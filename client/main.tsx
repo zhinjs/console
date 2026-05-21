@@ -13,11 +13,11 @@ import { BrowserRouter } from "react-router-dom";
 import { useWebSocket } from "@zhin.js/client";
 import { getRouterBasename } from "./pagesBase";
 import { ConsoleWebHost } from "./host/ConsoleWebHost";
-import { registerBuiltinConsolePages } from "@console/registerBuiltinShell";
-import { initializeTheme } from "@console/theme";
-import { hasToken } from "@console/utils/auth";
-import LoginPage from "@console/pages/login";
-import { TooltipProvider } from "@console/components/ui/tooltip";
+import { registerBuiltinConsolePages } from "@/registerBuiltinShell";
+import { initializeTheme } from "@/theme";
+import { hasToken } from "@/utils/auth";
+import LoginPage from "@/pages/login";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 initializeTheme();
 

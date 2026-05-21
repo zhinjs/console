@@ -63,7 +63,7 @@ export default defineConfig({
     resolve: {
       dedupe: ["lucide-react"],
       alias: {
-        "@console": path.join(siteRoot, "console-ui/src"),
+        "@": path.join(siteRoot, "client/src"),
         react: path.resolve(siteRoot, "node_modules/react"),
         "react-dom": path.resolve(siteRoot, "node_modules/react-dom"),
         "react-router-dom": path.resolve(siteRoot, "node_modules/react-router-dom"),

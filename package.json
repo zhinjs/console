@@ -1,10 +1,9 @@
 {
   "name": "zhin-console-site",
   "private": true,
-  "description": "Standalone Remote Console static site (Farm today; Vite-ready split from zhin monorepo)",
+  "description": "Zhin Remote Console static site (Farm + GitHub Pages)",
   "type": "module",
   "scripts": {
-    "sync": "node scripts/sync-from-zhin.mjs",
     "dev": "farm start",
     "build": "farm build",
     "preview": "serve dist -l 5173",

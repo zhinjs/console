@@ -9,7 +9,6 @@ export default {
   content: [
     "./index.html",
     "./**/*.{js,ts,jsx,tsx}",
-    path.join(siteRoot, "console-ui/src/**/*.{js,ts,jsx,tsx}"),
   ],
   theme: {
     extend: {

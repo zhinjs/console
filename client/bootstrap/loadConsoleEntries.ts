@@ -7,7 +7,7 @@ import {
   registerConsolePluginsFromEntries,
   type FetchConsoleEntriesOptions,
 } from "@zhin.js/console-core/browser";
-import { getApiBase, getToken } from "@console/utils/auth";
+import { getApiBase, getToken } from "@/utils/auth";
 import { app } from "@zhin.js/client";
 
 const addRoute = app.addRoute.bind(app);

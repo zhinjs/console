@@ -1,3 +1,3 @@
-import DashboardLayout from "@console/layouts/dashboard";
+import DashboardLayout from "@/layouts/dashboard";
 
 export const ConsoleView = DashboardLayout;
