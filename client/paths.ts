@@ -1,17 +1,10 @@
 import { DEFAULT_CONSOLE_BASE_PATH } from "@zhin.js/console-types";
 
-/** 与 zhin Host 一致：entries、@dev、esm 等 API 前缀 */
-export const CONSOLE_API_PATH = DEFAULT_CONSOLE_BASE_PATH;
+/** Host 插件清单（OpenAPI: GET /entries） */
+export const ENTRIES_PATH = "/entries";
 
-/**
- * 独立站点 UI 路由前缀。本仓库部署在单独域名（如 console.zhin.dev），页面在根路径。
- * 需要与 Host 一样挂在 /console 下时，构建前设 VITE_CONSOLE_SHELL_PATH=/console
- */
-export const CONSOLE_SHELL_PATH = (
-  import.meta as unknown as { env?: { VITE_CONSOLE_SHELL_PATH?: string } }
-).env?.VITE_CONSOLE_SHELL_PATH ?? "";
+/** 插件 dev/prod 模块前缀（相对 Host 根，如 /@dev/{id}.mjs） */
+export const CONSOLE_ASSET_PREFIXES = ["/@dev", "/@assets"] as const;
 
-export function normalizeShellBase(path: string): string {
-  if (!path || path === "/") return "";
-  return path.replace(/\/$/, "");
-}
+/** 旧版 UI 路由前缀（侧栏注册路径可能带 /console/…，用于剥离相对 path） */
+export const CONSOLE_UI_LEGACY_PREFIX = DEFAULT_CONSOLE_BASE_PATH;

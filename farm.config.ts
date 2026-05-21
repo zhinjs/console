@@ -4,8 +4,6 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "@farmfe/core";
 import farmPostcss from "@farmfe/js-plugin-postcss";
 import react from "@farmfe/plugin-react";
-import { DEFAULT_CONSOLE_BASE_PATH } from "@zhin.js/console-types";
-
 const siteRoot = path.dirname(fileURLToPath(import.meta.url));
 const consoleApiTarget = process.env.VITE_DEV_API ?? "http://127.0.0.1:8086";
 
@@ -32,11 +30,9 @@ const consoleApiProxy = {
 } as const;
 
 const consoleDevProxy = {
-  [`${DEFAULT_CONSOLE_BASE_PATH}/entries`]: consoleApiProxy,
-  [`${DEFAULT_CONSOLE_BASE_PATH}/me`]: consoleApiProxy,
-  [`${DEFAULT_CONSOLE_BASE_PATH}/@dev`]: consoleApiProxy,
-  [`${DEFAULT_CONSOLE_BASE_PATH}/@assets`]: consoleApiProxy,
-  [`${DEFAULT_CONSOLE_BASE_PATH}/esm`]: consoleApiProxy,
+  "/entries": consoleApiProxy,
+  "/@dev": consoleApiProxy,
+  "/@assets": consoleApiProxy,
   "/api": consoleApiProxy,
 } as const;
 
@@ -63,10 +59,6 @@ export default defineConfig({
     resolve: {
       dedupe: ["lucide-react"],
       alias: {
-        "@zhin.js/client/dist/websocket/instance": path.join(
-          siteRoot,
-          "client/bootstrap/websocketInstance.ts",
-        ),
         "@console": path.join(siteRoot, "console-ui/src"),
         react: path.resolve(siteRoot, "node_modules/react"),
         "react-dom": path.resolve(siteRoot, "node_modules/react-dom"),

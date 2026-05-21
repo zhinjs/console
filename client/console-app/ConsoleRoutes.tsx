@@ -1,15 +1,15 @@
 import * as React from "react";
 import { Route } from "react-router-dom";
 import { app } from "@zhin.js/client";
-import { CONSOLE_API_PATH } from "../paths";
+import { CONSOLE_UI_LEGACY_PREFIX } from "../paths";
 
-const routePathPrefix = CONSOLE_API_PATH.endsWith("/")
-  ? CONSOLE_API_PATH
-  : `${CONSOLE_API_PATH}/`;
+const routePathPrefix = CONSOLE_UI_LEGACY_PREFIX.endsWith("/")
+  ? CONSOLE_UI_LEGACY_PREFIX
+  : `${CONSOLE_UI_LEGACY_PREFIX}/`;
 
 function toRelativeRoutePath(abs: string): string {
   if (abs.startsWith(routePathPrefix)) return abs.slice(routePathPrefix.length);
-  if (abs === CONSOLE_API_PATH) return "";
+  if (abs === CONSOLE_UI_LEGACY_PREFIX) return "";
   return abs.startsWith("/") ? abs.slice(1) : abs;
 }
 

@@ -3,12 +3,12 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { loadConsoleEntries } from "../bootstrap/loadConsoleEntries";
 import { ConsoleView } from "../console-app/ConsoleView";
 import { useConsoleRouteElements } from "../console-app/ConsoleRoutes";
-import { CONSOLE_API_PATH, CONSOLE_SHELL_PATH, normalizeShellBase } from "../paths";
+import { CONSOLE_SHELL_PATH, CONSOLE_UI_LEGACY_PREFIX, normalizeShellBase } from "../paths";
 
 const shellBase = normalizeShellBase(CONSOLE_SHELL_PATH);
 const shellRoutePath = shellBase ? `${shellBase}/*` : "/*";
 const dashboardPath = `${shellBase || ""}/dashboard`.replace(/^\/\//, "/");
-const legacyApiPrefix = normalizeShellBase(CONSOLE_API_PATH);
+const legacyApiPrefix = normalizeShellBase(CONSOLE_UI_LEGACY_PREFIX);
 
 /** 旧链接：/console/dashboard → /dashboard（独立站点）或保留 /console 前缀（与 Host 同路径部署时） */
 function LegacyConsoleRedirect() {

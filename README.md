@@ -16,6 +16,15 @@ pnpm preview
 
 登录页填写 Host **API Base** + **Token**；Host 的 `corsOrigins` 需包含 Console 站点来源（如 `https://console.zhin.dev`）。
 
+与 Host 对齐的 API（见 `{API Base}/pub/openapi.json`）：
+
+- `GET /entries` — 插件清单
+- `POST /api/console/request` — Console RPC（原 WebSocket `type` 信封）
+- `GET /api/events` — SSE 推送（`@zhin.js/client` ≥ 1.1.0）
+- `GET /api/system/status` — 登录校验
+
+依赖 `@zhin.js/client` **≥ 1.1.0**（REST+SSE，不再连 `wss://…/server`）。
+
 可通过 URL **仅预填** Host 地址（`token` 须在登录页手动输入，勿放在 URL 中）：
 
 ```
@@ -29,7 +38,7 @@ https://console.zhin.dev/?apiBaseUrl=http://127.0.0.1:8086
 | `client/` | 入口 `main.tsx`、Host 壳、`bootstrap/` |
 | `console-ui/` | 内置 Console UI（`src/`），构建别名 `@console` |
 | `farm.config.ts` | `@console` → `console-ui/src` |
-| `client/paths.ts` | API 仍走 `/console/*`；UI 默认根路径 `/dashboard`（非 `/console/dashboard`） |
+| `client/paths.ts` | Host API 路径常量；UI 默认根路径 `/dashboard` |
 | `scripts/prepare-github-pages.mjs` | Pages SPA 回退与 CNAME |
 
 运行时依赖 [@zhin.js/client](https://www.npmjs.com/package/@zhin.js/client)、`console-core`、`console-types`（npm）。

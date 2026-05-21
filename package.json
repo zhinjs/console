@@ -10,7 +10,7 @@
     "pages:prepare": "node scripts/prepare-github-pages.mjs"
   },
   "dependencies": {
-    "@zhin.js/client": "^1.0.18",
+    "@zhin.js/client": "^1.1.0",
     "@zhin.js/console-core": "^0.1.1",
     "@zhin.js/console-types": "^0.1.1"
   },

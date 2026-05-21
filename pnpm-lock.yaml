@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@zhin.js/client':
-        specifier: ^1.0.18
-        version: 1.0.18(react@19.2.6)
+        specifier: ^1.1.0
+        version: 1.1.0(react@19.2.6)
       '@zhin.js/console-core':
         specifier: ^0.1.1
         version: 0.1.1(react@19.2.6)
@@ -1334,8 +1334,8 @@ packages:
   '@zeit/schemas@2.36.0':
     resolution: {integrity: sha512-7kjMwcChYEzMKjeex9ZFXkt1AyNov9R5HZtjBKVsmVpw7pa7ZtlCGvCBC2vnnXctaYN+aRI61HjIqeetZW5ROg==}
 
-  '@zhin.js/client@1.0.18':
-    resolution: {integrity: sha512-y6IfxbpaHVVL4sarn7qB8H+7RJc7M2FLsRc71A7jCHknunCIDwcWV5hm/7R/5FmcCsb4VNFJbwl5jbVWQklCKQ==}
+  '@zhin.js/client@1.1.0':
+    resolution: {integrity: sha512-6pktfV4LBeTdLCaXZQNNbP/GDO9DHA3C49ZpI844WxOTdseOIfZ81e+cltn0juJNyqC0MIdZ1kr0GyIhOXVX4Q==}
     peerDependencies:
       react: '>=18'
 
@@ -4212,13 +4212,12 @@ snapshots:
 
   '@zeit/schemas@2.36.0': {}
 
-  '@zhin.js/client@1.0.18(react@19.2.6)':
+  '@zhin.js/client@1.1.0(react@19.2.6)':
     dependencies:
-      '@zhin.js/console-core': 0.1.1(react@19.2.6)
       '@zhin.js/console-types': 0.1.1
+      clsx: 2.1.1
       react: 19.2.6
-    transitivePeerDependencies:
-      - supports-color
+      tailwind-merge: 3.6.0
 
   '@zhin.js/console-core@0.1.1(react@19.2.6)':
     dependencies:
