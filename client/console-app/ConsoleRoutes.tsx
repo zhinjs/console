@@ -1,15 +1,15 @@
 import * as React from "react";
 import { Route } from "react-router-dom";
 import { app } from "@zhin.js/client";
-import { DEFAULT_CONSOLE_BASE_PATH } from "@zhin.js/console-types";
+import { CONSOLE_API_PATH } from "../paths";
 
-const basePrefix = DEFAULT_CONSOLE_BASE_PATH.endsWith("/")
-  ? DEFAULT_CONSOLE_BASE_PATH
-  : `${DEFAULT_CONSOLE_BASE_PATH}/`;
+const routePathPrefix = CONSOLE_API_PATH.endsWith("/")
+  ? CONSOLE_API_PATH
+  : `${CONSOLE_API_PATH}/`;
 
 function toRelativeRoutePath(abs: string): string {
-  if (abs.startsWith(basePrefix)) return abs.slice(basePrefix.length);
-  if (abs === DEFAULT_CONSOLE_BASE_PATH) return "";
+  if (abs.startsWith(routePathPrefix)) return abs.slice(routePathPrefix.length);
+  if (abs === CONSOLE_API_PATH) return "";
   return abs.startsWith("/") ? abs.slice(1) : abs;
 }
 

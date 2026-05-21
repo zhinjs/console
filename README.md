@@ -20,8 +20,10 @@ pnpm preview
 
 | 路径 | 说明 |
 |------|------|
-| `client/` | 入口 `main.tsx`、Host 壳、`client/src/` UI |
-| `farm.config.ts` | 构建配置；`@` → `client/src` |
+| `client/` | 入口 `main.tsx`、Host 壳、`bootstrap/` |
+| `console-ui/` | 内置 Console UI（`src/`），构建别名 `@console` |
+| `farm.config.ts` | `@console` → `console-ui/src` |
+| `client/paths.ts` | API 仍走 `/console/*`；UI 默认根路径 `/dashboard`（非 `/console/dashboard`） |
 | `scripts/prepare-github-pages.mjs` | Pages SPA 回退与 CNAME |
 
 运行时依赖 [@zhin.js/client](https://www.npmjs.com/package/@zhin.js/client)、`console-core`、`console-types`（npm）。

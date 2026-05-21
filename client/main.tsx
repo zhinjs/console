@@ -10,14 +10,14 @@ import {
   CONSOLE_SHARED_MODULES_KEY,
 } from "@zhin.js/console-types";
 import { BrowserRouter } from "react-router-dom";
-import { useWebSocket } from "@zhin.js/client";
+import { destroyWebSocketManager, useWebSocket } from "@zhin.js/client";
 import { getRouterBasename } from "./pagesBase";
 import { ConsoleWebHost } from "./host/ConsoleWebHost";
-import { registerBuiltinConsolePages } from "@/registerBuiltinShell";
-import { initializeTheme } from "@/theme";
-import { hasToken } from "@/utils/auth";
-import LoginPage from "@/pages/login";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { registerBuiltinConsolePages } from "@console/registerBuiltinShell";
+import { initializeTheme } from "@console/theme";
+import { hasToken } from "@console/utils/auth";
+import LoginPage from "@console/pages/login";
+import { TooltipProvider } from "@console/components/ui/tooltip";
 
 initializeTheme();
 
@@ -53,7 +53,10 @@ function App() {
   const handleLogin = React.useCallback(() => setAuthed(true), []);
 
   React.useEffect(() => {
-    const onAuthRequired = () => setAuthed(false);
+    const onAuthRequired = () => {
+      destroyWebSocketManager();
+      setAuthed(false);
+    };
     window.addEventListener("zhin:auth-required", onAuthRequired);
     return () => window.removeEventListener("zhin:auth-required", onAuthRequired);
   }, []);

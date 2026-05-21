@@ -32,6 +32,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Require client + console-ui
+        run: |
+          test -f client/main.tsx
+          test -d console-ui/src
+
       - name: Build + SPA fallback
         env:
           CONSOLE_PAGES_BASE: ${{ vars.CONSOLE_PAGES_BASE || '' }}

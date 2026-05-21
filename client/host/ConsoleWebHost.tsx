@@ -3,19 +3,20 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { loadConsoleEntries } from "../bootstrap/loadConsoleEntries";
 import { ConsoleView } from "../console-app/ConsoleView";
 import { useConsoleRouteElements } from "../console-app/ConsoleRoutes";
-import { DEFAULT_CONSOLE_BASE_PATH } from "@zhin.js/console-types";
+import { CONSOLE_API_PATH, CONSOLE_SHELL_PATH, normalizeShellBase } from "../paths";
 
-const shellBase =
-  DEFAULT_CONSOLE_BASE_PATH === "/"
-    ? ""
-    : DEFAULT_CONSOLE_BASE_PATH.replace(/\/$/, "");
+const shellBase = normalizeShellBase(CONSOLE_SHELL_PATH);
 const shellRoutePath = shellBase ? `${shellBase}/*` : "/*";
 const dashboardPath = `${shellBase || ""}/dashboard`.replace(/^\/\//, "/");
+const legacyApiPrefix = normalizeShellBase(CONSOLE_API_PATH);
 
-/** Old bookmarks: /console/dashboard → /dashboard */
+/** 旧链接：/console/dashboard → /dashboard（独立站点）或保留 /console 前缀（与 Host 同路径部署时） */
 function LegacyConsoleRedirect() {
   const { pathname } = useLocation();
-  const rest = pathname.replace(/^\/console\/?/, "/") || "/dashboard";
+  const rest =
+    legacyApiPrefix && pathname.startsWith(`${legacyApiPrefix}/`)
+      ? pathname.slice(legacyApiPrefix.length) || "/dashboard"
+      : pathname.replace(/^\/console\/?/, "/") || "/dashboard";
   return <Navigate to={rest.startsWith("/") ? rest : `/${rest}`} replace />;
 }
 
@@ -41,7 +42,6 @@ function DashboardHome() {
 
 export function ConsoleWebHost() {
   const [ready, setReady] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
   const registeredRoutes = useConsoleRouteElements();
 
   React.useEffect(() => {
@@ -59,8 +59,12 @@ export function ConsoleWebHost() {
 
   return (
     <Routes>
-      <Route path="/console" element={<Navigate to={dashboardPath} replace />} />
-      <Route path="/console/*" element={<LegacyConsoleRedirect />} />
+      {legacyApiPrefix ? (
+        <>
+          <Route path={legacyApiPrefix} element={<Navigate to={dashboardPath} replace />} />
+          <Route path={`${legacyApiPrefix}/*`} element={<LegacyConsoleRedirect />} />
+        </>
+      ) : null}
       <Route path={shellRoutePath} element={<ConsoleView />}>
         <Route index element={<Navigate to={dashboardPath} replace />} />
         {registeredRoutes}

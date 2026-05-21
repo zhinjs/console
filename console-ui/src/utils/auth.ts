@@ -38,6 +38,14 @@ export function resolveApiUrl(path: string): string {
   return `${base}${p}`
 }
 
+/** WebSocket 应连用户 Host（如 ws://127.0.0.1:8086/server），而非 Pages 静态域 */
+export function resolveWebSocketUrl(path = '/server'): string {
+  const httpUrl = resolveApiUrl(path)
+  const url = new URL(httpUrl)
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+  return url.href
+}
+
 /** fetch with Bearer token; relative paths resolve against {@link getApiBase}. */
 export async function apiFetch(
   input: RequestInfo | URL,

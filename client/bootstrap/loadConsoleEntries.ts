@@ -6,9 +6,9 @@ import type {
   ConsolePluginRegister,
   PluginRegisterHostApi,
 } from "@zhin.js/console-types";
-import { DEFAULT_CONSOLE_BASE_PATH } from "@zhin.js/console-types";
+import { CONSOLE_API_PATH } from "../paths";
 import { app } from "@zhin.js/client";
-import { getApiBase, getToken } from "@/utils/auth";
+import { getApiBase, getToken } from "@console/utils/auth";
 
 export type FetchConsoleEntriesOptions = {
   entriesUrl?: string;
@@ -51,7 +51,7 @@ const defaultHostRegisterApi = createPluginRegisterHostApi({
 });
 
 function entriesUrlFromApiBase(apiBase: string): string {
-  const root = DEFAULT_CONSOLE_BASE_PATH.replace(/\/$/, "");
+  const root = CONSOLE_API_PATH.replace(/\/$/, "");
   const suffix = root ? `${root}/entries` : "/entries";
   const base = apiBase.replace(/\/$/, "");
   return base ? `${base}${suffix}` : suffix;

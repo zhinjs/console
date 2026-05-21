@@ -63,7 +63,11 @@ export default defineConfig({
     resolve: {
       dedupe: ["lucide-react"],
       alias: {
-        "@": path.join(siteRoot, "client/src"),
+        "@zhin.js/client/dist/websocket/instance": path.join(
+          siteRoot,
+          "client/bootstrap/websocketInstance.ts",
+        ),
+        "@console": path.join(siteRoot, "console-ui/src"),
         react: path.resolve(siteRoot, "node_modules/react"),
         "react-dom": path.resolve(siteRoot, "node_modules/react-dom"),
         "react-router-dom": path.resolve(siteRoot, "node_modules/react-router-dom"),
