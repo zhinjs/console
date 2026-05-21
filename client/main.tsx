@@ -15,9 +15,10 @@ import { getRouterBasename } from "./pagesBase";
 import { ConsoleWebHost } from "./host/ConsoleWebHost";
 import { registerBuiltinConsolePages } from "@console/registerBuiltinShell";
 import { initializeTheme } from "@console/theme";
-import { hasToken } from "@console/utils/auth";
+import { hasToken, readAuthFromQuery } from "@console/utils/auth";
 import LoginPage from "@console/pages/login";
 import { TooltipProvider } from "@console/components/ui/tooltip";
+import { runQueryAuthMiddleware } from "./middleware/queryAuth";
 
 initializeTheme();
 
@@ -49,8 +50,25 @@ function ConsoleShell() {
 }
 
 function App() {
-  const [authed, setAuthed] = React.useState(hasToken());
+  const hasQueryAuth = Boolean(readAuthFromQuery());
+  const [authed, setAuthed] = React.useState(() => !hasQueryAuth && hasToken());
+  const [authReady, setAuthReady] = React.useState(() => !hasQueryAuth);
   const handleLogin = React.useCallback(() => setAuthed(true), []);
+
+  React.useEffect(() => {
+    if (!hasQueryAuth) return;
+    let cancelled = false;
+    (async () => {
+      const ok = await runQueryAuthMiddleware();
+      if (!cancelled) {
+        setAuthed(ok || hasToken());
+        setAuthReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   React.useEffect(() => {
     const onAuthRequired = () => {
@@ -60,6 +78,14 @@ function App() {
     window.addEventListener("zhin:auth-required", onAuthRequired);
     return () => window.removeEventListener("zhin:auth-required", onAuthRequired);
   }, []);
+
+  if (!authReady) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <p className="text-sm text-muted-foreground">正在连接 Host…</p>
+      </div>
+    );
+  }
 
   if (!authed) {
     return <LoginPage onSuccess={handleLogin} />;

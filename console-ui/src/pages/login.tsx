@@ -1,59 +1,57 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { cn } from '@zhin.js/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { Button } from '../components/ui/button'
-import { setToken, setApiBase, getApiBase } from '../utils/auth'
+import { getApiBase, readAuthFromQuery, verifyAndStoreCredentials } from '../utils/auth'
 
 interface LoginPageProps {
   onSuccess: () => void
 }
 
 export default function LoginPage({ onSuccess }: LoginPageProps) {
+  const queryAuth = readAuthFromQuery()
   const [apiBase, setApiBaseValue] = useState(() => {
+    if (queryAuth?.apiBaseUrl) return queryAuth.apiBaseUrl
     const stored = getApiBase()
     if (stored && stored !== window.location.origin) return stored
     return 'http://localhost:8086'
   })
-  const [token, setTokenValue] = useState('')
+  const [token, setTokenValue] = useState(() => queryAuth?.token ?? '')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleLogin = useCallback(async () => {
-    const trimmed = token.trim()
-    const base = apiBase.trim().replace(/\/$/, '')
-    if (!base) {
-      setError('请填写 API Base URL（如 http://localhost:8086）')
-      return
-    }
-    if (!trimmed) {
-      setError('请输入 Token')
-      return
-    }
-
     setLoading(true)
     setError('')
 
-    try {
-      const res = await fetch(`${base}/api/system/status`, {
-        headers: { Authorization: `Bearer ${trimmed}` },
-      })
-
-      if (res.ok) {
-        setApiBase(base)
-        setToken(trimmed)
-        onSuccess()
-      } else if (res.status === 401) {
-        setError('Token 无效，请检查后重试')
-      } else {
-        setError(`验证失败 (HTTP ${res.status})`)
-      }
-    } catch {
-      setError('无法连接到 API，请检查 Base URL 与网络')
-    } finally {
-      setLoading(false)
+    const result = await verifyAndStoreCredentials(apiBase, token)
+    if (result.ok) {
+      onSuccess()
+    } else {
+      setError(result.message)
     }
+    setLoading(false)
   }, [token, apiBase, onSuccess])
+
+  useEffect(() => {
+    if (!queryAuth) return
+    let cancelled = false
+    ;(async () => {
+      setLoading(true)
+      const result = await verifyAndStoreCredentials(queryAuth.apiBaseUrl, queryAuth.token)
+      if (cancelled) return
+      if (result.ok) {
+        onSuccess()
+      } else {
+        setError(result.message)
+        setLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [queryAuth, onSuccess])
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
