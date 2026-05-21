@@ -16,10 +16,10 @@ pnpm preview
 
 登录页填写 Host **API Base** + **Token**；Host 的 `corsOrigins` 需包含 Console 站点来源（如 `https://console.zhin.dev`）。
 
-也可通过 URL 自动登录（校验成功后参数会从地址栏移除）：
+可通过 URL **仅预填** Host 地址（`token` 须在登录页手动输入，勿放在 URL 中）：
 
 ```
-https://console.zhin.dev/?apiBaseUrl=http://127.0.0.1:8086&token=YOUR_TOKEN
+https://console.zhin.dev/?apiBaseUrl=http://127.0.0.1:8086
 ```
 
 ## 目录

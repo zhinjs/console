@@ -33,24 +33,20 @@ export function hasToken(): boolean {
 }
 
 export const QUERY_API_BASE_URL = "apiBaseUrl";
-export const QUERY_TOKEN = "token";
 
-export function readAuthFromQuery(
+/** 仅允许 URL 预填 Host 地址；token 不得出现在 URL 中 */
+export function readApiBaseUrlFromQuery(
   search = typeof window !== "undefined" ? window.location.search : "",
-): { apiBaseUrl: string; token: string } | null {
-  const params = new URLSearchParams(search);
-  const apiBaseUrl = params.get(QUERY_API_BASE_URL)?.trim();
-  const token = params.get(QUERY_TOKEN)?.trim();
-  if (!apiBaseUrl || !token) return null;
-  return { apiBaseUrl, token };
+): string | null {
+  const apiBaseUrl = new URLSearchParams(search).get(QUERY_API_BASE_URL)?.trim();
+  return apiBaseUrl || null;
 }
 
-/** 从地址栏移除 apiBaseUrl、token，避免泄露 */
-export function stripAuthQueryFromUrl(): void {
+export function stripApiBaseUrlFromQuery(): void {
   if (typeof window === "undefined") return;
   const url = new URL(window.location.href);
+  if (!url.searchParams.has(QUERY_API_BASE_URL)) return;
   url.searchParams.delete(QUERY_API_BASE_URL);
-  url.searchParams.delete(QUERY_TOKEN);
   const next = `${url.pathname}${url.search}${url.hash}`;
   window.history.replaceState(window.history.state, "", next);
 }
@@ -80,7 +76,7 @@ export async function verifyAndStoreCredentials(
     if (res.ok) {
       setApiBase(base)
       setToken(trimmed)
-      stripAuthQueryFromUrl()
+      stripApiBaseUrlFromQuery()
       return { ok: true }
     }
     if (res.status === 401) {

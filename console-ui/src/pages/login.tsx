@@ -3,21 +3,22 @@ import { cn } from '@zhin.js/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { Button } from '../components/ui/button'
-import { getApiBase, readAuthFromQuery, verifyAndStoreCredentials } from '../utils/auth'
+import { getApiBase, verifyAndStoreCredentials } from '../utils/auth'
 
 interface LoginPageProps {
   onSuccess: () => void
+  /** 来自 ?apiBaseUrl=...，仅预填表单 */
+  initialApiBase?: string | null
 }
 
-export default function LoginPage({ onSuccess }: LoginPageProps) {
-  const queryAuth = readAuthFromQuery()
+export default function LoginPage({ onSuccess, initialApiBase }: LoginPageProps) {
   const [apiBase, setApiBaseValue] = useState(() => {
-    if (queryAuth?.apiBaseUrl) return queryAuth.apiBaseUrl
+    if (initialApiBase) return initialApiBase
     const stored = getApiBase()
     if (stored && stored !== window.location.origin) return stored
     return 'http://localhost:8086'
   })
-  const [token, setTokenValue] = useState(() => queryAuth?.token ?? '')
+  const [token, setTokenValue] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -35,23 +36,8 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
   }, [token, apiBase, onSuccess])
 
   useEffect(() => {
-    if (!queryAuth) return
-    let cancelled = false
-    ;(async () => {
-      setLoading(true)
-      const result = await verifyAndStoreCredentials(queryAuth.apiBaseUrl, queryAuth.token)
-      if (cancelled) return
-      if (result.ok) {
-        onSuccess()
-      } else {
-        setError(result.message)
-        setLoading(false)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [queryAuth, onSuccess])
+    if (initialApiBase) setApiBaseValue(initialApiBase)
+  }, [initialApiBase])
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
@@ -82,7 +68,7 @@ export default function LoginPage({ onSuccess }: LoginPageProps) {
               />
               <Input
                 type="password"
-                placeholder="API Token"
+                placeholder="API Token（须手动输入，勿通过 URL 传递）"
                 value={token}
                 onChange={(e) => {
                   setTokenValue(e.target.value)
