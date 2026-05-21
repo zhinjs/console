@@ -3,7 +3,7 @@ import { cn } from '@zhin.js/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { Button } from '../components/ui/button'
-import { getApiBase, verifyAndStoreCredentials } from '../utils/auth'
+import { getStoredApiBase, verifyAndStoreCredentials } from '../utils/auth'
 
 interface LoginPageProps {
   onSuccess: () => void
@@ -14,8 +14,8 @@ interface LoginPageProps {
 export default function LoginPage({ onSuccess, initialApiBase }: LoginPageProps) {
   const [apiBase, setApiBaseValue] = useState(() => {
     if (initialApiBase) return initialApiBase
-    const stored = getApiBase()
-    if (stored && stored !== window.location.origin) return stored
+    const stored = getStoredApiBase()
+    if (stored) return stored
     return 'http://localhost:8086'
   })
   const [token, setTokenValue] = useState('')

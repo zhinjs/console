@@ -15,7 +15,6 @@ import { getRouterBasename } from "./pagesBase";
 import { ConsoleWebHost } from "./host/ConsoleWebHost";
 import { registerBuiltinConsolePages } from "@console/registerBuiltinShell";
 import { initializeTheme } from "@console/theme";
-import { hasToken } from "@console/utils/auth";
 import LoginPage from "@console/pages/login";
 import { TooltipProvider } from "@console/components/ui/tooltip";
 import { runQueryPrefillMiddleware } from "./middleware/queryPrefill";
@@ -43,7 +42,7 @@ sharedModules.set("react-router-dom", ReactRouterDOM);
 
 registerBuiltinConsolePages();
 
-const prefilledApiBase = runQueryPrefillMiddleware();
+const initialSession = runQueryPrefillMiddleware();
 
 function ConsoleShell() {
   useWebSocket();
@@ -52,7 +51,8 @@ function ConsoleShell() {
 }
 
 function App() {
-  const [authed, setAuthed] = React.useState(hasToken());
+  const [authed, setAuthed] = React.useState(initialSession.authed);
+  const loginApiBase = initialSession.loginApiBase;
   const handleLogin = React.useCallback(() => setAuthed(true), []);
 
   React.useEffect(() => {
@@ -65,7 +65,9 @@ function App() {
   }, []);
 
   if (!authed) {
-    return <LoginPage onSuccess={handleLogin} initialApiBase={prefilledApiBase} />;
+    return (
+      <LoginPage onSuccess={handleLogin} initialApiBase={loginApiBase} />
+    );
   }
 
   return <ConsoleShell />;

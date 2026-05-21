@@ -32,6 +32,60 @@ export function hasToken(): boolean {
   return !!localStorage.getItem(TOKEN_KEY)
 }
 
+export function normalizeApiBase(base: string): string {
+  return base.trim().replace(/\/$/, '')
+}
+
+/** 仅读 localStorage 中的 Host，不含 Pages 站点 origin 回退 */
+export function getStoredApiBase(): string | null {
+  const stored = localStorage.getItem(API_BASE_KEY)?.trim()
+  return stored ? normalizeApiBase(stored) : null
+}
+
+export function clearSession(): void {
+  clearToken()
+  clearApiBase()
+}
+
+/**
+ * token 与 apiBase 成对缓存：URL 预填的 Host 与缓存不一致时清除登录态。
+ */
+export function reconcileAuthWithApiBase(incomingApiBase: string | null): {
+  authed: boolean
+  loginApiBase: string | null
+} {
+  const token = getToken()
+  const stored = getStoredApiBase()
+  const incoming = incomingApiBase ? normalizeApiBase(incomingApiBase) : null
+
+  if (incoming) {
+    if (token && stored !== incoming) {
+      clearSession()
+      return { authed: false, loginApiBase: incoming }
+    }
+    if (token && stored === incoming) {
+      return { authed: true, loginApiBase: incoming }
+    }
+    return { authed: false, loginApiBase: incoming }
+  }
+
+  if (token && stored) {
+    return { authed: true, loginApiBase: null }
+  }
+
+  if (token) {
+    clearSession()
+  }
+  return { authed: false, loginApiBase: stored }
+}
+
+export function clearSessionAndNotify(): void {
+  clearSession()
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('zhin:auth-required'))
+  }
+}
+
 export const QUERY_API_BASE_URL = "apiBaseUrl";
 
 /** 仅允许 URL 预填 Host 地址；token 不得出现在 URL 中 */
@@ -118,7 +172,7 @@ export async function apiFetch(
 
   const res = await fetch(url, { ...init, headers })
   if (res.status === 401) {
-    localStorage.removeItem(TOKEN_KEY)
+    clearToken()
     window.dispatchEvent(new CustomEvent('zhin:auth-required'))
   }
   return res

@@ -1,12 +1,17 @@
-import { readApiBaseUrlFromQuery, stripApiBaseUrlFromQuery } from "@console/utils/auth";
+import {
+  readApiBaseUrlFromQuery,
+  reconcileAuthWithApiBase,
+  stripApiBaseUrlFromQuery,
+} from "@console/utils/auth";
 
 /**
- * 启动时处理 ?apiBaseUrl=...：只预填 Host 地址，token 须用户在登录页输入。
- * 读取后从地址栏移除 apiBaseUrl。
+ * 启动时处理 ?apiBaseUrl=...：预填 Host；若与已缓存 token 的 Host 不一致则登出。
  */
-export function runQueryPrefillMiddleware(): string | null {
-  const apiBaseUrl = readApiBaseUrlFromQuery();
-  if (!apiBaseUrl) return null;
-  stripApiBaseUrlFromQuery();
-  return apiBaseUrl;
+export function runQueryPrefillMiddleware(): {
+  authed: boolean;
+  loginApiBase: string | null;
+} {
+  const incoming = readApiBaseUrlFromQuery();
+  if (incoming) stripApiBaseUrlFromQuery();
+  return reconcileAuthWithApiBase(incoming);
 }
