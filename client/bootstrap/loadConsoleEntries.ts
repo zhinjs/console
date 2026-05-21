@@ -1,14 +1,47 @@
 import * as React from "react";
-import {
-  configureConsole,
-  createPluginRegisterHostApi,
-  fetchConsoleEntries as fetchEntriesFromCore,
-  loadConsoleEntries as loadEntriesFromCore,
-  registerConsolePluginsFromEntries,
-  type FetchConsoleEntriesOptions,
-} from "@zhin.js/console-core/browser";
-import { getApiBase, getToken } from "@/utils/auth";
+import { configureConsole } from "@zhin.js/console-core/browser";
+import type {
+  ConsoleClientEntry,
+  ConsoleEntriesResponse,
+  ConsolePluginRegister,
+  PluginRegisterHostApi,
+} from "@zhin.js/console-types";
+import { DEFAULT_CONSOLE_BASE_PATH } from "@zhin.js/console-types";
 import { app } from "@zhin.js/client";
+import { getApiBase, getToken } from "@/utils/auth";
+
+export type FetchConsoleEntriesOptions = {
+  entriesUrl?: string;
+  signal?: AbortSignal;
+  fetchInit?: RequestInit | (() => RequestInit);
+};
+
+export type LoadConsoleEntriesOptions = FetchConsoleEntriesOptions & {
+  assetOrigin?: string;
+  hostApi?: PluginRegisterHostApi;
+  beforeLoad?: () => void;
+  onEmpty?: () => void;
+  onFetchError?: (status: number) => void;
+  onEntryError?: (entry: ConsoleClientEntry, error: unknown) => void;
+};
+
+export type CreatePluginRegisterHostApiOptions = {
+  React: PluginRegisterHostApi["React"];
+  addRoute: PluginRegisterHostApi["addRoute"];
+  addTool: PluginRegisterHostApi["addTool"];
+};
+
+export function createPluginRegisterHostApi(
+  options: CreatePluginRegisterHostApiOptions,
+): PluginRegisterHostApi {
+  const addRoute = options.addRoute;
+  return {
+    React: options.React,
+    addRoute,
+    addPage: addRoute,
+    addTool: options.addTool,
+  };
+}
 
 const addRoute = app.addRoute.bind(app);
 const defaultHostRegisterApi = createPluginRegisterHostApi({
@@ -17,53 +50,131 @@ const defaultHostRegisterApi = createPluginRegisterHostApi({
   addTool: app.addTool.bind(app),
 });
 
-export type { FetchConsoleEntriesOptions };
-export { registerConsolePluginsFromEntries };
-
-export async function fetchConsoleEntries(options?: FetchConsoleEntriesOptions) {
-  return fetchEntriesFromCore(options);
+function entriesUrlFromApiBase(apiBase: string): string {
+  const root = DEFAULT_CONSOLE_BASE_PATH.replace(/\/$/, "");
+  const suffix = root ? `${root}/entries` : "/entries";
+  const base = apiBase.replace(/\/$/, "");
+  return base ? `${base}${suffix}` : suffix;
 }
 
-let entriesLoadInflight: Promise<void> | null = null;
-
-export function loadConsoleEntries(options?: FetchConsoleEntriesOptions): Promise<void> {
-  if (entriesLoadInflight) return entriesLoadInflight;
-  entriesLoadInflight = runLoadConsoleEntries(options).finally(() => {
-    entriesLoadInflight = null;
-  });
-  return entriesLoadInflight;
+function defaultEntriesUrl(): string {
+  return entriesUrlFromApiBase(getApiBase());
 }
 
-async function runLoadConsoleEntries(options?: FetchConsoleEntriesOptions) {
+function resolveRequestUrl(pathOrUrl: string): string {
+  if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) return pathOrUrl;
+  if (typeof window === "undefined") return pathOrUrl;
   const apiBase = getApiBase();
-  await loadEntriesFromCore({
-    ...options,
-    entriesUrl: options?.entriesUrl ?? `${apiBase}/entries`,
-    assetOrigin: options?.assetOrigin ?? apiBase,
-    hostApi: defaultHostRegisterApi,
-    fetchInit: () => {
-      const token = getToken();
-      return {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      };
-    },
-    beforeLoad: () => {
-      configureConsole({
-        getRuntimeEnv: () =>
-          (import.meta as unknown as { env?: { MODE?: string } }).env?.MODE === "development"
-            ? "development"
-            : "production",
-      });
-    },
-    onFetchError: (status) => {
-      console.warn(
-        `[zhin-console] GET ${apiBase}/entries failed (HTTP ${status}). ` +
-          "确认 test-bot 已启动、API Base 与 corsOrigins 一致（localhost vs 127.0.0.1）。",
-      );
-      options?.onFetchError?.(status);
-    },
-    onEmpty: () => console.warn("[zhin-console] /entries returned empty list."),
-    onEntryError: (entry, error) =>
-      console.error(`[zhin-console] Failed to load plugin "${entry.id}":`, error),
+  const origin = apiBase || window.location.origin;
+  return new URL(pathOrUrl, `${origin}/`).href;
+}
+
+function resolvePluginImportUrl(resolvedModule: string, assetOrigin?: string): string {
+  if (resolvedModule.startsWith("http://") || resolvedModule.startsWith("https://")) {
+    return resolvedModule;
+  }
+  if (typeof window === "undefined") return resolvedModule;
+  const origin = assetOrigin?.replace(/\/$/, "") || window.location.origin;
+  return new URL(resolvedModule, `${origin}/`).href;
+}
+
+function resolveFetchInit(init?: RequestInit | (() => RequestInit)): RequestInit {
+  return typeof init === "function" ? init() : (init ?? {});
+}
+
+export async function fetchConsoleEntries(
+  options?: FetchConsoleEntriesOptions,
+): Promise<ConsoleEntriesResponse> {
+  const pathOrUrl = options?.entriesUrl ?? defaultEntriesUrl();
+  const url = resolveRequestUrl(pathOrUrl);
+  const init = resolveFetchInit(options?.fetchInit);
+  const res = await fetch(url, {
+    ...init,
+    signal: options?.signal ?? init.signal,
+  } as RequestInit);
+  if (!res.ok) {
+    throw Object.assign(new Error(`load entries failed: ${res.status}`), { status: res.status });
+  }
+  return (await res.json()) as ConsoleEntriesResponse;
+}
+
+export function getRegisterFn(mod: Record<string, unknown> | null | undefined): ConsolePluginRegister | null {
+  if (!mod) return null;
+  const r = mod["register"];
+  if (typeof r === "function") return r as ConsolePluginRegister;
+  const d = mod["default"] as Record<string, unknown> | undefined;
+  if (d && typeof d["register"] === "function") return d["register"] as ConsolePluginRegister;
+  return null;
+}
+
+export async function registerConsolePluginsFromEntries(
+  entries: ConsoleClientEntry[],
+  hostApi: PluginRegisterHostApi,
+  onEntryError?: (entry: ConsoleClientEntry, error: unknown) => void,
+  assetOrigin?: string,
+): Promise<void> {
+  if (!entries.length) return;
+  await Promise.all(
+    entries.map(async (entry) => {
+      try {
+        const specifier = resolvePluginImportUrl(entry.resolvedModule, assetOrigin);
+        const mod = (await import(/* @vite-ignore */ specifier)) as Record<string, unknown>;
+        const register = getRegisterFn(mod);
+        if (register) await register(hostApi);
+        else throw new Error(`entry "${entry.id}" has no register export`);
+      } catch (error) {
+        if (onEntryError) onEntryError(entry, error);
+        else throw error;
+      }
+    }),
+  );
+}
+
+export async function loadConsoleEntries(options?: LoadConsoleEntriesOptions): Promise<void> {
+  const apiBase = getApiBase();
+  const hostApi = options?.hostApi ?? defaultHostRegisterApi;
+
+  options?.beforeLoad?.();
+  configureConsole({
+    getRuntimeEnv: () =>
+      (import.meta as unknown as { env?: { MODE?: string } }).env?.MODE === "development"
+        ? "development"
+        : "production",
   });
+
+  let data: ConsoleEntriesResponse;
+  try {
+    data = await fetchConsoleEntries({
+      ...options,
+      entriesUrl: options?.entriesUrl ?? entriesUrlFromApiBase(apiBase),
+      fetchInit:
+        options?.fetchInit ??
+        (() => {
+          const token = getToken();
+          return { headers: token ? { Authorization: `Bearer ${token}` } : {} };
+        }),
+    });
+  } catch (error) {
+    const status =
+      typeof (error as { status?: unknown }).status === "number"
+        ? (error as { status: number }).status
+        : 0;
+    if (options?.onFetchError) {
+      options.onFetchError(status);
+      return;
+    }
+    throw error;
+  }
+
+  if (!data.entries?.length) {
+    options?.onEmpty?.();
+    return;
+  }
+
+  await registerConsolePluginsFromEntries(
+    data.entries,
+    hostApi,
+    options?.onEntryError,
+    options?.assetOrigin ?? apiBase,
+  );
 }
