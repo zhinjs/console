@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@zhin.js/client": "^1.1.0",
-    "@zhin.js/console-core": "^0.1.1",
+    "@zhin.js/host-router": "^0.0.0",
+    "@zhin.js/contract": "^1.0.0",
     "@zhin.js/console-types": "^0.1.1"
   },
   "devDependencies": {

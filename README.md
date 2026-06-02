@@ -41,7 +41,7 @@ https://console.zhin.dev/?apiBaseUrl=http://127.0.0.1:8086
 | `client/paths.ts` | Host API 路径常量；UI 默认根路径 `/dashboard` |
 | `scripts/prepare-github-pages.mjs` | Pages SPA 回退与 CNAME |
 
-运行时依赖 [@zhin.js/client](https://www.npmjs.com/package/@zhin.js/client)、`console-core`、`console-types`（npm）。
+运行时依赖 [@zhin.js/client](https://www.npmjs.com/package/@zhin.js/client)（SDK）与 [@zhin.js/contract](https://www.npmjs.com/package/@zhin.js/contract)（契约常量/类型）。
 
 ## CI / Pages
 

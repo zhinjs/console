@@ -1,9 +1,5 @@
 import * as React from 'react'
-import { app } from '@zhin.js/client'
-import {
-  createPluginRegisterHostApi,
-  loadConsoleEntries as loadEntriesFromCore,
-} from '@zhin.js/console-core/browser'
+import { app, createPluginRegisterHostApi, loadConsoleEntries as loadEntriesFromSdk } from '@zhin.js/client'
 import { getApiBase, getToken } from './utils/auth'
 
 const addRoute = app.addRoute.bind(app)
@@ -23,7 +19,7 @@ export function loadConsoleEntries(): Promise<void> {
 
 async function doLoad() {
   const apiBase = getApiBase()
-  await loadEntriesFromCore({
+  await loadEntriesFromSdk({
     entriesUrl: `${apiBase}/entries`,
     assetOrigin: apiBase,
     hostApi: defaultHostApi,

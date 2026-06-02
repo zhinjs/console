@@ -1,6 +1,6 @@
 import * as React from "react";
-import { configureConsole } from "@zhin.js/console-core/browser";
 import {
+  configureConsole,
   createPluginRegisterHostApi,
   fetchConsoleEntries,
   getRegisterFn,

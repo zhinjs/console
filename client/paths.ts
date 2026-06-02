@@ -1,4 +1,4 @@
-import { DEFAULT_CONSOLE_BASE_PATH } from "@zhin.js/console-types";
+import { DEFAULT_CONSOLE_BASE_PATH } from "@zhin.js/contract";
 
 /** Host 插件清单（OpenAPI: GET /entries） */
 export const ENTRIES_PATH = "/entries";

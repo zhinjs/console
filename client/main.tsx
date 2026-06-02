@@ -8,9 +8,9 @@ import * as ReactRouterDOM from "react-router-dom";
 import {
   CONSOLE_HOST_REACT_NAMESPACE_KEY,
   CONSOLE_SHARED_MODULES_KEY,
-} from "@zhin.js/console-types";
-import { BrowserRouter } from "react-router-dom";
+} from "@zhin.js/contract";
 import { destroyWebSocketManager, useWebSocket } from "@zhin.js/client";
+import { BrowserRouter } from "react-router-dom";
 import { getRouterBasename } from "./pagesBase";
 import { ConsoleWebHost } from "./host/ConsoleWebHost";
 import { registerBuiltinConsolePages } from "@console/registerBuiltinShell";
