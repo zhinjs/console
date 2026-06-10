@@ -1,5 +1,14 @@
 const TOKEN_KEY = 'zhin_api_token'
 const API_BASE_KEY = 'zhin_api_base'
+const SAVED_LOGINS_KEY = 'zhin_saved_logins'
+const MAX_SAVED_LOGINS = 20
+
+export interface SavedLogin {
+  apiBase: string
+  token: string
+  savedAt: number
+  lastUsedAt: number
+}
 
 export function getApiBase(): string {
   const stored = localStorage.getItem(API_BASE_KEY)?.trim()
@@ -45,6 +54,57 @@ export function getStoredApiBase(): string | null {
 export function clearSession(): void {
   clearToken()
   clearApiBase()
+}
+
+export function listSavedLogins(): SavedLogin[] {
+  try {
+    const raw = localStorage.getItem(SAVED_LOGINS_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as SavedLogin[]
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .filter((x) => x?.apiBase && x?.token)
+      .sort((a, b) => (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0))
+  } catch {
+    return []
+  }
+}
+
+export function getSavedLogin(apiBase: string): SavedLogin | null {
+  const base = normalizeApiBase(apiBase)
+  return listSavedLogins().find((x) => normalizeApiBase(x.apiBase) === base) ?? null
+}
+
+export function upsertSavedLogin(apiBase: string, token: string): void {
+  const base = normalizeApiBase(apiBase)
+  const trimmed = token.trim().replace(/^Bearer\s+/i, '')
+  if (!base || !trimmed) return
+
+  const now = Date.now()
+  const rest = listSavedLogins().filter((x) => normalizeApiBase(x.apiBase) !== base)
+  const existing = listSavedLogins().find((x) => normalizeApiBase(x.apiBase) === base)
+  rest.unshift({
+    apiBase: base,
+    token: trimmed,
+    savedAt: existing?.savedAt ?? now,
+    lastUsedAt: now,
+  })
+  localStorage.setItem(SAVED_LOGINS_KEY, JSON.stringify(rest.slice(0, MAX_SAVED_LOGINS)))
+}
+
+export function removeSavedLogin(apiBase: string): void {
+  const base = normalizeApiBase(apiBase)
+  const rest = listSavedLogins().filter((x) => normalizeApiBase(x.apiBase) !== base)
+  localStorage.setItem(SAVED_LOGINS_KEY, JSON.stringify(rest))
+}
+
+export function touchSavedLogin(apiBase: string): void {
+  const base = normalizeApiBase(apiBase)
+  const list = listSavedLogins()
+  const idx = list.findIndex((x) => normalizeApiBase(x.apiBase) === base)
+  if (idx < 0) return
+  list[idx] = { ...list[idx], lastUsedAt: Date.now() }
+  localStorage.setItem(SAVED_LOGINS_KEY, JSON.stringify(list))
 }
 
 /**
