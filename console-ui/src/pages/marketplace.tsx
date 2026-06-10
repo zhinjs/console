@@ -169,7 +169,7 @@ export default function MarketplacePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">插件市场</h1>
+          <h1 className="text-2xl font-bold tracking-tight">市场</h1>
           <p className="text-sm text-muted-foreground mt-1">
             探索 Zhin.js 生态中的 {plugins.length} 个插件
           </p>

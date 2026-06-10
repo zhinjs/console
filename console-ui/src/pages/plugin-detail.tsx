@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, AlertCircle, Package, Terminal, Box as IconBox, Layers, Clock, Database, Brain, Wrench, Shield, Settings, Plug, Server, type LucideIcon } from 'lucide-react'
+import { ArrowLeft, AlertCircle, Package, Settings, Terminal, Box as IconBox, Layers, Clock, Database, Brain, Wrench, Shield, Plug, Server, type LucideIcon } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { apiFetch } from '../utils/auth'
-import { PluginConfigForm } from '../components/PluginConfigForm'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
@@ -119,8 +119,22 @@ export default function PluginDetailPage() {
         </div>
       </div>
 
-      {/* Config form */}
-      <PluginConfigForm pluginName={plugin.name} onSuccess={() => {}} />
+      <Card className="border-border/80">
+        <CardContent className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
+          <div className="space-y-1">
+            <p className="text-sm font-medium">插件配置</p>
+            <p className="text-xs text-muted-foreground">
+              在配置页统一编辑本插件，支持表单校验与保存后热重载。
+            </p>
+          </div>
+          <Button variant="outline" size="sm" asChild>
+            <Link to={`/config?plugin=${encodeURIComponent(plugin.name)}`}>
+              <Settings className="w-4 h-4 mr-1" />
+              编辑配置
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       <Separator />
 

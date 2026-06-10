@@ -10,6 +10,8 @@ import {
   CONSOLE_SHARED_MODULES_KEY,
 } from "@zhin.js/contract";
 import { destroyWebSocketManager, useWebSocket } from "@zhin.js/client";
+import { setupConsoleSseBridge } from "@console/utils/sse-bridge";
+import { registerOptionalConsoleRoutes } from "@console/registerOptionalRoutes";
 import { BrowserRouter } from "react-router-dom";
 import { getRouterBasename } from "./pagesBase";
 import { ConsoleWebHost } from "./host/ConsoleWebHost";
@@ -46,6 +48,11 @@ const initialSession = runQueryPrefillMiddleware();
 
 function ConsoleShell() {
   useWebSocket();
+
+  React.useEffect(() => {
+    setupConsoleSseBridge();
+    void registerOptionalConsoleRoutes();
+  }, []);
 
   return <ConsoleWebHost />;
 }

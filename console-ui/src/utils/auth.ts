@@ -109,6 +109,28 @@ export type VerifyCredentialsResult =
   | { ok: true }
   | { ok: false; message: string; status?: number }
 
+export type ProbeHealthResult =
+  | { ok: true }
+  | { ok: false; message: string }
+
+/** 登录前探测 Host 连通性（无需 Token） */
+export async function probeHealth(apiBase: string): Promise<ProbeHealthResult> {
+  const base = apiBase.trim().replace(/\/$/, '')
+  if (!base) {
+    return { ok: false, message: '请填写 API Base URL' }
+  }
+  try {
+    const res = await fetch(`${base}/pub/health`)
+    if (res.ok) return { ok: true }
+    return { ok: false, message: `Host 健康检查失败 (HTTP ${res.status})` }
+  } catch {
+    return {
+      ok: false,
+      message: '无法连接 Host，请确认地址正确、服务已启动，且 CORS 已包含当前 Console 来源',
+    }
+  }
+}
+
 /** 校验 Host API Base + Token，成功则写入 localStorage */
 export async function verifyAndStoreCredentials(
   apiBase: string,
@@ -124,6 +146,11 @@ export async function verifyAndStoreCredentials(
   }
 
   try {
+    const health = await probeHealth(base)
+    if (!health.ok) {
+      return { ok: false, message: health.message }
+    }
+
     const res = await fetch(`${base}/api/system/status`, {
       headers: { Authorization: `Bearer ${trimmed}` },
     })

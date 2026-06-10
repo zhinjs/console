@@ -10,7 +10,7 @@ import { ScrollArea } from "../components/ui/scroll-area"
 import { Separator } from "../components/ui/separator"
 import { clearToken } from "../utils/auth"
 
-const GROUP_ORDER = ["系统", "扩展", "配置与数据", "其他"] as const
+const GROUP_ORDER = ["系统", "机器人", "命令与 Agent", "扩展", "配置与数据", "其他"] as const
 
 function SidebarMenuIcon({ icon }: { icon?: React.ReactNode | string }) {
   if (icon == null) return null

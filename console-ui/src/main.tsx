@@ -10,6 +10,8 @@ import { registerBuiltinConsolePages } from './registerBuiltinShell'
 import LoginPage from './pages/login'
 import DashboardLayout from './layouts/dashboard'
 import { hasToken } from './utils/auth'
+import { setupConsoleSseBridge } from './utils/sse-bridge'
+import { registerOptionalConsoleRoutes } from './registerOptionalRoutes'
 import './style.css'
 import { initializeTheme } from './theme'
 import { TooltipProvider } from './components/ui/tooltip'
@@ -45,6 +47,8 @@ function ConsoleShell() {
   useWebSocket()
 
   React.useEffect(() => {
+    setupConsoleSseBridge()
+    void registerOptionalConsoleRoutes()
     registerBuiltinConsolePages()
     loadConsoleEntries()
       .then(() => React.startTransition(() => setReady(true)))

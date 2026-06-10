@@ -17,7 +17,9 @@ import {
   Video,
   Wifi,
   WifiOff,
+  GitBranch,
 } from 'lucide-react'
+import { agentSessionsPath, buildSessionKey } from '../../utils/agent-session'
 import { cn } from '@zhin.js/client'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -198,7 +200,16 @@ export default function BotDetailPage() {
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           )}
-          {!listLoading && listErr && <p className="text-xs text-muted-foreground px-2 py-1">{listErr}</p>}
+          {!listLoading && listErr && (
+            <p
+              className={cn(
+                'text-xs px-2 py-1',
+                filteredChannels.length === 0 ? 'text-destructive' : 'text-muted-foreground',
+              )}
+            >
+              {listErr}
+            </p>
+          )}
           {filteredChannels.length === 0 && !listLoading && !listErr && (
             <p className="text-xs text-muted-foreground px-2 py-4 text-center">
               {listSearch.trim() ? `无匹配「${listSearch.trim()}」` : '暂无会话'}
@@ -318,6 +329,21 @@ export default function BotDetailPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    title="打开对话分支"
+                    asChild
+                  >
+                    <Link
+                      to={agentSessionsPath(
+                        buildSessionKey(adapter, botId, selection.channelType, selection.id),
+                      )}
+                    >
+                      <GitBranch className="h-4 w-4" />
+                    </Link>
+                  </Button>
                   {selection.channelType === 'private' && (
                     <Button
                       variant="ghost"

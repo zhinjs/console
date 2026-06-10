@@ -43,7 +43,12 @@ export default function HomePage() {
   useEffect(() => {
     fetchData()
     const interval = setInterval(fetchData, 5000)
-    return () => clearInterval(interval)
+    const onDataUpdate = () => { fetchData() }
+    window.addEventListener('zhin-console-data-update', onDataUpdate)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('zhin-console-data-update', onDataUpdate)
+    }
   }, [])
 
   const fetchData = async () => {
@@ -115,7 +120,7 @@ export default function HomePage() {
     <div className="space-y-6">
       {/* Page header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">系统概览</h1>
+        <h1 className="text-2xl font-bold tracking-tight">概览</h1>
         <p className="text-muted-foreground">实时监控您的机器人框架运行状态</p>
       </div>
 
@@ -226,8 +231,8 @@ export default function HomePage() {
             <Button variant="outline" className="h-auto p-4 justify-start" onClick={() => navigate('/plugins')}>
               <div className="flex flex-col items-start gap-1">
                 <Package className="h-5 w-5 mb-1" />
-                <span className="font-medium">插件管理</span>
-                <span className="text-xs text-muted-foreground">查看和管理插件</span>
+                <span className="font-medium">插件</span>
+                <span className="text-xs text-muted-foreground">查看已安装插件</span>
               </div>
             </Button>
             <Button variant="outline" className="h-auto p-4 justify-start" onClick={() => navigate('/bots')}>
@@ -240,7 +245,7 @@ export default function HomePage() {
             <Button variant="outline" className="h-auto p-4 justify-start" onClick={() => navigate('/logs')}>
               <div className="flex flex-col items-start gap-1">
                 <FileText className="h-5 w-5 mb-1" />
-                <span className="font-medium">系统日志</span>
+                <span className="font-medium">日志</span>
                 <span className="text-xs text-muted-foreground">查看运行日志</span>
               </div>
             </Button>

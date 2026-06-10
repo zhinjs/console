@@ -83,6 +83,23 @@ export default function LogsPage() {
     } catch (err) { console.error('Failed to fetch stats:', err) }
   }
 
+  const handleClearAll = async () => {
+    if (!confirm('确定清空全部日志吗？此操作不可撤销。')) return
+    try {
+      const res = await apiFetch('/api/logs', { method: 'DELETE' })
+      if (!res.ok) throw new Error('清空失败')
+      const data = await res.json()
+      if (data.success) {
+        setLogs([])
+        fetchStats()
+      } else {
+        throw new Error(data.error ?? '清空失败')
+      }
+    } catch (err) {
+      alert((err as Error).message)
+    }
+  }
+
   const handleCleanup = async (days?: number, maxRecords?: number) => {
     const message = days ? `确定清理 ${days} 天前的日志吗？` : `确定只保留最近 ${maxRecords} 条日志吗？`
     if (!confirm(message)) return
@@ -129,7 +146,7 @@ export default function LogsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="系统日志"
+        title="日志"
         description="实时查看与筛选系统运行日志；支持按级别与关键字过滤。"
       />
 
@@ -199,7 +216,10 @@ export default function LogsPage() {
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="destructive" size="sm" onClick={() => handleClearAll()}>
+              <Trash2 className="w-3.5 h-3.5 mr-1" />清空全部
+            </Button>
             <Button variant="outline" size="sm" onClick={() => handleCleanup(7)}>
               <Trash2 className="w-3.5 h-3.5 mr-1" />清理7天前
             </Button>

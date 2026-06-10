@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useConfigYaml } from '@zhin.js/client'
+import { PluginConfigForm } from '../components/PluginConfigForm'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import {
   Settings, AlertCircle, CheckCircle, Save, Loader2, X,
@@ -259,7 +261,10 @@ function ConfigFieldEditor({
 }
 
 export default function ConfigPage() {
+  const [searchParams] = useSearchParams()
+  const pluginFromUrl = searchParams.get('plugin')?.trim() ?? ''
   const { yaml, pluginKeys, loading, error, load, save } = useConfigYaml()
+  const [activeSection, setActiveSection] = useState<string>('general')
   const [mode, setMode] = useState<'form' | 'yaml'>('form')
   const [yamlText, setYamlText] = useState('')
   const [yamlDirty, setYamlDirty] = useState(false)
@@ -323,10 +328,25 @@ export default function ConfigPage() {
     }
   }
 
+  useEffect(() => {
+    if (!pluginFromUrl || loading) return
+    if (pluginKeys.includes(pluginFromUrl)) {
+      setActiveSection(`plugin:${pluginFromUrl}`)
+    }
+  }, [pluginFromUrl, pluginKeys, loading])
+
+  useEffect(() => {
+    const onConfigUpdated = () => {
+      void load().then(() => showMessage('success', '配置已更新（SSE）'))
+    }
+    window.addEventListener('zhin-console-config-updated', onConfigUpdated)
+    return () => window.removeEventListener('zhin-console-config-updated', onConfigUpdated)
+  }, [load, showMessage])
+
   if (loading && !yaml) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold tracking-tight">配置管理</h1>
+        <h1 className="text-2xl font-bold tracking-tight">配置</h1>
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           <span className="ml-2 text-sm text-muted-foreground">加载配置中...</span>
@@ -339,9 +359,9 @@ export default function ConfigPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">配置管理</h1>
+          <h1 className="text-2xl font-bold tracking-tight">配置</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            管理 zhin.config.yml 中的通用配置项（不含插件配置）
+            编辑 Host 通用项与各插件配置；插件项保存后可热重载，YAML 全量保存需重启
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -368,51 +388,67 @@ export default function ConfigPage() {
         </Alert>
       )}
 
-      <Tabs value={mode} onValueChange={v => setMode(v as 'form' | 'yaml')}>
-        <TabsList>
-          <TabsTrigger value="form" className="gap-1.5">
-            <FormInput className="w-4 h-4" />
-            表单模式
-          </TabsTrigger>
+      <Tabs value={activeSection} onValueChange={setActiveSection}>
+        <TabsList className="flex flex-wrap h-auto gap-1">
+          <TabsTrigger value="general">通用配置</TabsTrigger>
+          {pluginKeys.map((key) => (
+            <TabsTrigger key={key} value={`plugin:${key}`}>
+              {key}
+            </TabsTrigger>
+          ))}
           <TabsTrigger value="yaml" className="gap-1.5">
             <FileCode className="w-4 h-4" />
-            YAML 模式
+            YAML 全量
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="form">
-          <GeneralConfigForm
-            config={parsedConfig}
-            pluginKeys={pluginKeys}
-            onSave={handleFormSave}
-            saving={saving}
-          />
+        <TabsContent value="general" className="mt-4">
+          <Tabs value={mode} onValueChange={v => setMode(v as 'form' | 'yaml')}>
+            <TabsList>
+              <TabsTrigger value="form" className="gap-1.5">
+                <FormInput className="w-4 h-4" />
+                表单
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="form" className="mt-4">
+              <GeneralConfigForm
+                config={parsedConfig}
+                pluginKeys={pluginKeys}
+                onSave={handleFormSave}
+                saving={saving}
+              />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
-        <TabsContent value="yaml">
-          <div className="space-y-3">
-            <div className="relative">
-              <Textarea
-                value={yamlText}
-                onChange={e => { setYamlText(e.target.value); setYamlDirty(true) }}
-                className="font-mono text-sm min-h-[400px] resize-y"
-                placeholder="# zhin.config.yml"
-                spellCheck={false}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Button size="sm" onClick={handleYamlSave} disabled={saving || !yamlDirty}>
-                {saving
-                  ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />保存中...</>
-                  : <><Save className="w-4 h-4 mr-1" />保存</>}
+        {pluginKeys.map((key) => (
+          <TabsContent key={key} value={`plugin:${key}`} className="mt-4">
+            <PluginConfigForm pluginName={key} onSuccess={() => void load()} />
+          </TabsContent>
+        ))}
+
+        <TabsContent value="yaml" className="mt-4 space-y-3">
+          <div className="relative">
+            <Textarea
+              value={yamlText}
+              onChange={e => { setYamlText(e.target.value); setYamlDirty(true) }}
+              className="font-mono text-sm min-h-[400px] resize-y"
+              placeholder="# zhin.config.yml"
+              spellCheck={false}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={handleYamlSave} disabled={saving || !yamlDirty}>
+              {saving
+                ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />保存中...</>
+                : <><Save className="w-4 h-4 mr-1" />保存</>}
+            </Button>
+            {yamlDirty && (
+              <Button variant="outline" size="sm" onClick={() => { setYamlText(yaml); setYamlDirty(false) }}>
+                <X className="w-4 h-4 mr-1" />撤销
               </Button>
-              {yamlDirty && (
-                <Button variant="outline" size="sm" onClick={() => { setYamlText(yaml); setYamlDirty(false) }}>
-                  <X className="w-4 h-4 mr-1" />撤销
-                </Button>
-              )}
-              {yamlDirty && <span className="text-xs text-muted-foreground">有未保存的更改</span>}
-            </div>
+            )}
+            {yamlDirty && <span className="text-xs text-muted-foreground">有未保存的更改（YAML 保存需重启生效）</span>}
           </div>
         </TabsContent>
       </Tabs>

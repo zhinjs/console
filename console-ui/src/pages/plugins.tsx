@@ -95,7 +95,7 @@ export default function PluginsPage() {
     <div className="space-y-4">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">插件管理</h1>
+        <h1 className="text-2xl font-bold tracking-tight">插件</h1>
         <div className="flex items-center gap-2 mt-1">
           <span className="text-sm text-muted-foreground">共 {plugins.length} 个插件</span>
           <Badge variant="success">{plugins.filter(p => p.status === 'active').length}</Badge>

@@ -20,6 +20,8 @@ import {
   parseComposerToSegments,
   type MessageContent,
 } from '../../utils/parseComposerContent'
+import { listInboxCache } from '../../utils/inbox-cache'
+import { adapterListHint, isIcqqAdapter } from '../../utils/bot-adapter'
 
 export function useBotConsole() {
   const { adapter: adapterParam, botId: botIdParam } = useParams<{
@@ -97,40 +99,162 @@ export function useBotConsole() {
     return () => clearInterval(t)
   }, [loadInfo])
 
+  const loadChannelsFromInbox = useCallback(async (): Promise<
+    Array<{ id: string; name: string; channelType: 'private' | 'group' | 'channel' }>
+  > => {
+    const byKey = new Map<
+      string,
+      { id: string; name: string; channelType: 'private' | 'group' | 'channel'; ts: number }
+    >()
+    const upsert = (
+      channelType: string,
+      channelId: string,
+      name: string | null | undefined,
+      ts: number,
+    ) => {
+      if (channelType !== 'private' && channelType !== 'group' && channelType !== 'channel') return
+      const scope = channelType as 'private' | 'group' | 'channel'
+      const key = `${scope}:${channelId}`
+      const prev = byKey.get(key)
+      const safeTs = Number(ts) || 0
+      const label = name?.trim() || String(channelId)
+      if (!prev || safeTs > prev.ts) {
+        byKey.set(key, { id: String(channelId), name: label, channelType: scope, ts: safeTs })
+      }
+    }
+
+    try {
+      const result = await sendRequest<{
+        rows: Array<{
+          channel_id: string
+          channel_type: string
+          sender_name: string | null
+          created_at: number
+        }>
+      }>({
+        type: 'db:select',
+        table: 'unified_inbox_message',
+        page: 1,
+        pageSize: 200,
+        where: { adapter, bot_id: botId },
+      })
+      for (const row of result.rows ?? []) {
+        upsert(row.channel_type, String(row.channel_id), row.sender_name, row.created_at)
+      }
+    } catch {
+      // 收件箱 DB 不可用时继续尝试本地缓存
+    }
+
+    if (byKey.size === 0) {
+      const cached = await listInboxCache(adapter, botId, 'message')
+      for (const rec of cached) {
+        const d = rec.payload
+        const channelId = String(d.channelId ?? d.channel_id ?? '')
+        const channelType = String(d.channelType ?? d.channel_type ?? 'private')
+        const sender = d.sender as { name?: string } | undefined
+        const name = sender?.name ?? (d.sender_name as string | undefined)
+        upsert(channelType, channelId, name, Number(d.timestamp ?? rec.updatedAt))
+      }
+    }
+
+    return [...byKey.values()]
+      .sort((a, b) => b.ts - a.ts)
+      .map(({ id, name, channelType }) => ({ id, name, channelType }))
+  }, [adapter, botId, sendRequest])
+
   const loadLists = useCallback(async () => {
     if (!adapter || !botId || !connected) return
     setListLoading(true)
     setListErr(null)
+    const errors: string[] = []
+    let nextFriends: typeof friends = []
+    let nextGroups: typeof groups = []
+    let nextChannels: Array<{ id: string; name: string }> = []
+    let usedInboxFallback = false
+
     try {
-      if (adapter === 'icqq') {
-        const f = await sendRequest<{ friends: typeof friends }>({
-          type: 'bot:friends',
-          data: { adapter, botId },
-        }).catch(() => ({ friends: [] }))
-        const g = await sendRequest<{ groups: typeof groups }>({
-          type: 'bot:groups',
-          data: { adapter, botId },
-        }).catch(() => ({ groups: [] }))
-        setFriends(f.friends || [])
-        setGroups(g.groups || [])
-        setChannelList([])
+      const tryFriendsGroups = isIcqqAdapter(adapter) || adapter === 'napcat'
+      if (tryFriendsGroups) {
+        try {
+          const f = await sendRequest<{ friends: typeof friends }>({
+            type: 'bot:friends',
+            data: { adapter, botId },
+          })
+          nextFriends = f.friends || []
+        } catch (e) {
+          errors.push(`好友列表：${(e as Error).message}`)
+        }
+        try {
+          const g = await sendRequest<{ groups: typeof groups }>({
+            type: 'bot:groups',
+            data: { adapter, botId },
+          })
+          nextGroups = g.groups || []
+        } catch (e) {
+          errors.push(`群列表：${(e as Error).message}`)
+        }
       } else {
-        setFriends([])
-        setGroups([])
-        const ch = await sendRequest<{ channels?: Array<{ id: string; name: string }> }>({
-          type: 'bot:channels',
-          data: { adapter, botId },
-        }).catch((): { channels?: Array<{ id: string; name: string }> } => ({}))
-        const list = ch.channels ?? []
-        setChannelList(list)
-        if (!list.length) setListErr('当前适配器暂不支持好友/群/频道列表')
+        try {
+          const ch = await sendRequest<{ channels?: Array<{ id: string; name: string }> }>({
+            type: 'bot:channels',
+            data: { adapter, botId },
+          })
+          nextChannels = ch.channels ?? []
+        } catch (e) {
+          errors.push(`频道列表：${(e as Error).message}`)
+        }
+      }
+
+      const primaryEmpty =
+        nextFriends.length === 0 && nextGroups.length === 0 && nextChannels.length === 0
+      if (primaryEmpty) {
+        const inboxChannels = await loadChannelsFromInbox()
+        if (inboxChannels.length > 0) {
+          usedInboxFallback = true
+          nextFriends = inboxChannels
+            .filter((c) => c.channelType === 'private')
+            .map((c) => ({
+              user_id: Number(c.id) || 0,
+              nickname: c.name,
+              remark: '',
+            }))
+          nextGroups = inboxChannels
+            .filter((c) => c.channelType === 'group')
+            .map((c) => ({
+              group_id: Number(c.id) || 0,
+              name: c.name,
+            }))
+          nextChannels = inboxChannels
+            .filter((c) => c.channelType === 'channel')
+            .map((c) => ({ id: c.id, name: c.name }))
+        }
+      }
+
+      setFriends(nextFriends)
+      setGroups(nextGroups)
+      setChannelList(nextChannels)
+
+      const total = nextFriends.length + nextGroups.length + nextChannels.length
+      if (total === 0) {
+        const hint = adapterListHint(adapter)
+        if (errors.length) {
+          setListErr(`${errors.join('；')}。${hint}`)
+        } else if (!info?.connected) {
+          setListErr(`机器人未在线。${hint}`)
+        } else {
+          setListErr(`暂无会话。${hint}`)
+        }
+      } else if (usedInboxFallback) {
+        setListErr('已从收件箱历史恢复最近会话（主列表接口未返回数据）')
+      } else if (errors.length) {
+        setListErr(errors.join('；'))
       }
     } catch (e) {
       setListErr((e as Error).message)
     } finally {
       setListLoading(false)
     }
-  }, [adapter, botId, connected, sendRequest])
+  }, [adapter, botId, connected, sendRequest, loadChannelsFromInbox, info?.connected])
 
   useEffect(() => {
     if (connected) loadLists()
@@ -263,6 +387,129 @@ export function useBotConsole() {
   useEffect(() => {
     loadRequestsFromServer()
   }, [loadRequestsFromServer])
+
+  useEffect(() => {
+    if (!adapter || !botId) return
+    void (async () => {
+      const [cachedRequests, cachedNotices, cachedMessages] = await Promise.all([
+        listInboxCache(adapter, botId, 'request'),
+        listInboxCache(adapter, botId, 'notice'),
+        listInboxCache(adapter, botId, 'message'),
+      ])
+
+      if (cachedRequests.length) {
+        setRequests((prev) => {
+          const m = new Map(prev)
+          for (const rec of cachedRequests) {
+            const d = rec.payload
+            const id = d.id as number
+            if (id == null) continue
+            m.set(id, {
+              id,
+              platformRequestId: String(d.platformRequestId ?? ''),
+              type: String(d.type ?? ''),
+              sender: (d.sender as ReqItem['sender']) ?? { id: '', name: '' },
+              comment: String(d.comment ?? ''),
+              channel: (d.channel as ReqItem['channel']) ?? { id: '', type: 'private' },
+              timestamp: Number(d.timestamp ?? rec.updatedAt),
+              canAct: d.canAct === true,
+            })
+          }
+          return m
+        })
+      }
+
+      if (cachedNotices.length) {
+        setNotices((prev) => {
+          const m = new Map(prev)
+          for (const rec of cachedNotices) {
+            const d = rec.payload
+            const id = d.id as number
+            if (id == null) continue
+            m.set(id, {
+              id,
+              noticeType: String(d.noticeType ?? ''),
+              channel: (d.channel as NoticeItem['channel']) ?? { id: '', type: 'private' },
+              payload: String(d.payload ?? '{}'),
+              timestamp: Number(d.timestamp ?? rec.updatedAt),
+            })
+          }
+          return m
+        })
+      }
+
+      if (cachedRequests.length) {
+        setInboxRequests((prev) => {
+          if (prev.length) return prev
+          return cachedRequests.map((rec, idx) => {
+            const d = rec.payload
+            return {
+              id: Number(d.id ?? idx),
+              platform_request_id: String(d.platform_request_id ?? d.platformRequestId ?? ''),
+              type: String(d.type ?? ''),
+              sub_type: d.sub_type != null ? String(d.sub_type) : null,
+              channel_id: String(d.channel_id ?? d.channelId ?? ''),
+              channel_type: String(d.channel_type ?? d.channelType ?? 'private'),
+              sender_id: String(d.sender_id ?? ''),
+              sender_name: d.sender_name != null ? String(d.sender_name) : null,
+              comment: d.comment != null ? String(d.comment) : null,
+              created_at: Number(d.created_at ?? rec.updatedAt),
+              resolved: Number(d.resolved ?? 0),
+              resolved_at: d.resolved_at != null ? Number(d.resolved_at) : null,
+            } satisfies InboxRequestRow
+          })
+        })
+        setInboxRequestsEnabled(true)
+      }
+
+      if (cachedNotices.length) {
+        setInboxNotices((prev) => {
+          if (prev.length) return prev
+          return cachedNotices.map((rec, idx) => {
+            const d = rec.payload
+            return {
+              id: Number(d.id ?? idx),
+              platform_notice_id: String(d.platform_notice_id ?? ''),
+              type: String(d.type ?? d.noticeType ?? ''),
+              sub_type: d.sub_type != null ? String(d.sub_type) : null,
+              channel_id: String(d.channel_id ?? ''),
+              channel_type: String(d.channel_type ?? 'private'),
+              operator_id: d.operator_id != null ? String(d.operator_id) : null,
+              operator_name: d.operator_name != null ? String(d.operator_name) : null,
+              target_id: d.target_id != null ? String(d.target_id) : null,
+              target_name: d.target_name != null ? String(d.target_name) : null,
+              payload: String(d.payload ?? '{}'),
+              created_at: Number(d.created_at ?? rec.updatedAt),
+            } satisfies InboxNoticeRow
+          })
+        })
+        setInboxNoticesEnabled(true)
+      }
+
+      if (cachedMessages.length) {
+        setReceivedMessages((prev) => {
+          const seen = new Set(prev.map((m) => m.id))
+          const fromCache = cachedMessages
+            .map((rec) => {
+              const d = rec.payload
+              const channelId = String(d.channelId ?? d.channel_id ?? '')
+              const channelType = String(d.channelType ?? d.channel_type ?? 'private')
+              const content = normalizeInboundContent(d.content) as ReceivedMessage['content']
+              return {
+                id: `cache-${rec.id}`,
+                channelId,
+                channelType,
+                sender: (d.sender as ReceivedMessage['sender']) ?? { id: '', name: '' },
+                content,
+                timestamp: Number(d.timestamp ?? rec.updatedAt),
+              }
+            })
+            .filter((m) => !seen.has(m.id))
+          return [...prev, ...fromCache]
+        })
+      }
+    })()
+  }, [adapter, botId])
 
   useEffect(() => {
     if (selection?.type === 'channel') {

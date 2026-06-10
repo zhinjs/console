@@ -18,7 +18,7 @@ export default function FileManagePage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">文件管理</h1>
+          <h1 className="text-2xl font-bold tracking-tight">项目文件</h1>
           <p className="text-sm text-muted-foreground mt-1">
             浏览和编辑工作空间中的配置文件和源代码
           </p>

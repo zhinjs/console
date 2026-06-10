@@ -28,7 +28,7 @@ export default function DatabasePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="数据库管理"
+        title="数据库"
         description={`浏览和管理 ${DB_TYPE_LABELS[dbType]} 中的数据；左栏选择对象，右侧查看与编辑。`}
         actions={
           <div className="flex items-center gap-2">

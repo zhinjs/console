@@ -27,7 +27,7 @@ export default function BotManagePage() {
   const fetchBots = useCallback(async () => {
     if (!connected) {
       setLoading(false)
-      setError('WebSocket 未连接，请刷新页面')
+      setError('实时连接未就绪，请刷新页面')
       return
     }
     try {
@@ -80,7 +80,7 @@ export default function BotManagePage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">机器人管理</h1>
+          <h1 className="text-2xl font-bold tracking-tight">机器人</h1>
           <div className="flex items-center gap-2 mt-1">
             <span className="text-sm text-muted-foreground">共 {bots.length} 个机器人，</span>
             <Badge variant="success">{bots.filter(b => b.connected).length}</Badge>

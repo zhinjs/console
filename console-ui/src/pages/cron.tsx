@@ -67,7 +67,7 @@ export default function CronPage() {
   const fetchCrons = useCallback(async () => {
     if (!connected) {
       setLoading(false)
-      setError('WebSocket 未连接，请刷新页面')
+      setError('实时连接未就绪，请刷新页面')
       return
     }
     try {
