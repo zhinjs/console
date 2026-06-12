@@ -6,7 +6,7 @@ declare global {
 
 const SHELL_ROUTE_NAMES = new Set([
   "dashboard",
-  "bots",
+  "endpoints",
   "logs",
   "plugins",
   "marketplace",

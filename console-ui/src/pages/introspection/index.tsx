@@ -11,14 +11,14 @@ import { Skeleton } from '../../components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs'
 import { cn } from '@zhin.js/client'
 
-export type IntrospectionTab = 'commands' | 'bots' | 'bindings' | 'tools' | 'mcp'
+export type IntrospectionTab = 'commands' | 'endpoints' | 'bindings' | 'tools' | 'mcp'
 
 const TAB_CONFIG: Record<
   IntrospectionTab,
   { label: string; path: string; defaultPageSize: number; icon: typeof Terminal }
 > = {
   commands: { label: '命令', path: '/api/introspection/commands', defaultPageSize: 25, icon: Terminal },
-  bots: { label: '机器人', path: '/api/introspection/bots', defaultPageSize: 30, icon: Bot },
+  endpoints: { label: '机器人', path: '/api/introspection/endpoints', defaultPageSize: 30, icon: Bot },
   bindings: { label: 'Agent 绑定', path: '/api/introspection/bindings', defaultPageSize: 30, icon: Link2 },
   tools: { label: '工具', path: '/api/introspection/tools', defaultPageSize: 15, icon: Wrench },
   mcp: { label: 'MCP 服务', path: '/api/introspection/mcp', defaultPageSize: 30, icon: Server },
@@ -37,12 +37,12 @@ interface IntrospectionEnvelope<T> {
 }
 
 interface CommandItem { pattern: string; desc: string; plugin?: string }
-interface BotItem { adapter: string; name: string; online: boolean }
+interface EndpointItem { adapter: string; name: string; online: boolean }
 interface BindingItem { name: string; provider: string; model: string; mcpServers: string[]; hasAgentFile: boolean }
 interface ToolItem { name: string; description: string; source?: string }
 interface McpItem { name: string; connected: boolean; toolCount: number }
 
-type AnyItem = CommandItem | BotItem | BindingItem | ToolItem | McpItem
+type AnyItem = CommandItem | EndpointItem | BindingItem | ToolItem | McpItem
 
 function parseTab(raw: string | null): IntrospectionTab {
   if (raw && VALID_TABS.has(raw)) return raw as IntrospectionTab
@@ -72,7 +72,7 @@ function getColumns(tab: IntrospectionTab): { key: string; label: string }[] {
         { key: 'desc', label: 'desc' },
         { key: 'plugin', label: 'plugin' },
       ]
-    case 'bots':
+    case 'endpoints':
       return [
         { key: 'adapter', label: 'adapter' },
         { key: 'name', label: 'name' },
@@ -278,7 +278,7 @@ export default function IntrospectionPage() {
                   「绑定名称」是 Agent 配置名（如 default），不是对话 sessionKey。查看对话分支请从
                   <strong className="mx-1">机器人 → 私聊/群聊</strong>
                   进入，sessionKey 格式为
-                  <code className="mx-1 text-xs">platform:botId:scope:sceneId</code>
+                  <code className="mx-1 text-xs">platform:endpointId:scope:sceneId</code>
                   （例：<code className="text-xs">icqq:75318:private:userA</code>）。
                 </AlertDescription>
               </Alert>

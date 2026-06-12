@@ -28,12 +28,12 @@ import { Badge } from '../../components/ui/badge'
 import { Alert, AlertDescription } from '../../components/ui/alert'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs'
 import { MessageBody } from './MessageBody'
-import { useBotConsole } from './useBotConsole'
+import { useEndpointConsole } from './useEndpointConsole'
 import { hasRenderableComposerSegments, parseComposerToSegments } from '../../utils/parseComposerContent'
 import { dayKey, dayLabel } from './date-utils'
 
-export default function BotDetailPage() {
-  const ctx = useBotConsole()
+export default function EndpointDetailPage() {
+  const ctx = useEndpointConsole()
 
   if (!ctx.valid) {
     return (
@@ -47,7 +47,7 @@ export default function BotDetailPage() {
 
   const {
     adapter,
-    botId,
+    endpointId,
     connected,
     info,
     loadErr,
@@ -150,14 +150,14 @@ export default function BotDetailPage() {
         <div className="p-3 border-b border-border/60">
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" asChild>
-              <Link to="/bots">
+              <Link to="/endpoints">
                 <ArrowLeft className="h-4 w-4" />
               </Link>
             </Button>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <Bot className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span className="font-semibold truncate text-sm">{info?.name || botId}</span>
+                <span className="font-semibold truncate text-sm">{info?.name || endpointId}</span>
               </div>
               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                 <Badge variant="outline" className="text-[10px] px-1 font-normal">
@@ -338,7 +338,7 @@ export default function BotDetailPage() {
                   >
                     <Link
                       to={agentSessionsPath(
-                        buildSessionKey(adapter, botId, selection.channelType, selection.id),
+                        buildSessionKey(adapter, endpointId, selection.channelType, selection.id),
                       )}
                     >
                       <GitBranch className="h-4 w-4" />
@@ -792,7 +792,7 @@ export default function BotDetailPage() {
                         size="sm"
                         variant="destructive"
                         className="h-7 text-[10px] px-2"
-                        onClick={() => void groupAction('bot:groupKick', uid)}
+                        onClick={() => void groupAction('endpoint:groupKick', uid)}
                       >
                         踢
                       </Button>
@@ -800,7 +800,7 @@ export default function BotDetailPage() {
                         size="sm"
                         variant="outline"
                         className="h-7 text-[10px] px-2"
-                        onClick={() => void groupAction('bot:groupMute', uid)}
+                        onClick={() => void groupAction('endpoint:groupMute', uid)}
                       >
                         禁言
                       </Button>
@@ -808,7 +808,7 @@ export default function BotDetailPage() {
                         size="sm"
                         variant="outline"
                         className="h-7 text-[10px] px-2"
-                        onClick={() => void groupAction('bot:groupAdmin', uid, { enable: true })}
+                        onClick={() => void groupAction('endpoint:groupAdmin', uid, { enable: true })}
                       >
                         管理
                       </Button>

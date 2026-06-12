@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { Hash, MessageSquare, User, Users } from 'lucide-react'
 import { useWebSocket } from '@zhin.js/client'
 import type {
-  BotInfo,
+  EndpointInfo,
   ChatRow,
   InboxMessageRow,
   InboxNoticeRow,
@@ -20,20 +20,20 @@ import {
   parseComposerToSegments,
   type MessageContent,
 } from '../../utils/parseComposerContent'
-import { listInboxCache } from '../../utils/inbox-cache'
-import { adapterListHint, isIcqqAdapter } from '../../utils/bot-adapter'
+import { listInboxCache, putInboxCache } from '../../utils/inbox-cache'
+import { adapterListHint, isIcqqAdapter } from '../../utils/endpoint-adapter'
 
-export function useBotConsole() {
-  const { adapter: adapterParam, botId: botIdParam } = useParams<{
+export function useEndpointConsole() {
+  const { adapter: adapterParam, endpointId: endpointIdParam } = useParams<{
     adapter: string
-    botId: string
+    endpointId: string
   }>()
   const adapter = adapterParam ? decodeURIComponent(adapterParam) : ''
-  const botId = botIdParam ? decodeURIComponent(botIdParam) : ''
-  const valid = Boolean(adapter && botId)
+  const endpointId = endpointIdParam ? decodeURIComponent(endpointIdParam) : ''
+  const valid = Boolean(adapter && endpointId)
 
   const { sendRequest, connected } = useWebSocket()
-  const [info, setInfo] = useState<BotInfo | null>(null)
+  const [info, setInfo] = useState<EndpointInfo | null>(null)
   const [loadErr, setLoadErr] = useState<string | null>(null)
 
   const [msgContent, setMsgContent] = useState('')
@@ -80,18 +80,18 @@ export function useBotConsole() {
   const [noticesTab, setNoticesTab] = useState<'unread' | 'history'>('unread')
 
   const loadInfo = useCallback(async () => {
-    if (!adapter || !botId || !connected) return
+    if (!adapter || !endpointId || !connected) return
     try {
-      const data = await sendRequest<BotInfo>({
-        type: 'bot:info',
-        data: { adapter, botId },
+      const data = await sendRequest<EndpointInfo>({
+        type: 'endpoint:info',
+        data: { adapter, endpointId },
       })
       setInfo(data)
       setLoadErr(null)
     } catch (e) {
       setLoadErr((e as Error).message)
     }
-  }, [adapter, botId, connected, sendRequest])
+  }, [adapter, endpointId, connected, sendRequest])
 
   useEffect(() => {
     loadInfo()
@@ -136,7 +136,7 @@ export function useBotConsole() {
         table: 'unified_inbox_message',
         page: 1,
         pageSize: 200,
-        where: { adapter, bot_id: botId },
+        where: { adapter, endpoint_id: endpointId },
       })
       for (const row of result.rows ?? []) {
         upsert(row.channel_type, String(row.channel_id), row.sender_name, row.created_at)
@@ -146,7 +146,7 @@ export function useBotConsole() {
     }
 
     if (byKey.size === 0) {
-      const cached = await listInboxCache(adapter, botId, 'message')
+      const cached = await listInboxCache(adapter, endpointId, 'message')
       for (const rec of cached) {
         const d = rec.payload
         const channelId = String(d.channelId ?? d.channel_id ?? '')
@@ -160,10 +160,10 @@ export function useBotConsole() {
     return [...byKey.values()]
       .sort((a, b) => b.ts - a.ts)
       .map(({ id, name, channelType }) => ({ id, name, channelType }))
-  }, [adapter, botId, sendRequest])
+  }, [adapter, endpointId, sendRequest])
 
   const loadLists = useCallback(async () => {
-    if (!adapter || !botId || !connected) return
+    if (!adapter || !endpointId || !connected) return
     setListLoading(true)
     setListErr(null)
     const errors: string[] = []
@@ -177,8 +177,8 @@ export function useBotConsole() {
       if (tryFriendsGroups) {
         try {
           const f = await sendRequest<{ friends: typeof friends }>({
-            type: 'bot:friends',
-            data: { adapter, botId },
+            type: 'endpoint:friends',
+            data: { adapter, endpointId },
           })
           nextFriends = f.friends || []
         } catch (e) {
@@ -186,8 +186,8 @@ export function useBotConsole() {
         }
         try {
           const g = await sendRequest<{ groups: typeof groups }>({
-            type: 'bot:groups',
-            data: { adapter, botId },
+            type: 'endpoint:groups',
+            data: { adapter, endpointId },
           })
           nextGroups = g.groups || []
         } catch (e) {
@@ -196,8 +196,8 @@ export function useBotConsole() {
       } else {
         try {
           const ch = await sendRequest<{ channels?: Array<{ id: string; name: string }> }>({
-            type: 'bot:channels',
-            data: { adapter, botId },
+            type: 'endpoint:channels',
+            data: { adapter, endpointId },
           })
           nextChannels = ch.channels ?? []
         } catch (e) {
@@ -254,18 +254,18 @@ export function useBotConsole() {
     } finally {
       setListLoading(false)
     }
-  }, [adapter, botId, connected, sendRequest, loadChannelsFromInbox, info?.connected])
+  }, [adapter, endpointId, connected, sendRequest, loadChannelsFromInbox, info?.connected])
 
   useEffect(() => {
     if (connected) loadLists()
   }, [connected, loadLists])
 
   const loadRequestsFromServer = useCallback(async () => {
-    if (!adapter || !botId || !connected) return
+    if (!adapter || !endpointId || !connected) return
     try {
       const { requests: rows } = await sendRequest<{ requests: ReqItem[] }>({
-        type: 'bot:requests',
-        data: { adapter, botId },
+        type: 'endpoint:requests',
+        data: { adapter, endpointId },
       })
       setRequests((prev) => {
         const m = new Map(prev)
@@ -280,19 +280,19 @@ export function useBotConsole() {
     } catch {
       /* ignore */
     }
-  }, [adapter, botId, connected, sendRequest])
+  }, [adapter, endpointId, connected, sendRequest])
 
   const loadInboxMessages = useCallback(
     async (beforeTs?: number) => {
-      if (!adapter || !botId || selection?.type !== 'channel') return
+      if (!adapter || !endpointId || selection?.type !== 'channel') return
       setInboxMessagesLoading(true)
       const append = beforeTs != null
       try {
         const res = await sendRequest<{ messages: InboxMessageRow[]; inboxEnabled: boolean }>({
-          type: 'bot:inboxMessages',
+          type: 'endpoint:inboxMessages',
           data: {
             adapter,
-            botId,
+            endpointId,
             channelId: selection.id,
             channelType: selection.channelType,
             limit: 50,
@@ -319,18 +319,18 @@ export function useBotConsole() {
         setInboxMessagesLoading(false)
       }
     },
-    [adapter, botId, selection, sendRequest],
+    [adapter, endpointId, selection, sendRequest],
   )
 
   const loadInboxRequests = useCallback(
     async (append: boolean) => {
-      if (!adapter || !botId) return
+      if (!adapter || !endpointId) return
       setInboxRequestsLoading(true)
       try {
         const offset = append ? inboxRequestsOffset : 0
         const res = await sendRequest<{ requests: InboxRequestRow[]; inboxEnabled: boolean }>({
-          type: 'bot:inboxRequests',
-          data: { adapter, botId, limit: 30, offset },
+          type: 'endpoint:inboxRequests',
+          data: { adapter, endpointId, limit: 30, offset },
         })
         setInboxRequestsEnabled(!!res.inboxEnabled)
         if (!res.inboxEnabled || !res.requests?.length) {
@@ -350,18 +350,18 @@ export function useBotConsole() {
         setInboxRequestsLoading(false)
       }
     },
-    [adapter, botId, inboxRequestsOffset, sendRequest],
+    [adapter, endpointId, inboxRequestsOffset, sendRequest],
   )
 
   const loadInboxNotices = useCallback(
     async (append: boolean) => {
-      if (!adapter || !botId) return
+      if (!adapter || !endpointId) return
       setInboxNoticesLoading(true)
       try {
         const offset = append ? inboxNoticesOffset : 0
         const res = await sendRequest<{ notices: InboxNoticeRow[]; inboxEnabled: boolean }>({
-          type: 'bot:inboxNotices',
-          data: { adapter, botId, limit: 30, offset },
+          type: 'endpoint:inboxNotices',
+          data: { adapter, endpointId, limit: 30, offset },
         })
         setInboxNoticesEnabled(!!res.inboxEnabled)
         if (!res.inboxEnabled || !res.notices?.length) {
@@ -381,7 +381,7 @@ export function useBotConsole() {
         setInboxNoticesLoading(false)
       }
     },
-    [adapter, botId, inboxNoticesOffset, sendRequest],
+    [adapter, endpointId, inboxNoticesOffset, sendRequest],
   )
 
   useEffect(() => {
@@ -389,12 +389,12 @@ export function useBotConsole() {
   }, [loadRequestsFromServer])
 
   useEffect(() => {
-    if (!adapter || !botId) return
+    if (!adapter || !endpointId) return
     void (async () => {
       const [cachedRequests, cachedNotices, cachedMessages] = await Promise.all([
-        listInboxCache(adapter, botId, 'request'),
-        listInboxCache(adapter, botId, 'notice'),
-        listInboxCache(adapter, botId, 'message'),
+        listInboxCache(adapter, endpointId, 'request'),
+        listInboxCache(adapter, endpointId, 'notice'),
+        listInboxCache(adapter, endpointId, 'message'),
       ])
 
       if (cachedRequests.length) {
@@ -509,7 +509,7 @@ export function useBotConsole() {
         })
       }
     })()
-  }, [adapter, botId])
+  }, [adapter, endpointId])
 
   useEffect(() => {
     if (selection?.type === 'channel') {
@@ -526,8 +526,10 @@ export function useBotConsole() {
         data: Record<string, unknown>
       }
       const d = msg.data
-      if (msg.type === 'bot:request') {
-        if (d.adapter === adapter && d.botId === botId) {
+      const pushEndpointId = String(d.endpointId ?? d.botId ?? '')
+      if (msg.type === 'endpoint:request') {
+        if (d.adapter === adapter && pushEndpointId === endpointId) {
+          void putInboxCache(adapter, endpointId, 'request', d)
           setRequests((prev) => {
             const m = new Map(prev)
             m.set(d.id as number, {
@@ -543,8 +545,9 @@ export function useBotConsole() {
             return m
           })
         }
-      } else if (msg.type === 'bot:notice') {
-        if (d.adapter === adapter && d.botId === botId) {
+      } else if (msg.type === 'endpoint:notice') {
+        if (d.adapter === adapter && pushEndpointId === endpointId) {
+          void putInboxCache(adapter, endpointId, 'notice', d)
           setNotices((prev) => {
             const m = new Map(prev)
             m.set(d.id as number, {
@@ -557,8 +560,9 @@ export function useBotConsole() {
             return m
           })
         }
-      } else if (msg.type === 'bot:message') {
-        if (d.adapter === adapter && d.botId === botId) {
+      } else if (msg.type === 'endpoint:message') {
+        if (d.adapter === adapter && pushEndpointId === endpointId) {
+          void putInboxCache(adapter, endpointId, 'message', d)
           const content = normalizeInboundContent(d.content) as ReceivedMessage['content']
           setReceivedMessages((prev) => [
             ...prev,
@@ -576,7 +580,7 @@ export function useBotConsole() {
     }
     window.addEventListener('zhin-console-bot-push', onPush as EventListener)
     return () => window.removeEventListener('zhin-console-bot-push', onPush as EventListener)
-  }, [adapter, botId])
+  }, [adapter, endpointId])
 
   const requestList = useMemo(() => [...requests.values()].sort((a, b) => b.timestamp - a.timestamp), [requests])
   const noticeList = useMemo(() => [...notices.values()].sort((a, b) => b.timestamp - a.timestamp), [notices])
@@ -643,8 +647,8 @@ export function useBotConsole() {
     if (!confirm(`确定删除好友 ${selection.name}？`)) return
     try {
       await sendRequest({
-        type: 'bot:deleteFriend',
-        data: { adapter, botId, userId: selection.id },
+        type: 'endpoint:deleteFriend',
+        data: { adapter, endpointId, userId: selection.id },
       })
       setFriends((prev) => prev.filter((f) => String(f.user_id) !== selection.id))
       setSelection(null)
@@ -662,10 +666,10 @@ export function useBotConsole() {
     setSending(true)
     try {
       await sendRequest({
-        type: 'bot:sendMessage',
+        type: 'endpoint:sendMessage',
         data: {
           adapter,
-          botId,
+          endpointId,
           id: targetId,
           type: msgType,
           content: segments,
@@ -692,8 +696,8 @@ export function useBotConsole() {
   const approve = async (platformRequestId: string, approveIt: boolean) => {
     try {
       await sendRequest({
-        type: approveIt ? 'bot:requestApprove' : 'bot:requestReject',
-        data: { adapter, botId, requestId: platformRequestId },
+        type: approveIt ? 'endpoint:requestApprove' : 'endpoint:requestReject',
+        data: { adapter, endpointId, requestId: platformRequestId },
       })
       const row = requestList.find((r) => r.platformRequestId === platformRequestId)
       if (row) {
@@ -710,7 +714,7 @@ export function useBotConsole() {
 
   const dismissRequest = async (id: number) => {
     try {
-      await sendRequest({ type: 'bot:requestConsumed', data: { id } })
+      await sendRequest({ type: 'endpoint:requestConsumed', data: { id } })
       setRequests((prev) => {
         const m = new Map(prev)
         m.delete(id)
@@ -723,7 +727,7 @@ export function useBotConsole() {
 
   const dismissNotice = async (id: number) => {
     try {
-      await sendRequest({ type: 'bot:noticeConsumed', data: { id } })
+      await sendRequest({ type: 'endpoint:noticeConsumed', data: { id } })
       setNotices((prev) => {
         const m = new Map(prev)
         m.delete(id)
@@ -739,8 +743,8 @@ export function useBotConsole() {
     setMembersLoading(true)
     try {
       const r = await sendRequest<{ members: MemberRow[] }>({
-        type: 'bot:groupMembers',
-        data: { adapter, botId, groupId: selection.id },
+        type: 'endpoint:groupMembers',
+        data: { adapter, endpointId, groupId: selection.id },
       })
       setMembers(r.members || [])
     } catch (e) {
@@ -752,7 +756,7 @@ export function useBotConsole() {
   }
 
   const groupAction = async (
-    type: 'bot:groupKick' | 'bot:groupMute' | 'bot:groupAdmin',
+    type: 'endpoint:groupKick' | 'endpoint:groupMute' | 'endpoint:groupAdmin',
     userId: number | string,
     extra?: { enable?: boolean },
   ) => {
@@ -762,7 +766,7 @@ export function useBotConsole() {
         type,
         data: {
           adapter,
-          botId,
+          endpointId,
           groupId: selection.id,
           userId: String(userId),
           ...extra,
@@ -793,7 +797,7 @@ export function useBotConsole() {
   return {
     valid,
     adapter,
-    botId,
+    endpointId,
     connected,
     info,
     loadErr,

@@ -3,16 +3,16 @@
 export type ImSessionScope = 'private' | 'group' | 'channel'
 
 /**
- * IM 会话 sessionKey，格式：`{platform}:{botId}:{scope}:{sceneId}`
+ * IM 会话 sessionKey，格式：`{platform}:{endpointId}:{scope}:{sceneId}`
  * 例：icqq:75318:private:userA
  */
 export function buildSessionKey(
   platform: string,
-  botId: string,
+  endpointId: string,
   scope: ImSessionScope,
   sceneId: string,
 ): string {
-  return `${platform}:${botId}:${scope}:${sceneId}`
+  return `${platform}:${endpointId}:${scope}:${sceneId}`
 }
 
 export function agentSessionsPath(sessionKey: string): string {

@@ -1,4 +1,4 @@
-/** 适配器能力判断（与 Host bot:* RPC 行为对齐） */
+/** 适配器能力判断（与 Host endpoint:* RPC 行为对齐） */
 
 export function isIcqqAdapter(adapter: string): boolean {
   return adapter === 'icqq' || adapter.endsWith('/icqq') || adapter.includes('adapter-icqq')

@@ -24,6 +24,7 @@ interface MemoryCron {
 
 interface CronJobContext {
   platform?: string
+  endpointId?: string
   botId?: string
   senderId?: string
   sceneId?: string
@@ -41,18 +42,18 @@ interface PersistentCron {
   createdAt: number
 }
 
-interface BotInfo {
+interface EndpointInfo {
   name: string
   adapter: string
   connected: boolean
 }
 
-const EMPTY_CONTEXT: CronJobContext = { platform: '', botId: '', senderId: '', sceneId: '', scope: '' }
+const EMPTY_CONTEXT: CronJobContext = { platform: '', endpointId: '', senderId: '', sceneId: '', scope: '' }
 
 export default function CronPage() {
   const [memoryCrons, setMemoryCrons] = useState<MemoryCron[]>([])
   const [persistentCrons, setPersistentCrons] = useState<PersistentCron[]>([])
-  const [bots, setBots] = useState<BotInfo[]>([])
+  const [endpoints, setEndpoints] = useState<EndpointInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
@@ -74,10 +75,10 @@ export default function CronPage() {
       const data = await sendRequest<{ memory: MemoryCron[]; persistent: PersistentCron[] }>({ type: 'cron:list' })
       setMemoryCrons(data.memory || [])
       setPersistentCrons(data.persistent || [])
-      // Also fetch bots for context selector
+      // Also fetch endpoints for context selector
       try {
-        const botData = await sendRequest<{ bots: BotInfo[] }>({ type: 'bot:list' })
-        setBots(botData.bots || [])
+        const endpointData = await sendRequest<{ endpoints: EndpointInfo[] }>({ type: 'endpoint:list' })
+        setEndpoints(endpointData.endpoints || [])
       } catch { /* ignore */ }
       setError(null)
     } catch (err) {
@@ -101,7 +102,7 @@ export default function CronPage() {
       // Build context, omitting empty fields
       const ctx: CronJobContext = {}
       if (newCron.context.platform) ctx.platform = newCron.context.platform
-      if (newCron.context.botId) ctx.botId = newCron.context.botId
+      if (newCron.context.endpointId) ctx.endpointId = newCron.context.endpointId
       if (newCron.context.senderId) ctx.senderId = newCron.context.senderId
       if (newCron.context.sceneId) ctx.sceneId = newCron.context.sceneId
       if (newCron.context.scope) ctx.scope = newCron.context.scope
@@ -294,7 +295,9 @@ export default function CronPage() {
                           <span className="text-xs font-medium text-muted-foreground block mb-1">执行上下文</span>
                           <div className="bg-muted px-3 py-2 rounded text-xs space-y-1">
                             {job.context.platform && <p><span className="text-muted-foreground">平台:</span> {job.context.platform}</p>}
-                            {job.context.botId && <p><span className="text-muted-foreground">Bot:</span> {job.context.botId}</p>}
+                            {(job.context.endpointId ?? job.context.botId) && (
+                              <p><span className="text-muted-foreground">Endpoint:</span> {job.context.endpointId ?? job.context.botId}</p>
+                            )}
                             {job.context.senderId && <p><span className="text-muted-foreground">发送者:</span> {job.context.senderId}</p>}
                             {job.context.sceneId && <p><span className="text-muted-foreground">场景:</span> {job.context.sceneId}</p>}
                             {job.context.scope && <p><span className="text-muted-foreground">类型:</span> {job.context.scope}</p>}
@@ -433,25 +436,25 @@ export default function CronPage() {
                     value={newCron.context.platform || ''}
                     onChange={(e) => {
                       const platform = e.target.value
-                      setNewCron((p) => ({ ...p, context: { ...p.context, platform, botId: '' } }))
+                      setNewCron((p) => ({ ...p, context: { ...p.context, platform, endpointId: '' } }))
                     }}
                   >
                     <option value="">不指定</option>
-                    {[...new Set(bots.map((b) => b.adapter))].map((adapter) => (
+                    {[...new Set(endpoints.map((b) => b.adapter))].map((adapter) => (
                       <option key={adapter} value={adapter}>{adapter}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Bot</label>
+                  <label className="text-xs text-muted-foreground mb-1 block">Endpoint</label>
                   <select
                     className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    value={newCron.context.botId || ''}
+                    value={newCron.context.endpointId || ''}
                     disabled={!newCron.context.platform}
-                    onChange={(e) => setNewCron((p) => ({ ...p, context: { ...p.context, botId: e.target.value } }))}
+                    onChange={(e) => setNewCron((p) => ({ ...p, context: { ...p.context, endpointId: e.target.value } }))}
                   >
                     <option value="">不指定</option>
-                    {bots
+                    {endpoints
                       .filter((b) => b.adapter === newCron.context.platform)
                       .map((b) => (
                         <option key={b.name} value={b.name}>{b.name}</option>

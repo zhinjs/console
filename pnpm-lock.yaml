@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@zhin.js/client':
-        specifier: ^1.1.0
-        version: 1.1.0(react@19.2.6)
+        specifier: ^2.0.3
+        version: 2.0.3(react@19.2.6)
       '@zhin.js/console-types':
         specifier: ^0.1.1
         version: 0.1.5
@@ -19,7 +19,7 @@ importers:
         version: 1.0.0
       '@zhin.js/host-router':
         specifier: ^0.0.0
-        version: 0.0.0(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
+        version: 0.0.0(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
     devDependencies:
       '@farmfe/cli':
         specifier: ^1.0.5
@@ -1435,16 +1435,13 @@ packages:
   '@zhin.js/ai@1.1.26':
     resolution: {integrity: sha512-a0J7CvpFGacUgnZuQKS+QAJSxaysIrenHWR9lKnCfwuOqpIlL2t1HfdJioOuDeWWiooX5j8E9BGweP9NcSnlng==}
 
-  '@zhin.js/client@1.1.0':
-    resolution: {integrity: sha512-6pktfV4LBeTdLCaXZQNNbP/GDO9DHA3C49ZpI844WxOTdseOIfZ81e+cltn0juJNyqC0MIdZ1kr0GyIhOXVX4Q==}
+  '@zhin.js/client@2.0.3':
+    resolution: {integrity: sha512-sgoYoK+a4Ormc9TByt+PN66Ptn3OPDIPU5cHxucsz1/wSfwQRrIJKY7DomLrLpuqIvc6jMHT+G1QT1Hls/7N4A==}
     peerDependencies:
       react: '>=18'
 
   '@zhin.js/console-core@1.0.4':
     resolution: {integrity: sha512-O3sqdh5YL0vUSk+VVUEv7nEq4WEt80UPVlkCX0cEL8Mw2mqeJPQJG+XcZWPNEzswbTvEwLLlJ/x8RUVns0tqjA==}
-
-  '@zhin.js/console-types@0.1.1':
-    resolution: {integrity: sha512-TxZ6S7ym0G3vgE/Y9mXKvPf5yTIWofIORPSldhAna+sq8yXTHqEB1WhzIwI6GI8VTHsab/551XHAlE+ihCPIeA==}
 
   '@zhin.js/console-types@0.1.5':
     resolution: {integrity: sha512-1Rh/tHFwYgtVz77L+JfIUkyJJSn4HYSz/WN9g/MBB1euND2qGjX7GL7hkL/o/71UYGe0RkdlCmIRhkHu4xhrMQ==}
@@ -1463,6 +1460,9 @@ packages:
 
   '@zhin.js/contract@1.0.0':
     resolution: {integrity: sha512-Xi62Jva0YZbMRWHBco3b6G5sxtrDVD7Ryuo6s9PPkwDmLR4RSyo7RBgSECaMwrXLFWo0Gbd2guFz8ezOKZBj1w==}
+
+  '@zhin.js/contract@1.0.1':
+    resolution: {integrity: sha512-Ly8U3RxSf4kZN++r3f1QhiSNpErLI6/RNY3IsvvSOfDLi849+8xIFBCcPKM5djHb/DLgDnbAXZxUphkCp8DBPQ==}
 
   '@zhin.js/core@1.1.28':
     resolution: {integrity: sha512-Wqp4TrVWGsVkAonWvxDSvBvMvpf2dA1bY083V4bF9rEATS1vF3BOcGtZ9sinXKXw9GboeYe0i2ZJNKgGR+yXxQ==}
@@ -4610,21 +4610,21 @@ snapshots:
 
   '@zeit/schemas@2.36.0': {}
 
-  '@zhin.js/adapter-sandbox@3.0.5(@zhin.js/client@1.1.0(react@19.2.6))(@zhin.js/console@3.0.5(@types/ws@8.18.1)(@zhin.js/agent@0.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)))(@zhin.js/client@1.1.0(react@19.2.6))(@zhin.js/core@1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)))(@zhin.js/http-host@0.1.4)(@zhin.js/http@1.0.79(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)))(koa@3.2.1)(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)))(@zhin.js/core@1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)))(@zhin.js/http-host@0.1.4)(@zhin.js/http@1.0.79(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)))(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))':
+  '@zhin.js/adapter-sandbox@3.0.5(@zhin.js/client@2.0.3(react@19.2.6))(@zhin.js/console@3.0.5(@types/ws@8.18.1)(@zhin.js/agent@0.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)))(@zhin.js/client@2.0.3(react@19.2.6))(@zhin.js/core@1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)))(@zhin.js/http-host@0.1.4)(@zhin.js/http@1.0.79(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)))(koa@3.2.1)(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)))(@zhin.js/core@1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)))(@zhin.js/http-host@0.1.4)(@zhin.js/http@1.0.79(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)))(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))':
     dependencies:
-      '@zhin.js/core': 1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
-      zhin.js: 1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)
+      '@zhin.js/core': 1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
+      zhin.js: 1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)
     optionalDependencies:
-      '@zhin.js/client': 1.1.0(react@19.2.6)
-      '@zhin.js/console': 3.0.5(@types/ws@8.18.1)(@zhin.js/agent@0.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)))(@zhin.js/client@1.1.0(react@19.2.6))(@zhin.js/core@1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)))(@zhin.js/http-host@0.1.4)(@zhin.js/http@1.0.79(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)))(koa@3.2.1)(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
-      '@zhin.js/http': 1.0.79(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/client': 2.0.3(react@19.2.6)
+      '@zhin.js/console': 3.0.5(@types/ws@8.18.1)(@zhin.js/agent@0.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)))(@zhin.js/client@2.0.3(react@19.2.6))(@zhin.js/core@1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)))(@zhin.js/http-host@0.1.4)(@zhin.js/http@1.0.79(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)))(koa@3.2.1)(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/http': 1.0.79(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
       '@zhin.js/http-host': 0.1.4
 
-  '@zhin.js/agent@0.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))':
+  '@zhin.js/agent@0.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))':
     dependencies:
-      '@zhin.js/ai': 1.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
-      '@zhin.js/core': 1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
-      '@zhin.js/logger': 0.1.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/ai': 1.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/core': 1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/logger': 0.1.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
       he: 1.2.0
       js-yaml: 4.2.0
     transitivePeerDependencies:
@@ -4634,15 +4634,15 @@ snapshots:
       - redis
       - zhin.js
 
-  '@zhin.js/ai@1.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))':
+  '@zhin.js/ai@1.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))':
     dependencies:
-      '@zhin.js/logger': 0.1.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/logger': 0.1.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
     transitivePeerDependencies:
       - zhin.js
 
-  '@zhin.js/client@1.1.0(react@19.2.6)':
+  '@zhin.js/client@2.0.3(react@19.2.6)':
     dependencies:
-      '@zhin.js/console-types': 0.1.1
+      '@zhin.js/contract': 1.0.1
       clsx: 2.1.1
       react: 19.2.6
       tailwind-merge: 3.6.0
@@ -4658,23 +4658,21 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@zhin.js/console-types@0.1.1': {}
-
   '@zhin.js/console-types@0.1.5': {}
 
-  '@zhin.js/console@3.0.5(@types/ws@8.18.1)(@zhin.js/agent@0.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)))(@zhin.js/client@1.1.0(react@19.2.6))(@zhin.js/core@1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)))(@zhin.js/http-host@0.1.4)(@zhin.js/http@1.0.79(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)))(koa@3.2.1)(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))':
+  '@zhin.js/console@3.0.5(@types/ws@8.18.1)(@zhin.js/agent@0.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)))(@zhin.js/client@2.0.3(react@19.2.6))(@zhin.js/core@1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)))(@zhin.js/http-host@0.1.4)(@zhin.js/http@1.0.79(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)))(koa@3.2.1)(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))':
     dependencies:
       '@types/ws': 8.18.1
-      '@zhin.js/agent': 0.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
-      '@zhin.js/client': 1.1.0(react@19.2.6)
+      '@zhin.js/agent': 0.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/client': 2.0.3(react@19.2.6)
       '@zhin.js/console-core': 1.0.4
       '@zhin.js/console-types': 0.1.5
-      '@zhin.js/core': 1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
-      '@zhin.js/http': 1.0.79(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/core': 1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/http': 1.0.79(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
       '@zhin.js/http-host': 0.1.4
       koa: 3.2.1
       ws: 8.21.0
-      zhin.js: 1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)
+      zhin.js: 1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)
     transitivePeerDependencies:
       - bufferutil
       - supports-color
@@ -4682,13 +4680,15 @@ snapshots:
 
   '@zhin.js/contract@1.0.0': {}
 
-  '@zhin.js/core@1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))':
+  '@zhin.js/contract@1.0.1': {}
+
+  '@zhin.js/core@1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))':
     dependencies:
-      '@zhin.js/ai': 1.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
-      '@zhin.js/database': 1.0.71(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
-      '@zhin.js/kernel': 0.0.45(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
-      '@zhin.js/logger': 0.1.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
-      '@zhin.js/schema': 1.0.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/ai': 1.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/database': 1.0.71(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/kernel': 0.0.45(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/logger': 0.1.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/schema': 1.0.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
       croner: 9.1.0
       segment-matcher: 1.0.5
       smol-toml: 1.6.1
@@ -4700,18 +4700,18 @@ snapshots:
       - redis
       - zhin.js
 
-  '@zhin.js/database@1.0.71(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))':
+  '@zhin.js/database@1.0.71(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))':
     dependencies:
-      zhin.js: 1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)
+      zhin.js: 1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)
 
-  '@zhin.js/host-router@0.0.0(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))':
+  '@zhin.js/host-router@0.0.0(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))':
     dependencies:
       '@koa/router': 15.6.0(koa@3.2.1)
-      '@zhin.js/schema': 1.0.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/schema': 1.0.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
       koa: 3.2.1
       koa-body: 8.0.0
       ws: 8.21.0
-      zhin.js: 1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)
+      zhin.js: 1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)
     transitivePeerDependencies:
       - bufferutil
       - supports-color
@@ -4725,16 +4725,16 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@zhin.js/http@1.0.79(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))':
+  '@zhin.js/http@1.0.79(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))':
     dependencies:
       '@zhin.js/http-host': 0.1.4
-      '@zhin.js/queue-runtime': 0.0.4(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
-      '@zhin.js/schema': 1.0.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/queue-runtime': 0.0.4(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/schema': 1.0.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
       '@zhin.js/storage-port': 0.0.2
       koa: 3.2.1
       koa-body: 8.0.0
       ws: 8.21.0
-      zhin.js: 1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)
+      zhin.js: 1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)
     transitivePeerDependencies:
       - bufferutil
       - mongodb
@@ -4743,24 +4743,24 @@ snapshots:
       - redis
       - utf-8-validate
 
-  '@zhin.js/kernel@0.0.45(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))':
+  '@zhin.js/kernel@0.0.45(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))':
     dependencies:
-      '@zhin.js/logger': 0.1.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
-      '@zhin.js/schema': 1.0.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/logger': 0.1.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/schema': 1.0.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
       croner: 9.1.0
       smol-toml: 1.6.1
       yaml: 2.9.0
     transitivePeerDependencies:
       - zhin.js
 
-  '@zhin.js/logger@0.1.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))':
+  '@zhin.js/logger@0.1.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))':
     dependencies:
       chalk: 5.6.2
-      zhin.js: 1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)
+      zhin.js: 1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)
 
-  '@zhin.js/queue-runtime@0.0.4(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))':
+  '@zhin.js/queue-runtime@0.0.4(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))':
     dependencies:
-      '@zhin.js/core': 1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/core': 1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
       '@zhin.js/http-host': 0.1.4
       '@zhin.js/storage-port': 0.0.2
     transitivePeerDependencies:
@@ -4772,9 +4772,9 @@ snapshots:
       - utf-8-validate
       - zhin.js
 
-  '@zhin.js/schema@1.0.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))':
+  '@zhin.js/schema@1.0.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))':
     dependencies:
-      zhin.js: 1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)
+      zhin.js: 1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)
 
   '@zhin.js/storage-port@0.0.2': {}
 
@@ -6417,19 +6417,19 @@ snapshots:
 
   ylru@1.4.0: {}
 
-  zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1):
+  zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1):
     dependencies:
-      '@zhin.js/adapter-sandbox': 3.0.5(@zhin.js/client@1.1.0(react@19.2.6))(@zhin.js/console@3.0.5(@types/ws@8.18.1)(@zhin.js/agent@0.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)))(@zhin.js/client@1.1.0(react@19.2.6))(@zhin.js/core@1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)))(@zhin.js/http-host@0.1.4)(@zhin.js/http@1.0.79(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)))(koa@3.2.1)(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)))(@zhin.js/core@1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)))(@zhin.js/http-host@0.1.4)(@zhin.js/http@1.0.79(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)))(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
-      '@zhin.js/agent': 0.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
-      '@zhin.js/ai': 1.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
-      '@zhin.js/console': 3.0.5(@types/ws@8.18.1)(@zhin.js/agent@0.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)))(@zhin.js/client@1.1.0(react@19.2.6))(@zhin.js/core@1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)))(@zhin.js/http-host@0.1.4)(@zhin.js/http@1.0.79(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1)))(koa@3.2.1)(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
-      '@zhin.js/core': 1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
-      '@zhin.js/http': 1.0.79(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/adapter-sandbox': 3.0.5(@zhin.js/client@2.0.3(react@19.2.6))(@zhin.js/console@3.0.5(@types/ws@8.18.1)(@zhin.js/agent@0.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)))(@zhin.js/client@2.0.3(react@19.2.6))(@zhin.js/core@1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)))(@zhin.js/http-host@0.1.4)(@zhin.js/http@1.0.79(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)))(koa@3.2.1)(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)))(@zhin.js/core@1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)))(@zhin.js/http-host@0.1.4)(@zhin.js/http@1.0.79(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)))(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/agent': 0.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/ai': 1.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/console': 3.0.5(@types/ws@8.18.1)(@zhin.js/agent@0.1.26(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)))(@zhin.js/client@2.0.3(react@19.2.6))(@zhin.js/core@1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)))(@zhin.js/http-host@0.1.4)(@zhin.js/http@1.0.79(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1)))(koa@3.2.1)(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/core': 1.1.28(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/http': 1.0.79(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
       '@zhin.js/http-host': 0.1.4
-      '@zhin.js/kernel': 0.0.45(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
-      '@zhin.js/logger': 0.1.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
-      '@zhin.js/queue-runtime': 0.0.4(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
-      '@zhin.js/schema': 1.0.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@1.1.0(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/kernel': 0.0.45(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/logger': 0.1.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/queue-runtime': 0.0.4(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
+      '@zhin.js/schema': 1.0.68(zhin.js@1.0.86(@types/ws@8.18.1)(@zhin.js/client@2.0.3(react@19.2.6))(koa@3.2.1))
       '@zhin.js/storage-port': 0.0.2
       dotenv: 17.4.2
       yaml: 2.9.0

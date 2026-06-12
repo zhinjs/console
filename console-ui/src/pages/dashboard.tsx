@@ -15,7 +15,7 @@ import {
 
 interface Stats {
   plugins: { total: number; active: number }
-  bots: { total: number; online: number }
+  endpoints: { total: number; online: number }
   commands: number
   components: number
   uptime: number
@@ -145,9 +145,9 @@ export default function HomePage() {
             <Bot className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats?.bots.total || 0}</div>
+            <div className="text-3xl font-bold">{stats?.endpoints.total || 0}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              <Badge variant="success" className="mr-1">{stats?.bots.online || 0}</Badge>个在线
+              <Badge variant="success" className="mr-1">{stats?.endpoints.online || 0}</Badge>个在线
             </p>
           </CardContent>
         </Card>
@@ -235,7 +235,7 @@ export default function HomePage() {
                 <span className="text-xs text-muted-foreground">查看已安装插件</span>
               </div>
             </Button>
-            <Button variant="outline" className="h-auto p-4 justify-start" onClick={() => navigate('/bots')}>
+            <Button variant="outline" className="h-auto p-4 justify-start" onClick={() => navigate('/endpoints')}>
               <div className="flex flex-col items-start gap-1">
                 <Bot className="h-5 w-5 mb-1" />
                 <span className="font-medium">机器人状态</span>

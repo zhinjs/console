@@ -308,7 +308,7 @@ function FeatureItemCard({ featureName, item }: { featureName: string; item: any
             <code className="text-sm font-semibold">{item.name}</code>
           </div>
           <div className="flex gap-3 text-xs text-muted-foreground">
-            <span>Bot: {item.bots ?? 0}</span>
+            <span>Endpoint: {item.endpoints ?? item.bots ?? 0}</span>
             <span>在线: {item.online ?? 0}</span>
             {item.tools > 0 && <span>工具: {item.tools}</span>}
           </div>

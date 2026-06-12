@@ -2,7 +2,13 @@ import { getWebSocketManager } from '@zhin.js/client'
 
 let installed = false
 
-/** 将 SDK SSE 广播中的 config:updated / data-update 转为 window 自定义事件 */
+const ENDPOINT_PUSH_TYPES = new Set([
+  'endpoint:request',
+  'endpoint:notice',
+  'endpoint:message',
+])
+
+/** 将 SDK SSE 广播中的 config:updated / data-update / endpoint:* 推送转为 window 自定义事件 */
 export function setupConsoleSseBridge(): void {
   if (installed || typeof window === 'undefined') return
   installed = true
@@ -19,6 +25,8 @@ export function setupConsoleSseBridge(): void {
       window.dispatchEvent(new CustomEvent('zhin-console-config-updated', { detail: message }))
     } else if (t === 'data-update') {
       window.dispatchEvent(new CustomEvent('zhin-console-data-update', { detail: message }))
+    } else if (ENDPOINT_PUSH_TYPES.has(t)) {
+      window.dispatchEvent(new CustomEvent('zhin-console-bot-push', { detail: message }))
     }
   }
 }

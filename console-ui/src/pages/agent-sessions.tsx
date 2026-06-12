@@ -165,7 +165,7 @@ export default function AgentSessionsPage() {
     } else {
       setErrorKind('other')
       setError(
-        `sessionKey 格式不正确：「${sessionKeyFromUrl}」。应为 platform:botId:scope:sceneId（如 icqq:75318:private:userA）`,
+        `sessionKey 格式不正确：「${sessionKeyFromUrl}」。应为 platform:endpointId:scope:sceneId（如 icqq:75318:private:userA）`,
       )
     }
   }, [sessionKeyFromUrl, fetchTree])
@@ -174,7 +174,7 @@ export default function AgentSessionsPage() {
     <div className="space-y-6">
       <PageHeader
         title="对话分支"
-        description="查看并切换 AI 对话分支。sessionKey 格式为 platform:botId:scope:sceneId（可从机器人会话页跳转）。"
+        description="查看并切换 AI 对话分支。sessionKey 格式为 platform:endpointId:scope:sceneId（可从机器人会话页跳转）。"
       />
 
       <Card>

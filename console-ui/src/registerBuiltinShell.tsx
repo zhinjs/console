@@ -2,8 +2,8 @@ import { app } from '@zhin.js/client'
 import HomePage from './pages/dashboard'
 import PluginsPage from './pages/plugins'
 import PluginDetailPage from './pages/plugin-detail'
-import BotManagePage from './pages/bots'
-import BotDetailPage from './pages/bot-detail'
+import EndpointsPage from './pages/endpoints'
+import EndpointDetailPage from './pages/endpoint-detail'
 import LogsPage from './pages/logs'
 import ConfigPage from './pages/config'
 import EnvManagePage from './pages/env'
@@ -43,11 +43,11 @@ export function registerBuiltinConsolePages() {
   })
 
   app.addRoute({
-    path: '/bots',
+    path: '/endpoints',
     name: '机器人',
     parent: null,
     icon: 'Bot',
-    element: <BotManagePage />,
+    element: <EndpointsPage />,
     meta: { group: '机器人', order: 0 },
   })
 
@@ -132,10 +132,10 @@ export function registerBuiltinConsolePages() {
   })
 
   app.addRoute({
-    path: '/bots/:adapter/:botId',
+    path: '/endpoints/:adapter/:endpointId',
     name: '机器人详情',
     parent: null,
-    element: <BotDetailPage />,
+    element: <EndpointDetailPage />,
     meta: { hideInMenu: true, fullWidth: true },
   })
 }

@@ -1,4 +1,4 @@
-export interface BotInfo {
+export interface EndpointInfo {
   name: string
   adapter: string
   connected: boolean
