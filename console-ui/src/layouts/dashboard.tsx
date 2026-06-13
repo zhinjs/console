@@ -179,7 +179,7 @@ export default function DashboardLayout() {
       <div className="flex flex-col flex-1 overflow-hidden min-w-0">
         <header className="flex items-center justify-between h-14 px-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen((v) => !v)}>
+            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen((v) => !v)} aria-label="切换侧边栏">
               <Menu className="h-5 w-5" />
             </Button>
             <div className="flex flex-col min-w-0">
@@ -199,6 +199,7 @@ export default function DashboardLayout() {
                 className="pl-9 bg-muted/50"
                 list="console-nav-search"
                 autoComplete="off"
+                aria-label="搜索页面"
               />
               <datalist id="console-nav-search">
                 {searchTargets.map((t) => (
@@ -214,6 +215,7 @@ export default function DashboardLayout() {
               variant="ghost"
               size="icon"
               title="退出登录"
+              aria-label="退出登录"
               onClick={() => {
                 clearToken()
                 window.dispatchEvent(new CustomEvent("zhin:auth-required"))

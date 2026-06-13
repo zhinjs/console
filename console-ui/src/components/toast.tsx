@@ -72,7 +72,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={{ toast, success, error, warning, info }}>
       {children}
       {/* Toast container */}
-      <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+      <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 max-w-sm w-full pointer-events-none" role="status" aria-live="polite">
         {toasts.map(t => {
           const Icon = VARIANT_ICONS[t.variant || 'default']
           return (
@@ -92,6 +92,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 <button
                   className="shrink-0 h-5 w-5 rounded flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
                   onClick={() => remove(t.id)}
+                  aria-label="关闭通知"
                 >
                   <X className="h-3 w-3" />
                 </button>

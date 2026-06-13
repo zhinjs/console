@@ -131,7 +131,7 @@ export default function HomePage() {
 
       {/* Stats cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+        <Card aria-label={`插件总数: ${stats?.plugins.total || 0}, 活跃 ${stats?.plugins.active || 0}`}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">插件总数</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
@@ -144,7 +144,7 @@ export default function HomePage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card aria-label={`机器人: ${stats?.endpoints.total || 0}, 在线 ${stats?.endpoints.online || 0}`}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">机器人</CardTitle>
             <Bot className="h-4 w-4 text-muted-foreground" />
@@ -157,7 +157,7 @@ export default function HomePage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card aria-label={`命令数量: ${stats?.commands || 0}`}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">命令数量</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
@@ -168,7 +168,7 @@ export default function HomePage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card aria-label={`组件数量: ${stats?.components || 0}`}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">组件数量</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
