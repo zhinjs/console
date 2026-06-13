@@ -4,6 +4,8 @@ import { GitBranch, AlertCircle, CheckCircle, Loader2, History } from 'lucide-re
 import { apiFetch } from '../utils/auth'
 import { isLikelySessionKey, parseSessionKeyFromQuery } from '../utils/agent-session'
 import { PageHeader } from '../components/PageHeader'
+import { ErrorAlert } from '../components/error-alert'
+import { EmptyState } from '../components/empty-state'
 import { Card, CardContent } from '../components/ui/card'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { Badge } from '../components/ui/badge'
@@ -235,14 +237,7 @@ export default function AgentSessionsPage() {
       )}
 
       {error && (
-        <Alert variant={errorKind === '503' ? 'default' : 'destructive'}>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {errorKind === '404' && (error || '无活跃会话 — 请确认 sessionKey 是否正确，或先在对应会话中与 Agent 对话。')}
-            {errorKind === '503' && (error || 'Agent 未就绪')}
-            {errorKind === 'other' && error}
-          </AlertDescription>
-        </Alert>
+        <ErrorAlert error={error} onRetry={() => fetchTree(sessionKey)} />
       )}
 
       {loading && (
@@ -269,7 +264,7 @@ export default function AgentSessionsPage() {
             </div>
 
             {tree.points.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">暂无分支点</p>
+              <EmptyState compact title="暂无分支点" />
             ) : (
               <div className="space-y-2">
                 {tree.points.map((point) => {

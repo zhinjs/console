@@ -5,9 +5,14 @@ import { Database as DatabaseIcon, Table2, Trash2, RefreshCw, Loader2, AlertCirc
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Alert, AlertDescription } from '../../components/ui/alert'
+import { ErrorAlert } from '../../components/error-alert'
+import { EmptyState } from '../../components/empty-state'
 import { Badge } from '../../components/ui/badge'
+import { Skeleton } from '../../components/ui/skeleton'
 import { ScrollArea } from '../../components/ui/scroll-area'
 import { PageHeader } from '../../components/PageHeader'
+import { useToast } from '../../components/toast'
+import { ConfirmDialog } from '../../components/confirm-dialog'
 import { DB_TYPE_LABELS, DIALECT_LABELS } from './constants'
 import { RelatedTableView } from './related-table-view'
 import { DocumentCollectionView } from './document-collection-view'
@@ -21,11 +26,14 @@ export default function DatabasePage() {
     kvGet, kvSet, kvDelete, kvEntries,
   } = useDatabase()
 
+  const { success, error: toastError } = useToast()
   const [selectedTable, setSelectedTable] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ name: string; label: string } | null>(null)
   const selectedTableInfo = useMemo(() => tables.find((t: TableInfo) => t.name === selectedTable), [tables, selectedTable])
   const dbType: DatabaseType = info?.type ?? 'related'
 
   return (
+    <>
     <div className="space-y-6">
       <PageHeader
         title="数据库"
@@ -45,10 +53,7 @@ export default function DatabasePage() {
       />
 
       {error && (
-        <Alert variant="destructive" className="py-2">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <ErrorAlert error={error} onRetry={() => loadTables().catch(() => {})} />
       )}
 
       <Card className="overflow-hidden border-border/80 shadow-sm">
@@ -63,11 +68,11 @@ export default function DatabasePage() {
               <ScrollArea className="flex-1">
                 <div className="py-1">
                   {loading && !tables.length ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                    <div className="space-y-2 p-3">
+                      {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
                     </div>
                   ) : !tables.length ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">暂无数据</p>
+                    <EmptyState compact title="暂无数据" />
                   ) : tables.map((t: TableInfo) => (
                     <div
                       key={t.name}
@@ -95,10 +100,7 @@ export default function DatabasePage() {
                         onClick={(e: MouseEvent) => {
                           e.stopPropagation()
                           const label = dbType === 'related' ? '表' : dbType === 'document' ? '集合' : '桶'
-                          if (!confirm(`确定要删除${label} "${t.name}" 吗？此操作不可撤销！`)) return
-                          dropTable(t.name).then(() => {
-                            if (selectedTable === t.name) setSelectedTable(null)
-                          }).catch(() => {})
+                          setDeleteTarget({ name: t.name, label })
                         }}
                       >
                         <Trash2 className="w-3 h-3" />
@@ -174,5 +176,20 @@ export default function DatabasePage() {
         </CardContent>
       </Card>
     </div>
+    <ConfirmDialog
+      open={!!deleteTarget}
+      onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+      title={`删除${deleteTarget?.label || ''}`}
+      description={`确定要删除${deleteTarget?.label || ''} "${deleteTarget?.name}" 吗？此操作不可撤销！`}
+      variant="destructive"
+      confirmLabel="删除"
+      onConfirm={async () => {
+        if (!deleteTarget) return
+        await dropTable(deleteTarget.name)
+        if (selectedTable === deleteTarget.name) setSelectedTable(null)
+        setDeleteTarget(null)
+      }}
+    />
+    </>
   )
 }

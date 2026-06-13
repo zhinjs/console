@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { TableInfo, SelectResult } from '@zhin.js/client'
-import { Plus, Trash2, Pencil, RefreshCw, Loader2, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Save } from 'lucide-react'
+import { Plus, Trash2, Pencil, RefreshCw, Loader2, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Save, ArrowUp, ArrowDown } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Alert, AlertDescription } from '../../components/ui/alert'
 import {
@@ -12,6 +12,8 @@ import {
   DialogClose,
 } from '../../components/ui/dialog'
 import { JsonField } from './json-field'
+import { useToast } from '../../components/toast'
+import { ConfirmDialog } from '../../components/confirm-dialog'
 
 export function RelatedTableView({
   tableName,
@@ -35,6 +37,10 @@ export function RelatedTableView({
   const [editRow, setEditRow] = useState<any>(null)
   const [addRow, setAddRow] = useState(false)
   const [formData, setFormData] = useState<Record<string, string>>({})
+  const [deleteTarget, setDeleteTarget] = useState<any>(null)
+  const [sortCol, setSortCol] = useState<string | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const { success, error: toastError } = useToast()
   const pageSize = 50
 
   const load = useCallback(async () => {
@@ -90,14 +96,19 @@ export function RelatedTableView({
   }
 
   const handleDelete = async (row: any) => {
-    if (!confirm('确定要删除这条记录吗？')) return
+    setDeleteTarget(row)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
     try {
-      await remove(tableName, { [primaryKey]: row[primaryKey] })
-      setMsg({ type: 'success', text: '删除成功' })
-      setTimeout(() => setMsg(null), 2000)
+      await remove(tableName, { [primaryKey]: deleteTarget[primaryKey] })
+      success('删除成功')
       await load()
     } catch (err) {
-      setMsg({ type: 'error', text: (err as Error).message })
+      toastError((err as Error).message)
+    } finally {
+      setDeleteTarget(null)
     }
   }
 
@@ -120,6 +131,31 @@ export function RelatedTableView({
   }
 
   const totalPages = data ? Math.ceil(data.total / pageSize) : 0
+
+  const handleSortClick = (col: string) => {
+    if (sortCol === col) {
+      setSortDir(prev => prev === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortCol(col)
+      setSortDir('asc')
+    }
+  }
+
+  const sortedRows = useMemo(() => {
+    if (!data?.rows?.length || !sortCol) return data?.rows ?? []
+    const sorted = [...data.rows].sort((a, b) => {
+      const aVal = a[sortCol]
+      const bVal = b[sortCol]
+      if (aVal == null && bVal == null) return 0
+      if (aVal == null) return 1
+      if (bVal == null) return -1
+      const aStr = typeof aVal === 'object' ? JSON.stringify(aVal) : String(aVal)
+      const bStr = typeof bVal === 'object' ? JSON.stringify(bVal) : String(bVal)
+      const cmp = aStr.localeCompare(bStr, undefined, { numeric: true, sensitivity: 'base' })
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+    return sorted
+  }, [data?.rows, sortCol, sortDir])
 
   return (
     <div className="space-y-3">
@@ -151,9 +187,17 @@ export function RelatedTableView({
               {columns.map((col: string) => (
                 <th
                   key={col}
-                  className="px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap border-b border-border/80"
+                  className="px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap border-b border-border/80 cursor-pointer select-none hover:bg-muted/50 transition-colors"
+                  onClick={() => handleSortClick(col)}
                 >
-                  {col}
+                  <span className="inline-flex items-center gap-1">
+                    {col}
+                    {sortCol === col && (
+                      sortDir === 'asc'
+                        ? <ArrowUp className="w-3 h-3" />
+                        : <ArrowDown className="w-3 h-3" />
+                    )}
+                  </span>
                 </th>
               ))}
               <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-b border-border/80 w-24 min-w-[5.5rem]">
@@ -166,7 +210,7 @@ export function RelatedTableView({
               <tr><td colSpan={columns.length + 1} className="text-center py-8"><Loader2 className="w-4 h-4 animate-spin inline-block" /></td></tr>
             ) : !data?.rows?.length ? (
               <tr><td colSpan={columns.length + 1} className="text-center py-8 text-muted-foreground">暂无数据</td></tr>
-            ) : data.rows.map((row: any, i: number) => (
+            ) : sortedRows.map((row: any, i: number) => (
               <tr key={i} className="border-b border-border/60 hover:bg-muted/30 transition-colors">
                 {columns.map((col: string) => (
                   <td
@@ -216,6 +260,15 @@ export function RelatedTableView({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+        title="删除记录"
+        description="确定要删除这条记录吗？"
+        variant="destructive"
+        confirmLabel="删除"
+        onConfirm={confirmDelete}
+      />
     </div>
   )
 }

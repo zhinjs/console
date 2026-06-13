@@ -19,6 +19,7 @@ import { registerBuiltinConsolePages } from "@console/registerBuiltinShell";
 import { initializeTheme } from "@console/theme";
 import LoginPage from "@console/pages/login";
 import { TooltipProvider } from "@console/components/ui/tooltip";
+import { ToastProvider } from "@console/components/toast";
 import { runQueryPrefillMiddleware } from "./middleware/queryPrefill";
 
 initializeTheme();
@@ -83,7 +84,8 @@ function App() {
 ReactDOMClient.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <TooltipProvider>
-      <BrowserRouter
+      <ToastProvider>
+        <BrowserRouter
         basename={getRouterBasename()}
         future={{
           v7_startTransition: true,
@@ -92,6 +94,7 @@ ReactDOMClient.createRoot(document.getElementById("root")!).render(
       >
         <App />
       </BrowserRouter>
+      </ToastProvider>
     </TooltipProvider>
   </React.StrictMode>,
 );

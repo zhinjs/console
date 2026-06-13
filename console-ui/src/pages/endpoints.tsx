@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { Bot, AlertCircle, Wifi, WifiOff, Activity, Package, Zap, ChevronRight, RefreshCw } from 'lucide-react'
+import { Bot, AlertCircle, Wifi, WifiOff, Activity, Package, Zap, ChevronRight } from 'lucide-react'
 import { useWebSocket } from '@zhin.js/client'
+import { useToast } from '../components/toast'
+import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
@@ -23,6 +25,7 @@ export default function EndpointsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { connected, sendRequest } = useWebSocket()
+  const { error: toastError } = useToast()
 
   const fetchEndpoints = useCallback(async () => {
     if (!connected) {
@@ -71,6 +74,9 @@ export default function EndpointsPage() {
         <Alert variant="destructive" className="max-w-md">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>加载失败: {error}</AlertDescription>
+          <div className="mt-3">
+            <Button variant="outline" size="sm" onClick={fetchEndpoints}>重试</Button>
+          </div>
         </Alert>
       </div>
     )
@@ -78,29 +84,7 @@ export default function EndpointsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">机器人</h1>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-sm text-muted-foreground">共 {endpoints.length} 个机器人，</span>
-            <Badge variant="success">{endpoints.filter((e) => e.connected).length}</Badge>
-            <span className="text-sm text-muted-foreground">个在线</span>
-          </div>
-          <p className="text-sm text-muted-foreground mt-2">
-            ICQQ 扫码/验证码登录请前往侧栏{' '}
-            <Link to="/icqq" className="text-primary underline-offset-4 hover:underline font-medium">
-              ICQQ 管理
-            </Link>
-            。
-          </p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => { setLoading(true); void fetchEndpoints(); }} disabled={!connected || loading}>
-          <RefreshCw className={loading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
-          刷新
-        </Button>
-      </div>
-
-      <Separator />
+      <PageHeader title="机器人" description="管理所有已配置的 Endpoint 连接" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {endpoints.map((endpoint, index) => (

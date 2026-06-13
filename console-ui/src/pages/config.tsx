@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useConfigYaml } from '@zhin.js/client'
 import { PluginConfigForm } from '../components/PluginConfigForm'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import {
-  Settings, AlertCircle, CheckCircle, Save, Loader2, X,
+  Settings, AlertCircle, Save, Loader2, X,
   RefreshCw, FileCode, FormInput
 } from 'lucide-react'
 import { Card, CardContent } from '../components/ui/card'
@@ -14,7 +14,12 @@ import { Alert, AlertDescription } from '../components/ui/alert'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
 import { Textarea } from '../components/ui/textarea'
 import { Input } from '../components/ui/input'
+import { Skeleton } from '../components/ui/skeleton'
 import { Separator } from '../components/ui/separator'
+import { ErrorAlert } from '../components/error-alert'
+import { useToast } from '../components/toast'
+import { Switch } from '../components/ui/switch'
+import { PageHeader } from '../components/PageHeader'
 
 function GeneralConfigForm({
   config,
@@ -143,19 +148,10 @@ function ConfigFieldEditor({
             <span className="text-sm font-medium">{fieldKey}</span>
             <Badge variant="outline" className="text-[10px] px-1 py-0">boolean</Badge>
           </div>
-          <button
-            type="button"
-            onClick={() => onChange(!value)}
-            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-              value ? 'bg-primary' : 'bg-muted-foreground/30'
-            }`}
-          >
-            <span
-              className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${
-                value ? 'translate-x-4.5' : 'translate-x-0.5'
-              }`}
-            />
-          </button>
+          <Switch
+            checked={value}
+            onCheckedChange={onChange}
+          />
         </div>
       </div>
     )
@@ -269,7 +265,7 @@ export default function ConfigPage() {
   const [yamlText, setYamlText] = useState('')
   const [yamlDirty, setYamlDirty] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const { success, error: toastError } = useToast()
 
   useEffect(() => {
     if (yaml) {
@@ -286,19 +282,14 @@ export default function ConfigPage() {
     }
   }, [yaml])
 
-  const showMessage = useCallback((type: 'success' | 'error', text: string) => {
-    setMessage({ type, text })
-    setTimeout(() => setMessage(null), 3000)
-  }, [])
-
   const handleYamlSave = async () => {
     setSaving(true)
     try {
       await save(yamlText)
       setYamlDirty(false)
-      showMessage('success', '配置已保存，需重启生效')
+      success('配置已保存，需重启生效')
     } catch (err) {
-      showMessage('error', `保存失败: ${err instanceof Error ? err.message : '未知错误'}`)
+      toastError(`保存失败: ${err instanceof Error ? err.message : '未知错误'}`)
     } finally {
       setSaving(false)
     }
@@ -311,9 +302,9 @@ export default function ConfigPage() {
       const merged = { ...currentParsed, ...patch }
       const newYaml = stringifyYaml(merged, { lineWidth: 0 })
       await save(newYaml)
-      showMessage('success', '配置已保存，需重启生效')
+      success('配置已保存，需重启生效')
     } catch (err) {
-      showMessage('error', `保存失败: ${err instanceof Error ? err.message : '未知错误'}`)
+      toastError(`保存失败: ${err instanceof Error ? err.message : '未知错误'}`)
     } finally {
       setSaving(false)
     }
@@ -322,9 +313,9 @@ export default function ConfigPage() {
   const handleRefresh = async () => {
     try {
       await load()
-      showMessage('success', '已刷新')
+      success('已刷新')
     } catch {
-      showMessage('error', '刷新失败')
+      toastError('刷新失败')
     }
   }
 
@@ -337,19 +328,18 @@ export default function ConfigPage() {
 
   useEffect(() => {
     const onConfigUpdated = () => {
-      void load().then(() => showMessage('success', '配置已更新（SSE）'))
+      void load().then(() => success('配置已更新（SSE）'))
     }
     window.addEventListener('zhin-console-config-updated', onConfigUpdated)
     return () => window.removeEventListener('zhin-console-config-updated', onConfigUpdated)
-  }, [load, showMessage])
+  }, [load])
 
   if (loading && !yaml) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold tracking-tight">配置</h1>
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-sm text-muted-foreground">加载配置中...</span>
+        <PageHeader title="配置" description="加载配置中..." />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24" />)}
         </div>
       </div>
     )
@@ -358,12 +348,10 @@ export default function ConfigPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">配置</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            编辑 Host 通用项与各插件配置；插件项保存后可热重载，YAML 全量保存需重启
-          </p>
-        </div>
+        <PageHeader
+          title="配置"
+          description="编辑 Host 通用项与各插件配置；插件项保存后可热重载，YAML 全量保存需重启"
+        />
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
@@ -372,20 +360,8 @@ export default function ConfigPage() {
         </div>
       </div>
 
-      {message && (
-        <Alert variant={message.type === 'error' ? 'destructive' : 'success'} className="py-2">
-          {message.type === 'error'
-            ? <AlertCircle className="h-4 w-4" />
-            : <CheckCircle className="h-4 w-4" />}
-          <AlertDescription>{message.text}</AlertDescription>
-        </Alert>
-      )}
-
-      {error && !message && (
-        <Alert variant="destructive" className="py-2">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+      {error && (
+        <ErrorAlert error={error} onRetry={load} />
       )}
 
       <Tabs value={activeSection} onValueChange={setActiveSection}>

@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertCircle, Package, Terminal, Box as IconBox, Layers, Clock, Brain, Wrench, Database, Shield, Settings, Plug, Server, type LucideIcon } from 'lucide-react'
+import { AlertCircle, Package, Terminal, Box as IconBox, Layers, Clock, Brain, Wrench, Database, Shield, Settings, Plug, Server, Search, type LucideIcon } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import { Card, CardContent } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { Skeleton } from '../components/ui/skeleton'
 import { Separator } from '../components/ui/separator'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { PageHeader } from '../components/PageHeader'
+import { useToast } from '../components/toast'
 
 /** Feature 序列化格式（与后端 FeatureJSON 一致） */
 interface FeatureJSON {
@@ -45,9 +49,15 @@ function getIcon(iconName: string): LucideIcon {
 
 export default function PluginsPage() {
   const navigate = useNavigate()
+  const { error: toastError } = useToast()
   const [plugins, setPlugins] = useState<Plugin[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+
+  const filteredPlugins = plugins.filter(p =>
+    p.name.toLowerCase().includes(search.trim().toLowerCase())
+  )
 
   useEffect(() => {
     fetchPlugins()
@@ -82,11 +92,14 @@ export default function PluginsPage() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex flex-col items-center justify-center h-full gap-3">
         <Alert variant="destructive" className="max-w-md">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>加载失败: {error}</AlertDescription>
         </Alert>
+        <Button variant="outline" size="sm" onClick={() => { setError(null); setLoading(true); void fetchPlugins() }}>
+          重试
+        </Button>
       </div>
     )
   }
@@ -94,18 +107,28 @@ export default function PluginsPage() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">插件</h1>
-        <div className="flex items-center gap-2 mt-1">
-          <span className="text-sm text-muted-foreground">共 {plugins.length} 个插件</span>
-          <Badge variant="success">{plugins.filter(p => p.status === 'active').length}</Badge>
-          <span className="text-sm text-muted-foreground">个运行中</span>
-        </div>
+      <PageHeader title="插件" description="已加载的插件列表" />
+      <div className="flex items-center gap-2 -mt-2">
+        <span className="text-sm text-muted-foreground">共 {plugins.length} 个插件</span>
+        <Badge variant="success">{plugins.filter(p => p.status === 'active').length}</Badge>
+        <span className="text-sm text-muted-foreground">个运行中</span>
+      </div>
+
+      {/* Search */}
+      <div className="relative max-w-sm">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        <Input
+          type="search"
+          placeholder="搜索插件…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="pl-9"
+        />
       </div>
 
       {/* Plugin grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {plugins.map((plugin, index) => (
+        {filteredPlugins.map((plugin, index) => (
           <Card
             key={`${plugin.name}-${index}`}
             className="cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5"

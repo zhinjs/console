@@ -12,6 +12,8 @@ import {
   DialogFooter,
   DialogClose,
 } from '../../components/ui/dialog'
+import { useToast } from '../../components/toast'
+import { ConfirmDialog } from '../../components/confirm-dialog'
 
 export function DocumentCollectionView({
   tableName,
@@ -33,6 +35,8 @@ export function DocumentCollectionView({
   const [editDoc, setEditDoc] = useState<any>(null)
   const [addDoc, setAddDoc] = useState(false)
   const [jsonText, setJsonText] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<any>(null)
+  const { success, error: toastError } = useToast()
   const pageSize = 20
 
   const load = useCallback(async () => {
@@ -71,14 +75,19 @@ export function DocumentCollectionView({
   }
 
   const handleDelete = async (doc: any) => {
-    if (!confirm('确定要删除这条文档吗？')) return
+    setDeleteTarget(doc)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
     try {
-      await remove(tableName, { _id: doc._id })
-      setMsg({ type: 'success', text: '删除成功' })
-      setTimeout(() => setMsg(null), 2000)
+      await remove(tableName, { _id: deleteTarget._id })
+      success('删除成功')
       await load()
     } catch (err) {
-      setMsg({ type: 'error', text: (err as Error).message })
+      toastError((err as Error).message)
+    } finally {
+      setDeleteTarget(null)
     }
   }
 
@@ -150,6 +159,15 @@ export function DocumentCollectionView({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+        title="删除文档"
+        description="确定要删除这条文档吗？"
+        variant="destructive"
+        confirmLabel="删除"
+        onConfirm={confirmDelete}
+      />
     </div>
   )
 }
