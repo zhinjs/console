@@ -12,6 +12,8 @@ import {
   DialogClose,
 } from '../../components/ui/dialog'
 import { Input } from '../../components/ui/input'
+import { useToast } from '../../components/toast'
+import { ConfirmDialog } from '../../components/confirm-dialog'
 import type { ChangeEvent } from 'react'
 
 export function KvBucketView({
@@ -34,6 +36,8 @@ export function KvBucketView({
   const [addEntry, setAddEntry] = useState(false)
   const [keyInput, setKeyInput] = useState('')
   const [valueInput, setValueInput] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const { success, error: toastError } = useToast()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -68,14 +72,19 @@ export function KvBucketView({
   }
 
   const handleDelete = async (key: string) => {
-    if (!confirm(`确定要删除键 "${key}" 吗？`)) return
+    setDeleteTarget(key)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
     try {
-      await kvDelete(tableName, key)
-      setMsg({ type: 'success', text: '删除成功' })
-      setTimeout(() => setMsg(null), 2000)
+      await kvDelete(tableName, deleteTarget)
+      success('删除成功')
       await load()
     } catch (err) {
-      setMsg({ type: 'error', text: (err as Error).message })
+      toastError((err as Error).message)
+    } finally {
+      setDeleteTarget(null)
     }
   }
 
@@ -164,6 +173,15 @@ export function KvBucketView({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+        title="删除键值"
+        description={`确定要删除键 "${deleteTarget}" 吗？`}
+        variant="destructive"
+        confirmLabel="删除"
+        onConfirm={confirmDelete}
+      />
     </div>
   )
 }

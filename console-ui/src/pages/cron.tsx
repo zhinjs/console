@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, type ChangeEvent } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Clock, Plus, Trash2, AlertCircle, Pause, Play, RefreshCw, Timer, Cpu, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react'
 import { useWebSocket } from '@zhin.js/client'
 import { Button } from '../components/ui/button'
@@ -13,6 +13,10 @@ import {
   Dialog, DialogContent, DialogHeader, DialogFooter,
   DialogTitle, DialogDescription, DialogClose,
 } from '../components/ui/dialog'
+import { useToast } from '../components/toast'
+import { PageHeader } from '../components/PageHeader'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
+import { ConfirmDialog } from '../components/confirm-dialog'
 
 interface MemoryCron {
   type: 'memory'
@@ -64,6 +68,7 @@ export default function CronPage() {
   const [expandedMemIdx, setExpandedMemIdx] = useState<number | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const { connected, sendRequest } = useWebSocket()
+  const { success, error: toastError } = useToast()
 
   const fetchCrons = useCallback(async () => {
     if (!connected) {
@@ -118,7 +123,7 @@ export default function CronPage() {
       setNewCron({ cronExpression: '', prompt: '', label: '', context: { ...EMPTY_CONTEXT } })
       await fetchCrons()
     } catch (err) {
-      setError((err as Error).message)
+      toastError((err as Error).message)
     } finally {
       setSubmitting(false)
     }
@@ -132,7 +137,7 @@ export default function CronPage() {
       setDeleteTarget(null)
       await fetchCrons()
     } catch (err) {
-      setError((err as Error).message)
+      toastError((err as Error).message)
     } finally {
       setSubmitting(false)
     }
@@ -147,7 +152,7 @@ export default function CronPage() {
       }
       await fetchCrons()
     } catch (err) {
-      setError((err as Error).message)
+      toastError((err as Error).message)
     }
   }
 
@@ -179,22 +184,20 @@ export default function CronPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">定时任务</h2>
-          <p className="text-muted-foreground text-sm mt-1">
-            管理持久化定时任务和查看插件注册的内存任务
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => { setLoading(true); fetchCrons() }}>
-            <RefreshCw className="w-4 h-4 mr-1" /> 刷新
-          </Button>
-          <Button size="sm" onClick={() => setAddDialogOpen(true)}>
-            <Plus className="w-4 h-4 mr-1" /> 新建任务
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="定时任务"
+        description="管理持久化和内存定时任务"
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => { setLoading(true); fetchCrons() }}>
+              <RefreshCw className="w-4 h-4 mr-1" /> 刷新
+            </Button>
+            <Button size="sm" onClick={() => setAddDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-1" /> 新建任务
+            </Button>
+          </div>
+        }
+      />
 
       {/* Persistent Cron Jobs */}
       <div>
@@ -305,7 +308,7 @@ export default function CronPage() {
                         </div>
                       )}
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span>状态: {job.enabled ? '✅ 运行中' : '⏸️ 已暂停'}</span>
+                        <span className="flex items-center gap-1">状态: {job.enabled ? <Badge variant="default" className="text-xs">运行中</Badge> : <Badge variant="secondary" className="text-xs">已暂停</Badge>}</span>
                         <span>创建于: {new Date(job.createdAt).toLocaleString()}</span>
                       </div>
                     </div>
@@ -369,7 +372,7 @@ export default function CronPage() {
                         <code className="text-sm bg-muted px-2 py-1 rounded block">{cron.plugin}</code>
                       </div>
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span>状态: {cron.running ? '✅ 运行中' : '⏹️ 已停止'}</span>
+                        <span className="flex items-center gap-1">状态: {cron.running ? <Badge variant="default" className="text-xs">运行中</Badge> : <Badge variant="outline" className="text-xs">已停止</Badge>}</span>
                         {cron.nextExecution && (
                           <span>下次执行: {new Date(cron.nextExecution).toLocaleString()}</span>
                         )}
@@ -431,48 +434,60 @@ export default function CronPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">适配器</label>
-                  <select
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    value={newCron.context.platform || ''}
-                    onChange={(e) => {
-                      const platform = e.target.value
+                  <Select
+                    value={newCron.context.platform || '__none__'}
+                    onValueChange={(v) => {
+                      const platform = v === '__none__' ? '' : v
                       setNewCron((p) => ({ ...p, context: { ...p.context, platform, endpointId: '' } }))
                     }}
                   >
-                    <option value="">不指定</option>
-                    {[...new Set(endpoints.map((b) => b.adapter))].map((adapter) => (
-                      <option key={adapter} value={adapter}>{adapter}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="不指定" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">不指定</SelectItem>
+                      {[...new Set(endpoints.map((b) => b.adapter))].map((adapter) => (
+                        <SelectItem key={adapter} value={adapter}>{adapter}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">Endpoint</label>
-                  <select
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    value={newCron.context.endpointId || ''}
+                  <Select
+                    value={newCron.context.endpointId || '__none__'}
                     disabled={!newCron.context.platform}
-                    onChange={(e) => setNewCron((p) => ({ ...p, context: { ...p.context, endpointId: e.target.value } }))}
+                    onValueChange={(v) => setNewCron((p) => ({ ...p, context: { ...p.context, endpointId: v === '__none__' ? '' : v } }))}
                   >
-                    <option value="">不指定</option>
-                    {endpoints
-                      .filter((b) => b.adapter === newCron.context.platform)
-                      .map((b) => (
-                        <option key={b.name} value={b.name}>{b.name}</option>
-                      ))}
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="不指定" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">不指定</SelectItem>
+                      {endpoints
+                        .filter((b) => b.adapter === newCron.context.platform)
+                        .map((b) => (
+                          <SelectItem key={b.name} value={b.name}>{b.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">场景类型</label>
-                  <select
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    value={newCron.context.scope || ''}
-                    onChange={(e) => setNewCron((p) => ({ ...p, context: { ...p.context, scope: e.target.value } }))}
+                  <Select
+                    value={newCron.context.scope || '__none__'}
+                    onValueChange={(v) => setNewCron((p) => ({ ...p, context: { ...p.context, scope: v === '__none__' ? '' : v } }))}
                   >
-                    <option value="">不指定</option>
-                    <option value="private">私聊 (private)</option>
-                    <option value="group">群聊 (group)</option>
-                    <option value="channel">频道 (channel)</option>
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="不指定" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">不指定</SelectItem>
+                      <SelectItem value="private">私聊 (private)</SelectItem>
+                      <SelectItem value="group">群聊 (group)</SelectItem>
+                      <SelectItem value="channel">频道 (channel)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">发送者 ID</label>

@@ -12,6 +12,8 @@ import {
   DialogClose,
 } from '../../components/ui/dialog'
 import { JsonField } from './json-field'
+import { useToast } from '../../components/toast'
+import { ConfirmDialog } from '../../components/confirm-dialog'
 
 export function RelatedTableView({
   tableName,
@@ -35,6 +37,8 @@ export function RelatedTableView({
   const [editRow, setEditRow] = useState<any>(null)
   const [addRow, setAddRow] = useState(false)
   const [formData, setFormData] = useState<Record<string, string>>({})
+  const [deleteTarget, setDeleteTarget] = useState<any>(null)
+  const { success, error: toastError } = useToast()
   const pageSize = 50
 
   const load = useCallback(async () => {
@@ -90,14 +94,19 @@ export function RelatedTableView({
   }
 
   const handleDelete = async (row: any) => {
-    if (!confirm('确定要删除这条记录吗？')) return
+    setDeleteTarget(row)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
     try {
-      await remove(tableName, { [primaryKey]: row[primaryKey] })
-      setMsg({ type: 'success', text: '删除成功' })
-      setTimeout(() => setMsg(null), 2000)
+      await remove(tableName, { [primaryKey]: deleteTarget[primaryKey] })
+      success('删除成功')
       await load()
     } catch (err) {
-      setMsg({ type: 'error', text: (err as Error).message })
+      toastError((err as Error).message)
+    } finally {
+      setDeleteTarget(null)
     }
   }
 
@@ -216,6 +225,15 @@ export function RelatedTableView({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+        title="删除记录"
+        description="确定要删除这条记录吗？"
+        variant="destructive"
+        confirmLabel="删除"
+        onConfirm={confirmDelete}
+      />
     </div>
   )
 }

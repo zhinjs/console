@@ -10,6 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Checkbox } from '../components/ui/checkbox'
 import { cn } from '@zhin.js/client'
 import { PageHeader } from '../components/PageHeader'
+import { useToast } from '../components/toast'
+import { ConfirmDialog } from '../components/confirm-dialog'
+import { Input } from '../components/ui/input'
 
 interface LogEntry {
   level: 'info' | 'warn' | 'error'
@@ -25,6 +28,7 @@ interface LogStats {
 }
 
 export default function LogsPage() {
+  const { success, error: toastError } = useToast()
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [stats, setStats] = useState<LogStats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -34,6 +38,9 @@ export default function LogsPage() {
   const logsEndRef = useRef<HTMLDivElement>(null)
   const prevRawLogCountRef = useRef(0)
   const [textFilter, setTextFilter] = useState('')
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false)
+  const [cleanupConfirmOpen, setCleanupConfirmOpen] = useState(false)
+  const [cleanupParams, setCleanupParams] = useState<{ days?: number; maxRecords?: number }>({})
 
   const filteredLogs = useMemo(() => {
     const q = textFilter.trim().toLowerCase()
@@ -84,7 +91,10 @@ export default function LogsPage() {
   }
 
   const handleClearAll = async () => {
-    if (!confirm('确定清空全部日志吗？此操作不可撤销。')) return
+    setClearConfirmOpen(true)
+  }
+
+  const handleClearAllConfirm = async () => {
     try {
       const res = await apiFetch('/api/logs', { method: 'DELETE' })
       if (!res.ok) throw new Error('清空失败')
@@ -92,17 +102,22 @@ export default function LogsPage() {
       if (data.success) {
         setLogs([])
         fetchStats()
+        success('日志已清空')
       } else {
         throw new Error(data.error ?? '清空失败')
       }
     } catch (err) {
-      alert((err as Error).message)
+      toastError((err as Error).message)
     }
   }
 
   const handleCleanup = async (days?: number, maxRecords?: number) => {
-    const message = days ? `确定清理 ${days} 天前的日志吗？` : `确定只保留最近 ${maxRecords} 条日志吗？`
-    if (!confirm(message)) return
+    setCleanupParams({ days, maxRecords })
+    setCleanupConfirmOpen(true)
+  }
+
+  const handleCleanupConfirm = async () => {
+    const { days, maxRecords } = cleanupParams
     try {
       const res = await apiFetch('/api/logs/cleanup', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -110,8 +125,14 @@ export default function LogsPage() {
       })
       if (!res.ok) throw new Error('清理失败')
       const data = await res.json()
-      if (data.success) { alert(`成功清理 ${data.data.deletedCount} 条日志`); fetchLogs(); fetchStats() }
-    } catch (err) { alert((err as Error).message) }
+      if (data.success) {
+        success(`成功清理 ${data.data.deletedCount} 条日志`)
+        fetchLogs()
+        fetchStats()
+      }
+    } catch (err) {
+      toastError((err as Error).message)
+    }
   }
 
   const getLevelStyle = (level: string) => {
@@ -186,12 +207,12 @@ export default function LogsPage() {
           <div className="flex items-center gap-3 flex-wrap">
             <div className="relative flex-1 min-w-[180px] max-w-xs">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-              <input
+              <Input
                 type="search"
                 placeholder="搜索消息、来源…"
                 value={textFilter}
                 onChange={(e) => setTextFilter(e.target.value)}
-                className="w-full h-9 pl-9 pr-3 rounded-md border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="pl-9"
               />
             </div>
             <Select value={levelFilter} onValueChange={setLevelFilter}>
@@ -298,6 +319,27 @@ export default function LogsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={clearConfirmOpen}
+        onOpenChange={setClearConfirmOpen}
+        title="清空全部日志"
+        description="此操作不可撤销，确定要清空全部日志吗？"
+        variant="destructive"
+        confirmLabel="清空"
+        onConfirm={handleClearAllConfirm}
+      />
+      <ConfirmDialog
+        open={cleanupConfirmOpen}
+        onOpenChange={setCleanupConfirmOpen}
+        title="清理旧日志"
+        description={cleanupParams.days
+          ? `确定清理 ${cleanupParams.days} 天前的日志吗？`
+          : `确定只保留最近 ${cleanupParams.maxRecords} 条日志吗？`}
+        variant="destructive"
+        confirmLabel="清理"
+        onConfirm={handleCleanupConfirm}
+      />
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Bot, AlertCircle, Activity, Package, Clock, Cpu, MemoryStick, FileText, TrendingUp, RotateCw } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import { useWebSocket } from '@zhin.js/client'
+import { useToast } from '../components/toast'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
@@ -39,11 +40,12 @@ export default function HomePage() {
   const [restartDialogOpen, setRestartDialogOpen] = useState(false)
   const [restarting, setRestarting] = useState(false)
   const { sendRequest } = useWebSocket()
+  const { success, error: toastError } = useToast()
 
   useEffect(() => {
-    fetchData()
-    const interval = setInterval(fetchData, 5000)
-    const onDataUpdate = () => { fetchData() }
+    fetchStats()
+    const interval = setInterval(fetchStats, 5000)
+    const onDataUpdate = () => { fetchStats() }
     window.addEventListener('zhin-console-data-update', onDataUpdate)
     return () => {
       clearInterval(interval)
@@ -51,7 +53,7 @@ export default function HomePage() {
     }
   }, [])
 
-  const fetchData = async () => {
+  const fetchStats = async () => {
     try {
       const [statsRes, statusRes] = await Promise.all([
         apiFetch('/api/stats'),
@@ -85,7 +87,9 @@ export default function HomePage() {
     setRestarting(true)
     try {
       await sendRequest({ type: 'system:restart' })
+      success('正在重启...')
     } catch {
+      toastError('重启失败')
       // 连接断开是预期行为（进程重启中）
     }
     // 显示重启中状态，然后自动刷新页面
@@ -111,6 +115,9 @@ export default function HomePage() {
         <Alert variant="destructive" className="max-w-md">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>加载失败: {error}</AlertDescription>
+          <div className="mt-3">
+            <Button variant="outline" size="sm" onClick={fetchStats}>重试</Button>
+          </div>
         </Alert>
       </div>
     )

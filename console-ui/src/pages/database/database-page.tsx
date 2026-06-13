@@ -8,6 +8,8 @@ import { Alert, AlertDescription } from '../../components/ui/alert'
 import { Badge } from '../../components/ui/badge'
 import { ScrollArea } from '../../components/ui/scroll-area'
 import { PageHeader } from '../../components/PageHeader'
+import { useToast } from '../../components/toast'
+import { ConfirmDialog } from '../../components/confirm-dialog'
 import { DB_TYPE_LABELS, DIALECT_LABELS } from './constants'
 import { RelatedTableView } from './related-table-view'
 import { DocumentCollectionView } from './document-collection-view'
@@ -21,11 +23,14 @@ export default function DatabasePage() {
     kvGet, kvSet, kvDelete, kvEntries,
   } = useDatabase()
 
+  const { success, error: toastError } = useToast()
   const [selectedTable, setSelectedTable] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ name: string; label: string } | null>(null)
   const selectedTableInfo = useMemo(() => tables.find((t: TableInfo) => t.name === selectedTable), [tables, selectedTable])
   const dbType: DatabaseType = info?.type ?? 'related'
 
   return (
+    <>
     <div className="space-y-6">
       <PageHeader
         title="数据库"
@@ -95,10 +100,7 @@ export default function DatabasePage() {
                         onClick={(e: MouseEvent) => {
                           e.stopPropagation()
                           const label = dbType === 'related' ? '表' : dbType === 'document' ? '集合' : '桶'
-                          if (!confirm(`确定要删除${label} "${t.name}" 吗？此操作不可撤销！`)) return
-                          dropTable(t.name).then(() => {
-                            if (selectedTable === t.name) setSelectedTable(null)
-                          }).catch(() => {})
+                          setDeleteTarget({ name: t.name, label })
                         }}
                       >
                         <Trash2 className="w-3 h-3" />
@@ -174,5 +176,20 @@ export default function DatabasePage() {
         </CardContent>
       </Card>
     </div>
+    <ConfirmDialog
+      open={!!deleteTarget}
+      onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+      title={`删除${deleteTarget?.label || ''}`}
+      description={`确定要删除${deleteTarget?.label || ''} "${deleteTarget?.name}" 吗？此操作不可撤销！`}
+      variant="destructive"
+      confirmLabel="删除"
+      onConfirm={async () => {
+        if (!deleteTarget) return
+        await dropTable(deleteTarget.name)
+        if (selectedTable === deleteTarget.name) setSelectedTable(null)
+        setDeleteTarget(null)
+      }}
+    />
+    </>
   )
 }
