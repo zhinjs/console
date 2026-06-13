@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Checkbox } from '../components/ui/checkbox'
 import { cn } from '@zhin.js/client'
 import { PageHeader } from '../components/PageHeader'
+import { ErrorAlert } from '../components/error-alert'
+import { EmptyState } from '../components/empty-state'
 import { useToast } from '../components/toast'
 import { ConfirmDialog } from '../components/confirm-dialog'
 import { Input } from '../components/ui/input'
@@ -259,19 +261,14 @@ export default function LogsPage() {
         <CardContent className="p-4">
           <div className="max-h-[min(70vh,720px)] overflow-y-auto rounded-md border border-border/60 bg-muted/20 dark:bg-muted/30 p-2 space-y-1.5">
             {error ? (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>加载失败: {error}</AlertDescription>
-              </Alert>
+              <ErrorAlert error={error} onRetry={fetchLogs} />
             ) : logs.length === 0 ? (
               <div className="flex flex-col items-center gap-3 py-12">
                 <FileText className="w-12 h-12 text-muted-foreground/30" />
                 <span className="text-sm text-muted-foreground">暂无日志</span>
               </div>
             ) : filteredLogs.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 py-10 text-sm text-muted-foreground">
-                没有符合「{textFilter}」的条目，请调整筛选条件
-              </div>
+              <EmptyState compact title="没有符合的条目" description="尝试调整搜索或筛选条件" />
             ) : (
               filteredLogs.map((log, index) => {
                 const style = getLevelStyle(log.level)

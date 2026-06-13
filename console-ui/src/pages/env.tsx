@@ -9,7 +9,9 @@ import { PageHeader } from '../components/PageHeader'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Alert, AlertDescription } from '../components/ui/alert'
+import { ErrorAlert } from '../components/error-alert'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
+import { Skeleton } from '../components/ui/skeleton'
 import { Textarea } from '../components/ui/textarea'
 
 const SENSITIVE_PATTERN = /^(.*(?:PASSWORD|SECRET|TOKEN|KEY|PRIVATE|CREDENTIAL).*?=\s*)(.+)$/gim
@@ -158,9 +160,8 @@ export default function EnvManagePage() {
     return (
       <div className="space-y-6">
         <PageHeader title="环境变量" description="加载文件列表…" />
-        <div className="flex items-center justify-center py-12 rounded-lg border border-dashed">
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-sm text-muted-foreground">加载中...</span>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48" />)}
         </div>
       </div>
     )
@@ -180,10 +181,7 @@ export default function EnvManagePage() {
       />
 
       {error && (
-        <Alert variant="destructive" className="py-2">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <ErrorAlert error={error} onRetry={listFiles} />
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">

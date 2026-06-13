@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Alert, AlertDescription } from '../components/ui/alert'
+import { PageHeader } from '../components/PageHeader'
 import { Skeleton } from '../components/ui/skeleton'
 import {
   Dialog, DialogContent, DialogHeader, DialogFooter,
@@ -126,10 +127,7 @@ export default function HomePage() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">概览</h1>
-        <p className="text-muted-foreground">实时监控您的机器人框架运行状态</p>
-      </div>
+      <PageHeader title="概览" description="实时监控您的机器人框架运行状态" />
 
       {/* Stats cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

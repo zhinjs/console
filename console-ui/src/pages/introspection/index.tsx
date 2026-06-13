@@ -5,6 +5,8 @@ import { apiFetch, getApiBase } from '../../utils/auth'
 import { PageHeader } from '../../components/PageHeader'
 import { Card, CardContent } from '../../components/ui/card'
 import { Alert, AlertDescription } from '../../components/ui/alert'
+import { ErrorAlert } from '../../components/error-alert'
+import { EmptyState } from '../../components/empty-state'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
 import { Skeleton } from '../../components/ui/skeleton'
@@ -252,18 +254,8 @@ export default function IntrospectionPage() {
               </CardContent>
             </Card>
 
-            {serviceUnavailable && error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            {error && !serviceUnavailable && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
+            {error && (
+              <ErrorAlert error={error} onRetry={fetchData} />
             )}
 
             {envelope?.note && (
@@ -314,7 +306,7 @@ export default function IntrospectionPage() {
                             colSpan={columns.length}
                             className="text-center text-muted-foreground py-12"
                           >
-                            暂无数据
+                            <EmptyState compact />
                           </td>
                         </tr>
                       ) : (

@@ -14,7 +14,9 @@ import { Alert, AlertDescription } from '../components/ui/alert'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
 import { Textarea } from '../components/ui/textarea'
 import { Input } from '../components/ui/input'
+import { Skeleton } from '../components/ui/skeleton'
 import { Separator } from '../components/ui/separator'
+import { ErrorAlert } from '../components/error-alert'
 import { useToast } from '../components/toast'
 import { Switch } from '../components/ui/switch'
 import { PageHeader } from '../components/PageHeader'
@@ -336,9 +338,8 @@ export default function ConfigPage() {
     return (
       <div className="space-y-4">
         <PageHeader title="配置" description="加载配置中..." />
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-sm text-muted-foreground">加载配置中...</span>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24" />)}
         </div>
       </div>
     )
@@ -360,10 +361,7 @@ export default function ConfigPage() {
       </div>
 
       {error && (
-        <Alert variant="destructive" className="py-2">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <ErrorAlert error={error} onRetry={load} />
       )}
 
       <Tabs value={activeSection} onValueChange={setActiveSection}>

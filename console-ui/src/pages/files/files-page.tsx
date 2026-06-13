@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useFiles } from '@zhin.js/client'
-import { FolderOpen, Loader2, RefreshCw, AlertCircle } from 'lucide-react'
+import { RefreshCw, AlertCircle } from 'lucide-react'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Alert, AlertDescription } from '../../components/ui/alert'
 import { ScrollArea } from '../../components/ui/scroll-area'
+import { PageHeader } from '../../components/PageHeader'
+import { EmptyState } from '../../components/empty-state'
 import { useHljsTheme } from './use-hljs-theme'
 import { TreeNode } from './tree-node'
 import { FileEditor } from './file-editor'
@@ -16,18 +18,16 @@ export default function FileManagePage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">项目文件</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            浏览和编辑工作空间中的配置文件和源代码
-          </p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => loadTree()} disabled={loading}>
-          <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
-          刷新
-        </Button>
-      </div>
+      <PageHeader
+        title="项目文件"
+        description="浏览和编辑工作空间中的配置文件和源代码"
+        actions={
+          <Button variant="outline" size="sm" onClick={() => loadTree()} disabled={loading}>
+            <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
+            刷新
+          </Button>
+        }
+      />
 
       {error && (
         <Alert variant="destructive" className="py-2">
@@ -47,10 +47,10 @@ export default function FileManagePage() {
                 <div className="py-1">
                   {loading && tree.length === 0 ? (
                     <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                      <RefreshCw className="w-4 h-4 animate-spin text-muted-foreground" />
                     </div>
                   ) : tree.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">暂无文件</p>
+                    <EmptyState compact title="暂无文件" />
                   ) : (
                     tree.map((node) => (
                       <TreeNode

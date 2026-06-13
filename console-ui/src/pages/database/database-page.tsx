@@ -5,7 +5,10 @@ import { Database as DatabaseIcon, Table2, Trash2, RefreshCw, Loader2, AlertCirc
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Alert, AlertDescription } from '../../components/ui/alert'
+import { ErrorAlert } from '../../components/error-alert'
+import { EmptyState } from '../../components/empty-state'
 import { Badge } from '../../components/ui/badge'
+import { Skeleton } from '../../components/ui/skeleton'
 import { ScrollArea } from '../../components/ui/scroll-area'
 import { PageHeader } from '../../components/PageHeader'
 import { useToast } from '../../components/toast'
@@ -50,10 +53,7 @@ export default function DatabasePage() {
       />
 
       {error && (
-        <Alert variant="destructive" className="py-2">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <ErrorAlert error={error} onRetry={() => loadTables().catch(() => {})} />
       )}
 
       <Card className="overflow-hidden border-border/80 shadow-sm">
@@ -68,11 +68,11 @@ export default function DatabasePage() {
               <ScrollArea className="flex-1">
                 <div className="py-1">
                   {loading && !tables.length ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                    <div className="space-y-2 p-3">
+                      {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
                     </div>
                   ) : !tables.length ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">暂无数据</p>
+                    <EmptyState compact title="暂无数据" />
                   ) : tables.map((t: TableInfo) => (
                     <div
                       key={t.name}

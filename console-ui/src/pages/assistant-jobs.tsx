@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Brain, AlertCircle, RefreshCw, Loader2 } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import { PageHeader } from '../components/PageHeader'
+import { ErrorAlert } from '../components/error-alert'
 import { Card, CardContent } from '../components/ui/card'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { Badge } from '../components/ui/badge'
@@ -110,10 +111,7 @@ export default function AssistantJobsPage() {
       />
 
       {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <ErrorAlert error={error} onRetry={fetchJobs} />
       )}
 
       {data && typeof data.eventsActive === 'boolean' && (
