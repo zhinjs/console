@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import {
   Search, Package, Download, ExternalLink, AlertCircle,
-  ArrowUpDown, RefreshCw, ShieldCheck, Globe,
+  ArrowUpDown, RefreshCw, ShieldCheck, Globe, Copy, Check,
+  ChevronLeft, ChevronRight, GitBranch, Calendar, Scale,
   type LucideIcon,
 } from 'lucide-react'
 import { Card, CardContent } from '../components/ui/card'
@@ -11,7 +12,7 @@ import { Input } from '../components/ui/input'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { Skeleton } from '../components/ui/skeleton'
 import { Separator } from '../components/ui/separator'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs'
 import {
   Dialog, DialogContent, DialogHeader, DialogFooter,
   DialogTitle, DialogDescription, DialogClose,
@@ -20,13 +21,17 @@ import { apiFetch } from '../utils/auth'
 
 interface MarketPlugin {
   name: string
+  displayName: string
   version: string
   description: string
   author: string
   isOfficial: boolean
+  official: boolean
+  category: string
   keywords: string[]
   npm: string
   date: string
+  downloads: { weekly: number; monthly: number }
 }
 
 interface PluginDetail {
@@ -52,8 +57,9 @@ interface UpdateInfo {
   latest: string
 }
 
-type SortKey = 'name' | 'date'
+type SortKey = 'relevance' | 'downloads' | 'newest' | 'name'
 type Category = '' | 'adapter' | 'service' | 'util' | 'game' | 'feature'
+type DetailTab = 'readme' | 'versions' | 'deps'
 
 const CATEGORIES: { value: Category; label: string; icon: LucideIcon }[] = [
   { value: '', label: '全部', icon: Package },
@@ -64,18 +70,30 @@ const CATEGORIES: { value: Category; label: string; icon: LucideIcon }[] = [
   { value: 'feature', label: '特性', icon: Package },
 ]
 
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: 'relevance', label: '相关度' },
+  { value: 'downloads', label: '下载量' },
+  { value: 'newest', label: '最新' },
+  { value: 'name', label: '名称' },
+]
+
+const PAGE_SIZE = 18
+
 function formatDate(dateStr: string) {
   if (!dateStr) return ''
   return new Date(dateStr).toLocaleDateString('zh-CN')
 }
 
 function formatDownloads(n: number): string {
+  if (n >= 10000) return `${(n / 10000).toFixed(1)}w`
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
   return String(n)
 }
 
 export default function MarketplacePage() {
   const [plugins, setPlugins] = useState<MarketPlugin[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
@@ -83,16 +101,19 @@ export default function MarketplacePage() {
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
   const [category, setCategory] = useState<Category>('')
   const [officialOnly, setOfficialOnly] = useState(false)
-  const [sortKey, setSortKey] = useState<SortKey>('name')
+  const [sortKey, setSortKey] = useState<SortKey>('relevance')
   const [updates, setUpdates] = useState<UpdateInfo[]>([])
   const [updatesLoading, setUpdatesLoading] = useState(false)
+  const [updatesDismissed, setUpdatesDismissed] = useState(false)
 
   // Detail dialog
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detail, setDetail] = useState<PluginDetail | null>(null)
+  const [detailTab, setDetailTab] = useState<DetailTab>('readme')
+  const [copied, setCopied] = useState(false)
 
-  const fetchPlugins = useCallback(async () => {
+  const fetchPlugins = useCallback(async (p: number) => {
     setLoading(true)
     setError(null)
     try {
@@ -100,13 +121,16 @@ export default function MarketplacePage() {
       if (debouncedSearch) params.set('q', debouncedSearch)
       if (category) params.set('category', category)
       if (officialOnly) params.set('official', 'true')
-      params.set('limit', '50')
+      if (sortKey !== 'relevance') params.set('sort', sortKey)
+      params.set('page', String(p))
+      params.set('size', String(PAGE_SIZE))
 
       const res = await apiFetch(`/pub/marketplace/search?${params}`)
       if (!res.ok) throw new Error('搜索失败')
       const data = await res.json()
       if (data.success) {
         setPlugins(data.data)
+        setTotal(data.total || 0)
       } else {
         throw new Error(data.error || '数据格式错误')
       }
@@ -115,18 +139,24 @@ export default function MarketplacePage() {
     } finally {
       setLoading(false)
     }
-  }, [debouncedSearch, category, officialOnly])
+  }, [debouncedSearch, category, officialOnly, sortKey])
 
   // Debounce search input (350ms)
   useEffect(() => {
     clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => setDebouncedSearch(search), 350)
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(search)
+      setPage(1)
+    }, 350)
     return () => clearTimeout(debounceRef.current)
   }, [search])
 
   useEffect(() => {
-    fetchPlugins()
-  }, [fetchPlugins])
+    fetchPlugins(page)
+  }, [fetchPlugins, page])
+
+  // Reset page when filters change
+  useEffect(() => { setPage(1) }, [category, officialOnly, sortKey])
 
   const checkUpdates = useCallback(async () => {
     setUpdatesLoading(true)
@@ -144,6 +174,8 @@ export default function MarketplacePage() {
     setDetailOpen(true)
     setDetailLoading(true)
     setDetail(null)
+    setDetailTab('readme')
+    setCopied(false)
     try {
       const res = await apiFetch(`/pub/marketplace/detail/${name}`)
       if (res.ok) {
@@ -154,33 +186,38 @@ export default function MarketplacePage() {
     finally { setDetailLoading(false) }
   }, [])
 
-  const sorted = useMemo(() => {
-    const arr = [...plugins]
-    if (sortKey === 'date') {
-      arr.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    } else {
-      arr.sort((a, b) => a.name.localeCompare(b.name))
+  const handleCopyInstall = useCallback(async (name: string) => {
+    const cmd = `pnpm add ${name}`
+    try {
+      await navigator.clipboard.writeText(cmd)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      const el = document.createElement('textarea')
+      el.value = cmd
+      document.body.appendChild(el)
+      el.select()
+      document.execCommand('copy')
+      document.body.removeChild(el)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
     }
-    return arr
-  }, [plugins, sortKey])
+  }, [])
+
+  const totalPages = Math.ceil(total / PAGE_SIZE)
 
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">市场</h1>
+          <h1 className="text-2xl font-bold tracking-tight">插件市场</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            探索 Zhin.js 生态中的 {plugins.length} 个插件
+            探索 Zhin.js 生态中的插件
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={checkUpdates}
-            disabled={updatesLoading}
-          >
+          <Button variant="outline" size="sm" onClick={checkUpdates} disabled={updatesLoading}>
             <RefreshCw className={`w-4 h-4 mr-1 ${updatesLoading ? 'animate-spin' : ''}`} />
             检查更新
           </Button>
@@ -188,17 +225,29 @@ export default function MarketplacePage() {
       </div>
 
       {/* Updates banner */}
-      {updates.length > 0 && (
+      {updates.length > 0 && !updatesDismissed && (
         <Alert>
-          <RefreshCw className="h-4 w-4" />
-          <AlertDescription>
-            有 {updates.length} 个插件可更新：
-            {updates.map(u => (
-              <Badge key={u.name} variant="secondary" className="ml-1">
-                {u.name} {u.current} → {u.latest}
-              </Badge>
-            ))}
-          </AlertDescription>
+          <div className="flex items-start justify-between w-full">
+            <div className="flex items-start gap-2">
+              <RefreshCw className="h-4 w-4 mt-0.5 shrink-0" />
+              <AlertDescription>
+                有 {updates.length} 个插件可更新：
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {updates.slice(0, 5).map(u => (
+                    <Badge key={u.name} variant="secondary" className="text-xs">
+                      {u.name} → {u.latest}
+                    </Badge>
+                  ))}
+                  {updates.length > 5 && (
+                    <span className="text-xs text-muted-foreground">+{updates.length - 5} 更多</span>
+                  )}
+                </div>
+              </AlertDescription>
+            </div>
+            <Button variant="ghost" size="sm" className="shrink-0 -mt-1" onClick={() => setUpdatesDismissed(true)}>
+              关闭
+            </Button>
+          </div>
         </Alert>
       )}
 
@@ -222,14 +271,15 @@ export default function MarketplacePage() {
             <ShieldCheck className="w-4 h-4 mr-1" />
             仅官方
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSortKey(sortKey === 'name' ? 'date' : 'name')}
+          <select
+            value={sortKey}
+            onChange={e => setSortKey(e.target.value as SortKey)}
+            className="h-9 px-3 rounded-md border bg-transparent text-sm cursor-pointer hover:bg-accent transition-colors"
           >
-            <ArrowUpDown className="w-4 h-4 mr-1" />
-            {sortKey === 'name' ? '名称' : '更新时间'}
-          </Button>
+            {SORT_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -237,12 +287,17 @@ export default function MarketplacePage() {
       <Tabs value={category} onValueChange={v => setCategory(v as Category)}>
         <TabsList>
           {CATEGORIES.map(c => (
-            <TabsTrigger key={c.value} value={c.value}>
-              {c.label}
-            </TabsTrigger>
+            <TabsTrigger key={c.value} value={c.value}>{c.label}</TabsTrigger>
           ))}
         </TabsList>
       </Tabs>
+
+      {/* Results info */}
+      {!loading && (
+        <div className="text-xs text-muted-foreground">
+          共 {total} 个插件{totalPages > 1 && `，第 ${page}/${totalPages} 页`}
+        </div>
+      )}
 
       {/* Error */}
       {error && (
@@ -255,25 +310,27 @@ export default function MarketplacePage() {
       {/* Loading */}
       {loading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-40" />)}
+          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-44" />)}
         </div>
       )}
 
       {/* Plugin Grid */}
       {!loading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {sorted.map(plugin => (
+          {plugins.map(plugin => (
             <Card
               key={plugin.name}
               className="cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5"
               onClick={() => openDetail(plugin.name)}
             >
-              <CardContent className="p-4 space-y-3">
+              <CardContent className="p-4 space-y-2.5">
                 {/* Name & Badge */}
-                <div className="flex justify-between items-start">
+                <div className="flex justify-between items-start gap-2">
                   <div className="flex items-center gap-2 min-w-0">
                     <Package className="w-4 h-4 shrink-0 text-muted-foreground" />
-                    <span className="font-semibold text-sm truncate">{plugin.name}</span>
+                    <span className="font-semibold text-sm truncate">
+                      {plugin.displayName || plugin.name}
+                    </span>
                   </div>
                   <div className="flex gap-1 shrink-0">
                     {plugin.isOfficial && (
@@ -283,29 +340,35 @@ export default function MarketplacePage() {
                   </div>
                 </div>
 
-                <p className="text-xs text-muted-foreground line-clamp-2">
+                <p className="text-xs text-muted-foreground line-clamp-2 min-h-[2rem]">
                   {plugin.description || '暂无描述'}
                 </p>
 
                 <Separator />
 
-                {/* Footer */}
+                {/* Footer: author, date, downloads */}
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{plugin.author}</span>
-                  <span>{formatDate(plugin.date)}</span>
+                  <span className="truncate max-w-[40%]">{plugin.author}</span>
+                  <div className="flex items-center gap-3 shrink-0">
+                    {plugin.downloads?.monthly > 0 && (
+                      <span className="flex items-center gap-0.5">
+                        <Download className="w-3 h-3" />
+                        {formatDownloads(plugin.downloads.monthly)}/月
+                      </span>
+                    )}
+                    <span>{formatDate(plugin.date)}</span>
+                  </div>
                 </div>
 
                 {/* Keywords */}
-                {plugin.keywords.length > 0 && (
+                {plugin.keywords?.length > 0 && (
                   <div className="flex flex-wrap gap-1">
-                    {plugin.keywords.slice(0, 4).map(kw => (
-                      <Badge key={kw} variant="outline" className="text-[10px] px-1.5 py-0">
-                        {kw}
-                      </Badge>
+                    {plugin.keywords.slice(0, 3).map(kw => (
+                      <Badge key={kw} variant="outline" className="text-[10px] px-1.5 py-0">{kw}</Badge>
                     ))}
-                    {plugin.keywords.length > 4 && (
+                    {plugin.keywords.length > 3 && (
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                        +{plugin.keywords.length - 4}
+                        +{plugin.keywords.length - 3}
                       </Badge>
                     )}
                   </div>
@@ -317,7 +380,7 @@ export default function MarketplacePage() {
       )}
 
       {/* Empty */}
-      {!loading && sorted.length === 0 && (
+      {!loading && plugins.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-12">
             <Package className="w-12 h-12 text-muted-foreground" />
@@ -327,11 +390,38 @@ export default function MarketplacePage() {
         </Card>
       )}
 
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page <= 1 || loading}
+          >
+            <ChevronLeft className="w-4 h-4 mr-1" />
+            上一页
+          </Button>
+          <span className="text-sm text-muted-foreground px-2">
+            {page} / {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages || loading}
+          >
+            下一页
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+        </div>
+      )}
+
       {/* Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
           {detailLoading ? (
-            <div className="space-y-3">
+            <div className="space-y-3 p-1">
               <Skeleton className="h-6 w-48" />
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-20 w-full" />
@@ -347,19 +437,19 @@ export default function MarketplacePage() {
                 <DialogDescription>{detail.description}</DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-4">
+              <div className="flex-1 overflow-y-auto space-y-4 min-h-0">
                 {/* Stats */}
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div className="rounded-md bg-secondary p-2">
-                    <div className="text-lg font-bold">{formatDownloads(detail.downloads.weekly)}</div>
+                    <div className="text-lg font-bold">{formatDownloads(detail.downloads?.weekly || 0)}</div>
                     <div className="text-[10px] text-muted-foreground">周下载</div>
                   </div>
                   <div className="rounded-md bg-secondary p-2">
-                    <div className="text-lg font-bold">{formatDownloads(detail.downloads.monthly)}</div>
+                    <div className="text-lg font-bold">{formatDownloads(detail.downloads?.monthly || 0)}</div>
                     <div className="text-[10px] text-muted-foreground">月下载</div>
                   </div>
                   <div className="rounded-md bg-secondary p-2">
-                    <div className="text-lg font-bold">{detail.versions.length}</div>
+                    <div className="text-lg font-bold">{detail.versions?.length || 0}</div>
                     <div className="text-[10px] text-muted-foreground">版本数</div>
                   </div>
                 </div>
@@ -386,59 +476,136 @@ export default function MarketplacePage() {
                       <span>{formatDate(detail.lastPublish)}</span>
                     </div>
                   )}
-                  {detail.engines && Object.keys(detail.engines).length > 0 && (
+                  {detail.engines?.node && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Node.js</span>
-                      <span>{detail.engines.node || '-'}</span>
+                      <span>{detail.engines.node}</span>
                     </div>
                   )}
                 </div>
 
-                {/* Peer Dependencies */}
-                {detail.peerDependencies && Object.keys(detail.peerDependencies).length > 0 && (
-                  <>
-                    <Separator />
-                    <div>
-                      <h4 className="text-sm font-medium mb-2">对等依赖</h4>
-                      <div className="flex flex-wrap gap-1">
-                        {Object.entries(detail.peerDependencies).map(([name, ver]) => (
-                          <Badge key={name} variant="outline" className="text-xs">
-                            {name}@{ver}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </>
+                {/* Tabs: readme / versions / deps */}
+                <div className="flex border-b gap-0">
+                  {([['readme', 'README'], ['versions', '版本'], ['deps', '依赖']] as [DetailTab, string][]).map(
+                    ([key, label]) => (
+                      <button
+                        key={key}
+                        className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                          detailTab === key
+                            ? 'border-primary text-foreground'
+                            : 'border-transparent text-muted-foreground hover:text-foreground'
+                        }`}
+                        onClick={() => setDetailTab(key)}
+                      >
+                        {label}
+                      </button>
+                    ),
+                  )}
+                </div>
+
+                {/* Tab content */}
+                {detailTab === 'readme' && (
+                  <div>
+                    {detail.readme ? (
+                      <pre className="whitespace-pre-wrap text-xs text-muted-foreground leading-relaxed bg-secondary/50 rounded-md p-3 overflow-x-auto max-h-64 overflow-y-auto">
+                        {detail.readme}
+                      </pre>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-6">暂无 README</p>
+                    )}
+                  </div>
                 )}
 
-                {/* README excerpt */}
-                {detail.readme && (
-                  <>
-                    <Separator />
-                    <div>
-                      <h4 className="text-sm font-medium mb-2">README</h4>
-                      <p className="text-xs text-muted-foreground whitespace-pre-line leading-relaxed">
-                        {detail.readme}
+                {detailTab === 'versions' && (
+                  <div>
+                    {detail.versions?.length > 0 ? (
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+                        {detail.versions.slice(-20).reverse().map(v => (
+                          <span key={v} className="inline-flex items-center gap-1 px-2 py-1 rounded border text-xs font-mono bg-secondary/30">
+                            <GitBranch className="w-3 h-3 text-muted-foreground" />
+                            {v}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-6">暂无版本信息</p>
+                    )}
+                    {detail.versions?.length > 20 && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        最近 20 个版本（共 {detail.versions.length} 个）
                       </p>
-                    </div>
-                  </>
+                    )}
+                  </div>
+                )}
+
+                {detailTab === 'deps' && (
+                  <div className="space-y-3">
+                    {detail.peerDependencies && Object.keys(detail.peerDependencies).length > 0 ? (
+                      <div>
+                        <h4 className="text-xs font-medium mb-1.5 text-muted-foreground">Peer Dependencies</h4>
+                        <div className="space-y-1">
+                          {Object.entries(detail.peerDependencies).map(([name, ver]) => (
+                            <div key={name} className="flex items-center justify-between px-3 py-1.5 rounded border text-xs bg-secondary/30">
+                              <span className="font-mono">{name}</span>
+                              <span className="text-muted-foreground">{String(ver)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-6">无 peer dependencies</p>
+                    )}
+                    {detail.engines && Object.keys(detail.engines).length > 0 && (
+                      <div>
+                        <h4 className="text-xs font-medium mb-1.5 text-muted-foreground">Engines</h4>
+                        <div className="space-y-1">
+                          {Object.entries(detail.engines).map(([eng, ver]) => (
+                            <div key={eng} className="flex items-center justify-between px-3 py-1.5 rounded border text-xs bg-secondary/30">
+                              <span className="font-mono">{eng}</span>
+                              <span className="text-muted-foreground">{String(ver)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {/* Install command */}
-                <Separator />
                 <div>
                   <h4 className="text-sm font-medium mb-2">安装命令</h4>
-                  <code className="block text-xs bg-secondary rounded-md p-2">
-                    pnpm add {detail.name}
-                  </code>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-xs bg-secondary rounded-md p-2 overflow-x-auto">
+                      pnpm add {detail.name}
+                    </code>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCopyInstall(detail.name)}
+                      className="shrink-0"
+                    >
+                      {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    </Button>
+                  </div>
                 </div>
               </div>
 
-              <DialogFooter className="gap-2 flex-wrap">
+              <DialogFooter className="gap-2 flex-wrap shrink-0 pt-2">
                 {detail.homepage && (
                   <Button variant="outline" size="sm" asChild>
                     <a href={detail.homepage} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="w-3 h-3 mr-1" /> 主页
+                    </a>
+                  </Button>
+                )}
+                {detail.repository && (
+                  <Button variant="outline" size="sm" asChild>
+                    <a
+                      href={detail.repository.replace(/^git\+/, '').replace(/\.git$/, '')}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="w-3 h-3 mr-1" /> 源码
                     </a>
                   </Button>
                 )}
