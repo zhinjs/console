@@ -150,6 +150,7 @@ export default function LoginPage({ onSuccess, initialApiBase }: LoginPageProps)
               <Input
                 type="url"
                 placeholder="API Base URL（如 http://127.0.0.1:8086）"
+                aria-label="API Base URL"
                 value={apiBase}
                 onChange={(e) => {
                   setApiBaseValue(e.target.value)
@@ -159,6 +160,7 @@ export default function LoginPage({ onSuccess, initialApiBase }: LoginPageProps)
               <Input
                 type="password"
                 placeholder="API Token（须手动输入，勿通过 URL 传递）"
+                aria-label="API Token"
                 value={token}
                 onChange={(e) => {
                   setTokenValue(e.target.value)
@@ -167,7 +169,7 @@ export default function LoginPage({ onSuccess, initialApiBase }: LoginPageProps)
                 autoFocus={savedLogins.length === 0}
               />
               {error && (
-                <p className="text-sm text-destructive">{error}</p>
+                <p className="text-sm text-destructive" role="alert">{error}</p>
               )}
             </div>
 
