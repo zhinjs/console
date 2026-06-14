@@ -144,9 +144,9 @@ export default function HomePage() {
           </CardContent>
         </Card>
 
-        <Card aria-label={`机器人: ${stats?.endpoints.total || 0}, 在线 ${stats?.endpoints.online || 0}`}>
+        <Card aria-label={`Endpoints: ${stats?.endpoints.total || 0}, 在线 ${stats?.endpoints.online || 0}`}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">机器人</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Endpoints</CardTitle>
             <Bot className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -243,8 +243,8 @@ export default function HomePage() {
             <Button variant="outline" className="h-auto p-4 justify-start" onClick={() => navigate('/endpoints')}>
               <div className="flex flex-col items-start gap-1">
                 <Bot className="h-5 w-5 mb-1" />
-                <span className="font-medium">机器人状态</span>
-                <span className="text-xs text-muted-foreground">监控机器人运行</span>
+                <span className="font-medium">Endpoint 状态</span>
+                <span className="text-xs text-muted-foreground">监控 Endpoint 运行</span>
               </div>
             </Button>
             <Button variant="outline" className="h-auto p-4 justify-start" onClick={() => navigate('/logs')}>

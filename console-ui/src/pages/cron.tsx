@@ -29,7 +29,6 @@ interface MemoryCron {
 interface CronJobContext {
   platform?: string
   endpointId?: string
-  botId?: string
   senderId?: string
   sceneId?: string
   scope?: string
@@ -298,8 +297,8 @@ export default function CronPage() {
                           <span className="text-xs font-medium text-muted-foreground block mb-1">执行上下文</span>
                           <div className="bg-muted px-3 py-2 rounded text-xs space-y-1">
                             {job.context.platform && <p><span className="text-muted-foreground">平台:</span> {job.context.platform}</p>}
-                            {(job.context.endpointId ?? job.context.botId) && (
-                              <p><span className="text-muted-foreground">Endpoint:</span> {job.context.endpointId ?? job.context.botId}</p>
+                            {job.context.endpointId && (
+                              <p><span className="text-muted-foreground">Endpoint:</span> {job.context.endpointId}</p>
                             )}
                             {job.context.senderId && <p><span className="text-muted-foreground">发送者:</span> {job.context.senderId}</p>}
                             {job.context.sceneId && <p><span className="text-muted-foreground">场景:</span> {job.context.sceneId}</p>}

@@ -97,7 +97,7 @@ export function useMessageHistory(params: {
         data: Record<string, unknown>
       }
       const d = msg.data
-      const pushEndpointId = String(d.endpointId ?? d.botId ?? '')
+      const pushEndpointId = String(d.endpointId ?? '')
       if (msg.type === 'endpoint:message') {
         if (d.adapter === adapter && pushEndpointId === endpointId) {
           void putInboxCache(adapter, endpointId, 'message', d)
@@ -116,8 +116,8 @@ export function useMessageHistory(params: {
         }
       }
     }
-    window.addEventListener('zhin-console-bot-push', onPush as EventListener)
-    return () => window.removeEventListener('zhin-console-bot-push', onPush as EventListener)
+    window.addEventListener('zhin-console-endpoint-push', onPush as EventListener)
+    return () => window.removeEventListener('zhin-console-endpoint-push', onPush as EventListener)
   }, [adapter, endpointId])
 
   // Hydrate received messages from inbox cache on mount
