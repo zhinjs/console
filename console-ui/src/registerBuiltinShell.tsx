@@ -44,11 +44,11 @@ export function registerBuiltinConsolePages() {
 
   app.addRoute({
     path: '/endpoints',
-    name: '机器人',
+    name: 'Endpoints',
     parent: null,
     icon: 'Bot',
     element: <EndpointsPage />,
-    meta: { group: '机器人', order: 0 },
+    meta: { group: 'Endpoints', order: 0 },
   })
 
   app.addRoute({
@@ -133,7 +133,7 @@ export function registerBuiltinConsolePages() {
 
   app.addRoute({
     path: '/endpoints/:adapter/:endpointId',
-    name: '机器人详情',
+    name: 'Endpoint 详情',
     parent: null,
     element: <EndpointDetailPage />,
     meta: { hideInMenu: true, fullWidth: true },

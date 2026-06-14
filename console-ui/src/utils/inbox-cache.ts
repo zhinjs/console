@@ -13,14 +13,13 @@ export interface InboxCacheRecord {
   id: string
   adapter: string
   endpointId?: string
-  botId?: string
   kind: InboxKind
   payload: Record<string, unknown>
   updatedAt: number
 }
 
 function recordEndpointId(record: InboxCacheRecord): string {
-  return String(record.endpointId ?? record.botId ?? '')
+  return String(record.endpointId ?? '')
 }
 
 function openDb(): Promise<IDBDatabase> {

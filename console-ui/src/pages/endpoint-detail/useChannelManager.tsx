@@ -185,7 +185,7 @@ export function useChannelManager(params: {
         if (errors.length) {
           setListErr(`${errors.join('；')}。${hint}`)
         } else if (!info?.connected) {
-          setListErr(`机器人未在线。${hint}`)
+          setListErr(`Endpoint 未在线。${hint}`)
         } else {
           setListErr(`暂无会话。${hint}`)
         }

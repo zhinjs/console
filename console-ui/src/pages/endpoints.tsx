@@ -84,7 +84,7 @@ export default function EndpointsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="机器人" description="管理所有已配置的 Endpoint 连接" />
+      <PageHeader title="Endpoints" description="管理所有已配置的 Endpoint 连接" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {endpoints.map((endpoint, index) => (
@@ -163,8 +163,8 @@ export default function EndpointsPage() {
           <CardContent className="flex flex-col items-center gap-4 py-12">
             <Bot className="w-16 h-16 text-muted-foreground/30" />
             <div className="text-center">
-              <h3 className="text-lg font-semibold">暂无机器人</h3>
-              <p className="text-sm text-muted-foreground">请先配置并启动机器人</p>
+              <h3 className="text-lg font-semibold">暂无 Endpoint</h3>
+              <p className="text-sm text-muted-foreground">请先配置并启动 Endpoint</p>
             </div>
           </CardContent>
         </Card>

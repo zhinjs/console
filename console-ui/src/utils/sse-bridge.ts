@@ -26,7 +26,7 @@ export function setupConsoleSseBridge(): void {
     } else if (t === 'data-update') {
       window.dispatchEvent(new CustomEvent('zhin-console-data-update', { detail: message }))
     } else if (ENDPOINT_PUSH_TYPES.has(t)) {
-      window.dispatchEvent(new CustomEvent('zhin-console-bot-push', { detail: message }))
+      window.dispatchEvent(new CustomEvent('zhin-console-endpoint-push', { detail: message }))
     }
   }
 }

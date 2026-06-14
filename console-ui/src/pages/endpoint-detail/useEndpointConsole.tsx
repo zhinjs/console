@@ -275,7 +275,7 @@ export function useEndpointConsole() {
         data: Record<string, unknown>
       }
       const d = msg.data
-      const pushEndpointId = String(d.endpointId ?? d.botId ?? '')
+      const pushEndpointId = String(d.endpointId ?? '')
       if (msg.type === 'endpoint:request') {
         if (d.adapter === adapter && pushEndpointId === endpointId) {
           void putInboxCache(adapter, endpointId, 'request', d)
@@ -311,8 +311,8 @@ export function useEndpointConsole() {
         }
       }
     }
-    window.addEventListener('zhin-console-bot-push', onPush as EventListener)
-    return () => window.removeEventListener('zhin-console-bot-push', onPush as EventListener)
+    window.addEventListener('zhin-console-endpoint-push', onPush as EventListener)
+    return () => window.removeEventListener('zhin-console-endpoint-push', onPush as EventListener)
   }, [adapter, endpointId])
 
   // --- Derived lists ---

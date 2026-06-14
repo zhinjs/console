@@ -20,7 +20,7 @@ const TAB_CONFIG: Record<
   { label: string; path: string; defaultPageSize: number; icon: typeof Terminal }
 > = {
   commands: { label: '命令', path: '/api/introspection/commands', defaultPageSize: 25, icon: Terminal },
-  endpoints: { label: '机器人', path: '/api/introspection/endpoints', defaultPageSize: 30, icon: Bot },
+  endpoints: { label: 'Endpoints', path: '/api/introspection/endpoints', defaultPageSize: 30, icon: Bot },
   bindings: { label: 'Agent 绑定', path: '/api/introspection/bindings', defaultPageSize: 30, icon: Link2 },
   tools: { label: '工具', path: '/api/introspection/tools', defaultPageSize: 15, icon: Wrench },
   mcp: { label: 'MCP 服务', path: '/api/introspection/mcp', defaultPageSize: 30, icon: Server },
