@@ -78,6 +78,11 @@ function ConsoleShell() {
 function App() {
   const [authed, setAuthed] = React.useState(hasToken())
   const handleLogin = React.useCallback(() => setAuthed(true), [])
+  const initialApiBase = React.useMemo(() => {
+    const params = new URLSearchParams(window.location.search)
+    const raw = params.get('apiBaseUrl')
+    return raw ? decodeURIComponent(raw) : null
+  }, [])
 
   React.useEffect(() => {
     const onAuthRequired = () => setAuthed(false)
@@ -86,7 +91,7 @@ function App() {
   }, [])
 
   if (!authed) {
-    return <LoginPage onSuccess={handleLogin} />
+    return <LoginPage onSuccess={handleLogin} initialApiBase={initialApiBase} />
   }
 
   return <ConsoleShell />

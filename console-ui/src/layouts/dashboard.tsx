@@ -4,11 +4,13 @@ import { Menu, Search, LogOut } from "lucide-react"
 import { app, cn, type ConsoleRouteRecord } from "@zhin.js/client"
 import { getSidebarLucideIcon } from "../components/sidebarMenuIcons"
 import { ThemeToggle } from "../components/ThemeToggle"
-import { Button } from "../components/ui/button"
+import { Button, buttonVariants } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { ScrollArea } from "../components/ui/scroll-area"
 import { Separator } from "../components/ui/separator"
 import { clearToken } from "../utils/auth"
+import { isDemoMode } from "../utils/demo-mode"
+import { reopenDemoOnboarding } from "../components/DemoOnboarding"
 
 const GROUP_ORDER = ["系统", "Endpoints", "命令与 Agent", "扩展", "配置与数据", "其他"] as const
 
@@ -129,8 +131,12 @@ export default function DashboardLayout() {
             </div>
             {sidebarOpen && (
               <div className="flex flex-col min-w-0">
-                <span className="text-base font-semibold truncate">Zhin.js</span>
-                <span className="text-xs text-muted-foreground">管理控制台</span>
+                <span className="text-base font-semibold truncate">
+                  {isDemoMode() ? "Zhin.js Demo" : "Zhin.js"}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {isDemoMode() ? "零安装 Sandbox" : "管理控制台"}
+                </span>
               </div>
             )}
           </div>
@@ -183,8 +189,14 @@ export default function DashboardLayout() {
               <Menu className="h-5 w-5" />
             </Button>
             <div className="flex flex-col min-w-0">
-              <h2 className="text-sm font-semibold truncate">控制台</h2>
-              <span className="text-xs text-muted-foreground truncate">跳转菜单 · Enter 打开首条</span>
+              <h2 className="text-sm font-semibold truncate">
+                {isDemoMode() ? "在线 Demo" : "控制台"}
+              </h2>
+              <span className="text-xs text-muted-foreground truncate">
+                {isDemoMode()
+                  ? "hello · card · ai:"
+                  : "跳转菜单 · Enter 打开首条"}
+              </span>
             </div>
           </div>
 
@@ -210,7 +222,37 @@ export default function DashboardLayout() {
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
+            {isDemoMode() ? (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="hidden sm:inline-flex text-xs"
+                  onClick={() => reopenDemoOnboarding()}
+                >
+                  使用说明
+                </Button>
+                <a
+                  href="https://zhin.js.org/getting-started/first-run"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(buttonVariants({ variant: "default", size: "sm" }), "text-xs h-8")}
+                >
+                  部署到本机
+                </a>
+                <a
+                  href="https://zhin.js.org/adapters/icqq"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "text-xs h-8")}
+                >
+                  接 QQ Bot
+                </a>
+              </>
+            ) : null}
             <ThemeToggle />
+            {!isDemoMode() ? (
             <Button
               variant="ghost"
               size="icon"
@@ -223,6 +265,7 @@ export default function DashboardLayout() {
             >
               <LogOut className="h-4 w-4" />
             </Button>
+            ) : null}
           </div>
         </header>
 
