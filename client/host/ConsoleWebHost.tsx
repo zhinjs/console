@@ -4,10 +4,13 @@ import { loadConsoleEntries } from "../bootstrap/loadConsoleEntries";
 import { ConsoleView } from "../console-app/ConsoleView";
 import { useConsoleRouteElements } from "../console-app/ConsoleRoutes";
 import { CONSOLE_SHELL_PATH, CONSOLE_UI_LEGACY_PREFIX, normalizeShellBase } from "../paths";
+import { DEMO_DEFAULT_PATH, isDemoMode } from "@console/utils/demo-mode";
 
 const shellBase = normalizeShellBase(CONSOLE_SHELL_PATH);
 const shellRoutePath = shellBase ? `${shellBase}/*` : "/*";
 const dashboardPath = `${shellBase || ""}/dashboard`.replace(/^\/\//, "/");
+const demoHomePath = `${shellBase || ""}${DEMO_DEFAULT_PATH}`.replace(/^\/\//, "/");
+const defaultHomePath = isDemoMode() ? demoHomePath : dashboardPath;
 const legacyApiPrefix = normalizeShellBase(CONSOLE_UI_LEGACY_PREFIX);
 
 /** 旧链接：/console/dashboard → /dashboard（独立站点）或保留 /console 前缀（与 Host 同路径部署时） */
@@ -15,8 +18,8 @@ function LegacyConsoleRedirect() {
   const { pathname } = useLocation();
   const rest =
     legacyApiPrefix && pathname.startsWith(`${legacyApiPrefix}/`)
-      ? pathname.slice(legacyApiPrefix.length) || "/dashboard"
-      : pathname.replace(/^\/console\/?/, "/") || "/dashboard";
+      ? pathname.slice(legacyApiPrefix.length) || defaultHomePath
+      : pathname.replace(/^\/console\/?/, "/") || defaultHomePath;
   return <Navigate to={rest.startsWith("/") ? rest : `/${rest}`} replace />;
 }
 
@@ -61,16 +64,16 @@ export function ConsoleWebHost() {
     <Routes>
       {legacyApiPrefix ? (
         <>
-          <Route path={legacyApiPrefix} element={<Navigate to={dashboardPath} replace />} />
+          <Route path={legacyApiPrefix} element={<Navigate to={defaultHomePath} replace />} />
           <Route path={`${legacyApiPrefix}/*`} element={<LegacyConsoleRedirect />} />
         </>
       ) : null}
       <Route path={shellRoutePath} element={<ConsoleView />}>
-        <Route index element={<Navigate to={dashboardPath} replace />} />
+        <Route index element={<Navigate to={defaultHomePath} replace />} />
         {registeredRoutes}
         <Route path="*" element={<DashboardHome />} />
       </Route>
-      <Route path="*" element={<Navigate to={dashboardPath} replace />} />
+      <Route path="*" element={<Navigate to={defaultHomePath} replace />} />
     </Routes>
   );
 }

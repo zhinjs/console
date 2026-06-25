@@ -39,12 +39,22 @@ const consoleDevProxy = {
 const pagesBase = (process.env.CONSOLE_PAGES_BASE ?? "").replace(/\/$/, "");
 const assetPublicPath = pagesBase ? `${pagesBase}/` : "/";
 
+const demoBuildEnv = {
+  "import.meta.env.VITE_DEMO_MODE": JSON.stringify(process.env.VITE_DEMO_MODE ?? ""),
+  "import.meta.env.VITE_API_BASE": JSON.stringify(process.env.VITE_API_BASE ?? ""),
+  "import.meta.env.VITE_API_TOKEN": JSON.stringify(process.env.VITE_API_TOKEN ?? ""),
+  "import.meta.env.VITE_CONSOLE_SHELL_PATH": JSON.stringify(
+    process.env.VITE_CONSOLE_SHELL_PATH ?? "",
+  ),
+};
+
 export default defineConfig({
   root: path.join(siteRoot, "client"),
   plugins: [react({ runtime: "automatic" }), farmPostcss()],
   compilation: {
     presetEnv: false,
     lazyCompilation: false,
+    define: demoBuildEnv,
     partialBundling: {
       enforceResources: [
         { name: "lucide-react", test: ["[\\\\/]lucide-react[\\\\/]", "lucide-react"] },

@@ -31,6 +31,38 @@ pnpm preview
 https://console.zhin.dev/?apiBaseUrl=http://127.0.0.1:8086
 ```
 
+## Demo 站点（demo.zhin.dev）
+
+**与 console.zhin.dev 不同**：Demo 构建预连 `demo-api.zhin.dev`，跳过登录，默认打开 **沙盒**，隐藏配置/文件/cron/env 等写操作页。
+
+### 本地联调
+
+```bash
+# 终端 1：zhin 仓库 examples/demo-bot
+pnpm dev
+
+# 终端 2：Console Demo profile
+pnpm dev:demo
+# 或指定 Token（与 demo-bot .env DEMO_TOKEN 一致）
+VITE_DEMO_MODE=1 VITE_API_BASE=http://127.0.0.1:8086 VITE_API_TOKEN=... pnpm dev
+```
+
+### 生产构建
+
+```bash
+cp .env.demo.example .env.demo
+# 编辑 VITE_API_TOKEN 与 VPS .env DEMO_TOKEN 一致
+set -a && source .env.demo && set +a && pnpm build:demo
+pnpm pages:prepare   # CONSOLE_PAGES_CNAME=demo.zhin.dev
+```
+
+### 部署
+
+- **分支 `demo`**：push 触发 [`.github/workflows/demo-pages.yml`](.github/workflows/demo-pages.yml)
+- GitHub 仓库 Secrets：`DEMO_CONSOLE_TOKEN`（= VPS `DEMO_TOKEN`）
+- 仓库 Variables（可选）：`DEMO_PAGES_CNAME=demo.zhin.dev`
+- **Host 侧**：zhin 仓库 [`deploy/zhin-demo`](https://github.com/zhinjs/zhin/tree/main/deploy/zhin-demo) 部署 `demo-api.zhin.dev`（`examples/demo-bot`）
+
 ## 目录
 
 | 路径 | 说明 |

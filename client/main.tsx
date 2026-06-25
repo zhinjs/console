@@ -21,6 +21,8 @@ import LoginPage from "@console/pages/login";
 import { TooltipProvider } from "@console/components/ui/tooltip";
 import { ToastProvider } from "@console/components/toast";
 import { runQueryPrefillMiddleware } from "./middleware/queryPrefill";
+import { runDemoBootstrap } from "./middleware/demoBootstrap";
+import { isDemoMode } from "@console/utils/demo-mode";
 
 initializeTheme();
 
@@ -45,7 +47,8 @@ sharedModules.set("react-router-dom", ReactRouterDOM);
 
 registerBuiltinConsolePages();
 
-const initialSession = runQueryPrefillMiddleware();
+const demoSession = runDemoBootstrap();
+const initialSession = demoSession ?? runQueryPrefillMiddleware();
 
 function ConsoleShell() {
   useWebSocket();
@@ -73,6 +76,15 @@ function App() {
   }, []);
 
   if (!authed) {
+    if (isDemoMode()) {
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-background p-6">
+          <p className="text-sm text-destructive text-center max-w-md">
+            Demo 构建缺少 VITE_API_BASE / VITE_API_TOKEN，无法连接 demo-api。
+          </p>
+        </div>
+      );
+    }
     return (
       <LoginPage onSuccess={handleLogin} initialApiBase={loginApiBase} />
     );
