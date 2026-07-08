@@ -1,0 +1,140 @@
+/**
+ * Console 设计规范 — client/style.css 与 console-ui/src/style.css 共同引入
+ * 间距 / 圆角 / 边框 / 阴影 / 表面组件类
+ */
+
+@layer base {
+  :root {
+    --console-space-page-x: 1.5rem;
+    --console-space-page-y: 1.25rem;
+    --console-space-section: 1rem;
+    --console-space-stack: 0.75rem;
+    --console-space-card: 1.25rem;
+    --console-space-card-sm: 1rem;
+    --console-radius-sm: calc(var(--radius) - 4px);
+    --console-radius-md: var(--radius);
+    --console-radius-lg: calc(var(--radius) + 4px);
+    --console-radius-xl: calc(var(--radius) + 8px);
+    --console-border-subtle: hsl(var(--border) / 0.5);
+    --console-border-default: hsl(var(--border) / 0.82);
+    --console-border-strong: hsl(var(--border));
+    --console-shadow-xs: 0 1px 2px hsl(240 6% 10% / 0.05);
+    --console-shadow-sm: 0 1px 2px hsl(240 6% 10% / 0.06), 0 2px 8px hsl(240 6% 10% / 0.05);
+    --console-shadow-md: 0 4px 12px -2px hsl(240 6% 10% / 0.08), 0 2px 4px -2px hsl(240 6% 10% / 0.04);
+    --console-shadow-lg: 0 12px 28px -6px hsl(240 6% 10% / 0.1), 0 4px 10px -4px hsl(240 6% 10% / 0.05);
+    --console-shadow-hover: 0 8px 24px -4px hsl(240 6% 10% / 0.12), 0 4px 8px -4px hsl(240 6% 10% / 0.06);
+  }
+
+  .dark {
+    --console-shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.3);
+    --console-shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.34), 0 2px 8px hsl(0 0% 0% / 0.28);
+    --console-shadow-md: 0 4px 12px -2px hsl(0 0% 0% / 0.38), 0 2px 4px -2px hsl(0 0% 0% / 0.3);
+    --console-shadow-lg: 0 12px 28px -6px hsl(0 0% 0% / 0.44), 0 4px 10px -4px hsl(0 0% 0% / 0.34);
+    --console-shadow-hover: 0 8px 24px -4px hsl(0 0% 0% / 0.48), 0 4px 8px -4px hsl(0 0% 0% / 0.36);
+    --console-border-subtle: hsl(var(--border) / 0.55);
+    --console-border-default: hsl(var(--border) / 0.85);
+    --console-border-strong: hsl(var(--border) / 0.98);
+  }
+}
+
+@layer components {
+  .console-main {
+    padding: var(--console-space-page-y) var(--console-space-page-x);
+  }
+
+  .console-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--console-space-section);
+  }
+
+  .console-page-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--console-space-section);
+  }
+
+  .console-page-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--console-space-stack);
+  }
+
+  .console-page-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .console-surface {
+    border-radius: var(--console-radius-xl);
+    border: 1px solid var(--console-border-default);
+    background: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+    box-shadow: var(--console-shadow-sm);
+  }
+
+  .console-surface-muted {
+    border-radius: var(--console-radius-lg);
+    border: 1px solid var(--console-border-subtle);
+    background: hsl(var(--muted) / 0.45);
+    box-shadow: none;
+  }
+
+  .console-surface-inset {
+    border-radius: var(--console-radius-md);
+    border: 1px solid var(--console-border-subtle);
+    background: hsl(var(--muted) / 0.25);
+    box-shadow: inset 0 1px 2px hsl(240 6% 10% / 0.04);
+  }
+
+  .dark .console-surface-inset {
+    box-shadow: inset 0 1px 2px hsl(0 0% 0% / 0.22);
+  }
+
+  .console-surface-interactive {
+    border-radius: var(--console-radius-xl);
+    border: 1px solid var(--console-border-default);
+    background: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+    box-shadow: var(--console-shadow-sm);
+    cursor: pointer;
+    transition:
+      border-color 180ms ease,
+      box-shadow 180ms ease,
+      transform 180ms ease;
+  }
+
+  .console-surface-interactive:hover {
+    border-color: hsl(var(--primary) / 0.28);
+    box-shadow: var(--console-shadow-hover);
+    transform: translateY(-2px);
+  }
+
+  .console-surface-interactive:active {
+    transform: translateY(0);
+    box-shadow: var(--console-shadow-sm);
+  }
+
+  .console-divider {
+    height: 1px;
+    width: 100%;
+    background: var(--console-border-subtle);
+    border: 0;
+  }
+
+  .console-feature-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.125rem;
+    padding: 0.375rem;
+    border-radius: var(--console-radius-md);
+    border: 1px solid var(--console-border-subtle);
+    background: hsl(var(--muted) / 0.4);
+  }
+}

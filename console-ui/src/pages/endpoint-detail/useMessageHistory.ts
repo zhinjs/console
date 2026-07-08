@@ -13,6 +13,9 @@ import {
   type MessageContent,
 } from '../../utils/parseComposerContent'
 import { listInboxCache, putInboxCache } from '../../utils/inbox-cache'
+import { subscribeEndpointPush } from '../../utils/endpoint-push'
+import { toRpcChannelParent } from './conversation-labels'
+import { useToast } from '../../components/toast'
 
 interface LocalSentMessage {
   id: string
@@ -22,6 +25,13 @@ interface LocalSentMessage {
   timestamp: number
 }
 
+interface SendMessageOptions {
+  overrideSegments?: MessageContent
+  displayPrefixSegments?: MessageContent
+  textPrefix?: string
+  onSent?: () => void
+}
+
 export function useMessageHistory(params: {
   adapter: string
   endpointId: string
@@ -29,6 +39,7 @@ export function useMessageHistory(params: {
 }) {
   const { adapter, endpointId, selection } = params
   const { sendRequest } = useWebSocket()
+  const { error: toastError } = useToast()
 
   const [receivedMessages, setReceivedMessages] = useState<ReceivedMessage[]>([])
   const [localSent, setLocalSent] = useState<LocalSentMessage[]>([])
@@ -46,6 +57,7 @@ export function useMessageHistory(params: {
       setInboxMessagesLoading(true)
       const append = beforeTs != null
       try {
+        const rpcParent = toRpcChannelParent(selection.parent)
         const res = await sendRequest<{ messages: InboxMessageRow[]; inboxEnabled: boolean }>({
           type: 'endpoint:inboxMessages',
           data: {
@@ -53,6 +65,7 @@ export function useMessageHistory(params: {
             endpointId,
             channelId: selection.id,
             channelType: selection.channelType,
+            ...(rpcParent ? { parent: rpcParent } : {}),
             limit: 50,
             ...(beforeTs != null && { beforeTs }),
           },
@@ -86,17 +99,14 @@ export function useMessageHistory(params: {
       setInboxMessagesHasMore(true)
       void loadInboxMessages()
     }
-  }, [selection?.id, selection?.channelType, selection?.type, loadInboxMessages])
+  }, [selection?.id, selection?.channelType, selection?.type, selection?.parent?.type, selection?.parent?.id, loadInboxMessages])
 
   // Listen for real-time inbound messages via the console push event
   useEffect(() => {
     if (!adapter || !endpointId) return
-    const onPush = (ev: Event) => {
-      const msg = (ev as CustomEvent).detail as {
-        type: string
-        data: Record<string, unknown>
-      }
+    const onPush = (msg: { type: string; data?: Record<string, unknown> }) => {
       const d = msg.data
+      if (!d) return
       const pushEndpointId = String(d.endpointId ?? '')
       if (msg.type === 'endpoint:message') {
         if (d.adapter === adapter && pushEndpointId === endpointId) {
@@ -116,8 +126,7 @@ export function useMessageHistory(params: {
         }
       }
     }
-    window.addEventListener('zhin-console-endpoint-push', onPush as EventListener)
-    return () => window.removeEventListener('zhin-console-endpoint-push', onPush as EventListener)
+    return subscribeEndpointPush(onPush)
   }, [adapter, endpointId])
 
   // Hydrate received messages from inbox cache on mount
@@ -183,13 +192,23 @@ export function useMessageHistory(params: {
     return [...fromInbox, ...fromRealtime, ...outbound].sort((a, b) => a.timestamp - b.timestamp)
   }, [selection, receivedMessages, inboxMessages, localSent])
 
-  const handleSend = useCallback(async () => {
+  const handleSend = useCallback(async (options?: SendMessageOptions) => {
     const targetId = selection?.type === 'channel' ? selection.id : ''
     const msgType = selection?.type === 'channel' ? selection.channelType : 'private'
-    const segments = parseComposerToSegments(msgContent)
-    if (!targetId || !hasRenderableComposerSegments(segments)) return
+    const segments = options?.overrideSegments ?? parseComposerToSegments(msgContent)
+    const textPrefix = options?.textPrefix?.trim()
+    const prefixTextSegments: MessageContent = textPrefix
+      ? [{ type: 'text', data: { text: `${textPrefix}\n` } }]
+      : []
+    const outgoingSegments = [...prefixTextSegments, ...segments]
+    const displaySegments = [
+      ...(options?.displayPrefixSegments ?? []),
+      ...segments,
+    ]
+    if (!targetId || !hasRenderableComposerSegments(outgoingSegments)) return
     setSending(true)
     try {
+      const rpcParent = selection?.type === 'channel' ? toRpcChannelParent(selection.parent) : undefined
       await sendRequest({
         type: 'endpoint:sendMessage',
         data: {
@@ -197,7 +216,8 @@ export function useMessageHistory(params: {
           endpointId,
           id: targetId,
           type: msgType,
-          content: segments,
+          ...(rpcParent ? { parent: rpcParent } : {}),
+          content: outgoingSegments,
         },
       })
       setLocalSent((prev) => [
@@ -206,17 +226,18 @@ export function useMessageHistory(params: {
           id: `local-${Date.now()}-${Math.random().toString(36).slice(2)}`,
           channelId: targetId,
           channelType: msgType,
-          segments,
+          segments: displaySegments.length ? displaySegments : outgoingSegments,
           timestamp: Date.now(),
         },
       ])
       setMsgContent('')
+      options?.onSent?.()
     } catch (e) {
-      console.error('Failed to send message:', (e as Error).message)
+      toastError((e as Error).message, '发送失败')
     } finally {
       setSending(false)
     }
-  }, [selection, msgContent, sendRequest, adapter, endpointId])
+  }, [selection, msgContent, sendRequest, adapter, endpointId, toastError])
 
   return {
     receivedMessages,

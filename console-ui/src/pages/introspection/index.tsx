@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { Search, ChevronLeft, ChevronRight, AlertCircle, RefreshCw, Terminal, Bot, Link2, Wrench, Server } from 'lucide-react'
 import { apiFetch, getApiBase } from '../../utils/auth'
 import { PageHeader } from '../../components/PageHeader'
+import { PageShell } from '../../components/PageShell'
 import { Card, CardContent } from '../../components/ui/card'
 import { Alert, AlertDescription } from '../../components/ui/alert'
 import { ErrorAlert } from '../../components/error-alert'
@@ -199,7 +200,7 @@ export default function IntrospectionPage() {
   }, [tab, page, pageSize, filterParam])
 
   return (
-    <div className="space-y-6">
+    <PageShell>
       <PageHeader
         title="命令与工具"
         description="查看 Host 已注册的命令、机器人、Agent 绑定、工具与 MCP 服务，与 IM 里 /cmd、/tools 等查询结果一致。"
@@ -234,8 +235,8 @@ export default function IntrospectionPage() {
 
         {(Object.keys(TAB_CONFIG) as IntrospectionTab[]).map((key) => (
           <TabsContent key={key} value={key} className="space-y-4 mt-4">
-            <Card className="border-border/80 shadow-sm">
-              <CardContent className="flex flex-wrap items-center gap-3 p-3">
+            <Card>
+              <CardContent className="flex flex-wrap items-center gap-3 p-[var(--console-space-card-sm)]">
                 <div className="relative flex-1 min-w-[200px] max-w-sm">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                   <input
@@ -284,7 +285,7 @@ export default function IntrospectionPage() {
                 ))}
               </div>
             ) : (
-              <Card className="border-border/80 shadow-sm overflow-hidden">
+              <Card className="overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -359,6 +360,6 @@ export default function IntrospectionPage() {
           </TabsContent>
         ))}
       </Tabs>
-    </div>
+    </PageShell>
   )
 }

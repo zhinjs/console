@@ -1,6 +1,16 @@
 import { useCallback, useState } from 'react'
 import { useWebSocket } from '@zhin.js/client'
+import { useToast } from '../../components/toast'
 import type { MemberRow, SidebarSelection } from './types'
+
+const GROUP_ACTION_LABELS: Record<
+  'endpoint:groupKick' | 'endpoint:groupMute' | 'endpoint:groupAdmin',
+  string
+> = {
+  'endpoint:groupKick': '已踢出群成员',
+  'endpoint:groupMute': '已禁言群成员',
+  'endpoint:groupAdmin': '已更新管理员权限',
+}
 
 export function useGroupActions(params: {
   adapter: string
@@ -9,6 +19,7 @@ export function useGroupActions(params: {
 }) {
   const { adapter, endpointId, selection } = params
   const { sendRequest } = useWebSocket()
+  const { success, error: toastError } = useToast()
 
   const [members, setMembers] = useState<MemberRow[]>([])
   const [membersLoading, setMembersLoading] = useState(false)
@@ -23,12 +34,12 @@ export function useGroupActions(params: {
       })
       setMembers(r.members || [])
     } catch (e) {
-      console.error('Failed to load group members:', (e as Error).message)
+      toastError((e as Error).message, '加载群成员失败')
       setMembers([])
     } finally {
       setMembersLoading(false)
     }
-  }, [selection, sendRequest, adapter, endpointId])
+  }, [selection, sendRequest, adapter, endpointId, toastError])
 
   const groupAction = useCallback(
     async (
@@ -36,7 +47,7 @@ export function useGroupActions(params: {
       userId: number | string,
       extra?: { enable?: boolean },
     ) => {
-      if (selection?.type !== 'channel' || selection.channelType !== 'group') return
+      if (selection?.type !== 'channel' || selection.channelType !== 'group') return false
       try {
         await sendRequest({
           type,
@@ -49,11 +60,14 @@ export function useGroupActions(params: {
           },
         })
         await loadMembers()
+        success(GROUP_ACTION_LABELS[type])
+        return true
       } catch (e) {
-        console.error('Group action failed:', (e as Error).message)
+        toastError((e as Error).message, '群管理操作失败')
+        return false
       }
     },
-    [selection, sendRequest, adapter, endpointId, loadMembers],
+    [selection, sendRequest, adapter, endpointId, loadMembers, success, toastError],
   )
 
   return {

@@ -13,6 +13,7 @@ import { listInboxCache, putInboxCache } from '../../utils/inbox-cache'
 import { useChannelManager } from './useChannelManager'
 import { useMessageHistory } from './useMessageHistory'
 import { useGroupActions } from './useGroupActions'
+import { subscribeEndpointPush } from '../../utils/endpoint-push'
 
 export function useEndpointConsole() {
   const { adapter: adapterParam, endpointId: endpointIdParam } = useParams<{
@@ -269,12 +270,9 @@ export function useEndpointConsole() {
 
   // --- Listen for real-time push events for requests and notices ---
   useEffect(() => {
-    const onPush = (ev: Event) => {
-      const msg = (ev as CustomEvent).detail as {
-        type: string
-        data: Record<string, unknown>
-      }
+    const onPush = (msg: { type: string; data?: Record<string, unknown> }) => {
       const d = msg.data
+      if (!d) return
       const pushEndpointId = String(d.endpointId ?? '')
       if (msg.type === 'endpoint:request') {
         if (d.adapter === adapter && pushEndpointId === endpointId) {
@@ -311,8 +309,7 @@ export function useEndpointConsole() {
         }
       }
     }
-    window.addEventListener('zhin-console-endpoint-push', onPush as EventListener)
-    return () => window.removeEventListener('zhin-console-endpoint-push', onPush as EventListener)
+    return subscribeEndpointPush(onPush)
   }, [adapter, endpointId])
 
   // --- Derived lists ---
@@ -374,6 +371,32 @@ export function useEndpointConsole() {
     [sendRequest],
   )
 
+  const refreshNotices = useCallback(async () => {
+    if (!adapter || !endpointId) return
+    const cachedNotices = await listInboxCache(adapter, endpointId, 'notice')
+    if (cachedNotices.length) {
+      setNotices((prev) => {
+        const m = new Map(prev)
+        for (const rec of cachedNotices) {
+          const d = rec.payload
+          const id = d.id as number
+          if (id == null) continue
+          m.set(id, {
+            id,
+            noticeType: String(d.noticeType ?? d.type ?? ''),
+            channel: (d.channel as NoticeItem['channel']) ?? { id: '', type: 'private' },
+            payload: String(d.payload ?? '{}'),
+            timestamp: Number(d.timestamp ?? rec.updatedAt),
+          })
+        }
+        return m
+      })
+    }
+    if (noticesTab === 'history') {
+      await loadInboxNotices(false)
+    }
+  }, [adapter, endpointId, noticesTab, loadInboxNotices])
+
   const showRightPanel =
     channelMgr.selection?.type === 'channel' && channelMgr.selection.channelType === 'group' && adapter === 'icqq'
 
@@ -400,6 +423,12 @@ export function useEndpointConsole() {
     setListSearch: channelMgr.setListSearch,
     channels: channelMgr.channels,
     filteredChannels: channelMgr.filteredChannels,
+    conversationSections: channelMgr.conversationSections,
+    sectionCollapsed: channelMgr.sectionCollapsed,
+    systemSectionCollapsed: channelMgr.systemSectionCollapsed,
+    toggleSection: channelMgr.toggleSection,
+    toggleSystemSection: channelMgr.toggleSystemSection,
+    markConversationRead: channelMgr.markConversationRead,
     deleteFriend: channelMgr.deleteFriend,
     getChannelIcon: channelMgr.getChannelIcon,
     loadLists: channelMgr.loadLists,
@@ -432,6 +461,7 @@ export function useEndpointConsole() {
     inboxNoticesEnabled,
     loadInboxNotices,
     loadRequestsFromServer,
+    refreshNotices,
     approve,
     dismissRequest,
     dismissNotice,

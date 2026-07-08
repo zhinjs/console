@@ -62,6 +62,13 @@ export default {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+        xl: 'var(--console-radius-xl)',
+      },
+      boxShadow: {
+        'console-xs': 'var(--console-shadow-xs)',
+        'console-sm': 'var(--console-shadow-sm)',
+        'console-md': 'var(--console-shadow-md)',
+        'console-lg': 'var(--console-shadow-lg)',
       },
       keyframes: {
         "accordion-down": {

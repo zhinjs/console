@@ -3,6 +3,10 @@ import AssistantJobsPage, { probeAssistantEnabled } from './pages/assistant-jobs
 
 let assistantRegistered = false
 
+export function resetOptionalConsoleRoutes(): void {
+  assistantRegistered = false
+}
+
 /** 登录后探测 Assistant 可用性，非 404 时注册侧栏路由 */
 export async function registerOptionalConsoleRoutes(): Promise<void> {
   if (assistantRegistered) return
@@ -16,6 +20,6 @@ export async function registerOptionalConsoleRoutes(): Promise<void> {
     parent: null,
     icon: 'Activity',
     element: <AssistantJobsPage />,
-    meta: { group: '命令与 Agent', order: 2 },
+    meta: { group: '命令与 Agent', order: 3 },
   })
 }

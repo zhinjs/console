@@ -8,7 +8,7 @@ import { Button, buttonVariants } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { ScrollArea } from "../components/ui/scroll-area"
 import { Separator } from "../components/ui/separator"
-import { clearToken } from "../utils/auth"
+import { notifyAuthRequired } from "../utils/auth"
 import { isDemoMode } from "../utils/demo-mode"
 import { reopenDemoOnboarding } from "../components/DemoOnboarding"
 
@@ -27,14 +27,18 @@ function collectMenuRoutes(routes: readonly ConsoleRouteRecord[]): ConsoleRouteR
   return routes.filter((r) => !r.meta?.hideInMenu)
 }
 
-function useContentFullWidth(routes: readonly ConsoleRouteRecord[], pathname: string): boolean {
+function useRouteMetaFlag(
+  routes: readonly ConsoleRouteRecord[],
+  pathname: string,
+  flag: "fullWidth" | "flush",
+): boolean {
   return useMemo(() => {
     for (const r of routes) {
-      if (!r.meta?.fullWidth || !r.path) continue
+      if (!r.meta?.[flag] || !r.path) continue
       if (matchPath({ path: r.path, end: true }, pathname)) return true
     }
     return false
-  }, [routes, pathname])
+  }, [routes, pathname, flag])
 }
 
 export default function DashboardLayout() {
@@ -94,7 +98,8 @@ export default function DashboardLayout() {
     [searchHits, navigate],
   )
 
-  const contentFullWidth = useContentFullWidth(routes, location.pathname)
+  const contentFullWidth = useRouteMetaFlag(routes, location.pathname, "fullWidth")
+  const contentFlush = useRouteMetaFlag(routes, location.pathname, "flush")
 
   const orderedGroups = useMemo(() => {
     const seen = new Set<string>()
@@ -115,11 +120,11 @@ export default function DashboardLayout() {
     <div className="flex h-screen bg-background">
       <div
         className={cn(
-          "flex flex-col border-r bg-sidebar transition-all duration-300",
+          "flex flex-col border-r border-[var(--console-border-subtle)] bg-sidebar transition-all duration-300",
           sidebarOpen ? "w-64" : "w-16",
         )}
       >
-        <div className="p-4 border-b">
+        <div className="p-4 border-b border-[var(--console-border-subtle)]">
           <div
             className={cn(
               "flex items-center transition-all duration-300",
@@ -183,7 +188,7 @@ export default function DashboardLayout() {
       </div>
 
       <div className="flex flex-col flex-1 overflow-hidden min-w-0">
-        <header className="flex items-center justify-between h-14 px-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0">
+        <header className="flex items-center justify-between h-14 px-4 border-b border-[var(--console-border-subtle)] bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0 shadow-[var(--console-shadow-xs)]">
           <div className="flex items-center gap-3 min-w-0">
             <Button variant="ghost" size="icon" onClick={() => setSidebarOpen((v) => !v)} aria-label="切换侧边栏">
               <Menu className="h-5 w-5" />
@@ -259,8 +264,7 @@ export default function DashboardLayout() {
               title="退出登录"
               aria-label="退出登录"
               onClick={() => {
-                clearToken()
-                window.dispatchEvent(new CustomEvent("zhin:auth-required"))
+                notifyAuthRequired()
               }}
             >
               <LogOut className="h-4 w-4" />
@@ -271,11 +275,17 @@ export default function DashboardLayout() {
 
         <Separator className="md:hidden" />
 
-        <main className="flex-1 overflow-auto min-h-0">
+        <main
+          className={cn(
+            "flex-1 min-h-0",
+            contentFlush ? "overflow-hidden flex flex-col" : "overflow-auto",
+          )}
+        >
           <div
             className={cn(
-              "mx-auto p-6",
-              contentFullWidth ? "max-w-none w-full" : "max-w-7xl",
+              "mx-auto w-full",
+              contentFlush ? "console-page-flush flex-1 min-h-0 h-full p-0" : "console-main",
+              contentFullWidth ? "max-w-none" : "max-w-7xl",
             )}
           >
             <Outlet />

@@ -9,7 +9,8 @@ import {
   CONSOLE_HOST_REACT_NAMESPACE_KEY,
   CONSOLE_SHARED_MODULES_KEY,
 } from "@zhin.js/contract";
-import { destroyWebSocketManager, useWebSocket } from "@zhin.js/client";
+import { useWebSocket } from "@zhin.js/client";
+import { resetConsoleRuntime } from "@console/utils/console-runtime";
 import { setupConsoleSseBridge } from "@console/utils/sse-bridge";
 import { registerOptionalConsoleRoutes } from "@console/registerOptionalRoutes";
 import { BrowserRouter } from "react-router-dom";
@@ -68,7 +69,7 @@ function App() {
 
   React.useEffect(() => {
     const onAuthRequired = () => {
-      destroyWebSocketManager();
+      resetConsoleRuntime();
       setAuthed(false);
     };
     window.addEventListener("zhin:auth-required", onAuthRequired);

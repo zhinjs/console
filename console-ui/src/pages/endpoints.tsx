@@ -1,13 +1,12 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { Bot, AlertCircle, Wifi, WifiOff, Activity, Package, Zap, ChevronRight } from 'lucide-react'
+import { Bot, Wifi, WifiOff, Activity, Package, Zap, ChevronRight } from 'lucide-react'
 import { useWebSocket } from '@zhin.js/client'
-import { useToast } from '../components/toast'
 import { PageHeader } from '../components/PageHeader'
-import { Button } from '../components/ui/button'
+import { PageShell } from '../components/PageShell'
+import { ErrorAlert } from '../components/error-alert'
 import { Card, CardContent } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
-import { Alert, AlertDescription } from '../components/ui/alert'
 import { Skeleton } from '../components/ui/skeleton'
 import { Separator } from '../components/ui/separator'
 
@@ -25,7 +24,6 @@ export default function EndpointsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { connected, sendRequest } = useWebSocket()
-  const { error: toastError } = useToast()
 
   const fetchEndpoints = useCallback(async () => {
     if (!connected) {
@@ -59,41 +57,36 @@ export default function EndpointsPage() {
 
   if (loading && connected) {
     return (
-      <div className="space-y-6">
+      <PageShell>
         <Skeleton className="h-8 w-48" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48" />)}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--console-space-stack)]">
+          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 rounded-[var(--console-radius-xl)]" />)}
         </div>
-      </div>
+      </PageShell>
     )
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Alert variant="destructive" className="max-w-md">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>加载失败: {error}</AlertDescription>
-          <div className="mt-3">
-            <Button variant="outline" size="sm" onClick={fetchEndpoints}>重试</Button>
-          </div>
-        </Alert>
-      </div>
+      <PageShell>
+        <PageHeader title="机器人管理" description="管理所有已配置的 Endpoint 连接" />
+        <ErrorAlert error={`加载失败：${error}`} onRetry={fetchEndpoints} />
+      </PageShell>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="Endpoints" description="管理所有已配置的 Endpoint 连接" />
+    <PageShell>
+      <PageHeader title="机器人管理" description="管理所有已配置的 Endpoint 连接" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {endpoints.map((endpoint, index) => (
           <Link
             key={`${endpoint.adapter}-${endpoint.name}-${index}`}
             to={`/endpoints/${encodeURIComponent(endpoint.adapter)}/${encodeURIComponent(endpoint.name)}`}
-            className="block transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl"
+            className="block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <Card className="h-full cursor-pointer hover:border-primary/40">
+            <Card className="console-surface-interactive h-full">
               <CardContent className="p-5 space-y-4">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
@@ -118,7 +111,7 @@ export default function EndpointsPage() {
                 <Separator />
 
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+                  <div className="flex justify-between items-center p-2 rounded-[var(--console-radius-md)] console-surface-muted">
                     <div className="flex items-center gap-2 text-sm">
                       <Activity className={`w-4 h-4 ${endpoint.status === 'online' ? 'text-emerald-500' : 'text-muted-foreground'}`} />
                       <span className="text-muted-foreground">运行状态</span>
@@ -127,14 +120,14 @@ export default function EndpointsPage() {
                       {endpoint.status === 'online' ? '运行中' : '已停止'}
                     </Badge>
                   </div>
-                  <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+                  <div className="flex justify-between items-center p-2 rounded-[var(--console-radius-md)] console-surface-muted">
                     <div className="flex items-center gap-2 text-sm">
                       <Package className="w-4 h-4 text-muted-foreground" />
                       <span className="text-muted-foreground">适配器类型</span>
                     </div>
                     <span className="text-sm font-medium">{endpoint.adapter}</span>
                   </div>
-                  <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+                  <div className="flex justify-between items-center p-2 rounded-[var(--console-radius-md)] console-surface-muted">
                     <div className="flex items-center gap-2 text-sm">
                       <Zap className="w-4 h-4 text-muted-foreground" />
                       <span className="text-muted-foreground">连接状态</span>
@@ -169,6 +162,6 @@ export default function EndpointsPage() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </PageShell>
   )
 }

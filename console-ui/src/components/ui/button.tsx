@@ -1,5 +1,6 @@
 import type * as React from "react"
 import { forwardRef } from "react"
+import * as Radix from "radix-ui"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@zhin.js/client"
 
@@ -35,10 +36,13 @@ export interface ButtonProps
   asChild?: boolean
 }
 
+const Slot = Radix.Slot.Root
+
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : "button"
     return (
-      <button
+      <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         {...props}

@@ -139,11 +139,16 @@ export function reconcileAuthWithApiBase(incomingApiBase: string | null): {
   return { authed: false, loginApiBase: stored }
 }
 
-export function clearSessionAndNotify(): void {
-  clearSession()
+export function notifyAuthRequired(): void {
+  clearToken()
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('zhin:auth-required'))
   }
+}
+
+export function clearSessionAndNotify(): void {
+  clearSession()
+  notifyAuthRequired()
 }
 
 export const QUERY_API_BASE_URL = "apiBaseUrl";
@@ -259,8 +264,7 @@ export async function apiFetch(
 
   const res = await fetch(url, { ...init, headers })
   if (res.status === 401) {
-    clearToken()
-    window.dispatchEvent(new CustomEvent('zhin:auth-required'))
+    notifyAuthRequired()
   }
   return res
 }

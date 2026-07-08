@@ -77,9 +77,48 @@ export interface InboxNoticeRow {
 }
 
 export type SidebarSelection =
-  | { type: 'channel'; id: string; name: string; channelType: 'private' | 'group' | 'channel' }
+  | {
+      type: 'channel'
+      id: string
+      name: string
+      channelType: 'private' | 'group' | 'channel'
+      parent?: ChannelParentRef
+    }
   | { type: 'requests' }
   | { type: 'notices' }
+
+export type ConversationChannelType = 'private' | 'group' | 'channel'
+
+/** 与 Host `ConsoleChannelParent` / sendMessage parent 一致 */
+export type ChannelParentType = 'group' | 'guild'
+
+export interface ChannelParentRef {
+  type: ChannelParentType
+  id: string
+  name?: string
+}
+
+export interface ConversationEntry {
+  id: string
+  name: string
+  channelType: ConversationChannelType
+  parent?: ChannelParentRef
+  lastMessagePreview?: string
+  lastMessageAt?: number
+  unreadCount: number
+}
+
+export type ConversationSectionId = ConversationChannelType
+
+export interface ConversationSection {
+  id: ConversationSectionId
+  title: string
+  entries: ConversationEntry[]
+  emptyHint?: string
+  hidden?: boolean
+}
+
+export type SystemInboxSectionId = 'requests' | 'notices'
 
 export type MemberRow = {
   user_id?: number

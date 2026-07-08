@@ -15,6 +15,7 @@ import {
 } from '../components/ui/dialog'
 import { useToast } from '../components/toast'
 import { PageHeader } from '../components/PageHeader'
+import { isRpcMethodUnavailable } from '../utils/rpc-fallback'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
 import { ConfirmDialog } from '../components/confirm-dialog'
 
@@ -76,9 +77,20 @@ export default function CronPage() {
       return
     }
     try {
-      const data = await sendRequest<{ memory: MemoryCron[]; persistent: PersistentCron[] }>({ type: 'cron:list' })
-      setMemoryCrons(data.memory || [])
-      setPersistentCrons(data.persistent || [])
+      type ScheduleListResponse = {
+        jobs?: MemoryCron[]
+        memory?: MemoryCron[]
+        persistent?: PersistentCron[]
+      }
+      let data: ScheduleListResponse
+      try {
+        data = await sendRequest<ScheduleListResponse>({ type: 'schedule:list' })
+      } catch (scheduleErr) {
+        if (!isRpcMethodUnavailable(scheduleErr)) throw scheduleErr
+        data = await sendRequest<ScheduleListResponse>({ type: 'cron:list' })
+      }
+      setMemoryCrons(data.jobs ?? data.memory ?? [])
+      setPersistentCrons(data.persistent ?? [])
       // Also fetch endpoints for context selector
       try {
         const endpointData = await sendRequest<{ endpoints: EndpointInfo[] }>({ type: 'endpoint:list' })

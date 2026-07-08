@@ -14,13 +14,18 @@ import CronPage from './pages/cron'
 import MarketplacePage from './pages/marketplace'
 import IntrospectionPage from './pages/introspection'
 import AgentSessionsPage from './pages/agent-sessions'
+import AgentOrchestrationPage from './pages/agent-orchestration'
 
 function shouldRegisterBuiltin(path: string): boolean {
   if (!isDemoMode()) return true
   return !DEMO_HIDDEN_BUILTIN_PATHS.has(path)
 }
 
+let builtinPagesRegistered = false
+
 export function registerBuiltinConsolePages() {
+  if (builtinPagesRegistered) return
+  builtinPagesRegistered = true
   if (shouldRegisterBuiltin('/dashboard')) {
     app.addRoute({
       path: '/dashboard',
@@ -79,6 +84,15 @@ export function registerBuiltinConsolePages() {
     icon: 'GitBranch',
     element: <AgentSessionsPage />,
     meta: { group: '命令与 Agent', order: 1 },
+  })
+
+  app.addRoute({
+    path: '/agent/orchestration',
+    name: '编排运行',
+    parent: null,
+    icon: 'Workflow',
+    element: <AgentOrchestrationPage />,
+    meta: { group: '命令与 Agent', order: 2 },
   })
 
   app.addRoute({
@@ -158,6 +172,6 @@ export function registerBuiltinConsolePages() {
     name: 'Endpoint 详情',
     parent: null,
     element: <EndpointDetailPage />,
-    meta: { hideInMenu: true, fullWidth: true },
+    meta: { hideInMenu: true, fullWidth: true, flush: true },
   })
 }

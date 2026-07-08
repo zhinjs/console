@@ -26,6 +26,7 @@ import {
   Store,
   Terminal,
   Users,
+  Workflow,
   Wrench,
   Circle,
 } from "lucide-react";
@@ -56,6 +57,7 @@ const SIDEBAR_LUCIDE_BY_NAME: Record<string, LucideIcon> = {
   Globe,
   Shield,
   Wrench,
+  Workflow,
 };
 
 export function getSidebarLucideIcon(name: string): LucideIcon {

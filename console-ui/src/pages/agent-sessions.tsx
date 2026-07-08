@@ -1,8 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { GitBranch, AlertCircle, CheckCircle, Loader2, History } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { GitBranch, CheckCircle, Loader2, History } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
-import { isLikelySessionKey, parseSessionKeyFromQuery } from '../utils/agent-session'
+import {
+  agentOrchestrationPath,
+  isLikelySessionKey,
+  parseSessionKeyFromQuery,
+} from '../utils/agent-session'
+import {
+  loadAgentSessionHistory,
+  pushAgentSessionHistory,
+} from '../utils/agent-session-history'
 import { PageHeader } from '../components/PageHeader'
 import { ErrorAlert } from '../components/error-alert'
 import { EmptyState } from '../components/empty-state'
@@ -23,9 +31,6 @@ import {
 } from '../components/ui/dialog'
 import { cn } from '@zhin.js/client'
 
-const HISTORY_KEY = 'zhin_agent_session_keys'
-const MAX_HISTORY = 10
-
 interface TreePoint {
   index: number
   messageId: number
@@ -39,35 +44,11 @@ interface SessionTree {
   points: TreePoint[]
 }
 
-function loadHistory(): string[] {
-  try {
-    const raw = localStorage.getItem(HISTORY_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.filter((s) => typeof s === 'string') : []
-  } catch {
-    return []
-  }
-}
-
-function saveHistory(keys: string[]): void {
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(keys.slice(0, MAX_HISTORY)))
-}
-
-function pushHistory(key: string): string[] {
-  const trimmed = key.trim()
-  if (!trimmed) return loadHistory()
-  const prev = loadHistory().filter((k) => k !== trimmed)
-  const next = [trimmed, ...prev].slice(0, MAX_HISTORY)
-  saveHistory(next)
-  return next
-}
-
 export default function AgentSessionsPage() {
   const [searchParams] = useSearchParams()
   const sessionKeyFromUrl = parseSessionKeyFromQuery(searchParams.get('sessionKey'))
   const [sessionKey, setSessionKey] = useState(sessionKeyFromUrl)
-  const [history, setHistory] = useState<string[]>(() => loadHistory())
+  const [history, setHistory] = useState<string[]>(() => loadAgentSessionHistory())
   const [tree, setTree] = useState<SessionTree | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -106,7 +87,7 @@ export default function AgentSessionsPage() {
       }
 
       setTree(data.data as SessionTree)
-      setHistory(pushHistory(trimmed))
+      setHistory(pushAgentSessionHistory(trimmed))
     } catch (err) {
       setErrorKind('other')
       setError((err as Error).message)
@@ -237,7 +218,11 @@ export default function AgentSessionsPage() {
       )}
 
       {error && (
-        <ErrorAlert error={error} onRetry={() => fetchTree(sessionKey)} />
+        <ErrorAlert
+          error={error}
+          kind={errorKind}
+          onRetry={() => fetchTree(sessionKey)}
+        />
       )}
 
       {loading && (
@@ -303,6 +288,18 @@ export default function AgentSessionsPage() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {sessionKey.trim() && (
+        <p className="text-xs text-muted-foreground">
+          查看编排运行：
+          <Link
+            to={agentOrchestrationPath(sessionKey.trim())}
+            className="text-primary underline-offset-4 hover:underline ml-1"
+          >
+            前往编排运行页
+          </Link>
+        </p>
       )}
 
       <Dialog open={!!confirmPoint} onOpenChange={(open) => !open && setConfirmPoint(null)}>

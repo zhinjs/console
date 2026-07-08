@@ -21,6 +21,12 @@ export function agentSessionsPath(sessionKey: string): string {
   return `/agent/sessions?${params}`
 }
 
+export function agentOrchestrationPath(sessionKey: string): string {
+  const params = new URLSearchParams()
+  params.set('sessionKey', sessionKey)
+  return `/agent/orchestration?${params}`
+}
+
 /** 从 URL 查询参数解析 sessionKey（避免重复 decode） */
 export function parseSessionKeyFromQuery(raw: string | null): string {
   if (!raw) return ''

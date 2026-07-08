@@ -1,4 +1,5 @@
 import { getWebSocketManager } from '@zhin.js/client'
+import { dispatchEndpointPush, type EndpointPushMessage } from './endpoint-push'
 
 let installed = false
 
@@ -14,7 +15,7 @@ export function setupConsoleSseBridge(): void {
   installed = true
 
   const mgr = getWebSocketManager() as {
-    callbacks: { onMessage?: (message: { type: string; data?: unknown }) => void }
+    callbacks: { onMessage?: (message: EndpointPushMessage) => void }
   }
 
   const prev = mgr.callbacks.onMessage
@@ -26,7 +27,11 @@ export function setupConsoleSseBridge(): void {
     } else if (t === 'data-update') {
       window.dispatchEvent(new CustomEvent('zhin-console-data-update', { detail: message }))
     } else if (ENDPOINT_PUSH_TYPES.has(t)) {
-      window.dispatchEvent(new CustomEvent('zhin-console-endpoint-push', { detail: message }))
+      dispatchEndpointPush(message)
     }
   }
+}
+
+export function resetConsoleSseBridge(): void {
+  installed = false
 }
