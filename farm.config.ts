@@ -34,6 +34,7 @@ const consoleDevProxy = {
   "/@dev": consoleApiProxy,
   "/@assets": consoleApiProxy,
   "/api": consoleApiProxy,
+  "/zhin": consoleApiProxy,
 } as const;
 
 const pagesBase = (process.env.CONSOLE_PAGES_BASE ?? "").replace(/\/$/, "");

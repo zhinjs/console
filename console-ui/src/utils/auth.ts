@@ -3,6 +3,8 @@ const API_BASE_KEY = 'zhin_api_base'
 const SAVED_LOGINS_KEY = 'zhin_saved_logins'
 const MAX_SAVED_LOGINS = 20
 
+type ZhinWindow = Window & { __ZHIN_API_TOKEN?: string }
+
 export interface SavedLogin {
   apiBase: string
   token: string
@@ -10,26 +12,53 @@ export interface SavedLogin {
   lastUsedAt: number
 }
 
+function trimTrailingSlash(value: string): string {
+  return value.endsWith('/') ? value.slice(0, -1) : value
+}
+
+/** Demo / 构建预置 Token：优先于 localStorage（对齐 @zhin.js/client remoteApi） */
+function getRuntimeToken(): string | null {
+  if (typeof window === 'undefined') return null
+  const token = (window as ZhinWindow).__ZHIN_API_TOKEN
+  return token?.trim() || null
+}
+
 export function getApiBase(): string {
   const stored = localStorage.getItem(API_BASE_KEY)?.trim()
-  if (stored) return stored.replace(/\/$/, '')
+  if (stored) return trimTrailingSlash(stored)
   if (typeof window !== 'undefined') return window.location.origin
   return ''
 }
 
 export function setApiBase(base: string): void {
-  localStorage.setItem(API_BASE_KEY, base.replace(/\/$/, ''))
+  localStorage.setItem(API_BASE_KEY, trimTrailingSlash(base))
 }
 
 export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY)
+  return getRuntimeToken() ?? localStorage.getItem(TOKEN_KEY)
 }
 
 export function setToken(token: string): void {
   localStorage.setItem(TOKEN_KEY, token)
 }
 
+/** 写入运行时 Token（不落盘；Demo 用） */
+export function setRuntimeToken(token: string): void {
+  if (typeof window === 'undefined') return
+  ;(window as ZhinWindow).__ZHIN_API_TOKEN = token.trim()
+}
+
+export function clearRuntimeToken(): void {
+  if (typeof window === 'undefined') return
+  delete (window as ZhinWindow).__ZHIN_API_TOKEN
+}
+
 export function clearToken(): void {
+  try {
+    sessionStorage.removeItem(TOKEN_KEY)
+  } catch {
+    /* ignore */
+  }
   localStorage.removeItem(TOKEN_KEY)
 }
 
@@ -38,11 +67,11 @@ export function clearApiBase(): void {
 }
 
 export function hasToken(): boolean {
-  return !!localStorage.getItem(TOKEN_KEY)
+  return !!getToken()
 }
 
 export function normalizeApiBase(base: string): string {
-  return base.trim().replace(/\/$/, '')
+  return trimTrailingSlash(base.trim())
 }
 
 /** 仅读 localStorage 中的 Host，不含 Pages 站点 origin 回退 */
@@ -140,6 +169,7 @@ export function reconcileAuthWithApiBase(incomingApiBase: string | null): {
 }
 
 export function notifyAuthRequired(): void {
+  // 不清除 __ZHIN_API_TOKEN：Demo 预置 Token 应在 401 后仍可重试
   clearToken()
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('zhin:auth-required'))
@@ -180,7 +210,7 @@ export type ProbeHealthResult =
 
 /** 登录前探测 Host 连通性（无需 Token） */
 export async function probeHealth(apiBase: string): Promise<ProbeHealthResult> {
-  const base = apiBase.trim().replace(/\/$/, '')
+  const base = normalizeApiBase(apiBase)
   if (!base) {
     return { ok: false, message: '请填写 API Base URL' }
   }
@@ -201,7 +231,7 @@ export async function verifyAndStoreCredentials(
   apiBase: string,
   token: string,
 ): Promise<VerifyCredentialsResult> {
-  const base = apiBase.trim().replace(/\/$/, '')
+  const base = normalizeApiBase(apiBase)
   const trimmed = token.trim().replace(/^Bearer\s+/i, '')
   if (!base) {
     return { ok: false, message: '请填写 API Base URL（如 http://localhost:8086）' }
@@ -220,6 +250,7 @@ export async function verifyAndStoreCredentials(
       headers: { Authorization: `Bearer ${trimmed}` },
     })
     if (res.ok) {
+      clearRuntimeToken()
       setApiBase(base)
       setToken(trimmed)
       stripApiBaseUrlFromQuery()

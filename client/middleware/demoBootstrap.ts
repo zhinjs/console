@@ -2,10 +2,13 @@ import {
   getDemoBuildCredentials,
   isDemoMode,
 } from '@console/utils/demo-mode'
-import { setApiBase, setToken } from '@console/utils/auth'
+import { setApiBase, setRuntimeToken } from '@console/utils/auth'
 
 /**
  * demo.zhin.dev 构建：启动时写入预置 API Base + Demo Token，跳过登录页。
+ *
+ * Token 只写 `window.__ZHIN_API_TOKEN`（对齐 zhin deploy demo boot.js），
+ * 不落 localStorage；@zhin.js/client ≥ 2.0.5 的 getToken 会读运行时 Token。
  */
 export function runDemoBootstrap(): {
   authed: boolean
@@ -22,6 +25,6 @@ export function runDemoBootstrap(): {
   }
 
   setApiBase(apiBase)
-  setToken(apiToken)
+  setRuntimeToken(apiToken)
   return { authed: true, loginApiBase: null }
 }

@@ -15,8 +15,9 @@ export function isDemoMode(): boolean {
 
 export function getDemoBuildCredentials(): { apiBase: string; apiToken: string } {
   const env = readBuildEnv()
+  const apiBase = (env.VITE_API_BASE ?? '').trim()
   return {
-    apiBase: (env.VITE_API_BASE ?? '').trim().replace(/\/$/, ''),
+    apiBase: apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase,
     apiToken: (env.VITE_API_TOKEN ?? '').trim(),
   }
 }

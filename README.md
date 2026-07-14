@@ -23,7 +23,7 @@ pnpm preview
 - `GET /api/events` — SSE 推送（`@zhin.js/client` ≥ 1.1.0）
 - `GET /api/system/status` — 登录校验
 
-依赖 `@zhin.js/client` **≥ 1.1.0**（REST+SSE，不再连 `wss://…/server`）。
+依赖 `@zhin.js/client` **≥ 2.0.5**、`@zhin.js/contract` **≥ 1.0.3**（REST+SSE，不再连 `wss://…/server`；含 agent-stream 与 runtime Token）。
 
 可通过 URL **仅预填** Host 地址（`token` 须在登录页手动输入，勿放在 URL 中）：
 
@@ -31,6 +31,7 @@ pnpm preview
 https://console.zhin.dev/?apiBaseUrl=http://127.0.0.1:8086
 ```
 
+Demo 构建会写入 `window.__ZHIN_API_TOKEN`（对齐 zhin `deploy/zhin-demo`），UI 与 SDK 均优先读该运行时 Token，避免仅依赖 localStorage。
 ## Demo 站点（demo.zhin.dev）
 
 **与 console.zhin.dev 不同**：Demo 构建预连 `demo-api.zhin.dev`，跳过登录，默认打开 **沙盒**，隐藏配置/文件/cron/env 等写操作页。
