@@ -87,6 +87,14 @@ export default defineConfig({
         clsx: path.resolve(siteRoot, "node_modules/clsx"),
         "tailwind-merge": path.resolve(siteRoot, "node_modules/tailwind-merge"),
         yaml: path.resolve(siteRoot, "node_modules/yaml"),
+        // npm 发布的 @zhin.js/ai 不含 src/，其 exports development 条件悬空；
+        // dev 模式 farm 强制 development 条件，子路径解析必挂，这里指到 lib 产物
+        "@zhin.js/ai/agent-stream": path.resolve(
+          siteRoot, "node_modules/@zhin.js/ai/lib/agent-stream.js",
+        ),
+        "@zhin.js/ai/agent-stream-consumer": path.resolve(
+          siteRoot, "node_modules/@zhin.js/ai/lib/agent-stream-consumer.js",
+        ),
       },
     },
   },
