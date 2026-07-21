@@ -113,7 +113,7 @@ export function TupleFieldRenderer({
 export function ObjectFieldRenderer({
   fieldName, field, renderField
 }: CollectionFieldProps & { renderField: (fieldName: string, field: SchemaField, parentPath?: string) => React.ReactElement }) {
-  const objectFields = field.dict || field.properties || {}
+  const objectFields = field.object || field.dict || field.properties || {}
 
   return (
     <div className="rounded-lg border-2 bg-muted/30 overflow-hidden">
