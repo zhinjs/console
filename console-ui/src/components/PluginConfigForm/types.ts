@@ -17,6 +17,8 @@ export interface SchemaField {
   items?: SchemaField  // 兼容旧格式
   list?: SchemaField[]  // 用于 tuple/union/intersect 类型
   properties?: Record<string, SchemaField>
+  /** Schema.toJSON() object map（与 @zhin.js/schema 对齐；优先于 dict/properties） */
+  object?: Record<string, SchemaField>
   dict?: Record<string, SchemaField>  // object 类型的字段
   component?: string  // UI 组件提示
 }
