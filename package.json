@@ -12,8 +12,8 @@
     "pages:prepare": "node scripts/prepare-github-pages.mjs"
   },
   "dependencies": {
-    "@zhin.js/client": "link:../zhin/packages/console/client",
-    "@zhin.js/contract": "link:../zhin/packages/console/contract"
+    "@zhin.js/client": "^2.0.6",
+    "@zhin.js/contract": "^1.0.4"
   },
   "devDependencies": {
     "@farmfe/cli": "^1.0.5",
