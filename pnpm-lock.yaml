@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@zhin.js/ai':
+        specifier: ^1.4.5
+        version: 1.4.5(ai@7.0.32(zod@3.25.76))(zod@3.25.76)
       '@zhin.js/client':
         specifier: ^2.0.6
         version: 2.0.6(ai@7.0.32(zod@3.25.76))(react@19.2.6)(zod@3.25.76)

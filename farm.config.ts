@@ -69,6 +69,8 @@ export default defineConfig({
     },
     resolve: {
       dedupe: ["lucide-react"],
+      // npm 发布的 @zhin.js/* 包不含 src/，exports 的 development 条件会指到不存在的文件
+      conditions: ["module", "import", "browser", "default"],
       alias: {
         "@console": path.join(siteRoot, "console-ui/src"),
         react: path.resolve(siteRoot, "node_modules/react"),
