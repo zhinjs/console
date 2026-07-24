@@ -376,8 +376,8 @@ export default function DashboardLayout() {
 
         <main
           className={cn(
-            "flex-1 min-h-0 min-w-0 overflow-x-hidden",
-            contentFlush ? "overflow-hidden flex flex-col" : "overflow-auto",
+            "flex-1 min-h-0 min-w-0",
+            contentFlush ? "overflow-hidden flex flex-col" : "overflow-y-auto overflow-x-hidden",
           )}
         >
           <div
