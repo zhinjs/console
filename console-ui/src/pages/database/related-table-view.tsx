@@ -158,15 +158,15 @@ export function RelatedTableView({
   }, [data?.rows, sortCol, sortDir])
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col h-full min-h-0 gap-3">
       {msg && (
-        <Alert variant={msg.type === 'error' ? 'destructive' : 'success'} className="py-2">
+        <Alert variant={msg.type === 'error' ? 'destructive' : 'success'} className="py-2 shrink-0">
           {msg.type === 'error' ? <AlertCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
           <AlertDescription>{msg.text}</AlertDescription>
         </Alert>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 shrink-0">
         <Button size="sm" variant="outline" onClick={load} disabled={loading}>
           <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />刷新
         </Button>
@@ -177,9 +177,9 @@ export function RelatedTableView({
       </div>
 
       <div
-        className="border rounded-md max-h-[min(70vh,720px)] overflow-auto overscroll-contain scroll-smooth touch-pan-x touch-pan-y bg-card"
+        className="flex-1 min-h-[16rem] min-w-0 border rounded-md overflow-auto overscroll-contain scroll-smooth touch-pan-x touch-pan-y bg-card"
         role="region"
-        aria-label="数据表，可左右滑动查看宽表"
+        aria-label="数据表，宽表可在此区域内左右滑动"
       >
         <table className="text-sm border-collapse min-w-full w-max">
           <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm shadow-sm">
@@ -232,7 +232,7 @@ export function RelatedTableView({
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center justify-center gap-2 shrink-0">
           <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage((p: number) => p - 1)}><ChevronLeft className="w-4 h-4" /></Button>
           <span className="text-xs text-muted-foreground">{page} / {totalPages}</span>
           <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage((p: number) => p + 1)}><ChevronRight className="w-4 h-4" /></Button>

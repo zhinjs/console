@@ -1,17 +1,15 @@
 import { useState, useMemo, type MouseEvent } from 'react'
 import { useDatabase } from '@zhin.js/client'
 import type { DatabaseType, TableInfo } from '@zhin.js/client'
-import { Database as DatabaseIcon, Table2, Trash2, RefreshCw, Loader2, AlertCircle, Key } from 'lucide-react'
+import { Database as DatabaseIcon, Table2, Trash2, RefreshCw, Key, ArrowLeft } from 'lucide-react'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
-import { Alert, AlertDescription } from '../../components/ui/alert'
 import { ErrorAlert } from '../../components/error-alert'
 import { EmptyState } from '../../components/empty-state'
 import { Badge } from '../../components/ui/badge'
 import { Skeleton } from '../../components/ui/skeleton'
 import { ScrollArea } from '../../components/ui/scroll-area'
 import { PageHeader } from '../../components/PageHeader'
-import { useToast } from '../../components/toast'
 import { ConfirmDialog } from '../../components/confirm-dialog'
 import { DB_TYPE_LABELS, DIALECT_LABELS } from './constants'
 import { RelatedTableView } from './related-table-view'
@@ -26,22 +24,22 @@ export default function DatabasePage() {
     kvGet, kvSet, kvDelete, kvEntries,
   } = useDatabase()
 
-  const { success, error: toastError } = useToast()
   const [selectedTable, setSelectedTable] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ name: string; label: string } | null>(null)
   const selectedTableInfo = useMemo(() => tables.find((t: TableInfo) => t.name === selectedTable), [tables, selectedTable])
   const dbType: DatabaseType = info?.type ?? 'related'
+  const objectLabel = dbType === 'related' ? '表' : dbType === 'document' ? '集合' : '桶'
 
   return (
     <>
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader
         title="数据库"
         description={`浏览和管理 ${DB_TYPE_LABELS[dbType]} 中的数据；左栏选择对象，右侧查看与编辑。`}
         actions={
           <div className="flex items-center gap-2">
             {info && (
-              <Badge variant="secondary" className="font-normal">
+              <Badge variant="secondary" className="font-normal hidden sm:inline-flex">
                 {DIALECT_LABELS[info.dialect] || info.dialect} · {DB_TYPE_LABELS[info.type]}
               </Badge>
             )}
@@ -58,10 +56,10 @@ export default function DatabasePage() {
 
       <Card className="overflow-hidden border-border/80 shadow-sm">
         <CardContent className="p-0">
-          <div className="flex flex-col md:flex-row min-h-[min(520px,calc(100vh-11rem))]">
+          <div className="flex flex-col md:flex-row h-[min(calc(100dvh-9.5rem),52rem)]">
             <div
-              className={`w-full md:w-56 border-b md:border-b-0 md:border-r flex flex-col shrink-0 ${
-                selectedTable ? 'max-h-48 md:max-h-none' : 'min-h-[12rem] md:min-h-0 flex-1 md:flex-none'
+              className={`w-full md:w-56 border-b md:border-b-0 md:border-r flex-col shrink-0 min-h-0 ${
+                selectedTable ? 'hidden md:flex' : 'flex flex-1'
               }`}
             >
               <div className="px-3 py-2 border-b bg-muted/30">
@@ -103,8 +101,7 @@ export default function DatabasePage() {
                         className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-destructive shrink-0"
                         onClick={(e: MouseEvent) => {
                           e.stopPropagation()
-                          const label = dbType === 'related' ? '表' : dbType === 'document' ? '集合' : '桶'
-                          setDeleteTarget({ name: t.name, label })
+                          setDeleteTarget({ name: t.name, label: objectLabel })
                         }}
                       >
                         <Trash2 className="w-3 h-3" />
@@ -115,14 +112,33 @@ export default function DatabasePage() {
               </ScrollArea>
             </div>
 
-            <div className="flex-1 min-w-0 p-3 sm:p-4 overflow-x-hidden">
+            <div
+              className={`flex-1 min-w-0 min-h-0 flex-col ${
+                selectedTable ? 'flex' : 'hidden md:flex'
+              }`}
+            >
               {selectedTable ? (
                 <>
-                  <div className="flex items-center gap-2 mb-4 min-w-0">
-                    <Table2 className="w-5 h-5 text-muted-foreground shrink-0" />
-                    <h2 className="text-lg font-semibold truncate">{selectedTable}</h2>
+                  <div className="flex items-center gap-2 px-3 sm:px-4 py-2.5 border-b bg-muted/20 min-w-0 shrink-0">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="md:hidden shrink-0 -ml-1 px-2"
+                      onClick={() => setSelectedTable(null)}
+                      aria-label={`返回${objectLabel}列表`}
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-1" />
+                      返回
+                    </Button>
+                    {dbType === 'keyvalue' ? (
+                      <Key className="w-4 h-4 text-muted-foreground shrink-0 hidden sm:block" />
+                    ) : (
+                      <Table2 className="w-4 h-4 text-muted-foreground shrink-0 hidden sm:block" />
+                    )}
+                    <h2 className="text-base sm:text-lg font-semibold truncate min-w-0">{selectedTable}</h2>
                     {selectedTableInfo?.columns && (
-                      <div className="flex gap-1 ml-2 flex-wrap">
+                      <div className="hidden lg:flex gap-1 ml-2 flex-wrap min-w-0">
                         {(Object.entries(selectedTableInfo.columns) as [string, { type: string; primary?: boolean }][]).slice(0, 8).map(([col, def]) => (
                           <Badge key={col} variant="outline" className="text-[10px] px-1.5 py-0">
                             {col}{def.primary ? ' 🔑' : ''}: {def.type}
@@ -135,42 +151,44 @@ export default function DatabasePage() {
                     )}
                   </div>
 
-                  {dbType === 'keyvalue' ? (
-                    <KvBucketView
-                      key={selectedTable}
-                      tableName={selectedTable}
-                      kvGet={kvGet}
-                      kvSet={kvSet}
-                      kvDelete={kvDelete}
-                      kvEntries={kvEntries}
-                    />
-                  ) : dbType === 'document' ? (
-                    <DocumentCollectionView
-                      key={selectedTable}
-                      tableName={selectedTable}
-                      select={select}
-                      insert={insert}
-                      update={update}
-                      remove={remove}
-                    />
-                  ) : (
-                    <RelatedTableView
-                      key={selectedTable}
-                      tableName={selectedTable}
-                      tableInfo={selectedTableInfo}
-                      select={select}
-                      insert={insert}
-                      update={update}
-                      remove={remove}
-                    />
-                  )}
+                  <div className="flex-1 min-h-0 min-w-0 p-3 sm:p-4 overflow-hidden">
+                    {dbType === 'keyvalue' ? (
+                      <KvBucketView
+                        key={selectedTable}
+                        tableName={selectedTable}
+                        kvGet={kvGet}
+                        kvSet={kvSet}
+                        kvDelete={kvDelete}
+                        kvEntries={kvEntries}
+                      />
+                    ) : dbType === 'document' ? (
+                      <DocumentCollectionView
+                        key={selectedTable}
+                        tableName={selectedTable}
+                        select={select}
+                        insert={insert}
+                        update={update}
+                        remove={remove}
+                      />
+                    ) : (
+                      <RelatedTableView
+                        key={selectedTable}
+                        tableName={selectedTable}
+                        tableInfo={selectedTableInfo}
+                        select={select}
+                        insert={insert}
+                        update={update}
+                        remove={remove}
+                      />
+                    )}
+                  </div>
                 </>
               ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
+                <div className="flex items-center justify-center h-full text-muted-foreground p-4">
                   <div className="text-center">
                     <DatabaseIcon className="w-12 h-12 mx-auto mb-3 opacity-30" />
                     <p className="text-sm">
-                      在左侧选择{dbType === 'related' ? '一个表' : dbType === 'document' ? '一个集合' : '一个桶'}开始管理
+                      在左侧选择一个{objectLabel}开始管理
                     </p>
                   </div>
                 </div>
