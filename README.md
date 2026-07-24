@@ -54,9 +54,9 @@ pnpm pages:prepare   # CONSOLE_PAGES_CNAME=demo.zhin.dev
 
 ### 部署
 
-- **分支 `demo`**：push 触发 [`.github/workflows/demo-pages.yml`](.github/workflows/demo-pages.yml)
-- 仓库 Variables（可选）：`DEMO_PAGES_CNAME=demo.zhin.dev`
-- **Host 侧**：Hugging Face Space [`zhinjs-demo.hf.space`](https://zhinjs-demo.hf.space)
+- **实际托管**：Cloudflare Pages 项目 `console`（自定义域 `demo.zhin.dev`），监听 **`main`**，构建命令 `pnpm run build:demo`
+- push `main` 即自动部署；GitHub Actions `demo-pages.yml` 仅作备用（Pages 环境目前只允许 `main`）
+- **Host 侧**：Hugging Face Space [`zhinjs-demo.hf.space`](https://zhinjs-demo.hf.space)（Token `zhin-demo`）
 
 ## 目录
 
