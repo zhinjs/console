@@ -1,6 +1,6 @@
-import { useMemo, useState, useCallback, useSyncExternalStore, type KeyboardEvent } from "react"
+import { useMemo, useState, useCallback, useEffect, useSyncExternalStore, type KeyboardEvent } from "react"
 import { Outlet, Link, useLocation, useNavigate, matchPath } from "react-router-dom"
-import { Menu, Search, LogOut } from "lucide-react"
+import { Menu, Search, LogOut, X } from "lucide-react"
 import { app, cn, type ConsoleRouteRecord } from "@zhin.js/client"
 import { getSidebarLucideIcon } from "../components/sidebarMenuIcons"
 import { ThemeToggle } from "../components/ThemeToggle"
@@ -13,6 +13,19 @@ import { isDemoMode } from "../utils/demo-mode"
 import { reopenDemoOnboarding } from "../components/DemoOnboarding"
 
 const GROUP_ORDER = ["系统", "Endpoints", "命令与 Agent", "扩展", "配置与数据", "其他"] as const
+const MOBILE_MQ = "(max-width: 767px)"
+
+function useIsMobile() {
+  return useSyncExternalStore(
+    (onStoreChange) => {
+      const mql = window.matchMedia(MOBILE_MQ)
+      mql.addEventListener("change", onStoreChange)
+      return () => mql.removeEventListener("change", onStoreChange)
+    },
+    () => window.matchMedia(MOBILE_MQ).matches,
+    () => false,
+  )
+}
 
 function SidebarMenuIcon({ icon }: { icon?: React.ReactNode | string }) {
   if (icon == null) return null
@@ -44,9 +57,13 @@ function useRouteMetaFlag(
 export default function DashboardLayout() {
   const location = useLocation()
   const navigate = useNavigate()
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const isMobile = useIsMobile()
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
   const [searchQ, setSearchQ] = useState("")
+
+  const showLabels = isMobile || desktopSidebarOpen
 
   const routes = useSyncExternalStore(
     app.subscribe,
@@ -93,9 +110,10 @@ export default function DashboardLayout() {
         navigate(first.path)
         setActiveMenu(first.path)
         setSearchQ("")
+        if (isMobile) setMobileNavOpen(false)
       }
     },
-    [searchHits, navigate],
+    [searchHits, navigate, isMobile],
   )
 
   const contentFullWidth = useRouteMetaFlag(routes, location.pathname, "fullWidth")
@@ -116,36 +134,107 @@ export default function DashboardLayout() {
     return out
   }, [menuByGroup])
 
+  useEffect(() => {
+    setMobileNavOpen(false)
+  }, [location.pathname])
+
+  useEffect(() => {
+    if (!isMobile || !mobileNavOpen) return
+    const onKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape") setMobileNavOpen(false)
+    }
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    window.addEventListener("keydown", onKeyDown)
+    return () => {
+      document.body.style.overflow = prevOverflow
+      window.removeEventListener("keydown", onKeyDown)
+    }
+  }, [isMobile, mobileNavOpen])
+
+  const toggleSidebar = () => {
+    if (isMobile) setMobileNavOpen((v) => !v)
+    else setDesktopSidebarOpen((v) => !v)
+  }
+
   return (
-    <div className="flex h-screen bg-background">
-      <div
+    <div className="flex h-screen bg-background overflow-hidden">
+      {isMobile && mobileNavOpen ? (
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-black/50 border-0 cursor-default"
+          aria-label="关闭菜单"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      ) : null}
+
+      <aside
         className={cn(
-          "flex flex-col border-r border-[var(--console-border-subtle)] bg-sidebar transition-all duration-300",
-          sidebarOpen ? "w-64" : "w-16",
+          "flex flex-col border-r border-[var(--console-border-subtle)] bg-sidebar",
+          isMobile
+            ? cn(
+                "fixed inset-y-0 left-0 z-50 w-[min(16rem,88vw)] max-w-[88vw] shadow-lg transition-transform duration-300 ease-out",
+                mobileNavOpen ? "translate-x-0" : "-translate-x-full pointer-events-none",
+              )
+            : cn(
+                "relative shrink-0 transition-[width] duration-300",
+                desktopSidebarOpen ? "w-64" : "w-16",
+              ),
         )}
+        aria-hidden={isMobile && !mobileNavOpen}
       >
         <div className="p-4 border-b border-[var(--console-border-subtle)]">
           <div
             className={cn(
               "flex items-center transition-all duration-300",
-              sidebarOpen ? "gap-3" : "justify-center",
+              showLabels ? "gap-3" : "justify-center",
             )}
           >
             <div className="flex items-center justify-center w-9 h-9 min-w-9 rounded-lg bg-foreground text-background font-bold text-lg">
               Z
             </div>
-            {sidebarOpen && (
-              <div className="flex flex-col min-w-0">
-                <span className="text-base font-semibold truncate">
-                  {isDemoMode() ? "Zhin.js Demo" : "Zhin.js"}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {isDemoMode() ? "零安装 Sandbox" : "管理控制台"}
-                </span>
+            {showLabels && (
+              <div className="flex flex-1 items-center justify-between gap-2 min-w-0">
+                <div className="flex flex-col min-w-0">
+                  <span className="text-base font-semibold truncate">
+                    {isDemoMode() ? "Zhin.js Demo" : "Zhin.js"}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {isDemoMode() ? "零安装 Sandbox" : "管理控制台"}
+                  </span>
+                </div>
+                {isMobile ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0"
+                    onClick={() => setMobileNavOpen(false)}
+                    aria-label="关闭菜单"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                ) : null}
               </div>
             )}
           </div>
         </div>
+
+        {isMobile ? (
+          <div className="p-3 border-b border-[var(--console-border-subtle)]">
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                value={searchQ}
+                onChange={(e) => setSearchQ(e.target.value)}
+                onKeyDown={onSearchKeyDown}
+                placeholder="搜索菜单…"
+                className="pl-9 bg-muted/50"
+                autoComplete="off"
+                aria-label="搜索页面"
+              />
+            </div>
+          </div>
+        ) : null}
 
         <ScrollArea className="flex-1">
           <div className="p-2 space-y-3">
@@ -154,7 +243,7 @@ export default function DashboardLayout() {
               if (!items.length) return null
               return (
                 <div key={groupName} className="space-y-1">
-                  {sidebarOpen && (
+                  {showLabels && (
                     <div className="px-2 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                       {groupName}
                     </div>
@@ -166,17 +255,20 @@ export default function DashboardLayout() {
                       <Link
                         key={itemKey}
                         to={route.path}
-                        onClick={() => setActiveMenu(itemKey)}
+                        onClick={() => {
+                          setActiveMenu(itemKey)
+                          if (isMobile) setMobileNavOpen(false)
+                        }}
                         className={cn(
                           "menu-item",
                           isActive && "active",
-                          !sidebarOpen && "justify-center px-2",
+                          !showLabels && "justify-center px-2",
                         )}
                       >
                         <span className="shrink-0">
                           <SidebarMenuIcon icon={route.icon} />
                         </span>
-                        {sidebarOpen && <span className="truncate">{route.name}</span>}
+                        {showLabels && <span className="truncate">{route.name}</span>}
                       </Link>
                     )
                   })}
@@ -185,19 +277,25 @@ export default function DashboardLayout() {
             })}
           </div>
         </ScrollArea>
-      </div>
+      </aside>
 
-      <div className="flex flex-col flex-1 overflow-hidden min-w-0">
-        <header className="flex items-center justify-between h-14 px-4 border-b border-[var(--console-border-subtle)] bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0 shadow-[var(--console-shadow-xs)]">
-          <div className="flex items-center gap-3 min-w-0">
-            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen((v) => !v)} aria-label="切换侧边栏">
+      <div className="flex flex-col flex-1 overflow-hidden min-w-0 w-full">
+        <header className="flex items-center justify-between h-14 px-3 sm:px-4 border-b border-[var(--console-border-subtle)] bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0 shadow-[var(--console-shadow-xs)] gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleSidebar}
+              aria-label={isMobile ? (mobileNavOpen ? "关闭菜单" : "打开菜单") : "切换侧边栏"}
+              aria-expanded={isMobile ? mobileNavOpen : desktopSidebarOpen}
+            >
               <Menu className="h-5 w-5" />
             </Button>
             <div className="flex flex-col min-w-0">
               <h2 className="text-sm font-semibold truncate">
                 {isDemoMode() ? "在线 Demo" : "控制台"}
               </h2>
-              <span className="text-xs text-muted-foreground truncate">
+              <span className="text-xs text-muted-foreground truncate hidden sm:block">
                 {isDemoMode()
                   ? "hello · card · ai:"
                   : "跳转菜单 · Enter 打开首条"}
@@ -242,7 +340,7 @@ export default function DashboardLayout() {
                   href="https://zhin.js.org/getting-started/first-run"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={cn(buttonVariants({ variant: "default", size: "sm" }), "text-xs h-8")}
+                  className={cn(buttonVariants({ variant: "default", size: "sm" }), "text-xs h-8 px-2.5")}
                 >
                   部署到本机
                 </a>
@@ -250,7 +348,7 @@ export default function DashboardLayout() {
                   href="https://zhin.js.org/adapters/icqq"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "text-xs h-8")}
+                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "text-xs h-8 px-2.5 hidden sm:inline-flex")}
                 >
                   接 QQ Bot
                 </a>
@@ -277,13 +375,13 @@ export default function DashboardLayout() {
 
         <main
           className={cn(
-            "flex-1 min-h-0",
+            "flex-1 min-h-0 min-w-0",
             contentFlush ? "overflow-hidden flex flex-col" : "overflow-auto",
           )}
         >
           <div
             className={cn(
-              "mx-auto w-full",
+              "mx-auto w-full min-w-0",
               contentFlush ? "console-page-flush flex-1 min-h-0 h-full p-0" : "console-main",
               contentFullWidth ? "max-w-none" : "max-w-7xl",
             )}

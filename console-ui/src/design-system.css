@@ -35,11 +35,26 @@
     --console-border-default: hsl(var(--border) / 0.85);
     --console-border-strong: hsl(var(--border) / 0.98);
   }
+
+  @media (max-width: 767px) {
+    :root {
+      --console-space-page-x: 0.875rem;
+      --console-space-page-y: 0.875rem;
+      --console-space-section: 0.875rem;
+      --console-space-card: 1rem;
+    }
+  }
 }
 
 @layer components {
   .console-main {
     padding: var(--console-space-page-y) var(--console-space-page-x);
+  }
+
+  @media (max-width: 767px) {
+    .console-page-toolbar {
+      gap: 0.5rem;
+    }
   }
 
   .console-page {
