@@ -34,25 +34,20 @@ https://console.zhin.dev/?apiBaseUrl=http://127.0.0.1:8086
 Demo 构建会写入 `window.__ZHIN_API_TOKEN`（对齐 zhin `deploy/zhin-demo`），UI 与 SDK 均优先读该运行时 Token，避免仅依赖 localStorage。
 ## Demo 站点（demo.zhin.dev）
 
-**与 console.zhin.dev 不同**：Demo 构建预连 `demo-api.zhin.dev`，跳过登录，默认打开 **沙盒**，隐藏配置/文件/cron/env 等写操作页。
+**与 console.zhin.dev 不同**：Demo 构建固定预连 `https://zhinjs-demo.hf.space`（Token `zhin-demo`），跳过登录，默认打开 **沙盒**；菜单与正式站一致，不再隐藏管理页。
 
 ### 本地联调
 
 ```bash
-# 终端 1：zhin 仓库 examples/demo-bot
-pnpm dev
-
-# 终端 2：Console Demo profile
 pnpm dev:demo
-# 或指定 Token（与 demo-bot .env DEMO_TOKEN 一致）
+# 或覆盖为本机 Host
 VITE_DEMO_MODE=1 VITE_API_BASE=http://127.0.0.1:8086 VITE_API_TOKEN=... pnpm dev
 ```
 
 ### 生产构建
 
 ```bash
-cp .env.demo.example .env.demo
-# 编辑 VITE_API_TOKEN 与 VPS .env DEMO_TOKEN 一致
+cp .env.demo.example .env.demo   # 默认已指向 hf.space / zhin-demo
 set -a && source .env.demo && set +a && pnpm build:demo
 pnpm pages:prepare   # CONSOLE_PAGES_CNAME=demo.zhin.dev
 ```
@@ -60,9 +55,8 @@ pnpm pages:prepare   # CONSOLE_PAGES_CNAME=demo.zhin.dev
 ### 部署
 
 - **分支 `demo`**：push 触发 [`.github/workflows/demo-pages.yml`](.github/workflows/demo-pages.yml)
-- GitHub 仓库 Secrets：`DEMO_CONSOLE_TOKEN`（= VPS `DEMO_TOKEN`）
 - 仓库 Variables（可选）：`DEMO_PAGES_CNAME=demo.zhin.dev`
-- **Host 侧**：zhin 仓库 [`deploy/zhin-demo`](https://github.com/zhinjs/zhin/tree/main/deploy/zhin-demo) 部署 `demo-api.zhin.dev`（`examples/demo-bot`）
+- **Host 侧**：Hugging Face Space [`zhinjs-demo.hf.space`](https://zhinjs-demo.hf.space)
 
 ## 目录
 

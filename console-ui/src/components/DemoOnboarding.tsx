@@ -12,7 +12,7 @@ const STEPS = [
     body: (
       <>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          你已连接到官方托管 Sandbox（<code className="text-xs bg-muted px-1 rounded">demo-api.zhin.dev</code>
+          你已连接到官方托管 Demo Host（<code className="text-xs bg-muted px-1 rounded">zhinjs-demo.hf.space</code>
           ），无需 API Base / Token。
         </p>
         <p className="text-sm text-muted-foreground leading-relaxed mt-2">

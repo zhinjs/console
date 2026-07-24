@@ -1,5 +1,4 @@
 import { app } from '@zhin.js/client'
-import { DEMO_HIDDEN_BUILTIN_PATHS, isDemoMode } from './utils/demo-mode'
 import HomePage from './pages/dashboard'
 import PluginsPage from './pages/plugins'
 import PluginDetailPage from './pages/plugin-detail'
@@ -16,48 +15,38 @@ import IntrospectionPage from './pages/introspection'
 import AgentSessionsPage from './pages/agent-sessions'
 import AgentOrchestrationPage from './pages/agent-orchestration'
 
-function shouldRegisterBuiltin(path: string): boolean {
-  if (!isDemoMode()) return true
-  return !DEMO_HIDDEN_BUILTIN_PATHS.has(path)
-}
-
 let builtinPagesRegistered = false
 
 export function registerBuiltinConsolePages() {
   if (builtinPagesRegistered) return
   builtinPagesRegistered = true
-  if (shouldRegisterBuiltin('/dashboard')) {
-    app.addRoute({
-      path: '/dashboard',
-      name: '概览',
-      parent: null,
-      icon: 'Home',
-      element: <HomePage />,
-      meta: { group: '系统', order: 0 },
-    })
-  }
 
-  if (shouldRegisterBuiltin('/logs')) {
-    app.addRoute({
-      path: '/logs',
-      name: '日志',
-      parent: null,
-      icon: 'FileText',
-      element: <LogsPage />,
-      meta: { group: '系统', order: 1, fullWidth: true },
-    })
-  }
+  app.addRoute({
+    path: '/dashboard',
+    name: '概览',
+    parent: null,
+    icon: 'Home',
+    element: <HomePage />,
+    meta: { group: '系统', order: 0 },
+  })
 
-  if (shouldRegisterBuiltin('/cron')) {
-    app.addRoute({
-      path: '/cron',
-      name: '定时任务',
-      parent: null,
-      icon: 'Clock',
-      element: <CronPage />,
-      meta: { group: '系统', order: 2 },
-    })
-  }
+  app.addRoute({
+    path: '/logs',
+    name: '日志',
+    parent: null,
+    icon: 'FileText',
+    element: <LogsPage />,
+    meta: { group: '系统', order: 1, fullWidth: true },
+  })
+
+  app.addRoute({
+    path: '/cron',
+    name: '定时任务',
+    parent: null,
+    icon: 'Clock',
+    element: <CronPage />,
+    meta: { group: '系统', order: 2 },
+  })
 
   app.addRoute({
     path: '/endpoints',
@@ -112,60 +101,50 @@ export function registerBuiltinConsolePages() {
     meta: { hideInMenu: true },
   })
 
-  if (!isDemoMode()) {
-    app.addRoute({
-      path: '/marketplace',
-      name: '市场',
-      parent: null,
-      icon: 'Store',
-      element: <MarketplacePage />,
-      meta: { group: '扩展', order: 1 },
-    })
-  }
+  app.addRoute({
+    path: '/marketplace',
+    name: '市场',
+    parent: null,
+    icon: 'Store',
+    element: <MarketplacePage />,
+    meta: { group: '扩展', order: 1 },
+  })
 
-  if (shouldRegisterBuiltin('/config')) {
-    app.addRoute({
-      path: '/config',
-      name: '配置',
-      parent: null,
-      icon: 'Settings',
-      element: <ConfigPage />,
-      meta: { group: '配置与数据', order: 0 },
-    })
-  }
+  app.addRoute({
+    path: '/config',
+    name: '配置',
+    parent: null,
+    icon: 'Settings',
+    element: <ConfigPage />,
+    meta: { group: '配置与数据', order: 0 },
+  })
 
-  if (shouldRegisterBuiltin('/env')) {
-    app.addRoute({
-      path: '/env',
-      name: '环境变量',
-      parent: null,
-      icon: 'KeyRound',
-      element: <EnvManagePage />,
-      meta: { group: '配置与数据', order: 1 },
-    })
-  }
+  app.addRoute({
+    path: '/env',
+    name: '环境变量',
+    parent: null,
+    icon: 'KeyRound',
+    element: <EnvManagePage />,
+    meta: { group: '配置与数据', order: 1 },
+  })
 
-  if (shouldRegisterBuiltin('/files')) {
-    app.addRoute({
-      path: '/files',
-      name: '项目文件',
-      parent: null,
-      icon: 'FolderOpen',
-      element: <FileManagePage />,
-      meta: { group: '配置与数据', order: 2 },
-    })
-  }
+  app.addRoute({
+    path: '/files',
+    name: '项目文件',
+    parent: null,
+    icon: 'FolderOpen',
+    element: <FileManagePage />,
+    meta: { group: '配置与数据', order: 2 },
+  })
 
-  if (shouldRegisterBuiltin('/database')) {
-    app.addRoute({
-      path: '/database',
-      name: '数据库',
-      parent: null,
-      icon: 'Database',
-      element: <DatabasePage />,
-      meta: { group: '配置与数据', order: 3, fullWidth: true },
-    })
-  }
+  app.addRoute({
+    path: '/database',
+    name: '数据库',
+    parent: null,
+    icon: 'Database',
+    element: <DatabasePage />,
+    meta: { group: '配置与数据', order: 3, fullWidth: true },
+  })
 
   app.addRoute({
     path: '/endpoints/:adapter/:endpointId',

@@ -4,6 +4,10 @@ type DemoBuildEnv = {
   VITE_API_TOKEN?: string
 }
 
+/** demo.zhin.dev 固定 Host（可被构建环境变量覆盖） */
+export const DEMO_API_BASE = 'https://zhinjs-demo.hf.space'
+export const DEMO_API_TOKEN = 'zhin-demo'
+
 function readBuildEnv(): DemoBuildEnv {
   return (import.meta as unknown as { env?: DemoBuildEnv }).env ?? {}
 }
@@ -15,21 +19,13 @@ export function isDemoMode(): boolean {
 
 export function getDemoBuildCredentials(): { apiBase: string; apiToken: string } {
   const env = readBuildEnv()
-  const apiBase = (env.VITE_API_BASE ?? '').trim()
+  const apiBase = (env.VITE_API_BASE ?? DEMO_API_BASE).trim() || DEMO_API_BASE
+  const apiToken = (env.VITE_API_TOKEN ?? DEMO_API_TOKEN).trim() || DEMO_API_TOKEN
   return {
     apiBase: apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase,
-    apiToken: (env.VITE_API_TOKEN ?? '').trim(),
+    apiToken,
   }
 }
 
 /** Demo 构建下默认 landing：Sandbox 插件路由 */
 export const DEMO_DEFAULT_PATH = '/sandbox'
-
-/** Demo 模式下不注册的管理页（写配置 / 文件 / cron / env） */
-export const DEMO_HIDDEN_BUILTIN_PATHS = new Set([
-  '/config',
-  '/env',
-  '/files',
-  '/database',
-  '/cron',
-])
