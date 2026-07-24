@@ -207,7 +207,7 @@ export default function LogsPage() {
       <Card className="border-border/80 shadow-sm">
         <CardContent className="flex justify-between items-center p-3 flex-wrap gap-3">
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="relative flex-1 min-w-[180px] max-w-xs">
+            <div className="relative flex-1 min-w-0 w-full sm:min-w-[180px] max-w-xs">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
               <Input
                 type="search"

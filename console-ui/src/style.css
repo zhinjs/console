@@ -239,7 +239,7 @@
   padding: 1rem;
   height: calc(100vh - 42px - 3rem);
   width: 100%;
-  max-width: 100vw;
+  max-width: 100%;
   position: relative;
   overflow: hidden;
 }
@@ -913,12 +913,17 @@
    Responsive: Mobile
    ============================================ */
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .sandbox-container {
     padding: 0;
     gap: 0;
     flex-direction: column;
     height: calc(100vh - 42px - 3rem);
+  }
+
+  /* IM 布局保持横向：会话列表用 fixed 抽屉，不占主区高度 */
+  .sandbox-container.im-layout {
+    flex-direction: row;
   }
 
   .mobile-channel-toggle {
@@ -942,7 +947,7 @@
     left: 0;
     top: 0;
     bottom: 0;
-    width: min(320px, 88vw);
+    width: min(20rem, 88vw);
     max-width: 88vw;
     transform: translateX(-100%);
     z-index: 1000;
@@ -952,6 +957,17 @@
 
   .channel-sidebar.show {
     transform: translateX(0);
+  }
+
+  .im-layout > .channel-sidebar {
+    position: fixed;
+    z-index: 1000;
+  }
+
+  .im-layout > .im-main-split {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
   }
 
   .channel-overlay {
@@ -2330,13 +2346,14 @@
   text-align: center;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .sandbox-container.im-layout {
     height: 100%;
     min-height: 0;
     border-right: 0;
     border-left: 0;
     border-radius: 0;
+    max-width: 100%;
   }
 
   .mobile-channel-toggle {
@@ -2346,8 +2363,8 @@
   }
 
   .im-layout .channel-sidebar {
-    width: min(340px, 90vw);
-    max-width: 90vw;
+    width: min(20rem, 88vw);
+    max-width: 88vw;
     box-shadow: 14px 0 36px hsl(var(--im-shadow) / 0.22);
   }
 
@@ -2364,8 +2381,8 @@
   }
 
   .im-composer-tools {
-    flex-wrap: nowrap;
-    overflow-x: auto;
+    flex-wrap: wrap;
+    overflow-x: visible;
     padding-bottom: 0.15rem;
   }
 
@@ -2373,8 +2390,18 @@
     flex-shrink: 0;
   }
 
+  .im-media-input {
+    min-width: 0 !important;
+    width: 100%;
+  }
+
   .im-system-content {
     padding: 0.8rem;
+  }
+
+  .im-right-panel.im-right-visible {
+    width: min(100%, 20rem);
+    max-width: 90vw;
   }
 }
 

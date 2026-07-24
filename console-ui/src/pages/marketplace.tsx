@@ -285,7 +285,7 @@ export default function MarketplacePage() {
 
       {/* Category Tabs */}
       <Tabs value={category} onValueChange={v => setCategory(v as Category)}>
-        <TabsList>
+        <TabsList className="flex flex-wrap h-auto w-full justify-start gap-1">
           {CATEGORIES.map(c => (
             <TabsTrigger key={c.value} value={c.value}>{c.label}</TabsTrigger>
           ))}
@@ -347,8 +347,8 @@ export default function MarketplacePage() {
                 <Separator />
 
                 {/* Footer: author, date, downloads */}
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span className="truncate max-w-[40%]">{plugin.author}</span>
+                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground min-w-0">
+                  <span className="truncate min-w-0 flex-1">{plugin.author}</span>
                   <div className="flex items-center gap-3 shrink-0">
                     {plugin.downloads?.monthly > 0 && (
                       <span className="flex items-center gap-0.5">
@@ -419,7 +419,7 @@ export default function MarketplacePage() {
 
       {/* Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="w-[calc(100%-2rem)] max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
           {detailLoading ? (
             <div className="space-y-3 p-1">
               <Skeleton className="h-6 w-48" />
@@ -519,11 +519,11 @@ export default function MarketplacePage() {
                 {detailTab === 'versions' && (
                   <div>
                     {detail.versions?.length > 0 ? (
-                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                         {detail.versions.slice(-20).reverse().map(v => (
-                          <span key={v} className="inline-flex items-center gap-1 px-2 py-1 rounded border text-xs font-mono bg-secondary/30">
-                            <GitBranch className="w-3 h-3 text-muted-foreground" />
-                            {v}
+                          <span key={v} className="inline-flex items-center gap-1 px-2 py-1 rounded border text-xs font-mono bg-secondary/30 min-w-0 truncate" title={v}>
+                            <GitBranch className="w-3 h-3 text-muted-foreground shrink-0" />
+                            <span className="truncate">{v}</span>
                           </span>
                         ))}
                       </div>
@@ -545,9 +545,9 @@ export default function MarketplacePage() {
                         <h4 className="text-xs font-medium mb-1.5 text-muted-foreground">Peer Dependencies</h4>
                         <div className="space-y-1">
                           {Object.entries(detail.peerDependencies).map(([name, ver]) => (
-                            <div key={name} className="flex items-center justify-between px-3 py-1.5 rounded border text-xs bg-secondary/30">
-                              <span className="font-mono">{name}</span>
-                              <span className="text-muted-foreground">{String(ver)}</span>
+                            <div key={name} className="flex items-center justify-between gap-2 px-3 py-1.5 rounded border text-xs bg-secondary/30 min-w-0">
+                              <span className="font-mono truncate min-w-0">{name}</span>
+                              <span className="text-muted-foreground shrink-0 truncate max-w-[40%]" title={String(ver)}>{String(ver)}</span>
                             </div>
                           ))}
                         </div>
@@ -560,9 +560,9 @@ export default function MarketplacePage() {
                         <h4 className="text-xs font-medium mb-1.5 text-muted-foreground">Engines</h4>
                         <div className="space-y-1">
                           {Object.entries(detail.engines).map(([eng, ver]) => (
-                            <div key={eng} className="flex items-center justify-between px-3 py-1.5 rounded border text-xs bg-secondary/30">
-                              <span className="font-mono">{eng}</span>
-                              <span className="text-muted-foreground">{String(ver)}</span>
+                            <div key={eng} className="flex items-center justify-between gap-2 px-3 py-1.5 rounded border text-xs bg-secondary/30 min-w-0">
+                              <span className="font-mono truncate min-w-0">{eng}</span>
+                              <span className="text-muted-foreground shrink-0 truncate max-w-[40%]" title={String(ver)}>{String(ver)}</span>
                             </div>
                           ))}
                         </div>
@@ -574,8 +574,8 @@ export default function MarketplacePage() {
                 {/* Install command */}
                 <div>
                   <h4 className="text-sm font-medium mb-2">安装命令</h4>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 text-xs bg-secondary rounded-md p-2 overflow-x-auto">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <code className="flex-1 min-w-0 text-xs bg-secondary rounded-md p-2 overflow-x-auto break-all">
                       pnpm add {detail.name}
                     </code>
                     <Button

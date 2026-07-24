@@ -94,25 +94,25 @@ export function DocumentCollectionView({
   const totalPages = data ? Math.ceil(data.total / pageSize) : 0
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col h-full min-h-0 gap-3">
       {msg && (
-        <Alert variant={msg.type === 'error' ? 'destructive' : 'success'} className="py-2">
+        <Alert variant={msg.type === 'error' ? 'destructive' : 'success'} className="py-2 shrink-0">
           {msg.type === 'error' ? <AlertCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
           <AlertDescription>{msg.text}</AlertDescription>
         </Alert>
       )}
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 shrink-0">
         <Button size="sm" variant="outline" onClick={load} disabled={loading}>
           <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />刷新
         </Button>
         <Button size="sm" onClick={() => { setAddDoc(true); setJsonText('{\n  \n}') }}>
           <Plus className="w-3.5 h-3.5 mr-1" />添加文档
         </Button>
-        <span className="text-xs text-muted-foreground ml-auto">共 {data?.total ?? 0} 条 · 第 {page}/{totalPages || 1} 页</span>
+        <span className="text-xs text-muted-foreground sm:ml-auto basis-full sm:basis-auto">共 {data?.total ?? 0} 条 · 第 {page}/{totalPages || 1} 页</span>
       </div>
 
-      <div className="space-y-2">
+      <div className="flex-1 min-h-0 min-w-0 overflow-y-auto space-y-2 overscroll-contain">
         {loading && !data ? (
           <div className="text-center py-8"><Loader2 className="w-4 h-4 animate-spin inline-block" /></div>
         ) : !data?.rows?.length ? (
@@ -120,8 +120,8 @@ export function DocumentCollectionView({
         ) : data.rows.map((doc: any, i: number) => (
           <Card key={doc._id || i} className="overflow-hidden">
             <CardContent className="p-3">
-              <div className="flex items-start justify-between gap-2">
-                <pre className="text-xs font-mono flex-1 overflow-x-auto whitespace-pre-wrap break-all">{JSON.stringify(doc, null, 2)}</pre>
+              <div className="flex items-start justify-between gap-2 min-w-0">
+                <pre className="text-xs font-mono flex-1 min-w-0 whitespace-pre-wrap break-all">{JSON.stringify(doc, null, 2)}</pre>
                 <div className="flex flex-col gap-1 shrink-0">
                   <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => {
                     setEditDoc(doc)
@@ -137,7 +137,7 @@ export function DocumentCollectionView({
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center justify-center gap-2 shrink-0">
           <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage((p: number) => p - 1)}><ChevronLeft className="w-4 h-4" /></Button>
           <span className="text-xs text-muted-foreground">{page} / {totalPages}</span>
           <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage((p: number) => p + 1)}><ChevronRight className="w-4 h-4" /></Button>

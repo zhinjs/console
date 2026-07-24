@@ -667,7 +667,7 @@ export default function EndpointDetailPage() {
                             ? '视频直链 URL'
                             : '音频直链 URL'
                       }
-                      className="im-media-input flex-1 min-w-[12rem] h-9 text-sm"
+                      className="im-media-input flex-1 min-w-0 sm:min-w-[12rem] h-9 text-sm"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault()

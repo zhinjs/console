@@ -347,18 +347,16 @@ export default function ConfigPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <PageHeader
-          title="配置"
-          description="编辑 Host 通用项与各插件配置；插件项保存后可热重载，YAML 全量保存需重启"
-        />
-        <div className="flex items-center gap-2">
+      <PageHeader
+        title="配置"
+        description="编辑 Host 通用项与各插件配置；插件项保存后可热重载，YAML 全量保存需重启"
+        actions={
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
             刷新
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {error && (
         <ErrorAlert error={error} onRetry={load} />
