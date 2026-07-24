@@ -342,7 +342,8 @@ export default function DashboardLayout() {
                   rel="noopener noreferrer"
                   className={cn(buttonVariants({ variant: "default", size: "sm" }), "text-xs h-8 px-2.5")}
                 >
-                  部署到本机
+                  <span className="sm:hidden">部署</span>
+                  <span className="hidden sm:inline">部署到本机</span>
                 </a>
                 <a
                   href="https://zhin.js.org/adapters/icqq"
@@ -375,7 +376,7 @@ export default function DashboardLayout() {
 
         <main
           className={cn(
-            "flex-1 min-h-0 min-w-0",
+            "flex-1 min-h-0 min-w-0 overflow-x-hidden",
             contentFlush ? "overflow-hidden flex flex-col" : "overflow-auto",
           )}
         >

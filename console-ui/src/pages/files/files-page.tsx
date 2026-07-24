@@ -38,8 +38,12 @@ export default function FileManagePage() {
 
       <Card className="overflow-hidden">
         <CardContent className="p-0">
-          <div className="flex" style={{ height: '600px' }}>
-            <div className="w-64 border-r flex flex-col shrink-0">
+          <div className="flex flex-col md:flex-row h-[min(70vh,600px)] md:h-[600px]">
+            <div
+              className={`w-full md:w-64 border-b md:border-b-0 md:border-r flex-col shrink-0 ${
+                selectedFile ? 'hidden md:flex' : 'flex flex-1 md:flex-none'
+              }`}
+            >
               <div className="px-3 py-2 border-b bg-muted/30">
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">文件浏览器</span>
               </div>
@@ -65,7 +69,7 @@ export default function FileManagePage() {
               </ScrollArea>
             </div>
 
-            <div className="flex-1 min-w-0">
+            <div className={`flex-1 min-w-0 min-h-0 ${selectedFile ? 'flex flex-col' : 'hidden md:block'}`}>
               {selectedFile ? (
                 <FileEditor
                   key={selectedFile}
@@ -78,8 +82,7 @@ export default function FileManagePage() {
                 <div className="flex items-center justify-center h-full text-muted-foreground">
                   <div className="text-center">
                     <FolderOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p className="text-sm">在左侧选择一个文件开始编辑</p>
-                    <p className="text-xs mt-1 opacity-60">支持 .env、src/、package.json 等关键文件</p>
+                    <p className="text-sm">选择左侧文件开始编辑</p>
                   </div>
                 </div>
               )}

@@ -209,7 +209,7 @@ export default function AgentOrchestrationPage() {
       <Card>
         <CardContent className="p-4 space-y-3">
           <div className="flex flex-wrap gap-2">
-            <div className="flex-1 min-w-[240px]">
+            <div className="flex-1 min-w-0 w-full sm:min-w-[240px]">
               <Input
                 placeholder="sessionKey（如 icqq:75318:private:userA）"
                 value={sessionKey}
@@ -242,7 +242,8 @@ export default function AgentOrchestrationPage() {
                   key={k}
                   variant="outline"
                   size="sm"
-                  className="h-6 text-xs px-2"
+                  className="h-6 text-xs px-2 max-w-[12rem] truncate"
+                  title={k}
                   onClick={() => {
                     setSessionKey(k)
                     void fetchRuns(k)

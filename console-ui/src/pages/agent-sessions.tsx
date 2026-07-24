@@ -163,7 +163,7 @@ export default function AgentSessionsPage() {
       <Card>
         <CardContent className="p-4 space-y-3">
           <div className="flex flex-wrap gap-2">
-            <div className="flex-1 min-w-[240px] relative">
+            <div className="flex-1 min-w-0 w-full sm:min-w-[240px] relative">
               <Input
                 placeholder="sessionKey（如 private:user123）"
                 value={sessionKey}
@@ -196,7 +196,8 @@ export default function AgentSessionsPage() {
                   key={k}
                   variant="outline"
                   size="sm"
-                  className="h-6 text-xs px-2"
+                  className="h-6 text-xs px-2 max-w-[12rem] truncate"
+                  title={k}
                   onClick={() => {
                     setSessionKey(k)
                     void fetchTree(k)
@@ -267,11 +268,11 @@ export default function AgentSessionsPage() {
                           : 'border-border/60 hover:bg-muted/40 cursor-pointer',
                       )}
                     >
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant={isActive ? 'default' : 'outline'} className="text-[10px]">
+                      <div className="flex items-center gap-2 mb-1 min-w-0">
+                        <Badge variant={isActive ? 'default' : 'outline'} className="text-[10px] shrink-0">
                           #{point.index}
                         </Badge>
-                        <span className="text-xs text-muted-foreground font-mono">
+                        <span className="text-xs text-muted-foreground font-mono truncate min-w-0" title={String(point.messageId)}>
                           msg {point.messageId}
                         </span>
                         {isActive && (

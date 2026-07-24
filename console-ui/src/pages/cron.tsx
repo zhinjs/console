@@ -246,9 +246,9 @@ export default function CronPage() {
                           {job.enabled ? '运行中' : '已暂停'}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2 ml-6">
-                        <code className="bg-muted px-1.5 py-0.5 rounded">{job.cronExpression}</code>
-                        <span>创建于 {new Date(job.createdAt).toLocaleString()}</span>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mb-2 ml-6">
+                        <code className="bg-muted px-1.5 py-0.5 rounded break-all">{job.cronExpression}</code>
+                        <span className="shrink-0">创建于 {new Date(job.createdAt).toLocaleString()}</span>
                       </div>
                       {!isExpanded && (
                         <p className="text-sm text-muted-foreground line-clamp-1 ml-6">{job.prompt}</p>
@@ -294,11 +294,11 @@ export default function CronPage() {
                             {copiedId === job.id ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
                           </Button>
                         </div>
-                        <code className="text-xs bg-muted px-2 py-1 rounded block">{job.id}</code>
+                        <code className="text-xs bg-muted px-2 py-1 rounded block break-all">{job.id}</code>
                       </div>
                       <div>
                         <span className="text-xs font-medium text-muted-foreground block mb-1">Cron 表达式</span>
-                        <code className="text-sm bg-muted px-2 py-1 rounded block">{job.cronExpression}</code>
+                        <code className="text-sm bg-muted px-2 py-1 rounded block break-all">{job.cronExpression}</code>
                       </div>
                       <div>
                         <span className="text-xs font-medium text-muted-foreground block mb-1">Prompt</span>
@@ -442,7 +442,7 @@ export default function CronPage() {
               <p className="text-xs text-muted-foreground mb-3">
                 指定任务执行时的身份信息，如不填则以 system 身份执行
               </p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">适配器</label>
                   <Select

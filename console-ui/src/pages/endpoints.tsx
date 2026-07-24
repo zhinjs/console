@@ -88,14 +88,14 @@ export default function EndpointsPage() {
           >
             <Card className="console-surface-interactive h-full">
               <CardContent className="p-5 space-y-4">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <div className={`p-2 rounded-md ${endpoint.connected ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-muted'}`}>
+                <div className="flex justify-between items-center gap-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className={`p-2 rounded-md shrink-0 ${endpoint.connected ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-muted'}`}>
                       <Bot className={`w-5 h-5 ${endpoint.connected ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`} />
                     </div>
-                    <span className="text-lg font-bold">{endpoint.name}</span>
+                    <span className="text-lg font-bold truncate">{endpoint.name}</span>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 shrink-0">
                     <Badge variant={endpoint.connected ? 'success' : 'secondary'}>
                       {endpoint.connected ? <><Wifi className="w-3 h-3 mr-1" />在线</> : <><WifiOff className="w-3 h-3 mr-1" />离线</>}
                     </Badge>

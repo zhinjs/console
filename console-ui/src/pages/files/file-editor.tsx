@@ -83,13 +83,13 @@ export function FileEditor({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/30">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-2 px-3 sm:px-4 py-2 border-b bg-muted/30 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
           {getFileIcon(fileName)}
-          <span className="text-sm font-medium">{filePath}</span>
-          {dirty && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">未保存</Badge>}
+          <span className="text-sm font-medium truncate" title={filePath}>{filePath}</span>
+          {dirty && <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">未保存</Badge>}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           <Button size="sm" variant="ghost" onClick={onClose} title="关闭">
             <X className="w-4 h-4" />
           </Button>
@@ -113,7 +113,7 @@ export function FileEditor({
         />
       </div>
 
-      <div className="flex items-center gap-2 px-4 py-2 border-t bg-muted/30">
+      <div className="flex flex-wrap items-center gap-2 px-3 sm:px-4 py-2 border-t bg-muted/30">
         <Button size="sm" onClick={() => void handleSave()} disabled={saving || !dirty}>
           {saving
             ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />保存中...</>
@@ -124,7 +124,7 @@ export function FileEditor({
             撤销更改
           </Button>
         )}
-        <span className="text-xs text-muted-foreground ml-auto">
+        <span className="text-xs text-muted-foreground sm:ml-auto basis-full sm:basis-auto">
           {content.split('\n').length} 行 · Ctrl+S 保存
         </span>
       </div>

@@ -104,18 +104,18 @@ export default function PluginDetailPage() {
         <ArrowLeft className="w-4 h-4 mr-1" /> 返回
       </Button>
 
-      <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-secondary">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-secondary shrink-0">
           <Package className="w-6 h-6" />
         </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold">{plugin.name}</h1>
-            <Badge variant={plugin.status === 'active' ? 'success' : 'secondary'}>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-wrap">
+            <h1 className="text-xl font-bold truncate">{plugin.name}</h1>
+            <Badge variant={plugin.status === 'active' ? 'success' : 'secondary'} className="shrink-0">
               {plugin.status === 'active' ? '运行中' : '已停止'}
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground">{plugin.description || '暂无描述'}</p>
+          <p className="text-sm text-muted-foreground break-words">{plugin.description || '暂无描述'}</p>
         </div>
       </div>
 
@@ -232,7 +232,7 @@ function FeatureItemCard({ featureName, item }: { featureName: string; item: any
             <div>
               <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">用法:</span>
               {item.usage.map((u: string, i: number) => (
-                <code key={i} className="block text-xs bg-muted rounded px-1 py-0.5 mt-0.5">{u}</code>
+                <code key={i} className="block text-xs bg-muted rounded px-1 py-0.5 mt-0.5 break-all">{u}</code>
               ))}
             </div>
           )}
@@ -240,7 +240,7 @@ function FeatureItemCard({ featureName, item }: { featureName: string; item: any
             <div>
               <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">示例:</span>
               {item.examples.map((e: string, i: number) => (
-                <code key={i} className="block text-xs bg-muted rounded px-1 py-0.5 mt-0.5">{e}</code>
+                <code key={i} className="block text-xs bg-muted rounded px-1 py-0.5 mt-0.5 break-all">{e}</code>
               ))}
             </div>
           )}
@@ -248,9 +248,9 @@ function FeatureItemCard({ featureName, item }: { featureName: string; item: any
       )
     case 'cron':
       return (
-        <div className="flex justify-between items-center rounded-md bg-muted/50 p-2">
-          <code className="text-sm">{item.expression}</code>
-          <Badge variant={item.running ? 'success' : 'secondary'}>
+        <div className="flex flex-wrap justify-between items-center gap-2 rounded-md bg-muted/50 p-2">
+          <code className="text-sm break-all min-w-0">{item.expression}</code>
+          <Badge variant={item.running ? 'success' : 'secondary'} className="shrink-0">
             {item.running ? '运行中' : '已停止'}
           </Badge>
         </div>

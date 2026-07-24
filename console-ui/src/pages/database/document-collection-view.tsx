@@ -102,14 +102,14 @@ export function DocumentCollectionView({
         </Alert>
       )}
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" variant="outline" onClick={load} disabled={loading}>
           <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />刷新
         </Button>
         <Button size="sm" onClick={() => { setAddDoc(true); setJsonText('{\n  \n}') }}>
           <Plus className="w-3.5 h-3.5 mr-1" />添加文档
         </Button>
-        <span className="text-xs text-muted-foreground ml-auto">共 {data?.total ?? 0} 条 · 第 {page}/{totalPages || 1} 页</span>
+        <span className="text-xs text-muted-foreground sm:ml-auto basis-full sm:basis-auto">共 {data?.total ?? 0} 条 · 第 {page}/{totalPages || 1} 页</span>
       </div>
 
       <div className="space-y-2">

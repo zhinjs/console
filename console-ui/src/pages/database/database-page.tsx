@@ -58,8 +58,12 @@ export default function DatabasePage() {
 
       <Card className="overflow-hidden border-border/80 shadow-sm">
         <CardContent className="p-0">
-          <div className="flex min-h-[min(520px,calc(100vh-11rem))]">
-            <div className="w-56 border-r flex flex-col shrink-0">
+          <div className="flex flex-col md:flex-row min-h-[min(520px,calc(100vh-11rem))]">
+            <div
+              className={`w-full md:w-56 border-b md:border-b-0 md:border-r flex flex-col shrink-0 ${
+                selectedTable ? 'max-h-48 md:max-h-none' : 'min-h-[12rem] md:min-h-0 flex-1 md:flex-none'
+              }`}
+            >
               <div className="px-3 py-2 border-b bg-muted/30">
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {dbType === 'related' ? '数据表' : dbType === 'document' ? '集合' : '桶'}
@@ -111,12 +115,12 @@ export default function DatabasePage() {
               </ScrollArea>
             </div>
 
-            <div className="flex-1 min-w-0 p-4">
+            <div className="flex-1 min-w-0 p-3 sm:p-4 overflow-x-hidden">
               {selectedTable ? (
                 <>
-                  <div className="flex items-center gap-2 mb-4">
-                    <Table2 className="w-5 h-5 text-muted-foreground" />
-                    <h2 className="text-lg font-semibold">{selectedTable}</h2>
+                  <div className="flex items-center gap-2 mb-4 min-w-0">
+                    <Table2 className="w-5 h-5 text-muted-foreground shrink-0" />
+                    <h2 className="text-lg font-semibold truncate">{selectedTable}</h2>
                     {selectedTableInfo?.columns && (
                       <div className="flex gap-1 ml-2 flex-wrap">
                         {(Object.entries(selectedTableInfo.columns) as [string, { type: string; primary?: boolean }][]).slice(0, 8).map(([col, def]) => (

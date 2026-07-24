@@ -160,10 +160,7 @@ export default function PluginsPage() {
               <hr className="console-divider" />
 
               {plugin.features.length > 0 ? (
-                <div
-                  className="grid gap-1"
-                  style={{ gridTemplateColumns: `repeat(${Math.min(plugin.features.length, 4)}, 1fr)` }}
-                >
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
                   {plugin.features.map((feature) => {
                     const Icon = getIcon(feature.icon)
                     return (

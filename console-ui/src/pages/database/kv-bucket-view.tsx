@@ -97,14 +97,14 @@ export function KvBucketView({
         </Alert>
       )}
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" variant="outline" onClick={load} disabled={loading}>
           <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />刷新
         </Button>
         <Button size="sm" onClick={() => { setAddEntry(true); setKeyInput(''); setValueInput('') }}>
           <Plus className="w-3.5 h-3.5 mr-1" />添加键值
         </Button>
-        <span className="text-xs text-muted-foreground ml-auto">共 {entries.length} 个键</span>
+        <span className="text-xs text-muted-foreground sm:ml-auto basis-full sm:basis-auto">共 {entries.length} 个键</span>
       </div>
 
       <div
