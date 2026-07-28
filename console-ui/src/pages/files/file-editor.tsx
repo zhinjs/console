@@ -24,22 +24,29 @@ export function FileEditor({
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-  const loadContent = useCallback(async () => {
+  const loadContent = useCallback(async (cancelled?: () => boolean) => {
     setLoading(true)
     setMessage(null)
     try {
       const text = await readFile(filePath)
+      // 切换文件后旧 readFile 晚返回时直接丢弃，避免覆盖新文件内容（及随后 Ctrl+S 写脏数据）
+      if (cancelled?.()) return
       setContent(text)
       setOriginalContent(text)
     } catch (err) {
+      if (cancelled?.()) return
       setMessage({ type: 'error', text: `加载失败: ${err instanceof Error ? err.message : '未知错误'}` })
     } finally {
-      setLoading(false)
+      if (!cancelled?.()) setLoading(false)
     }
   }, [filePath, readFile])
 
   useEffect(() => {
-    loadContent()
+    let cancelled = false
+    void loadContent(() => cancelled)
+    return () => {
+      cancelled = true
+    }
   }, [loadContent])
 
   const handleSave = useCallback(async () => {

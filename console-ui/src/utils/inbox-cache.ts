@@ -1,17 +1,23 @@
 /**
  * 与 @zhin.js/client idb-store 共用同一 IndexedDB（zhin-console / inbox），
  * 供 endpoint-detail 在 RPC 返回前展示缓存的收件箱数据，并在 SSE 推送时增量持久化。
+ *
+ * Schema 与 SDK 侧 idb-store 对齐：DB_VERSION=2（inbox + pending 两个 store）、
+ * 记录使用 endpoint_id 字段；读取时兼容旧版 endpointId 字段。
  */
 
 const DB_NAME = 'zhin-console'
-const DB_VERSION = 1
+const DB_VERSION = 2
 const STORE_INBOX = 'inbox'
+const STORE_PENDING = 'pending'
 
 export type InboxKind = 'message' | 'request' | 'notice'
 
 export interface InboxCacheRecord {
   id: string
   adapter: string
+  endpoint_id?: string
+  /** 旧版（DB v1）记录字段，仅读取兼容 */
   endpointId?: string
   kind: InboxKind
   payload: Record<string, unknown>
@@ -19,7 +25,7 @@ export interface InboxCacheRecord {
 }
 
 function recordEndpointId(record: InboxCacheRecord): string {
-  return String(record.endpointId ?? '')
+  return String(record.endpoint_id ?? record.endpointId ?? '')
 }
 
 function openDb(): Promise<IDBDatabase> {
@@ -31,6 +37,9 @@ function openDb(): Promise<IDBDatabase> {
       const db = req.result
       if (!db.objectStoreNames.contains(STORE_INBOX)) {
         db.createObjectStore(STORE_INBOX, { keyPath: 'id' })
+      }
+      if (!db.objectStoreNames.contains(STORE_PENDING)) {
+        db.createObjectStore(STORE_PENDING, { keyPath: 'id' })
       }
     }
   })
@@ -71,7 +80,7 @@ export async function putInboxCache(
     const record: InboxCacheRecord = {
       id,
       adapter,
-      endpointId,
+      endpoint_id: endpointId,
       kind,
       payload,
       updatedAt: Date.now(),

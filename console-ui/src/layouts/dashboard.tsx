@@ -190,7 +190,13 @@ export default function DashboardLayout() {
               showLabels ? "gap-3" : "justify-center",
             )}
           >
-            <div className="flex items-center justify-center w-9 h-9 min-w-9 rounded-lg bg-foreground text-background font-bold text-lg">
+            <div
+              className="flex items-center justify-center w-9 h-9 min-w-9 rounded-lg text-white font-bold text-lg"
+              style={{
+                background: "linear-gradient(135deg, #2f9e6e 0%, #4cc38a 100%)",
+                boxShadow: "0 2px 8px -2px rgba(47, 158, 110, 0.5)",
+              }}
+            >
               Z
             </div>
             {showLabels && (

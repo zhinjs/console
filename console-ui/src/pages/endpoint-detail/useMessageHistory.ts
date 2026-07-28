@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useWebSocket } from '@zhin.js/client'
 import type {
   ChatRow,
@@ -50,10 +50,13 @@ export function useMessageHistory(params: {
   const [inboxMessagesLoading, setInboxMessagesLoading] = useState(false)
   const [inboxMessagesHasMore, setInboxMessagesHasMore] = useState(true)
   const [inboxMessagesEnabled, setInboxMessagesEnabled] = useState(false)
+  // 递增序号：切换会话后在途的旧请求 resolve 时序号已过期，直接丢弃，避免覆盖/混入新会话数据
+  const inboxLoadSeqRef = useRef(0)
 
   const loadInboxMessages = useCallback(
     async (beforeTs?: number) => {
       if (!adapter || !endpointId || selection?.type !== 'channel') return
+      const seq = ++inboxLoadSeqRef.current
       setInboxMessagesLoading(true)
       const append = beforeTs != null
       try {
@@ -70,6 +73,7 @@ export function useMessageHistory(params: {
             ...(beforeTs != null && { beforeTs }),
           },
         })
+        if (seq !== inboxLoadSeqRef.current) return
         setInboxMessagesEnabled(!!res.inboxEnabled)
         if (!res.inboxEnabled || !res.messages?.length) {
           if (!append) setInboxMessages([])
@@ -83,11 +87,11 @@ export function useMessageHistory(params: {
         }
         setInboxMessagesHasMore(res.messages.length >= 50)
       } catch {
+        if (seq !== inboxLoadSeqRef.current) return
         if (!append) setInboxMessages([])
-        setInboxMessagesEnabled(false)
         setInboxMessagesHasMore(false)
       } finally {
-        setInboxMessagesLoading(false)
+        if (seq === inboxLoadSeqRef.current) setInboxMessagesLoading(false)
       }
     },
     [adapter, endpointId, selection, sendRequest],
@@ -108,7 +112,7 @@ export function useMessageHistory(params: {
       const d = msg.data
       if (!d) return
       const pushEndpointId = String(d.endpointId ?? '')
-      if (msg.type === 'endpoint:message') {
+      if (msg.type === 'message.receive') {
         if (d.adapter === adapter && pushEndpointId === endpointId) {
           void putInboxCache(adapter, endpointId, 'message', d)
           const content = normalizeInboundContent(d.content) as ReceivedMessage['content']
@@ -132,8 +136,10 @@ export function useMessageHistory(params: {
   // Hydrate received messages from inbox cache on mount
   useEffect(() => {
     if (!adapter || !endpointId) return
+    let cancelled = false
     void (async () => {
       const cachedMessages = await listInboxCache(adapter, endpointId, 'message')
+      if (cancelled) return
       if (cachedMessages.length) {
         setReceivedMessages((prev) => {
           const seen = new Set(prev.map((m) => m.id))
@@ -157,6 +163,9 @@ export function useMessageHistory(params: {
         })
       }
     })()
+    return () => {
+      cancelled = true
+    }
   }, [adapter, endpointId])
 
   const channelMessages = useMemo((): ChatRow[] => {

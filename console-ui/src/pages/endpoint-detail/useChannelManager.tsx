@@ -434,7 +434,7 @@ export function useChannelManager(params: {
   useEffect(() => {
     if (!adapter || !endpointId) return
     return subscribeEndpointPush((message) => {
-      if (message.type !== 'endpoint:message') return
+      if (message.type !== 'message.receive') return
       const d = message.data as Record<string, unknown> | undefined
       if (!d) return
       const pushAdapter = String(d.adapter ?? '')

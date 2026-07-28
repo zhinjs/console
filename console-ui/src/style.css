@@ -9,34 +9,34 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    --background: 150 30% 97%;
+    --foreground: 158 28% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 158 28% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 40%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --popover-foreground: 158 28% 10%;
+    --primary: 154 54% 40%;
+    --primary-foreground: 150 60% 98%;
+    --secondary: 152 35% 94%;
+    --secondary-foreground: 155 50% 20%;
+    --muted: 152 30% 94%;
+    --muted-foreground: 156 12% 38%;
+    --accent: 152 55% 92%;
+    --accent-foreground: 154 55% 24%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
+    --border: 152 24% 88%;
+    --input: 152 24% 88%;
+    --ring: 154 54% 40%;
     --radius: 0.5rem;
-    --sidebar: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 240 5.9% 10%;
+    --sidebar: 152 32% 98%;
+    --sidebar-foreground: 156 14% 32%;
+    --sidebar-primary: 154 54% 40%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 152 48% 93%;
+    --sidebar-accent-foreground: 154 50% 24%;
+    --sidebar-border: 152 22% 90%;
+    --sidebar-ring: 154 54% 40%;
     /* Bot 详情 IM 区 */
     --im-shell-bg: 214 25% 94%;
     --im-list-bg: 210 29% 97%;
@@ -59,33 +59,33 @@
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --background: 158 32% 5%;
+    --foreground: 150 22% 95%;
+    --card: 158 24% 8%;
+    --card-foreground: 150 22% 95%;
+    --popover: 158 24% 8%;
+    --popover-foreground: 150 22% 95%;
+    --primary: 151 50% 53%;
+    --primary-foreground: 158 65% 7%;
+    --secondary: 157 18% 14%;
+    --secondary-foreground: 150 22% 95%;
+    --muted: 157 18% 14%;
+    --muted-foreground: 152 12% 62%;
+    --accent: 155 28% 15%;
+    --accent-foreground: 151 50% 72%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
-    --sidebar: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 0 0% 98%;
-    --sidebar-primary-foreground: 240 5.9% 10%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 240 4.9% 83.9%;
+    --border: 157 16% 15%;
+    --input: 157 16% 17%;
+    --ring: 151 50% 53%;
+    --sidebar: 158 28% 6.5%;
+    --sidebar-foreground: 152 14% 75%;
+    --sidebar-primary: 151 50% 53%;
+    --sidebar-primary-foreground: 158 65% 7%;
+    --sidebar-accent: 156 22% 12%;
+    --sidebar-accent-foreground: 151 45% 72%;
+    --sidebar-border: 157 16% 14%;
+    --sidebar-ring: 151 50% 53%;
     --im-shell-bg: 220 16% 8%;
     --im-list-bg: 220 13% 11%;
     --im-list-surface: 220 12% 14%;
@@ -224,9 +224,15 @@
 }
 
 .menu-item.active {
-  background-color: hsl(var(--sidebar-primary));
+  background: linear-gradient(135deg, hsl(var(--sidebar-primary)) 0%, hsl(152 52% 47%) 100%);
   color: hsl(var(--sidebar-primary-foreground));
-  box-shadow: var(--console-shadow-xs);
+  box-shadow: 0 2px 10px -2px hsl(154 54% 40% / 0.5), var(--console-shadow-xs);
+}
+
+.dark .menu-item.active {
+  background: linear-gradient(135deg, hsl(154 48% 42%) 0%, hsl(151 50% 50%) 100%);
+  color: hsl(158 65% 8%);
+  box-shadow: 0 2px 10px -2px hsl(151 60% 45% / 0.35);
 }
 
 /* ============================================

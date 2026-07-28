@@ -169,7 +169,9 @@ export function reconcileAuthWithApiBase(incomingApiBase: string | null): {
 }
 
 export function notifyAuthRequired(): void {
-  // 不清除 __ZHIN_API_TOKEN：Demo 预置 Token 应在 401 后仍可重试
+  // Demo 预置的 runtime token 过期后同样要失效，否则 getToken() 永远优先命中它，造成 401 死循环；
+  // 重新登录（verifyAndStoreCredentials 成功）会再次写入新的 token。
+  clearRuntimeToken()
   clearToken()
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('zhin:auth-required'))
