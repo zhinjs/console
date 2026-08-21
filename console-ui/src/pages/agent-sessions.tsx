@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { GitBranch, CheckCircle, Loader2, History } from 'lucide-react'
+import { GitBranch, CheckCircle, Loader2 } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import {
   agentOrchestrationPath,
@@ -18,8 +18,8 @@ import { Card, CardContent } from '../components/ui/card'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
-import { Input } from '../components/ui/input'
 import { Skeleton } from '../components/ui/skeleton'
+import { AgentSessionPicker } from '../components/AgentSessionPicker'
 import {
   Dialog,
   DialogContent,
@@ -96,10 +96,6 @@ export default function AgentSessionsPage() {
     }
   }, [])
 
-  const handleLoad = () => {
-    void fetchTree(sessionKey)
-  }
-
   const handleSwitchLeaf = async (point: TreePoint) => {
     const trimmed = sessionKey.trim()
     if (!trimmed) return
@@ -157,59 +153,17 @@ export default function AgentSessionsPage() {
     <div className="space-y-6">
       <PageHeader
         title="对话分支"
-        description="查看并切换 AI 对话分支。sessionKey 格式为 platform:endpointId:scope:sceneId（可从机器人会话页跳转）。"
+        description="沿着真实渠道会话查看 AI 对话分支，并决定下一轮对话从哪条路径继续。"
       />
 
-      <Card>
-        <CardContent className="p-4 space-y-3">
-          <div className="flex flex-wrap gap-2">
-            <div className="flex-1 min-w-0 w-full sm:min-w-[240px] relative">
-              <Input
-                placeholder="sessionKey（如 private:user123）"
-                value={sessionKey}
-                onChange={(e) => setSessionKey(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleLoad()}
-                list="agent-session-history"
-              />
-              <datalist id="agent-session-history">
-                {history.map((k) => (
-                  <option key={k} value={k} />
-                ))}
-              </datalist>
-            </div>
-            <Button onClick={handleLoad} disabled={loading || !sessionKey.trim()}>
-              {loading ? (
-                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-              ) : (
-                <GitBranch className="w-4 h-4 mr-1" />
-              )}
-              加载
-            </Button>
-          </div>
-
-          {history.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <History className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">最近:</span>
-              {history.slice(0, 5).map((k) => (
-                <Button
-                  key={k}
-                  variant="outline"
-                  size="sm"
-                  className="h-6 text-xs px-2 max-w-[12rem] truncate"
-                  title={k}
-                  onClick={() => {
-                    setSessionKey(k)
-                    void fetchTree(k)
-                  }}
-                >
-                  {k}
-                </Button>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <AgentSessionPicker
+        value={sessionKey}
+        history={history}
+        loading={loading}
+        actionLabel="查看分支"
+        onChange={setSessionKey}
+        onLoad={(key) => void fetchTree(key)}
+      />
 
       {switchMsg && (
         <Alert variant="success">

@@ -1,18 +1,41 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { LucideIcon } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { Bot, AlertCircle, Activity, Package, Clock, Cpu, MemoryStick, FileText, TrendingUp, RotateCw } from 'lucide-react'
+import {
+  Activity,
+  AlertCircle,
+  AlertTriangle,
+  ArrowUpRight,
+  Bot,
+  Brain,
+  CheckCircle2,
+  Command,
+  Cpu,
+  FileText,
+  MemoryStick,
+  Package,
+  Radio,
+  RefreshCw,
+  RotateCw,
+  Server,
+  Settings2,
+  Sparkles,
+  Wrench,
+} from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import { useWebSocket } from '@zhin.js/client'
 import { useToast } from '../components/toast'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card'
-import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Alert, AlertDescription } from '../components/ui/alert'
-import { PageHeader } from '../components/PageHeader'
 import { Skeleton } from '../components/ui/skeleton'
 import {
-  Dialog, DialogContent, DialogHeader, DialogFooter,
-  DialogTitle, DialogDescription, DialogClose,
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '../components/ui/dialog'
 
 interface Stats {
@@ -32,251 +55,494 @@ interface SystemStatus {
   nodeVersion: string
 }
 
+interface OptionalOverview {
+  errorLogs: number
+  warningLogs: number
+  tools: number | null
+  agents: number | null
+  mcpServices: number | null
+  connectedMcp: number | null
+}
+
+interface IntrospectionEnvelope {
+  total?: number
+  items?: Array<Record<string, unknown>>
+}
+
+interface CapabilityItem {
+  label: string
+  value: number | null
+  detail: string
+  icon: LucideIcon
+  path: string
+}
+
+interface AttentionItem {
+  title: string
+  detail: string
+  path: string
+  tone: 'warning' | 'danger' | 'neutral'
+}
+
+const EMPTY_OPTIONAL: OptionalOverview = {
+  errorLogs: 0,
+  warningLogs: 0,
+  tools: null,
+  agents: null,
+  mcpServices: null,
+  connectedMcp: null,
+}
+
+async function fetchOptionalData(path: string): Promise<unknown | null> {
+  try {
+    const response = await apiFetch(path)
+    if (!response.ok) return null
+    const body = await response.json()
+    return body?.success === false ? null : body?.data ?? null
+  } catch {
+    return null
+  }
+}
+
+function readTotal(value: unknown): number | null {
+  if (!value || typeof value !== 'object') return null
+  const total = (value as IntrospectionEnvelope).total
+  return typeof total === 'number' ? total : null
+}
+
+function readMcpSummary(value: unknown): { total: number | null; connected: number | null } {
+  if (!value || typeof value !== 'object') return { total: null, connected: null }
+  const envelope = value as IntrospectionEnvelope
+  const rows = Array.isArray(envelope.items) ? envelope.items : []
+  return {
+    total: typeof envelope.total === 'number' ? envelope.total : null,
+    connected: rows.length ? rows.filter((row) => row.connected === true).length : 0,
+  }
+}
+
+function formatUptime(seconds: number): string {
+  const days = Math.floor(seconds / 86400)
+  const hours = Math.floor((seconds % 86400) / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  if (days > 0) return `${days} 天 ${hours} 小时`
+  if (hours > 0) return `${hours} 小时 ${minutes} 分钟`
+  return `${Math.max(minutes, 1)} 分钟`
+}
+
+function formatMemory(bytes: number): string {
+  if (!Number.isFinite(bytes)) return '—'
+  return `${(bytes / 1024 / 1024).toFixed(0)} MB`
+}
+
 export default function HomePage() {
   const navigate = useNavigate()
   const [stats, setStats] = useState<Stats | null>(null)
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null)
+  const [optional, setOptional] = useState<OptionalOverview>(EMPTY_OPTIONAL)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [restartDialogOpen, setRestartDialogOpen] = useState(false)
   const [restarting, setRestarting] = useState(false)
   const { sendRequest } = useWebSocket()
   const { success, error: toastError } = useToast()
 
-  useEffect(() => {
-    fetchStats()
-    const interval = setInterval(fetchStats, 5000)
-    const onDataUpdate = () => { fetchStats() }
-    window.addEventListener('zhin-console-data-update', onDataUpdate)
-    return () => {
-      clearInterval(interval)
-      window.removeEventListener('zhin-console-data-update', onDataUpdate)
+  const fetchDashboard = useCallback(async (background = false) => {
+    if (background) setRefreshing(true)
+    try {
+      const [statsResponse, statusResponse] = await Promise.all([
+        apiFetch('/api/stats'),
+        apiFetch('/api/system/status'),
+      ])
+      if (!statsResponse.ok || !statusResponse.ok) throw new Error('无法读取 Host 状态')
+
+      const [statsBody, statusBody] = await Promise.all([
+        statsResponse.json(),
+        statusResponse.json(),
+      ])
+      if (!statsBody.success || !statusBody.success) throw new Error('Host 返回了无效状态')
+
+      setStats(statsBody.data)
+      setSystemStatus(statusBody.data)
+      setError(null)
+
+      const [logs, tools, agents, mcp] = await Promise.all([
+        fetchOptionalData('/api/logs/stats'),
+        fetchOptionalData('/api/introspection/tools?page=1&pageSize=1'),
+        fetchOptionalData('/api/introspection/bindings?page=1&pageSize=1'),
+        fetchOptionalData('/api/introspection/mcp?page=1&pageSize=100'),
+      ])
+      const logStats = logs as { byLevel?: { error?: number; warn?: number } } | null
+      const mcpSummary = readMcpSummary(mcp)
+      setOptional({
+        errorLogs: logStats?.byLevel?.error ?? 0,
+        warningLogs: logStats?.byLevel?.warn ?? 0,
+        tools: readTotal(tools),
+        agents: readTotal(agents),
+        mcpServices: mcpSummary.total,
+        connectedMcp: mcpSummary.connected,
+      })
+    } catch (caught) {
+      setError((caught as Error).message)
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
     }
   }, [])
 
-  const fetchStats = async () => {
-    try {
-      const [statsRes, statusRes] = await Promise.all([
-        apiFetch('/api/stats'),
-        apiFetch('/api/system/status')
-      ])
-      if (!statsRes.ok || !statusRes.ok) throw new Error('API 请求失败')
-      const statsData = await statsRes.json()
-      const statusData = await statusRes.json()
-      if (statsData.success && statusData.success) {
-        setStats(statsData.data)
-        setSystemStatus(statusData.data)
-        setError(null)
-      }
-    } catch (err) {
-      setError((err as Error).message)
-    } finally {
-      setLoading(false)
+  useEffect(() => {
+    void fetchDashboard()
+    const interval = window.setInterval(() => void fetchDashboard(), 10000)
+    const onDataUpdate = () => void fetchDashboard()
+    window.addEventListener('zhin-console-data-update', onDataUpdate)
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener('zhin-console-data-update', onDataUpdate)
     }
-  }
+  }, [fetchDashboard])
 
-  const formatUptime = (seconds: number) => {
-    const days = Math.floor(seconds / 86400)
-    const hours = Math.floor((seconds % 86400) / 3600)
-    const minutes = Math.floor((seconds % 3600) / 60)
-    return `${days}天 ${hours}小时 ${minutes}分钟`
-  }
+  const offlineEndpoints = Math.max(
+    0,
+    (stats?.endpoints.total ?? 0) - (stats?.endpoints.online ?? 0),
+  )
+  const healthy = offlineEndpoints === 0 && optional.errorLogs === 0
 
-  const formatMemory = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(2)} MB`
+  const capabilities = useMemo<CapabilityItem[]>(() => [
+    {
+      label: '渠道',
+      value: stats?.endpoints.total ?? 0,
+      detail: `${stats?.endpoints.online ?? 0} 个在线连接`,
+      icon: Radio,
+      path: '/endpoints',
+    },
+    {
+      label: '命令',
+      value: stats?.commands ?? 0,
+      detail: '可被消息直接调用',
+      icon: Command,
+      path: '/introspection?tab=commands',
+    },
+    {
+      label: 'Agent',
+      value: optional.agents,
+      detail: optional.agents === null ? '未启用或尚未接线' : '模型与会话绑定',
+      icon: Brain,
+      path: '/agent/studio',
+    },
+    {
+      label: '工具',
+      value: optional.tools,
+      detail: optional.tools === null ? '安装 Agent 后可用' : '供 Agent 按需调用',
+      icon: Wrench,
+      path: '/introspection?tab=tools',
+    },
+    {
+      label: 'MCP 服务',
+      value: optional.mcpServices,
+      detail: optional.mcpServices === null
+        ? '未启用或尚未接线'
+        : `${optional.connectedMcp ?? 0} 个连接正常`,
+      icon: Server,
+      path: '/introspection?tab=mcp',
+    },
+    {
+      label: '插件',
+      value: stats?.plugins.total ?? 0,
+      detail: `${stats?.plugins.active ?? 0} 个正在运行`,
+      icon: Package,
+      path: '/plugins',
+    },
+  ], [optional, stats])
+
+  const attentionItems = useMemo<AttentionItem[]>(() => {
+    const items: AttentionItem[] = []
+    if ((stats?.endpoints.total ?? 0) === 0) {
+      items.push({
+        title: '还没有连接渠道',
+        detail: '先用 Sandbox 验证，再接入真实平台。',
+        path: '/endpoints',
+        tone: 'neutral',
+      })
+    } else if (offlineEndpoints > 0) {
+      items.push({
+        title: `${offlineEndpoints} 个渠道离线`,
+        detail: '检查凭据、网络和适配器日志。',
+        path: '/endpoints',
+        tone: 'warning',
+      })
+    }
+    if (optional.errorLogs > 0) {
+      items.push({
+        title: `${optional.errorLogs} 条错误日志`,
+        detail: '查看最近错误并定位受影响的能力。',
+        path: '/logs',
+        tone: 'danger',
+      })
+    }
+    if (optional.warningLogs > 0) {
+      items.push({
+        title: `${optional.warningLogs} 条运行警告`,
+        detail: '这些问题尚未中断服务，但值得检查。',
+        path: '/logs',
+        tone: 'warning',
+      })
+    }
+    if (optional.agents === 0) {
+      items.push({
+        title: '尚未配置 Agent',
+        detail: '配置模型和 Agent 后即可使用工具与记忆。',
+        path: '/config',
+        tone: 'neutral',
+      })
+    }
+    return items.slice(0, 4)
+  }, [offlineEndpoints, optional, stats])
 
   const handleRestart = async () => {
     setRestarting(true)
     try {
       await sendRequest({ type: 'system:restart' })
-      success('正在重启...')
+      success('服务正在重启')
     } catch {
-      toastError('重启失败')
-      // 连接断开是预期行为（进程重启中）
+      toastError('重启请求未能发送')
     }
-    // 显示重启中状态，然后自动刷新页面
-    setTimeout(() => {
-      window.location.reload()
-    }, 3000)
+    window.setTimeout(() => window.location.reload(), 3000)
   }
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div><Skeleton className="h-8 w-48" /><Skeleton className="h-4 w-64 mt-2" /></div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32" />)}
+      <div className="console-dashboard space-y-5" aria-label="正在加载工作台">
+        <Skeleton className="h-72 rounded-[1.75rem]" />
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.7fr)]">
+          <Skeleton className="h-96 rounded-[1.4rem]" />
+          <Skeleton className="h-96 rounded-[1.4rem]" />
         </div>
       </div>
     )
   }
 
-  if (error) {
+  if (error && !stats) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Alert variant="destructive" className="max-w-md">
+      <div className="console-dashboard flex min-h-[55vh] items-center justify-center">
+        <Alert variant="destructive" className="max-w-lg">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>加载失败: {error}</AlertDescription>
-          <div className="mt-3">
-            <Button variant="outline" size="sm" onClick={fetchStats}>重试</Button>
-          </div>
+          <AlertDescription className="space-y-3">
+            <p>工作台无法连接到 Host：{error}</p>
+            <Button variant="outline" size="sm" onClick={() => void fetchDashboard()}>
+              <RefreshCw className="h-4 w-4" />
+              重新连接
+            </Button>
+          </AlertDescription>
         </Alert>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Page header */}
-      <PageHeader title="概览" description="实时监控您的机器人框架运行状态" />
-
-      {/* Stats cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card aria-label={`插件总数: ${stats?.plugins.total || 0}, 活跃 ${stats?.plugins.active || 0}`}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">插件总数</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats?.plugins.total || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              <Badge variant="secondary" className="mr-1">{stats?.plugins.active || 0}</Badge>个活跃
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card aria-label={`Endpoints: ${stats?.endpoints.total || 0}, 在线 ${stats?.endpoints.online || 0}`}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Endpoints</CardTitle>
-            <Bot className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats?.endpoints.total || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              <Badge variant="success" className="mr-1">{stats?.endpoints.online || 0}</Badge>个在线
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card aria-label={`命令数量: ${stats?.commands || 0}`}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">命令数量</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats?.commands || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">可用命令</p>
-          </CardContent>
-        </Card>
-
-        <Card aria-label={`组件数量: ${stats?.components || 0}`}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">组件数量</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats?.components || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">已注册组件</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* System status */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>系统信息</CardTitle>
-            <CardDescription>服务器运行状态</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2 text-sm"><Clock className="h-4 w-4 text-muted-foreground" />运行时间</div>
-              <Badge variant="secondary">{systemStatus ? formatUptime(systemStatus.uptime) : '-'}</Badge>
-            </div>
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2 text-sm"><Cpu className="h-4 w-4 text-muted-foreground" />平台</div>
-              <Badge variant="secondary">{systemStatus?.platform || '-'}</Badge>
-            </div>
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2 text-sm"><Activity className="h-4 w-4 text-muted-foreground" />Node 版本</div>
-              <Badge variant="secondary">{systemStatus?.nodeVersion || '-'}</Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>资源使用</CardTitle>
-            <CardDescription>内存使用情况</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2 text-sm"><MemoryStick className="h-4 w-4 text-muted-foreground" />堆内存使用</div>
-              <Badge variant="secondary">{stats ? `${stats.memory.toFixed(2)} MB` : '-'}</Badge>
-            </div>
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2 text-sm"><MemoryStick className="h-4 w-4 text-muted-foreground" />总堆内存</div>
-              <Badge variant="secondary">{systemStatus ? formatMemory(systemStatus.memory.heapTotal) : '-'}</Badge>
-            </div>
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2 text-sm"><MemoryStick className="h-4 w-4 text-muted-foreground" />RSS</div>
-              <Badge variant="secondary">{systemStatus ? formatMemory(systemStatus.memory.rss) : '-'}</Badge>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>快速操作</CardTitle>
-          <CardDescription>常用功能快捷入口</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Button variant="outline" className="h-auto p-4 justify-start" onClick={() => navigate('/plugins')}>
-              <div className="flex flex-col items-start gap-1">
-                <Package className="h-5 w-5 mb-1" />
-                <span className="font-medium">插件</span>
-                <span className="text-xs text-muted-foreground">查看已安装插件</span>
+    <div className="console-dashboard space-y-5">
+      <section className="console-dashboard-hero" aria-labelledby="dashboard-title">
+        <div className="console-dashboard-glow" aria-hidden="true" />
+        <div className="relative z-10 flex flex-col gap-7">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-3xl">
+              <div className="mb-4 flex items-center gap-2 text-sm font-medium text-primary">
+                <span className={healthy ? 'console-status-dot' : 'console-status-dot is-warning'} />
+                {healthy ? '所有核心服务运行正常' : '有事项需要处理'}
               </div>
-            </Button>
-            <Button variant="outline" className="h-auto p-4 justify-start" onClick={() => navigate('/endpoints')}>
-              <div className="flex flex-col items-start gap-1">
-                <Bot className="h-5 w-5 mb-1" />
-                <span className="font-medium">Endpoint 状态</span>
-                <span className="text-xs text-muted-foreground">监控 Endpoint 运行</span>
-              </div>
-            </Button>
-            <Button variant="outline" className="h-auto p-4 justify-start" onClick={() => navigate('/logs')}>
-              <div className="flex flex-col items-start gap-1">
-                <FileText className="h-5 w-5 mb-1" />
-                <span className="font-medium">日志</span>
-                <span className="text-xs text-muted-foreground">查看运行日志</span>
-              </div>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto p-4 justify-start border-orange-200 hover:border-orange-400 hover:bg-orange-50 dark:border-orange-800 dark:hover:border-orange-600 dark:hover:bg-orange-950"
-              onClick={() => setRestartDialogOpen(true)}
-              disabled={restarting}
-            >
-              <div className="flex flex-col items-start gap-1">
-                <RotateCw className={`h-5 w-5 mb-1 text-orange-500 ${restarting ? 'animate-spin' : ''}`} />
-                <span className="font-medium">{restarting ? '重启中...' : '重启服务'}</span>
-                <span className="text-xs text-muted-foreground">{restarting ? '请稍候，页面将自动刷新' : '重启机器人进程'}</span>
-              </div>
+              <h1 id="dashboard-title" className="text-balance text-3xl font-semibold tracking-[-0.04em] sm:text-4xl xl:text-[2.8rem] xl:leading-[1.05]">
+                让每个渠道、能力和 Agent<br className="hidden sm:block" />都保持在你的掌控中
+              </h1>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
+                这里汇总 Zhin 的连接状态、可用能力与待处理事项。进入任意模块，即可继续配置、调试或观察运行。
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Button onClick={() => navigate('/endpoints')}>
+                <Bot className="h-4 w-4" />
+                进入会话
+                <ArrowUpRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => void fetchDashboard(true)}
+                disabled={refreshing}
+                aria-label="刷新工作台"
+              >
+                <RefreshCw className={refreshing ? 'animate-spin' : ''} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setRestartDialogOpen(true)}
+                aria-label="重启服务"
+              >
+                <RotateCw />
+              </Button>
+            </div>
+          </div>
+
+          <div className="console-dashboard-metrics">
+            <div className="console-dashboard-metric">
+              <span>在线渠道</span>
+              <strong>{stats?.endpoints.online ?? 0}<small> / {stats?.endpoints.total ?? 0}</small></strong>
+            </div>
+            <div className="console-dashboard-metric">
+              <span>运行插件</span>
+              <strong>{stats?.plugins.active ?? 0}<small> / {stats?.plugins.total ?? 0}</small></strong>
+            </div>
+            <div className="console-dashboard-metric">
+              <span>可用命令</span>
+              <strong>{stats?.commands ?? 0}</strong>
+            </div>
+            <div className="console-dashboard-metric">
+              <span>持续运行</span>
+              <strong className="text-base sm:text-lg">{formatUptime(systemStatus?.uptime ?? 0)}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {error ? (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>部分状态未能更新：{error}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(19rem,0.7fr)]">
+        <section className="console-dashboard-panel" aria-labelledby="capability-title">
+          <div className="console-panel-heading">
+            <div>
+              <span className="console-eyebrow">Capability map</span>
+              <h2 id="capability-title">已装载的能力</h2>
+              <p>从渠道接入到 Agent 工具链，快速确认当前实例能做什么。</p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/agent/studio')}>
+              查看全部
+              <ArrowUpRight />
             </Button>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Restart confirmation dialog */}
+          <div className="console-capability-grid">
+            {capabilities.map((capability) => {
+              const Icon = capability.icon
+              return (
+                <button
+                  key={capability.label}
+                  type="button"
+                  className="console-capability-item"
+                  onClick={() => navigate(capability.path)}
+                >
+                  <span className="console-capability-icon"><Icon /></span>
+                  <span className="min-w-0 flex-1 text-left">
+                    <span className="block text-sm font-semibold">{capability.label}</span>
+                    <span className="mt-1 block truncate text-xs text-muted-foreground">{capability.detail}</span>
+                  </span>
+                  <strong>{capability.value ?? '—'}</strong>
+                </button>
+              )
+            })}
+          </div>
+        </section>
+
+        <aside className="console-dashboard-panel console-attention-panel" aria-labelledby="attention-title">
+          <div className="console-panel-heading">
+            <div>
+              <span className="console-eyebrow">Attention</span>
+              <h2 id="attention-title">需要你关注</h2>
+            </div>
+            <span className="text-xs tabular-nums text-muted-foreground">{attentionItems.length} 项</span>
+          </div>
+
+          {attentionItems.length === 0 ? (
+            <div className="console-all-clear">
+              <CheckCircle2 />
+              <div>
+                <h3>运行状态良好</h3>
+                <p>目前没有离线渠道或错误日志。</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {attentionItems.map((item) => (
+                <button
+                  key={item.title}
+                  type="button"
+                  className={`console-attention-item is-${item.tone}`}
+                  onClick={() => navigate(item.path)}
+                >
+                  {item.tone === 'neutral' ? <Sparkles /> : <AlertTriangle />}
+                  <span className="min-w-0 flex-1 text-left">
+                    <span className="block text-sm font-semibold">{item.title}</span>
+                    <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">{item.detail}</span>
+                  </span>
+                  <ArrowUpRight />
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="console-runtime-strip">
+            <div>
+              <Cpu />
+              <span>{systemStatus?.platform ?? '—'} · Node {systemStatus?.nodeVersion ?? '—'}</span>
+            </div>
+            <div>
+              <MemoryStick />
+              <span>{formatMemory(systemStatus?.memory.rss ?? 0)} RSS</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <section className="console-dashboard-panel" aria-labelledby="next-title">
+        <div className="console-panel-heading">
+          <div>
+            <span className="console-eyebrow">Next action</span>
+            <h2 id="next-title">继续构建你的 Bot</h2>
+            <p>从真实操作进入，不必先理解底层模块。</p>
+          </div>
+        </div>
+
+        <div className="console-action-grid">
+          <button type="button" className="console-primary-action" onClick={() => navigate('/endpoints')}>
+            <span className="console-primary-action-icon"><Bot /></span>
+            <span className="min-w-0 text-left">
+              <span className="block text-base font-semibold">连接和管理会话</span>
+              <span className="mt-1 block text-sm text-muted-foreground">查看好友、群组、统一收件箱并直接收发消息。</span>
+            </span>
+            <ArrowUpRight />
+          </button>
+
+          <div className="console-secondary-actions">
+            <button type="button" onClick={() => navigate('/agent/studio')}>
+              <span><Activity />打开 Agent Studio</span>
+              <ArrowUpRight />
+            </button>
+            <button type="button" onClick={() => navigate('/marketplace')}>
+              <span><Package />从市场添加能力</span>
+              <ArrowUpRight />
+            </button>
+            <button type="button" onClick={() => navigate('/config')}>
+              <span><Settings2 />调整运行配置</span>
+              <ArrowUpRight />
+            </button>
+            <button type="button" onClick={() => navigate('/logs')}>
+              <span><FileText />检查运行记录</span>
+              <ArrowUpRight />
+            </button>
+          </div>
+        </div>
+      </section>
+
       <Dialog open={restartDialogOpen} onOpenChange={setRestartDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>确认重启</DialogTitle>
+            <DialogTitle>重启 Zhin 服务</DialogTitle>
             <DialogDescription>
-              确定要重启机器人进程吗？所有连接将临时断开，进行中的对话会被中断。进程将在几秒内自动恢复。
+              所有连接将短暂断开，进行中的对话也会被中止。守护进程会在几秒内重新拉起服务。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -287,10 +553,12 @@ export default function HomePage() {
               variant="destructive"
               onClick={() => {
                 setRestartDialogOpen(false)
-                handleRestart()
+                void handleRestart()
               }}
+              disabled={restarting}
             >
-              确认重启
+              {restarting ? <RotateCw className="animate-spin" /> : <RotateCw />}
+              {restarting ? '正在重启' : '确认重启'}
             </Button>
           </DialogFooter>
         </DialogContent>

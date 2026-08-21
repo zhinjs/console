@@ -12,7 +12,7 @@ import { notifyAuthRequired } from "../utils/auth"
 import { isDemoMode } from "../utils/demo-mode"
 import { reopenDemoOnboarding } from "../components/DemoOnboarding"
 
-const GROUP_ORDER = ["系统", "Endpoints", "命令与 Agent", "扩展", "配置与数据", "其他"] as const
+const GROUP_ORDER = ["总览", "渠道与会话", "Agent 工作台", "自动化", "扩展", "运维", "其他"] as const
 const MOBILE_MQ = "(max-width: 767px)"
 
 function useIsMobile() {
@@ -118,6 +118,12 @@ export default function DashboardLayout() {
 
   const contentFullWidth = useRouteMetaFlag(routes, location.pathname, "fullWidth")
   const contentFlush = useRouteMetaFlag(routes, location.pathname, "flush")
+  const currentRoute = useMemo(
+    () => menuRoutes.find((route) => (
+      location.pathname === route.path || location.pathname.startsWith(`${route.path}/`)
+    )),
+    [location.pathname, menuRoutes],
+  )
 
   const orderedGroups = useMemo(() => {
     const seen = new Set<string>()
@@ -158,7 +164,8 @@ export default function DashboardLayout() {
   }
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="console-app-shell flex h-[100dvh] bg-background overflow-hidden">
+      <a href="#console-main-content" className="console-skip-link">跳到主要内容</a>
       {isMobile && mobileNavOpen ? (
         <button
           type="button"
@@ -170,7 +177,7 @@ export default function DashboardLayout() {
 
       <aside
         className={cn(
-          "flex flex-col border-r border-[var(--console-border-subtle)] bg-sidebar",
+          "console-sidebar flex flex-col border-r border-[var(--console-border-subtle)] bg-sidebar",
           isMobile
             ? cn(
                 "fixed inset-y-0 left-0 z-50 w-[min(16rem,88vw)] max-w-[88vw] shadow-lg transition-transform duration-300 ease-out",
@@ -190,14 +197,8 @@ export default function DashboardLayout() {
               showLabels ? "gap-3" : "justify-center",
             )}
           >
-            <div
-              className="flex items-center justify-center w-9 h-9 min-w-9 rounded-lg text-white font-bold text-lg"
-              style={{
-                background: "linear-gradient(135deg, #2f9e6e 0%, #4cc38a 100%)",
-                boxShadow: "0 2px 8px -2px rgba(47, 158, 110, 0.5)",
-              }}
-            >
-              Z
+            <div className="console-brand-mark" aria-hidden="true">
+              <span>Z</span>
             </div>
             {showLabels && (
               <div className="flex flex-1 items-center justify-between gap-2 min-w-0">
@@ -206,7 +207,7 @@ export default function DashboardLayout() {
                     {isDemoMode() ? "Zhin.js Demo" : "Zhin.js"}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {isDemoMode() ? "零安装 Sandbox" : "管理控制台"}
+                    {isDemoMode() ? "零安装 Sandbox" : "Bot 工作台"}
                   </span>
                 </div>
                 {isMobile ? (
@@ -250,7 +251,7 @@ export default function DashboardLayout() {
               return (
                 <div key={groupName} className="space-y-1">
                   {showLabels && (
-                    <div className="px-2 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <div className="px-2 pt-2 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground/75">
                       {groupName}
                     </div>
                   )}
@@ -286,7 +287,7 @@ export default function DashboardLayout() {
       </aside>
 
       <div className="flex flex-col flex-1 overflow-hidden min-w-0 w-full">
-        <header className="flex items-center justify-between h-14 px-3 sm:px-4 border-b border-[var(--console-border-subtle)] bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0 shadow-[var(--console-shadow-xs)] gap-2">
+        <header className="console-topbar flex items-center justify-between h-14 px-3 sm:px-5 border-b border-[var(--console-border-subtle)] bg-background/88 backdrop-blur-xl shrink-0 gap-2">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <Button
               variant="ghost"
@@ -299,12 +300,12 @@ export default function DashboardLayout() {
             </Button>
             <div className="flex flex-col min-w-0">
               <h2 className="text-sm font-semibold truncate">
-                {isDemoMode() ? "在线 Demo" : "控制台"}
+                {currentRoute?.name ?? (isDemoMode() ? "在线 Demo" : "工作台")}
               </h2>
               <span className="text-xs text-muted-foreground truncate hidden sm:block">
                 {isDemoMode()
                   ? "hello · card · ai:"
-                  : "跳转菜单 · Enter 打开首条"}
+                  : currentRoute?.meta?.group ?? "管理你的 Zhin Bot"}
               </span>
             </div>
           </div>
@@ -316,8 +317,8 @@ export default function DashboardLayout() {
                 value={searchQ}
                 onChange={(e) => setSearchQ(e.target.value)}
                 onKeyDown={onSearchKeyDown}
-                placeholder="按名称或路径搜索菜单…"
-                className="pl-9 bg-muted/50"
+                placeholder="搜索页面和功能…"
+                className="pl-9 bg-muted/45 border-transparent focus-visible:border-input"
                 list="console-nav-search"
                 autoComplete="off"
                 aria-label="搜索页面"
@@ -381,6 +382,7 @@ export default function DashboardLayout() {
         <Separator className="md:hidden" />
 
         <main
+          id="console-main-content"
           className={cn(
             "flex-1 min-h-0 min-w-0",
             contentFlush ? "overflow-hidden flex flex-col" : "overflow-y-auto overflow-x-hidden",

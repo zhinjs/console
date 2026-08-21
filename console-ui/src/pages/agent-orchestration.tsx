@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Workflow, Loader2, History, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react'
+import { Loader2, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import {
   agentSessionsPath,
@@ -17,8 +17,8 @@ import { EmptyState } from '../components/empty-state'
 import { Card, CardContent } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
-import { Input } from '../components/ui/input'
 import { Skeleton } from '../components/ui/skeleton'
+import { AgentSessionPicker } from '../components/AgentSessionPicker'
 import { cn } from '@zhin.js/client'
 
 interface OrchestrationTask {
@@ -163,19 +163,6 @@ export default function AgentOrchestrationPage() {
     }
   }, [])
 
-  const handleLoad = () => {
-    const trimmed = sessionKey.trim()
-    if (!trimmed) return
-    if (!isLikelySessionKey(trimmed)) {
-      setErrorKind('other')
-      setError(
-        `sessionKey 格式不正确：「${trimmed}」。应为 platform:endpointId:scope:sceneId（如 icqq:75318:private:userA）`,
-      )
-      return
-    }
-    void fetchRuns(trimmed)
-  }
-
   useEffect(() => {
     if (!sessionKeyFromUrl) return
     setSessionKey(sessionKeyFromUrl)
@@ -192,8 +179,8 @@ export default function AgentOrchestrationPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="编排运行"
-        description="查看多 Agent 编排运行状态与任务结果。sessionKey 格式为 platform:endpointId:scope:sceneId。"
+        title="运行追踪"
+        description="从渠道会话进入，查看 Agent 运行、任务分配和执行结果。"
         actions={
           sessionKey.trim() ? (
             <Link
@@ -206,56 +193,21 @@ export default function AgentOrchestrationPage() {
         }
       />
 
-      <Card>
-        <CardContent className="p-4 space-y-3">
-          <div className="flex flex-wrap gap-2">
-            <div className="flex-1 min-w-0 w-full sm:min-w-[240px]">
-              <Input
-                placeholder="sessionKey（如 icqq:75318:private:userA）"
-                value={sessionKey}
-                onChange={(e) => setSessionKey(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleLoad()}
-                list="agent-orchestration-history"
-              />
-              <datalist id="agent-orchestration-history">
-                {history.map((k) => (
-                  <option key={k} value={k} />
-                ))}
-              </datalist>
-            </div>
-            <Button onClick={handleLoad} disabled={loadingRuns || !sessionKey.trim()}>
-              {loadingRuns ? (
-                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-              ) : (
-                <Workflow className="w-4 h-4 mr-1" />
-              )}
-              加载
-            </Button>
-          </div>
-
-          {history.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <History className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">最近:</span>
-              {history.slice(0, 5).map((k) => (
-                <Button
-                  key={k}
-                  variant="outline"
-                  size="sm"
-                  className="h-6 text-xs px-2 max-w-[12rem] truncate"
-                  title={k}
-                  onClick={() => {
-                    setSessionKey(k)
-                    void fetchRuns(k)
-                  }}
-                >
-                  {k}
-                </Button>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <AgentSessionPicker
+        value={sessionKey}
+        history={history}
+        loading={loadingRuns}
+        actionLabel="查看运行"
+        onChange={setSessionKey}
+        onLoad={(key) => {
+          if (!isLikelySessionKey(key)) {
+            setErrorKind('other')
+            setError('会话标识格式不正确，请从“渠道与会话”选择一个对话。')
+            return
+          }
+          void fetchRuns(key)
+        }}
+      />
 
       {error && (
         <ErrorAlert

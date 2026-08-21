@@ -12,6 +12,8 @@ import DatabasePage from './pages/database/database-page'
 import CronPage from './pages/cron'
 import MarketplacePage from './pages/marketplace'
 import IntrospectionPage from './pages/introspection'
+import AgentStudioPage from './pages/agent-studio'
+import AgentWorkbenchPage from './pages/agent-workbench'
 import AgentSessionsPage from './pages/agent-sessions'
 import AgentOrchestrationPage from './pages/agent-orchestration'
 
@@ -23,11 +25,11 @@ export function registerBuiltinConsolePages() {
 
   app.addRoute({
     path: '/dashboard',
-    name: '概览',
+    name: '工作台',
     parent: null,
     icon: 'Home',
     element: <HomePage />,
-    meta: { group: '系统', order: 0 },
+    meta: { group: '总览', order: 0 },
   })
 
   app.addRoute({
@@ -36,7 +38,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'FileText',
     element: <LogsPage />,
-    meta: { group: '系统', order: 1, fullWidth: true },
+    meta: { group: '运维', order: 0, fullWidth: true },
   })
 
   app.addRoute({
@@ -45,25 +47,43 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Clock',
     element: <CronPage />,
-    meta: { group: '系统', order: 2 },
+    meta: { group: '自动化', order: 0 },
   })
 
   app.addRoute({
     path: '/endpoints',
-    name: 'Endpoints',
+    name: '渠道与会话',
     parent: null,
     icon: 'Bot',
     element: <EndpointsPage />,
-    meta: { group: 'Endpoints', order: 0 },
+    meta: { group: '渠道与会话', order: 0 },
+  })
+
+  app.addRoute({
+    path: '/agent/studio',
+    name: 'Agent Studio',
+    parent: null,
+    icon: 'Sparkles',
+    element: <AgentStudioPage />,
+    meta: { group: 'Agent 工作台', order: 0, fullWidth: true },
+  })
+
+  app.addRoute({
+    path: '/agent/workbench',
+    name: 'Agent 概览',
+    parent: null,
+    icon: 'Brain',
+    element: <AgentWorkbenchPage />,
+    meta: { group: 'Agent 工作台', order: 1 },
   })
 
   app.addRoute({
     path: '/introspection',
-    name: '命令与工具',
+    name: '能力目录',
     parent: null,
     icon: 'Terminal',
     element: <IntrospectionPage />,
-    meta: { group: '命令与 Agent', order: 0, fullWidth: true },
+    meta: { group: 'Agent 工作台', order: 2, fullWidth: true },
   })
 
   app.addRoute({
@@ -72,16 +92,16 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'GitBranch',
     element: <AgentSessionsPage />,
-    meta: { group: '命令与 Agent', order: 1 },
+    meta: { group: 'Agent 工作台', order: 3 },
   })
 
   app.addRoute({
     path: '/agent/orchestration',
-    name: '编排运行',
+    name: '运行追踪',
     parent: null,
     icon: 'Workflow',
     element: <AgentOrchestrationPage />,
-    meta: { group: '命令与 Agent', order: 2 },
+    meta: { group: 'Agent 工作台', order: 4 },
   })
 
   app.addRoute({
@@ -116,7 +136,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Settings',
     element: <ConfigPage />,
-    meta: { group: '配置与数据', order: 0 },
+    meta: { group: '运维', order: 1 },
   })
 
   app.addRoute({
@@ -125,7 +145,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'KeyRound',
     element: <EnvManagePage />,
-    meta: { group: '配置与数据', order: 1 },
+    meta: { group: '运维', order: 2 },
   })
 
   app.addRoute({
@@ -134,7 +154,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'FolderOpen',
     element: <FileManagePage />,
-    meta: { group: '配置与数据', order: 2 },
+    meta: { group: '运维', order: 3 },
   })
 
   app.addRoute({
@@ -143,7 +163,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Database',
     element: <DatabasePage />,
-    meta: { group: '配置与数据', order: 3, fullWidth: true },
+    meta: { group: '运维', order: 4, fullWidth: true },
   })
 
   app.addRoute({

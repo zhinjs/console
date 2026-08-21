@@ -25,7 +25,7 @@ import {
   X,
   GitBranch,
 } from 'lucide-react'
-import { agentSessionsPath, buildSessionKey } from '../../utils/agent-session'
+import { agentStudioPath, buildSessionKey } from '../../utils/agent-session'
 import { cn } from '@zhin.js/client'
 import { useConfirm } from '../../components/confirm-dialog'
 import { Button } from '../../components/ui/button'
@@ -465,11 +465,12 @@ export default function EndpointDetailPage() {
                     variant="ghost"
                     size="icon"
                     className="im-header-icon-button h-8 w-8"
-                    title="打开对话分支"
+                    title="查看 Agent 对话轨迹"
+                    aria-label="查看 Agent 对话轨迹"
                     asChild
                   >
                     <Link
-                      to={agentSessionsPath(
+                      to={agentStudioPath(
                         buildSessionKey(adapter, endpointId, selection.channelType, selection.id),
                       )}
                     >

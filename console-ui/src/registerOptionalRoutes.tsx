@@ -20,6 +20,6 @@ export async function registerOptionalConsoleRoutes(): Promise<void> {
     parent: null,
     icon: 'Activity',
     element: <AssistantJobsPage />,
-    meta: { group: '命令与 Agent', order: 3 },
+    meta: { group: '自动化', order: 1 },
   })
 }

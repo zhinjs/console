@@ -2,6 +2,19 @@
 
 export type ImSessionScope = 'private' | 'group' | 'channel'
 
+export interface ParsedImSessionKey {
+  platform: string
+  endpointId: string
+  scope: ImSessionScope
+  sceneId: string
+}
+
+export const SESSION_SCOPE_LABELS: Record<ImSessionScope, string> = {
+  private: '私聊',
+  group: '群聊',
+  channel: '频道',
+}
+
 /**
  * IM 会话 sessionKey，格式：`{platform}:{endpointId}:{scope}:{sceneId}`
  * 例：icqq:75318:private:userA
@@ -19,6 +32,12 @@ export function agentSessionsPath(sessionKey: string): string {
   const params = new URLSearchParams()
   params.set('sessionKey', sessionKey)
   return `/agent/sessions?${params}`
+}
+
+export function agentStudioPath(sessionKey: string): string {
+  const params = new URLSearchParams()
+  params.set('sessionKey', sessionKey)
+  return `/agent/studio?${params}`
 }
 
 export function agentOrchestrationPath(sessionKey: string): string {
@@ -45,4 +64,18 @@ export function isLikelySessionKey(key: string): boolean {
   if (parts.length < 4) return false
   const scope = parts[2]
   return scope === 'private' || scope === 'group' || scope === 'channel'
+}
+
+/** 将内部 sessionKey 拆成 Console 可展示的会话上下文。 */
+export function parseImSessionKey(key: string): ParsedImSessionKey | null {
+  const parts = key.trim().split(':')
+  if (parts.length < 4) return null
+  const scope = parts[2]
+  if (scope !== 'private' && scope !== 'group' && scope !== 'channel') return null
+  return {
+    platform: parts[0],
+    endpointId: parts[1],
+    scope,
+    sceneId: parts.slice(3).join(':'),
+  }
 }

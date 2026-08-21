@@ -23,6 +23,7 @@ import {
   Server,
   Settings,
   Shield,
+  Sparkles,
   Store,
   Terminal,
   Users,
@@ -56,6 +57,7 @@ const SIDEBAR_LUCIDE_BY_NAME: Record<string, LucideIcon> = {
   GitBranch,
   Globe,
   Shield,
+  Sparkles,
   Wrench,
   Workflow,
 };
