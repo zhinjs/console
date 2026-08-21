@@ -16,6 +16,7 @@ import AgentStudioPage from './pages/agent-studio'
 import AgentWorkbenchPage from './pages/agent-workbench'
 import AgentSessionsPage from './pages/agent-sessions'
 import AgentOrchestrationPage from './pages/agent-orchestration'
+import WorkroomsPage from './pages/workrooms'
 
 let builtinPagesRegistered = false
 
@@ -78,12 +79,21 @@ export function registerBuiltinConsolePages() {
   })
 
   app.addRoute({
-    path: '/introspection',
-    name: '能力目录',
+    path: '/agent/workrooms',
+    name: 'Workroom 看板',
     parent: null,
-    icon: 'Terminal',
-    element: <IntrospectionPage />,
+    icon: 'Workflow',
+    element: <WorkroomsPage />,
     meta: { group: 'Agent 工作台', order: 2, fullWidth: true },
+  })
+
+  app.addRoute({
+    path: '/introspection',
+    name: '运行时能力',
+    parent: null,
+    icon: 'Blocks',
+    element: <IntrospectionPage />,
+    meta: { group: '运行时', order: 0, fullWidth: true },
   })
 
   app.addRoute({

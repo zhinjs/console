@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { useWebSocket } from '@zhin.js/client'
 import type {
   EndpointInfo,
@@ -23,6 +23,14 @@ export function useEndpointConsole() {
   const adapter = adapterParam ? decodeURIComponent(adapterParam) : ''
   const endpointId = endpointIdParam ? decodeURIComponent(endpointIdParam) : ''
   const valid = Boolean(adapter && endpointId)
+  const [searchParams] = useSearchParams()
+  const requestedChannelType = searchParams.get('channelType')
+  const initialChannelType = requestedChannelType === 'private'
+    || requestedChannelType === 'group'
+    || requestedChannelType === 'channel'
+    ? requestedChannelType
+    : undefined
+  const initialChannelId = searchParams.get('channelId')?.trim() || undefined
 
   const { sendRequest, connected } = useWebSocket()
   const [info, setInfo] = useState<EndpointInfo | null>(null)
@@ -50,7 +58,14 @@ export function useEndpointConsole() {
   }, [loadInfo])
 
   // --- Channel manager ---
-  const channelMgr = useChannelManager({ adapter, endpointId, connected, info })
+  const channelMgr = useChannelManager({
+    adapter,
+    endpointId,
+    connected,
+    info,
+    initialChannelType,
+    initialChannelId,
+  })
 
   // --- Message history ---
   const msgHistory = useMessageHistory({

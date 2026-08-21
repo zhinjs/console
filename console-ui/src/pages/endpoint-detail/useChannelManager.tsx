@@ -72,8 +72,10 @@ export function useChannelManager(params: {
   endpointId: string
   connected: boolean
   info: EndpointInfo | null
+  initialChannelType?: ConversationChannelType
+  initialChannelId?: string
 }) {
-  const { adapter, endpointId, connected, info } = params
+  const { adapter, endpointId, connected, info, initialChannelType, initialChannelId } = params
   const { sendRequest } = useWebSocket()
   const { success, error: toastError } = useToast()
 
@@ -85,7 +87,16 @@ export function useChannelManager(params: {
   const [metaIndex, setMetaIndex] = useState<ConversationMetaIndex>(new Map())
   const [nameIndex, setNameIndex] = useState<ConversationNameIndex>(new Map())
 
-  const [selection, setSelection] = useState<SidebarSelection | null>(null)
+  const [selection, setSelection] = useState<SidebarSelection | null>(() =>
+    initialChannelType && initialChannelId
+      ? {
+          type: 'channel',
+          id: initialChannelId,
+          name: initialChannelId,
+          channelType: initialChannelType,
+        }
+      : null,
+  )
   const [showChannelList, setShowChannelList] = useState(false)
   const [listSearch, setListSearch] = useState('')
   const [sectionCollapsed, setSectionCollapsed] = useState<Record<ConversationSectionId, boolean>>({

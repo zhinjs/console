@@ -1353,6 +1353,227 @@
     color: hsl(var(--primary));
   }
 
+  .console-studio-trace-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: hsl(var(--primary));
+    font-size: 0.6rem;
+    font-weight: 650;
+  }
+
+  .console-studio-trace-live i {
+    width: 0.38rem;
+    height: 0.38rem;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
+    animation: console-studio-pulse 1.8s infinite;
+  }
+
+  .console-studio-trace-console {
+    border-bottom: 1px solid var(--studio-rule);
+    background:
+      radial-gradient(circle at 12% 0%, hsl(var(--primary) / 0.055), transparent 32%),
+      hsl(var(--background) / 0.58);
+  }
+
+  .console-studio-trace-metrics {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    border-bottom: 1px solid hsl(var(--border) / 0.42);
+  }
+
+  .console-studio-trace-metrics article {
+    min-width: 0;
+    padding: 0.72rem 0.75rem 0.78rem;
+    border-right: 1px solid hsl(var(--border) / 0.42);
+  }
+
+  .console-studio-trace-metrics article:last-child {
+    border-right: 0;
+  }
+
+  .console-studio-trace-metrics article > span {
+    display: flex;
+    align-items: center;
+    gap: 0.28rem;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.52rem;
+    font-weight: 650;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .console-studio-trace-metrics article > span svg {
+    width: 0.68rem;
+    height: 0.68rem;
+    color: hsl(var(--primary));
+  }
+
+  .console-studio-trace-metrics article strong {
+    display: block;
+    overflow: hidden;
+    margin-top: 0.38rem;
+    font-family: var(--font-mono, monospace);
+    font-size: clamp(0.85rem, 1.4vw, 1.08rem);
+    font-variant-numeric: tabular-nums;
+    font-weight: 650;
+    letter-spacing: -0.035em;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .console-studio-trace-metrics article small {
+    display: block;
+    overflow: hidden;
+    margin-top: 0.32rem;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.52rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .console-studio-trace-metrics article.has-problem strong,
+  .console-studio-trace-metrics article.has-problem > span svg {
+    color: hsl(var(--destructive));
+  }
+
+  .console-studio-turn-strip {
+    display: flex;
+    gap: 0.42rem;
+    overflow-x: auto;
+    padding: 0.62rem 0.72rem 0.25rem;
+    scrollbar-width: thin;
+  }
+
+  .console-studio-turn-strip button {
+    position: relative;
+    display: grid;
+    min-width: max-content;
+    grid-template-columns: auto 1fr;
+    column-gap: 0.38rem;
+    align-items: center;
+    padding: 0.48rem 0.6rem;
+    border: 1px solid hsl(var(--border) / 0.5);
+    border-radius: 0.55rem 0.55rem 0.55rem 0.18rem;
+    background: hsl(var(--card) / 0.55);
+    color: hsl(var(--muted-foreground));
+    text-align: left;
+    transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease, transform 160ms ease;
+  }
+
+  .console-studio-turn-strip button:hover {
+    border-color: hsl(var(--primary) / 0.25);
+    color: hsl(var(--foreground));
+    transform: translateY(-1px);
+  }
+
+  .console-studio-turn-strip button:active {
+    transform: translateY(0) scale(0.98);
+  }
+
+  .console-studio-turn-strip button.is-active {
+    border-color: hsl(var(--primary) / 0.32);
+    background: hsl(var(--primary) / 0.09);
+    color: hsl(var(--foreground));
+    box-shadow: inset 0 -1px 0 hsl(var(--primary) / 0.25);
+  }
+
+  .console-studio-turn-strip button i {
+    width: 0.34rem;
+    height: 0.34rem;
+    grid-row: 1 / 3;
+    border-radius: 50%;
+    background: hsl(var(--muted-foreground) / 0.55);
+  }
+
+  .console-studio-turn-strip button.is-running i {
+    background: hsl(var(--primary));
+    box-shadow: 0 0 0 0.18rem hsl(var(--primary) / 0.12);
+  }
+
+  .console-studio-turn-strip button.is-failed i,
+  .console-studio-turn-strip button.is-cancelled i {
+    background: hsl(var(--destructive));
+  }
+
+  .console-studio-turn-strip button span {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.62rem;
+    font-weight: 650;
+  }
+
+  .console-studio-turn-strip button small {
+    grid-column: 2;
+    font-size: 0.5rem;
+    opacity: 0.68;
+  }
+
+  .console-studio-turn-strip button:first-child {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+  }
+
+  .console-studio-trace-controls {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+    padding: 0.45rem 0.72rem 0.62rem;
+  }
+
+  .console-studio-trace-filters {
+    display: flex;
+    min-width: 0;
+    gap: 0.18rem;
+    overflow-x: auto;
+  }
+
+  .console-studio-trace-filters button {
+    flex: none;
+    padding: 0.32rem 0.48rem;
+    border-radius: 0.36rem;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.56rem;
+    font-weight: 600;
+    transition: background-color 150ms ease, color 150ms ease;
+  }
+
+  .console-studio-trace-filters button:hover,
+  .console-studio-trace-filters button.is-active {
+    background: hsl(var(--accent) / 0.72);
+    color: hsl(var(--foreground));
+  }
+
+  .console-studio-trace-filters button.is-active {
+    box-shadow: inset 0 -1px 0 hsl(var(--primary) / 0.5);
+  }
+
+  .console-studio-trace-playback {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 0.12rem;
+  }
+
+  .console-studio-trace-playback > span {
+    padding-right: 0.28rem;
+    color: hsl(var(--muted-foreground));
+    font-family: var(--font-mono, monospace);
+    font-size: 0.55rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .console-studio-trace-playback button svg {
+    width: 0.72rem;
+    height: 0.72rem;
+  }
+
   .console-studio-flow {
     position: relative;
     min-height: 0;
@@ -1423,6 +1644,64 @@
     color: hsl(var(--primary));
   }
 
+  .console-studio-event.is-trace {
+    background:
+      linear-gradient(100deg, hsl(var(--foreground) / 0.018), transparent 55%),
+      hsl(var(--card) / 0.9);
+  }
+
+  .console-studio-event.is-running,
+  .console-studio-event.is-thinking {
+    border-color: hsl(var(--primary) / 0.22);
+  }
+
+  .console-studio-event.is-running .console-studio-event-node,
+  .console-studio-event.is-thinking .console-studio-event-node,
+  .console-studio-event.is-capability .console-studio-event-node {
+    border-color: hsl(var(--primary) / 0.22);
+    background: hsl(var(--primary) / 0.1);
+    color: hsl(var(--primary));
+  }
+
+  .console-studio-event.is-running .console-studio-event-node svg {
+    animation: spin 1.2s linear infinite;
+  }
+
+  .console-studio-event.is-tool .console-studio-event-node,
+  .console-studio-event.is-usage .console-studio-event-node {
+    border-color: hsl(38 84% 55% / 0.25);
+    background: hsl(38 84% 55% / 0.1);
+    color: hsl(38 72% 46%);
+  }
+
+  .console-studio-event.is-success .console-studio-event-node {
+    border-color: hsl(152 62% 42% / 0.24);
+    background: hsl(152 62% 42% / 0.1);
+    color: hsl(152 58% 38%);
+  }
+
+  .console-studio-event.is-error {
+    border-color: hsl(var(--destructive) / 0.2);
+  }
+
+  .console-studio-event.is-error .console-studio-event-node {
+    border-color: hsl(var(--destructive) / 0.24);
+    background: hsl(var(--destructive) / 0.08);
+    color: hsl(var(--destructive));
+  }
+
+  .console-studio-event.is-replay-current {
+    border-color: hsl(var(--primary) / 0.5);
+    background:
+      linear-gradient(100deg, hsl(var(--primary) / 0.1), transparent 62%),
+      hsl(var(--card));
+    box-shadow: inset 2px 0 0 hsl(var(--primary)), 0 20px 38px -32px hsl(var(--primary) / 0.75);
+  }
+
+  .console-studio-awaiting.is-filtered > span {
+    color: hsl(var(--primary));
+  }
+
   .console-studio-event-node svg {
     width: 0.9rem;
     height: 0.9rem;
@@ -1443,6 +1722,58 @@
     color: hsl(var(--muted-foreground));
     font-size: 0.64rem;
     line-height: 1.5;
+  }
+
+  .console-studio-event-content {
+    min-width: 0;
+  }
+
+  .console-studio-trace-detail {
+    margin-top: 0.5rem;
+  }
+
+  .console-studio-trace-detail summary {
+    display: inline-flex;
+    cursor: pointer;
+    list-style: none;
+    align-items: center;
+    gap: 0.25rem;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.58rem;
+    transition: color 160ms ease;
+  }
+
+  .console-studio-trace-detail summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .console-studio-trace-detail summary:hover {
+    color: hsl(var(--foreground));
+  }
+
+  .console-studio-trace-detail summary svg {
+    width: 0.7rem;
+    height: 0.7rem;
+    transition: transform 160ms ease;
+  }
+
+  .console-studio-trace-detail[open] summary svg {
+    transform: rotate(180deg);
+  }
+
+  .console-studio-trace-detail pre {
+    max-height: 18rem;
+    overflow: auto;
+    margin-top: 0.55rem;
+    padding: 0.75rem;
+    border: 1px solid hsl(var(--border) / 0.6);
+    border-radius: 0.65rem;
+    background: hsl(var(--background) / 0.82);
+    color: hsl(var(--foreground) / 0.8);
+    font-size: 0.58rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
 
   .console-studio-awaiting {
@@ -1766,6 +2097,11 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
+  @keyframes console-studio-pulse {
+    0% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4); }
+    70%, 100% { box-shadow: 0 0 0 0.45rem hsl(var(--primary) / 0); }
+  }
+
   @media (max-width: 1180px) {
     .console-studio-frame {
       min-height: auto;
@@ -1826,6 +2162,16 @@
     .console-studio-inspector-section:nth-child(3) {
       border-left: 0;
     }
+
+    .console-studio-trace-controls {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .console-studio-trace-playback {
+      width: 100%;
+      justify-content: flex-end;
+    }
   }
 
   @media (max-width: 767px) {
@@ -1852,6 +2198,27 @@
 
     .console-agent-metrics {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .console-studio-trace-metrics {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .console-studio-trace-metrics article:nth-child(2n) {
+      border-right: 0;
+    }
+
+    .console-studio-trace-metrics article:nth-child(-n + 4) {
+      border-bottom: 1px solid hsl(var(--border) / 0.42);
+    }
+
+    .console-studio-trace-metrics article:last-child {
+      grid-column: 1 / -1;
+    }
+
+    .console-studio-trace-playback {
+      flex-wrap: wrap;
+      justify-content: flex-start;
     }
 
     .console-session-picker-empty,

@@ -7,12 +7,14 @@ import {
   AlertTriangle,
   ArrowUpRight,
   Bot,
+  Blocks,
   Brain,
   CheckCircle2,
   Command,
   Cpu,
   FileText,
   MemoryStick,
+  Layers3,
   Package,
   Radio,
   RefreshCw,
@@ -62,6 +64,7 @@ interface OptionalOverview {
   agents: number | null
   mcpServices: number | null
   connectedMcp: number | null
+  middlewares: number | null
 }
 
 interface IntrospectionEnvelope {
@@ -91,6 +94,7 @@ const EMPTY_OPTIONAL: OptionalOverview = {
   agents: null,
   mcpServices: null,
   connectedMcp: null,
+  middlewares: null,
 }
 
 async function fetchOptionalData(path: string): Promise<unknown | null> {
@@ -166,11 +170,12 @@ export default function HomePage() {
       setSystemStatus(statusBody.data)
       setError(null)
 
-      const [logs, tools, agents, mcp] = await Promise.all([
+      const [logs, tools, agents, mcp, middlewares] = await Promise.all([
         fetchOptionalData('/api/logs/stats'),
         fetchOptionalData('/api/introspection/tools?page=1&pageSize=1'),
         fetchOptionalData('/api/introspection/bindings?page=1&pageSize=1'),
         fetchOptionalData('/api/introspection/mcp?page=1&pageSize=100'),
+        fetchOptionalData('/api/introspection/middlewares?page=1&pageSize=1'),
       ])
       const logStats = logs as { byLevel?: { error?: number; warn?: number } } | null
       const mcpSummary = readMcpSummary(mcp)
@@ -181,6 +186,7 @@ export default function HomePage() {
         agents: readTotal(agents),
         mcpServices: mcpSummary.total,
         connectedMcp: mcpSummary.connected,
+        middlewares: readTotal(middlewares),
       })
     } catch (caught) {
       setError((caught as Error).message)
@@ -221,6 +227,20 @@ export default function HomePage() {
       detail: '可被消息直接调用',
       icon: Command,
       path: '/introspection?tab=commands',
+    },
+    {
+      label: '中间件',
+      value: optional.middlewares,
+      detail: optional.middlewares === null ? 'Runtime 尚未接线' : '按阶段与拓扑有序执行',
+      icon: Layers3,
+      path: '/introspection?tab=middlewares',
+    },
+    {
+      label: '组件',
+      value: stats?.components ?? 0,
+      detail: '可在实验台输入 Props 渲染',
+      icon: Blocks,
+      path: '/introspection?tab=components',
     },
     {
       label: 'Agent',

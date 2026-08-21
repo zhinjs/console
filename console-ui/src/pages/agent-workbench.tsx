@@ -318,7 +318,7 @@ export default function AgentWorkbenchPage() {
         <Link to="/introspection?tab=tools"><Wrench /><span><strong>工具目录</strong><small>查看输入与来源</small></span><ArrowUpRight /></Link>
         <Link to="/introspection?tab=mcp"><Server /><span><strong>MCP 服务</strong><small>检查连接健康度</small></span><ArrowUpRight /></Link>
         <Link to="/agent/sessions"><GitBranch /><span><strong>对话分支</strong><small>继续最近上下文</small></span><ArrowUpRight /></Link>
-        <Link to={workroomRoute?.path ?? '/agent/orchestration'}><Workflow /><span><strong>{workroomRoute ? 'Workroom' : '运行追踪'}</strong><small>查看任务与执行结果</small></span><ArrowUpRight /></Link>
+        <Link to={workroomRoute?.path ?? '/agent/orchestration'}><Workflow /><span><strong>{workroomRoute ? 'Workroom 看板' : '运行追踪'}</strong><small>{workroomRoute ? '配置 Bot、Agent 与角色关系' : '查看任务与执行结果'}</small></span><ArrowUpRight /></Link>
       </section>
     </div>
   )
