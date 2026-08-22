@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Hash, MessageSquare, User, Users } from 'lucide-react'
-import { useWebSocket } from '@zhin.js/client'
 import { useToast } from '../../components/toast'
+import { ENDPOINT_RPC, SIDE_EVENT_PUSH } from '../../contracts/zhin-console'
+import { requestConsole } from '../../utils/console-rpc'
 import type {
   ChannelParentRef,
   ConversationChannelType,
@@ -70,13 +71,11 @@ function sortEntries(entries: ConversationEntry[]): ConversationEntry[] {
 export function useChannelManager(params: {
   adapter: string
   endpointId: string
-  connected: boolean
   info: EndpointInfo | null
   initialChannelType?: ConversationChannelType
   initialChannelId?: string
 }) {
-  const { adapter, endpointId, connected, info, initialChannelType, initialChannelId } = params
-  const { sendRequest } = useWebSocket()
+  const { adapter, endpointId, info, initialChannelType, initialChannelId } = params
   const { success, error: toastError } = useToast()
 
   const [friends, setFriends] = useState<FriendsEntry[]>([])
@@ -144,7 +143,7 @@ export function useChannelManager(params: {
     }
 
     try {
-      const result = await sendRequest<{
+      const result = await requestConsole<{
         rows: Array<{
           channel_id: string
           channel_type: string
@@ -203,16 +202,16 @@ export function useChannelManager(params: {
       .map(({ id, name, channelType, parent }) =>
         parent ? { id, name, channelType, parent } : { id, name, channelType },
       )
-  }, [adapter, endpointId, sendRequest])
+  }, [adapter, endpointId])
 
   const refreshMetadata = useCallback(async () => {
-    const { meta, names } = await buildMetadataIndex(adapter, endpointId, sendRequest)
+    const { meta, names } = await buildMetadataIndex(adapter, endpointId, requestConsole)
     setMetaIndex(meta)
     setNameIndex(names)
-  }, [adapter, endpointId, sendRequest])
+  }, [adapter, endpointId])
 
   const loadLists = useCallback(async () => {
-    if (!adapter || !endpointId || !connected) return
+    if (!adapter || !endpointId) return
     setListLoading(true)
     setListErr(null)
     const errors: string[] = []
@@ -227,9 +226,9 @@ export function useChannelManager(params: {
 
       if (loadFriendsGroups) {
         try {
-          const f = await sendRequest<{ friends: unknown[] }>({
-            type: 'endpoint:friends',
-            data: { adapter, endpointId },
+          const f = await requestConsole<{ friends: unknown[] }>({
+            type: ENDPOINT_RPC.FRIENDS,
+            data: { adapter, endpointKey: endpointId },
           })
           nextFriends = normalizeList(f.friends ?? [], normalizeFriendRecord).filter(
             (x) => x.user_id > 0,
@@ -238,9 +237,9 @@ export function useChannelManager(params: {
           errors.push(`好友列表：${(e as Error).message}`)
         }
         try {
-          const g = await sendRequest<{ groups: unknown[] }>({
-            type: 'endpoint:groups',
-            data: { adapter, endpointId },
+          const g = await requestConsole<{ groups: unknown[] }>({
+            type: ENDPOINT_RPC.GROUPS,
+            data: { adapter, endpointKey: endpointId },
           })
           nextGroups = normalizeList(g.groups ?? [], normalizeGroupRecord).filter(
             (x) => x.group_id > 0,
@@ -251,7 +250,7 @@ export function useChannelManager(params: {
       }
 
       try {
-        nextChannels = await fetchEndpointChannelCatalog(sendRequest, adapter, endpointId)
+        nextChannels = await fetchEndpointChannelCatalog(requestConsole, adapter, endpointId)
       } catch (e) {
         errors.push(`频道列表：${(e as Error).message}`)
       }
@@ -298,11 +297,11 @@ export function useChannelManager(params: {
     } finally {
       setListLoading(false)
     }
-  }, [adapter, endpointId, connected, sendRequest, loadChannelsFromInbox, info?.connected, refreshMetadata])
+  }, [adapter, endpointId, loadChannelsFromInbox, info?.connected, refreshMetadata])
 
   useEffect(() => {
-    if (connected) loadLists()
-  }, [connected, loadLists])
+    void loadLists()
+  }, [loadLists])
 
   const resolveDisplayName = useCallback(
     (channelType: ConversationChannelType, id: string, primaryName: string) => {
@@ -445,11 +444,11 @@ export function useChannelManager(params: {
   useEffect(() => {
     if (!adapter || !endpointId) return
     return subscribeEndpointPush((message) => {
-      if (message.type !== 'message.receive') return
+      if (message.type !== SIDE_EVENT_PUSH.MESSAGE_RECEIVE) return
       const d = message.data as Record<string, unknown> | undefined
       if (!d) return
       const pushAdapter = String(d.adapter ?? '')
-      const pushEndpointId = String(d.endpointId ?? '')
+      const pushEndpointId = String(d.endpointKey ?? '')
       if (pushAdapter !== adapter || pushEndpointId !== endpointId) return
 
       const channelId = String(d.channelId ?? d.channel_id ?? '')
@@ -506,9 +505,9 @@ export function useChannelManager(params: {
   const deleteFriend = useCallback(async () => {
     if (selection?.type !== 'channel' || selection.channelType !== 'private') return false
     try {
-      await sendRequest({
-        type: 'endpoint:deleteFriend',
-        data: { adapter, endpointId, userId: selection.id },
+      await requestConsole({
+        type: ENDPOINT_RPC.DELETE_FRIEND,
+        data: { adapter, endpointKey: endpointId, userId: selection.id },
       })
       setFriends((prev) => prev.filter((f) => String(f.user_id) !== selection.id))
       setSelection(null)
@@ -519,7 +518,7 @@ export function useChannelManager(params: {
       toastError((e as Error).message, '删除好友失败')
       return false
     }
-  }, [selection, sendRequest, adapter, endpointId, loadLists, success, toastError])
+  }, [selection, adapter, endpointId, loadLists, success, toastError])
 
   const getChannelIcon = (channelType: string): ReactNode => {
     switch (channelType) {

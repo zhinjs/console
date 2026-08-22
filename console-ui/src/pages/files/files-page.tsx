@@ -10,8 +10,10 @@ import { EmptyState } from '../../components/empty-state'
 import { useHljsTheme } from './use-hljs-theme'
 import { TreeNode } from './tree-node'
 import { FileEditor } from './file-editor'
+import { isDemoMode } from '../../utils/demo-mode'
 
 export default function FileManagePage() {
+  const readOnly = isDemoMode()
   useHljsTheme()
   const { tree, loading, error, loadTree, readFile, saveFile } = useFiles()
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
@@ -20,7 +22,7 @@ export default function FileManagePage() {
     <div className="space-y-4">
       <PageHeader
         title="项目文件"
-        description="浏览和编辑工作空间中的配置文件和源代码"
+        description={readOnly ? '浏览工作空间中的配置文件和源代码（Demo 只读）' : '浏览和编辑工作空间中的配置文件和源代码'}
         actions={
           <Button variant="outline" size="sm" onClick={() => loadTree()} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
@@ -76,6 +78,7 @@ export default function FileManagePage() {
                   filePath={selectedFile}
                   readFile={readFile}
                   saveFile={saveFile}
+                  readOnly={readOnly}
                   onClose={() => setSelectedFile(null)}
                 />
               ) : (

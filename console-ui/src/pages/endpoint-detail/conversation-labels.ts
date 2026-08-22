@@ -1,4 +1,5 @@
 import type { ChannelParentRef, ChannelParentType, ConversationChannelType } from './types'
+import { ENDPOINT_RPC } from '../../contracts/zhin-console'
 
 export function pickLabel(...candidates: unknown[]): string | undefined {
   for (const c of candidates) {
@@ -151,7 +152,7 @@ export function toConsoleChannelParent(
   return undefined
 }
 
-/** endpoint:sendMessage / endpoint:inboxMessages 出站 parent */
+/** Endpoint / Inbox RPC 出站 parent */
 export function toRpcChannelParent(
   parent: ChannelParentRef | undefined,
 ): { type: ChannelParentType; id: string } | undefined {
@@ -180,15 +181,15 @@ export function normalizeChannelRecord(raw: Record<string, unknown>): ChannelsEn
 
 type SendRequestFn = <T>(req: { type: string; [key: string]: unknown }) => Promise<T>
 
-/** 统一 endpoint:channels RPC（ICQQ / QQ / 其他适配器） */
+/** 统一 Endpoint channel catalog RPC（ICQQ / QQ / 其他适配器） */
 export async function fetchEndpointChannelCatalog(
   sendRequest: SendRequestFn,
   adapter: string,
   endpointId: string,
 ): Promise<ChannelsEntry[]> {
   const res = await sendRequest<{ channels?: unknown[]; count?: number }>({
-    type: 'endpoint:channels',
-    data: { adapter, endpointId },
+    type: ENDPOINT_RPC.CHANNELS,
+    data: { adapter, endpointKey: endpointId },
   })
   return (res.channels ?? [])
     .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')

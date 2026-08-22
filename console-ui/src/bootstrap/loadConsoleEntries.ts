@@ -86,7 +86,9 @@ async function doLoadConsoleEntries(options?: LoadConsoleEntriesOptions): Promis
       options?.fetchInit ??
       (() => {
         const token = getToken()
-        return { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+        const headers: Record<string, string> = {}
+        if (token) headers.Authorization = `Bearer ${token}`
+        return { headers }
       }),
     onFetchError: (status) => {
       console.warn(

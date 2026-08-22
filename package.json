@@ -8,6 +8,8 @@
     "dev:demo": "VITE_DEMO_MODE=1 VITE_API_BASE=https://zhinjs-demo.hf.space VITE_API_TOKEN=zhin-demo farm start",
     "build": "farm build",
     "build:demo": "VITE_DEMO_MODE=1 VITE_API_BASE=https://zhinjs-demo.hf.space VITE_API_TOKEN=zhin-demo farm build",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.mjs",
     "preview": "serve dist -l 5173",
     "pages:prepare": "node scripts/prepare-github-pages.mjs"
   },

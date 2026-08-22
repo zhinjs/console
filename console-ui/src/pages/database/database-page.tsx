@@ -15,8 +15,10 @@ import { DB_TYPE_LABELS, DIALECT_LABELS } from './constants'
 import { RelatedTableView } from './related-table-view'
 import { DocumentCollectionView } from './document-collection-view'
 import { KvBucketView } from './kv-bucket-view'
+import { isDemoMode } from '../../utils/demo-mode'
 
 export default function DatabasePage() {
+  const readOnly = isDemoMode()
   const {
     info, tables, loading, error,
     loadInfo, loadTables, dropTable,
@@ -35,7 +37,7 @@ export default function DatabasePage() {
     <div className="space-y-4 sm:space-y-6">
       <PageHeader
         title="数据库"
-        description={`浏览和管理 ${DB_TYPE_LABELS[dbType]} 中的数据；左栏选择对象，右侧查看与编辑。`}
+        description={readOnly ? `浏览 ${DB_TYPE_LABELS[dbType]} 中的数据（Demo 只读）。` : `浏览和管理 ${DB_TYPE_LABELS[dbType]} 中的数据；左栏选择对象，右侧查看与编辑。`}
         actions={
           <div className="flex items-center gap-2">
             {info && (
@@ -96,7 +98,7 @@ export default function DatabasePage() {
                       {dbType === 'keyvalue' ? <Key className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <Table2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
                       <span className="truncate flex-1">{t.name}</span>
                       {t.columns && <Badge variant="secondary" className="ml-auto text-[10px] px-1 py-0">{Object.keys(t.columns).length}</Badge>}
-                      <Button
+                      {!readOnly && <Button
                         size="sm" variant="ghost"
                         className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-destructive shrink-0"
                         onClick={(e: MouseEvent) => {
@@ -105,7 +107,7 @@ export default function DatabasePage() {
                         }}
                       >
                         <Trash2 className="w-3 h-3" />
-                      </Button>
+                      </Button>}
                     </div>
                   ))}
                 </div>
@@ -160,6 +162,7 @@ export default function DatabasePage() {
                         kvSet={kvSet}
                         kvDelete={kvDelete}
                         kvEntries={kvEntries}
+                        readOnly={readOnly}
                       />
                     ) : dbType === 'document' ? (
                       <DocumentCollectionView
@@ -169,6 +172,7 @@ export default function DatabasePage() {
                         insert={insert}
                         update={update}
                         remove={remove}
+                        readOnly={readOnly}
                       />
                     ) : (
                       <RelatedTableView
@@ -179,6 +183,7 @@ export default function DatabasePage() {
                         insert={insert}
                         update={update}
                         remove={remove}
+                        readOnly={readOnly}
                       />
                     )}
                   </div>
@@ -198,7 +203,7 @@ export default function DatabasePage() {
         </CardContent>
       </Card>
     </div>
-    <ConfirmDialog
+    {!readOnly && <ConfirmDialog
       open={!!deleteTarget}
       onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
       title={`删除${deleteTarget?.label || ''}`}
@@ -211,7 +216,7 @@ export default function DatabasePage() {
         if (selectedTable === deleteTarget.name) setSelectedTable(null)
         setDeleteTarget(null)
       }}
-    />
+    />}
     </>
   )
 }

@@ -49,6 +49,7 @@ interface PluginDetail {
   readme: string
   versions: string[]
   lastPublish: string
+  npm?: string
 }
 
 interface UpdateInfo {
@@ -98,7 +99,7 @@ export default function MarketplacePage() {
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [category, setCategory] = useState<Category>('')
   const [officialOnly, setOfficialOnly] = useState(false)
   const [sortKey, setSortKey] = useState<SortKey>('relevance')
@@ -143,12 +144,14 @@ export default function MarketplacePage() {
 
   // Debounce search input (350ms)
   useEffect(() => {
-    clearTimeout(debounceRef.current)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
       setDebouncedSearch(search)
       setPage(1)
     }, 350)
-    return () => clearTimeout(debounceRef.current)
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
   }, [search])
 
   useEffect(() => {

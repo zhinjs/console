@@ -12,11 +12,13 @@ export function FileEditor({
   readFile,
   saveFile,
   onClose,
+  readOnly,
 }: {
   filePath: string
   readFile: (path: string) => Promise<string>
   saveFile: (path: string, content: string) => Promise<unknown>
   onClose: () => void
+  readOnly: boolean
 }) {
   const [content, setContent] = useState('')
   const [originalContent, setOriginalContent] = useState('')
@@ -50,6 +52,7 @@ export function FileEditor({
   }, [loadContent])
 
   const handleSave = useCallback(async () => {
+    if (readOnly) return
     setSaving(true)
     setMessage(null)
     try {
@@ -62,7 +65,7 @@ export function FileEditor({
     } finally {
       setSaving(false)
     }
-  }, [filePath, content, saveFile])
+  }, [filePath, content, readOnly, saveFile])
 
   const dirty = content !== originalContent
 
@@ -70,12 +73,12 @@ export function FileEditor({
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault()
-        if (dirty && !saving) void handleSave()
+        if (!readOnly && dirty && !saving) void handleSave()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [dirty, saving, handleSave])
+  }, [dirty, saving, handleSave, readOnly])
 
   const fileName = filePath.split('/').pop() || filePath
 
@@ -117,22 +120,23 @@ export function FileEditor({
           value={content}
           onChange={setContent}
           language={getLanguage(fileName)}
+          readOnly={readOnly}
         />
       </div>
 
       <div className="flex flex-wrap items-center gap-2 px-3 sm:px-4 py-2 border-t bg-muted/30">
-        <Button size="sm" onClick={() => void handleSave()} disabled={saving || !dirty}>
+        {!readOnly && <Button size="sm" onClick={() => void handleSave()} disabled={saving || !dirty}>
           {saving
             ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />保存中...</>
             : <><Save className="w-4 h-4 mr-1" />保存</>}
-        </Button>
-        {dirty && (
+        </Button>}
+        {!readOnly && dirty && (
           <Button variant="outline" size="sm" onClick={() => setContent(originalContent)}>
             撤销更改
           </Button>
         )}
         <span className="text-xs text-muted-foreground sm:ml-auto basis-full sm:basis-auto">
-          {content.split('\n').length} 行 · Ctrl+S 保存
+          {readOnly ? `Demo 只读 · ${content.split('\n').length} 行` : `${content.split('\n').length} 行 · Ctrl+S 保存`}
         </span>
       </div>
     </div>

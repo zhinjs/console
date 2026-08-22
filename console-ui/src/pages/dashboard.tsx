@@ -2,19 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Activity,
   AlertCircle,
   AlertTriangle,
   ArrowUpRight,
   Bot,
-  Blocks,
   Brain,
   CheckCircle2,
   Command,
   Cpu,
   FileText,
   MemoryStick,
-  Layers3,
   Package,
   Radio,
   RefreshCw,
@@ -22,10 +19,13 @@ import {
   Server,
   Settings2,
   Sparkles,
+  Workflow,
   Wrench,
 } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
-import { useWebSocket } from '@zhin.js/client'
+import { CONSOLE_REST, CONSOLE_RPC } from '../contracts/zhin-console'
+import { requestConsole } from '../utils/console-rpc'
+import { isDemoMode } from '../utils/demo-mode'
 import { useToast } from '../components/toast'
 import { Button } from '../components/ui/button'
 import { Alert, AlertDescription } from '../components/ui/alert'
@@ -44,7 +44,6 @@ interface Stats {
   plugins: { total: number; active: number }
   endpoints: { total: number; online: number }
   commands: number
-  components: number
   uptime: number
   memory: number
 }
@@ -64,7 +63,6 @@ interface OptionalOverview {
   agents: number | null
   mcpServices: number | null
   connectedMcp: number | null
-  middlewares: number | null
 }
 
 interface IntrospectionEnvelope {
@@ -94,7 +92,6 @@ const EMPTY_OPTIONAL: OptionalOverview = {
   agents: null,
   mcpServices: null,
   connectedMcp: null,
-  middlewares: null,
 }
 
 async function fetchOptionalData(path: string): Promise<unknown | null> {
@@ -148,15 +145,15 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null)
   const [restartDialogOpen, setRestartDialogOpen] = useState(false)
   const [restarting, setRestarting] = useState(false)
-  const { sendRequest } = useWebSocket()
+  const readOnly = isDemoMode()
   const { success, error: toastError } = useToast()
 
   const fetchDashboard = useCallback(async (background = false) => {
     if (background) setRefreshing(true)
     try {
       const [statsResponse, statusResponse] = await Promise.all([
-        apiFetch('/api/stats'),
-        apiFetch('/api/system/status'),
+        apiFetch(CONSOLE_REST.STATS),
+        apiFetch(CONSOLE_REST.SYSTEM_STATUS),
       ])
       if (!statsResponse.ok || !statusResponse.ok) throw new Error('无法读取 Host 状态')
 
@@ -170,12 +167,11 @@ export default function HomePage() {
       setSystemStatus(statusBody.data)
       setError(null)
 
-      const [logs, tools, agents, mcp, middlewares] = await Promise.all([
-        fetchOptionalData('/api/logs/stats'),
-        fetchOptionalData('/api/introspection/tools?page=1&pageSize=1'),
-        fetchOptionalData('/api/introspection/bindings?page=1&pageSize=1'),
-        fetchOptionalData('/api/introspection/mcp?page=1&pageSize=100'),
-        fetchOptionalData('/api/introspection/middlewares?page=1&pageSize=1'),
+      const [logs, tools, agents, mcp] = await Promise.all([
+        fetchOptionalData(CONSOLE_REST.LOGS_STATS),
+        fetchOptionalData(`${CONSOLE_REST.INTROSPECTION}/tools?page=1&pageSize=1`),
+        fetchOptionalData(`${CONSOLE_REST.INTROSPECTION}/bindings?page=1&pageSize=1`),
+        fetchOptionalData(`${CONSOLE_REST.INTROSPECTION}/mcp?page=1&pageSize=100`),
       ])
       const logStats = logs as { byLevel?: { error?: number; warn?: number } } | null
       const mcpSummary = readMcpSummary(mcp)
@@ -186,7 +182,6 @@ export default function HomePage() {
         agents: readTotal(agents),
         mcpServices: mcpSummary.total,
         connectedMcp: mcpSummary.connected,
-        middlewares: readTotal(middlewares),
       })
     } catch (caught) {
       setError((caught as Error).message)
@@ -199,11 +194,8 @@ export default function HomePage() {
   useEffect(() => {
     void fetchDashboard()
     const interval = window.setInterval(() => void fetchDashboard(), 10000)
-    const onDataUpdate = () => void fetchDashboard()
-    window.addEventListener('zhin-console-data-update', onDataUpdate)
     return () => {
       window.clearInterval(interval)
-      window.removeEventListener('zhin-console-data-update', onDataUpdate)
     }
   }, [fetchDashboard])
 
@@ -229,25 +221,11 @@ export default function HomePage() {
       path: '/introspection?tab=commands',
     },
     {
-      label: '中间件',
-      value: optional.middlewares,
-      detail: optional.middlewares === null ? 'Runtime 尚未接线' : '按阶段与拓扑有序执行',
-      icon: Layers3,
-      path: '/introspection?tab=middlewares',
-    },
-    {
-      label: '组件',
-      value: stats?.components ?? 0,
-      detail: '可在实验台输入 Props 渲染',
-      icon: Blocks,
-      path: '/introspection?tab=components',
-    },
-    {
       label: 'Agent',
       value: optional.agents,
       detail: optional.agents === null ? '未启用或尚未接线' : '模型与会话绑定',
       icon: Brain,
-      path: '/agent/studio',
+      path: '/agent/workbench',
     },
     {
       label: '工具',
@@ -321,7 +299,7 @@ export default function HomePage() {
   const handleRestart = async () => {
     setRestarting(true)
     try {
-      await sendRequest({ type: 'system:restart' })
+      await requestConsole({ type: CONSOLE_RPC.SYSTEM_RESTART })
       success('服务正在重启')
     } catch {
       toastError('重启请求未能发送')
@@ -392,14 +370,16 @@ export default function HomePage() {
               >
                 <RefreshCw className={refreshing ? 'animate-spin' : ''} />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setRestartDialogOpen(true)}
-                aria-label="重启服务"
-              >
-                <RotateCw />
-              </Button>
+              {!readOnly ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setRestartDialogOpen(true)}
+                  aria-label="重启服务"
+                >
+                  <RotateCw />
+                </Button>
+              ) : null}
             </div>
           </div>
 
@@ -439,7 +419,7 @@ export default function HomePage() {
               <h2 id="capability-title">已装载的能力</h2>
               <p>从渠道接入到 Agent 工具链，快速确认当前实例能做什么。</p>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/agent/studio')}>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/introspection')}>
               查看全部
               <ArrowUpRight />
             </Button>
@@ -537,8 +517,8 @@ export default function HomePage() {
           </button>
 
           <div className="console-secondary-actions">
-            <button type="button" onClick={() => navigate('/agent/studio')}>
-              <span><Activity />打开 Agent Studio</span>
+            <button type="button" onClick={() => navigate('/agent/workrooms')}>
+              <span><Workflow />查看 Workroom 任务</span>
               <ArrowUpRight />
             </button>
             <button type="button" onClick={() => navigate('/marketplace')}>
@@ -557,7 +537,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <Dialog open={restartDialogOpen} onOpenChange={setRestartDialogOpen}>
+      {!readOnly && <Dialog open={restartDialogOpen} onOpenChange={setRestartDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>重启 Zhin 服务</DialogTitle>
@@ -582,7 +562,7 @@ export default function HomePage() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog>}
     </div>
   )
 }

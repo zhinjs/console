@@ -11,7 +11,6 @@ import {
 } from "@zhin.js/contract";
 import { useWebSocket } from "@zhin.js/client";
 import { resetConsoleRuntime } from "@console/utils/console-runtime";
-import { setupConsoleSseBridge } from "@console/utils/sse-bridge";
 import { registerOptionalConsoleRoutes } from "@console/registerOptionalRoutes";
 import { BrowserRouter } from "react-router-dom";
 import { getRouterBasename } from "./pagesBase";
@@ -55,7 +54,6 @@ function ConsoleShell() {
   useWebSocket();
 
   React.useEffect(() => {
-    setupConsoleSseBridge();
     void registerOptionalConsoleRoutes();
   }, []);
 
@@ -100,10 +98,6 @@ ReactDOMClient.createRoot(document.getElementById("root")!).render(
       <ToastProvider>
         <BrowserRouter
         basename={getRouterBasename()}
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true,
-        }}
       >
         <App />
       </BrowserRouter>

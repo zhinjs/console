@@ -25,7 +25,7 @@ import {
   X,
   GitBranch,
 } from 'lucide-react'
-import { agentStudioPath, buildSessionKey } from '../../utils/agent-session'
+import { agentSessionsPath, buildSessionKey } from '../../utils/agent-session'
 import { cn } from '@zhin.js/client'
 import { useConfirm } from '../../components/confirm-dialog'
 import { Button } from '../../components/ui/button'
@@ -43,6 +43,9 @@ import {
   type MessageContent,
 } from '../../utils/parseComposerContent'
 import { dayKey, dayLabel } from './date-utils'
+import { ENDPOINT_RPC } from '../../contracts/zhin-console'
+import { isDemoMode } from '../../utils/demo-mode'
+import type { GroupAction } from './useGroupActions'
 
 type ComposerMode = 'plain' | 'markdown'
 
@@ -77,6 +80,7 @@ function memberInitials(name: string): string {
 
 export default function EndpointDetailPage() {
   const ctx = useEndpointConsole()
+  const readOnly = isDemoMode()
 
   if (!ctx.valid) {
     return (
@@ -170,22 +174,22 @@ export default function EndpointDetailPage() {
   }
 
   const handleGroupAction = async (
-    type: 'endpoint:groupKick' | 'endpoint:groupMute' | 'endpoint:groupAdmin',
+    type: GroupAction,
     userId: number | string,
     memberName: string,
     extra?: { enable?: boolean },
   ) => {
     const prompts: Record<typeof type, { title: string; description: string; destructive?: boolean }> = {
-      'endpoint:groupKick': {
+      [ENDPOINT_RPC.GROUP_KICK]: {
         title: '踢出群成员',
         description: `确定将「${memberName}」踢出群聊？`,
         destructive: true,
       },
-      'endpoint:groupMute': {
+      [ENDPOINT_RPC.GROUP_MUTE]: {
         title: '禁言成员',
         description: `确定禁言「${memberName}」？`,
       },
-      'endpoint:groupAdmin': {
+      [ENDPOINT_RPC.GROUP_ADMIN]: {
         title: '设为管理员',
         description: `确定将「${memberName}」设为群管理员？`,
       },
@@ -351,7 +355,7 @@ export default function EndpointDetailPage() {
 
   const composerSegments = buildComposerSegments()
   const canSend =
-    connected &&
+    !readOnly &&
     !sending &&
     (hasRenderableComposerSegments(composerSegments) || quoteDraft != null || forwardDraft != null)
 
@@ -470,14 +474,14 @@ export default function EndpointDetailPage() {
                     asChild
                   >
                     <Link
-                      to={agentStudioPath(
+                      to={agentSessionsPath(
                         buildSessionKey(adapter, endpointId, selection.channelType, selection.id),
                       )}
                     >
                       <GitBranch className="h-4 w-4" />
                     </Link>
                   </Button>
-                  {selection.channelType === 'private' && (
+                  {!readOnly && selection.channelType === 'private' && (
                     <Button
                       variant="ghost"
                       size="icon"
@@ -543,6 +547,11 @@ export default function EndpointDetailPage() {
                 )}
               </div>
 
+              {readOnly ? (
+                <div className="im-composer shrink-0 border-t px-4 py-3 text-xs text-muted-foreground">
+                  Demo 仅读消息记录，不提供消息编辑器。
+                </div>
+              ) : (
               <div className="im-composer p-3 shrink-0 space-y-2">
                 <input
                   ref={imageFileRef}
@@ -737,9 +746,10 @@ export default function EndpointDetailPage() {
                   </Button>
                 </div>
                 <p className="im-composer-hint text-[10px] text-muted-foreground">
-                  Enter 发送 · Shift+Enter 换行 · 当前模式：{composerMode === 'markdown' ? 'Markdown' : '普通文本'} · 待发送 {composerSegments.length} 个消息段
+                  <>Enter 发送 · Shift+Enter 换行 · 当前模式：{composerMode === 'markdown' ? 'Markdown' : '普通文本'} · 待发送 {composerSegments.length} 个消息段</>
                 </p>
               </div>
+              )}
             </>
           )}
 
@@ -784,7 +794,7 @@ export default function EndpointDetailPage() {
                         </span>
                       </div>
                       {r.comment && <p className="text-sm">{r.comment}</p>}
-                      <div className="flex flex-wrap gap-2">
+                      {!readOnly && <div className="flex flex-wrap gap-2">
                         {r.canAct === true && (
                           <>
                             <Button size="sm" onClick={() => void approve(r.platformRequestId, true)}>
@@ -798,7 +808,7 @@ export default function EndpointDetailPage() {
                         <Button size="sm" variant="ghost" onClick={() => void dismissRequest(r.id)}>
                           标记已处理
                         </Button>
-                      </div>
+                      </div>}
                     </div>
                   ))}
                 </TabsContent>
@@ -900,9 +910,11 @@ export default function EndpointDetailPage() {
                           {new Date(n.timestamp).toLocaleString()}
                         </p>
                       </div>
-                      <Button size="sm" variant="outline" onClick={() => void dismissNotice(n.id)}>
-                        已读
-                      </Button>
+                      {!readOnly && (
+                        <Button size="sm" variant="outline" onClick={() => void dismissNotice(n.id)}>
+                          已读
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </TabsContent>
@@ -1052,13 +1064,13 @@ export default function EndpointDetailPage() {
                         </Badge>
                       </span>
                     </div>
-                    <div className="im-member-actions">
+                    {!readOnly && <div className="im-member-actions">
                       <Button
                         size="sm"
                         variant="destructive"
                         className="im-member-danger h-7 text-[10px] px-2"
                         onClick={() =>
-                          void handleGroupAction('endpoint:groupKick', uid, item.name)
+                          void handleGroupAction(ENDPOINT_RPC.GROUP_KICK, uid, item.name)
                         }
                       >
                         踢
@@ -1068,7 +1080,7 @@ export default function EndpointDetailPage() {
                         variant="outline"
                         className="h-7 text-[10px] px-2"
                         onClick={() =>
-                          void handleGroupAction('endpoint:groupMute', uid, item.name)
+                          void handleGroupAction(ENDPOINT_RPC.GROUP_MUTE, uid, item.name)
                         }
                       >
                         禁言
@@ -1078,12 +1090,12 @@ export default function EndpointDetailPage() {
                         variant="outline"
                         className="h-7 text-[10px] px-2"
                         onClick={() =>
-                          void handleGroupAction('endpoint:groupAdmin', uid, item.name, { enable: true })
+                          void handleGroupAction(ENDPOINT_RPC.GROUP_ADMIN, uid, item.name, { enable: true })
                         }
                       >
                         管理
                       </Button>
-                    </div>
+                    </div>}
                   </div>
                 )
               })}

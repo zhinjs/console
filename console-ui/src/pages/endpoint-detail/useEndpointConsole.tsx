@@ -14,6 +14,8 @@ import { useChannelManager } from './useChannelManager'
 import { useMessageHistory } from './useMessageHistory'
 import { useGroupActions } from './useGroupActions'
 import { subscribeEndpointPush } from '../../utils/endpoint-push'
+import { ENDPOINT_RPC, INBOX_RPC, SIDE_EVENT_PUSH, SIDE_EVENT_RPC } from '../../contracts/zhin-console'
+import { requestConsole } from '../../utils/console-rpc'
 
 export function useEndpointConsole() {
   const { adapter: adapterParam, endpointId: endpointIdParam } = useParams<{
@@ -32,24 +34,24 @@ export function useEndpointConsole() {
     : undefined
   const initialChannelId = searchParams.get('channelId')?.trim() || undefined
 
-  const { sendRequest, connected } = useWebSocket()
+  const { connected } = useWebSocket()
   const [info, setInfo] = useState<EndpointInfo | null>(null)
   const [loadErr, setLoadErr] = useState<string | null>(null)
 
   // --- Endpoint info ---
   const loadInfo = useCallback(async () => {
-    if (!adapter || !endpointId || !connected) return
+    if (!adapter || !endpointId) return
     try {
-      const data = await sendRequest<EndpointInfo>({
-        type: 'endpoint:info',
-        data: { adapter, endpointId },
+      const data = await requestConsole<EndpointInfo>({
+        type: ENDPOINT_RPC.INFO,
+        data: { adapter, endpointKey: endpointId },
       })
       setInfo(data)
       setLoadErr(null)
     } catch (e) {
       setLoadErr((e as Error).message)
     }
-  }, [adapter, endpointId, connected, sendRequest])
+  }, [adapter, endpointId])
 
   useEffect(() => {
     loadInfo()
@@ -61,7 +63,6 @@ export function useEndpointConsole() {
   const channelMgr = useChannelManager({
     adapter,
     endpointId,
-    connected,
     info,
     initialChannelType,
     initialChannelId,
@@ -97,11 +98,11 @@ export function useEndpointConsole() {
 
   // --- Load requests from server ---
   const loadRequestsFromServer = useCallback(async () => {
-    if (!adapter || !endpointId || !connected) return
+    if (!adapter || !endpointId) return
     try {
-      const { requests: rows } = await sendRequest<{ requests: ReqItem[] }>({
-        type: 'endpoint:requests',
-        data: { adapter, endpointId },
+      const { requests: rows } = await requestConsole<{ requests: ReqItem[] }>({
+        type: SIDE_EVENT_RPC.REQUEST_LIST,
+        data: { adapter, endpointKey: endpointId },
       })
       setRequests((prev) => {
         const m = new Map(prev)
@@ -113,7 +114,7 @@ export function useEndpointConsole() {
     } catch {
       /* ignore */
     }
-  }, [adapter, endpointId, connected, sendRequest])
+  }, [adapter, endpointId])
 
   useEffect(() => {
     loadRequestsFromServer()
@@ -130,9 +131,9 @@ export function useEndpointConsole() {
       setInboxRequestsLoading(true)
       try {
         const offset = append ? inboxRequestsOffset : 0
-        const res = await sendRequest<{ requests: InboxRequestRow[]; inboxEnabled: boolean }>({
-          type: 'endpoint:inboxRequests',
-          data: { adapter, endpointId, limit: 30, offset },
+        const res = await requestConsole<{ requests: InboxRequestRow[]; inboxEnabled: boolean }>({
+          type: INBOX_RPC.REQUESTS,
+          data: { adapter, endpointKey: endpointId, limit: 30, offset },
         })
         if (seq !== inboxRequestsSeqRef.current) return
         setInboxRequestsEnabled(!!res.inboxEnabled)
@@ -154,7 +155,7 @@ export function useEndpointConsole() {
         if (seq === inboxRequestsSeqRef.current) setInboxRequestsLoading(false)
       }
     },
-    [adapter, endpointId, inboxRequestsOffset, sendRequest],
+    [adapter, endpointId, inboxRequestsOffset],
   )
 
   // --- Load inbox notices ---
@@ -165,9 +166,9 @@ export function useEndpointConsole() {
       setInboxNoticesLoading(true)
       try {
         const offset = append ? inboxNoticesOffset : 0
-        const res = await sendRequest<{ notices: InboxNoticeRow[]; inboxEnabled: boolean }>({
-          type: 'endpoint:inboxNotices',
-          data: { adapter, endpointId, limit: 30, offset },
+        const res = await requestConsole<{ notices: InboxNoticeRow[]; inboxEnabled: boolean }>({
+          type: INBOX_RPC.NOTICES,
+          data: { adapter, endpointKey: endpointId, limit: 30, offset },
         })
         if (seq !== inboxNoticesSeqRef.current) return
         setInboxNoticesEnabled(!!res.inboxEnabled)
@@ -189,7 +190,7 @@ export function useEndpointConsole() {
         if (seq === inboxNoticesSeqRef.current) setInboxNoticesLoading(false)
       }
     },
-    [adapter, endpointId, inboxNoticesOffset, sendRequest],
+    [adapter, endpointId, inboxNoticesOffset],
   )
 
   // --- Hydrate requests/notices/messages from local inbox cache ---
@@ -299,11 +300,12 @@ export function useEndpointConsole() {
 
   // --- Listen for real-time push events for requests and notices ---
   useEffect(() => {
-    const onPush = (msg: { type: string; data?: Record<string, unknown> }) => {
-      const d = msg.data
-      if (!d) return
-      const pushEndpointId = String(d.endpointId ?? '')
-      if (msg.type === 'request.receive') {
+    const onPush = (msg: { type: string; data?: unknown }) => {
+      const data = msg.data
+      if (!data || typeof data !== 'object') return
+      const d = data as Record<string, unknown>
+      const pushEndpointId = String(d.endpointKey ?? '')
+      if (msg.type === SIDE_EVENT_PUSH.REQUEST_RECEIVE) {
         if (d.adapter === adapter && pushEndpointId === endpointId) {
           void putInboxCache(adapter, endpointId, 'request', d)
           setRequests((prev) => {
@@ -321,7 +323,7 @@ export function useEndpointConsole() {
             return m
           })
         }
-      } else if (msg.type === 'notice.receive') {
+      } else if (msg.type === SIDE_EVENT_PUSH.NOTICE_RECEIVE) {
         if (d.adapter === adapter && pushEndpointId === endpointId) {
           void putInboxCache(adapter, endpointId, 'notice', d)
           setNotices((prev) => {
@@ -349,9 +351,9 @@ export function useEndpointConsole() {
   const approve = useCallback(
     async (platformRequestId: string, approveIt: boolean) => {
       try {
-        await sendRequest({
-          type: approveIt ? 'endpoint:requestApprove' : 'endpoint:requestReject',
-          data: { adapter, endpointId, requestId: platformRequestId },
+        await requestConsole({
+          type: approveIt ? SIDE_EVENT_RPC.REQUEST_APPROVE : SIDE_EVENT_RPC.REQUEST_REJECT,
+          data: { adapter, endpointKey: endpointId, requestId: platformRequestId },
         })
         const row = requestList.find((r) => r.platformRequestId === platformRequestId)
         if (row) {
@@ -365,13 +367,13 @@ export function useEndpointConsole() {
         console.error('Failed to approve/reject request:', (e as Error).message)
       }
     },
-    [sendRequest, adapter, endpointId, requestList],
+    [adapter, endpointId, requestList],
   )
 
   const dismissRequest = useCallback(
     async (id: number) => {
       try {
-        await sendRequest({ type: 'endpoint:requestConsumed', data: { id } })
+        await requestConsole({ type: SIDE_EVENT_RPC.REQUEST_CONSUMED, data: { id } })
         setRequests((prev) => {
           const m = new Map(prev)
           m.delete(id)
@@ -381,13 +383,13 @@ export function useEndpointConsole() {
         console.error('Failed to dismiss request:', (e as Error).message)
       }
     },
-    [sendRequest],
+    [],
   )
 
   const dismissNotice = useCallback(
     async (id: number) => {
       try {
-        await sendRequest({ type: 'endpoint:noticeConsumed', data: { id } })
+        await requestConsole({ type: SIDE_EVENT_RPC.NOTICE_CONSUMED, data: { id } })
         setNotices((prev) => {
           const m = new Map(prev)
           m.delete(id)
@@ -397,7 +399,7 @@ export function useEndpointConsole() {
         console.error('Failed to dismiss notice:', (e as Error).message)
       }
     },
-    [sendRequest],
+    [],
   )
 
   const refreshNotices = useCallback(async () => {

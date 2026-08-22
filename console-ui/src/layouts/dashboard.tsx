@@ -1,18 +1,18 @@
-import { useMemo, useState, useCallback, useEffect, useSyncExternalStore, type KeyboardEvent } from "react"
-import { Outlet, Link, useLocation, useNavigate, matchPath } from "react-router-dom"
-import { Menu, Search, LogOut, X } from "lucide-react"
+import { useMemo, useState, useEffect, useSyncExternalStore } from "react"
+import { Outlet, Link, useLocation, matchPath } from "react-router-dom"
+import { Menu, LogOut, X } from "lucide-react"
 import { app, cn, type ConsoleRouteRecord } from "@zhin.js/client"
 import { getSidebarLucideIcon } from "../components/sidebarMenuIcons"
 import { ThemeToggle } from "../components/ThemeToggle"
 import { Button, buttonVariants } from "../components/ui/button"
-import { Input } from "../components/ui/input"
 import { ScrollArea } from "../components/ui/scroll-area"
 import { Separator } from "../components/ui/separator"
 import { notifyAuthRequired } from "../utils/auth"
 import { isDemoMode } from "../utils/demo-mode"
 import { reopenDemoOnboarding } from "../components/DemoOnboarding"
+import { ConsoleCommandCenter } from "../components/ConsoleCommandCenter"
 
-const GROUP_ORDER = ["总览", "渠道与会话", "Agent 工作台", "自动化", "扩展", "运维", "其他"] as const
+const GROUP_ORDER = ["总览", "Agent 工作台", "渠道与会话", "自动化", "运行时", "扩展", "运维", "其他"] as const
 const MOBILE_MQ = "(max-width: 767px)"
 
 function useIsMobile() {
@@ -43,7 +43,7 @@ function collectMenuRoutes(routes: readonly ConsoleRouteRecord[]): ConsoleRouteR
 function useRouteMetaFlag(
   routes: readonly ConsoleRouteRecord[],
   pathname: string,
-  flag: "fullWidth" | "flush",
+  flag: "fullWidth",
 ): boolean {
   return useMemo(() => {
     for (const r of routes) {
@@ -56,12 +56,10 @@ function useRouteMetaFlag(
 
 export default function DashboardLayout() {
   const location = useLocation()
-  const navigate = useNavigate()
   const isMobile = useIsMobile()
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
-  const [searchQ, setSearchQ] = useState("")
 
   const showLabels = isMobile || desktopSidebarOpen
 
@@ -89,35 +87,11 @@ export default function DashboardLayout() {
     return map
   }, [menuRoutes])
 
-  const searchTargets = useMemo(
-    () => menuRoutes.map((r) => ({ title: r.name, path: r.path })),
-    [menuRoutes],
-  )
-
-  const searchHits = useMemo(() => {
-    const q = searchQ.trim().toLowerCase()
-    if (!q) return searchTargets
-    return searchTargets.filter(
-      (t) => t.title.toLowerCase().includes(q) || t.path.toLowerCase().includes(q),
-    )
-  }, [searchQ, searchTargets])
-
-  const onSearchKeyDown = useCallback(
-    (e: KeyboardEvent<HTMLInputElement>) => {
-      if (e.key !== "Enter") return
-      const first = searchHits[0]
-      if (first?.path) {
-        navigate(first.path)
-        setActiveMenu(first.path)
-        setSearchQ("")
-        if (isMobile) setMobileNavOpen(false)
-      }
-    },
-    [searchHits, navigate, isMobile],
-  )
-
   const contentFullWidth = useRouteMetaFlag(routes, location.pathname, "fullWidth")
-  const contentFlush = useRouteMetaFlag(routes, location.pathname, "flush")
+  const contentFlush = matchPath(
+    { path: '/endpoints/:adapter/:endpointId', end: true },
+    location.pathname,
+  ) !== null
   const currentRoute = useMemo(
     () => menuRoutes.find((route) => (
       location.pathname === route.path || location.pathname.startsWith(`${route.path}/`)
@@ -226,23 +200,6 @@ export default function DashboardLayout() {
           </div>
         </div>
 
-        {isMobile ? (
-          <div className="p-3 border-b border-[var(--console-border-subtle)]">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-              <Input
-                value={searchQ}
-                onChange={(e) => setSearchQ(e.target.value)}
-                onKeyDown={onSearchKeyDown}
-                placeholder="搜索菜单…"
-                className="pl-9 bg-muted/50"
-                autoComplete="off"
-                aria-label="搜索页面"
-              />
-            </div>
-          </div>
-        ) : null}
-
         <ScrollArea className="flex-1">
           <div className="p-2 space-y-3">
             {orderedGroups.map((groupName) => {
@@ -310,25 +267,8 @@ export default function DashboardLayout() {
             </div>
           </div>
 
-          <div className="hidden md:flex flex-1 max-w-md mx-4">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-              <Input
-                value={searchQ}
-                onChange={(e) => setSearchQ(e.target.value)}
-                onKeyDown={onSearchKeyDown}
-                placeholder="搜索页面和功能…"
-                className="pl-9 bg-muted/45 border-transparent focus-visible:border-input"
-                list="console-nav-search"
-                autoComplete="off"
-                aria-label="搜索页面"
-              />
-              <datalist id="console-nav-search">
-                {searchTargets.map((t) => (
-                  <option key={t.path} value={`${t.title} ${t.path}`} />
-                ))}
-              </datalist>
-            </div>
+          <div className="flex flex-1 max-w-lg mx-1 sm:mx-4">
+            <ConsoleCommandCenter routes={menuRoutes} />
           </div>
 
           <div className="flex items-center gap-1 shrink-0">

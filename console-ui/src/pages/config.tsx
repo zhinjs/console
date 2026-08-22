@@ -20,6 +20,7 @@ import { ErrorAlert } from '../components/error-alert'
 import { useToast } from '../components/toast'
 import { Switch } from '../components/ui/switch'
 import { PageHeader } from '../components/PageHeader'
+import { isDemoMode } from '../utils/demo-mode'
 
 function GeneralConfigForm({
   config,
@@ -256,7 +257,7 @@ function ConfigFieldEditor({
   )
 }
 
-export default function ConfigPage() {
+function EditableConfigPage() {
   const [searchParams] = useSearchParams()
   const pluginFromUrl = searchParams.get('plugin')?.trim() ?? ''
   const { yaml, pluginKeys, loading, error, load, save } = useConfigYaml()
@@ -325,14 +326,6 @@ export default function ConfigPage() {
       setActiveSection(`plugin:${pluginFromUrl}`)
     }
   }, [pluginFromUrl, pluginKeys, loading])
-
-  useEffect(() => {
-    const onConfigUpdated = () => {
-      void load().then(() => success('配置已更新（SSE）'))
-    }
-    window.addEventListener('zhin-console-config-updated', onConfigUpdated)
-    return () => window.removeEventListener('zhin-console-config-updated', onConfigUpdated)
-  }, [load])
 
   if (loading && !yaml) {
     return (
@@ -428,4 +421,34 @@ export default function ConfigPage() {
       </Tabs>
     </div>
   )
+}
+
+function DemoConfigPage() {
+  return (
+    <div className="space-y-4">
+      <PageHeader
+        title="配置"
+        description="Demo 不读取 Host 原始配置；完整配置工作台仅在私有 full 模式开放"
+      />
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          原始 YAML 可能包含 Token、密钥与基础设施信息，因此公开 Demo 不请求、不缓存，也不渲染配置内容。
+        </AlertDescription>
+      </Alert>
+      <Card>
+        <CardContent className="flex min-h-56 flex-col items-center justify-center gap-3 text-center">
+          <Settings className="h-8 w-8 text-muted-foreground" />
+          <div>
+            <h2 className="font-semibold">配置数据已隔离</h2>
+            <p className="mt-1 text-sm text-muted-foreground">部署 Console full 模式后，可使用表单和 YAML 两种方式管理配置。</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+export default function ConfigPage() {
+  return isDemoMode() ? <DemoConfigPage /> : <EditableConfigPage />
 }

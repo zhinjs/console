@@ -22,12 +22,14 @@ export function KvBucketView({
   kvSet,
   kvDelete,
   kvEntries,
+  readOnly,
 }: {
   tableName: string
   kvGet: (table: string, key: string) => Promise<{ key: string; value: any }>
   kvSet: (table: string, key: string, value: any, ttl?: number) => Promise<any>
   kvDelete: (table: string, key: string) => Promise<any>
   kvEntries: (table: string) => Promise<{ entries: KvEntry[] }>
+  readOnly: boolean
 }) {
   const [entries, setEntries] = useState<KvEntry[]>([])
   const [loading, setLoading] = useState(false)
@@ -101,9 +103,9 @@ export function KvBucketView({
         <Button size="sm" variant="outline" onClick={load} disabled={loading}>
           <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />刷新
         </Button>
-        <Button size="sm" onClick={() => { setAddEntry(true); setKeyInput(''); setValueInput('') }}>
+        {!readOnly && <Button size="sm" onClick={() => { setAddEntry(true); setKeyInput(''); setValueInput('') }}>
           <Plus className="w-3.5 h-3.5 mr-1" />添加键值
-        </Button>
+        </Button>}
         <span className="text-xs text-muted-foreground sm:ml-auto basis-full sm:basis-auto">共 {entries.length} 个键</span>
       </div>
 
@@ -117,14 +119,14 @@ export function KvBucketView({
             <tr className="border-b border-border/80">
               <th className="px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[8rem]">Key</th>
               <th className="px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap min-w-[12rem]">Value</th>
-              <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap w-24 min-w-[5.5rem]">操作</th>
+              {!readOnly && <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap w-24 min-w-[5.5rem]">操作</th>}
             </tr>
           </thead>
           <tbody>
             {loading && !entries.length ? (
-              <tr><td colSpan={3} className="text-center py-8"><Loader2 className="w-4 h-4 animate-spin inline-block" /></td></tr>
+              <tr><td colSpan={readOnly ? 2 : 3} className="text-center py-8"><Loader2 className="w-4 h-4 animate-spin inline-block" /></td></tr>
             ) : !entries.length ? (
-              <tr><td colSpan={3} className="text-center py-8 text-muted-foreground">暂无数据</td></tr>
+              <tr><td colSpan={readOnly ? 2 : 3} className="text-center py-8 text-muted-foreground">暂无数据</td></tr>
             ) : entries.map((entry) => (
               <tr key={entry.key} className="border-b border-border/60 hover:bg-muted/30 transition-colors">
                 <td className="px-3 py-1.5 font-mono text-xs whitespace-nowrap align-top">
@@ -134,7 +136,7 @@ export function KvBucketView({
                 <td className="px-3 py-1.5 font-mono text-xs whitespace-nowrap align-top" title={typeof entry.value === 'object' ? JSON.stringify(entry.value) : String(entry.value ?? '')}>
                   {typeof entry.value === 'object' ? JSON.stringify(entry.value) : String(entry.value ?? '')}
                 </td>
-                <td className="px-3 py-1.5 text-right space-x-1 whitespace-nowrap">
+                {!readOnly && <td className="px-3 py-1.5 text-right space-x-1 whitespace-nowrap">
                   <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => {
                     setEditEntry(entry)
                     setAddEntry(false)
@@ -142,14 +144,14 @@ export function KvBucketView({
                     setValueInput(typeof entry.value === 'object' ? JSON.stringify(entry.value, null, 2) : String(entry.value ?? ''))
                   }}><Pencil className="w-3 h-3" /></Button>
                   <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive" onClick={() => handleDelete(entry.key)}><Trash2 className="w-3 h-3" /></Button>
-                </td>
+                </td>}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      <Dialog open={editEntry !== null || addEntry} onOpenChange={(open) => { if (!open) { setEditEntry(null); setAddEntry(false) } }}>
+      {!readOnly && <Dialog open={editEntry !== null || addEntry} onOpenChange={(open) => { if (!open) { setEditEntry(null); setAddEntry(false) } }}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{addEntry ? '添加键值' : '编辑键值'}</DialogTitle></DialogHeader>
           <div className="space-y-3 py-2">
@@ -172,8 +174,8 @@ export function KvBucketView({
             <Button size="sm" onClick={() => handleSave(addEntry)}><Save className="w-3.5 h-3.5 mr-1" />保存</Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
-      <ConfirmDialog
+      </Dialog>}
+      {!readOnly && <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
         title="删除键值"
@@ -181,7 +183,7 @@ export function KvBucketView({
         variant="destructive"
         confirmLabel="删除"
         onConfirm={confirmDelete}
-      />
+      />}
     </div>
   )
 }

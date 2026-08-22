@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { Bot, Wifi, WifiOff, Activity, Package, Zap, ChevronRight } from 'lucide-react'
-import { useWebSocket } from '@zhin.js/client'
 import { PageHeader } from '../components/PageHeader'
 import { PageShell } from '../components/PageShell'
 import { ErrorAlert } from '../components/error-alert'
@@ -9,6 +8,8 @@ import { Card, CardContent } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Skeleton } from '../components/ui/skeleton'
 import { Separator } from '../components/ui/separator'
+import { ENDPOINT_RPC } from '../contracts/zhin-console'
+import { requestConsole } from '../utils/console-rpc'
 
 interface EndpointInfo {
   name: string
@@ -23,16 +24,9 @@ export default function EndpointsPage() {
   const [endpoints, setEndpoints] = useState<EndpointInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { connected, sendRequest } = useWebSocket()
-
   const fetchEndpoints = useCallback(async () => {
-    if (!connected) {
-      setLoading(false)
-      setError('实时连接未就绪，请刷新页面')
-      return
-    }
     try {
-      const data = await sendRequest<{ endpoints: EndpointInfo[] }>({ type: 'endpoint:list' })
+      const data = await requestConsole<{ endpoints: EndpointInfo[] }>({ type: ENDPOINT_RPC.LIST })
       setEndpoints(data.endpoints || [])
       setError(null)
     } catch (err) {
@@ -40,22 +34,19 @@ export default function EndpointsPage() {
     } finally {
       setLoading(false)
     }
-  }, [connected, sendRequest])
+  }, [])
 
   useEffect(() => {
-    if (connected) {
-      setLoading(true)
-      fetchEndpoints()
-    }
-  }, [connected, fetchEndpoints])
+    setLoading(true)
+    void fetchEndpoints()
+  }, [fetchEndpoints])
 
   useEffect(() => {
-    if (!connected) return
     const interval = setInterval(fetchEndpoints, 8000)
     return () => clearInterval(interval)
-  }, [connected, fetchEndpoints])
+  }, [fetchEndpoints])
 
-  if (loading && connected) {
+  if (loading) {
     return (
       <PageShell>
         <Skeleton className="h-8 w-48" />

@@ -22,6 +22,7 @@ export function RelatedTableView({
   insert,
   update,
   remove,
+  readOnly,
 }: {
   tableName: string
   tableInfo?: TableInfo
@@ -29,6 +30,7 @@ export function RelatedTableView({
   insert: (table: string, row: any) => Promise<any>
   update: (table: string, row: any, where: any) => Promise<any>
   remove: (table: string, where: any) => Promise<any>
+  readOnly: boolean
 }) {
   const [data, setData] = useState<SelectResult | null>(null)
   const [loading, setLoading] = useState(false)
@@ -60,7 +62,7 @@ export function RelatedTableView({
 
   const columns = useMemo(() => {
     if (tableInfo?.columns) return Object.keys(tableInfo.columns)
-    if (data?.rows?.length) return Object.keys(data.rows[0])
+    if (data?.rows?.length) return Object.keys(data.rows[0] as Record<string, unknown>)
     return []
   }, [tableInfo, data])
 
@@ -143,7 +145,7 @@ export function RelatedTableView({
 
   const sortedRows = useMemo(() => {
     if (!data?.rows?.length || !sortCol) return data?.rows ?? []
-    const sorted = [...data.rows].sort((a, b) => {
+    const sorted = (data.rows as Record<string, unknown>[]).slice().sort((a, b) => {
       const aVal = a[sortCol]
       const bVal = b[sortCol]
       if (aVal == null && bVal == null) return 0
@@ -170,7 +172,7 @@ export function RelatedTableView({
         <Button size="sm" variant="outline" onClick={load} disabled={loading}>
           <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />刷新
         </Button>
-        <Button size="sm" onClick={openAdd}><Plus className="w-3.5 h-3.5 mr-1" />添加</Button>
+        {!readOnly && <Button size="sm" onClick={openAdd}><Plus className="w-3.5 h-3.5 mr-1" />添加</Button>}
         <span className="text-xs text-muted-foreground sm:ml-auto basis-full sm:basis-auto">
           共 {data?.total ?? 0} 条 · 第 {page}/{totalPages || 1} 页
         </span>
@@ -200,16 +202,16 @@ export function RelatedTableView({
                   </span>
                 </th>
               ))}
-              <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-b border-border/80 w-24 min-w-[5.5rem]">
+              {!readOnly && <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-b border-border/80 w-24 min-w-[5.5rem]">
                 操作
-              </th>
+              </th>}
             </tr>
           </thead>
           <tbody>
             {loading && !data ? (
-              <tr><td colSpan={columns.length + 1} className="text-center py-8"><Loader2 className="w-4 h-4 animate-spin inline-block" /></td></tr>
+              <tr><td colSpan={columns.length + (readOnly ? 0 : 1)} className="text-center py-8"><Loader2 className="w-4 h-4 animate-spin inline-block" /></td></tr>
             ) : !data?.rows?.length ? (
-              <tr><td colSpan={columns.length + 1} className="text-center py-8 text-muted-foreground">暂无数据</td></tr>
+              <tr><td colSpan={columns.length + (readOnly ? 0 : 1)} className="text-center py-8 text-muted-foreground">暂无数据</td></tr>
             ) : sortedRows.map((row: any, i: number) => (
               <tr key={i} className="border-b border-border/60 hover:bg-muted/30 transition-colors">
                 {columns.map((col: string) => (
@@ -221,10 +223,10 @@ export function RelatedTableView({
                     {typeof row[col] === 'object' ? JSON.stringify(row[col]) : String(row[col] ?? '')}
                   </td>
                 ))}
-                <td className="px-3 py-1.5 text-right space-x-1 whitespace-nowrap w-24 min-w-[5.5rem]">
+                {!readOnly && <td className="px-3 py-1.5 text-right space-x-1 whitespace-nowrap w-24 min-w-[5.5rem]">
                   <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => openEdit(row)}><Pencil className="w-3 h-3" /></Button>
                   <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive" onClick={() => handleDelete(row)}><Trash2 className="w-3 h-3" /></Button>
-                </td>
+                </td>}
               </tr>
             ))}
           </tbody>
@@ -239,7 +241,7 @@ export function RelatedTableView({
         </div>
       )}
 
-      <Dialog open={editRow !== null || addRow} onOpenChange={(open) => { if (!open) { setEditRow(null); setAddRow(false) } }}>
+      {!readOnly && <Dialog open={editRow !== null || addRow} onOpenChange={(open) => { if (!open) { setEditRow(null); setAddRow(false) } }}>
         <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{addRow ? '添加记录' : '编辑记录'}</DialogTitle>
@@ -259,8 +261,8 @@ export function RelatedTableView({
             <Button size="sm" onClick={() => handleSave(addRow)}><Save className="w-3.5 h-3.5 mr-1" />保存</Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
-      <ConfirmDialog
+      </Dialog>}
+      {!readOnly && <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
         title="删除记录"
@@ -268,7 +270,7 @@ export function RelatedTableView({
         variant="destructive"
         confirmLabel="删除"
         onConfirm={confirmDelete}
-      />
+      />}
     </div>
   )
 }

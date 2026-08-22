@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowUpRight,
@@ -16,11 +16,13 @@ import {
   Workflow,
   Wrench,
 } from 'lucide-react'
-import { app, cn, useWebSocket } from '@zhin.js/client'
+import { cn } from '@zhin.js/client'
+import { CONSOLE_REST, ENDPOINT_RPC } from '../contracts/zhin-console'
 import { apiFetch } from '../utils/auth'
+import { requestConsole } from '../utils/console-rpc'
 import { loadAgentSessionHistory } from '../utils/agent-session-history'
 import {
-  agentStudioPath,
+  agentSessionsPath,
   parseImSessionKey,
   SESSION_SCOPE_LABELS,
 } from '../utils/agent-session'
@@ -61,7 +63,7 @@ interface IntrospectionEnvelope<T> {
 }
 
 async function fetchIntrospection<T>(kind: string): Promise<IntrospectionEnvelope<T>> {
-  const response = await apiFetch(`/api/introspection/${kind}?page=1&pageSize=100`)
+  const response = await apiFetch(`${CONSOLE_REST.INTROSPECTION}/${kind}?page=1&pageSize=100`)
   const body = await response.json()
   if (!response.ok || body.success === false) {
     throw new Error(body.error ?? `无法读取 ${kind}`)
@@ -72,7 +74,7 @@ async function fetchIntrospection<T>(kind: string): Promise<IntrospectionEnvelop
 function SessionCard({ sessionKey }: { sessionKey: string }) {
   const parsed = parseImSessionKey(sessionKey)
   return (
-    <Link to={agentStudioPath(sessionKey)} className="console-agent-session-card" title={sessionKey}>
+    <Link to={agentSessionsPath(sessionKey)} className="console-agent-session-card" title={sessionKey}>
       <span className="console-agent-session-icon"><GitBranch /></span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-semibold">
@@ -90,7 +92,6 @@ function SessionCard({ sessionKey }: { sessionKey: string }) {
 }
 
 export default function AgentWorkbenchPage() {
-  const { connected, sendRequest } = useWebSocket()
   const [bindings, setBindings] = useState<BindingItem[]>([])
   const [tools, setTools] = useState<ToolItem[]>([])
   const [mcpServices, setMcpServices] = useState<McpItem[]>([])
@@ -99,12 +100,6 @@ export default function AgentWorkbenchPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [history] = useState(() => loadAgentSessionHistory())
-
-  const routes = useSyncExternalStore(app.subscribe, () => app._getRoutes())
-  const workroomRoute = useMemo(
-    () => routes.find((route) => route.path.toLowerCase().includes('workroom')),
-    [routes],
-  )
 
   const loadWorkbench = useCallback(async (background = false) => {
     if (background) setRefreshing(true)
@@ -118,10 +113,8 @@ export default function AgentWorkbenchPage() {
       setTools(toolData.items ?? [])
       setMcpServices(mcpData.items ?? [])
 
-      if (connected) {
-        const endpointData = await sendRequest<{ endpoints: EndpointItem[] }>({ type: 'endpoint:list' })
-        setEndpoints(endpointData.endpoints ?? [])
-      }
+      const endpointData = await requestConsole<{ endpoints: EndpointItem[] }>({ type: ENDPOINT_RPC.LIST })
+      setEndpoints(endpointData.endpoints)
       setError(null)
     } catch (caught) {
       setError((caught as Error).message)
@@ -129,7 +122,7 @@ export default function AgentWorkbenchPage() {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [connected, sendRequest])
+  }, [])
 
   useEffect(() => {
     void loadWorkbench()
@@ -203,12 +196,12 @@ export default function AgentWorkbenchPage() {
               模型负责思考，工具负责行动，<br className="hidden sm:block" />渠道把结果送到用户身边
             </h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-              选择下方 Agent 查看它使用的模型与 MCP 服务，或从最近对话继续检查分支和运行记录。
+              选择下方 Agent 查看它使用的模型与 MCP 服务，或从最近对话继续检查分支。
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button asChild>
-              <Link to="/agent/studio"><Sparkles />打开 Agent Studio</Link>
+              <Link to="/agent/sessions"><GitBranch />打开对话分支</Link>
             </Button>
             <Button variant="outline" asChild>
               <Link to="/config"><Settings2 />配置 Agent</Link>
@@ -318,7 +311,7 @@ export default function AgentWorkbenchPage() {
         <Link to="/introspection?tab=tools"><Wrench /><span><strong>工具目录</strong><small>查看输入与来源</small></span><ArrowUpRight /></Link>
         <Link to="/introspection?tab=mcp"><Server /><span><strong>MCP 服务</strong><small>检查连接健康度</small></span><ArrowUpRight /></Link>
         <Link to="/agent/sessions"><GitBranch /><span><strong>对话分支</strong><small>继续最近上下文</small></span><ArrowUpRight /></Link>
-        <Link to={workroomRoute?.path ?? '/agent/orchestration'}><Workflow /><span><strong>{workroomRoute ? 'Workroom 看板' : '运行追踪'}</strong><small>{workroomRoute ? '配置 Bot、Agent 与角色关系' : '查看任务与执行结果'}</small></span><ArrowUpRight /></Link>
+        <Link to="/agent/workrooms"><Workflow /><span><strong>Workroom 看板</strong><small>按 Project 查看 Run、Task 与 Assignment</small></span><ArrowUpRight /></Link>
       </section>
     </div>
   )

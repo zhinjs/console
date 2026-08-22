@@ -12,10 +12,8 @@ import DatabasePage from './pages/database/database-page'
 import CronPage from './pages/cron'
 import MarketplacePage from './pages/marketplace'
 import IntrospectionPage from './pages/introspection'
-import AgentStudioPage from './pages/agent-studio'
 import AgentWorkbenchPage from './pages/agent-workbench'
 import AgentSessionsPage from './pages/agent-sessions'
-import AgentOrchestrationPage from './pages/agent-orchestration'
 import WorkroomsPage from './pages/workrooms'
 
 let builtinPagesRegistered = false
@@ -61,21 +59,12 @@ export function registerBuiltinConsolePages() {
   })
 
   app.addRoute({
-    path: '/agent/studio',
-    name: 'Agent Studio',
-    parent: null,
-    icon: 'Sparkles',
-    element: <AgentStudioPage />,
-    meta: { group: 'Agent 工作台', order: 0, fullWidth: true },
-  })
-
-  app.addRoute({
     path: '/agent/workbench',
     name: 'Agent 概览',
     parent: null,
     icon: 'Brain',
     element: <AgentWorkbenchPage />,
-    meta: { group: 'Agent 工作台', order: 1 },
+    meta: { group: 'Agent 工作台', order: 0 },
   })
 
   app.addRoute({
@@ -84,7 +73,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Workflow',
     element: <WorkroomsPage />,
-    meta: { group: 'Agent 工作台', order: 2, fullWidth: true },
+    meta: { group: 'Agent 工作台', order: 1, fullWidth: true },
   })
 
   app.addRoute({
@@ -102,16 +91,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'GitBranch',
     element: <AgentSessionsPage />,
-    meta: { group: 'Agent 工作台', order: 3 },
-  })
-
-  app.addRoute({
-    path: '/agent/orchestration',
-    name: '运行追踪',
-    parent: null,
-    icon: 'Workflow',
-    element: <AgentOrchestrationPage />,
-    meta: { group: 'Agent 工作台', order: 4 },
+    meta: { group: 'Agent 工作台', order: 2 },
   })
 
   app.addRoute({
@@ -181,6 +161,6 @@ export function registerBuiltinConsolePages() {
     name: 'Endpoint 详情',
     parent: null,
     element: <EndpointDetailPage />,
-    meta: { hideInMenu: true, fullWidth: true, flush: true },
+    meta: { hideInMenu: true, fullWidth: true },
   })
 }

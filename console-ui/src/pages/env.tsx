@@ -13,6 +13,7 @@ import { ErrorAlert } from '../components/error-alert'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
 import { Skeleton } from '../components/ui/skeleton'
 import { Textarea } from '../components/ui/textarea'
+import { isDemoMode } from '../utils/demo-mode'
 
 const SENSITIVE_PATTERN = /^(.*(?:PASSWORD|SECRET|TOKEN|KEY|PRIVATE|CREDENTIAL).*?=\s*)(.+)$/gim
 
@@ -29,11 +30,13 @@ function EnvFileEditor({
   getFile,
   saveFile,
   exists,
+  readOnly,
 }: {
   filename: string
   getFile: (f: string) => Promise<string>
   saveFile: (f: string, c: string) => Promise<any>
   exists: boolean
+  readOnly: boolean
 }) {
   const [content, setContent] = useState('')
   const [originalContent, setOriginalContent] = useState('')
@@ -94,7 +97,7 @@ function EnvFileEditor({
       {!exists && !dirty && (
         <Alert className="py-2 border-yellow-500/50 text-yellow-700 dark:text-yellow-400">
           <FileWarning className="h-4 w-4" />
-          <AlertDescription>文件不存在，保存后将自动创建</AlertDescription>
+          <AlertDescription>{readOnly ? '文件不存在' : '文件不存在，保存后将自动创建'}</AlertDescription>
         </Alert>
       )}
 
@@ -110,8 +113,10 @@ function EnvFileEditor({
       <div className="relative">
         <Textarea
           value={displayContent}
-          onChange={e => { setContent(e.target.value); setMasked(false) }}
-          onFocus={() => setMasked(false)}
+          readOnly={readOnly}
+          aria-label={`${filename} 环境变量${readOnly ? '（只读且已遮罩）' : ''}`}
+          onChange={e => { if (!readOnly) { setContent(e.target.value); setMasked(false) } }}
+          onFocus={() => { if (!readOnly) setMasked(false) }}
           className="font-mono text-sm min-h-[350px] resize-y"
           placeholder="KEY=VALUE"
           spellCheck={false}
@@ -119,17 +124,17 @@ function EnvFileEditor({
       </div>
 
       <div className="flex items-center gap-2">
-        <Button size="sm" onClick={handleSave} disabled={saving || !dirty}>
+        {!readOnly && <Button size="sm" onClick={handleSave} disabled={saving || !dirty}>
           {saving
             ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />保存中...</>
             : <><Save className="w-4 h-4 mr-1" />保存</>}
-        </Button>
-        {dirty && (
+        </Button>}
+        {!readOnly && dirty && (
           <Button variant="outline" size="sm" onClick={() => { setContent(originalContent); setMasked(true) }}>
             撤销
           </Button>
         )}
-        <Button
+        {!readOnly && <Button
           variant="ghost"
           size="sm"
           onClick={() => setMasked(prev => !prev)}
@@ -137,7 +142,8 @@ function EnvFileEditor({
           title={masked ? '显示敏感值' : '隐藏敏感值'}
         >
           {masked ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-        </Button>
+        </Button>}
+        {readOnly && <span className="text-xs text-muted-foreground">Demo 只读 · 敏感值始终遮罩</span>}
         {dirty && <span className="text-xs text-muted-foreground">有未保存的更改</span>}
       </div>
     </div>
@@ -145,6 +151,7 @@ function EnvFileEditor({
 }
 
 export default function EnvManagePage() {
+  const readOnly = isDemoMode()
   const { files, loading, error, listFiles, getFile, saveFile } = useEnvFiles()
   const [activeTab, setActiveTab] = useState('.env')
 
@@ -171,7 +178,7 @@ export default function EnvManagePage() {
     <div className="space-y-6">
       <PageHeader
         title="环境变量"
-        description="管理 .env / .env.* 中的键值；含 PASSWORD、TOKEN、SECRET 等关键字的行可在未编辑时自动遮罩显示。保存后需重启进程生效。"
+        description={readOnly ? '查看 .env / .env.* 中的键值；Demo 只读且敏感值不可揭示。' : '管理 .env / .env.* 中的键值；含 PASSWORD、TOKEN、SECRET 等关键字的行可在未编辑时自动遮罩显示。保存后需重启进程生效。'}
         actions={
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
@@ -216,6 +223,7 @@ export default function EnvManagePage() {
                   getFile={getFile}
                   saveFile={saveFile}
                   exists={files.find(f => f.name === name)?.exists ?? false}
+                  readOnly={readOnly}
                 />
               </CardContent>
             </Card>

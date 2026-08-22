@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useWebSocket } from '@zhin.js/client'
 import type {
   ChatRow,
   InboxMessageRow,
@@ -16,6 +15,8 @@ import { listInboxCache, putInboxCache } from '../../utils/inbox-cache'
 import { subscribeEndpointPush } from '../../utils/endpoint-push'
 import { toRpcChannelParent } from './conversation-labels'
 import { useToast } from '../../components/toast'
+import { ENDPOINT_RPC, INBOX_RPC, SIDE_EVENT_PUSH } from '../../contracts/zhin-console'
+import { requestConsole } from '../../utils/console-rpc'
 
 interface LocalSentMessage {
   id: string
@@ -38,7 +39,6 @@ export function useMessageHistory(params: {
   selection: SidebarSelection | null
 }) {
   const { adapter, endpointId, selection } = params
-  const { sendRequest } = useWebSocket()
   const { error: toastError } = useToast()
 
   const [receivedMessages, setReceivedMessages] = useState<ReceivedMessage[]>([])
@@ -61,11 +61,11 @@ export function useMessageHistory(params: {
       const append = beforeTs != null
       try {
         const rpcParent = toRpcChannelParent(selection.parent)
-        const res = await sendRequest<{ messages: InboxMessageRow[]; inboxEnabled: boolean }>({
-          type: 'endpoint:inboxMessages',
+        const res = await requestConsole<{ messages: InboxMessageRow[]; inboxEnabled: boolean }>({
+          type: INBOX_RPC.MESSAGES,
           data: {
             adapter,
-            endpointId,
+            endpointKey: endpointId,
             channelId: selection.id,
             channelType: selection.channelType,
             ...(rpcParent ? { parent: rpcParent } : {}),
@@ -94,7 +94,7 @@ export function useMessageHistory(params: {
         if (seq === inboxLoadSeqRef.current) setInboxMessagesLoading(false)
       }
     },
-    [adapter, endpointId, selection, sendRequest],
+    [adapter, endpointId, selection],
   )
 
   useEffect(() => {
@@ -103,28 +103,29 @@ export function useMessageHistory(params: {
       setInboxMessagesHasMore(true)
       void loadInboxMessages()
     }
-  }, [selection?.id, selection?.channelType, selection?.type, selection?.parent?.type, selection?.parent?.id, loadInboxMessages])
+  }, [selection, loadInboxMessages])
 
   // Listen for real-time inbound messages via the console push event
   useEffect(() => {
     if (!adapter || !endpointId) return
-    const onPush = (msg: { type: string; data?: Record<string, unknown> }) => {
+    const onPush = (msg: { type: string; data?: unknown }) => {
       const d = msg.data
-      if (!d) return
-      const pushEndpointId = String(d.endpointId ?? '')
-      if (msg.type === 'message.receive') {
-        if (d.adapter === adapter && pushEndpointId === endpointId) {
-          void putInboxCache(adapter, endpointId, 'message', d)
-          const content = normalizeInboundContent(d.content) as ReceivedMessage['content']
+      if (!d || typeof d !== 'object') return
+      const payload = d as Record<string, unknown>
+      const pushEndpointId = String(payload.endpointKey ?? '')
+      if (msg.type === SIDE_EVENT_PUSH.MESSAGE_RECEIVE) {
+        if (payload.adapter === adapter && pushEndpointId === endpointId) {
+          void putInboxCache(adapter, endpointId, 'message', payload)
+          const content = normalizeInboundContent(payload.content) as ReceivedMessage['content']
           setReceivedMessages((prev) => [
             ...prev,
             {
               id: `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-              channelId: String(d.channelId ?? ''),
-              channelType: String(d.channelType ?? 'private'),
-              sender: (d.sender as ReceivedMessage['sender']) ?? { id: '', name: '' },
+              channelId: String(payload.channelId ?? ''),
+              channelType: String(payload.channelType ?? 'private'),
+              sender: (payload.sender as ReceivedMessage['sender']) ?? { id: '', name: '' },
               content,
-              timestamp: Number(d.timestamp ?? Date.now()),
+              timestamp: Number(payload.timestamp ?? Date.now()),
             },
           ])
         }
@@ -218,11 +219,11 @@ export function useMessageHistory(params: {
     setSending(true)
     try {
       const rpcParent = selection?.type === 'channel' ? toRpcChannelParent(selection.parent) : undefined
-      await sendRequest({
-        type: 'endpoint:sendMessage',
+      await requestConsole({
+        type: ENDPOINT_RPC.SEND_MESSAGE,
         data: {
           adapter,
-          endpointId,
+          endpointKey: endpointId,
           id: targetId,
           type: msgType,
           ...(rpcParent ? { parent: rpcParent } : {}),
@@ -246,7 +247,7 @@ export function useMessageHistory(params: {
     } finally {
       setSending(false)
     }
-  }, [selection, msgContent, sendRequest, adapter, endpointId, toastError])
+  }, [selection, msgContent, adapter, endpointId, toastError])
 
   return {
     receivedMessages,

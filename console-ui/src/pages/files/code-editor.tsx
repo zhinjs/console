@@ -4,10 +4,12 @@ export function CodeEditor({
   value,
   onChange,
   language,
+  readOnly = false,
 }: {
   value: string
   onChange: (v: string) => void
   language: string | null
+  readOnly?: boolean
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const preRef = useRef<HTMLPreElement>(null)
@@ -34,6 +36,7 @@ export function CodeEditor({
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === 'Tab') {
+        if (readOnly) return
         e.preventDefault()
         const ta = e.currentTarget
         const start = ta.selectionStart
@@ -45,7 +48,7 @@ export function CodeEditor({
         })
       }
     },
-    [value, onChange],
+    [value, onChange, readOnly],
   )
 
   return (
@@ -65,6 +68,8 @@ export function CodeEditor({
       <textarea
         ref={textareaRef}
         value={value}
+        readOnly={readOnly}
+        aria-label={readOnly ? '文件内容（只读）' : '文件内容编辑器'}
         onChange={(e) => onChange(e.target.value)}
         onScroll={handleScroll}
         onKeyDown={handleKeyDown}

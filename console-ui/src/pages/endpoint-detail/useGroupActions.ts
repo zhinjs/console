@@ -1,15 +1,18 @@
 import { useCallback, useState } from 'react'
-import { useWebSocket } from '@zhin.js/client'
 import { useToast } from '../../components/toast'
+import { ENDPOINT_RPC } from '../../contracts/zhin-console'
+import { requestConsole } from '../../utils/console-rpc'
 import type { MemberRow, SidebarSelection } from './types'
 
-const GROUP_ACTION_LABELS: Record<
-  'endpoint:groupKick' | 'endpoint:groupMute' | 'endpoint:groupAdmin',
-  string
-> = {
-  'endpoint:groupKick': '已踢出群成员',
-  'endpoint:groupMute': '已禁言群成员',
-  'endpoint:groupAdmin': '已更新管理员权限',
+export type GroupAction =
+  | typeof ENDPOINT_RPC.GROUP_KICK
+  | typeof ENDPOINT_RPC.GROUP_MUTE
+  | typeof ENDPOINT_RPC.GROUP_ADMIN
+
+const GROUP_ACTION_LABELS: Record<GroupAction, string> = {
+  [ENDPOINT_RPC.GROUP_KICK]: '已踢出群成员',
+  [ENDPOINT_RPC.GROUP_MUTE]: '已禁言群成员',
+  [ENDPOINT_RPC.GROUP_ADMIN]: '已更新管理员权限',
 }
 
 export function useGroupActions(params: {
@@ -18,7 +21,6 @@ export function useGroupActions(params: {
   selection: SidebarSelection | null
 }) {
   const { adapter, endpointId, selection } = params
-  const { sendRequest } = useWebSocket()
   const { success, error: toastError } = useToast()
 
   const [members, setMembers] = useState<MemberRow[]>([])
@@ -28,9 +30,9 @@ export function useGroupActions(params: {
     if (selection?.type !== 'channel' || selection.channelType !== 'group' || adapter !== 'icqq') return
     setMembersLoading(true)
     try {
-      const r = await sendRequest<{ members: MemberRow[] }>({
-        type: 'endpoint:groupMembers',
-        data: { adapter, endpointId, groupId: selection.id },
+      const r = await requestConsole<{ members: MemberRow[] }>({
+        type: ENDPOINT_RPC.GROUP_MEMBERS,
+        data: { adapter, endpointKey: endpointId, groupId: selection.id },
       })
       setMembers(r.members || [])
     } catch (e) {
@@ -39,21 +41,21 @@ export function useGroupActions(params: {
     } finally {
       setMembersLoading(false)
     }
-  }, [selection, sendRequest, adapter, endpointId, toastError])
+  }, [selection, adapter, endpointId, toastError])
 
   const groupAction = useCallback(
     async (
-      type: 'endpoint:groupKick' | 'endpoint:groupMute' | 'endpoint:groupAdmin',
+      type: GroupAction,
       userId: number | string,
       extra?: { enable?: boolean },
     ) => {
       if (selection?.type !== 'channel' || selection.channelType !== 'group') return false
       try {
-        await sendRequest({
+        await requestConsole({
           type,
           data: {
             adapter,
-            endpointId,
+            endpointKey: endpointId,
             groupId: selection.id,
             userId: String(userId),
             ...extra,
@@ -67,7 +69,7 @@ export function useGroupActions(params: {
         return false
       }
     },
-    [selection, sendRequest, adapter, endpointId, loadMembers, success, toastError],
+    [selection, adapter, endpointId, loadMembers, success, toastError],
   )
 
   return {

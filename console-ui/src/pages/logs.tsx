@@ -15,6 +15,8 @@ import { EmptyState } from '../components/empty-state'
 import { useToast } from '../components/toast'
 import { ConfirmDialog } from '../components/confirm-dialog'
 import { Input } from '../components/ui/input'
+import { CONSOLE_REST } from '../contracts/zhin-console'
+import { isDemoMode } from '../utils/demo-mode'
 
 interface LogEntry {
   level: 'info' | 'warn' | 'error'
@@ -30,6 +32,7 @@ interface LogStats {
 }
 
 export default function LogsPage() {
+  const readOnly = isDemoMode()
   const { success, error: toastError } = useToast()
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [stats, setStats] = useState<LogStats | null>(null)
@@ -71,7 +74,7 @@ export default function LogsPage() {
 
   const fetchLogs = async () => {
     try {
-      const url = levelFilter === 'all' ? '/api/logs?limit=100' : `/api/logs?limit=100&level=${levelFilter}`
+      const url = levelFilter === 'all' ? `${CONSOLE_REST.LOGS}?limit=100` : `${CONSOLE_REST.LOGS}?limit=100&level=${levelFilter}`
       const res = await apiFetch(url)
       if (!res.ok) throw new Error('API 请求失败')
       const data = await res.json()
@@ -85,7 +88,7 @@ export default function LogsPage() {
 
   const fetchStats = async () => {
     try {
-      const res = await apiFetch('/api/logs/stats')
+      const res = await apiFetch(CONSOLE_REST.LOGS_STATS)
       if (!res.ok) return
       const data = await res.json()
       if (data.success) setStats(data.data)
@@ -98,7 +101,7 @@ export default function LogsPage() {
 
   const handleClearAllConfirm = async () => {
     try {
-      const res = await apiFetch('/api/logs', { method: 'DELETE' })
+      const res = await apiFetch(CONSOLE_REST.LOGS, { method: 'DELETE' })
       if (!res.ok) throw new Error('清空失败')
       const data = await res.json()
       if (data.success) {
@@ -121,7 +124,7 @@ export default function LogsPage() {
   const handleCleanupConfirm = async () => {
     const { days, maxRecords } = cleanupParams
     try {
-      const res = await apiFetch('/api/logs/cleanup', {
+      const res = await apiFetch(CONSOLE_REST.LOGS_CLEANUP, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ days, maxRecords })
       })
@@ -170,7 +173,7 @@ export default function LogsPage() {
     <div className="space-y-6">
       <PageHeader
         title="日志"
-        description="实时查看与筛选系统运行日志；支持按级别与关键字过滤。"
+        description={readOnly ? '实时查看与筛选系统运行日志（Demo 只读）。' : '实时查看与筛选系统运行日志；支持按级别与关键字过滤。'}
       />
 
       {/* Stats */}
@@ -240,15 +243,15 @@ export default function LogsPage() {
           </div>
 
           <div className="flex gap-2 flex-wrap">
-            <Button variant="destructive" size="sm" onClick={() => handleClearAll()}>
+            {!readOnly && <Button variant="destructive" size="sm" onClick={() => handleClearAll()}>
               <Trash2 className="w-3.5 h-3.5 mr-1" />清空全部
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => handleCleanup(7)}>
+            </Button>}
+            {!readOnly && <Button variant="outline" size="sm" onClick={() => handleCleanup(7)}>
               <Trash2 className="w-3.5 h-3.5 mr-1" />清理7天前
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => handleCleanup(undefined, 5000)}>
+            </Button>}
+            {!readOnly && <Button variant="outline" size="sm" onClick={() => handleCleanup(undefined, 5000)}>
               <Trash2 className="w-3.5 h-3.5 mr-1" />保留5000条
-            </Button>
+            </Button>}
             <Button variant="outline" size="sm" onClick={() => fetchLogs()}>
               <RefreshCw className="w-3.5 h-3.5 mr-1" />刷新
             </Button>
@@ -317,7 +320,7 @@ export default function LogsPage() {
         </CardContent>
       </Card>
 
-      <ConfirmDialog
+      {!readOnly && <ConfirmDialog
         open={clearConfirmOpen}
         onOpenChange={setClearConfirmOpen}
         title="清空全部日志"
@@ -325,8 +328,8 @@ export default function LogsPage() {
         variant="destructive"
         confirmLabel="清空"
         onConfirm={handleClearAllConfirm}
-      />
-      <ConfirmDialog
+      />}
+      {!readOnly && <ConfirmDialog
         open={cleanupConfirmOpen}
         onOpenChange={setCleanupConfirmOpen}
         title="清理旧日志"
@@ -336,7 +339,7 @@ export default function LogsPage() {
         variant="destructive"
         confirmLabel="清理"
         onConfirm={handleCleanupConfirm}
-      />
+      />}
     </div>
   )
 }

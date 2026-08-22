@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Clock, Plus, Trash2, AlertCircle, Pause, Play, RefreshCw, Timer, Cpu, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react'
-import { useWebSocket } from '@zhin.js/client'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
@@ -15,24 +14,16 @@ import {
 } from '../components/ui/dialog'
 import { useToast } from '../components/toast'
 import { PageHeader } from '../components/PageHeader'
-import { isRpcMethodUnavailable } from '../utils/rpc-fallback'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
-import { ConfirmDialog } from '../components/confirm-dialog'
+import { CONSOLE_RPC } from '../contracts/zhin-console'
+import { requestConsole } from '../utils/console-rpc'
+import { isDemoMode } from '../utils/demo-mode'
 
 interface MemoryCron {
   type: 'memory'
   expression: string
   running: boolean
-  nextExecution: string | null
-  plugin: string
-}
-
-interface CronJobContext {
-  platform?: string
-  endpointId?: string
-  senderId?: string
-  sceneId?: string
-  scope?: string
+  nextExecution?: number | null
+  plugin?: string
 }
 
 interface PersistentCron {
@@ -42,96 +33,58 @@ interface PersistentCron {
   prompt: string
   label?: string
   enabled: boolean
-  context?: CronJobContext
-  createdAt: number
+  createdAt?: number
 }
-
-interface EndpointInfo {
-  name: string
-  adapter: string
-  connected: boolean
-}
-
-const EMPTY_CONTEXT: CronJobContext = { platform: '', endpointId: '', senderId: '', sceneId: '', scope: '' }
 
 export default function CronPage() {
   const [memoryCrons, setMemoryCrons] = useState<MemoryCron[]>([])
   const [persistentCrons, setPersistentCrons] = useState<PersistentCron[]>([])
-  const [endpoints, setEndpoints] = useState<EndpointInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<PersistentCron | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [newCron, setNewCron] = useState({ cronExpression: '', prompt: '', label: '', context: { ...EMPTY_CONTEXT } })
+  const [newCron, setNewCron] = useState({ cronExpression: '', prompt: '', label: '' })
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [expandedMemIdx, setExpandedMemIdx] = useState<number | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const { connected, sendRequest } = useWebSocket()
-  const { success, error: toastError } = useToast()
+  const { error: toastError } = useToast()
+  const readOnly = isDemoMode()
 
   const fetchCrons = useCallback(async () => {
-    if (!connected) {
-      setLoading(false)
-      setError('实时连接未就绪，请刷新页面')
-      return
-    }
     try {
       type ScheduleListResponse = {
-        jobs?: MemoryCron[]
         memory?: MemoryCron[]
         persistent?: PersistentCron[]
       }
-      let data: ScheduleListResponse
-      try {
-        data = await sendRequest<ScheduleListResponse>({ type: 'schedule:list' })
-      } catch (scheduleErr) {
-        if (!isRpcMethodUnavailable(scheduleErr)) throw scheduleErr
-        data = await sendRequest<ScheduleListResponse>({ type: 'cron:list' })
-      }
-      setMemoryCrons(data.jobs ?? data.memory ?? [])
+      const data = await requestConsole<ScheduleListResponse>({ type: CONSOLE_RPC.SCHEDULE_LIST })
+      setMemoryCrons(data.memory ?? [])
       setPersistentCrons(data.persistent ?? [])
-      // Also fetch endpoints for context selector
-      try {
-        const endpointData = await sendRequest<{ endpoints: EndpointInfo[] }>({ type: 'endpoint:list' })
-        setEndpoints(endpointData.endpoints || [])
-      } catch { /* ignore */ }
       setError(null)
     } catch (err) {
       setError((err as Error).message)
     } finally {
       setLoading(false)
     }
-  }, [connected, sendRequest])
+  }, [])
 
   useEffect(() => {
-    if (connected) {
-      setLoading(true)
-      fetchCrons()
-    }
-  }, [connected, fetchCrons])
+    setLoading(true)
+    void fetchCrons()
+  }, [fetchCrons])
 
   const handleAdd = async () => {
     if (!newCron.cronExpression || !newCron.prompt) return
     setSubmitting(true)
     try {
-      // Build context, omitting empty fields
-      const ctx: CronJobContext = {}
-      if (newCron.context.platform) ctx.platform = newCron.context.platform
-      if (newCron.context.endpointId) ctx.endpointId = newCron.context.endpointId
-      if (newCron.context.senderId) ctx.senderId = newCron.context.senderId
-      if (newCron.context.sceneId) ctx.sceneId = newCron.context.sceneId
-      if (newCron.context.scope) ctx.scope = newCron.context.scope
-      const hasContext = Object.keys(ctx).length > 0
-      await sendRequest({
-        type: 'cron:add',
+      await requestConsole({
+        type: CONSOLE_RPC.CRON_ADD,
         cronExpression: newCron.cronExpression,
         prompt: newCron.prompt,
         label: newCron.label,
-        context: hasContext ? ctx : undefined,
       })
       setAddDialogOpen(false)
-      setNewCron({ cronExpression: '', prompt: '', label: '', context: { ...EMPTY_CONTEXT } })
+      setNewCron({ cronExpression: '', prompt: '', label: '' })
       await fetchCrons()
     } catch (err) {
       toastError((err as Error).message)
@@ -144,7 +97,7 @@ export default function CronPage() {
     if (!deleteTarget) return
     setSubmitting(true)
     try {
-      await sendRequest({ type: 'cron:remove', id: deleteTarget.id })
+      await requestConsole({ type: CONSOLE_RPC.CRON_REMOVE, id: deleteTarget.id })
       setDeleteTarget(null)
       await fetchCrons()
     } catch (err) {
@@ -157,9 +110,9 @@ export default function CronPage() {
   const handleToggle = async (job: PersistentCron) => {
     try {
       if (job.enabled) {
-        await sendRequest({ type: 'cron:pause', id: job.id })
+        await requestConsole({ type: CONSOLE_RPC.CRON_PAUSE, id: job.id })
       } else {
-        await sendRequest({ type: 'cron:resume', id: job.id })
+        await requestConsole({ type: CONSOLE_RPC.CRON_RESUME, id: job.id })
       }
       await fetchCrons()
     } catch (err) {
@@ -167,7 +120,7 @@ export default function CronPage() {
     }
   }
 
-  if (loading && connected) {
+  if (loading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
@@ -203,9 +156,11 @@ export default function CronPage() {
             <Button variant="outline" size="sm" onClick={() => { setLoading(true); fetchCrons() }}>
               <RefreshCw className="w-4 h-4 mr-1" /> 刷新
             </Button>
-            <Button size="sm" onClick={() => setAddDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-1" /> 新建任务
-            </Button>
+            {!readOnly && (
+              <Button size="sm" onClick={() => setAddDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-1" /> 新建任务
+              </Button>
+            )}
           </div>
         }
       />
@@ -222,7 +177,9 @@ export default function CronPage() {
             <CardContent className="py-8 text-center text-muted-foreground">
               <Clock className="w-10 h-10 mx-auto mb-3 opacity-40" />
               <p>暂无持久化定时任务</p>
-              <p className="text-xs mt-1">点击「新建任务」添加一个定时 AI 任务</p>
+              <p className="text-xs mt-1">
+                {readOnly ? 'Demo 仅展示实例中已存在的任务' : '点击「新建任务」添加一个定时 AI 任务'}
+              </p>
             </CardContent>
           </Card>
         ) : (
@@ -248,13 +205,13 @@ export default function CronPage() {
                       </div>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mb-2 ml-6">
                         <code className="bg-muted px-1.5 py-0.5 rounded break-all">{job.cronExpression}</code>
-                        <span className="shrink-0">创建于 {new Date(job.createdAt).toLocaleString()}</span>
+                        <span className="shrink-0">创建于 {job.createdAt ? new Date(job.createdAt).toLocaleString() : '—'}</span>
                       </div>
                       {!isExpanded && (
                         <p className="text-sm text-muted-foreground line-clamp-1 ml-6">{job.prompt}</p>
                       )}
                     </div>
-                    <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {!readOnly && <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -273,7 +230,7 @@ export default function CronPage() {
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
-                    </div>
+                    </div>}
                   </div>
                   {isExpanded && (
                     <div className="mt-3 ml-6 space-y-3 border-t pt-3">
@@ -304,23 +261,9 @@ export default function CronPage() {
                         <span className="text-xs font-medium text-muted-foreground block mb-1">Prompt</span>
                         <pre className="text-sm bg-muted px-3 py-2 rounded whitespace-pre-wrap break-words max-h-60 overflow-y-auto">{job.prompt}</pre>
                       </div>
-                      {job.context && Object.values(job.context).some(Boolean) && (
-                        <div>
-                          <span className="text-xs font-medium text-muted-foreground block mb-1">执行上下文</span>
-                          <div className="bg-muted px-3 py-2 rounded text-xs space-y-1">
-                            {job.context.platform && <p><span className="text-muted-foreground">平台:</span> {job.context.platform}</p>}
-                            {job.context.endpointId && (
-                              <p><span className="text-muted-foreground">Endpoint:</span> {job.context.endpointId}</p>
-                            )}
-                            {job.context.senderId && <p><span className="text-muted-foreground">发送者:</span> {job.context.senderId}</p>}
-                            {job.context.sceneId && <p><span className="text-muted-foreground">场景:</span> {job.context.sceneId}</p>}
-                            {job.context.scope && <p><span className="text-muted-foreground">类型:</span> {job.context.scope}</p>}
-                          </div>
-                        </div>
-                      )}
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">状态: {job.enabled ? <Badge variant="default" className="text-xs">运行中</Badge> : <Badge variant="secondary" className="text-xs">已暂停</Badge>}</span>
-                        <span>创建于: {new Date(job.createdAt).toLocaleString()}</span>
+                        <span>创建于: {job.createdAt ? new Date(job.createdAt).toLocaleString() : '—'}</span>
                       </div>
                     </div>
                   )}
@@ -399,7 +342,7 @@ export default function CronPage() {
       </div>
 
       {/* Add Dialog */}
-      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+      {!readOnly && <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>新建定时任务</DialogTitle>
@@ -436,88 +379,6 @@ export default function CronPage() {
                 onChange={(e) => setNewCron((p) => ({ ...p, prompt: e.target.value }))}
               />
             </div>
-            <Separator />
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">执行上下文（可选）</label>
-              <p className="text-xs text-muted-foreground mb-3">
-                指定任务执行时的身份信息，如不填则以 system 身份执行
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">适配器</label>
-                  <Select
-                    value={newCron.context.platform || '__none__'}
-                    onValueChange={(v) => {
-                      const platform = v === '__none__' ? '' : v
-                      setNewCron((p) => ({ ...p, context: { ...p.context, platform, endpointId: '' } }))
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="不指定" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">不指定</SelectItem>
-                      {[...new Set(endpoints.map((b) => b.adapter))].map((adapter) => (
-                        <SelectItem key={adapter} value={adapter}>{adapter}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Endpoint</label>
-                  <Select
-                    value={newCron.context.endpointId || '__none__'}
-                    disabled={!newCron.context.platform}
-                    onValueChange={(v) => setNewCron((p) => ({ ...p, context: { ...p.context, endpointId: v === '__none__' ? '' : v } }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="不指定" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">不指定</SelectItem>
-                      {endpoints
-                        .filter((b) => b.adapter === newCron.context.platform)
-                        .map((b) => (
-                          <SelectItem key={b.name} value={b.name}>{b.name}</SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">场景类型</label>
-                  <Select
-                    value={newCron.context.scope || '__none__'}
-                    onValueChange={(v) => setNewCron((p) => ({ ...p, context: { ...p.context, scope: v === '__none__' ? '' : v } }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="不指定" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">不指定</SelectItem>
-                      <SelectItem value="private">私聊 (private)</SelectItem>
-                      <SelectItem value="group">群聊 (group)</SelectItem>
-                      <SelectItem value="channel">频道 (channel)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">发送者 ID</label>
-                  <Input
-                    placeholder="用户 ID"
-                    value={newCron.context.senderId || ''}
-                    onChange={(e) => setNewCron((p) => ({ ...p, context: { ...p.context, senderId: e.target.value } }))}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">场景 ID</label>
-                  <Input
-                    placeholder="群号/频道ID"
-                    value={newCron.context.sceneId || ''}
-                    onChange={(e) => setNewCron((p) => ({ ...p, context: { ...p.context, sceneId: e.target.value } }))}
-                  />
-                </div>
-              </div>
-            </div>
           </div>
           <DialogFooter>
             <DialogClose asChild>
@@ -531,10 +392,10 @@ export default function CronPage() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog>}
 
       {/* Delete Confirm Dialog */}
-      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      {!readOnly && <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>确认删除</DialogTitle>
@@ -551,7 +412,7 @@ export default function CronPage() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog>}
     </div>
   )
 }

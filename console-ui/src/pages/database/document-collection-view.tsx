@@ -21,12 +21,14 @@ export function DocumentCollectionView({
   insert,
   update,
   remove,
+  readOnly,
 }: {
   tableName: string
   select: (table: string, page?: number, pageSize?: number, where?: any) => Promise<SelectResult>
   insert: (table: string, row: any) => Promise<any>
   update: (table: string, row: any, where: any) => Promise<any>
   remove: (table: string, where: any) => Promise<any>
+  readOnly: boolean
 }) {
   const [data, setData] = useState<SelectResult | null>(null)
   const [loading, setLoading] = useState(false)
@@ -106,9 +108,9 @@ export function DocumentCollectionView({
         <Button size="sm" variant="outline" onClick={load} disabled={loading}>
           <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />刷新
         </Button>
-        <Button size="sm" onClick={() => { setAddDoc(true); setJsonText('{\n  \n}') }}>
+        {!readOnly && <Button size="sm" onClick={() => { setAddDoc(true); setJsonText('{\n  \n}') }}>
           <Plus className="w-3.5 h-3.5 mr-1" />添加文档
-        </Button>
+        </Button>}
         <span className="text-xs text-muted-foreground sm:ml-auto basis-full sm:basis-auto">共 {data?.total ?? 0} 条 · 第 {page}/{totalPages || 1} 页</span>
       </div>
 
@@ -122,14 +124,14 @@ export function DocumentCollectionView({
             <CardContent className="p-3">
               <div className="flex items-start justify-between gap-2 min-w-0">
                 <pre className="text-xs font-mono flex-1 min-w-0 whitespace-pre-wrap break-all">{JSON.stringify(doc, null, 2)}</pre>
-                <div className="flex flex-col gap-1 shrink-0">
+                {!readOnly && <div className="flex flex-col gap-1 shrink-0">
                   <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => {
                     setEditDoc(doc)
                     setAddDoc(false)
                     setJsonText(JSON.stringify(doc, null, 2))
                   }}><Pencil className="w-3 h-3" /></Button>
                   <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-destructive" onClick={() => handleDelete(doc)}><Trash2 className="w-3 h-3" /></Button>
-                </div>
+                </div>}
               </div>
             </CardContent>
           </Card>
@@ -144,7 +146,7 @@ export function DocumentCollectionView({
         </div>
       )}
 
-      <Dialog open={editDoc !== null || addDoc} onOpenChange={(open) => { if (!open) { setEditDoc(null); setAddDoc(false) } }}>
+      {!readOnly && <Dialog open={editDoc !== null || addDoc} onOpenChange={(open) => { if (!open) { setEditDoc(null); setAddDoc(false) } }}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>{addDoc ? '添加文档' : '编辑文档'}</DialogTitle></DialogHeader>
           <textarea
@@ -158,8 +160,8 @@ export function DocumentCollectionView({
             <Button size="sm" onClick={() => handleSave(addDoc)}><Save className="w-3.5 h-3.5 mr-1" />保存</Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
-      <ConfirmDialog
+      </Dialog>}
+      {!readOnly && <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
         title="删除文档"
@@ -167,7 +169,7 @@ export function DocumentCollectionView({
         variant="destructive"
         confirmLabel="删除"
         onConfirm={confirmDelete}
-      />
+      />}
     </div>
   )
 }

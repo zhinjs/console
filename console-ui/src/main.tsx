@@ -17,7 +17,6 @@ import LoginPage from './pages/login'
 import DashboardLayout from './layouts/dashboard'
 import { hasToken } from './utils/auth'
 import { resetConsoleRuntime } from './utils/console-runtime'
-import { setupConsoleSseBridge } from './utils/sse-bridge'
 import { registerOptionalConsoleRoutes } from './registerOptionalRoutes'
 import './style.css'
 import { initializeTheme } from './theme'
@@ -68,7 +67,6 @@ function ConsoleShell() {
   useWebSocket()
 
   React.useEffect(() => {
-    setupConsoleSseBridge()
     void registerOptionalConsoleRoutes()
     loadConsoleEntries()
       .then(() => React.startTransition(() => setReady(true)))
@@ -126,12 +124,7 @@ createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ToastProvider>
       <TooltipProvider>
-        <BrowserRouter
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true,
-          }}
-        >
+        <BrowserRouter>
           <App />
         </BrowserRouter>
       </TooltipProvider>

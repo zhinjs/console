@@ -5,7 +5,7 @@
 import type * as React from 'react'
 import { useState, useEffect } from 'react'
 import { useConfig } from '@zhin.js/client'
-import type { PluginConfigFormProps, SchemaField } from './types.js'
+import type { PluginConfigFormProps, Schema, SchemaField } from './types.js'
 import { Settings, ChevronDown, CheckCircle, AlertCircle, AlertTriangle, X, Save, Loader2 } from 'lucide-react'
 import { FieldRenderer, isComplexField } from './FieldRenderer.js'
 import { NestedFieldRenderer } from './NestedFieldRenderer.js'
@@ -84,7 +84,8 @@ export function PluginConfigForm({ pluginName, onSuccess }: Omit<PluginConfigFor
     )
   }
 
-  const fields = schema?.object || schema?.properties || schema?.dict || {}
+  const typedSchema = schema as Schema | null
+  const fields = typedSchema?.object || typedSchema?.properties || typedSchema?.dict || {}
   if (!schema || !fields || Object.keys(fields).length === 0) return null
 
   return (

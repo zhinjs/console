@@ -1,12 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { GitBranch, CheckCircle, Loader2 } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
-import {
-  agentOrchestrationPath,
-  isLikelySessionKey,
-  parseSessionKeyFromQuery,
-} from '../utils/agent-session'
+import { isLikelySessionKey, parseSessionKeyFromQuery } from '../utils/agent-session'
 import {
   loadAgentSessionHistory,
   pushAgentSessionHistory,
@@ -30,6 +26,8 @@ import {
   DialogClose,
 } from '../components/ui/dialog'
 import { cn } from '@zhin.js/client'
+import { CONSOLE_REST } from '../contracts/zhin-console'
+import { isDemoMode } from '../utils/demo-mode'
 
 interface TreePoint {
   index: number
@@ -45,6 +43,7 @@ interface SessionTree {
 }
 
 export default function AgentSessionsPage() {
+  const readOnly = isDemoMode()
   const [searchParams] = useSearchParams()
   const sessionKeyFromUrl = parseSessionKeyFromQuery(searchParams.get('sessionKey'))
   const [sessionKey, setSessionKey] = useState(sessionKeyFromUrl)
@@ -68,7 +67,7 @@ export default function AgentSessionsPage() {
     setSwitchMsg(null)
     try {
       const encoded = encodeURIComponent(trimmed)
-      const res = await apiFetch(`/api/agent/sessions/${encoded}/tree`)
+      const res = await apiFetch(`${CONSOLE_REST.AGENT_SESSIONS}/${encoded}/tree`)
       const data = await res.json()
 
       if (res.status === 404) {
@@ -97,13 +96,14 @@ export default function AgentSessionsPage() {
   }, [])
 
   const handleSwitchLeaf = async (point: TreePoint) => {
+    if (readOnly) return
     const trimmed = sessionKey.trim()
     if (!trimmed) return
     setSwitching(true)
     setSwitchMsg(null)
     try {
       const encoded = encodeURIComponent(trimmed)
-      const res = await apiFetch(`/api/agent/sessions/${encoded}/leaf`, {
+      const res = await apiFetch(`${CONSOLE_REST.AGENT_SESSIONS}/${encoded}/leaf`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messageId: point.messageId }),
@@ -153,7 +153,7 @@ export default function AgentSessionsPage() {
     <div className="space-y-6">
       <PageHeader
         title="对话分支"
-        description="沿着真实渠道会话查看 AI 对话分支，并决定下一轮对话从哪条路径继续。"
+        description={readOnly ? '沿着真实渠道会话查看 AI 对话分支（Demo 只读）。' : '沿着真实渠道会话查看 AI 对话分支，并决定下一轮对话从哪条路径继续。'}
       />
 
       <AgentSessionPicker
@@ -213,8 +213,8 @@ export default function AgentSessionsPage() {
                     <button
                       key={point.messageId}
                       type="button"
-                      onClick={() => !isActive && setConfirmPoint(point)}
-                      disabled={isActive || switching}
+                      onClick={() => !readOnly && !isActive && setConfirmPoint(point)}
+                      disabled={readOnly || isActive || switching}
                       className={cn(
                         'w-full text-left p-3 rounded-lg border transition-colors',
                         isActive
@@ -245,19 +245,7 @@ export default function AgentSessionsPage() {
         </Card>
       )}
 
-      {sessionKey.trim() && (
-        <p className="text-xs text-muted-foreground">
-          查看编排运行：
-          <Link
-            to={agentOrchestrationPath(sessionKey.trim())}
-            className="text-primary underline-offset-4 hover:underline ml-1"
-          >
-            前往编排运行页
-          </Link>
-        </p>
-      )}
-
-      <Dialog open={!!confirmPoint} onOpenChange={(open) => !open && setConfirmPoint(null)}>
+      {!readOnly && <Dialog open={!!confirmPoint} onOpenChange={(open) => !open && setConfirmPoint(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>切换活跃叶节点</DialogTitle>
@@ -284,7 +272,7 @@ export default function AgentSessionsPage() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog>}
     </div>
   )
 }
