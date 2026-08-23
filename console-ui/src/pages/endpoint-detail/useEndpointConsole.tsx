@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
-import { useWebSocket } from '@zhin.js/client'
+import {
+  useWebSocket,
+  type ConsoleInboxNoticesQuery,
+  type ConsoleInboxNoticesResult,
+} from '@zhin.js/client'
 import type {
   EndpointInfo,
   InboxRequestRow,
@@ -13,7 +17,11 @@ import { listInboxCache, putInboxCache } from '../../utils/inbox-cache'
 import { useChannelManager } from './useChannelManager'
 import { useMessageHistory } from './useMessageHistory'
 import { useGroupActions } from './useGroupActions'
-import { subscribeConsoleRecoveryGap, subscribeEndpointPush } from '../../utils/endpoint-push'
+import {
+  subscribeConsoleRecoveryGap,
+  subscribeEndpointPush,
+  type EndpointPushMessage,
+} from '../../utils/endpoint-push'
 import { ENDPOINT_RPC, INBOX_RPC, SIDE_EVENT_PUSH, SIDE_EVENT_RPC } from '../../contracts/zhin-console'
 import { requestConsole } from '../../utils/console-rpc'
 
@@ -208,14 +216,7 @@ export function useEndpointConsole() {
     const seq = ++unreadNoticesSeqRef.current
     const requestedEndpoint = `${adapter}\u0000${endpointId}`
     try {
-      const res = await requestConsole<{
-        notices: Array<InboxNoticeRow & {
-          noticeType: string
-          channel: { id: string; type: string }
-          timestamp: number
-        }>
-        inboxEnabled: boolean
-      }>({
+      const res = await requestConsole<ConsoleInboxNoticesResult>({
         type: INBOX_RPC.NOTICES,
         data: {
           adapter,
@@ -223,7 +224,7 @@ export function useEndpointConsole() {
           unreadOnly: true,
           limit: 100,
           offset: 0,
-        },
+        } satisfies ConsoleInboxNoticesQuery,
       })
       if (
         seq !== unreadNoticesSeqRef.current
@@ -382,40 +383,38 @@ export function useEndpointConsole() {
 
   // --- Listen for real-time push events for requests and notices ---
   useEffect(() => {
-    const onPush = (msg: { type: string; data?: unknown }) => {
-      const data = msg.data
-      if (!data || typeof data !== 'object') return
-      const d = data as Record<string, unknown>
-      const pushEndpointId = String(d.endpointKey ?? '')
+    const onPush = (msg: EndpointPushMessage) => {
       if (msg.type === SIDE_EVENT_PUSH.REQUEST_RECEIVE) {
-        if (d.adapter === adapter && pushEndpointId === endpointId) {
-          void putInboxCache(adapter, endpointId, 'request', d)
+        const request = msg.data
+        if (request.adapter === adapter && request.endpointKey === endpointId) {
+          void putInboxCache(adapter, endpointId, 'request', { ...request })
           setRequests((prev) => {
             const m = new Map(prev)
-            m.set(d.id as number, {
-              id: d.id as number,
-              platformRequestId: String(d.platformRequestId),
-              type: String(d.type),
-              sender: d.sender as ReqItem['sender'],
-              comment: String(d.comment ?? ''),
-              channel: d.channel as ReqItem['channel'],
-              timestamp: Number(d.timestamp),
-              canAct: d.canAct === true,
+            m.set(request.id, {
+              id: request.id,
+              platformRequestId: request.platformRequestId,
+              type: request.type,
+              sender: request.sender,
+              comment: request.comment,
+              channel: request.channel,
+              timestamp: request.timestamp,
+              canAct: request.canAct === true,
             })
             return m
           })
         }
       } else if (msg.type === SIDE_EVENT_PUSH.NOTICE_RECEIVE) {
-        if (d.adapter === adapter && pushEndpointId === endpointId) {
-          void putInboxCache(adapter, endpointId, 'notice', d)
+        const notice = msg.data
+        if (notice.adapter === adapter && notice.endpointKey === endpointId) {
+          void putInboxCache(adapter, endpointId, 'notice', { ...notice })
           setNotices((prev) => {
             const m = new Map(prev)
-            m.set(d.id as number, {
-              id: d.id as number,
-              noticeType: String(d.noticeType),
-              channel: d.channel as NoticeItem['channel'],
-              payload: String(d.payload ?? '{}'),
-              timestamp: Number(d.timestamp),
+            m.set(notice.id, {
+              id: notice.id,
+              noticeType: notice.noticeType,
+              channel: notice.channel,
+              payload: notice.payload,
+              timestamp: notice.timestamp,
             })
             return m
           })

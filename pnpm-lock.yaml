@@ -12,11 +12,11 @@ importers:
         specifier: ^1.5.6
         version: 1.5.6(ai@7.0.32(zod@4.4.3))(zod@4.4.3)
       '@zhin.js/client':
-        specifier: ^2.1.10
-        version: 2.1.10(ai@7.0.32(zod@4.4.3))(react@19.2.6)(zod@4.4.3)
+        specifier: ^2.1.11
+        version: 2.1.11(ai@7.0.32(zod@4.4.3))(react@19.2.6)(zod@4.4.3)
       '@zhin.js/contract':
-        specifier: ^1.0.15
-        version: 1.0.15(ai@7.0.32(zod@4.4.3))(zod@4.4.3)
+        specifier: ^1.0.16
+        version: 1.0.16(ai@7.0.32(zod@4.4.3))(zod@4.4.3)
       zod:
         specifier: ^4.0.0
         version: 4.4.3
@@ -1225,18 +1225,18 @@ packages:
       '@ai-sdk/openai-compatible':
         optional: true
 
-  '@zhin.js/client@2.1.10':
-    resolution: {integrity: sha512-/GHCtmBa1u3MymLRX+v0YCVIDFNOsQp5tK2sp2IkIiyPwdzOo5kz/c4l4DjqfiC0wAIRGqtN/MmwF1+6DQb41g==}
+  '@zhin.js/client@2.1.11':
+    resolution: {integrity: sha512-PnVkYp9y9jVWB36xRijwOvhdsDgKCcYm8aFhGITREMoiJDeje7l1j8oX/Zq4a8N8cIg+E+l1xjgDlEbeMkMFgg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     peerDependencies:
       react: '>=18'
 
-  '@zhin.js/console-protocol@1.1.3':
-    resolution: {integrity: sha512-cop5Swy8w9LRb99kwKG0da0bjJJmtUdhI1m/ChM3yJIucCuMpSZnyiFzhXBQvtyAOIIuDSwquPetxOMLAUq0PA==}
+  '@zhin.js/console-protocol@1.1.4':
+    resolution: {integrity: sha512-szcmaTZsnAS60hkmSaQSPd4gJGgB8orJlcNFl+Z1C2WhEUP6n/yl2KfkJ1j4rsjF5jyrCvVFfJKHuoRRvi3w4w==}
     engines: {node: ^20.19.0 || >=22.12.0}
 
-  '@zhin.js/contract@1.0.15':
-    resolution: {integrity: sha512-/WGnauxxcWF8C/YX5v0JVnG145XU7ylZAwJcZBX1YyTXMXi1xFF4RulQVwYxXCkTIplC3gusLvI3gCB2nE0GEA==}
+  '@zhin.js/contract@1.0.16':
+    resolution: {integrity: sha512-g+DsPMAm1ikGbndo0esLVZI9XIWl3tpKdC1tVGJ/n6XOFA7S72G2AZTqra85dfgwOG393dd9KM90eCLRUJPP/A==}
     engines: {node: ^20.19.0 || >=22.12.0}
 
   '@zhin.js/logger@1.0.76':
@@ -4072,10 +4072,10 @@ snapshots:
       undici: 8.10.0
       zod: 4.4.3
 
-  '@zhin.js/client@2.1.10(ai@7.0.32(zod@4.4.3))(react@19.2.6)(zod@4.4.3)':
+  '@zhin.js/client@2.1.11(ai@7.0.32(zod@4.4.3))(react@19.2.6)(zod@4.4.3)':
     dependencies:
-      '@zhin.js/console-protocol': 1.1.3
-      '@zhin.js/contract': 1.0.15(ai@7.0.32(zod@4.4.3))(zod@4.4.3)
+      '@zhin.js/console-protocol': 1.1.4
+      '@zhin.js/contract': 1.0.16(ai@7.0.32(zod@4.4.3))(zod@4.4.3)
       clsx: 2.1.1
       react: 19.2.6
       tailwind-merge: 3.6.0
@@ -4088,12 +4088,12 @@ snapshots:
       - ai
       - zod
 
-  '@zhin.js/console-protocol@1.1.3': {}
+  '@zhin.js/console-protocol@1.1.4': {}
 
-  '@zhin.js/contract@1.0.15(ai@7.0.32(zod@4.4.3))(zod@4.4.3)':
+  '@zhin.js/contract@1.0.16(ai@7.0.32(zod@4.4.3))(zod@4.4.3)':
     dependencies:
       '@zhin.js/ai': 1.5.6(ai@7.0.32(zod@4.4.3))(zod@4.4.3)
-      '@zhin.js/console-protocol': 1.1.3
+      '@zhin.js/console-protocol': 1.1.4
     transitivePeerDependencies:
       - '@ai-sdk/anthropic'
       - '@ai-sdk/deepseek'

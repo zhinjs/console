@@ -12,7 +12,11 @@ import {
   type MessageContent,
 } from '../../utils/parseComposerContent'
 import { listInboxCache, putInboxCache } from '../../utils/inbox-cache'
-import { subscribeConsoleRecoveryGap, subscribeEndpointPush } from '../../utils/endpoint-push'
+import {
+  subscribeConsoleRecoveryGap,
+  subscribeEndpointPush,
+  type EndpointPushMessage,
+} from '../../utils/endpoint-push'
 import { toRpcChannelParent } from './conversation-labels'
 import { useToast } from '../../components/toast'
 import { ENDPOINT_RPC, INBOX_RPC, SIDE_EVENT_PUSH } from '../../contracts/zhin-console'
@@ -120,28 +124,23 @@ export function useMessageHistory(params: {
   // Listen for real-time inbound messages via the console push event
   useEffect(() => {
     if (!adapter || !endpointId) return
-    const onPush = (msg: { type: string; data?: unknown }) => {
-      const d = msg.data
-      if (!d || typeof d !== 'object') return
-      const payload = d as Record<string, unknown>
-      const pushEndpointId = String(payload.endpointKey ?? '')
-      if (msg.type === SIDE_EVENT_PUSH.MESSAGE_RECEIVE) {
-        if (payload.adapter === adapter && pushEndpointId === endpointId) {
-          void putInboxCache(adapter, endpointId, 'message', payload)
-          const content = normalizeInboundContent(payload.content) as ReceivedMessage['content']
-          setReceivedMessages((prev) => [
-            ...prev,
-            {
-              id: `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-              channelId: String(payload.channelId ?? ''),
-              channelType: String(payload.channelType ?? 'private'),
-              sender: (payload.sender as ReceivedMessage['sender']) ?? { id: '', name: '' },
-              content,
-              timestamp: Number(payload.timestamp ?? Date.now()),
-            },
-          ])
-        }
-      }
+    const onPush = (msg: EndpointPushMessage) => {
+      if (msg.type !== SIDE_EVENT_PUSH.MESSAGE_RECEIVE) return
+      const payload = msg.data
+      if (payload.adapter !== adapter || payload.endpointKey !== endpointId) return
+      void putInboxCache(adapter, endpointId, 'message', { ...payload })
+      const content = normalizeInboundContent(payload.content) as ReceivedMessage['content']
+      setReceivedMessages((prev) => [
+        ...prev,
+        {
+          id: `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          channelId: payload.channelId,
+          channelType: payload.channelType,
+          sender: (payload.sender as ReceivedMessage['sender']) ?? { id: '', name: '' },
+          content,
+          timestamp: payload.timestamp,
+        },
+      ])
     }
     return subscribeEndpointPush(onPush)
   }, [adapter, endpointId])

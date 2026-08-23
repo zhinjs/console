@@ -1,23 +1,33 @@
-/** `@zhin.js/client` 对 canonical Endpoint SSE 事件公开的浏览器事件。 */
-export const ENDPOINT_PUSH_EVENT = 'zhin-console-bot-push' as const
-/** Public Client event emitted when bounded SSE history cannot resume exactly. */
-export const CONSOLE_RECOVERY_GAP_EVENT = 'zhin-console-event-recovery-gap' as const
+import {
+  getWebSocketManager,
+  SIDE_EVENT_PUSH,
+  type KnownConsoleEventEnvelope,
+} from '@zhin.js/client'
 
-export type EndpointPushMessage = { type: string; data?: unknown; delivery?: 'live' | 'history' }
+type EndpointPushType =
+  | typeof SIDE_EVENT_PUSH.MESSAGE_RECEIVE
+  | typeof SIDE_EVENT_PUSH.NOTICE_RECEIVE
+  | typeof SIDE_EVENT_PUSH.REQUEST_RECEIVE
+
+export type EndpointPushMessage = Extract<
+  KnownConsoleEventEnvelope,
+  { type: EndpointPushType }
+>
 
 export function subscribeEndpointPush(
   handler: (message: EndpointPushMessage) => void,
 ): () => void {
-  const listener = (event: Event) => {
-    handler((event as CustomEvent<EndpointPushMessage>).detail)
-  }
-  window.addEventListener(ENDPOINT_PUSH_EVENT, listener)
+  const manager = getWebSocketManager()
+  const unsubscribers = [
+    manager.onConsoleEvent(SIDE_EVENT_PUSH.MESSAGE_RECEIVE, handler),
+    manager.onConsoleEvent(SIDE_EVENT_PUSH.NOTICE_RECEIVE, handler),
+    manager.onConsoleEvent(SIDE_EVENT_PUSH.REQUEST_RECEIVE, handler),
+  ]
   return () => {
-    window.removeEventListener(ENDPOINT_PUSH_EVENT, listener)
+    for (const unsubscribe of unsubscribers) unsubscribe()
   }
 }
 
 export function subscribeConsoleRecoveryGap(handler: () => void): () => void {
-  window.addEventListener(CONSOLE_RECOVERY_GAP_EVENT, handler)
-  return () => window.removeEventListener(CONSOLE_RECOVERY_GAP_EVENT, handler)
+  return getWebSocketManager().onConsoleEventRecoveryGap(handler)
 }

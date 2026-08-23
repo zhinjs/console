@@ -74,7 +74,7 @@ test('Console shell only consumes public route metadata', () => {
   assert.doesNotMatch(routes, /flush\s*:/)
 })
 
-test('Endpoint transport uses canonical endpointKey and the public client push event', () => {
+test('Endpoint transport uses canonical endpointKey and the public typed client event API', () => {
   const endpointSources = [
     'pages/endpoint-detail/useMessageHistory.ts',
     'pages/endpoint-detail/useEndpointConsole.tsx',
@@ -86,9 +86,12 @@ test('Endpoint transport uses canonical endpointKey and the public client push e
   assert.match(endpointSources, /endpointKey/)
 
   const push = sourceText(join(SOURCE_ROOT, 'utils', 'endpoint-push.ts'))
-  assert.match(push, /zhin-console-bot-push/)
-  assert.match(push, /zhin-console-event-recovery-gap/)
-  assert.doesNotMatch(push, /dispatchEvent|callbacks/)
+  assert.match(push, /getWebSocketManager/)
+  assert.match(push, /onConsoleEvent\(/)
+  assert.match(push, /onConsoleEventRecoveryGap\(/)
+  assert.match(push, /KnownConsoleEventEnvelope/)
+  assert.doesNotMatch(push, /zhin-console-bot-push|zhin-console-event-recovery-gap/)
+  assert.doesNotMatch(push, /addEventListener|dispatchEvent|callbacks/)
   assert.equal(sourceFiles().some((path) => path.endsWith('/sse-bridge.ts')), false)
   const history = sourceText(join(SOURCE_ROOT, 'pages', 'endpoint-detail', 'useMessageHistory.ts'))
   assert.match(history, /subscribeConsoleRecoveryGap/)
@@ -159,8 +162,8 @@ test('released Zhin rich-message renderer is the single Markdown implementation'
 
 test('package manifest targets the released Zhin contract generation', () => {
   const manifest = JSON.parse(sourceText(join(ROOT, 'package.json')))
-  assert.equal(manifest.dependencies['@zhin.js/client'], '^2.1.10')
-  assert.equal(manifest.dependencies['@zhin.js/contract'], '^1.0.15')
+  assert.equal(manifest.dependencies['@zhin.js/client'], '^2.1.11')
+  assert.equal(manifest.dependencies['@zhin.js/contract'], '^1.0.16')
   assert.equal(manifest.dependencies['@zhin.js/ai'], '^1.5.6')
   assert.match(manifest.dependencies.zod, /^\^4\./)
 })

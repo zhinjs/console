@@ -445,8 +445,7 @@ export function useChannelManager(params: {
     if (!adapter || !endpointId) return
     return subscribeEndpointPush((message) => {
       if (message.type !== SIDE_EVENT_PUSH.MESSAGE_RECEIVE) return
-      const d = message.data as Record<string, unknown> | undefined
-      if (!d) return
+      const d: Record<string, unknown> = { ...message.data }
       const pushAdapter = String(d.adapter ?? '')
       const pushEndpointId = String(d.endpointKey ?? '')
       if (pushAdapter !== adapter || pushEndpointId !== endpointId) return

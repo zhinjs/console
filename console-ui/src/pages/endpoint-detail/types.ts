@@ -9,7 +9,7 @@ export interface ReqItem {
   id: number
   platformRequestId: string
   type: string
-  sender: { id: string; name: string }
+  sender: { id: string; name?: string }
   comment: string
   channel: { id: string; type: string }
   timestamp: number
