@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ReactElement } from 'react'
+import { useRef, useState, type ReactElement } from 'react'
 import {
   Braces,
   Download,
@@ -13,7 +13,7 @@ import {
   Quote,
   Video,
 } from 'lucide-react'
-import { cn, pickMediaRawUrl, resolveMediaSrc } from '@zhin.js/client'
+import { MarkdownContent, cn, pickMediaRawUrl, resolveMediaSrc } from '@zhin.js/client'
 import type { ReceivedMessage } from './types'
 
 type MessageSegment = ReceivedMessage['content'][number]
@@ -81,125 +81,6 @@ function renderInlineText(text: string, keyPrefix: string) {
 
   if (last < text.length) parts.push(text.slice(last))
   return parts
-}
-
-function isMarkdownBoundary(line: string): boolean {
-  return (
-    /^```/.test(line) ||
-    /^#{1,4}\s+/.test(line) ||
-    /^>\s?/.test(line) ||
-    /^[-*]\s+/.test(line) ||
-    /^\d+\.\s+/.test(line)
-  )
-}
-
-function MarkdownContent({ text }: { text: string }) {
-  const blocks = useMemo(() => {
-    const lines = text.replace(/\r\n/g, '\n').split('\n')
-    const nodes: ReactElement[] = []
-    let i = 0
-
-    while (i < lines.length) {
-      const line = lines[i]
-      if (!line.trim()) {
-        i += 1
-        continue
-      }
-
-      if (/^```/.test(line)) {
-        const lang = line.replace(/^```/, '').trim()
-        const code: string[] = []
-        i += 1
-        while (i < lines.length && !/^```/.test(lines[i])) {
-          code.push(lines[i])
-          i += 1
-        }
-        if (i < lines.length) i += 1
-        nodes.push(
-          <pre key={`code-${i}`} className="im-markdown-code">
-            {lang ? <span className="im-markdown-code-lang">{lang}</span> : null}
-            <code>{code.join('\n')}</code>
-          </pre>,
-        )
-        continue
-      }
-
-      const heading = line.match(/^(#{1,4})\s+(.+)$/)
-      if (heading) {
-        const level = heading[1].length
-        nodes.push(
-          <div key={`heading-${i}`} className={cn('im-markdown-heading', `im-markdown-heading-${level}`)}>
-            {renderInlineText(heading[2], `h-${i}`)}
-          </div>,
-        )
-        i += 1
-        continue
-      }
-
-      if (/^>\s?/.test(line)) {
-        const quoteLines: string[] = []
-        while (i < lines.length && /^>\s?/.test(lines[i])) {
-          quoteLines.push(lines[i].replace(/^>\s?/, ''))
-          i += 1
-        }
-        nodes.push(
-          <blockquote key={`quote-${i}`} className="im-markdown-quote">
-            {quoteLines.map((q, idx) => (
-              <p key={idx}>{renderInlineText(q, `quote-${i}-${idx}`)}</p>
-            ))}
-          </blockquote>,
-        )
-        continue
-      }
-
-      if (/^[-*]\s+/.test(line)) {
-        const items: string[] = []
-        while (i < lines.length && /^[-*]\s+/.test(lines[i])) {
-          items.push(lines[i].replace(/^[-*]\s+/, ''))
-          i += 1
-        }
-        nodes.push(
-          <ul key={`ul-${i}`} className="im-markdown-list">
-            {items.map((item, idx) => (
-              <li key={idx}>{renderInlineText(item, `ul-${i}-${idx}`)}</li>
-            ))}
-          </ul>,
-        )
-        continue
-      }
-
-      if (/^\d+\.\s+/.test(line)) {
-        const items: string[] = []
-        while (i < lines.length && /^\d+\.\s+/.test(lines[i])) {
-          items.push(lines[i].replace(/^\d+\.\s+/, ''))
-          i += 1
-        }
-        nodes.push(
-          <ol key={`ol-${i}`} className="im-markdown-list im-markdown-list-ordered">
-            {items.map((item, idx) => (
-              <li key={idx}>{renderInlineText(item, `ol-${i}-${idx}`)}</li>
-            ))}
-          </ol>,
-        )
-        continue
-      }
-
-      const paragraph: string[] = []
-      while (i < lines.length && lines[i].trim() && !isMarkdownBoundary(lines[i])) {
-        paragraph.push(lines[i])
-        i += 1
-      }
-      nodes.push(
-        <p key={`p-${i}`} className="im-markdown-paragraph">
-          {renderInlineText(paragraph.join('\n'), `p-${i}`)}
-        </p>,
-      )
-    }
-
-    return nodes
-  }, [text])
-
-  return <div className="im-markdown-body">{blocks}</div>
 }
 
 function TextContent({ text }: { text: string }) {

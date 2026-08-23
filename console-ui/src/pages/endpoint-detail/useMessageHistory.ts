@@ -12,7 +12,7 @@ import {
   type MessageContent,
 } from '../../utils/parseComposerContent'
 import { listInboxCache, putInboxCache } from '../../utils/inbox-cache'
-import { subscribeEndpointPush } from '../../utils/endpoint-push'
+import { subscribeConsoleRecoveryGap, subscribeEndpointPush } from '../../utils/endpoint-push'
 import { toRpcChannelParent } from './conversation-labels'
 import { useToast } from '../../components/toast'
 import { ENDPOINT_RPC, INBOX_RPC, SIDE_EVENT_PUSH } from '../../contracts/zhin-console'
@@ -104,6 +104,18 @@ export function useMessageHistory(params: {
       void loadInboxMessages()
     }
   }, [selection, loadInboxMessages])
+
+  // A bounded event-history gap means incremental state is incomplete. Reload
+  // the authoritative Inbox projection instead of pretending replay succeeded.
+  useEffect(() => {
+    if (selection?.type !== 'channel') return
+    return subscribeConsoleRecoveryGap(() => {
+      setReceivedMessages([])
+      setInboxMessages([])
+      setInboxMessagesHasMore(true)
+      void loadInboxMessages()
+    })
+  }, [loadInboxMessages, selection?.type])
 
   // Listen for real-time inbound messages via the console push event
   useEffect(() => {

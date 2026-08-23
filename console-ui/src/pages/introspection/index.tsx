@@ -2,16 +2,20 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useSearchParams } from 'react-router-dom'
 import {
   Bot,
+  Boxes,
   ChevronLeft,
   ChevronRight,
+  Eye,
   Link2,
+  Loader2,
+  Network,
   RefreshCw,
   Search,
   Server,
   Terminal,
   Wrench,
 } from 'lucide-react'
-import { cn } from '@zhin.js/client'
+import { CodeBlock, cn } from '@zhin.js/client'
 import {
   CONSOLE_REST,
   type SupportedIntrospectionKind,
@@ -24,6 +28,10 @@ import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
 import { Skeleton } from '../../components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
+import { Textarea } from '../../components/ui/textarea'
+import { isDemoMode } from '../../utils/demo-mode'
+import { MessageBody } from '../endpoint-detail/MessageBody'
+import type { ReceivedMessage } from '../endpoint-detail/types'
 
 export type IntrospectionTab = SupportedIntrospectionKind
 
@@ -32,6 +40,8 @@ const TAB_CONFIG: Record<
   { label: string; pageSize: number; icon: typeof Terminal }
 > = {
   commands: { label: '命令', pageSize: 25, icon: Terminal },
+  middlewares: { label: '中间件', pageSize: 30, icon: Network },
+  components: { label: '组件', pageSize: 30, icon: Boxes },
   endpoints: { label: 'Endpoints', pageSize: 30, icon: Bot },
   bindings: { label: 'Agent 绑定', pageSize: 30, icon: Link2 },
   tools: { label: '工具', pageSize: 15, icon: Wrench },
@@ -58,6 +68,19 @@ const COLUMNS: Record<IntrospectionTab, Array<{ key: string; label: string }>> =
     { key: 'aliases', label: '别名' },
     { key: 'permissions', label: '权限' },
     { key: 'plugin', label: '来源' },
+  ],
+  middlewares: [
+    { key: 'name', label: 'Middleware' },
+    { key: 'phase', label: 'Phase' },
+    { key: 'target', label: 'Target' },
+    { key: 'order', label: 'Order' },
+    { key: 'owner', label: 'Owner' },
+    { key: 'source', label: 'Source' },
+  ],
+  components: [
+    { key: 'name', label: 'Component' },
+    { key: 'owner', label: 'Owner' },
+    { key: 'source', label: 'Source' },
   ],
   endpoints: [
     { key: 'adapter', label: 'Adapter' },
@@ -101,6 +124,7 @@ function renderCell(value: unknown): ReactNode {
 }
 
 export default function IntrospectionPage() {
+  const readOnly = isDemoMode()
   const [searchParams, setSearchParams] = useSearchParams()
   const tabFromUrl = parseTab(searchParams.get('tab'))
   const filterFromUrl = searchParams.get('filter') ?? ''
@@ -113,6 +137,12 @@ export default function IntrospectionPage() {
   const [error, setError] = useState<string | null>(null)
   const requestRef = useRef(0)
   const abortRef = useRef<AbortController | null>(null)
+  const previewAbortRef = useRef<AbortController | null>(null)
+  const [previewComponent, setPreviewComponent] = useState<{ name: string; owner: string } | null>(null)
+  const [previewProps, setPreviewProps] = useState('{}')
+  const [previewOutput, setPreviewOutput] = useState<unknown>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewError, setPreviewError] = useState<string | null>(null)
 
   const load = useCallback(async (
     targetTab: IntrospectionTab,
@@ -167,6 +197,16 @@ export default function IntrospectionPage() {
     setPage(1)
   }, [filterFromUrl, tabFromUrl])
 
+  useEffect(() => {
+    if (tab === 'components') return
+    previewAbortRef.current?.abort()
+    setPreviewComponent(null)
+    setPreviewOutput(null)
+    setPreviewError(null)
+  }, [tab])
+
+  useEffect(() => () => previewAbortRef.current?.abort(), [])
+
   const columns = COLUMNS[tab]
   const sourceUrl = useMemo(() => {
     const config = TAB_CONFIG[tab]
@@ -195,11 +235,53 @@ export default function IntrospectionPage() {
     setSearchParams(params, { replace: true })
   }
 
+  const renderComponent = async () => {
+    if (readOnly || !previewComponent) return
+    let props: unknown
+    try {
+      props = JSON.parse(previewProps)
+    } catch {
+      setPreviewError('Props 必须是有效 JSON')
+      return
+    }
+    previewAbortRef.current?.abort()
+    const controller = new AbortController()
+    previewAbortRef.current = controller
+    setPreviewLoading(true)
+    setPreviewError(null)
+    setPreviewOutput(null)
+    try {
+      const response = await apiFetch(CONSOLE_REST.COMPONENT_PREVIEW, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requester: previewComponent.owner,
+          name: previewComponent.name,
+          props,
+        }),
+        signal: controller.signal,
+      })
+      const body = await response.json() as {
+        success: boolean
+        data?: { output?: unknown }
+        error?: string
+      }
+      if (!response.ok || body.success !== true || !body.data || !('output' in body.data)) {
+        throw new Error(body.error ?? `HTTP ${response.status}`)
+      }
+      if (!controller.signal.aborted) setPreviewOutput(body.data.output)
+    } catch (caught) {
+      if (!controller.signal.aborted) setPreviewError(caught instanceof Error ? caught.message : String(caught))
+    } finally {
+      if (!controller.signal.aborted) setPreviewLoading(false)
+    }
+  }
+
   return (
     <PageShell className="max-w-[1600px]">
       <PageHeader
         title="运行时能力"
-        description="读取当前 generation 的命令、Endpoint、Agent 绑定、工具与 MCP 投影。列表来自 Zhin Runtime，不从配置文件推测。"
+        description="读取当前 generation 的命令、中间件、组件、Endpoint、Agent 绑定、工具与 MCP 投影。列表来自 Zhin Runtime，不从配置文件推测。"
         actions={
           <Button variant="outline" size="sm" disabled={loading} onClick={() => void load(tab, page, appliedFilter)}>
             <RefreshCw className={loading ? 'animate-spin' : ''} />刷新
@@ -262,7 +344,10 @@ export default function IntrospectionPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[720px] text-left text-sm">
                     <thead className="border-b bg-muted/25 text-xs text-muted-foreground">
-                      <tr>{columns.map((column) => <th key={column.key} className="px-4 py-3 font-medium">{column.label}</th>)}</tr>
+                      <tr>
+                        {columns.map((column) => <th key={column.key} className="px-4 py-3 font-medium">{column.label}</th>)}
+                        {key === 'components' ? <th className="px-4 py-3 text-right font-medium">Preview</th> : null}
+                      </tr>
                     </thead>
                     <tbody className="divide-y">
                       {(data?.items ?? []).map((item, rowIndex) => (
@@ -272,15 +357,58 @@ export default function IntrospectionPage() {
                               {renderCell(item[column.key])}
                             </td>
                           ))}
+                          {key === 'components' ? (
+                            <td className="px-4 py-3 text-right align-top">
+                              {readOnly ? (
+                                <Badge variant="outline">Full only</Badge>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    previewAbortRef.current?.abort()
+                                    setPreviewComponent({
+                                      name: String(item.name ?? ''),
+                                      owner: String(item.owner ?? ''),
+                                    })
+                                    setPreviewProps('{}')
+                                    setPreviewOutput(null)
+                                    setPreviewLoading(false)
+                                    setPreviewError(null)
+                                  }}
+                                >
+                                  <Eye className="h-3.5 w-3.5" />预览
+                                </Button>
+                              )}
+                            </td>
+                          ) : null}
                         </tr>
                       ))}
                       {!data?.items.length ? (
-                        <tr><td colSpan={columns.length} className="px-4 py-12 text-center text-sm text-muted-foreground">当前 generation 没有该类能力</td></tr>
+                        <tr><td colSpan={columns.length + (key === 'components' ? 1 : 0)} className="px-4 py-12 text-center text-sm text-muted-foreground">当前 generation 没有该类能力</td></tr>
                       ) : null}
                     </tbody>
                   </table>
                 </div>
               )}
+
+              {key === 'components' && previewComponent ? (
+                <ComponentPreviewPanel
+                  component={previewComponent}
+                  propsText={previewProps}
+                  output={previewOutput}
+                  loading={previewLoading}
+                  error={previewError}
+                  onPropsChange={setPreviewProps}
+                  onRender={() => void renderComponent()}
+                  onClose={() => {
+                    previewAbortRef.current?.abort()
+                    setPreviewComponent(null)
+                    setPreviewOutput(null)
+                    setPreviewError(null)
+                  }}
+                />
+              ) : null}
 
               <footer className="flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center">
                 <p className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground" title={sourceUrl}>Source: {sourceUrl}</p>
@@ -296,4 +424,92 @@ export default function IntrospectionPage() {
       </Tabs>
     </PageShell>
   )
+}
+
+function ComponentPreviewPanel(props: {
+  component: { name: string; owner: string }
+  propsText: string
+  output: unknown
+  loading: boolean
+  error: string | null
+  onPropsChange(value: string): void
+  onRender(): void
+  onClose(): void
+}) {
+  return (
+    <section className="border-t bg-muted/[0.12] p-4" aria-labelledby="component-preview-title">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <span className="console-eyebrow">Component preview</span>
+          <h3 id="component-preview-title" className="mt-1 font-semibold">{props.component.name}</h3>
+          <p className="text-xs text-muted-foreground">requester {props.component.owner}</p>
+        </div>
+        <Button size="sm" variant="ghost" onClick={props.onClose}>关闭</Button>
+      </div>
+      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(16rem,0.7fr)_minmax(0,1.3fr)]">
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-muted-foreground" htmlFor="component-preview-props">Props JSON</label>
+          <Textarea
+            id="component-preview-props"
+            value={props.propsText}
+            onChange={(event) => props.onPropsChange(event.target.value)}
+            className="min-h-40 font-mono text-xs"
+            spellCheck={false}
+          />
+          <Button size="sm" onClick={props.onRender} disabled={props.loading}>
+            {props.loading ? <Loader2 className="animate-spin" /> : <Eye />}
+            {props.loading ? '渲染中' : '渲染组件'}
+          </Button>
+          {props.error ? <Alert variant="destructive"><AlertDescription>{props.error}</AlertDescription></Alert> : null}
+        </div>
+        <div className="min-h-52 overflow-auto rounded-lg border bg-background p-3">
+          {props.loading ? (
+            <div className="flex min-h-44 items-center justify-center text-sm text-muted-foreground"><Loader2 className="mr-2 animate-spin" />Component 正在运行</div>
+          ) : props.output == null ? (
+            <div className="flex min-h-44 items-center justify-center text-center text-sm text-muted-foreground">填写 Props 后渲染，输出会使用真实消息组件展示。</div>
+          ) : (
+            <ComponentPreviewOutput output={props.output} />
+          )}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function ComponentPreviewOutput({ output }: { output: unknown }) {
+  const values = Array.isArray(output) ? output : [output]
+  const segments = values.filter((value): value is ReceivedMessage['content'][number] => (
+    Boolean(value) && typeof value === 'object' && typeof (value as { type?: unknown }).type === 'string'
+  ))
+  if (segments.length === values.length && segments.length > 0) {
+    if (segments.length === 1 && segments[0].type === 'html') {
+      const data = segments[0].data ?? {}
+      const html = typeof data.html === 'string' ? data.html : ''
+      const height = clampPreviewDimension(data.height, 320, 160, 640)
+      if (html) {
+        const srcDoc = `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: blob:; font-src data:; style-src 'unsafe-inline'"></head><body>${html}</body></html>`
+        return (
+          <iframe
+            title="Component HTML preview"
+            sandbox=""
+            srcDoc={srcDoc}
+            className="w-full rounded-md border-0 bg-white"
+            style={{ height }}
+          />
+        )
+      }
+    }
+    if (segments.length === 1 && segments[0].type === 'code') {
+      const data = segments[0].data ?? {}
+      return <CodeBlock code={String(data.code ?? data.text ?? '')} language={String(data.language ?? '')} />
+    }
+    return <MessageBody content={segments} />
+  }
+  if (typeof output === 'string') return <MessageBody content={[{ type: 'text', data: { text: output } }]} />
+  return <CodeBlock code={JSON.stringify(output, null, 2) ?? String(output)} language="json" />
+}
+
+function clampPreviewDimension(value: unknown, fallback: number, minimum: number, maximum: number): number {
+  const parsed = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(parsed) ? Math.min(maximum, Math.max(minimum, parsed)) : fallback
 }

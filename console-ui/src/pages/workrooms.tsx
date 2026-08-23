@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   Activity,
   AlertTriangle,
@@ -10,6 +10,7 @@ import {
   FolderKanban,
   RefreshCw,
   Search,
+  Settings2,
   ShieldCheck,
   TimerReset,
   UserRoundCog,
@@ -27,6 +28,7 @@ import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { Skeleton } from '../components/ui/skeleton'
+import { isDemoMode } from '../utils/demo-mode'
 
 type RunStatus = 'active' | 'blocked' | 'needs_replan' | 'cancelling' | 'completed' | 'cancelled'
 type TaskStatus = 'ready' | 'blocked' | 'executing' | 'awaiting_acceptance' | 'cancelling' | 'accepted' | 'failed' | 'cancelled'
@@ -52,6 +54,13 @@ interface WorkroomTask {
   blockers: WorkroomBlocker[]
   currentAssignmentId?: string
   reportRef?: string
+  reportDigest?: string
+  candidateRef?: string
+  candidateHash?: string
+  completionReceiptDigest?: string
+  currentReviewerAssignmentId?: string
+  currentSponsorGateId?: string
+  acceptanceBlockReason?: string
   terminalReason?: string
 }
 
@@ -59,7 +68,10 @@ interface WorkroomAssignment {
   id: string
   taskKey: string
   taskRevision: number
+  revision: number
   attempt: number
+  fence: number
+  envelopeDigest: string
   role: 'executor' | 'reviewer' | 'integration'
   status: AssignmentStatus
   owner: string
@@ -67,7 +79,39 @@ interface WorkroomAssignment {
   controlDeadline?: number
   checkpointRef?: string
   reportRef?: string
+  reportDigest?: string
+  candidateRef?: string
+  candidateHash?: string
+  completionReceiptDigest?: string
+  latestProgress?: { summary: string; completedUnits?: number; totalUnits?: number }
+  observationDigests: Record<string, string>
   outcome?: 'interrupted' | 'committed' | 'outcome_unknown'
+}
+
+interface WorkroomAcceptanceWait {
+  id: string
+  taskKey: string
+  taskRevision: number
+  candidateHash: string
+  riskTier: 'low' | 'medium' | 'high' | 'critical'
+  route: 'reviewer_required' | 'sponsor_required' | 'reviewer_then_sponsor'
+  contractId: string
+  owner: string
+  deadline: number
+  allowedActions: string[]
+  status: string
+  evaluation: {
+    disposition: 'accepted' | 'rework' | 'policy_blocked'
+    route: string
+    decidedBy: string
+    reason?: string
+    riskAssessment: { tier: 'low' | 'medium' | 'high' | 'critical' }
+  }
+  reviewerPrincipalId?: string
+  sponsorPrincipalId?: string
+  authorizationRef?: string
+  verdict?: Record<string, unknown>
+  decisionReason?: string
 }
 
 interface WorkroomRun {
@@ -80,6 +124,8 @@ interface WorkroomRun {
   cancelRequested: boolean
   tasks: Record<string, WorkroomTask>
   assignments: Record<string, WorkroomAssignment>
+  reviewerAssignments: Record<string, WorkroomAcceptanceWait>
+  sponsorGates: Record<string, WorkroomAcceptanceWait>
 }
 
 interface RunsEnvelope {
@@ -138,7 +184,7 @@ async function readStrictJson<T>(response: Response): Promise<T> {
   return body.data
 }
 
-export default function WorkroomsPage() {
+function WorkroomBoardPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const projectFromUrl = searchParams.get('projectId')?.trim() ?? ''
   const runFromUrl = searchParams.get('runId')?.trim() ?? ''
@@ -293,15 +339,10 @@ export default function WorkroomsPage() {
         title="Workroom 任务看板"
         description="按 Project 读取 Workroom Journal 投影，观察 Run、Task、Assignment 与阻塞事实。这里不修改 Kernel 状态。"
         actions={
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!projectId || loading || refreshing}
-            onClick={() => void loadRuns(projectId, true)}
-          >
-            <RefreshCw className={refreshing ? 'animate-spin' : ''} />
-            刷新
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm"><Link to="/agent/workrooms/catalog"><Settings2 />配置 Workrooms</Link></Button>
+            <Button variant="outline" size="sm" disabled={!projectId || loading || refreshing} onClick={() => void loadRuns(projectId, true)}><RefreshCw className={refreshing ? 'animate-spin' : ''} />刷新</Button>
+          </div>
         }
       />
 
@@ -395,6 +436,7 @@ export default function WorkroomsPage() {
                   <div className="mt-3 flex items-center gap-3 text-[11px] text-muted-foreground">
                     <span>{Object.keys(run.tasks).length} tasks</span>
                     <span>{Object.keys(run.assignments).length} assignments</span>
+                    <span>{Object.keys(run.reviewerAssignments ?? {}).length + Object.keys(run.sponsorGates ?? {}).length} waits</span>
                     <span className="ml-auto">seq {run.sequence}</span>
                   </div>
                 </button>
@@ -433,9 +475,30 @@ export default function WorkroomsPage() {
   )
 }
 
+function DemoWorkroomBoardPage() {
+  return (
+    <PageShell className="max-w-[1200px]">
+      <PageHeader
+        title="Workroom 任务看板"
+        description="Run Journal 包含 Project 交付、审批与执行租约事实，仅向已认证的 full principal 开放。"
+        actions={<Button asChild variant="outline" size="sm"><Link to="/agent/workrooms/catalog"><Settings2 />查看公开目录</Link></Button>}
+      />
+      <div className="console-dashboard-panel flex min-h-[28rem] items-center justify-center p-6">
+        <EmptyState title="任务投影仅限私有控制台" description="Demo 不请求 Run / Task / Assignment 详情；你仍可查看只读 Workroom Catalog，了解空间、Bot 与 Agent 的映射。" />
+      </div>
+    </PageShell>
+  )
+}
+
+export default function WorkroomsPage() {
+  return isDemoMode() ? <DemoWorkroomBoardPage /> : <WorkroomBoardPage />
+}
+
 function RunDetail({ run }: { run: WorkroomRun }) {
   const tasks = Object.values(run.tasks)
   const assignments = Object.values(run.assignments)
+  const reviewerAssignments = Object.values(run.reviewerAssignments ?? {})
+  const sponsorGates = Object.values(run.sponsorGates ?? {})
   return (
     <div className="space-y-5 p-4 sm:p-5">
       <header className="border-b pb-4">
@@ -486,6 +549,8 @@ function RunDetail({ run }: { run: WorkroomRun }) {
                 </div>
               ) : null}
               {task.reportRef ? <EvidenceRef icon={FileCheck2} label="Report" value={task.reportRef} /> : null}
+              {task.candidateRef ? <EvidenceRef icon={ShieldCheck} label="Candidate" value={task.candidateRef} /> : null}
+              {task.acceptanceBlockReason ? <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">Acceptance: {task.acceptanceBlockReason}</p> : null}
               {task.terminalReason ? <p className="mt-2 text-xs text-destructive">{task.terminalReason}</p> : null}
             </article>
           ))}
@@ -512,7 +577,14 @@ function RunDetail({ run }: { run: WorkroomRun }) {
                 <p><TimerReset className="mr-1 inline h-3.5 w-3.5" />lease {formatTime(assignment.leaseExpiresAt)}</p>
                 <p>task rev {assignment.taskRevision} · attempt {assignment.attempt}</p>
                 {assignment.outcome ? <p>outcome {assignment.outcome}</p> : null}
+                <p>assignment rev {assignment.revision} · fence {assignment.fence}</p>
               </div>
+              {assignment.latestProgress ? (
+                <div className="mt-2 rounded-md bg-muted/35 px-2.5 py-2 text-xs">
+                  <p>{assignment.latestProgress.summary}</p>
+                  {assignment.latestProgress.totalUnits ? <p className="mt-1 text-[10px] text-muted-foreground">{assignment.latestProgress.completedUnits ?? 0} / {assignment.latestProgress.totalUnits}</p> : null}
+                </div>
+              ) : null}
               {assignment.checkpointRef ? <EvidenceRef icon={ShieldCheck} label="Checkpoint" value={assignment.checkpointRef} /> : null}
               {assignment.reportRef ? <EvidenceRef icon={CheckCircle2} label="Report" value={assignment.reportRef} /> : null}
             </article>
@@ -520,7 +592,39 @@ function RunDetail({ run }: { run: WorkroomRun }) {
           {assignments.length === 0 ? <EmptyState compact title="尚无 Assignment" /> : null}
         </div>
       </section>
+
+      <section aria-labelledby="workroom-acceptance-title">
+        <div className="mb-2 flex items-center justify-between">
+          <h3 id="workroom-acceptance-title" className="text-sm font-semibold">Acceptance waits</h3>
+          <Badge variant="outline">{reviewerAssignments.length + sponsorGates.length}</Badge>
+        </div>
+        <div className="grid gap-2 lg:grid-cols-2">
+          {reviewerAssignments.map((wait) => <AcceptanceWait key={wait.id} kind="Reviewer" wait={wait} />)}
+          {sponsorGates.map((wait) => <AcceptanceWait key={wait.id} kind="Sponsor" wait={wait} />)}
+          {!reviewerAssignments.length && !sponsorGates.length ? <EmptyState compact title="当前没有 Reviewer / Sponsor 等待项" /> : null}
+        </div>
+      </section>
     </div>
+  )
+}
+
+function AcceptanceWait(props: { kind: 'Reviewer' | 'Sponsor'; wait: WorkroomAcceptanceWait }) {
+  const { wait } = props
+  return (
+    <article className="rounded-lg border p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0"><p className="text-sm font-medium">{props.kind} · {wait.taskKey}</p><code className="text-[10px] text-muted-foreground">{wait.id}</code></div>
+        <Badge variant={statusVariant(wait.status)}>{wait.status}</Badge>
+      </div>
+      <div className="mt-3 grid gap-1 text-[11px] text-muted-foreground sm:grid-cols-2">
+        <span>risk {wait.riskTier}</span><span>route {wait.route}</span>
+        <span>owner {wait.owner}</span><span>deadline {formatTime(wait.deadline)}</span>
+        <span>decision {wait.evaluation.disposition}</span><span>by {wait.evaluation.decidedBy}</span>
+      </div>
+      {(wait.decisionReason || wait.evaluation.reason) ? <p className="mt-2 text-xs">{wait.decisionReason ?? wait.evaluation.reason}</p> : null}
+      {wait.allowedActions.length ? <div className="mt-2 flex flex-wrap gap-1">{wait.allowedActions.map((action) => <Badge key={action} variant="outline">{action}</Badge>)}</div> : null}
+      {wait.verdict ? <pre className="mt-2 max-h-32 overflow-auto rounded-md bg-muted/35 p-2 text-[10px]">{JSON.stringify(wait.verdict, null, 2)}</pre> : null}
+    </article>
   )
 }
 

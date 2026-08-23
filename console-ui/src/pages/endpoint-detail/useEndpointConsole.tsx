@@ -13,7 +13,7 @@ import { listInboxCache, putInboxCache } from '../../utils/inbox-cache'
 import { useChannelManager } from './useChannelManager'
 import { useMessageHistory } from './useMessageHistory'
 import { useGroupActions } from './useGroupActions'
-import { subscribeEndpointPush } from '../../utils/endpoint-push'
+import { subscribeConsoleRecoveryGap, subscribeEndpointPush } from '../../utils/endpoint-push'
 import { ENDPOINT_RPC, INBOX_RPC, SIDE_EVENT_PUSH, SIDE_EVENT_RPC } from '../../contracts/zhin-console'
 import { requestConsole } from '../../utils/console-rpc'
 
@@ -24,6 +24,9 @@ export function useEndpointConsole() {
   }>()
   const adapter = adapterParam ? decodeURIComponent(adapterParam) : ''
   const endpointId = endpointIdParam ? decodeURIComponent(endpointIdParam) : ''
+  const endpointIdentity = `${adapter}\u0000${endpointId}`
+  const endpointIdentityRef = useRef(endpointIdentity)
+  endpointIdentityRef.current = endpointIdentity
   const valid = Boolean(adapter && endpointId)
   const [searchParams] = useSearchParams()
   const requestedChannelType = searchParams.get('channelType')
@@ -124,6 +127,13 @@ export function useEndpointConsole() {
   // 递增序号：切换 endpoint 后在途的旧请求 resolve 时序号已过期，直接丢弃
   const inboxRequestsSeqRef = useRef(0)
   const inboxNoticesSeqRef = useRef(0)
+  const unreadNoticesSeqRef = useRef(0)
+
+  useEffect(() => {
+    // Invalidate an in-flight unread projection immediately when the endpoint
+    // identity changes, even before the new endpoint's cache hydration ends.
+    unreadNoticesSeqRef.current += 1
+  }, [adapter, endpointId])
   const loadInboxRequests = useCallback(
     async (append: boolean) => {
       if (!adapter || !endpointId) return
@@ -192,6 +202,74 @@ export function useEndpointConsole() {
     },
     [adapter, endpointId, inboxNoticesOffset],
   )
+
+  const loadNoticesFromServer = useCallback(async () => {
+    if (!adapter || !endpointId) return
+    const seq = ++unreadNoticesSeqRef.current
+    const requestedEndpoint = `${adapter}\u0000${endpointId}`
+    try {
+      const res = await requestConsole<{
+        notices: Array<InboxNoticeRow & {
+          noticeType: string
+          channel: { id: string; type: string }
+          timestamp: number
+        }>
+        inboxEnabled: boolean
+      }>({
+        type: INBOX_RPC.NOTICES,
+        data: {
+          adapter,
+          endpointKey: endpointId,
+          unreadOnly: true,
+          limit: 100,
+          offset: 0,
+        },
+      })
+      if (
+        seq !== unreadNoticesSeqRef.current
+        || requestedEndpoint !== endpointIdentityRef.current
+      ) return
+      if (!res.inboxEnabled) return
+      setNotices(new Map((res.notices ?? []).map((notice) => [notice.id, {
+        id: notice.id,
+        noticeType: notice.noticeType,
+        channel: notice.channel,
+        payload: notice.payload,
+        timestamp: notice.timestamp,
+      }])))
+    } catch {
+      /* keep the last complete projection on a transient network failure */
+    }
+  }, [adapter, endpointId])
+
+  // A recovery gap means every projection fed by the bounded event journal may
+  // be incomplete. Rebuild the request and notice views from their
+  // authoritative HTTP APIs; message history performs the same recovery in
+  // useMessageHistory for the currently selected conversation.
+  useEffect(() => {
+    if (!adapter || !endpointId) return
+    return subscribeConsoleRecoveryGap(() => {
+      setRequests(new Map())
+      setNotices(new Map())
+      setInboxRequests([])
+      setInboxRequestsOffset(0)
+      setInboxNotices([])
+      setInboxNoticesOffset(0)
+      void Promise.all([
+        loadRequestsFromServer(),
+        loadNoticesFromServer(),
+        loadInboxRequests(false),
+        loadInboxNotices(false),
+      ])
+    })
+  }, [
+    adapter,
+    endpointId,
+    loadInboxNotices,
+    loadInboxRequests,
+    loadNoticesFromServer,
+    loadRequestsFromServer,
+  ])
 
   // --- Hydrate requests/notices/messages from local inbox cache ---
   useEffect(() => {
@@ -292,11 +370,15 @@ export function useEndpointConsole() {
         })
         setInboxNoticesEnabled(true)
       }
+
+      // Cache is only a fast paint. The durable unread projection is the
+      // authority after refresh and removes notices already consumed elsewhere.
+      await loadNoticesFromServer()
     })()
     return () => {
       cancelled = true
     }
-  }, [adapter, endpointId])
+  }, [adapter, endpointId, loadNoticesFromServer])
 
   // --- Listen for real-time push events for requests and notices ---
   useEffect(() => {
@@ -404,29 +486,11 @@ export function useEndpointConsole() {
 
   const refreshNotices = useCallback(async () => {
     if (!adapter || !endpointId) return
-    const cachedNotices = await listInboxCache(adapter, endpointId, 'notice')
-    if (cachedNotices.length) {
-      setNotices((prev) => {
-        const m = new Map(prev)
-        for (const rec of cachedNotices) {
-          const d = rec.payload
-          const id = d.id as number
-          if (id == null) continue
-          m.set(id, {
-            id,
-            noticeType: String(d.noticeType ?? d.type ?? ''),
-            channel: (d.channel as NoticeItem['channel']) ?? { id: '', type: 'private' },
-            payload: String(d.payload ?? '{}'),
-            timestamp: Number(d.timestamp ?? rec.updatedAt),
-          })
-        }
-        return m
-      })
-    }
+    await loadNoticesFromServer()
     if (noticesTab === 'history') {
       await loadInboxNotices(false)
     }
-  }, [adapter, endpointId, noticesTab, loadInboxNotices])
+  }, [adapter, endpointId, noticesTab, loadInboxNotices, loadNoticesFromServer])
 
   const showRightPanel =
     channelMgr.selection?.type === 'channel' && channelMgr.selection.channelType === 'group' && adapter === 'icqq'

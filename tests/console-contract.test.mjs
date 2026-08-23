@@ -20,12 +20,7 @@ function sourceText(path) {
 
 test('Console does not call removed Zhin APIs or legacy Endpoint aliases', () => {
   const removed = [
-    'workrooms:get',
-    'workrooms:set',
     '/api/agent/orchestration',
-    '/api/agent/traces',
-    '/api/introspection/middlewares',
-    '/api/introspection/components',
     'endpoint:list',
     'endpoint:info',
     'endpoint:sendMessage',
@@ -55,20 +50,21 @@ test('Console does not call removed Zhin APIs or legacy Endpoint aliases', () =>
   }
 })
 
-test('built-in Agent navigation only exposes current Workbench, Workroom and Sessions', () => {
+test('built-in Agent navigation exposes Workbench, Workroom board/catalog and Sessions', () => {
   const source = sourceText(join(SOURCE_ROOT, 'registerBuiltinShell.tsx'))
   assert.match(source, /path: '\/agent\/workbench'/)
   assert.match(source, /path: '\/agent\/workrooms'/)
+  assert.match(source, /path: '\/agent\/workrooms\/catalog'/)
   assert.match(source, /path: '\/agent\/sessions'/)
   assert.doesNotMatch(source, /\/agent\/(?:studio|orchestration)/)
 })
 
 test('introspection surface is the exact current Host capability set', () => {
   const source = sourceText(join(SOURCE_ROOT, 'contracts', 'zhin-console.ts'))
-  for (const kind of ['commands', 'endpoints', 'bindings', 'tools', 'mcp']) {
+  for (const kind of ['commands', 'middlewares', 'components', 'endpoints', 'bindings', 'tools', 'mcp']) {
     assert.match(source, new RegExp(`\\| '${kind}'`))
   }
-  assert.doesNotMatch(source, /\| '(?:middlewares|components)'/)
+  assert.match(source, /COMPONENT_PREVIEW: '\/api\/introspection\/components\/render'/)
 })
 
 test('Console shell only consumes public route metadata', () => {
@@ -91,8 +87,19 @@ test('Endpoint transport uses canonical endpointKey and the public client push e
 
   const push = sourceText(join(SOURCE_ROOT, 'utils', 'endpoint-push.ts'))
   assert.match(push, /zhin-console-bot-push/)
+  assert.match(push, /zhin-console-event-recovery-gap/)
   assert.doesNotMatch(push, /dispatchEvent|callbacks/)
   assert.equal(sourceFiles().some((path) => path.endsWith('/sse-bridge.ts')), false)
+  const history = sourceText(join(SOURCE_ROOT, 'pages', 'endpoint-detail', 'useMessageHistory.ts'))
+  assert.match(history, /subscribeConsoleRecoveryGap/)
+  const endpointConsole = sourceText(join(SOURCE_ROOT, 'pages', 'endpoint-detail', 'useEndpointConsole.tsx'))
+  assert.match(endpointConsole, /subscribeConsoleRecoveryGap/)
+  assert.match(endpointConsole, /loadRequestsFromServer\(\)/)
+  assert.match(endpointConsole, /loadNoticesFromServer\(\)/)
+  assert.match(endpointConsole, /loadInboxRequests\(false\)/)
+  assert.match(endpointConsole, /loadInboxNotices\(false\)/)
+  assert.match(endpointConsole, /unreadOnly:\s*true/)
+  assert.match(history, /loadInboxMessages\(\)/)
 })
 
 test('Workroom selection is represented by projectId and runId in the URL', () => {
@@ -100,6 +107,18 @@ test('Workroom selection is represented by projectId and runId in the URL', () =
   assert.match(source, /searchParams\.get\('projectId'\)/)
   assert.match(source, /searchParams\.get\('runId'\)/)
   assert.match(source, /setSearchParams\(\{ projectId, runId \}\)/)
+})
+
+test('Workroom configuration uses the runtime Catalog CAS contract', () => {
+  const contract = sourceText(join(SOURCE_ROOT, 'contracts', 'zhin-console.ts'))
+  assert.match(contract, /WORKROOMS_GET: 'workrooms:get'/)
+  assert.match(contract, /WORKROOMS_SET: 'workrooms:set'/)
+  const source = sourceText(join(SOURCE_ROOT, 'pages', 'workroom-catalog.tsx'))
+  assert.match(source, /type: CONSOLE_RPC\.WORKROOMS_GET/)
+  assert.match(source, /type: CONSOLE_RPC\.WORKROOMS_SET/)
+  assert.match(source, /expectedRevision: catalog\.revision/)
+  assert.match(source, /restartRequired: false/)
+  assert.doesNotMatch(source, /config:set|ai\.workrooms/)
 })
 
 test('Demo-capable mutation pages expose explicit read-only branches', () => {
@@ -113,10 +132,12 @@ test('Demo-capable mutation pages expose explicit read-only branches', () => {
     'pages/logs.tsx',
     'pages/cron.tsx',
     'pages/dashboard.tsx',
+    'pages/workroom-catalog.tsx',
+    'pages/workrooms.tsx',
   ]) {
     const source = sourceText(join(SOURCE_ROOT, path))
     assert.match(source, /isDemoMode/, `${path} must derive its Demo permission boundary`)
-    assert.match(source, /readOnly|DemoConfigPage/, `${path} must render a read-only Demo state`)
+    assert.match(source, /readOnly|DemoConfigPage|DemoWorkroom/, `${path} must render a read-only Demo state`)
   }
 })
 
@@ -128,4 +149,18 @@ test('Demo config is split before the full-config hook can execute', () => {
   assert.ok(editableStart >= 0 && hookCall > editableStart)
   assert.ok(wrapper > hookCall)
   assert.match(source.slice(wrapper), /isDemoMode\(\) \? <DemoConfigPage \/> : <EditableConfigPage \/>/)
+})
+
+test('released Zhin rich-message renderer is the single Markdown implementation', () => {
+  const source = sourceText(join(SOURCE_ROOT, 'pages', 'endpoint-detail', 'MessageBody.tsx'))
+  assert.match(source, /import \{ MarkdownContent, cn, pickMediaRawUrl, resolveMediaSrc \} from '@zhin\.js\/client'/)
+  assert.doesNotMatch(source, /function MarkdownContent\(/)
+})
+
+test('package manifest targets the released Zhin contract generation', () => {
+  const manifest = JSON.parse(sourceText(join(ROOT, 'package.json')))
+  assert.equal(manifest.dependencies['@zhin.js/client'], '^2.1.10')
+  assert.equal(manifest.dependencies['@zhin.js/contract'], '^1.0.15')
+  assert.equal(manifest.dependencies['@zhin.js/ai'], '^1.5.6')
+  assert.match(manifest.dependencies.zod, /^\^4\./)
 })

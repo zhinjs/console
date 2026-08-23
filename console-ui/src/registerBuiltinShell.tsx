@@ -15,6 +15,7 @@ import IntrospectionPage from './pages/introspection'
 import AgentWorkbenchPage from './pages/agent-workbench'
 import AgentSessionsPage from './pages/agent-sessions'
 import WorkroomsPage from './pages/workrooms'
+import WorkroomCatalogPage from './pages/workroom-catalog'
 
 let builtinPagesRegistered = false
 
@@ -77,6 +78,15 @@ export function registerBuiltinConsolePages() {
   })
 
   app.addRoute({
+    path: '/agent/workrooms/catalog',
+    name: 'Workroom 配置',
+    parent: null,
+    icon: 'Network',
+    element: <WorkroomCatalogPage />,
+    meta: { group: 'Agent 工作台', order: 2, fullWidth: true },
+  })
+
+  app.addRoute({
     path: '/introspection',
     name: '运行时能力',
     parent: null,
@@ -91,7 +101,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'GitBranch',
     element: <AgentSessionsPage />,
-    meta: { group: 'Agent 工作台', order: 2 },
+    meta: { group: 'Agent 工作台', order: 3 },
   })
 
   app.addRoute({

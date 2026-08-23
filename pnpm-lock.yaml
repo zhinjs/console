@@ -9,14 +9,17 @@ importers:
   .:
     dependencies:
       '@zhin.js/ai':
-        specifier: ^1.4.5
-        version: 1.4.5(ai@7.0.32(zod@3.25.76))(zod@3.25.76)
+        specifier: ^1.5.6
+        version: 1.5.6(ai@7.0.32(zod@4.4.3))(zod@4.4.3)
       '@zhin.js/client':
-        specifier: ^2.0.6
-        version: 2.0.6(ai@7.0.32(zod@3.25.76))(react@19.2.6)(zod@3.25.76)
+        specifier: ^2.1.10
+        version: 2.1.10(ai@7.0.32(zod@4.4.3))(react@19.2.6)(zod@4.4.3)
       '@zhin.js/contract':
-        specifier: ^1.0.4
-        version: 1.0.4(ai@7.0.32(zod@3.25.76))(zod@3.25.76)
+        specifier: ^1.0.15
+        version: 1.0.15(ai@7.0.32(zod@4.4.3))(zod@4.4.3)
+      zod:
+        specifier: ^4.0.0
+        version: 4.4.3
     devDependencies:
       '@farmfe/cli':
         specifier: ^1.0.5
@@ -1199,8 +1202,8 @@ packages:
   '@zeit/schemas@2.36.0':
     resolution: {integrity: sha512-7kjMwcChYEzMKjeex9ZFXkt1AyNov9R5HZtjBKVsmVpw7pa7ZtlCGvCBC2vnnXctaYN+aRI61HjIqeetZW5ROg==}
 
-  '@zhin.js/ai@1.4.5':
-    resolution: {integrity: sha512-6fJLoZlIOx1Gx7vPl7SwkF0I6ER3xACPoIH08I+0dUVUKP11WulJqiBsKMue+WuE1K3gszmJ24+t8YN4BncKeA==}
+  '@zhin.js/ai@1.5.6':
+    resolution: {integrity: sha512-P2T3M6goZqSyVAwS1R/aYRA92ZlysUjqXNsCaBEcrD1V3xekA+c3SsXRf/3PpPi8qgleYS8JzASxlbaUa6lGfA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     peerDependencies:
       '@ai-sdk/anthropic': ^4.0.9
@@ -1222,18 +1225,22 @@ packages:
       '@ai-sdk/openai-compatible':
         optional: true
 
-  '@zhin.js/client@2.0.6':
-    resolution: {integrity: sha512-RhZL0S178XJiU2oRlAuf87S5+dM0vCKJ/2d+b0B7EKKda9fL6u26PUPRUSLtfkf88IOoyDKy1ne/s+gCMAZfvQ==}
+  '@zhin.js/client@2.1.10':
+    resolution: {integrity: sha512-/GHCtmBa1u3MymLRX+v0YCVIDFNOsQp5tK2sp2IkIiyPwdzOo5kz/c4l4DjqfiC0wAIRGqtN/MmwF1+6DQb41g==}
     engines: {node: ^20.19.0 || >=22.12.0}
     peerDependencies:
       react: '>=18'
 
-  '@zhin.js/contract@1.0.4':
-    resolution: {integrity: sha512-cy9iuGOVwXBr3AEk/8VPaDawFTo4ABbHLruVuqakf8tB/L8DbYsiGFnrFCw64pC/FL9T6Rc7P+PwRGbK5dRXqw==}
+  '@zhin.js/console-protocol@1.1.3':
+    resolution: {integrity: sha512-cop5Swy8w9LRb99kwKG0da0bjJJmtUdhI1m/ChM3yJIucCuMpSZnyiFzhXBQvtyAOIIuDSwquPetxOMLAUq0PA==}
     engines: {node: ^20.19.0 || >=22.12.0}
 
-  '@zhin.js/logger@1.0.75':
-    resolution: {integrity: sha512-6OkV65GpKsmgKfs7W7zrZXM6pvffPIqW75hEY3+Ei7urwWihhYPctFY14DnF/1hetmmkG+2gGxlJ1DbRFQeIow==}
+  '@zhin.js/contract@1.0.15':
+    resolution: {integrity: sha512-/WGnauxxcWF8C/YX5v0JVnG145XU7ylZAwJcZBX1YyTXMXi1xFF4RulQVwYxXCkTIplC3gusLvI3gCB2nE0GEA==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+
+  '@zhin.js/logger@1.0.76':
+    resolution: {integrity: sha512-6lQH1qYk8n7FY1OnKFeJ7eKNESFzCJm/YhFPutGz20k4Qog1PeNadCK+q/JBF3ev+N66CXcKhAr5PbMI8kWRHQ==}
 
   accepts@1.3.8:
     resolution: {integrity: sha512-PYAthTa2m2VKxuvSD3DPC/Gy+U+sOA1LAuT8mkmRuvw+NACSaeXEQ+NHcVF7rONl6qcaxV3Uuemwawk+7+SJLw==}
@@ -1658,8 +1665,8 @@ packages:
   eventemitter3@4.0.7:
     resolution: {integrity: sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==}
 
-  eventsource-parser@3.1.0:
-    resolution: {integrity: sha512-kJezFj9YFAMLeORyi7aCLxLbD5/qWMQnoMVlVPyHIll7lgRJCc3JVln9Vgl9nwQi0YkMnhdGTMNn7CkRRAptMg==}
+  eventsource-parser@3.1.1:
+    resolution: {integrity: sha512-EKN1vKAMcZ8MlYMpaNuxN6R9yakzH6uajHcHVTqWJzvu5pWw9DyhbP35HH8MVBQ+dZjAfDxk+A8NiR9KWaXiyQ==}
     engines: {node: '>=18.0.0'}
 
   execa@5.1.1:
@@ -2704,8 +2711,8 @@ packages:
   undici-types@7.24.6:
     resolution: {integrity: sha512-WRNW+sJgj5OBN4/0JpHFqtqzhpbnV0GuB+OozA9gCL7a993SmU+1JBZCzLNxYsbMfIeDL+lTsphD5jN5N+n0zg==}
 
-  undici@8.8.0:
-    resolution: {integrity: sha512-ubshXMXwF3MQIMF1y/WxZdNBnjEKeSg2wF5mcGUtU55YTw34tnVVpKRlLf7ruDXZ5344KokPVX4RBx1wJm64Bw==}
+  undici@8.10.0:
+    resolution: {integrity: sha512-HvltHd7avK13QIw/oLe4qoOLyoVSoafqJ2jYOrtMRBkbYT31eiBQ8O0ehRKZiEZCMEyLFQNIADpgCWC5fALvYQ==}
     engines: {node: '>=22.19.0'}
 
   universalify@0.1.2:
@@ -2815,22 +2822,25 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+
 snapshots:
 
-  '@ai-sdk/gateway@4.0.24(zod@3.25.76)':
+  '@ai-sdk/gateway@4.0.24(zod@4.4.3)':
     dependencies:
       '@ai-sdk/provider': 4.0.3
-      '@ai-sdk/provider-utils': 5.0.11(zod@3.25.76)
+      '@ai-sdk/provider-utils': 5.0.11(zod@4.4.3)
       '@vercel/oidc': 3.2.0
-      zod: 3.25.76
+      zod: 4.4.3
 
-  '@ai-sdk/provider-utils@5.0.11(zod@3.25.76)':
+  '@ai-sdk/provider-utils@5.0.11(zod@4.4.3)':
     dependencies:
       '@ai-sdk/provider': 4.0.3
       '@standard-schema/spec': 1.1.0
       '@workflow/serde': 4.1.0
-      eventsource-parser: 3.1.0
-      zod: 3.25.76
+      eventsource-parser: 3.1.1
+      zod: 4.4.3
 
   '@ai-sdk/provider@4.0.3':
     dependencies:
@@ -4055,16 +4065,17 @@ snapshots:
 
   '@zeit/schemas@2.36.0': {}
 
-  '@zhin.js/ai@1.4.5(ai@7.0.32(zod@3.25.76))(zod@3.25.76)':
+  '@zhin.js/ai@1.5.6(ai@7.0.32(zod@4.4.3))(zod@4.4.3)':
     dependencies:
-      '@zhin.js/logger': 1.0.75
-      ai: 7.0.32(zod@3.25.76)
-      undici: 8.8.0
-      zod: 3.25.76
+      '@zhin.js/logger': 1.0.76
+      ai: 7.0.32(zod@4.4.3)
+      undici: 8.10.0
+      zod: 4.4.3
 
-  '@zhin.js/client@2.0.6(ai@7.0.32(zod@3.25.76))(react@19.2.6)(zod@3.25.76)':
+  '@zhin.js/client@2.1.10(ai@7.0.32(zod@4.4.3))(react@19.2.6)(zod@4.4.3)':
     dependencies:
-      '@zhin.js/contract': 1.0.4(ai@7.0.32(zod@3.25.76))(zod@3.25.76)
+      '@zhin.js/console-protocol': 1.1.3
+      '@zhin.js/contract': 1.0.15(ai@7.0.32(zod@4.4.3))(zod@4.4.3)
       clsx: 2.1.1
       react: 19.2.6
       tailwind-merge: 3.6.0
@@ -4077,9 +4088,12 @@ snapshots:
       - ai
       - zod
 
-  '@zhin.js/contract@1.0.4(ai@7.0.32(zod@3.25.76))(zod@3.25.76)':
+  '@zhin.js/console-protocol@1.1.3': {}
+
+  '@zhin.js/contract@1.0.15(ai@7.0.32(zod@4.4.3))(zod@4.4.3)':
     dependencies:
-      '@zhin.js/ai': 1.4.5(ai@7.0.32(zod@3.25.76))(zod@3.25.76)
+      '@zhin.js/ai': 1.5.6(ai@7.0.32(zod@4.4.3))(zod@4.4.3)
+      '@zhin.js/console-protocol': 1.1.3
     transitivePeerDependencies:
       - '@ai-sdk/anthropic'
       - '@ai-sdk/deepseek'
@@ -4089,7 +4103,7 @@ snapshots:
       - ai
       - zod
 
-  '@zhin.js/logger@1.0.75':
+  '@zhin.js/logger@1.0.76':
     dependencies:
       chalk: 5.6.2
       string-width: 8.2.2
@@ -4099,12 +4113,12 @@ snapshots:
       mime-types: 2.1.35
       negotiator: 0.6.3
 
-  ai@7.0.32(zod@3.25.76):
+  ai@7.0.32(zod@4.4.3):
     dependencies:
-      '@ai-sdk/gateway': 4.0.24(zod@3.25.76)
+      '@ai-sdk/gateway': 4.0.24(zod@4.4.3)
       '@ai-sdk/provider': 4.0.3
-      '@ai-sdk/provider-utils': 5.0.11(zod@3.25.76)
-      zod: 3.25.76
+      '@ai-sdk/provider-utils': 5.0.11(zod@4.4.3)
+      zod: 4.4.3
 
   ajv@8.18.0:
     dependencies:
@@ -4472,7 +4486,7 @@ snapshots:
 
   eventemitter3@4.0.7: {}
 
-  eventsource-parser@3.1.0: {}
+  eventsource-parser@3.1.1: {}
 
   execa@5.1.1:
     dependencies:
@@ -5505,7 +5519,7 @@ snapshots:
 
   undici-types@7.24.6: {}
 
-  undici@8.8.0: {}
+  undici@8.10.0: {}
 
   universalify@0.1.2: {}
 
@@ -5584,3 +5598,5 @@ snapshots:
       zod: 3.25.76
 
   zod@3.25.76: {}
+
+  zod@4.4.3: {}

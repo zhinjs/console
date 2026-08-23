@@ -15,6 +15,8 @@ export { ENDPOINT_RPC, INBOX_RPC, SIDE_EVENT_PUSH, SIDE_EVENT_RPC }
 
 export const CONSOLE_RPC = {
   SYSTEM_RESTART: 'system:restart',
+  WORKROOMS_GET: 'workrooms:get',
+  WORKROOMS_SET: 'workrooms:set',
   SCHEDULE_LIST: 'schedule:list',
   CRON_ADD: 'cron:add',
   CRON_REMOVE: 'cron:remove',
@@ -29,12 +31,15 @@ export const CONSOLE_REST = {
   LOGS: '/api/logs',
   LOGS_CLEANUP: '/api/logs/cleanup',
   INTROSPECTION: '/api/introspection',
+  COMPONENT_PREVIEW: '/api/introspection/components/render',
   AGENT_SESSIONS: '/api/agent/sessions',
   WORKROOM_RUNS: '/api/agent/workroom/runs',
 } as const
 
 export type SupportedIntrospectionKind =
   | 'commands'
+  | 'middlewares'
+  | 'components'
   | 'endpoints'
   | 'bindings'
   | 'tools'
