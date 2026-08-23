@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Clock, Plus, Trash2, AlertCircle, Pause, Play, RefreshCw, Timer, Cpu, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Activity, Clock, Plus, Trash2, AlertCircle, Pause, Play, RefreshCw, Timer, Cpu, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
@@ -153,6 +154,9 @@ export default function CronPage() {
         description="管理持久化和内存定时任务"
         actions={
           <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/logs?q=schedule"><Activity />调度日志</Link>
+            </Button>
             <Button variant="outline" size="sm" onClick={() => { setLoading(true); fetchCrons() }}>
               <RefreshCw className="w-4 h-4 mr-1" /> 刷新
             </Button>
@@ -291,7 +295,7 @@ export default function CronPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-3">
             {memoryCrons.map((cron, idx) => {
               const isExpanded = expandedMemIdx === idx
               return (

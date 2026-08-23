@@ -342,7 +342,7 @@ export default function DashboardLayout() {
             className={cn(
               "mx-auto w-full min-w-0",
               contentFlush ? "console-page-flush flex-1 min-h-0 h-full p-0" : "console-main",
-              contentFullWidth ? "max-w-none" : "max-w-7xl",
+              contentFullWidth ? "max-w-none" : "console-content-frame",
             )}
           >
             <Outlet />

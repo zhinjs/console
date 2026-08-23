@@ -50,7 +50,7 @@ export default function EndpointsPage() {
     return (
       <PageShell>
         <Skeleton className="h-8 w-48" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--console-space-stack)]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-[var(--console-space-stack)]">
           {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 rounded-[var(--console-radius-xl)]" />)}
         </div>
       </PageShell>
@@ -70,7 +70,7 @@ export default function EndpointsPage() {
     <PageShell>
       <PageHeader title="机器人管理" description="管理所有已配置的 Endpoint 连接" />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
         {endpoints.map((endpoint, index) => (
           <Link
             key={`${endpoint.adapter}-${endpoint.name}-${index}`}

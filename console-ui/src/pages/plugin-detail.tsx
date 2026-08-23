@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, AlertCircle, Package, Settings, Terminal, Box as IconBox, Layers, Clock, Database, Brain, Wrench, Shield, Plug, Server, type LucideIcon } from 'lucide-react'
+import { Activity, ArrowLeft, AlertCircle, Package, Settings, Terminal, Box as IconBox, Layers, Clock, Database, Brain, Wrench, Shield, Plug, Server, type LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { apiFetch } from '../utils/auth'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
@@ -127,12 +127,17 @@ export default function PluginDetailPage() {
               在配置页统一编辑本插件，支持表单校验与保存后热重载。
             </p>
           </div>
-          <Button variant="outline" size="sm" asChild>
-            <Link to={`/config?plugin=${encodeURIComponent(plugin.name)}`}>
-              <Settings className="w-4 h-4 mr-1" />
-              编辑配置
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="ghost" size="sm" asChild>
+              <Link to={`/logs?q=${encodeURIComponent(plugin.name)}`}><Activity />相关日志</Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/config?plugin=${encodeURIComponent(plugin.name)}`}>
+                <Settings className="w-4 h-4 mr-1" />
+                编辑配置
+              </Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -167,7 +172,7 @@ export default function PluginDetailPage() {
       )}
 
       {/* Detail sections - 动态渲染每个 Feature 的 items */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3">
         {plugin.features.map((feature) => {
           if (feature.items.length === 0) return null
           const Icon = getIcon(feature.icon)

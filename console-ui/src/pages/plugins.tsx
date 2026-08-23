@@ -81,7 +81,7 @@ export default function PluginsPage() {
     return (
       <PageShell>
         <Skeleton className="h-8 w-48" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--console-space-stack)]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-[var(--console-space-stack)]">
           {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-40 rounded-[var(--console-radius-xl)]" />)}
         </div>
       </PageShell>
@@ -125,7 +125,7 @@ export default function PluginsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
         {filteredPlugins.map((plugin, index) => (
           <Card
             key={`${plugin.name}-${index}`}
