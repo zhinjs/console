@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect, useSyncExternalStore } from "react"
 import { Outlet, Link, useLocation, matchPath } from "react-router-dom"
 import { Menu, LogOut, X } from "lucide-react"
-import { app, cn, type ConsoleRouteRecord } from "@zhin.js/client"
+import { app, cn, useWebSocket, type ConsoleRouteRecord } from "@zhin.js/client"
 import { getSidebarLucideIcon } from "../components/sidebarMenuIcons"
 import { ThemeToggle } from "../components/ThemeToggle"
 import { Button, buttonVariants } from "../components/ui/button"
@@ -11,8 +11,8 @@ import { notifyAuthRequired } from "../utils/auth"
 import { isDemoMode } from "../utils/demo-mode"
 import { reopenDemoOnboarding } from "../components/DemoOnboarding"
 import { ConsoleCommandCenter } from "../components/ConsoleCommandCenter"
+import { NAV_GROUP_ORDER, NAV_GROUPS } from "../navigation-taxonomy"
 
-const GROUP_ORDER = ["总览", "Agent 工作台", "渠道与会话", "自动化", "运行时", "扩展", "运维", "其他"] as const
 const MOBILE_MQ = "(max-width: 767px)"
 
 function useIsMobile() {
@@ -60,6 +60,7 @@ export default function DashboardLayout() {
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
+  const { connected } = useWebSocket()
 
   const showLabels = isMobile || desktopSidebarOpen
 
@@ -77,7 +78,7 @@ export default function DashboardLayout() {
   const menuByGroup = useMemo(() => {
     const map = new Map<string, ConsoleRouteRecord[]>()
     for (const r of menuRoutes) {
-      const g = r.meta?.group ?? "其他"
+      const g = r.meta?.group ?? NAV_GROUPS.OTHER
       if (!map.has(g)) map.set(g, [])
       map.get(g)!.push(r)
     }
@@ -102,7 +103,7 @@ export default function DashboardLayout() {
   const orderedGroups = useMemo(() => {
     const seen = new Set<string>()
     const out: string[] = []
-    for (const g of GROUP_ORDER) {
+    for (const g of NAV_GROUP_ORDER) {
       if (menuByGroup.has(g) && menuByGroup.get(g)!.length) {
         out.push(g)
         seen.add(g)
@@ -272,6 +273,15 @@ export default function DashboardLayout() {
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
+            <span
+              className={cn("console-connection-state", connected ? "is-online" : "is-offline")}
+              title={connected ? "Console 实时事件已连接" : "Console 实时事件未连接"}
+              aria-label={connected ? "Console 实时事件已连接" : "Console 实时事件未连接"}
+              role="status"
+            >
+              <span aria-hidden="true" />
+              <span className="hidden xl:inline">{connected ? "实时" : "离线"}</span>
+            </span>
             {isDemoMode() ? (
               <>
                 <Button

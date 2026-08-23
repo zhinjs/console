@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -94,9 +94,11 @@ const EMPTY_OPTIONAL: OptionalOverview = {
   connectedMcp: null,
 }
 
-async function fetchOptionalData(path: string): Promise<unknown | null> {
+const DASHBOARD_REQUEST_TIMEOUT_MS = 8_000
+
+async function fetchOptionalData(path: string, signal: AbortSignal): Promise<unknown | null> {
   try {
-    const response = await apiFetch(path)
+    const response = await apiFetch(path, { signal })
     if (!response.ok) return null
     const body = await response.json()
     return body?.success === false ? null : body?.data ?? null
@@ -143,18 +145,34 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null)
   const [restartDialogOpen, setRestartDialogOpen] = useState(false)
   const [restarting, setRestarting] = useState(false)
+  const requestRef = useRef(0)
+  const requestAbortRef = useRef<AbortController | null>(null)
   const readOnly = isDemoMode()
   const { success, error: toastError } = useToast()
 
   const fetchDashboard = useCallback(async (background = false) => {
+    requestAbortRef.current?.abort()
+    const controller = new AbortController()
+    requestAbortRef.current = controller
+    const requestId = ++requestRef.current
     if (background) setRefreshing(true)
     try {
-      const [statsResponse, statusResponse] = await Promise.all([
-        apiFetch(CONSOLE_REST.STATS),
-        apiFetch(CONSOLE_REST.SYSTEM_STATUS),
+      const signal = AbortSignal.any([
+        controller.signal,
+        AbortSignal.timeout(DASHBOARD_REQUEST_TIMEOUT_MS),
       ])
+      const [statsResponse, statusResponse, logs, tools, agents, mcp] = await Promise.all([
+        apiFetch(CONSOLE_REST.STATS, { signal }),
+        apiFetch(CONSOLE_REST.SYSTEM_STATUS, { signal }),
+        fetchOptionalData(CONSOLE_REST.LOGS_STATS, signal),
+        fetchOptionalData(`${CONSOLE_REST.INTROSPECTION}/tools?page=1&pageSize=1`, signal),
+        fetchOptionalData(`${CONSOLE_REST.INTROSPECTION}/bindings?page=1&pageSize=1`, signal),
+        fetchOptionalData(`${CONSOLE_REST.INTROSPECTION}/mcp?page=1&pageSize=100`, signal),
+      ])
+      if (requestId !== requestRef.current) return
       if (!statsResponse.ok || !statusResponse.ok) throw new Error('无法读取 Host 状态')
 
       const [statsBody, statusBody] = await Promise.all([
@@ -167,12 +185,6 @@ export default function HomePage() {
       setSystemStatus(statusBody.data)
       setError(null)
 
-      const [logs, tools, agents, mcp] = await Promise.all([
-        fetchOptionalData(CONSOLE_REST.LOGS_STATS),
-        fetchOptionalData(`${CONSOLE_REST.INTROSPECTION}/tools?page=1&pageSize=1`),
-        fetchOptionalData(`${CONSOLE_REST.INTROSPECTION}/bindings?page=1&pageSize=1`),
-        fetchOptionalData(`${CONSOLE_REST.INTROSPECTION}/mcp?page=1&pageSize=100`),
-      ])
       const logStats = logs as { byLevel?: { error?: number; warn?: number } } | null
       const mcpSummary = readMcpSummary(mcp)
       setOptional({
@@ -183,9 +195,16 @@ export default function HomePage() {
         mcpServices: mcpSummary.total,
         connectedMcp: mcpSummary.connected,
       })
+      setLastUpdatedAt(Date.now())
     } catch (caught) {
-      setError((caught as Error).message)
+      if (requestId !== requestRef.current || controller.signal.aborted) return
+      const reason = caught as Error
+      setStats(null)
+      setSystemStatus(null)
+      setOptional(EMPTY_OPTIONAL)
+      setError(reason.name === 'TimeoutError' ? 'Host 响应超时，请检查连接或服务状态' : reason.message)
     } finally {
+      if (requestId !== requestRef.current) return
       setLoading(false)
       setRefreshing(false)
     }
@@ -195,6 +214,7 @@ export default function HomePage() {
     void fetchDashboard()
     const interval = window.setInterval(() => void fetchDashboard(), 10000)
     return () => {
+      requestAbortRef.current?.abort()
       window.clearInterval(interval)
     }
   }, [fetchDashboard])
@@ -203,20 +223,21 @@ export default function HomePage() {
     0,
     (stats?.endpoints.total ?? 0) - (stats?.endpoints.online ?? 0),
   )
-  const healthy = offlineEndpoints === 0 && optional.errorLogs === 0
+  const hostAvailable = stats !== null && systemStatus !== null
+  const healthy = hostAvailable && offlineEndpoints === 0 && optional.errorLogs === 0
 
   const capabilities = useMemo<CapabilityItem[]>(() => [
     {
       label: '渠道',
-      value: stats?.endpoints.total ?? 0,
-      detail: `${stats?.endpoints.online ?? 0} 个在线连接`,
+      value: stats?.endpoints.total ?? null,
+      detail: stats ? `${stats.endpoints.online} 个在线连接` : '等待 Host 状态',
       icon: Radio,
       path: '/endpoints',
     },
     {
       label: '命令',
-      value: stats?.commands ?? 0,
-      detail: '可被消息直接调用',
+      value: stats?.commands ?? null,
+      detail: stats ? '可被消息直接调用' : '等待 Host 状态',
       icon: Command,
       path: '/introspection?tab=commands',
     },
@@ -245,8 +266,8 @@ export default function HomePage() {
     },
     {
       label: '插件',
-      value: stats?.plugins.total ?? 0,
-      detail: `${stats?.plugins.active ?? 0} 个正在运行`,
+      value: stats?.plugins.total ?? null,
+      detail: stats ? `${stats.plugins.active} 个正在运行` : '等待 Host 状态',
       icon: Package,
       path: '/plugins',
     },
@@ -254,6 +275,14 @@ export default function HomePage() {
 
   const attentionItems = useMemo<AttentionItem[]>(() => {
     const items: AttentionItem[] = []
+    if (!stats && error) {
+      return [{
+        title: 'Host 暂时不可达',
+        detail: '控制面仍可继续使用；恢复连接后会自动刷新运行状态。',
+        path: '/logs',
+        tone: 'danger',
+      }]
+    }
     if ((stats?.endpoints.total ?? 0) === 0) {
       items.push({
         title: '还没有连接渠道',
@@ -294,7 +323,7 @@ export default function HomePage() {
       })
     }
     return items.slice(0, 4)
-  }, [offlineEndpoints, optional, stats])
+  }, [error, offlineEndpoints, optional, stats])
 
   const handleRestart = async () => {
     setRestarting(true)
@@ -319,23 +348,6 @@ export default function HomePage() {
     )
   }
 
-  if (error && !stats) {
-    return (
-      <div className="console-dashboard flex min-h-[55vh] items-center justify-center">
-        <Alert variant="destructive" className="max-w-lg">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="space-y-3">
-            <p>工作台无法连接到 Host：{error}</p>
-            <Button variant="outline" size="sm" onClick={() => void fetchDashboard()}>
-              <RefreshCw className="h-4 w-4" />
-              重新连接
-            </Button>
-          </AlertDescription>
-        </Alert>
-      </div>
-    )
-  }
-
   return (
     <div className="console-dashboard space-y-5">
       <section className="console-dashboard-hero" aria-labelledby="dashboard-title">
@@ -345,31 +357,44 @@ export default function HomePage() {
             <div className="max-w-3xl">
               <div className="mb-4 flex items-center gap-2 text-sm font-medium text-primary">
                 <span className={healthy ? 'console-status-dot' : 'console-status-dot is-warning'} />
-                {healthy ? '所有核心服务运行正常' : '有事项需要处理'}
+                {!hostAvailable ? 'Host 连接需要恢复' : healthy ? '所有核心服务运行正常' : '有事项需要处理'}
               </div>
               <h1 id="dashboard-title" className="text-balance text-3xl font-semibold tracking-[-0.04em] sm:text-4xl xl:text-[2.8rem] xl:leading-[1.05]">
-                让每个渠道、能力和 Agent<br className="hidden sm:block" />都保持在你的掌控中
+                {!hostAvailable
+                  ? <>Host 暂时不可达，<br className="hidden sm:block" />控制面仍可继续使用</>
+                  : <>先处理重要状态，<br className="hidden sm:block" />再进入正在进行的工作</>}
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
-                这里汇总 Zhin 的连接状态、可用能力与待处理事项。进入任意模块，即可继续配置、调试或观察运行。
+                {!hostAvailable
+                  ? '页面导航、配置入口和能力目录保持可用。重新连接后，渠道、Agent 与运行状态会在这里恢复。'
+                  : '这里优先汇总需要处理的渠道、日志和 Agent 状态，再提供能力目录与下一步操作。'}
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <Button onClick={() => navigate('/endpoints')}>
-                <Bot className="h-4 w-4" />
-                进入会话
-                <ArrowUpRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => void fetchDashboard(true)}
-                disabled={refreshing}
-                aria-label="刷新工作台"
-              >
-                <RefreshCw className={refreshing ? 'animate-spin' : ''} />
-              </Button>
+              {hostAvailable ? (
+                <Button onClick={() => navigate('/endpoints')}>
+                  <Bot className="h-4 w-4" />
+                  进入会话
+                  <ArrowUpRight className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button onClick={() => void fetchDashboard(true)} disabled={refreshing}>
+                  <RefreshCw className={refreshing ? 'animate-spin' : ''} />
+                  重新连接
+                </Button>
+              )}
+              {hostAvailable ? (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => void fetchDashboard(true)}
+                  disabled={refreshing}
+                  aria-label="刷新工作台"
+                >
+                  <RefreshCw className={refreshing ? 'animate-spin' : ''} />
+                </Button>
+              ) : null}
               {!readOnly ? (
                 <Button
                   variant="ghost"
@@ -386,19 +411,19 @@ export default function HomePage() {
           <div className="console-dashboard-metrics">
             <div className="console-dashboard-metric">
               <span>在线渠道</span>
-              <strong>{stats?.endpoints.online ?? 0}<small> / {stats?.endpoints.total ?? 0}</small></strong>
+              <strong>{stats ? stats.endpoints.online : '—'}{stats ? <small> / {stats.endpoints.total}</small> : null}</strong>
             </div>
             <div className="console-dashboard-metric">
               <span>运行插件</span>
-              <strong>{stats?.plugins.active ?? 0}<small> / {stats?.plugins.total ?? 0}</small></strong>
+              <strong>{stats ? stats.plugins.active : '—'}{stats ? <small> / {stats.plugins.total}</small> : null}</strong>
             </div>
             <div className="console-dashboard-metric">
               <span>可用命令</span>
-              <strong>{stats?.commands ?? 0}</strong>
+              <strong>{stats?.commands ?? '—'}</strong>
             </div>
             <div className="console-dashboard-metric">
               <span>持续运行</span>
-              <strong className="text-base sm:text-lg">{formatUptime(systemStatus?.uptime ?? 0)}</strong>
+              <strong className="text-base sm:text-lg">{systemStatus ? formatUptime(systemStatus.uptime) : '—'}</strong>
             </div>
           </div>
         </div>
@@ -407,51 +432,19 @@ export default function HomePage() {
       {error ? (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>部分状态未能更新：{error}</AlertDescription>
+          <AlertDescription>
+            {stats ? '部分状态未能更新' : '运行状态当前不可用'}：{error}
+            {lastUpdatedAt ? ` · 上次更新 ${new Date(lastUpdatedAt).toLocaleTimeString()}` : ''}
+          </AlertDescription>
         </Alert>
       ) : null}
 
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(19rem,0.7fr)]">
-        <section className="console-dashboard-panel" aria-labelledby="capability-title">
-          <div className="console-panel-heading">
-            <div>
-              <span className="console-eyebrow">Capability map</span>
-              <h2 id="capability-title">已装载的能力</h2>
-              <p>从渠道接入到 Agent 工具链，快速确认当前实例能做什么。</p>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/introspection')}>
-              查看全部
-              <ArrowUpRight />
-            </Button>
-          </div>
-
-          <div className="console-capability-grid">
-            {capabilities.map((capability) => {
-              const Icon = capability.icon
-              return (
-                <button
-                  key={capability.label}
-                  type="button"
-                  className="console-capability-item"
-                  onClick={() => navigate(capability.path)}
-                >
-                  <span className="console-capability-icon"><Icon /></span>
-                  <span className="min-w-0 flex-1 text-left">
-                    <span className="block text-sm font-semibold">{capability.label}</span>
-                    <span className="mt-1 block truncate text-xs text-muted-foreground">{capability.detail}</span>
-                  </span>
-                  <strong>{capability.value ?? '—'}</strong>
-                </button>
-              )
-            })}
-          </div>
-        </section>
-
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(19rem,0.7fr)_minmax(0,1.45fr)]">
         <aside className="console-dashboard-panel console-attention-panel" aria-labelledby="attention-title">
           <div className="console-panel-heading">
             <div>
               <span className="console-eyebrow">Attention</span>
-              <h2 id="attention-title">需要你关注</h2>
+              <h2 id="attention-title">现在需要处理</h2>
             </div>
             <span className="text-xs tabular-nums text-muted-foreground">{attentionItems.length} 项</span>
           </div>
@@ -491,10 +484,45 @@ export default function HomePage() {
             </div>
             <div>
               <MemoryStick />
-              <span>{formatMemory(systemStatus?.memory.rss ?? 0)} RSS</span>
+              <span>{systemStatus ? `${formatMemory(systemStatus.memory.rss)} RSS` : '等待运行状态'}</span>
             </div>
           </div>
         </aside>
+
+        <section className="console-dashboard-panel" aria-labelledby="capability-title">
+          <div className="console-panel-heading">
+            <div>
+              <span className="console-eyebrow">Capability map</span>
+              <h2 id="capability-title">当前实例的能力</h2>
+              <p>从渠道接入到 Agent 工具链，按能力进入对应工作区。</p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/introspection')}>
+              打开能力中心
+              <ArrowUpRight />
+            </Button>
+          </div>
+
+          <div className="console-capability-grid">
+            {capabilities.map((capability) => {
+              const Icon = capability.icon
+              return (
+                <button
+                  key={capability.label}
+                  type="button"
+                  className="console-capability-item"
+                  onClick={() => navigate(capability.path)}
+                >
+                  <span className="console-capability-icon"><Icon /></span>
+                  <span className="min-w-0 flex-1 text-left">
+                    <span className="block text-sm font-semibold">{capability.label}</span>
+                    <span className="mt-1 block truncate text-xs text-muted-foreground">{capability.detail}</span>
+                  </span>
+                  <strong>{capability.value ?? '—'}</strong>
+                </button>
+              )
+            })}
+          </div>
+        </section>
       </div>
 
       <section className="console-dashboard-panel" aria-labelledby="next-title">

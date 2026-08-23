@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Info, AlertTriangle, XCircle, Circle, Trash2, RefreshCw, FileText, AlertCircle, Copy, Search } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import { Card, CardContent } from '../components/ui/card'
@@ -31,16 +32,28 @@ interface LogStats {
   oldestTimestamp: string | null
 }
 
+const LOG_STATS_TIMEOUT_MS = 8_000
+
 export default function LogsPage() {
   const readOnly = isDemoMode()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { success, error: toastError } = useToast()
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [stats, setStats] = useState<LogStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [levelFilter, setLevelFilter] = useState<string>('all')
+  const requestedLevel = searchParams.get('level')
+  const levelFilter = requestedLevel === 'info' || requestedLevel === 'warn' || requestedLevel === 'error'
+    ? requestedLevel
+    : 'all'
   const [autoScroll, setAutoScroll] = useState(true)
   const logsEndRef = useRef<HTMLDivElement>(null)
+  const logsInFlightRef = useRef<{
+    level: string
+    controller: AbortController
+    promise: Promise<void>
+  } | null>(null)
+  const statsAbortRef = useRef<AbortController | null>(null)
   const prevRawLogCountRef = useRef(0)
   const [textFilter, setTextFilter] = useState('')
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false)
@@ -59,10 +72,21 @@ export default function LogsPage() {
   }, [logs, textFilter])
 
   useEffect(() => {
-    fetchLogs()
-    fetchStats()
-    const interval = setInterval(() => { fetchLogs(); fetchStats() }, 3000)
-    return () => clearInterval(interval)
+    let cancelled = false
+    let timer: number | undefined
+    const poll = async () => {
+      void fetchStats()
+      await fetchLogs()
+      if (!cancelled) timer = window.setTimeout(() => void poll(), 3000)
+    }
+    void poll()
+    return () => {
+      cancelled = true
+      logsInFlightRef.current?.controller.abort()
+      logsInFlightRef.current = null
+      statsAbortRef.current?.abort()
+      if (timer !== undefined) window.clearTimeout(timer)
+    }
   }, [levelFilter])
 
   useEffect(() => {
@@ -72,27 +96,61 @@ export default function LogsPage() {
     prevRawLogCountRef.current = logs.length
   }, [logs.length, autoScroll])
 
-  const fetchLogs = async () => {
-    try {
-      const url = levelFilter === 'all' ? `${CONSOLE_REST.LOGS}?limit=100` : `${CONSOLE_REST.LOGS}?limit=100&level=${levelFilter}`
-      const res = await apiFetch(url)
-      if (!res.ok) throw new Error('API 请求失败')
-      const data = await res.json()
-      if (data.success && Array.isArray(data.data)) { setLogs(data.data.reverse()); setError(null) }
-    } catch (err) {
-      setError((err as Error).message)
-    } finally {
-      setLoading(false)
-    }
+  const fetchLogs = (): Promise<void> => {
+    const existing = logsInFlightRef.current
+    if (existing?.level === levelFilter) return existing.promise
+    existing?.controller.abort()
+    const controller = new AbortController()
+    const promise = (async () => {
+      try {
+        const url = levelFilter === 'all' ? `${CONSOLE_REST.LOGS}?limit=100` : `${CONSOLE_REST.LOGS}?limit=100&level=${levelFilter}`
+        const res = await apiFetch(url, { signal: controller.signal })
+        if (!res.ok) throw new Error('API 请求失败')
+        const data = await res.json()
+        if (controller.signal.aborted || logsInFlightRef.current?.controller !== controller) return
+        if (data.success && Array.isArray(data.data)) { setLogs(data.data.reverse()); setError(null) }
+      } catch (err) {
+        if (controller.signal.aborted || logsInFlightRef.current?.controller !== controller) return
+        setError((err as Error).message)
+      } finally {
+        if (logsInFlightRef.current?.controller === controller) {
+          logsInFlightRef.current = null
+          setLoading(false)
+        }
+      }
+    })()
+    logsInFlightRef.current = { level: levelFilter, controller, promise }
+    return promise
   }
 
   const fetchStats = async () => {
+    statsAbortRef.current?.abort()
+    const controller = new AbortController()
+    statsAbortRef.current = controller
     try {
-      const res = await apiFetch(CONSOLE_REST.LOGS_STATS)
+      const res = await apiFetch(CONSOLE_REST.LOGS_STATS, {
+        signal: AbortSignal.any([
+          controller.signal,
+          AbortSignal.timeout(LOG_STATS_TIMEOUT_MS),
+        ]),
+      })
       if (!res.ok) return
       const data = await res.json()
-      if (data.success) setStats(data.data)
-    } catch (err) { console.error('Failed to fetch stats:', err) }
+      if (!controller.signal.aborted && statsAbortRef.current === controller && data.success) {
+        setStats(data.data)
+      }
+    } catch (err) {
+      if (!controller.signal.aborted && statsAbortRef.current === controller) {
+        console.error('Failed to fetch stats:', err)
+      }
+    }
+  }
+
+  const selectLevel = (level: string) => {
+    const next = new URLSearchParams(searchParams)
+    if (level === 'all') next.delete('level')
+    else next.set('level', level)
+    setSearchParams(next, { replace: true })
   }
 
   const handleClearAll = async () => {
@@ -220,7 +278,7 @@ export default function LogsPage() {
                 className="pl-9"
               />
             </div>
-            <Select value={levelFilter} onValueChange={setLevelFilter}>
+            <Select value={levelFilter} onValueChange={selectLevel}>
               <SelectTrigger className="w-32">
                 <SelectValue placeholder="所有级别" />
               </SelectTrigger>

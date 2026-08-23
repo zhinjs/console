@@ -16,6 +16,7 @@ import AgentWorkbenchPage from './pages/agent-workbench'
 import AgentSessionsPage from './pages/agent-sessions'
 import WorkroomsPage from './pages/workrooms'
 import WorkroomCatalogPage from './pages/workroom-catalog'
+import { NAV_GROUPS } from './navigation-taxonomy'
 
 let builtinPagesRegistered = false
 
@@ -29,7 +30,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Home',
     element: <HomePage />,
-    meta: { group: '总览', order: 0 },
+    meta: { group: NAV_GROUPS.OVERVIEW, order: 0 },
   })
 
   app.addRoute({
@@ -38,7 +39,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'FileText',
     element: <LogsPage />,
-    meta: { group: '运维', order: 0, fullWidth: true },
+    meta: { group: NAV_GROUPS.SYSTEM, order: 1, fullWidth: true },
   })
 
   app.addRoute({
@@ -47,7 +48,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Clock',
     element: <CronPage />,
-    meta: { group: '自动化', order: 0 },
+    meta: { group: NAV_GROUPS.AUTOMATION, order: 0 },
   })
 
   app.addRoute({
@@ -56,7 +57,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Bot',
     element: <EndpointsPage />,
-    meta: { group: '渠道与会话', order: 0 },
+    meta: { group: NAV_GROUPS.CONVERSATIONS, order: 0 },
   })
 
   app.addRoute({
@@ -65,16 +66,16 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Brain',
     element: <AgentWorkbenchPage />,
-    meta: { group: 'Agent 工作台', order: 0 },
+    meta: { group: NAV_GROUPS.AGENTS, order: 0 },
   })
 
   app.addRoute({
     path: '/agent/workrooms',
-    name: 'Workroom 看板',
+    name: 'Workroom',
     parent: null,
     icon: 'Workflow',
     element: <WorkroomsPage />,
-    meta: { group: 'Agent 工作台', order: 1, fullWidth: true },
+    meta: { group: NAV_GROUPS.AGENTS, order: 1, fullWidth: true },
   })
 
   app.addRoute({
@@ -83,7 +84,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Network',
     element: <WorkroomCatalogPage />,
-    meta: { group: 'Agent 工作台', order: 2, fullWidth: true },
+    meta: { group: NAV_GROUPS.AGENTS, order: 2, fullWidth: true, hideInMenu: true },
   })
 
   app.addRoute({
@@ -92,16 +93,16 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Blocks',
     element: <IntrospectionPage />,
-    meta: { group: '运行时', order: 0, fullWidth: true },
+    meta: { group: NAV_GROUPS.SYSTEM, order: 0, fullWidth: true },
   })
 
   app.addRoute({
     path: '/agent/sessions',
-    name: '对话分支',
+    name: 'Agent Sessions',
     parent: null,
     icon: 'GitBranch',
     element: <AgentSessionsPage />,
-    meta: { group: 'Agent 工作台', order: 3 },
+    meta: { group: NAV_GROUPS.AGENTS, order: 2 },
   })
 
   app.addRoute({
@@ -110,7 +111,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Package',
     element: <PluginsPage />,
-    meta: { group: '扩展', order: 0 },
+    meta: { group: NAV_GROUPS.AUTOMATION, order: 1 },
   })
 
   app.addRoute({
@@ -127,7 +128,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Store',
     element: <MarketplacePage />,
-    meta: { group: '扩展', order: 1 },
+    meta: { group: NAV_GROUPS.AUTOMATION, order: 2 },
   })
 
   app.addRoute({
@@ -136,7 +137,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Settings',
     element: <ConfigPage />,
-    meta: { group: '运维', order: 1 },
+    meta: { group: NAV_GROUPS.SYSTEM, order: 2 },
   })
 
   app.addRoute({
@@ -145,7 +146,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'KeyRound',
     element: <EnvManagePage />,
-    meta: { group: '运维', order: 2 },
+    meta: { group: NAV_GROUPS.SYSTEM, order: 3 },
   })
 
   app.addRoute({
@@ -154,7 +155,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'FolderOpen',
     element: <FileManagePage />,
-    meta: { group: '运维', order: 3 },
+    meta: { group: NAV_GROUPS.SYSTEM, order: 4 },
   })
 
   app.addRoute({
@@ -163,7 +164,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Database',
     element: <DatabasePage />,
-    meta: { group: '运维', order: 4, fullWidth: true },
+    meta: { group: NAV_GROUPS.SYSTEM, order: 5, fullWidth: true },
   })
 
   app.addRoute({

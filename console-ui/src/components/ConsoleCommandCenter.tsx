@@ -9,10 +9,10 @@ import {
   DialogDescription,
   DialogTitle,
 } from './ui/dialog'
+import { COMMAND_GROUP_ORDER, NAV_GROUPS } from '../navigation-taxonomy'
 
 const RECENT_KEY = 'zhin.console.command-center.recent'
 const RECENT_LIMIT = 5
-const COMMAND_GROUP_ORDER = ['Agent 工作台', '渠道与会话', '自动化', '运行时', '扩展', '运维', '总览', '其他']
 
 const ROUTE_DESCRIPTIONS: Record<string, string> = {
   '/dashboard': '检查运行健康度与待处理事项',
@@ -38,12 +38,56 @@ interface CommandTarget {
   group: string
   description: string
   icon?: React.ReactNode | string
+  kind?: 'page' | 'action'
 }
 
 interface CommandGroup {
   label: string
   items: CommandTarget[]
 }
+
+const QUICK_ACTIONS: readonly CommandTarget[] = [
+  {
+    path: '/logs?level=error',
+    title: '查看错误日志',
+    group: '快捷动作',
+    description: '只显示 error 级别的运行记录',
+    icon: 'FileText',
+    kind: 'action',
+  },
+  {
+    path: '/introspection?tab=commands',
+    title: '试运行命令',
+    group: '快捷动作',
+    description: '打开命令目录并检查参数契约',
+    icon: 'Terminal',
+    kind: 'action',
+  },
+  {
+    path: '/introspection?tab=components',
+    title: '预览消息组件',
+    group: '快捷动作',
+    description: '用真实消息渲染器检查组件输出',
+    icon: 'Blocks',
+    kind: 'action',
+  },
+  {
+    path: '/agent/workrooms/catalog',
+    title: '配置 Workroom 关系',
+    group: '快捷动作',
+    description: '管理 Project、协作空间、Bot 与 Agent 映射',
+    icon: 'Network',
+    kind: 'action',
+  },
+  {
+    path: '/introspection?tab=tools',
+    title: '检查 Agent 工具',
+    group: '快捷动作',
+    description: '查看 Tool Schema、来源与可用性',
+    icon: 'Wrench',
+    kind: 'action',
+  },
+]
 
 function readRecentPaths(): string[] {
   try {
@@ -112,8 +156,9 @@ function groupedTargets(
     byGroup.set(target.group, items)
   }
   const labels = [...byGroup.keys()].sort((left, right) => {
-    const leftIndex = COMMAND_GROUP_ORDER.indexOf(left)
-    const rightIndex = COMMAND_GROUP_ORDER.indexOf(right)
+    const order: readonly string[] = COMMAND_GROUP_ORDER
+    const leftIndex = order.indexOf(left)
+    const rightIndex = order.indexOf(right)
     return (leftIndex < 0 ? 999 : leftIndex) - (rightIndex < 0 ? 999 : rightIndex)
       || left.localeCompare(right)
   })
@@ -132,15 +177,19 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
   const [recentPaths, setRecentPaths] = useState<string[]>(() => readRecentPaths())
   const [shortcut, setShortcut] = useState('Ctrl K')
 
-  const targets = useMemo<CommandTarget[]>(() => routes
-    .filter((route) => !route.meta?.hideInMenu && route.path)
-    .map((route) => ({
-      path: route.path,
-      title: route.name,
-      group: route.meta?.group ?? '其他',
-      description: ROUTE_DESCRIPTIONS[route.path] ?? `打开 ${route.name}`,
-      icon: route.icon,
-    })), [routes])
+  const targets = useMemo<CommandTarget[]>(() => [
+    ...QUICK_ACTIONS,
+    ...routes
+      .filter((route) => !route.meta?.hideInMenu && route.path)
+      .map((route) => ({
+        path: route.path,
+        title: route.name,
+      group: route.meta?.group ?? NAV_GROUPS.OTHER,
+        description: ROUTE_DESCRIPTIONS[route.path] ?? `打开 ${route.name}`,
+        icon: route.icon,
+        kind: 'page' as const,
+      })),
+  ], [routes])
   const groups = useMemo(
     () => groupedTargets(targets, query, recentPaths),
     [query, recentPaths, targets],
@@ -201,15 +250,15 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
     <>
       <button type="button" className="console-command-trigger" onClick={() => setOpen(true)} aria-label="打开 Console 快速跳转">
         <Search aria-hidden="true" />
-        <span className="hidden lg:inline">跳转到 Console 页面</span>
-        <span className="lg:hidden">快速跳转</span>
+        <span className="hidden lg:inline">搜索页面或执行动作</span>
+        <span className="lg:hidden">搜索与动作</span>
         <kbd>{shortcut}</kbd>
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="console-command-center gap-0 overflow-hidden p-0">
           <DialogTitle className="sr-only">Console Command Center</DialogTitle>
-          <DialogDescription className="sr-only">搜索并打开 Console 页面</DialogDescription>
+          <DialogDescription className="sr-only">搜索 Console 页面或执行快捷动作</DialogDescription>
 
           <div className="console-command-search">
             <Search aria-hidden="true" />
@@ -218,8 +267,8 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={onInputKeyDown}
-              placeholder="搜索 Agent、Workroom、渠道或设置…"
-              aria-label="搜索 Console 页面"
+              placeholder="搜索页面或动作，例如“错误日志”“组件预览”…"
+              aria-label="搜索 Console 页面或快捷动作"
               role="combobox"
               aria-expanded="true"
               aria-controls="console-command-results"
@@ -256,7 +305,10 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
                     >
                       <span className="console-command-icon">{Icon ? <Icon /> : target.icon}</span>
                       <span className="min-w-0 flex-1 text-left">
-                        <span className="console-command-title">{target.title}</span>
+                        <span className="console-command-title">
+                          {target.title}
+                          {target.kind === 'action' ? <small>动作</small> : null}
+                        </span>
                         <span className="console-command-description">{target.description}</span>
                       </span>
                       {current ? <span className="console-command-current"><Check />当前</span> : <ArrowRight />}
