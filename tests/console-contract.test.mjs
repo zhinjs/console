@@ -105,6 +105,32 @@ test('introspection surface is the exact current Host capability set', () => {
   assert.match(source, /COMPONENT_PREVIEW: '\/api\/introspection\/components\/render'/)
 })
 
+test('runtime capabilities use purpose-built views with a shared inspector', () => {
+  const page = sourceText(join(SOURCE_ROOT, 'pages', 'introspection', 'index.tsx'))
+  const explorer = sourceText(join(SOURCE_ROOT, 'pages', 'introspection', 'CapabilityExplorer.tsx'))
+
+  assert.match(page, /CapabilityExplorer/)
+  assert.doesNotMatch(page, /<table/)
+  assert.match(explorer, /命令目录/)
+  assert.match(explorer, /执行管线/)
+  assert.match(explorer, /组件画廊/)
+  assert.match(explorer, /Agent 关系/)
+  assert.match(explorer, /能力 Inspector/)
+  assert.match(explorer, /原始运行时投影/)
+  assert.match(explorer, /\/agent\/workbench/)
+  assert.match(explorer, /Preserve that projection order/)
+  assert.doesNotMatch(explorer, /sort\(\(a, b\).*item\.order/)
+  assert.match(explorer, /console-runtime-binding-provider/)
+  assert.match(page, /error \? null : \(/)
+  const model = sourceText(join(SOURCE_ROOT, 'pages', 'introspection', 'capability-model.ts'))
+  assert.match(model, /interface CapabilityRowMap/)
+  assert.match(model, /commands: CommandRow/)
+  assert.match(model, /middlewares: MiddlewareRow/)
+  assert.match(explorer, /entriesForKind/)
+  assert.match(explorer, /CollectionProps<'commands'>/)
+  assert.match(explorer, /CollectionProps<'mcp'>/)
+})
+
 test('Console shell only consumes public route metadata', () => {
   const layout = sourceText(join(SOURCE_ROOT, 'layouts', 'dashboard.tsx'))
   const routes = sourceText(join(SOURCE_ROOT, 'registerBuiltinShell.tsx'))

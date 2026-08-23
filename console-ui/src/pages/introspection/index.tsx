@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   Bot,
@@ -15,16 +15,12 @@ import {
   Terminal,
   Wrench,
 } from 'lucide-react'
-import { CodeBlock, cn } from '@zhin.js/client'
-import {
-  CONSOLE_REST,
-  type SupportedIntrospectionKind,
-} from '../../contracts/zhin-console'
+import { CodeBlock } from '@zhin.js/client'
+import { CONSOLE_REST } from '../../contracts/zhin-console'
 import { apiFetch, getApiBase } from '../../utils/auth'
 import { PageHeader } from '../../components/PageHeader'
 import { PageShell } from '../../components/PageShell'
 import { Alert, AlertDescription } from '../../components/ui/alert'
-import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
 import { Skeleton } from '../../components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
@@ -32,8 +28,10 @@ import { Textarea } from '../../components/ui/textarea'
 import { isDemoMode } from '../../utils/demo-mode'
 import { MessageBody } from '../endpoint-detail/MessageBody'
 import type { ReceivedMessage } from '../endpoint-detail/types'
+import { CapabilityExplorer } from './CapabilityExplorer'
+import type { CapabilityItem, IntrospectionTab } from './capability-model'
 
-export type IntrospectionTab = SupportedIntrospectionKind
+export type { IntrospectionTab } from './capability-model'
 
 const TAB_CONFIG: Record<
   IntrospectionTab,
@@ -51,7 +49,7 @@ const TAB_CONFIG: Record<
 const VALID_TABS = new Set<string>(Object.keys(TAB_CONFIG))
 
 interface IntrospectionEnvelope {
-  items: Array<Record<string, unknown>>
+  items: CapabilityItem[]
   page: number
   pageSize: number
   total: number
@@ -60,67 +58,8 @@ interface IntrospectionEnvelope {
   note?: string
 }
 
-const COLUMNS: Record<IntrospectionTab, Array<{ key: string; label: string }>> = {
-  commands: [
-    { key: 'pattern', label: '命令路由' },
-    { key: 'desc', label: '说明' },
-    { key: 'parameters', label: '参数契约' },
-    { key: 'aliases', label: '别名' },
-    { key: 'permissions', label: '权限' },
-    { key: 'plugin', label: '来源' },
-  ],
-  middlewares: [
-    { key: 'name', label: 'Middleware' },
-    { key: 'phase', label: 'Phase' },
-    { key: 'target', label: 'Target' },
-    { key: 'order', label: 'Order' },
-    { key: 'owner', label: 'Owner' },
-    { key: 'source', label: 'Source' },
-  ],
-  components: [
-    { key: 'name', label: 'Component' },
-    { key: 'owner', label: 'Owner' },
-    { key: 'source', label: 'Source' },
-  ],
-  endpoints: [
-    { key: 'adapter', label: 'Adapter' },
-    { key: 'name', label: 'Name' },
-    { key: 'online', label: 'Online' },
-    { key: 'status', label: 'Status' },
-  ],
-  bindings: [
-    { key: 'name', label: 'Agent' },
-    { key: 'provider', label: 'Provider' },
-    { key: 'model', label: 'Model' },
-    { key: 'mcpServers', label: 'MCP Servers' },
-    { key: 'hasAgentFile', label: 'Agent File' },
-  ],
-  tools: [
-    { key: 'name', label: 'Tool' },
-    { key: 'description', label: 'Description' },
-    { key: 'source', label: 'Source' },
-  ],
-  mcp: [
-    { key: 'name', label: 'MCP Server' },
-    { key: 'connected', label: 'Connected' },
-    { key: 'toolCount', label: 'Tools' },
-    { key: 'error', label: 'Error' },
-  ],
-}
-
 function parseTab(value: string | null): IntrospectionTab {
   return value && VALID_TABS.has(value) ? value as IntrospectionTab : 'commands'
-}
-
-function renderCell(value: unknown): ReactNode {
-  if (value == null || value === '') return <span className="text-muted-foreground">—</span>
-  if (typeof value === 'boolean') return <Badge variant={value ? 'success' : 'secondary'}>{value ? '是' : '否'}</Badge>
-  if (Array.isArray(value)) {
-    if (!value.length) return <span className="text-muted-foreground">—</span>
-    return value.map((item) => typeof item === 'object' ? JSON.stringify(item) : String(item)).join(', ')
-  }
-  if (typeof value === 'object') return <code className="text-xs">{JSON.stringify(value)}</code>
-  return String(value)
 }
 
 export default function IntrospectionPage() {
@@ -207,7 +146,6 @@ export default function IntrospectionPage() {
 
   useEffect(() => () => previewAbortRef.current?.abort(), [])
 
-  const columns = COLUMNS[tab]
   const sourceUrl = useMemo(() => {
     const config = TAB_CONFIG[tab]
     const params = new URLSearchParams({ page: String(page), pageSize: String(config.pageSize) })
@@ -340,56 +278,23 @@ export default function IntrospectionPage() {
                 <div className="space-y-2 p-4">
                   {Array.from({ length: 5 }, (_, index) => <Skeleton key={index} className="h-11 w-full" />)}
                 </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[720px] text-left text-sm">
-                    <thead className="border-b bg-muted/25 text-xs text-muted-foreground">
-                      <tr>
-                        {columns.map((column) => <th key={column.key} className="px-4 py-3 font-medium">{column.label}</th>)}
-                        {key === 'components' ? <th className="px-4 py-3 text-right font-medium">Preview</th> : null}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {(data?.items ?? []).map((item, rowIndex) => (
-                        <tr key={`${String(item.name ?? item.pattern ?? rowIndex)}-${rowIndex}`} className="hover:bg-muted/20">
-                          {columns.map((column) => (
-                            <td key={column.key} className={cn('max-w-[26rem] px-4 py-3 align-top', column.key === 'name' || column.key === 'pattern' ? 'font-medium text-foreground' : 'text-muted-foreground')}>
-                              {renderCell(item[column.key])}
-                            </td>
-                          ))}
-                          {key === 'components' ? (
-                            <td className="px-4 py-3 text-right align-top">
-                              {readOnly ? (
-                                <Badge variant="outline">Full only</Badge>
-                              ) : (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    previewAbortRef.current?.abort()
-                                    setPreviewComponent({
-                                      name: String(item.name ?? ''),
-                                      owner: String(item.owner ?? ''),
-                                    })
-                                    setPreviewProps('{}')
-                                    setPreviewOutput(null)
-                                    setPreviewLoading(false)
-                                    setPreviewError(null)
-                                  }}
-                                >
-                                  <Eye className="h-3.5 w-3.5" />预览
-                                </Button>
-                              )}
-                            </td>
-                          ) : null}
-                        </tr>
-                      ))}
-                      {!data?.items.length ? (
-                        <tr><td colSpan={columns.length + (key === 'components' ? 1 : 0)} className="px-4 py-12 text-center text-sm text-muted-foreground">当前 generation 没有该类能力</td></tr>
-                      ) : null}
-                    </tbody>
-                  </table>
-                </div>
+              ) : error ? null : (
+                <CapabilityExplorer
+                  kind={key}
+                  items={data?.items ?? []}
+                  readOnly={readOnly}
+                  onPreviewComponent={(item) => {
+                    previewAbortRef.current?.abort()
+                    setPreviewComponent({
+                      name: String(item.name ?? ''),
+                      owner: String(item.owner ?? ''),
+                    })
+                    setPreviewProps('{}')
+                    setPreviewOutput(null)
+                    setPreviewLoading(false)
+                    setPreviewError(null)
+                  }}
+                />
               )}
 
               {key === 'components' && previewComponent ? (
