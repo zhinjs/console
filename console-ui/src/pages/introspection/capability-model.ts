@@ -51,6 +51,22 @@ export interface ToolRow extends RuntimeCapabilityRow {
   readonly source?: string
 }
 
+export interface PromptSectionRow extends RuntimeCapabilityRow {
+  readonly name?: string
+  readonly qualifiedName?: string
+  readonly title?: string
+  readonly owner?: string
+  readonly layer?: string
+  readonly order?: number
+  readonly retention?: 'required' | 'preferred' | 'opportunistic'
+  readonly maxChars?: number
+  readonly profiles?: string[]
+  readonly platforms?: string[]
+  readonly source?: string
+  readonly generation?: number
+  readonly contentChars?: number
+}
+
 export interface McpRow extends RuntimeCapabilityRow {
   readonly name?: string
   readonly connected?: boolean
@@ -65,6 +81,7 @@ export interface CapabilityRowMap {
   endpoints: EndpointRow
   bindings: BindingRow
   tools: ToolRow
+  'prompt-sections': PromptSectionRow
   mcp: McpRow
 }
 

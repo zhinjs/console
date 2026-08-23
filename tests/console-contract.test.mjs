@@ -102,7 +102,7 @@ test('Dashboard fails closed from loading into a navigable degraded control plan
 
 test('introspection surface is the exact current Host capability set', () => {
   const source = sourceText(join(SOURCE_ROOT, 'contracts', 'zhin-console.ts'))
-  for (const kind of ['commands', 'middlewares', 'components', 'endpoints', 'bindings', 'tools', 'mcp']) {
+  for (const kind of ['commands', 'middlewares', 'components', 'endpoints', 'bindings', 'tools', 'prompt-sections', 'mcp']) {
     assert.match(source, new RegExp(`\\| '${kind}'`))
   }
   assert.match(source, /COMPONENT_PREVIEW: '\/api\/introspection\/components\/render'/)
@@ -118,6 +118,9 @@ test('runtime capabilities use purpose-built views with a shared inspector', () 
   assert.match(explorer, /执行管线/)
   assert.match(explorer, /组件画廊/)
   assert.match(explorer, /Agent 关系/)
+  assert.match(explorer, /提示词片段目录/)
+  assert.match(explorer, /contentChars/)
+  assert.doesNotMatch(explorer, /entry\.item\.content\b/)
   assert.match(explorer, /能力 Inspector/)
   assert.match(explorer, /原始运行时投影/)
   assert.match(explorer, /\/agent\/workbench/)
@@ -129,9 +132,11 @@ test('runtime capabilities use purpose-built views with a shared inspector', () 
   assert.match(model, /interface CapabilityRowMap/)
   assert.match(model, /commands: CommandRow/)
   assert.match(model, /middlewares: MiddlewareRow/)
+  assert.match(model, /'prompt-sections': PromptSectionRow/)
   assert.match(explorer, /entriesForKind/)
   assert.match(explorer, /CollectionProps<'commands'>/)
   assert.match(explorer, /CollectionProps<'mcp'>/)
+  assert.match(explorer, /CollectionProps<'prompt-sections'>/)
 })
 
 test('operations pages form a URL-addressable diagnostic loop', () => {

@@ -10,6 +10,7 @@ import {
   Loader2,
   Network,
   RefreshCw,
+  ScrollText,
   Search,
   Server,
   Terminal,
@@ -43,6 +44,7 @@ const TAB_CONFIG: Record<
   endpoints: { label: 'Endpoints', pageSize: 30, icon: Bot },
   bindings: { label: 'Agent 绑定', pageSize: 30, icon: Link2 },
   tools: { label: '工具', pageSize: 15, icon: Wrench },
+  'prompt-sections': { label: '提示词片段', pageSize: 20, icon: ScrollText },
   mcp: { label: 'MCP 服务', pageSize: 30, icon: Server },
 }
 
@@ -219,7 +221,7 @@ export default function IntrospectionPage() {
     <PageShell className="max-w-[1600px]">
       <PageHeader
         title="运行时能力"
-        description="读取当前 generation 的命令、中间件、组件、Endpoint、Agent 绑定、工具与 MCP 投影。列表来自 Zhin Runtime，不从配置文件推测。"
+        description="读取当前 generation 的命令、中间件、组件、Endpoint、Agent 绑定、工具、提示词片段与 MCP 投影。列表来自 Zhin Runtime，不从配置文件推测。"
         actions={
           <Button variant="outline" size="sm" disabled={loading} onClick={() => void load(tab, page, appliedFilter)}>
             <RefreshCw className={loading ? 'animate-spin' : ''} />刷新

@@ -14,6 +14,7 @@ import {
   PlugZap,
   Server,
   ShieldCheck,
+  ScrollText,
   Terminal,
   Unplug,
   Wrench,
@@ -71,6 +72,12 @@ const KIND_META: Record<IntrospectionTab, {
     title: '工具目录',
     description: '检查 Agent 可发现的工具、职责说明与注册来源。',
     icon: Wrench,
+  },
+  'prompt-sections': {
+    eyebrow: 'Prompt governance',
+    title: '提示词片段',
+    description: '检查插件上下文的归属、generation、预算与投放范围；正文不会跨过内省边界。',
+    icon: ScrollText,
   },
   mcp: {
     eyebrow: 'MCP connections',
@@ -149,6 +156,8 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
             <BindingMap entries={entriesForKind(indexedItems, 'bindings')} selectedId={selectedId} onSelect={setSelectedId} />
           ) : kind === 'tools' ? (
             <ToolCatalog entries={entriesForKind(indexedItems, 'tools')} selectedId={selectedId} onSelect={setSelectedId} />
+          ) : kind === 'prompt-sections' ? (
+            <PromptSectionCatalog entries={entriesForKind(indexedItems, 'prompt-sections')} selectedId={selectedId} onSelect={setSelectedId} />
           ) : (
             <McpGrid entries={entriesForKind(indexedItems, 'mcp')} selectedId={selectedId} onSelect={setSelectedId} />
           )}
@@ -318,6 +327,42 @@ function ToolCatalog({ entries, selectedId, onSelect }: CollectionProps<'tools'>
           <Badge variant="outline">{text(entry.item.source, 'runtime')}</Badge>
         </SelectableCard>
       ))}
+    </div>
+  )
+}
+
+function PromptSectionCatalog({ entries, selectedId, onSelect }: CollectionProps<'prompt-sections'>) {
+  return (
+    <div className="console-runtime-prompt-list" aria-label="提示词片段目录">
+      {entries.map((entry) => {
+        const profiles = list(entry.item.profiles)
+        const platforms = list(entry.item.platforms)
+        const retention = text(entry.item.retention, 'preferred')
+        const contentChars = text(entry.item.contentChars, '0')
+        const maxChars = entry.item.maxChars == null ? '未限制' : `${text(entry.item.maxChars)} 上限`
+        return (
+          <SelectableCard key={entry.id} {...{ entry, entries, selectedId, onSelect }} className="console-runtime-prompt-card">
+            <span className="console-runtime-card-icon"><ScrollText /></span>
+            <span className="console-runtime-card-main">
+              <span className="console-runtime-prompt-heading">
+                <strong>{text(entry.item.title, text(entry.item.name, '未命名片段'))}</strong>
+                <Badge variant={retention === 'required' ? 'warning' : retention === 'preferred' ? 'secondary' : 'outline'}>{retention}</Badge>
+              </span>
+              <small>{text(entry.item.owner, 'runtime')} · {text(entry.item.layer, 'context')} · order {text(entry.item.order, '50')}</small>
+              <span className="console-runtime-tags">
+                {profiles.map((profile) => <Badge key={profile} variant="outline">{profile}</Badge>)}
+                {platforms.map((platform) => <Badge key={platform} variant="secondary">{platform}</Badge>)}
+                {!platforms.length ? <Badge variant="secondary">全平台</Badge> : null}
+              </span>
+            </span>
+            <span className="console-runtime-prompt-budget">
+              <strong>{contentChars}</strong>
+              <small>chars · {maxChars}</small>
+              <span>gen {text(entry.item.generation, '—')}</span>
+            </span>
+          </SelectableCard>
+        )
+      })}
     </div>
   )
 }

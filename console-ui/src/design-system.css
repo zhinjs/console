@@ -3157,7 +3157,8 @@
   }
 
   .console-runtime-command-list,
-  .console-runtime-binding-list {
+  .console-runtime-binding-list,
+  .console-runtime-prompt-list {
     display: flex;
     flex-direction: column;
     gap: 0.42rem;
@@ -3306,9 +3307,48 @@
 
   .console-runtime-health-card,
   .console-runtime-tool-card,
-  .console-runtime-mcp-card {
+  .console-runtime-mcp-card,
+  .console-runtime-prompt-card {
     min-height: 6.2rem;
     align-items: flex-start;
+  }
+
+  .console-runtime-prompt-card {
+    min-height: 7.1rem;
+  }
+
+  .console-runtime-prompt-heading {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .console-runtime-prompt-heading strong {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .console-runtime-prompt-budget {
+    display: flex;
+    min-width: 6.2rem;
+    flex: none;
+    flex-direction: column;
+    align-items: flex-end;
+    color: hsl(var(--muted-foreground));
+    font-family: var(--font-mono, monospace);
+    font-size: 0.58rem;
+  }
+
+  .console-runtime-prompt-budget strong {
+    color: hsl(var(--foreground));
+    font-size: 0.9rem;
+    line-height: 1.2;
+  }
+
+  .console-runtime-prompt-budget small,
+  .console-runtime-prompt-budget span {
+    margin-top: 0.15rem;
   }
 
   .console-runtime-binding {
@@ -3655,6 +3695,19 @@
 
     .console-runtime-source {
       display: none;
+    }
+
+    .console-runtime-prompt-card {
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .console-runtime-prompt-budget {
+      width: 100%;
+      align-items: flex-start;
+      padding-top: 0.55rem;
+      padding-left: 2.72rem;
+      border-top: 1px solid hsl(var(--border) / 0.45);
     }
 
     .console-runtime-binding {

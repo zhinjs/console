@@ -43,4 +43,5 @@ export type SupportedIntrospectionKind =
   | 'endpoints'
   | 'bindings'
   | 'tools'
+  | 'prompt-sections'
   | 'mcp'
