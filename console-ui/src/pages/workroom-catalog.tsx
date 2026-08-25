@@ -8,7 +8,9 @@ import {
   LayoutDashboard,
   Loader2,
   Plus,
+  RadioTower,
   RefreshCw,
+  Route,
   Save,
   Trash2,
   UsersRound,
@@ -27,6 +29,13 @@ import { Card, CardContent } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { Skeleton } from '../components/ui/skeleton'
 import { Textarea } from '../components/ui/textarea'
+import {
+  endpointRouteKey,
+  parseEndpointRouteKey,
+  validateWorkroomMessageRoutes,
+  type MessageRoute as WorkroomMessageRoute,
+  type MessageRouteIssue,
+} from './workroom-catalog-model.mjs'
 
 type MemberRole = 'orchestrator' | 'executor' | 'reviewer' | 'integration'
 type SpaceKind = 'group' | 'channel' | 'repository'
@@ -40,6 +49,7 @@ interface WorkroomMember {
   agent: string
   role: MemberRole
   assignmentRoute?: AssignmentRoute
+  messageRoute?: WorkroomMessageRoute
 }
 
 interface ConversationBinding {
@@ -110,6 +120,8 @@ export default function WorkroomCatalogPage() {
   const [catalog, setCatalog] = useState<WorkroomCatalog | null>(null)
   const [drafts, setDrafts] = useState<WorkroomDraft[]>([])
   const [endpoints, setEndpoints] = useState<EndpointOption[]>([])
+  const [endpointInventoryState, setEndpointInventoryState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [endpointError, setEndpointError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
@@ -129,21 +141,38 @@ export default function WorkroomCatalogPage() {
     setLoading(true)
     setError(null)
     setNotice(null)
+    setEndpointInventoryState('loading')
+    const endpointRequest = requestConsole<{ endpoints: EndpointOption[] }>({ type: ENDPOINT_RPC.LIST }).then(
+      (value) => ({ status: 'fulfilled' as const, value }),
+      (reason: unknown) => ({ status: 'rejected' as const, reason }),
+    )
+    let catalogLoaded = false
     try {
-      const [next, endpointData] = await Promise.all([
-        requestConsole<WorkroomCatalog>({ type: CONSOLE_RPC.WORKROOMS_GET }),
-        requestConsole<{ endpoints: EndpointOption[] }>({ type: ENDPOINT_RPC.LIST }),
-      ])
+      const next = await requestConsole<WorkroomCatalog>({ type: CONSOLE_RPC.WORKROOMS_GET })
       if (requestId !== requestRef.current || editVersion !== editVersionRef.current) return
       setCatalog(next)
-      setEndpoints(endpointData.endpoints ?? [])
       setDrafts(toDrafts(next.workrooms))
       setDirty(false)
       dirtyRef.current = false
+      catalogLoaded = true
     } catch (caught) {
       if (requestId === requestRef.current) setError(caught instanceof Error ? caught.message : String(caught))
     } finally {
       if (requestId === requestRef.current) setLoading(false)
+    }
+    if (!catalogLoaded) return
+
+    const endpointResult = await endpointRequest
+    if (requestId !== requestRef.current) return
+    if (endpointResult.status === 'fulfilled') {
+      setEndpoints(endpointResult.value.endpoints ?? [])
+      setEndpointError(null)
+      setEndpointInventoryState('ready')
+    } else {
+      setEndpointError(endpointResult.reason instanceof Error
+        ? endpointResult.reason.message
+        : String(endpointResult.reason))
+      setEndpointInventoryState('error')
     }
   }, [])
 
@@ -159,11 +188,19 @@ export default function WorkroomCatalogPage() {
     setNotice(null)
   }, [])
 
+  const messageRouteIssues = drafts.map((draft) => validateWorkroomMessageRoutes(
+    draft.members,
+    endpoints,
+    { validateKnownEndpoints: endpointInventoryState === 'ready' },
+  ))
+  const firstMessageRouteIssue = messageRouteIssues.flat()[0]
+
   const save = async () => {
     if (readOnly || !catalog || saving) return
     const projectIds = drafts.map((item) => item.projectId.trim())
     if (projectIds.some((id) => !id)) return setError('Project ID 不能为空')
     if (new Set(projectIds).size !== projectIds.length) return setError('Project ID 不能重复')
+    if (firstMessageRouteIssue) return setError(`消息出口配置不可发布：${firstMessageRouteIssue.message}`)
     const editVersion = editVersionRef.current
     setSaving(true)
     setError(null)
@@ -192,15 +229,19 @@ export default function WorkroomCatalogPage() {
   }
 
   const agentNames = useMemo(() => Object.keys(catalog?.agents ?? {}), [catalog])
-  const endpointCount = new Set(drafts.flatMap((item) => [item.conversation, item.sponsorConversation]
-    .filter((binding): binding is ConversationBinding => Boolean(binding))
+  const endpointCount = new Set(drafts.flatMap((item) => [
+    item.conversation,
+    item.sponsorConversation,
+    ...item.members.map((member) => member.messageRoute),
+  ]
+    .filter((binding): binding is ConversationBinding | WorkroomMessageRoute => Boolean(binding))
     .map((binding) => `${binding.adapter}:${binding.endpoint}`))).size
 
   return (
     <PageShell className="max-w-[1680px]">
       <PageHeader
         title="Workroom 配置"
-        description="管理持久 Catalog 中 Project、协作空间、Bot Endpoint 与成员 Agent 的权威映射；发布带 revision 校验并立即生效。"
+        description="管理 Project、协作空间、成员 Agent，以及每个 Agent 的消息出口投影 Endpoint；发布带 revision 校验并立即生效。"
         actions={
           <div className="flex items-center gap-2">
             <Button asChild variant="outline" size="sm"><Link to="/agent/workrooms"><LayoutDashboard />任务看板</Link></Button>
@@ -212,6 +253,7 @@ export default function WorkroomCatalogPage() {
 
       {readOnly ? <div className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-4 py-3 text-sm text-amber-800 dark:text-amber-200">Demo 只读展示目录；发布仅在私有 full 模式开放。</div> : null}
       {error ? <ErrorAlert error={error} onRetry={() => load(true)} /> : null}
+      {endpointError ? <div className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-4 py-3 text-sm text-amber-800 dark:text-amber-200">Endpoint 列表暂不可用；Catalog 仍可查看和编辑，已有消息出口会保持原值。发布时 Runtime 仍会执行最终校验。</div> : null}
       {notice ? <div className="rounded-lg border bg-muted/25 px-4 py-3 text-sm text-muted-foreground">{notice}</div> : null}
 
       {loading && !catalog ? (
@@ -233,6 +275,7 @@ export default function WorkroomCatalogPage() {
                 agents={agentNames}
                 agentDetails={catalog?.agents ?? {}}
                 endpoints={endpoints}
+                messageRouteIssues={new Map(messageRouteIssues[index]?.map((issue) => [issue.memberIndex, issue]))}
                 readOnly={readOnly || saving}
                 onChange={(next) => change((current) => current.map((item, itemIndex) => itemIndex === index ? next : item))}
                 onDelete={() => change((current) => current.filter((_, itemIndex) => itemIndex !== index))}
@@ -262,6 +305,7 @@ function WorkroomEditor(props: {
   agents: string[]
   agentDetails: WorkroomCatalog['agents']
   endpoints: EndpointOption[]
+  messageRouteIssues: ReadonlyMap<number, MessageRouteIssue>
   readOnly: boolean
   onChange(value: WorkroomDraft): void
   onDelete(): void
@@ -270,6 +314,11 @@ function WorkroomEditor(props: {
   const patch = (next: Partial<WorkroomDraft>) => props.onChange({ ...value, ...next })
   const setMember = (index: number, member: WorkroomMember) => patch({ members: value.members.map((item, itemIndex) => itemIndex === index ? member : item) })
   const orchestrators = value.members.filter((member) => member.role === 'orchestrator').map((member) => member.agent)
+  const messageRouteOwners = new Map<string, string>()
+  for (const member of value.members) {
+    if (!member.messageRoute) continue
+    messageRouteOwners.set(endpointRouteKey(member.messageRoute), member.agent)
+  }
 
   return (
     <article className={cn('console-dashboard-panel overflow-hidden', value.enabled === false && 'opacity-80')}>
@@ -294,17 +343,40 @@ function WorkroomEditor(props: {
 
         <section aria-labelledby={`members-${value.projectId}`}>
           <div className="mb-3 flex items-center justify-between gap-3">
-            <div><h3 id={`members-${value.projectId}`} className="text-sm font-semibold">成员与执行路由</h3><p className="mt-0.5 text-xs text-muted-foreground">同一 Agent 可承担多个角色；远程执行精确指向 Agent Endpoint。</p></div>
+            <div><h3 id={`members-${value.projectId}`} className="text-sm font-semibold">成员、执行与消息投影</h3><p className="mt-0.5 text-xs text-muted-foreground">执行入口决定任务在哪里运行；消息出口决定该 Agent 通过哪个 Bot Endpoint 在主空间发言。</p></div>
             <Badge variant="outline">{value.members.length}</Badge>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {value.members.map((member, index) => (
-              <div key={`${index}-${member.agent}-${member.role}`} className="grid gap-2 rounded-lg border p-3 md:grid-cols-[1fr_0.8fr_0.7fr_minmax(8rem,1fr)_auto] md:items-end">
-                <Field label="Agent"><NativeSelect value={member.agent} disabled={readOnly} onChange={(agent) => setMember(index, { ...member, agent })}><option value="">选择 Agent</option>{props.agents.map((agent) => <option key={agent} value={agent}>{props.agentDetails[agent]?.nickname || agent}</option>)}</NativeSelect></Field>
-                <Field label="Role"><NativeSelect value={member.role} disabled={readOnly} onChange={(role) => setMember(index, { ...member, role: role as MemberRole })}>{ROLES.map((role) => <option key={role} value={role}>{role}</option>)}</NativeSelect></Field>
-                <Field label="Execution"><NativeSelect value={member.assignmentRoute?.kind ?? 'local'} disabled={readOnly} onChange={(kind) => setMember(index, { ...member, assignmentRoute: kind === 'remote' ? { kind: 'remote', endpointId: '' } : { kind: 'local' } })}><option value="local">local</option><option value="remote">remote</option></NativeSelect></Field>
-                <Field label="Remote Endpoint ID"><Input value={member.assignmentRoute?.kind === 'remote' ? member.assignmentRoute.endpointId ?? '' : ''} disabled={readOnly || member.assignmentRoute?.kind !== 'remote'} onChange={(event) => setMember(index, { ...member, assignmentRoute: { kind: 'remote', endpointId: event.target.value } })} placeholder="worker-east" /></Field>
-                {!readOnly ? <Button variant="ghost" size="icon" aria-label={`删除成员 ${index + 1}`} onClick={() => patch({ members: value.members.filter((_, itemIndex) => itemIndex !== index) })}><Trash2 /></Button> : null}
+              <div key={`${index}-${member.agent}-${member.role}`} className="rounded-xl border bg-muted/[0.08] p-3 sm:p-4">
+                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(8rem,0.55fr)_auto] sm:items-end">
+                  <Field label="Agent"><NativeSelect value={member.agent} disabled={readOnly} onChange={(agent) => setMember(index, { ...member, agent })}><option value="">选择 Agent</option>{props.agents.map((agent) => <option key={agent} value={agent}>{props.agentDetails[agent]?.nickname || agent}</option>)}</NativeSelect></Field>
+                  <Field label="Role"><NativeSelect value={member.role} disabled={readOnly} onChange={(role) => setMember(index, { ...member, role: role as MemberRole })}>{ROLES.map((role) => <option key={role} value={role}>{role}</option>)}</NativeSelect></Field>
+                  {!readOnly ? <Button variant="ghost" size="icon" aria-label={`删除成员 ${index + 1}`} onClick={() => patch({ members: value.members.filter((_, itemIndex) => itemIndex !== index) })}><Trash2 /></Button> : <span />}
+                </div>
+
+                <div className="mt-4 grid gap-3 border-t pt-4 lg:grid-cols-2">
+                  <div className="rounded-lg border bg-background/70 p-3">
+                    <div className="mb-3 flex items-start gap-2">
+                      <Route className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                      <div><h4 className="text-xs font-semibold">任务执行入口</h4><p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">本机执行，或精确路由到远程 Agent Endpoint。</p></div>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Field label="Execution"><NativeSelect value={member.assignmentRoute?.kind ?? 'local'} disabled={readOnly} onChange={(kind) => setMember(index, { ...member, assignmentRoute: kind === 'remote' ? { kind: 'remote', endpointId: '' } : { kind: 'local' } })}><option value="local">local</option><option value="remote">remote</option></NativeSelect></Field>
+                      <Field label="Remote Endpoint ID"><Input value={member.assignmentRoute?.kind === 'remote' ? member.assignmentRoute.endpointId ?? '' : ''} disabled={readOnly || member.assignmentRoute?.kind !== 'remote'} onChange={(event) => setMember(index, { ...member, assignmentRoute: { kind: 'remote', endpointId: event.target.value } })} placeholder="worker-east" /></Field>
+                    </div>
+                  </div>
+
+                  <MessageRouteEditor
+                    member={member}
+                    primaryConversation={value.conversation}
+                    endpoints={props.endpoints}
+                    routeOwners={messageRouteOwners}
+                    issue={props.messageRouteIssues.get(index)}
+                    readOnly={readOnly}
+                    onChange={(messageRoute) => setMember(index, { ...member, messageRoute })}
+                  />
+                </div>
               </div>
             ))}
             {!readOnly ? <Button variant="outline" size="sm" onClick={() => patch({ members: [...value.members, { agent: props.agents[0] ?? '', role: value.members.some((member) => member.role === 'orchestrator') ? 'executor' : 'orchestrator' }] })}><Plus />添加成员</Button> : null}
@@ -312,6 +384,66 @@ function WorkroomEditor(props: {
         </section>
       </div>
     </article>
+  )
+}
+
+function MessageRouteEditor(props: {
+  member: WorkroomMember
+  primaryConversation?: ConversationBinding
+  endpoints: EndpointOption[]
+  routeOwners: ReadonlyMap<string, string>
+  issue?: MessageRouteIssue
+  readOnly: boolean
+  onChange(value: WorkroomMessageRoute | undefined): void
+}) {
+  const { member } = props
+  const routeValue = endpointRouteKey(member.messageRoute)
+  const routeKnown = props.endpoints.some((endpoint) =>
+    endpointRouteKey({ adapter: endpoint.adapter, endpoint: endpoint.name }) === routeValue)
+  const inheritedEndpoint = props.primaryConversation
+    ? `${props.primaryConversation.adapter}:${props.primaryConversation.endpoint}`
+    : '尚未配置主空间'
+
+  return (
+    <div className="rounded-lg border bg-background/70 p-3">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="flex items-start gap-2">
+          <RadioTower className="mt-0.5 h-4 w-4 text-muted-foreground" />
+          <div>
+            <h4 className="text-xs font-semibold">消息出口投影</h4>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">选择该 Agent 在主协作空间发言时使用的 Bot 身份。</p>
+          </div>
+        </div>
+        <Badge variant={props.issue ? 'destructive' : member.messageRoute ? 'outline' : 'secondary'}>
+          {props.issue ? '需要修正' : member.messageRoute ? '独立出口' : '继承主空间'}
+        </Badge>
+      </div>
+      <Field label="Projection Endpoint" hint={member.messageRoute
+        ? `通过 ${member.messageRoute.adapter}:${member.messageRoute.endpoint} 投影`
+        : `继承 ${inheritedEndpoint}`}>
+        <NativeSelect value={routeValue} disabled={props.readOnly} invalid={Boolean(props.issue)} onChange={(selected) => {
+          props.onChange(parseEndpointRouteKey(selected))
+        }}>
+          <option value="">继承主空间 Endpoint · {inheritedEndpoint}</option>
+          {!routeKnown && member.messageRoute ? (
+            <option value={routeValue}>{member.messageRoute.adapter}:{member.messageRoute.endpoint}{props.issue?.code === 'unknown' ? '（Endpoint 已失效）' : '（当前值）'}</option>
+          ) : null}
+          {props.endpoints.map((endpoint) => {
+            const value = endpointRouteKey({ adapter: endpoint.adapter, endpoint: endpoint.name })
+            const owner = props.routeOwners.get(value)
+            const occupied = Boolean(owner && owner !== member.agent)
+            return (
+              <option key={`${endpoint.adapter}:${endpoint.name}`} value={value} disabled={occupied}>
+                {endpoint.adapter}:{endpoint.name}
+                {endpoint.connected ? ' · online' : ' · offline'}
+                {occupied ? ` · 已由 ${owner} 使用` : ''}
+              </option>
+            )
+          })}
+        </NativeSelect>
+      </Field>
+      {props.issue ? <p role="alert" className="mt-2 text-xs leading-relaxed text-destructive">{props.issue.message}</p> : null}
+    </div>
   )
 }
 
@@ -328,8 +460,8 @@ function ConversationEditor(props: {
   const value = props.value ?? emptyConversation(props.orchestrators[0])
   const patch = (next: Partial<ConversationBinding>) => props.onChange({ ...value, ...next })
   const kinds = props.title === 'Sponsor Room' ? SPACE_KINDS.filter((kind) => kind !== 'repository') : SPACE_KINDS
-  const endpointValue = `${value.adapter}\0${value.endpoint}`
-  const endpointKnown = props.endpoints.some((endpoint) => `${endpoint.adapter}\0${endpoint.name}` === endpointValue)
+  const endpointValue = endpointRouteKey(value)
+  const endpointKnown = props.endpoints.some((endpoint) => endpointRouteKey({ adapter: endpoint.adapter, endpoint: endpoint.name }) === endpointValue)
   return (
     <section className="rounded-lg border p-3">
       <div className="mb-3 flex items-center justify-between gap-2">
@@ -340,12 +472,12 @@ function ConversationEditor(props: {
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Bot Endpoint">
             <NativeSelect value={endpointValue} disabled={props.readOnly} onChange={(selected) => {
-              const [adapter = '', endpoint = ''] = selected.split('\0')
-              patch({ adapter, endpoint })
+              const route = parseEndpointRouteKey(selected)
+              patch(route ?? { adapter: '', endpoint: '' })
             }}>
               <option value={'\0'}>选择已配置 Endpoint</option>
               {!endpointKnown && value.adapter && value.endpoint ? <option value={endpointValue}>{value.adapter}:{value.endpoint}（当前值）</option> : null}
-              {props.endpoints.map((endpoint) => <option key={`${endpoint.adapter}:${endpoint.name}`} value={`${endpoint.adapter}\0${endpoint.name}`}>{endpoint.adapter}:{endpoint.name}{endpoint.connected ? ' · online' : ' · offline'}</option>)}
+              {props.endpoints.map((endpoint) => <option key={`${endpoint.adapter}:${endpoint.name}`} value={endpointRouteKey({ adapter: endpoint.adapter, endpoint: endpoint.name })}>{endpoint.adapter}:{endpoint.name}{endpoint.connected ? ' · online' : ' · offline'}</option>)}
             </NativeSelect>
           </Field>
           <Field label="Space Kind"><NativeSelect value={value.kind} disabled={props.readOnly} onChange={(kind) => patch({ kind: kind as SpaceKind })}>{kinds.map((kind) => <option key={kind} value={kind}>{kind}</option>)}</NativeSelect></Field>
@@ -357,8 +489,8 @@ function ConversationEditor(props: {
   )
 }
 
-function NativeSelect(props: { value: string; disabled?: boolean; onChange(value: string): void; children: ReactNode }) {
-  return <select className="h-9 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" value={props.value} disabled={props.disabled} onChange={(event) => props.onChange(event.target.value)}>{props.children}</select>
+function NativeSelect(props: { value: string; disabled?: boolean; invalid?: boolean; onChange(value: string): void; children: ReactNode }) {
+  return <select aria-invalid={props.invalid || undefined} className={cn('h-9 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50', props.invalid && 'border-destructive focus-visible:ring-destructive')} value={props.value} disabled={props.disabled} onChange={(event) => props.onChange(event.target.value)}>{props.children}</select>
 }
 
 function Field(props: { label: string; hint?: string; children: ReactNode }) {

@@ -235,6 +235,24 @@ test('Workroom configuration uses the runtime Catalog CAS contract', () => {
   assert.doesNotMatch(source, /config:set|ai\.workrooms/)
 })
 
+test('Workroom members can bind a dedicated message projection Endpoint', () => {
+  const source = sourceText(join(SOURCE_ROOT, 'pages', 'workroom-catalog.tsx'))
+  assert.match(source, /messageRoute\?: WorkroomMessageRoute/)
+  assert.match(source, /消息出口投影/)
+  assert.match(source, /继承主空间 Endpoint/)
+  assert.match(source, /parseEndpointRouteKey\(selected\)/)
+  assert.match(source, /validateWorkroomMessageRoutes/)
+  assert.match(source, /firstMessageRouteIssue/)
+  assert.match(source, /aria-invalid/)
+  assert.doesNotMatch(source, /Promise\.allSettled/)
+  assert.match(source, /const endpointRequest = requestConsole/)
+  assert.match(source, /setLoading\(false\)[\s\S]*await endpointRequest/)
+  assert.match(source, /useState<'loading' \| 'ready' \| 'error'>\('loading'\)/)
+  assert.match(source, /validateKnownEndpoints: endpointInventoryState === 'ready'/)
+  assert.match(source, /endpoint\.connected \? ' · online' : ' · offline'/)
+  assert.match(source, /已由 .* 使用/)
+})
+
 test('Demo-capable mutation pages expose explicit read-only branches', () => {
   for (const path of [
     'pages/config.tsx',
