@@ -178,6 +178,23 @@ test('the shared shell adapts across PC, Pad and Phone widths', () => {
   assert.match(grids, /2xl:grid-cols-4/)
 })
 
+test('remote Agent playground styles are retained by the Tailwind source scanner', () => {
+  const source = sourceText(join(SOURCE_ROOT, 'agent-playground.css'))
+  const contract = sourceText(join(SOURCE_ROOT, 'remote-entry-style-contract.ts'))
+  const clientStyles = sourceText(join(ROOT, 'client', 'style.css'))
+  const playgroundClasses = new Set(
+    [...source.matchAll(/\.((?:agent-playground)[A-Za-z0-9_-]*)/g)].map((match) => match[1]),
+  )
+  const retainedClasses = new Set(
+    [...contract.matchAll(/['"]((?:agent-playground)[A-Za-z0-9_-]*)['"]/g)].map((match) => match[1]),
+  )
+  const missing = [...playgroundClasses].filter((className) => !retainedClasses.has(className))
+
+  assert.ok(playgroundClasses.size > 50, 'expected the complete remote Agent playground style contract')
+  assert.deepEqual(missing, [])
+  assert.match(clientStyles, /@import "\.\.\/console-ui\/src\/agent-playground\.css";/)
+})
+
 test('Console shell only consumes public route metadata', () => {
   const layout = sourceText(join(SOURCE_ROOT, 'layouts', 'dashboard.tsx'))
   const routes = sourceText(join(SOURCE_ROOT, 'registerBuiltinShell.tsx'))
