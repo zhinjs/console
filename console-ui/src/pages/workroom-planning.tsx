@@ -32,11 +32,34 @@ interface PlanningSetupStatus {
   planningPolicyReady: boolean
   disclosureReady: boolean
   disclosureConfigReady: boolean
+  disclosureStatusSupported: boolean
   modelProviderAlias?: string
   availableAgents: string[]
   availableTools: string[]
   availableSkills: string[]
   diagnostics: string[]
+}
+
+type PlanningSetupStatusResponse = Omit<PlanningSetupStatus, 'disclosureReady' | 'disclosureConfigReady' | 'disclosureStatusSupported'> & {
+  disclosureReady?: boolean
+  disclosureConfigReady?: boolean
+}
+
+function normalizePlanningSetupStatus(response: PlanningSetupStatusResponse): PlanningSetupStatus {
+  const disclosureStatusSupported = typeof response.disclosureReady === 'boolean'
+    && typeof response.disclosureConfigReady === 'boolean'
+  const diagnostics = [...response.diagnostics]
+  if (!disclosureStatusSupported) {
+    diagnostics.push('当前 Host 版本不支持 Workroom 披露状态；请升级 @zhin.js/cli 到最新版并重启 Host。')
+  }
+  return {
+    ...response,
+    ready: response.ready === true && disclosureStatusSupported && response.disclosureReady === true,
+    disclosureReady: response.disclosureReady === true,
+    disclosureConfigReady: response.disclosureConfigReady === true,
+    disclosureStatusSupported,
+    diagnostics,
+  }
 }
 
 export function PlanningDisclosurePanel({ projectId }: { projectId: string }) {
@@ -51,11 +74,11 @@ export function PlanningDisclosurePanel({ projectId }: { projectId: string }) {
     setLoading(true)
     setError(null)
     try {
-      const next = await requestConsole<PlanningSetupStatus>({
+      const response = await requestConsole<PlanningSetupStatusResponse>({
         type: CONSOLE_RPC.WORKROOM_PROFILE_STATUS,
         projectId,
       })
-      if (version === requestVersion.current) setStatus(next)
+      if (version === requestVersion.current) setStatus(normalizePlanningSetupStatus(response))
     } catch (caught) {
       if (version === requestVersion.current) {
         setStatus(null)
@@ -81,7 +104,7 @@ export function PlanningDisclosurePanel({ projectId }: { projectId: string }) {
     setBootstrapping(true)
     setError(null)
     try {
-      const next = await requestConsole<PlanningSetupStatus>({
+      const response = await requestConsole<PlanningSetupStatusResponse>({
         type: CONSOLE_RPC.WORKROOM_PROFILE_BOOTSTRAP,
         operationId: `console:planning-bootstrap:${targetProjectId}:${Date.now()}`,
         projectId: targetProjectId,
@@ -89,7 +112,7 @@ export function PlanningDisclosurePanel({ projectId }: { projectId: string }) {
         includeTools: status.availableTools,
         includeSkills: status.availableSkills,
       })
-      if (targetProjectId === projectId) setStatus(next)
+      if (targetProjectId === projectId) setStatus(normalizePlanningSetupStatus(response))
     } catch (caught) {
       if (targetProjectId === projectId) setError(caught instanceof Error ? caught.message : String(caught))
     } finally {
@@ -126,6 +149,7 @@ function PlanningStatus(props: {
 }) {
   const { status } = props
   const bootstrapAllowed = !status.ready
+    && status.disclosureStatusSupported
     && status.catalogReady
     && status.trustedPackPublisher
     && status.projectSponsor
@@ -142,7 +166,11 @@ function PlanningStatus(props: {
         <CapabilityStage label="Sponsor" ready={status.projectSponsor} detail={status.principalId ?? '未绑定 principal'} />
         <CapabilityStage label="Profile" ready={Boolean(status.activeProfile)} detail={status.activeProfile?.revisionId ?? '尚未激活'} />
         <CapabilityStage label="Planning" ready={status.planningPolicyReady} detail="Planning Policy" />
-        <CapabilityStage label="Disclosure" ready={status.disclosureReady} detail={status.disclosureConfigReady ? 'P12 authority' : '处理方契约待配置'} />
+        <CapabilityStage
+          label="Disclosure"
+          ready={status.disclosureReady}
+          detail={!status.disclosureStatusSupported ? 'Host 版本待升级' : status.disclosureConfigReady ? 'P12 authority' : '处理方契约待配置'}
+        />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">

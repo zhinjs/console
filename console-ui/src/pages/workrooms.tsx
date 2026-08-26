@@ -193,6 +193,7 @@ function WorkroomBoardPage() {
   const [projectId, setProjectId] = useState(projectFromUrl)
   const [recentProjects, setRecentProjects] = useState(readRecentProjects)
   const [runs, setRuns] = useState<WorkroomRun[]>([])
+  const [runsAvailable, setRunsAvailable] = useState(false)
   const [selectedRun, setSelectedRun] = useState<WorkroomRun | null>(null)
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
@@ -213,6 +214,7 @@ function WorkroomBoardPage() {
     if (!background) {
       setProjectId(normalized)
       setProjectInput(normalized)
+      setRunsAvailable(false)
     }
     background ? setRefreshing(true) : setLoading(true)
     setError(null)
@@ -226,6 +228,7 @@ function WorkroomBoardPage() {
       setProjectId(data.projectId)
       setProjectInput(data.projectId)
       setRuns(data.runs)
+      setRunsAvailable(true)
       setRecentProjects(rememberProject(data.projectId))
       setSelectedRun((current) => {
         if (!current) return null
@@ -233,10 +236,9 @@ function WorkroomBoardPage() {
       })
     } catch (caught) {
       if (!controller.signal.aborted) {
-        if (!background) {
-          setRuns([])
-          setSelectedRun(null)
-        }
+        setRuns([])
+        setSelectedRun(null)
+        setRunsAvailable(false)
         setError(caught instanceof Error ? caught.message : String(caught))
       }
     } finally {
@@ -275,6 +277,7 @@ function WorkroomBoardPage() {
       setProjectId('')
       setProjectInput('')
       setRuns([])
+      setRunsAvailable(false)
       setSelectedRun(null)
       setError(null)
     }
@@ -393,7 +396,7 @@ function WorkroomBoardPage() {
 
       {projectId ? <PlanningDisclosurePanel projectId={projectId} /> : null}
 
-      {projectId ? (
+      {projectId && runsAvailable ? (
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Workroom 摘要">
           <Metric icon={Workflow} label="Runs" value={runs.length} detail={`${totals.activeRuns} 个仍在运行`} />
           <Metric icon={FolderKanban} label="Tasks" value={totals.tasks} detail="Journal 中的任务事实" />
@@ -406,6 +409,13 @@ function WorkroomBoardPage() {
         <div className="grid gap-4 xl:grid-cols-[minmax(18rem,0.7fr)_minmax(0,1.3fr)]">
           <Skeleton className="h-[34rem] rounded-xl" />
           <Skeleton className="h-[34rem] rounded-xl" />
+        </div>
+      ) : projectId && !runsAvailable ? (
+        <div className="console-dashboard-panel flex min-h-[20rem] items-center justify-center p-6">
+          <EmptyState
+            title="无法读取 Workroom Run"
+            description="当前凭据未获得这个 Project 的治理投影读取权限。请升级并重启 Host、完成披露 authority 初始化后重试。"
+          />
         </div>
       ) : projectId ? (
         <div className="grid items-start gap-4 xl:grid-cols-[minmax(19rem,0.72fr)_minmax(0,1.28fr)]">

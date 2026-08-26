@@ -252,11 +252,24 @@ test('Workroom board exposes governed planning and disclosure setup', () => {
   assert.match(source, /规划与披露配置/)
   assert.match(source, /初始化披露能力/)
   assert.match(source, /disclosureConfigReady/)
+  assert.match(source, /disclosureStatusSupported/)
+  assert.match(source, /response\.ready === true && disclosureStatusSupported && response\.disclosureReady === true/)
+  assert.match(source, /Host 版本待升级/)
+  assert.match(source, /升级 @zhin\.js\/cli 到最新版/)
   assert.match(source, /expectedRegistryRevision: status\.registryRevision/)
   assert.match(source, /includeTools: status\.availableTools/)
   assert.match(source, /includeSkills: status\.availableSkills/)
   assert.match(source, /模型处理方披露契约/)
   assert.match(source, /OpenRouter.*ZDR.*data collection/)
+})
+
+test('Workroom run errors never masquerade as empty project data', () => {
+  const source = sourceText(join(SOURCE_ROOT, 'pages', 'workrooms.tsx'))
+  assert.match(source, /const \[runsAvailable, setRunsAvailable\] = useState\(false\)/)
+  assert.match(source, /projectId && runsAvailable/)
+  assert.match(source, /projectId && !runsAvailable/)
+  assert.match(source, /catch \(caught\)[\s\S]*setRuns\(\[\]\)[\s\S]*setSelectedRun\(null\)[\s\S]*setRunsAvailable\(false\)/)
+  assert.match(source, /无法读取 Workroom Run/)
 })
 
 test('Workroom configuration uses the runtime Catalog CAS contract', () => {
