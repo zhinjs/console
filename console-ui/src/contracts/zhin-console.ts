@@ -17,6 +17,8 @@ export const CONSOLE_RPC = {
   SYSTEM_RESTART: 'system:restart',
   WORKROOMS_GET: 'workrooms:get',
   WORKROOMS_SET: 'workrooms:set',
+  WORKROOM_PROFILE_STATUS: 'workroom.profile.status',
+  WORKROOM_PROFILE_BOOTSTRAP: 'workroom.profile.bootstrap',
   SCHEDULE_LIST: 'schedule:list',
   CRON_ADD: 'cron:add',
   CRON_REMOVE: 'cron:remove',

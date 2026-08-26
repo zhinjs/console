@@ -29,6 +29,7 @@ import { Card, CardContent } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { Skeleton } from '../components/ui/skeleton'
 import { isDemoMode } from '../utils/demo-mode'
+import { PlanningDisclosurePanel } from './workroom-planning'
 
 type RunStatus = 'active' | 'blocked' | 'needs_replan' | 'cancelling' | 'completed' | 'cancelled'
 type TaskStatus = 'ready' | 'blocked' | 'executing' | 'awaiting_acceptance' | 'cancelling' | 'accepted' | 'failed' | 'cancelled'
@@ -337,7 +338,7 @@ function WorkroomBoardPage() {
     <PageShell className="max-w-[1680px]">
       <PageHeader
         title="Workroom 任务看板"
-        description="按 Project 读取 Workroom Journal 投影，观察 Run、Task、Assignment 与阻塞事实。这里不修改 Kernel 状态。"
+        description="按 Project 读取 Workroom Journal 投影，观察 Run、Task、Assignment 与阻塞事实；规划与披露初始化通过显式治理动作发布。"
         actions={
           <div className="flex items-center gap-2">
             <Button asChild variant="outline" size="sm"><Link to="/agent/workrooms/catalog"><Settings2 />配置 Workrooms</Link></Button>
@@ -389,6 +390,8 @@ function WorkroomBoardPage() {
       </section>
 
       {error ? <ErrorAlert error={error} onRetry={projectInput.trim() ? () => loadRuns(projectInput) : undefined} /> : null}
+
+      {projectId ? <PlanningDisclosurePanel projectId={projectId} /> : null}
 
       {projectId ? (
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Workroom 摘要">

@@ -240,6 +240,25 @@ test('Workroom selection is represented by projectId and runId in the URL', () =
   assert.match(source, /setSearchParams\(\{ projectId, runId \}\)/)
 })
 
+test('Workroom board exposes governed planning and disclosure setup', () => {
+  const contract = sourceText(join(SOURCE_ROOT, 'contracts', 'zhin-console.ts'))
+  const source = [
+    sourceText(join(SOURCE_ROOT, 'pages', 'workrooms.tsx')),
+    sourceText(join(SOURCE_ROOT, 'pages', 'workroom-planning.tsx')),
+  ].join('\n')
+
+  assert.match(contract, /WORKROOM_PROFILE_STATUS: 'workroom\.profile\.status'/)
+  assert.match(contract, /WORKROOM_PROFILE_BOOTSTRAP: 'workroom\.profile\.bootstrap'/)
+  assert.match(source, /规划与披露配置/)
+  assert.match(source, /初始化披露能力/)
+  assert.match(source, /disclosureConfigReady/)
+  assert.match(source, /expectedRegistryRevision: status\.registryRevision/)
+  assert.match(source, /includeTools: status\.availableTools/)
+  assert.match(source, /includeSkills: status\.availableSkills/)
+  assert.match(source, /模型处理方披露契约/)
+  assert.match(source, /OpenRouter.*ZDR.*data collection/)
+})
+
 test('Workroom configuration uses the runtime Catalog CAS contract', () => {
   const contract = sourceText(join(SOURCE_ROOT, 'contracts', 'zhin-console.ts'))
   assert.match(contract, /WORKROOMS_GET: 'workrooms:get'/)
