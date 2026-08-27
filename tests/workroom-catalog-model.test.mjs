@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  createNewWorkroomDraft,
   endpointRouteKey,
   parseEndpointRouteKey,
+  validateWorkroomSponsors,
   validateWorkroomMessageRoutes,
 } from '../console-ui/src/pages/workroom-catalog-model.mjs'
 
@@ -36,4 +38,29 @@ test('same Agent may reuse one projection Endpoint and pending inventory does no
     { agent: 'planner', messageRoute: { adapter: 'discord', endpoint: 'bot-a' } },
   ]
   assert.deepEqual(validateWorkroomMessageRoutes(members, [], { validateKnownEndpoints: false }), [])
+})
+
+test('new Workroom explicitly binds the authenticated Console principal as Sponsor', () => {
+  assert.deepEqual(createNewWorkroomDraft({
+    projectId: 'workroom-1',
+    agent: 'orchestrator',
+    principalId: 'workroom-admin',
+  }), {
+    projectId: 'workroom-1',
+    name: 'New Workroom',
+    enabled: false,
+    members: [{ agent: 'orchestrator', role: 'orchestrator' }],
+    sponsors: ['workroom-admin'],
+  })
+})
+
+test('enabled Workroom cannot be published without a Sponsor principal', () => {
+  assert.deepEqual(validateWorkroomSponsors([
+    { projectId: 'ready', enabled: true, sponsors: ['workroom-admin'] },
+    { projectId: 'disabled', enabled: false },
+    { projectId: 'missing', enabled: true, sponsors: [] },
+  ]), [{
+    projectId: 'missing',
+    message: '已启用的 Workroom missing 至少需要一个 Sponsor principal。',
+  }])
 })

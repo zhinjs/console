@@ -30,8 +30,10 @@ import { Input } from '../components/ui/input'
 import { Skeleton } from '../components/ui/skeleton'
 import { Textarea } from '../components/ui/textarea'
 import {
+  createNewWorkroomDraft,
   endpointRouteKey,
   parseEndpointRouteKey,
+  validateWorkroomSponsors,
   validateWorkroomMessageRoutes,
   type MessageRoute as WorkroomMessageRoute,
   type MessageRouteIssue,
@@ -74,6 +76,7 @@ interface WorkroomCatalog {
   agents: Record<string, { provider?: string; model?: string; nickname?: string }>
   workrooms: Record<string, WorkroomDefinition>
   revision: string
+  principalId?: string
 }
 
 interface EndpointOption {
@@ -194,12 +197,14 @@ export default function WorkroomCatalogPage() {
     { validateKnownEndpoints: endpointInventoryState === 'ready' },
   ))
   const firstMessageRouteIssue = messageRouteIssues.flat()[0]
+  const firstSponsorIssue = validateWorkroomSponsors(drafts)[0]
 
   const save = async () => {
     if (readOnly || !catalog || saving) return
     const projectIds = drafts.map((item) => item.projectId.trim())
     if (projectIds.some((id) => !id)) return setError('Project ID 不能为空')
     if (new Set(projectIds).size !== projectIds.length) return setError('Project ID 不能重复')
+    if (firstSponsorIssue) return setError(firstSponsorIssue.message)
     if (firstMessageRouteIssue) return setError(`消息出口配置不可发布：${firstMessageRouteIssue.message}`)
     const editVersion = editVersionRef.current
     setSaving(true)
@@ -285,12 +290,11 @@ export default function WorkroomCatalogPage() {
             {!readOnly ? (
               <Button variant="outline" className="w-full border-dashed py-7" onClick={() => change((current) => {
                 const agent = agentNames[0] ?? ''
-                return [...current, {
+                return [...current, createNewWorkroomDraft({
                   projectId: nextProjectId(current),
-                  name: 'New Workroom',
-                  enabled: false,
-                  members: agent ? [{ agent, role: 'orchestrator' }] : [],
-                }]
+                  agent,
+                  principalId: catalog?.principalId,
+                })]
               })}><Plus />新建 Workroom</Button>
             ) : null}
           </div>

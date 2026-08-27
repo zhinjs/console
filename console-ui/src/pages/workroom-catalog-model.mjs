@@ -1,6 +1,37 @@
 /** @typedef {{ adapter: string, endpoint: string }} MessageRoute */
 /** @typedef {{ agent: string, messageRoute?: MessageRoute }} MessageRouteMember */
 /** @typedef {{ adapter: string, name: string }} EndpointOption */
+/** @typedef {{ projectId: string, enabled?: boolean, sponsors?: readonly string[] }} WorkroomSponsorDraft */
+
+/**
+ * Creates the visible initial state for a new Workroom. The principal comes
+ * from the authenticated Host response and remains visible/editable in the
+ * Sponsor Principals field before publish.
+ * @param {{ projectId: string, agent?: string, principalId?: string }} input
+ */
+export function createNewWorkroomDraft(input) {
+  return {
+    projectId: input.projectId,
+    name: 'New Workroom',
+    enabled: false,
+    members: input.agent ? [{ agent: input.agent, role: /** @type {const} */ ('orchestrator') }] : [],
+    ...(input.principalId ? { sponsors: [input.principalId] } : {}),
+  }
+}
+
+/**
+ * An enabled Project without a Sponsor cannot be read or governed through the
+ * Workroom Console, so reject that draft before it reaches the Runtime CAS.
+ * @param {readonly WorkroomSponsorDraft[]} drafts
+ */
+export function validateWorkroomSponsors(drafts) {
+  return drafts
+    .filter((draft) => draft.enabled !== false && !draft.sponsors?.length)
+    .map((draft) => ({
+      projectId: draft.projectId,
+      message: `已启用的 Workroom ${draft.projectId} 至少需要一个 Sponsor principal。`,
+    }))
+}
 
 /**
  * Encodes an Endpoint identity for native select values without confusing

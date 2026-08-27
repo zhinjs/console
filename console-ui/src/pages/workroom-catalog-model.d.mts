@@ -19,6 +19,32 @@ export interface MessageRouteIssue {
   message: string
 }
 
+export interface WorkroomSponsorDraft {
+  projectId: string
+  enabled?: boolean
+  sponsors?: string[]
+}
+
+export interface NewWorkroomDraft extends WorkroomSponsorDraft {
+  name: string
+  enabled: false
+  members: Array<{ agent: string; role: 'orchestrator' }>
+}
+
+export interface WorkroomSponsorIssue {
+  projectId: string
+  message: string
+}
+
+export function createNewWorkroomDraft(input: {
+  projectId: string
+  agent?: string
+  principalId?: string
+}): NewWorkroomDraft
+export function validateWorkroomSponsors(
+  drafts: readonly WorkroomSponsorDraft[],
+): WorkroomSponsorIssue[]
+
 export function endpointRouteKey(route?: MessageRoute): string
 export function parseEndpointRouteKey(value: string): MessageRoute | undefined
 export function validateWorkroomMessageRoutes(
