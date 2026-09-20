@@ -14,6 +14,13 @@ import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { Alert, AlertDescription } from '../ui/alert'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../ui/accordion'
+import { requestConsole } from '../../utils/console-rpc'
+
+interface ConfigValidation {
+  valid: boolean
+  errors: Array<{ path: string; message: string }>
+  missingEnv: string[]
+}
 
 export function PluginConfigForm({ pluginName, onSuccess }: Omit<PluginConfigFormProps, 'schema' | 'initialConfig'>) {
   const [localConfig, setLocalConfig] = useState<Record<string, any>>({})
@@ -27,10 +34,18 @@ export function PluginConfigForm({ pluginName, onSuccess }: Omit<PluginConfigFor
   }, [config])
 
   const [warnMessage, setWarnMessage] = useState<string | null>(null)
+  const [validation, setValidation] = useState<ConfigValidation | null>(null)
 
   const handleSave = async () => {
     if (!connected) return
     try {
+      const checked = await requestConsole<ConfigValidation>({
+        type: 'plugin:validate-config',
+        pluginName,
+        data: localConfig,
+      })
+      setValidation(checked)
+      if (!checked.valid) return
       const result = await setConfig(localConfig)
       if (result?.reloaded) {
         setSuccessMessage('配置已保存，插件已重载')
@@ -47,10 +62,12 @@ export function PluginConfigForm({ pluginName, onSuccess }: Omit<PluginConfigFor
   }
 
   const handleFieldChange = (fieldName: string, value: any) => {
+    setValidation(null)
     setLocalConfig(prev => ({ ...prev, [fieldName]: value }))
   }
 
   const handleNestedFieldChange = (parentPath: string, childKey: string, value: any) => {
+    setValidation(null)
     setLocalConfig(prev => ({
       ...prev,
       [parentPath]: { ...(prev[parentPath] || {}), [childKey]: value }
@@ -58,6 +75,7 @@ export function PluginConfigForm({ pluginName, onSuccess }: Omit<PluginConfigFor
   }
 
   const handleArrayItemChange = (fieldName: string, index: number, value: any) => {
+    setValidation(null)
     setLocalConfig(prev => {
       const arr = Array.isArray(prev[fieldName]) ? [...prev[fieldName]] : []
       arr[index] = value
@@ -116,6 +134,19 @@ export function PluginConfigForm({ pluginName, onSuccess }: Omit<PluginConfigFor
               <Alert variant="destructive" className="mb-3">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            {validation && (!validation.valid || validation.missingEnv.length > 0) && (
+              <Alert variant={validation.valid ? 'default' : 'destructive'} className="mb-3">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  {validation.errors.map(item => (
+                    <div key={`${item.path}:${item.message}`}>{item.path}: {item.message}</div>
+                  ))}
+                  {validation.missingEnv.length > 0 && (
+                    <div>缺少环境变量：{validation.missingEnv.join('、')}</div>
+                  )}
+                </AlertDescription>
               </Alert>
             )}
 

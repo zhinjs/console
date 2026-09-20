@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Activity, ArrowLeft, AlertCircle, Package, Settings, Terminal, Box as IconBox, Layers, Clock, Database, Brain, Wrench, Shield, Plug, Server, type LucideIcon } from 'lucide-react'
+import { Activity, ArrowLeft, AlertCircle, Package, Settings, Terminal, Box as IconBox, Layers, Clock, Database, Brain, Wrench, Shield, Plug, Server, Power, RefreshCw, Stethoscope, Trash2, type LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { apiFetch } from '../utils/auth'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
@@ -9,6 +9,8 @@ import { Button } from '../components/ui/button'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { Skeleton } from '../components/ui/skeleton'
 import { Separator } from '../components/ui/separator'
+import { requestConsole } from '../utils/console-rpc'
+import { useConfirm } from '../components/confirm-dialog'
 
 
 /** Feature 序列化格式（与后端 FeatureJSON 一致） */
@@ -27,6 +29,10 @@ interface PluginDetail {
   description: string
   features: FeatureJSON[]
   contexts: Array<{ name: string }>
+  packageName: string
+  instanceKey: string
+  manageable: boolean
+  version?: string
 }
 
 /** 根据后端返回的 icon 名称映射到 lucide-react 图标组件 */
@@ -54,6 +60,11 @@ export default function PluginDetailPage() {
   const [plugin, setPlugin] = useState<PluginDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actionLoading, setActionLoading] = useState(false)
+  const [actionMessage, setActionMessage] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [diagnostic, setDiagnostic] = useState<unknown>(null)
+  const { confirm, ConfirmDialog: ConfirmDialogHost } = useConfirm()
 
   useEffect(() => {
     if (name) fetchPluginDetail(name)
@@ -70,6 +81,111 @@ export default function PluginDetailPage() {
       setError((err as Error).message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const configRevision = async () => {
+    const source = await requestConsole<{ revision?: string }>({ type: 'config:get-source' })
+    return source.revision
+  }
+
+  const setEnabled = async (enabled: boolean) => {
+    if (!plugin) return
+    setActionLoading(true)
+    setActionError(null)
+    try {
+      const result = await requestConsole<{ message?: string }>({
+        type: 'plugin:set-enabled',
+        instanceKey: plugin.instanceKey,
+        enabled,
+      })
+      setActionMessage(result.message || (enabled ? '插件已启用' : '插件已停用'))
+    } catch (err) {
+      setActionError((err as Error).message)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const diagnose = async () => {
+    if (!plugin) return
+    setActionLoading(true)
+    setActionError(null)
+    try {
+      setDiagnostic(await requestConsole({ type: 'plugin:diagnose', pluginName: plugin.instanceKey }))
+    } catch (err) {
+      setActionError((err as Error).message)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const updatePlugin = async () => {
+    if (!plugin) return
+    setActionLoading(true)
+    setActionError(null)
+    try {
+      const response = await apiFetch('/api/marketplace/updates')
+      const body = await response.json()
+      const update = (body.data as Array<{ name: string; current?: string; latest?: string }> | undefined)
+        ?.find(item => item.name === plugin.packageName)
+      if (!update?.latest || update.latest === plugin.version) {
+        setActionMessage('当前已是最新版本')
+        return
+      }
+      const plan = await requestConsole<{ currentVersion: string | null; targetVersion: string }>({
+        type: 'plugin:plan-update',
+        packageName: plugin.packageName,
+        targetVersion: update.latest,
+      })
+      const accepted = await confirm({
+        title: `更新 ${plugin.name}？`,
+        description: `${plan.currentVersion || '未知版本'} → ${plan.targetVersion}，更新后需要重启 Host。`,
+        confirmLabel: '更新',
+      })
+      if (!accepted) return
+      const revision = await configRevision()
+      await requestConsole({
+        type: 'plugin:update',
+        packageName: plugin.packageName,
+        targetVersion: plan.targetVersion,
+        ...(revision ? { expectedRevision: revision } : {}),
+      })
+      setActionMessage(`已更新到 ${plan.targetVersion}，重启 Host 后生效`)
+    } catch (err) {
+      setActionError((err as Error).message)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const uninstallPlugin = async () => {
+    if (!plugin) return
+    const plan = await requestConsole<{
+      installed: boolean; declared: boolean; hasConfig: boolean
+    }>({ type: 'plugin:plan-uninstall', packageName: plugin.packageName })
+    const accepted = await confirm({
+      title: `卸载 ${plugin.name}？`,
+      description: `将移除${plan.installed ? '依赖、' : ''}${plan.declared ? '插件挂载、' : ''}${plan.hasConfig ? '配置' : ''}，该操作需要重启 Host。`,
+      confirmLabel: '卸载',
+      variant: 'destructive',
+    })
+    if (!accepted) return
+    setActionLoading(true)
+    setActionError(null)
+    try {
+      const revision = await configRevision()
+      await requestConsole({
+        type: 'plugin:uninstall',
+        packageName: plugin.packageName,
+        confirmation: plugin.packageName,
+        ...(revision ? { expectedRevision: revision } : {}),
+      })
+      navigate('/plugins')
+    } catch (err) {
+      setActionError((err as Error).message)
+    } finally {
+      setActionLoading(false)
     }
   }
 
@@ -140,6 +256,45 @@ export default function PluginDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {plugin.manageable && (
+        <Card className="border-border/80">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium">生命周期管理</p>
+                <p className="text-xs text-muted-foreground">诊断、启停、更新或卸载此插件。</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={() => void diagnose()} disabled={actionLoading}>
+                  <Stethoscope className="w-4 h-4 mr-1" />诊断
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => void updatePlugin()} disabled={actionLoading}>
+                  <RefreshCw className={`w-4 h-4 mr-1 ${actionLoading ? 'animate-spin' : ''}`} />更新
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => void setEnabled(plugin.status !== 'active')} disabled={actionLoading}>
+                  <Power className="w-4 h-4 mr-1" />{plugin.status === 'active' ? '停用' : '启用'}
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => void uninstallPlugin()} disabled={actionLoading}>
+                  <Trash2 className="w-4 h-4 mr-1" />卸载
+                </Button>
+              </div>
+            </div>
+            {actionMessage && <Alert><AlertDescription>{actionMessage}</AlertDescription></Alert>}
+            {actionError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{actionError}</AlertDescription>
+              </Alert>
+            )}
+            {diagnostic != null && (
+              <pre className="max-h-56 overflow-auto rounded-md bg-muted p-3 text-xs whitespace-pre-wrap">
+                {JSON.stringify(diagnostic, null, 2)}
+              </pre>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Separator />
 
@@ -219,6 +374,7 @@ export default function PluginDetailPage() {
           </Card>
         )}
       </div>
+      {ConfirmDialogHost}
     </div>
   )
 }

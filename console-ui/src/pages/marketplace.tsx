@@ -18,6 +18,7 @@ import {
   DialogTitle, DialogDescription, DialogClose,
 } from '../components/ui/dialog'
 import { apiFetch } from '../utils/auth'
+import { requestConsole } from '../utils/console-rpc'
 
 interface MarketPlugin {
   name: string
@@ -56,6 +57,16 @@ interface UpdateInfo {
   name: string
   current: string
   latest: string
+}
+
+interface PluginInstallPlan {
+  packageName: string
+  instanceKey: string
+  alreadyDeclared: boolean
+  alreadyInstalled: boolean
+  restartRequired: boolean
+  changes: { packageManifest: string; config: string }
+  warnings: string[]
 }
 
 type SortKey = 'relevance' | 'downloads' | 'newest' | 'name'
@@ -113,6 +124,10 @@ export default function MarketplacePage() {
   const [detail, setDetail] = useState<PluginDetail | null>(null)
   const [detailTab, setDetailTab] = useState<DetailTab>('readme')
   const [copied, setCopied] = useState(false)
+  const [installPlan, setInstallPlan] = useState<PluginInstallPlan | null>(null)
+  const [installLoading, setInstallLoading] = useState(false)
+  const [installMessage, setInstallMessage] = useState<string | null>(null)
+  const [installError, setInstallError] = useState<string | null>(null)
 
   const fetchPlugins = useCallback(async (p: number) => {
     setLoading(true)
@@ -179,6 +194,9 @@ export default function MarketplacePage() {
     setDetail(null)
     setDetailTab('readme')
     setCopied(false)
+    setInstallPlan(null)
+    setInstallMessage(null)
+    setInstallError(null)
     try {
       const res = await apiFetch(`/pub/marketplace/detail/${name}`)
       if (res.ok) {
@@ -188,6 +206,44 @@ export default function MarketplacePage() {
     } catch { /* ignore */ }
     finally { setDetailLoading(false) }
   }, [])
+
+  const previewInstall = useCallback(async (packageName: string) => {
+    setInstallLoading(true)
+    setInstallError(null)
+    setInstallMessage(null)
+    try {
+      const plan = await requestConsole<PluginInstallPlan>({
+        type: 'plugin:plan-install',
+        packageName,
+      })
+      setInstallPlan(plan)
+    } catch (err) {
+      setInstallError((err as Error).message)
+    } finally {
+      setInstallLoading(false)
+    }
+  }, [])
+
+  const commitInstall = useCallback(async () => {
+    if (!installPlan) return
+    setInstallLoading(true)
+    setInstallError(null)
+    try {
+      const config = await requestConsole<{ revision?: string }>({ type: 'config:get-source' })
+      const result = await requestConsole<{ restartRequired: boolean }>({
+        type: 'plugin:install',
+        packageName: installPlan.packageName,
+        ...(config.revision ? { expectedRevision: config.revision } : {}),
+      })
+      setInstallMessage(result.restartRequired ? '安装成功，重启 Host 后生效' : '安装成功')
+      setInstallPlan(null)
+      void checkUpdates()
+    } catch (err) {
+      setInstallError((err as Error).message)
+    } finally {
+      setInstallLoading(false)
+    }
+  }, [checkUpdates, installPlan])
 
   const handleCopyInstall = useCallback(async (name: string) => {
     const cmd = `pnpm add ${name}`
@@ -591,6 +647,43 @@ export default function MarketplacePage() {
                     </Button>
                   </div>
                 </div>
+
+                {installError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{installError}</AlertDescription>
+                  </Alert>
+                )}
+                {installMessage && (
+                  <Alert>
+                    <Check className="h-4 w-4" />
+                    <AlertDescription>{installMessage}</AlertDescription>
+                  </Alert>
+                )}
+                {installPlan && (
+                  <div className="rounded-md border p-3 space-y-2 text-sm">
+                    <div className="font-medium">安装计划</div>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <div>实例名：{installPlan.instanceKey}</div>
+                      <div>插件清单：{installPlan.changes.packageManifest === 'unchanged' ? '无需修改' : '将新增挂载'}</div>
+                      <div>配置：{installPlan.changes.config === 'unchanged' ? '无需修改' : '将创建配置项'}</div>
+                      <div>重启：{installPlan.restartRequired ? '需要' : '不需要'}</div>
+                    </div>
+                    {installPlan.warnings.length > 0 && (
+                      <ul className="list-disc pl-5 text-xs text-muted-foreground">
+                        {installPlan.warnings.map(warning => <li key={warning}>{warning}</li>)}
+                      </ul>
+                    )}
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => setInstallPlan(null)} disabled={installLoading}>
+                        取消
+                      </Button>
+                      <Button size="sm" onClick={() => void commitInstall()} disabled={installLoading}>
+                        {installLoading ? '安装中…' : '确认安装'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <DialogFooter className="gap-2 flex-wrap shrink-0 pt-2">
@@ -621,6 +714,12 @@ export default function MarketplacePage() {
                     <Download className="w-3 h-3 mr-1" /> npm
                   </a>
                 </Button>
+                {!installPlan && !installMessage && (
+                  <Button size="sm" onClick={() => void previewInstall(detail.name)} disabled={installLoading}>
+                    <Download className="w-3 h-3 mr-1" />
+                    {installLoading ? '检查中…' : '安装'}
+                  </Button>
+                )}
                 <DialogClose asChild>
                   <Button variant="secondary" size="sm">关闭</Button>
                 </DialogClose>
