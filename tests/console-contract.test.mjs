@@ -230,7 +230,27 @@ test('Endpoint transport uses canonical endpointKey and the public typed client 
   assert.match(endpointConsole, /loadInboxRequests\(false\)/)
   assert.match(endpointConsole, /loadInboxNotices\(false\)/)
   assert.match(endpointConsole, /unreadOnly:\s*true/)
+  assert.match(endpointConsole, /type: 'endpoint\.test'/)
+  assert.match(endpointConsole, /测试失败/)
   assert.match(history, /loadInboxMessages\(\)/)
+})
+
+test('plugin management requires plans, revision checks and config validation', () => {
+  const marketplace = sourceText(join(SOURCE_ROOT, 'pages', 'marketplace.tsx'))
+  const detail = sourceText(join(SOURCE_ROOT, 'pages', 'plugin-detail.tsx'))
+  const config = sourceText(join(SOURCE_ROOT, 'components', 'PluginConfigForm', 'index.tsx'))
+
+  assert.match(marketplace, /plugin:plan-install/)
+  assert.match(marketplace, /plugin:install/)
+  assert.match(marketplace, /expectedRevision/)
+  assert.match(detail, /plugin:diagnose/)
+  assert.match(detail, /plugin:plan-update/)
+  assert.match(detail, /plugin:update/)
+  assert.match(detail, /plugin:plan-uninstall/)
+  assert.match(detail, /plugin:uninstall/)
+  assert.match(detail, /plugin:set-enabled/)
+  assert.match(config, /plugin:validate-config/)
+  assert.match(config, /missingEnv/)
 })
 
 test('Workroom selection is represented by projectId and runId in the URL', () => {
