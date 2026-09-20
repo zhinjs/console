@@ -15,6 +15,9 @@ interface ConversationSidebarProps {
   info: EndpointInfo | null
   connected: boolean
   loadErr: string | null
+  testLoading: boolean
+  testMessage: string | null
+  onTest: () => void
   listLoading: boolean
   listErr: string | null
   listSearch: string
@@ -41,6 +44,9 @@ export function ConversationSidebar({
   info,
   connected,
   loadErr,
+  testLoading,
+  testMessage,
+  onTest,
   listLoading,
   listErr,
   listSearch,
@@ -112,6 +118,11 @@ export function ConversationSidebar({
           <p className="text-xs text-destructive leading-relaxed">{loadErr}</p>
         </div>
       )}
+      {testMessage && (
+        <div className="px-3 py-2 border-b border-border/40">
+          <p className="text-xs text-muted-foreground leading-relaxed">{testMessage}</p>
+        </div>
+      )}
 
       <div className="im-sidebar-search">
         <Search className="im-sidebar-search-icon h-4 w-4" aria-hidden />
@@ -177,6 +188,16 @@ export function ConversationSidebar({
       </div>
 
       <div className="im-sidebar-footer">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full text-xs h-9 text-muted-foreground hover:text-foreground"
+          onClick={onTest}
+          disabled={testLoading}
+        >
+          {testLoading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Wifi className="h-3.5 w-3.5 mr-1.5" />}
+          测试连接
+        </Button>
         <Button
           variant="ghost"
           size="sm"

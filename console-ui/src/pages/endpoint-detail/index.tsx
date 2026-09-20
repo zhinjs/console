@@ -98,6 +98,9 @@ export default function EndpointDetailPage() {
     connected,
     info,
     loadErr,
+    testLoading,
+    testMessage,
+    testEndpoint,
     msgContent,
     setMsgContent,
     sending,
@@ -404,6 +407,9 @@ export default function EndpointDetailPage() {
         info={info}
         connected={connected}
         loadErr={loadErr}
+        testLoading={testLoading}
+        testMessage={testMessage}
+        onTest={() => void testEndpoint()}
         listLoading={listLoading}
         listErr={listErr}
         listSearch={listSearch}

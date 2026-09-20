@@ -48,6 +48,8 @@ export function useEndpointConsole() {
   const { connected } = useWebSocket()
   const [info, setInfo] = useState<EndpointInfo | null>(null)
   const [loadErr, setLoadErr] = useState<string | null>(null)
+  const [testLoading, setTestLoading] = useState(false)
+  const [testMessage, setTestMessage] = useState<string | null>(null)
 
   // --- Endpoint info ---
   const loadInfo = useCallback(async () => {
@@ -69,6 +71,23 @@ export function useEndpointConsole() {
     const t = setInterval(loadInfo, 8000)
     return () => clearInterval(t)
   }, [loadInfo])
+
+  const testEndpoint = useCallback(async () => {
+    if (!adapter || !endpointId) return
+    setTestLoading(true)
+    try {
+      const result = await requestConsole<{ reachable: boolean; message: string; latencyMs: number }>({
+        type: 'endpoint.test',
+        adapter,
+        endpointKey: endpointId,
+      })
+      setTestMessage(`${result.message} · ${result.latencyMs}ms`)
+    } catch (error) {
+      setTestMessage(`测试失败：${(error as Error).message}`)
+    } finally {
+      setTestLoading(false)
+    }
+  }, [adapter, endpointId])
 
   // --- Channel manager ---
   const channelMgr = useChannelManager({
@@ -502,6 +521,9 @@ export function useEndpointConsole() {
     connected,
     info,
     loadErr,
+    testLoading,
+    testMessage,
+    testEndpoint,
     // message sending
     msgContent: msgHistory.msgContent,
     setMsgContent: msgHistory.setMsgContent,
