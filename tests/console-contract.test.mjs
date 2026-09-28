@@ -345,11 +345,19 @@ test('Demo-capable mutation pages expose explicit read-only branches', () => {
 test('Demo config is split before the full-config hook can execute', () => {
   const source = sourceText(join(SOURCE_ROOT, 'pages', 'config.tsx'))
   const editableStart = source.indexOf('function EditableConfigPage()')
-  const hookCall = source.indexOf('useConfigYaml()', editableStart)
+  const hookCall = source.indexOf('useConfigSource()', editableStart)
   const wrapper = source.indexOf('export default function ConfigPage()')
   assert.ok(editableStart >= 0 && hookCall > editableStart)
   assert.ok(wrapper > hookCall)
   assert.match(source.slice(wrapper), /isDemoMode\(\) \? <DemoConfigPage \/> : <EditableConfigPage \/>/)
+})
+
+test('full config editor uses revision-checked source RPCs', () => {
+  const source = sourceText(join(SOURCE_ROOT, 'hooks', 'useConfigSource.ts'))
+  assert.match(source, /type: 'config:get-source'/)
+  assert.match(source, /type: 'config:replace-source'/)
+  assert.match(source, /expectedRevision: config\.revision/)
+  assert.doesNotMatch(source, /config:(?:get|save)-yaml/)
 })
 
 test('released Zhin rich-message renderer is the single Markdown implementation', () => {

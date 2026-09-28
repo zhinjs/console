@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useConfigYaml } from '@zhin.js/client'
+import { useConfigSource } from '../hooks/useConfigSource'
 import { PluginConfigForm } from '../components/PluginConfigForm'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import {
@@ -260,34 +260,32 @@ function ConfigFieldEditor({
 function EditableConfigPage() {
   const [searchParams] = useSearchParams()
   const pluginFromUrl = searchParams.get('plugin')?.trim() ?? ''
-  const { yaml, pluginKeys, loading, error, load, save } = useConfigYaml()
+  const { source, format, configKeys: pluginKeys, loading, error, load, save } = useConfigSource()
   const [activeSection, setActiveSection] = useState<string>('general')
   const [mode, setMode] = useState<'form' | 'yaml'>('form')
-  const [yamlText, setYamlText] = useState('')
-  const [yamlDirty, setYamlDirty] = useState(false)
+  const [sourceText, setSourceText] = useState('')
+  const [sourceDirty, setSourceDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const { success, error: toastError } = useToast()
 
   useEffect(() => {
-    if (yaml) {
-      setYamlText(yaml)
-      setYamlDirty(false)
-    }
-  }, [yaml])
+    setSourceText(source)
+    setSourceDirty(false)
+  }, [source])
 
   const parsedConfig = useMemo(() => {
     try {
-      return parseYaml(yaml) || {}
+      return (format === 'json' ? JSON.parse(source) : parseYaml(source)) || {}
     } catch {
       return {}
     }
-  }, [yaml])
+  }, [source, format])
 
   const handleYamlSave = async () => {
     setSaving(true)
     try {
-      await save(yamlText)
-      setYamlDirty(false)
+      await save(sourceText)
+      setSourceDirty(false)
       success('配置已保存，需重启生效')
     } catch (err) {
       toastError(`保存失败: ${err instanceof Error ? err.message : '未知错误'}`)
@@ -299,10 +297,12 @@ function EditableConfigPage() {
   const handleFormSave = async (patch: Record<string, any>) => {
     setSaving(true)
     try {
-      const currentParsed = parseYaml(yaml) || {}
+      const currentParsed = (format === 'json' ? JSON.parse(source) : parseYaml(source)) || {}
       const merged = { ...currentParsed, ...patch }
-      const newYaml = stringifyYaml(merged, { lineWidth: 0 })
-      await save(newYaml)
+      const nextSource = format === 'json'
+        ? `${JSON.stringify(merged, null, 2)}\n`
+        : stringifyYaml(merged, { lineWidth: 0 })
+      await save(nextSource)
       success('配置已保存，需重启生效')
     } catch (err) {
       toastError(`保存失败: ${err instanceof Error ? err.message : '未知错误'}`)
@@ -327,7 +327,7 @@ function EditableConfigPage() {
     }
   }, [pluginFromUrl, pluginKeys, loading])
 
-  if (loading && !yaml) {
+  if (loading && !source) {
     return (
       <div className="space-y-4">
         <PageHeader title="配置" description="加载配置中..." />
@@ -342,7 +342,7 @@ function EditableConfigPage() {
     <div className="space-y-4">
       <PageHeader
         title="配置"
-        description="编辑 Host 通用项与各插件配置；插件项保存后可热重载，YAML 全量保存需重启"
+        description="编辑 Host 通用项与各插件配置；插件项保存后可热重载，原始配置全量保存需重启"
         actions={
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
@@ -365,7 +365,7 @@ function EditableConfigPage() {
           ))}
           <TabsTrigger value="yaml" className="gap-1.5">
             <FileCode className="w-4 h-4" />
-            YAML 全量
+            {format.toUpperCase()} 全量
           </TabsTrigger>
         </TabsList>
 
@@ -397,25 +397,25 @@ function EditableConfigPage() {
         <TabsContent value="yaml" className="mt-4 space-y-3">
           <div className="relative">
             <Textarea
-              value={yamlText}
-              onChange={e => { setYamlText(e.target.value); setYamlDirty(true) }}
+              value={sourceText}
+              onChange={e => { setSourceText(e.target.value); setSourceDirty(true) }}
               className="font-mono text-sm min-h-[400px] resize-y"
-              placeholder="# zhin.config.yml"
+              placeholder={format === 'json' ? '{ "plugins": {} }' : '# zhin.config.yml'}
               spellCheck={false}
             />
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={handleYamlSave} disabled={saving || !yamlDirty}>
+            <Button size="sm" onClick={handleYamlSave} disabled={saving || !sourceDirty}>
               {saving
                 ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />保存中...</>
                 : <><Save className="w-4 h-4 mr-1" />保存</>}
             </Button>
-            {yamlDirty && (
-              <Button variant="outline" size="sm" onClick={() => { setYamlText(yaml); setYamlDirty(false) }}>
+            {sourceDirty && (
+              <Button variant="outline" size="sm" onClick={() => { setSourceText(source); setSourceDirty(false) }}>
                 <X className="w-4 h-4 mr-1" />撤销
               </Button>
             )}
-            {yamlDirty && <span className="text-xs text-muted-foreground">有未保存的更改（YAML 保存需重启生效）</span>}
+            {sourceDirty && <span className="text-xs text-muted-foreground">有未保存的更改（全量保存需重启生效）</span>}
           </div>
         </TabsContent>
       </Tabs>
