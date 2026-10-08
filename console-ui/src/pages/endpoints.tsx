@@ -9,6 +9,7 @@ import { Badge } from '../components/ui/badge'
 import { Skeleton } from '../components/ui/skeleton'
 import { Separator } from '../components/ui/separator'
 import { ENDPOINT_RPC } from '../contracts/zhin-console'
+import { readEndpointList } from './endpoint-list-model.mjs'
 import { requestConsole } from '../utils/console-rpc'
 
 interface EndpointInfo {
@@ -27,7 +28,7 @@ export default function EndpointsPage() {
   const fetchEndpoints = useCallback(async () => {
     try {
       const data = await requestConsole<{ endpoints: EndpointInfo[] }>({ type: ENDPOINT_RPC.LIST })
-      setEndpoints(data.endpoints || [])
+      setEndpoints(readEndpointList(data))
       setError(null)
     } catch (err) {
       setError((err as Error).message)
@@ -60,7 +61,7 @@ export default function EndpointsPage() {
   if (error) {
     return (
       <PageShell>
-        <PageHeader title="机器人管理" description="管理所有已配置的 Endpoint 连接" />
+        <PageHeader title="渠道与会话" description="查看机器人渠道的连接状态，选择渠道进入会话、请求和通知。" />
         <ErrorAlert error={`加载失败：${error}`} onRetry={fetchEndpoints} />
       </PageShell>
     )
@@ -68,7 +69,7 @@ export default function EndpointsPage() {
 
   return (
     <PageShell>
-      <PageHeader title="机器人管理" description="管理所有已配置的 Endpoint 连接" />
+      <PageHeader title="渠道与会话" description="查看机器人渠道的连接状态，选择渠道进入会话、请求和通知。" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
         {endpoints.map((endpoint, index) => (
@@ -147,8 +148,8 @@ export default function EndpointsPage() {
           <CardContent className="flex flex-col items-center gap-4 py-12">
             <Bot className="w-16 h-16 text-muted-foreground/30" />
             <div className="text-center">
-              <h3 className="text-lg font-semibold">暂无 Endpoint</h3>
-              <p className="text-sm text-muted-foreground">请先配置并启动 Endpoint</p>
+              <h3 className="text-lg font-semibold">暂无渠道</h3>
+              <p className="text-sm text-muted-foreground">请先配置平台适配器及机器人账号，然后启动 Host。</p>
             </div>
           </CardContent>
         </Card>

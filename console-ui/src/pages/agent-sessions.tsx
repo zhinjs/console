@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { GitBranch, CheckCircle, Loader2 } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
@@ -33,6 +33,8 @@ interface TreePoint {
   index: number
   messageId: number
   preview: string
+  parentMessageId?: number | null
+  activePath?: boolean
 }
 
 interface SessionTree {
@@ -53,22 +55,36 @@ export default function AgentSessionsPage() {
   const [error, setError] = useState<string | null>(null)
   const [errorKind, setErrorKind] = useState<'none' | '404' | '503' | 'other'>('none')
 
-  const [confirmPoint, setConfirmPoint] = useState<TreePoint | null>(null)
+  const requestSequence = useRef(0)
+  const switchInFlight = useRef(false)
+  const [confirmPoint, setConfirmPoint] = useState<(TreePoint & { sessionKey: string }) | null>(null)
   const [switching, setSwitching] = useState(false)
   const [switchMsg, setSwitchMsg] = useState<string | null>(null)
 
-  const fetchTree = useCallback(async (key: string) => {
+  const fetchTree = useCallback(async (key: string, switchMessage: string | null = null) => {
     const trimmed = key.trim()
     if (!trimmed) return
+    if (!isLikelySessionKey(trimmed)) {
+      requestSequence.current += 1
+      setLoading(false)
+      setTree(null)
+      setConfirmPoint(null)
+      setErrorKind('other')
+      setError('会话标识不完整，请检查平台、渠道、类型与会话。')
+      return
+    }
+    const sequence = ++requestSequence.current
+    setConfirmPoint(null)
     setLoading(true)
     setError(null)
     setErrorKind('none')
     setTree(null)
-    setSwitchMsg(null)
+    setSwitchMsg(switchMessage)
     try {
       const encoded = encodeURIComponent(trimmed)
       const res = await apiFetch(`${CONSOLE_REST.AGENT_SESSIONS}/${encoded}/tree`)
       const data = await res.json()
+      if (sequence !== requestSequence.current) return
 
       if (res.status === 404) {
         setErrorKind('404')
@@ -77,7 +93,7 @@ export default function AgentSessionsPage() {
       }
       if (res.status === 503) {
         setErrorKind('503')
-        setError(data.error ?? 'Agent 未就绪')
+        setError('当前实例的 AI 对话分支能力尚未就绪。请先安装并配置 Agent；IM 消息功能可独立使用。')
         return
       }
       if (!res.ok || !data.success) {
@@ -88,17 +104,20 @@ export default function AgentSessionsPage() {
       setTree(data.data as SessionTree)
       setHistory(pushAgentSessionHistory(trimmed))
     } catch (err) {
+      if (sequence !== requestSequence.current) return
       setErrorKind('other')
       setError((err as Error).message)
     } finally {
-      setLoading(false)
+      if (sequence === requestSequence.current) setLoading(false)
     }
   }, [])
 
-  const handleSwitchLeaf = async (point: TreePoint) => {
-    if (readOnly) return
-    const trimmed = sessionKey.trim()
+  const handleSwitchLeaf = async (point: TreePoint & { sessionKey: string }) => {
+    if (readOnly || switchInFlight.current) return
+    const trimmed = point.sessionKey.trim()
     if (!trimmed) return
+    const viewSequence = requestSequence.current
+    switchInFlight.current = true
     setSwitching(true)
     setSwitchMsg(null)
     try {
@@ -109,6 +128,7 @@ export default function AgentSessionsPage() {
         body: JSON.stringify({ messageId: point.messageId }),
       })
       const data = await res.json()
+      if (viewSequence !== requestSequence.current) return
 
       if (res.status === 404) {
         setErrorKind('404')
@@ -117,24 +137,27 @@ export default function AgentSessionsPage() {
       }
       if (res.status === 503) {
         setErrorKind('503')
-        setError(data.error ?? 'Agent 未就绪')
+        setError('当前实例的 AI 对话分支能力尚未就绪。请先安装并配置 Agent；IM 消息功能可独立使用。')
         return
       }
       if (!res.ok || !data.success) {
         throw new Error(data.error ?? data.message ?? `切换失败 (HTTP ${res.status})`)
       }
 
-      setSwitchMsg(data.message ?? `已切换至消息 #${point.messageId}`)
       setConfirmPoint(null)
-      await fetchTree(trimmed)
+      await fetchTree(trimmed, `已切换至消息 #${point.messageId}`)
     } catch (err) {
+      if (viewSequence !== requestSequence.current) return
       setSwitchMsg(null)
       setError((err as Error).message)
       setErrorKind('other')
     } finally {
+      switchInFlight.current = false
       setSwitching(false)
     }
   }
+
+  useEffect(() => () => { requestSequence.current += 1 }, [])
 
   useEffect(() => {
     if (!sessionKeyFromUrl) return
@@ -156,13 +179,24 @@ export default function AgentSessionsPage() {
         description={readOnly ? '沿着真实渠道会话查看 AI 对话分支（Demo 只读）。' : '沿着真实渠道会话查看 AI 对话分支，并决定下一轮对话从哪条路径继续。'}
       />
 
+      <p className="text-sm text-muted-foreground">对话分支需要已安装并配置 Agent；仅使用 IM 的项目无需启用此能力。</p>
+
       <AgentSessionPicker
         value={sessionKey}
         history={history}
         loading={loading}
         actionLabel="查看分支"
-        onChange={setSessionKey}
-        onLoad={(key) => void fetchTree(key)}
+        onChange={(key) => {
+          if (switchInFlight.current) return
+          requestSequence.current += 1
+          setSessionKey(key)
+          setTree(null)
+          setConfirmPoint(null)
+          setLoading(false)
+          setError(null)
+          setSwitchMsg(null)
+        }}
+        onLoad={(key) => { if (!switchInFlight.current) void fetchTree(key) }}
       />
 
       {switchMsg && (
@@ -192,6 +226,7 @@ export default function AgentSessionsPage() {
         <Card>
           <CardContent className="p-4 space-y-3">
             <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+              <span>会话：<code className="text-foreground">{tree.sessionKey}</code></span>
               <span>
                 sessionId: <code className="text-foreground">{tree.sessionId}</code>
               </span>
@@ -213,7 +248,7 @@ export default function AgentSessionsPage() {
                     <button
                       key={point.messageId}
                       type="button"
-                      onClick={() => !readOnly && !isActive && setConfirmPoint(point)}
+                      onClick={() => !readOnly && !isActive && setConfirmPoint({ ...point, sessionKey: tree.sessionKey })}
                       disabled={readOnly || isActive || switching}
                       className={cn(
                         'w-full text-left p-3 rounded-lg border transition-colors',
@@ -235,6 +270,12 @@ export default function AgentSessionsPage() {
                           </Badge>
                         )}
                       </div>
+                      {(point.parentMessageId !== undefined || point.activePath !== undefined) && (
+                        <p className="text-xs text-muted-foreground mb-1">
+                          {point.parentMessageId == null ? '根消息' : `承接消息 #${point.parentMessageId}`}
+                          {point.activePath !== undefined && ` · ${point.activePath ? '当前路径' : '其他分支'}`}
+                        </p>
+                      )}
                       <p className="text-sm text-foreground/90">{point.preview || '（无预览）'}</p>
                     </button>
                   )
@@ -245,7 +286,7 @@ export default function AgentSessionsPage() {
         </Card>
       )}
 
-      {!readOnly && <Dialog open={!!confirmPoint} onOpenChange={(open) => !open && setConfirmPoint(null)}>
+      {!readOnly && <Dialog open={!!confirmPoint} onOpenChange={(open) => !open && !switching && setConfirmPoint(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>切换活跃叶节点</DialogTitle>
@@ -261,7 +302,7 @@ export default function AgentSessionsPage() {
           )}
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">取消</Button>
+              <Button variant="outline" disabled={switching}>取消</Button>
             </DialogClose>
             <Button
               disabled={switching || !confirmPoint}

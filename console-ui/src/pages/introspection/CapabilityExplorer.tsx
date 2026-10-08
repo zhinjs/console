@@ -1,4 +1,7 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { masonryLayout } from './masonry-layout.mjs'
+import { GalleryPreview } from './GalleryPreview'
+import { JsonViewer } from './JsonViewer'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
@@ -6,8 +9,6 @@ import {
   Boxes,
   CheckCircle2,
   CircleDot,
-  Code2,
-  Eye,
   FileCode2,
   GitBranch,
   Network,
@@ -19,16 +20,20 @@ import {
   Unplug,
   Wrench,
 } from 'lucide-react'
-import { CodeBlock, cn } from '@zhin.js/client'
+import { cn } from '@zhin.js/client'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
+import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog'
+import { capabilityEmptyState } from './empty-state.mjs'
 import type { CapabilityItem, CapabilityRowMap, IntrospectionTab } from './capability-model'
 
 interface CapabilityExplorerProps<K extends IntrospectionTab> {
   kind: K
   items: CapabilityRowMap[K][]
   readOnly: boolean
-  onPreviewComponent(item: CapabilityItem): void
+  filter?: string
+  total?: number
+  onClearFilter?(): void
 }
 
 const KIND_META: Record<IntrospectionTab, {
@@ -50,9 +55,9 @@ const KIND_META: Record<IntrospectionTab, {
     icon: GitBranch,
   },
   components: {
-    eyebrow: 'Message primitives',
+    eyebrow: '组件',
     title: '组件画廊',
-    description: '检查可复用消息组件的归属，并用真实渲染器验证输出。',
+    description: '查看组件并预览效果。',
     icon: Boxes,
   },
   endpoints: {
@@ -76,7 +81,7 @@ const KIND_META: Record<IntrospectionTab, {
   'prompt-sections': {
     eyebrow: 'Prompt governance',
     title: '提示词片段',
-    description: '检查插件上下文的归属、generation、预算与投放范围；正文不会跨过内省边界。',
+    description: '查看提示词片段的来源与适用范围。',
     icon: ScrollText,
   },
   mcp: {
@@ -107,7 +112,8 @@ function itemTitle(kind: IntrospectionTab, item: CapabilityItem): string {
   return text(item.name, '未命名能力')
 }
 
-export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, readOnly, onPreviewComponent }: CapabilityExplorerProps<K>) {
+export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, readOnly, filter, total, onClearFilter }: CapabilityExplorerProps<K>) {
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const indexedItems = useMemo(() => items.map((item, index) => ({ kind, item, id: identity(item, index) })), [items, kind])
   const selected = indexedItems.find(({ id }) => id === selectedId)?.item ?? indexedItems[0]?.item ?? null
@@ -116,15 +122,18 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
 
   useEffect(() => {
     setSelectedId(indexedItems[0]?.id ?? null)
+    setDetailsOpen(false)
   }, [indexedItems, kind])
 
   if (!items.length) {
+    const empty = capabilityEmptyState({ title: kind === 'components' ? '组件' : meta.title, filter, total })
     return (
       <div className="console-runtime-empty">
         <Icon aria-hidden="true" />
         <div>
-          <strong>当前 generation 没有{meta.title}</strong>
-          <p>这里展示 Runtime 已实际注册的能力；配置存在但尚未发布的内容不会出现。</p>
+          <strong>{empty.title}</strong>
+          <p>{empty.description}</p>
+          {empty.clearFilter && onClearFilter ? <Button variant="outline" size="sm" className="mt-3" onClick={onClearFilter}>清除筛选</Button> : null}
         </div>
       </div>
     )
@@ -135,21 +144,21 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
       <header className="console-capability-intro">
         <div className="console-capability-intro-icon"><Icon aria-hidden="true" /></div>
         <div>
-          <span className="console-eyebrow">{meta.eyebrow}</span>
+          {kind !== 'components' ? <span className="console-eyebrow">{meta.eyebrow}</span> : null}
           <h2 id="capability-collection-title">{meta.title}</h2>
-          <p>{meta.description}</p>
+          {kind !== 'components' ? <p>{meta.description}</p> : null}
         </div>
-        <div className="console-capability-count"><strong>{items.length}</strong><span>本页能力</span></div>
+        <div className="console-capability-count"><strong>{items.length}</strong><span>{kind === 'components' ? '个组件' : '项'}</span></div>
       </header>
 
-      <div className="console-capability-workspace">
+      <div className={cn("console-capability-workspace", kind === 'components' && "console-component-gallery-workspace")}>
         <div className="console-capability-collection">
           {kind === 'commands' ? (
             <CommandCatalog entries={entriesForKind(indexedItems, 'commands')} selectedId={selectedId} onSelect={setSelectedId} />
           ) : kind === 'middlewares' ? (
             <MiddlewarePipeline entries={entriesForKind(indexedItems, 'middlewares')} selectedId={selectedId} onSelect={setSelectedId} />
           ) : kind === 'components' ? (
-            <ComponentGallery entries={entriesForKind(indexedItems, 'components')} selectedId={selectedId} readOnly={readOnly} onSelect={setSelectedId} onPreview={onPreviewComponent} />
+            <ComponentGallery entries={entriesForKind(indexedItems, 'components')} selectedId={selectedId} readOnly={readOnly} onSelect={(id) => { setSelectedId(id); setDetailsOpen(true) }} />
           ) : kind === 'endpoints' ? (
             <EndpointGrid entries={entriesForKind(indexedItems, 'endpoints')} selectedId={selectedId} onSelect={setSelectedId} />
           ) : kind === 'bindings' ? (
@@ -162,7 +171,15 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
             <McpGrid entries={entriesForKind(indexedItems, 'mcp')} selectedId={selectedId} onSelect={setSelectedId} />
           )}
         </div>
-        <CapabilityInspector kind={kind} item={selected} readOnly={readOnly} onPreview={onPreviewComponent} />
+        {kind === 'components' ? <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+          <DialogContent className="console-component-drawer" aria-describedby={undefined} onCloseAutoFocus={(event) => {
+            event.preventDefault()
+            document.getElementById(`component-card-${selectedId}`)?.focus()
+          }}>
+            <DialogTitle className="sr-only">组件详情</DialogTitle>
+            <CapabilityInspector kind={kind} item={selected} readOnly={readOnly} />
+          </DialogContent>
+        </Dialog> : <CapabilityInspector kind={kind} item={selected} readOnly={readOnly} />}
       </div>
     </section>
   )
@@ -251,24 +268,48 @@ function MiddlewarePipeline({ entries, selectedId, onSelect }: CollectionProps<'
   )
 }
 
-function ComponentGallery(props: CollectionProps<'components'> & { readOnly: boolean; onPreview(item: CapabilityItem): void }) {
+function ComponentGallery(props: CollectionProps<'components'> & { readOnly: boolean }) {
+  const container = useRef<HTMLDivElement>(null)
+  const [layout, setLayout] = useState(() => masonryLayout(0, []))
+  useEffect(() => {
+    const root = container.current
+    if (!root) return
+    let frame = 0
+    function measure() {
+      if (!root) return
+      const heights = [...root.querySelectorAll<HTMLElement>(':scope > article')].map(card => card.getBoundingClientRect().height)
+      const parent = root.parentElement
+      const padding = parent ? getComputedStyle(parent) : null
+      const available = (parent?.clientWidth ?? root.clientWidth) - parseFloat(padding?.paddingLeft ?? '0') - parseFloat(padding?.paddingRight ?? '0')
+      const next = masonryLayout(available, heights)
+      setLayout(previous => JSON.stringify(previous) === JSON.stringify(next) ? previous : next)
+    }
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(measure)
+    })
+    observer.observe(root.parentElement ?? root)
+    for (const card of root.children) observer.observe(card)
+    measure()
+    return () => { observer.disconnect(); cancelAnimationFrame(frame) }
+  }, [props.entries])
   return (
-    <div className="console-runtime-card-grid" aria-label="组件画廊">
-      {props.entries.map((entry) => (
-        <article key={entry.id} className={cn('console-runtime-component', entry.id === props.selectedId && 'is-selected')}>
-          <button type="button" aria-pressed={entry.id === props.selectedId} onClick={() => props.onSelect(entry.id)}>
-            <span className="console-runtime-component-mark"><Code2 /></span>
-            <strong>{text(entry.item.name, '未命名组件')}</strong>
-            <small>{text(entry.item.owner, 'runtime')}</small>
-            <span>{text(entry.item.source, '内存注册')}</span>
-          </button>
-          {props.readOnly ? <Badge variant="outline">Full only</Badge> : (
-            <Button size="sm" variant="outline" onClick={() => props.onPreview(entry.item)}><Eye />真实预览</Button>
-          )}
-        </article>
-      ))}
+    <div ref={container} className="console-component-masonry" aria-label="组件画廊" style={{ gridTemplateColumns: `repeat(${layout.columns}, minmax(0, 1fr))`, maxWidth: layout.maxWidth }}>
+      {props.entries.map((entry, index) => <ComponentGalleryCard key={entry.id} entry={entry} position={layout.items[index]} selected={entry.id === props.selectedId} readOnly={props.readOnly} onSelect={() => props.onSelect(entry.id)} />)}
     </div>
   )
+}
+
+function ComponentGalleryCard({ entry, position, selected, readOnly, onSelect }: { entry: Entry<'components'>; position?: { column: number; row: number; span: number }; selected: boolean; readOnly: boolean; onSelect(): void }) {
+  return <article className={cn('console-runtime-component', selected && 'is-selected')} style={position ? { gridColumn: position.column, gridRow: `${position.row} / span ${position.span}` } : undefined} onClick={(event) => {
+    if ((event.target as Element).closest('button,a,input,textarea,summary')) return
+    onSelect()
+  }}>
+    <GalleryPreview item={entry.item} readOnly={readOnly} />
+    <button id={`component-card-${entry.id}`} type="button" aria-label={`查看 ${text(entry.item.name)} 组件详情`} aria-pressed={selected} onClick={onSelect}>
+      <strong>{text(entry.item.name, '未命名组件')}</strong><small>{text(entry.item.owner, 'runtime')}</small>
+    </button>
+  </article>
 }
 
 function EndpointGrid({ entries, selectedId, onSelect }: CollectionProps<'endpoints'>) {
@@ -387,26 +428,35 @@ function McpGrid({ entries, selectedId, onSelect }: CollectionProps<'mcp'>) {
   )
 }
 
+const PROPERTY_LABELS: Record<string, string> = {
+  name: '名称', pattern: '命令', desc: '说明', description: '说明',
+  owner: '所属插件', plugin: '所属插件', source: '来源文件',
+  parameters: '参数', aliases: '别名', permissions: '权限',
+  phase: '阶段', target: '目标', order: '顺序', adapter: '适配器',
+  online: '在线', status: '状态', provider: '模型提供方', model: '模型',
+  mcpServers: 'MCP 服务', hasAgentFile: 'Agent 文件',
+  qualifiedName: '完整名称', title: '标题', layer: '层级',
+  retention: '保留策略', maxChars: '字符上限', profiles: '适用配置',
+  platforms: '适用平台', generation: '运行代', contentChars: '内容字符数',
+  connected: '已连接', toolCount: '工具数', error: '错误',
+}
+
 function CapabilityInspector(props: {
   kind: IntrospectionTab
   item: CapabilityItem | null
   readOnly: boolean
-  onPreview(item: CapabilityItem): void
 }) {
   const { item, kind } = props
   if (!item) return null
-  const details = Object.entries(item).filter(([, value]) => value != null && value !== '')
+  const details = Object.entries(item).filter(([key, value]) => key !== 'previewProps' && value != null && value !== '')
   return (
-    <aside className="console-capability-inspector" aria-label="能力 Inspector">
+    <aside className="console-capability-inspector" aria-label="能力详情">
       <header>
-        <span className="console-eyebrow">能力 Inspector</span>
+        <span className="console-eyebrow">{kind === 'components' ? '组件详情' : '能力详情'}</span>
         <h3>{itemTitle(kind, item)}</h3>
-        <p>{KIND_META[kind].description}</p>
+
       </header>
       <div className="console-capability-inspector-actions">
-        {kind === 'components' && !props.readOnly ? (
-          <Button size="sm" onClick={() => props.onPreview(item)}><Eye />打开真实预览</Button>
-        ) : null}
         {kind === 'bindings' ? (
           <Button asChild size="sm"><Link to="/agent/workbench">进入 Agent 工作台<ArrowRight /></Link></Button>
         ) : null}
@@ -416,12 +466,13 @@ function CapabilityInspector(props: {
       </div>
       <dl className="console-capability-properties">
         {details.slice(0, 8).map(([key, value]) => (
-          <div key={key}><dt>{key}</dt><dd>{formatValue(value)}</dd></div>
+          <div key={key}><dt>{PROPERTY_LABELS[key] ?? key}</dt><dd>{formatValue(value)}</dd></div>
         ))}
       </dl>
+      {Object.prototype.hasOwnProperty.call(item, 'previewProps') ? <details className="console-capability-raw"><summary>示例参数</summary><JsonViewer value={item.previewProps} /></details> : null}
       <details className="console-capability-raw">
-        <summary>原始运行时投影</summary>
-        <CodeBlock code={JSON.stringify(item, null, 2)} language="json" />
+        <summary>原始数据</summary>
+        <JsonViewer value={item} />
       </details>
     </aside>
   )

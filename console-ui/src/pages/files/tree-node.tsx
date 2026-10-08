@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FileTreeNode } from '@zhin.js/client'
-import { FolderOpen, ChevronRight, ChevronDown } from 'lucide-react'
+import { Folder, FolderOpen, ChevronRight, ChevronDown } from 'lucide-react'
 import { getFileIcon } from './file-icons'
 
 export function TreeNode({
@@ -22,8 +22,8 @@ export function TreeNode({
     <div>
       <button
         className={`
-          w-full flex items-center gap-1.5 px-2 py-1 text-sm rounded-sm text-left
-          hover:bg-accent transition-colors
+          w-full min-w-0 flex items-center gap-1.5 px-2 py-1 text-sm rounded-sm text-left
+          hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset
           ${isSelected ? 'bg-accent text-accent-foreground font-medium' : ''}
         `}
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
@@ -34,6 +34,9 @@ export function TreeNode({
             onSelect(node.path)
           }
         }}
+        title={node.path}
+        aria-expanded={isDir ? expanded : undefined}
+        aria-current={!isDir && isSelected ? 'true' : undefined}
       >
         {isDir ? (
           expanded ? (
@@ -42,14 +45,15 @@ export function TreeNode({
             <ChevronRight className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
           )
         ) : (
-          <span className="w-3.5" />
+          <span className="w-3.5 shrink-0" aria-hidden="true" />
         )}
         {isDir ? (
-          <FolderOpen className="w-4 h-4 shrink-0 text-amber-500" />
+          expanded ? <FolderOpen className="w-4 h-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            : <Folder className="w-4 h-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         ) : (
           getFileIcon(node.name)
         )}
-        <span className="truncate">{node.name}</span>
+        <span className="min-w-0 flex-1 truncate">{node.name}</span>
       </button>
       {isDir && expanded && node.children && (
         <div>

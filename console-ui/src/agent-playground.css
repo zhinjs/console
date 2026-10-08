@@ -1,6 +1,7 @@
 .agent-playground-shell {
-  --playground-accent: 158 44% 34%;
-  --playground-accent-soft: 154 35% 93%;
+  --playground-accent: var(--primary);
+  --playground-accent-foreground: var(--primary-foreground);
+  --playground-accent-soft: var(--accent);
   --playground-line: var(--border);
   display: grid;
   grid-template-columns: minmax(13.5rem, 15.5rem) minmax(0, 1fr) minmax(16rem, 19rem);
@@ -16,8 +17,6 @@
 }
 
 .dark .agent-playground-shell {
-  --playground-accent: 153 48% 58%;
-  --playground-accent-soft: 155 22% 15%;
   box-shadow: 0 24px 70px hsl(var(--im-shadow) / 0.4);
 }
 
@@ -37,9 +36,7 @@
   transform: none;
   border: 0;
   border-right: 1px solid hsl(var(--playground-line) / 0.7);
-  background:
-    radial-gradient(circle at 0 0, hsl(var(--playground-accent) / 0.1), transparent 14rem),
-    hsl(var(--muted) / 0.32);
+  background: hsl(var(--muted) / 0.32);
   box-shadow: none;
 }
 
@@ -64,10 +61,10 @@
 .agent-playground-brand small {
   display: block;
   margin-top: 0.08rem;
-  color: hsl(var(--muted-foreground) / 0.72);
-  font-size: 0.62rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
   letter-spacing: 0.04em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .agent-playground-mark,
@@ -109,11 +106,11 @@
   align-items: center;
   justify-content: space-between;
   padding: 1rem 0.85rem 0.45rem;
-  color: hsl(var(--muted-foreground) / 0.82);
-  font-size: 0.65rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
   font-weight: 680;
   letter-spacing: 0.055em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .agent-playground-section-label span:last-child {
@@ -240,7 +237,7 @@
   border-radius: 0.42rem;
   background: transparent;
   color: hsl(var(--muted-foreground));
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   cursor: pointer;
 }
 
@@ -267,7 +264,7 @@
 
 .agent-playground-new-actions button.primary {
   background: hsl(var(--playground-accent));
-  color: white;
+  color: hsl(var(--playground-accent-foreground));
 }
 
 .agent-playground-endpoint {
@@ -279,14 +276,14 @@
   padding: 0.62rem 0.8rem 0.72rem;
   border-top: 1px solid hsl(var(--playground-line) / 0.56);
   color: hsl(var(--muted-foreground));
-  font-size: 0.65rem;
+  font-size: 0.75rem;
 }
 
 .agent-playground-endpoint strong {
   overflow: hidden;
   color: hsl(var(--foreground) / 0.82);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.64rem;
+  font-size: 0.75rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -350,7 +347,7 @@
   border: 1px solid hsl(var(--border));
   border-radius: 999px;
   color: hsl(var(--muted-foreground));
-  font-size: 0.59rem;
+  font-size: 0.75rem;
   font-weight: 650;
 }
 
@@ -359,8 +356,8 @@
   max-width: min(34vw, 30rem);
   margin-top: 0.18rem;
   overflow: hidden;
-  color: hsl(var(--muted-foreground) / 0.78);
-  font-size: 0.62rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -386,7 +383,7 @@
   border-radius: 0.58rem;
   background: hsl(var(--background));
   color: hsl(var(--muted-foreground));
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   text-decoration: none;
   cursor: pointer;
 }
@@ -411,7 +408,7 @@
   gap: 0.35rem;
   margin-right: 0.2rem;
   color: hsl(var(--muted-foreground));
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   white-space: nowrap;
 }
 
@@ -446,7 +443,7 @@
   border-bottom: 1px solid hsl(8 62% 52% / 0.2);
   background: hsl(8 70% 96%);
   color: hsl(8 38% 28%);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
 }
 
 .dark .agent-playground-confirm {
@@ -470,14 +467,14 @@
   border-radius: 0.5rem;
   background: transparent;
   color: inherit;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   cursor: pointer;
 }
 
 .agent-playground-confirm button.danger {
-  border-color: hsl(8 62% 47%);
-  background: hsl(8 62% 47%);
-  color: white;
+  border-color: hsl(var(--destructive));
+  background: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground));
 }
 
 .agent-playground-run-settings {
@@ -504,7 +501,7 @@
   align-items: center;
   gap: 0.3rem;
   color: hsl(var(--muted-foreground));
-  font-size: 0.61rem;
+  font-size: 0.75rem;
   font-weight: 650;
 }
 
@@ -520,7 +517,7 @@
   outline: 0;
   background: hsl(var(--background) / 0.84);
   color: hsl(var(--foreground));
-  font-size: 0.68rem;
+  font-size: 0.75rem;
 }
 
 .agent-playground-run-settings input:focus,
@@ -594,7 +591,7 @@
   margin: 0;
   padding-top: 0.1rem;
   color: hsl(8 58% 48%);
-  font-size: 0.64rem;
+  font-size: 0.75rem;
 }
 
 .agent-playground-conversation {
@@ -602,10 +599,7 @@
   min-height: 0;
   flex: 1;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 1px 1px, hsl(var(--foreground) / 0.035) 1px, transparent 0),
-    linear-gradient(180deg, hsl(var(--muted) / 0.18), transparent 7rem);
-  background-size: 20px 20px, auto;
+  background: hsl(var(--background));
 }
 
 .agent-playground-message-scroll {
@@ -659,7 +653,7 @@
   border-radius: 0.78rem;
   background: hsl(var(--background) / 0.8);
   color: hsl(var(--foreground) / 0.78);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   line-height: 1.45;
   text-align: left;
   cursor: pointer;
@@ -730,7 +724,7 @@
   gap: 0.45rem;
   margin: 0 0.12rem 0.3rem;
   color: hsl(var(--muted-foreground));
-  font-size: 0.64rem;
+  font-size: 0.75rem;
 }
 
 .agent-playground-message.is-user .agent-playground-message-meta {
@@ -779,10 +773,10 @@
   border: 1px solid hsl(38 76% 48% / 0.26);
   border-radius: 999px;
   color: hsl(34 70% 40%);
-  font-size: 0.55rem;
+  font-size: 0.75rem;
   font-weight: 720;
   letter-spacing: 0.055em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .agent-playground-approval-actions {
@@ -806,7 +800,7 @@
   border-radius: 0.48rem;
   background: hsl(var(--background) / 0.78);
   color: hsl(var(--foreground) / 0.8);
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   font-weight: 650;
   cursor: pointer;
   transition: background 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
@@ -821,7 +815,7 @@
 .agent-playground-approval-actions button.is-primary {
   border-color: hsl(var(--playground-accent) / 0.36);
   background: hsl(var(--playground-accent));
-  color: white;
+  color: hsl(var(--playground-accent-foreground));
 }
 
 .agent-playground-approval-actions button.is-danger {
@@ -839,7 +833,7 @@
   align-items: center;
   gap: 0.3rem;
   color: hsl(var(--playground-accent));
-  font-size: 0.61rem;
+  font-size: 0.75rem;
 }
 
 .agent-playground-message-content > :first-child,
@@ -909,10 +903,10 @@
   display: block;
   margin-bottom: 0.15rem;
   color: hsl(var(--muted-foreground) / 0.76);
-  font-size: 0.55rem;
+  font-size: 0.75rem;
   font-weight: 750;
   letter-spacing: 0.11em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .agent-playground-inline-run-copy h3 {
@@ -928,7 +922,7 @@
   overflow: hidden;
   margin: 0.2rem 0 0;
   color: hsl(var(--muted-foreground));
-  font-size: 0.64rem;
+  font-size: 0.75rem;
   line-height: 1.45;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -953,7 +947,7 @@
   border-radius: 0.48rem;
   background: hsl(var(--background) / 0.72);
   color: hsl(var(--foreground) / 0.73);
-  font-size: 0.61rem;
+  font-size: 0.75rem;
   font-weight: 660;
   cursor: pointer;
   transition: border-color 140ms ease, color 140ms ease, background 140ms ease, transform 140ms ease;
@@ -993,8 +987,8 @@
 }
 
 .agent-playground-inline-run-metrics > div:last-child { border-right: 0; }
-.agent-playground-inline-run-metrics dt { color: hsl(var(--muted-foreground)); font-size: 0.54rem; }
-.agent-playground-inline-run-metrics dd { overflow: hidden; margin: 0; font-size: 0.64rem; font-weight: 680; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+.agent-playground-inline-run-metrics dt { color: hsl(var(--muted-foreground)); font-size: 0.75rem; }
+.agent-playground-inline-run-metrics dd { overflow: hidden; margin: 0; font-size: 0.75rem; font-weight: 680; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
 .agent-playground-inline-run-metrics .has-problem dd { color: hsl(8 58% 48%); }
 
 .agent-playground-inline-run-steps {
@@ -1046,16 +1040,16 @@
 .agent-playground-inline-run-steps li.is-denied i { background: hsl(8 62% 52%); box-shadow: 0 0 0 1px hsl(8 62% 52% / 0.3); }
 .agent-playground-inline-run-steps li.is-cancelled i { background: hsl(38 76% 48%); box-shadow: 0 0 0 1px hsl(38 76% 48% / 0.3); }
 .agent-playground-inline-run-steps li > div { display: flex; min-width: 0; flex-direction: column; }
-.agent-playground-inline-run-steps strong { overflow: hidden; color: hsl(var(--foreground) / 0.82); font-size: 0.63rem; font-weight: 660; text-overflow: ellipsis; white-space: nowrap; }
-.agent-playground-inline-run-steps small { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: 0.55rem; text-overflow: ellipsis; white-space: nowrap; }
-.agent-playground-inline-run-steps li > span { color: hsl(var(--muted-foreground) / 0.78); font-size: 0.53rem; font-variant-numeric: tabular-nums; }
+.agent-playground-inline-run-steps strong { overflow: hidden; color: hsl(var(--foreground) / 0.82); font-size: 0.75rem; font-weight: 660; text-overflow: ellipsis; white-space: nowrap; }
+.agent-playground-inline-run-steps small { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: 0.75rem; text-overflow: ellipsis; white-space: nowrap; }
+.agent-playground-inline-run-steps li > span { color: hsl(var(--muted-foreground)); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
 .agent-playground-inline-run-steps li.is-failed > span,
 .agent-playground-inline-run-steps li.is-denied > span { color: hsl(8 58% 48%); }
 
 .agent-playground-inline-run-empty {
   padding: 0.72rem 1rem;
   color: hsl(var(--muted-foreground));
-  font-size: 0.61rem;
+  font-size: 0.75rem;
   text-align: center;
 }
 
@@ -1124,7 +1118,6 @@
   overflow-y: auto;
   border-left: 1px solid hsl(var(--playground-line) / 0.7);
   background:
-    radial-gradient(circle at 100% 0, hsl(var(--playground-accent) / 0.075), transparent 14rem),
     hsl(var(--muted) / 0.25);
   scrollbar-width: thin;
 }
@@ -1147,10 +1140,10 @@
 
 .agent-playground-inspector-head > div:first-child > span {
   color: hsl(var(--playground-accent));
-  font-size: 0.58rem;
+  font-size: 0.75rem;
   font-weight: 720;
   letter-spacing: 0.08em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .agent-playground-inspector-head h2 {
@@ -1190,7 +1183,7 @@
   border-radius: 0.44rem;
   background: transparent;
   color: hsl(var(--muted-foreground));
-  font-size: 0.63rem;
+  font-size: 0.75rem;
   font-weight: 650;
   cursor: pointer;
 }
@@ -1207,7 +1200,7 @@
   border-radius: 999px;
   background: hsl(var(--muted));
   color: hsl(var(--muted-foreground));
-  font-size: 0.52rem;
+  font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1233,16 +1226,16 @@
   justify-content: space-between;
   margin-bottom: 0.62rem;
   color: hsl(var(--foreground) / 0.82);
-  font-size: 0.69rem;
+  font-size: 0.75rem;
   font-weight: 680;
 }
 
 .agent-playground-inspector-title small {
   color: hsl(var(--muted-foreground));
-  font-size: 0.57rem;
+  font-size: 0.75rem;
   font-weight: 550;
   letter-spacing: 0.05em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .agent-playground-metrics {
@@ -1266,7 +1259,7 @@
 .agent-playground-metrics > div:nth-child(-n+2) { border-bottom: 1px solid hsl(var(--border) / 0.62); }
 .agent-playground-metrics svg { grid-row: span 2; width: 0.78rem; color: hsl(var(--playground-accent)); }
 .agent-playground-metrics strong { overflow: hidden; font-size: 0.82rem; font-variant-numeric: tabular-nums; text-overflow: ellipsis; }
-.agent-playground-metrics span { color: hsl(var(--muted-foreground)); font-size: 0.58rem; }
+.agent-playground-metrics span { color: hsl(var(--muted-foreground)); font-size: 0.75rem; }
 .agent-playground-metrics .has-problem svg,
 .agent-playground-metrics .has-problem strong { color: hsl(8 62% 52%); }
 
@@ -1284,7 +1277,7 @@
   gap: 0.75rem;
   padding: 0.36rem 0;
   border-bottom: 1px dashed hsl(var(--border) / 0.6);
-  font-size: 0.65rem;
+  font-size: 0.75rem;
 }
 
 .agent-playground-context-list > div:last-child { border-bottom: 0; }
@@ -1350,9 +1343,9 @@
 .agent-playground-trace-item.is-usage .agent-playground-trace-dot { background: hsl(184 52% 42%); }
 .agent-playground-trace-item.is-problem .agent-playground-trace-dot { background: hsl(8 62% 52%); }
 .agent-playground-trace-item > div { display: flex; min-width: 0; flex-direction: column; }
-.agent-playground-trace-item strong { overflow: hidden; font-size: 0.65rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
-.agent-playground-trace-item small { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: 0.58rem; text-overflow: ellipsis; white-space: nowrap; }
-.agent-playground-trace-item time { margin-top: 0.03rem; color: hsl(var(--muted-foreground) / 0.65); font-size: 0.54rem; font-variant-numeric: tabular-nums; }
+.agent-playground-trace-item strong { overflow: hidden; font-size: 0.75rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.agent-playground-trace-item small { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: 0.75rem; text-overflow: ellipsis; white-space: nowrap; }
+.agent-playground-trace-item time { margin-top: 0.03rem; color: hsl(var(--muted-foreground)); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
 
 .agent-playground-trace-loading,
 .agent-playground-trace-empty,
@@ -1365,7 +1358,7 @@
   border: 1px dashed hsl(var(--border));
   border-radius: 0.72rem;
   color: hsl(var(--muted-foreground));
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   text-align: center;
 }
 
@@ -1421,8 +1414,8 @@
 .agent-playground-task-list article.is-failed > i { background: hsl(8 62% 52%); }
 .agent-playground-task-list article.is-cancelled > i { background: hsl(38 76% 48%); }
 .agent-playground-task-list article > div { display: flex; min-width: 0; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
-.agent-playground-task-list strong { font-size: 0.65rem; font-weight: 680; }
-.agent-playground-task-list code { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: 0.54rem; text-overflow: ellipsis; }
+.agent-playground-task-list strong { font-size: 0.75rem; font-weight: 680; }
+.agent-playground-task-list code { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: 0.75rem; text-overflow: ellipsis; }
 
 .agent-playground-task-list dl {
   display: grid;
@@ -1434,8 +1427,8 @@
 }
 
 .agent-playground-task-list dl > div { display: flex; flex-direction: column; gap: 0.06rem; }
-.agent-playground-task-list dt { color: hsl(var(--muted-foreground)); font-size: 0.52rem; }
-.agent-playground-task-list dd { margin: 0; font-size: 0.61rem; font-variant-numeric: tabular-nums; }
+.agent-playground-task-list dt { color: hsl(var(--muted-foreground)); font-size: 0.75rem; }
+.agent-playground-task-list dd { margin: 0; font-size: 0.75rem; font-variant-numeric: tabular-nums; }
 
 .agent-playground-artifact-list article {
   overflow: hidden;
@@ -1478,9 +1471,9 @@
 .agent-playground-artifact-list article > button > span:nth-child(2) { display: flex; min-width: 0; flex-direction: column; }
 .agent-playground-artifact-list strong,
 .agent-playground-artifact-list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.agent-playground-artifact-list strong { font-size: 0.62rem; font-weight: 660; }
-.agent-playground-artifact-list small { color: hsl(var(--muted-foreground)); font-size: 0.54rem; }
-.agent-playground-artifact-list em { color: hsl(var(--muted-foreground)); font-size: 0.51rem; font-style: normal; text-transform: uppercase; }
+.agent-playground-artifact-list strong { font-size: 0.75rem; font-weight: 660; }
+.agent-playground-artifact-list small { color: hsl(var(--muted-foreground)); font-size: 0.75rem; }
+.agent-playground-artifact-list em { color: hsl(var(--muted-foreground)); font-size: 0.75rem; font-style: normal; text-transform: none; }
 .agent-playground-artifact-list article.is-completed em { color: hsl(var(--playground-accent)); }
 .agent-playground-artifact-list article.is-failed em,
 .agent-playground-artifact-list article.is-denied em { color: hsl(8 58% 47%); }
@@ -1496,7 +1489,7 @@
 .agent-playground-artifact-detail > code {
   overflow-wrap: anywhere;
   color: hsl(var(--muted-foreground));
-  font-size: 0.56rem;
+  font-size: 0.75rem;
 }
 
 .agent-playground-artifact-detail pre {
@@ -1508,7 +1501,7 @@
   border-radius: 0.48rem;
   background: hsl(220 18% 10%);
   color: hsl(210 25% 91%);
-  font-size: 0.56rem;
+  font-size: 0.75rem;
   line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
@@ -1518,7 +1511,7 @@
   display: flex;
   justify-content: space-between;
   color: hsl(var(--muted-foreground));
-  font-size: 0.52rem;
+  font-size: 0.75rem;
 }
 
 .agent-playground-artifact-empty {
@@ -1532,7 +1525,7 @@
   border: 1px dashed hsl(var(--border));
   border-radius: 0.72rem;
   color: hsl(var(--muted-foreground));
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   line-height: 1.45;
   text-align: center;
 }
@@ -1551,8 +1544,8 @@
   text-decoration: none;
 }
 
-.agent-playground-studio-link > span { display: flex; align-items: center; gap: 0.4rem; font-size: 0.68rem; font-weight: 680; }
-.agent-playground-studio-link code { overflow: hidden; opacity: 0.7; font-size: 0.56rem; text-overflow: ellipsis; white-space: nowrap; }
+.agent-playground-studio-link > span { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; font-weight: 680; }
+.agent-playground-studio-link code { overflow: hidden; opacity: 0.7; font-size: 0.75rem; text-overflow: ellipsis; white-space: nowrap; }
 .agent-playground-studio-link:hover { border-color: hsl(var(--playground-accent) / 0.42); }
 
 .agent-playground-inspector-overlay { display: none; }
@@ -1630,7 +1623,7 @@
     background: hsl(var(--background));
   }
 
-  .agent-playground-mobilebar strong { font-size: 0.72rem; }
+  .agent-playground-mobilebar strong { font-size: 0.75rem; }
   .agent-playground-mobilebar button {
     display: inline-flex;
     align-items: center;
@@ -1640,7 +1633,7 @@
     border: 0;
     background: transparent;
     color: hsl(var(--muted-foreground));
-    font-size: 0.65rem;
+    font-size: 0.75rem;
     cursor: pointer;
   }
   .agent-playground-mobilebar button:last-child { justify-self: end; }

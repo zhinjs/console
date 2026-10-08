@@ -3,7 +3,7 @@ import { Bot, ChevronRight, GitBranch, History, Loader2, MessagesSquare } from '
 import { cn } from '@zhin.js/client'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import { parseImSessionKey, SESSION_SCOPE_LABELS } from '../utils/agent-session'
+import { parseImSessionKey, isLikelySessionKey, SESSION_SCOPE_LABELS } from '../utils/agent-session'
 
 interface AgentSessionPickerProps {
   value: string
@@ -48,15 +48,17 @@ export function AgentSessionPicker({
   onChange,
   onLoad,
 }: AgentSessionPickerProps) {
-  const candidates = Array.from(new Set([value, ...history].filter(Boolean))).slice(0, 6)
+  const valid = isLikelySessionKey(value)
+  const invalid = Boolean(value.trim()) && !valid
+  const candidates = Array.from(new Set([value, ...history].filter(isLikelySessionKey))).slice(0, 6)
 
   return (
     <section className="console-agent-session-picker" aria-labelledby="session-picker-title">
       <div className="console-panel-heading mb-3">
         <div>
-          <span className="console-eyebrow">Conversation context</span>
-          <h2 id="session-picker-title">选择一个对话</h2>
-          <p>从渠道会话进入时会自动带上上下文，也可以从最近使用的对话继续。</p>
+
+          <h2 id="session-picker-title">选择对话</h2>
+          <p>从最近对话选择，或浏览渠道会话。</p>
         </div>
         <Button variant="ghost" size="sm" asChild>
           <Link to="/endpoints">
@@ -109,7 +111,10 @@ export function AgentSessionPicker({
           <Input
             value={value}
             onChange={(event) => onChange(event.target.value)}
-            onKeyDown={(event) => event.key === 'Enter' && onLoad(value)}
+            onKeyDown={(event) => event.key === 'Enter' && valid && !loading && onLoad(value)}
+            aria-label="会话标识"
+            aria-invalid={invalid}
+            aria-describedby={invalid ? 'session-key-error' : undefined}
             placeholder="platform:endpoint:scope:scene"
             className="font-mono text-xs"
             list="agent-session-picker-history"
@@ -117,11 +122,12 @@ export function AgentSessionPicker({
           <datalist id="agent-session-picker-history">
             {history.map((key) => <option key={key} value={key} />)}
           </datalist>
-          <Button onClick={() => onLoad(value)} disabled={loading || !value.trim()}>
+          <Button onClick={() => onLoad(value)} disabled={loading || !valid}>
             {loading ? <Loader2 className="animate-spin" /> : <GitBranch />}
             {actionLabel}
           </Button>
         </div>
+        {invalid ? <p id="session-key-error" className="mt-2 text-xs text-destructive">请输入完整标识：平台:渠道:private|group|channel:会话。</p> : null}
       </details>
     </section>
   )

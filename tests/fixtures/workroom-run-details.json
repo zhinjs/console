@@ -1,0 +1,95 @@
+{
+  "detail": {
+    "status": 200,
+    "body": {
+      "success": true,
+      "data": {
+        "version": 1,
+        "projectId": "console-ui-workroom0001",
+        "runId": "run-e0e7a3953776dba87cee390267fcad3",
+        "status": "blocked",
+        "sequence": 3,
+        "cancelRequested": false,
+        "counts": {
+          "tasks": 1,
+          "assignments": 0,
+          "reviewerAssignments": 0,
+          "sponsorGates": 0
+        },
+        "authorityDigest": "sha256:d8c18a6fb9228cab6744df5046f9090ce9c0218a6b8d2fb7479b05415b88ad7d",
+        "tasks": [
+          {
+            "version": 1,
+            "ref": "workroom-task:400d4fcc63b9e8150fbf023c6b6d9316cfbe5fd9c31471eb7f612e67a6455df1",
+            "status": "blocked",
+            "revision": 1,
+            "attempt": 0,
+            "required": true,
+            "blockerCount": 1,
+            "hasCurrentAssignment": false,
+            "digest": "sha256:59c5adc10661a7141436760e7610657e588216c6b80c8b6e68e22d1dc78bfe87"
+          }
+        ],
+        "assignments": [],
+        "blockers": [
+          {
+            "version": 1,
+            "taskRef": "workroom-task:400d4fcc63b9e8150fbf023c6b6d9316cfbe5fd9c31471eb7f612e67a6455df1",
+            "blockerRef": "workroom-blocker:030f9663e23e8b9b7ecd67d15d333fbaece6170c9337c572dc523ff4576d23ec",
+            "kind": "approval",
+            "deadline": 1791427286960,
+            "allowedActions": [
+              "resolve",
+              "replan",
+              "cancel"
+            ],
+            "digest": "sha256:5750019a42e0cf88b600002d62bb6f13386961e8cde8dafae98014b17fa5c6e6"
+          }
+        ],
+        "digest": "sha256:cae3338ccd7ad36bbf0017807993f93d15d86ddf9efc571f647f1823ce51e052"
+      }
+    }
+  },
+  "readiness": {
+    "status": 200,
+    "body": {
+      "success": true,
+      "data": {
+        "version": 1,
+        "projectId": "console-ui-workroom0001",
+        "runId": "run-e0e7a3953776dba87cee390267fcad3",
+        "sequence": 3,
+        "state": "blocked",
+        "blockers": [
+          {
+            "version": 1,
+            "taskRef": "workroom-task:400d4fcc63b9e8150fbf023c6b6d9316cfbe5fd9c31471eb7f612e67a6455df1",
+            "blockerRef": "workroom-blocker:030f9663e23e8b9b7ecd67d15d333fbaece6170c9337c572dc523ff4576d23ec",
+            "kind": "approval",
+            "deadline": 1791427286960,
+            "allowedActions": [
+              "resolve",
+              "replan",
+              "cancel"
+            ],
+            "digest": "sha256:5750019a42e0cf88b600002d62bb6f13386961e8cde8dafae98014b17fa5c6e6"
+          }
+        ],
+        "recommendedActions": [
+          "resolve",
+          "replan",
+          "cancel"
+        ],
+        "authorityDigest": "sha256:d8c18a6fb9228cab6744df5046f9090ce9c0218a6b8d2fb7479b05415b88ad7d",
+        "digest": "sha256:17db38ab650ce4feefc8ce706f8cde4b3b068f8a720376b0f2f593658632c7b3"
+      }
+    }
+  },
+  "forged-principal": {
+    "status": 400,
+    "body": {
+      "success": false,
+      "error": "principalId 只能来自认证 token"
+    }
+  }
+}

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { Activity, ArrowLeft, AlertCircle, Package, Settings, Terminal, Box as IconBox, Layers, Clock, Database, Brain, Wrench, Shield, Plug, Server, Power, RefreshCw, Stethoscope, Trash2, type LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { apiFetch } from '../utils/auth'
@@ -11,6 +11,9 @@ import { Skeleton } from '../components/ui/skeleton'
 import { Separator } from '../components/ui/separator'
 import { requestConsole } from '../utils/console-rpc'
 import { useConfirm } from '../components/confirm-dialog'
+import { validatePluginDetail, requirePluginUpdate, pluginDiagnosticSummary } from './plugin-detail-model.mjs'
+import { JsonViewer } from './introspection/JsonViewer'
+import { waitForPluginStatus } from './plugin-lifecycle-model.mjs'
 
 
 /** Feature 序列化格式（与后端 FeatureJSON 一致） */
@@ -19,19 +22,19 @@ interface FeatureJSON {
   icon: string
   desc: string
   count: number
-  items: any[]
+  items: { name: string; desc?: string }[]
 }
 
 interface PluginDetail {
   name: string
-  filename: string
+  packageRoot: string
   status: 'active' | 'inactive'
   description: string
   features: FeatureJSON[]
-  contexts: Array<{ name: string }>
   packageName: string
   instanceKey: string
   manageable: boolean
+  readOnly?: boolean
   version?: string
 }
 
@@ -57,30 +60,46 @@ function getIcon(iconName: string): LucideIcon {
 export default function PluginDetailPage() {
   const { name } = useParams<{ name: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const query = searchParams.get('q')
+  const listUrl = query ? `/plugins?q=${encodeURIComponent(query)}` : '/plugins'
+  const lifecycleAbort = useRef<AbortController | null>(null)
+  const detailSequence = useRef(0)
+  const actionInFlight = useRef(false)
   const [plugin, setPlugin] = useState<PluginDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actionUnconfirmed, setActionUnconfirmed] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [actionErrorDetail, setActionErrorDetail] = useState<string | null>(null)
   const [diagnostic, setDiagnostic] = useState<unknown>(null)
   const { confirm, ConfirmDialog: ConfirmDialogHost } = useConfirm()
 
   useEffect(() => {
+    lifecycleAbort.current?.abort()
+    setActionLoading(false)
+    setActionMessage(null)
+    setActionError(null)
+    setActionErrorDetail(null)
     if (name) fetchPluginDetail(name)
+    return () => { lifecycleAbort.current?.abort(); detailSequence.current += 1 }
   }, [name])
 
   const fetchPluginDetail = async (pluginName: string) => {
+    const sequence = ++detailSequence.current
+    setLoading(true)
     try {
       const res = await apiFetch(`/api/plugins/${encodeURIComponent(pluginName)}`)
-      if (!res.ok) throw new Error('API 请求失败')
+      if (!res.ok) throw new Error(res.status === 404 ? '未找到该插件，可能已被移除。' : res.status === 403 ? '当前身份无权查看该插件。' : `插件读取失败（HTTP ${res.status}），请稍后重试。`)
       const data = await res.json()
-      if (data.success) { setPlugin(data.data); setError(null) }
+      if (data.success) { validatePluginDetail(data.data); if (sequence === detailSequence.current) { setPlugin(data.data); setError(null); setActionUnconfirmed(false) } }
       else throw new Error('数据格式错误')
     } catch (err) {
-      setError((err as Error).message)
+      if (sequence === detailSequence.current) setError((err as Error).message)
     } finally {
-      setLoading(false)
+      if (sequence === detailSequence.current) setLoading(false)
     }
   }
 
@@ -90,46 +109,77 @@ export default function PluginDetailPage() {
   }
 
   const setEnabled = async (enabled: boolean) => {
-    if (!plugin) return
+    if (!plugin || actionInFlight.current || actionUnconfirmed) return
+    const instanceKey = plugin.instanceKey
+    const controller = new AbortController()
+    lifecycleAbort.current?.abort()
+    lifecycleAbort.current = controller
+    actionInFlight.current = true
     setActionLoading(true)
     setActionError(null)
+    setActionErrorDetail(null)
+    setActionMessage('正在提交操作并等待 Host 恢复，核对插件运行状态…')
     try {
-      const result = await requestConsole<{ message?: string }>({
-        type: 'plugin:set-enabled',
-        instanceKey: plugin.instanceKey,
-        enabled,
-      })
-      setActionMessage(result.message || (enabled ? '插件已启用' : '插件已停用'))
-    } catch (err) {
-      setActionError((err as Error).message)
+      try {
+        await requestConsole({ type: 'plugin:set-enabled', instanceKey, enabled })
+      } catch {
+        if (!controller.signal.aborted) setActionMessage('操作回执未确认，正在读取 Host 核对结果；请勿重复操作。')
+      }
+      const result = await waitForPluginStatus(async () => {
+        const response = await apiFetch(`/api/plugins/${encodeURIComponent(instanceKey)}`, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(5000)]) })
+        if (!response.ok) throw new Error('Host not ready')
+        const body = await response.json()
+        if (!body.success) throw new Error('Host not ready')
+        validatePluginDetail(body.data)
+        if (body.data.instanceKey !== instanceKey) throw new Error('Plugin identity mismatch')
+        return body.data as PluginDetail
+      }, enabled ? 'active' : 'inactive', controller.signal)
+      if (controller.signal.aborted) return
+      if (result) {
+        detailSequence.current += 1
+        setPlugin(result)
+        setActionMessage(enabled ? '已核对：插件已启用并运行' : '已核对：插件已停用')
+      } else {
+        setActionMessage(null)
+        setActionUnconfirmed(true)
+        setActionError('等待 Host 恢复或状态变化超时，操作结果尚未确认。当前显示最后一次读取的状态，请刷新核对后再操作。')
+      }
     } finally {
-      setActionLoading(false)
+      actionInFlight.current = false
+      if (!controller.signal.aborted) setActionLoading(false)
     }
   }
 
   const diagnose = async () => {
-    if (!plugin) return
+    if (!plugin || actionInFlight.current || actionUnconfirmed) return
+    actionInFlight.current = true
     setActionLoading(true)
     setActionError(null)
+    setActionErrorDetail(null)
+    setActionMessage(null)
+    setDiagnostic(null)
     try {
       setDiagnostic(await requestConsole({ type: 'plugin:diagnose', pluginName: plugin.instanceKey }))
     } catch (err) {
       setActionError((err as Error).message)
     } finally {
+      actionInFlight.current = false
       setActionLoading(false)
     }
   }
 
   const updatePlugin = async () => {
-    if (!plugin) return
+    if (!plugin || actionInFlight.current || actionUnconfirmed) return
+    actionInFlight.current = true
     setActionLoading(true)
     setActionError(null)
+    setActionErrorDetail(null)
+    setActionMessage(null)
     try {
       const response = await apiFetch('/api/marketplace/updates')
-      const body = await response.json()
-      const update = (body.data as Array<{ name: string; current?: string; latest?: string }> | undefined)
-        ?.find(item => item.name === plugin.packageName)
-      if (!update?.latest || update.latest === plugin.version) {
+      if (!response.ok) throw new Error(`检查更新失败（HTTP ${response.status}），请稍后重试。`)
+      const update = requirePluginUpdate(await response.json(), plugin.packageName)
+      if (update.latest === plugin.version) {
         setActionMessage('当前已是最新版本')
         return
       }
@@ -155,25 +205,29 @@ export default function PluginDetailPage() {
     } catch (err) {
       setActionError((err as Error).message)
     } finally {
+      actionInFlight.current = false
       setActionLoading(false)
     }
   }
 
   const uninstallPlugin = async () => {
-    if (!plugin) return
-    const plan = await requestConsole<{
-      installed: boolean; declared: boolean; hasConfig: boolean
-    }>({ type: 'plugin:plan-uninstall', packageName: plugin.packageName })
-    const accepted = await confirm({
-      title: `卸载 ${plugin.name}？`,
-      description: `将移除${plan.installed ? '依赖、' : ''}${plan.declared ? '插件挂载、' : ''}${plan.hasConfig ? '配置' : ''}，该操作需要重启 Host。`,
-      confirmLabel: '卸载',
-      variant: 'destructive',
-    })
-    if (!accepted) return
+    if (!plugin || actionInFlight.current || actionUnconfirmed) return
+    actionInFlight.current = true
     setActionLoading(true)
     setActionError(null)
+    setActionErrorDetail(null)
+    setActionMessage(null)
     try {
+      const plan = await requestConsole<{
+        installed: boolean; declared: boolean; hasConfig: boolean
+      }>({ type: 'plugin:plan-uninstall', packageName: plugin.packageName })
+      const accepted = await confirm({
+        title: `卸载 ${plugin.name}？`,
+        description: `将移除${plan.installed ? '依赖、' : ''}${plan.declared ? '插件挂载、' : ''}${plan.hasConfig ? '配置' : ''}，该操作需要重启 Host。`,
+        confirmLabel: '卸载',
+        variant: 'destructive',
+      })
+      if (!accepted) return
       const revision = await configRevision()
       await requestConsole({
         type: 'plugin:uninstall',
@@ -181,10 +235,12 @@ export default function PluginDetailPage() {
         confirmation: plugin.packageName,
         ...(revision ? { expectedRevision: revision } : {}),
       })
-      navigate('/plugins')
+      navigate(listUrl)
     } catch (err) {
-      setActionError((err as Error).message)
+      setActionError('卸载失败，请查看错误详情后重试。')
+      setActionErrorDetail((err as Error).message)
     } finally {
+      actionInFlight.current = false
       setActionLoading(false)
     }
   }
@@ -202,13 +258,14 @@ export default function PluginDetailPage() {
   if (error || !plugin) {
     return (
       <div>
-        <Button variant="ghost" onClick={() => navigate('/plugins')} className="mb-4">
+        <Button variant="ghost" onClick={() => navigate(listUrl)} className="mb-4">
           <ArrowLeft className="w-4 h-4 mr-1" /> 返回
         </Button>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>加载失败: {error || '插件不存在'}</AlertDescription>
         </Alert>
+        {name && <Button variant="outline" size="sm" className="mt-3" onClick={() => void fetchPluginDetail(name)}>重试</Button>}
       </div>
     )
   }
@@ -216,7 +273,7 @@ export default function PluginDetailPage() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <Button variant="ghost" size="sm" onClick={() => navigate('/plugins')}>
+      <Button variant="ghost" size="sm" onClick={() => navigate(listUrl)}>
         <ArrowLeft className="w-4 h-4 mr-1" /> 返回
       </Button>
 
@@ -240,20 +297,21 @@ export default function PluginDetailPage() {
           <div className="space-y-1">
             <p className="text-sm font-medium">插件配置</p>
             <p className="text-xs text-muted-foreground">
-              在配置页统一编辑本插件，支持表单校验与保存后热重载。
+              {plugin.readOnly ? '当前连接仅允许查看插件信息。' : '在配置页编辑插件设置。'}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="ghost" size="sm" asChild>
-              <Link to={`/logs?q=${encodeURIComponent(plugin.name)}`}><Activity />相关日志</Link>
-            </Button>
-            <Button variant="outline" size="sm" asChild>
-              <Link to={`/config?plugin=${encodeURIComponent(plugin.name)}`}>
-                <Settings className="w-4 h-4 mr-1" />
-                编辑配置
-              </Link>
-            </Button>
-          </div>
+          {!plugin.readOnly && (
+            <div className="flex flex-wrap gap-2">
+              <Button variant="ghost" size="sm" asChild>
+                <Link to={`/logs?q=${encodeURIComponent(plugin.name)}`}><Activity />相关日志</Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link to={`/config?plugin=${encodeURIComponent(plugin.name)}`}>
+                  <Settings className="w-4 h-4 mr-1" />编辑配置
+                </Link>
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -262,20 +320,20 @@ export default function PluginDetailPage() {
           <CardContent className="p-4 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p className="text-sm font-medium">生命周期管理</p>
+                <p className="text-sm font-medium">插件操作</p>
                 <p className="text-xs text-muted-foreground">诊断、启停、更新或卸载此插件。</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={() => void diagnose()} disabled={actionLoading}>
+                <Button variant="outline" size="sm" onClick={() => void diagnose()} disabled={actionLoading || actionUnconfirmed}>
                   <Stethoscope className="w-4 h-4 mr-1" />诊断
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => void updatePlugin()} disabled={actionLoading}>
+                <Button variant="outline" size="sm" onClick={() => void updatePlugin()} disabled={actionLoading || actionUnconfirmed}>
                   <RefreshCw className={`w-4 h-4 mr-1 ${actionLoading ? 'animate-spin' : ''}`} />更新
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => void setEnabled(plugin.status !== 'active')} disabled={actionLoading}>
+                <Button variant="outline" size="sm" onClick={() => void setEnabled(plugin.status !== 'active')} disabled={actionLoading || actionUnconfirmed}>
                   <Power className="w-4 h-4 mr-1" />{plugin.status === 'active' ? '停用' : '启用'}
                 </Button>
-                <Button variant="destructive" size="sm" onClick={() => void uninstallPlugin()} disabled={actionLoading}>
+                <Button variant="destructive" size="sm" onClick={() => void uninstallPlugin()} disabled={actionLoading || actionUnconfirmed}>
                   <Trash2 className="w-4 h-4 mr-1" />卸载
                 </Button>
               </div>
@@ -284,18 +342,15 @@ export default function PluginDetailPage() {
             {actionError && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{actionError}</AlertDescription>
+                <AlertDescription>{actionError}{actionErrorDetail && <details className="mt-2 text-xs"><summary className="cursor-pointer">错误详情</summary><p className="mt-2 break-all">{actionErrorDetail}</p></details>}{actionUnconfirmed && <Button variant="outline" size="sm" onClick={() => void fetchPluginDetail(plugin.instanceKey)}>刷新核对状态</Button>}</AlertDescription>
               </Alert>
             )}
-            {diagnostic != null && (
-              <pre className="max-h-56 overflow-auto rounded-md bg-muted p-3 text-xs whitespace-pre-wrap">
-                {JSON.stringify(diagnostic, null, 2)}
-              </pre>
-            )}
+            {diagnostic != null && <PluginDiagnostic value={diagnostic} />}
           </CardContent>
         </Card>
       )}
 
+      <p className="text-xs text-muted-foreground">{plugin.features.length ? '已加载能力' : '暂无已加载能力'}</p>
       <Separator />
 
       {/* Stats grid - 动态渲染 features 摘要 */}
@@ -313,16 +368,7 @@ export default function PluginDetailPage() {
               </Card>
             )
           })}
-          {/* Contexts card */}
-          {plugin.contexts.length > 0 && (
-            <Card>
-              <CardContent className="flex flex-col items-center gap-1 p-3">
-                <Database className="w-4 h-4 text-muted-foreground" />
-                <span className="text-2xl font-bold">{plugin.contexts.length}</span>
-                <span className="text-xs text-muted-foreground">上下文</span>
-              </CardContent>
-            </Card>
-          )}
+
         </div>
       )}
 
@@ -352,145 +398,26 @@ export default function PluginDetailPage() {
           )
         })}
 
-        {/* Contexts section */}
-        {plugin.contexts.length > 0 && (
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <Database className="w-4 h-4 text-muted-foreground" />
-                <CardTitle className="text-base">上下文</CardTitle>
-                <Badge variant="secondary">{plugin.contexts.length}</Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="max-h-60 overflow-y-auto pr-1 space-y-2">
-                {plugin.contexts.map((ctx, index) => (
-                  <div key={index} className="rounded-md bg-muted/50 p-2">
-                    <code className="text-sm">{ctx.name}</code>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+
       </div>
       {ConfirmDialogHost}
     </div>
   )
 }
 
-/** 根据 Feature 类型渲染不同样式的 item 卡片 */
-function FeatureItemCard({ featureName, item }: { featureName: string; item: any }) {
-  switch (featureName) {
-    case 'command':
-      return (
-        <div className="rounded-md bg-muted/50 p-3 space-y-1">
-          <code className="text-sm font-semibold">{item.name}</code>
-          {item.desc?.map((desc: string, i: number) => (
-            <p key={i} className="text-xs text-muted-foreground">{desc}</p>
-          ))}
-          {item.usage && item.usage.length > 0 && (
-            <div>
-              <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">用法:</span>
-              {item.usage.map((u: string, i: number) => (
-                <code key={i} className="block text-xs bg-muted rounded px-1 py-0.5 mt-0.5 break-all">{u}</code>
-              ))}
-            </div>
-          )}
-          {item.examples && item.examples.length > 0 && (
-            <div>
-              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">示例:</span>
-              {item.examples.map((e: string, i: number) => (
-                <code key={i} className="block text-xs bg-muted rounded px-1 py-0.5 mt-0.5 break-all">{e}</code>
-              ))}
-            </div>
-          )}
-        </div>
-      )
-    case 'cron':
-      return (
-        <div className="flex flex-wrap justify-between items-center gap-2 rounded-md bg-muted/50 p-2">
-          <code className="text-sm break-all min-w-0">{item.expression}</code>
-          <Badge variant={item.running ? 'success' : 'secondary'} className="shrink-0">
-            {item.running ? '运行中' : '已停止'}
-          </Badge>
-        </div>
-      )
-    case 'tool':
-      return (
-        <div className="rounded-md bg-muted/50 p-3 space-y-1">
-          <code className="text-sm font-semibold">{item.name}</code>
-          {item.desc && <p className="text-xs text-muted-foreground">{item.desc}</p>}
-          {item.platforms && item.platforms.length > 0 && (
-            <div className="flex gap-1 flex-wrap">
-              {item.platforms.map((p: string, i: number) => (
-                <Badge key={i} variant="outline" className="text-[10px]">{p}</Badge>
-              ))}
-            </div>
-          )}
-        </div>
-      )
-    case 'skill':
-      return (
-        <div className="rounded-md bg-muted/50 p-3 space-y-1">
-          <code className="text-sm font-semibold">{item.name}</code>
-          {item.desc && <p className="text-xs text-muted-foreground">{item.desc}</p>}
-          {item.toolCount != null && (
-            <span className="text-xs text-muted-foreground">工具: {item.toolCount}</span>
-          )}
-        </div>
-      )
-    case 'config':
-      return (
-        <div className="flex justify-between items-center rounded-md bg-muted/50 p-2">
-          <code className="text-sm">{item.name}</code>
-          {item.defaultValue !== undefined && (
-            <span className="text-xs text-muted-foreground">默认: {JSON.stringify(item.defaultValue)}</span>
-          )}
-        </div>
-      )
-    case 'permission':
-      return (
-        <div className="rounded-md bg-muted/50 p-2">
-          <code className="text-sm">{item.name}</code>
-        </div>
-      )
-    case 'database':
-      return (
-        <div className="rounded-md bg-muted/50 p-2">
-          <code className="text-sm">{item.name}</code>
-        </div>
-      )
-    case 'adapter':
-      return (
-        <div className="rounded-md bg-muted/50 p-3 space-y-1">
-          <div className="flex items-center gap-2">
-            <Plug className="w-3.5 h-3.5 text-muted-foreground" />
-            <code className="text-sm font-semibold">{item.name}</code>
-          </div>
-          <div className="flex gap-3 text-xs text-muted-foreground">
-            <span>Endpoint: {item.endpoints ?? 0}</span>
-            <span>在线: {item.online ?? 0}</span>
-            {item.tools > 0 && <span>工具: {item.tools}</span>}
-          </div>
-        </div>
-      )
-    case 'service':
-      return (
-        <div className="rounded-md bg-muted/50 p-2 flex items-center gap-2">
-          <Server className="w-3.5 h-3.5 text-muted-foreground" />
-          <code className="text-sm">{item.name}</code>
-          {item.desc && item.desc !== item.name && (
-            <span className="text-xs text-muted-foreground">- {item.desc}</span>
-          )}
-        </div>
-      )
-    default:
-      // 通用渲染：显示 item.name 或 JSON
-      return (
-        <div className="rounded-md bg-muted/50 p-2">
-          <code className="text-sm">{item.name || JSON.stringify(item)}</code>
-        </div>
-      )
-  }
+/** The current Host exposes capability names and optional string descriptions. */
+function FeatureItemCard({ item }: { featureName: string; item: { name: string; desc?: string } }) {
+  return <div className="rounded-md bg-muted/50 p-3 space-y-1"><code className="break-all text-sm font-semibold">{item.name}</code>{item.desc && <p className="text-xs text-muted-foreground">{item.desc}</p>}</div>
+}
+
+function PluginDiagnostic({ value }: { value: unknown }) {
+  const { status, errors, missingEnv, warnings } = pluginDiagnosticSummary(value)
+  const title = status === 'valid' ? '配置检查通过' : status === 'missing-env' ? '需要补充环境变量' : status === 'invalid' ? '配置检查未通过' : '未提供配置检查结果'
+  return <section aria-label="插件诊断结果" className="space-y-3 rounded-md bg-muted/40 p-3 text-sm">
+    <Badge variant={status === 'valid' ? 'success' : status === 'unknown' ? 'secondary' : 'warning'}>{title}</Badge>
+    {errors.length > 0 && <div><p className="mb-1 font-medium">配置错误</p><ul className="list-disc space-y-1 pl-5">{errors.map((error, index) => <li key={index} className="break-words">{error}</li>)}</ul></div>}
+    {missingEnv.length > 0 && <div><p className="mb-1 font-medium">缺少环境变量</p><div className="flex flex-wrap gap-1">{missingEnv.map(name => <code key={name} className="break-all rounded bg-muted px-1.5 py-0.5 text-xs">{name}</code>)}</div></div>}
+    {warnings.length > 0 && <div><p className="mb-1 font-medium">提示</p><ul className="list-disc space-y-1 pl-5">{warnings.map((warning, index) => <li key={index} className="break-words">{warning}</li>)}</ul></div>}
+    <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">原始诊断数据</summary><div className="mt-2"><JsonViewer value={value} /></div></details>
+  </section>
 }

@@ -37,27 +37,20 @@ export function agentSessionsPath(sessionKey: string): string {
 /** 从 URL 查询参数解析 sessionKey（避免重复 decode） */
 export function parseSessionKeyFromQuery(raw: string | null): string {
   if (!raw) return ''
-  const trimmed = raw.trim()
-  if (!trimmed) return ''
-  try {
-    return decodeURIComponent(trimmed)
-  } catch {
-    return trimmed
-  }
+  // URLSearchParams.get already decoded the query. Percent sequences in the
+  // identifier itself are literal data, not another URI encoding layer.
+  return raw.trim()
 }
 
 /** 是否为合法 sessionKey 形态（四段，含 scope） */
 export function isLikelySessionKey(key: string): boolean {
-  const parts = key.split(':')
-  if (parts.length < 4) return false
-  const scope = parts[2]
-  return scope === 'private' || scope === 'group' || scope === 'channel'
+  return parseImSessionKey(key) !== null
 }
 
 /** 将内部 sessionKey 拆成 Console 可展示的会话上下文。 */
 export function parseImSessionKey(key: string): ParsedImSessionKey | null {
   const parts = key.trim().split(':')
-  if (parts.length < 4) return null
+  if (parts.length < 4 || !parts[0].trim() || !parts[1].trim() || !parts.slice(3).join(':').trim()) return null
   const scope = parts[2]
   if (scope !== 'private' && scope !== 'group' && scope !== 'channel') return null
   return {

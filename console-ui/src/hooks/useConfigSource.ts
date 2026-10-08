@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useReducer } from 'react'
 import { getWebSocketManager } from '@zhin.js/client'
+import { configErrorReducer } from './config-error-state.mjs'
 import { requestConsole } from '../utils/console-rpc'
 
 type ConfigSource = {
@@ -21,20 +22,20 @@ export function useConfigSource() {
   const [connected, setConnected] = useState(manager.isConnected())
   const [config, setConfig] = useState<ConfigSource | null>(null)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [{ readError, saveError }, errorAction] = useReducer(configErrorReducer, { readError: null, saveError: null })
   const attempted = useRef(false)
 
   useEffect(() => manager.onConnectionChange(setConnected), [manager])
 
   const load = useCallback(async () => {
     setLoading(true)
-    setError(null)
+    errorAction({ type: 'read-start' })
     try {
       const result = await requestConsole<ConfigSource>({ type: 'config:get-source' })
       setConfig(result)
       return result
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Unknown error')
+      errorAction({ type: 'read-failed', error: cause instanceof Error ? cause.message : 'Unknown error' })
       throw cause
     } finally {
       setLoading(false)
@@ -44,7 +45,7 @@ export function useConfigSource() {
   const save = useCallback(async (source: string) => {
     if (!config?.revision) throw new Error('配置版本未知，请先刷新')
     setLoading(true)
-    setError(null)
+    errorAction({ type: 'save-start' })
     try {
       const result = await requestConsole<ReplaceResult>({
         type: 'config:replace-source',
@@ -52,9 +53,10 @@ export function useConfigSource() {
         expectedRevision: config.revision,
       })
       setConfig({ ...config, source, revision: result.revision })
+      errorAction({ type: 'save-succeeded' })
       return result
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Unknown error')
+      errorAction({ type: 'save-failed', error: cause instanceof Error ? cause.message : 'Unknown error' })
       throw cause
     } finally {
       setLoading(false)
@@ -72,11 +74,14 @@ export function useConfigSource() {
   }, [connected, config, load])
 
   return {
+    loaded: config !== null,
     source: config?.source ?? '',
     format: config?.format ?? 'yaml',
     configKeys: config?.configKeys ?? [],
     loading,
-    error,
+    error: saveError ?? readError,
+    errorOperation: saveError ? 'save' as const : readError ? 'read' as const : null,
+    clearSaveError: () => errorAction({ type: 'discard-save' }),
     load,
     save,
   }

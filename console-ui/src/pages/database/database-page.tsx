@@ -1,5 +1,6 @@
 import { useState, useMemo, type MouseEvent } from 'react'
-import { useDatabase } from '@zhin.js/client'
+import { useDatabaseConsole } from './use-database-console'
+import { readErrorSummary } from '../../utils/read-error.mjs'
 import type { DatabaseType, TableInfo } from '@zhin.js/client'
 import { Database as DatabaseIcon, Table2, Trash2, RefreshCw, Key, ArrowLeft } from 'lucide-react'
 import { Card, CardContent } from '../../components/ui/card'
@@ -20,11 +21,11 @@ import { isDemoMode } from '../../utils/demo-mode'
 export default function DatabasePage() {
   const readOnly = isDemoMode()
   const {
-    info, tables, loading, error,
+    info, tables, loaded, loading, error,
     loadInfo, loadTables, dropTable,
     select, insert, update, remove,
     kvGet, kvSet, kvDelete, kvEntries,
-  } = useDatabase()
+  } = useDatabaseConsole()
 
   const [selectedTable, setSelectedTable] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ name: string; label: string } | null>(null)
@@ -53,7 +54,7 @@ export default function DatabasePage() {
       />
 
       {error && (
-        <ErrorAlert error={error} onRetry={() => loadTables().catch(() => {})} />
+        <div><ErrorAlert error={readErrorSummary(error, '数据库信息')} onRetry={() => { void loadInfo().catch(() => {}); void loadTables().catch(() => {}) }} /><details className="text-xs"><summary>技术详情</summary><p>{error}</p></details></div>
       )}
 
       <Card className="overflow-hidden border-border/80 shadow-sm">
@@ -75,6 +76,8 @@ export default function DatabasePage() {
                     <div className="space-y-2 p-3">
                       {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
                     </div>
+                  ) : !tables.length && (!loaded || error) ? (
+                    <EmptyState compact title={error ? '数据库对象尚未读取成功' : '等待读取数据库对象'} />
                   ) : !tables.length ? (
                     <EmptyState compact title="暂无数据" />
                   ) : tables.map((t: TableInfo) => (
@@ -97,9 +100,9 @@ export default function DatabasePage() {
                     >
                       {dbType === 'keyvalue' ? <Key className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <Table2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
                       <span className="truncate flex-1">{t.name}</span>
-                      {t.columns && <Badge variant="secondary" className="ml-auto text-[10px] px-1 py-0">{Object.keys(t.columns).length}</Badge>}
+                      {t.columns && <Badge variant="secondary" className="ml-auto text-[10px] px-1 py-0">{Object.keys(t.columns).length} 列</Badge>}
                       {!readOnly && <Button
-                        size="sm" variant="ghost"
+                        size="sm" variant="ghost" aria-label={`删除${objectLabel} ${t.name}`}
                         className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-destructive shrink-0"
                         onClick={(e: MouseEvent) => {
                           e.stopPropagation()
@@ -193,7 +196,7 @@ export default function DatabasePage() {
                   <div className="text-center">
                     <DatabaseIcon className="w-12 h-12 mx-auto mb-3 opacity-30" />
                     <p className="text-sm">
-                      在左侧选择一个{objectLabel}开始管理
+                      {error || !loaded ? '数据库对象尚未读取成功，请先重试或使用有权限的身份连接。' : `在左侧选择一个${objectLabel}${readOnly ? '查看数据' : '开始管理'}`}
                     </p>
                   </div>
                 </div>

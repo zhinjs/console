@@ -13,14 +13,14 @@ export interface PageHeaderProps {
  */
 export function PageHeader({ title, description, actions, className }: PageHeaderProps) {
   return (
-    <div className={cn('flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4', className)}>
+    <div className={cn('console-page-header', className)}>
       <div className="min-w-0 space-y-1">
-        <h1 className="text-2xl font-semibold tracking-[-0.035em] text-foreground sm:text-[1.75rem]">{title}</h1>
+        <h1 className="console-page-title">{title}</h1>
         {description ? (
-          <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">{description}</p>
+          <p className="console-page-description">{description}</p>
         ) : null}
       </div>
-      {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="console-page-header-actions">{actions}</div> : null}
     </div>
   )
 }

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { AlertCircle, Package, Terminal, Box as IconBox, Layers, Clock, Brain, Wrench, Database, Shield, Settings, Plug, Server, Search, type LucideIcon } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import { Card, CardContent } from '../components/ui/card'
@@ -9,6 +9,8 @@ import { Skeleton } from '../components/ui/skeleton'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { PageHeader } from '../components/PageHeader'
+import { useConsoleRead } from '../hooks/use-console-read'
+import { validatePluginList } from './plugin-list-model.mjs'
 import { PageShell } from '../components/PageShell'
 
 /** Feature 序列化格式（与后端 FeatureJSON 一致） */
@@ -48,36 +50,31 @@ function getIcon(iconName: string): LucideIcon {
 
 export default function PluginsPage() {
   const navigate = useNavigate()
-  const [plugins, setPlugins] = useState<Plugin[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
+  const { data: plugins, loaded, loading, error, refresh } = useConsoleRead<Plugin[]>(async () => {
+    const res = await apiFetch('/api/plugins')
+    if (!res.ok) throw new Error(res.status === 403 ? '当前身份无权读取插件列表' : `插件读取失败（HTTP ${res.status}）`)
+    return validatePluginList(await res.json()) as Plugin[]
+  }, [])
+  const [searchParams, setSearchParams] = useSearchParams()
+  const search = searchParams.get('q') ?? ''
+  const setSearch = (value: string) => {
+    const next = new URLSearchParams(searchParams)
+    if (value) next.set('q', value)
+    else next.delete('q')
+    setSearchParams(next, { replace: true })
+  }
+  const detailUrl = (name: string) => `/plugins/${encodeURIComponent(name)}${search ? `?q=${encodeURIComponent(search)}` : ''}`
 
   const filteredPlugins = plugins.filter(p =>
     p.name.toLowerCase().includes(search.trim().toLowerCase())
   )
 
   useEffect(() => {
-    fetchPlugins()
-    const interval = setInterval(fetchPlugins, 10000)
+    const interval = setInterval(() => void refresh().catch(() => {}), 10000)
     return () => clearInterval(interval)
-  }, [])
+  }, [refresh])
 
-  const fetchPlugins = async () => {
-    try {
-      const res = await apiFetch('/api/plugins')
-      if (!res.ok) throw new Error('API 请求失败')
-      const data = await res.json()
-      if (data.success) { setPlugins(data.data); setError(null) }
-      else throw new Error('数据格式错误')
-    } catch (err) {
-      setError((err as Error).message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (loading) {
+  if (loading && !loaded) {
     return (
       <PageShell>
         <Skeleton className="h-8 w-48" />
@@ -88,14 +85,14 @@ export default function PluginsPage() {
     )
   }
 
-  if (error) {
+  if (error && !loaded) {
     return (
       <PageShell className="items-center justify-center min-h-[40vh]">
         <Alert variant="destructive" className="max-w-md">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>加载失败: {error}</AlertDescription>
         </Alert>
-        <Button variant="outline" size="sm" onClick={() => { setError(null); setLoading(true); void fetchPlugins() }}>
+        <Button variant="outline" size="sm" onClick={() => void refresh().catch(() => {})}>
           重试
         </Button>
       </PageShell>
@@ -104,10 +101,11 @@ export default function PluginsPage() {
 
   return (
     <PageShell>
-      <PageHeader title="插件" description="已加载的插件列表" />
+      <PageHeader title="子插件" description="额外加载的子插件；项目根插件不计入此列表" actions={<Button variant="outline" size="sm" disabled={loading} onClick={() => void refresh().catch(() => {})}>刷新</Button>} />
+      {error ? <Alert variant="warning"><AlertCircle className="h-4 w-4" /><AlertDescription className="flex items-center justify-between gap-3"><span>{error}。以下是上次读取的列表。</span><Button variant="outline" size="sm" onClick={() => void refresh().catch(() => {})}>重试</Button></AlertDescription></Alert> : null}
 
       <div className="console-page-meta">
-        <span>共 {plugins.length} 个插件</span>
+        <span>共 {plugins.length} 个子插件</span>
         <Badge variant="success">{plugins.filter(p => p.status === 'active').length}</Badge>
         <span>个运行中</span>
       </div>
@@ -130,11 +128,11 @@ export default function PluginsPage() {
           <Card
             key={`${plugin.name}-${index}`}
             className="console-surface-interactive cursor-pointer"
-            onClick={() => navigate(`/plugins/${encodeURIComponent(plugin.name)}`)}
+            onClick={() => navigate(detailUrl(plugin.name))}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault()
-                navigate(`/plugins/${encodeURIComponent(plugin.name)}`)
+                navigate(detailUrl(plugin.name))
               }
             }}
             role="button"
@@ -180,14 +178,19 @@ export default function PluginsPage() {
         ))}
       </div>
 
+      {plugins.length > 0 && filteredPlugins.length === 0 ? <Card><CardContent className="flex flex-col items-center gap-3 py-10">
+        <h3 className="text-base font-semibold">没有匹配的插件</h3>
+        <p className="text-sm text-muted-foreground">试试其他名称，或清除筛选。</p>
+        <Button variant="outline" size="sm" onClick={() => setSearch('')}>清除筛选</Button>
+      </CardContent></Card> : null}
       {plugins.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-12">
             <div className="flex items-center justify-center w-16 h-16 rounded-full bg-muted border border-[var(--console-border-subtle)]">
               <Package className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold">暂无插件</h3>
-            <p className="text-sm text-muted-foreground">请先安装并启用插件</p>
+            <h3 className="text-lg font-semibold">暂无子插件</h3>
+            <p className="text-sm text-muted-foreground">当前没有额外子插件；项目根插件的命令、组件和适配器仍可运行。</p>
           </CardContent>
         </Card>
       )}

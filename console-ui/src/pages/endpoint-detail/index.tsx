@@ -36,6 +36,7 @@ import { Alert, AlertDescription } from '../../components/ui/alert'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs'
 import { ConversationSidebar } from './ConversationSidebar'
 import { ChatMessageRow, type MessageDraftReference } from './ChatMessageRow'
+import { canShowReadEmpty } from './endpoint-request.mjs'
 import { useEndpointConsole } from './useEndpointConsole'
 import {
   hasRenderableComposerSegments,
@@ -95,9 +96,9 @@ export default function EndpointDetailPage() {
   const {
     adapter,
     endpointId,
-    connected,
     info,
     loadErr,
+    actionError,
     testLoading,
     testMessage,
     testEndpoint,
@@ -105,7 +106,7 @@ export default function EndpointDetailPage() {
     setMsgContent,
     sending,
     listLoading,
-    listErr,
+    listNotice,
     selection,
     setSelection,
     showChannelList,
@@ -121,22 +122,33 @@ export default function EndpointDetailPage() {
     membersLoading,
     channelMessages,
     inboxMessagesLoading,
+    inboxMessagesError,
     inboxMessagesHasMore,
     inboxMessagesEnabled,
     loadInboxMessages,
     inboxMessages,
     requestList,
+    requestsLoading,
+    requestsError,
+    requestsAvailable,
     noticeList,
+    noticesLoading,
+    noticesError,
+    noticesAvailable,
+    inboxRequestsError,
+    inboxNoticesError,
     requestsTab,
     setRequestsTab,
     noticesTab,
     setNoticesTab,
     inboxRequests,
     inboxRequestsLoading,
+    inboxRequestsHasMore,
     inboxRequestsEnabled,
     loadInboxRequests,
     inboxNotices,
     inboxNoticesLoading,
+    inboxNoticesHasMore,
     inboxNoticesEnabled,
     loadInboxNotices,
     deleteFriend,
@@ -405,13 +417,12 @@ export default function EndpointDetailPage() {
         adapter={adapter}
         endpointId={endpointId}
         info={info}
-        connected={connected}
         loadErr={loadErr}
         testLoading={testLoading}
         testMessage={testMessage}
         onTest={() => void testEndpoint()}
         listLoading={listLoading}
-        listErr={listErr}
+        listNotice={listNotice}
         listSearch={listSearch}
         onListSearchChange={setListSearch}
         conversationSections={conversationSections}
@@ -518,7 +529,8 @@ export default function EndpointDetailPage() {
                     </Button>
                   </div>
                 )}
-                {channelMessages.length === 0 && !inboxMessagesLoading ? (
+                {inboxMessagesError ? <Alert variant="destructive"><AlertDescription>消息历史读取失败：{inboxMessagesError}</AlertDescription></Alert> : null}
+                {channelMessages.length === 0 && canShowReadEmpty(inboxMessagesLoading, inboxMessagesError) ? (
                   <div className="im-empty-state flex flex-col items-center justify-center flex-1 gap-2 text-muted-foreground text-sm py-12">
                     <MessageSquare className="h-10 w-10 opacity-35" />
                     <span>
@@ -766,7 +778,13 @@ export default function EndpointDetailPage() {
                   <UserPlus size={18} />
                   请求
                 </h2>
-                <Button size="sm" variant="outline" className="im-secondary-action" onClick={() => void loadRequestsFromServer()}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="im-secondary-action"
+                  disabled={requestsTab === 'history' ? inboxRequestsLoading : requestsLoading}
+                  onClick={() => void (requestsTab === 'history' ? loadInboxRequests(false) : loadRequestsFromServer())}
+                >
                   刷新
                 </Button>
               </header>
@@ -784,14 +802,17 @@ export default function EndpointDetailPage() {
                   <TabsTrigger value="history">历史</TabsTrigger>
                 </TabsList>
                 <TabsContent value="pending" className="im-system-content flex-1 overflow-y-auto p-4 space-y-3 mt-0">
-                  {requestList.length === 0 && (
+                  {actionError ? <Alert variant="destructive"><AlertDescription>操作失败：{actionError}</AlertDescription></Alert> : null}
+                  {requestsLoading ? <p role="status">正在读取待处理请求…</p> : null}
+                  {requestsError ? <Alert variant="destructive"><AlertDescription>请求读取失败：{requestsError}</AlertDescription></Alert> : null}
+                  {requestList.length === 0 && canShowReadEmpty(requestsLoading, requestsError) && (
                     <div className="im-empty-state flex flex-col items-center justify-center py-16 gap-2 text-muted-foreground text-sm">
                       <UserPlus size={40} className="opacity-25" />
-                      <span>暂无未处理请求</span>
+                      <span>{requestsAvailable === false ? '此渠道未提供请求管理，且未启用请求收件箱' : '暂无未处理请求'}</span>
                     </div>
                   )}
                   {requestList.map((r) => (
-                    <div key={r.id} className="im-inbox-card border border-border/80 rounded-lg p-3 space-y-2 bg-background/50">
+                    <div key={r.platformRequestId} className="im-inbox-card border border-border/80 rounded-lg p-3 space-y-2 bg-background/50">
                       <div className="flex flex-wrap gap-2 text-sm">
                         <Badge>{r.type}</Badge>
                         <span>来自 {r.sender.name || r.sender.id}</span>
@@ -811,7 +832,7 @@ export default function EndpointDetailPage() {
                             </Button>
                           </>
                         )}
-                        <Button size="sm" variant="ghost" onClick={() => void dismissRequest(r.id)}>
+                        <Button size="sm" variant="ghost" disabled={r.id === undefined} onClick={() => { if (r.id !== undefined) void dismissRequest(r.id) }}>
                           标记已处理
                         </Button>
                       </div>}
@@ -819,7 +840,8 @@ export default function EndpointDetailPage() {
                   ))}
                 </TabsContent>
                 <TabsContent value="history" className="im-system-content flex-1 overflow-y-auto p-4 space-y-3 mt-0 min-h-0">
-                  {!inboxRequestsEnabled && !inboxRequestsLoading && (
+                  {inboxRequestsError ? <Alert variant="destructive"><AlertDescription>{inboxRequestsError}</AlertDescription></Alert> : null}
+                  {!inboxRequestsEnabled && canShowReadEmpty(inboxRequestsLoading, inboxRequestsError) && (
                     <div className="im-empty-state flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground text-sm">
                       <span>未启用统一收件箱，无历史记录</span>
                     </div>
@@ -829,7 +851,7 @@ export default function EndpointDetailPage() {
                       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
                   )}
-                  {inboxRequestsEnabled && inboxRequests.length === 0 && !inboxRequestsLoading && (
+                  {inboxRequestsEnabled && inboxRequests.length === 0 && canShowReadEmpty(inboxRequestsLoading, inboxRequestsError) && (
                     <div className="im-empty-state flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground text-sm">
                       <span>暂无请求历史</span>
                     </div>
@@ -853,10 +875,10 @@ export default function EndpointDetailPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          disabled={inboxRequestsLoading}
+                          disabled={inboxRequestsLoading || !inboxRequestsHasMore}
                           onClick={() => void loadInboxRequests(true)}
                         >
-                          {inboxRequestsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : '加载更多'}
+                          {inboxRequestsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : inboxRequestsHasMore ? '加载更多' : '没有更多记录'}
                         </Button>
                       </div>
                     </>
@@ -896,10 +918,13 @@ export default function EndpointDetailPage() {
                   <TabsTrigger value="history">历史</TabsTrigger>
                 </TabsList>
                 <TabsContent value="unread" className="im-system-content flex-1 overflow-y-auto p-4 space-y-3 mt-0">
-                  {noticeList.length === 0 && (
+                  {actionError ? <Alert variant="destructive"><AlertDescription>操作失败：{actionError}</AlertDescription></Alert> : null}
+                  {noticesLoading ? <p role="status">正在读取通知…</p> : null}
+                  {noticesError ? <Alert variant="destructive"><AlertDescription>通知读取失败：{noticesError}</AlertDescription></Alert> : null}
+                  {noticeList.length === 0 && canShowReadEmpty(noticesLoading, noticesError) && (
                     <div className="im-empty-state flex flex-col items-center justify-center py-16 gap-2 text-muted-foreground text-sm">
                       <Bell size={40} className="opacity-25" />
-                      <span>暂无未读通知</span>
+                      <span>{noticesAvailable === false ? '此实例未启用通知收件箱' : '暂无未读通知'}</span>
                     </div>
                   )}
                   {noticeList.map((n) => (
@@ -925,7 +950,8 @@ export default function EndpointDetailPage() {
                   ))}
                 </TabsContent>
                 <TabsContent value="history" className="im-system-content flex-1 overflow-y-auto p-4 space-y-3 mt-0 min-h-0">
-                  {!inboxNoticesEnabled && !inboxNoticesLoading && (
+                  {inboxNoticesError ? <Alert variant="destructive"><AlertDescription>{inboxNoticesError}</AlertDescription></Alert> : null}
+                  {!inboxNoticesEnabled && canShowReadEmpty(inboxNoticesLoading, inboxNoticesError) && (
                     <div className="im-empty-state flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground text-sm">
                       <span>未启用统一收件箱，无历史记录</span>
                     </div>
@@ -935,7 +961,7 @@ export default function EndpointDetailPage() {
                       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
                   )}
-                  {inboxNoticesEnabled && inboxNotices.length === 0 && !inboxNoticesLoading && (
+                  {inboxNoticesEnabled && inboxNotices.length === 0 && canShowReadEmpty(inboxNoticesLoading, inboxNoticesError) && (
                     <div className="im-empty-state flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground text-sm">
                       <span>暂无通知历史</span>
                     </div>
@@ -959,10 +985,10 @@ export default function EndpointDetailPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          disabled={inboxNoticesLoading}
+                          disabled={inboxNoticesLoading || !inboxNoticesHasMore}
                           onClick={() => void loadInboxNotices(true)}
                         >
-                          {inboxNoticesLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : '加载更多'}
+                          {inboxNoticesLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : inboxNoticesHasMore ? '加载更多' : '没有更多记录'}
                         </Button>
                       </div>
                     </>
@@ -977,7 +1003,7 @@ export default function EndpointDetailPage() {
               <MessageSquare className="h-14 w-14 opacity-20" />
               <p className="text-sm font-medium text-foreground/80">选择会话或查看请求 / 通知</p>
               <p className="text-xs max-w-sm">
-                左侧列表与 Telegram Web 类似：点选好友或群开始聊天；请求与通知在列表下方分组。
+                在左侧选择好友、群或频道查看消息并发送内容；也可以查看请求与通知。
               </p>
             </div>
           )}
@@ -1012,7 +1038,8 @@ export default function EndpointDetailPage() {
                 <Input
                   value={memberSearch}
                   onChange={(e) => setMemberSearch(e.target.value)}
-                  placeholder="搜索昵称 / ID / 角色"
+                  aria-label="搜索成员"
+                  placeholder="搜索成员昵称、ID 或角色"
                   className="h-8 border-0 bg-transparent px-0 text-xs shadow-none focus-visible:ring-0"
                 />
               </div>

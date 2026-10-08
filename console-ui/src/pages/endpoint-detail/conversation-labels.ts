@@ -189,7 +189,7 @@ export async function fetchEndpointChannelCatalog(
 ): Promise<ChannelsEntry[]> {
   const res = await sendRequest<{ channels?: unknown[]; count?: number }>({
     type: ENDPOINT_RPC.CHANNELS,
-    data: { adapter, endpointKey: endpointId },
+    adapter, endpointKey: endpointId,
   })
   return (res.channels ?? [])
     .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')

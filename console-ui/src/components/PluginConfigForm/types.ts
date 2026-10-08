@@ -9,6 +9,7 @@ export interface SchemaField {
   default?: any
   required?: boolean
   enum?: any[]
+  integer?: boolean
   min?: number
   max?: number
   step?: number  // 用于 percent 类型

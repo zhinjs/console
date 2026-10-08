@@ -1,0 +1,27 @@
+{
+  "status": 200,
+  "body": {
+    "success": true,
+    "data": {
+      "projectId": "console-ui-workroom0001",
+      "runs": [
+        {
+          "version": 1,
+          "projectId": "console-ui-workroom0001",
+          "runId": "run-e0e7a3953776dba87cee390267fcad3",
+          "status": "blocked",
+          "sequence": 3,
+          "cancelRequested": false,
+          "counts": {
+            "tasks": 1,
+            "assignments": 0,
+            "reviewerAssignments": 0,
+            "sponsorGates": 0
+          },
+          "authorityDigest": "sha256:d8c18a6fb9228cab6744df5046f9090ce9c0218a6b8d2fb7479b05415b88ad7d",
+          "digest": "sha256:629bf044ec96c77596a48eb083e6d8cc76d59b2cfa6ea41b69defebbfe131a6e"
+        }
+      ]
+    }
+  }
+}

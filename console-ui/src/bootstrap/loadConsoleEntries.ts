@@ -11,6 +11,7 @@ import {
   type LoadConsoleEntriesOptions,
 } from '@zhin.js/client'
 import { app } from '@zhin.js/client'
+import { createHostRegistration } from './host-registration.mjs'
 import { getApiBase, getToken } from '../utils/auth'
 
 export type {
@@ -51,9 +52,10 @@ function idempotentAddTool(input: AddToolInput): string {
   }
 }
 
-const defaultHostRegisterApi = createPluginRegisterHostApi({
-  React,
+export const hostRegistrations = createHostRegistration({
   addRoute: app.addRoute.bind(app),
+  removeRoute: app.removeRoute.bind(app),
+  readRoutes: () => app._getRoutes(),
   addTool: idempotentAddTool,
 })
 
@@ -67,12 +69,26 @@ let entriesLoadPromise: Promise<void> | null = null
 
 async function doLoadConsoleEntries(options?: LoadConsoleEntriesOptions): Promise<void> {
   const apiBase = getApiBase()
+  const session = hostRegistrations.capture()
+  const requestedApi = options?.hostApi
+  const hostApi = createPluginRegisterHostApi({
+    React,
+    addRoute: (input) => {
+      if (!session.active()) return
+      if (requestedApi) requestedApi.addRoute(input)
+      else session.addRoute(input as Parameters<typeof app.addRoute>[0])
+    },
+    addTool: (input) => {
+      if (!session.active()) throw new Error('Host connection changed; stale tool registration ignored')
+      return requestedApi ? requestedApi.addTool(input) : session.addTool(input as AddToolInput)
+    },
+  })
 
   await loadEntriesFromSdk({
     ...options,
     entriesUrl: options?.entriesUrl ?? entriesUrlForApiBase(apiBase),
     assetOrigin: options?.assetOrigin ?? apiBase,
-    hostApi: options?.hostApi ?? defaultHostRegisterApi,
+    hostApi,
     beforeLoad: () => {
       configureConsole({
         getRuntimeEnv: () =>
@@ -110,15 +126,18 @@ async function doLoadConsoleEntries(options?: LoadConsoleEntriesOptions): Promis
 
 export function loadConsoleEntries(options?: LoadConsoleEntriesOptions): Promise<void> {
   if (entriesLoadPromise) return entriesLoadPromise
-  entriesLoadPromise = doLoadConsoleEntries(options).catch((err) => {
-    entriesLoadPromise = null
+  const pending = doLoadConsoleEntries(options).catch((err) => {
+    if (entriesLoadPromise === pending) entriesLoadPromise = null
     throw err
   })
-  return entriesLoadPromise
+  entriesLoadPromise = pending
+  return pending
 }
 
 /** 登出 / 换 Host 后清空插件加载缓存，下次登录会重新拉 /entries */
 export function resetConsoleEntries(): void {
   entriesLoadPromise = null
-  registeredToolIds.clear()
+  hostRegistrations.reset()
+  // Published SDK has no removeTool. Preserve known IDs to avoid duplicate
+  // registrations; stale asynchronous calls are rejected by the epoch guard.
 }

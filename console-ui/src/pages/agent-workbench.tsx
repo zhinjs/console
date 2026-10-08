@@ -1,3 +1,4 @@
+import { summarizeOptional } from './dashboard-health'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -60,6 +61,7 @@ interface EndpointItem {
 interface IntrospectionEnvelope<T> {
   items: T[]
   total: number
+  note?: string
 }
 
 async function fetchIntrospection<T>(kind: string): Promise<IntrospectionEnvelope<T>> {
@@ -80,7 +82,7 @@ function SessionCard({ sessionKey }: { sessionKey: string }) {
         <span className="block truncate text-sm font-semibold">
           {parsed?.sceneId ?? '自定义会话'}
         </span>
-        <span className="mt-1 block truncate text-[11px] text-muted-foreground">
+        <span className="mt-1 block truncate console-text-label text-muted-foreground">
           {parsed
             ? `${parsed.platform} · ${parsed.endpointId} · ${SESSION_SCOPE_LABELS[parsed.scope]}`
             : sessionKey}
@@ -96,6 +98,7 @@ export default function AgentWorkbenchPage() {
   const [tools, setTools] = useState<ToolItem[]>([])
   const [mcpServices, setMcpServices] = useState<McpItem[]>([])
   const [endpoints, setEndpoints] = useState<EndpointItem[]>([])
+  const [agentStatus, setAgentStatus] = useState<'unknown' | 'unavailable' | 'available'>('unknown')
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -109,6 +112,7 @@ export default function AgentWorkbenchPage() {
         fetchIntrospection<ToolItem>('tools'),
         fetchIntrospection<McpItem>('mcp'),
       ])
+      setAgentStatus(summarizeOptional(null, bindingData).agentStatus)
       setBindings(bindingData.items ?? [])
       setTools(toolData.items ?? [])
       setMcpServices(mcpData.items ?? [])
@@ -130,7 +134,7 @@ export default function AgentWorkbenchPage() {
 
   const connectedMcp = mcpServices.filter((service) => service.connected).length
   const onlineEndpoints = endpoints.filter((endpoint) => endpoint.connected).length
-  const ready = bindings.length > 0 && onlineEndpoints > 0
+  const ready = agentStatus !== 'unavailable' && bindings.length > 0 && onlineEndpoints > 0
 
   const readiness = [
     {
@@ -141,7 +145,7 @@ export default function AgentWorkbenchPage() {
     },
     {
       label: 'Agent 绑定',
-      detail: bindings.length ? `${bindings.length} 个 Agent 可用` : '尚未配置模型与 Agent',
+      detail: agentStatus === 'unavailable' ? '未安装或装配 Agent' : bindings.length ? `${bindings.length} 个 Agent 配置绑定` : '尚未配置模型与 Agent',
       ready: bindings.length > 0,
       path: bindings.length ? '/introspection?tab=bindings' : '/config',
     },
@@ -175,7 +179,7 @@ export default function AgentWorkbenchPage() {
     <div className="console-agent-workbench space-y-5">
       <PageHeader
         title="Agent 工作台"
-        description="从模型绑定到真实渠道会话，在一个地方确认 Agent 能力并继续最近的工作。"
+        description="检查 Agent 配置与渠道状态，选择下一步操作。"
         actions={
           <Button variant="outline" size="sm" onClick={() => void loadWorkbench(true)} disabled={refreshing}>
             <RefreshCw className={refreshing ? 'animate-spin' : ''} />
@@ -185,29 +189,35 @@ export default function AgentWorkbenchPage() {
       />
 
       <section className="console-agent-hero" aria-label="Agent 就绪状态">
-        <div className="console-agent-hero-orbit" aria-hidden="true" />
-        <div className="relative z-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-          <div>
-            <div className="mb-4 flex items-center gap-2 text-sm font-medium text-primary">
-              {ready ? <CheckCircle2 /> : <CircleDashed />}
-              {ready ? 'Agent 已连接到真实会话' : '还差几步即可开始对话'}
-            </div>
-            <h2 className="max-w-3xl text-balance text-2xl font-semibold tracking-[-0.04em] sm:text-3xl">
-              模型负责思考，工具负责行动，<br className="hidden sm:block" />渠道把结果送到用户身边
+        <div className="console-agent-summary-row">
+          <div className="min-w-0">
+            <h2 className="flex items-center gap-2 text-base font-semibold">
+              {!error && ready ? <CheckCircle2 /> : <CircleDashed />}
+              {error ? '当前状态未确认' : ready ? '配置与渠道已齐备' : '继续完成 Agent 配置'}
             </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-              选择下方 Agent 查看它使用的模型与 MCP 服务，或从最近对话继续检查分支。
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              {error ? '本次读取未完成，下方可能保留上次数据。请先重试读取。'
+                : ready ? '可以打开会话验证模型连接与实际对话结果。'
+                  : '先处理下列缺项，再通过真实会话确认收发与模型连接。'}
             </p>
+            {!error && !ready ? (
+              <ul className="console-agent-missing" aria-label="待完成配置">
+                {agentStatus === 'unavailable' ? <li><Link to="/config">安装并装配可选 Agent 能力 →</Link></li>
+                  : bindings.length === 0 ? <li><Link to="/config">配置模型与 Agent 绑定 →</Link></li> : null}
+                {onlineEndpoints === 0 ? <li><Link to="/endpoints">连接一个机器人渠道 →</Link></li> : null}
+              </ul>
+            ) : null}
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button asChild>
-              <Link to="/agent/sessions"><GitBranch />打开对话分支</Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link to="/config"><Settings2 />配置 Agent</Link>
-            </Button>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            {error ? <Button variant="outline" onClick={() => void loadWorkbench(true)} disabled={refreshing}><RefreshCw />重试读取</Button>
+              : ready ? <Button asChild><Link to="/agent/sessions"><GitBranch />打开对话分支</Link></Button>
+                : <Button asChild><Link to={agentStatus === 'unavailable' || bindings.length === 0 ? '/config' : '/endpoints'}><Settings2 />{agentStatus === 'unavailable' || bindings.length === 0 ? '配置 Agent' : '连接渠道'}</Link></Button>}
           </div>
         </div>
+        <details className="console-agent-state-explanation">
+          <summary>状态说明</summary>
+          <p>此处展示已发现的配置与渠道状态；模型连接及实际对话结果需在对应会话中验证。选择下方 Agent 查看模型与 MCP 服务，或从最近对话检查分支。</p>
+        </details>
 
         <div className="console-agent-metrics">
           <div><Brain /><span>Agent</span><strong>{bindings.length}</strong></div>
@@ -223,9 +233,8 @@ export default function AgentWorkbenchPage() {
         <section className="console-dashboard-panel" aria-labelledby="agents-title">
           <div className="console-panel-heading">
             <div>
-              <span className="console-eyebrow">Agent bindings</span>
-              <h2 id="agents-title">可用 Agent</h2>
-              <p>每个绑定都明确展示 Provider、模型和所连接的 MCP 服务。</p>
+              <h2 id="agents-title">Agent 配置绑定</h2>
+              <p>每个绑定展示已配置的 Provider、模型和已声明的 MCP 服务；声明不代表 Agent 已启用或 MCP 已连接。</p>
             </div>
             <Link
               to="/introspection?tab=bindings"
@@ -249,7 +258,7 @@ export default function AgentWorkbenchPage() {
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {(binding.mcpServers ?? []).length ? binding.mcpServers.map((server) => (
                         <span key={server}><PlugZap />{server}</span>
-                      )) : <span><Sparkles />使用本地工具目录</span>}
+                      )) : <span><Sparkles />未声明 MCP 服务</span>}
                     </div>
                   </div>
                   <Link to="/introspection?tab=bindings" aria-label={`查看 ${binding.name} 详情`}><ArrowUpRight /></Link>
@@ -259,7 +268,7 @@ export default function AgentWorkbenchPage() {
           ) : (
             <div className="console-agent-empty">
               <Brain />
-              <div><h3>尚未发现 Agent 绑定</h3><p>安装并配置 @zhin.js/agent 后，这里会显示模型与能力关系。</p></div>
+              <div><h3>{agentStatus === 'unavailable' ? '未安装或装配 Agent' : '尚未发现 Agent 绑定'}</h3><p>{agentStatus === 'unavailable' ? 'IM 核心可独立使用；需要 AI 时先安装 @zhin.js/agent、zod、ai 和所选 Provider，再配置模型。' : 'Agent 是可选能力，IM 核心可独立使用。需要 AI 时安装 @zhin.js/agent、zod、ai 和所选 Provider，然后配置模型与 Agent。'}</p></div>
               <Button size="sm" asChild><Link to="/config">打开配置</Link></Button>
             </div>
           )}
@@ -268,7 +277,6 @@ export default function AgentWorkbenchPage() {
         <aside className="console-dashboard-panel" aria-labelledby="readiness-title">
           <div className="console-panel-heading">
             <div>
-              <span className="console-eyebrow">Readiness</span>
               <h2 id="readiness-title">能力链路</h2>
             </div>
           </div>
@@ -287,9 +295,7 @@ export default function AgentWorkbenchPage() {
       <section className="console-dashboard-panel" aria-labelledby="recent-title">
         <div className="console-panel-heading">
           <div>
-            <span className="console-eyebrow">Recent conversations</span>
             <h2 id="recent-title">最近的 Agent 对话</h2>
-            <p>无需复制内部标识，直接回到对话分支或从渠道列表选择新会话。</p>
           </div>
           <Button variant="ghost" size="sm" asChild><Link to="/endpoints">全部渠道<ArrowUpRight /></Link></Button>
         </div>

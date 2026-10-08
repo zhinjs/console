@@ -1,3 +1,6 @@
+import { readErrorSummary } from '../utils/read-error.mjs'
+import { logPayloadAvailability } from './logs/read-state.mjs'
+import { summarizeOptional } from './dashboard-health'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -57,8 +60,10 @@ interface SystemStatus {
 }
 
 interface OptionalOverview {
-  errorLogs: number
-  warningLogs: number
+  logReadError: string | null
+  errorLogs: number | null
+  warningLogs: number | null
+  agentStatus: 'unknown' | 'unavailable' | 'available'
   tools: number | null
   agents: number | null
   mcpServices: number | null
@@ -86,8 +91,10 @@ interface AttentionItem {
 }
 
 const EMPTY_OPTIONAL: OptionalOverview = {
-  errorLogs: 0,
-  warningLogs: 0,
+  logReadError: null,
+  errorLogs: null,
+  warningLogs: null,
+  agentStatus: 'unknown',
   tools: null,
   agents: null,
   mcpServices: null,
@@ -104,6 +111,19 @@ async function fetchOptionalData(path: string, signal: AbortSignal): Promise<unk
     return body?.success === false ? null : body?.data ?? null
   } catch {
     return null
+  }
+}
+
+async function fetchLogOverview(signal: AbortSignal): Promise<{ data: unknown | null; error: string | null }> {
+  try {
+    const response = await apiFetch(CONSOLE_REST.LOGS_STATS, { signal })
+    if (!response.ok) return { data: null, error: readErrorSummary(`HTTP ${response.status}`, '日志统计') }
+    const body = await response.json()
+    if (body?.success !== true) return { data: null, error: readErrorSummary(body?.error, '日志统计') }
+    const availability = logPayloadAvailability(body)
+    return availability.available ? { data: body.data ?? null, error: null } : { data: null, error: availability.message }
+  } catch (cause) {
+    return { data: null, error: readErrorSummary(cause instanceof Error ? cause.message : cause, '日志统计') }
   }
 }
 
@@ -167,7 +187,7 @@ export default function HomePage() {
       const [statsResponse, statusResponse, logs, tools, agents, mcp] = await Promise.all([
         apiFetch(CONSOLE_REST.STATS, { signal }),
         apiFetch(CONSOLE_REST.SYSTEM_STATUS, { signal }),
-        fetchOptionalData(CONSOLE_REST.LOGS_STATS, signal),
+        fetchLogOverview(signal),
         fetchOptionalData(`${CONSOLE_REST.INTROSPECTION}/tools?page=1&pageSize=1`, signal),
         fetchOptionalData(`${CONSOLE_REST.INTROSPECTION}/bindings?page=1&pageSize=1`, signal),
         fetchOptionalData(`${CONSOLE_REST.INTROSPECTION}/mcp?page=1&pageSize=100`, signal),
@@ -185,11 +205,11 @@ export default function HomePage() {
       setSystemStatus(statusBody.data)
       setError(null)
 
-      const logStats = logs as { byLevel?: { error?: number; warn?: number } } | null
+      const optionalSummary = summarizeOptional(logs.data, agents)
       const mcpSummary = readMcpSummary(mcp)
       setOptional({
-        errorLogs: logStats?.byLevel?.error ?? 0,
-        warningLogs: logStats?.byLevel?.warn ?? 0,
+        ...optionalSummary,
+        logReadError: logs.error,
         tools: readTotal(tools),
         agents: readTotal(agents),
         mcpServices: mcpSummary.total,
@@ -244,7 +264,7 @@ export default function HomePage() {
     {
       label: 'Agent',
       value: optional.agents,
-      detail: optional.agents === null ? '未启用或尚未接线' : '模型与会话绑定',
+      detail: optional.agentStatus === 'unavailable' ? '未安装或装配 Agent' : optional.agentStatus === 'unknown' ? '状态暂时不可读' : optional.agents === 0 ? '可选能力：需要 AI 时安装并配置 Agent' : '模型与会话绑定',
       icon: Brain,
       path: '/agent/workbench',
     },
@@ -265,9 +285,9 @@ export default function HomePage() {
       path: '/introspection?tab=mcp',
     },
     {
-      label: '插件',
+      label: '子插件',
       value: stats?.plugins.total ?? null,
-      detail: stats ? `${stats.plugins.active} 个正在运行` : '等待 Host 状态',
+      detail: stats ? `${stats.plugins.active} 个子插件正在运行` : '等待 Host 状态',
       icon: Package,
       path: '/plugins',
     },
@@ -298,29 +318,24 @@ export default function HomePage() {
         tone: 'warning',
       })
     }
-    if (optional.errorLogs > 0) {
+    if ((optional.errorLogs ?? 0) > 0) {
       items.push({
-        title: `${optional.errorLogs} 条错误日志`,
-        detail: '查看最近错误并定位受影响的能力。',
+        title: `历史错误 ${optional.errorLogs} 条`,
+        detail: '打开错误日志',
         path: '/logs',
         tone: 'danger',
       })
     }
-    if (optional.warningLogs > 0) {
+    if ((optional.warningLogs ?? 0) > 0) {
       items.push({
-        title: `${optional.warningLogs} 条运行警告`,
-        detail: '这些问题尚未中断服务，但值得检查。',
+        title: `历史警告 ${optional.warningLogs} 条`,
+        detail: '打开警告日志',
         path: '/logs',
         tone: 'warning',
       })
     }
-    if (optional.agents === 0) {
-      items.push({
-        title: '尚未配置 Agent',
-        detail: '配置模型和 Agent 后即可使用工具与记忆。',
-        path: '/config',
-        tone: 'neutral',
-      })
+    if (optional.errorLogs === null) {
+      items.push({ title: '日志状态暂时不可读', detail: optional.logReadError ?? '尚无法确认是否有运行错误，请打开日志页检查读取详情。', path: '/logs', tone: 'warning' })
     }
     return items.slice(0, 4)
   }, [error, offlineEndpoints, optional, stats])
@@ -329,7 +344,7 @@ export default function HomePage() {
     setRestarting(true)
     try {
       await requestConsole({ type: CONSOLE_RPC.SYSTEM_RESTART })
-      success('服务正在重启')
+      success('重启请求已发送，连接将在服务恢复后自动重连')
     } catch {
       toastError('重启请求未能发送')
     }
@@ -414,7 +429,7 @@ export default function HomePage() {
               <strong>{stats ? stats.endpoints.online : '—'}{stats ? <small> / {stats.endpoints.total}</small> : null}</strong>
             </div>
             <div className="console-dashboard-metric">
-              <span>运行插件</span>
+              <span>运行子插件</span>
               <strong>{stats ? stats.plugins.active : '—'}{stats ? <small> / {stats.plugins.total}</small> : null}</strong>
             </div>
             <div className="console-dashboard-metric">
@@ -443,8 +458,8 @@ export default function HomePage() {
         <aside className="console-dashboard-panel console-attention-panel" aria-labelledby="attention-title">
           <div className="console-panel-heading">
             <div>
-              <span className="console-eyebrow">Attention</span>
-              <h2 id="attention-title">现在需要处理</h2>
+
+              <h2 id="attention-title">状态与日志</h2>
             </div>
             <span className="text-xs tabular-nums text-muted-foreground">{attentionItems.length} 项</span>
           </div>
@@ -453,8 +468,8 @@ export default function HomePage() {
             <div className="console-all-clear">
               <CheckCircle2 />
               <div>
-                <h3>运行状态良好</h3>
-                <p>目前没有离线渠道或错误日志。</p>
+                <h3>渠道在线</h3>
+                <p>暂无警告或错误日志</p>
               </div>
             </div>
           ) : (
@@ -492,9 +507,9 @@ export default function HomePage() {
         <section className="console-dashboard-panel" aria-labelledby="capability-title">
           <div className="console-panel-heading">
             <div>
-              <span className="console-eyebrow">Capability map</span>
+
               <h2 id="capability-title">当前实例的能力</h2>
-              <p>从渠道接入到 Agent 工具链，按能力进入对应工作区。</p>
+
             </div>
             <Button variant="ghost" size="sm" onClick={() => navigate('/introspection')}>
               打开能力中心
@@ -528,9 +543,9 @@ export default function HomePage() {
       <section className="console-dashboard-panel" aria-labelledby="next-title">
         <div className="console-panel-heading">
           <div>
-            <span className="console-eyebrow">Next action</span>
-            <h2 id="next-title">继续构建你的 Bot</h2>
-            <p>从真实操作进入，不必先理解底层模块。</p>
+
+            <h2 id="next-title">常用操作</h2>
+
           </div>
         </div>
 
@@ -570,7 +585,7 @@ export default function HomePage() {
           <DialogHeader>
             <DialogTitle>重启 Zhin 服务</DialogTitle>
             <DialogDescription>
-              所有连接将短暂断开，进行中的对话也会被中止。守护进程会在几秒内重新拉起服务。
+              所有连接将断开，进行中的对话可能被中止。通过 zhin runtime start 启动的前台和 daemon 服务会自动重新启动；--once 模式不会自动恢复。若使用自定义启动器，请确认其重启机制。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

@@ -1,29 +1,34 @@
-import { useEffect, useMemo, useState, type RefObject } from 'react'
+import { useState, type RefObject } from 'react'
 import { Link } from 'react-router-dom'
 import {
   AlertTriangle,
   ArrowRight,
-  CheckCircle2,
   Circle,
   Copy,
   FileText,
   Filter,
   Info,
+  MoreHorizontal,
+  X,
   RefreshCw,
   Search,
   Trash2,
   XCircle,
 } from 'lucide-react'
+import { selectedHistoryEntry } from './history-model.mjs'
 import { cn } from '@zhin.js/client'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
 import { Checkbox } from '../../components/ui/checkbox'
 import { Input } from '../../components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '../../components/ui/dropdown-menu'
+import './disclosure.css'
 import { EmptyState } from '../../components/empty-state'
 import { ErrorAlert } from '../../components/error-alert'
 
 export interface LogEntry {
+  id: string | number
   level: string
   message: string
   timestamp: string
@@ -37,16 +42,28 @@ export interface LogStats {
 }
 
 export interface LogWorkbenchState {
+  loading: boolean
+  source: string
+  page: number
+  pageSize: number
+  total: number | null
+  totalPages: number | null
+  sources: {source:string;count:number}[]
   logs: LogEntry[]
   stats: LogStats | null
   level: 'all' | 'debug' | 'info' | 'warn' | 'error'
   query: string
   autoScroll: boolean
   error: string | null
+  logsKnown: boolean
+  canManage: boolean
   readOnly: boolean
 }
 
 export interface LogWorkbenchActions {
+  selectSource(source:string):void
+  changePage(page:number):void
+  changePageSize(size:number):void
   selectLevel(level: string): void
   changeQuery(query: string): void
   changeAutoScroll(enabled: boolean): void
@@ -80,50 +97,23 @@ function getLevelMeta(level: string) {
   }
 }
 
-function logIdentity(log: LogEntry): string {
-  return `${log.timestamp}\u0000${log.level}\u0000${log.source}\u0000${log.message}`
-}
-
 export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const logEntries = useMemo(() => {
-    const occurrences = new Map<string, number>()
-    return state.logs.map((log) => {
-      const identity = logIdentity(log)
-      const occurrence = occurrences.get(identity) ?? 0
-      occurrences.set(identity, occurrence + 1)
-      return { log, id: `${identity}\u0000${occurrence}` }
-    })
-  }, [state.logs])
-  const selectedEntry = logEntries.find(({ id }) => id === selectedId) ?? logEntries.at(-1) ?? null
-  const selected = selectedEntry?.log ?? null
-  const sourceCounts = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const log of state.logs) {
-      const source = log.source || 'runtime'
-      counts.set(source, (counts.get(source) ?? 0) + 1)
-    }
-    return [...counts.entries()].sort((left, right) => right[1] - left[1])
-  }, [state.logs])
-
-  useEffect(() => {
-    if (!logEntries.length) setSelectedId(null)
-    else if (!logEntries.some(({ id }) => id === selectedId)) {
-      setSelectedId(logEntries.at(-1)!.id)
-    }
-  }, [logEntries, selectedId])
-
+  const [sourcesOpen, setSourcesOpen] = useState(false)
+  const [selection, setSelection] = useState<LogEntry | null>(null)
+  const selected = selection ? selectedHistoryEntry(state.logs,selection) : null
+  const logEntries = state.logs.map(log => ({log,id:String(log.id)}))
+  const selectedOnPage = selected ? state.logs.some(log => String(log.id) === String(selected.id)) : false
+  const sourceCounts = state.sources
   const levelCount = (level: KnownLogLevel) => state.stats?.byLevel[level] ?? 0
   const visibleTotal = state.logs.length
-  const issueCount = levelCount('warn') + levelCount('error')
-  const healthLabel = issueCount === 0 ? '当前窗口稳定' : `${issueCount} 条需关注`
+
 
   return (
     <section className="console-log-workbench" aria-label="日志诊断工作台">
       <header className="console-log-overview">
         <button type="button" className={cn('console-log-signal', state.level === 'all' && 'is-selected')} onClick={() => actions.selectLevel('all')} aria-pressed={state.level === 'all'}>
-          <span className="console-eyebrow">Event journal</span>
-          <strong>{state.stats?.total ?? visibleTotal}</strong>
+
+          <strong>{state.stats?.total ?? '—'}</strong>
           <small>总日志</small>
         </button>
         {OVERVIEW_LEVELS.map((level) => {
@@ -132,15 +122,12 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
           return (
             <button key={level} type="button" className={cn('console-log-signal', meta.className, state.level === level && 'is-selected')} onClick={() => actions.selectLevel(level)} aria-pressed={state.level === level}>
               <Icon aria-hidden="true" />
-              <strong>{levelCount(level)}</strong>
+              <strong>{state.stats ? levelCount(level) : '—'}</strong>
               <small>{meta.label}</small>
             </button>
           )
         })}
-        <div className={cn('console-log-health', issueCount === 0 && 'is-healthy')}>
-          <CheckCircle2 aria-hidden="true" />
-          <span><small>Window signal</small><strong>{healthLabel}</strong></span>
-        </div>
+
       </header>
 
       <div className="console-log-toolbar">
@@ -164,32 +151,42 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
         </label>
         <div className="console-log-toolbar-actions">
           <Button variant="ghost" size="sm" onClick={actions.refresh}><RefreshCw />刷新</Button>
-          {!state.readOnly ? <Button variant="ghost" size="sm" onClick={() => actions.cleanup(7)}><Trash2 />清理旧日志</Button> : null}
-          {!state.readOnly ? <Button variant="ghost" size="sm" onClick={() => actions.cleanup(undefined, 5000)}>保留 5000 条</Button> : null}
-          {!state.readOnly ? <Button variant="ghost" size="sm" className="text-destructive" onClick={actions.clearAll}><Trash2 />清空</Button> : null}
+          <Button variant="outline" size="sm" aria-expanded={sourcesOpen} aria-controls="log-source-directory" onClick={() => setSourcesOpen(open => !open)}><Filter />{state.source ? `来源：${state.source}` : '来源筛选'}</Button>
+          {!state.readOnly ? <DropdownMenu>
+            <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" disabled={!state.canManage} aria-label="日志维护操作"><MoreHorizontal />维护</Button></DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>日志维护</DropdownMenuLabel>
+              <DropdownMenuItem disabled={!state.canManage} onSelect={() => actions.cleanup(7)}>清理 7 天前的日志</DropdownMenuItem>
+              <DropdownMenuItem disabled={!state.canManage} onSelect={() => actions.cleanup(undefined, 5000)}>仅保留最近 5000 条</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled={!state.canManage} className="text-destructive" onSelect={actions.clearAll}>清空全部日志</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu> : null}
         </div>
       </div>
 
-      <div className="console-log-layout">
-        <aside className="console-log-sources" aria-label="来源聚合">
-          <header><span className="console-eyebrow">来源聚合</span><small>{sourceCounts.length} sources</small></header>
-          <button type="button" className={!state.query ? 'is-selected' : undefined} onClick={() => actions.changeQuery('')}>
-            <span>全部来源</span><strong>{visibleTotal}</strong>
+      <div className={cn("console-log-layout console-log-layout--disclosure", sourcesOpen && "has-sources", selection && "has-inspector")}>
+        {sourcesOpen ? <aside id="log-source-directory" className="console-log-sources" aria-label="来源聚合">
+          <header><span className="console-eyebrow">全部历史来源（按级别与搜索筛选）</span><small>{state.logsKnown ? sourceCounts.length : '—'} sources</small></header>
+          <button type="button" className={!state.source ? 'is-selected' : undefined} onClick={() => actions.selectSource('')}>
+            <span>全部来源</span><strong>{state.logsKnown ? sourceCounts.reduce((sum,row)=>sum+row.count,0) : '—'}</strong>
           </button>
-          {sourceCounts.map(([source, count]) => (
-            <button key={source} type="button" className={state.query === source ? 'is-selected' : undefined} onClick={() => actions.changeQuery(source)} title={source}>
-              <span>{source}</span><strong>{count}</strong>
+          {state.source && !sourceCounts.some(row=>row.source === state.source) ? <button type="button" className="is-selected" onClick={()=>actions.selectSource('')}><span>当前来源：{state.source} · 清除</span></button> : null}
+          {sourceCounts.map(({source, count}) => (
+            <button key={source} type="button" disabled={!source} className={state.source === source ? 'is-selected' : undefined} onClick={() => actions.selectSource(source)} title={source}>
+              <span>{source || '未标注来源'}</span><strong>{state.logsKnown ? count : '—'}</strong>
             </button>
           ))}
-        </aside>
+        </aside> : null}
 
         <section className="console-log-stream" aria-labelledby="log-stream-title">
           <header>
-            <div><span className="console-eyebrow">Live projection</span><h2 id="log-stream-title">连续事件流</h2></div>
-            <Badge variant="outline">{visibleTotal} visible</Badge>
+            <div><h2 id="log-stream-title">历史事件</h2></div>
+            <Badge variant="outline">本页 {state.logsKnown ? visibleTotal : '—'} 条</Badge>
           </header>
           <div className="console-log-stream-body">
-            {state.error ? (
+            <div ref={endRef} />
+            {state.loading && !state.logsKnown ? <p role="status">正在读取日志历史…</p> : state.error ? (
               <ErrorAlert error={state.error} onRetry={actions.retry} />
             ) : state.logs.length === 0 ? (
               <div className="console-log-empty"><FileText /><strong>当前筛选没有日志</strong><p>日志到达后会自动出现在此处。</p></div>
@@ -198,7 +195,7 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
                 const meta = getLevelMeta(log.level)
                 const Icon = meta.icon
                 return (
-                  <button key={id} type="button" className={cn('console-log-event', meta.className, id === selectedEntry?.id && 'is-selected')} aria-pressed={id === selectedEntry?.id} onClick={() => setSelectedId(id)}>
+                  <button key={id} type="button" className={cn('console-log-event', meta.className, id === String(selected?.id) && 'is-selected')} aria-pressed={id === String(selected?.id)} onClick={() => setSelection(log)}>
                     <span className="console-log-event-icon"><Icon /></span>
                     <span className="console-log-event-body">
                       <span><time>{formatLogTime(log.timestamp)}</time><code>{log.source || 'runtime'}</code></span>
@@ -209,17 +206,22 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
                 )
               })
             )}
-            <div ref={endRef} />
           </div>
+          <nav className="console-log-pagination" aria-label="日志历史分页">
+            <Button variant="outline" size="sm" disabled={state.loading || !state.logsKnown || state.page <= 1} onClick={()=>actions.changePage(state.page-1)}>上一页</Button>
+            <span className="console-log-page-summary" aria-live="polite">{state.logsKnown ? `第 ${state.page} / ${state.totalPages} 页 · 筛选结果 ${state.total} 条` : '分页总数暂时未知'}</span>
+            <select aria-label="每页日志条数" value={state.pageSize} onChange={event=>actions.changePageSize(Number(event.target.value))}>{[50,100,200].map(size=><option key={size} value={size}>每页 {size} 条</option>)}</select>
+            <Button variant="outline" size="sm" disabled={state.loading || !state.logsKnown || state.page >= (state.totalPages ?? 1)} onClick={()=>actions.changePage(state.page+1)}>下一页</Button>
+          </nav>
         </section>
 
-        <LogInspector key={selectedEntry?.id ?? 'empty'} log={selected} onFilterSource={actions.changeQuery} />
+        {selected ? <LogInspector key={String(selected.id)} log={selected} offPage={!selectedOnPage} onFilterSource={actions.selectSource} onClose={() => setSelection(null)} /> : null}
       </div>
     </section>
   )
 }
 
-function LogInspector({ log, onFilterSource }: { log: LogEntry | null; onFilterSource(source: string): void }) {
+function LogInspector({ log, offPage, onFilterSource, onClose }: { log: LogEntry | null; offPage:boolean; onFilterSource(source: string): void; onClose(): void }) {
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle')
   if (!log) {
     return <aside className="console-log-inspector is-empty" aria-label="事件 Inspector"><EmptyState compact title="选择一条事件" description="完整时间、来源与诊断动作会显示在这里。" /></aside>
@@ -231,15 +233,19 @@ function LogInspector({ log, onFilterSource }: { log: LogEntry | null; onFilterS
   return (
     <aside className="console-log-inspector" aria-label="事件 Inspector">
       <header>
-        <span className="console-eyebrow">事件 Inspector</span>
+        <div className="flex items-center justify-between gap-2"><span className="console-eyebrow">事件详情</span><Button variant="ghost" size="sm" aria-label="关闭事件详情" onClick={onClose}><X /></Button></div>
         <div><span className={cn('console-log-inspector-level', meta.className)}><Icon />{meta.label}</span><time>{formatLogTime(log.timestamp, true)}</time></div>
         <h3>{log.message}</h3>
       </header>
-      <dl>
+      {offPage ? <p role="status">所选事件不在当前页或当前筛选中；下方保留该事件快照。</p> : null}
+      <details>
+        <summary>技术字段</summary>
+        <dl>
         <div><dt>source</dt><dd>{log.source || 'runtime'}</dd></div>
         <div><dt>timestamp</dt><dd>{log.timestamp}</dd></div>
         <div><dt>level</dt><dd>{log.level}</dd></div>
-      </dl>
+        </dl>
+      </details>
       <div className="console-log-inspector-actions">
         <Button
           size="sm"
@@ -254,7 +260,7 @@ function LogInspector({ log, onFilterSource }: { log: LogEntry | null; onFilterS
           }}
         ><Copy />{copyState === 'copied' ? '已复制' : '复制事件'}</Button>
         {log.source ? <Button size="sm" variant="outline" onClick={() => onFilterSource(log.source)}><Filter />仅看此来源</Button> : null}
-        <Button size="sm" variant="ghost" asChild><Link to={`/introspection?tab=commands&filter=${runtimeFilter}`}>查找运行时能力<ArrowRight /></Link></Button>
+        <Button size="sm" variant="ghost" asChild><Link to={`/introspection?tab=commands&filter=${runtimeFilter}`}>在能力目录中搜索来源名称<ArrowRight /></Link></Button>
       </div>
       {copyState === 'failed' ? <p className="console-log-copy-error" role="status">浏览器拒绝了剪贴板访问，请展开原始事件后手动复制。</p> : null}
       <details>

@@ -1,0 +1,21 @@
+/* Natural-height cards flow into responsive columns; only the gallery owns previews. */
+.console-component-masonry { display:grid; width:100%; grid-auto-rows:1px; column-gap:16px; align-items:start; }
+.console-component-masonry > .console-runtime-component { display:inline-flex; width:100%; height:auto; min-height:0; margin:0; min-width:0; align-self:start; }
+.console-runtime-component .console-component-live-preview { width:100%; overflow:hidden; border-radius:var(--console-radius-md); background:hsl(var(--background) / .65); }
+.console-component-live-preview iframe { pointer-events:none; display:block; }
+.console-component-preview-state { display:flex; min-height:100px; align-items:center; justify-content:center; gap:8px; padding:16px; font-size:var(--console-text-label); color:hsl(var(--muted-foreground)); overflow-wrap:anywhere; }
+.console-component-preview-state svg { width:16px; height:16px; flex:none; }
+.console-runtime-component > button { flex:none; min-height:var(--console-control-height-sm); }
+
+.console-component-gallery-workspace { grid-template-columns:minmax(0,1fr) !important; }
+.console-component-drawer { inset:0 0 0 auto !important; width:min(480px,100vw) !important; max-width:100vw !important; height:100dvh; transform:none !important; translate:none !important; display:block !important; overflow-y:auto; border-radius:var(--console-radius-lg) 0 0 var(--console-radius-lg); padding:var(--console-space-card); }
+.console-component-drawer .console-capability-inspector { border:0; background:transparent; padding:0; }
+.console-component-drawer .console-capability-inspector > header { padding-right:40px; }
+.console-component-drawer[data-state=open] { animation:console-drawer-enter 180ms ease-out !important; }
+.console-component-drawer[data-state=closed] { animation:none !important; }
+.console-component-drawer > button:last-child { min-width:var(--console-control-height-sm); min-height:var(--console-control-height-sm); display:flex; align-items:center; justify-content:center; }
+@keyframes console-drawer-enter { from { opacity:0; margin-right:-24px; } to { opacity:1; margin-right:0; } }
+@media(prefers-reduced-motion:reduce) { .console-component-drawer[data-state=open] { animation:none !important; } }
+
+
+.console-component-preview-error { flex-direction:column; align-items:flex-start; }

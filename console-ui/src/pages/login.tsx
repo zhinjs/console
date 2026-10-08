@@ -93,15 +93,11 @@ export default function LoginPage({ onSuccess, initialApiBase }: LoginPageProps)
   }, [initialApiBase])
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
+    <div className="flex items-center justify-center min-h-[100dvh] bg-background">
       <Card className={cn('w-full max-w-md mx-4')}>
         <CardHeader className="text-center space-y-2">
           <div
-            className="flex items-center justify-center mx-auto w-12 h-12 rounded-xl text-white font-bold text-xl"
-            style={{
-              background: "linear-gradient(135deg, #2f9e6e 0%, #4cc38a 100%)",
-              boxShadow: "0 4px 12px -3px rgba(47, 158, 110, 0.5)",
-            }}
+            className="flex items-center justify-center mx-auto w-12 h-12 rounded-xl bg-primary text-primary-foreground shadow-[var(--console-shadow-xs)] font-semibold text-xl"
           >
             Z
           </div>

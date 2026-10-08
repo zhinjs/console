@@ -81,7 +81,7 @@ export function registerBuiltinConsolePages() {
   app.addRoute({
     path: '/agent/workrooms/catalog',
     name: 'Workroom 配置',
-    parent: null,
+    parent: '/agent/workrooms',
     icon: 'Network',
     element: <WorkroomCatalogPage />,
     meta: { group: NAV_GROUPS.AGENTS, order: 2, fullWidth: true, hideInMenu: true },
@@ -98,7 +98,7 @@ export function registerBuiltinConsolePages() {
 
   app.addRoute({
     path: '/agent/sessions',
-    name: 'Agent Sessions',
+    name: '对话分支',
     parent: null,
     icon: 'GitBranch',
     element: <AgentSessionsPage />,
@@ -111,15 +111,15 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Package',
     element: <PluginsPage />,
-    meta: { group: NAV_GROUPS.AUTOMATION, order: 1 },
+    meta: { group: NAV_GROUPS.AUTOMATION, order: 2 },
   })
 
   app.addRoute({
     path: '/plugins/:name',
     name: '插件详情',
-    parent: null,
+    parent: '/plugins',
     element: <PluginDetailPage />,
-    meta: { hideInMenu: true },
+    meta: { hideInMenu: true, group: NAV_GROUPS.AUTOMATION },
   })
 
   app.addRoute({
@@ -128,7 +128,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Store',
     element: <MarketplacePage />,
-    meta: { group: NAV_GROUPS.AUTOMATION, order: 2 },
+    meta: { group: NAV_GROUPS.AUTOMATION, order: 3 },
   })
 
   app.addRoute({
@@ -169,9 +169,9 @@ export function registerBuiltinConsolePages() {
 
   app.addRoute({
     path: '/endpoints/:adapter/:endpointId',
-    name: 'Endpoint 详情',
-    parent: null,
+    name: '渠道详情',
+    parent: '/endpoints',
     element: <EndpointDetailPage />,
-    meta: { hideInMenu: true, fullWidth: true },
+    meta: { hideInMenu: true, fullWidth: true, group: NAV_GROUPS.CONVERSATIONS },
   })
 }

@@ -1,0 +1,9 @@
+@import 'highlight.js/styles/github.css';
+@import './github-dark-scoped.css';
+
+:root { --console-code-background: #ffffff; --console-code-foreground: #24292e; --console-code-constant: #005cc5; --console-code-string: #032f62; }
+.dark { --console-code-background: #0d1117; --console-code-foreground: #c9d1d9; --console-code-constant: #79c0ff; --console-code-string: #a5d6ff; }
+.file-code-editor { background: var(--console-code-background); color: var(--console-code-foreground); }
+/* Preserve exact textarea/pre alignment; theme typography must not alter glyph widths. */
+.file-code-editor .hljs { padding: 0; overflow: visible; }
+.file-code-editor .hljs * { font-weight: inherit; font-style: inherit; }

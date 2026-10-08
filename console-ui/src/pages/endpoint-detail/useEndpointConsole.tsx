@@ -1,3 +1,5 @@
+import { readRequestHistory, readNoticeHistory, mergeHistoryRows } from './inbox-history-model.mjs'
+import { readPendingRequests, pendingRequestKey } from './pending-request-model.mjs'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import {
@@ -23,6 +25,8 @@ import {
   type EndpointPushMessage,
 } from '../../utils/endpoint-push'
 import { ENDPOINT_RPC, INBOX_RPC, SIDE_EVENT_PUSH, SIDE_EVENT_RPC } from '../../contracts/zhin-console'
+import { readEndpointList } from '../endpoint-list-model.mjs'
+import { endpointAddress, requestApproval, consumedRows } from './endpoint-request.mjs'
 import { requestConsole } from '../../utils/console-rpc'
 
 export function useEndpointConsole() {
@@ -50,6 +54,7 @@ export function useEndpointConsole() {
   const [loadErr, setLoadErr] = useState<string | null>(null)
   const [testLoading, setTestLoading] = useState(false)
   const [testMessage, setTestMessage] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   // --- Endpoint info ---
   const loadInfo = useCallback(async () => {
@@ -57,9 +62,9 @@ export function useEndpointConsole() {
     try {
       const data = await requestConsole<EndpointInfo>({
         type: ENDPOINT_RPC.INFO,
-        data: { adapter, endpointKey: endpointId },
+        ...endpointAddress(adapter, endpointId),
       })
-      setInfo(data)
+      setInfo(readEndpointList({ endpoints: [data] })[0])
       setLoadErr(null)
     } catch (e) {
       setLoadErr((e as Error).message)
@@ -113,36 +118,47 @@ export function useEndpointConsole() {
   })
 
   // --- Requests & notices state ---
-  const [requests, setRequests] = useState<Map<number, ReqItem>>(new Map())
+  const [requests, setRequests] = useState<Map<string, ReqItem>>(new Map())
   const [notices, setNotices] = useState<Map<number, NoticeItem>>(new Map())
   const [inboxRequests, setInboxRequests] = useState<InboxRequestRow[]>([])
   const [inboxRequestsLoading, setInboxRequestsLoading] = useState(false)
+  const [inboxRequestsHasMore, setInboxRequestsHasMore] = useState(false)
   const [inboxRequestsOffset, setInboxRequestsOffset] = useState(0)
   const [inboxRequestsEnabled, setInboxRequestsEnabled] = useState(false)
   const [inboxNotices, setInboxNotices] = useState<InboxNoticeRow[]>([])
   const [inboxNoticesLoading, setInboxNoticesLoading] = useState(false)
+  const [inboxNoticesHasMore, setInboxNoticesHasMore] = useState(false)
   const [inboxNoticesOffset, setInboxNoticesOffset] = useState(0)
   const [inboxNoticesEnabled, setInboxNoticesEnabled] = useState(false)
   const [requestsTab, setRequestsTab] = useState<'pending' | 'history'>('pending')
   const [noticesTab, setNoticesTab] = useState<'unread' | 'history'>('unread')
 
+  const [requestsLoading, setRequestsLoading] = useState(true)
+  const [requestsError, setRequestsError] = useState<string | null>(null)
+  const [requestsAvailable, setRequestsAvailable] = useState<boolean | null>(null)
+  const [noticesLoading, setNoticesLoading] = useState(true)
+  const [noticesError, setNoticesError] = useState<string | null>(null)
+  const [noticesAvailable, setNoticesAvailable] = useState<boolean | null>(null)
+  const [inboxRequestsError, setInboxRequestsError] = useState<string | null>(null)
+  const [inboxNoticesError, setInboxNoticesError] = useState<string | null>(null)
+
   // --- Load requests from server ---
   const loadRequestsFromServer = useCallback(async () => {
     if (!adapter || !endpointId) return
+    setRequestsLoading(true)
+    setRequestsError(null)
     try {
-      const { requests: rows } = await requestConsole<{ requests: ReqItem[] }>({
+      const response = await requestConsole<{ inboxEnabled: boolean; source: string }>({
         type: SIDE_EVENT_RPC.REQUEST_LIST,
-        data: { adapter, endpointKey: endpointId },
+        ...endpointAddress(adapter, endpointId),
       })
-      setRequests((prev) => {
-        const m = new Map(prev)
-        for (const r of rows || []) {
-          m.set(r.id, { ...r, canAct: false })
-        }
-        return m
-      })
-    } catch {
-      /* ignore */
+      const rows = readPendingRequests(response)
+      setRequestsAvailable(response.source === 'endpoint' || response.inboxEnabled === true)
+      setRequests(new Map(rows.map(row => [pendingRequestKey(row), row])))
+    } catch (caught) {
+      setRequestsError(caught instanceof Error ? caught.message : String(caught))
+    } finally {
+      setRequestsLoading(false)
     }
   }, [adapter, endpointId])
 
@@ -166,28 +182,31 @@ export function useEndpointConsole() {
       if (!adapter || !endpointId) return
       const seq = ++inboxRequestsSeqRef.current
       setInboxRequestsLoading(true)
+      setInboxRequestsError(null)
       try {
         const offset = append ? inboxRequestsOffset : 0
         const res = await requestConsole<{ requests: InboxRequestRow[]; inboxEnabled: boolean }>({
           type: INBOX_RPC.REQUESTS,
-          data: { adapter, endpointKey: endpointId, limit: 30, offset },
+          ...endpointAddress(adapter, endpointId), limit: 30, offset,
         })
         if (seq !== inboxRequestsSeqRef.current) return
-        setInboxRequestsEnabled(!!res.inboxEnabled)
-        if (!res.inboxEnabled || !res.requests?.length) {
+        const rows = readRequestHistory(res)
+        setInboxRequestsEnabled(res.inboxEnabled)
+        setInboxRequestsHasMore(res.inboxEnabled && rows.length === 30)
+        setInboxRequestsOffset(offset + rows.length)
+        if (!res.inboxEnabled || !rows.length) {
           if (!append) setInboxRequests([])
           return
         }
         if (append) {
-          setInboxRequests((prev) => [...prev, ...res.requests])
+          setInboxRequests((prev) => mergeHistoryRows(prev, rows))
         } else {
-          setInboxRequests(res.requests)
+          setInboxRequests(rows)
         }
-        setInboxRequestsOffset(offset + (res.requests?.length ?? 0))
-      } catch {
+      } catch (caught) {
         // 一次性网络错误不改变 enabled 状态；仅服务端明确 inboxEnabled===false 才置 false
         if (seq !== inboxRequestsSeqRef.current) return
-        if (!append) setInboxRequests([])
+        setInboxRequestsError(caught instanceof Error ? caught.message : String(caught))
       } finally {
         if (seq === inboxRequestsSeqRef.current) setInboxRequestsLoading(false)
       }
@@ -201,28 +220,31 @@ export function useEndpointConsole() {
       if (!adapter || !endpointId) return
       const seq = ++inboxNoticesSeqRef.current
       setInboxNoticesLoading(true)
+      setInboxNoticesError(null)
       try {
         const offset = append ? inboxNoticesOffset : 0
         const res = await requestConsole<{ notices: InboxNoticeRow[]; inboxEnabled: boolean }>({
           type: INBOX_RPC.NOTICES,
-          data: { adapter, endpointKey: endpointId, limit: 30, offset },
+          ...endpointAddress(adapter, endpointId), limit: 30, offset,
         })
         if (seq !== inboxNoticesSeqRef.current) return
-        setInboxNoticesEnabled(!!res.inboxEnabled)
-        if (!res.inboxEnabled || !res.notices?.length) {
+        const rows = readNoticeHistory(res)
+        setInboxNoticesEnabled(res.inboxEnabled)
+        setInboxNoticesHasMore(res.inboxEnabled && rows.length === 30)
+        setInboxNoticesOffset(offset + rows.length)
+        if (!res.inboxEnabled || !rows.length) {
           if (!append) setInboxNotices([])
           return
         }
         if (append) {
-          setInboxNotices((prev) => [...prev, ...res.notices])
+          setInboxNotices((prev) => mergeHistoryRows(prev, rows))
         } else {
-          setInboxNotices(res.notices)
+          setInboxNotices(rows)
         }
-        setInboxNoticesOffset(offset + res.notices.length)
-      } catch {
+      } catch (caught) {
         // 一次性网络错误不改变 enabled 状态；仅服务端明确 inboxEnabled===false 才置 false
         if (seq !== inboxNoticesSeqRef.current) return
-        if (!append) setInboxNotices([])
+        setInboxNoticesError(caught instanceof Error ? caught.message : String(caught))
       } finally {
         if (seq === inboxNoticesSeqRef.current) setInboxNoticesLoading(false)
       }
@@ -234,10 +256,12 @@ export function useEndpointConsole() {
     if (!adapter || !endpointId) return
     const seq = ++unreadNoticesSeqRef.current
     const requestedEndpoint = `${adapter}\u0000${endpointId}`
+    setNoticesLoading(true)
+    setNoticesError(null)
     try {
       const res = await requestConsole<ConsoleInboxNoticesResult>({
         type: INBOX_RPC.NOTICES,
-        data: {
+        ...{
           adapter,
           endpointKey: endpointId,
           unreadOnly: true,
@@ -249,6 +273,7 @@ export function useEndpointConsole() {
         seq !== unreadNoticesSeqRef.current
         || requestedEndpoint !== endpointIdentityRef.current
       ) return
+      setNoticesAvailable(res.inboxEnabled)
       if (!res.inboxEnabled) return
       setNotices(new Map((res.notices ?? []).map((notice) => [notice.id, {
         id: notice.id,
@@ -257,8 +282,12 @@ export function useEndpointConsole() {
         payload: notice.payload,
         timestamp: notice.timestamp,
       }])))
-    } catch {
-      /* keep the last complete projection on a transient network failure */
+    } catch (caught) {
+      if (seq === unreadNoticesSeqRef.current && requestedEndpoint === endpointIdentityRef.current) {
+        setNoticesError(caught instanceof Error ? caught.message : String(caught))
+      }
+    } finally {
+      if (seq === unreadNoticesSeqRef.current) setNoticesLoading(false)
     }
   }, [adapter, endpointId])
 
@@ -309,7 +338,7 @@ export function useEndpointConsole() {
             const d = rec.payload
             const id = d.id as number
             if (id == null) continue
-            m.set(id, {
+            m.set(pendingRequestKey({id,platformRequestId:String(d.platformRequestId ?? '')}), {
               id,
               platformRequestId: String(d.platformRequestId ?? ''),
               type: String(d.type ?? ''),
@@ -409,7 +438,7 @@ export function useEndpointConsole() {
           void putInboxCache(adapter, endpointId, 'request', { ...request })
           setRequests((prev) => {
             const m = new Map(prev)
-            m.set(request.id, {
+            m.set(pendingRequestKey(request), {
               id: request.id,
               platformRequestId: request.platformRequestId,
               type: request.type,
@@ -450,21 +479,22 @@ export function useEndpointConsole() {
   // --- Request/notice actions ---
   const approve = useCallback(
     async (platformRequestId: string, approveIt: boolean) => {
+      setActionError(null)
       try {
         await requestConsole({
           type: approveIt ? SIDE_EVENT_RPC.REQUEST_APPROVE : SIDE_EVENT_RPC.REQUEST_REJECT,
-          data: { adapter, endpointKey: endpointId, requestId: platformRequestId },
+          ...requestApproval(adapter, endpointId, platformRequestId),
         })
         const row = requestList.find((r) => r.platformRequestId === platformRequestId)
         if (row) {
           setRequests((prev) => {
             const m = new Map(prev)
-            m.delete(row.id)
+            m.delete(pendingRequestKey(row))
             return m
           })
         }
       } catch (e) {
-        console.error('Failed to approve/reject request:', (e as Error).message)
+        setActionError((e as Error).message)
       }
     },
     [adapter, endpointId, requestList],
@@ -472,15 +502,16 @@ export function useEndpointConsole() {
 
   const dismissRequest = useCallback(
     async (id: number) => {
+      setActionError(null)
       try {
-        await requestConsole({ type: SIDE_EVENT_RPC.REQUEST_CONSUMED, data: { id } })
+        await requestConsole({ type: SIDE_EVENT_RPC.REQUEST_CONSUMED, ...consumedRows(id) })
         setRequests((prev) => {
           const m = new Map(prev)
-          m.delete(id)
+          for (const [key, request] of m) if (request.id === id) m.delete(key)
           return m
         })
       } catch (e) {
-        console.error('Failed to dismiss request:', (e as Error).message)
+        setActionError((e as Error).message)
       }
     },
     [],
@@ -488,15 +519,16 @@ export function useEndpointConsole() {
 
   const dismissNotice = useCallback(
     async (id: number) => {
+      setActionError(null)
       try {
-        await requestConsole({ type: SIDE_EVENT_RPC.NOTICE_CONSUMED, data: { id } })
+        await requestConsole({ type: SIDE_EVENT_RPC.NOTICE_CONSUMED, ...consumedRows(id) })
         setNotices((prev) => {
           const m = new Map(prev)
           m.delete(id)
           return m
         })
       } catch (e) {
-        console.error('Failed to dismiss notice:', (e as Error).message)
+        setActionError((e as Error).message)
       }
     },
     [],
@@ -524,13 +556,14 @@ export function useEndpointConsole() {
     testLoading,
     testMessage,
     testEndpoint,
+    actionError,
     // message sending
     msgContent: msgHistory.msgContent,
     setMsgContent: msgHistory.setMsgContent,
     sending: msgHistory.sending,
     // channel manager
     listLoading: channelMgr.listLoading,
-    listErr: channelMgr.listErr,
+    listNotice: channelMgr.listNotice,
     selection: channelMgr.selection,
     setSelection: channelMgr.setSelection,
     showChannelList: channelMgr.showChannelList,
@@ -551,6 +584,7 @@ export function useEndpointConsole() {
     // message history
     channelMessages: msgHistory.channelMessages,
     inboxMessagesLoading: msgHistory.inboxMessagesLoading,
+    inboxMessagesError: msgHistory.inboxMessagesError,
     inboxMessagesHasMore: msgHistory.inboxMessagesHasMore,
     inboxMessagesEnabled: msgHistory.inboxMessagesEnabled,
     loadInboxMessages: msgHistory.loadInboxMessages,
@@ -563,17 +597,27 @@ export function useEndpointConsole() {
     groupAction: groupAct.groupAction,
     // requests & notices
     requestList,
+    requestsLoading,
+    requestsError,
+    requestsAvailable,
     noticeList,
+    noticesLoading,
+    noticesError,
+    noticesAvailable,
+    inboxRequestsError,
+    inboxNoticesError,
     requestsTab,
     setRequestsTab,
     noticesTab,
     setNoticesTab,
     inboxRequests,
     inboxRequestsLoading,
+    inboxRequestsHasMore,
     inboxRequestsEnabled,
     loadInboxRequests,
     inboxNotices,
     inboxNoticesLoading,
+    inboxNoticesHasMore,
     inboxNoticesEnabled,
     loadInboxNotices,
     loadRequestsFromServer,

@@ -5,6 +5,7 @@ import { ConversationRow } from './ConversationRow'
 interface ConversationSectionProps {
   section: ConversationSectionType
   collapsed: boolean
+  suppressEmpty?: boolean
   onToggle: () => void
   selectionKey: string | null
   onSelectEntry: (entry: ConversationSectionType['entries'][number]) => void
@@ -13,6 +14,7 @@ interface ConversationSectionProps {
 export function ConversationSection({
   section,
   collapsed,
+  suppressEmpty = false,
   onToggle,
   selectionKey,
   onSelectEntry,
@@ -36,7 +38,7 @@ export function ConversationSection({
       {!collapsed && (
         <div className="im-section-panel">
           {count === 0 ? (
-            <p className="im-section-empty">{section.emptyHint ?? '暂无会话'}</p>
+            suppressEmpty ? null : <p className="im-section-empty">{section.emptyHint ?? '暂无会话'}</p>
           ) : (
             section.entries.map((entry) => {
               const key = `${entry.channelType}-${entry.id}`

@@ -3,22 +3,16 @@ import { Link, useSearchParams } from 'react-router-dom'
 import {
   Activity,
   AlertTriangle,
-  ArrowRight,
-  CheckCircle2,
-  Clock3,
-  FileCheck2,
   FolderKanban,
   RefreshCw,
   Search,
   Settings2,
-  ShieldCheck,
-  TimerReset,
   UserRoundCog,
   Workflow,
 } from 'lucide-react'
 import { cn } from '@zhin.js/client'
 import { CONSOLE_REST } from '../contracts/zhin-console'
-import { apiFetch } from '../utils/auth'
+import { apiFetch, getApiBase } from '../utils/auth'
 import { PageHeader } from '../components/PageHeader'
 import { PageShell } from '../components/PageShell'
 import { ErrorAlert } from '../components/error-alert'
@@ -30,116 +24,32 @@ import { Input } from '../components/ui/input'
 import { Skeleton } from '../components/ui/skeleton'
 import { isDemoMode } from '../utils/demo-mode'
 import { PlanningDisclosurePanel } from './workroom-planning'
+import { runTotals, retainRunDetail, validateRuns, validateDetail } from './workroom-runs-model.mjs'
 
 type RunStatus = 'active' | 'blocked' | 'needs_replan' | 'cancelling' | 'completed' | 'cancelled'
-type TaskStatus = 'ready' | 'blocked' | 'executing' | 'awaiting_acceptance' | 'cancelling' | 'accepted' | 'failed' | 'cancelled'
-type AssignmentStatus = 'leased' | 'running' | 'cancel_requested' | 'execution_completed' | 'lost' | 'cancelled'
-
-interface WorkroomBlocker {
-  id: string
-  kind: string
-  owner: string
-  reason: string
-  deadline: number
-  allowedActions: string[]
-}
-
-interface WorkroomTask {
-  key: string
-  title: string
-  status: TaskStatus
-  revision: number
-  attempt: number
-  maxAttempts: number
-  required: boolean
-  blockers: WorkroomBlocker[]
-  currentAssignmentId?: string
-  reportRef?: string
-  reportDigest?: string
-  candidateRef?: string
-  candidateHash?: string
-  completionReceiptDigest?: string
-  currentReviewerAssignmentId?: string
-  currentSponsorGateId?: string
-  acceptanceBlockReason?: string
-  terminalReason?: string
-}
-
-interface WorkroomAssignment {
-  id: string
-  taskKey: string
-  taskRevision: number
-  revision: number
-  attempt: number
-  fence: number
-  envelopeDigest: string
-  role: 'executor' | 'reviewer' | 'integration'
-  status: AssignmentStatus
-  owner: string
-  leaseExpiresAt: number
-  controlDeadline?: number
-  checkpointRef?: string
-  reportRef?: string
-  reportDigest?: string
-  candidateRef?: string
-  candidateHash?: string
-  completionReceiptDigest?: string
-  latestProgress?: { summary: string; completedUnits?: number; totalUnits?: number }
-  observationDigests: Record<string, string>
-  outcome?: 'interrupted' | 'committed' | 'outcome_unknown'
-}
-
-interface WorkroomAcceptanceWait {
-  id: string
-  taskKey: string
-  taskRevision: number
-  candidateHash: string
-  riskTier: 'low' | 'medium' | 'high' | 'critical'
-  route: 'reviewer_required' | 'sponsor_required' | 'reviewer_then_sponsor'
-  contractId: string
-  owner: string
-  deadline: number
-  allowedActions: string[]
-  status: string
-  evaluation: {
-    disposition: 'accepted' | 'rework' | 'policy_blocked'
-    route: string
-    decidedBy: string
-    reason?: string
-    riskAssessment: { tier: 'low' | 'medium' | 'high' | 'critical' }
-  }
-  reviewerPrincipalId?: string
-  sponsorPrincipalId?: string
-  authorizationRef?: string
-  verdict?: Record<string, unknown>
-  decisionReason?: string
-}
-
-interface WorkroomRun {
-  runId: string
+interface WorkroomRunSummary {
   projectId: string
-  title: string
+  runId: string
   status: RunStatus
   sequence: number
-  now: number
   cancelRequested: boolean
-  tasks: Record<string, WorkroomTask>
-  assignments: Record<string, WorkroomAssignment>
-  reviewerAssignments: Record<string, WorkroomAcceptanceWait>
-  sponsorGates: Record<string, WorkroomAcceptanceWait>
+  counts: { tasks: number; assignments: number; reviewerAssignments: number; sponsorGates: number }
 }
-
-interface RunsEnvelope {
-  projectId: string
-  runs: WorkroomRun[]
+interface WorkroomRun extends WorkroomRunSummary {
+  tasks: { ref: string; status: string; revision: number; attempt: number; required: boolean; blockerCount: number; hasCurrentAssignment: boolean }[]
+  assignments: { ref: string; taskRef: string; status: string; role: string; revision: number; attempt: number; fence: number; outcome?: string }[]
+  blockers: { taskRef: string; blockerRef: string; kind: string; deadline?: number; allowedActions: string[] }[]
 }
+interface RunsEnvelope { projectId: string; runs: WorkroomRunSummary[] }
 
-const RECENT_PROJECTS_KEY = 'zhin.console.workroom.projects'
+function recentProjectsKey(): string {
+  return `zhin.console.workroom.projects:${encodeURIComponent(getApiBase())}`
+}
 const ACTIVE_RUN_STATUSES = new Set<RunStatus>(['active', 'blocked', 'needs_replan', 'cancelling'])
 
 function readRecentProjects(): string[] {
   try {
-    const parsed = JSON.parse(localStorage.getItem(RECENT_PROJECTS_KEY) ?? '[]') as unknown
+    const parsed = JSON.parse(localStorage.getItem(recentProjectsKey()) ?? '[]') as unknown
     return Array.isArray(parsed)
       ? parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, 8)
       : []
@@ -151,7 +61,7 @@ function readRecentProjects(): string[] {
 function rememberProject(projectId: string): string[] {
   const next = [projectId, ...readRecentProjects().filter((item) => item !== projectId)].slice(0, 8)
   try {
-    localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(next))
+    localStorage.setItem(recentProjectsKey(), JSON.stringify(next))
   } catch {
     // URL remains the durable deep link when browser storage is unavailable.
   }
@@ -192,7 +102,7 @@ function WorkroomBoardPage() {
   const [projectInput, setProjectInput] = useState(projectFromUrl)
   const [projectId, setProjectId] = useState(projectFromUrl)
   const [recentProjects, setRecentProjects] = useState(readRecentProjects)
-  const [runs, setRuns] = useState<WorkroomRun[]>([])
+  const [runs, setRuns] = useState<WorkroomRunSummary[]>([])
   const [runsAvailable, setRunsAvailable] = useState(false)
   const [selectedRun, setSelectedRun] = useState<WorkroomRun | null>(null)
   const [loading, setLoading] = useState(false)
@@ -224,6 +134,7 @@ function WorkroomBoardPage() {
         { signal: controller.signal },
       )
       const data = await readStrictJson<RunsEnvelope>(response)
+      validateRuns(data)
       if (controller.signal.aborted) return
       setProjectId(data.projectId)
       setProjectInput(data.projectId)
@@ -232,7 +143,7 @@ function WorkroomBoardPage() {
       setRecentProjects(rememberProject(data.projectId))
       setSelectedRun((current) => {
         if (!current) return null
-        return data.runs.find((run) => run.runId === current.runId) ?? null
+        return retainRunDetail(current, data.runs)
       })
     } catch (caught) {
       if (!controller.signal.aborted) {
@@ -262,6 +173,7 @@ function WorkroomBoardPage() {
         { signal: controller.signal },
       )
       const detail = await readStrictJson<WorkroomRun>(response)
+      validateDetail(detail)
       if (!controller.signal.aborted) setSelectedRun(detail)
     } catch (caught) {
       if (!controller.signal.aborted) setError(caught instanceof Error ? caught.message : String(caught))
@@ -326,22 +238,13 @@ function WorkroomBoardPage() {
     return () => window.clearInterval(timer)
   }, [hasActiveRuns, loadRuns, projectId])
 
-  const totals = useMemo(() => {
-    const tasks = runs.flatMap((run) => Object.values(run.tasks))
-    const assignments = runs.flatMap((run) => Object.values(run.assignments))
-    return {
-      activeRuns: runs.filter((run) => ACTIVE_RUN_STATUSES.has(run.status)).length,
-      tasks: tasks.length,
-      blocked: tasks.filter((task) => task.status === 'blocked').length,
-      assignments: assignments.length,
-    }
-  }, [runs])
+  const totals = useMemo(() => runTotals(runs), [runs])
 
   return (
     <PageShell className="max-w-[1680px]">
       <PageHeader
         title="Workroom 任务看板"
-        description="按 Project 读取 Workroom Journal 投影，观察 Run、Task、Assignment 与阻塞事实；规划与披露初始化通过显式治理动作发布。"
+        description="查看项目运行、任务分配与阻塞情况；规划和权限初始化需要显式确认。"
         actions={
           <div className="flex items-center gap-2">
             <Button asChild variant="outline" size="sm"><Link to="/agent/workrooms/catalog"><Settings2 />配置 Workrooms</Link></Button>
@@ -363,7 +266,7 @@ function WorkroomBoardPage() {
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') selectProject(projectInput)
                 }}
-                placeholder="project-alpha"
+                placeholder="填写 Workroom 配置中的 Project ID"
                 aria-label="Workroom Project ID"
               />
               <Button disabled={loading || !projectInput.trim()} onClick={() => selectProject(projectInput)}>
@@ -398,10 +301,10 @@ function WorkroomBoardPage() {
 
       {projectId && runsAvailable ? (
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Workroom 摘要">
-          <Metric icon={Workflow} label="Runs" value={runs.length} detail={`${totals.activeRuns} 个仍在运行`} />
-          <Metric icon={FolderKanban} label="Tasks" value={totals.tasks} detail="Journal 中的任务事实" />
-          <Metric icon={AlertTriangle} label="Blocked" value={totals.blocked} detail="等待依赖、审批或输入" tone={totals.blocked ? 'warning' : 'success'} />
-          <Metric icon={UserRoundCog} label="Assignments" value={totals.assignments} detail="Executor / Reviewer / Integration" />
+          <Metric icon={Workflow} label="运行" value={runs.length} detail={`${totals.activeRuns} 个仍在运行`} />
+          <Metric icon={FolderKanban} label="任务" value={totals.tasks} detail="总任务数" />
+          <Metric icon={AlertTriangle} label="阻塞运行" value={totals.blocked} detail="打开运行记录查看原因" tone={totals.blocked ? 'warning' : 'success'} />
+          <Metric icon={UserRoundCog} label="执行分配" value={totals.assignments} detail="执行、审核与集成" />
         </section>
       ) : null}
 
@@ -414,7 +317,7 @@ function WorkroomBoardPage() {
         <div className="console-dashboard-panel flex min-h-[20rem] items-center justify-center p-6">
           <EmptyState
             title="无法读取 Workroom Run"
-            description="当前凭据未获得这个 Project 的治理投影读取权限。请升级并重启 Host、完成披露 authority 初始化后重试。"
+            description="无法读取此项目的运行记录。请检查连接与项目授权。"
           />
         </div>
       ) : projectId ? (
@@ -424,7 +327,7 @@ function WorkroomBoardPage() {
               <div>
                 <span className="console-eyebrow">{projectId}</span>
                 <h2 id="workroom-runs-title">Run 时间线</h2>
-                <p>选择一个 Run 查看任务、租约和交付证据。</p>
+                <p>选择一条运行，查看任务状态、执行分配与阻塞项。</p>
               </div>
               {hasActiveRuns ? <Badge variant="secondary"><Activity className="mr-1 h-3 w-3" />Live</Badge> : null}
             </div>
@@ -441,16 +344,14 @@ function WorkroomBoardPage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold">{run.title || '未命名 Run'}</p>
-                      <code className="mt-1 block truncate text-[10px] text-muted-foreground">{run.runId}</code>
+                      <p className="truncate text-sm font-semibold">{run.runId}</p>
                     </div>
                     <Badge variant={statusVariant(run.status)}>{run.status}</Badge>
                   </div>
                   <div className="mt-3 flex items-center gap-3 text-[11px] text-muted-foreground">
-                    <span>{Object.keys(run.tasks).length} tasks</span>
-                    <span>{Object.keys(run.assignments).length} assignments</span>
-                    <span>{Object.keys(run.reviewerAssignments ?? {}).length + Object.keys(run.sponsorGates ?? {}).length} waits</span>
-                    <span className="ml-auto">seq {run.sequence}</span>
+                    <span>{run.counts.tasks} tasks</span>
+                    <span>{run.counts.assignments} assignments</span>
+                    <span>{run.counts.reviewerAssignments + run.counts.sponsorGates} waits</span>
                   </div>
                 </button>
               ))}
@@ -479,8 +380,8 @@ function WorkroomBoardPage() {
       ) : (
         <div className="console-dashboard-panel flex min-h-[28rem] items-center justify-center p-6">
           <EmptyState
-            title="输入 Project ID 开始"
-            description="Workroom 是 Project-scoped 的事件流；Console 不猜测项目，也不从会话标识反推归属。"
+            title="选择要查看的 Workroom"
+            description="打开「配置 Workrooms」，在已配置项目上点击「查看任务」，或填写其 Project ID 查询。这里只展示你有权限访问的项目。"
           />
         </div>
       )}
@@ -493,11 +394,11 @@ function DemoWorkroomBoardPage() {
     <PageShell className="max-w-[1200px]">
       <PageHeader
         title="Workroom 任务看板"
-        description="Run Journal 包含 Project 交付、审批与执行租约事实，仅向已认证的 full principal 开放。"
+        description="查看项目任务、审批与执行记录。"
         actions={<Button asChild variant="outline" size="sm"><Link to="/agent/workrooms/catalog"><Settings2 />查看公开目录</Link></Button>}
       />
       <div className="console-dashboard-panel flex min-h-[28rem] items-center justify-center p-6">
-        <EmptyState title="任务投影仅限私有控制台" description="Demo 不请求 Run / Task / Assignment 详情；你仍可查看只读 Workroom Catalog，了解空间、Bot 与 Agent 的映射。" />
+        <EmptyState title="任务详情需要项目授权" description="演示模式不提供任务详情。可查看项目目录。" />
       </div>
     </PageShell>
   )
@@ -508,137 +409,23 @@ export default function WorkroomsPage() {
 }
 
 function RunDetail({ run }: { run: WorkroomRun }) {
-  const tasks = Object.values(run.tasks)
-  const assignments = Object.values(run.assignments)
-  const reviewerAssignments = Object.values(run.reviewerAssignments ?? {})
-  const sponsorGates = Object.values(run.sponsorGates ?? {})
-  return (
-    <div className="space-y-5 p-4 sm:p-5">
-      <header className="border-b pb-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <span className="console-eyebrow">Run detail</span>
-            <h2 id="workroom-detail-title" className="mt-1 text-xl font-semibold">{run.title || '未命名 Run'}</h2>
-            <code className="mt-1 block break-all text-[11px] text-muted-foreground">{run.runId}</code>
-          </div>
-          <Badge variant={statusVariant(run.status)}>{run.status}</Badge>
-        </div>
-        <div className="mt-4 grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
-          <span><Clock3 className="mr-1 inline h-3.5 w-3.5" />逻辑时钟 {formatTime(run.now)}</span>
-          <span>Sequence {run.sequence}</span>
-          <span>{run.cancelRequested ? '已请求取消' : '未请求取消'}</span>
-        </div>
-      </header>
-
-      <section aria-labelledby="workroom-tasks-title">
-        <div className="mb-2 flex items-center justify-between">
-          <h3 id="workroom-tasks-title" className="text-sm font-semibold">Tasks</h3>
-          <Badge variant="outline">{tasks.length}</Badge>
-        </div>
-        <div className="space-y-2">
-          {tasks.map((task) => (
-            <article key={task.key} className="rounded-lg border p-3">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{task.title}</p>
-                  <code className="text-[10px] text-muted-foreground">{task.key} · rev {task.revision}</code>
-                </div>
-                <Badge variant={statusVariant(task.status)}>{task.status}</Badge>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-                <span>attempt {task.attempt}/{task.maxAttempts}</span>
-                <span>{task.required ? 'required' : 'optional'}</span>
-                {task.currentAssignmentId ? <span>assignment {task.currentAssignmentId}</span> : null}
-              </div>
-              {task.blockers.length ? (
-                <div className="mt-3 space-y-1.5">
-                  {task.blockers.map((blocker) => (
-                    <div key={blocker.id} className="rounded-md border border-amber-500/25 bg-amber-500/[0.06] px-2.5 py-2 text-xs">
-                      <div className="flex flex-wrap items-center gap-2"><AlertTriangle className="h-3.5 w-3.5 text-amber-600" /><strong>{blocker.kind}</strong><span className="text-muted-foreground">owner {blocker.owner}</span></div>
-                      <p className="mt-1 text-muted-foreground">{blocker.reason}</p>
-                      <p className="mt-1 text-[10px] text-muted-foreground">deadline {formatTime(blocker.deadline)}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-              {task.reportRef ? <EvidenceRef icon={FileCheck2} label="Report" value={task.reportRef} /> : null}
-              {task.candidateRef ? <EvidenceRef icon={ShieldCheck} label="Candidate" value={task.candidateRef} /> : null}
-              {task.acceptanceBlockReason ? <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">Acceptance: {task.acceptanceBlockReason}</p> : null}
-              {task.terminalReason ? <p className="mt-2 text-xs text-destructive">{task.terminalReason}</p> : null}
-            </article>
-          ))}
-          {tasks.length === 0 ? <EmptyState compact title="尚未规划 Task" /> : null}
-        </div>
-      </section>
-
-      <section aria-labelledby="workroom-assignments-title">
-        <div className="mb-2 flex items-center justify-between">
-          <h3 id="workroom-assignments-title" className="text-sm font-semibold">Assignments</h3>
-          <Badge variant="outline">{assignments.length}</Badge>
-        </div>
-        <div className="grid gap-2 lg:grid-cols-2">
-          {assignments.map((assignment) => (
-            <article key={assignment.id} className="rounded-lg border p-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{assignment.owner}</p>
-                  <p className="text-[11px] text-muted-foreground">{assignment.role} · {assignment.taskKey}</p>
-                </div>
-                <Badge variant={statusVariant(assignment.status)}>{assignment.status}</Badge>
-              </div>
-              <div className="mt-3 space-y-1 text-[11px] text-muted-foreground">
-                <p><TimerReset className="mr-1 inline h-3.5 w-3.5" />lease {formatTime(assignment.leaseExpiresAt)}</p>
-                <p>task rev {assignment.taskRevision} · attempt {assignment.attempt}</p>
-                {assignment.outcome ? <p>outcome {assignment.outcome}</p> : null}
-                <p>assignment rev {assignment.revision} · fence {assignment.fence}</p>
-              </div>
-              {assignment.latestProgress ? (
-                <div className="mt-2 rounded-md bg-muted/35 px-2.5 py-2 text-xs">
-                  <p>{assignment.latestProgress.summary}</p>
-                  {assignment.latestProgress.totalUnits ? <p className="mt-1 text-[10px] text-muted-foreground">{assignment.latestProgress.completedUnits ?? 0} / {assignment.latestProgress.totalUnits}</p> : null}
-                </div>
-              ) : null}
-              {assignment.checkpointRef ? <EvidenceRef icon={ShieldCheck} label="Checkpoint" value={assignment.checkpointRef} /> : null}
-              {assignment.reportRef ? <EvidenceRef icon={CheckCircle2} label="Report" value={assignment.reportRef} /> : null}
-            </article>
-          ))}
-          {assignments.length === 0 ? <EmptyState compact title="尚无 Assignment" /> : null}
-        </div>
-      </section>
-
-      <section aria-labelledby="workroom-acceptance-title">
-        <div className="mb-2 flex items-center justify-between">
-          <h3 id="workroom-acceptance-title" className="text-sm font-semibold">Acceptance waits</h3>
-          <Badge variant="outline">{reviewerAssignments.length + sponsorGates.length}</Badge>
-        </div>
-        <div className="grid gap-2 lg:grid-cols-2">
-          {reviewerAssignments.map((wait) => <AcceptanceWait key={wait.id} kind="Reviewer" wait={wait} />)}
-          {sponsorGates.map((wait) => <AcceptanceWait key={wait.id} kind="Sponsor" wait={wait} />)}
-          {!reviewerAssignments.length && !sponsorGates.length ? <EmptyState compact title="当前没有 Reviewer / Sponsor 等待项" /> : null}
-        </div>
-      </section>
-    </div>
-  )
-}
-
-function AcceptanceWait(props: { kind: 'Reviewer' | 'Sponsor'; wait: WorkroomAcceptanceWait }) {
-  const { wait } = props
-  return (
-    <article className="rounded-lg border p-3">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0"><p className="text-sm font-medium">{props.kind} · {wait.taskKey}</p><code className="text-[10px] text-muted-foreground">{wait.id}</code></div>
-        <Badge variant={statusVariant(wait.status)}>{wait.status}</Badge>
-      </div>
-      <div className="mt-3 grid gap-1 text-[11px] text-muted-foreground sm:grid-cols-2">
-        <span>risk {wait.riskTier}</span><span>route {wait.route}</span>
-        <span>owner {wait.owner}</span><span>deadline {formatTime(wait.deadline)}</span>
-        <span>decision {wait.evaluation.disposition}</span><span>by {wait.evaluation.decidedBy}</span>
-      </div>
-      {(wait.decisionReason || wait.evaluation.reason) ? <p className="mt-2 text-xs">{wait.decisionReason ?? wait.evaluation.reason}</p> : null}
-      {wait.allowedActions.length ? <div className="mt-2 flex flex-wrap gap-1">{wait.allowedActions.map((action) => <Badge key={action} variant="outline">{action}</Badge>)}</div> : null}
-      {wait.verdict ? <pre className="mt-2 max-h-32 overflow-auto rounded-md bg-muted/35 p-2 text-[10px]">{JSON.stringify(wait.verdict, null, 2)}</pre> : null}
-    </article>
-  )
+  return <div className="space-y-5 p-4 sm:p-5">
+    <header><h2 id="workroom-detail-title" className="text-lg font-semibold">运行详情</h2><Badge variant={statusVariant(run.status)}>{run.status}</Badge><p className="text-sm text-muted-foreground">{run.cancelRequested ? '已请求取消' : '未请求取消'}</p></header>
+    <p className="text-sm text-muted-foreground">当前账号仅可查看任务状态，无法查看任务内容与证据。</p>
+    <details className="rounded-lg border p-3 text-sm"><summary className="cursor-pointer font-medium">运行标识与版本</summary><p className="mt-2 break-all">Run ID：<code>{run.runId}</code> · Sequence {run.sequence}</p></details>
+    <section><h3 className="text-sm font-semibold">任务 · {run.counts.tasks}</h3>{run.tasks.map((task,index) => <article key={task.ref} className="my-2 rounded-lg border p-3">
+      <div className="flex items-center justify-between gap-2"><strong className="text-sm">任务 {index + 1}</strong><Badge variant={statusVariant(task.status)}>{task.status}</Badge></div>
+      <p className="mt-2 text-sm text-muted-foreground">{task.required ? '必需' : '可选'} · {task.blockerCount} 个阻塞项 · {task.hasCurrentAssignment ? '已有执行分配' : '未分配执行'}</p>
+      <details className="mt-2 text-sm"><summary className="cursor-pointer">任务技术标识</summary><p className="mt-2 break-all"><code>{task.ref}</code> · revision {task.revision} · attempt {task.attempt}</p></details>
+    </article>)}{!run.tasks.length && <EmptyState compact title="尚无任务" />}</section>
+    <section><h3 className="text-sm font-semibold">执行分配 · {run.counts.assignments}</h3>{run.assignments.map((item,index) => <article key={item.ref} className="my-2 rounded-lg border p-3">
+      <div className="flex items-center justify-between gap-2"><strong className="text-sm">执行分配 {index + 1} · {item.role}</strong><Badge variant={statusVariant(item.status)}>{item.status}</Badge></div>
+      {item.outcome ? <p className="mt-2 text-sm">{item.outcome}</p> : null}
+      <details className="mt-2 text-sm"><summary className="cursor-pointer">执行分配技术标识</summary><p className="mt-2 break-all"><code>{item.ref}</code> · task <code>{item.taskRef}</code> · revision {item.revision} · attempt {item.attempt} · fence {item.fence}</p></details>
+    </article>)}{!run.assignments.length && <EmptyState compact title="尚无执行分配" />}</section>
+    <section><h3 className="text-sm font-semibold">阻塞项</h3>{run.blockers.map(item => <article key={item.blockerRef} className="my-2 rounded-lg border p-3"><strong className="text-sm">{item.kind}</strong><p className="text-sm">截止时间 {formatTime(item.deadline)}</p><p className="text-sm text-muted-foreground">允许动作：{item.allowedActions.join(' / ') || '无'}</p><details className="mt-2 text-sm"><summary className="cursor-pointer">阻塞项技术标识</summary><p className="mt-2 break-all">Task：<code>{item.taskRef}</code> · Blocker：<code>{item.blockerRef}</code></p></details></article>)}{!run.blockers.length && <EmptyState compact title="当前没有阻塞项" />}</section>
+    <p className="text-sm text-muted-foreground">Reviewer 等待：{run.counts.reviewerAssignments} · Sponsor 等待：{run.counts.sponsorGates}（此接口仅提供计数）</p>
+  </div>
 }
 
 function Metric(props: {
@@ -657,17 +444,5 @@ function Metric(props: {
         <p className="mt-1 text-xs text-muted-foreground">{props.detail}</p>
       </CardContent>
     </Card>
-  )
-}
-
-function EvidenceRef(props: { icon: typeof FileCheck2; label: string; value: string }) {
-  const Icon = props.icon
-  return (
-    <div className="mt-2 flex min-w-0 items-center gap-1.5 rounded-md bg-muted/35 px-2 py-1.5 text-[11px] text-muted-foreground">
-      <Icon className="h-3.5 w-3.5 shrink-0" />
-      <span>{props.label}</span>
-      <code className="min-w-0 flex-1 truncate text-foreground" title={props.value}>{props.value}</code>
-      <ArrowRight className="h-3.5 w-3.5 shrink-0" />
-    </div>
   )
 }
