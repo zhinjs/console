@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useConfigSource } from '../hooks/useConfigSource'
 import { PluginConfigForm } from '../components/PluginConfigForm'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import {
   Settings, AlertCircle, Save, Loader2, X,
-  RefreshCw, FileCode, FormInput
+  RefreshCw, FileCode
 } from 'lucide-react'
 import { Card, CardContent } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
@@ -16,11 +16,13 @@ import { Textarea } from '../components/ui/textarea'
 import { Input } from '../components/ui/input'
 import { Skeleton } from '../components/ui/skeleton'
 import { Separator } from '../components/ui/separator'
-import { ErrorAlert } from '../components/error-alert'
 import { useToast } from '../components/toast'
 import { Switch } from '../components/ui/switch'
 import { PageHeader } from '../components/PageHeader'
+import { readErrorSummary } from '../utils/read-error.mjs'
 import { isDemoMode } from '../utils/demo-mode'
+import { validateConfigSource } from './config-source-validation.mjs'
+import { generalConfigKeys, resolveConfigSection } from './config-navigation.mjs'
 
 function GeneralConfigForm({
   config,
@@ -33,23 +35,20 @@ function GeneralConfigForm({
   onSave: (patch: Record<string, any>) => Promise<void>
   saving: boolean
 }) {
-  const generalKeys = useMemo(() => {
-    const excludeSet = new Set(pluginKeys)
-    excludeSet.add('plugins')
-    return Object.keys(config).filter(k => !excludeSet.has(k))
-  }, [config, pluginKeys])
+  const generalKeys = useMemo(() => generalConfigKeys(config, pluginKeys), [config, pluginKeys])
 
   const [localValues, setLocalValues] = useState<Record<string, any>>({})
   const [dirty, setDirty] = useState(false)
 
   useEffect(() => {
+    if (dirty) return
     const vals: Record<string, any> = {}
     for (const key of generalKeys) {
       vals[key] = config[key]
     }
     setLocalValues(vals)
     setDirty(false)
-  }, [config, generalKeys])
+  }, [config, generalKeys, dirty])
 
   const handleChange = (key: string, value: any) => {
     setLocalValues(prev => ({ ...prev, [key]: value }))
@@ -57,8 +56,12 @@ function GeneralConfigForm({
   }
 
   const handleSave = async () => {
-    await onSave(localValues)
-    setDirty(false)
+    try {
+      await onSave(localValues)
+      setDirty(false)
+    } catch {
+      // Parent shows the save error; retain this form draft for retry.
+    }
   }
 
   const handleReset = () => {
@@ -260,18 +263,18 @@ function ConfigFieldEditor({
 function EditableConfigPage() {
   const [searchParams] = useSearchParams()
   const pluginFromUrl = searchParams.get('plugin')?.trim() ?? ''
-  const { source, format, configKeys: pluginKeys, loading, error, load, save } = useConfigSource()
-  const [activeSection, setActiveSection] = useState<string>('general')
-  const [mode, setMode] = useState<'form' | 'yaml'>('form')
+  const { source, format, configKeys: pluginKeys, loading, loaded, error, errorOperation, clearSaveError, load, save } = useConfigSource()
+  const [activeSection, setActiveSection] = useState<string>(() => pluginFromUrl ? `plugin:${pluginFromUrl}` : 'general')
   const [sourceText, setSourceText] = useState('')
   const [sourceDirty, setSourceDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const { success, error: toastError } = useToast()
 
   useEffect(() => {
+    if (sourceDirty) return
     setSourceText(source)
     setSourceDirty(false)
-  }, [source])
+  }, [source, sourceDirty])
 
   const parsedConfig = useMemo(() => {
     try {
@@ -281,14 +284,20 @@ function EditableConfigPage() {
     }
   }, [source, format])
 
+  const hasGeneral = generalConfigKeys(parsedConfig, pluginKeys).length > 0
+  const visibleSection = resolveConfigSection(activeSection, pluginKeys, hasGeneral)
+
+  const sourceIssue = useMemo(() => validateConfigSource(sourceText, format), [sourceText, format])
+
   const handleYamlSave = async () => {
+    if (saving || !sourceDirty || sourceIssue) return
     setSaving(true)
     try {
       await save(sourceText)
       setSourceDirty(false)
       success('配置已保存，需重启生效')
     } catch (err) {
-      toastError(`保存失败: ${err instanceof Error ? err.message : '未知错误'}`)
+      toastError('配置保存失败，草稿已保留。请查看页面中的技术详情。')
     } finally {
       setSaving(false)
     }
@@ -305,7 +314,8 @@ function EditableConfigPage() {
       await save(nextSource)
       success('配置已保存，需重启生效')
     } catch (err) {
-      toastError(`保存失败: ${err instanceof Error ? err.message : '未知错误'}`)
+      toastError('配置保存失败，草稿已保留。请查看页面中的技术详情。')
+      throw err
     } finally {
       setSaving(false)
     }
@@ -320,12 +330,12 @@ function EditableConfigPage() {
     }
   }
 
+  const previousPluginUrl = useRef(pluginFromUrl)
   useEffect(() => {
-    if (!pluginFromUrl || loading) return
-    if (pluginKeys.includes(pluginFromUrl)) {
-      setActiveSection(`plugin:${pluginFromUrl}`)
-    }
-  }, [pluginFromUrl, pluginKeys, loading])
+    if (previousPluginUrl.current === pluginFromUrl) return
+    previousPluginUrl.current = pluginFromUrl
+    setActiveSection(pluginFromUrl ? `plugin:${pluginFromUrl}` : 'general')
+  }, [pluginFromUrl])
 
   if (loading && !source) {
     return (
@@ -342,7 +352,7 @@ function EditableConfigPage() {
     <div className="space-y-4">
       <PageHeader
         title="配置"
-        description="编辑 Host 通用项与各插件配置；插件项保存后可热重载，原始配置全量保存需重启"
+        description="按配置项编辑，或修改完整源码。"
         actions={
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
@@ -352,12 +362,19 @@ function EditableConfigPage() {
       />
 
       {error && (
-        <ErrorAlert error={error} onRetry={load} />
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="space-y-2">
+            <p>{errorOperation === 'save' ? '配置保存失败，当前草稿已保留。请检查内容后重新保存，或撤销本次修改。' : readErrorSummary(error, '配置')}</p>
+            <details><summary className="cursor-pointer">技术详情</summary><pre className="mt-2 whitespace-pre-wrap break-words text-xs">{error}</pre></details>
+            {errorOperation === 'read' ? <Button variant="outline" size="sm" onClick={() => void load().catch(() => {})}>重试读取</Button> : null}
+          </AlertDescription>
+        </Alert>
       )}
 
-      <Tabs value={activeSection} onValueChange={setActiveSection}>
+      {loaded ? <Tabs value={visibleSection} onValueChange={setActiveSection}>
         <TabsList className="flex flex-wrap h-auto gap-1">
-          <TabsTrigger value="general">通用配置</TabsTrigger>
+          {hasGeneral ? <TabsTrigger value="general">其他配置</TabsTrigger> : null}
           {pluginKeys.map((key) => (
             <TabsTrigger key={key} value={`plugin:${key}`}>
               {key}
@@ -369,34 +386,22 @@ function EditableConfigPage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="general" className="mt-4">
-          <Tabs value={mode} onValueChange={v => setMode(v as 'form' | 'yaml')}>
-            <TabsList>
-              <TabsTrigger value="form" className="gap-1.5">
-                <FormInput className="w-4 h-4" />
-                表单
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="form" className="mt-4">
-              <GeneralConfigForm
-                config={parsedConfig}
-                pluginKeys={pluginKeys}
-                onSave={handleFormSave}
-                saving={saving}
-              />
-            </TabsContent>
-          </Tabs>
-        </TabsContent>
+        {hasGeneral ? <TabsContent value="general" className="mt-4">
+          <GeneralConfigForm config={parsedConfig} pluginKeys={pluginKeys} onSave={handleFormSave} saving={saving} />
+        </TabsContent> : null}
 
         {pluginKeys.map((key) => (
           <TabsContent key={key} value={`plugin:${key}`} className="mt-4">
-            <PluginConfigForm pluginName={key} onSuccess={() => void load()} />
+            <PluginConfigForm pluginName={key} onSuccess={() => void load()} onOpenYaml={() => setActiveSection('yaml')} />
           </TabsContent>
         ))}
 
         <TabsContent value="yaml" className="mt-4 space-y-3">
           <div className="relative">
             <Textarea
+              aria-label={`${format.toUpperCase()} 配置源码`}
+              aria-invalid={sourceDirty && Boolean(sourceIssue)}
+              aria-describedby={sourceDirty && sourceIssue ? 'config-source-error' : undefined}
               value={sourceText}
               onChange={e => { setSourceText(e.target.value); setSourceDirty(true) }}
               className="font-mono text-sm min-h-[400px] resize-y"
@@ -404,21 +409,22 @@ function EditableConfigPage() {
               spellCheck={false}
             />
           </div>
+          {sourceDirty && sourceIssue ? <p id="config-source-error" role="alert" className="text-sm text-destructive">{sourceIssue}</p> : null}
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={handleYamlSave} disabled={saving || !sourceDirty}>
+            <Button size="sm" onClick={handleYamlSave} disabled={saving || !sourceDirty || Boolean(sourceIssue)}>
               {saving
                 ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />保存中...</>
                 : <><Save className="w-4 h-4 mr-1" />保存</>}
             </Button>
             {sourceDirty && (
-              <Button variant="outline" size="sm" onClick={() => { setSourceText(source); setSourceDirty(false) }}>
+              <Button variant="outline" size="sm" disabled={saving} onClick={() => { setSourceText(source); setSourceDirty(false); clearSaveError() }}>
                 <X className="w-4 h-4 mr-1" />撤销
               </Button>
             )}
             {sourceDirty && <span className="text-xs text-muted-foreground">有未保存的更改（全量保存需重启生效）</span>}
           </div>
         </TabsContent>
-      </Tabs>
+      </Tabs> : null}
     </div>
   )
 }

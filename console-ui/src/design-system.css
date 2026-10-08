@@ -3,37 +3,77 @@
  * 间距 / 圆角 / 边框 / 阴影 / 表面组件类
  */
 
+@import "./theme-tokens.css";
+
 @layer base {
   :root {
+    --console-font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    --console-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --console-text-label: 0.75rem;
+    --console-text-caption: var(--console-text-label);
+    --console-text-code: 0.75rem;
+    --console-text-body-sm: 0.8125rem;
+    --console-text-title-compact: 1.25rem;
+    --console-text-section-sm: 0.9375rem;
+    --console-line-code: 1.25rem;
+    --console-leading-title: 1.25;
+    --console-leading-section: 1.4;
+    --console-leading-body: 1.6;
+    --console-leading-label: 1.45;
+    --console-leading-code: 1.6;
+    --console-border-width: 1px;
+    --console-focus-width: 2px;
+    --console-text-body: 0.8125rem;
+    --console-text-section: 1rem;
+    --console-text-title: 1.375rem;
+    --console-control-height: 2.75rem;
+    --console-control-height-sm: 2.75rem;
+    --console-surface-raised: hsl(var(--foreground) / 0.035);
+    --console-surface-muted: hsl(var(--foreground) / 0.055);
+    --console-surface-inset: hsl(var(--foreground) / 0.025);
+    --console-control-radius: var(--console-radius-md);
     --console-space-page-x: 1.5rem;
     --console-space-page-y: 1.25rem;
-    --console-space-section: 1rem;
+    --console-space-section: 1.25rem;
     --console-space-stack: 0.75rem;
     --console-space-card: 1.25rem;
     --console-space-card-sm: 1rem;
-    --console-radius-sm: calc(var(--radius) - 4px);
-    --console-radius-md: var(--radius);
-    --console-radius-lg: calc(var(--radius) + 4px);
-    --console-radius-xl: calc(var(--radius) + 8px);
+    --console-radius-sm: 0.375rem;
+    --console-radius-md: 0.5rem;
+    --console-radius-lg: 0.75rem;
+    --console-radius-xl: 1rem;
     --console-border-subtle: hsl(var(--border) / 0.5);
     --console-border-default: hsl(var(--border) / 0.82);
     --console-border-strong: hsl(var(--border));
-    --console-shadow-xs: 0 1px 2px hsl(240 6% 10% / 0.05);
-    --console-shadow-sm: 0 1px 2px hsl(240 6% 10% / 0.06), 0 2px 8px hsl(240 6% 10% / 0.05);
-    --console-shadow-md: 0 4px 12px -2px hsl(240 6% 10% / 0.08), 0 2px 4px -2px hsl(240 6% 10% / 0.04);
-    --console-shadow-lg: 0 12px 28px -6px hsl(240 6% 10% / 0.1), 0 4px 10px -4px hsl(240 6% 10% / 0.05);
-    --console-shadow-hover: 0 8px 24px -4px hsl(240 6% 10% / 0.12), 0 4px 8px -4px hsl(240 6% 10% / 0.06);
+
+    --console-shadow-color: 0 0% 0%;
+    --console-shadow-opacity: 0.055;
+    --console-shadow-contact-opacity: 0.07;
+    --console-shadow-ambient-opacity: 0.035;
+    --console-highlight-opacity: 0.52;
+    --console-shadow-blur-sm: 6px;
+    --console-shadow-blur-md: 12px;
+    --console-shadow-blur-lg: 20px;
+    --console-shadow-xs: 0 1px 2px -1px hsl(var(--console-shadow-color) / var(--console-shadow-contact-opacity)), 0 3px var(--console-shadow-blur-sm) -3px hsl(var(--console-shadow-color) / var(--console-shadow-opacity)), 0 6px var(--console-shadow-blur-md) -7px hsl(var(--console-shadow-color) / var(--console-shadow-ambient-opacity));
+    --console-shadow-sm: 0 1px 3px -1px hsl(var(--console-shadow-color) / var(--console-shadow-contact-opacity)), 0 4px var(--console-shadow-blur-md) -5px hsl(var(--console-shadow-color) / var(--console-shadow-opacity)), 0 8px var(--console-shadow-blur-lg) -10px hsl(var(--console-shadow-color) / var(--console-shadow-ambient-opacity));
+    --console-shadow-md: 0 2px 4px -2px hsl(var(--console-shadow-color) / var(--console-shadow-contact-opacity)), 0 6px var(--console-shadow-blur-md) -6px hsl(var(--console-shadow-color) / var(--console-shadow-opacity)), 0 12px var(--console-shadow-blur-lg) -12px hsl(var(--console-shadow-color) / var(--console-shadow-ambient-opacity));
+    --console-shadow-lg: 0 2px 5px -2px hsl(var(--console-shadow-color) / var(--console-shadow-contact-opacity)), 0 8px var(--console-shadow-blur-md) -7px hsl(var(--console-shadow-color) / var(--console-shadow-opacity)), 0 16px var(--console-shadow-blur-lg) -14px hsl(var(--console-shadow-color) / var(--console-shadow-ambient-opacity));
+    --console-shadow-hover: var(--console-shadow-md);
+    --console-shadow-button: inset 0 1px 0 hsl(0 0% 100% / var(--console-highlight-opacity)), var(--console-shadow-xs);
   }
 
   .dark {
-    --console-shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.3);
-    --console-shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.34), 0 2px 8px hsl(0 0% 0% / 0.28);
-    --console-shadow-md: 0 4px 12px -2px hsl(0 0% 0% / 0.38), 0 2px 4px -2px hsl(0 0% 0% / 0.3);
-    --console-shadow-lg: 0 12px 28px -6px hsl(0 0% 0% / 0.44), 0 4px 10px -4px hsl(0 0% 0% / 0.34);
-    --console-shadow-hover: 0 8px 24px -4px hsl(0 0% 0% / 0.48), 0 4px 8px -4px hsl(0 0% 0% / 0.36);
+    --console-surface-raised: hsl(var(--foreground) / 0.065);
+    --console-surface-muted: hsl(var(--foreground) / 0.09);
+    --console-surface-inset: hsl(var(--foreground) / 0.04);
+
     --console-border-subtle: hsl(var(--border) / 0.55);
     --console-border-default: hsl(var(--border) / 0.85);
     --console-border-strong: hsl(var(--border) / 0.98);
+    --console-shadow-opacity: 0.24;
+    --console-shadow-contact-opacity: 0.32;
+    --console-shadow-ambient-opacity: 0.15;
+    --console-highlight-opacity: 0.075;
   }
 
   @media (max-width: 767px) {
@@ -45,6 +85,22 @@
     }
   }
 
+  @media (min-width: 768px) {
+    :root {
+      --console-text-label: 0.8125rem; --console-text-code: 0.8125rem;
+      --console-text-body: 0.875rem; --console-text-title: 1.5rem; --console-text-title-compact: 1.5rem;
+      --console-control-height: 2.25rem; --console-control-height-sm: 2.25rem;
+      --console-radius-sm: 0.5rem; --console-radius-md: 0.625rem;
+      --console-radius-lg: 0.875rem; --console-radius-xl: 1.125rem;
+      --console-shadow-blur-sm: 8px; --console-shadow-blur-md: 16px; --console-shadow-blur-lg: 28px;
+    }
+  }
+  @media (min-width: 1200px) {
+    :root {
+      --console-text-title: 1.75rem; --console-control-height-sm: 2rem;
+      --console-shadow-blur-sm: 10px; --console-shadow-blur-md: 20px; --console-shadow-blur-lg: 36px;
+    }
+  }
   @media (min-width: 768px) and (max-width: 1199px) {
     :root {
       --console-space-page-x: 1.125rem;
@@ -68,14 +124,12 @@
     height: 2.35rem;
     align-items: center;
     gap: 0.625rem;
-    border: 1px solid hsl(var(--border) / 0.62);
-    border-radius: 0.75rem 0.75rem 0.75rem 0.35rem;
+    border: var(--console-border-width) solid hsl(var(--border) / 0.62);
+    border-radius: var(--console-control-radius);
     padding: 0 0.55rem 0 0.75rem;
-    background:
-      linear-gradient(110deg, hsl(var(--muted) / 0.5), hsl(var(--background) / 0.78)),
-      hsl(var(--background));
+    background: hsl(var(--card) / 0.8);
     color: hsl(var(--muted-foreground));
-    font-size: 0.78rem;
+    font-size: var(--console-text-body);
     text-align: left;
     box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.38);
     transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
@@ -93,7 +147,7 @@
   }
 
   .console-command-trigger:focus-visible {
-    outline: 2px solid hsl(var(--ring));
+    outline: var(--console-focus-width) solid hsl(var(--ring));
     outline-offset: 2px;
   }
 
@@ -114,14 +168,14 @@
     min-width: 1.5rem;
     height: 1.4rem;
     place-items: center;
-    border: 1px solid hsl(var(--border) / 0.72);
+    border: var(--console-border-width) solid hsl(var(--border) / 0.72);
     border-bottom-color: hsl(var(--border));
-    border-radius: 0.35rem;
+    border-radius: var(--console-radius-sm);
     padding: 0 0.35rem;
     background: hsl(var(--background) / 0.86);
     color: hsl(var(--muted-foreground));
     font-family: var(--font-mono, ui-monospace, monospace);
-    font-size: 0.66rem;
+    font-size: var(--console-text-label);
     line-height: 1;
     box-shadow: 0 1px 0 hsl(var(--border) / 0.65);
   }
@@ -131,13 +185,9 @@
     max-width: 46rem;
     max-height: min(44rem, calc(100dvh - 2rem));
     border-color: hsl(var(--primary) / 0.2);
-    border-radius: 1.35rem 1.35rem 1.35rem 0.55rem;
-    background:
-      radial-gradient(circle at 86% -12%, hsl(var(--primary) / 0.12), transparent 18rem),
-      hsl(var(--background) / 0.98);
-    box-shadow:
-      inset 0 1px 0 hsl(0 0% 100% / 0.42),
-      0 32px 90px -28px hsl(154 45% 8% / 0.58);
+    border-radius: var(--console-radius-xl);
+    background: hsl(var(--popover) / 0.98);
+    box-shadow: var(--console-shadow-lg);
   }
 
   .console-command-search {
@@ -167,7 +217,7 @@
     outline: 0;
     background: transparent;
     color: hsl(var(--foreground));
-    font-size: 1rem;
+    font-size: var(--console-text-section);
     letter-spacing: -0.012em;
   }
 
@@ -177,12 +227,12 @@
 
   .console-command-count {
     min-width: 1.75rem;
-    border-radius: 0.4rem;
+    border-radius: var(--console-radius-sm);
     padding: 0.25rem 0.42rem;
     background: hsl(var(--primary) / 0.1);
     color: hsl(var(--primary));
     font-family: var(--font-mono, ui-monospace, monospace);
-    font-size: 0.7rem;
+    font-size: var(--console-text-label);
     text-align: center;
   }
 
@@ -206,7 +256,7 @@
     padding: 0.75rem 0.65rem 0.42rem;
     background: linear-gradient(hsl(var(--background) / 0.98) 72%, transparent);
     color: hsl(var(--muted-foreground) / 0.78);
-    font-size: 0.67rem;
+    font-size: var(--console-text-label);
     font-weight: 650;
     letter-spacing: 0.075em;
   }
@@ -217,8 +267,8 @@
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 0.78rem;
-    border: 1px solid transparent;
-    border-radius: 0.85rem 0.85rem 0.85rem 0.35rem;
+    border: var(--console-border-width) solid transparent;
+    border-radius: var(--console-radius-md);
     padding: 0.68rem 0.7rem;
     color: hsl(var(--foreground));
     transition: background-color 120ms ease, border-color 120ms ease, transform 120ms ease;
@@ -235,7 +285,7 @@
     width: 2rem;
     height: 2rem;
     place-items: center;
-    border-radius: 0.62rem 0.62rem 0.62rem 0.25rem;
+    border-radius: var(--console-radius-md);
     background: hsl(var(--muted) / 0.72);
     color: hsl(var(--muted-foreground));
   }
@@ -264,20 +314,20 @@
   }
 
   .console-command-title {
-    font-size: 0.84rem;
+    font-size: var(--console-text-body);
     font-weight: 620;
   }
 
   .console-command-title small {
     display: inline-flex;
     margin-left: 0.45rem;
-    border: 1px solid hsl(var(--primary) / 0.18);
-    border-radius: 0.35rem;
+    border: var(--console-border-width) solid hsl(var(--primary) / 0.18);
+    border-radius: var(--console-radius-sm);
     padding: 0.08rem 0.3rem;
     background: hsl(var(--primary) / 0.08);
     color: hsl(var(--primary));
     font-family: var(--font-mono, ui-monospace, monospace);
-    font-size: 0.55rem;
+    font-size: var(--console-text-label);
     font-weight: 650;
     letter-spacing: 0.04em;
     vertical-align: 0.08rem;
@@ -286,7 +336,7 @@
   .console-command-description {
     margin-top: 0.16rem;
     color: hsl(var(--muted-foreground));
-    font-size: 0.71rem;
+    font-size: var(--console-text-label);
   }
 
   .console-command-current {
@@ -294,7 +344,7 @@
     align-items: center;
     gap: 0.25rem;
     color: hsl(var(--primary));
-    font-size: 0.67rem;
+    font-size: var(--console-text-label);
     font-weight: 600;
   }
 
@@ -323,11 +373,11 @@
 
   .console-command-empty strong {
     color: hsl(var(--foreground));
-    font-size: 0.9rem;
+    font-size: var(--console-text-body);
   }
 
   .console-command-empty span {
-    font-size: 0.75rem;
+    font-size: var(--console-text-body);
   }
 
   .console-command-footer {
@@ -339,7 +389,7 @@
     padding: 0 1rem;
     background: hsl(var(--muted) / 0.32);
     color: hsl(var(--muted-foreground));
-    font-size: 0.67rem;
+    font-size: var(--console-text-label);
   }
 
   .console-command-footer > span {
@@ -352,7 +402,7 @@
     min-width: 1.22rem;
     height: 1.15rem;
     padding-inline: 0.22rem;
-    font-size: 0.58rem;
+    font-size: var(--console-text-label);
   }
 
   .console-command-footer kbd svg {
@@ -377,7 +427,7 @@
       top: 0.75rem;
       max-height: calc(100dvh - 1.5rem);
       transform: translateX(-50%);
-      border-radius: 1rem 1rem 1rem 0.45rem;
+      border-radius: var(--console-radius-lg);
     }
 
     .console-command-search {
@@ -450,30 +500,30 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.875rem;
+    font-size: var(--console-text-body);
     color: hsl(var(--muted-foreground));
   }
 
   .console-surface {
     border-radius: var(--console-radius-xl);
-    border: 1px solid var(--console-border-default);
-    background: hsl(var(--card));
+    border: var(--console-border-width) solid var(--console-border-default);
+    background: var(--console-surface-raised);
     color: hsl(var(--card-foreground));
-    box-shadow: var(--console-shadow-sm);
+    box-shadow: var(--console-shadow-xs);
   }
 
   .console-surface-muted {
     border-radius: var(--console-radius-lg);
-    border: 1px solid var(--console-border-subtle);
-    background: hsl(var(--muted) / 0.45);
+    border: var(--console-border-width) solid var(--console-border-subtle);
+    background: var(--console-surface-muted);
     box-shadow: none;
   }
 
   .console-surface-inset {
     border-radius: var(--console-radius-md);
-    border: 1px solid var(--console-border-subtle);
-    background: hsl(var(--muted) / 0.25);
-    box-shadow: inset 0 1px 2px hsl(240 6% 10% / 0.04);
+    border: var(--console-border-width) solid var(--console-border-subtle);
+    background: var(--console-surface-inset);
+    box-shadow: inset 0 1px 2px hsl(0 0% 10% / 0.04);
   }
 
   .dark .console-surface-inset {
@@ -482,10 +532,10 @@
 
   .console-surface-interactive {
     border-radius: var(--console-radius-xl);
-    border: 1px solid var(--console-border-default);
-    background: hsl(var(--card));
+    border: var(--console-border-width) solid var(--console-border-default);
+    background: var(--console-surface-raised);
     color: hsl(var(--card-foreground));
-    box-shadow: var(--console-shadow-sm);
+    box-shadow: var(--console-shadow-xs);
     cursor: pointer;
     transition:
       border-color 180ms ease,
@@ -496,7 +546,7 @@
   .console-surface-interactive:hover {
     border-color: hsl(var(--primary) / 0.28);
     box-shadow: var(--console-shadow-hover);
-    transform: translateY(-2px);
+    transform: translateY(-1px);
   }
 
   .console-surface-interactive:active {
@@ -518,7 +568,7 @@
     gap: 0.125rem;
     padding: 0.375rem;
     border-radius: var(--console-radius-md);
-    border: 1px solid var(--console-border-subtle);
+    border: var(--console-border-width) solid var(--console-border-subtle);
     background: hsl(var(--muted) / 0.4);
   }
 
@@ -528,11 +578,11 @@
     left: 0.75rem;
     z-index: 70;
     transform: translateY(-160%);
-    border-radius: 0.625rem;
+    border-radius: var(--console-radius-md);
     background: hsl(var(--foreground));
     color: hsl(var(--background));
     padding: 0.625rem 0.875rem;
-    font-size: 0.8125rem;
+    font-size: var(--console-text-body);
     font-weight: 600;
     transition: transform 160ms ease;
   }
@@ -542,19 +592,16 @@
   }
 
   .console-app-shell {
-    background:
-      radial-gradient(circle at 82% 0%, hsl(var(--primary) / 0.07), transparent 25rem),
-      hsl(var(--background));
+    background: hsl(var(--background));
   }
 
   .console-sidebar {
-    background:
-      linear-gradient(180deg, hsl(var(--sidebar)) 0%, hsl(var(--sidebar) / 0.96) 100%);
-    box-shadow: 12px 0 36px -32px hsl(154 50% 18% / 0.45);
+    background: hsl(var(--sidebar));
+    box-shadow: none;
   }
 
   .console-topbar {
-    box-shadow: 0 8px 28px -28px hsl(154 45% 14% / 0.55);
+    box-shadow: var(--console-shadow-xs);
   }
 
   .console-connection-state {
@@ -562,11 +609,11 @@
     height: 1.8rem;
     align-items: center;
     gap: 0.4rem;
-    border: 1px solid hsl(var(--border) / 0.58);
-    border-radius: 0.55rem;
+    border: var(--console-border-width) solid hsl(var(--border) / 0.58);
+    border-radius: var(--console-radius-md);
     padding: 0 0.55rem;
     color: hsl(var(--muted-foreground));
-    font-size: 0.68rem;
+    font-size: var(--console-text-label);
     font-weight: 550;
     white-space: nowrap;
   }
@@ -575,48 +622,31 @@
     width: 0.42rem;
     height: 0.42rem;
     border-radius: 50%;
-    background: hsl(38 82% 52%);
-    box-shadow: 0 0 0 0.22rem hsl(38 82% 52% / 0.1);
+    background: hsl(var(--warning));
+    box-shadow: 0 0 0 0.22rem hsl(var(--warning) / 0.1);
   }
 
   .console-connection-state.is-online > span:first-child {
-    background: hsl(var(--primary));
-    box-shadow: 0 0 0 0.22rem hsl(var(--primary) / 0.1);
+    background: hsl(var(--success));
+    box-shadow: 0 0 0 0.22rem hsl(var(--success) / 0.1);
   }
 
   .console-brand-mark {
-    position: relative;
     display: grid;
     width: 2.35rem;
     height: 2.35rem;
     min-width: 2.35rem;
     place-items: center;
-    overflow: hidden;
-    border-radius: 0.75rem 0.75rem 0.75rem 0.3rem;
-    background:
-      radial-gradient(circle at 26% 18%, hsl(150 70% 72% / 0.9), transparent 32%),
-      linear-gradient(145deg, hsl(154 58% 34%), hsl(164 62% 25%));
-    color: white;
-    box-shadow:
-      inset 0 1px 0 hsl(0 0% 100% / 0.3),
-      0 8px 20px -10px hsl(154 60% 24% / 0.75);
-  }
-
-  .console-brand-mark::after {
-    content: '';
-    position: absolute;
-    right: -0.4rem;
-    bottom: -0.5rem;
-    width: 1.35rem;
-    height: 1.35rem;
-    border: 1px solid hsl(0 0% 100% / 0.25);
-    border-radius: 50%;
+    border-radius: var(--console-radius-lg);
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
+    box-shadow: var(--console-shadow-xs);
   }
 
   .console-brand-mark span {
     position: relative;
     z-index: 1;
-    font-size: 1.08rem;
+    font-size: var(--console-text-section);
     font-weight: 700;
     letter-spacing: -0.08em;
     transform: translateX(-0.04em);
@@ -632,8 +662,8 @@
     position: relative;
     isolation: isolate;
     overflow: hidden;
-    border: 1px solid hsl(var(--primary) / 0.16);
-    border-radius: 1.75rem 1.75rem 1.75rem 0.75rem;
+    border: var(--console-border-width) solid hsl(var(--primary) / 0.16);
+    border-radius: var(--console-radius-xl);
     padding: clamp(1.25rem, 2.4vw, 2rem);
     background:
       linear-gradient(135deg, hsl(var(--card) / 0.96), hsl(var(--secondary) / 0.78)),
@@ -658,7 +688,7 @@
     top: -8rem;
     width: 25rem;
     height: 25rem;
-    border: 1px solid hsl(var(--primary) / 0.09);
+    border: var(--console-border-width) solid hsl(var(--primary) / 0.09);
     border-radius: 44% 56% 68% 32%;
     background:
       repeating-radial-gradient(circle at 50% 50%, transparent 0 1.15rem, hsl(var(--primary) / 0.035) 1.2rem 1.25rem),
@@ -684,8 +714,8 @@
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     overflow: hidden;
-    border: 1px solid hsl(var(--border) / 0.58);
-    border-radius: 1rem 1rem 1rem 0.4rem;
+    border: var(--console-border-width) solid hsl(var(--border) / 0.58);
+    border-radius: var(--console-radius-lg);
     background: hsl(var(--card) / 0.62);
     backdrop-filter: blur(16px);
   }
@@ -704,7 +734,7 @@
   }
 
   .console-dashboard-metric > span {
-    font-size: 0.72rem;
+    font-size: var(--console-text-label);
     font-weight: 500;
     color: hsl(var(--muted-foreground));
   }
@@ -720,27 +750,19 @@
   }
 
   .console-dashboard-metric small {
-    font-size: 0.75rem;
+    font-size: var(--console-text-body);
     font-weight: 500;
     letter-spacing: 0;
     color: hsl(var(--muted-foreground));
   }
 
   .console-dashboard-panel {
-    border: 1px solid hsl(var(--border) / 0.68);
-    border-radius: 1.4rem 1.4rem 1.4rem 0.65rem;
-    padding: clamp(1rem, 2vw, 1.4rem);
-    background: hsl(var(--card) / 0.88);
-    box-shadow:
-      inset 0 1px 0 hsl(0 0% 100% / 0.46),
-      0 20px 55px -48px hsl(154 48% 18% / 0.65);
+    border: var(--console-border-width) solid hsl(var(--border) / 0.68);
+    border-radius: var(--console-radius-lg);
+    padding: var(--console-space-card);
+    background: var(--console-surface-raised);
+    box-shadow: var(--console-shadow-xs);
     backdrop-filter: blur(18px);
-  }
-
-  .dark .console-dashboard-panel {
-    box-shadow:
-      inset 0 1px 0 hsl(0 0% 100% / 0.045),
-      0 20px 55px -40px hsl(0 0% 0% / 0.75);
   }
 
   .console-panel-heading {
@@ -753,7 +775,7 @@
 
   .console-panel-heading h2 {
     margin-top: 0.25rem;
-    font-size: 1.05rem;
+    font-size: var(--console-text-section);
     font-weight: 650;
     letter-spacing: -0.025em;
   }
@@ -761,18 +783,19 @@
   .console-panel-heading p {
     margin-top: 0.3rem;
     max-width: 36rem;
-    font-size: 0.78rem;
+    font-size: var(--console-text-body);
     line-height: 1.6;
     color: hsl(var(--muted-foreground));
   }
 
   .console-eyebrow {
-    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.61rem;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: hsl(var(--primary));
+    font-family: var(--console-font-sans);
+    font-size: var(--console-text-caption);
+    line-height: 1.5;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    color: hsl(var(--muted-foreground));
   }
 
   .console-capability-grid {
@@ -787,8 +810,8 @@
     gap: 0.75rem;
     min-width: 0;
     padding: 0.8rem;
-    border: 1px solid transparent;
-    border-radius: 0.9rem 0.9rem 0.9rem 0.35rem;
+    border: var(--console-border-width) solid transparent;
+    border-radius: var(--console-radius-md);
     background: hsl(var(--muted) / 0.42);
     color: hsl(var(--foreground));
     transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
@@ -807,7 +830,7 @@
   .console-capability-item > strong {
     min-width: 2rem;
     text-align: right;
-    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: var(--console-font-mono);
     font-size: 1.2rem;
     letter-spacing: -0.04em;
     font-variant-numeric: tabular-nums;
@@ -819,7 +842,7 @@
     height: 2.15rem;
     flex: none;
     place-items: center;
-    border-radius: 0.68rem 0.68rem 0.68rem 0.25rem;
+    border-radius: var(--console-radius-md);
     background: hsl(var(--card));
     color: hsl(var(--primary));
     box-shadow: 0 1px 0 hsl(var(--border));
@@ -842,7 +865,7 @@
     align-items: flex-start;
     gap: 0.8rem;
     padding: 1rem;
-    border-radius: 1rem 1rem 1rem 0.35rem;
+    border-radius: var(--console-radius-lg);
     background: hsl(var(--primary) / 0.075);
     color: hsl(var(--primary));
   }
@@ -855,13 +878,13 @@
   }
 
   .console-all-clear h3 {
-    font-size: 0.875rem;
+    font-size: var(--console-text-body);
     font-weight: 650;
   }
 
   .console-all-clear p {
     margin-top: 0.2rem;
-    font-size: 0.75rem;
+    font-size: var(--console-text-body);
     line-height: 1.5;
     color: hsl(var(--muted-foreground));
   }
@@ -872,8 +895,8 @@
     align-items: flex-start;
     gap: 0.7rem;
     padding: 0.78rem;
-    border: 1px solid hsl(var(--border) / 0.62);
-    border-radius: 0.85rem 0.85rem 0.85rem 0.35rem;
+    border: var(--console-border-width) solid hsl(var(--border) / 0.62);
+    border-radius: var(--console-radius-md);
     background: transparent;
     color: hsl(var(--foreground));
     transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
@@ -921,8 +944,8 @@
     align-items: center;
     gap: 0.5rem;
     min-width: 0;
-    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.66rem;
+    font-family: var(--console-font-mono);
+    font-size: var(--console-text-label);
   }
 
   .console-runtime-strip svg {
@@ -950,8 +973,8 @@
     gap: 1rem;
     padding: 1.25rem;
     overflow: hidden;
-    border: 1px solid hsl(var(--primary) / 0.15);
-    border-radius: 1.15rem 1.15rem 1.15rem 0.45rem;
+    border: var(--console-border-width) solid hsl(var(--primary) / 0.15);
+    border-radius: var(--console-radius-lg);
     background:
       radial-gradient(circle at 100% 0%, hsl(var(--primary) / 0.16), transparent 48%),
       hsl(var(--secondary) / 0.62);
@@ -982,7 +1005,7 @@
     height: 3.15rem;
     flex: none;
     place-items: center;
-    border-radius: 1rem 1rem 1rem 0.35rem;
+    border-radius: var(--console-radius-lg);
     background: hsl(var(--primary));
     color: hsl(var(--primary-foreground));
     box-shadow: 0 12px 28px -16px hsl(var(--primary) / 0.8);
@@ -1006,8 +1029,8 @@
     justify-content: space-between;
     gap: 0.75rem;
     padding: 0.85rem;
-    border: 1px solid hsl(var(--border) / 0.64);
-    border-radius: 0.9rem 0.9rem 0.9rem 0.35rem;
+    border: var(--console-border-width) solid hsl(var(--border) / 0.64);
+    border-radius: var(--console-radius-md);
     background: hsl(var(--muted) / 0.3);
     color: hsl(var(--foreground));
     transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
@@ -1025,7 +1048,7 @@
     align-items: flex-start;
     gap: 0.6rem;
     text-align: left;
-    font-size: 0.78rem;
+    font-size: var(--console-text-body);
     font-weight: 600;
     line-height: 1.4;
   }
@@ -1041,8 +1064,8 @@
 
   .console-agent-session-picker {
     padding: 1rem;
-    border: 1px solid hsl(var(--border) / 0.7);
-    border-radius: 1.3rem 1.3rem 1.3rem 0.5rem;
+    border: var(--console-border-width) solid hsl(var(--border) / 0.7);
+    border-radius: var(--console-radius-lg);
     background:
       radial-gradient(circle at 100% 0%, hsl(var(--primary) / 0.08), transparent 34%),
       hsl(var(--card) / 0.84);
@@ -1061,8 +1084,8 @@
     align-items: center;
     gap: 0.65rem;
     padding: 0.75rem;
-    border: 1px solid hsl(var(--border) / 0.58);
-    border-radius: 0.95rem 0.95rem 0.95rem 0.35rem;
+    border: var(--console-border-width) solid hsl(var(--border) / 0.58);
+    border-radius: var(--console-radius-md);
     background: hsl(var(--muted) / 0.26);
     color: hsl(var(--foreground));
     transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
@@ -1077,7 +1100,7 @@
   .console-session-candidate.is-active {
     border-color: hsl(var(--primary) / 0.38);
     background: hsl(var(--primary) / 0.08);
-    box-shadow: inset 3px 0 0 hsl(var(--primary));
+    box-shadow: var(--console-shadow-sm);
   }
 
   .console-session-candidate > svg {
@@ -1093,7 +1116,7 @@
     height: 2.1rem;
     flex: none;
     place-items: center;
-    border-radius: 0.7rem 0.7rem 0.7rem 0.25rem;
+    border-radius: var(--console-radius-md);
     background: hsl(var(--secondary));
     color: hsl(var(--primary));
   }
@@ -1110,8 +1133,8 @@
     align-items: center;
     gap: 0.9rem;
     padding: 1rem;
-    border: 1px dashed hsl(var(--border));
-    border-radius: 1rem 1rem 1rem 0.4rem;
+    border: var(--console-border-width) solid hsl(var(--border));
+    border-radius: var(--console-radius-lg);
     background: hsl(var(--muted) / 0.22);
   }
 
@@ -1123,7 +1146,7 @@
     flex: none;
     place-items: center;
     padding: 0.7rem;
-    border-radius: 0.9rem 0.9rem 0.9rem 0.3rem;
+    border-radius: var(--console-radius-md);
     background: hsl(var(--primary) / 0.09);
     color: hsl(var(--primary));
   }
@@ -1135,7 +1158,7 @@
 
   .console-session-picker-empty h3,
   .console-agent-empty h3 {
-    font-size: 0.875rem;
+    font-size: var(--console-text-body);
     font-weight: 650;
   }
 
@@ -1143,7 +1166,7 @@
   .console-agent-empty p {
     margin-top: 0.2rem;
     color: hsl(var(--muted-foreground));
-    font-size: 0.75rem;
+    font-size: var(--console-text-body);
     line-height: 1.5;
   }
 
@@ -1164,7 +1187,7 @@
     width: fit-content;
     cursor: pointer;
     color: hsl(var(--muted-foreground));
-    font-size: 0.7rem;
+    font-size: var(--console-text-label);
     font-weight: 600;
     list-style: none;
   }
@@ -1178,31 +1201,20 @@
   }
 
   .console-agent-hero {
-    position: relative;
-    isolation: isolate;
-    overflow: hidden;
-    padding: clamp(1.25rem, 3vw, 2rem);
-    border: 1px solid hsl(var(--primary) / 0.16);
-    border-radius: 1.65rem 1.65rem 1.65rem 0.55rem;
-    background:
-      radial-gradient(circle at 78% -35%, hsl(var(--primary) / 0.2), transparent 45%),
-      linear-gradient(135deg, hsl(var(--card)), hsl(var(--secondary) / 0.46));
-    box-shadow: 0 28px 70px -54px hsl(var(--primary) / 0.68);
+    padding: var(--console-space-card);
+    border: var(--console-border-width) solid var(--console-border-default);
+    border-radius: var(--console-radius-lg);
+    background: var(--console-surface-raised);
+    box-shadow: var(--console-shadow-xs);
   }
 
-  .console-agent-hero-orbit {
-    position: absolute;
-    top: -8rem;
-    right: -5rem;
-    width: 24rem;
-    height: 24rem;
-    border: 1px solid hsl(var(--primary) / 0.13);
-    border-radius: 50%;
-    box-shadow:
-      0 0 0 3rem hsl(var(--primary) / 0.025),
-      0 0 0 7rem hsl(var(--primary) / 0.018);
-    pointer-events: none;
-  }
+  .console-agent-summary-row { display: flex; flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .console-agent-missing { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-top: 0.75rem; font-size: var(--console-text-body); line-height: 1.5; }
+  .console-agent-missing a { color: hsl(var(--foreground)); text-decoration: underline; text-underline-offset: 3px; }
+  .console-agent-state-explanation { margin-top: 0.75rem; font-size: var(--console-text-body); line-height: 1.6; color: hsl(var(--muted-foreground)); }
+  .console-agent-state-explanation summary { width: fit-content; cursor: pointer; }
+  .console-agent-state-explanation p { max-width: 65ch; margin-top: 0.5rem; }
+  @media (min-width: 900px) { .console-agent-summary-row { flex-direction: row; justify-content: space-between; gap: 1.5rem; } }
 
   .console-agent-hero svg {
     width: 1rem;
@@ -1224,10 +1236,9 @@
     align-items: center;
     gap: 0.55rem;
     padding: 0.75rem;
-    border: 1px solid hsl(var(--border) / 0.5);
-    border-radius: 0.9rem 0.9rem 0.9rem 0.3rem;
-    background: hsl(var(--background) / 0.58);
-    backdrop-filter: blur(10px);
+    border: var(--console-border-width) solid hsl(var(--border) / 0.5);
+    border-radius: var(--console-radius-md);
+    background: hsl(var(--muted) / 0.35);
   }
 
   .console-agent-metrics > div > svg {
@@ -1236,7 +1247,8 @@
 
   .console-agent-metrics span {
     color: hsl(var(--muted-foreground));
-    font-size: 0.68rem;
+    font-size: var(--console-text-body);
+    white-space: nowrap;
     font-weight: 600;
   }
 
@@ -1247,7 +1259,7 @@
 
   .console-agent-metrics small {
     color: hsl(var(--muted-foreground));
-    font-size: 0.65rem;
+    font-size: var(--console-text-body);
     font-weight: 500;
   }
 
@@ -1261,8 +1273,8 @@
     align-items: flex-start;
     gap: 0.8rem;
     padding: 0.9rem;
-    border: 1px solid hsl(var(--border) / 0.58);
-    border-radius: 1rem 1rem 1rem 0.35rem;
+    border: var(--console-border-width) solid hsl(var(--border) / 0.58);
+    border-radius: var(--console-radius-lg);
     background: hsl(var(--muted) / 0.22);
     transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
   }
@@ -1274,14 +1286,14 @@
   }
 
   .console-agent-binding-card h3 {
-    font-size: 0.9rem;
+    font-size: var(--console-text-body);
     font-weight: 650;
   }
 
   .console-agent-binding-card p {
     margin-top: 0.15rem;
     color: hsl(var(--muted-foreground));
-    font-size: 0.72rem;
+    font-size: var(--console-text-label);
   }
 
   .console-agent-binding-card > div span {
@@ -1292,7 +1304,7 @@
     border-radius: 999px;
     background: hsl(var(--secondary));
     color: hsl(var(--muted-foreground));
-    font-size: 0.64rem;
+    font-size: var(--console-text-label);
     font-weight: 600;
   }
 
@@ -1319,7 +1331,7 @@
     height: 2.4rem;
     flex: none;
     place-items: center;
-    border-radius: 0.8rem 0.8rem 0.8rem 0.28rem;
+    border-radius: var(--console-radius-md);
     background: hsl(var(--primary) / 0.1);
     color: hsl(var(--primary));
   }
@@ -1377,13 +1389,13 @@
   }
 
   .console-readiness-row strong {
-    font-size: 0.78rem;
+    font-size: var(--console-text-body);
   }
 
   .console-readiness-row small {
     margin-top: 0.18rem;
     color: hsl(var(--muted-foreground));
-    font-size: 0.66rem;
+    font-size: var(--console-text-label);
   }
 
   .console-agent-session-grid {
@@ -1398,8 +1410,8 @@
     align-items: center;
     gap: 0.65rem;
     padding: 0.8rem;
-    border: 1px solid hsl(var(--border) / 0.56);
-    border-radius: 0.95rem 0.95rem 0.95rem 0.35rem;
+    border: var(--console-border-width) solid hsl(var(--border) / 0.56);
+    border-radius: var(--console-radius-md);
     background: hsl(var(--muted) / 0.24);
     color: hsl(var(--foreground));
     transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
@@ -1424,8 +1436,8 @@
     gap: 0.65rem;
     min-height: 4.6rem;
     padding: 0.8rem;
-    border: 1px solid hsl(var(--border) / 0.58);
-    border-radius: 1rem 1rem 1rem 0.35rem;
+    border: var(--console-border-width) solid hsl(var(--border) / 0.58);
+    border-radius: var(--console-radius-lg);
     background: hsl(var(--card));
     color: hsl(var(--foreground));
     transition: transform 180ms ease, border-color 180ms ease;
@@ -1454,14 +1466,14 @@
   }
 
   .console-agent-shortcuts strong {
-    font-size: 0.78rem;
+    font-size: var(--console-text-body);
   }
 
   .console-agent-shortcuts small {
     margin-top: 0.18rem;
     overflow: hidden;
     color: hsl(var(--muted-foreground));
-    font-size: 0.65rem;
+    font-size: var(--console-text-label);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -1479,8 +1491,8 @@
     min-height: min(47rem, calc(100dvh - 10.5rem));
     overflow: hidden;
     grid-template-columns: minmax(12.5rem, 0.72fr) minmax(24rem, 2.15fr) minmax(14.5rem, 0.9fr);
-    border: 1px solid hsl(var(--border) / 0.72);
-    border-radius: 1.35rem 1.35rem 1.35rem 0.5rem;
+    border: var(--console-border-width) solid hsl(var(--border) / 0.72);
+    border-radius: var(--console-radius-lg);
     background: hsl(var(--card));
     box-shadow:
       0 30px 80px -64px hsl(var(--primary) / 0.55),
@@ -1518,14 +1530,14 @@
     margin-bottom: 0.2rem;
     color: hsl(var(--primary));
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.58rem;
+    font-size: var(--console-text-label);
     font-weight: 650;
     letter-spacing: 0.16em;
     text-transform: uppercase;
   }
 
   .console-studio-pane-head h2 {
-    font-size: 0.86rem;
+    font-size: var(--console-text-body);
     font-weight: 650;
     letter-spacing: -0.015em;
   }
@@ -1553,8 +1565,8 @@
     align-items: center;
     gap: 0.6rem;
     padding: 0.65rem;
-    border: 1px solid transparent;
-    border-radius: 0.8rem 0.8rem 0.8rem 0.25rem;
+    border: var(--console-border-width) solid transparent;
+    border-radius: var(--console-radius-md);
     color: hsl(var(--foreground));
     transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
   }
@@ -1570,7 +1582,7 @@
     background:
       linear-gradient(90deg, hsl(var(--primary) / 0.1), transparent 82%),
       hsl(var(--background) / 0.76);
-    box-shadow: inset 2px 0 0 hsl(var(--primary));
+    box-shadow: var(--console-shadow-sm);
   }
 
   .console-studio-context > span:first-child {
@@ -1578,7 +1590,7 @@
     width: 1.8rem;
     height: 1.8rem;
     place-items: center;
-    border-radius: 0.58rem 0.58rem 0.58rem 0.2rem;
+    border-radius: var(--console-radius-md);
     background: hsl(var(--secondary));
     color: hsl(var(--muted-foreground));
   }
@@ -1603,14 +1615,14 @@
   }
 
   .console-studio-context strong {
-    font-size: 0.72rem;
+    font-size: var(--console-text-label);
     font-weight: 650;
   }
 
   .console-studio-context small {
     margin-top: 0.15rem;
     color: hsl(var(--muted-foreground));
-    font-size: 0.58rem;
+    font-size: var(--console-text-label);
   }
 
   .console-studio-context-empty {
@@ -1632,7 +1644,7 @@
   }
 
   .console-studio-context-empty p {
-    font-size: 0.7rem;
+    font-size: var(--console-text-label);
     line-height: 1.65;
   }
 
@@ -1643,7 +1655,7 @@
     padding: 0.7rem 0.9rem;
     border-top: 1px solid var(--studio-rule);
     color: hsl(var(--muted-foreground));
-    font-size: 0.6rem;
+    font-size: var(--console-text-label);
   }
 
   .console-studio-live-dot {
@@ -1693,8 +1705,8 @@
     height: 2.5rem;
     flex: none;
     place-items: center;
-    border: 1px solid hsl(var(--primary) / 0.18);
-    border-radius: 0.9rem 0.9rem 0.9rem 0.28rem;
+    border: var(--console-border-width) solid hsl(var(--primary) / 0.18);
+    border-radius: var(--console-radius-md);
     background:
       radial-gradient(circle at 75% 20%, hsl(var(--background) / 0.7), transparent 35%),
       hsl(var(--primary) / 0.13);
@@ -1708,7 +1720,7 @@
   }
 
   .console-studio-session-head h2 {
-    font-size: 0.92rem;
+    font-size: var(--console-text-body);
     font-weight: 650;
     letter-spacing: -0.02em;
   }
@@ -1717,7 +1729,7 @@
     margin-top: 0.2rem;
     color: hsl(var(--muted-foreground));
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.58rem;
+    font-size: var(--console-text-label);
   }
 
   .console-studio-endpoint-state {
@@ -1725,7 +1737,7 @@
     align-items: center;
     gap: 0.3rem;
     color: hsl(var(--muted-foreground));
-    font-size: 0.58rem;
+    font-size: var(--console-text-label);
     font-weight: 600;
   }
 
@@ -1746,7 +1758,7 @@
     align-items: center;
     gap: 0.35rem;
     color: hsl(var(--primary));
-    font-size: 0.6rem;
+    font-size: var(--console-text-label);
     font-weight: 650;
   }
 
@@ -1787,7 +1799,7 @@
     align-items: center;
     gap: 0.28rem;
     color: hsl(var(--muted-foreground));
-    font-size: 0.52rem;
+    font-size: var(--console-text-label);
     font-weight: 650;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -1818,7 +1830,7 @@
     overflow: hidden;
     margin-top: 0.32rem;
     color: hsl(var(--muted-foreground));
-    font-size: 0.52rem;
+    font-size: var(--console-text-label);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -1844,8 +1856,8 @@
     column-gap: 0.38rem;
     align-items: center;
     padding: 0.48rem 0.6rem;
-    border: 1px solid hsl(var(--border) / 0.5);
-    border-radius: 0.55rem 0.55rem 0.55rem 0.18rem;
+    border: var(--console-border-width) solid hsl(var(--border) / 0.5);
+    border-radius: var(--console-radius-md);
     background: hsl(var(--card) / 0.55);
     color: hsl(var(--muted-foreground));
     text-align: left;
@@ -1889,13 +1901,13 @@
 
   .console-studio-turn-strip button span {
     font-family: var(--font-mono, monospace);
-    font-size: 0.62rem;
+    font-size: var(--console-text-label);
     font-weight: 650;
   }
 
   .console-studio-turn-strip button small {
     grid-column: 2;
-    font-size: 0.5rem;
+    font-size: var(--console-text-label);
     opacity: 0.68;
   }
 
@@ -1925,9 +1937,9 @@
   .console-studio-trace-filters button {
     flex: none;
     padding: 0.32rem 0.48rem;
-    border-radius: 0.36rem;
+    border-radius: var(--console-radius-sm);
     color: hsl(var(--muted-foreground));
-    font-size: 0.56rem;
+    font-size: var(--console-text-label);
     font-weight: 600;
     transition: background-color 150ms ease, color 150ms ease;
   }
@@ -1953,7 +1965,7 @@
     padding-right: 0.28rem;
     color: hsl(var(--muted-foreground));
     font-family: var(--font-mono, monospace);
-    font-size: 0.55rem;
+    font-size: var(--console-text-label);
     font-variant-numeric: tabular-nums;
   }
 
@@ -1987,8 +1999,8 @@
     gap: 0.85rem;
     margin-bottom: 0.7rem;
     padding: 0.85rem;
-    border: 1px solid hsl(var(--border) / 0.55);
-    border-radius: 1rem 1rem 1rem 0.35rem;
+    border: var(--console-border-width) solid hsl(var(--border) / 0.55);
+    border-radius: var(--console-radius-lg);
     background: hsl(var(--card) / 0.88);
     box-shadow: 0 18px 35px -32px hsl(var(--foreground) / 0.32);
     animation: console-studio-enter 320ms both cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -2005,7 +2017,7 @@
     background:
       linear-gradient(100deg, hsl(var(--primary) / 0.08), transparent 62%),
       hsl(var(--card) / 0.94);
-    box-shadow: inset 2px 0 0 hsl(var(--primary)), 0 20px 38px -32px hsl(var(--primary) / 0.65);
+    box-shadow: var(--console-shadow-sm);
   }
 
   .console-studio-event.is-ingress {
@@ -2019,8 +2031,8 @@
     width: 2.1rem;
     height: 2.1rem;
     place-items: center;
-    border: 1px solid hsl(var(--border) / 0.62);
-    border-radius: 0.7rem 0.7rem 0.7rem 0.22rem;
+    border: var(--console-border-width) solid hsl(var(--border) / 0.62);
+    border-radius: var(--console-radius-md);
     background: hsl(var(--secondary));
     color: hsl(var(--muted-foreground));
   }
@@ -2083,7 +2095,7 @@
     background:
       linear-gradient(100deg, hsl(var(--primary) / 0.1), transparent 62%),
       hsl(var(--card));
-    box-shadow: inset 2px 0 0 hsl(var(--primary)), 0 20px 38px -32px hsl(var(--primary) / 0.75);
+    box-shadow: var(--console-shadow-sm);
   }
 
   .console-studio-awaiting.is-filtered > span {
@@ -2098,7 +2110,7 @@
   .console-studio-event h3 {
     margin-top: 0.18rem;
     overflow: hidden;
-    font-size: 0.78rem;
+    font-size: var(--console-text-body);
     font-weight: 650;
     line-height: 1.4;
     text-overflow: ellipsis;
@@ -2108,7 +2120,7 @@
   .console-studio-event p {
     margin-top: 0.25rem;
     color: hsl(var(--muted-foreground));
-    font-size: 0.64rem;
+    font-size: var(--console-text-label);
     line-height: 1.5;
   }
 
@@ -2127,7 +2139,7 @@
     align-items: center;
     gap: 0.25rem;
     color: hsl(var(--muted-foreground));
-    font-size: 0.58rem;
+    font-size: var(--console-text-label);
     transition: color 160ms ease;
   }
 
@@ -2154,11 +2166,11 @@
     overflow: auto;
     margin-top: 0.55rem;
     padding: 0.75rem;
-    border: 1px solid hsl(var(--border) / 0.6);
-    border-radius: 0.65rem;
+    border: var(--console-border-width) solid hsl(var(--border) / 0.6);
+    border-radius: var(--console-radius-md);
     background: hsl(var(--background) / 0.82);
     color: hsl(var(--foreground) / 0.8);
-    font-size: 0.58rem;
+    font-size: var(--console-text-label);
     line-height: 1.6;
     white-space: pre-wrap;
     word-break: break-word;
@@ -2171,8 +2183,8 @@
     gap: 0.9rem;
     margin: 1.2rem 0 0 1.05rem;
     padding: 1rem 1.1rem;
-    border: 1px dashed hsl(var(--border));
-    border-radius: 1rem 1rem 1rem 0.35rem;
+    border: var(--console-border-width) solid hsl(var(--border));
+    border-radius: var(--console-radius-lg);
     background: hsl(var(--background) / 0.65);
   }
 
@@ -2194,14 +2206,14 @@
   }
 
   .console-studio-awaiting h3 {
-    font-size: 0.78rem;
+    font-size: var(--console-text-body);
     font-weight: 650;
   }
 
   .console-studio-awaiting p {
     margin-top: 0.2rem;
     color: hsl(var(--muted-foreground));
-    font-size: 0.65rem;
+    font-size: var(--console-text-label);
     line-height: 1.55;
   }
 
@@ -2238,13 +2250,13 @@
   }
 
   .console-studio-actions strong {
-    font-size: 0.69rem;
+    font-size: var(--console-text-label);
   }
 
   .console-studio-actions small {
     margin-top: 0.15rem;
     color: hsl(var(--muted-foreground));
-    font-size: 0.58rem;
+    font-size: var(--console-text-label);
   }
 
   .console-studio-welcome {
@@ -2272,7 +2284,7 @@
     max-width: 30rem;
     margin: 0.8rem 0 1.2rem;
     color: hsl(var(--muted-foreground));
-    font-size: 0.76rem;
+    font-size: var(--console-text-body);
     line-height: 1.7;
   }
 
@@ -2287,8 +2299,8 @@
     width: 2.4rem;
     height: 2.4rem;
     place-items: center;
-    border: 1px solid hsl(var(--primary) / 0.22);
-    border-radius: 0.8rem 0.8rem 0.8rem 0.28rem;
+    border: var(--console-border-width) solid hsl(var(--primary) / 0.22);
+    border-radius: var(--console-radius-md);
     background: hsl(var(--primary) / 0.09);
     color: hsl(var(--primary));
     box-shadow: 0 12px 24px -18px hsl(var(--primary) / 0.8);
@@ -2315,8 +2327,8 @@
     position: relative;
     overflow: hidden;
     padding: 0.9rem;
-    border: 1px solid hsl(var(--primary) / 0.16);
-    border-radius: 1rem 1rem 1rem 0.35rem;
+    border: var(--console-border-width) solid hsl(var(--primary) / 0.16);
+    border-radius: var(--console-radius-lg);
     background:
       radial-gradient(circle at 100% 0%, hsl(var(--primary) / 0.13), transparent 45%),
       hsl(var(--background) / 0.82);
@@ -2328,7 +2340,7 @@
     height: 2.3rem;
     margin-bottom: 0.85rem;
     place-items: center;
-    border-radius: 0.75rem 0.75rem 0.75rem 0.24rem;
+    border-radius: var(--console-radius-md);
     background: hsl(var(--primary));
     color: hsl(var(--primary-foreground));
     box-shadow: 0 12px 26px -16px hsl(var(--primary) / 0.8);
@@ -2341,7 +2353,7 @@
 
   .console-studio-agent-card h3 {
     margin-top: 0.28rem;
-    font-size: 0.95rem;
+    font-size: var(--console-text-body);
     font-weight: 650;
     letter-spacing: -0.025em;
   }
@@ -2350,7 +2362,7 @@
     margin-top: 0.25rem;
     color: hsl(var(--muted-foreground));
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.58rem;
+    font-size: var(--console-text-label);
     line-height: 1.5;
   }
 
@@ -2360,11 +2372,11 @@
     gap: 0.3rem;
     margin-top: 0.7rem;
     padding: 0.28rem 0.42rem;
-    border-radius: 0.4rem 0.4rem 0.4rem 0.15rem;
+    border-radius: var(--console-radius-sm);
     background: hsl(var(--primary) / 0.1);
     color: hsl(var(--primary));
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.55rem;
+    font-size: var(--console-text-label);
     font-weight: 650;
   }
 
@@ -2391,7 +2403,7 @@
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    font-size: 0.68rem;
+    font-size: var(--console-text-label);
     font-weight: 650;
   }
 
@@ -2404,7 +2416,7 @@
   .console-studio-inspector-title strong {
     color: hsl(var(--muted-foreground));
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.62rem;
+    font-size: var(--console-text-label);
   }
 
   .console-studio-tool-row,
@@ -2417,7 +2429,7 @@
     border-bottom: 1px solid hsl(var(--border) / 0.35);
     color: hsl(var(--foreground));
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.58rem;
+    font-size: var(--console-text-label);
   }
 
   .console-studio-tool-row:last-child,
@@ -2437,12 +2449,12 @@
   .console-studio-tool-row small,
   .console-studio-mcp-row small {
     color: hsl(var(--muted-foreground));
-    font-size: 0.52rem;
+    font-size: var(--console-text-label);
   }
 
   .console-studio-inspector-empty {
     color: hsl(var(--muted-foreground));
-    font-size: 0.62rem;
+    font-size: var(--console-text-label);
     line-height: 1.6;
     overflow-wrap: anywhere;
   }
@@ -2458,9 +2470,9 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.55rem 0.4rem;
-    border-radius: 0.55rem;
+    border-radius: var(--console-radius-md);
     color: hsl(var(--foreground));
-    font-size: 0.65rem;
+    font-size: var(--console-text-label);
     font-weight: 600;
     transition: transform 180ms ease, background-color 180ms ease;
   }
@@ -2492,8 +2504,8 @@
 
   .console-log-workbench {
     overflow: hidden;
-    border: 1px solid hsl(var(--border) / 0.68);
-    border-radius: 1.35rem 1.35rem 1.35rem 0.55rem;
+    border: var(--console-border-width) solid hsl(var(--border) / 0.68);
+    border-radius: var(--console-radius-lg);
     background: hsl(var(--card) / 0.82);
     box-shadow: 0 22px 60px -52px hsl(154 48% 18% / 0.7);
   }
@@ -2535,7 +2547,7 @@
   }
 
   .console-log-signal.is-selected {
-    box-shadow: inset 0 -3px 0 hsl(var(--primary));
+    box-shadow: var(--console-shadow-xs);
   }
 
   .console-log-signal > svg {
@@ -2562,7 +2574,7 @@
   }
 
   .console-log-signal small {
-    font-size: 0.64rem;
+    font-size: var(--console-text-label);
   }
 
   .console-log-health {
@@ -2591,7 +2603,7 @@
   .console-log-health small {
     color: hsl(var(--muted-foreground));
     font-family: var(--font-mono, monospace);
-    font-size: 0.56rem;
+    font-size: var(--console-text-label);
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
@@ -2599,7 +2611,7 @@
   .console-log-health strong {
     margin-top: 0.15rem;
     color: hsl(var(--foreground));
-    font-size: 0.72rem;
+    font-size: var(--console-text-label);
   }
 
   .console-log-toolbar {
@@ -2617,7 +2629,7 @@
     flex: none;
     color: hsl(var(--muted-foreground));
     cursor: pointer;
-    font-size: 0.68rem;
+    font-size: var(--console-text-label);
   }
 
   .console-log-toolbar-actions {
@@ -2651,7 +2663,7 @@
   .console-log-sources > header small {
     color: hsl(var(--muted-foreground));
     font-family: var(--font-mono, monospace);
-    font-size: 0.55rem;
+    font-size: var(--console-text-label);
   }
 
   .console-log-sources > button {
@@ -2660,9 +2672,9 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.52rem 0.48rem;
-    border-radius: 0.5rem 0.5rem 0.5rem 0.2rem;
+    border-radius: var(--console-radius-md);
     color: hsl(var(--muted-foreground));
-    font-size: 0.64rem;
+    font-size: var(--console-text-label);
     text-align: left;
     transition: background-color 150ms ease, color 150ms ease;
   }
@@ -2674,7 +2686,7 @@
   }
 
   .console-log-sources > button.is-selected {
-    box-shadow: inset 2px 0 0 hsl(var(--primary));
+    box-shadow: var(--console-shadow-sm);
   }
 
   .console-log-sources > button span {
@@ -2687,7 +2699,7 @@
 
   .console-log-sources > button strong {
     font-family: var(--font-mono, monospace);
-    font-size: 0.58rem;
+    font-size: var(--console-text-label);
     font-variant-numeric: tabular-nums;
   }
 
@@ -2709,7 +2721,7 @@
 
   .console-log-stream h2 {
     margin-top: 0.15rem;
-    font-size: 0.86rem;
+    font-size: var(--console-text-body);
     font-weight: 660;
     letter-spacing: -0.015em;
   }
@@ -2743,7 +2755,7 @@
   }
 
   .console-log-event.is-selected {
-    box-shadow: inset 2px 0 0 hsl(var(--primary));
+    box-shadow: var(--console-shadow-sm);
   }
 
   .console-log-event-icon {
@@ -2751,7 +2763,7 @@
     width: 1.65rem;
     height: 1.65rem;
     place-items: center;
-    border-radius: 0.48rem 0.48rem 0.48rem 0.18rem;
+    border-radius: var(--console-radius-md);
     background: hsl(var(--muted) / 0.72);
     color: hsl(var(--muted-foreground));
   }
@@ -2784,7 +2796,7 @@
     gap: 0.45rem;
     color: hsl(var(--muted-foreground));
     font-family: var(--font-mono, monospace);
-    font-size: 0.56rem;
+    font-size: var(--console-text-label);
   }
 
   .console-log-event-body code {
@@ -2798,7 +2810,7 @@
     display: -webkit-box;
     overflow: hidden;
     font-family: var(--font-mono, monospace);
-    font-size: 0.66rem;
+    font-size: var(--console-text-label);
     font-weight: 500;
     line-height: 1.55;
     -webkit-box-orient: vertical;
@@ -2848,14 +2860,14 @@
   .console-log-inspector time {
     color: hsl(var(--muted-foreground));
     font-family: var(--font-mono, monospace);
-    font-size: 0.55rem;
+    font-size: var(--console-text-label);
   }
 
   .console-log-inspector h3 {
     margin-top: 0.65rem;
     overflow-wrap: anywhere;
     font-family: var(--font-mono, monospace);
-    font-size: 0.72rem;
+    font-size: var(--console-text-label);
     font-weight: 560;
     line-height: 1.6;
   }
@@ -2865,7 +2877,7 @@
     align-items: center;
     gap: 0.3rem;
     color: hsl(var(--muted-foreground));
-    font-size: 0.62rem;
+    font-size: var(--console-text-label);
     font-weight: 650;
   }
 
@@ -2898,7 +2910,7 @@
   .console-log-inspector dd {
     overflow-wrap: anywhere;
     font-family: var(--font-mono, monospace);
-    font-size: 0.57rem;
+    font-size: var(--console-text-label);
   }
 
   .console-log-inspector dt {
@@ -2919,14 +2931,14 @@
   .console-log-copy-error {
     margin-top: 0.55rem;
     color: hsl(var(--destructive));
-    font-size: 0.62rem;
+    font-size: var(--console-text-label);
     line-height: 1.45;
   }
 
   .console-log-inspector summary {
     color: hsl(var(--muted-foreground));
     cursor: pointer;
-    font-size: 0.62rem;
+    font-size: var(--console-text-label);
   }
 
   .console-log-inspector pre {
@@ -2934,10 +2946,10 @@
     margin-top: 0.5rem;
     overflow: auto;
     padding: 0.65rem;
-    border-radius: 0.5rem;
+    border-radius: var(--console-radius-md);
     background: hsl(var(--background) / 0.72);
     font-family: var(--font-mono, monospace);
-    font-size: 0.58rem;
+    font-size: var(--console-text-label);
     white-space: pre-wrap;
   }
 
@@ -2959,12 +2971,12 @@
 
   .console-log-empty strong {
     color: hsl(var(--foreground));
-    font-size: 0.75rem;
+    font-size: var(--console-text-body);
   }
 
   .console-log-empty p {
     margin-top: 0.25rem;
-    font-size: 0.64rem;
+    font-size: var(--console-text-label);
   }
 
   .console-capability-explorer {
@@ -2988,8 +3000,8 @@
     width: 2.75rem;
     height: 2.75rem;
     place-items: center;
-    border: 1px solid hsl(var(--primary) / 0.2);
-    border-radius: 0.9rem 0.9rem 0.9rem 0.35rem;
+    border: var(--console-border-width) solid hsl(var(--primary) / 0.2);
+    border-radius: var(--console-radius-md);
     background: hsl(var(--primary) / 0.1);
     color: hsl(var(--primary));
   }
@@ -3001,7 +3013,7 @@
 
   .console-capability-intro h2 {
     margin-top: 0.18rem;
-    font-size: 1.05rem;
+    font-size: var(--console-text-section);
     font-weight: 680;
     letter-spacing: -0.025em;
   }
@@ -3010,7 +3022,7 @@
     margin-top: 0.2rem;
     max-width: 48rem;
     color: hsl(var(--muted-foreground));
-    font-size: 0.74rem;
+    font-size: var(--console-text-label);
     line-height: 1.55;
   }
 
@@ -3031,7 +3043,7 @@
   .console-capability-count span {
     margin-top: 0.25rem;
     color: hsl(var(--muted-foreground));
-    font-size: 0.62rem;
+    font-size: var(--console-text-label);
   }
 
   .console-capability-workspace {
@@ -3052,12 +3064,13 @@
     align-items: center;
     gap: 0.72rem;
     padding: 0.78rem;
-    border: 1px solid hsl(var(--border) / 0.55);
-    border-radius: 0.85rem 0.85rem 0.85rem 0.32rem;
+    border: var(--console-border-width) solid hsl(var(--border) / 0.55);
+    border-radius: var(--console-radius-md);
     background: hsl(var(--background) / 0.65);
     color: hsl(var(--foreground));
     text-align: left;
     transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+    box-shadow: var(--console-shadow-sm);
   }
 
   .console-runtime-card:hover {
@@ -3068,15 +3081,15 @@
 
   .console-runtime-card:focus-visible,
   .console-runtime-component > button:focus-visible {
-    outline: 2px solid hsl(var(--ring));
+    outline: var(--console-focus-width) solid hsl(var(--ring));
     outline-offset: 2px;
   }
 
   .console-runtime-card.is-selected,
   .console-runtime-component.is-selected {
-    border-color: hsl(var(--primary) / 0.42);
-    background: hsl(var(--primary) / 0.07);
-    box-shadow: inset 3px 0 0 hsl(var(--primary));
+    border-color: hsl(var(--foreground) / 0.22);
+    background: var(--console-surface-raised);
+    box-shadow: var(--console-shadow-sm);
   }
 
   .console-runtime-card-main {
@@ -3094,7 +3107,7 @@
   }
 
   .console-runtime-card-main strong {
-    font-size: 0.78rem;
+    font-size: var(--console-text-body);
     font-weight: 650;
     white-space: nowrap;
   }
@@ -3102,7 +3115,7 @@
   .console-runtime-card-main small,
   .console-runtime-card-main > span:not(.console-runtime-tags) {
     color: hsl(var(--muted-foreground));
-    font-size: 0.66rem;
+    font-size: var(--console-text-label);
     line-height: 1.45;
   }
 
@@ -3114,7 +3127,7 @@
     width: 2rem;
     height: 2rem;
     place-items: center;
-    border-radius: 0.65rem 0.65rem 0.65rem 0.25rem;
+    border-radius: var(--console-radius-md);
     background: hsl(var(--muted) / 0.7);
     color: hsl(var(--muted-foreground));
   }
@@ -3134,7 +3147,7 @@
     overflow: hidden;
     color: hsl(var(--muted-foreground));
     font-family: var(--font-mono, monospace);
-    font-size: 0.6rem;
+    font-size: var(--console-text-label);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -3198,7 +3211,7 @@
     margin-bottom: 0.4rem;
     color: hsl(var(--primary));
     font-family: var(--font-mono, monospace);
-    font-size: 0.63rem;
+    font-size: var(--console-text-label);
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -3236,7 +3249,7 @@
   .console-runtime-sequence {
     color: hsl(var(--primary));
     font-family: var(--font-mono, monospace);
-    font-size: 0.62rem;
+    font-size: var(--console-text-label);
     font-weight: 700;
   }
 
@@ -3246,10 +3259,11 @@
     flex-direction: column;
     gap: 0.7rem;
     padding: 0.75rem;
-    border: 1px solid hsl(var(--border) / 0.58);
-    border-radius: 1rem 1rem 1rem 0.35rem;
+    border: var(--console-border-width) solid hsl(var(--border) / 0.58);
+    border-radius: var(--console-radius-lg);
     background: hsl(var(--background) / 0.68);
     transition: border-color 150ms ease, background-color 150ms ease;
+    box-shadow: var(--console-shadow-sm);
   }
 
   .console-runtime-component > button {
@@ -3267,11 +3281,9 @@
     min-height: 4.5rem;
     place-items: center;
     margin-bottom: 0.65rem;
-    border: 1px dashed hsl(var(--primary) / 0.2);
-    border-radius: 0.7rem;
-    background:
-      radial-gradient(circle at 72% 20%, hsl(var(--primary) / 0.12), transparent 35%),
-      hsl(var(--muted) / 0.25);
+    border: var(--console-border-width) solid var(--console-border-subtle);
+    border-radius: var(--console-radius-md);
+    background: var(--console-surface-inset);
     color: hsl(var(--primary));
   }
 
@@ -3281,7 +3293,7 @@
   }
 
   .console-runtime-component strong {
-    font-size: 0.8rem;
+    font-size: var(--console-text-body);
   }
 
   .console-runtime-component small,
@@ -3289,7 +3301,7 @@
     max-width: 100%;
     overflow: hidden;
     color: hsl(var(--muted-foreground));
-    font-size: 0.62rem;
+    font-size: var(--console-text-label);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -3337,12 +3349,12 @@
     align-items: flex-end;
     color: hsl(var(--muted-foreground));
     font-family: var(--font-mono, monospace);
-    font-size: 0.58rem;
+    font-size: var(--console-text-label);
   }
 
   .console-runtime-prompt-budget strong {
     color: hsl(var(--foreground));
-    font-size: 0.9rem;
+    font-size: var(--console-text-body);
     line-height: 1.2;
   }
 
@@ -3391,7 +3403,7 @@
   .console-capability-inspector h3 {
     margin-top: 0.3rem;
     overflow-wrap: anywhere;
-    font-size: 0.95rem;
+    font-size: var(--console-text-body);
     font-weight: 680;
     letter-spacing: -0.02em;
   }
@@ -3399,7 +3411,7 @@
   .console-capability-inspector header p {
     margin-top: 0.35rem;
     color: hsl(var(--muted-foreground));
-    font-size: 0.67rem;
+    font-size: var(--console-text-label);
     line-height: 1.5;
   }
 
@@ -3425,19 +3437,19 @@
   .console-capability-properties dt {
     color: hsl(var(--muted-foreground));
     font-family: var(--font-mono, monospace);
-    font-size: 0.6rem;
+    font-size: var(--console-text-label);
   }
 
   .console-capability-properties dd {
     min-width: 0;
     overflow-wrap: anywhere;
-    font-size: 0.68rem;
+    font-size: var(--console-text-label);
     line-height: 1.45;
   }
 
   .console-capability-properties dd code {
     font-family: var(--font-mono, monospace);
-    font-size: 0.62rem;
+    font-size: var(--console-text-label);
   }
 
   .console-capability-raw {
@@ -3447,7 +3459,7 @@
   .console-capability-raw summary {
     cursor: pointer;
     color: hsl(var(--muted-foreground));
-    font-size: 0.66rem;
+    font-size: var(--console-text-label);
     font-weight: 600;
   }
 
@@ -3474,13 +3486,13 @@
   .console-runtime-empty strong {
     display: block;
     color: hsl(var(--foreground));
-    font-size: 0.8rem;
+    font-size: var(--console-text-body);
   }
 
   .console-runtime-empty p {
     margin-top: 0.25rem;
     max-width: 29rem;
-    font-size: 0.68rem;
+    font-size: var(--console-text-label);
     line-height: 1.55;
   }
 
@@ -3849,4 +3861,69 @@
       height: 2.65rem;
     }
   }
+}
+
+@layer components {
+  .console-page-header { display: flex; flex-direction: column; gap: 0.875rem; }
+  .console-page-title { margin: 0; font-size: var(--console-text-title); font-weight: 600; line-height: var(--console-leading-title); letter-spacing: -0.025em; color: hsl(var(--foreground)); text-wrap: balance; }
+  .console-page-description { max-width: 65ch; margin-top: 0.5rem; font-size: var(--console-text-body); line-height: var(--console-leading-body); color: hsl(var(--muted-foreground)); text-wrap: pretty; }
+  .console-page-header-actions { display: flex; flex-wrap: wrap; flex-shrink: 0; align-items: center; gap: 0.5rem; }
+  .console-control { border-radius: var(--console-control-radius); font-variant-numeric: tabular-nums; }
+  .console-control:focus-visible { outline: var(--console-focus-width) solid hsl(var(--ring)); outline-offset: 3px; }
+  .console-control:disabled { cursor: not-allowed; }
+  .console-control[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+  .console-card { border: var(--console-border-width) solid var(--console-border-default); border-radius: var(--console-radius-lg); background: var(--console-surface-raised); box-shadow: var(--console-shadow-sm); }
+  .console-section-title { font-size: var(--console-text-section); line-height: var(--console-leading-section); font-weight: 600; letter-spacing: -0.01em; }
+  @media (min-width: 640px) {
+    .console-page-header { flex-direction: row; align-items: flex-start; justify-content: space-between; gap: 1.5rem; }
+  }
+}
+
+@layer components {
+  @media (min-width: 641px) and (max-width: 1199px) {
+    .console-agent-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+}
+
+@layer components {
+  .console-badge-success { border-color: hsl(var(--success) / 0.2); background: hsl(var(--success) / 0.08); color: hsl(var(--success)); }
+  .console-badge-info { border-color: hsl(var(--info) / 0.2); background: hsl(var(--info) / 0.08); color: hsl(var(--info)); }
+  .console-badge-warning { border-color: hsl(var(--warning) / 0.2); background: hsl(var(--warning) / 0.08); color: hsl(var(--warning)); }
+}
+
+@layer components {
+  .console-text-body { font-size: var(--console-text-body); line-height: var(--console-leading-body); }
+  .console-text-label { font-size: var(--console-text-label); line-height: var(--console-leading-label); }
+  .console-text-code { font-family: var(--console-font-mono); font-size: var(--console-text-code); line-height: var(--console-leading-code); }
+  .console-menu-item { min-height: var(--console-control-height-sm); }
+}
+
+@layer components {
+  /* The gallery selection button is a column; its footer action is an independent row. */
+  .console-runtime-component > .console-runtime-component-preview {
+    display: inline-flex;
+    flex: none;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    align-self: flex-start;
+    width: fit-content;
+    height: var(--console-control-height-sm);
+    min-height: var(--console-control-height-sm);
+    gap: 0.375rem;
+    padding: 0 0.75rem;
+    font-size: var(--console-text-label);
+    line-height: var(--console-leading-label);
+    font-weight: 500;
+    border: var(--console-border-width) solid var(--console-border-subtle);
+    border-radius: var(--console-radius-md);
+    background: linear-gradient(180deg, hsl(var(--card) / 0.75), hsl(var(--muted) / 0.42));
+    color: hsl(var(--foreground));
+    box-shadow: var(--console-shadow-button);
+  }
+  .console-runtime-component > .console-runtime-component-preview:hover:not(:disabled) {
+    border-color: hsl(var(--foreground) / 0.18);
+    background: linear-gradient(180deg, hsl(var(--card) / 0.9), hsl(var(--muted) / 0.58));
+  }
+  .console-runtime-component-preview > svg { width: 0.875rem; height: 0.875rem; flex: none; }
 }

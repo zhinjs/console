@@ -20,8 +20,8 @@ export function EmptyState({ icon: Icon, title, description, className, compact 
     return (
       <div className={cn('flex flex-col items-center gap-2 py-8 text-center', className)}>
         {Icon && <Icon className="w-8 h-8 text-muted-foreground opacity-30" />}
-        <p className="text-sm text-muted-foreground">{title || '暂无数据'}</p>
-        {description && <p className="text-xs text-muted-foreground">{description}</p>}
+        <p className="console-text-body text-muted-foreground">{title || '暂无数据'}</p>
+        {description && <p className="console-text-label text-muted-foreground">{description}</p>}
       </div>
     )
   }
@@ -29,8 +29,8 @@ export function EmptyState({ icon: Icon, title, description, className, compact 
   return (
     <div className={cn('flex flex-col items-center gap-3 py-12 text-center', className)}>
       {Icon && <Icon className="w-12 h-12 text-muted-foreground opacity-30" />}
-      {title && <h3 className="text-lg font-semibold">{title}</h3>}
-      <p className="text-sm text-muted-foreground max-w-sm">{description || '暂无数据'}</p>
+      {title && <h3 className="console-section-title">{title}</h3>}
+      <p className="console-text-body text-muted-foreground max-w-sm">{description || '暂无数据'}</p>
     </div>
   )
 }

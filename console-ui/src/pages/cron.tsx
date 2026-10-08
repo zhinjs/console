@@ -19,6 +19,24 @@ import { CONSOLE_RPC } from '../contracts/zhin-console'
 import { requestConsole } from '../utils/console-rpc'
 import { isDemoMode } from '../utils/demo-mode'
 
+function cronValidationMessage(error?: string): string {
+  if (!error) return '请检查表达式。'
+  const fields = /^Cron expression must have 6 fields, got (\d+)$/.exec(error)
+  if (fields) return `需要 6 个字段（秒 分 时 日 月 周），当前为 ${fields[1]} 个。`
+  const invalid = /^(Empty cron field|Invalid cron field|Invalid cron step|Invalid cron range|Invalid cron value): (.+)$/.exec(error)
+  if (invalid) {
+    const reason: Record<string, string> = {
+      'Empty cron field': '字段没有有效取值，请检查范围',
+      'Invalid cron field': '字段格式无效',
+      'Invalid cron step': '步长无效',
+      'Invalid cron range': '范围格式无效',
+      'Invalid cron value': '字段取值无效',
+    }
+    return `${reason[invalid[1]]}：${invalid[2]}`
+  }
+  return error
+}
+
 interface MemoryCron {
   type: 'memory'
   expression: string
@@ -48,6 +66,9 @@ export default function CronPage() {
   const [newCron, setNewCron] = useState({ cronExpression: '', prompt: '', label: '' })
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [expandedMemIdx, setExpandedMemIdx] = useState<number | null>(null)
+  const [persistentAvailable, setPersistentAvailable] = useState(false)
+  const [cronValidation, setCronValidation] = useState<{ expression: string; valid: boolean; error?: string } | null>(null)
+  const [togglePending, setTogglePending] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const { error: toastError } = useToast()
   const readOnly = isDemoMode()
@@ -57,8 +78,10 @@ export default function CronPage() {
       type ScheduleListResponse = {
         memory?: MemoryCron[]
         persistent?: PersistentCron[]
+        capabilities?: { persistent?: boolean }
       }
       const data = await requestConsole<ScheduleListResponse>({ type: CONSOLE_RPC.SCHEDULE_LIST })
+      setPersistentAvailable(data.capabilities?.persistent === true)
       setMemoryCrons(data.memory ?? [])
       setPersistentCrons(data.persistent ?? [])
       setError(null)
@@ -74,14 +97,29 @@ export default function CronPage() {
     void fetchCrons()
   }, [fetchCrons])
 
+  useEffect(() => {
+    setCronValidation(null)
+    if (!addDialogOpen || !newCron.cronExpression.trim()) return
+    let active = true
+    const expression = newCron.cronExpression.trim()
+    const timer = setTimeout(() => {
+      void requestConsole<{ valid: boolean; error?: string }>({ type: CONSOLE_RPC.CRON_VALIDATE, cronExpression: expression })
+        .then((result) => { if (active) setCronValidation({ expression, ...result }) })
+        .catch(() => { if (active) setCronValidation({ expression, valid: false, error: '无法校验表达式，请检查连接后重试。' }) })
+    }, 250)
+    return () => { active = false; clearTimeout(timer) }
+  }, [addDialogOpen, newCron.cronExpression])
+
+  const validCron = cronValidation?.valid === true && cronValidation.expression === newCron.cronExpression.trim()
+
   const handleAdd = async () => {
-    if (!newCron.cronExpression || !newCron.prompt) return
+    if (!persistentAvailable || readOnly || submitting || !validCron || !newCron.prompt.trim()) return
     setSubmitting(true)
     try {
       await requestConsole({
         type: CONSOLE_RPC.CRON_ADD,
-        cronExpression: newCron.cronExpression,
-        prompt: newCron.prompt,
+        cronExpression: newCron.cronExpression.trim(),
+        prompt: newCron.prompt.trim(),
         label: newCron.label,
       })
       setAddDialogOpen(false)
@@ -95,7 +133,7 @@ export default function CronPage() {
   }
 
   const handleDelete = async () => {
-    if (!deleteTarget) return
+    if (!deleteTarget || !persistentAvailable || readOnly || submitting) return
     setSubmitting(true)
     try {
       await requestConsole({ type: CONSOLE_RPC.CRON_REMOVE, id: deleteTarget.id })
@@ -109,6 +147,8 @@ export default function CronPage() {
   }
 
   const handleToggle = async (job: PersistentCron) => {
+    if (!persistentAvailable || readOnly || togglePending) return
+    setTogglePending(job.id)
     try {
       if (job.enabled) {
         await requestConsole({ type: CONSOLE_RPC.CRON_PAUSE, id: job.id })
@@ -118,6 +158,8 @@ export default function CronPage() {
       await fetchCrons()
     } catch (err) {
       toastError((err as Error).message)
+    } finally {
+      setTogglePending(null)
     }
   }
 
@@ -160,7 +202,7 @@ export default function CronPage() {
             <Button variant="outline" size="sm" onClick={() => { setLoading(true); fetchCrons() }}>
               <RefreshCw className="w-4 h-4 mr-1" /> 刷新
             </Button>
-            {!readOnly && (
+            {!readOnly && persistentAvailable && (
               <Button size="sm" onClick={() => setAddDialogOpen(true)}>
                 <Plus className="w-4 h-4 mr-1" /> 新建任务
               </Button>
@@ -168,6 +210,13 @@ export default function CronPage() {
           </div>
         }
       />
+
+      {!readOnly && !persistentAvailable && <Alert>
+        <AlertDescription>
+          当前实例尚未启用持久化 AI 调度，暂不能创建、暂停或删除任务。已有插件注册的任务仍可在下方查看。
+          如需定时 AI 任务，请在运行实例中安装并配置 Agent 及持久化调度引擎，再刷新本页。
+        </AlertDescription>
+      </Alert>}
 
       {/* Persistent Cron Jobs */}
       <div>
@@ -182,7 +231,7 @@ export default function CronPage() {
               <Clock className="w-10 h-10 mx-auto mb-3 opacity-40" />
               <p>暂无持久化定时任务</p>
               <p className="text-xs mt-1">
-                {readOnly ? 'Demo 仅展示实例中已存在的任务' : '点击「新建任务」添加一个定时 AI 任务'}
+                {readOnly ? 'Demo 仅展示实例中已存在的任务' : persistentAvailable ? '点击「新建任务」添加一个定时 AI 任务' : '启用持久化 AI 调度后可在这里管理任务'}
               </p>
             </CardContent>
           </Card>
@@ -204,7 +253,7 @@ export default function CronPage() {
                           {job.label || job.id}
                         </span>
                         <Badge variant={job.enabled ? 'default' : 'outline'} className="text-xs shrink-0">
-                          {job.enabled ? '运行中' : '已暂停'}
+                          {job.enabled ? '已启用' : '已暂停'}
                         </Badge>
                       </div>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mb-2 ml-6">
@@ -215,12 +264,13 @@ export default function CronPage() {
                         <p className="text-sm text-muted-foreground line-clamp-1 ml-6">{job.prompt}</p>
                       )}
                     </div>
-                    {!readOnly && <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {!readOnly && persistentAvailable && <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
                         title={job.enabled ? '暂停' : '恢复'}
+                        disabled={togglePending !== null}
                         onClick={() => handleToggle(job)}
                       >
                         {job.enabled ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
@@ -230,6 +280,7 @@ export default function CronPage() {
                         size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive"
                         title="删除"
+                        disabled={togglePending !== null}
                         onClick={() => setDeleteTarget(job)}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -246,10 +297,14 @@ export default function CronPage() {
                             size="icon"
                             className="h-6 w-6"
                             title="复制 ID"
-                            onClick={() => {
-                              navigator.clipboard.writeText(job.id)
-                              setCopiedId(job.id)
-                              setTimeout(() => setCopiedId(null), 1500)
+                            onClick={async () => {
+                              try {
+                                await navigator.clipboard.writeText(job.id)
+                                setCopiedId(job.id)
+                                setTimeout(() => setCopiedId(null), 1500)
+                              } catch {
+                                toastError('复制失败，请手动选择任务 ID 复制。')
+                              }
                             }}
                           >
                             {copiedId === job.id ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
@@ -346,7 +401,7 @@ export default function CronPage() {
       </div>
 
       {/* Add Dialog */}
-      {!readOnly && <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+      {!readOnly && persistentAvailable && <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>新建定时任务</DialogTitle>
@@ -366,14 +421,17 @@ export default function CronPage() {
             <div>
               <label className="text-sm font-medium mb-1.5 block">Cron 表达式</label>
               <Input
-                placeholder="分 时 日 月 周，例如：0 9 * * *"
+                placeholder="秒 分 时 日 月 周，例如：0 0 9 * * *"
                 value={newCron.cronExpression}
                 onChange={(e) => setNewCron((p) => ({ ...p, cronExpression: e.target.value }))}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                5 字段格式：分(0-59) 时(0-23) 日(1-31) 月(1-12) 周(0-7)
+                6 字段格式：秒(0-59) 分(0-59) 时(0-23) 日(1-31) 月(1-12) 周(0-7)
               </p>
             </div>
+            {newCron.cronExpression.trim() && <p role="status" className={cronValidation?.valid ? 'text-xs text-muted-foreground' : 'text-xs text-destructive'}>
+              {cronValidation ? cronValidation.valid ? '表达式校验通过' : `表达式无效：${cronValidationMessage(cronValidation.error)}` : '正在校验表达式…'}
+            </p>}
             <div>
               <label className="text-sm font-medium mb-1.5 block">Prompt</label>
               <Textarea
@@ -386,11 +444,11 @@ export default function CronPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">取消</Button>
+              <Button variant="outline" disabled={submitting}>取消</Button>
             </DialogClose>
             <Button
               onClick={handleAdd}
-              disabled={submitting || !newCron.cronExpression || !newCron.prompt}
+              disabled={submitting || !validCron || !newCron.prompt.trim()}
             >
               {submitting ? '创建中...' : '创建'}
             </Button>
@@ -399,7 +457,7 @@ export default function CronPage() {
       </Dialog>}
 
       {/* Delete Confirm Dialog */}
-      {!readOnly && <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      {!readOnly && persistentAvailable && <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>确认删除</DialogTitle>
@@ -409,7 +467,7 @@ export default function CronPage() {
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">取消</Button>
+              <Button variant="outline" disabled={submitting}>取消</Button>
             </DialogClose>
             <Button variant="destructive" onClick={handleDelete} disabled={submitting}>
               {submitting ? '删除中...' : '删除'}

@@ -1,0 +1,37 @@
+{
+  "success": true,
+  "data": {
+    "name": "repeater",
+    "status": "active",
+    "description": "Repeater",
+    "features": [
+      {
+        "name": "command",
+        "icon": "Terminal",
+        "desc": "命令",
+        "count": 1,
+        "items": [
+          {
+            "name": "repeater-status"
+          }
+        ]
+      },
+      {
+        "name": "middleware",
+        "icon": "Layers",
+        "desc": "中间件",
+        "count": 1,
+        "items": [
+          {
+            "name": "repeater"
+          }
+        ]
+      }
+    ],
+    "packageName": "@zhin.js/plugin-repeater",
+    "instanceKey": "repeater",
+    "manageable": false,
+    "packageRoot": "./node_modules/.pnpm/@zhin.js+plugin-repeater@1.1.4_@zhin.js+command@1.1.3_@zhin.js+middleware@1.1.2_zhin.js@1.1.4/node_modules/@zhin.js/plugin-repeater",
+    "version": "1.1.4"
+  }
+}

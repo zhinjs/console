@@ -20,6 +20,7 @@ export const CONSOLE_RPC = {
   WORKROOM_PROFILE_STATUS: 'workroom.profile.status',
   WORKROOM_PROFILE_BOOTSTRAP: 'workroom.profile.bootstrap',
   SCHEDULE_LIST: 'schedule:list',
+  CRON_VALIDATE: 'cron:validate',
   CRON_ADD: 'cron:add',
   CRON_REMOVE: 'cron:remove',
   CRON_PAUSE: 'cron:pause',

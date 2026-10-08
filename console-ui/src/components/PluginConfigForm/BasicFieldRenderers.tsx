@@ -1,3 +1,5 @@
+import { useId } from 'react'
+import { numericFieldIssue } from './numeric-validation.mjs'
 /**
  * Basic type field renderers
  */
@@ -41,15 +43,18 @@ export function StringFieldRenderer({ field, value, onChange }: FieldRendererPro
   )
 }
 
-export function NumberFieldRenderer({ field, value, onChange }: FieldRendererProps) {
-  return (
-    <Input
-      type="number" value={value?.toString() || ''}
-      onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-      placeholder={field.description || '请输入数字'}
-      min={field.min} max={field.max}
-    />
-  )
+export function NumberFieldRenderer({ fieldName, field, value, onChange }: FieldRendererProps) {
+  const errorId = useId()
+  const issue = numericFieldIssue(field, value)
+  return <div className="space-y-1">
+    <Input type="number" aria-label={field.key || fieldName}
+      aria-invalid={Boolean(issue)} aria-describedby={issue ? errorId : undefined}
+      value={value?.toString() ?? ''}
+      onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))}
+      placeholder={field.description || '请输入数字'} min={field.min} max={field.max}
+      step={field.integer ? 1 : 'any'} />
+    {issue ? <p id={errorId} role="alert" className="text-xs text-destructive">{issue}</p> : null}
+  </div>
 }
 
 export function BooleanFieldRenderer({ value, onChange }: FieldRendererProps) {

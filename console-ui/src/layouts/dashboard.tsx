@@ -12,6 +12,7 @@ import { isDemoMode } from "../utils/demo-mode"
 import { reopenDemoOnboarding } from "../components/DemoOnboarding"
 import { ConsoleCommandCenter } from "../components/ConsoleCommandCenter"
 import { NAV_GROUP_ORDER, NAV_GROUPS } from "../navigation-taxonomy"
+import { resolveNavigationLocation } from "../navigation-location.mjs"
 
 const MOBILE_MQ = "(max-width: 767px)"
 
@@ -59,7 +60,6 @@ export default function DashboardLayout() {
   const isMobile = useIsMobile()
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const [activeMenu, setActiveMenu] = useState<string | null>(null)
   const { connected } = useWebSocket()
 
   const showLabels = isMobile || desktopSidebarOpen
@@ -93,11 +93,9 @@ export default function DashboardLayout() {
     { path: '/endpoints/:adapter/:endpointId', end: true },
     location.pathname,
   ) !== null
-  const currentRoute = useMemo(
-    () => menuRoutes.find((route) => (
-      location.pathname === route.path || location.pathname.startsWith(`${route.path}/`)
-    )),
-    [location.pathname, menuRoutes],
+  const navigation = useMemo(
+    () => resolveNavigationLocation(routes, location.pathname, (pattern, pathname) => matchPath({ path: pattern, end: true }, pathname) !== null),
+    [location.pathname, routes],
   )
 
   const orderedGroups = useMemo(() => {
@@ -215,13 +213,13 @@ export default function DashboardLayout() {
                   )}
                   {items.map((route, index) => {
                     const itemKey = route.path || `menu-item-${groupName}-${index}`
-                    const isActive = activeMenu === itemKey || location.pathname === route.path || location.pathname.startsWith(route.path + "/")
+                    const isActive = navigation.visible?.path === route.path
                     return (
                       <Link
                         key={itemKey}
                         to={route.path}
+                        aria-current={isActive ? "page" : undefined}
                         onClick={() => {
-                          setActiveMenu(itemKey)
                           if (isMobile) setMobileNavOpen(false)
                         }}
                         className={cn(
@@ -256,16 +254,13 @@ export default function DashboardLayout() {
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <div className="flex flex-col min-w-0">
-              <h2 className="text-sm font-semibold truncate">
-                {currentRoute?.name ?? (isDemoMode() ? "在线 Demo" : "工作台")}
-              </h2>
-              <span className="text-xs text-muted-foreground truncate hidden sm:block">
-                {isDemoMode()
-                  ? "hello · card · ai:"
-                  : currentRoute?.meta?.group ?? "管理你的 Zhin Bot"}
-              </span>
-            </div>
+            <nav aria-label="当前位置" className="flex flex-col min-w-0">
+              <span className="text-xs text-muted-foreground truncate">{navigation.group}</span>
+              <div className="flex items-center gap-1 min-w-0 text-sm font-semibold">
+                {navigation.parent && <><Link className="truncate hover:underline" to={navigation.parent.path}>{navigation.parent.name}</Link><span aria-hidden="true">/</span></>}
+                <span aria-current="page" className="truncate">{navigation.current?.name ?? (isDemoMode() ? "在线 Demo" : "工作台")}</span>
+              </div>
+            </nav>
           </div>
 
           <div className="flex flex-1 max-w-lg mx-1 sm:mx-4">

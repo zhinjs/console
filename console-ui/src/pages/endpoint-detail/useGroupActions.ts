@@ -32,7 +32,7 @@ export function useGroupActions(params: {
     try {
       const r = await requestConsole<{ members: MemberRow[] }>({
         type: ENDPOINT_RPC.GROUP_MEMBERS,
-        data: { adapter, endpointKey: endpointId, groupId: selection.id },
+        adapter, endpointKey: endpointId, groupId: selection.id,
       })
       setMembers(r.members || [])
     } catch (e) {
@@ -53,7 +53,7 @@ export function useGroupActions(params: {
       try {
         await requestConsole({
           type,
-          data: {
+          ...{
             adapter,
             endpointKey: endpointId,
             groupId: selection.id,

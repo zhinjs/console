@@ -1,4 +1,5 @@
 import type { ConversationChannelType } from './types'
+import { getApiBase } from '../../utils/auth'
 
 const STORAGE_PREFIX = 'zhin_conv_read'
 
@@ -8,7 +9,7 @@ function readKey(
   channelType: ConversationChannelType,
   channelId: string,
 ): string {
-  return `${STORAGE_PREFIX}:${adapter}:${endpointId}:${channelType}:${channelId}`
+  return `${STORAGE_PREFIX}:${encodeURIComponent(getApiBase())}:${JSON.stringify([adapter, endpointId, channelType, channelId])}`
 }
 
 export function getLastReadAt(

@@ -1,5 +1,7 @@
 import { useMemo, useCallback, useRef, type KeyboardEvent } from 'react'
 import { editorFontStyle } from './editor-constants'
+import { highlightCode } from './highlight-code.mjs'
+import './code-highlight.css'
 export function CodeEditor({
   value,
   onChange,
@@ -14,17 +16,7 @@ export function CodeEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const preRef = useRef<HTMLPreElement>(null)
 
-  const highlighted = useMemo(() => {
-    if (window.hljs && language && window.hljs.getLanguage(language)) {
-      try {
-        return window.hljs.highlight(value, { language }).value
-      } catch { /* fallback */ }
-    }
-    return value
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-  }, [value, language])
+  const highlighted = useMemo(() => highlightCode(value, language), [value, language])
 
   const handleScroll = useCallback(() => {
     if (preRef.current && textareaRef.current) {
@@ -52,7 +44,7 @@ export function CodeEditor({
   )
 
   return (
-    <div className="relative h-full w-full overflow-hidden">
+    <div className="file-code-editor relative h-full w-full overflow-hidden">
       <pre
         ref={preRef}
         className="absolute inset-0 m-0 p-4 overflow-auto pointer-events-none"
@@ -78,7 +70,7 @@ export function CodeEditor({
         style={{
           ...editorFontStyle,
           color: 'transparent',
-          caretColor: 'hsl(var(--foreground))',
+          caretColor: 'var(--foreground)',
           WebkitTextFillColor: 'transparent',
         }}
         spellCheck={false}

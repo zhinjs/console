@@ -51,6 +51,7 @@ export function useMessageHistory(params: {
   const [sending, setSending] = useState(false)
 
   const [inboxMessages, setInboxMessages] = useState<InboxMessageRow[]>([])
+  const [inboxMessagesError, setInboxMessagesError] = useState<string | null>(null)
   const [inboxMessagesLoading, setInboxMessagesLoading] = useState(false)
   const [inboxMessagesHasMore, setInboxMessagesHasMore] = useState(true)
   const [inboxMessagesEnabled, setInboxMessagesEnabled] = useState(false)
@@ -62,12 +63,13 @@ export function useMessageHistory(params: {
       if (!adapter || !endpointId || selection?.type !== 'channel') return
       const seq = ++inboxLoadSeqRef.current
       setInboxMessagesLoading(true)
+      setInboxMessagesError(null)
       const append = beforeTs != null
       try {
         const rpcParent = toRpcChannelParent(selection.parent)
         const res = await requestConsole<{ messages: InboxMessageRow[]; inboxEnabled: boolean }>({
           type: INBOX_RPC.MESSAGES,
-          data: {
+          ...{
             adapter,
             endpointKey: endpointId,
             channelId: selection.id,
@@ -90,9 +92,9 @@ export function useMessageHistory(params: {
           setInboxMessages(res.messages)
         }
         setInboxMessagesHasMore(res.messages.length >= 50)
-      } catch {
+      } catch (caught) {
         if (seq !== inboxLoadSeqRef.current) return
-        if (!append) setInboxMessages([])
+        setInboxMessagesError(caught instanceof Error ? caught.message : String(caught))
         setInboxMessagesHasMore(false)
       } finally {
         if (seq === inboxLoadSeqRef.current) setInboxMessagesLoading(false)
@@ -232,11 +234,11 @@ export function useMessageHistory(params: {
       const rpcParent = selection?.type === 'channel' ? toRpcChannelParent(selection.parent) : undefined
       await requestConsole({
         type: ENDPOINT_RPC.SEND_MESSAGE,
-        data: {
+        ...{
           adapter,
           endpointKey: endpointId,
-          id: targetId,
-          type: msgType,
+          channelId: targetId,
+          channelType: msgType,
           ...(rpcParent ? { parent: rpcParent } : {}),
           content: outgoingSegments,
         },
@@ -271,6 +273,7 @@ export function useMessageHistory(params: {
     inboxMessages,
     setInboxMessages,
     inboxMessagesLoading,
+    inboxMessagesError,
     inboxMessagesHasMore,
     inboxMessagesEnabled,
     setInboxMessagesEnabled,

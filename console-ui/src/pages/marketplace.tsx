@@ -1,3 +1,7 @@
+import { copyText } from './clipboard-copy.mjs'
+import { useToast } from '../components/toast'
+import { reconcileInstall } from './marketplace-install-model.mjs'
+import { applyRegistryVersion, belongsToZhinScope } from './marketplace-version.mjs'
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import {
   Search, Package, Download, ExternalLink, AlertCircle,
@@ -24,6 +28,7 @@ interface MarketPlugin {
   name: string
   displayName: string
   version: string
+  versionSource?: 'index' | 'registry'
   description: string
   author: string
   isOfficial: boolean
@@ -103,6 +108,7 @@ function formatDownloads(n: number): string {
 }
 
 export default function MarketplacePage() {
+  const toast = useToast()
   const [plugins, setPlugins] = useState<MarketPlugin[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -119,11 +125,17 @@ export default function MarketplacePage() {
   const [updatesDismissed, setUpdatesDismissed] = useState(false)
 
   // Detail dialog
+  const registryDetails = useRef(new Map<string, PluginDetail>())
+  const detailRequest = useRef(0)
+  const [detailError, setDetailError] = useState<string | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detail, setDetail] = useState<PluginDetail | null>(null)
   const [detailTab, setDetailTab] = useState<DetailTab>('readme')
   const [copied, setCopied] = useState(false)
+  const installInFlight = useRef(false)
+  const pendingInstalls = useRef(new Map<string, string>())
+  const [uncertainPackage, setUncertainPackage] = useState<string | null>(null)
   const [installPlan, setInstallPlan] = useState<PluginInstallPlan | null>(null)
   const [installLoading, setInstallLoading] = useState(false)
   const [installMessage, setInstallMessage] = useState<string | null>(null)
@@ -145,7 +157,7 @@ export default function MarketplacePage() {
       if (!res.ok) throw new Error('搜索失败')
       const data = await res.json()
       if (data.success) {
-        setPlugins(data.data)
+        setPlugins(data.data.map((plugin: MarketPlugin) => applyRegistryVersion(plugin, registryDetails.current.get(plugin.name))))
         setTotal(data.total || 0)
       } else {
         throw new Error(data.error || '数据格式错误')
@@ -182,13 +194,15 @@ export default function MarketplacePage() {
       const res = await apiFetch('/api/marketplace/updates')
       if (res.ok) {
         const data = await res.json()
-        if (data.success) setUpdates(data.data)
+        if (data.success) setUpdates(data.data.filter((item: UpdateInfo) => item.current && item.latest && item.current !== item.latest))
       }
     } catch { /* ignore */ }
     finally { setUpdatesLoading(false) }
   }, [])
 
   const openDetail = useCallback(async (name: string) => {
+    const request = ++detailRequest.current
+    setDetailError(null)
     setDetailOpen(true)
     setDetailLoading(true)
     setDetail(null)
@@ -196,15 +210,23 @@ export default function MarketplacePage() {
     setCopied(false)
     setInstallPlan(null)
     setInstallMessage(null)
-    setInstallError(null)
+    setInstallError(pendingInstalls.current.get(name) ?? null)
+    setUncertainPackage(pendingInstalls.current.has(name) ? name : null)
     try {
       const res = await apiFetch(`/pub/marketplace/detail/${name}`)
-      if (res.ok) {
-        const data = await res.json()
-        if (data.success) setDetail(data.data)
-      }
-    } catch { /* ignore */ }
-    finally { setDetailLoading(false) }
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.error || '加载插件详情失败')
+      if (request !== detailRequest.current) return
+      const resolved = data.data as PluginDetail
+      if (resolved.name !== name || !resolved.version) throw new Error('注册表返回的包身份或 latest 版本无效')
+      registryDetails.current.set(name, resolved)
+      setDetail(resolved)
+      setPlugins(items => items.map(plugin => applyRegistryVersion(plugin, registryDetails.current.get(plugin.name))))
+    } catch (error) {
+      if (request === detailRequest.current) setDetailError((error as Error).message)
+    } finally {
+      if (request === detailRequest.current) setDetailLoading(false)
+    }
   }, [])
 
   const previewInstall = useCallback(async (packageName: string) => {
@@ -224,44 +246,67 @@ export default function MarketplacePage() {
     }
   }, [])
 
+  const recheckInstall = useCallback(async (packageName: string) => {
+    setInstallLoading(true)
+    const request = detailRequest.current
+    const state = await reconcileInstall(packageName, () => requestConsole<PluginInstallPlan>({ type: 'plugin:plan-install', packageName }))
+    if (state.confirmed) pendingInstalls.current.delete(packageName)
+    else pendingInstalls.current.set(packageName, state.message)
+    if (request === detailRequest.current) {
+      setInstallPlan(null)
+      setUncertainPackage(state.confirmed ? null : packageName)
+      setInstallError(state.confirmed ? null : state.message)
+      setInstallMessage(state.confirmed ? state.message : null)
+    }
+    setInstallLoading(false)
+  }, [])
+
   const commitInstall = useCallback(async () => {
-    if (!installPlan) return
+    if (!installPlan || installInFlight.current || uncertainPackage) return
+    const packageName = installPlan.packageName
+    const request = detailRequest.current
+    installInFlight.current = true
     setInstallLoading(true)
     setInstallError(null)
+    let submitted = false
     try {
       const config = await requestConsole<{ revision?: string }>({ type: 'config:get-source' })
+      submitted = true
+      setInstallPlan(null)
+      const unknown = '安装已提交，结果正在核对；请勿重复安装。'
+      pendingInstalls.current.set(packageName, unknown)
+      setUncertainPackage(packageName)
       const result = await requestConsole<{ restartRequired: boolean }>({
-        type: 'plugin:install',
-        packageName: installPlan.packageName,
+        type: 'plugin:install', packageName,
         ...(config.revision ? { expectedRevision: config.revision } : {}),
       })
-      setInstallMessage(result.restartRequired ? '安装成功，重启 Host 后生效' : '安装成功')
-      setInstallPlan(null)
+      pendingInstalls.current.delete(packageName)
+      if (request === detailRequest.current) {
+        setUncertainPackage(null)
+        setInstallMessage(result.restartRequired ? '安装成功，重启 Host 后生效' : '安装成功')
+      }
       void checkUpdates()
     } catch (err) {
-      setInstallError((err as Error).message)
+      if (submitted) await recheckInstall(packageName)
+      else setInstallError((err as Error).message)
     } finally {
+      installInFlight.current = false
       setInstallLoading(false)
     }
-  }, [checkUpdates, installPlan])
+  }, [checkUpdates, installPlan, uncertainPackage, recheckInstall])
 
   const handleCopyInstall = useCallback(async (name: string) => {
-    const cmd = `pnpm add ${name}`
-    try {
-      await navigator.clipboard.writeText(cmd)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      const el = document.createElement('textarea')
-      el.value = cmd
-      document.body.appendChild(el)
-      el.select()
-      document.execCommand('copy')
-      document.body.removeChild(el)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+    const request = detailRequest.current
+    setCopied(false)
+    const success = await copyText(`pnpm add ${name}@latest`, navigator.clipboard, document)
+    if (!success) {
+      toast.error('复制失败，请选中安装命令手动复制。')
+      return
     }
-  }, [])
+    if (request !== detailRequest.current) return
+    setCopied(true)
+    setTimeout(() => { if (request === detailRequest.current) setCopied(false) }, 2000)
+  }, [toast])
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
@@ -272,7 +317,7 @@ export default function MarketplacePage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">插件市场</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            探索 Zhin.js 生态中的插件
+            探索 Zhin.js 生态中的插件。列表为发现索引，打开详情后核验注册表 latest。
           </p>
         </div>
         <div className="flex gap-2">
@@ -290,11 +335,11 @@ export default function MarketplacePage() {
             <div className="flex items-start gap-2">
               <RefreshCw className="h-4 w-4 mt-0.5 shrink-0" />
               <AlertDescription>
-                有 {updates.length} 个插件可更新：
+                有 {updates.length} 个插件的本地版本与注册表 latest 不同：
                 <div className="flex flex-wrap gap-1 mt-1">
                   {updates.slice(0, 5).map(u => (
                     <Badge key={u.name} variant="secondary" className="text-xs">
-                      {u.name} → {u.latest}
+                      {u.name}：{u.current} → latest {u.latest}
                     </Badge>
                   ))}
                   {updates.length > 5 && (
@@ -327,8 +372,8 @@ export default function MarketplacePage() {
             size="sm"
             onClick={() => setOfficialOnly(!officialOnly)}
           >
-            <ShieldCheck className="w-4 h-4 mr-1" />
-            仅官方
+            <Package className="w-4 h-4 mr-1" />
+            仅 @zhin.js
           </Button>
           <select
             value={sortKey}
@@ -392,10 +437,10 @@ export default function MarketplacePage() {
                     </span>
                   </div>
                   <div className="flex gap-1 shrink-0">
-                    {plugin.isOfficial && (
-                      <Badge variant="default" className="text-[10px]">官方</Badge>
+                    {belongsToZhinScope(plugin.name) && (
+                      <Badge variant="default" className="text-[10px]" title="包属于 @zhin.js 命名空间，不表示安全审计或兼容性保证">@zhin.js</Badge>
                     )}
-                    <Badge variant="secondary" className="text-[10px]">v{plugin.version}</Badge>
+                    <Badge variant="secondary" className="text-[10px]">{plugin.versionSource === 'registry' ? 'latest' : '索引'} v{plugin.version}</Badge>
                   </div>
                 </div>
 
@@ -477,7 +522,7 @@ export default function MarketplacePage() {
       )}
 
       {/* Detail Dialog */}
-      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+      <Dialog open={detailOpen} onOpenChange={(open) => { if (!open) detailRequest.current++; setDetailOpen(open) }}>
         <DialogContent className="w-[calc(100%-2rem)] max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
           {detailLoading ? (
             <div className="space-y-3 p-1">
@@ -491,7 +536,7 @@ export default function MarketplacePage() {
                 <DialogTitle className="flex items-center gap-2">
                   <Package className="w-5 h-5" />
                   {detail.name}
-                  <Badge variant="secondary">v{detail.version}</Badge>
+                  <Badge variant="secondary">latest v{detail.version}</Badge>
                 </DialogTitle>
                 <DialogDescription>{detail.description}</DialogDescription>
               </DialogHeader>
@@ -635,12 +680,13 @@ export default function MarketplacePage() {
                   <h4 className="text-sm font-medium mb-2">安装命令</h4>
                   <div className="flex items-center gap-2 min-w-0">
                     <code className="flex-1 min-w-0 text-xs bg-secondary rounded-md p-2 overflow-x-auto break-all">
-                      pnpm add {detail.name}
+                      pnpm add {detail.name}@latest
                     </code>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleCopyInstall(detail.name)}
+                      aria-label={copied ? '已复制安装命令' : '复制安装命令'}
                       className="shrink-0"
                     >
                       {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
@@ -660,6 +706,7 @@ export default function MarketplacePage() {
                     <AlertDescription>{installMessage}</AlertDescription>
                   </Alert>
                 )}
+                {uncertainPackage && <Button variant="outline" size="sm" disabled={installLoading} onClick={() => void recheckInstall(uncertainPackage)}>{installLoading ? '核对中…' : '重新核对安装状态'}</Button>}
                 {installPlan && (
                   <div className="rounded-md border p-3 space-y-2 text-sm">
                     <div className="font-medium">安装计划</div>
@@ -678,7 +725,7 @@ export default function MarketplacePage() {
                       <Button variant="ghost" size="sm" onClick={() => setInstallPlan(null)} disabled={installLoading}>
                         取消
                       </Button>
-                      <Button size="sm" onClick={() => void commitInstall()} disabled={installLoading}>
+                      <Button size="sm" onClick={() => void commitInstall()} disabled={installLoading || !!uncertainPackage}>
                         {installLoading ? '安装中…' : '确认安装'}
                       </Button>
                     </div>
@@ -714,7 +761,7 @@ export default function MarketplacePage() {
                     <Download className="w-3 h-3 mr-1" /> npm
                   </a>
                 </Button>
-                {!installPlan && !installMessage && (
+                {!installPlan && !installMessage && !uncertainPackage && (
                   <Button size="sm" onClick={() => void previewInstall(detail.name)} disabled={installLoading}>
                     <Download className="w-3 h-3 mr-1" />
                     {installLoading ? '检查中…' : '安装'}
@@ -728,7 +775,7 @@ export default function MarketplacePage() {
           ) : (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>加载插件详情失败</AlertDescription>
+              <AlertDescription>{detailError || '加载插件详情失败'}</AlertDescription>
             </Alert>
           )}
         </DialogContent>

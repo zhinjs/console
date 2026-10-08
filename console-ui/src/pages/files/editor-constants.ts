@@ -1,9 +1,7 @@
-export const HLJS_CDN = 'https://cdn.jsdelivr.net.cn/npm/@highlightjs/cdn-assets@11/styles'
-
 export const editorFontStyle = {
-  fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
-  fontSize: '13px',
-  lineHeight: '20px',
+  fontFamily: 'var(--console-font-mono, ui-monospace, monospace)',
+  fontSize: 'var(--console-text-code, 13px)',
+  lineHeight: 'var(--console-line-code, 20px)',
   tabSize: 2,
   whiteSpace: 'pre' as const,
 }

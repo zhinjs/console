@@ -1,6 +1,11 @@
 import * as React from "react";
 import { Route } from "react-router-dom";
 import { app } from "@zhin.js/client";
+import { PageErrorBoundary } from "@console/components/page-error-boundary";
+
+function RouteContent({ route }: { route: ReturnType<typeof app._getRoutes>[number] }) {
+  return <>{app._renderRouteElement(route)}</>;
+}
 import { CONSOLE_UI_LEGACY_PREFIX } from "../paths";
 
 const routePathPrefix = CONSOLE_UI_LEGACY_PREFIX.endsWith("/")
@@ -21,7 +26,7 @@ export function useConsoleRouteElements(): React.ReactElement {
   return (
     <>
       {routeRecords.map((r) => (
-        <Route key={r.path} path={toRelativeRoutePath(r.path)} element={app._renderRouteElement(r)} />
+        <Route key={r.path} path={toRelativeRoutePath(r.path)} element={<PageErrorBoundary key={r.path}><RouteContent route={r} /></PageErrorBoundary>} />
       ))}
     </>
   );

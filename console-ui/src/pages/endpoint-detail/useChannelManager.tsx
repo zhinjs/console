@@ -1,3 +1,4 @@
+import { conversationListNotice, type ConversationListNotice } from './conversation-list-notice.mjs'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Hash, MessageSquare, User, Users } from 'lucide-react'
 import { useToast } from '../../components/toast'
@@ -14,7 +15,6 @@ import type {
 } from './types'
 import { listInboxCache } from '../../utils/inbox-cache'
 import {
-  adapterListHint,
   adapterSupportsChannels,
   adapterSupportsPrivateGroups,
   sectionEmptyHint,
@@ -82,7 +82,7 @@ export function useChannelManager(params: {
   const [groups, setGroups] = useState<GroupsEntry[]>([])
   const [channelList, setChannelList] = useState<ChannelsEntry[]>([])
   const [listLoading, setListLoading] = useState(false)
-  const [listErr, setListErr] = useState<string | null>(null)
+  const [listNotice, setListNotice] = useState<ConversationListNotice | null>(null)
   const [metaIndex, setMetaIndex] = useState<ConversationMetaIndex>(new Map())
   const [nameIndex, setNameIndex] = useState<ConversationNameIndex>(new Map())
 
@@ -213,7 +213,7 @@ export function useChannelManager(params: {
   const loadLists = useCallback(async () => {
     if (!adapter || !endpointId) return
     setListLoading(true)
-    setListErr(null)
+    setListNotice(null)
     const errors: string[] = []
     let nextFriends: FriendsEntry[] = []
     let nextGroups: GroupsEntry[] = []
@@ -228,7 +228,7 @@ export function useChannelManager(params: {
         try {
           const f = await requestConsole<{ friends: unknown[] }>({
             type: ENDPOINT_RPC.FRIENDS,
-            data: { adapter, endpointKey: endpointId },
+            adapter, endpointKey: endpointId,
           })
           nextFriends = normalizeList(f.friends ?? [], normalizeFriendRecord).filter(
             (x) => x.user_id > 0,
@@ -239,7 +239,7 @@ export function useChannelManager(params: {
         try {
           const g = await requestConsole<{ groups: unknown[] }>({
             type: ENDPOINT_RPC.GROUPS,
-            data: { adapter, endpointKey: endpointId },
+            adapter, endpointKey: endpointId,
           })
           nextGroups = normalizeList(g.groups ?? [], normalizeGroupRecord).filter(
             (x) => x.group_id > 0,
@@ -276,24 +276,9 @@ export function useChannelManager(params: {
       await refreshMetadata()
 
       const total = nextFriends.length + nextGroups.length + nextChannels.length
-      if (total === 0) {
-        const hint = adapterListHint(adapter)
-        if (errors.length) {
-          setListErr(`${errors.join('；')}。${hint}`)
-        } else if (!info?.connected) {
-          setListErr(`Endpoint 未在线。${hint}`)
-        } else {
-          setListErr(`暂无会话。${hint}`)
-        }
-      } else if (usedInboxFallback) {
-        setListErr('已从收件箱历史恢复最近会话（主列表接口未返回数据）')
-      } else if (inboxMergedCount > 0) {
-        setListErr(`已从收件箱补充 ${inboxMergedCount} 个最近会话`)
-      } else if (errors.length) {
-        setListErr(errors.join('；'))
-      }
+      setListNotice(conversationListNotice({ total, errors, connected: info?.connected, historyOnly: usedInboxFallback }))
     } catch (e) {
-      setListErr((e as Error).message)
+      setListNotice(conversationListNotice({ total: 0, errors: [(e as Error).message] }))
     } finally {
       setListLoading(false)
     }
@@ -506,7 +491,7 @@ export function useChannelManager(params: {
     try {
       await requestConsole({
         type: ENDPOINT_RPC.DELETE_FRIEND,
-        data: { adapter, endpointKey: endpointId, userId: selection.id },
+        adapter, endpointKey: endpointId, userId: selection.id,
       })
       setFriends((prev) => prev.filter((f) => String(f.user_id) !== selection.id))
       setSelection(null)
@@ -541,7 +526,7 @@ export function useChannelManager(params: {
     groups,
     channelList,
     listLoading,
-    listErr,
+    listNotice,
     selection,
     setSelection,
     showChannelList,

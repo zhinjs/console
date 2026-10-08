@@ -1,0 +1,27 @@
+/* Radix wraps viewport content in display:table, whose intrinsic width can
+   exceed the sidebar for long filenames. Keep only the file tree constrained. */
+.file-tree-scroll [data-radix-scroll-area-viewport] > div {
+  display: block !important;
+  min-width: 0 !important;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Files controls retain comfortable touch targets while the editor occupies
+   the full content width below the desktop split-view breakpoint. */
+.file-control {
+  min-height: 44px;
+  min-width: 44px;
+}
+@media (min-width: 768px) {
+  .file-control {
+    min-height: 36px;
+    min-width: 36px;
+  }
+}
+@media (min-width: 1024px) {
+  .file-control {
+    min-height: 32px;
+    min-width: 32px;
+  }
+}

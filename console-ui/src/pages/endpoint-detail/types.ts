@@ -6,7 +6,7 @@ export interface EndpointInfo {
 }
 
 export interface ReqItem {
-  id: number
+  id?: number
   platformRequestId: string
   type: string
   sender: { id: string; name?: string }

@@ -1,0 +1,1 @@
+export function reconcileInstall(packageName: string, readPlan: () => Promise<{ packageName: string; alreadyInstalled: boolean; alreadyDeclared: boolean }>): Promise<{ confirmed: boolean; message: string }>;
