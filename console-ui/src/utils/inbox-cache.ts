@@ -1,10 +1,17 @@
+import { getApiBase, getToken } from './auth'
+import { createInboxCacheAuthority, selectInboxCache } from './inbox-cache-scope.mjs'
+
 /**
- * 与 @zhin.js/client idb-store 共用同一 IndexedDB（zhin-console / inbox），
- * 供 endpoint-detail 在 RPC 返回前展示缓存的收件箱数据，并在 SSE 推送时增量持久化。
- *
- * Schema 与 SDK 侧 idb-store 对齐：DB_VERSION=2（inbox + pending 两个 store）、
- * 记录使用 endpoint_id 字段；读取时兼容旧版 endpointId 字段。
+ * SDK-shared IndexedDB, but this UI reads only its current authenticated connection scope.
+ * The opaque random scope persists with records; no credential/hash is written or returned.
+ * A page reload creates a fresh identity, so prior-session and unscoped SDK rows are not hydrated.
  */
+const authority = createInboxCacheAuthority(() => {
+  try { return { host: getApiBase(), credential: getToken() ?? undefined } }
+  catch { return undefined }
+})
+export function getInboxCacheScope(): string | undefined { return authority.current() }
+export function isInboxCacheScopeActive(scope?: string): boolean { return authority.active(scope) }
 
 const DB_NAME = 'zhin-console'
 const DB_VERSION = 2
@@ -16,16 +23,11 @@ export type InboxKind = 'message' | 'request' | 'notice'
 export interface InboxCacheRecord {
   id: string
   adapter: string
+  scope?: string
   endpoint_id?: string
-  /** 旧版（DB v1）记录字段，仅读取兼容 */
-  endpointId?: string
   kind: InboxKind
   payload: Record<string, unknown>
   updatedAt: number
-}
-
-function recordEndpointId(record: InboxCacheRecord): string {
-  return String(record.endpoint_id ?? record.endpointId ?? '')
 }
 
 function openDb(): Promise<IDBDatabase> {
@@ -50,7 +52,8 @@ export async function listInboxCache(
   endpointId: string,
   kind: InboxKind,
 ): Promise<InboxCacheRecord[]> {
-  if (typeof indexedDB === 'undefined') return []
+  const scope = authority.current()
+  if (!scope || typeof indexedDB === 'undefined') return []
   try {
     const db = await openDb()
     const all = await new Promise<InboxCacheRecord[]>((resolve, reject) => {
@@ -60,9 +63,7 @@ export async function listInboxCache(
       req.onerror = () => reject(req.error)
     })
     db.close()
-    return all
-      .filter((r) => r.adapter === adapter && recordEndpointId(r) === endpointId && r.kind === kind)
-      .sort((a, b) => b.updatedAt - a.updatedAt)
+    return authority.active(scope) ? selectInboxCache(all, scope, adapter, endpointId, kind) : []
   } catch {
     return []
   }
@@ -74,11 +75,13 @@ export async function putInboxCache(
   kind: InboxKind,
   payload: Record<string, unknown>,
 ): Promise<void> {
-  if (typeof indexedDB === 'undefined') return
+  const scope = authority.current()
+  if (!scope || typeof indexedDB === 'undefined') return
   try {
     const id = `${adapter}:${endpointId}:${kind}:${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     const record: InboxCacheRecord = {
       id,
+      scope,
       adapter,
       endpoint_id: endpointId,
       kind,
@@ -86,6 +89,7 @@ export async function putInboxCache(
       updatedAt: Date.now(),
     }
     const db = await openDb()
+    if (!authority.active(scope)) { db.close(); return }
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction(STORE_INBOX, 'readwrite')
       tx.objectStore(STORE_INBOX).put(record)

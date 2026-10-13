@@ -21,7 +21,11 @@ export interface SchemaField {
   /** Schema.toJSON() object map（与 @zhin.js/schema 对齐；优先于 dict/properties） */
   object?: Record<string, SchemaField>
   dict?: Record<string, SchemaField>  // object 类型的字段
-  component?: string  // UI 组件提示
+  component?: string  // Host UI 组件提示
+  hidden?: boolean
+  secret?: boolean
+  effect?: string
+  options?: ReadonlyArray<{ label: string; value: unknown }>
 }
 
 export interface Schema {
@@ -37,14 +41,4 @@ export interface PluginConfigFormProps {
   schema: Schema | null
   initialConfig?: Record<string, any>
   onSuccess?: () => void
-}
-
-export interface FieldRendererProps {
-  fieldName: string
-  field: SchemaField
-  value: any
-  onChange: (value: any) => void
-  parentPath?: string
-  onNestedChange?: (parentPath: string, childKey: string, value: any) => void
-  onArrayItemChange?: (fieldName: string, index: number, value: any) => void
 }

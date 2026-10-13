@@ -34,6 +34,7 @@ const consoleDevProxy = {
   "/@dev": consoleApiProxy,
   "/@assets": consoleApiProxy,
   "/api": consoleApiProxy,
+  "/pub": consoleApiProxy,
   "/zhin": consoleApiProxy,
 } as const;
 

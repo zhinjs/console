@@ -1,0 +1,2 @@
+export function createInboxCacheAuthority(readConnection: () => { host?: string; credential?: string } | undefined, newId?: () => string): { current(): string | undefined; active(expected?: string): boolean }
+export function selectInboxCache<T extends { scope?: string; adapter: string; endpoint_id?: string; kind: string; updatedAt: number }>(records: T[], scope: string | undefined, adapter: string, endpointId: string, kind: string): T[]

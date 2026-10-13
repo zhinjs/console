@@ -1,6 +1,7 @@
 import { Copy, Forward, Quote } from 'lucide-react'
 import { cn } from '@zhin.js/client'
 import type { ChatRow } from './types'
+import { RenderingDiagnostics } from './RenderingDiagnostics'
 import { MessageBody, messageContentSummary } from './MessageBody'
 
 export interface MessageDraftReference {
@@ -22,7 +23,7 @@ function senderNameOf(message: ChatRow): string {
 
 export function toDraftReference(message: ChatRow): MessageDraftReference {
   return {
-    id: message.id,
+    id: message.messageId ?? message.id,
     senderName: senderNameOf(message),
     summary: messageContentSummary(message.content, 96) || '[空消息]',
   }
@@ -59,9 +60,11 @@ export function ChatMessageRow({ message, onQuote, onForward }: ChatMessageRowPr
         <div className={cn('im-meta flex items-center gap-2 text-[10px] mb-0.5', out ? '' : 'text-muted-foreground')}>
           <span className={cn('font-medium', out ? '' : 'text-foreground/90')}>{senderName}</span>
           <span className="tabular-nums opacity-80">{timeLabel}</span>
+          {message.directionUnknown && <span className="opacity-70">历史方向未记录</span>}
         </div>
         <div className="im-message-text text-[14px] leading-snug break-words">
           <MessageBody content={message.content} />
+          {out && <RenderingDiagnostics rendering={message.rendering} messageId={message.messageId} error={message.renderingError} />}
         </div>
       </div>
     </article>

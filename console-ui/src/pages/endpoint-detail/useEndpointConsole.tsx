@@ -15,7 +15,8 @@ import type {
   NoticeItem,
 } from './types'
 import { normalizeInboundContent } from '../../utils/parseComposerContent'
-import { listInboxCache, putInboxCache } from '../../utils/inbox-cache'
+import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
+import { listInboxCache, putInboxCache, isInboxCacheScopeActive } from '../../utils/inbox-cache'
 import { useChannelManager } from './useChannelManager'
 import { useMessageHistory } from './useMessageHistory'
 import { useGroupActions } from './useGroupActions'
@@ -26,7 +27,7 @@ import {
 } from '../../utils/endpoint-push'
 import { ENDPOINT_RPC, INBOX_RPC, SIDE_EVENT_PUSH, SIDE_EVENT_RPC } from '../../contracts/zhin-console'
 import { readEndpointList } from '../endpoint-list-model.mjs'
-import { endpointAddress, requestApproval, consumedRows } from './endpoint-request.mjs'
+import { readEndpointIdentity, endpointAddress, requestApproval, consumedRows } from './endpoint-request.mjs'
 import { requestConsole } from '../../utils/console-rpc'
 
 export function useEndpointConsole() {
@@ -40,6 +41,7 @@ export function useEndpointConsole() {
   const endpointIdentityRef = useRef(endpointIdentity)
   endpointIdentityRef.current = endpointIdentity
   const valid = Boolean(adapter && endpointId)
+  const cacheScope = useInboxCacheScope()
   const [searchParams] = useSearchParams()
   const requestedChannelType = searchParams.get('channelType')
   const initialChannelType = requestedChannelType === 'private'
@@ -57,24 +59,28 @@ export function useEndpointConsole() {
   const [actionError, setActionError] = useState<string | null>(null)
 
   // --- Endpoint info ---
+  const infoSequence = useRef(0)
   const loadInfo = useCallback(async () => {
     if (!adapter || !endpointId) return
+    const sequence = ++infoSequence.current
     try {
       const data = await requestConsole<EndpointInfo>({
         type: ENDPOINT_RPC.INFO,
         ...endpointAddress(adapter, endpointId),
       })
-      setInfo(readEndpointList({ endpoints: [data] })[0])
+      if (sequence !== infoSequence.current || !isInboxCacheScopeActive(cacheScope)) return
+      setInfo({ ...readEndpointList({ endpoints: [data] })[0], endpoint: readEndpointIdentity(data.endpoint) })
       setLoadErr(null)
     } catch (e) {
-      setLoadErr((e as Error).message)
+      if (sequence === infoSequence.current && isInboxCacheScopeActive(cacheScope)) setLoadErr((e as Error).message)
     }
-  }, [adapter, endpointId])
+  }, [adapter, endpointId, cacheScope])
 
   useEffect(() => {
-    loadInfo()
+    setInfo(null)
+    void loadInfo()
     const t = setInterval(loadInfo, 8000)
-    return () => clearInterval(t)
+    return () => { clearInterval(t); infoSequence.current++ }
   }, [loadInfo])
 
   const testEndpoint = useCallback(async () => {
@@ -92,7 +98,7 @@ export function useEndpointConsole() {
     } finally {
       setTestLoading(false)
     }
-  }, [adapter, endpointId])
+  }, [adapter, endpointId, cacheScope])
 
   // --- Channel manager ---
   const channelMgr = useChannelManager({
@@ -107,6 +113,7 @@ export function useEndpointConsole() {
   const msgHistory = useMessageHistory({
     adapter,
     endpointId,
+    endpoint: info?.endpoint,
     selection: channelMgr.selection,
   })
 
@@ -142,6 +149,11 @@ export function useEndpointConsole() {
   const [inboxRequestsError, setInboxRequestsError] = useState<string | null>(null)
   const [inboxNoticesError, setInboxNoticesError] = useState<string | null>(null)
 
+  useEffect(() => {
+    setRequests(new Map()); setNotices(new Map()); setInboxRequests([]); setInboxNotices([])
+    setRequestsAvailable(null); setNoticesAvailable(null); setInboxRequestsEnabled(false); setInboxNoticesEnabled(false)
+  }, [cacheScope])
+
   // --- Load requests from server ---
   const loadRequestsFromServer = useCallback(async () => {
     if (!adapter || !endpointId) return
@@ -152,15 +164,16 @@ export function useEndpointConsole() {
         type: SIDE_EVENT_RPC.REQUEST_LIST,
         ...endpointAddress(adapter, endpointId),
       })
+      if (!isInboxCacheScopeActive(cacheScope)) return
       const rows = readPendingRequests(response)
       setRequestsAvailable(response.source === 'endpoint' || response.inboxEnabled === true)
       setRequests(new Map(rows.map(row => [pendingRequestKey(row), row])))
     } catch (caught) {
-      setRequestsError(caught instanceof Error ? caught.message : String(caught))
+      if (isInboxCacheScopeActive(cacheScope)) setRequestsError(caught instanceof Error ? caught.message : String(caught))
     } finally {
-      setRequestsLoading(false)
+      if (isInboxCacheScopeActive(cacheScope)) setRequestsLoading(false)
     }
-  }, [adapter, endpointId])
+  }, [adapter, endpointId, cacheScope])
 
   useEffect(() => {
     loadRequestsFromServer()
@@ -176,7 +189,7 @@ export function useEndpointConsole() {
     // Invalidate an in-flight unread projection immediately when the endpoint
     // identity changes, even before the new endpoint's cache hydration ends.
     unreadNoticesSeqRef.current += 1
-  }, [adapter, endpointId])
+  }, [adapter, endpointId, cacheScope])
   const loadInboxRequests = useCallback(
     async (append: boolean) => {
       if (!adapter || !endpointId) return
@@ -189,7 +202,7 @@ export function useEndpointConsole() {
           type: INBOX_RPC.REQUESTS,
           ...endpointAddress(adapter, endpointId), limit: 30, offset,
         })
-        if (seq !== inboxRequestsSeqRef.current) return
+        if (seq !== inboxRequestsSeqRef.current || !isInboxCacheScopeActive(cacheScope)) return
         const rows = readRequestHistory(res)
         setInboxRequestsEnabled(res.inboxEnabled)
         setInboxRequestsHasMore(res.inboxEnabled && rows.length === 30)
@@ -205,13 +218,13 @@ export function useEndpointConsole() {
         }
       } catch (caught) {
         // 一次性网络错误不改变 enabled 状态；仅服务端明确 inboxEnabled===false 才置 false
-        if (seq !== inboxRequestsSeqRef.current) return
+        if (seq !== inboxRequestsSeqRef.current || !isInboxCacheScopeActive(cacheScope)) return
         setInboxRequestsError(caught instanceof Error ? caught.message : String(caught))
       } finally {
-        if (seq === inboxRequestsSeqRef.current) setInboxRequestsLoading(false)
+        if (seq === inboxRequestsSeqRef.current && isInboxCacheScopeActive(cacheScope)) setInboxRequestsLoading(false)
       }
     },
-    [adapter, endpointId, inboxRequestsOffset],
+    [adapter, endpointId, inboxRequestsOffset, cacheScope],
   )
 
   // --- Load inbox notices ---
@@ -227,7 +240,7 @@ export function useEndpointConsole() {
           type: INBOX_RPC.NOTICES,
           ...endpointAddress(adapter, endpointId), limit: 30, offset,
         })
-        if (seq !== inboxNoticesSeqRef.current) return
+        if (seq !== inboxNoticesSeqRef.current || !isInboxCacheScopeActive(cacheScope)) return
         const rows = readNoticeHistory(res)
         setInboxNoticesEnabled(res.inboxEnabled)
         setInboxNoticesHasMore(res.inboxEnabled && rows.length === 30)
@@ -243,13 +256,13 @@ export function useEndpointConsole() {
         }
       } catch (caught) {
         // 一次性网络错误不改变 enabled 状态；仅服务端明确 inboxEnabled===false 才置 false
-        if (seq !== inboxNoticesSeqRef.current) return
+        if (seq !== inboxNoticesSeqRef.current || !isInboxCacheScopeActive(cacheScope)) return
         setInboxNoticesError(caught instanceof Error ? caught.message : String(caught))
       } finally {
-        if (seq === inboxNoticesSeqRef.current) setInboxNoticesLoading(false)
+        if (seq === inboxNoticesSeqRef.current && isInboxCacheScopeActive(cacheScope)) setInboxNoticesLoading(false)
       }
     },
-    [adapter, endpointId, inboxNoticesOffset],
+    [adapter, endpointId, inboxNoticesOffset, cacheScope],
   )
 
   const loadNoticesFromServer = useCallback(async () => {
@@ -272,6 +285,7 @@ export function useEndpointConsole() {
       if (
         seq !== unreadNoticesSeqRef.current
         || requestedEndpoint !== endpointIdentityRef.current
+        || !isInboxCacheScopeActive(cacheScope)
       ) return
       setNoticesAvailable(res.inboxEnabled)
       if (!res.inboxEnabled) return
@@ -283,13 +297,13 @@ export function useEndpointConsole() {
         timestamp: notice.timestamp,
       }])))
     } catch (caught) {
-      if (seq === unreadNoticesSeqRef.current && requestedEndpoint === endpointIdentityRef.current) {
+      if (seq === unreadNoticesSeqRef.current && requestedEndpoint === endpointIdentityRef.current && isInboxCacheScopeActive(cacheScope)) {
         setNoticesError(caught instanceof Error ? caught.message : String(caught))
       }
     } finally {
-      if (seq === unreadNoticesSeqRef.current) setNoticesLoading(false)
+      if (seq === unreadNoticesSeqRef.current && isInboxCacheScopeActive(cacheScope)) setNoticesLoading(false)
     }
-  }, [adapter, endpointId])
+  }, [adapter, endpointId, cacheScope])
 
   // A recovery gap means every projection fed by the bounded event journal may
   // be incomplete. Rebuild the request and notice views from their
@@ -329,7 +343,7 @@ export function useEndpointConsole() {
         listInboxCache(adapter, endpointId, 'request'),
         listInboxCache(adapter, endpointId, 'notice'),
       ])
-      if (cancelled) return
+      if (cancelled || !isInboxCacheScopeActive(cacheScope)) return
 
       if (cachedRequests.length) {
         setRequests((prev) => {
@@ -427,11 +441,12 @@ export function useEndpointConsole() {
     return () => {
       cancelled = true
     }
-  }, [adapter, endpointId, loadNoticesFromServer])
+  }, [adapter, endpointId, loadNoticesFromServer, cacheScope])
 
   // --- Listen for real-time push events for requests and notices ---
   useEffect(() => {
     const onPush = (msg: EndpointPushMessage) => {
+      if (!isInboxCacheScopeActive(cacheScope)) return
       if (msg.type === SIDE_EVENT_PUSH.REQUEST_RECEIVE) {
         const request = msg.data
         if (request.adapter === adapter && request.endpointKey === endpointId) {
@@ -470,7 +485,7 @@ export function useEndpointConsole() {
       }
     }
     return subscribeEndpointPush(onPush)
-  }, [adapter, endpointId])
+  }, [adapter, endpointId, cacheScope])
 
   // --- Derived lists ---
   const requestList = useMemo(() => [...requests.values()].sort((a, b) => b.timestamp - a.timestamp), [requests])

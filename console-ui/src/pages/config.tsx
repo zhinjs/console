@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useConfigSource } from '../hooks/useConfigSource'
+import { useConfigSource, type ConfigSource } from '../hooks/useConfigSource'
 import { PluginConfigForm } from '../components/PluginConfigForm'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import {
@@ -21,24 +21,28 @@ import { Switch } from '../components/ui/switch'
 import { PageHeader } from '../components/PageHeader'
 import { readErrorSummary } from '../utils/read-error.mjs'
 import { isDemoMode } from '../utils/demo-mode'
+import { editSourceDraft, saveSourceDraft, type SourceDraft } from './config-source-draft.mjs'
 import { validateConfigSource } from './config-source-validation.mjs'
 import { generalConfigKeys, resolveConfigSection } from './config-navigation.mjs'
 
 function GeneralConfigForm({
   config,
   pluginKeys,
+  snapshot,
   onSave,
   saving
 }: {
   config: Record<string, any>
   pluginKeys: string[]
-  onSave: (patch: Record<string, any>) => Promise<void>
+  snapshot: ConfigSource | null
+  onSave: (patch: Record<string, any>, baseline: ConfigSource | null) => Promise<void>
   saving: boolean
 }) {
   const generalKeys = useMemo(() => generalConfigKeys(config, pluginKeys), [config, pluginKeys])
 
   const [localValues, setLocalValues] = useState<Record<string, any>>({})
   const [dirty, setDirty] = useState(false)
+  const [baselineSnapshot, setBaselineSnapshot] = useState<ConfigSource | null>(snapshot)
 
   useEffect(() => {
     if (dirty) return
@@ -47,8 +51,9 @@ function GeneralConfigForm({
       vals[key] = config[key]
     }
     setLocalValues(vals)
+    setBaselineSnapshot(snapshot)
     setDirty(false)
-  }, [config, generalKeys, dirty])
+  }, [config, generalKeys, dirty, snapshot])
 
   const handleChange = (key: string, value: any) => {
     setLocalValues(prev => ({ ...prev, [key]: value }))
@@ -57,7 +62,7 @@ function GeneralConfigForm({
 
   const handleSave = async () => {
     try {
-      await onSave(localValues)
+      await onSave(localValues, baselineSnapshot)
       setDirty(false)
     } catch {
       // Parent shows the save error; retain this form draft for retry.
@@ -70,6 +75,7 @@ function GeneralConfigForm({
       vals[key] = config[key]
     }
     setLocalValues(vals)
+    setBaselineSnapshot(snapshot)
     setDirty(false)
   }
 
@@ -89,7 +95,7 @@ function GeneralConfigForm({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-3">
+      <fieldset disabled={saving} className="space-y-3">
         {generalKeys.map(key => (
           <ConfigFieldEditor
             key={key}
@@ -98,7 +104,7 @@ function GeneralConfigForm({
             onChange={val => handleChange(key, val)}
           />
         ))}
-      </div>
+      </fieldset>
       <div className="flex items-center gap-2 pt-2">
         <Button size="sm" onClick={handleSave} disabled={saving || !dirty}>
           {saving
@@ -106,7 +112,7 @@ function GeneralConfigForm({
             : <><Save className="w-4 h-4 mr-1" />保存</>}
         </Button>
         {dirty && (
-          <Button variant="outline" size="sm" onClick={handleReset}>
+          <Button variant="outline" size="sm" disabled={saving} onClick={handleReset}>
             <X className="w-4 h-4 mr-1" />撤销
           </Button>
         )}
@@ -263,18 +269,14 @@ function ConfigFieldEditor({
 function EditableConfigPage() {
   const [searchParams] = useSearchParams()
   const pluginFromUrl = searchParams.get('plugin')?.trim() ?? ''
-  const { source, format, configKeys: pluginKeys, loading, loaded, error, errorOperation, clearSaveError, load, save } = useConfigSource()
+  const { source, format, configKeys: pluginKeys, loading, loaded, error, errorOperation, clearSaveError, load, saveBound, snapshot } = useConfigSource()
   const [activeSection, setActiveSection] = useState<string>(() => pluginFromUrl ? `plugin:${pluginFromUrl}` : 'general')
-  const [sourceText, setSourceText] = useState('')
-  const [sourceDirty, setSourceDirty] = useState(false)
+  const [sourceDraft, setSourceDraft] = useState<SourceDraft | null>(null)
+  const sourceText = sourceDraft?.source ?? source
+  const sourceDirty = sourceDraft !== null
+  const draftFormat = sourceDraft?.snapshot.format ?? format
   const [saving, setSaving] = useState(false)
   const { success, error: toastError } = useToast()
-
-  useEffect(() => {
-    if (sourceDirty) return
-    setSourceText(source)
-    setSourceDirty(false)
-  }, [source, sourceDirty])
 
   const parsedConfig = useMemo(() => {
     try {
@@ -287,14 +289,14 @@ function EditableConfigPage() {
   const hasGeneral = generalConfigKeys(parsedConfig, pluginKeys).length > 0
   const visibleSection = resolveConfigSection(activeSection, pluginKeys, hasGeneral)
 
-  const sourceIssue = useMemo(() => validateConfigSource(sourceText, format), [sourceText, format])
+  const sourceIssue = useMemo(() => validateConfigSource(sourceText, draftFormat), [sourceText, draftFormat])
 
   const handleYamlSave = async () => {
     if (saving || !sourceDirty || sourceIssue) return
     setSaving(true)
     try {
-      await save(sourceText)
-      setSourceDirty(false)
+      await saveSourceDraft(saveBound, sourceDraft)
+      setSourceDraft(null)
       success('配置已保存，需重启生效')
     } catch (err) {
       toastError('配置保存失败，草稿已保留。请查看页面中的技术详情。')
@@ -303,15 +305,16 @@ function EditableConfigPage() {
     }
   }
 
-  const handleFormSave = async (patch: Record<string, any>) => {
+  const handleFormSave = async (patch: Record<string, any>, baseline: ConfigSource | null) => {
     setSaving(true)
     try {
-      const currentParsed = (format === 'json' ? JSON.parse(source) : parseYaml(source)) || {}
+      if (!baseline?.revision) throw new Error('草稿版本未知，请撤销并重新读取配置')
+      const currentParsed = (baseline.format === 'json' ? JSON.parse(baseline.source) : parseYaml(baseline.source)) || {}
       const merged = { ...currentParsed, ...patch }
-      const nextSource = format === 'json'
+      const nextSource = baseline.format === 'json'
         ? `${JSON.stringify(merged, null, 2)}\n`
         : stringifyYaml(merged, { lineWidth: 0 })
-      await save(nextSource)
+      await saveBound(nextSource, baseline)
       success('配置已保存，需重启生效')
     } catch (err) {
       toastError('配置保存失败，草稿已保留。请查看页面中的技术详情。')
@@ -387,7 +390,7 @@ function EditableConfigPage() {
         </TabsList>
 
         {hasGeneral ? <TabsContent value="general" className="mt-4">
-          <GeneralConfigForm config={parsedConfig} pluginKeys={pluginKeys} onSave={handleFormSave} saving={saving} />
+          <GeneralConfigForm config={parsedConfig} pluginKeys={pluginKeys} snapshot={snapshot} onSave={handleFormSave} saving={saving} />
         </TabsContent> : null}
 
         {pluginKeys.map((key) => (
@@ -399,11 +402,12 @@ function EditableConfigPage() {
         <TabsContent value="yaml" className="mt-4 space-y-3">
           <div className="relative">
             <Textarea
-              aria-label={`${format.toUpperCase()} 配置源码`}
+              aria-label={`${draftFormat.toUpperCase()} 配置源码`}
               aria-invalid={sourceDirty && Boolean(sourceIssue)}
               aria-describedby={sourceDirty && sourceIssue ? 'config-source-error' : undefined}
               value={sourceText}
-              onChange={e => { setSourceText(e.target.value); setSourceDirty(true) }}
+              disabled={saving}
+              onChange={e => { const value = e.target.value; setSourceDraft(previous => editSourceDraft(previous, snapshot, value)) }}
               className="font-mono text-sm min-h-[400px] resize-y"
               placeholder={format === 'json' ? '{ "plugins": {} }' : '# zhin.config.yml'}
               spellCheck={false}
@@ -417,11 +421,11 @@ function EditableConfigPage() {
                 : <><Save className="w-4 h-4 mr-1" />保存</>}
             </Button>
             {sourceDirty && (
-              <Button variant="outline" size="sm" disabled={saving} onClick={() => { setSourceText(source); setSourceDirty(false); clearSaveError() }}>
+              <Button variant="outline" size="sm" disabled={saving} onClick={() => { setSourceDraft(null); clearSaveError() }}>
                 <X className="w-4 h-4 mr-1" />撤销
               </Button>
             )}
-            {sourceDirty && <span className="text-xs text-muted-foreground">有未保存的更改（全量保存需重启生效）</span>}
+            {sourceDirty && <span className="text-xs text-muted-foreground">有未保存的更改；草稿绑定开始编辑时的版本，刷新不会覆盖或自动合并草稿。冲突后请核对最新源码再重新编辑。</span>}
           </div>
         </TabsContent>
       </Tabs> : null}

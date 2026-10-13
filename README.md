@@ -9,7 +9,9 @@ Remote Console 静态前端，独立仓库部署到 GitHub Pages（与 [zhin](ht
 
 ```bash
 pnpm install
-pnpm dev          # http://127.0.0.1:5173 ，代理到 VITE_DEV_API（默认 8086）
+pnpm dev          # 默认 http://localhost:9000；代理到 VITE_DEV_API（默认 8086）
+pnpm test
+pnpm typecheck
 pnpm build
 pnpm preview
 ```
@@ -78,3 +80,13 @@ pnpm pages:prepare   # CONSOLE_PAGES_CNAME=demo.zhin.dev
 
 - `CONSOLE_PAGES_CNAME` — 默认 `console.zhin.dev`
 - `CONSOLE_PAGES_BASE` — 自定义域留空；仅 `*.github.io/<repo>/` 子路径时设为 `/console`
+
+## 插件安装与配置
+
+市场先核验 npm 的实际版本，再生成绑定包版本、实例和项目修订的安装计划。安装后分别查看依赖、实例声明、配置校验、等待应用、当前代发布及平台就绪；就绪不代表业务验证通过。依赖文件变化不会在插件管理操作完成前打断 Host，应用需要显式确认。
+
+安装回执丢失时先只读核对；仅当相同版本已经安装、尚未声明且没有依赖问题，才能生成新的补全挂载计划，确认后继续配置，不能自动重放旧操作。业务检查先披露范围与副作用，再批准一次；旧代结果与未知执行结果不能用当前插件状态替代。
+
+插件表单支持嵌套对象和数组、默认值及环境引用。Host 提供配置的精确路径，草稿绑定首次编辑时的源码修订；刷新不能为旧草稿背书。暂不支持的 Schema 整体切换到源码编辑，避免只保存部分字段。
+
+组件画廊可按目标 Endpoint、会话、父频道和线程预览，显示实际投影形式与降级原因。预览不发送消息、不注册按钮、不执行出站中间件。会话历史读取正式 Inbox 字段与平台消息 ID；有诊断的出站记录展示最终投递形式，缺少历史方向或诊断时明确提示，不猜测。

@@ -2,12 +2,16 @@
 export function createConfigDraftGuard() {
  let identity
  let dirty = false
+ let snapshot
  return {
    edited() { dirty = true },
    saved() { dirty = false },
-   receive(key, value) {
+   get snapshot() { return snapshot },
+   receive(key, value, sourceSnapshot) {
      if (identity !== key) { identity = key; dirty = false }
-     return value != null && !dirty
+     const accepted = value != null && !dirty
+     if (accepted) snapshot = sourceSnapshot
+     return accepted
    },
  }
 }

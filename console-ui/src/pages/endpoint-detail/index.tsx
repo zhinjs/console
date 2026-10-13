@@ -521,7 +521,7 @@ export default function EndpointDetailPage() {
                       className="text-xs"
                       disabled={inboxMessagesLoading}
                       onClick={() => {
-                        const oldest = Math.min(...inboxMessages.map((m) => m.created_at))
+                        const oldest = Math.min(...inboxMessages.map((m) => m.timestamp))
                         void loadInboxMessages(oldest)
                       }}
                     >
