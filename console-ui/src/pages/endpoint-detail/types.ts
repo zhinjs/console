@@ -1,4 +1,5 @@
 export interface EndpointInfo {
+  endpoint: { id: string; adapter: string }
   name: string
   adapter: string
   connected: boolean
@@ -25,6 +26,15 @@ export interface NoticeItem {
 }
 
 export interface ReceivedMessage {
+  endpoint?: { id: string; adapter: string }
+  messageId?: string
+  outgoing?: boolean
+  directionUnknown?: boolean
+  local?: boolean
+  parent?: ChannelParentRef
+  threadId?: string
+  rendering?: import('./rendering-diagnostics.mjs').RenderingDiagnostic
+  renderingError?: string
   id: string
   channelId: string
   channelType: string
@@ -36,14 +46,19 @@ export interface ReceivedMessage {
 /** 合并展示用：控制台发出的消息右对齐 */
 export type ChatRow = ReceivedMessage & { outgoing?: boolean }
 
+/** Public Console Inbox RPC row, not a database table row. */
 export interface InboxMessageRow {
   id: number
-  platform_message_id: string
-  sender_id: string
-  sender_name: string | null
-  content: string
-  raw: string | null
-  created_at: number
+  platformMessageId: string
+  sender: { id: string; name?: string }
+  content: unknown
+  raw: unknown
+  timestamp: number
+  channel: { id: string; type: string; parent?: ChannelParentRef }
+  direction?: 'inbound' | 'outbound'
+  rendering?: import('./rendering-diagnostics.mjs').RenderingDiagnostic
+  renderingError?: string
+  conversation?: { endpoint: { id: string; adapter: string }; kind: 'private' | 'group' | 'channel'; id: string; parent?: { kind: 'private' | 'group' | 'channel'; id: string }; threadId?: string }
 }
 
 export interface InboxRequestRow {
@@ -83,6 +98,7 @@ export type SidebarSelection =
       name: string
       channelType: 'private' | 'group' | 'channel'
       parent?: ChannelParentRef
+      threadId?: string
     }
   | { type: 'requests' }
   | { type: 'notices' }

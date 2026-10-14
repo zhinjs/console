@@ -1,6 +1,6 @@
 import { copyText } from './clipboard-copy.mjs'
 import { useToast } from '../components/toast'
-import { reconcileInstall } from './marketplace-install-model.mjs'
+import { reconcileInstall, canResumeInstall, planInstallRecovery } from './marketplace-install-model.mjs'
 import { applyRegistryVersion, belongsToZhinScope } from './marketplace-version.mjs'
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import {
@@ -23,6 +23,10 @@ import {
 } from '../components/ui/dialog'
 import { apiFetch } from '../utils/auth'
 import { requestConsole } from '../utils/console-rpc'
+import { Link } from 'react-router-dom'
+import { isDemoMode } from '../utils/demo-mode'
+import { validateManagementState, mutationRequest, type PluginManagementState } from './plugin-management-model.mjs'
+import { PluginManagementSummary } from './PluginManagementSummary'
 
 interface MarketPlugin {
   name: string
@@ -65,6 +69,10 @@ interface UpdateInfo {
 }
 
 interface PluginInstallPlan {
+  projectRevision?: string
+  configurationRevision?: string | null
+  requestedSpec?: string
+  targetVersion?: string
   packageName: string
   instanceKey: string
   alreadyDeclared: boolean
@@ -109,6 +117,7 @@ function formatDownloads(n: number): string {
 
 export default function MarketplacePage() {
   const toast = useToast()
+  const readOnly = isDemoMode()
   const [plugins, setPlugins] = useState<MarketPlugin[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -134,11 +143,12 @@ export default function MarketplacePage() {
   const [detailTab, setDetailTab] = useState<DetailTab>('readme')
   const [copied, setCopied] = useState(false)
   const installInFlight = useRef(false)
-  const pendingInstalls = useRef(new Map<string, string>())
+  const pendingInstalls = useRef(new Map<string, { message: string; instanceKey: string; version: string }>())
   const [uncertainPackage, setUncertainPackage] = useState<string | null>(null)
   const [installPlan, setInstallPlan] = useState<PluginInstallPlan | null>(null)
   const [installLoading, setInstallLoading] = useState(false)
   const [installMessage, setInstallMessage] = useState<string | null>(null)
+  const [installedState, setInstalledState] = useState<PluginManagementState | null>(null)
   const [installError, setInstallError] = useState<string | null>(null)
 
   const fetchPlugins = useCallback(async (p: number) => {
@@ -209,8 +219,9 @@ export default function MarketplacePage() {
     setDetailTab('readme')
     setCopied(false)
     setInstallPlan(null)
+    setInstalledState(null)
     setInstallMessage(null)
-    setInstallError(pendingInstalls.current.get(name) ?? null)
+    setInstallError(pendingInstalls.current.get(name)?.message ?? null)
     setUncertainPackage(pendingInstalls.current.has(name) ? name : null)
     try {
       const res = await apiFetch(`/pub/marketplace/detail/${name}`)
@@ -230,30 +241,41 @@ export default function MarketplacePage() {
   }, [])
 
   const previewInstall = useCallback(async (packageName: string) => {
+    if (readOnly || installInFlight.current || uncertainPackage || !detail || detail.name !== packageName || !detail.version) return
+    const sequence = detailRequest.current
+    installInFlight.current = true
     setInstallLoading(true)
     setInstallError(null)
     setInstallMessage(null)
     try {
+      const requestedSpec = `${packageName}@${detail.version}`
       const plan = await requestConsole<PluginInstallPlan>({
         type: 'plugin:plan-install',
-        packageName,
+        packageName: requestedSpec,
       })
-      setInstallPlan(plan)
+      if (sequence !== detailRequest.current) return
+      if (plan.packageName !== packageName) throw new Error('安装计划返回了不同包，请重新核验')
+      mutationRequest('plugin:install', { ...plan, requestedSpec })
+      setInstallPlan({ ...plan, requestedSpec, targetVersion: detail.version })
     } catch (err) {
-      setInstallError((err as Error).message)
+      if (sequence === detailRequest.current) setInstallError((err as Error).message)
     } finally {
-      setInstallLoading(false)
+      installInFlight.current = false
+      if (sequence === detailRequest.current) setInstallLoading(false)
     }
-  }, [])
+  }, [detail, readOnly, uncertainPackage])
 
   const recheckInstall = useCallback(async (packageName: string) => {
     setInstallLoading(true)
     const request = detailRequest.current
-    const state = await reconcileInstall(packageName, () => requestConsole<PluginInstallPlan>({ type: 'plugin:plan-install', packageName }))
+    const target = pendingInstalls.current.get(packageName)
+    if (!target) { setInstallLoading(false); return }
+    const state = await reconcileInstall(packageName, () => requestConsole({ type: 'plugin:inspect', instanceKey: target.instanceKey }), target)
     if (state.confirmed) pendingInstalls.current.delete(packageName)
-    else pendingInstalls.current.set(packageName, state.message)
+    else pendingInstalls.current.set(packageName, { ...target, message: state.message })
     if (request === detailRequest.current) {
       setInstallPlan(null)
+      setInstalledState(state.state)
       setUncertainPackage(state.confirmed ? null : packageName)
       setInstallError(state.confirmed ? null : state.message)
       setInstallMessage(state.confirmed ? state.message : null)
@@ -261,8 +283,29 @@ export default function MarketplacePage() {
     setInstallLoading(false)
   }, [])
 
+  const resumeInstall = useCallback(async () => {
+    if (readOnly || !uncertainPackage || installInFlight.current) return
+    const packageName = uncertainPackage
+    const target = pendingInstalls.current.get(packageName)
+    if (!target) return
+    const sequence = detailRequest.current
+    installInFlight.current = true
+    setInstallLoading(true)
+    try {
+      const plan = await planInstallRecovery(requestConsole, packageName, target)
+      if (sequence !== detailRequest.current) return
+      pendingInstalls.current.delete(packageName)
+      setUncertainPackage(null)
+      setInstallError(null)
+      setInstallMessage(null)
+      setInstallPlan(plan as PluginInstallPlan)
+    } catch (error) {
+      if (sequence === detailRequest.current) setInstallError((error as Error).message)
+    } finally { installInFlight.current = false; if (sequence === detailRequest.current) setInstallLoading(false) }
+  }, [readOnly, uncertainPackage])
+
   const commitInstall = useCallback(async () => {
-    if (!installPlan || installInFlight.current || uncertainPackage) return
+    if (readOnly || !installPlan || installInFlight.current || uncertainPackage) return
     const packageName = installPlan.packageName
     const request = detailRequest.current
     installInFlight.current = true
@@ -270,30 +313,31 @@ export default function MarketplacePage() {
     setInstallError(null)
     let submitted = false
     try {
-      const config = await requestConsole<{ revision?: string }>({ type: 'config:get-source' })
+      const installRequest = mutationRequest('plugin:install', installPlan)
       submitted = true
       setInstallPlan(null)
       const unknown = '安装已提交，结果正在核对；请勿重复安装。'
-      pendingInstalls.current.set(packageName, unknown)
+      pendingInstalls.current.set(packageName, { message: unknown, instanceKey: installPlan.instanceKey, version: installPlan.targetVersion! })
       setUncertainPackage(packageName)
-      const result = await requestConsole<{ restartRequired: boolean }>({
-        type: 'plugin:install', packageName,
-        ...(config.revision ? { expectedRevision: config.revision } : {}),
-      })
+      await requestConsole(installRequest)
+      const reconciled = await reconcileInstall(packageName, () => requestConsole({ type: 'plugin:inspect', instanceKey: installPlan.instanceKey }), { instanceKey: installPlan.instanceKey, version: installPlan.targetVersion! })
+      if (!reconciled.confirmed || !reconciled.state) { await recheckInstall(packageName); return }
+      const state = reconciled.state
       pendingInstalls.current.delete(packageName)
       if (request === detailRequest.current) {
         setUncertainPackage(null)
-        setInstallMessage(result.restartRequired ? '安装成功，重启 Host 后生效' : '安装成功')
+        setInstalledState(state)
+        setInstallMessage('安装步骤已完成。请按当前状态完善配置、申请应用并选择业务检查；尚未证明功能可用。')
       }
       void checkUpdates()
     } catch (err) {
       if (submitted) await recheckInstall(packageName)
-      else setInstallError((err as Error).message)
+      else if (request === detailRequest.current) setInstallError((err as Error).message)
     } finally {
       installInFlight.current = false
       setInstallLoading(false)
     }
-  }, [checkUpdates, installPlan, uncertainPackage, recheckInstall])
+  }, [checkUpdates, installPlan, uncertainPackage, recheckInstall, readOnly])
 
   const handleCopyInstall = useCallback(async (name: string) => {
     const request = detailRequest.current
@@ -707,10 +751,13 @@ export default function MarketplacePage() {
                   </Alert>
                 )}
                 {uncertainPackage && <Button variant="outline" size="sm" disabled={installLoading} onClick={() => void recheckInstall(uncertainPackage)}>{installLoading ? '核对中…' : '重新核对安装状态'}</Button>}
+                {!readOnly && uncertainPackage && canResumeInstall(installedState, uncertainPackage, pendingInstalls.current.get(uncertainPackage)) && <Button size="sm" disabled={installLoading} onClick={() => void resumeInstall()}>生成补全挂载与配置的计划</Button>}
+                {installedState && <div className="rounded-md border p-3"><PluginManagementSummary state={installedState} /></div>}
                 {installPlan && (
                   <div className="rounded-md border p-3 space-y-2 text-sm">
                     <div className="font-medium">安装计划</div>
                     <div className="text-xs text-muted-foreground space-y-1">
+                      <div>目标包：{installPlan.requestedSpec}</div>
                       <div>实例名：{installPlan.instanceKey}</div>
                       <div>插件清单：{installPlan.changes.packageManifest === 'unchanged' ? '无需修改' : '将新增挂载'}</div>
                       <div>配置：{installPlan.changes.config === 'unchanged' ? '无需修改' : '将创建配置项'}</div>
@@ -725,7 +772,7 @@ export default function MarketplacePage() {
                       <Button variant="ghost" size="sm" onClick={() => setInstallPlan(null)} disabled={installLoading}>
                         取消
                       </Button>
-                      <Button size="sm" onClick={() => void commitInstall()} disabled={installLoading || !!uncertainPackage}>
+                      <Button size="sm" onClick={() => void commitInstall()} disabled={readOnly || installLoading || !!uncertainPackage}>
                         {installLoading ? '安装中…' : '确认安装'}
                       </Button>
                     </div>
@@ -761,12 +808,14 @@ export default function MarketplacePage() {
                     <Download className="w-3 h-3 mr-1" /> npm
                   </a>
                 </Button>
-                {!installPlan && !installMessage && !uncertainPackage && (
+                {!readOnly && !installPlan && !installMessage && !uncertainPackage && (
                   <Button size="sm" onClick={() => void previewInstall(detail.name)} disabled={installLoading}>
                     <Download className="w-3 h-3 mr-1" />
                     {installLoading ? '检查中…' : '安装'}
                   </Button>
                 )}
+                {readOnly && <span className="text-xs text-muted-foreground">当前为 Demo，只能查看市场，安装需完整权限。</span>}
+                <Button variant="outline" size="sm" asChild><Link to="/plugins">查看本地插件状态</Link></Button>
                 <DialogClose asChild>
                   <Button variant="secondary" size="sm">关闭</Button>
                 </DialogClose>

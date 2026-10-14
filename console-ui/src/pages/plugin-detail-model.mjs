@@ -22,6 +22,6 @@ export function pluginDiagnosticSummary(diagnostic) {
   const errors = Array.isArray(validation?.errors) ? validation.errors.map(error => typeof error === 'string' ? error : `${error?.path ?? ''} ${error?.message ?? ''}`.trim()) : [];
   const missingEnv = Array.isArray(validation?.missingEnv) ? validation.missingEnv.map(String) : [];
   const warnings = Array.isArray(diagnostic?.plan?.warnings) ? diagnostic.plan.warnings.map(String) : [];
-  const status = validation?.valid === false || errors.length ? 'invalid' : missingEnv.length ? 'missing-env' : validation?.valid === true ? 'valid' : 'unknown';
+  const status = validation?.valid === false || errors.length ? 'invalid' : missingEnv.length ? 'missing-env' : validation?.schemaAvailable === false ? 'unknown' : validation?.valid === true ? 'valid' : 'unknown';
   return {status, errors, missingEnv, warnings};
 }

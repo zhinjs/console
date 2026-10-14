@@ -12,6 +12,7 @@ import { PageHeader } from '../components/PageHeader'
 import { useConsoleRead } from '../hooks/use-console-read'
 import { validatePluginList } from './plugin-list-model.mjs'
 import { PageShell } from '../components/PageShell'
+import { managementLabel, type PluginManagementState } from './plugin-management-model.mjs'
 
 /** Feature 序列化格式（与后端 FeatureJSON 一致） */
 interface FeatureJSON {
@@ -27,6 +28,9 @@ interface Plugin {
   status: 'active' | 'inactive'
   description: string
   features: FeatureJSON[]
+  instanceKey?: string
+  management?: PluginManagementState
+  managementError?: string
 }
 
 /** 根据后端返回的 icon 名称映射到 lucide-react 图标组件 */
@@ -107,7 +111,7 @@ export default function PluginsPage() {
       <div className="console-page-meta">
         <span>共 {plugins.length} 个子插件</span>
         <Badge variant="success">{plugins.filter(p => p.status === 'active').length}</Badge>
-        <span>个运行中</span>
+        <span>个代内已加载</span>
       </div>
 
       <div className="console-page-toolbar">
@@ -128,11 +132,11 @@ export default function PluginsPage() {
           <Card
             key={`${plugin.name}-${index}`}
             className="console-surface-interactive cursor-pointer"
-            onClick={() => navigate(detailUrl(plugin.name))}
+            onClick={() => navigate(detailUrl(plugin.instanceKey ?? plugin.name))}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault()
-                navigate(detailUrl(plugin.name))
+                navigate(detailUrl(plugin.instanceKey ?? plugin.name))
               }
             }}
             role="button"
@@ -146,8 +150,8 @@ export default function PluginsPage() {
                   </div>
                   <span className="font-semibold text-sm truncate">{plugin.name}</span>
                 </div>
-                <Badge variant={plugin.status === 'active' ? 'success' : 'secondary'} className="shrink-0">
-                  {plugin.status === 'active' ? '运行中' : '已停止'}
+                <Badge variant={plugin.management?.status === 'enabled' ? 'success' : plugin.management?.status === 'missing-config' || plugin.management?.status === 'degraded' ? 'warning' : 'secondary'} className="shrink-0">
+                  {plugin.management ? managementLabel(plugin.management) : '应用证据未确认'}
                 </Badge>
               </div>
 
@@ -155,6 +159,7 @@ export default function PluginsPage() {
                 {plugin.description || '暂无描述'}
               </p>
 
+              {plugin.management ? <p className="text-xs text-muted-foreground">当前代 {plugin.management.generation ?? '未发布'} · {plugin.management.published ? '包与配置已应用' : '待核对应用'} · {plugin.management.verification === 'available' ? '业务检查可选' : '未提供业务检查'}</p> : <p className="text-xs text-muted-foreground">{plugin.managementError ? `状态读取失败：${plugin.managementError}` : 'Host 尚未提供状态证据'}</p>}
               <hr className="console-divider" />
 
               {plugin.features.length > 0 ? (

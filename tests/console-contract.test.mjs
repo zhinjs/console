@@ -245,7 +245,10 @@ test('plugin management requires plans, revision checks and config validation', 
 
   assert.match(marketplace, /plugin:plan-install/)
   assert.match(marketplace, /plugin:install/)
-  assert.match(marketplace, /expectedRevision/)
+  const workflow = sourceText(join(SOURCE_ROOT, 'pages', 'plugin-management-model.mjs'))
+  assert.match(marketplace, /mutationRequest\('plugin:install'/)
+  assert.match(workflow, /expectedRevision: plan\.configurationRevision/)
+  assert.match(workflow, /expectedProjectRevision: plan\.projectRevision/)
   assert.match(detail, /plugin:diagnose/)
   assert.match(detail, /plugin:plan-update/)
   assert.match(detail, /plugin:update/)

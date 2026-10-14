@@ -187,7 +187,7 @@ export default function LoginPage({ onSuccess, initialApiBase }: LoginPageProps)
               {loading ? '验证中...' : selectedSavedBase && token ? '快速连接' : '连接'}
             </Button>
             <p className="text-xs text-center text-muted-foreground">
-              须填写运行 test-bot 的 Host 地址（与预览站 5173 不同）。localhost 与 127.0.0.1 请与 corsOrigins 一致。
+              填写 Bot 启动日志中的 Host 地址。使用本地地址时，请确保 Host 的 corsOrigins 允许当前 Console 来源。
             </p>
           </form>
         </CardContent>

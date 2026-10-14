@@ -1,5 +1,5 @@
 import { conversationListNotice, type ConversationListNotice } from './conversation-list-notice.mjs'
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Hash, MessageSquare, User, Users } from 'lucide-react'
 import { useToast } from '../../components/toast'
 import { ENDPOINT_RPC, SIDE_EVENT_PUSH } from '../../contracts/zhin-console'
@@ -13,7 +13,8 @@ import type {
   EndpointInfo,
   SidebarSelection,
 } from './types'
-import { listInboxCache } from '../../utils/inbox-cache'
+import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
+import { listInboxCache, isInboxCacheScopeActive } from '../../utils/inbox-cache'
 import {
   adapterSupportsChannels,
   adapterSupportsPrivateGroups,
@@ -76,6 +77,7 @@ export function useChannelManager(params: {
   initialChannelId?: string
 }) {
   const { adapter, endpointId, info, initialChannelType, initialChannelId } = params
+  const cacheScope = useInboxCacheScope()
   const { success, error: toastError } = useToast()
 
   const [friends, setFriends] = useState<FriendsEntry[]>([])
@@ -96,6 +98,14 @@ export function useChannelManager(params: {
         }
       : null,
   )
+  const previousCacheScope = useRef(cacheScope)
+  useEffect(() => {
+    if (previousCacheScope.current !== cacheScope) setSelection(null)
+    previousCacheScope.current = cacheScope
+    setListNotice(null)
+    setFriends([]); setGroups([]); setChannelList([]); setMetaIndex(new Map()); setNameIndex(new Map())
+  }, [cacheScope])
+
   const [showChannelList, setShowChannelList] = useState(false)
   const [listSearch, setListSearch] = useState('')
   const [sectionCollapsed, setSectionCollapsed] = useState<Record<ConversationSectionId, boolean>>({
@@ -183,6 +193,7 @@ export function useChannelManager(params: {
 
     if (byKey.size === 0) {
       const cached = await listInboxCache(adapter, endpointId, 'message')
+      if (!isInboxCacheScopeActive(cacheScope)) return []
       for (const rec of cached) {
         const d = rec.payload
         const channelId = String(d.channelId ?? d.channel_id ?? '')
@@ -202,13 +213,14 @@ export function useChannelManager(params: {
       .map(({ id, name, channelType, parent }) =>
         parent ? { id, name, channelType, parent } : { id, name, channelType },
       )
-  }, [adapter, endpointId])
+  }, [adapter, endpointId, cacheScope])
 
   const refreshMetadata = useCallback(async () => {
     const { meta, names } = await buildMetadataIndex(adapter, endpointId, requestConsole)
+    if (!isInboxCacheScopeActive(cacheScope)) return
     setMetaIndex(meta)
     setNameIndex(names)
-  }, [adapter, endpointId])
+  }, [adapter, endpointId, cacheScope])
 
   const loadLists = useCallback(async () => {
     if (!adapter || !endpointId) return
@@ -270,19 +282,22 @@ export function useChannelManager(params: {
         }
       }
 
+      if (!isInboxCacheScopeActive(cacheScope)) return
       setFriends(nextFriends)
       setGroups(nextGroups)
       setChannelList(nextChannels)
       await refreshMetadata()
 
+      if (!isInboxCacheScopeActive(cacheScope)) return
       const total = nextFriends.length + nextGroups.length + nextChannels.length
       setListNotice(conversationListNotice({ total, errors, connected: info?.connected, historyOnly: usedInboxFallback }))
     } catch (e) {
+      if (!isInboxCacheScopeActive(cacheScope)) return
       setListNotice(conversationListNotice({ total: 0, errors: [(e as Error).message] }))
     } finally {
-      setListLoading(false)
+      if (isInboxCacheScopeActive(cacheScope)) setListLoading(false)
     }
-  }, [adapter, endpointId, loadChannelsFromInbox, info?.connected, refreshMetadata])
+  }, [adapter, endpointId, loadChannelsFromInbox, info?.connected, refreshMetadata, cacheScope])
 
   useEffect(() => {
     void loadLists()
@@ -429,6 +444,7 @@ export function useChannelManager(params: {
   useEffect(() => {
     if (!adapter || !endpointId) return
     return subscribeEndpointPush((message) => {
+      if (!isInboxCacheScopeActive(cacheScope)) return
       if (message.type !== SIDE_EVENT_PUSH.MESSAGE_RECEIVE) return
       const d: Record<string, unknown> = { ...message.data }
       const pushAdapter = String(d.adapter ?? '')
@@ -476,7 +492,7 @@ export function useChannelManager(params: {
         markConversationRead(channelType, channelId, ts)
       }
     })
-  }, [adapter, endpointId, selection, markConversationRead])
+  }, [adapter, endpointId, selection, markConversationRead, cacheScope])
 
   const toggleSection = useCallback((id: ConversationSectionId) => {
     setSectionCollapsed((prev) => ({ ...prev, [id]: !prev[id] }))

@@ -1,1 +1,2 @@
-export function createConfigDraftGuard(): { edited(): void; saved(): void; receive(key: string, value: unknown): boolean };
+import type { ConfigSource } from '../../hooks/useConfigSource.js'
+export function createConfigDraftGuard(): { edited(): void; saved(): void; readonly snapshot: ConfigSource | undefined; receive(key: string, value: unknown, sourceSnapshot?: ConfigSource): boolean };

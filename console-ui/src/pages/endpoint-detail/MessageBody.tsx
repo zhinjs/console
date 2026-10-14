@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { MarkdownContent, cn, pickMediaRawUrl, resolveMediaSrc } from '@zhin.js/client'
 import type { ReceivedMessage } from './types'
+import { pickMessageMediaRaw } from './media-source.mjs'
 
 type MessageSegment = ReceivedMessage['content'][number]
 
@@ -107,9 +108,9 @@ function MediaFallback({ label }: { label: string }) {
 
 function ImageSegment({ seg }: { seg: MessageSegment }) {
   const d = segmentData(seg)
-  const raw = pickMediaRawUrl(d)
+  const raw = pickMessageMediaRaw(d, pickMediaRawUrl)
   const src = resolveMediaSrc(raw, 'image')
-  const label = stringifyValue(d.name ?? d.filename ?? d.file ?? raw) || '图片'
+  const label = stringifyValue(d.name ?? d.filename ?? (d.media as { file_name?: unknown } | undefined)?.file_name) || '图片'
   if (!src) return <MediaFallback label="[图片]" />
 
   return (
@@ -136,7 +137,7 @@ function ImageSegment({ seg }: { seg: MessageSegment }) {
 
 function VideoSegment({ seg }: { seg: MessageSegment }) {
   const d = segmentData(seg)
-  const raw = pickMediaRawUrl(d)
+  const raw = pickMessageMediaRaw(d, pickMediaRawUrl)
   const src = resolveMediaSrc(raw, 'video')
   const label = stringifyValue(d.name ?? d.filename ?? raw) || '视频'
   if (!src) return <MediaFallback label="[视频]" />
@@ -160,7 +161,7 @@ function VideoSegment({ seg }: { seg: MessageSegment }) {
 
 function AudioSegment({ seg }: { seg: MessageSegment }) {
   const d = segmentData(seg)
-  const raw = pickMediaRawUrl(d)
+  const raw = pickMessageMediaRaw(d, pickMediaRawUrl)
   const src = resolveMediaSrc(raw, 'audio')
   const audioRef = useRef<HTMLAudioElement>(null)
   const [playing, setPlaying] = useState(false)
