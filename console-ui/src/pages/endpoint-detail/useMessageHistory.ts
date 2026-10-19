@@ -156,6 +156,7 @@ export function useMessageHistory(params: {
         {
           id: `msg-${payload.messageId ?? crypto.randomUUID()}`,
           messageId: payload.messageId,
+          conversation: payload.conversation,
           endpoint: payload.endpoint,
           parent: payload.parent,
           threadId: payload.threadId,
@@ -188,7 +189,7 @@ export function useMessageHistory(params: {
               const d = readMessagePush(rec.payload)
               if (!d || !endpoint || d.endpoint.id !== endpoint.id || d.endpoint.adapter !== endpoint.adapter) return []
               return [{
-                id: `cache-${rec.id}`, endpoint: d.endpoint, messageId: d.messageId,
+                id: `cache-${rec.id}`, endpoint: d.endpoint, messageId: d.messageId, conversation: d.conversation,
                 channelId: d.channelId, channelType: d.channelType, parent: d.parent, threadId: d.threadId,
                 outgoing: d.outgoing, rendering: d.rendering, renderingError: d.renderingError,
                 sender: (d.sender as ReceivedMessage['sender']) ?? { id: '', name: '' },
@@ -216,6 +217,7 @@ export function useMessageHistory(params: {
         return {
           id: `inbox-${m.id}`,
           messageId: m.platformMessageId || undefined,
+          conversation: m.conversation,
           endpoint: observed?.endpoint ?? endpoint,
           parent: observed?.parent ?? m.channel.parent,
           threadId: observed?.threadId,

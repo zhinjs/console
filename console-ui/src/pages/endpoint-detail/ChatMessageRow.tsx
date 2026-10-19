@@ -3,6 +3,7 @@ import { cn } from '@zhin.js/client'
 import type { ChatRow } from './types'
 import { RenderingDiagnostics } from './RenderingDiagnostics'
 import { MessageBody, messageContentSummary } from './MessageBody'
+import { MessageDiagnosticsAction } from './MessageDiagnostics'
 
 export interface MessageDraftReference {
   id: string
@@ -46,6 +47,7 @@ export function ChatMessageRow({ message, onQuote, onForward }: ChatMessageRowPr
   return (
     <article className={cn('im-message-row', out && 'im-message-row--out')}>
       <div className="im-message-actions" aria-label="消息操作">
+        {!out && !message.local && <MessageDiagnosticsAction message={message} />}
         <button type="button" title="引用" onClick={() => onQuote(draftRef)}>
           <Quote className="h-3.5 w-3.5" />
         </button>

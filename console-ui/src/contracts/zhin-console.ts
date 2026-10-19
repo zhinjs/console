@@ -35,6 +35,7 @@ export const CONSOLE_REST = {
   LOGS_CLEANUP: '/api/logs/cleanup',
   INTROSPECTION: '/api/introspection',
   COMPONENT_PREVIEW: '/api/introspection/components/render',
+  MESSAGE_DIAGNOSTICS: '/api/messages/diagnostics',
   AGENT_SESSIONS: '/api/agent/sessions',
   WORKROOM_RUNS: '/api/agent/workroom/runs',
 } as const

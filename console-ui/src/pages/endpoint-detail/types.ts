@@ -26,6 +26,8 @@ export interface NoticeItem {
 }
 
 export interface ReceivedMessage {
+  /** Original canonical identity from the Host; never synthesize it from display fields. */
+  conversation?: DiagnosticConversation
   endpoint?: { id: string; adapter: string }
   messageId?: string
   outgoing?: boolean
@@ -58,7 +60,15 @@ export interface InboxMessageRow {
   direction?: 'inbound' | 'outbound'
   rendering?: import('./rendering-diagnostics.mjs').RenderingDiagnostic
   renderingError?: string
-  conversation?: { endpoint: { id: string; adapter: string }; kind: 'private' | 'group' | 'channel'; id: string; parent?: { kind: 'private' | 'group' | 'channel'; id: string }; threadId?: string }
+  conversation?: DiagnosticConversation
+}
+
+export interface DiagnosticConversation {
+  endpoint: { id: string; adapter: string }
+  kind: 'private' | 'group' | 'channel'
+  id: string
+  parent?: { kind: 'private' | 'group' | 'channel'; id: string }
+  threadId?: string
 }
 
 export interface InboxRequestRow {

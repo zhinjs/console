@@ -36,6 +36,7 @@ import { Alert, AlertDescription } from '../../components/ui/alert'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs'
 import { ConversationSidebar } from './ConversationSidebar'
 import { ChatMessageRow, type MessageDraftReference } from './ChatMessageRow'
+import { MessageDiagnosticsAction, MessageDiagnosticsProvider } from './MessageDiagnostics'
 import { canShowReadEmpty } from './endpoint-request.mjs'
 import { useEndpointConsole } from './useEndpointConsole'
 import {
@@ -404,6 +405,7 @@ export default function EndpointDetailPage() {
   let lastDay = ''
 
   return (
+    <MessageDiagnosticsProvider>
     <div className="sandbox-container im-layout">
       <button
         type="button"
@@ -482,6 +484,7 @@ export default function EndpointDetailPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  <MessageDiagnosticsAction endpoint={info?.endpoint} selection={selection} />
                   <Button
                     variant="ghost"
                     size="icon"
@@ -1138,5 +1141,6 @@ export default function EndpointDetailPage() {
       </div>
       {ConfirmDialogHost}
     </div>
+    </MessageDiagnosticsProvider>
   )
 }
