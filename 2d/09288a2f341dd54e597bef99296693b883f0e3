@@ -1,0 +1,23 @@
+console-ui/src/pages/scenario-lab/scenario-model.mjs
+  s_079f1dc5e6308d::t_6cb494048db196 118-123
+tests/fixtures/scenario-lab/provenance.json
+  s_079f1dc5e6308d::t_2537fbca87ce2d 3
+tests/fixtures/scenario-lab/scenario.test.mjs
+  s_079f1dc5e6308d::t_2b2bb8f1b5f3a1 26-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2d09288a2f341dd54e597bef99296693b883f0e3",
+  "prompts": {},
+  "sessions": {
+    "s_079f1dc5e6308d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a079da-08f2-7112-8660-7d86c654edb0",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
