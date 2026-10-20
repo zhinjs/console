@@ -115,7 +115,12 @@ test(scenario.name, { timeout: 15000 }, async () => {
     // Explicit source-to-synthetic mapping. The production endpoint is provenance, never an execution target.
     const effectiveEndpoint = { id: capabilityId(rootPluginId(), adapterFeatureId, scenario.fixture.syntheticEndpoint), adapter: scenario.fixture.syntheticEndpoint };
     const result = await kit.receive({ endpoint: scenario.fixture.syntheticEndpoint, conversation: address, sender: scenario.sender, content: scenario.input });
-    assert.equal(result?.status, scenario.assertions.dispatchStatus, 'dispatch status');
+    if (scenario.assertions.dispatchStatus === 'unmatched') {
+      assert.equal(result?.matched, false, 'unmatched route');
+      assert.ok(result.status === undefined || result.status === 'unmatched', 'unmatched dispatch status');
+    } else {
+      assert.equal(result?.status, scenario.assertions.dispatchStatus, 'dispatch status');
+    }
     assert.deepEqual(kit.deliveries.map(({ conversation, payload }) => ({ conversation, payload })),
       scenario.assertions.deliveries.map(payload => ({ conversation: { ...address, endpoint: effectiveEndpoint }, payload })), 'exact target and final payloads');
   } finally { await kit.close(); }
