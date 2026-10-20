@@ -26,6 +26,7 @@ import { validateConfigSource } from './config-source-validation.mjs'
 import { generalConfigKeys, resolveConfigSection } from './config-navigation.mjs'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
+import { WelcomeFlowContext } from './WelcomeFlowContext'
 
 function GeneralConfigForm({
   config,
@@ -403,6 +404,9 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
         </Alert>
       )}
 
+      {searchParams.get('useCase') === 'group-welcome' && pluginFromUrl && visibleSection === `plugin:${pluginFromUrl}` && loaded
+        ? <WelcomeFlowContext instanceKey={pluginFromUrl} kind="config" /> : null}
+
       {loaded ? <Tabs value={visibleSection} onValueChange={setActiveSection}>
         <TabsList className="flex flex-wrap h-auto gap-1">
           {hasGeneral ? <TabsTrigger value="general">其他配置</TabsTrigger> : null}
@@ -423,7 +427,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
 
         {pluginKeys.map((key) => (
           <TabsContent key={key} value={`plugin:${key}`} className="mt-4">
-            <PluginConfigForm pluginName={key} onSuccess={() => { if (isInboxCacheScopeActive(connectionScope)) void load().catch(() => {}) }} onOpenYaml={() => { if (isInboxCacheScopeActive(connectionScope)) setActiveSection('yaml') }} />
+            <PluginConfigForm pluginName={key} purposeFields={searchParams.get('useCase') === 'group-welcome' && key === pluginFromUrl ? ['welcomeMessage', 'welcomeConversations'] : undefined} onSuccess={() => { if (isInboxCacheScopeActive(connectionScope)) void load().catch(() => {}) }} onOpenYaml={() => { if (isInboxCacheScopeActive(connectionScope)) setActiveSection('yaml') }} />
           </TabsContent>
         ))}
 

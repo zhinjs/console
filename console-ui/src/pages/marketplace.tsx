@@ -22,9 +22,13 @@ import {
   DialogTitle, DialogDescription, DialogClose,
 } from '../components/ui/dialog'
 import { apiFetch } from '../utils/auth'
-import { requestConsole } from '../utils/console-rpc'
-import { Link } from 'react-router-dom'
+import { requestConsole, type ConsoleRpcRequest } from '../utils/console-rpc'
+import { Link, useSearchParams } from 'react-router-dom'
 import { isDemoMode } from '../utils/demo-mode'
+import { useInboxCacheScope } from '../utils/useInboxCacheScope'
+import { isInboxCacheScopeActive } from '../utils/inbox-cache'
+import { CONSOLE_REST } from '../contracts/zhin-console'
+import { readWelcomeUseCase, welcomeReturnUrl } from './welcome-use-case-model.mjs'
 import { validateManagementState, mutationRequest, type PluginManagementState } from './plugin-management-model.mjs'
 import { PluginManagementSummary } from './PluginManagementSummary'
 
@@ -116,8 +120,21 @@ function formatDownloads(n: number): string {
 }
 
 export default function MarketplacePage() {
+  const scope = useInboxCacheScope()
+  return <MarketplaceSession key={scope ?? 'public-market'} scope={scope} />
+}
+
+function MarketplaceSession({ scope }: { scope?: string }) {
   const toast = useToast()
-  const readOnly = isDemoMode()
+  const [searchParams] = useSearchParams()
+  const welcomeRequested = searchParams.get('useCase') === 'group-welcome'
+  const [welcomePackage, setWelcomePackage] = useState<string | null>(null)
+  const [welcomeError, setWelcomeError] = useState<string | null>(null)
+  const readOnly = isDemoMode() || !isInboxCacheScopeActive(scope)
+  const requestForScope = useCallback((request: ConsoleRpcRequest) => {
+    if (!isInboxCacheScopeActive(scope)) return Promise.reject(new Error('连接身份已变化，请在原 Host 核对；不会向新连接继续操作。'))
+    return requestConsole(request)
+  }, [scope])
   const [plugins, setPlugins] = useState<MarketPlugin[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -240,8 +257,25 @@ export default function MarketplacePage() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!welcomeRequested || !scope || !isInboxCacheScopeActive(scope) || isDemoMode()) return
+    let cancelled = false
+    setWelcomePackage(null); setWelcomeError(null)
+    void (async () => {
+      try {
+        const response = await apiFetch(CONSOLE_REST.TASK_USE_CASES, { cache: 'no-store' })
+        if (!response.ok) throw Error('无法读取 Host 用途目录，未自动选择任何插件。')
+        const useCase = readWelcomeUseCase(await response.json())
+        if (cancelled || !isInboxCacheScopeActive(scope)) return
+        setWelcomePackage(useCase.packageName)
+        await openDetail(useCase.packageName)
+      } catch (cause) { if (!cancelled && isInboxCacheScopeActive(scope)) setWelcomeError(cause instanceof Error ? cause.message : '用途读取失败') }
+    })()
+    return () => { cancelled = true; detailRequest.current++ }
+  }, [welcomeRequested, scope, openDetail])
+
   const previewInstall = useCallback(async (packageName: string) => {
-    if (readOnly || installInFlight.current || uncertainPackage || !detail || detail.name !== packageName || !detail.version) return
+    if (readOnly || !isInboxCacheScopeActive(scope) || installInFlight.current || uncertainPackage || !detail || detail.name !== packageName || !detail.version) return
     const sequence = detailRequest.current
     installInFlight.current = true
     setInstallLoading(true)
@@ -249,10 +283,10 @@ export default function MarketplacePage() {
     setInstallMessage(null)
     try {
       const requestedSpec = `${packageName}@${detail.version}`
-      const plan = await requestConsole<PluginInstallPlan>({
+      const plan = await requestForScope({
         type: 'plugin:plan-install',
         packageName: requestedSpec,
-      })
+      }) as PluginInstallPlan
       if (sequence !== detailRequest.current) return
       if (plan.packageName !== packageName) throw new Error('安装计划返回了不同包，请重新核验')
       mutationRequest('plugin:install', { ...plan, requestedSpec })
@@ -263,14 +297,15 @@ export default function MarketplacePage() {
       installInFlight.current = false
       if (sequence === detailRequest.current) setInstallLoading(false)
     }
-  }, [detail, readOnly, uncertainPackage])
+  }, [detail, readOnly, uncertainPackage, scope, requestForScope])
 
   const recheckInstall = useCallback(async (packageName: string) => {
     setInstallLoading(true)
     const request = detailRequest.current
     const target = pendingInstalls.current.get(packageName)
     if (!target) { setInstallLoading(false); return }
-    const state = await reconcileInstall(packageName, () => requestConsole({ type: 'plugin:inspect', instanceKey: target.instanceKey }), target)
+    if (!isInboxCacheScopeActive(scope)) return
+    const state = await reconcileInstall(packageName, () => requestForScope({ type: 'plugin:inspect', instanceKey: target.instanceKey }), target)
     if (state.confirmed) pendingInstalls.current.delete(packageName)
     else pendingInstalls.current.set(packageName, { ...target, message: state.message })
     if (request === detailRequest.current) {
@@ -281,10 +316,10 @@ export default function MarketplacePage() {
       setInstallMessage(state.confirmed ? state.message : null)
     }
     setInstallLoading(false)
-  }, [])
+  }, [scope, requestForScope])
 
   const resumeInstall = useCallback(async () => {
-    if (readOnly || !uncertainPackage || installInFlight.current) return
+    if (readOnly || !isInboxCacheScopeActive(scope) || !uncertainPackage || installInFlight.current) return
     const packageName = uncertainPackage
     const target = pendingInstalls.current.get(packageName)
     if (!target) return
@@ -292,7 +327,7 @@ export default function MarketplacePage() {
     installInFlight.current = true
     setInstallLoading(true)
     try {
-      const plan = await planInstallRecovery(requestConsole, packageName, target)
+      const plan = await planInstallRecovery(requestForScope, packageName, target)
       if (sequence !== detailRequest.current) return
       pendingInstalls.current.delete(packageName)
       setUncertainPackage(null)
@@ -302,10 +337,10 @@ export default function MarketplacePage() {
     } catch (error) {
       if (sequence === detailRequest.current) setInstallError((error as Error).message)
     } finally { installInFlight.current = false; if (sequence === detailRequest.current) setInstallLoading(false) }
-  }, [readOnly, uncertainPackage])
+  }, [readOnly, uncertainPackage, scope, requestForScope])
 
   const commitInstall = useCallback(async () => {
-    if (readOnly || !installPlan || installInFlight.current || uncertainPackage) return
+    if (readOnly || !isInboxCacheScopeActive(scope) || !installPlan || installInFlight.current || uncertainPackage) return
     const packageName = installPlan.packageName
     const request = detailRequest.current
     installInFlight.current = true
@@ -319,8 +354,9 @@ export default function MarketplacePage() {
       const unknown = '安装已提交，结果正在核对；请勿重复安装。'
       pendingInstalls.current.set(packageName, { message: unknown, instanceKey: installPlan.instanceKey, version: installPlan.targetVersion! })
       setUncertainPackage(packageName)
-      await requestConsole(installRequest)
-      const reconciled = await reconcileInstall(packageName, () => requestConsole({ type: 'plugin:inspect', instanceKey: installPlan.instanceKey }), { instanceKey: installPlan.instanceKey, version: installPlan.targetVersion! })
+      await requestForScope(installRequest)
+      if (!isInboxCacheScopeActive(scope)) return
+      const reconciled = await reconcileInstall(packageName, () => requestForScope({ type: 'plugin:inspect', instanceKey: installPlan.instanceKey }), { instanceKey: installPlan.instanceKey, version: installPlan.targetVersion! })
       if (!reconciled.confirmed || !reconciled.state) { await recheckInstall(packageName); return }
       const state = reconciled.state
       pendingInstalls.current.delete(packageName)
@@ -337,7 +373,7 @@ export default function MarketplacePage() {
       installInFlight.current = false
       setInstallLoading(false)
     }
-  }, [checkUpdates, installPlan, uncertainPackage, recheckInstall, readOnly])
+  }, [checkUpdates, installPlan, uncertainPackage, recheckInstall, readOnly, scope, requestForScope])
 
   const handleCopyInstall = useCallback(async (name: string) => {
     const request = detailRequest.current
@@ -356,6 +392,7 @@ export default function MarketplacePage() {
 
   return (
     <div className="space-y-4">
+      {welcomeRequested && <Alert><AlertDescription className="space-y-2"><p>{welcomePackage ? `群欢迎用途 · Host 指定包 ${welcomePackage}。这里只打开详情；请自行审阅版本与原安装计划，尚未执行安装。` : welcomeError ?? '正在读取 Host 的群欢迎用途；不会按 URL 包名猜测插件。'}</p><Link className="underline" to={welcomeReturnUrl()}>返回群欢迎流程并选择实例</Link></AlertDescription></Alert>}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
@@ -752,7 +789,7 @@ export default function MarketplacePage() {
                 )}
                 {uncertainPackage && <Button variant="outline" size="sm" disabled={installLoading} onClick={() => void recheckInstall(uncertainPackage)}>{installLoading ? '核对中…' : '重新核对安装状态'}</Button>}
                 {!readOnly && uncertainPackage && canResumeInstall(installedState, uncertainPackage, pendingInstalls.current.get(uncertainPackage)) && <Button size="sm" disabled={installLoading} onClick={() => void resumeInstall()}>生成补全挂载与配置的计划</Button>}
-                {installedState && <div className="rounded-md border p-3"><PluginManagementSummary state={installedState} /></div>}
+                {installedState && <div className="rounded-md border p-3 space-y-3"><PluginManagementSummary state={installedState} />{welcomePackage === installedState.packageName && installedState.declared && <Button asChild size="sm"><Link to={welcomeReturnUrl(installedState.instanceKey)}>继续配置实际实例 {installedState.instanceKey}</Link></Button>}</div>}
                 {installPlan && (
                   <div className="rounded-md border p-3 space-y-2 text-sm">
                     <div className="font-medium">安装计划</div>
