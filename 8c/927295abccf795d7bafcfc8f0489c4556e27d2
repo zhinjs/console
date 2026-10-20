@@ -1,0 +1,77 @@
+README.md
+  s_079f1dc5e6308d::t_5cc410d0783e82 92-93,111-116
+console-ui/src/components/PluginConfigForm/ConfigApplicationEvidence.tsx
+  s_079f1dc5e6308d::t_3c6c99c95e24f5 1-103
+console-ui/src/components/PluginConfigForm/ConfigFieldExplanation.tsx
+  s_079f1dc5e6308d::t_1f3e8d8a0d4770 1-49
+console-ui/src/components/PluginConfigForm/config-evidence-model.d.mts
+  s_079f1dc5e6308d::t_77d12a96f69df6 1-12
+console-ui/src/components/PluginConfigForm/config-evidence-model.mjs
+  s_079f1dc5e6308d::t_ccc602e489ff27 1-60
+console-ui/src/components/PluginConfigForm/config-explanation-model.d.mts
+  s_079f1dc5e6308d::t_65e760359e9808 1-10
+console-ui/src/components/PluginConfigForm/config-explanation-model.mjs
+  s_079f1dc5e6308d::t_73b539c789ec90 1-65
+console-ui/src/components/PluginConfigForm/draft-guard.d.mts
+  s_079f1dc5e6308d::t_fdbe33c7d53eb3 2
+console-ui/src/components/PluginConfigForm/draft-guard.mjs
+  s_079f1dc5e6308d::t_e469195d6b9962 9
+console-ui/src/components/PluginConfigForm/index.tsx
+  s_079f1dc5e6308d::t_f8c05663e439c8 16-18,82,93,97,101,111-114
+console-ui/src/components/sidebarMenuIcons.ts
+  s_079f1dc5e6308d::t_3adcc06adaf3f0 34,40
+console-ui/src/contracts/zhin-console.ts
+  s_079f1dc5e6308d::t_5513c6cc94b62f 17
+console-ui/src/pages/PluginManagementSummary.tsx
+  s_079f1dc5e6308d::t_20d93aa98aa14a 6,16
+console-ui/src/pages/config.tsx
+  s_079f1dc5e6308d::t_8da44a155c03dd 30,319,322,342,344,396
+console-ui/src/pages/scenario-lab.tsx
+  s_079f1dc5e6308d::t_2bdb8b9ea9daed 1-121
+console-ui/src/pages/scenario-lab/scenario-model.d.mts
+  s_079f1dc5e6308d::t_8cb7c35752cce4 1-15
+console-ui/src/pages/scenario-lab/scenario-model.mjs
+  s_079f1dc5e6308d::t_d98136220c4a64 1-187
+console-ui/src/registerBuiltinShell.tsx
+  s_079f1dc5e6308d::t_5cfcbabe63c461 17,111-112
+tests/config-connection-scope.test.mjs
+  s_079f1dc5e6308d::t_d4b22610ab1efb 15,75-76,79
+tests/config-evidence.test.mjs
+  s_079f1dc5e6308d::t_23ccfa0ff98aa4 1-186
+tests/config-explanation-ui.test.mjs
+  s_079f1dc5e6308d::t_b4777dadc40cc5 1-39
+tests/config-explanation.test.mjs
+  s_079f1dc5e6308d::t_23a3f33b46c3dc 1-49
+tests/config-source-draft.test.mjs
+  s_079f1dc5e6308d::t_3a42909355b3a1 6,11
+tests/fixtures/config-explanation-host.json
+  s_079f1dc5e6308d::t_816c0c758a4581 1-187
+tests/fixtures/scenario-lab/README.md
+  s_079f1dc5e6308d::t_90b41c80007b89 1-17
+tests/fixtures/scenario-lab/provenance.json
+  s_079f1dc5e6308d::t_0f4d33bcfa7034 1-6
+tests/fixtures/scenario-lab/scenario.json
+  s_079f1dc5e6308d::t_69b3fcb87c4bce 1-53
+tests/fixtures/scenario-lab/scenario.test.mjs
+  s_079f1dc5e6308d::t_881a2da9b204f1 1-35
+tests/scenario-lab-ui.test.mjs
+  s_079f1dc5e6308d::t_dab8666c0fabc4 1-29
+tests/scenario-lab.test.mjs
+  s_079f1dc5e6308d::t_e52dca483baaca 1-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8c927295abccf795d7bafcfc8f0489c4556e27d2",
+  "prompts": {},
+  "sessions": {
+    "s_079f1dc5e6308d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a079da-08f2-7112-8660-7d86c654edb0",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
