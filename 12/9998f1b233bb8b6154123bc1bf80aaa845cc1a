@@ -1,0 +1,42 @@
+console-ui/src/components/PluginConfigForm/index.tsx
+  s_079f1dc5e6308d::t_d8de0b80314304 14-15,19-28,42-45,59,64-65,68,72,77,82-83,86
+tests/config-source-draft.test.mjs
+  s_079f1dc5e6308d::t_faa42d17ddef18 7,10
+tests/permission-explanation.test.mjs
+  s_079f1dc5e6308d::t_92e14eb2ccdd43 52,64-66
+  s_079f1dc5e6308d::t_251977363632fa 67-68
+console-ui/src/pages/permission-explanation-model.mjs
+  s_079f1dc5e6308d::t_92e14eb2ccdd43 40
+console-ui/src/hooks/useConfigSource.ts
+  s_079f1dc5e6308d::t_d8a8c9005841ea 59,63-64,90-91
+  s_079f1dc5e6308d::t_d8de0b80314304 5-7,15-16,28,34-35,38-39,44-48,51-53,58,60-61,67,69,73-75,84,94,96,99-101,104,109,112,115-123
+  s_079f1dc5e6308d::t_0aec4ef1e2bc5e 86
+  s_079f1dc5e6308d::t_7cd789e138de2c 36-37,40-41,124-125
+tests/config-connection-scope.test.mjs
+  s_079f1dc5e6308d::t_603bfa88d77def 1-11,15-16,18-32,34-41,43-61,63-73,76-77,87-96,100-112,116-157,159-254,312
+  s_079f1dc5e6308d::t_bc0ba9410f389b 114-115
+  s_079f1dc5e6308d::t_4a2eef4eeeeddd 12-14,17,33,42,62,74-75,78-86,97-99,113,255-282,285-288,291-311
+  s_079f1dc5e6308d::t_d79ddaf80e7893 283-284,289-290
+  s_079f1dc5e6308d::t_d8a8c9005841ea 158
+console-ui/src/pages/config.tsx
+  s_079f1dc5e6308d::t_faa42d17ddef18 27-28,35-36,43,63,69,72,80,278-283,293-294,311-314,318,322,324,329-331,341,344,347,352-354,357,360,421,426,438
+console-ui/src/components/PluginConfigForm/usePluginConfigDraft.ts
+  s_079f1dc5e6308d::t_d8de0b80314304 6-7,11,16-17,20-22,26,32-38,40-41,44-46,50-54
+  s_079f1dc5e6308d::t_7cd789e138de2c 39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "129998f1b233bb8b6154123bc1bf80aaa845cc1a",
+  "prompts": {},
+  "sessions": {
+    "s_079f1dc5e6308d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a079da-08f2-7112-8660-7d86c654edb0",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
