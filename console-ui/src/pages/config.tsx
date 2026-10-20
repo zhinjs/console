@@ -24,19 +24,23 @@ import { isDemoMode } from '../utils/demo-mode'
 import { editSourceDraft, saveSourceDraft, type SourceDraft } from './config-source-draft.mjs'
 import { validateConfigSource } from './config-source-validation.mjs'
 import { generalConfigKeys, resolveConfigSection } from './config-navigation.mjs'
+import { useInboxCacheScope } from '../utils/useInboxCacheScope'
+import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 
 function GeneralConfigForm({
   config,
   pluginKeys,
   snapshot,
   onSave,
-  saving
+  saving,
+  connectionScope,
 }: {
   config: Record<string, any>
   pluginKeys: string[]
   snapshot: ConfigSource | null
   onSave: (patch: Record<string, any>, baseline: ConfigSource | null) => Promise<void>
   saving: boolean
+  connectionScope: string
 }) {
   const generalKeys = useMemo(() => generalConfigKeys(config, pluginKeys), [config, pluginKeys])
 
@@ -56,13 +60,16 @@ function GeneralConfigForm({
   }, [config, generalKeys, dirty, snapshot])
 
   const handleChange = (key: string, value: any) => {
+    if (!isInboxCacheScopeActive(connectionScope)) return
     setLocalValues(prev => ({ ...prev, [key]: value }))
     setDirty(true)
   }
 
   const handleSave = async () => {
+    if (!isInboxCacheScopeActive(connectionScope) || baselineSnapshot?.connectionScope !== connectionScope) return
     try {
       await onSave(localValues, baselineSnapshot)
+      if (!isInboxCacheScopeActive(connectionScope)) return
       setDirty(false)
     } catch {
       // Parent shows the save error; retain this form draft for retry.
@@ -70,6 +77,7 @@ function GeneralConfigForm({
   }
 
   const handleReset = () => {
+    if (!isInboxCacheScopeActive(connectionScope)) return
     const vals: Record<string, any> = {}
     for (const key of generalKeys) {
       vals[key] = config[key]
@@ -267,6 +275,12 @@ function ConfigFieldEditor({
 }
 
 function EditableConfigPage() {
+  const scope = useInboxCacheScope()
+  if (!scope || !isInboxCacheScopeActive(scope)) return <Card className="p-4" role="status">连接身份已变化，请登录当前 Host 后重新读取配置。</Card>
+  return <EditableConfigSession key={scope} connectionScope={scope} />
+}
+
+function EditableConfigSession({ connectionScope }: { connectionScope: string }) {
   const [searchParams] = useSearchParams()
   const pluginFromUrl = searchParams.get('plugin')?.trim() ?? ''
   const { source, format, configKeys: pluginKeys, loading, loaded, error, errorOperation, clearSaveError, load, saveBound, snapshot } = useConfigSource()
@@ -276,6 +290,8 @@ function EditableConfigPage() {
   const sourceDirty = sourceDraft !== null
   const draftFormat = sourceDraft?.snapshot.format ?? format
   const [saving, setSaving] = useState(false)
+  const operation = useRef(0)
+  useEffect(() => () => { operation.current++ }, [])
   const { success, error: toastError } = useToast()
 
   const parsedConfig = useMemo(() => {
@@ -292,20 +308,27 @@ function EditableConfigPage() {
   const sourceIssue = useMemo(() => validateConfigSource(sourceText, draftFormat), [sourceText, draftFormat])
 
   const handleYamlSave = async () => {
-    if (saving || !sourceDirty || sourceIssue) return
+    if (!isInboxCacheScopeActive(connectionScope) || sourceDraft?.snapshot.connectionScope !== connectionScope
+      || saving || !sourceDirty || sourceIssue) return
+    const operationId = ++operation.current
+    const currentOperation = () => isInboxCacheScopeActive(connectionScope) && operation.current === operationId
     setSaving(true)
     try {
       await saveSourceDraft(saveBound, sourceDraft)
+      if (!currentOperation()) return
       setSourceDraft(null)
       success('配置已保存，需重启生效')
     } catch (err) {
-      toastError('配置保存失败，草稿已保留。请查看页面中的技术详情。')
+      if (currentOperation()) toastError('配置保存失败，草稿已保留。请查看页面中的技术详情。')
     } finally {
-      setSaving(false)
+      if (currentOperation()) setSaving(false)
     }
   }
 
   const handleFormSave = async (patch: Record<string, any>, baseline: ConfigSource | null) => {
+    if (!isInboxCacheScopeActive(connectionScope) || baseline?.connectionScope !== connectionScope) throw new Error('草稿属于旧连接，请重新读取当前 Host 配置')
+    const operationId = ++operation.current
+    const currentOperation = () => isInboxCacheScopeActive(connectionScope) && operation.current === operationId
     setSaving(true)
     try {
       if (!baseline?.revision) throw new Error('草稿版本未知，请撤销并重新读取配置')
@@ -315,21 +338,26 @@ function EditableConfigPage() {
         ? `${JSON.stringify(merged, null, 2)}\n`
         : stringifyYaml(merged, { lineWidth: 0 })
       await saveBound(nextSource, baseline)
+      if (!currentOperation()) throw new Error('保存结果已过期，请到原 Host 核实')
       success('配置已保存，需重启生效')
     } catch (err) {
-      toastError('配置保存失败，草稿已保留。请查看页面中的技术详情。')
+      if (currentOperation()) toastError('配置保存失败，草稿已保留。请查看页面中的技术详情。')
       throw err
     } finally {
-      setSaving(false)
+      if (currentOperation()) setSaving(false)
     }
   }
 
   const handleRefresh = async () => {
+    if (!isInboxCacheScopeActive(connectionScope)) return
+    const operationId = ++operation.current
+    const currentOperation = () => isInboxCacheScopeActive(connectionScope) && operation.current === operationId
     try {
       await load()
+      if (!currentOperation()) return
       success('已刷新')
     } catch {
-      toastError('刷新失败')
+      if (currentOperation()) toastError('刷新失败')
     }
   }
 
@@ -390,12 +418,12 @@ function EditableConfigPage() {
         </TabsList>
 
         {hasGeneral ? <TabsContent value="general" className="mt-4">
-          <GeneralConfigForm config={parsedConfig} pluginKeys={pluginKeys} snapshot={snapshot} onSave={handleFormSave} saving={saving} />
+          <GeneralConfigForm config={parsedConfig} pluginKeys={pluginKeys} snapshot={snapshot} onSave={handleFormSave} saving={saving} connectionScope={connectionScope} />
         </TabsContent> : null}
 
         {pluginKeys.map((key) => (
           <TabsContent key={key} value={`plugin:${key}`} className="mt-4">
-            <PluginConfigForm pluginName={key} onSuccess={() => void load()} onOpenYaml={() => setActiveSection('yaml')} />
+            <PluginConfigForm pluginName={key} onSuccess={() => { if (isInboxCacheScopeActive(connectionScope)) void load().catch(() => {}) }} onOpenYaml={() => { if (isInboxCacheScopeActive(connectionScope)) setActiveSection('yaml') }} />
           </TabsContent>
         ))}
 
@@ -407,7 +435,7 @@ function EditableConfigPage() {
               aria-describedby={sourceDirty && sourceIssue ? 'config-source-error' : undefined}
               value={sourceText}
               disabled={saving}
-              onChange={e => { const value = e.target.value; setSourceDraft(previous => editSourceDraft(previous, snapshot, value)) }}
+              onChange={e => { if (!isInboxCacheScopeActive(connectionScope)) return; const value = e.target.value; setSourceDraft(previous => editSourceDraft(previous, snapshot, value)) }}
               className="font-mono text-sm min-h-[400px] resize-y"
               placeholder={format === 'json' ? '{ "plugins": {} }' : '# zhin.config.yml'}
               spellCheck={false}

@@ -1,0 +1,309 @@
+{
+  "catalog": {
+    "success": true,
+    "data": {
+      "generation": 0,
+      "page": 1,
+      "pageSize": 50,
+      "total": 4,
+      "commands": [
+        {
+          "id": "root\u0000zhin.command\u0000admin",
+          "owner": "root",
+          "name": "admin",
+          "description": "仅群聊管理员",
+          "adapter": "permission-test",
+          "permits": [
+            "group()",
+            "role(admin)"
+          ]
+        },
+        {
+          "id": "root\u0000zhin.command\u0000open",
+          "owner": "root",
+          "name": "open",
+          "permits": []
+        },
+        {
+          "id": "root\u0000zhin.command\u0000platform",
+          "owner": "root",
+          "name": "platform",
+          "permits": [
+            "platform(permission-test,admin)"
+          ]
+        },
+        {
+          "id": "root\u0000zhin.command\u0000user",
+          "owner": "root",
+          "name": "user",
+          "permits": [
+            "user(alice)",
+            "role(user)"
+          ]
+        }
+      ]
+    }
+  },
+  "explanation": {
+    "success": true,
+    "data": {
+      "generation": 0,
+      "simulation": true,
+      "command": {
+        "id": "root\u0000zhin.command\u0000admin",
+        "owner": "root",
+        "name": "admin",
+        "description": "仅群聊管理员",
+        "adapter": "permission-test",
+        "permits": [
+          "group()",
+          "role(admin)"
+        ]
+      },
+      "permissionHost": "present",
+      "adapter": {
+        "outcome": "unknown",
+        "reason": "未选择当前 Endpoint，无法判断命令的精确 adapter 约束"
+      },
+      "rules": [
+        {
+          "index": 0,
+          "rule": "group()",
+          "kind": "group",
+          "values": [
+            ""
+          ],
+          "outcome": "unknown",
+          "reason": "未提供会话目标，无法判断此条件；单项内多个值为 OR，规则之间为 AND"
+        },
+        {
+          "index": 1,
+          "rule": "role(admin)",
+          "kind": "role",
+          "values": [
+            "admin"
+          ],
+          "outcome": "unknown",
+          "reason": "未提供假设角色，无法判断角色条件；单项内多个值为 OR，规则之间为 AND"
+        }
+      ],
+      "summary": {
+        "outcome": "unknown",
+        "reason": "存在缺少依据的条件，不能推断命令可执行"
+      },
+      "unconstrained": [
+        "已解释的 builtin 规则不检查具体 Endpoint、parent 或 thread；保留完整目标不等于这些维度受规则限制"
+      ],
+      "assumptions": [
+        "身份与角色仅用于模拟，未向平台核实",
+        "未执行命令、动态默认值、平台或自定义 checker"
+      ]
+    }
+  },
+  "admin": {
+    "success": true,
+    "data": {
+      "generation": 0,
+      "simulation": true,
+      "command": {
+        "id": "root\u0000zhin.command\u0000admin",
+        "owner": "root",
+        "name": "admin",
+        "description": "仅群聊管理员",
+        "adapter": "permission-test",
+        "permits": [
+          "group()",
+          "role(admin)"
+        ]
+      },
+      "target": {
+        "endpoint": {
+          "adapter": "permission-test",
+          "id": "root/adapter-owner\u0000zhin.adapter\u0000permission-test"
+        },
+        "kind": "group",
+        "id": "room",
+        "parent": {
+          "kind": "channel",
+          "id": "workspace"
+        },
+        "threadId": "topic"
+      },
+      "sender": {
+        "id": "alice",
+        "roles": [
+          "admin"
+        ]
+      },
+      "permissionHost": "present",
+      "adapter": {
+        "outcome": "match",
+        "reason": "命令 adapter 与当前 Endpoint 声明的原生适配器精确比较；未探测在线状态"
+      },
+      "rules": [
+        {
+          "index": 0,
+          "rule": "group()",
+          "kind": "group",
+          "values": [
+            ""
+          ],
+          "outcome": "match",
+          "reason": "要求群聊，按群 ID 匹配；空值或星号不限群 ID；单项内多个值为 OR，规则之间为 AND"
+        },
+        {
+          "index": 1,
+          "rule": "role(admin)",
+          "kind": "role",
+          "values": [
+            "admin"
+          ],
+          "outcome": "match",
+          "reason": "按角色精确匹配；仅 master 隐含 trusted，不隐含 admin；单项内多个值为 OR，规则之间为 AND"
+        }
+      ],
+      "summary": {
+        "outcome": "match",
+        "reason": "已解释的 builtin 条件与假设输入匹配；不代表真实授权或命令可执行"
+      },
+      "unconstrained": [
+        "已解释的 builtin 规则不检查具体 Endpoint、parent 或 thread；保留完整目标不等于这些维度受规则限制"
+      ],
+      "assumptions": [
+        "身份与角色仅用于模拟，未向平台核实",
+        "未执行命令、动态默认值、平台或自定义 checker"
+      ]
+    }
+  },
+  "unknownRole": {
+    "success": true,
+    "data": {
+      "generation": 0,
+      "simulation": true,
+      "command": {
+        "id": "root\u0000zhin.command\u0000admin",
+        "owner": "root",
+        "name": "admin",
+        "description": "仅群聊管理员",
+        "adapter": "permission-test",
+        "permits": [
+          "group()",
+          "role(admin)"
+        ]
+      },
+      "target": {
+        "endpoint": {
+          "adapter": "permission-test",
+          "id": "root/adapter-owner\u0000zhin.adapter\u0000permission-test"
+        },
+        "kind": "group",
+        "id": "room",
+        "parent": {
+          "kind": "channel",
+          "id": "workspace"
+        },
+        "threadId": "topic"
+      },
+      "sender": {
+        "id": "alice"
+      },
+      "permissionHost": "present",
+      "adapter": {
+        "outcome": "match",
+        "reason": "命令 adapter 与当前 Endpoint 声明的原生适配器精确比较；未探测在线状态"
+      },
+      "rules": [
+        {
+          "index": 0,
+          "rule": "group()",
+          "kind": "group",
+          "values": [
+            ""
+          ],
+          "outcome": "match",
+          "reason": "要求群聊，按群 ID 匹配；空值或星号不限群 ID；单项内多个值为 OR，规则之间为 AND"
+        },
+        {
+          "index": 1,
+          "rule": "role(admin)",
+          "kind": "role",
+          "values": [
+            "admin"
+          ],
+          "outcome": "unknown",
+          "reason": "未提供假设角色，无法判断角色条件；单项内多个值为 OR，规则之间为 AND"
+        }
+      ],
+      "summary": {
+        "outcome": "unknown",
+        "reason": "存在缺少依据的条件，不能推断命令可执行"
+      },
+      "unconstrained": [
+        "已解释的 builtin 规则不检查具体 Endpoint、parent 或 thread；保留完整目标不等于这些维度受规则限制"
+      ],
+      "assumptions": [
+        "身份与角色仅用于模拟，未向平台核实",
+        "未执行命令、动态默认值、平台或自定义 checker"
+      ]
+    }
+  },
+  "platform": {
+    "success": true,
+    "data": {
+      "generation": 0,
+      "simulation": true,
+      "command": {
+        "id": "root\u0000zhin.command\u0000platform",
+        "owner": "root",
+        "name": "platform",
+        "permits": [
+          "platform(permission-test,admin)"
+        ]
+      },
+      "target": {
+        "endpoint": {
+          "adapter": "permission-test",
+          "id": "root/adapter-owner\u0000zhin.adapter\u0000permission-test"
+        },
+        "kind": "group",
+        "id": "room",
+        "parent": {
+          "kind": "channel",
+          "id": "workspace"
+        },
+        "threadId": "topic"
+      },
+      "sender": {
+        "id": "alice",
+        "roles": [
+          "admin"
+        ]
+      },
+      "permissionHost": "present",
+      "adapter": {
+        "outcome": "not_evaluated",
+        "reason": "命令未声明 adapter 约束"
+      },
+      "rules": [
+        {
+          "index": 0,
+          "rule": "platform(permission-test,admin)",
+          "kind": "platform",
+          "outcome": "not_evaluated",
+          "reason": "平台权限 checker 未执行，不能据此判断权限"
+        }
+      ],
+      "summary": {
+        "outcome": "not_evaluated",
+        "reason": "存在未执行的平台或自定义条件，不能推断命令可执行"
+      },
+      "unconstrained": [
+        "已解释的 builtin 规则不检查具体 Endpoint、parent 或 thread；保留完整目标不等于这些维度受规则限制"
+      ],
+      "assumptions": [
+        "身份与角色仅用于模拟，未向平台核实",
+        "未执行命令、动态默认值、平台或自定义 checker"
+      ]
+    }
+  }
+}

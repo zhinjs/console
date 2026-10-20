@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState, useReducer } from 'react'
 import { getWebSocketManager } from '@zhin.js/client'
 import { configErrorReducer } from './config-error-state.mjs'
 import { requestConsole } from '../utils/console-rpc'
+import { useInboxCacheScope } from '../utils/useInboxCacheScope'
+import { getInboxCacheScope, isInboxCacheScopeActive } from '../utils/inbox-cache'
+import { createDiagnosticRequestGate } from '../pages/endpoint-detail/message-diagnostics.mjs'
 
 export type ConfigSource = {
   source: string
@@ -9,6 +12,8 @@ export type ConfigSource = {
   revision: string
   configKeys: string[]
   configPaths?: Readonly<Record<string, readonly string[]>>
+  /** Local opaque connection identity; never included in the Host RPC payload. */
+  readonly connectionScope?: string
 }
 
 type ReplaceResult = {
@@ -20,34 +25,54 @@ type ReplaceResult = {
 
 export function useConfigSource({ autoLoad = true }: { autoLoad?: boolean } = {}) {
   const manager = getWebSocketManager()
+  const scope = useInboxCacheScope()
   const [connected, setConnected] = useState(manager.isConnected())
   const [config, setConfig] = useState<ConfigSource | null>(null)
   const [loading, setLoading] = useState(false)
   const [{ readError, saveError }, errorAction] = useReducer(configErrorReducer, { readError: null, saveError: null })
   const attempted = useRef(false)
-  const requestSequence = useRef(0)
+  const operations = useRef(createDiagnosticRequestGate(getInboxCacheScope))
+  const [feedbackScope, setFeedbackScope] = useState<string | undefined>(undefined)
+  const [readErrorScope, setReadErrorScope] = useState<string | undefined>(undefined)
+  const [saveErrorScope, setSaveErrorScope] = useState<string | undefined>(undefined)
+  const active = isInboxCacheScopeActive(scope)
+  const current = active && config?.connectionScope === scope ? config : null
+  const currentReadError = active && readErrorScope === scope ? readError : null
+  const currentSaveError = active && saveErrorScope === scope ? saveError : null
 
   useEffect(() => manager.onConnectionChange(setConnected), [manager])
+  useEffect(() => {
+    operations.current.cancel(); attempted.current = false; setConfig(null); setLoading(false)
+    setFeedbackScope(undefined); errorAction({ type: 'read-start' }); errorAction({ type: 'discard-save' })
+    return () => operations.current.cancel()
+  }, [scope])
 
   const load = useCallback(async () => {
-    const sequence = ++requestSequence.current
+    if (!isInboxCacheScopeActive(scope)) throw new Error('连接身份已变化，请在当前 Host 重新读取配置')
+    const request = operations.current.begin()
+    setFeedbackScope(scope)
     setLoading(true)
     errorAction({ type: 'read-start' })
     try {
       const result = await requestConsole<ConfigSource>({ type: 'config:get-source' })
-      if (sequence === requestSequence.current) setConfig(result)
-      return result
+      if (!request.current() || !isInboxCacheScopeActive(scope)) throw new Error('配置读取已过期，请在当前 Host 重新读取')
+      const bound = Object.freeze({ ...result, connectionScope: scope })
+      setConfig(bound)
+      return bound
     } catch (cause) {
-      if (sequence === requestSequence.current) errorAction({ type: 'read-failed', error: cause instanceof Error ? cause.message : '读取失败' })
+      if (!request.current() || !isInboxCacheScopeActive(scope)) throw new Error('配置读取已过期，请在当前 Host 重新读取')
+      setReadErrorScope(scope); errorAction({ type: 'read-failed', error: cause instanceof Error ? cause.message : '读取失败' })
       throw cause
     } finally {
-      if (sequence === requestSequence.current) setLoading(false)
+      if (request.current() && isInboxCacheScopeActive(scope)) setLoading(false)
     }
-  }, [])
+  }, [scope])
 
   const saveBound = useCallback(async (source: string, config: ConfigSource) => {
     if (!config?.revision) throw new Error('配置版本未知，请先刷新')
-    ++requestSequence.current
+    if (!isInboxCacheScopeActive(scope) || config.connectionScope !== scope) throw new Error('配置属于旧连接，请在当前 Host 重新读取后保存')
+    const request = operations.current.begin()
+    setFeedbackScope(scope)
     setLoading(true)
     errorAction({ type: 'save-start' })
     try {
@@ -56,45 +81,48 @@ export function useConfigSource({ autoLoad = true }: { autoLoad?: boolean } = {}
         source,
         expectedRevision: config.revision,
       })
+      if (!request.current() || !isInboxCacheScopeActive(scope)) throw new Error('保存结果属于旧连接或已被替代，请到原 Host 核实；当前页面不会重试')
       if (!result.success || !result.revision) throw new Error(result.message || 'Host 未确认配置保存成功')
-      setConfig(current => current?.revision === config.revision ? { ...current, source, revision: result.revision } : current)
+      setConfig(current => current && current.connectionScope === scope && current.revision === config.revision ? { ...current, source, revision: result.revision } : current)
       errorAction({ type: 'save-succeeded' })
       return result
     } catch (cause) {
-      errorAction({ type: 'save-failed', error: cause instanceof Error ? cause.message : 'Unknown error' })
+      if (!request.current() || !isInboxCacheScopeActive(scope)) throw new Error('保存结果属于旧连接或已被替代，请到原 Host 核实；当前页面不会重试')
+      setSaveErrorScope(scope); errorAction({ type: 'save-failed', error: cause instanceof Error ? cause.message : 'Unknown error' })
       throw cause
     } finally {
-      setLoading(false)
+      if (request.current() && isInboxCacheScopeActive(scope)) setLoading(false)
     }
-  }, [])
+  }, [scope])
 
   const save = useCallback(async (source: string) => {
-    if (!config) throw new Error('配置版本未知，请先刷新')
-    return saveBound(source, config)
-  }, [config, saveBound])
+    if (!current) throw new Error('配置版本未知，请先在当前 Host 刷新')
+    return saveBound(source, current)
+  }, [current, saveBound])
 
   useEffect(() => {
-    if (!autoLoad) return
+    if (!autoLoad || !active) return
     if (!connected) {
       attempted.current = false
       return
     }
-    if (config || attempted.current) return
+    if (current || attempted.current) return
     attempted.current = true
     void load().catch(() => {})
-  }, [autoLoad, connected, config, load])
+  }, [autoLoad, connected, current, load, active])
 
   return {
-    loaded: config !== null,
-    snapshot: config,
-    source: config?.source ?? '',
-    format: config?.format ?? 'yaml',
-    configKeys: config?.configKeys ?? [],
-    configPaths: config?.configPaths ?? {},
-    revision: config?.revision ?? '',
-    loading,
-    error: saveError ?? readError,
-    errorOperation: saveError ? 'save' as const : readError ? 'read' as const : null,
+    scope: active ? scope : undefined,
+    loaded: current !== null,
+    snapshot: current,
+    source: current?.source ?? '',
+    format: current?.format ?? 'yaml',
+    configKeys: current?.configKeys ?? [],
+    configPaths: current?.configPaths ?? {},
+    revision: current?.revision ?? '',
+    loading: active && feedbackScope === scope && loading,
+    error: currentSaveError ?? currentReadError,
+    errorOperation: currentSaveError ? 'save' as const : currentReadError ? 'read' as const : null,
     clearSaveError: () => errorAction({ type: 'discard-save' }),
     load,
     save,
