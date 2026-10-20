@@ -1,0 +1,66 @@
+console-ui/src/registerBuiltinShell.tsx
+  s_079f1dc5e6308d::t_c3a9e5d1bb5a34 111-113,115-118
+  s_079f1dc5e6308d::t_a51dd23642b6ad 114
+  s_079f1dc5e6308d::t_4a57833840e524 16
+  s_079f1dc5e6308d::t_41666334fc30d8 110
+console-ui/src/pages/command-permissions.tsx
+  s_079f1dc5e6308d::t_4a57833840e524 1-22,24-25,27-29,32-43,45-50,52-58,60-72,74-95,98-115
+  s_079f1dc5e6308d::t_c3a9e5d1bb5a34 23,30-31,44
+  s_079f1dc5e6308d::t_a51dd23642b6ad 26,51,59,96-97
+  s_079f1dc5e6308d::t_a8363477b22dbc 73
+console-ui/src/pages/permission-explanation-model.mjs
+  s_079f1dc5e6308d::t_cc973795cd6103 41,43
+  s_079f1dc5e6308d::t_5c2705feee09d2 1,10-13,38,54
+  s_079f1dc5e6308d::t_4a57833840e524 55-57
+  s_079f1dc5e6308d::t_a51dd23642b6ad 36
+  s_079f1dc5e6308d::t_d29bd47c014853 2-9,14-16,19-35,37,39-40,42,44-53,58-77
+  s_079f1dc5e6308d::t_d62c3fd55af9fe 17-18
+console-ui/src/components/PluginConfigForm/ConversationScopeEditor.tsx
+  s_079f1dc5e6308d::t_a51dd23642b6ad 1-8,10-11,13-14,16-21,25-26,29-30
+  s_079f1dc5e6308d::t_f18c444a2b41cf 12,22,27
+  s_079f1dc5e6308d::t_d1b6a276f921cf 9,15,23-24,28
+console-ui/src/contracts/zhin-console.ts
+  s_079f1dc5e6308d::t_4a57833840e524 39-40
+console-ui/src/components/PluginConfigForm/ConversationTargetEditor.tsx
+  s_079f1dc5e6308d::t_a51dd23642b6ad 1-73
+console-ui/src/pages/introspection/CapabilityExplorer.tsx
+  s_079f1dc5e6308d::t_c3a9e5d1bb5a34 152
+tests/permission-explanation.test.mjs
+  s_079f1dc5e6308d::t_68c453e549ca0d 1-2,4-54,58-69,85
+  s_079f1dc5e6308d::t_5c2705feee09d2 55-56
+  s_079f1dc5e6308d::t_55f6a09d5765f2 3,70-84
+  s_079f1dc5e6308d::t_cc973795cd6103 57
+console-ui/src/pages/permission-explanation-model.d.mts
+  s_079f1dc5e6308d::t_4a57833840e524 1-13,15-17
+  s_079f1dc5e6308d::t_a51dd23642b6ad 14
+tests/conversation-scope-ui.test.mjs
+  s_079f1dc5e6308d::t_e1f7a99e4da074 1-32,35-74,77,83-86,94
+  s_079f1dc5e6308d::t_d1b6a276f921cf 75-76,78-82,87-93
+  s_079f1dc5e6308d::t_f18c444a2b41cf 33-34
+console-ui/src/components/PluginConfigForm/SchemaFieldEditor.tsx
+  s_079f1dc5e6308d::t_dfef20ed91f089 2-3,17,28,46
+console-ui/src/components/PluginConfigForm/conversation-scope-model.d.mts
+  s_079f1dc5e6308d::t_0c6ba3c38adb12 1-12
+console-ui/src/components/PluginConfigForm/conversation-scope-model.mjs
+  s_079f1dc5e6308d::t_14b47f5374c498 1-48
+tests/conversation-scope-model.test.mjs
+  s_079f1dc5e6308d::t_b93b5c4a50e35b 1-58
+tests/fixtures/permission-http.json
+  s_079f1dc5e6308d::t_d5540d315eb96d 1-309
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1a14b465650b47a8eabb868ecc2f7098a0e9c088",
+  "prompts": {},
+  "sessions": {
+    "s_079f1dc5e6308d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a079da-08f2-7112-8660-7d86c654edb0",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
