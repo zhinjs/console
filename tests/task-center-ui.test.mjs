@@ -53,3 +53,14 @@ test('parameter summary uses Schema titles, an explicit human timezone, readable
   assert.match(html, /周期秒数/); assert.match(html, />60</); assert.match(html, /额外提示/); assert.match(html, />否</)
   assert.match(html, /普通值、3/); assert.match(html, /&lt;script&gt;/); assert.doesNotMatch(html, /<script>|2027-01-01T09:00/)
 })
+
+test('a real polling provider task displays its supplied schedule details without claiming it is unscheduled', async () => {
+  const fixture = JSON.parse(await readFile(new URL('./fixtures/rss-task-providers.json', import.meta.url), 'utf8'))
+  const rss = fixture.scheduled.data.providers[0].tasks[0]
+  const html = renderToStaticMarkup(React.createElement(AdminTaskCard, {task:rss, disabled:false, onAction:()=>{}}))
+  assert.match(html, /提供方未返回具体时间，请查看执行规则与任务详情/)
+  assert.doesNotMatch(html, /下次执行：未安排|1970/)
+  assert.match(html, /实例轮询 0 \*\/5 \* \* \* \*/)
+  assert.match(html, /已建立基线；从后续新文章开始推送/)
+  assert.match(html, /example-parent/); assert.match(html, /example-thread/)
+})

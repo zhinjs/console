@@ -102,7 +102,7 @@ export function validateTaskParameters(schema, parameters) {
 }
 export function availableTaskActions(task) { return task.actions.filter(action => task.state !== 'unknown' || action === 'cancel') }
 export function taskTimeLabel(time, timezone) {
-  if (time === undefined) return '未安排'
+  if (time === undefined) return '提供方未返回具体时间，请查看执行规则与任务详情'
   const date = new Date(time)
   if (!Number.isFinite(date.getTime())) return '时间超出可显示范围，请检查任务提供方'
   try { return `${date.toLocaleString('zh-CN', { timeZone: timezone || 'UTC', hour12: false })}（${timezone || 'UTC'}）` }
@@ -132,7 +132,7 @@ export function taskParameterSummary(schema, parameters, timezone) {
   })
 }
 export function taskActionDescription(action) {
-  return ({ create: '确认后保存管理员任务，并按指定时间向所选会话投递。不会发送测试消息。',
+  return ({ create: '确认后保存管理员任务，后续按提供方的执行规则运行。请核对下方外部影响及投递目标；不会发送测试消息。',
     pause: '确认后请求暂停后续执行；已经开始的投递无法撤回。',
     resume: '确认后请求恢复调度，后续执行时间以提供方返回为准。不会重试不确定的投递。',
     cancel: '确认后取消后续执行，无法撤回已经开始或结果不确定的投递。',

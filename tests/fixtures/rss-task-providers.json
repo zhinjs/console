@@ -1,0 +1,165 @@
+{
+  "provenance": {
+    "source": "real AdministratorRssTasks + SQLite + AdapterIndex + authenticated HTTP routes",
+    "network": "Only ephemeral loopback HTTP; feed loader and platform send are local synthetic functions",
+    "captures": "HTTP response bodies retained verbatim; no authorization headers or real account credentials"
+  },
+  "scheduled": {
+    "success": true,
+    "data": {
+      "generation": 0,
+      "providers": [
+        {
+          "owner": "root/rss",
+          "packageName": "@zhin.js/plugin-rss",
+          "title": "管理员 RSS 订阅",
+          "description": "向精确账号、会话与线程推送新文章，独立于聊天创建的 RSS 订阅",
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "url"
+            ],
+            "properties": {
+              "url": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048,
+                "title": "RSS / Atom 地址",
+                "description": "HTTP(S) 地址，不接受 URL 用户名或密码"
+              }
+            }
+          },
+          "effects": [
+            "保存后按实例 pollCron 定时访问源站；新建及暂停后恢复的首次成功抓取只建立基线，不发送历史文章",
+            "后续新文章经统一发送链投递到所选完整目标；暂停或取消不能撤回已开始的投递",
+            "未确认的投递不会自动重试或恢复；需核实目标会话后取消并另建订阅",
+            "每实例最多 8 条任务，操作回执保留最近 32 条；订阅仅保留最近 64 个条目标识，长期移除后重新出现的文章可能再次视为新内容"
+          ],
+          "revision": "52c6b809-7ddc-41c5-b764-bf328f0eaa9f",
+          "tasks": [
+            {
+              "id": "42bc74a1-eaf7-4b1e-8815-ebf6d93736a4",
+              "ownership": "administrator",
+              "title": "RSS · https://example.test/rss",
+              "target": {
+                "endpoint": {
+                  "adapter": "sandbox",
+                  "id": "root\u0000zhin.adapter\u0000sandbox"
+                },
+                "kind": "channel",
+                "id": "example-channel",
+                "parent": {
+                  "kind": "channel",
+                  "id": "example-parent"
+                },
+                "threadId": "example-thread"
+              },
+              "state": "scheduled",
+              "createdAt": 1792461351441,
+              "parameters": {
+                "url": "https://example.test/rss"
+              },
+              "actions": [
+                "pause",
+                "cancel"
+              ],
+              "detail": "已建立基线；从后续新文章开始推送；实例轮询 0 */5 * * * *；最近抓取 2026-10-20T01:55:51.442Z；状态不代表平台连接健康"
+            }
+          ],
+          "receipts": [
+            {
+              "requestId": "42bc74a1-eaf7-4b1e-8815-ebf6d93736a4",
+              "taskId": "42bc74a1-eaf7-4b1e-8815-ebf6d93736a4",
+              "operation": "create"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "unknown": {
+    "success": true,
+    "data": {
+      "generation": 0,
+      "providers": [
+        {
+          "owner": "root/rss",
+          "packageName": "@zhin.js/plugin-rss",
+          "title": "管理员 RSS 订阅",
+          "description": "向精确账号、会话与线程推送新文章，独立于聊天创建的 RSS 订阅",
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "url"
+            ],
+            "properties": {
+              "url": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048,
+                "title": "RSS / Atom 地址",
+                "description": "HTTP(S) 地址，不接受 URL 用户名或密码"
+              }
+            }
+          },
+          "effects": [
+            "保存后按实例 pollCron 定时访问源站；新建及暂停后恢复的首次成功抓取只建立基线，不发送历史文章",
+            "后续新文章经统一发送链投递到所选完整目标；暂停或取消不能撤回已开始的投递",
+            "未确认的投递不会自动重试或恢复；需核实目标会话后取消并另建订阅",
+            "每实例最多 8 条任务，操作回执保留最近 32 条；订阅仅保留最近 64 个条目标识，长期移除后重新出现的文章可能再次视为新内容"
+          ],
+          "revision": "8162bafa-b339-4602-a348-58d13f56a4c2",
+          "tasks": [
+            {
+              "id": "42bc74a1-eaf7-4b1e-8815-ebf6d93736a4",
+              "ownership": "administrator",
+              "title": "RSS · https://example.test/rss",
+              "target": {
+                "endpoint": {
+                  "adapter": "sandbox",
+                  "id": "root\u0000zhin.adapter\u0000sandbox"
+                },
+                "kind": "channel",
+                "id": "example-channel",
+                "parent": {
+                  "kind": "channel",
+                  "id": "example-parent"
+                },
+                "threadId": "example-thread"
+              },
+              "state": "unknown",
+              "createdAt": 1792461351441,
+              "parameters": {
+                "url": "https://example.test/rss"
+              },
+              "actions": [
+                "cancel"
+              ],
+              "lastRunAt": 1792461351457,
+              "detail": "平台未确认投递，请核实目标会话后取消并另建订阅；不会自动重试；实例轮询 0 */5 * * * *；最近抓取 2026-10-20T01:55:51.457Z；状态不代表平台连接健康"
+            }
+          ],
+          "receipts": [
+            {
+              "requestId": "42bc74a1-eaf7-4b1e-8815-ebf6d93736a4",
+              "taskId": "42bc74a1-eaf7-4b1e-8815-ebf6d93736a4",
+              "operation": "create"
+            },
+            {
+              "requestId": "d77d3659-8df3-48c7-b324-bf0696048a34",
+              "taskId": "42bc74a1-eaf7-4b1e-8815-ebf6d93736a4",
+              "operation": "pause"
+            },
+            {
+              "requestId": "4a4cdfc4-c730-4217-be89-d7b86d77bc0e",
+              "taskId": "42bc74a1-eaf7-4b1e-8815-ebf6d93736a4",
+              "operation": "resume"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
