@@ -12,6 +12,7 @@ import { createConfigDraftGuard } from '../console-ui/src/components/PluginConfi
 import * as sourceDraftModel from '../console-ui/src/pages/config-source-draft.mjs'
 import * as sourceValidation from '../console-ui/src/pages/config-source-validation.mjs'
 import * as configNavigation from '../console-ui/src/pages/config-navigation.mjs'
+import * as configEvidenceModel from '../console-ui/src/components/PluginConfigForm/config-evidence-model.mjs'
 
 const require = createRequire(import.meta.url)
 const files = await Promise.all(['hooks/useConfigSource.ts', 'components/PluginConfigForm/usePluginConfigDraft.ts', 'components/PluginConfigForm/index.tsx', 'pages/config.tsx']
@@ -71,8 +72,11 @@ function fixture() {
     '../../utils/inbox-cache': { getInboxCacheScope: () => authority.current(), isInboxCacheScopeActive: scope => authority.active(scope) },
     '../pages/endpoint-detail/message-diagnostics.mjs': { createDiagnosticRequestGate }, '../../pages/endpoint-detail/message-diagnostics.mjs': { createDiagnosticRequestGate },
     './source-model.mjs': sourceModel, './schema-model.mjs': schemaModel, './draft-guard.mjs': { createConfigDraftGuard },
+    './config-evidence-model.mjs': configEvidenceModel, './ConfigApplicationEvidence': { ConfigApplicationEvidence: 'config-evidence' },
+    '../components/PluginConfigForm/config-evidence-model.mjs': configEvidenceModel,
     'react-router-dom': { Link: 'a', useSearchParams: () => [new URLSearchParams(), () => {}] },
     'lucide-react': new Proxy({}, { get: () => 'i' }),
+    './ConfigFieldExplanation': { ConfigFieldExplanation: 'field-explanation' },
     './SchemaFieldEditor': { SchemaFieldEditor: 'field-editor' }, '../ui/card': { Card: 'article' }, '../ui/badge': { Badge: 'span' },
     '../ui/button': { Button: 'button' }, '../ui/alert': { Alert: 'aside', AlertDescription: 'p' },
     '../components/ui/card': { Card: 'article', CardContent: 'section' }, '../components/ui/button': { Button: 'button' },

@@ -14,6 +14,7 @@ import MarketplacePage from './pages/marketplace'
 import TaskCenterPage from './pages/task-center'
 import WelcomeUseCasePage from './pages/welcome-use-case'
 import IntrospectionPage from './pages/introspection'
+import ScenarioLabPage from './pages/scenario-lab'
 import CommandPermissionsPage from './pages/command-permissions'
 import AgentWorkbenchPage from './pages/agent-workbench'
 import AgentSessionsPage from './pages/agent-sessions'
@@ -106,6 +107,8 @@ export function registerBuiltinConsolePages() {
     element: <WorkroomCatalogPage />,
     meta: { group: NAV_GROUPS.AGENTS, order: 2, fullWidth: true, hideInMenu: true },
   })
+
+  app.addRoute({ path: '/scenario-lab', name: '消息场景试验台', parent: null, icon: 'FlaskConical', element: <ScenarioLabPage />, meta: { group: NAV_GROUPS.SYSTEM, order: 2, fullWidth: true } })
 
   app.addRoute({
     path: '/introspection',
