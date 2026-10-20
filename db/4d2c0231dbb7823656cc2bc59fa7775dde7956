@@ -1,0 +1,78 @@
+console-ui/src/registerBuiltinShell.tsx
+  s_079f1dc5e6308d::t_4b4c77aa698c6d 17,113-119
+  s_079f1dc5e6308d::t_fd1a29ee195dcc 120-121
+README.md
+  s_079f1dc5e6308d::t_2ed915a6809ef7 98
+console-ui/src/components/PluginConfigForm/ConversationScopeEditor.tsx
+  s_079f1dc5e6308d::t_742892cc799d93 1-30
+console-ui/src/components/PluginConfigForm/ConversationTargetEditor.tsx
+  s_079f1dc5e6308d::t_3f378bddb7c20b 1-73
+console-ui/src/components/PluginConfigForm/SchemaFieldEditor.tsx
+  s_079f1dc5e6308d::t_70626bff5755df 2-3,17,28,46
+console-ui/src/components/PluginConfigForm/conversation-scope-model.d.mts
+  s_079f1dc5e6308d::t_277700c9188b13 1-12
+console-ui/src/components/PluginConfigForm/conversation-scope-model.mjs
+  s_079f1dc5e6308d::t_3f8722e944dd70 1-48
+console-ui/src/components/PluginConfigForm/index.tsx
+  s_079f1dc5e6308d::t_368c0836aeba14 14-15,19-28,42-45,59,64-65,68,72,77,82-83,86
+console-ui/src/components/PluginConfigForm/usePluginConfigDraft.ts
+  s_079f1dc5e6308d::t_a3eb35b73fcea9 6-7,11,16-17,20-22,26,32-41,44-46,50-54
+console-ui/src/contracts/zhin-console.ts
+  s_079f1dc5e6308d::t_46f79dedb36f5a 39-40
+console-ui/src/hooks/useConfigSource.ts
+  s_079f1dc5e6308d::t_21afd0e2ec0a1e 5-7,15-16,28,34-41,44-48,51-53,58-61,63-64,67,69,73-75,84,86,90-91,94,96,99-101,104,109,112,115-125
+console-ui/src/pages/command-permissions.tsx
+  s_079f1dc5e6308d::t_317726c429f9fb 1-115
+console-ui/src/pages/config.tsx
+  s_079f1dc5e6308d::t_48bb9c54b1edd8 27-28,35-36,43,63,69,72,80,278-283,293-294,311-314,318,322,324,329-331,341,344,347,352-354,357,360,421,426,438
+console-ui/src/pages/endpoint-detail/message-diagnostics.d.mts
+  s_079f1dc5e6308d::t_4a4c7f6512aa18 9
+console-ui/src/pages/endpoint-detail/message-diagnostics.mjs
+  s_079f1dc5e6308d::t_3acb7eedbac6ed 35,37-43,54,57,76,84,93-102
+console-ui/src/pages/introspection/CapabilityExplorer.tsx
+  s_079f1dc5e6308d::t_a61b53fabad720 152
+console-ui/src/pages/permission-explanation-model.d.mts
+  s_079f1dc5e6308d::t_5b65532279a0fa 1-17
+console-ui/src/pages/permission-explanation-model.mjs
+  s_079f1dc5e6308d::t_dd278fd5610a13 1-77
+console-ui/src/pages/task-center-model.mjs
+  s_079f1dc5e6308d::t_7be06b58dfd585 105,135
+tests/command-admission-diagnostics.test.mjs
+  s_079f1dc5e6308d::t_abe2ddccd569a7 1-49
+tests/config-connection-scope.test.mjs
+  s_079f1dc5e6308d::t_d5ec2681a8fb3b 1-312
+tests/config-source-draft.test.mjs
+  s_079f1dc5e6308d::t_73ebc5941acc3f 7,10
+tests/conversation-scope-model.test.mjs
+  s_079f1dc5e6308d::t_e15a9509c8623c 1-58
+tests/conversation-scope-ui.test.mjs
+  s_079f1dc5e6308d::t_d829b62c7301e6 1-94
+tests/fixtures/message-diagnostics-admission-busy.json
+  s_079f1dc5e6308d::t_38433f7367e88a 1-89
+tests/fixtures/permission-http.json
+  s_079f1dc5e6308d::t_6d373e19ba65f6 1-309
+tests/fixtures/rss-task-providers.json
+  s_079f1dc5e6308d::t_6ee186c10c6d6d 1-165
+tests/permission-explanation.test.mjs
+  s_079f1dc5e6308d::t_b1a5152c84c690 1-90
+tests/task-center-ui.test.mjs
+  s_079f1dc5e6308d::t_3e38943e8bdd08 56-66
+tests/task-center.test.mjs
+  s_079f1dc5e6308d::t_e1ce65ddb9f0da 97,103-104,112-128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "db4d2c0231dbb7823656cc2bc59fa7775dde7956",
+  "prompts": {},
+  "sessions": {
+    "s_079f1dc5e6308d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a079da-08f2-7112-8660-7d86c654edb0",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
