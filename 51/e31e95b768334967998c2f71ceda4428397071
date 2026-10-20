@@ -1,0 +1,103 @@
+console-ui/src/components/PluginConfigForm/index.tsx
+  s_079f1dc5e6308d::t_1b37280704ed10 17-19,23,32,74,105,118,121,125,129-130,135-138
+README.md
+  s_079f1dc5e6308d::t_b3ab048a010cc6 92-93,111-116
+console-ui/src/components/PluginConfigForm/ConfigApplicationEvidence.tsx
+  s_079f1dc5e6308d::t_97315adac7607f 1-103
+console-ui/src/components/PluginConfigForm/ConfigFieldExplanation.tsx
+  s_079f1dc5e6308d::t_072deef1680ba7 1-49
+console-ui/src/components/PluginConfigForm/config-evidence-model.d.mts
+  s_079f1dc5e6308d::t_a77766431a152f 1-12
+console-ui/src/components/PluginConfigForm/config-evidence-model.mjs
+  s_079f1dc5e6308d::t_69c44a7210870c 1-60
+console-ui/src/components/PluginConfigForm/config-explanation-model.d.mts
+  s_079f1dc5e6308d::t_a953a8c6ec3b53 1-10
+console-ui/src/components/PluginConfigForm/config-explanation-model.mjs
+  s_079f1dc5e6308d::t_0d45f4e600ef61 1-65
+console-ui/src/components/PluginConfigForm/draft-guard.d.mts
+  s_079f1dc5e6308d::t_c18df53f218a08 2
+console-ui/src/components/PluginConfigForm/draft-guard.mjs
+  s_079f1dc5e6308d::t_af2e001ded09b9 9
+console-ui/src/components/sidebarMenuIcons.ts
+  s_079f1dc5e6308d::t_245738fa032ccb 34,40
+console-ui/src/contracts/zhin-console.ts
+  s_079f1dc5e6308d::t_7c52af5706b59f 17
+console-ui/src/pages/PluginManagementSummary.tsx
+  s_079f1dc5e6308d::t_1086d51925061b 6,16
+console-ui/src/pages/WelcomeFlowContext.tsx
+  s_079f1dc5e6308d::t_0ad3072ce3de27 1-41
+console-ui/src/pages/config.tsx
+  s_079f1dc5e6308d::t_efa3de32b410b9 26-27,74,77,128,141-143,161
+console-ui/src/pages/marketplace.tsx
+  s_079f1dc5e6308d::t_cdef4b4e85449f 25-26,28-31,123-127,129-137,260-276,278,286,289,300,307-308,319,322,330,340,343,357-359,376,395,792
+console-ui/src/pages/plugin-detail.tsx
+  s_079f1dc5e6308d::t_6e084c42afa5ad 18-19,429,450,452
+console-ui/src/pages/scenario-lab.tsx
+  s_079f1dc5e6308d::t_345f6766bf4ed5 1-121
+console-ui/src/pages/scenario-lab/scenario-model.d.mts
+  s_079f1dc5e6308d::t_5f14e00d3e404b 1-15
+console-ui/src/pages/scenario-lab/scenario-model.mjs
+  s_079f1dc5e6308d::t_29aed1b1f32576 1-187
+console-ui/src/pages/task-center.tsx
+  s_079f1dc5e6308d::t_597af930659d60 227
+console-ui/src/pages/useWelcomeInspection.ts
+  s_079f1dc5e6308d::t_04b18fdf8b9018 1-61
+console-ui/src/pages/welcome-use-case-model.d.mts
+  s_079f1dc5e6308d::t_bfbeb7ed18d7d2 1-16
+console-ui/src/pages/welcome-use-case-model.mjs
+  s_079f1dc5e6308d::t_a482d8076c50ad 1-79
+console-ui/src/pages/welcome-use-case.tsx
+  s_079f1dc5e6308d::t_83eb5108899691 1-76
+console-ui/src/registerBuiltinShell.tsx
+  s_079f1dc5e6308d::t_be5999e8e5d766 15,17,58-65,111-112
+tests/config-connection-scope.test.mjs
+  s_079f1dc5e6308d::t_b1797a8cc52a60 17,81-82,85,97,305-321
+tests/config-evidence.test.mjs
+  s_079f1dc5e6308d::t_fa35bb95b3f22c 1-186
+tests/config-explanation-ui.test.mjs
+  s_079f1dc5e6308d::t_d29593a2134296 1-39
+tests/config-explanation.test.mjs
+  s_079f1dc5e6308d::t_0c2dbce5b5c4b6 1-49
+tests/config-source-draft.test.mjs
+  s_079f1dc5e6308d::t_8319947174e9f4 6,11
+tests/fixtures/config-explanation-host.json
+  s_079f1dc5e6308d::t_ec6092c8a1c446 1-187
+tests/fixtures/scenario-lab/README.md
+  s_079f1dc5e6308d::t_064546bb2c1778 1-17
+tests/fixtures/scenario-lab/provenance.json
+  s_079f1dc5e6308d::t_c34fd1739d87cc 1-6
+tests/fixtures/scenario-lab/scenario.json
+  s_079f1dc5e6308d::t_c90f051db9dc5e 1-53
+tests/fixtures/scenario-lab/scenario.test.mjs
+  s_079f1dc5e6308d::t_ae1998b49cdf85 1-35
+tests/fixtures/welcome-flow-empty-env.json
+  s_079f1dc5e6308d::t_3219cafbb65ac8 1-786
+tests/fixtures/welcome-flow-provider.json
+  s_079f1dc5e6308d::t_5507493b2cc67f 1-810
+tests/scenario-lab-ui.test.mjs
+  s_079f1dc5e6308d::t_a622fc0328efd5 1-29
+tests/scenario-lab.test.mjs
+  s_079f1dc5e6308d::t_5eefc7f90891f6 1-57
+tests/welcome-market-scope.test.mjs
+  s_079f1dc5e6308d::t_cd45dea4dfa5ce 1-65
+tests/welcome-use-case-hook.test.mjs
+  s_079f1dc5e6308d::t_0b86ca6257a2c5 1-125
+tests/welcome-use-case.test.mjs
+  s_079f1dc5e6308d::t_9d01c887244c86 1-102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "51e31e95b768334967998c2f71ceda4428397071",
+  "prompts": {},
+  "sessions": {
+    "s_079f1dc5e6308d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a079da-08f2-7112-8660-7d86c654edb0",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
