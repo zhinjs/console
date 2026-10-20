@@ -49,7 +49,7 @@ test('binds explanations to exact command, generation, canonical target and assu
 test('builds read-only hypothetical requests without inventing conversation or role identity', () => {
   assert.deepEqual(permissionRequest(3, selected), { generation: 3, commandId: selected.id })
   assert.deepEqual(permissionRequest(3, selected, { senderId: 'alice' }), { generation: 3, commandId: selected.id, sender: { id: 'alice' } })
-  const body = permissionRequest(3, selected, { target, senderId: 'alice', roles: 'admin，trusted admin' })
+  const body = permissionRequest(3, selected, { target, senderId: 'alice', roles: ' admin，trusted, admin ' })
   assert.deepEqual(body.sender.roles, ['admin', 'trusted'])
   assert.deepEqual(body.target, target)
   const longEndpoint = { ...target, endpoint: { ...target.endpoint, id: 'e'.repeat(4096) } }
@@ -59,6 +59,11 @@ test('builds read-only hypothetical requests without inventing conversation or r
   assert.throws(() => permissionRequest(3, selected, { roles: 'admin' }), /发送者 ID/)
   assert.throws(() => permissionRequest(3, selected, { requireTarget: true }), /完整/)
   assert.throws(() => permissionRequest(3, selected, { target: { ...target, parent: { id: 'guild' } } }), /完整/)
+})
+
+test('preserves spaces inside exact role names and separates roles only by commas', () => {
+  const body = permissionRequest(3, selected, { senderId: 'alice', roles: ' project admin, on call reviewer，project admin ' })
+  assert.deepEqual(body.sender.roles, ['project admin', 'on call reviewer'])
 })
 
 test('rejects malformed catalogs and duplicate identities instead of guessing a command', () => {

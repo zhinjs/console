@@ -37,7 +37,7 @@ export function permissionRequest(generation, selected, { target, requireTarget 
   if (!integer(generation) || !selected?.id) throw new Error('请先从当前运行代目录选择命令。')
   if ((target !== undefined || requireTarget) && !validTarget(target)) throw new Error('请填写完整的假设账号与会话身份。')
   if (senderId.length > 200 || roles.length > 2000) throw new Error('假设身份过长，请精简后重试。')
-  const values = roles.split(/[,，\s]+/u).filter(Boolean)
+  const values = roles.split(/[,，]/u).map(value => value.trim()).filter(Boolean)
   if (values.length && !senderId) throw new Error('填写假设角色时，请同时提供发送者 ID。')
   return { generation, commandId: selected.id, ...(target === undefined ? {} : { target }),
     ...(senderId ? { sender: { id: senderId, ...(values.length ? { roles: [...new Set(values)] } : {}) } } : {}) }
