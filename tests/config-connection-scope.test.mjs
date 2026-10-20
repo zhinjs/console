@@ -76,6 +76,7 @@ function fixture() {
     '../components/PluginConfigForm/config-evidence-model.mjs': configEvidenceModel,
     'react-router-dom': { Link: 'a', useSearchParams: () => [new URLSearchParams(), () => {}] },
     'lucide-react': new Proxy({}, { get: () => 'i' }),
+    './ConfigFieldExplanation': { ConfigFieldExplanation: 'field-explanation' },
     './SchemaFieldEditor': { SchemaFieldEditor: 'field-editor' }, '../ui/card': { Card: 'article' }, '../ui/badge': { Badge: 'span' },
     '../ui/button': { Button: 'button' }, '../ui/alert': { Alert: 'aside', AlertDescription: 'p' },
     '../components/ui/card': { Card: 'article', CardContent: 'section' }, '../components/ui/button': { Button: 'button' },
