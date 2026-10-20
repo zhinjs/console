@@ -1,0 +1,187 @@
+{
+  "provenance": "Actual RootRuntime + file authority + dispatchRuntimeConsoleRpc, independent synthetic fixtures; no platform or network actions. Temp projects removed after capture.",
+  "initial": {
+    "request": {
+      "type": "config:explain",
+      "instanceKey": "demo",
+      "expectedRevision": "99c9552f57f449aba279d8912cfa3deee322544a5d53b498426adef31f9ff06c",
+      "requestId": 1
+    },
+    "reply": {
+      "requestId": 1,
+      "data": {
+        "instanceKey": "demo",
+        "revision": "99c9552f57f449aba279d8912cfa3deee322544a5d53b498426adef31f9ff06c",
+        "projectRevision": "a8b48d4267901129d2afbf62f01f75f20290b04170a4f9c5850ebdc6192ab874",
+        "generation": 1,
+        "projection": "supported",
+        "fields": [
+          {
+            "path": [
+              "commandNamespace"
+            ],
+            "candidateOrigin": "unset",
+            "generationMatch": "equal",
+            "generationOrigin": "unknown"
+          },
+          {
+            "path": [
+              "count"
+            ],
+            "candidateOrigin": "schema-default",
+            "generationMatch": "equal",
+            "generationOrigin": "unknown"
+          },
+          {
+            "path": [
+              "optional"
+            ],
+            "candidateOrigin": "unset",
+            "generationMatch": "equal",
+            "generationOrigin": "unknown"
+          },
+          {
+            "path": [
+              "environment"
+            ],
+            "candidateOrigin": "file",
+            "generationMatch": "redacted",
+            "generationOrigin": "unknown"
+          },
+          {
+            "path": [
+              "password"
+            ],
+            "candidateOrigin": "file",
+            "generationMatch": "redacted",
+            "generationOrigin": "unknown"
+          }
+        ]
+      }
+    }
+  },
+  "different": {
+    "request": {
+      "type": "config:explain",
+      "instanceKey": "demo",
+      "expectedRevision": "b1ac0e8322428f1665b536b87b04d031125369d823b3c91e91fcf7023b126f58",
+      "requestId": 1
+    },
+    "reply": {
+      "requestId": 1,
+      "data": {
+        "instanceKey": "demo",
+        "revision": "b1ac0e8322428f1665b536b87b04d031125369d823b3c91e91fcf7023b126f58",
+        "projectRevision": "d4a71bb32a3bac05d61ab46c537d7378d2c52335258d520ddbdd2b44a57b761f",
+        "generation": 1,
+        "projection": "supported",
+        "fields": [
+          {
+            "path": [
+              "commandNamespace"
+            ],
+            "candidateOrigin": "unset",
+            "generationMatch": "equal",
+            "generationOrigin": "unknown"
+          },
+          {
+            "path": [
+              "count"
+            ],
+            "candidateOrigin": "file",
+            "generationMatch": "different",
+            "generationOrigin": "unknown"
+          },
+          {
+            "path": [
+              "optional"
+            ],
+            "candidateOrigin": "unset",
+            "generationMatch": "equal",
+            "generationOrigin": "unknown"
+          },
+          {
+            "path": [
+              "environment"
+            ],
+            "candidateOrigin": "file",
+            "generationMatch": "redacted",
+            "generationOrigin": "unknown"
+          },
+          {
+            "path": [
+              "password"
+            ],
+            "candidateOrigin": "file",
+            "generationMatch": "redacted",
+            "generationOrigin": "unknown"
+          }
+        ]
+      }
+    }
+  },
+  "unsupportedComplex": {
+    "request": {
+      "type": "config:explain",
+      "instanceKey": "demo",
+      "expectedRevision": "ba0229fc69e4340a25198604e5e049da4aa893f7d7a51f48d2d88c4cc3f98e27",
+      "requestId": 1
+    },
+    "reply": {
+      "requestId": 1,
+      "data": {
+        "instanceKey": "demo",
+        "revision": "ba0229fc69e4340a25198604e5e049da4aa893f7d7a51f48d2d88c4cc3f98e27",
+        "projectRevision": "5235f289d480fe2490b1713a120e33f881fb3caa8c50edd0da20f1cf1c5ed2d8",
+        "generation": 1,
+        "projection": "unsupported",
+        "reason": "complex-schema",
+        "fields": []
+      }
+    }
+  },
+  "unsupportedCustom": {
+    "request": {
+      "type": "config:explain",
+      "instanceKey": "demo",
+      "expectedRevision": "ba0229fc69e4340a25198604e5e049da4aa893f7d7a51f48d2d88c4cc3f98e27",
+      "requestId": 1
+    },
+    "reply": {
+      "requestId": 1,
+      "data": {
+        "instanceKey": "demo",
+        "revision": "ba0229fc69e4340a25198604e5e049da4aa893f7d7a51f48d2d88c4cc3f98e27",
+        "projectRevision": "5235f289d480fe2490b1713a120e33f881fb3caa8c50edd0da20f1cf1c5ed2d8",
+        "generation": 1,
+        "projection": "unsupported",
+        "reason": "custom-resolver",
+        "fields": []
+      }
+    }
+  },
+  "drift": {
+    "request": {
+      "type": "config:explain",
+      "instanceKey": "demo",
+      "expectedRevision": "99c9552f57f449aba279d8912cfa3deee322544a5d53b498426adef31f9ff06c",
+      "requestId": 1
+    },
+    "reply": {
+      "requestId": 1,
+      "error": "配置解释未确认，请重新读取文件版本与当前运行状态；原配置未改动。"
+    }
+  },
+  "demoDenied": {
+    "request": {
+      "type": "config:explain",
+      "instanceKey": "demo",
+      "expectedRevision": "b1ac0e8322428f1665b536b87b04d031125369d823b3c91e91fcf7023b126f58",
+      "requestId": 1
+    },
+    "reply": {
+      "requestId": 1,
+      "error": "Demo scope: RPC \"config:explain\" is forbidden"
+    }
+  }
+}

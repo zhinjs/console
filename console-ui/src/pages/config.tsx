@@ -23,6 +23,8 @@ import { validateConfigSource } from './config-source-validation.mjs'
 import { configSectionKeys, resolveConfigSection } from './config-navigation.mjs'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
+import { WelcomeFlowContext } from './WelcomeFlowContext'
+import { configurationSaveSummary } from '../components/PluginConfigForm/config-evidence-model.mjs'
 
 function EditableConfigPage() {
   const scope = useInboxCacheScope()
@@ -69,10 +71,10 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
     const currentOperation = () => isInboxCacheScopeActive(connectionScope) && operation.current === operationId
     setSaving(true)
     try {
-      await saveSourceDraft(saveBound, sourceDraft)
+      const result = await saveSourceDraft(saveBound, sourceDraft)
       if (!currentOperation()) return
       setSourceDraft(null)
-      success('配置已保存，需重启生效')
+      success(`${configurationSaveSummary(result)} 文件版本：${result.revision}`)
     } catch (err) {
       if (currentOperation()) toastError('配置保存失败，草稿已保留。请查看页面中的技术详情。')
     } finally {
@@ -123,6 +125,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
           </Button>
         }
       />
+      {snapshot?.revision ? <p className="break-all text-xs text-muted-foreground">已读取文件版本：<code>{snapshot.revision}</code>。文件保存不代表当前运行已应用。</p> : null}
 
       {error && (
         <Alert variant="destructive">
@@ -134,6 +137,9 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
           </AlertDescription>
         </Alert>
       )}
+
+      {searchParams.get('useCase') === 'group-welcome' && pluginFromUrl && visibleSection === `plugin:${pluginFromUrl}` && loaded
+        ? <WelcomeFlowContext instanceKey={pluginFromUrl} kind="config" /> : null}
 
       {loaded ? <Tabs value={visibleSection} onValueChange={setActiveSection}>
         <Input type="search" aria-label="筛选配置项" placeholder="搜索配置项或插件实例…" value={sectionFilter} onChange={event => setSectionFilter(event.target.value)} className="mb-2 max-w-md" />
@@ -152,7 +158,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
 
         {sectionKeys.map((key) => (
           <TabsContent key={key} value={`plugin:${key}`} forceMount hidden={visibleSection !== `plugin:${key}`} className="mt-4">
-            {visitedSections.has(`plugin:${key}`) || visibleSection === `plugin:${key}` ? <PluginConfigForm pluginName={key} sourceRevision={snapshot?.revision} onSuccess={() => { if (isInboxCacheScopeActive(connectionScope)) void load().catch(() => {}) }} onOpenYaml={() => { if (isInboxCacheScopeActive(connectionScope)) setActiveSection('yaml') }} /> : null}
+            {visitedSections.has(`plugin:${key}`) || visibleSection === `plugin:${key}` ? <PluginConfigForm pluginName={key} sourceRevision={snapshot?.revision} purposeFields={searchParams.get('useCase') === 'group-welcome' && key === pluginFromUrl ? ['welcomeMessage', 'welcomeConversations'] : undefined} onSuccess={() => { if (isInboxCacheScopeActive(connectionScope)) void load().catch(() => {}) }} onOpenYaml={() => { if (isInboxCacheScopeActive(connectionScope)) setActiveSection('yaml') }} /> : null}
           </TabsContent>
         ))}
 
