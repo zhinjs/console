@@ -1,15 +1,14 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { generalConfigKeys, resolveConfigSection } from '../console-ui/src/pages/config-navigation.mjs'
+import { configSectionKeys, resolveConfigSection } from '../console-ui/src/pages/config-navigation.mjs'
 
-test('configuration landing never selects an empty or removed category', () => {
-  const keys = ['http', 'plugin']
-  assert.deepEqual(generalConfigKeys({http: {}, plugin: {}, plugins: {}}, keys), [])
-  assert.equal(resolveConfigSection('general', keys, false), 'plugin:http')
-  assert.equal(resolveConfigSection('plugin:removed', keys, false), 'plugin:http')
-  assert.equal(resolveConfigSection('plugin:plugin', keys, false), 'plugin:plugin')
-  assert.equal(resolveConfigSection('yaml', keys, false), 'yaml')
-  assert.equal(resolveConfigSection('general', [], false), 'yaml')
-  assert.deepEqual(generalConfigKeys({http: {}, custom: {}, plugins: {}}, keys), ['custom'])
-  assert.equal(resolveConfigSection('general', keys, true), 'general')
+test('configuration defaults to the first schema section, including unconfigured Host sections', () => {
+  const keys = configSectionKeys({ configVersion: 2, plugins: {}, http: {}, custom: {}, disable_plugins: [] }, ['http', 'speech', 'plugin'])
+  assert.deepEqual(keys, ['http', 'speech', 'plugin', 'custom'])
+  assert.equal(resolveConfigSection('general', keys), 'plugin:http')
+  assert.equal(resolveConfigSection('plugin:removed', keys), 'plugin:http')
+  assert.equal(resolveConfigSection('plugin:speech', keys), 'plugin:speech')
+  assert.equal(resolveConfigSection('plugin:custom', keys), 'plugin:custom')
+  assert.equal(resolveConfigSection('yaml', keys), 'yaml')
+  assert.equal(resolveConfigSection('general', []), 'declarations')
 })

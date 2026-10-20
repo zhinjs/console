@@ -14,6 +14,7 @@ async function componentSource(file,names) {
 async function load(code) {
  let compiled=ts.transpileModule(code,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext,jsx:ts.JsxEmit.ReactJSX}}).outputText
  compiled=compiled.replaceAll('"react/jsx-runtime"',JSON.stringify(import.meta.resolve('react/jsx-runtime')))
+ compiled=compiled.replaceAll('"react"',JSON.stringify(import.meta.resolve('react')))
  return import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`)
 }
 const code=`import {useState} from ${JSON.stringify(import.meta.resolve('react'))};
@@ -51,9 +52,15 @@ test('target summaries expose exact parent/thread absence and escape user data, 
 })
 
 test('SchemaFieldEditor wires custom scope before generic lists and suppresses broadening unset',async()=>{
- const source=await readFile(new URL(base+'SchemaFieldEditor.tsx',import.meta.url),'utf8')
- assert.match(source,/conversationScope \? <ConversationScopeEditor/)
- assert.match(source,/!conversationScope && field.type !== 'const'/)
+ const implementation=await componentSource('SchemaFieldEditor.tsx',['SchemaFieldEditor'])
+ const module=await load(`import {useId} from ${JSON.stringify(import.meta.resolve('react'))};
+ import {isConversationScopeField} from ${JSON.stringify(new URL(base+'conversation-scope-model.mjs',import.meta.url).href)};
+ const ConversationScopeEditor=()=> <span>精确会话控件</span>;
+ const numericFieldIssue=()=>null;
+ const Button=({children,...props})=><button {...props}>{children}</button>;
+ ${implementation}`)
+ const html=renderToStaticMarkup(React.createElement(module.SchemaFieldEditor,{name:'scope',field,value:[],onChange(){assert.fail('render must not change scope')}}))
+ assert.match(html,/精确会话控件/);assert.doesNotMatch(html,/取消此项设置|添加列表项/)
 })
 
 

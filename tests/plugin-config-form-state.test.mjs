@@ -13,4 +13,7 @@ test('a schema enables form only after a connected successful read', () => {
   assert.equal(pluginConfigFormState({ loading: false, connected: true, schema }), 'ready')
   assert.equal(pluginConfigFormState({ loading: false, connected: true, schema, error: 'read failed' }), 'error')
   assert.equal(pluginConfigFormState({ loading: false, connected: false, schema }), 'disconnected')
+  for (const schema of [{ type: 'object', object: {} }, { type: 'string' }, { type: 'null' }, { type: 'any' }]) {
+    assert.equal(pluginConfigFormState({ loading: false, connected: true, schema }), 'ready')
+  }
 })
