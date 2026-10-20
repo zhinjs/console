@@ -1,0 +1,19 @@
+tests/config-connection-scope.test.mjs
+  s_f2bb6203cb4258::t_f0864ff4d22ed9 17,80-81,84,96,304-320
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4dd825797ea06650633c885ad6e0e8a250b2b3a8",
+  "prompts": {},
+  "sessions": {
+    "s_f2bb6203cb4258": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a15359-fe34-7b93-b30c-7be5b5bc1d90",
+        "model": "unknown"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
