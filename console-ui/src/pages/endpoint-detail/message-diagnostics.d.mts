@@ -6,6 +6,7 @@ export interface MessageDiagnostic {
   startedAt: number; endedAt?: number; status: 'processing' | 'completed' | 'failed'
   truncated: boolean
   route?: string; command?: string; dispatchStatus?: string
+  limit?: { reason: 'cooldown' | 'busy' | 'capacity' | 'operation_unavailable' | 'identity_unavailable' | 'service_unavailable'; retryAfterMs?: number }
   steps: Array<{ stage: string; status: string; at: number }>
   deliveries: Array<{ conversation: DiagnosticConversation; status: string; failureCode?: string; deliveryUnknown?: boolean; rendering?: RenderingDiagnostic }>
 }
