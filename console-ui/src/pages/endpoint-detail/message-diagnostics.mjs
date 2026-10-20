@@ -32,8 +32,15 @@ export function diagnosticQuery(target) {
   return new URLSearchParams({ conversation: JSON.stringify(target.conversation), ...(target.messageId !== undefined ? { messageId: target.messageId } : {}), limit: target.messageId !== undefined ? '10' : '50' }).toString()
 }
 const stages = new Set(['received', 'origin', 'prefix', 'middleware', 'handlers', 'dispatch', 'delivery'])
-const stepStatuses = new Set(['accepted', 'human', 'member', 'peer_bot', 'self', 'unclassified', 'matched', 'mismatch', 'empty_input', 'commands_unavailable', 'started', 'entered', 'stopped', 'replaced', 'completed', 'unmatched', 'invalid', 'denied', 'executed', 'interaction', 'middleware', 'command', 'agent', 'self_echo', 'duplicate', 'bot_origin', 'dedup_error', 'sent', 'failed', 'unsupported', 'rejected', 'suppressed', 'unknown'])
+const stepStatuses = new Set(['accepted', 'human', 'member', 'peer_bot', 'self', 'unclassified', 'matched', 'mismatch', 'empty_input', 'commands_unavailable', 'started', 'entered', 'stopped', 'replaced', 'completed', 'unmatched', 'invalid', 'denied', 'limited', 'executed', 'interaction', 'middleware', 'command', 'agent', 'self_echo', 'duplicate', 'bot_origin', 'dedup_error', 'sent', 'failed', 'unsupported', 'rejected', 'suppressed', 'unknown'])
 const routes = new Set(['interaction', 'middleware', 'command', 'agent', 'unmatched', 'self_echo', 'duplicate', 'bot_origin', 'dedup_error'])
+const limitReasons = new Set(['cooldown', 'busy', 'capacity', 'operation_unavailable', 'identity_unavailable', 'service_unavailable'])
+function readLimit(value, status) {
+  if (value === undefined) return undefined
+  if (!value || typeof value !== 'object' || Array.isArray(value) || status !== 'limited' || !limitReasons.has(value.reason)
+    || value.retryAfterMs !== undefined && (value.reason !== 'cooldown' || !Number.isSafeInteger(value.retryAfterMs) || value.retryAfterMs <= 0 || value.retryAfterMs > 86_400_000)) throw new Error('指令准入诊断格式无效。')
+  return { reason: value.reason, ...(value.retryAfterMs !== undefined ? { retryAfterMs: value.retryAfterMs } : {}) }
+}
 const deliveryStatuses = new Set(['sent', 'failed', 'unsupported', 'rejected', 'suppressed'])
 export function readMessageDiagnostics(body, target) {
   if (!validDiagnosticConversation(target?.conversation) || body?.success !== true || !Array.isArray(body.data) || body.data.length > (target.messageId !== undefined ? 10 : 50)) throw new Error('消息诊断响应格式无效，请刷新或更新 Host。')
@@ -44,9 +51,10 @@ export function readMessageDiagnostics(body, target) {
       || !Number.isFinite(item.startedAt) || item.endedAt !== undefined && !Number.isFinite(item.endedAt)
       || !['processing', 'completed', 'failed'].includes(item.status) || item.route !== undefined && !routes.has(item.route)
       || typeof item.truncated !== 'boolean'
-      || item.dispatchStatus !== undefined && !['unmatched', 'invalid', 'denied', 'executed'].includes(item.dispatchStatus)
+      || item.dispatchStatus !== undefined && !['unmatched', 'invalid', 'denied', 'limited', 'executed'].includes(item.dispatchStatus)
       || !Array.isArray(item.steps) || item.steps.length > 32 || !Array.isArray(item.deliveries) || item.deliveries.length > 32
       || item.command !== undefined && (typeof item.command !== 'string' || item.command.length > 200)) throw new Error('消息诊断身份或字段无效，未展示可能属于其他会话的记录。')
+    const limit = readLimit(item.limit, item.dispatchStatus)
     const steps = item.steps.map(step => {
       if (!step || !stages.has(step.stage) || !stepStatuses.has(step.status) || !Number.isFinite(step.at)) throw new Error('诊断步骤格式无效。')
       return { stage: step.stage, status: step.status, at: step.at }
@@ -65,7 +73,7 @@ export function readMessageDiagnostics(body, target) {
       ...(item.messageId !== undefined ? { messageId: item.messageId } : {}), startedAt: item.startedAt,
       ...(item.endedAt !== undefined ? { endedAt: item.endedAt } : {}), status: item.status, truncated: item.truncated,
       ...(item.route !== undefined ? { route: item.route } : {}), ...(item.command !== undefined ? { command: item.command } : {}),
-      ...(item.dispatchStatus !== undefined ? { dispatchStatus: item.dispatchStatus } : {}), steps, deliveries }
+      ...(item.dispatchStatus !== undefined ? { dispatchStatus: item.dispatchStatus } : {}), ...(limit !== undefined ? { limit } : {}), steps, deliveries }
   })
 }
 const labels = {
@@ -73,7 +81,7 @@ const labels = {
   accepted: '已接收', human: '人类消息', member: '协作成员 Bot', peer_bot: '其他 Bot', self: '自身', unclassified: '来源未分类',
   matched: '已匹配', mismatch: '前缀不匹配', empty_input: '输入为空', commands_unavailable: '指令能力不可用', started: '已开始',
   entered: '已进入', stopped: '链路已停止', replaced: '返回内容已替换', completed: '本阶段已结束', unmatched: '未匹配指令',
-  invalid: '参数或格式无效', denied: '权限未通过', executed: '指令已执行', interaction: '交互回调', command: '指令', agent: '已交给 Agent',
+  invalid: '参数或格式无效', denied: '权限未通过', limited: '指令执行受限', executed: '指令已执行', interaction: '交互回调', command: '指令', agent: '已交给 Agent',
   self_echo: '自身消息回声', duplicate: '重复消息', bot_origin: 'Bot 来源被拦截', dedup_error: '去重检查失败',
   sent: '平台已受理', failed: '失败', unsupported: '不支持', rejected: '已拒绝', suppressed: '已拦截', unknown: '投递结果不确定', processing: '入站处理中',
 }
@@ -82,6 +90,16 @@ export function diagnosticAdvice(record) {
   const advice = []
   if (record.route === 'agent') advice.push('消息已交给 Agent；请在 Agent 运行记录查看后续工具、审批和回复。这里不代表 Agent 已完成。')
   if (record.status === 'processing') advice.push('入站处理仍在进行，可稍后手动刷新；不会重放消息。')
+  if (record.dispatchStatus === 'limited') {
+    const reason = record.limit?.reason
+    if (reason === 'cooldown') advice.push(record.limit.retryAfterMs !== undefined
+      ? `本次指令处于冷却期；记录产生时剩余约 ${Math.ceil(record.limit.retryAfterMs / 1000)} 秒。不会自动重放。`
+      : '本次指令处于冷却期；请等待冷却结束后再决定是否执行。不会自动重放。')
+    else if (reason === 'busy') advice.push('同一指令、发送者和完整会话已有执行占用并发额度；完成时间未知。请查看原执行，不要连续重复触发。')
+    else if (reason === 'capacity') advice.push('当前指令准入容量已满；本次未进入指令业务执行，请结合 Host 状态排查。不会自动重放。')
+    else if (reason === 'identity_unavailable') advice.push('本次缺少可信的完整会话或发送者身份，无法应用指令准入策略；请检查适配器入站身份，不要伪造身份补齐。')
+    else advice.push('本次未获得有效的指令执行上下文或准入服务；请核对当前运行代与 Host 状态。不会自动重放。')
+  }
   if (record.dispatchStatus === 'denied') advice.push('请检查该指令的权限规则与发送者在目标会话中的真实角色。')
   if (record.dispatchStatus === 'invalid') advice.push('请查看该指令的帮助，核对参数和输入格式。')
   if (record.steps.some(step => step.stage === 'prefix' && step.status === 'mismatch')) advice.push('请核对本账号的指令前缀；前缀未匹配也可能继续走普通聊天链路。')
