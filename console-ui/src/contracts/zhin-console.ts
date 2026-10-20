@@ -36,6 +36,10 @@ export const CONSOLE_REST = {
   INTROSPECTION: '/api/introspection',
   COMPONENT_PREVIEW: '/api/introspection/components/render',
   MESSAGE_DIAGNOSTICS: '/api/messages/diagnostics',
+  TASK_PROVIDERS: '/api/tasks/providers',
+  TASK_USE_CASES: '/api/tasks/use-cases',
+  TASK_CREATE: '/api/tasks/create',
+  TASK_CHANGE: '/api/tasks/change',
   AGENT_SESSIONS: '/api/agent/sessions',
   WORKROOM_RUNS: '/api/agent/workroom/runs',
 } as const

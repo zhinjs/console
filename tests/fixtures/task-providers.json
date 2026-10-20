@@ -1,0 +1,82 @@
+{
+  "success": true,
+  "data": {
+    "generation": 0,
+    "providers": [
+      {
+        "owner": "root/reminder",
+        "packageName": "@zhin.js/plugin-reminder",
+        "title": "管理员提醒",
+        "description": "独立于聊天个人提醒，向指定账号、会话及线程发送一次性或固定周期提醒",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "text",
+            "at"
+          ],
+          "properties": {
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500,
+              "title": "提醒内容"
+            },
+            "at": {
+              "type": "string",
+              "format": "date-time",
+              "title": "首次执行时间",
+              "description": "未来一年内、显式包含 Z 或 ±hh:mm 的 ISO 时间"
+            },
+            "intervalSeconds": {
+              "type": "integer",
+              "minimum": 60,
+              "maximum": 31536000,
+              "title": "周期秒数（可选）"
+            }
+          }
+        },
+        "effects": [
+          "创建后将在指定时间通过当前插件实例向目标会话发送提醒；暂停或取消不能撤回已开始的投递",
+          "未确认的投递不会自动重试或恢复，需核实目标会话后取消并另建任务"
+        ],
+        "revision": "3c413ca2-884c-49d7-9b22-9458026ee5f7",
+        "tasks": [
+          {
+            "id": "26c83b5e-05da-40ca-88ba-d7aae2fa3700",
+            "ownership": "administrator",
+            "title": "示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示…",
+            "target": {
+              "endpoint": {
+                "adapter": "memory",
+                "id": "root\u0000zhin.adapter\u0000memory"
+              },
+              "kind": "group",
+              "id": "demo-group"
+            },
+            "state": "scheduled",
+            "createdAt": 1800000000000,
+            "parameters": {
+              "text": "示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示示",
+              "at": "2027-01-15T08:01:00.000Z"
+            },
+            "actions": [
+              "pause",
+              "cancel"
+            ],
+            "nextRunAt": 1800000060000,
+            "timezone": "UTC",
+            "detail": "等待执行；状态仅表示调度事实，不代表平台连接或投递健康"
+          }
+        ],
+        "receipts": [
+          {
+            "requestId": "26c83b5e-05da-40ca-88ba-d7aae2fa3700",
+            "taskId": "26c83b5e-05da-40ca-88ba-d7aae2fa3700",
+            "operation": "create"
+          }
+        ]
+      }
+    ]
+  }
+}
