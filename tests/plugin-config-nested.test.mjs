@@ -44,12 +44,13 @@ test('required guidance reports deep list/object omissions without pretending to
   assert.match(hostValidationSummary({valid:true,missingEnv:['KEY']}),/环境变量/)
   assert.match(hostValidationSummary({valid:false,missingEnv:[]}),/Host 校验/)
 })
-test('unsupported structures block the entire form, including nested refs, dicts, tuples and unions',()=>{
+test('projected complex AST is supported; unprojected reference structures remain explicitly recognizable',()=>{
   assert.deepEqual(unsupportedFormFields(schema),[])
-  for(const field of [{$ref:'#/$defs/A'}, {type:'union',list:[{type:'string'}]}, {type:'tuple'}, {type:'dict',inner:{type:'string'}}, {type:'object',object:{},patternProperties:{}}]){
+  for(const field of [{$ref:'#/$defs/A'}, {type:'object',object:{},patternProperties:{}}]){
     const errors=unsupportedFormFields({type:'object',object:{supported:{type:'string'},unsupported:field}})
     assert.ok(errors.some(error=>error.includes('$.unsupported')))
   }
+  for (const field of [{type:'union',list:[{type:'string'}]}, {type:'tuple',list:[{type:'null'}],inner:false}, {type:'dict',inner:{type:'string'}}, {type:'intersect',list:[{type:'object',object:{}}]}, {type:'any'}]) assert.deepEqual(unsupportedFormFields(field),[])
 })
 test('formal Host paths edit only the chosen plugin and preserve unknown config/source siblings',()=>{
   const source='# retain host guidance\nhttp:\n  port: 8090\nplugins:\n  "a/b":\n    nested: {old: true}\n  sibling:\n    keep: secret-reference\n'

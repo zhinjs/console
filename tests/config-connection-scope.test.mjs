@@ -64,7 +64,7 @@ function fixture() {
   const successes = [], errors = []
   const requestConsole = input => new Promise((resolve, reject) => { calls.push({ input, scope: authority.current(), resolve, reject, answered: false }) })
   const mocks = {
-    react: { ...runtime.hooks, useId: () => 'test-field' },
+    react: { ...runtime.hooks, useId: () => 'test-field', createElement: require('react').createElement },
     '@zhin.js/client': { getWebSocketManager: () => ({ isConnected: () => true, onConnectionChange: () => () => {} }) },
     './config-error-state.mjs': { configErrorReducer },
     '../utils/console-rpc': { requestConsole }, '../../utils/console-rpc': { requestConsole },
@@ -76,6 +76,7 @@ function fixture() {
     './numeric-validation.mjs': { numericFieldIssue }, './conversation-scope-model.mjs': { isConversationScopeField }, './ConversationScopeEditor': { ConversationScopeEditor: 'scope-editor' },
     '../ui/input': { Input: 'input' }, '../ui/textarea': { Textarea: 'textarea' }, '../ui/switch': { Switch: 'switch' },
     '../ui/select': { Select: 'select-root', SelectContent: 'select-content', SelectItem: 'option', SelectTrigger: 'select-trigger', SelectValue: 'select-value' },
+    '../../pages/files/code-editor': { CodeEditor: 'code-editor' }, './files/code-editor': { CodeEditor: 'code-editor' },
     'react-router-dom': { Link: 'a', useSearchParams: () => [new URLSearchParams(), () => {}] },
     'lucide-react': new Proxy({}, { get: () => 'i' }),
     './SchemaFieldEditor': { SchemaFieldEditor: 'field-editor' }, '../ui/card': { Card: 'article' }, '../ui/badge': { Badge: 'span' },
@@ -100,8 +101,8 @@ function fixture() {
   const plugin = compile(files[1]); mocks['./usePluginConfigDraft'] = plugin
   const form = compile(`${files[2]}\nexport { PluginConfigFormSession };`)
   mocks['../hooks/useConfigSource'] = source; mocks['../components/PluginConfigForm'] = form
-  const page = compile(`${files[3]}\nexport { EditableConfigPage, EditableConfigSession, GeneralConfigForm };`)
-  const editor = compile(files[4])
+  const page = compile(`${files[3]}\nexport { EditableConfigPage, EditableConfigSession };`)
+  const editor = compile(`${files[4]}\nexport { JsonValueEditor, UnionValueEditor, ObjectValueEditor, SequenceValueEditor, SecretTextEditor };`)
   return { runtime, calls, source, plugin, form, page, editor, authority, successes, errors,
     switchHost() { connection = { host: 'https://host-b', credential: 'credential-b' } },
     switchCredential() { connection = { ...connection, credential: 'credential-b' } },
@@ -331,40 +332,39 @@ test('a dirty whole-file A session is remounted on B; B rendering and equal-revi
   const f = fixture(), rootA = f.page.EditableConfigPage()
   f.runtime.mount(() => f.page.EditableConfigSession(rootA.props)); f.answer('config:get-source', wholeSnapshot('A')); await f.runtime.settle()
   const aDraft = JSON.stringify({ flag: 'A-edited', 'group-suite': { welcomeMessage: 'A-only' } })
-  elements(f.runtime.value).find(item => item.type === 'textarea').props.onChange({ target: { value: aDraft } }); await f.runtime.settle()
-  assert.equal(elements(f.runtime.value).find(item => item.type === 'textarea').props.value, aDraft)
+  elements(f.runtime.value).find(item => item.type === 'code-editor' && !item.props.readOnly).props.onChange(aDraft); await f.runtime.settle()
+  assert.equal(elements(f.runtime.value).find(item => item.type === 'code-editor' && !item.props.readOnly).props.value, aDraft)
   const oldSave = button(f.runtime.value, '保存').props.onClick
   f.switchHost(); const rootB = f.page.EditableConfigPage(); assert.notEqual(rootA.key, rootB.key)
   f.runtime.remount(() => f.page.EditableConfigSession(rootB.props)); f.answer('config:get-source', wholeSnapshot('B')); await f.runtime.settle()
-  const bTree = f.runtime.value, bText = elements(bTree).find(item => item.type === 'textarea')
+  const bTree = f.runtime.value, bText = elements(bTree).find(item => item.type === 'code-editor' && !item.props.readOnly)
   assert.equal(bText.props.value, wholeSnapshot('B').source); assert.ok(!bText.props.value.includes('A-only'))
-  const general = elements(bTree).find(item => item.type === f.page.GeneralConfigForm)
-  assert.equal(general.props.config.flag, 'B'); assert.equal(general.props.snapshot.connectionScope, rootB.props.connectionScope)
+  assert.ok(!elements(bTree).some(item => item.type === 'textarea'))
   const before = f.calls.length; await oldSave(); assert.equal(f.calls.length, before)
   const bDraft = JSON.stringify({ flag: 'B-edited', 'group-suite': { welcomeMessage: 'B-only' } })
-  bText.props.onChange({ target: { value: bDraft } }); await f.runtime.settle()
+  bText.props.onChange(bDraft); await f.runtime.settle()
   const saved = button(f.runtime.value, '保存').props.onClick(); const call = f.answer('config:replace-source', { success: true, revision: 'B-new', restartRequired: false })
   assert.equal(call.scope, rootB.props.connectionScope); assert.equal(call.input.source, bDraft); assert.equal(call.input.expectedRevision, 'same-revision')
   await saved; await f.runtime.settle(); assert.deepEqual(f.errors, []); assert.equal(f.successes.length, 1); f.runtime.unmount()
 })
 
-test('the General form starts a fresh B draft and its actual save handler carries only the B baseline', async () => {
-  const f = fixture(), rootA = f.page.EditableConfigPage(), writes = []
-  const aSnapshot = { ...wholeSnapshot('A'), connectionScope: rootA.props.connectionScope }
-  const onSave = async (patch, baseline) => writes.push({ patch, baseline })
-  const aProps = { config: { flag: 'A' }, pluginKeys: [], snapshot: aSnapshot, onSave, saving: false, connectionScope: rootA.props.connectionScope }
-  f.runtime.mount(() => f.page.GeneralConfigForm(aProps))
-  elements(f.runtime.value).find(item => item.props?.fieldKey === 'flag').props.onChange('A-dirty'); await f.runtime.settle()
-  const oldSave = button(f.runtime.value, '保存').props.onClick
-  f.switchCredential(); const rootB = f.page.EditableConfigPage(); assert.notEqual(rootA.key, rootB.key)
-  const bSnapshot = { ...wholeSnapshot('B'), connectionScope: rootB.props.connectionScope }
-  const bProps = { config: { flag: 'B' }, pluginKeys: [], snapshot: bSnapshot, onSave, saving: false, connectionScope: rootB.props.connectionScope }
-  f.runtime.remount(() => f.page.GeneralConfigForm(bProps))
-  assert.equal(elements(f.runtime.value).find(item => item.props?.fieldKey === 'flag').props.value, 'B')
-  await oldSave(); assert.deepEqual(writes, [])
-  elements(f.runtime.value).find(item => item.props?.fieldKey === 'flag').props.onChange('B-dirty'); await f.runtime.settle()
-  await button(f.runtime.value, '保存').props.onClick()
-  assert.deepEqual(writes, [{ patch: { flag: 'B-dirty' }, baseline: bSnapshot }]); f.runtime.unmount()
+test('canonical scalar forms remount on credential change and cannot save the previous scalar draft', async () => {
+  const f = fixture(), scopeA = f.authority.current()
+  const scalar = name => ({ source: JSON.stringify({ log_level: name, sibling: { keep: true } }), format: 'json', revision: 'same', configKeys: ['log_level'], configPaths: { log_level: ['log_level'] } })
+  f.runtime.mount(() => f.form.PluginConfigFormSession({ pluginName: 'log_level', connectionScope: scopeA }))
+  f.answer('config:get-source', scalar('info')); f.answer('schema:get', { type: 'string' }); await f.runtime.settle()
+  elements(f.runtime.value).find(item => item.type === 'field-editor').props.onChange('debug'); await f.runtime.settle()
+  const oldSave = button(f.runtime.value, '保存配置').props.onClick
+  f.switchCredential(); const scopeB = f.authority.current()
+  f.runtime.remount(() => f.form.PluginConfigFormSession({ pluginName: 'log_level', connectionScope: scopeB }))
+  f.answer('config:get-source', scalar('warn')); f.answer('schema:get', { type: 'string' }); await f.runtime.settle()
+  assert.equal(elements(f.runtime.value).find(item => item.type === 'field-editor').props.value, 'warn')
+  const before = f.calls.length; await oldSave(); assert.equal(f.calls.length, before)
+  elements(f.runtime.value).find(item => item.type === 'field-editor').props.onChange('error'); await f.runtime.settle()
+  button(f.runtime.value, '保存配置').props.onClick(); const check = f.answer('plugin:validate-config', valid); assert.equal(check.input.data, 'error'); await f.runtime.settle()
+  const write = f.answer('config:replace-source', { success: true, revision: 'next', restartRequired: false })
+  assert.equal(write.input.expectedRevision, 'same'); assert.deepEqual(JSON.parse(write.input.source), { log_level: 'error', sibling: { keep: true } }); await f.runtime.settle()
+  f.answer('config:get-source', { ...scalar('error'), revision: 'next' }); f.answer('schema:get', { type: 'string' }); await f.runtime.settle(); f.runtime.unmount()
 })
 
 test('retired source-page refresh/save responses cannot toast success, clear drafts or reload the new session', async () => {
@@ -374,11 +374,208 @@ test('retired source-page refresh/save responses cannot toast success, clear dra
     let pending
     if (operation === 'refresh') pending = button(f.runtime.value, '刷新').props.onClick()
     else {
-      elements(f.runtime.value).find(item => item.type === 'textarea').props.onChange({ target: { value: wholeSnapshot('A-changed').source } }); await f.runtime.settle()
+      elements(f.runtime.value).find(item => item.type === 'code-editor' && !item.props.readOnly).props.onChange(wholeSnapshot('A-changed').source); await f.runtime.settle()
       pending = button(f.runtime.value, '保存').props.onClick()
     }
     f.switchCredential()
     f.answer(operation === 'refresh' ? 'config:get-source' : 'config:replace-source', operation === 'refresh' ? wholeSnapshot('A-late') : { success: true, revision: 'A-new', restartRequired: false }, scope)
     await pending; await f.runtime.settle(); assert.deepEqual(f.successes, []); assert.deepEqual(f.errors, []); f.runtime.unmount()
   }
+})
+
+const customSnapshot = (value, revision = 'r1') => ({ source: JSON.stringify({ entry: value, 'other.alias': { kept: true } }), format: 'json', revision, configKeys: ['entry'], configPaths: { entry: ['entry'] } })
+async function customForm(value, definition, props = {}) {
+  const f = fixture(), source = customSnapshot(value)
+  f.runtime.mount(() => f.form.PluginConfigFormSession({ pluginName: 'entry', connectionScope: f.authority.current(), ...props }))
+  f.answer('config:get-source', source); f.answer('schema:get', definition); await f.runtime.settle()
+  return f
+}
+test('production root forms echo null, false, zero and empty strings without coercion and save their actual scalar values', async () => {
+  for (const [value, type] of [[null, 'null'], [false, 'boolean'], [0, 'number'], ['', 'string']]) {
+    const f = await customForm(value, { type })
+    assert.equal(elements(f.runtime.value).find(item => item.type === 'field-editor').props.value, value)
+    button(f.runtime.value, '保存配置').props.onClick(); const check = f.answer('plugin:validate-config', valid); assert.equal(check.input.data, value); await f.runtime.settle()
+    const write = f.answer('config:replace-source', { success: true, revision: 'r2', restartRequired: false })
+    assert.equal(write.input.expectedRevision, 'r1'); assert.deepEqual(JSON.parse(write.input.source), { entry: value, 'other.alias': { kept: true } }); await f.runtime.settle()
+    f.answer('config:get-source', customSnapshot(value, 'r2')); f.answer('schema:get', { type }); await f.runtime.settle(); f.runtime.unmount()
+  }
+})
+
+test('empty object needs no fields, missing Schema stays explicit, and all known fields are displayed by default', async () => {
+  const empty = await customForm({}, { type: 'object', object: {}, additional: false })
+  assert.ok(label(empty.runtime.value).includes('此项无需配置。')); assert.ok(!label(empty.runtime.value).includes('配置需要源码编辑')); empty.runtime.unmount()
+  const missing = await customForm({}, null)
+  assert.ok(label(missing.runtime.value).includes('配置 Schema 不可用')); assert.equal(button(missing.runtime.value, '保存配置'), undefined); missing.runtime.unmount()
+  const full = await customForm({ optional: 'kept' }, { type: 'object', object: { optional: { type: 'string' }, extra: { type: 'number' } } })
+  assert.deepEqual(elements(full.runtime.value).filter(item => item.type === 'field-editor').map(item => item.props.name), ['optional', 'extra']); full.runtime.unmount()
+})
+
+test('single-item highlighted source shares the actual form draft and invalid text blocks switching or stale-value saves', async () => {
+  const f = await customForm({ text: 'old' }, { type: 'object', object: { text: { type: 'string' } } })
+  elements(f.runtime.value).find(item => item.type === 'field-editor').props.onChange('dirty'); await f.runtime.settle()
+  button(f.runtime.value, '此项源码').props.onClick(); await f.runtime.settle()
+  let source = elements(f.runtime.value).find(item => item.type === 'code-editor'); assert.equal(JSON.parse(source.props.value).text, 'dirty')
+  source.props.onChange('{'); await f.runtime.settle(); assert.equal(button(f.runtime.value, '保存配置').props.disabled, true)
+  const before = f.calls.length; button(f.runtime.value, '保存配置').props.onClick(); assert.equal(f.calls.length, before)
+  button(f.runtime.value, '表单').props.onClick(); await f.runtime.settle(); assert.equal(elements(f.runtime.value).find(item => item.type === 'code-editor').props.value, '{')
+  source = elements(f.runtime.value).find(item => item.type === 'code-editor'); source.props.onChange('{"text":"source-edited","future":{"keep":true}}'); await f.runtime.settle()
+  button(f.runtime.value, '表单').props.onClick(); await f.runtime.settle(); assert.equal(elements(f.runtime.value).find(item => item.type === 'field-editor' && item.props.name === 'text').props.value, 'source-edited')
+  button(f.runtime.value, '此项源码').props.onClick(); await f.runtime.settle(); assert.deepEqual(JSON.parse(elements(f.runtime.value).find(item => item.type === 'code-editor').props.value), { text: 'source-edited', future: { keep: true } }); f.runtime.unmount()
+})
+
+test('a field JSON syntax failure synchronously blocks the original save path without converting the rest of the form', async () => {
+  const f = await customForm({ raw: { kept: true }, regular: 'hello' }, { type: 'object', object: { raw: { type: 'any' }, regular: { type: 'string' } } })
+  const raw = elements(f.runtime.value).find(item => item.type === 'field-editor' && item.props.name === 'raw')
+  raw.props.onValidityChange(raw.props.path, true); await f.runtime.settle()
+  assert.equal(button(f.runtime.value, '保存配置').props.disabled, true); assert.equal(button(f.runtime.value, '最小必填配置').props.disabled, true)
+  button(f.runtime.value, '最小必填配置').props.onClick(); await f.runtime.settle(); assert.ok(elements(f.runtime.value).some(item => item.type === 'field-editor' && item.props.name === 'raw'))
+  assert.equal(elements(f.runtime.value).find(item => item.type === 'field-editor' && item.props.name === 'regular').props.value, 'hello')
+  raw.props.onValidityChange(raw.props.path, false); await f.runtime.settle(); assert.equal(button(f.runtime.value, '保存配置').props.disabled, false); f.runtime.unmount()
+})
+
+test('external source revision refreshes clean forms, while dirty forms retain their original alias and CAS baseline', async () => {
+  const f = fixture(); let revision = 'r1'
+  f.runtime.mount(() => f.form.PluginConfigFormSession({ pluginName: 'entry', connectionScope: f.authority.current(), sourceRevision: revision }))
+  const definition = { type: 'string' }
+  f.answer('config:get-source', customSnapshot('old')); f.answer('schema:get', definition); await f.runtime.settle()
+  assert.equal(f.calls.filter(item => item.input.type === 'config:get-source').length, 1)
+  revision = 'r2'; f.runtime.render(); f.answer('config:get-source', customSnapshot('from-full-source', 'r2')); f.answer('schema:get', definition); await f.runtime.settle()
+  assert.equal(elements(f.runtime.value).find(item => item.type === 'field-editor').props.value, 'from-full-source')
+  elements(f.runtime.value).find(item => item.type === 'field-editor').props.onChange('dirty-kept'); await f.runtime.settle()
+  revision = 'r3'; f.runtime.render(); f.answer('config:get-source', customSnapshot('concurrent', 'r3')); f.answer('schema:get', definition); await f.runtime.settle()
+  assert.equal(elements(f.runtime.value).find(item => item.type === 'field-editor').props.value, 'dirty-kept')
+  button(f.runtime.value, '保存配置').props.onClick(); f.answer('plugin:validate-config', valid); await f.runtime.settle()
+  const write = f.answer('config:replace-source', Error('CAS conflict'), undefined, true); assert.equal(write.input.expectedRevision, 'r2'); await f.runtime.settle()
+  assert.equal(elements(f.runtime.value).find(item => item.type === 'field-editor').props.value, 'dirty-kept'); f.runtime.unmount()
+})
+
+test('real union controls preserve branch values and the original unknown value through switching', async () => {
+  const f = fixture(), drafts = { json: new Map(), unions: new Map() }
+  const definition = { type: 'union', list: [{ type: 'object', object: { kind: { type: 'const', value: 'a' }, text: { type: 'string' } } }, { type: 'object', object: { kind: { type: 'const', value: 'b' }, count: { type: 'number', default: 0 } } }] }
+  let value = { kind: 'a', text: 'initial', 'future.key': { keep: true } }
+  f.runtime.mount(() => f.editor.UnionValueEditor({ name: 'choice', field: definition, value, drafts, onChange: next => { value = next } }))
+  let select = elements(f.runtime.value).find(item => item.type === 'select'); assert.equal(select.props.value, '0')
+  let child = elements(f.runtime.value).find(item => item.type === f.editor.SchemaFieldEditor)
+  child.props.onChange({ ...value, text: 'dirty-a' }); f.runtime.render()
+  select = elements(f.runtime.value).find(item => item.type === 'select'); select.props.onChange({ target: { value: '1' } }); f.runtime.render(); assert.deepEqual(value, { kind: 'b', count: 0 })
+  child = elements(f.runtime.value).find(item => item.type === f.editor.SchemaFieldEditor); child.props.onChange({ ...value, count: 7 }); f.runtime.render()
+  elements(f.runtime.value).find(item => item.type === 'select').props.onChange({ target: { value: '0' } }); f.runtime.render(); assert.equal(value.text, 'dirty-a'); assert.deepEqual(value['future.key'], { keep: true })
+  elements(f.runtime.value).find(item => item.type === 'select').props.onChange({ target: { value: '1' } }); f.runtime.render(); assert.equal(value.count, 7)
+  elements(f.runtime.value).find(item => item.type === 'select').props.onChange({ target: { value: 'preserved' } }); f.runtime.render(); assert.equal(value.text, 'initial'); f.runtime.unmount()
+})
+
+test('real field JSON control keeps invalid raw text across remounts and reports errors before any parsed-value write', async () => {
+  const f = fixture(), drafts = { json: new Map(), unions: new Map() }, flags = [], writes = []
+  const props = { name: 'raw', field: { type: 'any' }, value: { keep: true }, path: '$/choice/branch:0', drafts, onChange: value => writes.push(value), onValidityChange: (path, invalid) => flags.push({ path, invalid }) }
+  f.runtime.mount(() => f.editor.JsonValueEditor(props))
+  elements(f.runtime.value).find(item => item.type === 'code-editor').props.onChange('{')
+  assert.equal(flags.at(-1).invalid, true); assert.deepEqual(writes, []); await f.runtime.settle()
+  f.runtime.remount(() => f.editor.JsonValueEditor(props)); await f.runtime.settle(); assert.equal(elements(f.runtime.value).find(item => item.type === 'code-editor').props.value, '{'); assert.equal(flags.at(-1).invalid, true)
+  elements(f.runtime.value).find(item => item.type === 'code-editor').props.onChange('{"keep":false}'); assert.deepEqual(writes, [{ keep: false }]); assert.equal(flags.at(-1).invalid, false); f.runtime.unmount()
+})
+
+test('real dynamic dictionary keeps literal keys, rejects duplicate/reserved keys and edits one nested value', async () => {
+  const f = fixture(); let value = { 'a.b': { nested: [1], keep: true }, untouched: { keep: true } }
+  const props = () => ({ name: 'dict', field: { type: 'dict', inner: { type: 'object', object: { nested: { type: 'list', inner: { type: 'number' } } } } }, value, onChange: next => { value = next } })
+  f.runtime.mount(() => f.editor.ObjectValueEditor(props()))
+  const child = elements(f.runtime.value).find(item => item.type === f.editor.SchemaFieldEditor && item.props.name === 'a.b'); child.props.onChange({ nested: [2], keep: true }); f.runtime.render()
+  assert.deepEqual(value, { 'a.b': { nested: [2], keep: true }, untouched: { keep: true } })
+  let input = elements(f.runtime.value).find(item => item.type === 'input'); input.props.onChange({ target: { value: '__proto__' } }); await f.runtime.settle(); button(f.runtime.value, '添加键值').props.onClick(); await f.runtime.settle(); assert.ok(!Object.hasOwn(value, '__proto__'))
+  input = elements(f.runtime.value).find(item => item.type === 'input'); input.props.onChange({ target: { value: 'new.key' } }); await f.runtime.settle(); button(f.runtime.value, '添加键值').props.onClick(); f.runtime.render(); assert.deepEqual(value['new.key'], {}); f.runtime.unmount()
+})
+
+test('tuple positions do not shift and tail values use their own projected schema', () => {
+  const f = fixture(); let value = ['first', 2, { old: true }]
+  const props = { name: 'tuple', field: { type: 'tuple', list: [{ type: 'string' }, { type: 'number' }], inner: { type: 'any' } }, value, onChange: next => { value = next } }
+  const tree = f.editor.SequenceValueEditor(props), fields = elements(tree).filter(item => item.type === f.editor.SchemaFieldEditor)
+  assert.deepEqual(fields.map(item => item.props.field.type), ['string', 'number', 'any'])
+  fields[1].props.onChange(9); assert.deepEqual(value, ['first', 9, { old: true }]); assert.equal(elements(tree).filter(item => item.type === 'button' && label(item) === '删除此项').length, 1)
+  const fixed = f.editor.SequenceValueEditor({ ...props, field: { ...props.field, inner: false } }); assert.equal(button(fixed, '添加列表项'), undefined)
+})
+
+test('Host-only conditional constraints cannot edit, remove or default the shared intersection value', () => {
+  const f = fixture(), changes = []
+  const tree = f.editor.SchemaFieldEditor({ name: 'conditional', field: { type: 'constraint', reason: 'host-validation' }, value: { enabled: true }, onChange: next => changes.push(next) })
+  assert.ok(label(tree).includes('提交后由 Host 校验')); assert.deepEqual(elements(tree).filter(item => ['input', 'button', 'code-editor'].includes(item.type)), []); assert.deepEqual(changes, [])
+  const definition = { type: 'intersect', list: [{ type: 'object', object: { enabled: { type: 'boolean', default: false } } }, { type: 'constraint', default: { injected: true } }] }
+  assert.deepEqual(schemaModel.initialSchemaValue(definition), { enabled: false })
+  assert.deepEqual(schemaModel.declaredDefaults(definition, { kept: true }), { kept: true, enabled: false })
+})
+
+test('secret annotations on an object are inherited by dynamic and known child editors', () => {
+  const f = fixture()
+  f.runtime.mount(() => f.editor.ObjectValueEditor({ name: 'secrets', field: { type: 'object', secret: true, object: { known: { type: 'string', secret: false } }, additional: { type: 'any' } }, value: { known: 'hide-me', dynamic: { secret: 'hide-too' } }, onChange: () => assert.fail('render must not write') }))
+  const fields = elements(f.runtime.value).filter(item => item.type === f.editor.SchemaFieldEditor)
+  assert.equal(fields.length, 2); assert.ok(fields.every(item => item.props.field.secret === true)); f.runtime.unmount()
+})
+
+test('secret textarea stays hidden until explicit editing and preserves multiline content including trailing newline', async () => {
+  const f = fixture(), changes = [], value = 'PRIVATE-FIRST\nPRIVATE-SECOND\n'
+  const props = { name: 'credential', field: { type: 'string', secret: true, component: 'textarea' }, value, onChange: next => changes.push(next) }
+  const root = f.editor.SchemaFieldEditor(props)
+  assert.equal(elements(root).filter(item => item.type === 'textarea' || item.type === 'input').length, 0)
+  assert.ok(!label(root).includes('PRIVATE-FIRST')); assert.deepEqual(changes, [])
+  const secret = elements(root).find(item => item.type === f.editor.SecretTextEditor)
+  f.runtime.mount(() => f.editor.SecretTextEditor(secret.props))
+  assert.equal(elements(f.runtime.value).filter(item => item.type === 'textarea').length, 0)
+  button(f.runtime.value, '编辑敏感文本').props.onClick(); await f.runtime.settle()
+  const input = elements(f.runtime.value).find(item => item.type === 'textarea'); assert.equal(input.props.value, value)
+  input.props.onChange({ target: { value: value + 'NEW-LINE\n' } }); assert.deepEqual(changes, [value + 'NEW-LINE\n'])
+  button(f.runtime.value, '隐藏敏感文本').props.onClick(); await f.runtime.settle(); assert.equal(elements(f.runtime.value).filter(item => item.type === 'textarea').length, 0); f.runtime.unmount()
+})
+
+test('inherited secret textarea, null mismatches and password JSON cannot expose saved content on initial form rendering', () => {
+  const f = fixture(), hidden = 'PRIVATE-SAVED-VALUE'
+  f.runtime.mount(() => f.editor.ObjectValueEditor({ name: 'parent', field: { type: 'object', secret: true, object: { nested: { type: 'string', component: 'textarea', secret: false } } }, value: { nested: hidden }, onChange() {} }))
+  const child = elements(f.runtime.value).find(item => item.type === f.editor.SchemaFieldEditor)
+  const text = f.editor.SchemaFieldEditor(child.props)
+  assert.ok(elements(text).some(item => item.type === f.editor.SecretTextEditor)); assert.ok(!label(text).includes(hidden)); f.runtime.unmount()
+  const nullField = f.editor.SchemaFieldEditor({ name: 'nullable', field: { type: 'null', secret: true }, value: hidden, onChange() {} })
+  assert.ok(!label(nullField).includes(hidden)); assert.ok(label(nullField).includes('敏感原值未展示'))
+  const password = f.editor.SchemaFieldEditor({ name: 'password', field: { type: 'any', component: 'password' }, value: { token: hidden }, onChange() {} })
+  const json = elements(password).find(item => item.type === f.editor.JsonValueEditor); assert.equal(json.props.field.secret, true)
+  f.runtime.mount(() => f.editor.JsonValueEditor(json.props)); assert.equal(elements(f.runtime.value).filter(item => item.type === 'code-editor').length, 0); assert.ok(!label(f.runtime.value).includes(hidden)); f.runtime.unmount()
+})
+
+test('real list deletion preserves the second row React identity, union branch and branch drafts while purging only the removed row', async () => {
+  const list = fixture(), child = fixture(), drafts = { json: new Map(), unions: new Map() }, flags = []
+  const union = { type: 'union', list: [{ type: 'object', object: { kind: { type: 'const', value: 'a' }, text: { type: 'string' } } }, { type: 'object', object: { kind: { type: 'const', value: 'b' }, count: { type: 'number', default: 0 } } }] }
+  let rows = [{ kind: 'a', text: 'first' }, { kind: 'b', count: 99, keep: 'second' }]
+  const listProps = () => ({ name: 'rows', path: '$/rows', field: { type: 'list', inner: union }, value: rows, drafts, onValidityChange: (path, invalid) => flags.push({ path, invalid }), onChange: next => { rows = next } })
+  list.runtime.mount(() => list.editor.SequenceValueEditor(listProps()))
+  const fields = () => elements(list.runtime.value).filter(item => item.type === list.editor.SchemaFieldEditor)
+  const firstPath = fields()[0].props.path, secondPath = fields()[1].props.path
+  const oldKey = elements(list.runtime.value).find(item => item.props?.children?.some?.(node => node?.props?.path === secondPath))?.key
+  assert.notEqual(oldKey, undefined)
+  drafts.json.set(`${firstPath}/branch:0/raw`, { text: '{', value: null, error: 'invalid' })
+  drafts.unions.set(firstPath, { selected: 0, values: new Map() })
+  let secondProps = fields()[1].props
+  child.runtime.mount(() => child.editor.UnionValueEditor(secondProps))
+  assert.equal(elements(child.runtime.value).find(item => item.type === 'select').props.value, '1')
+  elements(list.runtime.value).find(item => item.type === 'button' && label(item) === '删除此项').props.onClick(); list.runtime.render()
+  assert.equal(fields().length, 1); assert.equal(fields()[0].props.path, secondPath); assert.notEqual(fields()[0].props.path, firstPath)
+  const newKey = elements(list.runtime.value).find(item => item.props?.children?.some?.(node => node?.props?.path === secondPath))?.key; assert.equal(newKey, oldKey)
+  assert.equal(drafts.json.has(`${firstPath}/branch:0/raw`), false); assert.equal(drafts.unions.has(firstPath), false); assert.deepEqual(flags.at(-1), { path: `${firstPath}/branch:0/raw`, invalid: false })
+  secondProps = fields()[0].props; child.runtime.render()
+  assert.equal(elements(child.runtime.value).find(item => item.type === 'select').props.value, '1'); assert.deepEqual(rows, [{ kind: 'b', count: 99, keep: 'second' }])
+  elements(child.runtime.value).find(item => item.type === 'select').props.onChange({ target: { value: '0' } }); list.runtime.render(); secondProps = fields()[0].props; child.runtime.render()
+  elements(child.runtime.value).find(item => item.type === 'select').props.onChange({ target: { value: '1' } }); list.runtime.render(); secondProps = fields()[0].props; child.runtime.render()
+  assert.deepEqual(rows, [{ kind: 'b', count: 99, keep: 'second' }]); assert.equal(elements(child.runtime.value).find(item => item.type === 'select').props.value, '1')
+  child.runtime.unmount(); list.runtime.unmount()
+})
+
+test('deleting a row with invalid JSON does not transfer its text to an equal-valued sibling or a newly appended row', async () => {
+  const f = fixture(), json = fixture(), drafts = { json: new Map(), unions: new Map() }
+  let rows = [{ same: true }, { same: true }]
+  const props = () => ({ name: 'rows', path: '$/rows', field: { type: 'list', inner: { type: 'any' } }, value: rows, drafts, onChange: next => { rows = next } })
+  f.runtime.mount(() => f.editor.SequenceValueEditor(props()))
+  const fields = () => elements(f.runtime.value).filter(item => item.type === f.editor.SchemaFieldEditor)
+  const first = fields()[0].props, second = fields()[1].props
+  json.runtime.mount(() => json.editor.JsonValueEditor(first)); elements(json.runtime.value).find(item => item.type === 'code-editor').props.onChange('{'); await json.runtime.settle(); json.runtime.unmount()
+  elements(f.runtime.value).find(item => item.type === 'button' && label(item) === '删除此项').props.onClick(); f.runtime.render()
+  assert.equal(fields()[0].props.path, second.path)
+  json.runtime.remount(() => json.editor.JsonValueEditor(fields()[0].props)); assert.deepEqual(JSON.parse(elements(json.runtime.value).find(item => item.type === 'code-editor').props.value), { same: true }); json.runtime.unmount()
+  button(f.runtime.value, '添加列表项').props.onClick(); f.runtime.render()
+  assert.notEqual(fields()[1].props.path, first.path); assert.notEqual(fields()[1].props.path, second.path)
+  assert.ok(!drafts.json.has(first.path)); f.runtime.unmount()
 })

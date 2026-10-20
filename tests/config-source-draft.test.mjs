@@ -39,16 +39,21 @@ test('actual page discards a draft only after the bound save succeeds; explicit 
 })
 
 
-test('actual GeneralConfigForm and parent save handlers keep the dirty form baseline after refresh',async()=>{
- const baseline={...a,source:'{"systemFlag":1,"plugin":{"one":1}}'}
- const refreshed={...b,source:'{"systemFlag":2,"plugin":{"one":1,"otherClient":2}}'}
- let persisted=refreshed.source, cleared=false, unsafeCalls=0
- const calls=[]
- const parent=await pageSaveHandler({source:refreshed.source,format:'json',snapshot:refreshed,
-  setSaving:()=>{},saveBound:async(source,original)=>{calls.push({source,revision:original.revision});if(original.revision!==refreshed.revision)throw Error('CAS conflict');persisted=source},
-  save:async(source)=>{unsafeCalls++;persisted=source},success:()=>{},toastError:()=>{},parseYaml:()=>{throw Error('unexpected format')},stringifyYaml:()=>{throw Error('unexpected format')}},'handleFormSave')
- const form=await pageSaveHandler({localValues:{systemFlag:9},baselineSnapshot:baseline,snapshot:refreshed,onSave:parent,setDirty:()=>{cleared=true}},'handleSave')
- await form()
- assert.equal(calls.length,1);assert.equal(calls[0].revision,'a');assert.deepEqual(JSON.parse(calls[0].source),{systemFlag:9,plugin:{one:1}})
- assert.equal(persisted,refreshed.source);assert.equal(unsafeCalls,0);assert.equal(cleared,false)
+test('schema-driven scalar config retains its original revision after refresh', async () => {
+ const { createConfigDraftGuard } = await import('../console-ui/src/components/PluginConfigForm/draft-guard.mjs')
+ const { configSourceForPlugin } = await import('../console-ui/src/components/PluginConfigForm/source-model.mjs')
+ const baseline={...a,source:'{"log_level":"info","plugin":{"one":1}}'}
+ const refreshed={...b,source:'{"log_level":"warn","plugin":{"one":1,"otherClient":2}}'}
+ const guard=createConfigDraftGuard()
+ assert.equal(guard.receive('log_level','info',baseline),true)
+ guard.edited()
+ assert.equal(guard.receive('log_level','warn',refreshed),false)
+ const next=configSourceForPlugin(guard.snapshot.source,guard.snapshot.format,['log_level'],'debug')
+ assert.equal(guard.snapshot.revision,'a')
+ assert.deepEqual(JSON.parse(next),{log_level:'debug',plugin:{one:1}})
+ await assert.rejects(saveSourceDraft(async(source,snapshot)=>{
+  assert.equal(source,next);assert.equal(snapshot.revision,'a')
+  if(snapshot.revision!==refreshed.revision)throw Error('CAS conflict')
+ },editSourceDraft(null,guard.snapshot,next)),/CAS conflict/)
+ assert.equal(guard.snapshot.revision,'a')
 })

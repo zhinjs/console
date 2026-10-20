@@ -4,14 +4,22 @@ import { highlightCode } from './highlight-code.mjs'
 import './code-highlight.css'
 export function CodeEditor({
   value,
-  onChange,
+  onChange = () => {},
   language,
   readOnly = false,
+  disabled = false,
+  ariaLabel,
+  invalid,
+  errorId,
 }: {
   value: string
-  onChange: (v: string) => void
+  onChange?: (v: string) => void
   language: string | null
   readOnly?: boolean
+  disabled?: boolean
+  ariaLabel?: string
+  invalid?: boolean
+  errorId?: string
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const preRef = useRef<HTMLPreElement>(null)
@@ -28,7 +36,7 @@ export function CodeEditor({
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === 'Tab') {
-        if (readOnly) return
+        if (readOnly || disabled) return
         e.preventDefault()
         const ta = e.currentTarget
         const start = ta.selectionStart
@@ -40,7 +48,7 @@ export function CodeEditor({
         })
       }
     },
-    [value, onChange, readOnly],
+    [value, onChange, readOnly, disabled],
   )
 
   return (
@@ -61,7 +69,10 @@ export function CodeEditor({
         ref={textareaRef}
         value={value}
         readOnly={readOnly}
-        aria-label={readOnly ? '文件内容（只读）' : '文件内容编辑器'}
+        disabled={disabled}
+        aria-label={ariaLabel ?? (readOnly ? '文件内容（只读）' : '文件内容编辑器')}
+        aria-invalid={invalid}
+        aria-describedby={errorId}
         onChange={(e) => onChange(e.target.value)}
         onScroll={handleScroll}
         onKeyDown={handleKeyDown}
@@ -70,7 +81,7 @@ export function CodeEditor({
         style={{
           ...editorFontStyle,
           color: 'transparent',
-          caretColor: 'var(--foreground)',
+          caretColor: 'var(--console-code-foreground)',
           WebkitTextFillColor: 'transparent',
         }}
         spellCheck={false}

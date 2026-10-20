@@ -9,7 +9,7 @@ export function createConfigDraftGuard() {
    get snapshot() { return snapshot },
    receive(key, value, sourceSnapshot) {
      if (identity !== key) { identity = key; dirty = false }
-     const accepted = value != null && !dirty
+     const accepted = !dirty
      if (accepted) snapshot = sourceSnapshot
      return accepted
    },

@@ -1,6 +1,6 @@
 /** Consume the Host's ConsoleSchema projection. This module edits drafts; only the Host validates. */
 export function objectFields(schema) { return schema?.type === 'object' && schema.object && !Array.isArray(schema.object) ? schema.object : {} }
-const simpleTypes = new Set(['string', 'number', 'integer', 'boolean', 'const'])
+const simpleTypes = new Set(['string', 'number', 'integer', 'boolean', 'const', 'null', 'any', 'constraint'])
 const unsupportedKeys = ['$ref', 'anyOf', 'oneOf', 'allOf', 'prefixItems', 'patternProperties', 'additionalProperties']
 export function unsupportedFormFields(schema, path = '$') {
   if (!schema || typeof schema !== 'object' || Array.isArray(schema)) return [`${path}：Host 未提供可编辑的字段定义`]
@@ -11,6 +11,8 @@ export function unsupportedFormFields(schema, path = '$') {
     return Object.entries(schema.object).flatMap(([key, field]) => unsupportedFormFields(field, `${path}.${key}`))
   }
   if (schema.type === 'list') return schema.inner ? unsupportedFormFields(schema.inner, `${path}[]`) : [`${path}：列表缺少元素定义`]
+  if (schema.type === 'dict') return schema.inner ? unsupportedFormFields(schema.inner, `${path}.*`) : []
+  if (['union', 'tuple', 'intersect'].includes(schema.type)) return Array.isArray(schema.list) ? schema.list.flatMap((field, i) => unsupportedFormFields(field, `${path}[${i}]`)) : []
   return simpleTypes.has(schema.type) ? [] : [`${path}：${String(schema.type ?? '未知类型')} 需要源码编辑`]
 }
 function copy(value) { return value === undefined ? undefined : structuredClone(value) }
@@ -23,7 +25,56 @@ export function declaredDefaults(schema, value) {
     }
   }
   if (schema.type === 'list' && Array.isArray(current) && schema.inner) return current.map(item => declaredDefaults(schema.inner, item))
+  if (schema.type === 'tuple' && Array.isArray(current)) return current.map((item, index) => {
+    const field = schema.list?.[index] ?? schema.inner
+    return field ? declaredDefaults(field, item) : item
+  })
+  if (schema.type === 'dict' && current && typeof current === 'object' && !Array.isArray(current) && schema.inner) {
+    for (const key of Object.keys(current)) Object.defineProperty(current, key, { value: declaredDefaults(schema.inner, current[key]), enumerable: true, configurable: true, writable: true })
+  }
+  if (schema.type === 'intersect') return (schema.list ?? []).reduce((value, branch) => branch.type === 'constraint' ? value : declaredDefaults(branch, value), current)
   return current
+}
+/** Explicit add/branch-selection seed, never an implicit conversion of a saved value. */
+export function initialSchemaValue(schema) {
+  if (Object.hasOwn(schema, 'default')) return copy(schema.default)
+  if (schema.type === 'const') return copy(Object.hasOwn(schema, 'value') ? schema.value : schema.default)
+  if (schema.type === 'null') return null
+  if (schema.type === 'object') {
+    const result = {}
+    for (const [key, field] of Object.entries(objectFields(schema))) {
+      if (field.required || field.type === 'const' || Object.hasOwn(field, 'default')) {
+        const child = initialSchemaValue(field)
+        if (child !== undefined) Object.defineProperty(result, key, { value: child, enumerable: true, configurable: true, writable: true })
+      }
+    }
+    return result
+  }
+  if (schema.type === 'dict') return {}
+  if (schema.type === 'intersect') {
+    const branches = (schema.list ?? []).filter(field => field.type !== 'constraint')
+    const values = branches.map(initialSchemaValue)
+    if (values.length && values.every(value => value && typeof value === 'object' && !Array.isArray(value))) return Object.assign({}, ...values)
+  }
+  if (schema.type === 'list') return []
+  if (schema.type === 'tuple') return (schema.list ?? []).map(field => initialSchemaValue(field) ?? null)
+  return undefined
+}
+/** Presentation only, never a replacement for Host validation or a claim of branch validity. */
+export function matchingSchemaBranches(branches, value) {
+  function matches(field, current) {
+    if (field.type === 'const') return JSON.stringify(current) === JSON.stringify(Object.hasOwn(field, 'value') ? field.value : field.default)
+    if (field.type === 'null') return current === null
+    if (field.type === 'object' || field.type === 'dict') {
+      if (!current || typeof current !== 'object' || Array.isArray(current)) return false
+      return Object.entries(objectFields(field)).every(([key, child]) => child.type !== 'const' || matches(child, current[key]))
+    }
+    if (field.type === 'list' || field.type === 'tuple') return Array.isArray(current)
+    if (field.type === 'number' || field.type === 'integer') return typeof current === 'number'
+    if (field.type === 'any') return true
+    return typeof current === field.type
+  }
+  return branches.flatMap((field, index) => matches(field, value) ? [index] : [])
 }
 /** Own-property writes preserve unknown siblings, literal dots and array structure; never use dotted paths. */
 export function updateObjectField(value, key, child) {

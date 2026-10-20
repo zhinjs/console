@@ -6,6 +6,7 @@ export interface SchemaField {
   key?: string
   type: string
   description?: string
+  title?: string
   default?: any
   required?: boolean
   enum?: any[]
@@ -14,7 +15,11 @@ export interface SchemaField {
   max?: number
   step?: number  // 用于 percent 类型
   pattern?: string
-  inner?: SchemaField  // 用于 list/dict 类型
+  inner?: SchemaField | false
+  additional?: SchemaField | false
+  value?: unknown
+  mode?: 'anyOf' | 'oneOf'
+  reason?: string
   items?: SchemaField  // 兼容旧格式
   list?: SchemaField[]  // 用于 tuple/union/intersect 类型
   properties?: Record<string, SchemaField>
@@ -28,17 +33,17 @@ export interface SchemaField {
   options?: ReadonlyArray<{ label: string; value: unknown }>
 }
 
-export interface Schema {
-  type: string
-  object?: Record<string, SchemaField>
-  properties?: Record<string, SchemaField>
-  dict?: Record<string, SchemaField>
-  description?: string
+export type Schema = SchemaField
+
+/** Owned by one scoped form; never shared between connections or aliases. */
+export interface SchemaEditorDrafts {
+  json: Map<string, { text: string; value: unknown; error: string | null }>
+  unions: Map<string, { selected: number | undefined; values: Map<number, unknown> }>
 }
 
 export interface PluginConfigFormProps {
   pluginName: string
   schema: Schema | null
-  initialConfig?: Record<string, any>
+  initialConfig?: unknown
   onSuccess?: () => void
 }

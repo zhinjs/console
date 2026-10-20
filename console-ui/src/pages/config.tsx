@@ -1,278 +1,28 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { useConfigSource, type ConfigSource } from '../hooks/useConfigSource'
+import { Link, useSearchParams } from 'react-router-dom'
+import { useConfigSource } from '../hooks/useConfigSource'
 import { PluginConfigForm } from '../components/PluginConfigForm'
-import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
+import { parse as parseYaml } from 'yaml'
 import {
   Settings, AlertCircle, Save, Loader2, X,
   RefreshCw, FileCode
 } from 'lucide-react'
 import { Card, CardContent } from '../components/ui/card'
-import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
-import { Textarea } from '../components/ui/textarea'
 import { Input } from '../components/ui/input'
+import { CodeEditor } from './files/code-editor'
 import { Skeleton } from '../components/ui/skeleton'
-import { Separator } from '../components/ui/separator'
 import { useToast } from '../components/toast'
-import { Switch } from '../components/ui/switch'
 import { PageHeader } from '../components/PageHeader'
 import { readErrorSummary } from '../utils/read-error.mjs'
 import { isDemoMode } from '../utils/demo-mode'
 import { editSourceDraft, saveSourceDraft, type SourceDraft } from './config-source-draft.mjs'
 import { validateConfigSource } from './config-source-validation.mjs'
-import { generalConfigKeys, resolveConfigSection } from './config-navigation.mjs'
+import { configSectionKeys, resolveConfigSection } from './config-navigation.mjs'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
-
-function GeneralConfigForm({
-  config,
-  pluginKeys,
-  snapshot,
-  onSave,
-  saving,
-  connectionScope,
-}: {
-  config: Record<string, any>
-  pluginKeys: string[]
-  snapshot: ConfigSource | null
-  onSave: (patch: Record<string, any>, baseline: ConfigSource | null) => Promise<void>
-  saving: boolean
-  connectionScope: string
-}) {
-  const generalKeys = useMemo(() => generalConfigKeys(config, pluginKeys), [config, pluginKeys])
-
-  const [localValues, setLocalValues] = useState<Record<string, any>>({})
-  const [dirty, setDirty] = useState(false)
-  const [baselineSnapshot, setBaselineSnapshot] = useState<ConfigSource | null>(snapshot)
-
-  useEffect(() => {
-    if (dirty) return
-    const vals: Record<string, any> = {}
-    for (const key of generalKeys) {
-      vals[key] = config[key]
-    }
-    setLocalValues(vals)
-    setBaselineSnapshot(snapshot)
-    setDirty(false)
-  }, [config, generalKeys, dirty, snapshot])
-
-  const handleChange = (key: string, value: any) => {
-    if (!isInboxCacheScopeActive(connectionScope)) return
-    setLocalValues(prev => ({ ...prev, [key]: value }))
-    setDirty(true)
-  }
-
-  const handleSave = async () => {
-    if (!isInboxCacheScopeActive(connectionScope) || baselineSnapshot?.connectionScope !== connectionScope) return
-    try {
-      await onSave(localValues, baselineSnapshot)
-      if (!isInboxCacheScopeActive(connectionScope)) return
-      setDirty(false)
-    } catch {
-      // Parent shows the save error; retain this form draft for retry.
-    }
-  }
-
-  const handleReset = () => {
-    if (!isInboxCacheScopeActive(connectionScope)) return
-    const vals: Record<string, any> = {}
-    for (const key of generalKeys) {
-      vals[key] = config[key]
-    }
-    setLocalValues(vals)
-    setBaselineSnapshot(snapshot)
-    setDirty(false)
-  }
-
-  if (generalKeys.length === 0) {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center gap-3 py-12">
-          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-muted">
-            <Settings className="w-8 h-8 text-muted-foreground" />
-          </div>
-          <h3 className="text-lg font-semibold">暂无通用配置</h3>
-          <p className="text-sm text-muted-foreground">配置文件中未发现可编辑的通用字段</p>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      <fieldset disabled={saving} className="space-y-3">
-        {generalKeys.map(key => (
-          <ConfigFieldEditor
-            key={key}
-            fieldKey={key}
-            value={localValues[key]}
-            onChange={val => handleChange(key, val)}
-          />
-        ))}
-      </fieldset>
-      <div className="flex items-center gap-2 pt-2">
-        <Button size="sm" onClick={handleSave} disabled={saving || !dirty}>
-          {saving
-            ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />保存中...</>
-            : <><Save className="w-4 h-4 mr-1" />保存</>}
-        </Button>
-        {dirty && (
-          <Button variant="outline" size="sm" disabled={saving} onClick={handleReset}>
-            <X className="w-4 h-4 mr-1" />撤销
-          </Button>
-        )}
-        {dirty && <span className="text-xs text-muted-foreground">有未保存的更改</span>}
-      </div>
-    </div>
-  )
-}
-
-function ConfigFieldEditor({
-  fieldKey,
-  value,
-  onChange
-}: {
-  fieldKey: string
-  value: any
-  onChange: (val: any) => void
-}) {
-  const valueType = typeof value
-
-  if (value === null || value === undefined) {
-    return (
-      <div className="p-3 rounded-lg bg-muted/50 border space-y-1.5">
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm font-medium">{fieldKey}</span>
-          <Badge variant="outline" className="text-[10px] px-1 py-0">null</Badge>
-        </div>
-        <Input
-          value=""
-          placeholder="(空值)"
-          onChange={e => onChange(e.target.value || null)}
-          className="h-8 text-sm"
-        />
-      </div>
-    )
-  }
-
-  if (valueType === 'boolean') {
-    return (
-      <div className="p-3 rounded-lg bg-muted/50 border space-y-1.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm font-medium">{fieldKey}</span>
-            <Badge variant="outline" className="text-[10px] px-1 py-0">boolean</Badge>
-          </div>
-          <Switch
-            checked={value}
-            onCheckedChange={onChange}
-          />
-        </div>
-      </div>
-    )
-  }
-
-  if (valueType === 'number') {
-    return (
-      <div className="p-3 rounded-lg bg-muted/50 border space-y-1.5">
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm font-medium">{fieldKey}</span>
-          <Badge variant="outline" className="text-[10px] px-1 py-0">number</Badge>
-        </div>
-        <Input
-          type="number"
-          value={value}
-          onChange={e => onChange(Number(e.target.value))}
-          className="h-8 text-sm"
-        />
-      </div>
-    )
-  }
-
-  if (valueType === 'string') {
-    const isMultiline = value.includes('\n') || value.length > 80
-    return (
-      <div className="p-3 rounded-lg bg-muted/50 border space-y-1.5">
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm font-medium">{fieldKey}</span>
-          <Badge variant="outline" className="text-[10px] px-1 py-0">string</Badge>
-        </div>
-        {isMultiline ? (
-          <Textarea
-            value={value}
-            onChange={e => onChange(e.target.value)}
-            className="text-sm font-mono min-h-[80px]"
-          />
-        ) : (
-          <Input
-            value={value}
-            onChange={e => onChange(e.target.value)}
-            className="h-8 text-sm"
-          />
-        )}
-      </div>
-    )
-  }
-
-  if (Array.isArray(value)) {
-    return (
-      <div className="p-3 rounded-lg bg-muted/50 border space-y-1.5">
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm font-medium">{fieldKey}</span>
-          <Badge variant="outline" className="text-[10px] px-1 py-0">array[{value.length}]</Badge>
-        </div>
-        <Textarea
-          value={stringifyYaml(value).trim()}
-          onChange={e => {
-            try {
-              const parsed = parseYaml(e.target.value)
-              if (Array.isArray(parsed)) onChange(parsed)
-            } catch { /* ignore parse errors during typing */ }
-          }}
-          className="text-sm font-mono min-h-[80px]"
-        />
-      </div>
-    )
-  }
-
-  if (valueType === 'object') {
-    return (
-      <div className="p-3 rounded-lg bg-muted/50 border space-y-1.5">
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm font-medium">{fieldKey}</span>
-          <Badge variant="outline" className="text-[10px] px-1 py-0">object</Badge>
-        </div>
-        <Textarea
-          value={stringifyYaml(value).trim()}
-          onChange={e => {
-            try {
-              const parsed = parseYaml(e.target.value)
-              if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) onChange(parsed)
-            } catch { /* ignore parse errors during typing */ }
-          }}
-          className="text-sm font-mono min-h-[100px]"
-        />
-      </div>
-    )
-  }
-
-  return (
-    <div className="p-3 rounded-lg bg-muted/50 border space-y-1.5">
-      <div className="flex items-center gap-1.5">
-        <span className="text-sm font-medium">{fieldKey}</span>
-        <Badge variant="outline" className="text-[10px] px-1 py-0">{valueType}</Badge>
-      </div>
-      <Input
-        value={String(value)}
-        onChange={e => onChange(e.target.value)}
-        className="h-8 text-sm"
-      />
-    </div>
-  )
-}
 
 function EditableConfigPage() {
   const scope = useInboxCacheScope()
@@ -285,6 +35,8 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
   const pluginFromUrl = searchParams.get('plugin')?.trim() ?? ''
   const { source, format, configKeys: pluginKeys, loading, loaded, error, errorOperation, clearSaveError, load, saveBound, snapshot } = useConfigSource()
   const [activeSection, setActiveSection] = useState<string>(() => pluginFromUrl ? `plugin:${pluginFromUrl}` : 'general')
+  const [visitedSections, setVisitedSections] = useState<Set<string>>(() => new Set())
+  const [sectionFilter, setSectionFilter] = useState('')
   const [sourceDraft, setSourceDraft] = useState<SourceDraft | null>(null)
   const sourceText = sourceDraft?.source ?? source
   const sourceDirty = sourceDraft !== null
@@ -302,8 +54,11 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
     }
   }, [source, format])
 
-  const hasGeneral = generalConfigKeys(parsedConfig, pluginKeys).length > 0
-  const visibleSection = resolveConfigSection(activeSection, pluginKeys, hasGeneral)
+  const sectionKeys = useMemo(() => configSectionKeys(parsedConfig, pluginKeys), [parsedConfig, pluginKeys])
+  const visibleSection = resolveConfigSection(activeSection, sectionKeys)
+  useEffect(() => {
+    if (loaded && visibleSection.startsWith('plugin:')) setVisitedSections(previous => previous.has(visibleSection) ? previous : new Set([...previous, visibleSection]))
+  }, [loaded, visibleSection])
 
   const sourceIssue = useMemo(() => validateConfigSource(sourceText, draftFormat), [sourceText, draftFormat])
 
@@ -320,29 +75,6 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
       success('配置已保存，需重启生效')
     } catch (err) {
       if (currentOperation()) toastError('配置保存失败，草稿已保留。请查看页面中的技术详情。')
-    } finally {
-      if (currentOperation()) setSaving(false)
-    }
-  }
-
-  const handleFormSave = async (patch: Record<string, any>, baseline: ConfigSource | null) => {
-    if (!isInboxCacheScopeActive(connectionScope) || baseline?.connectionScope !== connectionScope) throw new Error('草稿属于旧连接，请重新读取当前 Host 配置')
-    const operationId = ++operation.current
-    const currentOperation = () => isInboxCacheScopeActive(connectionScope) && operation.current === operationId
-    setSaving(true)
-    try {
-      if (!baseline?.revision) throw new Error('草稿版本未知，请撤销并重新读取配置')
-      const currentParsed = (baseline.format === 'json' ? JSON.parse(baseline.source) : parseYaml(baseline.source)) || {}
-      const merged = { ...currentParsed, ...patch }
-      const nextSource = baseline.format === 'json'
-        ? `${JSON.stringify(merged, null, 2)}\n`
-        : stringifyYaml(merged, { lineWidth: 0 })
-      await saveBound(nextSource, baseline)
-      if (!currentOperation()) throw new Error('保存结果已过期，请到原 Host 核实')
-      success('配置已保存，需重启生效')
-    } catch (err) {
-      if (currentOperation()) toastError('配置保存失败，草稿已保留。请查看页面中的技术详情。')
-      throw err
     } finally {
       if (currentOperation()) setSaving(false)
     }
@@ -383,7 +115,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
     <div className="space-y-4">
       <PageHeader
         title="配置"
-        description="按配置项编辑，或修改完整源码。"
+        description="默认按字段定义编辑，每项配置均可切换表单与源码。"
         actions={
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
@@ -404,41 +136,46 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
       )}
 
       {loaded ? <Tabs value={visibleSection} onValueChange={setActiveSection}>
-        <TabsList className="flex flex-wrap h-auto gap-1">
-          {hasGeneral ? <TabsTrigger value="general">其他配置</TabsTrigger> : null}
-          {pluginKeys.map((key) => (
+        <Input type="search" aria-label="筛选配置项" placeholder="搜索配置项或插件实例…" value={sectionFilter} onChange={event => setSectionFilter(event.target.value)} className="mb-2 max-w-md" />
+        <TabsList className="flex max-h-48 flex-wrap justify-start overflow-y-auto h-auto gap-1">
+          {sectionKeys.filter(key => key.toLowerCase().includes(sectionFilter.trim().toLowerCase())).map((key) => (
             <TabsTrigger key={key} value={`plugin:${key}`}>
               {key}
             </TabsTrigger>
           ))}
+          <TabsTrigger value="declarations">插件声明</TabsTrigger>
           <TabsTrigger value="yaml" className="gap-1.5">
             <FileCode className="w-4 h-4" />
-            {format.toUpperCase()} 全量
+            完整源码
           </TabsTrigger>
         </TabsList>
 
-        {hasGeneral ? <TabsContent value="general" className="mt-4">
-          <GeneralConfigForm config={parsedConfig} pluginKeys={pluginKeys} snapshot={snapshot} onSave={handleFormSave} saving={saving} connectionScope={connectionScope} />
-        </TabsContent> : null}
-
-        {pluginKeys.map((key) => (
-          <TabsContent key={key} value={`plugin:${key}`} className="mt-4">
-            <PluginConfigForm pluginName={key} onSuccess={() => { if (isInboxCacheScopeActive(connectionScope)) void load().catch(() => {}) }} onOpenYaml={() => { if (isInboxCacheScopeActive(connectionScope)) setActiveSection('yaml') }} />
+        {sectionKeys.map((key) => (
+          <TabsContent key={key} value={`plugin:${key}`} forceMount hidden={visibleSection !== `plugin:${key}`} className="mt-4">
+            {visitedSections.has(`plugin:${key}`) || visibleSection === `plugin:${key}` ? <PluginConfigForm pluginName={key} sourceRevision={snapshot?.revision} onSuccess={() => { if (isInboxCacheScopeActive(connectionScope)) void load().catch(() => {}) }} onOpenYaml={() => { if (isInboxCacheScopeActive(connectionScope)) setActiveSection('yaml') }} /> : null}
           </TabsContent>
         ))}
 
+        <TabsContent value="declarations" className="mt-4">
+          <Card className="space-y-3 p-4">
+            <h2 className="font-semibold">插件实例与启停声明</h2>
+            <p className="text-sm text-muted-foreground">configVersion、plugins 和 disable_plugins 决定配置版本、插件挂载与启停。通过插件管理创建或调整实例；业务参数在对应配置项中编辑。</p>
+            <Button asChild variant="outline"><Link to="/plugins">管理插件实例</Link></Button>
+            <div className="h-64 overflow-hidden rounded-lg border"><CodeEditor value={JSON.stringify(Object.fromEntries(['configVersion', 'plugins', 'disable_plugins'].filter(key => Object.hasOwn(parsedConfig, key)).map(key => [key, parsedConfig[key]])), null, 2)} language="json" readOnly ariaLabel="当前插件声明（只读）" /></div>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="yaml" className="mt-4 space-y-3">
-          <div className="relative">
-            <Textarea
-              aria-label={`${draftFormat.toUpperCase()} 配置源码`}
-              aria-invalid={sourceDirty && Boolean(sourceIssue)}
-              aria-describedby={sourceDirty && sourceIssue ? 'config-source-error' : undefined}
+          <p className="text-sm text-muted-foreground">完整源码基于已保存配置；各项表单中尚未保存的草稿仍会保留。编辑单项时可在该项内切换源码，与表单共用草稿。</p>
+          <div className="h-[min(65vh,640px)] min-h-[320px] overflow-hidden rounded-lg border">
+            <CodeEditor
+              ariaLabel={`${draftFormat.toUpperCase()} 配置源码`}
+              invalid={sourceDirty && Boolean(sourceIssue)}
+              errorId={sourceDirty && sourceIssue ? 'config-source-error' : undefined}
               value={sourceText}
+              language={draftFormat}
               disabled={saving}
-              onChange={e => { if (!isInboxCacheScopeActive(connectionScope)) return; const value = e.target.value; setSourceDraft(previous => editSourceDraft(previous, snapshot, value)) }}
-              className="font-mono text-sm min-h-[400px] resize-y"
-              placeholder={format === 'json' ? '{ "plugins": {} }' : '# zhin.config.yml'}
-              spellCheck={false}
+              onChange={value => { if (!isInboxCacheScopeActive(connectionScope)) return; setSourceDraft(previous => editSourceDraft(previous, snapshot, value)) }}
             />
           </div>
           {sourceDirty && sourceIssue ? <p id="config-source-error" role="alert" className="text-sm text-destructive">{sourceIssue}</p> : null}

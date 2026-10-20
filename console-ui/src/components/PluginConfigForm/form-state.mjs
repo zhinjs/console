@@ -3,6 +3,5 @@ export function pluginConfigFormState({ loading, error, connected, schema }) {
   if (loading) return 'loading'
   if (error) return 'error'
   if (!connected) return 'disconnected'
-  const fields = schema?.object || schema?.properties || schema?.dict || {}
-  return Object.keys(fields).length ? 'ready' : 'no-schema'
+  return schema && (typeof schema.type === 'string' || schema.object) ? 'ready' : 'no-schema'
 }
