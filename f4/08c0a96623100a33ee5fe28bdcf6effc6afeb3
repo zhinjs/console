@@ -1,0 +1,26 @@
+console-ui/src/pages/task-center-model.mjs
+  s_079f1dc5e6308d::t_1cb95e48ed7f65 105,135
+tests/task-center.test.mjs
+  s_079f1dc5e6308d::t_1cb95e48ed7f65 97,103-104
+  s_079f1dc5e6308d::t_a22e157d35500c 112-128
+tests/fixtures/rss-task-providers.json
+  s_079f1dc5e6308d::t_f0027c14365035 1-165
+tests/task-center-ui.test.mjs
+  s_079f1dc5e6308d::t_d624d050174c49 56-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f408c0a96623100a33ee5fe28bdcf6effc6afeb3",
+  "prompts": {},
+  "sessions": {
+    "s_079f1dc5e6308d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a079da-08f2-7112-8660-7d86c654edb0",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
