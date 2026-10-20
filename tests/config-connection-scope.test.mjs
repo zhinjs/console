@@ -309,6 +309,8 @@ test('purpose fields expose optional welcome inputs without dropping other field
   f.answer('config:get-source', { ...snapshot('original'), source: JSON.stringify({ 'group-suite': original }) })
   f.answer('schema:get', { type: 'object', object: { ...schema.object, keywordReply: { type: 'boolean' }, commandNamespace: { type: 'string' } } })
   await f.runtime.settle()
+  assert.deepEqual(elements(f.runtime.value).filter(item => item.type === 'field-editor').map(item => item.props.name), Object.keys(original))
+  button(f.runtime.value, '用途与必填配置').props.onClick(); await f.runtime.settle()
   const editors = elements(f.runtime.value).filter(item => item.type === 'field-editor')
   assert.deepEqual(editors.map(item => item.props.name), ['welcomeMessage', 'welcomeConversations'])
   editors[0].props.onChange('updated welcome'); await f.runtime.settle()
