@@ -14,6 +14,7 @@ import MarketplacePage from './pages/marketplace'
 import TaskCenterPage from './pages/task-center'
 import IntrospectionPage from './pages/introspection'
 import ScenarioLabPage from './pages/scenario-lab'
+import CommandPermissionsPage from './pages/command-permissions'
 import AgentWorkbenchPage from './pages/agent-workbench'
 import AgentSessionsPage from './pages/agent-sessions'
 import WorkroomsPage from './pages/workrooms'
@@ -107,6 +108,15 @@ export function registerBuiltinConsolePages() {
     icon: 'Blocks',
     element: <IntrospectionPage />,
     meta: { group: NAV_GROUPS.SYSTEM, order: 0, fullWidth: true },
+  })
+
+  app.addRoute({
+    path: '/permissions',
+    name: '命令权限说明',
+    parent: '/introspection',
+    icon: 'Shield',
+    element: <CommandPermissionsPage />,
+    meta: { group: NAV_GROUPS.SYSTEM, order: 1 },
   })
 
   app.addRoute({

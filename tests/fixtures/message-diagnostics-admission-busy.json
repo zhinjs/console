@@ -1,0 +1,89 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": "d5465011-d57b-4a74-9257-348f79bef5fb",
+      "generation": 1,
+      "conversation": {
+        "endpoint": {
+          "id": "root\u0000zhin.adapter\u0000memory",
+          "adapter": "memory"
+        },
+        "kind": "private",
+        "id": "result-room"
+      },
+      "messageId": "admission-busy",
+      "startedAt": 1792461732360,
+      "status": "completed",
+      "truncated": false,
+      "steps": [
+        {
+          "stage": "received",
+          "status": "accepted",
+          "at": 1792461732360
+        },
+        {
+          "stage": "origin",
+          "status": "human",
+          "at": 1792461732360
+        },
+        {
+          "stage": "handlers",
+          "status": "started",
+          "at": 1792461732360
+        },
+        {
+          "stage": "handlers",
+          "status": "completed",
+          "at": 1792461732360
+        },
+        {
+          "stage": "prefix",
+          "status": "matched",
+          "at": 1792461732360
+        },
+        {
+          "stage": "dispatch",
+          "status": "started",
+          "at": 1792461732360
+        },
+        {
+          "stage": "dispatch",
+          "status": "limited",
+          "at": 1792461732360
+        },
+        {
+          "stage": "delivery",
+          "status": "sent",
+          "at": 1792461732361
+        }
+      ],
+      "deliveries": [
+        {
+          "conversation": {
+            "endpoint": {
+              "id": "root\u0000zhin.adapter\u0000memory",
+              "adapter": "memory"
+            },
+            "kind": "private",
+            "id": "result-room"
+          },
+          "status": "sent",
+          "rendering": {
+            "forms": [
+              "text"
+            ],
+            "fallbacks": []
+          }
+        }
+      ],
+      "route": "command",
+      "command": "gh issue list",
+      "dispatchStatus": "limited",
+      "limit": {
+        "reason": "busy"
+      },
+      "endedAt": 1792461732361
+    }
+  ]
+}

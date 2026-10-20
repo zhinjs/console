@@ -94,17 +94,35 @@ test('task use cases use Host package provenance and structured guidance without
   assert.deepEqual(readTaskUseCases({ success: true, data: [useCase] }), [useCase])
   assert.throws(() => readTaskUseCases({ success: true, data: [{ ...useCase, steps: ['ok', {}] }] }))
   assert.match(taskTimeLabel(0, 'Asia/Shanghai'), /Asia\/Shanghai/)
-  assert.equal(taskTimeLabel(undefined, 'UTC'), '未安排')
+  assert.equal(taskTimeLabel(undefined, 'UTC'), '提供方未返回具体时间，请查看执行规则与任务详情')
   assert.match(taskTimeLabel(1e100, 'UTC'), /超出可显示范围/)
   assert.match(taskTimeLabel(0, 'Invalid\/Timezone'), /提供方时区无效/)
 })
 
 test('confirmation descriptions distinguish creation from state changes and preserve explicit timezones', () => {
-  assert.match(taskActionDescription('create'), /保存管理员任务，并按指定时间/)
+  assert.match(taskActionDescription('create'), /保存管理员任务，后续按提供方的执行规则运行/)
+  assert.doesNotMatch(taskActionDescription('create'), /指定时间/)
   assert.match(taskActionDescription('pause'), /暂停后续执行/)
   assert.match(taskActionDescription('cancel'), /无法撤回/)
   assert.match(taskActionDescription('update'), /目标保持不变/)
   assert.doesNotMatch(taskActionDescription('resume'), /按指定时间向所选会话投递/)
   assert.match(taskDateTimeLabel('2027-01-01T09:00:00+08:00', 'UTC'), /UTC/)
   assert.equal(taskDateTimeLabel('2027-01-01T09:00:00+08:00'), '2027年1月1日 09:00（UTC+08:00）')
+})
+
+test('real RSS provider keeps polling semantics without fabricating a next execution date or reminder parameters', async () => {
+  const fixture = JSON.parse(await readFile(new URL('./fixtures/rss-task-providers.json', import.meta.url), 'utf8'))
+  const scheduled = readTaskProviders(fixture.scheduled).providers[0]
+  const task = scheduled.tasks[0]
+  assert.deepEqual(Object.keys(taskParameterFields(scheduled.schema).fields), ['url'])
+  assert.deepEqual(validateTaskParameters(scheduled.schema, task.parameters), [])
+  assert.equal(task.nextRunAt, undefined)
+  assert.match(taskTimeLabel(task.nextRunAt, task.timezone), /提供方未返回具体时间/)
+  assert.doesNotMatch(taskTimeLabel(task.nextRunAt, task.timezone), /未安排|1970|2026/)
+  assert.match(task.detail, /已建立基线|实例轮询/)
+  assert.equal(task.target.parent.id, 'example-parent')
+  assert.equal(task.target.threadId, 'example-thread')
+  const unknown = readTaskProviders(fixture.unknown).providers[0].tasks[0]
+  assert.deepEqual(availableTaskActions(unknown), ['cancel'])
+  assert.match(unknown.detail, /不会自动重试/)
 })

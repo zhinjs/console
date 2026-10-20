@@ -149,6 +149,7 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
           {kind !== 'components' ? <p>{meta.description}</p> : null}
         </div>
         <div className="console-capability-count"><strong>{items.length}</strong><span>{kind === 'components' ? '个组件' : '项'}</span></div>
+        {kind === 'commands' && <Button asChild size="sm" variant="outline"><Link to="/permissions"><ShieldCheck className="size-4 mr-2" />查看权限说明</Link></Button>}
       </header>
 
       <div className={cn("console-capability-workspace", kind === 'components' && "console-component-gallery-workspace")}>

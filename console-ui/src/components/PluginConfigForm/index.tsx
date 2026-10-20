@@ -11,10 +11,21 @@ import { Button } from '../ui/button'
 import { Alert, AlertDescription } from '../ui/alert'
 import { createConfigDraftGuard } from './draft-guard.mjs'
 import { requestConsole } from '../../utils/console-rpc'
+import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
+import { isInboxCacheScopeActive } from '../../utils/inbox-cache'
 
 interface ConfigValidation { valid: boolean; schemaAvailable?: boolean; errors: Array<{ path: string; message: string }>; missingEnv: string[] }
 
-export function PluginConfigForm({ pluginName, onSuccess, onOpenYaml }: Omit<PluginConfigFormProps, 'schema' | 'initialConfig'> & { onOpenYaml?: () => void }) {
+type EditableConfigProps = Omit<PluginConfigFormProps, 'schema' | 'initialConfig'> & { onOpenYaml?: () => void }
+
+export function PluginConfigForm(props: EditableConfigProps) {
+  const scope = useInboxCacheScope()
+  if (!scope || !isInboxCacheScopeActive(scope)) return <Card className="mt-4 p-4" role="status">连接身份已变化，请登录当前 Host 后重新读取配置。</Card>
+  // A different Host or credential owns a fresh draft and confirmation session.
+  return <PluginConfigFormSession key={JSON.stringify([scope, props.pluginName])} {...props} connectionScope={scope} />
+}
+
+function PluginConfigFormSession({ pluginName, onSuccess, onOpenYaml, connectionScope }: EditableConfigProps & { connectionScope: string }) {
   const form = usePluginConfigDraft(pluginName)
   const invalidRootConfig = form.loaded && form.config !== undefined && (!form.config || typeof form.config !== 'object' || Array.isArray(form.config))
   const [localConfig, setLocalConfig] = useState<Record<string, unknown>>({})
@@ -28,7 +39,10 @@ export function PluginConfigForm({ pluginName, onSuccess, onOpenYaml }: Omit<Plu
   const operation = useRef(0)
   const currentName = useRef(pluginName)
   currentName.current = pluginName
-  useEffect(() => { operation.current++; setSaving(false); setSaveError(null); setMessage(null); setValidation(null); setMode('minimum') }, [pluginName])
+  useEffect(() => {
+    operation.current++; setSaving(false); setSaveError(null); setMessage(null); setValidation(null); setMode('minimum')
+    return () => { operation.current++ }
+  }, [pluginName, connectionScope])
   useEffect(() => {
     if (!form.loaded || invalidRootConfig) return
     if (guard.current.receive(pluginName, form.config ?? {}, form.snapshot)) {
@@ -42,30 +56,34 @@ export function PluginConfigForm({ pluginName, onSuccess, onOpenYaml }: Omit<Plu
   const required = form.schema ? requiredGuidance(form.schema as SchemaField, localConfig) : []
   const visibleFields = Object.entries(fields).filter(([name, field]) => !field.hidden && (mode === 'all' || field.required || required.some(path => path.startsWith(`$.${name}.`) || path.startsWith(`$.${name}[`))))
   const change = (name: string, value: unknown) => {
+    if (!isInboxCacheScopeActive(connectionScope)) return
     guard.current.edited(); setValidation(null); setMessage(null)
     setLocalConfig(previous => updateObjectField(previous, name, value))
   }
   const handleSave = async (checkOnly = false) => {
-    if (saving || !form.loaded || draftName !== pluginName || unsupported.length || !form.schema) return
+    if (!isInboxCacheScopeActive(connectionScope) || form.scope !== connectionScope || form.snapshot?.connectionScope !== connectionScope
+      || saving || !form.loaded || draftName !== pluginName || unsupported.length || !form.schema) return
     const name = pluginName
     const operationId = ++operation.current
+    const currentOperation = () => isInboxCacheScopeActive(connectionScope) && currentName.current === name && operation.current === operationId
     setSaving(true); setSaveError(null); setMessage(null)
     try {
       const checked = await requestConsole<ConfigValidation>({ type: 'plugin:validate-config', pluginName: name, data: localConfig })
-      if (currentName.current !== name || operation.current !== operationId) return
+      if (!currentOperation()) return
       setValidation(checked)
       if (checked.schemaAvailable === false) throw new Error('Host 字段定义已变化或不可用，请刷新或打开完整源码')
       if (checkOnly || !checked.valid || checked.missingEnv.length > 0) return
       const result = await form.setConfig(localConfig, guard.current.snapshot)
-      if (currentName.current !== name || operation.current !== operationId) return
+      if (!currentOperation()) return
       guard.current.saved()
       setMessage(result.restartRequired ? '配置已保存；系统配置变更需要重启。' : '配置已保存，等待 Host 应用插件配置。')
       onSuccess?.()
       await form.load()
-    } catch (cause) { if (currentName.current === name && operation.current === operationId) setSaveError(cause instanceof Error ? cause.message : '保存失败，草稿已保留') }
-    finally { if (currentName.current === name && operation.current === operationId) setSaving(false) }
+    } catch (cause) { if (currentOperation()) setSaveError(cause instanceof Error ? cause.message : '保存失败，草稿已保留') }
+    finally { if (currentOperation()) setSaving(false) }
   }
   const reset = () => {
+    if (!isInboxCacheScopeActive(connectionScope)) return
     guard.current.saved(); guard.current.receive(pluginName, form.config ?? {}, form.snapshot); setLocalConfig(form.schema ? declaredDefaults(form.schema as SchemaField, form.config ?? {}) : {})
     setValidation(null); setSaveError(null); setMessage(null)
   }

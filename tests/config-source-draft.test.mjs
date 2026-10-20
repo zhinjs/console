@@ -4,9 +4,10 @@ import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
 import { editSourceDraft, saveSourceDraft } from '../console-ui/src/pages/config-source-draft.mjs'
 
-const a={source:'{"plugin":{"one":1}}',format:'json',revision:'a',configKeys:['plugin']}
+const a={source:'{"plugin":{"one":1}}',format:'json',revision:'a',configKeys:['plugin'],connectionScope:'test-scope'}
 const b={...a,source:'{"plugin":{"one":1,"otherClient":2}}',revision:'b'}
 async function pageSaveHandler(bindings, name = 'handleYamlSave') {
+ bindings={connectionScope:'test-scope',isInboxCacheScopeActive:()=>true,operation:{current:0},...bindings}
  const source=await readFile(new URL('../console-ui/src/pages/config.tsx',import.meta.url),'utf8')
  const ast=ts.createSourceFile('config.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX)
  let declaration

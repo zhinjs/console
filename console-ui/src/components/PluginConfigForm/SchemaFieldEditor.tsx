@@ -1,4 +1,6 @@
 import { useId } from 'react'
+import { ConversationScopeEditor } from './ConversationScopeEditor'
+import { isConversationScopeField } from './conversation-scope-model.mjs'
 import type { SchemaField } from './types.js'
 import { objectFields, declaredDefaults, updateObjectField, updateListItem, numericDraft } from './schema-model.mjs'
 import { numericFieldIssue } from './numeric-validation.mjs'
@@ -12,6 +14,7 @@ export function SchemaFieldEditor({ name, field, value, onChange, allowEnvironme
   name: string; field: SchemaField; value: unknown; onChange: (value: unknown) => void; allowEnvironmentReferences?: boolean
 }) {
   const id = useId()
+  const conversationScope = isConversationScopeField(field)
   const numeric = field.type === 'number' || field.type === 'integer'
   const numericIssue = numeric && !(typeof value === 'string' && /^\$\{[A-Za-z_][A-Za-z0-9_]*\}$/.test(value)) ? numericFieldIssue({ ...field, integer: field.integer || field.type === 'integer' }, value) : null
   if (field.hidden) return null
@@ -22,7 +25,7 @@ export function SchemaFieldEditor({ name, field, value, onChange, allowEnvironme
     {field.description ? <p className="text-xs text-muted-foreground">{field.description}</p> : null}
     {Object.hasOwn(field, 'default') ? <p className="text-xs text-muted-foreground">{secret ? '已声明默认值' : `声明默认值：${JSON.stringify(field.default)}`}</p> : null}
     {secret ? <p className="text-xs text-muted-foreground">{allowEnvironmentReferences ? <>建议填写环境变量引用，如 {'${API_KEY}'}；不要将密钥写入配置。</> : '请按任务提供方要求填写；此处不解析环境变量引用。'}</p> : null}
-    {options?.length ? <Select value={value === undefined ? '' : String(options.findIndex(option => JSON.stringify(option.value) === JSON.stringify(value)))} onValueChange={index => onChange(structuredClone(options[Number(index)]!.value))}>
+    {conversationScope ? <ConversationScopeEditor field={field} value={value} onChange={onChange} /> : options?.length ? <Select value={value === undefined ? '' : String(options.findIndex(option => JSON.stringify(option.value) === JSON.stringify(value)))} onValueChange={index => onChange(structuredClone(options[Number(index)]!.value))}>
       <SelectTrigger id={id}><SelectValue placeholder="请选择" /></SelectTrigger>
       <SelectContent>{options.map((option, index) => <SelectItem key={index} value={String(index)}>{option.label}</SelectItem>)}</SelectContent>
     </Select> : field.type === 'object' ? <div className="space-y-2 border-l pl-3">
@@ -40,6 +43,6 @@ export function SchemaFieldEditor({ name, field, value, onChange, allowEnvironme
       : field.component === 'textarea' ? <Textarea id={id} value={value === undefined ? '' : String(value)} onChange={event => onChange(event.target.value)} />
       : <Input id={id} type={field.secret || field.component === 'password' ? 'password' : 'text'} autoComplete="off" value={value === undefined ? '' : String(value)} onChange={event => onChange(event.target.value)} />}
     {numericIssue ? <p role="alert" className="text-xs text-destructive">{numericIssue}；以 Host 校验结果为准。</p> : null}
-    {field.type !== 'const' && value !== undefined ? <Button type="button" variant="ghost" size="sm" onClick={() => onChange(undefined)}>取消此项设置{Object.hasOwn(field, 'default') ? '（使用声明默认值）' : ''}</Button> : null}
+    {!conversationScope && field.type !== 'const' && value !== undefined ? <Button type="button" variant="ghost" size="sm" onClick={() => onChange(undefined)}>取消此项设置{Object.hasOwn(field, 'default') ? '（使用声明默认值）' : ''}</Button> : null}
   </div>
 }
