@@ -19,7 +19,7 @@ import { configurationSaveSummary, isManagedConfigInstance } from './config-evid
 
 interface ConfigValidation { valid: boolean; schemaAvailable?: boolean; errors: Array<{ path: string; message: string }>; missingEnv: string[] }
 
-type EditableConfigProps = Omit<PluginConfigFormProps, 'schema' | 'initialConfig'> & { onOpenYaml?: () => void }
+type EditableConfigProps = Omit<PluginConfigFormProps, 'schema' | 'initialConfig'> & { onOpenYaml?: () => void; purposeFields?: readonly string[] }
 
 export function PluginConfigForm(props: EditableConfigProps) {
   const scope = useInboxCacheScope()
@@ -28,7 +28,7 @@ export function PluginConfigForm(props: EditableConfigProps) {
   return <PluginConfigFormSession key={JSON.stringify([scope, props.pluginName])} {...props} connectionScope={scope} />
 }
 
-function PluginConfigFormSession({ pluginName, onSuccess, onOpenYaml, connectionScope }: EditableConfigProps & { connectionScope: string }) {
+function PluginConfigFormSession({ pluginName, onSuccess, onOpenYaml, purposeFields, connectionScope }: EditableConfigProps & { connectionScope: string }) {
   const form = usePluginConfigDraft(pluginName)
   const invalidRootConfig = form.loaded && form.config !== undefined && (!form.config || typeof form.config !== 'object' || Array.isArray(form.config))
   const [localConfig, setLocalConfig] = useState<Record<string, unknown>>({})
@@ -57,7 +57,7 @@ function PluginConfigFormSession({ pluginName, onSuccess, onOpenYaml, connection
   const fields = objectFields(form.schema)
   const unsupported = form.schema ? unsupportedFormFields(form.schema) : []
   const required = form.schema ? requiredGuidance(form.schema as SchemaField, localConfig) : []
-  const visibleFields = Object.entries(fields).filter(([name, field]) => !field.hidden && (mode === 'all' || field.required || required.some(path => path.startsWith(`$.${name}.`) || path.startsWith(`$.${name}[`))))
+  const visibleFields = Object.entries(fields).filter(([name, field]) => !field.hidden && (mode === 'all' || purposeFields?.includes(name) || field.required || required.some(path => path.startsWith(`$.${name}.`) || path.startsWith(`$.${name}[`))))
   const change = (name: string, value: unknown) => {
     if (!isInboxCacheScopeActive(connectionScope)) return
     guard.current.edited(); setValidation(null); setMessage(null)
@@ -102,7 +102,8 @@ function PluginConfigFormSession({ pluginName, onSuccess, onOpenYaml, connection
   return <Card className="mt-4 p-4 space-y-4">
     <div className="flex items-center gap-2"><Settings className="h-4 w-4" /><h3 className="font-semibold">插件配置</h3><Badge variant="secondary">{Object.keys(fields).length} 项</Badge></div>
     <p className="text-sm text-muted-foreground">先完成必填项；已有值和声明默认值会保留。Host 负责最终校验，保存使用读取时的版本，冲突时保留草稿。</p>
-    <div className="flex gap-2"><Button variant={mode === 'minimum' ? 'default' : 'outline'} size="sm" onClick={() => setMode('minimum')}>最小必填配置</Button><Button variant={mode === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setMode('all')}>全部配置</Button></div>
+    <div className="flex gap-2"><Button variant={mode === 'minimum' ? 'default' : 'outline'} size="sm" onClick={() => setMode('minimum')}>{purposeFields?.length ? '用途与必填配置' : '最小必填配置'}</Button><Button variant={mode === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setMode('all')}>全部配置</Button></div>
+    {purposeFields?.length ? <p className="text-sm text-muted-foreground">已显示本用途相关字段；不代表这些字段必填。其他字段与已有值仍完整保留，保存继续使用同一配置对象与版本。</p> : null}
     {required.length ? <Alert><AlertDescription>尚未填写必填配置：{required.join('、')}。必填是字段存在性提示，格式以 Host 校验结果为准。</AlertDescription></Alert> : mode === 'minimum' ? <p className="text-sm text-muted-foreground">当前没有缺少的必填项；仍需校验环境变量和字段格式。</p> : null}
     {(saveError || form.error) ? <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{saveError ?? form.error}。草稿已保留；请刷新最新版本后确认修改。</AlertDescription></Alert> : null}
     {validation ? <Alert variant={validation.valid && !validation.missingEnv.length ? 'default' : 'destructive'}><AlertDescription><p>{hostValidationSummary(validation)}</p>{validation.errors.map(item => <p key={`${item.path}:${item.message}`}>{item.path}: {item.message}</p>)}{validation.missingEnv.length ? <p>缺少环境变量：{validation.missingEnv.join('、')}。<Link className="underline" to="/env">配置环境变量</Link>后重新校验。</p> : null}</AlertDescription></Alert> : null}

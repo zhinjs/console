@@ -12,6 +12,7 @@ import DatabasePage from './pages/database/database-page'
 import CronPage from './pages/cron'
 import MarketplacePage from './pages/marketplace'
 import TaskCenterPage from './pages/task-center'
+import WelcomeUseCasePage from './pages/welcome-use-case'
 import IntrospectionPage from './pages/introspection'
 import ScenarioLabPage from './pages/scenario-lab'
 import CommandPermissionsPage from './pages/command-permissions'
@@ -52,6 +53,14 @@ export function registerBuiltinConsolePages() {
     icon: 'ClipboardList',
     element: <TaskCenterPage />,
     meta: { group: NAV_GROUPS.AUTOMATION, order: -1 },
+  })
+
+  app.addRoute({
+    path: '/use-cases/group-welcome',
+    name: '群欢迎配置流程',
+    parent: '/tasks',
+    element: <WelcomeUseCasePage />,
+    meta: { hideInMenu: true, group: NAV_GROUPS.AUTOMATION },
   })
 
   app.addRoute({

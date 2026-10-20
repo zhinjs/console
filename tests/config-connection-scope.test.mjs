@@ -88,6 +88,7 @@ function fixture() {
     '../components/toast': { useToast: () => ({ success: message => successes.push(message), error: message => errors.push(message) }) },
     '../utils/read-error.mjs': { readErrorSummary: value => value }, '../utils/demo-mode': { isDemoMode: () => false },
     './config-source-draft.mjs': sourceDraftModel, './config-source-validation.mjs': sourceValidation, './config-navigation.mjs': configNavigation,
+    './WelcomeFlowContext': { WelcomeFlowContext: 'welcome-flow-context' },
   }
   function compile(source) {
     const module = { exports: {} }
@@ -226,6 +227,23 @@ test('a captured form save handler cannot validate or write after the connection
   const f = fixture(), tree = await loadedForm(f), save = button(tree, '保存配置'), before = f.calls.length
   f.switchHost(); save.props.onClick(); await f.runtime.settle()
   assert.equal(f.calls.length, before); f.runtime.unmount()
+})
+
+test('purpose fields expose optional welcome inputs without dropping other fields from the original CAS save', async () => {
+  const f = fixture(), connectionScope = f.authority.current()
+  const original = { welcomeMessage: 'original', welcomeConversations: [], keywordReply: true, commandNamespace: 'alpha' }
+  f.runtime.mount(() => f.form.PluginConfigFormSession({ pluginName: 'group-suite', connectionScope, purposeFields: ['welcomeMessage', 'welcomeConversations'] }))
+  f.answer('config:get-source', { ...snapshot('original'), source: JSON.stringify({ 'group-suite': original }) })
+  f.answer('schema:get', { type: 'object', object: { ...schema.object, keywordReply: { type: 'boolean' }, commandNamespace: { type: 'string' } } })
+  await f.runtime.settle()
+  const editors = elements(f.runtime.value).filter(item => item.type === 'field-editor')
+  assert.deepEqual(editors.map(item => item.props.name), ['welcomeMessage', 'welcomeConversations'])
+  editors[0].props.onChange('updated welcome'); await f.runtime.settle()
+  button(f.runtime.value, '保存配置').props.onClick(); f.answer('plugin:validate-config', valid); await f.runtime.settle()
+  const write = f.calls.find(item => item.input.type === 'config:replace-source')
+  assert.equal(write.input.expectedRevision, 'same-revision')
+  assert.deepEqual(JSON.parse(write.input.source)['group-suite'], { ...original, welcomeMessage: 'updated welcome' })
+  f.runtime.unmount()
 })
 
 test('a late validation result cannot submit a config to another credential or apply success to its page', async () => {
