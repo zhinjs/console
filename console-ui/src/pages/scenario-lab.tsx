@@ -24,6 +24,7 @@ export default function ScenarioLabPage() {
   const [parentId, setParentId] = useState('')
   const [thread, setThread] = useState('')
   const [senderId, setSenderId] = useState('example-user')
+  const [withName, setWithName] = useState(false)
   const [senderName, setSenderName] = useState('')
   const [withRoles, setWithRoles] = useState(false)
   const [roles, setRoles] = useState('[]')
@@ -46,20 +47,20 @@ export default function ScenarioLabPage() {
     try {
       if (Boolean(parentKind) !== Boolean(parentId)) throw new Error('父容器类型和 ID 必须同时填写')
       const sourceTarget = { ...target, ...(parentKind ? { parent: { kind: parentKind, id: parentId } } : {}), ...(thread ? { threadId: thread } : {}) }
-      const scene = readScenario({ schemaVersion: 1, name, sourceTarget, sender: { id: senderId, ...(senderName ? { name: senderName } : {}), ...(withRoles ? { roles: parseJsonField(roles, '测试角色') } : {}) }, input, preview: readScenarioSegments(parseJsonField(output, '作者预期输出')), profile,
+      const scene = readScenario({ schemaVersion: 1, name, sourceTarget, sender: { id: senderId, ...(withName ? { name: senderName } : {}), ...(withRoles ? { roles: parseJsonField(roles, '测试角色') } : {}) }, input, preview: readScenarioSegments(parseJsonField(output, '作者预期输出')), profile,
         ...(withFixture ? { fixture: { syntheticEndpoint, config: parseJsonField(config, '独立测试配置') } } : {}),
         ...(withAssertions ? { assertions: { dispatchStatus: status, deliveries: parseJsonField(deliveries, '最终 payload 断言') } } : {}),
       })
       return { scene, error: '', issues: scenarioExportIssues(scene) }
     } catch (error) { return { scene: null, error: error instanceof Error ? error.message : '场景格式无效', issues: [] } }
-  }, [target, parentKind, parentId, thread, name, senderId, senderName, withRoles, roles, input, output, profile, withFixture, syntheticEndpoint, config, withAssertions, status, deliveries])
+  }, [target, parentKind, parentId, thread, name, senderId, withName, senderName, withRoles, roles, input, output, profile, withFixture, syntheticEndpoint, config, withAssertions, status, deliveries])
   const exported = result.scene && !result.issues.length ? exportScenarioRegression(result.scene) : null
   function load() {
     try {
       const scene: Scenario = readScenarioJson(importText)
       setName(scene.name); setTarget({ endpoint: scene.sourceTarget.endpoint, kind: scene.sourceTarget.kind, id: scene.sourceTarget.id })
       setParentKind(scene.sourceTarget.parent?.kind ?? ''); setParentId(scene.sourceTarget.parent?.id ?? ''); setThread(scene.sourceTarget.threadId ?? '')
-      setSenderId(scene.sender.id); setSenderName(scene.sender.name ?? ''); setWithRoles(Object.hasOwn(scene.sender, 'roles')); setRoles(JSON.stringify(scene.sender.roles ?? []))
+      setSenderId(scene.sender.id); setWithName(Object.hasOwn(scene.sender, 'name')); setSenderName(scene.sender.name ?? ''); setWithRoles(Object.hasOwn(scene.sender, 'roles')); setRoles(JSON.stringify(scene.sender.roles ?? []))
       setInput(scene.input); setOutput(JSON.stringify(scene.preview, null, 2)); setProfile(scene.profile)
       setWithFixture(Boolean(scene.fixture)); setSyntheticEndpoint(scene.fixture?.syntheticEndpoint ?? 'test'); setConfig(JSON.stringify(scene.fixture?.config ?? { configVersion: 2 }, null, 2))
       setWithAssertions(Boolean(scene.assertions)); setStatus(scene.assertions?.dispatchStatus ?? ''); setDeliveries(scene.assertions ? JSON.stringify(scene.assertions.deliveries, null, 2) : '')
@@ -79,7 +80,7 @@ export default function ScenarioLabPage() {
           <div className="grid gap-3 sm:grid-cols-2"><Field label="来源父容器类型"><select aria-label="来源父容器类型" className="w-full rounded-md border bg-background p-2" value={parentKind} onChange={e => setParentKind(e.target.value)}><option value="">不提供</option><option value="private">私聊</option><option value="group">群聊</option><option value="channel">频道</option></select></Field><Field label="来源父容器 ID"><Input aria-label="来源父容器 ID" value={parentId} onChange={e => setParentId(e.target.value)} /></Field></div>
           <Field label="来源话题 / 回复串 ID"><Input aria-label="来源话题 / 回复串 ID" value={thread} onChange={e => setThread(e.target.value)} /></Field>
           <p className="text-xs text-muted-foreground">kind、ID、父容器和话题均原样保留；未填写不代表通配。</p>
-          <div className="grid gap-3 sm:grid-cols-2"><Field label="发送者 ID"><Input aria-label="发送者 ID" value={senderId} onChange={e => setSenderId(e.target.value)} /></Field><Field label="发送者名称（可选）"><Input aria-label="发送者名称（可选）" value={senderName} onChange={e => setSenderName(e.target.value)} /></Field></div>
+          <div className="grid gap-3 sm:grid-cols-2"><Field label="发送者 ID"><Input aria-label="发送者 ID" value={senderId} onChange={e => setSenderId(e.target.value)} /></Field><Field label="发送者名称（可选）"><label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={withName} onChange={e => setWithName(e.target.checked)} />提供发送者名称（允许为空）</label><Input aria-label="发送者名称（可选）" disabled={!withName} value={senderName} onChange={e => setSenderName(e.target.value)} /></Field></div>
           <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={withRoles} onChange={e => setWithRoles(e.target.checked)} />明确提供测试角色</label>{withRoles ? <Field label="测试角色 JSON 数组（[] 明确空角色）"><Input aria-label="测试角色" value={roles} onChange={e => setRoles(e.target.value)} /></Field> : <p className="text-xs text-muted-foreground">未提供角色；与明确的空角色数组 [] 保持区别。</p>}
           <Field label="未来入站文本"><Textarea aria-label="未来入站文本" value={input} maxLength={16000} onChange={e => setInput(e.target.value)} /></Field><p className="text-xs text-muted-foreground">仅为未来 PluginTestKit.receive 的输入，不会在此页派发。</p>
         </Card>
