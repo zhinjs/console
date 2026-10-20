@@ -1,0 +1,39 @@
+console-ui/src/components/sidebarMenuIcons.ts
+  s_079f1dc5e6308d::t_f2b406f9edce2b 34,40
+console-ui/src/pages/scenario-lab.tsx
+  s_079f1dc5e6308d::t_08ecd00d99d9ea 1-120
+console-ui/src/pages/scenario-lab/scenario-model.d.mts
+  s_079f1dc5e6308d::t_51eff03d40d329 1-15
+console-ui/src/pages/scenario-lab/scenario-model.mjs
+  s_079f1dc5e6308d::t_34181491879d19 1-182
+console-ui/src/registerBuiltinShell.tsx
+  s_079f1dc5e6308d::t_a51949738d4c15 16,101-102
+tests/fixtures/scenario-lab/README.md
+  s_079f1dc5e6308d::t_6c6f953551ff1a 1-17
+tests/fixtures/scenario-lab/provenance.json
+  s_079f1dc5e6308d::t_0eed2594455530 1-6
+tests/fixtures/scenario-lab/scenario.json
+  s_079f1dc5e6308d::t_a1d2d6720fef77 1-53
+tests/fixtures/scenario-lab/scenario.test.mjs
+  s_079f1dc5e6308d::t_6862976d748c9d 1-30
+tests/scenario-lab-ui.test.mjs
+  s_079f1dc5e6308d::t_21b55c5b76960d 1-29
+tests/scenario-lab.test.mjs
+  s_079f1dc5e6308d::t_bdecb7195e839e 1-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6292437d2d77c9124c0f032cfef939390665de26",
+  "prompts": {},
+  "sessions": {
+    "s_079f1dc5e6308d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a079da-08f2-7112-8660-7d86c654edb0",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
