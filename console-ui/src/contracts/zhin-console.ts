@@ -14,6 +14,7 @@ import {
 export { ENDPOINT_RPC, INBOX_RPC, SIDE_EVENT_PUSH, SIDE_EVENT_RPC }
 
 export const CONSOLE_RPC = {
+  CONFIG_EXPLAIN: 'config:explain',
   SYSTEM_RESTART: 'system:restart',
   WORKROOMS_GET: 'workrooms:get',
   WORKROOMS_SET: 'workrooms:set',

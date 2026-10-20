@@ -73,6 +73,7 @@ function fixture() {
     './source-model.mjs': sourceModel, './schema-model.mjs': schemaModel, './draft-guard.mjs': { createConfigDraftGuard },
     'react-router-dom': { Link: 'a', useSearchParams: () => [new URLSearchParams(), () => {}] },
     'lucide-react': new Proxy({}, { get: () => 'i' }),
+    './ConfigFieldExplanation': { ConfigFieldExplanation: 'field-explanation' },
     './SchemaFieldEditor': { SchemaFieldEditor: 'field-editor' }, '../ui/card': { Card: 'article' }, '../ui/badge': { Badge: 'span' },
     '../ui/button': { Button: 'button' }, '../ui/alert': { Alert: 'aside', AlertDescription: 'p' },
     '../components/ui/card': { Card: 'article', CardContent: 'section' }, '../components/ui/button': { Button: 'button' },

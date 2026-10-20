@@ -6,6 +6,7 @@ export function createConfigDraftGuard() {
  return {
    edited() { dirty = true },
    saved() { dirty = false },
+   get dirty() { return dirty },
    get snapshot() { return snapshot },
    receive(key, value, sourceSnapshot) {
      if (identity !== key) { identity = key; dirty = false }
