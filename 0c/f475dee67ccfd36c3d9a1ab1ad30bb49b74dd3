@@ -1,0 +1,41 @@
+README.md
+  s_079f1dc5e6308d::t_b2693274753308 109-114
+console-ui/src/components/PluginConfigForm/ConfigFieldExplanation.tsx
+  s_079f1dc5e6308d::t_f23f5838f61986 1-49
+console-ui/src/components/PluginConfigForm/config-explanation-model.d.mts
+  s_079f1dc5e6308d::t_f3079e5c341b11 1-10
+console-ui/src/components/PluginConfigForm/config-explanation-model.mjs
+  s_079f1dc5e6308d::t_9600beaeb1ea02 1-65
+console-ui/src/components/PluginConfigForm/draft-guard.d.mts
+  s_079f1dc5e6308d::t_edbbdd6cd843a9 2
+console-ui/src/components/PluginConfigForm/draft-guard.mjs
+  s_079f1dc5e6308d::t_e16fa37cdebc8e 9
+console-ui/src/components/PluginConfigForm/index.tsx
+  s_079f1dc5e6308d::t_6990cd33f3b5bd 16,91,95,99,108
+console-ui/src/contracts/zhin-console.ts
+  s_079f1dc5e6308d::t_d98ea1b7bb6d5d 17
+tests/config-connection-scope.test.mjs
+  s_079f1dc5e6308d::t_4bc1cd6b5fed96 76
+tests/config-explanation-ui.test.mjs
+  s_079f1dc5e6308d::t_297fffdef10a42 1-39
+tests/config-explanation.test.mjs
+  s_079f1dc5e6308d::t_8f1a51727ddf3b 1-49
+tests/fixtures/config-explanation-host.json
+  s_079f1dc5e6308d::t_40f304c8451dce 1-187
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0cf475dee67ccfd36c3d9a1ab1ad30bb49b74dd3",
+  "prompts": {},
+  "sessions": {
+    "s_079f1dc5e6308d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a079da-08f2-7112-8660-7d86c654edb0",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
