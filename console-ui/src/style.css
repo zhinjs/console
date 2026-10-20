@@ -4353,6 +4353,7 @@
 @media (max-width: 767px) {
   .sandbox-container.im-layout {
     height: 100%;
+    flex-direction: column;
     min-height: 0;
     border-right: 0;
     border-left: 0;
@@ -4361,6 +4362,7 @@
   }
 
   .mobile-channel-toggle {
+    flex-shrink: 0;
     border-radius: 0.85rem;
     background: hsl(var(--im-bubble-out));
     box-shadow: 0 12px 26px hsl(var(--im-unread) / 0.22);
@@ -4370,6 +4372,12 @@
     width: min(20rem, 88vw);
     max-width: 88vw;
     box-shadow: 14px 0 36px hsl(var(--im-shadow) / 0.22);
+  }
+
+  /* Override the shared relative-child surface rule only for the drawer. */
+  .im-layout > .channel-sidebar {
+    position: fixed;
+    z-index: 1000;
   }
 
   .im-message-list {

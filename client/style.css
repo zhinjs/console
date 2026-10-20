@@ -2093,12 +2093,14 @@
 @media (max-width: 768px) {
   .sandbox-container.im-layout {
     height: calc(100dvh - 42px);
+    flex-direction: column;
     border-right: 0;
     border-left: 0;
     border-radius: 0;
   }
 
   .mobile-channel-toggle {
+    flex-shrink: 0;
     border-radius: 0.85rem;
     background: hsl(var(--im-bubble-out));
     box-shadow: 0 12px 26px hsl(var(--im-unread) / 0.22);
@@ -2110,6 +2112,13 @@
     max-width: 90vw;
     background: hsl(var(--im-list-bg));
     box-shadow: 14px 0 36px hsl(var(--im-shadow) / 0.22);
+  }
+
+  /* The later IM surface rules position all children relatively. A hidden
+     mobile drawer must stay out of flow so the conversation keeps its height. */
+  .im-layout > .channel-sidebar {
+    position: fixed;
+    z-index: 1000;
   }
 
   .im-message-list {
