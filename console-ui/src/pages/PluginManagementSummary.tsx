@@ -3,7 +3,7 @@ import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { managementLabel, type PluginManagementState } from './plugin-management-model.mjs'
 
-export function PluginManagementSummary({ state, error, readOnly = false }: { readOnly?: boolean; state?: PluginManagementState | null; error?: string | null }) {
+export function PluginManagementSummary({ state, error, readOnly = false, showNavigation = true }: { readOnly?: boolean; showNavigation?: boolean; state?: PluginManagementState | null; error?: string | null }) {
   if (!state) return <p className="text-sm text-muted-foreground">{error ? `状态未确认：${error}` : 'Host 未提供安装与当前代证据，请刷新状态。'}</p>
   const failures = [...state.issues, ...(state.validation?.errors.map(issue => `${issue.path} ${issue.message}`) ?? [])]
   return <section aria-label="插件应用证据" className="space-y-3 text-sm">
@@ -13,6 +13,6 @@ export function PluginManagementSummary({ state, error, readOnly = false }: { re
     {!!state.validation?.missingEnv.length && <p className="text-amber-700">缺少环境变量：{state.validation.missingEnv.join('、')}</p>}
     {failures.length > 0 && <ul className="list-disc pl-5 text-destructive">{failures.map((issue,index) => <li key={index}>{issue}</li>)}</ul>}
     <p className="text-xs text-muted-foreground">安装、应用与平台就绪不代表业务功能已经验证。</p>
-    {state.declared && <div className="flex gap-2"><Button variant="outline" size="sm" asChild><Link to={`/plugins/${encodeURIComponent(state.instanceKey)}`}>插件详情</Link></Button><Button variant="outline" size="sm" asChild><Link to={`/config?plugin=${encodeURIComponent(state.instanceKey)}`}>{readOnly ? '查看配置' : '配置此实例'}</Link></Button></div>}
+    {state.declared && showNavigation && <div className="flex gap-2"><Button variant="outline" size="sm" asChild><Link to={`/plugins/${encodeURIComponent(state.instanceKey)}`}>插件详情</Link></Button><Button variant="outline" size="sm" asChild><Link to={`/config?plugin=${encodeURIComponent(state.instanceKey)}`}>{readOnly ? '查看配置' : '配置此实例'}</Link></Button></div>}
   </section>
 }

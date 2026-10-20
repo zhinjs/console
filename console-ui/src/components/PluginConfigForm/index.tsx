@@ -13,6 +13,8 @@ import { createConfigDraftGuard } from './draft-guard.mjs'
 import { requestConsole } from '../../utils/console-rpc'
 import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../../utils/inbox-cache'
+import { ConfigApplicationEvidence } from './ConfigApplicationEvidence'
+import { configurationSaveSummary, isManagedConfigInstance } from './config-evidence-model.mjs'
 
 interface ConfigValidation { valid: boolean; schemaAvailable?: boolean; errors: Array<{ path: string; message: string }>; missingEnv: string[] }
 
@@ -76,7 +78,7 @@ function PluginConfigFormSession({ pluginName, onSuccess, onOpenYaml, connection
       const result = await form.setConfig(localConfig, guard.current.snapshot)
       if (!currentOperation()) return
       guard.current.saved()
-      setMessage(result.restartRequired ? '配置已保存；系统配置变更需要重启。' : '配置已保存，等待 Host 应用插件配置。')
+      setMessage(`${configurationSaveSummary(result)} 文件版本：${result.revision}`)
       onSuccess?.()
       await form.load()
     } catch (cause) { if (currentOperation()) setSaveError(cause instanceof Error ? cause.message : '保存失败，草稿已保留') }
@@ -103,6 +105,9 @@ function PluginConfigFormSession({ pluginName, onSuccess, onOpenYaml, connection
     {(saveError || form.error) ? <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{saveError ?? form.error}。草稿已保留；请刷新最新版本后确认修改。</AlertDescription></Alert> : null}
     {validation ? <Alert variant={validation.valid && !validation.missingEnv.length ? 'default' : 'destructive'}><AlertDescription><p>{hostValidationSummary(validation)}</p>{validation.errors.map(item => <p key={`${item.path}:${item.message}`}>{item.path}: {item.message}</p>)}{validation.missingEnv.length ? <p>缺少环境变量：{validation.missingEnv.join('、')}。<Link className="underline" to="/env">配置环境变量</Link>后重新校验。</p> : null}</AlertDescription></Alert> : null}
     {message ? <p role="status" className="text-sm">{message}</p> : null}
+    <ConfigApplicationEvidence pluginName={pluginName} revision={form.snapshot?.revision} draftRevision={guard.current.snapshot?.revision}
+      dirty={guard.current.dirty} disabled={saving || form.loading || !!form.error}
+      managed={isManagedConfigInstance(form.snapshot, pluginName)} />
     <fieldset disabled={saving || form.loading} className="space-y-3">{visibleFields.map(([name, field]) => <SchemaFieldEditor key={name} name={name} field={field} value={localConfig[name]} onChange={value => change(name, value)} />)}</fieldset>
     <div className="flex flex-wrap justify-end gap-2 border-t pt-3"><Button variant="outline" onClick={reset} disabled={saving}>撤销草稿</Button><Button variant="outline" onClick={() => void form.load()} disabled={saving || form.loading}>刷新版本（保留草稿）</Button>{onOpenYaml ? <Button variant="outline" onClick={onOpenYaml}>打开完整源码</Button> : null}<Button variant="outline" onClick={() => void handleSave(true)} disabled={saving || draftName !== pluginName || !!form.error}>校验配置</Button><Button onClick={() => void handleSave()} disabled={saving || draftName !== pluginName || form.loading || !!form.error}>{saving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}保存配置</Button></div>
   </Card>
