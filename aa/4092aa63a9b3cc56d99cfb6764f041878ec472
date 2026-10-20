@@ -1,0 +1,75 @@
+tests/config-connection-scope.test.mjs
+  s_079f1dc5e6308d::t_b600f0266f40ff 228-244
+  s_079f1dc5e6308d::t_3de23d110717c8 87
+console-ui/src/pages/config.tsx
+  s_079f1dc5e6308d::t_f4400f9add9d07 430
+  s_079f1dc5e6308d::t_c2b1b28b63dc3b 29,407-408
+  s_079f1dc5e6308d::t_b43dfc882bdaf7 409
+console-ui/src/pages/marketplace.tsx
+  s_079f1dc5e6308d::t_e6cc47b7fc6903 26,28-31,123-127,129-133,274
+  s_079f1dc5e6308d::t_e63c57c9a076cc 260-272
+  s_079f1dc5e6308d::t_e753d185eb920b 25,134-137,273,275-276,278,286,289,300,307-308,319,322,330,340,343,357-359,376,395,792
+console-ui/src/pages/plugin-detail.tsx
+  s_079f1dc5e6308d::t_c2b1b28b63dc3b 18-19,429,450,452
+console-ui/src/pages/welcome-use-case-model.d.mts
+  s_079f1dc5e6308d::t_bf50269be9165d 6
+  s_079f1dc5e6308d::t_c9435a7f21af79 3,12,14-15
+  s_079f1dc5e6308d::t_93275d385523fc 1-2,4-5,7-11,13,16
+tests/welcome-use-case-hook.test.mjs
+  s_079f1dc5e6308d::t_8f1c025f528588 1-85,95-125
+  s_079f1dc5e6308d::t_9afa99e543a271 86-94
+console-ui/src/pages/welcome-use-case.tsx
+  s_079f1dc5e6308d::t_0cc12b62c4a72d 6,13,47-48,67-68
+  s_079f1dc5e6308d::t_f65e83c1c40708 63,73
+  s_079f1dc5e6308d::t_93275d385523fc 1-5,7-12,14-46,49-62,64-66,69-72,74-76
+console-ui/src/components/PluginConfigForm/index.tsx
+  s_079f1dc5e6308d::t_f4400f9add9d07 19,28,57,101-102
+console-ui/src/pages/useWelcomeInspection.ts
+  s_079f1dc5e6308d::t_93275d385523fc 1-11,14-15,17-21,23-24,26-27,29,31-44,46-49,52-53,56,58,60-61
+  s_079f1dc5e6308d::t_c9435a7f21af79 22,25,28,51,57
+  s_079f1dc5e6308d::t_9afa99e543a271 12-13,16,30,50,54-55,59
+  s_079f1dc5e6308d::t_a7f0f6771cd36f 45
+console-ui/src/pages/task-center.tsx
+  s_079f1dc5e6308d::t_c2b1b28b63dc3b 227
+console-ui/src/registerBuiltinShell.tsx
+  s_079f1dc5e6308d::t_a7f0f6771cd36f 15
+  s_079f1dc5e6308d::t_c2b1b28b63dc3b 58-64
+  s_079f1dc5e6308d::t_db74a2985f6e66 57
+console-ui/src/pages/welcome-use-case-model.mjs
+  s_079f1dc5e6308d::t_c9435a7f21af79 5,36,41-42,47-48,52,59,64,66,71-72,74
+  s_079f1dc5e6308d::t_bf50269be9165d 9-11,46,49-51,53-54,73,77
+  s_079f1dc5e6308d::t_0cc12b62c4a72d 43-45,55-58
+  s_079f1dc5e6308d::t_93275d385523fc 1-4,6-8,12-35,37-40,60-63,65,67-70,75-76,78
+  s_079f1dc5e6308d::t_0a3ca22350ea25 79
+tests/welcome-market-scope.test.mjs
+  s_079f1dc5e6308d::t_e087d7f07a659b 1-65
+tests/welcome-use-case.test.mjs
+  s_079f1dc5e6308d::t_ef1018ddc81d89 1-25,27-64,97-102
+  s_079f1dc5e6308d::t_564ad13401e13f 26
+  s_079f1dc5e6308d::t_9afa99e543a271 65,73-74
+  s_079f1dc5e6308d::t_27d80982be23b8 75-87,89-96
+  s_079f1dc5e6308d::t_23901721531659 66-72,88
+console-ui/src/pages/WelcomeFlowContext.tsx
+  s_079f1dc5e6308d::t_e6cc47b7fc6903 2-5,14-36
+  s_079f1dc5e6308d::t_a7f0f6771cd36f 1,6-13,37-41
+tests/fixtures/welcome-flow-empty-env.json
+  s_079f1dc5e6308d::t_6ce648be75716b 1-786
+tests/fixtures/welcome-flow-provider.json
+  s_079f1dc5e6308d::t_0f7f2b9d97f4f7 1-810
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aa4092aa63a9b3cc56d99cfb6764f041878ec472",
+  "prompts": {},
+  "sessions": {
+    "s_079f1dc5e6308d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a079da-08f2-7112-8660-7d86c654edb0",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
