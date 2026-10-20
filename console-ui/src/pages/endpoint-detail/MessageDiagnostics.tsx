@@ -8,6 +8,7 @@ import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
 import { getInboxCacheScope, isInboxCacheScopeActive } from '../../utils/inbox-cache'
 import { CONSOLE_REST } from '../../contracts/zhin-console'
 import { RenderingDiagnostics } from './RenderingDiagnostics'
+import { diagnosticHelpLinks } from './diagnostic-help.mjs'
 import type { ChatRow, DiagnosticConversation, SidebarSelection } from './types'
 import { createDiagnosticRequestGate, diagnosticTarget, conversationDiagnosticTarget, diagnosticConversationKey, diagnosticQuery,
   readMessageDiagnostics, diagnosticLabel, diagnosticAdvice, DIAGNOSTIC_RETENTION, type MessageDiagnostic } from './message-diagnostics.mjs'
@@ -98,6 +99,10 @@ export function MessageDiagnosticsAction({ message, endpoint, selection }: { mes
               <details><summary className="cursor-pointer text-muted-foreground">实际目标身份</summary><pre className="whitespace-pre-wrap break-all">{JSON.stringify(delivery.conversation, null, 2)}</pre></details>
             </div>)}</div>
             {diagnosticAdvice(record).map(advice => <p key={advice} className="text-xs leading-relaxed text-muted-foreground">{advice}</p>)}
+            <nav aria-label="对应问题的处理方法" className="space-y-1 border-t pt-2 text-xs">
+              <p className="font-medium">查看处理方法</p>
+              {diagnosticHelpLinks(record).map(link => <a key={link.id} href={link.href} target="_blank" rel="noopener noreferrer" className="block underline underline-offset-2">{link.label}</a>)}
+            </nav>
             <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">记录身份与版本</summary><pre className="whitespace-pre-wrap break-all">{JSON.stringify({ id: record.id, generation: record.generation, messageId: record.messageId, conversation: record.conversation }, null, 2)}</pre></details>
           </article>)}
         </>}
