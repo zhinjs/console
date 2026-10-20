@@ -603,3 +603,51 @@ test('deleting a row with invalid JSON does not transfer its text to an equal-va
   assert.notEqual(fields()[1].props.path, first.path); assert.notEqual(fields()[1].props.path, second.path)
   assert.ok(!drafts.json.has(first.path)); f.runtime.unmount()
 })
+
+test('deleting and recreating a dynamic key removes its invalid JSON draft but preserves its sibling drafts', async () => {
+  const f = fixture(), json = fixture(), drafts = { json: new Map(), unions: new Map() }, flags = []
+  let value = { entry: null, sibling: { keep: true } }
+  const props = () => ({ name: 'dict', path: '$/dict', field: { type: 'dict', inner: { type: 'any' } }, value, drafts, onValidityChange: (path, invalid) => flags.push({ path, invalid }), onChange: next => { value = next } })
+  f.runtime.mount(() => f.editor.ObjectValueEditor(props()))
+  const entry = () => elements(f.runtime.value).find(item => item.type === f.editor.SchemaFieldEditor && item.props.name === 'entry').props
+  const removedPath = entry().path, siblingPath = elements(f.runtime.value).find(item => item.type === f.editor.SchemaFieldEditor && item.props.name === 'sibling').props.path
+  const siblingDraft = { text: '{"keep":true}', value: { keep: true }, error: null }; drafts.json.set(siblingPath, siblingDraft)
+  json.runtime.mount(() => json.editor.JsonValueEditor(entry())); elements(json.runtime.value).find(item => item.type === 'code-editor').props.onChange('{'); await json.runtime.settle(); json.runtime.unmount()
+  button(f.runtime.value, '删除键 entry').props.onClick(); f.runtime.render()
+  assert.equal(Object.hasOwn(value, 'entry'), false); assert.equal(drafts.json.has(removedPath), false)
+  assert.equal(drafts.json.get(siblingPath), siblingDraft); assert.deepEqual(value.sibling, { keep: true })
+  elements(f.runtime.value).find(item => item.type === 'input').props.onChange({ target: { value: 'entry' } }); await f.runtime.settle(); button(f.runtime.value, '添加键值').props.onClick(); f.runtime.render()
+  assert.equal(value.entry, null); json.runtime.remount(() => json.editor.JsonValueEditor(entry())); await json.runtime.settle()
+  assert.equal(elements(json.runtime.value).find(item => item.type === 'code-editor').props.value, 'null'); assert.equal(flags.at(-1).invalid, false)
+  json.runtime.unmount(); f.runtime.unmount()
+})
+
+test('recreating a deleted union dictionary key selects its new initial branch without resurrecting the old branch cache', async () => {
+  const f = fixture(), union = fixture(), drafts = { json: new Map(), unions: new Map() }
+  const definition = { type: 'union', default: { kind: 'a', text: 'new' }, list: [{ type: 'object', object: { kind: { type: 'const', value: 'a' }, text: { type: 'string' } } }, { type: 'object', object: { kind: { type: 'const', value: 'b' }, count: { type: 'number' } } }] }
+  let value = { entry: { kind: 'b', count: 99 }, sibling: { kind: 'a', text: 'keep' } }
+  const props = () => ({ name: 'dict', path: '$/dict', field: { type: 'dict', inner: definition }, value, drafts, onChange: next => { value = next } })
+  f.runtime.mount(() => f.editor.ObjectValueEditor(props()))
+  const entry = () => elements(f.runtime.value).find(item => item.type === f.editor.SchemaFieldEditor && item.props.name === 'entry').props
+  union.runtime.mount(() => union.editor.UnionValueEditor(entry())); assert.equal(elements(union.runtime.value).find(item => item.type === 'select').props.value, '1'); union.runtime.unmount()
+  button(f.runtime.value, '删除键 entry').props.onClick(); f.runtime.render()
+  elements(f.runtime.value).find(item => item.type === 'input').props.onChange({ target: { value: 'entry' } }); await f.runtime.settle(); button(f.runtime.value, '添加键值').props.onClick(); f.runtime.render()
+  union.runtime.remount(() => union.editor.UnionValueEditor(entry())); assert.equal(elements(union.runtime.value).find(item => item.type === 'select').props.value, '0')
+  assert.deepEqual(value, { sibling: { kind: 'a', text: 'keep' }, entry: { kind: 'a', text: 'new' } }); union.runtime.unmount(); f.runtime.unmount()
+})
+
+test('explicitly unsetting and re-adding an optional object cannot revive its discarded invalid JSON child draft', async () => {
+  const object = fixture(), json = fixture(), drafts = { json: new Map(), unions: new Map() }, flags = []
+  const definition = { type: 'object', default: { raw: null }, object: { raw: { type: 'any' } }, additional: false }
+  let value = { raw: null }
+  const props = () => ({ name: 'optional', path: '$/optional', field: definition, value, drafts, onValidityChange: (path, invalid) => flags.push({ path, invalid }), onChange: next => { value = next } })
+  object.runtime.mount(() => object.editor.ObjectValueEditor(props()))
+  const raw = () => elements(object.runtime.value).find(item => item.type === object.editor.SchemaFieldEditor && item.props.name === 'raw').props
+  json.runtime.mount(() => json.editor.JsonValueEditor(raw())); elements(json.runtime.value).find(item => item.type === 'code-editor').props.onChange('{'); await json.runtime.settle()
+  button(object.editor.SchemaFieldEditor(props()), '取消此项设置（使用声明默认值）').props.onClick(); object.runtime.render(); json.runtime.unmount()
+  assert.equal(value, undefined)
+  button(object.runtime.value, '添加对象配置').props.onClick(); object.runtime.render(); assert.deepEqual(value, { raw: null })
+  json.runtime.remount(() => json.editor.JsonValueEditor(raw())); await json.runtime.settle()
+  assert.equal(elements(json.runtime.value).find(item => item.type === 'code-editor').props.value, 'null'); assert.equal(flags.at(-1).invalid, false)
+  json.runtime.unmount(); object.runtime.unmount()
+})

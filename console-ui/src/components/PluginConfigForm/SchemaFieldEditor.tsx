@@ -27,6 +27,12 @@ function branchLabel(branch: SchemaField, parent: SchemaField) {
 }
 function inheritedField(parent: SchemaField, child: SchemaField): SchemaField { return parent.secret ? { ...child, secret: true } : child }
 
+/** Explicit removal discards only that value's cached drafts, including nested branch and JSON state. */
+function clearEditorDraftSubtree(path: string, drafts?: SchemaEditorDrafts, onValidityChange?: FieldEditorProps['onValidityChange']) {
+  for (const key of drafts?.json.keys() ?? []) if (key === path || key.startsWith(`${path}/`)) { drafts?.json.delete(key); onValidityChange?.(key, false) }
+  for (const key of drafts?.unions.keys() ?? []) if (key === path || key.startsWith(`${path}/`)) drafts?.unions.delete(key)
+}
+
 /** Multiline credentials retain their exact text; revealing them requires an explicit action. */
 function SecretTextEditor({ name, value, onChange, id }: FieldEditorProps & { id: string }) {
   const [reveal, setReveal] = useState(false)
@@ -61,7 +67,7 @@ function ObjectValueEditor(props: FieldEditorProps) {
   const dynamic = field.type === 'dict' ? field.inner || { type: 'any' } : field.additional
   const extras = Object.keys(object).filter(key => !Object.hasOwn(fields, key))
   return <div className="space-y-3 border-l pl-3">{Object.entries(fields).map(([key, child]) => <SchemaFieldEditor {...props} key={key} path={`${path}/${JSON.stringify(key)}`} name={key} field={inheritedField(field, child)} value={object[key]} onChange={next => onChange(updateObjectField(object, key, next))} />)}
-    {extras.map(key => <div key={key} className="space-y-2"><SchemaFieldEditor {...props} path={`${path}/${JSON.stringify(key)}`} name={key} field={inheritedField(field, dynamic || { type: 'any', reason: 'Schema 未声明此保存字段；原值保留，最终由 Host 校验。' })} value={object[key]} onChange={next => onChange(updateObjectField(object, key, next))} /><Button type="button" variant="outline" size="sm" onClick={() => onChange(updateObjectField(object, key, undefined))}>删除键 {key}</Button></div>)}
+    {extras.map(key => <div key={key} className="space-y-2"><SchemaFieldEditor {...props} path={`${path}/${JSON.stringify(key)}`} name={key} field={inheritedField(field, dynamic || { type: 'any', reason: 'Schema 未声明此保存字段；原值保留，最终由 Host 校验。' })} value={object[key]} onChange={next => onChange(updateObjectField(object, key, next))} /><Button type="button" variant="outline" size="sm" onClick={() => { clearEditorDraftSubtree(`${path}/${JSON.stringify(key)}`, props.drafts, props.onValidityChange); onChange(updateObjectField(object, key, undefined)) }}>删除键 {key}</Button></div>)}
     {!Object.keys(fields).length && !extras.length && <p className="text-xs text-muted-foreground">{dynamic ? '当前为空对象，可添加键值。' : '此项无需配置字段。'}</p>}
     {dynamic && <div className="flex flex-wrap gap-2"><Input aria-label="新增字典键" value={keyDraft} onChange={event => { setKeyDraft(event.target.value); setKeyError(null) }} /><Button type="button" variant="outline" size="sm" onClick={() => {
       if (!keyDraft || Object.hasOwn(object, keyDraft) || Object.hasOwn(fields, keyDraft) || props.reservedKeys?.includes(keyDraft) || ['__proto__', 'prototype', 'constructor'].includes(keyDraft)) { setKeyError('键不能为空、不能重复或使用保留名称。'); return }
@@ -82,11 +88,7 @@ function SequenceValueEditor(props: FieldEditorProps) {
   const rowPath = (id: number) => `${path}/row:${id}`
   const remove = (index: number) => {
     const removed = rows.current.ids.splice(index, 1)[0]
-    if (removed !== undefined) {
-      const prefix = rowPath(removed)
-      for (const key of drafts?.json.keys() ?? []) if (key === prefix || key.startsWith(`${prefix}/`)) { drafts?.json.delete(key); onValidityChange?.(key, false) }
-      for (const key of drafts?.unions.keys() ?? []) if (key === prefix || key.startsWith(`${prefix}/`)) drafts?.unions.delete(key)
-    }
+    if (removed !== undefined) clearEditorDraftSubtree(rowPath(removed), drafts, onValidityChange)
     onChange(items.filter((_, i) => i !== index))
   }
   return <div className="space-y-3">{value !== undefined && !Array.isArray(value) && <JsonValueEditor {...props} />}{indexes.map(index => {
@@ -153,6 +155,6 @@ export function SchemaFieldEditor({ name, field, value, onChange, allowEnvironme
       : field.type === 'string' ? value !== undefined && typeof value !== 'string' ? <JsonValueEditor {...nested} /> : <Input id={id} type={field.secret || field.component === 'password' ? 'password' : 'text'} autoComplete="off" value={value === undefined ? '' : String(value)} onChange={event => onChange(event.target.value)} /> : <JsonValueEditor {...nested} />}
     {preservedOption ? <p className="break-all text-xs text-muted-foreground">{environmentOption ? '当前为环境变量引用，展开值未读取。' : <>当前保存值不在选项中{secret ? '。' : `：${JSON.stringify(value)?.slice(0, 200)}${(JSON.stringify(value)?.length ?? 0) > 200 ? '…' : ''}。`}</>}未选择替换时会原样保留；可明确选择新值，或打开完整源码编辑。保存仍需 Host 校验。</p> : null}
     {numericIssue ? <p role="alert" className="text-xs text-destructive">{numericIssue}；以 Host 校验结果为准。</p> : null}
-    {!conversationScope && !['const', 'constraint'].includes(field.type) && value !== undefined ? <Button type="button" variant="ghost" size="sm" onClick={() => onChange(undefined)}>取消此项设置{Object.hasOwn(field, 'default') ? '（使用声明默认值）' : ''}</Button> : null}
+    {!conversationScope && !['const', 'constraint'].includes(field.type) && value !== undefined ? <Button type="button" variant="ghost" size="sm" onClick={() => { clearEditorDraftSubtree(path, drafts, onValidityChange); onChange(undefined) }}>取消此项设置{Object.hasOwn(field, 'default') ? '（使用声明默认值）' : ''}</Button> : null}
   </div>
 }
