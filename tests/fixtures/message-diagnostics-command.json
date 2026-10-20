@@ -1,0 +1,86 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": "4d83942e-f070-47fd-8565-e1907dfbc0e5",
+      "generation": 0,
+      "conversation": {
+        "endpoint": {
+          "id": "root\u0000zhin.adapter\u0000memory",
+          "adapter": "memory"
+        },
+        "kind": "private",
+        "id": "result-room"
+      },
+      "messageId": "platform-message",
+      "startedAt": 1792400600506,
+      "status": "completed",
+      "truncated": false,
+      "steps": [
+        {
+          "stage": "received",
+          "status": "accepted",
+          "at": 1792400600506
+        },
+        {
+          "stage": "origin",
+          "status": "human",
+          "at": 1792400600506
+        },
+        {
+          "stage": "handlers",
+          "status": "started",
+          "at": 1792400600506
+        },
+        {
+          "stage": "handlers",
+          "status": "completed",
+          "at": 1792400600506
+        },
+        {
+          "stage": "prefix",
+          "status": "matched",
+          "at": 1792400600506
+        },
+        {
+          "stage": "dispatch",
+          "status": "started",
+          "at": 1792400600506
+        },
+        {
+          "stage": "dispatch",
+          "status": "executed",
+          "at": 1792400600506
+        },
+        {
+          "stage": "delivery",
+          "status": "sent",
+          "at": 1792400600506
+        }
+      ],
+      "deliveries": [
+        {
+          "conversation": {
+            "endpoint": {
+              "id": "root\u0000zhin.adapter\u0000memory",
+              "adapter": "memory"
+            },
+            "kind": "private",
+            "id": "result-room"
+          },
+          "status": "sent",
+          "rendering": {
+            "forms": [
+              "text"
+            ],
+            "fallbacks": []
+          }
+        }
+      ],
+      "route": "command",
+      "command": "gh issue list",
+      "dispatchStatus": "executed",
+      "endedAt": 1792400600506
+    }
+  ]
+}

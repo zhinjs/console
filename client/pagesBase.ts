@@ -14,6 +14,7 @@ const SHELL_ROUTE_NAMES = new Set([
   "console",
   "sandbox",
   "cron",
+  "tasks",
   "env",
   "files",
   "database",

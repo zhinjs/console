@@ -286,18 +286,28 @@ export async function apiFetch(
   input: RequestInfo | URL,
   init?: RequestInit,
 ): Promise<Response> {
+  const apiBase = getApiBase()
   const token = getToken()
   const headers = new Headers(init?.headers)
-  if (token) headers.set('Authorization', `Bearer ${token}`)
-
   const url =
     typeof input === 'string' && input.startsWith('/')
-      ? resolveApiUrl(input)
+      ? `${apiBase}${input}`
       : input
+  const belongsToHost = requestBelongsToHost(url, apiBase)
+  if (token && belongsToHost) headers.set('Authorization', `Bearer ${token}`)
 
   const res = await fetch(url, { ...init, headers })
-  if (res.status === 401) {
+  // An old connection's response must not invalidate a newer Host or credential.
+  if (res.status === 401 && belongsToHost && token && getApiBase() === apiBase && getToken() === token) {
     notifyAuthRequired()
   }
   return res
+}
+
+function requestBelongsToHost(input: RequestInfo | URL, apiBase: string): boolean {
+  try {
+    const base = new URL(`${apiBase}/`)
+    const target = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url, base)
+    return target.origin === base.origin && target.pathname.startsWith(base.pathname)
+  } catch { return false }
 }

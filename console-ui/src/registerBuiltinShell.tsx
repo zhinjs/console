@@ -11,6 +11,7 @@ import FileManagePage from './pages/files'
 import DatabasePage from './pages/database/database-page'
 import CronPage from './pages/cron'
 import MarketplacePage from './pages/marketplace'
+import TaskCenterPage from './pages/task-center'
 import IntrospectionPage from './pages/introspection'
 import AgentWorkbenchPage from './pages/agent-workbench'
 import AgentSessionsPage from './pages/agent-sessions'
@@ -40,6 +41,15 @@ export function registerBuiltinConsolePages() {
     icon: 'FileText',
     element: <LogsPage />,
     meta: { group: NAV_GROUPS.SYSTEM, order: 1, fullWidth: true },
+  })
+
+  app.addRoute({
+    path: '/tasks',
+    name: '任务中心',
+    parent: null,
+    icon: 'ClipboardList',
+    element: <TaskCenterPage />,
+    meta: { group: NAV_GROUPS.AUTOMATION, order: -1 },
   })
 
   app.addRoute({
