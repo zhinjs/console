@@ -31,11 +31,13 @@ import {
   Workflow,
   Wrench,
   Circle,
+  FlaskConical,
 } from "lucide-react";
 
 /** 内置 registerBuiltinShell 与各插件常用名；未知名称回退 Circle */
 const SIDEBAR_LUCIDE_BY_NAME: Record<string, LucideIcon> = {
   Home,
+  FlaskConical,
   Bot,
   FileText,
   Clock,

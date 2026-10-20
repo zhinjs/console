@@ -14,6 +14,7 @@ import * as sourceValidation from '../console-ui/src/pages/config-source-validat
 import * as configNavigation from '../console-ui/src/pages/config-navigation.mjs'
 import { numericFieldIssue } from '../console-ui/src/components/PluginConfigForm/numeric-validation.mjs'
 import { isConversationScopeField } from '../console-ui/src/components/PluginConfigForm/conversation-scope-model.mjs'
+import * as configEvidenceModel from '../console-ui/src/components/PluginConfigForm/config-evidence-model.mjs'
 
 const require = createRequire(import.meta.url)
 const files = await Promise.all(['hooks/useConfigSource.ts', 'components/PluginConfigForm/usePluginConfigDraft.ts', 'components/PluginConfigForm/index.tsx', 'pages/config.tsx', 'components/PluginConfigForm/SchemaFieldEditor.tsx']
@@ -76,8 +77,11 @@ function fixture() {
     './numeric-validation.mjs': { numericFieldIssue }, './conversation-scope-model.mjs': { isConversationScopeField }, './ConversationScopeEditor': { ConversationScopeEditor: 'scope-editor' },
     '../ui/input': { Input: 'input' }, '../ui/textarea': { Textarea: 'textarea' }, '../ui/switch': { Switch: 'switch' },
     '../ui/select': { Select: 'select-root', SelectContent: 'select-content', SelectItem: 'option', SelectTrigger: 'select-trigger', SelectValue: 'select-value' },
+    './config-evidence-model.mjs': configEvidenceModel, './ConfigApplicationEvidence': { ConfigApplicationEvidence: 'config-evidence' },
+    '../components/PluginConfigForm/config-evidence-model.mjs': configEvidenceModel,
     'react-router-dom': { Link: 'a', useSearchParams: () => [new URLSearchParams(), () => {}] },
     'lucide-react': new Proxy({}, { get: () => 'i' }),
+    './ConfigFieldExplanation': { ConfigFieldExplanation: 'field-explanation' },
     './SchemaFieldEditor': { SchemaFieldEditor: 'field-editor' }, '../ui/card': { Card: 'article' }, '../ui/badge': { Badge: 'span' },
     '../ui/button': { Button: 'button' }, '../ui/alert': { Alert: 'aside', AlertDescription: 'p' },
     '../components/ui/card': { Card: 'article', CardContent: 'section' }, '../components/ui/button': { Button: 'button' },
@@ -89,6 +93,7 @@ function fixture() {
     '../components/toast': { useToast: () => ({ success: message => successes.push(message), error: message => errors.push(message) }) },
     '../utils/read-error.mjs': { readErrorSummary: value => value }, '../utils/demo-mode': { isDemoMode: () => false },
     './config-source-draft.mjs': sourceDraftModel, './config-source-validation.mjs': sourceValidation, './config-navigation.mjs': configNavigation,
+    './WelcomeFlowContext': { WelcomeFlowContext: 'welcome-flow-context' },
   }
   function compile(source) {
     const module = { exports: {} }
@@ -294,6 +299,23 @@ test('a captured form save handler cannot validate or write after the connection
   const f = fixture(), tree = await loadedForm(f), save = button(tree, '保存配置'), before = f.calls.length
   f.switchHost(); save.props.onClick(); await f.runtime.settle()
   assert.equal(f.calls.length, before); f.runtime.unmount()
+})
+
+test('purpose fields expose optional welcome inputs without dropping other fields from the original CAS save', async () => {
+  const f = fixture(), connectionScope = f.authority.current()
+  const original = { welcomeMessage: 'original', welcomeConversations: [], keywordReply: true, commandNamespace: 'alpha' }
+  f.runtime.mount(() => f.form.PluginConfigFormSession({ pluginName: 'group-suite', connectionScope, purposeFields: ['welcomeMessage', 'welcomeConversations'] }))
+  f.answer('config:get-source', { ...snapshot('original'), source: JSON.stringify({ 'group-suite': original }) })
+  f.answer('schema:get', { type: 'object', object: { ...schema.object, keywordReply: { type: 'boolean' }, commandNamespace: { type: 'string' } } })
+  await f.runtime.settle()
+  const editors = elements(f.runtime.value).filter(item => item.type === 'field-editor')
+  assert.deepEqual(editors.map(item => item.props.name), ['welcomeMessage', 'welcomeConversations'])
+  editors[0].props.onChange('updated welcome'); await f.runtime.settle()
+  button(f.runtime.value, '保存配置').props.onClick(); f.answer('plugin:validate-config', valid); await f.runtime.settle()
+  const write = f.calls.find(item => item.input.type === 'config:replace-source')
+  assert.equal(write.input.expectedRevision, 'same-revision')
+  assert.deepEqual(JSON.parse(write.input.source)['group-suite'], { ...original, welcomeMessage: 'updated welcome' })
+  f.runtime.unmount()
 })
 
 test('a late validation result cannot submit a config to another credential or apply success to its page', async () => {

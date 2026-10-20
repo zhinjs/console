@@ -15,6 +15,8 @@ import { validatePluginDetail, requirePluginUpdate, pluginDiagnosticSummary } fr
 import { JsonViewer } from './introspection/JsonViewer'
 import { PluginManagementSummary } from './PluginManagementSummary'
 import { isDemoMode } from '../utils/demo-mode'
+import { WelcomeFlowContext } from './WelcomeFlowContext'
+import { welcomeConfigUrl } from './welcome-use-case-model.mjs'
 import { validateManagementState, managementLabel, canApplyPlugin, canVerifyPlugin, captureVerificationPlan, verifyApprovedPlugin, verificationSummary, mutationRequest, applyRequest, waitForManagementState, waitForEnabledManagementState, verificationIsCurrent, type PluginManagementState, type VerificationPlan, type VerificationResult, type MutationPlan } from './plugin-management-model.mjs'
 
 
@@ -424,7 +426,7 @@ export default function PluginDetailPage() {
                 <Link to={`/logs?q=${encodeURIComponent(plugin.name)}`}><Activity />相关日志</Link>
               </Button>
               <Button variant="outline" size="sm" asChild>
-                <Link to={`/config?plugin=${encodeURIComponent(plugin.instanceKey)}`}>
+                <Link to={searchParams.get('useCase') === 'group-welcome' ? welcomeConfigUrl(plugin.instanceKey) : `/config?plugin=${encodeURIComponent(plugin.instanceKey)}`}>
                   <Settings className="w-4 h-4 mr-1" />编辑配置
                 </Link>
               </Button>
@@ -445,8 +447,9 @@ export default function PluginDetailPage() {
         }}>已核对外部结果</Button>
       </AlertDescription></Alert>}
       <Card><CardHeader><CardTitle className="text-base">安装与应用状态</CardTitle></CardHeader><CardContent><PluginManagementSummary state={plugin.management} error={plugin.managementError} readOnly={!writable} /><Button variant="outline" size="sm" className="mt-3" disabled={actionLoading} onClick={() => void fetchPluginDetail(plugin.instanceKey)}>刷新状态证据</Button></CardContent></Card>
+      {searchParams.get('useCase') === 'group-welcome' && <WelcomeFlowContext instanceKey={plugin.instanceKey} kind="detail" />}
       {writable && (
-        <Card className="border-border/80">
+      <Card className="border-border/80">
           <CardContent className="p-4 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
