@@ -1,0 +1,19 @@
+console-ui/src/pages/scenario-lab.tsx
+  s_079f1dc5e6308d::t_65e82fbc149cc4 27,50,56,63,83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "89a74a1336e32a2eec3a2d7301f604c5c67693d6",
+  "prompts": {},
+  "sessions": {
+    "s_079f1dc5e6308d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a079da-08f2-7112-8660-7d86c654edb0",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
