@@ -1,0 +1,75 @@
+tests/conversation-scope-ui.test.mjs
+  s_079f1dc5e6308d::t_04c0ee2be1b5a4 55-63
+  s_079f1dc5e6308d::t_f95361412fa6d1 17
+tests/plugin-config-form-state.test.mjs
+  s_079f1dc5e6308d::t_49a0da3a56b281 16-18
+console-ui/src/components/PluginConfigForm/schema-model.mjs
+  s_079f1dc5e6308d::t_900ce1de03f6f4 3,35,54-58
+  s_079f1dc5e6308d::t_f8e96d5bc5b8c0 14-15,28-34,38-53,59-78
+tests/plugin-config-nested.test.mjs
+  s_079f1dc5e6308d::t_ff61d8b62555da 47,49,53
+console-ui/src/components/PluginConfigForm/schema-model.d.mts
+  s_079f1dc5e6308d::t_f8e96d5bc5b8c0 5-6
+console-ui/src/components/PluginConfigForm/draft-guard.mjs
+  s_079f1dc5e6308d::t_f8e96d5bc5b8c0 12
+console-ui/src/components/PluginConfigForm/form-state.mjs
+  s_079f1dc5e6308d::t_49a0da3a56b281 6
+tests/config-option-preservation.test.mjs
+  s_079f1dc5e6308d::t_ff61d8b62555da 19
+console-ui/src/components/PluginConfigForm/SchemaFieldEditor.tsx
+  s_079f1dc5e6308d::t_9f4fa3348ecf27 22-27,29-34,112,118,135,152
+  s_079f1dc5e6308d::t_900ce1de03f6f4 141,156
+  s_079f1dc5e6308d::t_08f1fa665520c1 5,17,67,93,123
+  s_079f1dc5e6308d::t_556eb9acebe132 1,4,6,14,16,18-21,35-39,41-45,47-50,52-62,65-66,68-73,76-79,92,102-108,110-111,117,120-122,148
+  s_079f1dc5e6308d::t_9069d04903af57 74-75,80-91,94-101
+  s_079f1dc5e6308d::t_fdf5168e9a868d 127,150-151
+  s_079f1dc5e6308d::t_ff61d8b62555da 109,113-116
+  s_079f1dc5e6308d::t_10abf255003af1 28,40,46,51,63-64,119,149,153
+console-ui/src/components/PluginConfigForm/index.tsx
+  s_079f1dc5e6308d::t_900ce1de03f6f4 55,111
+  s_079f1dc5e6308d::t_ec2e146180e568 79,85
+  s_079f1dc5e6308d::t_6c3730a82c3bb2 125
+  s_079f1dc5e6308d::t_86d3d7ca6406e2 140
+  s_079f1dc5e6308d::t_08f1fa665520c1 1,4,7-8,20,29,31,33-38,48,52-53,56-57,60-66,68-70,72,75,77-78,80-84,88,110,112,117-119,123,130-139
+console-ui/src/components/PluginConfigForm/types.ts
+  s_079f1dc5e6308d::t_f8e96d5bc5b8c0 9,18-22,36-41,47
+tests/config-connection-scope.test.mjs
+  s_079f1dc5e6308d::t_d2b7b6bec102f3 104,351-367
+  s_079f1dc5e6308d::t_ec2e146180e568 495-509,538
+  s_079f1dc5e6308d::t_9f4fa3348ecf27 105,510-537
+  s_079f1dc5e6308d::t_ca2296c5144112 549
+  s_079f1dc5e6308d::t_1d5fc31095222d 494,539-548,550-581
+  s_079f1dc5e6308d::t_9c458dbe4b47f0 335-336,340,342,345,377,385-429,433-493
+  s_079f1dc5e6308d::t_ff61d8b62555da 79
+  s_079f1dc5e6308d::t_97da6baa93521f 67,430-432
+README.md
+  s_079f1dc5e6308d::t_36d2143eb9ff26 90
+console-ui/src/pages/config-navigation.d.mts
+  s_079f1dc5e6308d::t_32335f6c65b09f 1-2
+console-ui/src/pages/config-navigation.mjs
+  s_079f1dc5e6308d::t_b31cca671b0a14 1-4,6-7,9
+console-ui/src/pages/config.tsx
+  s_079f1dc5e6308d::t_d5e602e88a2817 2-3,5,15,23,38-39,57-61,118,139-141,146,149,153-155,159-167,169-174,176,178
+console-ui/src/pages/files/code-editor.tsx
+  s_079f1dc5e6308d::t_e1d08b445ff83d 7,10-13,16,19-22,39,51,72-75,84
+tests/config-navigation.test.mjs
+  s_079f1dc5e6308d::t_4d14ef46310e92 3,5-13
+tests/config-source-draft.test.mjs
+  s_079f1dc5e6308d::t_a69c3eb8ed1140 42-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3565b97d8596e241c1d516d8ddbfeac380545840",
+  "prompts": {},
+  "sessions": {
+    "s_079f1dc5e6308d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a079da-08f2-7112-8660-7d86c654edb0",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
