@@ -12,9 +12,11 @@ import { createConfigDraftGuard } from '../console-ui/src/components/PluginConfi
 import * as sourceDraftModel from '../console-ui/src/pages/config-source-draft.mjs'
 import * as sourceValidation from '../console-ui/src/pages/config-source-validation.mjs'
 import * as configNavigation from '../console-ui/src/pages/config-navigation.mjs'
+import { numericFieldIssue } from '../console-ui/src/components/PluginConfigForm/numeric-validation.mjs'
+import { isConversationScopeField } from '../console-ui/src/components/PluginConfigForm/conversation-scope-model.mjs'
 
 const require = createRequire(import.meta.url)
-const files = await Promise.all(['hooks/useConfigSource.ts', 'components/PluginConfigForm/usePluginConfigDraft.ts', 'components/PluginConfigForm/index.tsx', 'pages/config.tsx']
+const files = await Promise.all(['hooks/useConfigSource.ts', 'components/PluginConfigForm/usePluginConfigDraft.ts', 'components/PluginConfigForm/index.tsx', 'pages/config.tsx', 'components/PluginConfigForm/SchemaFieldEditor.tsx']
   .map(path => readFile(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')))
 
 /** Execute the production hooks and handlers unchanged; drive hook scheduling and RPC boundaries deterministically. */
@@ -62,7 +64,7 @@ function fixture() {
   const successes = [], errors = []
   const requestConsole = input => new Promise((resolve, reject) => { calls.push({ input, scope: authority.current(), resolve, reject, answered: false }) })
   const mocks = {
-    react: runtime.hooks,
+    react: { ...runtime.hooks, useId: () => 'test-field' },
     '@zhin.js/client': { getWebSocketManager: () => ({ isConnected: () => true, onConnectionChange: () => () => {} }) },
     './config-error-state.mjs': { configErrorReducer },
     '../utils/console-rpc': { requestConsole }, '../../utils/console-rpc': { requestConsole },
@@ -71,6 +73,9 @@ function fixture() {
     '../../utils/inbox-cache': { getInboxCacheScope: () => authority.current(), isInboxCacheScopeActive: scope => authority.active(scope) },
     '../pages/endpoint-detail/message-diagnostics.mjs': { createDiagnosticRequestGate }, '../../pages/endpoint-detail/message-diagnostics.mjs': { createDiagnosticRequestGate },
     './source-model.mjs': sourceModel, './schema-model.mjs': schemaModel, './draft-guard.mjs': { createConfigDraftGuard },
+    './numeric-validation.mjs': { numericFieldIssue }, './conversation-scope-model.mjs': { isConversationScopeField }, './ConversationScopeEditor': { ConversationScopeEditor: 'scope-editor' },
+    '../ui/input': { Input: 'input' }, '../ui/textarea': { Textarea: 'textarea' }, '../ui/switch': { Switch: 'switch' },
+    '../ui/select': { Select: 'select-root', SelectContent: 'select-content', SelectItem: 'option', SelectTrigger: 'select-trigger', SelectValue: 'select-value' },
     'react-router-dom': { Link: 'a', useSearchParams: () => [new URLSearchParams(), () => {}] },
     'lucide-react': new Proxy({}, { get: () => 'i' }),
     './SchemaFieldEditor': { SchemaFieldEditor: 'field-editor' }, '../ui/card': { Card: 'article' }, '../ui/badge': { Badge: 'span' },
@@ -96,7 +101,8 @@ function fixture() {
   const form = compile(`${files[2]}\nexport { PluginConfigFormSession };`)
   mocks['../hooks/useConfigSource'] = source; mocks['../components/PluginConfigForm'] = form
   const page = compile(`${files[3]}\nexport { EditableConfigPage, EditableConfigSession, GeneralConfigForm };`)
-  return { runtime, calls, source, plugin, form, page, authority, successes, errors,
+  const editor = compile(files[4])
+  return { runtime, calls, source, plugin, form, page, editor, authority, successes, errors,
     switchHost() { connection = { host: 'https://host-b', credential: 'credential-b' } },
     switchCredential() { connection = { ...connection, credential: 'credential-b' } },
     logout() { connection = undefined },
@@ -110,6 +116,7 @@ const snapshot = label => ({ source: JSON.stringify({ 'group-suite': { welcomeMe
   format: 'json', revision: 'same-revision', configKeys: ['group-suite'], configPaths: { 'group-suite': ['group-suite'] } })
 const schema = { type: 'object', object: { welcomeMessage: { type: 'string' }, welcomeConversations: { type: 'list', inner: { type: 'object', object: {} } } } }
 const valid = { valid: true, schemaAvailable: true, errors: [], missingEnv: [] }
+const calendar = JSON.parse(await readFile(new URL('./fixtures/calendar-config-provider.json', import.meta.url), 'utf8'))
 function elements(value) { return value && typeof value === 'object' ? [value, ...[value.props?.children, value.props?.actions].flat(Infinity).flatMap(elements)] : [] }
 const label = element => element && typeof element === 'object'
   ? [element.props?.children].flat(Infinity).map(value => typeof value === 'string' ? value : label(value)).join('') : ''
@@ -130,6 +137,71 @@ async function loadedForm(f, onSuccess = () => {}) {
   f.answer('config:get-source', snapshot('A')); f.answer('schema:get', schema); await f.runtime.settle()
   assert.ok(button(f.runtime.value, '保存配置')); return f.runtime.value
 }
+
+async function loadedCalendarForm(source = calendar.source) {
+  const f = fixture(), connectionScope = f.authority.current()
+  f.runtime.mount(() => f.form.PluginConfigFormSession({ pluginName: 'calendar-alpha', connectionScope }))
+  f.answer('config:get-source', source); f.answer('schema:get', calendar.schema); await f.runtime.settle()
+  assert.equal(elements(f.runtime.value).some(item => label(item) === '配置需要源码编辑'), false)
+  button(f.runtime.value, '全部配置').props.onClick(); await f.runtime.settle()
+  return f
+}
+const calendarField = (f, name) => elements(f.runtime.value).find(item => item.type === 'field-editor' && item.props.name === name)
+
+test('actual Calendar projection and production Select/form handlers keep all branches, other aliases and original CAS revision', async () => {
+  assert.deepEqual(calendar.schema.object.provider.options.map(item => item.value), ['none', 'caldav', 'google', 'microsoft'])
+  const f = await loadedCalendarForm(), provider = calendarField(f, 'provider')
+  const select = elements(f.editor.SchemaFieldEditor(provider.props)).find(item => item.type === 'select-root')
+  assert.equal(select.props.value, '1'); select.props.onValueChange('2'); await f.runtime.settle()
+  button(f.runtime.value, '保存配置').props.onClick()
+  const checked = f.answer('plugin:validate-config', calendar.validation)
+  const before = JSON.parse(calendar.source.source)
+  const expected = { ...schemaModel.declaredDefaults(calendar.schema, before['calendar-alpha']), provider: 'google' }
+  assert.deepEqual(checked.input.data, expected); await f.runtime.settle()
+  const saved = f.answer('config:replace-source', calendar.save)
+  assert.equal(saved.input.expectedRevision, calendar.source.revision)
+  const payload = JSON.parse(saved.input.source)
+  assert.deepEqual(payload, { ...before, 'calendar-alpha': expected })
+  assert.equal(payload['calendar-alpha'].caldav.password, '${CALDAV_PASSWORD}')
+  assert.equal(payload['calendar-alpha'].google.client_secret, '${GOOGLE_SECRET}')
+  assert.equal(payload['calendar-alpha'].microsoft.refresh_token, '${MS_REFRESH}')
+  await f.runtime.settle()
+  // Browser/hook transport is simulated; this derived readback includes the unchanged form's declared defaults.
+  f.answer('config:get-source', { ...calendar.after, source: saved.input.source }); f.answer('schema:get', calendar.schema); await f.runtime.settle()
+  assert.equal(calendarField(f, 'provider').props.value, 'google'); f.runtime.unmount()
+})
+
+test('actual Calendar validation rejects a preserved environment option without deleting it or saving a partial object', async () => {
+  const f = await loadedCalendarForm(calendar.referenceSource), provider = calendarField(f, 'provider')
+  const select = elements(f.editor.SchemaFieldEditor(provider.props)).find(item => item.type === 'select-root')
+  assert.equal(select.props.value, 'preserved')
+  calendarField(f, 'timezone').props.onChange('UTC'); await f.runtime.settle()
+  button(f.runtime.value, '保存配置').props.onClick()
+  const checked = f.answer('plugin:validate-config', calendar.referenceValidation); await f.runtime.settle()
+  assert.equal(checked.input.data.provider, '${CALENDAR_PROVIDER}')
+  assert.equal(checked.input.data.timezone, 'UTC')
+  assert.equal(f.calls.filter(item => item.input.type === 'config:replace-source').length, 0)
+  assert.equal(calendarField(f, 'provider').props.value, '${CALENDAR_PROVIDER}')
+  assert.equal(calendarField(f, 'timezone').props.value, 'UTC'); f.runtime.unmount()
+})
+
+test('actual Calendar rejection keeps an unknown alpha field and CAS failure keeps the edited provider draft', async () => {
+  const document = JSON.parse(calendar.source.source); document['calendar-alpha'].future = 'must-not-delete'
+  const invalid = await loadedCalendarForm({ ...calendar.source, source: JSON.stringify(document) })
+  calendarField(invalid, 'timezone').props.onChange('UTC'); await invalid.runtime.settle()
+  button(invalid.runtime.value, '保存配置').props.onClick()
+  const checked = invalid.answer('plugin:validate-config', calendar.invalid); await invalid.runtime.settle()
+  assert.equal(checked.input.data.future, 'must-not-delete')
+  assert.equal(invalid.calls.filter(item => item.input.type === 'config:replace-source').length, 0)
+  assert.equal(calendarField(invalid, 'timezone').props.value, 'UTC'); invalid.runtime.unmount()
+  const conflict = await loadedCalendarForm()
+  const select = elements(conflict.editor.SchemaFieldEditor(calendarField(conflict, 'provider').props)).find(item => item.type === 'select-root')
+  select.props.onValueChange('2'); await conflict.runtime.settle()
+  button(conflict.runtime.value, '保存配置').props.onClick(); conflict.answer('plugin:validate-config', calendar.validation); await conflict.runtime.settle()
+  const write = conflict.answer('config:replace-source', new Error(calendar.conflict), undefined, true); await conflict.runtime.settle()
+  assert.equal(write.input.expectedRevision, calendar.source.revision)
+  assert.equal(calendarField(conflict, 'provider').props.value, 'google'); conflict.runtime.unmount()
+})
 
 for (const change of ['switchHost', 'switchCredential', 'logout']) test(`configuration masks old data and refuses old-snapshot writes before effects after ${change}`, async () => {
   const f = fixture(), old = await loadedSource(f), before = f.calls.length
