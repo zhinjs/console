@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import type { ConversationListNotice } from './conversation-list-notice.mjs'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Bot, Loader2, RefreshCw, Search, Wifi, WifiOff } from 'lucide-react'
@@ -65,6 +66,7 @@ export function ConversationSidebar({
   showChannelList,
   onCloseMobileList,
 }: ConversationSidebarProps) {
+  const i18n = useI18n()
   const channelConnected = info?.connected === true && !loadErr
   const channelKnown = info !== null && !loadErr
   const selectionKey =
@@ -82,7 +84,7 @@ export function ConversationSidebar({
     <div className={cn('channel-sidebar im-sidebar', showChannelList && 'show')}>
       <div className="im-sidebar-header">
         <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" asChild>
-          <Link to="/endpoints" aria-label="返回聊天账号">
+          <Link to="/endpoints" aria-label={i18n.t("返回聊天账号")}>
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
@@ -106,7 +108,7 @@ export function ConversationSidebar({
                   )}
                 >
                   {channelConnected ? <Wifi size={10} /> : <WifiOff size={10} />}
-                  {!channelKnown ? '状态未知' : channelConnected ? '在线' : '离线'}
+                  {!channelKnown ? i18n.t("状态未知") : channelConnected ? i18n.t("在线") : i18n.t("离线")}
                 </span>
               </div>
             </div>
@@ -130,8 +132,8 @@ export function ConversationSidebar({
         <Input
           value={listSearch}
           onChange={(e) => onListSearchChange(e.target.value)}
-          aria-label="搜索会话"
-          placeholder="搜索会话名称或 ID"
+          aria-label={i18n.t("搜索会话")}
+          placeholder={i18n.t("搜索会话名称或 ID")}
           className="im-sidebar-search-input h-9 text-sm pl-9 border-0 shadow-none bg-transparent focus-visible:ring-0"
         />
       </div>
@@ -146,13 +148,13 @@ export function ConversationSidebar({
         {!listLoading && listNotice && (
           <div className="px-3 py-2 mb-1 text-xs leading-relaxed" role={listNotice.tone === 'error' ? 'alert' : 'status'}>
             <p className={listNotice.tone === 'error' ? 'text-destructive' : listNotice.tone === 'warning' ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}>{listNotice.text}</p>
-            {listNotice.details && <details className="mt-2 text-muted-foreground"><summary className="cursor-pointer">技术详情</summary><p className="mt-2 break-words">{listNotice.details}</p></details>}
+            {listNotice.details && <details className="mt-2 text-muted-foreground"><summary className="cursor-pointer">{i18n.t("技术详情")}</summary><p className="mt-2 break-words">{listNotice.details}</p></details>}
           </div>
         )}
 
         {isSearchEmpty && (
           <p className="text-xs text-muted-foreground px-3 py-8 text-center">
-            无匹配「{listSearch.trim()}」
+            {i18n.t("无匹配「")}{listSearch.trim()}」
           </p>
         )}
 
@@ -195,8 +197,7 @@ export function ConversationSidebar({
           disabled={testLoading}
         >
           {testLoading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Wifi className="h-3.5 w-3.5 mr-1.5" />}
-          测试连接
-        </Button>
+          {i18n.t("测试连接")}</Button>
         <Button
           variant="ghost"
           size="sm"
@@ -205,8 +206,7 @@ export function ConversationSidebar({
           disabled={listLoading}
         >
           <RefreshCw className={cn('h-3.5 w-3.5 mr-1.5', listLoading && 'animate-spin')} />
-          刷新列表
-        </Button>
+          {i18n.t("刷新列表")}</Button>
       </div>
     </div>
   )

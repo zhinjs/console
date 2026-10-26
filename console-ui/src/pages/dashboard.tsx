@@ -1,3 +1,5 @@
+import { translate } from '../i18n/locale.mjs'
+import { useI18n } from '../i18n'
 import { readErrorSummary } from '../utils/read-error.mjs'
 import { logPayloadAvailability } from './logs/read-state.mjs'
 import { summarizeOptional } from './dashboard-health'
@@ -114,16 +116,16 @@ async function fetchOptionalData(path: string, signal: AbortSignal): Promise<unk
   }
 }
 
-async function fetchLogOverview(signal: AbortSignal): Promise<{ data: unknown | null; error: string | null }> {
+async function fetchLogOverview(signal: AbortSignal, locale: 'zh-CN' | 'en' = 'zh-CN'): Promise<{ data: unknown | null; error: string | null }> {
   try {
     const response = await apiFetch(CONSOLE_REST.LOGS_STATS, { signal })
-    if (!response.ok) return { data: null, error: readErrorSummary(`HTTP ${response.status}`, '日志统计') }
+    if (!response.ok) return { data: null, error: readErrorSummary(`HTTP ${response.status}`, translate(locale, "日志统计"), locale) }
     const body = await response.json()
-    if (body?.success !== true) return { data: null, error: readErrorSummary(body?.error, '日志统计') }
-    const availability = logPayloadAvailability(body)
+    if (body?.success !== true) return { data: null, error: readErrorSummary(body?.error, translate(locale, "日志统计"), locale) }
+    const availability = logPayloadAvailability(body, locale)
     return availability.available ? { data: body.data ?? null, error: null } : { data: null, error: availability.message }
   } catch (cause) {
-    return { data: null, error: readErrorSummary(cause instanceof Error ? cause.message : cause, '日志统计') }
+    return { data: null, error: readErrorSummary(cause instanceof Error ? cause.message : cause, translate(locale, "日志统计"), locale) }
   }
 }
 
@@ -143,13 +145,13 @@ function readMcpSummary(value: unknown): { total: number | null; connected: numb
   }
 }
 
-function formatUptime(seconds: number): string {
+function formatUptime(seconds: number, locale: 'zh-CN' | 'en' = 'zh-CN'): string {
   const days = Math.floor(seconds / 86400)
   const hours = Math.floor((seconds % 86400) / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
-  if (days > 0) return `${days} 天 ${hours} 小时`
-  if (hours > 0) return `${hours} 小时 ${minutes} 分钟`
-  return `${Math.max(minutes, 1)} 分钟`
+  if (days > 0) return translate(locale, "{0} 天 {1} 小时", [days, hours])
+  if (hours > 0) return translate(locale, "{0} 小时 {1} 分钟", [hours, minutes])
+  return translate(locale, "{0} 分钟", [Math.max(minutes, 1)])
 }
 
 function formatMemory(bytes: number): string {
@@ -158,6 +160,7 @@ function formatMemory(bytes: number): string {
 }
 
 export default function HomePage() {
+  const i18n = useI18n()
   const navigate = useNavigate()
   const [stats, setStats] = useState<Stats | null>(null)
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null)
@@ -187,19 +190,19 @@ export default function HomePage() {
       const [statsResponse, statusResponse, logs, tools, agents, mcp] = await Promise.all([
         apiFetch(CONSOLE_REST.STATS, { signal }),
         apiFetch(CONSOLE_REST.SYSTEM_STATUS, { signal }),
-        fetchLogOverview(signal),
+        fetchLogOverview(signal, i18n.locale),
         fetchOptionalData(`${CONSOLE_REST.INTROSPECTION}/tools?page=1&pageSize=1`, signal),
         fetchOptionalData(`${CONSOLE_REST.INTROSPECTION}/bindings?page=1&pageSize=1`, signal),
         fetchOptionalData(`${CONSOLE_REST.INTROSPECTION}/mcp?page=1&pageSize=100`, signal),
       ])
       if (requestId !== requestRef.current) return
-      if (!statsResponse.ok || !statusResponse.ok) throw new Error('无法读取 Host 状态')
+      if (!statsResponse.ok || !statusResponse.ok) throw new Error(i18n.t("无法读取 Host 状态"))
 
       const [statsBody, statusBody] = await Promise.all([
         statsResponse.json(),
         statusResponse.json(),
       ])
-      if (!statsBody.success || !statusBody.success) throw new Error('Host 返回了无效状态')
+      if (!statsBody.success || !statusBody.success) throw new Error(i18n.t("Host 返回了无效状态"))
 
       setStats(statsBody.data)
       setSystemStatus(statusBody.data)
@@ -222,13 +225,13 @@ export default function HomePage() {
       setStats(null)
       setSystemStatus(null)
       setOptional(EMPTY_OPTIONAL)
-      setError(reason.name === 'TimeoutError' ? 'Host 响应超时，请检查连接或服务状态' : reason.message)
+      setError(reason.name === 'TimeoutError' ? i18n.t("Host 响应超时，请检查连接或服务状态") : reason.message)
     } finally {
       if (requestId !== requestRef.current) return
       setLoading(false)
       setRefreshing(false)
     }
-  }, [])
+  }, [i18n])
 
   useEffect(() => {
     void fetchDashboard()
@@ -248,112 +251,112 @@ export default function HomePage() {
 
   const capabilities = useMemo<CapabilityItem[]>(() => [
     {
-      label: '渠道',
+      label: i18n.t("渠道"),
       value: stats?.endpoints.total ?? null,
-      detail: stats ? `${stats.endpoints.online} 个在线连接` : '等待 Host 状态',
+      detail: stats ? i18n.t("{0} 个在线连接", [stats.endpoints.online]) : i18n.t("等待 Host 状态"),
       icon: Radio,
       path: '/endpoints',
     },
     {
-      label: '命令',
+      label: i18n.t("命令"),
       value: stats?.commands ?? null,
-      detail: stats ? '可被消息直接调用' : '等待 Host 状态',
+      detail: stats ? i18n.t("可被消息直接调用") : i18n.t("等待 Host 状态"),
       icon: Command,
       path: '/introspection?tab=commands',
     },
     {
       label: 'Agent',
       value: optional.agents,
-      detail: optional.agentStatus === 'unavailable' ? '未安装或装配 Agent' : optional.agentStatus === 'unknown' ? '状态暂时不可读' : optional.agents === 0 ? '可选能力：需要 AI 时安装并配置 Agent' : '模型与会话绑定',
+      detail: optional.agentStatus === 'unavailable' ? i18n.t("未安装或装配 Agent") : optional.agentStatus === 'unknown' ? i18n.t("状态暂时不可读") : optional.agents === 0 ? i18n.t("可选能力：需要 AI 时安装并配置 Agent") : i18n.t("模型与会话绑定"),
       icon: Brain,
       path: '/agent/workbench',
     },
     {
-      label: '工具',
+      label: i18n.t("工具"),
       value: optional.tools,
-      detail: optional.tools === null ? '安装 Agent 后可用' : '供 Agent 按需调用',
+      detail: optional.tools === null ? i18n.t("安装 Agent 后可用") : i18n.t("供 Agent 按需调用"),
       icon: Wrench,
       path: '/introspection?tab=tools',
     },
     {
-      label: 'MCP 服务',
+      label: i18n.t("MCP 服务"),
       value: optional.mcpServices,
       detail: optional.mcpServices === null
-        ? '未启用或尚未接线'
-        : `${optional.connectedMcp ?? 0} 个连接正常`,
+        ? i18n.t("未启用或尚未接线")
+        : i18n.t("{0} 个连接正常", [optional.connectedMcp ?? 0]),
       icon: Server,
       path: '/introspection?tab=mcp',
     },
     {
-      label: '子插件',
+      label: i18n.t("子插件"),
       value: stats?.plugins.total ?? null,
-      detail: stats ? `${stats.plugins.active} 个子插件正在运行` : '等待 Host 状态',
+      detail: stats ? i18n.t("{0} 个子插件正在运行", [stats.plugins.active]) : i18n.t("等待 Host 状态"),
       icon: Package,
       path: '/plugins',
     },
-  ], [optional, stats])
+  ], [optional, stats, i18n])
 
   const attentionItems = useMemo<AttentionItem[]>(() => {
     const items: AttentionItem[] = []
     if (!stats && error) {
       return [{
-        title: 'Host 暂时不可达',
-        detail: '控制面仍可继续使用；恢复连接后会自动刷新运行状态。',
+        title: i18n.t("Host 暂时不可达"),
+        detail: i18n.t("控制面仍可继续使用；恢复连接后会自动刷新运行状态。"),
         path: '/logs',
         tone: 'danger',
       }]
     }
     if ((stats?.endpoints.total ?? 0) === 0) {
       items.push({
-        title: '还没有连接渠道',
-        detail: '先用 Sandbox 验证，再接入真实平台。',
+        title: i18n.t("还没有连接渠道"),
+        detail: i18n.t("先用 Sandbox 验证，再接入真实平台。"),
         path: '/endpoints',
         tone: 'neutral',
       })
     } else if (offlineEndpoints > 0) {
       items.push({
-        title: `${offlineEndpoints} 个渠道离线`,
-        detail: '检查凭据、网络和适配器日志。',
+        title: i18n.t("{0} 个渠道离线", [offlineEndpoints]),
+        detail: i18n.t("检查凭据、网络和适配器日志。"),
         path: '/endpoints',
         tone: 'warning',
       })
     }
     if ((optional.errorLogs ?? 0) > 0) {
       items.push({
-        title: `历史错误 ${optional.errorLogs} 条`,
-        detail: '打开错误日志',
+        title: i18n.t("历史错误 {0} 条", [optional.errorLogs]),
+        detail: i18n.t("打开错误日志"),
         path: '/logs',
         tone: 'danger',
       })
     }
     if ((optional.warningLogs ?? 0) > 0) {
       items.push({
-        title: `历史警告 ${optional.warningLogs} 条`,
-        detail: '打开警告日志',
+        title: i18n.t("历史警告 {0} 条", [optional.warningLogs]),
+        detail: i18n.t("打开警告日志"),
         path: '/logs',
         tone: 'warning',
       })
     }
     if (optional.errorLogs === null) {
-      items.push({ title: '日志状态暂时不可读', detail: optional.logReadError ?? '尚无法确认是否有运行错误，请打开日志页检查读取详情。', path: '/logs', tone: 'warning' })
+      items.push({ title: i18n.t("日志状态暂时不可读"), detail: optional.logReadError ?? i18n.t("尚无法确认是否有运行错误，请打开日志页检查读取详情。"), path: '/logs', tone: 'warning' })
     }
     return items.slice(0, 4)
-  }, [error, offlineEndpoints, optional, stats])
+  }, [error, offlineEndpoints, optional, stats, i18n])
 
   const handleRestart = async () => {
     setRestarting(true)
     try {
       await requestConsole({ type: CONSOLE_RPC.SYSTEM_RESTART })
-      success('重启请求已发送，连接将在服务恢复后自动重连')
+      success(i18n.t("重启请求已发送，连接将在服务恢复后自动重连"))
     } catch {
-      toastError('重启请求未能发送')
+      toastError(i18n.t("重启请求未能发送"))
     }
     window.setTimeout(() => window.location.reload(), 3000)
   }
 
   if (loading) {
     return (
-      <div className="console-dashboard space-y-5" aria-label="正在加载工作台">
+      <div className="console-dashboard space-y-5" aria-label={i18n.t("正在加载工作台")}>
         <Skeleton className="h-72 rounded-[1.75rem]" />
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.7fr)]">
           <Skeleton className="h-96 rounded-[1.4rem]" />
@@ -372,17 +375,17 @@ export default function HomePage() {
             <div className="max-w-3xl">
               <div className="mb-4 flex items-center gap-2 text-sm font-medium text-primary">
                 <span className={healthy ? 'console-status-dot' : 'console-status-dot is-warning'} />
-                {!hostAvailable ? 'Host 连接需要恢复' : healthy ? '所有核心服务运行正常' : '有事项需要处理'}
+                {!hostAvailable ? i18n.t("Host 连接需要恢复") : healthy ? i18n.t("所有核心服务运行正常") : i18n.t("有事项需要处理")}
               </div>
               <h1 id="dashboard-title" className="text-balance text-3xl font-semibold tracking-[-0.04em] sm:text-4xl xl:text-[2.8rem] xl:leading-[1.05]">
                 {!hostAvailable
-                  ? <>Host 暂时不可达，<br className="hidden sm:block" />控制面仍可继续使用</>
-                  : <>先处理重要状态，<br className="hidden sm:block" />再进入正在进行的工作</>}
+                  ? <>{i18n.t("Host 暂时不可达，")}<br className="hidden sm:block" />{i18n.t("控制面仍可继续使用")}</>
+                  : <>{i18n.t("先处理重要状态，")}<br className="hidden sm:block" />{i18n.t("再进入正在进行的工作")}</>}
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
                 {!hostAvailable
-                  ? '页面导航、配置入口和能力目录保持可用。重新连接后，渠道、Agent 与运行状态会在这里恢复。'
-                  : '这里优先汇总需要处理的渠道、日志和 Agent 状态，再提供能力目录与下一步操作。'}
+                  ? i18n.t("页面导航、配置入口和能力目录保持可用。重新连接后，渠道、Agent 与运行状态会在这里恢复。")
+                  : i18n.t("这里优先汇总需要处理的渠道、日志和 Agent 状态，再提供能力目录与下一步操作。")}
               </p>
             </div>
 
@@ -390,14 +393,12 @@ export default function HomePage() {
               {hostAvailable ? (
                 <Button onClick={() => navigate('/endpoints')}>
                   <Bot className="h-4 w-4" />
-                  进入会话
-                  <ArrowUpRight className="h-4 w-4" />
+                  {i18n.t("进入会话")}<ArrowUpRight className="h-4 w-4" />
                 </Button>
               ) : (
                 <Button onClick={() => void fetchDashboard(true)} disabled={refreshing}>
                   <RefreshCw className={refreshing ? 'animate-spin' : ''} />
-                  重新连接
-                </Button>
+                  {i18n.t("重新连接")}</Button>
               )}
               {hostAvailable ? (
                 <Button
@@ -405,7 +406,7 @@ export default function HomePage() {
                   size="icon"
                   onClick={() => void fetchDashboard(true)}
                   disabled={refreshing}
-                  aria-label="刷新工作台"
+                  aria-label={i18n.t("刷新工作台")}
                 >
                   <RefreshCw className={refreshing ? 'animate-spin' : ''} />
                 </Button>
@@ -415,7 +416,7 @@ export default function HomePage() {
                   variant="ghost"
                   size="icon"
                   onClick={() => setRestartDialogOpen(true)}
-                  aria-label="重启服务"
+                  aria-label={i18n.t("重启服务")}
                 >
                   <RotateCw />
                 </Button>
@@ -425,20 +426,20 @@ export default function HomePage() {
 
           <div className="console-dashboard-metrics">
             <div className="console-dashboard-metric">
-              <span>在线渠道</span>
+              <span>{i18n.t("在线渠道")}</span>
               <strong>{stats ? stats.endpoints.online : '—'}{stats ? <small> / {stats.endpoints.total}</small> : null}</strong>
             </div>
             <div className="console-dashboard-metric">
-              <span>运行子插件</span>
+              <span>{i18n.t("运行子插件")}</span>
               <strong>{stats ? stats.plugins.active : '—'}{stats ? <small> / {stats.plugins.total}</small> : null}</strong>
             </div>
             <div className="console-dashboard-metric">
-              <span>可用命令</span>
+              <span>{i18n.t("可用命令")}</span>
               <strong>{stats?.commands ?? '—'}</strong>
             </div>
             <div className="console-dashboard-metric">
-              <span>持续运行</span>
-              <strong className="text-base sm:text-lg">{systemStatus ? formatUptime(systemStatus.uptime) : '—'}</strong>
+              <span>{i18n.t("持续运行")}</span>
+              <strong className="text-base sm:text-lg">{systemStatus ? formatUptime(systemStatus.uptime, i18n.locale) : '—'}</strong>
             </div>
           </div>
         </div>
@@ -448,8 +449,8 @@ export default function HomePage() {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {stats ? '部分状态未能更新' : '运行状态当前不可用'}：{error}
-            {lastUpdatedAt ? ` · 上次更新 ${new Date(lastUpdatedAt).toLocaleTimeString()}` : ''}
+            {stats ? i18n.t("部分状态未能更新") : i18n.t("运行状态当前不可用")}：{error}
+            {lastUpdatedAt ? i18n.t(" · 上次更新 {0}", [new Date(lastUpdatedAt).toLocaleTimeString(i18n.locale)]) : ''}
           </AlertDescription>
         </Alert>
       ) : null}
@@ -459,17 +460,17 @@ export default function HomePage() {
           <div className="console-panel-heading">
             <div>
 
-              <h2 id="attention-title">状态与日志</h2>
+              <h2 id="attention-title">{i18n.t("状态与日志")}</h2>
             </div>
-            <span className="text-xs tabular-nums text-muted-foreground">{attentionItems.length} 项</span>
+            <span className="text-xs tabular-nums text-muted-foreground">{attentionItems.length} {i18n.t(" 项")}</span>
           </div>
 
           {attentionItems.length === 0 ? (
             <div className="console-all-clear">
               <CheckCircle2 />
               <div>
-                <h3>渠道在线</h3>
-                <p>暂无警告或错误日志</p>
+                <h3>{i18n.t("渠道在线")}</h3>
+                <p>{i18n.t("暂无警告或错误日志")}</p>
               </div>
             </div>
           ) : (
@@ -499,7 +500,7 @@ export default function HomePage() {
             </div>
             <div>
               <MemoryStick />
-              <span>{systemStatus ? `${formatMemory(systemStatus.memory.rss)} RSS` : '等待运行状态'}</span>
+              <span>{systemStatus ? `${formatMemory(systemStatus.memory.rss)} RSS` : i18n.t("等待运行状态")}</span>
             </div>
           </div>
         </aside>
@@ -508,12 +509,11 @@ export default function HomePage() {
           <div className="console-panel-heading">
             <div>
 
-              <h2 id="capability-title">当前实例的能力</h2>
+              <h2 id="capability-title">{i18n.t("当前实例的能力")}</h2>
 
             </div>
             <Button variant="ghost" size="sm" onClick={() => navigate('/introspection')}>
-              打开能力中心
-              <ArrowUpRight />
+              {i18n.t("打开能力中心")}<ArrowUpRight />
             </Button>
           </div>
 
@@ -544,7 +544,7 @@ export default function HomePage() {
         <div className="console-panel-heading">
           <div>
 
-            <h2 id="next-title">常用操作</h2>
+            <h2 id="next-title">{i18n.t("常用操作")}</h2>
 
           </div>
         </div>
@@ -553,27 +553,27 @@ export default function HomePage() {
           <button type="button" className="console-primary-action" onClick={() => navigate('/endpoints')}>
             <span className="console-primary-action-icon"><Bot /></span>
             <span className="min-w-0 text-left">
-              <span className="block text-base font-semibold">连接和管理会话</span>
-              <span className="mt-1 block text-sm text-muted-foreground">查看好友、群组、统一收件箱并直接收发消息。</span>
+              <span className="block text-base font-semibold">{i18n.t("连接和管理会话")}</span>
+              <span className="mt-1 block text-sm text-muted-foreground">{i18n.t("查看好友、群组、统一收件箱并直接收发消息。")}</span>
             </span>
             <ArrowUpRight />
           </button>
 
           <div className="console-secondary-actions">
             <button type="button" onClick={() => navigate('/agent/workrooms')}>
-              <span><Workflow />查看 Workroom 任务</span>
+              <span><Workflow />{i18n.t("查看 Workroom 任务")}</span>
               <ArrowUpRight />
             </button>
             <button type="button" onClick={() => navigate('/marketplace')}>
-              <span><Package />从市场添加能力</span>
+              <span><Package />{i18n.t("从市场添加能力")}</span>
               <ArrowUpRight />
             </button>
             <button type="button" onClick={() => navigate('/config')}>
-              <span><Settings2 />调整运行配置</span>
+              <span><Settings2 />{i18n.t("调整运行配置")}</span>
               <ArrowUpRight />
             </button>
             <button type="button" onClick={() => navigate('/logs')}>
-              <span><FileText />检查运行记录</span>
+              <span><FileText />{i18n.t("检查运行记录")}</span>
               <ArrowUpRight />
             </button>
           </div>
@@ -583,14 +583,13 @@ export default function HomePage() {
       {!readOnly && <Dialog open={restartDialogOpen} onOpenChange={setRestartDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>重启 Zhin 服务</DialogTitle>
+            <DialogTitle>{i18n.t("重启 Zhin 服务")}</DialogTitle>
             <DialogDescription>
-              所有连接将断开，进行中的对话可能被中止。通过 zhin runtime start 启动的前台和 daemon 服务会自动重新启动；--once 模式不会自动恢复。若使用自定义启动器，请确认其重启机制。
-            </DialogDescription>
+              {i18n.t("所有连接将断开，进行中的对话可能被中止。通过 zhin runtime start 启动的前台和 daemon 服务会自动重新启动；--once 模式不会自动恢复。若使用自定义启动器，请确认其重启机制。")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">取消</Button>
+              <Button variant="outline">{i18n.t("取消")}</Button>
             </DialogClose>
             <Button
               variant="destructive"
@@ -601,7 +600,7 @@ export default function HomePage() {
               disabled={restarting}
             >
               {restarting ? <RotateCw className="animate-spin" /> : <RotateCw />}
-              {restarting ? '正在重启' : '确认重启'}
+              {restarting ? i18n.t("正在重启") : i18n.t("确认重启")}
             </Button>
           </DialogFooter>
         </DialogContent>

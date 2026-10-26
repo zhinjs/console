@@ -1,18 +1,19 @@
-export function validatePluginDetail(plugin) {
-  if (!plugin || typeof plugin.name !== 'string' || !plugin.name.trim() || !['active', 'inactive'].includes(plugin.status) || typeof plugin.manageable !== 'boolean' || (plugin.readOnly !== undefined && typeof plugin.readOnly !== 'boolean') || typeof plugin.packageName !== 'string' || !plugin.packageName.trim() || typeof plugin.instanceKey !== 'string' || !plugin.instanceKey.trim() || !Array.isArray(plugin.features)) throw new Error('插件详情响应格式不正确');
+import { translate } from '../i18n/locale.mjs'
+export function validatePluginDetail(plugin, locale = 'zh-CN') {
+  if (!plugin || typeof plugin.name !== 'string' || !plugin.name.trim() || !['active', 'inactive'].includes(plugin.status) || typeof plugin.manageable !== 'boolean' || (plugin.readOnly !== undefined && typeof plugin.readOnly !== 'boolean') || typeof plugin.packageName !== 'string' || !plugin.packageName.trim() || typeof plugin.instanceKey !== 'string' || !plugin.instanceKey.trim() || !Array.isArray(plugin.features)) throw new Error(translate(locale, "插件详情响应格式不正确"));
   for (const feature of plugin.features) {
-    if (!feature || typeof feature.name !== 'string' || typeof feature.desc !== 'string' || !Number.isSafeInteger(feature.count) || feature.count < 0 || !Array.isArray(feature.items) || feature.count !== feature.items.length) throw new Error('插件能力响应格式不正确');
-    for (const item of feature.items) if (!item || typeof item.name !== 'string' || (item.desc !== undefined && typeof item.desc !== 'string')) throw new Error('插件能力摘要格式不正确');
+    if (!feature || typeof feature.name !== 'string' || typeof feature.desc !== 'string' || !Number.isSafeInteger(feature.count) || feature.count < 0 || !Array.isArray(feature.items) || feature.count !== feature.items.length) throw new Error(translate(locale, "插件能力响应格式不正确"));
+    for (const item of feature.items) if (!item || typeof item.name !== 'string' || (item.desc !== undefined && typeof item.desc !== 'string')) throw new Error(translate(locale, "插件能力摘要格式不正确"));
   }
 }
 
-export function requirePluginUpdate(payload, packageName) {
+export function requirePluginUpdate(payload, packageName, locale = 'zh-CN') {
   if (payload?.success !== true || !Array.isArray(payload.data)) {
-    throw new Error('版本查询响应格式不正确。');
+    throw new Error(translate(locale, "版本查询响应格式不正确。"));
   }
   const update = payload.data.find(item => item && item.name === packageName);
   if (!update || typeof update.latest !== 'string' || !update.latest.trim()) {
-    throw new Error('未获取到此插件的版本信息，请稍后重试。');
+    throw new Error(translate(locale, "未获取到此插件的版本信息，请稍后重试。"));
   }
   return update;
 }

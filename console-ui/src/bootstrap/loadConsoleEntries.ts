@@ -1,3 +1,4 @@
+import { translate } from '../i18n/locale.mjs'
 import * as React from 'react'
 import {
   configureConsole,
@@ -68,7 +69,7 @@ function entriesUrlForApiBase(apiBase: string): string {
 /** 成功加载后复用同一 Promise，避免 React StrictMode 二次 effect 重复注册插件 */
 let entriesLoadPromise: Promise<void> | null = null
 
-async function doLoadConsoleEntries(options?: LoadConsoleEntriesOptions): Promise<void> {
+async function doLoadConsoleEntries(options?: LoadConsoleEntriesOptions, locale: 'zh-CN' | 'en' = 'zh-CN'): Promise<void> {
   const apiBase = getApiBase()
   const session = hostRegistrations.capture()
   const requestedApi = options?.hostApi
@@ -111,7 +112,7 @@ async function doLoadConsoleEntries(options?: LoadConsoleEntriesOptions): Promis
     onFetchError: (status) => {
       console.warn(
         `[zhin-console] GET ${entriesUrlForApiBase(apiBase)} failed (HTTP ${status}). ` +
-          '确认 Host 已启动、API Base 与 corsOrigins 一致。',
+          translate(locale, "确认 Host 已启动、API Base 与 corsOrigins 一致。"),
       )
       options?.onFetchError?.(status)
     },
@@ -126,9 +127,9 @@ async function doLoadConsoleEntries(options?: LoadConsoleEntriesOptions): Promis
   })
 }
 
-export function loadConsoleEntries(options?: LoadConsoleEntriesOptions): Promise<void> {
+export function loadConsoleEntries(options?: LoadConsoleEntriesOptions, locale: 'zh-CN' | 'en' = 'zh-CN'): Promise<void> {
   if (entriesLoadPromise) return entriesLoadPromise
-  const pending = doLoadConsoleEntries(options).catch((err) => {
+  const pending = doLoadConsoleEntries(options, locale).catch((err) => {
     if (entriesLoadPromise === pending) entriesLoadPromise = null
     throw err
   })

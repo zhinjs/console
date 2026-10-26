@@ -3,6 +3,8 @@
  */
 
 export interface SchemaField {
+  /** Host-authored display metadata; option values remain unchanged. */
+  'x-i18n'?: Readonly<{ en?: Readonly<{ title?: string; description?: string; enumLabels?: Readonly<Record<string, string>> }> }>
   key?: string
   type: string
   description?: string
@@ -30,7 +32,7 @@ export interface SchemaField {
   hidden?: boolean
   secret?: boolean
   effect?: string
-  options?: ReadonlyArray<{ label: string; value: unknown }>
+  options?: ReadonlyArray<{ label: string; value: unknown; 'x-i18n'?: SchemaField['x-i18n'] }>
 }
 
 export type Schema = SchemaField

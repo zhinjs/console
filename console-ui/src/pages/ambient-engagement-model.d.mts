@@ -28,11 +28,11 @@ export const AMBIENT_CONFIG_PATH: readonly string[]
 export const DEFAULT_MAX_PER_HOUR: number
 export const MAX_PER_HOUR_LIMIT: number
 export const BEHAVIOR_CHOICES: ReadonlyArray<{ value: AmbientBehavior; label: string; hint: string }>
-export function validateAmbientStatus(data: unknown): AmbientStatus
-export function describeAmbientStatus(status: AmbientStatus): AmbientStatusView
+export function validateAmbientStatus(data: unknown, locale?: 'zh-CN' | 'en'): AmbientStatus
+export function describeAmbientStatus(status: AmbientStatus, locale?: 'zh-CN' | 'en'): AmbientStatusView
 export function readAmbientSettings(configDocument: unknown): AmbientSettings
 export function parseGroupList(text: string): string[]
-export function validateAmbientSettings(settings: AmbientSettings): string[]
+export function validateAmbientSettings(settings: AmbientSettings, locale?: 'zh-CN' | 'en'): string[]
 export function buildAmbientPatches(settings: AmbientSettings): AmbientPatch[]
-export function describeSaveResult(result: unknown): SaveFeedback
+export function describeSaveResult(result: unknown, locale?: 'zh-CN' | 'en'): SaveFeedback
 export function isPermissionDenied(error: unknown): boolean

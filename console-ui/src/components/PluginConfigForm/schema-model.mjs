@@ -1,19 +1,20 @@
+import { translate } from '../../i18n/locale.mjs'
 /** Consume the Host's ConsoleSchema projection. This module edits drafts; only the Host validates. */
 export function objectFields(schema) { return schema?.type === 'object' && schema.object && !Array.isArray(schema.object) ? schema.object : {} }
 const simpleTypes = new Set(['string', 'number', 'integer', 'boolean', 'const', 'null', 'any', 'constraint'])
 const unsupportedKeys = ['$ref', 'anyOf', 'oneOf', 'allOf', 'prefixItems', 'patternProperties', 'additionalProperties']
-export function unsupportedFormFields(schema, path = '$') {
-  if (!schema || typeof schema !== 'object' || Array.isArray(schema)) return [`${path}：Host 未提供可编辑的字段定义`]
+export function unsupportedFormFields(schema, path = '$', locale = 'zh-CN') {
+  if (!schema || typeof schema !== 'object' || Array.isArray(schema)) return [translate(locale, "{0}：Host 未提供可编辑的字段定义", [path])]
   const keyword = unsupportedKeys.find(key => schema[key] !== undefined && schema[key] !== false)
-  if (keyword) return [`${path}：${keyword} 需要源码编辑`]
+  if (keyword) return [translate(locale, "{0}：{1} 需要源码编辑", [path, keyword])]
   if (schema.type === 'object') {
-    if (!schema.object || typeof schema.object !== 'object' || Array.isArray(schema.object)) return [`${path}：对象字段尚未由 Host 投影`]
-    return Object.entries(schema.object).flatMap(([key, field]) => unsupportedFormFields(field, `${path}.${key}`))
+    if (!schema.object || typeof schema.object !== 'object' || Array.isArray(schema.object)) return [translate(locale, "{0}：对象字段尚未由 Host 投影", [path])]
+    return Object.entries(schema.object).flatMap(([key, field]) => unsupportedFormFields(field, `${path}.${key}`, locale))
   }
-  if (schema.type === 'list') return schema.inner ? unsupportedFormFields(schema.inner, `${path}[]`) : [`${path}：列表缺少元素定义`]
-  if (schema.type === 'dict') return schema.inner ? unsupportedFormFields(schema.inner, `${path}.*`) : []
-  if (['union', 'tuple', 'intersect'].includes(schema.type)) return Array.isArray(schema.list) ? schema.list.flatMap((field, i) => unsupportedFormFields(field, `${path}[${i}]`)) : []
-  return simpleTypes.has(schema.type) ? [] : [`${path}：${String(schema.type ?? '未知类型')} 需要源码编辑`]
+  if (schema.type === 'list') return schema.inner ? unsupportedFormFields(schema.inner, `${path}[]`, locale) : [translate(locale, "{0}：列表缺少元素定义", [path])]
+  if (schema.type === 'dict') return schema.inner ? unsupportedFormFields(schema.inner, `${path}.*`, locale) : []
+  if (['union', 'tuple', 'intersect'].includes(schema.type)) return Array.isArray(schema.list) ? schema.list.flatMap((field, i) => unsupportedFormFields(field, `${path}[${i}]`, locale)) : []
+  return simpleTypes.has(schema.type) ? [] : [translate(locale, "{0}：{1} 需要源码编辑", [path, String(schema.type ?? translate(locale, "未知类型"))])]
 }
 function copy(value) { return value === undefined ? undefined : structuredClone(value) }
 export function declaredDefaults(schema, value) {
@@ -104,9 +105,9 @@ export function requiredGuidance(schema, value, path = '$') {
   }
   return entries
 }
-export function hostValidationSummary(checked) {
+export function hostValidationSummary(checked, locale = 'zh-CN') {
   if (!checked) return null
-  if (!checked.valid) return '配置未通过 Host 校验，请根据字段提示修改。'
-  if (checked.missingEnv?.length) return '字段格式已通过校验，但环境变量尚未配置，不能完成最小配置。'
-  return 'Host 校验通过，可以保存配置。'
+  if (!checked.valid) return translate(locale, "配置未通过 Host 校验，请根据字段提示修改。")
+  if (checked.missingEnv?.length) return translate(locale, "字段格式已通过校验，但环境变量尚未配置，不能完成最小配置。")
+  return translate(locale, "Host 校验通过，可以保存配置。")
 }

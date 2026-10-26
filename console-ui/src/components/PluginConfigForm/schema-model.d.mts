@@ -1,6 +1,6 @@
 import type { SchemaField } from './types.js'
 export function objectFields(schema: unknown): Record<string, SchemaField>
-export function unsupportedFormFields(schema: unknown, path?: string): string[]
+export function unsupportedFormFields(schema: unknown, path?: string, locale?: 'zh-CN' | 'en'): string[]
 export function declaredDefaults(schema: SchemaField, value: unknown): any
 export function initialSchemaValue(schema: SchemaField): unknown
 export function matchingSchemaBranches(branches: SchemaField[], value: unknown): number[]
@@ -8,4 +8,4 @@ export function updateObjectField(value: unknown, key: string, child: unknown): 
 export function updateListItem(value: unknown[], index: number, child: unknown): unknown[]
 export function numericDraft(text: string): string | number | undefined
 export function requiredGuidance(schema: SchemaField, value: unknown, path?: string): string[]
-export function hostValidationSummary(checked: { valid: boolean; missingEnv?: readonly string[] } | null): string | null
+export function hostValidationSummary(checked: { valid: boolean; missingEnv?: readonly string[] } | null, locale?: 'zh-CN' | 'en'): string | null

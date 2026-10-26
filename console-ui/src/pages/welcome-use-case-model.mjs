@@ -1,3 +1,4 @@
+import { translate } from '../i18n/locale.mjs'
 import { readTaskUseCases } from './task-center-model.mjs'
 import { validatePluginList } from './plugin-list-model.mjs'
 import { validateManagementState } from './plugin-management-model.mjs'
@@ -10,16 +11,16 @@ const text = value => typeof value === 'string' && value.length > 0 && value.len
 const envReference = value => typeof value === 'string' && value.includes('${')
 const targetHasReference = item => [item?.endpoint?.adapter, item?.endpoint?.id, item?.kind, item?.id,
   item?.parent?.kind, item?.parent?.id, item?.threadId].some(envReference)
-export function readWelcomeUseCase(payload) {
-  const value = readTaskUseCases(payload).find(item => item.id === WELCOME_USE_CASE && item.mode === 'plugin-configuration')
-  if (!value) throw Error('当前 Host 未提供群欢迎用途，请更新 Host 或使用原插件管理入口。')
+export function readWelcomeUseCase(payload, locale = 'zh-CN') {
+  const value = readTaskUseCases(payload, locale).find(item => item.id === WELCOME_USE_CASE && item.mode === 'plugin-configuration')
+  if (!value) throw Error(translate(locale, "当前 Host 未提供群欢迎用途，请更新 Host 或使用原插件管理入口。"))
   return value
 }
-export function readWelcomeInstances(payload, packageName) {
-  const rows = validatePluginList(payload).filter(item => item.packageName === packageName && item.manageable === true)
+export function readWelcomeInstances(payload, packageName, locale = 'zh-CN') {
+  const rows = validatePluginList(payload, locale).filter(item => item.packageName === packageName && item.manageable === true)
   const seen = new Set()
   return rows.map(item => {
-    if (!text(item.instanceKey) || seen.has(item.instanceKey)) throw Error('实例目录身份不完整或重复，请刷新 Host 目录。')
+    if (!text(item.instanceKey) || seen.has(item.instanceKey)) throw Error(translate(locale, "实例目录身份不完整或重复，请刷新 Host 目录。"))
     seen.add(item.instanceKey)
     return { instanceKey: item.instanceKey, packageName: item.packageName, status: item.status }
   })
@@ -34,22 +35,22 @@ export function welcomeDetailUrl(instanceKey) {
   return `/plugins/${encodeURIComponent(instanceKey)}?useCase=group-welcome`
 }
 /** Uses the existing read-only verification plan's opaque incarnation, even with no executable checks. */
-export function readWelcomeEvidence(state, plan, instanceKey, packageName, source) {
-  const inspected = validateManagementState(state, instanceKey)
+export function readWelcomeEvidence(state, plan, instanceKey, packageName, source, locale = 'zh-CN') {
+  const inspected = validateManagementState(state, instanceKey, locale)
   if (inspected.packageName !== packageName || !plan || plan.instanceKey !== instanceKey || plan.packageName !== packageName
     || plan.generation !== inspected.generation || plan.projectRevision !== inspected.projectRevision || !text(plan.checkRevision)
-    || !Array.isArray(plan.checks)) throw Error('实例或运行代证据已变化，请重新读取；未执行业务检查。')
+    || !Array.isArray(plan.checks)) throw Error(translate(locale, "实例或运行代证据已变化，请重新读取；未执行业务检查。"))
   if (!source || source.revision !== inspected.revision || !['yaml', 'json'].includes(source.format) || typeof source.source !== 'string'
-    || !Array.isArray(source.configPaths?.[instanceKey])) throw Error('配置文件版本或实例路径与应用证据不一致，请重新读取。')
+    || !Array.isArray(source.configPaths?.[instanceKey])) throw Error(translate(locale, "配置文件版本或实例路径与应用证据不一致，请重新读取。"))
   let config
-  try { config = configAtPath(parseConfigDocument(source.source, source.format), source.configPaths[instanceKey]) }
-  catch { throw Error('配置源码无法安全读取，请在原配置页核对格式与实例路径。') }
+  try { config = configAtPath(parseConfigDocument(source.source, source.format, locale), source.configPaths[instanceKey], locale) }
+  catch { throw Error(translate(locale, "配置源码无法安全读取，请在原配置页核对格式与实例路径。")) }
   const scopeUnknown = envReference(config?.welcomeConversations) || Array.isArray(config?.welcomeConversations) && config.welcomeConversations.some(targetHasReference)
   if (!config || typeof config !== 'object' || Array.isArray(config)
     || config.welcomeMessage !== undefined && typeof config.welcomeMessage !== 'string'
     || config.welcomeConversations !== undefined && !scopeUnknown && (!Array.isArray(config.welcomeConversations) || config.welcomeConversations.length > 100
       || config.welcomeConversations.some(target => !welcomeTargetKey(target)))
-    || Array.isArray(config.welcomeConversations) && config.welcomeConversations.length > 100) throw Error('群欢迎字段不是可识别的配置，请到原配置页核对。')
+    || Array.isArray(config.welcomeConversations) && config.welcomeConversations.length > 100) throw Error(translate(locale, "群欢迎字段不是可识别的配置，请到原配置页核对。"))
   // Project only the relevant public scope and a content-present flag; discard the raw document and text.
   const welcome = { messagePresent: envReference(config.welcomeMessage) ? null : !!config.welcomeMessage, mode: scopeUnknown ? 'unknown' : config.welcomeConversations === undefined ? 'all'
     : config.welcomeConversations.length ? 'selected' : 'none', targets: (scopeUnknown ? [] : config.welcomeConversations ?? []).map(item => ({

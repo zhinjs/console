@@ -1,3 +1,5 @@
+import { translate } from '../../i18n/locale.mjs'
+import { useI18n } from '../../i18n'
 import { useRef, useState, type ReactElement } from 'react'
 import {
   Braces,
@@ -107,11 +109,12 @@ function MediaFallback({ label }: { label: string }) {
 }
 
 function ImageSegment({ seg }: { seg: MessageSegment }) {
+  const i18n = useI18n()
   const d = segmentData(seg)
   const raw = pickMessageMediaRaw(d, pickMediaRawUrl)
   const src = resolveMediaSrc(raw, 'image')
-  const label = stringifyValue(d.name ?? d.filename ?? (d.media as { file_name?: unknown } | undefined)?.file_name) || '图片'
-  if (!src) return <MediaFallback label="[图片]" />
+  const label = stringifyValue(d.name ?? d.filename ?? (d.media as { file_name?: unknown } | undefined)?.file_name) || i18n.t("图片")
+  if (!src) return <MediaFallback label={i18n.t("[图片]")} />
 
   return (
     <figure className="im-media-card im-image-card">
@@ -127,7 +130,7 @@ function ImageSegment({ seg }: { seg: MessageSegment }) {
       </a>
       <figcaption className="im-media-caption">
         <span className="truncate">{label}</span>
-        <a href={src} target="_blank" rel="noreferrer" title="打开原图">
+        <a href={src} target="_blank" rel="noreferrer" title={i18n.t("打开原图")}>
           <ExternalLink className="h-3.5 w-3.5" />
         </a>
       </figcaption>
@@ -136,11 +139,12 @@ function ImageSegment({ seg }: { seg: MessageSegment }) {
 }
 
 function VideoSegment({ seg }: { seg: MessageSegment }) {
+  const i18n = useI18n()
   const d = segmentData(seg)
   const raw = pickMessageMediaRaw(d, pickMediaRawUrl)
   const src = resolveMediaSrc(raw, 'video')
-  const label = stringifyValue(d.name ?? d.filename ?? raw) || '视频'
-  if (!src) return <MediaFallback label="[视频]" />
+  const label = stringifyValue(d.name ?? d.filename ?? raw) || i18n.t("视频")
+  if (!src) return <MediaFallback label={i18n.t("[视频]")} />
 
   return (
     <figure className="im-media-card im-video-card">
@@ -150,8 +154,8 @@ function VideoSegment({ seg }: { seg: MessageSegment }) {
       </div>
       <video src={src} controls playsInline preload="metadata" className="im-video-player" />
       <figcaption className="im-media-caption">
-        <span>视频消息</span>
-        <a href={src} target="_blank" rel="noreferrer" title="打开视频">
+        <span>{i18n.t("视频消息")}</span>
+        <a href={src} target="_blank" rel="noreferrer" title={i18n.t("打开视频")}>
           <ExternalLink className="h-3.5 w-3.5" />
         </a>
       </figcaption>
@@ -160,6 +164,7 @@ function VideoSegment({ seg }: { seg: MessageSegment }) {
 }
 
 function AudioSegment({ seg }: { seg: MessageSegment }) {
+  const i18n = useI18n()
   const d = segmentData(seg)
   const raw = pickMessageMediaRaw(d, pickMediaRawUrl)
   const src = resolveMediaSrc(raw, 'audio')
@@ -168,7 +173,7 @@ function AudioSegment({ seg }: { seg: MessageSegment }) {
   const [current, setCurrent] = useState(0)
   const [duration, setDuration] = useState(Number(d.duration ?? 0))
 
-  if (!src) return <MediaFallback label="[语音]" />
+  if (!src) return <MediaFallback label={i18n.t("[语音]")} />
 
   const toggle = () => {
     const audio = audioRef.current
@@ -182,13 +187,13 @@ function AudioSegment({ seg }: { seg: MessageSegment }) {
 
   return (
     <div className="im-audio-card">
-      <button type="button" className="im-audio-play" onClick={toggle} aria-label={playing ? '暂停语音' : '播放语音'}>
+      <button type="button" className="im-audio-play" onClick={toggle} aria-label={playing ? i18n.t("暂停语音") : i18n.t("播放语音")}>
         {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
       </button>
       <div className="im-audio-main">
         <div className="im-audio-title">
           <Music className="h-3.5 w-3.5" />
-          <span>语音消息</span>
+          <span>{i18n.t("语音消息")}</span>
           <span className="im-audio-time">{formatDuration(current)} / {formatDuration(duration)}</span>
         </div>
         <input
@@ -220,8 +225,9 @@ function AudioSegment({ seg }: { seg: MessageSegment }) {
 }
 
 function FileSegment({ seg }: { seg: MessageSegment }) {
+  const i18n = useI18n()
   const d = segmentData(seg)
-  const name = stringifyValue(d.name ?? d.filename ?? d.file ?? '文件')
+  const name = stringifyValue(d.name ?? d.filename ?? d.file ?? i18n.t("文件"))
   const size = stringifyValue(d.size ?? d.fileSize)
   const rawUrl = stringifyValue(d.url ?? d.src ?? d.path)
 
@@ -235,7 +241,7 @@ function FileSegment({ seg }: { seg: MessageSegment }) {
         {size ? <span className="im-file-meta">{size}</span> : null}
       </span>
       {rawUrl ? (
-        <a href={rawUrl} target="_blank" rel="noreferrer" className="im-file-action" title="打开文件">
+        <a href={rawUrl} target="_blank" rel="noreferrer" className="im-file-action" title={i18n.t("打开文件")}>
           <Download className="h-3.5 w-3.5" />
         </a>
       ) : null}
@@ -244,13 +250,14 @@ function FileSegment({ seg }: { seg: MessageSegment }) {
 }
 
 function ReferenceSegment({ seg, kind }: { seg: MessageSegment; kind: 'quote' | 'forward' }) {
+  const i18n = useI18n()
   const d = segmentData(seg)
   const title =
     stringifyValue(d.senderName ?? d.sender_name ?? d.sender ?? d.from ?? d.source) ||
-    (kind === 'quote' ? '引用消息' : '转发消息')
+    (kind === 'quote' ? i18n.t("引用消息") : i18n.t("转发消息"))
   const summary =
     stringifyValue(d.summary ?? d.text ?? d.preview ?? d.content ?? d.message) ||
-    (kind === 'quote' ? '原消息摘要不可用' : '转发内容摘要不可用')
+    (kind === 'quote' ? i18n.t("原消息摘要不可用") : i18n.t("转发内容摘要不可用"))
   const Icon = kind === 'quote' ? Quote : Forward
 
   return (
@@ -265,11 +272,12 @@ function ReferenceSegment({ seg, kind }: { seg: MessageSegment; kind: 'quote' | 
 }
 
 function UnknownSegment({ seg }: { seg: MessageSegment }) {
+  const i18n = useI18n()
   return (
     <details className="im-unknown-segment">
       <summary>
         <Braces className="h-3.5 w-3.5" />
-        未识别消息类型：{seg.type}
+        {i18n.t("未识别消息类型：")}{seg.type}
       </summary>
       <pre>{JSON.stringify(seg.data ?? {}, null, 2)}</pre>
     </details>
@@ -277,6 +285,7 @@ function UnknownSegment({ seg }: { seg: MessageSegment }) {
 }
 
 function MessageSegmentView({ seg, index }: { seg: MessageSegment; index: number }) {
+  const i18n = useI18n()
   const d = segmentData(seg)
 
   if (seg.type === 'text' && d.text != null) {
@@ -298,11 +307,11 @@ function MessageSegmentView({ seg, index }: { seg: MessageSegment; index: number
   if (seg.type === 'face' || seg.type === 'emoji') {
     const id = String(d.id ?? d.faceId ?? '')
     const label = String(d.name ?? d.text ?? id)
-    if (!id) return <span className="im-face-fallback">[{label || '表情'}]</span>
+    if (!id) return <span className="im-face-fallback">[{label || i18n.t("表情")}]</span>
     return (
       <img
         src={`https://face.viki.moe/apng/${id}.png`}
-        alt={label ? `表情 ${label}` : '表情'}
+        alt={label ? i18n.t("表情 {0}", [label]) : i18n.t("表情")}
         className="im-face-image"
         onError={(e) => {
           ;(e.target as HTMLImageElement).style.display = 'none'
@@ -332,19 +341,19 @@ function MessageSegmentView({ seg, index }: { seg: MessageSegment; index: number
   return <UnknownSegment seg={{ ...seg, data: { ...d, _index: index } }} />
 }
 
-export function messageContentSummary(content: ReceivedMessage['content'], maxLength = 80): string {
+export function messageContentSummary(content: ReceivedMessage['content'], maxLength = 80, locale: 'zh-CN' | 'en' = 'zh-CN'): string {
   const parts = content.map((seg) => {
     const d = segmentData(seg)
     if (seg.type === 'text') return stringifyValue(d.text)
     if (seg.type === 'markdown' || seg.type === 'md') return stringifyValue(d.text ?? d.content)
     if (seg.type === 'at') return `@${stringifyValue(d.name ?? d.qq ?? d.id)}`
-    if (seg.type === 'face' || seg.type === 'emoji') return '[表情]'
-    if (seg.type === 'image') return '[图片]'
-    if (seg.type === 'video') return '[视频]'
-    if (seg.type === 'audio' || seg.type === 'record') return '[语音]'
-    if (seg.type === 'file') return `[文件] ${stringifyValue(d.name ?? d.filename)}`
-    if (seg.type === 'quote' || seg.type === 'reply') return `[引用] ${stringifyValue(d.summary ?? d.text)}`
-    if (seg.type === 'forward' || seg.type === 'node') return '[转发消息]'
+    if (seg.type === 'face' || seg.type === 'emoji') return translate(locale, "[表情]")
+    if (seg.type === 'image') return translate(locale, "[图片]")
+    if (seg.type === 'video') return translate(locale, "[视频]")
+    if (seg.type === 'audio' || seg.type === 'record') return translate(locale, "[语音]")
+    if (seg.type === 'file') return translate(locale, "[文件] {0}", [stringifyValue(d.name ?? d.filename)])
+    if (seg.type === 'quote' || seg.type === 'reply') return translate(locale, "[引用] {0}", [stringifyValue(d.summary ?? d.text)])
+    if (seg.type === 'forward' || seg.type === 'node') return translate(locale, "[转发消息]")
     return `[${seg.type}]`
   })
   const text = parts.join(' ').replace(/\s+/g, ' ').trim()

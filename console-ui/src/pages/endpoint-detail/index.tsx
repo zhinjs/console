@@ -1,3 +1,5 @@
+import { translate } from '../../i18n/locale.mjs'
+import { useI18n } from '../../i18n'
 import type * as React from 'react'
 import { Fragment, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -67,10 +69,10 @@ function memberRoleOf(member: Record<string, unknown>): string {
   return String(member.role ?? member.permission ?? member.level ?? 'member')
 }
 
-function memberRoleLabel(role: string): string {
-  if (role === 'owner' || role === 'leader') return '群主'
-  if (role === 'admin' || role === 'administrator') return '管理'
-  return '成员'
+function memberRoleLabel(role: string, locale: 'zh-CN' | 'en' = 'zh-CN'): string {
+  if (role === 'owner' || role === 'leader') return translate(locale, "群主")
+  if (role === 'admin' || role === 'administrator') return translate(locale, "管理")
+  return translate(locale, "成员")
 }
 
 function memberInitials(name: string): string {
@@ -81,6 +83,7 @@ function memberInitials(name: string): string {
 }
 
 export default function EndpointDetailPage() {
+  const i18n = useI18n()
   const ctx = useEndpointConsole()
   const readOnly = isDemoMode()
 
@@ -88,7 +91,7 @@ export default function EndpointDetailPage() {
     return (
       <div className="p-4">
         <Alert>
-          <AlertDescription>参数无效</AlertDescription>
+          <AlertDescription>{i18n.t("参数无效")}</AlertDescription>
         </Alert>
       </div>
     )
@@ -181,9 +184,9 @@ export default function EndpointDetailPage() {
   const handleDeleteFriend = async () => {
     if (selection?.type !== 'channel' || selection.channelType !== 'private') return
     const ok = await confirm({
-      title: '删除好友',
-      description: `确定删除好友「${selection.name}」？此操作不可撤销。`,
-      confirmLabel: '删除',
+      title: i18n.t("删除好友"),
+      description: i18n.t("确定删除好友「{0}」？此操作不可撤销。", [selection.name]),
+      confirmLabel: i18n.t("删除"),
       variant: 'destructive',
     })
     if (ok) await deleteFriend()
@@ -197,24 +200,24 @@ export default function EndpointDetailPage() {
   ) => {
     const prompts: Record<typeof type, { title: string; description: string; destructive?: boolean }> = {
       [ENDPOINT_RPC.GROUP_KICK]: {
-        title: '踢出群成员',
-        description: `确定将「${memberName}」踢出群聊？`,
+        title: i18n.t("踢出群成员"),
+        description: i18n.t("确定将「{0}」踢出群聊？", [memberName]),
         destructive: true,
       },
       [ENDPOINT_RPC.GROUP_MUTE]: {
-        title: '禁言成员',
-        description: `确定禁言「${memberName}」？`,
+        title: i18n.t("禁言成员"),
+        description: i18n.t("确定禁言「{0}」？", [memberName]),
       },
       [ENDPOINT_RPC.GROUP_ADMIN]: {
-        title: '设为管理员',
-        description: `确定将「${memberName}」设为群管理员？`,
+        title: i18n.t("设为管理员"),
+        description: i18n.t("确定将「{0}」设为群管理员？", [memberName]),
       },
     }
     const prompt = prompts[type]
     const ok = await confirm({
       title: prompt.title,
       description: prompt.description,
-      confirmLabel: '确定',
+      confirmLabel: i18n.t("确定"),
       variant: prompt.destructive ? 'destructive' : 'default',
     })
     if (ok) await groupAction(type, userId, extra)
@@ -237,7 +240,7 @@ export default function EndpointDetailPage() {
         id: createAttachmentId(mediaPanel),
         type: mediaPanel,
         url: u,
-        name: mediaPanel === 'image' ? '图片链接' : mediaPanel === 'video' ? '视频链接' : '音频链接',
+        name: mediaPanel === 'image' ? i18n.t("图片链接") : mediaPanel === 'video' ? i18n.t("视频链接") : i18n.t("音频链接"),
         source: 'url',
       },
     ])
@@ -259,7 +262,7 @@ export default function EndpointDetailPage() {
             id: createAttachmentId('image'),
             type: 'image',
             url: dataUrl,
-            name: f.name || '本地图片',
+            name: f.name || i18n.t("本地图片"),
             source: 'local',
           },
         ])
@@ -282,7 +285,7 @@ export default function EndpointDetailPage() {
             id: createAttachmentId('file'),
             type: 'file',
             url: dataUrl,
-            name: f.name || '本地文件',
+            name: f.name || i18n.t("本地文件"),
             source: 'local',
           },
         ])
@@ -351,9 +354,9 @@ export default function EndpointDetailPage() {
 
     const textPrefix =
       quoteDraft != null
-        ? `引用 ${quoteDraft.senderName}: ${quoteDraft.summary}`
+        ? i18n.t("引用 {0}: {1}", [quoteDraft.senderName, quoteDraft.summary])
         : forwardDraft != null
-          ? `转发 ${forwardDraft.senderName}: ${forwardDraft.summary}`
+          ? i18n.t("转发 {0}: {1}", [forwardDraft.senderName, forwardDraft.summary])
           : undefined
 
     void handleSend({
@@ -412,8 +415,7 @@ export default function EndpointDetailPage() {
         className="mobile-channel-toggle md:hidden"
         onClick={() => setShowChannelList(!showChannelList)}
       >
-        <MessageSquare size={20} /> 会话列表
-      </button>
+        <MessageSquare size={20} /> {i18n.t(" 会话列表")}</button>
 
       <ConversationSidebar
         adapter={adapter}
@@ -472,10 +474,10 @@ export default function EndpointDetailPage() {
                     <h2 className="text-[15px] font-semibold truncate leading-tight">{selection.name}</h2>
                     <p className="text-[11px] text-muted-foreground truncate mt-0.5">
                       {selection.channelType === 'private'
-                        ? '私聊'
+                        ? i18n.t("私聊")
                         : selection.channelType === 'group'
-                          ? '群聊'
-                          : '频道'}
+                          ? i18n.t("群聊")
+                          : i18n.t("频道")}
                       {selection.channelType === 'channel' && selection.parent?.name
                         ? ` · ${selection.parent.name}`
                         : ''}{' '}
@@ -489,8 +491,8 @@ export default function EndpointDetailPage() {
                     variant="ghost"
                     size="icon"
                     className="im-header-icon-button h-8 w-8"
-                    title="查看 Agent 对话轨迹"
-                    aria-label="查看 Agent 对话轨迹"
+                    title={i18n.t("查看 Agent 对话轨迹")}
+                    aria-label={i18n.t("查看 Agent 对话轨迹")}
                     asChild
                   >
                     <Link
@@ -506,7 +508,7 @@ export default function EndpointDetailPage() {
                       variant="ghost"
                       size="icon"
                       className="im-header-icon-button h-8 w-8 text-destructive hover:text-destructive"
-                      title="删除好友"
+                      title={i18n.t("删除好友")}
                       onClick={() => void handleDeleteFriend()}
                     >
                       <UserMinus className="h-4 w-4" />
@@ -528,16 +530,16 @@ export default function EndpointDetailPage() {
                         void loadInboxMessages(oldest)
                       }}
                     >
-                      {inboxMessagesLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : '加载更早消息'}
+                      {inboxMessagesLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : i18n.t("加载更早消息")}
                     </Button>
                   </div>
                 )}
-                {inboxMessagesError ? <Alert variant="destructive"><AlertDescription>消息历史读取失败：{inboxMessagesError}</AlertDescription></Alert> : null}
+                {inboxMessagesError ? <Alert variant="destructive"><AlertDescription>{i18n.t("消息历史读取失败：")}{inboxMessagesError}</AlertDescription></Alert> : null}
                 {channelMessages.length === 0 && canShowReadEmpty(inboxMessagesLoading, inboxMessagesError) ? (
                   <div className="im-empty-state flex flex-col items-center justify-center flex-1 gap-2 text-muted-foreground text-sm py-12">
                     <MessageSquare className="h-10 w-10 opacity-35" />
                     <span>
-                      {inboxMessagesEnabled ? '暂无消息' : '暂无消息，对方发送的消息会显示在此处'}
+                      {inboxMessagesEnabled ? i18n.t("暂无消息") : i18n.t("暂无消息，对方发送的消息会显示在此处")}
                     </span>
                   </div>
                 ) : (
@@ -549,7 +551,7 @@ export default function EndpointDetailPage() {
                       const out = m.outgoing === true
                       return (
                         <Fragment key={m.id}>
-                          {showDate && <div className="im-date-pill">{dayLabel(m.timestamp)}</div>}
+                          {showDate && <div className="im-date-pill">{dayLabel(m.timestamp, i18n.locale)}</div>}
                           <ChatMessageRow
                             message={m}
                             onQuote={(ref) => {
@@ -570,8 +572,7 @@ export default function EndpointDetailPage() {
 
               {readOnly ? (
                 <div className="im-composer shrink-0 border-t px-4 py-3 text-xs text-muted-foreground">
-                  Demo 仅读消息记录，不提供消息编辑器。
-                </div>
+                  {i18n.t("Demo 仅读消息记录，不提供消息编辑器。")}</div>
               ) : (
               <div className="im-composer p-3 shrink-0 space-y-2">
                 <input
@@ -594,13 +595,13 @@ export default function EndpointDetailPage() {
                     </span>
                     <span className="im-draft-reference-main">
                       <span className="im-draft-reference-title">
-                        {quoteDraft ? `引用 ${quoteDraft.senderName}` : `转发 ${forwardDraft?.senderName}`}
+                        {quoteDraft ? i18n.t("引用 {0}", [quoteDraft.senderName]) : i18n.t("转发 {0}", [forwardDraft?.senderName])}
                       </span>
                       <span className="im-draft-reference-summary">
                         {quoteDraft?.summary ?? forwardDraft?.summary}
                       </span>
                     </span>
-                    <button type="button" className="im-draft-reference-close" onClick={clearMessageDrafts} aria-label="取消">
+                    <button type="button" className="im-draft-reference-close" onClick={clearMessageDrafts} aria-label={i18n.t("取消")}>
                       <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
@@ -611,7 +612,7 @@ export default function EndpointDetailPage() {
                     variant={composerMode === 'markdown' ? 'secondary' : 'outline'}
                     size="sm"
                     className="im-tool-button h-8 px-2 text-xs"
-                    title="Markdown 模式"
+                    title={i18n.t("Markdown 模式")}
                     onClick={() => setComposerMode((mode) => (mode === 'markdown' ? 'plain' : 'markdown'))}
                   >
                     <Code2 className="w-3.5 h-3.5 mr-1" />
@@ -622,34 +623,31 @@ export default function EndpointDetailPage() {
                     variant="outline"
                     size="sm"
                     className="im-tool-button h-8 px-2 text-xs"
-                    title="插入 QQ 表情段"
+                    title={i18n.t("插入 QQ 表情段")}
                     onClick={() => appendComposerToken('[face:14]')}
                   >
                     <Smile className="w-3.5 h-3.5 mr-1" />
-                    表情
-                  </Button>
+                    {i18n.t("表情")}</Button>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     className="im-tool-button h-8 px-2 text-xs"
-                    title="选择本地图片（插入为 data URL）"
+                    title={i18n.t("选择本地图片（插入为 data URL）")}
                     onClick={() => imageFileRef.current?.click()}
                   >
                     <Image className="w-3.5 h-3.5 mr-1" />
-                    图片文件
-                  </Button>
+                    {i18n.t("图片文件")}</Button>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     className="im-tool-button h-8 px-2 text-xs"
-                    title="选择本地文件（插入为 data URL 文件段）"
+                    title={i18n.t("选择本地文件（插入为 data URL 文件段）")}
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <Paperclip className="w-3.5 h-3.5 mr-1" />
-                    文件
-                  </Button>
+                    {i18n.t("文件")}</Button>
                   <Button
                     type="button"
                     variant={mediaPanel === 'image' ? 'secondary' : 'outline'}
@@ -659,8 +657,7 @@ export default function EndpointDetailPage() {
                       setMediaPanel((p) => (p === 'image' ? null : 'image'))
                     }}
                   >
-                    图片链接
-                  </Button>
+                    {i18n.t("图片链接")}</Button>
                   <Button
                     type="button"
                     variant={mediaPanel === 'video' ? 'secondary' : 'outline'}
@@ -671,8 +668,7 @@ export default function EndpointDetailPage() {
                     }}
                   >
                     <Video className="w-3.5 h-3.5 mr-1" />
-                    视频
-                  </Button>
+                    {i18n.t("视频")}</Button>
                   <Button
                     type="button"
                     variant={mediaPanel === 'audio' ? 'secondary' : 'outline'}
@@ -683,8 +679,7 @@ export default function EndpointDetailPage() {
                     }}
                   >
                     <Music className="w-3.5 h-3.5 mr-1" />
-                    音频
-                  </Button>
+                    {i18n.t("音频")}</Button>
                 </div>
                 {mediaPanel && (
                   <div className="im-media-panel flex flex-wrap items-end gap-2 p-2">
@@ -693,10 +688,10 @@ export default function EndpointDetailPage() {
                       onChange={(e) => setMediaUrl(e.target.value)}
                       placeholder={
                         mediaPanel === 'image'
-                          ? '图片 URL 或 base64://…'
+                          ? i18n.t("图片 URL 或 base64://…")
                           : mediaPanel === 'video'
-                            ? '视频直链 URL'
-                            : '音频直链 URL'
+                            ? i18n.t("视频直链 URL")
+                            : i18n.t("音频直链 URL")
                       }
                       className="im-media-input flex-1 min-w-0 sm:min-w-[12rem] h-9 text-sm"
                       onKeyDown={(e) => {
@@ -708,8 +703,7 @@ export default function EndpointDetailPage() {
                     />
                     <Button type="button" size="sm" className="im-insert-button h-9" onClick={commitMediaUrl} disabled={!mediaUrl.trim()}>
                       <Check className="w-3.5 h-3.5 mr-1" />
-                      插入
-                    </Button>
+                      {i18n.t("插入")}</Button>
                   </div>
                 )}
                 {composerAttachments.length > 0 && (
@@ -730,10 +724,10 @@ export default function EndpointDetailPage() {
                         <span className="im-attachment-main">
                           <span className="im-attachment-name">{item.name}</span>
                           <span className="im-attachment-meta">
-                            {item.source === 'local' ? '本地附件' : 'URL 附件'} · {item.type}
+                            {item.source === 'local' ? i18n.t("本地附件") : i18n.t("URL 附件")} · {item.type}
                           </span>
                         </span>
-                        <button type="button" onClick={() => removeAttachment(item.id)} aria-label="移除附件">
+                        <button type="button" onClick={() => removeAttachment(item.id)} aria-label={i18n.t("移除附件")}>
                           <X className="h-3.5 w-3.5" />
                         </button>
                       </div>
@@ -744,8 +738,8 @@ export default function EndpointDetailPage() {
                   <Textarea
                     placeholder={
                       composerMode === 'markdown'
-                        ? 'Markdown 消息：支持标题、列表、引用、代码块…'
-                        : '文字消息；也可手写 [@名称]、[face:id]、[image:URL]、[video:URL]、[audio:URL]'
+                        ? i18n.t("Markdown 消息：支持标题、列表、引用、代码块…")
+                        : i18n.t("文字消息；也可手写 [@名称]、[face:id]、[image:URL]、[video:URL]、[audio:URL]")
                     }
                     value={msgContent}
                     onChange={(e) => setMsgContent(e.target.value)}
@@ -767,7 +761,7 @@ export default function EndpointDetailPage() {
                   </Button>
                 </div>
                 <p className="im-composer-hint text-[10px] text-muted-foreground">
-                  <>Enter 发送 · Shift+Enter 换行 · 当前模式：{composerMode === 'markdown' ? 'Markdown' : '普通文本'} · 待发送 {composerSegments.length} 个消息段</>
+                  <>{i18n.t("Enter 发送 · Shift+Enter 换行 · 当前模式：")}{composerMode === 'markdown' ? 'Markdown' : i18n.t("普通文本")} {i18n.t(" · 待发送 ")}{composerSegments.length} {i18n.t(" 个消息段")}</>
                 </p>
               </div>
               )}
@@ -779,8 +773,7 @@ export default function EndpointDetailPage() {
               <header className="im-chat-header im-system-page-header px-4 py-3 flex items-center justify-between">
                 <h2 className="text-base font-semibold flex items-center gap-2">
                   <UserPlus size={18} />
-                  请求
-                </h2>
+                  {i18n.t("请求")}</h2>
                 <Button
                   size="sm"
                   variant="outline"
@@ -788,8 +781,7 @@ export default function EndpointDetailPage() {
                   disabled={requestsTab === 'history' ? inboxRequestsLoading : requestsLoading}
                   onClick={() => void (requestsTab === 'history' ? loadInboxRequests(false) : loadRequestsFromServer())}
                 >
-                  刷新
-                </Button>
+                  {i18n.t("刷新")}</Button>
               </header>
               <Tabs
                 value={requestsTab}
@@ -801,26 +793,26 @@ export default function EndpointDetailPage() {
                 className="flex flex-col flex-1 min-h-0"
               >
                 <TabsList className="im-tabs-list mx-3 mt-2 w-auto justify-start">
-                  <TabsTrigger value="pending">待处理</TabsTrigger>
-                  <TabsTrigger value="history">历史</TabsTrigger>
+                  <TabsTrigger value="pending">{i18n.t("待处理")}</TabsTrigger>
+                  <TabsTrigger value="history">{i18n.t("历史")}</TabsTrigger>
                 </TabsList>
                 <TabsContent value="pending" className="im-system-content flex-1 overflow-y-auto p-4 space-y-3 mt-0">
-                  {actionError ? <Alert variant="destructive"><AlertDescription>操作失败：{actionError}</AlertDescription></Alert> : null}
-                  {requestsLoading ? <p role="status">正在读取待处理请求…</p> : null}
-                  {requestsError ? <Alert variant="destructive"><AlertDescription>请求读取失败：{requestsError}</AlertDescription></Alert> : null}
+                  {actionError ? <Alert variant="destructive"><AlertDescription>{i18n.t("操作失败：")}{actionError}</AlertDescription></Alert> : null}
+                  {requestsLoading ? <p role="status">{i18n.t("正在读取待处理请求…")}</p> : null}
+                  {requestsError ? <Alert variant="destructive"><AlertDescription>{i18n.t("请求读取失败：")}{requestsError}</AlertDescription></Alert> : null}
                   {requestList.length === 0 && canShowReadEmpty(requestsLoading, requestsError) && (
                     <div className="im-empty-state flex flex-col items-center justify-center py-16 gap-2 text-muted-foreground text-sm">
                       <UserPlus size={40} className="opacity-25" />
-                      <span>{requestsAvailable === false ? '此渠道未提供请求管理，且未启用请求收件箱' : '暂无未处理请求'}</span>
+                      <span>{requestsAvailable === false ? i18n.t("此渠道未提供请求管理，且未启用请求收件箱") : i18n.t("暂无未处理请求")}</span>
                     </div>
                   )}
                   {requestList.map((r) => (
                     <div key={r.platformRequestId} className="im-inbox-card border border-border/80 rounded-lg p-3 space-y-2 bg-background/50">
                       <div className="flex flex-wrap gap-2 text-sm">
                         <Badge>{r.type}</Badge>
-                        <span>来自 {r.sender.name || r.sender.id}</span>
+                        <span>{i18n.t("来自 ")}{r.sender.name || r.sender.id}</span>
                         <span className="text-muted-foreground text-xs">
-                          {new Date(r.timestamp).toLocaleString()}
+                          {new Date(r.timestamp).toLocaleString(i18n.locale)}
                         </span>
                       </div>
                       {r.comment && <p className="text-sm">{r.comment}</p>}
@@ -828,16 +820,13 @@ export default function EndpointDetailPage() {
                         {r.canAct === true && (
                           <>
                             <Button size="sm" onClick={() => void approve(r.platformRequestId, true)}>
-                              同意
-                            </Button>
+                              {i18n.t("同意")}</Button>
                             <Button size="sm" variant="outline" onClick={() => void approve(r.platformRequestId, false)}>
-                              拒绝
-                            </Button>
+                              {i18n.t("拒绝")}</Button>
                           </>
                         )}
                         <Button size="sm" variant="ghost" disabled={r.id === undefined} onClick={() => { if (r.id !== undefined) void dismissRequest(r.id) }}>
-                          标记已处理
-                        </Button>
+                          {i18n.t("标记已处理")}</Button>
                       </div>}
                     </div>
                   ))}
@@ -846,7 +835,7 @@ export default function EndpointDetailPage() {
                   {inboxRequestsError ? <Alert variant="destructive"><AlertDescription>{inboxRequestsError}</AlertDescription></Alert> : null}
                   {!inboxRequestsEnabled && canShowReadEmpty(inboxRequestsLoading, inboxRequestsError) && (
                     <div className="im-empty-state flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground text-sm">
-                      <span>未启用统一收件箱，无历史记录</span>
+                      <span>{i18n.t("未启用统一收件箱，无历史记录")}</span>
                     </div>
                   )}
                   {inboxRequestsLoading && inboxRequests.length === 0 && (
@@ -856,7 +845,7 @@ export default function EndpointDetailPage() {
                   )}
                   {inboxRequestsEnabled && inboxRequests.length === 0 && canShowReadEmpty(inboxRequestsLoading, inboxRequestsError) && (
                     <div className="im-empty-state flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground text-sm">
-                      <span>暂无请求历史</span>
+                      <span>{i18n.t("暂无请求历史")}</span>
                     </div>
                   )}
                   {inboxRequests.length > 0 && (
@@ -867,9 +856,9 @@ export default function EndpointDetailPage() {
                             <Badge variant="outline">{r.type}</Badge>
                             <span>{r.sender_name || r.sender_id}</span>
                             <span className="text-muted-foreground text-xs">
-                              {new Date(r.created_at).toLocaleString()}
+                              {new Date(r.created_at).toLocaleString(i18n.locale)}
                             </span>
-                            {r.resolved ? <Badge variant="secondary">已处理</Badge> : null}
+                            {r.resolved ? <Badge variant="secondary">{i18n.t("已处理")}</Badge> : null}
                           </div>
                           {r.comment && <p className="text-muted-foreground text-sm">{r.comment}</p>}
                         </div>
@@ -881,7 +870,7 @@ export default function EndpointDetailPage() {
                           disabled={inboxRequestsLoading || !inboxRequestsHasMore}
                           onClick={() => void loadInboxRequests(true)}
                         >
-                          {inboxRequestsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : inboxRequestsHasMore ? '加载更多' : '没有更多记录'}
+                          {inboxRequestsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : inboxRequestsHasMore ? i18n.t("加载更多") : i18n.t("没有更多记录")}
                         </Button>
                       </div>
                     </>
@@ -896,16 +885,14 @@ export default function EndpointDetailPage() {
               <header className="im-chat-header im-system-page-header px-4 py-3 flex items-center justify-between">
                 <h2 className="text-base font-semibold flex items-center gap-2">
                   <Bell size={18} />
-                  通知
-                </h2>
+                  {i18n.t("通知")}</h2>
                 <Button
                   size="sm"
                   variant="outline"
                   className="im-secondary-action"
                   onClick={() => void refreshNotices()}
                 >
-                  刷新
-                </Button>
+                  {i18n.t("刷新")}</Button>
               </header>
               <Tabs
                 value={noticesTab}
@@ -917,17 +904,17 @@ export default function EndpointDetailPage() {
                 className="flex flex-col flex-1 min-h-0"
               >
                 <TabsList className="im-tabs-list mx-3 mt-2 w-auto justify-start">
-                  <TabsTrigger value="unread">未读</TabsTrigger>
-                  <TabsTrigger value="history">历史</TabsTrigger>
+                  <TabsTrigger value="unread">{i18n.t("未读")}</TabsTrigger>
+                  <TabsTrigger value="history">{i18n.t("历史")}</TabsTrigger>
                 </TabsList>
                 <TabsContent value="unread" className="im-system-content flex-1 overflow-y-auto p-4 space-y-3 mt-0">
-                  {actionError ? <Alert variant="destructive"><AlertDescription>操作失败：{actionError}</AlertDescription></Alert> : null}
-                  {noticesLoading ? <p role="status">正在读取通知…</p> : null}
-                  {noticesError ? <Alert variant="destructive"><AlertDescription>通知读取失败：{noticesError}</AlertDescription></Alert> : null}
+                  {actionError ? <Alert variant="destructive"><AlertDescription>{i18n.t("操作失败：")}{actionError}</AlertDescription></Alert> : null}
+                  {noticesLoading ? <p role="status">{i18n.t("正在读取通知…")}</p> : null}
+                  {noticesError ? <Alert variant="destructive"><AlertDescription>{i18n.t("通知读取失败：")}{noticesError}</AlertDescription></Alert> : null}
                   {noticeList.length === 0 && canShowReadEmpty(noticesLoading, noticesError) && (
                     <div className="im-empty-state flex flex-col items-center justify-center py-16 gap-2 text-muted-foreground text-sm">
                       <Bell size={40} className="opacity-25" />
-                      <span>{noticesAvailable === false ? '此实例未启用通知收件箱' : '暂无未读通知'}</span>
+                      <span>{noticesAvailable === false ? i18n.t("此实例未启用通知收件箱") : i18n.t("暂无未读通知")}</span>
                     </div>
                   )}
                   {noticeList.map((n) => (
@@ -941,13 +928,12 @@ export default function EndpointDetailPage() {
                           {n.payload.slice(0, 200)}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {new Date(n.timestamp).toLocaleString()}
+                          {new Date(n.timestamp).toLocaleString(i18n.locale)}
                         </p>
                       </div>
                       {!readOnly && (
                         <Button size="sm" variant="outline" onClick={() => void dismissNotice(n.id)}>
-                          已读
-                        </Button>
+                          {i18n.t("已读")}</Button>
                       )}
                     </div>
                   ))}
@@ -956,7 +942,7 @@ export default function EndpointDetailPage() {
                   {inboxNoticesError ? <Alert variant="destructive"><AlertDescription>{inboxNoticesError}</AlertDescription></Alert> : null}
                   {!inboxNoticesEnabled && canShowReadEmpty(inboxNoticesLoading, inboxNoticesError) && (
                     <div className="im-empty-state flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground text-sm">
-                      <span>未启用统一收件箱，无历史记录</span>
+                      <span>{i18n.t("未启用统一收件箱，无历史记录")}</span>
                     </div>
                   )}
                   {inboxNoticesLoading && inboxNotices.length === 0 && (
@@ -966,7 +952,7 @@ export default function EndpointDetailPage() {
                   )}
                   {inboxNoticesEnabled && inboxNotices.length === 0 && canShowReadEmpty(inboxNoticesLoading, inboxNoticesError) && (
                     <div className="im-empty-state flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground text-sm">
-                      <span>暂无通知历史</span>
+                      <span>{i18n.t("暂无通知历史")}</span>
                     </div>
                   )}
                   {inboxNotices.length > 0 && (
@@ -976,7 +962,7 @@ export default function EndpointDetailPage() {
                           <div className="flex flex-wrap gap-2">
                             <Badge variant="outline">{n.type}</Badge>
                             <span className="text-muted-foreground text-xs">
-                              {new Date(n.created_at).toLocaleString()}
+                              {new Date(n.created_at).toLocaleString(i18n.locale)}
                             </span>
                           </div>
                           <p className="text-muted-foreground font-mono text-xs truncate max-w-full">
@@ -991,7 +977,7 @@ export default function EndpointDetailPage() {
                           disabled={inboxNoticesLoading || !inboxNoticesHasMore}
                           onClick={() => void loadInboxNotices(true)}
                         >
-                          {inboxNoticesLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : inboxNoticesHasMore ? '加载更多' : '没有更多记录'}
+                          {inboxNoticesLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : inboxNoticesHasMore ? i18n.t("加载更多") : i18n.t("没有更多记录")}
                         </Button>
                       </div>
                     </>
@@ -1004,10 +990,9 @@ export default function EndpointDetailPage() {
           {!selection && (
             <div className="im-empty-state im-empty-state--hero flex flex-col items-center justify-center flex-1 gap-3 text-muted-foreground px-6 text-center">
               <MessageSquare className="h-14 w-14 opacity-20" />
-              <p className="text-sm font-medium text-foreground/80">选择会话或查看请求 / 通知</p>
+              <p className="text-sm font-medium text-foreground/80">{i18n.t("选择会话或查看请求 / 通知")}</p>
               <p className="text-xs max-w-sm">
-                在左侧选择好友、群或频道查看消息并发送内容；也可以查看请求与通知。
-              </p>
+                {i18n.t("在左侧选择好友、群或频道查看消息并发送内容；也可以查看请求与通知。")}</p>
             </div>
           )}
         </div>
@@ -1017,8 +1002,8 @@ export default function EndpointDetailPage() {
             <div className="im-right-header p-3 border-b border-border/60">
               <div className="im-member-panel-title">
                 <div>
-                  <h3 className="text-sm font-semibold">群成员与管理</h3>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">仅 ICQQ 群聊</p>
+                  <h3 className="text-sm font-semibold">{i18n.t("群成员与管理")}</h3>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">{i18n.t("仅 ICQQ 群聊")}</p>
                 </div>
                 <Badge variant="secondary" className="im-member-total">
                   {memberCounts.total}
@@ -1034,24 +1019,23 @@ export default function EndpointDetailPage() {
                 disabled={membersLoading}
               >
                 {membersLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                加载成员
-              </Button>
+                {i18n.t("加载成员")}</Button>
               <div className="im-member-search">
                 <Search className="h-3.5 w-3.5" />
                 <Input
                   value={memberSearch}
                   onChange={(e) => setMemberSearch(e.target.value)}
-                  aria-label="搜索成员"
-                  placeholder="搜索成员昵称、ID 或角色"
+                  aria-label={i18n.t("搜索成员")}
+                  placeholder={i18n.t("搜索成员昵称、ID 或角色")}
                   className="h-8 border-0 bg-transparent px-0 text-xs shadow-none focus-visible:ring-0"
                 />
               </div>
               <div className="im-member-role-tabs">
                 {[
-                  ['all', `全部 ${memberCounts.total}`],
-                  ['owner', `群主 ${memberCounts.owner}`],
-                  ['admin', `管理 ${memberCounts.admin}`],
-                  ['member', `成员 ${memberCounts.member}`],
+                  ['all', i18n.t("全部 {0}", [memberCounts.total])],
+                  ['owner', i18n.t("群主 {0}", [memberCounts.owner])],
+                  ['admin', i18n.t("管理 {0}", [memberCounts.admin])],
+                  ['member', i18n.t("成员 {0}", [memberCounts.member])],
                 ].map(([value, label]) => (
                   <button
                     key={value}
@@ -1068,7 +1052,7 @@ export default function EndpointDetailPage() {
               {filteredMembers.length === 0 && (
                 <div className="im-member-empty">
                   <User className="h-8 w-8 opacity-30" />
-                  <span>{membersLoading ? '正在加载成员' : '暂无匹配成员'}</span>
+                  <span>{membersLoading ? i18n.t("正在加载成员") : i18n.t("暂无匹配成员")}</span>
                 </div>
               )}
               {filteredMembers.map((item) => {
@@ -1096,7 +1080,7 @@ export default function EndpointDetailPage() {
                           <User className="h-3.5 w-3.5" />
                         )}
                         <Badge variant="outline" className="text-[10px]">
-                          {memberRoleLabel(item.role)}
+                          {memberRoleLabel(item.role, i18n.locale)}
                         </Badge>
                       </span>
                     </div>
@@ -1109,8 +1093,7 @@ export default function EndpointDetailPage() {
                           void handleGroupAction(ENDPOINT_RPC.GROUP_KICK, uid, item.name)
                         }
                       >
-                        踢
-                      </Button>
+                        {i18n.t("踢")}</Button>
                       <Button
                         size="sm"
                         variant="outline"
@@ -1119,8 +1102,7 @@ export default function EndpointDetailPage() {
                           void handleGroupAction(ENDPOINT_RPC.GROUP_MUTE, uid, item.name)
                         }
                       >
-                        禁言
-                      </Button>
+                        {i18n.t("禁言")}</Button>
                       <Button
                         size="sm"
                         variant="outline"
@@ -1129,8 +1111,7 @@ export default function EndpointDetailPage() {
                           void handleGroupAction(ENDPOINT_RPC.GROUP_ADMIN, uid, item.name, { enable: true })
                         }
                       >
-                        管理
-                      </Button>
+                        {i18n.t("管理")}</Button>
                     </div>}
                   </div>
                 )

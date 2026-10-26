@@ -1,3 +1,4 @@
+import { localeModule, isLocaleImport } from './locale-fixture.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -53,7 +54,7 @@ function fixture({ approve = async () => true, wait, buildRequest, storageFailur
     '../../utils/inbox-cache': { isInboxCacheScopeActive: scope => authority.active(scope) }, '../confirm-dialog': { useConfirm: () => ({ confirm: approve, ConfirmDialog: 'dialog' }) },
   }
   const module = { exports: {} }, code = ts.transpileModule(`${source}\nexport { EvidenceSession };`, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
-  new Function('require', 'exports', 'module', code)(name => Object.hasOwn(mocks, name) ? mocks[name] : require(name), module.exports, module)
+  new Function('require', 'exports', 'module', code)(name => isLocaleImport(name) ? localeModule : Object.hasOwn(mocks, name) ? mocks[name] : require(name), module.exports, module)
   runtime.mount(() => module.exports.EvidenceSession(props))
   return { runtime, calls, records,
     remount() { props = { ...props, scope: authority.current() }; runtime.remount() },

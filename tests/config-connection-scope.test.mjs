@@ -1,3 +1,4 @@
+import { localeModule, isLocaleImport } from './locale-fixture.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -14,6 +15,7 @@ import * as sourceValidation from '../console-ui/src/pages/config-source-validat
 import * as configNavigation from '../console-ui/src/pages/config-navigation.mjs'
 import { numericFieldIssue } from '../console-ui/src/components/PluginConfigForm/numeric-validation.mjs'
 import { isConversationScopeField } from '../console-ui/src/components/PluginConfigForm/conversation-scope-model.mjs'
+import { translate } from '../console-ui/src/i18n/locale.mjs'
 import * as configEvidenceModel from '../console-ui/src/components/PluginConfigForm/config-evidence-model.mjs'
 
 const require = createRequire(import.meta.url)
@@ -59,6 +61,9 @@ function hookRuntime() {
 }
 
 function fixture() {
+  let locale = 'zh-CN'
+  let messages = localeModule.useI18n()
+  const localized = { ...localeModule, useI18n: () => messages }
   const runtime = hookRuntime(); let connection = { host: 'https://host-a', credential: 'credential-a' }, nextScope = 0
   const authority = createInboxCacheAuthority(() => connection, () => `opaque-${++nextScope}`)
   const calls = []
@@ -99,7 +104,7 @@ function fixture() {
   function compile(source) {
     const module = { exports: {} }
     const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
-    new Function('require', 'exports', 'module', code)(name => Object.hasOwn(mocks, name) ? mocks[name] : require(name), module.exports, module)
+    new Function('require', 'exports', 'module', code)(name => isLocaleImport(name) ? localized : Object.hasOwn(mocks, name) ? mocks[name] : require(name), module.exports, module)
     return module.exports
   }
   const source = compile(files[0]); mocks['../../hooks/useConfigSource'] = source
@@ -109,6 +114,7 @@ function fixture() {
   const page = compile(`${files[3]}\nexport { EditableConfigPage, EditableConfigSession };`)
   const editor = compile(`${files[4]}\nexport { JsonValueEditor, UnionValueEditor, ObjectValueEditor, SequenceValueEditor, SecretTextEditor };`)
   return { runtime, calls, source, plugin, form, page, editor, authority, successes, errors,
+    switchLocale(next) { locale = next; messages = { ...localeModule.useI18n(), locale, t: (message, values) => translate(locale, message, values) } },
     switchHost() { connection = { host: 'https://host-b', credential: 'credential-b' } },
     switchCredential() { connection = { ...connection, credential: 'credential-b' } },
     logout() { connection = undefined },
@@ -650,4 +656,36 @@ test('explicitly unsetting and re-adding an optional object cannot revive its di
   json.runtime.remount(() => json.editor.JsonValueEditor(raw())); await json.runtime.settle()
   assert.equal(elements(json.runtime.value).find(item => item.type === 'code-editor').props.value, 'null'); assert.equal(flags.at(-1).invalid, false)
   json.runtime.unmount(); object.runtime.unmount()
+})
+
+
+test('changing interface locale keeps the actual config form draft and original revision without issuing another load', async () => {
+  const f = await loadedCalendarForm()
+  calendarField(f, 'provider').props.onChange('google'); await f.runtime.settle()
+  const calls = f.calls.length
+  f.switchLocale('en'); f.runtime.render(); await f.runtime.settle()
+  assert.equal(f.calls.length, calls)
+  assert.equal(calendarField(f, 'provider').props.value, 'google')
+  assert.ok(button(f.runtime.value, 'Save configuration'))
+  button(f.runtime.value, 'Save configuration').props.onClick()
+  const validated = f.answer('plugin:validate-config', calendar.validation)
+  assert.equal(validated.input.data.provider, 'google'); await f.runtime.settle()
+  const saved = f.answer('config:replace-source', calendar.save)
+  assert.equal(saved.input.expectedRevision, calendar.source.revision)
+  await f.runtime.settle()
+})
+
+test('production schema editor translates labels while preserving selected and emitted option values', () => {
+  const f = fixture(); f.switchLocale('en')
+  const changes = []
+  const field = { type:'string', title:'模式', options:[{value:'off',label:'关闭'},{value:'on',label:'开启'}], 'x-i18n':{en:{title:'Mode',description:'Choose a mode',enumLabels:{on:'On',off:'Off'}}} }
+  f.runtime.mount(() => f.editor.SchemaFieldEditor({name:'mode',field,value:'off',onChange: value => changes.push(value)}))
+  const tree = f.runtime.value
+  assert.ok(elements(tree).some(item => label(item) === 'Mode'))
+  const options = elements(tree).filter(item => item.type === 'option')
+  assert.deepEqual(options.map(label), ['Off','On'])
+  const select = elements(tree).find(item => item.type === 'select-root')
+  assert.equal(select.props.value,'0'); assert.deepEqual(changes,[])
+  select.props.onValueChange('1'); assert.deepEqual(changes,['on'])
+  assert.equal(field.title,'模式')
 })

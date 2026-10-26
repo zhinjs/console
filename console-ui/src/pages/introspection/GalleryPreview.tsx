@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
@@ -20,6 +21,7 @@ import { JsonViewer } from './JsonViewer'
 import './component-gallery.css'
 
 export function GalleryPreview({ item, readOnly }: { item: CapabilityItem; readOnly: boolean }) {
+  const i18n = useI18n()
   const cacheScope = useInboxCacheScope()
   const [output, setOutput] = useState<unknown>(null)
   const [generation, setGeneration] = useState<number>()
@@ -68,7 +70,7 @@ export function GalleryPreview({ item, readOnly }: { item: CapabilityItem; readO
         })
         const body = await response.json()
         if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`)
-        const result = readPreviewResponse(body, target)
+        const result = readPreviewResponse(body, target, i18n.locale)
         if (request.current() && isInboxCacheScopeActive(cacheScope)) { setOutput(result.output); setRendering(result.rendering); setGeneration(result.generation) }
       } catch (caught) {
         if (request.current() && isInboxCacheScopeActive(cacheScope)) setError(caught instanceof Error ? caught.message : String(caught))
@@ -85,47 +87,48 @@ export function GalleryPreview({ item, readOnly }: { item: CapabilityItem; readO
     const sequence = ++catalogSequence.current
     setTargetError('')
     try {
-      const value = readPreviewEndpoints(await requestConsole({ type: ENDPOINT_RPC.LIST }))
+      const value = readPreviewEndpoints(await requestConsole({ type: ENDPOINT_RPC.LIST }), i18n.locale)
       if (sequence !== catalogSequence.current || !isInboxCacheScopeActive(cacheScope)) return
       setEndpoints(value)
-      if (!value.length) setTargetError('当前 Host 没有提供可预览的 Endpoint 标识')
+      if (!value.length) setTargetError(i18n.t("当前 Host 没有提供可预览的 Endpoint 标识"))
     } catch (caught) { if (sequence === catalogSequence.current && isInboxCacheScopeActive(cacheScope)) setTargetError(caught instanceof Error ? caught.message : String(caught)) }
   }
   function previewTarget() {
-    try { if (endpointIndex === '') throw new Error('请选择目标 Endpoint'); setTarget(buildPreviewTarget(endpoints[Number(endpointIndex)]?.endpoint, { kind, id: conversationId, parentKind, parentId, threadId })); setTargetError(''); setAttempt(value => value + 1) }
+    try { if (endpointIndex === '') throw new Error(i18n.t("请选择目标 Endpoint")); setTarget(buildPreviewTarget(endpoints[Number(endpointIndex)]?.endpoint, { kind, id: conversationId, parentKind, parentId, threadId }, i18n.locale)); setTargetError(''); setAttempt(value => value + 1) }
     catch (caught) { setTargetError(caught instanceof Error ? caught.message : String(caught)) }
   }
   const targetName = target && (endpoints.find(value => value.endpoint.id === target.endpoint.id && value.endpoint.adapter === target.endpoint.adapter)?.name ?? target.endpoint.adapter)
-  return <div ref={container} className="console-component-live-preview" aria-label={`${name} 预览`}>
+  return <div ref={container} className="console-component-live-preview" aria-label={i18n.t("{0} 预览", [name])}>
     <div className="px-3 pt-2 text-[11px] text-muted-foreground">
-      {target ? `目标预览：${target.endpoint.adapter} / ${targetName} · ${{ private: '私聊', group: '群聊', channel: '频道' }[target.kind]} ${target.id}${target.parent ? ` · 父级 ${target.parent.id}` : ''}${target.threadId ? ` · 线程 ${target.threadId}` : ''}` : '作者 HTML / 消息预览'}
-      {generation !== undefined && <span> · 代次 {generation}</span>}
+      {target ? i18n.t("目标预览：{0} / {1} · {2} {3}{4}{5}", [target.endpoint.adapter, targetName, { private: i18n.t("私聊"), group: i18n.t("群聊"), channel: i18n.t("频道") }[target.kind], target.id, target.parent ? ` · 父级 ${target.parent.id}` : '', target.threadId ? ` · 线程 ${target.threadId}` : '']) : i18n.t("作者 HTML / 消息预览")}
+      {generation !== undefined && <span> {i18n.t(" · 代次 ")}{generation}</span>}
     </div>
-    {readOnly ? <span className="console-component-preview-state">此连接不支持组件渲染</span>
-      : loading ? <span className="console-component-preview-state"><Loader2 className="animate-spin" />加载中</span>
-      : error ? <div className="console-component-preview-state console-component-preview-error"><span role="alert">无法预览：{error}</span><Button size="sm" variant="outline" onClick={(event) => { event.stopPropagation(); setAttempt(value => value + 1) }}>重试预览</Button></div>
+    {readOnly ? <span className="console-component-preview-state">{i18n.t("此连接不支持组件渲染")}</span>
+      : loading ? <span className="console-component-preview-state"><Loader2 className="animate-spin" />{i18n.t("加载中")}</span>
+      : error ? <div className="console-component-preview-state console-component-preview-error"><span role="alert">{i18n.t("无法预览：")}{error}</span><Button size="sm" variant="outline" onClick={(event) => { event.stopPropagation(); setAttempt(value => value + 1) }}>{i18n.t("重试预览")}</Button></div>
       : <div className="px-3 pb-2"><ComponentPreviewOutput output={output} />{target && <RenderingDiagnostics rendering={rendering} preview />}</div>}
     {!readOnly && <details className="border-t p-3 text-xs" onClick={event => event.stopPropagation()}>
-      <summary className="cursor-pointer">按目标 Endpoint 预览</summary>
-      <p className="my-2 text-muted-foreground">不会发送消息或注册按钮回调；不运行出站中间件。实际发送记录是最终诊断依据。</p>
-      <Button size="sm" variant="outline" onClick={() => void loadEndpoints()}>加载 Endpoint</Button>
+      <summary className="cursor-pointer">{i18n.t("按目标 Endpoint 预览")}</summary>
+      <p className="my-2 text-muted-foreground">{i18n.t("不会发送消息或注册按钮回调；不运行出站中间件。实际发送记录是最终诊断依据。")}</p>
+      <Button size="sm" variant="outline" onClick={() => void loadEndpoints()}>{i18n.t("加载 Endpoint")}</Button>
       <div className="mt-2 grid gap-2">
-        <label>Endpoint<select className="console-control mt-1 w-full rounded border bg-background p-2" value={endpointIndex} onChange={event => setEndpointIndex(event.target.value)}><option value="">请选择</option>{endpoints.map((endpoint, index) => <option key={JSON.stringify(endpoint.endpoint)} value={index}>{endpoint.endpoint.adapter} / {endpoint.name}{endpoint.connected ? '' : '（离线）'}</option>)}</select></label>
-        <label>会话类型<select className="console-control mt-1 w-full rounded border bg-background p-2" value={kind} onChange={event => setKind(event.target.value)}><option value="private">私聊</option><option value="group">群聊</option><option value="channel">频道</option></select></label>
-        <Input aria-label="目标会话 ID" placeholder="会话 ID" value={conversationId} onChange={event => setConversationId(event.target.value)} />
-        <label>父级（可选）<select className="console-control mt-1 w-full rounded border bg-background p-2" value={parentKind} onChange={event => setParentKind(event.target.value)}><option value="">无</option><option value="group">群聊</option><option value="channel">频道 / 服务器</option></select></label>
-        <Input aria-label="父级 ID" placeholder="父级 ID（填写父级类型时必填）" value={parentId} onChange={event => setParentId(event.target.value)} />
-        <Input aria-label="线程 ID" placeholder="线程 ID（可选）" value={threadId} onChange={event => setThreadId(event.target.value)} />
+        <label>Endpoint<select className="console-control mt-1 w-full rounded border bg-background p-2" value={endpointIndex} onChange={event => setEndpointIndex(event.target.value)}><option value="">{i18n.t("请选择")}</option>{endpoints.map((endpoint, index) => <option key={JSON.stringify(endpoint.endpoint)} value={index}>{endpoint.endpoint.adapter} / {endpoint.name}{endpoint.connected ? '' : i18n.t("（离线）")}</option>)}</select></label>
+        <label>{i18n.t("会话类型")}<select className="console-control mt-1 w-full rounded border bg-background p-2" value={kind} onChange={event => setKind(event.target.value)}><option value="private">{i18n.t("私聊")}</option><option value="group">{i18n.t("群聊")}</option><option value="channel">{i18n.t("频道")}</option></select></label>
+        <Input aria-label={i18n.t("目标会话 ID")} placeholder={i18n.t("会话 ID")} value={conversationId} onChange={event => setConversationId(event.target.value)} />
+        <label>{i18n.t("父级（可选）")}<select className="console-control mt-1 w-full rounded border bg-background p-2" value={parentKind} onChange={event => setParentKind(event.target.value)}><option value="">{i18n.t("无")}</option><option value="group">{i18n.t("群聊")}</option><option value="channel">{i18n.t("频道 / 服务器")}</option></select></label>
+        <Input aria-label={i18n.t("父级 ID")} placeholder={i18n.t("父级 ID（填写父级类型时必填）")} value={parentId} onChange={event => setParentId(event.target.value)} />
+        <Input aria-label={i18n.t("线程 ID")} placeholder={i18n.t("线程 ID（可选）")} value={threadId} onChange={event => setThreadId(event.target.value)} />
         {targetError && <span role="alert" className="text-destructive">{targetError}</span>}
-        <div className="flex flex-wrap gap-2"><Button size="sm" onClick={previewTarget} disabled={endpointIndex === ''}>目标预览</Button><Button size="sm" variant="outline" onClick={() => { setTarget(undefined); setAttempt(value => value + 1) }}>作者预览</Button></div>
+        <div className="flex flex-wrap gap-2"><Button size="sm" onClick={previewTarget} disabled={endpointIndex === ''}>{i18n.t("目标预览")}</Button><Button size="sm" variant="outline" onClick={() => { setTarget(undefined); setAttempt(value => value + 1) }}>{i18n.t("作者预览")}</Button></div>
       </div>
     </details>}
   </div>
 }
 
 function ComponentPreviewOutput({ output: originalOutput }: { output: unknown }) {
+  const i18n = useI18n()
   const output = unwrapComponentOutput(originalOutput)
-  if (output == null || Array.isArray(output) && output.length === 0) return <span className="text-xs text-muted-foreground">组件未渲染内容</span>
+  if (output == null || Array.isArray(output) && output.length === 0) return <span className="text-xs text-muted-foreground">{i18n.t("组件未渲染内容")}</span>
   const values = (Array.isArray(output) ? output : [output]).map((value) =>
     typeof value === 'string' ? { type: 'text', data: { text: value } } : value)
   const segments = values.filter((value): value is ReceivedMessage['content'][number] => (

@@ -1,3 +1,4 @@
+import { translate } from '../i18n/locale.mjs'
 /** @typedef {{ adapter: string, endpoint: string }} MessageRoute */
 /** @typedef {{ agent: string, messageRoute?: MessageRoute }} MessageRouteMember */
 /** @typedef {{ adapter: string, name: string }} EndpointOption */
@@ -24,12 +25,12 @@ export function createNewWorkroomDraft(input) {
  * Workroom Console, so reject that draft before it reaches the Runtime CAS.
  * @param {readonly WorkroomSponsorDraft[]} drafts
  */
-export function validateWorkroomSponsors(drafts) {
+export function validateWorkroomSponsors(drafts, locale = 'zh-CN') {
   return drafts.flatMap(draft => {
     const sponsors = draft.sponsors ?? []
-    const message = draft.enabled !== false && !sponsors.length ? '已启用的项目至少需要一位负责人'
-      : sponsors.some(id => !id.trim() || id !== id.trim()) ? '负责人标识不能为空或含首尾空格'
-      : new Set(sponsors).size !== sponsors.length ? '负责人标识不能重复' : null
+    const message = draft.enabled !== false && !sponsors.length ? translate(locale, "已启用的项目至少需要一位负责人")
+      : sponsors.some(id => !id.trim() || id !== id.trim()) ? translate(locale, "负责人标识不能为空或含首尾空格")
+      : new Set(sponsors).size !== sponsors.length ? translate(locale, "负责人标识不能重复") : null
     return message ? [{ projectId: draft.projectId, message }] : []
   })
 }
@@ -61,7 +62,7 @@ export function parseEndpointRouteKey(value) {
  * @param {readonly EndpointOption[]} endpoints
  * @param {{ validateKnownEndpoints?: boolean }} [options]
  */
-export function validateWorkroomMessageRoutes(members, endpoints, options = {}) {
+export function validateWorkroomMessageRoutes(members, endpoints, options = {}, locale = 'zh-CN') {
   const validateKnownEndpoints = options.validateKnownEndpoints !== false
   const knownEndpoints = new Set(endpoints.map((endpoint) =>
     endpointRouteKey({ adapter: endpoint.adapter, endpoint: endpoint.name })))
@@ -83,7 +84,7 @@ export function validateWorkroomMessageRoutes(members, endpoints, options = {}) 
       return [{
         memberIndex,
         code: 'unknown',
-        message: `Endpoint ${label} 不在当前 Runtime Endpoint 列表中，请重新选择或改为继承主空间。`,
+        message: translate(locale, "Endpoint {0} 不在当前 Runtime Endpoint 列表中，请重新选择或改为继承主空间。", [label]),
       }]
     }
     const agents = [...(agentsByRoute.get(key) ?? [])]
@@ -91,7 +92,7 @@ export function validateWorkroomMessageRoutes(members, endpoints, options = {}) 
       return [{
         memberIndex,
         code: 'conflict',
-        message: `Endpoint ${label} 同时分配给多个 Agent（${agents.join('、')}），请为每个 Agent 选择独立出口。`,
+        message: translate(locale, "Endpoint {0} 同时分配给多个 Agent（{1}），请为每个 Agent 选择独立出口。", [label, agents.join('、')]),
       }]
     }
     return []
@@ -103,51 +104,51 @@ export function validateWorkroomMessageRoutes(members, endpoints, options = {}) 
  * that it is current or allow publication. Local drafts remain untouched.
  * @param {{ hasCatalog: boolean, loading: boolean, saving?: boolean, error?: string | null, dirty?: boolean, readOnly?: boolean }} state
  */
-export function catalogAvailability(state) {
+export function catalogAvailability(state, locale = 'zh-CN') {
   const current = state.hasCatalog && !state.loading && !state.error
   return {
     canEdit: current && !state.readOnly && !state.saving,
     canPublish: current && !state.readOnly && !state.saving && Boolean(state.dirty),
-    revisionDetail: !state.hasCatalog ? '目录尚未加载'
-      : state.loading ? '正在核验目录'
-      : state.error ? (state.dirty ? '刷新失败；保留未发布修改' : '刷新失败；显示上次加载的目录')
-      : state.dirty ? '存在未发布修改' : '已与持久目录同步',
+    revisionDetail: !state.hasCatalog ? translate(locale, "目录尚未加载")
+      : state.loading ? translate(locale, "正在核验目录")
+      : state.error ? (state.dirty ? translate(locale, "刷新失败；保留未发布修改") : translate(locale, "刷新失败；显示上次加载的目录"))
+      : state.dirty ? translate(locale, "存在未发布修改") : translate(locale, "已与持久目录同步"),
   }
 }
 
 /** @param {readonly { projectId: string }[]} drafts */
-export function validateWorkroomProjectIds(drafts) {
+export function validateWorkroomProjectIds(drafts, locale = 'zh-CN') {
   const ids = drafts.map(draft => draft.projectId.trim())
   const counts = new Map()
   for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1)
-  return ids.map(id => !id ? 'Project ID 不能为空' : counts.get(id) > 1 ? 'Project ID 不能重复' : !/^[a-z0-9][a-z0-9_-]{0,63}$/.test(id) ? '使用 1–64 位小写字母、数字、下划线或连字符，首位为字母或数字' : null)
+  return ids.map(id => !id ? translate(locale, "Project ID 不能为空") : counts.get(id) > 1 ? translate(locale, "Project ID 不能重复") : !/^[a-z0-9][a-z0-9_-]{0,63}$/.test(id) ? translate(locale, "使用 1–64 位小写字母、数字、下划线或连字符，首位为字母或数字") : null)
 }
 
-export function validateWorkroomBasics(draft, endpoints, validateKnownEndpoints = true) {
+export function validateWorkroomBasics(draft, endpoints, validateKnownEndpoints = true, locale = 'zh-CN') {
   const orchestrators = draft.members.filter(member => member.role === 'orchestrator').map(member => member.agent)
   function bindingIssues(binding, required) {
-    if (!binding) return required ? { endpoint: '请选择消息渠道', id: '请输入协作空间标识', agent: '请选择协调成员' } : {}
+    if (!binding) return required ? { endpoint: translate(locale, "请选择消息渠道"), id: translate(locale, "请输入协作空间标识"), agent: translate(locale, "请选择协调成员") } : {}
     return {
-      ...(!binding.adapter || !binding.endpoint ? { endpoint: '请选择消息渠道' } : validateKnownEndpoints && !endpoints.some(endpoint => endpoint.adapter === binding.adapter && endpoint.name === binding.endpoint) ? { endpoint: '当前渠道已不可用，请重新选择' } : {}),
-      ...(!binding.id.trim() ? { id: '请输入协作空间标识' } : binding.kind === 'repository' && !/^[^/\s]+\/[^/\s]+$/.test(binding.id.trim()) ? { id: '仓库格式为 owner/repo' } : {}),
-      ...(!orchestrators.includes(binding.agent) ? { agent: '请选择具有 orchestrator 角色的成员' } : {}),
+      ...(!binding.adapter || !binding.endpoint ? { endpoint: translate(locale, "请选择消息渠道") } : validateKnownEndpoints && !endpoints.some(endpoint => endpoint.adapter === binding.adapter && endpoint.name === binding.endpoint) ? { endpoint: translate(locale, "当前渠道已不可用，请重新选择") } : {}),
+      ...(!binding.id.trim() ? { id: translate(locale, "请输入协作空间标识") } : binding.kind === 'repository' && !/^[^/\s]+\/[^/\s]+$/.test(binding.id.trim()) ? { id: translate(locale, "仓库格式为 owner/repo") } : {}),
+      ...(!orchestrators.includes(binding.agent) ? { agent: translate(locale, "请选择具有 orchestrator 角色的成员") } : {}),
     }
   }
-  return { name: !draft.name.trim() ? '请输入名称' : null, conversation: bindingIssues(draft.conversation, draft.enabled !== false), sponsorConversation: bindingIssues(draft.sponsorConversation, false) }
+  return { name: !draft.name.trim() ? translate(locale, "请输入名称") : null, conversation: bindingIssues(draft.conversation, draft.enabled !== false), sponsorConversation: bindingIssues(draft.sponsorConversation, false) }
 }
 
-export function validateWorkroomMembers(draft, agents) {
+export function validateWorkroomMembers(draft, agents, locale = 'zh-CN') {
   const counts = new Map()
   for (const member of draft.members) {
     const key = `${member.agent}\0${member.role}`
     counts.set(key, (counts.get(key) ?? 0) + 1)
   }
   return {
-    orchestrator: draft.enabled !== false && !draft.members.some(member => member.role === 'orchestrator') ? '已启用的项目需要至少一位协调成员' : null,
+    orchestrator: draft.enabled !== false && !draft.members.some(member => member.role === 'orchestrator') ? translate(locale, "已启用的项目需要至少一位协调成员") : null,
     members: draft.members.map(member => ({
-      ...(!member.agent ? { agent: '请选择 Agent' } : !agents.includes(member.agent) ? { agent: '当前 Agent 已不可用，请重新选择' } : {}),
-      ...(counts.get(`${member.agent}\0${member.role}`) > 1 ? { role: '同一 Agent 的角色不能重复' } : {}),
-      ...(member.assignmentRoute?.kind === 'remote' && (!member.assignmentRoute.endpointId?.trim() || member.assignmentRoute.endpointId !== member.assignmentRoute.endpointId.trim()) ? { endpointId: '请输入远程入口标识，不含首尾空格' } : {}),
+      ...(!member.agent ? { agent: translate(locale, "请选择 Agent") } : !agents.includes(member.agent) ? { agent: translate(locale, "当前 Agent 已不可用，请重新选择") } : {}),
+      ...(counts.get(`${member.agent}\0${member.role}`) > 1 ? { role: translate(locale, "同一 Agent 的角色不能重复") } : {}),
+      ...(member.assignmentRoute?.kind === 'remote' && (!member.assignmentRoute.endpointId?.trim() || member.assignmentRoute.endpointId !== member.assignmentRoute.endpointId.trim()) ? { endpointId: translate(locale, "请输入远程入口标识，不含首尾空格") } : {}),
     })),
   }
 }
@@ -163,7 +164,7 @@ export function workroomDefinitionsMatch(actual, expected) {
 }
 
 /** Mirror Host ownership order, including shared Sponsor audiences and member message routes. */
-export function validateWorkroomSpaceOwnership(drafts) {
+export function validateWorkroomSpaceOwnership(drafts, locale = 'zh-CN') {
   const issues = drafts.map(() => ({ members: [] }));
   const owners = new Map();
   function address(binding, route = binding) {
@@ -181,7 +182,7 @@ export function validateWorkroomSpaceOwnership(drafts) {
       const ref = {index,field}; const kind = field === 'sponsorConversation' ? 'sponsor' : 'workroom';
       const owner = owners.get(key);
       if (owner && (owner.kind !== 'sponsor' || kind !== 'sponsor')) {
-        const message = '此空间已用于其他协作或负责人空间，请使用不同标识。';
+        const message = translate(locale, "此空间已用于其他协作或负责人空间，请使用不同标识。");
         report(ref,message);owner.refs.forEach(ref => report(ref,message));
       } else if (owner) { owner.projects.push(index);owner.refs.push(ref); }
       else owners.set(key,{kind,projects:[index],refs:[ref]});
@@ -192,14 +193,14 @@ export function validateWorkroomSpaceOwnership(drafts) {
       const key=address(draft.conversation,member.messageRoute);if(!key)continue;
       const ref={index,field:'member',memberIndex};const owner=owners.get(key);
       if(owner && !owner.projects.includes(index)) {
-        const message='此消息出口对应的空间已被其他项目占用。';report(ref,message);owner.refs.forEach(ref=>report(ref,message));
+        const message=translate(locale, "此消息出口对应的空间已被其他项目占用。");report(ref,message);owner.refs.forEach(ref=>report(ref,message));
       } else if(!owner) owners.set(key,{kind:'workroom',projects:[index],refs:[ref]});
     }
   }
   for(const owner of owners.values()) {
     if(owner.kind!=='sponsor' || owner.projects.length<2)continue;
     const audiences=owner.projects.map(index=>JSON.stringify([...(drafts[index].sponsors??[])].sort()));
-    if(audiences.includes('[]') || new Set(audiences).size!==1) owner.refs.forEach(ref=>report(ref,'共享负责人空间的项目必须配置相同且非空的负责人集合。'));
+    if(audiences.includes('[]') || new Set(audiences).size!==1) owner.refs.forEach(ref=>report(ref,translate(locale, "共享负责人空间的项目必须配置相同且非空的负责人集合。")));
   }
   return issues;
 }

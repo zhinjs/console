@@ -1,3 +1,4 @@
+import { prepareLocaleModule } from './locale-fixture.mjs'
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { readFile } from 'node:fs/promises'
@@ -12,7 +13,7 @@ const compiled = ts.transpileModule(await readFile(componentFile, 'utf8'), {
 }).outputText.replace(/(['"])react\/jsx-runtime\1/g, JSON.stringify(import.meta.resolve('react/jsx-runtime')))
   .replace(/(['"])react\1/g, JSON.stringify(import.meta.resolve('react')))
   .replace(/(['"])\.\/record-value-preview\.mjs\1/g, JSON.stringify(new URL('../console-ui/src/pages/database/record-value-preview.mjs', import.meta.url).href))
-const { RecordValueDisclosure } = await import('data:text/javascript;base64,' + Buffer.from(compiled).toString('base64'))
+const { RecordValueDisclosure } = await import('data:text/javascript;base64,' + Buffer.from(prepareLocaleModule(compiled)).toString('base64'))
 
 test('document summaries separate identity and bounded fields without expanding nested values', () => {
   const document = { _id: 'doc-1', name: 'Example', nested: { fullBody: 'full-nested-body' }, items: [1, 2], additional: true }

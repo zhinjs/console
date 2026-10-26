@@ -13,10 +13,10 @@ export interface MessageDiagnostic {
 export const DIAGNOSTIC_RETENTION: string
 export function validDiagnosticConversation(value: unknown): value is DiagnosticConversation
 export function diagnosticConversationKey(value: unknown): string | undefined
-export function diagnosticTarget(message: unknown): DiagnosticTarget | { reason: string }
-export function conversationDiagnosticTarget(endpoint: unknown, selection: unknown): DiagnosticTarget | { reason: string }
-export function diagnosticQuery(target: DiagnosticTarget): string
-export function readMessageDiagnostics(body: unknown, target: DiagnosticTarget): MessageDiagnostic[]
-export function diagnosticLabel(value?: string): string
-export function diagnosticAdvice(record: MessageDiagnostic): string[]
+export function diagnosticTarget(message: unknown, locale?: 'zh-CN' | 'en'): DiagnosticTarget | { reason: string }
+export function conversationDiagnosticTarget(endpoint: unknown, selection: unknown, locale?: 'zh-CN' | 'en'): DiagnosticTarget | { reason: string }
+export function diagnosticQuery(target: DiagnosticTarget, locale?: 'zh-CN' | 'en'): string
+export function readMessageDiagnostics(body: unknown, target: DiagnosticTarget, locale?: 'zh-CN' | 'en'): MessageDiagnostic[]
+export function diagnosticLabel(value?: string, locale?: 'zh-CN' | 'en'): string
+export function diagnosticAdvice(record: MessageDiagnostic, locale?: 'zh-CN' | 'en'): string[]
 export function createDiagnosticRequestGate(readScope?: () => string | undefined): { begin(): { signal: AbortSignal; current(): boolean }; cancel(): void }

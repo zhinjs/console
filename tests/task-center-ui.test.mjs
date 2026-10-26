@@ -1,3 +1,4 @@
+import { prepareLocaleModule } from './locale-fixture.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -18,7 +19,7 @@ const code = `import {availableTaskActions,taskTimeLabel,taskParameterSummary,TA
   ${summaries.map(node => node.getText(ast)).join('\n')}`
 let compiled = ts.transpileModule(code, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX } }).outputText
 compiled = compiled.replaceAll('"react/jsx-runtime"', JSON.stringify(import.meta.resolve('react/jsx-runtime')))
-const { AdminTaskCard, TaskTargetSummary, TaskParameterSummary } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`)
+const { AdminTaskCard, TaskTargetSummary, TaskParameterSummary } = await import(`data:text/javascript;base64,${Buffer.from(prepareLocaleModule(compiled)).toString('base64')}`)
 const target = { endpoint: { id: 'account-full-id', adapter: 'root/adapter' }, kind: 'channel', id: 'room', parent: { kind: 'channel', id: 'team' }, threadId: 'topic' }
 const task = { id: 'task', ownership: 'administrator', title: '管理员提醒', target, state: 'unknown', createdAt: 100,
   nextRunAt: 200, timezone: 'Asia/Shanghai', parameters: {}, actions: ['resume', 'update', 'cancel'] }

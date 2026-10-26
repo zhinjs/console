@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import { useCallback, useState } from 'react'
 import { useToast } from '../../components/toast'
 import { ENDPOINT_RPC } from '../../contracts/zhin-console'
@@ -20,6 +21,7 @@ export function useGroupActions(params: {
   endpointId: string
   selection: SidebarSelection | null
 }) {
+  const i18n = useI18n()
   const { adapter, endpointId, selection } = params
   const { success, error: toastError } = useToast()
 
@@ -36,12 +38,12 @@ export function useGroupActions(params: {
       })
       setMembers(r.members || [])
     } catch (e) {
-      toastError((e as Error).message, '加载群成员失败')
+      toastError((e as Error).message, i18n.t("加载群成员失败"))
       setMembers([])
     } finally {
       setMembersLoading(false)
     }
-  }, [selection, adapter, endpointId, toastError])
+  }, [selection, adapter, endpointId, toastError, i18n])
 
   const groupAction = useCallback(
     async (
@@ -62,14 +64,14 @@ export function useGroupActions(params: {
           },
         })
         await loadMembers()
-        success(GROUP_ACTION_LABELS[type])
+        success(i18n.t(GROUP_ACTION_LABELS[type]))
         return true
       } catch (e) {
-        toastError((e as Error).message, '群管理操作失败')
+        toastError((e as Error).message, i18n.t("群管理操作失败"))
         return false
       }
     },
-    [selection, adapter, endpointId, loadMembers, success, toastError],
+    [selection, adapter, endpointId, loadMembers, success, toastError, i18n],
   )
 
   return {

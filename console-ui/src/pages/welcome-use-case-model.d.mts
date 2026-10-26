@@ -4,12 +4,12 @@ import type { DiagnosticConversation } from './endpoint-detail/types'
 export const WELCOME_USE_CASE: 'group-welcome'
 export interface WelcomeInstance { instanceKey: string; packageName: string; status: string }
 export interface WelcomeEvidence { state: PluginManagementState; incarnation: string; welcome: { messagePresent: boolean | null; mode: 'all' | 'none' | 'selected' | 'unknown'; targets: DiagnosticConversation[] } }
-export function readWelcomeUseCase(payload: unknown): TaskUseCase
-export function readWelcomeInstances(payload: unknown, packageName: string): WelcomeInstance[]
+export function readWelcomeUseCase(payload: unknown, locale?: 'zh-CN' | 'en'): TaskUseCase
+export function readWelcomeInstances(payload: unknown, packageName: string, locale?: 'zh-CN' | 'en'): WelcomeInstance[]
 export function welcomeReturnUrl(instanceKey?: string): string
 export function welcomeConfigUrl(instanceKey: string): string
 export function welcomeDetailUrl(instanceKey: string): string
-export function readWelcomeEvidence(state: unknown, plan: unknown, instanceKey: string, packageName: string, source: unknown): WelcomeEvidence
+export function readWelcomeEvidence(state: unknown, plan: unknown, instanceKey: string, packageName: string, source: unknown, locale?: 'zh-CN' | 'en'): WelcomeEvidence
 export function welcomeEvidenceKey(value?: WelcomeEvidence | null): string | undefined
 export function welcomeApplied(value?: WelcomeEvidence | null): boolean
 export function welcomeReady(value?: WelcomeEvidence | null, target?: unknown): boolean

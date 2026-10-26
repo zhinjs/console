@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n'
 import { useCallback, useState } from 'react'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
@@ -6,42 +7,41 @@ import {
   setDemoOnboardingDone,
 } from '../utils/demo-onboarding'
 
-const STEPS = [
+
+
+export function DemoOnboardingGate({ children }: { children: React.ReactNode }) {
+  const i18n = useI18n()
+  const STEPS = [
   {
-    title: '零安装体验 Zhin',
+    title: i18n.t("零安装体验 Zhin"),
     body: (
       <>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          你已连接到官方托管 Demo Host（<code className="text-xs bg-muted px-1 rounded">zhinjs-demo.hf.space</code>
-          ），无需 API Base / Token。
-        </p>
+          {i18n.t("你已连接到官方托管 Demo Host（")}<code className="text-xs bg-muted px-1 rounded">zhinjs-demo.hf.space</code>
+          {i18n.t("），无需 API Base / Token。")}</p>
         <p className="text-sm text-muted-foreground leading-relaxed mt-2">
-          <strong>QQ 群助手 + 可选 @AI</strong> — 先在 Demo 里玩通，再部署到本机或接 QQ。
-        </p>
+          <strong>{i18n.t("QQ 群助手 + 可选 @AI")}</strong> {i18n.t("— 先在 Demo 里玩通，再部署到本机或接 QQ。")}</p>
       </>
     ),
   },
   {
-    title: '试试 hello 与 card',
+    title: i18n.t("试试 hello 与 card"),
     body: (
       <>
-        <p className="text-sm text-muted-foreground mb-2">在侧栏打开 <strong>沙盒</strong>，依次发送：</p>
+        <p className="text-sm text-muted-foreground mb-2">{i18n.t("在侧栏打开")}<strong>{i18n.t("沙盒")}</strong>{i18n.t("，依次发送：")}</p>
         <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
           <li>
-            <code className="text-xs bg-muted px-1 rounded">hello</code> — 命令 Bot 回复
-          </li>
+            <code className="text-xs bg-muted px-1 rounded">hello</code> {i18n.t("— 命令 Bot 回复")}</li>
           <li>
-            <code className="text-xs bg-muted px-1 rounded">card</code> — JSX 状态卡片
-          </li>
+            <code className="text-xs bg-muted px-1 rounded">card</code> {i18n.t("— JSX 状态卡片")}</li>
           <li>
-            <code className="text-xs bg-muted px-1 rounded">ai: 你好</code> — Agent 对话（Demo 已启用 Ollama）
-          </li>
+            <code className="text-xs bg-muted px-1 rounded">{i18n.t("ai: 你好")}</code> {i18n.t("— Agent 对话（Demo 已启用 Ollama）")}</li>
         </ul>
       </>
     ),
   },
   {
-    title: '下一步（任选）',
+    title: i18n.t("下一步（任选）"),
     body: (
       <div className="flex flex-col gap-2">
         <a
@@ -50,22 +50,18 @@ const STEPS = [
           target="_blank"
           rel="noopener noreferrer"
         >
-          部署到本机 · npm create zhin-app
-        </a>
+          {i18n.t("部署到本机 · npm create zhin-app")}</a>
         <a
           className="inline-flex items-center justify-center rounded-md border border-primary text-primary text-sm font-medium h-10 px-4"
           href="https://zhin.js.org/adapters/icqq"
           target="_blank"
           rel="noopener noreferrer"
         >
-          接 QQ Bot · ICQQ 适配器
-        </a>
+          {i18n.t("接 QQ Bot · ICQQ 适配器")}</a>
       </div>
     ),
   },
 ] as const
-
-export function DemoOnboardingGate({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(() => !isDemoOnboardingDone())
   const [step, setStep] = useState(0)
 
@@ -91,7 +87,7 @@ export function DemoOnboardingGate({ children }: { children: React.ReactNode }) 
         <Card className="w-full max-w-md shadow-xl">
           <CardHeader>
             <p className="text-xs text-muted-foreground">
-              使用说明 · {step + 1} / {STEPS.length}
+              {i18n.t("使用说明 · ")}{step + 1} / {STEPS.length}
             </p>
             <CardTitle id="demo-onboard-title" className="text-lg">
               {current.title}
@@ -102,22 +98,18 @@ export function DemoOnboardingGate({ children }: { children: React.ReactNode }) 
             <div className="flex flex-wrap gap-2">
             {step > 0 && (
               <Button type="button" variant="secondary" onClick={() => setStep((s) => s - 1)}>
-                上一步
-              </Button>
+                {i18n.t("上一步")}</Button>
             )}
             {!isLast ? (
               <>
                 <Button type="button" className="flex-1" onClick={() => setStep((s) => s + 1)}>
-                  下一步
-                </Button>
+                  {i18n.t("下一步")}</Button>
                 <Button type="button" variant="ghost" onClick={close}>
-                  跳过
-                </Button>
+                  {i18n.t("跳过")}</Button>
               </>
             ) : (
               <Button type="button" className="flex-1" onClick={close}>
-                开始体验
-              </Button>
+                {i18n.t("开始体验")}</Button>
             )}
           </div>
           </CardContent>

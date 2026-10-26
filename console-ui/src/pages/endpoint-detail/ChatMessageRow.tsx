@@ -1,3 +1,5 @@
+import { translate } from '../../i18n/locale.mjs'
+import { useI18n } from '../../i18n'
 import { Copy, Forward, Quote } from 'lucide-react'
 import { cn } from '@zhin.js/client'
 import type { ChatRow } from './types'
@@ -17,27 +19,28 @@ interface ChatMessageRowProps {
   onForward: (ref: MessageDraftReference) => void
 }
 
-function senderNameOf(message: ChatRow): string {
-  if (message.outgoing) return '我'
-  return message.sender?.name || message.sender?.id || '未知'
+function senderNameOf(message: ChatRow, locale: 'zh-CN' | 'en' = 'zh-CN'): string {
+  if (message.outgoing) return translate(locale, "我")
+  return message.sender?.name || message.sender?.id || translate(locale, "未知")
 }
 
-export function toDraftReference(message: ChatRow): MessageDraftReference {
+export function toDraftReference(message: ChatRow, locale: 'zh-CN' | 'en' = 'zh-CN'): MessageDraftReference {
   return {
     id: message.messageId ?? message.id,
-    senderName: senderNameOf(message),
-    summary: messageContentSummary(message.content, 96) || '[空消息]',
+    senderName: senderNameOf(message, locale),
+    summary: messageContentSummary(message.content, 96, locale) || translate(locale, "[空消息]"),
   }
 }
 
 export function ChatMessageRow({ message, onQuote, onForward }: ChatMessageRowProps) {
+  const i18n = useI18n()
   const out = message.outgoing === true
-  const senderName = senderNameOf(message)
-  const timeLabel = new Date(message.timestamp).toLocaleTimeString('zh-CN', {
+  const senderName = senderNameOf(message, i18n.locale)
+  const timeLabel = new Date(message.timestamp).toLocaleTimeString(i18n.locale, {
     hour: '2-digit',
     minute: '2-digit',
   })
-  const draftRef = toDraftReference(message)
+  const draftRef = toDraftReference(message, i18n.locale)
 
   const copySummary = () => {
     if (typeof navigator === 'undefined' || !navigator.clipboard) return
@@ -46,15 +49,15 @@ export function ChatMessageRow({ message, onQuote, onForward }: ChatMessageRowPr
 
   return (
     <article className={cn('im-message-row', out && 'im-message-row--out')}>
-      <div className="im-message-actions" aria-label="消息操作">
+      <div className="im-message-actions" aria-label={i18n.t("消息操作")}>
         {!out && !message.local && <MessageDiagnosticsAction message={message} />}
-        <button type="button" title="引用" onClick={() => onQuote(draftRef)}>
+        <button type="button" title={i18n.t("引用")} onClick={() => onQuote(draftRef)}>
           <Quote className="h-3.5 w-3.5" />
         </button>
-        <button type="button" title="转发" onClick={() => onForward(draftRef)}>
+        <button type="button" title={i18n.t("转发")} onClick={() => onForward(draftRef)}>
           <Forward className="h-3.5 w-3.5" />
         </button>
-        <button type="button" title="复制摘要" onClick={copySummary}>
+        <button type="button" title={i18n.t("复制摘要")} onClick={copySummary}>
           <Copy className="h-3.5 w-3.5" />
         </button>
       </div>
@@ -62,7 +65,7 @@ export function ChatMessageRow({ message, onQuote, onForward }: ChatMessageRowPr
         <div className={cn('im-meta flex items-center gap-2 text-[10px] mb-0.5', out ? '' : 'text-muted-foreground')}>
           <span className={cn('font-medium', out ? '' : 'text-foreground/90')}>{senderName}</span>
           <span className="tabular-nums opacity-80">{timeLabel}</span>
-          {message.directionUnknown && <span className="opacity-70">历史方向未记录</span>}
+          {message.directionUnknown && <span className="opacity-70">{i18n.t("历史方向未记录")}</span>}
         </div>
         <div className="im-message-text text-[14px] leading-snug break-words">
           <MessageBody content={message.content} />

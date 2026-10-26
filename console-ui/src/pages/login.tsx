@@ -1,3 +1,5 @@
+import { LanguageSelect } from '../components/LanguageSelect'
+import { useI18n } from '../i18n'
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { cn } from '@zhin.js/client'
 import { Trash2 } from 'lucide-react'
@@ -30,6 +32,7 @@ interface LoginPageProps {
 }
 
 export default function LoginPage({ onSuccess, initialApiBase }: LoginPageProps) {
+  const i18n = useI18n()
   const [savedLogins, setSavedLogins] = useState(() => listSavedLogins())
   const [apiBase, setApiBaseValue] = useState(() => {
     if (initialApiBase) return initialApiBase
@@ -60,7 +63,7 @@ export default function LoginPage({ onSuccess, initialApiBase }: LoginPageProps)
     setLoading(true)
     setError('')
 
-    const result = await verifyAndStoreCredentials(apiBase, token)
+    const result = await verifyAndStoreCredentials(apiBase, token, i18n.locale)
     if (result.ok) {
       if (remember) {
         upsertSavedLogin(apiBase, token)
@@ -73,7 +76,7 @@ export default function LoginPage({ onSuccess, initialApiBase }: LoginPageProps)
       setError(result.message)
     }
     setLoading(false)
-  }, [token, apiBase, remember, onSuccess])
+  }, [token, apiBase, remember, onSuccess, i18n])
 
   const handleRemoveSaved = useCallback(() => {
     if (!selectedSavedBase) return
@@ -96,15 +99,15 @@ export default function LoginPage({ onSuccess, initialApiBase }: LoginPageProps)
     <div className="flex items-center justify-center min-h-[100dvh] bg-background">
       <Card className={cn('w-full max-w-md mx-4')}>
         <CardHeader className="text-center space-y-2">
+          <div className="flex justify-end"><LanguageSelect /></div>
           <div
             className="flex items-center justify-center mx-auto w-12 h-12 rounded-xl bg-primary text-primary-foreground shadow-[var(--console-shadow-xs)] font-semibold text-xl"
           >
             Z
           </div>
-          <CardTitle className="text-xl">Zhin.js 控制台</CardTitle>
+          <CardTitle className="text-xl">{i18n.t("Zhin.js 控制台")}</CardTitle>
           <CardDescription>
-            配置 Remote Console：API 地址与 Bearer Token
-          </CardDescription>
+            {i18n.t("配置 Remote Console：API 地址与 Bearer Token")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -116,14 +119,14 @@ export default function LoginPage({ onSuccess, initialApiBase }: LoginPageProps)
           >
             {savedLogins.length > 0 && (
               <div className="space-y-2">
-                <label className="text-xs text-muted-foreground">已保存的连接</label>
+                <label className="text-xs text-muted-foreground">{i18n.t("已保存的连接")}</label>
                 <div className="flex gap-2">
                   <Select
                     value={selectedSavedBase || undefined}
                     onValueChange={(value) => applySavedLogin(value)}
                   >
                     <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="选择 Host 快速填入…" />
+                      <SelectValue placeholder={i18n.t("选择 Host 快速填入…")} />
                     </SelectTrigger>
                     <SelectContent>
                       {savedLogins.map((item) => (
@@ -140,7 +143,7 @@ export default function LoginPage({ onSuccess, initialApiBase }: LoginPageProps)
                     className="shrink-0"
                     disabled={!selectedSavedBase}
                     onClick={handleRemoveSaved}
-                    title="删除此保存"
+                    title={i18n.t("删除此保存")}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -151,7 +154,7 @@ export default function LoginPage({ onSuccess, initialApiBase }: LoginPageProps)
             <div className="space-y-2">
               <Input
                 type="url"
-                placeholder="API Base URL（如 http://127.0.0.1:8086）"
+                placeholder={i18n.t("API Base URL（如 http://127.0.0.1:8086）")}
                 aria-label="API Base URL"
                 value={apiBase}
                 onChange={(e) => {
@@ -161,7 +164,7 @@ export default function LoginPage({ onSuccess, initialApiBase }: LoginPageProps)
               />
               <Input
                 type="password"
-                placeholder="API Token（须手动输入，勿通过 URL 传递）"
+                placeholder={i18n.t("API Token（须手动输入，勿通过 URL 传递）")}
                 aria-label="API Token"
                 value={token}
                 onChange={(e) => {
@@ -180,15 +183,14 @@ export default function LoginPage({ onSuccess, initialApiBase }: LoginPageProps)
                 checked={remember}
                 onCheckedChange={(v) => setRemember(v === true)}
               />
-              <span className="text-sm text-muted-foreground">保存登录信息，下次可快速选择</span>
+              <span className="text-sm text-muted-foreground">{i18n.t("保存登录信息，下次可快速选择")}</span>
             </label>
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? '验证中...' : selectedSavedBase && token ? '快速连接' : '连接'}
+              {loading ? i18n.t("验证中...") : selectedSavedBase && token ? i18n.t("快速连接") : i18n.t("连接")}
             </Button>
             <p className="text-xs text-center text-muted-foreground">
-              填写 Bot 启动日志中的 Host 地址。使用本地地址时，请确保 Host 的 corsOrigins 允许当前 Console 来源。
-            </p>
+              {i18n.t("填写 Bot 启动日志中的 Host 地址。使用本地地址时，请确保 Host 的 corsOrigins 允许当前 Console 来源。")}</p>
           </form>
         </CardContent>
       </Card>

@@ -3,4 +3,4 @@ export function requestApproval(adapter: string, endpointKey: string, platformRe
 export function consumedRows(id: number): { rowIds: number[] }
 export function canShowReadEmpty(loading: boolean, error: string | null): boolean
 
-export function readEndpointIdentity(value: unknown): { id: string; adapter: string }
+export function readEndpointIdentity(value: unknown, locale?: 'zh-CN' | 'en'): { id: string; adapter: string }

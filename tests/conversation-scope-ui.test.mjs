@@ -1,3 +1,4 @@
+import { prepareLocaleModule } from './locale-fixture.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -15,7 +16,7 @@ async function load(code) {
  let compiled=ts.transpileModule(code,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext,jsx:ts.JsxEmit.ReactJSX}}).outputText
  compiled=compiled.replaceAll('"react/jsx-runtime"',JSON.stringify(import.meta.resolve('react/jsx-runtime')))
  compiled=compiled.replaceAll('"react"',JSON.stringify(import.meta.resolve('react')))
- return import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`)
+ return import(`data:text/javascript;base64,${Buffer.from(prepareLocaleModule(compiled)).toString('base64')}`)
 }
 const code=`import {useState} from ${JSON.stringify(import.meta.resolve('react'))};
  import {scopeAllowedKinds,CONVERSATION_KIND_LABELS,targetDraft} from ${JSON.stringify(new URL(base+'conversation-scope-model.mjs',import.meta.url).href)};

@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { requestConsole } from '../utils/console-rpc'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
@@ -7,6 +8,9 @@ import { readWelcomeEvidence, welcomeEvidenceKey, welcomeReady, welcomeTargetKey
 
 /** A scoped view of existing Host evidence. No install/configuration/verification execution authority. */
 export function useWelcomeInspection(instanceKey: string, packageName: string, target: unknown) {
+  const i18n = useI18n()
+  const messages = useRef(i18n)
+  messages.current = i18n
   const scope = useInboxCacheScope(), targetKey = welcomeTargetKey(target)
   const binding = JSON.stringify([scope, instanceKey, packageName])
   const current = useRef({ binding, targetKey, epoch: 0 })
@@ -25,13 +29,13 @@ export function useWelcomeInspection(instanceKey: string, packageName: string, t
         requestConsole({ type: 'config:get-source' }),
       ])
       if (!read.current() || current.current.binding !== binding || !isInboxCacheScopeActive(scope)) return undefined
-      const evidence = readWelcomeEvidence(state, plan, instanceKey, packageName, source)
+      const evidence = readWelcomeEvidence(state, plan, instanceKey, packageName, source, messages.current.locale)
       setEntry({ binding, evidence })
       setRecord(previous => previous?.binding === binding && previous.epoch === current.current.epoch && previous.evidenceKey === welcomeEvidenceKey(evidence) && welcomeReady(evidence) ? previous : null)
       return evidence
     } catch (cause) {
       if (read.current() && current.current.binding === binding && isInboxCacheScopeActive(scope)) {
-        setEntry({ binding, error: cause instanceof Error ? cause.message : '无法读取当前应用证据' }); setRecord(null)
+        setEntry({ binding, error: cause instanceof Error ? cause.message : messages.current.t("无法读取当前应用证据") }); setRecord(null)
       }
       return undefined
     }

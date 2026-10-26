@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import { Bell, ChevronDown, ChevronRight, UserPlus } from 'lucide-react'
 import { cn } from '@zhin.js/client'
 import type { SidebarSelection } from './types'
@@ -21,10 +22,11 @@ export function SystemInboxSection({
   onSelectRequests,
   onSelectNotices,
 }: SystemInboxSectionProps) {
+  const i18n = useI18n()
   const total = requestCount + noticeCount
 
   return (
-    <section className="im-conversation-section im-system-section" aria-label="系统">
+    <section className="im-conversation-section im-system-section" aria-label={i18n.t("系统")}>
       <button
         type="button"
         className="im-section-header"
@@ -34,7 +36,7 @@ export function SystemInboxSection({
         <span className="im-section-chevron" aria-hidden>
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </span>
-        <span className="im-section-title">系统</span>
+        <span className="im-section-title">{i18n.t("系统")}</span>
         {total > 0 ? <span className="im-section-count-badge">{total}</span> : null}
       </button>
       {!collapsed && (
@@ -48,8 +50,8 @@ export function SystemInboxSection({
               <UserPlus className="h-4 w-4" />
             </span>
             <span className="im-system-label">
-              <span className="im-system-title">请求</span>
-              <span className="im-system-desc">好友/群邀请</span>
+              <span className="im-system-title">{i18n.t("请求")}</span>
+              <span className="im-system-desc">{i18n.t("好友/群邀请")}</span>
             </span>
             {requestCount > 0 ? (
               <span className="im-conversation-unread">{requestCount}</span>
@@ -64,8 +66,8 @@ export function SystemInboxSection({
               <Bell className="h-4 w-4" />
             </span>
             <span className="im-system-label">
-              <span className="im-system-title">通知</span>
-              <span className="im-system-desc">群管/撤回等</span>
+              <span className="im-system-title">{i18n.t("通知")}</span>
+              <span className="im-system-desc">{i18n.t("群管/撤回等")}</span>
             </span>
             {noticeCount > 0 ? (
               <span className="im-conversation-unread">{noticeCount}</span>

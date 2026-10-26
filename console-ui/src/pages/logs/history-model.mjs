@@ -1,3 +1,4 @@
+import { translate } from '../../i18n/locale.mjs'
 export function historyQuery(params) {
   const positive = (value, fallback) => /^\d+$/.test(value ?? '') && Number(value) > 0 ? Number(value) : fallback
   const level = ['debug', 'info', 'warn', 'error'].includes(params.get('level')) ? params.get('level') : 'all'
@@ -17,16 +18,16 @@ export function changeHistoryFilter(params, name, value) {
   next.delete('page')
   return next
 }
-export function validateHistoryResponse(payload) {
+export function validateHistoryResponse(payload, locale = 'zh-CN') {
   if (payload?.success && Array.isArray(payload.data)
-    && ['page','pageSize','totalPages','sources'].some(key => !(key in payload))) throw new Error('Host 不支持日志历史分页')
+    && ['page','pageSize','totalPages','sources'].some(key => !(key in payload))) throw new Error(translate(locale, "Host 不支持日志历史分页"))
   if (!payload?.success || !Array.isArray(payload.data) || !Array.isArray(payload.sources)
     || !Number.isInteger(payload.total) || payload.total < 0
     || !Number.isInteger(payload.page) || payload.page < 1
     || !Number.isInteger(payload.pageSize) || payload.pageSize < 1
     || !Number.isInteger(payload.totalPages) || payload.totalPages < 1
     || payload.data.some(row => row.id == null || typeof row.message !== 'string' || typeof row.source !== 'string' || typeof row.level !== 'string' || typeof row.timestamp !== 'string')
-    || payload.sources.some(row => typeof row.source !== 'string' || !Number.isInteger(row.count) || row.count < 0)) throw new Error('日志历史分页响应无效')
+    || payload.sources.some(row => typeof row.source !== 'string' || !Number.isInteger(row.count) || row.count < 0)) throw new Error(translate(locale, "日志历史分页响应无效"))
   return payload
 }
 export function selectedHistoryEntry(rows, selected) {

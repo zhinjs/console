@@ -9,9 +9,9 @@ test('configuration-only bindings never assert Agent execution or MCP connection
  test('workbench starts with actionable state and discloses the explanation instead of a marketing hero',()=>{
   const source=readFileSync(new URL('../console-ui/src/pages/agent-workbench.tsx',import.meta.url),'utf8');
   assert.doesNotMatch(source,/模型负责思考|console-agent-hero-orbit/);
-  assert.match(source,/aria-label="待完成配置"/);
+  assert.match(source,/aria-label=\{i18n\.t\("待完成配置"\)\}/);
   assert.match(source,/当前状态未确认/);
   assert.match(source,/<details className="console-agent-state-explanation">/);
-  assert.match(source,/<summary>状态说明<\/summary>/);
+  assert.match(source,/<summary>\{i18n\.t\("状态说明"\)\}<\/summary>/);
   assert.match(source,/安装并装配可选 Agent 能力/);
  });

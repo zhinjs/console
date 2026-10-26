@@ -1,3 +1,4 @@
+import { prepareLocaleModule } from './locale-fixture.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'
@@ -12,7 +13,7 @@ assert.ok(definitions.every(Boolean))
 const code=`import{scenarioMarkdownBlocks}from ${JSON.stringify(new URL('../console-ui/src/pages/scenario-lab/scenario-model.mjs',import.meta.url).href)};const Card=({children,...props})=><section {...props}>{children}</section>;${definitions.map(node=>node.getText(ast)).join('\n')}`
 let js=ts.transpileModule(code,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext,jsx:ts.JsxEmit.ReactJSX}}).outputText
 js=js.replaceAll('"react/jsx-runtime"',JSON.stringify(import.meta.resolve('react/jsx-runtime')))
-const {ScenarioPreview}=await import(`data:text/javascript;base64,${Buffer.from(js).toString('base64')}`)
+const {ScenarioPreview}=await import(`data:text/javascript;base64,${Buffer.from(prepareLocaleModule(js)).toString('base64')}`)
 test('preview uses text nodes for hostile HTML, inert media and disabled controls',()=>{
  const items=scenarioPreviewItems([{type:'html',data:{html:'<img src="https://invalid.test"><script>alert(1)</script>'}},{type:'image',data:{media:{kind:'url',value:'https://invalid.test/a.png'}}},{type:'keyboard',data:{rows:[[{label:'执行',payload:'execute'}]]}}],'rich')
  const html=renderToStaticMarkup(React.createElement(ScenarioPreview,{items,error:''}))

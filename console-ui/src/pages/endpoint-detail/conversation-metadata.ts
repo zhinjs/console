@@ -1,3 +1,4 @@
+import { translate } from '../../i18n/locale.mjs'
 import { listInboxCache } from '../../utils/inbox-cache'
 import { normalizeInboundContent } from '../../utils/parseComposerContent'
 import type { ConversationChannelType } from './types'
@@ -29,7 +30,7 @@ const PREVIEW_LABELS: Record<string, string> = {
 
 export function previewFromMessageContent(
   raw: unknown,
-  maxLen = 48,
+  maxLen = 48, locale: 'zh-CN' | 'en' = 'zh-CN'
 ): string {
   const segments = normalizeInboundContent(raw)
   if (!segments.length) return ''
@@ -39,7 +40,7 @@ export function previewFromMessageContent(
       const t = String(seg.data?.text ?? '').trim()
       if (t) parts.push(t)
     } else {
-      parts.push(PREVIEW_LABELS[seg.type] ?? `[${seg.type}]`)
+      parts.push((PREVIEW_LABELS[seg.type] ? translate(locale, PREVIEW_LABELS[seg.type]) : undefined) ?? `[${seg.type}]`)
     }
   }
   const joined = parts.join(' ').replace(/\s+/g, ' ').trim()
@@ -93,11 +94,11 @@ export function ingestInboxRow(
   content: unknown,
   ts: number,
   nameIndex?: ConversationNameIndex,
-  payload?: Record<string, unknown>,
+  payload?: Record<string, unknown>, locale: 'zh-CN' | 'en' = 'zh-CN'
 ): void {
   if (channelType !== 'private' && channelType !== 'group' && channelType !== 'channel') return
   const scope = channelType as ConversationChannelType
-  const preview = previewFromMessageContent(content)
+  const preview = previewFromMessageContent(content, undefined, locale)
   upsertMeta(index, scope, String(channelId), ts, preview)
   if (nameIndex && payload) {
     const name = channelNameFromMessagePayload(payload, channelType)
@@ -110,7 +111,7 @@ type SendRequestFn = <T>(req: { type: string; [key: string]: unknown }) => Promi
 export async function buildMetadataIndex(
   adapter: string,
   endpointId: string,
-  sendRequest?: SendRequestFn,
+  sendRequest?: SendRequestFn, locale: 'zh-CN' | 'en' = 'zh-CN'
 ): Promise<{ meta: ConversationMetaIndex; names: ConversationNameIndex }> {
   const index: ConversationMetaIndex = new Map()
   const names: ConversationNameIndex = new Map()
@@ -176,8 +177,7 @@ export async function buildMetadataIndex(
           content,
           row.created_at,
           names,
-          payload,
-        )
+          payload, locale)
       }
     } catch {
       /* inbox DB not available */
@@ -194,7 +194,7 @@ export async function buildMetadataIndex(
     if (name) {
       upsertName(names, channelType as ConversationChannelType, channelId, name)
     }
-    ingestInboxRow(index, channelType, channelId, d.content, ts, names, d)
+    ingestInboxRow(index, channelType, channelId, d.content, ts, names, d, locale)
   }
 
   return { meta: index, names }

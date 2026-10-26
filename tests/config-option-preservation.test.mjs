@@ -1,3 +1,4 @@
+import { localeModule, isLocaleImport } from './locale-fixture.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -18,7 +19,7 @@ const mocks = {
   '../ui/select': { Select: 'select-root', SelectContent: 'select-content', SelectItem: 'option', SelectTrigger: 'select-trigger', SelectValue: 'select-value' },
   '../../pages/files/code-editor': { CodeEditor: 'code-editor' },
 }
-new Function('require', 'exports', 'module', code)(name => mocks[name] ?? require(name), module.exports, module)
+new Function('require', 'exports', 'module', code)(name => isLocaleImport(name) ? localeModule : mocks[name] ?? require(name), module.exports, module)
 const { SchemaFieldEditor } = module.exports
 function elements(value) { return value && typeof value === 'object' ? [value, ...[value.props?.children].flat(Infinity).flatMap(elements)] : [] }
 const field = { type: 'string', options: ['none', 'caldav', 'google', 'microsoft'].map(value => ({ label: value, value })) }

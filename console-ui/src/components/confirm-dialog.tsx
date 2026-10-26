@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n'
 import { useState, useCallback, type ReactNode } from 'react'
 import {
   Dialog, DialogContent, DialogHeader, DialogFooter,
@@ -18,9 +19,10 @@ interface ConfirmDialogProps {
 
 export function ConfirmDialog({
   open, onOpenChange, title, description,
-  confirmLabel = '确认', cancelLabel = '取消',
+  confirmLabel, cancelLabel,
   variant = 'default', onConfirm,
 }: ConfirmDialogProps) {
+  const i18n = useI18n()
   const [loading, setLoading] = useState(false)
 
   const handleConfirm = useCallback(async () => {
@@ -42,7 +44,7 @@ export function ConfirmDialog({
         </DialogHeader>
         <DialogFooter className="gap-2">
           <DialogClose asChild>
-            <Button variant="outline" size="sm">{cancelLabel}</Button>
+            <Button variant="outline" size="sm">{cancelLabel ?? i18n.t('取消')}</Button>
           </DialogClose>
           <Button
             variant={variant === 'destructive' ? 'destructive' : 'default'}
@@ -50,7 +52,7 @@ export function ConfirmDialog({
             onClick={handleConfirm}
             disabled={loading}
           >
-            {loading ? '处理中...' : confirmLabel}
+            {loading ? i18n.t("处理中...") : (confirmLabel ?? i18n.t('确认'))}
           </Button>
         </DialogFooter>
       </DialogContent>

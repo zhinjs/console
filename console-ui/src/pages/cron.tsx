@@ -1,3 +1,5 @@
+import { translate } from '../i18n/locale.mjs'
+import { useI18n } from '../i18n'
 import { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { Activity, Clock, Plus, Trash2, AlertCircle, Pause, Play, RefreshCw, Timer, Cpu, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react'
@@ -19,18 +21,18 @@ import { CONSOLE_RPC } from '../contracts/zhin-console'
 import { requestConsole } from '../utils/console-rpc'
 import { isDemoMode } from '../utils/demo-mode'
 
-function cronValidationMessage(error?: string): string {
-  if (!error) return '请检查表达式。'
+function cronValidationMessage(error?: string, locale: 'zh-CN' | 'en' = 'zh-CN'): string {
+  if (!error) return translate(locale, "请检查表达式。")
   const fields = /^Cron expression must have 6 fields, got (\d+)$/.exec(error)
-  if (fields) return `需要 6 个字段（秒 分 时 日 月 周），当前为 ${fields[1]} 个。`
+  if (fields) return translate(locale, "需要 6 个字段（秒 分 时 日 月 周），当前为 {0} 个。", [fields[1]])
   const invalid = /^(Empty cron field|Invalid cron field|Invalid cron step|Invalid cron range|Invalid cron value): (.+)$/.exec(error)
   if (invalid) {
     const reason: Record<string, string> = {
-      'Empty cron field': '字段没有有效取值，请检查范围',
-      'Invalid cron field': '字段格式无效',
-      'Invalid cron step': '步长无效',
-      'Invalid cron range': '范围格式无效',
-      'Invalid cron value': '字段取值无效',
+      'Empty cron field': translate(locale, "字段没有有效取值，请检查范围"),
+      'Invalid cron field': translate(locale, "字段格式无效"),
+      'Invalid cron step': translate(locale, "步长无效"),
+      'Invalid cron range': translate(locale, "范围格式无效"),
+      'Invalid cron value': translate(locale, "字段取值无效"),
     }
     return `${reason[invalid[1]]}：${invalid[2]}`
   }
@@ -56,6 +58,7 @@ interface PersistentCron {
 }
 
 export default function CronPage() {
+  const i18n = useI18n()
   const [memoryCrons, setMemoryCrons] = useState<MemoryCron[]>([])
   const [persistentCrons, setPersistentCrons] = useState<PersistentCron[]>([])
   const [loading, setLoading] = useState(true)
@@ -105,7 +108,7 @@ export default function CronPage() {
     const timer = setTimeout(() => {
       void requestConsole<{ valid: boolean; error?: string }>({ type: CONSOLE_RPC.CRON_VALIDATE, cronExpression: expression })
         .then((result) => { if (active) setCronValidation({ expression, ...result }) })
-        .catch(() => { if (active) setCronValidation({ expression, valid: false, error: '无法校验表达式，请检查连接后重试。' }) })
+        .catch(() => { if (active) setCronValidation({ expression, valid: false, error: i18n.t("无法校验表达式，请检查连接后重试。") }) })
     }, 250)
     return () => { active = false; clearTimeout(timer) }
   }, [addDialogOpen, newCron.cronExpression])
@@ -182,8 +185,7 @@ export default function CronPage() {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
         <Button variant="outline" size="sm" onClick={() => { setError(null); setLoading(true); fetchCrons() }}>
-          <RefreshCw className="w-4 h-4 mr-1" /> 重试
-        </Button>
+          <RefreshCw className="w-4 h-4 mr-1" /> {i18n.t(" 重试")}</Button>
       </div>
     )
   }
@@ -192,20 +194,18 @@ export default function CronPage() {
     <div className="space-y-6">
       {/* Header */}
       <PageHeader
-        title="定时提醒"
-        description="管理持久化和内存定时任务"
+        title={i18n.t("定时提醒")}
+        description={i18n.t("管理持久化和内存定时任务")}
         actions={
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" asChild>
-              <Link to="/logs?q=schedule"><Activity />调度日志</Link>
+              <Link to="/logs?q=schedule"><Activity />{i18n.t("调度日志")}</Link>
             </Button>
             <Button variant="outline" size="sm" onClick={() => { setLoading(true); fetchCrons() }}>
-              <RefreshCw className="w-4 h-4 mr-1" /> 刷新
-            </Button>
+              <RefreshCw className="w-4 h-4 mr-1" /> {i18n.t(" 刷新")}</Button>
             {!readOnly && persistentAvailable && (
               <Button size="sm" onClick={() => setAddDialogOpen(true)}>
-                <Plus className="w-4 h-4 mr-1" /> 新建任务
-              </Button>
+                <Plus className="w-4 h-4 mr-1" /> {i18n.t(" 新建任务")}</Button>
             )}
           </div>
         }
@@ -213,25 +213,23 @@ export default function CronPage() {
 
       {!readOnly && !persistentAvailable && <Alert>
         <AlertDescription>
-          当前实例尚未启用持久化 AI 调度，暂不能创建、暂停或删除任务。已有插件注册的任务仍可在下方查看。
-          如需定时 AI 任务，请在运行实例中安装并配置 Agent 及持久化调度引擎，再刷新本页。
-        </AlertDescription>
+          {i18n.t("当前实例尚未启用持久化 AI 调度，暂不能创建、暂停或删除任务。已有插件注册的任务仍可在下方查看。 如需定时 AI 任务，请在运行实例中安装并配置 Agent 及持久化调度引擎，再刷新本页。")}</AlertDescription>
       </Alert>}
 
       {/* Persistent Cron Jobs */}
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Timer className="w-5 h-5 text-primary" />
-          <h3 className="text-lg font-semibold">持久化任务</h3>
+          <h3 className="text-lg font-semibold">{i18n.t("持久化任务")}</h3>
           <Badge variant="secondary">{persistentCrons.length}</Badge>
         </div>
         {persistentCrons.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center text-muted-foreground">
               <Clock className="w-10 h-10 mx-auto mb-3 opacity-40" />
-              <p>暂无持久化定时任务</p>
+              <p>{i18n.t("暂无持久化定时任务")}</p>
               <p className="text-xs mt-1">
-                {readOnly ? 'Demo 仅展示实例中已存在的任务' : persistentAvailable ? '点击「新建任务」添加一个定时 AI 任务' : '启用持久化 AI 调度后可在这里管理任务'}
+                {readOnly ? i18n.t("Demo 仅展示实例中已存在的任务") : persistentAvailable ? i18n.t("点击「新建任务」添加一个定时 AI 任务") : i18n.t("启用持久化 AI 调度后可在这里管理任务")}
               </p>
             </CardContent>
           </Card>
@@ -253,12 +251,12 @@ export default function CronPage() {
                           {job.label || job.id}
                         </span>
                         <Badge variant={job.enabled ? 'default' : 'outline'} className="text-xs shrink-0">
-                          {job.enabled ? '已启用' : '已暂停'}
+                          {job.enabled ? i18n.t("已启用") : i18n.t("已暂停")}
                         </Badge>
                       </div>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mb-2 ml-6">
                         <code className="bg-muted px-1.5 py-0.5 rounded break-all">{job.cronExpression}</code>
-                        <span className="shrink-0">创建于 {job.createdAt ? new Date(job.createdAt).toLocaleString() : '—'}</span>
+                        <span className="shrink-0">{i18n.t("创建于 ")}{job.createdAt ? new Date(job.createdAt).toLocaleString(i18n.locale) : '—'}</span>
                       </div>
                       {!isExpanded && (
                         <p className="text-sm text-muted-foreground line-clamp-1 ml-6">{job.prompt}</p>
@@ -269,7 +267,7 @@ export default function CronPage() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        title={job.enabled ? '暂停' : '恢复'}
+                        title={job.enabled ? i18n.t("暂停") : i18n.t("恢复")}
                         disabled={togglePending !== null}
                         onClick={() => handleToggle(job)}
                       >
@@ -279,7 +277,7 @@ export default function CronPage() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive"
-                        title="删除"
+                        title={i18n.t("删除")}
                         disabled={togglePending !== null}
                         onClick={() => setDeleteTarget(job)}
                       >
@@ -291,19 +289,19 @@ export default function CronPage() {
                     <div className="mt-3 ml-6 space-y-3 border-t pt-3">
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-medium text-muted-foreground">任务 ID</span>
+                          <span className="text-xs font-medium text-muted-foreground">{i18n.t("任务 ID")}</span>
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-6 w-6"
-                            title="复制 ID"
+                            title={i18n.t("复制 ID")}
                             onClick={async () => {
                               try {
                                 await navigator.clipboard.writeText(job.id)
                                 setCopiedId(job.id)
                                 setTimeout(() => setCopiedId(null), 1500)
                               } catch {
-                                toastError('复制失败，请手动选择任务 ID 复制。')
+                                toastError(i18n.t("复制失败，请手动选择任务 ID 复制。"))
                               }
                             }}
                           >
@@ -313,7 +311,7 @@ export default function CronPage() {
                         <code className="text-xs bg-muted px-2 py-1 rounded block break-all">{job.id}</code>
                       </div>
                       <div>
-                        <span className="text-xs font-medium text-muted-foreground block mb-1">Cron 表达式</span>
+                        <span className="text-xs font-medium text-muted-foreground block mb-1">{i18n.t("Cron 表达式")}</span>
                         <code className="text-sm bg-muted px-2 py-1 rounded block break-all">{job.cronExpression}</code>
                       </div>
                       <div>
@@ -321,8 +319,8 @@ export default function CronPage() {
                         <pre className="text-sm bg-muted px-3 py-2 rounded whitespace-pre-wrap break-words max-h-60 overflow-y-auto">{job.prompt}</pre>
                       </div>
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">状态: {job.enabled ? <Badge variant="default" className="text-xs">运行中</Badge> : <Badge variant="secondary" className="text-xs">已暂停</Badge>}</span>
-                        <span>创建于: {job.createdAt ? new Date(job.createdAt).toLocaleString() : '—'}</span>
+                        <span className="flex items-center gap-1">{i18n.t("状态: ")}{job.enabled ? <Badge variant="default" className="text-xs">{i18n.t("运行中")}</Badge> : <Badge variant="secondary" className="text-xs">{i18n.t("已暂停")}</Badge>}</span>
+                        <span>{i18n.t("创建于: ")}{job.createdAt ? new Date(job.createdAt).toLocaleString(i18n.locale) : '—'}</span>
                       </div>
                     </div>
                   )}
@@ -340,14 +338,13 @@ export default function CronPage() {
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Cpu className="w-5 h-5 text-muted-foreground" />
-          <h3 className="text-lg font-semibold">内存任务（插件注册）</h3>
+          <h3 className="text-lg font-semibold">{i18n.t("内存任务（插件注册）")}</h3>
           <Badge variant="outline">{memoryCrons.length}</Badge>
         </div>
         {memoryCrons.length === 0 ? (
           <Card>
             <CardContent className="py-6 text-center text-muted-foreground text-sm">
-              暂无插件注册的内存定时任务
-            </CardContent>
+              {i18n.t("暂无插件注册的内存定时任务")}</CardContent>
           </Card>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-3">
@@ -365,29 +362,29 @@ export default function CronPage() {
                       <code className="text-sm bg-muted px-1.5 py-0.5 rounded">{cron.expression}</code>
                     </div>
                     <Badge variant={cron.running ? 'default' : 'outline'} className="text-xs">
-                      {cron.running ? '运行中' : '已停止'}
+                      {cron.running ? i18n.t("运行中") : i18n.t("已停止")}
                     </Badge>
                   </div>
                   <div className="text-xs text-muted-foreground space-y-0.5 ml-6">
-                    <p>插件: {cron.plugin}</p>
+                    <p>{i18n.t("插件: ")}{cron.plugin}</p>
                     {cron.nextExecution && (
-                      <p>下次执行: {new Date(cron.nextExecution).toLocaleString()}</p>
+                      <p>{i18n.t("下次执行: ")}{new Date(cron.nextExecution).toLocaleString(i18n.locale)}</p>
                     )}
                   </div>
                   {isExpanded && (
                     <div className="mt-3 ml-6 space-y-2 border-t pt-3">
                       <div>
-                        <span className="text-xs font-medium text-muted-foreground block mb-1">Cron 表达式</span>
+                        <span className="text-xs font-medium text-muted-foreground block mb-1">{i18n.t("Cron 表达式")}</span>
                         <code className="text-sm bg-muted px-2 py-1 rounded block">{cron.expression}</code>
                       </div>
                       <div>
-                        <span className="text-xs font-medium text-muted-foreground block mb-1">所属插件</span>
+                        <span className="text-xs font-medium text-muted-foreground block mb-1">{i18n.t("所属插件")}</span>
                         <code className="text-sm bg-muted px-2 py-1 rounded block">{cron.plugin}</code>
                       </div>
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">状态: {cron.running ? <Badge variant="default" className="text-xs">运行中</Badge> : <Badge variant="outline" className="text-xs">已停止</Badge>}</span>
+                        <span className="flex items-center gap-1">{i18n.t("状态: ")}{cron.running ? <Badge variant="default" className="text-xs">{i18n.t("运行中")}</Badge> : <Badge variant="outline" className="text-xs">{i18n.t("已停止")}</Badge>}</span>
                         {cron.nextExecution && (
-                          <span>下次执行: {new Date(cron.nextExecution).toLocaleString()}</span>
+                          <span>{i18n.t("下次执行: ")}{new Date(cron.nextExecution).toLocaleString(i18n.locale)}</span>
                         )}
                       </div>
                     </div>
@@ -404,38 +401,36 @@ export default function CronPage() {
       {!readOnly && persistentAvailable && <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>新建定时任务</DialogTitle>
+            <DialogTitle>{i18n.t("新建定时任务")}</DialogTitle>
             <DialogDescription>
-              创建一个持久化定时任务，到点时会将 Prompt 发送给 AI 执行。
-            </DialogDescription>
+              {i18n.t("创建一个持久化定时任务，到点时会将 Prompt 发送给 AI 执行。")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
-              <label className="text-sm font-medium mb-1.5 block">标签（可选）</label>
+              <label className="text-sm font-medium mb-1.5 block">{i18n.t("标签（可选）")}</label>
               <Input
-                placeholder="例如：每日摘要"
+                placeholder={i18n.t("例如：每日摘要")}
                 value={newCron.label}
                 onChange={(e) => setNewCron((p) => ({ ...p, label: e.target.value }))}
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Cron 表达式</label>
+              <label className="text-sm font-medium mb-1.5 block">{i18n.t("Cron 表达式")}</label>
               <Input
-                placeholder="秒 分 时 日 月 周，例如：0 0 9 * * *"
+                placeholder={i18n.t("秒 分 时 日 月 周，例如：0 0 9 * * *")}
                 value={newCron.cronExpression}
                 onChange={(e) => setNewCron((p) => ({ ...p, cronExpression: e.target.value }))}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                6 字段格式：秒(0-59) 分(0-59) 时(0-23) 日(1-31) 月(1-12) 周(0-7)
-              </p>
+                {i18n.t("6 字段格式：秒(0-59) 分(0-59) 时(0-23) 日(1-31) 月(1-12) 周(0-7)")}</p>
             </div>
             {newCron.cronExpression.trim() && <p role="status" className={cronValidation?.valid ? 'text-xs text-muted-foreground' : 'text-xs text-destructive'}>
-              {cronValidation ? cronValidation.valid ? '表达式校验通过' : `表达式无效：${cronValidationMessage(cronValidation.error)}` : '正在校验表达式…'}
+              {cronValidation ? cronValidation.valid ? i18n.t("表达式校验通过") : i18n.t("表达式无效：{0}", [cronValidationMessage(cronValidation.error, i18n.locale)]) : i18n.t("正在校验表达式…")}
             </p>}
             <div>
               <label className="text-sm font-medium mb-1.5 block">Prompt</label>
               <Textarea
-                placeholder="触发时发送给 AI 的指令..."
+                placeholder={i18n.t("触发时发送给 AI 的指令...")}
                 rows={4}
                 value={newCron.prompt}
                 onChange={(e) => setNewCron((p) => ({ ...p, prompt: e.target.value }))}
@@ -444,13 +439,13 @@ export default function CronPage() {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" disabled={submitting}>取消</Button>
+              <Button variant="outline" disabled={submitting}>{i18n.t("取消")}</Button>
             </DialogClose>
             <Button
               onClick={handleAdd}
               disabled={submitting || !validCron || !newCron.prompt.trim()}
             >
-              {submitting ? '创建中...' : '创建'}
+              {submitting ? i18n.t("创建中...") : i18n.t("创建")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -460,17 +455,16 @@ export default function CronPage() {
       {!readOnly && persistentAvailable && <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>确认删除</DialogTitle>
+            <DialogTitle>{i18n.t("确认删除")}</DialogTitle>
             <DialogDescription>
-              确定要删除任务「{deleteTarget?.label || deleteTarget?.id}」吗？此操作不可撤销。
-            </DialogDescription>
+              {i18n.t("确定要删除任务「")}{deleteTarget?.label || deleteTarget?.id}{i18n.t("」吗？此操作不可撤销。")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" disabled={submitting}>取消</Button>
+              <Button variant="outline" disabled={submitting}>{i18n.t("取消")}</Button>
             </DialogClose>
             <Button variant="destructive" onClick={handleDelete} disabled={submitting}>
-              {submitting ? '删除中...' : '删除'}
+              {submitting ? i18n.t("删除中...") : i18n.t("删除")}
             </Button>
           </DialogFooter>
         </DialogContent>

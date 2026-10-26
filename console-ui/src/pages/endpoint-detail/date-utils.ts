@@ -1,14 +1,15 @@
+import { translate } from '../../i18n/locale.mjs'
 export function dayKey(ts: number) {
   const d = new Date(ts)
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
 }
 
-export function dayLabel(ts: number) {
-  return new Date(ts).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
+export function dayLabel(ts: number, locale: 'zh-CN' | 'en' = 'zh-CN') {
+  return new Date(ts).toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
 /** 会话列表右侧时间：今天 HH:mm / 昨天 / MM-DD */
-export function formatConversationTime(ts: number): string {
+export function formatConversationTime(ts: number, locale: 'zh-CN' | 'en' = 'zh-CN'): string {
   if (!ts) return ''
   const d = new Date(ts)
   const now = new Date()
@@ -17,7 +18,7 @@ export function formatConversationTime(ts: number): string {
     d.getMonth() === now.getMonth() &&
     d.getDate() === now.getDate()
   if (sameDay) {
-    return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
+    return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false })
   }
   const yesterday = new Date(now)
   yesterday.setDate(now.getDate() - 1)
@@ -25,9 +26,9 @@ export function formatConversationTime(ts: number): string {
     d.getFullYear() === yesterday.getFullYear() &&
     d.getMonth() === yesterday.getMonth() &&
     d.getDate() === yesterday.getDate()
-  if (isYesterday) return '昨天'
+  if (isYesterday) return translate(locale, "昨天")
   if (d.getFullYear() === now.getFullYear()) {
-    return d.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
+    return d.toLocaleDateString(locale, { month: '2-digit', day: '2-digit' })
   }
-  return d.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })
+  return d.toLocaleDateString(locale, { year: 'numeric', month: '2-digit', day: '2-digit' })
 }

@@ -8,5 +8,5 @@ export function endpointKey(endpoint: unknown): string
 export function targetDraft(value: unknown): { endpoint: {id?: string; adapter?: string}; kind: string; id: string; parentKind: string; parentId: string; threadId: string }
 export function updateTargetField(value: unknown, field: string, child: unknown): unknown
 export function updateTargetParent(value: unknown, field: string, child: unknown): unknown
-export function targetDraftIssue(value: unknown, allowedKinds?: readonly ConversationKind[]): string | null
+export function targetDraftIssue(value: unknown, allowedKinds?: readonly ConversationKind[], locale?: 'zh-CN' | 'en'): string | null
 export function createScopeReadGate(readScope: () => string | undefined): { begin(): {scope: string | undefined; current(): boolean}; cancel(): void }

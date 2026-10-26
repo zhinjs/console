@@ -147,3 +147,15 @@ test('the page reads status through pluginRpc(root, skills) and writes with conf
   assert.doesNotMatch(page, /config:set/)
   assert.doesNotMatch(page, /判官|决策模型|judge|TypeSafe|Jev/)
 })
+
+
+test('English display retains status meaning, unknown task names and exact configuration patches', () => {
+  const view=describeSkillsStatus({...hostStatus, tasks:[...hostStatus.tasks,{...hostStatus.tasks[0],task:'第三方任务'}]}, 'en')
+  assert.equal(view.tasks[0].label, 'Choose skills for the bot')
+  assert.equal(view.tasks[0].mode, 'Observe only'); assert.equal(view.tasks[0].modeVariant, 'info')
+  assert.equal(view.tasks[1].modeVariant, 'success'); assert.equal(view.tasks[1].averageTime,'1.5 s')
+  assert.equal(view.tasks[2].label,'第三方任务')
+  assert.equal(view.recent[0].text,'Unsuccessful attempt')
+  assert.match(describeSaveResult({status:'saved',restartRequired:true},'en').text,/Restart the bot/)
+  assert.throws(()=>validateSkillsStatus({},'en'),/Invalid skills assistant status/)
+})

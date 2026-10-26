@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { Activity, ArrowLeft, AlertCircle, Package, Settings, Terminal, Box as IconBox, Layers, Clock, Database, Brain, Wrench, Shield, Plug, Server, Power, RefreshCw, Stethoscope, Trash2, type LucideIcon } from 'lucide-react'
@@ -64,6 +65,7 @@ function getIcon(iconName: string): LucideIcon {
 }
 
 export default function PluginDetailPage() {
+  const i18n = useI18n()
   const { name } = useParams<{ name: string }>()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -105,7 +107,7 @@ export default function PluginDetailPage() {
   }, [name])
 
   useEffect(() => {
-    if (verificationResult && !verificationIsCurrent(verificationResult.outcome, verificationResult.plan, plugin?.management)) {
+    if (verificationResult && !verificationIsCurrent(verificationResult.outcome, verificationResult.plan, plugin?.management, undefined, i18n.locale)) {
       setVerificationResult(null)
       setVerificationInvalidated(true)
     }
@@ -120,14 +122,14 @@ export default function PluginDetailPage() {
     const invalidate = () => { setVerificationResult(null); setVerificationInvalidated(true) }
     const check = async () => {
       try {
-        const state = validateManagementState(await requestConsole({ type: 'plugin:inspect', instanceKey: verificationResult.plan.instanceKey }), verificationResult.plan.instanceKey)
+        const state = validateManagementState(await requestConsole({ type: 'plugin:inspect', instanceKey: verificationResult.plan.instanceKey }), verificationResult.plan.instanceKey, i18n.locale)
         if (cancelled) return
-        if (!verificationIsCurrent(verificationResult.outcome, verificationResult.plan, state)) { invalidate(); return }
+        if (!verificationIsCurrent(verificationResult.outcome, verificationResult.plan, state, undefined, i18n.locale)) { invalidate(); return }
         // The check revision includes Host incarnation, even when generation resets
         // to the same number. Planning is read-only and never invokes a check.
         const currentPlan = await requestConsole({ type: 'plugin:plan-verification', instanceKey: verificationResult.plan.instanceKey })
         if (cancelled) return
-        if (!currentPlan || !verificationIsCurrent(verificationResult.outcome, verificationResult.plan, state, currentPlan)) { invalidate(); return }
+        if (!currentPlan || !verificationIsCurrent(verificationResult.outcome, verificationResult.plan, state, currentPlan, i18n.locale)) { invalidate(); return }
       } catch { if (!cancelled) { invalidate(); return } }
       if (!cancelled) timer = setTimeout(() => void check(), 5000)
     }
@@ -140,24 +142,24 @@ export default function PluginDetailPage() {
     setLoading(true)
     try {
       const res = await apiFetch(`/api/plugins/${encodeURIComponent(pluginName)}`)
-      if (!res.ok) throw new Error(res.status === 404 ? '未找到该插件，可能已被移除。' : res.status === 403 ? '当前身份无权查看该插件。' : `插件读取失败（HTTP ${res.status}），请稍后重试。`)
+      if (!res.ok) throw new Error(res.status === 404 ? i18n.t("未找到该插件，可能已被移除。") : res.status === 403 ? i18n.t("当前身份无权查看该插件。") : i18n.t("插件读取失败（HTTP {0}），请稍后重试。", [res.status]))
       const data = await res.json()
       if (data.success) {
-        validatePluginDetail(data.data)
-        if (data.data.management) validateManagementState(data.data.management, data.data.instanceKey)
+        validatePluginDetail(data.data, i18n.locale)
+        if (data.data.management) validateManagementState(data.data.management, data.data.instanceKey, i18n.locale)
         if (sequence === detailSequence.current) {
           setPlugin(data.data)
           setError(null)
           if (actionUnconfirmed && !unconfirmedCheck) {
             setActionError(null)
             setActionErrorDetail(null)
-            setActionMessage('已重新读取 Host 当前状态，请以安装与应用证据为准。')
+            setActionMessage(i18n.t("已重新读取 Host 当前状态，请以安装与应用证据为准。"))
           }
           if (!unconfirmedCheck) setActionUnconfirmed(false)
           setVerificationPlan(null)
         }
       }
-      else throw new Error('数据格式错误')
+      else throw new Error(i18n.t("数据格式错误"))
     } catch (err) {
       if (sequence === detailSequence.current) setError((err as Error).message)
     } finally {
@@ -176,27 +178,26 @@ export default function PluginDetailPage() {
     setActionLoading(true)
     setActionError(null)
     setActionErrorDetail(null)
-    setActionMessage('正在提交操作并等待 Host 恢复，核对插件运行状态…')
+    setActionMessage(i18n.t("正在提交操作并等待 Host 恢复，核对插件运行状态…"))
     try {
       try {
         await requestConsole({ type: 'plugin:set-enabled', instanceKey, enabled })
       } catch {
-        if (!controller.signal.aborted) setActionMessage('操作回执未确认，正在读取 Host 核对结果；请勿重复操作。')
+        if (!controller.signal.aborted) setActionMessage(i18n.t("操作回执未确认，正在读取 Host 核对结果；请勿重复操作。"))
       }
       const result = await waitForEnabledManagementState(
         () => requestConsole({ type: 'plugin:inspect', instanceKey }),
-        previous, enabled, controller.signal,
-      )
+        previous, enabled, controller.signal, undefined, i18n.locale)
       if (controller.signal.aborted) return
       if (result) {
         detailSequence.current += 1
         await fetchPluginDetail(instanceKey)
         if (controller.signal.aborted) return
-        setActionMessage(enabled ? '已核对：实例代内已加载；平台上线与业务功能尚未验证' : '已核对：插件已停用')
+        setActionMessage(enabled ? i18n.t("已核对：实例代内已加载；平台上线与业务功能尚未验证") : i18n.t("已核对：插件已停用"))
       } else {
         setActionMessage(null)
         setActionUnconfirmed(true)
-        setActionError('等待 Host 恢复或状态变化超时，操作结果尚未确认。当前显示最后一次读取的状态，请刷新核对后再操作。')
+        setActionError(i18n.t("等待 Host 恢复或状态变化超时，操作结果尚未确认。当前显示最后一次读取的状态，请刷新核对后再操作。"))
       }
     } finally {
       actionInFlight.current = false
@@ -232,10 +233,10 @@ export default function PluginDetailPage() {
     setActionMessage(null)
     try {
       const response = await apiFetch('/api/marketplace/updates')
-      if (!response.ok) throw new Error(`检查更新失败（HTTP ${response.status}），请稍后重试。`)
-      const update = requirePluginUpdate(await response.json(), plugin.packageName)
+      if (!response.ok) throw new Error(i18n.t("检查更新失败（HTTP {0}），请稍后重试。", [response.status]))
+      const update = requirePluginUpdate(await response.json(), plugin.packageName, i18n.locale)
       if (update.latest === plugin.version) {
-        setActionMessage('当前已是最新版本')
+        setActionMessage(i18n.t("当前已是最新版本"))
         return
       }
       const plan = await requestConsole<MutationPlan & { currentVersion: string | null; targetVersion: string }>({
@@ -244,20 +245,20 @@ export default function PluginDetailPage() {
         targetVersion: update.latest,
       })
       const accepted = await confirm({
-        title: `更新 ${plugin.name}？`,
-        description: `${plan.currentVersion || '未知版本'} → ${plan.targetVersion}，更新后需要重启 Host。`,
-        confirmLabel: '更新',
+        title: i18n.t("更新 {0}？", [plugin.name]),
+        description: i18n.t("{0} → {1}，更新后需要重启 Host。", [plan.currentVersion || i18n.t("未知版本"), plan.targetVersion]),
+        confirmLabel: i18n.t("更新"),
       })
       if (!accepted || routeIdentity.current !== name) return
       submitted = true
-      await requestConsole(mutationRequest('plugin:update', plan, { targetVersion: plan.targetVersion }))
+      await requestConsole(mutationRequest('plugin:update', plan, { targetVersion: plan.targetVersion }, i18n.locale))
       if (routeIdentity.current !== name) return
       await fetchPluginDetail(plugin.instanceKey)
-      setActionMessage(`已核验磁盘版本 ${plan.targetVersion}。请完善配置后应用，再核对当前代与业务检查。`)
+      setActionMessage(i18n.t("已核验磁盘版本 {0}。请完善配置后应用，再核对当前代与业务检查。", [plan.targetVersion]))
     } catch (err) {
       if (routeIdentity.current !== name) return
       if (submitted) setActionUnconfirmed(true)
-      setActionError(`${(err as Error).message}${submitted ? '。更新结果未确认，请刷新核对，勿重复提交。' : ''}`)
+      setActionError(`${(err as Error).message}${submitted ? i18n.t("。更新结果未确认，请刷新核对，勿重复提交。") : ''}`)
     } finally {
       actionInFlight.current = false
       setActionLoading(false)
@@ -274,18 +275,18 @@ export default function PluginDetailPage() {
     try {
       const plan = await requestConsole<MutationPlan & { installed: boolean; declared: boolean; hasConfig: boolean }>({ type: 'plugin:plan-uninstall', packageName: plugin.instanceKey })
       const accepted = await confirm({
-        title: `卸载 ${plugin.name}？`,
-        description: `将卸载实例 ${plan.instanceKey}${plan.hasConfig ? '及其配置' : ''}，其他实例保持不变。Host 会按其他实例占用决定是否移除依赖。需要应用后核对。`,
-        confirmLabel: '卸载',
+        title: i18n.t("卸载 {0}？", [plugin.name]),
+        description: i18n.t("将卸载实例 {0}{1}，其他实例保持不变。Host 会按其他实例占用决定是否移除依赖。需要应用后核对。", [plan.instanceKey, plan.hasConfig ? i18n.t("及其配置") : '']),
+        confirmLabel: i18n.t("卸载"),
         variant: 'destructive',
       })
       if (!accepted || routeIdentity.current !== name) return
-      await requestConsole(mutationRequest('plugin:uninstall', plan, { confirmation: plan.instanceKey }))
+      await requestConsole(mutationRequest('plugin:uninstall', plan, { confirmation: plan.instanceKey }, i18n.locale))
       if (routeIdentity.current === name) navigate(listUrl)
     } catch (err) {
       if (routeIdentity.current !== name) return
       setActionUnconfirmed(true)
-      setActionError('卸载结果未确认，请刷新核对；不要重复提交。')
+      setActionError(i18n.t("卸载结果未确认，请刷新核对；不要重复提交。"))
       setActionErrorDetail((err as Error).message)
     } finally {
       actionInFlight.current = false
@@ -304,16 +305,16 @@ export default function PluginDetailPage() {
     lifecycleAbort.current?.abort()
     lifecycleAbort.current = controller
     try {
-      const request = applyRequest(previous)
-      if (!await confirm({ title: '应用插件变更？', description: `${plugin.instanceKey} 当前代 ${previous.generation ?? '未发布'}。Host 将申请应用/重启；只有后续状态才能确认成功。`, confirmLabel: '申请应用' })) return
+      const request = applyRequest(previous, i18n.locale)
+      if (!await confirm({ title: i18n.t("应用插件变更？"), description: i18n.t("{0} 当前代 {1}。Host 将申请应用/重启；只有后续状态才能确认成功。", [plugin.instanceKey, previous.generation ?? i18n.t("未发布")]), confirmLabel: i18n.t("申请应用") })) return
       if (controller.signal.aborted) return
       try { await requestConsole(request) }
-      catch { setActionMessage('应用回执未确认，正在只读核对当前代；请勿重复提交。') }
-      const result = await waitForManagementState(() => requestConsole({ type: 'plugin:inspect', instanceKey: previous.instanceKey }), previous, controller.signal)
+      catch { setActionMessage(i18n.t("应用回执未确认，正在只读核对当前代；请勿重复提交。")) }
+      const result = await waitForManagementState(() => requestConsole({ type: 'plugin:inspect', instanceKey: previous.instanceKey }), previous, controller.signal, undefined, i18n.locale)
       if (controller.signal.aborted) return
-      if (!result) { setActionUnconfirmed(true); setActionMessage(null); setActionError('应用结果未知。请恢复连接后刷新核对，不要重复申请。'); return }
+      if (!result) { setActionUnconfirmed(true); setActionMessage(null); setActionError(i18n.t("应用结果未知。请恢复连接后刷新核对，不要重复申请。")); return }
       await fetchPluginDetail(previous.instanceKey)
-      setActionMessage(result.disabled ? '已核对：实例已停用' : `已核对：第 ${result.generation} 代已应用；业务功能尚需独立验证。`)
+      setActionMessage(result.disabled ? i18n.t("已核对：实例已停用") : i18n.t("已核对：第 {0} 代已应用；业务功能尚需独立验证。", [result.generation]))
     } catch (err) { if (!controller.signal.aborted) setActionError((err as Error).message) }
     finally { actionInFlight.current = false; if (!controller.signal.aborted) setActionLoading(false) }
   }
@@ -325,11 +326,11 @@ export default function PluginDetailPage() {
     setActionError(null)
     setVerificationPlan(null)
     try {
-      const state = validateManagementState(await requestConsole({ type: 'plugin:inspect', instanceKey: plugin.instanceKey }), plugin.instanceKey)
+      const state = validateManagementState(await requestConsole({ type: 'plugin:inspect', instanceKey: plugin.instanceKey }), plugin.instanceKey, i18n.locale)
       if (routeIdentity.current !== name) return
       setPlugin(previous => previous ? { ...previous, management: state } : previous)
       const plan = await requestConsole({ type: 'plugin:plan-verification', instanceKey: plugin.instanceKey })
-      if (routeIdentity.current === name) setVerificationPlan(captureVerificationPlan(plan, state))
+      if (routeIdentity.current === name) setVerificationPlan(captureVerificationPlan(plan, state, i18n.locale))
     } catch (err) { if (routeIdentity.current === name) setActionError((err as Error).message) }
     finally { actionInFlight.current = false; setActionLoading(false) }
   }
@@ -344,13 +345,13 @@ export default function PluginDetailPage() {
     setActionLoading(true)
     setActionError(null)
     try {
-      const accepted = await confirm({ title: `执行「${check.title}」？`, description: `范围：${check.scope === 'local' ? '本地' : '平台（可能产生外部操作）'}。副作用：${check.effects.join('；') || '插件未声明额外副作用'}。批准仅绑定第 ${plan.generation} 代和当前检查定义。`, confirmLabel: '批准执行一次' })
+      const accepted = await confirm({ title: i18n.t("执行「{0}」？", [check.title]), description: i18n.t("范围：{0}。副作用：{1}。批准仅绑定第 {2} 代和当前检查定义。", [check.scope === 'local' ? i18n.t("本地") : i18n.t("平台（可能产生外部操作）"), check.effects.join('；') || i18n.t("插件未声明额外副作用"), plan.generation]), confirmLabel: i18n.t("批准执行一次") })
       if (!accepted || routeIdentity.current !== name) return
       setVerificationPlan(null)
       setVerificationResult(null)
       setVerificationInvalidated(false)
       submitted = true
-      const result = await verifyApprovedPlugin(requestConsole, plan, checkId, plugin.management)
+      const result = await verifyApprovedPlugin(requestConsole, plan, checkId, plugin.management, i18n.locale)
       if (routeIdentity.current !== name) return
       setVerificationResult({ outcome: result, plan })
       if (!result.current) setActionUnconfirmed(true)
@@ -359,7 +360,7 @@ export default function PluginDetailPage() {
       if (submitted) {
         setActionUnconfirmed(true)
         setUnconfirmedCheck(check.title)
-        setActionError(`检查「${check.title}」的执行结果未知：${(err as Error).message}。刷新插件状态不能确认该检查是否执行；请核对日志及外部结果，勿重复执行。`)
+        setActionError(i18n.t("检查「{0}」的执行结果未知：{1}。刷新插件状态不能确认该检查是否执行；请核对日志及外部结果，勿重复执行。", [check.title, (err as Error).message]))
       } else setActionError((err as Error).message)
     }
     finally { actionInFlight.current = false; setActionLoading(false) }
@@ -379,13 +380,12 @@ export default function PluginDetailPage() {
     return (
       <div>
         <Button variant="ghost" onClick={() => navigate(listUrl)} className="mb-4">
-          <ArrowLeft className="w-4 h-4 mr-1" /> 返回
-        </Button>
+          <ArrowLeft className="w-4 h-4 mr-1" /> {i18n.t(" 返回")}</Button>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>加载失败: {error || '插件不存在'}</AlertDescription>
+          <AlertDescription>{i18n.t("加载失败: ")}{error || i18n.t("插件不存在")}</AlertDescription>
         </Alert>
-        {name && <Button variant="outline" size="sm" className="mt-3" onClick={() => void fetchPluginDetail(name)}>重试</Button>}
+        {name && <Button variant="outline" size="sm" className="mt-3" onClick={() => void fetchPluginDetail(name)}>{i18n.t("重试")}</Button>}
       </div>
     )
   }
@@ -394,8 +394,7 @@ export default function PluginDetailPage() {
     <div className="space-y-4">
       {/* Header */}
       <Button variant="ghost" size="sm" onClick={() => navigate(listUrl)}>
-        <ArrowLeft className="w-4 h-4 mr-1" /> 返回
-      </Button>
+        <ArrowLeft className="w-4 h-4 mr-1" /> {i18n.t(" 返回")}</Button>
 
       <div className="flex items-center gap-3 min-w-0">
         <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-secondary shrink-0">
@@ -405,30 +404,29 @@ export default function PluginDetailPage() {
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
             <h1 className="text-xl font-bold truncate">{plugin.name}</h1>
             <Badge variant={plugin.management?.status === 'enabled' ? 'success' : plugin.management?.status === 'missing-config' || plugin.management?.status === 'degraded' ? 'warning' : 'secondary'} className="shrink-0">
-              {plugin.management ? managementLabel(plugin.management) : plugin.status === 'active' ? '代内已加载' : '未加载'}
+              {plugin.management ? managementLabel(plugin.management, i18n.locale) : plugin.status === 'active' ? i18n.t("代内已加载") : i18n.t("未加载")}
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground break-words">{plugin.description || '暂无描述'}</p>
+          <p className="text-sm text-muted-foreground break-words">{plugin.description || i18n.t("暂无描述")}</p>
         </div>
       </div>
 
       <Card className="border-border/80">
         <CardContent className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4">
           <div className="space-y-1">
-            <p className="text-sm font-medium">插件配置</p>
+            <p className="text-sm font-medium">{i18n.t("插件配置")}</p>
             <p className="text-xs text-muted-foreground">
-              {plugin.readOnly ? '当前连接仅允许查看插件信息。' : '在配置页编辑插件设置。'}
+              {plugin.readOnly ? i18n.t("当前连接仅允许查看插件信息。") : i18n.t("在配置页编辑插件设置。")}
             </p>
           </div>
           {!plugin.readOnly && (
             <div className="flex flex-wrap gap-2">
               <Button variant="ghost" size="sm" asChild>
-                <Link to={`/logs?q=${encodeURIComponent(plugin.name)}`}><Activity />相关日志</Link>
+                <Link to={`/logs?q=${encodeURIComponent(plugin.name)}`}><Activity />{i18n.t("相关日志")}</Link>
               </Button>
               <Button variant="outline" size="sm" asChild>
                 <Link to={searchParams.get('useCase') === 'group-welcome' ? welcomeConfigUrl(plugin.instanceKey) : `/config?plugin=${encodeURIComponent(plugin.instanceKey)}`}>
-                  <Settings className="w-4 h-4 mr-1" />编辑配置
-                </Link>
+                  <Settings className="w-4 h-4 mr-1" />{i18n.t("编辑配置")}</Link>
               </Button>
             </div>
           )}
@@ -436,59 +434,55 @@ export default function PluginDetailPage() {
       </Card>
 
       {unconfirmedCheck && <Alert variant="destructive"><AlertDescription>
-        检查「{unconfirmedCheck}」的结果仍未知。当前插件状态不代表之前的外部操作未发生。
-        <Button variant="outline" size="sm" className="mt-2" onClick={async () => {
-          if (!await confirm({ title: '已核对未知检查的结果？', description: '请先确认日志和外部结果。继续只解除操作锁定，不会重试检查；如需再次执行，仍须读取新计划并单独批准。', confirmLabel: '已核对，解除锁定' })) return
+        {i18n.t("检查「")}{unconfirmedCheck}{i18n.t("」的结果仍未知。当前插件状态不代表之前的外部操作未发生。")}<Button variant="outline" size="sm" className="mt-2" onClick={async () => {
+          if (!await confirm({ title: i18n.t("已核对未知检查的结果？"), description: i18n.t("请先确认日志和外部结果。继续只解除操作锁定，不会重试检查；如需再次执行，仍须读取新计划并单独批准。"), confirmLabel: i18n.t("已核对，解除锁定") })) return
           setUnconfirmedCheck(null)
           setActionUnconfirmed(false)
           setActionError(null)
           setActionErrorDetail(null)
           setVerificationPlan(null)
-        }}>已核对外部结果</Button>
+        }}>{i18n.t("已核对外部结果")}</Button>
       </AlertDescription></Alert>}
-      <Card><CardHeader><CardTitle className="text-base">安装与应用状态</CardTitle></CardHeader><CardContent><PluginManagementSummary state={plugin.management} error={plugin.managementError} readOnly={!writable} /><Button variant="outline" size="sm" className="mt-3" disabled={actionLoading} onClick={() => void fetchPluginDetail(plugin.instanceKey)}>刷新状态证据</Button></CardContent></Card>
+      <Card><CardHeader><CardTitle className="text-base">{i18n.t("安装与应用状态")}</CardTitle></CardHeader><CardContent><PluginManagementSummary state={plugin.management} error={plugin.managementError} readOnly={!writable} /><Button variant="outline" size="sm" className="mt-3" disabled={actionLoading} onClick={() => void fetchPluginDetail(plugin.instanceKey)}>{i18n.t("刷新状态证据")}</Button></CardContent></Card>
       {searchParams.get('useCase') === 'group-welcome' && <WelcomeFlowContext instanceKey={plugin.instanceKey} kind="detail" />}
       {writable && (
       <Card className="border-border/80">
           <CardContent className="p-4 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p className="text-sm font-medium">插件操作</p>
-                <p className="text-xs text-muted-foreground">诊断、启停、更新或卸载此插件。</p>
+                <p className="text-sm font-medium">{i18n.t("插件操作")}</p>
+                <p className="text-xs text-muted-foreground">{i18n.t("诊断、启停、更新或卸载此插件。")}</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={() => void applyPlugin()} disabled={actionLoading || actionUnconfirmed || !canApplyPlugin(plugin.management)}>应用变更</Button>
-                <Button variant="outline" size="sm" onClick={() => void loadVerificationPlan()} disabled={actionLoading || actionUnconfirmed || !canVerifyPlugin(plugin.management)}>查看业务检查</Button>
+                <Button variant="outline" size="sm" onClick={() => void applyPlugin()} disabled={actionLoading || actionUnconfirmed || !canApplyPlugin(plugin.management)}>{i18n.t("应用变更")}</Button>
+                <Button variant="outline" size="sm" onClick={() => void loadVerificationPlan()} disabled={actionLoading || actionUnconfirmed || !canVerifyPlugin(plugin.management)}>{i18n.t("查看业务检查")}</Button>
                 <Button variant="outline" size="sm" onClick={() => void diagnose()} disabled={actionLoading || actionUnconfirmed}>
-                  <Stethoscope className="w-4 h-4 mr-1" />诊断
-                </Button>
+                  <Stethoscope className="w-4 h-4 mr-1" />{i18n.t("诊断")}</Button>
                 <Button variant="outline" size="sm" onClick={() => void updatePlugin()} disabled={actionLoading || actionUnconfirmed}>
-                  <RefreshCw className={`w-4 h-4 mr-1 ${actionLoading ? 'animate-spin' : ''}`} />更新
-                </Button>
+                  <RefreshCw className={`w-4 h-4 mr-1 ${actionLoading ? 'animate-spin' : ''}`} />{i18n.t("更新")}</Button>
                 <Button variant="outline" size="sm" onClick={() => void setEnabled(plugin.management?.disabled ?? (plugin.status !== 'active'))} disabled={actionLoading || actionUnconfirmed || !plugin.management}>
-                  <Power className="w-4 h-4 mr-1" />{plugin.management ? plugin.management.disabled ? '启用' : '停用' : plugin.status === 'active' ? '停用' : '启用'}
+                  <Power className="w-4 h-4 mr-1" />{plugin.management ? plugin.management.disabled ? i18n.t("启用") : i18n.t("停用") : plugin.status === 'active' ? i18n.t("停用") : i18n.t("启用")}
                 </Button>
                 <Button variant="destructive" size="sm" onClick={() => void uninstallPlugin()} disabled={actionLoading || actionUnconfirmed}>
-                  <Trash2 className="w-4 h-4 mr-1" />卸载
-                </Button>
+                  <Trash2 className="w-4 h-4 mr-1" />{i18n.t("卸载")}</Button>
               </div>
             </div>
             {actionMessage && <Alert><AlertDescription>{actionMessage}</AlertDescription></Alert>}
             {actionError && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{actionError}{actionErrorDetail && <details className="mt-2 text-xs"><summary className="cursor-pointer">错误详情</summary><p className="mt-2 break-all">{actionErrorDetail}</p></details>}{actionUnconfirmed && <Button variant="outline" size="sm" onClick={() => void fetchPluginDetail(plugin.instanceKey)}>刷新核对状态</Button>}</AlertDescription>
+                <AlertDescription>{actionError}{actionErrorDetail && <details className="mt-2 text-xs"><summary className="cursor-pointer">{i18n.t("错误详情")}</summary><p className="mt-2 break-all">{actionErrorDetail}</p></details>}{actionUnconfirmed && <Button variant="outline" size="sm" onClick={() => void fetchPluginDetail(plugin.instanceKey)}>{i18n.t("刷新核对状态")}</Button>}</AlertDescription>
               </Alert>
             )}
-            {verificationPlan && <section aria-label="业务验证计划" className="space-y-3 rounded-md border p-3"><p className="font-medium">第 {verificationPlan.generation} 代业务检查 · 尚未执行</p>{verificationPlan.checks.length === 0 ? <p>插件未提供可执行检查。</p> : verificationPlan.checks.map(check => <div key={check.id} className="space-y-2"><p>{check.title} <Badge variant="secondary">{check.scope === 'local' ? '本地' : '平台'}</Badge></p><ul className="list-disc pl-5 text-xs text-muted-foreground">{check.effects.map((effect,index) => <li key={index}>{effect}</li>)}</ul><Button size="sm" disabled={actionLoading || actionUnconfirmed} onClick={() => void runVerification(check.id)}>审阅并批准一次</Button></div>)}</section>}
-            {verificationInvalidated && <p role="status" className="text-sm text-amber-700 dark:text-amber-300">当前代、配置或连接证据已变化，旧检查结果已失效。请重新查看业务检查并验证。</p>}
-            {verificationResult && verificationIsCurrent(verificationResult.outcome, verificationResult.plan, plugin.management) && <section aria-label="业务验证结果" className="space-y-2"><p className="font-medium">{verificationSummary(verificationResult.outcome)}</p><p className="text-sm">{verificationResult.outcome.summary}</p><ul className="list-disc pl-5 text-xs">{verificationResult.outcome.evidence.map((evidence,index) => <li key={index}>{evidence}</li>)}</ul></section>}
+            {verificationPlan && <section aria-label={i18n.t("业务验证计划")} className="space-y-3 rounded-md border p-3"><p className="font-medium">{i18n.t("第 ")}{verificationPlan.generation} {i18n.t(" 代业务检查 · 尚未执行")}</p>{verificationPlan.checks.length === 0 ? <p>{i18n.t("插件未提供可执行检查。")}</p> : verificationPlan.checks.map(check => <div key={check.id} className="space-y-2"><p>{check.title} <Badge variant="secondary">{check.scope === 'local' ? i18n.t("本地") : i18n.t("平台")}</Badge></p><ul className="list-disc pl-5 text-xs text-muted-foreground">{check.effects.map((effect,index) => <li key={index}>{effect}</li>)}</ul><Button size="sm" disabled={actionLoading || actionUnconfirmed} onClick={() => void runVerification(check.id)}>{i18n.t("审阅并批准一次")}</Button></div>)}</section>}
+            {verificationInvalidated && <p role="status" className="text-sm text-amber-700 dark:text-amber-300">{i18n.t("当前代、配置或连接证据已变化，旧检查结果已失效。请重新查看业务检查并验证。")}</p>}
+            {verificationResult && verificationIsCurrent(verificationResult.outcome, verificationResult.plan, plugin.management, undefined, i18n.locale) && <section aria-label={i18n.t("业务验证结果")} className="space-y-2"><p className="font-medium">{verificationSummary(verificationResult.outcome, i18n.locale)}</p><p className="text-sm">{verificationResult.outcome.summary}</p><ul className="list-disc pl-5 text-xs">{verificationResult.outcome.evidence.map((evidence,index) => <li key={index}>{evidence}</li>)}</ul></section>}
             {diagnostic != null && <PluginDiagnostic value={diagnostic} />}
           </CardContent>
         </Card>
       )}
 
-      <p className="text-xs text-muted-foreground">{plugin.features.length ? '已加载能力' : '暂无已加载能力'}</p>
+      <p className="text-xs text-muted-foreground">{plugin.features.length ? i18n.t("已加载能力") : i18n.t("暂无已加载能力")}</p>
       <Separator />
 
       {/* Stats grid - 动态渲染 features 摘要 */}
@@ -549,13 +543,14 @@ function FeatureItemCard({ item }: { featureName: string; item: { name: string; 
 }
 
 function PluginDiagnostic({ value }: { value: unknown }) {
+  const i18n = useI18n()
   const { status, errors, missingEnv, warnings } = pluginDiagnosticSummary(value)
-  const title = status === 'valid' ? '配置检查通过' : status === 'missing-env' ? '需要补充环境变量' : status === 'invalid' ? '配置检查未通过' : '未提供配置检查结果'
-  return <section aria-label="插件诊断结果" className="space-y-3 rounded-md bg-muted/40 p-3 text-sm">
+  const title = status === 'valid' ? i18n.t("配置检查通过") : status === 'missing-env' ? i18n.t("需要补充环境变量") : status === 'invalid' ? i18n.t("配置检查未通过") : i18n.t("未提供配置检查结果")
+  return <section aria-label={i18n.t("插件诊断结果")} className="space-y-3 rounded-md bg-muted/40 p-3 text-sm">
     <Badge variant={status === 'valid' ? 'success' : status === 'unknown' ? 'secondary' : 'warning'}>{title}</Badge>
-    {errors.length > 0 && <div><p className="mb-1 font-medium">配置错误</p><ul className="list-disc space-y-1 pl-5">{errors.map((error, index) => <li key={index} className="break-words">{error}</li>)}</ul></div>}
-    {missingEnv.length > 0 && <div><p className="mb-1 font-medium">缺少环境变量</p><div className="flex flex-wrap gap-1">{missingEnv.map(name => <code key={name} className="break-all rounded bg-muted px-1.5 py-0.5 text-xs">{name}</code>)}</div></div>}
-    {warnings.length > 0 && <div><p className="mb-1 font-medium">提示</p><ul className="list-disc space-y-1 pl-5">{warnings.map((warning, index) => <li key={index} className="break-words">{warning}</li>)}</ul></div>}
-    <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">原始诊断数据</summary><div className="mt-2"><JsonViewer value={value} /></div></details>
+    {errors.length > 0 && <div><p className="mb-1 font-medium">{i18n.t("配置错误")}</p><ul className="list-disc space-y-1 pl-5">{errors.map((error, index) => <li key={index} className="break-words">{error}</li>)}</ul></div>}
+    {missingEnv.length > 0 && <div><p className="mb-1 font-medium">{i18n.t("缺少环境变量")}</p><div className="flex flex-wrap gap-1">{missingEnv.map(name => <code key={name} className="break-all rounded bg-muted px-1.5 py-0.5 text-xs">{name}</code>)}</div></div>}
+    {warnings.length > 0 && <div><p className="mb-1 font-medium">{i18n.t("提示")}</p><ul className="list-disc space-y-1 pl-5">{warnings.map((warning, index) => <li key={index} className="break-words">{warning}</li>)}</ul></div>}
+    <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">{i18n.t("原始诊断数据")}</summary><div className="mt-2"><JsonViewer value={value} /></div></details>
   </section>
 }

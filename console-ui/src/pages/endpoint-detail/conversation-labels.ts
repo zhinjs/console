@@ -1,3 +1,4 @@
+import { translate } from '../../i18n/locale.mjs'
 import type { ChannelParentRef, ChannelParentType, ConversationChannelType } from './types'
 import { ENDPOINT_RPC } from '../../contracts/zhin-console'
 
@@ -24,12 +25,12 @@ export function displayNameForConversation(
   channelType: ConversationChannelType,
   id: string,
   primaryName: string | undefined,
-  hintName?: string,
+  hintName?: string, locale: 'zh-CN' | 'en' = 'zh-CN'
 ): string {
   const resolved = pickLabel(hintName, primaryName)
   if (resolved && !isIdLikeName(resolved, id)) return resolved
-  if (channelType === 'group') return `群聊 ${id}`
-  if (channelType === 'channel') return `频道 ${id}`
+  if (channelType === 'group') return translate(locale, "群聊 {0}", [id])
+  if (channelType === 'channel') return translate(locale, "频道 {0}", [id])
   return resolved || id
 }
 

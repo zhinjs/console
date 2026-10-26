@@ -1,3 +1,4 @@
+import { translate } from '../../i18n/locale.mjs'
 import { readRendering } from './rendering-diagnostics.mjs'
 
 const kinds = new Set(['private', 'group', 'channel'])
@@ -12,38 +13,38 @@ export function diagnosticConversationKey(value) {
   if (!validDiagnosticConversation(value)) return undefined
   return JSON.stringify([value.endpoint.adapter, value.endpoint.id, value.kind, value.id, value.parent?.kind ?? null, value.parent?.id ?? null, value.threadId ?? null])
 }
-export function diagnosticTarget(message) {
-  if (message?.outgoing !== false || message?.directionUnknown || message?.local) return { reason: '仅支持方向明确的入站消息；历史方向未知时无法查询。' }
-  if (!validDiagnosticConversation(message.conversation)) return { reason: '该消息没有 Host 提供的完整会话身份，无法精确查询。请等待新的入站消息。' }
-  if (!text(message.messageId)) return { reason: '该消息缺少平台消息 ID，无法精确查询；不会使用正文或本地记录 ID 猜测。' }
+export function diagnosticTarget(message, locale = 'zh-CN') {
+  if (message?.outgoing !== false || message?.directionUnknown || message?.local) return { reason: translate(locale, "仅支持方向明确的入站消息；历史方向未知时无法查询。") }
+  if (!validDiagnosticConversation(message.conversation)) return { reason: translate(locale, "该消息没有 Host 提供的完整会话身份，无法精确查询。请等待新的入站消息。") }
+  if (!text(message.messageId)) return { reason: translate(locale, "该消息缺少平台消息 ID，无法精确查询；不会使用正文或本地记录 ID 猜测。") }
   return { conversation: message.conversation, messageId: message.messageId }
 }
-export function conversationDiagnosticTarget(endpoint, selection) {
-  if (selection?.type !== 'channel' || !['private', 'group', 'channel'].includes(selection.channelType)) return { reason: '请选择明确的会话。' }
-  if (selection.parent && !['group', 'guild'].includes(selection.parent.type)) return { reason: '父容器身份无效，无法精确查询。' }
+export function conversationDiagnosticTarget(endpoint, selection, locale = 'zh-CN') {
+  if (selection?.type !== 'channel' || !['private', 'group', 'channel'].includes(selection.channelType)) return { reason: translate(locale, "请选择明确的会话。") }
+  if (selection.parent && !['group', 'guild'].includes(selection.parent.type)) return { reason: translate(locale, "父容器身份无效，无法精确查询。") }
   const conversation = { endpoint, kind: selection.channelType, id: selection.id,
     ...(selection.parent ? { parent: { kind: selection.parent.type === 'guild' ? 'channel' : 'group', id: selection.parent.id } } : {}),
     ...(selection.threadId !== undefined ? { threadId: selection.threadId } : {}) }
-  if (!validDiagnosticConversation(conversation)) return { reason: '尚未获得 Host 提供的完整 Endpoint 和会话身份，无法查询。' }
+  if (!validDiagnosticConversation(conversation)) return { reason: translate(locale, "尚未获得 Host 提供的完整 Endpoint 和会话身份，无法查询。") }
   return { conversation }
 }
-export function diagnosticQuery(target) {
-  if (!validDiagnosticConversation(target?.conversation) || target.messageId !== undefined && !text(target.messageId)) throw new Error('缺少精确消息身份')
+export function diagnosticQuery(target, locale = 'zh-CN') {
+  if (!validDiagnosticConversation(target?.conversation) || target.messageId !== undefined && !text(target.messageId)) throw new Error(translate(locale, "缺少精确消息身份"))
   return new URLSearchParams({ conversation: JSON.stringify(target.conversation), ...(target.messageId !== undefined ? { messageId: target.messageId } : {}), limit: target.messageId !== undefined ? '10' : '50' }).toString()
 }
 const stages = new Set(['received', 'origin', 'prefix', 'middleware', 'handlers', 'dispatch', 'delivery'])
 const stepStatuses = new Set(['accepted', 'human', 'member', 'peer_bot', 'self', 'unclassified', 'matched', 'mismatch', 'empty_input', 'commands_unavailable', 'started', 'entered', 'stopped', 'replaced', 'completed', 'unmatched', 'invalid', 'denied', 'limited', 'executed', 'interaction', 'middleware', 'command', 'agent', 'self_echo', 'duplicate', 'bot_origin', 'dedup_error', 'sent', 'failed', 'unsupported', 'rejected', 'suppressed', 'unknown'])
 const routes = new Set(['interaction', 'middleware', 'command', 'agent', 'unmatched', 'self_echo', 'duplicate', 'bot_origin', 'dedup_error'])
 const limitReasons = new Set(['cooldown', 'busy', 'capacity', 'operation_unavailable', 'identity_unavailable', 'service_unavailable'])
-function readLimit(value, status) {
+function readLimit(value, status, locale = 'zh-CN') {
   if (value === undefined) return undefined
   if (!value || typeof value !== 'object' || Array.isArray(value) || status !== 'limited' || !limitReasons.has(value.reason)
-    || value.retryAfterMs !== undefined && (value.reason !== 'cooldown' || !Number.isSafeInteger(value.retryAfterMs) || value.retryAfterMs <= 0 || value.retryAfterMs > 86_400_000)) throw new Error('指令准入诊断格式无效。')
+    || value.retryAfterMs !== undefined && (value.reason !== 'cooldown' || !Number.isSafeInteger(value.retryAfterMs) || value.retryAfterMs <= 0 || value.retryAfterMs > 86_400_000)) throw new Error(translate(locale, "指令准入诊断格式无效。"))
   return { reason: value.reason, ...(value.retryAfterMs !== undefined ? { retryAfterMs: value.retryAfterMs } : {}) }
 }
 const deliveryStatuses = new Set(['sent', 'failed', 'unsupported', 'rejected', 'suppressed'])
-export function readMessageDiagnostics(body, target) {
-  if (!validDiagnosticConversation(target?.conversation) || body?.success !== true || !Array.isArray(body.data) || body.data.length > (target.messageId !== undefined ? 10 : 50)) throw new Error('消息诊断响应格式无效，请刷新或更新 Host。')
+export function readMessageDiagnostics(body, target, locale = 'zh-CN') {
+  if (!validDiagnosticConversation(target?.conversation) || body?.success !== true || !Array.isArray(body.data) || body.data.length > (target.messageId !== undefined ? 10 : 50)) throw new Error(translate(locale, "消息诊断响应格式无效，请刷新或更新 Host。"))
   return body.data.map(item => {
     if (!item || !text(item.id) || !Number.isSafeInteger(item.generation) || item.generation < 0
       || diagnosticConversationKey(item.conversation) !== diagnosticConversationKey(target.conversation)
@@ -53,17 +54,17 @@ export function readMessageDiagnostics(body, target) {
       || typeof item.truncated !== 'boolean'
       || item.dispatchStatus !== undefined && !['unmatched', 'invalid', 'denied', 'limited', 'executed'].includes(item.dispatchStatus)
       || !Array.isArray(item.steps) || item.steps.length > 32 || !Array.isArray(item.deliveries) || item.deliveries.length > 32
-      || item.command !== undefined && (typeof item.command !== 'string' || item.command.length > 200)) throw new Error('消息诊断身份或字段无效，未展示可能属于其他会话的记录。')
-    const limit = readLimit(item.limit, item.dispatchStatus)
+      || item.command !== undefined && (typeof item.command !== 'string' || item.command.length > 200)) throw new Error(translate(locale, "消息诊断身份或字段无效，未展示可能属于其他会话的记录。"))
+    const limit = readLimit(item.limit, item.dispatchStatus, locale)
     const steps = item.steps.map(step => {
-      if (!step || !stages.has(step.stage) || !stepStatuses.has(step.status) || !Number.isFinite(step.at)) throw new Error('诊断步骤格式无效。')
+      if (!step || !stages.has(step.stage) || !stepStatuses.has(step.status) || !Number.isFinite(step.at)) throw new Error(translate(locale, "诊断步骤格式无效。"))
       return { stage: step.stage, status: step.status, at: step.at }
     })
     const deliveries = item.deliveries.map(delivery => {
       if (!delivery || !validDiagnosticConversation(delivery.conversation) || !deliveryStatuses.has(delivery.status)
         || delivery.deliveryUnknown !== undefined && typeof delivery.deliveryUnknown !== 'boolean'
-        || delivery.failureCode !== undefined && (typeof delivery.failureCode !== 'string' || !/^[a-z0-9_]{1,96}$/u.test(delivery.failureCode))) throw new Error('投递诊断格式无效。')
-      const rendering = readRendering(delivery.rendering)
+        || delivery.failureCode !== undefined && (typeof delivery.failureCode !== 'string' || !/^[a-z0-9_]{1,96}$/u.test(delivery.failureCode))) throw new Error(translate(locale, "投递诊断格式无效。"))
+      const rendering = readRendering(delivery.rendering, locale)
       return { conversation: delivery.conversation, status: delivery.status,
         ...(delivery.failureCode !== undefined ? { failureCode: delivery.failureCode } : {}),
         ...(delivery.deliveryUnknown !== undefined ? { deliveryUnknown: delivery.deliveryUnknown } : {}),
@@ -85,34 +86,34 @@ const labels = {
   self_echo: '自身消息回声', duplicate: '重复消息', bot_origin: 'Bot 来源被拦截', dedup_error: '去重检查失败',
   sent: '平台已受理', failed: '失败', unsupported: '不支持', rejected: '已拒绝', suppressed: '已拦截', unknown: '投递结果不确定', processing: '入站处理中',
 }
-export function diagnosticLabel(value) { return labels[value] ?? '未识别的状态' }
-export function diagnosticAdvice(record) {
+export function diagnosticLabel(value, locale = 'zh-CN') { return (labels[value] ? translate(locale, labels[value]) : undefined) ?? translate(locale, "未识别的状态") }
+export function diagnosticAdvice(record, locale = 'zh-CN') {
   const advice = []
-  if (record.route === 'agent') advice.push('消息已交给 Agent；请在 Agent 运行记录查看后续工具、审批和回复。这里不代表 Agent 已完成。')
-  if (record.status === 'processing') advice.push('入站处理仍在进行，可稍后手动刷新；不会重放消息。')
+  if (record.route === 'agent') advice.push(translate(locale, "消息已交给 Agent；请在 Agent 运行记录查看后续工具、审批和回复。这里不代表 Agent 已完成。"))
+  if (record.status === 'processing') advice.push(translate(locale, "入站处理仍在进行，可稍后手动刷新；不会重放消息。"))
   if (record.dispatchStatus === 'limited') {
     const reason = record.limit?.reason
     if (reason === 'cooldown') advice.push(record.limit.retryAfterMs !== undefined
-      ? `本次指令处于冷却期；记录产生时剩余约 ${Math.ceil(record.limit.retryAfterMs / 1000)} 秒。不会自动重放。`
-      : '本次指令处于冷却期；请等待冷却结束后再决定是否执行。不会自动重放。')
-    else if (reason === 'busy') advice.push('同一指令、发送者和完整会话已有执行占用并发额度；完成时间未知。请查看原执行，不要连续重复触发。')
-    else if (reason === 'capacity') advice.push('当前指令准入容量已满；本次未进入指令业务执行，请结合 Host 状态排查。不会自动重放。')
-    else if (reason === 'identity_unavailable') advice.push('本次缺少可信的完整会话或发送者身份，无法应用指令准入策略；请检查适配器入站身份，不要伪造身份补齐。')
-    else advice.push('本次未获得有效的指令执行上下文或准入服务；请核对当前运行代与 Host 状态。不会自动重放。')
+      ? translate(locale, "本次指令处于冷却期；记录产生时剩余约 {0} 秒。不会自动重放。", [Math.ceil(record.limit.retryAfterMs / 1000)])
+      : translate(locale, "本次指令处于冷却期；请等待冷却结束后再决定是否执行。不会自动重放。"))
+    else if (reason === 'busy') advice.push(translate(locale, "同一指令、发送者和完整会话已有执行占用并发额度；完成时间未知。请查看原执行，不要连续重复触发。"))
+    else if (reason === 'capacity') advice.push(translate(locale, "当前指令准入容量已满；本次未进入指令业务执行，请结合 Host 状态排查。不会自动重放。"))
+    else if (reason === 'identity_unavailable') advice.push(translate(locale, "本次缺少可信的完整会话或发送者身份，无法应用指令准入策略；请检查适配器入站身份，不要伪造身份补齐。"))
+    else advice.push(translate(locale, "本次未获得有效的指令执行上下文或准入服务；请核对当前运行代与 Host 状态。不会自动重放。"))
   }
-  if (record.dispatchStatus === 'denied') advice.push('请检查该指令的权限规则与发送者在目标会话中的真实角色。')
-  if (record.dispatchStatus === 'invalid') advice.push('请查看该指令的帮助，核对参数和输入格式。')
-  if (record.steps.some(step => step.stage === 'prefix' && step.status === 'mismatch')) advice.push('请核对本账号的指令前缀；前缀未匹配也可能继续走普通聊天链路。')
-  if (record.steps.some(step => step.stage === 'middleware' && step.status === 'failed')) advice.push('入站中间件执行失败，请检查对应插件与 Host 日志；诊断不记录消息正文和原始异常。')
+  if (record.dispatchStatus === 'denied') advice.push(translate(locale, "请检查该指令的权限规则与发送者在目标会话中的真实角色。"))
+  if (record.dispatchStatus === 'invalid') advice.push(translate(locale, "请查看该指令的帮助，核对参数和输入格式。"))
+  if (record.steps.some(step => step.stage === 'prefix' && step.status === 'mismatch')) advice.push(translate(locale, "请核对本账号的指令前缀；前缀未匹配也可能继续走普通聊天链路。"))
+  if (record.steps.some(step => step.stage === 'middleware' && step.status === 'failed')) advice.push(translate(locale, "入站中间件执行失败，请检查对应插件与 Host 日志；诊断不记录消息正文和原始异常。"))
   if (record.status === 'failed' && record.steps.some(step => step.stage === 'middleware' && step.status === 'entered')
-    && !record.steps.some(step => step.stage === 'middleware' && step.status === 'completed')) advice.push('中间件链尚未结束，异常也可能来自下游处理；请结合此时刻的 Host 日志定位对应插件。')
+    && !record.steps.some(step => step.stage === 'middleware' && step.status === 'completed')) advice.push(translate(locale, "中间件链尚未结束，异常也可能来自下游处理；请结合此时刻的 Host 日志定位对应插件。"))
   if (record.status === 'failed' && record.steps.some(step => step.stage === 'handlers' && step.status === 'started')
-    && !record.steps.some(step => step.stage === 'handlers' && step.status === 'completed')) advice.push('消息事件处理器尚未结束，请检查相应 handler 插件和 Host 日志。')
-  if (record.deliveries.some(delivery => delivery.failureCode === 'outbound_middleware_failed')) advice.push('出站中间件执行失败，请检查审核或改写插件的日志与配置。')
-  if (record.deliveries.some(delivery => delivery.deliveryUnknown)) advice.push('投递结果不确定，请先到实际目标会话核实，避免重复发送。本面板不会自动重试。')
-  if (record.deliveries.some(delivery => delivery.status !== 'sent' && !delivery.deliveryUnknown)) advice.push('有投递未被平台受理，请检查实际目标、Endpoint 连接与目标支持的消息能力。')
-  if (record.status === 'failed' && !advice.length) advice.push('入站处理失败，请结合此时刻的 Host 日志检查插件；不要直接重发可能产生副作用的操作。')
-  if (!record.deliveries.length) advice.push('此记录没有关联投递；链路可能未产生回复，或后续工作在独立任务中继续。')
+    && !record.steps.some(step => step.stage === 'handlers' && step.status === 'completed')) advice.push(translate(locale, "消息事件处理器尚未结束，请检查相应 handler 插件和 Host 日志。"))
+  if (record.deliveries.some(delivery => delivery.failureCode === 'outbound_middleware_failed')) advice.push(translate(locale, "出站中间件执行失败，请检查审核或改写插件的日志与配置。"))
+  if (record.deliveries.some(delivery => delivery.deliveryUnknown)) advice.push(translate(locale, "投递结果不确定，请先到实际目标会话核实，避免重复发送。本面板不会自动重试。"))
+  if (record.deliveries.some(delivery => delivery.status !== 'sent' && !delivery.deliveryUnknown)) advice.push(translate(locale, "有投递未被平台受理，请检查实际目标、Endpoint 连接与目标支持的消息能力。"))
+  if (record.status === 'failed' && !advice.length) advice.push(translate(locale, "入站处理失败，请结合此时刻的 Host 日志检查插件；不要直接重发可能产生副作用的操作。"))
+  if (!record.deliveries.length) advice.push(translate(locale, "此记录没有关联投递；链路可能未产生回复，或后续工作在独立任务中继续。"))
   return advice
 }
 /** Cancellation and supersession invalidate responses even if fetch ignores AbortSignal. */
