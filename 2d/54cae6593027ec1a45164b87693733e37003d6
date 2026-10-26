@@ -1,0 +1,401 @@
+console-ui/src/components/LanguageSelect.tsx
+  s_079f1dc5e6308d::t_cde01316639104 1-15
+  s_079f1dc5e6308d::t_47856e828c2634 16
+console-ui/src/i18n/locale.mjs
+  s_079f1dc5e6308d::t_cde01316639104 1-39
+  s_079f1dc5e6308d::t_304fa6186ff61e 40-46
+console-ui/src/i18n/locale.d.mts
+  s_079f1dc5e6308d::t_cde01316639104 1-8
+console-ui/src/i18n/messages.en.mjs
+  s_079f1dc5e6308d::t_cde01316639104 1-6
+  s_079f1dc5e6308d::t_1fd72afdd3ece7 7-2206
+console-ui/src/i18n/index.tsx
+  s_079f1dc5e6308d::t_cde01316639104 1-42
+  s_079f1dc5e6308d::t_55207ed8aaf5dc 43-46
+README.md
+  s_079f1dc5e6308d::t_e7665065c74722 132-137
+client/host/ConsoleWebHost.tsx
+  s_079f1dc5e6308d::t_315721f7bdd284 1,28,33,40,44
+client/main.tsx
+  s_079f1dc5e6308d::t_a8180c4e8bf9da 1-2,66,85,99,109
+client/middleware/demoBootstrap.ts
+  s_079f1dc5e6308d::t_c6704fe71de69c 1,14,23
+console-ui/src/bootstrap/loadConsoleEntries.ts
+  s_079f1dc5e6308d::t_3acd2e0bf11f96 1,72,115,130,132
+console-ui/src/components/AgentSessionPicker.tsx
+  s_079f1dc5e6308d::t_f16845eebe4a64 1,19,24,35,49,53,63-64,69,101-102,105,111,117,129,132
+console-ui/src/components/ConsoleCommandCenter.tsx
+  s_079f1dc5e6308d::t_75f32108fa29cf 1-3,137,145,151,173,185,190-192,196,198-199,255,257-258,265,274-275,287-288,314,318,326-327,333-336
+console-ui/src/components/DemoOnboarding.tsx
+  s_079f1dc5e6308d::t_d09a0e63b87eb6 1,10-14,16,20-21,23,28,31,34,36,38,44,53,60,90,101,106,108,112
+console-ui/src/components/PluginConfigForm/ConfigApplicationEvidence.tsx
+  s_079f1dc5e6308d::t_1916792edeebb8 1,22,36,45,50,52,58-59,72,74-75,78,80,82,84,86-87,92-94,96-101
+console-ui/src/components/PluginConfigForm/ConfigFieldExplanation.tsx
+  s_079f1dc5e6308d::t_41cc0edab15ba0 1,18,28,32-37,43,45-50
+console-ui/src/components/PluginConfigForm/ConversationScopeEditor.tsx
+  s_079f1dc5e6308d::t_aefb0e6ae03fcf 1,10,14-19,21,24-26,29-30
+console-ui/src/components/PluginConfigForm/ConversationTargetEditor.tsx
+  s_079f1dc5e6308d::t_819f259a6e1dbb 1,25,33,39-41,44,46,49-50,52-55,57-61,67,70-74
+console-ui/src/components/PluginConfigForm/SchemaFieldEditor.tsx
+  s_079f1dc5e6308d::t_7fac08e094a31c 1-2,24-26,41,43,48,57-58,61,63,67,72,76-79,81,86,102,104,110,114,122,128,133-135,139,146,149,151-153,158,160-163,166-168
+console-ui/src/components/PluginConfigForm/config-evidence-model.d.mts
+  s_079f1dc5e6308d::t_e1dda8b41018d1 3-5,10
+console-ui/src/components/PluginConfigForm/config-evidence-model.mjs
+  s_079f1dc5e6308d::t_578014786f496c 1,6,9,15-16,19-23,44-45,48,50
+console-ui/src/components/PluginConfigForm/config-explanation-model.d.mts
+  s_079f1dc5e6308d::t_ab6987a34b67ab 9-10
+console-ui/src/components/PluginConfigForm/config-explanation-model.mjs
+  s_079f1dc5e6308d::t_94898dc056c4dc 1,22-23,28,45,58,62
+console-ui/src/components/PluginConfigForm/conversation-scope-model.d.mts
+  s_079f1dc5e6308d::t_4327a6b73dcb11 11
+console-ui/src/components/PluginConfigForm/conversation-scope-model.mjs
+  s_079f1dc5e6308d::t_66ecd57e14f33a 1,31,33,35-38,40
+console-ui/src/components/PluginConfigForm/index.tsx
+  s_079f1dc5e6308d::t_30cd8d33137228 1,27,29,35,103,108,111,122-123,125,127,130-136,141-143,146-147,152
+console-ui/src/components/PluginConfigForm/numeric-validation.d.mts
+  s_079f1dc5e6308d::t_56f7b3752e7c13 2-3
+console-ui/src/components/PluginConfigForm/numeric-validation.mjs
+  s_079f1dc5e6308d::t_00e1fc8cb5d1c7 1-7,11,14-16
+console-ui/src/components/PluginConfigForm/schema-model.d.mts
+  s_079f1dc5e6308d::t_9aa59a8dcf3a5a 3,11
+console-ui/src/components/PluginConfigForm/schema-model.mjs
+  s_079f1dc5e6308d::t_9a61851e749dcf 1,6-7,9,11-12,14-17,108,110-112
+console-ui/src/components/PluginConfigForm/source-model.d.mts
+  s_079f1dc5e6308d::t_1e2292b760bfaa 1-4
+console-ui/src/components/PluginConfigForm/source-model.mjs
+  s_079f1dc5e6308d::t_76b22dc0a4c9a0 1,3,5,8-9,12-13,20,27-28
+console-ui/src/components/PluginConfigForm/types.ts
+  s_079f1dc5e6308d::t_de3bcdb3572a5a 6-7,35
+console-ui/src/components/PluginConfigForm/usePluginConfigDraft.ts
+  s_079f1dc5e6308d::t_c51aafdd3bcf37 1,11-13,29,32-33,35-36,48,50,52-53
+console-ui/src/components/ThemeToggle.tsx
+  s_079f1dc5e6308d::t_ebf9bfd2531119 1,6,13-14
+console-ui/src/components/confirm-dialog.tsx
+  s_079f1dc5e6308d::t_bdc36f9564e7f9 1,22,25,47,55
+console-ui/src/components/empty-state.tsx
+  s_079f1dc5e6308d::t_5954220f57e3ee 1,20,25,35
+console-ui/src/components/error-alert.tsx
+  s_079f1dc5e6308d::t_6d59d6a6487b0e 1,27,37
+console-ui/src/components/page-error-boundary.tsx
+  s_079f1dc5e6308d::t_53efc27c3c9fb7 1,17-18,20-21
+console-ui/src/components/toast.tsx
+  s_079f1dc5e6308d::t_167f4b511d731f 1,41,97
+console-ui/src/components/ui/dialog.tsx
+  s_079f1dc5e6308d::t_5a3b7c756d82c5 1,47
+console-ui/src/hooks/useConfigSource.ts
+  s_079f1dc5e6308d::t_0a071cd0e8e8a6 1,28-30,55,62,67-68,76-77,88-89,94,103
+console-ui/src/i18n/navigation.ts
+  s_079f1dc5e6308d::t_e8e4fc12288a8e 1-33
+console-ui/src/layouts/dashboard.tsx
+  s_079f1dc5e6308d::t_1b43a6430ced3d 1-3,81,130-131,174,179,216,225,243,252,256,260,279,297,302-303,305-306,318-319,323,334,341-342,350,353,359-360
+console-ui/src/main.tsx
+  s_079f1dc5e6308d::t_0d01dc5a4cdda3 1-2,66,84,128,136
+console-ui/src/navigation-location.d.mts
+  s_079f1dc5e6308d::t_312e8fd93d9efc 2
+console-ui/src/navigation-location.mjs
+  s_079f1dc5e6308d::t_c725c7d5defab3 1,3,8
+console-ui/src/pages/PluginManagementSummary.tsx
+  s_079f1dc5e6308d::t_c7badea8e3c029 1,8-9,11-15,17-18
+console-ui/src/pages/WelcomeFlowContext.tsx
+  s_079f1dc5e6308d::t_4b7885c4826c3e 1,20,28-30,32,39-41
+console-ui/src/pages/agent-sessions.tsx
+  s_079f1dc5e6308d::t_ae2106330d4d06 1,49,75,93,98,115,137,142,146,150,172,180-181,184,190,231,236,238,244,271,276-277,280,293,295,304,311
+console-ui/src/pages/agent-workbench.tsx
+  s_079f1dc5e6308d::t_98e49677018633 1-2,69,73,79,86,90,100,115-117,133,145-146,151-152,157-158,163-164,185-186,190,194,199,202-204,207-210,215-217,221-222,227,229,239-240,246,260,264,267,274-275,283,301,303,313-314,319-323
+console-ui/src/pages/ambient-engagement-model.d.mts
+  s_079f1dc5e6308d::t_617f735ff6e73f 31-32,35,37
+console-ui/src/pages/ambient-engagement-model.mjs
+  s_079f1dc5e6308d::t_27d1f9780c2218 1,50-53,55,57,59,61,63-66,69,73-77,80-83,86-88,98,100-101,103-106,108,163,167,169,172,201-202,205,208,211,213
+console-ui/src/pages/ambient-engagement.tsx
+  s_079f1dc5e6308d::t_48c9e8f50cfbd1 1-2,43,46-47,61-62,66,76-78,91,94,98,104-105,107,110,119,122,128,136,140,142-143,152,171,183,194,202-203,207,210,212,216,219,222,224-225,233,242
+console-ui/src/pages/assistant-jobs-model.d.mts
+  s_079f1dc5e6308d::t_91619e9f4b070b 3,5
+console-ui/src/pages/assistant-jobs-model.mjs
+  s_079f1dc5e6308d::t_7499cfd3ec6f72 1-2,4,6-7,16,20
+console-ui/src/pages/assistant-jobs.tsx
+  s_079f1dc5e6308d::t_3e29f25cfdadbc 1-2,23,31,42-44,46-48,50-51,53,59-60
+console-ui/src/pages/command-permissions.tsx
+  s_079f1dc5e6308d::t_aace2a18db897d 1,20,44-45,47,49,61,68-69,71,78-82,84-85,87-89,92-93,96-98,100-111,113
+console-ui/src/pages/config-source-draft.d.mts
+  s_079f1dc5e6308d::t_0e659af68d9aa3 3-4
+console-ui/src/pages/config-source-draft.mjs
+  s_079f1dc5e6308d::t_af022b58c06f9a 1,3,5,8-9
+console-ui/src/pages/config-source-validation.d.mts
+  s_079f1dc5e6308d::t_106c19ac03703f 1
+console-ui/src/pages/config-source-validation.mjs
+  s_079f1dc5e6308d::t_3bed5fdc51f8e3 1,4,9,12
+console-ui/src/pages/config.tsx
+  s_079f1dc5e6308d::t_a16b85e6d43eb2 1,31,33,38,68,77,80,82,95,97,111,122-123,127,130,136-138,147,154,157,168-171,176,179,185,192-193,197,199,208,212-213,218,224-225
+console-ui/src/pages/cron.tsx
+  s_079f1dc5e6308d::t_d756b1816eb24f 1-2,24-25,27,31-35,61,111,188,197-198,202,205,208,216,223,230,232,254,259,270,280,292,297,304,314,322-323,341,347,365,369,371,377,381,385,387,404,406,410,412,418,420,425,428,433,442,448,458,460,464,467
+console-ui/src/pages/dashboard.tsx
+  s_079f1dc5e6308d::t_fdeefc22d01429 1-2,119,122,124-125,128,148,152-154,163,193,199,205,228,234,254,256,261,263,270,275,277,282,285-286,291,293,297,303-304,311-312,318-319,326-327,334-335,341,344,350,352,359,378,382-383,387-388,396,401,409,419,429,433,437,441-442,452-453,463,465,472-473,503,512,516,547,556-557,564,568,572,576,586,588,592,603
+console-ui/src/pages/database/RecordValueDisclosure.tsx
+  s_079f1dc5e6308d::t_6733d65edffb8a 1,5,10,13,15
+console-ui/src/pages/database/database-page.tsx
+  s_079f1dc5e6308d::t_ad628dece33d63 1,23,36,42-43,48,52,58,71,81,83,104,106,135,138,199,212-213,215
+console-ui/src/pages/database/document-collection-view.tsx
+  s_079f1dc5e6308d::t_fb18fbc79352f5 1,38,70,75-76,79,100-101,124,126-127,134,140-141,144,148-149,159,161,167,177-178,185-186,188
+console-ui/src/pages/database/kv-bucket-view.tsx
+  s_079f1dc5e6308d::t_e7ecd73acd0f4d 1,38,70-71,75,98,119,121-122,128,135,142,155,160-161,171,178,188,191-192,199-200,202
+console-ui/src/pages/database/mutation-model.d.mts
+  s_079f1dc5e6308d::t_17f6a06df86d16 2-4
+console-ui/src/pages/database/mutation-model.mjs
+  s_079f1dc5e6308d::t_ddc7a4616db564 1,14,17,22,24,28-30
+console-ui/src/pages/database/record-value-preview.d.mts
+  s_079f1dc5e6308d::t_885c40f628119a 1
+console-ui/src/pages/database/record-value-preview.mjs
+  s_079f1dc5e6308d::t_49f18dfc7874dc 1,6-8,11-12,15-17
+console-ui/src/pages/database/related-row-identity.d.mts
+  s_079f1dc5e6308d::t_eff120647581f2 2
+console-ui/src/pages/database/related-row-identity.mjs
+  s_079f1dc5e6308d::t_21f3e099059d35 1,6-7,10
+console-ui/src/pages/database/related-row-validation.d.mts
+  s_079f1dc5e6308d::t_a3b37ee07be86e 1-2
+console-ui/src/pages/database/related-row-validation.mjs
+  s_079f1dc5e6308d::t_6f63f245fe4408 1,7,12-16,24,27,30
+console-ui/src/pages/database/related-table-view.tsx
+  s_079f1dc5e6308d::t_2446bd9a3526c4 1,44,94,106,112,122,124,138-139,202,207-209,214-215,217,221,226,238-239,252,257,259,261,274-275,285,287,294,308,310-311,318-319,321
+console-ui/src/pages/database/save-error.d.mts
+  s_079f1dc5e6308d::t_c3e7fc40c2ad49 1
+console-ui/src/pages/database/save-error.mjs
+  s_079f1dc5e6308d::t_494b09f2498824 1-2,5
+console-ui/src/pages/endpoint-detail/ChatMessageRow.tsx
+  s_079f1dc5e6308d::t_b61325e7bbb4f5 1-2,22-24,27,30-31,36,38-39,43,52,54,57,60,68
+console-ui/src/pages/endpoint-detail/ConversationRow.tsx
+  s_079f1dc5e6308d::t_55e8eefa96eab0 1,14-15,48
+console-ui/src/pages/endpoint-detail/ConversationSection.tsx
+  s_079f1dc5e6308d::t_11248d3744dd5f 1,23,43
+console-ui/src/pages/endpoint-detail/ConversationSidebar.tsx
+  s_079f1dc5e6308d::t_a690b7eb457e34 1,69,87,111,135-136,151,157,200,209
+console-ui/src/pages/endpoint-detail/MessageBody.tsx
+  s_079f1dc5e6308d::t_c7d9f4a4119e08 1-2,112,116-117,133,142,146-147,157-158,167,176,190,196,228,230,244,253,257,260,275,280,288,310,314,344,350-356
+console-ui/src/pages/endpoint-detail/MessageDiagnostics.tsx
+  s_079f1dc5e6308d::t_a74f520991e781 1,25-27,32,34,45,59,62-65,67,70,76-78,82-85,87-88,90-99,101-102,104-107,109
+console-ui/src/pages/endpoint-detail/RenderingDiagnostics.tsx
+  s_079f1dc5e6308d::t_689c0217d6f5dd 1,6-7,9-10,12-13,15-16
+console-ui/src/pages/endpoint-detail/SystemInboxSection.tsx
+  s_079f1dc5e6308d::t_277a8296119bf8 1,25,29,39,53-54,69-70
+console-ui/src/pages/endpoint-detail/conversation-labels.ts
+  s_079f1dc5e6308d::t_5b27025e6d6cea 1,28,32-33
+console-ui/src/pages/endpoint-detail/conversation-list-notice.d.mts
+  s_079f1dc5e6308d::t_dc21d2f7a0335e 2
+console-ui/src/pages/endpoint-detail/conversation-list-notice.mjs
+  s_079f1dc5e6308d::t_afd43e51da34fc 1-5
+console-ui/src/pages/endpoint-detail/conversation-metadata.ts
+  s_079f1dc5e6308d::t_96dfd8bc93dc0b 1,33,43,97,101,114,180,197
+console-ui/src/pages/endpoint-detail/date-utils.ts
+  s_079f1dc5e6308d::t_b3195885fba57f 1,7-8,12,21,29,31,33
+console-ui/src/pages/endpoint-detail/diagnostic-help.d.mts
+  s_079f1dc5e6308d::t_caa5fdf2543085 3
+console-ui/src/pages/endpoint-detail/diagnostic-help.mjs
+  s_079f1dc5e6308d::t_75a21d80ab397b 1,17,31
+console-ui/src/pages/endpoint-detail/endpoint-request.d.mts
+  s_079f1dc5e6308d::t_71df3601209210 6
+console-ui/src/pages/endpoint-detail/endpoint-request.mjs
+  s_079f1dc5e6308d::t_e4e110ebf628dd 1,9-10
+console-ui/src/pages/endpoint-detail/inbox-history-model.d.mts
+  s_079f1dc5e6308d::t_302a7eb6700353 2-3,5
+console-ui/src/pages/endpoint-detail/inbox-history-model.mjs
+  s_079f1dc5e6308d::t_b41bc5f94eca12 1,3-5,7,11-13,17-19,26-27,31-34,36
+console-ui/src/pages/endpoint-detail/index.tsx
+  s_079f1dc5e6308d::t_b6c62cbc1bd176 1-2,72-75,86,94,187-189,203-204,208-209,212-213,220,243,265,288,357,359,418,477,479-480,494-495,511,533,537,542,554,575,598,604,615,626,630,636,640,646,650,660,671,682,691,693-694,706,727,730,741-742,764,776,784,796-797,800-802,806,813,815,823,825,829,838,848,859,861,873,888,895,907-908,911-913,917,931,936,945,955,965,980,993,995,1005-1006,1022,1028-1029,1035-1038,1055,1083,1096,1105,1114
+console-ui/src/pages/endpoint-detail/message-diagnostics.d.mts
+  s_079f1dc5e6308d::t_3d89aab5d6cc00 16-21
+console-ui/src/pages/endpoint-detail/message-diagnostics.mjs
+  s_079f1dc5e6308d::t_88b12d8d05a520 1,16-19,22-24,28,31-32,39,42,46-47,57-58,60,66-67,89-90,92-93,97-102,104-107,109,111-116
+console-ui/src/pages/endpoint-detail/pending-request-model.d.mts
+  s_079f1dc5e6308d::t_ba3b64e8978c97 3
+console-ui/src/pages/endpoint-detail/pending-request-model.mjs
+  s_079f1dc5e6308d::t_2627c179d984ee 1,3-4,6
+console-ui/src/pages/endpoint-detail/rendering-diagnostics.d.mts
+  s_079f1dc5e6308d::t_c5257f892bcb48 5-6,9
+console-ui/src/pages/endpoint-detail/rendering-diagnostics.mjs
+  s_079f1dc5e6308d::t_739e8084b08f4c 1,5,10,14-16,40,48
+console-ui/src/pages/endpoint-detail/useChannelManager.tsx
+  s_079f1dc5e6308d::t_c5d0af08a6574c 1,80,221,225,251,262,269,295,298,302,311,313,402,409,416,425,461,484,517,520,523
+console-ui/src/pages/endpoint-detail/useEndpointConsole.tsx
+  s_079f1dc5e6308d::t_389b559f17614c 1,35,74,79,99,103,170,178,208,229,246,267
+console-ui/src/pages/endpoint-detail/useGroupActions.ts
+  s_079f1dc5e6308d::t_18fdf67d5e35d4 1,24,41,46,67,70,74
+console-ui/src/pages/endpoint-detail/useMessageHistory.ts
+  s_079f1dc5e6308d::t_d59dbbb959f44b 1,54,103,124,152,191,217,245,251,299,303
+console-ui/src/pages/endpoint-list-model.d.mts
+  s_079f1dc5e6308d::t_3a6f0852ce5767 1
+console-ui/src/pages/endpoint-list-model.mjs
+  s_079f1dc5e6308d::t_021d8d9fb19b7f 1-3,5,7
+console-ui/src/pages/endpoints.tsx
+  s_079f1dc5e6308d::t_719ef43fd1197f 1,26,33,40,66-67,74,94,101,111,114,120,127,130,137,139,152-153
+console-ui/src/pages/env.tsx
+  s_079f1dc5e6308d::t_69b9b0e508b774 1,52,66-68,79,101,103,122,132,141,145-146,151,162-163,167,174-175,177,179-180,185-188,197,225,236-237,241,246,258,271-272
+console-ui/src/pages/files/code-editor.tsx
+  s_079f1dc5e6308d::t_5998725731ab3c 1,25,75
+console-ui/src/pages/files/file-editor.tsx
+  s_079f1dc5e6308d::t_280b059e6bf1c0 1,30,44-46,59,83,86,91,124,135,138,144,150,166-167,171,174,180-183
+console-ui/src/pages/files/files-page.tsx
+  s_079f1dc5e6308d::t_b3e633122eb90f 1,35,67-68,72,76,81,94,103,105,136,147-150
+console-ui/src/pages/introspection/CapabilityExplorer.tsx
+  s_079f1dc5e6308d::t_01347accf2b0de 1-2,112-114,118,123-124,133,140,155-156,184,217,219,227-228,230-231,243,253,279,305,312,318-319,325,327,335,346,348,357,370,372,377-378,388,390,396,402,409,425,427,434-435,463,468,470-471,476,479,484,487,489,496-497
+console-ui/src/pages/introspection/GalleryPreview.tsx
+  s_079f1dc5e6308d::t_c258a032714eae 1,24,73,90,93,97,101,103-104,106-108,111-113,115-120,122,129,131
+console-ui/src/pages/introspection/JsonViewer.tsx
+  s_079f1dc5e6308d::t_b0fa91d3922277 1,10,15,26,32,34
+console-ui/src/pages/introspection/empty-state.d.mts
+  s_079f1dc5e6308d::t_9a286c51456bf0 1
+console-ui/src/pages/introspection/empty-state.mjs
+  s_079f1dc5e6308d::t_26af5d6267bb59 1-2,5-6,10-11,15-16
+console-ui/src/pages/introspection/index.tsx
+  s_079f1dc5e6308d::t_39554ee4e3d448 1,63,168-169,172,177,180,197-198,203,205,214,239,241,243
+console-ui/src/pages/introspection/target-preview.d.mts
+  s_079f1dc5e6308d::t_a656f862e20c2c 4-6
+console-ui/src/pages/introspection/target-preview.mjs
+  s_079f1dc5e6308d::t_9458721a03d420 1,5-6,11-15,20-23
+console-ui/src/pages/login.tsx
+  s_079f1dc5e6308d::t_f5d35c2aeb3611 1-2,35,66,79,102,108,110,122,129,146,157,167,186,190,193
+console-ui/src/pages/logs.tsx
+  s_079f1dc5e6308d::t_bea7fd6e5734da 1,20,95,101,117,140,142,144,158,202,209,211,233,237,240,249-250,273-274,276,282,284-285,287
+console-ui/src/pages/logs/LogWorkbench.tsx
+  s_079f1dc5e6308d::t_ff3f7a66304bb5 1-2,103,115,120,139,142,144,153,156-157,159,161-163,165,172-173,175,177,180,187-188,192,195,204,213-217,228,231,238,240-241,244,246,265-267,269,271,278,281
+console-ui/src/pages/logs/history-model.d.mts
+  s_079f1dc5e6308d::t_5cb50d2203aba6 7
+console-ui/src/pages/logs/history-model.mjs
+  s_079f1dc5e6308d::t_6dcd75a080f2bb 1,21,23,30
+console-ui/src/pages/logs/read-state.d.mts
+  s_079f1dc5e6308d::t_011068ae1a8a02 2
+console-ui/src/pages/logs/read-state.mjs
+  s_079f1dc5e6308d::t_d9387feda1eeec 1,11,13
+console-ui/src/pages/marketplace-install-model.d.mts
+  s_079f1dc5e6308d::t_a47440579179bd 4-5
+console-ui/src/pages/marketplace-install-model.mjs
+  s_079f1dc5e6308d::t_e46c43ec116a9d 1,8-10,13-14,17,19,21-23,25
+console-ui/src/pages/marketplace.tsx
+  s_079f1dc5e6308d::t_8206dbdaf5eeac 1-2,113,115,130-132,140,189,195,202,251,254,263,272-273,277,296-297,305,313,324,335,345,356,359,364,371,381,388,394,400,404,406,411,422,429,435,445,458,465,475,483,522,524,529,541,543,571-572,587,597,627,631,635,645,651,657-658,671,696,713,717,737,757,766,786-788,791,793-797,806,808,819,829,844,847-848,850,857
+console-ui/src/pages/permission-explanation-model.d.mts
+  s_079f1dc5e6308d::t_e8163a213ce6da 13-17
+console-ui/src/pages/permission-explanation-model.mjs
+  s_079f1dc5e6308d::t_5df08133723355 1,10,16,18,22-23,27,31-33,37-40,42,47,51-53,55,58,61-62,65,69-70,73-77
+console-ui/src/pages/plugin-detail-model.d.mts
+  s_079f1dc5e6308d::t_60a5dbac71431d 1-2
+console-ui/src/pages/plugin-detail-model.mjs
+  s_079f1dc5e6308d::t_5b0f0436e41f0d 1-3,5-6,10,12,16
+console-ui/src/pages/plugin-detail.tsx
+  s_079f1dc5e6308d::t_83f83c901e1f5f 1,68,110,125,127,132,145,148-149,156,162,181,186,190,196,200,236-237,239,248-250,254,257,261,278-280,284,289,308-309,312-313,315,317,329,333,348,354,363,383,386,388,397,407,410,417,419,425,429,437-438,444,446,453-454,457-458,460,462,464,467,474,477-479,485,546,548-549,551-554
+console-ui/src/pages/plugin-list-model.d.mts
+  s_079f1dc5e6308d::t_ab40a2e83b3317 1
+console-ui/src/pages/plugin-list-model.mjs
+  s_079f1dc5e6308d::t_2293a15020fa36 1,3-4,6-7,9
+console-ui/src/pages/plugin-management-model.d.mts
+  s_079f1dc5e6308d::t_8e9f40d60b13f2 12-13,16-24
+console-ui/src/pages/plugin-management-model.mjs
+  s_079f1dc5e6308d::t_a7a610b9245c4e 1,5-6,9,12-14,17,23-25,28-30,33-38,40-42,45-47,54-55,59,68,70,73-74,76,78
+console-ui/src/pages/plugins.tsx
+  s_079f1dc5e6308d::t_cc6e9f63984f7a 1,57,61-62,99,102,109-110,113,115,123,155,160,163,180,188-190,198-199
+console-ui/src/pages/scenario-lab.tsx
+  s_079f1dc5e6308d::t_cb0b51e56b7c2e 1-2,17-18,23-24,35,46-48,51,53-60,63,71,74-76,79-88,90,94-102,104,111-112,116-118
+console-ui/src/pages/scenario-lab/scenario-model.d.mts
+  s_079f1dc5e6308d::t_bc6d12a861c95d 5-12,15
+console-ui/src/pages/scenario-lab/scenario-model.mjs
+  s_079f1dc5e6308d::t_7cf85f42dc8753 1,13-15,18,20-21,23-24,27,30-38,40-41,43-47,49,51-60,62-64,67-69,71,74,76-79,81,83-86,90-93,130-131,134-136,140-146,150-151,161,185
+console-ui/src/pages/task-center-model.d.mts
+  s_079f1dc5e6308d::t_b7bbe06ab32537 15-17,19,22-24,26-30
+console-ui/src/pages/task-center-model.mjs
+  s_079f1dc5e6308d::t_4039c093ae8950 1,9-10,17,23,29-30,35,37,40-41,48-49,52,67,70,72-73,75,82-83,87-88,93,95-100,102,106-107,109-111,113-114,116,119-126,129,131,133,136-141,143,145,148,150,153
+console-ui/src/pages/task-center.tsx
+  s_079f1dc5e6308d::t_ab253eb0b928ed 1,34-35,37-40,45-47,51,53-56,58-60,65,93,95-96,104,110,118-120,126-128,131,144,150,152,154,157-158,164-165,171,174-175,184-185,189,198,200,204-206,209,216-218,221-222,225,227-229,232-235,237,239-241,243-245,247-254,256,259-261,263,265,268-271,274,276
+console-ui/src/pages/useWelcomeInspection.ts
+  s_079f1dc5e6308d::t_b122b66cc2d591 1,11-13,32,38
+console-ui/src/pages/welcome-use-case-model.d.mts
+  s_079f1dc5e6308d::t_bd2d6d5d328022 7-8,12
+console-ui/src/pages/welcome-use-case-model.mjs
+  s_079f1dc5e6308d::t_fabe0bb547592f 1,14-16,19-20,23,38-39,42,44,46-47,53
+console-ui/src/pages/welcome-use-case.tsx
+  s_079f1dc5e6308d::t_cd14b9d855ff62 1,19,21,26,40-42,44,53,55-61,63-66,68,70-72,74-76
+console-ui/src/pages/workroom-catalog-model.d.mts
+  s_079f1dc5e6308d::t_2a197f09ffc5f4 45,53,63,65,69,73,76
+console-ui/src/pages/workroom-catalog-model.mjs
+  s_079f1dc5e6308d::t_b5ffc6b962b3fa 1,28,31-33,65,87,95,107,112-115,120,124,127,130,132-134,137,140,147,149-151,167,185,196,203
+console-ui/src/pages/workroom-catalog.tsx
+  s_079f1dc5e6308d::t_0a8a8c5a2b3f4f 1,146-148,198,205,243,253,257,259,261,264,272,281,290,296,343-344,347-349,354-360,367-370,393,402,410-413,435,458,461-463,469-470,472,478,486,488,498,520,529,533,547,554,562-563,567,571-572,576,578,588,610,621-622,631-632,638,643
+console-ui/src/pages/workroom-planning.tsx
+  s_079f1dc5e6308d::t_fa6528ba23bd80 1-2,50,55,68-70,86,120,133-134,137-139,155,163,165-166,170-174,176,178,192-193,199,202,204,211,222,226,239-240,262,265-267,273,276-278,290,307,310,318,320,322-323
+console-ui/src/pages/workroom-runs-model.d.mts
+  s_079f1dc5e6308d::t_0b1d2984697a97 2-3
+console-ui/src/pages/workroom-runs-model.mjs
+  s_079f1dc5e6308d::t_61d01917ac839e 1-3,5-6,9-11
+console-ui/src/pages/workrooms.tsx
+  s_079f1dc5e6308d::t_490d704666782a 1-2,81,83,86,92,101-103,123,141-142,180-181,251-252,255-256,274,279,283,307-311,323-324,333-334,363,379,387-388,397,401-403,406,417,419-428,430-433
+console-ui/src/utils/auth.ts
+  s_079f1dc5e6308d::t_27fe9f20d77bf3 1,215,218,223,227,235,240,243,247,263,265,267
+console-ui/src/utils/endpoint-adapter.ts
+  s_079f1dc5e6308d::t_ec29193a3874c1 1,12,14,17,20,22,36,39-40,43-44,46-48
+console-ui/src/utils/read-error.d.mts
+  s_079f1dc5e6308d::t_1c8aca484e4799 1
+console-ui/src/utils/read-error.mjs
+  s_079f1dc5e6308d::t_fe3cc906764e5b 1-2,5
+docs/localization.md
+  s_079f1dc5e6308d::t_a786e4756f56fb 1-51
+tests/agent-workbench-disclosure.test.mjs
+  s_079f1dc5e6308d::t_7e12ccf4d6796d 12,15
+tests/auth-session.test.mjs
+  s_079f1dc5e6308d::t_b70a747b18cd05 1,16
+tests/channel-copy.test.mjs
+  s_079f1dc5e6308d::t_bc3ee5c5148ef5 5-7
+tests/config-connection-scope.test.mjs
+  s_079f1dc5e6308d::t_7246c11be32c41 1,18,64-66,107,117,660-691
+tests/config-evidence.test.mjs
+  s_079f1dc5e6308d::t_0e7fd07e82515e 1,57
+tests/config-explanation-ui.test.mjs
+  s_079f1dc5e6308d::t_403daef05249a9 1,18
+tests/config-option-preservation.test.mjs
+  s_079f1dc5e6308d::t_db522e56280602 1,22
+tests/config-source-draft.test.mjs
+  s_079f1dc5e6308d::t_c7a18dc7ef8395 1,19
+tests/console-contract.test.mjs
+  s_079f1dc5e6308d::t_a3fd7c96e8f33b 146
+tests/conversation-scope-ui.test.mjs
+  s_079f1dc5e6308d::t_5f3213e94e79e4 1,19
+tests/dashboard-health.test.mjs
+  s_079f1dc5e6308d::t_c79679d9b596ec 1,8
+tests/database-value-preview.test.mjs
+  s_079f1dc5e6308d::t_9914d57e5da867 1,16
+tests/files-tree-presentation.test.mjs
+  s_079f1dc5e6308d::t_f236079e8159a9 1,18
+tests/fixtures/scenario-lab/provenance.json
+  s_079f1dc5e6308d::t_28a667deff3df0 3
+tests/locale-fixture.mjs
+  s_079f1dc5e6308d::t_5d493dcf98fd71 1-21
+tests/localization-lifecycle.test.mjs
+  s_079f1dc5e6308d::t_858d489b217943 1-63
+tests/localization.test.mjs
+  s_079f1dc5e6308d::t_a0865d77b9f130 1-121
+tests/message-diagnostics-ui.test.mjs
+  s_079f1dc5e6308d::t_5c743b83b95628 1,16
+tests/plugin-verification-reconciliation.test.mjs
+  s_079f1dc5e6308d::t_d402115e47382d 1,14
+tests/scenario-lab-ui.test.mjs
+  s_079f1dc5e6308d::t_46f3f01d6283e7 1,16
+tests/task-center-deferred.test.mjs
+  s_079f1dc5e6308d::t_34c5b67cd4dd49 1,16
+tests/task-center-ui.test.mjs
+  s_079f1dc5e6308d::t_8b3475d5d2b1c3 1,22
+tests/welcome-market-scope.test.mjs
+  s_079f1dc5e6308d::t_986966f4bed701 1,20
+tests/welcome-use-case-hook.test.mjs
+  s_079f1dc5e6308d::t_7d71064f9f7ca9 1,39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2d54cae6593027ec1a45164b87693733e37003d6",
+  "prompts": {},
+  "sessions": {
+    "s_079f1dc5e6308d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a079da-08f2-7112-8660-7d86c654edb0",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
