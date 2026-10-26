@@ -1,0 +1,35 @@
+console-ui/src/i18n/messages.en.mjs
+  s_079f1dc5e6308d::t_d8380c1ebcf420 2205-2248
+console-ui/src/i18n/navigation.ts
+  s_079f1dc5e6308d::t_bfde01fc2b4a1e 4,13,33-36
+console-ui/src/pages/skills-assistant-model.d.mts
+  s_079f1dc5e6308d::t_350486cdb5ed4b 1,14,29-30,35
+console-ui/src/pages/skills-assistant-model.mjs
+  s_079f1dc5e6308d::t_8cd4de89080b7d 1,53,55,59-61,63-65,67,70-72,74-78,81,85-87,90,93-94,99,103,106,108-109,114,119-120,209-210,213,216,219,221
+console-ui/src/pages/skills-assistant.tsx
+  s_079f1dc5e6308d::t_9fc18a7f5436af 1-2,29,34,41,44-45,59-60,64-67,76-78,88,91,95,97,100-101,104,110,112-113,116,118,121,135,137,143,147-148,155-156,161,168,190,201,209-210,214-215,225,235
+docs/localization.md
+  s_079f1dc5e6308d::t_ee7965eefeb449 15-18
+tests/localization-lifecycle.test.mjs
+  s_079f1dc5e6308d::t_2cf3026757447b 1,94-110
+tests/localization.test.mjs
+  s_079f1dc5e6308d::t_806e8fad66f6a7 122-134
+tests/skills-assistant.test.mjs
+  s_079f1dc5e6308d::t_27c8f48b99de2f 150-161
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9d2bfb6a86cbe41d7fc28652722e9e14d9df9da3",
+  "prompts": {},
+  "sessions": {
+    "s_079f1dc5e6308d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a079da-08f2-7112-8660-7d86c654edb0",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
