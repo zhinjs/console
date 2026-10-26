@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Save, Loader2, AlertCircle, CheckCircle, X } from 'lucide-react'
 import { Badge } from '../../components/ui/badge'
@@ -26,6 +27,7 @@ export function FileEditor({
   draft?: { content: string; originalContent: string }
   onDraftChange: (draft: { content: string; originalContent: string } | null) => void
 }) {
+  const i18n = useI18n()
   const [content, setContent] = useState(draft?.content ?? '')
   const [originalContent, setOriginalContent] = useState(draft?.originalContent ?? '')
   const [loading, setLoading] = useState(!draft)
@@ -39,6 +41,9 @@ export function FileEditor({
   const restoredDraft = useRef(draft)
   const saveInFlight = useRef(false)
 
+  const messages = useRef(i18n)
+  messages.current = i18n
+
   const loadContent = useCallback(async (cancelled?: () => boolean) => {
     setLoading(true)
     setMessage(null)
@@ -51,7 +56,7 @@ export function FileEditor({
       setLoaded(true)
     } catch (err) {
       if (cancelled?.()) return
-      setMessage({ type: 'error', text: readErrorSummary(err, '文件内容'), details: err instanceof Error ? err.message : String(err) })
+      setMessage({ type: 'error', text: readErrorSummary(err, messages.current.t("文件内容"), messages.current.locale), details: err instanceof Error ? err.message : String(err) })
     } finally {
       if (!cancelled?.()) setLoading(false)
     }
@@ -75,15 +80,15 @@ export function FileEditor({
       await saveFile(filePath, content)
       onDraftChange(null)
       setOriginalContent(content)
-      setMessage({ type: 'success', text: '已保存' })
+      setMessage({ type: 'success', text: i18n.t("已保存") })
 
     } catch (err) {
-      setMessage({ type: 'error', text: '保存失败，未保存修改已保留。请重试。', details: err instanceof Error ? err.message : String(err) })
+      setMessage({ type: 'error', text: i18n.t("保存失败，未保存修改已保留。请重试。"), details: err instanceof Error ? err.message : String(err) })
     } finally {
       saveInFlight.current = false
       setSaving(false)
     }
-  }, [filePath, content, readOnly, saveFile, loaded, onDraftChange])
+  }, [filePath, content, readOnly, saveFile, loaded, onDraftChange, i18n])
 
   const dirty = content !== originalContent
   useEffect(() => {
@@ -116,7 +121,7 @@ export function FileEditor({
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-sm text-muted-foreground">加载中...</span>
+        <span className="ml-2 text-sm text-muted-foreground">{i18n.t("加载中...")}</span>
       </div>
     )
   }
@@ -127,22 +132,22 @@ export function FileEditor({
         <div className="flex items-center gap-2 min-w-0">
           {getFileIcon(fileName)}
           <span className="text-sm font-medium truncate" title={filePath}>{filePath}</span>
-          {dirty && <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">未保存</Badge>}
+          {dirty && <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">{i18n.t("未保存")}</Badge>}
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <Button className="file-control" size="sm" variant="ghost" disabled={saving} onClick={onClose} title="关闭" aria-label="关闭文件">
+          <Button className="file-control" size="sm" variant="ghost" disabled={saving} onClick={onClose} title={i18n.t("关闭")} aria-label={i18n.t("关闭文件")}>
             <X className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
-      {draft && dirty && <p className="px-4 pt-2 text-xs text-muted-foreground">已恢复本标签页内的未保存修改。刷新或关闭标签页前请保存。</p>}
+      {draft && dirty && <p className="px-4 pt-2 text-xs text-muted-foreground">{i18n.t("已恢复本标签页内的未保存修改。刷新或关闭标签页前请保存。")}</p>}
       {message && (
         <Alert variant={message.type === 'error' ? 'destructive' : 'success'} className="mx-4 mt-2 py-2">
           {message.type === 'error'
             ? <AlertCircle className="h-4 w-4" />
             : <CheckCircle className="h-4 w-4" />}
-          <AlertDescription>{message.text}{message.details ? <details className="mt-2"><summary className="cursor-pointer">技术详情</summary><pre className="mt-2 whitespace-pre-wrap break-words text-xs">{message.details}</pre></details> : null}</AlertDescription>
+          <AlertDescription>{message.text}{message.details ? <details className="mt-2"><summary className="cursor-pointer">{i18n.t("技术详情")}</summary><pre className="mt-2 whitespace-pre-wrap break-words text-xs">{message.details}</pre></details> : null}</AlertDescription>
         </Alert>
       )}
 
@@ -158,25 +163,24 @@ export function FileEditor({
       <div className="flex flex-wrap items-center gap-2 px-3 sm:px-4 py-2 border-t bg-muted/30">
         {!readOnly && <Button className="file-control" size="sm" onClick={() => void handleSave()} disabled={saving || !dirty || !loaded}>
           {saving
-            ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />保存中...</>
-            : <><Save className="w-4 h-4 mr-1" />保存</>}
+            ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />{i18n.t("保存中...")}</>
+            : <><Save className="w-4 h-4 mr-1" />{i18n.t("保存")}</>}
         </Button>}
         {!readOnly && dirty && (
           <Button className="file-control" variant="outline" size="sm" disabled={saving} onClick={() => setDiscardOpen(true)}>
-            撤销更改
-          </Button>
+            {i18n.t("撤销更改")}</Button>
         )}
         <span className="text-xs text-muted-foreground sm:ml-auto basis-full sm:basis-auto">
-          {readOnly ? `Demo 只读 · ${content.split('\n').length} 行` : `${content.split('\n').length} 行 · Ctrl+S 保存`}
+          {readOnly ? i18n.t("Demo 只读 · {0} 行", [content.split('\n').length]) : i18n.t("{0} 行 · Ctrl+S 保存", [content.split('\n').length])}
         </span>
       </div>
       <ConfirmDialog
         open={discardOpen}
         onOpenChange={setDiscardOpen}
-        title="放弃未保存的修改？"
-        description={`将恢复 ${filePath} 上次保存的内容。`}
-        confirmLabel="放弃修改"
-        cancelLabel="继续编辑"
+        title={i18n.t("放弃未保存的修改？")}
+        description={i18n.t("将恢复 {0} 上次保存的内容。", [filePath])}
+        confirmLabel={i18n.t("放弃修改")}
+        cancelLabel={i18n.t("继续编辑")}
         variant="destructive"
         onConfirm={() => { setContent(originalContent); setMessage(null) }}
       />

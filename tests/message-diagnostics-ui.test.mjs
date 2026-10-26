@@ -1,3 +1,4 @@
+import { prepareLocaleModule } from './locale-fixture.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -12,7 +13,7 @@ for (const specifier of ['react/jsx-runtime', './rendering-diagnostics.mjs']) {
   const resolved = specifier.startsWith('.') ? new URL('../console-ui/src/pages/endpoint-detail/rendering-diagnostics.mjs', import.meta.url).href : import.meta.resolve(specifier)
   source = source.replaceAll(`"${specifier}"`, JSON.stringify(resolved)).replaceAll(`'${specifier}'`, JSON.stringify(resolved))
 }
-const { RenderingDiagnostics } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`)
+const { RenderingDiagnostics } = await import(`data:text/javascript;base64,${Buffer.from(prepareLocaleModule(source)).toString('base64')}`)
 const rendering = { forms: ['text'], fallbacks: ['renderer_failed'] }
 
 test('diagnostic projection does not present suppressed or failed content conversion as Endpoint delivery proof', () => {

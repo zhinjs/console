@@ -1,3 +1,6 @@
+import { routeLabel } from '../i18n/navigation'
+import { translate } from '../i18n/locale.mjs'
+import { useI18n } from '../i18n'
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ArrowRight, Check, Command, CornerDownLeft, Search } from 'lucide-react'
@@ -131,7 +134,7 @@ function commandScore(target: CommandTarget, rawQuery: string): number {
 function groupedTargets(
   targets: CommandTarget[],
   query: string,
-  recentPaths: string[],
+  recentPaths: string[], locale: 'zh-CN' | 'en' = 'zh-CN'
 ): CommandGroup[] {
   const ranked = targets
     .map((target) => ({ target, score: commandScore(target, query) }))
@@ -139,13 +142,13 @@ function groupedTargets(
     .sort((left, right) => right.score - left.score || left.target.title.localeCompare(right.target.title))
     .map((entry) => entry.target)
 
-  if (query.trim()) return ranked.length ? [{ label: '搜索结果', items: ranked }] : []
+  if (query.trim()) return ranked.length ? [{ label: translate(locale, "搜索结果"), items: ranked }] : []
 
   const groups: CommandGroup[] = []
   const recent = recentPaths
     .map((path) => targets.find((target) => target.path === path))
     .filter((target): target is CommandTarget => target != null)
-  if (recent.length) groups.push({ label: '最近访问', items: recent })
+  if (recent.length) groups.push({ label: translate(locale, "最近访问"), items: recent })
 
   const recentSet = new Set(recent.map((target) => target.path))
   const byGroup = new Map<string, CommandTarget[]>()
@@ -167,6 +170,7 @@ function groupedTargets(
 }
 
 export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRouteRecord[] }) {
+  const i18n = useI18n()
   const navigate = useNavigate()
   const location = useLocation()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -178,21 +182,21 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
   const [shortcut, setShortcut] = useState('Ctrl K')
 
   const targets = useMemo<CommandTarget[]>(() => [
-    ...QUICK_ACTIONS,
+    ...QUICK_ACTIONS.map(action => ({ ...action, title: i18n.t(action.title), description: i18n.t(action.description) })),
     ...routes
       .filter((route) => !route.meta?.hideInMenu && route.path)
       .map((route) => ({
         path: route.path,
-        title: route.name,
-      group: route.meta?.group ?? NAV_GROUPS.OTHER,
-        description: ROUTE_DESCRIPTIONS[route.path] ?? `打开 ${route.name}`,
+        title: routeLabel(route, i18n.locale),
+        group: route.meta?.group ?? NAV_GROUPS.OTHER,
+        description: (ROUTE_DESCRIPTIONS[route.path] ? i18n.t(ROUTE_DESCRIPTIONS[route.path]) : undefined) ?? i18n.t("打开 {0}", [routeLabel(route, i18n.locale)]),
         icon: route.icon,
         kind: 'page' as const,
       })),
-  ], [routes])
+  ], [routes, i18n])
   const groups = useMemo(
-    () => groupedTargets(targets, query, recentPaths),
-    [query, recentPaths, targets],
+    () => groupedTargets(targets, query, recentPaths, i18n.locale),
+    [query, recentPaths, targets, i18n],
   )
   const visibleTargets = useMemo(() => groups.flatMap((group) => group.items), [groups])
 
@@ -248,17 +252,17 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
   let runningIndex = 0
   return (
     <>
-      <button type="button" className="console-command-trigger" onClick={() => setOpen(true)} aria-label="打开 Console 快速跳转">
+      <button type="button" className="console-command-trigger" onClick={() => setOpen(true)} aria-label={i18n.t("打开 Console 快速跳转")}>
         <Search aria-hidden="true" />
-        <span className="hidden lg:inline">搜索页面或执行动作</span>
-        <span className="lg:hidden">搜索与动作</span>
+        <span className="hidden lg:inline">{i18n.t("搜索页面或执行动作")}</span>
+        <span className="lg:hidden">{i18n.t("搜索与动作")}</span>
         <kbd>{shortcut}</kbd>
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="console-command-center gap-0 overflow-hidden p-0">
           <DialogTitle className="sr-only">Console Command Center</DialogTitle>
-          <DialogDescription className="sr-only">搜索 Console 页面或执行快捷动作</DialogDescription>
+          <DialogDescription className="sr-only">{i18n.t("搜索 Console 页面或执行快捷动作")}</DialogDescription>
 
           <div className="console-command-search">
             <Search aria-hidden="true" />
@@ -267,8 +271,8 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={onInputKeyDown}
-              placeholder="搜索页面或动作，例如“错误日志”“组件预览”…"
-              aria-label="搜索 Console 页面或快捷动作"
+              placeholder={i18n.t("搜索页面或动作，例如“错误日志”“组件预览”…")}
+              aria-label={i18n.t("搜索 Console 页面或快捷动作")}
               role="combobox"
               aria-expanded="true"
               aria-controls="console-command-results"
@@ -280,8 +284,8 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
 
           <div id="console-command-results" className="console-command-results" role="listbox">
             {groups.length ? groups.map((group) => (
-              <section key={group.label} className="console-command-group" role="group" aria-label={group.label}>
-                <div className="console-command-group-label">{group.label}</div>
+              <section key={i18n.t(group.label)} className="console-command-group" role="group" aria-label={i18n.t(group.label)}>
+                <div className="console-command-group-label">{i18n.t(group.label)}</div>
                 {group.items.map((target) => {
                   const itemIndex = runningIndex++
                   const Icon = typeof target.icon === 'string' ? getSidebarLucideIcon(target.icon) : null
@@ -307,11 +311,11 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
                       <span className="min-w-0 flex-1 text-left">
                         <span className="console-command-title">
                           {target.title}
-                          {target.kind === 'action' ? <small>动作</small> : null}
+                          {target.kind === 'action' ? <small>{i18n.t("动作")}</small> : null}
                         </span>
                         <span className="console-command-description">{target.description}</span>
                       </span>
-                      {current ? <span className="console-command-current"><Check />当前</span> : <ArrowRight />}
+                      {current ? <span className="console-command-current"><Check />{i18n.t("当前")}</span> : <ArrowRight />}
                     </button>
                   )
                 })}
@@ -319,17 +323,17 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
             )) : (
               <div className="console-command-empty">
                 <Search />
-                <strong>没有匹配的功能</strong>
-                <span>试试“Agent”“日志”“群组”或“配置”</span>
+                <strong>{i18n.t("没有匹配的功能")}</strong>
+                <span>{i18n.t("试试“Agent”“日志”“群组”或“配置”")}</span>
               </div>
             )}
           </div>
 
           <footer className="console-command-footer">
-            <span><kbd>↑</kbd><kbd>↓</kbd>选择</span>
-            <span><kbd><CornerDownLeft /></kbd>打开</span>
-            <span><kbd>Esc</kbd>关闭</span>
-            <span className="ml-auto hidden sm:inline">{targets.length} 个入口</span>
+            <span><kbd>↑</kbd><kbd>↓</kbd>{i18n.t("选择")}</span>
+            <span><kbd><CornerDownLeft /></kbd>{i18n.t("打开")}</span>
+            <span><kbd>Esc</kbd>{i18n.t("关闭")}</span>
+            <span className="ml-auto hidden sm:inline">{targets.length} {i18n.t(" 个入口")}</span>
           </footer>
         </DialogContent>
       </Dialog>

@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import { useState, useMemo, type MouseEvent } from 'react'
 import { useDatabaseConsole } from './use-database-console'
 import { readErrorSummary } from '../../utils/read-error.mjs'
@@ -19,6 +20,7 @@ import { KvBucketView } from './kv-bucket-view'
 import { isDemoMode } from '../../utils/demo-mode'
 
 export default function DatabasePage() {
+  const i18n = useI18n()
   const readOnly = isDemoMode()
   const {
     info, tables, loaded, loading, error,
@@ -31,30 +33,29 @@ export default function DatabasePage() {
   const [deleteTarget, setDeleteTarget] = useState<{ name: string; label: string } | null>(null)
   const selectedTableInfo = useMemo(() => tables.find((t: TableInfo) => t.name === selectedTable), [tables, selectedTable])
   const dbType: DatabaseType = info?.type ?? 'related'
-  const objectLabel = dbType === 'related' ? '表' : dbType === 'document' ? '集合' : '桶'
+  const objectLabel = dbType === 'related' ? i18n.t("表") : dbType === 'document' ? i18n.t("集合") : i18n.t("桶")
 
   return (
     <>
     <div className="space-y-4 sm:space-y-6">
       <PageHeader
-        title="数据库"
-        description={readOnly ? `浏览 ${DB_TYPE_LABELS[dbType]} 中的数据（Demo 只读）。` : `浏览和管理 ${DB_TYPE_LABELS[dbType]} 中的数据；左栏选择对象，右侧查看与编辑。`}
+        title={i18n.t("数据库")}
+        description={readOnly ? i18n.t("浏览 {0} 中的数据（Demo 只读）。", [i18n.t(DB_TYPE_LABELS[dbType])]) : i18n.t("浏览和管理 {0} 中的数据；左栏选择对象，右侧查看与编辑。", [i18n.t(DB_TYPE_LABELS[dbType])])}
         actions={
           <div className="flex items-center gap-2">
             {info && (
               <Badge variant="secondary" className="font-normal hidden sm:inline-flex">
-                {DIALECT_LABELS[info.dialect] || info.dialect} · {DB_TYPE_LABELS[info.type]}
+                {DIALECT_LABELS[info.dialect] || info.dialect} · {i18n.t(DB_TYPE_LABELS[info.type])}
               </Badge>
             )}
             <Button variant="outline" size="sm" onClick={() => { loadInfo().catch(() => {}); loadTables().catch(() => {}) }} disabled={loading}>
-              <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />刷新
-            </Button>
+              <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新")}</Button>
           </div>
         }
       />
 
       {error && (
-        <div><ErrorAlert error={readErrorSummary(error, '数据库信息')} onRetry={() => { void loadInfo().catch(() => {}); void loadTables().catch(() => {}) }} /><details className="text-xs"><summary>技术详情</summary><p>{error}</p></details></div>
+        <div><ErrorAlert error={readErrorSummary(error, i18n.t("数据库信息"), i18n.locale)} onRetry={() => { void loadInfo().catch(() => {}); void loadTables().catch(() => {}) }} /><details className="text-xs"><summary>{i18n.t("技术详情")}</summary><p>{error}</p></details></div>
       )}
 
       <Card className="overflow-hidden border-border/80 shadow-sm">
@@ -67,7 +68,7 @@ export default function DatabasePage() {
             >
               <div className="px-3 py-2 border-b bg-muted/30">
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  {dbType === 'related' ? '数据表' : dbType === 'document' ? '集合' : '桶'}
+                  {dbType === 'related' ? i18n.t("数据表") : dbType === 'document' ? i18n.t("集合") : i18n.t("桶")}
                 </span>
               </div>
               <ScrollArea className="flex-1">
@@ -77,9 +78,9 @@ export default function DatabasePage() {
                       {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
                     </div>
                   ) : !tables.length && (!loaded || error) ? (
-                    <EmptyState compact title={error ? '数据库对象尚未读取成功' : '等待读取数据库对象'} />
+                    <EmptyState compact title={error ? i18n.t("数据库对象尚未读取成功") : i18n.t("等待读取数据库对象")} />
                   ) : !tables.length ? (
-                    <EmptyState compact title="暂无数据" />
+                    <EmptyState compact title={i18n.t("暂无数据")} />
                   ) : tables.map((t: TableInfo) => (
                     <div
                       key={t.name}
@@ -100,9 +101,9 @@ export default function DatabasePage() {
                     >
                       {dbType === 'keyvalue' ? <Key className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <Table2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
                       <span className="truncate flex-1">{t.name}</span>
-                      {t.columns && <Badge variant="secondary" className="ml-auto text-[10px] px-1 py-0">{Object.keys(t.columns).length} 列</Badge>}
+                      {t.columns && <Badge variant="secondary" className="ml-auto text-[10px] px-1 py-0">{Object.keys(t.columns).length} {i18n.t(" 列")}</Badge>}
                       {!readOnly && <Button
-                        size="sm" variant="ghost" aria-label={`删除${objectLabel} ${t.name}`}
+                        size="sm" variant="ghost" aria-label={i18n.t("删除{0} {1}", [objectLabel, t.name])}
                         className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-destructive shrink-0"
                         onClick={(e: MouseEvent) => {
                           e.stopPropagation()
@@ -131,11 +132,10 @@ export default function DatabasePage() {
                       size="sm"
                       className="md:hidden shrink-0 -ml-1 px-2"
                       onClick={() => setSelectedTable(null)}
-                      aria-label={`返回${objectLabel}列表`}
+                      aria-label={i18n.t("返回{0}列表", [objectLabel])}
                     >
                       <ArrowLeft className="w-4 h-4 mr-1" />
-                      返回
-                    </Button>
+                      {i18n.t("返回")}</Button>
                     {dbType === 'keyvalue' ? (
                       <Key className="w-4 h-4 text-muted-foreground shrink-0 hidden sm:block" />
                     ) : (
@@ -196,7 +196,7 @@ export default function DatabasePage() {
                   <div className="text-center">
                     <DatabaseIcon className="w-12 h-12 mx-auto mb-3 opacity-30" />
                     <p className="text-sm">
-                      {error || !loaded ? '数据库对象尚未读取成功，请先重试或使用有权限的身份连接。' : `在左侧选择一个${objectLabel}${readOnly ? '查看数据' : '开始管理'}`}
+                      {error || !loaded ? i18n.t("数据库对象尚未读取成功，请先重试或使用有权限的身份连接。") : i18n.t("在左侧选择一个{0}{1}", [objectLabel, readOnly ? i18n.t("查看数据") : i18n.t("开始管理")])}
                     </p>
                   </div>
                 </div>
@@ -209,10 +209,10 @@ export default function DatabasePage() {
     {!readOnly && <ConfirmDialog
       open={!!deleteTarget}
       onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
-      title={`删除${deleteTarget?.label || ''}`}
-      description={`确定要删除${deleteTarget?.label || ''} "${deleteTarget?.name}" 吗？此操作不可撤销！`}
+      title={i18n.t("删除{0}", [deleteTarget?.label || ''])}
+      description={i18n.t("确定要删除{0} \"{1}\" 吗？此操作不可撤销！", [deleteTarget?.label || '', deleteTarget?.name])}
       variant="destructive"
-      confirmLabel="删除"
+      confirmLabel={i18n.t("删除")}
       onConfirm={async () => {
         if (!deleteTarget) return
         await dropTable(deleteTarget.name)

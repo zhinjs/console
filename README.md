@@ -129,3 +129,9 @@ Console 面向普通用户（[zhin#970](https://github.com/zhinjs/zhin/issues/97
 插件配置中的“字段来源与运行代一致性”通过手动读取 `config:explain`（需要 full 权限）。它绑定当前已读取的文件版本，显示候选字段来自文件、Schema 默认值、未设置或无法证明，并展示读取时与运行代的一致性；不展示配置值或环境变量展开值。未保存草稿保持独立，解释不会覆盖草稿。
 
 运行代来源未记录时始终显示未知，值一致不能证明来源一致；敏感或环境引用未比较不等于通过。复杂 Schema、自定义解析和版本漂移会明确提示无法解释，保留完整源码入口，不执行应用、业务验证或发送。Demo 不请求此接口，切换 Host、凭据或文件版本会丢弃旧结果。
+
+## 界面语言 / Interface language
+
+登录页和工作台可手动选择简体中文或英文，默认中文，偏好仅保存在当前浏览器站点。它独立于 Bot 语言和时区；切换保留配置值和未保存草稿。Schema 可通过 `x-i18n.en` 声明标题、说明和按稳定值映射的选项标签，第三方未提供翻译的原文保持不变。详见[界面语言与 Schema 扩展](docs/localization.md)。
+
+Choose Simplified Chinese or English on the sign-in screen or dashboard. This preference is local to the Console, independent of the Bot language and timezone. Configuration values, user content, and unsaved drafts are preserved. See [interface language and Schema metadata](docs/localization.md).

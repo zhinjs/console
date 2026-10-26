@@ -1,3 +1,4 @@
+import { translate } from '../i18n/locale.mjs'
 const TOKEN_KEY = 'zhin_api_token'
 const API_BASE_KEY = 'zhin_api_base'
 const SAVED_LOGINS_KEY = 'zhin_saved_logins'
@@ -211,19 +212,19 @@ export type ProbeHealthResult =
   | { ok: false; message: string }
 
 /** 登录前探测 Host 连通性（无需 Token） */
-export async function probeHealth(apiBase: string): Promise<ProbeHealthResult> {
+export async function probeHealth(apiBase: string, locale: 'zh-CN' | 'en' = 'zh-CN'): Promise<ProbeHealthResult> {
   const base = normalizeApiBase(apiBase)
   if (!base) {
-    return { ok: false, message: '请填写 API Base URL' }
+    return { ok: false, message: translate(locale, "请填写 API Base URL") }
   }
   try {
     const res = await fetch(`${base}/pub/health`)
     if (res.ok) return { ok: true }
-    return { ok: false, message: `Host 健康检查失败 (HTTP ${res.status})` }
+    return { ok: false, message: translate(locale, "Host 健康检查失败 (HTTP {0})", [res.status]) }
   } catch {
     return {
       ok: false,
-      message: '无法连接 Host，请确认地址正确、服务已启动，且 CORS 已包含当前 Console 来源',
+      message: translate(locale, "无法连接 Host，请确认地址正确、服务已启动，且 CORS 已包含当前 Console 来源"),
     }
   }
 }
@@ -231,19 +232,19 @@ export async function probeHealth(apiBase: string): Promise<ProbeHealthResult> {
 /** 校验 Host API Base + Token，成功则写入 localStorage */
 export async function verifyAndStoreCredentials(
   apiBase: string,
-  token: string,
+  token: string, locale: 'zh-CN' | 'en' = 'zh-CN'
 ): Promise<VerifyCredentialsResult> {
   const base = normalizeApiBase(apiBase)
   const trimmed = token.trim().replace(/^Bearer\s+/i, '')
   if (!base) {
-    return { ok: false, message: '请填写 API Base URL（如 http://localhost:8086）' }
+    return { ok: false, message: translate(locale, "请填写 API Base URL（如 http://localhost:8086）") }
   }
   if (!trimmed) {
-    return { ok: false, message: '请输入 Token' }
+    return { ok: false, message: translate(locale, "请输入 Token") }
   }
 
   try {
-    const health = await probeHealth(base)
+    const health = await probeHealth(base, locale)
     if (!health.ok) {
       return { ok: false, message: health.message }
     }
@@ -259,11 +260,11 @@ export async function verifyAndStoreCredentials(
       return { ok: true }
     }
     if (res.status === 401) {
-      return { ok: false, status: 401, message: 'Token 无效，请检查后重试' }
+      return { ok: false, status: 401, message: translate(locale, "Token 无效，请检查后重试") }
     }
-    return { ok: false, status: res.status, message: `验证失败 (HTTP ${res.status})` }
+    return { ok: false, status: res.status, message: translate(locale, "验证失败 (HTTP {0})", [res.status]) }
   } catch {
-    return { ok: false, message: '无法连接到 API，请检查 Base URL 与网络' }
+    return { ok: false, message: translate(locale, "无法连接到 API，请检查 Base URL 与网络") }
   }
 }
 

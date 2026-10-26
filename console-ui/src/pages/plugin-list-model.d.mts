@@ -1,1 +1,1 @@
-export function validatePluginList(payload: unknown): unknown[]
+export function validatePluginList(payload: unknown, locale?: 'zh-CN' | 'en'): unknown[]

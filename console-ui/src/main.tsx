@@ -1,3 +1,5 @@
+import { LocaleProvider } from './i18n'
+import { useI18n } from './i18n'
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'
 import * as ReactDOMClient from 'react-dom/client'
@@ -61,6 +63,7 @@ function useConsoleRouteElements(): React.ReactElement {
 }
 
 function ConsoleShell() {
+  const i18n = useI18n()
   const [ready, setReady] = React.useState(false)
   const registeredRoutes = useConsoleRouteElements()
 
@@ -78,7 +81,7 @@ function ConsoleShell() {
       <div className="flex items-center justify-center h-screen bg-background">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-muted-foreground border-t-foreground"></div>
-          <p className="mt-3 text-sm text-muted-foreground">加载中…</p>
+          <p className="mt-3 text-sm text-muted-foreground">{i18n.t("加载中…")}</p>
         </div>
       </div>
     )
@@ -122,6 +125,7 @@ function App() {
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
+    <LocaleProvider>
     <ToastProvider>
       <TooltipProvider>
         <BrowserRouter>
@@ -129,5 +133,6 @@ createRoot(document.getElementById('root')!).render(
         </BrowserRouter>
       </TooltipProvider>
     </ToastProvider>
+  </LocaleProvider>
   </React.StrictMode>,
 )

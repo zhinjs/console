@@ -1,3 +1,4 @@
+import { defaultI18n } from './locale-fixture.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -12,7 +13,7 @@ async function pageHandler(name, bindings) {
   const visit = node => { if (ts.isVariableDeclaration(node) && node.name.getText(ast) === name) declaration = node; ts.forEachChild(node, visit) }
   visit(ast); assert.ok(declaration)
   const compiled = ts.transpileModule(`const ${declaration.getText(ast)};`, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText
-  return Function(...Object.keys(bindings), `${compiled}; return ${name};`)(...Object.values(bindings))
+  return Function('i18n', ...Object.keys(bindings), `${compiled}; return ${name};`)(defaultI18n, ...Object.values(bindings))
 }
 const submitHandler = bindings => pageHandler('submit', bindings)
 const noop = () => {}

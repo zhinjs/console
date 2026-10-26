@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n'
 import { useCallback, useEffect, useMemo, useRef, useState, useId, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -142,6 +143,9 @@ function ensureUnloadGuard() {
 }
 
 export default function WorkroomCatalogPage() {
+  const i18n = useI18n()
+  const messages = useRef(i18n)
+  messages.current = i18n
   const readOnly = isDemoMode()
   const connection = getWebSocketManager()
   const restoredDraft = useRef(readOnly ? undefined : draftSessions.get(connection))
@@ -191,14 +195,14 @@ export default function WorkroomCatalogPage() {
       if (dirtyRef.current && !discardDraft && !reconciled) {
         // Keep the original revision: publication must still detect external
         // changes rather than silently rebasing a retained draft.
-        setNotice(publishUnconfirmedRef.current ? '最新配置与本地草稿不同，请核对后决定是否放弃修改。' : '连接已恢复，本地草稿已保留。')
+        setNotice(publishUnconfirmedRef.current ? messages.current.t("最新配置与本地草稿不同，请核对后决定是否放弃修改。") : messages.current.t("连接已恢复，本地草稿已保留。"))
       } else {
         setCatalog(next)
         setDrafts(toDrafts(next.workrooms))
         setDirty(false)
         setPublishUnconfirmed(false)
         dirtyRef.current = false
-        if (reconciled) setNotice('已核对最新配置，发布成功。')
+        if (reconciled) setNotice(messages.current.t("已核对最新配置，发布成功。"))
       }
       catalogLoaded = true
     } catch (caught) {
@@ -236,7 +240,7 @@ export default function WorkroomCatalogPage() {
     else draftSessions.clear(connection)
   }, [connection, catalog, drafts, dirty, readOnly, publishUnconfirmed])
 
-  const availability = catalogAvailability({ hasCatalog: Boolean(catalog), loading, saving, error: catalogError, dirty, readOnly })
+  const availability = catalogAvailability({ hasCatalog: Boolean(catalog), loading, saving, error: catalogError, dirty, readOnly }, i18n.locale)
 
   const change = useCallback((updater: (current: WorkroomDraft[]) => WorkroomDraft[]) => {
     editVersionRef.current += 1
@@ -246,19 +250,18 @@ export default function WorkroomCatalogPage() {
     setNotice(null)
   }, [])
 
-  const spaceIssues = validateWorkroomSpaceOwnership(drafts)
+  const spaceIssues = validateWorkroomSpaceOwnership(drafts, i18n.locale)
   const messageRouteIssues = drafts.map((draft, index) => [...validateWorkroomMessageRoutes(
     draft.members,
     endpoints,
-    { validateKnownEndpoints: endpointInventoryState === 'ready' },
-  ), ...spaceIssues[index].members])
+    { validateKnownEndpoints: endpointInventoryState === 'ready' }, i18n.locale), ...spaceIssues[index].members])
   const firstMessageRouteIssue = messageRouteIssues.flat()[0]
-  const sponsorIssues = validateWorkroomSponsors(drafts)
+  const sponsorIssues = validateWorkroomSponsors(drafts, i18n.locale)
   const firstSponsorIssue = sponsorIssues[0]
-  const projectIdIssues = validateWorkroomProjectIds(drafts)
+  const projectIdIssues = validateWorkroomProjectIds(drafts, i18n.locale)
   const firstProjectIdIssue = projectIdIssues.find(Boolean)
   const basicIssues = drafts.map((draft, index) => {
-    const basic = validateWorkroomBasics(draft, endpoints, endpointInventoryState === "ready")
+    const basic = validateWorkroomBasics(draft, endpoints, endpointInventoryState === "ready", i18n.locale)
     return { ...basic,
       conversation: { ...basic.conversation, ...(spaceIssues[index].conversation ? {id: basic.conversation.id ?? spaceIssues[index].conversation} : {}) },
       sponsorConversation: { ...basic.sponsorConversation, ...(spaceIssues[index].sponsorConversation ? {id: basic.sponsorConversation.id ?? spaceIssues[index].sponsorConversation} : {}) },
@@ -266,7 +269,7 @@ export default function WorkroomCatalogPage() {
   })
   const firstBasicIssue = basicIssues.flatMap(issue => [issue.name, ...Object.values(issue.conversation), ...Object.values(issue.sponsorConversation)]).find(Boolean)
 
-  const memberIssues = drafts.map(draft => validateWorkroomMembers(draft, Object.keys(catalog?.agents ?? {})))
+  const memberIssues = drafts.map(draft => validateWorkroomMembers(draft, Object.keys(catalog?.agents ?? {}), i18n.locale))
   const firstMemberIssue = memberIssues.flatMap(issue => [issue.orchestrator, ...issue.members.flatMap(row => Object.values(row))]).find(Boolean)
 
   const save = async () => {
@@ -275,7 +278,7 @@ export default function WorkroomCatalogPage() {
     if (firstBasicIssue) return setError(firstBasicIssue)
     if (firstMemberIssue) return setError(firstMemberIssue)
     if (firstSponsorIssue) return setError(firstSponsorIssue.message)
-    if (firstMessageRouteIssue) return setError(`消息出口配置不可发布：${firstMessageRouteIssue.message}`)
+    if (firstMessageRouteIssue) return setError(i18n.t("消息出口配置不可发布：{0}", [firstMessageRouteIssue.message]))
     const editVersion = editVersionRef.current
     const viewRequestId = requestRef.current
     const definitions = toDefinitions(drafts)
@@ -284,13 +287,13 @@ export default function WorkroomCatalogPage() {
       setPublishUnconfirmed(false)
       setError(null)
       if (editVersion !== editVersionRef.current) {
-        setNotice('配置已发布，本地还有新的修改。')
+        setNotice(i18n.t("配置已发布，本地还有新的修改。"))
         return
       }
       setDrafts(toDrafts(next.workrooms))
       setDirty(false)
       dirtyRef.current = false
-      setNotice(recovered ? '已核对最新配置，发布成功。' : '配置已发布。')
+      setNotice(recovered ? i18n.t("已核对最新配置，发布成功。") : i18n.t("配置已发布。"))
     }
     setSaving(true)
     setError(null)
@@ -337,34 +340,34 @@ export default function WorkroomCatalogPage() {
   return (
     <PageShell className="max-w-[1680px]">
       <PageHeader
-        title="Workroom 配置"
-        description="配置协作空间、成员和消息渠道。"
+        title={i18n.t("Workroom 配置")}
+        description={i18n.t("配置协作空间、成员和消息渠道。")}
         actions={
           <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm"><Link to="/agent/workrooms"><LayoutDashboard />任务看板</Link></Button>
-            <Button variant="outline" size="sm" disabled={loading || saving} onClick={() => void load(false)}><RefreshCw className={loading ? 'animate-spin' : ''} />刷新</Button>
-            {!readOnly ? <Button size="sm" disabled={!availability.canPublish || publishUnconfirmed || Boolean(firstProjectIdIssue || firstBasicIssue || firstMemberIssue || firstMessageRouteIssue || firstSponsorIssue)} onClick={() => void save()}>{saving ? <Loader2 className="animate-spin" /> : <Save />}{saving ? '发布中' : '发布目录'}</Button> : null}
+            <Button asChild variant="outline" size="sm"><Link to="/agent/workrooms"><LayoutDashboard />{i18n.t("任务看板")}</Link></Button>
+            <Button variant="outline" size="sm" disabled={loading || saving} onClick={() => void load(false)}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
+            {!readOnly ? <Button size="sm" disabled={!availability.canPublish || publishUnconfirmed || Boolean(firstProjectIdIssue || firstBasicIssue || firstMemberIssue || firstMessageRouteIssue || firstSponsorIssue)} onClick={() => void save()}>{saving ? <Loader2 className="animate-spin" /> : <Save />}{saving ? i18n.t("发布中") : i18n.t("发布目录")}</Button> : null}
           </div>
         }
       />
 
-      {readOnly ? <div className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-4 py-3 text-sm text-amber-800 dark:text-amber-200">Demo 只读展示目录；发布仅在私有 full 模式开放。</div> : null}
-      {error || publishUnconfirmed ? <ErrorAlert error={publishUnconfirmed ? '未能确认发布结果。本地草稿已保留，请刷新并核对最新配置。' : error ?? ''} onRetry={catalogError || publishUnconfirmed ? () => load(false, true) : undefined} /> : null}
-      {error && publishUnconfirmed ? <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">错误详情</summary><pre className="mt-2 whitespace-pre-wrap break-words">{error}</pre></details> : null}
-      {!loading && !catalog ? <EmptyState title="Workroom 目录未就绪" description="尚未取得目录，暂不能新建、编辑或发布。请先在 Host 安装并配置可选 Workroom Catalog 服务及 Agent，再刷新；无需重建本地草稿。" /> : null}
-      {catalog && catalogError ? <div className="rounded-lg border bg-muted/25 px-4 py-3 text-sm text-muted-foreground">刷新失败，以下是上次成功加载的目录；本地修改仍保留，恢复目录连接前暂停编辑和发布。</div> : null}
-      {dirty ? <Button variant="outline" size="sm" disabled={loading || saving} onClick={() => setReloadOpen(true)}>放弃未发布修改</Button> : null}
-      {endpointError ? <div className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-4 py-3 text-sm text-amber-800 dark:text-amber-200">Endpoint 列表暂不可用；Catalog 仍可查看和编辑，已有消息出口会保持原值。发布时 Runtime 仍会执行最终校验。</div> : null}
+      {readOnly ? <div className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-4 py-3 text-sm text-amber-800 dark:text-amber-200">{i18n.t("Demo 只读展示目录；发布仅在私有 full 模式开放。")}</div> : null}
+      {error || publishUnconfirmed ? <ErrorAlert error={publishUnconfirmed ? i18n.t("未能确认发布结果。本地草稿已保留，请刷新并核对最新配置。") : error ?? ''} onRetry={catalogError || publishUnconfirmed ? () => load(false, true) : undefined} /> : null}
+      {error && publishUnconfirmed ? <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">{i18n.t("错误详情")}</summary><pre className="mt-2 whitespace-pre-wrap break-words">{error}</pre></details> : null}
+      {!loading && !catalog ? <EmptyState title={i18n.t("Workroom 目录未就绪")} description={i18n.t("尚未取得目录，暂不能新建、编辑或发布。请先在 Host 安装并配置可选 Workroom Catalog 服务及 Agent，再刷新；无需重建本地草稿。")} /> : null}
+      {catalog && catalogError ? <div className="rounded-lg border bg-muted/25 px-4 py-3 text-sm text-muted-foreground">{i18n.t("刷新失败，以下是上次成功加载的目录；本地修改仍保留，恢复目录连接前暂停编辑和发布。")}</div> : null}
+      {dirty ? <Button variant="outline" size="sm" disabled={loading || saving} onClick={() => setReloadOpen(true)}>{i18n.t("放弃未发布修改")}</Button> : null}
+      {endpointError ? <div className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-4 py-3 text-sm text-amber-800 dark:text-amber-200">{i18n.t("Endpoint 列表暂不可用；Catalog 仍可查看和编辑，已有消息出口会保持原值。发布时 Runtime 仍会执行最终校验。")}</div> : null}
       {notice ? <div className="rounded-lg border bg-muted/25 px-4 py-3 text-sm text-muted-foreground">{notice}</div> : null}
 
       {loading && !catalog ? (
         <div className="space-y-3"><Skeleton className="h-24 rounded-xl" /><Skeleton className="h-96 rounded-xl" /></div>
       ) : catalog ? (
         <>
-          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Workroom Catalog 摘要">
-            <Metric icon={Boxes} label="Workrooms" value={drafts.length} detail={`${drafts.filter((item) => item.enabled !== false).length} 个已启用`} />
-            <Metric icon={Bot} label="Bot Endpoints" value={endpointCount} detail="一个 Endpoint 可服务多个 Workroom" />
-            <Metric icon={UsersRound} label="Agents" value={agentNames.length} detail="来自当前 Agent generation" />
+          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label={i18n.t("Workroom Catalog 摘要")}>
+            <Metric icon={Boxes} label="Workrooms" value={drafts.length} detail={i18n.t("{0} 个已启用", [drafts.filter((item) => item.enabled !== false).length])} />
+            <Metric icon={Bot} label="Bot Endpoints" value={endpointCount} detail={i18n.t("一个 Endpoint 可服务多个 Workroom")} />
+            <Metric icon={UsersRound} label="Agents" value={agentNames.length} detail={i18n.t("来自当前 Agent generation")} />
             <Metric icon={Database} label="Revision" value={catalog?.revision.slice(0, 8) ?? '—'} detail={availability.revisionDetail} />
           </section>
 
@@ -387,7 +390,7 @@ export default function WorkroomCatalogPage() {
                 onDelete={() => change((current) => current.filter((_, itemIndex) => itemIndex !== index))}
               />
             ))}
-            {!drafts.length ? <EmptyState title="尚未配置 Workroom" description="创建第一个 Project，将协作空间绑定到 Orchestrator Agent。" /> : null}
+            {!drafts.length ? <EmptyState title={i18n.t("尚未配置 Workroom")} description={i18n.t("创建第一个 Project，将协作空间绑定到 Orchestrator Agent。")} /> : null}
             {!readOnly ? (
               <Button variant="outline" disabled={!availability.canEdit} className="w-full border-dashed py-7" onClick={() => change((current) => {
                 const agent = agentNames[0] ?? ''
@@ -396,7 +399,7 @@ export default function WorkroomCatalogPage() {
                   agent,
                   principalId: catalog?.principalId,
                 })]
-              })}><Plus />新建 Workroom</Button>
+              })}><Plus />{i18n.t("新建 Workroom")}</Button>
             ) : null}
           </div>
         </>
@@ -404,10 +407,10 @@ export default function WorkroomCatalogPage() {
       <ConfirmDialog
         open={reloadOpen}
         onOpenChange={setReloadOpen}
-        title="载入最新配置？"
-        description="载入成功后将替换本地未发布修改；读取失败时会保留草稿。"
-        cancelLabel="继续编辑"
-        confirmLabel="放弃修改并载入"
+        title={i18n.t("载入最新配置？")}
+        description={i18n.t("载入成功后将替换本地未发布修改；读取失败时会保留草稿。")}
+        cancelLabel={i18n.t("继续编辑")}
+        confirmLabel={i18n.t("放弃修改并载入")}
         onConfirm={() => load(true)}
       />
     </PageShell>
@@ -429,6 +432,7 @@ function WorkroomEditor(props: {
   onChange(value: WorkroomDraft): void
   onDelete(): void
 }) {
+  const i18n = useI18n()
   const { value, readOnly } = props
   const projectIdErrorId = useId()
   const nameErrorId = useId()
@@ -451,27 +455,27 @@ function WorkroomEditor(props: {
             <Field label="Project ID"><Input value={value.projectId} required aria-invalid={Boolean(props.projectIdIssue)} aria-describedby={props.projectIdIssue ? projectIdErrorId : undefined} disabled={readOnly} onChange={(event) => patch({ projectId: event.target.value })} placeholder="project-alpha" /></Field>
             {props.projectIdIssue ? <p id={projectIdErrorId} className="mt-1 text-xs text-destructive">{props.projectIdIssue}</p> : null}
           </div>
-          <div><Field label="名称"><Input value={value.name} required aria-invalid={Boolean(props.basicIssues.name)} aria-describedby={props.basicIssues.name ? nameErrorId : undefined} disabled={readOnly} onChange={(event) => patch({ name: event.target.value })} placeholder="协作项目名称" /></Field>{props.basicIssues.name ? <p id={nameErrorId} className="mt-1 text-xs text-destructive">{props.basicIssues.name}</p> : null}</div>
+          <div><Field label={i18n.t("名称")}><Input value={value.name} required aria-invalid={Boolean(props.basicIssues.name)} aria-describedby={props.basicIssues.name ? nameErrorId : undefined} disabled={readOnly} onChange={(event) => patch({ name: event.target.value })} placeholder={i18n.t("协作项目名称")} /></Field>{props.basicIssues.name ? <p id={nameErrorId} className="mt-1 text-xs text-destructive">{props.basicIssues.name}</p> : null}</div>
         </div>
         <div className="flex items-center gap-2">
-          {props.persisted ? <Button asChild variant="outline" size="sm"><Link to={`/agent/workrooms?projectId=${encodeURIComponent(value.projectId.trim())}`}><LayoutDashboard />查看任务</Link></Button> : null}
-          <label className="flex cursor-pointer items-center gap-2 text-sm"><input type="checkbox" checked={value.enabled !== false} disabled={readOnly} onChange={(event) => patch({ enabled: event.target.checked })} />启用</label>
-          {!readOnly ? <Button variant="ghost" size="icon" aria-label={`删除 ${value.projectId}`} onClick={props.onDelete}><Trash2 /></Button> : null}
+          {props.persisted ? <Button asChild variant="outline" size="sm"><Link to={`/agent/workrooms?projectId=${encodeURIComponent(value.projectId.trim())}`}><LayoutDashboard />{i18n.t("查看任务")}</Link></Button> : null}
+          <label className="flex cursor-pointer items-center gap-2 text-sm"><input type="checkbox" checked={value.enabled !== false} disabled={readOnly} onChange={(event) => patch({ enabled: event.target.checked })} />{i18n.t("启用")}</label>
+          {!readOnly ? <Button variant="ghost" size="icon" aria-label={i18n.t("删除 {0}", [value.projectId])} onClick={props.onDelete}><Trash2 /></Button> : null}
         </div>
       </header>
 
       <div className="grid gap-5 p-4 sm:p-5 xl:grid-cols-[minmax(0,0.86fr)_minmax(0,1.14fr)]">
         <div className="space-y-4">
-          <Field label="说明"><Textarea value={value.description ?? ''} disabled={readOnly} onChange={(event) => patch({ description: event.target.value || undefined })} placeholder="这个 Workroom 负责什么？" className="min-h-20" /></Field>
-          <ConversationEditor title="主协作空间" required mandatory={value.enabled !== false} issues={props.basicIssues.conversation} value={value.conversation} endpoints={props.endpoints} orchestrators={orchestrators} readOnly={readOnly} onChange={(conversation) => patch({ conversation })} />
+          <Field label={i18n.t("说明")}><Textarea value={value.description ?? ''} disabled={readOnly} onChange={(event) => patch({ description: event.target.value || undefined })} placeholder={i18n.t("这个 Workroom 负责什么？")} className="min-h-20" /></Field>
+          <ConversationEditor title={i18n.t("主协作空间")} required mandatory={value.enabled !== false} issues={props.basicIssues.conversation} value={value.conversation} endpoints={props.endpoints} orchestrators={orchestrators} readOnly={readOnly} onChange={(conversation) => patch({ conversation })} />
           <ConversationEditor title="Sponsor Room" issues={props.basicIssues.sponsorConversation} value={value.sponsorConversation} endpoints={props.endpoints} orchestrators={orchestrators} readOnly={readOnly} onChange={(sponsorConversation) => patch({ sponsorConversation })} />
-          <Field label="负责人标识" hint="每行一位"><Textarea aria-invalid={Boolean(props.sponsorIssue)} aria-describedby={props.sponsorIssue ? sponsorErrorId : undefined} value={(value.sponsors ?? []).join('\n')} disabled={readOnly} onChange={(event) => patch({ sponsors: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean) })} placeholder="github:user:octocat" className="min-h-20 font-mono text-xs" /></Field>
+          <Field label={i18n.t("负责人标识")} hint={i18n.t("每行一位")}><Textarea aria-invalid={Boolean(props.sponsorIssue)} aria-describedby={props.sponsorIssue ? sponsorErrorId : undefined} value={(value.sponsors ?? []).join('\n')} disabled={readOnly} onChange={(event) => patch({ sponsors: event.target.value.split('\n').map((item) => item.trim()).filter(Boolean) })} placeholder="github:user:octocat" className="min-h-20 font-mono text-xs" /></Field>
           {props.sponsorIssue ? <p id={sponsorErrorId} className="text-xs text-destructive">{props.sponsorIssue}</p> : null}
         </div>
 
         <section aria-labelledby={`members-${value.projectId}`}>
           <div className="mb-3 flex items-center justify-between gap-3">
-            <div><h3 id={`members-${value.projectId}`} className="text-sm font-semibold">成员</h3><p className="mt-0.5 text-xs text-muted-foreground">选择参与项目的 Agent 和角色。</p></div>
+            <div><h3 id={`members-${value.projectId}`} className="text-sm font-semibold">{i18n.t("成员")}</h3><p className="mt-0.5 text-xs text-muted-foreground">{i18n.t("选择参与项目的 Agent 和角色。")}</p></div>
             <Badge variant="outline">{value.members.length}</Badge>
           </div>
           {props.memberIssues.orchestrator ? <p className="mb-2 text-xs text-destructive">{props.memberIssues.orchestrator}</p> : null}
@@ -479,9 +483,9 @@ function WorkroomEditor(props: {
             {value.members.map((member, index) => (
               <div key={index} className="rounded-xl border bg-muted/[0.08] p-3 sm:p-4">
                 <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(8rem,0.55fr)_auto] sm:items-end">
-                  <Field label="Agent"><NativeSelect value={member.agent} invalid={Boolean(props.memberIssues.members[index]?.agent)} describedBy={props.memberIssues.members[index]?.agent ? `${memberErrorId}-${index}-agent` : undefined} disabled={readOnly} onChange={(agent) => setMember(index, { ...member, agent })}><option value="">选择 Agent</option>{props.agents.map((agent) => <option key={agent} value={agent}>{props.agentDetails[agent]?.nickname || agent}</option>)}</NativeSelect></Field>
+                  <Field label="Agent"><NativeSelect value={member.agent} invalid={Boolean(props.memberIssues.members[index]?.agent)} describedBy={props.memberIssues.members[index]?.agent ? `${memberErrorId}-${index}-agent` : undefined} disabled={readOnly} onChange={(agent) => setMember(index, { ...member, agent })}><option value="">{i18n.t("选择 Agent")}</option>{props.agents.map((agent) => <option key={agent} value={agent}>{props.agentDetails[agent]?.nickname || agent}</option>)}</NativeSelect></Field>
                   <Field label="Role"><NativeSelect value={member.role} invalid={Boolean(props.memberIssues.members[index]?.role)} describedBy={props.memberIssues.members[index]?.role ? `${memberErrorId}-${index}-role` : undefined} disabled={readOnly} onChange={(role) => setMember(index, { ...member, role: role as MemberRole })}>{ROLES.map((role) => <option key={role} value={role}>{role}</option>)}</NativeSelect></Field>
-                  {!readOnly ? <Button variant="ghost" size="icon" aria-label={`删除成员 ${index + 1}`} onClick={() => patch({ members: value.members.filter((_, itemIndex) => itemIndex !== index) })}><Trash2 /></Button> : <span />}
+                  {!readOnly ? <Button variant="ghost" size="icon" aria-label={i18n.t("删除成员 {0}", [index + 1])} onClick={() => patch({ members: value.members.filter((_, itemIndex) => itemIndex !== index) })}><Trash2 /></Button> : <span />}
                 </div>
 
                 {props.memberIssues.members[index]?.agent ? <p id={`${memberErrorId}-${index}-agent`} className="mt-1 text-xs text-destructive">{props.memberIssues.members[index].agent}</p> : null}
@@ -491,7 +495,7 @@ function WorkroomEditor(props: {
                   <div className="rounded-lg border bg-background/70 p-3">
                     <div className="mb-3 flex items-start gap-2">
                       <Route className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                      <div><h4 className="text-xs font-semibold">任务执行入口</h4><p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">本机执行，或精确路由到远程 Agent Endpoint。</p></div>
+                      <div><h4 className="text-xs font-semibold">{i18n.t("任务执行入口")}</h4><p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{i18n.t("本机执行，或精确路由到远程 Agent Endpoint。")}</p></div>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <Field label="Execution"><NativeSelect value={member.assignmentRoute?.kind ?? 'local'} disabled={readOnly} onChange={(kind) => setMember(index, { ...member, assignmentRoute: kind === 'remote' ? { kind: 'remote', endpointId: '' } : { kind: 'local' } })}><option value="local">local</option><option value="remote">remote</option></NativeSelect></Field>
@@ -513,7 +517,7 @@ function WorkroomEditor(props: {
                 </MemberOptions>
               </div>
             ))}
-            {!readOnly ? <Button variant="outline" size="sm" onClick={() => patch({ members: [...value.members, { agent: props.agents[0] ?? '', role: value.members.some((member) => member.role === 'orchestrator') ? 'executor' : 'orchestrator' }] })}><Plus />添加成员</Button> : null}
+            {!readOnly ? <Button variant="outline" size="sm" onClick={() => patch({ members: [...value.members, { agent: props.agents[0] ?? '', role: value.members.some((member) => member.role === 'orchestrator') ? 'executor' : 'orchestrator' }] })}><Plus />{i18n.t("添加成员")}</Button> : null}
           </div>
         </section>
       </div>
@@ -522,10 +526,11 @@ function WorkroomEditor(props: {
 }
 
 function MemberOptions({ initiallyOpen, invalid, children }: { initiallyOpen: boolean; invalid: boolean; children: ReactNode }) {
+  const i18n = useI18n()
   const [open, setOpen] = useState(initiallyOpen || invalid)
   useEffect(() => { if (invalid) setOpen(true) }, [invalid])
   return <details open={open} onToggle={(event) => setOpen(event.currentTarget.open)} className="mt-3 border-t pt-3">
-    <summary className="cursor-pointer text-xs font-medium text-muted-foreground">执行与消息渠道</summary>
+    <summary className="cursor-pointer text-xs font-medium text-muted-foreground">{i18n.t("执行与消息渠道")}</summary>
     {children}
   </details>
 }
@@ -539,13 +544,14 @@ function MessageRouteEditor(props: {
   readOnly: boolean
   onChange(value: WorkroomMessageRoute | undefined): void
 }) {
+  const i18n = useI18n()
   const { member } = props
   const routeValue = endpointRouteKey(member.messageRoute)
   const routeKnown = props.endpoints.some((endpoint) =>
     endpointRouteKey({ adapter: endpoint.adapter, endpoint: endpoint.name }) === routeValue)
   const inheritedEndpoint = props.primaryConversation
     ? `${props.primaryConversation.adapter}:${props.primaryConversation.endpoint}`
-    : '尚未配置主空间'
+    : i18n.t("尚未配置主空间")
 
   return (
     <div className="rounded-lg border bg-background/70 p-3">
@@ -553,23 +559,23 @@ function MessageRouteEditor(props: {
         <div className="flex items-start gap-2">
           <RadioTower className="mt-0.5 h-4 w-4 text-muted-foreground" />
           <div>
-            <h4 className="text-xs font-semibold">消息出口投影</h4>
-            <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">选择该 Agent 在主协作空间发言时使用的 Bot 身份。</p>
+            <h4 className="text-xs font-semibold">{i18n.t("消息出口投影")}</h4>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{i18n.t("选择该 Agent 在主协作空间发言时使用的 Bot 身份。")}</p>
           </div>
         </div>
         <Badge variant={props.issue ? 'destructive' : member.messageRoute ? 'outline' : 'secondary'}>
-          {props.issue ? '需要修正' : member.messageRoute ? '独立出口' : '继承主空间'}
+          {props.issue ? i18n.t("需要修正") : member.messageRoute ? i18n.t("独立出口") : i18n.t("继承主空间")}
         </Badge>
       </div>
       <Field label="Projection Endpoint" hint={member.messageRoute
-        ? `通过 ${member.messageRoute.adapter}:${member.messageRoute.endpoint} 投影`
-        : `继承 ${inheritedEndpoint}`}>
+        ? i18n.t("通过 {0}:{1} 投影", [member.messageRoute.adapter, member.messageRoute.endpoint])
+        : i18n.t("继承 {0}", [inheritedEndpoint])}>
         <NativeSelect value={routeValue} disabled={props.readOnly} invalid={Boolean(props.issue)} onChange={(selected) => {
           props.onChange(parseEndpointRouteKey(selected))
         }}>
-          <option value="">继承主空间 Endpoint · {inheritedEndpoint}</option>
+          <option value="">{i18n.t("继承主空间 Endpoint · ")}{inheritedEndpoint}</option>
           {!routeKnown && member.messageRoute ? (
-            <option value={routeValue}>{member.messageRoute.adapter}:{member.messageRoute.endpoint}{props.issue?.code === 'unknown' ? '（Endpoint 已失效）' : '（当前值）'}</option>
+            <option value={routeValue}>{member.messageRoute.adapter}:{member.messageRoute.endpoint}{props.issue?.code === 'unknown' ? i18n.t("（Endpoint 已失效）") : i18n.t("（当前值）")}</option>
           ) : null}
           {props.endpoints.map((endpoint) => {
             const value = endpointRouteKey({ adapter: endpoint.adapter, endpoint: endpoint.name })
@@ -579,7 +585,7 @@ function MessageRouteEditor(props: {
               <option key={`${endpoint.adapter}:${endpoint.name}`} value={value} disabled={occupied}>
                 {endpoint.adapter}:{endpoint.name}
                 {endpoint.connected ? ' · online' : ' · offline'}
-                {occupied ? ` · 已由 ${owner} 使用` : ''}
+                {occupied ? i18n.t(" · 已由 {0} 使用", [owner]) : ''}
               </option>
             )
           })}
@@ -601,6 +607,7 @@ function ConversationEditor(props: {
   readOnly: boolean
   onChange(value: ConversationBinding | undefined): void
 }) {
+  const i18n = useI18n()
   const errorId = useId()
   const enabled = Boolean(props.value)
   const value = props.value ?? emptyConversation(props.orchestrators[0])
@@ -611,8 +618,8 @@ function ConversationEditor(props: {
   return (
     <section className="rounded-lg border p-3">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2"><GitFork className="h-4 w-4 text-muted-foreground" /><h3 className="text-sm font-semibold">{props.title}</h3>{props.mandatory ? <Badge variant="secondary">必填</Badge> : null}</div>
-        {!props.required ? <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={enabled} disabled={props.readOnly} onChange={(event) => props.onChange(event.target.checked ? value : undefined)} />启用</label> : null}
+        <div className="flex items-center gap-2"><GitFork className="h-4 w-4 text-muted-foreground" /><h3 className="text-sm font-semibold">{props.title}</h3>{props.mandatory ? <Badge variant="secondary">{i18n.t("必填")}</Badge> : null}</div>
+        {!props.required ? <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={enabled} disabled={props.readOnly} onChange={(event) => props.onChange(event.target.checked ? value : undefined)} />{i18n.t("启用")}</label> : null}
       </div>
       {(enabled || props.required) ? (
         <div className="grid gap-3 sm:grid-cols-2">
@@ -621,19 +628,19 @@ function ConversationEditor(props: {
               const route = parseEndpointRouteKey(selected)
               patch(route ?? { adapter: '', endpoint: '' })
             }}>
-              <option value={'\0'}>选择已配置 Endpoint</option>
-              {!endpointKnown && value.adapter && value.endpoint ? <option value={endpointValue}>{value.adapter}:{value.endpoint}（当前值）</option> : null}
+              <option value={'\0'}>{i18n.t("选择已配置 Endpoint")}</option>
+              {!endpointKnown && value.adapter && value.endpoint ? <option value={endpointValue}>{value.adapter}:{value.endpoint}{i18n.t("（当前值）")}</option> : null}
               {props.endpoints.map((endpoint) => <option key={`${endpoint.adapter}:${endpoint.name}`} value={endpointRouteKey({ adapter: endpoint.adapter, endpoint: endpoint.name })}>{endpoint.adapter}:{endpoint.name}{endpoint.connected ? ' · online' : ' · offline'}</option>)}
             </NativeSelect>
           </Field>
           <Field label="Space Kind"><NativeSelect value={value.kind} disabled={props.readOnly} onChange={(kind) => patch({ kind: kind as SpaceKind })}>{kinds.map((kind) => <option key={kind} value={kind}>{kind}</option>)}</NativeSelect></Field>
           <Field label={value.kind === 'repository' ? 'Repository' : 'Space ID'}><Input value={value.id} aria-invalid={Boolean(props.issues.id)} aria-describedby={props.issues.id ? `${errorId}-space` : undefined} disabled={props.readOnly} onChange={(event) => patch({ id: event.target.value })} placeholder={value.kind === 'repository' ? 'owner/repo' : 'channel-or-group-id'} /></Field>
-          <Field label="Orchestrator Agent"><NativeSelect value={value.agent} invalid={Boolean(props.issues.agent)} describedBy={props.issues.agent ? `${errorId}-agent` : undefined} disabled={props.readOnly} onChange={(agent) => patch({ agent })}><option value="">选择 Orchestrator</option>{props.orchestrators.map((agent) => <option key={agent} value={agent}>{agent}</option>)}</NativeSelect></Field>
+          <Field label="Orchestrator Agent"><NativeSelect value={value.agent} invalid={Boolean(props.issues.agent)} describedBy={props.issues.agent ? `${errorId}-agent` : undefined} disabled={props.readOnly} onChange={(agent) => patch({ agent })}><option value="">{i18n.t("选择 Orchestrator")}</option>{props.orchestrators.map((agent) => <option key={agent} value={agent}>{agent}</option>)}</NativeSelect></Field>
           {props.issues.endpoint ? <p id={`${errorId}-endpoint`} className="text-xs text-destructive sm:col-span-2">{props.issues.endpoint}</p> : null}
           {props.issues.id ? <p id={`${errorId}-space`} className="text-xs text-destructive sm:col-span-2">{props.issues.id}</p> : null}
           {props.issues.agent ? <p id={`${errorId}-agent`} className="text-xs text-destructive sm:col-span-2">{props.issues.agent}</p> : null}
         </div>
-      ) : <p className="text-xs text-muted-foreground">未配置独立 Sponsor 控制空间。</p>}
+      ) : <p className="text-xs text-muted-foreground">{i18n.t("未配置独立 Sponsor 控制空间。")}</p>}
     </section>
   )
 }

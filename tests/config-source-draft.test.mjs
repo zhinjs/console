@@ -1,3 +1,4 @@
+import { defaultI18n } from './locale-fixture.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -15,7 +16,7 @@ async function pageSaveHandler(bindings, name = 'handleYamlSave') {
  function find(node) { if(ts.isVariableDeclaration(node)&&node.name.getText(ast)===name) declaration=node; ts.forEachChild(node,find) }
  find(ast);assert.ok(declaration,'actual page must have a source-save handler')
  const code=ts.transpileModule(`const ${declaration.getText(ast)};`,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText
- return Function(...Object.keys(bindings),`${code}; return ${name};`)(...Object.values(bindings))
+ return Function('i18n', ...Object.keys(bindings),`${code}; return ${name};`)(defaultI18n, ...Object.values(bindings))
 }
 
 test('actual page save keeps the original draft revision after refresh and subsequent typing, preserving concurrent changes',async()=>{

@@ -1,1 +1,1 @@
-export function readEndpointList(payload: unknown): Array<{ name: string; adapter: string; connected: boolean; status: 'online' | 'offline'; pendingRequestCount?: number; pendingNoticeCount?: number }>
+export function readEndpointList(payload: unknown, locale?: 'zh-CN' | 'en'): Array<{ name: string; adapter: string; connected: boolean; status: 'online' | 'offline'; pendingRequestCount?: number; pendingNoticeCount?: number }>

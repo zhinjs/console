@@ -1,3 +1,5 @@
+import { translate } from '../../i18n/locale.mjs'
+import { useI18n } from '../../i18n'
 import { masonryLayout } from './masonry-layout.mjs'
 import { GalleryPreview } from './GalleryPreview'
 import { JsonViewer } from './JsonViewer'
@@ -107,17 +109,19 @@ function identity(item: CapabilityItem, index: number): string {
   return `${text(item.name, text(item.pattern, 'item'))}:${text(item.owner, text(item.plugin, 'runtime'))}:${index}`
 }
 
-function itemTitle(kind: IntrospectionTab, item: CapabilityItem): string {
-  if (kind === 'commands') return text(item.pattern, '未命名命令')
-  return text(item.name, '未命名能力')
+function itemTitle(kind: IntrospectionTab, item: CapabilityItem, locale: 'zh-CN' | 'en' = 'zh-CN'): string {
+  if (kind === 'commands') return text(item.pattern, translate(locale, "未命名命令"))
+  return text(item.name, translate(locale, "未命名能力"))
 }
 
 export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, readOnly, filter, total, onClearFilter }: CapabilityExplorerProps<K>) {
+  const i18n = useI18n()
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const indexedItems = useMemo(() => items.map((item, index) => ({ kind, item, id: identity(item, index) })), [items, kind])
   const selected = indexedItems.find(({ id }) => id === selectedId)?.item ?? indexedItems[0]?.item ?? null
-  const meta = KIND_META[kind]
+  const authoredMeta = KIND_META[kind]
+  const meta = { ...authoredMeta, title: i18n.t(authoredMeta.title), description: i18n.t(authoredMeta.description), eyebrow: i18n.t(authoredMeta.eyebrow) }
   const Icon = meta.icon
 
   useEffect(() => {
@@ -126,14 +130,14 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
   }, [indexedItems, kind])
 
   if (!items.length) {
-    const empty = capabilityEmptyState({ title: kind === 'components' ? '组件' : meta.title, filter, total })
+    const empty = capabilityEmptyState({ title: kind === 'components' ? i18n.t("组件") : meta.title, filter, total }, i18n.locale)
     return (
       <div className="console-runtime-empty">
         <Icon aria-hidden="true" />
         <div>
           <strong>{empty.title}</strong>
           <p>{empty.description}</p>
-          {empty.clearFilter && onClearFilter ? <Button variant="outline" size="sm" className="mt-3" onClick={onClearFilter}>清除筛选</Button> : null}
+          {empty.clearFilter && onClearFilter ? <Button variant="outline" size="sm" className="mt-3" onClick={onClearFilter}>{i18n.t("清除筛选")}</Button> : null}
         </div>
       </div>
     )
@@ -148,8 +152,8 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
           <h2 id="capability-collection-title">{meta.title}</h2>
           {kind !== 'components' ? <p>{meta.description}</p> : null}
         </div>
-        <div className="console-capability-count"><strong>{items.length}</strong><span>{kind === 'components' ? '个组件' : '项'}</span></div>
-        {kind === 'commands' && <Button asChild size="sm" variant="outline"><Link to="/permissions"><ShieldCheck className="size-4 mr-2" />查看权限说明</Link></Button>}
+        <div className="console-capability-count"><strong>{items.length}</strong><span>{kind === 'components' ? i18n.t("个组件") : i18n.t("项")}</span></div>
+        {kind === 'commands' && <Button asChild size="sm" variant="outline"><Link to="/permissions"><ShieldCheck className="size-4 mr-2" />{i18n.t("查看权限说明")}</Link></Button>}
       </header>
 
       <div className={cn("console-capability-workspace", kind === 'components' && "console-component-gallery-workspace")}>
@@ -177,7 +181,7 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
             event.preventDefault()
             document.getElementById(`component-card-${selectedId}`)?.focus()
           }}>
-            <DialogTitle className="sr-only">组件详情</DialogTitle>
+            <DialogTitle className="sr-only">{i18n.t("组件详情")}</DialogTitle>
             <CapabilityInspector kind={kind} item={selected} readOnly={readOnly} />
           </DialogContent>
         </Dialog> : <CapabilityInspector kind={kind} item={selected} readOnly={readOnly} />}
@@ -210,8 +214,9 @@ function SelectableCard<K extends IntrospectionTab>(props: CollectionProps<K> & 
 }
 
 function CommandCatalog({ entries, selectedId, onSelect }: CollectionProps<'commands'>) {
+  const i18n = useI18n()
   return (
-    <div className="console-runtime-command-list" aria-label="命令目录">
+    <div className="console-runtime-command-list" aria-label={i18n.t("命令目录")}>
       {entries.map((entry) => {
         const parameters = list(entry.item.parameters)
         const permissions = list(entry.item.permissions)
@@ -219,11 +224,11 @@ function CommandCatalog({ entries, selectedId, onSelect }: CollectionProps<'comm
           <SelectableCard key={entry.id} {...{ entry, entries, selectedId, onSelect }}>
             <span className="console-runtime-card-icon"><Terminal /></span>
             <span className="console-runtime-card-main">
-              <strong className="font-mono">{text(entry.item.pattern, '未命名命令')}</strong>
-              <small>{text(entry.item.desc, '没有提供命令说明')}</small>
+              <strong className="font-mono">{text(entry.item.pattern, i18n.t("未命名命令"))}</strong>
+              <small>{text(entry.item.desc, i18n.t("没有提供命令说明"))}</small>
               <span className="console-runtime-tags">
-                {parameters.length ? <Badge variant="outline">{parameters.length} 参数</Badge> : <Badge variant="secondary">无参数</Badge>}
-                {permissions.length ? <Badge variant="warning"><ShieldCheck />{permissions.length} 权限</Badge> : null}
+                {parameters.length ? <Badge variant="outline">{parameters.length} {i18n.t(" 参数")}</Badge> : <Badge variant="secondary">{i18n.t("无参数")}</Badge>}
+                {permissions.length ? <Badge variant="warning"><ShieldCheck />{permissions.length} {i18n.t(" 权限")}</Badge> : null}
               </span>
             </span>
             <span className="console-runtime-source">{text(entry.item.plugin, 'runtime')}<ArrowRight /></span>
@@ -235,6 +240,7 @@ function CommandCatalog({ entries, selectedId, onSelect }: CollectionProps<'comm
 }
 
 function MiddlewarePipeline({ entries, selectedId, onSelect }: CollectionProps<'middlewares'>) {
+  const i18n = useI18n()
   const phases = new Map<string, Entry<'middlewares'>[]>()
   // Host's MiddlewareIndex is the execution-order SSOT: phase → order → topology → id.
   // Preserve that projection order; regrouping must never invent a different pipeline.
@@ -244,7 +250,7 @@ function MiddlewarePipeline({ entries, selectedId, onSelect }: CollectionProps<'
   }
   let sequence = 0
   return (
-    <div className="console-runtime-pipeline" aria-label="中间件执行管线">
+    <div className="console-runtime-pipeline" aria-label={i18n.t("中间件执行管线")}>
       {[...phases].map(([phase, phaseEntries]) => (
         <section key={phase} className="console-runtime-phase">
           <header><span>{phase}</span><small>{phaseEntries.length} stages</small></header>
@@ -270,6 +276,7 @@ function MiddlewarePipeline({ entries, selectedId, onSelect }: CollectionProps<'
 }
 
 function ComponentGallery(props: CollectionProps<'components'> & { readOnly: boolean }) {
+  const i18n = useI18n()
   const container = useRef<HTMLDivElement>(null)
   const [layout, setLayout] = useState(() => masonryLayout(0, []))
   useEffect(() => {
@@ -295,27 +302,29 @@ function ComponentGallery(props: CollectionProps<'components'> & { readOnly: boo
     return () => { observer.disconnect(); cancelAnimationFrame(frame) }
   }, [props.entries])
   return (
-    <div ref={container} className="console-component-masonry" aria-label="组件画廊" style={{ gridTemplateColumns: `repeat(${layout.columns}, minmax(0, 1fr))`, maxWidth: layout.maxWidth }}>
+    <div ref={container} className="console-component-masonry" aria-label={i18n.t("组件画廊")} style={{ gridTemplateColumns: `repeat(${layout.columns}, minmax(0, 1fr))`, maxWidth: layout.maxWidth }}>
       {props.entries.map((entry, index) => <ComponentGalleryCard key={entry.id} entry={entry} position={layout.items[index]} selected={entry.id === props.selectedId} readOnly={props.readOnly} onSelect={() => props.onSelect(entry.id)} />)}
     </div>
   )
 }
 
 function ComponentGalleryCard({ entry, position, selected, readOnly, onSelect }: { entry: Entry<'components'>; position?: { column: number; row: number; span: number }; selected: boolean; readOnly: boolean; onSelect(): void }) {
+  const i18n = useI18n()
   return <article className={cn('console-runtime-component', selected && 'is-selected')} style={position ? { gridColumn: position.column, gridRow: `${position.row} / span ${position.span}` } : undefined} onClick={(event) => {
     if ((event.target as Element).closest('button,a,input,textarea,summary')) return
     onSelect()
   }}>
     <GalleryPreview item={entry.item} readOnly={readOnly} />
-    <button id={`component-card-${entry.id}`} type="button" aria-label={`查看 ${text(entry.item.name)} 组件详情`} aria-pressed={selected} onClick={onSelect}>
-      <strong>{text(entry.item.name, '未命名组件')}</strong><small>{text(entry.item.owner, 'runtime')}</small>
+    <button id={`component-card-${entry.id}`} type="button" aria-label={i18n.t("查看 {0} 组件详情", [text(entry.item.name)])} aria-pressed={selected} onClick={onSelect}>
+      <strong>{text(entry.item.name, i18n.t("未命名组件"))}</strong><small>{text(entry.item.owner, 'runtime')}</small>
     </button>
   </article>
 }
 
 function EndpointGrid({ entries, selectedId, onSelect }: CollectionProps<'endpoints'>) {
+  const i18n = useI18n()
   return (
-    <div className="console-runtime-card-grid" aria-label="Endpoint 状态">
+    <div className="console-runtime-card-grid" aria-label={i18n.t("Endpoint 状态")}>
       {entries.map((entry) => {
         const online = entry.item.online === true
         return (
@@ -323,7 +332,7 @@ function EndpointGrid({ entries, selectedId, onSelect }: CollectionProps<'endpoi
             <span className={cn('console-runtime-health', online && 'is-online')}>{online ? <CheckCircle2 /> : <Unplug />}</span>
             <span className="console-runtime-card-main">
               <small>{text(entry.item.adapter, 'adapter')}</small>
-              <strong>{text(entry.item.name, '未命名 Endpoint')}</strong>
+              <strong>{text(entry.item.name, i18n.t("未命名 Endpoint"))}</strong>
               <span>{text(entry.item.status, online ? 'connected' : 'offline')}</span>
             </span>
           </SelectableCard>
@@ -334,8 +343,9 @@ function EndpointGrid({ entries, selectedId, onSelect }: CollectionProps<'endpoi
 }
 
 function BindingMap({ entries, selectedId, onSelect }: CollectionProps<'bindings'>) {
+  const i18n = useI18n()
   return (
-    <div className="console-runtime-binding-list" aria-label="Agent 关系">
+    <div className="console-runtime-binding-list" aria-label={i18n.t("Agent 关系")}>
       {entries.map((entry) => {
         const servers = list(entry.item.mcpServers)
         return (
@@ -344,7 +354,7 @@ function BindingMap({ entries, selectedId, onSelect }: CollectionProps<'bindings
             <span className="console-runtime-card-main console-runtime-binding-agent"><small>Agent</small><strong>{text(entry.item.name)}</strong></span>
             <span className="console-runtime-edge"><ArrowRight /></span>
             <span className="console-runtime-node"><CircleDot /></span>
-            <span className="console-runtime-card-main console-runtime-binding-provider"><small>{text(entry.item.provider, 'Provider')}</small><strong>{text(entry.item.model, '默认模型')}</strong></span>
+            <span className="console-runtime-card-main console-runtime-binding-provider"><small>{text(entry.item.provider, 'Provider')}</small><strong>{text(entry.item.model, i18n.t("默认模型"))}</strong></span>
             <span className="console-runtime-binding-meta">
               <Badge variant={servers.length ? 'success' : 'secondary'}>{servers.length} MCP</Badge>
               {entry.item.hasAgentFile === true ? <Badge variant="outline"><FileCode2 />agent.md</Badge> : null}
@@ -357,14 +367,15 @@ function BindingMap({ entries, selectedId, onSelect }: CollectionProps<'bindings
 }
 
 function ToolCatalog({ entries, selectedId, onSelect }: CollectionProps<'tools'>) {
+  const i18n = useI18n()
   return (
-    <div className="console-runtime-card-grid" aria-label="工具目录">
+    <div className="console-runtime-card-grid" aria-label={i18n.t("工具目录")}>
       {entries.map((entry) => (
         <SelectableCard key={entry.id} {...{ entry, entries, selectedId, onSelect }} className="console-runtime-tool-card">
           <span className="console-runtime-card-icon"><Wrench /></span>
           <span className="console-runtime-card-main">
-            <strong>{text(entry.item.name, '未命名工具')}</strong>
-            <small>{text(entry.item.description, '没有提供工具说明')}</small>
+            <strong>{text(entry.item.name, i18n.t("未命名工具"))}</strong>
+            <small>{text(entry.item.description, i18n.t("没有提供工具说明"))}</small>
           </span>
           <Badge variant="outline">{text(entry.item.source, 'runtime')}</Badge>
         </SelectableCard>
@@ -374,27 +385,28 @@ function ToolCatalog({ entries, selectedId, onSelect }: CollectionProps<'tools'>
 }
 
 function PromptSectionCatalog({ entries, selectedId, onSelect }: CollectionProps<'prompt-sections'>) {
+  const i18n = useI18n()
   return (
-    <div className="console-runtime-prompt-list" aria-label="提示词片段目录">
+    <div className="console-runtime-prompt-list" aria-label={i18n.t("提示词片段目录")}>
       {entries.map((entry) => {
         const profiles = list(entry.item.profiles)
         const platforms = list(entry.item.platforms)
         const retention = text(entry.item.retention, 'preferred')
         const contentChars = text(entry.item.contentChars, '0')
-        const maxChars = entry.item.maxChars == null ? '未限制' : `${text(entry.item.maxChars)} 上限`
+        const maxChars = entry.item.maxChars == null ? i18n.t("未限制") : i18n.t("{0} 上限", [text(entry.item.maxChars)])
         return (
           <SelectableCard key={entry.id} {...{ entry, entries, selectedId, onSelect }} className="console-runtime-prompt-card">
             <span className="console-runtime-card-icon"><ScrollText /></span>
             <span className="console-runtime-card-main">
               <span className="console-runtime-prompt-heading">
-                <strong>{text(entry.item.title, text(entry.item.name, '未命名片段'))}</strong>
+                <strong>{text(entry.item.title, text(entry.item.name, i18n.t("未命名片段")))}</strong>
                 <Badge variant={retention === 'required' ? 'warning' : retention === 'preferred' ? 'secondary' : 'outline'}>{retention}</Badge>
               </span>
               <small>{text(entry.item.owner, 'runtime')} · {text(entry.item.layer, 'context')} · order {text(entry.item.order, '50')}</small>
               <span className="console-runtime-tags">
                 {profiles.map((profile) => <Badge key={profile} variant="outline">{profile}</Badge>)}
                 {platforms.map((platform) => <Badge key={platform} variant="secondary">{platform}</Badge>)}
-                {!platforms.length ? <Badge variant="secondary">全平台</Badge> : null}
+                {!platforms.length ? <Badge variant="secondary">{i18n.t("全平台")}</Badge> : null}
               </span>
             </span>
             <span className="console-runtime-prompt-budget">
@@ -410,16 +422,17 @@ function PromptSectionCatalog({ entries, selectedId, onSelect }: CollectionProps
 }
 
 function McpGrid({ entries, selectedId, onSelect }: CollectionProps<'mcp'>) {
+  const i18n = useI18n()
   return (
-    <div className="console-runtime-card-grid" aria-label="MCP 服务">
+    <div className="console-runtime-card-grid" aria-label={i18n.t("MCP 服务")}>
       {entries.map((entry) => {
         const connected = entry.item.connected === true
         return (
           <SelectableCard key={entry.id} {...{ entry, entries, selectedId, onSelect }} className="console-runtime-mcp-card">
             <span className={cn('console-runtime-health', connected && 'is-online')}>{connected ? <PlugZap /> : <Unplug />}</span>
             <span className="console-runtime-card-main">
-              <strong>{text(entry.item.name, '未命名 MCP')}</strong>
-              <small>{connected ? `${text(entry.item.toolCount, '0')} tools available` : text(entry.item.error, '连接不可用')}</small>
+              <strong>{text(entry.item.name, i18n.t("未命名 MCP"))}</strong>
+              <small>{connected ? `${text(entry.item.toolCount, '0')} tools available` : text(entry.item.error, i18n.t("连接不可用"))}</small>
             </span>
             <Badge variant={connected ? 'success' : 'destructive'}>{connected ? 'Connected' : 'Offline'}</Badge>
           </SelectableCard>
@@ -447,40 +460,41 @@ function CapabilityInspector(props: {
   item: CapabilityItem | null
   readOnly: boolean
 }) {
+  const i18n = useI18n()
   const { item, kind } = props
   if (!item) return null
   const details = Object.entries(item).filter(([key, value]) => key !== 'previewProps' && value != null && value !== '')
   return (
-    <aside className="console-capability-inspector" aria-label="能力详情">
+    <aside className="console-capability-inspector" aria-label={i18n.t("能力详情")}>
       <header>
-        <span className="console-eyebrow">{kind === 'components' ? '组件详情' : '能力详情'}</span>
-        <h3>{itemTitle(kind, item)}</h3>
+        <span className="console-eyebrow">{kind === 'components' ? i18n.t("组件详情") : i18n.t("能力详情")}</span>
+        <h3>{itemTitle(kind, item, i18n.locale)}</h3>
 
       </header>
       <div className="console-capability-inspector-actions">
         {kind === 'bindings' ? (
-          <Button asChild size="sm"><Link to="/agent/workbench">查看机器人状态<ArrowRight /></Link></Button>
+          <Button asChild size="sm"><Link to="/agent/workbench">{i18n.t("查看机器人状态")}<ArrowRight /></Link></Button>
         ) : null}
         {kind === 'endpoints' ? (
-          <Button asChild size="sm"><Link to="/endpoints">管理 Endpoints<ArrowRight /></Link></Button>
+          <Button asChild size="sm"><Link to="/endpoints">{i18n.t("管理 Endpoints")}<ArrowRight /></Link></Button>
         ) : null}
       </div>
       <dl className="console-capability-properties">
         {details.slice(0, 8).map(([key, value]) => (
-          <div key={key}><dt>{PROPERTY_LABELS[key] ?? key}</dt><dd>{formatValue(value)}</dd></div>
+          <div key={key}><dt>{PROPERTY_LABELS[key] ? i18n.t(PROPERTY_LABELS[key]) : key}</dt><dd>{formatValue(value, i18n.locale)}</dd></div>
         ))}
       </dl>
-      {Object.prototype.hasOwnProperty.call(item, 'previewProps') ? <details className="console-capability-raw"><summary>示例参数</summary><JsonViewer value={item.previewProps} /></details> : null}
+      {Object.prototype.hasOwnProperty.call(item, 'previewProps') ? <details className="console-capability-raw"><summary>{i18n.t("示例参数")}</summary><JsonViewer value={item.previewProps} /></details> : null}
       <details className="console-capability-raw">
-        <summary>原始数据</summary>
+        <summary>{i18n.t("原始数据")}</summary>
         <JsonViewer value={item} />
       </details>
     </aside>
   )
 }
 
-function formatValue(value: unknown): ReactNode {
-  if (typeof value === 'boolean') return <Badge variant={value ? 'success' : 'secondary'}>{value ? '是' : '否'}</Badge>
+function formatValue(value: unknown, locale: 'zh-CN' | 'en' = 'zh-CN'): ReactNode {
+  if (typeof value === 'boolean') return <Badge variant={value ? 'success' : 'secondary'}>{value ? translate(locale, "是") : translate(locale, "否")}</Badge>
   if (Array.isArray(value)) {
     if (!value.length) return <span className="text-muted-foreground">—</span>
     return <span className="console-runtime-tags">{value.map((entry, index) => <Badge key={`${String(entry)}-${index}`} variant="outline">{typeof entry === 'object' ? JSON.stringify(entry) : String(entry)}</Badge>)}</span>

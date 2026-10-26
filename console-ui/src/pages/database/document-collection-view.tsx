@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import { RecordValueDisclosure } from './RecordValueDisclosure'
 import { valuePreview, fullValueText } from './record-value-preview.mjs'
 import { documentTarget, parseDocument } from './mutation-model.mjs'
@@ -34,6 +35,7 @@ export function DocumentCollectionView({
   remove: (table: string, where: any) => Promise<any>
   readOnly: boolean
 }) {
+  const i18n = useI18n()
   const { busy, gate, run } = useMutation()
   const [data, setData] = useState<SelectResult | null>(null)
   const [loading, setLoading] = useState(false)
@@ -65,16 +67,16 @@ export function DocumentCollectionView({
     if (readOnly || gate.pending) return
     await run(async () => {
     try {
-      const doc = parseDocument(jsonText)
+      const doc = parseDocument(jsonText, i18n.locale)
       if (isNew) {
         await insert(tableName, doc)
       } else {
         const { _id, ...rest } = doc
-        const target = documentTarget(editDoc)
-        if (doc._id !== editDoc._id) throw new Error('编辑不能修改 _id。')
+        const target = documentTarget(editDoc, i18n.locale)
+        if (doc._id !== editDoc._id) throw new Error(i18n.t("编辑不能修改 _id。"))
         await update(tableName, rest, target)
       }
-      setMsg({ type: 'success', text: isNew ? '添加成功' : '更新成功' })
+      setMsg({ type: 'success', text: isNew ? i18n.t("添加成功") : i18n.t("更新成功") })
       setEditDoc(null)
       setAddDoc(false)
       setJsonText('')
@@ -95,8 +97,8 @@ export function DocumentCollectionView({
     if (!deleteTarget || gate.pending || readOnly) return
     await run(async () => {
     try {
-      await remove(tableName, documentTarget(deleteTarget))
-      success('删除成功')
+      await remove(tableName, documentTarget(deleteTarget, i18n.locale))
+      success(i18n.t("删除成功"))
       await load()
     } catch (err) {
       toastError((err as Error).message)
@@ -119,34 +121,32 @@ export function DocumentCollectionView({
 
       <div className="flex flex-wrap items-center gap-2 shrink-0">
         <Button size="sm" variant="outline" onClick={load} disabled={loading || busy}>
-          <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />刷新
-        </Button>
+          <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新")}</Button>
         {!readOnly && <Button size="sm" disabled={busy} onClick={() => { setAddDoc(true); setJsonText('{\n  \n}') }}>
-          <Plus className="w-3.5 h-3.5 mr-1" />添加文档
-        </Button>}
-        <span className="text-xs text-muted-foreground sm:ml-auto basis-full sm:basis-auto">共 {data?.total ?? 0} 条 · 第 {page}/{totalPages || 1} 页</span>
+          <Plus className="w-3.5 h-3.5 mr-1" />{i18n.t("添加文档")}</Button>}
+        <span className="text-xs text-muted-foreground sm:ml-auto basis-full sm:basis-auto">{i18n.t("共 ")}{data?.total ?? 0} {i18n.t(" 条 · 第 ")}{page}/{totalPages || 1} {i18n.t(" 页")}</span>
       </div>
 
       <div className="flex-1 min-h-0 min-w-0 overflow-y-auto space-y-2 overscroll-contain">
         {loading && !data ? (
           <div className="text-center py-8"><Loader2 className="w-4 h-4 animate-spin inline-block" /></div>
         ) : !data?.rows?.length ? (
-          <p className="text-center py-8 text-muted-foreground text-sm">暂无文档</p>
+          <p className="text-center py-8 text-muted-foreground text-sm">{i18n.t("暂无文档")}</p>
         ) : data.rows.map((doc: any, i: number) => (
           <Card key={`${tableName}:${page}:${doc._id ?? i}`} className="min-w-0 overflow-hidden">
             <CardContent className="p-3">
               <div className="flex items-start justify-between gap-2 min-w-0">
                 <div className="min-w-0 flex-1 space-y-2">
-                  <p className="truncate font-mono text-xs text-foreground" title={fullValueText(doc._id)}>ID · {doc._id == null ? '未提供' : fullValueText(doc._id)}</p>
-                  <RecordValueDisclosure value={doc} summary={valuePreview(doc, 140, ['_id'])} label="查看完整 JSON" />
+                  <p className="truncate font-mono text-xs text-foreground" title={fullValueText(doc._id)}>ID · {doc._id == null ? i18n.t("未提供") : fullValueText(doc._id)}</p>
+                  <RecordValueDisclosure value={doc} summary={valuePreview(doc, 140, ['_id'], i18n.locale)} label={i18n.t("查看完整 JSON")} />
                 </div>
                 {!readOnly && <div className="flex items-start gap-1 shrink-0">
-                  <Button size="sm" variant="outline" disabled={busy} aria-label="编辑记录" className="h-8 px-2" onClick={() => {
+                  <Button size="sm" variant="outline" disabled={busy} aria-label={i18n.t("编辑记录")} className="h-8 px-2" onClick={() => {
                     setEditDoc(doc)
                     setAddDoc(false)
                     setJsonText(JSON.stringify(doc, null, 2))
-                  }}><Pencil className="mr-1 h-3 w-3" />编辑</Button>
-                  <Button size="sm" variant="ghost" disabled={busy} aria-label="删除记录" className="h-8 w-8 p-0 text-destructive" onClick={() => handleDelete(doc)}><Trash2 className="w-3 h-3" /></Button>
+                  }}><Pencil className="mr-1 h-3 w-3" />{i18n.t("编辑")}</Button>
+                  <Button size="sm" variant="ghost" disabled={busy} aria-label={i18n.t("删除记录")} className="h-8 w-8 p-0 text-destructive" onClick={() => handleDelete(doc)}><Trash2 className="w-3 h-3" /></Button>
                 </div>}
               </div>
             </CardContent>
@@ -156,15 +156,15 @@ export function DocumentCollectionView({
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 shrink-0">
-          <Button size="sm" variant="outline" aria-label="上一页" disabled={busy || page <= 1} onClick={() => setPage((p: number) => p - 1)}><ChevronLeft className="w-4 h-4" /></Button>
+          <Button size="sm" variant="outline" aria-label={i18n.t("上一页")} disabled={busy || page <= 1} onClick={() => setPage((p: number) => p - 1)}><ChevronLeft className="w-4 h-4" /></Button>
           <span className="text-xs text-muted-foreground">{page} / {totalPages}</span>
-          <Button size="sm" variant="outline" aria-label="下一页" disabled={busy || page >= totalPages} onClick={() => setPage((p: number) => p + 1)}><ChevronRight className="w-4 h-4" /></Button>
+          <Button size="sm" variant="outline" aria-label={i18n.t("下一页")} disabled={busy || page >= totalPages} onClick={() => setPage((p: number) => p + 1)}><ChevronRight className="w-4 h-4" /></Button>
         </div>
       )}
 
       {!readOnly && <Dialog open={editDoc !== null || addDoc} onOpenChange={(open) => { if (!open && !gate.pending) { setEditDoc(null); setAddDoc(false) } }}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{addDoc ? '添加文档' : '编辑文档'}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{addDoc ? i18n.t("添加文档") : i18n.t("编辑文档")}</DialogTitle></DialogHeader>
           <textarea
             disabled={busy}
             value={jsonText}
@@ -174,18 +174,18 @@ export function DocumentCollectionView({
           />
           {msg?.type === 'error' && <p role="alert" className="text-sm text-destructive">{msg.text}</p>}
           <DialogFooter>
-            <DialogClose asChild><Button variant="outline" size="sm" disabled={busy}>取消</Button></DialogClose>
-            <Button size="sm" disabled={busy} onClick={() => handleSave(addDoc)}><Save className="w-3.5 h-3.5 mr-1" />保存</Button>
+            <DialogClose asChild><Button variant="outline" size="sm" disabled={busy}>{i18n.t("取消")}</Button></DialogClose>
+            <Button size="sm" disabled={busy} onClick={() => handleSave(addDoc)}><Save className="w-3.5 h-3.5 mr-1" />{i18n.t("保存")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>}
       {!readOnly && <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => { if (!open && !gate.pending) setDeleteTarget(null) }}
-        title="删除文档"
-        description="确定要删除这条文档吗？"
+        title={i18n.t("删除文档")}
+        description={i18n.t("确定要删除这条文档吗？")}
         variant="destructive"
-        confirmLabel="删除"
+        confirmLabel={i18n.t("删除")}
         onConfirm={confirmDelete}
       />}
     </div>

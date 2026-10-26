@@ -1,3 +1,4 @@
+import { translate } from '../../i18n/locale.mjs'
 // Fixed public documentation links. No conversation, token, body or exception is
 // interpolated into a URL, and selecting help never replays an operation.
 const base = 'https://zhin.js.org/troubleshooting/messages'
@@ -13,7 +14,7 @@ const topics = Object.freeze({
   rendering: ['检查图片和文字降级', 'message-rendering'],
 })
 
-export function diagnosticHelpLinks(record) {
+export function diagnosticHelpLinks(record, locale = 'zh-CN') {
   const selected = new Set(['overview'])
   const incomplete = (stage, start) => record.steps.some(step => step.stage === stage && step.status === start)
     && !record.steps.some(step => step.stage === stage && step.status === 'completed')
@@ -27,5 +28,5 @@ export function diagnosticHelpLinks(record) {
   if (record.deliveries.some(item => item.deliveryUnknown || item.status === 'unknown')) selected.add('unknown')
   if (record.deliveries.some(item => item.status !== 'sent' && !item.deliveryUnknown && item.status !== 'unknown')) selected.add('delivery')
   if (record.deliveries.some(item => item.rendering?.fallbacks?.length)) selected.add('rendering')
-  return [...selected].map(key => ({ id: key, label: topics[key][0], href: base + (topics[key][1] ? `#${topics[key][1]}` : '') }))
+  return [...selected].map(key => ({ id: key, label: translate(locale, topics[key][0]), href: base + (topics[key][1] ? `#${topics[key][1]}` : '') }))
 }

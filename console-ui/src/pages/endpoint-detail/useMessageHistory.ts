@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type {
   ChatRow,
@@ -50,6 +51,7 @@ export function useMessageHistory(params: {
   endpoint?: { id: string; adapter: string }
   selection: SidebarSelection | null
 }) {
+  const i18n = useI18n()
   const { adapter, endpointId, endpoint, selection } = params
   const cacheScope = useInboxCacheScope()
   const { error: toastError } = useToast()
@@ -98,7 +100,7 @@ export function useMessageHistory(params: {
           },
         })
         if (seq !== inboxLoadSeqRef.current || !isInboxCacheScopeActive(cacheScope)) return
-        const rows = readMessageHistory(res)
+        const rows = readMessageHistory(res, i18n.locale)
         setInboxMessagesEnabled(res.inboxEnabled)
         if (!res.inboxEnabled || !rows.length) {
           if (!append) setInboxMessages([])
@@ -119,7 +121,7 @@ export function useMessageHistory(params: {
         if (seq === inboxLoadSeqRef.current) setInboxMessagesLoading(false)
       }
     },
-    [adapter, endpointId, selection, cacheScope],
+    [adapter, endpointId, selection, cacheScope, i18n],
   )
 
   useEffect(() => {
@@ -147,7 +149,7 @@ export function useMessageHistory(params: {
     if (!adapter || !endpointId) return
     const onPush = (msg: EndpointPushMessage) => {
       if (msg.type !== SIDE_EVENT_PUSH.MESSAGE_RECEIVE) return
-      const payload = readMessagePush(msg.data)
+      const payload = readMessagePush(msg.data, i18n.locale)
       if (!isInboxCacheScopeActive(cacheScope) || !payload || !endpoint || payload.endpoint.adapter !== endpoint.adapter || payload.endpoint.id !== endpoint.id) return
       void putInboxCache(adapter, endpointId, 'message', { ...payload })
       const content = normalizeInboundContent(payload.content) as ReceivedMessage['content']
@@ -186,7 +188,7 @@ export function useMessageHistory(params: {
           const seen = new Set(prev.map((m) => m.id))
           const fromCache = cachedMessages
             .flatMap((rec) => {
-              const d = readMessagePush(rec.payload)
+              const d = readMessagePush(rec.payload, i18n.locale)
               if (!d || !endpoint || d.endpoint.id !== endpoint.id || d.endpoint.adapter !== endpoint.adapter) return []
               return [{
                 id: `cache-${rec.id}`, endpoint: d.endpoint, messageId: d.messageId, conversation: d.conversation,
@@ -212,7 +214,7 @@ export function useMessageHistory(params: {
       .filter((message) => message.channel.id === selection.id && message.channel.type === selection.channelType)
       .slice().sort((left, right) => left.timestamp - right.timestamp || left.id - right.id)
       .map((m) => {
-        const observed = m.conversation ? readMessagePush({ ...m, messageId: m.platformMessageId }) : undefined
+        const observed = m.conversation ? readMessagePush({ ...m, messageId: m.platformMessageId }, i18n.locale) : undefined
         const content = normalizeInboundContent(m.content) as ReceivedMessage['content']
         return {
           id: `inbox-${m.id}`,
@@ -240,13 +242,13 @@ export function useMessageHistory(params: {
         id: m.id, messageId: m.messageId, endpoint: m.endpoint, parent: m.parent, threadId: m.threadId, local: true,
         channelId: m.channelId,
         channelType: m.channelType,
-        sender: { id: 'self', name: '我' },
+        sender: { id: 'self', name: i18n.t("我") },
         content: m.segments as ReceivedMessage['content'],
         timestamp: m.timestamp,
         outgoing: true,
       }))
     return correlateChatRows([...fromInbox, ...fromRealtime, ...outbound])
-  }, [selection, receivedMessages, inboxMessages, localSent, endpoint])
+  }, [selection, receivedMessages, inboxMessages, localSent, endpoint, i18n])
 
   const handleSend = useCallback(async (options?: SendMessageOptions) => {
     const targetId = selection?.type === 'channel' ? selection.id : ''
@@ -294,11 +296,11 @@ export function useMessageHistory(params: {
       ].slice(-500))
       if (requestedView === viewKeyRef.current) { setMsgContent(current => current === msgContent ? '' : current); options?.onSent?.() }
     } catch (e) {
-      if (epoch === endpointEpoch.current) toastError((e as Error).message, `发送到 ${targetId} 失败`)
+      if (epoch === endpointEpoch.current) toastError((e as Error).message, i18n.t("发送到 {0} 失败", [targetId]))
     } finally {
       if (epoch === endpointEpoch.current) setSending(false)
     }
-  }, [selection, msgContent, adapter, endpointId, endpoint, toastError])
+  }, [selection, msgContent, adapter, endpointId, endpoint, toastError, i18n])
 
   return {
     receivedMessages,

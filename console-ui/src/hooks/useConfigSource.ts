@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n'
 import { useCallback, useEffect, useRef, useState, useReducer } from 'react'
 import { getWebSocketManager } from '@zhin.js/client'
 import { configErrorReducer } from './config-error-state.mjs'
@@ -24,6 +25,9 @@ type ReplaceResult = {
 }
 
 export function useConfigSource({ autoLoad = true }: { autoLoad?: boolean } = {}) {
+  const i18n = useI18n()
+  const messages = useRef(i18n)
+  messages.current = i18n
   const manager = getWebSocketManager()
   const scope = useInboxCacheScope()
   const [connected, setConnected] = useState(manager.isConnected())
@@ -48,20 +52,20 @@ export function useConfigSource({ autoLoad = true }: { autoLoad?: boolean } = {}
   }, [scope])
 
   const load = useCallback(async () => {
-    if (!isInboxCacheScopeActive(scope)) throw new Error('连接身份已变化，请在当前 Host 重新读取配置')
+    if (!isInboxCacheScopeActive(scope)) throw new Error(messages.current.t("连接身份已变化，请在当前 Host 重新读取配置"))
     const request = operations.current.begin()
     setFeedbackScope(scope)
     setLoading(true)
     errorAction({ type: 'read-start' })
     try {
       const result = await requestConsole<ConfigSource>({ type: 'config:get-source' })
-      if (!request.current() || !isInboxCacheScopeActive(scope)) throw new Error('配置读取已过期，请在当前 Host 重新读取')
+      if (!request.current() || !isInboxCacheScopeActive(scope)) throw new Error(messages.current.t("配置读取已过期，请在当前 Host 重新读取"))
       const bound = Object.freeze({ ...result, connectionScope: scope })
       setConfig(bound)
       return bound
     } catch (cause) {
-      if (!request.current() || !isInboxCacheScopeActive(scope)) throw new Error('配置读取已过期，请在当前 Host 重新读取')
-      setReadErrorScope(scope); errorAction({ type: 'read-failed', error: cause instanceof Error ? cause.message : '读取失败' })
+      if (!request.current() || !isInboxCacheScopeActive(scope)) throw new Error(messages.current.t("配置读取已过期，请在当前 Host 重新读取"))
+      setReadErrorScope(scope); errorAction({ type: 'read-failed', error: cause instanceof Error ? cause.message : messages.current.t("读取失败") })
       throw cause
     } finally {
       if (request.current() && isInboxCacheScopeActive(scope)) setLoading(false)
@@ -69,8 +73,8 @@ export function useConfigSource({ autoLoad = true }: { autoLoad?: boolean } = {}
   }, [scope])
 
   const saveBound = useCallback(async (source: string, config: ConfigSource) => {
-    if (!config?.revision) throw new Error('配置版本未知，请先刷新')
-    if (!isInboxCacheScopeActive(scope) || config.connectionScope !== scope) throw new Error('配置属于旧连接，请在当前 Host 重新读取后保存')
+    if (!config?.revision) throw new Error(messages.current.t("配置版本未知，请先刷新"))
+    if (!isInboxCacheScopeActive(scope) || config.connectionScope !== scope) throw new Error(messages.current.t("配置属于旧连接，请在当前 Host 重新读取后保存"))
     const request = operations.current.begin()
     setFeedbackScope(scope)
     setLoading(true)
@@ -81,13 +85,13 @@ export function useConfigSource({ autoLoad = true }: { autoLoad?: boolean } = {}
         source,
         expectedRevision: config.revision,
       })
-      if (!request.current() || !isInboxCacheScopeActive(scope)) throw new Error('保存结果属于旧连接或已被替代，请到原 Host 核实；当前页面不会重试')
-      if (!result.success || !result.revision) throw new Error(result.message || 'Host 未确认配置保存成功')
+      if (!request.current() || !isInboxCacheScopeActive(scope)) throw new Error(messages.current.t("保存结果属于旧连接或已被替代，请到原 Host 核实；当前页面不会重试"))
+      if (!result.success || !result.revision) throw new Error(result.message || messages.current.t("Host 未确认配置保存成功"))
       setConfig(current => current && current.connectionScope === scope && current.revision === config.revision ? { ...current, source, revision: result.revision } : current)
       errorAction({ type: 'save-succeeded' })
       return result
     } catch (cause) {
-      if (!request.current() || !isInboxCacheScopeActive(scope)) throw new Error('保存结果属于旧连接或已被替代，请到原 Host 核实；当前页面不会重试')
+      if (!request.current() || !isInboxCacheScopeActive(scope)) throw new Error(messages.current.t("保存结果属于旧连接或已被替代，请到原 Host 核实；当前页面不会重试"))
       setSaveErrorScope(scope); errorAction({ type: 'save-failed', error: cause instanceof Error ? cause.message : 'Unknown error' })
       throw cause
     } finally {
@@ -96,7 +100,7 @@ export function useConfigSource({ autoLoad = true }: { autoLoad?: boolean } = {}
   }, [scope])
 
   const save = useCallback(async (source: string) => {
-    if (!current) throw new Error('配置版本未知，请先在当前 Host 刷新')
+    if (!current) throw new Error(messages.current.t("配置版本未知，请先在当前 Host 刷新"))
     return saveBound(source, current)
   }, [current, saveBound])
 

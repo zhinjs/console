@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import { readRequestHistory, readNoticeHistory, mergeHistoryRows } from './inbox-history-model.mjs'
 import { readPendingRequests, pendingRequestKey } from './pending-request-model.mjs'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -31,6 +32,7 @@ import { readEndpointIdentity, endpointAddress, requestApproval, consumedRows } 
 import { requestConsole } from '../../utils/console-rpc'
 
 export function useEndpointConsole() {
+  const i18n = useI18n()
   const { adapter: adapterParam, endpointId: endpointIdParam } = useParams<{
     adapter: string
     endpointId: string
@@ -69,12 +71,12 @@ export function useEndpointConsole() {
         ...endpointAddress(adapter, endpointId),
       })
       if (sequence !== infoSequence.current || !isInboxCacheScopeActive(cacheScope)) return
-      setInfo({ ...readEndpointList({ endpoints: [data] })[0], endpoint: readEndpointIdentity(data.endpoint) })
+      setInfo({ ...readEndpointList({ endpoints: [data] }, i18n.locale)[0], endpoint: readEndpointIdentity(data.endpoint, i18n.locale) })
       setLoadErr(null)
     } catch (e) {
       if (sequence === infoSequence.current && isInboxCacheScopeActive(cacheScope)) setLoadErr((e as Error).message)
     }
-  }, [adapter, endpointId, cacheScope])
+  }, [adapter, endpointId, cacheScope, i18n])
 
   useEffect(() => {
     setInfo(null)
@@ -94,11 +96,11 @@ export function useEndpointConsole() {
       })
       setTestMessage(`${result.message} · ${result.latencyMs}ms`)
     } catch (error) {
-      setTestMessage(`测试失败：${(error as Error).message}`)
+      setTestMessage(i18n.t("测试失败：{0}", [(error as Error).message]))
     } finally {
       setTestLoading(false)
     }
-  }, [adapter, endpointId, cacheScope])
+  }, [adapter, endpointId, cacheScope, i18n])
 
   // --- Channel manager ---
   const channelMgr = useChannelManager({
@@ -165,7 +167,7 @@ export function useEndpointConsole() {
         ...endpointAddress(adapter, endpointId),
       })
       if (!isInboxCacheScopeActive(cacheScope)) return
-      const rows = readPendingRequests(response)
+      const rows = readPendingRequests(response, i18n.locale)
       setRequestsAvailable(response.source === 'endpoint' || response.inboxEnabled === true)
       setRequests(new Map(rows.map(row => [pendingRequestKey(row), row])))
     } catch (caught) {
@@ -173,7 +175,7 @@ export function useEndpointConsole() {
     } finally {
       if (isInboxCacheScopeActive(cacheScope)) setRequestsLoading(false)
     }
-  }, [adapter, endpointId, cacheScope])
+  }, [adapter, endpointId, cacheScope, i18n])
 
   useEffect(() => {
     loadRequestsFromServer()
@@ -203,7 +205,7 @@ export function useEndpointConsole() {
           ...endpointAddress(adapter, endpointId), limit: 30, offset,
         })
         if (seq !== inboxRequestsSeqRef.current || !isInboxCacheScopeActive(cacheScope)) return
-        const rows = readRequestHistory(res)
+        const rows = readRequestHistory(res, i18n.locale)
         setInboxRequestsEnabled(res.inboxEnabled)
         setInboxRequestsHasMore(res.inboxEnabled && rows.length === 30)
         setInboxRequestsOffset(offset + rows.length)
@@ -224,7 +226,7 @@ export function useEndpointConsole() {
         if (seq === inboxRequestsSeqRef.current && isInboxCacheScopeActive(cacheScope)) setInboxRequestsLoading(false)
       }
     },
-    [adapter, endpointId, inboxRequestsOffset, cacheScope],
+    [adapter, endpointId, inboxRequestsOffset, cacheScope, i18n],
   )
 
   // --- Load inbox notices ---
@@ -241,7 +243,7 @@ export function useEndpointConsole() {
           ...endpointAddress(adapter, endpointId), limit: 30, offset,
         })
         if (seq !== inboxNoticesSeqRef.current || !isInboxCacheScopeActive(cacheScope)) return
-        const rows = readNoticeHistory(res)
+        const rows = readNoticeHistory(res, i18n.locale)
         setInboxNoticesEnabled(res.inboxEnabled)
         setInboxNoticesHasMore(res.inboxEnabled && rows.length === 30)
         setInboxNoticesOffset(offset + rows.length)
@@ -262,7 +264,7 @@ export function useEndpointConsole() {
         if (seq === inboxNoticesSeqRef.current && isInboxCacheScopeActive(cacheScope)) setInboxNoticesLoading(false)
       }
     },
-    [adapter, endpointId, inboxNoticesOffset, cacheScope],
+    [adapter, endpointId, inboxNoticesOffset, cacheScope, i18n],
   )
 
   const loadNoticesFromServer = useCallback(async () => {

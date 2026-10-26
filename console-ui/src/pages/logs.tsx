@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n'
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { apiFetch } from '../utils/auth'
@@ -16,6 +17,7 @@ import { historyQuery, historyParams, changeHistoryFilter, isCurrentHistoryReque
 const LOG_STATS_TIMEOUT_MS = 8_000
 
 export default function LogsPage() {
+  const i18n = useI18n()
   const readOnly = isDemoMode()
   const [searchParams, setSearchParams] = useSearchParams()
   const searchParamsRef = useRef(searchParams)
@@ -90,13 +92,13 @@ export default function LogsPage() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json()
         if (activeKeyRef.current !== requestKey || !isCurrentHistoryRequest(logsInFlightRef.current,controller,requestKey)) return
-        const availability = logPayloadAvailability(data)
+        const availability = logPayloadAvailability(data, i18n.locale)
         if (!availability.available) {
           setLogsLoaded(false)
           setError(availability.message)
           return
         }
-        const result = validateHistoryResponse(data)
+        const result = validateHistoryResponse(data, i18n.locale)
         setHistory(result)
         setLogs(result.data)
         loadedKeyRef.current = requestKey
@@ -112,7 +114,7 @@ export default function LogsPage() {
         if (activeKeyRef.current !== requestKey || !isCurrentHistoryRequest(logsInFlightRef.current,controller,requestKey)) return
         setLogsLoaded(false)
         const message = err instanceof Error ? err.message : String(err)
-        setError(message === 'Host 不支持日志历史分页' ? '当前 Host 不支持日志历史分页。请更新 Host 后重试；旧版仅支持最近日志的接口不能提供完整历史。' : readErrorSummary(message, '日志'))
+        setError(message === i18n.t("Host 不支持日志历史分页") ? i18n.t("当前 Host 不支持日志历史分页。请更新 Host 后重试；旧版仅支持最近日志的接口不能提供完整历史。") : readErrorSummary(message, i18n.t("日志"), i18n.locale))
       } finally {
         if (logsInFlightRef.current?.controller === controller) {
           logsInFlightRef.current = null
@@ -135,11 +137,11 @@ export default function LogsPage() {
             AbortSignal.timeout(LOG_STATS_TIMEOUT_MS),
           ]),
         })
-        if (!res.ok) throw new Error(`日志统计暂时不可读 (HTTP ${res.status})`)
+        if (!res.ok) throw new Error(i18n.t("日志统计暂时不可读 (HTTP {0})", [res.status]))
         const data = await res.json()
-        if (!data.success) throw new Error('日志统计响应无效')
+        if (!data.success) throw new Error(i18n.t("日志统计响应无效"))
         if (!controller.signal.aborted && statsInFlightRef.current?.controller === controller) {
-          const availability = logPayloadAvailability(data)
+          const availability = logPayloadAvailability(data, i18n.locale)
           if (!availability.available) {
             setStats(null)
             setStatsError(availability.message)
@@ -153,7 +155,7 @@ export default function LogsPage() {
       } catch (err) {
         if (!controller.signal.aborted && statsInFlightRef.current?.controller === controller) {
           setStats(null)
-          setStatsError(readErrorSummary(err instanceof Error ? err.message : err, '日志统计'))
+          setStatsError(readErrorSummary(err instanceof Error ? err.message : err, i18n.t("日志统计"), i18n.locale))
         }
       } finally {
         if (statsInFlightRef.current?.controller === controller) statsInFlightRef.current = null
@@ -197,16 +199,16 @@ export default function LogsPage() {
     invalidateLogReads()
     try {
       const res = await apiFetch(CONSOLE_REST.LOGS, { method: 'DELETE' })
-      if (!res.ok) throw new Error('清空失败')
+      if (!res.ok) throw new Error(i18n.t("清空失败"))
       const data = await res.json()
       if (data.success) {
         invalidateLogReads()
         setLogs([])
         void fetchLogs()
         void fetchStats()
-        success('日志已清空')
+        success(i18n.t("日志已清空"))
       } else {
-        throw new Error(data.error ?? '清空失败')
+        throw new Error(data.error ?? i18n.t("清空失败"))
       }
     } catch (err) {
       toastError((err as Error).message)
@@ -228,14 +230,14 @@ export default function LogsPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ days, maxRecords })
       })
-      if (!res.ok) throw new Error('清理失败')
+      if (!res.ok) throw new Error(i18n.t("清理失败"))
       const data = await res.json()
       if (data.success) {
         invalidateLogReads()
-        success(`成功清理 ${data.deletedCount} 条日志`)
+        success(i18n.t("成功清理 {0} 条日志", [data.deletedCount]))
         void fetchLogs()
         void fetchStats()
-      } else throw new Error(data.error ?? '清理失败')
+      } else throw new Error(data.error ?? i18n.t("清理失败"))
     } catch (err) {
       toastError((err as Error).message)
     }
@@ -244,8 +246,8 @@ export default function LogsPage() {
   return (
     <PageShell className="console-logs-page max-w-[1800px]">
       <PageHeader
-        title="运行记录"
-        description={readOnly ? '实时查看与筛选系统运行日志（Demo 只读）。' : '查看历史与实时日志，定位运行异常。'}
+        title={i18n.t("运行记录")}
+        description={readOnly ? i18n.t("实时查看与筛选系统运行日志（Demo 只读）。") : i18n.t("查看历史与实时日志，定位运行异常。")}
       />
 
       <LogWorkbench
@@ -268,21 +270,21 @@ export default function LogsPage() {
       {!readOnly && <ConfirmDialog
         open={clearConfirmOpen}
         onOpenChange={setClearConfirmOpen}
-        title="清空全部日志"
-        description="此操作不可撤销，确定要清空全部日志吗？"
+        title={i18n.t("清空全部日志")}
+        description={i18n.t("此操作不可撤销，确定要清空全部日志吗？")}
         variant="destructive"
-        confirmLabel="清空"
+        confirmLabel={i18n.t("清空")}
         onConfirm={handleClearAllConfirm}
       />}
       {!readOnly && <ConfirmDialog
         open={cleanupConfirmOpen}
         onOpenChange={setCleanupConfirmOpen}
-        title="清理旧日志"
+        title={i18n.t("清理旧日志")}
         description={cleanupParams.days
-          ? `确定清理 ${cleanupParams.days} 天前的日志吗？匹配的日志会永久删除，操作不可撤销。`
-          : `确定只保留最近 ${cleanupParams.maxRecords} 条日志吗？其余日志会永久删除，操作不可撤销。`}
+          ? i18n.t("确定清理 {0} 天前的日志吗？匹配的日志会永久删除，操作不可撤销。", [cleanupParams.days])
+          : i18n.t("确定只保留最近 {0} 条日志吗？其余日志会永久删除，操作不可撤销。", [cleanupParams.maxRecords])}
         variant="destructive"
-        confirmLabel="清理"
+        confirmLabel={i18n.t("清理")}
         onConfirm={handleCleanupConfirm}
       />}
     </PageShell>

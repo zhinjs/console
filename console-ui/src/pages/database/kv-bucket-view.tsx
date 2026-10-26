@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import { RecordValueDisclosure } from './RecordValueDisclosure'
 import { assertNewKey } from './mutation-model.mjs'
 import { useMutation } from './use-mutation'
@@ -34,6 +35,7 @@ export function KvBucketView({
   kvEntries: (table: string) => Promise<{ entries: KvEntry[] }>
   readOnly: boolean
 }) {
+  const i18n = useI18n()
   const { busy, gate, run } = useMutation()
   const [entries, setEntries] = useState<KvEntry[]>([])
   const [loading, setLoading] = useState(false)
@@ -65,12 +67,12 @@ export function KvBucketView({
     await run(async () => {
     try {
       const key = keyInput.trim()
-      if (!key) throw new Error('Key 不能为空。')
-      if (isNew) assertNewKey(key, (await kvEntries(tableName)).entries)
+      if (!key) throw new Error(i18n.t("Key 不能为空。"))
+      if (isNew) assertNewKey(key, (await kvEntries(tableName)).entries, i18n.locale)
       let val: any
       try { val = JSON.parse(valueInput) } catch { val = valueInput }
       await kvSet(tableName, key, val)
-      setMsg({ type: 'success', text: isNew ? '添加成功' : '更新成功' })
+      setMsg({ type: 'success', text: isNew ? i18n.t("添加成功") : i18n.t("更新成功") })
       setEditEntry(null)
       setAddEntry(false)
       setKeyInput('')
@@ -93,7 +95,7 @@ export function KvBucketView({
     await run(async () => {
     try {
       await kvDelete(tableName, deleteTarget)
-      success('删除成功')
+      success(i18n.t("删除成功"))
       await load()
     } catch (err) {
       toastError((err as Error).message)
@@ -114,32 +116,30 @@ export function KvBucketView({
 
       <div className="flex flex-wrap items-center gap-2 shrink-0">
         <Button size="sm" variant="outline" onClick={load} disabled={loading || busy}>
-          <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />刷新
-        </Button>
+          <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新")}</Button>
         {!readOnly && <Button size="sm" disabled={busy} onClick={() => { setAddEntry(true); setKeyInput(''); setValueInput('') }}>
-          <Plus className="w-3.5 h-3.5 mr-1" />添加键值
-        </Button>}
-        <span className="text-xs text-muted-foreground sm:ml-auto basis-full sm:basis-auto">共 {entries.length} 个键</span>
+          <Plus className="w-3.5 h-3.5 mr-1" />{i18n.t("添加键值")}</Button>}
+        <span className="text-xs text-muted-foreground sm:ml-auto basis-full sm:basis-auto">{i18n.t("共 ")}{entries.length} {i18n.t(" 个键")}</span>
       </div>
 
       <div
         className="flex-1 min-h-[16rem] min-w-0 border rounded-md overflow-auto overscroll-contain touch-pan-x touch-pan-y bg-card"
         role="region"
-        aria-label="键值表，宽表可在此区域内左右滑动"
+        aria-label={i18n.t("键值表，宽表可在此区域内左右滑动")}
       >
         <table className="w-full min-w-[28rem] table-fixed border-collapse text-sm">
           <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm">
             <tr className="border-b border-border/80">
               <th className="px-3 py-2 text-left font-medium text-muted-foreground w-[30%]">Key</th>
               <th className="px-3 py-2 text-left font-medium text-muted-foreground ">Value</th>
-              {!readOnly && <th className="px-3 py-2 text-right font-medium text-muted-foreground w-28">操作</th>}
+              {!readOnly && <th className="px-3 py-2 text-right font-medium text-muted-foreground w-28">{i18n.t("操作")}</th>}
             </tr>
           </thead>
           <tbody>
             {loading && !entries.length ? (
               <tr><td colSpan={readOnly ? 2 : 3} className="text-center py-8"><Loader2 className="w-4 h-4 animate-spin inline-block" /></td></tr>
             ) : !entries.length ? (
-              <tr><td colSpan={readOnly ? 2 : 3} className="text-center py-8 text-muted-foreground">暂无数据</td></tr>
+              <tr><td colSpan={readOnly ? 2 : 3} className="text-center py-8 text-muted-foreground">{i18n.t("暂无数据")}</td></tr>
             ) : entries.map((entry) => (
               <tr key={entry.key} className="border-b border-border/60 hover:bg-muted/30 transition-colors">
                 <td className="px-3 py-2 align-top">
@@ -152,13 +152,13 @@ export function KvBucketView({
                   <RecordValueDisclosure value={entry.value} />
                 </td>
                 {!readOnly && <td className="px-3 py-2 text-right align-top space-x-1 whitespace-nowrap">
-                  <Button size="sm" variant="outline" disabled={busy} aria-label="编辑记录" className="h-8 px-2" onClick={() => {
+                  <Button size="sm" variant="outline" disabled={busy} aria-label={i18n.t("编辑记录")} className="h-8 px-2" onClick={() => {
                     setEditEntry(entry)
                     setAddEntry(false)
                     setKeyInput(entry.key)
                     setValueInput(typeof entry.value === 'object' ? JSON.stringify(entry.value, null, 2) : String(entry.value ?? ''))
-                  }}><Pencil className="mr-1 h-3 w-3" />编辑</Button>
-                  <Button size="sm" variant="ghost" disabled={busy} aria-label="删除记录" className="h-8 w-8 p-0 text-destructive" onClick={() => handleDelete(entry.key)}><Trash2 className="w-3 h-3" /></Button>
+                  }}><Pencil className="mr-1 h-3 w-3" />{i18n.t("编辑")}</Button>
+                  <Button size="sm" variant="ghost" disabled={busy} aria-label={i18n.t("删除记录")} className="h-8 w-8 p-0 text-destructive" onClick={() => handleDelete(entry.key)}><Trash2 className="w-3 h-3" /></Button>
                 </td>}
               </tr>
             ))}
@@ -168,14 +168,14 @@ export function KvBucketView({
 
       {!readOnly && <Dialog open={editEntry !== null || addEntry} onOpenChange={(open) => { if (!open && !gate.pending) { setEditEntry(null); setAddEntry(false) } }}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>{addEntry ? '添加键值' : '编辑键值'}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{addEntry ? i18n.t("添加键值") : i18n.t("编辑键值")}</DialogTitle></DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">Key</label>
               <Input value={keyInput} onChange={(e: ChangeEvent<HTMLInputElement>) => setKeyInput(e.target.value)} className="font-mono text-xs" disabled={!addEntry || busy} />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Value (JSON 或纯文本)</label>
+              <label className="text-xs font-medium text-muted-foreground">{i18n.t("Value (JSON 或纯文本)")}</label>
               <textarea
                 disabled={busy}
                 value={valueInput}
@@ -185,21 +185,21 @@ export function KvBucketView({
               />
             </div>
           </div>
-          {addEntry && entries.some(entry => entry.key === keyInput.trim()) && <p role="alert" className="text-xs text-destructive">该 Key 已存在，请取消并编辑已有键值。</p>}
+          {addEntry && entries.some(entry => entry.key === keyInput.trim()) && <p role="alert" className="text-xs text-destructive">{i18n.t("该 Key 已存在，请取消并编辑已有键值。")}</p>}
           {msg?.type === 'error' && <p role="alert" className="text-sm text-destructive">{msg.text}</p>}
           <DialogFooter>
-            <DialogClose asChild><Button variant="outline" size="sm" disabled={busy}>取消</Button></DialogClose>
-            <Button size="sm" disabled={busy || !keyInput.trim() || (addEntry && entries.some(entry => entry.key === keyInput.trim()))} onClick={() => handleSave(addEntry)}><Save className="w-3.5 h-3.5 mr-1" />保存</Button>
+            <DialogClose asChild><Button variant="outline" size="sm" disabled={busy}>{i18n.t("取消")}</Button></DialogClose>
+            <Button size="sm" disabled={busy || !keyInput.trim() || (addEntry && entries.some(entry => entry.key === keyInput.trim()))} onClick={() => handleSave(addEntry)}><Save className="w-3.5 h-3.5 mr-1" />{i18n.t("保存")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>}
       {!readOnly && <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => { if (!open && !gate.pending) setDeleteTarget(null) }}
-        title="删除键值"
-        description={`确定要删除键 "${deleteTarget}" 吗？`}
+        title={i18n.t("删除键值")}
+        description={i18n.t("确定要删除键 \"{0}\" 吗？", [deleteTarget])}
         variant="destructive"
-        confirmLabel="删除"
+        confirmLabel={i18n.t("删除")}
         onConfirm={confirmDelete}
       />}
     </div>

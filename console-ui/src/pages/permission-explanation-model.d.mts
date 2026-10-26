@@ -10,8 +10,8 @@ export interface PermissionExplanation {
   rules: (PermissionResult & { index: number; rule: string; kind: string; values?: string[] })[];
   summary: PermissionResult; unconstrained: string[]; assumptions: string[];
 }
-export function readPermissionCatalog(body: unknown): PermissionCatalog
-export function permissionRequest(generation: number, selected: PermissionCommand, input?: { target?: unknown; requireTarget?: boolean; senderId?: string; roles?: string }): PermissionRequest
-export function readPermissionExplanation(body: unknown, requested: PermissionRequest): PermissionExplanation
-export function permissionOutcomeLabel(outcome: string): string
-export function permissionHttpError(status: number): string
+export function readPermissionCatalog(body: unknown, locale?: 'zh-CN' | 'en'): PermissionCatalog
+export function permissionRequest(generation: number, selected: PermissionCommand, input?: { target?: unknown; requireTarget?: boolean; senderId?: string; roles?: string }, locale?: 'zh-CN' | 'en'): PermissionRequest
+export function readPermissionExplanation(body: unknown, requested: PermissionRequest, locale?: 'zh-CN' | 'en'): PermissionExplanation
+export function permissionOutcomeLabel(outcome: string, locale?: 'zh-CN' | 'en'): string
+export function permissionHttpError(status: number, locale?: 'zh-CN' | 'en'): string

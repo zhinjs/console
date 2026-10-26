@@ -1,3 +1,4 @@
+import { translate } from '../i18n/locale.mjs'
 /**
  * 群聊插话页（zhinjs/zhin#970）的纯逻辑：校验 Host 状态、把设置翻成大白话、生成 config:patch。
  * 页面面向普通用户，这里不输出判官、决策模型、置信度等内部细节。
@@ -46,45 +47,45 @@ function isTimestamp(value) {
 }
 
 /** 校验 plugin.root.ambient 的返回；格式不对时抛错，不能被当成「没有数据」。 */
-export function validateAmbientStatus(data) {
-  if (!isPlainObject(data)) throw new Error('群聊插话状态格式不正确。')
-  if (typeof data.enabled !== 'boolean') throw new Error('群聊插话状态格式不正确。')
-  if (!AMBIENT_MODES.includes(data.mode)) throw new Error('群聊插话状态格式不正确。')
+export function validateAmbientStatus(data, locale = 'zh-CN') {
+  if (!isPlainObject(data)) throw new Error(translate(locale, "群聊插话状态格式不正确。"))
+  if (typeof data.enabled !== 'boolean') throw new Error(translate(locale, "群聊插话状态格式不正确。"))
+  if (!AMBIENT_MODES.includes(data.mode)) throw new Error(translate(locale, "群聊插话状态格式不正确。"))
   const groupsValid = data.groups === 'all' || isCount(data.groups)
-  if (!groupsValid) throw new Error('群聊插话状态格式不正确。')
+  if (!groupsValid) throw new Error(translate(locale, "群聊插话状态格式不正确。"))
   const last24h = data.last24h
-  if (!isPlainObject(last24h)) throw new Error('群聊插话状态格式不正确。')
+  if (!isPlainObject(last24h)) throw new Error(translate(locale, "群聊插话状态格式不正确。"))
   for (const outcome of AMBIENT_OUTCOMES) {
-    if (!isCount(last24h[outcome])) throw new Error('群聊插话状态格式不正确。')
+    if (!isCount(last24h[outcome])) throw new Error(translate(locale, "群聊插话状态格式不正确。"))
   }
-  if (!Array.isArray(data.recent)) throw new Error('群聊插话状态格式不正确。')
+  if (!Array.isArray(data.recent)) throw new Error(translate(locale, "群聊插话状态格式不正确。"))
   for (const entry of data.recent) {
-    if (!isPlainObject(entry)) throw new Error('群聊插话记录格式不正确。')
-    if (!isTimestamp(entry.at)) throw new Error('群聊插话记录格式不正确。')
-    if (typeof entry.group !== 'string') throw new Error('群聊插话记录格式不正确。')
-    if (!AMBIENT_OUTCOMES.includes(entry.outcome)) throw new Error('群聊插话记录格式不正确。')
+    if (!isPlainObject(entry)) throw new Error(translate(locale, "群聊插话记录格式不正确。"))
+    if (!isTimestamp(entry.at)) throw new Error(translate(locale, "群聊插话记录格式不正确。"))
+    if (typeof entry.group !== 'string') throw new Error(translate(locale, "群聊插话记录格式不正确。"))
+    if (!AMBIENT_OUTCOMES.includes(entry.outcome)) throw new Error(translate(locale, "群聊插话记录格式不正确。"))
   }
   const updatedAtValid = data.updatedAt === null || isTimestamp(data.updatedAt)
-  if (!updatedAtValid) throw new Error('群聊插话状态格式不正确。')
+  if (!updatedAtValid) throw new Error(translate(locale, "群聊插话状态格式不正确。"))
   return data
 }
 
-function describeCurrentBehavior(status) {
-  if (!status.enabled) return '关闭'
-  if (status.mode === 'shadow') return '只观察'
-  if (status.mode === 'active') return '主动参与'
-  return '关闭'
+function describeCurrentBehavior(status, locale = 'zh-CN') {
+  if (!status.enabled) return translate(locale, "关闭", undefined, "state")
+  if (status.mode === 'shadow') return translate(locale, "只观察")
+  if (status.mode === 'active') return translate(locale, "主动参与")
+  return translate(locale, "关闭", undefined, "state")
 }
 
-function describeGroupScope(groups) {
-  if (groups === 'all') return '所有群'
-  if (groups === 0) return '还没有选群'
-  return `${groups} 个群`
+function describeGroupScope(groups, locale = 'zh-CN') {
+  if (groups === 'all') return translate(locale, "所有群")
+  if (groups === 0) return translate(locale, "还没有选群")
+  return translate(locale, "{0} 个群", [groups])
 }
 
-function describeRecentEntry(entry) {
-  const outcomeLabel = OUTCOME_LABELS[entry.outcome]
-  const skipReasonLabel = entry.outcome === 'skipped' && entry.skipReason ? SKIP_REASON_LABELS[entry.skipReason] : undefined
+function describeRecentEntry(entry, locale = 'zh-CN') {
+  const outcomeLabel = translate(locale, OUTCOME_LABELS[entry.outcome])
+  const skipReasonLabel = entry.outcome === 'skipped' && entry.skipReason ? translate(locale, SKIP_REASON_LABELS[entry.skipReason]) : undefined
   return {
     at: entry.at,
     group: entry.group,
@@ -94,17 +95,17 @@ function describeRecentEntry(entry) {
 }
 
 /** 把 Host 状态翻成页面直接显示的大白话；不带判官、模型、置信度。 */
-export function describeAmbientStatus(status) {
+export function describeAmbientStatus(status, locale = 'zh-CN') {
   return {
-    behavior: describeCurrentBehavior(status),
-    groupScope: describeGroupScope(status.groups),
+    behavior: describeCurrentBehavior(status, locale),
+    groupScope: describeGroupScope(status.groups, locale),
     counts: [
-      { key: 'spoke', label: '接了话', value: status.last24h.spoke },
-      { key: 'watched', label: '想接话但没开口', value: status.last24h.watched },
-      { key: 'stayed_quiet', label: '决定不接话', value: status.last24h.stayed_quiet },
-      { key: 'skipped', label: '没有判断', value: status.last24h.skipped },
+      { key: 'spoke', label: translate(locale, "接了话"), value: status.last24h.spoke },
+      { key: 'watched', label: translate(locale, "想接话但没开口"), value: status.last24h.watched },
+      { key: 'stayed_quiet', label: translate(locale, "决定不接话"), value: status.last24h.stayed_quiet },
+      { key: 'skipped', label: translate(locale, "没有判断"), value: status.last24h.skipped },
     ],
-    recent: status.recent.map(describeRecentEntry),
+    recent: status.recent.map(entry => describeRecentEntry(entry, locale)),
     hasActivity: status.recent.length > 0,
     updatedAt: status.updatedAt,
   }
@@ -159,16 +160,16 @@ export function parseGroupList(text) {
 }
 
 /** 返回给用户看的问题列表；为空表示可以保存。 */
-export function validateAmbientSettings(settings) {
+export function validateAmbientSettings(settings, locale = 'zh-CN') {
   const problems = []
   if (settings.behavior === 'off') return problems
   if (settings.groupScope === 'some') {
-    if (settings.groups.length === 0) problems.push('请至少填一个群，或者选择「所有群」。')
+    if (settings.groups.length === 0) problems.push(translate(locale, "请至少填一个群，或者选择「所有群」。"))
     const malformedGroups = settings.groups.filter((group) => !GROUP_ID_PATTERN.test(group))
-    if (malformedGroups.length > 0) problems.push(`群的写法是「平台:群号」，例如 qq:123456。这些需要改一下：${malformedGroups.join('、')}`)
+    if (malformedGroups.length > 0) problems.push(translate(locale, "群的写法是「平台:群号」，例如 qq:123456。这些需要改一下：{0}", [malformedGroups.join('、')]))
   }
   const maxPerHourValid = Number.isInteger(settings.maxPerHour) && settings.maxPerHour >= 1 && settings.maxPerHour <= MAX_PER_HOUR_LIMIT
-  if (!maxPerHourValid) problems.push(`每小时最多插话次数要在 1 到 ${MAX_PER_HOUR_LIMIT} 之间。`)
+  if (!maxPerHourValid) problems.push(translate(locale, "每小时最多插话次数要在 1 到 {0} 之间。", [MAX_PER_HOUR_LIMIT]))
   return problems
 }
 
@@ -197,19 +198,19 @@ const RESTART_REQUIRED_TEXT = '已保存。需要重启机器人才会生效。'
 const NO_RESTART_TEXT = '已保存，马上生效，不用重启。'
 
 /** 把 config:patch 的结果翻成提示；保存成功时一定说明要不要重启。 */
-export function describeSaveResult(result) {
-  if (!isPlainObject(result)) return { kind: 'error', text: '保存结果格式不正确，请刷新后再看一下设置是否已保存。' }
+export function describeSaveResult(result, locale = 'zh-CN') {
+  if (!isPlainObject(result)) return { kind: 'error', text: translate(locale, "保存结果格式不正确，请刷新后再看一下设置是否已保存。") }
   if (result.status === 'saved') {
     const restartRequired = result.restartRequired !== false
-    return { kind: 'saved', restartRequired, text: restartRequired ? RESTART_REQUIRED_TEXT : NO_RESTART_TEXT }
+    return { kind: 'saved', restartRequired, text: translate(locale, restartRequired ? RESTART_REQUIRED_TEXT : NO_RESTART_TEXT) }
   }
   if (result.status === 'conflict') {
-    return { kind: 'conflict', text: '设置刚刚在别处被改过。已经载入最新的设置，请确认后再保存一次。' }
+    return { kind: 'conflict', text: translate(locale, "设置刚刚在别处被改过。已经载入最新的设置，请确认后再保存一次。") }
   }
   if (result.status === 'invalid') {
-    return { kind: 'invalid', text: '这些设置没有通过检查，没有保存。请检查后再试。' }
+    return { kind: 'invalid', text: translate(locale, "这些设置没有通过检查，没有保存。请检查后再试。") }
   }
-  return { kind: 'error', text: '保存失败，请稍后再试。' }
+  return { kind: 'error', text: translate(locale, "保存失败，请稍后再试。") }
 }
 
 /** 调用者没有 ambient:read 或未登录时，Host 返回 401/403。 */

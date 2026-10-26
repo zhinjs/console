@@ -1,3 +1,4 @@
+import { prepareLocaleModule } from './locale-fixture.mjs'
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { readFile } from 'node:fs/promises'
@@ -14,7 +15,7 @@ async function compile(name, imports = {}) {
       .replaceAll(`'${specifier}'`, JSON.stringify(import.meta.resolve(specifier)))
   }
   for (const [specifier, url] of Object.entries(imports)) source = source.replaceAll(`'${specifier}'`, JSON.stringify(url))
-  return 'data:text/javascript;base64,' + Buffer.from(source).toString('base64')
+  return 'data:text/javascript;base64,' + Buffer.from(prepareLocaleModule(source)).toString('base64')
 }
 const iconsURL = await compile('file-icons')
 const { getFileIcon } = await import(iconsURL)

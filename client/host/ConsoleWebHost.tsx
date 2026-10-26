@@ -1,3 +1,4 @@
+import { useI18n } from '../../console-ui/src/i18n'
 import * as React from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { loadConsoleEntries } from "../bootstrap/loadConsoleEntries";
@@ -24,21 +25,23 @@ function LegacyConsoleRedirect() {
 }
 
 function ShellLoading() {
+  const i18n = useI18n()
   return (
     <div className="flex items-center justify-center h-screen bg-background">
       <div className="text-center">
         <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-muted-foreground border-t-foreground" />
-        <p className="mt-3 text-sm text-muted-foreground">加载中…</p>
+        <p className="mt-3 text-sm text-muted-foreground">{i18n.t("加载中…")}</p>
       </div>
     </div>
   );
 }
 
 function DashboardHome() {
+  const i18n = useI18n()
   return (
     <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
       <h1 className="text-2xl font-semibold mb-2 text-foreground">Zhin Console</h1>
-      <p className="text-sm">从侧栏选择一个页面，或安装注册控制台路由的插件。</p>
+      <p className="text-sm">{i18n.t("从侧栏选择一个页面，或安装注册控制台路由的插件。")}</p>
     </div>
   );
 }

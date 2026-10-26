@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@zhin.js/client'
 
@@ -16,11 +17,12 @@ interface EmptyStateProps {
  * - compact 模式用于表格行/卡片内嵌场景
  */
 export function EmptyState({ icon: Icon, title, description, className, compact }: EmptyStateProps) {
+  const i18n = useI18n()
   if (compact) {
     return (
       <div className={cn('flex flex-col items-center gap-2 py-8 text-center', className)}>
         {Icon && <Icon className="w-8 h-8 text-muted-foreground opacity-30" />}
-        <p className="console-text-body text-muted-foreground">{title || '暂无数据'}</p>
+        <p className="console-text-body text-muted-foreground">{title || i18n.t("暂无数据")}</p>
         {description && <p className="console-text-label text-muted-foreground">{description}</p>}
       </div>
     )
@@ -30,7 +32,7 @@ export function EmptyState({ icon: Icon, title, description, className, compact 
     <div className={cn('flex flex-col items-center gap-3 py-12 text-center', className)}>
       {Icon && <Icon className="w-12 h-12 text-muted-foreground opacity-30" />}
       {title && <h3 className="console-section-title">{title}</h3>}
-      <p className="console-text-body text-muted-foreground max-w-sm">{description || '暂无数据'}</p>
+      <p className="console-text-body text-muted-foreground max-w-sm">{description || i18n.t("暂无数据")}</p>
     </div>
   )
 }

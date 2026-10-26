@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useEnvFiles, getWebSocketManager } from '@zhin.js/client'
 import {
@@ -48,6 +49,7 @@ function EnvFileEditor({
   draft?: FileDraft
   onDraftChange: (draft: FileDraft | null) => void
 }) {
+  const i18n = useI18n()
   const [content, setContent] = useState(draft?.content ?? '')
   const [originalContent, setOriginalContent] = useState(draft?.originalContent ?? '')
   const [loading, setLoading] = useState(false)
@@ -61,6 +63,9 @@ function EnvFileEditor({
   const restoredDraft = useRef(draft)
   const saveInFlight = useRef(false)
 
+  const messages = useRef(i18n)
+  messages.current = i18n
+
   const loadContent = useCallback(async (cancelled?: () => boolean) => {
     setLoading(true)
     setMessage(null)
@@ -71,7 +76,7 @@ function EnvFileEditor({
       setOriginalContent(text)
       setLoaded(true)
     } catch (err) {
-      if (!cancelled?.()) setMessage({ type: 'error', text: readErrorSummary(err, '环境变量文件'), details: err instanceof Error ? err.message : String(err) })
+      if (!cancelled?.()) setMessage({ type: 'error', text: readErrorSummary(err, messages.current.t("环境变量文件"), messages.current.locale), details: err instanceof Error ? err.message : String(err) })
     } finally {
       if (!cancelled?.()) setLoading(false)
     }
@@ -93,9 +98,9 @@ function EnvFileEditor({
       await saveFile(filename, content)
       onDraftChange(null)
       setOriginalContent(content)
-      setMessage({ type: 'success', text: '已保存，需重启生效' })
+      setMessage({ type: 'success', text: i18n.t("已保存，需重启生效") })
     } catch (err) {
-      setMessage({ type: 'error', text: '保存失败；未保存修改已保留，请重试。', details: err instanceof Error ? err.message : String(err) })
+      setMessage({ type: 'error', text: i18n.t("保存失败；未保存修改已保留，请重试。"), details: err instanceof Error ? err.message : String(err) })
     } finally {
       saveInFlight.current = false
       setSaving(false)
@@ -114,7 +119,7 @@ function EnvFileEditor({
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-sm text-muted-foreground">加载中...</span>
+        <span className="ml-2 text-sm text-muted-foreground">{i18n.t("加载中...")}</span>
       </div>
     )
   }
@@ -124,7 +129,7 @@ function EnvFileEditor({
       {shouldShowMissingEnv({ loaded, exists, dirty, readFailed: message?.type === 'error' }) && (
         <Alert className="py-2 border-yellow-500/50 text-yellow-700 dark:text-yellow-400">
           <FileWarning className="h-4 w-4" />
-          <AlertDescription>{readOnly ? '文件不存在' : '文件不存在，保存后将自动创建'}</AlertDescription>
+          <AlertDescription>{readOnly ? i18n.t("文件不存在") : i18n.t("文件不存在，保存后将自动创建")}</AlertDescription>
         </Alert>
       )}
 
@@ -133,17 +138,17 @@ function EnvFileEditor({
           {message.type === 'error'
             ? <AlertCircle className="h-4 w-4" />
             : <CheckCircle className="h-4 w-4" />}
-          <AlertDescription>{message.text}{message.details ? <details className="mt-2"><summary className="cursor-pointer">技术详情</summary><pre className="mt-2 whitespace-pre-wrap break-words text-xs">{message.details}</pre></details> : null}</AlertDescription>
+          <AlertDescription>{message.text}{message.details ? <details className="mt-2"><summary className="cursor-pointer">{i18n.t("技术详情")}</summary><pre className="mt-2 whitespace-pre-wrap break-words text-xs">{message.details}</pre></details> : null}</AlertDescription>
         </Alert>
       )}
 
-      {!loaded && !loading ? <Button variant="outline" size="sm" onClick={() => void loadContent()}>重试读取</Button> : null}
-      {dirty ? <p className="text-xs text-muted-foreground">未保存修改只在本标签页内保留；切换页面或文件可恢复，刷新前请保存。</p> : null}
+      {!loaded && !loading ? <Button variant="outline" size="sm" onClick={() => void loadContent()}>{i18n.t("重试读取")}</Button> : null}
+      {dirty ? <p className="text-xs text-muted-foreground">{i18n.t("未保存修改只在本标签页内保留；切换页面或文件可恢复，刷新前请保存。")}</p> : null}
       <div className="relative">
         <Textarea
           value={displayContent}
           readOnly={!access.canEdit}
-          aria-label={`${filename} 环境变量${readOnly ? '（只读且已遮罩）' : ''}`}
+          aria-label={i18n.t("{0} 环境变量{1}", [filename, readOnly ? i18n.t("（只读且已遮罩）") : ''])}
           onChange={e => { if (access.canEdit) { setContent(e.target.value); setMessage(null) } }}
           className="font-mono text-sm min-h-[350px] resize-y"
           placeholder="KEY=VALUE"
@@ -154,34 +159,33 @@ function EnvFileEditor({
       <div className="flex items-center gap-2">
         {!readOnly && <Button size="sm" onClick={handleSave} disabled={!access.canSave}>
           {saving
-            ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />保存中...</>
-            : <><Save className="w-4 h-4 mr-1" />保存</>}
+            ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />{i18n.t("保存中...")}</>
+            : <><Save className="w-4 h-4 mr-1" />{i18n.t("保存")}</>}
         </Button>}
         {!readOnly && dirty && (
           <Button variant="outline" size="sm" disabled={saving} onClick={() => setDiscardOpen(true)}>
-            撤销
-          </Button>
+            {i18n.t("撤销")}</Button>
         )}
         {!readOnly && <Button
           variant="ghost"
           size="sm"
           onClick={() => setMasked(prev => !prev)}
           disabled={!loaded || saving}
-          title={masked ? '显示敏感值并编辑' : '隐藏敏感值'}
-          aria-label={masked ? '显示敏感值并编辑' : '隐藏敏感值'}
+          title={masked ? i18n.t("显示敏感值并编辑") : i18n.t("隐藏敏感值")}
+          aria-label={masked ? i18n.t("显示敏感值并编辑") : i18n.t("隐藏敏感值")}
         >
-          {masked ? <><Eye className="w-4 h-4 mr-1" />显示敏感值并编辑</> : <><EyeOff className="w-4 h-4 mr-1" />隐藏敏感值</>}
+          {masked ? <><Eye className="w-4 h-4 mr-1" />{i18n.t("显示敏感值并编辑")}</> : <><EyeOff className="w-4 h-4 mr-1" />{i18n.t("隐藏敏感值")}</>}
         </Button>}
-        {readOnly && <span className="text-xs text-muted-foreground">Demo 只读 · 敏感值始终遮罩</span>}
-        {dirty && <span className="text-xs text-muted-foreground">有未保存的更改</span>}
+        {readOnly && <span className="text-xs text-muted-foreground">{i18n.t("Demo 只读 · 敏感值始终遮罩")}</span>}
+        {dirty && <span className="text-xs text-muted-foreground">{i18n.t("有未保存的更改")}</span>}
       </div>
       <ConfirmDialog
         open={discardOpen}
         onOpenChange={setDiscardOpen}
-        title="放弃未保存的修改？"
-        description={`将恢复 ${filename} 上次保存的内容。`}
-        confirmLabel="放弃修改"
-        cancelLabel="继续编辑"
+        title={i18n.t("放弃未保存的修改？")}
+        description={i18n.t("将恢复 {0} 上次保存的内容。", [filename])}
+        confirmLabel={i18n.t("放弃修改")}
+        cancelLabel={i18n.t("继续编辑")}
         variant="destructive"
         onConfirm={() => { setContent(originalContent); setMasked(true); setMessage(null) }}
       />
@@ -190,6 +194,7 @@ function EnvFileEditor({
 }
 
 export default function EnvManagePage() {
+  const i18n = useI18n()
   const readOnly = isDemoMode()
   const { files, loading, error, listFiles, getFile, saveFile } = useEnvFiles()
   ensureEnvUnloadGuard()
@@ -217,7 +222,7 @@ export default function EnvManagePage() {
   if (loading && files.length === 0) {
     return (
       <div className="space-y-6">
-        <PageHeader title="环境变量" description="加载文件列表…" />
+        <PageHeader title={i18n.t("环境变量")} description={i18n.t("加载文件列表…")} />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48" />)}
         </div>
@@ -228,18 +233,17 @@ export default function EnvManagePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="环境变量"
-        description={readOnly ? '查看 .env / .env.* 中的键值；Demo 只读且敏感值不可揭示。' : '敏感值默认隐藏，保存后需重启生效。'}
+        title={i18n.t("环境变量")}
+        description={readOnly ? i18n.t("查看 .env / .env.* 中的键值；Demo 只读且敏感值不可揭示。") : i18n.t("敏感值默认隐藏，保存后需重启生效。")}
         actions={
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
-            刷新
-          </Button>
+            {i18n.t("刷新")}</Button>
         }
       />
 
       {error && (
-        <div className="space-y-2"><ErrorAlert error={readErrorSummary(error, '环境变量文件列表')} onRetry={handleRefresh} /><details className="text-xs"><summary className="cursor-pointer">技术详情</summary><pre className="mt-2 whitespace-pre-wrap break-words">{error}</pre></details></div>
+        <div className="space-y-2"><ErrorAlert error={readErrorSummary(error, i18n.t("环境变量文件列表"), i18n.locale)} onRetry={handleRefresh} /><details className="text-xs"><summary className="cursor-pointer">{i18n.t("技术详情")}</summary><pre className="mt-2 whitespace-pre-wrap break-words">{error}</pre></details></div>
       )}
 
       <Tabs value={activeTab} onValueChange={selectTab} className="space-y-4">
@@ -251,7 +255,7 @@ export default function EnvManagePage() {
                 <KeyRound className="w-3.5 h-3.5" />
                 {name}
                 {fileInfo && !fileInfo.exists && (
-                  <Badge variant="outline" className="text-[10px] px-1 py-0 ml-1">新</Badge>
+                  <Badge variant="outline" className="text-[10px] px-1 py-0 ml-1">{i18n.t("新")}</Badge>
                 )}
               </TabsTrigger>
             )
@@ -264,9 +268,8 @@ export default function EnvManagePage() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-base font-semibold">{name}</CardTitle>
                 <CardDescription>
-                  格式 <code className="rounded bg-muted px-1 py-0.5 text-xs">KEY=VALUE</code>
-                  ，支持带引号的多行值。
-                </CardDescription>
+                  {i18n.t("格式 ")}<code className="rounded bg-muted px-1 py-0.5 text-xs">KEY=VALUE</code>
+                  {i18n.t("，支持带引号的多行值。")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <EnvFileEditor

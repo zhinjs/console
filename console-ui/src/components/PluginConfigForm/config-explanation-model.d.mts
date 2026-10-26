@@ -6,5 +6,5 @@ export const CONFIG_CANDIDATE_ORIGINS: Readonly<Record<string, string>>
 export const CONFIG_GENERATION_MATCHES: Readonly<Record<string, string>>
 export function validExplanationBinding(value: unknown): boolean
 export function explanationBindingKey(binding: unknown): string | null
-export function readConfigExplanation(value: unknown, expected?: Pick<ExplanationBinding, 'instanceKey' | 'revision'>): ConfigExplanation
-export function createConfigExplanationReader(options: { read: (binding: {instanceKey: string; revision: string}) => Promise<unknown>; getBinding: () => ExplanationBinding; active: (scope: string) => boolean; publish: (state: ExplanationState) => void }): { load(): Promise<void>; cancel(): void }
+export function readConfigExplanation(value: unknown, expected?: Pick<ExplanationBinding, 'instanceKey' | 'revision'>, locale?: 'zh-CN' | 'en'): ConfigExplanation
+export function createConfigExplanationReader(options: { read: (binding: {instanceKey: string; revision: string}) => Promise<unknown>; getBinding: () => ExplanationBinding; active: (scope: string) => boolean; publish: (state: ExplanationState) => void }, locale?: 'zh-CN' | 'en'): { load(): Promise<void>; cancel(): void }

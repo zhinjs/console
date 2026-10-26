@@ -1,3 +1,4 @@
+import { localeModule, isLocaleImport } from './locale-fixture.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -35,7 +36,7 @@ function setup() {
     './endpoint-detail/message-diagnostics.mjs': { createDiagnosticRequestGate }, './welcome-use-case-model.mjs': model,
   }
   const module = { exports: {} }, code = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText
-  new Function('require', 'exports', 'module', 'setInterval', 'clearInterval', code)(name => { assert.ok(Object.hasOwn(mocks, name), name); return mocks[name] }, module.exports, module,
+  new Function('require', 'exports', 'module', 'setInterval', 'clearInterval', code)(name => { if (isLocaleImport(name)) return localeModule; assert.ok(Object.hasOwn(mocks, name), name); return mocks[name] }, module.exports, module,
     fn => { const id = ++timerId; timers.set(id, fn); return id }, id => timers.delete(id))
   rt.mount(() => module.exports.useWelcomeInspection(args.instanceKey, args.packageName, args.target))
   return { rt, args, calls, scopes, timers,

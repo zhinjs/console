@@ -1,3 +1,4 @@
+import { translate } from '../../i18n/locale.mjs'
 import { objectFields, updateObjectField } from './schema-model.mjs'
 import { buildPreviewTarget } from '../../pages/introspection/target-preview.mjs'
 
@@ -27,16 +28,16 @@ export function updateTargetField(value, field, child) { return updateObjectFiel
 export function updateTargetParent(value, field, child) {
   return updateObjectField(value, 'parent', updateObjectField(value?.parent, field, child))
 }
-export function targetDraftIssue(value, allowedKinds = CONVERSATION_KINDS) {
+export function targetDraftIssue(value, allowedKinds = CONVERSATION_KINDS, locale = 'zh-CN') {
   try {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return '目标尚不是完整对象，请填写目标并交由 Host 校验。'
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return translate(locale, "目标尚不是完整对象，请填写目标并交由 Host 校验。")
     const draft = targetDraft(value)
-    if (!allowedKinds.includes(draft.kind)) return '请选择此字段允许的会话类型。'
-    if (value.parent !== undefined && (!draft.parentKind || !draft.parentId.trim())) return '父容器类型和 ID 必须同时填写；没有父容器时请明确移除。'
-    if (value.threadId !== undefined && !draft.threadId.trim()) return '话题 ID 不能为空；没有话题时请明确移除。'
-    buildPreviewTarget(draft.endpoint, draft)
+    if (!allowedKinds.includes(draft.kind)) return translate(locale, "请选择此字段允许的会话类型。")
+    if (value.parent !== undefined && (!draft.parentKind || !draft.parentId.trim())) return translate(locale, "父容器类型和 ID 必须同时填写；没有父容器时请明确移除。")
+    if (value.threadId !== undefined && !draft.threadId.trim()) return translate(locale, "话题 ID 不能为空；没有话题时请明确移除。")
+    buildPreviewTarget(draft.endpoint, draft, locale)
     return null
-  } catch (error) { return error instanceof Error ? error.message : '目标身份不完整，以 Host 校验为准。' }
+  } catch (error) { return error instanceof Error ? error.message : translate(locale, "目标身份不完整，以 Host 校验为准。") }
 }
 /** Read requests may finish after unmount or a credential change; never publish those results. */
 export function createScopeReadGate(readScope) {

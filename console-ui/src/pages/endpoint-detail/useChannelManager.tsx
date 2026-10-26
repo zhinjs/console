@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import { conversationListNotice, type ConversationListNotice } from './conversation-list-notice.mjs'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Hash, MessageSquare, User, Users } from 'lucide-react'
@@ -76,6 +77,7 @@ export function useChannelManager(params: {
   initialChannelType?: ConversationChannelType
   initialChannelId?: string
 }) {
+  const i18n = useI18n()
   const { adapter, endpointId, info, initialChannelType, initialChannelId } = params
   const cacheScope = useInboxCacheScope()
   const { success, error: toastError } = useToast()
@@ -216,11 +218,11 @@ export function useChannelManager(params: {
   }, [adapter, endpointId, cacheScope])
 
   const refreshMetadata = useCallback(async () => {
-    const { meta, names } = await buildMetadataIndex(adapter, endpointId, requestConsole)
+    const { meta, names } = await buildMetadataIndex(adapter, endpointId, requestConsole, i18n.locale)
     if (!isInboxCacheScopeActive(cacheScope)) return
     setMetaIndex(meta)
     setNameIndex(names)
-  }, [adapter, endpointId, cacheScope])
+  }, [adapter, endpointId, cacheScope, i18n])
 
   const loadLists = useCallback(async () => {
     if (!adapter || !endpointId) return
@@ -246,7 +248,7 @@ export function useChannelManager(params: {
             (x) => x.user_id > 0,
           )
         } catch (e) {
-          errors.push(`好友列表：${(e as Error).message}`)
+          errors.push(i18n.t("好友列表：{0}", [(e as Error).message]))
         }
         try {
           const g = await requestConsole<{ groups: unknown[] }>({
@@ -257,14 +259,14 @@ export function useChannelManager(params: {
             (x) => x.group_id > 0,
           )
         } catch (e) {
-          errors.push(`群列表：${(e as Error).message}`)
+          errors.push(i18n.t("群列表：{0}", [(e as Error).message]))
         }
       }
 
       try {
         nextChannels = await fetchEndpointChannelCatalog(requestConsole, adapter, endpointId)
       } catch (e) {
-        errors.push(`频道列表：${(e as Error).message}`)
+        errors.push(i18n.t("频道列表：{0}", [(e as Error).message]))
       }
 
       const rpcEmpty =
@@ -290,14 +292,14 @@ export function useChannelManager(params: {
 
       if (!isInboxCacheScopeActive(cacheScope)) return
       const total = nextFriends.length + nextGroups.length + nextChannels.length
-      setListNotice(conversationListNotice({ total, errors, connected: info?.connected, historyOnly: usedInboxFallback }))
+      setListNotice(conversationListNotice({ total, errors, connected: info?.connected, historyOnly: usedInboxFallback }, i18n.locale))
     } catch (e) {
       if (!isInboxCacheScopeActive(cacheScope)) return
-      setListNotice(conversationListNotice({ total: 0, errors: [(e as Error).message] }))
+      setListNotice(conversationListNotice({ total: 0, errors: [(e as Error).message] }, i18n.locale))
     } finally {
       if (isInboxCacheScopeActive(cacheScope)) setListLoading(false)
     }
-  }, [adapter, endpointId, loadChannelsFromInbox, info?.connected, refreshMetadata, cacheScope])
+  }, [adapter, endpointId, loadChannelsFromInbox, info?.connected, refreshMetadata, cacheScope, i18n])
 
   useEffect(() => {
     void loadLists()
@@ -306,9 +308,9 @@ export function useChannelManager(params: {
   const resolveDisplayName = useCallback(
     (channelType: ConversationChannelType, id: string, primaryName: string) => {
       const hint = nameIndex.get(conversationKey(channelType, id))
-      return displayNameForConversation(channelType, id, primaryName, hint)
+      return displayNameForConversation(channelType, id, primaryName, hint, i18n.locale)
     },
-    [nameIndex],
+    [nameIndex, i18n],
   )
 
   const buildEntry = useCallback(
@@ -397,21 +399,21 @@ export function useChannelManager(params: {
         id: 'private',
         title: SECTION_TITLES.private,
         entries: privateEntries,
-        emptyHint: sectionEmptyHint(adapter, 'private'),
+        emptyHint: sectionEmptyHint(adapter, 'private', i18n.locale),
         hidden: !showPrivate,
       },
       {
         id: 'group',
         title: SECTION_TITLES.group,
         entries: groupEntries,
-        emptyHint: sectionEmptyHint(adapter, 'group'),
+        emptyHint: sectionEmptyHint(adapter, 'group', i18n.locale),
         hidden: !showGroup,
       },
       {
         id: 'channel',
         title: SECTION_TITLES.channel,
         entries: channelEntries,
-        emptyHint: sectionEmptyHint(adapter, 'channel'),
+        emptyHint: sectionEmptyHint(adapter, 'channel', i18n.locale),
         hidden: !showChannel,
       },
     ]
@@ -420,7 +422,7 @@ export function useChannelManager(params: {
       return sections.filter((s) => !s.hidden && s.entries.length > 0)
     }
     return sections.filter((s) => !s.hidden)
-  }, [adapter, friends, groups, channelList, listSearch, buildEntry])
+  }, [adapter, friends, groups, channelList, listSearch, buildEntry, i18n])
 
   const filteredChannels = useMemo(() => {
     return conversationSections.flatMap((s) => s.entries)
@@ -456,7 +458,7 @@ export function useChannelManager(params: {
       if (channelType !== 'private' && channelType !== 'group' && channelType !== 'channel') return
 
       const ts = Number(d.timestamp ?? Date.now())
-      const preview = previewFromMessageContent(d.content)
+      const preview = previewFromMessageContent(d.content, undefined, i18n.locale)
 
       const channelName = channelNameFromMessagePayload(d, channelType)
       if (channelName) {
@@ -479,7 +481,7 @@ export function useChannelManager(params: {
 
       setMetaIndex((prev) => {
         const next = new Map(prev)
-        ingestInboxRow(next, channelType, channelId, d.content, ts, undefined, d)
+        ingestInboxRow(next, channelType, channelId, d.content, ts, undefined, d, i18n.locale)
         return next
       })
 
@@ -512,13 +514,13 @@ export function useChannelManager(params: {
       setFriends((prev) => prev.filter((f) => String(f.user_id) !== selection.id))
       setSelection(null)
       await loadLists()
-      success(`已删除好友「${selection.name}」`)
+      success(i18n.t("已删除好友「{0}」", [selection.name]))
       return true
     } catch (e) {
-      toastError((e as Error).message, '删除好友失败')
+      toastError((e as Error).message, i18n.t("删除好友失败"))
       return false
     }
-  }, [selection, adapter, endpointId, loadLists, success, toastError])
+  }, [selection, adapter, endpointId, loadLists, success, toastError, i18n])
 
   const getChannelIcon = (channelType: string): ReactNode => {
     switch (channelType) {

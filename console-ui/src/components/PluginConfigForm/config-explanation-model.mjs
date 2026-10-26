@@ -1,3 +1,4 @@
+import { translate } from '../../i18n/locale.mjs'
 /** Value-free, saved-revision-bound field explanation. No mutation or persistence. */
 const hash = value => typeof value === 'string' && /^[a-f0-9]{64}$/u.test(value)
 const record = value => Boolean(value) && typeof value === 'object' && !Array.isArray(value)
@@ -18,13 +19,13 @@ export const CONFIG_GENERATION_MATCHES = Object.freeze({ equal: '读取时与运
 export function validExplanationBinding(value) { return Boolean(value && typeof value.scope === 'string' && value.scope && typeof value.instanceKey === 'string' && value.instanceKey.trim() && value.instanceKey.length <= 128 && hash(value.revision)) }
 export function explanationBindingKey(binding) { return validExplanationBinding(binding) ? JSON.stringify([binding.scope, binding.instanceKey, binding.revision]) : null }
 class ExplanationVersionMismatch extends Error {}
-export function readConfigExplanation(value, expected) {
-  const invalid = () => { throw new Error('Host 返回的字段解释格式或版本不正确；请刷新已保存配置后重新读取。') }
+export function readConfigExplanation(value, expected, locale = 'zh-CN') {
+  const invalid = () => { throw new Error(translate(locale, "Host 返回的字段解释格式或版本不正确；请刷新已保存配置后重新读取。")) }
   if (!ownKeys(value, ['instanceKey', 'revision', 'projectRevision', 'generation', 'projection', 'reason', 'fields'])
     || typeof value.instanceKey !== 'string' || !value.instanceKey.trim() || value.instanceKey.length > 128 || !hash(value.revision) || !hash(value.projectRevision)
     || !(value.generation === null || Number.isSafeInteger(value.generation) && value.generation >= 0)
     || !['supported', 'unsupported'].includes(value.projection) || !Array.isArray(value.fields) || value.fields.length > 128) invalid()
-  if (expected && (value.instanceKey !== expected.instanceKey || value.revision !== expected.revision)) throw new ExplanationVersionMismatch('字段解释不属于当前已保存版本；请刷新配置并重新读取，草稿不会被覆盖。')
+  if (expected && (value.instanceKey !== expected.instanceKey || value.revision !== expected.revision)) throw new ExplanationVersionMismatch(translate(locale, "字段解释不属于当前已保存版本；请刷新配置并重新读取，草稿不会被覆盖。"))
   if (value.projection === 'unsupported') {
     if (value.fields.length || !Object.hasOwn(CONFIG_EXPLANATION_REASONS, value.reason)) invalid()
   } else if (Object.hasOwn(value, 'reason') || value.generation === null) invalid()
@@ -41,7 +42,7 @@ export function readConfigExplanation(value, expected) {
   return { instanceKey: value.instanceKey, revision: value.revision, projectRevision: value.projectRevision, generation: value.generation, projection: value.projection, ...(value.projection === 'unsupported' ? { reason: value.reason } : {}), fields }
 }
 /** Actual read handler: late responses cannot publish across a saved revision or authenticated connection. */
-export function createConfigExplanationReader({ read, getBinding, active, publish }) {
+export function createConfigExplanationReader({ read, getBinding, active, publish }, locale = 'zh-CN') {
   let epoch = 0
   return {
     cancel() { epoch++ },
@@ -54,11 +55,11 @@ export function createConfigExplanationReader({ read, getBinding, active, publis
       try {
         const raw = await read({ instanceKey: binding.instanceKey, revision: binding.revision })
         if (!current()) return
-        const data = readConfigExplanation(raw, binding)
+        const data = readConfigExplanation(raw, binding, locale)
         publish({ kind: 'ready', key, data })
       } catch (error) {
         if (current()) publish({ kind: 'error', key, message: error instanceof ExplanationVersionMismatch
-          ? '字段解释不属于当前已保存版本；请刷新配置并重新读取，草稿不会被覆盖。' : '暂时无法读取字段解释。请核对当前 Host 的 full 权限和版本，或刷新配置后重试；这不表示配置保存或应用失败。' })
+          ? translate(locale, "字段解释不属于当前已保存版本；请刷新配置并重新读取，草稿不会被覆盖。") : translate(locale, "暂时无法读取字段解释。请核对当前 Host 的 full 权限和版本，或刷新配置后重试；这不表示配置保存或应用失败。") })
       }
     },
   }

@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n'
 import { useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { AlertCircle, Package, Terminal, Box as IconBox, Layers, Clock, Brain, Wrench, Database, Shield, Settings, Plug, Server, Search, type LucideIcon } from 'lucide-react'
@@ -53,11 +54,12 @@ function getIcon(iconName: string): LucideIcon {
 }
 
 export default function PluginsPage() {
+  const i18n = useI18n()
   const navigate = useNavigate()
   const { data: plugins, loaded, loading, error, refresh } = useConsoleRead<Plugin[]>(async () => {
     const res = await apiFetch('/api/plugins')
-    if (!res.ok) throw new Error(res.status === 403 ? '当前身份无权读取插件列表' : `插件读取失败（HTTP ${res.status}）`)
-    return validatePluginList(await res.json()) as Plugin[]
+    if (!res.ok) throw new Error(res.status === 403 ? i18n.t("当前身份无权读取插件列表") : i18n.t("插件读取失败（HTTP {0}）", [res.status]))
+    return validatePluginList(await res.json(), i18n.locale) as Plugin[]
   }, [])
   const [searchParams, setSearchParams] = useSearchParams()
   const search = searchParams.get('q') ?? ''
@@ -94,24 +96,23 @@ export default function PluginsPage() {
       <PageShell className="items-center justify-center min-h-[40vh]">
         <Alert variant="destructive" className="max-w-md">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>加载失败: {error}</AlertDescription>
+          <AlertDescription>{i18n.t("加载失败: ")}{error}</AlertDescription>
         </Alert>
         <Button variant="outline" size="sm" onClick={() => void refresh().catch(() => {})}>
-          重试
-        </Button>
+          {i18n.t("重试")}</Button>
       </PageShell>
     )
   }
 
   return (
     <PageShell>
-      <PageHeader title="子插件" description="额外加载的子插件；项目根插件不计入此列表" actions={<Button variant="outline" size="sm" disabled={loading} onClick={() => void refresh().catch(() => {})}>刷新</Button>} />
-      {error ? <Alert variant="warning"><AlertCircle className="h-4 w-4" /><AlertDescription className="flex items-center justify-between gap-3"><span>{error}。以下是上次读取的列表。</span><Button variant="outline" size="sm" onClick={() => void refresh().catch(() => {})}>重试</Button></AlertDescription></Alert> : null}
+      <PageHeader title={i18n.t("子插件")} description={i18n.t("额外加载的子插件；项目根插件不计入此列表")} actions={<Button variant="outline" size="sm" disabled={loading} onClick={() => void refresh().catch(() => {})}>{i18n.t("刷新")}</Button>} />
+      {error ? <Alert variant="warning"><AlertCircle className="h-4 w-4" /><AlertDescription className="flex items-center justify-between gap-3"><span>{error}{i18n.t("。以下是上次读取的列表。")}</span><Button variant="outline" size="sm" onClick={() => void refresh().catch(() => {})}>{i18n.t("重试")}</Button></AlertDescription></Alert> : null}
 
       <div className="console-page-meta">
-        <span>共 {plugins.length} 个子插件</span>
+        <span>{i18n.t("共 ")}{plugins.length} {i18n.t(" 个子插件")}</span>
         <Badge variant="success">{plugins.filter(p => p.status === 'active').length}</Badge>
-        <span>个代内已加载</span>
+        <span>{i18n.t("个代内已加载")}</span>
       </div>
 
       <div className="console-page-toolbar">
@@ -119,7 +120,7 @@ export default function PluginsPage() {
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <Input
             type="search"
-            placeholder="搜索插件…"
+            placeholder={i18n.t("搜索插件…")}
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-9"
@@ -151,15 +152,15 @@ export default function PluginsPage() {
                   <span className="font-semibold text-sm truncate">{plugin.name}</span>
                 </div>
                 <Badge variant={plugin.management?.status === 'enabled' ? 'success' : plugin.management?.status === 'missing-config' || plugin.management?.status === 'degraded' ? 'warning' : 'secondary'} className="shrink-0">
-                  {plugin.management ? managementLabel(plugin.management) : '应用证据未确认'}
+                  {plugin.management ? managementLabel(plugin.management, i18n.locale) : i18n.t("应用证据未确认")}
                 </Badge>
               </div>
 
               <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                {plugin.description || '暂无描述'}
+                {plugin.description || i18n.t("暂无描述")}
               </p>
 
-              {plugin.management ? <p className="text-xs text-muted-foreground">当前代 {plugin.management.generation ?? '未发布'} · {plugin.management.published ? '包与配置已应用' : '待核对应用'} · {plugin.management.verification === 'available' ? '业务检查可选' : '未提供业务检查'}</p> : <p className="text-xs text-muted-foreground">{plugin.managementError ? `状态读取失败：${plugin.managementError}` : 'Host 尚未提供状态证据'}</p>}
+              {plugin.management ? <p className="text-xs text-muted-foreground">{i18n.t("当前代 ")}{plugin.management.generation ?? i18n.t("未发布")} · {plugin.management.published ? i18n.t("包与配置已应用") : i18n.t("待核对应用")} · {plugin.management.verification === 'available' ? i18n.t("业务检查可选") : i18n.t("未提供业务检查")}</p> : <p className="text-xs text-muted-foreground">{plugin.managementError ? i18n.t("状态读取失败：{0}", [plugin.managementError]) : i18n.t("Host 尚未提供状态证据")}</p>}
               <hr className="console-divider" />
 
               {plugin.features.length > 0 ? (
@@ -176,7 +177,7 @@ export default function PluginsPage() {
                   })}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground text-center py-2">无注册功能</p>
+                <p className="text-xs text-muted-foreground text-center py-2">{i18n.t("无注册功能")}</p>
               )}
             </CardContent>
           </Card>
@@ -184,9 +185,9 @@ export default function PluginsPage() {
       </div>
 
       {plugins.length > 0 && filteredPlugins.length === 0 ? <Card><CardContent className="flex flex-col items-center gap-3 py-10">
-        <h3 className="text-base font-semibold">没有匹配的插件</h3>
-        <p className="text-sm text-muted-foreground">试试其他名称，或清除筛选。</p>
-        <Button variant="outline" size="sm" onClick={() => setSearch('')}>清除筛选</Button>
+        <h3 className="text-base font-semibold">{i18n.t("没有匹配的插件")}</h3>
+        <p className="text-sm text-muted-foreground">{i18n.t("试试其他名称，或清除筛选。")}</p>
+        <Button variant="outline" size="sm" onClick={() => setSearch('')}>{i18n.t("清除筛选")}</Button>
       </CardContent></Card> : null}
       {plugins.length === 0 && (
         <Card>
@@ -194,8 +195,8 @@ export default function PluginsPage() {
             <div className="flex items-center justify-center w-16 h-16 rounded-full bg-muted border border-[var(--console-border-subtle)]">
               <Package className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold">暂无子插件</h3>
-            <p className="text-sm text-muted-foreground">当前没有额外子插件；项目根插件的命令、组件和适配器仍可运行。</p>
+            <h3 className="text-lg font-semibold">{i18n.t("暂无子插件")}</h3>
+            <p className="text-sm text-muted-foreground">{i18n.t("当前没有额外子插件；项目根插件的命令、组件和适配器仍可运行。")}</p>
           </CardContent>
         </Card>
       )}

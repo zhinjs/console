@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { GitBranch, CheckCircle, Loader2 } from 'lucide-react'
@@ -45,6 +46,7 @@ interface SessionTree {
 }
 
 export default function AgentSessionsPage() {
+  const i18n = useI18n()
   const readOnly = isDemoMode()
   const [searchParams] = useSearchParams()
   const sessionKeyFromUrl = parseSessionKeyFromQuery(searchParams.get('sessionKey'))
@@ -70,7 +72,7 @@ export default function AgentSessionsPage() {
       setTree(null)
       setConfirmPoint(null)
       setErrorKind('other')
-      setError('会话标识不完整，请检查平台、渠道、类型与会话。')
+      setError(i18n.t("会话标识不完整，请检查平台、渠道、类型与会话。"))
       return
     }
     const sequence = ++requestSequence.current
@@ -88,12 +90,12 @@ export default function AgentSessionsPage() {
 
       if (res.status === 404) {
         setErrorKind('404')
-        setError(data.error ?? `未找到活跃会话：${trimmed}`)
+        setError(data.error ?? i18n.t("未找到活跃会话：{0}", [trimmed]))
         return
       }
       if (res.status === 503) {
         setErrorKind('503')
-        setError('聊天记录还没准备好：请先安装并配置 AI 机器人；收发消息不受影响。')
+        setError(i18n.t("聊天记录还没准备好：请先安装并配置 AI 机器人；收发消息不受影响。"))
         return
       }
       if (!res.ok || !data.success) {
@@ -110,7 +112,7 @@ export default function AgentSessionsPage() {
     } finally {
       if (sequence === requestSequence.current) setLoading(false)
     }
-  }, [])
+  }, [i18n])
 
   const handleSwitchLeaf = async (point: TreePoint & { sessionKey: string }) => {
     if (readOnly || switchInFlight.current) return
@@ -132,20 +134,20 @@ export default function AgentSessionsPage() {
 
       if (res.status === 404) {
         setErrorKind('404')
-        setError(data.error ?? `未找到活跃会话：${trimmed}`)
+        setError(data.error ?? i18n.t("未找到活跃会话：{0}", [trimmed]))
         return
       }
       if (res.status === 503) {
         setErrorKind('503')
-        setError('聊天记录还没准备好：请先安装并配置 AI 机器人；收发消息不受影响。')
+        setError(i18n.t("聊天记录还没准备好：请先安装并配置 AI 机器人；收发消息不受影响。"))
         return
       }
       if (!res.ok || !data.success) {
-        throw new Error(data.error ?? data.message ?? `切换失败 (HTTP ${res.status})`)
+        throw new Error(data.error ?? data.message ?? i18n.t("切换失败 (HTTP {0})", [res.status]))
       }
 
       setConfirmPoint(null)
-      await fetchTree(trimmed, `已切换至消息 #${point.messageId}`)
+      await fetchTree(trimmed, i18n.t("已切换至消息 #{0}", [point.messageId]))
     } catch (err) {
       if (viewSequence !== requestSequence.current) return
       setSwitchMsg(null)
@@ -167,7 +169,7 @@ export default function AgentSessionsPage() {
     } else {
       setErrorKind('other')
       setError(
-        `sessionKey 格式不正确：「${sessionKeyFromUrl}」。应为 platform:endpointId:scope:sceneId（如 icqq:75318:private:userA）`,
+        i18n.t("sessionKey 格式不正确：「{0}」。应为 platform:endpointId:scope:sceneId（如 icqq:75318:private:userA）", [sessionKeyFromUrl]),
       )
     }
   }, [sessionKeyFromUrl, fetchTree])
@@ -175,17 +177,17 @@ export default function AgentSessionsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="聊天记录"
-        description={readOnly ? '按聊天账号和会话查看机器人和大家聊过什么（Demo 只读）。' : '按聊天账号和会话查看机器人和大家聊过什么，也可以选一段继续往下聊。'}
+        title={i18n.t("聊天记录")}
+        description={readOnly ? i18n.t("按聊天账号和会话查看机器人和大家聊过什么（Demo 只读）。") : i18n.t("按聊天账号和会话查看机器人和大家聊过什么，也可以选一段继续往下聊。")}
       />
 
-      <p className="text-sm text-muted-foreground">聊天记录需要先装好并配置 AI 机器人；只用聊天账号收发消息的项目不需要开启。</p>
+      <p className="text-sm text-muted-foreground">{i18n.t("聊天记录需要先装好并配置 AI 机器人；只用聊天账号收发消息的项目不需要开启。")}</p>
 
       <AgentSessionPicker
         value={sessionKey}
         history={history}
         loading={loading}
-        actionLabel="查看分支"
+        actionLabel={i18n.t("查看分支")}
         onChange={(key) => {
           if (switchInFlight.current) return
           requestSequence.current += 1
@@ -226,20 +228,20 @@ export default function AgentSessionsPage() {
         <Card>
           <CardContent className="p-4 space-y-3">
             <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-              <span>会话：<code className="text-foreground">{tree.sessionKey}</code></span>
+              <span>{i18n.t("会话：")}<code className="text-foreground">{tree.sessionKey}</code></span>
               <span>
                 sessionId: <code className="text-foreground">{tree.sessionId}</code>
               </span>
               <span>
-                活跃叶节点:{' '}
+                {i18n.t("活跃叶节点:")}{' '}
                 <Badge variant="secondary">
-                  {tree.activeLeafMessageId ?? '默认（最后一条）'}
+                  {tree.activeLeafMessageId ?? i18n.t("默认（最后一条）")}
                 </Badge>
               </span>
             </div>
 
             {tree.points.length === 0 ? (
-              <EmptyState compact title="暂无分支点" />
+              <EmptyState compact title={i18n.t("暂无分支点")} />
             ) : (
               <div className="space-y-2">
                 {tree.points.map((point) => {
@@ -266,17 +268,16 @@ export default function AgentSessionsPage() {
                         </span>
                         {isActive && (
                           <Badge variant="success" className="text-[10px] ml-auto">
-                            当前活跃
-                          </Badge>
+                            {i18n.t("当前活跃")}</Badge>
                         )}
                       </div>
                       {(point.parentMessageId !== undefined || point.activePath !== undefined) && (
                         <p className="text-xs text-muted-foreground mb-1">
-                          {point.parentMessageId == null ? '根消息' : `承接消息 #${point.parentMessageId}`}
-                          {point.activePath !== undefined && ` · ${point.activePath ? '当前路径' : '其他分支'}`}
+                          {point.parentMessageId == null ? i18n.t("根消息") : i18n.t("承接消息 #{0}", [point.parentMessageId])}
+                          {point.activePath !== undefined && ` · ${point.activePath ? i18n.t("当前路径") : i18n.t("其他分支")}`}
                         </p>
                       )}
-                      <p className="text-sm text-foreground/90">{point.preview || '（无预览）'}</p>
+                      <p className="text-sm text-foreground/90">{point.preview || i18n.t("（无预览）")}</p>
                     </button>
                   )
                 })}
@@ -289,11 +290,9 @@ export default function AgentSessionsPage() {
       {!readOnly && <Dialog open={!!confirmPoint} onOpenChange={(open) => !open && !switching && setConfirmPoint(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>切换活跃叶节点</DialogTitle>
+            <DialogTitle>{i18n.t("切换活跃叶节点")}</DialogTitle>
             <DialogDescription>
-              将活跃路径切换至消息 #{confirmPoint?.messageId}（分支 #{confirmPoint?.index}）？
-              后续 AI 对话将从该用户消息点继续。
-            </DialogDescription>
+              {i18n.t("将活跃路径切换至消息 #")}{confirmPoint?.messageId}{i18n.t("（分支 #")}{confirmPoint?.index}{i18n.t("）？ 后续 AI 对话将从该用户消息点继续。")}</DialogDescription>
           </DialogHeader>
           {confirmPoint && (
             <p className="text-sm text-muted-foreground border rounded-md p-3 bg-muted/30">
@@ -302,15 +301,14 @@ export default function AgentSessionsPage() {
           )}
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" disabled={switching}>取消</Button>
+              <Button variant="outline" disabled={switching}>{i18n.t("取消")}</Button>
             </DialogClose>
             <Button
               disabled={switching || !confirmPoint}
               onClick={() => confirmPoint && void handleSwitchLeaf(confirmPoint)}
             >
               {switching ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
-              确认切换
-            </Button>
+              {i18n.t("确认切换")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>}

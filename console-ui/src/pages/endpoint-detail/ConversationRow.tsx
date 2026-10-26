@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import { cn } from '@zhin.js/client'
 import { formatConversationTime } from './date-utils'
 import { conversationAvatarStyle, conversationInitials } from './conversation-avatar'
@@ -10,7 +11,8 @@ interface ConversationRowProps {
 }
 
 export function ConversationRow({ entry, active, onSelect }: ConversationRowProps) {
-  const timeLabel = entry.lastMessageAt ? formatConversationTime(entry.lastMessageAt) : ''
+  const i18n = useI18n()
+  const timeLabel = entry.lastMessageAt ? formatConversationTime(entry.lastMessageAt, i18n.locale) : ''
   const preview = entry.lastMessagePreview?.trim()
   const initials = conversationInitials(entry.name)
 
@@ -43,7 +45,7 @@ export function ConversationRow({ entry, active, onSelect }: ConversationRowProp
           {preview ? (
             <span className="im-conversation-preview">{preview}</span>
           ) : (
-            <span className="im-conversation-preview im-conversation-preview--empty">暂无消息</span>
+            <span className="im-conversation-preview im-conversation-preview--empty">{i18n.t("暂无消息")}</span>
           )}
           {entry.unreadCount > 0 ? (
             <span className="im-conversation-unread">

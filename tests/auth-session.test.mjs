@@ -1,3 +1,4 @@
+import { localeModule, isLocaleImport } from './locale-fixture.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -12,7 +13,7 @@ function storage() {
 }
 function harness() {
   const exports = {}, requests = [], events = [], window = { location: { origin: 'https://console.example' }, dispatchEvent: event => events.push(event.type) }
-  vm.runInNewContext(compiled, { exports, Headers, URL, localStorage: storage(), sessionStorage: storage(), window,
+  vm.runInNewContext(compiled, { require: name => { assert.ok(isLocaleImport(name)); return localeModule }, exports, Headers, URL, localStorage: storage(), sessionStorage: storage(), window,
     CustomEvent: class { constructor(type) { this.type = type } },
     fetch: (url, init) => new Promise(resolve => requests.push({ url, init, resolve })) })
   exports.setApiBase('https://host-a.example'); exports.setToken('test-credential-a')

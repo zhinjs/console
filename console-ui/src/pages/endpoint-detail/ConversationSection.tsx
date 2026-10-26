@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import type { ConversationSection as ConversationSectionType } from './types'
 import { ConversationRow } from './ConversationRow'
@@ -19,6 +20,7 @@ export function ConversationSection({
   selectionKey,
   onSelectEntry,
 }: ConversationSectionProps) {
+  const i18n = useI18n()
   const count = section.entries.length
 
   return (
@@ -38,7 +40,7 @@ export function ConversationSection({
       {!collapsed && (
         <div className="im-section-panel">
           {count === 0 ? (
-            suppressEmpty ? null : <p className="im-section-empty">{section.emptyHint ?? '暂无会话'}</p>
+            suppressEmpty ? null : <p className="im-section-empty">{section.emptyHint ?? i18n.t("暂无会话")}</p>
           ) : (
             section.entries.map((entry) => {
               const key = `${entry.channelType}-${entry.id}`

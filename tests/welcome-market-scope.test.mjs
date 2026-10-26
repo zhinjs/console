@@ -1,3 +1,4 @@
+import { useI18n } from './locale-fixture.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -16,7 +17,7 @@ const compiled = ts.transpileModule(body + '\nexports.Session=MarketplaceSession
 const fixture = JSON.parse(await readFile(new URL('./fixtures/welcome-flow-provider.json', import.meta.url), 'utf8'))
 function setup() {
   const slots = [], calls = []; let cursor = 0, active = 'scope-a', controls
-  const bindings = {
+  const bindings = { useI18n,
     useState(initial) { const i = cursor++; if (!(i in slots)) slots[i] = typeof initial === 'function' ? initial() : initial; return [slots[i], next => { slots[i] = typeof next === 'function' ? next(slots[i]) : next }] },
     useRef(initial) { const i = cursor++; return slots[i] ?? (slots[i] = { current: initial }) },
     useCallback: fn => fn, useMemo: fn => fn(), useEffect() {},

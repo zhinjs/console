@@ -1,3 +1,6 @@
+import { routeLabel } from '../i18n/navigation'
+import { LanguageSelect } from '../components/LanguageSelect'
+import { useI18n } from '../i18n'
 import { useMemo, useState, useEffect, useSyncExternalStore } from "react"
 import { Outlet, Link, useLocation, matchPath } from "react-router-dom"
 import { Menu, LogOut, X, ChevronRight } from "lucide-react"
@@ -75,6 +78,7 @@ function useRouteMetaFlag(
 }
 
 export default function DashboardLayout() {
+  const i18n = useI18n()
   const location = useLocation()
   const isMobile = useIsMobile()
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true)
@@ -123,8 +127,8 @@ export default function DashboardLayout() {
     location.pathname,
   ) !== null
   const navigation = useMemo(
-    () => resolveNavigationLocation(routes, location.pathname, (pattern, pathname) => matchPath({ path: pattern, end: true }, pathname) !== null),
-    [location.pathname, routes],
+    () => resolveNavigationLocation(routes, location.pathname, (pattern, pathname) => matchPath({ path: pattern, end: true }, pathname) !== null, i18n.locale),
+    [location.pathname, routes, i18n],
   )
 
   const orderedGroups = useMemo(() => {
@@ -167,12 +171,12 @@ export default function DashboardLayout() {
 
   return (
     <div className="console-app-shell flex h-[100dvh] bg-background overflow-hidden">
-      <a href="#console-main-content" className="console-skip-link">跳到主要内容</a>
+      <a href="#console-main-content" className="console-skip-link">{i18n.t("跳到主要内容")}</a>
       {isMobile && mobileNavOpen ? (
         <button
           type="button"
           className="fixed inset-0 z-40 bg-black/50 border-0 cursor-default"
-          aria-label="关闭菜单"
+          aria-label={i18n.t("关闭菜单")}
           onClick={() => setMobileNavOpen(false)}
         />
       ) : null}
@@ -209,7 +213,7 @@ export default function DashboardLayout() {
                     {isDemoMode() ? "Zhin.js Demo" : "Zhin.js"}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {isDemoMode() ? "零安装 Sandbox" : "Bot 工作台"}
+                    {isDemoMode() ? i18n.t("零安装 Sandbox") : i18n.t("Bot 工作台")}
                   </span>
                 </div>
                 {isMobile ? (
@@ -218,7 +222,7 @@ export default function DashboardLayout() {
                     size="icon"
                     className="shrink-0"
                     onClick={() => setMobileNavOpen(false)}
-                    aria-label="关闭菜单"
+                    aria-label={i18n.t("关闭菜单")}
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -236,7 +240,7 @@ export default function DashboardLayout() {
               const collapsible = COLLAPSED_BY_DEFAULT_NAV_GROUPS.includes(groupName)
               const open = !collapsible || !showLabels || expandedGroups.has(groupName) || navigation.group === groupName
               return (
-                <div key={groupName} className="space-y-1">
+                <div key={i18n.t(groupName)} className="space-y-1">
                   {showLabels && (collapsible ? (
                     <button
                       type="button"
@@ -245,15 +249,15 @@ export default function DashboardLayout() {
                       className="flex w-full items-center gap-1 px-2 pt-2 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground/75 hover:text-foreground"
                     >
                       <ChevronRight className={cn("w-3 h-3 transition-transform", open && "rotate-90")} />
-                      {groupName}
+                      {i18n.t(groupName)}
                     </button>
                   ) : (
                     <div className="px-2 pt-2 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground/75">
-                      {groupName}
+                      {i18n.t(groupName)}
                     </div>
                   ))}
                   {open && items.map((route, index) => {
-                    const itemKey = route.path || `menu-item-${groupName}-${index}`
+                    const itemKey = route.path || `menu-item-${i18n.t(groupName)}-${index}`
                     const isActive = navigation.visible?.path === route.path
                     return (
                       <Link
@@ -272,7 +276,7 @@ export default function DashboardLayout() {
                         <span className="shrink-0">
                           <SidebarMenuIcon icon={route.icon} />
                         </span>
-                        {showLabels && <span className="truncate">{route.name}</span>}
+                        {showLabels && <span className="truncate">{routeLabel(route, i18n.locale)}</span>}
                       </Link>
                     )
                   })}
@@ -290,16 +294,16 @@ export default function DashboardLayout() {
               variant="ghost"
               size="icon"
               onClick={toggleSidebar}
-              aria-label={isMobile ? (mobileNavOpen ? "关闭菜单" : "打开菜单") : "切换侧边栏"}
+              aria-label={isMobile ? (mobileNavOpen ? i18n.t("关闭菜单") : i18n.t("打开菜单")) : i18n.t("切换侧边栏")}
               aria-expanded={isMobile ? mobileNavOpen : desktopSidebarOpen}
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <nav aria-label="当前位置" className="flex flex-col min-w-0">
-              <span className="text-xs text-muted-foreground truncate">{navigation.group}</span>
+            <nav aria-label={i18n.t("当前位置")} className="flex flex-col min-w-0">
+              <span className="text-xs text-muted-foreground truncate">{i18n.t(navigation.group)}</span>
               <div className="flex items-center gap-1 min-w-0 text-sm font-semibold">
-                {navigation.parent && <><Link className="truncate hover:underline" to={navigation.parent.path}>{navigation.parent.name}</Link><span aria-hidden="true">/</span></>}
-                <span aria-current="page" className="truncate">{navigation.current?.name ?? (isDemoMode() ? "在线 Demo" : "首页")}</span>
+                {navigation.parent && <><Link className="truncate hover:underline" to={navigation.parent.path}>{routeLabel(navigation.parent, i18n.locale)}</Link><span aria-hidden="true">/</span></>}
+                <span aria-current="page" className="truncate">{(navigation.current ? routeLabel(navigation.current, i18n.locale) : undefined) ?? (isDemoMode() ? i18n.t("在线 Demo") : i18n.t("首页"))}</span>
               </div>
             </nav>
           </div>
@@ -311,12 +315,12 @@ export default function DashboardLayout() {
           <div className="flex items-center gap-1 shrink-0">
             <span
               className={cn("console-connection-state", connected ? "is-online" : "is-offline")}
-              title={connected ? "Console 实时事件已连接" : "Console 实时事件未连接"}
-              aria-label={connected ? "Console 实时事件已连接" : "Console 实时事件未连接"}
+              title={connected ? i18n.t("Console 实时事件已连接") : i18n.t("Console 实时事件未连接")}
+              aria-label={connected ? i18n.t("Console 实时事件已连接") : i18n.t("Console 实时事件未连接")}
               role="status"
             >
               <span aria-hidden="true" />
-              <span className="hidden xl:inline">{connected ? "实时" : "离线"}</span>
+              <span className="hidden xl:inline">{connected ? i18n.t("实时") : i18n.t("离线")}</span>
             </span>
             {isDemoMode() ? (
               <>
@@ -327,16 +331,15 @@ export default function DashboardLayout() {
                   className="hidden sm:inline-flex text-xs"
                   onClick={() => reopenDemoOnboarding()}
                 >
-                  使用说明
-                </Button>
+                  {i18n.t("使用说明")}</Button>
                 <a
                   href="https://zhin.js.org/getting-started/first-run"
                   target="_blank"
                   rel="noopener noreferrer"
                   className={cn(buttonVariants({ variant: "default", size: "sm" }), "text-xs h-8 px-2.5")}
                 >
-                  <span className="sm:hidden">部署</span>
-                  <span className="hidden sm:inline">部署到本机</span>
+                  <span className="sm:hidden">{i18n.t("部署")}</span>
+                  <span className="hidden sm:inline">{i18n.t("部署到本机")}</span>
                 </a>
                 <a
                   href="https://zhin.js.org/adapters/icqq"
@@ -344,17 +347,17 @@ export default function DashboardLayout() {
                   rel="noopener noreferrer"
                   className={cn(buttonVariants({ variant: "outline", size: "sm" }), "text-xs h-8 px-2.5 hidden sm:inline-flex")}
                 >
-                  接 QQ Bot
-                </a>
+                  {i18n.t("接 QQ Bot")}</a>
               </>
             ) : null}
+            <LanguageSelect />
             <ThemeToggle />
             {!isDemoMode() ? (
             <Button
               variant="ghost"
               size="icon"
-              title="退出登录"
-              aria-label="退出登录"
+              title={i18n.t("退出登录")}
+              aria-label={i18n.t("退出登录")}
               onClick={() => {
                 notifyAuthRequired()
               }}

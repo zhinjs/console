@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n'
 import { createContext, useContext, useState, useCallback, useRef, type ReactNode } from 'react'
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react'
 import { cn } from '@zhin.js/client'
@@ -37,6 +38,7 @@ const VARIANT_ICONS: Record<string, typeof CheckCircle> = {
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const i18n = useI18n()
   const [toasts, setToasts] = useState<Toast[]>([])
   const counterRef = useRef(0)
 
@@ -92,7 +94,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 <button
                   className="shrink-0 h-5 w-5 rounded flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
                   onClick={() => remove(t.id)}
-                  aria-label="关闭通知"
+                  aria-label={i18n.t("关闭通知")}
                 >
                   <X className="h-3 w-3" />
                 </button>

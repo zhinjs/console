@@ -1,3 +1,5 @@
+import { LocaleProvider } from '@console/i18n'
+import { useI18n } from '../console-ui/src/i18n'
 import "./style.css";
 import * as React from "react";
 import * as ReactJsxDevRuntime from "react/jsx-dev-runtime";
@@ -61,6 +63,7 @@ function ConsoleShell() {
 }
 
 function App() {
+  const i18n = useI18n()
   const [authed, setAuthed] = React.useState(initialSession.authed);
   const loginApiBase = initialSession.loginApiBase;
   const handleLogin = React.useCallback(() => setAuthed(true), []);
@@ -79,8 +82,7 @@ function App() {
       return (
         <div className="flex items-center justify-center min-h-screen bg-background p-6">
           <p className="text-sm text-destructive text-center max-w-md">
-            Demo 构建缺少 VITE_API_BASE / VITE_API_TOKEN，无法连接 demo-api。
-          </p>
+            {i18n.t("Demo 构建缺少 VITE_API_BASE / VITE_API_TOKEN，无法连接 demo-api。")}</p>
         </div>
       );
     }
@@ -94,6 +96,7 @@ function App() {
 
 ReactDOMClient.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
+    <LocaleProvider>
     <TooltipProvider>
       <ToastProvider>
         <BrowserRouter
@@ -103,5 +106,6 @@ ReactDOMClient.createRoot(document.getElementById("root")!).render(
       </BrowserRouter>
       </ToastProvider>
     </TooltipProvider>
+  </LocaleProvider>
   </React.StrictMode>,
 );

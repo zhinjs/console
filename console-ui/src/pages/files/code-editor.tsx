@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import { useMemo, useCallback, useRef, type KeyboardEvent } from 'react'
 import { editorFontStyle } from './editor-constants'
 import { highlightCode } from './highlight-code.mjs'
@@ -21,6 +22,7 @@ export function CodeEditor({
   invalid?: boolean
   errorId?: string
 }) {
+  const i18n = useI18n()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const preRef = useRef<HTMLPreElement>(null)
 
@@ -70,7 +72,7 @@ export function CodeEditor({
         value={value}
         readOnly={readOnly}
         disabled={disabled}
-        aria-label={ariaLabel ?? (readOnly ? '文件内容（只读）' : '文件内容编辑器')}
+        aria-label={ariaLabel ?? (readOnly ? i18n.t("文件内容（只读）") : i18n.t("文件内容编辑器"))}
         aria-invalid={invalid}
         aria-describedby={errorId}
         onChange={(e) => onChange(e.target.value)}

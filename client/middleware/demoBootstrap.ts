@@ -1,3 +1,4 @@
+import { translate } from '../../console-ui/src/i18n/locale.mjs'
 import {
   getDemoBuildCredentials,
   isDemoMode,
@@ -10,7 +11,7 @@ import { setApiBase, setRuntimeToken } from '@console/utils/auth'
  * Token 只写 `window.__ZHIN_API_TOKEN`（对齐 zhin deploy demo boot.js），
  * 不落 localStorage；@zhin.js/client ≥ 2.0.5 的 getToken 会读运行时 Token。
  */
-export function runDemoBootstrap(): {
+export function runDemoBootstrap(locale: 'zh-CN' | 'en' = 'zh-CN'): {
   authed: boolean
   loginApiBase: string | null
 } | null {
@@ -19,7 +20,7 @@ export function runDemoBootstrap(): {
   const { apiBase, apiToken } = getDemoBuildCredentials()
   if (!apiBase || !apiToken) {
     console.error(
-      '[demo] 缺少 VITE_API_BASE 或 VITE_API_TOKEN，无法预连 demo-api',
+      translate(locale, "[demo] 缺少 VITE_API_BASE 或 VITE_API_TOKEN，无法预连 demo-api"),
     )
     return { authed: false, loginApiBase: apiBase || null }
   }

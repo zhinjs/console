@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n'
 import { AlertCircle, RefreshCw, Info } from 'lucide-react'
 import { Alert, AlertDescription } from './ui/alert'
 import { Button } from './ui/button'
@@ -23,6 +24,7 @@ function variantForKind(kind: ErrorAlertKind): 'destructive' | 'warning' | 'defa
  * - 404 / 503 使用差异化样式
  */
 export function ErrorAlert({ error, onRetry, className, kind = 'other' }: ErrorAlertProps) {
+  const i18n = useI18n()
   const Icon = kind === '404' ? Info : AlertCircle
   return (
     <Alert variant={variantForKind(kind)} className={className}>
@@ -32,8 +34,7 @@ export function ErrorAlert({ error, onRetry, className, kind = 'other' }: ErrorA
         {onRetry && (
           <Button variant="outline" size="sm" onClick={onRetry} className="shrink-0">
             <RefreshCw className="w-3 h-3 mr-1" />
-            重试
-          </Button>
+            {i18n.t("重试")}</Button>
         )}
       </AlertDescription>
     </Alert>

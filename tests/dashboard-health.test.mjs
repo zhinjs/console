@@ -1,10 +1,11 @@
+import { prepareLocaleModule } from './locale-fixture.mjs'
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { readFileSync } from 'node:fs'
 import ts from 'typescript'
 const source = readFileSync(new URL('../console-ui/src/pages/dashboard-health.ts', import.meta.url), 'utf8')
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext } }).outputText
-const { summarizeOptional } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`)
+const { summarizeOptional } = await import(`data:text/javascript;base64,${Buffer.from(prepareLocaleModule(compiled)).toString('base64')}`)
 
 test('unreadable log statistics remain unknown while readable empty levels mean zero', () => {
   assert.equal(summarizeOptional(null, null).errorLogs, null)

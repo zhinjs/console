@@ -1,3 +1,5 @@
+import { translate } from '../i18n/locale.mjs'
+import { useI18n } from '../i18n'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
@@ -76,18 +78,18 @@ function statusVariant(status: string): 'success' | 'secondary' | 'destructive' 
   return 'outline'
 }
 
-function formatTime(value: number | undefined): string {
+function formatTime(value: number | undefined, locale: 'zh-CN' | 'en' = 'zh-CN'): string {
   if (!value || !Number.isFinite(value)) return '—'
-  return new Date(value).toLocaleString()
+  return new Date(value).toLocaleString(locale)
 }
 
-async function readStrictJson<T>(response: Response): Promise<T> {
+async function readStrictJson<T>(response: Response, locale: 'zh-CN' | 'en' = 'zh-CN'): Promise<T> {
   const raw = await response.text()
   let body: { success: boolean; data?: T; error?: string }
   try {
     body = JSON.parse(raw) as { success: boolean; data?: T; error?: string }
   } catch {
-    throw new Error(response.ok ? '服务端返回了无效 JSON' : `HTTP ${response.status}`)
+    throw new Error(response.ok ? translate(locale, "服务端返回了无效 JSON") : `HTTP ${response.status}`)
   }
   if (!response.ok || body.success !== true || body.data === undefined) {
     throw new Error(body.error ?? `HTTP ${response.status}`)
@@ -96,6 +98,9 @@ async function readStrictJson<T>(response: Response): Promise<T> {
 }
 
 function WorkroomBoardPage() {
+  const i18n = useI18n()
+  const messages = useRef(i18n)
+  messages.current = i18n
   const [searchParams, setSearchParams] = useSearchParams()
   const projectFromUrl = searchParams.get('projectId')?.trim() ?? ''
   const runFromUrl = searchParams.get('runId')?.trim() ?? ''
@@ -115,7 +120,7 @@ function WorkroomBoardPage() {
   const loadRuns = useCallback(async (target: string, background = false) => {
     const normalized = target.trim()
     if (!normalized) {
-      setError('请输入 Workroom Project ID')
+      setError(messages.current.t("请输入 Workroom Project ID"))
       return
     }
     listAbortRef.current?.abort()
@@ -133,8 +138,8 @@ function WorkroomBoardPage() {
         `${CONSOLE_REST.WORKROOM_RUNS}?projectId=${encodeURIComponent(normalized)}`,
         { signal: controller.signal },
       )
-      const data = await readStrictJson<RunsEnvelope>(response)
-      validateRuns(data)
+      const data = await readStrictJson<RunsEnvelope>(response, messages.current.locale)
+      validateRuns(data, messages.current.locale)
       if (controller.signal.aborted) return
       setProjectId(data.projectId)
       setProjectInput(data.projectId)
@@ -172,8 +177,8 @@ function WorkroomBoardPage() {
         `${CONSOLE_REST.WORKROOM_RUNS}/${encodeURIComponent(runId)}?projectId=${encodeURIComponent(targetProjectId)}`,
         { signal: controller.signal },
       )
-      const detail = await readStrictJson<WorkroomRun>(response)
-      validateDetail(detail)
+      const detail = await readStrictJson<WorkroomRun>(response, messages.current.locale)
+      validateDetail(detail, messages.current.locale)
       if (!controller.signal.aborted) setSelectedRun(detail)
     } catch (caught) {
       if (!controller.signal.aborted) setError(caught instanceof Error ? caught.message : String(caught))
@@ -243,12 +248,12 @@ function WorkroomBoardPage() {
   return (
     <PageShell className="max-w-[1680px]">
       <PageHeader
-        title="Workroom 任务看板"
-        description="查看项目运行、任务分配与阻塞情况；规划和权限初始化需要显式确认。"
+        title={i18n.t("Workroom 任务看板")}
+        description={i18n.t("查看项目运行、任务分配与阻塞情况；规划和权限初始化需要显式确认。")}
         actions={
           <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm"><Link to="/agent/workrooms/catalog"><Settings2 />配置 Workrooms</Link></Button>
-            <Button variant="outline" size="sm" disabled={!projectId || loading || refreshing} onClick={() => void loadRuns(projectId, true)}><RefreshCw className={refreshing ? 'animate-spin' : ''} />刷新</Button>
+            <Button asChild variant="outline" size="sm"><Link to="/agent/workrooms/catalog"><Settings2 />{i18n.t("配置 Workrooms")}</Link></Button>
+            <Button variant="outline" size="sm" disabled={!projectId || loading || refreshing} onClick={() => void loadRuns(projectId, true)}><RefreshCw className={refreshing ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
           </div>
         }
       />
@@ -266,17 +271,16 @@ function WorkroomBoardPage() {
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') selectProject(projectInput)
                 }}
-                placeholder="填写 Workroom 配置中的 Project ID"
+                placeholder={i18n.t("填写 Workroom 配置中的 Project ID")}
                 aria-label="Workroom Project ID"
               />
               <Button disabled={loading || !projectInput.trim()} onClick={() => selectProject(projectInput)}>
                 {loading ? <RefreshCw className="animate-spin" /> : <Search />}
-                查询
-              </Button>
+                {i18n.t("查询")}</Button>
             </div>
           </label>
           {recentProjects.length ? (
-            <div className="flex max-w-2xl flex-wrap gap-1.5" aria-label="最近查询的 Project">
+            <div className="flex max-w-2xl flex-wrap gap-1.5" aria-label={i18n.t("最近查询的 Project")}>
               {recentProjects.map((item) => (
                 <button
                   key={item}
@@ -300,11 +304,11 @@ function WorkroomBoardPage() {
       {projectId ? <PlanningDisclosurePanel projectId={projectId} /> : null}
 
       {projectId && runsAvailable ? (
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Workroom 摘要">
-          <Metric icon={Workflow} label="运行" value={runs.length} detail={`${totals.activeRuns} 个仍在运行`} />
-          <Metric icon={FolderKanban} label="任务" value={totals.tasks} detail="总任务数" />
-          <Metric icon={AlertTriangle} label="阻塞运行" value={totals.blocked} detail="打开运行记录查看原因" tone={totals.blocked ? 'warning' : 'success'} />
-          <Metric icon={UserRoundCog} label="执行分配" value={totals.assignments} detail="执行、审核与集成" />
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label={i18n.t("Workroom 摘要")}>
+          <Metric icon={Workflow} label={i18n.t("运行")} value={runs.length} detail={i18n.t("{0} 个仍在运行", [totals.activeRuns])} />
+          <Metric icon={FolderKanban} label={i18n.t("任务")} value={totals.tasks} detail={i18n.t("总任务数")} />
+          <Metric icon={AlertTriangle} label={i18n.t("阻塞运行")} value={totals.blocked} detail={i18n.t("打开运行记录查看原因")} tone={totals.blocked ? 'warning' : 'success'} />
+          <Metric icon={UserRoundCog} label={i18n.t("执行分配")} value={totals.assignments} detail={i18n.t("执行、审核与集成")} />
         </section>
       ) : null}
 
@@ -316,8 +320,8 @@ function WorkroomBoardPage() {
       ) : projectId && !runsAvailable ? (
         <div className="console-dashboard-panel flex min-h-[20rem] items-center justify-center p-6">
           <EmptyState
-            title="无法读取 Workroom Run"
-            description="无法读取此项目的运行记录。请检查连接与项目授权。"
+            title={i18n.t("无法读取 Workroom Run")}
+            description={i18n.t("无法读取此项目的运行记录。请检查连接与项目授权。")}
           />
         </div>
       ) : projectId ? (
@@ -326,8 +330,8 @@ function WorkroomBoardPage() {
             <div className="console-panel-heading px-4 pt-4 sm:px-5 sm:pt-5">
               <div>
                 <span className="console-eyebrow">{projectId}</span>
-                <h2 id="workroom-runs-title">Run 时间线</h2>
-                <p>选择一条运行，查看任务状态、执行分配与阻塞项。</p>
+                <h2 id="workroom-runs-title">{i18n.t("Run 时间线")}</h2>
+                <p>{i18n.t("选择一条运行，查看任务状态、执行分配与阻塞项。")}</p>
               </div>
               {hasActiveRuns ? <Badge variant="secondary"><Activity className="mr-1 h-3 w-3" />Live</Badge> : null}
             </div>
@@ -356,7 +360,7 @@ function WorkroomBoardPage() {
                 </button>
               ))}
               {runs.length === 0 ? (
-                <EmptyState compact title="这个 Project 还没有 Run" description="WorkroomKernel 创建首个 Run 后会出现在这里。" />
+                <EmptyState compact title={i18n.t("这个 Project 还没有 Run")} description={i18n.t("WorkroomKernel 创建首个 Run 后会出现在这里。")} />
               ) : null}
             </div>
           </section>
@@ -372,7 +376,7 @@ function WorkroomBoardPage() {
               <RunDetail run={selectedRun} />
             ) : (
               <div className="flex min-h-[34rem] items-center justify-center p-6">
-                <EmptyState title="选择一个 Run" description="右侧将展示 Kernel 的 Task、Assignment、Blocker 与交付引用。" />
+                <EmptyState title={i18n.t("选择一个 Run")} description={i18n.t("右侧将展示 Kernel 的 Task、Assignment、Blocker 与交付引用。")} />
               </div>
             )}
           </section>
@@ -380,8 +384,8 @@ function WorkroomBoardPage() {
       ) : (
         <div className="console-dashboard-panel flex min-h-[28rem] items-center justify-center p-6">
           <EmptyState
-            title="选择要查看的 Workroom"
-            description="打开「配置 Workrooms」，在已配置项目上点击「查看任务」，或填写其 Project ID 查询。这里只展示你有权限访问的项目。"
+            title={i18n.t("选择要查看的 Workroom")}
+            description={i18n.t("打开「配置 Workrooms」，在已配置项目上点击「查看任务」，或填写其 Project ID 查询。这里只展示你有权限访问的项目。")}
           />
         </div>
       )}
@@ -390,15 +394,16 @@ function WorkroomBoardPage() {
 }
 
 function DemoWorkroomBoardPage() {
+  const i18n = useI18n()
   return (
     <PageShell className="max-w-[1200px]">
       <PageHeader
-        title="Workroom 任务看板"
-        description="查看项目任务、审批与执行记录。"
-        actions={<Button asChild variant="outline" size="sm"><Link to="/agent/workrooms/catalog"><Settings2 />查看公开目录</Link></Button>}
+        title={i18n.t("Workroom 任务看板")}
+        description={i18n.t("查看项目任务、审批与执行记录。")}
+        actions={<Button asChild variant="outline" size="sm"><Link to="/agent/workrooms/catalog"><Settings2 />{i18n.t("查看公开目录")}</Link></Button>}
       />
       <div className="console-dashboard-panel flex min-h-[28rem] items-center justify-center p-6">
-        <EmptyState title="任务详情需要项目授权" description="演示模式不提供任务详情。可查看项目目录。" />
+        <EmptyState title={i18n.t("任务详情需要项目授权")} description={i18n.t("演示模式不提供任务详情。可查看项目目录。")} />
       </div>
     </PageShell>
   )
@@ -409,22 +414,23 @@ export default function WorkroomsPage() {
 }
 
 function RunDetail({ run }: { run: WorkroomRun }) {
+  const i18n = useI18n()
   return <div className="space-y-5 p-4 sm:p-5">
-    <header><h2 id="workroom-detail-title" className="text-lg font-semibold">运行详情</h2><Badge variant={statusVariant(run.status)}>{run.status}</Badge><p className="text-sm text-muted-foreground">{run.cancelRequested ? '已请求取消' : '未请求取消'}</p></header>
-    <p className="text-sm text-muted-foreground">当前账号仅可查看任务状态，无法查看任务内容与证据。</p>
-    <details className="rounded-lg border p-3 text-sm"><summary className="cursor-pointer font-medium">运行标识与版本</summary><p className="mt-2 break-all">Run ID：<code>{run.runId}</code> · Sequence {run.sequence}</p></details>
-    <section><h3 className="text-sm font-semibold">任务 · {run.counts.tasks}</h3>{run.tasks.map((task,index) => <article key={task.ref} className="my-2 rounded-lg border p-3">
-      <div className="flex items-center justify-between gap-2"><strong className="text-sm">任务 {index + 1}</strong><Badge variant={statusVariant(task.status)}>{task.status}</Badge></div>
-      <p className="mt-2 text-sm text-muted-foreground">{task.required ? '必需' : '可选'} · {task.blockerCount} 个阻塞项 · {task.hasCurrentAssignment ? '已有执行分配' : '未分配执行'}</p>
-      <details className="mt-2 text-sm"><summary className="cursor-pointer">任务技术标识</summary><p className="mt-2 break-all"><code>{task.ref}</code> · revision {task.revision} · attempt {task.attempt}</p></details>
-    </article>)}{!run.tasks.length && <EmptyState compact title="尚无任务" />}</section>
-    <section><h3 className="text-sm font-semibold">执行分配 · {run.counts.assignments}</h3>{run.assignments.map((item,index) => <article key={item.ref} className="my-2 rounded-lg border p-3">
-      <div className="flex items-center justify-between gap-2"><strong className="text-sm">执行分配 {index + 1} · {item.role}</strong><Badge variant={statusVariant(item.status)}>{item.status}</Badge></div>
+    <header><h2 id="workroom-detail-title" className="text-lg font-semibold">{i18n.t("运行详情")}</h2><Badge variant={statusVariant(run.status)}>{run.status}</Badge><p className="text-sm text-muted-foreground">{run.cancelRequested ? i18n.t("已请求取消") : i18n.t("未请求取消")}</p></header>
+    <p className="text-sm text-muted-foreground">{i18n.t("当前账号仅可查看任务状态，无法查看任务内容与证据。")}</p>
+    <details className="rounded-lg border p-3 text-sm"><summary className="cursor-pointer font-medium">{i18n.t("运行标识与版本")}</summary><p className="mt-2 break-all">Run ID：<code>{run.runId}</code> · Sequence {run.sequence}</p></details>
+    <section><h3 className="text-sm font-semibold">{i18n.t("任务 · ")}{run.counts.tasks}</h3>{run.tasks.map((task,index) => <article key={task.ref} className="my-2 rounded-lg border p-3">
+      <div className="flex items-center justify-between gap-2"><strong className="text-sm">{i18n.t("任务 ")}{index + 1}</strong><Badge variant={statusVariant(task.status)}>{task.status}</Badge></div>
+      <p className="mt-2 text-sm text-muted-foreground">{task.required ? i18n.t("必需") : i18n.t("可选")} · {task.blockerCount} {i18n.t(" 个阻塞项 · ")}{task.hasCurrentAssignment ? i18n.t("已有执行分配") : i18n.t("未分配执行")}</p>
+      <details className="mt-2 text-sm"><summary className="cursor-pointer">{i18n.t("任务技术标识")}</summary><p className="mt-2 break-all"><code>{task.ref}</code> · revision {task.revision} · attempt {task.attempt}</p></details>
+    </article>)}{!run.tasks.length && <EmptyState compact title={i18n.t("尚无任务")} />}</section>
+    <section><h3 className="text-sm font-semibold">{i18n.t("执行分配 · ")}{run.counts.assignments}</h3>{run.assignments.map((item,index) => <article key={item.ref} className="my-2 rounded-lg border p-3">
+      <div className="flex items-center justify-between gap-2"><strong className="text-sm">{i18n.t("执行分配 ")}{index + 1} · {item.role}</strong><Badge variant={statusVariant(item.status)}>{item.status}</Badge></div>
       {item.outcome ? <p className="mt-2 text-sm">{item.outcome}</p> : null}
-      <details className="mt-2 text-sm"><summary className="cursor-pointer">执行分配技术标识</summary><p className="mt-2 break-all"><code>{item.ref}</code> · task <code>{item.taskRef}</code> · revision {item.revision} · attempt {item.attempt} · fence {item.fence}</p></details>
-    </article>)}{!run.assignments.length && <EmptyState compact title="尚无执行分配" />}</section>
-    <section><h3 className="text-sm font-semibold">阻塞项</h3>{run.blockers.map(item => <article key={item.blockerRef} className="my-2 rounded-lg border p-3"><strong className="text-sm">{item.kind}</strong><p className="text-sm">截止时间 {formatTime(item.deadline)}</p><p className="text-sm text-muted-foreground">允许动作：{item.allowedActions.join(' / ') || '无'}</p><details className="mt-2 text-sm"><summary className="cursor-pointer">阻塞项技术标识</summary><p className="mt-2 break-all">Task：<code>{item.taskRef}</code> · Blocker：<code>{item.blockerRef}</code></p></details></article>)}{!run.blockers.length && <EmptyState compact title="当前没有阻塞项" />}</section>
-    <p className="text-sm text-muted-foreground">Reviewer 等待：{run.counts.reviewerAssignments} · Sponsor 等待：{run.counts.sponsorGates}（此接口仅提供计数）</p>
+      <details className="mt-2 text-sm"><summary className="cursor-pointer">{i18n.t("执行分配技术标识")}</summary><p className="mt-2 break-all"><code>{item.ref}</code> · task <code>{item.taskRef}</code> · revision {item.revision} · attempt {item.attempt} · fence {item.fence}</p></details>
+    </article>)}{!run.assignments.length && <EmptyState compact title={i18n.t("尚无执行分配")} />}</section>
+    <section><h3 className="text-sm font-semibold">{i18n.t("阻塞项")}</h3>{run.blockers.map(item => <article key={item.blockerRef} className="my-2 rounded-lg border p-3"><strong className="text-sm">{item.kind}</strong><p className="text-sm">{i18n.t("截止时间 ")}{formatTime(item.deadline, i18n.locale)}</p><p className="text-sm text-muted-foreground">{i18n.t("允许动作：")}{item.allowedActions.join(' / ') || i18n.t("无")}</p><details className="mt-2 text-sm"><summary className="cursor-pointer">{i18n.t("阻塞项技术标识")}</summary><p className="mt-2 break-all">Task：<code>{item.taskRef}</code> · Blocker：<code>{item.blockerRef}</code></p></details></article>)}{!run.blockers.length && <EmptyState compact title={i18n.t("当前没有阻塞项")} />}</section>
+    <p className="text-sm text-muted-foreground">{i18n.t("Reviewer 等待：")}{run.counts.reviewerAssignments} {i18n.t(" · Sponsor 等待：")}{run.counts.sponsorGates}{i18n.t("（此接口仅提供计数）")}</p>
   </div>
 }
 
