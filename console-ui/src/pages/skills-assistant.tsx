@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react'
+import { useI18n } from '../i18n'
+import { useState, useRef, useCallback, type ReactNode } from 'react'
 import { parse as parseConfigSource } from 'yaml'
 import { RefreshCw, RotateCw } from 'lucide-react'
 import { requestConsole } from '../utils/console-rpc'
@@ -25,23 +26,23 @@ import {
   validateSkillsStatus,
   type SaveFeedback,
   type SkillsSettings,
-  type SkillsStatusView,
+  type SkillsStatus,
   type TaskModes,
 } from './skills-assistant-model.mjs'
 
 type ConfigSource = { source: string; revision: string }
-type StatusRead = { denied: true } | { denied: false; view: SkillsStatusView }
+type StatusRead = { denied: true } | { denied: false; status: SkillsStatus }
 type SettingsRead = { settings: SkillsSettings; revision: string }
 type PatchResult = {
   status?: string
   errors?: Array<{ path: string; message: string }>
 }
 
-async function readSkillsStatus(): Promise<StatusRead> {
+async function readSkillsStatus(locale: 'zh-CN' | 'en'): Promise<StatusRead> {
   try {
     const data = await pluginRpc<unknown>('root', 'skills')
-    const status = validateSkillsStatus(data)
-    return { denied: false, view: describeSkillsStatus(status) }
+    const status = validateSkillsStatus(data, locale)
+    return { denied: false, status }
   } catch (error) {
     if (isPermissionDenied(error)) return { denied: true }
     throw error
@@ -55,18 +56,15 @@ async function readSkillsSettingsFromHost(): Promise<SettingsRead> {
   return { settings, revision: configSource.revision }
 }
 
-function formatTime(timestamp: number): string {
-  return new Date(timestamp).toLocaleString()
-}
-
-function modeBadgeVariant(mode: string): 'success' | 'info' | 'secondary' {
-  if (mode === '正式使用') return 'success'
-  if (mode === '只观察') return 'info'
-  return 'secondary'
+function formatTime(timestamp: number, locale: 'zh-CN' | 'en'): string {
+  return new Date(timestamp).toLocaleString(locale)
 }
 
 export default function SkillsAssistantPage() {
-  const statusRead = useConsoleRead<StatusRead | null>(readSkillsStatus, null)
+  const i18n = useI18n()
+  const messages = useRef(i18n); messages.current = i18n
+  const readStatus = useCallback(() => readSkillsStatus(messages.current.locale), [])
+  const statusRead = useConsoleRead<StatusRead | null>(readStatus, null)
   const settingsRead = useConsoleRead<SettingsRead | null>(readSkillsSettingsFromHost, null)
   const refreshAll = () => {
     void statusRead.refresh().catch(() => {})
@@ -75,9 +73,9 @@ export default function SkillsAssistantPage() {
   const loading = statusRead.loading || settingsRead.loading
   return <PageShell>
     <PageHeader
-      title="技能助手"
-      description="让一个专门的小助手帮机器人挑技能、挑工具、判断要不要接话。"
-      actions={<Button variant="outline" size="sm" onClick={refreshAll} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />刷新</Button>}
+      title={i18n.t("技能助手")}
+      description={i18n.t("让一个专门的小助手帮机器人挑技能、挑工具、判断要不要接话。")}
+      actions={<Button variant="outline" size="sm" onClick={refreshAll} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>}
     />
     <SkillsStatusSection read={statusRead} onRetry={() => { void statusRead.refresh().catch(() => {}) }} />
     <SkillsSettingsSection read={settingsRead} onReload={() => settingsRead.refresh()} />
@@ -87,39 +85,40 @@ export default function SkillsAssistantPage() {
 type StatusReadState = ReturnType<typeof useConsoleRead<StatusRead | null>>
 
 function SkillsStatusSection({ read, onRetry }: { read: StatusReadState; onRetry: () => void }) {
+  const i18n = useI18n()
   if (read.loading && !read.loaded) return <Skeleton className="h-40 w-full" />
   if (read.error && !read.loaded) {
-    return <ErrorAlert error={readErrorSummary(read.error, '技能助手状态')} onRetry={onRetry} />
+    return <ErrorAlert error={readErrorSummary(read.error, i18n.t("技能助手状态"))} onRetry={onRetry} />
   }
   if (!read.data) return null
   if (read.data.denied) {
-    return <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">当前账号没有查看技能助手的权限，请联系管理员开通。</CardContent></Card>
+    return <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">{i18n.t("当前账号没有查看技能助手的权限，请联系管理员开通。")}</CardContent></Card>
   }
-  const view = read.data.view
+  const view = describeSkillsStatus(read.data.status, i18n.locale)
   return <Card>
     <CardHeader>
-      <CardTitle className="text-base">最近 24 小时帮了 {view.totalCalls} 次{view.failedCalls > 0 ? `，其中 ${view.failedCalls} 次没成功` : ''}</CardTitle>
-      <CardDescription>重启机器人后会重新计数。</CardDescription>
+      <CardTitle className="text-base">{i18n.t("最近 24 小时帮了 {0} 次", [view.totalCalls])}{view.failedCalls > 0 ? i18n.t("，其中 {0} 次没成功", [view.failedCalls]) : ''}</CardTitle>
+      <CardDescription>{i18n.t("重启机器人后会重新计数。")}</CardDescription>
     </CardHeader>
     <CardContent className="space-y-4">
-      {read.error && <p className="text-xs text-destructive">刷新失败，下面是上次读到的数据。</p>}
+      {read.error && <p className="text-xs text-destructive">{i18n.t("刷新失败，下面是上次读到的数据。")}</p>}
       {view.tasks.length > 0
         ? <div className="grid gap-3 sm:grid-cols-2">
           {view.tasks.map((row) => <div key={row.task} className="space-y-1 rounded-md border p-3 text-sm">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-medium">{row.label}</span>
-              <Badge variant={modeBadgeVariant(row.mode)}>{row.mode}</Badge>
+              <Badge variant={row.modeVariant}>{row.mode}</Badge>
             </div>
-            <p className="text-muted-foreground">用了 {row.calls} 次：给出建议 {row.helped} 次，没有合适的 {row.noSuggestion} 次{row.failed > 0 ? `，没成功 ${row.failed} 次` : ''}</p>
-            <p className="text-xs text-muted-foreground">平均每次 {row.averageTime}</p>
+            <p className="text-muted-foreground">{i18n.t("用了 {0} 次：给出建议 {1} 次，没有合适的 {2} 次", [row.calls, row.helped, row.noSuggestion])}{row.failed > 0 ? i18n.t("，没成功 {0} 次", [row.failed]) : ''}</p>
+            <p className="text-xs text-muted-foreground">{i18n.t("平均每次 ")}{row.averageTime}</p>
           </div>)}
         </div>
-        : <p className="text-sm text-muted-foreground">最近 24 小时还没有用到技能助手。</p>}
+        : <p className="text-sm text-muted-foreground">{i18n.t("最近 24 小时还没有用到技能助手。")}</p>}
       {view.hasActivity && <div className="space-y-1">
-        <h3 className="text-sm font-medium">最近的记录</h3>
+        <h3 className="text-sm font-medium">{i18n.t("最近的记录")}</h3>
         <ul className="divide-y rounded-md border text-sm">
           {view.recent.map((entry) => <li key={`${entry.at}-${entry.label}-${entry.outcome}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
-            <span className="text-xs text-muted-foreground">{formatTime(entry.at)}</span>
+            <span className="text-xs text-muted-foreground">{formatTime(entry.at, i18n.locale)}</span>
             <span>{entry.label}</span>
             <span className="text-muted-foreground">{entry.text}</span>
             <span className="text-xs text-muted-foreground">{entry.duration}</span>
@@ -133,37 +132,40 @@ function SkillsStatusSection({ read, onRetry }: { read: StatusReadState; onRetry
 type SettingsReadState = ReturnType<typeof useConsoleRead<SettingsRead | null>>
 
 function SettingsNotice({ children }: { children: ReactNode }) {
+  const i18n = useI18n()
   return <Card>
-    <CardHeader><CardTitle className="text-base">设置</CardTitle></CardHeader>
+    <CardHeader><CardTitle className="text-base">{i18n.t("设置")}</CardTitle></CardHeader>
     <CardContent className="space-y-2 text-sm text-muted-foreground">{children}</CardContent>
   </Card>
 }
 
 function SkillsSettingsSection({ read, onReload }: { read: SettingsReadState; onReload: () => Promise<SettingsRead | null> }) {
+  const i18n = useI18n()
   if (read.loading && !read.loaded) return <Skeleton className="h-56 w-full" />
   if (read.error && !read.loaded) {
     return <SettingsNotice>
-      <p>暂时不能在这里修改设置。只有管理员账号可以修改。</p>
-      <details className="text-xs"><summary className="cursor-pointer">错误详情</summary><p className="mt-2 break-all">{read.error}</p></details>
+      <p>{i18n.t("暂时不能在这里修改设置。只有管理员账号可以修改。")}</p>
+      <details className="text-xs"><summary className="cursor-pointer">{i18n.t("错误详情")}</summary><p className="mt-2 break-all">{read.error}</p></details>
     </SettingsNotice>
   }
   if (!read.data) return null
   const settings = read.data.settings
   if (!settings.instanceKey) {
     return <SettingsNotice>
-      <p>还没有安装技能助手服务。</p>
-      <p>在机器人所在的电脑上运行 <code className="rounded bg-muted px-1">zhin setup --decisions</code>，按提示填好密钥，然后重启机器人。</p>
+      <p>{i18n.t("还没有安装技能助手服务。")}</p>
+      <p>{i18n.t("在机器人所在的电脑上运行 ")}<code className="rounded bg-muted px-1">zhin setup --decisions</code>{i18n.t("，按提示填好密钥，然后重启机器人。")}</p>
     </SettingsNotice>
   }
   if (settings.usesOtherService) {
     return <SettingsNotice>
-      <p>现在用的是另一个服务来做这些判断，这个页面不能修改它。需要调整的话，请到「高级 → 配置」里改。</p>
+      <p>{i18n.t("现在用的是另一个服务来做这些判断，这个页面不能修改它。需要调整的话，请到「高级 → 配置」里改。")}</p>
     </SettingsNotice>
   }
   return <SkillsSettingsForm key={read.data.revision} initial={read.data} onReload={onReload} />
 }
 
 function SkillsSettingsForm({ initial, onReload }: { initial: SettingsRead; onReload: () => Promise<SettingsRead | null> }) {
+  const i18n = useI18n()
   const [modes, setModes] = useState<TaskModes>(initial.settings.modes)
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState<SaveFeedback | null>(null)
@@ -185,7 +187,7 @@ function SkillsSettingsForm({ initial, onReload }: { initial: SettingsRead; onRe
         expectedRevision: initial.revision,
         patches: buildSkillsPatches(initial.settings, modes),
       })
-      const saveFeedback = describeSaveResult(result)
+      const saveFeedback = describeSaveResult(result, i18n.locale)
       if (saveFeedback.kind === 'invalid') {
         const messages = (result.errors ?? []).map((error) => error.message)
         setServerProblems(messages)
@@ -196,7 +198,7 @@ function SkillsSettingsForm({ initial, onReload }: { initial: SettingsRead; onRe
       setFeedback(saveFeedback)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
-      setFeedback({ kind: 'error', text: `保存失败：${message}` })
+      setFeedback({ kind: 'error', text: i18n.t("保存失败：{0}", [message]) })
     } finally {
       setSaving(false)
     }
@@ -204,13 +206,13 @@ function SkillsSettingsForm({ initial, onReload }: { initial: SettingsRead; onRe
 
   return <Card>
     <CardHeader>
-      <CardTitle className="text-base">设置</CardTitle>
-      <CardDescription>{MODE_EXPLANATION} 改完需要重启机器人才会生效。</CardDescription>
+      <CardTitle className="text-base">{i18n.t("设置")}</CardTitle>
+      <CardDescription>{i18n.t(MODE_EXPLANATION)} {i18n.t(" 改完需要重启机器人才会生效。")}</CardDescription>
     </CardHeader>
     <CardContent className="space-y-3">
       {ASSISTANT_TASKS.map((entry) => <fieldset key={entry.task} className="space-y-2 rounded-md border p-3">
-        <legend className="px-1 text-sm font-medium">{entry.label}</legend>
-        <p className="text-xs text-muted-foreground">{entry.hint}</p>
+        <legend className="px-1 text-sm font-medium">{i18n.t(entry.label)}</legend>
+        <p className="text-xs text-muted-foreground">{i18n.t(entry.hint)}</p>
         <div className="flex flex-wrap gap-4">
           {MODE_CHOICES.map((choice) => <label key={choice.value} className="flex cursor-pointer items-center gap-2 text-sm">
             <input
@@ -220,7 +222,7 @@ function SkillsSettingsForm({ initial, onReload }: { initial: SettingsRead; onRe
               checked={modes[entry.task] === choice.value}
               onChange={() => chooseMode(entry.task, choice.value)}
             />
-            {choice.label}
+            {i18n.t(choice.label, undefined, 'state')}
           </label>)}
         </div>
       </fieldset>)}
@@ -230,7 +232,7 @@ function SkillsSettingsForm({ initial, onReload }: { initial: SettingsRead; onRe
       </ul>}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={() => { void save() }} disabled={saving || !changed}>{saving ? '正在保存…' : '保存'}</Button>
+        <Button onClick={() => { void save() }} disabled={saving || !changed}>{saving ? i18n.t("正在保存…") : i18n.t("保存")}</Button>
         {feedback && <SaveFeedbackNotice feedback={feedback} />}
       </div>
     </CardContent>

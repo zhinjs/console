@@ -1,3 +1,4 @@
+import { translate } from '../i18n/locale.mjs'
 /**
  * 技能助手页（zhinjs/zhin#970）的纯逻辑：校验 Host 状态、把设置翻成大白话、生成 config:patch。
  * 页面面向普通用户，不输出决策模型、判官、置信度、原因代码等内部细节。
@@ -49,74 +50,74 @@ function isTimestamp(value) {
   return typeof value === 'number' && Number.isFinite(value)
 }
 
-function taskLabel(task) {
+function taskLabel(task, locale = 'zh-CN') {
   const known = ASSISTANT_TASKS.find((entry) => entry.task === task)
-  return known ? known.label : task
+  return known ? translate(locale, known.label) : task
 }
 
 /** 校验 plugin.root.skills 的返回；格式不对时抛错，不能被当成「没有数据」。 */
-export function validateSkillsStatus(data) {
-  if (!isPlainObject(data)) throw new Error('技能助手状态格式不正确。')
-  if (!Array.isArray(data.tasks)) throw new Error('技能助手状态格式不正确。')
+export function validateSkillsStatus(data, locale = 'zh-CN') {
+  if (!isPlainObject(data)) throw new Error(translate(locale, '技能助手状态格式不正确。'))
+  if (!Array.isArray(data.tasks)) throw new Error(translate(locale, '技能助手状态格式不正确。'))
   for (const row of data.tasks) {
-    if (!isPlainObject(row)) throw new Error('技能助手状态格式不正确。')
-    if (typeof row.task !== 'string') throw new Error('技能助手状态格式不正确。')
-    if (!TASK_MODES.includes(row.mode)) throw new Error('技能助手状态格式不正确。')
+    if (!isPlainObject(row)) throw new Error(translate(locale, '技能助手状态格式不正确。'))
+    if (typeof row.task !== 'string') throw new Error(translate(locale, '技能助手状态格式不正确。'))
+    if (!TASK_MODES.includes(row.mode)) throw new Error(translate(locale, '技能助手状态格式不正确。'))
     for (const key of ['calls', 'selected', 'abstained', 'shadow', 'failed', 'averageMs']) {
-      if (!isCount(row[key])) throw new Error('技能助手状态格式不正确。')
+      if (!isCount(row[key])) throw new Error(translate(locale, '技能助手状态格式不正确。'))
     }
   }
-  if (!isPlainObject(data.totals)) throw new Error('技能助手状态格式不正确。')
-  if (!isCount(data.totals.calls)) throw new Error('技能助手状态格式不正确。')
-  if (!Array.isArray(data.recent)) throw new Error('技能助手状态格式不正确。')
+  if (!isPlainObject(data.totals)) throw new Error(translate(locale, '技能助手状态格式不正确。'))
+  if (!isCount(data.totals.calls)) throw new Error(translate(locale, '技能助手状态格式不正确。'))
+  if (!Array.isArray(data.recent)) throw new Error(translate(locale, '技能助手状态格式不正确。'))
   for (const entry of data.recent) {
-    if (!isPlainObject(entry)) throw new Error('技能助手记录格式不正确。')
-    if (!isTimestamp(entry.at)) throw new Error('技能助手记录格式不正确。')
-    if (typeof entry.task !== 'string') throw new Error('技能助手记录格式不正确。')
-    if (!TASK_OUTCOMES.includes(entry.outcome)) throw new Error('技能助手记录格式不正确。')
-    if (!isCount(entry.durationMs)) throw new Error('技能助手记录格式不正确。')
+    if (!isPlainObject(entry)) throw new Error(translate(locale, '技能助手记录格式不正确。'))
+    if (!isTimestamp(entry.at)) throw new Error(translate(locale, '技能助手记录格式不正确。'))
+    if (typeof entry.task !== 'string') throw new Error(translate(locale, '技能助手记录格式不正确。'))
+    if (!TASK_OUTCOMES.includes(entry.outcome)) throw new Error(translate(locale, '技能助手记录格式不正确。'))
+    if (!isCount(entry.durationMs)) throw new Error(translate(locale, '技能助手记录格式不正确。'))
   }
   const updatedAtValid = data.updatedAt === null || isTimestamp(data.updatedAt)
-  if (!updatedAtValid) throw new Error('技能助手状态格式不正确。')
+  if (!updatedAtValid) throw new Error(translate(locale, '技能助手状态格式不正确。'))
   return data
 }
 
-function formatDuration(milliseconds) {
-  if (milliseconds < 1000) return `${Math.round(milliseconds)} 毫秒`
-  return `${(milliseconds / 1000).toFixed(1)} 秒`
+function formatDuration(milliseconds, locale = 'zh-CN') {
+  if (milliseconds < 1000) return translate(locale, '{0} 毫秒', [Math.round(milliseconds)])
+  return translate(locale, '{0} 秒', [(milliseconds / 1000).toFixed(1)])
 }
 
-function describeTaskRow(row) {
+function describeTaskRow(row, locale = 'zh-CN') {
   return {
     task: row.task,
-    label: taskLabel(row.task),
-    mode: MODE_LABELS[row.mode],
+    label: taskLabel(row.task, locale),
+    mode: translate(locale, MODE_LABELS[row.mode], [], 'state'), modeVariant: row.mode === 'active' ? 'success' : row.mode === 'shadow' ? 'info' : 'secondary',
     calls: row.calls,
     helped: row.selected + row.shadow,
     noSuggestion: row.abstained,
     failed: row.failed,
-    averageTime: formatDuration(row.averageMs),
+    averageTime: formatDuration(row.averageMs, locale),
   }
 }
 
-function describeRecentEntry(entry) {
+function describeRecentEntry(entry, locale = 'zh-CN') {
   return {
     at: entry.at,
-    label: taskLabel(entry.task),
+    label: taskLabel(entry.task, locale),
     outcome: entry.outcome,
-    text: OUTCOME_LABELS[entry.outcome],
-    duration: formatDuration(entry.durationMs),
+    text: translate(locale, OUTCOME_LABELS[entry.outcome]),
+    duration: formatDuration(entry.durationMs, locale),
   }
 }
 
 /** 把 Host 状态翻成页面直接显示的大白话；不带模型、原因代码和 token 数。 */
-export function describeSkillsStatus(status) {
+export function describeSkillsStatus(status, locale = 'zh-CN') {
   const failedCalls = status.tasks.reduce((sum, row) => sum + row.failed, 0)
   return {
     totalCalls: status.totals.calls,
     failedCalls,
-    tasks: status.tasks.map(describeTaskRow),
-    recent: status.recent.map(describeRecentEntry),
+    tasks: status.tasks.map(row => describeTaskRow(row, locale)),
+    recent: status.recent.map(entry => describeRecentEntry(entry, locale)),
     hasActivity: status.recent.length > 0,
     updatedAt: status.updatedAt,
   }
@@ -205,19 +206,19 @@ const RESTART_REQUIRED_TEXT = '已保存。需要重启机器人才会生效。'
 const NO_RESTART_TEXT = '已保存，马上生效，不用重启。'
 
 /** 把 config:patch 的结果翻成提示；保存成功时一定说明要不要重启。 */
-export function describeSaveResult(result) {
-  if (!isPlainObject(result)) return { kind: 'error', text: '保存结果格式不正确，请刷新后再看一下设置是否已保存。' }
+export function describeSaveResult(result, locale = 'zh-CN') {
+  if (!isPlainObject(result)) return { kind: 'error', text: translate(locale, '保存结果格式不正确，请刷新后再看一下设置是否已保存。') }
   if (result.status === 'saved') {
     const restartRequired = result.restartRequired !== false
-    return { kind: 'saved', restartRequired, text: restartRequired ? RESTART_REQUIRED_TEXT : NO_RESTART_TEXT }
+    return { kind: 'saved', restartRequired, text: translate(locale, restartRequired ? RESTART_REQUIRED_TEXT : NO_RESTART_TEXT) }
   }
   if (result.status === 'conflict') {
-    return { kind: 'conflict', text: '设置刚刚在别处被改过。已经载入最新的设置，请确认后再保存一次。' }
+    return { kind: 'conflict', text: translate(locale, '设置刚刚在别处被改过。已经载入最新的设置，请确认后再保存一次。') }
   }
   if (result.status === 'invalid') {
-    return { kind: 'invalid', text: '这些设置没有通过检查，没有保存。请检查后再试。' }
+    return { kind: 'invalid', text: translate(locale, '这些设置没有通过检查，没有保存。请检查后再试。') }
   }
-  return { kind: 'error', text: '保存失败，请稍后再试。' }
+  return { kind: 'error', text: translate(locale, '保存失败，请稍后再试。') }
 }
 
 /** 调用者没有 skills:read 或未登录时，Host 返回 401/403。 */

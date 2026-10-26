@@ -12,6 +12,10 @@
 
 任务提供方与用途目录通过 `?locale=zh-CN|en` 请求展示语言；任务变更请求携带相同的 `locale`，仅影响回执展示，不进入参数或 CAS 操作身份。需要支持这一显示契约的 Host。其他动态服务端信息继续由服务端负责提供，不在前端猜测翻译。
 
+插件页面可用 `definePage({ title: '试聊一下', titleI18n: { en: 'Try a conversation' } })` 提供导航标题。Host 保留该显示元数据，Console 只选择显式翻译；缺失时保留原标题，不根据第三方标题文本猜测。
+
+权限目录与解释请求也通过 URL 的 `locale` 参数指定展示语言。切换界面语言保留假设账号、会话、角色和发送者；不会自动重新执行检查。技能助手页保存的仍是固定 `off` / `shadow` / `active` 值，翻译只改变标签与状态说明。
+
 ## Schema 显示扩展
 
 每个 Schema 节点可声明 `x-i18n.en`。`title`、`description` 仅覆盖展示；`enumLabels` 按 `String(option.value)` 匹配，选项重排不会把标签对应到错误值。

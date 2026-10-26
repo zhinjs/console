@@ -1,3 +1,4 @@
+import { hasSkillsChanges, buildSkillsPatches, describeSaveResult } from '../console-ui/src/pages/skills-assistant-model.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -90,3 +91,20 @@ test('permission requests use the selected language without clearing hypotheses 
  assert.equal(new URL(requests.at(-1).url,'https://example.test').searchParams.get('locale'),'en');
  assert.equal(new URL(requests[0].url,'https://example.test').searchParams.get('locale'),'zh-CN');
 });
+
+
+test('skills form language changes preserve modified modes and do not trigger reads or saves', async()=>{
+ const runtime=hooks();let locale=messages('zh-CN');const writes=[];let reads=0;
+ const component=await lifecycle('pages/skills-assistant.tsx','SkillsSettingsForm','  return <Card', 'modes, chooseMode, save',{
+  ...runtime.api,useI18n:()=>locale,hasSkillsChanges,buildSkillsPatches,describeSaveResult,
+  requestConsole:async body=>{writes.push(body);return {status:'saved',restartRequired:true}},
+ });
+ const initial={revision:'rev-1',settings:{instanceKey:'my-helper',provider:'root/my-helper',usesOtherService:false,modes:{skills:'off',tools:'off',memory:'off',agents:'off',approval:'off',ambient:'off'}}};
+ const props={initial,onReload:async()=>{reads++;return initial}};
+ runtime.mount(()=>component(props));runtime.value.chooseMode('skills','shadow');runtime.render();
+ locale=messages('en');runtime.render();await runtime.settle();
+ assert.equal(runtime.value.modes.skills,'shadow');assert.equal(writes.length,0);assert.equal(reads,0);
+ await runtime.value.save();await runtime.settle();
+ assert.deepEqual(writes,[{type:'config:patch',instanceKey:'my-helper',expectedRevision:'rev-1',patches:[{op:'set',path:['ai','decisions','skills','mode'],value:'shadow'}]}]);
+ assert.equal(reads,1);
+})

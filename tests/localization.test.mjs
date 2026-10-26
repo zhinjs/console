@@ -119,3 +119,16 @@ test('every explicit authored translation literal has an English catalog entry',
   for(const root of roots) await scan(root)
   assert.ok(count>2000,'guard must inspect production copy, not only the locale selector')
 })
+
+
+test('plugin navigation uses explicit title translations and leaves missing or third-party titles unchanged', async()=>{
+ const source=await readFile(new URL('../console-ui/src/i18n/navigation.ts',import.meta.url),'utf8')
+ const code=ts.transpileModule(source.replace(/^import.*\n/gm,''),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
+ const exports={}; Function('exports','translate',code)(exports,translate)
+ const route={path:'/sandbox',name:'试聊一下',meta:{titleI18n:{en:'Try a conversation'}}}
+ assert.equal(exports.routeLabel(route,'en'),'Try a conversation')
+ assert.equal(exports.routeLabel(route,'zh-CN'),'试聊一下')
+ assert.equal(exports.routeLabel({...route,meta:undefined},'en'),'试聊一下')
+ assert.equal(exports.routeLabel({path:'/third-party',name:'保存'},'en'),'保存')
+ assert.equal(exports.routeLabel({...route,meta:{titleI18n:{en:''}}},'en'),'试聊一下')
+})

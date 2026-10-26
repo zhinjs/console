@@ -1,3 +1,4 @@
+import type { Locale } from '../i18n/locale.mjs'
 export type TaskMode = 'off' | 'shadow' | 'active'
 export type AssistantTask = 'skills' | 'tools' | 'memory' | 'agents' | 'approval' | 'ambient'
 export type TaskOutcome = 'selected' | 'abstained' | 'failed' | 'shadow'
@@ -10,7 +11,7 @@ export interface SkillsStatus {
 export interface SkillsStatusView {
   totalCalls: number
   failedCalls: number
-  tasks: Array<{ task: string; label: string; mode: string; calls: number; helped: number; noSuggestion: number; failed: number; averageTime: string }>
+  tasks: Array<{ task: string; label: string; mode: string; modeVariant: 'success' | 'info' | 'secondary'; calls: number; helped: number; noSuggestion: number; failed: number; averageTime: string }>
   recent: Array<{ at: number; label: string; outcome: TaskOutcome; text: string; duration: string }>
   hasActivity: boolean
   updatedAt: number | null
@@ -25,11 +26,11 @@ export const DECISIONS_CONFIG_PATH: readonly string[]
 export const ASSISTANT_TASKS: ReadonlyArray<{ task: AssistantTask; label: string; hint: string }>
 export const MODE_CHOICES: ReadonlyArray<{ value: TaskMode; label: string }>
 export const MODE_EXPLANATION: string
-export function validateSkillsStatus(data: unknown): SkillsStatus
-export function describeSkillsStatus(status: SkillsStatus): SkillsStatusView
+export function validateSkillsStatus(data: unknown, locale?: Locale): SkillsStatus
+export function describeSkillsStatus(status: SkillsStatus, locale?: Locale): SkillsStatusView
 export function findAssistantInstanceKey(configDocument: unknown): string | undefined
 export function readSkillsSettings(configDocument: unknown): SkillsSettings
 export function buildSkillsPatches(initial: SkillsSettings, modes: TaskModes): SkillsPatch[]
 export function hasSkillsChanges(initial: SkillsSettings, modes: TaskModes): boolean
-export function describeSaveResult(result: unknown): SaveFeedback
+export function describeSaveResult(result: unknown, locale?: Locale): SaveFeedback
 export function isPermissionDenied(error: unknown): boolean

@@ -1,7 +1,7 @@
 import { translate, type Locale } from './locale.mjs'
 import type { ConsoleRouteRecord } from '@zhin.js/client'
 
-// Only the shell-owned path/name pair is translated. Plugin route titles remain authored by their provider.
+// Plugin titles use only explicit provider metadata; shell-owned path/name pairs use our catalog.
 const builtinNames: Readonly<Record<string, string>> = {
   "/dashboard": "首页",
   "/logs": "运行记录",
@@ -10,6 +10,7 @@ const builtinNames: Readonly<Record<string, string>> = {
   "/cron": "定时提醒",
   "/endpoints": "聊天账号",
   "/agent/workbench": "机器人状态",
+  "/agent/skills": "技能助手",
   "/agent/ambient": "群聊插话",
   "/agent/workrooms": "Workroom",
   "/agent/workrooms/catalog": "Workroom 配置",
@@ -29,5 +30,9 @@ const builtinNames: Readonly<Record<string, string>> = {
 }
 
 export function routeLabel(route: ConsoleRouteRecord, locale: Locale): string {
+  // Keep compatibility with older published client types while the optional metadata rolls out.
+  const titles = (route.meta as { readonly titleI18n?: Readonly<Partial<Record<Locale, string>>> } | undefined)?.titleI18n
+  const provided = titles && Object.hasOwn(titles, locale) ? titles[locale] : undefined
+  if (typeof provided === 'string' && provided.trim()) return provided
   return builtinNames[route.path] === route.name ? translate(locale, route.name) : route.name
 }
