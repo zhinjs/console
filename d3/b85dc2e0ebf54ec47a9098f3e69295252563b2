@@ -1,0 +1,26 @@
+README.md
+  h_b680f75345178a 70,76-80
+console-ui/src/pages/skills-assistant-model.d.mts
+  h_b680f75345178a 1-35
+console-ui/src/pages/skills-assistant-model.mjs
+  h_b680f75345178a 1-226
+console-ui/src/pages/skills-assistant.tsx
+  h_b680f75345178a 1-248
+console-ui/src/registerBuiltinShell.tsx
+  h_b680f75345178a 23-24,107-116
+tests/console-contract.test.mjs
+  h_b680f75345178a 83-84
+tests/skills-assistant.test.mjs
+  h_b680f75345178a 1-149
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d3b85dc2e0ebf54ec47a9098f3e69295252563b2",
+  "prompts": {},
+  "humans": {
+    "h_b680f75345178a": {
+      "author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
