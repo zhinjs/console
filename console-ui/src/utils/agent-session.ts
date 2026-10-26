@@ -1,4 +1,4 @@
-/** 对话分支 sessionKey 与深链（与 @zhin.js/ai resolveIMSessionId 一致） */
+/** 聊天记录（Agent 会话）sessionKey 与深链（与 @zhin.js/ai resolveIMSessionId 一致） */
 
 export type ImSessionScope = 'private' | 'group' | 'channel'
 

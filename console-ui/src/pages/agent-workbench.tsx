@@ -210,7 +210,7 @@ export default function AgentWorkbenchPage() {
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
             {error ? <Button variant="outline" onClick={() => void loadWorkbench(true)} disabled={refreshing}><RefreshCw />重试读取</Button>
-              : ready ? <Button asChild><Link to="/agent/sessions"><GitBranch />打开对话分支</Link></Button>
+              : ready ? <Button asChild><Link to="/agent/sessions"><GitBranch />打开聊天记录</Link></Button>
                 : <Button asChild><Link to={agentStatus === 'unavailable' || bindings.length === 0 ? '/config' : '/endpoints'}><Settings2 />{agentStatus === 'unavailable' || bindings.length === 0 ? '配置 Agent' : '连接渠道'}</Link></Button>}
           </div>
         </div>
@@ -316,7 +316,7 @@ export default function AgentWorkbenchPage() {
       <section className="console-agent-shortcuts" aria-label="Agent 快捷入口">
         <Link to="/introspection?tab=tools"><Wrench /><span><strong>工具目录</strong><small>查看输入与来源</small></span><ArrowUpRight /></Link>
         <Link to="/introspection?tab=mcp"><Server /><span><strong>MCP 服务</strong><small>检查连接健康度</small></span><ArrowUpRight /></Link>
-        <Link to="/agent/sessions"><GitBranch /><span><strong>对话分支</strong><small>继续最近上下文</small></span><ArrowUpRight /></Link>
+        <Link to="/agent/sessions"><GitBranch /><span><strong>聊天记录</strong><small>继续最近上下文</small></span><ArrowUpRight /></Link>
         <Link to="/agent/workrooms"><Workflow /><span><strong>Workroom 看板</strong><small>按 Project 查看 Run、Task 与 Assignment</small></span><ArrowUpRight /></Link>
       </section>
     </div>

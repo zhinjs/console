@@ -19,7 +19,7 @@ const ROUTE_DESCRIPTIONS: Record<string, string> = {
   '/agent/workbench': '确认 Agent、工具、MCP 与渠道就绪状态',
   '/agent/workrooms': '按 Project 查看 Workroom Run、Task 与 Assignment',
   '/agent/workrooms/catalog': '配置协作空间、Bot Endpoint 与成员 Agent 映射',
-  '/agent/sessions': '浏览持久化会话与对话分支',
+  '/agent/sessions': '看看机器人和大家聊过什么，并从某段继续聊',
   '/endpoints': '管理 Bot Endpoint、群组、频道和收件箱',
   '/introspection': '检查命令、中间件、组件、Endpoint、Agent、工具与 MCP',
   '/logs': '定位错误、警告与运行事件',

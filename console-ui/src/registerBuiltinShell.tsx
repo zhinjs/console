@@ -130,7 +130,7 @@ export function registerBuiltinConsolePages() {
 
   app.addRoute({
     path: '/agent/sessions',
-    name: '对话分支',
+    name: '聊天记录',
     parent: null,
     icon: 'GitBranch',
     element: <AgentSessionsPage />,
