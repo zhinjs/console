@@ -1,0 +1,22 @@
+console-ui/src/components/ConsoleCommandCenter.tsx
+  h_b680f75345178a 22
+console-ui/src/pages/agent-workbench.tsx
+  h_b680f75345178a 213,319
+console-ui/src/registerBuiltinShell.tsx
+  h_b680f75345178a 133
+console-ui/src/pages/agent-sessions.tsx
+  h_b680f75345178a 96,140,178-179,182
+console-ui/src/utils/agent-session.ts
+  h_b680f75345178a 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ae70d681f3af36b291c47575c23f23b7a92476fc",
+  "prompts": {},
+  "humans": {
+    "h_b680f75345178a": {
+      "author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
