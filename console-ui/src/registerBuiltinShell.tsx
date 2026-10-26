@@ -18,6 +18,8 @@ import ScenarioLabPage from './pages/scenario-lab'
 import CommandPermissionsPage from './pages/command-permissions'
 import AgentWorkbenchPage from './pages/agent-workbench'
 import AgentSessionsPage from './pages/agent-sessions'
+import AmbientEngagementPage from './pages/ambient-engagement'
+import { AMBIENT_STATUS_PERMISSION } from './pages/ambient-engagement-model.mjs'
 import WorkroomsPage from './pages/workrooms'
 import WorkroomCatalogPage from './pages/workroom-catalog'
 import { NAV_GROUPS } from './navigation-taxonomy'
@@ -88,6 +90,16 @@ export function registerBuiltinConsolePages() {
     icon: 'Brain',
     element: <AgentWorkbenchPage />,
     meta: { group: NAV_GROUPS.BOT, order: 0 },
+  })
+
+  app.addRoute({
+    path: '/agent/ambient',
+    name: '群聊插话',
+    parent: null,
+    icon: 'MessagesSquare',
+    element: <AmbientEngagementPage />,
+    requiredPermissions: [AMBIENT_STATUS_PERMISSION],
+    meta: { group: NAV_GROUPS.BOT, order: 3 },
   })
 
   app.addRoute({
