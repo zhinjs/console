@@ -38,7 +38,7 @@ export default function CommandPermissionsPage() {
     explanations.current.cancel(); setResult(null); setSelected(null); setChecking(false); setCatalog(null)
     const request = catalogReads.current.begin(); setLoading(true); setError(null)
     try {
-      const search = new URLSearchParams({ page: String(nextPage), pageSize: '50', q: query })
+      const search = new URLSearchParams({ page: String(nextPage), pageSize: '50', q: query, locale: i18n.locale })
       const response = await apiFetch(`${CONSOLE_REST.COMMAND_PERMISSIONS}?${search}`, { signal: request.signal, cache: 'no-store' })
       if (!request.current() || !isInboxCacheScopeActive(scope)) return
       if (!response.ok) throw new Error(permissionHttpError(response.status, i18n.locale))
@@ -62,7 +62,7 @@ export default function CommandPermissionsPage() {
     catch (caught) { setError((caught as Error).message); return }
     const request = explanations.current.begin(); setChecking(true)
     try {
-      const response = await apiFetch(CONSOLE_REST.COMMAND_PERMISSION_EXPLAIN, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const response = await apiFetch(`${CONSOLE_REST.COMMAND_PERMISSION_EXPLAIN}?${new URLSearchParams({ locale: i18n.locale })}`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body), signal: request.signal, cache: 'no-store' })
       if (!request.current() || !isInboxCacheScopeActive(scope)) return
       if (!response.ok) { if (response.status === 409) { setCatalog(null); setSelected(null) }; throw new Error(permissionHttpError(response.status, i18n.locale)) }

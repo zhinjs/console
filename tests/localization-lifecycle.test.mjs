@@ -7,6 +7,8 @@ import { envEditorAccess, maskEnvContent } from '../console-ui/src/pages/env-edi
 import { createDiagnosticRequestGate } from '../console-ui/src/pages/endpoint-detail/message-diagnostics.mjs'
 import { readTaskProviders, readTaskUseCases, reconcileTaskMutation } from '../console-ui/src/pages/task-center-model.mjs'
 
+import { permissionRequest, readPermissionCatalog, readPermissionExplanation, permissionHttpError } from '../console-ui/src/pages/permission-explanation-model.mjs'
+
 function hooks() {
   const slots=[]; let cursor=0, pending=[], dirty=false, render, value
   const same=(a,b)=>a && b && a.length===b.length && a.every((v,i)=>Object.is(v,b[i]))
@@ -61,3 +63,30 @@ test('task language refresh preserves the operation epoch, target and draft whil
  assert.equal(runtime.value.mutationEpoch.current,epoch)
  assert.deepEqual(requests,['/providers?locale=zh-CN','/use-cases?locale=zh-CN','/providers?locale=en','/use-cases?locale=en'])
 })
+
+
+test('permission requests use the selected language without clearing hypotheses or automatically rerunning checks', async () => {
+ const runtime=hooks(); let locale=messages('zh-CN'); const requests=[]; const scope='permission-fixture';
+ const command={id:'root/demo\0zhin.command\0status',owner:'root/demo',name:'status',description:'状态',permits:[]};
+ const component=await lifecycle('pages/command-permissions.tsx','CommandPermissionsPage','  return <div',
+  'loadCatalog, explain, choose, setSenderId, senderId, setRoles, roles, setTarget, target, setIncludeTarget, setHypothesis, hypothesis, selected, current', {
+  ...runtime.api, useI18n:()=>locale, useInboxCacheScope:()=>scope, createDiagnosticRequestGate, getInboxCacheScope:()=>scope,
+  isInboxCacheScopeActive:value=>value===scope, isDemoMode:()=>false, permissionRequest, readPermissionCatalog, readPermissionExplanation, permissionHttpError,
+  CONSOLE_REST:{COMMAND_PERMISSIONS:'/permissions',COMMAND_PERMISSION_EXPLAIN:'/explain'},
+  apiFetch:async (url, options)=>{requests.push({url,options});return {ok:true,json:async()=>options.method==='POST'?
+   {success:true,data:{generation:3,simulation:true,command,permissionHost:'present',adapter:{outcome:'not_evaluated',reason:'fixture'},rules:[],summary:{outcome:'unknown',reason:'fixture'},unconstrained:[],assumptions:[],...JSON.parse(options.body)}}:
+   {success:true,data:{generation:3,page:1,pageSize:50,total:1,commands:[command]}}}},
+ });
+ runtime.mount(()=>component()); await runtime.value.loadCatalog(); await runtime.settle();
+ runtime.value.choose(command); await runtime.settle();
+ runtime.value.setSenderId('原始用户'); runtime.value.setRoles('project admin'); runtime.value.setTarget({endpoint:{adapter:'qq',id:'endpoint'},kind:'group',id:'room',threadId:'topic'});
+ runtime.value.setIncludeTarget(true); runtime.value.setHypothesis(true); runtime.render();
+ const before=requests.length; locale=messages('en'); runtime.render(); await runtime.settle();
+ assert.equal(requests.length,before); assert.equal(runtime.value.senderId,'原始用户'); assert.equal(runtime.value.roles,'project admin'); assert.equal(runtime.value.target.threadId,'topic'); assert.equal(runtime.value.selected.id,command.id); assert.equal(runtime.value.hypothesis,true);
+ await runtime.value.explain(command,true); await runtime.settle();
+ const check=requests.at(-1); assert.equal(check.url,'/explain?locale=en');
+ assert.deepEqual(JSON.parse(check.options.body),{generation:3,commandId:command.id,target:runtime.value.target,sender:{id:'原始用户',roles:['project admin']}});
+ await runtime.value.loadCatalog(); await runtime.settle();
+ assert.equal(new URL(requests.at(-1).url,'https://example.test').searchParams.get('locale'),'en');
+ assert.equal(new URL(requests[0].url,'https://example.test').searchParams.get('locale'),'zh-CN');
+});
