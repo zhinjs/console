@@ -1,0 +1,42 @@
+console-ui/src/bootstrap/loadConsoleEntries.ts
+  h_b680f75345178a 16,79-81
+console-ui/src/components/AgentSessionPicker.tsx
+  h_b680f75345178a 100
+console-ui/src/components/ConsoleCommandCenter.tsx
+  h_b680f75345178a 18-19,23,25-28
+console-ui/src/layouts/dashboard.tsx
+  h_b680f75345178a 3,14,18-36,85-94,236-237,240-250,254-255,302
+console-ui/src/navigation-taxonomy.ts
+  h_b680f75345178a 1-7,9-12,17-19,21,24-41
+console-ui/src/pages/agent-workbench.tsx
+  h_b680f75345178a 181
+console-ui/src/pages/cron.tsx
+  h_b680f75345178a 195
+console-ui/src/pages/endpoint-detail/ConversationSidebar.tsx
+  h_b680f75345178a 85
+console-ui/src/pages/endpoints.tsx
+  h_b680f75345178a 64,72
+console-ui/src/pages/introspection/CapabilityExplorer.tsx
+  h_b680f75345178a 462
+console-ui/src/pages/logs.tsx
+  h_b680f75345178a 247
+console-ui/src/registerBuiltinShell.tsx
+  h_b680f75345178a 33,37,42,46,55,63,68,72,77,81,86,90,99,108,111,119,128,137,142,146,154,159,163,172,181,190,199,207
+console-ui/src/registerOptionalRoutes.tsx
+  h_b680f75345178a 27
+tests/channel-copy.test.mjs
+  h_b680f75345178a 5-6
+tests/console-contract.test.mjs
+  h_b680f75345178a 61-64,66-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c0dc7834fbbe075b9698ccd092dc382e79596d15",
+  "prompts": {},
+  "humans": {
+    "h_b680f75345178a": {
+      "author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
