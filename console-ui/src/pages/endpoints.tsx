@@ -61,7 +61,7 @@ export default function EndpointsPage() {
   if (error) {
     return (
       <PageShell>
-        <PageHeader title="渠道与会话" description="查看机器人渠道的连接状态，选择渠道进入会话、请求和通知。" />
+        <PageHeader title="聊天账号" description="看看机器人登录的聊天账号是否在线，点进去查看会话、好友申请和通知。" />
         <ErrorAlert error={`加载失败：${error}`} onRetry={fetchEndpoints} />
       </PageShell>
     )
@@ -69,7 +69,7 @@ export default function EndpointsPage() {
 
   return (
     <PageShell>
-      <PageHeader title="渠道与会话" description="查看机器人渠道的连接状态，选择渠道进入会话、请求和通知。" />
+      <PageHeader title="聊天账号" description="看看机器人登录的聊天账号是否在线，点进去查看会话、好友申请和通知。" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
         {endpoints.map((endpoint, index) => (

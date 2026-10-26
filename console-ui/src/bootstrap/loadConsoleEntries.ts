@@ -13,6 +13,7 @@ import {
 import { app } from '@zhin.js/client'
 import { createHostRegistration } from './host-registration.mjs'
 import { getApiBase, getToken } from '../utils/auth'
+import { placePluginRoute } from '../navigation-taxonomy'
 
 export type {
   CreatePluginRegisterHostApiOptions,
@@ -75,8 +76,9 @@ async function doLoadConsoleEntries(options?: LoadConsoleEntriesOptions): Promis
     React,
     addRoute: (input) => {
       if (!session.active()) return
-      if (requestedApi) requestedApi.addRoute(input)
-      else session.addRoute(input as Parameters<typeof app.addRoute>[0])
+      const placed = placePluginRoute(input as Parameters<typeof app.addRoute>[0])
+      if (requestedApi) requestedApi.addRoute(placed as typeof input)
+      else session.addRoute(placed)
     },
     addTool: (input) => {
       if (!session.active()) throw new Error('Host connection changed; stale tool registration ignored')

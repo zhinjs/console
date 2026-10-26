@@ -459,7 +459,7 @@ function CapabilityInspector(props: {
       </header>
       <div className="console-capability-inspector-actions">
         {kind === 'bindings' ? (
-          <Button asChild size="sm"><Link to="/agent/workbench">进入 Agent 工作台<ArrowRight /></Link></Button>
+          <Button asChild size="sm"><Link to="/agent/workbench">查看机器人状态<ArrowRight /></Link></Button>
         ) : null}
         {kind === 'endpoints' ? (
           <Button asChild size="sm"><Link to="/endpoints">管理 Endpoints<ArrowRight /></Link></Button>

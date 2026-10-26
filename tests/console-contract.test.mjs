@@ -56,17 +56,37 @@ test('built-in Agent navigation exposes Workbench, Workroom board/catalog and Se
   assert.match(source, /path: '\/agent\/workrooms'/)
   assert.match(source, /path: '\/agent\/workrooms\/catalog'/)
   assert.match(source, /path: '\/agent\/sessions'/)
-  assert.match(source, /NAV_GROUPS\.AGENTS/)
-  assert.match(source, /NAV_GROUPS\.CONVERSATIONS/)
-  assert.match(source, /NAV_GROUPS\.AUTOMATION/)
-  assert.match(source, /NAV_GROUPS\.SYSTEM/)
   assert.match(source, /path: '\/agent\/workrooms\/catalog'[\s\S]*hideInMenu: true/)
   assert.doesNotMatch(source, /\/agent\/(?:studio|orchestration)/)
+})
+
+test('ordinary-user navigation uses plain names and folds advanced pages (#970)', () => {
+  const source = sourceText(join(SOURCE_ROOT, 'registerBuiltinShell.tsx'))
   const taxonomy = sourceText(join(SOURCE_ROOT, 'navigation-taxonomy.ts'))
-  assert.match(taxonomy, /对话与渠道/)
-  assert.match(taxonomy, /Agent 与 Workroom/)
-  assert.match(taxonomy, /自动化与扩展/)
-  assert.match(taxonomy, /系统/)
+  // 「机器人」分组名是对外约定，后续新页会挂在下面
+  assert.match(taxonomy, /BOT: '机器人'/)
+  assert.match(taxonomy, /ADVANCED: '高级'/)
+  assert.match(taxonomy, /COLLAPSED_BY_DEFAULT_NAV_GROUPS[^\n]*NAV_GROUPS\.ADVANCED/)
+  assert.match(taxonomy, /'\/sandbox': \{ group: NAV_GROUPS\.BOT/)
+  const routeGroup = (path) => {
+    const start = source.indexOf(`path: '${path}'`)
+    assert.notEqual(start, -1, path)
+    const block = source.slice(start, source.indexOf('})', start))
+    return { name: /name: '([^']+)'/.exec(block)?.[1], group: /group: NAV_GROUPS\.(\w+)/.exec(block)?.[1], hidden: /hideInMenu: true/.test(block) }
+  }
+  const daily = { '/dashboard': '首页', '/endpoints': '聊天账号', '/agent/sessions': '聊天记录', '/cron': '定时提醒', '/logs': '运行记录' }
+  for (const [path, name] of Object.entries(daily)) assert.deepEqual(routeGroup(path), { name, group: 'DAILY', hidden: false })
+  assert.deepEqual(routeGroup('/plugins'), { name: '功能管理', group: 'FEATURES', hidden: false })
+  assert.deepEqual(routeGroup('/marketplace'), { name: '功能商店', group: 'FEATURES', hidden: false })
+  assert.equal(routeGroup('/agent/workbench').group, 'BOT')
+  for (const path of ['/config', '/env', '/files', '/database', '/introspection', '/scenario-lab', '/agent/workrooms']) {
+    assert.equal(routeGroup(path).group, 'ADVANCED', path)
+  }
+  assert.doesNotMatch(source, /'对话分支'|'Agent 概览'|judge|decision|TypeSafe|shadow/)
+  const entries = sourceText(join(SOURCE_ROOT, 'bootstrap', 'loadConsoleEntries.ts'))
+  assert.match(entries, /placePluginRoute\(/)
+  const layout = sourceText(join(SOURCE_ROOT, 'layouts', 'dashboard.tsx'))
+  assert.match(layout, /aria-expanded=\{open\}/)
 })
 
 test('Command Center exposes task-oriented actions in addition to route navigation', () => {

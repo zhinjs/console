@@ -97,7 +97,7 @@ export function AgentSessionPicker({
           <span><Bot /></span>
           <div>
             <h3>还没有最近对话</h3>
-            <p>进入“渠道与会话”，选择联系人、群组或频道，再打开 Agent 轨迹。</p>
+            <p>进入“聊天账号”，选择联系人、群组或频道，再打开 Agent 轨迹。</p>
           </div>
           <Button size="sm" asChild>
             <Link to="/endpoints">选择会话</Link>

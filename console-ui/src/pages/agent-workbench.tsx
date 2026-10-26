@@ -178,7 +178,7 @@ export default function AgentWorkbenchPage() {
   return (
     <div className="console-agent-workbench space-y-5">
       <PageHeader
-        title="Agent 工作台"
+        title="机器人状态"
         description="检查 Agent 配置与渠道状态，选择下一步操作。"
         actions={
           <Button variant="outline" size="sm" onClick={() => void loadWorkbench(true)} disabled={refreshing}>

@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useSyncExternalStore } from "react"
 import { Outlet, Link, useLocation, matchPath } from "react-router-dom"
-import { Menu, LogOut, X } from "lucide-react"
+import { Menu, LogOut, X, ChevronRight } from "lucide-react"
 import { app, cn, useWebSocket, type ConsoleRouteRecord } from "@zhin.js/client"
 import { getSidebarLucideIcon } from "../components/sidebarMenuIcons"
 import { ThemeToggle } from "../components/ThemeToggle"
@@ -11,10 +11,29 @@ import { notifyAuthRequired } from "../utils/auth"
 import { isDemoMode } from "../utils/demo-mode"
 import { reopenDemoOnboarding } from "../components/DemoOnboarding"
 import { ConsoleCommandCenter } from "../components/ConsoleCommandCenter"
-import { NAV_GROUP_ORDER, NAV_GROUPS } from "../navigation-taxonomy"
+import { COLLAPSED_BY_DEFAULT_NAV_GROUPS, NAV_GROUP_ORDER, NAV_GROUPS } from "../navigation-taxonomy"
 import { resolveNavigationLocation } from "../navigation-location.mjs"
 
 const MOBILE_MQ = "(max-width: 767px)"
+const EXPANDED_GROUPS_KEY = "zhin.console.nav.expanded-groups"
+
+function readExpandedGroups(): Set<string> {
+  try {
+    const raw = window.localStorage.getItem(EXPANDED_GROUPS_KEY)
+    const parsed: unknown = raw ? JSON.parse(raw) : []
+    return new Set(Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : [])
+  } catch {
+    return new Set()
+  }
+}
+
+function writeExpandedGroups(groups: ReadonlySet<string>): void {
+  try {
+    window.localStorage.setItem(EXPANDED_GROUPS_KEY, JSON.stringify([...groups]))
+  } catch {
+    // Storage may be unavailable (private mode); folding still works for this session.
+  }
+}
 
 function useIsMobile() {
   return useSyncExternalStore(
@@ -63,6 +82,16 @@ export default function DashboardLayout() {
   const { connected } = useWebSocket()
 
   const showLabels = isMobile || desktopSidebarOpen
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(readExpandedGroups)
+  const toggleGroup = (groupName: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(groupName)) next.delete(groupName)
+      else next.add(groupName)
+      writeExpandedGroups(next)
+      return next
+    })
+  }
 
   const routes = useSyncExternalStore(
     app.subscribe,
@@ -204,14 +233,26 @@ export default function DashboardLayout() {
             {orderedGroups.map((groupName) => {
               const items = menuByGroup.get(groupName) ?? []
               if (!items.length) return null
+              const collapsible = COLLAPSED_BY_DEFAULT_NAV_GROUPS.includes(groupName)
+              const open = !collapsible || !showLabels || expandedGroups.has(groupName) || navigation.group === groupName
               return (
                 <div key={groupName} className="space-y-1">
-                  {showLabels && (
+                  {showLabels && (collapsible ? (
+                    <button
+                      type="button"
+                      aria-expanded={open}
+                      onClick={() => toggleGroup(groupName)}
+                      className="flex w-full items-center gap-1 px-2 pt-2 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground/75 hover:text-foreground"
+                    >
+                      <ChevronRight className={cn("w-3 h-3 transition-transform", open && "rotate-90")} />
+                      {groupName}
+                    </button>
+                  ) : (
                     <div className="px-2 pt-2 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground/75">
                       {groupName}
                     </div>
-                  )}
-                  {items.map((route, index) => {
+                  ))}
+                  {open && items.map((route, index) => {
                     const itemKey = route.path || `menu-item-${groupName}-${index}`
                     const isActive = navigation.visible?.path === route.path
                     return (
@@ -258,7 +299,7 @@ export default function DashboardLayout() {
               <span className="text-xs text-muted-foreground truncate">{navigation.group}</span>
               <div className="flex items-center gap-1 min-w-0 text-sm font-semibold">
                 {navigation.parent && <><Link className="truncate hover:underline" to={navigation.parent.path}>{navigation.parent.name}</Link><span aria-hidden="true">/</span></>}
-                <span aria-current="page" className="truncate">{navigation.current?.name ?? (isDemoMode() ? "在线 Demo" : "工作台")}</span>
+                <span aria-current="page" className="truncate">{navigation.current?.name ?? (isDemoMode() ? "在线 Demo" : "首页")}</span>
               </div>
             </nav>
           </div>

@@ -24,6 +24,6 @@ export async function registerOptionalConsoleRoutes(): Promise<void> {
     parent: null,
     icon: 'Activity',
     element: <AssistantJobsPage />,
-    meta: { group: NAV_GROUPS.AUTOMATION, order: 1 },
+    meta: { group: NAV_GROUPS.BOT, order: 2 },
   }, enabled)
 }
