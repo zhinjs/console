@@ -67,13 +67,17 @@ Console 面向普通用户（[zhin#970](https://github.com/zhinjs/zhin/issues/97
 | 分组 | 页面 |
 |------|------|
 | 常用 | 首页、聊天账号、聊天记录、定时提醒、运行记录 |
-| 机器人 | 机器人状态、试聊一下（sandbox 插件页）、助手任务（启用助手时）、群聊插话 |
+| 机器人 | 机器人状态、试聊一下（sandbox 插件页）、助手任务（启用助手时）、群聊插话、技能助手 |
 | 功能 | 功能管理、功能商店、任务中心 |
 | 高级（默认折叠） | 配置、环境变量、项目文件、数据库、运行时能力、消息场景试验台、Workroom |
 
 「机器人」分组名是对外约定，后续新页挂在它下面。
 
-「群聊插话」（`/agent/ambient`）：状态来自 `pluginRpc('root', 'ambient')`（Host 方法 `plugin.root.ambient`，需要令牌持有 `ambient:read`），设置用 `config:patch` + `expectedRevision` 只写 `ai.trigger.ambient` 下的几个键，保存后总会提示是否需要重启。插件约定页没有分组字段，已知页面按路由在 `PLUGIN_PAGE_PLACEMENT` 里归组，其余进「其他」。原有路由路径不变，旧链接继续可用。
+「群聊插话」（`/agent/ambient`）：状态来自 `pluginRpc('root', 'ambient')`（Host 方法 `plugin.root.ambient`，需要令牌持有 `ambient:read`），设置用 `config:patch` + `expectedRevision` 只写 `ai.trigger.ambient` 下的几个键，保存后总会提示是否需要重启。
+
+「技能助手」（`/agent/skills`）：状态来自 `pluginRpc('root', 'skills')`（Host 方法 `plugin.root.skills`，需要令牌持有 `skills:read`）。设置用 `config:patch` + `instanceKey`（`plugins` 里 `@zhin.js/service-typesafe` 的实例名）+ `expectedRevision`，只写 `ai.decisions.<事项>.mode`（该插件 `schema.json` 声明的 `x-zhin-config.patchPaths: ["ai.decisions"]`）；还没绑定时顺带写 `ai.decisions.provider: root/<实例名>`，已绑定其他服务时不允许在页面里改。
+
+插件约定页没有分组字段，已知页面按路由在 `PLUGIN_PAGE_PLACEMENT` 里归组，其余进「其他」。原有路由路径不变，旧链接继续可用。
 
 ## 目录
 
