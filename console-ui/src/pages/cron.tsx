@@ -192,7 +192,7 @@ export default function CronPage() {
     <div className="space-y-6">
       {/* Header */}
       <PageHeader
-        title="定时任务"
+        title="定时提醒"
         description="管理持久化和内存定时任务"
         actions={
           <div className="flex items-center gap-2">

@@ -244,7 +244,7 @@ export default function LogsPage() {
   return (
     <PageShell className="console-logs-page max-w-[1800px]">
       <PageHeader
-        title="日志"
+        title="运行记录"
         description={readOnly ? '实时查看与筛选系统运行日志（Demo 只读）。' : '查看历史与实时日志，定位运行异常。'}
       />
 

@@ -82,7 +82,7 @@ export function ConversationSidebar({
     <div className={cn('channel-sidebar im-sidebar', showChannelList && 'show')}>
       <div className="im-sidebar-header">
         <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" asChild>
-          <Link to="/endpoints" aria-label="返回渠道与会话">
+          <Link to="/endpoints" aria-label="返回聊天账号">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>

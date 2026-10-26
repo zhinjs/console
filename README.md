@@ -36,7 +36,7 @@ https://console.zhin.dev/?apiBaseUrl=http://127.0.0.1:8086
 Demo 构建会写入 `window.__ZHIN_API_TOKEN`（对齐 zhin `deploy/zhin-demo`），UI 与 SDK 均优先读该运行时 Token，避免仅依赖 localStorage。
 ## Demo 站点（demo.zhin.dev）
 
-**与 console.zhin.dev 不同**：Demo 构建固定预连 `https://zhinjs-demo.hf.space`（Token `zhin-demo`），跳过登录，默认打开 **沙盒**；菜单与正式站一致，不再隐藏管理页。
+**与 console.zhin.dev 不同**：Demo 构建固定预连 `https://zhinjs-demo.hf.space`（Token `zhin-demo`），跳过登录，默认打开 **试聊一下**（沙盒）；菜单与正式站一致，不再隐藏管理页。
 
 ### 本地联调
 
@@ -59,6 +59,19 @@ pnpm pages:prepare   # CONSOLE_PAGES_CNAME=demo.zhin.dev
 - **实际托管**：Cloudflare Pages 项目 `console`（自定义域 `demo.zhin.dev`），监听 **`main`**，构建命令 `pnpm run build:demo`
 - push `main` 即自动部署；GitHub Actions `demo-pages.yml` 仅作备用（Pages 环境目前只允许 `main`）
 - **Host 侧**：Hugging Face Space [`zhinjs-demo.hf.space`](https://zhinjs-demo.hf.space)（Token `zhin-demo`）
+
+## 导航
+
+Console 面向普通用户（[zhin#970](https://github.com/zhinjs/zhin/issues/970)），侧栏分组定义在 `console-ui/src/navigation-taxonomy.ts`：
+
+| 分组 | 页面 |
+|------|------|
+| 常用 | 首页、聊天账号、聊天记录、定时提醒、运行记录 |
+| 机器人 | 机器人状态、试聊一下（sandbox 插件页）、助手任务（启用助手时） |
+| 功能 | 功能管理、功能商店、任务中心 |
+| 高级（默认折叠） | 配置、环境变量、项目文件、数据库、运行时能力、消息场景试验台、Workroom |
+
+「机器人」分组名是对外约定，后续新页挂在它下面。插件约定页没有分组字段，已知页面按路由在 `PLUGIN_PAGE_PLACEMENT` 里归组，其余进「其他」。原有路由路径不变，旧链接继续可用。
 
 ## 目录
 

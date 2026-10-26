@@ -93,7 +93,7 @@ export default function AgentSessionsPage() {
       }
       if (res.status === 503) {
         setErrorKind('503')
-        setError('当前实例的 AI 对话分支能力尚未就绪。请先安装并配置 Agent；IM 消息功能可独立使用。')
+        setError('聊天记录还没准备好：请先安装并配置 AI 机器人；收发消息不受影响。')
         return
       }
       if (!res.ok || !data.success) {
@@ -137,7 +137,7 @@ export default function AgentSessionsPage() {
       }
       if (res.status === 503) {
         setErrorKind('503')
-        setError('当前实例的 AI 对话分支能力尚未就绪。请先安装并配置 Agent；IM 消息功能可独立使用。')
+        setError('聊天记录还没准备好：请先安装并配置 AI 机器人；收发消息不受影响。')
         return
       }
       if (!res.ok || !data.success) {
@@ -175,11 +175,11 @@ export default function AgentSessionsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="对话分支"
-        description={readOnly ? '沿着真实渠道会话查看 AI 对话分支（Demo 只读）。' : '沿着真实渠道会话查看 AI 对话分支，并决定下一轮对话从哪条路径继续。'}
+        title="聊天记录"
+        description={readOnly ? '按聊天账号和会话查看机器人和大家聊过什么（Demo 只读）。' : '按聊天账号和会话查看机器人和大家聊过什么，也可以选一段继续往下聊。'}
       />
 
-      <p className="text-sm text-muted-foreground">对话分支需要已安装并配置 Agent；仅使用 IM 的项目无需启用此能力。</p>
+      <p className="text-sm text-muted-foreground">聊天记录需要先装好并配置 AI 机器人；只用聊天账号收发消息的项目不需要开启。</p>
 
       <AgentSessionPicker
         value={sessionKey}
