@@ -80,6 +80,8 @@ test('ordinary-user navigation uses plain names and folds advanced pages (#970)'
   assert.deepEqual(routeGroup('/marketplace'), { name: '功能商店', group: 'FEATURES', hidden: false })
   assert.deepEqual(routeGroup('/agent/ambient'), { name: '群聊插话', group: 'BOT', hidden: false })
   assert.match(source, /path: '\/agent\/ambient'[\s\S]*?requiredPermissions: \[AMBIENT_STATUS_PERMISSION\]/)
+  assert.deepEqual(routeGroup('/agent/skills'), { name: '技能助手', group: 'BOT', hidden: false })
+  assert.match(source, /path: '\/agent\/skills'[\s\S]*?requiredPermissions: \[SKILLS_STATUS_PERMISSION\]/)
   assert.equal(routeGroup('/agent/workbench').group, 'BOT')
   for (const path of ['/config', '/env', '/files', '/database', '/introspection', '/scenario-lab', '/agent/workrooms']) {
     assert.equal(routeGroup(path).group, 'ADVANCED', path)
