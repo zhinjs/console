@@ -1,0 +1,40 @@
+console-ui/src/pages/plugin-management-model.mjs
+  s_079f1dc5e6308d::t_d8dcbf115cdf84 45,47,50
+  s_079f1dc5e6308d::t_60d7fce0b5e7be 40-44,46,48-49,51
+console-ui/src/components/PluginConfigForm/types.ts
+  s_079f1dc5e6308d::t_f3c7676c591658 42
+console-ui/src/components/PluginConfigForm/SchemaFieldEditor.tsx
+  s_079f1dc5e6308d::t_f3c7676c591658 50,54,60-61,63,69,78-81
+console-ui/src/pages/plugin-management-model.d.mts
+  s_079f1dc5e6308d::t_60d7fce0b5e7be 7-8,10,21-22
+console-ui/src/pages/task-center.tsx
+  s_079f1dc5e6308d::t_3dab0f2962899e 24,161,165,175,215-221,275,278
+tests/plugin-verification-reconciliation.test.mjs
+  s_079f1dc5e6308d::t_d8dcbf115cdf84 77-78
+  s_079f1dc5e6308d::t_7306a6386bf116 1-2,10,17,56-76,79
+  s_079f1dc5e6308d::t_9f90592ad5f90d 7-8,37-55
+tests/localization-lifecycle.test.mjs
+  s_079f1dc5e6308d::t_a6f7c3c805ab28 10-13,39-153
+console-ui/src/components/PluginConfigForm/index.tsx
+  s_079f1dc5e6308d::t_8b908c1d4eb5cf 41,62,118,145-147
+console-ui/src/pages/endpoint-detail/useMessageHistory.ts
+  s_079f1dc5e6308d::t_ff0bc1426847d5 55,104,125,153
+console-ui/src/pages/plugin-detail.tsx
+  s_079f1dc5e6308d::t_fb504183869767 21,344,349,363-364,370-371,480,482
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e64cbe2172707f8f5ed6b2fb2f51ec0d62a85cce",
+  "prompts": {},
+  "sessions": {
+    "s_079f1dc5e6308d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a079da-08f2-7112-8660-7d86c654edb0",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
