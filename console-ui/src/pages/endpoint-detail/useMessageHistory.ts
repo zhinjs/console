@@ -52,6 +52,7 @@ export function useMessageHistory(params: {
   selection: SidebarSelection | null
 }) {
   const i18n = useI18n()
+  const messages = useRef(i18n); messages.current = i18n
   const { adapter, endpointId, endpoint, selection } = params
   const cacheScope = useInboxCacheScope()
   const { error: toastError } = useToast()
@@ -100,7 +101,7 @@ export function useMessageHistory(params: {
           },
         })
         if (seq !== inboxLoadSeqRef.current || !isInboxCacheScopeActive(cacheScope)) return
-        const rows = readMessageHistory(res, i18n.locale)
+        const rows = readMessageHistory(res, messages.current.locale)
         setInboxMessagesEnabled(res.inboxEnabled)
         if (!res.inboxEnabled || !rows.length) {
           if (!append) setInboxMessages([])
@@ -121,7 +122,7 @@ export function useMessageHistory(params: {
         if (seq === inboxLoadSeqRef.current) setInboxMessagesLoading(false)
       }
     },
-    [adapter, endpointId, selection, cacheScope, i18n],
+    [adapter, endpointId, selection, cacheScope],
   )
 
   useEffect(() => {
@@ -149,7 +150,7 @@ export function useMessageHistory(params: {
     if (!adapter || !endpointId) return
     const onPush = (msg: EndpointPushMessage) => {
       if (msg.type !== SIDE_EVENT_PUSH.MESSAGE_RECEIVE) return
-      const payload = readMessagePush(msg.data, i18n.locale)
+      const payload = readMessagePush(msg.data, messages.current.locale)
       if (!isInboxCacheScopeActive(cacheScope) || !payload || !endpoint || payload.endpoint.adapter !== endpoint.adapter || payload.endpoint.id !== endpoint.id) return
       void putInboxCache(adapter, endpointId, 'message', { ...payload })
       const content = normalizeInboundContent(payload.content) as ReceivedMessage['content']

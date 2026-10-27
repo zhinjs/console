@@ -39,7 +39,7 @@ export type Schema = SchemaField
 
 /** Owned by one scoped form; never shared between connections or aliases. */
 export interface SchemaEditorDrafts {
-  json: Map<string, { text: string; value: unknown; error: string | null }>
+  json: Map<string, { text: string; value: unknown; error: boolean }>
   unions: Map<string, { selected: number | undefined; values: Map<number, unknown> }>
 }
 
