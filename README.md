@@ -75,6 +75,8 @@ Console 面向普通用户（[zhin#970](https://github.com/zhinjs/zhin/issues/97
 
 「群聊插话」（`/agent/ambient`）：状态来自 `pluginRpc('root', 'ambient')`（Host 方法 `plugin.root.ambient`，需要令牌持有 `ambient:read`），设置用 `config:patch` + `expectedRevision` 只写 `ai.trigger.ambient` 下的几个键，保存后总会提示是否需要重启。
 
+「决策回放」（`/agent/replay`，从「机器人状态」页的快捷入口进入，不在菜单里）：读 `ai_decision_events`（zhinjs/zhin ADR 0036 切片 C）。列表用 `pluginRpc('root', 'decisions')`（新的在前，`nextBefore` 翻页），点一行看整个回合用 `decision-turn`，导出用 `decisions-export` 按 `nextSince` 逐页拼成一个 JSON 文件；三者都需要令牌持有 `decisions:read`。
+
 「技能助手」（`/agent/skills`）：状态来自 `pluginRpc('root', 'skills')`（Host 方法 `plugin.root.skills`，需要令牌持有 `skills:read`）。设置用 `config:patch` + `instanceKey`（`plugins` 里 `@zhin.js/service-typesafe` 的实例名）+ `expectedRevision`，只写 `ai.decisions.<事项>.mode`（该插件 `schema.json` 声明的 `x-zhin-config.patchPaths: ["ai.decisions"]`）；还没绑定时顺带写 `ai.decisions.provider: root/<实例名>`，已绑定其他服务时不允许在页面里改。
 
 插件约定页没有分组字段，已知页面按路由在 `PLUGIN_PAGE_PLACEMENT` 里归组，其余进「其他」。原有路由路径不变，旧链接继续可用。

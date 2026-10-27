@@ -18,6 +18,8 @@ import ScenarioLabPage from './pages/scenario-lab'
 import CommandPermissionsPage from './pages/command-permissions'
 import AgentWorkbenchPage from './pages/agent-workbench'
 import AgentSessionsPage from './pages/agent-sessions'
+import BotReplayPage from './pages/bot-replay'
+import { REPLAY_PERMISSION } from './pages/bot-replay-model.mjs'
 import AmbientEngagementPage from './pages/ambient-engagement'
 import { AMBIENT_STATUS_PERMISSION } from './pages/ambient-engagement-model.mjs'
 import SkillsAssistantPage from './pages/skills-assistant'
@@ -92,6 +94,16 @@ export function registerBuiltinConsolePages() {
     icon: 'Brain',
     element: <AgentWorkbenchPage />,
     meta: { group: NAV_GROUPS.BOT, order: 0 },
+  })
+
+  app.addRoute({
+    path: '/agent/replay',
+    name: '决策回放',
+    parent: '/agent/workbench',
+    icon: 'Brain',
+    element: <BotReplayPage />,
+    requiredPermissions: [REPLAY_PERMISSION],
+    meta: { group: NAV_GROUPS.BOT, order: 1, hideInMenu: true },
   })
 
   app.addRoute({
