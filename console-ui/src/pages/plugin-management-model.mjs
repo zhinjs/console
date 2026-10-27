@@ -37,6 +37,18 @@ export function verificationSummary(result, locale = 'zh-CN') {
   if (result.status === 'failed') return translate(locale, "业务检查未通过");
   return result.scope === 'local' ? translate(locale, "本地业务检查通过；尚未验证平台投递") : translate(locale, "所选平台业务检查通过");
 }
+/** Explicit provider metadata only; unknown third-party copy and the approved plan stay intact. */
+function displayTranslation(original, translations, locale, accepts) {
+  const translated = translations && Object.hasOwn(translations, locale) ? translations[locale] : undefined;
+  return accepts(translated) ? translated : original;
+}
+const textList = (value, original) => Array.isArray(value) && value.length === original.length && value.every(text);
+export function verificationCheckDisplay(check, locale = 'zh-CN') {
+  return { title: displayTranslation(check.title, check.titleI18n, locale, text), effects: displayTranslation(check.effects, check.effectsI18n, locale, value => textList(value, check.effects)) };
+}
+export function verificationResultDisplay(result, locale = 'zh-CN') {
+  return { summary: displayTranslation(result.summary, result.summaryI18n, locale, text), evidence: displayTranslation(result.evidence, result.evidenceI18n, locale, value => textList(value, result.evidence)) };
+}
 export function mutationRequest(type, plan, extra = {}, locale = 'zh-CN') {
   if (!plan || !text(plan.packageName) || !text(plan.instanceKey) || !text(plan.projectRevision)) throw Error(translate(locale, "操作计划缺少项目版本，请重新读取计划后确认"));
   if (type === 'plugin:install' && plan.requestedSpec && plan.requestedSpec !== plan.packageName && !plan.requestedSpec.startsWith(`${plan.packageName}@`)) throw Error(translate(locale, "安装请求与批准的包身份不一致"));

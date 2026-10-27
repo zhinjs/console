@@ -38,7 +38,7 @@ function PluginConfigFormSession({ pluginName, onSuccess, onOpenYaml, sourceRevi
   const [draftName, setDraftName] = useState<string | null>(null)
   const [mode, setMode] = useState<'all' | 'minimum'>('all')
   const [view, setView] = useState<'form' | 'source'>('form')
-  const [sourceText, setSourceText] = useState(''), [sourceError, setSourceError] = useState<string | null>(null)
+  const [sourceText, setSourceText] = useState(''), [sourceError, setSourceError] = useState(false)
   const [invalidFields, setInvalidFields] = useState<ReadonlySet<string>>(new Set())
   const [draftVersion, setDraftVersion] = useState(0)
   const editorDrafts = useRef<SchemaEditorDrafts>({ json: new Map(), unions: new Map() })
@@ -59,7 +59,7 @@ function PluginConfigFormSession({ pluginName, onSuccess, onOpenYaml, sourceRevi
     if (guard.current.receive(pluginName, form.config, form.snapshot)) {
       setDraftName(pluginName)
       const next = form.schema ? declaredDefaults(form.schema, form.config === undefined && ['object', 'dict', 'list', 'tuple', 'intersect'].includes(form.schema.type) ? initialSchemaValue(form.schema) : form.config) : form.config
-      setLocalConfig(next); setSourceText(next === undefined ? '' : JSON.stringify(next, null, 2)); setSourceError(null); setInvalidFields(new Set())
+      setLocalConfig(next); setSourceText(next === undefined ? '' : JSON.stringify(next, null, 2)); setSourceError(false); setInvalidFields(new Set())
       editorDrafts.current.json.clear(); editorDrafts.current.unions.clear(); setDraftVersion(previous => previous + 1)
       setSaveError(null); setValidation(null)
     }
@@ -115,7 +115,7 @@ function PluginConfigFormSession({ pluginName, onSuccess, onOpenYaml, sourceRevi
     if (!isInboxCacheScopeActive(connectionScope)) return
     guard.current.saved(); guard.current.receive(pluginName, form.config, form.snapshot)
     const next = form.schema ? declaredDefaults(form.schema, form.config === undefined && ['object', 'dict', 'list', 'tuple', 'intersect'].includes(form.schema.type) ? initialSchemaValue(form.schema) : form.config) : form.config
-    setLocalConfig(next); setSourceText(next === undefined ? '' : JSON.stringify(next, null, 2)); setSourceError(null); setInvalidFields(new Set()); editorDrafts.current.json.clear(); editorDrafts.current.unions.clear(); setDraftVersion(previous => previous + 1)
+    setLocalConfig(next); setSourceText(next === undefined ? '' : JSON.stringify(next, null, 2)); setSourceError(false); setInvalidFields(new Set()); editorDrafts.current.json.clear(); editorDrafts.current.unions.clear(); setDraftVersion(previous => previous + 1)
     setValidation(null); setSaveError(null); setMessage(null)
   }
   const explanation = <ConfigFieldExplanation instanceKey={pluginName} revision={form.snapshot?.revision} draftRevision={guard.current.snapshot?.revision} dirty={guard.current.dirty} disabled={saving || form.loading || !!form.error} onOpenSource={onOpenYaml} />
@@ -142,9 +142,9 @@ function PluginConfigFormSession({ pluginName, onSuccess, onOpenYaml, sourceRevi
     {invalidFields.size > 0 && <p role="alert" className="text-sm text-destructive">{i18n.t("有字段 JSON 草稿格式错误，修正后才能保存。")}</p>}
     {view === 'source' ? <div className="space-y-2"><p className="text-xs text-muted-foreground">{i18n.t("此项 JSON 与表单共用当前草稿，切换无需保存。完整文件源码基于已保存版本，与此项草稿独立；保存仍使用草稿原版本。")}</p><div className="h-80 overflow-hidden rounded-md border"><CodeEditor language="json" ariaLabel={i18n.t("{0} 此项源码", [pluginName])} value={sourceText} disabled={saving || form.loading} invalid={!!sourceError} onChange={text => {
       guard.current.edited(); setSourceText(text); setValidation(null); setMessage(null)
-      try { setLocalConfig(JSON.parse(text)); setSourceError(null); editorDrafts.current.json.clear(); editorDrafts.current.unions.clear(); setDraftVersion(previous => previous + 1) }
-      catch { setSourceError(i18n.t("JSON 格式错误，当前草稿已保留。")) }
-    }} /></div>{sourceError && <p role="alert" className="text-xs text-destructive">{sourceError}</p>}</div> : <fieldset key={draftVersion} disabled={saving || form.loading} className="space-y-3">{rootObject ? <>{visibleFields.map(([name, field]) => <SchemaFieldEditor key={name} path={`$/${JSON.stringify(name)}`} drafts={editorDrafts.current} onValidityChange={fieldValidity} name={name} field={form.schema?.secret ? { ...field, secret: true } : field} value={objectConfig[name]} onChange={value => change(name, value)} />)}{(!Object.keys(fields).length && !Object.keys(objectConfig).length && !form.schema.additional) ? <p>{i18n.t("此项无需配置。")}</p> : null}{(form.schema.additional || Object.keys(objectConfig).some(key => !Object.hasOwn(fields, key))) ? <SchemaFieldEditor name={i18n.t("其他字段")} path="$/additional" drafts={editorDrafts.current} onValidityChange={fieldValidity} reservedKeys={Object.keys(fields)} field={{ type: 'object', object: {}, additional: form.schema.additional, secret: form.schema.secret }} value={Object.fromEntries(Object.entries(objectConfig).filter(([key]) => !Object.hasOwn(fields, key)))} onChange={value => {
+      try { setLocalConfig(JSON.parse(text)); setSourceError(false); editorDrafts.current.json.clear(); editorDrafts.current.unions.clear(); setDraftVersion(previous => previous + 1) }
+      catch { setSourceError(true) }
+    }} /></div>{sourceError && <p role="alert" className="text-xs text-destructive">{i18n.t("JSON 格式错误，当前草稿已保留。")}</p>}</div> : <fieldset key={draftVersion} disabled={saving || form.loading} className="space-y-3">{rootObject ? <>{visibleFields.map(([name, field]) => <SchemaFieldEditor key={name} path={`$/${JSON.stringify(name)}`} drafts={editorDrafts.current} onValidityChange={fieldValidity} name={name} field={form.schema?.secret ? { ...field, secret: true } : field} value={objectConfig[name]} onChange={value => change(name, value)} />)}{(!Object.keys(fields).length && !Object.keys(objectConfig).length && !form.schema.additional) ? <p>{i18n.t("此项无需配置。")}</p> : null}{(form.schema.additional || Object.keys(objectConfig).some(key => !Object.hasOwn(fields, key))) ? <SchemaFieldEditor name={i18n.t("其他字段")} path="$/additional" drafts={editorDrafts.current} onValidityChange={fieldValidity} reservedKeys={Object.keys(fields)} field={{ type: 'object', object: {}, additional: form.schema.additional, secret: form.schema.secret }} value={Object.fromEntries(Object.entries(objectConfig).filter(([key]) => !Object.hasOwn(fields, key)))} onChange={value => {
       const next = Object.fromEntries(Object.entries(objectConfig).filter(([key]) => Object.hasOwn(fields, key)))
       if (value && typeof value === 'object' && !Array.isArray(value)) for (const [key, child] of Object.entries(value)) if (!Object.hasOwn(fields, key)) Object.defineProperty(next, key, { value: child, enumerable: true, configurable: true, writable: true })
       changeValue(next)

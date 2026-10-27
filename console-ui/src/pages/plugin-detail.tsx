@@ -18,7 +18,7 @@ import { PluginManagementSummary } from './PluginManagementSummary'
 import { isDemoMode } from '../utils/demo-mode'
 import { WelcomeFlowContext } from './WelcomeFlowContext'
 import { welcomeConfigUrl } from './welcome-use-case-model.mjs'
-import { validateManagementState, managementLabel, canApplyPlugin, canVerifyPlugin, captureVerificationPlan, verifyApprovedPlugin, verificationSummary, mutationRequest, applyRequest, waitForManagementState, waitForEnabledManagementState, verificationIsCurrent, type PluginManagementState, type VerificationPlan, type VerificationResult, type MutationPlan } from './plugin-management-model.mjs'
+import { validateManagementState, managementLabel, canApplyPlugin, canVerifyPlugin, captureVerificationPlan, verifyApprovedPlugin, verificationSummary, verificationCheckDisplay, verificationResultDisplay, mutationRequest, applyRequest, waitForManagementState, waitForEnabledManagementState, verificationIsCurrent, type PluginManagementState, type VerificationPlan, type VerificationResult, type MutationPlan } from './plugin-management-model.mjs'
 
 
 /** Feature 序列化格式（与后端 FeatureJSON 一致） */
@@ -341,11 +341,12 @@ export default function PluginDetailPage() {
     let submitted = false
     const check = plan.checks.find(item => item.id === checkId)
     if (!check) return
+    const display = verificationCheckDisplay(check, i18n.locale)
     actionInFlight.current = true
     setActionLoading(true)
     setActionError(null)
     try {
-      const accepted = await confirm({ title: i18n.t("执行「{0}」？", [check.title]), description: i18n.t("范围：{0}。副作用：{1}。批准仅绑定第 {2} 代和当前检查定义。", [check.scope === 'local' ? i18n.t("本地") : i18n.t("平台（可能产生外部操作）"), check.effects.join('；') || i18n.t("插件未声明额外副作用"), plan.generation]), confirmLabel: i18n.t("批准执行一次") })
+      const accepted = await confirm({ title: i18n.t("执行「{0}」？", [display.title]), description: i18n.t("范围：{0}。副作用：{1}。批准仅绑定第 {2} 代和当前检查定义。", [check.scope === 'local' ? i18n.t("本地") : i18n.t("平台（可能产生外部操作）"), display.effects.join(i18n.locale === 'en' ? '; ' : '；') || i18n.t("插件未声明额外副作用"), plan.generation]), confirmLabel: i18n.t("批准执行一次") })
       if (!accepted || routeIdentity.current !== name) return
       setVerificationPlan(null)
       setVerificationResult(null)
@@ -359,12 +360,14 @@ export default function PluginDetailPage() {
       if (routeIdentity.current !== name) return
       if (submitted) {
         setActionUnconfirmed(true)
-        setUnconfirmedCheck(check.title)
-        setActionError(i18n.t("检查「{0}」的执行结果未知：{1}。刷新插件状态不能确认该检查是否执行；请核对日志及外部结果，勿重复执行。", [check.title, (err as Error).message]))
+        setUnconfirmedCheck(display.title)
+        setActionError(i18n.t("检查「{0}」的执行结果未知：{1}。刷新插件状态不能确认该检查是否执行；请核对日志及外部结果，勿重复执行。", [display.title, (err as Error).message]))
       } else setActionError((err as Error).message)
     }
     finally { actionInFlight.current = false; setActionLoading(false) }
   }
+
+  const verificationDisplay = verificationResult ? verificationResultDisplay(verificationResult.outcome, i18n.locale) : null
 
   if (loading) {
     return (
@@ -474,9 +477,9 @@ export default function PluginDetailPage() {
                 <AlertDescription>{actionError}{actionErrorDetail && <details className="mt-2 text-xs"><summary className="cursor-pointer">{i18n.t("错误详情")}</summary><p className="mt-2 break-all">{actionErrorDetail}</p></details>}{actionUnconfirmed && <Button variant="outline" size="sm" onClick={() => void fetchPluginDetail(plugin.instanceKey)}>{i18n.t("刷新核对状态")}</Button>}</AlertDescription>
               </Alert>
             )}
-            {verificationPlan && <section aria-label={i18n.t("业务验证计划")} className="space-y-3 rounded-md border p-3"><p className="font-medium">{i18n.t("第 ")}{verificationPlan.generation} {i18n.t(" 代业务检查 · 尚未执行")}</p>{verificationPlan.checks.length === 0 ? <p>{i18n.t("插件未提供可执行检查。")}</p> : verificationPlan.checks.map(check => <div key={check.id} className="space-y-2"><p>{check.title} <Badge variant="secondary">{check.scope === 'local' ? i18n.t("本地") : i18n.t("平台")}</Badge></p><ul className="list-disc pl-5 text-xs text-muted-foreground">{check.effects.map((effect,index) => <li key={index}>{effect}</li>)}</ul><Button size="sm" disabled={actionLoading || actionUnconfirmed} onClick={() => void runVerification(check.id)}>{i18n.t("审阅并批准一次")}</Button></div>)}</section>}
+            {verificationPlan && <section aria-label={i18n.t("业务验证计划")} className="space-y-3 rounded-md border p-3"><p className="font-medium">{i18n.t("第 ")}{verificationPlan.generation} {i18n.t(" 代业务检查 · 尚未执行")}</p>{verificationPlan.checks.length === 0 ? <p>{i18n.t("插件未提供可执行检查。")}</p> : verificationPlan.checks.map(check => { const display = verificationCheckDisplay(check, i18n.locale); return <div key={check.id} className="space-y-2"><p>{display.title} <Badge variant="secondary">{check.scope === 'local' ? i18n.t("本地") : i18n.t("平台")}</Badge></p><ul className="list-disc pl-5 text-xs text-muted-foreground">{display.effects.map((effect,index) => <li key={index}>{effect}</li>)}</ul><Button size="sm" disabled={actionLoading || actionUnconfirmed} onClick={() => void runVerification(check.id)}>{i18n.t("审阅并批准一次")}</Button></div> })}</section>}
             {verificationInvalidated && <p role="status" className="text-sm text-amber-700 dark:text-amber-300">{i18n.t("当前代、配置或连接证据已变化，旧检查结果已失效。请重新查看业务检查并验证。")}</p>}
-            {verificationResult && verificationIsCurrent(verificationResult.outcome, verificationResult.plan, plugin.management, undefined, i18n.locale) && <section aria-label={i18n.t("业务验证结果")} className="space-y-2"><p className="font-medium">{verificationSummary(verificationResult.outcome, i18n.locale)}</p><p className="text-sm">{verificationResult.outcome.summary}</p><ul className="list-disc pl-5 text-xs">{verificationResult.outcome.evidence.map((evidence,index) => <li key={index}>{evidence}</li>)}</ul></section>}
+            {verificationResult && verificationIsCurrent(verificationResult.outcome, verificationResult.plan, plugin.management, undefined, i18n.locale) && <section aria-label={i18n.t("业务验证结果")} className="space-y-2"><p className="font-medium">{verificationSummary(verificationResult.outcome, i18n.locale)}</p><p className="text-sm">{verificationDisplay?.summary}</p><ul className="list-disc pl-5 text-xs">{verificationDisplay?.evidence.map((evidence,index) => <li key={index}>{evidence}</li>)}</ul></section>}
             {diagnostic != null && <PluginDiagnostic value={diagnostic} />}
           </CardContent>
         </Card>

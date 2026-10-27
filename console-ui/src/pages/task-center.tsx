@@ -21,7 +21,7 @@ import { readTaskProviders, readTaskMutation, readTaskUseCases, readPendingTask,
   availableTaskActions, taskTimeLabel, taskParameterSummary, taskActionDescription, TASK_STATE_LABELS, TASK_ACTION_LABELS, type AdminTask, type TaskAction,
   type TaskProvider, type TaskProviders, type TaskMutationBody, type PendingTask, type TaskUseCase } from './task-center-model.mjs'
 
-type Review = { body: TaskMutationBody; target: DiagnosticConversation; effects: string[]; title: string; action: 'create' | TaskAction; parameters: Record<string, unknown>; schema: Record<string, unknown>; timezone?: string }
+type Review = { body: TaskMutationBody; target: DiagnosticConversation; effects: string[]; action: 'create' | TaskAction; parameters: Record<string, unknown>; schema: Record<string, unknown>; timezone?: string }
 type TargetFields = { kind: string; id: string; parentKind: string; parentId: string; threadId: string }
 const emptyTarget: TargetFields = { kind: 'private', id: '', parentKind: '', parentId: '', threadId: '' }
 const selectClass = 'h-9 w-full rounded-md border bg-background px-3 text-sm'
@@ -158,11 +158,11 @@ export default function TaskCenterPage() {
   const issues = base ? validateTaskParameters(base.provider.schema, parameters, i18n.locale) : []
 
   const prepareCreateOrUpdate = () => {
-    if (!base || !targetPreview || disabled || stale || issues.length || form.unsupported) return
+    if (!base || !provider || !targetPreview || disabled || stale || issues.length || form.unsupported) return
     try {
       const body = taskMutationBody({ generation: base.generation, provider: base.provider, requestId: crypto.randomUUID(), target: targetPreview, parameters,
         ...(editTask ? { id: editTask.id, action: 'update' as const } : {}) }, i18n.locale)
-      setReview({ body, target: targetPreview, effects: base.provider.effects, title: editTask ? i18n.t("确认修改管理员任务") : i18n.t("确认创建管理员任务"), action: editTask ? 'update' : 'create', parameters: structuredClone(parameters), schema: base.provider.schema, timezone: editTask?.timezone })
+      setReview({ body, target: targetPreview, effects: provider.effects, action: editTask ? 'update' : 'create', parameters: structuredClone(parameters), schema: base.provider.schema, timezone: editTask?.timezone })
     } catch (caught) { setError((caught as Error).message) }
   }
   const act = (task: AdminTask, action: TaskAction) => {
@@ -172,7 +172,7 @@ export default function TaskCenterPage() {
     }
     try {
       const body = taskMutationBody({ generation: catalog.generation, provider, requestId: crypto.randomUUID(), id: task.id, action }, i18n.locale)
-      setReview({ body, target: task.target, effects: provider.effects, title: i18n.t("确认{0}管理员任务", [i18n.t(TASK_ACTION_LABELS[action])]), action, parameters: structuredClone(task.parameters), schema: provider.schema, timezone: task.timezone })
+      setReview({ body, target: task.target, effects: provider.effects, action, parameters: structuredClone(task.parameters), schema: provider.schema, timezone: task.timezone })
     } catch (caught) { setError((caught as Error).message) }
   }
   const submit = async () => {
@@ -211,6 +211,13 @@ export default function TaskCenterPage() {
     } catch (caught) { if (owned()) { setError((caught as Error).message); setNotice(null) } }
     finally { if (owned()) { writing.current = false; setBusy(false) } }
   }
+
+  // Display metadata may refresh without replacing the approved mutation snapshot or draft.
+  const reviewTitle = !review ? '' : review.action === 'create' ? i18n.t("确认创建管理员任务")
+    : review.action === 'update' ? i18n.t("确认修改管理员任务") : i18n.t("确认{0}管理员任务", [i18n.t(TASK_ACTION_LABELS[review.action])])
+  const reviewEffects = review && catalog?.generation === review.body.generation
+    && provider?.owner === review.body.owner && provider.revision === review.body.expectedRevision
+    ? provider.effects : review?.effects ?? []
 
   return <div className="p-4 md:p-6 space-y-5 max-w-6xl mx-auto">
     <div className="flex items-center justify-between gap-3"><div><h1 className="text-xl font-semibold flex items-center gap-2"><ClipboardList className="h-5 w-5" />{i18n.t("任务中心")}</h1><p className="text-sm text-muted-foreground mt-1">{i18n.t("从用途创建管理员任务；聊天中创建的个人任务仍归原用户，本页不会导入。")}</p></div>
@@ -265,10 +272,10 @@ export default function TaskCenterPage() {
         <div className="space-y-3"><h2 className="font-medium">{provider ? i18n.t("{0} · 管理员任务", [provider.title]) : i18n.t("请选择用途查看任务")}</h2>{provider && !provider.tasks.length && <p className="text-sm text-muted-foreground">{i18n.t("当前没有管理员任务；这不代表聊天用户没有个人任务。")}</p>}{provider?.tasks.map(task => <AdminTaskCard key={task.id} task={task} disabled={disabled} onAction={act} />)}</div>
       </div>}
     </>}
-    <Dialog open={review !== null && current} onOpenChange={value => { if (!value) setReview(null) }}><DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto"><DialogHeader><DialogTitle>{review?.title}</DialogTitle><DialogDescription>{review && taskActionDescription(review.action, i18n.locale)}</DialogDescription></DialogHeader>
+    <Dialog open={review !== null && current} onOpenChange={value => { if (!value) setReview(null) }}><DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto"><DialogHeader><DialogTitle>{reviewTitle}</DialogTitle><DialogDescription>{review && taskActionDescription(review.action, i18n.locale)}</DialogDescription></DialogHeader>
       {review && <div className="space-y-3 text-sm"><p>{i18n.t("操作：")}{review.action === 'create' ? i18n.t("创建") : i18n.t(TASK_ACTION_LABELS[review.action])} · {provider?.title}</p>
         {review.action === 'cancel' && <Alert><AlertDescription>{i18n.t("取消无法撤回已经在途或结果不确定的发送，请先核对目标会话。")}</AlertDescription></Alert>}
-        <div><p className="font-medium">{i18n.t("未来外部影响")}</p>{review.effects.length ? <ul className="list-disc pl-5">{review.effects.map(effect => <li key={effect}>{effect}</li>)}</ul> : <p>{i18n.t("提供方未声明影响说明；这不等于没有外部副作用。")}</p>}</div>
+        <div><p className="font-medium">{i18n.t("未来外部影响")}</p>{reviewEffects.length ? <ul className="list-disc pl-5">{reviewEffects.map(effect => <li key={effect}>{effect}</li>)}</ul> : <p>{i18n.t("提供方未声明影响说明；这不等于没有外部副作用。")}</p>}</div>
         <div className="rounded-md bg-muted/40 p-3"><TaskTargetSummary target={review.target} accountName={accountName(review.target)} /></div>
         <TaskParameterSummary schema={review.schema} parameters={review.parameters} timezone={review.timezone} />
         <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">{i18n.t("完整身份与参数")}</summary><pre className="whitespace-pre-wrap break-all pt-2">{JSON.stringify({ target: review.target, parameters: review.parameters }, null, 2)}</pre></details>

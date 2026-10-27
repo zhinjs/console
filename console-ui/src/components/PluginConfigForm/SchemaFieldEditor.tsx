@@ -47,26 +47,26 @@ function SecretTextEditor({ name, value, onChange, id }: FieldEditorProps & { id
 function JsonValueEditor({ value, onChange, path = '$', drafts, onValidityChange, name, field }: FieldEditorProps) {
   const i18n = useI18n()
   const cached = drafts?.json.get(path)
-  const [draft, setDraft] = useState(() => cached && sameValue(cached.value, value) ? cached : { text: jsonText(value), value, error: null as string | null })
+  const [draft, setDraft] = useState(() => cached && sameValue(cached.value, value) ? cached : { text: jsonText(value), value, error: false })
   const [reveal, setReveal] = useState(!field.secret)
   const errorId = useId()
   useEffect(() => {
-    if (!sameValue(draft.value, value)) setDraft({ text: jsonText(value), value, error: null })
+    if (!sameValue(draft.value, value)) setDraft({ text: jsonText(value), value, error: false })
   }, [value, draft.value])
   useEffect(() => { onValidityChange?.(path, !!draft.error); return () => onValidityChange?.(path, false) }, [path, draft.error, onValidityChange])
   if (!reveal) return <div className="space-y-2"><p className="text-xs text-muted-foreground">{i18n.t("敏感值未展示，未编辑时原样保留。")}</p><Button type="button" variant="outline" size="sm" onClick={() => setReveal(true)}>{i18n.t("编辑敏感 JSON")}</Button></div>
   return <div className="space-y-2"><p className="text-xs text-muted-foreground">{field.reason ?? i18n.t("此字段使用 JSON 值编辑；其他字段继续使用表单。")}{field.secret ? i18n.t(" 此项可能包含敏感值，请使用环境变量引用。") : ''}</p><div className="h-44 overflow-hidden rounded-md border"><CodeEditor language="json" ariaLabel={i18n.t("{0} JSON 值", [name])} value={draft.text} invalid={!!draft.error} errorId={draft.error ? errorId : undefined} onChange={text => {
     let next: typeof draft
-    try { const parsed = JSON.parse(text); next = { text, value: parsed, error: null }; onChange(parsed) }
-    catch { next = { text, value, error: i18n.t("JSON 格式有误；草稿已保留，修正后才能保存。") } }
+    try { const parsed = JSON.parse(text); next = { text, value: parsed, error: false }; onChange(parsed) }
+    catch { next = { text, value, error: true } }
     onValidityChange?.(path, !!next.error); drafts?.json.set(path, next); setDraft(next)
-  }} /></div>{draft.error && <p id={errorId} role="alert" className="text-xs text-destructive">{draft.error}</p>}{value === undefined && !draft.text && <p className="text-xs text-muted-foreground">{i18n.t("尚未设置；不编辑时保持省略。")}</p>}</div>
+  }} /></div>{draft.error && <p id={errorId} role="alert" className="text-xs text-destructive">{i18n.t("JSON 格式有误；草稿已保留，修正后才能保存。")}</p>}{value === undefined && !draft.text && <p className="text-xs text-muted-foreground">{i18n.t("尚未设置；不编辑时保持省略。")}</p>}</div>
 }
 
 function ObjectValueEditor(props: FieldEditorProps) {
   const i18n = useI18n()
   const { field, value, onChange, path = '$' } = props
-  const [keyDraft, setKeyDraft] = useState(''), [keyError, setKeyError] = useState<string | null>(null)
+  const [keyDraft, setKeyDraft] = useState(''), [keyError, setKeyError] = useState(false)
   const fields = objectFields(field)
   const object = value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : undefined
   if (!object) return <div className="space-y-2">{value !== undefined && <JsonValueEditor {...props} />}<Button type="button" variant="outline" size="sm" onClick={() => onChange(initialSchemaValue(field))}>{i18n.t("添加对象配置")}</Button></div>
@@ -75,10 +75,10 @@ function ObjectValueEditor(props: FieldEditorProps) {
   return <div className="space-y-3 border-l pl-3">{Object.entries(fields).map(([key, child]) => <SchemaFieldEditor {...props} key={key} path={`${path}/${JSON.stringify(key)}`} name={key} field={inheritedField(field, child)} value={object[key]} onChange={next => onChange(updateObjectField(object, key, next))} />)}
     {extras.map(key => <div key={key} className="space-y-2"><SchemaFieldEditor {...props} path={`${path}/${JSON.stringify(key)}`} name={key} field={inheritedField(field, dynamic || { type: 'any', reason: i18n.t("Schema 未声明此保存字段；原值保留，最终由 Host 校验。") })} value={object[key]} onChange={next => onChange(updateObjectField(object, key, next))} /><Button type="button" variant="outline" size="sm" onClick={() => { clearEditorDraftSubtree(`${path}/${JSON.stringify(key)}`, props.drafts, props.onValidityChange); onChange(updateObjectField(object, key, undefined)) }}>{i18n.t("删除键 ")}{key}</Button></div>)}
     {!Object.keys(fields).length && !extras.length && <p className="text-xs text-muted-foreground">{dynamic ? i18n.t("当前为空对象，可添加键值。") : i18n.t("此项无需配置字段。")}</p>}
-    {dynamic && <div className="flex flex-wrap gap-2"><Input aria-label={i18n.t("新增字典键")} value={keyDraft} onChange={event => { setKeyDraft(event.target.value); setKeyError(null) }} /><Button type="button" variant="outline" size="sm" onClick={() => {
-      if (!keyDraft || Object.hasOwn(object, keyDraft) || Object.hasOwn(fields, keyDraft) || props.reservedKeys?.includes(keyDraft) || ['__proto__', 'prototype', 'constructor'].includes(keyDraft)) { setKeyError(i18n.t("键不能为空、不能重复或使用保留名称。")); return }
-      onChange(updateObjectField(object, keyDraft, initialSchemaValue(dynamic) ?? (dynamic.type === 'string' ? '' : dynamic.type === 'boolean' ? false : null))); setKeyDraft(''); setKeyError(null)
-    }}>{i18n.t("添加键值")}</Button></div>}{keyError && <p role="alert" className="text-xs text-destructive">{keyError}</p>}
+    {dynamic && <div className="flex flex-wrap gap-2"><Input aria-label={i18n.t("新增字典键")} value={keyDraft} onChange={event => { setKeyDraft(event.target.value); setKeyError(false) }} /><Button type="button" variant="outline" size="sm" onClick={() => {
+      if (!keyDraft || Object.hasOwn(object, keyDraft) || Object.hasOwn(fields, keyDraft) || props.reservedKeys?.includes(keyDraft) || ['__proto__', 'prototype', 'constructor'].includes(keyDraft)) { setKeyError(true); return }
+      onChange(updateObjectField(object, keyDraft, initialSchemaValue(dynamic) ?? (dynamic.type === 'string' ? '' : dynamic.type === 'boolean' ? false : null))); setKeyDraft(''); setKeyError(false)
+    }}>{i18n.t("添加键值")}</Button></div>}{keyError && <p role="alert" className="text-xs text-destructive">{i18n.t("键不能为空、不能重复或使用保留名称。")}</p>}
   </div>
 }
 

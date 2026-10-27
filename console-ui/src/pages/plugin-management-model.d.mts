@@ -4,9 +4,10 @@ export interface PluginManagementState {
   validation: { schemaAvailable?: boolean; valid: boolean; errors: readonly {path:string;message:string}[]; missingEnv: readonly string[] } | null;
   generation: number | null; published: boolean; readiness: 'unknown' | 'ready' | 'pending' | 'degraded'; restartRequired: boolean; disabled: boolean; issues: readonly string[]; verification: 'not-configured' | 'available';
 }
-export interface VerificationCheck { readonly id:string; readonly title:string; readonly effects:readonly string[]; readonly scope:'local'|'platform' }
+type DisplayTranslations<T> = Readonly<Partial<Record<'zh-CN' | 'en', T>>>
+export interface VerificationCheck { readonly id:string; readonly title:string; readonly titleI18n?:DisplayTranslations<string>; readonly effects:readonly string[]; readonly effectsI18n?:DisplayTranslations<readonly string[]>; readonly scope:'local'|'platform' }
 export interface VerificationPlan { readonly packageName:string; readonly instanceKey:string; readonly generation:number|null; readonly projectRevision:string; readonly checkRevision:string; readonly checks:readonly VerificationCheck[] }
-export interface VerificationResult { packageName:string; instanceKey:string; checkId:string; generation:number|null; current:boolean; status:'passed'|'failed'|'not-configured'; scope:'local'|'platform'|null; summary:string; evidence:readonly string[] }
+export interface VerificationResult { packageName:string; instanceKey:string; checkId:string; generation:number|null; current:boolean; status:'passed'|'failed'|'not-configured'; scope:'local'|'platform'|null; summary:string; summaryI18n?:DisplayTranslations<string>; evidence:readonly string[]; evidenceI18n?:DisplayTranslations<readonly string[]> }
 export interface WorkflowRequest { readonly type:string; readonly [key:string]:unknown }
 export interface MutationPlan { packageName:string; instanceKey:string; projectRevision?:string; configurationRevision?:string|null; requestedSpec?:string }
 export function validateManagementState(state:unknown, instanceKey?:string, locale?: 'zh-CN' | 'en'):PluginManagementState;
@@ -17,6 +18,8 @@ export function captureVerificationPlan(plan:unknown,state:PluginManagementState
 export function verificationRequest(plan:VerificationPlan,checkId:string,state:PluginManagementState, locale?: 'zh-CN' | 'en'):WorkflowRequest;
 export function verifyApprovedPlugin(request:(request:WorkflowRequest)=>Promise<unknown>,plan:VerificationPlan,checkId:string,state:PluginManagementState, locale?: 'zh-CN' | 'en'):Promise<VerificationResult>;
 export function verificationSummary(result:VerificationResult|null, locale?: 'zh-CN' | 'en'):string;
+export function verificationCheckDisplay(check:VerificationCheck, locale?: 'zh-CN' | 'en'):{title:string;effects:readonly string[]};
+export function verificationResultDisplay(result:VerificationResult, locale?: 'zh-CN' | 'en'):{summary:string;evidence:readonly string[]};
 export function mutationRequest(type:string,plan:MutationPlan,extra?:Readonly<Record<string,unknown>>, locale?: 'zh-CN' | 'en'):WorkflowRequest;
 export function applyRequest(state:PluginManagementState, locale?: 'zh-CN' | 'en'):WorkflowRequest;
 export function waitForManagementState(read:()=>Promise<unknown>,previous:PluginManagementState,signal:AbortSignal,options?:{attempts?:number;pause?:(ms:number,signal?:AbortSignal)=>Promise<void>}, locale?: 'zh-CN' | 'en'):Promise<PluginManagementState|null>;
