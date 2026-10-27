@@ -10,6 +10,7 @@ const builtinNames: Readonly<Record<string, string>> = {
   "/cron": "定时提醒",
   "/endpoints": "聊天账号",
   "/agent/workbench": "机器人状态",
+  "/agent/replay": "决策回放",
   "/agent/skills": "技能助手",
   "/agent/ambient": "群聊插话",
   "/agent/workrooms": "Workroom",

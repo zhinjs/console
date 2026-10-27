@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   CircleDashed,
   GitBranch,
+  History,
   MessagesSquare,
   PlugZap,
   RefreshCw,
@@ -319,6 +320,7 @@ export default function AgentWorkbenchPage() {
       <section className="console-agent-shortcuts" aria-label={i18n.t("Agent 快捷入口")}>
         <Link to="/introspection?tab=tools"><Wrench /><span><strong>{i18n.t("工具目录")}</strong><small>{i18n.t("查看输入与来源")}</small></span><ArrowUpRight /></Link>
         <Link to="/introspection?tab=mcp"><Server /><span><strong>{i18n.t("MCP 服务")}</strong><small>{i18n.t("检查连接健康度")}</small></span><ArrowUpRight /></Link>
+        <Link to="/agent/replay"><History /><span><strong>{i18n.t("决策回放")}</strong><small>{i18n.t("每次回或不回的原因")}</small></span><ArrowUpRight /></Link>
         <Link to="/agent/sessions"><GitBranch /><span><strong>{i18n.t("聊天记录")}</strong><small>{i18n.t("继续最近上下文")}</small></span><ArrowUpRight /></Link>
         <Link to="/agent/workrooms"><Workflow /><span><strong>{i18n.t("Workroom 看板")}</strong><small>{i18n.t("按 Project 查看 Run、Task 与 Assignment")}</small></span><ArrowUpRight /></Link>
       </section>

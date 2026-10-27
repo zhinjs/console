@@ -83,6 +83,10 @@ test('ordinary-user navigation uses plain names and folds advanced pages (#970)'
   assert.deepEqual(routeGroup('/agent/skills'), { name: '技能助手', group: 'BOT', hidden: false })
   assert.match(source, /path: '\/agent\/skills'[\s\S]*?requiredPermissions: \[SKILLS_STATUS_PERMISSION\]/)
   assert.equal(routeGroup('/agent/workbench').group, 'BOT')
+  // 决策回放挂在「机器人状态」下（ADR 0036 切片 C），不进菜单，入口在机器人状态页
+  assert.deepEqual(routeGroup('/agent/replay'), { name: '决策回放', group: 'BOT', hidden: true })
+  assert.match(source, /path: '\/agent\/replay'[\s\S]*?parent: '\/agent\/workbench'[\s\S]*?requiredPermissions: \[REPLAY_PERMISSION\]/)
+  assert.match(sourceText(join(SOURCE_ROOT, 'pages', 'agent-workbench.tsx')), /to="\/agent\/replay"/)
   for (const path of ['/config', '/env', '/files', '/database', '/introspection', '/scenario-lab', '/agent/workrooms']) {
     assert.equal(routeGroup(path).group, 'ADVANCED', path)
   }
