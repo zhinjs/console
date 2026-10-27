@@ -1,0 +1,32 @@
+README.md
+  h_b680f75345178a 78-79
+console-ui/src/i18n/messages.en.mjs
+  h_b680f75345178a 2248-2319
+console-ui/src/i18n/navigation.ts
+  h_b680f75345178a 13
+console-ui/src/pages/agent-workbench.tsx
+  h_b680f75345178a 13,323
+console-ui/src/pages/bot-replay-model.d.mts
+  h_b680f75345178a 1-73
+console-ui/src/pages/bot-replay-model.mjs
+  h_b680f75345178a 1-221
+console-ui/src/pages/bot-replay.tsx
+  h_b680f75345178a 1-224
+console-ui/src/registerBuiltinShell.tsx
+  h_b680f75345178a 21-22,99-108
+tests/bot-replay.test.mjs
+  h_b680f75345178a 1-90
+tests/console-contract.test.mjs
+  h_b680f75345178a 86-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1078bb76cf1c6e73a7e128dfb5b22d0d503dc799",
+  "prompts": {},
+  "humans": {
+    "h_b680f75345178a": {
+      "author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
