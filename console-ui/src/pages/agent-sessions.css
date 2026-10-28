@@ -1,0 +1,241 @@
+@layer components {
+  .console-conversations-page {
+    container-type: inline-size;
+  }
+
+  .console-session-workspace {
+    display: grid;
+    grid-template-columns: minmax(12rem, 14rem) minmax(0, 1fr);
+    gap: 1.5rem;
+    min-width: 0;
+    align-items: start;
+  }
+
+  .console-session-directory,
+  .console-session-reading {
+    min-width: 0;
+  }
+
+  .console-session-directory {
+    border-right: var(--console-border-width) solid var(--console-border-subtle);
+    padding-right: 1rem;
+  }
+
+  .console-session-directory .console-agent-session-picker {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .console-session-directory .console-panel-heading {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .console-session-directory .console-panel-heading h2 {
+    font-size: var(--console-text-section-sm);
+  }
+
+  .console-session-directory .console-session-candidate {
+    padding: 0.875rem 0.5rem;
+    gap: 0.625rem;
+    border: 0;
+  }
+
+  .console-session-directory .console-session-candidate-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .console-session-directory .console-session-advanced > div {
+    flex-direction: column;
+  }
+
+  .console-session-directory .console-session-picker-empty {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.75rem;
+  }
+
+  .console-session-directory .console-session-picker-empty > a {
+    margin-left: 0;
+  }
+
+  .console-session-heading {
+    padding-bottom: 1rem;
+  }
+
+  .console-session-heading h2 {
+    overflow-wrap: anywhere;
+    font-size: var(--console-text-section);
+    font-weight: 600;
+    line-height: var(--console-leading-section);
+  }
+
+  .console-session-heading p {
+    margin-top: 0.3rem;
+    overflow-wrap: anywhere;
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-label);
+  }
+
+  .console-session-reading [role='tabpanel'] {
+    margin-top: 1.25rem;
+  }
+
+  .console-session-branches {
+    border-top: var(--console-border-width) solid var(--console-border-subtle);
+    padding-top: 1rem;
+  }
+
+  .conversation-history {
+    min-width: 0;
+  }
+
+  .conversation-history-navigation {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding-block: 0.5rem 1.25rem;
+  }
+
+  .conversation-history-list {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 1.75rem;
+  }
+
+  .conversation-date {
+    margin-block: 0.5rem;
+    color: hsl(var(--muted-foreground));
+    text-align: center;
+    font-size: var(--console-text-label);
+  }
+
+  .conversation-message {
+    min-width: 0;
+    max-width: 100%;
+    align-self: flex-start;
+  }
+
+  .conversation-message-outgoing {
+    align-self: flex-end;
+  }
+
+  .conversation-message-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.625rem;
+    margin-bottom: 0.5rem;
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-label);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .conversation-message-outgoing .conversation-message-meta {
+    justify-content: flex-end;
+  }
+
+  .conversation-message-meta > span:first-child {
+    color: hsl(var(--foreground));
+    font-weight: 550;
+    overflow-wrap: anywhere;
+  }
+
+  .conversation-message-body {
+    max-width: 65ch;
+    min-width: 0;
+    padding: 0.875rem 1rem;
+    border-radius: var(--console-radius-lg);
+    background: var(--console-surface-inset);
+    color: hsl(var(--foreground));
+    font-size: var(--console-text-body);
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+  }
+
+  .conversation-message-outgoing .conversation-message-body {
+    background: hsl(var(--primary) / 0.07);
+  }
+
+  .conversation-message-body .im-text-body {
+    white-space: pre-wrap;
+  }
+
+  .conversation-message-body pre {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .conversation-message-body img,
+  .conversation-message-body video {
+    max-width: 100%;
+    max-height: 24rem;
+    object-fit: contain;
+    border-radius: var(--console-radius-md);
+  }
+
+  .conversation-message-body .im-media-card {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .conversation-message-recalled,
+  .conversation-system-message {
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-label);
+    line-height: 1.6;
+  }
+
+  .conversation-system-message {
+    align-self: center;
+    text-align: center;
+  }
+
+  .conversation-message-recalled {
+    margin-top: 0.375rem;
+  }
+
+  .conversation-history-empty {
+    padding-block: 4rem;
+    color: hsl(var(--muted-foreground));
+    text-align: center;
+  }
+
+  @container (max-width: 52rem) {
+    .console-session-workspace {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 1.25rem;
+    }
+
+    .console-session-directory {
+      border-right: 0;
+      border-bottom: var(--console-border-width) solid var(--console-border-subtle);
+      padding: 0 0 1rem;
+    }
+
+    .console-session-directory:not(.is-open) > #session-directory {
+      display: none;
+    }
+
+    .console-session-directory.is-open > #session-directory {
+      margin-top: 1rem;
+    }
+  }
+}
+
+/* Button display utilities belong to Tailwind's utilities layer. */
+.console-conversations-page .console-session-directory-toggle {
+  display: none;
+}
+
+@container (max-width: 52rem) {
+  .console-conversations-page .console-session-directory-toggle {
+    display: inline-flex;
+  }
+}

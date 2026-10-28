@@ -1,0 +1,166 @@
+@layer components {
+  .console-plugin-catalog-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .console-plugin-catalog-count {
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-body);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .console-plugin-catalog-search {
+    position: relative;
+    width: min(100%, 22rem);
+  }
+
+  .console-plugin-catalog-search > svg {
+    position: absolute;
+    top: 50%;
+    left: 0.75rem;
+    width: 1rem;
+    height: 1rem;
+    transform: translateY(-50%);
+    color: hsl(var(--muted-foreground));
+    pointer-events: none;
+  }
+
+  .console-plugin-catalog-list {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .console-plugin-catalog-list > li + li {
+    border-top: var(--console-border-width) solid var(--console-border-subtle);
+  }
+
+  .console-plugin-catalog-row {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: auto minmax(0, 1fr) minmax(8rem, auto) auto;
+    align-items: center;
+    gap: 1rem;
+    border-radius: var(--console-radius-md);
+    padding: 1.125rem 0.75rem;
+    color: hsl(var(--foreground));
+    text-decoration: none;
+    transition: background-color 150ms ease;
+  }
+
+  .console-plugin-catalog-row:hover {
+    background: var(--console-surface-inset);
+  }
+
+  .console-plugin-catalog-row:focus-visible {
+    outline: var(--console-focus-width) solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  .console-plugin-catalog-icon {
+    display: grid;
+    width: 2.25rem;
+    height: 2.25rem;
+    place-items: center;
+    border-radius: var(--console-radius-md);
+    background: hsl(var(--muted));
+    color: hsl(var(--muted-foreground));
+  }
+
+  .console-plugin-catalog-icon > svg,
+  .console-plugin-catalog-arrow {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .console-plugin-catalog-arrow {
+    color: hsl(var(--muted-foreground));
+  }
+
+  .console-plugin-catalog-identity,
+  .console-plugin-catalog-state {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.375rem;
+    overflow-wrap: anywhere;
+  }
+
+  .console-plugin-catalog-identity > strong {
+    font-size: var(--console-text-section-sm);
+    font-weight: 600;
+    line-height: var(--console-leading-section);
+  }
+
+  .console-plugin-catalog-identity > span {
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-body);
+    line-height: var(--console-leading-body);
+  }
+
+  .console-plugin-catalog-state {
+    align-items: flex-start;
+    max-width: 20rem;
+    justify-self: end;
+  }
+
+  .console-plugin-catalog-state > small {
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-label);
+    line-height: var(--console-leading-label);
+  }
+
+  .console-plugin-catalog-empty {
+    display: flex;
+    min-height: 14rem;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    text-align: center;
+  }
+
+  .console-plugin-catalog-empty > svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .console-plugin-catalog-empty > h2 {
+    font-size: var(--console-text-section);
+    font-weight: 600;
+  }
+
+  .console-plugin-catalog-empty > p {
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-body);
+  }
+
+  @media (max-width: 767px) {
+    .console-plugin-catalog-search {
+      width: 100%;
+    }
+
+    .console-plugin-catalog-row {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 0.75rem;
+      padding: 1rem 0.25rem;
+    }
+
+    .console-plugin-catalog-state {
+      grid-column: 2;
+      justify-self: start;
+      max-width: 100%;
+    }
+
+    .console-plugin-catalog-arrow {
+      grid-column: 3;
+      grid-row: 1;
+    }
+  }
+}
