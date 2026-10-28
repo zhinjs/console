@@ -480,28 +480,32 @@ test('external source revision refreshes clean forms, while dirty forms retain t
   assert.equal(elements(f.runtime.value).find(item => item.type === 'field-editor').props.value, 'dirty-kept'); f.runtime.unmount()
 })
 
-test('real union controls preserve branch values and the original unknown value through switching', async () => {
+test('a union infers its editor from the value without any fill-mode control and keeps unknown keys', async () => {
   const f = fixture(), drafts = { json: new Map(), unions: new Map() }
   const definition = { type: 'union', list: [{ type: 'object', object: { kind: { type: 'const', value: 'a' }, text: { type: 'string' } } }, { type: 'object', object: { kind: { type: 'const', value: 'b' }, count: { type: 'number', default: 0 } } }] }
-  let value = { kind: 'a', text: 'initial', 'future.key': { keep: true } }
+  let value = { kind: 'b', count: 3, 'future.key': { keep: true } }
   f.runtime.mount(() => f.editor.UnionValueEditor({ name: 'choice', field: definition, value, drafts, onChange: next => { value = next } }))
-  let select = elements(f.runtime.value).find(item => item.type === 'select'); assert.equal(select.props.value, '0')
-  let child = elements(f.runtime.value).find(item => item.type === f.editor.SchemaFieldEditor)
-  child.props.onChange({ ...value, text: 'dirty-a' }); f.runtime.render()
-  select = elements(f.runtime.value).find(item => item.type === 'select'); select.props.onChange({ target: { value: '1' } }); f.runtime.render(); assert.deepEqual(value, { kind: 'b', count: 0 })
-  child = elements(f.runtime.value).find(item => item.type === f.editor.SchemaFieldEditor); child.props.onChange({ ...value, count: 7 }); f.runtime.render()
-  elements(f.runtime.value).find(item => item.type === 'select').props.onChange({ target: { value: '0' } }); f.runtime.render(); assert.equal(value.text, 'dirty-a'); assert.deepEqual(value['future.key'], { keep: true })
-  elements(f.runtime.value).find(item => item.type === 'select').props.onChange({ target: { value: '1' } }); f.runtime.render(); assert.equal(value.count, 7)
-  elements(f.runtime.value).find(item => item.type === 'select').props.onChange({ target: { value: 'preserved' } }); f.runtime.render(); assert.equal(value.text, 'initial'); f.runtime.unmount()
+  assert.equal(elements(f.runtime.value).some(item => item.type === 'select' || item.type === 'option'), false)
+  const child = elements(f.runtime.value).find(item => item.type === f.editor.SchemaFieldEditor)
+  assert.match(child.props.path, /branch:1$/)
+  child.props.onChange({ ...value, count: 7 }); f.runtime.render()
+  assert.deepEqual(value, { kind: 'b', count: 7, 'future.key': { keep: true } })
+  assert.match(elements(f.runtime.value).find(item => item.type === f.editor.SchemaFieldEditor).props.path, /branch:1$/); f.runtime.unmount()
+})
+
+test('a union of constants edits as radio choices', () => {
+  const f = fixture(), changes = []
+  const tree = f.editor.SchemaFieldEditor({ name: 'level', field: { type: 'union', list: [{ type: 'const', value: 'low', title: '低' }, { type: 'const', value: 'high', title: '高' }] }, value: 'high', onChange: next => changes.push(next) })
+  const group = elements(tree).find(item => item.type === 'radio-group'); assert.equal(group.props.value, '1')
+  group.props.onValueChange('0'); assert.deepEqual(changes, ['low'])
 })
 
 test('an unset union opens its first fillable branch without writing a value', async () => {
   const f = fixture(), drafts = { json: new Map(), unions: new Map() }, writes = []
   const definition = { type: 'union', list: [{ type: 'null' }, { type: 'boolean' }, { type: 'string' }] }
   f.runtime.mount(() => f.editor.UnionValueEditor({ name: 'enabled', field: definition, value: undefined, drafts, onChange: next => writes.push(next) }))
-  const select = elements(f.runtime.value).find(item => item.type === 'select')
-  assert.equal(select.props.value, '1')
-  assert.ok(elements(f.runtime.value).some(item => item.type === 'option' && item.props.value === 'preserved' && item.props.children === '暂不设置'))
+  assert.match(elements(f.runtime.value).find(item => item.type === f.editor.SchemaFieldEditor).props.path, /branch:1$/)
+  assert.equal(elements(f.runtime.value).some(item => item.type === 'select'), false)
   assert.equal(elements(f.runtime.value).some(item => item.type === f.editor.JsonValueEditor), false)
   assert.deepEqual(writes, []); f.runtime.unmount()
 })
@@ -593,16 +597,13 @@ test('real list deletion preserves the second row React identity, union branch a
   drafts.unions.set(firstPath, { selected: 0, values: new Map() })
   let secondProps = fields()[1].props
   child.runtime.mount(() => child.editor.UnionValueEditor(secondProps))
-  assert.equal(elements(child.runtime.value).find(item => item.type === 'select').props.value, '1')
+  assert.ok(elements(child.runtime.value).find(item => item.type === child.editor.SchemaFieldEditor).props.path.endsWith('/branch:1'))
   elements(list.runtime.value).find(item => item.type === 'button' && label(item) === '删除此项').props.onClick(); list.runtime.render()
   assert.equal(fields().length, 1); assert.equal(fields()[0].props.path, secondPath); assert.notEqual(fields()[0].props.path, firstPath)
   const newKey = elements(list.runtime.value).find(item => [item.props?.children].flat().some(node => node?.props?.path === secondPath))?.key; assert.equal(newKey, oldKey)
   assert.equal(drafts.json.has(`${firstPath}/branch:0/raw`), false); assert.equal(drafts.unions.has(firstPath), false); assert.deepEqual(flags.at(-1), { path: `${firstPath}/branch:0/raw`, invalid: false })
   secondProps = fields()[0].props; child.runtime.render()
-  assert.equal(elements(child.runtime.value).find(item => item.type === 'select').props.value, '1'); assert.deepEqual(rows, [{ kind: 'b', count: 99, keep: 'second' }])
-  elements(child.runtime.value).find(item => item.type === 'select').props.onChange({ target: { value: '0' } }); list.runtime.render(); secondProps = fields()[0].props; child.runtime.render()
-  elements(child.runtime.value).find(item => item.type === 'select').props.onChange({ target: { value: '1' } }); list.runtime.render(); secondProps = fields()[0].props; child.runtime.render()
-  assert.deepEqual(rows, [{ kind: 'b', count: 99, keep: 'second' }]); assert.equal(elements(child.runtime.value).find(item => item.type === 'select').props.value, '1')
+  assert.ok(elements(child.runtime.value).find(item => item.type === child.editor.SchemaFieldEditor).props.path.endsWith('/branch:1')); assert.deepEqual(rows, [{ kind: 'b', count: 99, keep: 'second' }])
   child.runtime.unmount(); list.runtime.unmount()
 })
 
@@ -648,10 +649,10 @@ test('recreating a deleted union dictionary key selects its new initial branch w
   const props = () => ({ name: 'dict', path: '$/dict', field: { type: 'dict', inner: definition }, value, drafts, onChange: next => { value = next } })
   f.runtime.mount(() => f.editor.ObjectValueEditor(props()))
   const entry = () => elements(f.runtime.value).find(item => item.type === f.editor.SchemaFieldEditor && item.props.name === 'entry').props
-  union.runtime.mount(() => union.editor.UnionValueEditor(entry())); assert.equal(elements(union.runtime.value).find(item => item.type === 'select').props.value, '1'); union.runtime.unmount()
+  union.runtime.mount(() => union.editor.UnionValueEditor(entry())); assert.ok(elements(union.runtime.value).find(item => item.type === union.editor.SchemaFieldEditor).props.path.endsWith('/branch:1')); union.runtime.unmount()
   button(f.runtime.value, '删除键 entry').props.onClick(); f.runtime.render()
   elements(f.runtime.value).find(item => item.type === 'input').props.onChange({ target: { value: 'entry' } }); await f.runtime.settle(); button(f.runtime.value, '添加键值').props.onClick(); f.runtime.render()
-  union.runtime.remount(() => union.editor.UnionValueEditor(entry())); assert.equal(elements(union.runtime.value).find(item => item.type === 'select').props.value, '0')
+  union.runtime.remount(() => union.editor.UnionValueEditor(entry())); assert.ok(elements(union.runtime.value).find(item => item.type === union.editor.SchemaFieldEditor).props.path.endsWith('/branch:0'))
   assert.deepEqual(value, { sibling: { kind: 'a', text: 'keep' }, entry: { kind: 'a', text: 'new' } }); union.runtime.unmount(); f.runtime.unmount()
 })
 
@@ -703,14 +704,14 @@ test('production schema editor translates labels while preserving selected and e
   assert.equal(field.title,'模式')
 })
 
-test('fill mode sits on the key title row and the branch never repeats the key as a second header', () => {
+test('a union key has one title row, no fill-mode control, and the branch never repeats the key', () => {
   const f = fixture(), drafts = { json: new Map(), unions: new Map(), originals: new Map() }
   const definition = { type: 'union', title: 'trigger', list: [{ type: 'object', object: { mode: { type: 'string' } } }, { type: 'boolean' }] }
   let value = { mode: 'x' }
   f.runtime.mount(() => f.editor.UnionValueEditor({ name: 'trigger', path: '$/trigger', field: definition, value, drafts, onChange: next => { value = next } }))
   const branch = elements(f.runtime.value).find(item => item.type === f.editor.SchemaFieldEditor)
   assert.equal(branch.props.label, 'trigger'); assert.equal(branch.props.inheritActions, true)
-  assert.equal(branch.props.actions[0].type, 'select')
+  assert.equal(elements(f.runtime.value).some(item => item.type === 'select'), false)
   const tree = f.editor.SchemaFieldEditor(branch.props)
   const titles = elements(tree).filter(item => item.props?.className === 'text-sm font-medium')
   assert.deepEqual(titles.map(label), ['trigger'])
@@ -734,6 +735,8 @@ test('booleans render only a title-row switch, and list enums are checkboxes tha
   const f = fixture(), changes = []
   const flag = f.editor.SchemaFieldEditor({ name: 'enabled', field: { type: 'boolean' }, value: true, onChange: next => changes.push(next) })
   assert.equal(elements(flag).filter(item => item.type === 'switch').length, 1); assert.equal(label(flag).includes('已启用'), false)
+  const head = elements(flag).find(item => item.props?.className === 'console-field-head')
+  assert.equal(elements(head).some(item => ['switch', 'radio-group', 'checkbox'].includes(item.type)), false)
   const list = f.editor.SchemaFieldEditor({ name: 'kinds', field: { type: 'list', inner: { type: 'string', enum: ['a', 'b', 'c'] } }, value: ['b', 'zzz'], onChange: next => changes.push(next) })
   const boxes = elements(list).filter(item => item.type === 'checkbox')
   assert.deepEqual(boxes.map(item => item.props.checked), [false, true, false])
