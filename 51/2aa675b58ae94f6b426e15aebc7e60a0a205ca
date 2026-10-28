@@ -1,0 +1,18 @@
+console-ui/src/components/PluginConfigForm/SchemaFieldEditor.tsx
+  h_b680f75345178a 105,108,112-115,119-120,122,174,176,195,199-200,215
+console-ui/src/shell.css
+  h_b680f75345178a 887
+tests/config-connection-scope.test.mjs
+  h_b680f75345178a 483,486,488-500,507-508,600,606,652,655,707,714,738-739
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "512aa675b58ae94f6b426e15aebc7e60a0a205ca",
+  "prompts": {},
+  "humans": {
+    "h_b680f75345178a": {
+      "author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
