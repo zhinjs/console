@@ -1,0 +1,18 @@
+console-ui/src/components/PluginConfigForm/ConfigApplicationEvidence.tsx
+  h_b680f75345178a 26,97-98,101,105
+console-ui/src/components/PluginConfigForm/index.tsx
+  h_b680f75345178a 152-153
+tests/config-connection-scope.test.mjs
+  h_b680f75345178a 747-755
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f0d5499ff39b69e03d336e448fdf7ebbb6c0b8ba",
+  "prompts": {},
+  "humans": {
+    "h_b680f75345178a": {
+      "author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
