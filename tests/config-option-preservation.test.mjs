@@ -17,6 +17,7 @@ const mocks = {
   './ConversationScopeEditor': { ConversationScopeEditor: 'scope-editor' }, './conversation-scope-model.mjs': { isConversationScopeField: () => false },
   '../ui/input': { Input: 'input' }, '../ui/textarea': { Textarea: 'textarea' }, '../ui/button': { Button: 'button' }, '../ui/switch': { Switch: 'switch' },
   '../ui/select': { Select: 'select-root', SelectContent: 'select-content', SelectItem: 'option', SelectTrigger: 'select-trigger', SelectValue: 'select-value' },
+  '../ui/radio-group': { RadioGroup: 'radio-group', RadioGroupItem: 'radio' }, '../ui/checkbox': { Checkbox: 'checkbox' },
   '../../pages/files/code-editor': { CodeEditor: 'code-editor' },
 }
 new Function('require', 'exports', 'module', code)(name => isLocaleImport(name) ? localeModule : mocks[name] ?? require(name), module.exports, module)
@@ -25,7 +26,7 @@ function elements(value) { return value && typeof value === 'object' ? [value, .
 const field = { type: 'string', options: ['none', 'caldav', 'google', 'microsoft'].map(value => ({ label: value, value })) }
 function render(value, extra = {}) {
   const changes = [], tree = SchemaFieldEditor({ name: 'provider', field, value, onChange: next => changes.push(next), ...extra })
-  const select = elements(tree).find(item => item.type === 'select-root')
+  const select = elements(tree).find(item => item.type === 'radio-group')
   return { tree, select, changes, html: renderToStaticMarkup(tree) }
 }
 
@@ -34,7 +35,8 @@ test('production option editor retains unknown saved values without choosing the
     const f = render(value)
     assert.equal(f.select.props.value, 'preserved'); assert.deepEqual(f.changes, [])
     assert.match(f.html, /当前保存值不在选项中/)
-    assert.ok(elements(f.tree).some(item => item.type === 'option' && item.props.value === 'preserved' && item.props.disabled))
+    assert.ok(elements(f.tree).filter(item => item.type === 'radio').every(item => item.props.value !== 'preserved'))
+    assert.match(f.html, /现有值不在选项中（原样保留）|环境变量引用（原样保留）/)
     for (const invalid of ['preserved', '', '-1', '01', '1.5', 'NaN', '99999999999999999999']) f.select.props.onValueChange(invalid)
     assert.deepEqual(f.changes, [])
     f.select.props.onValueChange('2'); assert.deepEqual(f.changes, ['google'])

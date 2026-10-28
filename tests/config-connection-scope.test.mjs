@@ -82,6 +82,7 @@ function fixture() {
     './numeric-validation.mjs': { numericFieldIssue }, './conversation-scope-model.mjs': { isConversationScopeField }, './ConversationScopeEditor': { ConversationScopeEditor: 'scope-editor' },
     '../ui/input': { Input: 'input' }, '../ui/textarea': { Textarea: 'textarea' }, '../ui/switch': { Switch: 'switch' },
     '../ui/select': { Select: 'select-root', SelectContent: 'select-content', SelectItem: 'option', SelectTrigger: 'select-trigger', SelectValue: 'select-value' },
+  '../ui/radio-group': { RadioGroup: 'radio-group', RadioGroupItem: 'radio' }, '../ui/checkbox': { Checkbox: 'checkbox' },
     '../../pages/files/code-editor': { CodeEditor: 'code-editor' }, './files/code-editor': { CodeEditor: 'code-editor' },
     './config-evidence-model.mjs': configEvidenceModel, './ConfigApplicationEvidence': { ConfigApplicationEvidence: 'config-evidence' },
     '../components/PluginConfigForm/config-evidence-model.mjs': configEvidenceModel,
@@ -163,7 +164,7 @@ const calendarField = (f, name) => elements(f.runtime.value).find(item => item.t
 test('actual Calendar projection and production Select/form handlers keep all branches, other aliases and original CAS revision', async () => {
   assert.deepEqual(calendar.schema.object.provider.options.map(item => item.value), ['none', 'caldav', 'google', 'microsoft'])
   const f = await loadedCalendarForm(), provider = calendarField(f, 'provider')
-  const select = elements(f.editor.SchemaFieldEditor(provider.props)).find(item => item.type === 'select-root')
+  const select = elements(f.editor.SchemaFieldEditor(provider.props)).find(item => item.type === 'radio-group')
   assert.equal(select.props.value, '1'); select.props.onValueChange('2'); await f.runtime.settle()
   button(f.runtime.value, '保存配置').props.onClick()
   const checked = f.answer('plugin:validate-config', calendar.validation)
@@ -185,7 +186,7 @@ test('actual Calendar projection and production Select/form handlers keep all br
 
 test('actual Calendar validation rejects a preserved environment option without deleting it or saving a partial object', async () => {
   const f = await loadedCalendarForm(calendar.referenceSource), provider = calendarField(f, 'provider')
-  const select = elements(f.editor.SchemaFieldEditor(provider.props)).find(item => item.type === 'select-root')
+  const select = elements(f.editor.SchemaFieldEditor(provider.props)).find(item => item.type === 'radio-group')
   assert.equal(select.props.value, 'preserved')
   calendarField(f, 'timezone').props.onChange('UTC'); await f.runtime.settle()
   button(f.runtime.value, '保存配置').props.onClick()
@@ -207,7 +208,7 @@ test('actual Calendar rejection keeps an unknown alpha field and CAS failure kee
   assert.equal(invalid.calls.filter(item => item.input.type === 'config:replace-source').length, 0)
   assert.equal(calendarField(invalid, 'timezone').props.value, 'UTC'); invalid.runtime.unmount()
   const conflict = await loadedCalendarForm()
-  const select = elements(conflict.editor.SchemaFieldEditor(calendarField(conflict, 'provider').props)).find(item => item.type === 'select-root')
+  const select = elements(conflict.editor.SchemaFieldEditor(calendarField(conflict, 'provider').props)).find(item => item.type === 'radio-group')
   select.props.onValueChange('2'); await conflict.runtime.settle()
   button(conflict.runtime.value, '保存配置').props.onClick(); conflict.answer('plugin:validate-config', calendar.validation); await conflict.runtime.settle()
   const write = conflict.answer('config:replace-source', new Error(calendar.conflict), undefined, true); await conflict.runtime.settle()
@@ -586,7 +587,7 @@ test('real list deletion preserves the second row React identity, union branch a
   list.runtime.mount(() => list.editor.SequenceValueEditor(listProps()))
   const fields = () => elements(list.runtime.value).filter(item => item.type === list.editor.SchemaFieldEditor)
   const firstPath = fields()[0].props.path, secondPath = fields()[1].props.path
-  const oldKey = elements(list.runtime.value).find(item => item.props?.children?.some?.(node => node?.props?.path === secondPath))?.key
+  const oldKey = elements(list.runtime.value).find(item => [item.props?.children].flat().some(node => node?.props?.path === secondPath))?.key
   assert.notEqual(oldKey, undefined)
   drafts.json.set(`${firstPath}/branch:0/raw`, { text: '{', value: null, error: 'invalid' })
   drafts.unions.set(firstPath, { selected: 0, values: new Map() })
@@ -595,7 +596,7 @@ test('real list deletion preserves the second row React identity, union branch a
   assert.equal(elements(child.runtime.value).find(item => item.type === 'select').props.value, '1')
   elements(list.runtime.value).find(item => item.type === 'button' && label(item) === '删除此项').props.onClick(); list.runtime.render()
   assert.equal(fields().length, 1); assert.equal(fields()[0].props.path, secondPath); assert.notEqual(fields()[0].props.path, firstPath)
-  const newKey = elements(list.runtime.value).find(item => item.props?.children?.some?.(node => node?.props?.path === secondPath))?.key; assert.equal(newKey, oldKey)
+  const newKey = elements(list.runtime.value).find(item => [item.props?.children].flat().some(node => node?.props?.path === secondPath))?.key; assert.equal(newKey, oldKey)
   assert.equal(drafts.json.has(`${firstPath}/branch:0/raw`), false); assert.equal(drafts.unions.has(firstPath), false); assert.deepEqual(flags.at(-1), { path: `${firstPath}/branch:0/raw`, invalid: false })
   secondProps = fields()[0].props; child.runtime.render()
   assert.equal(elements(child.runtime.value).find(item => item.type === 'select').props.value, '1'); assert.deepEqual(rows, [{ kind: 'b', count: 99, keep: 'second' }])
@@ -616,7 +617,8 @@ test('deleting a row with invalid JSON does not transfer its text to an equal-va
   elements(f.runtime.value).find(item => item.type === 'button' && label(item) === '删除此项').props.onClick(); f.runtime.render()
   assert.equal(fields()[0].props.path, second.path)
   json.runtime.remount(() => json.editor.JsonValueEditor(fields()[0].props)); assert.deepEqual(JSON.parse(elements(json.runtime.value).find(item => item.type === 'code-editor').props.value), { same: true }); json.runtime.unmount()
-  button(f.runtime.value, '添加列表项').props.onClick(); f.runtime.render()
+  // Add sits on the list's own title row, outside the row editor.
+  button(f.editor.SchemaFieldEditor(props()), '添加列表项').props.onClick(); f.runtime.render()
   assert.notEqual(fields()[1].props.path, first.path); assert.notEqual(fields()[1].props.path, second.path)
   assert.ok(!drafts.json.has(first.path)); f.runtime.unmount()
 })
@@ -661,7 +663,7 @@ test('explicitly unsetting and re-adding an optional object cannot revive its di
   object.runtime.mount(() => object.editor.ObjectValueEditor(props()))
   const raw = () => elements(object.runtime.value).find(item => item.type === object.editor.SchemaFieldEditor && item.props.name === 'raw').props
   json.runtime.mount(() => json.editor.JsonValueEditor(raw())); elements(json.runtime.value).find(item => item.type === 'code-editor').props.onChange('{'); await json.runtime.settle()
-  button(object.editor.SchemaFieldEditor(props()), '取消此项设置（使用声明默认值）').props.onClick(); object.runtime.render(); json.runtime.unmount()
+  button(object.editor.SchemaFieldEditor(props()), '清空').props.onClick(); object.runtime.render(); json.runtime.unmount()
   assert.equal(value, undefined)
   button(object.runtime.value, '添加对象配置').props.onClick(); object.runtime.render(); assert.deepEqual(value, { raw: null })
   json.runtime.remount(() => json.editor.JsonValueEditor(raw())); await json.runtime.settle()
@@ -693,10 +695,49 @@ test('production schema editor translates labels while preserving selected and e
   f.runtime.mount(() => f.editor.SchemaFieldEditor({name:'mode',field,value:'off',onChange: value => changes.push(value)}))
   const tree = f.runtime.value
   assert.ok(elements(tree).some(item => label(item) === 'Mode'))
-  const options = elements(tree).filter(item => item.type === 'option')
+  const options = elements(tree).filter(item => item.type === 'label' && [item.props.children].flat().some(child => child?.type === 'radio'))
   assert.deepEqual(options.map(label), ['Off','On'])
-  const select = elements(tree).find(item => item.type === 'select-root')
+  const select = elements(tree).find(item => item.type === 'radio-group')
   assert.equal(select.props.value,'0'); assert.deepEqual(changes,[])
   select.props.onValueChange('1'); assert.deepEqual(changes,['on'])
   assert.equal(field.title,'模式')
+})
+
+test('fill mode sits on the key title row and the branch never repeats the key as a second header', () => {
+  const f = fixture(), drafts = { json: new Map(), unions: new Map(), originals: new Map() }
+  const definition = { type: 'union', title: 'trigger', list: [{ type: 'object', object: { mode: { type: 'string' } } }, { type: 'boolean' }] }
+  let value = { mode: 'x' }
+  f.runtime.mount(() => f.editor.UnionValueEditor({ name: 'trigger', path: '$/trigger', field: definition, value, drafts, onChange: next => { value = next } }))
+  const branch = elements(f.runtime.value).find(item => item.type === f.editor.SchemaFieldEditor)
+  assert.equal(branch.props.label, 'trigger'); assert.equal(branch.props.inheritActions, true)
+  assert.equal(branch.props.actions[0].type, 'select')
+  const tree = f.editor.SchemaFieldEditor(branch.props)
+  const titles = elements(tree).filter(item => item.props?.className === 'text-sm font-medium')
+  assert.deepEqual(titles.map(label), ['trigger'])
+  assert.ok(elements(tree).some(item => item.type === 'details'))
+  assert.equal(label(tree).includes('取消此项设置'), false)
+  f.runtime.unmount()
+})
+
+test('撤销 restores the first-seen value and 清空 leaves the key unset', () => {
+  const f = fixture(), drafts = { json: new Map(), unions: new Map(), originals: new Map() }, changes = []
+  const props = value => ({ name: 'token', path: '$/token', field: { type: 'string', default: 'd' }, value, drafts, onChange: next => changes.push(next) })
+  let tree = f.editor.SchemaFieldEditor(props('saved'))
+  assert.equal(button(tree, '撤销'), undefined)
+  tree = f.editor.SchemaFieldEditor(props('edited'))
+  button(tree, '撤销').props.onClick(); assert.deepEqual(changes, ['saved'])
+  button(tree, '清空').props.onClick(); assert.deepEqual(changes, ['saved', undefined])
+  assert.equal(elements(tree).find(item => item.type === 'input').props.placeholder.includes('${ENV_NAME}'), true)
+})
+
+test('booleans render only a title-row switch, and list enums are checkboxes that keep unknown values', () => {
+  const f = fixture(), changes = []
+  const flag = f.editor.SchemaFieldEditor({ name: 'enabled', field: { type: 'boolean' }, value: true, onChange: next => changes.push(next) })
+  assert.equal(elements(flag).filter(item => item.type === 'switch').length, 1); assert.equal(label(flag).includes('已启用'), false)
+  const list = f.editor.SchemaFieldEditor({ name: 'kinds', field: { type: 'list', inner: { type: 'string', enum: ['a', 'b', 'c'] } }, value: ['b', 'zzz'], onChange: next => changes.push(next) })
+  const boxes = elements(list).filter(item => item.type === 'checkbox')
+  assert.deepEqual(boxes.map(item => item.props.checked), [false, true, false])
+  boxes[2].props.onCheckedChange(true); assert.deepEqual(changes.at(-1), ['b', 'c', 'zzz'])
+  boxes[1].props.onCheckedChange(false); assert.deepEqual(changes.at(-1), ['zzz'])
+  assert.equal(button(list, '添加列表项'), undefined)
 })

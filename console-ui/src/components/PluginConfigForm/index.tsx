@@ -41,7 +41,7 @@ function PluginConfigFormSession({ pluginName, onSuccess, onOpenYaml, sourceRevi
   const [sourceText, setSourceText] = useState(''), [sourceError, setSourceError] = useState(false)
   const [invalidFields, setInvalidFields] = useState<ReadonlySet<string>>(new Set())
   const [draftVersion, setDraftVersion] = useState(0)
-  const editorDrafts = useRef<SchemaEditorDrafts>({ json: new Map(), unions: new Map() })
+  const editorDrafts = useRef<SchemaEditorDrafts>({ json: new Map(), unions: new Map(), originals: new Map() })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -60,7 +60,7 @@ function PluginConfigFormSession({ pluginName, onSuccess, onOpenYaml, sourceRevi
       setDraftName(pluginName)
       const next = form.schema ? declaredDefaults(form.schema, form.config === undefined && ['object', 'dict', 'list', 'tuple', 'intersect'].includes(form.schema.type) ? initialSchemaValue(form.schema) : form.config) : form.config
       setLocalConfig(next); setSourceText(next === undefined ? '' : JSON.stringify(next, null, 2)); setSourceError(false); setInvalidFields(new Set())
-      editorDrafts.current.json.clear(); editorDrafts.current.unions.clear(); setDraftVersion(previous => previous + 1)
+      editorDrafts.current.json.clear(); editorDrafts.current.unions.clear(); editorDrafts.current.originals?.clear(); setDraftVersion(previous => previous + 1)
       setSaveError(null); setValidation(null)
     }
   }, [pluginName, form.loaded, form.config, form.schema, form.snapshot])
@@ -127,7 +127,7 @@ function PluginConfigFormSession({ pluginName, onSuccess, onOpenYaml, sourceRevi
     if (!isInboxCacheScopeActive(connectionScope)) return
     guard.current.saved(); guard.current.receive(pluginName, form.config, form.snapshot)
     const next = form.schema ? declaredDefaults(form.schema, form.config === undefined && ['object', 'dict', 'list', 'tuple', 'intersect'].includes(form.schema.type) ? initialSchemaValue(form.schema) : form.config) : form.config
-    setLocalConfig(next); setSourceText(next === undefined ? '' : JSON.stringify(next, null, 2)); setSourceError(false); setInvalidFields(new Set()); editorDrafts.current.json.clear(); editorDrafts.current.unions.clear(); setDraftVersion(previous => previous + 1)
+    setLocalConfig(next); setSourceText(next === undefined ? '' : JSON.stringify(next, null, 2)); setSourceError(false); setInvalidFields(new Set()); editorDrafts.current.json.clear(); editorDrafts.current.unions.clear(); editorDrafts.current.originals?.clear(); setDraftVersion(previous => previous + 1)
     setValidation(null); setSaveError(null); setMessage(null)
   }
   const explanation = <ConfigFieldExplanation instanceKey={pluginName} revision={form.snapshot?.revision} draftRevision={guard.current.snapshot?.revision} dirty={guard.current.dirty} disabled={saving || form.loading || !!form.error} onOpenSource={onOpenYaml} />
