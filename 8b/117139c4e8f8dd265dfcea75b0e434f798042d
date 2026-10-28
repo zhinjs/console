@@ -1,0 +1,146 @@
+console-ui/src/theme-tokens.css
+  s_0300dde04694ef::t_b95d02ba340a1a 4-5,7,9-10,12,14-16,18,21-22,25-27,51,64-70,72,74,76,78,81,85,87,111
+tests/config-connection-scope.test.mjs
+  s_0300dde04694ef::t_f29ff7fe0d3a35 497-507
+console-ui/src/pages/config.tsx
+  s_0300dde04694ef::t_dba3bb7a09a24c 135,151-159,166,169,174,183
+  s_0300dde04694ef::t_51c62c86c65383 30-33
+  s_0300dde04694ef::t_90c60a1e8ee2a8 34
+console-ui/src/pages/task-center.tsx
+  s_0300dde04694ef::t_73efd18f810d36 2,224,238
+  s_0300dde04694ef::t_7259795da831af 5
+  s_0300dde04694ef::t_cc5b7d6cec2eec 223
+console-ui/src/components/ThemeToggle.tsx
+  s_0300dde04694ef::t_42823c7ed90561 12-13,18,20
+console-ui/src/pages/plugins.tsx
+  s_0300dde04694ef::t_b8dc8dc9adb0ae 163
+  s_0300dde04694ef::t_2d4cea3014a3eb 131,146,149,164,167,171-174,180
+console-ui/src/pages/cron-schedule.mjs
+  s_0300dde04694ef::t_0fbf75acf88757 1-45
+console-ui/src/pages/database/database-page.tsx
+  s_0300dde04694ef::t_e117aa823f1c1c 63
+tests/agent-session-recent.test.mjs
+  s_0300dde04694ef::t_98ae8b3b0de3f1 3,20-26
+  s_0300dde04694ef::t_f81b2bff5120fb 1-2,4-19,27
+console-ui/src/pages/ambient-engagement-model.mjs
+  s_0300dde04694ef::t_5e3f7110a40120 220-245
+tests/cron-schedule.test.mjs
+  s_0300dde04694ef::t_0fbf75acf88757 1-27
+console-ui/src/pages/agent-workbench.tsx
+  s_0300dde04694ef::t_47bab3e18d8392 142,200,207,209-210,212,263-264,266
+console-ui/src/registerOptionalRoutes.tsx
+  s_0300dde04694ef::t_50f69e5cda3b49 26,29
+  s_0300dde04694ef::t_272441164d8a82 4,13-16,23,30
+console-ui/src/design-system.css
+  s_0300dde04694ef::t_352e8b78eb06a0 915,921-922,926,928,934-935,951-952,955,958,974-975,978-979,981,987-988,993-995
+  s_0300dde04694ef::t_73e8ea1fef4290 617,620-626,628,631-634,637-642,645-650,654-656,658-659,663-664,670,677-682,693-694,696,710,713,770-772,815,817-820
+  s_0300dde04694ef::t_039c6181a16570 614,3868-4012
+  s_0300dde04694ef::t_edc2da93f64def 608,4087-4147
+  s_0300dde04694ef::t_04eaad8c9697ae 7
+  s_0300dde04694ef::t_9cc812070e5362 4148-4175
+  s_0300dde04694ef::t_9e3d7ac111fb06 32,67
+  s_0300dde04694ef::t_2d4cea3014a3eb 535,548,566-567,569-581
+  s_0300dde04694ef::t_47bab3e18d8392 1214-1215,1222-1226,1230-1231
+  s_0300dde04694ef::t_6b814be30f07c3 4013-4086
+  s_0300dde04694ef::t_cc9e4ae7808e35 607,609-610,613
+console-ui/src/pages/agent-session-recent.d.mts
+  s_0300dde04694ef::t_f81b2bff5120fb 1-2
+  s_0300dde04694ef::t_98ae8b3b0de3f1 3
+console-ui/src/shell.css
+  s_0300dde04694ef::t_c15973f9d4d28a 768-796
+  s_0300dde04694ef::t_99b50dbccb4603 567-676
+  s_0300dde04694ef::t_42823c7ed90561 464-545
+  s_0300dde04694ef::t_9a00481413047a 546-566
+  s_0300dde04694ef::t_7259795da831af 677-732
+  s_0300dde04694ef::t_5e97fde4ed9a37 733-767
+  s_0300dde04694ef::t_04eaad8c9697ae 1-463
+console-ui/src/pages/agent-sessions.tsx
+  s_0300dde04694ef::t_98ae8b3b0de3f1 32-34,58,168-177,203
+console-ui/src/pages/cron.tsx
+  s_0300dde04694ef::t_50f69e5cda3b49 24-25,63-77,95,114-118,293
+  s_0300dde04694ef::t_edc2da93f64def 89-93
+  s_0300dde04694ef::t_ad26696c8e68f3 23,286,380-414
+console-ui/src/components/ui/tooltip.tsx
+  s_0300dde04694ef::t_04eaad8c9697ae 21
+console-ui/src/components/PluginConfigForm/SchemaFieldEditor.tsx
+  s_0300dde04694ef::t_f54e4f991dc526 119-120,129
+console-ui/src/components/ui/skeleton.tsx
+  s_0300dde04694ef::t_9a00481413047a 7
+console-ui/src/components/PluginConfigForm/ConfigFieldExplanation.tsx
+  s_0300dde04694ef::t_51c62c86c65383 11-14
+  s_0300dde04694ef::t_dba3bb7a09a24c 40
+  s_0300dde04694ef::t_a70cbd60aeebe2 15
+console-ui/src/components/PluginConfigForm/ConfigApplicationEvidence.tsx
+  s_0300dde04694ef::t_dba3bb7a09a24c 98
+  s_0300dde04694ef::t_427d02ddd8be17 105
+  s_0300dde04694ef::t_51c62c86c65383 13-16
+  s_0300dde04694ef::t_2ea6de43ed181a 17
+console-ui/src/pages/assistant-jobs-model.mjs
+  s_0300dde04694ef::t_d991fafd15d69c 24-36
+console-ui/src/pages/files/files-page.tsx
+  s_0300dde04694ef::t_e117aa823f1c1c 87
+console-ui/src/components/LanguageSelect.tsx
+  s_0300dde04694ef::t_42823c7ed90561 8-9,11
+tests/ambient-group-summary.test.mjs
+  s_0300dde04694ef::t_5e3f7110a40120 1-24
+console-ui/src/pages/assistant-jobs-model.d.mts
+  s_0300dde04694ef::t_d991fafd15d69c 6
+console-ui/src/pages/assistant-jobs.tsx
+  s_0300dde04694ef::t_9cc812070e5362 19
+  s_0300dde04694ef::t_db8446f61ce5c6 4,26-27,44
+  s_0300dde04694ef::t_d991fafd15d69c 54-55
+console-ui/src/i18n/messages.en.mjs
+  s_0300dde04694ef::t_0fbf75acf88757 1123-1144
+  s_0300dde04694ef::t_9b628b73682703 1147-1149
+  s_0300dde04694ef::t_9e3d7ac111fb06 1091
+  s_0300dde04694ef::t_47bab3e18d8392 1145-1146
+  s_0300dde04694ef::t_6b814be30f07c3 1150-1151
+  s_0300dde04694ef::t_c15973f9d4d28a 1098-1104
+  s_0300dde04694ef::t_039c6181a16570 1152-1154
+  s_0300dde04694ef::t_50f69e5cda3b49 1092-1097
+  s_0300dde04694ef::t_98ae8b3b0de3f1 1112-1117
+  s_0300dde04694ef::t_9cc812070e5362 1118-1122
+  s_0300dde04694ef::t_5e97fde4ed9a37 1105-1111
+  s_0300dde04694ef::t_42823c7ed90561 758-762
+console-ui/src/pages/agent-session-recent.mjs
+  s_0300dde04694ef::t_f81b2bff5120fb 2-21,31
+  s_0300dde04694ef::t_98ae8b3b0de3f1 1,22-30
+console-ui/src/components/AgentSessionPicker.tsx
+  s_0300dde04694ef::t_98ae8b3b0de3f1 8,13-14,21,28,37,41,43,52,61-62,70,97
+console-ui/src/pages/workrooms.tsx
+  s_0300dde04694ef::t_5e97fde4ed9a37 16-17,46,112,231-246,281-308,323-341,430
+console-ui/src/pages/skills-assistant.tsx
+  s_0300dde04694ef::t_99b50dbccb4603 212-220,228,232
+console-ui/src/pages/endpoints.tsx
+  s_0300dde04694ef::t_039c6181a16570 75-103,106-109,111-116,118-122,124-140
+console-ui/src/pages/dashboard.tsx
+  s_0300dde04694ef::t_9e3d7ac111fb06 381-384,388,390-391,393
+  s_0300dde04694ef::t_9b628b73682703 250-251,287,325-332,337,345,353
+console-ui/src/pages/cron-schedule.d.mts
+  s_0300dde04694ef::t_0fbf75acf88757 1-2
+console-ui/src/pages/ambient-engagement-model.d.mts
+  s_0300dde04694ef::t_5e3f7110a40120 39-41
+console-ui/src/pages/ambient-engagement.tsx
+  s_0300dde04694ef::t_99b50dbccb4603 266,275-276,278-279,281-282
+  s_0300dde04694ef::t_c15973f9d4d28a 23,30
+  s_0300dde04694ef::t_730b4d1fbd1a41 7-8,122,128-189
+  s_0300dde04694ef::t_2ed1eb2406a8e9 190
+console-ui/src/layouts/dashboard.tsx
+  s_0300dde04694ef::t_d28abc39856ffe 4,6,12,22-38,101-102,171-175,192-195,201,204,206,213-214,218-220,222-225,227-238,241-242,249-250,255,258,261-262,266-267,272,276,278,281,284-290,295,298-311,313-315,317-341,345,349,376,399,401,406,408
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8b117139c4e8f8dd265dfcea75b0e434f798042d",
+  "prompts": {},
+  "sessions": {
+    "s_0300dde04694ef": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "44689723-7a44-489f-898d-78cb9dc45540",
+        "model": "unknown"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
