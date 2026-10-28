@@ -7,6 +7,10 @@
 @import "./shell.css";
 
 @layer base {
+  html {
+    font-size: 125%;
+  }
+
   :root {
     --console-font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
     --console-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -1251,7 +1255,17 @@
     color: hsl(var(--primary));
   }
 
-  .console-agent-binding-card > a,
+  .console-agent-binding-card > a {
+    display: grid;
+    width: var(--console-control-height-sm);
+    height: var(--console-control-height-sm);
+    flex: none;
+    place-items: center;
+    border-radius: var(--console-radius-sm);
+    color: hsl(var(--muted-foreground));
+  }
+
+  .console-agent-binding-card > a > svg,
   .console-agent-session-card > svg,
   .console-agent-shortcuts > a > svg:last-child,
   .console-readiness-row > svg:last-child {
@@ -2932,6 +2946,11 @@
       hsl(var(--muted) / 0.12);
   }
 
+  .console-capability-intro > a {
+    grid-column: 2;
+    justify-self: start;
+  }
+
   .console-capability-intro-icon {
     display: grid;
     width: 2.75rem;
@@ -3078,20 +3097,25 @@
 
   .console-runtime-source {
     display: flex;
-    max-width: 9rem;
+    min-width: 0;
+    max-width: 100%;
     align-items: center;
     gap: 0.25rem;
-    overflow: hidden;
     color: hsl(var(--muted-foreground));
     font-family: var(--font-mono, monospace);
     font-size: var(--console-text-label);
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
+  }
+
+  .console-runtime-source > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .console-runtime-source svg {
     width: 0.7rem;
     height: 0.7rem;
+    flex: none;
   }
 
   .console-runtime-tags {
@@ -3372,6 +3396,8 @@
   }
 
   .console-capability-properties dt {
+    min-width: 0;
+    overflow-wrap: anywhere;
     color: hsl(var(--muted-foreground));
     font-family: var(--font-mono, monospace);
     font-size: var(--console-text-label);
@@ -3387,6 +3413,7 @@
   .console-capability-properties dd code {
     font-family: var(--font-mono, monospace);
     font-size: var(--console-text-label);
+    white-space: normal;
   }
 
   .console-capability-raw {
@@ -3640,10 +3667,6 @@
 
     .console-runtime-card-grid {
       grid-template-columns: 1fr;
-    }
-
-    .console-runtime-source {
-      display: none;
     }
 
     .console-runtime-prompt-card {

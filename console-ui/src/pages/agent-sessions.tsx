@@ -1,4 +1,7 @@
 import { useI18n } from '../i18n'
+import { SessionMessageDetails } from './SessionMessageDetails'
+import { useInboxCacheScope } from '../utils/useInboxCacheScope'
+import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { GitBranch, CheckCircle, Loader2 } from 'lucide-react'
@@ -42,6 +45,7 @@ interface TreePoint {
 }
 
 interface SessionTree {
+  connectionScope?: string
   sessionKey: string
   sessionId: string
   activeLeafMessageId: number | null
@@ -51,12 +55,14 @@ interface SessionTree {
 export default function AgentSessionsPage() {
   const i18n = useI18n()
   const readOnly = isDemoMode()
+  const scope = useInboxCacheScope()
   const [searchParams] = useSearchParams()
   const sessionKeyFromUrl = parseSessionKeyFromQuery(searchParams.get('sessionKey'))
   const [sessionKey, setSessionKey] = useState(sessionKeyFromUrl)
   const [history, setHistory] = useState<string[]>(() => loadAgentSessionHistory())
   const [recent, setRecent] = useState<RecentSession[] | null>(null)
-  const [tree, setTree] = useState<SessionTree | null>(null)
+  const [loadedTree, setTree] = useState<SessionTree | null>(null)
+  const tree = isInboxCacheScopeActive(scope) && loadedTree?.connectionScope === scope ? loadedTree : null
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [errorKind, setErrorKind] = useState<'none' | '404' | '503' | 'other'>('none')
@@ -68,6 +74,8 @@ export default function AgentSessionsPage() {
   const [switchMsg, setSwitchMsg] = useState<string | null>(null)
 
   const fetchTree = useCallback(async (key: string, switchMessage: string | null = null) => {
+    const connectionScope = scope
+    if (!isInboxCacheScopeActive(connectionScope)) return
     const trimmed = key.trim()
     if (!trimmed) return
     if (!isLikelySessionKey(trimmed)) {
@@ -90,7 +98,7 @@ export default function AgentSessionsPage() {
       const encoded = encodeURIComponent(trimmed)
       const res = await apiFetch(`${CONSOLE_REST.AGENT_SESSIONS}/${encoded}/tree`)
       const data = await res.json()
-      if (sequence !== requestSequence.current) return
+      if (sequence !== requestSequence.current || !isInboxCacheScopeActive(connectionScope)) return
 
       if (res.status === 404) {
         setErrorKind('404')
@@ -107,16 +115,16 @@ export default function AgentSessionsPage() {
         throw new Error(data.error ?? `HTTP ${res.status}`)
       }
 
-      setTree(data.data as SessionTree)
+      setTree({ ...data.data as SessionTree, connectionScope })
       setHistory(pushAgentSessionHistory(trimmed))
     } catch (err) {
-      if (sequence !== requestSequence.current) return
+      if (sequence !== requestSequence.current || !isInboxCacheScopeActive(connectionScope)) return
       setErrorKind('other')
       setError((err as Error).message)
     } finally {
       if (sequence === requestSequence.current) setLoading(false)
     }
-  }, [i18n])
+  }, [i18n, scope])
 
   const handleSwitchLeaf = async (point: TreePoint & { sessionKey: string }) => {
     if (readOnly || switchInFlight.current) return
@@ -162,6 +170,15 @@ export default function AgentSessionsPage() {
       setSwitching(false)
     }
   }
+
+  useEffect(() => {
+    requestSequence.current += 1
+    setTree(null)
+    setConfirmPoint(null)
+    setError(null)
+    setSwitchMsg(null)
+    setLoading(false)
+  }, [scope])
 
   useEffect(() => () => { requestSequence.current += 1 }, [])
 
@@ -263,38 +280,40 @@ export default function AgentSessionsPage() {
                 {tree.points.map((point) => {
                   const isActive = tree.activeLeafMessageId === point.messageId
                   return (
-                    <button
-                      key={point.messageId}
-                      type="button"
-                      onClick={() => !readOnly && !isActive && setConfirmPoint({ ...point, sessionKey: tree.sessionKey })}
-                      disabled={readOnly || isActive || switching}
-                      className={cn(
-                        'w-full text-left px-4 py-4 transition-colors focus-visible:outline-offset-[-2px]',
-                        isActive
-                          ? 'bg-primary/5 shadow-[inset_2px_0_hsl(var(--primary))]'
-                          : 'hover:bg-muted/40 cursor-pointer',
-                      )}
-                    >
-                      <p className="mb-3 text-sm leading-relaxed text-foreground">{point.preview || i18n.t("（无预览）")}</p>
-                      <div className="flex items-center gap-2 mb-1 min-w-0">
-                        <Badge variant={isActive ? 'default' : 'outline'} className="shrink-0">
-                          #{point.index}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground font-mono truncate min-w-0" title={String(point.messageId)}>
-                          msg {point.messageId}
-                        </span>
-                        {isActive && (
-                          <Badge variant="success" className="ml-auto">
-                            {i18n.t("当前活跃")}</Badge>
+                    <div key={point.messageId}>
+                      <button
+                        type="button"
+                        onClick={() => !readOnly && !isActive && setConfirmPoint({ ...point, sessionKey: tree.sessionKey })}
+                        disabled={readOnly || isActive || switching}
+                        className={cn(
+                          'w-full text-left px-4 py-4 transition-colors focus-visible:outline-offset-[-2px]',
+                          isActive
+                            ? 'bg-primary/5 shadow-[inset_2px_0_hsl(var(--primary))]'
+                            : 'hover:bg-muted/40 cursor-pointer',
                         )}
-                      </div>
-                      {(point.parentMessageId !== undefined || point.activePath !== undefined) && (
-                        <p className="text-xs text-muted-foreground mb-1">
-                          {point.parentMessageId == null ? i18n.t("根消息") : i18n.t("承接消息 #{0}", [point.parentMessageId])}
-                          {point.activePath !== undefined && ` · ${point.activePath ? i18n.t("当前路径") : i18n.t("其他分支")}`}
-                        </p>
-                      )}
-                    </button>
+                      >
+                        <p className="mb-3 text-sm leading-relaxed text-foreground [overflow-wrap:anywhere]">{point.preview || i18n.t("（无预览）")}</p>
+                        <div className="flex items-center gap-2 mb-1 min-w-0">
+                          <Badge variant={isActive ? 'default' : 'outline'} className="shrink-0">
+                            #{point.index}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground font-mono truncate min-w-0" title={String(point.messageId)}>
+                            msg {point.messageId}
+                          </span>
+                          {isActive && (
+                            <Badge variant="success" className="ml-auto">
+                              {i18n.t("当前活跃")}</Badge>
+                          )}
+                        </div>
+                        {(point.parentMessageId !== undefined || point.activePath !== undefined) && (
+                          <p className="text-xs text-muted-foreground mb-1">
+                            {point.parentMessageId == null ? i18n.t("根消息") : i18n.t("承接消息 #{0}", [point.parentMessageId])}
+                            {point.activePath !== undefined && ` · ${point.activePath ? i18n.t("当前路径") : i18n.t("其他分支")}`}
+                          </p>
+                        )}
+                      </button>
+                      <SessionMessageDetails key={`${tree.connectionScope}:${tree.sessionKey}:${tree.sessionId}:${point.messageId}`} sessionKey={tree.sessionKey} sessionId={tree.sessionId} messageId={point.messageId} connectionScope={tree.connectionScope} />
+                    </div>
                   )
                 })}
               </div>

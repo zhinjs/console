@@ -230,8 +230,8 @@ function CommandCatalog({ entries, selectedId, onSelect }: CollectionProps<'comm
                 {parameters.length ? <Badge variant="outline">{parameters.length} {i18n.t(" 参数")}</Badge> : <Badge variant="secondary">{i18n.t("无参数")}</Badge>}
                 {permissions.length ? <Badge variant="warning"><ShieldCheck />{permissions.length} {i18n.t(" 权限")}</Badge> : null}
               </span>
+              <span className="console-runtime-source"><span>{text(entry.item.plugin, 'runtime')}</span><ArrowRight /></span>
             </span>
-            <span className="console-runtime-source">{text(entry.item.plugin, 'runtime')}<ArrowRight /></span>
           </SelectableCard>
         )
       })}
