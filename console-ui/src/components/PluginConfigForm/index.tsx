@@ -1,7 +1,7 @@
 import { useI18n } from '../../i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Settings, AlertCircle, Save, Loader2 } from 'lucide-react'
+import { Settings, AlertCircle, Save, Loader2, Undo2, RefreshCw, FileCode, ShieldCheck } from 'lucide-react'
 import type { PluginConfigFormProps, SchemaField, SchemaEditorDrafts } from './types.js'
 import { usePluginConfigDraft } from './usePluginConfigDraft'
 import { SchemaFieldEditor } from './SchemaFieldEditor'
@@ -126,8 +126,11 @@ function PluginConfigFormSession({ pluginName, onSuccess, onOpenYaml, sourceRevi
     {form.schemaError ? <p className="text-xs text-muted-foreground">{form.schemaError}</p> : null}
     {onOpenYaml ? <Button variant="outline" onClick={onOpenYaml}>{i18n.t("打开完整源码")}</Button> : <Link className="text-sm underline" to={`/config?plugin=${encodeURIComponent(pluginName)}`}>{i18n.t("进入配置源码页")}</Link>}
   </Card>{explanation}</div>
-  return <Card className="mt-4 p-4 space-y-4">
-    <div className="flex items-center gap-2"><Settings className="h-4 w-4" /><h3 className="font-semibold">{i18n.t("配置 · ")}{pluginName}</h3><Badge variant="secondary">{rootObject ? i18n.t("{0} 项", [Object.keys(fields).length]) : form.schema.type}</Badge></div>
+  return <Card className="mt-0 p-4 pt-0 space-y-4">
+    <div className="console-config-actionbar">
+      <div className="flex min-w-0 items-center gap-2"><Settings className="h-4 w-4 shrink-0" /><h3 className="truncate font-semibold">{i18n.t("配置 · ")}{pluginName}</h3><Badge variant="secondary">{rootObject ? i18n.t("{0} 项", [Object.keys(fields).length]) : form.schema.type}</Badge>{guard.current.dirty ? <span className="console-dirty-pill" role="status">{i18n.t("有未保存的修改")}</span> : null}</div>
+      <div className="flex flex-wrap items-center justify-end gap-2"><Button variant="ghost" size="sm" onClick={reset} disabled={saving} title={i18n.t("撤销草稿")}><Undo2 className="h-4 w-4" /><span className="sr-only md:not-sr-only">{i18n.t("撤销草稿")}</span></Button><Button variant="ghost" size="sm" onClick={() => void form.load()} disabled={saving || form.loading} title={i18n.t("刷新版本（保留草稿）")}><RefreshCw className="h-4 w-4" /><span className="sr-only md:not-sr-only">{i18n.t("刷新版本（保留草稿）")}</span></Button>{onOpenYaml ? <Button variant="ghost" size="sm" onClick={onOpenYaml} title={i18n.t("打开完整源码")}><FileCode className="h-4 w-4" /><span className="sr-only md:not-sr-only">{i18n.t("打开完整源码")}</span></Button> : null}<span className="console-topbar-divider hidden sm:block" aria-hidden="true" /><Button variant="outline" size="sm" onClick={() => void handleSave(true)} disabled={saving || draftName !== pluginName || !!form.error || !!sourceError || invalidFields.size > 0}><ShieldCheck className="h-4 w-4" />{i18n.t("校验配置")}</Button><Button size="sm" onClick={() => void handleSave()} disabled={saving || draftName !== pluginName || form.loading || !!form.error || !!sourceError || invalidFields.size > 0}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{i18n.t("保存配置")}</Button></div>
+    </div>
     <p className="text-sm text-muted-foreground">{i18n.t("先完成必填项；已有值和声明默认值会保留。Host 负责最终校验，保存使用读取时的版本，冲突时保留草稿。")}</p>
     <div className="flex flex-wrap gap-2"><Button variant={view === 'form' ? 'default' : 'outline'} size="sm" onClick={() => { if (sourceError) { setSaveError(i18n.t("此项源码有格式错误，草稿已保留；请修正后再切回表单。")); return } setView('form') }}>{i18n.t("表单")}</Button><Button variant={view === 'source' ? 'default' : 'outline'} size="sm" onClick={() => { if (invalidFields.size) { setSaveError(i18n.t("字段 JSON 草稿有格式错误，请修正后切换。")); return } if (view !== 'source') setSourceText(localConfig === undefined ? '' : JSON.stringify(localConfig, null, 2)); setView('source') }}>{i18n.t("此项源码")}</Button>{view === 'form' && rootObject && <><Button variant={mode === 'minimum' ? 'default' : 'outline'} size="sm" disabled={invalidFields.size > 0} onClick={() => { if (!invalidFields.size) setMode('minimum') }}>{purposeFields?.length ? i18n.t("用途与必填配置") : i18n.t("最小必填配置")}</Button><Button variant={mode === 'all' ? 'default' : 'outline'} size="sm" disabled={invalidFields.size > 0} onClick={() => { if (!invalidFields.size) setMode('all') }}>{i18n.t("全部配置")}</Button></>}</div>
     {purposeFields?.length ? <p className="text-sm text-muted-foreground">{i18n.t("已显示本用途相关字段；不代表这些字段必填。其他字段与已有值仍完整保留，保存继续使用同一配置对象与版本。")}</p> : null}
@@ -149,6 +152,5 @@ function PluginConfigFormSession({ pluginName, onSuccess, onOpenYaml, sourceRevi
       if (value && typeof value === 'object' && !Array.isArray(value)) for (const [key, child] of Object.entries(value)) if (!Object.hasOwn(fields, key)) Object.defineProperty(next, key, { value: child, enumerable: true, configurable: true, writable: true })
       changeValue(next)
     }} /> : null}</> : <SchemaFieldEditor name={pluginName} field={form.schema} value={localConfig} onChange={changeValue} drafts={editorDrafts.current} onValidityChange={fieldValidity} />}</fieldset>}
-    <div className="flex flex-wrap justify-end gap-2 border-t pt-3"><Button variant="outline" onClick={reset} disabled={saving}>{i18n.t("撤销草稿")}</Button><Button variant="outline" onClick={() => void form.load()} disabled={saving || form.loading}>{i18n.t("刷新版本（保留草稿）")}</Button>{onOpenYaml ? <Button variant="outline" onClick={onOpenYaml}>{i18n.t("打开完整源码")}</Button> : null}<Button variant="outline" onClick={() => void handleSave(true)} disabled={saving || draftName !== pluginName || !!form.error || !!sourceError || invalidFields.size > 0}>{i18n.t("校验配置")}</Button><Button onClick={() => void handleSave()} disabled={saving || draftName !== pluginName || form.loading || !!form.error || !!sourceError || invalidFields.size > 0}>{saving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}{i18n.t("保存配置")}</Button></div>
   </Card>
 }

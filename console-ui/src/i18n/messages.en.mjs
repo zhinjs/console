@@ -1089,6 +1089,7 @@ export const englishMessages = Object.freeze({
   "Host 暂时不可达，": "The Host is temporarily unreachable; ",
   "控制面仍可继续使用": "the control interface remains available",
   "运行概览": "Overview",
+  "有未保存的修改": "Unsaved changes",
   "上次执行失败": "Last run failed",
   "上次执行成功": "Last run succeeded",
   "上次已跳过": "Last run skipped",
