@@ -1,0 +1,80 @@
+console-ui/src/pages/ConversationTrace.tsx
+  s_12b1e02705543f::t_7d249b8ca22a6a 98-99,115
+  s_12b1e02705543f::t_7d860980687f2a 111
+  s_12b1e02705543f::t_1f427ccfb468e4 104
+  s_12b1e02705543f::t_fa59d88020fce5 66
+  s_12b1e02705543f::t_a1325e1abe80a2 1,3-8,10-60,62,64-65,67-68,70-76,78-82,84-86,88,90-93,95-97,100-103,105,107-110,112-114,116-119
+  s_12b1e02705543f::t_acacf192c91302 2
+  s_12b1e02705543f::t_f1ef570e6f6a85 9,61,63,69,77,83,87,89,94,106
+console-ui/src/pages/conversation-trace-model.mjs
+  s_12b1e02705543f::t_d70e382d943455 15,17,37,42-43,51,54,81
+  s_12b1e02705543f::t_fa59d88020fce5 74-75
+  s_12b1e02705543f::t_acacf192c91302 33,67-69
+  s_12b1e02705543f::t_6cf522d187ee3b 1-14,16,18-32,34-36,38-41,44-50,52-53,55-66,70-73,76-80,82-121
+tests/conversation-trace-ui.test.mjs
+  s_12b1e02705543f::t_47d159cb9e3d8e 70-77
+  s_12b1e02705543f::t_672ae2525de711 1-69,78-128
+console-ui/src/pages/useConversationTraces.ts
+  s_12b1e02705543f::t_7d249b8ca22a6a 15,20,26-29,36,41
+  s_12b1e02705543f::t_6cf522d187ee3b 1-4,7-8,12-14,16,18-19,21,23-25,30-32,34-35,37-40,42
+  s_12b1e02705543f::t_d70e382d943455 5-6,9-11,17,22,33
+console-ui/src/components/ui/popover.tsx
+  s_12b1e02705543f::t_6cf522d187ee3b 1-14
+console-ui/src/pages/ConversationHistory.tsx
+  s_12b1e02705543f::t_d70e382d943455 11,25,37-38,59,61,65,68-69,71-72
+  s_12b1e02705543f::t_f1ef570e6f6a85 27,60,70
+  s_12b1e02705543f::t_e9640ef16d1b6e 9-10,26,28,94,118
+console-ui/src/pages/ConversationUsage.tsx
+  s_12b1e02705543f::t_a1325e1abe80a2 2-6,8-9,20-35,37-38,41-45,47-50
+  s_12b1e02705543f::t_782aa6f97eb5a6 1,10-19
+  s_12b1e02705543f::t_7d860980687f2a 36,39-40,46
+  s_12b1e02705543f::t_fa59d88020fce5 7
+console-ui/src/pages/agent-sessions.tsx
+  s_12b1e02705543f::t_d70e382d943455 6,69-70,339,354
+  s_12b1e02705543f::t_f1ef570e6f6a85 68,347,352
+  s_12b1e02705543f::t_e9640ef16d1b6e 3-5,71,336,344-346,350,353
+  s_12b1e02705543f::t_7d249b8ca22a6a 351
+  s_9477e63ef5cee5::t_fd8004c9c99b0d 355
+console-ui/src/pages/conversation-trace.css
+  s_12b1e02705543f::t_e9640ef16d1b6e 1-6,9-10,13-61
+  s_12b1e02705543f::t_782aa6f97eb5a6 7-8,11-12
+tests/conversation-trace-model.test.mjs
+  s_12b1e02705543f::t_fa59d88020fce5 1-65
+tests/conversation-page.test.mjs
+  s_12b1e02705543f::t_47d159cb9e3d8e 23,46,50,134-152
+  s_12b1e02705543f::t_9031213fec8fd8 153
+console-ui/src/pages/conversation-trace-model.d.mts
+  s_12b1e02705543f::t_6cf522d187ee3b 1-2,4-5,7-9,13,15-20
+  s_12b1e02705543f::t_fa59d88020fce5 3,6
+  s_12b1e02705543f::t_d70e382d943455 10-12,14
+tests/conversation-history.test.mjs
+  s_12b1e02705543f::t_672ae2525de711 9,66
+  s_12b1e02705543f::t_47d159cb9e3d8e 185-189,191-199
+  s_12b1e02705543f::t_a4aacf2e6597c8 190
+console-ui/src/i18n/messages.en.mjs
+  s_12b1e02705543f::t_1f427ccfb468e4 2525-2569
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8b4a3df59b3a89daef859e23a7f1b96b340159f8",
+  "prompts": {},
+  "sessions": {
+    "s_12b1e02705543f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a18193-fbf7-76b3-b33e-f286cdc167c7",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    },
+    "s_9477e63ef5cee5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4e622535-6dd6-4e23-9811-302f91a2903b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
