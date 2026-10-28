@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import ts from 'typescript'
 import { localeModule } from './locale-fixture.mjs'
 import * as model from '../console-ui/src/pages/conversation-history-model.mjs'
+import * as traceModel from '../console-ui/src/pages/conversation-trace-model.mjs'
 import { createDiagnosticRequestGate } from '../console-ui/src/pages/endpoint-detail/message-diagnostics.mjs'
 import { createInboxCacheAuthority } from '../console-ui/src/utils/inbox-cache-scope.mjs'
 import { pickMessageMediaRaw } from '../console-ui/src/pages/endpoint-detail/media-source.mjs'
@@ -62,6 +63,7 @@ function fixture({ realMessageBody = false } = {}) {
     '../utils/inbox-cache': { getInboxCacheScope: () => authority.current(), isInboxCacheScopeActive: scope => authority.active(scope) },
     './endpoint-detail/message-diagnostics.mjs': { createDiagnosticRequestGate },
     './endpoint-detail/MessageBody': realMessageBody ? bodyModule.exports : { MessageBody: 'message-body' }, './conversation-history-model.mjs': model,
+    './ConversationUsage': { ConversationUsage: 'conversation-usage' }, './conversation-trace-model.mjs': traceModel,
   }
   new Function('require', 'exports', 'module', code)(name => mocks[name] ?? require(name), module.exports, module)
   hooks.mount(() => module.exports.ConversationHistory(props))
@@ -178,5 +180,20 @@ test('the actual timeline and MessageBody render the entire long message and pub
   assert.ok(html.includes(text))
   assert.match(html, /<img[^>]*src="https:\/\/assets\.example\/full\.png"/)
   assert.doesNotMatch(html, /查看全文|切换到此处|执行分支|line-clamp/)
+  f.hooks.unmount()
+})
+
+test('usage attaches to the precise triggering inbound message and never to an assumed reply', async()=>{
+  const f=fixture(), observations=[]
+  f.props.onConversation=(...args)=>observations.push(args)
+  f.props.turns=[{turn_id:'turn-a',origin:{conversation,messageId:'msg-1'}}]
+  f.hooks.render()
+  f.answer(0,body([message(1,'trigger',{id:'member'}),message(2,'bot reply'),message(3,'other user',{id:'other'})]));await f.hooks.settle()
+  const usage=elements(f.hooks.value).filter(node=>node.type==='conversation-usage')
+  assert.equal(usage.length,2)
+  assert.equal(usage[0].props.turns[0].turn_id,'turn-a');assert.equal(usage[1].props.turns.length,0)
+  assert.deepEqual(observations[0][0],conversation)
+  button(f.hooks.value,'刷新').props.onClick();f.answer(1,{code:'conversation_ambiguous'},409);await f.hooks.settle()
+  assert.equal(observations.at(-1)[0],undefined);assert.match(observations.at(-1)[1],/多个频道或话题/)
   f.hooks.unmount()
 })

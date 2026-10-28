@@ -6,6 +6,9 @@ import { apiFetch } from '../utils/auth'
 import { getInboxCacheScope, isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { createDiagnosticRequestGate } from './endpoint-detail/message-diagnostics.mjs'
 import { MessageBody } from './endpoint-detail/MessageBody'
+import { ConversationUsage } from './ConversationUsage'
+import { turnsForMessage, type TraceTurn } from './conversation-trace-model.mjs'
+import type { DiagnosticConversation } from './endpoint-detail/types'
 import {
   conversationHistoryQuery, conversationHistoryFailure, readConversationHistory, prependConversationHistory,
   type ConversationHistoryFailure, type ConversationHistoryPage,
@@ -19,7 +22,10 @@ interface HistoryState {
   error: (ConversationHistoryFailure & { mode: 'latest' | 'earlier' }) | null
 }
 
-export function ConversationHistory({ sessionKey, connectionScope }: { sessionKey: string; connectionScope?: string }) {
+export function ConversationHistory({ sessionKey, connectionScope, turns = [], onOpenTrace, onRefresh, onConversation }: {
+  sessionKey: string; connectionScope?: string; turns?: TraceTurn[]; onOpenTrace?: (turnId: string) => void; onRefresh?: () => void
+  onConversation?: (conversation: DiagnosticConversation | undefined, error?: string, retry?: () => void) => void
+}) {
   const i18n = useI18n()
   const [state, setState] = useState<HistoryState>({ sessionKey, connectionScope, page: null, loading: false, error: null })
   const current = useRef({ sessionKey, connectionScope })
@@ -28,6 +34,8 @@ export function ConversationHistory({ sessionKey, connectionScope }: { sessionKe
   latest.current = state
   const requests = useRef(createDiagnosticRequestGate(getInboxCacheScope))
   const inFlight = useRef(false)
+  const reportConversation = useRef(onConversation)
+  reportConversation.current = onConversation
   const load = useCallback(async (mode: 'latest' | 'earlier' = 'latest') => {
     if (!isInboxCacheScopeActive(connectionScope) || current.current.sessionKey !== sessionKey
       || current.current.connectionScope !== connectionScope || inFlight.current) return
@@ -48,13 +56,20 @@ export function ConversationHistory({ sessionKey, connectionScope }: { sessionKe
       catch { if (response.ok) throw new Error('聊天记录响应格式不正确。') }
       if (!active()) return
       if (!response.ok) {
-        setState({ ...previous, loading: false, error: { ...conversationHistoryFailure(response.status, body), mode } })
+        const failure = conversationHistoryFailure(response.status, body)
+        reportConversation.current?.(undefined, failure.message, () => void load('latest'))
+        setState({ ...previous, loading: false, error: { ...failure, mode } })
         return
       }
       const page = readConversationHistory(body, previous.page?.conversation, before)
+      reportConversation.current?.(page.conversation)
       setState({ sessionKey, connectionScope, page: mode === 'earlier' ? prependConversationHistory(previous.page, page) : page, loading: false, error: null })
     } catch (cause) {
-      if (active()) setState({ ...previous, loading: false, error: { kind: 'other', message: cause instanceof Error ? cause.message : '聊天记录读取失败。', mode } })
+      if (active()) {
+        const message = cause instanceof Error ? cause.message : '聊天记录读取失败。'
+        reportConversation.current?.(undefined, message, () => void load('latest'))
+        setState({ ...previous, loading: false, error: { kind: 'other', message, mode } })
+      }
     } finally { if (active()) inFlight.current = false }
   }, [sessionKey, connectionScope])
 
@@ -76,7 +91,7 @@ export function ConversationHistory({ sessionKey, connectionScope }: { sessionKe
   let lastDay = ''
   return <section className="conversation-history" aria-label={i18n.t('聊天记录')}>
     <div className="conversation-history-navigation">
-      <Button variant="ghost" size="sm" disabled={state.loading} onClick={() => void load('latest')}>{i18n.t('刷新')}</Button>
+      <Button variant="ghost" size="sm" disabled={state.loading} onClick={() => { void load('latest'); onRefresh?.() }}>{i18n.t('刷新')}</Button>
       {page?.hasMore ? <Button variant="ghost" size="sm" disabled={state.loading} onClick={() => void load('earlier')}>{state.loading ? i18n.t('加载中…') : i18n.t('加载更早记录')}</Button>
         : state.loading ? <p role="status">{i18n.t('加载中…')}</p> : null}
     </div>
@@ -100,6 +115,7 @@ export function ConversationHistory({ sessionKey, connectionScope }: { sessionKe
                 {recalled.has(message.ref.id) ? <span className="conversation-message-recalled">{i18n.t('已撤回')}</span> : null}
               </header>
               <div className="conversation-message-body"><MessageBody content={message.segments} /></div>
+              {message.actor ? <ConversationUsage turns={turnsForMessage(turns, message.ref)} onOpenTrace={onOpenTrace} /> : null}
             </article> : null}
         </Fragment>
       })}
