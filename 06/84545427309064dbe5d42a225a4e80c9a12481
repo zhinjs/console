@@ -1,0 +1,162 @@
+console-ui/src/components/ui/radio-group.tsx
+  s_9622fd28aba994::t_64da7a680adf0d 23
+tests/page-radio-groups.test.mjs
+  s_9622fd28aba994::t_7312cb997d12a4 1-74
+console-ui/src/pages/assistant-jobs.tsx
+  s_9622fd28aba994::t_f57a706ad8221e 17,50
+tests/state-controls.test.mjs
+  s_9622fd28aba994::t_d75f16f345eda7 1-102
+console-ui/src/components/ui/switch.tsx
+  s_9622fd28aba994::t_e7f6e2814b6004 14,22
+console-ui/src/pages/marketplace.tsx
+  s_9622fd28aba994::t_f57a706ad8221e 460,462-465
+  s_9622fd28aba994::t_9215d51bc73ccb 18
+console-ui/src/pages/skills-assistant.tsx
+  s_9622fd28aba994::t_456db284f659e7 162,211
+  s_9622fd28aba994::t_2b3c38788186c6 16,220,222,227
+client/style.css
+  s_9622fd28aba994::t_0dd7ae751c4327 6
+tests/page-select-fields.test.mjs
+  s_9622fd28aba994::t_2c03efbf77d0f8 31,104-119
+  s_9622fd28aba994::t_72abe01c059fb3 37
+  s_9622fd28aba994::t_ceb6fe98e65f00 1-30,32-36,38-103,120
+console-ui/src/style.css
+  s_9622fd28aba994::t_0dd7ae751c4327 6
+  s_9622fd28aba994::t_b6f6cdff4daa16 4
+console-ui/src/pages/welcome-use-case.tsx
+  s_9622fd28aba994::t_f57a706ad8221e 6
+  s_9622fd28aba994::t_b0bf23fa655dda 7,60,73
+console-ui/src/pages/scenario-lab.tsx
+  s_9622fd28aba994::t_9215d51bc73ccb 11,84-85,88-89,92,97,99-100
+  s_9622fd28aba994::t_9c13efa98d6f46 8
+tests/task-center-ui.test.mjs
+  s_9622fd28aba994::t_869c72611dcb4e 46
+console-ui/src/pages/plugins.tsx
+  s_9622fd28aba994::t_734b186864eee8 85,87-88,96,108,112-117,122,131,135,146-147,157-158,167
+  s_9622fd28aba994::t_6d9f4a343e1781 148-155
+  s_9622fd28aba994::t_f263cb803bc53b 162
+  s_9622fd28aba994::t_456db284f659e7 109,163
+console-ui/src/pages/task-center.tsx
+  s_9622fd28aba994::t_734b186864eee8 53,223,236,245-246,250
+  s_9622fd28aba994::t_f57a706ad8221e 9,247,255
+  s_9622fd28aba994::t_456db284f659e7 38,61,224,248,252,254,256-262,264,273
+console-ui/src/components/PluginConfigForm/index.tsx
+  s_9622fd28aba994::t_48c6bf3446f432 29,41,62,70,82-83
+  s_9622fd28aba994::t_42d3ae7078f553 4,8,16,21,24,111,113,122-123,127,134-136,138-140,142-143,145,149,153
+console-ui/src/pages/cron.tsx
+  s_9622fd28aba994::t_734b186864eee8 199,210,222,249,265,269,369
+console-ui/src/pages/endpoints.tsx
+  s_9622fd28aba994::t_734b186864eee8 53,55-56,64,72,86,93,95,103
+  s_9622fd28aba994::t_456db284f659e7 65,73
+tests/dashboard-health.test.mjs
+  s_9622fd28aba994::t_a3a505dc30e468 27-28
+console-ui/src/pages/resource-pages.css
+  s_9622fd28aba994::t_0dd7ae751c4327 1-254
+console-ui/src/pages/agent-sessions.tsx
+  s_9622fd28aba994::t_d48b72295e30fd 195,203,243-245,256-257,260,262,272,274-275,278,280,287,309,311
+tests/config-connection-scope.test.mjs
+  s_9622fd28aba994::t_48c6bf3446f432 901-910,912-920
+  s_9622fd28aba994::t_700e2a73c7d27c 1007-1031
+  s_9622fd28aba994::t_f3fc334e750380 101,430-432
+  s_9622fd28aba994::t_f4a4ce0233b52a 792-795,809,826,829,866,940,943-955,959-964,966-970,972,977,979-982
+  s_9622fd28aba994::t_b3de6415e4ce27 319,350,352,354,400-401,410-412,706,711,719,734,753-755,828,846,856,860-862,883,889-890,896-897,911,941-942,956-958,965,971,973-976,978,983-1006
+  s_9622fd28aba994::t_e93f0facb4951d 871,876
+console-ui/src/components/PageHeader.tsx
+  s_9622fd28aba994::t_1e924b735e3e3a 16,24
+console-ui/src/components/PluginConfigForm/usePluginConfigDraft.ts
+  s_9622fd28aba994::t_0689fdd5cc1303 58
+console-ui/src/layouts/dashboard.tsx
+  s_9622fd28aba994::t_1e924b735e3e3a 325,356,364,373
+console-ui/src/shell.css
+  s_9622fd28aba994::t_1e924b735e3e3a 4,68,80,90,95,112-114,130-131,142,154,194,196,198,200,217,249,322-329,337,376-378,389-393,414,417-420,428-433
+  s_9622fd28aba994::t_54e89d2da2a2c6 500-501,503,574,596,603,625,631
+console-ui/src/pages/dashboard.tsx
+  s_9622fd28aba994::t_734b186864eee8 368-369,371-372,379,464
+  s_9622fd28aba994::t_456db284f659e7 393-395
+console-ui/src/pages/bot-replay.tsx
+  s_9622fd28aba994::t_f57a706ad8221e 13,152-153,156
+tests/select-field.test.mjs
+  s_9622fd28aba994::t_7d911ccf79923f 1-60,66-96
+  s_9622fd28aba994::t_6dac2664896d23 63-64
+  s_9622fd28aba994::t_6198b0bfb8274f 61-62,65
+console-ui/src/pages/ambient-engagement.tsx
+  s_9622fd28aba994::t_2b3c38788186c6 21,266-271,277,279,282,284
+console-ui/src/components/ui/checkbox.tsx
+  s_9622fd28aba994::t_f226f15d366024 7,16,21-23
+console-ui/src/components/ui/select.tsx
+  s_9622fd28aba994::t_c825e331e58978 20,73,77-78,84,104,109,131-145,147,151-152,158-160,162-175,178-180,184
+  s_9622fd28aba994::t_c5a38026da3e81 71,153-157
+  s_9622fd28aba994::t_2567aaa9cd6454 146,148-150,161,176-177
+README.md
+  s_9622fd28aba994::t_9baf102b67b42d 113,115
+console-ui/src/agent-playground.css
+  s_9622fd28aba994::t_73d75e79b2cc6f 13,15,36,62,80,107,139,148,189,213,236,275,282,320,346,356,382,407,442,466,484,500,516,590,622-623,635,652,656,668,702,722,738,740,745,771,798,831,850,852,901,910,920,945,985-986,1038-1040,1047,1078,1086,1138,1181,1198,1224,1230,1256-1257,1275,1341-1343,1356,1412-1413,1425-1426,1469-1471,1487,1499,1509,1523,1542-1543,1621,1631
+console-ui/src/components/AgentSessionPicker.tsx
+  s_9622fd28aba994::t_2efc9439938814 117
+console-ui/src/components/LanguageSelect.tsx
+  s_9622fd28aba994::t_5ec02a2734044d 4,12-14
+console-ui/src/components/PluginConfigForm/ConversationTargetEditor.tsx
+  s_9622fd28aba994::t_f5c5b1d3d95ddf 4,22,47-48,50-54,57-61,63-67
+console-ui/src/components/PluginConfigForm/SchemaFieldEditor.tsx
+  s_9622fd28aba994::t_c77d01d16754e6 212-214
+console-ui/src/components/ui/alert.tsx
+  s_9622fd28aba994::t_f6ae6964f98272 7,11,13,45
+console-ui/src/components/ui/badge.tsx
+  s_9622fd28aba994::t_88099c3ded782f 6,10,12
+console-ui/src/components/ui/button.tsx
+  s_9622fd28aba994::t_996a371f5fa3f4 8,12-15
+console-ui/src/components/ui/dialog.tsx
+  s_9622fd28aba994::t_dd6ce81f841555 22,39,55,60
+console-ui/src/components/ui/input.tsx
+  s_9622fd28aba994::t_71ace6081d1d0b 11
+console-ui/src/components/ui/tabs.tsx
+  s_9622fd28aba994::t_53dbd73d12177a 17,33
+console-ui/src/components/ui/textarea.tsx
+  s_9622fd28aba994::t_3421ac838977ed 10
+console-ui/src/design-system.css
+  s_9622fd28aba994::t_0f35da201989df 27,51-53,63,94-95,101,513,527,531,539,543,547-548,552,1009-1011,1016-1017,1024-1028,1030-1031,1035,1039-1040,3800-3803,3806-3807,4059,4065-4066,4076,4083
+console-ui/src/i18n/messages.en.mjs
+  s_9622fd28aba994::t_1f9f894476d36b 3-29
+console-ui/src/pages/command-permissions.tsx
+  s_9622fd28aba994::t_2916e5f315d9bb 7,98-99
+console-ui/src/pages/config.tsx
+  s_9622fd28aba994::t_1d2ec783a1fa1d 8,34,80,86,88,102,111,124,131,136-137,139,146,150-151,153,155,169,174-175
+console-ui/src/pages/introspection/GalleryPreview.tsx
+  s_9622fd28aba994::t_563b10825f23e4 7,116-117,119
+console-ui/src/pages/logs/LogWorkbench.tsx
+  s_9622fd28aba994::t_05f593af171e5b 26,141-142,208-209
+console-ui/src/pages/logs/disclosure.css
+  s_9622fd28aba994::t_b2f7ec2866338d 14-15,27,31,33-34,56-57
+console-ui/src/pages/workroom-catalog.tsx
+  s_9622fd28aba994::t_ebe240e7ab0987 31,34,464,488-489,503,575,577-580,584-590,620,625,628-632,634,636
+console-ui/src/settings.css
+  s_9622fd28aba994::t_7f703ddc4336b4 52
+console-ui/src/theme-tokens.css
+  s_9622fd28aba994::t_719746a746fba9 1,4-5,7,9,12,14,16,18-20,23,25,28,64,66,68,78,80,83,88
+tests/checkbox-consumers.test.mjs
+  s_9622fd28aba994::t_038bdf60fb8a57 1-91
+tests/plugin-config-nested.test.mjs
+  s_9622fd28aba994::t_1deac5efb93900 3-5,126-177
+tests/select-field-consumers.test.mjs
+  s_9622fd28aba994::t_c22066a5680093 1-107
+tests/settings-model.test.mjs
+  s_9622fd28aba994::t_0d2432b02b8fe2 81,90-91
+tests/visual-foundation.test.mjs
+  s_9622fd28aba994::t_0a096fbd89877e 18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0684545427309064dbe5d42a225a4e80c9a12481",
+  "prompts": {},
+  "sessions": {
+    "s_9622fd28aba994": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a166a4-5b4c-7e22-80f0-d3374c43b4fb",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
