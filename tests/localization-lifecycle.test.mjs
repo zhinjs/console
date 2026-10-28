@@ -78,24 +78,6 @@ test('JSON field and dictionary errors follow the interface language while inval
   }
 })
 
-test('per-plugin source JSON error translates without replacing the source draft or allowing save', async () => {
-  const runtime = hooks(); let locale = messages('zh-CN')
-  const form = { loaded: true, schema: { type: 'object', object: {} }, config: {}, snapshot: { revision: 'r1' } }
-  const names = ['Card', 'Badge', 'Button', 'Settings', 'AlertCircle', 'Save', 'Loader2', 'Undo2', 'RefreshCw', 'FileCode', 'ShieldCheck', 'ChevronsUpDown', 'ChevronsDownUp', 'Alert', 'AlertDescription', 'Link', 'CodeEditor', 'SchemaFieldEditor', 'ConfigFieldExplanation', 'ConfigApplicationEvidence']
-  const Component = await componentFunctions('components/PluginConfigForm/index.tsx', ['PluginConfigFormSession'], {
-    ...runtime.api, ...schemaModel, ...Object.fromEntries(names.map(name => [name, name])),
-    useI18n: () => locale, usePluginConfigDraft: () => form, createConfigDraftGuard, isInboxCacheScopeActive: () => true, isManagedConfigInstance: () => false,
-  })
-  runtime.mount(() => Component({ pluginName: 'fixture', connectionScope: 'fixture' }))
-  elements(runtime.value).find(node => node.type === 'Button' && node.children.includes('此项源码')).props.onClick(); runtime.render()
-  elements(runtime.value).find(node => node.type === 'CodeEditor').props.onChange('{'); runtime.render()
-  locale = messages('en'); runtime.render()
-  const editor = elements(runtime.value).find(node => node.type === 'CodeEditor')
-  assert.equal(editor.props.value, '{'); assert.equal(editor.props.invalid, true)
-  assert.ok(elements(runtime.value).some(node => node.props.role === 'alert' && node.children.includes(translate('en', 'JSON 格式错误，当前草稿已保留。'))))
-  assert.equal(elements(runtime.value).find(node => node.type === 'Button' && node.children.includes(translate('en', '保存配置'))).props.disabled, true)
-})
-
 test('task review display follows refreshed locale while mutation identity and drafts stay pinned', async () => {
   const runtime = hooks(); let locale = messages('zh-CN'); const scope = 'task-fixture'; const requests = []
   const fixture = JSON.parse(await readFile(new URL('./fixtures/task-providers.json', import.meta.url), 'utf8'))

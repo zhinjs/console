@@ -15,6 +15,7 @@ import { Card, CardContent } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
+import { SelectField } from '../components/ui/select'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { Skeleton } from '../components/ui/skeleton'
 import { Separator } from '../components/ui/separator'
@@ -456,15 +457,12 @@ function MarketplaceSession({ scope }: { scope?: string }) {
           >
             <Package className="w-4 h-4 mr-1" />
             {i18n.t("仅 @zhin.js")}</Button>
-          <select
+          <SelectField
             value={sortKey}
-            onChange={e => setSortKey(e.target.value as SortKey)}
-            className="h-9 px-3 rounded-md border bg-transparent text-sm cursor-pointer hover:bg-accent transition-colors"
-          >
-            {SORT_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{i18n.t(opt.label)}</option>
-            ))}
-          </select>
+            onValueChange={value => setSortKey(value as SortKey)}
+            className="w-auto"
+            options={SORT_OPTIONS.map(opt => ({ value: opt.value, label: i18n.t(opt.label) }))}
+          />
         </div>
       </div>
 

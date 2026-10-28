@@ -28,8 +28,10 @@ import { EmptyState } from '../components/empty-state'
 import { ErrorAlert } from '../components/error-alert'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
+import { Checkbox } from '../components/ui/checkbox'
 import { Card, CardContent } from '../components/ui/card'
 import { Input } from '../components/ui/input'
+import { SelectField } from '../components/ui/select'
 import { Skeleton } from '../components/ui/skeleton'
 import { Textarea } from '../components/ui/textarea'
 import {
@@ -459,7 +461,7 @@ function WorkroomEditor(props: {
         </div>
         <div className="flex items-center gap-2">
           {props.persisted ? <Button asChild variant="outline" size="sm"><Link to={`/agent/workrooms?projectId=${encodeURIComponent(value.projectId.trim())}`}><LayoutDashboard />{i18n.t("查看任务")}</Link></Button> : null}
-          <label className="flex cursor-pointer items-center gap-2 text-sm"><input type="checkbox" checked={value.enabled !== false} disabled={readOnly} onChange={(event) => patch({ enabled: event.target.checked })} />{i18n.t("启用")}</label>
+          <label className="flex cursor-pointer items-center gap-2 text-sm"><Checkbox checked={value.enabled !== false} disabled={readOnly} onCheckedChange={checked => patch({ enabled: checked === true })} />{i18n.t("启用")}</label>
           {!readOnly ? <Button variant="ghost" size="icon" aria-label={i18n.t("删除 {0}", [value.projectId])} onClick={props.onDelete}><Trash2 /></Button> : null}
         </div>
       </header>
@@ -483,8 +485,8 @@ function WorkroomEditor(props: {
             {value.members.map((member, index) => (
               <div key={index} className="rounded-xl border bg-muted/[0.08] p-3 sm:p-4">
                 <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(8rem,0.55fr)_auto] sm:items-end">
-                  <Field label="Agent"><NativeSelect value={member.agent} invalid={Boolean(props.memberIssues.members[index]?.agent)} describedBy={props.memberIssues.members[index]?.agent ? `${memberErrorId}-${index}-agent` : undefined} disabled={readOnly} onChange={(agent) => setMember(index, { ...member, agent })}><option value="">{i18n.t("选择 Agent")}</option>{props.agents.map((agent) => <option key={agent} value={agent}>{props.agentDetails[agent]?.nickname || agent}</option>)}</NativeSelect></Field>
-                  <Field label="Role"><NativeSelect value={member.role} invalid={Boolean(props.memberIssues.members[index]?.role)} describedBy={props.memberIssues.members[index]?.role ? `${memberErrorId}-${index}-role` : undefined} disabled={readOnly} onChange={(role) => setMember(index, { ...member, role: role as MemberRole })}>{ROLES.map((role) => <option key={role} value={role}>{role}</option>)}</NativeSelect></Field>
+                  <Field label="Agent"><SelectField value={member.agent} aria-invalid={Boolean(props.memberIssues.members[index]?.agent) || undefined} aria-describedby={props.memberIssues.members[index]?.agent ? `${memberErrorId}-${index}-agent` : undefined} disabled={readOnly} onValueChange={(agent) => setMember(index, { ...member, agent })} options={[{value: '', label: i18n.t("选择 Agent")}, ...props.agents.map(agent => ({value: agent, label: props.agentDetails[agent]?.nickname || agent}))]} /></Field>
+                  <Field label="Role"><SelectField value={member.role} aria-invalid={Boolean(props.memberIssues.members[index]?.role) || undefined} aria-describedby={props.memberIssues.members[index]?.role ? `${memberErrorId}-${index}-role` : undefined} disabled={readOnly} onValueChange={(role) => setMember(index, { ...member, role: role as MemberRole })} options={ROLES.map(role => ({value: role, label: role}))} /></Field>
                   {!readOnly ? <Button variant="ghost" size="icon" aria-label={i18n.t("删除成员 {0}", [index + 1])} onClick={() => patch({ members: value.members.filter((_, itemIndex) => itemIndex !== index) })}><Trash2 /></Button> : <span />}
                 </div>
 
@@ -498,7 +500,7 @@ function WorkroomEditor(props: {
                       <div><h4 className="text-xs font-semibold">{i18n.t("任务执行入口")}</h4><p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{i18n.t("本机执行，或精确路由到远程 Agent Endpoint。")}</p></div>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <Field label="Execution"><NativeSelect value={member.assignmentRoute?.kind ?? 'local'} disabled={readOnly} onChange={(kind) => setMember(index, { ...member, assignmentRoute: kind === 'remote' ? { kind: 'remote', endpointId: '' } : { kind: 'local' } })}><option value="local">local</option><option value="remote">remote</option></NativeSelect></Field>
+                      <Field label="Execution"><SelectField value={member.assignmentRoute?.kind ?? 'local'} disabled={readOnly} onValueChange={(kind) => setMember(index, { ...member, assignmentRoute: kind === 'remote' ? { kind: 'remote', endpointId: '' } : { kind: 'local' } })} options={[{value: 'local', label: 'local'}, {value: 'remote', label: 'remote'}]} /></Field>
                       <Field label="Remote Endpoint ID"><Input aria-invalid={Boolean(props.memberIssues.members[index]?.endpointId)} aria-describedby={props.memberIssues.members[index]?.endpointId ? `${memberErrorId}-${index}-remote` : undefined} value={member.assignmentRoute?.kind === 'remote' ? member.assignmentRoute.endpointId ?? '' : ''} disabled={readOnly || member.assignmentRoute?.kind !== 'remote'} onChange={(event) => setMember(index, { ...member, assignmentRoute: { kind: 'remote', endpointId: event.target.value } })} placeholder="worker-east" /></Field>
                     </div>
                     {props.memberIssues.members[index]?.endpointId ? <p id={`${memberErrorId}-${index}-remote`} className="mt-1 text-xs text-destructive">{props.memberIssues.members[index].endpointId}</p> : null}
@@ -570,26 +572,22 @@ function MessageRouteEditor(props: {
       <Field label="Projection Endpoint" hint={member.messageRoute
         ? i18n.t("通过 {0}:{1} 投影", [member.messageRoute.adapter, member.messageRoute.endpoint])
         : i18n.t("继承 {0}", [inheritedEndpoint])}>
-        <NativeSelect value={routeValue} disabled={props.readOnly} invalid={Boolean(props.issue)} onChange={(selected) => {
+        <SelectField value={routeValue} disabled={props.readOnly} aria-invalid={Boolean(props.issue) || undefined} onValueChange={(selected) => {
           props.onChange(parseEndpointRouteKey(selected))
-        }}>
-          <option value="">{i18n.t("继承主空间 Endpoint · ")}{inheritedEndpoint}</option>
-          {!routeKnown && member.messageRoute ? (
-            <option value={routeValue}>{member.messageRoute.adapter}:{member.messageRoute.endpoint}{props.issue?.code === 'unknown' ? i18n.t("（Endpoint 已失效）") : i18n.t("（当前值）")}</option>
-          ) : null}
-          {props.endpoints.map((endpoint) => {
+        }} options={[
+          {value: '', label: `${i18n.t("继承主空间 Endpoint · ")}${inheritedEndpoint}`},
+          ...(!routeKnown && member.messageRoute ? [{value: routeValue, label: `${member.messageRoute.adapter}:${member.messageRoute.endpoint}${props.issue?.code === 'unknown' ? i18n.t("（Endpoint 已失效）") : i18n.t("（当前值）")}`}] : []),
+          ...props.endpoints.map((endpoint) => {
             const value = endpointRouteKey({ adapter: endpoint.adapter, endpoint: endpoint.name })
             const owner = props.routeOwners.get(value)
             const occupied = Boolean(owner && owner !== member.agent)
-            return (
-              <option key={`${endpoint.adapter}:${endpoint.name}`} value={value} disabled={occupied}>
-                {endpoint.adapter}:{endpoint.name}
-                {endpoint.connected ? ' · online' : ' · offline'}
-                {occupied ? i18n.t(" · 已由 {0} 使用", [owner]) : ''}
-              </option>
-            )
-          })}
-        </NativeSelect>
+            return {
+              value,
+              disabled: occupied,
+              label: `${endpoint.adapter}:${endpoint.name}${endpoint.connected ? ' · online' : ' · offline'}${occupied ? i18n.t(" · 已由 {0} 使用", [owner]) : ''}`,
+            }
+          }),
+        ]} />
       </Field>
       {props.issue ? <p role="alert" className="mt-2 text-xs leading-relaxed text-destructive">{props.issue.message}</p> : null}
     </div>
@@ -619,23 +617,23 @@ function ConversationEditor(props: {
     <section className="rounded-lg border p-3">
       <div className="mb-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2"><GitFork className="h-4 w-4 text-muted-foreground" /><h3 className="text-sm font-semibold">{props.title}</h3>{props.mandatory ? <Badge variant="secondary">{i18n.t("必填")}</Badge> : null}</div>
-        {!props.required ? <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={enabled} disabled={props.readOnly} onChange={(event) => props.onChange(event.target.checked ? value : undefined)} />{i18n.t("启用")}</label> : null}
+        {!props.required ? <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground"><Checkbox checked={enabled} disabled={props.readOnly} onCheckedChange={checked => props.onChange(checked === true ? value : undefined)} />{i18n.t("启用")}</label> : null}
       </div>
       {(enabled || props.required) ? (
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Bot Endpoint">
-            <NativeSelect value={endpointValue} invalid={Boolean(props.issues.endpoint)} describedBy={props.issues.endpoint ? `${errorId}-endpoint` : undefined} disabled={props.readOnly} onChange={(selected) => {
+            <SelectField value={endpointValue} aria-invalid={Boolean(props.issues.endpoint) || undefined} aria-describedby={props.issues.endpoint ? `${errorId}-endpoint` : undefined} disabled={props.readOnly} onValueChange={(selected) => {
               const route = parseEndpointRouteKey(selected)
               patch(route ?? { adapter: '', endpoint: '' })
-            }}>
-              <option value={'\0'}>{i18n.t("选择已配置 Endpoint")}</option>
-              {!endpointKnown && value.adapter && value.endpoint ? <option value={endpointValue}>{value.adapter}:{value.endpoint}{i18n.t("（当前值）")}</option> : null}
-              {props.endpoints.map((endpoint) => <option key={`${endpoint.adapter}:${endpoint.name}`} value={endpointRouteKey({ adapter: endpoint.adapter, endpoint: endpoint.name })}>{endpoint.adapter}:{endpoint.name}{endpoint.connected ? ' · online' : ' · offline'}</option>)}
-            </NativeSelect>
+            }} options={[
+              {value: '\0', label: i18n.t("选择已配置 Endpoint")},
+              ...(!endpointKnown && value.adapter && value.endpoint ? [{value: endpointValue, label: `${value.adapter}:${value.endpoint}${i18n.t("（当前值）")}`}] : []),
+              ...props.endpoints.map(endpoint => ({value: endpointRouteKey({adapter: endpoint.adapter, endpoint: endpoint.name}), label: `${endpoint.adapter}:${endpoint.name}${endpoint.connected ? ' · online' : ' · offline'}`})),
+            ]} />
           </Field>
-          <Field label="Space Kind"><NativeSelect value={value.kind} disabled={props.readOnly} onChange={(kind) => patch({ kind: kind as SpaceKind })}>{kinds.map((kind) => <option key={kind} value={kind}>{kind}</option>)}</NativeSelect></Field>
+          <Field label="Space Kind"><SelectField value={value.kind} disabled={props.readOnly} onValueChange={(kind) => patch({ kind: kind as SpaceKind })} options={kinds.map(kind => ({value: kind, label: kind}))} /></Field>
           <Field label={value.kind === 'repository' ? 'Repository' : 'Space ID'}><Input value={value.id} aria-invalid={Boolean(props.issues.id)} aria-describedby={props.issues.id ? `${errorId}-space` : undefined} disabled={props.readOnly} onChange={(event) => patch({ id: event.target.value })} placeholder={value.kind === 'repository' ? 'owner/repo' : 'channel-or-group-id'} /></Field>
-          <Field label="Orchestrator Agent"><NativeSelect value={value.agent} invalid={Boolean(props.issues.agent)} describedBy={props.issues.agent ? `${errorId}-agent` : undefined} disabled={props.readOnly} onChange={(agent) => patch({ agent })}><option value="">{i18n.t("选择 Orchestrator")}</option>{props.orchestrators.map((agent) => <option key={agent} value={agent}>{agent}</option>)}</NativeSelect></Field>
+          <Field label="Orchestrator Agent"><SelectField value={value.agent} aria-invalid={Boolean(props.issues.agent) || undefined} aria-describedby={props.issues.agent ? `${errorId}-agent` : undefined} disabled={props.readOnly} onValueChange={(agent) => patch({ agent })} options={[{value: '', label: i18n.t("选择 Orchestrator")}, ...props.orchestrators.map(agent => ({value: agent, label: agent}))]} /></Field>
           {props.issues.endpoint ? <p id={`${errorId}-endpoint`} className="text-xs text-destructive sm:col-span-2">{props.issues.endpoint}</p> : null}
           {props.issues.id ? <p id={`${errorId}-space`} className="text-xs text-destructive sm:col-span-2">{props.issues.id}</p> : null}
           {props.issues.agent ? <p id={`${errorId}-agent`} className="text-xs text-destructive sm:col-span-2">{props.issues.agent}</p> : null}
@@ -643,10 +641,6 @@ function ConversationEditor(props: {
       ) : <p className="text-xs text-muted-foreground">{i18n.t("未配置独立 Sponsor 控制空间。")}</p>}
     </section>
   )
-}
-
-function NativeSelect(props: { value: string; disabled?: boolean; invalid?: boolean; describedBy?: string; onChange(value: string): void; children: ReactNode }) {
-  return <select aria-invalid={props.invalid || undefined} aria-describedby={props.describedBy} className={cn('h-9 w-full rounded-md border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50', props.invalid && 'border-destructive focus-visible:ring-destructive')} value={props.value} disabled={props.disabled} onChange={(event) => props.onChange(event.target.value)}>{props.children}</select>
 }
 
 function Field(props: { label: string; hint?: string; children: ReactNode }) {

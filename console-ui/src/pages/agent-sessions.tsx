@@ -192,17 +192,15 @@ export default function AgentSessionsPage() {
     <div className="space-y-6">
       <PageHeader
         title={i18n.t("聊天记录")}
-        description={readOnly ? i18n.t("按聊天账号和会话查看机器人和大家聊过什么（Demo 只读）。") : i18n.t("按聊天账号和会话查看机器人和大家聊过什么，也可以选一段继续往下聊。")}
+        description={readOnly ? i18n.t("按聊天账号和会话查看机器人和大家聊过什么（Demo 只读）。") : undefined}
       />
-
-      <p className="text-sm text-muted-foreground">{i18n.t("聊天记录需要先装好并配置 AI 机器人；只用聊天账号收发消息的项目不需要开启。")}</p>
 
       <AgentSessionPicker
         value={sessionKey}
         history={history}
         recent={recent}
         loading={loading}
-        actionLabel={i18n.t("查看分支")}
+        actionLabel={i18n.t("查看记录")}
         onChange={(key) => {
           if (switchInFlight.current) return
           requestSequence.current += 1
@@ -242,7 +240,9 @@ export default function AgentSessionsPage() {
       {tree && !loading && (
         <Card>
           <CardContent className="p-4 space-y-3">
-            <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+            <details className="border-b pb-3 text-xs text-muted-foreground">
+              <summary className="cursor-pointer">{i18n.t("会话详情")}</summary>
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 break-all">
               <span>{i18n.t("会话：")}<code className="text-foreground">{tree.sessionKey}</code></span>
               <span>
                 sessionId: <code className="text-foreground">{tree.sessionId}</code>
@@ -253,12 +253,13 @@ export default function AgentSessionsPage() {
                   {tree.activeLeafMessageId ?? i18n.t("默认（最后一条）")}
                 </Badge>
               </span>
-            </div>
+              </div>
+            </details>
 
             {tree.points.length === 0 ? (
-              <EmptyState compact title={i18n.t("暂无分支点")} />
+              <EmptyState compact title={i18n.t("暂无可继续的消息")} />
             ) : (
-              <div className="space-y-2">
+              <div className="divide-y">
                 {tree.points.map((point) => {
                   const isActive = tree.activeLeafMessageId === point.messageId
                   return (
@@ -268,21 +269,22 @@ export default function AgentSessionsPage() {
                       onClick={() => !readOnly && !isActive && setConfirmPoint({ ...point, sessionKey: tree.sessionKey })}
                       disabled={readOnly || isActive || switching}
                       className={cn(
-                        'w-full text-left p-3 rounded-lg border transition-colors',
+                        'w-full text-left px-4 py-4 transition-colors focus-visible:outline-offset-[-2px]',
                         isActive
-                          ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-                          : 'border-border/60 hover:bg-muted/40 cursor-pointer',
+                          ? 'bg-primary/5 shadow-[inset_2px_0_hsl(var(--primary))]'
+                          : 'hover:bg-muted/40 cursor-pointer',
                       )}
                     >
+                      <p className="mb-3 text-sm leading-relaxed text-foreground">{point.preview || i18n.t("（无预览）")}</p>
                       <div className="flex items-center gap-2 mb-1 min-w-0">
-                        <Badge variant={isActive ? 'default' : 'outline'} className="text-[10px] shrink-0">
+                        <Badge variant={isActive ? 'default' : 'outline'} className="shrink-0">
                           #{point.index}
                         </Badge>
                         <span className="text-xs text-muted-foreground font-mono truncate min-w-0" title={String(point.messageId)}>
                           msg {point.messageId}
                         </span>
                         {isActive && (
-                          <Badge variant="success" className="text-[10px] ml-auto">
+                          <Badge variant="success" className="ml-auto">
                             {i18n.t("当前活跃")}</Badge>
                         )}
                       </div>
@@ -292,7 +294,6 @@ export default function AgentSessionsPage() {
                           {point.activePath !== undefined && ` · ${point.activePath ? i18n.t("当前路径") : i18n.t("其他分支")}`}
                         </p>
                       )}
-                      <p className="text-sm text-foreground/90">{point.preview || i18n.t("（无预览）")}</p>
                     </button>
                   )
                 })}
@@ -305,9 +306,9 @@ export default function AgentSessionsPage() {
       {!readOnly && <Dialog open={!!confirmPoint} onOpenChange={(open) => !open && !switching && setConfirmPoint(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{i18n.t("切换活跃叶节点")}</DialogTitle>
+            <DialogTitle>{i18n.t("从这条消息继续")}</DialogTitle>
             <DialogDescription>
-              {i18n.t("将活跃路径切换至消息 #")}{confirmPoint?.messageId}{i18n.t("（分支 #")}{confirmPoint?.index}{i18n.t("）？ 后续 AI 对话将从该用户消息点继续。")}</DialogDescription>
+              {i18n.t("后续 AI 对话将从这条消息继续。")}</DialogDescription>
           </DialogHeader>
           {confirmPoint && (
             <p className="text-sm text-muted-foreground border rounded-md p-3 bg-muted/30">

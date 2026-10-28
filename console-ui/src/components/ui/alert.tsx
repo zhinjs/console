@@ -4,13 +4,13 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@zhin.js/client"
 
 const alertVariants = cva(
-  "relative w-full rounded-[var(--console-radius-lg)] border-[length:var(--console-border-width)] px-4 py-3 text-[length:var(--console-text-body)] [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground [&>svg~*]:pl-7",
+  "relative w-full rounded-[var(--console-radius-lg)] border-[length:var(--console-border-width)] px-4 py-3 text-[length:var(--console-text-body)] leading-relaxed [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-3.5 [&>svg]:text-foreground [&>svg~*]:pl-7",
   {
     variants: {
       variant: {
-        default: "bg-background text-foreground",
+        default: "border-border bg-muted/35 text-foreground",
         destructive:
-          "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
+          "border-destructive/30 bg-destructive/5 text-destructive dark:border-destructive/40 [&>svg]:text-destructive",
         success:
           "console-badge-success [&>svg]:text-[hsl(var(--success))]",
         warning:
@@ -42,7 +42,7 @@ const AlertTitle = forwardRef<
 >(({ className, ...props }, ref) => (
   <h5
     ref={ref}
-    className={cn("mb-1 font-medium leading-none tracking-tight", className)}
+    className={cn("mb-1 font-medium leading-normal", className)}
     {...props}
   />
 ))

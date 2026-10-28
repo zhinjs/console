@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react'
 import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../../utils/inbox-cache'
 import { Input } from '../../components/ui/input'
+import { SelectField } from '../../components/ui/select'
 import { RenderingDiagnostics } from '../endpoint-detail/RenderingDiagnostics'
 import { requestConsole } from '../../utils/console-rpc'
 import { createPreviewRequestGate, buildPreviewTarget, readPreviewEndpoints, readPreviewResponse, type PreviewEndpoint, type PreviewTarget } from './target-preview.mjs'
@@ -112,10 +113,10 @@ export function GalleryPreview({ item, readOnly }: { item: CapabilityItem; readO
       <p className="my-2 text-muted-foreground">{i18n.t("不会发送消息或注册按钮回调；不运行出站中间件。实际发送记录是最终诊断依据。")}</p>
       <Button size="sm" variant="outline" onClick={() => void loadEndpoints()}>{i18n.t("加载 Endpoint")}</Button>
       <div className="mt-2 grid gap-2">
-        <label>Endpoint<select className="console-control mt-1 w-full rounded border bg-background p-2" value={endpointIndex} onChange={event => setEndpointIndex(event.target.value)}><option value="">{i18n.t("请选择")}</option>{endpoints.map((endpoint, index) => <option key={JSON.stringify(endpoint.endpoint)} value={index}>{endpoint.endpoint.adapter} / {endpoint.name}{endpoint.connected ? '' : i18n.t("（离线）")}</option>)}</select></label>
-        <label>{i18n.t("会话类型")}<select className="console-control mt-1 w-full rounded border bg-background p-2" value={kind} onChange={event => setKind(event.target.value)}><option value="private">{i18n.t("私聊")}</option><option value="group">{i18n.t("群聊")}</option><option value="channel">{i18n.t("频道")}</option></select></label>
+        <label>Endpoint<SelectField className="mt-1 w-full" value={endpointIndex} onValueChange={setEndpointIndex} options={[{value: '', label: i18n.t("请选择")}, ...endpoints.map((endpoint, index) => ({value: String(index), label: `${endpoint.endpoint.adapter} / ${endpoint.name}${endpoint.connected ? '' : i18n.t("（离线）")}`}))]} /></label>
+        <label>{i18n.t("会话类型")}<SelectField className="mt-1 w-full" value={kind} onValueChange={setKind} options={[{value: 'private', label: i18n.t("私聊")}, {value: 'group', label: i18n.t("群聊")}, {value: 'channel', label: i18n.t("频道")}]} /></label>
         <Input aria-label={i18n.t("目标会话 ID")} placeholder={i18n.t("会话 ID")} value={conversationId} onChange={event => setConversationId(event.target.value)} />
-        <label>{i18n.t("父级（可选）")}<select className="console-control mt-1 w-full rounded border bg-background p-2" value={parentKind} onChange={event => setParentKind(event.target.value)}><option value="">{i18n.t("无")}</option><option value="group">{i18n.t("群聊")}</option><option value="channel">{i18n.t("频道 / 服务器")}</option></select></label>
+        <label>{i18n.t("父级（可选）")}<SelectField className="mt-1 w-full" value={parentKind} onValueChange={setParentKind} options={[{value: '', label: i18n.t("无")}, {value: 'group', label: i18n.t("群聊")}, {value: 'channel', label: i18n.t("频道 / 服务器")}]} /></label>
         <Input aria-label={i18n.t("父级 ID")} placeholder={i18n.t("父级 ID（填写父级类型时必填）")} value={parentId} onChange={event => setParentId(event.target.value)} />
         <Input aria-label={i18n.t("线程 ID")} placeholder={i18n.t("线程 ID（可选）")} value={threadId} onChange={event => setThreadId(event.target.value)} />
         {targetError && <span role="alert" className="text-destructive">{targetError}</span>}

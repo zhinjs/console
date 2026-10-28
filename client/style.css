@@ -2,6 +2,8 @@
 @config "./tailwind.config.js";
 @import "../console-ui/src/design-system.css";
 @import "../console-ui/src/agent-playground.css";
+@import "../console-ui/src/settings.css";
+@import "../console-ui/src/pages/resource-pages.css";
 
 /* ============================================
    shadcn/ui Base Styles - Zinc Black/White/Gray
@@ -92,7 +94,6 @@
 *:focus-visible {
   outline: var(--console-focus-width) solid hsl(var(--ring));
   outline-offset: 2px;
-  border-radius: calc(var(--radius) - 2px);
 }
 
 @media (prefers-reduced-motion: reduce) {

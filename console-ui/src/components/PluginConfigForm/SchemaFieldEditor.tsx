@@ -17,6 +17,8 @@ import { RadioGroup, RadioGroupItem } from '../ui/radio-group'
 
 interface FieldEditorProps {
   name: string; field: SchemaField; value: unknown; onChange: (value: unknown) => void; allowEnvironmentReferences?: boolean
+  /** Scoped settings show scalar defaults without adding them to the owner's draft. */
+  useDeclaredDefaults?: boolean
   path?: string; drafts?: SchemaEditorDrafts; onValidityChange?: (path: string, invalid: boolean) => void
   reservedKeys?: readonly string[]
   /** Title-row overrides used by union branches, list rows and dictionary entries. */
@@ -160,16 +162,20 @@ function appendedListItem(field: SchemaField, value: unknown) {
 
 const choiceGroupClass = 'flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-x-5 sm:gap-y-2'
 
-export function SchemaFieldEditor({ name, field: sourceField, value, onChange, allowEnvironmentReferences = true, path = '$', drafts, onValidityChange, reservedKeys, label, actions, inheritActions, clearable = true }: FieldEditorProps) {
+export function SchemaFieldEditor({ name, field: sourceField, value: rawValue, onChange, allowEnvironmentReferences = true, useDeclaredDefaults = false, path = '$', drafts, onValidityChange, reservedKeys, label, actions, inheritActions, clearable = true }: FieldEditorProps) {
   const i18n = useI18n()
   const field = localizeSchemaField(sourceField, i18n.locale)
+  const hasDefault = Object.hasOwn(field, 'default')
+  const scalarDefault = useDeclaredDefaults && rawValue === undefined && hasDefault
+    && ['string', 'number', 'integer', 'boolean', 'const', 'null'].includes(field.type)
+  const value = scalarDefault ? structuredClone(field.default) : rawValue
   const id = useId()
   const conversationScope = isConversationScopeField(field)
   const numeric = field.type === 'number' || field.type === 'integer'
   const numericIssue = numeric && !(allowEnvironmentReferences && typeof value === 'string' && value.includes('${')) ? numericFieldIssue({ ...field, integer: field.integer || field.type === 'integer' }, value, i18n.locale) : null
   if (field.hidden) return null
   // The first value seen for a path is what 撤销 restores; the form clears this baseline whenever it reloads the saved config.
-  if (drafts?.originals && !drafts.originals.has(path)) drafts.originals.set(path, value === undefined ? undefined : structuredClone(value))
+  if (drafts?.originals && !drafts.originals.has(path)) drafts.originals.set(path, rawValue === undefined ? undefined : structuredClone(rawValue))
   const secret = field.secret || field.component === 'password'
   const constUnion = field.type === 'union' && !!field.list?.length && field.list.every(branch => branch.type === 'const')
   const options = field.options ?? field.enum?.map(option => ({ label: String(option), value: option }))
@@ -178,9 +184,8 @@ export function SchemaFieldEditor({ name, field: sourceField, value, onChange, a
   const preservedOption = !!options?.length && value !== undefined && optionIndex < 0
   const environmentOption = allowEnvironmentReferences && typeof value === 'string' && value.includes('${')
   const preservedLabel = environmentOption ? i18n.t("环境变量引用（原样保留）") : i18n.t("现有值不在选项中（原样保留）")
-  const nested = { name, field: secret ? { ...field, secret: true } : field, value, onChange, allowEnvironmentReferences, path, drafts, onValidityChange, reservedKeys }
+  const nested = { name, field: secret ? { ...field, secret: true } : field, value, onChange, allowEnvironmentReferences, useDeclaredDefaults, path, drafts, onValidityChange, reservedKeys }
   const title = label ?? field.title ?? field.key ?? name
-  const hasDefault = Object.hasOwn(field, 'default')
   const choices = conversationScope ? undefined : multiChoiceOptions(field, i18n.locale)
   const sequence = !conversationScope && !choices && (field.type === 'list' || field.type === 'tuple')
   const canAppend = sequence && (field.type === 'list' || !!field.inner) && (value === undefined || Array.isArray(value))
@@ -189,8 +194,8 @@ export function SchemaFieldEditor({ name, field: sourceField, value, onChange, a
   const valueActions: ReactNode[] = []
   if (!inheritActions && editable) {
     const original = drafts?.originals?.get(path)
-    if (drafts?.originals?.has(path) && !sameValue(value, original)) valueActions.push(<Button key="revert" type="button" variant="ghost" size="sm" title={i18n.t("撤销修改，恢复原值或默认值")} onClick={event => { keepGroupState(event); clearEditorDraftSubtree(path, drafts, onValidityChange); onChange(original === undefined ? undefined : structuredClone(original)) }}><Undo2 /><span className="sr-only sm:not-sr-only">{i18n.t("撤销")}</span></Button>)
-    if (clearable && value !== undefined) valueActions.push(<Button key="clear" type="button" variant="ghost" size="sm" title={hasDefault ? i18n.t("清空（使用声明默认值）") : i18n.t("清空（保存时省略此项）")} onClick={event => { keepGroupState(event); clearEditorDraftSubtree(path, drafts, onValidityChange); onChange(undefined) }}><Eraser /><span className="sr-only sm:not-sr-only">{i18n.t("清空")}</span></Button>)
+    if (drafts?.originals?.has(path) && !sameValue(rawValue, original)) valueActions.push(<Button key="revert" type="button" variant="ghost" size="sm" title={i18n.t("撤销修改，恢复原值或默认值")} onClick={event => { keepGroupState(event); clearEditorDraftSubtree(path, drafts, onValidityChange); onChange(original === undefined ? undefined : structuredClone(original)) }}><Undo2 /><span className="sr-only sm:not-sr-only">{i18n.t("撤销")}</span></Button>)
+    if (clearable && rawValue !== undefined) valueActions.push(<Button key="clear" type="button" variant="ghost" size="sm" title={hasDefault ? i18n.t("清空（使用声明默认值）") : i18n.t("清空（保存时省略此项）")} onClick={event => { keepGroupState(event); clearEditorDraftSubtree(path, drafts, onValidityChange); onChange(undefined) }}><Eraser /><span className="sr-only sm:not-sr-only">{useDeclaredDefaults && hasDefault ? i18n.t("恢复默认") : i18n.t("清空")}</span></Button>)
   }
   if (field.type === 'union' && !conversationScope && !constUnion) return <UnionValueEditor {...nested} label={title} actions={[...valueActions, ...actionList(actions)]} />
   const contentActions: ReactNode[] = []
@@ -204,7 +209,9 @@ export function SchemaFieldEditor({ name, field: sourceField, value, onChange, a
   const unknownChoices = choices ? selectedChoices.filter(item => !choices.some(option => sameValue(option.value, item))) : []
   const content = <>
     {field.description ? <p className="text-xs text-muted-foreground">{field.description}</p> : null}
-    {hasDefault ? <p className="text-xs text-muted-foreground">{secret ? i18n.t("已声明默认值") : i18n.t("声明默认值：{0}", [JSON.stringify(field.default)])}</p> : null}
+    {hasDefault ? <p className="text-xs text-muted-foreground">{useDeclaredDefaults
+      ? rawValue === undefined ? i18n.t("使用默认值") : i18n.t("已自定义")
+      : secret ? i18n.t("已声明默认值") : i18n.t("声明默认值：{0}", [JSON.stringify(field.default)])}</p> : null}
     {secret && !textInput ? <p className="text-xs text-muted-foreground">{allowEnvironmentReferences ? <>{i18n.t("建议填写环境变量引用，如 ")}{'${API_KEY}'}{i18n.t("；不要将密钥写入配置。")}</> : i18n.t("请按任务提供方要求填写；此处不解析环境变量引用。")}</p> : null}
     {conversationScope ? <ConversationScopeEditor field={field} value={value} onChange={onChange} /> : field.type === 'constraint' ? <p className="text-xs text-muted-foreground">{i18n.t("此约束不提供额外输入；提交后由 Host 校验，不在此处推断通过。")}</p> : field.type === 'intersect' ? <div className="space-y-3"><p className="text-xs text-muted-foreground">{i18n.t("所有约束共同适用；各组编辑同一份值，Host 最终校验。")}</p>{(field.list ?? []).map((branch, index) => <SchemaFieldEditor {...nested} key={index} path={`${path}/intersect:${index}`} field={inheritedField(field, branch)} name={branch.title ?? i18n.t("{0} 约束 {1}", [name, index + 1])} />)}</div> : options?.length ? <RadioGroup id={id} aria-label={title} className={choiceGroupClass} value={preservedOption ? 'preserved' : value === undefined ? '' : String(optionIndex)} onValueChange={index => {
       if (!/^(0|[1-9]\d*)$/.test(index)) return

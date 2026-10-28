@@ -1,5 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+import ts from 'typescript'
+import { defaultI18n } from './locale-fixture.mjs'
 import { declaredDefaults, unsupportedFormFields, updateObjectField, updateListItem, numericDraft, requiredGuidance, hostValidationSummary } from '../console-ui/src/components/PluginConfigForm/schema-model.mjs'
 import { configSourceForPlugin, parseConfigDocument, configAtPath, replaceConfigAtPath } from '../console-ui/src/components/PluginConfigForm/source-model.mjs'
 import { createConfigDraftGuard } from '../console-ui/src/components/PluginConfigForm/draft-guard.mjs'
@@ -85,4 +88,90 @@ test('dirty source/config drafts keep their bound revision after refresh until e
   guard.saved()
   assert.equal(guard.receive('a',{},newer),true)
   assert.equal(guard.snapshot.revision,'r2')
+})
+
+test('restoring defaults deletes only the selected override in JSON and YAML while preserving explicit null', () => {
+  const original = { menuKeyword: 'custom', sibling: { nullable: null, keep: true } }
+  const replaced = replaceConfigAtPath(original, ['menuKeyword'], undefined)
+  assert.equal(Object.hasOwn(replaced, 'menuKeyword'), false)
+  assert.deepEqual(replaced.sibling, original.sibling)
+  assert.equal(original.menuKeyword, 'custom')
+  for (const [format, source] of [
+    ['json', JSON.stringify(original)],
+    ['yaml', '# keep sibling guidance\nsibling:\n  nullable: null\n  keep: true\nmenuKeyword: custom\n'],
+  ]) {
+    const restored = configSourceForPlugin(source, format, ['menuKeyword'], undefined)
+    const parsed = parseConfigDocument(restored, format)
+    assert.equal(Object.hasOwn(parsed, 'menuKeyword'), false)
+    assert.deepEqual(parsed.sibling, original.sibling)
+    if (format === 'yaml') assert.match(restored, /# keep sibling guidance/)
+    const nullable = parseConfigDocument(configSourceForPlugin(source, format, ['menuKeyword'], null), format)
+    assert.equal(Object.hasOwn(nullable, 'menuKeyword'), true)
+    assert.equal(nullable.menuKeyword, null)
+  }
+})
+
+test('removing a nested alias override detaches only its path and missing removal creates no parents', () => {
+  const source = 'plugins:\n  a: &shared\n    nested:\n      enabled: false\n      keep: true\n  b: *shared\n'
+  const restored = parseConfigDocument(configSourceForPlugin(source, 'yaml', ['plugins', 'a', 'nested', 'enabled'], undefined), 'yaml')
+  assert.equal(Object.hasOwn(restored.plugins.a.nested, 'enabled'), false)
+  assert.equal(restored.plugins.a.nested.keep, true)
+  assert.equal(restored.plugins.b.nested.enabled, false)
+  assert.equal(restored.plugins.b.nested.keep, true)
+  assert.deepEqual(replaceConfigAtPath({ sibling: true }, ['missing', 'nested', 'key'], undefined), { sibling: true })
+  for (const [format, input] of [['json', '{"sibling":true}'], ['yaml', 'sibling: true\n']]) {
+    assert.deepEqual(parseConfigDocument(configSourceForPlugin(input, format, ['missing', 'nested', 'key'], undefined), format), { sibling: true })
+  }
+})
+
+
+test('schema-driven scalar edits retain the original revision and the actual bound-save callback rejects a stale CAS', async () => {
+  const scope = 'scalar-test-scope'
+  const baseline = {source: '{"log_level":"info","plugin":{"one":1}}', format: 'json', revision: 'a', configKeys: ['log_level'], connectionScope: scope}
+  const refreshed = {...baseline, source: '{"log_level":"warn","plugin":{"one":1,"otherClient":2}}', revision: 'b'}
+  const guard = createConfigDraftGuard()
+  assert.equal(guard.receive('log_level', 'info', baseline), true)
+  guard.edited()
+  assert.equal(guard.receive('log_level', 'warn', refreshed), false)
+  const next = configSourceForPlugin(guard.snapshot.source, guard.snapshot.format, ['log_level'], 'debug')
+  assert.equal(guard.snapshot.revision, 'a')
+  assert.deepEqual(JSON.parse(next), {log_level: 'debug', plugin: {one: 1}})
+
+  // Execute the active hook's callback so the regression pins the real RPC CAS
+  // payload rather than the removed full-file editor's draft helper.
+  const source = await readFile(new URL('../console-ui/src/hooks/useConfigSource.ts', import.meta.url), 'utf8')
+  const ast = ts.createSourceFile('useConfigSource.ts', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
+  let callback
+  function visit(node) {
+    if (ts.isVariableDeclaration(node) && node.name.getText(ast) === 'saveBound' && ts.isCallExpression(node.initializer)) callback = node.initializer.arguments[0]
+    ts.forEachChild(node, visit)
+  }
+  visit(ast)
+  assert.ok(callback, 'the active source hook retains a bound save callback')
+  const compiled = ts.transpileModule(`const saveBound = ${callback.getText(ast)};`, {compilerOptions: {target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext}}).outputText
+  const calls = [], actions = [], loading = [], errorScopes = []
+  let persisted = refreshed.source
+  const bindings = {
+    messages: {current: defaultI18n}, scope,
+    isInboxCacheScopeActive: candidate => candidate === scope,
+    operations: {current: {begin: () => ({current: () => true})}},
+    setFeedbackScope() {}, setLoading: value => loading.push(value), errorAction: action => actions.push(action.type),
+    setSaveErrorScope: value => errorScopes.push(value),
+    setConfig: () => assert.fail('a rejected CAS cannot replace the active snapshot'),
+    requestConsole: async input => {
+      calls.push(input)
+      if (input.expectedRevision !== refreshed.revision) throw Error('CAS conflict')
+      persisted = input.source
+      return {success: true, revision: 'c', restartRequired: false}
+    },
+  }
+  const saveBound = Function(...Object.keys(bindings), `${compiled}; return saveBound;`)(...Object.values(bindings))
+  await assert.rejects(saveBound(next, guard.snapshot), /CAS conflict/)
+  assert.deepEqual(calls, [{type: 'config:replace-source', source: next, expectedRevision: 'a'}])
+  assert.equal(persisted, refreshed.source)
+  assert.deepEqual(actions, ['save-start', 'save-failed'])
+  assert.deepEqual(errorScopes, [scope])
+  assert.deepEqual(loading, [true, false])
+  assert.equal(guard.snapshot.revision, 'a')
+  assert.equal(guard.dirty, true)
 })

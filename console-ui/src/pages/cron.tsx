@@ -196,7 +196,7 @@ export default function CronPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="console-page console-resource-page console-schedule-page">
         <Skeleton className="h-8 w-48" />
         <div className="grid grid-cols-1 gap-4">
           {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32" />)}
@@ -207,7 +207,7 @@ export default function CronPage() {
 
   if (error) {
     return (
-      <div className="space-y-4">
+      <div className="console-page console-resource-page console-schedule-page">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
@@ -219,7 +219,7 @@ export default function CronPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="console-page console-resource-page console-schedule-page">
       {/* Header */}
       <PageHeader
         title={i18n.t("定时提醒")}
@@ -246,7 +246,7 @@ export default function CronPage() {
 
       {/* Persistent Cron Jobs */}
       <div>
-        <div className="flex items-center gap-2 mb-3">
+        <div className="console-resource-section-heading flex items-center gap-2 mb-3">
           <Timer className="w-5 h-5 text-primary" />
           <h3 className="text-lg font-semibold">{i18n.t("持久化任务")}</h3>
           <Badge variant="secondary">{persistentCrons.length}</Badge>
@@ -262,11 +262,11 @@ export default function CronPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 gap-3">
+          <div className="console-resource-list console-schedule-list">
             {persistentCrons.map((job) => {
               const isExpanded = expandedId === job.id
               return (
-              <Card key={job.id} className={!job.enabled ? 'opacity-60' : ''}>
+              <Card key={job.id} className={`console-schedule-row ${!job.enabled ? 'opacity-60' : ''}`}>
                 <CardContent className="py-4">
                   <div
                     className="flex items-start justify-between gap-4 cursor-pointer"
@@ -366,7 +366,7 @@ export default function CronPage() {
 
       {/* Memory Cron Jobs (read-only) */}
       <div>
-        <div className="flex items-center gap-2 mb-3">
+        <div className="console-resource-section-heading flex items-center gap-2 mb-3">
           <Cpu className="w-5 h-5 text-muted-foreground" />
           <h3 className="text-lg font-semibold">{i18n.t("内存任务（插件注册）")}</h3>
           <Badge variant="outline">{memoryCrons.length}</Badge>

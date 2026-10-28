@@ -114,7 +114,7 @@ export function AgentSessionPicker({
       )}
 
       <details className="console-session-advanced">
-        <summary>{i18n.t("高级：使用会话标识")}</summary>
+        <summary>{i18n.t("输入会话标识")}</summary>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <Input
             value={value}

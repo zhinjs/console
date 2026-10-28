@@ -322,7 +322,7 @@ export default function DashboardLayout() {
 
       <div className="flex flex-col flex-1 overflow-hidden min-w-0 w-full">
         <header className="console-topbar">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="console-topbar-location flex items-center gap-2 min-w-0">
             {isMobile ? (
               <Button
                 variant="ghost"
@@ -353,7 +353,7 @@ export default function DashboardLayout() {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="hidden sm:inline-flex text-xs"
+                  className="console-topbar-link hidden sm:inline-flex text-xs"
                   onClick={() => reopenDemoOnboarding()}
                 >
                   {i18n.t("使用说明")}</Button>
@@ -361,7 +361,7 @@ export default function DashboardLayout() {
                   href="https://zhin.js.org/getting-started/first-run"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={cn(buttonVariants({ variant: "default", size: "sm" }), "text-xs h-8 px-2.5")}
+                  className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "console-topbar-link text-xs h-8 px-2.5")}
                 >
                   <span className="sm:hidden">{i18n.t("部署")}</span>
                   <span className="hidden sm:inline">{i18n.t("部署到本机")}</span>
@@ -370,7 +370,7 @@ export default function DashboardLayout() {
                   href="https://zhin.js.org/adapters/icqq"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "text-xs h-8 px-2.5 hidden sm:inline-flex")}
+                  className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "console-topbar-link text-xs h-8 px-2.5 hidden sm:inline-flex")}
                 >
                   {i18n.t("接 QQ Bot")}</a>
                 <span className="console-topbar-divider" aria-hidden="true" />

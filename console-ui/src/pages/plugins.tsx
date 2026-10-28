@@ -82,10 +82,10 @@ export default function PluginsPage() {
 
   if (loading && !loaded) {
     return (
-      <PageShell>
+      <PageShell className="console-resource-page console-plugins-page">
         <Skeleton className="h-8 w-48" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-[var(--console-space-stack)]">
-          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-40 rounded-[var(--console-radius-xl)]" />)}
+        <div className="space-y-3">
+          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-24 rounded-[var(--console-radius-md)]" />)}
         </div>
       </PageShell>
     )
@@ -93,7 +93,7 @@ export default function PluginsPage() {
 
   if (error && !loaded) {
     return (
-      <PageShell className="items-center justify-center min-h-[40vh]">
+      <PageShell className="console-resource-page console-plugins-page items-center justify-center min-h-[40vh]">
         <Alert variant="destructive" className="max-w-md">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{i18n.t("加载失败: ")}{error}</AlertDescription>
@@ -105,21 +105,21 @@ export default function PluginsPage() {
   }
 
   return (
-    <PageShell>
-      <PageHeader title={i18n.t("子插件")} description={i18n.t("额外加载的子插件；项目根插件不计入此列表")} actions={<Button variant="outline" size="sm" disabled={loading} onClick={() => void refresh().catch(() => {})}>{i18n.t("刷新")}</Button>} />
+    <PageShell className="console-resource-page console-plugins-page">
+      <PageHeader title={i18n.t("子插件")} actions={<Button variant="outline" size="sm" disabled={loading} onClick={() => void refresh().catch(() => {})}>{i18n.t("刷新")}</Button>} />
       {error ? <Alert variant="warning"><AlertCircle className="h-4 w-4" /><AlertDescription className="flex items-center justify-between gap-3"><span>{error}{i18n.t("。以下是上次读取的列表。")}</span><Button variant="outline" size="sm" onClick={() => void refresh().catch(() => {})}>{i18n.t("重试")}</Button></AlertDescription></Alert> : null}
 
-      <div className="console-page-meta">
-        <span>{i18n.t("共 ")}{plugins.length} {i18n.t(" 个子插件")}</span>
-        <Badge variant="success">{plugins.filter(p => p.status === 'active').length}</Badge>
-        <span>{i18n.t("个代内已加载")}</span>
-      </div>
-
-      <div className="console-page-toolbar">
+      <div className="console-resource-toolbar console-page-toolbar">
+        <div className="console-page-meta">
+          <span>{i18n.t("共 ")}{plugins.length} {i18n.t(" 个子插件")}</span>
+          <span aria-hidden="true">·</span>
+          <span>{plugins.filter(p => p.status === 'active').length} {i18n.t("个代内已加载")}</span>
+        </div>
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <Input
             type="search"
+            aria-label={i18n.t("搜索插件…")}
             placeholder={i18n.t("搜索插件…")}
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -128,11 +128,11 @@ export default function PluginsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
+      <div className="console-resource-list console-plugin-list">
         {filteredPlugins.map((plugin, index) => (
           <Card
             key={`${plugin.name}-${index}`}
-            className="console-surface-interactive cursor-pointer"
+            className="console-plugin-row console-surface-interactive cursor-pointer"
             onClick={() => navigate(detailUrl(plugin.instanceKey ?? plugin.name))}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -143,28 +143,28 @@ export default function PluginsPage() {
             role="button"
             tabIndex={0}
           >
-            <CardContent className="flex h-full flex-col gap-3 p-4">
-              <div className="flex justify-between items-center gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="flex items-center justify-center w-9 h-9 shrink-0 rounded-[var(--console-radius-md)] bg-muted text-muted-foreground">
-                    <Package className="w-4 h-4" />
-                  </div>
-                  <span className="font-semibold text-sm truncate">{plugin.name}</span>
+            <CardContent className="console-plugin-row-content">
+              <div className="console-plugin-identity flex items-start gap-3 min-w-0">
+                <div className="console-resource-icon">
+                  <Package className="w-4 h-4" />
                 </div>
+                <div className="min-w-0">
+                  <span className="block font-semibold text-sm truncate">{plugin.name}</span>
+                  <p className="mt-1 text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                    {plugin.description || i18n.t("暂无描述")}
+                  </p>
+                </div>
+              </div>
+              <div className="console-plugin-state space-y-2">
                 <Badge variant={plugin.management?.status === 'enabled' ? 'success' : plugin.management?.status === 'missing-config' || plugin.management?.status === 'degraded' ? 'warning' : 'secondary'} className="shrink-0">
                   {plugin.management ? managementLabel(plugin.management, i18n.locale) : i18n.t("应用证据未确认")}
                 </Badge>
+                {plugin.management && !plugin.management.published ? <p className="text-xs text-muted-foreground">{i18n.t("待核对应用")}</p> : null}
+                {plugin.managementError ? <p className="text-xs text-destructive">{i18n.t("状态读取失败：{0}", [plugin.managementError])}</p> : null}
               </div>
 
-              <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                {plugin.description || i18n.t("暂无描述")}
-              </p>
-
-              {plugin.management?.status === 'enabled' && plugin.management.published ? null : plugin.management ? <p className="text-xs text-muted-foreground">{i18n.t("当前代 ")}{plugin.management.generation ?? i18n.t("未发布")} · {plugin.management.published ? i18n.t("包与配置已应用") : i18n.t("待核对应用")} · {plugin.management.verification === 'available' ? i18n.t("业务检查可选") : i18n.t("未提供业务检查")}</p> : <p className="text-xs text-muted-foreground">{plugin.managementError ? i18n.t("状态读取失败：{0}", [plugin.managementError]) : i18n.t("Host 尚未提供状态证据")}</p>}
-              <hr className="console-divider mt-auto" />
-
               {plugin.features.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
+                <div className="console-plugin-features flex flex-wrap gap-x-4 gap-y-2">
                   {plugin.features.map((feature) => {
                     const Icon = getIcon(feature.icon)
                     return (
@@ -196,7 +196,6 @@ export default function PluginsPage() {
               <Package className="w-8 h-8 text-muted-foreground" />
             </div>
             <h3 className="text-lg font-semibold">{i18n.t("暂无子插件")}</h3>
-            <p className="text-sm text-muted-foreground">{i18n.t("当前没有额外子插件；项目根插件的命令、组件和适配器仍可运行。")}</p>
           </CardContent>
         </Card>
       )}

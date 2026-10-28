@@ -201,7 +201,7 @@ export function registerBuiltinConsolePages() {
 
   app.addRoute({
     path: '/config',
-    name: '配置',
+    name: '设置',
     parent: null,
     icon: 'Settings',
     element: <ConfigPage />,

@@ -14,6 +14,7 @@ import { Card, CardContent } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
+import { SelectField } from '../components/ui/select'
 import { Skeleton } from '../components/ui/skeleton'
 import { JsonViewer } from './introspection/JsonViewer'
 import { validateAssistantJobs, filterAssistantJobs, probeAssistantJobs, explainJobError, type AssistantJobsResponse } from './assistant-jobs-model.mjs'
@@ -46,7 +47,7 @@ export default function AssistantJobsPage() {
     {read.loading && !read.loaded ? <Skeleton className="h-32 w-full" /> : read.data?.unavailable ? <Card><CardContent className="flex flex-col items-center gap-3 py-12"><Brain className="h-10 w-10 text-muted-foreground/40" /><h2 className="text-base font-medium">{i18n.t("助手未启用")}</h2><p className="text-sm text-muted-foreground">{i18n.t("启用助手后，可在这里查看任务。")}</p></CardContent></Card> : data ? <>
       <div className="flex flex-wrap items-center gap-3">
         <Input aria-label={i18n.t("搜索助手任务")} placeholder={i18n.t("搜索名称或编号…")} value={query} onChange={event => setQuery(event.target.value)} className="w-full sm:max-w-xs" />
-        <select aria-label={i18n.t("助手任务状态")} value={status} onChange={event => setStatus(event.target.value)} className="h-9 rounded-md border bg-background px-3 text-sm"><option value="all">{i18n.t("全部状态")}</option><option value="enabled">{i18n.t("已启用")}</option><option value="paused">{i18n.t("已暂停")}</option><option value="error">{i18n.t("执行失败")}</option></select>
+        <SelectField aria-label={i18n.t("助手任务状态")} value={status} onValueChange={setStatus} className="w-auto" options={[{ value: 'all', label: i18n.t("全部状态") }, { value: 'enabled', label: i18n.t("已启用") }, { value: 'paused', label: i18n.t("已暂停") }, { value: 'error', label: i18n.t("执行失败") }]} />
         <span className="text-xs text-muted-foreground">{i18n.t("事件接收 ")}<Badge variant={data.eventsActive ? 'success' : 'secondary'}>{data.eventsActive ? i18n.t("已启用") : i18n.t("未启用")}</Badge></span>
       </div>
       {!jobs.length ? <Card><CardContent className="flex flex-col items-center gap-3 py-12 text-muted-foreground"><Brain className="h-10 w-10 opacity-30" /><p className="text-sm">{data.jobs.length ? i18n.t("没有匹配的任务") : i18n.t("暂无任务")}</p>{data.jobs.length > 0 && <Button variant="outline" size="sm" onClick={() => {setQuery('');setStatus('all')}}>{i18n.t("清除筛选")}</Button>}</CardContent></Card> : <div className="space-y-3">{jobs.map(job => <Card key={job.id}><CardContent className="space-y-3 p-4">

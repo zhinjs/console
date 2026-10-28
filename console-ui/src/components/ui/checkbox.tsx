@@ -4,7 +4,7 @@ import * as Radix from "radix-ui"
 
 const CheckboxPrimitive = Radix.Checkbox
 import { cn } from "@zhin.js/client"
-import { Check } from "lucide-react"
+import { Check, Minus } from "lucide-react"
 
 const Checkbox = forwardRef<
   React.ComponentRef<typeof CheckboxPrimitive.Root>,
@@ -13,13 +13,14 @@ const Checkbox = forwardRef<
   <CheckboxPrimitive.Root
     ref={ref}
     className={cn(
-      "peer h-4 w-4 shrink-0 rounded-sm border border-primary shadow focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground",
+      "console-control peer inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] border border-input bg-card text-primary-foreground transition-colors disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=indeterminate]:border-primary data-[state=indeterminate]:bg-primary",
       className
     )}
     {...props}
   >
-    <CheckboxPrimitive.Indicator className={cn("flex items-center justify-center text-current")}>
-      <Check className="h-4 w-4" />
+    <CheckboxPrimitive.Indicator className="group/indicator flex items-center justify-center text-current">
+      <Check className="hidden h-3.5 w-3.5 group-data-[state=checked]/indicator:block" />
+      <Minus className="hidden h-3.5 w-3.5 group-data-[state=indeterminate]/indicator:block" />
     </CheckboxPrimitive.Indicator>
   </CheckboxPrimitive.Root>
 ))
