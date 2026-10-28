@@ -1,7 +1,7 @@
 /* Console app shell: sidebar, top bar and route transitions shared by both entry points. */
 @layer components {
   .console-app-shell {
-    --console-sidebar-width: 15rem;
+    --console-sidebar-width: 15.5rem;
     --console-sidebar-collapsed-width: 4rem;
     --console-topbar-height: 3.5rem;
     --console-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -65,7 +65,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    padding: 0 0.75rem 0 0.875rem;
+    padding: 0 1rem;
   }
 
   .console-sidebar.is-collapsed .console-sidebar-header {
@@ -77,7 +77,7 @@
     display: flex;
     min-width: 0;
     align-items: center;
-    gap: 0.625rem;
+    gap: 0.75rem;
     border-radius: var(--console-radius-md);
     color: hsl(var(--foreground));
     text-decoration: none;
@@ -87,12 +87,12 @@
     display: flex;
     min-width: 0;
     flex-direction: column;
-    line-height: 1.2;
+    line-height: 1.4;
   }
 
   .console-sidebar-brand-text strong {
     overflow: hidden;
-    font-size: 0.875rem;
+    font-size: 1rem;
     font-weight: 650;
     letter-spacing: -0.01em;
     text-overflow: ellipsis;
@@ -109,14 +109,13 @@
 
   .console-brand-mark {
     display: grid;
-    width: 1.875rem;
-    height: 1.875rem;
-    min-width: 1.875rem;
+    width: 2rem;
+    height: 2rem;
+    min-width: 2rem;
     place-items: center;
     border-radius: var(--console-radius-md);
     background: hsl(var(--foreground));
     color: hsl(var(--background));
-    box-shadow: var(--console-shadow-xs), inset 0 1px 0 hsl(0 0% 100% / 0.14);
   }
 
   .console-brand-mark span {
@@ -128,8 +127,8 @@
   .console-sidebar-nav {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    padding: 0.25rem 0.625rem 1rem;
+    gap: 1.25rem;
+    padding: 0.75rem 0.75rem 1rem;
   }
 
   .console-sidebar.is-collapsed .console-sidebar-nav {
@@ -140,7 +139,7 @@
   .console-nav-group {
     display: flex;
     flex-direction: column;
-    gap: 1px;
+    gap: 0.125rem;
   }
 
   .console-nav-group-label {
@@ -152,11 +151,10 @@
     border: 0;
     border-radius: var(--console-radius-sm);
     background: transparent;
-    padding: 0.25rem 0.625rem 0.375rem;
+    padding: 0.25rem 0.75rem 0.5rem;
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
     font-weight: 550;
-    letter-spacing: 0.02em;
     text-align: left;
   }
 
@@ -193,13 +191,13 @@
   .console-nav-item {
     position: relative;
     display: flex;
-    height: 2.125rem;
+    min-height: 2.5rem;
     align-items: center;
-    gap: 0.625rem;
+    gap: 0.75rem;
     border-radius: var(--console-radius-md);
-    padding: 0 0.625rem;
+    padding: 0.5rem 0.75rem;
     color: hsl(var(--sidebar-foreground));
-    font-size: 0.8125rem;
+    font-size: var(--console-text-body);
     font-weight: 500;
     text-decoration: none;
     transition: background-color 140ms ease, color 140ms ease;
@@ -216,31 +214,13 @@
   }
 
   .console-nav-item.is-active {
-    background: hsl(var(--card));
+    background: hsl(var(--sidebar-accent));
     color: hsl(var(--sidebar-accent-foreground));
     font-weight: 600;
-    box-shadow: var(--console-shadow-xs), 0 0 0 1px hsl(var(--sidebar-border));
   }
 
   .dark .console-nav-item.is-active {
     background: hsl(var(--sidebar-accent));
-    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.04);
-  }
-
-  .console-nav-item.is-active::before {
-    content: "";
-    position: absolute;
-    top: 0.5rem;
-    bottom: 0.5rem;
-    left: -0.625rem;
-    width: 3px;
-    border-radius: 0 3px 3px 0;
-    background: hsl(var(--primary));
-    animation: console-nav-indicator 220ms var(--console-ease-out);
-  }
-
-  .console-sidebar.is-collapsed .console-nav-item.is-active::before {
-    left: -0.75rem;
   }
 
   .console-nav-icon {
@@ -266,8 +246,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    border-top: var(--console-border-width) solid hsl(var(--sidebar-border));
-    padding: 0.625rem 0.75rem;
+    padding: 0.75rem 0.875rem;
   }
 
   .console-sidebar.is-collapsed .console-sidebar-footer {
@@ -299,15 +278,6 @@
 
   .console-connection-state.is-online > span:first-child {
     background: hsl(var(--success));
-  }
-
-  .console-connection-state.is-online > span:first-child::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: inherit;
-    animation: console-live-ping 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
   }
 
   .console-connection-state > span:last-child:not(:first-child) {
@@ -349,10 +319,14 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    border-bottom: var(--console-border-width) solid hsl(var(--border) / 0.8);
-    background: hsl(var(--background) / 0.82);
-    padding: 0 1rem 0 1.25rem;
-    backdrop-filter: saturate(1.4) blur(12px);
+    border-bottom: var(--console-border-width) solid var(--console-border-subtle);
+    background: hsl(var(--background));
+    padding: 0 1.25rem;
+  }
+
+  .console-topbar-location {
+    flex: 0 1 auto;
+    max-width: 16rem;
   }
 
   .console-breadcrumb {
@@ -360,7 +334,7 @@
     min-width: 0;
     align-items: center;
     gap: 0.375rem;
-    font-size: 0.8125rem;
+    font-size: var(--console-text-label);
   }
 
   .console-breadcrumb-group {
@@ -399,8 +373,9 @@
 
   .console-topbar-search {
     display: flex;
-    flex: 1;
-    max-width: 28rem;
+    flex: 1 1 18rem;
+    min-width: 10rem;
+    max-width: 32rem;
     justify-content: center;
   }
 
@@ -409,6 +384,11 @@
     flex-shrink: 0;
     align-items: center;
     gap: 0.25rem;
+  }
+
+  .console-topbar-link {
+    color: hsl(var(--muted-foreground));
+    font-weight: 500;
   }
 
   .console-topbar-divider {
@@ -431,8 +411,13 @@
 
     .console-topbar-search {
       flex: 0 0 auto;
+      min-width: 0;
       margin-left: auto;
     }
+
+    .console-topbar-location { max-width: min(10rem, 40vw); }
+
+    .console-sidebar.is-mobile .console-nav-item { min-height: 2.75rem; }
   }
 
   @media (min-width: 768px) and (max-width: 1023px) {
@@ -440,6 +425,12 @@
     .console-breadcrumb-group + .console-breadcrumb-sep {
       display: none;
     }
+
+    .console-topbar-location { max-width: 9rem; }
+    .console-topbar-search { flex: 0 0 2.25rem; min-width: 0; margin-left: auto; }
+    .console-topbar-search .console-command-trigger { width: 2.25rem; height: 2.25rem; justify-content: center; padding: 0; }
+    .console-topbar-search .console-command-trigger > span,
+    .console-topbar-search .console-command-trigger > kbd { display: none; }
   }
 
   /* ---------- Route transitions ---------- */
@@ -452,14 +443,6 @@
     to { opacity: 1; transform: none; }
   }
 
-  @keyframes console-nav-indicator {
-    from { transform: scaleY(0.2); opacity: 0; }
-    to { transform: none; opacity: 1; }
-  }
-
-  @keyframes console-live-ping {
-    75%, 100% { transform: scale(2.4); opacity: 0; }
-  }
 }
 
 @layer components {
@@ -513,35 +496,11 @@
     pointer-events: none;
   }
 
-  .console-language-select select {
-    height: 100%;
-    max-width: 8rem;
-    appearance: none;
-    border: 0;
-    border-radius: inherit;
-    background: transparent;
-    padding: 0 0.625rem 0 1.875rem;
-    color: inherit;
-    font: inherit;
-    cursor: pointer;
-  }
-
-  .console-language-select select:focus-visible {
-    outline: var(--console-focus-width) solid hsl(var(--ring));
-    outline-offset: 1px;
-  }
-
   @media (max-width: 639px) {
-    .console-language-select select {
-      width: 2rem;
-      padding: 0;
-      color: transparent;
-    }
-
-    .console-language-select select option {
-      color: hsl(var(--foreground));
-    }
+    .console-language-select { height: 2.25rem; }
+    .console-language-select > svg { left: 0.625rem; }
   }
+
 }
 
 @layer components {
@@ -612,7 +571,7 @@
     cursor: pointer;
   }
 
-  .console-segmented input {
+  .console-segmented [role="radio"] {
     position: absolute;
     inset: 0;
     opacity: 0;
@@ -634,14 +593,14 @@
     color: hsl(var(--foreground));
   }
 
-  .console-segmented input:checked + span {
+  .console-segmented label:has([role="radio"][data-state="checked"]) > span {
     background: hsl(var(--card));
     color: hsl(var(--foreground));
     font-weight: 600;
     box-shadow: var(--console-shadow-xs);
   }
 
-  .console-segmented input:focus-visible + span {
+  .console-segmented label:has([role="radio"]:focus-visible) > span {
     outline: var(--console-focus-width) solid hsl(var(--ring));
     outline-offset: 1px;
   }
@@ -663,15 +622,14 @@
     border-color: hsl(var(--foreground) / 0.2);
   }
 
-  .console-choice-card:has(input:checked) {
+  .console-choice-card:has([role="radio"][data-state="checked"]) {
     border-color: hsl(var(--primary) / 0.5);
     background: hsl(var(--primary) / 0.05);
     box-shadow: 0 0 0 1px hsl(var(--primary) / 0.25);
   }
 
-  .console-choice-card input {
+  .console-choice-card [role="radio"] {
     margin-top: 0.2rem;
-    accent-color: hsl(var(--primary));
   }
 }
 

@@ -17,7 +17,7 @@ const SelectTrigger = forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "console-control flex h-[var(--console-control-height)] w-full items-center justify-between whitespace-nowrap rounded-[var(--console-radius-md)] border-[length:var(--console-border-width)] border-input bg-card/80 px-3 py-2 text-[length:var(--console-text-body)] shadow-[var(--console-shadow-xs)] ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+      "console-control flex h-[var(--console-control-height)] w-full items-center justify-between whitespace-nowrap rounded-[var(--console-radius-md)] border-[length:var(--console-border-width)] border-input bg-card px-3 py-2 text-[length:var(--console-text-body)] ring-offset-background placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-60 [&>span]:line-clamp-1",
       className
     )}
     {...props}
@@ -68,20 +68,20 @@ const SelectContent = forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-[var(--console-radius-md)] border-[length:var(--console-border-width)] bg-popover text-popover-foreground shadow-[var(--console-shadow-md)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        "relative z-50 max-h-[min(24rem,var(--radix-select-content-available-height,calc(100dvh-1rem)))] min-w-[8rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-[var(--console-radius-md)] border-[length:var(--console-border-width)] border-border bg-popover text-popover-foreground shadow-[var(--console-shadow-md)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
         position === "popper" &&
-          "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
+          "w-[var(--radix-select-trigger-width)]",
         className
       )}
       position={position}
+      collisionPadding={8}
+      sideOffset={4}
       {...props}
     >
       <SelectScrollUpButton />
       <SelectPrimitive.Viewport
         className={cn(
-          "p-1",
-          position === "popper" &&
-            "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
+          "min-h-0 w-full min-w-0 overflow-y-auto overscroll-contain p-1"
         )}
       >
         {children}
@@ -101,12 +101,12 @@ const SelectItem = forwardRef<
     ref={ref}
     value={value}
     className={cn(
-      "console-menu-item relative flex w-full cursor-default select-none items-center rounded-[var(--console-radius-sm)] py-1.5 pl-2 pr-8 text-[length:var(--console-text-body)] outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "console-menu-item relative flex w-full min-w-0 cursor-default select-none items-center rounded-[var(--console-radius-sm)] py-1.5 pl-2.5 pr-8 text-[length:var(--console-text-body)] leading-normal outline-none focus:bg-accent focus:text-accent-foreground data-[state=checked]:bg-primary/5 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>span:last-child]:min-w-0 [&>span:last-child]:truncate",
       className
     )}
     {...props}
   >
-    <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
+    <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center text-primary">
       <SelectPrimitive.ItemIndicator>
         <Check className="h-4 w-4" />
       </SelectPrimitive.ItemIndicator>
@@ -128,7 +128,58 @@ const SelectSeparator = forwardRef<
 ))
 SelectSeparator.displayName = "SelectSeparator"
 
+export interface SelectFieldOption {
+  value: string
+  label: React.ReactNode
+  disabled?: boolean
+}
+
+export interface SelectFieldProps extends Omit<
+  React.ComponentPropsWithoutRef<typeof SelectTrigger>,
+  "value" | "defaultValue" | "onChange" | "children" | "asChild" | "name"
+> {
+  options: readonly SelectFieldOption[]
+  value: string
+  onValueChange: (value: string) => void
+}
+
+// Controlled UI only: Radix values are encoded, so native named-form submission is not exposed.
+const SelectField = forwardRef<React.ComponentRef<typeof SelectTrigger>, SelectFieldProps>(
+  ({ options, value, onValueChange, disabled, ...triggerProps }, ref) => {
+    const selected = options.find(option => option.value === value)
+    return (
+      <Select
+        value={JSON.stringify(value)}
+        onValueChange={encoded => {
+          // Radix's hidden form control emits an empty sentinel for unmatched values.
+          const option = options.find(item => JSON.stringify(item.value) === encoded)
+          if (option) onValueChange(option.value)
+        }}
+        disabled={disabled}
+      >
+        <SelectTrigger ref={ref} disabled={disabled} {...triggerProps}>
+          <SelectValue>{selected ? selected.label : value}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          {options.map(option => (
+            <SelectItem
+              key={option.value}
+              value={JSON.stringify(option.value)}
+              disabled={option.disabled}
+              title={typeof option.label === "string" ? option.label : undefined}
+            >
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    )
+  }
+)
+SelectField.displayName = "SelectField"
+
 export {
   Select, SelectGroup, SelectValue, SelectTrigger, SelectContent,
   SelectItem, SelectSeparator, SelectScrollUpButton, SelectScrollDownButton,
+  SelectField,
 }

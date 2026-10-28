@@ -18,6 +18,7 @@ import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Textarea } from '../components/ui/textarea'
 import { Skeleton } from '../components/ui/skeleton'
+import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group'
 import {
   BEHAVIOR_CHOICES,
   ambientGroupLabel,
@@ -258,28 +259,29 @@ function AmbientSettingsForm({ initial, onReload }: { initial: SettingsRead; onR
   return <Card>
     <CardHeader>
       <CardTitle className="text-base">{i18n.t("设置")}</CardTitle>
-      <CardDescription>{i18n.t("改完需要重启机器人才会生效。冷却时间等更细的调整，请到「高级 → 配置」里改。")}</CardDescription>
     </CardHeader>
     <CardContent className="space-y-5">
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">{i18n.t("机器人要不要自己接话？")}</legend>
-        {BEHAVIOR_CHOICES.map((choice) => <label key={choice.value} className="console-choice-card">
-          <input type="radio" name="ambient-behavior" value={choice.value} checked={behavior === choice.value} onChange={() => setBehavior(choice.value)} className="mt-1" />
-          <span><span className="font-medium">{i18n.t(choice.label, undefined, "state")}</span><span className="block text-xs text-muted-foreground">{i18n.t(choice.hint)}</span></span>
-        </label>)}
+        <RadioGroup aria-label={i18n.t("机器人要不要自己接话？")} name="ambient-behavior" value={behavior} onValueChange={value => setBehavior(value as AmbientBehavior)}>
+          {BEHAVIOR_CHOICES.map((choice) => <label key={choice.value} className="console-choice-card">
+            <RadioGroupItem value={choice.value} className="mt-1" />
+            <span><span className="font-medium">{i18n.t(choice.label, undefined, "state")}</span><span className="block text-xs text-muted-foreground">{i18n.t(choice.hint)}</span></span>
+          </label>)}
+        </RadioGroup>
         {behavior === 'off' && initial.settings.groups.length > 0 && <p className="text-xs text-muted-foreground">{i18n.t("关闭后会清空下面的群列表，以后重新打开时要再填一次。")}</p>}
       </fieldset>
 
       {showsGroupOptions && <fieldset className="space-y-2">
         <legend className="text-sm font-medium">{i18n.t("在哪些群里？")}</legend>
-        <div className="console-segmented">
+        <RadioGroup aria-label={i18n.t("在哪些群里？")} name="ambient-group-scope" value={groupScope} onValueChange={value => setGroupScope(value as AmbientSettings['groupScope'])} className="console-segmented flex gap-1">
         <label>
-          <input type="radio" name="ambient-group-scope" value="all" checked={groupScope === 'all'} onChange={() => setGroupScope('all')} />
+          <RadioGroupItem value="all" />
           <span>{i18n.t("所有群")}</span></label>
         <label>
-          <input type="radio" name="ambient-group-scope" value="some" checked={groupScope === 'some'} onChange={() => setGroupScope('some')} />
+          <RadioGroupItem value="some" />
           <span>{i18n.t("只在这些群")}</span></label>
-        </div>
+        </RadioGroup>
         {groupScope === 'some' && <Textarea
           aria-label={i18n.t("群列表")}
           placeholder={i18n.t("每行一个，写成「平台:群号」，例如\nqq:123456")}

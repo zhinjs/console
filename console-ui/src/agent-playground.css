@@ -10,15 +10,12 @@
   min-height: 36rem;
   overflow: hidden;
   border: 1px solid hsl(var(--playground-line) / 0.84);
-  border-radius: 1.1rem;
+  border-radius: var(--console-radius-lg);
   background: hsl(var(--background));
-  box-shadow: 0 24px 70px hsl(var(--im-shadow) / 0.1);
+  box-shadow: none;
   isolation: isolate;
 }
 
-.dark .agent-playground-shell {
-  box-shadow: 0 24px 70px hsl(var(--im-shadow) / 0.4);
-}
 
 .agent-playground-mobilebar {
   display: none;
@@ -36,7 +33,7 @@
   transform: none;
   border: 0;
   border-right: 1px solid hsl(var(--playground-line) / 0.7);
-  background: hsl(var(--muted) / 0.32);
+  background: hsl(var(--sidebar));
   box-shadow: none;
 }
 
@@ -62,7 +59,7 @@
   display: block;
   margin-top: 0.08rem;
   color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   letter-spacing: 0.04em;
   text-transform: none;
 }
@@ -80,7 +77,7 @@
   width: 2rem;
   height: 2rem;
   border: 1px solid hsl(var(--playground-accent) / 0.17);
-  border-radius: 0.68rem 0.68rem 0.68rem 0.25rem;
+  border-radius: var(--console-radius-md);
 }
 
 .agent-playground-connection {
@@ -107,7 +104,7 @@
   justify-content: space-between;
   padding: 1rem 0.85rem 0.45rem;
   color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   font-weight: 680;
   letter-spacing: 0.055em;
   text-transform: none;
@@ -139,17 +136,16 @@
   color: hsl(var(--foreground));
   text-align: left;
   cursor: pointer;
-  transition: background 160ms ease, transform 160ms ease;
+  transition: background 160ms ease;
 }
 
 .agent-playground-session:hover {
   background: hsl(var(--background) / 0.72);
-  transform: translateX(2px);
 }
 
 .agent-playground-session.active {
   background: hsl(var(--background));
-  box-shadow: 0 7px 24px hsl(var(--im-shadow) / 0.08), inset 2px 0 hsl(var(--playground-accent));
+  box-shadow: inset 2px 0 hsl(var(--playground-accent));
 }
 
 .agent-playground-session-icon,
@@ -190,7 +186,7 @@
   border-radius: 0.68rem;
   background: hsl(var(--playground-accent) / 0.045);
   color: hsl(var(--playground-accent));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   font-weight: 650;
   cursor: pointer;
 }
@@ -214,7 +210,7 @@
   outline: 0;
   background: hsl(var(--background) / 0.75);
   color: hsl(var(--foreground));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
 }
 
 .agent-playground-new-form > input:focus {
@@ -237,7 +233,7 @@
   border-radius: 0.42rem;
   background: transparent;
   color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   cursor: pointer;
 }
 
@@ -276,14 +272,14 @@
   padding: 0.62rem 0.8rem 0.72rem;
   border-top: 1px solid hsl(var(--playground-line) / 0.56);
   color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
 }
 
 .agent-playground-endpoint strong {
   overflow: hidden;
   color: hsl(var(--foreground) / 0.82);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -321,7 +317,7 @@
   width: 2.35rem;
   height: 2.35rem;
   border: 1px solid hsl(var(--playground-accent) / 0.18);
-  border-radius: 0.78rem 0.78rem 0.78rem 0.28rem;
+  border-radius: var(--console-radius-md);
   background: hsl(var(--playground-accent-soft));
   color: hsl(var(--playground-accent));
 }
@@ -347,7 +343,7 @@
   border: 1px solid hsl(var(--border));
   border-radius: 999px;
   color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   font-weight: 650;
 }
 
@@ -357,7 +353,7 @@
   margin-top: 0.18rem;
   overflow: hidden;
   color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -383,7 +379,7 @@
   border-radius: 0.58rem;
   background: hsl(var(--background));
   color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   text-decoration: none;
   cursor: pointer;
 }
@@ -408,7 +404,7 @@
   gap: 0.35rem;
   margin-right: 0.2rem;
   color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   white-space: nowrap;
 }
 
@@ -443,7 +439,7 @@
   border-bottom: 1px solid hsl(8 62% 52% / 0.2);
   background: hsl(8 70% 96%);
   color: hsl(8 38% 28%);
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
 }
 
 .dark .agent-playground-confirm {
@@ -467,7 +463,7 @@
   border-radius: 0.5rem;
   background: transparent;
   color: inherit;
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   cursor: pointer;
 }
 
@@ -485,7 +481,7 @@
   gap: 0.65rem;
   padding: 0.72rem 0.85rem;
   border-bottom: 1px solid hsl(var(--playground-line) / 0.7);
-  background: hsl(var(--muted) / 0.32);
+  background: hsl(var(--sidebar));
   box-shadow: inset 0 1px hsl(var(--background) / 0.7);
 }
 
@@ -501,7 +497,7 @@
   align-items: center;
   gap: 0.3rem;
   color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   font-weight: 650;
 }
 
@@ -517,7 +513,7 @@
   outline: 0;
   background: hsl(var(--background) / 0.84);
   color: hsl(var(--foreground));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
 }
 
 .agent-playground-run-settings input:focus,
@@ -591,7 +587,7 @@
   margin: 0;
   padding-top: 0.1rem;
   color: hsl(8 58% 48%);
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
 }
 
 .agent-playground-conversation {
@@ -623,8 +619,8 @@
   height: 3.6rem;
   margin-bottom: 1.1rem;
   border: 1px solid hsl(var(--playground-accent) / 0.18);
-  border-radius: 1.15rem 1.15rem 1.15rem 0.38rem;
-  box-shadow: 0 12px 34px hsl(var(--playground-accent) / 0.12);
+  border-radius: var(--console-radius-lg);
+  box-shadow: none;
 }
 
 .agent-playground-empty h2 {
@@ -636,7 +632,7 @@
   max-width: 34rem;
   margin: 0.5rem 0 1.35rem;
   color: hsl(var(--muted-foreground));
-  font-size: 0.82rem;
+  font-size: var(--console-text-body);
   line-height: 1.65;
 }
 
@@ -653,11 +649,11 @@
   border-radius: 0.78rem;
   background: hsl(var(--background) / 0.8);
   color: hsl(var(--foreground) / 0.78);
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   line-height: 1.45;
   text-align: left;
   cursor: pointer;
-  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+  transition: border-color 160ms ease, background-color 160ms ease;
 }
 
 .agent-playground-prompts button::after {
@@ -669,8 +665,7 @@
 
 .agent-playground-prompts button:hover {
   border-color: hsl(var(--playground-accent) / 0.3);
-  box-shadow: 0 10px 25px hsl(var(--im-shadow) / 0.07);
-  transform: translateY(-2px);
+  background: hsl(var(--muted));
 }
 
 .agent-playground-message-list {
@@ -704,7 +699,7 @@
 
 .agent-playground-message.is-agent .agent-playground-message-avatar {
   border-color: hsl(var(--playground-accent) / 0.18);
-  border-radius: 0.65rem 0.65rem 0.65rem 0.22rem;
+  border-radius: var(--console-radius-md);
   background: hsl(var(--playground-accent-soft));
   color: hsl(var(--playground-accent));
 }
@@ -724,7 +719,7 @@
   gap: 0.45rem;
   margin: 0 0.12rem 0.3rem;
   color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
 }
 
 .agent-playground-message.is-user .agent-playground-message-meta {
@@ -740,14 +735,14 @@
   overflow: hidden;
   padding: 0.78rem 0.88rem;
   border: 1px solid hsl(var(--border) / 0.78);
-  border-radius: 0.35rem 0.88rem 0.88rem 0.88rem;
+  border-radius: var(--console-radius-lg);
   background: hsl(var(--background) / 0.94);
-  box-shadow: 0 7px 22px hsl(var(--im-shadow) / 0.055);
+  box-shadow: none;
 }
 
 .agent-playground-message.is-user .agent-playground-message-content {
   border-color: hsl(var(--playground-accent) / 0.2);
-  border-radius: 0.88rem 0.35rem 0.88rem 0.88rem;
+  border-radius: var(--console-radius-lg);
   background: hsl(var(--playground-accent-soft));
   box-shadow: none;
 }
@@ -773,7 +768,7 @@
   border: 1px solid hsl(38 76% 48% / 0.26);
   border-radius: 999px;
   color: hsl(34 70% 40%);
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   font-weight: 720;
   letter-spacing: 0.055em;
   text-transform: none;
@@ -800,7 +795,7 @@
   border-radius: 0.48rem;
   background: hsl(var(--background) / 0.78);
   color: hsl(var(--foreground) / 0.8);
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   font-weight: 650;
   cursor: pointer;
   transition: background 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
@@ -833,7 +828,7 @@
   align-items: center;
   gap: 0.3rem;
   color: hsl(var(--playground-accent));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
 }
 
 .agent-playground-message-content > :first-child,
@@ -852,9 +847,9 @@
   overflow: hidden;
   margin-left: 2.58rem;
   border: 1px solid hsl(var(--playground-line) / 0.82);
-  border-radius: 0.32rem 1rem 1rem 1rem;
+  border-radius: var(--console-radius-lg);
   background: hsl(var(--background) / 0.86);
-  box-shadow: 0 14px 38px hsl(var(--im-shadow) / 0.065);
+  box-shadow: none;
 }
 
 .dark .agent-playground-inline-run {
@@ -903,7 +898,7 @@
   display: block;
   margin-bottom: 0.15rem;
   color: hsl(var(--muted-foreground) / 0.76);
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   font-weight: 750;
   letter-spacing: 0.11em;
   text-transform: none;
@@ -912,7 +907,7 @@
 .agent-playground-inline-run-copy h3 {
   margin: 0;
   color: hsl(var(--foreground) / 0.91);
-  font-size: 0.82rem;
+  font-size: var(--console-text-body);
   font-weight: 710;
   letter-spacing: -0.012em;
 }
@@ -922,7 +917,7 @@
   overflow: hidden;
   margin: 0.2rem 0 0;
   color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   line-height: 1.45;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -947,7 +942,7 @@
   border-radius: 0.48rem;
   background: hsl(var(--background) / 0.72);
   color: hsl(var(--foreground) / 0.73);
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   font-weight: 660;
   cursor: pointer;
   transition: border-color 140ms ease, color 140ms ease, background 140ms ease, transform 140ms ease;
@@ -987,8 +982,8 @@
 }
 
 .agent-playground-inline-run-metrics > div:last-child { border-right: 0; }
-.agent-playground-inline-run-metrics dt { color: hsl(var(--muted-foreground)); font-size: 0.75rem; }
-.agent-playground-inline-run-metrics dd { overflow: hidden; margin: 0; font-size: 0.75rem; font-weight: 680; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+.agent-playground-inline-run-metrics dt { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
+.agent-playground-inline-run-metrics dd { overflow: hidden; margin: 0; font-size: var(--console-text-label); font-weight: 680; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
 .agent-playground-inline-run-metrics .has-problem dd { color: hsl(8 58% 48%); }
 
 .agent-playground-inline-run-steps {
@@ -1040,16 +1035,16 @@
 .agent-playground-inline-run-steps li.is-denied i { background: hsl(8 62% 52%); box-shadow: 0 0 0 1px hsl(8 62% 52% / 0.3); }
 .agent-playground-inline-run-steps li.is-cancelled i { background: hsl(38 76% 48%); box-shadow: 0 0 0 1px hsl(38 76% 48% / 0.3); }
 .agent-playground-inline-run-steps li > div { display: flex; min-width: 0; flex-direction: column; }
-.agent-playground-inline-run-steps strong { overflow: hidden; color: hsl(var(--foreground) / 0.82); font-size: 0.75rem; font-weight: 660; text-overflow: ellipsis; white-space: nowrap; }
-.agent-playground-inline-run-steps small { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: 0.75rem; text-overflow: ellipsis; white-space: nowrap; }
-.agent-playground-inline-run-steps li > span { color: hsl(var(--muted-foreground)); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+.agent-playground-inline-run-steps strong { overflow: hidden; color: hsl(var(--foreground) / 0.82); font-size: var(--console-text-label); font-weight: 660; text-overflow: ellipsis; white-space: nowrap; }
+.agent-playground-inline-run-steps small { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); text-overflow: ellipsis; white-space: nowrap; }
+.agent-playground-inline-run-steps li > span { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-variant-numeric: tabular-nums; }
 .agent-playground-inline-run-steps li.is-failed > span,
 .agent-playground-inline-run-steps li.is-denied > span { color: hsl(8 58% 48%); }
 
 .agent-playground-inline-run-empty {
   padding: 0.72rem 1rem;
   color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   text-align: center;
 }
 
@@ -1080,7 +1075,7 @@
   padding: 0.72rem 0.85rem 0.65rem;
   border-top: 1px solid hsl(var(--playground-line) / 0.74);
   background: hsl(var(--background) / 0.94);
-  box-shadow: 0 -12px 35px hsl(var(--im-shadow) / 0.04);
+  box-shadow: none;
   backdrop-filter: blur(16px);
 }
 
@@ -1088,7 +1083,7 @@
 .agent-playground-composer .sandbox-markdown-preview {
   min-height: 3rem !important;
   border-color: hsl(var(--border) / 0.86) !important;
-  border-radius: 0.72rem !important;
+  border-radius: var(--console-radius-lg) !important;
   background-color: hsl(var(--muted) / 0.24);
 }
 
@@ -1140,7 +1135,7 @@
 
 .agent-playground-inspector-head > div:first-child > span {
   color: hsl(var(--playground-accent));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   font-weight: 720;
   letter-spacing: 0.08em;
   text-transform: none;
@@ -1183,7 +1178,7 @@
   border-radius: 0.44rem;
   background: transparent;
   color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   font-weight: 650;
   cursor: pointer;
 }
@@ -1200,7 +1195,7 @@
   border-radius: 999px;
   background: hsl(var(--muted));
   color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1226,13 +1221,13 @@
   justify-content: space-between;
   margin-bottom: 0.62rem;
   color: hsl(var(--foreground) / 0.82);
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   font-weight: 680;
 }
 
 .agent-playground-inspector-title small {
   color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   font-weight: 550;
   letter-spacing: 0.05em;
   text-transform: none;
@@ -1258,8 +1253,8 @@
 .agent-playground-metrics > div:nth-child(odd) { border-right: 1px solid hsl(var(--border) / 0.62); }
 .agent-playground-metrics > div:nth-child(-n+2) { border-bottom: 1px solid hsl(var(--border) / 0.62); }
 .agent-playground-metrics svg { grid-row: span 2; width: 0.78rem; color: hsl(var(--playground-accent)); }
-.agent-playground-metrics strong { overflow: hidden; font-size: 0.82rem; font-variant-numeric: tabular-nums; text-overflow: ellipsis; }
-.agent-playground-metrics span { color: hsl(var(--muted-foreground)); font-size: 0.75rem; }
+.agent-playground-metrics strong { overflow: hidden; font-size: var(--console-text-body); font-variant-numeric: tabular-nums; text-overflow: ellipsis; }
+.agent-playground-metrics span { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .agent-playground-metrics .has-problem svg,
 .agent-playground-metrics .has-problem strong { color: hsl(8 62% 52%); }
 
@@ -1277,7 +1272,7 @@
   gap: 0.75rem;
   padding: 0.36rem 0;
   border-bottom: 1px dashed hsl(var(--border) / 0.6);
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
 }
 
 .agent-playground-context-list > div:last-child { border-bottom: 0; }
@@ -1343,9 +1338,9 @@
 .agent-playground-trace-item.is-usage .agent-playground-trace-dot { background: hsl(184 52% 42%); }
 .agent-playground-trace-item.is-problem .agent-playground-trace-dot { background: hsl(8 62% 52%); }
 .agent-playground-trace-item > div { display: flex; min-width: 0; flex-direction: column; }
-.agent-playground-trace-item strong { overflow: hidden; font-size: 0.75rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
-.agent-playground-trace-item small { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: 0.75rem; text-overflow: ellipsis; white-space: nowrap; }
-.agent-playground-trace-item time { margin-top: 0.03rem; color: hsl(var(--muted-foreground)); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+.agent-playground-trace-item strong { overflow: hidden; font-size: var(--console-text-label); font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.agent-playground-trace-item small { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); text-overflow: ellipsis; white-space: nowrap; }
+.agent-playground-trace-item time { margin-top: 0.03rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-variant-numeric: tabular-nums; }
 
 .agent-playground-trace-loading,
 .agent-playground-trace-empty,
@@ -1358,7 +1353,7 @@
   border: 1px dashed hsl(var(--border));
   border-radius: 0.72rem;
   color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   text-align: center;
 }
 
@@ -1414,8 +1409,8 @@
 .agent-playground-task-list article.is-failed > i { background: hsl(8 62% 52%); }
 .agent-playground-task-list article.is-cancelled > i { background: hsl(38 76% 48%); }
 .agent-playground-task-list article > div { display: flex; min-width: 0; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
-.agent-playground-task-list strong { font-size: 0.75rem; font-weight: 680; }
-.agent-playground-task-list code { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: 0.75rem; text-overflow: ellipsis; }
+.agent-playground-task-list strong { font-size: var(--console-text-label); font-weight: 680; }
+.agent-playground-task-list code { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); text-overflow: ellipsis; }
 
 .agent-playground-task-list dl {
   display: grid;
@@ -1427,8 +1422,8 @@
 }
 
 .agent-playground-task-list dl > div { display: flex; flex-direction: column; gap: 0.06rem; }
-.agent-playground-task-list dt { color: hsl(var(--muted-foreground)); font-size: 0.75rem; }
-.agent-playground-task-list dd { margin: 0; font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+.agent-playground-task-list dt { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
+.agent-playground-task-list dd { margin: 0; font-size: var(--console-text-label); font-variant-numeric: tabular-nums; }
 
 .agent-playground-artifact-list article {
   overflow: hidden;
@@ -1471,9 +1466,9 @@
 .agent-playground-artifact-list article > button > span:nth-child(2) { display: flex; min-width: 0; flex-direction: column; }
 .agent-playground-artifact-list strong,
 .agent-playground-artifact-list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.agent-playground-artifact-list strong { font-size: 0.75rem; font-weight: 660; }
-.agent-playground-artifact-list small { color: hsl(var(--muted-foreground)); font-size: 0.75rem; }
-.agent-playground-artifact-list em { color: hsl(var(--muted-foreground)); font-size: 0.75rem; font-style: normal; text-transform: none; }
+.agent-playground-artifact-list strong { font-size: var(--console-text-label); font-weight: 660; }
+.agent-playground-artifact-list small { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
+.agent-playground-artifact-list em { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-style: normal; text-transform: none; }
 .agent-playground-artifact-list article.is-completed em { color: hsl(var(--playground-accent)); }
 .agent-playground-artifact-list article.is-failed em,
 .agent-playground-artifact-list article.is-denied em { color: hsl(8 58% 47%); }
@@ -1489,7 +1484,7 @@
 .agent-playground-artifact-detail > code {
   overflow-wrap: anywhere;
   color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
 }
 
 .agent-playground-artifact-detail pre {
@@ -1501,7 +1496,7 @@
   border-radius: 0.48rem;
   background: hsl(220 18% 10%);
   color: hsl(210 25% 91%);
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
@@ -1511,7 +1506,7 @@
   display: flex;
   justify-content: space-between;
   color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
 }
 
 .agent-playground-artifact-empty {
@@ -1525,7 +1520,7 @@
   border: 1px dashed hsl(var(--border));
   border-radius: 0.72rem;
   color: hsl(var(--muted-foreground));
-  font-size: 0.75rem;
+  font-size: var(--console-text-label);
   line-height: 1.45;
   text-align: center;
 }
@@ -1544,8 +1539,8 @@
   text-decoration: none;
 }
 
-.agent-playground-studio-link > span { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; font-weight: 680; }
-.agent-playground-studio-link code { overflow: hidden; opacity: 0.7; font-size: 0.75rem; text-overflow: ellipsis; white-space: nowrap; }
+.agent-playground-studio-link > span { display: flex; align-items: center; gap: 0.4rem; font-size: var(--console-text-label); font-weight: 680; }
+.agent-playground-studio-link code { overflow: hidden; opacity: 0.7; font-size: var(--console-text-label); text-overflow: ellipsis; white-space: nowrap; }
 .agent-playground-studio-link:hover { border-color: hsl(var(--playground-accent) / 0.42); }
 
 .agent-playground-inspector-overlay { display: none; }
@@ -1623,7 +1618,7 @@
     background: hsl(var(--background));
   }
 
-  .agent-playground-mobilebar strong { font-size: 0.75rem; }
+  .agent-playground-mobilebar strong { font-size: var(--console-text-label); }
   .agent-playground-mobilebar button {
     display: inline-flex;
     align-items: center;
@@ -1633,7 +1628,7 @@
     border: 0;
     background: transparent;
     color: hsl(var(--muted-foreground));
-    font-size: 0.75rem;
+    font-size: var(--console-text-label);
     cursor: pointer;
   }
   .agent-playground-mobilebar button:last-child { justify-self: end; }

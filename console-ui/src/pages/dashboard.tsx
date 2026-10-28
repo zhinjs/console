@@ -365,18 +365,18 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="console-dashboard space-y-5" aria-label={i18n.t("正在加载工作台")}>
-        <Skeleton className="h-72 rounded-[1.75rem]" />
+      <div className="console-dashboard console-overview-page space-y-5" aria-label={i18n.t("正在加载工作台")}>
+        <Skeleton className="h-48 rounded-[var(--console-radius-md)]" />
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.7fr)]">
-          <Skeleton className="h-96 rounded-[1.4rem]" />
-          <Skeleton className="h-96 rounded-[1.4rem]" />
+          <Skeleton className="h-72 rounded-[var(--console-radius-md)]" />
+          <Skeleton className="h-72 rounded-[var(--console-radius-md)]" />
         </div>
       </div>
     )
   }
 
   return (
-    <div className="console-dashboard space-y-5">
+    <div className="console-dashboard console-overview-page space-y-5">
       <section className="console-dashboard-hero" aria-labelledby="dashboard-title">
         <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -390,11 +390,9 @@ export default function HomePage() {
                   ? <>{i18n.t("Host 暂时不可达，")}{i18n.t("控制面仍可继续使用")}</>
                   : i18n.t("运行概览")}
               </h1>
-              <p className="console-dashboard-lede">
-                {!hostAvailable
-                  ? i18n.t("页面导航、配置入口和能力目录保持可用。重新连接后，渠道、Agent 与运行状态会在这里恢复。")
-                  : i18n.t("这里优先汇总需要处理的渠道、日志和 Agent 状态，再提供能力目录与下一步操作。")}
-              </p>
+              {!hostAvailable ? <p className="console-dashboard-lede">
+                {i18n.t("页面导航、配置入口和能力目录保持可用。重新连接后，渠道、Agent 与运行状态会在这里恢复。")}
+              </p> : null}
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -463,7 +461,7 @@ export default function HomePage() {
         </Alert>
       ) : null}
 
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(19rem,0.7fr)_minmax(0,1.45fr)]">
+      <div className="console-overview-columns grid items-start gap-5 lg:grid-cols-[minmax(19rem,0.7fr)_minmax(0,1.45fr)]">
         <aside className="console-dashboard-panel console-attention-panel" aria-labelledby="attention-title">
           <div className="console-panel-heading">
             <div>

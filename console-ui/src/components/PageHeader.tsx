@@ -13,7 +13,7 @@ export interface PageHeaderProps {
  */
 export function PageHeader({ title, description, actions, className }: PageHeaderProps) {
   return (
-    <div className={cn('console-page-header', className)}>
+    <header className={cn('console-page-header', className)}>
       <div className="min-w-0 space-y-1">
         <h1 className="console-page-title">{title}</h1>
         {description ? (
@@ -21,6 +21,6 @@ export function PageHeader({ title, description, actions, className }: PageHeade
         ) : null}
       </div>
       {actions ? <div className="console-page-header-actions">{actions}</div> : null}
-    </div>
+    </header>
   )
 }

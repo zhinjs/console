@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
+import { Checkbox } from '../components/ui/checkbox'
+import { SelectField } from '../components/ui/select'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { ConversationTargetEditor, ConversationTargetSummary } from '../components/PluginConfigForm/ConversationTargetEditor'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
@@ -55,7 +57,7 @@ export function WelcomeUseCaseSession({ scope }: { scope: string }) {
     <Card><CardHeader><CardTitle>{i18n.t("1 · 选择明确实例")}</CardTitle></CardHeader><CardContent className="space-y-3">
       <Button variant="outline" disabled={loading || !active} onClick={() => void load()}>{loading ? i18n.t("读取中…") : i18n.t("刷新用途与实例")}</Button>
       {catalog && <><p className="break-all text-sm">{i18n.t("Host 用途指定的插件包：")}<code>{catalog.useCase.packageName}</code></p>
-        <label className="block text-sm">{i18n.t("群欢迎实例")}<select aria-label={i18n.t("群欢迎实例")} className="mt-2 w-full min-w-0 rounded-md border bg-background p-2" value={selected ? instanceKey : ''} onChange={event => { setObserved(false); setTarget({ kind: 'group' }); setParams(event.target.value ? { instance: event.target.value } : {}) }}><option value="">{i18n.t("请选择实例（不会默认选择同包实例）")}</option>{catalog.instances.map(item => <option key={item.instanceKey} value={item.instanceKey}>{item.instanceKey} · {item.status === 'active' ? i18n.t("已加载") : i18n.t("未加载")}</option>)}</select></label>
+        <label className="block text-sm">{i18n.t("群欢迎实例")}<SelectField aria-label={i18n.t("群欢迎实例")} className="mt-2 w-full min-w-0" value={selected ? instanceKey : ''} onValueChange={value => { setObserved(false); setTarget({ kind: 'group' }); setParams(value ? { instance: value } : {}) }} options={[{ value: '', label: i18n.t("请选择实例（不会默认选择同包实例）") }, ...catalog.instances.map(item => ({ value: item.instanceKey, label: <>{item.instanceKey} · {item.status === 'active' ? i18n.t("已加载") : i18n.t("未加载")}</> }))]} /></label>
         {!catalog.instances.length && <p className="text-sm">{i18n.t("尚无该包的可管理实例，请先审阅安装计划。")}</p>}
         {instanceKey && !selected && <p role="alert" className="text-sm text-destructive">{i18n.t("返回的实例不在当前 Host 的可管理目录中，请刷新或重新选择，不按包名猜测。")}</p>}
         <Button asChild variant="outline"><Link to="/marketplace?useCase=group-welcome">{i18n.t("查看此用途的插件与安装计划")}</Link></Button></>}
@@ -68,7 +70,7 @@ export function WelcomeUseCaseSession({ scope }: { scope: string }) {
       <Card><CardHeader><CardTitle>{i18n.t("4 · 在测试群人工核对")}</CardTitle></CardHeader><CardContent className="space-y-4 text-sm"><p>{i18n.t("选择实际测试群，由成员真实加入后核对该实例的欢迎。此操作可能向群发消息，请先与群成员约定。普通测试发送不能代替成员加入链路。")}</p>
         <ConversationTargetEditor value={target} onChange={next => { setObserved(false); setConfirmError(null); setTarget(next) }} allowedKinds={['group']} disabled={!active} idPrefix="welcome-test" />
         {!ready && inspection.evidence && <p className="text-muted-foreground">{i18n.t("尚不能记录：请核对已应用状态、非空欢迎文案、非空范围，以及测试群完整身份是否在精确范围中。")}</p>}
-        <label className="flex items-start gap-2"><input type="checkbox" className="mt-1" checked={observed} onChange={event => setObserved(event.target.checked)} disabled={!ready || !welcomeTargetKey(target)} /><span>{i18n.t("我已在上述完整会话观察真实成员加入，并核对该实例按预期欢迎。此为人工观察与归因，系统未自动识别发出欢迎的实例。")}</span></label>
+        <label className="flex items-start gap-2"><Checkbox className="mt-1" checked={observed} onCheckedChange={checked => setObserved(checked === true)} disabled={!ready || !welcomeTargetKey(target)} /><span>{i18n.t("我已在上述完整会话观察真实成员加入，并核对该实例按预期欢迎。此为人工观察与归因，系统未自动识别发出欢迎的实例。")}</span></label>
         <Button disabled={!active || !ready || !observed || !welcomeTargetKey(target) || inspection.loading} onClick={async () => { if (!observed || !isInboxCacheScopeActive(scope)) return; const confirmed = await inspection.confirmObserved(); if (isInboxCacheScopeActive(scope)) { setObserved(false); setConfirmError(confirmed ? null : i18n.t("证据或目标已变化，未记录确认；请重新核对当前状态与实际群结果。")) } }}>{i18n.t("只读核对后记录人工确认")}</Button>
         {confirmError && <p role="alert" className="text-destructive">{confirmError}</p>}
         {inspection.manualRecord && <Alert><AlertDescription>{i18n.t("人工确认 · ")}{new Date(inspection.manualRecord.at).toLocaleString(i18n.locale)}{i18n.t("。这是当时的人工观察记录，不是平台自动验收，也不保证持续可用。配置、实例、运行代、完整测试目标或连接身份变化后失效；重读失败不保留确认。")}</AlertDescription></Alert>}

@@ -22,7 +22,6 @@ export interface SettingsGroup {
 export interface SettingsSelection {
   readonly group: SettingsGroupId
   readonly entry?: SettingsEntry
-  readonly source?: 'yaml' | 'declarations'
 }
 export function buildSettingsCatalog(config: Record<string, unknown>, configKeys: readonly string[], configPaths?: Readonly<Record<string, readonly string[]>>): SettingsGroup[]
 export function filterSettingsCatalog(catalog: readonly SettingsGroup[], query: string): readonly SettingsGroup[]

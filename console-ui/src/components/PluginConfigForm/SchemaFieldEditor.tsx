@@ -209,8 +209,9 @@ export function SchemaFieldEditor({ name, field: sourceField, value: rawValue, o
   const unknownChoices = choices ? selectedChoices.filter(item => !choices.some(option => sameValue(option.value, item))) : []
   const content = <>
     {field.description ? <p className="text-xs text-muted-foreground">{field.description}</p> : null}
-    {hasDefault ? <p className="text-xs text-muted-foreground">{useDeclaredDefaults ? <>{rawValue === undefined ? i18n.t("使用默认值") : i18n.t("已自定义")}{' · '}</> : null}{secret ? i18n.t("已声明默认值") : i18n.t("声明默认值：{0}", [JSON.stringify(field.default)])}</p> : null}
-    {useDeclaredDefaults && rawValue === undefined && !hasDefault ? <p className="text-xs text-muted-foreground">{i18n.t("尚未设置；不编辑时保持省略。")}</p> : null}
+    {hasDefault ? <p className="text-xs text-muted-foreground">{useDeclaredDefaults
+      ? rawValue === undefined ? i18n.t("使用默认值") : i18n.t("已自定义")
+      : secret ? i18n.t("已声明默认值") : i18n.t("声明默认值：{0}", [JSON.stringify(field.default)])}</p> : null}
     {secret && !textInput ? <p className="text-xs text-muted-foreground">{allowEnvironmentReferences ? <>{i18n.t("建议填写环境变量引用，如 ")}{'${API_KEY}'}{i18n.t("；不要将密钥写入配置。")}</> : i18n.t("请按任务提供方要求填写；此处不解析环境变量引用。")}</p> : null}
     {conversationScope ? <ConversationScopeEditor field={field} value={value} onChange={onChange} /> : field.type === 'constraint' ? <p className="text-xs text-muted-foreground">{i18n.t("此约束不提供额外输入；提交后由 Host 校验，不在此处推断通过。")}</p> : field.type === 'intersect' ? <div className="space-y-3"><p className="text-xs text-muted-foreground">{i18n.t("所有约束共同适用；各组编辑同一份值，Host 最终校验。")}</p>{(field.list ?? []).map((branch, index) => <SchemaFieldEditor {...nested} key={index} path={`${path}/intersect:${index}`} field={inheritedField(field, branch)} name={branch.title ?? i18n.t("{0} 约束 {1}", [name, index + 1])} />)}</div> : options?.length ? <RadioGroup id={id} aria-label={title} className={choiceGroupClass} value={preservedOption ? 'preserved' : value === undefined ? '' : String(optionIndex)} onValueChange={index => {
       if (!/^(0|[1-9]\d*)$/.test(index)) return

@@ -50,10 +50,10 @@ export default function EndpointsPage() {
 
   if (loading) {
     return (
-      <PageShell>
+      <PageShell className="console-resource-page console-endpoints-page">
         <Skeleton className="h-8 w-48" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-[var(--console-space-stack)]">
-          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 rounded-[var(--console-radius-xl)]" />)}
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 rounded-[var(--console-radius-md)]" />)}
         </div>
       </PageShell>
     )
@@ -61,16 +61,16 @@ export default function EndpointsPage() {
 
   if (error) {
     return (
-      <PageShell>
-        <PageHeader title={i18n.t("聊天账号")} description={i18n.t("看看机器人登录的聊天账号是否在线，点进去查看会话、好友申请和通知。")} />
+      <PageShell className="console-resource-page console-endpoints-page">
+        <PageHeader title={i18n.t("聊天账号")} />
         <ErrorAlert error={i18n.t("加载失败：{0}", [error])} onRetry={fetchEndpoints} />
       </PageShell>
     )
   }
 
   return (
-    <PageShell>
-      <PageHeader title={i18n.t("聊天账号")} description={i18n.t("看看机器人登录的聊天账号是否在线，点进去查看会话、好友申请和通知。")} />
+    <PageShell className="console-resource-page console-endpoints-page">
+      <PageHeader title={i18n.t("聊天账号")} />
 
       {endpoints.length > 0 && (
         <div className="console-page-meta">
@@ -83,16 +83,16 @@ export default function EndpointsPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
+      <div className="console-resource-list console-endpoint-list">
         {endpoints.map((endpoint, index) => {
           const pending = (endpoint.pendingRequestCount ?? 0) + (endpoint.pendingNoticeCount ?? 0)
           return (
             <Link
               key={`${endpoint.adapter}-${endpoint.name}-${index}`}
               to={`/endpoints/${encodeURIComponent(endpoint.adapter)}/${encodeURIComponent(endpoint.name)}`}
-              className="console-endpoint-card group"
+              className="console-endpoint-card console-endpoint-row group"
             >
-              <div className="flex items-start gap-3 min-w-0">
+              <div className="console-endpoint-identity flex items-start gap-3 min-w-0">
                 <span className={endpoint.connected ? 'console-endpoint-avatar is-online' : 'console-endpoint-avatar'} aria-hidden="true">
                   <Bot />
                 </span>
@@ -100,7 +100,7 @@ export default function EndpointsPage() {
                   <div className="truncate text-sm font-semibold">{endpoint.name}</div>
                   <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                     <Package className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                    <span className="truncate font-mono">{endpoint.adapter}</span>
+                    <span className="truncate">{endpoint.adapter}</span>
                   </div>
                 </div>
                 <Badge variant={endpoint.connected ? 'success' : 'secondary'} className="shrink-0">

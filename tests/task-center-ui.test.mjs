@@ -43,7 +43,7 @@ test('target summary leads with the account name and readable conversation, with
   assert.match(html, /room/); assert.match(html, /父容器/); assert.match(html, /team/); assert.match(html, /topic/)
   assert.doesNotMatch(html, /account-full-id/)
   const fallback = renderToStaticMarkup(React.createElement(TaskTargetSummary, { target }))
-  assert.match(fallback, /账号完整 ID/); assert.match(fallback, /account-full-id/)
+  assert.match(fallback, /<dt[^>]*>账号<\/dt>/); assert.match(fallback, /account-full-id/)
 })
 
 test('parameter summary uses Schema titles, an explicit human timezone, readable values and escaped user text', () => {

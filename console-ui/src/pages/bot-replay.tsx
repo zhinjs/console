@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
+import { SelectField } from '../components/ui/select'
 import { Skeleton } from '../components/ui/skeleton'
 import {
   EXPORT_WINDOWS,
@@ -33,8 +34,6 @@ import {
   type ReplayRow,
   type ReplayTurn,
 } from './bot-replay-model.mjs'
-
-const selectClass = 'h-9 rounded-md border bg-background px-3 text-sm'
 
 function formatTime(timestamp: number, locale: 'zh-CN' | 'en'): string {
   return new Date(timestamp).toLocaleString(locale)
@@ -150,19 +149,11 @@ export default function BotReplayPage() {
         <CardContent className="flex flex-wrap items-end gap-3 pt-6">
           <Input className="w-36" aria-label={i18n.t("平台")} placeholder={i18n.t("平台，如 icqq")} value={draft.platform ?? ''} onChange={event => setDraft({ ...draft, platform: event.target.value })} />
           <Input className="w-48" aria-label={i18n.t("会话")} placeholder={i18n.t("会话，如 group:123")} value={draft.sceneId ?? ''} onChange={event => setDraft({ ...draft, sceneId: event.target.value })} />
-          <select aria-label={i18n.t("类型")} className={selectClass} value={draft.kind ?? ''} onChange={event => setDraft({ ...draft, kind: event.target.value })}>
-            <option value="">{i18n.t("全部类型")}</option>
-            {REPLAY_KINDS.map(kind => <option key={kind} value={kind}>{kindLabel(kind, i18n.locale)}</option>)}
-          </select>
-          <select aria-label={i18n.t("结果")} className={selectClass} value={draft.outcome ?? ''} onChange={event => setDraft({ ...draft, outcome: event.target.value })}>
-            <option value="">{i18n.t("全部结果")}</option>
-            {REPLAY_OUTCOMES.map(outcome => <option key={outcome} value={outcome}>{outcomeLabel(outcome, i18n.locale)}</option>)}
-          </select>
+          <SelectField aria-label={i18n.t("类型")} className="w-auto" value={draft.kind ?? ''} onValueChange={value => setDraft({ ...draft, kind: value })} options={[{ value: '', label: i18n.t("全部类型") }, ...REPLAY_KINDS.map(kind => ({ value: kind, label: kindLabel(kind, i18n.locale) }))]} />
+          <SelectField aria-label={i18n.t("结果")} className="w-auto" value={draft.outcome ?? ''} onValueChange={value => setDraft({ ...draft, outcome: value })} options={[{ value: '', label: i18n.t("全部结果") }, ...REPLAY_OUTCOMES.map(outcome => ({ value: outcome, label: outcomeLabel(outcome, i18n.locale) }))]} />
           <Button size="sm" onClick={() => setFilter(buildReplayFilter(draft))}>{i18n.t("筛选")}</Button>
           <span className="flex-1" />
-          <select aria-label={i18n.t("导出范围")} className={selectClass} value={windowChoice} onChange={event => setWindowChoice(event.target.value)}>
-            {EXPORT_WINDOWS.map(choice => <option key={choice.value} value={choice.value}>{i18n.t(choice.label)}</option>)}
-          </select>
+          <SelectField aria-label={i18n.t("导出范围")} className="w-auto" value={windowChoice} onValueChange={setWindowChoice} options={EXPORT_WINDOWS.map(choice => ({ value: String(choice.value), label: i18n.t(choice.label) }))} />
           <Button size="sm" variant="outline" onClick={() => void runExport()} disabled={exporting}><Download />{exporting ? i18n.t("导出中…") : i18n.t("导出 JSON")}</Button>
         </CardContent>
         {exportNote ? <p className="px-6 pb-4 text-xs text-muted-foreground">{exportNote}</p> : null}

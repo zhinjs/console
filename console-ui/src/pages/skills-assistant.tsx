@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Skeleton } from '../components/ui/skeleton'
+import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group'
 import {
   ASSISTANT_TASKS,
   MODE_CHOICES,
@@ -158,7 +159,7 @@ function SkillsSettingsSection({ read, onReload }: { read: SettingsReadState; on
   }
   if (settings.usesOtherService) {
     return <SettingsNotice>
-      <p>{i18n.t("现在用的是另一个服务来做这些判断，这个页面不能修改它。需要调整的话，请到「高级 → 配置」里改。")}</p>
+      <p>{i18n.t("当前判断由其他服务提供，请到设置中调整。")}</p>
     </SettingsNotice>
   }
   return <SkillsSettingsForm key={read.data.revision} initial={read.data} onReload={onReload} />
@@ -207,7 +208,7 @@ function SkillsSettingsForm({ initial, onReload }: { initial: SettingsRead; onRe
   return <Card>
     <CardHeader>
       <CardTitle className="text-base">{i18n.t("设置")}</CardTitle>
-      <CardDescription>{i18n.t(MODE_EXPLANATION)} {i18n.t(" 改完需要重启机器人才会生效。")}</CardDescription>
+      <CardDescription>{i18n.t(MODE_EXPLANATION)}</CardDescription>
     </CardHeader>
     <CardContent className="space-y-4">
       <div className="console-setting-list">
@@ -216,18 +217,14 @@ function SkillsSettingsForm({ initial, onReload }: { initial: SettingsRead; onRe
           <legend className="text-sm font-medium">{i18n.t(entry.label)}</legend>
           <p className="mt-0.5 text-xs text-muted-foreground">{i18n.t(entry.hint)}</p>
         </div>
-        <div className="console-segmented">
+        <RadioGroup aria-label={i18n.t(entry.label)} name={`skills-mode-${entry.task}`} value={modes[entry.task]} onValueChange={value => chooseMode(entry.task, value as TaskModes[keyof TaskModes])} className="console-segmented flex gap-1">
           {MODE_CHOICES.map((choice) => <label key={choice.value}>
-            <input
-              type="radio"
-              name={`skills-mode-${entry.task}`}
+            <RadioGroupItem
               value={choice.value}
-              checked={modes[entry.task] === choice.value}
-              onChange={() => chooseMode(entry.task, choice.value)}
             />
             <span>{i18n.t(choice.label, undefined, 'state')}</span>
           </label>)}
-        </div>
+        </RadioGroup>
       </fieldset>)}
       </div>
 

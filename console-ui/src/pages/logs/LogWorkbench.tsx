@@ -23,7 +23,7 @@ import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
 import { Checkbox } from '../../components/ui/checkbox'
 import { Input } from '../../components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
+import { SelectField } from '../../components/ui/select'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '../../components/ui/dropdown-menu'
 import './disclosure.css'
 import { EmptyState } from '../../components/empty-state'
@@ -138,16 +138,8 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input type="search" aria-label={i18n.t("搜索日志消息或来源")} placeholder={i18n.t("搜索消息、来源…")} value={state.query} onChange={(event) => actions.changeQuery(event.target.value)} className="pl-9" />
         </div>
-        <Select value={state.level} onValueChange={actions.selectLevel}>
-          <SelectTrigger className="w-32" aria-label={i18n.t("日志级别")}><SelectValue placeholder={i18n.t("所有级别")} /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{i18n.t("所有级别")}</SelectItem>
-            <SelectItem value="debug">Debug</SelectItem>
-            <SelectItem value="info">Info</SelectItem>
-            <SelectItem value="warn">Warn</SelectItem>
-            <SelectItem value="error">Error</SelectItem>
-          </SelectContent>
-        </Select>
+        <SelectField value={state.level} onValueChange={actions.selectLevel} className="w-32" aria-label={i18n.t("日志级别")}
+          options={[{ value: 'all', label: i18n.t("所有级别") }, ...['debug', 'info', 'warn', 'error'].map(value => ({ value, label: LEVEL_META[value as KnownLogLevel].label }))]} />
         <label className="console-log-autoscroll">
           <Checkbox checked={state.autoScroll} onCheckedChange={(checked) => actions.changeAutoScroll(checked === true)} />
           <span>{i18n.t("跟随最新")}</span>
@@ -213,7 +205,8 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
           <nav className="console-log-pagination" aria-label={i18n.t("日志历史分页")}>
             <Button variant="outline" size="sm" disabled={state.loading || !state.logsKnown || state.page <= 1} onClick={()=>actions.changePage(state.page-1)}>{i18n.t("上一页")}</Button>
             <span className="console-log-page-summary" aria-live="polite">{state.logsKnown ? i18n.t("第 {0} / {1} 页 · 筛选结果 {2} 条", [state.page, state.totalPages, state.total]) : i18n.t("分页总数暂时未知")}</span>
-            <select aria-label={i18n.t("每页日志条数")} value={state.pageSize} onChange={event=>actions.changePageSize(Number(event.target.value))}>{[50,100,200].map(size=><option key={size} value={size}>{i18n.t("每页 ")}{size} {i18n.t(" 条")}</option>)}</select>
+            <SelectField aria-label={i18n.t("每页日志条数")} value={String(state.pageSize)} onValueChange={value => actions.changePageSize(Number(value))}
+              options={[50, 100, 200].map(size => ({ value: String(size), label: <>{i18n.t("每页 ")}{size} {i18n.t(" 条")}</> }))} />
             <Button variant="outline" size="sm" disabled={state.loading || !state.logsKnown || state.page >= (state.totalPages ?? 1)} onClick={()=>actions.changePage(state.page+1)}>{i18n.t("下一页")}</Button>
           </nav>
         </section>

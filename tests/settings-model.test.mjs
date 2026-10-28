@@ -78,7 +78,7 @@ test('keeps schema-declared but unset sections reachable and tolerates empty/no-
   assert.equal(group(result, 'presets').entries.length, 0)
 })
 
-test('preserves legacy plugin/source links and defaults models/presets to their single scoped entry', () => {
+test('preserves legacy plugin links, rejects removed source selections and opens scoped model/preset entries', () => {
   const result = catalog()
   assert.equal(resolveSettingsSelection('plugin:qq', result).entry.configKey, 'qq')
   assert.equal(resolveSettingsSelection('plugin:ai', result).entry.id, 'config:ai')
@@ -87,8 +87,8 @@ test('preserves legacy plugin/source links and defaults models/presets to their 
   assert.deepEqual(resolveSettingsSelection('general', result), { group: 'general' })
   assert.deepEqual(resolveSettingsSelection('plugins', result), { group: 'plugins' })
   assert.deepEqual(resolveSettingsSelection('plugin:missing', result), { group: 'general' })
-  assert.deepEqual(resolveSettingsSelection('yaml', result), { group: 'general', source: 'yaml' })
-  assert.deepEqual(resolveSettingsSelection('declarations', result), { group: 'general', source: 'declarations' })
+  assert.deepEqual(resolveSettingsSelection('yaml', result), { group: 'general' })
+  assert.deepEqual(resolveSettingsSelection('declarations', result), { group: 'general' })
   const alias = buildSettingsCatalog({}, ['team/bot'], { 'team/bot': ['team', 'bot'] })
   assert.equal(resolveSettingsSelection('plugin:team/bot', alias).entry.configKey, 'team/bot')
 })

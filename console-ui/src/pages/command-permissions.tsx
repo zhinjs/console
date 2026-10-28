@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { ShieldCheck, RefreshCw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
+import { Checkbox } from '../components/ui/checkbox'
 import { Input } from '../components/ui/input'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { ConversationTargetEditor, ConversationTargetSummary } from '../components/PluginConfigForm/ConversationTargetEditor'
@@ -94,8 +95,8 @@ export default function CommandPermissionsPage() {
     </CardContent></Card>
     {selected && current && <div className="grid gap-5 lg:grid-cols-2"><Card><CardHeader><CardTitle className="break-words">{selected.name}</CardTitle></CardHeader><CardContent className="space-y-4">
       <p className="text-sm">{i18n.t("permit 数组中的条件必须全部满足；同一项括号内的逗号表示任选一个。平台和自定义 checker 均不会执行。")}</p>
-      <label className="flex gap-2 items-start text-sm"><input type="checkbox" checked={hypothesis} onChange={event => { invalidateHypothesis(); setHypothesis(event.target.checked) }} />{i18n.t("使用假设会话和身份检查内置条件")}</label>
-      {hypothesis && <div className="space-y-3"><label className="flex gap-2 items-start text-sm"><input type="checkbox" checked={includeTarget} onChange={event => { invalidateHypothesis(); setIncludeTarget(event.target.checked) }} />{i18n.t("提供假设会话与账号（可选）")}</label>
+      <label className="flex gap-2 items-start text-sm"><Checkbox checked={hypothesis} onCheckedChange={checked => { invalidateHypothesis(); setHypothesis(checked === true) }} />{i18n.t("使用假设会话和身份检查内置条件")}</label>
+      {hypothesis && <div className="space-y-3"><label className="flex gap-2 items-start text-sm"><Checkbox checked={includeTarget} onCheckedChange={checked => { invalidateHypothesis(); setIncludeTarget(checked === true) }} />{i18n.t("提供假设会话与账号（可选）")}</label>
         {includeTarget && <ConversationTargetEditor value={target} onChange={value => { invalidateHypothesis(); setTarget(value) }} idPrefix="permission-target" disabled={checking} />}
         <label className="block space-y-1 text-sm"><span>{i18n.t("假设发送者 ID（可选）")}</span><Input value={senderId} maxLength={200} onChange={event => { invalidateHypothesis(); setSenderId(event.target.value) }} /></label>
         <label className="block space-y-1 text-sm"><span>{i18n.t("假设角色（逗号分隔，可选）")}</span><Input value={roles} maxLength={2000} placeholder={i18n.t("例如 admin、trusted；留空表示未知")} onChange={event => { invalidateHypothesis(); setRoles(event.target.value) }} /></label>

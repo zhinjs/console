@@ -1,6 +1,7 @@
 import { useI18n } from '../../i18n'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Input } from '../ui/input'
+import { SelectField } from '../ui/select'
 import { Button } from '../ui/button'
 import { ENDPOINT_RPC } from '../../contracts/zhin-console'
 import { requestConsole } from '../../utils/console-rpc'
@@ -18,7 +19,7 @@ export interface ConversationTargetEditorProps {
   idPrefix?: string
   disabled?: boolean
 }
-const control = 'mt-1 w-full min-w-0 rounded-md border bg-background px-3 py-2 text-sm'
+const control = 'mt-1 w-full min-w-0'
 
 /** Edits only a draft. Endpoint discovery is read-only and scoped to the current login. */
 export function ConversationTargetEditor({ value, onChange, allowedKinds = CONVERSATION_KINDS, idPrefix, disabled = false }: ConversationTargetEditorProps) {
@@ -43,15 +44,27 @@ export function ConversationTargetEditor({ value, onChange, allowedKinds = CONVE
   return <div className="min-w-0 space-y-3">
     <div className="flex flex-wrap items-center gap-2"><Button type="button" variant="outline" size="sm" disabled={disabled || active && catalog.loading} onClick={() => void loadEndpoints()}>{active && catalog.loading ? i18n.t("正在读取账号…") : i18n.t("读取当前 Host 账号")}</Button><span className="text-xs text-muted-foreground">{i18n.t("仅读取列表，不验证平台或发送消息。")}</span></div>
     {active && catalog.error ? <p role="alert" className="break-words text-xs text-destructive">{catalog.error}</p> : null}
-    <label className="block text-sm" htmlFor={`${prefix}-endpoint`}>{i18n.t("目标账号")}<select id={`${prefix}-endpoint`} className={control} disabled={disabled} value={selected} onChange={event => {
-      const endpoint = endpoints.find(row => endpointKey(row.endpoint) === event.target.value)?.endpoint
+    <label className="block text-sm" htmlFor={`${prefix}-endpoint`}>{i18n.t("目标账号")}<SelectField id={`${prefix}-endpoint`} className={control} disabled={disabled} value={selected} onValueChange={selectedEndpoint => {
+      const endpoint = endpoints.find(row => endpointKey(row.endpoint) === selectedEndpoint)?.endpoint
       if (endpoint) onChange(updateTargetField(value, 'endpoint', {...draft.endpoint, ...endpoint}))
-    }}><option value="">{i18n.t("请先读取并选择完整账号")}</option>{selected && !currentEndpoint ? <option value={selected}>{i18n.t("已配置完整账号（当前列表未核对）")}</option> : null}{endpoints.map(row => <option key={endpointKey(row.endpoint)} value={endpointKey(row.endpoint)}>{row.name} · {row.endpoint.adapter}{row.connected ? '' : i18n.t("（离线）")}</option>)}</select></label>
+    }} options={[
+      {value: '', label: i18n.t("请先读取并选择完整账号")},
+      ...(selected && !currentEndpoint ? [{value: selected, label: i18n.t("已配置完整账号（当前列表未核对）")}] : []),
+      ...endpoints.map(row => ({value: endpointKey(row.endpoint), label: `${row.name} · ${row.endpoint.adapter}${row.connected ? '' : i18n.t("（离线）")}`})),
+    ]} /></label>
     {selected ? <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">{i18n.t("账号完整身份")}</summary><p className="mt-1 break-all">{draft.endpoint.adapter} / {draft.endpoint.id}</p></details> : null}
     <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-      <label className="min-w-0 text-sm" htmlFor={`${prefix}-kind`}>{i18n.t("会话类型")}<select id={`${prefix}-kind`} className={control} disabled={disabled} value={draft.kind} onChange={event => onChange(updateTargetField(value, 'kind', event.target.value))}><option value="">{i18n.t("请选择类型")}</option>{draft.kind && !allowedKinds.includes(draft.kind as ConversationKind) ? <option value={draft.kind}>{i18n.t("当前类型不在允许范围：")}{draft.kind}</option> : null}{allowedKinds.map(kind => <option key={kind} value={kind}>{i18n.t(CONVERSATION_KIND_LABELS[kind])}</option>)}</select></label>
+      <label className="min-w-0 text-sm" htmlFor={`${prefix}-kind`}>{i18n.t("会话类型")}<SelectField id={`${prefix}-kind`} className={control} disabled={disabled} value={draft.kind} onValueChange={kind => onChange(updateTargetField(value, 'kind', kind))} options={[
+        {value: '', label: i18n.t("请选择类型")},
+        ...(draft.kind && !allowedKinds.includes(draft.kind as ConversationKind) ? [{value: draft.kind, label: `${i18n.t("当前类型不在允许范围：")}${draft.kind}`}] : []),
+        ...allowedKinds.map(kind => ({value: kind, label: i18n.t(CONVERSATION_KIND_LABELS[kind])})),
+      ]} /></label>
       <label className="min-w-0 text-sm" htmlFor={`${prefix}-id`}>{i18n.t("会话 ID")}<Input id={`${prefix}-id`} className="mt-1" disabled={disabled} value={draft.id} onChange={event => onChange(updateTargetField(value, 'id', event.target.value))} placeholder={i18n.t("平台实际会话 ID")} /></label>
-      <label className="min-w-0 text-sm" htmlFor={`${prefix}-parent-kind`}>{i18n.t("父容器类型（可选）")}<select id={`${prefix}-parent-kind`} className={control} disabled={disabled} value={draft.parentKind} onChange={event => onChange(updateTargetParent(value, 'kind', event.target.value))}><option value="">{i18n.t("未指定")}</option>{draft.parentKind && !CONVERSATION_KINDS.includes(draft.parentKind as ConversationKind) ? <option value={draft.parentKind}>{draft.parentKind}{i18n.t("（待校验）")}</option> : null}{CONVERSATION_KINDS.map(kind => <option key={kind} value={kind}>{i18n.t(CONVERSATION_KIND_LABELS[kind])}</option>)}</select></label>
+      <label className="min-w-0 text-sm" htmlFor={`${prefix}-parent-kind`}>{i18n.t("父容器类型（可选）")}<SelectField id={`${prefix}-parent-kind`} className={control} disabled={disabled} value={draft.parentKind} onValueChange={kind => onChange(updateTargetParent(value, 'kind', kind))} options={[
+        {value: '', label: i18n.t("未指定")},
+        ...(draft.parentKind && !CONVERSATION_KINDS.includes(draft.parentKind as ConversationKind) ? [{value: draft.parentKind, label: `${draft.parentKind}${i18n.t("（待校验）")}`}] : []),
+        ...CONVERSATION_KINDS.map(kind => ({value: kind, label: i18n.t(CONVERSATION_KIND_LABELS[kind])})),
+      ]} /></label>
       <label className="min-w-0 text-sm" htmlFor={`${prefix}-parent-id`}>{i18n.t("父容器 ID")}<Input id={`${prefix}-parent-id`} className="mt-1" disabled={disabled} value={draft.parentId} onChange={event => onChange(updateTargetParent(value, 'id', event.target.value))} placeholder={i18n.t("频道所属服务器等实际 ID")} /></label>
     </div>
     <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={() => onChange(updateTargetField(value, 'parent', undefined))}>{i18n.t("明确不含父容器")}</Button>

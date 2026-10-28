@@ -6,6 +6,7 @@ import { RefreshCw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
+import { SelectField } from '../components/ui/select'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog'
 import { SchemaFieldEditor } from '../components/PluginConfigForm/SchemaFieldEditor'
@@ -25,7 +26,6 @@ import { readTaskProviders, readTaskMutation, readTaskUseCases, readPendingTask,
 type Review = { body: TaskMutationBody; target: DiagnosticConversation; effects: string[]; action: 'create' | TaskAction; parameters: Record<string, unknown>; schema: Record<string, unknown>; timezone?: string }
 type TargetFields = { kind: string; id: string; parentKind: string; parentId: string; threadId: string }
 const emptyTarget: TargetFields = { kind: 'private', id: '', parentKind: '', parentId: '', threadId: '' }
-const selectClass = 'h-9 w-full rounded-md border bg-background px-3 text-sm'
 const pendingStorageKey = () => `zhin.admin-task.pending:${encodeURIComponent(getApiBase())}`
 function savedPending() {
   try { return readPendingTask(JSON.parse(sessionStorage.getItem(pendingStorageKey()) ?? 'null')) ?? null } catch { return null }
@@ -35,7 +35,7 @@ export function TaskTargetSummary({ target, accountName }: { target: DiagnosticC
   const i18n = useI18n()
   const kind = (value: string) => ({ private: i18n.t("私聊"), group: i18n.t("群聊"), channel: i18n.t("频道") })[value] ?? value
   return <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-sm">
-    <dt className="text-muted-foreground">{accountName ? i18n.t("投递账号") : i18n.t("账号完整 ID")}</dt><dd className="break-all">{accountName || JSON.stringify(target.endpoint.id).slice(1, -1)}</dd>
+    <dt className="text-muted-foreground">{accountName ? i18n.t("投递账号") : i18n.t("账号")}</dt><dd className="break-all">{accountName || JSON.stringify(target.endpoint.id).slice(1, -1)}</dd>
     <dt className="text-muted-foreground">{i18n.t("会话")}</dt><dd className="break-all">{kind(target.kind)} · {target.id}</dd>
     {target.parent && <><dt className="text-muted-foreground">{i18n.t("父容器")}</dt><dd className="break-all">{kind(target.parent.kind)} · {target.parent.id}</dd></>}
     {target.threadId && <><dt className="text-muted-foreground">{i18n.t("话题")}</dt><dd className="break-all">{target.threadId}</dd></>}
@@ -50,7 +50,7 @@ export function TaskParameterSummary({ schema, parameters, timezone }: { schema:
 
 export function AdminTaskCard({ task, disabled, onAction }: { task: AdminTask; disabled: boolean; onAction: (task: AdminTask, action: TaskAction) => void }) {
   const i18n = useI18n()
-  return <Card><CardContent className="p-4 space-y-3">
+  return <Card className="console-task-row"><CardContent className="console-task-row-content space-y-3">
     <div className="flex flex-wrap justify-between gap-2"><h3 className="font-medium break-words">{task.title}</h3><span className="text-xs text-muted-foreground">{i18n.t("管理员任务 · ")}{i18n.t(TASK_STATE_LABELS[task.state])}</span></div>
     <p className="text-xs text-muted-foreground">{i18n.t("下次执行：")}{taskTimeLabel(task.nextRunAt, task.timezone, i18n.locale)}</p>
     {task.lastRunAt !== undefined && <p className="text-xs text-muted-foreground">{i18n.t("最近执行：")}{taskTimeLabel(task.lastRunAt, task.timezone, i18n.locale)}</p>}
@@ -58,7 +58,7 @@ export function AdminTaskCard({ task, disabled, onAction }: { task: AdminTask; d
     {task.detail && <p className="text-sm text-muted-foreground whitespace-pre-wrap">{task.detail}</p>}
     {task.state === 'unknown' && <Alert><AlertDescription>{i18n.t("投递结果不确定，请先到实际目标核实；此任务不能恢复或重试。取消也无法撤回可能已在途的发送。")}</AlertDescription></Alert>}
     <div className="flex flex-wrap gap-2">{availableTaskActions(task).map(action => <Button key={action} size="sm" variant={action === 'cancel' ? 'destructive' : 'outline'} disabled={disabled} onClick={() => onAction(task, action)}>{i18n.t(TASK_ACTION_LABELS[action])}</Button>)}</div>
-    <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">{i18n.t("完整目标与任务身份")}</summary><pre className="whitespace-pre-wrap break-all">{JSON.stringify({ id: task.id, target: task.target, parameters: task.parameters }, null, 2)}</pre></details>
+    <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">{i18n.t("任务详情")}</summary><pre className="whitespace-pre-wrap break-all">{JSON.stringify({ id: task.id, target: task.target, parameters: task.parameters }, null, 2)}</pre></details>
   </CardContent></Card>
 }
 
@@ -220,8 +220,8 @@ export default function TaskCenterPage() {
     && provider?.owner === review.body.owner && provider.revision === review.body.expectedRevision
     ? provider.effects : review?.effects ?? []
 
-  return <div className="console-page">
-    <PageHeader title={i18n.t("任务中心")} description={i18n.t("从用途创建管理员任务；聊天中创建的个人任务仍归原用户，本页不会导入。")} actions={<Button variant="outline" size="sm" disabled={loading || busy || !current} onClick={() => { void refresh(); void loadUseCases() }}><RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新核对")}</Button>} />
+  return <div className="console-page console-resource-page console-tasks-page">
+    <PageHeader title={i18n.t("任务中心")} actions={<Button variant="outline" size="sm" disabled={loading || busy || !current} onClick={() => { void refresh(); void loadUseCases() }}><RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新核对")}</Button>} />
     {demo && <Alert><AlertDescription>{i18n.t("Demo 仅展示；创建、修改、暂停、恢复和取消均已禁用。")}</AlertDescription></Alert>}
     {error && current && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
     {notice && current && <Alert><AlertDescription>{notice}</AlertDescription></Alert>}
@@ -233,7 +233,7 @@ export default function TaskCenterPage() {
     </AlertDescription></Alert>}
     {!current ? <p className="text-sm text-muted-foreground">{i18n.t("请连接 Host 后读取任务。")}</p> : <>
       {loading && !catalog && <p role="status">{i18n.t("正在读取任务提供方…")}</p>}
-      <Card><CardHeader><CardTitle>{i18n.t("按用途开始")}</CardTitle></CardHeader><CardContent className="space-y-3">
+      <Card className="console-task-use-cases"><CardHeader><CardTitle>{i18n.t("按用途开始")}</CardTitle></CardHeader><CardContent className="space-y-3">
         {useCaseError && <p className="text-xs text-muted-foreground">{useCaseError}</p>}
         {useCases.map(item => <details key={item.id} className="console-disclosure-card"><summary className="font-medium">{item.title}</summary><div className="space-y-3 pt-3 text-sm"><p>{item.summary}</p><ol className="list-decimal pl-5 space-y-1">{item.steps.map(step => <li key={step}>{step}</li>)}</ol><ul className="list-disc pl-5 text-xs text-muted-foreground space-y-1">{item.limitations.map(limitation => <li key={limitation}>{limitation}</li>)}</ul>
           <p className="text-xs break-all">{i18n.t("插件包：")}<code>{item.packageName}</code>{i18n.t("（可选中复制）")}</p><div className="flex flex-wrap gap-2"><Button asChild size="sm" variant="outline"><Link to="/marketplace">{i18n.t("到市场查看安装计划")}</Link></Button><Button asChild size="sm" variant="outline"><Link to="/plugins">{i18n.t("管理插件实例")}</Link></Button>
@@ -242,25 +242,26 @@ export default function TaskCenterPage() {
           </div>{item.mode === 'administrator-task' && !catalog?.providers.some(candidate => candidate.packageName === item.packageName) && <p className="text-xs text-muted-foreground">{i18n.t("尚无该软件包已加载的任务提供方；安装后还需配置、应用并回到此页刷新。")}</p>}</div></details>)}
       </CardContent></Card>
       {catalog && !catalog.providers.length && <Card><CardContent className="p-5 space-y-3"><p>{i18n.t("尚无可用的管理员任务提供方。请安装并启用相应用途插件，再返回刷新。")}</p><Button asChild variant="outline"><Link to="/marketplace">{i18n.t("前往插件市场")}</Link></Button></CardContent></Card>}
-      {!!catalog?.providers.length && <div className="grid gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-        <div className="space-y-4"><Card><CardHeader><CardTitle>{i18n.t("选择用途")}</CardTitle></CardHeader><CardContent className="space-y-3">
-          <select aria-label={i18n.t("任务用途")} className={selectClass} value={selectedOwner} disabled={busy || !!pending} onChange={event => chooseProvider(event.target.value)}><option value="">{i18n.t("请选择用途提供方")}</option>{catalog.providers.map(item => <option key={item.owner} value={item.owner}>{item.title} · {item.owner}</option>)}</select>
-          {provider && <><p className="text-sm text-muted-foreground">{provider.description}</p><p className="text-xs">{i18n.t("此处创建的是管理员任务，由具有管理权限的人员维护；聊天个人提醒仍由原用户管理。")}</p></>}
+      {!!catalog?.providers.length && <div className="console-task-workspace grid gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <div className="space-y-4"><Card className="console-task-setup"><CardHeader><CardTitle>{i18n.t("选择用途")}</CardTitle></CardHeader><CardContent className="space-y-3">
+          <SelectField aria-label={i18n.t("任务用途")} value={selectedOwner} disabled={busy || !!pending} onValueChange={chooseProvider} options={[{ value: '', label: i18n.t("请选择用途提供方") }, ...catalog.providers.map(item => ({ value: item.owner, label: <>{item.title} · {item.owner}</> }))]} />
+          {provider && <p className="text-sm text-muted-foreground">{provider.description}</p>}
         </CardContent></Card>
-        {base && <Card><CardHeader><CardTitle>{editTask ? i18n.t("修改任务参数") : i18n.t("配置管理员任务")}</CardTitle></CardHeader><CardContent className="space-y-4">
+        {base && <Card className="console-task-form"><CardHeader><CardTitle>{editTask ? i18n.t("修改任务参数") : i18n.t("配置管理员任务")}</CardTitle></CardHeader><CardContent className="space-y-4">
           {stale && <Alert><AlertDescription>{i18n.t("草稿基于旧运行代或旧修订，不能直接提交；刷新不会为旧草稿背书。")}</AlertDescription></Alert>}
-          {!editTask ? <fieldset className="space-y-3"><legend className="font-medium text-sm">{i18n.t("精确投递目标")}</legend><Button variant="outline" size="sm" disabled={disabled} onClick={() => void loadEndpoints()}>{i18n.t("读取账号列表")}</Button>
+          {!editTask ? <fieldset className="space-y-3"><legend className="font-medium text-sm">{i18n.t("投递目标")}</legend><Button variant="outline" size="sm" disabled={disabled} onClick={() => void loadEndpoints()}>{i18n.t("读取账号列表")}</Button>
             {endpointError && <p className="text-xs text-destructive">{endpointError}</p>}
-            <select aria-label={i18n.t("投递账号")} className={selectClass} value={endpointKey} disabled={disabled} onChange={event => { setEndpointKey(event.target.value); setTargetFields(emptyTarget) }}><option value="">{i18n.t("请选择 Host 返回的账号")}</option>{endpoints.map(item => <option key={JSON.stringify(item.endpoint)} value={JSON.stringify(item.endpoint)}>{item.name} · {item.endpoint.adapter} · {item.connected ? i18n.t("已连接") : i18n.t("未连接")}</option>)}</select>
-            <label className="text-xs block">{i18n.t("会话类型")}<select aria-label={i18n.t("会话类型")} className={selectClass} value={targetFields.kind} disabled={disabled} onChange={event => setTargetFields(current => ({ ...current, kind: event.target.value }))}><option value="private">{i18n.t("私聊")}</option><option value="group">{i18n.t("群聊")}</option><option value="channel">{i18n.t("频道")}</option></select></label>
-            <Input aria-label={i18n.t("会话 ID")} placeholder={i18n.t("平台原始会话 ID")} value={targetFields.id} disabled={disabled} onChange={event => setTargetFields(current => ({ ...current, id: event.target.value }))} />
-            <div className="grid grid-cols-2 gap-2"><select aria-label={i18n.t("父容器类型")} className={selectClass} value={targetFields.parentKind} disabled={disabled} onChange={event => setTargetFields(current => ({ ...current, parentKind: event.target.value }))}><option value="">{i18n.t("无父容器")}</option><option value="private">private</option><option value="group">group</option><option value="channel">{i18n.t("channel（服务器/工作区）")}</option></select>
-              <Input aria-label={i18n.t("父容器 ID")} placeholder={i18n.t("父容器原始 ID（如有）")} value={targetFields.parentId} disabled={disabled} onChange={event => setTargetFields(current => ({ ...current, parentId: event.target.value }))} /></div>
-            <Input aria-label={i18n.t("话题 ID")} placeholder={i18n.t("话题 / thread ID（如有）")} value={targetFields.threadId} disabled={disabled} onChange={event => setTargetFields(current => ({ ...current, threadId: event.target.value }))} />
-            <p className="text-xs text-muted-foreground">{i18n.t("目录查询并非所有平台都支持；请按平台身份明确填写，不会推测父容器或话题，不会测试发送。")}</p>
-          </fieldset> : <p className="text-xs text-muted-foreground">{i18n.t("修改任务保留原始目标；取消任务也无法撤回在途发送。")}</p>}
+            <SelectField aria-label={i18n.t("投递账号")} value={endpointKey} disabled={disabled} onValueChange={value => { setEndpointKey(value); setTargetFields(emptyTarget) }} options={[{ value: '', label: i18n.t("请选择账号") }, ...endpoints.map(item => ({ value: JSON.stringify(item.endpoint), label: <>{item.name} · {item.endpoint.adapter} · {item.connected ? i18n.t("已连接") : i18n.t("未连接")}</> }))]} />
+            <label className="text-xs block">{i18n.t("会话类型")}<SelectField aria-label={i18n.t("会话类型")} value={targetFields.kind} disabled={disabled} onValueChange={value => setTargetFields(current => ({ ...current, kind: value }))} options={[{ value: 'private', label: i18n.t("私聊") }, { value: 'group', label: i18n.t("群聊") }, { value: 'channel', label: i18n.t("频道") }]} /></label>
+            <Input aria-label={i18n.t("会话 ID")} placeholder={i18n.t("会话 ID")} value={targetFields.id} disabled={disabled} onChange={event => setTargetFields(current => ({ ...current, id: event.target.value }))} />
+            <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">{i18n.t("父容器与话题（可选）")}</summary><div className="mt-3 space-y-3">
+              <div className="grid grid-cols-2 gap-2"><SelectField aria-label={i18n.t("父容器类型")} value={targetFields.parentKind} disabled={disabled} onValueChange={value => setTargetFields(current => ({ ...current, parentKind: value }))} options={[{ value: '', label: i18n.t("无父容器") }, { value: 'private', label: 'private' }, { value: 'group', label: 'group' }, { value: 'channel', label: i18n.t("channel（服务器/工作区）") }]} />
+                <Input aria-label={i18n.t("父容器 ID")} placeholder={i18n.t("父容器 ID")} value={targetFields.parentId} disabled={disabled} onChange={event => setTargetFields(current => ({ ...current, parentId: event.target.value }))} /></div>
+              <Input aria-label={i18n.t("话题 ID")} placeholder={i18n.t("话题 ID")} value={targetFields.threadId} disabled={disabled} onChange={event => setTargetFields(current => ({ ...current, threadId: event.target.value }))} />
+            </div></details>
+          </fieldset> : <p className="text-xs text-muted-foreground">{i18n.t("投递目标保持不变。")}</p>}
           {targetIssue && <p className="text-xs text-muted-foreground">{targetIssue}</p>}
-          {targetPreview && <div className="space-y-2 rounded-md bg-muted/40 p-3"><p className="text-sm font-medium">{i18n.t("投递目标预览")}</p><TaskTargetSummary target={targetPreview} accountName={accountName(targetPreview)} /><details className="text-xs text-muted-foreground"><summary className="cursor-pointer">{i18n.t("完整目标身份")}</summary><pre className="whitespace-pre-wrap break-all pt-2">{JSON.stringify(targetPreview, null, 2)}</pre></details></div>}
+          {targetPreview && <div className="space-y-2 rounded-md bg-muted/40 p-3"><p className="text-sm font-medium">{i18n.t("投递目标预览")}</p><TaskTargetSummary target={targetPreview} accountName={accountName(targetPreview)} /><details className="text-xs text-muted-foreground"><summary className="cursor-pointer">{i18n.t("目标详情")}</summary><pre className="whitespace-pre-wrap break-all pt-2">{JSON.stringify(targetPreview, null, 2)}</pre></details></div>}
           {form.unsupported ? <Alert><AlertDescription>{form.unsupported}</AlertDescription></Alert> : <fieldset disabled={disabled} className="space-y-3">{Object.entries(form.fields).map(([key, field]) => <SchemaFieldEditor key={key} name={key} field={field} value={parameters[key]} allowEnvironmentReferences={false} onChange={value => setParameters(previous => { const next = { ...previous }; if (value ===undefined) delete next[key]; else Object.defineProperty(next, key, { value, enumerable: true, writable: true, configurable: true }); return next })} />)}</fieldset>}
           {!!issues.length && <ul className="text-xs text-muted-foreground list-disc pl-4">{issues.map(issue => <li key={issue}>{issue}</li>)}</ul>}
           <div className="flex flex-wrap gap-2"><Button disabled={disabled || stale || !targetPreview || !!issues.length || !!form.unsupported} onClick={prepareCreateOrUpdate}>{editTask ? i18n.t("核对修改") : i18n.t("核对并创建")}</Button>
@@ -269,7 +270,7 @@ export default function TaskCenterPage() {
         </CardContent></Card>}
         {!base && provider && <Button variant="outline" disabled={disabled} onClick={() => chooseProvider(selectedOwner)}>{i18n.t("为此用途创建新任务")}</Button>}
         </div>
-        <div className="space-y-3"><h2 className="font-medium">{provider ? i18n.t("{0} · 管理员任务", [provider.title]) : i18n.t("请选择用途查看任务")}</h2>{provider && !provider.tasks.length && <p className="text-sm text-muted-foreground">{i18n.t("当前没有管理员任务；这不代表聊天用户没有个人任务。")}</p>}{provider?.tasks.map(task => <AdminTaskCard key={task.id} task={task} disabled={disabled} onAction={act} />)}</div>
+        <div className="console-task-list space-y-3"><h2 className="font-medium">{provider ? i18n.t("{0} · 管理员任务", [provider.title]) : i18n.t("请选择用途查看任务")}</h2>{provider && !provider.tasks.length && <p className="text-sm text-muted-foreground">{i18n.t("当前没有管理员任务。")}</p>}{provider?.tasks.map(task => <AdminTaskCard key={task.id} task={task} disabled={disabled} onAction={act} />)}</div>
       </div>}
     </>}
     <Dialog open={review !== null && current} onOpenChange={value => { if (!value) setReview(null) }}><DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto"><DialogHeader><DialogTitle>{reviewTitle}</DialogTitle><DialogDescription>{review && taskActionDescription(review.action, i18n.locale)}</DialogDescription></DialogHeader>

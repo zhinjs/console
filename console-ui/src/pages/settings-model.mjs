@@ -117,7 +117,6 @@ export function filterSettingsCatalog(catalog, query) {
 
 /** Preserve existing config links while making group landing pages explicit. */
 export function resolveSettingsSelection(selection, catalog) {
-  if (selection === 'yaml' || selection === 'declarations') return { group: 'general', source: selection }
   const entryId = selection?.startsWith('plugin:') ? `config:${encodeURIComponent(selection.slice(7))}` : selection
   for (const group of catalog) {
     const entry = group.entries.find(candidate => candidate.id === entryId)
