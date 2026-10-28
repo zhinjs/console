@@ -27,13 +27,6 @@ interface FieldEditorProps {
 
 function jsonText(value: unknown) { return value === undefined ? '' : JSON.stringify(value, null, 2) }
 function sameValue(a: unknown, b: unknown) { return JSON.stringify(a) === JSON.stringify(b) }
-function branchLabel(original: SchemaField, parent: SchemaField, i18n: ReturnType<typeof useI18n>) {
-  const branch = localizeSchemaField(original, i18n.locale)
-  const types: Record<string, string> = { string: i18n.t( "文本"), number: i18n.t( "数字"), integer: i18n.t( "整数"), boolean: i18n.t( "开关"), object: i18n.t( "对象"), dict: i18n.t( "键值表"), list: i18n.t( "列表"), tuple: i18n.t( "固定列表"), null: i18n.t( "空值"), any: i18n.t( "JSON 值") }
-  const kind = branch.type === 'const' ? JSON.stringify(Object.hasOwn(branch, 'value') ? branch.value : branch.default) : types[branch.type] ?? branch.type
-  const title = branch.title ?? (branch.description !== parent.description ? branch.description : undefined)
-  return title ? `${title}（${kind}）` : kind
-}
 function inheritedField(parent: SchemaField, child: SchemaField): SchemaField { return parent.secret ? { ...child, secret: true } : child }
 
 /** Explicit removal discards only that value's cached drafts, including nested branch and JSON state. */
@@ -111,33 +104,24 @@ function SequenceValueEditor(props: FieldEditorProps) {
   })}{!indexes.length && Array.isArray(value) ? <p className="text-xs text-muted-foreground">{i18n.t("暂无列表项。")}</p> : null}</div>
 }
 
+/** The branch is inferred from the schema and the value; there is no user-facing fill-mode control. */
 function UnionValueEditor(props: FieldEditorProps) {
   const i18n = useI18n()
-  const { field, value, onChange, path = '$', drafts, label, actions, name } = props
+  const { field, value, path = '$', drafts, label, actions, name } = props
   const branches = field.list ?? []
   const local = useRef(new Map<string, { selected: number | undefined; values: Map<number, unknown> }>())
   const store = drafts?.unions ?? local.current
-  // An unset value has no branch to match; open the first fillable branch so the field reads as a normal control. The value stays unset until edited.
-  if (!store.has(path)) { const matches = matchingSchemaBranches(branches, value), fillable = branches.findIndex(branch => branch.type !== 'null' && branch.type !== 'constraint'); store.set(path, { selected: matches.length === 1 ? matches[0] : value === undefined && fillable >= 0 ? fillable : undefined, values: new Map([[-1, structuredClone(value)]]) }) }
-  const current = store.get(path)!
-  // The store owns the selection so an explicit revert/clear (which discards it) re-derives the branch from the restored value.
-  const [, rerender] = useState(0)
-  const selected = current.selected
+  // Inferred once per path so a mid-edit value that briefly matches another branch does not swap the editor; an explicit 撤销/清空 discards it and re-infers.
+  // An unset value opens the first fillable branch so the field reads as a normal control; the value stays unset until edited.
+  if (!store.has(path)) { const matches = matchingSchemaBranches(branches, value), fillable = branches.findIndex(branch => branch.type !== 'null' && branch.type !== 'constraint'); store.set(path, { selected: matches.length ? matches[0] : value === undefined && fillable >= 0 ? fillable : undefined, values: new Map() }) }
+  const selected = store.get(path)!.selected
   const title = label ?? field.title ?? field.key ?? name
-  // Fill mode is a compact control on the key's own title row; the branch editor renders that single row instead of a second header.
-  const select = <select key="fill-mode" className="console-fill-mode" title={i18n.t("填写方式")} aria-label={i18n.t("{0} 类型分支", [name])} value={selected === undefined ? 'preserved' : String(selected)} onChange={event => {
-    const index = event.target.value === 'preserved' ? undefined : Number(event.target.value)
-    if (index !== undefined && (!/^(0|[1-9]\d*)$/.test(event.target.value) || !branches[index])) return
-    current.values.set(selected ?? -1, structuredClone(value))
-    const next = current.values.has(index ?? -1) ? structuredClone(current.values.get(index ?? -1)) : index === undefined ? undefined : initialSchemaValue(branches[index])
-    current.selected = index; rerender(previous => previous + 1); onChange(next)
-  }}><option value="preserved">{current.values.get(-1) === undefined ? i18n.t("暂不设置") : i18n.t("原值 / 未选择分支（保留草稿）")}</option>{branches.map((branch, index) => <option key={index} value={String(index)}>{branchLabel(branch, field, i18n)}</option>)}</select>
-  const headerActions = [select, ...actionList(actions)]
   if (selected !== undefined && branches[selected]) {
     const branch = inheritedField(field, branches[selected])
-    return <SchemaFieldEditor {...props} key={selected} path={`${path}/branch:${selected}`} field={{ ...branch, description: branch.description ?? field.description, required: field.required }} label={title} actions={headerActions} inheritActions />
+    // The branch renders the key's single title row; it must not repeat the key as a second header.
+    return <SchemaFieldEditor {...props} key={selected} path={`${path}/branch:${selected}`} field={{ ...branch, description: branch.description ?? field.description, required: field.required }} label={title} actions={actions} inheritActions />
   }
-  return renderFieldShell({ title, required: field.required, actions: headerActions, requiredLabel: i18n.t("必填"), children: <>{field.description ? <p className="text-xs text-muted-foreground">{field.description}</p> : null}<JsonValueEditor {...props} path={`${path}/unselected`} /></> })
+  return renderFieldShell({ title, required: field.required, actions: actionList(actions), requiredLabel: i18n.t("必填"), children: <>{field.description ? <p className="text-xs text-muted-foreground">{field.description}</p> : null}<JsonValueEditor {...props} path={`${path}/unselected`} /></> })
 }
 
 /** Normalizes caller-provided title-row controls into one keyed list. */
@@ -193,7 +177,9 @@ export function SchemaFieldEditor({ name, field: sourceField, value: rawValue, o
   // The first value seen for a path is what 撤销 restores; the form clears this baseline whenever it reloads the saved config.
   if (drafts?.originals && !drafts.originals.has(path)) drafts.originals.set(path, rawValue === undefined ? undefined : structuredClone(rawValue))
   const secret = field.secret || field.component === 'password'
+  const constUnion = field.type === 'union' && !!field.list?.length && field.list.every(branch => branch.type === 'const')
   const options = field.options ?? field.enum?.map(option => ({ label: String(option), value: option }))
+    ?? (constUnion ? field.list!.map(branch => { const localized = localizeSchemaField(branch, i18n.locale), constant = Object.hasOwn(localized, 'value') ? localized.value : localized.default; return { label: localized.title ?? JSON.stringify(constant), value: constant } }) : undefined)
   const optionIndex = options?.findIndex(option => JSON.stringify(option.value) === JSON.stringify(value)) ?? -1
   const preservedOption = !!options?.length && value !== undefined && optionIndex < 0
   const environmentOption = allowEnvironmentReferences && typeof value === 'string' && value.includes('${')
@@ -211,13 +197,12 @@ export function SchemaFieldEditor({ name, field: sourceField, value: rawValue, o
     if (drafts?.originals?.has(path) && !sameValue(rawValue, original)) valueActions.push(<Button key="revert" type="button" variant="ghost" size="sm" title={i18n.t("撤销修改，恢复原值或默认值")} onClick={event => { keepGroupState(event); clearEditorDraftSubtree(path, drafts, onValidityChange); onChange(original === undefined ? undefined : structuredClone(original)) }}><Undo2 /><span className="sr-only sm:not-sr-only">{i18n.t("撤销")}</span></Button>)
     if (clearable && rawValue !== undefined) valueActions.push(<Button key="clear" type="button" variant="ghost" size="sm" title={hasDefault ? i18n.t("清空（使用声明默认值）") : i18n.t("清空（保存时省略此项）")} onClick={event => { keepGroupState(event); clearEditorDraftSubtree(path, drafts, onValidityChange); onChange(undefined) }}><Eraser /><span className="sr-only sm:not-sr-only">{useDeclaredDefaults && hasDefault ? i18n.t("恢复默认") : i18n.t("清空")}</span></Button>)
   }
-  if (field.type === 'union' && !conversationScope) return <UnionValueEditor {...nested} label={title} actions={[...valueActions, ...actionList(actions)]} />
+  if (field.type === 'union' && !conversationScope && !constUnion) return <UnionValueEditor {...nested} label={title} actions={[...valueActions, ...actionList(actions)]} />
   const contentActions: ReactNode[] = []
   if (canAppend) contentActions.push(<Button key="add" type="button" variant="outline" size="sm" title={i18n.t("添加列表项")} onClick={event => { keepGroupState(event); event?.currentTarget?.closest('details')?.setAttribute('open', ''); onChange(appendedListItem(field, value)) }}><Plus /><span className="sr-only sm:not-sr-only">{i18n.t("添加列表项")}</span></Button>)
-  if (field.type === 'boolean' && !options?.length) contentActions.push(<Switch key="switch" id={id} aria-label={title} checked={value === true} onCheckedChange={onChange} />)
   const passed = actionList(actions)
-  // A union branch inherits the union's row: fill mode first, then this branch's own content control, then the value controls.
-  const headerActions = inheritActions ? [...passed.slice(0, 1), ...contentActions, ...passed.slice(1)] : [...contentActions, ...valueActions, ...passed]
+  // Title row holds only buttons; a union branch reuses the union's value controls instead of its own.
+  const headerActions = [...contentActions, ...(inheritActions ? [] : valueActions), ...passed]
   const textInput = !options?.length && (field.type === 'string' || field.component === 'textarea') && (value === undefined || typeof value === 'string')
   const textPlaceholder = allowEnvironmentReferences ? secret ? i18n.t("建议使用环境变量引用，如 ${API_KEY}") : i18n.t("文本，或 ${ENV_NAME} 引用环境变量") : undefined
   const selectedChoices = Array.isArray(value) ? value : []
@@ -233,7 +218,7 @@ export function SchemaFieldEditor({ name, field: sourceField, value: rawValue, o
       if (option) onChange(structuredClone(option.value))
     }}>{options.map((option, index) => <label key={index} className="flex cursor-pointer items-center gap-2 text-sm"><RadioGroupItem value={String(index)} />{option.label}</label>)}</RadioGroup>
       : choices ? value !== undefined && !Array.isArray(value) ? <JsonValueEditor {...nested} /> : <><div id={id} role="group" aria-label={title} className={choiceGroupClass}>{choices.map((option, index) => <label key={index} className="flex cursor-pointer items-center gap-2 text-sm"><Checkbox checked={selectedChoices.some(item => sameValue(item, option.value))} onCheckedChange={checked => onChange([...choices.filter(candidate => candidate === option ? checked === true : selectedChoices.some(item => sameValue(item, candidate.value))).map(candidate => structuredClone(candidate.value)), ...unknownChoices])} />{option.label}</label>)}</div>{unknownChoices.length ? <p className="text-xs text-muted-foreground">{i18n.t("另有 {0} 个保存值不在选项中，将原样保留。", [unknownChoices.length])}</p> : null}</>
-      : field.type === 'object' || field.type === 'dict' ? <ObjectValueEditor {...nested} /> : field.type === 'list' || field.type === 'tuple' ? <SequenceValueEditor {...nested} /> : field.type === 'boolean' ? value !== undefined && typeof value !== 'boolean' ? <><p className="text-xs text-muted-foreground">{i18n.t("已保存非布尔原值；不操作时保留。可在下方编辑，或明确使用开关替换。")}</p><JsonValueEditor {...nested} /></> : null
+      : field.type === 'object' || field.type === 'dict' ? <ObjectValueEditor {...nested} /> : field.type === 'list' || field.type === 'tuple' ? <SequenceValueEditor {...nested} /> : field.type === 'boolean' ? <>{value !== undefined && typeof value !== 'boolean' ? <><p className="text-xs text-muted-foreground">{i18n.t("已保存非布尔原值；不操作时保留。可在下方编辑，或明确使用开关替换。")}</p><JsonValueEditor {...nested} /></> : null}<div><Switch id={id} aria-label={title} checked={value === true} onCheckedChange={onChange} /></div></>
       : field.type === 'const' ? <div className="space-y-2"><p id={id} className="text-sm">{secret ? i18n.t("固定值未展示；当前原值保持不变。") : <>{i18n.t("当前：")}{JSON.stringify(value) ?? i18n.t("未设置")}{i18n.t("；固定值：")}{JSON.stringify(Object.hasOwn(field, 'value') ? field.value : field.default)}</>}</p>{!sameValue(value, Object.hasOwn(field, 'value') ? field.value : field.default) && <Button type="button" variant="outline" size="sm" onClick={() => onChange(structuredClone(Object.hasOwn(field, 'value') ? field.value : field.default))}>{i18n.t("使用固定值")}</Button>}</div>
       : field.type === 'null' ? <div className="space-y-2"><p>{i18n.t("当前：")}{secret && value !== null && value !== undefined ? i18n.t("敏感原值未展示") : JSON.stringify(value) ?? i18n.t("未设置")}</p>{value !== null && <Button type="button" variant="outline" size="sm" onClick={() => onChange(null)}>{i18n.t("设为 null")}</Button>}</div>
       : field.type === 'number' || field.type === 'integer' ? value !== undefined && typeof value !== 'number' && typeof value !== 'string' ? <JsonValueEditor {...nested} /> : <Input id={id} type={field.secret ? 'password' : 'text'} aria-invalid={!!numericIssue} inputMode="decimal" value={value === undefined ? '' : String(value)} onChange={event => onChange(numericDraft(event.target.value))} placeholder={allowEnvironmentReferences ? i18n.t("数字或 ${ENV_NAME}") : i18n.t("填写数字")} />
