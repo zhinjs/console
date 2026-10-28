@@ -1,0 +1,21 @@
+console-ui/src/components/PluginConfigForm/index.tsx
+  s_9622fd28aba994::t_0efa85cca4eafd 146
+tests/config-connection-scope.test.mjs
+  s_9622fd28aba994::t_f3836761b4a877 962-970
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d4acb50a009dfa06526f3a1d97a6bf4781ec9a34",
+  "prompts": {},
+  "sessions": {
+    "s_9622fd28aba994": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a166a4-5b4c-7e22-80f0-d3374c43b4fb",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
