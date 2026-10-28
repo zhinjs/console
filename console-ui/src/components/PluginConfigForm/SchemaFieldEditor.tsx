@@ -146,8 +146,8 @@ export function SchemaFieldEditor({ name, field: sourceField, value, onChange, a
   const environmentOption = allowEnvironmentReferences && typeof value === 'string' && value.includes('${')
   const preservedLabel = environmentOption ? i18n.t("环境变量引用（原样保留）") : i18n.t("现有值不在选项中（原样保留）")
   const nested = { name, field: secret ? { ...field, secret: true } : field, value, onChange, allowEnvironmentReferences, path, drafts, onValidityChange, reservedKeys }
-  return <div className="space-y-2 rounded-md border p-3">
-    <label htmlFor={id} className="text-sm font-medium">{field.title ?? field.key ?? name}{field.required ? <span className="ml-1 text-destructive">{i18n.t("必填")}</span> : null}</label>
+  const collapsible = !conversationScope && ['object', 'dict', 'list', 'tuple'].includes(field.type)
+  const content = <>
     {field.description ? <p className="text-xs text-muted-foreground">{field.description}</p> : null}
     {Object.hasOwn(field, 'default') ? <p className="text-xs text-muted-foreground">{secret ? i18n.t("已声明默认值") : i18n.t("声明默认值：{0}", [JSON.stringify(field.default)])}</p> : null}
     {secret ? <p className="text-xs text-muted-foreground">{allowEnvironmentReferences ? <>{i18n.t("建议填写环境变量引用，如 ")}{'${API_KEY}'}{i18n.t("；不要将密钥写入配置。")}</> : i18n.t("请按任务提供方要求填写；此处不解析环境变量引用。")}</p> : null}
@@ -167,5 +167,22 @@ export function SchemaFieldEditor({ name, field: sourceField, value, onChange, a
     {preservedOption ? <p className="break-all text-xs text-muted-foreground">{environmentOption ? i18n.t("当前为环境变量引用，展开值未读取。") : <>{i18n.t("当前保存值不在选项中")}{secret ? '。' : `：${JSON.stringify(value)?.slice(0, 200)}${(JSON.stringify(value)?.length ?? 0) > 200 ? '…' : ''}。`}</>}{i18n.t("未选择替换时会原样保留；可明确选择新值，或打开完整源码编辑。保存仍需 Host 校验。")}</p> : null}
     {numericIssue ? <p role="alert" className="text-xs text-destructive">{numericIssue}{i18n.t("；以 Host 校验结果为准。")}</p> : null}
     {!conversationScope && !['const', 'constraint'].includes(field.type) && value !== undefined ? <Button type="button" variant="ghost" size="sm" onClick={() => { clearEditorDraftSubtree(path, drafts, onValidityChange); onChange(undefined) }}>{i18n.t("取消此项设置")}{Object.hasOwn(field, 'default') ? i18n.t("（使用声明默认值）") : ''}</Button> : null}
+  </>
+  if (collapsible) {
+    const entries = Array.isArray(value) ? value.length : value && typeof value === 'object' ? Object.keys(value).length : 0
+    const declared = Object.keys(objectFields(field)).length
+    // Open only when something here still needs input; otherwise the summary line is enough to scan.
+    const needsInput = field.required && value === undefined
+    return <details className="console-field-group" open={needsInput || undefined}>
+      <summary>
+        <span className="text-sm font-medium">{field.title ?? field.key ?? name}{field.required ? <span className="ml-1 text-destructive">{i18n.t("必填")}</span> : null}</span>
+        <span className="console-field-group-meta">{field.type === 'list' || field.type === 'tuple' ? i18n.t("{0} 项", [entries]) : declared ? i18n.t("{0} 个字段 · 已设置 {1}", [declared, entries]) : i18n.t("已设置 {0}", [entries])}{value === undefined ? ` · ${i18n.t("尚未设置")}` : ''}</span>
+      </summary>
+      <div className="console-field-group-body space-y-2">{content}</div>
+    </details>
+  }
+  return <div className="space-y-2 rounded-md border p-3">
+    <label htmlFor={id} className="text-sm font-medium">{field.title ?? field.key ?? name}{field.required ? <span className="ml-1 text-destructive">{i18n.t("必填")}</span> : null}</label>
+    {content}
   </div>
 }
