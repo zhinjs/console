@@ -53,7 +53,7 @@ test('target summaries expose exact parent/thread absence and escape user data, 
 })
 
 test('SchemaFieldEditor wires custom scope before generic lists and suppresses broadening unset',async()=>{
- const implementation=await componentSource('SchemaFieldEditor.tsx',['SchemaFieldEditor'])
+ const implementation=await componentSource('SchemaFieldEditor.tsx',['SchemaFieldEditor','actionList','renderFieldShell','keepGroupState'])
  const module=await load(`import {useId} from ${JSON.stringify(import.meta.resolve('react'))};
  import {isConversationScopeField} from ${JSON.stringify(new URL(base+'conversation-scope-model.mjs',import.meta.url).href)};
  const ConversationScopeEditor=()=> <span>精确会话控件</span>;
@@ -61,7 +61,7 @@ test('SchemaFieldEditor wires custom scope before generic lists and suppresses b
  const Button=({children,...props})=><button {...props}>{children}</button>;
  ${implementation}`)
  const html=renderToStaticMarkup(React.createElement(module.SchemaFieldEditor,{name:'scope',field,value:[],onChange(){assert.fail('render must not change scope')}}))
- assert.match(html,/精确会话控件/);assert.doesNotMatch(html,/取消此项设置|添加列表项/)
+ assert.match(html,/精确会话控件/);assert.doesNotMatch(html,/取消此项设置|添加列表项|清空|撤销/)
 })
 
 

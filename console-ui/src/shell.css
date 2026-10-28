@@ -882,3 +882,35 @@
   }
 
 }
+
+@layer components {
+  /* A field's key and its compact controls (fill mode, add, undo, clear, delete) share one title row. */
+  .console-field-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem 0.5rem;
+  }
+
+  .console-field-actions {
+    margin-left: auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.25rem;
+    cursor: default;
+  }
+
+  .console-fill-mode {
+    height: var(--console-control-height-sm);
+    max-width: 14rem;
+    border: var(--console-border-width) solid hsl(var(--input));
+    border-radius: var(--console-radius-md);
+    background: hsl(var(--background));
+    padding: 0 0.5rem;
+    font-size: var(--console-text-caption);
+    text-overflow: ellipsis;
+  }
+}

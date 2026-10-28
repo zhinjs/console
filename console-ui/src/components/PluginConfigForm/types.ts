@@ -41,6 +41,8 @@ export type Schema = SchemaField
 export interface SchemaEditorDrafts {
   json: Map<string, { text: string; value: unknown; error: boolean }>
   unions: Map<string, { selected: number | undefined; values: Map<number, unknown> }>
+  /** Per-path baseline restored by a field's 撤销; reset whenever the saved config is (re)loaded. */
+  originals?: Map<string, unknown>
 }
 
 export interface PluginConfigFormProps {
