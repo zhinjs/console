@@ -20,7 +20,7 @@ const elements = node => node && typeof node === 'object' ? [node, ...[node.prop
 const text = node => typeof node === 'string' ? node : node && typeof node === 'object' ? node.type === 'Dialog' && !node.props.open ? '' : [node.props?.children].flat(Infinity).map(text).join('') : ''
 const settle = () => new Promise(resolve => setImmediate(resolve))
 function fixture() {
-  const slots = [], calls = []; let cursor = 0, effects = [], scope = 'scope-a', params = new URLSearchParams({ sessionKey: 'icqq:bot:group:room' }), tree
+  const slots = [], calls = [], traceReads = []; let cursor = 0, effects = [], scope = 'scope-a', params = new URLSearchParams({ sessionKey: 'icqq:bot:group:room' }), tree
   const same = (a,b) => a && a.length === b.length && a.every((value,index) => Object.is(value,b[index]))
   const hooks = {
     useState(initial) { const index=cursor++; if (!(index in slots)) slots[index]=typeof initial==='function'?initial():initial; return [slots[index], value=>{ slots[index]=typeof value==='function'?value(slots[index]):value }] },
@@ -43,10 +43,11 @@ function fixture() {
     '../components/ui/tabs':{Tabs:'tabs',TabsList:'tabs-list',TabsTrigger:'tabs-trigger',TabsContent:'tabs-content'},
     '../components/ui/dialog':ui, '../components/AgentSessionPicker':{AgentSessionPicker:'session-picker'},
     './SessionMessageDetails':{SessionMessageDetails:'message-details'}, './ConversationHistory':{ConversationHistory:'conversation-history'},
+    './ConversationTrace':{ConversationTrace:'conversation-trace'}, './useConversationTraces':{useConversationTraces:(...args)=>{ traceReads.push(args); return {turns:[],loading:false,error:null,refresh(){}} }},
     '@zhin.js/client':{cn:(...parts)=>parts.filter(Boolean).join(' ')}, '../contracts/zhin-console':{CONSOLE_REST:{AGENT_SESSIONS:'/api/agent/sessions'}},
     '../utils/demo-mode':{isDemoMode:()=>false}, './agent-session-recent.mjs':{readRecentSessions},
   })
-  const f = {calls,render(){cursor=0;tree=module.default(); const run=effects;effects=[];run.forEach(fn=>fn());return tree},get tree(){return tree},setScope(value){scope=value},navigate(key){params=new URLSearchParams({sessionKey:key})},close(){slots.forEach(slot=>slot?.cleanup?.())}}
+  const f = {calls,traceReads,render(){cursor=0;tree=module.default(); const run=effects;effects=[];run.forEach(fn=>fn());return tree},get tree(){return tree},setScope(value){scope=value},navigate(key){params=new URLSearchParams({sessionKey:key})},close(){slots.forEach(slot=>slot?.cleanup?.())}}
   f.render();return f
 }
 const find=(f,type)=>elements(f.tree).find(node=>node.type===type)
@@ -129,4 +130,24 @@ test('branch errors belong to their producing Host and URL before reset effects 
     if (change==='scope') f.setScope('scope-b'); else f.navigate('icqq:bot:group:room-b')
     f.render();assert.equal(find(f,'error-alert'),undefined);f.close()
   }
+})
+
+test('Trace reuses the mounted history resolver, rejects ambiguity, and clears canonical scope on URL change',()=>{
+  const f=fixture(), conversation={endpoint:{adapter:'root/icqq',id:'canonical'},kind:'group',id:'room'}
+  assert.equal(f.traceReads.at(-1)[2],undefined)
+  const history=find(f,'conversation-history')
+  const panel=elements(f.tree).find(node=>node.type==='tabs-content'&&node.props.value==='conversation')
+  assert.equal(panel.props.forceMount,true)
+  history.props.onConversation(conversation);f.render();assert.equal(f.traceReads.at(-1)[2],conversation)
+  history.props.onOpenTrace('turn-a');f.render();assert.equal(find(f,'tabs').props.value,'trace')
+  assert.equal(find(f,'conversation-trace').props.selectedTurn,'turn-a')
+  let retries=0
+  find(f,'conversation-history').props.onConversation(undefined,'AMBIGUOUS',()=>retries++);f.render()
+  assert.equal(f.traceReads.at(-1)[2],undefined)
+  assert.equal(find(f,'conversation-trace').props.error,'AMBIGUOUS')
+  find(f,'conversation-trace').props.refresh();assert.equal(retries,1)
+  f.navigate('icqq:bot:group:another-room');f.render()
+  assert.equal(f.traceReads.at(-1)[2],undefined)
+  assert.equal(find(f,'conversation-trace').props.selectedTurn,'')
+  f.close()
 })

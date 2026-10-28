@@ -1,5 +1,9 @@
 import { useI18n } from '../i18n'
 import { ConversationHistory } from './ConversationHistory'
+import { ConversationTrace } from './ConversationTrace'
+import { useConversationTraces } from './useConversationTraces'
+import './conversation-trace.css'
+import type { DiagnosticConversation } from './endpoint-detail/types'
 import './agent-sessions.css'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
 import { SessionMessageDetails } from './SessionMessageDetails'
@@ -61,6 +65,10 @@ export default function AgentSessionsPage() {
   const [view, setView] = useState('conversation')
   const [directoryOpen, setDirectoryOpen] = useState(!sessionKeyFromUrl)
   const selectedKey = isLikelySessionKey(sessionKeyFromUrl) ? sessionKeyFromUrl : ''
+  const [resolvedConversation, setResolvedConversation] = useState<{ identity: string; conversation?: DiagnosticConversation; error?: string; retry?: () => void } | null>(null)
+  const resolved = resolvedConversation?.identity === JSON.stringify([scope, selectedKey]) ? resolvedConversation : null
+  const traces = useConversationTraces(readOnly ? '' : selectedKey, scope, resolved?.conversation)
+  const [traceSelection, setTraceSelection] = useState<{ identity: string; turnId: string } | null>(null)
   const selected = parseImSessionKey(selectedKey)
   const [history, setHistory] = useState<string[]>(() => loadAgentSessionHistory())
   const [recentResult, setRecent] = useState<{ connectionScope?: string; rows: RecentSession[] } | null>(null)
@@ -325,14 +333,25 @@ export default function AgentSessionsPage() {
               >
                 <TabsList aria-label={i18n.t('记录视图')}>
                   <TabsTrigger value="conversation">{i18n.t('对话')}</TabsTrigger>
+                  <TabsTrigger value="trace">{i18n.t('轨迹')}</TabsTrigger>
                   <TabsTrigger value="branches">{i18n.t('会话分支')}</TabsTrigger>
                 </TabsList>
-                <TabsContent value="conversation">
+                <TabsContent value="conversation" forceMount className="data-[state=inactive]:hidden">
                   <ConversationHistory
                     key={`${scope}:${selectedKey}`}
                     sessionKey={selectedKey}
                     connectionScope={scope}
+                    turns={traces.turns}
+                    onRefresh={traces.refresh}
+                    onOpenTrace={(turnId) => { setTraceSelection({ identity, turnId }); setView('trace') }}
+                    onConversation={(conversation, error, retry) => setResolvedConversation({ identity, conversation, error, retry })}
                   />
+                </TabsContent>
+                <TabsContent value="trace">
+                  <ConversationTrace turns={traces.turns} revision={traces.revision} loading={!resolved?.conversation && !resolved?.error || traces.loading} error={resolved?.error ?? traces.error}
+                    refresh={() => { if (resolved?.conversation) void traces.refresh(); else if (resolved?.retry) { setResolvedConversation({ identity }); resolved.retry() } }}
+                    selectedTurn={traceSelection?.identity === identity ? traceSelection.turnId : ''}
+                    onSelectTurn={(turnId) => setTraceSelection({ identity, turnId })} connectionScope={scope} conversation={resolved?.conversation} />
                 </TabsContent>
                 <TabsContent value="branches">
                   {currentFeedback && switchMsg && (
