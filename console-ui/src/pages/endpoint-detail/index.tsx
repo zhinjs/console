@@ -491,8 +491,8 @@ export default function EndpointDetailPage() {
                     variant="ghost"
                     size="icon"
                     className="im-header-icon-button h-8 w-8"
-                    title={i18n.t("查看 Agent 对话轨迹")}
-                    aria-label={i18n.t("查看 Agent 对话轨迹")}
+                    title={i18n.t("查看聊天记录")}
+                    aria-label={i18n.t("查看聊天记录")}
                     asChild
                   >
                     <Link
@@ -500,7 +500,7 @@ export default function EndpointDetailPage() {
                         buildSessionKey(adapter, endpointId, selection.channelType, selection.id),
                       )}
                     >
-                      <GitBranch className="h-4 w-4" />
+                      <MessageSquare className="h-4 w-4" />
                     </Link>
                   </Button>
                   {!readOnly && selection.channelType === 'private' && (

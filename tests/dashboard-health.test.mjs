@@ -24,7 +24,7 @@ test('dashboard requires known zero errors and labels root-excluding statistics 
   assert.match(dashboard, /\.\.\.optionalSummary/)
   assert.match(dashboard, /运行子插件/)
   const plugins = readFileSync(new URL('../console-ui/src/pages/plugins.tsx', import.meta.url), 'utf8')
-  assert.match(plugins, /title=\{i18n\.t\("子插件"\)\}/)
+  assert.match(plugins, /title=\{i18n\.t\("功能管理"\)\}/)
   assert.match(plugins, /plugins\.length\} \{i18n\.t\(" 个子插件"\)/)
 })
 

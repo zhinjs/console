@@ -67,7 +67,7 @@ export function AgentSessionPicker({
         <div>
 
           <h2 id="session-picker-title">{i18n.t("选择对话")}</h2>
-          <p>{recent?.length ? i18n.t("按最近 Agent 活动排序，选一个查看完整对话。") : i18n.t("从最近对话选择，或浏览渠道会话。")}</p>
+
         </div>
         <Button variant="ghost" size="sm" asChild>
           <Link to="/endpoints">
@@ -105,7 +105,7 @@ export function AgentSessionPicker({
           <span><Bot /></span>
           <div>
             <h3>{i18n.t("还没有最近对话")}</h3>
-            <p>{i18n.t("进入“聊天账号”，选择联系人、群组或频道，再打开 Agent 轨迹。")}</p>
+            <p>{i18n.t("从“聊天账号”选择联系人、群组或频道。")}</p>
           </div>
           <Button size="sm" asChild>
             <Link to="/endpoints">{i18n.t("选择会话")}</Link>
