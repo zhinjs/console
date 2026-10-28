@@ -151,15 +151,15 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
       {loaded ? <Tabs value={visibleSection} onValueChange={setActiveSection} orientation="vertical" className="console-config-layout">
         <div className="console-config-nav">
         <Input type="search" aria-label={i18n.t("筛选配置项")} placeholder={i18n.t("搜索配置项或插件实例…")} value={sectionFilter} onChange={event => setSectionFilter(event.target.value)} />
-        <TabsList className="console-config-nav-list">
-          <TabsTrigger value="declarations">{i18n.t("插件声明")}</TabsTrigger>
-          <TabsTrigger value="yaml" className="gap-1.5">
+        <TabsList className="console-config-nav-list flex h-auto max-h-48 flex-wrap items-stretch justify-start gap-1 overflow-y-auto border border-[var(--console-border-default)] bg-card p-1.5 lg:max-h-[calc(100dvh-12rem)] lg:flex-col lg:flex-nowrap">
+          <TabsTrigger value="declarations" className="shrink-0 lg:w-full lg:justify-start">{i18n.t("插件声明")}</TabsTrigger>
+          <TabsTrigger value="yaml" className="gap-1.5 shrink-0 lg:w-full lg:justify-start">
             <FileCode className="w-4 h-4" />
             {i18n.t("完整源码")}</TabsTrigger>
           <span className="console-config-nav-label" aria-hidden="true">{i18n.t("配置项")} · {sectionKeys.length}</span>
           {sectionKeys.filter(key => key.toLowerCase().includes(sectionFilter.trim().toLowerCase())).map((key) => (
-            <TabsTrigger key={key} value={`plugin:${key}`}>
-              {key}
+            <TabsTrigger key={key} value={`plugin:${key}`} className="shrink-0 lg:w-full lg:justify-start" title={key}>
+              <span className="truncate">{key}</span>
             </TabsTrigger>
           ))}
         </TabsList>
