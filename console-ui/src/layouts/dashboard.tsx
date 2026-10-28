@@ -353,7 +353,7 @@ export default function DashboardLayout() {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="console-topbar-link hidden sm:inline-flex text-xs"
+                  className="console-topbar-link hidden lg:inline-flex text-xs"
                   onClick={() => reopenDemoOnboarding()}
                 >
                   {i18n.t("使用说明")}</Button>
@@ -370,7 +370,7 @@ export default function DashboardLayout() {
                   href="https://zhin.js.org/adapters/icqq"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "console-topbar-link text-xs h-8 px-2.5 hidden sm:inline-flex")}
+                  className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "console-topbar-link text-xs h-8 px-2.5 hidden lg:inline-flex")}
                 >
                   {i18n.t("接 QQ Bot")}</a>
                 <span className="console-topbar-divider" aria-hidden="true" />
