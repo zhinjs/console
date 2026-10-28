@@ -86,3 +86,37 @@ test('dirty source/config drafts keep their bound revision after refresh until e
   assert.equal(guard.receive('a',{},newer),true)
   assert.equal(guard.snapshot.revision,'r2')
 })
+
+test('restoring defaults deletes only the selected override in JSON and YAML while preserving explicit null', () => {
+  const original = { menuKeyword: 'custom', sibling: { nullable: null, keep: true } }
+  const replaced = replaceConfigAtPath(original, ['menuKeyword'], undefined)
+  assert.equal(Object.hasOwn(replaced, 'menuKeyword'), false)
+  assert.deepEqual(replaced.sibling, original.sibling)
+  assert.equal(original.menuKeyword, 'custom')
+  for (const [format, source] of [
+    ['json', JSON.stringify(original)],
+    ['yaml', '# keep sibling guidance\nsibling:\n  nullable: null\n  keep: true\nmenuKeyword: custom\n'],
+  ]) {
+    const restored = configSourceForPlugin(source, format, ['menuKeyword'], undefined)
+    const parsed = parseConfigDocument(restored, format)
+    assert.equal(Object.hasOwn(parsed, 'menuKeyword'), false)
+    assert.deepEqual(parsed.sibling, original.sibling)
+    if (format === 'yaml') assert.match(restored, /# keep sibling guidance/)
+    const nullable = parseConfigDocument(configSourceForPlugin(source, format, ['menuKeyword'], null), format)
+    assert.equal(Object.hasOwn(nullable, 'menuKeyword'), true)
+    assert.equal(nullable.menuKeyword, null)
+  }
+})
+
+test('removing a nested alias override detaches only its path and missing removal creates no parents', () => {
+  const source = 'plugins:\n  a: &shared\n    nested:\n      enabled: false\n      keep: true\n  b: *shared\n'
+  const restored = parseConfigDocument(configSourceForPlugin(source, 'yaml', ['plugins', 'a', 'nested', 'enabled'], undefined), 'yaml')
+  assert.equal(Object.hasOwn(restored.plugins.a.nested, 'enabled'), false)
+  assert.equal(restored.plugins.a.nested.keep, true)
+  assert.equal(restored.plugins.b.nested.enabled, false)
+  assert.equal(restored.plugins.b.nested.keep, true)
+  assert.deepEqual(replaceConfigAtPath({ sibling: true }, ['missing', 'nested', 'key'], undefined), { sibling: true })
+  for (const [format, input] of [['json', '{"sibling":true}'], ['yaml', 'sibling: true\n']]) {
+    assert.deepEqual(parseConfigDocument(configSourceForPlugin(input, format, ['missing', 'nested', 'key'], undefined), format), { sibling: true })
+  }
+})

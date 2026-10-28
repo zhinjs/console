@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
 @import "./design-system.css";
+@import "./settings.css";
 
 /* ============================================
    shadcn/ui Base Styles - Zinc Black/White/Gray

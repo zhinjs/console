@@ -22,7 +22,7 @@ const builtinNames: Readonly<Record<string, string>> = {
   "/plugins": "功能管理",
   "/plugins/:name": "插件详情",
   "/marketplace": "功能商店",
-  "/config": "配置",
+  "/config": "设置",
   "/env": "环境变量",
   "/files": "项目文件",
   "/database": "数据库",

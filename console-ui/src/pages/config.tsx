@@ -6,12 +6,11 @@ import { PluginConfigForm } from '../components/PluginConfigForm'
 import { parse as parseYaml } from 'yaml'
 import {
   Settings, AlertCircle, Save, Loader2, X,
-  RefreshCw, FileCode
+  RefreshCw, FileCode, ChevronRight, ArrowLeft, SlidersHorizontal, Brain, Bot, Blocks
 } from 'lucide-react'
 import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Alert, AlertDescription } from '../components/ui/alert'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
 import { Input } from '../components/ui/input'
 import { CodeEditor } from './files/code-editor'
 import { Skeleton } from '../components/ui/skeleton'
@@ -21,7 +20,7 @@ import { readErrorSummary } from '../utils/read-error.mjs'
 import { isDemoMode } from '../utils/demo-mode'
 import { editSourceDraft, saveSourceDraft, type SourceDraft } from './config-source-draft.mjs'
 import { validateConfigSource } from './config-source-validation.mjs'
-import { configSectionKeys, resolveConfigSection } from './config-navigation.mjs'
+import { buildSettingsCatalog, resolveSettingsSelection, type SettingsEntry } from './settings-model.mjs'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { WelcomeFlowContext } from './WelcomeFlowContext'
@@ -45,7 +44,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
   const pluginFromUrl = searchParams.get('plugin')?.trim() ?? ''
   const { source, format, configKeys: pluginKeys, loading, loaded, error, errorOperation, clearSaveError, load, saveBound, snapshot } = useConfigSource()
   const [activeSection, setActiveSection] = useState<string>(() => pluginFromUrl ? `plugin:${pluginFromUrl}` : 'general')
-  const [visitedSections, setVisitedSections] = useState<Set<string>>(() => new Set())
+  const [visitedEntries, setVisitedEntries] = useState<Map<string, SettingsEntry>>(() => new Map())
   const [sectionFilter, setSectionFilter] = useState('')
   const [sourceDraft, setSourceDraft] = useState<SourceDraft | null>(null)
   const sourceText = sourceDraft?.source ?? source
@@ -64,11 +63,19 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
     }
   }, [source, format])
 
-  const sectionKeys = useMemo(() => configSectionKeys(parsedConfig, pluginKeys), [parsedConfig, pluginKeys])
-  const visibleSection = resolveConfigSection(activeSection, sectionKeys)
+  const catalog = useMemo(() => buildSettingsCatalog(parsedConfig, pluginKeys, snapshot?.configPaths), [parsedConfig, pluginKeys, snapshot?.configPaths])
+  const selection = resolveSettingsSelection(activeSection, catalog)
+  const activeEntry = selection.entry
+  const activeGroup = catalog.find(group => group.id === selection.group) ?? catalog[0]
+  const normalizedFilter = sectionFilter.trim().toLocaleLowerCase()
+  const listEntries = activeGroup.entries.filter(entry =>
+    [entry.title, entry.description, entry.configKey].some(value => i18n.t(value).toLocaleLowerCase().includes(normalizedFilter)))
+  const sections = [...new Set(listEntries.map(entry => entry.section ?? 'general'))]
+  const ownerKeys = [...new Set(catalog.flatMap(group => group.entries.map(entry => entry.configKey)))]
   useEffect(() => {
-    if (loaded && visibleSection.startsWith('plugin:')) setVisitedSections(previous => previous.has(visibleSection) ? previous : new Set([...previous, visibleSection]))
-  }, [loaded, visibleSection])
+    if (loaded && activeEntry) setVisitedEntries(previous => previous.get(activeEntry.configKey)?.id === activeEntry.id
+      ? previous : new Map(previous).set(activeEntry.configKey, activeEntry))
+  }, [loaded, activeEntry])
 
   const sourceIssue = useMemo(() => validateConfigSource(sourceText, draftFormat, i18n.locale), [sourceText, draftFormat, i18n])
 
@@ -113,7 +120,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
   if (loading && !source) {
     return (
       <div className="space-y-4">
-        <PageHeader title={i18n.t("配置")} description={i18n.t("加载配置中...")} />
+        <PageHeader title={i18n.t("设置")} description={i18n.t("加载配置中...")} />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24" />)}
         </div>
@@ -124,8 +131,8 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
   return (
     <div className="space-y-4">
       <PageHeader
-        title={i18n.t("配置")}
-        description={i18n.t("默认按字段定义编辑，每项配置均可切换表单与源码。")}
+        title={i18n.t("设置")}
+        description={i18n.t("按用途查找设置；需要调整时，再打开对应配置。")}
         actions={
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
@@ -145,43 +152,96 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
         </Alert>
       )}
 
-      {searchParams.get('useCase') === 'group-welcome' && pluginFromUrl && visibleSection === `plugin:${pluginFromUrl}` && loaded
+      {searchParams.get('useCase') === 'group-welcome' && pluginFromUrl && activeEntry?.configKey === pluginFromUrl && loaded
         ? <WelcomeFlowContext instanceKey={pluginFromUrl} kind="config" /> : null}
 
-      {loaded ? <Tabs value={visibleSection} onValueChange={setActiveSection} orientation="vertical" className="console-config-layout">
-        <div className="console-config-nav">
-        <Input type="search" aria-label={i18n.t("筛选配置项")} placeholder={i18n.t("搜索配置项或插件实例…")} value={sectionFilter} onChange={event => setSectionFilter(event.target.value)} />
-        <TabsList className="console-config-nav-list flex h-auto max-h-48 flex-wrap items-stretch justify-start gap-1 overflow-y-auto border border-[var(--console-border-default)] bg-card p-1.5 lg:max-h-[calc(100dvh-12rem)] lg:flex-col lg:flex-nowrap">
-          <TabsTrigger value="declarations" className="shrink-0 lg:w-full lg:justify-start">{i18n.t("插件声明")}</TabsTrigger>
-          <TabsTrigger value="yaml" className="gap-1.5 shrink-0 lg:w-full lg:justify-start">
-            <FileCode className="w-4 h-4" />
-            {i18n.t("完整源码")}</TabsTrigger>
-          <span className="console-config-nav-label" aria-hidden="true">{i18n.t("配置项")} · {sectionKeys.length}</span>
-          {sectionKeys.filter(key => key.toLowerCase().includes(sectionFilter.trim().toLowerCase())).map((key) => (
-            <TabsTrigger key={key} value={`plugin:${key}`} className="shrink-0 lg:w-full lg:justify-start" title={key}>
-              <span className="truncate">{key}</span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
-        </div>
+      {loaded ? <div className="console-settings-layout">
+        <nav className="console-settings-nav" aria-label={i18n.t("设置分类")}>
+          <div className="console-settings-nav-primary">
+            {catalog.map(group => {
+              const Icon = group.id === 'general' ? SlidersHorizontal : group.id === 'models' ? Brain : group.id === 'presets' ? Bot : Blocks
+              return <button key={group.id} type="button" className="console-settings-nav-item"
+                aria-current={!selection.source && activeGroup.id === group.id ? 'page' : undefined}
+                onClick={() => { setActiveSection(group.id); setSectionFilter('') }}>
+                <Icon aria-hidden="true" /><span>{i18n.t(group.title)}</span>
+              </button>
+            })}
+          </div>
+          <details className="console-settings-advanced" open={selection.source ? true : undefined}>
+            <summary>{i18n.t("高级")}</summary>
+            <button type="button" className="console-settings-nav-item" aria-current={selection.source === 'declarations' ? 'page' : undefined} onClick={() => setActiveSection('declarations')}>
+              <Blocks aria-hidden="true" /><span>{i18n.t("插件声明")}</span>
+            </button>
+            <button type="button" className="console-settings-nav-item" aria-current={selection.source === 'yaml' ? 'page' : undefined} onClick={() => setActiveSection('yaml')}>
+              <FileCode aria-hidden="true" /><span>{i18n.t("完整源码")}</span>
+            </button>
+          </details>
+        </nav>
 
-        {sectionKeys.map((key) => (
-          <TabsContent key={key} value={`plugin:${key}`} forceMount hidden={visibleSection !== `plugin:${key}`} className="mt-0 min-w-0">
-            {visitedSections.has(`plugin:${key}`) || visibleSection === `plugin:${key}` ? <PluginConfigForm pluginName={key} sourceRevision={snapshot?.revision} purposeFields={searchParams.get('useCase') === 'group-welcome' && key === pluginFromUrl ? ['welcomeMessage', 'welcomeConversations'] : undefined} onSuccess={() => { if (isInboxCacheScopeActive(connectionScope)) void load().catch(() => {}) }} onOpenYaml={() => { if (isInboxCacheScopeActive(connectionScope)) setActiveSection('yaml') }} /> : null}
-          </TabsContent>
-        ))}
+        <div className="console-settings-content">
+          {!selection.source && !activeEntry ? <section aria-labelledby="settings-category-title" className="console-settings-category">
+            <header className="console-settings-category-heading">
+              <div><h2 id="settings-category-title">{i18n.t(activeGroup.title)}</h2><p>{i18n.t(activeGroup.description)}</p></div>
+              {activeGroup.entries.length > 0 ? <Input type="search" aria-label={i18n.t("搜索设置")}
+                placeholder={i18n.t("搜索名称或用途…")} value={sectionFilter} onChange={event => setSectionFilter(event.target.value)} /> : null}
+            </header>
+            {sections.map(section => <section className="console-settings-section" key={section}>
+              {section !== 'general' ? <h3>{i18n.t(section === 'builtin' ? '内置能力' : section === 'extensions' ? '已安装与自定义' : '未识别配置')}</h3> : null}
+              <div className="console-settings-list">
+                {listEntries.filter(entry => (entry.section ?? 'general') === section).map(entry => <button key={entry.id} type="button"
+                  className="console-settings-entry" onClick={() => setActiveSection(entry.id)}>
+                  <span className="console-settings-entry-icon" aria-hidden="true"><Settings /></span>
+                  <span className="console-settings-entry-copy"><strong>{i18n.t(entry.title)}</strong><span>{i18n.t(entry.description)}</span>
+                    <small>{entry.configKey}{!entry.writable ? ` · ${i18n.t("只读")}` : ''}</small></span>
+                  <ChevronRight className="console-settings-entry-arrow" aria-hidden="true" />
+                </button>)}
+              </div>
+            </section>)}
+            {!listEntries.length ? <div className="console-settings-empty" role="status">
+              <Settings aria-hidden="true" /><h3>{i18n.t(activeGroup.entries.length ? '没有匹配的设置' : '当前没有可配置项目')}</h3>
+              <p>{i18n.t(activeGroup.entries.length ? '换一个名称或用途重新搜索。' : '此处只展示当前 Host 提供的配置，不会自动安装或启用功能。')}</p>
+              {normalizedFilter ? <Button variant="outline" onClick={() => setSectionFilter('')}>{i18n.t("清除搜索")}</Button> : null}
+            </div> : null}
+          </section> : null}
 
-        <TabsContent value="declarations" className="mt-0 min-w-0">
+          {!selection.source && activeEntry ? <div className="console-settings-detail-heading">
+            {activeGroup.id === 'general' || activeGroup.id === 'plugins' ? <Button type="button" variant="ghost" size="sm" onClick={() => { setActiveSection(activeGroup.id); setSectionFilter('') }}>
+              <ArrowLeft aria-hidden="true" />{i18n.t("返回 {0}", [i18n.t(activeGroup.title)])}
+            </Button> : null}
+            <p>{i18n.t("未修改的可选项沿用默认值；保存只更新当前配置，运行状态需另行核对。")}</p>
+            {activeEntry.configKey === 'ai' ? <p>{i18n.t("模型、预设和对话能力共用一份 AI 草稿；保存会包含这份草稿中的全部修改。")}</p> : null}
+          </div> : null}
+
+          {ownerKeys.map(key => {
+            // A configuration owner has exactly one form and CAS-bound draft. In
+            // particular, switching AI views never creates independent ai drafts.
+            const entry = activeEntry?.configKey === key ? activeEntry : visitedEntries.get(key)
+            const visible = !selection.source && activeEntry?.configKey === key
+            return <section key={key} hidden={!visible} className="console-settings-form" aria-label={entry ? i18n.t(entry.title) : key}>
+              {entry && !entry.writable ? <Card className="console-settings-empty">
+                <Settings aria-hidden="true" /><h3>{i18n.t(entry.title)}</h3>
+                <p>{i18n.t("Host 未提供此项的可编辑路径。可查看完整源码，或刷新后重新读取配置定义。")}</p>
+                <Button variant="outline" onClick={() => setActiveSection('yaml')}>{i18n.t("查看完整源码")}</Button>
+              </Card> : entry ? <PluginConfigForm pluginName={key} sourceRevision={snapshot?.revision}
+                displayTitle={i18n.t(entry.title)} description={i18n.t(entry.description)}
+                fieldNames={entry.fieldNames} excludedFieldNames={entry.excludedFieldNames ?? []}
+                purposeFields={searchParams.get('useCase') === 'group-welcome' && key === pluginFromUrl ? ['welcomeMessage', 'welcomeConversations'] : undefined}
+                onSuccess={() => { if (isInboxCacheScopeActive(connectionScope)) void load().catch(() => {}) }}
+                onOpenYaml={() => { if (isInboxCacheScopeActive(connectionScope)) setActiveSection('yaml') }} /> : null}
+            </section>
+          })}
+
+        <section hidden={selection.source !== 'declarations'} className="mt-0 min-w-0" aria-label={i18n.t("插件声明")}>
           <Card className="space-y-3 p-4">
             <h2 className="font-semibold">{i18n.t("插件实例与启停声明")}</h2>
             <p className="text-sm text-muted-foreground">{i18n.t("configVersion、plugins 和 disable_plugins 决定配置版本、插件挂载与启停。通过插件管理创建或调整实例；业务参数在对应配置项中编辑。")}</p>
             <Button asChild variant="outline"><Link to="/plugins">{i18n.t("管理插件实例")}</Link></Button>
             <div className="h-64 overflow-hidden rounded-lg border"><CodeEditor value={JSON.stringify(Object.fromEntries(['configVersion', 'plugins', 'disable_plugins'].filter(key => Object.hasOwn(parsedConfig, key)).map(key => [key, parsedConfig[key]])), null, 2)} language="json" readOnly ariaLabel={i18n.t("当前插件声明（只读）")} /></div>
           </Card>
-        </TabsContent>
+        </section>
 
-        <TabsContent value="yaml" className="mt-0 min-w-0 space-y-3">
-          <p className="text-sm text-muted-foreground">{i18n.t("完整源码基于已保存配置；各项表单中尚未保存的草稿仍会保留。编辑单项时可在该项内切换源码，与表单共用草稿。")}</p>
+        <section hidden={selection.source !== 'yaml'} className="mt-0 min-w-0 space-y-3" aria-label={i18n.t("完整源码")}>
+          <p className="text-sm text-muted-foreground">{i18n.t("完整源码包含已保存的全部设置；表单中的未保存草稿仍会保留，两种编辑方式不会自动合并。")}</p>
           <div className="h-[min(65vh,640px)] min-h-[320px] overflow-hidden rounded-lg border">
             <CodeEditor
               ariaLabel={i18n.t("{0} 配置源码", [draftFormat.toUpperCase()])}
@@ -206,8 +266,9 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
             )}
             {sourceDirty && <span className="text-xs text-muted-foreground">{i18n.t("有未保存的更改；草稿绑定开始编辑时的版本，刷新不会覆盖或自动合并草稿。冲突后请核对最新源码再重新编辑。")}</span>}
           </div>
-        </TabsContent>
-      </Tabs> : null}
+        </section>
+        </div>
+      </div> : null}
     </div>
   )
 }
@@ -217,7 +278,7 @@ function DemoConfigPage() {
   return (
     <div className="space-y-4">
       <PageHeader
-        title={i18n.t("配置")}
+        title={i18n.t("设置")}
         description={i18n.t("Demo 不读取 Host 原始配置；完整配置工作台仅在私有 full 模式开放")}
       />
       <Alert>

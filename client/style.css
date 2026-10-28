@@ -2,6 +2,7 @@
 @config "./tailwind.config.js";
 @import "../console-ui/src/design-system.css";
 @import "../console-ui/src/agent-playground.css";
+@import "../console-ui/src/settings.css";
 
 /* ============================================
    shadcn/ui Base Styles - Zinc Black/White/Gray

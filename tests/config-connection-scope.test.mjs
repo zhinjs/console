@@ -13,6 +13,7 @@ import { createConfigDraftGuard } from '../console-ui/src/components/PluginConfi
 import * as sourceDraftModel from '../console-ui/src/pages/config-source-draft.mjs'
 import * as sourceValidation from '../console-ui/src/pages/config-source-validation.mjs'
 import * as configNavigation from '../console-ui/src/pages/config-navigation.mjs'
+import * as settingsModel from '../console-ui/src/pages/settings-model.mjs'
 import { numericFieldIssue } from '../console-ui/src/components/PluginConfigForm/numeric-validation.mjs'
 import { isConversationScopeField } from '../console-ui/src/components/PluginConfigForm/conversation-scope-model.mjs'
 import { translate } from '../console-ui/src/i18n/locale.mjs'
@@ -60,7 +61,7 @@ function hookRuntime() {
   }
 }
 
-function fixture() {
+function fixture(query = '') {
   let locale = 'zh-CN'
   let messages = localeModule.useI18n()
   const localized = { ...localeModule, useI18n: () => messages }
@@ -86,7 +87,7 @@ function fixture() {
     '../../pages/files/code-editor': { CodeEditor: 'code-editor' }, './files/code-editor': { CodeEditor: 'code-editor' },
     './config-evidence-model.mjs': configEvidenceModel, './ConfigApplicationEvidence': { ConfigApplicationEvidence: 'config-evidence' },
     '../components/PluginConfigForm/config-evidence-model.mjs': configEvidenceModel,
-    'react-router-dom': { Link: 'a', useSearchParams: () => [new URLSearchParams(), () => {}] },
+    'react-router-dom': { Link: 'a', useSearchParams: () => [new URLSearchParams(query), () => {}] },
     'lucide-react': new Proxy({}, { get: () => 'i' }),
     './ConfigFieldExplanation': { ConfigFieldExplanation: 'field-explanation' },
     './SchemaFieldEditor': { SchemaFieldEditor: 'field-editor' }, '../ui/card': { Card: 'article' }, '../ui/badge': { Badge: 'span' },
@@ -99,7 +100,7 @@ function fixture() {
     '../components/ui/switch': { Switch: 'switch' }, '../components/PageHeader': { PageHeader: 'header' },
     '../components/toast': { useToast: () => ({ success: message => successes.push(message), error: message => errors.push(message) }) },
     '../utils/read-error.mjs': { readErrorSummary: value => value }, '../utils/demo-mode': { isDemoMode: () => false },
-    './config-source-draft.mjs': sourceDraftModel, './config-source-validation.mjs': sourceValidation, './config-navigation.mjs': configNavigation,
+    './config-source-draft.mjs': sourceDraftModel, './config-source-validation.mjs': sourceValidation, './config-navigation.mjs': configNavigation, './settings-model.mjs': settingsModel,
     './WelcomeFlowContext': { WelcomeFlowContext: 'welcome-flow-context' },
   }
   function compile(source) {
@@ -740,4 +741,217 @@ test('booleans render only a title-row switch, and list enums are checkboxes tha
   boxes[2].props.onCheckedChange(true); assert.deepEqual(changes.at(-1), ['b', 'c', 'zzz'])
   boxes[1].props.onCheckedChange(false); assert.deepEqual(changes.at(-1), ['zzz'])
   assert.equal(button(list, '添加列表项'), undefined)
+})
+
+test('settings categories share one raw root draft and original CAS without materializing defaults or losing hidden siblings', async () => {
+  const f = fixture(), connectionScope = f.authority.current()
+  let fields = ['providers']
+  const original = { providers: { primary: { model: 'old' } }, agents: { zhin: { provider: 'primary' } }, future: { keep: true } }
+  const source = { source: JSON.stringify({ ai: original, untouched: { keep: true } }), format: 'json', revision: 'ai-r1', configKeys: ['ai'], configPaths: { ai: ['ai'] } }
+  const definition = { type: 'object', object: { providers: { type: 'dict', inner: { type: 'any' } }, agents: { type: 'dict', inner: { type: 'any' } }, enabled: { type: 'boolean', default: true }, maxTurns: { type: 'number', default: 7 } }, additional: { type: 'any' } }
+  f.runtime.mount(() => f.form.PluginConfigFormSession({ pluginName: 'ai', connectionScope, fieldNames: fields, displayTitle: '模型', onOpenYaml: () => {} }))
+  f.answer('config:get-source', source); f.answer('schema:get', definition); await f.runtime.settle()
+  const currentFields = () => elements(f.runtime.value).filter(item => item.type === 'field-editor')
+  assert.deepEqual(currentFields().map(item => item.props.name), ['providers'])
+  assert.equal(button(f.runtime.value, '此项源码'), undefined)
+  assert.ok(button(f.runtime.value, '打开完整源码'))
+  currentFields()[0].props.onChange({ primary: { model: 'edited' } }); await f.runtime.settle()
+  fields = ['agents']; f.runtime.render(); await f.runtime.settle()
+  assert.deepEqual(currentFields().map(item => item.props.name), ['agents'])
+  currentFields()[0].props.onChange({ zhin: { provider: 'primary', nickname: 'edited' } }); await f.runtime.settle()
+  fields = ['enabled']; f.runtime.render(); await f.runtime.settle()
+  assert.equal(currentFields()[0].props.value, undefined)
+  assert.equal(currentFields()[0].props.useDeclaredDefaults, true)
+  button(f.runtime.value, '保存配置').props.onClick()
+  const validation = f.answer('plugin:validate-config', valid); await f.runtime.settle()
+  const expected = { ...original, providers: { primary: { model: 'edited' } }, agents: { zhin: { provider: 'primary', nickname: 'edited' } } }
+  assert.deepEqual(validation.input.data, expected)
+  const write = f.answer('config:replace-source', { success: true, revision: 'ai-r2', restartRequired: true }); await f.runtime.settle()
+  assert.equal(write.input.expectedRevision, 'ai-r1')
+  assert.deepEqual(JSON.parse(write.input.source), { ai: expected, untouched: { keep: true } })
+  f.runtime.unmount()
+})
+
+test('settings category with no Host-defined field does not expose the root or additional fields', async () => {
+  const f = fixture(), connectionScope = f.authority.current()
+  f.runtime.mount(() => f.form.PluginConfigFormSession({ pluginName: 'group-suite', connectionScope, fieldNames: ['missing'] }))
+  f.answer('config:get-source', snapshot('keep')); f.answer('schema:get', { ...schema, additional: { type: 'any' } }); await f.runtime.settle()
+  assert.equal(elements(f.runtime.value).filter(item => item.type === 'field-editor').length, 0)
+  assert.match(label(f.runtime.value), /Host 尚未提供此分类的可编辑字段/)
+  assert.equal(button(f.runtime.value, '此项源码'), undefined)
+  f.runtime.unmount()
+})
+
+test('an invalid JSON draft in a hidden settings category still blocks validation after editor unmount cleanup', async () => {
+  const f = fixture(), connectionScope = f.authority.current()
+  let fields = ['welcomeMessage']
+  f.runtime.mount(() => f.form.PluginConfigFormSession({ pluginName: 'group-suite', connectionScope, fieldNames: fields }))
+  f.answer('config:get-source', snapshot('keep')); f.answer('schema:get', schema); await f.runtime.settle()
+  const editor = elements(f.runtime.value).find(item => item.type === 'field-editor')
+  editor.props.drafts.json.set(editor.props.path, { text: '{', value: 'keep', error: true })
+  editor.props.onValidityChange(editor.props.path, true); await f.runtime.settle()
+  fields = ['welcomeConversations']; f.runtime.render(); editor.props.onValidityChange(editor.props.path, false); await f.runtime.settle()
+  assert.equal(button(f.runtime.value, '保存配置').props.disabled, true)
+  const before = f.calls.length; button(f.runtime.value, '保存配置').props.onClick(); await f.runtime.settle()
+  assert.equal(f.calls.length, before)
+  fields = ['welcomeMessage']; f.runtime.render(); await f.runtime.settle()
+  assert.equal(elements(f.runtime.value).find(item => item.type === 'field-editor').props.drafts.json.get(editor.props.path).text, '{')
+  button(f.runtime.value, '撤销草稿').props.onClick(); await f.runtime.settle()
+  assert.equal(button(f.runtime.value, '保存配置').props.disabled, false)
+  f.runtime.unmount()
+})
+
+test('scoped scalar defaults are displayed without writes and restore-default removes the override', () => {
+  const f = fixture(), changes = [], drafts = { json: new Map(), unions: new Map(), originals: new Map() }
+  const props = value => ({ name: 'enabled', path: '$/enabled', field: { type: 'boolean', default: true }, value, useDeclaredDefaults: true, drafts, onChange: next => changes.push(next) })
+  let tree = f.editor.SchemaFieldEditor(props(undefined))
+  assert.equal(elements(tree).find(item => item.type === 'switch').props.checked, true)
+  assert.deepEqual(changes, [])
+  assert.match(label(tree), /使用默认值/)
+  assert.equal(button(tree, '恢复默认'), undefined)
+  tree = f.editor.SchemaFieldEditor(props(false))
+  assert.equal(elements(tree).find(item => item.type === 'switch').props.checked, false)
+  assert.match(label(tree), /已自定义/)
+  button(tree, '恢复默认').props.onClick()
+  assert.deepEqual(changes, [undefined])
+})
+
+const settingsSnapshot = {
+  source: JSON.stringify({ locale: 'zh-CN', http: { port: 8068 },
+    ai: { providers: { service: { apiKey: '${MODEL_KEY}', models: ['model-a'] } }, agents: { zhin: { provider: 'service', model: 'model-a' } } },
+    plugins: { 'calendar-custom': '@example/calendar' }, 'calendar-custom': { provider: 'none' }, unknown_saved: { untouched: true } }),
+  format: 'json', revision: 'settings-original', configKeys: ['locale', 'http', 'ai', 'calendar-custom'],
+  configPaths: { locale: ['locale'], http: ['http'], ai: ['ai'], 'calendar-custom': ['calendar-custom'] },
+}
+const pageForm = (f, name) => elements(f.runtime.value).filter(element => element.type === f.form.PluginConfigForm && element.props.pluginName === name)
+async function settingsPage() {
+  const f = fixture(), root = f.page.EditableConfigPage()
+  f.runtime.mount(() => f.page.EditableConfigSession(root.props)); f.answer('config:get-source', settingsSnapshot); await f.runtime.settle()
+  return f
+}
+
+test('actual settings page separates four categories and retains one owner form across model, preset and AI capability views', async () => {
+  const f = await settingsPage()
+  for (const title of ['通用设置', '模型', 'Agent 预设', '插件配置']) assert.ok(button(f.runtime.value, title))
+  assert.equal(pageForm(f, 'ai').length, 0, 'category landing does not request every form')
+  button(f.runtime.value, '模型').props.onClick(); await f.runtime.settle()
+  let forms = pageForm(f, 'ai'); assert.equal(forms.length, 1); assert.deepEqual(forms[0].props.fieldNames, ['providers'])
+  const formType = forms[0].type, ownerSection = elements(f.runtime.value).find(element => element.type === 'section' && element.key === 'ai')
+  assert.ok(ownerSection); assert.equal(ownerSection.props.hidden, false)
+  button(f.runtime.value, 'Agent 预设').props.onClick(); await f.runtime.settle()
+  forms = pageForm(f, 'ai'); assert.equal(forms.length, 1); assert.equal(forms[0].type, formType); assert.deepEqual(forms[0].props.fieldNames, ['agents'])
+  assert.equal(elements(f.runtime.value).filter(element => element.type === 'section' && element.key === 'ai').length, 1)
+  button(f.runtime.value, '插件配置').props.onClick(); await f.runtime.settle()
+  assert.equal(elements(f.runtime.value).find(element => element.type === 'section' && element.key === 'ai').props.hidden, true)
+  const capability = elements(f.runtime.value).find(element => element.type === 'button' && label(element).includes('对话与执行'))
+  capability.props.onClick(); await f.runtime.settle()
+  forms = pageForm(f, 'ai'); assert.equal(forms.length, 1); assert.deepEqual(forms[0].props.fieldNames, ['enabled', 'agent'])
+  assert.ok(label(f.runtime.value).includes('保存会包含这份草稿中的全部修改'))
+  assert.equal(f.calls.filter(call => call.input.type === 'config:replace-source').length, 0, 'navigation never writes configuration')
+  f.runtime.unmount()
+})
+
+test('actual settings page searches catalog metadata and explains an unknown saved section without fabricating a form', async () => {
+  const f = await settingsPage()
+  button(f.runtime.value, '插件配置').props.onClick(); await f.runtime.settle()
+  const search = () => elements(f.runtime.value).find(element => element.type === 'input' && element.props['aria-label'] === '搜索设置')
+  search().props.onChange({ target: { value: 'calendar-custom' } }); await f.runtime.settle()
+  assert.ok(elements(f.runtime.value).some(element => element.type === 'button' && label(element).includes('calendar-custom')))
+  assert.ok(!elements(f.runtime.value).some(element => element.type === 'button' && label(element).includes('unknown_saved')))
+  search().props.onChange({ target: { value: '${MODEL_KEY}' } }); await f.runtime.settle()
+  assert.ok(label(f.runtime.value).includes('没有匹配的设置'))
+  button(f.runtime.value, '清除搜索').props.onClick(); await f.runtime.settle()
+  elements(f.runtime.value).find(element => element.type === 'button' && label(element).includes('unknown_saved')).props.onClick(); await f.runtime.settle()
+  assert.equal(pageForm(f, 'unknown_saved').length, 0)
+  assert.ok(label(f.runtime.value).includes('Host 未提供此项的可编辑路径'))
+  assert.equal(f.calls.filter(call => call.input.type === 'schema:get').length, 0)
+  f.runtime.unmount()
+})
+
+test('whole-root settings with an empty exclusion retain scalar, array and dictionary editors without guessing defaults', async () => {
+  for (const [pluginName, definition, original] of [
+    ['locale', { type: 'string', default: 'zh-CN' }, 'en'],
+    ['menuKeyword', { type: 'list', inner: { type: 'string' } }, ['menu']],
+    ['customDict', { type: 'dict', inner: { type: 'number' } }, { a: 1 }],
+  ]) {
+    const f = fixture(), connectionScope = f.authority.current()
+    f.runtime.mount(() => f.form.PluginConfigFormSession({ pluginName, connectionScope, excludedFieldNames: [] }))
+    f.answer('config:get-source', { source: JSON.stringify({ [pluginName]: original, sibling: 'keep' }), format: 'json', revision: 'root-r1', configKeys: [pluginName], configPaths: { [pluginName]: [pluginName] } })
+    f.answer('schema:get', definition); await f.runtime.settle()
+    const editors = elements(f.runtime.value).filter(item => item.type === 'field-editor')
+    assert.equal(editors.length, 1); assert.equal(editors[0].props.field.type, definition.type)
+    assert.deepEqual(editors[0].props.value, original)
+    assert.equal(label(f.runtime.value).includes('Host 尚未提供此分类的可编辑字段'), false)
+    button(f.runtime.value, '保存配置').props.onClick(); const validation = f.answer('plugin:validate-config', valid); await f.runtime.settle()
+    assert.deepEqual(validation.input.data, original)
+    const write = f.answer('config:replace-source', { success: true, revision: 'root-r2', restartRequired: true }); await f.runtime.settle()
+    assert.deepEqual(JSON.parse(write.input.source), { [pluginName]: original, sibling: 'keep' })
+    assert.equal(write.input.expectedRevision, 'root-r1')
+    f.runtime.unmount()
+  }
+})
+
+test('settings diagnostics follow editable fields in one closed disclosure and unset values do not claim an absent default', async () => {
+  const f = fixture(), connectionScope = f.authority.current()
+  f.runtime.mount(() => f.form.PluginConfigFormSession({ pluginName: 'group-suite', connectionScope, fieldNames: ['welcomeMessage'] }))
+  f.answer('config:get-source', snapshot('keep')); f.answer('schema:get', schema); await f.runtime.settle()
+  const all = elements(f.runtime.value), editor = all.findIndex(item => item.type === 'field-editor')
+  const diagnostic = all.find(item => item.type === 'details' && label(item).includes('高级与诊断'))
+  assert.ok(diagnostic); assert.equal(diagnostic.props.open, undefined)
+  assert.ok(all.indexOf(diagnostic) > editor)
+  assert.equal(elements(diagnostic).filter(item => item.type === 'field-explanation').length, 1)
+  assert.equal(elements(diagnostic).filter(item => item.type === 'config-evidence').length, 1)
+  assert.equal(button(f.runtime.value, '表单'), undefined)
+  assert.equal(button(f.runtime.value, '最小必填配置'), undefined)
+  const tree = f.editor.SchemaFieldEditor({ name: 'unset', field: { type: 'string' }, value: undefined, useDeclaredDefaults: true, onChange: () => assert.fail('render must not write') })
+  assert.ok(label(tree).includes('尚未设置；不编辑时保持省略。'))
+  assert.ok(!label(tree).includes('使用默认值'))
+  f.runtime.unmount()
+})
+
+test('existing plugin configuration links and group-welcome context still open the original owner and purpose fields', async () => {
+  const f = fixture('plugin=group-suite&useCase=group-welcome'), root = f.page.EditableConfigPage()
+  f.runtime.mount(() => f.page.EditableConfigSession(root.props)); f.answer('config:get-source', snapshot('saved')); await f.runtime.settle()
+  const forms = pageForm(f, 'group-suite')
+  assert.equal(forms.length, 1)
+  assert.deepEqual(forms[0].props.purposeFields, ['welcomeMessage', 'welcomeConversations'])
+  assert.deepEqual(forms[0].props.excludedFieldNames, [])
+  assert.ok(elements(f.runtime.value).some(element => element.type === 'welcome-flow-context' && element.props.instanceKey === 'group-suite'))
+  assert.equal(elements(f.runtime.value).find(element => element.type === 'section' && element.key === 'group-suite').props.hidden, false)
+  f.runtime.unmount()
+})
+
+test('switching a minimum-only AI capability view to one-field models still exposes the optional providers field', async () => {
+  const f = fixture(), connectionScope = f.authority.current()
+  let include
+  f.runtime.mount(() => f.form.PluginConfigFormSession({ pluginName: 'ai', connectionScope, fieldNames: include, excludedFieldNames: include ? undefined : ['providers'] }))
+  f.answer('config:get-source', { source: JSON.stringify({ ai: { providers: { primary: { model: 'saved' } } } }), format: 'json', revision: 'ai-r1', configKeys: ['ai'], configPaths: { ai: ['ai'] } })
+  f.answer('schema:get', { type: 'object', object: { providers: { type: 'dict', inner: { type: 'any' } }, enabled: { type: 'boolean', default: true }, maxTurns: { type: 'number', default: 7 } } }); await f.runtime.settle()
+  button(f.runtime.value, '最小必填配置').props.onClick(); await f.runtime.settle()
+  include = ['providers']; f.runtime.render(); await f.runtime.settle()
+  const editors = elements(f.runtime.value).filter(item => item.type === 'field-editor')
+  assert.deepEqual(editors.map(item => item.props.name), ['providers'])
+  assert.deepEqual(editors[0].props.value, { primary: { model: 'saved' } })
+  assert.equal(button(f.runtime.value, '全部配置'), undefined)
+  f.runtime.unmount()
+})
+
+test('actual root scalar restore-default saves YAML with the override absent rather than null', async () => {
+  const f = fixture(), connectionScope = f.authority.current()
+  f.runtime.mount(() => f.form.PluginConfigFormSession({ pluginName: 'menuKeyword', connectionScope, excludedFieldNames: [] }))
+  f.answer('config:get-source', { source: 'menuKeyword: custom\nsibling:\n  keep: true\n  nullable: null\n', format: 'yaml', revision: 'menu-r1', configKeys: ['menuKeyword'], configPaths: { menuKeyword: ['menuKeyword'] } })
+  f.answer('schema:get', { type: 'string', default: 'menu' }); await f.runtime.settle()
+  const props = elements(f.runtime.value).find(item => item.type === 'field-editor').props
+  const editor = f.editor.SchemaFieldEditor(props)
+  button(editor, '恢复默认').props.onClick(); await f.runtime.settle()
+  assert.equal(elements(f.runtime.value).find(item => item.type === 'field-editor').props.value, undefined)
+  button(f.runtime.value, '保存配置').props.onClick()
+  const validation = f.answer('plugin:validate-config', valid); await f.runtime.settle()
+  assert.equal(validation.input.data, undefined)
+  const write = f.answer('config:replace-source', { success: true, revision: 'menu-r2', restartRequired: true }); await f.runtime.settle()
+  const saved = sourceModel.parseConfigDocument(write.input.source, 'yaml')
+  assert.equal(Object.hasOwn(saved, 'menuKeyword'), false)
+  assert.deepEqual(saved.sibling, { keep: true, nullable: null })
+  assert.equal(write.input.expectedRevision, 'menu-r1')
+  f.runtime.unmount()
 })
