@@ -1,0 +1,64 @@
+console-ui/src/components/PluginConfigForm/source-model.mjs
+  s_9622fd28aba994::t_5f5d2e1ca269c4 16-20,23,28,42
+  s_9622fd28aba994::t_7f5f2f7884247a 39-41
+console-ui/src/pages/settings-model.d.mts
+  s_9622fd28aba994::t_3e319c089f7ee4 1-29
+console-ui/src/pages/settings-model.mjs
+  s_9622fd28aba994::t_3af147f8e71de6 12,19-31,86,88-92
+  s_9622fd28aba994::t_3e319c089f7ee4 1-11,13-18,32-85,87,93-129
+tests/localization-lifecycle.test.mjs
+  s_9622fd28aba994::t_1a47bb3de62921 85
+client/style.css
+  s_9622fd28aba994::t_5e6f6af5e9b0a8 5
+tests/settings-model.test.mjs
+  s_9622fd28aba994::t_3e319c089f7ee4 1-17,20-21,24-29,53-104
+  s_9622fd28aba994::t_3af147f8e71de6 18-19,22-23,30-52
+console-ui/src/components/PluginConfigForm/index.tsx
+  s_9622fd28aba994::t_06644e164dae91 58-59,125,162-163,165,168,172-173
+  s_9622fd28aba994::t_6fc2d621664b88 94,166,177,181-189
+  s_9622fd28aba994::t_afbe5fee8273de 24-35,45,47,76,92-93,95,148
+  s_9622fd28aba994::t_09dc1e039dbabc 48,96
+console-ui/src/components/PluginConfigForm/SchemaFieldEditor.tsx
+  s_9622fd28aba994::t_be3f1e0892de02 228
+  s_9622fd28aba994::t_f8c3955e91d1a6 20-21,181,184-187,194,201,211-212,227
+README.md
+  s_9622fd28aba994::t_18d37e6a06c914 111
+  s_9622fd28aba994::t_3fa61a8e09728e 72,112-113
+console-ui/src/i18n/messages.en.mjs
+  s_9622fd28aba994::t_0586c3dc2e3432 21
+  s_9622fd28aba994::t_da6e0325c2fefe 4-20
+  s_9622fd28aba994::t_1f86e23f48748d 3
+  s_9622fd28aba994::t_3fa61a8e09728e 22-77
+tests/config-connection-scope.test.mjs
+  s_9622fd28aba994::t_788ab44427e0e3 16,64,90,103,745-847,849-908,936
+  s_9622fd28aba994::t_18d37e6a06c914 848,909-935,937
+  s_9622fd28aba994::t_124135bde0eb53 938-957
+console-ui/src/i18n/navigation.ts
+  s_9622fd28aba994::t_82a91372ab8c13 25
+console-ui/src/pages/config.tsx
+  s_9622fd28aba994::t_0619dea4170ba6 9,23,47,66-74,76-78,123,134-135,155,158-205,207-213,215-234,241,243-244,269-271,281
+console-ui/src/registerBuiltinShell.tsx
+  s_9622fd28aba994::t_fd60cccf0b5cbb 204
+console-ui/src/settings.css
+  s_9622fd28aba994::t_c568fd236e5f0a 1-83
+console-ui/src/style.css
+  s_9622fd28aba994::t_66ddafc7049a70 4
+tests/plugin-config-nested.test.mjs
+  s_9622fd28aba994::t_4ab6b93e345cbd 89-122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bc4cba2e868e08bf26e96eefd496a239946ff1a3",
+  "prompts": {},
+  "sessions": {
+    "s_9622fd28aba994": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a166a4-5b4c-7e22-80f0-d3374c43b4fb",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
