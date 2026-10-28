@@ -21,3 +21,16 @@ export async function probeAssistantJobs(fetchJobs, locale = 'zh-CN') {
     return true
   } catch { return false }
 }
+
+const KNOWN_JOB_ERRORS = [
+  [/endpoint not found/i, "发送目标的聊天账号不存在或已改名。请确认该账号仍在“聊天账号”中在线，或修改任务的发送目标。"],
+  [/timeout|timed out/i, "执行超时。请检查模型服务与网络，稍后会按计划重试。"],
+  [/rate limit|429/i, "模型服务限流。请降低频率或检查 Provider 额度。"],
+  [/unauthori[sz]ed|401|invalid api key/i, "模型服务鉴权失败。请检查 Provider 的 API Key 配置。"],
+]
+/** Explains a raw job error in task terms; unknown errors return null and the raw text stays the message. */
+export function explainJobError(error, locale = 'zh-CN') {
+  if (typeof error !== 'string' || !error) return null
+  const known = KNOWN_JOB_ERRORS.find(([pattern]) => pattern.test(error))
+  return known ? translate(locale, known[1]) : null
+}

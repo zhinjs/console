@@ -5,24 +5,27 @@ import { cn } from '@zhin.js/client'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { parseImSessionKey, isLikelySessionKey, SESSION_SCOPE_LABELS } from '../utils/agent-session'
+import { relativeSince, type RecentSession } from '../pages/agent-session-recent.mjs'
 
 interface AgentSessionPickerProps {
   value: string
   history: string[]
+  /** Sessions the Host recorded Agent activity for; null while unknown or unavailable. */
+  recent?: RecentSession[] | null
   loading?: boolean
   actionLabel?: string
   onChange: (value: string) => void
   onLoad: (value: string) => void
 }
 
-function SessionIdentity({ sessionKey }: { sessionKey: string }) {
+function SessionIdentity({ sessionKey, activity }: { sessionKey: string; activity?: RecentSession }) {
   const i18n = useI18n()
   const parsed = parseImSessionKey(sessionKey)
   if (!parsed) {
     return (
       <span className="min-w-0 flex-1 text-left">
         <span className="block truncate text-sm font-semibold">{i18n.t("自定义会话")}</span>
-        <code className="mt-1 block truncate text-[10px] text-muted-foreground">{sessionKey}</code>
+        <code className="mt-1 block truncate text-xs text-muted-foreground">{sessionKey}</code>
       </span>
     )
   }
@@ -31,12 +34,13 @@ function SessionIdentity({ sessionKey }: { sessionKey: string }) {
     <span className="min-w-0 flex-1 text-left">
       <span className="flex min-w-0 items-center gap-1.5">
         <span className="truncate text-sm font-semibold">{parsed.sceneId}</span>
-        <span className="shrink-0 text-[10px] text-muted-foreground">
+        <span className="shrink-0 text-xs text-muted-foreground">
           {i18n.t(SESSION_SCOPE_LABELS[parsed.scope])}
         </span>
       </span>
-      <span className="mt-1 block truncate text-[10px] text-muted-foreground">
+      <span className="mt-1 block truncate text-xs text-muted-foreground">
         {parsed.platform} · {parsed.endpointId}
+        {activity ? <> · {i18n.t("{0} 轮", [activity.turns])} · {relativeSince(activity.lastAt, Date.now(), i18n.locale)}</> : null}
       </span>
     </span>
   )
@@ -45,6 +49,7 @@ function SessionIdentity({ sessionKey }: { sessionKey: string }) {
 export function AgentSessionPicker({
   value,
   history,
+  recent,
   loading,
   actionLabel,
   onChange,
@@ -53,7 +58,8 @@ export function AgentSessionPicker({
   const i18n = useI18n()
   const valid = isLikelySessionKey(value)
   const invalid = Boolean(value.trim()) && !valid
-  const candidates = Array.from(new Set([value, ...history].filter(isLikelySessionKey))).slice(0, 6)
+  const activity = new Map((recent ?? []).map((row) => [row.sessionKey, row]))
+  const candidates = Array.from(new Set([value, ...(recent ?? []).map((row) => row.sessionKey), ...history].filter(isLikelySessionKey))).slice(0, 9)
 
   return (
     <section className="console-agent-session-picker" aria-labelledby="session-picker-title">
@@ -61,7 +67,7 @@ export function AgentSessionPicker({
         <div>
 
           <h2 id="session-picker-title">{i18n.t("选择对话")}</h2>
-          <p>{i18n.t("从最近对话选择，或浏览渠道会话。")}</p>
+          <p>{recent?.length ? i18n.t("按最近 Agent 活动排序，选一个查看完整对话。") : i18n.t("从最近对话选择，或浏览渠道会话。")}</p>
         </div>
         <Button variant="ghost" size="sm" asChild>
           <Link to="/endpoints">
@@ -88,7 +94,7 @@ export function AgentSessionPicker({
                 <span className="console-session-candidate-icon">
                   {active ? <GitBranch /> : <History />}
                 </span>
-                <SessionIdentity sessionKey={key} />
+                <SessionIdentity sessionKey={key} activity={activity.get(key)} />
                 {loading && active ? <Loader2 className="animate-spin" /> : <ChevronRight />}
               </button>
             )

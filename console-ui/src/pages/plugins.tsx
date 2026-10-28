@@ -128,7 +128,7 @@ export default function PluginsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
         {filteredPlugins.map((plugin, index) => (
           <Card
             key={`${plugin.name}-${index}`}
@@ -143,10 +143,10 @@ export default function PluginsPage() {
             role="button"
             tabIndex={0}
           >
-            <CardContent className="p-4 space-y-3">
+            <CardContent className="flex h-full flex-col gap-3 p-4">
               <div className="flex justify-between items-center gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="flex items-center justify-center w-8 h-8 shrink-0 rounded-[var(--console-radius-md)] bg-secondary border border-[var(--console-border-subtle)]">
+                  <div className="flex items-center justify-center w-9 h-9 shrink-0 rounded-[var(--console-radius-md)] bg-muted text-muted-foreground">
                     <Package className="w-4 h-4" />
                   </div>
                   <span className="font-semibold text-sm truncate">{plugin.name}</span>
@@ -160,24 +160,24 @@ export default function PluginsPage() {
                 {plugin.description || i18n.t("暂无描述")}
               </p>
 
-              {plugin.management ? <p className="text-xs text-muted-foreground">{i18n.t("当前代 ")}{plugin.management.generation ?? i18n.t("未发布")} · {plugin.management.published ? i18n.t("包与配置已应用") : i18n.t("待核对应用")} · {plugin.management.verification === 'available' ? i18n.t("业务检查可选") : i18n.t("未提供业务检查")}</p> : <p className="text-xs text-muted-foreground">{plugin.managementError ? i18n.t("状态读取失败：{0}", [plugin.managementError]) : i18n.t("Host 尚未提供状态证据")}</p>}
-              <hr className="console-divider" />
+              {plugin.management?.status === 'enabled' && plugin.management.published ? null : plugin.management ? <p className="text-xs text-muted-foreground">{i18n.t("当前代 ")}{plugin.management.generation ?? i18n.t("未发布")} · {plugin.management.published ? i18n.t("包与配置已应用") : i18n.t("待核对应用")} · {plugin.management.verification === 'available' ? i18n.t("业务检查可选") : i18n.t("未提供业务检查")}</p> : <p className="text-xs text-muted-foreground">{plugin.managementError ? i18n.t("状态读取失败：{0}", [plugin.managementError]) : i18n.t("Host 尚未提供状态证据")}</p>}
+              <hr className="console-divider mt-auto" />
 
               {plugin.features.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
+                <div className="flex flex-wrap gap-1.5">
                   {plugin.features.map((feature) => {
                     const Icon = getIcon(feature.icon)
                     return (
-                      <div key={feature.name} className="console-feature-cell">
-                        <Icon className="w-3 h-3 text-muted-foreground" />
-                        <span className="text-sm font-bold tabular-nums">{feature.count}</span>
-                        <span className="text-[10px] text-muted-foreground text-center leading-tight">{feature.desc}</span>
+                      <div key={feature.name} className="console-feature-cell" title={feature.desc}>
+                        <Icon aria-hidden="true" />
+                        <span className="font-semibold tabular-nums text-foreground">{feature.count}</span>
+                        <span>{feature.desc}</span>
                       </div>
                     )
                   })}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground text-center py-2">{i18n.t("无注册功能")}</p>
+                <p className="text-xs text-muted-foreground">{i18n.t("无注册功能")}</p>
               )}
             </CardContent>
           </Card>

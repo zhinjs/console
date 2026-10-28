@@ -9,14 +9,15 @@ export function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="p-2 hover:bg-accent rounded-lg transition-colors text-foreground"
+      type="button"
+      className="console-icon-button"
       title={theme === 'light' ? i18n.t("切换到暗色模式") : i18n.t("切换到亮色模式")}
       aria-label={i18n.t("切换主题")}
     >
       {theme === 'light' ? (
-        <Moon className="w-5 h-5" />
+        <Moon />
       ) : (
-        <Sun className="w-5 h-5" />
+        <Sun />
       )}
     </button>
   )

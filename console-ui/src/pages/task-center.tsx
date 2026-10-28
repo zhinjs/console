@@ -1,7 +1,8 @@
 import { useI18n } from '../i18n'
+import { PageHeader } from '../components/PageHeader'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ClipboardList, RefreshCw } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
@@ -219,9 +220,8 @@ export default function TaskCenterPage() {
     && provider?.owner === review.body.owner && provider.revision === review.body.expectedRevision
     ? provider.effects : review?.effects ?? []
 
-  return <div className="p-4 md:p-6 space-y-5 max-w-6xl mx-auto">
-    <div className="flex items-center justify-between gap-3"><div><h1 className="text-xl font-semibold flex items-center gap-2"><ClipboardList className="h-5 w-5" />{i18n.t("任务中心")}</h1><p className="text-sm text-muted-foreground mt-1">{i18n.t("从用途创建管理员任务；聊天中创建的个人任务仍归原用户，本页不会导入。")}</p></div>
-      <Button variant="outline" disabled={loading || busy || !current} onClick={() => { void refresh(); void loadUseCases() }}><RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新核对")}</Button></div>
+  return <div className="console-page">
+    <PageHeader title={i18n.t("任务中心")} description={i18n.t("从用途创建管理员任务；聊天中创建的个人任务仍归原用户，本页不会导入。")} actions={<Button variant="outline" size="sm" disabled={loading || busy || !current} onClick={() => { void refresh(); void loadUseCases() }}><RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新核对")}</Button>} />
     {demo && <Alert><AlertDescription>{i18n.t("Demo 仅展示；创建、修改、暂停、恢复和取消均已禁用。")}</AlertDescription></Alert>}
     {error && current && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
     {notice && current && <Alert><AlertDescription>{notice}</AlertDescription></Alert>}
@@ -235,7 +235,7 @@ export default function TaskCenterPage() {
       {loading && !catalog && <p role="status">{i18n.t("正在读取任务提供方…")}</p>}
       <Card><CardHeader><CardTitle>{i18n.t("按用途开始")}</CardTitle></CardHeader><CardContent className="space-y-3">
         {useCaseError && <p className="text-xs text-muted-foreground">{useCaseError}</p>}
-        {useCases.map(item => <details key={item.id} className="rounded-md border p-3"><summary className="cursor-pointer font-medium">{item.title}</summary><div className="space-y-3 pt-3 text-sm"><p>{item.summary}</p><ol className="list-decimal pl-5 space-y-1">{item.steps.map(step => <li key={step}>{step}</li>)}</ol><ul className="list-disc pl-5 text-xs text-muted-foreground space-y-1">{item.limitations.map(limitation => <li key={limitation}>{limitation}</li>)}</ul>
+        {useCases.map(item => <details key={item.id} className="console-disclosure-card"><summary className="font-medium">{item.title}</summary><div className="space-y-3 pt-3 text-sm"><p>{item.summary}</p><ol className="list-decimal pl-5 space-y-1">{item.steps.map(step => <li key={step}>{step}</li>)}</ol><ul className="list-disc pl-5 text-xs text-muted-foreground space-y-1">{item.limitations.map(limitation => <li key={limitation}>{limitation}</li>)}</ul>
           <p className="text-xs break-all">{i18n.t("插件包：")}<code>{item.packageName}</code>{i18n.t("（可选中复制）")}</p><div className="flex flex-wrap gap-2"><Button asChild size="sm" variant="outline"><Link to="/marketplace">{i18n.t("到市场查看安装计划")}</Link></Button><Button asChild size="sm" variant="outline"><Link to="/plugins">{i18n.t("管理插件实例")}</Link></Button>
             {item.id === 'group-welcome' && item.mode === 'plugin-configuration' && <Button asChild size="sm"><Link to="/use-cases/group-welcome">{i18n.t("开始群欢迎配置流程")}</Link></Button>}
             {item.mode === 'administrator-task' && catalog?.providers.filter(candidate => candidate.packageName === item.packageName).map(candidate => <Button key={candidate.owner} size="sm" disabled={disabled} onClick={() => chooseProvider(candidate.owner)}>{i18n.t("配置 ")}{candidate.title} · {candidate.owner}</Button>)}

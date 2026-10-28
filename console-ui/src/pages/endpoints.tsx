@@ -8,7 +8,6 @@ import { ErrorAlert } from '../components/error-alert'
 import { Card, CardContent } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Skeleton } from '../components/ui/skeleton'
-import { Separator } from '../components/ui/separator'
 import { ENDPOINT_RPC } from '../contracts/zhin-console'
 import { readEndpointList } from './endpoint-list-model.mjs'
 import { requestConsole } from '../utils/console-rpc'
@@ -73,75 +72,72 @@ export default function EndpointsPage() {
     <PageShell>
       <PageHeader title={i18n.t("聊天账号")} description={i18n.t("看看机器人登录的聊天账号是否在线，点进去查看会话、好友申请和通知。")} />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
-        {endpoints.map((endpoint, index) => (
-          <Link
-            key={`${endpoint.adapter}-${endpoint.name}-${index}`}
-            to={`/endpoints/${encodeURIComponent(endpoint.adapter)}/${encodeURIComponent(endpoint.name)}`}
-            className="block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <Card className="console-surface-interactive h-full">
-              <CardContent className="p-5 space-y-4">
-                <div className="flex justify-between items-center gap-2 min-w-0">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className={`p-2 rounded-md shrink-0 ${endpoint.connected ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-muted'}`}>
-                      <Bot className={`w-5 h-5 ${endpoint.connected ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`} />
-                    </div>
-                    <span className="text-lg font-bold truncate">{endpoint.name}</span>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Badge variant={endpoint.connected ? 'success' : 'secondary'}>
-                      {endpoint.connected ? <><Wifi className="w-3 h-3 mr-1" />{i18n.t("在线")}</> : <><WifiOff className="w-3 h-3 mr-1" />{i18n.t("离线")}</>}
-                    </Badge>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                </div>
+      {endpoints.length > 0 && (
+        <div className="console-page-meta">
+          <span>{i18n.t("共 {0} 个账号", [String(endpoints.length)])}</span>
+          <span aria-hidden="true">·</span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="console-status-dot" aria-hidden="true" />
+            {i18n.t("{0} 个在线", [String(endpoints.filter((endpoint) => endpoint.connected).length)])}
+          </span>
+        </div>
+      )}
 
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">{i18n.t("适配器:")}</span>
-                  <Badge variant="outline">{endpoint.adapter}</Badge>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
+        {endpoints.map((endpoint, index) => {
+          const pending = (endpoint.pendingRequestCount ?? 0) + (endpoint.pendingNoticeCount ?? 0)
+          return (
+            <Link
+              key={`${endpoint.adapter}-${endpoint.name}-${index}`}
+              to={`/endpoints/${encodeURIComponent(endpoint.adapter)}/${encodeURIComponent(endpoint.name)}`}
+              className="console-endpoint-card group"
+            >
+              <div className="flex items-start gap-3 min-w-0">
+                <span className={endpoint.connected ? 'console-endpoint-avatar is-online' : 'console-endpoint-avatar'} aria-hidden="true">
+                  <Bot />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold">{endpoint.name}</div>
+                  <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Package className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    <span className="truncate font-mono">{endpoint.adapter}</span>
+                  </div>
                 </div>
+                <Badge variant={endpoint.connected ? 'success' : 'secondary'} className="shrink-0">
+                  {endpoint.connected ? <><Wifi className="w-3 h-3 mr-1" />{i18n.t("在线")}</> : <><WifiOff className="w-3 h-3 mr-1" />{i18n.t("离线")}</>}
+                </Badge>
+              </div>
 
-                <Separator />
+              <dl className="console-endpoint-facts">
+                <div>
+                  <dt><Activity aria-hidden="true" />{i18n.t("运行状态")}</dt>
+                  <dd className={endpoint.status === 'online' ? 'is-good' : undefined}>
+                    {endpoint.status === 'online' ? i18n.t("运行中") : i18n.t("已停止")}
+                  </dd>
+                </div>
+                <div>
+                  <dt><Zap aria-hidden="true" />{i18n.t("连接状态")}</dt>
+                  <dd className={endpoint.connected ? 'is-good' : undefined}>
+                    {endpoint.connected ? i18n.t("已连接") : i18n.t("未连接")}
+                  </dd>
+                </div>
+              </dl>
 
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center p-2 rounded-[var(--console-radius-md)] console-surface-muted">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Activity className={`w-4 h-4 ${endpoint.status === 'online' ? 'text-emerald-500' : 'text-muted-foreground'}`} />
-                      <span className="text-muted-foreground">{i18n.t("运行状态")}</span>
-                    </div>
-                    <Badge variant={endpoint.status === 'online' ? 'success' : 'secondary'}>
-                      {endpoint.status === 'online' ? i18n.t("运行中") : i18n.t("已停止")}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between items-center p-2 rounded-[var(--console-radius-md)] console-surface-muted">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Package className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">{i18n.t("适配器类型")}</span>
-                    </div>
-                    <span className="text-sm font-medium">{endpoint.adapter}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 rounded-[var(--console-radius-md)] console-surface-muted">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Zap className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">{i18n.t("连接状态")}</span>
-                    </div>
-                    <span className={`text-sm font-medium ${endpoint.connected ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
-                      {endpoint.connected ? i18n.t("已连接") : i18n.t("未连接")}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
-                  {(endpoint.pendingRequestCount ?? 0) + (endpoint.pendingNoticeCount ?? 0) > 0 && (
-                    <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                      {(endpoint.pendingRequestCount ?? 0) + (endpoint.pendingNoticeCount ?? 0)} {i18n.t(" 条待处理")}</span>
-                  )}
-                  <p className="text-xs text-primary">{i18n.t("点击进入管理")}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
+              <div className="console-endpoint-footer">
+                {pending > 0 ? (
+                  <span className="console-endpoint-pending">
+                    {pending} {i18n.t(" 条待处理")}</span>
+                ) : (
+                  <span>{i18n.t("暂无待处理")}</span>
+                )}
+                <span className="console-endpoint-open">
+                  {i18n.t("点击进入管理")}
+                  <ChevronRight aria-hidden="true" />
+                </span>
+              </div>
+            </Link>
+          )
+        })}
       </div>
 
       {endpoints.length === 0 && (

@@ -10,6 +10,11 @@ import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../../utils/inbox-cache'
 import { useConfirm } from '../confirm-dialog'
 
+/** Compact display for content-hash revisions; the full value stays in the title for copying. */
+function shortRevision(revision: string): string {
+  return revision.length > 16 ? `${revision.slice(0, 8)}…${revision.slice(-4)}` : revision
+}
+
 type Props = { pluginName: string; revision?: string; draftRevision?: string; dirty: boolean; disabled?: boolean; managed: boolean }
 
 export function ConfigApplicationEvidence(props: Props) {
@@ -90,14 +95,14 @@ function EvidenceSession({ pluginName, revision, draftRevision, dirty, disabled,
   }
 
   return <section aria-label={i18n.t("配置保存与应用证据")} className="space-y-3 rounded-md border p-3 text-sm">
-    <p>{i18n.t("已读取文件版本：")}<code className="break-all">{revision ?? i18n.t("未知")}</code></p>
+    <p>{i18n.t("已读取文件版本：")}<code className="console-revision" title={revision}>{revision ? shortRevision(revision) : i18n.t("未知")}</code></p>
     {dirty ? <p className="text-amber-700">{i18n.t("有未保存草稿；基于版本 ")}{draftRevision?.slice(0, 12) ?? i18n.t("未知")}{i18n.t("。保存前不会应用草稿。")}</p> : null}
     {managed ? <>
       <p className="text-xs text-muted-foreground">{i18n.t("文件已保存、当前代配置语义一致、平台就绪和业务验证是不同证据；未确认应用不等于应用失败。")}</p>
       <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={() => void read()} disabled={loading || disabled || !revision}>{loading ? i18n.t("正在核对…") : i18n.t("读取应用证据")}</Button>
         <Button size="sm" onClick={() => void apply()} disabled={!bound || !canApplyPlugin(evidence) || dirty || disabled || loading || unconfirmed}>{i18n.t("应用已保存配置")}</Button>
         <Button size="sm" variant="outline" asChild><Link to="/logs">{i18n.t("查看运行日志")}</Link></Button></div>
-      {evidence ? <><p className="break-all text-xs text-muted-foreground">{i18n.t("证据文件版本：")}{evidence.revision ?? i18n.t("未知")}</p>{!bound ? <p role="status">{i18n.t("证据与已读取文件版本不一致，或该实例未声明；请刷新文件并核对草稿后重新读取，当前不会申请应用。")}</p> : null}<PluginManagementSummary state={evidence} showNavigation={!dirty} /></> : null}
+      {evidence ? <><p className="text-xs text-muted-foreground">{i18n.t("证据文件版本：")}<code className="console-revision" title={evidence.revision ?? undefined}>{evidence.revision ? shortRevision(evidence.revision) : i18n.t("未知")}</code></p>{!bound ? <p role="status">{i18n.t("证据与已读取文件版本不一致，或该实例未声明；请刷新文件并核对草稿后重新读取，当前不会申请应用。")}</p> : null}<PluginManagementSummary state={evidence} showNavigation={!dirty} /></> : null}
     </> : <p className="text-xs text-muted-foreground">{i18n.t("此项不是已声明的插件实例；文件保存不证明 Host 或应用配置已生效，请按实际保存回执处理进程重启。")}</p>}
     {error ? <p role="alert">{error}</p> : null}{notice ? <p role="status">{notice}</p> : null}
     {ConfirmDialog}

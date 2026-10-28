@@ -27,6 +27,11 @@ import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { WelcomeFlowContext } from './WelcomeFlowContext'
 import { configurationSaveSummary } from '../components/PluginConfigForm/config-evidence-model.mjs'
 
+/** Compact display for content-hash revisions; the full value stays in the title for copying. */
+function shortRevision(revision: string): string {
+  return revision.length > 16 ? `${revision.slice(0, 8)}…${revision.slice(-4)}` : revision
+}
+
 function EditableConfigPage() {
   const i18n = useI18n()
   const scope = useInboxCacheScope()
@@ -127,7 +132,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
             {i18n.t("刷新")}</Button>
         }
       />
-      {snapshot?.revision ? <p className="break-all text-xs text-muted-foreground">{i18n.t("已读取文件版本：")}<code>{snapshot.revision}</code>{i18n.t("。文件保存不代表当前运行已应用。")}</p> : null}
+      {snapshot?.revision ? <p className="text-xs text-muted-foreground">{i18n.t("已读取文件版本：")}<code className="console-revision" title={snapshot.revision}>{shortRevision(snapshot.revision)}</code>{i18n.t("。文件保存不代表当前运行已应用。")}</p> : null}
 
       {error && (
         <Alert variant="destructive">
@@ -143,27 +148,30 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
       {searchParams.get('useCase') === 'group-welcome' && pluginFromUrl && visibleSection === `plugin:${pluginFromUrl}` && loaded
         ? <WelcomeFlowContext instanceKey={pluginFromUrl} kind="config" /> : null}
 
-      {loaded ? <Tabs value={visibleSection} onValueChange={setActiveSection}>
-        <Input type="search" aria-label={i18n.t("筛选配置项")} placeholder={i18n.t("搜索配置项或插件实例…")} value={sectionFilter} onChange={event => setSectionFilter(event.target.value)} className="mb-2 max-w-md" />
-        <TabsList className="flex max-h-48 flex-wrap justify-start overflow-y-auto h-auto gap-1">
+      {loaded ? <Tabs value={visibleSection} onValueChange={setActiveSection} orientation="vertical" className="console-config-layout">
+        <div className="console-config-nav">
+        <Input type="search" aria-label={i18n.t("筛选配置项")} placeholder={i18n.t("搜索配置项或插件实例…")} value={sectionFilter} onChange={event => setSectionFilter(event.target.value)} />
+        <TabsList className="console-config-nav-list">
+          <TabsTrigger value="declarations">{i18n.t("插件声明")}</TabsTrigger>
+          <TabsTrigger value="yaml" className="gap-1.5">
+            <FileCode className="w-4 h-4" />
+            {i18n.t("完整源码")}</TabsTrigger>
+          <span className="console-config-nav-label" aria-hidden="true">{i18n.t("配置项")} · {sectionKeys.length}</span>
           {sectionKeys.filter(key => key.toLowerCase().includes(sectionFilter.trim().toLowerCase())).map((key) => (
             <TabsTrigger key={key} value={`plugin:${key}`}>
               {key}
             </TabsTrigger>
           ))}
-          <TabsTrigger value="declarations">{i18n.t("插件声明")}</TabsTrigger>
-          <TabsTrigger value="yaml" className="gap-1.5">
-            <FileCode className="w-4 h-4" />
-            {i18n.t("完整源码")}</TabsTrigger>
         </TabsList>
+        </div>
 
         {sectionKeys.map((key) => (
-          <TabsContent key={key} value={`plugin:${key}`} forceMount hidden={visibleSection !== `plugin:${key}`} className="mt-4">
+          <TabsContent key={key} value={`plugin:${key}`} forceMount hidden={visibleSection !== `plugin:${key}`} className="mt-0 min-w-0">
             {visitedSections.has(`plugin:${key}`) || visibleSection === `plugin:${key}` ? <PluginConfigForm pluginName={key} sourceRevision={snapshot?.revision} purposeFields={searchParams.get('useCase') === 'group-welcome' && key === pluginFromUrl ? ['welcomeMessage', 'welcomeConversations'] : undefined} onSuccess={() => { if (isInboxCacheScopeActive(connectionScope)) void load().catch(() => {}) }} onOpenYaml={() => { if (isInboxCacheScopeActive(connectionScope)) setActiveSection('yaml') }} /> : null}
           </TabsContent>
         ))}
 
-        <TabsContent value="declarations" className="mt-4">
+        <TabsContent value="declarations" className="mt-0 min-w-0">
           <Card className="space-y-3 p-4">
             <h2 className="font-semibold">{i18n.t("插件实例与启停声明")}</h2>
             <p className="text-sm text-muted-foreground">{i18n.t("configVersion、plugins 和 disable_plugins 决定配置版本、插件挂载与启停。通过插件管理创建或调整实例；业务参数在对应配置项中编辑。")}</p>
@@ -172,7 +180,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
           </Card>
         </TabsContent>
 
-        <TabsContent value="yaml" className="mt-4 space-y-3">
+        <TabsContent value="yaml" className="mt-0 min-w-0 space-y-3">
           <p className="text-sm text-muted-foreground">{i18n.t("完整源码基于已保存配置；各项表单中尚未保存的草稿仍会保留。编辑单项时可在该项内切换源码，与表单共用草稿。")}</p>
           <div className="h-[min(65vh,640px)] min-h-[320px] overflow-hidden rounded-lg border">
             <CodeEditor

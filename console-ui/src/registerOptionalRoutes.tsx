@@ -1,7 +1,7 @@
 import { assistantNavigation } from './bootstrap/assistant-navigation'
 import { NAV_GROUPS } from './navigation-taxonomy'
 import { hostRegistrations } from './bootstrap/loadConsoleEntries'
-import AssistantJobsPage, { probeAssistantEnabled } from './pages/assistant-jobs'
+import AssistantJobsPage from './pages/assistant-jobs'
 
 let assistantRegistered = false
 
@@ -10,20 +10,22 @@ export function resetOptionalConsoleRoutes(): void {
   assistantNavigation.reset()
 }
 
-/** 保留直接访问路由；助手未启用时只隐藏侧栏入口。 */
+/**
+ * 助手任务与定时提醒的持久任务是同一批记录：不进侧栏，入口在定时提醒的每个任务上；
+ * 保留直接访问路由用于查看执行详情。
+ */
 export async function registerOptionalConsoleRoutes(): Promise<void> {
   if (assistantRegistered) return
   const session = hostRegistrations.capture()
-  const enabled = await probeAssistantEnabled()
   if (!session.active()) return
 
   assistantRegistered = true
-  assistantNavigation.bind(session, {
+  session.addRoute({
     path: '/assistant/jobs',
     name: '助手任务',
-    parent: null,
+    parent: '/cron',
     icon: 'Activity',
     element: <AssistantJobsPage />,
-    meta: { group: NAV_GROUPS.BOT, order: 2 },
-  }, enabled)
+    meta: { group: NAV_GROUPS.DAILY, order: 3, hideInMenu: true },
+  })
 }

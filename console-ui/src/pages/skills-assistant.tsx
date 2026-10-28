@@ -209,12 +209,15 @@ function SkillsSettingsForm({ initial, onReload }: { initial: SettingsRead; onRe
       <CardTitle className="text-base">{i18n.t("设置")}</CardTitle>
       <CardDescription>{i18n.t(MODE_EXPLANATION)} {i18n.t(" 改完需要重启机器人才会生效。")}</CardDescription>
     </CardHeader>
-    <CardContent className="space-y-3">
-      {ASSISTANT_TASKS.map((entry) => <fieldset key={entry.task} className="space-y-2 rounded-md border p-3">
-        <legend className="px-1 text-sm font-medium">{i18n.t(entry.label)}</legend>
-        <p className="text-xs text-muted-foreground">{i18n.t(entry.hint)}</p>
-        <div className="flex flex-wrap gap-4">
-          {MODE_CHOICES.map((choice) => <label key={choice.value} className="flex cursor-pointer items-center gap-2 text-sm">
+    <CardContent className="space-y-4">
+      <div className="console-setting-list">
+      {ASSISTANT_TASKS.map((entry) => <fieldset key={entry.task} className="console-setting-row">
+        <div className="min-w-0">
+          <legend className="text-sm font-medium">{i18n.t(entry.label)}</legend>
+          <p className="mt-0.5 text-xs text-muted-foreground">{i18n.t(entry.hint)}</p>
+        </div>
+        <div className="console-segmented">
+          {MODE_CHOICES.map((choice) => <label key={choice.value}>
             <input
               type="radio"
               name={`skills-mode-${entry.task}`}
@@ -222,10 +225,11 @@ function SkillsSettingsForm({ initial, onReload }: { initial: SettingsRead; onRe
               checked={modes[entry.task] === choice.value}
               onChange={() => chooseMode(entry.task, choice.value)}
             />
-            {i18n.t(choice.label, undefined, 'state')}
+            <span>{i18n.t(choice.label, undefined, 'state')}</span>
           </label>)}
         </div>
       </fieldset>)}
+      </div>
 
       {serverProblems.length > 0 && <ul className="list-disc space-y-1 pl-5 text-sm text-destructive">
         {serverProblems.map((problem) => <li key={problem}>{problem}</li>)}

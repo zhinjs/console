@@ -29,6 +29,9 @@ import {
 import { cn } from '@zhin.js/client'
 import { CONSOLE_REST } from '../contracts/zhin-console'
 import { isDemoMode } from '../utils/demo-mode'
+import { readRecentSessions, type RecentSession } from './agent-session-recent.mjs'
+
+const RECENT_SESSIONS_PATH = '/api/agent/trace-archive/sessions'
 
 interface TreePoint {
   index: number
@@ -52,6 +55,7 @@ export default function AgentSessionsPage() {
   const sessionKeyFromUrl = parseSessionKeyFromQuery(searchParams.get('sessionKey'))
   const [sessionKey, setSessionKey] = useState(sessionKeyFromUrl)
   const [history, setHistory] = useState<string[]>(() => loadAgentSessionHistory())
+  const [recent, setRecent] = useState<RecentSession[] | null>(null)
   const [tree, setTree] = useState<SessionTree | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -161,6 +165,16 @@ export default function AgentSessionsPage() {
 
   useEffect(() => () => { requestSequence.current += 1 }, [])
 
+  // Recent sessions come from the Host's trace archive; without it the picker falls back to this browser's history.
+  useEffect(() => {
+    let active = true
+    void apiFetch(RECENT_SESSIONS_PATH)
+      .then(async (res) => (res.ok ? readRecentSessions(await res.json()) : []))
+      .catch(() => [])
+      .then((rows) => { if (active) setRecent(rows) })
+    return () => { active = false }
+  }, [])
+
   useEffect(() => {
     if (!sessionKeyFromUrl) return
     setSessionKey(sessionKeyFromUrl)
@@ -186,6 +200,7 @@ export default function AgentSessionsPage() {
       <AgentSessionPicker
         value={sessionKey}
         history={history}
+        recent={recent}
         loading={loading}
         actionLabel={i18n.t("查看分支")}
         onChange={(key) => {

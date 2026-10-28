@@ -4,6 +4,7 @@
  */
 
 @import "./theme-tokens.css";
+@import "./shell.css";
 
 @layer base {
   :root {
@@ -28,7 +29,7 @@
     --console-text-title: 1.375rem;
     --console-control-height: 2.75rem;
     --console-control-height-sm: 2.75rem;
-    --console-surface-raised: hsl(var(--foreground) / 0.035);
+    --console-surface-raised: hsl(var(--card));
     --console-surface-muted: hsl(var(--foreground) / 0.055);
     --console-surface-inset: hsl(var(--foreground) / 0.025);
     --console-control-radius: var(--console-radius-md);
@@ -63,7 +64,7 @@
   }
 
   .dark {
-    --console-surface-raised: hsl(var(--foreground) / 0.065);
+    --console-surface-raised: hsl(var(--card));
     --console-surface-muted: hsl(var(--foreground) / 0.09);
     --console-surface-inset: hsl(var(--foreground) / 0.04);
 
@@ -531,7 +532,7 @@
   }
 
   .console-surface-interactive {
-    border-radius: var(--console-radius-xl);
+    border-radius: var(--console-radius-lg);
     border: var(--console-border-width) solid var(--console-border-default);
     background: var(--console-surface-raised);
     color: hsl(var(--card-foreground));
@@ -544,7 +545,7 @@
   }
 
   .console-surface-interactive:hover {
-    border-color: hsl(var(--primary) / 0.28);
+    border-color: hsl(var(--foreground) / 0.18);
     box-shadow: var(--console-shadow-hover);
     transform: translateY(-1px);
   }
@@ -562,14 +563,22 @@
   }
 
   .console-feature-cell {
-    display: flex;
-    flex-direction: column;
+    display: inline-flex;
+    max-width: 100%;
     align-items: center;
-    gap: 0.125rem;
-    padding: 0.375rem;
-    border-radius: var(--console-radius-md);
-    border: var(--console-border-width) solid var(--console-border-subtle);
-    background: hsl(var(--muted) / 0.4);
+    gap: 0.3rem;
+    padding: 0.1875rem 0.5rem;
+    border-radius: 999px;
+    background: var(--console-surface-muted);
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-label);
+    white-space: nowrap;
+  }
+
+  .console-feature-cell svg {
+    width: 0.75rem;
+    height: 0.75rem;
+    flex-shrink: 0;
   }
 
   .console-skip-link {
@@ -595,63 +604,6 @@
     background: hsl(var(--background));
   }
 
-  .console-sidebar {
-    background: hsl(var(--sidebar));
-    box-shadow: none;
-  }
-
-  .console-topbar {
-    box-shadow: var(--console-shadow-xs);
-  }
-
-  .console-connection-state {
-    display: inline-flex;
-    height: 1.8rem;
-    align-items: center;
-    gap: 0.4rem;
-    border: var(--console-border-width) solid hsl(var(--border) / 0.58);
-    border-radius: var(--console-radius-md);
-    padding: 0 0.55rem;
-    color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-label);
-    font-weight: 550;
-    white-space: nowrap;
-  }
-
-  .console-connection-state > span:first-child {
-    width: 0.42rem;
-    height: 0.42rem;
-    border-radius: 50%;
-    background: hsl(var(--warning));
-    box-shadow: 0 0 0 0.22rem hsl(var(--warning) / 0.1);
-  }
-
-  .console-connection-state.is-online > span:first-child {
-    background: hsl(var(--success));
-    box-shadow: 0 0 0 0.22rem hsl(var(--success) / 0.1);
-  }
-
-  .console-brand-mark {
-    display: grid;
-    width: 2.35rem;
-    height: 2.35rem;
-    min-width: 2.35rem;
-    place-items: center;
-    border-radius: var(--console-radius-lg);
-    background: hsl(var(--foreground));
-    color: hsl(var(--background));
-    box-shadow: var(--console-shadow-xs);
-  }
-
-  .console-brand-mark span {
-    position: relative;
-    z-index: 1;
-    font-size: var(--console-text-section);
-    font-weight: 700;
-    letter-spacing: -0.08em;
-    transform: translateX(-0.04em);
-  }
-
   .console-dashboard {
     width: 100%;
     max-width: 92rem;
@@ -660,77 +612,74 @@
 
   .console-dashboard-hero {
     position: relative;
-    isolation: isolate;
-    overflow: hidden;
-    border: var(--console-border-width) solid hsl(var(--primary) / 0.16);
-    border-radius: var(--console-radius-xl);
-    padding: clamp(1.25rem, 2.4vw, 2rem);
-    background:
-      linear-gradient(135deg, hsl(var(--card) / 0.96), hsl(var(--secondary) / 0.78)),
-      hsl(var(--card));
-    box-shadow:
-      inset 0 1px 0 hsl(0 0% 100% / 0.58),
-      0 24px 65px -52px hsl(154 58% 22% / 0.7);
   }
 
-  .dark .console-dashboard-hero {
-    background:
-      linear-gradient(135deg, hsl(var(--card)), hsl(var(--secondary) / 0.68)),
-      hsl(var(--card));
-    box-shadow:
-      inset 0 1px 0 hsl(0 0% 100% / 0.06),
-      0 24px 65px -45px hsl(151 55% 40% / 0.28);
+  .console-health-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    border: var(--console-border-width) solid hsl(var(--success) / 0.25);
+    border-radius: 999px;
+    background: hsl(var(--success) / 0.08);
+    padding: 0.25rem 0.75rem 0.25rem 0.625rem;
+    color: hsl(var(--success));
+    font-size: var(--console-text-label);
+    font-weight: 600;
   }
 
-  .console-dashboard-glow {
-    position: absolute;
-    right: -5rem;
-    top: -8rem;
-    width: 25rem;
-    height: 25rem;
-    border: var(--console-border-width) solid hsl(var(--primary) / 0.09);
-    border-radius: 44% 56% 68% 32%;
-    background:
-      repeating-radial-gradient(circle at 50% 50%, transparent 0 1.15rem, hsl(var(--primary) / 0.035) 1.2rem 1.25rem),
-      radial-gradient(circle, hsl(var(--primary) / 0.12), transparent 67%);
-    transform: rotate(17deg);
-    pointer-events: none;
+  .console-health-pill.is-warning {
+    border-color: hsl(var(--warning) / 0.3);
+    background: hsl(var(--warning) / 0.08);
+    color: hsl(var(--warning));
+  }
+
+  .console-dashboard-title {
+    font-size: clamp(1.375rem, 2vw, 1.625rem);
+    font-weight: 650;
+    line-height: 1.25;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+
+  .console-dashboard-lede {
+    max-width: 42rem;
+    margin-top: 0.375rem;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.875rem;
+    line-height: 1.6;
   }
 
   .console-status-dot {
-    width: 0.52rem;
-    height: 0.52rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    flex: none;
     border-radius: 50%;
-    background: hsl(var(--primary));
-    box-shadow: 0 0 0 0.3rem hsl(var(--primary) / 0.1);
+    background: hsl(var(--success));
+    box-shadow: 0 0 0 0.2rem hsl(var(--success) / 0.18);
   }
 
   .console-status-dot.is-warning {
-    background: hsl(38 82% 52%);
-    box-shadow: 0 0 0 0.3rem hsl(38 82% 52% / 0.12);
+    background: hsl(var(--warning));
+    box-shadow: 0 0 0 0.2rem hsl(var(--warning) / 0.18);
   }
 
   .console-dashboard-metrics {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    overflow: hidden;
-    border: var(--console-border-width) solid hsl(var(--border) / 0.58);
-    border-radius: var(--console-radius-lg);
-    background: hsl(var(--card) / 0.62);
-    backdrop-filter: blur(16px);
+    gap: 0.75rem;
   }
 
   .console-dashboard-metric {
     display: flex;
     min-width: 0;
     flex-direction: column;
-    gap: 0.45rem;
-    padding: 1rem 1.1rem 1.15rem;
-    border-right: 1px solid hsl(var(--border) / 0.52);
-  }
-
-  .console-dashboard-metric:last-child {
-    border-right: 0;
+    gap: 0.5rem;
+    border: var(--console-border-width) solid var(--console-border-default);
+    border-radius: var(--console-radius-lg);
+    background: hsl(var(--card));
+    padding: 1rem 1.125rem;
+    box-shadow: var(--console-shadow-xs);
   }
 
   .console-dashboard-metric > span {
@@ -741,9 +690,10 @@
 
   .console-dashboard-metric strong {
     overflow: hidden;
-    font-size: clamp(1.35rem, 2.4vw, 1.85rem);
+    font-size: 1.625rem;
+    font-weight: 650;
     line-height: 1.1;
-    letter-spacing: -0.045em;
+    letter-spacing: -0.03em;
     text-overflow: ellipsis;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
@@ -757,12 +707,11 @@
   }
 
   .console-dashboard-panel {
-    border: var(--console-border-width) solid hsl(var(--border) / 0.68);
+    border: var(--console-border-width) solid var(--console-border-default);
     border-radius: var(--console-radius-lg);
     padding: var(--console-space-card);
-    background: var(--console-surface-raised);
+    background: hsl(var(--card));
     box-shadow: var(--console-shadow-xs);
-    backdrop-filter: blur(18px);
   }
 
   .console-panel-heading {
@@ -818,9 +767,9 @@
   }
 
   .console-capability-item:hover {
-    transform: translateY(-2px);
-    border-color: hsl(var(--primary) / 0.18);
-    background: hsl(var(--accent) / 0.7);
+    border-color: var(--console-border-default);
+    background: hsl(var(--card));
+    box-shadow: var(--console-shadow-sm);
   }
 
   .console-capability-item:active {
@@ -863,11 +812,12 @@
   .console-all-clear {
     display: flex;
     align-items: flex-start;
-    gap: 0.8rem;
+    gap: 0.75rem;
     padding: 1rem;
-    border-radius: var(--console-radius-lg);
-    background: hsl(var(--primary) / 0.075);
-    color: hsl(var(--primary));
+    border: var(--console-border-width) solid hsl(var(--success) / 0.2);
+    border-radius: var(--console-radius-md);
+    background: hsl(var(--success) / 0.06);
+    color: hsl(var(--success));
   }
 
   .console-all-clear > svg {
@@ -962,30 +912,27 @@
 
   .console-action-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 0.75rem;
   }
 
   .console-primary-action {
     display: flex;
-    min-height: 10.5rem;
-    align-items: flex-end;
+    min-height: 100%;
+    align-items: center;
     gap: 1rem;
     padding: 1.25rem;
     overflow: hidden;
-    border: var(--console-border-width) solid hsl(var(--primary) / 0.15);
+    border: var(--console-border-width) solid hsl(var(--primary) / 0.22);
     border-radius: var(--console-radius-lg);
-    background:
-      radial-gradient(circle at 100% 0%, hsl(var(--primary) / 0.16), transparent 48%),
-      hsl(var(--secondary) / 0.62);
+    background: hsl(var(--primary) / 0.05);
     color: hsl(var(--foreground));
     transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
   }
 
   .console-primary-action:hover {
-    transform: translateY(-2px);
-    border-color: hsl(var(--primary) / 0.3);
-    box-shadow: 0 18px 40px -32px hsl(var(--primary) / 0.7);
+    border-color: hsl(var(--primary) / 0.4);
+    background: hsl(var(--primary) / 0.08);
   }
 
   .console-primary-action:active {
@@ -1001,14 +948,14 @@
 
   .console-primary-action-icon {
     display: grid;
-    width: 3.15rem;
-    height: 3.15rem;
+    width: 2.75rem;
+    height: 2.75rem;
     flex: none;
     place-items: center;
-    border-radius: var(--console-radius-lg);
+    border-radius: var(--console-radius-md);
     background: hsl(var(--primary));
     color: hsl(var(--primary-foreground));
-    box-shadow: 0 12px 28px -16px hsl(var(--primary) / 0.8);
+    box-shadow: var(--console-shadow-sm);
   }
 
   .console-primary-action-icon svg {
@@ -1024,29 +971,28 @@
 
   .console-secondary-actions button {
     display: flex;
-    min-height: 5rem;
-    align-items: flex-start;
+    min-height: 4.25rem;
+    align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    padding: 0.85rem;
-    border: var(--console-border-width) solid hsl(var(--border) / 0.64);
+    padding: 0.875rem 1rem;
+    border: var(--console-border-width) solid var(--console-border-default);
     border-radius: var(--console-radius-md);
-    background: hsl(var(--muted) / 0.3);
+    background: hsl(var(--card));
     color: hsl(var(--foreground));
     transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
   }
 
   .console-secondary-actions button:hover {
-    transform: translateY(-2px);
-    border-color: hsl(var(--primary) / 0.2);
-    background: hsl(var(--accent) / 0.55);
+    border-color: hsl(var(--foreground) / 0.2);
+    box-shadow: var(--console-shadow-sm);
   }
 
   .console-secondary-actions button > span {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.6rem;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.625rem;
     text-align: left;
     font-size: var(--console-text-body);
     font-weight: 600;
@@ -1265,24 +1211,24 @@
 
   .console-agent-binding-list {
     display: grid;
-    gap: 0.55rem;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    gap: 0.5rem;
   }
 
   .console-agent-binding-card {
     display: flex;
     align-items: flex-start;
     gap: 0.8rem;
-    padding: 0.9rem;
-    border: var(--console-border-width) solid hsl(var(--border) / 0.58);
-    border-radius: var(--console-radius-lg);
-    background: hsl(var(--muted) / 0.22);
-    transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
+    padding: 0.75rem;
+    border: var(--console-border-width) solid var(--console-border-default);
+    border-radius: var(--console-radius-md);
+    background: hsl(var(--card));
+    transition: border-color 160ms ease, box-shadow 160ms ease;
   }
 
   .console-agent-binding-card:hover {
-    transform: translateY(-2px);
-    border-color: hsl(var(--primary) / 0.25);
-    background: hsl(var(--accent) / 0.42);
+    border-color: hsl(var(--foreground) / 0.18);
+    box-shadow: var(--console-shadow-sm);
   }
 
   .console-agent-binding-card h3 {
@@ -3753,14 +3699,6 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .console-dashboard-metric:nth-child(2) {
-      border-right: 0;
-    }
-
-    .console-dashboard-metric:nth-child(-n + 2) {
-      border-bottom: 1px solid hsl(var(--border) / 0.52);
-    }
-
     .console-capability-grid,
     .console-action-grid,
     .console-secondary-actions,
@@ -3926,4 +3864,312 @@
     background: linear-gradient(180deg, hsl(var(--card) / 0.9), hsl(var(--muted) / 0.58));
   }
   .console-runtime-component-preview > svg { width: 0.875rem; height: 0.875rem; flex: none; }
+}
+
+@layer components {
+  .console-endpoint-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+    border: var(--console-border-width) solid var(--console-border-default);
+    border-radius: var(--console-radius-lg);
+    background: hsl(var(--card));
+    padding: 1rem;
+    color: hsl(var(--card-foreground));
+    text-decoration: none;
+    box-shadow: var(--console-shadow-xs);
+    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  }
+
+  .console-endpoint-card:hover {
+    border-color: hsl(var(--foreground) / 0.18);
+    box-shadow: var(--console-shadow-md);
+    transform: translateY(-1px);
+  }
+
+  .console-endpoint-card:focus-visible {
+    outline: var(--console-focus-width) solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  .console-endpoint-avatar {
+    position: relative;
+    display: grid;
+    width: 2.5rem;
+    height: 2.5rem;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: var(--console-radius-md);
+    background: hsl(var(--muted));
+    color: hsl(var(--muted-foreground));
+  }
+
+  .console-endpoint-avatar svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+
+  .console-endpoint-avatar::after {
+    content: "";
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    width: 0.75rem;
+    height: 0.75rem;
+    border: 2px solid hsl(var(--card));
+    border-radius: 50%;
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  .console-endpoint-avatar.is-online {
+    background: hsl(var(--success) / 0.1);
+    color: hsl(var(--success));
+  }
+
+  .console-endpoint-avatar.is-online::after {
+    background: hsl(var(--success));
+  }
+
+  .console-endpoint-facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin: 0;
+  }
+
+  .console-endpoint-facts > div {
+    min-width: 0;
+    border-radius: var(--console-radius-md);
+    background: var(--console-surface-muted);
+    padding: 0.5rem 0.625rem;
+  }
+
+  .console-endpoint-facts dt {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-label);
+  }
+
+  .console-endpoint-facts dt svg {
+    width: 0.8125rem;
+    height: 0.8125rem;
+  }
+
+  .console-endpoint-facts dd {
+    margin: 0.25rem 0 0;
+    font-size: var(--console-text-body);
+    font-weight: 600;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .console-endpoint-facts dd.is-good {
+    color: hsl(var(--success));
+  }
+
+  .console-endpoint-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border-top: var(--console-border-width) solid var(--console-border-subtle);
+    padding-top: 0.75rem;
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-label);
+  }
+
+  .console-endpoint-pending {
+    border-radius: 999px;
+    background: hsl(var(--warning) / 0.1);
+    padding: 0.125rem 0.5rem;
+    color: hsl(var(--warning));
+    font-weight: 600;
+  }
+
+  .console-endpoint-open {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+    color: hsl(var(--foreground));
+    font-weight: 500;
+    transition: color 140ms ease;
+  }
+
+  .console-endpoint-open svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    transition: transform 160ms var(--console-ease-out, ease);
+  }
+
+  .console-endpoint-card:hover .console-endpoint-open {
+    color: hsl(var(--primary));
+  }
+
+  .console-endpoint-card:hover .console-endpoint-open svg {
+    transform: translateX(2px);
+  }
+}
+
+@layer components {
+  .console-revision {
+    border-radius: var(--console-radius-sm);
+    background: var(--console-surface-muted);
+    padding: 0.0625rem 0.375rem;
+    font-family: var(--console-font-mono);
+    font-size: var(--console-text-code);
+    cursor: help;
+  }
+
+  .console-config-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .console-config-nav {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .console-config-nav-list.console-config-nav-list {
+    display: flex;
+    height: auto;
+    max-height: 12rem;
+    flex-wrap: wrap;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0.25rem;
+    overflow-y: auto;
+    border: var(--console-border-width) solid var(--console-border-default);
+    border-radius: var(--console-radius-lg);
+    background: hsl(var(--card));
+    padding: 0.375rem;
+  }
+
+  .console-config-nav-label {
+    width: 100%;
+    padding: 0.5rem 0.5rem 0.25rem;
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-label);
+    font-weight: 550;
+  }
+
+  @media (min-width: 1024px) {
+    .console-config-layout {
+      display: grid;
+      grid-template-columns: 15rem minmax(0, 1fr);
+      align-items: start;
+      gap: 1.25rem;
+    }
+
+    .console-config-nav {
+      position: sticky;
+      top: 0;
+    }
+
+    .console-config-nav-list.console-config-nav-list {
+      max-height: calc(100dvh - 12rem);
+      flex-direction: column;
+      flex-wrap: nowrap;
+    }
+
+    .console-config-nav-list > button {
+      justify-content: flex-start;
+      width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+}
+
+@layer components {
+  .console-table-card {
+    overflow-x: auto;
+    border: var(--console-border-width) solid var(--console-border-default);
+    border-radius: var(--console-radius-lg);
+    background: hsl(var(--card));
+    box-shadow: var(--console-shadow-xs);
+  }
+
+  .console-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--console-text-body);
+  }
+
+  .console-table th {
+    border-bottom: var(--console-border-width) solid var(--console-border-default);
+    background: var(--console-surface-inset);
+    padding: 0.625rem 1rem;
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-label);
+    font-weight: 550;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .console-table td {
+    border-bottom: var(--console-border-width) solid var(--console-border-subtle);
+    padding: 0.625rem 1rem;
+    vertical-align: middle;
+  }
+
+  .console-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .console-table tbody tr {
+    transition: background-color 120ms ease;
+  }
+
+  .console-table tbody tr:hover {
+    background: var(--console-surface-inset);
+  }
+
+  .console-table-sub {
+    display: block;
+    margin-top: 0.125rem;
+    color: hsl(var(--muted-foreground));
+    font-family: var(--console-font-mono);
+    font-size: var(--console-text-label);
+  }
+
+  .console-inline-code {
+    border-radius: var(--console-radius-sm);
+    background: var(--console-surface-muted);
+    padding: 0.0625rem 0.375rem;
+    font-family: var(--console-font-mono);
+    font-size: var(--console-text-code);
+  }
+}
+
+@layer components {
+  .console-job-error {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    border: var(--console-border-width) solid hsl(var(--destructive) / 0.25);
+    border-radius: var(--console-radius-md);
+    background: hsl(var(--destructive) / 0.05);
+    padding: 0.625rem 0.75rem;
+    color: hsl(var(--destructive));
+    font-size: var(--console-text-body);
+    line-height: 1.5;
+  }
+
+  .console-job-error code {
+    color: hsl(var(--muted-foreground));
+    font-family: var(--console-font-mono);
+    font-size: var(--console-text-label);
+  }
+
+  .console-job-error a {
+    align-self: flex-start;
+    color: hsl(var(--foreground));
+    font-size: var(--console-text-label);
+    font-weight: 600;
+  }
 }

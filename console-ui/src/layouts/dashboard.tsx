@@ -1,15 +1,15 @@
 import { routeLabel } from '../i18n/navigation'
 import { LanguageSelect } from '../components/LanguageSelect'
 import { useI18n } from '../i18n'
-import { useMemo, useState, useEffect, useSyncExternalStore } from "react"
+import { useMemo, useRef, useState, useEffect, useLayoutEffect, useSyncExternalStore } from "react"
 import { Outlet, Link, useLocation, matchPath } from "react-router-dom"
-import { Menu, LogOut, X, ChevronRight } from "lucide-react"
+import { Menu, LogOut, X, ChevronRight, PanelLeftClose, PanelLeftOpen } from "lucide-react"
 import { app, cn, useWebSocket, type ConsoleRouteRecord } from "@zhin.js/client"
 import { getSidebarLucideIcon } from "../components/sidebarMenuIcons"
 import { ThemeToggle } from "../components/ThemeToggle"
 import { Button, buttonVariants } from "../components/ui/button"
 import { ScrollArea } from "../components/ui/scroll-area"
-import { Separator } from "../components/ui/separator"
+import { Tooltip, TooltipContent, TooltipTrigger } from "../components/ui/tooltip"
 import { notifyAuthRequired } from "../utils/auth"
 import { isDemoMode } from "../utils/demo-mode"
 import { reopenDemoOnboarding } from "../components/DemoOnboarding"
@@ -19,6 +19,23 @@ import { resolveNavigationLocation } from "../navigation-location.mjs"
 
 const MOBILE_MQ = "(max-width: 767px)"
 const EXPANDED_GROUPS_KEY = "zhin.console.nav.expanded-groups"
+const SIDEBAR_COLLAPSED_KEY = "zhin.console.nav.collapsed"
+
+function readSidebarOpen(): boolean {
+  try {
+    return window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) !== "1"
+  } catch {
+    return true
+  }
+}
+
+function writeSidebarOpen(open: boolean): void {
+  try {
+    window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, open ? "0" : "1")
+  } catch {
+    // Storage may be unavailable (private mode); the preference lasts for this session.
+  }
+}
 
 function readExpandedGroups(): Set<string> {
   try {
@@ -81,7 +98,8 @@ export default function DashboardLayout() {
   const i18n = useI18n()
   const location = useLocation()
   const isMobile = useIsMobile()
-  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true)
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(readSidebarOpen)
+  const mainRef = useRef<HTMLElement>(null)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const { connected } = useWebSocket()
 
@@ -150,6 +168,11 @@ export default function DashboardLayout() {
     setMobileNavOpen(false)
   }, [location.pathname])
 
+  // A new page starts at its top; query-only changes (filters, tabs) keep the scroll position.
+  useLayoutEffect(() => {
+    mainRef.current?.scrollTo({ top: 0 })
+  }, [location.pathname])
+
   useEffect(() => {
     if (!isMobile || !mobileNavOpen) return
     const onKeyDown = (e: globalThis.KeyboardEvent) => {
@@ -166,162 +189,164 @@ export default function DashboardLayout() {
 
   const toggleSidebar = () => {
     if (isMobile) setMobileNavOpen((v) => !v)
-    else setDesktopSidebarOpen((v) => !v)
+    else setDesktopSidebarOpen((v) => {
+      writeSidebarOpen(!v)
+      return !v
+    })
   }
 
   return (
     <div className="console-app-shell flex h-[100dvh] bg-background overflow-hidden">
       <a href="#console-main-content" className="console-skip-link">{i18n.t("跳到主要内容")}</a>
-      {isMobile && mobileNavOpen ? (
+      {isMobile ? (
         <button
           type="button"
-          className="fixed inset-0 z-40 bg-black/50 border-0 cursor-default"
+          className={cn("console-nav-scrim", mobileNavOpen && "is-open")}
           aria-label={i18n.t("关闭菜单")}
+          tabIndex={mobileNavOpen ? 0 : -1}
           onClick={() => setMobileNavOpen(false)}
         />
       ) : null}
 
       <aside
         className={cn(
-          "console-sidebar flex flex-col border-r border-[var(--console-border-subtle)] bg-sidebar",
-          isMobile
-            ? cn(
-                "fixed inset-y-0 left-0 z-50 w-[min(16rem,88vw)] max-w-[88vw] shadow-lg transition-transform duration-300 ease-out",
-                mobileNavOpen ? "translate-x-0" : "-translate-x-full pointer-events-none",
-              )
-            : cn(
-                "relative shrink-0 transition-[width] duration-300",
-                desktopSidebarOpen ? "w-64" : "w-16",
-              ),
+          "console-sidebar",
+          isMobile ? cn("is-mobile", mobileNavOpen && "is-open") : !desktopSidebarOpen && "is-collapsed",
         )}
         aria-hidden={isMobile && !mobileNavOpen}
       >
-        <div className="p-4 border-b border-[var(--console-border-subtle)]">
-          <div
-            className={cn(
-              "flex items-center transition-all duration-300",
-              showLabels ? "gap-3" : "justify-center",
-            )}
-          >
-            <div className="console-brand-mark" aria-hidden="true">
-              <span>Z</span>
-            </div>
+        <div className="console-sidebar-header">
+          <Link to="/dashboard" className="console-sidebar-brand" aria-label={isDemoMode() ? "Zhin.js Demo" : "Zhin.js"}>
+            <span className="console-brand-mark" aria-hidden="true"><span>Z</span></span>
             {showLabels && (
-              <div className="flex flex-1 items-center justify-between gap-2 min-w-0">
-                <div className="flex flex-col min-w-0">
-                  <span className="text-base font-semibold truncate">
-                    {isDemoMode() ? "Zhin.js Demo" : "Zhin.js"}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {isDemoMode() ? i18n.t("零安装 Sandbox") : i18n.t("Bot 工作台")}
-                  </span>
-                </div>
-                {isMobile ? (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="shrink-0"
-                    onClick={() => setMobileNavOpen(false)}
-                    aria-label={i18n.t("关闭菜单")}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                ) : null}
-              </div>
+              <span className="console-sidebar-brand-text">
+                <strong>{isDemoMode() ? "Zhin.js Demo" : "Zhin.js"}</strong>
+                <small>{isDemoMode() ? i18n.t("零安装 Sandbox") : i18n.t("Bot 工作台")}</small>
+              </span>
             )}
-          </div>
+          </Link>
+          {isMobile ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
+              onClick={() => setMobileNavOpen(false)}
+              aria-label={i18n.t("关闭菜单")}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          ) : null}
         </div>
 
-        <ScrollArea className="flex-1">
-          <div className="p-2 space-y-3">
+        <ScrollArea className="flex-1 min-h-0">
+          <nav className="console-sidebar-nav" aria-label={i18n.t("主导航")}>
             {orderedGroups.map((groupName) => {
               const items = menuByGroup.get(groupName) ?? []
               if (!items.length) return null
               const collapsible = COLLAPSED_BY_DEFAULT_NAV_GROUPS.includes(groupName)
               const open = !collapsible || !showLabels || expandedGroups.has(groupName) || navigation.group === groupName
               return (
-                <div key={i18n.t(groupName)} className="space-y-1">
-                  {showLabels && (collapsible ? (
+                <div key={i18n.t(groupName)} className="console-nav-group">
+                  {showLabels ? (collapsible ? (
                     <button
                       type="button"
                       aria-expanded={open}
                       onClick={() => toggleGroup(groupName)}
-                      className="flex w-full items-center gap-1 px-2 pt-2 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground/75 hover:text-foreground"
+                      className="console-nav-group-label is-toggle"
                     >
-                      <ChevronRight className={cn("w-3 h-3 transition-transform", open && "rotate-90")} />
                       {i18n.t(groupName)}
+                      <ChevronRight className={cn("console-nav-group-chevron", open && "is-open")} aria-hidden="true" />
                     </button>
                   ) : (
-                    <div className="px-2 pt-2 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground/75">
-                      {i18n.t(groupName)}
-                    </div>
-                  ))}
+                    <div className="console-nav-group-label">{i18n.t(groupName)}</div>
+                  )) : <div className="console-nav-group-rule" aria-hidden="true" />}
                   {open && items.map((route, index) => {
                     const itemKey = route.path || `menu-item-${i18n.t(groupName)}-${index}`
                     const isActive = navigation.visible?.path === route.path
-                    return (
+                    const label = routeLabel(route, i18n.locale)
+                    const link = (
                       <Link
                         key={itemKey}
                         to={route.path}
                         aria-current={isActive ? "page" : undefined}
+                        aria-label={showLabels ? undefined : label}
                         onClick={() => {
                           if (isMobile) setMobileNavOpen(false)
                         }}
-                        className={cn(
-                          "menu-item",
-                          isActive && "active",
-                          !showLabels && "justify-center px-2",
-                        )}
+                        className={cn("console-nav-item", isActive && "is-active")}
                       >
-                        <span className="shrink-0">
+                        <span className="console-nav-icon">
                           <SidebarMenuIcon icon={route.icon} />
                         </span>
-                        {showLabels && <span className="truncate">{routeLabel(route, i18n.locale)}</span>}
+                        {showLabels && <span className="truncate">{label}</span>}
                       </Link>
+                    )
+                    if (showLabels) return link
+                    return (
+                      <Tooltip key={itemKey} delayDuration={120}>
+                        <TooltipTrigger asChild>{link}</TooltipTrigger>
+                        <TooltipContent side="right" sideOffset={10}>{label}</TooltipContent>
+                      </Tooltip>
                     )
                   })}
                 </div>
               )
             })}
-          </div>
+          </nav>
         </ScrollArea>
+
+        <div className="console-sidebar-footer">
+          <span
+            className={cn("console-connection-state", connected ? "is-online" : "is-offline")}
+            title={connected ? i18n.t("Console 实时事件已连接") : i18n.t("Console 实时事件未连接")}
+            aria-label={connected ? i18n.t("Console 实时事件已连接") : i18n.t("Console 实时事件未连接")}
+            role="status"
+          >
+            <span aria-hidden="true" />
+            {showLabels ? <span>{connected ? i18n.t("实时事件已连接") : i18n.t("实时事件未连接")}</span> : null}
+          </span>
+          {!isMobile ? (
+            <button
+              type="button"
+              className="console-sidebar-collapse"
+              onClick={toggleSidebar}
+              aria-label={desktopSidebarOpen ? i18n.t("收起侧边栏") : i18n.t("展开侧边栏")}
+              aria-expanded={desktopSidebarOpen}
+              title={desktopSidebarOpen ? i18n.t("收起侧边栏") : i18n.t("展开侧边栏")}
+            >
+              {desktopSidebarOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
+            </button>
+          ) : null}
+        </div>
       </aside>
 
       <div className="flex flex-col flex-1 overflow-hidden min-w-0 w-full">
-        <header className="console-topbar flex items-center justify-between h-14 px-3 sm:px-5 border-b border-[var(--console-border-subtle)] bg-background/88 backdrop-blur-xl shrink-0 gap-2">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleSidebar}
-              aria-label={isMobile ? (mobileNavOpen ? i18n.t("关闭菜单") : i18n.t("打开菜单")) : i18n.t("切换侧边栏")}
-              aria-expanded={isMobile ? mobileNavOpen : desktopSidebarOpen}
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-            <nav aria-label={i18n.t("当前位置")} className="flex flex-col min-w-0">
-              <span className="text-xs text-muted-foreground truncate">{i18n.t(navigation.group)}</span>
-              <div className="flex items-center gap-1 min-w-0 text-sm font-semibold">
-                {navigation.parent && <><Link className="truncate hover:underline" to={navigation.parent.path}>{routeLabel(navigation.parent, i18n.locale)}</Link><span aria-hidden="true">/</span></>}
-                <span aria-current="page" className="truncate">{(navigation.current ? routeLabel(navigation.current, i18n.locale) : undefined) ?? (isDemoMode() ? i18n.t("在线 Demo") : i18n.t("首页"))}</span>
-              </div>
+        <header className="console-topbar">
+          <div className="flex items-center gap-2 min-w-0">
+            {isMobile ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleSidebar}
+                aria-label={mobileNavOpen ? i18n.t("关闭菜单") : i18n.t("打开菜单")}
+                aria-expanded={mobileNavOpen}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            ) : null}
+            <nav aria-label={i18n.t("当前位置")} className="console-breadcrumb">
+              <span className="console-breadcrumb-group">{i18n.t(navigation.group)}</span>
+              <ChevronRight aria-hidden="true" className="console-breadcrumb-sep" />
+              {navigation.parent && <><Link className="console-breadcrumb-link" to={navigation.parent.path}>{routeLabel(navigation.parent, i18n.locale)}</Link><ChevronRight aria-hidden="true" className="console-breadcrumb-sep" /></>}
+              <span aria-current="page" className="console-breadcrumb-current">{(navigation.current ? routeLabel(navigation.current, i18n.locale) : undefined) ?? (isDemoMode() ? i18n.t("在线 Demo") : i18n.t("首页"))}</span>
             </nav>
           </div>
 
-          <div className="flex flex-1 max-w-lg mx-1 sm:mx-4">
+          <div className="console-topbar-search">
             <ConsoleCommandCenter routes={menuRoutes} />
           </div>
 
-          <div className="flex items-center gap-1 shrink-0">
-            <span
-              className={cn("console-connection-state", connected ? "is-online" : "is-offline")}
-              title={connected ? i18n.t("Console 实时事件已连接") : i18n.t("Console 实时事件未连接")}
-              aria-label={connected ? i18n.t("Console 实时事件已连接") : i18n.t("Console 实时事件未连接")}
-              role="status"
-            >
-              <span aria-hidden="true" />
-              <span className="hidden xl:inline">{connected ? i18n.t("实时") : i18n.t("离线")}</span>
-            </span>
+          <div className="console-topbar-actions">
             {isDemoMode() ? (
               <>
                 <Button
@@ -348,6 +373,7 @@ export default function DashboardLayout() {
                   className={cn(buttonVariants({ variant: "outline", size: "sm" }), "text-xs h-8 px-2.5 hidden sm:inline-flex")}
                 >
                   {i18n.t("接 QQ Bot")}</a>
+                <span className="console-topbar-divider" aria-hidden="true" />
               </>
             ) : null}
             <LanguageSelect />
@@ -368,18 +394,18 @@ export default function DashboardLayout() {
           </div>
         </header>
 
-        <Separator className="md:hidden" />
-
         <main
           id="console-main-content"
+          ref={mainRef}
           className={cn(
-            "flex-1 min-h-0 min-w-0",
+            "console-main-scroll flex-1 min-h-0 min-w-0",
             contentFlush ? "overflow-hidden flex flex-col" : "overflow-y-auto overflow-x-hidden",
           )}
         >
           <div
+            key={location.pathname}
             className={cn(
-              "mx-auto w-full min-w-0",
+              "console-route-view mx-auto w-full min-w-0",
               contentFlush ? "console-page-flush flex-1 min-h-0 h-full p-0" : "console-main",
               contentFullWidth ? "max-w-none" : "console-content-frame",
             )}

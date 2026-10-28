@@ -494,6 +494,17 @@ test('real union controls preserve branch values and the original unknown value 
   elements(f.runtime.value).find(item => item.type === 'select').props.onChange({ target: { value: 'preserved' } }); f.runtime.render(); assert.equal(value.text, 'initial'); f.runtime.unmount()
 })
 
+test('an unset union opens its first fillable branch without writing a value', async () => {
+  const f = fixture(), drafts = { json: new Map(), unions: new Map() }, writes = []
+  const definition = { type: 'union', list: [{ type: 'null' }, { type: 'boolean' }, { type: 'string' }] }
+  f.runtime.mount(() => f.editor.UnionValueEditor({ name: 'enabled', field: definition, value: undefined, drafts, onChange: next => writes.push(next) }))
+  const select = elements(f.runtime.value).find(item => item.type === 'select')
+  assert.equal(select.props.value, '1')
+  assert.ok(elements(f.runtime.value).some(item => item.type === 'option' && item.props.value === 'preserved' && item.props.children === '暂不设置'))
+  assert.equal(elements(f.runtime.value).some(item => item.type === f.editor.JsonValueEditor), false)
+  assert.deepEqual(writes, []); f.runtime.unmount()
+})
+
 test('real field JSON control keeps invalid raw text across remounts and reports errors before any parsed-value write', async () => {
   const f = fixture(), drafts = { json: new Map(), unions: new Map() }, flags = [], writes = []
   const props = { name: 'raw', field: { type: 'any' }, value: { keep: true }, path: '$/choice/branch:0', drafts, onChange: value => writes.push(value), onValidityChange: (path, invalid) => flags.push({ path, invalid }) }
