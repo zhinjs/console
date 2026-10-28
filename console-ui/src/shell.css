@@ -835,3 +835,50 @@
     background: currentColor;
   }
 }
+
+@layer components {
+  .console-field-group {
+    border: var(--console-border-width) solid var(--console-border-default);
+    border-radius: var(--console-radius-md);
+    background: hsl(var(--card));
+  }
+
+  /* Group headers stay visible while a long object scrolls, just below the form action bar. */
+  #console-main-content .console-field-group > summary {
+    position: sticky;
+    top: var(--config-sticky-top, 3.5rem);
+    z-index: 5;
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.5rem;
+    border-radius: var(--console-radius-md);
+    background: hsl(var(--card) / 0.95);
+    padding: 0.625rem 0.75rem;
+    backdrop-filter: blur(8px);
+  }
+
+  .console-field-group[open] > summary {
+    border-bottom: var(--console-border-width) solid var(--console-border-subtle);
+    border-radius: var(--console-radius-md) var(--console-radius-md) 0 0;
+  }
+
+  .console-field-group .console-field-group > summary {
+    top: calc(var(--config-sticky-top, 3.5rem) + 2.5rem);
+    z-index: 4;
+  }
+
+  .console-field-group .console-field-group .console-field-group > summary {
+    top: calc(var(--config-sticky-top, 3.5rem) + 5rem);
+    z-index: 3;
+  }
+
+  .console-field-group-meta {
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-label);
+  }
+
+  .console-field-group-body {
+    padding: 0.75rem;
+  }
+
+}

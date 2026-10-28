@@ -1,7 +1,7 @@
 import { useI18n } from '../../i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Settings, AlertCircle, Save, Loader2, Undo2, RefreshCw, FileCode, ShieldCheck } from 'lucide-react'
+import { Settings, AlertCircle, Save, Loader2, Undo2, RefreshCw, FileCode, ShieldCheck, ChevronsUpDown, ChevronsDownUp } from 'lucide-react'
 import type { PluginConfigFormProps, SchemaField, SchemaEditorDrafts } from './types.js'
 import { usePluginConfigDraft } from './usePluginConfigDraft'
 import { SchemaFieldEditor } from './SchemaFieldEditor'
@@ -89,6 +89,18 @@ function PluginConfigFormSession({ pluginName, onSuccess, onOpenYaml, sourceRevi
       const next = new Set(previous); invalid ? next.add(path) : next.delete(path); return next
     })
   }, [connectionScope])
+  // Field-group headers stick right under the action bar, whose height changes as it wraps.
+  const formRef = useRef<HTMLDivElement>(null)
+  const actionbarObserver = useRef<ResizeObserver | null>(null)
+  const actionbarRef = useCallback((node: HTMLDivElement | null) => {
+    actionbarObserver.current?.disconnect()
+    actionbarObserver.current = null
+    if (!node || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => node.parentElement?.style.setProperty('--config-sticky-top', `${node.offsetHeight}px`))
+    observer.observe(node)
+    actionbarObserver.current = observer
+  }, [])
+  const toggleGroups = (open: boolean) => formRef.current?.querySelectorAll<HTMLDetailsElement>('details.console-field-group').forEach((group) => { group.open = open })
   const handleSave = async (checkOnly = false) => {
     if (!isInboxCacheScopeActive(connectionScope) || form.scope !== connectionScope || form.snapshot?.connectionScope !== connectionScope
       || saving || !form.loaded || draftName !== pluginName || invalidFields.size || sourceError || !form.schema) return
@@ -126,13 +138,13 @@ function PluginConfigFormSession({ pluginName, onSuccess, onOpenYaml, sourceRevi
     {form.schemaError ? <p className="text-xs text-muted-foreground">{form.schemaError}</p> : null}
     {onOpenYaml ? <Button variant="outline" onClick={onOpenYaml}>{i18n.t("打开完整源码")}</Button> : <Link className="text-sm underline" to={`/config?plugin=${encodeURIComponent(pluginName)}`}>{i18n.t("进入配置源码页")}</Link>}
   </Card>{explanation}</div>
-  return <Card className="mt-0 p-4 pt-0 space-y-4">
-    <div className="console-config-actionbar">
+  return <Card ref={formRef} className="mt-0 p-4 pt-0 space-y-4">
+    <div ref={actionbarRef} className="console-config-actionbar">
       <div className="flex min-w-0 items-center gap-2"><Settings className="h-4 w-4 shrink-0" /><h3 className="truncate font-semibold">{i18n.t("配置 · ")}{pluginName}</h3><Badge variant="secondary">{rootObject ? i18n.t("{0} 项", [Object.keys(fields).length]) : form.schema.type}</Badge>{guard.current.dirty ? <span className="console-dirty-pill" role="status">{i18n.t("有未保存的修改")}</span> : null}</div>
       <div className="flex flex-wrap items-center justify-end gap-2"><Button variant="ghost" size="sm" onClick={reset} disabled={saving} title={i18n.t("撤销草稿")}><Undo2 className="h-4 w-4" /><span className="sr-only md:not-sr-only">{i18n.t("撤销草稿")}</span></Button><Button variant="ghost" size="sm" onClick={() => void form.load()} disabled={saving || form.loading} title={i18n.t("刷新版本（保留草稿）")}><RefreshCw className="h-4 w-4" /><span className="sr-only md:not-sr-only">{i18n.t("刷新版本（保留草稿）")}</span></Button>{onOpenYaml ? <Button variant="ghost" size="sm" onClick={onOpenYaml} title={i18n.t("打开完整源码")}><FileCode className="h-4 w-4" /><span className="sr-only md:not-sr-only">{i18n.t("打开完整源码")}</span></Button> : null}<span className="console-topbar-divider hidden sm:block" aria-hidden="true" /><Button variant="outline" size="sm" onClick={() => void handleSave(true)} disabled={saving || draftName !== pluginName || !!form.error || !!sourceError || invalidFields.size > 0}><ShieldCheck className="h-4 w-4" />{i18n.t("校验配置")}</Button><Button size="sm" onClick={() => void handleSave()} disabled={saving || draftName !== pluginName || form.loading || !!form.error || !!sourceError || invalidFields.size > 0}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{i18n.t("保存配置")}</Button></div>
     </div>
     <p className="text-sm text-muted-foreground">{i18n.t("先完成必填项；已有值和声明默认值会保留。Host 负责最终校验，保存使用读取时的版本，冲突时保留草稿。")}</p>
-    <div className="flex flex-wrap gap-2"><Button variant={view === 'form' ? 'default' : 'outline'} size="sm" onClick={() => { if (sourceError) { setSaveError(i18n.t("此项源码有格式错误，草稿已保留；请修正后再切回表单。")); return } setView('form') }}>{i18n.t("表单")}</Button><Button variant={view === 'source' ? 'default' : 'outline'} size="sm" onClick={() => { if (invalidFields.size) { setSaveError(i18n.t("字段 JSON 草稿有格式错误，请修正后切换。")); return } if (view !== 'source') setSourceText(localConfig === undefined ? '' : JSON.stringify(localConfig, null, 2)); setView('source') }}>{i18n.t("此项源码")}</Button>{view === 'form' && rootObject && <><Button variant={mode === 'minimum' ? 'default' : 'outline'} size="sm" disabled={invalidFields.size > 0} onClick={() => { if (!invalidFields.size) setMode('minimum') }}>{purposeFields?.length ? i18n.t("用途与必填配置") : i18n.t("最小必填配置")}</Button><Button variant={mode === 'all' ? 'default' : 'outline'} size="sm" disabled={invalidFields.size > 0} onClick={() => { if (!invalidFields.size) setMode('all') }}>{i18n.t("全部配置")}</Button></>}</div>
+    <div className="flex flex-wrap gap-2"><Button variant={view === 'form' ? 'default' : 'outline'} size="sm" onClick={() => { if (sourceError) { setSaveError(i18n.t("此项源码有格式错误，草稿已保留；请修正后再切回表单。")); return } setView('form') }}>{i18n.t("表单")}</Button><Button variant={view === 'source' ? 'default' : 'outline'} size="sm" onClick={() => { if (invalidFields.size) { setSaveError(i18n.t("字段 JSON 草稿有格式错误，请修正后切换。")); return } if (view !== 'source') setSourceText(localConfig === undefined ? '' : JSON.stringify(localConfig, null, 2)); setView('source') }}>{i18n.t("此项源码")}</Button>{view === 'form' && rootObject && <><Button variant={mode === 'minimum' ? 'default' : 'outline'} size="sm" disabled={invalidFields.size > 0} onClick={() => { if (!invalidFields.size) setMode('minimum') }}>{purposeFields?.length ? i18n.t("用途与必填配置") : i18n.t("最小必填配置")}</Button><Button variant={mode === 'all' ? 'default' : 'outline'} size="sm" disabled={invalidFields.size > 0} onClick={() => { if (!invalidFields.size) setMode('all') }}>{i18n.t("全部配置")}</Button></>}{view === 'form' ? <span className="ml-auto flex gap-1"><Button variant="ghost" size="sm" onClick={() => toggleGroups(true)}><ChevronsUpDown className="h-4 w-4" />{i18n.t("全部展开")}</Button><Button variant="ghost" size="sm" onClick={() => toggleGroups(false)}><ChevronsDownUp className="h-4 w-4" />{i18n.t("全部折叠")}</Button></span> : null}</div>
     {purposeFields?.length ? <p className="text-sm text-muted-foreground">{i18n.t("已显示本用途相关字段；不代表这些字段必填。其他字段与已有值仍完整保留，保存继续使用同一配置对象与版本。")}</p> : null}
     {required.length ? <Alert><AlertDescription>{i18n.t("尚未填写必填配置：")}{required.join('、')}{i18n.t("。必填是字段存在性提示，格式以 Host 校验结果为准。")}</AlertDescription></Alert> : mode === 'minimum' ? <p className="text-sm text-muted-foreground">{i18n.t("当前没有缺少的必填项；仍需校验环境变量和字段格式。")}</p> : null}
     {(saveError || form.error) ? <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{saveError ?? form.error}{i18n.t("。草稿已保留；请刷新最新版本后确认修改。")}</AlertDescription></Alert> : null}

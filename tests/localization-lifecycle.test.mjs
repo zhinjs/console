@@ -81,7 +81,7 @@ test('JSON field and dictionary errors follow the interface language while inval
 test('per-plugin source JSON error translates without replacing the source draft or allowing save', async () => {
   const runtime = hooks(); let locale = messages('zh-CN')
   const form = { loaded: true, schema: { type: 'object', object: {} }, config: {}, snapshot: { revision: 'r1' } }
-  const names = ['Card', 'Badge', 'Button', 'Settings', 'AlertCircle', 'Save', 'Loader2', 'Undo2', 'RefreshCw', 'FileCode', 'ShieldCheck', 'Alert', 'AlertDescription', 'Link', 'CodeEditor', 'SchemaFieldEditor', 'ConfigFieldExplanation', 'ConfigApplicationEvidence']
+  const names = ['Card', 'Badge', 'Button', 'Settings', 'AlertCircle', 'Save', 'Loader2', 'Undo2', 'RefreshCw', 'FileCode', 'ShieldCheck', 'ChevronsUpDown', 'ChevronsDownUp', 'Alert', 'AlertDescription', 'Link', 'CodeEditor', 'SchemaFieldEditor', 'ConfigFieldExplanation', 'ConfigApplicationEvidence']
   const Component = await componentFunctions('components/PluginConfigForm/index.tsx', ['PluginConfigFormSession'], {
     ...runtime.api, ...schemaModel, ...Object.fromEntries(names.map(name => [name, name])),
     useI18n: () => locale, usePluginConfigDraft: () => form, createConfigDraftGuard, isInboxCacheScopeActive: () => true, isManagedConfigInstance: () => false,
