@@ -1,0 +1,27 @@
+tests/localization-lifecycle.test.mjs
+  s_0300dde04694ef::t_20b92fcd23344d 84
+console-ui/src/i18n/messages.en.mjs
+  s_0300dde04694ef::t_354fb9e438682f 1092
+console-ui/src/components/PluginConfigForm/index.tsx
+  s_0300dde04694ef::t_354fb9e438682f 4
+  s_0300dde04694ef::t_2b92285495a96f 129-131,133
+  s_0300dde04694ef::t_3c4c07767397e5 132
+console-ui/src/shell.css
+  s_0300dde04694ef::t_354fb9e438682f 797-837
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "362249a9a30e7e807e43680d1dfdb8f4c699b84f",
+  "prompts": {},
+  "sessions": {
+    "s_0300dde04694ef": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "44689723-7a44-489f-898d-78cb9dc45540",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
