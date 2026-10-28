@@ -116,7 +116,8 @@ function UnionValueEditor(props: FieldEditorProps) {
   const branches = field.list ?? []
   const local = useRef(new Map<string, { selected: number | undefined; values: Map<number, unknown> }>())
   const store = drafts?.unions ?? local.current
-  if (!store.has(path)) { const matches = matchingSchemaBranches(branches, value); store.set(path, { selected: matches.length === 1 ? matches[0] : undefined, values: new Map([[-1, structuredClone(value)]]) }) }
+  // An unset value has no branch to match; open the first fillable branch so the field reads as a normal control. The value stays unset until edited.
+  if (!store.has(path)) { const matches = matchingSchemaBranches(branches, value), fillable = branches.findIndex(branch => branch.type !== 'null' && branch.type !== 'constraint'); store.set(path, { selected: matches.length === 1 ? matches[0] : value === undefined && fillable >= 0 ? fillable : undefined, values: new Map([[-1, structuredClone(value)]]) }) }
   const current = store.get(path)!
   const [selected, setSelected] = useState(current.selected)
   return <div className="space-y-3"><label className="block text-xs">{i18n.t("填写方式")}<select className="mt-1 w-full rounded-md border bg-background p-2" aria-label={i18n.t("{0} 类型分支", [props.name])} value={selected === undefined ? 'preserved' : String(selected)} onChange={event => {
@@ -125,7 +126,7 @@ function UnionValueEditor(props: FieldEditorProps) {
     current.values.set(selected ?? -1, structuredClone(value))
     const next = current.values.has(index ?? -1) ? structuredClone(current.values.get(index ?? -1)) : index === undefined ? undefined : initialSchemaValue(branches[index])
     current.selected = index; setSelected(index); onChange(next)
-  }}><option value="preserved">{i18n.t("原值 / 未选择分支（保留草稿）")}</option>{branches.map((branch, index) => <option key={index} value={String(index)}>{branchLabel(branch, field, i18n)}</option>)}</select></label><p className="text-xs text-muted-foreground">{i18n.t("切换填写方式会保留各自的草稿，保存时校验格式。")}</p>
+  }}><option value="preserved">{current.values.get(-1) === undefined ? i18n.t("暂不设置") : i18n.t("原值 / 未选择分支（保留草稿）")}</option>{branches.map((branch, index) => <option key={index} value={String(index)}>{branchLabel(branch, field, i18n)}</option>)}</select></label>
     {selected !== undefined && branches[selected] ? <SchemaFieldEditor {...props} key={selected} path={`${path}/branch:${selected}`} field={inheritedField(field, branches[selected])} /> : <JsonValueEditor {...props} path={`${path}/unselected`} />}
   </div>
 }

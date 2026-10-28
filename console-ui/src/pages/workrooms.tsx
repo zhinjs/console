@@ -13,7 +13,8 @@ import {
   Workflow,
 } from 'lucide-react'
 import { cn } from '@zhin.js/client'
-import { CONSOLE_REST } from '../contracts/zhin-console'
+import { CONSOLE_REST, CONSOLE_RPC } from '../contracts/zhin-console'
+import { requestConsole } from '../utils/console-rpc'
 import { apiFetch, getApiBase } from '../utils/auth'
 import { PageHeader } from '../components/PageHeader'
 import { PageShell } from '../components/PageShell'
@@ -42,6 +43,7 @@ interface WorkroomRun extends WorkroomRunSummary {
   assignments: { ref: string; taskRef: string; status: string; role: string; revision: number; attempt: number; fence: number; outcome?: string }[]
   blockers: { taskRef: string; blockerRef: string; kind: string; deadline?: number; allowedActions: string[] }[]
 }
+interface ConfiguredProject { id: string; name: string; description?: string; enabled: boolean }
 interface RunsEnvelope { projectId: string; runs: WorkroomRunSummary[] }
 
 function recentProjectsKey(): string {
@@ -107,6 +109,7 @@ function WorkroomBoardPage() {
   const [projectInput, setProjectInput] = useState(projectFromUrl)
   const [projectId, setProjectId] = useState(projectFromUrl)
   const [recentProjects, setRecentProjects] = useState(readRecentProjects)
+  const [configuredProjects, setConfiguredProjects] = useState<ConfiguredProject[] | null>(null)
   const [runs, setRuns] = useState<WorkroomRunSummary[]>([])
   const [runsAvailable, setRunsAvailable] = useState(false)
   const [selectedRun, setSelectedRun] = useState<WorkroomRun | null>(null)
@@ -225,6 +228,22 @@ function WorkroomBoardPage() {
     setSearchParams({ projectId: normalized })
   }, [loadRuns, projectFromUrl, runFromUrl, setSearchParams])
 
+  // Configured projects come from the Catalog so nobody has to remember a Project ID; manual entry stays as a fallback.
+  useEffect(() => {
+    let active = true
+    void requestConsole<{ workrooms?: Record<string, { name?: string; description?: string; enabled?: boolean }> }>({ type: CONSOLE_RPC.WORKROOMS_GET })
+      .then((catalog) => Object.entries(catalog.workrooms ?? {}).map(([id, room]) => ({ id, name: room.name || id, description: room.description, enabled: room.enabled !== false })))
+      .catch(() => [] as ConfiguredProject[])
+      .then((projects) => {
+        if (!active) return
+        setConfiguredProjects(projects)
+        if (!projectFromUrl && projects.length === 1) setSearchParams({ projectId: projects[0]!.id }, { replace: true })
+      })
+    return () => { active = false }
+    // Read once per page visit; selecting a project must not refetch the Catalog.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const selectRun = useCallback((runId: string) => {
     if (!projectId) return
     if (runId === runFromUrl) {
@@ -259,11 +278,34 @@ function WorkroomBoardPage() {
       />
 
       <section className="console-dashboard-panel p-4 sm:p-5" aria-labelledby="workroom-project-title">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-          <label className="block">
-            <span id="workroom-project-title" className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Project ID
-            </span>
+        <div className="console-panel-heading mb-3">
+          <div>
+            <h2 id="workroom-project-title">{i18n.t("选择项目")}</h2>
+            <p>{configuredProjects?.length ? i18n.t("已配置的 Workroom 项目，选一个查看任务。") : i18n.t("还没有读取到已配置的项目，可以按 Project ID 查询。")}</p>
+          </div>
+        </div>
+        {configuredProjects === null ? <Skeleton className="h-16 w-full" /> : configuredProjects.length ? (
+          <div className="console-workroom-projects" aria-label={i18n.t("已配置的 Workroom 项目")}>
+            {configuredProjects.map((project) => (
+              <button
+                key={project.id}
+                type="button"
+                aria-current={project.id === projectId ? 'true' : undefined}
+                className={cn('console-workroom-project', project.id === projectId && 'is-active', !project.enabled && 'is-disabled')}
+                onClick={() => selectProject(project.id)}
+              >
+                <span className="min-w-0 flex-1 text-left">
+                  <span className="block truncate text-sm font-semibold">{project.name}</span>
+                  <span className="mt-0.5 block truncate text-xs text-muted-foreground">{project.description || project.id}</span>
+                </span>
+                {!project.enabled ? <Badge variant="secondary">{i18n.t("已停用")}</Badge> : null}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        <details className="mt-3" open={configuredProjects !== null && configuredProjects.length === 0}>
+          <summary className="text-xs font-medium text-muted-foreground">{i18n.t("按 Project ID 查询")}</summary>
+          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
             <div className="flex gap-2">
               <Input
                 value={projectInput}
@@ -278,25 +320,25 @@ function WorkroomBoardPage() {
                 {loading ? <RefreshCw className="animate-spin" /> : <Search />}
                 {i18n.t("查询")}</Button>
             </div>
-          </label>
-          {recentProjects.length ? (
-            <div className="flex max-w-2xl flex-wrap gap-1.5" aria-label={i18n.t("最近查询的 Project")}>
-              {recentProjects.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  className={cn(
-                    'rounded-md border px-2.5 py-1.5 text-xs transition-colors hover:bg-muted',
-                    item === projectId && 'border-primary/35 bg-primary/[0.06] text-primary',
-                  )}
-                  onClick={() => selectProject(item)}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
+            {recentProjects.length ? (
+              <div className="flex max-w-2xl flex-wrap gap-1.5" aria-label={i18n.t("最近查询的 Project")}>
+                {recentProjects.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    className={cn(
+                      'rounded-md border px-2.5 py-1.5 text-xs transition-colors hover:bg-muted',
+                      item === projectId && 'border-primary/35 bg-primary/[0.06] text-primary',
+                    )}
+                    onClick={() => selectProject(item)}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </details>
       </section>
 
       {error ? <ErrorAlert error={error} onRetry={projectInput.trim() ? () => loadRuns(projectInput) : undefined} /> : null}
@@ -385,7 +427,7 @@ function WorkroomBoardPage() {
         <div className="console-dashboard-panel flex min-h-[28rem] items-center justify-center p-6">
           <EmptyState
             title={i18n.t("选择要查看的 Workroom")}
-            description={i18n.t("打开「配置 Workrooms」，在已配置项目上点击「查看任务」，或填写其 Project ID 查询。这里只展示你有权限访问的项目。")}
+            description={i18n.t("在上方选择一个已配置的项目；还没有项目时，先打开「配置 Workrooms」创建。")}
           />
         </div>
       )}

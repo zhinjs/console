@@ -217,3 +217,29 @@ export function describeSaveResult(result, locale = 'zh-CN') {
 export function isPermissionDenied(error) {
   return Boolean(error) && (error.status === 401 || error.status === 403)
 }
+
+const SHORT_OUTCOME_LABELS = Object.freeze({ spoke: '接了话', watched: '想接话', stayed_quiet: '不接话', skipped: '未判断' })
+
+/** One row per group, newest activity first, so repeated identical decisions read as a count instead of a wall of rows. */
+export function summarizeRecentByGroup(recent, locale = 'zh-CN') {
+  const groups = new Map()
+  for (const entry of recent) {
+    const row = groups.get(entry.group) ?? { group: entry.group, count: 0, lastAt: 0, lastText: '', outcomes: new Map() }
+    row.count += 1
+    if (entry.at >= row.lastAt) { row.lastAt = entry.at; row.lastText = entry.text }
+    row.outcomes.set(entry.outcome, (row.outcomes.get(entry.outcome) ?? 0) + 1)
+    groups.set(entry.group, row)
+  }
+  return [...groups.values()]
+    .sort((a, b) => b.lastAt - a.lastAt)
+    .map(row => ({
+      group: row.group, count: row.count, lastAt: row.lastAt, lastText: row.lastText,
+      outcomes: AMBIENT_OUTCOMES.filter(outcome => row.outcomes.has(outcome)).map(outcome => ({ outcome, label: translate(locale, SHORT_OUTCOME_LABELS[outcome]), count: row.outcomes.get(outcome) })),
+    }))
+}
+
+/** `platform:groupId` → display name using the account group lists; unknown groups keep their id. */
+export function ambientGroupLabel(group, names) {
+  const name = names?.get(group)
+  return name ? { name, id: group } : { name: group, id: null }
+}

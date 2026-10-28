@@ -16,7 +16,6 @@ import {
   RefreshCw,
   Server,
   Settings2,
-  Sparkles,
   Workflow,
   Wrench,
 } from 'lucide-react'
@@ -140,6 +139,7 @@ export default function AgentWorkbenchPage() {
   const connectedMcp = mcpServices.filter((service) => service.connected).length
   const onlineEndpoints = endpoints.filter((endpoint) => endpoint.connected).length
   const ready = agentStatus !== 'unavailable' && bindings.length > 0 && onlineEndpoints > 0
+  const disconnectedMcp = mcpServices.length - connectedMcp
 
   const readiness = [
     {
@@ -197,18 +197,19 @@ export default function AgentWorkbenchPage() {
           <div className="min-w-0">
             <h2 className="flex items-center gap-2 text-base font-semibold">
               {!error && ready ? <CheckCircle2 /> : <CircleDashed />}
-              {error ? i18n.t("当前状态未确认") : ready ? i18n.t("配置与渠道已齐备") : i18n.t("继续完成 Agent 配置")}
+              {error ? i18n.t("当前状态未确认") : ready ? disconnectedMcp > 0 ? i18n.t("可以对话，但有服务未连接") : i18n.t("配置与渠道已齐备") : i18n.t("继续完成 Agent 配置")}
             </h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               {error ? i18n.t("本次读取未完成，下方可能保留上次数据。请先重试读取。")
                 : ready ? i18n.t("可以打开会话验证模型连接与实际对话结果。")
                   : i18n.t("先处理下列缺项，再通过真实会话确认收发与模型连接。")}
             </p>
-            {!error && !ready ? (
+            {!error && (!ready || disconnectedMcp > 0) ? (
               <ul className="console-agent-missing" aria-label={i18n.t("待完成配置")}>
-                {agentStatus === 'unavailable' ? <li><Link to="/config">{i18n.t("安装并装配可选 Agent 能力 →")}</Link></li>
+                {disconnectedMcp > 0 ? <li><Link to="/introspection?tab=mcp">{i18n.t("{0} 个 MCP 服务未连接，检查服务地址与凭据 →", [disconnectedMcp])}</Link></li> : null}
+                {ready ? null : agentStatus === 'unavailable' ? <li><Link to="/config">{i18n.t("安装并装配可选 Agent 能力 →")}</Link></li>
                   : bindings.length === 0 ? <li><Link to="/config">{i18n.t("配置模型与 Agent 绑定 →")}</Link></li> : null}
-                {onlineEndpoints === 0 ? <li><Link to="/endpoints">{i18n.t("连接一个机器人渠道 →")}</Link></li> : null}
+                {!ready && onlineEndpoints === 0 ? <li><Link to="/endpoints">{i18n.t("连接一个机器人渠道 →")}</Link></li> : null}
               </ul>
             ) : null}
           </div>
@@ -259,10 +260,10 @@ export default function AgentWorkbenchPage() {
                       {binding.hasAgentFile ? <span className="console-agent-file-mark">agent.md</span> : null}
                     </div>
                     <p>{binding.provider || i18n.t("默认 Provider")} · {binding.model || i18n.t("默认模型")}</p>
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {(binding.mcpServers ?? []).length ? binding.mcpServers.map((server) => (
+                    <div className="mt-2 flex flex-wrap gap-1.5 empty:hidden">
+                      {(binding.mcpServers ?? []).map((server) => (
                         <span key={server}><PlugZap />{server}</span>
-                      )) : <span><Sparkles />{i18n.t("未声明 MCP 服务")}</span>}
+                      ))}
                     </div>
                   </div>
                   <Link to="/introspection?tab=bindings" aria-label={i18n.t("查看 {0} 详情", [binding.name])}><ArrowUpRight /></Link>

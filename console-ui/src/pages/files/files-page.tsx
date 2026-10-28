@@ -84,7 +84,7 @@ export default function FileManagePage() {
 
       <Card className="overflow-hidden">
         <CardContent className="p-0">
-          <div className="flex flex-col lg:flex-row h-[min(70vh,600px)] lg:h-[600px]">
+          <div className="flex flex-col lg:flex-row h-[min(70vh,600px)] lg:h-[max(32rem,calc(100dvh-13rem))]">
             <div
               className={`w-full min-w-0 lg:w-64 border-b lg:border-b-0 lg:border-r flex-col shrink-0 ${
                 selectedFile ? 'hidden lg:flex' : 'flex flex-1 lg:flex-none'

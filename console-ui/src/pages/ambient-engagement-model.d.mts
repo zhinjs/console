@@ -36,3 +36,6 @@ export function validateAmbientSettings(settings: AmbientSettings, locale?: 'zh-
 export function buildAmbientPatches(settings: AmbientSettings): AmbientPatch[]
 export function describeSaveResult(result: unknown, locale?: 'zh-CN' | 'en'): SaveFeedback
 export function isPermissionDenied(error: unknown): boolean
+export interface AmbientGroupSummary { group: string; count: number; lastAt: number; lastText: string; outcomes: Array<{ outcome: AmbientOutcome; label: string; count: number }> }
+export function summarizeRecentByGroup(recent: AmbientStatusView['recent'], locale?: 'zh-CN' | 'en'): AmbientGroupSummary[]
+export function ambientGroupLabel(group: string, names: ReadonlyMap<string, string> | null | undefined): { name: string; id: string | null }

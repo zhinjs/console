@@ -60,7 +60,7 @@ export default function DatabasePage() {
 
       <Card className="overflow-hidden border-border/80 shadow-sm">
         <CardContent className="p-0">
-          <div className="flex flex-col md:flex-row h-[min(calc(100dvh-9.5rem),52rem)]">
+          <div className="flex flex-col md:flex-row h-[max(28rem,calc(100dvh-11rem))]">
             <div
               className={`w-full md:w-56 border-b md:border-b-0 md:border-r flex-col shrink-0 min-h-0 ${
                 selectedTable ? 'hidden md:flex' : 'flex flex-1'

@@ -8,6 +8,11 @@ import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
 import { isDemoMode } from '../../utils/demo-mode'
 import { createConfigExplanationReader, explanationBindingKey, CONFIG_CANDIDATE_ORIGINS, CONFIG_GENERATION_MATCHES, CONFIG_EXPLANATION_REASONS, type ConfigExplanation, type ExplanationState } from './config-explanation-model.mjs'
 
+/** Compact display for content-hash revisions; the full value stays in the title for copying. */
+function shortRevision(revision: string): string {
+  return revision.length > 16 ? `${revision.slice(0, 8)}…${revision.slice(-4)}` : revision
+}
+
 type Props = { instanceKey: string; revision?: string; draftRevision?: string; dirty: boolean; disabled?: boolean; onOpenSource?: () => void }
 export function ConfigFieldExplanation(props: Props) {
   const scope = useInboxCacheScope()
@@ -32,7 +37,7 @@ function ExplanationSession({ instanceKey, revision, draftRevision, dirty, disab
   return <section aria-label={i18n.t("字段来源与运行代一致性")} className="space-y-3 rounded-md border p-3 text-sm">
     <h3 className="font-medium">{i18n.t("字段来源与运行代一致性")}</h3>
     <p className="text-xs text-muted-foreground">{i18n.t("只解释已保存版本，按需读取；不显示配置值或环境变量展开值，不改配置、不申请应用、不发送消息。")}</p>
-    <p className="break-all text-xs text-muted-foreground">{i18n.t("已读取文件版本：")}{revision ?? i18n.t("未知")}</p>
+    <p className="text-xs text-muted-foreground">{i18n.t("已读取文件版本：")}<code className="console-revision" title={revision}>{revision ? shortRevision(revision) : i18n.t("未知")}</code></p>
     {dirty && <p className="text-amber-700">{i18n.t("有未保存草稿（基于 ")}{draftRevision?.slice(0, 12) ?? i18n.t("未知版本")}{i18n.t("）；下面解释当前已读取的保存版本，不解释或覆盖草稿。")}</p>}
     <div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" disabled={!key || disabled || visible?.kind === 'loading'} onClick={() => void reader.current?.load()}>{visible?.kind === 'loading' ? i18n.t("正在读取解释…") : i18n.t("读取已保存版本解释")}</Button>{onOpenSource && <Button variant="outline" size="sm" onClick={onOpenSource}>{i18n.t("查看完整源码")}</Button>}</div>
     {visible?.kind === 'error' && <p role="alert">{visible.message}</p>}

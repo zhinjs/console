@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { parse as parseConfigSource } from 'yaml'
 import { RefreshCw, RotateCw } from 'lucide-react'
 import { requestConsole } from '../utils/console-rpc'
+import { ENDPOINT_RPC } from '../contracts/zhin-console'
+import { normalizeGroupRecord } from './endpoint-detail/conversation-labels'
 import { pluginRpc } from '../utils/plugin-rpc'
 import { readErrorSummary } from '../utils/read-error.mjs'
 import { useConsoleRead } from '../hooks/use-console-read'
@@ -18,12 +20,14 @@ import { Textarea } from '../components/ui/textarea'
 import { Skeleton } from '../components/ui/skeleton'
 import {
   BEHAVIOR_CHOICES,
+  ambientGroupLabel,
   buildAmbientPatches,
   describeAmbientStatus,
   describeSaveResult,
   isPermissionDenied,
   parseGroupList,
   readAmbientSettings,
+  summarizeRecentByGroup,
   validateAmbientSettings,
   validateAmbientStatus,
   type AmbientBehavior,
@@ -115,19 +119,73 @@ function AmbientStatusSection({ read, onRetry }: { read: StatusReadState; onRetr
         </div>)}
       </div>
       {view.hasActivity
-        ? <div className="space-y-1">
-          <h3 className="text-sm font-medium">{i18n.t("最近的记录")}</h3>
-          <ul className="divide-y rounded-md border text-sm">
-            {view.recent.map((entry) => <li key={`${entry.at}-${entry.group}-${entry.outcome}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
-              <span className="text-xs text-muted-foreground">{formatTime(entry.at, i18n.locale)}</span>
-              <span className="break-all">{entry.group}</span>
-              <span className="text-muted-foreground">{entry.text}</span>
-            </li>)}
-          </ul>
-        </div>
+        ? <AmbientRecentActivity recent={view.recent} />
         : <p className="text-sm text-muted-foreground">{i18n.t("最近 24 小时还没有记录。")}</p>}
     </CardContent>
   </Card>
+}
+
+/** Best-effort group names from connected accounts of the platforms that appear in the records. */
+function useAmbientGroupNames(groups: string[]): Map<string, string> | null {
+  const [names, setNames] = useState<Map<string, string> | null>(null)
+  const platforms = [...new Set(groups.map((group) => group.split(':')[0] ?? '').filter(Boolean))].sort().join(',')
+  useEffect(() => {
+    if (!platforms) return
+    let active = true
+    const wanted = new Set(platforms.split(','))
+    void (async () => {
+      const { endpoints = [] } = await requestConsole<{ endpoints?: Array<{ name: string; adapter: string; connected: boolean }> }>({ type: ENDPOINT_RPC.LIST })
+      const lists = await Promise.all(endpoints.filter((endpoint) => endpoint.connected && wanted.has(endpoint.adapter)).map((endpoint) =>
+        requestConsole<{ groups?: unknown[] }>({ type: ENDPOINT_RPC.GROUPS, adapter: endpoint.adapter, endpointKey: endpoint.name })
+          .then((result) => ({ adapter: endpoint.adapter, groups: result.groups ?? [] }))
+          .catch(() => null)))
+      const next = new Map<string, string>()
+      for (const list of lists) {
+        for (const raw of list?.groups ?? []) {
+          if (!raw || typeof raw !== 'object') continue
+          const group = normalizeGroupRecord(raw as Record<string, unknown>)
+          if (group.group_id > 0 && group.name) next.set(`${list!.adapter}:${group.group_id}`, group.name)
+        }
+      }
+      if (active) setNames(next)
+    })().catch(() => {})
+    return () => { active = false }
+  }, [platforms])
+  return names
+}
+
+function AmbientRecentActivity({ recent }: { recent: AmbientStatusView['recent'] }) {
+  const i18n = useI18n()
+  const names = useAmbientGroupNames(recent.map((entry) => entry.group))
+  const groups = summarizeRecentByGroup(recent, i18n.locale)
+  return <div className="space-y-3">
+    <h3 className="text-sm font-medium">{i18n.t("最近的记录")}</h3>
+    <div className="console-table-card">
+      <table className="console-table">
+        <thead><tr><th scope="col">{i18n.t("群")}</th><th scope="col">{i18n.t("记录")}</th><th scope="col">{i18n.t("最近一次")}</th></tr></thead>
+        <tbody>
+          {groups.map((row) => {
+            const label = ambientGroupLabel(row.group, names)
+            return <tr key={row.group}>
+              <td><span className="block font-medium">{label.name}</span>{label.id ? <span className="console-table-sub">{label.id}</span> : null}</td>
+              <td><div className="flex flex-wrap gap-1.5">{row.outcomes.map((item) => <span key={item.outcome} className={`console-outcome-chip is-${item.outcome}`}>{item.label} × {item.count}</span>)}</div></td>
+              <td><span className="block">{row.lastText}</span><span className="console-table-sub">{formatTime(row.lastAt, i18n.locale)}</span></td>
+            </tr>
+          })}
+        </tbody>
+      </table>
+    </div>
+    <details>
+      <summary className="text-xs font-medium text-muted-foreground">{i18n.t("逐条记录（{0}）", [recent.length])}</summary>
+      <ul className="mt-2 divide-y rounded-md border text-sm">
+        {recent.map((entry) => <li key={`${entry.at}-${entry.group}-${entry.outcome}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
+          <span className="text-xs text-muted-foreground tabular-nums">{formatTime(entry.at, i18n.locale)}</span>
+          <span className="break-all">{ambientGroupLabel(entry.group, names).name}</span>
+          <span className="text-muted-foreground">{entry.text}</span>
+        </li>)}
+      </ul>
+    </details>
+  </div>
 }
 
 type SettingsReadState = ReturnType<typeof useConsoleRead<SettingsRead | null>>
@@ -205,7 +263,7 @@ function AmbientSettingsForm({ initial, onReload }: { initial: SettingsRead; onR
     <CardContent className="space-y-5">
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">{i18n.t("机器人要不要自己接话？")}</legend>
-        {BEHAVIOR_CHOICES.map((choice) => <label key={choice.value} className="flex cursor-pointer items-start gap-2 rounded-md border p-3 text-sm">
+        {BEHAVIOR_CHOICES.map((choice) => <label key={choice.value} className="console-choice-card">
           <input type="radio" name="ambient-behavior" value={choice.value} checked={behavior === choice.value} onChange={() => setBehavior(choice.value)} className="mt-1" />
           <span><span className="font-medium">{i18n.t(choice.label, undefined, "state")}</span><span className="block text-xs text-muted-foreground">{i18n.t(choice.hint)}</span></span>
         </label>)}
@@ -214,12 +272,14 @@ function AmbientSettingsForm({ initial, onReload }: { initial: SettingsRead; onR
 
       {showsGroupOptions && <fieldset className="space-y-2">
         <legend className="text-sm font-medium">{i18n.t("在哪些群里？")}</legend>
-        <label className="flex items-center gap-2 text-sm">
+        <div className="console-segmented">
+        <label>
           <input type="radio" name="ambient-group-scope" value="all" checked={groupScope === 'all'} onChange={() => setGroupScope('all')} />
-          {i18n.t("所有群")}</label>
-        <label className="flex items-center gap-2 text-sm">
+          <span>{i18n.t("所有群")}</span></label>
+        <label>
           <input type="radio" name="ambient-group-scope" value="some" checked={groupScope === 'some'} onChange={() => setGroupScope('some')} />
-          {i18n.t("只在这些群")}</label>
+          <span>{i18n.t("只在这些群")}</span></label>
+        </div>
         {groupScope === 'some' && <Textarea
           aria-label={i18n.t("群列表")}
           placeholder={i18n.t("每行一个，写成「平台:群号」，例如\nqq:123456")}

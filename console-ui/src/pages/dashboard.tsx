@@ -247,7 +247,8 @@ export default function HomePage() {
     (stats?.endpoints.total ?? 0) - (stats?.endpoints.online ?? 0),
   )
   const hostAvailable = stats !== null && systemStatus !== null
-  const healthy = hostAvailable && offlineEndpoints === 0 && optional.errorLogs === 0
+  const disconnectedMcp = Math.max(0, (optional.mcpServices ?? 0) - (optional.connectedMcp ?? 0))
+  const healthy = hostAvailable && offlineEndpoints === 0 && disconnectedMcp === 0 && optional.errorLogs === 0
 
   const capabilities = useMemo<CapabilityItem[]>(() => [
     {
@@ -283,7 +284,7 @@ export default function HomePage() {
       value: optional.mcpServices,
       detail: optional.mcpServices === null
         ? i18n.t("未启用或尚未接线")
-        : i18n.t("{0} 个连接正常", [optional.connectedMcp ?? 0]),
+        : disconnectedMcp > 0 ? i18n.t("{0} 个未连接", [disconnectedMcp]) : i18n.t("{0} 个连接正常", [optional.connectedMcp ?? 0]),
       icon: Server,
       path: '/introspection?tab=mcp',
     },
@@ -321,11 +322,19 @@ export default function HomePage() {
         tone: 'warning',
       })
     }
+    if (disconnectedMcp > 0) {
+      items.push({
+        title: i18n.t("{0} 个 MCP 服务未连接", [disconnectedMcp]),
+        detail: i18n.t("Agent 暂时无法调用这些服务提供的工具。"),
+        path: '/introspection?tab=mcp',
+        tone: 'warning',
+      })
+    }
     if ((optional.errorLogs ?? 0) > 0) {
       items.push({
         title: i18n.t("历史错误 {0} 条", [optional.errorLogs]),
         detail: i18n.t("打开错误日志"),
-        path: '/logs',
+        path: '/logs?level=error',
         tone: 'danger',
       })
     }
@@ -333,7 +342,7 @@ export default function HomePage() {
       items.push({
         title: i18n.t("历史警告 {0} 条", [optional.warningLogs]),
         detail: i18n.t("打开警告日志"),
-        path: '/logs',
+        path: '/logs?level=warn',
         tone: 'warning',
       })
     }
@@ -341,7 +350,7 @@ export default function HomePage() {
       items.push({ title: i18n.t("日志状态暂时不可读"), detail: optional.logReadError ?? i18n.t("尚无法确认是否有运行错误，请打开日志页检查读取详情。"), path: '/logs', tone: 'warning' })
     }
     return items.slice(0, 4)
-  }, [error, offlineEndpoints, optional, stats, i18n])
+  }, [error, offlineEndpoints, disconnectedMcp, optional, stats, i18n])
 
   const handleRestart = async () => {
     setRestarting(true)
@@ -369,20 +378,19 @@ export default function HomePage() {
   return (
     <div className="console-dashboard space-y-5">
       <section className="console-dashboard-hero" aria-labelledby="dashboard-title">
-        <div className="console-dashboard-glow" aria-hidden="true" />
-        <div className="relative z-10 flex flex-col gap-7">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-            <div className="max-w-3xl">
-              <div className="mb-4 flex items-center gap-2 text-sm font-medium text-primary">
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0 max-w-3xl">
+              <div className={healthy ? 'console-health-pill' : 'console-health-pill is-warning'}>
                 <span className={healthy ? 'console-status-dot' : 'console-status-dot is-warning'} />
                 {!hostAvailable ? i18n.t("Host 连接需要恢复") : healthy ? i18n.t("所有核心服务运行正常") : i18n.t("有事项需要处理")}
               </div>
-              <h1 id="dashboard-title" className="text-balance text-3xl font-semibold tracking-[-0.04em] sm:text-4xl xl:text-[2.8rem] xl:leading-[1.05]">
+              <h1 id="dashboard-title" className="console-dashboard-title">
                 {!hostAvailable
-                  ? <>{i18n.t("Host 暂时不可达，")}<br className="hidden sm:block" />{i18n.t("控制面仍可继续使用")}</>
-                  : <>{i18n.t("先处理重要状态，")}<br className="hidden sm:block" />{i18n.t("再进入正在进行的工作")}</>}
+                  ? <>{i18n.t("Host 暂时不可达，")}{i18n.t("控制面仍可继续使用")}</>
+                  : i18n.t("运行概览")}
               </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
+              <p className="console-dashboard-lede">
                 {!hostAvailable
                   ? i18n.t("页面导航、配置入口和能力目录保持可用。重新连接后，渠道、Agent 与运行状态会在这里恢复。")
                   : i18n.t("这里优先汇总需要处理的渠道、日志和 Agent 状态，再提供能力目录与下一步操作。")}
