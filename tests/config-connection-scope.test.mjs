@@ -744,3 +744,12 @@ test('booleans render only a title-row switch, and list enums are checkboxes tha
   boxes[1].props.onCheckedChange(false); assert.deepEqual(changes.at(-1), ['zzz'])
   assert.equal(button(list, '添加列表项'), undefined)
 })
+
+test('the form view carries no instruction wall; field-origin diagnostics live only with the source view', async () => {
+  const f = fixture(), tree = await loadedForm(f)
+  assert.equal(label(tree).includes('先完成必填项'), false)
+  assert.equal(elements(tree).some(item => item.type === 'field-explanation'), false)
+  button(f.runtime.value, '此项源码').props.onClick(); await f.runtime.settle()
+  assert.ok(elements(f.runtime.value).some(item => item.type === 'field-explanation'))
+  f.runtime.unmount()
+})
