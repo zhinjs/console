@@ -67,7 +67,7 @@ Console 面向普通用户（[zhin#970](https://github.com/zhinjs/zhin/issues/97
 | 分组 | 页面 |
 |------|------|
 | 常用 | 首页、聊天账号、聊天记录、定时提醒、运行记录 |
-| 机器人 | 机器人状态、试聊一下（sandbox 插件页）、助手任务（启用助手时）、群聊插话、技能助手 |
+| 机器人 | 机器人状态、试聊一下（sandbox 插件页）、助手任务（启用助手时）、群聊插话、技能助手、Token 用量 |
 | 功能 | 功能管理、功能商店、任务中心 |
 | 高级（默认折叠） | 设置、环境变量、项目文件、数据库、运行时能力、消息场景试验台、Workroom |
 
@@ -137,3 +137,5 @@ Console 面向普通用户（[zhin#970](https://github.com/zhinjs/zhin/issues/97
 登录页和工作台可手动选择简体中文或英文，默认中文，偏好仅保存在当前浏览器站点。它独立于 Bot 语言和时区；切换保留配置值和未保存草稿。Schema 可通过 `x-i18n.en` 声明标题、说明和按稳定值映射的选项标签，第三方未提供翻译的原文保持不变。详见[界面语言与 Schema 扩展](docs/localization.md)。
 
 Choose Simplified Chinese or English on the sign-in screen or dashboard. This preference is local to the Console, independent of the Bot language and timezone. Configuration values, user content, and unsaved drafts are preserved. See [interface language and Schema metadata](docs/localization.md).
+
+「Token 用量」（`/agent/usage`）：读 `pluginRpc('root', 'usage-stats')`（Host 方法 `plugin.root.usage-stats`，只读，依赖 zhin 的 `feat/console-usage-stats`）。按时间范围（今天 / 近 7 天 / 近 30 天 / 自定义）、粒度（自动 / 小时 / 天）和会话筛选；展示总输入 / 输出、缓存命中率（含单次调用 P50 / P90）、按时间堆叠的输入、命中率折线、按模型的输入 / 输出 / 缓存读取、输入构成和用量最高的会话。图表是仓库内的零依赖 SVG（`token-usage-charts.tsx`），缓存写入和分位数等新字段缺失时自动隐藏。无权限（401/403）时显示无权限提示。
