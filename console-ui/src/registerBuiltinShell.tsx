@@ -133,6 +133,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'BarChart3',
     element: <TokenUsagePage />,
+    requiredPermissions: ['control:read'],
     meta: { group: NAV_GROUPS.BOT, order: 5 },
   })
 

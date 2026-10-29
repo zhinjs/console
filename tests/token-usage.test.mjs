@@ -17,7 +17,7 @@ const stats = (extra = {}) => ({
     { provider: 'a', model: 'm1', calls: 3, inputTokens: 800, outputTokens: 150, cacheReadTokens: 400 },
     { provider: 'b', model: 'm2', calls: 1, inputTokens: 200, outputTokens: 50, cacheReadTokens: 100 },
   ],
-  bySession: [{ sessionKey: 'icqq:group:123', turns: 2, calls: 3, inputTokens: 700, outputTokens: 100, cacheReadTokens: 350 }],
+  bySession: [{ sessionKey: 'icqq:8596238:group:123', turns: 2, calls: 3, inputTokens: 700, outputTokens: 100, cacheReadTokens: 350 }],
   series: [
     { bucketStart: 0, calls: 2, inputTokens: 600, outputTokens: 100, cacheReadTokens: 300, byModel: { 'a/m1': 400, 'b/m2': 200 } },
     { bucketStart: HOUR, calls: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, byModel: {} },
@@ -118,11 +118,14 @@ test('donut slices sum to a full turn and skip empty segments', () => {
   assert.deepEqual(donutSlices([{ key: 'x', value: 0 }]), [])
 })
 
-test('session keys split into platform / scope / scene id', () => {
-  assert.deepEqual(splitSessionKey({ sessionKey: 'icqq:group:123' }), { sessionKey: 'icqq:group:123', platform: 'icqq', scope: 'group', sceneId: '123' })
-  assert.equal(splitSessionKey({ sessionKey: 'telegram:channel:a:b' }).sceneId, 'a:b')
+test('session keys split as platform:endpoint:scope:sceneId; short keys stay raw', () => {
+  assert.deepEqual(splitSessionKey({ sessionKey: 'icqq:8596238:group:1048877509' }),
+    { sessionKey: 'icqq:8596238:group:1048877509', platform: 'icqq', endpoint: '8596238', scope: 'group', sceneId: '1048877509' })
+  assert.equal(splitSessionKey({ sessionKey: 'telegram:bot1:channel:a:b' }).sceneId, 'a:b')
+  const schedule = splitSessionKey({ sessionKey: 'schedule:assistant-profile-weatherReport' })
+  assert.deepEqual(schedule, { sessionKey: 'schedule:assistant-profile-weatherReport', platform: '', endpoint: '', scope: '', sceneId: 'schedule:assistant-profile-weatherReport' })
   assert.equal(splitSessionKey({ sessionKey: 'weird' }).sceneId, 'weird')
-  assert.deepEqual(splitSessionKey({ sessionKey: 'x', platform: 'p', scope: 's', sceneId: 'i' }), { sessionKey: 'x', platform: 'p', scope: 's', sceneId: 'i' })
+  assert.deepEqual(splitSessionKey({ sessionKey: 'x', platform: 'p', endpoint: 'e', scope: 's', sceneId: 'i' }), { sessionKey: 'x', platform: 'p', endpoint: 'e', scope: 's', sceneId: 'i' })
 })
 
 test('sessions sort by any column without mutating the input', () => {
@@ -175,7 +178,7 @@ test('401 / 403 are permission denials', () => {
 
 test('the page is registered under the bot group and reads plugin.root.usage-stats', async () => {
   const shell = await readFile(new URL('../console-ui/src/registerBuiltinShell.tsx', import.meta.url), 'utf8')
-  assert.match(shell, /path: '\/agent\/usage'[\s\S]*?name: 'Token 用量'[\s\S]*?group: NAV_GROUPS\.BOT/)
+  assert.match(shell, /path: '\/agent\/usage'[\s\S]*?name: 'Token 用量'[\s\S]*?group: NAV_GROUPS\.BOT[\s\S]*?requiredPermissions: \['control:read'\]|path: '\/agent\/usage'[\s\S]*?requiredPermissions: \['control:read'\][\s\S]*?group: NAV_GROUPS\.BOT/)
   const page = await readFile(new URL('../console-ui/src/pages/token-usage.tsx', import.meta.url), 'utf8')
   assert.match(page, /pluginRpc<unknown>\('root', USAGE_METHOD/)
 })

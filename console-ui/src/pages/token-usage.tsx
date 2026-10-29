@@ -97,7 +97,7 @@ export default function TokenUsagePage() {
     const modelKeys = collectModelKeys(stats)
     const colors = buildColorMap(modelKeys)
     const shown = topModelKeys(stats.byModel)
-    return { colors, shown, hasOther: modelKeys.length > shown.length, showWrite: hasCacheWrite(stats), quantiles: cacheQuantiles(stats.totals) }
+    return { colors, shown, hasOther: modelKeys.length > shown.length, showWrite: hasCacheWrite(stats), showEndpoint: stats.bySession.some(row => splitSessionKey(row).endpoint !== ''), quantiles: cacheQuantiles(stats.totals) }
   }, [stats])
 
   const sessions = useMemo(() => stats ? sortSessions(stats.bySession, sortKey, sortDir) : [], [stats, sortKey, sortDir])
@@ -133,7 +133,7 @@ export default function TokenUsagePage() {
           </> : null}
           <SelectField aria-label={i18n.t("统计粒度")} className="w-auto" value={bucket} onValueChange={setBucket} options={USAGE_BUCKETS.map(item => ({ value: item.value, label: i18n.t(item.label) }))} />
           <form className="flex items-center gap-2" onSubmit={event => { event.preventDefault(); applySession(sessionDraft) }}>
-            <Input className="w-56" aria-label={i18n.t("会话")} placeholder={i18n.t("按会话筛选，如 icqq:group:123")} value={sessionDraft} onChange={event => setSessionDraft(event.target.value)} />
+            <Input className="w-56" aria-label={i18n.t("会话")} placeholder={i18n.t("按会话筛选，如 icqq:8596238:group:123")} value={sessionDraft} onChange={event => setSessionDraft(event.target.value)} />
             <Button size="sm" type="submit">{i18n.t("筛选")}</Button>
             {session ? <Button size="sm" type="button" variant="ghost" onClick={() => applySession('')}><X />{i18n.t("清除会话")}</Button> : null}
           </form>
@@ -199,6 +199,7 @@ export default function TokenUsagePage() {
                       <thead className="text-xs text-muted-foreground">
                         <tr>
                           <th scope="col" className="px-3 py-2 text-left font-medium">{i18n.t("平台")}</th>
+                          {view.showEndpoint ? <th scope="col" className="px-3 py-2 text-left font-medium">{i18n.t("账号")}</th> : null}
                           <th scope="col" className="px-3 py-2 text-left font-medium">{i18n.t("类型")}</th>
                           <th scope="col" className="px-3 py-2 text-left font-medium">{i18n.t("会话 ID")}</th>
                           {header('turns', i18n.t("回合"))}
@@ -215,6 +216,7 @@ export default function TokenUsagePage() {
                           const parts = splitSessionKey(row)
                           return <tr key={row.sessionKey} className="cursor-pointer hover:bg-muted/50" title={row.sessionKey} onClick={() => pickSession(row)}>
                             <td className="px-3 py-2">{parts.platform || '—'}</td>
+                            {view.showEndpoint ? <td className="px-3 py-2">{parts.endpoint || '—'}</td> : null}
                             <td className="px-3 py-2">{parts.scope || '—'}</td>
                             <td className="px-3 py-2 break-all font-mono text-xs"><button type="button" className="text-left underline-offset-2 hover:underline" onClick={event => { event.stopPropagation(); pickSession(row) }}>{parts.sceneId || row.sessionKey}</button></td>
                             <td className="px-3 py-2 text-right tabular-nums">{formatTokens(row.turns, i18n.locale)}</td>

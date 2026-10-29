@@ -240,19 +240,19 @@ export function segmentValues(segments) {
 }
 
 /**
- * 拆 sessionKey：优先用 Host 给的 platform / scope / sceneId，缺失时按 `platform:scope:sceneId`
- * （scene id 里允许再有冒号）拆；拆不出来的部分为空串，原 key 始终保留。
+ * 拆 sessionKey：真实格式是 `platform:endpoint:scope:sceneId`（sceneId 里允许再有冒号）。
+ * 优先用 Host 给的 platform / endpoint / scope / sceneId；缺失时按上面拆，
+ * 少于 4 段（如 `schedule:assistant-profile-weatherReport`）不猜，整条 key 当作会话 ID 显示。
  */
 export function splitSessionKey(row) {
   const parts = String(row.sessionKey).split(':')
-  const fallback = {
-    platform: parts.length >= 3 ? parts[0] : '',
-    scope: parts.length >= 3 ? parts[1] : parts.length === 2 ? parts[0] : '',
-    sceneId: parts.length >= 3 ? parts.slice(2).join(':') : parts.length === 2 ? parts[1] : parts[0],
-  }
+  const fallback = parts.length >= 4
+    ? { platform: parts[0], endpoint: parts[1], scope: parts[2], sceneId: parts.slice(3).join(':') }
+    : { platform: '', endpoint: '', scope: '', sceneId: row.sessionKey }
   return {
     sessionKey: row.sessionKey,
     platform: row.platform || fallback.platform,
+    endpoint: row.endpoint || fallback.endpoint,
     scope: row.scope || fallback.scope,
     sceneId: row.sceneId || fallback.sceneId,
   }

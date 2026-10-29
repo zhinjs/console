@@ -14,7 +14,7 @@ export const SESSION_SORT_KEYS: readonly string[]
 export type UsageBucket = 'hour' | 'day'
 export interface UsageTokens { calls: number; inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheShare?: number; cacheWriteTokens?: number }
 export interface UsageModelRow extends UsageTokens { provider: string; model: string }
-export interface UsageSessionRow extends UsageTokens { sessionKey: string; platform?: string; scope?: string; sceneId?: string; turns: number }
+export interface UsageSessionRow extends UsageTokens { sessionKey: string; platform?: string; endpoint?: string; scope?: string; sceneId?: string; turns: number }
 export interface UsagePoint extends UsageTokens { bucketStart: number; byModel: Record<string, number> }
 export interface UsageStats {
   range: { since: number; until: number; bucket: UsageBucket; timeZone?: string }
@@ -53,7 +53,7 @@ export function topModelKeys(byModel: UsageModelRow[], limit?: number): string[]
 export function niceMax(value: number): number
 export function donutSlices(values: Array<{ key: string; value: number }>): DonutSlice[]
 export function segmentValues(segments: UsageStats['segments']): Array<{ key: string; value: number }>
-export function splitSessionKey(row: Pick<UsageSessionRow, 'sessionKey' | 'platform' | 'scope' | 'sceneId'>): { sessionKey: string; platform: string; scope: string; sceneId: string }
+export function splitSessionKey(row: Pick<UsageSessionRow, 'sessionKey' | 'platform' | 'endpoint' | 'scope' | 'sceneId'>): { sessionKey: string; platform: string; endpoint: string; scope: string; sceneId: string }
 export function sortSessions(rows: UsageSessionRow[], key?: string, direction?: 'asc' | 'desc'): UsageSessionRow[]
 export function rangeFor(preset: string, now?: number): { since: number; until: number }
 export function autoBucket(range: { since: number; until: number }): UsageBucket

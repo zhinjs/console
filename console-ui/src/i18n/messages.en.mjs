@@ -2581,7 +2581,7 @@ export const englishMessages = Object.freeze({
 "自动": "Auto",
 "小时": "Hour",
 "天": "Day",
-"按会话筛选，如 icqq:group:123": "Filter by conversation, e.g. icqq:group:123",
+"按会话筛选，如 icqq:8596238:group:123": "Filter by conversation, e.g. icqq:group:123",
 "清除会话": "Clear conversation",
 "自定义范围的开始时间必须早于结束时间。": "The start time must be earlier than the end time.",
 "总输入 tokens": "Total input tokens",
