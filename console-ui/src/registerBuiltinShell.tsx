@@ -22,6 +22,7 @@ import BotReplayPage from './pages/bot-replay'
 import { REPLAY_PERMISSION } from './pages/bot-replay-model.mjs'
 import AmbientEngagementPage from './pages/ambient-engagement'
 import { AMBIENT_STATUS_PERMISSION } from './pages/ambient-engagement-model.mjs'
+import TokenUsagePage from './pages/token-usage'
 import SkillsAssistantPage from './pages/skills-assistant'
 import { SKILLS_STATUS_PERMISSION } from './pages/skills-assistant-model.mjs'
 import WorkroomsPage from './pages/workrooms'
@@ -124,6 +125,15 @@ export function registerBuiltinConsolePages() {
     element: <SkillsAssistantPage />,
     requiredPermissions: [SKILLS_STATUS_PERMISSION],
     meta: { group: NAV_GROUPS.BOT, order: 4 },
+  })
+
+  app.addRoute({
+    path: '/agent/usage',
+    name: 'Token 用量',
+    parent: null,
+    icon: 'BarChart3',
+    element: <TokenUsagePage />,
+    meta: { group: NAV_GROUPS.BOT, order: 5 },
   })
 
   app.addRoute({

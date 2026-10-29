@@ -13,6 +13,7 @@ const builtinNames: Readonly<Record<string, string>> = {
   "/agent/replay": "决策回放",
   "/agent/skills": "技能助手",
   "/agent/ambient": "群聊插话",
+  "/agent/usage": "Token 用量",
   "/agent/workrooms": "Workroom",
   "/agent/workrooms/catalog": "Workroom 配置",
   "/scenario-lab": "消息场景试验台",
