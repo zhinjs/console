@@ -42,7 +42,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Home',
     element: <HomePage />,
-    meta: { group: NAV_GROUPS.DAILY, order: 0 },
+    meta: { group: NAV_GROUPS.OPERATIONS, order: 0 },
   })
 
   app.addRoute({
@@ -51,7 +51,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'FileText',
     element: <LogsPage />,
-    meta: { group: NAV_GROUPS.DAILY, order: 4, fullWidth: true },
+    meta: { group: NAV_GROUPS.OPERATIONS, order: 2, fullWidth: true },
   })
 
   app.addRoute({
@@ -60,7 +60,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'ClipboardList',
     element: <TaskCenterPage />,
-    meta: { group: NAV_GROUPS.FEATURES, order: 2 },
+    meta: { group: NAV_GROUPS.TASKS, order: 0 },
   })
 
   app.addRoute({
@@ -68,7 +68,7 @@ export function registerBuiltinConsolePages() {
     name: '群欢迎配置流程',
     parent: '/tasks',
     element: <WelcomeUseCasePage />,
-    meta: { hideInMenu: true, group: NAV_GROUPS.FEATURES },
+    meta: { hideInMenu: true, group: NAV_GROUPS.TASKS },
   })
 
   app.addRoute({
@@ -77,7 +77,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Clock',
     element: <CronPage />,
-    meta: { group: NAV_GROUPS.DAILY, order: 3 },
+    meta: { group: NAV_GROUPS.TASKS, order: 1 },
   })
 
   app.addRoute({
@@ -86,7 +86,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Bot',
     element: <EndpointsPage />,
-    meta: { group: NAV_GROUPS.DAILY, order: 1 },
+    meta: { group: NAV_GROUPS.ACCOUNTS, order: 0 },
   })
 
   app.addRoute({
@@ -95,7 +95,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Brain',
     element: <AgentWorkbenchPage />,
-    meta: { group: NAV_GROUPS.BOT, order: 0 },
+    meta: { group: NAV_GROUPS.OPERATIONS, order: 1 },
   })
 
   app.addRoute({
@@ -105,7 +105,7 @@ export function registerBuiltinConsolePages() {
     icon: 'Brain',
     element: <BotReplayPage />,
     requiredPermissions: [REPLAY_PERMISSION],
-    meta: { group: NAV_GROUPS.BOT, order: 1, hideInMenu: true },
+    meta: { group: NAV_GROUPS.OPERATIONS, order: 1, hideInMenu: true },
   })
 
   app.addRoute({
@@ -115,7 +115,7 @@ export function registerBuiltinConsolePages() {
     icon: 'MessagesSquare',
     element: <AmbientEngagementPage />,
     requiredPermissions: [AMBIENT_STATUS_PERMISSION],
-    meta: { group: NAV_GROUPS.BOT, order: 3 },
+    meta: { group: NAV_GROUPS.SETTINGS, order: 2 },
   })
 
   app.addRoute({
@@ -125,7 +125,7 @@ export function registerBuiltinConsolePages() {
     icon: 'Sparkles',
     element: <SkillsAssistantPage />,
     requiredPermissions: [SKILLS_STATUS_PERMISSION],
-    meta: { group: NAV_GROUPS.BOT, order: 4 },
+    meta: { group: NAV_GROUPS.SETTINGS, order: 3 },
   })
 
   app.addRoute({
@@ -135,7 +135,7 @@ export function registerBuiltinConsolePages() {
     icon: 'BarChart3',
     element: <TokenUsagePage />,
     requiredPermissions: ['control:read'],
-    meta: { group: NAV_GROUPS.BOT, order: 5 },
+    meta: { group: NAV_GROUPS.OPERATIONS, order: 3 },
   })
 
   app.addRoute({
@@ -144,7 +144,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Workflow',
     element: <WorkroomsPage />,
-    meta: { group: NAV_GROUPS.ADVANCED, order: 6, fullWidth: true },
+    meta: { group: NAV_GROUPS.TASKS, order: 2, fullWidth: true },
   })
 
   app.addRoute({
@@ -153,10 +153,10 @@ export function registerBuiltinConsolePages() {
     parent: '/agent/workrooms',
     icon: 'Network',
     element: <WorkroomCatalogPage />,
-    meta: { group: NAV_GROUPS.ADVANCED, order: 7, fullWidth: true, hideInMenu: true },
+    meta: { group: NAV_GROUPS.TASKS, order: 2, fullWidth: true, hideInMenu: true },
   })
 
-  app.addRoute({ path: '/scenario-lab', name: '消息场景试验台', parent: null, icon: 'FlaskConical', element: <ScenarioLabPage />, meta: { group: NAV_GROUPS.ADVANCED, order: 5, fullWidth: true } })
+  app.addRoute({ path: '/scenario-lab', name: '消息场景试验台', parent: null, icon: 'FlaskConical', element: <ScenarioLabPage />, meta: { group: NAV_GROUPS.OPERATIONS, order: 7, fullWidth: true } })
 
   app.addRoute({
     path: '/introspection',
@@ -164,7 +164,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Blocks',
     element: <IntrospectionPage />,
-    meta: { group: NAV_GROUPS.ADVANCED, order: 4, fullWidth: true },
+    meta: { group: NAV_GROUPS.OPERATIONS, order: 4, fullWidth: true },
   })
 
   app.addRoute({
@@ -173,7 +173,7 @@ export function registerBuiltinConsolePages() {
     parent: '/introspection',
     icon: 'Shield',
     element: <CommandPermissionsPage />,
-    meta: { group: NAV_GROUPS.ADVANCED, order: 8, hideInMenu: true },
+    meta: { group: NAV_GROUPS.OPERATIONS, order: 4, hideInMenu: true },
   })
 
   app.addRoute({ path: '/agent/models', name: '个人模型', parent: null, icon: 'KeyRound', element: <PersonalModelsPage />, meta: { group: NAV_GROUPS.BOT, order: 7 } })
@@ -184,7 +184,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'GitBranch',
     element: <AgentSessionsPage />,
-    meta: { group: NAV_GROUPS.DAILY, order: 2 },
+    meta: { group: NAV_GROUPS.WORK, order: 1 },
   })
 
   app.addRoute({
@@ -193,7 +193,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Package',
     element: <PluginsPage />,
-    meta: { group: NAV_GROUPS.FEATURES, order: 0 },
+    meta: { group: NAV_GROUPS.PLUGINS, order: 0 },
   })
 
   app.addRoute({
@@ -201,7 +201,7 @@ export function registerBuiltinConsolePages() {
     name: '插件详情',
     parent: '/plugins',
     element: <PluginDetailPage />,
-    meta: { hideInMenu: true, group: NAV_GROUPS.FEATURES },
+    meta: { hideInMenu: true, group: NAV_GROUPS.PLUGINS },
   })
 
   app.addRoute({
@@ -210,7 +210,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Store',
     element: <MarketplacePage />,
-    meta: { group: NAV_GROUPS.FEATURES, order: 1 },
+    meta: { group: NAV_GROUPS.PLUGINS, order: 1 },
   })
 
   app.addRoute({
@@ -219,7 +219,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Settings',
     element: <ConfigPage />,
-    meta: { group: NAV_GROUPS.ADVANCED, order: 0 },
+    meta: { group: NAV_GROUPS.SETTINGS, order: 0 },
   })
 
   app.addRoute({
@@ -228,7 +228,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'KeyRound',
     element: <EnvManagePage />,
-    meta: { group: NAV_GROUPS.ADVANCED, order: 1 },
+    meta: { group: NAV_GROUPS.SETTINGS, order: 1 },
   })
 
   app.addRoute({
@@ -237,7 +237,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'FolderOpen',
     element: <FileManagePage />,
-    meta: { group: NAV_GROUPS.ADVANCED, order: 2 },
+    meta: { group: NAV_GROUPS.OPERATIONS, order: 5 },
   })
 
   app.addRoute({
@@ -246,7 +246,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Database',
     element: <DatabasePage />,
-    meta: { group: NAV_GROUPS.ADVANCED, order: 3, fullWidth: true },
+    meta: { group: NAV_GROUPS.OPERATIONS, order: 6, fullWidth: true },
   })
 
   app.addRoute({
@@ -254,6 +254,6 @@ export function registerBuiltinConsolePages() {
     name: '渠道详情',
     parent: '/endpoints',
     element: <EndpointDetailPage />,
-    meta: { hideInMenu: true, fullWidth: true, group: NAV_GROUPS.DAILY },
+    meta: { hideInMenu: true, fullWidth: true, group: NAV_GROUPS.ACCOUNTS },
   })
 }

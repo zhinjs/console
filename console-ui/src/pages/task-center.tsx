@@ -1,4 +1,5 @@
 import { useI18n } from '../i18n'
+import { HostToolApprovalsPanel } from './HostToolApprovalsPanel'
 import { PageHeader } from '../components/PageHeader'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -222,6 +223,7 @@ export default function TaskCenterPage() {
 
   return <div className="console-page console-resource-page console-tasks-page">
     <PageHeader title={i18n.t("任务中心")} actions={<Button variant="outline" size="sm" disabled={loading || busy || !current} onClick={() => { void refresh(); void loadUseCases() }}><RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新核对")}</Button>} />
+    <HostToolApprovalsPanel />
     {demo && <Alert><AlertDescription>{i18n.t("Demo 仅展示；创建、修改、暂停、恢复和取消均已禁用。")}</AlertDescription></Alert>}
     {error && current && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
     {notice && current && <Alert><AlertDescription>{notice}</AlertDescription></Alert>}

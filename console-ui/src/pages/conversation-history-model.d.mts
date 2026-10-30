@@ -21,7 +21,7 @@ export interface ConversationHistoryPage {
   hasMore: boolean
 }
 export interface ConversationHistoryFailure { kind: '404' | '503' | 'other'; message: string }
-export function conversationHistoryQuery(sessionKey: string, beforeSequence?: number): string
+export function conversationHistoryQuery(sessionKey: string, beforeSequence?: number, connectionId?: string): string
 export function readConversationHistory(body: unknown, expectedConversation?: DiagnosticConversation, beforeSequence?: number, locale?: 'zh-CN' | 'en'): ConversationHistoryPage
 export function prependConversationHistory(current: ConversationHistoryPage | null, earlier: ConversationHistoryPage): ConversationHistoryPage
 export function conversationHistoryFailure(status: number, body: unknown, locale?: 'zh-CN' | 'en'): ConversationHistoryFailure

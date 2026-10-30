@@ -176,9 +176,9 @@ test('401 / 403 are permission denials', () => {
   assert.equal(isPermissionDenied(null), false)
 })
 
-test('the page is registered under the bot group and reads plugin.root.usage-stats', async () => {
+test('the page is registered under operations and reads plugin.root.usage-stats', async () => {
   const shell = await readFile(new URL('../console-ui/src/registerBuiltinShell.tsx', import.meta.url), 'utf8')
-  assert.match(shell, /path: '\/agent\/usage'[\s\S]*?name: 'Token 用量'[\s\S]*?group: NAV_GROUPS\.BOT[\s\S]*?requiredPermissions: \['control:read'\]|path: '\/agent\/usage'[\s\S]*?requiredPermissions: \['control:read'\][\s\S]*?group: NAV_GROUPS\.BOT/)
+  assert.match(shell, /path: '\/agent\/usage'[\s\S]*?name: 'Token 用量'[\s\S]*?group: NAV_GROUPS\.OPERATIONS[\s\S]*?requiredPermissions: \['control:read'\]|path: '\/agent\/usage'[\s\S]*?requiredPermissions: \['control:read'\][\s\S]*?group: NAV_GROUPS\.OPERATIONS/)
   const page = await readFile(new URL('../console-ui/src/pages/token-usage.tsx', import.meta.url), 'utf8')
   assert.match(page, /pluginRpc<unknown>\('root', USAGE_METHOD/)
 })

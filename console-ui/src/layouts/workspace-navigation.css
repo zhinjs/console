@@ -1,0 +1,61 @@
+/* Workspace navigation shares the shell tokens; management pages open on demand. */
+@layer components {
+  .console-sidebar-secondary {
+    display: flex;
+    flex-shrink: 0;
+    flex-direction: column;
+    gap: 0.125rem;
+    border-top: var(--console-border-width) solid hsl(var(--sidebar-border));
+    padding: 0.5rem 0.75rem 0;
+  }
+
+  .console-secondary-trigger {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .console-secondary-trigger[data-state="open"] {
+    background: hsl(var(--sidebar-accent));
+  }
+
+  .console-secondary-chevron {
+    width: 0.875rem;
+    height: 0.875rem;
+    flex-shrink: 0;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .console-secondary-menu {
+    width: min(17rem, calc(100vw - 1.5rem));
+    max-height: min(70dvh, var(--radix-dropdown-menu-content-available-height));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .console-secondary-menu a {
+    min-height: 2.5rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .console-secondary-menu a[aria-current="page"] {
+    background: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
+    font-weight: 600;
+  }
+
+  .console-sidebar .console-nav-item:focus-visible,
+  .console-sidebar-brand:focus-visible,
+  .console-sidebar-collapse:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 767px) {
+    .console-sidebar-secondary .console-nav-item {
+      min-height: 2.75rem;
+    }
+  }
+}

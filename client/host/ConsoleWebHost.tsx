@@ -4,18 +4,16 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { loadConsoleEntries } from "../bootstrap/loadConsoleEntries";
 import { ConsoleView } from "../console-app/ConsoleView";
 import { useConsoleRouteElements } from "../console-app/ConsoleRoutes";
+import { app } from "@zhin.js/client";
+import { resolveConsoleEntry } from "@console/bootstrap/default-entry.mjs";
 import { CONSOLE_SHELL_PATH, CONSOLE_UI_LEGACY_PREFIX, normalizeShellBase } from "../paths";
-import { DEMO_DEFAULT_PATH, isDemoMode } from "@console/utils/demo-mode";
 
 const shellBase = normalizeShellBase(CONSOLE_SHELL_PATH);
 const shellRoutePath = shellBase ? `${shellBase}/*` : "/*";
-const dashboardPath = `${shellBase || ""}/dashboard`.replace(/^\/\//, "/");
-const demoHomePath = `${shellBase || ""}${DEMO_DEFAULT_PATH}`.replace(/^\/\//, "/");
-const defaultHomePath = isDemoMode() ? demoHomePath : dashboardPath;
 const legacyApiPrefix = normalizeShellBase(CONSOLE_UI_LEGACY_PREFIX);
 
 /** 旧链接：/console/dashboard → /dashboard（独立站点）或保留 /console 前缀（与 Host 同路径部署时） */
-function LegacyConsoleRedirect() {
+function LegacyConsoleRedirect({ defaultHomePath }: { defaultHomePath: string }) {
   const { pathname } = useLocation();
   const rest =
     legacyApiPrefix && pathname.startsWith(`${legacyApiPrefix}/`)
@@ -49,6 +47,7 @@ function DashboardHome() {
 export function ConsoleWebHost() {
   const [ready, setReady] = React.useState(false);
   const registeredRoutes = useConsoleRouteElements();
+  const defaultHomePath = `${shellBase}${resolveConsoleEntry(app._getRoutes())}`;
 
   React.useEffect(() => {
     loadConsoleEntries()
@@ -68,7 +67,7 @@ export function ConsoleWebHost() {
       {legacyApiPrefix ? (
         <>
           <Route path={legacyApiPrefix} element={<Navigate to={defaultHomePath} replace />} />
-          <Route path={`${legacyApiPrefix}/*`} element={<LegacyConsoleRedirect />} />
+          <Route path={`${legacyApiPrefix}/*`} element={<LegacyConsoleRedirect defaultHomePath={defaultHomePath} />} />
         </>
       ) : null}
       <Route path={shellRoutePath} element={<ConsoleView />}>

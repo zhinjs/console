@@ -1,11 +1,18 @@
 /**
  * Task-oriented navigation vocabulary shared by route registration and shell surfaces.
  *
- * Console 面向普通用户（zhinjs/zhin#970）：常用页面放前面并用大白话命名；
- * 配置、自省、文件、数据库等进「高级」，默认折叠。「机器人」分组名是对外约定，
- * 后续「群聊插话」「技能助手」页会挂在它下面，不要改名。
+ * Builtin pages follow the user's work: conversations, tasks, accounts and plugins.
+ * Settings and operations live in the sidebar footer. Legacy group values remain
+ * available to plugins that declare their own navigation metadata.
  */
 export const NAV_GROUPS = {
+  WORK: '会话',
+  TASKS: '任务',
+  ACCOUNTS: '聊天账号',
+  PLUGINS: '插件',
+  SETTINGS: '设置',
+  OPERATIONS: '运行维护',
+  // Keep published plugin group names unchanged.
   DAILY: '常用',
   BOT: '机器人',
   FEATURES: '功能',
@@ -13,29 +20,31 @@ export const NAV_GROUPS = {
   OTHER: '其他',
 } as const
 
-export const NAV_GROUP_ORDER = [
-  NAV_GROUPS.DAILY,
-  NAV_GROUPS.BOT,
-  NAV_GROUPS.FEATURES,
-  NAV_GROUPS.OTHER,
-  NAV_GROUPS.ADVANCED,
+export const PRIMARY_NAV_GROUP_ORDER = [
+  NAV_GROUPS.WORK,
+  NAV_GROUPS.TASKS,
+  NAV_GROUPS.ACCOUNTS,
+  NAV_GROUPS.PLUGINS,
 ] as const
 
-/** Groups folded by default in the sidebar; they expand when the current page lives inside. */
+export const FOOTER_NAV_GROUP_ORDER = [NAV_GROUPS.SETTINGS, NAV_GROUPS.OPERATIONS] as const
+
+export const NAV_GROUP_ORDER = [...PRIMARY_NAV_GROUP_ORDER, ...FOOTER_NAV_GROUP_ORDER] as const
+
+/** Preserve folding for plugin pages that explicitly use the legacy advanced group. */
 export const COLLAPSED_BY_DEFAULT_NAV_GROUPS: readonly string[] = [NAV_GROUPS.ADVANCED]
 
 /**
- * Convention pages from plugins carry no group in their metadata. Known ordinary-user
- * plugin pages are placed here by route; unknown ones stay in「其他」.
+ * The Sandbox is the conversation entry. Other ungrouped plugin pages belong to
+ * plugins; explicit provider groups and display metadata are preserved.
  */
 export const PLUGIN_PAGE_PLACEMENT: Readonly<Record<string, { group: string; order: number }>> = {
-  '/sandbox': { group: NAV_GROUPS.BOT, order: 1 },
+  '/sandbox': { group: NAV_GROUPS.WORK, order: 0 },
 }
 
 export function placePluginRoute<T extends { path?: string; meta?: Record<string, unknown> }>(route: T): T {
   if (route.meta?.group || !route.path) return route
-  const placement = PLUGIN_PAGE_PLACEMENT[route.path]
-  if (!placement) return route
+  const placement: { group: string; order?: number } = PLUGIN_PAGE_PLACEMENT[route.path] ?? { group: NAV_GROUPS.PLUGINS }
   return { ...route, meta: { ...route.meta, group: placement.group, order: route.meta?.order ?? placement.order } }
 }
 

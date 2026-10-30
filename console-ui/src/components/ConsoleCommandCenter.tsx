@@ -19,6 +19,8 @@ const RECENT_LIMIT = 5
 
 const ROUTE_DESCRIPTIONS: Record<string, string> = {
   '/dashboard': '机器人是否正常、有什么要处理',
+  '/sandbox': '与 Agent 对话并处理工作',
+  '/tasks': '管理已配置的任务与执行记录',
   '/agent/workbench': '看看 AI 机器人是否准备好、最近做了什么',
   '/agent/workrooms': '按 Project 查看 Workroom Run、Task 与 Assignment',
   '/agent/workrooms/catalog': '配置协作空间、Bot Endpoint 与成员 Agent 映射',
@@ -29,7 +31,7 @@ const ROUTE_DESCRIPTIONS: Record<string, string> = {
   '/cron': '到点自动做事或发提醒',
   '/plugins': '开关和设置已装的功能',
   '/marketplace': '找新功能并安装',
-  '/config': '编辑项目配置并查看配置结构',
+  '/config': '配置模型、Agent 和插件',
   '/env': '管理运行环境变量',
   '/files': '浏览和编辑项目文件',
   '/database': '检查数据表、记录与持久化状态',
@@ -50,6 +52,14 @@ interface CommandGroup {
 }
 
 const QUICK_ACTIONS: readonly CommandTarget[] = [
+  {
+    path: '/sandbox',
+    title: '进入会话',
+    group: '快捷动作',
+    description: '与 Agent 对话并处理工作',
+    icon: 'MessageSquare',
+    kind: 'action',
+  },
   {
     path: '/logs?level=error',
     title: '查看错误日志',
@@ -181,19 +191,22 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
   const [recentPaths, setRecentPaths] = useState<string[]>(() => readRecentPaths())
   const [shortcut, setShortcut] = useState('Ctrl K')
 
-  const targets = useMemo<CommandTarget[]>(() => [
-    ...QUICK_ACTIONS.map(action => ({ ...action, title: i18n.t(action.title), description: i18n.t(action.description) })),
-    ...routes
-      .filter((route) => !route.meta?.hideInMenu && route.path)
-      .map((route) => ({
-        path: route.path,
-        title: routeLabel(route, i18n.locale),
-        group: route.meta?.group ?? NAV_GROUPS.OTHER,
-        description: (ROUTE_DESCRIPTIONS[route.path] ? i18n.t(ROUTE_DESCRIPTIONS[route.path]) : undefined) ?? i18n.t("打开 {0}", [routeLabel(route, i18n.locale)]),
-        icon: route.icon,
-        kind: 'page' as const,
-      })),
-  ], [routes, i18n])
+  const targets = useMemo<CommandTarget[]>(() => {
+    const actions = QUICK_ACTIONS.filter(action => routes.some(route => route.path === action.path.split('?')[0]))
+    return [
+      ...actions.map(action => ({ ...action, title: i18n.t(action.title), description: i18n.t(action.description) })),
+      ...routes
+        .filter((route) => !route.meta?.hideInMenu && route.path && !actions.some(action => action.path === route.path))
+        .map((route) => ({
+          path: route.path,
+          title: routeLabel(route, i18n.locale),
+          group: route.meta?.group ?? NAV_GROUPS.PLUGINS,
+          description: (ROUTE_DESCRIPTIONS[route.path] ? i18n.t(ROUTE_DESCRIPTIONS[route.path]) : undefined) ?? i18n.t("打开 {0}", [routeLabel(route, i18n.locale)]),
+          icon: route.icon,
+          kind: 'page' as const,
+        })),
+    ]
+  }, [routes, i18n])
   const groups = useMemo(
     () => groupedTargets(targets, query, recentPaths, i18n.locale),
     [query, recentPaths, targets, i18n],

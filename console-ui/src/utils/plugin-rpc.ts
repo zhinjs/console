@@ -1,4 +1,4 @@
-import { apiFetch } from './auth'
+import { apiFetch, type ApiRequestContext } from './auth'
 
 /** Error from a plugin Console RPC; `message` is safe to show, `code` is stable. */
 export class PluginRpcError extends Error {
@@ -25,6 +25,7 @@ export async function pluginRpc<T>(
   pluginId: string,
   method: string,
   data?: Readonly<Record<string, unknown>>,
+  options: { readonly signal?: AbortSignal; readonly context?: ApiRequestContext } = {},
 ): Promise<T> {
   const requestBody = {
     type: `plugin.${pluginId}.${method}`,
@@ -35,7 +36,8 @@ export async function pluginRpc<T>(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(requestBody),
-  })
+    signal: options.signal,
+  }, options.context)
   let body: PluginRpcResponseBody<T> = {}
   try {
     body = await response.json() as PluginRpcResponseBody<T>
