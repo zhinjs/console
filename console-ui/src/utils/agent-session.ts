@@ -1,3 +1,5 @@
+import { isPersonalSessionKey } from '../pages/personal-models-model.mjs'
+
 /** 聊天记录（Agent 会话）sessionKey 与深链（与 @zhin.js/ai resolveIMSessionId 一致） */
 
 export type ImSessionScope = 'private' | 'group' | 'channel'
@@ -42,9 +44,9 @@ export function parseSessionKeyFromQuery(raw: string | null): string {
   return raw.trim()
 }
 
-/** 是否为合法 sessionKey 形态（四段，含 scope） */
+/** Accept a complete personal hash or a legacy IM key; hashes never imply a conversation address. */
 export function isLikelySessionKey(key: string): boolean {
-  return parseImSessionKey(key) !== null
+  return isPersonalSessionKey(key) || parseImSessionKey(key) !== null
 }
 
 /** 将内部 sessionKey 拆成 Console 可展示的会话上下文。 */

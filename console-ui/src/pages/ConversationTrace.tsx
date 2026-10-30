@@ -7,6 +7,7 @@ import { ErrorAlert } from '../components/error-alert'
 import { apiFetch } from '../utils/auth'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import type { DiagnosticConversation } from './endpoint-detail/types'
+import { isPersonalSessionKey } from './personal-models-model.mjs'
 import { ContextUsage, UsageSummary } from './ConversationUsage'
 import {
   formatTraceMetric, promptContent, readTraceDetail, readTraceRequest, traceBodyStatus, traceFailure,
@@ -58,7 +59,7 @@ export function RequestBody({ request }: { request: TraceRequest }) {
   </Accordion>
 }
 
-export function RequestDetails({ sessionKey, turnId, requestId, connectionScope, conversation }: { sessionKey: string; turnId: string; requestId: string; connectionScope?: string; conversation: DiagnosticConversation }) {
+export function RequestDetails({ sessionKey, turnId, requestId, connectionScope, conversation }: { sessionKey: string; turnId: string; requestId: string; connectionScope?: string; conversation?: DiagnosticConversation }) {
   const i18n = useI18n()
   const result = useTraceRead(traceQuery('request', sessionKey, turnId, requestId, conversation), connectionScope, body => readTraceRequest(body, sessionKey, turnId, requestId))
   if (!isInboxCacheScopeActive(connectionScope)) return null
@@ -66,7 +67,7 @@ export function RequestDetails({ sessionKey, turnId, requestId, connectionScope,
   return result.data ? <>{result.data.usage ? <UsageSummary turns={[{ usage_calls: [result.data.usage] }]} /> : null}<RequestBody request={result.data} /></> : <p role="status" className="conversation-trace-empty">{i18n.t('加载中…')}</p>
 }
 
-function TurnRequests({ detail, sessionKey, rootTurnId, connectionScope, conversation }: { detail: TraceDetail; sessionKey: string; rootTurnId: string; connectionScope?: string; conversation: DiagnosticConversation }) {
+function TurnRequests({ detail, sessionKey, rootTurnId, connectionScope, conversation }: { detail: TraceDetail; sessionKey: string; rootTurnId: string; connectionScope?: string; conversation?: DiagnosticConversation }) {
   const i18n = useI18n()
   const [openRequest, setOpenRequest] = useState('')
   return <>
@@ -84,7 +85,7 @@ function TurnRequests({ detail, sessionKey, rootTurnId, connectionScope, convers
   </>
 }
 
-export function TurnDetails({ turn, connectionScope, conversation }: { turn: TraceTurn; connectionScope?: string; conversation: DiagnosticConversation }) {
+export function TurnDetails({ turn, connectionScope, conversation }: { turn: TraceTurn; connectionScope?: string; conversation?: DiagnosticConversation }) {
   const i18n = useI18n()
   const result = useTraceRead(traceQuery('turn', turn.session_key, turn.turn_id, undefined, conversation), connectionScope, body => readTraceDetail(body, turn.session_key, turn.turn_id, 'zh-CN', conversation))
   if (!isInboxCacheScopeActive(connectionScope)) return null
@@ -112,7 +113,7 @@ export function ConversationTrace({ turns, loading, error, refresh, selectedTurn
           <ChevronRight /><span><strong>{time.format(turn.started_at)}</strong><small>{models.join(' · ') || i18n.t('模型未记录')}</small></span>
           <span className="conversation-trace-overview"><span>{traceStatus(turn.termination.status, i18n.locale)}</span><small>{formatTraceMetric(traceUsage([turn]).totalTokens, i18n.locale)} tok{turn.duration_ms === undefined ? '' : ` · ${(turn.duration_ms / 1000).toFixed(1)}s`}</small></span>
         </Button>
-        {selected && conversation ? <div id={`trace-${turn.turn_id}`}><TurnDetails key={`${connectionScope}:${turn.turn_id}:${revision}`} turn={turn} connectionScope={connectionScope} conversation={conversation} /></div> : null}
+        {selected && (conversation || isPersonalSessionKey(turn.session_key)) ? <div id={`trace-${turn.turn_id}`}><TurnDetails key={`${connectionScope}:${turn.turn_id}:${revision}`} turn={turn} connectionScope={connectionScope} conversation={conversation} /></div> : null}
       </article>
     })}
   </section>

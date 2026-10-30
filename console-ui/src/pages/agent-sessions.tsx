@@ -1,4 +1,6 @@
 import { useI18n } from '../i18n'
+import { isPersonalSessionKey } from './personal-models-model.mjs'
+import { PersonalSessionPanel } from './PersonalSessionPanel'
 import { ConversationHistory } from './ConversationHistory'
 import { ConversationTrace } from './ConversationTrace'
 import { useConversationTraces } from './useConversationTraces'
@@ -67,6 +69,7 @@ export default function AgentSessionsPage() {
   const selectedKey = isLikelySessionKey(sessionKeyFromUrl) ? sessionKeyFromUrl : ''
   const [resolvedConversation, setResolvedConversation] = useState<{ identity: string; conversation?: DiagnosticConversation; error?: string; retry?: () => void } | null>(null)
   const resolved = resolvedConversation?.identity === JSON.stringify([scope, selectedKey]) ? resolvedConversation : null
+  const personal = isPersonalSessionKey(selectedKey)
   const traces = useConversationTraces(readOnly ? '' : selectedKey, scope, resolved?.conversation)
   const [traceSelection, setTraceSelection] = useState<{ identity: string; turnId: string } | null>(null)
   const selected = parseImSessionKey(selectedKey)
@@ -237,8 +240,9 @@ export default function AgentSessionsPage() {
   // Recent sessions come from the Host's trace archive; without it the picker falls back to this browser's history.
   useEffect(() => {
     let active = true
+    if (!isInboxCacheScopeActive(scope)) { setRecent(null); return }
+    if (personal) return
     setRecent(null)
-    if (!isInboxCacheScopeActive(scope)) return
     void apiFetch(RECENT_SESSIONS_PATH, { cache: 'no-store' })
       .then(async (res) => (res.ok ? readRecentSessions(await res.json()) : []))
       .catch(() => [])
@@ -248,7 +252,7 @@ export default function AgentSessionsPage() {
     return () => {
       active = false
     }
-  }, [scope])
+  }, [scope, personal])
 
   useEffect(() => {
     if (!sessionKeyFromUrl) return
@@ -317,11 +321,10 @@ export default function AgentSessionsPage() {
           {selectedKey ? (
             <>
               <header className="console-session-heading">
-                <h2>{selected?.sceneId}</h2>
-                <p>
-                  {selected?.platform} · {selected?.endpointId}
-                </p>
+                <h2>{personal ? i18n.t('个人会话') : selected?.sceneId}</h2>
+                {selected ? <p>{selected.platform} · {selected.endpointId}</p> : null}
               </header>
+              {personal ? <PersonalSessionPanel key={`${scope}:${selectedKey}`} sessionKey={selectedKey} connectionScope={scope} preferredOwnerId={searchParams.get('personalOwner')} /> : null}
               <Tabs
                 value={view}
                 onValueChange={(value) => {
@@ -337,7 +340,7 @@ export default function AgentSessionsPage() {
                   <TabsTrigger value="branches">{i18n.t('会话分支')}</TabsTrigger>
                 </TabsList>
                 <TabsContent value="conversation" forceMount className="data-[state=inactive]:hidden">
-                  <ConversationHistory
+                  {personal ? <ErrorAlert kind="503" error={i18n.t('聊天记录暂不可用，请稍后重试。')} /> : <ConversationHistory
                     key={`${scope}:${selectedKey}`}
                     sessionKey={selectedKey}
                     connectionScope={scope}
@@ -345,11 +348,11 @@ export default function AgentSessionsPage() {
                     onRefresh={traces.refresh}
                     onOpenTrace={(turnId) => { setTraceSelection({ identity, turnId }); setView('trace') }}
                     onConversation={(conversation, error, retry) => setResolvedConversation({ identity, conversation, error, retry })}
-                  />
+                  />}
                 </TabsContent>
                 <TabsContent value="trace">
-                  <ConversationTrace turns={traces.turns} revision={traces.revision} loading={!resolved?.conversation && !resolved?.error || traces.loading} error={resolved?.error ?? traces.error}
-                    refresh={() => { if (resolved?.conversation) void traces.refresh(); else if (resolved?.retry) { setResolvedConversation({ identity }); resolved.retry() } }}
+                  <ConversationTrace turns={traces.turns} revision={traces.revision} loading={personal ? traces.loading : !resolved?.conversation && !resolved?.error || traces.loading} error={personal ? traces.error : resolved?.error ?? traces.error}
+                    refresh={() => { if (personal) void traces.refresh(); else if (resolved?.conversation) void traces.refresh(); else if (resolved?.retry) { setResolvedConversation({ identity }); resolved.retry() } }}
                     selectedTurn={traceSelection?.identity === identity ? traceSelection.turnId : ''}
                     onSelectTurn={(turnId) => setTraceSelection({ identity, turnId })} connectionScope={scope} conversation={resolved?.conversation} />
                 </TabsContent>

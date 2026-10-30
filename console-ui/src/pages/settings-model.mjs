@@ -28,7 +28,7 @@ const AI_CAPABILITIES = [
   { id: 'ai:usage', title: '用量与审计', description: '管理 AI 用量限制和审计记录。', fieldNames: ['usage', 'audit'] },
   { id: 'ai:collaboration', title: '协作与决策', description: '设置 Workroom 协作和决策能力。', fieldNames: ['workroom', 'decisions'] },
 ]
-const NAMED_AI_FIELDS = ['providers', 'agents', ...AI_CAPABILITIES.flatMap(entry => entry.fieldNames)]
+const NAMED_AI_FIELDS = ['providers', 'modelCatalog', 'modelPolicy', 'agents', ...AI_CAPABILITIES.flatMap(entry => entry.fieldNames)]
 const SECTIONS = {
   general: ['基础运行', 'general'],
   builtin: ['内置能力', 'builtin'],
@@ -82,8 +82,10 @@ export function buildSettingsCatalog(config, configKeys, configPaths) {
     } else if (hostOwned && Object.hasOwn(BUILTIN, key)) {
       const entry = configEntry(key, 'plugins', 'builtin', BUILTIN[key], writable)
       if (key === 'ai') {
-        byGroup.models.entries.push({ ...entry, id: 'ai:providers', group: 'models', title: '模型服务',
-          description: '设置模型服务商、连接凭据和可用模型。', fieldNames: ['providers'] })
+        byGroup.models.entries.push({ ...entry, id: 'ai:providers', group: 'models', title: '部署模型目录',
+          description: '管理部署模型目录和初始聊天模型。', fieldNames: ['modelCatalog'] })
+        byGroup.models.entries.push({ ...entry, id: 'ai:model-policy', group: 'models', title: '运行时模型策略',
+          description: '按用途和作用域选择预设，下一轮生效。', editor: 'runtime-model-policy', fieldNames: ['modelPolicy'] })
         byGroup.presets.entries.push({ ...entry, id: 'ai:agents', group: 'presets', title: 'Agent 预设',
           description: '为已有 Agent 配置模型、名称与可用服务。', fieldNames: ['agents'] })
         byGroup.plugins.entries.push(...AI_CAPABILITIES.map(capability => ({ ...entry, ...capability,

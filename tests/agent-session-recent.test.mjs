@@ -25,3 +25,11 @@ test('recent activity reads as a short past time', () => {
   assert.equal(relativeSince(0, 2 * 3_600_000), '2 小时前')
   assert.equal(relativeSince(0, 3 * 86_400_000, 'en'), '3 days ago')
 })
+
+
+test('full-authorized directories retain valid personal hashes without pretending they are legacy conversation keys', () => {
+  const key = `personal-session:v1:${'a'.repeat(64)}`
+  const row = { session_key: key, turns: 1, last_started_at: 10, last_status: 'completed' }
+  assert.equal(readRecentSessions({ success: true, data: [row] })[0].sessionKey, key)
+  assert.deepEqual(readRecentSessions({ success: true, data: [{ ...row, session_key: 'personal-session:v1:incomplete' }] }), [])
+})

@@ -5,6 +5,7 @@ import { createRequire } from 'node:module'
 import { renderToStaticMarkup } from 'react-dom/server'
 import ts from 'typescript'
 import { localeModule, isLocaleImport } from './locale-fixture.mjs'
+import * as personalModels from '../console-ui/src/pages/personal-models-model.mjs'
 import * as model from '../console-ui/src/pages/conversation-trace-model.mjs'
 import { createDiagnosticRequestGate, diagnosticConversationKey } from '../console-ui/src/pages/endpoint-detail/message-diagnostics.mjs'
 import { createInboxCacheAuthority } from '../console-ui/src/utils/inbox-cache-scope.mjs'
@@ -14,7 +15,7 @@ const sources = Object.fromEntries(await Promise.all(['ConversationTrace', 'Conv
 const compile = (name, mocks) => {
   const module = { exports: {} }
   const code = ts.transpileModule(sources[name], { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
-  new Function('require','exports','module',code)(key => isLocaleImport(key) ? localeModule : mocks[key] ?? require(key), module.exports, module)
+  new Function('require','exports','module',code)(key => isLocaleImport(key) ? localeModule : key === './personal-models-model.mjs' ? personalModels : mocks[key] ?? require(key), module.exports, module)
   return module.exports
 }
 const conversation = { endpoint: { adapter: 'root/icqq', id: 'canonical-bot' }, kind: 'group', id: 'group-a' }
@@ -42,7 +43,7 @@ function fixture(kind='list') {
   const authority=createInboxCacheAuthority(()=>connection,()=>`scope-${++scopeId}`)
   const hooks=runtime(),calls=[]
   const props={connectionScope:authority.current(),sessionKey:session,turnId:'turn-a',requestId:'request-a',conversation,turn}
-  const mocks={
+  const mocks={ './personal-models-model.mjs':personalModels,
     react:{...require('react'),...hooks.hooks},
     '../utils/auth':{apiFetch:(url,options)=>new Promise((resolve,reject)=>calls.push({url,...options,resolve,reject}))},
     '../utils/inbox-cache':{getInboxCacheScope:()=>authority.current(),isInboxCacheScopeActive:scope=>authority.active(scope)},
@@ -140,4 +141,43 @@ test('usage summary distinguishes total, cached and non-cached input without inv
   assert.match(html, /非缓存输入<\/dt><dd>2,101/)
   assert.match(html, /缓存读取<\/dt><dd>11,083/)
   assert.match(render([{ prompt_tokens: 13184 }]), /非缓存输入<\/dt><dd>—/)
+})
+
+
+test('a complete personal hash reads existing exact-session trace without a personal binding or physical-history lookup', async () => {
+  const f = fixture()
+  const key = `personal-session:v1:${'a'.repeat(64)}`
+  f.props.sessionKey = key; f.props.conversation = undefined; f.hooks.render()
+  const query = new URL(f.calls.at(-1).url, 'https://fixture')
+  assert.equal(query.searchParams.get('sessionKey'), key)
+  assert.equal(query.searchParams.has('conversation'), false)
+  f.answer(f.calls.length - 1, wrap([{ ...turn, session_key: key }]))
+  await f.hooks.settle()
+  assert.equal(f.hooks.value.turns[0].session_key, key)
+  f.hooks.unmount()
+})
+
+test('the existing full guard can refuse a personal exact-session trace without revealing data', async () => {
+  const f = fixture()
+  f.props.sessionKey = `personal-session:v1:${'b'.repeat(64)}`; f.props.conversation = undefined; f.hooks.render()
+  f.answer(f.calls.length - 1, { success: false }, 403)
+  await f.hooks.settle()
+  assert.deepEqual(f.hooks.value.turns, [])
+  assert.ok(f.hooks.value.error)
+  f.hooks.unmount()
+})
+
+
+test('personal exact-session turn details keep the original full read path without requiring a physical conversation', async () => {
+  const f = fixture('turn')
+  const key = `personal-session:v1:${'c'.repeat(64)}`
+  f.props.turn = { ...turn, session_key: key }; f.props.conversation = undefined; f.hooks.render()
+  const query = new URL(f.calls.at(-1).url, 'https://fixture')
+  assert.equal(query.pathname, '/api/agent/trace-archive/turn')
+  assert.equal(query.searchParams.get('sessionKey'), key)
+  assert.equal(query.searchParams.has('conversation'), false)
+  f.answer(f.calls.length - 1, wrap({ ...detail, session_key: key }))
+  await f.hooks.settle()
+  assert.ok(elements(f.hooks.value).some(node => typeof node.type === 'function' && node.type.name === 'TurnRequests'))
+  f.hooks.unmount()
 })

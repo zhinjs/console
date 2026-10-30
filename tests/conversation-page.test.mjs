@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import ts from 'typescript'
 import { localeModule, isLocaleImport } from './locale-fixture.mjs'
+import * as personalModels from '../console-ui/src/pages/personal-models-model.mjs'
 import { readRecentSessions } from '../console-ui/src/pages/agent-session-recent.mjs'
 
 const require = createRequire(import.meta.url)
@@ -14,13 +15,13 @@ function compile(source, mocks = {}) {
   return module.exports
 }
 const source = await readFile(new URL('../console-ui/src/pages/agent-sessions.tsx', import.meta.url), 'utf8')
-const sessions = compile(await readFile(new URL('../console-ui/src/utils/agent-session.ts', import.meta.url), 'utf8'))
+const sessions = compile(await readFile(new URL('../console-ui/src/utils/agent-session.ts', import.meta.url), 'utf8'), { '../pages/personal-models-model.mjs': personalModels })
 const elements = node => node && typeof node === 'object' ? [node, ...[node.props?.children].flat(Infinity).flatMap(elements)] : []
 // Radix Dialog does not mount its content while closed.
 const text = node => typeof node === 'string' ? node : node && typeof node === 'object' ? node.type === 'Dialog' && !node.props.open ? '' : [node.props?.children].flat(Infinity).map(text).join('') : ''
 const settle = () => new Promise(resolve => setImmediate(resolve))
-function fixture() {
-  const slots = [], calls = [], traceReads = []; let cursor = 0, effects = [], scope = 'scope-a', params = new URLSearchParams({ sessionKey: 'icqq:bot:group:room' }), tree
+function fixture(initialKey = 'icqq:bot:group:room') {
+  const slots = [], calls = [], traceReads = []; let cursor = 0, effects = [], scope = 'scope-a', params = new URLSearchParams({ sessionKey: initialKey }), tree
   const same = (a,b) => a && a.length === b.length && a.every((value,index) => Object.is(value,b[index]))
   const hooks = {
     useState(initial) { const index=cursor++; if (!(index in slots)) slots[index]=typeof initial==='function'?initial():initial; return [slots[index], value=>{ slots[index]=typeof value==='function'?value(slots[index]):value }] },
@@ -31,6 +32,8 @@ function fixture() {
   const ui = Object.fromEntries(['Dialog','DialogContent','DialogHeader','DialogFooter','DialogTitle','DialogDescription','DialogClose'].map(name=>[name,name]))
   const module = compile(source, {
     react: hooks,
+    './personal-models-model.mjs': personalModels,
+    './PersonalSessionPanel': { PersonalSessionPanel: 'personal-session-panel' },
     'react-router-dom': { useSearchParams: () => [params, next=>{params=next}] },
     '../utils/agent-session': sessions,
     '../utils/agent-session-history': {loadAgentSessionHistory:()=>[],pushAgentSessionHistory:key=>[key]},
@@ -149,5 +152,54 @@ test('Trace reuses the mounted history resolver, rejects ambiguity, and clears c
   f.navigate('icqq:bot:group:another-room');f.render()
   assert.equal(f.traceReads.at(-1)[2],undefined)
   assert.equal(find(f,'conversation-trace').props.selectedTurn,'')
+  f.close()
+})
+
+
+test('personal model management is additive: existing exact-session read tabs remain independent of binding', async () => {
+  const key = `personal-session:v1:${'a'.repeat(64)}`
+  const f = fixture(key); f.render()
+  assert.equal(find(f, 'personal-session-panel').props.sessionKey, key)
+  assert.equal(find(f, 'conversation-history'), undefined)
+  assert.ok(find(f, 'conversation-trace'))
+  assert.ok(find(f, 'tabs'))
+  assert.equal(f.calls.length, 0)
+  assert.equal(f.traceReads.at(-1)[0], key)
+  find(f, 'tabs').props.onValueChange('branches'); f.render()
+  const request = f.calls.find(call => call.url.endsWith('/tree'))
+  assert.ok(request); assert.ok(request.url.includes(encodeURIComponent(key)))
+  answerTree(request, key); await settle(); f.render()
+  assert.equal(find(f, 'message-details').props.sessionKey, key)
+  assert.ok(!f.calls.some(call => call.url.includes('/trace-archive/sessions') || call.url.includes('/conversations/history')))
+  f.close()
+})
+
+
+test('a personal tree denied by the existing full guard renders no branch messages and triggers no write', async () => {
+  const key = `personal-session:v1:${'b'.repeat(64)}`
+  const f = fixture(key); find(f, 'tabs').props.onValueChange('branches'); f.render()
+  const request = f.calls.find(call => call.url.endsWith('/tree'))
+  assert.ok(request)
+  request.resolve({ status: 403, ok: false, json: async () => ({ success: false, error: 'full required' }) })
+  await settle(); f.render()
+  assert.equal(find(f, 'message-details'), undefined)
+  assert.ok(!text(f.tree).includes('FULL BRANCH PREVIEW'))
+  assert.ok(!f.calls.some(call => call.init.method === 'POST'))
+  f.close()
+})
+
+
+test('already-authorized recent personal sessions stay visible without querying an all-session directory from a personal page', async () => {
+  const key = `personal-session:v1:${'d'.repeat(64)}`
+  const f = fixture()
+  f.calls.find(call => call.url.endsWith('/trace-archive/sessions')).resolve({ ok: true, json: async () => ({ success: true,
+    data: [{ session_key: key, turns: 1, last_started_at: 1, last_status: 'completed' }] }) })
+  await settle(); f.render()
+  assert.equal(find(f, 'session-picker').props.recent[0].sessionKey, key)
+  f.navigate(key); f.render()
+  assert.equal(find(f, 'session-picker').props.recent[0].sessionKey, key)
+  assert.equal(f.calls.filter(call => call.url.endsWith('/trace-archive/sessions')).length, 1)
+  f.setScope('scope-b'); f.render()
+  assert.equal(find(f, 'session-picker').props.recent, null)
   f.close()
 })
