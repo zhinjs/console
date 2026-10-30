@@ -1,0 +1,38 @@
+tests/conversation-trace-model.test.mjs
+  s_9622fd28aba994::t_65ab7a9bffb14f 11-29
+tests/conversation-trace-ui.test.mjs
+  s_9622fd28aba994::t_5941ba7eb6e5ab 129-143
+console-ui/src/pages/ConversationUsage.tsx
+  s_9622fd28aba994::t_96316a473df2e7 11
+console-ui/src/pages/conversation-trace-model.mjs
+  s_9622fd28aba994::t_96316a473df2e7 80,82,87-102
+console-ui/src/pages/conversation-history-model.d.mts
+  s_9622fd28aba994::t_80dca3bb553003 7
+console-ui/src/pages/ConversationHistory.tsx
+  s_9622fd28aba994::t_80dca3bb553003 117-118
+tests/conversation-history.test.mjs
+  s_9622fd28aba994::t_6b8caa04db9da4 186-195
+console-ui/src/i18n/messages.en.mjs
+  s_9622fd28aba994::t_80dca3bb553003 2532
+  s_9622fd28aba994::t_96316a473df2e7 2530-2531
+console-ui/src/pages/conversation-history-model.mjs
+  s_9622fd28aba994::t_80dca3bb553003 36
+console-ui/src/pages/conversation-trace-model.d.mts
+  s_9622fd28aba994::t_96316a473df2e7 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "db6992a1858e123475480cb47b7457629fa2134d",
+  "prompts": {},
+  "sessions": {
+    "s_9622fd28aba994": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a166a4-5b4c-7e22-80f0-d3374c43b4fb",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
