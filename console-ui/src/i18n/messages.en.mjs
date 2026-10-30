@@ -1,5 +1,11 @@
 /** Authored Console UI copy. Interpolated content is never translated. */
 export const englishMessages = Object.freeze({
+  "运行维护": "Operations",
+  "设置与运行维护": "Settings and operations",
+  "进入会话": "Open conversation",
+  "与 Agent 对话并处理工作": "Talk to the Agent and get work done",
+  "管理已配置的任务与执行记录": "Manage configured tasks and execution history",
+  "配置模型、Agent 和插件": "Configure models, Agents, and plugins",
   "文件管理": "File manager",
   "配置读取失败。": "Could not load configuration.",
   "此分类暂时无法编辑。": "This category is currently unavailable for editing.",

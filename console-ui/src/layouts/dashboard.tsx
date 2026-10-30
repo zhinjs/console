@@ -3,7 +3,7 @@ import { LanguageSelect } from '../components/LanguageSelect'
 import { useI18n } from '../i18n'
 import { useMemo, useRef, useState, useEffect, useLayoutEffect, useSyncExternalStore } from "react"
 import { Outlet, Link, useLocation, matchPath } from "react-router-dom"
-import { Menu, LogOut, X, ChevronRight, PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import { Menu, LogOut, X, ChevronRight, PanelLeftClose, PanelLeftOpen, Settings2, Activity } from "lucide-react"
 import { app, cn, useWebSocket, type ConsoleRouteRecord } from "@zhin.js/client"
 import { getSidebarLucideIcon } from "../components/sidebarMenuIcons"
 import { ThemeToggle } from "../components/ThemeToggle"
@@ -14,7 +14,9 @@ import { notifyAuthRequired } from "../utils/auth"
 import { isDemoMode } from "../utils/demo-mode"
 import { reopenDemoOnboarding } from "../components/DemoOnboarding"
 import { ConsoleCommandCenter } from "../components/ConsoleCommandCenter"
-import { COLLAPSED_BY_DEFAULT_NAV_GROUPS, NAV_GROUP_ORDER, NAV_GROUPS } from "../navigation-taxonomy"
+import { COLLAPSED_BY_DEFAULT_NAV_GROUPS, FOOTER_NAV_GROUP_ORDER, NAV_GROUP_ORDER, NAV_GROUPS } from "../navigation-taxonomy"
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel } from "../components/ui/dropdown-menu"
+import "./workspace-navigation.css"
 import { resolveNavigationLocation } from "../navigation-location.mjs"
 
 const MOBILE_MQ = "(max-width: 767px)"
@@ -100,6 +102,8 @@ export default function DashboardLayout() {
   const isMobile = useIsMobile()
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(readSidebarOpen)
   const mainRef = useRef<HTMLElement>(null)
+  const sidebarRef = useRef<HTMLElement>(null)
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const { connected } = useWebSocket()
 
@@ -129,7 +133,7 @@ export default function DashboardLayout() {
   const menuByGroup = useMemo(() => {
     const map = new Map<string, ConsoleRouteRecord[]>()
     for (const r of menuRoutes) {
-      const g = r.meta?.group ?? NAV_GROUPS.OTHER
+      const g = r.meta?.group ?? NAV_GROUPS.PLUGINS
       if (!map.has(g)) map.set(g, [])
       map.get(g)!.push(r)
     }
@@ -163,6 +167,11 @@ export default function DashboardLayout() {
     }
     return out
   }, [menuByGroup])
+  const primaryGroups = orderedGroups.filter((group) => !FOOTER_NAV_GROUP_ORDER.some((footerGroup) => footerGroup === group))
+  const footerGroups = FOOTER_NAV_GROUP_ORDER.filter((group) => menuByGroup.has(group))
+  const currentLabel = navigation.current ? routeLabel(navigation.current, i18n.locale) : isDemoMode() ? i18n.t("在线 Demo") : i18n.t("首页")
+  const groupLabel = i18n.t(navigation.group)
+  const parentLabel = navigation.parent ? routeLabel(navigation.parent, i18n.locale) : null
 
   useEffect(() => {
     setMobileNavOpen(false)
@@ -176,14 +185,16 @@ export default function DashboardLayout() {
   useEffect(() => {
     if (!isMobile || !mobileNavOpen) return
     const onKeyDown = (e: globalThis.KeyboardEvent) => {
-      if (e.key === "Escape") setMobileNavOpen(false)
+      if (e.key === "Escape" && !e.defaultPrevented) setMobileNavOpen(false)
     }
+    sidebarRef.current?.querySelector<HTMLElement>("button, a")?.focus()
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
     window.addEventListener("keydown", onKeyDown)
     return () => {
       document.body.style.overflow = prevOverflow
       window.removeEventListener("keydown", onKeyDown)
+      mobileMenuButtonRef.current?.focus()
     }
   }, [isMobile, mobileNavOpen])
 
@@ -213,10 +224,12 @@ export default function DashboardLayout() {
           "console-sidebar",
           isMobile ? cn("is-mobile", mobileNavOpen && "is-open") : !desktopSidebarOpen && "is-collapsed",
         )}
+        ref={sidebarRef}
         aria-hidden={isMobile && !mobileNavOpen}
+        inert={isMobile && !mobileNavOpen}
       >
         <div className="console-sidebar-header">
-          <Link to="/dashboard" className="console-sidebar-brand" aria-label={isDemoMode() ? "Zhin.js Demo" : "Zhin.js"}>
+          <Link to="/" className="console-sidebar-brand" aria-label={isDemoMode() ? "Zhin.js Demo" : "Zhin.js"}>
             <span className="console-brand-mark" aria-hidden="true"><span>Z</span></span>
             {showLabels && (
               <span className="console-sidebar-brand-text">
@@ -240,26 +253,19 @@ export default function DashboardLayout() {
 
         <ScrollArea className="flex-1 min-h-0">
           <nav className="console-sidebar-nav" aria-label={i18n.t("主导航")}>
-            {orderedGroups.map((groupName) => {
+            {primaryGroups.map((groupName) => {
               const items = menuByGroup.get(groupName) ?? []
               if (!items.length) return null
               const collapsible = COLLAPSED_BY_DEFAULT_NAV_GROUPS.includes(groupName)
               const open = !collapsible || !showLabels || expandedGroups.has(groupName) || navigation.group === groupName
+              const showGroupLabel = !items.some((route) => routeLabel(route, i18n.locale) === i18n.t(groupName))
               return (
                 <div key={i18n.t(groupName)} className="console-nav-group">
-                  {showLabels ? (collapsible ? (
-                    <button
-                      type="button"
-                      aria-expanded={open}
-                      onClick={() => toggleGroup(groupName)}
-                      className="console-nav-group-label is-toggle"
-                    >
-                      {i18n.t(groupName)}
-                      <ChevronRight className={cn("console-nav-group-chevron", open && "is-open")} aria-hidden="true" />
-                    </button>
-                  ) : (
-                    <div className="console-nav-group-label">{i18n.t(groupName)}</div>
-                  )) : <div className="console-nav-group-rule" aria-hidden="true" />}
+                  {showLabels ? collapsible ? <button type="button" aria-expanded={open}
+                    onClick={() => toggleGroup(groupName)} className="console-nav-group-label is-toggle">
+                    {i18n.t(groupName)}<ChevronRight className={cn("console-nav-group-chevron", open && "is-open")} aria-hidden="true" />
+                  </button> : showGroupLabel && <div className="console-nav-group-label">{i18n.t(groupName)}</div>
+                    : <div className="console-nav-group-rule" aria-hidden="true" />}
                   {open && items.map((route, index) => {
                     const itemKey = route.path || `menu-item-${i18n.t(groupName)}-${index}`
                     const isActive = navigation.visible?.path === route.path
@@ -295,6 +301,36 @@ export default function DashboardLayout() {
           </nav>
         </ScrollArea>
 
+        {footerGroups.length ? <nav className="console-sidebar-secondary" aria-label={i18n.t("设置与运行维护")}>
+          {footerGroups.map((groupName) => {
+            const items = menuByGroup.get(groupName) ?? []
+            const active = navigation.group === groupName
+            const label = i18n.t(groupName)
+            return <DropdownMenu key={groupName}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className={cn("console-nav-item console-secondary-trigger", active && "is-active")}
+                  aria-label={label}
+                  title={!showLabels ? label : undefined}
+                >
+                  <span className="console-nav-icon">{groupName === NAV_GROUPS.SETTINGS ? <Settings2 /> : <Activity />}</span>
+                  {showLabels ? <><span className="min-w-0 flex-1 truncate text-left">{label}</span><ChevronRight className="console-secondary-chevron" aria-hidden="true" /></> : null}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side={isMobile ? "top" : "right"} align="end" sideOffset={8} className="console-secondary-menu">
+                <DropdownMenuLabel>{label}</DropdownMenuLabel>
+                {items.map((route) => <DropdownMenuItem key={route.path} asChild>
+                  <Link to={route.path} aria-current={navigation.visible?.path === route.path ? "page" : undefined}
+                    onClick={() => { if (isMobile) setMobileNavOpen(false) }}>
+                    <SidebarMenuIcon icon={route.icon} /><span>{routeLabel(route, i18n.locale)}</span>
+                  </Link>
+                </DropdownMenuItem>)}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          })}
+        </nav> : null}
+
         <div className="console-sidebar-footer">
           <span
             className={cn("console-connection-state", connected ? "is-online" : "is-offline")}
@@ -327,6 +363,7 @@ export default function DashboardLayout() {
               <Button
                 variant="ghost"
                 size="icon"
+                ref={mobileMenuButtonRef}
                 onClick={toggleSidebar}
                 aria-label={mobileNavOpen ? i18n.t("关闭菜单") : i18n.t("打开菜单")}
                 aria-expanded={mobileNavOpen}
@@ -335,15 +372,14 @@ export default function DashboardLayout() {
               </Button>
             ) : null}
             <nav aria-label={i18n.t("当前位置")} className="console-breadcrumb">
-              <span className="console-breadcrumb-group">{i18n.t(navigation.group)}</span>
-              <ChevronRight aria-hidden="true" className="console-breadcrumb-sep" />
-              {navigation.parent && <><Link className="console-breadcrumb-link" to={navigation.parent.path}>{routeLabel(navigation.parent, i18n.locale)}</Link><ChevronRight aria-hidden="true" className="console-breadcrumb-sep" /></>}
-              <span aria-current="page" className="console-breadcrumb-current">{(navigation.current ? routeLabel(navigation.current, i18n.locale) : undefined) ?? (isDemoMode() ? i18n.t("在线 Demo") : i18n.t("首页"))}</span>
+              {groupLabel !== currentLabel && groupLabel !== parentLabel ? <><span className="console-breadcrumb-group">{groupLabel}</span><ChevronRight aria-hidden="true" className="console-breadcrumb-sep" /></> : null}
+              {navigation.parent && parentLabel !== currentLabel ? <><Link className="console-breadcrumb-link" to={navigation.parent.path}>{parentLabel}</Link><ChevronRight aria-hidden="true" className="console-breadcrumb-sep" /></> : null}
+              <span aria-current="page" className="console-breadcrumb-current">{currentLabel}</span>
             </nav>
           </div>
 
           <div className="console-topbar-search">
-            <ConsoleCommandCenter routes={menuRoutes} />
+            <ConsoleCommandCenter routes={routes} />
           </div>
 
           <div className="console-topbar-actions">
