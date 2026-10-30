@@ -8,6 +8,25 @@ const turn = { turn_id: 'turn-1', session_key: session, started_at: 1234, model_
 const call = { prompt_tokens: 100, completion_tokens: 20, total_tokens: 120, cache_read_tokens: 60, cache_write_tokens: 0, reasoning_tokens: 5, reported: { input: true, output: true, totalTokens: true, cacheRead: true, cacheWrite: true, reasoning: true } }
 const wrap = data => ({ success: true, data })
 
+test('non-cached input is calculated per call only when both input and cache read are known', () => {
+  const hit = { ...call, prompt_tokens: 13_184, cache_read_tokens: 11_083 }
+  assert.deepEqual(traceUsage([{ usage_calls: [hit] }]).uncachedInput, { value: 2101, partial: false })
+  assert.deepEqual(traceUsage([{ usage_calls: [hit, { ...call, prompt_tokens: 100, cache_read_tokens: 0 }] }]).uncachedInput,
+    { value: 2201, partial: false })
+  for (const missing of [
+    { prompt_tokens: 500 },
+    { cache_read_tokens: 100 },
+    { ...call, reported: { ...call.reported, cacheRead: false } },
+    { ...call, cache_read_tokens: 101 },
+  ]) {
+    assert.deepEqual(traceUsage([{ usage_calls: [missing] }]).uncachedInput, { value: null, partial: true })
+    assert.deepEqual(traceUsage([{ usage_calls: [hit, missing] }]).uncachedInput, { value: 2101, partial: true })
+  }
+  assert.deepEqual(traceUsage([{ usage_calls: [{ ...call, prompt_tokens: 0, cache_read_tokens: 0 }] }]).uncachedInput,
+    { value: 0, partial: false })
+  assert.deepEqual(traceUsage([{ total_tokens: 120 }]).uncachedInput, { value: null, partial: true })
+})
+
 test('usage preserves reported zero, missing values and partial sums without counting cache or reasoning twice', () => {
   const all = traceUsage([{ usage_calls: [call, { ...call, prompt_tokens: 40, completion_tokens: 10, total_tokens: 50 }] }])
   assert.deepEqual(all.totalTokens, { value: 170, partial: false })

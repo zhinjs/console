@@ -8,7 +8,7 @@ export function UsageSummary({ turns }: { turns: Array<Pick<TraceTurn, 'usage_ca
   const i18n = useI18n()
   const usage = traceUsage(turns)
   const groups = [
-    { key: 'input', label: '输入', parts: [['cacheRead', '缓存读取'], ['cacheWrite', '缓存写入']] },
+    { key: 'input', label: '总输入', parts: [['uncachedInput', '非缓存输入'], ['cacheRead', '缓存读取'], ['cacheWrite', '缓存写入']] },
     { key: 'output', label: '输出', parts: [['reasoning', '推理']] },
   ] as const
   return <div className="conversation-usage-metrics">

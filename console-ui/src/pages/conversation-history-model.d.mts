@@ -4,6 +4,7 @@ export interface ConversationHistoryMessage {
   ref: { conversation: DiagnosticConversation; id: string }
   actor?: { id: string; displayName?: string }
   segments: ReceivedMessage['content']
+  contentStatus?: 'unavailable'
   timestamp: number
 }
 export interface ConversationHistoryEvent {

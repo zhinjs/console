@@ -77,16 +77,29 @@ export function readTraceRequest(body, sessionKey, turnId, requestId, locale = '
 
 /** The list's usage_calls already includes subagents; never add the nested tree a second time. */
 export function traceUsage(turns) {
-  return Object.fromEntries(Object.entries(usageFields).map(([key, field]) => {
+  const usage = Object.fromEntries(Object.entries(usageFields).map(([key, field]) => {
     const samples = turns.flatMap(turn => turn.usage_calls === undefined ? [key === 'totalTokens' && number(turn.total_tokens) && turn.total_tokens > 0 ? turn.total_tokens : undefined] : turn.usage_calls.map(call => {
-      const value = call[field]
-      if (!number(value)) return undefined
-      const reported = call.reported?.[key] ?? (['cacheRead', 'cacheWrite', 'reasoning'].includes(key) || value > 0)
-      return reported ? value : undefined
+      return reportedValue(call, key, field)
     }))
     const known = samples.filter(value => value !== undefined)
     return [key, { value: known.length || !samples.length ? known.reduce((sum, value) => sum + value, 0) : null, partial: known.length !== samples.length }]
   }))
+  // Subtract within each call: unrelated partial sums cannot establish uncached input.
+  const samples = turns.flatMap(turn => turn.usage_calls === undefined ? [undefined] : turn.usage_calls.map(call => {
+    const input = reportedValue(call, 'input', usageFields.input)
+    const cached = reportedValue(call, 'cacheRead', usageFields.cacheRead)
+    return input !== undefined && cached !== undefined && cached <= input ? input - cached : undefined
+  }))
+  const known = samples.filter(value => value !== undefined)
+  usage.uncachedInput = { value: known.length || !samples.length ? known.reduce((sum, value) => sum + value, 0) : null, partial: known.length !== samples.length }
+  return usage
+}
+
+function reportedValue(call, key, field) {
+  const value = call[field]
+  if (!number(value)) return undefined
+  const reported = call.reported?.[key] ?? (['cacheRead', 'cacheWrite', 'reasoning'].includes(key) || value > 0)
+  return reported ? value : undefined
 }
 
 export function formatTraceMetric(metric, locale = 'zh-CN') {

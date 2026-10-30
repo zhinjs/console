@@ -126,3 +126,18 @@ test('prompt sections render complete escaped text and ordered message roles, wi
   assert.ok(html.includes('END\n'));assert.ok(html.includes('&lt;script&gt;'));assert.ok(!html.includes('<script>'))
   assert.ok(html.indexOf('first')<html.indexOf('second'));assert.ok(html.includes('omitted'));assert.ok(!html.includes('<img'))
 })
+
+test('usage summary distinguishes total, cached and non-cached input without inventing unknown usage', () => {
+  const simple = ({ children }) => children
+  const { UsageSummary } = compile('ConversationUsage', {
+    './conversation-trace-model.mjs': model,
+    '../components/ui/button': { Button: simple },
+    '../components/ui/popover': { Popover: simple, PopoverContent: simple, PopoverTrigger: simple },
+  })
+  const render = calls => renderToStaticMarkup(require('react').createElement(UsageSummary, { turns: [{ usage_calls: calls }] }))
+  const html = render([{ prompt_tokens: 13184, cache_read_tokens: 11083, completion_tokens: 54 }])
+  assert.match(html, /总输入<\/dt><dd>13,184/)
+  assert.match(html, /非缓存输入<\/dt><dd>2,101/)
+  assert.match(html, /缓存读取<\/dt><dd>11,083/)
+  assert.match(render([{ prompt_tokens: 13184 }]), /非缓存输入<\/dt><dd>—/)
+})
