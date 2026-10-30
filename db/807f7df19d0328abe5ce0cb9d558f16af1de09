@@ -1,0 +1,28 @@
+console-ui/src/agent-playground.css
+  h_b680f75345178a 49-82,368,1189-1194,1198-1219,1807,1813-1823,1858
+console-ui/src/pages/ConversationHistory.tsx
+  h_b680f75345178a 20,26-27,31-33,42-44,49,53,67,75,80,86
+console-ui/src/pages/SandboxConversationDetails.tsx
+  h_b680f75345178a 17,21,23,26,29-30,33,50
+console-ui/src/pages/conversation-history-model.d.mts
+  h_b680f75345178a 24
+console-ui/src/pages/conversation-history-model.mjs
+  h_b680f75345178a 9,12
+console-ui/src/remote-entry-style-contract.ts
+  h_b680f75345178a 9,25-27
+tests/conversation-history.test.mjs
+  h_b680f75345178a 54,57,77-110
+tests/sandbox-conversation-details.test.mjs
+  h_b680f75345178a 60,62,126-127,140,145,169
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "db807f7df19d0328abe5ce0cb9d558f16af1de09",
+  "prompts": {},
+  "humans": {
+    "h_b680f75345178a": {
+      "author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
