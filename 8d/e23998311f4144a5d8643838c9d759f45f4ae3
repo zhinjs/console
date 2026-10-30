@@ -1,0 +1,24 @@
+console-ui/src/agent-playground.css
+  h_b680f75345178a 7,19-52,326,334,347,353-357,369,376-377,397,408-412,528-529,539,545-548,1163,1174-1177,1213,1623-1625,1654-1656,1699,1704,1720-1721,1723-1727,1730-1731
+console-ui/src/bootstrap/loadConsoleEntries.ts
+  h_b680f75345178a 18,81
+console-ui/src/bootstrap/sandbox-conversation-details.tsx
+  h_b680f75345178a 1-17
+console-ui/src/pages/SandboxConversationDetails.tsx
+  h_b680f75345178a 1-66
+console-ui/src/remote-entry-style-contract.ts
+  h_b680f75345178a 22-23
+tests/sandbox-conversation-details.test.mjs
+  h_b680f75345178a 1-170
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8de23998311f4144a5d8643838c9d759f45f4ae3",
+  "prompts": {},
+  "humans": {
+    "h_b680f75345178a": {
+      "author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
