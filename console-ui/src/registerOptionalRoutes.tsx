@@ -26,6 +26,6 @@ export async function registerOptionalConsoleRoutes(): Promise<void> {
     parent: '/cron',
     icon: 'Activity',
     element: <AssistantJobsPage />,
-    meta: { group: NAV_GROUPS.DAILY, order: 3, hideInMenu: true },
+    meta: { group: NAV_GROUPS.TASKS, order: 3, hideInMenu: true },
   })
 }

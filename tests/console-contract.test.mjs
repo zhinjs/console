@@ -60,36 +60,36 @@ test('built-in Agent navigation exposes Workbench, Workroom board/catalog and Se
   assert.doesNotMatch(source, /\/agent\/(?:studio|orchestration)/)
 })
 
-test('ordinary-user navigation uses plain names and folds advanced pages (#970)', () => {
+test('work-oriented navigation preserves ordinary-user names and legacy plugin groups', () => {
   const source = sourceText(join(SOURCE_ROOT, 'registerBuiltinShell.tsx'))
   const taxonomy = sourceText(join(SOURCE_ROOT, 'navigation-taxonomy.ts'))
-  // 「机器人」分组名是对外约定，后续新页会挂在下面
+  // Published plugin groups remain compatible; builtin placement follows the approved work navigation.
   assert.match(taxonomy, /BOT: '机器人'/)
   assert.match(taxonomy, /ADVANCED: '高级'/)
   assert.match(taxonomy, /COLLAPSED_BY_DEFAULT_NAV_GROUPS[^\n]*NAV_GROUPS\.ADVANCED/)
-  assert.match(taxonomy, /'\/sandbox': \{ group: NAV_GROUPS\.BOT/)
+  assert.match(taxonomy, /'\/sandbox': \{ group: NAV_GROUPS\.WORK/)
   const routeGroup = (path) => {
     const start = source.indexOf(`path: '${path}'`)
     assert.notEqual(start, -1, path)
     const block = source.slice(start, source.indexOf('})', start))
     return { name: /name: '([^']+)'/.exec(block)?.[1], group: /group: NAV_GROUPS\.(\w+)/.exec(block)?.[1], hidden: /hideInMenu: true/.test(block) }
   }
-  const daily = { '/dashboard': '首页', '/endpoints': '聊天账号', '/agent/sessions': '聊天记录', '/cron': '定时提醒', '/logs': '运行记录' }
-  for (const [path, name] of Object.entries(daily)) assert.deepEqual(routeGroup(path), { name, group: 'DAILY', hidden: false })
-  assert.deepEqual(routeGroup('/plugins'), { name: '功能管理', group: 'FEATURES', hidden: false })
-  assert.deepEqual(routeGroup('/marketplace'), { name: '功能商店', group: 'FEATURES', hidden: false })
-  assert.deepEqual(routeGroup('/agent/ambient'), { name: '群聊插话', group: 'BOT', hidden: false })
+  const primary = { '/dashboard': ['首页','OPERATIONS'], '/endpoints': ['聊天账号','ACCOUNTS'], '/agent/sessions': ['聊天记录','WORK'], '/cron': ['定时提醒','TASKS'], '/logs': ['运行记录','OPERATIONS'] }
+  for (const [path, [name,group]] of Object.entries(primary)) assert.deepEqual(routeGroup(path), { name, group, hidden: false })
+  assert.deepEqual(routeGroup('/plugins'), { name: '功能管理', group: 'PLUGINS', hidden: false })
+  assert.deepEqual(routeGroup('/marketplace'), { name: '功能商店', group: 'PLUGINS', hidden: false })
+  assert.deepEqual(routeGroup('/agent/ambient'), { name: '群聊插话', group: 'SETTINGS', hidden: false })
   assert.match(source, /path: '\/agent\/ambient'[\s\S]*?requiredPermissions: \[AMBIENT_STATUS_PERMISSION\]/)
-  assert.deepEqual(routeGroup('/agent/skills'), { name: '技能助手', group: 'BOT', hidden: false })
+  assert.deepEqual(routeGroup('/agent/skills'), { name: '技能助手', group: 'SETTINGS', hidden: false })
   assert.match(source, /path: '\/agent\/skills'[\s\S]*?requiredPermissions: \[SKILLS_STATUS_PERMISSION\]/)
-  assert.equal(routeGroup('/agent/workbench').group, 'BOT')
+  assert.equal(routeGroup('/agent/workbench').group, 'OPERATIONS')
   // 决策回放挂在「机器人状态」下（ADR 0036 切片 C），不进菜单，入口在机器人状态页
-  assert.deepEqual(routeGroup('/agent/replay'), { name: '决策回放', group: 'BOT', hidden: true })
+  assert.deepEqual(routeGroup('/agent/replay'), { name: '决策回放', group: 'OPERATIONS', hidden: true })
   assert.match(source, /path: '\/agent\/replay'[\s\S]*?parent: '\/agent\/workbench'[\s\S]*?requiredPermissions: \[REPLAY_PERMISSION\]/)
   assert.match(sourceText(join(SOURCE_ROOT, 'pages', 'agent-workbench.tsx')), /to="\/agent\/replay"/)
-  for (const path of ['/config', '/env', '/files', '/database', '/introspection', '/scenario-lab', '/agent/workrooms']) {
-    assert.equal(routeGroup(path).group, 'ADVANCED', path)
-  }
+  for (const path of ['/config', '/env']) assert.equal(routeGroup(path).group, 'SETTINGS', path)
+  for (const path of ['/files', '/database', '/introspection', '/scenario-lab']) assert.equal(routeGroup(path).group, 'OPERATIONS', path)
+  assert.equal(routeGroup('/agent/workrooms').group, 'TASKS')
   assert.doesNotMatch(source, /'对话分支'|'Agent 概览'|judge|decision|TypeSafe|shadow/)
   const entries = sourceText(join(SOURCE_ROOT, 'bootstrap', 'loadConsoleEntries.ts'))
   assert.match(entries, /placePluginRoute\(/)

@@ -282,13 +282,24 @@ export function resolveWebSocketUrl(path = '/server'): string {
   return url.href
 }
 
-/** fetch with Bearer token; relative paths resolve against {@link getApiBase}. */
+/** One Host/credential snapshot for a group of requests owned by the same view. */
+export interface ApiRequestContext {
+  readonly apiBase: string
+  readonly token: string | null
+}
+
+/** Kept inside a request owner's closure, never persisted or exposed as UI state. */
+export function captureApiRequestContext(): ApiRequestContext {
+  return Object.freeze({ apiBase: getApiBase(), token: getToken() })
+}
+
+/** Fetch with Bearer auth; an explicit context pins relative paths and credentials to their owner. */
 export async function apiFetch(
   input: RequestInfo | URL,
   init?: RequestInit,
+  context?: ApiRequestContext,
 ): Promise<Response> {
-  const apiBase = getApiBase()
-  const token = getToken()
+  const { apiBase, token } = context ?? captureApiRequestContext()
   const headers = new Headers(init?.headers)
   const url =
     typeof input === 'string' && input.startsWith('/')

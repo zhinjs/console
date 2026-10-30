@@ -6,6 +6,7 @@
  * names here prevents the production optimizer from dropping their local CSS.
  */
 export const REMOTE_AGENT_PLAYGROUND_CLASSES = [
+  'sandbox-composer-tabs',
   'agent-playground-add',
   'agent-playground-approval-actions',
   'agent-playground-artifact-detail',
@@ -19,6 +20,11 @@ export const REMOTE_AGENT_PLAYGROUND_CLASSES = [
   'agent-playground-connection',
   'agent-playground-context-list',
   'agent-playground-conversation',
+  'agent-playground-conversation-details',
+  'agent-playground-details-back',
+  'agent-playground-recovery',
+  'agent-playground-history-navigation',
+  'agent-playground-history-notice',
   'agent-playground-directory-field',
   'agent-playground-empty',
   'agent-playground-empty-mark',

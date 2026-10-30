@@ -1,5 +1,6 @@
 import { useI18n } from '../../i18n'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import './file-tree.css'
 import { getWebSocketManager, type FileTreeNode } from '@zhin.js/client'
 import { RefreshCw, AlertCircle, FolderOpen } from 'lucide-react'
@@ -16,6 +17,8 @@ import { createFileDraftSessions, type FileDraft } from './draft-session.mjs'
 import { isDemoMode } from '../../utils/demo-mode'
 import { useConsoleRead } from '../../hooks/use-console-read'
 import { readErrorSummary } from '../../utils/read-error.mjs'
+import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
+import { isInboxCacheScopeActive } from '../../utils/inbox-cache'
 
 // Navigation keeps drafts in memory only, scoped to the current Host client.
 // A new connection/reset receives a new manager and cannot reuse old files.
@@ -32,29 +35,52 @@ function ensureUnloadGuard() {
 }
 
 export default function FileManagePage() {
+  const scope = useInboxCacheScope()
+  if (!isInboxCacheScopeActive(scope)) return null
+  return <FileManageSession key={scope} />
+}
+
+function FileManageSession() {
   const i18n = useI18n()
   const readOnly = isDemoMode()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedPath = searchParams.get('path') || null
   const fileManager = getWebSocketManager()
   const { data: tree, loaded, loading, error, refresh: loadTree } = useConsoleRead<FileTreeNode[]>(async () => (await fileManager.getFileTree()).tree, [])
   const readFile = async (path: string) => (await fileManager.readFile(path)).content
   const saveFile = (path: string, content: string) => fileManager.saveFile(path, content)
   ensureUnloadGuard()
-  const manager = getWebSocketManager()
-  const session = draftSessions.get(manager)
+  const session = draftSessions.get(fileManager)
   const [selectedFile, setSelectedFile] = useState<string | null>(session.selected)
   const [pendingSelection, setPendingSelection] = useState<{ path: string | null } | null>(null)
-  const applySelection = (path: string | null) => {
+  const syncSelectionPath = useCallback((path: string | null) => {
+    if (path === requestedPath) return
+    setSearchParams(previous => {
+      const next = new URLSearchParams(previous)
+      if (path) next.set('path', path)
+      else next.delete('path')
+      return next
+    }, { replace: true })
+  }, [requestedPath, setSearchParams])
+  const applySelection = useCallback((path: string | null) => {
     session.selected = path
     setSelectedFile(path)
-  }
-  const selectFile = (path: string | null) => {
+    syncSelectionPath(path)
+  }, [session, syncSelectionPath])
+  const selectFile = useCallback((path: string | null) => {
     if (path === selectedFile) return
     if (selectedFile && session.drafts.has(selectedFile)) {
       setPendingSelection({ path })
+      // A URL is a selection request, not permission to replace the current draft.
+      // Consume it now so cancel/close cannot replay the same request on remount.
+      syncSelectionPath(selectedFile)
       return
     }
     applySelection(path)
-  }
+  }, [selectedFile, session, syncSelectionPath, applySelection])
+  useEffect(() => {
+    if (requestedPath) selectFile(requestedPath)
+  }, [requestedPath, selectFile])
   const updateDraft = useCallback((draft: FileDraft | null) => {
     if (!selectedFile) return
     if (draft) session.drafts.set(selectedFile, draft)

@@ -51,10 +51,10 @@ function runtime() {
   } while (flush && dirty); return value }, async settle() { for (let i = 0; i < 16; i++) { await Promise.resolve(); if (dirty || effects.length) this.render() }; return value },
   unmount() { slots.forEach(slot => slot?.cleanup?.()); effects = [] }, get value() { return value } }
 }
-function fixture({ realMessageBody = false } = {}) {
+function fixture({ realMessageBody = false, connectionId } = {}) {
   let connection = { host: 'https://host-a', credential: 'fixture-a' }, scopeId = 0
   const authority = createInboxCacheAuthority(() => connection, () => `scope-${++scopeId}`)
-  const props = { sessionKey: 'icqq:alias:channel:room', connectionScope: authority.current() }
+  const props = { sessionKey: 'icqq:alias:channel:room', connectionScope: authority.current(), connectionId }
   const calls = [], hooks = runtime(), module = { exports: {} }
   const mocks = {
     react: { ...require('react'), ...hooks.hooks }, '../i18n': localeModule,
@@ -73,6 +73,40 @@ function fixture({ realMessageBody = false } = {}) {
     switchCredential() { connection = { ...connection, credential: 'fixture-b' } },
   }
 }
+
+test('history query optionally binds a real connection while old callers and empty values retain the original wire', () => {
+  const legacy = model.conversationHistoryQuery('sandbox:bot:group:room', 12)
+  assert.equal(new URL(legacy, 'https://console.example').searchParams.has('connectionId'), false)
+  const query = new URL(model.conversationHistoryQuery('sandbox:bot:group:room', 12, 'ws + unicode中文'), 'https://console.example')
+  assert.equal(query.searchParams.get('connectionId'), 'ws + unicode中文')
+  assert.equal(query.searchParams.get('beforeSequence'), '12')
+  for (const empty of [undefined, null, '', '  ', {}, 7]) {
+    assert.equal(new URL(model.conversationHistoryQuery('key', undefined, empty), 'https://console.example').searchParams.has('connectionId'), false)
+  }
+})
+
+test('reconnecting the same scene retires the previous canonical address and pending page before a late response', async () => {
+  const f = fixture({ connectionId: 'first-socket' }), observations = []
+  f.props.onConversation = (...args) => observations.push(args)
+  f.hooks.render()
+  assert.equal(new URL(f.calls[0].url, 'https://console.example').searchParams.get('connectionId'), 'first-socket')
+  f.answer(0, body([message(51, 'OLD_ENDPOINT'), ...events(52, 49)], true)); await f.hooks.settle()
+  button(f.hooks.value, '加载更早记录').props.onClick()
+  assert.equal(new URL(f.calls[1].url, 'https://console.example').searchParams.get('connectionId'), 'first-socket')
+  f.props.connectionId = 'second-socket'
+  assert.equal(f.hooks.render(false), null, 'old content must be hidden before the cleanup effect')
+  f.hooks.render()
+  assert.equal(f.calls[1].signal.aborted, true)
+  assert.equal(new URL(f.calls[2].url, 'https://console.example').searchParams.get('connectionId'), 'second-socket')
+  assert.equal(new URL(f.calls[2].url, 'https://console.example').searchParams.has('beforeSequence'), false)
+  const nextConversation = { ...conversation, endpoint: { ...conversation.endpoint, id: 'another-canonical-endpoint' } }
+  const next = message(1, 'CURRENT_ENDPOINT'); next.message.ref.conversation = nextConversation
+  f.answer(2, body([next], false, nextConversation)); await f.hooks.settle()
+  f.answer(1, body([message(1, 'LATE_OLD_ENDPOINT')])); await f.hooks.settle()
+  assert.deepEqual(elements(f.hooks.value).filter(item => item.type === 'message-body').map(item => item.props.content[0].data.text), ['CURRENT_ENDPOINT'])
+  assert.deepEqual(observations.map(args => args[0]), [conversation, nextConversation])
+  f.hooks.unmount()
+})
 
 test('actual history reads one page, advances through non-message events only on demand, and keeps full text/actor/recall semantics', async () => {
   const f = fixture(), long = '完整聊天正文'.repeat(4000) + 'COMPLETE_TAIL'
