@@ -176,7 +176,7 @@ export function registerBuiltinConsolePages() {
     meta: { group: NAV_GROUPS.OPERATIONS, order: 4, hideInMenu: true },
   })
 
-  app.addRoute({ path: '/agent/models', name: '个人模型', parent: null, icon: 'KeyRound', element: <PersonalModelsPage />, meta: { group: NAV_GROUPS.BOT, order: 7 } })
+  app.addRoute({ path: '/agent/models', name: '个人模型', parent: null, icon: 'KeyRound', element: <PersonalModelsPage />, meta: { group: NAV_GROUPS.SETTINGS, order: 4 } })
 
   app.addRoute({
     path: '/agent/sessions',
