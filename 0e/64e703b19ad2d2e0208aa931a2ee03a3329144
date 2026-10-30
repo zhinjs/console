@@ -1,0 +1,16 @@
+console-ui/src/pages/files/files-page.tsx
+  h_b680f75345178a 2-3,20-21,38-43,46-47,53,56-65,68-70,74-76,80-83
+tests/files-deep-link.test.mjs
+  h_b680f75345178a 1-174
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0e64e703b19ad2d2e0208aa931a2ee03a3329144",
+  "prompts": {},
+  "humans": {
+    "h_b680f75345178a": {
+      "author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
