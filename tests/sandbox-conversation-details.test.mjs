@@ -57,9 +57,9 @@ test('only the actual Sandbox element receives a lazy optional reader without ch
   assert.equal(wrapped.meta, route.meta)
   assert.equal(route.element.props.renderConversationDetails, undefined)
   assert.equal(renderToStaticMarkup(wrapped.element), '<p>legacy conversation</p>')
-  const details = wrapped.element.props.renderConversationDetails({ sessionKey: 'sandbox:bot:group:room', canExecute: true })
+  const details = wrapped.element.props.renderConversationDetails({ sessionKey: 'sandbox:bot:group:room', canExecute: true, connectionId: 'live-connection' })
   assert.equal(details.type, Reader)
-  assert.deepEqual(details.props, { sessionKey: 'sandbox:bot:group:room', canExecute: true })
+  assert.deepEqual(details.props, { sessionKey: 'sandbox:bot:group:room', canExecute: true, connectionId: 'live-connection' })
   for (const unchanged of [{ ...route, path: '/calendar' }, { ...route, element: null }]) {
     assert.equal(withSandboxConversationDetails(unchanged), unchanged)
   }
@@ -123,6 +123,8 @@ test('read-only connections and Demo never mount history or trace readers', asyn
   assert.equal(SandboxConversationDetails({ sessionKey: 'sandbox:bot:private:owner', canExecute: false }), null)
   demo = true
   assert.equal(SandboxConversationDetails({ sessionKey: 'sandbox:bot:private:owner', canExecute: true }), null)
+  demo = false
+  assert.equal(SandboxConversationDetails({ sessionKey: 'sandbox:bot:private:owner', canExecute: true, connectionId: 'live-connection' }).props.connectionId, 'live-connection')
 })
 
 test('the reading view reuses canonical history, binds traces to its resolved address and opens a selected turn from usage', async () => {
@@ -135,11 +137,12 @@ test('the reading view reuses canonical history, binds traces to its resolved ad
     Tabs: 'Tabs', TabsContent: 'TabsContent', TabsList: 'TabsList', TabsTrigger: 'TabsTrigger',
     ConversationHistory: 'History', ConversationTrace: 'Trace',
   }, ['ConversationReader'])
-  const props = { sessionKey: 'sandbox:bot:group:room', connectionScope: 'host-epoch' }
+  const props = { sessionKey: 'sandbox:bot:group:room', connectionScope: 'host-epoch', connectionId: 'live-socket' }
   let view = runtime.render(ConversationReader, props)
   const history = children(view, 'History')[0]
   assert.equal(history.props.sessionKey, props.sessionKey)
   assert.equal(history.props.connectionScope, props.connectionScope)
+  assert.equal(history.props.connectionId, props.connectionId)
   assert.equal(children(view, 'TabsContent')[0].props.forceMount, true)
   assert.deepEqual(calls.at(-1), [props.sessionKey, props.connectionScope, undefined])
   const conversation = { endpoint: { adapter: 'root/sandbox', id: 'root/sandbox\0bot' }, kind: 'group', id: 'room', threadId: 'actual-thread' }
@@ -163,6 +166,7 @@ test('Host or scene changes remount the existing cancellable readers, while an i
   const first = ScopedConversationDetails({ sessionKey: 'sandbox:bot:group:a' })
   const otherScene = ScopedConversationDetails({ sessionKey: 'sandbox:bot:group:b' })
   assert.notEqual(first.key, otherScene.key)
+  assert.notEqual(first.key, ScopedConversationDetails({ sessionKey: 'sandbox:bot:group:a', connectionId: 'new-socket' }).key)
   scope = 'second-host'
   assert.notEqual(first.key, ScopedConversationDetails({ sessionKey: 'sandbox:bot:group:a' }).key)
   active = false

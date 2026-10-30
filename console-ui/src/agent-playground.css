@@ -46,6 +46,40 @@
   color: hsl(var(--foreground));
 }
 
+.agent-playground-recovery {
+  display: grid;
+  flex: none;
+  max-height: min(40dvh, 24rem);
+  overflow: auto;
+  gap: 0.75rem;
+  margin: 1rem;
+  font-size: var(--console-text-body);
+}
+.agent-playground-recovery[hidden] { display: none; }
+
+.agent-playground-recovery > section,
+.agent-playground-recovery > details {
+  min-width: 0;
+  padding: 0.875rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--console-radius-md);
+  background: hsl(var(--background));
+}
+
+.agent-playground-recovery h3 { margin-bottom: 0.75rem; font-weight: 600; }
+.agent-playground-recovery summary { display: flex; flex-wrap: wrap; gap: 0.375rem 1rem; align-items: baseline; cursor: pointer; }
+.agent-playground-recovery time { margin-left: auto; font-size: var(--console-text-label); color: hsl(var(--muted-foreground)); }
+.agent-playground-recovery details[open] summary { margin-bottom: 0.875rem; }
+.agent-playground-recovery details > a { display: inline-flex; margin: 0.5rem 0.75rem 0 0; color: hsl(var(--primary)); }
+.agent-playground-recovery > p[role=alert],
+.agent-playground-history-navigation p[role=alert] { color: hsl(var(--destructive)); overflow-wrap: anywhere; }
+.agent-playground-recovery > button,
+.agent-playground-recovery > p > button,
+.agent-playground-history-navigation button { padding: 0.375rem 0.625rem; border-radius: var(--console-radius-sm); color: hsl(var(--primary)); cursor: pointer; }
+.agent-playground-history-navigation { padding: 0.5rem 1rem; font-size: var(--console-text-label); }
+.agent-playground-history-notice { padding: 0.5rem 1rem; color: hsl(var(--muted-foreground)); text-align: center; font-size: var(--console-text-label); }
+.agent-playground-main:has(> .agent-playground-recovery:not([hidden])) .agent-playground-empty { display: none; }
+
 
 .agent-playground-shell.has-inspector {
   grid-template-columns: minmax(13.5rem, 15.5rem) minmax(0, 1fr) minmax(16rem, 19rem);
@@ -331,6 +365,7 @@
 
 .agent-playground-runbar {
   display: flex;
+  flex-shrink: 0;
   flex-wrap: wrap;
   min-height: 4.75rem;
   align-items: center;
@@ -1151,8 +1186,35 @@
 }
 
 .agent-playground-composer .sandbox-composer-tabs {
-  border-color: transparent;
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 0.12rem;
+  padding: 0.16rem;
+  border: 1px solid transparent;
+  border-radius: 0.48rem;
   background: hsl(var(--muted));
+}
+
+.agent-playground-composer .sandbox-composer-tabs button {
+  min-height: 1.65rem;
+  padding: 0 0.5rem;
+  border: 0;
+  border-radius: 0.34rem;
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  font-size: var(--console-text-label);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.agent-playground-composer .sandbox-composer-tabs button.active {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.agent-playground-composer .sandbox-composer-tabs button:focus-visible {
+  outline: var(--console-focus-width) solid hsl(var(--ring));
+  outline-offset: 1px;
 }
 
 .agent-playground-composer > div:last-child {
@@ -1742,13 +1804,23 @@
 
   .agent-playground-runbar {
     min-height: 4.1rem;
+    gap: 0.55rem;
     padding: 0.6rem 0.7rem;
   }
 
   .agent-playground-run-icon { width: 2.05rem; height: 2.05rem; }
   .agent-playground-run-title span { display: none; }
-  .agent-playground-run-actions { gap: 0.16rem; }
-  .agent-playground-run-actions button { min-width: 1.85rem; height: 1.85rem; padding: 0; }
+  .agent-playground-run-actions { flex-wrap: nowrap; gap: 0.25rem; }
+  .agent-playground-run-actions button {
+    flex-shrink: 0;
+    width: 2rem;
+    min-width: 2rem;
+    height: 2rem;
+    gap: 0;
+    padding: 0;
+    /* Text remains the accessible name when narrow screens use the existing icons. */
+    font-size: 0;
+  }
 
   .agent-playground-confirm { align-items: flex-end; flex-wrap: wrap; }
   .agent-playground-confirm > div { flex-basis: 100%; }
@@ -1783,6 +1855,7 @@
   .agent-playground-inline-run footer { align-items: flex-start; flex-direction: column; }
 
   .agent-playground-composer { padding: 0.6rem; }
+  .agent-playground-composer > div:first-child > .flex-1 { display: none; }
   .agent-playground-composer > div:last-child { display: none; }
   .agent-playground-composer .zhin-code-block { min-width: min(20rem, 78vw); }
 }

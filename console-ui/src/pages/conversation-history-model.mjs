@@ -6,9 +6,10 @@ const text = value => typeof value === 'string' && value.length > 0
 const sequence = value => Number.isSafeInteger(value) && value >= 0
 const timestamp = value => Number.isFinite(value) && Number.isFinite(new Date(value).getTime())
 
-export function conversationHistoryQuery(sessionKey, beforeSequence) {
+export function conversationHistoryQuery(sessionKey, beforeSequence, connectionId) {
   const params = new URLSearchParams({ sessionKey })
   if (beforeSequence !== undefined) params.set('beforeSequence', String(beforeSequence))
+  if (typeof connectionId === 'string' && connectionId.trim()) params.set('connectionId', connectionId.trim())
   return `/api/conversations/history?${params}`
 }
 

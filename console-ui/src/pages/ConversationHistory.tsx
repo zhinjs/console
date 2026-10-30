@@ -17,19 +17,20 @@ import {
 interface HistoryState {
   sessionKey: string
   connectionScope?: string
+  connectionId?: string
   page: ConversationHistoryPage | null
   loading: boolean
   error: (ConversationHistoryFailure & { mode: 'latest' | 'earlier' }) | null
 }
 
-export function ConversationHistory({ sessionKey, connectionScope, turns = [], onOpenTrace, onRefresh, onConversation }: {
-  sessionKey: string; connectionScope?: string; turns?: TraceTurn[]; onOpenTrace?: (turnId: string) => void; onRefresh?: () => void
+export function ConversationHistory({ sessionKey, connectionScope, connectionId, turns = [], onOpenTrace, onRefresh, onConversation }: {
+  sessionKey: string; connectionScope?: string; connectionId?: string; turns?: TraceTurn[]; onOpenTrace?: (turnId: string) => void; onRefresh?: () => void
   onConversation?: (conversation: DiagnosticConversation | undefined, error?: string, retry?: () => void) => void
 }) {
   const i18n = useI18n()
-  const [state, setState] = useState<HistoryState>({ sessionKey, connectionScope, page: null, loading: false, error: null })
-  const current = useRef({ sessionKey, connectionScope })
-  current.current = { sessionKey, connectionScope }
+  const [state, setState] = useState<HistoryState>({ sessionKey, connectionScope, connectionId, page: null, loading: false, error: null })
+  const current = useRef({ sessionKey, connectionScope, connectionId })
+  current.current = { sessionKey, connectionScope, connectionId }
   const latest = useRef(state)
   latest.current = state
   const requests = useRef(createDiagnosticRequestGate(getInboxCacheScope))
@@ -38,18 +39,18 @@ export function ConversationHistory({ sessionKey, connectionScope, turns = [], o
   reportConversation.current = onConversation
   const load = useCallback(async (mode: 'latest' | 'earlier' = 'latest') => {
     if (!isInboxCacheScopeActive(connectionScope) || current.current.sessionKey !== sessionKey
-      || current.current.connectionScope !== connectionScope || inFlight.current) return
-    const previous = latest.current.sessionKey === sessionKey && latest.current.connectionScope === connectionScope
-      ? latest.current : { sessionKey, connectionScope, page: null, loading: false, error: null }
+      || current.current.connectionScope !== connectionScope || current.current.connectionId !== connectionId || inFlight.current) return
+    const previous = latest.current.sessionKey === sessionKey && latest.current.connectionScope === connectionScope && latest.current.connectionId === connectionId
+      ? latest.current : { sessionKey, connectionScope, connectionId, page: null, loading: false, error: null }
     if (mode === 'earlier' && !previous.page?.hasMore) return
     const before = mode === 'earlier' ? previous.page?.nextBeforeSequence ?? undefined : undefined
     const request = requests.current.begin()
     const active = () => request.current() && isInboxCacheScopeActive(connectionScope)
-      && current.current.sessionKey === sessionKey && current.current.connectionScope === connectionScope
+      && current.current.sessionKey === sessionKey && current.current.connectionScope === connectionScope && current.current.connectionId === connectionId
     inFlight.current = true
     setState({ ...previous, loading: true, error: null })
     try {
-      const response = await apiFetch(conversationHistoryQuery(sessionKey, before), { signal: request.signal, cache: 'no-store' })
+      const response = await apiFetch(conversationHistoryQuery(sessionKey, before, connectionId), { signal: request.signal, cache: 'no-store' })
       if (!active()) return
       let body: unknown
       try { body = await response.json() }
@@ -63,7 +64,7 @@ export function ConversationHistory({ sessionKey, connectionScope, turns = [], o
       }
       const page = readConversationHistory(body, previous.page?.conversation, before)
       reportConversation.current?.(page.conversation)
-      setState({ sessionKey, connectionScope, page: mode === 'earlier' ? prependConversationHistory(previous.page, page) : page, loading: false, error: null })
+      setState({ sessionKey, connectionScope, connectionId, page: mode === 'earlier' ? prependConversationHistory(previous.page, page) : page, loading: false, error: null })
     } catch (cause) {
       if (active()) {
         const message = cause instanceof Error ? cause.message : '聊天记录读取失败。'
@@ -71,18 +72,18 @@ export function ConversationHistory({ sessionKey, connectionScope, turns = [], o
         setState({ ...previous, loading: false, error: { kind: 'other', message, mode } })
       }
     } finally { if (active()) inFlight.current = false }
-  }, [sessionKey, connectionScope])
+  }, [sessionKey, connectionScope, connectionId])
 
   useEffect(() => {
     requests.current.cancel()
     inFlight.current = false
-    latest.current = { sessionKey, connectionScope, page: null, loading: false, error: null }
+    latest.current = { sessionKey, connectionScope, connectionId, page: null, loading: false, error: null }
     setState(latest.current)
     void load()
     return () => { requests.current.cancel(); inFlight.current = false }
   }, [load])
 
-  if (!isInboxCacheScopeActive(connectionScope) || state.sessionKey !== sessionKey || state.connectionScope !== connectionScope) return null
+  if (!isInboxCacheScopeActive(connectionScope) || state.sessionKey !== sessionKey || state.connectionScope !== connectionScope || state.connectionId !== connectionId) return null
   const page = state.page
   const items = page?.items.filter(item => item.type === 'message.created' || item.type === 'message.recalled') ?? []
   const recalled = new Set(page?.items.filter(item => item.type === 'message.recalled' && item.messageRef).map(item => item.messageRef!.id))

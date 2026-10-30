@@ -14,22 +14,23 @@ import './agent-sessions.css'
 export interface SandboxConversationContext {
   readonly sessionKey: string
   readonly canExecute: boolean
+  readonly connectionId?: string
 }
 
 /** Mounted only when the Sandbox asks its Console shell for conversation details. */
-export function SandboxConversationDetails({ sessionKey, canExecute }: SandboxConversationContext) {
+export function SandboxConversationDetails({ sessionKey, canExecute, connectionId }: SandboxConversationContext) {
   if (!canExecute || isDemoMode()) return null
-  return <ScopedConversationDetails sessionKey={sessionKey} />
+  return <ScopedConversationDetails sessionKey={sessionKey} connectionId={connectionId} />
 }
 
-function ScopedConversationDetails({ sessionKey }: { sessionKey: string }) {
+function ScopedConversationDetails({ sessionKey, connectionId }: { sessionKey: string; connectionId?: string }) {
   const scope = useInboxCacheScope()
   if (!isInboxCacheScopeActive(scope)) return null
-  // Changing the Host, credentials or scene retires the underlying readers and their requests.
-  return <ConversationReader key={JSON.stringify([scope, sessionKey])} sessionKey={sessionKey} connectionScope={scope} />
+  // A new connection also retires the previously resolved canonical address.
+  return <ConversationReader key={JSON.stringify([scope, sessionKey, connectionId])} sessionKey={sessionKey} connectionScope={scope} connectionId={connectionId} />
 }
 
-function ConversationReader({ sessionKey, connectionScope }: { sessionKey: string; connectionScope?: string }) {
+function ConversationReader({ sessionKey, connectionScope, connectionId }: { sessionKey: string; connectionScope?: string; connectionId?: string }) {
   const i18n = useI18n()
   const [view, setView] = useState('conversation')
   const [resolved, setResolved] = useState<{
@@ -46,7 +47,7 @@ function ConversationReader({ sessionKey, connectionScope }: { sessionKey: strin
       <TabsTrigger value="trace">{i18n.t('轨迹')}</TabsTrigger>
     </TabsList>
     <TabsContent value="conversation" forceMount className="data-[state=inactive]:hidden">
-      <ConversationHistory sessionKey={sessionKey} connectionScope={connectionScope} turns={traces.turns}
+      <ConversationHistory sessionKey={sessionKey} connectionScope={connectionScope} connectionId={connectionId} turns={traces.turns}
         onRefresh={traces.refresh}
         onOpenTrace={turnId => { setSelectedTurn(turnId); setView('trace') }}
         onConversation={(conversation, error, retry) => setResolved({ conversation, error, retry })} />
