@@ -1,0 +1,32 @@
+console-ui/src/components/confirm-dialog.tsx
+  h_b680f75345178a 14,22,46
+console-ui/src/i18n/messages.en.mjs
+  h_b680f75345178a 3-17
+console-ui/src/pages/HostToolApprovalsPanel.tsx
+  h_b680f75345178a 1-163
+console-ui/src/pages/task-center.tsx
+  h_b680f75345178a 2,226
+console-ui/src/pages/tool-approvals-model.d.mts
+  h_b680f75345178a 1-18
+console-ui/src/pages/tool-approvals-model.mjs
+  h_b680f75345178a 1-22
+console-ui/src/utils/auth.ts
+  h_b680f75345178a 285-296,300,302
+console-ui/src/utils/plugin-rpc.ts
+  h_b680f75345178a 1,28,39-40
+tests/tool-approvals-panel.test.mjs
+  h_b680f75345178a 1-206
+tests/tool-approvals-rpc.test.mjs
+  h_b680f75345178a 1-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "22b4fe13c41d5ece48dd42fb9c9053c07be6ecdc",
+  "prompts": {},
+  "humans": {
+    "h_b680f75345178a": {
+      "author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
