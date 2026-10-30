@@ -17,6 +17,7 @@ import IntrospectionPage from './pages/introspection'
 import ScenarioLabPage from './pages/scenario-lab'
 import CommandPermissionsPage from './pages/command-permissions'
 import AgentWorkbenchPage from './pages/agent-workbench'
+import PersonalModelsPage from './pages/personal-models'
 import AgentSessionsPage from './pages/agent-sessions'
 import BotReplayPage from './pages/bot-replay'
 import { REPLAY_PERMISSION } from './pages/bot-replay-model.mjs'
@@ -174,6 +175,8 @@ export function registerBuiltinConsolePages() {
     element: <CommandPermissionsPage />,
     meta: { group: NAV_GROUPS.OPERATIONS, order: 4, hideInMenu: true },
   })
+
+  app.addRoute({ path: '/agent/models', name: '个人模型', parent: null, icon: 'KeyRound', element: <PersonalModelsPage />, meta: { group: NAV_GROUPS.SETTINGS, order: 4 } })
 
   app.addRoute({
     path: '/agent/sessions',

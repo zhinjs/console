@@ -20,6 +20,7 @@ const builtinNames: Readonly<Record<string, string>> = {
   "/introspection": "运行时能力",
   "/permissions": "命令权限说明",
   "/agent/sessions": "聊天记录",
+  "/agent/models": "个人模型",
   "/plugins": "功能管理",
   "/plugins/:name": "插件详情",
   "/marketplace": "功能商店",

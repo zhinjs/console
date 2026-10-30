@@ -1,6 +1,8 @@
+import { isPersonalSessionKey } from './personal-models-model.mjs'
 import { translate } from '../i18n/locale.mjs'
 const SCOPES = new Set(['private', 'group', 'channel'])
 const validKey = key => {
+  if (isPersonalSessionKey(key)) return true
   const parts = key.trim().split(':')
   return parts.length >= 4 && !!parts[0].trim() && !!parts[1].trim() && SCOPES.has(parts[2]) && !!parts.slice(3).join(':').trim()
 }

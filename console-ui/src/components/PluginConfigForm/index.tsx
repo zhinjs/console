@@ -4,6 +4,9 @@ import { Link } from 'react-router-dom'
 import { Settings, AlertCircle, Save, Loader2 } from 'lucide-react'
 import type { PluginConfigFormProps, SchemaField, SchemaEditorDrafts } from './types.js'
 import { usePluginConfigDraft } from './usePluginConfigDraft'
+import { AgentPresetsEditor } from './AgentPresetsEditor'
+import { SelectField } from '../ui/select'
+import { deploymentPresetChoices } from '../../pages/model-policy-model.mjs'
 import { SchemaFieldEditor } from './SchemaFieldEditor'
 import { objectFields, declaredDefaults, initialSchemaValue, updateObjectField, hostValidationSummary } from './schema-model.mjs'
 import { Card } from '../ui/card'
@@ -14,6 +17,16 @@ import { requestConsole } from '../../utils/console-rpc'
 import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../../utils/inbox-cache'
 import { configurationSaveSummary } from './config-evidence-model.mjs'
+
+function deploymentCatalogField(field: SchemaField): SchemaField {
+  const collections = Object.fromEntries(Object.entries(objectFields(field)).map(([name, collection]) => {
+    const child = collection.inner || collection.additional
+    if (!child || typeof child !== 'object') return [name, collection]
+    const entity = { ...child, object: Object.fromEntries(Object.entries(objectFields(child)).map(([key, value]) => [key, ['id', 'ownerId'].includes(key) ? { ...value, hidden: true } : value])) }
+    return [name, { ...collection, ...(collection.inner ? { inner: entity } : { additional: entity }) }]
+  }))
+  return { ...field, object: collections }
+}
 
 interface ConfigValidation { valid: boolean; schemaAvailable?: boolean; errors: Array<{ path: string; message: string }>; missingEnv: string[] }
 
@@ -82,6 +95,9 @@ function PluginConfigFormSession({ pluginName, onSuccess, sourceRevision, fieldN
   const objectConfig = localConfig && typeof localConfig === 'object' && !Array.isArray(localConfig) ? localConfig as Record<string, unknown>
     : localConfig === undefined && form.schema?.type === 'object' ? {} : undefined
   const rootObject = form.schema?.type === 'object' && objectConfig !== undefined
+  const catalogView = pluginName === 'ai' && fieldNames?.includes('modelCatalog')
+  const presetChoices = deploymentPresetChoices(objectConfig)
+  const initialChat = (objectConfig?.modelPolicy as { defaults?: { chat?: string } } | undefined)?.defaults?.chat ?? ''
   const categoryFields = Object.entries(fields).filter(([name, field]) => !field.hidden
     && (fieldNames === undefined || fieldNames.includes(name)) && !excludedFieldNames?.includes(name))
   const changeValue = (value: unknown) => {
@@ -146,7 +162,11 @@ function PluginConfigFormSession({ pluginName, onSuccess, sourceRevision, fieldN
     {validation && (!validation.valid || validation.missingEnv.length > 0) ? <Alert variant={validation.valid && !validation.missingEnv.length ? 'default' : 'destructive'}><AlertDescription><p>{hostValidationSummary(validation, i18n.locale)}</p>{validation.errors.map(item => <p key={`${item.path}:${item.message}`}>{item.path}: {item.message}</p>)}{validation.missingEnv.length ? <p>{i18n.t("缺少环境变量：")}{validation.missingEnv.join('、')}。<Link className="underline" to="/env">{i18n.t("配置环境变量")}</Link>{i18n.t("后重新校验。")}</p> : null}</AlertDescription></Alert> : null}
     {message ? <p role="status" className="text-sm">{message}</p> : null}
     {hasInvalidFields && <p role="alert" className="text-sm text-destructive">{i18n.t("有字段 JSON 草稿格式错误，修正后才能保存。")}</p>}
-    <fieldset key={draftVersion} disabled={saving || form.loading} className="space-y-3">{filtersRootFields && (!rootObject || !categoryFields.length) ? <div role="alert"><p>{i18n.t("此分类暂时无法编辑。")}</p><Link className="text-sm underline" to="/files">{i18n.t("打开文件管理")}</Link></div> : rootObject ? <>{categoryFields.map(([name, field]) => <SchemaFieldEditor key={name} path={`$/${JSON.stringify(name)}`} drafts={editorDrafts.current} onValidityChange={fieldValidity} name={name} useDeclaredDefaults={scoped} field={form.schema?.secret ? { ...field, secret: true } : field} value={objectConfig[name]} onChange={value => change(name, value)} />)}{(!Object.keys(fields).length && !Object.keys(objectConfig).length && !form.schema.additional) ? <p>{i18n.t("此项无需配置。")}</p> : null}{!filtersRootFields && (form.schema.additional || Object.keys(objectConfig).some(key => !Object.hasOwn(fields, key))) ? <SchemaFieldEditor name={i18n.t("其他字段")} path="$/additional" drafts={editorDrafts.current} onValidityChange={fieldValidity} reservedKeys={Object.keys(fields)} field={{ type: 'object', object: {}, additional: form.schema.additional, secret: form.schema.secret }} value={Object.fromEntries(Object.entries(objectConfig).filter(([key]) => !Object.hasOwn(fields, key)))} onChange={value => {
+    <fieldset key={draftVersion} disabled={saving || form.loading} className="space-y-3">{filtersRootFields && (!rootObject || !categoryFields.length) ? <div role="alert"><p>{i18n.t("此分类暂时无法编辑。")}</p><Link className="text-sm underline" to="/files">{i18n.t("打开文件管理")}</Link></div> : rootObject ? <>{categoryFields.map(([name, field]) => pluginName === 'ai' && name === 'agents' ? <AgentPresetsEditor key={name} value={objectConfig[name]} field={field} ai={objectConfig} onChange={value => change(name, value)} drafts={editorDrafts.current} onValidityChange={fieldValidity} /> : <SchemaFieldEditor key={name} path={`$/${JSON.stringify(name)}`} drafts={editorDrafts.current} onValidityChange={fieldValidity} name={name} useDeclaredDefaults={scoped} field={form.schema?.secret ? { ...field, secret: true } : pluginName === 'ai' && name === 'modelCatalog' ? deploymentCatalogField(field) : field} value={objectConfig[name]} onChange={value => change(name, value)} />)}{catalogView && objectConfig.modelCatalog !== undefined ? <label className="block space-y-2 text-sm"><span>{i18n.t('初始聊天模型')}</span><SelectField aria-label={i18n.t('初始聊天模型')} value={initialChat} options={[{ value: '', label: i18n.t('选择模型预设'), disabled: true }, ...presetChoices.map(preset => ({ value: preset.id, label: `${preset.id} · ${preset.model}` })), ...(initialChat && !presetChoices.some(preset => preset.id === initialChat) ? [{ value: initialChat, label: initialChat }] : [])]} onValueChange={chat => {
+      const policy = objectConfig.modelPolicy && typeof objectConfig.modelPolicy === 'object' ? objectConfig.modelPolicy as Record<string, unknown> : {}
+      const defaults = policy.defaults && typeof policy.defaults === 'object' ? policy.defaults as Record<string, unknown> : {}
+      change('modelPolicy', { ...policy, defaults: { ...defaults, chat } })
+    }} /></label> : null}{(!Object.keys(fields).length && !Object.keys(objectConfig).length && !form.schema.additional) ? <p>{i18n.t("此项无需配置。")}</p> : null}{!filtersRootFields && (form.schema.additional || Object.keys(objectConfig).some(key => !Object.hasOwn(fields, key))) ? <SchemaFieldEditor name={i18n.t("其他字段")} path="$/additional" drafts={editorDrafts.current} onValidityChange={fieldValidity} reservedKeys={Object.keys(fields)} field={{ type: 'object', object: {}, additional: form.schema.additional, secret: form.schema.secret }} value={Object.fromEntries(Object.entries(objectConfig).filter(([key]) => !Object.hasOwn(fields, key)))} onChange={value => {
       const next = Object.fromEntries(Object.entries(objectConfig).filter(([key]) => Object.hasOwn(fields, key)))
       if (value && typeof value === 'object' && !Array.isArray(value)) for (const [key, child] of Object.entries(value)) if (!Object.hasOwn(fields, key)) Object.defineProperty(next, key, { value: child, enumerable: true, configurable: true, writable: true })
       changeValue(next)

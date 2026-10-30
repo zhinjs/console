@@ -18,6 +18,7 @@ import { isDemoMode } from '../utils/demo-mode'
 import { buildSettingsCatalog, resolveSettingsSelection, type SettingsEntry } from './settings-model.mjs'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
+import { ModelPolicySettings } from './ModelPolicySettings'
 import { WelcomeFlowContext } from './WelcomeFlowContext'
 
 function EditableConfigPage() {
@@ -34,6 +35,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
   const { source, format, configKeys: pluginKeys, loading, loaded, error, load, snapshot } = useConfigSource()
   const [activeSection, setActiveSection] = useState<string>(() => pluginFromUrl ? `plugin:${pluginFromUrl}` : 'general')
   const [visitedEntries, setVisitedEntries] = useState<Map<string, SettingsEntry>>(() => new Map())
+  const [runtimeVisited, setRuntimeVisited] = useState(false)
   const [sectionFilter, setSectionFilter] = useState('')
   const parsedConfig = useMemo(() => {
     try {
@@ -51,9 +53,10 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
   const listEntries = activeGroup.entries.filter(entry =>
     [entry.title, entry.description, entry.configKey].some(value => i18n.t(value).toLocaleLowerCase().includes(normalizedFilter)))
   const sections = [...new Set(listEntries.map(entry => entry.section ?? 'general'))]
-  const ownerKeys = [...new Set(catalog.flatMap(group => group.entries.map(entry => entry.configKey)))]
+  const ownerKeys = [...new Set(catalog.flatMap(group => group.entries.filter(entry => !entry.editor).map(entry => entry.configKey)))]
   useEffect(() => {
-    if (loaded && activeEntry) setVisitedEntries(previous => previous.get(activeEntry.configKey)?.id === activeEntry.id
+    if (loaded && activeEntry?.editor) setRuntimeVisited(true)
+    if (loaded && activeEntry && !activeEntry.editor) setVisitedEntries(previous => previous.get(activeEntry.configKey)?.id === activeEntry.id
       ? previous : new Map(previous).set(activeEntry.configKey, activeEntry))
   }, [loaded, activeEntry])
 
@@ -139,11 +142,13 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
             </Button>
           </div> : null}
 
+          {runtimeVisited ? <section hidden={activeEntry?.editor !== 'runtime-model-policy'}><ModelPolicySettings connectionScope={connectionScope} /></section> : null}
+
           {ownerKeys.map(key => {
             // A configuration owner has exactly one form and CAS-bound draft. In
             // particular, switching AI views never creates independent ai drafts.
-            const entry = activeEntry?.configKey === key ? activeEntry : visitedEntries.get(key)
-            const visible = activeEntry?.configKey === key
+            const entry = activeEntry?.configKey === key && !activeEntry.editor ? activeEntry : visitedEntries.get(key)
+            const visible = activeEntry?.configKey === key && !activeEntry.editor
             return <section key={key} hidden={!visible} className="console-settings-form" aria-label={entry ? i18n.t(entry.title) : key}>
               {entry && !entry.writable ? <Card className="console-settings-empty">
                 <Settings aria-hidden="true" /><h3>{i18n.t(entry.title)}</h3>

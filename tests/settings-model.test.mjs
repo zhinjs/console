@@ -17,9 +17,11 @@ test('organizes authoritative Host settings and keeps one AI owner across models
   const presets = group(result, 'presets').entries[0]
   const dialogue = group(result, 'plugins').entries.find(item => item.id === 'config:ai')
   const remaining = group(result, 'plugins').entries.find(item => item.id === 'ai:other')
-  assert.equal(models.configKey, 'ai'); assert.deepEqual(models.fieldNames, ['providers'])
+  assert.equal(models.configKey, 'ai'); assert.deepEqual(models.fieldNames, ['modelCatalog'])
   assert.equal(presets.configKey, 'ai'); assert.deepEqual(presets.fieldNames, ['agents'])
   assert.deepEqual(dialogue.fieldNames, ['enabled', 'agent'])
+  assert.ok(remaining.excludedFieldNames.includes('modelCatalog')); assert.ok(remaining.excludedFieldNames.includes('modelPolicy'));
+  assert.equal(group(result, 'models').entries[1].editor, 'runtime-model-policy');
   assert.ok(remaining.excludedFieldNames.includes('providers')); assert.ok(remaining.excludedFieldNames.includes('agents'))
   assert.equal(remaining.fieldNames, undefined, 'future Host fields remain visible in the remaining AI capability')
   assert.ok(group(result, 'plugins').entries.find(item => item.configKey === 'speech').builtin)
@@ -32,13 +34,13 @@ test('organizes authoritative Host settings and keeps one AI owner across models
 test('classifies every current Host AI field once and keeps future fields reachable without changing configuration', () => {
   // The current Host schema's ai.properties keys. Pinning this inventory makes
   // overlap/omission visible while the catch-all preserves forward compatibility.
-  const hostFields = ['decisions', 'workroom', 'agent', 'enabled', 'providers', 'agents', 'sessions', 'context',
+  const hostFields = ['decisions', 'workroom', 'agent', 'enabled', 'modelCatalog', 'modelPolicy', 'agents', 'sessions', 'context',
     'imageGeneration', 'multimodal', 'memory', 'knowledge', 'githubMcp', 'mcpServers', 'access', 'trigger', 'usage', 'audit', 'imageStorage']
   const document = { ai: Object.fromEntries([...hostFields, 'futureCapability'].map(key => [key, { unchanged: true }])) }
   const before = structuredClone(document)
   const result = buildSettingsCatalog(document, ['ai'], { ai: ['ai'] })
   const entries = result.flatMap(item => item.entries).filter(entry => entry.configKey === 'ai')
-  assert.equal(entries.length, 11, 'models, presets, eight specific capabilities and one future-field fallback')
+  assert.equal(entries.length, 12, 'deployment catalog, independent runtime refs, roles, eight capabilities and future fields')
   assert.equal(new Set(entries.map(entry => entry.id)).size, entries.length)
   for (const field of [...hostFields, 'futureCapability']) {
     const owners = entries.filter(entry => entry.fieldNames ? entry.fieldNames.includes(field)
@@ -82,7 +84,7 @@ test('preserves legacy plugin links, rejects removed source selections and opens
   const result = catalog()
   assert.equal(resolveSettingsSelection('plugin:qq', result).entry.configKey, 'qq')
   assert.equal(resolveSettingsSelection('plugin:ai', result).entry.id, 'config:ai')
-  assert.equal(resolveSettingsSelection('models', result).entry.id, 'ai:providers')
+  assert.deepEqual(resolveSettingsSelection('models', result), { group: 'models' })
   assert.equal(resolveSettingsSelection('presets', result).entry.id, 'ai:agents')
   assert.deepEqual(resolveSettingsSelection('general', result), { group: 'general' })
   assert.deepEqual(resolveSettingsSelection('plugins', result), { group: 'plugins' })

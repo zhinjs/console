@@ -4,6 +4,7 @@ import { getInboxCacheScope, isInboxCacheScopeActive } from '../utils/inbox-cach
 import { createDiagnosticRequestGate } from './endpoint-detail/message-diagnostics.mjs'
 import { diagnosticConversationKey } from './endpoint-detail/message-diagnostics.mjs'
 import type { DiagnosticConversation } from './endpoint-detail/types'
+import { isPersonalSessionKey } from './personal-models-model.mjs'
 import { readTraceTurns, traceFailure, traceQuery, type TraceTurn } from './conversation-trace-model.mjs'
 
 export function useConversationTraces(sessionKey: string, connectionScope?: string, conversation?: DiagnosticConversation) {
@@ -14,7 +15,7 @@ export function useConversationTraces(sessionKey: string, connectionScope?: stri
   const requests = useRef(createDiagnosticRequestGate(getInboxCacheScope))
   const [state, setState] = useState<{ identity: string; turns: TraceTurn[]; loading: boolean; error: string | null; revision: number }>({ identity, turns: [], loading: false, error: null, revision: 0 })
   const load = useCallback(async () => {
-    if (!sessionKey || !conversationKey || !isInboxCacheScopeActive(connectionScope) || current.current !== identity) return
+    if (!sessionKey || (!conversationKey && !isPersonalSessionKey(sessionKey)) || !isInboxCacheScopeActive(connectionScope) || current.current !== identity) return
     const request = requests.current.begin()
     const active = () => request.current() && current.current === identity && isInboxCacheScopeActive(connectionScope)
     setState(previous => ({ identity, turns: previous.identity === identity ? previous.turns : [], loading: true, error: null, revision: previous.revision }))

@@ -65,7 +65,7 @@ test('builtin route regrouping preserves deep links, hidden detail ownership and
   '/dashboard':'OPERATIONS','/logs':'OPERATIONS','/tasks':'TASKS','/use-cases/group-welcome':'TASKS','/cron':'TASKS',
   '/endpoints':'ACCOUNTS','/agent/workbench':'OPERATIONS','/agent/replay':'OPERATIONS','/agent/ambient':'SETTINGS','/agent/skills':'SETTINGS',
   '/agent/usage':'OPERATIONS','/agent/workrooms':'TASKS','/agent/workrooms/catalog':'TASKS','/scenario-lab':'OPERATIONS','/introspection':'OPERATIONS',
-  '/permissions':'OPERATIONS','/agent/sessions':'WORK','/plugins':'PLUGINS','/plugins/:name':'PLUGINS','/marketplace':'PLUGINS',
+  '/permissions':'OPERATIONS','/agent/sessions':'WORK','/agent/models':'SETTINGS','/plugins':'PLUGINS','/plugins/:name':'PLUGINS','/marketplace':'PLUGINS',
   '/config':'SETTINGS','/env':'SETTINGS','/files':'OPERATIONS','/database':'OPERATIONS','/endpoints/:adapter/:endpointId':'ACCOUNTS',
  }
  assert.deepEqual([...byPath.keys()].sort(),Object.keys(expected).sort())
