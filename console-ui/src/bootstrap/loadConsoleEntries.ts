@@ -15,6 +15,7 @@ import { app } from '@zhin.js/client'
 import { createHostRegistration } from './host-registration.mjs'
 import { getApiBase, getToken } from '../utils/auth'
 import { placePluginRoute } from '../navigation-taxonomy'
+import { withSandboxConversationDetails } from './sandbox-conversation-details'
 
 export type {
   CreatePluginRegisterHostApiOptions,
@@ -77,7 +78,7 @@ async function doLoadConsoleEntries(options?: LoadConsoleEntriesOptions, locale:
     React,
     addRoute: (input) => {
       if (!session.active()) return
-      const placed = placePluginRoute(input as Parameters<typeof app.addRoute>[0])
+      const placed = withSandboxConversationDetails(placePluginRoute(input as Parameters<typeof app.addRoute>[0]))
       if (requestedApi) requestedApi.addRoute(placed as typeof input)
       else session.addRoute(placed)
     },

@@ -19,6 +19,8 @@ export const REMOTE_AGENT_PLAYGROUND_CLASSES = [
   'agent-playground-connection',
   'agent-playground-context-list',
   'agent-playground-conversation',
+  'agent-playground-conversation-details',
+  'agent-playground-details-back',
   'agent-playground-directory-field',
   'agent-playground-empty',
   'agent-playground-empty-mark',
