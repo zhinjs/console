@@ -11,7 +11,7 @@ export function traceQuery(kind: 'turns' | 'turn' | 'request', sessionKey: strin
 export function readTraceTurns(body: unknown, sessionKey: string, locale?: 'zh-CN' | 'en', conversation?: DiagnosticConversation): TraceTurn[]
 export function readTraceDetail(body: unknown, sessionKey: string, turnId: string, locale?: 'zh-CN' | 'en', conversation?: DiagnosticConversation): TraceDetail
 export function readTraceRequest(body: unknown, sessionKey: string, turnId: string, requestId: string, locale?: 'zh-CN' | 'en'): TraceRequest
-export function traceUsage(turns: Array<Pick<TraceTurn, 'usage_calls' | 'total_tokens'>>): Record<UsageKey, TraceMetric>
+export function traceUsage(turns: Array<Pick<TraceTurn, 'usage_calls' | 'total_tokens'>>): Record<UsageKey | 'uncachedInput', TraceMetric>
 export function formatTraceMetric(metric: TraceMetric, locale?: 'zh-CN' | 'en'): string
 export function turnsForMessage(turns: TraceTurn[], ref: { conversation: DiagnosticConversation; id: string }): TraceTurn[]
 export function traceFailure(status: number, locale?: 'zh-CN' | 'en'): string

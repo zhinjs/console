@@ -114,7 +114,8 @@ export function ConversationHistory({ sessionKey, connectionScope, turns = [], o
                 <time dateTime={new Date(timestamp).toISOString()}>{timeFormat.format(timestamp)}</time>
                 {recalled.has(message.ref.id) ? <span className="conversation-message-recalled">{i18n.t('已撤回')}</span> : null}
               </header>
-              <div className="conversation-message-body"><MessageBody content={message.segments} /></div>
+              <div className="conversation-message-body">{message.contentStatus === 'unavailable'
+                ? <p>{i18n.t('消息正文未保存')}</p> : <MessageBody content={message.segments} />}</div>
               {message.actor ? <ConversationUsage turns={turnsForMessage(turns, message.ref)} onOpenTrace={onOpenTrace} /> : null}
             </article> : null}
         </Fragment>

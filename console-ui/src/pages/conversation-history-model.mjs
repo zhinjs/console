@@ -33,6 +33,7 @@ export function readConversationHistory(body, expectedConversation, beforeSequen
       if (!record(message) || !text(message.ref?.id) || diagnosticConversationKey(message.ref?.conversation) !== key
         || !timestamp(message.timestamp) || !Array.isArray(message.segments)
         || !message.segments.every(segment => record(segment) && text(segment.type) && record(segment.data))
+        || message.contentStatus !== undefined && message.contentStatus !== 'unavailable'
         || message.actor !== undefined && (!record(message.actor) || !text(message.actor.id)
           || message.actor.displayName !== undefined && typeof message.actor.displayName !== 'string')) fail()
       result.message = message

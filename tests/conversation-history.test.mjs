@@ -183,6 +183,16 @@ test('the actual timeline and MessageBody render the entire long message and pub
   f.hooks.unmount()
 })
 
+test('a confirmed bubble with unavailable body is explicit instead of showing an empty or invented message', async () => {
+  const f = fixture({ realMessageBody: true })
+  const item = message(1, '')
+  item.message.segments = []
+  item.message.contentStatus = 'unavailable'
+  f.answer(0, body([item])); await f.hooks.settle()
+  assert.match(renderToStaticMarkup(f.hooks.value), /消息正文未保存/)
+  f.hooks.unmount()
+})
+
 test('usage attaches to the precise triggering inbound message and never to an assumed reply', async()=>{
   const f=fixture(), observations=[]
   f.props.onConversation=(...args)=>observations.push(args)
