@@ -1,0 +1,23 @@
+console-ui/src/i18n/messages.en.mjs
+  s_9622fd28aba994::t_9b26c5ebe84068 3-85
+console-ui/src/pages/model-policy-model.mjs
+  s_9622fd28aba994::t_882abd7c74ce06 1-93
+console-ui/src/registerBuiltinShell.tsx
+  s_9622fd28aba994::t_efffa48637f4c4 20,179-180
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "411d17837f02ffb5495028ea92992f2f0b3713cd",
+  "prompts": {},
+  "sessions": {
+    "s_9622fd28aba994": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a166a4-5b4c-7e22-80f0-d3374c43b4fb",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
