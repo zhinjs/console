@@ -11,6 +11,7 @@ interface ConfirmDialogProps {
   onOpenChange: (open: boolean) => void
   title: string
   description?: string
+  children?: ReactNode
   confirmLabel?: string
   cancelLabel?: string
   variant?: 'default' | 'destructive'
@@ -18,7 +19,7 @@ interface ConfirmDialogProps {
 }
 
 export function ConfirmDialog({
-  open, onOpenChange, title, description,
+  open, onOpenChange, title, description, children,
   confirmLabel, cancelLabel,
   variant = 'default', onConfirm,
 }: ConfirmDialogProps) {
@@ -42,6 +43,7 @@ export function ConfirmDialog({
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
+        {children}
         <DialogFooter className="gap-2">
           <DialogClose asChild>
             <Button variant="outline" size="sm">{cancelLabel ?? i18n.t('取消')}</Button>
