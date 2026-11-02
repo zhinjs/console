@@ -26,6 +26,8 @@ import { validateAssistantJobs, explainJobError, type AssistantJob } from './ass
 import { apiFetch } from '../utils/auth'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
+import { ScheduleExecutions } from './ScheduleExecutions'
 import './cron.css'
 
 function cronValidationMessage(error?: string, locale: 'zh-CN' | 'en' = 'zh-CN'): string {
@@ -242,30 +244,6 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
 
   if (!isInboxCacheScopeActive(connectionScope)) return null
 
-  if (loading) {
-    return (
-      <div className="console-page console-resource-page console-schedule-page">
-        <Skeleton className="h-8 w-48" />
-        <div className="grid grid-cols-1 gap-4">
-          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32" />)}
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="console-page console-resource-page console-schedule-page">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-        <Button variant="outline" size="sm" onClick={() => { setError(null); setLoading(true); fetchCrons() }}>
-          <RefreshCw className="w-4 h-4 mr-1" /> {i18n.t(" 重试")}</Button>
-      </div>
-    )
-  }
-
   return (
     <div className="console-page console-resource-page console-schedule-page">
       {/* Header */}
@@ -278,7 +256,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
             </Button>
             <Button variant="outline" size="sm" onClick={() => { setLoading(true); fetchCrons() }}>
               <RefreshCw className="w-4 h-4 mr-1" /> {i18n.t(" 刷新")}</Button>
-            {!readOnly && persistentAvailable && (
+            {!readOnly && persistentAvailable && !loading && !error && (
               <Button size="sm" onClick={() => setAddDialogOpen(true)}>
                 <Plus className="w-4 h-4 mr-1" /> {i18n.t(" 新建任务")}</Button>
             )}
@@ -286,6 +264,14 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
         }
       />
 
+      <Tabs defaultValue="tasks">
+        <TabsList aria-label={i18n.t('定时任务视图')}><TabsTrigger value="tasks">{i18n.t('定时任务')}</TabsTrigger><TabsTrigger value="history">{i18n.t('执行记录')}</TabsTrigger></TabsList>
+        <TabsContent value="history"><ScheduleExecutions key={connectionScope} connectionScope={connectionScope} /></TabsContent>
+        <TabsContent value="tasks">
+          {loading ? <div className="grid grid-cols-1 gap-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32" />)}</div> : error ? <div className="space-y-3">
+            <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>
+            <Button variant="outline" size="sm" onClick={() => { setError(null); setLoading(true); void fetchCrons() }}><RefreshCw />{i18n.t("重试")}</Button>
+          </div> : <>
       {!readOnly && !persistentAvailable && <Alert>
         <AlertDescription>
           {i18n.t("当前实例尚未启用持久化 AI 调度，暂不能创建、暂停或删除任务。已有插件注册的任务仍可在下方查看。 如需定时 AI 任务，请在运行实例中安装并配置 Agent 及持久化调度引擎，再刷新本页。")}</AlertDescription>
@@ -359,6 +345,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
                         <div><dt>{i18n.t("创建时间")}</dt><dd>{job.createdAt ? new Date(job.createdAt).toLocaleString(i18n.locale) : '—'}</dd></div>
                         {job.lastExecutedAt != null && <div><dt>{i18n.t("最近执行")}</dt><dd>{new Date(job.lastExecutedAt).toLocaleString(i18n.locale)}</dd></div>}
                       </dl>
+                      <ScheduleExecutions key={`${connectionScope}:${job.id}`} jobId={job.id} label={job.label} connectionScope={connectionScope} />
                     </div>}
                   </div>
                 </CardContent>
@@ -399,6 +386,10 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
           </div>
         )}
       </section>
+
+          </>}
+        </TabsContent>
+      </Tabs>
 
       {/* Add Dialog */}
       {!readOnly && persistentAvailable && <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
