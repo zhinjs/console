@@ -1,0 +1,73 @@
+tests/schedule-executions.test.mjs
+  s_9622fd28aba994::t_30024d1cefd5fc 1-14,16-37,43-71,73-80,83-108,111-136,159-160,187-189,191-200,202
+  s_9622fd28aba994::t_3f94d814e7b158 161-186
+  s_9622fd28aba994::t_1eaf52615f225b 15,109-110
+  s_9622fd28aba994::t_475ffc0d938a68 190
+  s_9622fd28aba994::t_331d6c8b9d22c8 38-39,137-158
+  s_9622fd28aba994::t_d1a130fff7185b 81-82,201
+  s_9622fd28aba994::t_b60e0fc215cd69 72
+  s_9622fd28aba994::t_893fd49493ce9e 40-42
+console-ui/src/pages/schedule-executions.css
+  s_9622fd28aba994::t_3d3b19b86ebff0 1-11,13-28
+  s_9622fd28aba994::t_e130d06408d645 12
+console-ui/src/pages/schedule-executions-model.d.mts
+  s_9622fd28aba994::t_7ae7d28e5e6111 6
+  s_9622fd28aba994::t_d10871994ef947 1,4
+  s_9622fd28aba994::t_594518babe2968 16
+  s_9622fd28aba994::t_1eaf52615f225b 8
+  s_9622fd28aba994::t_8ca851d2888dea 9,12
+  s_9622fd28aba994::t_ae06f04d2610ee 7
+  s_9622fd28aba994::t_3e384b0876c4a3 2-3,5,10-11,13-15,17
+console-ui/src/i18n/messages.en.mjs
+  s_9622fd28aba994::t_d10871994ef947 5
+  s_9622fd28aba994::t_1eaf52615f225b 26
+  s_9622fd28aba994::t_8aafef09c8fc47 6-25
+  s_9622fd28aba994::t_475ffc0d938a68 3-4
+  s_9622fd28aba994::t_c19315acf0363c 27-89
+console-ui/src/pages/cron.tsx
+  s_9622fd28aba994::t_7ae7d28e5e6111 30,348
+  s_9622fd28aba994::t_8ca851d2888dea 29,267-270,391-392
+  s_9622fd28aba994::t_45ae455b428cf0 259,271-274,390
+  s_9622fd28aba994::t_292de1742de051 393
+console-ui/src/pages/schedule-executions-model.mjs
+  s_9622fd28aba994::t_7ae7d28e5e6111 57-58
+  s_9622fd28aba994::t_d10871994ef947 7,20,89
+  s_9622fd28aba994::t_aa18e85cb155de 45-49,51
+  s_9622fd28aba994::t_3e384b0876c4a3 1-6,8-11,13-19,21-25,27-31,33-34,38-44,52-56,59-74,77-88,90,94-96,98-99
+  s_9622fd28aba994::t_8ca851d2888dea 12,75-76
+  s_9622fd28aba994::t_869c48f955ff97 26,50,97
+  s_9622fd28aba994::t_1eaf52615f225b 32,35-37
+  s_9622fd28aba994::t_594518babe2968 91-93
+console-ui/src/pages/ScheduleExecutions.tsx
+  s_9622fd28aba994::t_3d3b19b86ebff0 1-11,13-15,17-59,62-72,74-75,77-88,100-107,109-125,127-132,134-137,140-156,158,160-164,166-167,174-176,178,180-181,184-186,189-190
+  s_9622fd28aba994::t_869c48f955ff97 12,73,76,97
+  s_9622fd28aba994::t_6b47e1be7224de 159,170-173,177,188
+  s_9622fd28aba994::t_d10871994ef947 108
+  s_9622fd28aba994::t_aa18e85cb155de 89-96,98-99
+  s_9622fd28aba994::t_594518babe2968 61
+  s_9622fd28aba994::t_8ca851d2888dea 16,126,133,168,182-183,187
+  s_9622fd28aba994::t_475ffc0d938a68 60
+  s_9622fd28aba994::t_661d226b23be34 138-139,157,165,169
+  s_9622fd28aba994::t_1eaf52615f225b 179
+tests/cron-page-ui.test.mjs
+  s_9622fd28aba994::t_8ca851d2888dea 53
+  s_9622fd28aba994::t_331d6c8b9d22c8 99-110,118-119
+  s_9622fd28aba994::t_e130d06408d645 111-117
+  s_9622fd28aba994::t_7ae7d28e5e6111 54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8df2a1ea7f1da3eb25424e1ef7534e7d97f8227a",
+  "prompts": {},
+  "sessions": {
+    "s_9622fd28aba994": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a166a4-5b4c-7e22-80f0-d3374c43b4fb",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
