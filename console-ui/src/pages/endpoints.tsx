@@ -10,6 +10,7 @@ import { Badge } from '../components/ui/badge'
 import { Skeleton } from '../components/ui/skeleton'
 import { ENDPOINT_RPC } from '../contracts/zhin-console'
 import { readEndpointList } from './endpoint-list-model.mjs'
+import { endpointLifecycleLabel } from './endpoint-presentation.mjs'
 import { requestConsole } from '../utils/console-rpc'
 
 interface EndpointInfo {
@@ -17,6 +18,8 @@ interface EndpointInfo {
   adapter: string
   connected: boolean
   status: 'online' | 'offline'
+  pendingLogin?: boolean
+  transportState?: string
   pendingRequestCount?: number
   pendingNoticeCount?: number
 }
@@ -112,7 +115,7 @@ export default function EndpointsPage() {
                 <div>
                   <dt><Activity aria-hidden="true" />{i18n.t("运行状态")}</dt>
                   <dd className={endpoint.status === 'online' ? 'is-good' : undefined}>
-                    {endpoint.status === 'online' ? i18n.t("运行中") : i18n.t("已停止")}
+                    {i18n.t(endpointLifecycleLabel(endpoint))}
                   </dd>
                 </div>
                 <div>

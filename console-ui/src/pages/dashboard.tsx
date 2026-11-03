@@ -357,10 +357,11 @@ export default function HomePage() {
     try {
       await requestConsole({ type: CONSOLE_RPC.SYSTEM_RESTART })
       success(i18n.t("重启请求已发送，连接将在服务恢复后自动重连"))
+      window.setTimeout(() => window.location.reload(), 3000)
     } catch {
       toastError(i18n.t("重启请求未能发送"))
+      setRestarting(false)
     }
-    window.setTimeout(() => window.location.reload(), 3000)
   }
 
   if (loading) {

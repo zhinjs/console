@@ -18,6 +18,7 @@ function compile(code, mocks) {
 const taxonomy = compile(await source('navigation-taxonomy.ts'), {})
 const navigation = compile(await source('i18n/navigation.ts'), { './locale.mjs': { translate } })
 const layoutSource = await source('layouts/dashboard.tsx')
+const mobileHookSource = await source('hooks/useIsMobile.ts')
 const commandSource = await source('components/ConsoleCommandCenter.tsx')
 const nodes = node => node && typeof node === 'object' ? [node, ...[node.props?.children].flat(Infinity).flatMap(nodes)] : []
 const text = node => typeof node === 'string' ? node : node && typeof node === 'object' ? [node.props?.children].flat(Infinity).map(text).join('') : ''
@@ -67,6 +68,7 @@ function fixture({ routes, path = '/sandbox', mobile = false, collapsed = false,
     '../utils/auth': { notifyAuthRequired() {} }, '../utils/demo-mode': { isDemoMode: () => false },
     '../components/DemoOnboarding': { reopenDemoOnboarding() {} }, '../components/ConsoleCommandCenter': { ConsoleCommandCenter: 'command-center' },
   }
+  mocks['../hooks/useIsMobile'] = compile(mobileHookSource, { react: hooks })
   const module = compile(command ? commandSource : layoutSource, mocks)
   return {
     events,
@@ -134,6 +136,7 @@ test('collapsed navigation retains named controls and mobile hidden navigation c
     nodes(tree).find(node => node.type === 'button' && node.props['aria-label'] === '打开菜单').props.onClick()
     tree = mobile.render()
     assert.equal(nodes(tree).find(node => node.type === 'aside').props.inert, false)
+    assert.equal(nodes(tree).find(node => node.props?.className === 'flex flex-col flex-1 overflow-hidden min-w-0 w-full').props.inert, true)
     nodes(nav(tree, '设置与运行维护')).find(node => node.type === 'a').props.onClick()
     assert.equal(nodes(mobile.render()).find(node => node.type === 'aside').props.inert, true)
   } finally { mobile.close() }

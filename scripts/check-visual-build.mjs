@@ -32,7 +32,7 @@ function compiledStyles(width,dark){
  }
  return {variables,expand,selectors}
 }
-for(const [width,title,label,control,compact,radius] of [[390,'1.375rem','.75rem','2.75rem','2.75rem','.5rem'],[768,'1.5rem','.8125rem','2.25rem','2.25rem','.625rem'],[1920,'1.75rem','.8125rem','2.25rem','2rem','.625rem']])for(const dark of [false,true]){
+for(const [width,title,label,control,compact,radius] of [[390,'1.375rem','.75rem','2.75rem','2.75rem','.5rem'],[768,'1.5rem','.8125rem','2.25rem','2.25rem','.5rem'],[1920,'1.75rem','.8125rem','2.25rem','2rem','.5rem']])for(const dark of [false,true]){
  const {variables,expand,selectors}=compiledStyles(width,dark)
  const number=value=>parseFloat(value)
  assert.equal(number(variables['--console-text-title']),number(title))
@@ -43,12 +43,12 @@ for(const [width,title,label,control,compact,radius] of [[390,'1.375rem','.75rem
  assert.equal(number(expand(selectors.get('.console-page-title')['font-size'])),number(title))
  assert.match(expand(selectors.get('.console-card').background),/hsl\(/)
  assert.doesNotMatch(expand(selectors.get('.console-card')['box-shadow']),/var\(/)
- assert.ok((expand(selectors.get('.console-card')['box-shadow']).match(/hsl\(/g)??[]).length>=3,'card needs contact/middle/ambient shadow layers')
+ assert.equal(expand(selectors.get('.console-card')['box-shadow']), 'none', 'cards should be flat, not layered with decoration')
  const selectedShadow=expand(selectors.get('.console-runtime-component.is-selected')['box-shadow'])
  assert.doesNotMatch(selectedShadow,/inset/,'selection must not restore the hard inset rail')
- assert.ok((expand(variables['--console-shadow-button']).match(/hsl\(/g)??[]).length>=4,'button needs material highlight plus three soft shadow layers')
+ assert.equal(expand(variables['--console-shadow-button']), 'none', 'buttons use semantic fills and focus rather than material shadows')
  assert.ok([...selectors.keys()].some(selector=>selector.includes('console-text-body')))
  assert.ok([...selectors.values()].some(styles=>styles.height?.includes('--console-control-height')),'shared control utility must be emitted')
- assert.equal(variables['--background'],dark?'0 0% 4%':'0 0% 100%')
+ assert.equal(variables['--background'],dark?'0 0% 9%':'0 0% 100%')
 }
 console.log('Compiled linked styles: 390/768/1920px × light/dark role/radius/shadow/surface/control checks passed.')

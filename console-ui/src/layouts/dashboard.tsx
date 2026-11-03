@@ -19,7 +19,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import "./workspace-navigation.css"
 import { resolveNavigationLocation } from "../navigation-location.mjs"
 
-const MOBILE_MQ = "(max-width: 767px)"
+import { useIsMobile } from '../hooks/useIsMobile'
 const EXPANDED_GROUPS_KEY = "zhin.console.nav.expanded-groups"
 const SIDEBAR_COLLAPSED_KEY = "zhin.console.nav.collapsed"
 
@@ -55,18 +55,6 @@ function writeExpandedGroups(groups: ReadonlySet<string>): void {
   } catch {
     // Storage may be unavailable (private mode); folding still works for this session.
   }
-}
-
-function useIsMobile() {
-  return useSyncExternalStore(
-    (onStoreChange) => {
-      const mql = window.matchMedia(MOBILE_MQ)
-      mql.addEventListener("change", onStoreChange)
-      return () => mql.removeEventListener("change", onStoreChange)
-    },
-    () => window.matchMedia(MOBILE_MQ).matches,
-    () => false,
-  )
 }
 
 function SidebarMenuIcon({ icon }: { icon?: React.ReactNode | string }) {
@@ -214,6 +202,7 @@ export default function DashboardLayout() {
           type="button"
           className={cn("console-nav-scrim", mobileNavOpen && "is-open")}
           aria-label={i18n.t("关闭菜单")}
+          aria-hidden={!mobileNavOpen}
           tabIndex={mobileNavOpen ? 0 : -1}
           onClick={() => setMobileNavOpen(false)}
         />
@@ -356,7 +345,7 @@ export default function DashboardLayout() {
         </div>
       </aside>
 
-      <div className="flex flex-col flex-1 overflow-hidden min-w-0 w-full">
+      <div className="flex flex-col flex-1 overflow-hidden min-w-0 w-full" inert={isMobile && mobileNavOpen}>
         <header className="console-topbar">
           <div className="console-topbar-location flex items-center gap-2 min-w-0">
             {isMobile ? (

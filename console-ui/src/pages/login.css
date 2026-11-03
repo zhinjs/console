@@ -1,0 +1,35 @@
+@layer components {
+  .console-login { display: grid; place-items: center; min-height: 100dvh; padding: 32px 24px; background: hsl(var(--background)); }
+  .console-login-layout { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,400px); gap: 64px; align-items: center; width: min(100%,900px); }
+  .console-login-intro { max-width: 42ch; }
+  .console-login-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 44px; font-size: 16px; font-weight: 600; }
+  .console-login-mark { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: hsl(var(--foreground)); color: hsl(var(--background)); font-weight: 700; }
+  .console-login-intro h1 { margin: 0 0 16px; font-size: 32px; line-height: 1.25; letter-spacing: -.03em; font-weight: 600; }
+  .console-login-intro p { margin: 0; color: hsl(var(--muted-foreground)); font-size: 14px; line-height: 1.8; }
+  .console-login-notes { display: flex; align-items: center; gap: 8px; margin-top: 24px; color: hsl(var(--muted-foreground)); font-size: 12px; }
+  .console-login-notes svg { width: 15px; height: 15px; flex: none; }
+  .console-login-panel { padding: 28px; border: 1px solid hsl(var(--border)); border-radius: 14px; background: hsl(var(--card)); }
+  .console-login-panel-head { display: flex; justify-content: flex-end; margin-bottom: 24px; }
+  .console-login-form { display: grid; gap: 20px; }
+  .console-login-field { display: grid; gap: 7px; min-width: 0; font-size: 13px; font-weight: 500; }
+  .console-login-field small { color: hsl(var(--muted-foreground)); font-size: 12px; font-weight: 400; line-height: 1.6; }
+  .console-login-field input { font-size: 14px; }
+  .console-login-saved { display: flex; gap: 8px; min-width: 0; }
+  .console-login-saved > button:first-child { flex: 1; min-width: 0; }
+  .console-login-token { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 6px; }
+  .console-login-remember { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 1.5; color: hsl(var(--muted-foreground)); cursor: pointer; }
+  .console-login-remember > button { flex: none; margin-top: 2px; }
+  .console-login-session-note { margin: -10px 0 0 24px; color: hsl(var(--muted-foreground)); font-size: 12px; line-height: 1.6; }
+  .console-login-error { padding: 12px; border-radius: 8px; background: hsl(var(--destructive) / .07); color: hsl(var(--destructive)); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+  .console-login-help { border-top: 1px solid hsl(var(--border)); padding-top: 16px; color: hsl(var(--muted-foreground)); font-size: 12px; }
+  .console-login-help summary { width: fit-content; cursor: pointer; }
+  .console-login-help p { margin: 12px 0 0; line-height: 1.8; }
+  @media (max-width: 767px) {
+    .console-login { padding: 24px 16px; }
+    .console-login-layout { grid-template-columns: minmax(0,1fr); gap: 28px; max-width: 460px; }
+    .console-login-brand { margin-bottom: 24px; }
+    .console-login-intro h1 { font-size: 26px; margin-bottom: 10px; }
+    .console-login-notes { margin-top: 12px; }
+    .console-login-panel { padding: 20px; }
+  }
+}
