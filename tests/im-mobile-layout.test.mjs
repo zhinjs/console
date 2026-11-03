@@ -42,7 +42,9 @@ function computed(css, width, path) {
   return Object.fromEntries([...values].map(([key, entry]) => [key, entry.value]))
 }
 for (const file of ['client/style.css', 'console-ui/src/style.css']) {
-  const css = await readFile(new URL(`../${file}`, import.meta.url), 'utf8')
+  const entry = await readFile(new URL(`../${file}`, import.meta.url), 'utf8')
+  assert.match(entry, /@import ["'][^"']*im-workspace\.css["']/u)
+  const css = `${entry}\n${await readFile(new URL('../console-ui/src/im-workspace.css', import.meta.url), 'utf8')}`
   test(`${file}: a translated mobile sidebar is fixed rather than consuming the conversation's flex height`, () => {
     const drawer = computed(css, 390, sidebar), shell = computed(css, 390, layout), button = computed(css, 390, toggle)
     assert.equal(drawer.position, 'fixed')
@@ -50,6 +52,18 @@ for (const file of ['client/style.css', 'console-ui/src/style.css']) {
     assert.equal(shell['flex-direction'], 'column')
     assert.equal(button.display, 'flex')
     assert.equal(button['flex-shrink'], '0')
+  })
+  test(`${file}: message actions do not steal mobile bubble width or precede inbound text`, () => {
+    for (const outgoing of [false, true]) {
+      const row = [{ classes: ['im-message-row', ...(outgoing ? ['im-message-row--out'] : [])] }]
+      const bubble = [...row, { classes: ['im-bubble'] }]
+      const actions = [...row, { classes: ['im-message-actions'] }]
+      assert.equal(computed(css, 1440, bubble).order, '1')
+      assert.equal(computed(css, 1440, actions).order, outgoing ? '0' : '2')
+      assert.equal(computed(css, 390, row)['flex-direction'], 'column')
+      assert.equal(computed(css, 390, bubble).order, '1')
+      assert.equal(computed(css, 390, actions).order, '2')
+    }
   })
   test(`${file}: desktop sidebar remains in flow and does not gain mobile drawer positioning`, () => {
     for (const width of [1024, 1440]) {

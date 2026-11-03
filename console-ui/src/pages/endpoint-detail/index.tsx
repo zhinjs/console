@@ -11,6 +11,7 @@ import {
   FileText,
   Forward,
   Image,
+  Link2,
   Loader2,
   MessageSquare,
   Music,
@@ -613,10 +614,12 @@ export default function EndpointDetailPage() {
                     size="sm"
                     className="im-tool-button h-8 px-2 text-xs"
                     title={i18n.t("Markdown 模式")}
+                    aria-label={i18n.t("Markdown 模式")}
+                    aria-pressed={composerMode === 'markdown'}
                     onClick={() => setComposerMode((mode) => (mode === 'markdown' ? 'plain' : 'markdown'))}
                   >
                     <Code2 className="w-3.5 h-3.5 mr-1" />
-                    Markdown
+                    <span className="im-tool-label">Markdown</span>
                   </Button>
                   <Button
                     type="button"
@@ -624,43 +627,51 @@ export default function EndpointDetailPage() {
                     size="sm"
                     className="im-tool-button h-8 px-2 text-xs"
                     title={i18n.t("插入 QQ 表情段")}
+                    aria-label={i18n.t("表情")}
                     onClick={() => appendComposerToken('[face:14]')}
                   >
                     <Smile className="w-3.5 h-3.5 mr-1" />
-                    {i18n.t("表情")}</Button>
+                    <span className="im-tool-label">{i18n.t("表情")}</span></Button>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     className="im-tool-button h-8 px-2 text-xs"
                     title={i18n.t("选择本地图片（插入为 data URL）")}
+                    aria-label={i18n.t("图片文件")}
                     onClick={() => imageFileRef.current?.click()}
                   >
                     <Image className="w-3.5 h-3.5 mr-1" />
-                    {i18n.t("图片文件")}</Button>
+                    <span className="im-tool-label">{i18n.t("图片文件")}</span></Button>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     className="im-tool-button h-8 px-2 text-xs"
                     title={i18n.t("选择本地文件（插入为 data URL 文件段）")}
+                    aria-label={i18n.t("文件")}
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <Paperclip className="w-3.5 h-3.5 mr-1" />
-                    {i18n.t("文件")}</Button>
+                    <span className="im-tool-label">{i18n.t("文件")}</span></Button>
                   <Button
                     type="button"
                     variant={mediaPanel === 'image' ? 'secondary' : 'outline'}
+                    aria-label={i18n.t('图片链接')}
+                    aria-pressed={mediaPanel === 'image'}
                     size="sm"
                     className="im-tool-button h-8 px-2 text-xs"
                     onClick={() => {
                       setMediaPanel((p) => (p === 'image' ? null : 'image'))
                     }}
                   >
-                    {i18n.t("图片链接")}</Button>
+                    <Link2 className="w-3.5 h-3.5 mr-1" />
+                    <span className="im-tool-label">{i18n.t("图片链接")}</span></Button>
                   <Button
                     type="button"
                     variant={mediaPanel === 'video' ? 'secondary' : 'outline'}
+                    aria-label={i18n.t('视频')}
+                    aria-pressed={mediaPanel === 'video'}
                     size="sm"
                     className="im-tool-button h-8 px-2 text-xs"
                     onClick={() => {
@@ -668,10 +679,12 @@ export default function EndpointDetailPage() {
                     }}
                   >
                     <Video className="w-3.5 h-3.5 mr-1" />
-                    {i18n.t("视频")}</Button>
+                    <span className="im-tool-label">{i18n.t("视频")}</span></Button>
                   <Button
                     type="button"
                     variant={mediaPanel === 'audio' ? 'secondary' : 'outline'}
+                    aria-label={i18n.t('音频')}
+                    aria-pressed={mediaPanel === 'audio'}
                     size="sm"
                     className="im-tool-button h-8 px-2 text-xs"
                     onClick={() => {
@@ -679,7 +692,7 @@ export default function EndpointDetailPage() {
                     }}
                   >
                     <Music className="w-3.5 h-3.5 mr-1" />
-                    {i18n.t("音频")}</Button>
+                    <span className="im-tool-label">{i18n.t("音频")}</span></Button>
                 </div>
                 {mediaPanel && (
                   <div className="im-media-panel flex flex-wrap items-end gap-2 p-2">
@@ -738,9 +751,10 @@ export default function EndpointDetailPage() {
                   <Textarea
                     placeholder={
                       composerMode === 'markdown'
-                        ? i18n.t("Markdown 消息：支持标题、列表、引用、代码块…")
-                        : i18n.t("文字消息；也可手写 [@名称]、[face:id]、[image:URL]、[video:URL]、[audio:URL]")
+                        ? i18n.t('输入 Markdown 消息…')
+                        : i18n.t('输入消息…')
                     }
+                    aria-label={i18n.t('消息内容')}
                     value={msgContent}
                     onChange={(e) => setMsgContent(e.target.value)}
                     onKeyDown={(e) => {
@@ -749,19 +763,22 @@ export default function EndpointDetailPage() {
                         handleSendWithDrafts()
                       }
                     }}
-                    className="im-composer-textarea flex-1 min-h-[44px] max-h-[160px] text-sm resize-y bg-background font-mono text-[13px]"
+                    className={cn('im-composer-textarea flex-1 min-h-[44px] max-h-[160px] text-sm resize-y bg-background', composerMode === 'markdown' ? 'font-mono' : 'font-sans')}
                     rows={2}
                   />
                   <Button
-                    className="im-send-button shrink-0 h-10 w-10 p-0 rounded-full"
+                    type="button"
+                    className="im-send-button shrink-0 h-11 px-4 gap-2"
+                    aria-busy={sending}
                     onClick={handleSendWithDrafts}
                     disabled={!canSend}
                   >
                     {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    {i18n.t('发送')}
                   </Button>
                 </div>
                 <p className="im-composer-hint text-[10px] text-muted-foreground">
-                  <>{i18n.t("Enter 发送 · Shift+Enter 换行 · 当前模式：")}{composerMode === 'markdown' ? 'Markdown' : i18n.t("普通文本")} {i18n.t(" · 待发送 ")}{composerSegments.length} {i18n.t(" 个消息段")}</>
+                  {i18n.t('Enter 发送 · Shift+Enter 换行')}{composerMode === 'markdown' && <span> · Markdown</span>}
                 </p>
               </div>
               )}

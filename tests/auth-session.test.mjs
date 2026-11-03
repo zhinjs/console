@@ -12,13 +12,42 @@ function storage() {
   return { getItem: key => items.get(key) ?? null, setItem: (key, value) => items.set(key, value), removeItem: key => items.delete(key) }
 }
 function harness() {
-  const exports = {}, requests = [], events = [], window = { location: { origin: 'https://console.example' }, dispatchEvent: event => events.push(event.type) }
-  vm.runInNewContext(compiled, { require: name => { assert.ok(isLocaleImport(name)); return localeModule }, exports, Headers, URL, localStorage: storage(), sessionStorage: storage(), window,
+  const exports = {}, requests = [], events = [], localStorage = storage(), sessionStorage = storage()
+  const window = { location: { origin: 'https://console.example', href: 'https://console.example/login' }, dispatchEvent: event => events.push(event.type) }
+  vm.runInNewContext(compiled, { require: name => { assert.ok(isLocaleImport(name)); return localeModule }, exports, Headers, URL, AbortSignal, localStorage, sessionStorage, window,
     CustomEvent: class { constructor(type) { this.type = type } },
     fetch: (url, init) => new Promise(resolve => requests.push({ url, init, resolve })) })
   exports.setApiBase('https://host-a.example'); exports.setToken('test-credential-a')
-  return { auth: exports, requests, events, window }
+  return { auth: exports, requests, events, window, localStorage, sessionStorage }
 }
+
+test('a session-only token replaces stale persistent credentials and remains available to authenticated reads', () => {
+  const { auth, localStorage, sessionStorage } = harness()
+  auth.setToken('session-credential', false)
+  assert.equal(localStorage.getItem('zhin_api_token'), null)
+  assert.equal(sessionStorage.getItem('zhin_api_token'), 'session-credential')
+  assert.equal(auth.getToken(), 'session-credential')
+  auth.setToken('remembered-credential', true)
+  assert.equal(localStorage.getItem('zhin_api_token'), 'remembered-credential')
+  assert.equal(sessionStorage.getItem('zhin_api_token'), null)
+  auth.clearToken()
+  assert.equal(auth.getToken(), null)
+})
+
+test('verified login honors the session-only choice and bounds both connection probes', async () => {
+  const { auth, requests, localStorage, sessionStorage } = harness()
+  const pending = auth.verifyAndStoreCredentials('https://host-b.example', 'Bearer session-credential', 'zh-CN', false)
+  assert.ok(requests[0].init.signal instanceof AbortSignal)
+  requests[0].resolve({ ok: true })
+  for (let index = 0; index < 8; index++) await Promise.resolve()
+  assert.equal(requests[1].url, 'https://host-b.example/api/system/status')
+  assert.ok(requests[1].init.signal instanceof AbortSignal)
+  requests[1].resolve({ ok: true })
+  assert.equal((await pending).ok, true)
+  assert.equal(localStorage.getItem('zhin_api_token'), null)
+  assert.equal(sessionStorage.getItem('zhin_api_token'), 'session-credential')
+  assert.equal(auth.getApiBase(), 'https://host-b.example')
+})
 
 test('a delayed 401 from Host A cannot clear Host B credentials or require B to sign in', async () => {
   const { auth, requests, events } = harness()

@@ -36,11 +36,14 @@ export function setApiBase(base: string): void {
 }
 
 export function getToken(): string | null {
-  return getRuntimeToken() ?? localStorage.getItem(TOKEN_KEY)
+  return getRuntimeToken() ?? localStorage.getItem(TOKEN_KEY) ?? sessionStorage.getItem(TOKEN_KEY)
 }
 
-export function setToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token)
+export function setToken(token: string, persistent = true): void {
+  localStorage.removeItem(TOKEN_KEY)
+  sessionStorage.removeItem(TOKEN_KEY)
+  const storage = persistent ? localStorage : sessionStorage
+  storage.setItem(TOKEN_KEY, token)
 }
 
 /** 写入运行时 Token（不落盘；Demo 用） */
@@ -218,7 +221,7 @@ export async function probeHealth(apiBase: string, locale: 'zh-CN' | 'en' = 'zh-
     return { ok: false, message: translate(locale, "请填写 API Base URL") }
   }
   try {
-    const res = await fetch(`${base}/pub/health`)
+    const res = await fetch(`${base}/pub/health`, { signal: AbortSignal.timeout(8_000) })
     if (res.ok) return { ok: true }
     return { ok: false, message: translate(locale, "Host 健康检查失败 (HTTP {0})", [res.status]) }
   } catch {
@@ -232,7 +235,7 @@ export async function probeHealth(apiBase: string, locale: 'zh-CN' | 'en' = 'zh-
 /** 校验 Host API Base + Token，成功则写入 localStorage */
 export async function verifyAndStoreCredentials(
   apiBase: string,
-  token: string, locale: 'zh-CN' | 'en' = 'zh-CN'
+  token: string, locale: 'zh-CN' | 'en' = 'zh-CN', persistent = true
 ): Promise<VerifyCredentialsResult> {
   const base = normalizeApiBase(apiBase)
   const trimmed = token.trim().replace(/^Bearer\s+/i, '')
@@ -251,11 +254,12 @@ export async function verifyAndStoreCredentials(
 
     const res = await fetch(`${base}/api/system/status`, {
       headers: { Authorization: `Bearer ${trimmed}` },
+      signal: AbortSignal.timeout(8_000),
     })
     if (res.ok) {
       clearRuntimeToken()
       setApiBase(base)
-      setToken(trimmed)
+      setToken(trimmed, persistent)
       stripApiBaseUrlFromQuery()
       return { ok: true }
     }

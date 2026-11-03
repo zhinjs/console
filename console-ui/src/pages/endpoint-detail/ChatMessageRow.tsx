@@ -49,28 +49,22 @@ export function ChatMessageRow({ message, onQuote, onForward }: ChatMessageRowPr
 
   return (
     <article className={cn('im-message-row', out && 'im-message-row--out')}>
-      <div className="im-message-actions" aria-label={i18n.t("消息操作")}>
-        {!out && !message.local && <MessageDiagnosticsAction message={message} />}
-        <button type="button" title={i18n.t("引用")} onClick={() => onQuote(draftRef)}>
-          <Quote className="h-3.5 w-3.5" />
-        </button>
-        <button type="button" title={i18n.t("转发")} onClick={() => onForward(draftRef)}>
-          <Forward className="h-3.5 w-3.5" />
-        </button>
-        <button type="button" title={i18n.t("复制摘要")} onClick={copySummary}>
-          <Copy className="h-3.5 w-3.5" />
-        </button>
-      </div>
       <div className={cn('im-bubble', out ? 'im-bubble-out' : 'im-bubble-in')}>
         <div className={cn('im-meta flex items-center gap-2 text-[10px] mb-0.5', out ? '' : 'text-muted-foreground')}>
           <span className={cn('font-medium', out ? '' : 'text-foreground/90')}>{senderName}</span>
-          <span className="tabular-nums opacity-80">{timeLabel}</span>
-          {message.directionUnknown && <span className="opacity-70">{i18n.t("历史方向未记录")}</span>}
+          <span className="tabular-nums">{timeLabel}</span>
+          {message.directionUnknown && <span className="im-direction-note">{i18n.t("历史方向未记录")}</span>}
         </div>
         <div className="im-message-text text-[14px] leading-snug break-words">
           <MessageBody content={message.content} />
           {out && <RenderingDiagnostics rendering={message.rendering} messageId={message.messageId} error={message.renderingError} />}
         </div>
+      </div>
+      <div className="im-message-actions" aria-label={i18n.t("消息操作")}>
+        {!out && !message.local && <MessageDiagnosticsAction message={message} />}
+        <button type="button" title={i18n.t("引用")} onClick={() => onQuote(draftRef)}><Quote className="h-3.5 w-3.5" /></button>
+        <button type="button" title={i18n.t("转发")} onClick={() => onForward(draftRef)}><Forward className="h-3.5 w-3.5" /></button>
+        <button type="button" title={i18n.t("复制摘要")} onClick={copySummary}><Copy className="h-3.5 w-3.5" /></button>
       </div>
     </article>
   )

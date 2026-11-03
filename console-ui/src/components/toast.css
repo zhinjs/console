@@ -1,0 +1,17 @@
+@layer components {
+  .console-toast-stack { position: fixed; bottom: max(16px, env(safe-area-inset-bottom)); right: 16px; z-index: 100; display: grid; gap: 10px; width: min(400px, calc(100vw - 32px)); pointer-events: none; }
+  .console-toast { display: flex; align-items: flex-start; gap: 12px; padding: 16px; border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--popover)); color: hsl(var(--popover-foreground)); box-shadow: 0 8px 28px hsl(0 0% 0% / 0.1); pointer-events: auto; }
+  .console-toast-icon { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 8px; background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
+  .console-toast-icon svg { width: 17px; height: 17px; }
+  .console-toast-success .console-toast-icon { background: hsl(var(--success) / 0.12); color: hsl(var(--success)); }
+  .console-toast-error .console-toast-icon { background: hsl(var(--destructive) / 0.12); color: hsl(var(--destructive)); }
+  .console-toast-warning .console-toast-icon { background: hsl(var(--warning) / 0.12); color: hsl(var(--warning)); }
+  .console-toast-info .console-toast-icon { background: hsl(var(--info) / 0.12); color: hsl(var(--info)); }
+  .console-toast-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; line-height: 1.6; font-size: var(--console-text-body); }
+  .console-toast-copy strong { display: block; font-weight: 600; margin-bottom: 3px; }
+  .console-toast-copy p { margin: 0; }
+  .console-toast-close { display: grid; place-items: center; flex: none; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: hsl(var(--muted-foreground)); cursor: pointer; }
+  .console-toast-close:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+  .console-toast-close svg { width: 15px; height: 15px; }
+  @media (max-width: 767px) { .console-toast { padding: 14px; gap: 10px; } .console-toast-close { width: 32px; height: 32px; } }
+}

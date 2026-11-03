@@ -1,7 +1,9 @@
 import { useI18n } from '../../i18n'
+import { useEffect, useRef, type KeyboardEvent } from 'react'
+import { useIsMobile } from '../../hooks/useIsMobile'
 import type { ConversationListNotice } from './conversation-list-notice.mjs'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Bot, Loader2, RefreshCw, Search, Wifi, WifiOff } from 'lucide-react'
+import { ArrowLeft, Bot, Loader2, RefreshCw, Search, Wifi, WifiOff, X } from 'lucide-react'
 import { cn } from '@zhin.js/client'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -67,6 +69,26 @@ export function ConversationSidebar({
   onCloseMobileList,
 }: ConversationSidebarProps) {
   const i18n = useI18n()
+  const isMobile = useIsMobile()
+  const sidebarRef = useRef<HTMLDivElement>(null)
+  const mobileDialog = isMobile && !!onCloseMobileList
+  useEffect(() => {
+    if (!mobileDialog || !showChannelList) return
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    sidebarRef.current?.querySelector<HTMLElement>('button, a, input')?.focus()
+    return () => { if (previous?.isConnected && !previous.closest('[inert]')) previous.focus() }
+  }, [mobileDialog, showChannelList])
+
+  const onDrawerKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!mobileDialog || !showChannelList || event.defaultPrevented || event.nativeEvent.isComposing) return
+    if (event.key === 'Escape') { event.preventDefault(); onCloseMobileList?.(); return }
+    if (event.key !== 'Tab') return
+    const targets = [...event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled])')]
+      .filter(element => element.tabIndex >= 0 && element.getClientRects().length > 0)
+    const first = targets[0], last = targets.at(-1)
+    if (event.shiftKey && document.activeElement === first && last) { event.preventDefault(); last.focus() }
+    else if (!event.shiftKey && document.activeElement === last && first) { event.preventDefault(); first.focus() }
+  }
   const channelConnected = info?.connected === true && !loadErr
   const channelKnown = info !== null && !loadErr
   const selectionKey =
@@ -81,7 +103,10 @@ export function ConversationSidebar({
   }
 
   return (
-    <div className={cn('channel-sidebar im-sidebar', showChannelList && 'show')}>
+    <div className={cn('channel-sidebar im-sidebar', showChannelList && 'show')} ref={sidebarRef}
+      role={mobileDialog ? 'dialog' : undefined} aria-modal={mobileDialog && showChannelList ? true : undefined}
+      aria-label={mobileDialog ? i18n.t('会话列表') : undefined} aria-hidden={isMobile && !showChannelList}
+      inert={isMobile && !showChannelList} onKeyDown={onDrawerKeyDown}>
       <div className="im-sidebar-header">
         <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" asChild>
           <Link to="/endpoints" aria-label={i18n.t("返回聊天账号")}>
@@ -114,6 +139,7 @@ export function ConversationSidebar({
             </div>
           </div>
         </div>
+        {isMobile && onCloseMobileList && <Button type="button" variant="ghost" size="icon" className="shrink-0" onClick={onCloseMobileList} aria-label={i18n.t('关闭会话列表')}><X className="h-4 w-4" /></Button>}
       </div>
 
       {loadErr && (
