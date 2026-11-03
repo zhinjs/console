@@ -17,11 +17,11 @@ test('organizes authoritative Host settings and keeps one AI owner across models
   const presets = group(result, 'presets').entries[0]
   const dialogue = group(result, 'plugins').entries.find(item => item.id === 'config:ai')
   const remaining = group(result, 'plugins').entries.find(item => item.id === 'ai:other')
-  assert.equal(models.configKey, 'ai'); assert.deepEqual(models.fieldNames, ['modelCatalog'])
+  assert.equal(models.configKey, 'ai'); assert.equal(models.editor, 'inference'); assert.equal(models.fieldNames, undefined)
   assert.equal(presets.configKey, 'ai'); assert.deepEqual(presets.fieldNames, ['agents'])
   assert.deepEqual(dialogue.fieldNames, ['enabled', 'agent'])
   assert.ok(remaining.excludedFieldNames.includes('modelCatalog')); assert.ok(remaining.excludedFieldNames.includes('modelPolicy'));
-  assert.equal(group(result, 'models').entries[1].editor, 'runtime-model-policy');
+  assert.equal(group(result, 'models').entries.length, 1);
   assert.ok(remaining.excludedFieldNames.includes('providers')); assert.ok(remaining.excludedFieldNames.includes('agents'))
   assert.equal(remaining.fieldNames, undefined, 'future Host fields remain visible in the remaining AI capability')
   assert.ok(group(result, 'plugins').entries.find(item => item.configKey === 'speech').builtin)
@@ -34,22 +34,22 @@ test('organizes authoritative Host settings and keeps one AI owner across models
 test('classifies every current Host AI field once and keeps future fields reachable without changing configuration', () => {
   // The current Host schema's ai.properties keys. Pinning this inventory makes
   // overlap/omission visible while the catch-all preserves forward compatibility.
-  const hostFields = ['decisions', 'workroom', 'agent', 'enabled', 'modelCatalog', 'modelPolicy', 'agents', 'sessions', 'context',
+  const hostFields = ['workroom', 'agent', 'enabled', 'agents', 'sessions', 'context',
     'imageGeneration', 'multimodal', 'memory', 'knowledge', 'githubMcp', 'mcpServers', 'access', 'trigger', 'usage', 'audit', 'imageStorage']
   const document = { ai: Object.fromEntries([...hostFields, 'futureCapability'].map(key => [key, { unchanged: true }])) }
   const before = structuredClone(document)
   const result = buildSettingsCatalog(document, ['ai'], { ai: ['ai'] })
   const entries = result.flatMap(item => item.entries).filter(entry => entry.configKey === 'ai')
-  assert.equal(entries.length, 12, 'deployment catalog, independent runtime refs, roles, eight capabilities and future fields')
+  assert.equal(entries.length, 11, 'runtime models, role metadata, eight capabilities and future fields')
   assert.equal(new Set(entries.map(entry => entry.id)).size, entries.length)
   for (const field of [...hostFields, 'futureCapability']) {
-    const owners = entries.filter(entry => entry.fieldNames ? entry.fieldNames.includes(field)
+    const owners = entries.filter(entry => !entry.editor).filter(entry => entry.fieldNames ? entry.fieldNames.includes(field)
       : entry.excludedFieldNames ? !entry.excludedFieldNames.includes(field) : true)
     assert.equal(owners.length, 1, `${field} belongs to exactly one presentation entry`)
     if (field === 'futureCapability') assert.equal(owners[0].id, 'ai:other')
   }
   assert.deepEqual(group(result, 'plugins').entries.map(entry => entry.title), [
-    '对话与执行', '会话与上下文', '记忆与知识', '图片与感知', '外部服务', '回复与访问', '用量与审计', '协作与决策', '其他 AI 设置',
+    '对话与执行', '会话与上下文', '记忆与知识', '图片与感知', '外部服务', '回复与访问', '用量与审计', '协作', '其他 AI 设置',
   ])
   assert.deepEqual(document, before)
 })
@@ -84,7 +84,7 @@ test('preserves legacy plugin links, rejects removed source selections and opens
   const result = catalog()
   assert.equal(resolveSettingsSelection('plugin:qq', result).entry.configKey, 'qq')
   assert.equal(resolveSettingsSelection('plugin:ai', result).entry.id, 'config:ai')
-  assert.deepEqual(resolveSettingsSelection('models', result), { group: 'models' })
+  assert.equal(resolveSettingsSelection('models', result).entry.editor, 'inference')
   assert.equal(resolveSettingsSelection('presets', result).entry.id, 'ai:agents')
   assert.deepEqual(resolveSettingsSelection('general', result), { group: 'general' })
   assert.deepEqual(resolveSettingsSelection('plugins', result), { group: 'plugins' })

@@ -11,7 +11,6 @@ import * as sourceModel from '../console-ui/src/components/PluginConfigForm/sour
 import * as schemaModel from '../console-ui/src/components/PluginConfigForm/schema-model.mjs'
 import { createConfigDraftGuard } from '../console-ui/src/components/PluginConfigForm/draft-guard.mjs'
 import * as configNavigation from '../console-ui/src/pages/config-navigation.mjs'
-import * as modelPolicyModel from '../console-ui/src/pages/model-policy-model.mjs'
 import * as settingsModel from '../console-ui/src/pages/settings-model.mjs'
 import { numericFieldIssue } from '../console-ui/src/components/PluginConfigForm/numeric-validation.mjs'
 import { isConversationScopeField } from '../console-ui/src/components/PluginConfigForm/conversation-scope-model.mjs'
@@ -89,8 +88,8 @@ function fixture(query = '') {
     'react-router-dom': { Link: 'a', useSearchParams: () => [new URLSearchParams(query), () => {}] },
     'lucide-react': new Proxy({}, { get: () => 'i' }),
     './ConfigFieldExplanation': { ConfigFieldExplanation: 'field-explanation' },
-    './AgentPresetsEditor': { AgentPresetsEditor: 'agent-presets-editor' }, '../../pages/model-policy-model.mjs': modelPolicyModel,
-    './ModelPolicySettings': { ModelPolicySettings: 'model-policy-settings' },
+    './AgentPresetsEditor': { AgentPresetsEditor: 'agent-presets-editor' },
+    './inference/Workspace': { InferenceWorkspace: 'inference-workspace' },
     './SchemaFieldEditor': { SchemaFieldEditor: 'field-editor' }, '../ui/card': { Card: 'article' }, '../ui/badge': { Badge: 'span' },
     '../ui/button': { Button: 'button' }, '../ui/alert': { Alert: 'aside', AlertDescription: 'p' },
     '../components/ui/card': { Card: 'article', CardContent: 'section' }, '../components/ui/button': { Button: 'button' },
@@ -789,7 +788,7 @@ async function settingsPage() {
   return f
 }
 
-test('actual settings page separates four categories and retains one owner form across model, preset and AI capability views', async () => {
+test('actual settings separates runtime model management from the single static AI behavior and role owner', async () => {
   const f = await settingsPage()
   for (const title of ['通用设置', '模型', 'Agent 预设', '插件配置']) assert.ok(button(f.runtime.value, title))
   const navigation = elements(f.runtime.value).find(element => element.type === 'nav' && element.props['aria-label'] === '设置分类')
@@ -798,12 +797,11 @@ test('actual settings page separates four categories and retains one owner form 
   assert.ok(!label(f.runtime.value).includes('已读取文件版本：'))
   assert.equal(pageForm(f, 'ai').length, 0, 'category landing does not request every form')
   button(f.runtime.value, '模型').props.onClick(); await f.runtime.settle()
-  elements(f.runtime.value).find(item => item.type === 'button' && label(item).includes('部署模型')).props.onClick(); await f.runtime.settle()
-  let forms = pageForm(f, 'ai'); assert.equal(forms.length, 1); assert.deepEqual(forms[0].props.fieldNames, ['modelCatalog'])
-  const formType = forms[0].type, ownerSection = elements(f.runtime.value).find(element => element.type === 'section' && element.key === 'ai')
-  assert.ok(ownerSection); assert.equal(ownerSection.props.hidden, false)
+  assert.ok(elements(f.runtime.value).some(item => item.type === 'inference-workspace'))
+  assert.equal(pageForm(f, 'ai').length, 0, 'runtime models must not instantiate a source-file draft')
+  let forms
   button(f.runtime.value, 'Agent 预设').props.onClick(); await f.runtime.settle()
-  forms = pageForm(f, 'ai'); assert.equal(forms.length, 1); assert.equal(forms[0].type, formType); assert.deepEqual(forms[0].props.fieldNames, ['agents'])
+  forms = pageForm(f, 'ai'); assert.equal(forms.length, 1); assert.deepEqual(forms[0].props.fieldNames, ['agents'])
   assert.equal(elements(f.runtime.value).filter(element => element.type === 'section' && element.key === 'ai').length, 1)
   button(f.runtime.value, '插件配置').props.onClick(); await f.runtime.settle()
   assert.equal(elements(f.runtime.value).find(element => element.type === 'section' && element.key === 'ai').props.hidden, true)
@@ -1015,8 +1013,8 @@ test('settings page has no file editor or refresh path, and actual read-error re
   assert.equal(button(f.runtime.value, '保存'), undefined)
   assert.equal(elements(f.runtime.value).some(item => item.type === 'code-editor'), false)
   button(f.runtime.value, '模型').props.onClick(); await f.runtime.settle()
-  elements(f.runtime.value).find(item => item.type === 'button' && label(item).includes('部署模型')).props.onClick(); await f.runtime.settle()
-  assert.equal(pageForm(f, 'ai')[0].props.onOpenYaml, undefined)
+  assert.equal(pageForm(f, 'ai').length, 0)
+  assert.ok(elements(f.runtime.value).some(item => item.type === 'inference-workspace'))
   assert.equal(f.calls.some(call => call.input.type === 'config:replace-source'), false)
   f.runtime.unmount()
 })
@@ -1044,30 +1042,23 @@ test('a loaded form offers read retry only for an actual read failure and keeps 
   f.runtime.unmount()
 })
 
-test('first deployment catalog, initial chat and one role conversion share the original AI source CAS', async () => {
-  const f = fixture(), connectionScope = f.authority.current(); let fields = ['modelCatalog']
-  const before = { providers: { old: { sdk: 'ollama', baseUrl: 'https://old.test', models: ['old'] } },
-    agents: { zhin: { provider: 'old', model: 'old', nickname: 'Main', permission: { task: { '*': 'deny' } }, mcpServers: ['readonly'] } }, future: { keep: true } }
-  const catalog = { connections: { main: { revision: 1, sdk: 'ollama', baseUrl: 'https://new.test' } },
-    models: { next: { connectionId: 'main', model: 'new-model', capabilities: {} } }, presets: { chosen: { modelId: 'next' } } }
+test('static role metadata edits preserve the original source CAS without writing runtime model selections', async () => {
+  const f = fixture(), connectionScope = f.authority.current()
+  const before = { agents: { zhin: { nickname: 'Main', permission: { task: { '*': 'deny' } }, mcpServers: ['readonly'] } }, future: { keep: true } }
   const original = { source: JSON.stringify({ ai: before, other: { preserved: true } }), format: 'json', revision: 'original-ai-cas', configKeys: ['ai'], configPaths: { ai: ['ai'] } }
-  f.runtime.mount(() => f.form.PluginConfigFormSession({ pluginName: 'ai', connectionScope, fieldNames: fields }))
-  f.answer('config:get-source', original); f.answer('schema:get', { type: 'object', object: { modelCatalog: { type: 'object', object: {} }, agents: { type: 'dict', inner: { type: 'object', object: {} } } } }); await f.runtime.settle()
-  elements(f.runtime.value).find(item => item.type === 'field-editor' && item.props.name === 'modelCatalog').props.onChange(catalog); await f.runtime.settle()
-  const initial = elements(f.runtime.value).find(item => item.type === 'select-field' && item.props['aria-label'] === '初始聊天模型')
-  assert.ok(initial); initial.props.onValueChange('chosen'); await f.runtime.settle()
-  fields = ['agents']; f.runtime.render(); await f.runtime.settle()
+  f.runtime.mount(() => f.form.PluginConfigFormSession({ pluginName: 'ai', connectionScope, fieldNames: ['agents'] }))
+  f.answer('config:get-source', original); f.answer('schema:get', { type: 'object', object: { agents: { type: 'dict', inner: { type: 'object', object: {} } } } }); await f.runtime.settle()
   const role = elements(f.runtime.value).find(item => item.type === 'agent-presets-editor')
-  role.props.onChange(modelPolicyModel.selectAgentPreset(role.props.value, 'zhin', 'chosen')); await f.runtime.settle()
+  role.props.onChange({ zhin: { ...before.agents.zhin, nickname: 'Updated' } }); await f.runtime.settle()
   button(f.runtime.value, '保存全部修改').props.onClick(); const validation = f.answer('plugin:validate-config', valid); await f.runtime.settle()
-  assert.deepEqual(validation.input.data.modelCatalog, catalog)
-  assert.deepEqual(validation.input.data.modelPolicy, { defaults: { chat: 'chosen' } })
-  assert.deepEqual(validation.input.data.agents.zhin, { preset: 'chosen', nickname: 'Main', permission: before.agents.zhin.permission, mcpServers: ['readonly'] })
+  assert.equal(validation.input.data.agents.zhin.nickname, 'Updated')
+  assert.deepEqual(validation.input.data.agents.zhin.permission, before.agents.zhin.permission)
   assert.deepEqual(validation.input.data.future, before.future)
+  assert.equal(Object.hasOwn(validation.input.data,'modelCatalog'),false)
+  assert.equal(Object.hasOwn(validation.input.data,'modelPolicy'),false)
   const saved = f.answer('config:replace-source', { success: true, revision: 'next', restartRequired: true }); await f.runtime.settle()
   assert.equal(saved.input.expectedRevision, 'original-ai-cas')
   assert.deepEqual(JSON.parse(saved.input.source), { ai: validation.input.data, other: { preserved: true } })
   assert.equal(f.calls.filter(item => item.input.type === 'config:replace-source').length, 1)
-  assert.equal(JSON.stringify(saved.input).includes('refsOverride'), false)
   f.runtime.unmount()
 })

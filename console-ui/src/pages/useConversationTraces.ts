@@ -4,7 +4,7 @@ import { getInboxCacheScope, isInboxCacheScopeActive } from '../utils/inbox-cach
 import { createDiagnosticRequestGate } from './endpoint-detail/message-diagnostics.mjs'
 import { diagnosticConversationKey } from './endpoint-detail/message-diagnostics.mjs'
 import type { DiagnosticConversation } from './endpoint-detail/types'
-import { isPersonalSessionKey } from './personal-models-model.mjs'
+import { isPersonalSessionKey } from './personal-session-model.mjs'
 import { readTraceTurns, traceFailure, traceQuery, type TraceTurn } from './conversation-trace-model.mjs'
 
 export function useConversationTraces(sessionKey: string, connectionScope?: string, conversation?: DiagnosticConversation) {

@@ -8,7 +8,7 @@ export interface SettingsEntry {
   readonly sectionTitle: string
   readonly title: string
   readonly description: string
-  readonly editor?: 'runtime-model-policy'
+  readonly editor?: 'inference'
   readonly fieldNames?: readonly string[]
   readonly excludedFieldNames?: readonly string[]
   readonly writable: boolean
