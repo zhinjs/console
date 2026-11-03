@@ -1,0 +1,49 @@
+console-ui/src/components/PluginConfigForm/config-evidence-model.mjs
+  s_efe26f87c3b074::t_bd823ea6a530d1 4,22-24
+console-ui/src/hooks/useConfigSource.ts
+  s_9622fd28aba994::t_6c356956905b34 9-10,12,22,29-33,46-47,51-54,64-65,71,78-92,119-123,140-184,205,212-216
+console-ui/src/pages/ambient-engagement-model.d.mts
+  s_efe26f87c3b074::t_1831e867861b70 25
+console-ui/src/pages/ambient-engagement-model.mjs
+  s_efe26f87c3b074::t_aa1a280182aa91 2,205-209
+console-ui/src/pages/skills-assistant-model.d.mts
+  s_efe26f87c3b074::t_8c6323db770cef 22
+console-ui/src/pages/skills-assistant-model.mjs
+  s_efe26f87c3b074::t_d9543f34a778ff 2,213-217
+tests/config-connection-scope.test.mjs
+  s_9622fd28aba994::t_aa552f499c53d7 20,89-91,93,149-347
+console-ui/src/components/PluginConfigForm/usePluginConfigDraft.ts
+  s_4a3da79bf26c58::t_451c8350aaa010 59-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "db4f37e06ae58d0ffa253d696aa839d817ecb712",
+  "prompts": {},
+  "sessions": {
+    "s_4a3da79bf26c58": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "66214013-1784-4c6a-9edd-9039237b51db",
+        "model": "unknown"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    },
+    "s_9622fd28aba994": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a166a4-5b4c-7e22-80f0-d3374c43b4fb",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    },
+    "s_efe26f87c3b074": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05573-d991-7071-ac03-024f89a3d9a3",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
