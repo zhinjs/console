@@ -56,5 +56,6 @@ export function usePluginConfigDraft(pluginName: string) {
   return { scope, config, schema, schemaError: feedbackCurrent ? schemaError : null,
     loading: feedbackCurrent && loading || source.loading, error: feedbackCurrent ? error ?? source.error : source.error,
     errorOperation: feedbackCurrent && error ? 'read' as const : source.errorOperation,
-    loaded: current !== null, snapshot: current?.snapshot, setConfig, load }
+    loaded: current !== null, snapshot: current?.snapshot, applicationSnapshot: source.snapshot, setConfig, load,
+    applyConfiguration: source.applyConfiguration, applyLoading: source.applyLoading, applyError: source.applyError, applyBlocked: source.applyBlocked }
 }

@@ -1,4 +1,5 @@
 import { translate } from '../i18n/locale.mjs'
+import { configurationRuntimeStatus } from '../components/PluginConfigForm/config-live-status.mjs'
 /**
  * 技能助手页（zhinjs/zhin#970）的纯逻辑：校验 Host 状态、把设置翻成大白话、生成 config:patch。
  * 页面面向普通用户，不输出决策模型、判官、置信度、原因代码等内部细节。
@@ -209,6 +210,11 @@ const NO_RESTART_TEXT = '已保存，马上生效，不用重启。'
 export function describeSaveResult(result, locale = 'zh-CN') {
   if (!isPlainObject(result)) return { kind: 'error', text: translate(locale, '保存结果格式不正确，请刷新后再看一下设置是否已保存。') }
   if (result.status === 'saved') {
+    if (Object.hasOwn(result, 'application') || result.applicationError !== undefined) {
+      const state = configurationRuntimeStatus(result, result.revision, locale)
+      return { kind: 'saved', restartRequired: result.restartRequired === true, applicationKind: state.kind,
+        text: `${translate(locale, '配置已保存。')} ${state.summary}` }
+    }
     const restartRequired = result.restartRequired !== false
     return { kind: 'saved', restartRequired, text: translate(locale, restartRequired ? RESTART_REQUIRED_TEXT : NO_RESTART_TEXT) }
   }
