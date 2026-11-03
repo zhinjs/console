@@ -13,6 +13,7 @@ import {
 } from './inference/model.mjs'
 import {
   readPersonalSessionState,
+  samePersonalSessionSelection,
   type PersonalAddress,
   type PersonalSessionState,
 } from './personal-session-model.mjs'
@@ -78,10 +79,13 @@ export function PersonalSessionModelPicker({
     }
   }, [sessionKey, address, ownerId, connectionScope])
   const choices = selectableLanguageProfiles(models),
-    original = state?.selection.kind === 'profile' ? state.selection.profile.id : ''
+    chosen = choices.find((value) => value.id === selected)
+  const selection: PersonalSessionState['selection'] = chosen
+    ? { kind: 'profile', profile: chosen.selection }
+    : { kind: 'inherit' }
+  const unchanged = samePersonalSessionSelection(state?.selection, selection)
   async function save() {
     if (!state || !active() || busy) return
-    const chosen = choices.find((value) => value.id === selected)
     if (selected && !chosen) return
     setBusy(true)
     setError('')
@@ -94,7 +98,7 @@ export function PersonalSessionModelPicker({
         body: {
           address,
           expectedRevision: state.revision,
-          selection: chosen ? { kind: 'profile', profile: chosen.selection } : { kind: 'inherit' },
+          selection,
         },
       })
       const next = readPersonalSessionState(result, sessionKey, address)
@@ -129,7 +133,10 @@ export function PersonalSessionModelPicker({
             disabled={!state || busy}
           />
         </label>
-        <Button onClick={() => void save()} disabled={!state || busy || selected === original}>
+        <Button
+          onClick={() => void save()}
+          disabled={!state || busy || unchanged || (!!selected && !chosen)}
+        >
           保存
         </Button>
         <Button

@@ -116,3 +116,12 @@ export function readPersonalSessionState(state, sessionKey, address) {
           },
   }
 }
+/** Persistent identity deliberately excludes a Profile's revision, parameters and native model. */
+export function samePersonalSessionSelection(left, right) {
+  if (left?.kind !== right?.kind) return false
+  if (left?.kind === 'inherit') return true
+  if (left?.kind !== 'profile') return false
+  return ['id', 'rootId', 'accountId', 'accountIncarnation', 'kind'].every(
+    (field) => left.profile[field] === right.profile[field]
+  )
+}

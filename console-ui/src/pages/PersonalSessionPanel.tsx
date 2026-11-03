@@ -20,15 +20,11 @@ export function PersonalSessionPanel({
   connectionScope?: string
   preferredOwnerId?: string | null
 }) {
-  const m = useInferenceManagement(connectionScope),
+  const m = useInferenceManagement(connectionScope, preferredOwnerId),
     [row, setRow] = useState<PersonalSessionRow | null>(null),
     [error, setError] = useState(''),
     sequence = useRef(0)
   const owner = m.owners.find((value) => value.id === m.ownerId)?.personal
-  useEffect(() => {
-    if (preferredOwnerId && m.owners.some((value) => value.id === preferredOwnerId))
-      m.setOwnerId(preferredOwnerId)
-  }, [preferredOwnerId, m.owners])
   useEffect(() => {
     if (!owner || !isPersonalSessionKey(sessionKey)) return
     let stopped = false

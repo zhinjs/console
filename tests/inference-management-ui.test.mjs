@@ -83,7 +83,7 @@ function hooks() {
     },
   }
 }
-function fixture(storage = new Map()) {
+function fixture(storage = new Map(), { preferredOwnerId } = {}) {
   const runtime = hooks(),
     calls = []
   let connection = { scope: 'scope-a', base: 'https://host-a.test/base' }
@@ -114,7 +114,7 @@ function fixture(storage = new Map()) {
     module,
     module.exports
   )
-  runtime.mount(() => module.exports.useInferenceManagement(connection.scope))
+  runtime.mount(() => module.exports.useInferenceManagement(connection.scope, preferredOwnerId))
   function answer(path, data, status = 200, base = connection.base) {
     const call = calls.find(
       (call) =>
@@ -172,6 +172,229 @@ async function ready(f, owners = [owner()], id = owners[0].id, label = 'a') {
   f.answer('/inference', view(id, label))
   await f.runtime.settle()
 }
+
+test('initial owner preference selects the first view atomically and never overrides later manual selection', async () => {
+  const f = fixture(new Map(), { preferredOwnerId: 'two' })
+  f.answer('/owners', [owner('one'), owner('two')])
+  await f.runtime.settle()
+  assert.equal(f.runtime.value.ownerId, 'two')
+  assert.equal(f.runtime.value.busy, true)
+  assert.equal(f.calls.filter((call) => call.url.includes('owner=one')).length, 0)
+  f.answer('/inference', view('two'))
+  await f.runtime.settle()
+  assert.equal(f.runtime.value.view.ownerId, 'two')
+  f.runtime.value.setOwnerId('one')
+  await f.runtime.settle()
+  await ready(f, [owner('one'), owner('two')], 'one')
+  const refreshing = f.runtime.value.load()
+  await f.runtime.settle()
+  await ready(f, [owner('one'), owner('two')], 'one')
+  await refreshing
+  assert.equal(f.runtime.value.ownerId, 'one')
+  assert.equal(f.runtime.value.view.ownerId, 'one')
+  f.runtime.unmount()
+})
+
+async function component(runtime, path, mocks) {
+  const code = ts.transpileModule(await readFile(new URL(path, import.meta.url), 'utf8'), {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2022,
+      jsx: ts.JsxEmit.ReactJSX,
+    },
+  }).outputText
+  const module = { exports: {} }
+  const dependencies = {
+    react: runtime.api,
+    'react/jsx-runtime': {
+      jsx: (type, props) => ({ type, props }),
+      jsxs: (type, props) => ({ type, props }),
+    },
+    ...mocks,
+  }
+  new Function('require', 'module', 'exports', code)(
+    (name) => {
+      assert.ok(name in dependencies, `unexpected component dependency ${name}`)
+      return dependencies[name]
+    },
+    module,
+    module.exports
+  )
+  return module.exports
+}
+function nodes(node) {
+  return node && typeof node === 'object'
+    ? [node, ...[node.props?.children].flat(Infinity).flatMap(nodes)]
+    : []
+}
+const personalOwner = {
+  rootId: '/host',
+  platform: 'qq',
+  endpoint: 'bot',
+  adapterId: 'adapter',
+  subjectId: 'user',
+}
+const personalAddress = {
+  rootId: '/host',
+  platform: 'qq',
+  endpoint: 'bot',
+  subjectId: 'user',
+  conversation: { endpoint: { adapter: 'qq', id: 'adapter' }, kind: 'private', id: 'user' },
+}
+const personalKey = `personal-session:v1:${'a'.repeat(64)}`
+
+for (const lateResult of ['success', 'failure'])
+  test(`a directory refresh owns its loading state after a late ${lateResult} from the previous epoch`, async () => {
+    const runtime = hooks(),
+      calls = [],
+      errors = []
+    let epoch = 1
+    const management = (id) => ({
+      ownerId: 'personal',
+      owners: [{ id: 'personal', personal: personalOwner }],
+      view: {},
+      revisionEpoch: id,
+      active: () => id === epoch,
+      setError: (error) => errors.push(error),
+      request: () => new Promise((resolve, reject) => calls.push({ resolve, reject })),
+    })
+    let m = management(epoch)
+    const personal = await import('../console-ui/src/pages/personal-session-model.mjs')
+    const { PersonalSessions } = await component(
+      runtime,
+      '../console-ui/src/pages/inference/PersonalSessions.tsx',
+      {
+        'react-router-dom': { Link: 'link' },
+        '../../components/ui/button': { Button: 'button' },
+        '../../utils/agent-session': { agentSessionsPath: () => '/session' },
+        '../PersonalSessionModelPicker': { PersonalSessionModelPicker: 'picker' },
+        '../personal-session-model.mjs': personal,
+        './model.mjs': model,
+      }
+    )
+    runtime.mount(() => PersonalSessions({ management: m, connectionScope: 'connection' }))
+    await runtime.settle()
+    assert.equal(calls.length, 1)
+    epoch++
+    m = management(epoch)
+    runtime.render()
+    await runtime.settle()
+    assert.equal(calls.length, 2)
+    if (lateResult === 'success')
+      calls[0].resolve({
+        rows: [{ sessionKey: personalKey, address: personalAddress, updatedAt: 1 }],
+        hasMore: true,
+      })
+    else calls[0].reject(new Error('stale-operation'))
+    await runtime.settle()
+    assert.equal(
+      nodes(runtime.value).some((node) => node.type === 'link'),
+      false
+    )
+    assert.equal(JSON.stringify(runtime.value).includes('暂无已保存'), false)
+    calls[1].resolve({ rows: [], hasMore: false })
+    await runtime.settle()
+    assert.equal(JSON.stringify(runtime.value).includes('暂无已保存'), true)
+    epoch++
+    m = management(epoch)
+    runtime.render()
+    await runtime.settle()
+    calls[2].resolve({
+      rows: [{ sessionKey: personalKey, address: personalAddress, updatedAt: 2 }],
+      hasMore: true,
+    })
+    await runtime.settle()
+    assert.equal(
+      nodes(runtime.value).find((node) => node.props?.children === '加载更多').props.disabled,
+      false
+    )
+    assert.deepEqual(errors, [])
+    runtime.unmount()
+  })
+
+test('confirming a rebound Profile saves its complete new account identity; native model edits remain unchanged', async () => {
+  const runtime = hooks(),
+    calls = []
+  const previous = {
+    id: 'profile',
+    rootId: '/host',
+    accountId: 'old',
+    accountIncarnation: 'old-incarnation',
+    kind: 'language',
+  }
+  const current = { ...previous, accountId: 'new', accountIncarnation: 'new-incarnation' }
+  let models = {
+    rootId: '/host',
+    accounts: { new: { incarnation: 'new-incarnation', serviceId: 'service' } },
+    services: { service: { models: { native: { kinds: ['language'] } } } },
+    profiles: { profile: { id: 'profile', model: 'native', accountId: 'new' } },
+    deployment: [],
+  }
+  const personal = await import('../console-ui/src/pages/personal-session-model.mjs')
+  const state = (profile) => ({
+    identity: { key: personalKey, address: personalAddress },
+    revision: 1,
+    selection: { kind: 'profile', profile },
+  })
+  const { PersonalSessionModelPicker } = await component(
+    runtime,
+    '../console-ui/src/pages/PersonalSessionModelPicker.tsx',
+    {
+      'lucide-react': { RefreshCw: 'icon' },
+      '../components/ui/button': { Button: 'button' },
+      '../components/ui/select': { SelectField: 'select' },
+      '../components/error-alert': { ErrorAlert: 'error' },
+      '../utils/auth': {
+        apiFetch: async (url, init) => {
+          calls.push({ url, init })
+          return Response.json({
+            success: true,
+            data: state(init?.method === 'PUT' ? current : previous),
+          })
+        },
+      },
+      '../utils/inbox-cache': { isInboxCacheScopeActive: () => true },
+      './inference/model.mjs': model,
+      './personal-session-model.mjs': personal,
+    }
+  )
+  runtime.mount(() =>
+    PersonalSessionModelPicker({
+      sessionKey: personalKey,
+      address: personalAddress,
+      models,
+      ownerId: 'owner',
+      connectionScope: 'scope',
+    })
+  )
+  await runtime.settle()
+  let save = nodes(runtime.value).find(
+    (node) => node.type === 'button' && node.props.children === '保存'
+  )
+  assert.equal(save.props.disabled, false)
+  save.props.onClick()
+  await runtime.settle()
+  assert.deepEqual(
+    JSON.parse(calls.find((call) => call.init?.method === 'PUT').init.body).selection,
+    { kind: 'profile', profile: current }
+  )
+  save = nodes(runtime.value).find(
+    (node) => node.type === 'button' && node.props.children === '保存'
+  )
+  assert.equal(save.props.disabled, true)
+  models = {
+    ...models,
+    profiles: { profile: { ...models.profiles.profile, model: 'another', revision: 2 } },
+    services: { service: { models: { another: { kinds: ['language'] } } } },
+  }
+  runtime.render()
+  assert.equal(
+    nodes(runtime.value).find((node) => node.type === 'button' && node.props.children === '保存')
+      .props.disabled,
+    true
+  )
+  runtime.unmount()
+})
 
 test('connection replacement clears every old owner/view and rejects late read/action/export callbacks', async () => {
   const f = fixture()

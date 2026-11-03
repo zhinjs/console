@@ -4,6 +4,7 @@ import {
   isPersonalSessionKey,
   readPersonalSessionRows,
   readPersonalSessionState,
+  samePersonalSessionSelection,
 } from '../console-ui/src/pages/personal-session-model.mjs'
 import { isLikelySessionKey, parseImSessionKey } from '../console-ui/src/utils/agent-session.ts'
 
@@ -28,6 +29,36 @@ const address = {
     threadId: 'topic',
   },
 }
+
+test('selection equality uses every persistent identity field and ignores mutable Profile content', () => {
+  const profile = {
+    id: 'p',
+    rootId: '/host',
+    accountId: 'account',
+    accountIncarnation: 'one',
+    kind: 'language',
+  }
+  const selected = { kind: 'profile', profile }
+  for (const field of ['id', 'rootId', 'accountId', 'accountIncarnation', 'kind'])
+    assert.equal(
+      samePersonalSessionSelection(selected, {
+        kind: 'profile',
+        profile: { ...profile, [field]: 'different' },
+      }),
+      false,
+      field
+    )
+  assert.equal(
+    samePersonalSessionSelection(selected, {
+      kind: 'profile',
+      profile: { ...profile, revision: 3, model: 'new-native', parameters: { temperature: 0.5 } },
+    }),
+    true
+  )
+  assert.equal(samePersonalSessionSelection({ kind: 'inherit' }, { kind: 'inherit' }), true)
+  assert.equal(samePersonalSessionSelection(selected, { kind: 'inherit' }), false)
+  assert.equal(samePersonalSessionSelection(undefined, undefined), false)
+})
 
 test('recognizes only complete personal hashes without pretending they are legacy IM identities', () => {
   assert.equal(isLikelySessionKey(key), true)

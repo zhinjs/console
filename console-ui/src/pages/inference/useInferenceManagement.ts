@@ -26,7 +26,7 @@ interface RequestIdentity {
 }
 
 /** One authenticated connection owns this workspace; a saved receipt belongs to one Host and owner. */
-export function useInferenceManagement(connectionScope?: string) {
+export function useInferenceManagement(connectionScope?: string, initialOwnerId?: string | null) {
   const [owners, setOwners] = useState<Owner[]>([])
   const [ownerId, setOwnerId] = useState('')
   const [view, setView] = useState<View | null>(null)
@@ -142,7 +142,8 @@ export function useInferenceManagement(connectionScope?: string) {
     setPending(null)
     setError('')
     setBusy(false)
-    void load('')
+    // Resolve a deep link before requesting the first view. Later reloads retain the selected owner.
+    void load(initialOwnerId ?? '')
     return () => {
       alive.current = false
       epoch.current++

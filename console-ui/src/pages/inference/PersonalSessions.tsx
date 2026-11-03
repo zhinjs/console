@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/button'
 import { agentSessionsPath } from '../../utils/agent-session'
@@ -18,27 +18,38 @@ export function PersonalSessions({
     [hasMore, setHasMore] = useState(false),
     [offset, setOffset] = useState(0),
     [selected, setSelected] = useState<PersonalSessionRow | null>(null),
-    [loading, setLoading] = useState(false)
+    [loading, setLoading] = useState(false),
+    sequence = useRef(0)
   const owner = m.owners.find((owner) => owner.id === m.ownerId)?.personal
   async function load(first = false) {
-    if (!owner || loading) return
+    if (!owner || (!first && loading)) return
+    const id = ++sequence.current
+    const active = () => id === sequence.current && m.active()
     setLoading(true)
     try {
       const result = await m.request(`/sessions?limit=50&offset=${first ? 0 : offset}`)
       const page = readPersonalSessionRows({ success: true, data: result }, owner)
-      if (!m.active()) return
+      if (!active()) return
       setRows((previous) => (first ? page.rows : [...previous, ...page.rows]))
       setHasMore(page.hasMore)
       setOffset((first ? 0 : offset) + page.rows.length)
     } catch (error) {
-      if (m.active()) m.setError(inferenceError(error))
+      if (active()) m.setError(inferenceError(error))
     } finally {
-      if (m.active()) setLoading(false)
+      if (active()) setLoading(false)
     }
   }
   useEffect(() => {
+    setRows([])
+    setHasMore(false)
+    setOffset(0)
+    setSelected(null)
+    setLoading(false)
     void load(true)
-  }, [m.ownerId])
+    return () => {
+      sequence.current++
+    }
+  }, [m.ownerId, m.revisionEpoch, connectionScope])
   return (
     <div className="space-y-4">
       <h3 className="font-semibold">个人会话</h3>
