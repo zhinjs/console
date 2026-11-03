@@ -1,0 +1,171 @@
+console-ui/src/pages/login.css
+  s_4a3da79bf26c58::t_be5942b3ee2e36 22
+  s_4a3da79bf26c58::t_8f53249725efbf 1-18,20-21,23-35
+  s_4a3da79bf26c58::t_cbebdd84afa440 19
+console-ui/src/layouts/dashboard.tsx
+  s_4a3da79bf26c58::t_1fa4e64e3d13d8 205
+  s_4a3da79bf26c58::t_7ab3ab87aaf4c0 348
+  s_4a3da79bf26c58::t_2465267573df25 22
+tests/toast-policy.test.mjs
+  s_4a3da79bf26c58::t_1cc9c81e9df194 1-29
+console-ui/src/i18n/messages.en.mjs
+  s_4a3da79bf26c58::t_6c0f63cc20f08e 11-13
+  s_4a3da79bf26c58::t_f2e6bb49744628 14-15
+  s_4a3da79bf26c58::t_d4be2ce66ce369 8
+  s_4a3da79bf26c58::t_047f48065a4aeb 16-25
+  s_4a3da79bf26c58::t_3d83d7109adc64 3-7
+  s_4a3da79bf26c58::t_ba132a59163fd3 9-10
+console-ui/src/hooks/useIsMobile.ts
+  s_4a3da79bf26c58::t_4ec4873dda7430 1-14
+console-ui/src/im-workspace.css
+  s_4a3da79bf26c58::t_b92a0aebdd3d3e 61-64
+  s_4a3da79bf26c58::t_9105293e56ff63 206-208
+  s_4a3da79bf26c58::t_f6bc8981fd5b8b 131
+  s_4a3da79bf26c58::t_61545fe99ffc4d 113-115
+  s_4a3da79bf26c58::t_7966f54e91d154 209
+  s_4a3da79bf26c58::t_829b81c2634788 143
+  s_4a3da79bf26c58::t_68d767c40b1230 1-60,65-112,116-130,132-142,144-201,205,210-211
+  s_4a3da79bf26c58::t_1b763076fa1b0e 202-204
+console-ui/src/pages/endpoint-detail/ChatMessageRow.tsx
+  s_4a3da79bf26c58::t_e26a61529aee2e 63-68
+  s_4a3da79bf26c58::t_01fe3bf4b5272b 55-56
+console-ui/src/components/toast.tsx
+  s_4a3da79bf26c58::t_9922ab802135d0 2,4-5,12,27-28,34,37-40,43,47-50,52,56-58,63-65,67-68,70,72-78,80-95,97-100,102-109,113-120,124-126
+  s_4a3da79bf26c58::t_32db80846cad6d 66
+  s_4a3da79bf26c58::t_24fbab8c5c5508 110-112
+  s_4a3da79bf26c58::t_31906d23bd0ca5 42,44-46
+  s_4a3da79bf26c58::t_1668692040e423 24-25
+  s_4a3da79bf26c58::t_aaafa2e465ca44 51,53-55
+  s_efe26f87c3b074::t_82955ef0e9d0e7 41
+tests/im-mobile-layout.test.mjs
+  s_4a3da79bf26c58::t_ce5190df74f5ad 45-47
+  s_4a3da79bf26c58::t_86e53b78f93802 56-67
+tests/auth-session.test.mjs
+  s_4a3da79bf26c58::t_35e5b90c19f611 24-51
+  s_4a3da79bf26c58::t_fe36bed15042a9 15-17,21
+tests/workspace-navigation.test.mjs
+  s_4a3da79bf26c58::t_e5e6a96c1fd3f6 139
+  s_4a3da79bf26c58::t_1592cac7ea81b4 21
+  s_4a3da79bf26c58::t_0699a7970ec593 71
+scripts/ui-preview-host.mjs
+  s_4a3da79bf26c58::t_d4e020a98b7f56 65
+  s_4a3da79bf26c58::t_69c0e894423e92 69-78
+  s_4a3da79bf26c58::t_1efeb698561990 1-4,7-32,34-63,66,68,79-87
+  s_4a3da79bf26c58::t_42a9c156a683d2 67
+  s_4a3da79bf26c58::t_76502a472493d7 5
+  s_4a3da79bf26c58::t_47673f59a04e06 6
+  s_4a3da79bf26c58::t_1a5225e0d81b1c 33
+  s_4a3da79bf26c58::t_df78cc2dbf005c 64
+scripts/check-visual-build.mjs
+  s_4a3da79bf26c58::t_c5e8b8eef1fa5b 49
+  s_4a3da79bf26c58::t_5129ebe7769200 46
+  s_4a3da79bf26c58::t_3dea4b51cac196 35
+  s_4a3da79bf26c58::t_c01552163d184b 52
+console-ui/src/components/toast-policy.mjs
+  s_4a3da79bf26c58::t_bd036694d4fcf6 1-12
+console-ui/src/theme-tokens.css
+  s_4a3da79bf26c58::t_f129e20b9a9bd4 43
+  s_4a3da79bf26c58::t_2ca98bf46e29f3 51
+  s_4a3da79bf26c58::t_ef6b8978480c76 97-98
+  s_4a3da79bf26c58::t_c2e379debef906 10
+  s_4a3da79bf26c58::t_8e5f3b00bcab84 20,23,28
+  s_4a3da79bf26c58::t_4814bc50fa0b9f 32
+  s_4a3da79bf26c58::t_51d513fc81b1db 37-38
+console-ui/src/components/toast-policy.d.mts
+  s_4a3da79bf26c58::t_4fe1e280389bb0 1-5
+console-ui/src/pages/endpoint-presentation.d.mts
+  s_4a3da79bf26c58::t_802159f153fa17 1
+docs/lightweight-ui-refresh.md
+  s_4a3da79bf26c58::t_a1a2cb2e12751d 1-19,21-62
+  s_4a3da79bf26c58::t_bd6c24bb808a9d 20
+console-ui/src/pages/login.tsx
+  s_4a3da79bf26c58::t_78a7ae7ad03d29 105
+  s_4a3da79bf26c58::t_7ca9e840d80928 106
+  s_4a3da79bf26c58::t_11de270765983b 113-114
+  s_4a3da79bf26c58::t_12605d8f183a1b 4,8,10-11,13,17,24,27,33,41-43,46,51-52,54,56,58,65,68,70,74-92,94-104,107-112,115-118,120
+  s_4a3da79bf26c58::t_fc7250c17dd6dd 26
+  s_4a3da79bf26c58::t_60f1a4cb9ad19f 49
+tests/endpoint-presentation.test.mjs
+  s_4a3da79bf26c58::t_70b0fa530e2dfe 1-13
+tests/conversation-drawer.test.mjs
+  s_4a3da79bf26c58::t_9033967b302c19 1-62
+console-ui/src/pages/dashboard.tsx
+  s_4a3da79bf26c58::t_cee1cfb5f3afbd 360,363
+console-ui/src/pages/endpoint-detail/RenderingDiagnostics.tsx
+  s_4a3da79bf26c58::t_ecf29b2245499e 9-12
+console-ui/src/utils/auth.ts
+  s_4a3da79bf26c58::t_95a5056be63376 257
+  s_4a3da79bf26c58::t_0b65aa74d1531b 262
+  s_4a3da79bf26c58::t_f515b448c38e50 42-46
+  s_4a3da79bf26c58::t_af14f9994f8462 224
+  s_4a3da79bf26c58::t_d8e19a5dcb6561 39
+  s_4a3da79bf26c58::t_a24dfc8a6f829f 238
+console-ui/src/pages/endpoint-detail/index.tsx
+  s_4a3da79bf26c58::t_5a2b8316fd2793 686-687
+  s_4a3da79bf26c58::t_1d8f02e20e25d4 766
+  s_4a3da79bf26c58::t_1a42147efa1988 770-772
+  s_4a3da79bf26c58::t_ff790a89b82887 754-755
+  s_4a3da79bf26c58::t_ffe7eae4afb854 14
+  s_4a3da79bf26c58::t_598de2ed7ee89f 757
+  s_4a3da79bf26c58::t_8b19b67d0b5658 673-674
+  s_4a3da79bf26c58::t_09439b1e64512d 668-669
+  s_4a3da79bf26c58::t_a01530ae76bd32 645
+  s_4a3da79bf26c58::t_1bec0fb7926706 634
+  s_4a3da79bf26c58::t_732a12d93b6a8d 656
+  s_4a3da79bf26c58::t_bde826d33929e9 695
+  s_4a3da79bf26c58::t_df233bda17fa8a 641
+  s_4a3da79bf26c58::t_6008a8ae9336d8 622
+  s_4a3da79bf26c58::t_347914154c3d43 682
+  s_4a3da79bf26c58::t_868c01c0e9e6cd 630
+  s_4a3da79bf26c58::t_ace8f37fbc91a7 652
+  s_4a3da79bf26c58::t_4c98d3686567fd 660-661
+  s_4a3da79bf26c58::t_eb3ae76fd1d217 781
+  s_4a3da79bf26c58::t_1d9d27968165a7 777
+  s_4a3da79bf26c58::t_6ed1cf974d0c9e 617-618
+console-ui/src/components/toast.css
+  s_4a3da79bf26c58::t_edc33a3a92b109 1-17
+console-ui/src/design-system.css
+  s_4a3da79bf26c58::t_450c9cd5baf069 11
+  s_4a3da79bf26c58::t_78dc6284c51863 105
+  s_4a3da79bf26c58::t_35e15fec38d6c9 15
+console-ui/src/pages/endpoints.tsx
+  s_4a3da79bf26c58::t_9d1ed6a89d728a 13
+  s_4a3da79bf26c58::t_2e3f2b6dd281bc 21-22
+  s_4a3da79bf26c58::t_4181494249e9cf 118
+console-ui/src/pages/endpoint-detail/ConversationSidebar.tsx
+  s_4a3da79bf26c58::t_c43f813ef68576 142
+  s_4a3da79bf26c58::t_1f8af917bedda0 72-91
+  s_4a3da79bf26c58::t_9a9089c78e5f77 6
+  s_4a3da79bf26c58::t_bf7f8ff3ba9121 2-3
+  s_4a3da79bf26c58::t_f6f86201f26a5c 106-109
+console-ui/src/pages/endpoint-presentation.mjs
+  s_4a3da79bf26c58::t_410fc51e20a247 1-9
+client/style.css
+  s_4a3da79bf26c58::t_719648a903247d 7
+console-ui/src/style.css
+  s_4a3da79bf26c58::t_2d811ca4884ddc 7,149-150,156,158-160,162-168,171-173,175-177,179-181,183-188,190-193,196-200,203-207,210-215,218-223,226-231,234-240,243-246,249-263,266-273,276-281,284-286,289-297,300,302-309,311-313,315,318-324,326-334,337-339,342-343,346-352,355-359,362-366,368-373,376-381,384-393,396-399,402-404,407-413,415-417,420-422,425-427,430-432,435-436,439-441,443-448,451,455-457,460,462-465,468-469,471,473-477,480-488,490,492-495,497,499-500,502-507,509-512
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "05eb3c726ab2bf5e64dd10f3a90fd5ec77a64474",
+  "prompts": {},
+  "sessions": {
+    "s_4a3da79bf26c58": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "66214013-1784-4c6a-9edd-9039237b51db",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    },
+    "s_efe26f87c3b074": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a05573-d991-7071-ac03-024f89a3d9a3",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
