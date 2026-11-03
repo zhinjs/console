@@ -17,6 +17,8 @@ import { requestConsole } from '../../utils/console-rpc'
 import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../../utils/inbox-cache'
 import { configurationSaveSummary } from './config-evidence-model.mjs'
+import { ConfigurationLiveStatus } from './ConfigurationLiveStatus'
+import { configurationSupportsApply } from './config-live-status.mjs'
 
 function deploymentCatalogField(field: SchemaField): SchemaField {
   const collections = Object.fromEntries(Object.entries(objectFields(field)).map(([name, collection]) => {
@@ -56,6 +58,8 @@ function PluginConfigFormSession({ pluginName, onSuccess, sourceRevision, fieldN
   const scoped = fieldNames !== undefined || excludedFieldNames !== undefined
   const filtersRootFields = fieldNames !== undefined || Boolean(excludedFieldNames?.length)
   const form = usePluginConfigDraft(pluginName)
+  const applicationSnapshot = form.applicationSnapshot ?? form.snapshot
+  const supportsApply = configurationSupportsApply(applicationSnapshot)
   const [localConfig, setLocalConfig] = useState<unknown>(undefined)
   const [draftName, setDraftName] = useState<string | null>(null)
   const [invalidFields, setInvalidFields] = useState<ReadonlySet<string>>(new Set())
@@ -160,7 +164,11 @@ function PluginConfigFormSession({ pluginName, onSuccess, sourceRevision, fieldN
     </div>
     {(saveError || form.error) ? <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{saveError ?? form.error}{i18n.t("。草稿已保留。")}<Link className="ml-2 underline" to="/files">{i18n.t("打开文件管理")}</Link>{form.errorOperation === 'read' ? <Button variant="outline" size="sm" onClick={() => void form.load()}>{i18n.t("重试读取")}</Button> : null}</AlertDescription></Alert> : null}
     {validation && (!validation.valid || validation.missingEnv.length > 0) ? <Alert variant={validation.valid && !validation.missingEnv.length ? 'default' : 'destructive'}><AlertDescription><p>{hostValidationSummary(validation, i18n.locale)}</p>{validation.errors.map(item => <p key={`${item.path}:${item.message}`}>{item.path}: {item.message}</p>)}{validation.missingEnv.length ? <p>{i18n.t("缺少环境变量：")}{validation.missingEnv.join('、')}。<Link className="underline" to="/env">{i18n.t("配置环境变量")}</Link>{i18n.t("后重新校验。")}</p> : null}</AlertDescription></Alert> : null}
-    {message ? <p role="status" className="text-sm">{message}</p> : null}
+    {message ? <p role="status" className="text-sm">{i18n.t('保存回执：{0}', [message])}</p> : null}
+    <ConfigurationLiveStatus result={applicationSnapshot}
+      revision={applicationSnapshot?.revision} onRefresh={() => void form.load()}
+      onApply={supportsApply ? () => void form.applyConfiguration() : undefined}
+      disabled={form.loading || saving || form.applyBlocked} applying={form.applyLoading} actionError={form.applyError} />
     {hasInvalidFields && <p role="alert" className="text-sm text-destructive">{i18n.t("有字段 JSON 草稿格式错误，修正后才能保存。")}</p>}
     <fieldset key={draftVersion} disabled={saving || form.loading} className="space-y-3">{filtersRootFields && (!rootObject || !categoryFields.length) ? <div role="alert"><p>{i18n.t("此分类暂时无法编辑。")}</p><Link className="text-sm underline" to="/files">{i18n.t("打开文件管理")}</Link></div> : rootObject ? <>{categoryFields.map(([name, field]) => pluginName === 'ai' && name === 'agents' ? <AgentPresetsEditor key={name} value={objectConfig[name]} field={field} ai={objectConfig} onChange={value => change(name, value)} drafts={editorDrafts.current} onValidityChange={fieldValidity} /> : <SchemaFieldEditor key={name} path={`$/${JSON.stringify(name)}`} drafts={editorDrafts.current} onValidityChange={fieldValidity} name={name} useDeclaredDefaults={scoped} field={form.schema?.secret ? { ...field, secret: true } : pluginName === 'ai' && name === 'modelCatalog' ? deploymentCatalogField(field) : field} value={objectConfig[name]} onChange={value => change(name, value)} />)}{catalogView && objectConfig.modelCatalog !== undefined ? <label className="block space-y-2 text-sm"><span>{i18n.t('初始聊天模型')}</span><SelectField aria-label={i18n.t('初始聊天模型')} value={initialChat} options={[{ value: '', label: i18n.t('选择模型预设'), disabled: true }, ...presetChoices.map(preset => ({ value: preset.id, label: `${preset.id} · ${preset.model}` })), ...(initialChat && !presetChoices.some(preset => preset.id === initialChat) ? [{ value: initialChat, label: initialChat }] : [])]} onValueChange={chat => {
       const policy = objectConfig.modelPolicy && typeof objectConfig.modelPolicy === 'object' ? objectConfig.modelPolicy as Record<string, unknown> : {}

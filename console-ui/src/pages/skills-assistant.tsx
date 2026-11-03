@@ -1,4 +1,8 @@
 import { useI18n } from '../i18n'
+import { useInboxCacheScope } from '../utils/useInboxCacheScope'
+import { isInboxCacheScopeActive } from '../utils/inbox-cache'
+import { ConfigurationLiveStatus } from '../components/PluginConfigForm/ConfigurationLiveStatus'
+import { configurationReceiptForRead, type ConfigurationApplicationStatus } from '../components/PluginConfigForm/config-live-status.mjs'
 import { useState, useRef, useCallback, type ReactNode } from 'react'
 import { parse as parseConfigSource } from 'yaml'
 import { RefreshCw, RotateCw } from 'lucide-react'
@@ -31,11 +35,12 @@ import {
   type TaskModes,
 } from './skills-assistant-model.mjs'
 
-type ConfigSource = { source: string; revision: string }
+type ConfigSource = ConfigurationApplicationStatus & { source: string; revision: string }
 type StatusRead = { denied: true } | { denied: false; status: SkillsStatus }
-type SettingsRead = { settings: SkillsSettings; revision: string }
-type PatchResult = {
+type SettingsRead = { settings: SkillsSettings; revision: string; application?: ConfigurationApplicationStatus; readEpoch?: number }
+type PatchResult = ConfigurationApplicationStatus & {
   status?: string
+  revision?: string
   errors?: Array<{ path: string; message: string }>
 }
 
@@ -54,7 +59,7 @@ async function readSkillsSettingsFromHost(): Promise<SettingsRead> {
   const configSource = await requestConsole<ConfigSource>({ type: 'config:get-source' })
   const configDocument: unknown = parseConfigSource(configSource.source)
   const settings = readSkillsSettings(configDocument)
-  return { settings, revision: configSource.revision }
+  return { settings, revision: configSource.revision, application: { application: configSource.application, applicationError: configSource.applicationError } }
 }
 
 function formatTime(timestamp: number, locale: 'zh-CN' | 'en'): string {
@@ -62,11 +67,21 @@ function formatTime(timestamp: number, locale: 'zh-CN' | 'en'): string {
 }
 
 export default function SkillsAssistantPage() {
+  const scope = useInboxCacheScope()
+  if (!scope || !isInboxCacheScopeActive(scope)) return null
+  return <SkillsAssistantSession key={scope} />
+}
+
+function SkillsAssistantSession() {
   const i18n = useI18n()
   const messages = useRef(i18n); messages.current = i18n
   const readStatus = useCallback(() => readSkillsStatus(messages.current.locale), [])
   const statusRead = useConsoleRead<StatusRead | null>(readStatus, null)
-  const settingsRead = useConsoleRead<SettingsRead | null>(readSkillsSettingsFromHost, null)
+  const configurationReadEpoch = useRef(0)
+  const settingsRead = useConsoleRead<SettingsRead | null>(async () => {
+    const readEpoch = ++configurationReadEpoch.current
+    return { ...await readSkillsSettingsFromHost(), readEpoch }
+  }, null)
   const refreshAll = () => {
     void statusRead.refresh().catch(() => {})
     void settingsRead.refresh().catch(() => {})
@@ -79,7 +94,7 @@ export default function SkillsAssistantPage() {
       actions={<Button variant="outline" size="sm" onClick={refreshAll} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>}
     />
     <SkillsStatusSection read={statusRead} onRetry={() => { void statusRead.refresh().catch(() => {}) }} />
-    <SkillsSettingsSection read={settingsRead} onReload={() => settingsRead.refresh()} />
+    <SkillsSettingsSection read={settingsRead} onReload={() => settingsRead.refresh()} currentReadEpoch={() => configurationReadEpoch.current} />
   </PageShell>
 }
 
@@ -140,7 +155,7 @@ function SettingsNotice({ children }: { children: ReactNode }) {
   </Card>
 }
 
-function SkillsSettingsSection({ read, onReload }: { read: SettingsReadState; onReload: () => Promise<SettingsRead | null> }) {
+function SkillsSettingsSection({ read, onReload, currentReadEpoch }: { read: SettingsReadState; onReload: () => Promise<SettingsRead | null>; currentReadEpoch: () => number }) {
   const i18n = useI18n()
   if (read.loading && !read.loaded) return <Skeleton className="h-56 w-full" />
   if (read.error && !read.loaded) {
@@ -162,14 +177,17 @@ function SkillsSettingsSection({ read, onReload }: { read: SettingsReadState; on
       <p>{i18n.t("当前判断由其他服务提供，请到设置中调整。")}</p>
     </SettingsNotice>
   }
-  return <SkillsSettingsForm key={read.data.revision} initial={read.data} onReload={onReload} />
+  return <SkillsSettingsForm key={read.data.revision} initial={read.data} onReload={onReload} currentReadEpoch={currentReadEpoch} />
 }
 
-function SkillsSettingsForm({ initial, onReload }: { initial: SettingsRead; onReload: () => Promise<SettingsRead | null> }) {
+function SkillsSettingsForm({ initial, onReload, currentReadEpoch }: { initial: SettingsRead; onReload: () => Promise<SettingsRead | null>; currentReadEpoch?: () => number }) {
+  const scope = useInboxCacheScope()
   const i18n = useI18n()
   const [modes, setModes] = useState<TaskModes>(initial.settings.modes)
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState<SaveFeedback | null>(null)
+  const [receipt, setReceipt] = useState<{ value: PatchResult; observedReadEpoch: number } | null>(null)
+  const currentReceipt = configurationReceiptForRead(initial, receipt)
   const [serverProblems, setServerProblems] = useState<string[]>([])
   const changed = hasSkillsChanges(initial.settings, modes)
 
@@ -179,6 +197,7 @@ function SkillsSettingsForm({ initial, onReload }: { initial: SettingsRead; onRe
   }
 
   const save = async () => {
+    if (!isInboxCacheScopeActive(scope)) return
     setSaving(true)
     setFeedback(null)
     try {
@@ -188,7 +207,9 @@ function SkillsSettingsForm({ initial, onReload }: { initial: SettingsRead; onRe
         expectedRevision: initial.revision,
         patches: buildSkillsPatches(initial.settings, modes),
       })
+      if (!isInboxCacheScopeActive(scope)) return
       const saveFeedback = describeSaveResult(result, i18n.locale)
+      if (result.status === 'saved') setReceipt({ value: result, observedReadEpoch: currentReadEpoch?.() ?? initial.readEpoch ?? 0 })
       if (saveFeedback.kind === 'invalid') {
         const messages = (result.errors ?? []).map((error) => error.message)
         setServerProblems(messages)
@@ -196,12 +217,13 @@ function SkillsSettingsForm({ initial, onReload }: { initial: SettingsRead; onRe
       if (saveFeedback.kind === 'saved' || saveFeedback.kind === 'conflict') {
         await onReload().catch(() => null)
       }
-      setFeedback(saveFeedback)
+      if (isInboxCacheScopeActive(scope)) setFeedback(saveFeedback)
     } catch (error) {
+      if (!isInboxCacheScopeActive(scope)) return
       const message = error instanceof Error ? error.message : String(error)
       setFeedback({ kind: 'error', text: i18n.t("保存失败：{0}", [message]) })
     } finally {
-      setSaving(false)
+      if (isInboxCacheScopeActive(scope)) setSaving(false)
     }
   }
 
@@ -236,15 +258,17 @@ function SkillsSettingsForm({ initial, onReload }: { initial: SettingsRead; onRe
         <Button onClick={() => { void save() }} disabled={saving || !changed}>{saving ? i18n.t("正在保存…") : i18n.t("保存")}</Button>
         {feedback && <SaveFeedbackNotice feedback={feedback} />}
       </div>
+      <ConfigurationLiveStatus result={currentReceipt ?? initial.application} revision={currentReceipt?.revision ?? initial.revision} />
     </CardContent>
   </Card>
 }
 
 function SaveFeedbackNotice({ feedback }: { feedback: SaveFeedback }) {
+  const i18n = useI18n()
   if (feedback.kind === 'saved') {
     return <span className="flex items-center gap-1 text-sm">
       {feedback.restartRequired && <RotateCw className="size-4 text-amber-600" />}
-      <span className={feedback.restartRequired ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}>{feedback.text}</span>
+      <span className={feedback.applicationKind === 'applied' ? 'text-emerald-700 dark:text-emerald-400' : feedback.applicationKind === 'failed' ? 'text-destructive' : feedback.restartRequired || feedback.applicationKind ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}>{i18n.t('保存回执：{0}', [feedback.text])}</span>
     </span>
   }
   return <span className="text-sm text-destructive">{feedback.text}</span>

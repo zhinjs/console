@@ -1,4 +1,6 @@
 import { hasSkillsChanges, buildSkillsPatches, describeSaveResult } from '../console-ui/src/pages/skills-assistant-model.mjs'
+import * as ambientModel from '../console-ui/src/pages/ambient-engagement-model.mjs'
+import { configurationReceiptForRead } from '../console-ui/src/components/PluginConfigForm/config-live-status.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -51,6 +53,28 @@ async function componentFunctions(file, names, bindings) {
   const compiled = ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.None, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } }).outputText
   return Function('React', ...Object.keys(bindings), `${compiled}; return ${names[0]}`)({ createElement: element }, ...Object.values(bindings))
 }
+
+test('ambient same-file refresh replaces an earlier saved application receipt', async () => {
+  const runtime = hooks(); let epoch = 1
+  const evidence = (id, status) => ({ application: { operationId: id, sourceRevision: 'r1', saved: true, generation: 2, applicationRevision: 1,
+    groups: [{ id: 'root', paths: [['root']], effect: 'reload-plugin', status, dependsOn: [] }] } })
+  let initial = { revision: 'r1', readEpoch: epoch, settings: { behavior: 'off', groupScope: 'all', groups: [], maxPerHour: 6 }, application: evidence('op1', 'applied') }
+  const Component = await componentFunctions('pages/ambient-engagement.tsx', ['AmbientSettingsForm'], {
+    ...runtime.api, ...ambientModel, configurationReceiptForRead, useI18n: () => messages('zh-CN'), useInboxCacheScope: () => 'scope', isInboxCacheScopeActive: () => true,
+    requestConsole: async () => ({ status: 'saved', revision: 'r1', ...evidence('op2', 'applied') }),
+    Card: 'Card', CardHeader: 'CardHeader', CardTitle: 'CardTitle', CardContent: 'CardContent', RadioGroup: 'RadioGroup', RadioGroupItem: 'RadioGroupItem',
+    Input: 'Input', Textarea: 'Textarea', Button: 'Button', SaveFeedbackNotice: 'SaveFeedbackNotice', ConfigurationLiveStatus: 'ConfigurationLiveStatus',
+  })
+  const onReload = async () => { initial = { ...initial, readEpoch: ++epoch, application: evidence('op2', 'applied') }; return initial }
+  runtime.mount(() => Component({ initial, onReload, currentReadEpoch: () => epoch }))
+  const save = elements(runtime.value).find(node => node.type === 'Button')
+  assert.equal(save.props.disabled, false, 'Ambient supports a real no-op save')
+  save.props.onClick(); await runtime.settle()
+  initial = { ...initial, readEpoch: ++epoch, application: evidence('op3', 'restart-pending') }; runtime.render()
+  const shown = elements(runtime.value).find(node => node.type === 'ConfigurationLiveStatus').props
+  assert.equal(shown.result.application.operationId, 'op3')
+  assert.equal(shown.result.application.groups[0].status, 'restart-pending')
+})
 
 test('JSON field and dictionary errors follow the interface language while invalid drafts stay intact', async () => {
   for (const name of ['JsonValueEditor', 'ObjectValueEditor']) {
@@ -197,7 +221,8 @@ test('permission requests use the selected language without clearing hypotheses 
 test('skills form language changes preserve modified modes and do not trigger reads or saves', async()=>{
  const runtime=hooks();let locale=messages('zh-CN');const writes=[];let reads=0;
  const component=await lifecycle('pages/skills-assistant.tsx','SkillsSettingsForm','  return <Card', 'modes, chooseMode, save',{
-  ...runtime.api,useI18n:()=>locale,hasSkillsChanges,buildSkillsPatches,describeSaveResult,
+  ...runtime.api,useI18n:()=>locale,hasSkillsChanges,buildSkillsPatches,describeSaveResult,configurationReceiptForRead,
+  useInboxCacheScope:()=> 'test-connection',isInboxCacheScopeActive:scope=>scope==='test-connection',
   requestConsole:async body=>{writes.push(body);return {status:'saved',restartRequired:true}},
  });
  const initial={revision:'rev-1',settings:{instanceKey:'my-helper',provider:'root/my-helper',usesOtherService:false,modes:{skills:'off',tools:'off',memory:'off',agents:'off',approval:'off',ambient:'off'}}};

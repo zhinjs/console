@@ -19,7 +19,7 @@ export interface SkillsStatusView {
 export type TaskModes = Record<AssistantTask, TaskMode>
 export interface SkillsSettings { instanceKey: string | undefined; provider: string | undefined; usesOtherService: boolean; modes: TaskModes }
 export type SkillsPatch = { op: 'set'; path: string[]; value: unknown }
-export interface SaveFeedback { kind: 'saved' | 'conflict' | 'invalid' | 'error'; text: string; restartRequired?: boolean }
+export interface SaveFeedback { kind: 'saved' | 'conflict' | 'invalid' | 'error'; text: string; restartRequired?: boolean; applicationKind?: import('../components/PluginConfigForm/config-live-status.mjs').ConfigurationRuntimeStatus['kind'] }
 export const SKILLS_STATUS_PERMISSION: 'skills:read'
 export const SKILLS_ASSISTANT_PACKAGE: string
 export const DECISIONS_CONFIG_PATH: readonly string[]

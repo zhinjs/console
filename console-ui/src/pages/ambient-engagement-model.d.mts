@@ -22,7 +22,7 @@ export interface AmbientStatusView {
 export type AmbientBehavior = 'off' | 'watch' | 'join'
 export interface AmbientSettings { behavior: AmbientBehavior; groupScope: 'all' | 'some'; groups: string[]; maxPerHour: number }
 export type AmbientPatch = { op: 'set'; path: string[]; value: unknown }
-export interface SaveFeedback { kind: 'saved' | 'conflict' | 'invalid' | 'error'; text: string; restartRequired?: boolean }
+export interface SaveFeedback { kind: 'saved' | 'conflict' | 'invalid' | 'error'; text: string; restartRequired?: boolean; applicationKind?: import('../components/PluginConfigForm/config-live-status.mjs').ConfigurationRuntimeStatus['kind'] }
 export const AMBIENT_STATUS_PERMISSION: 'ambient:read'
 export const AMBIENT_CONFIG_PATH: readonly string[]
 export const DEFAULT_MAX_PER_HOUR: number

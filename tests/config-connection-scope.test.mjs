@@ -17,6 +17,7 @@ import { numericFieldIssue } from '../console-ui/src/components/PluginConfigForm
 import { isConversationScopeField } from '../console-ui/src/components/PluginConfigForm/conversation-scope-model.mjs'
 import { translate } from '../console-ui/src/i18n/locale.mjs'
 import * as configEvidenceModel from '../console-ui/src/components/PluginConfigForm/config-evidence-model.mjs'
+import * as configLiveStatus from '../console-ui/src/components/PluginConfigForm/config-live-status.mjs'
 
 const require = createRequire(import.meta.url)
 const files = await Promise.all(['hooks/useConfigSource.ts', 'components/PluginConfigForm/usePluginConfigDraft.ts', 'components/PluginConfigForm/index.tsx', 'pages/config.tsx', 'components/PluginConfigForm/SchemaFieldEditor.tsx']
@@ -85,7 +86,11 @@ function fixture(query = '') {
   '../ui/radio-group': { RadioGroup: 'radio-group', RadioGroupItem: 'radio' }, '../ui/checkbox': { Checkbox: 'checkbox' },
     '../../pages/files/code-editor': { CodeEditor: 'code-editor' }, './files/code-editor': { CodeEditor: 'code-editor' },
     './config-evidence-model.mjs': configEvidenceModel, './ConfigApplicationEvidence': { ConfigApplicationEvidence: 'config-evidence' },
+    './config-live-status.mjs': configLiveStatus,
+    './ConfigurationLiveStatus': { ConfigurationLiveStatus: 'configuration-live-status' },
+    '../components/PluginConfigForm/ConfigurationLiveStatus': { ConfigurationLiveStatus: 'configuration-live-status' },
     '../components/PluginConfigForm/config-evidence-model.mjs': configEvidenceModel,
+    '../components/PluginConfigForm/config-live-status.mjs': configLiveStatus,
     'react-router-dom': { Link: 'a', useSearchParams: () => [new URLSearchParams(query), () => {}] },
     'lucide-react': new Proxy({}, { get: () => 'i' }),
     './ConfigFieldExplanation': { ConfigFieldExplanation: 'field-explanation' },
@@ -141,6 +146,205 @@ async function loadedSource(f, name = 'A') {
   const pending = f.runtime.value.load(); f.answer('config:get-source', snapshot(name)); await pending; await f.runtime.settle()
   return f.runtime.value
 }
+
+test('source save keeps the Host application receipt separate from the confirmed file revision', async () => {
+  const f = fixture(), initial = await loadedSource(f)
+  const application = { operationId: 'config:2', sourceRevision: 'saved-r2', saved: true, generation: 3, applicationRevision: 1,
+    groups: [{ id: 'http', paths: [['http', 'port']], effect: 'restart-process', status: 'restart-pending', dependsOn: [] }] }
+  const saving = initial.saveBound(initial.source, initial.snapshot)
+  f.answer('config:replace-source', { success: true, revision: 'saved-r2', restartRequired: true, application })
+  await saving; await f.runtime.settle()
+  assert.equal(f.runtime.value.snapshot.revision, 'saved-r2')
+  assert.deepEqual(f.runtime.value.snapshot.application, application)
+  f.runtime.unmount()
+})
+
+const liveApplication = (revision = 'same-revision', statuses = ['applied']) => ({ operationId: 'config:3', sourceRevision: revision, saved: true,
+  generation: 4, applicationRevision: 3, groups: statuses.map((status, index) => ({ id: `change-${index}`, paths: [['http', 'port']],
+    effect: 'restart-process', status, dependsOn: [] })) })
+async function loadedApplication(f, extra = {}) {
+  f.runtime.mount(() => f.source.useConfigSource({ autoLoad: false }))
+  const reading = f.runtime.value.load()
+  f.answer('config:get-source', { ...snapshot('A'), application: liveApplication(), ...extra })
+  await reading; await f.runtime.settle()
+  return f.runtime.value
+}
+
+test('explicit configuration application uses one CAS-bound config:apply and displays pending groups honestly', async () => {
+  const f = fixture(), current = await loadedApplication(f)
+  const first = current.applyConfiguration(), duplicate = current.applyConfiguration()
+  const application = liveApplication('same-revision', ['applied', 'restart-pending'])
+  const request = f.answer('config:apply', { status: 'applied', application })
+  assert.deepEqual(request.input, { type: 'config:apply', expectedRevision: 'same-revision' })
+  await Promise.all([first, duplicate]); await f.runtime.settle()
+  assert.deepEqual(f.runtime.value.snapshot.application, application)
+  assert.equal(configLiveStatus.configurationRuntimeStatus(f.runtime.value.snapshot, 'same-revision').kind, 'partial')
+  assert.equal(f.calls.filter(call => call.input.type === 'config:apply').length, 1)
+  assert.equal(f.calls.some(call => ['plugin:apply', 'config:replace-source', 'config:set'].includes(call.input.type)), false)
+  f.runtime.unmount()
+})
+
+test('a valid unchanged configuration is confirmed active and stays operable after readback', async () => {
+  const f = fixture(), application = liveApplication('same-revision', [])
+  const current = await loadedApplication(f, { application })
+  assert.equal(configLiveStatus.configurationRuntimeStatus(current.snapshot, current.revision).kind, 'applied')
+  const pending = current.applyConfiguration()
+  f.answer('config:apply', { status: 'applied', application })
+  await pending; await f.runtime.settle()
+  assert.equal(f.runtime.value.snapshot.applicationError, undefined)
+  assert.equal(f.runtime.value.applyBlocked, false)
+  const reading = f.runtime.value.load()
+  f.answer('config:get-source', { ...snapshot('A'), application })
+  await reading; await f.runtime.settle()
+  assert.equal(f.runtime.value.applyBlocked, false)
+  const again = f.runtime.value.applyConfiguration()
+  f.answer('config:apply', { status: 'applied', application })
+  await again; await f.runtime.settle()
+  assert.equal(f.calls.filter(call => call.input.type === 'config:apply').length, 2)
+  f.runtime.unmount()
+})
+
+for (const failure of ['conflict', 'unconfirmed', 'transport']) test(`configuration apply ${failure} does not retry until a read verifies the current state`, async () => {
+  const f = fixture(), current = await loadedApplication(f)
+  const pending = current.applyConfiguration()
+  f.answer('config:apply', failure === 'transport' ? new Error('private server details') : { status: failure, revision: 'new-file', message: 'private server details' }, undefined, failure === 'transport')
+  await pending; await f.runtime.settle()
+  assert.equal(f.runtime.value.applyBlocked, true)
+  assert.doesNotMatch(f.runtime.value.applyError, /private server/)
+  await f.runtime.value.applyConfiguration()
+  assert.equal(f.calls.filter(call => call.input.type === 'config:apply').length, 1)
+  const reading = f.runtime.value.load()
+  f.answer('config:get-source', { ...snapshot('A'), application: { ...liveApplication(), operationId: failure === 'conflict' ? 'config:3' : 'config:4' } })
+  await reading; await f.runtime.settle()
+  assert.equal(f.runtime.value.applyBlocked, false)
+  assert.equal(f.runtime.value.applyError, null)
+  f.runtime.unmount()
+})
+
+test('known validation refusal is distinct from an unknown application outcome', async () => {
+  const f = fixture(), current = await loadedApplication(f)
+  const pending = current.applyConfiguration()
+  f.answer('config:apply', { status: 'invalid', message: 'private validation details' })
+  await pending; await f.runtime.settle()
+  assert.match(f.runtime.value.applyError, /校验失败/)
+  assert.equal(f.runtime.value.snapshot.applicationError, 'invalid')
+  assert.equal(f.runtime.value.applyBlocked, false)
+  f.runtime.unmount()
+})
+
+test('a known superseded application needs a fresh read but does not keep the unknown-operation guard', async () => {
+  const f = fixture(), current = await loadedApplication(f)
+  const pending = current.applyConfiguration()
+  f.answer('config:apply', { status: 'applied', application: liveApplication('same-revision', ['superseded']) })
+  await pending; await f.runtime.settle()
+  assert.equal(configLiveStatus.configurationRuntimeStatus(f.runtime.value.snapshot, 'same-revision').kind, 'stale')
+  const reading = f.runtime.value.load()
+  f.answer('config:get-source', { ...snapshot('A'), application: liveApplication('same-revision', ['superseded']) })
+  await reading; await f.runtime.settle()
+  assert.equal(f.runtime.value.applyBlocked, false)
+  f.runtime.unmount()
+})
+
+test('an old unknown application does not block a newer externally saved revision from explicit application', async () => {
+  const f = fixture(), current = await loadedApplication(f)
+  const pending = current.applyConfiguration()
+  f.answer('config:apply', { status: 'unconfirmed', message: 'Not confirmed' })
+  await pending; await f.runtime.settle()
+  assert.equal(f.runtime.value.applyBlocked, true)
+  const reading = f.runtime.value.load()
+  f.answer('config:get-source', { ...snapshot('new external file'), revision: 'new-revision', application: liveApplication(), applicationError: 'unconfirmed' })
+  await reading; await f.runtime.settle()
+  assert.equal(f.runtime.value.applyBlocked, false)
+  const applying = f.runtime.value.applyConfiguration()
+  const call = f.answer('config:apply', { status: 'applied', application: liveApplication('new-revision') })
+  assert.equal(call.input.expectedRevision, 'new-revision')
+  await applying; await f.runtime.settle()
+  assert.equal(configLiveStatus.configurationRuntimeStatus(f.runtime.value.snapshot, 'new-revision').kind, 'applied')
+  f.runtime.unmount()
+})
+
+test('a read during application cannot erase a later timeout or use the old operation as proof', async () => {
+  const f = fixture(), current = await loadedApplication(f)
+  const pending = current.applyConfiguration()
+  const reading = f.runtime.value.load()
+  f.answer('config:get-source', { ...snapshot('A'), application: liveApplication() })
+  await reading; await f.runtime.settle()
+  assert.equal(f.runtime.value.applyLoading, true)
+  assert.equal(f.runtime.value.loading, true)
+  f.answer('config:apply', new Error('lost response after the old read'), undefined, true)
+  await pending; await f.runtime.settle()
+  assert.equal(f.runtime.value.applyBlocked, true)
+  assert.match(f.runtime.value.applyError, /未确认/)
+  await f.runtime.value.applyConfiguration()
+  assert.equal(f.calls.filter(call => call.input.type === 'config:apply').length, 1)
+  const oldRead = f.runtime.value.load()
+  f.answer('config:get-source', { ...snapshot('A'), application: liveApplication() })
+  await oldRead; await f.runtime.settle()
+  assert.equal(f.runtime.value.applyBlocked, true)
+  const confirmed = f.runtime.value.load()
+  f.answer('config:get-source', { ...snapshot('A'), application: { ...liveApplication(), operationId: 'config:4' } })
+  await confirmed; await f.runtime.settle()
+  assert.equal(f.runtime.value.applyBlocked, false)
+  f.runtime.unmount()
+})
+
+test('a late old read cannot replace an application receipt that settled after the read began', async () => {
+  const f = fixture(), current = await loadedApplication(f)
+  const applying = current.applyConfiguration()
+  const reading = f.runtime.value.load()
+  const application = { ...liveApplication(), operationId: 'config:4' }
+  f.answer('config:apply', { status: 'applied', application })
+  await applying; await f.runtime.settle()
+  f.answer('config:get-source', { ...snapshot('A'), application: liveApplication() })
+  await reading; await f.runtime.settle()
+  assert.equal(f.runtime.value.snapshot.application.operationId, 'config:4')
+  assert.equal(f.runtime.value.loading, false)
+  f.runtime.unmount()
+})
+
+test('language changes reformat an unconfirmed application without another request or clearing its guard', async () => {
+  const f = fixture(), current = await loadedApplication(f)
+  const applying = current.applyConfiguration()
+  f.answer('config:apply', { status: 'unconfirmed', message: 'Not confirmed' })
+  await applying; await f.runtime.settle()
+  const requests = f.calls.length
+  f.switchLocale('en'); f.runtime.render()
+  assert.match(f.runtime.value.applyError, /unconfirmed/)
+  assert.equal(f.runtime.value.applyBlocked, true)
+  assert.equal(f.calls.length, requests)
+  f.runtime.unmount()
+})
+
+test('a late apply response cannot publish evidence into another Host and malformed metadata does not hide configuration', async () => {
+  const f = fixture(), current = await loadedApplication(f)
+  const scope = f.authority.current(), pending = current.applyConfiguration()
+  f.switchHost(); f.runtime.render()
+  f.answer('config:apply', { status: 'applied', application: liveApplication() }, scope)
+  await pending; await f.runtime.settle()
+  assert.equal(f.runtime.value.snapshot, null)
+  const reading = f.runtime.value.load()
+  f.answer('config:get-source', { ...snapshot('B'), application: { groups: 'invalid metadata' } })
+  await reading; await f.runtime.settle()
+  assert.equal(f.runtime.value.loaded, true)
+  assert.equal(f.runtime.value.error, null)
+  assert.match(f.runtime.value.source, /B/)
+  f.runtime.unmount()
+})
+
+test('a superseded save stays a confirmed save and a later old-Host receipt clears old application evidence', async () => {
+  const f = fixture(), current = await loadedApplication(f)
+  const pending = current.saveBound(current.source, current.snapshot)
+  f.answer('config:replace-source', { success: true, revision: 'new-file', applicationError: 'superseded' })
+  await pending; await f.runtime.settle()
+  assert.equal(f.runtime.value.error, null)
+  assert.equal(configLiveStatus.configurationRuntimeStatus(f.runtime.value.snapshot, 'new-file').kind, 'stale')
+  const next = f.runtime.value.saveBound(f.runtime.value.source, f.runtime.value.snapshot)
+  f.answer('config:replace-source', { success: true, revision: 'next-file', restartRequired: false })
+  await next; await f.runtime.settle()
+  assert.equal(f.runtime.value.snapshot.application, undefined)
+  assert.equal(f.runtime.value.snapshot.applicationError, undefined)
+  f.runtime.unmount()
+})
 async function loadedPlugin(f, name = 'A') {
   f.runtime.mount(() => f.plugin.usePluginConfigDraft('group-suite'))
   f.answer('config:get-source', snapshot(name)); f.answer('schema:get', schema); await f.runtime.settle()
