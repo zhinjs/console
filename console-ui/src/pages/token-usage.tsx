@@ -62,6 +62,8 @@ export default function TokenUsagePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [denied, setDenied] = useState(false)
+  // 503 means the Host has no AI runtime yet: an expected empty state, not a failure to retry.
+  const [unavailable, setUnavailable] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState<SortKey>('inputTokens')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
@@ -84,10 +86,12 @@ export default function TokenUsagePage() {
         setStats(validateUsageStats(data, i18n.locale))
         setError(null)
         setDenied(false)
+        setUnavailable(null)
       })
       .catch(caught => {
         if (cancelled) return
         if (isPermissionDenied(caught)) setDenied(true)
+        else if ((caught as { status?: number }).status === 503) setUnavailable((caught as Error).message)
         else setError((caught as Error).message)
       })
       .finally(() => { if (!cancelled) setLoading(false) })
@@ -136,14 +140,15 @@ export default function TokenUsagePage() {
           <SelectField aria-label={i18n.t("统计粒度")} className="w-auto" value={bucket} onValueChange={setBucket} options={USAGE_BUCKETS.map(item => ({ value: item.value, label: i18n.t(item.label) }))} />
           <form className="flex items-center gap-2" onSubmit={event => { event.preventDefault(); applySession(sessionDraft) }}>
             <Input className="w-56" aria-label={i18n.t("会话")} placeholder={i18n.t("按会话筛选，如 icqq:8596238:group:123")} value={sessionDraft} onChange={event => setSessionDraft(event.target.value)} />
-            <Button size="sm" type="submit">{i18n.t("筛选")}</Button>
+            <Button type="submit">{i18n.t("筛选")}</Button>
             {session ? <Button size="sm" type="button" variant="ghost" onClick={() => applySession('')}><X />{i18n.t("清除会话")}</Button> : null}
           </form>
         </CardContent>
         {built.error ? <p className="px-6 pb-4 text-xs text-destructive">{i18n.t("自定义范围的开始时间必须早于结束时间。")}</p> : null}
       </Card>
 
-      {loading && !stats ? <Skeleton className="h-64 w-full" />
+      {unavailable && !stats ? <Card><CardContent><EmptyState title={i18n.t("还没有用量数据")} description={unavailable} /></CardContent></Card>
+        : loading && !stats ? <Skeleton className="h-64 w-full" />
         : error && !stats ? <ErrorAlert error={error} onRetry={() => setRefreshTick(tick => tick + 1)} />
           : stats && view ? <>
             {error ? <ErrorAlert error={error} onRetry={() => setRefreshTick(tick => tick + 1)} /> : null}

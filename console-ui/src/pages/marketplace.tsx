@@ -517,7 +517,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                   </div>
                   <div className="flex gap-1 shrink-0">
                     {belongsToZhinScope(plugin.name) && (
-                      <Badge variant="default" title={i18n.t("包属于 @zhin.js 命名空间，不表示安全审计或兼容性保证")}>@zhin.js</Badge>
+                      <Badge variant="outline" size="sm" title={i18n.t("包属于 @zhin.js 命名空间，不表示安全审计或兼容性保证")}>@zhin.js</Badge>
                     )}
                     <Badge variant="secondary">{plugin.versionSource === 'registry' ? 'latest' : i18n.t("索引")} v{plugin.version}</Badge>
                   </div>

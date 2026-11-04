@@ -1598,6 +1598,8 @@ export const englishMessages = Object.freeze({
   "重新连接": "Reconnect",
   "刷新工作台": "Refresh workspace",
   "重启服务": "Restart service",
+  "重启": "Restart",
+  "还没有用量数据": "No usage data yet",
   "运行子插件": "Running child plugins",
   "可用命令": "Available commands",
   "持续运行": "Uptime",

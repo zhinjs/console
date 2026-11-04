@@ -20,7 +20,7 @@ import {
   Package,
   Radio,
   RefreshCw,
-  RotateCw,
+  Power,
   Server,
   Settings2,
   Sparkles,
@@ -424,12 +424,11 @@ export default function HomePage() {
               {!readOnly ? (
                 <Button
                   variant="ghost"
-                  size="icon"
                   disabled={restarting}
                   onClick={() => { void confirmRestart() }}
-                  aria-label={i18n.t("重启服务")}
-                >
-                  <RotateCw />
+                  >
+                    <Power />
+                    {i18n.t("重启")}
                 </Button>
               ) : null}
             </div>
