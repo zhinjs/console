@@ -17,6 +17,7 @@ import { ErrorAlert } from '../components/error-alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
 import { Input } from '../components/ui/input'
 import { Textarea } from '../components/ui/textarea'
 import { Skeleton } from '../components/ui/skeleton'
@@ -181,20 +182,20 @@ function AmbientRecentActivity({ recent }: { recent: AmbientStatusView['recent']
   return <div className="space-y-3">
     <h3 className="text-sm font-medium">{i18n.t("最近的记录")}</h3>
     {namesFailed ? <p role="status" className="text-xs text-warning">{i18n.t("群名未能读取，暂以群号显示。")}</p> : null}
-    <div className="console-table-card">
-      <table className="console-table">
-        <thead><tr><th scope="col">{i18n.t("群")}</th><th scope="col">{i18n.t("记录")}</th><th scope="col">{i18n.t("最近一次")}</th></tr></thead>
-        <tbody>
+    <div className="overflow-hidden rounded-lg border bg-card">
+      <Table>
+        <TableHeader><TableRow className="hover:bg-transparent"><TableHead>{i18n.t("群")}</TableHead><TableHead>{i18n.t("记录")}</TableHead><TableHead>{i18n.t("最近一次")}</TableHead></TableRow></TableHeader>
+        <TableBody>
           {groups.map((row) => {
             const label = ambientGroupLabel(row.group, names)
-            return <tr key={row.group}>
-              <td><span className="block font-medium">{label.name}</span>{label.id ? <span className="console-table-sub">{label.id}</span> : null}</td>
-              <td><div className="flex flex-wrap gap-1.5">{row.outcomes.map((item) => <span key={item.outcome} className={`console-outcome-chip is-${item.outcome}`}>{item.label} × {item.count}</span>)}</div></td>
-              <td><span className="block">{row.lastText}</span><span className="console-table-sub">{formatTime(row.lastAt, i18n.locale)}</span></td>
-            </tr>
+            return <TableRow key={row.group}>
+              <TableCell><span className="block font-medium">{label.name}</span>{label.id ? <span className="console-table-sub">{label.id}</span> : null}</TableCell>
+              <TableCell><div className="flex flex-wrap gap-1.5">{row.outcomes.map((item) => <span key={item.outcome} className={`console-outcome-chip is-${item.outcome}`}>{item.label} × {item.count}</span>)}</div></TableCell>
+              <TableCell><span className="block">{row.lastText}</span><span className="console-table-sub">{formatTime(row.lastAt, i18n.locale)}</span></TableCell>
+            </TableRow>
           })}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
     <details>
       <summary className="text-xs font-medium text-muted-foreground">{i18n.t("逐条记录（{0}）", [recent.length])}</summary>

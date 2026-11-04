@@ -1,6 +1,7 @@
 import { useI18n } from '../../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '../ui/button'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table'
 import { requestConsole } from '../../utils/console-rpc'
 import { CONSOLE_RPC } from '../../contracts/zhin-console'
 import { getInboxCacheScope, isInboxCacheScopeActive } from '../../utils/inbox-cache'
@@ -51,7 +52,7 @@ export function ConfigFieldExplanationView({ data }: { data: ConfigExplanation }
     <p className="text-xs text-muted-foreground">{i18n.t("运行代字段来源：未知（未记录）。值一致不证明来自同一配置来源；敏感或环境引用未比较不等于一致。")}</p>
     {data.projection === 'unsupported' ? <p role="status">{i18n.t("暂不能解释：")}{i18n.t(CONFIG_EXPLANATION_REASONS[data.reason ?? '']) ?? i18n.t("Host 未提供可证明证据。")}{i18n.t("请使用完整源码并结合运行日志核对。")}</p>
       : !data.fields.length ? <p role="status">{i18n.t("此 Schema 没有可展示的静态字段；这不证明业务配置已生效。")}</p>
-        : <div className="max-w-full overflow-auto"><table className="w-full min-w-0 border-collapse text-xs"><thead><tr><th className="border p-2 text-left">{i18n.t("字段路径")}</th><th className="border p-2 text-left">{i18n.t("已保存候选来源")}</th><th className="border p-2 text-left">{i18n.t("读取时与运行代比较")}</th></tr></thead><tbody>{data.fields.map(field => <tr key={JSON.stringify(field.path)}><td className="break-all border p-2">{field.path.map(part => JSON.stringify(part)).join(' → ')}</td><td className="border p-2">{i18n.t(CONFIG_CANDIDATE_ORIGINS[field.candidateOrigin])}</td><td className="border p-2">{i18n.t(CONFIG_GENERATION_MATCHES[field.generationMatch])}</td></tr>)}</tbody></table></div>}
+        : <Table className="text-xs"><TableHeader><TableRow className="hover:bg-transparent"><TableHead>{i18n.t("字段路径")}</TableHead><TableHead>{i18n.t("已保存候选来源")}</TableHead><TableHead>{i18n.t("读取时与运行代比较")}</TableHead></TableRow></TableHeader><TableBody>{data.fields.map(field => <TableRow key={JSON.stringify(field.path)}><TableCell className="break-all">{field.path.map(part => JSON.stringify(part)).join(' → ')}</TableCell><TableCell>{i18n.t(CONFIG_CANDIDATE_ORIGINS[field.candidateOrigin])}</TableCell><TableCell>{i18n.t(CONFIG_GENERATION_MATCHES[field.generationMatch])}</TableCell></TableRow>)}</TableBody></Table>}
     <details className="text-xs"><summary className="cursor-pointer text-muted-foreground">{i18n.t("证据版本")}</summary><p className="mt-2 break-all">{i18n.t("配置文件版本：")}{data.revision}</p><p className="break-all">{i18n.t("项目版本：")}{data.projectRevision}</p></details>
   </div>
 }

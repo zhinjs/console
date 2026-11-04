@@ -9,6 +9,7 @@ import { EmptyState } from '../components/empty-state'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { ListItemButton } from '../components/ui/list-item-button'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
 import { Input } from '../components/ui/input'
 import { SelectField } from '../components/ui/select'
 import { Skeleton } from '../components/ui/skeleton'
@@ -111,11 +112,11 @@ export default function TokenUsagePage() {
   const applySession = (value: string) => { setSessionDraft(value); setSession(value.trim()) }
 
   const empty = stats && stats.totals.calls === 0
-  const header = (key: SortKey, label: string) => <th scope="col" className="px-3 py-2 text-right font-medium">
+  const header = (key: SortKey, label: string) => <TableHead numeric>
     <Button type="button" variant="ghost" size="sm" className="-mr-3" onClick={() => toggleSort(key)} aria-label={i18n.t("按{0}排序", [label])}>
       {label}{sortKey === key ? (sortDir === 'desc' ? <ArrowDown /> : <ArrowUp />) : null}
     </Button>
-  </th>
+  </TableHead>
 
   return <PageShell>
     <PageHeader
@@ -195,43 +196,41 @@ export default function TokenUsagePage() {
               <Card>
                 <CardHeader><CardTitle className="text-base">{i18n.t("用量最高的会话")}</CardTitle><CardDescription>{i18n.t("最多 50 个；点一行只看这个会话。")}</CardDescription></CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[720px] text-sm">
-                      <thead className="text-xs text-muted-foreground">
-                        <tr>
-                          <th scope="col" className="px-3 py-2 text-left font-medium">{i18n.t("平台")}</th>
-                          {view.showEndpoint ? <th scope="col" className="px-3 py-2 text-left font-medium">{i18n.t("账号")}</th> : null}
-                          <th scope="col" className="px-3 py-2 text-left font-medium">{i18n.t("类型")}</th>
-                          <th scope="col" className="px-3 py-2 text-left font-medium">{i18n.t("会话 ID")}</th>
+                  <Table className="min-w-[720px]">
+                      <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead>{i18n.t("平台")}</TableHead>
+                          {view.showEndpoint ? <TableHead>{i18n.t("账号")}</TableHead> : null}
+                          <TableHead>{i18n.t("类型")}</TableHead>
+                          <TableHead>{i18n.t("会话 ID")}</TableHead>
                           {header('turns', i18n.t("回合"))}
                           {header('calls', i18n.t("调用"))}
                           {header('inputTokens', i18n.t("输入"))}
                           {header('outputTokens', i18n.t("输出"))}
                           {header('cacheReadTokens', i18n.t("缓存读取"))}
                           {header('cache', i18n.t("缓存命中率"))}
-                          {view.showWrite ? <th scope="col" className="px-3 py-2 text-right font-medium">{i18n.t("缓存写入")}</th> : null}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
+                          {view.showWrite ? <TableHead numeric>{i18n.t("缓存写入")}</TableHead> : null}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {sessions.map(row => {
                           const parts = splitSessionKey(row)
-                          return <tr key={row.sessionKey} className="cursor-pointer hover:bg-muted/50" title={row.sessionKey} onClick={() => pickSession(row)}>
-                            <td className="px-3 py-2">{parts.platform || '—'}</td>
-                            {view.showEndpoint ? <td className="px-3 py-2">{parts.endpoint || '—'}</td> : null}
-                            <td className="px-3 py-2">{parts.scope || '—'}</td>
-                            <td className="px-3 py-2 break-all font-mono text-xs"><ListItemButton className="underline-offset-2 hover:underline" onClick={event => { event.stopPropagation(); pickSession(row) }}>{parts.sceneId || row.sessionKey}</ListItemButton></td>
-                            <td className="px-3 py-2 text-right tabular-nums">{formatTokens(row.turns, i18n.locale)}</td>
-                            <td className="px-3 py-2 text-right tabular-nums">{formatTokens(row.calls, i18n.locale)}</td>
-                            <td className="px-3 py-2 text-right tabular-nums">{formatTokens(row.inputTokens, i18n.locale)}</td>
-                            <td className="px-3 py-2 text-right tabular-nums">{formatTokens(row.outputTokens, i18n.locale)}</td>
-                            <td className="px-3 py-2 text-right tabular-nums">{formatTokens(row.cacheReadTokens, i18n.locale)}</td>
-                            <td className="px-3 py-2 text-right tabular-nums">{formatPercent(cacheRatio(row), i18n.locale)}</td>
-                            {view.showWrite ? <td className="px-3 py-2 text-right tabular-nums">{row.cacheWriteTokens ? formatTokens(row.cacheWriteTokens, i18n.locale) : '—'}</td> : null}
-                          </tr>
+                          return <TableRow key={row.sessionKey} className="cursor-pointer hover:bg-muted/50" title={row.sessionKey} onClick={() => pickSession(row)}>
+                            <TableCell>{parts.platform || '—'}</TableCell>
+                            {view.showEndpoint ? <TableCell>{parts.endpoint || '—'}</TableCell> : null}
+                            <TableCell>{parts.scope || '—'}</TableCell>
+                            <TableCell className="break-all font-mono text-xs"><ListItemButton className="underline-offset-2 hover:underline" onClick={event => { event.stopPropagation(); pickSession(row) }}>{parts.sceneId || row.sessionKey}</ListItemButton></TableCell>
+                            <TableCell numeric>{formatTokens(row.turns, i18n.locale)}</TableCell>
+                            <TableCell numeric>{formatTokens(row.calls, i18n.locale)}</TableCell>
+                            <TableCell numeric>{formatTokens(row.inputTokens, i18n.locale)}</TableCell>
+                            <TableCell numeric>{formatTokens(row.outputTokens, i18n.locale)}</TableCell>
+                            <TableCell numeric>{formatTokens(row.cacheReadTokens, i18n.locale)}</TableCell>
+                            <TableCell numeric>{formatPercent(cacheRatio(row), i18n.locale)}</TableCell>
+                            {view.showWrite ? <TableCell numeric>{row.cacheWriteTokens ? formatTokens(row.cacheWriteTokens, i18n.locale) : '—'}</TableCell> : null}
+                          </TableRow>
                         })}
-                      </tbody>
-                    </table>
-                  </div>
+                      </TableBody>
+                    </Table>
                 </CardContent>
               </Card>
             </>}

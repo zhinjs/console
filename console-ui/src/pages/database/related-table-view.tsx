@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { TableInfo, SelectResult } from '@zhin.js/client'
 import { Plus, Trash2, Pencil, RefreshCw, Loader2, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Save, ArrowUp, ArrowDown } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { Alert, AlertDescription } from '../../components/ui/alert'
 import {
   Dialog,
@@ -225,14 +226,13 @@ export function RelatedTableView({
         role="region"
         aria-label={i18n.t("数据表，宽表可在此区域内左右滑动")}
       >
-        <table className="text-sm border-collapse min-w-full w-max">
-          <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm shadow-sm">
-            <tr className="border-b">
+        <Table containerClassName="overflow-visible" className="min-w-full w-max">
+          <TableHeader sticky>
+            <TableRow className="hover:bg-transparent">
               {columns.map((col: string) => (
-                <th
+                <TableHead
                   key={col}
                   aria-sort={sortCol === col ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                  className="px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap border-b border-border/80"
                 >
                   <button type="button" disabled={loading || busy}
                     aria-label={i18n.t("按 {0} {1}排列（当前页）", [col, sortCol === col && sortDir === 'asc' ? i18n.t("降序") : i18n.t("升序")])}
@@ -246,38 +246,38 @@ export function RelatedTableView({
                         : <ArrowDown className="w-3 h-3" />
                     )}
                   </button>
-                </th>
+                </TableHead>
               ))}
-              {!readOnly && <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-b border-border/80 w-24 min-w-[5.5rem]">
-                {i18n.t("操作")}</th>}
-            </tr>
-          </thead>
-          <tbody>
+              {!readOnly && <TableHead numeric className="w-24 min-w-[5.5rem]">
+                {i18n.t("操作")}</TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {loading && !hasCurrentPage ? (
-              <tr><td colSpan={columns.length + (readOnly ? 0 : 1)} className="text-center py-8"><span role="status" aria-label={i18n.t("正在加载表数据")}><Loader2 className="w-4 h-4 animate-spin inline-block" /></span></td></tr>
+              <TableRow><TableCell colSpan={columns.length + (readOnly ? 0 : 1)} className="py-8 text-center"><span role="status" aria-label={i18n.t("正在加载表数据")}><Loader2 className="w-4 h-4 animate-spin inline-block" /></span></TableCell></TableRow>
             ) : readError && !hasCurrentPage ? (
-              <tr><td colSpan={columns.length + (readOnly ? 0 : 1)} className="text-center py-8 text-muted-foreground">{i18n.t("数据未加载")}</td></tr>
+              <TableRow><TableCell colSpan={columns.length + (readOnly ? 0 : 1)} className="py-8 text-center text-muted-foreground">{i18n.t("数据未加载")}</TableCell></TableRow>
             ) : !data?.rows?.length ? (
-              <tr><td colSpan={columns.length + (readOnly ? 0 : 1)} className="text-center py-8 text-muted-foreground">{i18n.t("暂无数据")}</td></tr>
+              <TableRow><TableCell colSpan={columns.length + (readOnly ? 0 : 1)} className="py-8 text-center text-muted-foreground">{i18n.t("暂无数据")}</TableCell></TableRow>
             ) : sortedRows.map((row: any, i: number) => (
-              <tr key={i} className="border-b border-border/60 hover:bg-muted/30 transition-colors">
+              <TableRow key={i}>
                 {columns.map((col: string) => (
-                  <td
+                  <TableCell
                     key={col}
-                    className="px-3 py-1.5 font-mono text-xs whitespace-nowrap align-top"
+                    className="whitespace-nowrap py-1.5 align-top font-mono text-xs"
                     title={typeof row[col] === 'object' ? JSON.stringify(row[col]) : String(row[col] ?? '')}
                   >
                     {typeof row[col] === 'object' ? JSON.stringify(row[col]) : String(row[col] ?? '')}
-                  </td>
+                  </TableCell>
                 ))}
-                {!readOnly && <td className="px-3 py-1.5 text-right space-x-1 whitespace-nowrap w-24 min-w-[5.5rem]">
-                  <Button size="sm" variant="ghost" disabled={loading || busy || !!readError || !canIdentify} aria-label={i18n.t("编辑记录")} className="h-6 w-6 p-0" onClick={() => openEdit(row)}><Pencil className="w-3 h-3" /></Button>
-                  <Button size="sm" variant="ghost" disabled={loading || busy || !!readError || !canIdentify} aria-label={i18n.t("删除记录")} className="h-6 w-6 p-0 text-destructive" onClick={() => handleDelete(row)}><Trash2 className="w-3 h-3" /></Button>
-                </td>}
-              </tr>
+                {!readOnly && <TableCell numeric className="w-24 min-w-[5.5rem] space-x-1 whitespace-nowrap py-1.5">
+                  <Button size="icon" variant="ghost" disabled={loading || busy || !!readError || !canIdentify} aria-label={i18n.t("编辑记录")} onClick={() => openEdit(row)}><Pencil /></Button>
+                  <Button size="icon" variant="ghost" disabled={loading || busy || !!readError || !canIdentify} aria-label={i18n.t("删除记录")} className="text-destructive" onClick={() => handleDelete(row)}><Trash2 /></Button>
+                </TableCell>}
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {totalPages > 1 && (

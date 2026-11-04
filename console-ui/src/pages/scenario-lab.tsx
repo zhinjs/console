@@ -7,6 +7,7 @@ import { Card } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Checkbox } from '../components/ui/checkbox'
 import { Input } from '../components/ui/input'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
 import { Textarea } from '../components/ui/textarea'
 import { SelectField } from '../components/ui/select'
 import { readScenario, readScenarioJson, readScenarioSegments, scenarioPreviewItems, scenarioMarkdownBlocks, scenarioExportIssues, scenarioJson, exportScenarioRegression, SCENARIO_PROFILES, type Scenario, type ScenarioTarget } from './scenario-lab/scenario-model.mjs'
@@ -121,7 +122,7 @@ export function ScenarioMarkdown({ source }: { source: string }) {
     if (block.kind === 'heading') return <p key={index} role="heading" aria-level={block.level} className={block.level === 1 ? 'text-lg font-semibold' : 'font-semibold'}>{block.text}</p>
     if (block.kind === 'list') return block.ordered ? <ol key={index} className="list-decimal space-y-1 pl-5">{block.items?.map((item, i) => <li key={i}>{item}</li>)}</ol> : <ul key={index} className="list-disc space-y-1 pl-5">{block.items?.map((item, i) => <li key={i}>{item}</li>)}</ul>
     if (block.kind === 'quote') return <blockquote key={index} className="whitespace-pre-wrap border-l-2 pl-3 text-muted-foreground">{block.text}</blockquote>
-    if (block.kind === 'table') return <div key={index} className="max-w-full overflow-auto"><table className="w-full border-collapse text-xs"><thead><tr>{block.rows?.[0].map((cell, i) => <th key={i} className="border bg-muted p-2 text-left">{cell}</th>)}</tr></thead><tbody>{block.rows?.slice(1).map((row, i) => <tr key={i}>{row.map((cell, j) => <td key={j} className="border p-2">{cell}</td>)}</tr>)}</tbody></table></div>
+    if (block.kind === 'table') return <Table key={index} className="text-xs"><TableHeader><TableRow className="hover:bg-transparent">{block.rows?.[0].map((cell, i) => <TableHead key={i}>{cell}</TableHead>)}</TableRow></TableHeader><TableBody>{block.rows?.slice(1).map((row, i) => <TableRow key={i}>{row.map((cell, j) => <TableCell key={j}>{cell}</TableCell>)}</TableRow>)}</TableBody></Table>
     if (block.kind === 'source') return <div key={index}><p className="text-xs text-muted-foreground">{block.label}</p><pre className="whitespace-pre-wrap break-all text-xs">{block.text}</pre></div>
     return <p key={index} className="whitespace-pre-wrap break-words">{block.text}</p>
   })}</div>
