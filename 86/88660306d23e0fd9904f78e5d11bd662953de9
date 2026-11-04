@@ -1,0 +1,67 @@
+console-ui/src/pages/inference/Profiles.tsx
+  s_9622fd28aba994::t_68417918209925 15,283
+  s_9622fd28aba994::t_1a4e7863fa1d81 67-72
+  s_9622fd28aba994::t_85ee65a7482ad8 16,264
+console-ui/src/pages/inference/model.mjs
+  s_9622fd28aba994::t_54f2eeeacb22ba 77-84,120
+  s_9622fd28aba994::t_749ff789786d5c 99-100,107
+tests/fixtures/inference-support/member.json
+  s_9622fd28aba994::t_5121a3919cb4cf 1-104
+tests/inference-support-display.test.mjs
+  s_9622fd28aba994::t_9a75da1bc67ad6 42-43
+  s_9622fd28aba994::t_68417918209925 198,208-211
+  s_9622fd28aba994::t_5121a3919cb4cf 216-249
+  s_9622fd28aba994::t_65e788dc5d85b8 1-41,44-73,75-197,199-207,212-215
+  s_9622fd28aba994::t_ec8658a127b4e3 74
+console-ui/src/pages/PersonalSessionModelPicker.tsx
+  s_9622fd28aba994::t_68417918209925 5,120
+  s_9622fd28aba994::t_1a4e7863fa1d81 118-119,121
+  s_9622fd28aba994::t_c9f5ff7cf630b6 156
+console-ui/src/pages/inference/Purposes.tsx
+  s_9622fd28aba994::t_68417918209925 6,66
+  s_9622fd28aba994::t_1a4e7863fa1d81 64-65,67
+  s_9622fd28aba994::t_81d9f922d348ca 5,10,362
+tests/inference-management-ui.test.mjs
+  s_9622fd28aba994::t_68417918209925 213-214
+  s_9622fd28aba994::t_e0e5f9148855ea 329
+console-ui/src/pages/inference/SupportInfo.tsx
+  s_9622fd28aba994::t_68417918209925 14-17,24-30
+  s_9622fd28aba994::t_54f2eeeacb22ba 1-13,18-23,31-40
+console-ui/src/pages/inference/model.d.mts
+  s_9622fd28aba994::t_54f2eeeacb22ba 10-14,16,78,132-133,137
+tests/fixtures/inference-support/README.md
+  s_9622fd28aba994::t_5121a3919cb4cf 1-29
+README.md
+  s_9622fd28aba994::t_1a4e7863fa1d81 113-114
+tests/personal-session-panel-scope.test.mjs
+  s_9622fd28aba994::t_68417918209925 31
+  s_9622fd28aba994::t_6d4c2197e95d76 21
+console-ui/src/pages/inference/Accounts.tsx
+  s_9622fd28aba994::t_1a4e7863fa1d81 114-119,241,265-267,324-326
+  s_9622fd28aba994::t_68417918209925 14,481,506
+  s_9622fd28aba994::t_7baf232f66f19c 15,41,85,393,400,466
+tests/inference-draft-source.test.mjs
+  s_9622fd28aba994::t_68417918209925 35
+tests/fixtures/inference-support/operator.json
+  s_9622fd28aba994::t_5121a3919cb4cf 1-301
+console-ui/src/i18n/messages.en.mjs
+  s_9622fd28aba994::t_992def3a959fb2 3-5
+tests/inference-model.test.mjs
+  s_9622fd28aba994::t_f601b4b2dbac28 148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8688660306d23e0fd9904f78e5d11bd662953de9",
+  "prompts": {},
+  "sessions": {
+    "s_9622fd28aba994": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a166a4-5b4c-7e22-80f0-d3374c43b4fb",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
