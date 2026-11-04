@@ -1,0 +1,37 @@
+console-ui/src/components/ConsoleCommandCenter.tsx
+  s_9477e63ef5cee5::t_84966a97e323a8 16,269,274,310,333
+console-ui/src/components/ui/list-item-button.tsx
+  s_9477e63ef5cee5::t_6ab582207c2d27 1-29
+console-ui/src/layouts/dashboard.tsx
+  s_9477e63ef5cee5::t_227a915c55d53b 23,202,254,257,301,309,335,344
+console-ui/src/pages/config.tsx
+  s_9477e63ef5cee5::t_e3caa8b6147cb9 25,107,111,130,136
+console-ui/src/pages/dashboard.tsx
+  s_9477e63ef5cee5::t_434081158e9b91 47,487,499,532,544,561,568,571,574-575,578-579,582-583,586
+console-ui/src/pages/introspection/CapabilityExplorer.tsx
+  s_9477e63ef5cee5::t_573339c34e5c85 31,206,213,319,321
+console-ui/src/pages/logs/LogWorkbench.tsx
+  s_9477e63ef5cee5::t_09b1ddb8ee1357 31,118,122,127,131,167,169-170,172,174,194,201
+console-ui/src/pages/marketplace.tsx
+  s_9477e63ef5cee5::t_cbdd94415999e0 668-682
+console-ui/src/pages/token-usage.tsx
+  s_9477e63ef5cee5::t_4d92c30b597bea 11,115-117,222
+console-ui/src/pages/workrooms.tsx
+  s_9477e63ef5cee5::t_ecc906ab2a79ca 31,291,303,327,330-332,336,382,402
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7fac0f1b516e0942450165b549242a49ca00d88f",
+  "prompts": {},
+  "sessions": {
+    "s_9477e63ef5cee5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4e622535-6dd6-4e23-9811-302f91a2903b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
