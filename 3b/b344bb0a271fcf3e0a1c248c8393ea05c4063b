@@ -1,0 +1,55 @@
+client/tailwind.config.js
+  s_9477e63ef5cee5::t_5cf6c7262a7b4f 42-53
+console-ui/src/components/PluginConfigForm/ConfigApplicationEvidence.tsx
+  s_9477e63ef5cee5::t_1f807c204fa040 99
+console-ui/src/components/PluginConfigForm/ConfigFieldExplanation.tsx
+  s_9477e63ef5cee5::t_1652d998604fdb 41
+console-ui/src/pages/HostSelfChangesPanel.tsx
+  s_9477e63ef5cee5::t_4dc2fedd62828a 45-47,232,292,318,327,330,350
+console-ui/src/pages/PluginManagementSummary.tsx
+  s_9477e63ef5cee5::t_7fda10dcaba626 15
+console-ui/src/pages/ambient-engagement.tsx
+  s_9477e63ef5cee5::t_a252d7d0f7c292 339-340
+console-ui/src/pages/endpoint-detail/ConversationSidebar.tsx
+  s_9477e63ef5cee5::t_e56e04cec3a717 176
+console-ui/src/pages/endpoint-detail/MessageDiagnostics.tsx
+  s_9477e63ef5cee5::t_1b5e9271951b24 94
+console-ui/src/pages/endpoint-detail/RenderingDiagnostics.tsx
+  s_9477e63ef5cee5::t_5ddce93c33cce5 17
+console-ui/src/pages/env.tsx
+  s_9477e63ef5cee5::t_885f1fee711ab4 130
+console-ui/src/pages/plugin-detail.tsx
+  s_9477e63ef5cee5::t_88c9991a97561f 481
+console-ui/src/pages/scenario-lab.tsx
+  s_9477e63ef5cee5::t_9443aa398db9a9 102
+console-ui/src/pages/skills-assistant.tsx
+  s_9477e63ef5cee5::t_c18a32a7ee859b 270-271
+console-ui/src/pages/token-usage-charts.tsx
+  s_9477e63ef5cee5::t_8d5299d1bf3713 27,96,100
+console-ui/src/pages/token-usage-model.mjs
+  s_9477e63ef5cee5::t_f797a82da3e802 130,132-133,135
+console-ui/src/pages/workroom-catalog.tsx
+  s_9477e63ef5cee5::t_4c29eb7809d0ef 356,362
+console-ui/src/pages/workroom-planning.tsx
+  s_9477e63ef5cee5::t_11ff47904827bf 188,211,239,254
+console-ui/src/pages/workrooms.tsx
+  s_9477e63ef5cee5::t_7500d08a3ed640 491
+console-ui/src/theme-tokens.css
+  s_9477e63ef5cee5::t_e5332dbae2e5fc 60-68,128-136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3bb344bb0a271fcf3e0a1c248c8393ea05c4063b",
+  "prompts": {},
+  "sessions": {
+    "s_9477e63ef5cee5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4e622535-6dd6-4e23-9811-302f91a2903b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
