@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { SelectField } from '../components/ui/select'
 import { ErrorAlert } from '../components/error-alert'
-import { useInferenceManagement } from './inference/useInferenceManagement'
+import { useInferenceManagement, type InferenceManagement } from './inference/useInferenceManagement'
 import { inferenceError } from './inference/model.mjs'
 import { PersonalSessionModelPicker } from './PersonalSessionModelPicker'
 import {
@@ -10,23 +10,66 @@ import {
   type PersonalSessionRow,
 } from './personal-session-model.mjs'
 
-/** A personal hash never grants access to the all-conversation history API. */
-export function PersonalSessionPanel({
-  sessionKey,
-  connectionScope,
-  preferredOwnerId,
-}: {
+interface PersonalSessionPanelProps {
   sessionKey: string
   connectionScope?: string
   preferredOwnerId?: string | null
+}
+
+/** A personal hash never grants access to the all-conversation history API. */
+export function PersonalSessionPanel(props: PersonalSessionPanelProps) {
+  return (
+    <PersonalSessionScope
+      key={JSON.stringify([props.connectionScope, props.preferredOwnerId])}
+      {...props}
+    />
+  )
+}
+
+function PersonalSessionScope({ sessionKey, connectionScope, preferredOwnerId }: PersonalSessionPanelProps) {
+  const m = useInferenceManagement(connectionScope, preferredOwnerId)
+  const owner = m.owners.find((value) => value.id === m.ownerId)?.personal
+  return (
+    <div className="space-y-4 rounded-md border p-5">
+      {m.owners.length > 1 ? (
+        <SelectField
+          aria-label="个人身份"
+          value={m.ownerId}
+          onValueChange={m.setOwnerId}
+          options={m.owners.map((value) => ({ value: value.id, label: value.label }))}
+        />
+      ) : null}
+      {m.error ? <ErrorAlert error={m.error} /> : null}
+      {!owner && !m.busy ? (
+        <p className="text-sm text-muted-foreground">请使用关联此会话的个人身份登录。</p>
+      ) : null}
+      {owner && isPersonalSessionKey(sessionKey) ? (
+        <PersonalSessionReader
+          key={JSON.stringify([
+            m.ownerId, owner.rootId, owner.platform, owner.endpoint,
+            owner.adapterId, owner.subjectId, sessionKey,
+          ])}
+          management={m}
+          owner={owner}
+          sessionKey={sessionKey}
+          connectionScope={connectionScope}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+/** The row, lookup error and model picker belong to one resolved personal identity. */
+function PersonalSessionReader({ management: m, owner, sessionKey, connectionScope }: {
+  management: InferenceManagement
+  owner: NonNullable<InferenceManagement['owners'][number]['personal']>
+  sessionKey: string
+  connectionScope?: string
 }) {
-  const m = useInferenceManagement(connectionScope, preferredOwnerId),
-    [row, setRow] = useState<PersonalSessionRow | null>(null),
+  const [row, setRow] = useState<PersonalSessionRow | null>(null),
     [error, setError] = useState(''),
     sequence = useRef(0)
-  const owner = m.owners.find((value) => value.id === m.ownerId)?.personal
   useEffect(() => {
-    if (!owner || !isPersonalSessionKey(sessionKey)) return
     let stopped = false
     const id = ++sequence.current
     setRow(null)
@@ -58,24 +101,12 @@ export function PersonalSessionPanel({
       stopped = true
       sequence.current++
     }
-  }, [owner, sessionKey, connectionScope])
+  }, [m.revisionEpoch])
   return (
-    <div className="space-y-4 rounded-md border p-5">
-      {m.owners.length > 1 ? (
-        <SelectField
-          aria-label="个人身份"
-          value={m.ownerId}
-          onValueChange={m.setOwnerId}
-          options={m.owners.map((value) => ({ value: value.id, label: value.label }))}
-        />
-      ) : null}
-      {m.error || error ? <ErrorAlert error={m.error || error} /> : null}
-      {!owner && !m.busy ? (
-        <p className="text-sm text-muted-foreground">请使用关联此会话的个人身份登录。</p>
-      ) : null}
+    <>
+      {error ? <ErrorAlert error={error} /> : null}
       {row && m.view ? (
         <PersonalSessionModelPicker
-          key={`${m.ownerId}:${row.sessionKey}`}
           sessionKey={row.sessionKey}
           address={row.address}
           models={m.view}
@@ -83,6 +114,6 @@ export function PersonalSessionPanel({
           connectionScope={connectionScope}
         />
       ) : null}
-    </div>
+    </>
   )
 }
