@@ -2918,5 +2918,12 @@ export const englishMessages = Object.freeze({
 "刷新": "Refresh",
 "用量数据格式不正确。": "The usage data has an unexpected format.",
 "最近会话未能读取，仅显示本机历史。": "Recent sessions could not be loaded; showing this browser's history only.",
-"群名未能读取，暂以群号显示。": "Group names could not be loaded; showing group IDs instead."
+"群名未能读取，暂以群号显示。": "Group names could not be loaded; showing group IDs instead.",
+"取消管理员": "Remove admin",
+"确定取消「{0}」的群管理员身份？": "Remove group admin rights from \"{0}\"?",
+"踢出": "Remove",
+"禁言时长（分钟）": "Mute duration (minutes)",
+"1 分钟到 30 天（43200 分钟）。": "1 minute to 30 days (43200 minutes).",
+"取消管理": "Revoke admin",
+"设为管理": "Make admin"
 })

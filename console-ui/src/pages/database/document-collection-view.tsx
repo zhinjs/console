@@ -141,12 +141,12 @@ export function DocumentCollectionView({
                   <RecordValueDisclosure value={doc} summary={valuePreview(doc, 140, ['_id'], i18n.locale)} label={i18n.t("查看完整 JSON")} />
                 </div>
                 {!readOnly && <div className="flex items-start gap-1 shrink-0">
-                  <Button size="sm" variant="outline" disabled={busy} aria-label={i18n.t("编辑记录")} className="h-8 px-2" onClick={() => {
+                  <Button size="sm" variant="outline" disabled={busy} aria-label={i18n.t("编辑记录")} onClick={() => {
                     setEditDoc(doc)
                     setAddDoc(false)
                     setJsonText(JSON.stringify(doc, null, 2))
                   }}><Pencil className="mr-1 h-3 w-3" />{i18n.t("编辑")}</Button>
-                  <Button size="sm" variant="ghost" disabled={busy} aria-label={i18n.t("删除记录")} className="h-8 w-8 p-0 text-destructive" onClick={() => handleDelete(doc)}><Trash2 className="w-3 h-3" /></Button>
+                  <Button size="icon" variant="ghost" disabled={busy} aria-label={i18n.t("删除记录")} className="text-destructive" onClick={() => handleDelete(doc)}><Trash2 /></Button>
                 </div>}
               </div>
             </CardContent>

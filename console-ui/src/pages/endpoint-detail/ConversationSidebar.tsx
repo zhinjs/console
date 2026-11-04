@@ -108,9 +108,9 @@ export function ConversationSidebar({
       aria-label={mobileDialog ? i18n.t('会话列表') : undefined} aria-hidden={isMobile && !showChannelList}
       inert={isMobile && !showChannelList} onKeyDown={onDrawerKeyDown}>
       <div className="im-sidebar-header">
-        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" asChild>
+        <Button variant="ghost" size="icon" className="shrink-0" asChild>
           <Link to="/endpoints" aria-label={i18n.t("返回聊天账号")}>
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft />
           </Link>
         </Button>
         <div className="im-sidebar-endpoint">

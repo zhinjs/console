@@ -1,6 +1,7 @@
 import { translate } from '../../i18n/locale.mjs'
 import { useI18n } from '../../i18n'
 import type * as React from 'react'
+import type { ReactNode } from 'react'
 import { Fragment, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -81,6 +82,21 @@ function memberInitials(name: string): string {
   if (!trimmed) return 'U'
   const chars = Array.from(trimmed)
   return chars.slice(0, 2).join('').toUpperCase()
+}
+
+const DEFAULT_MUTE_MINUTES = 10
+const MAX_MUTE_MINUTES = 43200
+
+/** Minutes input rendered inside the mute confirmation; the value is read back through `valueRef`. */
+function MuteDurationField({ valueRef }: { valueRef: { current: string } }) {
+  const i18n = useI18n()
+  const [value, setValue] = useState(valueRef.current)
+  return <label className="block space-y-1.5 text-sm">
+    <span className="font-medium">{i18n.t("禁言时长（分钟）")}</span>
+    <Input type="number" min={1} max={MAX_MUTE_MINUTES} inputMode="numeric" value={value}
+      onChange={(event) => { setValue(event.target.value); valueRef.current = event.target.value }} />
+    <small className="text-muted-foreground">{i18n.t("1 分钟到 30 天（43200 分钟）。")}</small>
+  </label>
 }
 
 export default function EndpointDetailPage() {
@@ -179,6 +195,7 @@ export default function EndpointDetailPage() {
   const [memberSearch, setMemberSearch] = useState('')
   const [memberRoleFilter, setMemberRoleFilter] = useState<'all' | 'owner' | 'admin' | 'member'>('all')
   const { confirm, ConfirmDialog: ConfirmDialogHost } = useConfirm()
+  const muteMinutesRef = useRef(String(DEFAULT_MUTE_MINUTES))
   const imageFileRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -199,29 +216,42 @@ export default function EndpointDetailPage() {
     memberName: string,
     extra?: { enable?: boolean },
   ) => {
-    const prompts: Record<typeof type, { title: string; description: string; destructive?: boolean }> = {
+    muteMinutesRef.current = String(DEFAULT_MUTE_MINUTES)
+    const revoke = type === ENDPOINT_RPC.GROUP_ADMIN && extra?.enable === false
+    const prompts: Record<typeof type, { title: string; description: string; confirmLabel: string; destructive?: boolean; children?: ReactNode }> = {
       [ENDPOINT_RPC.GROUP_KICK]: {
         title: i18n.t("踢出群成员"),
         description: i18n.t("确定将「{0}」踢出群聊？", [memberName]),
+        confirmLabel: i18n.t("踢出"),
         destructive: true,
       },
       [ENDPOINT_RPC.GROUP_MUTE]: {
         title: i18n.t("禁言成员"),
         description: i18n.t("确定禁言「{0}」？", [memberName]),
+        confirmLabel: i18n.t("禁言"),
+        children: <MuteDurationField valueRef={muteMinutesRef} />,
       },
       [ENDPOINT_RPC.GROUP_ADMIN]: {
-        title: i18n.t("设为管理员"),
-        description: i18n.t("确定将「{0}」设为群管理员？", [memberName]),
+        title: revoke ? i18n.t("取消管理员") : i18n.t("设为管理员"),
+        description: revoke ? i18n.t("确定取消「{0}」的群管理员身份？", [memberName]) : i18n.t("确定将「{0}」设为群管理员？", [memberName]),
+        confirmLabel: revoke ? i18n.t("取消管理员") : i18n.t("设为管理员"),
       },
     }
     const prompt = prompts[type]
     const ok = await confirm({
       title: prompt.title,
       description: prompt.description,
-      confirmLabel: i18n.t("确定"),
+      children: prompt.children,
+      confirmLabel: prompt.confirmLabel,
       variant: prompt.destructive ? 'destructive' : 'default',
     })
-    if (ok) await groupAction(type, userId, extra)
+    if (!ok) return
+    if (type === ENDPOINT_RPC.GROUP_MUTE) {
+      const minutes = Math.min(MAX_MUTE_MINUTES, Math.max(1, Math.round(Number(muteMinutesRef.current)) || DEFAULT_MUTE_MINUTES))
+      await groupAction(type, userId, { ...extra, duration: minutes * 60 })
+      return
+    }
+    await groupAction(type, userId, extra)
   }
 
   const appendComposerToken = (token: string) => {
@@ -714,7 +744,7 @@ export default function EndpointDetailPage() {
                         }
                       }}
                     />
-                    <Button type="button" size="sm" className="im-insert-button h-9" onClick={commitMediaUrl} disabled={!mediaUrl.trim()}>
+                    <Button type="button" size="sm" className="im-insert-button" onClick={commitMediaUrl} disabled={!mediaUrl.trim()}>
                       <Check className="w-3.5 h-3.5 mr-1" />
                       {i18n.t("插入")}</Button>
                   </div>
@@ -1105,7 +1135,7 @@ export default function EndpointDetailPage() {
                       <Button
                         size="sm"
                         variant="destructive"
-                        className="im-member-danger h-7 text-xs px-2"
+                        className="im-member-danger"
                         onClick={() =>
                           void handleGroupAction(ENDPOINT_RPC.GROUP_KICK, uid, item.name)
                         }
@@ -1114,7 +1144,6 @@ export default function EndpointDetailPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-7 text-xs px-2"
                         onClick={() =>
                           void handleGroupAction(ENDPOINT_RPC.GROUP_MUTE, uid, item.name)
                         }
@@ -1123,12 +1152,11 @@ export default function EndpointDetailPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-7 text-xs px-2"
                         onClick={() =>
-                          void handleGroupAction(ENDPOINT_RPC.GROUP_ADMIN, uid, item.name, { enable: true })
+                          void handleGroupAction(ENDPOINT_RPC.GROUP_ADMIN, uid, item.name, { enable: roleKind !== 'admin' })
                         }
                       >
-                        {i18n.t("管理")}</Button>
+                        {roleKind === 'admin' ? i18n.t("取消管理") : i18n.t("设为管理")}</Button>
                     </div>}
                   </div>
                 )

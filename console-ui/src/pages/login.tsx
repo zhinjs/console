@@ -95,7 +95,7 @@ export default function LoginPage({ onSuccess, initialApiBase }: LoginPageProps)
           <label className="console-login-field" htmlFor="console-login-address">
             <span>{i18n.t('Host 地址')}</span>
             <Input id="console-login-address" type="url" required disabled={loading} autoComplete="url" spellCheck={false}
-              aria-label="API Base URL" placeholder="http://localhost:8086" value={apiBase}
+              placeholder="http://localhost:8086" value={apiBase}
               onChange={event => { setApiBaseValue(event.target.value); setError('') }} />
             <small>{i18n.t('填写机器人启动日志中的地址。')}</small>
           </label>

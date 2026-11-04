@@ -35,15 +35,7 @@ import { useToast } from '../components/toast'
 import { Button } from '../components/ui/button'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { Skeleton } from '../components/ui/skeleton'
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../components/ui/dialog'
+import { useConfirm } from '../components/confirm-dialog'
 import { ListItemButton } from '../components/ui/list-item-button'
 
 interface Stats {
@@ -170,7 +162,7 @@ export default function HomePage() {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null)
-  const [restartDialogOpen, setRestartDialogOpen] = useState(false)
+  const { confirm, ConfirmDialog: ConfirmDialogHost } = useConfirm()
   const [restarting, setRestarting] = useState(false)
   const requestRef = useRef(0)
   const requestAbortRef = useRef<AbortController | null>(null)
@@ -365,6 +357,16 @@ export default function HomePage() {
     }
   }
 
+  const confirmRestart = async () => {
+    const ok = await confirm({
+      title: i18n.t("重启 Zhin 服务"),
+      description: i18n.t("所有连接将断开，进行中的对话可能被中止。通过 zhin runtime start 启动的前台和 daemon 服务会自动重新启动；--once 模式不会自动恢复。若使用自定义启动器，请确认其重启机制。"),
+      confirmLabel: i18n.t("确认重启"),
+      variant: 'destructive',
+    })
+    if (ok) await handleRestart()
+  }
+
   if (loading) {
     return (
       <div className="console-dashboard console-overview-page space-y-5" aria-label={i18n.t("正在加载工作台")}>
@@ -423,7 +425,8 @@ export default function HomePage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setRestartDialogOpen(true)}
+                  disabled={restarting}
+                  onClick={() => { void confirmRestart() }}
                   aria-label={i18n.t("重启服务")}
                 >
                   <RotateCw />
@@ -588,31 +591,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {!readOnly && <Dialog open={restartDialogOpen} onOpenChange={setRestartDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{i18n.t("重启 Zhin 服务")}</DialogTitle>
-            <DialogDescription>
-              {i18n.t("所有连接将断开，进行中的对话可能被中止。通过 zhin runtime start 启动的前台和 daemon 服务会自动重新启动；--once 模式不会自动恢复。若使用自定义启动器，请确认其重启机制。")}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">{i18n.t("取消")}</Button>
-            </DialogClose>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setRestartDialogOpen(false)
-                void handleRestart()
-              }}
-              disabled={restarting}
-            >
-              {restarting ? <RotateCw className="animate-spin" /> : <RotateCw />}
-              {restarting ? i18n.t("正在重启") : i18n.t("确认重启")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>}
+      {ConfirmDialogHost}
     </div>
   )
 }

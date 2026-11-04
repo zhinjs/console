@@ -49,7 +49,7 @@ export function useGroupActions(params: {
     async (
       type: GroupAction,
       userId: number | string,
-      extra?: { enable?: boolean },
+      extra?: { enable?: boolean; duration?: number },
     ) => {
       if (selection?.type !== 'channel' || selection.channelType !== 'group') return false
       try {
