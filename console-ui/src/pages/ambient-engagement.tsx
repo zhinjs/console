@@ -143,12 +143,14 @@ function AmbientStatusSection({ read, onRetry }: { read: StatusReadState; onRetr
 }
 
 /** Best-effort group names from connected accounts of the platforms that appear in the records. */
-function useAmbientGroupNames(groups: string[]): Map<string, string> | null {
+function useAmbientGroupNames(groups: string[]): { names: Map<string, string> | null; failed: boolean } {
   const [names, setNames] = useState<Map<string, string> | null>(null)
+  const [failed, setFailed] = useState(false)
   const platforms = [...new Set(groups.map((group) => group.split(':')[0] ?? '').filter(Boolean))].sort().join(',')
   useEffect(() => {
     if (!platforms) return
     let active = true
+    setFailed(false)
     const wanted = new Set(platforms.split(','))
     void (async () => {
       const { endpoints = [] } = await requestConsole<{ endpoints?: Array<{ name: string; adapter: string; connected: boolean }> }>({ type: ENDPOINT_RPC.LIST })
@@ -157,6 +159,7 @@ function useAmbientGroupNames(groups: string[]): Map<string, string> | null {
           .then((result) => ({ adapter: endpoint.adapter, groups: result.groups ?? [] }))
           .catch(() => null)))
       const next = new Map<string, string>()
+      if (active && lists.some((list) => list === null)) setFailed(true)
       for (const list of lists) {
         for (const raw of list?.groups ?? []) {
           if (!raw || typeof raw !== 'object') continue
@@ -165,18 +168,19 @@ function useAmbientGroupNames(groups: string[]): Map<string, string> | null {
         }
       }
       if (active) setNames(next)
-    })().catch(() => {})
+    })().catch(() => { if (active) setFailed(true) })
     return () => { active = false }
   }, [platforms])
-  return names
+  return { names, failed }
 }
 
 function AmbientRecentActivity({ recent }: { recent: AmbientStatusView['recent'] }) {
   const i18n = useI18n()
-  const names = useAmbientGroupNames(recent.map((entry) => entry.group))
+  const { names, failed: namesFailed } = useAmbientGroupNames(recent.map((entry) => entry.group))
   const groups = summarizeRecentByGroup(recent, i18n.locale)
   return <div className="space-y-3">
     <h3 className="text-sm font-medium">{i18n.t("最近的记录")}</h3>
+    {namesFailed ? <p role="status" className="text-xs text-warning">{i18n.t("群名未能读取，暂以群号显示。")}</p> : null}
     <div className="console-table-card">
       <table className="console-table">
         <thead><tr><th scope="col">{i18n.t("群")}</th><th scope="col">{i18n.t("记录")}</th><th scope="col">{i18n.t("最近一次")}</th></tr></thead>

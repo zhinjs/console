@@ -2916,5 +2916,7 @@ export const englishMessages = Object.freeze({
 "会话": "Conversation",
 "筛选": "Filter",
 "刷新": "Refresh",
-"用量数据格式不正确。": "The usage data has an unexpected format."
+"用量数据格式不正确。": "The usage data has an unexpected format.",
+"最近会话未能读取，仅显示本机历史。": "Recent sessions could not be loaded; showing this browser's history only.",
+"群名未能读取，暂以群号显示。": "Group names could not be loaded; showing group IDs instead."
 })

@@ -74,6 +74,7 @@ export default function AgentSessionsPage() {
   const [traceSelection, setTraceSelection] = useState<{ identity: string; turnId: string } | null>(null)
   const selected = parseImSessionKey(selectedKey)
   const [history, setHistory] = useState<string[]>(() => loadAgentSessionHistory())
+  const [recentFailed, setRecentFailed] = useState(false)
   const [recentResult, setRecent] = useState<{ connectionScope?: string; rows: RecentSession[] } | null>(null)
   const recent =
     recentResult && isInboxCacheScopeActive(scope) && recentResult.connectionScope === scope
@@ -240,14 +241,15 @@ export default function AgentSessionsPage() {
   // Recent sessions come from the Host's trace archive; without it the picker falls back to this browser's history.
   useEffect(() => {
     let active = true
-    if (!isInboxCacheScopeActive(scope)) { setRecent(null); return }
+    if (!isInboxCacheScopeActive(scope)) { setRecent(null); setRecentFailed(false); return }
     if (personal) return
     setRecent(null)
+    setRecentFailed(false)
     void apiFetch(RECENT_SESSIONS_PATH, { cache: 'no-store' })
-      .then(async (res) => (res.ok ? readRecentSessions(await res.json()) : []))
-      .catch(() => [])
-      .then((rows) => {
-        if (active && isInboxCacheScopeActive(scope)) setRecent({ connectionScope: scope, rows })
+      .then(async (res) => (res.ok ? { rows: readRecentSessions(await res.json()), failed: false } : { rows: [] as RecentSession[], failed: true }))
+      .catch(() => ({ rows: [] as RecentSession[], failed: true }))
+      .then(({ rows, failed }) => {
+        if (active && isInboxCacheScopeActive(scope)) { setRecent({ connectionScope: scope, rows }); setRecentFailed(failed) }
       })
     return () => {
       active = false
@@ -289,6 +291,7 @@ export default function AgentSessionsPage() {
             {i18n.t('切换对话')}
           </Button>
           <div id="session-directory">
+            {recentFailed ? <p role="status" className="mb-2 text-xs text-warning">{i18n.t('最近会话未能读取，仅显示本机历史。')}</p> : null}
             <AgentSessionPicker
               value={sessionKey}
               history={history}
