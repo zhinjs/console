@@ -1,0 +1,53 @@
+console-ui/src/components/ConsoleCommandCenter.tsx
+  s_9477e63ef5cee5::t_c72bdc394238c6 23
+console-ui/src/i18n/messages.en.mjs
+  s_9477e63ef5cee5::t_7cea25faafdffd 855-859
+console-ui/src/i18n/navigation.ts
+  s_9477e63ef5cee5::t_97f34e30f51aa7 8
+console-ui/src/pages/assistant-jobs.tsx
+  s_9477e63ef5cee5::t_b2ea5ae8583dde 3,35-37,52
+console-ui/src/pages/cron.tsx
+  s_9477e63ef5cee5::t_8a2eb68592e4b3 24,83,247-257,259,313,316,325,380
+console-ui/src/pages/task-center.tsx
+  s_9477e63ef5cee5::t_bc21c391611b69 225
+console-ui/src/pages/task-hub-model.d.mts
+  s_9477e63ef5cee5::t_1ad79bdd016102 1-10
+console-ui/src/pages/task-hub-model.mjs
+  s_9477e63ef5cee5::t_3b678a5ac26296 1-44
+console-ui/src/pages/task-hub.tsx
+  s_9477e63ef5cee5::t_db882aa3065cc6 1-47
+console-ui/src/registerBuiltinShell.tsx
+  s_9477e63ef5cee5::t_d0443e97f595c6 13,58,61,73,77-87
+tests/console-contract.test.mjs
+  s_9477e63ef5cee5::t_fa9f68d69f6a02 77,79-80
+tests/cron-page-ui.test.mjs
+  s_9477e63ef5cee5::t_463a88c649f49d 11,53,100,102-103,107-117
+tests/navigation-taxonomy.test.mjs
+  s_9622fd28aba994::t_565761b35fb45b 51,65,73
+tests/task-hub.test.mjs
+  s_9477e63ef5cee5::t_8eb124b2945917 1-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a00a408c5409588fb9190423de44e0103640bf5f",
+  "prompts": {},
+  "sessions": {
+    "s_9477e63ef5cee5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4e622535-6dd6-4e23-9811-302f91a2903b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    },
+    "s_9622fd28aba994": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a166a4-5b4c-7e22-80f0-d3374c43b4fb",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
