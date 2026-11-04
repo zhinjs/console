@@ -1,0 +1,47 @@
+README.md
+  s_9477e63ef5cee5::t_a6f8d4678ff110 69,71
+console-ui/src/components/ConsoleCommandCenter.tsx
+  s_9477e63ef5cee5::t_9c98cfba13d03c 68
+console-ui/src/i18n/messages.en.mjs
+  s_9477e63ef5cee5::t_7a7df406a8943e 1616,2467-2469,2510,2927-2928
+console-ui/src/i18n/navigation.ts
+  s_9477e63ef5cee5::t_4a6e5cca3ff2ba 7,24,26,31
+console-ui/src/pages/dashboard.tsx
+  s_9477e63ef5cee5::t_969373d41b2eb8 587
+console-ui/src/pages/endpoint-detail/ChatMessageRow.tsx
+  s_9477e63ef5cee5::t_dc2a3680ed04e7 65-67
+console-ui/src/pages/logs.tsx
+  s_9477e63ef5cee5::t_17d6a225b68997 249
+console-ui/src/pages/plugins.tsx
+  s_9477e63ef5cee5::t_c3b15bd22f4678 33,103
+console-ui/src/registerBuiltinShell.tsx
+  s_9477e63ef5cee5::t_386482b8c790e5 50,192,209,254
+docs/localization.md
+  s_9477e63ef5cee5::t_1a0baa45eadd11 19-32
+tests/console-contract.test.mjs
+  s_9477e63ef5cee5::t_bd482eb1c2228b 77,79-80
+tests/dashboard-health.test.mjs
+  s_9477e63ef5cee5::t_b19b8184ed8a61 27
+tests/plugins-page.test.mjs
+  s_9477e63ef5cee5::t_a3aa0a190c20bd 66
+tests/route-names-i18n.test.mjs
+  s_9477e63ef5cee5::t_8949f5ecfd16af 1-20
+tests/workspace-navigation.test.mjs
+  s_9477e63ef5cee5::t_590f75d19d0946 91,94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8001fc62bbdd3533e1e6a7f033898ec06eb4348f",
+  "prompts": {},
+  "sessions": {
+    "s_9477e63ef5cee5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4e622535-6dd6-4e23-9811-302f91a2903b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
