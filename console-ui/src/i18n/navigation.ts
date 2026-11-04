@@ -5,7 +5,7 @@ import type { ConsoleRouteRecord } from '@zhin.js/client'
 const builtinNames: Readonly<Record<string, string>> = {
   "/dashboard": "首页",
   "/logs": "运行记录",
-  "/tasks": "任务中心",
+  "/tasks": "任务",
   "/use-cases/group-welcome": "群欢迎配置流程",
   "/cron": "定时提醒",
   "/endpoints": "聊天账号",

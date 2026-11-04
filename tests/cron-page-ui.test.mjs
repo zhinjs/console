@@ -8,6 +8,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { localeModule, isLocaleImport } from './locale-fixture.mjs'
 import { describeCron, relativeUntil } from '../console-ui/src/pages/cron-schedule.mjs'
 import { validateAssistantJobs, explainJobError } from '../console-ui/src/pages/assistant-jobs-model.mjs'
+import { taskTabHref } from '../console-ui/src/pages/task-hub-model.mjs'
 import { createInboxCacheAuthority } from '../console-ui/src/utils/inbox-cache-scope.mjs'
 
 const require = createRequire(import.meta.url)
@@ -49,7 +50,7 @@ function fixture({ demo = false, available = true, jobs = [], deferJobs = false,
     '../utils/console-rpc': { requestConsole: input => new Promise((resolve, reject) => calls.push({ input, resolve, reject, answered: false, scope: authority.current() })) },
     '../utils/useInboxCacheScope': { useInboxCacheScope: () => authority.current() }, '../utils/inbox-cache': { isInboxCacheScopeActive: scope => authority.active(scope) },
     '../utils/demo-mode': { isDemoMode: () => demo }, './cron-schedule.mjs': { describeCron, relativeUntil },
-    './assistant-jobs-model.mjs': { validateAssistantJobs, explainJobError },
+    './assistant-jobs-model.mjs': { validateAssistantJobs, explainJobError }, './task-hub-model.mjs': { taskTabHref },
     '../components/ui/tabs': { Tabs: 'tabs', TabsList: 'tab-list', TabsTrigger: 'tab-trigger', TabsContent: 'tab-panel' },
     './ScheduleExecutions': { ScheduleExecutions: 'schedule-executions' },
     '../utils/auth': { apiFetch: (url, options) => new Promise((resolve, reject) => { httpCalls.push({ url, options, resolve, reject, scope: authority.current() }); if (!deferJobs) resolve({ ok: true, json: async () => ({ success: true, data: { jobs, eventsActive: false } }) }) }) }, './cron.css': {},
@@ -96,25 +97,25 @@ test('list leads with task text and human schedule; native expansion reveals ide
   f.close()
 })
 
-test('the original cron page has global history independent of current persistent tasks and reuses filtered history inside task details', async () => {
+test('cron page keeps per-task filtered history; global history and run-detail links live in the task hub', async () => {
   const f = fixture({ available: false }); await f.settle()
-  const global = elements(f.tree).find(node => node.type === 'tab-panel' && node.props.value === 'history')
-  assert.ok(global)
-  const panel = elements(global).find(node => node.type === 'schedule-executions')
-  assert.equal(panel.props.jobId, undefined)
-  assert.equal(panel.props.connectionScope, f.authority.current())
+  assert.equal(elements(f.tree).some(node => node.type === 'tab-panel'), false, 'the merged page owns tabs; the schedule panel has none of its own')
+  assert.equal(elements(f.tree).some(node => node.type === 'page-header'), false, 'the hub renders the single page header')
   const task = row(f.tree, 'task:daily')
   elements(task).find(node => node.type === 'button' && node.props['aria-controls']).props.onClick(); f.render()
   const filtered = elements(row(f.tree, 'task:daily')).find(node => node.type === 'schedule-executions')
-  assert.equal(filtered.props.jobId, 'task:daily'); assert.equal(filtered.props.connectionScope, panel.props.connectionScope)
+  assert.equal(filtered.props.jobId, 'task:daily'); assert.equal(filtered.props.connectionScope, f.authority.current())
   f.close()
-  const unavailable = fixture({ autoLoad: false })
-  const history = () => elements(unavailable.tree).find(node => node.type === 'tab-panel' && node.props.value === 'history')
-  assert.ok(history(), 'current schedules loading cannot hide stored executions')
-  unavailable.calls[0].reject(new Error('current schedule RPC unavailable')); await unavailable.settle()
-  assert.ok(history(), 'current schedules failing cannot hide stored executions')
-  assert.ok(elements(history()).some(node => node.type === 'schedule-executions'))
-  unavailable.close()
+})
+
+test('icon-only schedule controls are labelled and use the shared control size', async () => {
+  const f = fixture({ available: true }); await f.settle()
+  const task = row(f.tree, 'task:daily')
+  elements(task).find(node => node.type === 'button' && node.props['aria-controls']).props.onClick(); f.render()
+  const icons = elements(row(f.tree, 'task:daily')).filter(node => node.type === 'button' && node.props.size === 'icon')
+  assert.ok(icons.length >= 3)
+  for (const button of icons) { assert.ok(button.props['aria-label'], 'icon button needs an accessible name'); assert.doesNotMatch(button.props.className ?? '', /\bh-6\b|\bw-6\b/) }
+  f.close()
 })
 
 test('search and status filters use returned enablement and execution evidence, including missing results', async () => {

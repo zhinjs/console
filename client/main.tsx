@@ -13,7 +13,6 @@ import {
 } from "@zhin.js/contract";
 import { useWebSocket } from "@zhin.js/client";
 import { resetConsoleRuntime } from "@console/utils/console-runtime";
-import { registerOptionalConsoleRoutes } from "@console/registerOptionalRoutes";
 import { BrowserRouter } from "react-router-dom";
 import { getRouterBasename } from "./pagesBase";
 import { ConsoleWebHost } from "./host/ConsoleWebHost";
@@ -54,10 +53,6 @@ const initialSession = demoSession ?? runQueryPrefillMiddleware();
 
 function ConsoleShell() {
   useWebSocket();
-
-  React.useEffect(() => {
-    void registerOptionalConsoleRoutes();
-  }, []);
 
   return <ConsoleWebHost />;
 }

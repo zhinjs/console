@@ -20,7 +20,7 @@ const RECENT_LIMIT = 5
 const ROUTE_DESCRIPTIONS: Record<string, string> = {
   '/dashboard': '机器人是否正常、有什么要处理',
   '/sandbox': '与 Agent 对话并处理工作',
-  '/tasks': '管理已配置的任务与执行记录',
+  '/tasks': '管理员任务、定时提醒、助手任务与执行记录',
   '/agent/workbench': '看看 AI 机器人是否准备好、最近做了什么',
   '/agent/workrooms': '按 Project 查看 Workroom Run、Task 与 Assignment',
   '/agent/workrooms/catalog': '配置协作空间、Bot Endpoint 与成员 Agent 映射',
@@ -28,7 +28,6 @@ const ROUTE_DESCRIPTIONS: Record<string, string> = {
   '/endpoints': '查看聊天账号、群和好友申请',
   '/introspection': '检查命令、中间件、组件、Endpoint、Agent、工具与 MCP',
   '/logs': '查看出错、警告和运行过程',
-  '/cron': '到点自动做事或发提醒',
   '/plugins': '开关和设置已装的功能',
   '/marketplace': '找新功能并安装',
   '/config': '配置模型、Agent 和插件',
