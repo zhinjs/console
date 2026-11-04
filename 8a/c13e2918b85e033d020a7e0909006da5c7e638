@@ -1,0 +1,53 @@
+console-ui/src/pages/inference/model.d.mts
+  s_9622fd28aba994::t_f42c522a564418 158-162
+tests/personal-session-panel-scope.test.mjs
+  s_9622fd28aba994::t_ab54ca0bb28d8a 8-9
+tests/helpers/inference-page-runtime.mjs
+  s_9622fd28aba994::t_ab54ca0bb28d8a 1-60
+console-ui/src/pages/inference/Profiles.tsx
+  s_9622fd28aba994::t_9c35a761ffb551 26,30,40,49,77,97,99,104,107,109-111,113,123,128,132,251
+console-ui/src/pages/inference/Accounts.tsx
+  s_9622fd28aba994::t_9c35a761ffb551 19,37,74,92,122,131,140,162,228-237,252,254,282,378,384,389,400,417,438
+  s_9622fd28aba994::t_f42c522a564418 32-36,264-265,267-275
+  s_9622fd28aba994::t_b6f4eefa0f3551 537-538
+console-ui/src/pages/inference/model.mjs
+  s_9622fd28aba994::t_12802636868cdc 46
+console-ui/src/pages/inference/useInferenceManagement.ts
+  s_9622fd28aba994::t_12802636868cdc 36
+  s_9622fd28aba994::t_322079b172e553 47-50,117,122,139,163,302
+  s_9622fd28aba994::t_9a147c9ebe0de8 28-33,35,38,40-42,192,194-198,206-208,229-231,243-245,312
+  s_9622fd28aba994::t_69a40fb12b7137 34,37,39,131-135,191,246
+README.md
+  s_9622fd28aba994::t_12802636868cdc 111
+tests/inference-draft-source.test.mjs
+  s_9622fd28aba994::t_00f0fd78ec2817 56,72,88,114-116
+  s_9622fd28aba994::t_ab54ca0bb28d8a 1-22,24-55,57-71,73-87,89-113,117-121
+  s_9622fd28aba994::t_12802636868cdc 23
+console-ui/src/pages/inference/Workspace.tsx
+  s_9622fd28aba994::t_f42c522a564418 139-147,160-163
+  s_9622fd28aba994::t_9c35a761ffb551 17,25,58,164
+  s_9622fd28aba994::t_2425080b5a3517 126
+tests/inference-management-ui.test.mjs
+  s_9622fd28aba994::t_00f0fd78ec2817 639,697-716,718-721
+  s_9622fd28aba994::t_c62d2246689b78 638,640-696,722-723
+  s_9622fd28aba994::t_35623631f19da7 724-825
+  s_9622fd28aba994::t_adc0e39588a8ac 589,717
+console-ui/src/pages/inference/Purposes.tsx
+  s_9622fd28aba994::t_3692c7bf50c388 27-36,111-119
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8ac13e2918b85e033d020a7e0909006da5c7e638",
+  "prompts": {},
+  "sessions": {
+    "s_9622fd28aba994": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a166a4-5b4c-7e22-80f0-d3374c43b4fb",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
