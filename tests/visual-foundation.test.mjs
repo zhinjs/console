@@ -15,9 +15,9 @@ const ratio=(a,b)=>{const la=luminance(a),lb=luminance(b);return(Math.max(la,lb)
 test('both neutral themes preserve readable type and visible control boundaries',()=>{
  assert.equal(themes.length,2)
  for(const tokens of themes){
-  for(const [name,value] of Object.entries(tokens)) if(!/^(primary|success|info|warning|destructive|ring|sidebar-primary|sidebar-ring)(-|$)/.test(name)) assert.equal(value.s,0,`${name} is neutral`)
+  for(const [name,value] of Object.entries(tokens)) if(!/^(primary|success|info|warning|destructive|chart|ring|sidebar-primary|sidebar-ring)(-|$)/.test(name)) assert.equal(value.s,0,`${name} is neutral`)
   for(const [foreground,background] of [['foreground','background'],['card-foreground','card'],['muted-foreground','background'],['muted-foreground','card'],['primary-foreground','primary'],['im-bubble-out-fg','im-bubble-out'],['im-row-active-fg','im-row-active'],['destructive-foreground','destructive'],['success-foreground','success'],['info-foreground','info'],['warning-foreground','warning']]) assert.ok(ratio(tokens[foreground],tokens[background])>=4.5,`${foreground}/${background} text contrast`)
-  for(const [foreground,background] of [['input','card'],['input','background'],['ring','background'],['destructive','background'],['success','background'],['info','background'],['warning','background']]) assert.ok(ratio(tokens[foreground],tokens[background])>=3,`${foreground}/${background} control contrast`)
+  for(const [foreground,background] of [['input','card'],['input','background'],['ring','background'],['destructive','background'],['success','background'],['info','background'],['warning','background'],...[1,2,3,4,5,6,7,8].map(n=>['chart-'+n,'background'])]) assert.ok(ratio(tokens[foreground],tokens[background])>=3,`${foreground}/${background} control contrast`)
  }
 })
 test('real and secondary Console entries share one palette without remote font requests',()=>{
