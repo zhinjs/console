@@ -1,0 +1,26 @@
+tests/personal-session-panel-scope.test.mjs
+  s_9622fd28aba994::t_e78cc043dec8a6 75,78,117-118,191-199
+  s_9622fd28aba994::t_c4a7e8190afebb 6,72-73,83,94-96,98-108,111,113-115,162-190,200-201
+  s_9622fd28aba994::t_9df62b9d7a1c90 84-93
+  s_9622fd28aba994::t_34f4e4d109690f 1-5,7-71,74,76-77,79-82,97,109-110,112,116,119-120,122-126,128-133,135-141,144-161
+  s_9622fd28aba994::t_e8a73b54ba6449 121,127,134,142-143
+console-ui/src/pages/PersonalSessionPanel.tsx
+  s_9622fd28aba994::t_b5ef3830a9bda0 4,13,17-20,27-47,52-67,69,104,106-107,117
+  s_9622fd28aba994::t_9df62b9d7a1c90 21-26,48-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0e04bd81def3c19eae1c14d26220da3065ad030d",
+  "prompts": {},
+  "sessions": {
+    "s_9622fd28aba994": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a166a4-5b4c-7e22-80f0-d3374c43b4fb",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
