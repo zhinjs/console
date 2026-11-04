@@ -8,6 +8,7 @@ import { ErrorAlert } from '../components/error-alert'
 import { EmptyState } from '../components/empty-state'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
+import { ListItemButton } from '../components/ui/list-item-button'
 import { Input } from '../components/ui/input'
 import { SelectField } from '../components/ui/select'
 import { Skeleton } from '../components/ui/skeleton'
@@ -111,9 +112,9 @@ export default function TokenUsagePage() {
 
   const empty = stats && stats.totals.calls === 0
   const header = (key: SortKey, label: string) => <th scope="col" className="px-3 py-2 text-right font-medium">
-    <button type="button" className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => toggleSort(key)} aria-label={i18n.t("按{0}排序", [label])}>
-      {label}{sortKey === key ? (sortDir === 'desc' ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />) : null}
-    </button>
+    <Button type="button" variant="ghost" size="sm" className="-mr-3" onClick={() => toggleSort(key)} aria-label={i18n.t("按{0}排序", [label])}>
+      {label}{sortKey === key ? (sortDir === 'desc' ? <ArrowDown /> : <ArrowUp />) : null}
+    </Button>
   </th>
 
   return <PageShell>
@@ -218,7 +219,7 @@ export default function TokenUsagePage() {
                             <td className="px-3 py-2">{parts.platform || '—'}</td>
                             {view.showEndpoint ? <td className="px-3 py-2">{parts.endpoint || '—'}</td> : null}
                             <td className="px-3 py-2">{parts.scope || '—'}</td>
-                            <td className="px-3 py-2 break-all font-mono text-xs"><button type="button" className="text-left underline-offset-2 hover:underline" onClick={event => { event.stopPropagation(); pickSession(row) }}>{parts.sceneId || row.sessionKey}</button></td>
+                            <td className="px-3 py-2 break-all font-mono text-xs"><ListItemButton className="underline-offset-2 hover:underline" onClick={event => { event.stopPropagation(); pickSession(row) }}>{parts.sceneId || row.sessionKey}</ListItemButton></td>
                             <td className="px-3 py-2 text-right tabular-nums">{formatTokens(row.turns, i18n.locale)}</td>
                             <td className="px-3 py-2 text-right tabular-nums">{formatTokens(row.calls, i18n.locale)}</td>
                             <td className="px-3 py-2 text-right tabular-nums">{formatTokens(row.inputTokens, i18n.locale)}</td>

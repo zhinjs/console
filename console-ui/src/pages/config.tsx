@@ -22,6 +22,7 @@ import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { ModelPolicySettings } from './ModelPolicySettings'
 import { WelcomeFlowContext } from './WelcomeFlowContext'
+import { ListItemButton } from '../components/ui/list-item-button'
 
 function EditableConfigPage() {
   const i18n = useI18n()
@@ -103,11 +104,11 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
           <div className="console-settings-nav-primary">
             {catalog.map(group => {
               const Icon = group.id === 'general' ? SlidersHorizontal : group.id === 'models' ? Brain : group.id === 'presets' ? Bot : Blocks
-              return <button key={group.id} type="button" className="console-settings-nav-item"
+              return <ListItemButton key={group.id} type="button" className="console-settings-nav-item"
                 aria-current={activeGroup.id === group.id ? 'page' : undefined}
                 onClick={() => { setActiveSection(group.id); setSectionFilter('') }}>
                 <Icon aria-hidden="true" /><span>{i18n.t(group.title)}</span>
-              </button>
+              </ListItemButton>
             })}
           </div>
         </nav>
@@ -126,13 +127,13 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
             {sections.map(section => <section className="console-settings-section" key={section}>
               {section !== 'general' ? <h3>{i18n.t(section === 'builtin' ? '内置能力' : section === 'extensions' ? '已安装与自定义' : '未识别配置')}</h3> : null}
               <div className="console-settings-list">
-                {listEntries.filter(entry => (entry.section ?? 'general') === section).map(entry => <button key={entry.id} type="button"
+                {listEntries.filter(entry => (entry.section ?? 'general') === section).map(entry => <ListItemButton key={entry.id} type="button"
                   className="console-settings-entry" onClick={() => setActiveSection(entry.id)}>
                   <span className="console-settings-entry-icon" aria-hidden="true"><Settings /></span>
                   <span className="console-settings-entry-copy"><strong>{i18n.t(entry.title)}</strong><span>{i18n.t(entry.description)}</span>
                     {!entry.writable ? <small>{i18n.t("只读")}</small> : null}</span>
                   <ChevronRight className="console-settings-entry-arrow" aria-hidden="true" />
-                </button>)}
+                </ListItemButton>)}
               </div>
             </section>)}
             {!listEntries.length ? <div className="console-settings-empty" role="status">

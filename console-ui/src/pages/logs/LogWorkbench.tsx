@@ -28,6 +28,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import './disclosure.css'
 import { EmptyState } from '../../components/empty-state'
 import { ErrorAlert } from '../../components/error-alert'
+import { ListItemButton } from '../../components/ui/list-item-button'
 
 export interface LogEntry {
   id: string | number
@@ -114,20 +115,20 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
   return (
     <section className="console-log-workbench" aria-label={i18n.t("日志诊断工作台")}>
       <header className="console-log-overview">
-        <button type="button" className={cn('console-log-signal', state.level === 'all' && 'is-selected')} onClick={() => actions.selectLevel('all')} aria-pressed={state.level === 'all'}>
+        <ListItemButton type="button" className={cn('console-log-signal', state.level === 'all' && 'is-selected')} onClick={() => actions.selectLevel('all')} aria-pressed={state.level === 'all'}>
 
           <strong>{state.stats?.total ?? '—'}</strong>
           <small>{i18n.t("总日志")}</small>
-        </button>
+        </ListItemButton>
         {OVERVIEW_LEVELS.map((level) => {
           const meta = LEVEL_META[level]
           const Icon = meta.icon
           return (
-            <button key={level} type="button" className={cn('console-log-signal', meta.className, state.level === level && 'is-selected')} onClick={() => actions.selectLevel(level)} aria-pressed={state.level === level}>
+            <ListItemButton key={level} type="button" className={cn('console-log-signal', meta.className, state.level === level && 'is-selected')} onClick={() => actions.selectLevel(level)} aria-pressed={state.level === level}>
               <Icon aria-hidden="true" />
               <strong>{state.stats ? levelCount(level) : '—'}</strong>
               <small>{meta.label}</small>
-            </button>
+            </ListItemButton>
           )
         })}
 
@@ -163,14 +164,14 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
       <div className={cn("console-log-layout console-log-layout--disclosure", sourcesOpen && "has-sources", selection && "has-inspector")}>
         {sourcesOpen ? <aside id="log-source-directory" className="console-log-sources" aria-label={i18n.t("来源聚合")}>
           <header><span className="console-eyebrow">{i18n.t("全部历史来源（按级别与搜索筛选）")}</span><small>{state.logsKnown ? sourceCounts.length : '—'} sources</small></header>
-          <button type="button" className={!state.source ? 'is-selected' : undefined} onClick={() => actions.selectSource('')}>
+          <ListItemButton type="button" className={!state.source ? 'is-selected' : undefined} onClick={() => actions.selectSource('')}>
             <span>{i18n.t("全部来源")}</span><strong>{state.logsKnown ? sourceCounts.reduce((sum,row)=>sum+row.count,0) : '—'}</strong>
-          </button>
-          {state.source && !sourceCounts.some(row=>row.source === state.source) ? <button type="button" className="is-selected" onClick={()=>actions.selectSource('')}><span>{i18n.t("当前来源：")}{state.source} {i18n.t(" · 清除")}</span></button> : null}
+          </ListItemButton>
+          {state.source && !sourceCounts.some(row=>row.source === state.source) ? <ListItemButton type="button" className="is-selected" onClick={()=>actions.selectSource('')}><span>{i18n.t("当前来源：")}{state.source} {i18n.t(" · 清除")}</span></ListItemButton> : null}
           {sourceCounts.map(({source, count}) => (
-            <button key={source} type="button" disabled={!source} className={state.source === source ? 'is-selected' : undefined} onClick={() => actions.selectSource(source)} title={source}>
+            <ListItemButton key={source} type="button" disabled={!source} className={state.source === source ? 'is-selected' : undefined} onClick={() => actions.selectSource(source)} title={source}>
               <span>{source || i18n.t("未标注来源")}</span><strong>{state.logsKnown ? count : '—'}</strong>
-            </button>
+            </ListItemButton>
           ))}
         </aside> : null}
 
@@ -190,14 +191,14 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
                 const meta = getLevelMeta(log.level)
                 const Icon = meta.icon
                 return (
-                  <button key={id} type="button" className={cn('console-log-event', meta.className, id === String(selected?.id) && 'is-selected')} aria-pressed={id === String(selected?.id)} onClick={() => setSelection(log)}>
+                  <ListItemButton key={id} type="button" className={cn('console-log-event', meta.className, id === String(selected?.id) && 'is-selected')} aria-pressed={id === String(selected?.id)} onClick={() => setSelection(log)}>
                     <span className="console-log-event-icon"><Icon /></span>
                     <span className="console-log-event-body">
                       <span><time>{formatLogTime(log.timestamp, undefined, i18n.locale)}</time><code>{log.source || 'runtime'}</code></span>
                       <strong>{log.message}</strong>
                     </span>
                     <ArrowRight className="console-log-event-arrow" />
-                  </button>
+                  </ListItemButton>
                 )
               })
             )}

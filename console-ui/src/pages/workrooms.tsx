@@ -28,6 +28,7 @@ import { Skeleton } from '../components/ui/skeleton'
 import { isDemoMode } from '../utils/demo-mode'
 import { PlanningDisclosurePanel } from './workroom-planning'
 import { runTotals, retainRunDetail, validateRuns, validateDetail } from './workroom-runs-model.mjs'
+import { ListItemButton } from '../components/ui/list-item-button'
 
 type RunStatus = 'active' | 'blocked' | 'needs_replan' | 'cancelling' | 'completed' | 'cancelled'
 interface WorkroomRunSummary {
@@ -287,7 +288,7 @@ function WorkroomBoardPage() {
         {configuredProjects === null ? <Skeleton className="h-16 w-full" /> : configuredProjects.length ? (
           <div className="console-workroom-projects" aria-label={i18n.t("已配置的 Workroom 项目")}>
             {configuredProjects.map((project) => (
-              <button
+              <ListItemButton
                 key={project.id}
                 type="button"
                 aria-current={project.id === projectId ? 'true' : undefined}
@@ -299,7 +300,7 @@ function WorkroomBoardPage() {
                   <span className="mt-0.5 block truncate text-xs text-muted-foreground">{project.description || project.id}</span>
                 </span>
                 {!project.enabled ? <Badge variant="secondary">{i18n.t("已停用")}</Badge> : null}
-              </button>
+              </ListItemButton>
             ))}
           </div>
         ) : null}
@@ -323,17 +324,16 @@ function WorkroomBoardPage() {
             {recentProjects.length ? (
               <div className="flex max-w-2xl flex-wrap gap-1.5" aria-label={i18n.t("最近查询的 Project")}>
                 {recentProjects.map((item) => (
-                  <button
+                  <Button
                     key={item}
                     type="button"
-                    className={cn(
-                      'rounded-md border px-2.5 py-1.5 text-xs transition-colors hover:bg-muted',
-                      item === projectId && 'border-primary/35 bg-primary/[0.06] text-primary',
-                    )}
+                    variant="outline"
+                    size="sm"
+                    className={cn(item === projectId && 'border-primary/35 bg-primary/[0.06] text-primary')}
                     onClick={() => selectProject(item)}
                   >
                     {item}
-                  </button>
+                  </Button>
                 ))}
               </div>
             ) : null}
@@ -379,7 +379,7 @@ function WorkroomBoardPage() {
             </div>
             <div className="space-y-2 p-3 sm:p-4">
               {runs.map((run) => (
-                <button
+                <ListItemButton
                   key={run.runId}
                   type="button"
                   className={cn(
@@ -399,7 +399,7 @@ function WorkroomBoardPage() {
                     <span>{run.counts.assignments} assignments</span>
                     <span>{run.counts.reviewerAssignments + run.counts.sponsorGates} waits</span>
                   </div>
-                </button>
+                </ListItemButton>
               ))}
               {runs.length === 0 ? (
                 <EmptyState compact title={i18n.t("这个 Project 还没有 Run")} description={i18n.t("WorkroomKernel 创建首个 Run 后会出现在这里。")} />

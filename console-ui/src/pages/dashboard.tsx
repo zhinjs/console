@@ -44,6 +44,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog'
+import { ListItemButton } from '../components/ui/list-item-button'
 
 interface Stats {
   plugins: { total: number; active: number }
@@ -483,7 +484,7 @@ export default function HomePage() {
           ) : (
             <div className="space-y-2">
               {attentionItems.map((item) => (
-                <button
+                <ListItemButton
                   key={item.title}
                   type="button"
                   className={`console-attention-item is-${item.tone}`}
@@ -495,7 +496,7 @@ export default function HomePage() {
                     <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">{item.detail}</span>
                   </span>
                   <ArrowUpRight />
-                </button>
+                </ListItemButton>
               ))}
             </div>
           )}
@@ -528,7 +529,7 @@ export default function HomePage() {
             {capabilities.map((capability) => {
               const Icon = capability.icon
               return (
-                <button
+                <ListItemButton
                   key={capability.label}
                   type="button"
                   className="console-capability-item"
@@ -540,7 +541,7 @@ export default function HomePage() {
                     <span className="mt-1 block truncate text-xs text-muted-foreground">{capability.detail}</span>
                   </span>
                   <strong>{capability.value ?? '—'}</strong>
-                </button>
+                </ListItemButton>
               )
             })}
           </div>
@@ -557,32 +558,32 @@ export default function HomePage() {
         </div>
 
         <div className="console-action-grid">
-          <button type="button" className="console-primary-action" onClick={() => navigate('/endpoints')}>
+          <ListItemButton type="button" className="console-primary-action" onClick={() => navigate('/endpoints')}>
             <span className="console-primary-action-icon"><Bot /></span>
             <span className="min-w-0 text-left">
               <span className="block text-base font-semibold">{i18n.t("连接和管理会话")}</span>
               <span className="mt-1 block text-sm text-muted-foreground">{i18n.t("查看好友、群组、统一收件箱并直接收发消息。")}</span>
             </span>
             <ArrowUpRight />
-          </button>
+          </ListItemButton>
 
           <div className="console-secondary-actions">
-            <button type="button" onClick={() => navigate('/agent/workrooms')}>
+            <ListItemButton type="button" onClick={() => navigate('/agent/workrooms')}>
               <span><Workflow />{i18n.t("查看 Workroom 任务")}</span>
               <ArrowUpRight />
-            </button>
-            <button type="button" onClick={() => navigate('/marketplace')}>
+            </ListItemButton>
+            <ListItemButton type="button" onClick={() => navigate('/marketplace')}>
               <span><Package />{i18n.t("从市场添加能力")}</span>
               <ArrowUpRight />
-            </button>
-            <button type="button" onClick={() => navigate('/config')}>
+            </ListItemButton>
+            <ListItemButton type="button" onClick={() => navigate('/config')}>
               <span><Settings2 />{i18n.t("调整运行配置")}</span>
               <ArrowUpRight />
-            </button>
-            <button type="button" onClick={() => navigate('/logs')}>
+            </ListItemButton>
+            <ListItemButton type="button" onClick={() => navigate('/logs')}>
               <span><FileText />{i18n.t("检查运行记录")}</span>
               <ArrowUpRight />
-            </button>
+            </ListItemButton>
           </div>
         </div>
       </section>

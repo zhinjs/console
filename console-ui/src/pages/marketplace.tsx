@@ -665,23 +665,21 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                 </div>
 
                 {/* Tabs: readme / versions / deps */}
-                <div className="flex border-b gap-0">
-                  {([['readme', 'README'], ['versions', i18n.t("版本")], ['deps', i18n.t("依赖")]] as [DetailTab, string][]).map(
-                    ([key, label]) => (
-                      <button
-                        key={key}
-                        className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
-                          detailTab === key
-                            ? 'border-primary text-foreground'
-                            : 'border-transparent text-muted-foreground hover:text-foreground'
-                        }`}
-                        onClick={() => setDetailTab(key)}
-                      >
-                        {label}
-                      </button>
-                    ),
-                  )}
-                </div>
+                <Tabs value={detailTab} onValueChange={(value) => setDetailTab(value as DetailTab)}>
+                  <TabsList className="h-auto w-full justify-start gap-0 rounded-none border-b bg-transparent p-0">
+                    {([['readme', 'README'], ['versions', i18n.t("版本")], ['deps', i18n.t("依赖")]] as [DetailTab, string][]).map(
+                      ([key, label]) => (
+                        <TabsTrigger
+                          key={key}
+                          value={key}
+                          className="rounded-none border-b-2 border-transparent px-3 py-2 data-[state=active]:border-primary data-[state=active]:bg-transparent max-md:min-h-11"
+                        >
+                          {label}
+                        </TabsTrigger>
+                      ),
+                    )}
+                  </TabsList>
+                </Tabs>
 
                 {/* Tab content */}
                 {detailTab === 'readme' && (

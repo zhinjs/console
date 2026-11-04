@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from './ui/dialog'
 import { COMMAND_GROUP_ORDER, NAV_GROUPS } from '../navigation-taxonomy'
+import { ListItemButton } from '../components/ui/list-item-button'
 
 const RECENT_KEY = 'zhin.console.command-center.recent'
 const RECENT_LIMIT = 5
@@ -265,12 +266,12 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
   let runningIndex = 0
   return (
     <>
-      <button type="button" className="console-command-trigger" onClick={() => setOpen(true)} aria-label={i18n.t("打开 Console 快速跳转")}>
+      <ListItemButton type="button" className="console-command-trigger" onClick={() => setOpen(true)} aria-label={i18n.t("打开 Console 快速跳转")}>
         <Search aria-hidden="true" />
         <span className="hidden lg:inline">{i18n.t("搜索页面或执行动作")}</span>
         <span className="lg:hidden">{i18n.t("搜索与动作")}</span>
         <kbd>{shortcut}</kbd>
-      </button>
+      </ListItemButton>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="console-command-center gap-0 overflow-hidden p-0">
@@ -306,7 +307,7 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
                   const current = location.pathname === target.path
                     || location.pathname.startsWith(`${target.path}/`)
                   return (
-                    <button
+                    <ListItemButton
                       key={target.path}
                       id={`console-command-${itemIndex}`}
                       ref={(node) => {
@@ -329,7 +330,7 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
                         <span className="console-command-description">{target.description}</span>
                       </span>
                       {current ? <span className="console-command-current"><Check />{i18n.t("当前")}</span> : <ArrowRight />}
-                    </button>
+                    </ListItemButton>
                   )
                 })}
               </section>

@@ -28,6 +28,7 @@ import { Button } from '../../components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog'
 import { capabilityEmptyState } from './empty-state.mjs'
 import type { CapabilityItem, CapabilityRowMap, IntrospectionTab } from './capability-model'
+import { ListItemButton } from '../../components/ui/list-item-button'
 
 interface CapabilityExplorerProps<K extends IntrospectionTab> {
   kind: K
@@ -202,14 +203,14 @@ function entriesForKind<K extends IntrospectionTab>(entries: readonly AnyEntry[]
 function SelectableCard<K extends IntrospectionTab>(props: CollectionProps<K> & { entry: Entry<K>; children: ReactNode; className?: string }) {
   const selected = props.entry.id === props.selectedId
   return (
-    <button
+    <ListItemButton
       type="button"
       className={cn('console-runtime-card', selected && 'is-selected', props.className)}
       aria-pressed={selected}
       onClick={() => props.onSelect(props.entry.id)}
     >
       {props.children}
-    </button>
+    </ListItemButton>
   )
 }
 
@@ -315,9 +316,9 @@ function ComponentGalleryCard({ entry, position, selected, readOnly, onSelect }:
     onSelect()
   }}>
     <GalleryPreview item={entry.item} readOnly={readOnly} />
-    <button id={`component-card-${entry.id}`} type="button" aria-label={i18n.t("查看 {0} 组件详情", [text(entry.item.name)])} aria-pressed={selected} onClick={onSelect}>
+    <ListItemButton id={`component-card-${entry.id}`} type="button" aria-label={i18n.t("查看 {0} 组件详情", [text(entry.item.name)])} aria-pressed={selected} onClick={onSelect}>
       <strong>{text(entry.item.name, i18n.t("未命名组件"))}</strong><small>{text(entry.item.owner, 'runtime')}</small>
-    </button>
+    </ListItemButton>
   </article>
 }
 
