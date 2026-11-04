@@ -14,7 +14,7 @@ import { ErrorAlert } from '../../components/error-alert'
 import { Alert, AlertDescription } from '../../components/ui/alert'
 import { Textarea } from '../../components/ui/textarea'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
-import { useInferenceManagement } from './useInferenceManagement'
+import { useInferenceManagement, type InferenceSource } from './useInferenceManagement'
 import { Profiles } from './Profiles'
 import { Accounts } from './Accounts'
 import { Purposes } from './Purposes'
@@ -22,7 +22,7 @@ import { PersonalSessions } from './PersonalSessions'
 
 export function InferenceWorkspace({ connectionScope }: { connectionScope?: string }) {
   const m = useInferenceManagement(connectionScope),
-    [importing, setImporting] = useState(false),
+    [importing, setImporting] = useState<InferenceSource | null>(null),
     [source, setSource] = useState('')
   async function exportPlan() {
     const result = await m.request('/export')
@@ -55,7 +55,7 @@ export function InferenceWorkspace({ connectionScope }: { connectionScope?: stri
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setImporting(true)}
+            onClick={() => setImporting(m.source)}
             disabled={!m.view || m.busy || !!m.pending}
           >
             <Upload />
@@ -123,7 +123,7 @@ export function InferenceWorkspace({ connectionScope }: { connectionScope?: stri
           </TabsContent>
           {m.view.hostAdministrator ? (
             <TabsContent value="purposes">
-              <Purposes key={m.view.revision} management={m} />
+              <Purposes management={m} />
             </TabsContent>
           ) : (
             <TabsContent value="sessions">
@@ -136,7 +136,15 @@ export function InferenceWorkspace({ connectionScope }: { connectionScope?: stri
           正在读取模型…
         </p>
       ) : null}
-      <Dialog open={importing} onOpenChange={setImporting}>
+      <Dialog
+        open={!!importing}
+        onOpenChange={(open) => {
+          if (!open) {
+            setImporting(null)
+            setSource('')
+          }
+        }}
+      >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>导入模型配置</DialogTitle>
@@ -149,8 +157,11 @@ export function InferenceWorkspace({ connectionScope }: { connectionScope?: stri
               event.preventDefault()
               try {
                 const parsed = parseYaml(source)
-                if (await m.savePlan(parsed.plan ?? parsed, parsed.bindings ?? {})) {
-                  setImporting(false)
+                if (importing && await m.savePlan(parsed.plan ?? parsed, {
+                  source: importing,
+                  bindings: parsed.bindings ?? {},
+                })) {
+                  setImporting(null)
                   setSource('')
                 }
               } catch {

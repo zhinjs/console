@@ -16,7 +16,7 @@ import { Card } from '../../components/ui/card'
 import { useConfirm } from '../../components/confirm-dialog'
 import { driverKey, type Account, type ObjectValue } from './model.mjs'
 import { SchemaFields } from './SchemaFields'
-import type { InferenceManagement } from './useInferenceManagement'
+import type { InferenceManagement, InferenceSource } from './useInferenceManagement'
 
 const statusLabels: Record<string, string> = {
   ready: '可用',
@@ -29,8 +29,12 @@ const statusLabels: Record<string, string> = {
 }
 export function Accounts({ management: m }: { management: InferenceManagement }) {
   const view = m.view!,
-    [editing, setEditing] = useState<{ account?: Account; replacement?: boolean } | null>(null),
-    [credential, setCredential] = useState<Account | null>(null)
+    [editing, setEditing] = useState<{
+      account?: Account
+      replacement?: boolean
+      source: InferenceSource
+    } | null>(null),
+    [credential, setCredential] = useState<{ account: Account; source: InferenceSource } | null>(null)
   const [login, setLogin] = useState<{
     account: Account
     challenge: { loginId: string; authorizationUrl: string; redirectUri: string }
@@ -67,7 +71,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
         variant: 'destructive',
       })
     )
-      await m.savePlan({ version: 1, remove: { accounts: [account.id] } })
+      await m.savePlan({ version: 1, remove: { accounts: [account.id] } }, { source: m.source! })
   }
   async function begin(account: Account) {
     const challenge = await m.action<{
@@ -85,7 +89,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
       {dialog}
       <div className="flex items-center justify-between gap-3">
         <h3 className="font-semibold">账号</h3>
-        <Button onClick={() => setEditing({})} disabled={disabled}>
+        <Button onClick={() => setEditing({ source: m.source! })} disabled={disabled}>
           <Plus />
           新增账号
         </Button>
@@ -115,7 +119,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setEditing({ account })}
+                    onClick={() => setEditing({ account, source: m.source! })}
                     disabled={disabled}
                   >
                     <Pencil />
@@ -124,7 +128,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setEditing({ account, replacement: true })}
+                    onClick={() => setEditing({ account, replacement: true, source: m.source! })}
                     disabled={disabled}
                   >
                     新增替代账号
@@ -133,7 +137,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setCredential(account)}
+                      onClick={() => setCredential({ account, source: m.source! })}
                       disabled={disabled}
                     >
                       <KeyRound />
@@ -155,7 +159,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
                         variant="ghost"
                         size="sm"
                         disabled={disabled}
-                        onClick={() => setCredential(account)}
+                        onClick={() => setCredential({ account, source: m.source! })}
                       >
                         客户端凭据
                       </Button>
@@ -221,13 +225,16 @@ export function Accounts({ management: m }: { management: InferenceManagement })
                 : '保存配置后再登录或设置密钥。'}
             </DialogDescription>
           </DialogHeader>
-          <AccountForm
-            key={`${editing?.account?.id ?? 'new'}:${editing?.replacement ?? false}`}
-            account={editing?.account}
-            replacement={editing?.replacement}
-            management={m}
-            onSaved={() => setEditing(null)}
-          />
+          {editing ? (
+            <AccountForm
+              key={`${editing.account?.id ?? 'new'}:${editing.replacement ?? false}`}
+              account={editing.account}
+              replacement={editing.replacement}
+              source={editing.source}
+              management={m}
+              onSaved={() => setEditing(null)}
+            />
+          ) : null}
         </DialogContent>
       </Dialog>
       <Dialog
@@ -242,9 +249,9 @@ export function Accounts({ management: m }: { management: InferenceManagement })
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {credential?.authentication.method === 'oauth' ? '客户端凭据' : '设置 API Key'}
+              {credential?.account.authentication.method === 'oauth' ? '客户端凭据' : '设置 API Key'}
             </DialogTitle>
-            <DialogDescription>{credential?.label ?? credential?.id}</DialogDescription>
+            <DialogDescription>{credential?.account.label ?? credential?.account.id}</DialogDescription>
           </DialogHeader>
           {m.error ? <ErrorAlert error={m.error} /> : null}
           <form
@@ -254,20 +261,25 @@ export function Accounts({ management: m }: { management: InferenceManagement })
               if (!credential) return
               const secret = clientSecret
               setClientSecret('')
-              const field = credential.authentication.method === 'oauth' ? 'clientSecret' : 'key'
+              const field = credential.account.authentication.method === 'oauth'
+                ? 'clientSecret' : 'key'
               if (
-                await m.save(field === 'key' ? '/key/prepare' : '/client/prepare', {
-                  accountId: credential.id,
-                  expectedRevision: view.statuses[credential.id].revision,
-                  [field]: secret,
-                })
+                await m.save(
+                  field === 'key' ? '/key/prepare' : '/client/prepare',
+                  {
+                    accountId: credential.account.id,
+                    expectedRevision: credential.source.view.statuses[credential.account.id].revision,
+                    [field]: secret,
+                  },
+                  { source: credential.source }
+                )
               )
                 setCredential(null)
             }}
           >
             <label className="block space-y-2 text-sm">
               <span>
-                {credential?.authentication.method === 'oauth' ? 'Client Secret' : 'API Key'}
+                {credential?.account.authentication.method === 'oauth' ? 'Client Secret' : 'API Key'}
               </span>
               <Input
                 type="password"
@@ -363,16 +375,18 @@ export function Accounts({ management: m }: { management: InferenceManagement })
 }
 function AccountForm({
   management: m,
+  source,
   account,
   replacement = false,
   onSaved,
 }: {
   management: InferenceManagement
+  source: InferenceSource
   account?: Account
   replacement?: boolean
   onSaved: () => void
 }) {
-  const view = m.view!
+  const view = source.view
   const originalService = account && view.services[account.serviceId]
   const updating = !!account && !replacement
   const [serviceId, setServiceId] = useState(updating ? account.serviceId : '')
@@ -383,7 +397,7 @@ function AccountForm({
   const [optionsValid, setOptionsValid] = useState(true)
   const [options, setOptions] = useState<ObjectValue>(originalService?.options ?? {})
   const [method, setMethod] = useState(account?.authentication.method ?? '')
-  const [source, setSource] = useState(!replacement ? account?.authentication.source ?? '' : '')
+  const [authSource, setAuthSource] = useState(!replacement ? account?.authentication.source ?? '' : '')
   const service = view.services[serviceId]
   const driver = view.drivers.find(
     (value) => driverKey(value) === (service ? driverKey(service.driver) : driverId)
@@ -400,7 +414,7 @@ function AccountForm({
     const targetAccount = updating ? account!.id : `account-${crypto.randomUUID()}`
     const authentication = updating
       ? account!.authentication
-      : { method, ...(method === 'api-key' && source ? { source } : {}) }
+      : { method, ...(method === 'api-key' && authSource ? { source: authSource } : {}) }
     const updateService = !service || (updating && canEditService)
     const saved = await m.savePlan({
       version: 1,
@@ -421,7 +435,7 @@ function AccountForm({
           }
         : {}),
       accounts: { [targetAccount]: { service: targetService, label, auth: authentication } },
-    })
+    }, { source })
     if (saved) onSaved()
   }
   function chooseService(id: string) {
@@ -520,8 +534,8 @@ function AccountForm({
             <span>环境变量引用（可选）</span>
             <Input
               disabled={updating}
-              value={source}
-              onChange={(event) => setSource(event.target.value)}
+              value={authSource}
+              onChange={(event) => setAuthSource(event.target.value)}
               placeholder="env://MODEL_API_KEY"
               autoComplete="off"
             />

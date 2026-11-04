@@ -586,6 +586,7 @@ test('the single graph editor preserves sibling decision modes and model IDs acr
     savePlan: async plan => { plans.push(plan); return true },
     setError: error => assert.fail(error),
   }
+  management.source = { view: management.view, connectionScope: 'scope', base: 'https://host.test' }
   const { Purposes } = await component(runtime, '../console-ui/src/pages/inference/Purposes.tsx', {
     'lucide-react': { Plus: 'icon', Trash2: 'icon' }, './model.mjs': model,
     '../../components/ui/button': { Button: 'button' }, '../../components/ui/input': { Input: 'input' },
@@ -633,4 +634,192 @@ test('decision purpose saves use only graph prepare/apply and reload the committ
   assert.equal(f.calls.filter(call => call.url.includes('/apply')).length, 1)
   assert.equal(f.calls.some(call => call.url.includes('config:apply') || call.url.includes('config:patch')), false)
   f.runtime.unmount()
+})
+
+const readSource = f => f.runtime.value.source
+
+test('a prepared plan cannot silently rebase a draft onto a newer graph revision', async () => {
+  const f = fixture(); await ready(f)
+  const source = readSource(f)
+  const saving = f.runtime.value.savePlan({ version: 1 }, { source }); await f.runtime.settle()
+  f.answer('/plan', { prepared: { ciphertext: 'newer-plan' }, fingerprint: 'newer', baseRevision: 2 })
+  await f.runtime.settle()
+  assert.equal(f.calls.some(call => call.url.includes('/apply')), false)
+  assert.equal(await saving, false)
+  assert.deepEqual([...f.storage], [])
+  assert.match(f.runtime.value.error, /变化|重新/)
+  f.runtime.unmount()
+})
+
+test('refreshing a graph never endorses an already-open draft; reopening uses the newly read revision', async () => {
+  const f = fixture(); await ready(f)
+  const source = readSource(f)
+  const refresh = f.runtime.value.load(); await f.runtime.settle()
+  f.answer('/owners', [owner()]); await f.runtime.settle()
+  f.answer('/inference', { ...view(), revision: 2 }); await refresh; await f.runtime.settle()
+  const saving = f.runtime.value.savePlan({ version: 1 }, { source }); await f.runtime.settle()
+  f.answer('/plan', { prepared: { ciphertext: 'fresh-plan' }, fingerprint: 'fresh', baseRevision: 2 })
+  await f.runtime.settle()
+  assert.equal(f.calls.some(call => call.url.includes('/apply')), false)
+  assert.equal(await saving, false); assert.deepEqual([...f.storage], [])
+  const reopened = f.runtime.value.savePlan({ version: 1 }, { source: readSource(f) }); await f.runtime.settle()
+  f.answer('/plan', { prepared: { ciphertext: 'fresh-plan' }, fingerprint: 'fresh', baseRevision: 2 }); await f.runtime.settle()
+  f.answer('/apply', { status: 'committed', graphRevision: 3 }); await f.runtime.settle()
+  f.answer('/owners', [owner()]); await f.runtime.settle()
+  f.answer('/inference', { ...view(), revision: 3 }); await f.runtime.settle()
+  assert.equal(await reopened, true)
+  assert.equal(f.calls.filter(call => call.url.includes('/apply')).length, 1)
+  f.runtime.unmount()
+})
+
+for (const change of ['owner', 'connection'])
+  test(`an old draft source cannot prepare a mutation after ${change} replacement`, async () => {
+    const f = fixture(); await ready(f, [owner('one'), owner('two')], 'one')
+    const source = readSource(f)
+    if (change === 'owner') f.runtime.value.setOwnerId('two')
+    else f.switchHost()
+    await f.runtime.settle(); await ready(f, [owner('two')], 'two')
+    const start = f.calls.length
+    const saving = f.runtime.value.savePlan({ version: 1 }, { source }); await f.runtime.settle()
+    assert.equal(f.calls.length, start)
+    assert.equal(await saving, false)
+    f.runtime.unmount()
+  })
+
+test('a concurrent commit after a matching review still uses the existing apply-conflict receipt path once', async () => {
+  const f = fixture(); await ready(f)
+  const saving = f.runtime.value.savePlan({ version: 1 }, { source: readSource(f) }); await f.runtime.settle()
+  f.answer('/plan', { prepared: { ciphertext: 'matching-plan' }, fingerprint: 'matching', baseRevision: 1 }); await f.runtime.settle()
+  f.answer('/apply', { status: 'conflict', code: 'revision-conflict' }); await f.runtime.settle()
+  assert.equal(await saving, false)
+  assert.equal(f.calls.filter(call => call.url.includes('/apply')).length, 1)
+  assert.equal(f.runtime.value.pending, null); assert.deepEqual([...f.storage], [])
+  f.runtime.unmount()
+})
+
+
+test('an old plan uses resource bindings from its read source, never from the refreshed graph', async () => {
+  const f = fixture(); await ready(f)
+  const source = readSource(f)
+  const refresh = f.runtime.value.load(); await f.runtime.settle()
+  f.answer('/owners', [owner()]); await f.runtime.settle()
+  f.answer('/inference', { ...view(), revision: 2, profiles: { added: { id: 'added' } } }); await refresh; await f.runtime.settle()
+  const saving = f.runtime.value.savePlan({ version: 1 }, { source }); await f.runtime.settle()
+  const request = f.answer('/plan', { prepared: { ciphertext: 'new-graph' }, fingerprint: 'new', baseRevision: 2 })
+  assert.deepEqual(JSON.parse(request.init.body).bindings, { services: {}, accounts: {}, profiles: {} })
+  await f.runtime.settle(); assert.equal(await saving, false)
+  assert.equal(f.calls.some(call => call.url.includes('/apply')), false)
+  f.runtime.unmount()
+})
+
+test('credential review also refuses a newer graph before storing any mutation receipt or applying', async () => {
+  const f = fixture(); await ready(f)
+  const saving = f.runtime.value.save('/key/prepare', { accountId: 'account', expectedRevision: 0, key: 'synthetic-key' }, { source: readSource(f) }); await f.runtime.settle()
+  f.answer('/key/prepare', { prepared: { ciphertext: 'prepared-credential' }, fingerprint: 'credential', baseRevision: 2 })
+  await f.runtime.settle(); assert.equal(await saving, false)
+  assert.equal(f.calls.some(call => call.url.includes('/apply')), false)
+  assert.deepEqual([...f.storage], [])
+  f.runtime.unmount()
+})
+
+const purposeView = (revision, mode = 'off') => ({
+  ...view(), revision,
+  purposes: { defaults: {}, decisions: {
+    skills: { mode, profile: 'decision-one', timeoutMs: 90, minConfidence: 0.6 },
+    tools: { mode: 'active', profile: 'decision-two', maxSelections: 3 },
+  } },
+  profiles: {
+    'decision-one': { id: 'decision-one', accountId: 'account', model: 'decision' },
+    'decision-two': { id: 'decision-two', accountId: 'account', model: 'decision' },
+  },
+  accounts: { account: { serviceId: 'service' } },
+  services: { service: { models: { decision: { kinds: ['decision'] } } } },
+})
+async function purposeFixture() {
+  const f = fixture(), runtime = hooks(), submissions = []
+  f.answer('/owners', [owner()]); await f.runtime.settle()
+  f.answer('/inference', purposeView(1)); await f.runtime.settle()
+  const { Purposes } = await component(runtime, '../console-ui/src/pages/inference/Purposes.tsx', {
+    'lucide-react': { Plus: 'icon', Trash2: 'icon' }, './model.mjs': model,
+    '../../components/ui/button': { Button: 'button' }, '../../components/ui/input': { Input: 'input' },
+    '../../components/ui/select': { SelectField: 'select' }, '../../components/ui/card': { Card: 'card' },
+  })
+  runtime.mount(() => Purposes({ management: { ...f.runtime.value, savePlan: (plan, options) => {
+    submissions.push({ plan, options }); return f.runtime.value.savePlan(plan, options)
+  } } }))
+  f.answer('/targets', { adapters: [], endpoints: [], scenes: [], agents: [] }); await runtime.settle()
+  const select = () => nodes(runtime.value).find(node => node.type === 'select' && node.props['aria-label'] === '技能选择模式')
+  async function finish(revision, mode, receiptRevision = revision) {
+    f.answer('/apply', { status: 'committed', receipt: { graphRevision: receiptRevision } }); await f.runtime.settle()
+    f.answer('/owners', [owner()]); await f.runtime.settle()
+    f.answer('/inference', purposeView(revision, mode)); await f.runtime.settle(); await runtime.settle()
+  }
+  return { ...f, page: runtime, submissions, finish,
+    mode: () => select().props.value,
+    choose(mode) { select().props.onValueChange(mode); runtime.render() },
+    submit() { return runtime.value.props.onSubmit({ preventDefault() {} }) },
+    refreshPage() { runtime.render() },
+  }
+}
+
+test('real Purposes retains its draft and original source through external refresh and rejects a newer prepared base', async () => {
+  const f = await purposeFixture(), origin = f.runtime.value.source
+  f.choose('shadow')
+  const refresh = f.runtime.value.load(); await f.runtime.settle()
+  f.answer('/owners', [owner()]); await f.runtime.settle()
+  f.answer('/inference', purposeView(2, 'active')); await refresh; await f.runtime.settle()
+  f.refreshPage(); assert.equal(f.mode(), 'shadow')
+  const saving = f.submit(); await f.runtime.settle()
+  f.answer('/plan', { prepared: { ciphertext: 'external-newer' }, fingerprint: 'newer', baseRevision: 2 }); await f.runtime.settle()
+  assert.equal(await saving, undefined)
+  assert.strictEqual(f.submissions[0].options.source, origin)
+  assert.equal(f.calls.some(call => call.url.includes('/apply')), false)
+  assert.equal(f.mode(), 'shadow'); assert.deepEqual([...f.storage], [])
+  assert.deepEqual(f.submissions[0].plan.purposes.decisions.tools, { mode: 'active', profile: 'decision-two', maxSelections: 3 })
+  f.page.unmount(); f.runtime.unmount()
+})
+
+for (const editDuringSave of [false, true])
+  test(`real Purposes advances only after its proven save and preserves ${editDuringSave ? 'new edits during the wait' : 'a second normal save'}`, async () => {
+    const f = await purposeFixture()
+    f.choose('shadow')
+    const saving = f.submit(); await f.runtime.settle()
+    f.answer('/plan', { prepared: { ciphertext: 'own-save' }, fingerprint: 'own', baseRevision: 1 }); await f.runtime.settle()
+    if (editDuringSave) f.choose('active')
+    await f.finish(2, 'shadow'); await saving; await f.page.settle(); f.refreshPage()
+    assert.equal(f.mode(), editDuringSave ? 'active' : 'shadow')
+    if (!editDuringSave) f.choose('active')
+    const again = f.submit(); await f.runtime.settle()
+    assert.equal(f.submissions[1].options.source.view.revision, 2)
+    assert.equal(f.submissions[1].plan.purposes.decisions.skills.mode, 'active')
+    f.answer('/plan', { prepared: { ciphertext: 'own-save-again' }, fingerprint: 'again', baseRevision: 2 }); await f.runtime.settle()
+    await f.finish(3, 'active'); await again; await f.page.settle()
+    assert.equal(f.calls.filter(call => call.url.includes('/apply')).length, 2)
+    assert.equal(f.mode(), 'active')
+    f.page.unmount(); f.runtime.unmount()
+  })
+
+test('unknown Purposes save retains the source and all later edits without replaying the mutation', async () => {
+  const f = await purposeFixture(), origin = f.runtime.value.source
+  f.choose('shadow'); const saving = f.submit(); await f.runtime.settle()
+  f.answer('/plan', { prepared: { ciphertext: 'unknown-save' }, fingerprint: 'unknown', baseRevision: 1 }); await f.runtime.settle()
+  f.choose('active'); f.answer('/apply', { status: 'commit-unknown' }); await f.runtime.settle(); await saving; f.refreshPage()
+  assert.equal(f.mode(), 'active'); assert.ok(f.runtime.value.pending)
+  await f.submit(); assert.strictEqual(f.submissions[1].options.source, origin)
+  assert.equal(f.calls.filter(call => call.url.includes('/apply')).length, 1)
+  assert.equal(f.calls.filter(call => call.url.includes('/plan')).length, 1)
+  f.page.unmount(); f.runtime.unmount()
+})
+
+test('reading someone else’s subsequent revision after an own commit cannot move the purpose draft baseline', async () => {
+  const f = await purposeFixture(), origin = f.runtime.value.source
+  f.choose('shadow'); const saving = f.submit(); await f.runtime.settle()
+  f.answer('/plan', { prepared: { ciphertext: 'own-then-external' }, fingerprint: 'own', baseRevision: 1 }); await f.runtime.settle()
+  await f.finish(3, 'active', 2); await saving; f.refreshPage()
+  assert.equal(f.mode(), 'shadow')
+  const again = f.submit(); await f.runtime.settle()
+  assert.strictEqual(f.submissions[1].options.source, origin)
+  f.answer('/plan', { prepared: { ciphertext: 'external-current' }, fingerprint: 'external', baseRevision: 3 }); await f.runtime.settle(); await again
+  assert.equal(f.calls.filter(call => call.url.includes('/apply')).length, 1)
+  f.page.unmount(); f.runtime.unmount()
 })

@@ -155,7 +155,11 @@ export interface Targets {
 export function applyInferenceChange(
   fetch: typeof globalThis.fetch,
   input: { ownerId: string; prepared: ObjectValue; mutationId: string }
-): Promise<{ status: 'committed' | 'conflict' | 'not-committed' | 'commit-unknown'; code?: string }>
+): Promise<{
+  status: 'committed' | 'conflict' | 'not-committed' | 'commit-unknown'
+  code?: string
+  receipt?: { graphRevision: number }
+}>
 export function pendingMutationKey(base: string, ownerId: string): string
 export function readPendingMutation(
   storage: Pick<Storage, 'getItem'>,

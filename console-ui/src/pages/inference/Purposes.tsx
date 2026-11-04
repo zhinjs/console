@@ -24,9 +24,16 @@ const taskLabels: Record<string, string> = {
   ambient: '旁听参与判断',
 }
 export function Purposes({ management: m }: { management: InferenceManagement }) {
-  const view = m.view!,
-    [draft, setDraft] = useState<PurposeState>(() => structuredClone(view.purposes!)),
-    [targets, setTargets] = useState<Targets | null>(null)
+  const [editor, setEditor] = useState(() => ({
+    source: m.source!,
+    draft: structuredClone(m.source!.view.purposes!),
+  }))
+  const { source, draft } = editor
+  const view = source.view
+  const [targets, setTargets] = useState<Targets | null>(null)
+  function setDraft(update: (previous: PurposeState) => PurposeState) {
+    setEditor((previous) => ({ ...previous, draft: update(previous.draft) }))
+  }
   const [level, setLevel] = useState<'adapters' | 'endpoints' | 'scenes'>('adapters'),
     [target, setTarget] = useState(''),
     [sceneOffset, setSceneOffset] = useState(0)
@@ -101,7 +108,15 @@ export function Purposes({ management: m }: { management: InferenceManagement })
       className="space-y-6"
       onSubmit={async (event) => {
         event.preventDefault()
-        await m.savePlan({ version: 1, purposes: purposePlan(draft, view.purposes!) })
+        const submitted = editor
+        await m.savePlan({ version: 1, purposes: purposePlan(draft, view.purposes!) }, {
+          source,
+          onCommitted: (next) => setEditor((current) => ({
+            source: next,
+            // Only this confirmed save can move the baseline. Keep edits made while it waited.
+            draft: current === submitted ? structuredClone(next.view.purposes!) : current.draft,
+          })),
+        })
       }}
     >
       <div className="flex items-center justify-between gap-3">

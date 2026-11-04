@@ -23,11 +23,11 @@ import {
   type ModelDefinition,
 } from './model.mjs'
 import { SchemaFields } from './SchemaFields'
-import type { InferenceManagement } from './useInferenceManagement'
+import type { InferenceManagement, InferenceSource } from './useInferenceManagement'
 
 export function Profiles({ management: m }: { management: InferenceManagement }) {
   const view = m.view!,
-    [editing, setEditing] = useState<Profile | null | undefined>(undefined),
+    [editing, setEditing] = useState<{ profile: Profile | null; source: InferenceSource } | null>(null),
     { confirm, ConfirmDialog: dialog } = useConfirm()
   async function remove(profile: Profile) {
     if (
@@ -37,7 +37,7 @@ export function Profiles({ management: m }: { management: InferenceManagement })
         variant: 'destructive',
       })
     )
-      await m.savePlan({ version: 1, remove: { profiles: [profile.id] } })
+      await m.savePlan({ version: 1, remove: { profiles: [profile.id] } }, { source: m.source! })
   }
   return (
     <div className="space-y-4">
@@ -46,7 +46,7 @@ export function Profiles({ management: m }: { management: InferenceManagement })
         <h3 className="font-semibold">模型</h3>
         <Button
           disabled={m.busy || !!m.pending || !Object.keys(view.accounts).length}
-          onClick={() => setEditing(null)}
+          onClick={() => setEditing({ profile: null, source: m.source! })}
         >
           <Plus />
           添加模型
@@ -74,7 +74,7 @@ export function Profiles({ management: m }: { management: InferenceManagement })
                     size="icon"
                     aria-label={`编辑 ${profile.label ?? profile.model}`}
                     disabled={m.busy || !!m.pending}
-                    onClick={() => setEditing(profile)}
+                    onClick={() => setEditing({ profile, source: m.source! })}
                   >
                     <Pencil />
                   </Button>
@@ -94,22 +94,23 @@ export function Profiles({ management: m }: { management: InferenceManagement })
         </div>
       )}
       <Dialog
-        open={editing !== undefined}
+        open={editing !== null}
         onOpenChange={(open) => {
-          if (!open) setEditing(undefined)
+          if (!open) setEditing(null)
         }}
       >
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editing ? '编辑模型' : '添加模型'}</DialogTitle>
+            <DialogTitle>{editing?.profile ? '编辑模型' : '添加模型'}</DialogTitle>
             <DialogDescription>同一账号可添加多个模型，无需重复认证。</DialogDescription>
           </DialogHeader>
-          {editing !== undefined ? (
+          {editing ? (
             <ProfileForm
-              key={editing?.id ?? 'new'}
-              profile={editing}
+              key={editing.profile?.id ?? 'new'}
+              profile={editing.profile}
+              source={editing.source}
               management={m}
-              onSaved={() => setEditing(undefined)}
+              onSaved={() => setEditing(null)}
             />
           ) : null}
         </DialogContent>
@@ -119,14 +120,16 @@ export function Profiles({ management: m }: { management: InferenceManagement })
 }
 function ProfileForm({
   profile,
+  source,
   management,
   onSaved,
 }: {
   profile: Profile | null
+  source: InferenceSource
   management: InferenceManagement
   onSaved: () => void
 }) {
-  const view = management.view!
+  const view = source.view
   const [accountId, setAccountId] = useState(profile?.accountId ?? '')
   const [label, setLabel] = useState(profile?.label ?? '')
   const [modelId, setModelId] = useState(profile?.model ?? '')
@@ -245,7 +248,7 @@ function ProfileForm({
       profiles: {
         [id]: { account: account.id, model: modelId, parameters, label: label || modelId },
       },
-    })
+    }, { source })
     if (saved) onSaved()
   }
   return (

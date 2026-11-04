@@ -43,7 +43,7 @@ export function inferenceError(error) {
   if (code === 'forbidden') return '当前身份无权执行此操作。'
   if (code === 'plan-conflict') return '连接或模型身份发生变化，请新增账号或模型并明确重新绑定。'
   if (['conflict', 'stale-reference', 'revision-conflict'].includes(code))
-    return '配置已变化，请重新读取后再保存。'
+    return '配置已变化，请重新读取；已有草稿需重新打开编辑后再保存。'
   if (['invalid-input', 'invalid-plan', 'invalid-graph'].includes(code))
     return '请检查必填项、参数和模型能力。'
   if (code === 'identity-change') return '凭据属于不同或无法核实的账号，请新增账号并重新绑定模型。'

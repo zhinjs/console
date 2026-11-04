@@ -25,11 +25,29 @@ interface RequestIdentity {
   readonly base: string
 }
 
+/** The graph and authenticated connection actually read when an editor was opened. */
+export interface InferenceSource {
+  readonly view: View
+  readonly connectionScope?: string
+  readonly base: string
+}
+interface SaveOptions {
+  readonly source?: InferenceSource
+  /** Called only for a read whose revision matches this submission's committed receipt. */
+  readonly onCommitted?: (source: InferenceSource) => void
+}
+interface PlanSaveOptions extends SaveOptions {
+  readonly bindings?: ReturnType<typeof resourceBindings>
+}
+
 /** One authenticated connection owns this workspace; a saved receipt belongs to one Host and owner. */
 export function useInferenceManagement(connectionScope?: string, initialOwnerId?: string | null) {
   const [owners, setOwners] = useState<Owner[]>([])
   const [ownerId, setOwnerId] = useState('')
-  const [view, setView] = useState<View | null>(null)
+  const [observed, setObserved] = useState<InferenceSource | null>(null)
+  const source = observed?.connectionScope === connectionScope && observed?.base === getApiBase()
+    ? observed : null
+  const view = source?.view ?? null
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [pending, setPending] = useState<string | null>(null)
@@ -96,12 +114,12 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
       const selected = available.some((value) => value.id === preferredOwner)
         ? preferredOwner
         : available[0]?.id ?? ''
-      if (selected !== owner.current) setView(null)
+      if (selected !== owner.current) setObserved(null)
       owner.current = selected
       setOwners(available)
       setOwnerId(selected)
       if (!selected) {
-        setView(null)
+        setObserved(null)
         return
       }
       const identity = capture()
@@ -110,11 +128,15 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
         ownerId: selected,
         signal: abort.signal,
       })
-      if (current(identity)) setView(next)
+      if (current(identity)) {
+        const nextSource = { view: next, connectionScope, base: identity.base }
+        setObserved(nextSource)
+        return nextSource
+      }
     } catch (failure) {
       if (connectionActive() && id === epoch.current && !abort.signal.aborted) {
         if (failure instanceof InferenceRequestError && [401, 403].includes(failure.status)) {
-          setView(null)
+          setObserved(null)
           setOwners([])
           owner.current = ''
           setOwnerId('')
@@ -138,7 +160,7 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
     busyOperation.current = null
     setOwners([])
     setOwnerId('')
-    setView(null)
+    setObserved(null)
     setPending(null)
     setError('')
     setBusy(false)
@@ -166,8 +188,14 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
     return result
   }
 
-  async function save(path: string, body: unknown): Promise<boolean> {
+  async function save(path: string, body: unknown, options: SaveOptions = {}): Promise<boolean> {
+    const origin = options.source ?? source
     if (!active() || busyOperation.current !== null || pendingId.current) return false
+    if (!origin || origin.connectionScope !== connectionScope || origin.base !== getApiBase()
+      || origin.view.ownerId !== renderedIdentity.ownerId || origin.view.rootId !== view?.rootId) {
+      setError(inferenceError(new InferenceRequestError('stale-operation')))
+      return false
+    }
     const identity = renderedIdentity
     busyOperation.current = identity.epoch
     setBusy(true)
@@ -175,6 +203,9 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
     try {
       const prepared = await request<Prepared>(path, body)
       if (!current(identity)) return false
+      // Review must not silently turn an old editor into a plan against newer data.
+      if (prepared.baseRevision !== origin.view.revision)
+        throw new InferenceRequestError('revision-conflict')
       const mutationId = crypto.randomUUID()
       // Persist only the receipt ID before submission. No secret/capsule/body is stored in the browser.
       try {
@@ -195,7 +226,9 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
         throw new InferenceRequestError(
           result.code ?? (result.status === 'conflict' ? 'conflict' : 'unavailable')
         )
-      await load(identity.ownerId)
+      const committed = await load(identity.ownerId)
+      if (committed && result.receipt?.graphRevision === committed.view.revision)
+        options.onCommitted?.(committed)
       return true
     } catch (failure) {
       if (current(identity)) setError(inferenceError(failure))
@@ -207,8 +240,10 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
       }
     }
   }
-  function savePlan(plan: unknown, bindings = view ? resourceBindings(view) : {}) {
-    return save('/plan', { plan, bindings })
+  function savePlan(plan: unknown, options: PlanSaveOptions = {}) {
+    const origin = options.source ?? source
+    const bindings = options.bindings ?? (origin ? resourceBindings(origin.view) : {})
+    return save('/plan', { plan, bindings }, { ...options, source: origin ?? undefined })
   }
   async function queryPending() {
     if (!active() || !pendingId.current || busyOperation.current !== null) return
@@ -264,7 +299,7 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
     controller.current?.abort()
     owner.current = id
     setOwnerId(id)
-    setView(null)
+    setObserved(null)
     setPending(null)
     pendingId.current = null
     void load(id)
@@ -274,6 +309,7 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
     ownerId,
     setOwnerId: selectOwner,
     view,
+    source,
     busy,
     error,
     setError: (message: string) => {
