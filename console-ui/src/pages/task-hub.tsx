@@ -37,7 +37,7 @@ export default function TaskHubPage() {
   return <div className="console-page console-resource-page console-tasks-hub">
     <PageHeader title={i18n.t("任务")} description={i18n.t("管理员任务、定时提醒、助手任务和执行记录集中在这里。")} />
     <Tabs value={active} onValueChange={select}>
-      <TabsList aria-label={i18n.t("任务视图")} className="h-auto max-w-full flex-wrap justify-start">
+      <TabsList aria-label={i18n.t("任务视图")} className="h-auto max-w-full justify-start overflow-x-auto whitespace-nowrap">
         {tabs.map(tab => <TabsTrigger key={tab.id} value={tab.id}>{i18n.t(tab.label)}</TabsTrigger>)}
       </TabsList>
       {tabs.map(tab => <TabsContent key={tab.id} value={tab.id}>{tab.id === active ? panels[tab.id] : null}</TabsContent>)}
