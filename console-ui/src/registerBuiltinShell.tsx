@@ -9,9 +9,8 @@ import ConfigPage from './pages/config'
 import EnvManagePage from './pages/env'
 import FileManagePage from './pages/files'
 import DatabasePage from './pages/database/database-page'
-import CronPage from './pages/cron'
 import MarketplacePage from './pages/marketplace'
-import TaskCenterPage from './pages/task-center'
+import TaskHubPage, { LegacyTaskRoute } from './pages/task-hub'
 import WelcomeUseCasePage from './pages/welcome-use-case'
 import IntrospectionPage from './pages/introspection'
 import ScenarioLabPage from './pages/scenario-lab'
@@ -56,10 +55,10 @@ export function registerBuiltinConsolePages() {
 
   app.addRoute({
     path: '/tasks',
-    name: '任务中心',
+    name: '任务',
     parent: null,
     icon: 'ClipboardList',
-    element: <TaskCenterPage />,
+    element: <TaskHubPage />,
     meta: { group: NAV_GROUPS.TASKS, order: 0 },
   })
 
@@ -71,13 +70,21 @@ export function registerBuiltinConsolePages() {
     meta: { hideInMenu: true, group: NAV_GROUPS.TASKS },
   })
 
+  // Legacy entries: kept as hidden redirects so bookmarks and old links land on the matching /tasks tab.
   app.addRoute({
     path: '/cron',
     name: '定时提醒',
-    parent: null,
-    icon: 'Clock',
-    element: <CronPage />,
-    meta: { group: NAV_GROUPS.TASKS, order: 1 },
+    parent: '/tasks',
+    element: <LegacyTaskRoute />,
+    meta: { group: NAV_GROUPS.TASKS, hideInMenu: true },
+  })
+
+  app.addRoute({
+    path: '/assistant/jobs',
+    name: '助手任务',
+    parent: '/tasks',
+    element: <LegacyTaskRoute />,
+    meta: { group: NAV_GROUPS.TASKS, hideInMenu: true },
   })
 
   app.addRoute({

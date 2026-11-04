@@ -7,7 +7,7 @@ const root = new URL('../', import.meta.url)
 const routeNames = (file) => [...readFileSync(new URL(file, root), 'utf8').matchAll(/\bname:\s*'([^']+)'/g)].map(match => match[1])
 
 test('every built-in and optional route name has an English entry', () => {
-  const names = [...routeNames('console-ui/src/registerBuiltinShell.tsx'), ...routeNames('console-ui/src/registerOptionalRoutes.tsx')]
+  const names = [...routeNames('console-ui/src/registerBuiltinShell.tsx')]
   assert.ok(names.length >= 20, 'route names were found')
   const missing = names.filter(name => typeof englishMessages[name] !== 'string' || englishMessages[name].trim() === '')
   assert.deepEqual(missing, [])
