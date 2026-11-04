@@ -1,0 +1,23 @@
+console-ui/src/hooks/use-personal-models.ts
+  s_9477e63ef5cee5::t_96524d7388a2a3 1-35
+console-ui/src/pages/PersonalSessionPanel.tsx
+  s_9477e63ef5cee5::t_03d473db68e453 5,10-11,20-21,23-24,26-29,35,43,47,51-52,56-57
+console-ui/src/pages/personal-models.tsx
+  s_9477e63ef5cee5::t_6b2250c7c1b0bf 7,33,35-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7107e15d15ce16e53497278aa3a9fe646a55fa30",
+  "prompts": {},
+  "sessions": {
+    "s_9477e63ef5cee5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4e622535-6dd6-4e23-9811-302f91a2903b",
+        "model": "unknown"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
