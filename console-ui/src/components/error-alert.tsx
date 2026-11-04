@@ -10,6 +10,8 @@ interface ErrorAlertProps {
   onRetry?: () => void
   className?: string
   kind?: ErrorAlertKind
+  /** Raw error text kept behind a collapsible "技术详情" disclosure. */
+  technicalDetail?: string
 }
 
 function variantForKind(kind: ErrorAlertKind): 'destructive' | 'warning' | 'default' {
@@ -23,19 +25,27 @@ function variantForKind(kind: ErrorAlertKind): 'destructive' | 'warning' | 'defa
  * - 标准化 Alert 样式 + 可选重试按钮
  * - 404 / 503 使用差异化样式
  */
-export function ErrorAlert({ error, onRetry, className, kind = 'other' }: ErrorAlertProps) {
+export function ErrorAlert({ error, onRetry, className, kind = 'other', technicalDetail }: ErrorAlertProps) {
   const i18n = useI18n()
   const Icon = kind === '404' ? Info : AlertCircle
   return (
     <Alert variant={variantForKind(kind)} className={className}>
       <Icon className="h-4 w-4" />
-      <AlertDescription className="flex items-center justify-between gap-2">
+      <AlertDescription className="space-y-2">
+       <div className="flex items-center justify-between gap-2">
         <span>{error}</span>
         {onRetry && (
           <Button variant="outline" size="sm" onClick={onRetry} className="shrink-0">
             <RefreshCw className="w-3 h-3 mr-1" />
             {i18n.t("重试")}</Button>
         )}
+       </div>
+        {technicalDetail ? (
+          <details className="text-xs">
+            <summary className="cursor-pointer">{i18n.t("技术详情")}</summary>
+            <pre className="mt-2 whitespace-pre-wrap break-words">{technicalDetail}</pre>
+          </details>
+        ) : null}
       </AlertDescription>
     </Alert>
   )

@@ -69,7 +69,7 @@ function fixture(initialQuery = '') {
     '../../components/PageHeader': { PageHeader: 'page-header' }, '../../components/empty-state': { EmptyState: 'empty' },
     '../../components/ui/card': { Card: 'article', CardContent: 'section' },
     '../../components/ui/button': { Button: 'button' }, '../../components/ui/badge': { Badge: 'span' },
-    '../../components/ui/alert': { Alert: 'aside', AlertDescription: 'p' },
+    '../../components/ui/alert': { Alert: 'aside', AlertDescription: 'p' }, '../../components/error-alert': { ErrorAlert: 'aside' },
     '../../components/ui/scroll-area': { ScrollArea: 'div' },
     'lucide-react': new Proxy({}, { get: () => 'i' }),
   }

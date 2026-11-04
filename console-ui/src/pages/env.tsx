@@ -243,7 +243,7 @@ export default function EnvManagePage() {
       />
 
       {error && (
-        <div className="space-y-2"><ErrorAlert error={readErrorSummary(error, i18n.t("环境变量文件列表"), i18n.locale)} onRetry={handleRefresh} /><details className="text-xs"><summary className="cursor-pointer">{i18n.t("技术详情")}</summary><pre className="mt-2 whitespace-pre-wrap break-words">{error}</pre></details></div>
+        <ErrorAlert error={readErrorSummary(error, i18n.t("环境变量文件列表"), i18n.locale)} technicalDetail={error} onRetry={handleRefresh} />
       )}
 
       <Tabs value={activeTab} onValueChange={selectTab} className="space-y-4">

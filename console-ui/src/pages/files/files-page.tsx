@@ -8,6 +8,7 @@ import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { ConfirmDialog } from '../../components/confirm-dialog'
 import { Alert, AlertDescription } from '../../components/ui/alert'
+import { ErrorAlert } from '../../components/error-alert'
 import { ScrollArea } from '../../components/ui/scroll-area'
 import { PageHeader } from '../../components/PageHeader'
 import { EmptyState } from '../../components/empty-state'
@@ -102,10 +103,7 @@ function FileManageSession() {
       {selectedFile ? <p className="text-xs text-muted-foreground">{i18n.t("切换页面会保留本标签页内的未保存修改；刷新或关闭标签页前请保存。文件列表刷新不会重新加载编辑内容。")}</p> : null}
 
       {error && (
-        <Alert variant="destructive" className="py-2">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{readErrorSummary(error, i18n.t("文件列表"), i18n.locale)}<Button className="file-control" variant="outline" size="sm" onClick={() => void loadTree().catch(() => {})} disabled={loading}>{i18n.t("重试")}</Button><details><summary>{i18n.t("技术详情")}</summary><p>{error}</p></details></AlertDescription>
-        </Alert>
+        <ErrorAlert error={readErrorSummary(error, i18n.t("文件列表"), i18n.locale)} technicalDetail={error} onRetry={loading ? undefined : () => void loadTree().catch(() => {})} className="py-2" />
       )}
 
       <Card className="overflow-hidden">

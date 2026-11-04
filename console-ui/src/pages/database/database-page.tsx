@@ -55,7 +55,7 @@ export default function DatabasePage() {
       />
 
       {error && (
-        <div><ErrorAlert error={readErrorSummary(error, i18n.t("数据库信息"), i18n.locale)} onRetry={() => { void loadInfo().catch(() => {}); void loadTables().catch(() => {}) }} /><details className="text-xs"><summary>{i18n.t("技术详情")}</summary><p>{error}</p></details></div>
+        <ErrorAlert error={readErrorSummary(error, i18n.t("数据库信息"), i18n.locale)} technicalDetail={error} onRetry={() => { void loadInfo().catch(() => {}); void loadTables().catch(() => {}) }} />
       )}
 
       <Card className="overflow-hidden border-border/80 shadow-sm">
