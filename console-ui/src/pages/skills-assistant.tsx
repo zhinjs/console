@@ -5,7 +5,8 @@ import { ConfigurationLiveStatus } from '../components/PluginConfigForm/Configur
 import { configurationReceiptForRead, type ConfigurationApplicationStatus } from '../components/PluginConfigForm/config-live-status.mjs'
 import { useState, useRef, useCallback, type ReactNode } from 'react'
 import { parse as parseConfigSource } from 'yaml'
-import { RefreshCw, RotateCw } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
+import { ApplyFeedback } from '../components/ApplyFeedback'
 import { requestConsole } from '../utils/console-rpc'
 import { pluginRpc } from '../utils/plugin-rpc'
 import { readErrorSummary } from '../utils/read-error.mjs'
@@ -256,20 +257,9 @@ function SkillsSettingsForm({ initial, onReload, currentReadEpoch }: { initial: 
 
       <div className="flex flex-wrap items-center gap-3">
         <Button onClick={() => { void save() }} disabled={saving || !changed}>{saving ? i18n.t("正在保存…") : i18n.t("保存")}</Button>
-        {feedback && <SaveFeedbackNotice feedback={feedback} />}
+        {feedback && <ApplyFeedback feedback={feedback} />}
       </div>
       <ConfigurationLiveStatus result={currentReceipt ?? initial.application} revision={currentReceipt?.revision ?? initial.revision} />
     </CardContent>
   </Card>
-}
-
-function SaveFeedbackNotice({ feedback }: { feedback: SaveFeedback }) {
-  const i18n = useI18n()
-  if (feedback.kind === 'saved') {
-    return <span className="flex items-center gap-1 text-sm">
-      {feedback.restartRequired && <RotateCw className="size-4 text-warning" />}
-      <span className={feedback.applicationKind === 'applied' ? 'text-success' : feedback.applicationKind === 'failed' ? 'text-destructive' : feedback.restartRequired || feedback.applicationKind ? 'text-warning' : 'text-muted-foreground'}>{i18n.t('保存回执：{0}', [feedback.text])}</span>
-    </span>
-  }
-  return <span className="text-sm text-destructive">{feedback.text}</span>
 }

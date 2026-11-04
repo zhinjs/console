@@ -63,7 +63,7 @@ test('ambient same-file refresh replaces an earlier saved application receipt', 
     ...runtime.api, ...ambientModel, configurationReceiptForRead, useI18n: () => messages('zh-CN'), useInboxCacheScope: () => 'scope', isInboxCacheScopeActive: () => true,
     requestConsole: async () => ({ status: 'saved', revision: 'r1', ...evidence('op2', 'applied') }),
     Card: 'Card', CardHeader: 'CardHeader', CardTitle: 'CardTitle', CardContent: 'CardContent', RadioGroup: 'RadioGroup', RadioGroupItem: 'RadioGroupItem',
-    Input: 'Input', Textarea: 'Textarea', Button: 'Button', SaveFeedbackNotice: 'SaveFeedbackNotice', ConfigurationLiveStatus: 'ConfigurationLiveStatus',
+    Input: 'Input', Textarea: 'Textarea', Button: 'Button', ApplyFeedback: 'ApplyFeedback', ConfigurationLiveStatus: 'ConfigurationLiveStatus',
   })
   const onReload = async () => { initial = { ...initial, readEpoch: ++epoch, application: evidence('op2', 'applied') }; return initial }
   runtime.mount(() => Component({ initial, onReload, currentReadEpoch: () => epoch }))
