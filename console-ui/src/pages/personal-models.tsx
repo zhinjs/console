@@ -4,6 +4,7 @@ import { KeyRound, Loader2, Plus, RefreshCw } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { apiFetch } from '../utils/auth'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
+import { usePersonalModels } from '../hooks/use-personal-models'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { agentSessionsPath } from '../utils/agent-session'
 import { isDemoMode } from '../utils/demo-mode'
@@ -29,30 +30,12 @@ export default function PersonalModelsPage() {
 }
 function PersonalModelsWorkspace({ scope }: { scope?: string }) {
   const i18n = useI18n()
-  const [view, setView] = useState<PersonalModelsView | null>(null)
+  const { view, loading, error, reload: load } = usePersonalModels(scope)
   const [ownerId, setOwnerId] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const mounted = useRef(true)
-  const sequence = useRef(0)
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false; sequence.current += 1 } }, [])
-  const load = useCallback(async () => {
-    if (!isInboxCacheScopeActive(scope)) return
-    const current = ++sequence.current
-    setLoading(true); setError('')
-    try {
-      const response = await apiFetch('/api/agent/personal-models', { cache: 'no-store' })
-      const body = await response.json()
-      if (!response.ok || body.success !== true) { if (current === sequence.current && mounted.current && isInboxCacheScopeActive(scope)) setError(personalModelFailure(response.status, body.code)); return }
-      const result = readPersonalModelsView(body)
-      if (current === sequence.current && mounted.current && isInboxCacheScopeActive(scope)) {
-        setView(result)
-        setOwnerId(previous => result.owners.some(owner => owner.ownerId === previous) ? previous : result.owners.length === 1 ? result.owners[0].ownerId : '')
-      }
-    } catch { if (current === sequence.current && mounted.current && isInboxCacheScopeActive(scope)) setError('个人模型请求失败，请检查输入后重试。') }
-    finally { if (current === sequence.current && mounted.current) setLoading(false) }
-  }, [scope])
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    if (!view) return
+    setOwnerId(previous => view.owners.some(owner => owner.ownerId === previous) ? previous : view.owners.length === 1 ? view.owners[0].ownerId : '')
+  }, [view])
   const selected = view?.owners.find(owner => owner.ownerId === ownerId)
   return <PageShell>
     <PageHeader title={i18n.t('个人模型')} description={i18n.t('管理自己的模型连接，为每个个人会话选择模型。')}
