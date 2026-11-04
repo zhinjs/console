@@ -1,0 +1,25 @@
+console-ui/src/components/ApplyFeedback.tsx
+  s_9477e63ef5cee5::t_be0161ed430286 1-25
+console-ui/src/pages/ambient-engagement.tsx
+  s_9477e63ef5cee5::t_9375303f549ae8 5-6,334
+console-ui/src/pages/skills-assistant.tsx
+  s_9477e63ef5cee5::t_281022954e99c4 8-9,260
+tests/localization-lifecycle.test.mjs
+  s_9477e63ef5cee5::t_c16a7015fc49fe 66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c37ca1d355f768fee2fd8e2e2c5230cdc1c39c7b",
+  "prompts": {},
+  "sessions": {
+    "s_9477e63ef5cee5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4e622535-6dd6-4e23-9811-302f91a2903b",
+        "model": "unknown"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
