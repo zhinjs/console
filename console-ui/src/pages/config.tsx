@@ -3,6 +3,8 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useConfigSource } from '../hooks/useConfigSource'
 import { PluginConfigForm } from '../components/PluginConfigForm'
+import { ConfigurationLiveStatus } from '../components/PluginConfigForm/ConfigurationLiveStatus'
+import { configurationSupportsApply } from '../components/PluginConfigForm/config-live-status.mjs'
 import { parse as parseYaml } from 'yaml'
 import {
   Settings, AlertCircle, ChevronRight, ArrowLeft, SlidersHorizontal, Brain, Bot, Blocks
@@ -32,7 +34,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
   const i18n = useI18n()
   const [searchParams] = useSearchParams()
   const pluginFromUrl = searchParams.get('plugin')?.trim() ?? ''
-  const { source, format, configKeys: pluginKeys, loading, loaded, error, load, snapshot } = useConfigSource()
+  const { source, format, configKeys: pluginKeys, loading, loaded, error, load, snapshot, applyConfiguration, applyLoading, applyError, applyBlocked } = useConfigSource()
   const [activeSection, setActiveSection] = useState<string>(() => pluginFromUrl ? `plugin:${pluginFromUrl}` : 'general')
   const [visitedEntries, setVisitedEntries] = useState<Map<string, SettingsEntry>>(() => new Map())
   const [runtimeVisited, setRuntimeVisited] = useState(false)
@@ -111,6 +113,10 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
         </nav>
 
         <div className="console-settings-content">
+          {!activeEntry ? <ConfigurationLiveStatus result={snapshot} revision={snapshot?.revision}
+            onRefresh={() => void load().catch(() => {})}
+            onApply={configurationSupportsApply(snapshot) ? () => void applyConfiguration() : undefined}
+            disabled={loading || applyBlocked} applying={applyLoading} actionError={applyError} /> : null}
           {!activeEntry ? <section aria-labelledby="settings-category-title" className="console-settings-category">
             <header className="console-settings-category-heading">
               <div><h2 id="settings-category-title">{i18n.t(activeGroup.title)}</h2><p>{i18n.t(activeGroup.description)}</p></div>

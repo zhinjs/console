@@ -1,4 +1,5 @@
-import { hasSkillsChanges, buildSkillsPatches, describeSaveResult } from '../console-ui/src/pages/skills-assistant-model.mjs'
+import * as ambientModel from '../console-ui/src/pages/ambient-engagement-model.mjs'
+import { configurationReceiptForRead } from '../console-ui/src/components/PluginConfigForm/config-live-status.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -51,6 +52,28 @@ async function componentFunctions(file, names, bindings) {
   const compiled = ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.None, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React } }).outputText
   return Function('React', ...Object.keys(bindings), `${compiled}; return ${names[0]}`)({ createElement: element }, ...Object.values(bindings))
 }
+
+test('ambient same-file refresh replaces an earlier saved application receipt', async () => {
+  const runtime = hooks(); let epoch = 1
+  const evidence = (id, status) => ({ application: { operationId: id, sourceRevision: 'r1', saved: true, generation: 2, applicationRevision: 1,
+    groups: [{ id: 'root', paths: [['root']], effect: 'reload-plugin', status, dependsOn: [] }] } })
+  let initial = { revision: 'r1', readEpoch: epoch, settings: { behavior: 'off', groupScope: 'all', groups: [], maxPerHour: 6 }, application: evidence('op1', 'applied') }
+  const Component = await componentFunctions('pages/ambient-engagement.tsx', ['AmbientSettingsForm'], {
+    ...runtime.api, ...ambientModel, configurationReceiptForRead, useI18n: () => messages('zh-CN'), useInboxCacheScope: () => 'scope', isInboxCacheScopeActive: () => true,
+    requestConsole: async () => ({ status: 'saved', revision: 'r1', ...evidence('op2', 'applied') }),
+    Card: 'Card', CardHeader: 'CardHeader', CardTitle: 'CardTitle', CardContent: 'CardContent', RadioGroup: 'RadioGroup', RadioGroupItem: 'RadioGroupItem',
+    Input: 'Input', Textarea: 'Textarea', Button: 'Button', SaveFeedbackNotice: 'SaveFeedbackNotice', ConfigurationLiveStatus: 'ConfigurationLiveStatus',
+  })
+  const onReload = async () => { initial = { ...initial, readEpoch: ++epoch, application: evidence('op2', 'applied') }; return initial }
+  runtime.mount(() => Component({ initial, onReload, currentReadEpoch: () => epoch }))
+  const save = elements(runtime.value).find(node => node.type === 'Button')
+  assert.equal(save.props.disabled, false, 'Ambient supports a real no-op save')
+  save.props.onClick(); await runtime.settle()
+  initial = { ...initial, readEpoch: ++epoch, application: evidence('op3', 'restart-pending') }; runtime.render()
+  const shown = elements(runtime.value).find(node => node.type === 'ConfigurationLiveStatus').props
+  assert.equal(shown.result.application.operationId, 'op3')
+  assert.equal(shown.result.application.groups[0].status, 'restart-pending')
+})
 
 test('JSON field and dictionary errors follow the interface language while invalid drafts stay intact', async () => {
   for (const name of ['JsonValueEditor', 'ObjectValueEditor']) {
@@ -194,18 +217,27 @@ test('permission requests use the selected language without clearing hypotheses 
 });
 
 
-test('skills form language changes preserve modified modes and do not trigger reads or saves', async()=>{
- const runtime=hooks();let locale=messages('zh-CN');const writes=[];let reads=0;
- const component=await lifecycle('pages/skills-assistant.tsx','SkillsSettingsForm','  return <Card', 'modes, chooseMode, save',{
-  ...runtime.api,useI18n:()=>locale,hasSkillsChanges,buildSkillsPatches,describeSaveResult,
-  requestConsole:async body=>{writes.push(body);return {status:'saved',restartRequired:true}},
- });
- const initial={revision:'rev-1',settings:{instanceKey:'my-helper',provider:'root/my-helper',usesOtherService:false,modes:{skills:'off',tools:'off',memory:'off',agents:'off',approval:'off',ambient:'off'}}};
- const props={initial,onReload:async()=>{reads++;return initial}};
- runtime.mount(()=>component(props));runtime.value.chooseMode('skills','shadow');runtime.render();
- locale=messages('en');runtime.render();await runtime.settle();
- assert.equal(runtime.value.modes.skills,'shadow');assert.equal(writes.length,0);assert.equal(reads,0);
- await runtime.value.save();await runtime.settle();
- assert.deepEqual(writes,[{type:'config:patch',instanceKey:'my-helper',expectedRevision:'rev-1',patches:[{op:'set',path:['ai','decisions','skills','mode'],value:'shadow'}]}]);
- assert.equal(reads,1);
+test('skills status language refresh keeps its reader identity and uses the current language only on explicit refresh', async () => {
+  const runtime = hooks(); let locale = messages('zh-CN'); const reads = []
+  const Component = await componentFunctions('pages/skills-assistant.tsx', ['SkillsAssistantSession'], {
+    ...runtime.api, useI18n: () => locale,
+    readSkillsStatus: async value => { reads.push(value); return null },
+    useConsoleRead: read => {
+      runtime.api.useEffect(() => { void read() }, [read])
+      return { refresh: read, loading: false }
+    },
+    PageShell: 'PageShell', PageHeader: 'PageHeader', Button: 'Button', Link: 'Link', RefreshCw: 'RefreshCw', SkillsStatusSection: 'SkillsStatusSection',
+  })
+  runtime.mount(() => Component()); await runtime.settle()
+  assert.deepEqual(reads, ['zh-CN'])
+  const first = elements(runtime.value).find(node => node.type === 'SkillsStatusSection').props.onRetry
+  locale = messages('en'); runtime.render(); await runtime.settle()
+  assert.deepEqual(reads, ['zh-CN'], 'locale changes do not trigger reads or graph mutations')
+  const link = elements(runtime.value).find(node => node.type === 'Link')
+  assert.equal(link.props.to, '/agent/models')
+  assert.equal(link.children.join(''), 'Manage model purposes')
+  const header = elements(runtime.value).find(node => node.type === 'PageHeader')
+  await header.props.actions.props.onClick(); await runtime.settle()
+  assert.deepEqual(reads, ['zh-CN', 'en'])
+  assert.equal(typeof first, 'function')
 })

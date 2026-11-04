@@ -7,7 +7,6 @@ import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { defaultI18n } from './locale-fixture.mjs'
 import { BEHAVIOR_CHOICES } from '../console-ui/src/pages/ambient-engagement-model.mjs'
-import { MODE_CHOICES } from '../console-ui/src/pages/skills-assistant-model.mjs'
 
 const require = createRequire(import.meta.url)
 const compilerOptions = { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX }
@@ -51,24 +50,4 @@ test('ambient radio groups retain their values and group identity and change onl
   assert.equal(scopeRoot.props.name, 'ambient-group-scope'); assert.equal(scopeRoot.props.value, 'some')
   assert.equal(scopeRoot.props['aria-label'], '在哪些群里？')
   scopeRoot.props.onValueChange('all'); assert.equal(groupScope, 'all'); assert.equal(behavior, 'join')
-})
-
-test('assistant radio callback updates one task mode and clears the existing server problems without touching siblings', async () => {
-  const ast = await page('skills-assistant')
-  let chooseModeNode
-  const visit = node => {
-    if (ts.isVariableDeclaration(node) && node.name.getText(ast) === 'chooseMode') chooseModeNode = node.initializer
-    ts.forEachChild(node, visit)
-  }
-  visit(ast); assert.ok(chooseModeNode)
-  let modes = { skills: 'off', tools: 'active', memory: 'shadow', agents: 'off', approval: 'off', ambient: 'off' }, serverProblems = ['old error']
-  const chooseMode = evaluate(chooseModeNode.getText(ast), { setModes: update => { modes = update(modes) }, setServerProblems: value => { serverProblems = value } })
-  const modeGroup = group(ast, 'skills-mode-', { entry: { task: 'skills', label: '为机器人选择技能' }, modes, MODE_CHOICES, chooseMode })
-  const actual = RadioGroup.render(modeGroup.props, null)
-  assert.equal(actual.props.name, 'skills-mode-skills'); assert.equal(actual.props.value, 'off')
-  assert.equal(actual.props['aria-label'], '为机器人选择技能')
-  assert.equal((renderToStaticMarkup(modeGroup).match(/role="radio"/g) ?? []).length, 3)
-  actual.props.onValueChange('shadow')
-  assert.deepEqual(modes, { skills: 'shadow', tools: 'active', memory: 'shadow', agents: 'off', approval: 'off', ambient: 'off' })
-  assert.deepEqual(serverProblems, [])
 })

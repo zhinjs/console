@@ -16,21 +16,8 @@ export interface SkillsStatusView {
   hasActivity: boolean
   updatedAt: number | null
 }
-export type TaskModes = Record<AssistantTask, TaskMode>
-export interface SkillsSettings { instanceKey: string | undefined; provider: string | undefined; usesOtherService: boolean; modes: TaskModes }
-export type SkillsPatch = { op: 'set'; path: string[]; value: unknown }
-export interface SaveFeedback { kind: 'saved' | 'conflict' | 'invalid' | 'error'; text: string; restartRequired?: boolean }
 export const SKILLS_STATUS_PERMISSION: 'skills:read'
-export const SKILLS_ASSISTANT_PACKAGE: string
-export const DECISIONS_CONFIG_PATH: readonly string[]
 export const ASSISTANT_TASKS: ReadonlyArray<{ task: AssistantTask; label: string; hint: string }>
-export const MODE_CHOICES: ReadonlyArray<{ value: TaskMode; label: string }>
-export const MODE_EXPLANATION: string
 export function validateSkillsStatus(data: unknown, locale?: Locale): SkillsStatus
 export function describeSkillsStatus(status: SkillsStatus, locale?: Locale): SkillsStatusView
-export function findAssistantInstanceKey(configDocument: unknown): string | undefined
-export function readSkillsSettings(configDocument: unknown): SkillsSettings
-export function buildSkillsPatches(initial: SkillsSettings, modes: TaskModes): SkillsPatch[]
-export function hasSkillsChanges(initial: SkillsSettings, modes: TaskModes): boolean
-export function describeSaveResult(result: unknown, locale?: Locale): SaveFeedback
 export function isPermissionDenied(error: unknown): boolean

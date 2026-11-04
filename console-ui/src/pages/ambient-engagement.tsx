@@ -1,9 +1,11 @@
 import { translate } from '../i18n/locale.mjs'
 import { useI18n } from '../i18n'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { parse as parseConfigSource } from 'yaml'
 import { RefreshCw, RotateCw } from 'lucide-react'
 import { requestConsole } from '../utils/console-rpc'
+import { useInboxCacheScope } from '../utils/useInboxCacheScope'
+import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { ENDPOINT_RPC } from '../contracts/zhin-console'
 import { normalizeGroupRecord } from './endpoint-detail/conversation-labels'
 import { pluginRpc } from '../utils/plugin-rpc'
@@ -19,6 +21,8 @@ import { Input } from '../components/ui/input'
 import { Textarea } from '../components/ui/textarea'
 import { Skeleton } from '../components/ui/skeleton'
 import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group'
+import { ConfigurationLiveStatus } from '../components/PluginConfigForm/ConfigurationLiveStatus'
+import { configurationReceiptForRead, type ConfigurationApplicationStatus } from '../components/PluginConfigForm/config-live-status.mjs'
 import {
   BEHAVIOR_CHOICES,
   ambientGroupLabel,
@@ -37,11 +41,12 @@ import {
   type SaveFeedback,
 } from './ambient-engagement-model.mjs'
 
-type ConfigSource = { source: string; revision: string }
+type ConfigSource = ConfigurationApplicationStatus & { source: string; revision: string }
 type StatusRead = { denied: true } | { denied: false; view: AmbientStatusView }
-type SettingsRead = { settings: AmbientSettings; revision: string }
-type PatchResult = {
+type SettingsRead = { settings: AmbientSettings; revision: string; application?: ConfigurationApplicationStatus; readEpoch?: number }
+type PatchResult = ConfigurationApplicationStatus & {
   status?: string
+  revision?: string
   errors?: Array<{ path: string; message: string }>
 }
 
@@ -60,7 +65,7 @@ async function readAmbientSettingsFromHost(): Promise<SettingsRead> {
   const configSource = await requestConsole<ConfigSource>({ type: 'config:get-source' })
   const configDocument: unknown = parseConfigSource(configSource.source)
   const settings = readAmbientSettings(configDocument)
-  return { settings, revision: configSource.revision }
+  return { settings, revision: configSource.revision, application: { application: configSource.application, applicationError: configSource.applicationError } }
 }
 
 function formatTime(timestamp: number, locale: 'zh-CN' | 'en' = 'zh-CN'): string {
@@ -68,9 +73,19 @@ function formatTime(timestamp: number, locale: 'zh-CN' | 'en' = 'zh-CN'): string
 }
 
 export default function AmbientEngagementPage() {
+  const scope = useInboxCacheScope()
+  if (!scope || !isInboxCacheScopeActive(scope)) return null
+  return <AmbientEngagementSession key={scope} />
+}
+
+function AmbientEngagementSession() {
   const i18n = useI18n()
   const statusRead = useConsoleRead<StatusRead | null>(readAmbientStatus, null)
-  const settingsRead = useConsoleRead<SettingsRead | null>(readAmbientSettingsFromHost, null)
+  const configurationReadEpoch = useRef(0)
+  const settingsRead = useConsoleRead<SettingsRead | null>(async () => {
+    const readEpoch = ++configurationReadEpoch.current
+    return { ...await readAmbientSettingsFromHost(), readEpoch }
+  }, null)
   const refreshAll = () => {
     void statusRead.refresh().catch(() => {})
     void settingsRead.refresh().catch(() => {})
@@ -86,6 +101,7 @@ export default function AmbientEngagementPage() {
     <AmbientSettingsSection
       read={settingsRead}
       onReload={() => settingsRead.refresh()}
+      currentReadEpoch={() => configurationReadEpoch.current}
     />
   </PageShell>
 }
@@ -191,7 +207,7 @@ function AmbientRecentActivity({ recent }: { recent: AmbientStatusView['recent']
 
 type SettingsReadState = ReturnType<typeof useConsoleRead<SettingsRead | null>>
 
-function AmbientSettingsSection({ read, onReload }: { read: SettingsReadState; onReload: () => Promise<SettingsRead | null> }) {
+function AmbientSettingsSection({ read, onReload, currentReadEpoch }: { read: SettingsReadState; onReload: () => Promise<SettingsRead | null>; currentReadEpoch: () => number }) {
   const i18n = useI18n()
   if (read.loading && !read.loaded) return <Skeleton className="h-56 w-full" />
   if (read.error && !read.loaded) {
@@ -204,10 +220,11 @@ function AmbientSettingsSection({ read, onReload }: { read: SettingsReadState; o
     </Card>
   }
   if (!read.data) return null
-  return <AmbientSettingsForm key={read.data.revision} initial={read.data} onReload={onReload} />
+  return <AmbientSettingsForm key={read.data.revision} initial={read.data} onReload={onReload} currentReadEpoch={currentReadEpoch} />
 }
 
-function AmbientSettingsForm({ initial, onReload }: { initial: SettingsRead; onReload: () => Promise<SettingsRead | null> }) {
+function AmbientSettingsForm({ initial, onReload, currentReadEpoch }: { initial: SettingsRead; onReload: () => Promise<SettingsRead | null>; currentReadEpoch?: () => number }) {
+  const scope = useInboxCacheScope()
   const i18n = useI18n()
   const [behavior, setBehavior] = useState<AmbientBehavior>(initial.settings.behavior)
   const [groupScope, setGroupScope] = useState(initial.settings.groupScope)
@@ -215,6 +232,8 @@ function AmbientSettingsForm({ initial, onReload }: { initial: SettingsRead; onR
   const [maxPerHourText, setMaxPerHourText] = useState(String(initial.settings.maxPerHour))
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState<SaveFeedback | null>(null)
+  const [receipt, setReceipt] = useState<{ value: PatchResult; observedReadEpoch: number } | null>(null)
+  const currentReceipt = configurationReceiptForRead(initial, receipt)
   const [serverProblems, setServerProblems] = useState<string[]>([])
 
   useEffect(() => {
@@ -231,6 +250,7 @@ function AmbientSettingsForm({ initial, onReload }: { initial: SettingsRead; onR
   const showsGroupOptions = behavior !== 'off'
 
   const save = async () => {
+    if (!isInboxCacheScopeActive(scope)) return
     setSaving(true)
     setFeedback(null)
     try {
@@ -239,7 +259,9 @@ function AmbientSettingsForm({ initial, onReload }: { initial: SettingsRead; onR
         expectedRevision: initial.revision,
         patches: buildAmbientPatches(draft),
       })
+      if (!isInboxCacheScopeActive(scope)) return
       const saveFeedback = describeSaveResult(result, i18n.locale)
+      if (result.status === 'saved') setReceipt({ value: result, observedReadEpoch: currentReadEpoch?.() ?? initial.readEpoch ?? 0 })
       if (saveFeedback.kind === 'invalid') {
         const messages = (result.errors ?? []).map((error) => error.message)
         setServerProblems(messages)
@@ -247,12 +269,13 @@ function AmbientSettingsForm({ initial, onReload }: { initial: SettingsRead; onR
       if (saveFeedback.kind === 'saved' || saveFeedback.kind === 'conflict') {
         await onReload().catch(() => null)
       }
-      setFeedback(saveFeedback)
+      if (isInboxCacheScopeActive(scope)) setFeedback(saveFeedback)
     } catch (error) {
+      if (!isInboxCacheScopeActive(scope)) return
       const message = error instanceof Error ? error.message : String(error)
       setFeedback({ kind: 'error', text: i18n.t("保存失败：{0}", [message]) })
     } finally {
-      setSaving(false)
+      if (isInboxCacheScopeActive(scope)) setSaving(false)
     }
   }
 
@@ -304,15 +327,17 @@ function AmbientSettingsForm({ initial, onReload }: { initial: SettingsRead; onR
         <Button onClick={() => { void save() }} disabled={saving || problems.length > 0}>{saving ? i18n.t("正在保存…") : i18n.t("保存")}</Button>
         {feedback && <SaveFeedbackNotice feedback={feedback} />}
       </div>
+      <ConfigurationLiveStatus result={currentReceipt ?? initial.application} revision={currentReceipt?.revision ?? initial.revision} />
     </CardContent>
   </Card>
 }
 
 function SaveFeedbackNotice({ feedback }: { feedback: SaveFeedback }) {
+  const i18n = useI18n()
   if (feedback.kind === 'saved') {
     return <span className="flex items-center gap-1 text-sm">
       {feedback.restartRequired && <RotateCw className="size-4 text-amber-600" />}
-      <span className={feedback.restartRequired ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}>{feedback.text}</span>
+      <span className={feedback.applicationKind === 'applied' ? 'text-emerald-700 dark:text-emerald-400' : feedback.applicationKind === 'failed' ? 'text-destructive' : feedback.restartRequired || feedback.applicationKind ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}>{i18n.t('保存回执：{0}', [feedback.text])}</span>
     </span>
   }
   return <span className="text-sm text-destructive">{feedback.text}</span>

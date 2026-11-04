@@ -560,3 +560,77 @@ test('an authenticated fresh save rejected before dispatch clears only that fres
   )
   f.runtime.unmount()
 })
+
+test('the single graph editor preserves sibling decision modes and model IDs across parent refreshes', async () => {
+  const runtime = hooks(), plans = [], requests = []
+  const original = {
+    defaults: {},
+    decisions: {
+      skills: { mode: 'off', profile: 'decision-one', timeoutMs: 90, minConfidence: 0.6 },
+      tools: { mode: 'active', profile: 'decision-two', maxSelections: 3 },
+    },
+  }
+  const management = {
+    view: {
+      ...view(), purposes: original,
+      profiles: {
+        'decision-one': { id: 'decision-one', accountId: 'account', model: 'decision' },
+        'decision-two': { id: 'decision-two', accountId: 'account', model: 'decision' },
+        'language-only': { id: 'language-only', accountId: 'account', model: 'chat' },
+      },
+      accounts: { account: { serviceId: 'service' } },
+      services: { service: { models: { decision: { kinds: ['decision'] }, chat: { kinds: ['language'] } } } },
+    },
+    active: () => true, busy: false, pending: null,
+    request: async path => { requests.push(path); return { adapters: [], endpoints: [], scenes: [], agents: [] } },
+    savePlan: async plan => { plans.push(plan); return true },
+    setError: error => assert.fail(error),
+  }
+  const { Purposes } = await component(runtime, '../console-ui/src/pages/inference/Purposes.tsx', {
+    'lucide-react': { Plus: 'icon', Trash2: 'icon' }, './model.mjs': model,
+    '../../components/ui/button': { Button: 'button' }, '../../components/ui/input': { Input: 'input' },
+    '../../components/ui/select': { SelectField: 'select' }, '../../components/ui/card': { Card: 'card' },
+  })
+  runtime.mount(() => Purposes({ management })); await runtime.settle()
+  const select = label => nodes(runtime.value).find(node => node.type === 'select' && node.props['aria-label'] === label)
+  for (const label of ['技能选择', '工具选择', '记忆选择', 'Agent 选择', '工具审批建议', '旁听参与判断']) {
+    assert.deepEqual(select(`${label}模式`).props.options.map(option => option.value), ['off', 'shadow', 'active'])
+    assert.deepEqual(select(`${label}模型`).props.options.map(option => option.value), ['', 'decision-one', 'decision-two'])
+  }
+  select('技能选择模式').props.onValueChange('shadow'); runtime.render()
+  select('技能选择模型').props.onValueChange('decision-two'); runtime.render()
+  runtime.render(); await runtime.settle() // Parent language/status refresh does not remount the graph draft.
+  assert.equal(select('技能选择模式').props.value, 'shadow')
+  assert.equal(select('技能选择模型').props.value, 'decision-two')
+  assert.equal(select('工具选择模式').props.value, 'active')
+  assert.deepEqual(plans, []); assert.deepEqual(requests, ['/targets'])
+  await runtime.value.props.onSubmit({ preventDefault() {} })
+  assert.deepEqual(plans[0].purposes.decisions, {
+    skills: { ...original.decisions.skills, mode: 'shadow', profile: 'decision-two' },
+    tools: original.decisions.tools,
+  })
+  assert.deepEqual(original.decisions.skills, { mode: 'off', profile: 'decision-one', timeoutMs: 90, minConfidence: 0.6 })
+  runtime.unmount()
+})
+
+test('decision purpose saves use only graph prepare/apply and reload the committed selection', async () => {
+  const f = fixture(); await ready(f)
+  const plan = { version: 1, purposes: { decisions: { skills: { mode: 'shadow', profile: 'decision-two' } } } }
+  const saving = f.runtime.value.savePlan(plan); await f.runtime.settle()
+  const prepared = { ciphertext: 'synthetic-purpose-plan' }
+  const request = f.answer('/plan', { prepared, fingerprint: 'purpose-fingerprint', baseRevision: 1 })
+  assert.deepEqual(JSON.parse(request.init.body).plan, plan)
+  await f.runtime.settle()
+  const applied = f.answer('/apply', { status: 'committed', mutationId: 'receipt', graphRevision: 2 })
+  assert.deepEqual(JSON.parse(applied.init.body).prepared, prepared)
+  await f.runtime.settle()
+  f.answer('/owners', [owner()]); await f.runtime.settle()
+  f.answer('/inference', { ...view(), revision: 2, purposes: { defaults: {}, decisions: { skills: { mode: 'shadow', profile: 'decision-two' } } } })
+  await f.runtime.settle(); assert.equal(await saving, true)
+  assert.deepEqual(f.runtime.value.view.purposes.decisions.skills, { mode: 'shadow', profile: 'decision-two' })
+  assert.equal(f.runtime.value.pending, null)
+  assert.ok(f.calls.every(call => new URL(call.url, 'https://fixture').pathname.startsWith('/api/agent/inference')))
+  assert.equal(f.calls.filter(call => call.url.includes('/apply')).length, 1)
+  assert.equal(f.calls.some(call => call.url.includes('config:apply') || call.url.includes('config:patch')), false)
+  f.runtime.unmount()
+})
