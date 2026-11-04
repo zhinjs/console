@@ -1,0 +1,19 @@
+console-ui/src/design-system.css
+  s_9477e63ef5cee5::t_d18fd7233758b9 1445,1918,2715,2721
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e71f059b4f65565a0b0cea17dacdfe31d9b7c97a",
+  "prompts": {},
+  "sessions": {
+    "s_9477e63ef5cee5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4e622535-6dd6-4e23-9811-302f91a2903b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
