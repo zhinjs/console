@@ -127,7 +127,7 @@ function EnvFileEditor({
   return (
     <div className="space-y-3">
       {shouldShowMissingEnv({ loaded, exists, dirty, readFailed: message?.type === 'error' }) && (
-        <Alert className="py-2 border-yellow-500/50 text-yellow-700 dark:text-yellow-400">
+        <Alert className="py-2 border-warning/50 text-warning">
           <FileWarning className="h-4 w-4" />
           <AlertDescription>{readOnly ? i18n.t("文件不存在") : i18n.t("文件不存在，保存后将自动创建")}</AlertDescription>
         </Alert>

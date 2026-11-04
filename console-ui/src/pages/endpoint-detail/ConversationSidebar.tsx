@@ -173,7 +173,7 @@ export function ConversationSidebar({
 
         {!listLoading && listNotice && (
           <div className="px-3 py-2 mb-1 text-xs leading-relaxed" role={listNotice.tone === 'error' ? 'alert' : 'status'}>
-            <p className={listNotice.tone === 'error' ? 'text-destructive' : listNotice.tone === 'warning' ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}>{listNotice.text}</p>
+            <p className={listNotice.tone === 'error' ? 'text-destructive' : listNotice.tone === 'warning' ? 'text-warning' : 'text-muted-foreground'}>{listNotice.text}</p>
             {listNotice.details && <details className="mt-2 text-muted-foreground"><summary className="cursor-pointer">{i18n.t("技术详情")}</summary><p className="mt-2 break-words">{listNotice.details}</p></details>}
           </div>
         )}

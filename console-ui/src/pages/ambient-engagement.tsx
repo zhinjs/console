@@ -336,8 +336,8 @@ function SaveFeedbackNotice({ feedback }: { feedback: SaveFeedback }) {
   const i18n = useI18n()
   if (feedback.kind === 'saved') {
     return <span className="flex items-center gap-1 text-sm">
-      {feedback.restartRequired && <RotateCw className="size-4 text-amber-600" />}
-      <span className={feedback.applicationKind === 'applied' ? 'text-emerald-700 dark:text-emerald-400' : feedback.applicationKind === 'failed' ? 'text-destructive' : feedback.restartRequired || feedback.applicationKind ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}>{i18n.t('保存回执：{0}', [feedback.text])}</span>
+      {feedback.restartRequired && <RotateCw className="size-4 text-warning" />}
+      <span className={feedback.applicationKind === 'applied' ? 'text-success' : feedback.applicationKind === 'failed' ? 'text-destructive' : feedback.restartRequired || feedback.applicationKind ? 'text-warning' : 'text-muted-foreground'}>{i18n.t('保存回执：{0}', [feedback.text])}</span>
     </span>
   }
   return <span className="text-sm text-destructive">{feedback.text}</span>

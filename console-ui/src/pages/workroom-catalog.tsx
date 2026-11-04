@@ -353,13 +353,13 @@ export default function WorkroomCatalogPage() {
         }
       />
 
-      {readOnly ? <div className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-4 py-3 text-sm text-amber-800 dark:text-amber-200">{i18n.t("Demo 只读展示目录；发布仅在私有 full 模式开放。")}</div> : null}
+      {readOnly ? <div className="rounded-lg border border-warning/25 bg-warning/[0.06] px-4 py-3 text-sm text-warning">{i18n.t("Demo 只读展示目录；发布仅在私有 full 模式开放。")}</div> : null}
       {error || publishUnconfirmed ? <ErrorAlert error={publishUnconfirmed ? i18n.t("未能确认发布结果。本地草稿已保留，请刷新并核对最新配置。") : error ?? ''} onRetry={catalogError || publishUnconfirmed ? () => load(false, true) : undefined} /> : null}
       {error && publishUnconfirmed ? <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">{i18n.t("错误详情")}</summary><pre className="mt-2 whitespace-pre-wrap break-words">{error}</pre></details> : null}
       {!loading && !catalog ? <EmptyState title={i18n.t("Workroom 目录未就绪")} description={i18n.t("尚未取得目录，暂不能新建、编辑或发布。请先在 Host 安装并配置可选 Workroom Catalog 服务及 Agent，再刷新；无需重建本地草稿。")} /> : null}
       {catalog && catalogError ? <div className="rounded-lg border bg-muted/25 px-4 py-3 text-sm text-muted-foreground">{i18n.t("刷新失败，以下是上次成功加载的目录；本地修改仍保留，恢复目录连接前暂停编辑和发布。")}</div> : null}
       {dirty ? <Button variant="outline" size="sm" disabled={loading || saving} onClick={() => setReloadOpen(true)}>{i18n.t("放弃未发布修改")}</Button> : null}
-      {endpointError ? <div className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-4 py-3 text-sm text-amber-800 dark:text-amber-200">{i18n.t("Endpoint 列表暂不可用；Catalog 仍可查看和编辑，已有消息出口会保持原值。发布时 Runtime 仍会执行最终校验。")}</div> : null}
+      {endpointError ? <div className="rounded-lg border border-warning/25 bg-warning/[0.06] px-4 py-3 text-sm text-warning">{i18n.t("Endpoint 列表暂不可用；Catalog 仍可查看和编辑，已有消息出口会保持原值。发布时 Runtime 仍会执行最终校验。")}</div> : null}
       {notice ? <div className="rounded-lg border bg-muted/25 px-4 py-3 text-sm text-muted-foreground">{notice}</div> : null}
 
       {loading && !catalog ? (

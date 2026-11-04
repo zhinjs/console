@@ -96,7 +96,7 @@ function EvidenceSession({ pluginName, revision, draftRevision, dirty, disabled,
 
   return <section aria-label={i18n.t("配置保存与应用证据")} className="space-y-3 rounded-md border p-3 text-sm">
     <p>{i18n.t("已读取文件版本：")}<code className="console-revision" title={revision}>{revision ? shortRevision(revision) : i18n.t("未知")}</code></p>
-    {dirty ? <p className="text-amber-700">{i18n.t("有未保存草稿；基于版本 ")}{draftRevision?.slice(0, 12) ?? i18n.t("未知")}{i18n.t("。保存前不会应用草稿。")}</p> : null}
+    {dirty ? <p className="text-warning">{i18n.t("有未保存草稿；基于版本 ")}{draftRevision?.slice(0, 12) ?? i18n.t("未知")}{i18n.t("。保存前不会应用草稿。")}</p> : null}
     {managed ? <>
       <p className="text-xs text-muted-foreground">{i18n.t("文件已保存、当前代配置语义一致、平台就绪和业务验证是不同证据；未确认应用不等于应用失败。")}</p>
       <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={() => void read()} disabled={loading || disabled || !revision}>{loading ? i18n.t("正在核对…") : i18n.t("读取应用证据")}</Button>

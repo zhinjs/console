@@ -24,7 +24,7 @@ import {
 const W = 720
 const H = 220
 const PAD = { left: 48, right: 12, top: 10, bottom: 26 }
-const SEGMENT_COLORS: Record<string, string> = { history: '#2563eb', fixed: '#7c5cff', user: '#0f9d76' }
+const SEGMENT_COLORS: Record<string, string> = { history: 'hsl(var(--chart-1))', fixed: 'hsl(var(--chart-5))', user: 'hsl(var(--chart-3))' }
 
 function xLabelEvery(count: number): number {
   return Math.max(1, Math.ceil(count / 8))
@@ -93,11 +93,11 @@ export function CacheLineChart({ series, bucket }: { series: UsagePoint[]; bucke
       <line x1={PAD.left} x2={W - PAD.right} y1={y(tick)} y2={y(tick)} stroke="currentColor" strokeOpacity={0.12} />
       <text x={PAD.left - 6} y={y(tick) + 3} textAnchor="end" fontSize={12} fill="currentColor" fillOpacity={0.65}>{formatPercent(tick, i18n.locale)}</text>
     </g>)}
-    {path ? <path d={path} fill="none" stroke="#0f9d76" strokeWidth={2} strokeLinejoin="round" /> : null}
+    {path ? <path d={path} fill="none" stroke="hsl(var(--chart-3))" strokeWidth={2} strokeLinejoin="round" /> : null}
     {points.map((point, index) => {
       const label = formatBucketLabel(point.bucketStart, bucket, i18n.locale)
       return <g key={point.bucketStart}>
-        {point.value !== null ? <circle cx={x(index)} cy={y(point.value)} r={points.length > 60 ? 1.5 : 3} fill="#0f9d76"><title>{`${label} · ${formatPercent(point.value, i18n.locale)}`}</title></circle> : null}
+        {point.value !== null ? <circle cx={x(index)} cy={y(point.value)} r={points.length > 60 ? 1.5 : 3} fill="hsl(var(--chart-3))"><title>{`${label} · ${formatPercent(point.value, i18n.locale)}`}</title></circle> : null}
         {index % every === 0 ? <text x={x(index)} y={120 - 8} textAnchor="middle" fontSize={12} fill="currentColor" fillOpacity={0.65}>{label}</text> : null}
       </g>
     })}

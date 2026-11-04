@@ -488,7 +488,7 @@ function Metric(props: {
     <Card>
       <CardContent className="p-4">
         <div className="flex items-center gap-2 text-xs text-muted-foreground"><Icon className="h-4 w-4" />{props.label}</div>
-        <strong className={cn('mt-2 block text-2xl', props.tone === 'warning' && 'text-amber-600', props.tone === 'success' && 'text-emerald-600')}>{props.value}</strong>
+        <strong className={cn('mt-2 block text-2xl', props.tone === 'warning' && 'text-warning', props.tone === 'success' && 'text-success')}>{props.value}</strong>
         <p className="mt-1 text-xs text-muted-foreground">{props.detail}</p>
       </CardContent>
     </Card>
