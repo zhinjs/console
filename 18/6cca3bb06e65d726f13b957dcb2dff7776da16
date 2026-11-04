@@ -1,0 +1,31 @@
+console-ui/src/i18n/messages.en.mjs
+  s_9477e63ef5cee5::t_85eab784e42d8c 2921-2928
+console-ui/src/pages/dashboard.tsx
+  s_9477e63ef5cee5::t_ca0be0f7e4bc86 38,165,360-369,428-429,594
+console-ui/src/pages/database/document-collection-view.tsx
+  s_9477e63ef5cee5::t_ec284e0701cded 144,149
+console-ui/src/pages/endpoint-detail/ConversationSidebar.tsx
+  s_9477e63ef5cee5::t_ca317936ca72db 111,113
+console-ui/src/pages/endpoint-detail/index.tsx
+  s_9477e63ef5cee5::t_420e20b18ee271 4,87-101,198,219-221,225,231-232,235-237,244-245,248-254,747,1138,1156,1159
+console-ui/src/pages/endpoint-detail/useGroupActions.ts
+  s_9477e63ef5cee5::t_5af0e763061067 52
+console-ui/src/pages/login.tsx
+  s_9477e63ef5cee5::t_b40b8a103163fa 98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "186cca3bb06e65d726f13b957dcb2dff7776da16",
+  "prompts": {},
+  "sessions": {
+    "s_9477e63ef5cee5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4e622535-6dd6-4e23-9811-302f91a2903b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
