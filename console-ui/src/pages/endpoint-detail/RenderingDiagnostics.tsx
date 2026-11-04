@@ -10,7 +10,7 @@ export function RenderingDiagnostics({ rendering, messageId, error, preview = fa
     <summary>{i18n.t('消息信息')}</summary>
     <div title={messageId}>{i18n.t('消息 ID：')}<code>{messageId}</code></div>
   </details>
-  return <div className="mt-2 border-t border-current/10 pt-1.5 text-[11px] leading-relaxed opacity-90" aria-label={projection ? i18n.t("出站内容投影诊断") : preview ? i18n.t("目标预览渲染诊断") : i18n.t("实际发送渲染诊断")}>
+  return <div className="mt-2 border-t border-current/10 pt-1.5 text-xs leading-relaxed opacity-90" aria-label={projection ? i18n.t("出站内容投影诊断") : preview ? i18n.t("目标预览渲染诊断") : i18n.t("实际发送渲染诊断")}>
     {messageId && <div className="break-all" title={messageId}>{i18n.t("消息 ID：")}<code>{messageId}</code></div>}
     {labels && <>
       <div>{projection ? i18n.t("出站投影") : preview ? i18n.t("目标预览") : i18n.t("传给 Endpoint")}：{labels.forms.join('、') || i18n.t("空内容")}</div>

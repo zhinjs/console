@@ -123,7 +123,7 @@ export function ConversationSidebar({
                 {info?.name || endpointId}
               </p>
               <div className="flex items-center gap-1.5 mt-1">
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-medium h-5">
+                <Badge variant="secondary" size="sm" className="h-5">
                   {adapter}
                 </Badge>
                 <span

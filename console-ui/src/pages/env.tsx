@@ -255,7 +255,7 @@ export default function EnvManagePage() {
                 <KeyRound className="w-3.5 h-3.5" />
                 {name}
                 {fileInfo && !fileInfo.exists && (
-                  <Badge variant="outline" className="text-[10px] px-1 py-0 ml-1">{i18n.t("新")}</Badge>
+                  <Badge variant="outline" size="sm" className="ml-1">{i18n.t("新")}</Badge>
                 )}
               </TabsTrigger>
             )

@@ -497,7 +497,7 @@ function WorkroomEditor(props: {
                   <div className="rounded-lg border bg-background/70 p-3">
                     <div className="mb-3 flex items-start gap-2">
                       <Route className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                      <div><h4 className="text-xs font-semibold">{i18n.t("任务执行入口")}</h4><p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{i18n.t("本机执行，或精确路由到远程 Agent Endpoint。")}</p></div>
+                      <div><h4 className="text-xs font-semibold">{i18n.t("任务执行入口")}</h4><p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{i18n.t("本机执行，或精确路由到远程 Agent Endpoint。")}</p></div>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <Field label="Execution"><SelectField value={member.assignmentRoute?.kind ?? 'local'} disabled={readOnly} onValueChange={(kind) => setMember(index, { ...member, assignmentRoute: kind === 'remote' ? { kind: 'remote', endpointId: '' } : { kind: 'local' } })} options={[{value: 'local', label: 'local'}, {value: 'remote', label: 'remote'}]} /></Field>
@@ -562,7 +562,7 @@ function MessageRouteEditor(props: {
           <RadioTower className="mt-0.5 h-4 w-4 text-muted-foreground" />
           <div>
             <h4 className="text-xs font-semibold">{i18n.t("消息出口投影")}</h4>
-            <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{i18n.t("选择该 Agent 在主协作空间发言时使用的 Bot 身份。")}</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{i18n.t("选择该 Agent 在主协作空间发言时使用的 Bot 身份。")}</p>
           </div>
         </div>
         <Badge variant={props.issue ? 'destructive' : member.messageRoute ? 'outline' : 'secondary'}>

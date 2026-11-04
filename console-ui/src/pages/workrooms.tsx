@@ -394,7 +394,7 @@ function WorkroomBoardPage() {
                     </div>
                     <Badge variant={statusVariant(run.status)}>{run.status}</Badge>
                   </div>
-                  <div className="mt-3 flex items-center gap-3 text-[11px] text-muted-foreground">
+                  <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
                     <span>{run.counts.tasks} tasks</span>
                     <span>{run.counts.assignments} assignments</span>
                     <span>{run.counts.reviewerAssignments + run.counts.sponsorGates} waits</span>

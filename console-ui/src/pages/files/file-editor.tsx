@@ -132,7 +132,7 @@ export function FileEditor({
         <div className="flex items-center gap-2 min-w-0">
           {getFileIcon(fileName)}
           <span className="text-sm font-medium truncate" title={filePath}>{filePath}</span>
-          {dirty && <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0">{i18n.t("未保存")}</Badge>}
+          {dirty && <Badge variant="secondary" size="sm" className="shrink-0">{i18n.t("未保存")}</Badge>}
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <Button className="file-control" size="sm" variant="ghost" disabled={saving} onClick={onClose} title={i18n.t("关闭")} aria-label={i18n.t("关闭文件")}>

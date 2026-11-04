@@ -100,7 +100,7 @@ export function GalleryPreview({ item, readOnly }: { item: CapabilityItem; readO
   }
   const targetName = target && (endpoints.find(value => value.endpoint.id === target.endpoint.id && value.endpoint.adapter === target.endpoint.adapter)?.name ?? target.endpoint.adapter)
   return <div ref={container} className="console-component-live-preview" aria-label={i18n.t("{0} 预览", [name])}>
-    <div className="px-3 pt-2 text-[11px] text-muted-foreground">
+    <div className="px-3 pt-2 text-xs text-muted-foreground">
       {target ? i18n.t("目标预览：{0} / {1} · {2} {3}{4}{5}", [target.endpoint.adapter, targetName, { private: i18n.t("私聊"), group: i18n.t("群聊"), channel: i18n.t("频道") }[target.kind], target.id, target.parent ? ` · 父级 ${target.parent.id}` : '', target.threadId ? ` · 线程 ${target.threadId}` : '']) : i18n.t("作者 HTML / 消息预览")}
       {generation !== undefined && <span> {i18n.t(" · 代次 ")}{generation}</span>}
     </div>

@@ -50,7 +50,7 @@ export function ChatMessageRow({ message, onQuote, onForward }: ChatMessageRowPr
   return (
     <article className={cn('im-message-row', out && 'im-message-row--out')}>
       <div className={cn('im-bubble', out ? 'im-bubble-out' : 'im-bubble-in')}>
-        <div className={cn('im-meta flex items-center gap-2 text-[10px] mb-0.5', out ? '' : 'text-muted-foreground')}>
+        <div className={cn('im-meta flex items-center gap-2 text-xs mb-0.5', out ? '' : 'text-muted-foreground')}>
           <span className={cn('font-medium', out ? '' : 'text-foreground/90')}>{senderName}</span>
           <span className="tabular-nums">{timeLabel}</span>
           {message.directionUnknown && <span className="im-direction-note">{i18n.t("历史方向未记录")}</span>}

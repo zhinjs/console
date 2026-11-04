@@ -473,7 +473,7 @@ export default function EndpointDetailPage() {
                   </div>
                   <div className="min-w-0">
                     <h2 className="text-[15px] font-semibold truncate leading-tight">{selection.name}</h2>
-                    <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
                       {selection.channelType === 'private'
                         ? i18n.t("私聊")
                         : selection.channelType === 'group'
@@ -777,7 +777,7 @@ export default function EndpointDetailPage() {
                     {i18n.t('发送')}
                   </Button>
                 </div>
-                <p className="im-composer-hint text-[10px] text-muted-foreground">
+                <p className="im-composer-hint text-xs text-muted-foreground">
                   {i18n.t('Enter 发送 · Shift+Enter 换行')}{composerMode === 'markdown' && <span> · Markdown</span>}
                 </p>
               </div>
@@ -1020,7 +1020,7 @@ export default function EndpointDetailPage() {
               <div className="im-member-panel-title">
                 <div>
                   <h3 className="text-sm font-semibold">{i18n.t("群成员与管理")}</h3>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">{i18n.t("仅 ICQQ 群聊")}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{i18n.t("仅 ICQQ 群聊")}</p>
                 </div>
                 <Badge variant="secondary" className="im-member-total">
                   {memberCounts.total}
@@ -1096,7 +1096,7 @@ export default function EndpointDetailPage() {
                         ) : (
                           <User className="h-3.5 w-3.5" />
                         )}
-                        <Badge variant="outline" className="text-[10px]">
+                        <Badge variant="outline">
                           {memberRoleLabel(item.role, i18n.locale)}
                         </Badge>
                       </span>
@@ -1105,7 +1105,7 @@ export default function EndpointDetailPage() {
                       <Button
                         size="sm"
                         variant="destructive"
-                        className="im-member-danger h-7 text-[10px] px-2"
+                        className="im-member-danger h-7 text-xs px-2"
                         onClick={() =>
                           void handleGroupAction(ENDPOINT_RPC.GROUP_KICK, uid, item.name)
                         }
@@ -1114,7 +1114,7 @@ export default function EndpointDetailPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-7 text-[10px] px-2"
+                        className="h-7 text-xs px-2"
                         onClick={() =>
                           void handleGroupAction(ENDPOINT_RPC.GROUP_MUTE, uid, item.name)
                         }
@@ -1123,7 +1123,7 @@ export default function EndpointDetailPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-7 text-[10px] px-2"
+                        className="h-7 text-xs px-2"
                         onClick={() =>
                           void handleGroupAction(ENDPOINT_RPC.GROUP_ADMIN, uid, item.name, { enable: true })
                         }

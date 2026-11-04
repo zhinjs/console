@@ -275,7 +275,7 @@
 
 .zhin-code-language {
   color: hsl(210 14% 68%);
-  font-size: 0.68rem;
+  font-size: var(--console-text-label);
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -283,7 +283,7 @@
 
 .zhin-code-streaming {
   color: hsl(151 48% 63%);
-  font-size: 0.68rem;
+  font-size: var(--console-text-label);
 }
 
 .zhin-code-streaming::before {
@@ -310,7 +310,7 @@
   background: transparent;
   color: hsl(210 14% 72%);
   font: inherit;
-  font-size: 0.68rem;
+  font-size: var(--console-text-label);
   cursor: pointer;
   transition: background 160ms ease, color 160ms ease, transform 160ms ease;
 }
@@ -388,7 +388,7 @@
   border-radius: 0.34rem;
   background: transparent;
   color: hsl(var(--muted-foreground));
-  font-size: 0.72rem;
+  font-size: var(--console-text-label);
   cursor: pointer;
   transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
 }

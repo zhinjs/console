@@ -101,7 +101,7 @@ export default function DatabasePage() {
                     >
                       {dbType === 'keyvalue' ? <Key className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <Table2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
                       <span className="truncate flex-1">{t.name}</span>
-                      {t.columns && <Badge variant="secondary" className="ml-auto text-[10px] px-1 py-0">{Object.keys(t.columns).length} {i18n.t(" 列")}</Badge>}
+                      {t.columns && <Badge variant="secondary" size="sm" className="ml-auto">{Object.keys(t.columns).length} {i18n.t(" 列")}</Badge>}
                       {!readOnly && <Button
                         size="sm" variant="ghost" aria-label={i18n.t("删除{0} {1}", [objectLabel, t.name])}
                         className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-destructive shrink-0"
@@ -145,12 +145,12 @@ export default function DatabasePage() {
                     {selectedTableInfo?.columns && (
                       <div className="hidden lg:flex gap-1 ml-2 flex-wrap min-w-0">
                         {(Object.entries(selectedTableInfo.columns) as [string, { type: string; primary?: boolean }][]).slice(0, 8).map(([col, def]) => (
-                          <Badge key={col} variant="outline" className="text-[10px] px-1.5 py-0">
+                          <Badge key={col} variant="outline" size="sm">
                             {col}{def.primary ? ' 🔑' : ''}: {def.type}
                           </Badge>
                         ))}
                         {Object.keys(selectedTableInfo.columns).length > 8 && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">+{Object.keys(selectedTableInfo.columns).length - 8}</Badge>
+                          <Badge variant="outline" size="sm">+{Object.keys(selectedTableInfo.columns).length - 8}</Badge>
                         )}
                       </div>
                     )}
