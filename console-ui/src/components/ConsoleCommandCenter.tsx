@@ -65,7 +65,7 @@ const QUICK_ACTIONS: readonly CommandTarget[] = [
     path: '/logs?level=error',
     title: '查看错误日志',
     group: '快捷动作',
-    description: '只显示 error 级别的运行记录',
+    description: '只显示 error 级别的运行日志',
     icon: 'FileText',
     kind: 'action',
   },

@@ -246,7 +246,7 @@ export default function LogsPage() {
   return (
     <PageShell className="console-logs-page max-w-[1800px]">
       <PageHeader
-        title={i18n.t("运行记录")}
+        title={i18n.t("运行日志")}
         description={readOnly ? i18n.t("实时查看与筛选系统运行日志（Demo 只读）。") : i18n.t("查看历史与实时日志，定位运行异常。")}
       />
 

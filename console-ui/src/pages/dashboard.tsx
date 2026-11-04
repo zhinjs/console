@@ -584,7 +584,7 @@ export default function HomePage() {
               <ArrowUpRight />
             </ListItemButton>
             <ListItemButton type="button" onClick={() => navigate('/logs')}>
-              <span><FileText />{i18n.t("检查运行记录")}</span>
+              <span><FileText />{i18n.t("检查运行日志")}</span>
               <ArrowUpRight />
             </ListItemButton>
           </div>

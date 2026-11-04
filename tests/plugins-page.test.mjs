@@ -63,7 +63,7 @@ test('production functionality list has one native detail link per instance and 
   assert.equal(label(tree).includes('INTERNAL_CAPABILITY_COUNT'), false)
   assert.equal(label(tree).includes('9327'), false)
   assert.equal(label(tree).includes('@private/implementation-package'), false)
-  assert.equal(elements(tree).find(item => item.type === 'page-header').props.title, '功能管理')
+  assert.equal(elements(tree).find(item => item.type === 'page-header').props.title, '插件管理')
   elements(tree).find(item => item.type === 'input').props.onChange({ target: { value: '' } })
   assert.equal(f.params.get('q'), null)
   assert.equal(f.params.get('from'), 'sidebar')

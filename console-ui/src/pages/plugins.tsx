@@ -30,7 +30,7 @@ export default function PluginsPage() {
   const i18n = useI18n()
   const scope = useInboxCacheScope()
   if (!scope || !isInboxCacheScopeActive(scope)) return <PageShell className="console-plugins-page">
-    <PageHeader title={i18n.t("功能管理")} />
+    <PageHeader title={i18n.t("插件管理")} />
     <Alert><AlertDescription>{i18n.t("请连接 Host 后读取功能。")}</AlertDescription></Alert>
   </PageShell>
   return <PluginsPageSession key={scope} connectionScope={scope} />
@@ -100,7 +100,7 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
 
   return (
     <PageShell className="console-plugins-page">
-      <PageHeader title={i18n.t("功能管理")} actions={<Button variant="outline" size="sm" disabled={loading} onClick={() => void refreshCurrent()}>{i18n.t("刷新")}</Button>} />
+      <PageHeader title={i18n.t("插件管理")} actions={<Button variant="outline" size="sm" disabled={loading} onClick={() => void refreshCurrent()}>{i18n.t("刷新")}</Button>} />
       {error ? <Alert variant="warning"><AlertCircle className="h-4 w-4" /><AlertDescription className="flex items-center justify-between gap-3"><span>{error}{i18n.t("。以下是上次读取的列表。")}</span><Button variant="outline" size="sm" onClick={() => void refreshCurrent()}>{i18n.t("重试")}</Button></AlertDescription></Alert> : null}
 
       <div className="console-plugin-catalog-toolbar">

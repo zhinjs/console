@@ -16,6 +16,20 @@
 
 权限目录与解释请求也通过 URL 的 `locale` 参数指定展示语言。切换界面语言保留假设账号、会话、角色和发送者；不会自动重新执行检查。技能助手页保存的仍是固定 `off` / `shadow` / `active` 值，翻译只改变标签与状态说明。
 
+## 术语表（路由名与导航）
+
+内置路由 `name` 必须在 `messages.en.mjs` 有英文条目（`tests/route-names-i18n.test.mjs` 检查）。同一概念全站只用一个词：
+
+| 概念 | 中文 | English | 说明 |
+| --- | --- | --- | --- |
+| 插件 | 插件管理 / 插件市场 / 插件详情 | Plugins / Marketplace / Plugin details | 不再使用「功能管理」「功能商店」 |
+| 系统日志页（`/logs`） | 运行日志 | Runtime logs | 「运行记录」不再作为该页名称 |
+| 会话文字记录 | 聊天记录 | Chat history | Agent 会话 |
+| 回复决策 | 决策回放 | Decision replay | |
+| 模型用量 | Token 用量 | Token usage | Token 与中文之间留空格 |
+| Workroom | Workroom | Workroom | 产品名，两种语言都不翻译；「协作空间」仅指 Project 绑定的会话 |
+| 聊天账号（Endpoint） | 聊天账号 / 聊天账号详情 | Chat accounts / Chat account details | 不再使用「渠道详情」 |
+
 ## Schema 显示扩展
 
 每个 Schema 节点可声明 `x-i18n.en`。`title`、`description` 仅覆盖展示；`enumLabels` 按 `String(option.value)` 匹配，选项重排不会把标签对应到错误值。

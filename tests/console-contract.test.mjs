@@ -74,10 +74,10 @@ test('work-oriented navigation preserves ordinary-user names and legacy plugin g
     const block = source.slice(start, source.indexOf('})', start))
     return { name: /name: '([^']+)'/.exec(block)?.[1], group: /group: NAV_GROUPS\.(\w+)/.exec(block)?.[1], hidden: /hideInMenu: true/.test(block) }
   }
-  const primary = { '/dashboard': ['首页','OPERATIONS'], '/endpoints': ['聊天账号','ACCOUNTS'], '/agent/sessions': ['聊天记录','WORK'], '/cron': ['定时提醒','TASKS'], '/logs': ['运行记录','OPERATIONS'] }
+  const primary = { '/dashboard': ['首页','OPERATIONS'], '/endpoints': ['聊天账号','ACCOUNTS'], '/agent/sessions': ['聊天记录','WORK'], '/cron': ['定时提醒','TASKS'], '/logs': ['运行日志','OPERATIONS'] }
   for (const [path, [name,group]] of Object.entries(primary)) assert.deepEqual(routeGroup(path), { name, group, hidden: false })
-  assert.deepEqual(routeGroup('/plugins'), { name: '功能管理', group: 'PLUGINS', hidden: false })
-  assert.deepEqual(routeGroup('/marketplace'), { name: '功能商店', group: 'PLUGINS', hidden: false })
+  assert.deepEqual(routeGroup('/plugins'), { name: '插件管理', group: 'PLUGINS', hidden: false })
+  assert.deepEqual(routeGroup('/marketplace'), { name: '插件市场', group: 'PLUGINS', hidden: false })
   assert.deepEqual(routeGroup('/agent/ambient'), { name: '群聊插话', group: 'SETTINGS', hidden: false })
   assert.match(source, /path: '\/agent\/ambient'[\s\S]*?requiredPermissions: \[AMBIENT_STATUS_PERMISSION\]/)
   assert.deepEqual(routeGroup('/agent/skills'), { name: '技能助手', group: 'SETTINGS', hidden: false })

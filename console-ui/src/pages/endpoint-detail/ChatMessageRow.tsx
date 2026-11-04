@@ -62,9 +62,9 @@ export function ChatMessageRow({ message, onQuote, onForward }: ChatMessageRowPr
       </div>
       <div className="im-message-actions" aria-label={i18n.t("消息操作")}>
         {!out && !message.local && <MessageDiagnosticsAction message={message} />}
-        <button type="button" title={i18n.t("引用")} onClick={() => onQuote(draftRef)}><Quote className="h-3.5 w-3.5" /></button>
-        <button type="button" title={i18n.t("转发")} onClick={() => onForward(draftRef)}><Forward className="h-3.5 w-3.5" /></button>
-        <button type="button" title={i18n.t("复制摘要")} onClick={copySummary}><Copy className="h-3.5 w-3.5" /></button>
+        <button type="button" title={i18n.t("引用")} aria-label={i18n.t("引用")} onClick={() => onQuote(draftRef)}><Quote className="size-4" /></button>
+        <button type="button" title={i18n.t("转发")} aria-label={i18n.t("转发")} onClick={() => onForward(draftRef)}><Forward className="size-4" /></button>
+        <button type="button" title={i18n.t("复制摘要")} aria-label={i18n.t("复制摘要")} onClick={copySummary}><Copy className="size-4" /></button>
       </div>
     </article>
   )
