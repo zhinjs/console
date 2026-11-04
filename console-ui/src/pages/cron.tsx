@@ -17,16 +17,15 @@ import {
   DialogTitle, DialogDescription, DialogClose,
 } from '../components/ui/dialog'
 import { useToast } from '../components/toast'
-import { PageHeader } from '../components/PageHeader'
 import { CONSOLE_RPC } from '../contracts/zhin-console'
 import { requestConsole } from '../utils/console-rpc'
 import { isDemoMode } from '../utils/demo-mode'
 import { describeCron, relativeUntil } from './cron-schedule.mjs'
+import { taskTabHref } from './task-hub-model.mjs'
 import { validateAssistantJobs, explainJobError, type AssistantJob } from './assistant-jobs-model.mjs'
 import { apiFetch } from '../utils/auth'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { ScheduleExecutions } from './ScheduleExecutions'
 import './cron.css'
 
@@ -81,7 +80,7 @@ function PersistentRunStatus({ state, job, now }: { state?: AssistantJob['state'
     <div className="console-cron-run-facts">
       <span>{i18n.t("下次执行：")}{next ?? (timestamp != null ? new Date(timestamp).toLocaleString(i18n.locale) : '—')}</span>
       {lastStatus ? <Badge variant={failed ? 'destructive' : lastStatus === 'ok' ? 'success' : 'secondary'}>{failed ? i18n.t("上次执行失败") : lastStatus === 'ok' ? i18n.t("上次执行成功") : lastStatus === 'skipped' ? i18n.t("上次已跳过") : lastStatus}</Badge> : <span>{i18n.t("最近结果：")}{'—'}</span>}
-      {state ? <Link className="font-medium text-foreground hover:underline" to={`/assistant/jobs?q=${encodeURIComponent(job.id)}`}>{i18n.t("执行详情 →")}</Link> : null}
+      {state ? <Link className="font-medium text-foreground hover:underline" to={taskTabHref('assistant', { q: job.id })}>{i18n.t("执行详情 →")}</Link> : null}
     </div>
     {failed && state?.lastError ? <div className="console-job-error" role="note"><p>{explainJobError(state.lastError, i18n.locale) ?? state.lastError}</p>{explainJobError(state.lastError, i18n.locale) ? <code>{state.lastError}</code> : null}</div> : null}
   </div>
@@ -91,7 +90,6 @@ export default function CronPage() {
   const i18n = useI18n()
   const scope = useInboxCacheScope()
   if (!scope || !isInboxCacheScopeActive(scope)) return <div className="console-page console-resource-page console-schedule-page">
-    <PageHeader title={i18n.t("定时提醒")} />
     <Alert><AlertDescription>{i18n.t("请连接 Host 后读取任务。")}</AlertDescription></Alert>
   </div>
   return <CronPageSession key={scope} connectionScope={scope} />
@@ -246,28 +244,19 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
 
   return (
     <div className="console-page console-resource-page console-schedule-page">
-      {/* Header */}
-      <PageHeader
-        title={i18n.t("定时提醒")}
-        actions={
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/logs?q=schedule"><Activity />{i18n.t("调度日志")}</Link>
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => { setLoading(true); fetchCrons() }}>
-              <RefreshCw className="w-4 h-4 mr-1" /> {i18n.t(" 刷新")}</Button>
-            {!readOnly && persistentAvailable && !loading && !error && (
-              <Button size="sm" onClick={() => setAddDialogOpen(true)}>
-                <Plus className="w-4 h-4 mr-1" /> {i18n.t(" 新建任务")}</Button>
-            )}
-          </div>
-        }
-      />
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button variant="ghost" size="sm" asChild>
+          <Link to="/logs?q=schedule"><Activity />{i18n.t("调度日志")}</Link>
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => { setLoading(true); fetchCrons() }}>
+          <RefreshCw className="w-4 h-4 mr-1" /> {i18n.t(" 刷新")}</Button>
+        {!readOnly && persistentAvailable && !loading && !error && (
+          <Button size="sm" onClick={() => setAddDialogOpen(true)}>
+            <Plus className="w-4 h-4 mr-1" /> {i18n.t(" 新建任务")}</Button>
+        )}
+      </div>
 
-      <Tabs defaultValue="tasks">
-        <TabsList aria-label={i18n.t('定时任务视图')}><TabsTrigger value="tasks">{i18n.t('定时任务')}</TabsTrigger><TabsTrigger value="history">{i18n.t('执行记录')}</TabsTrigger></TabsList>
-        <TabsContent value="history"><ScheduleExecutions key={connectionScope} connectionScope={connectionScope} /></TabsContent>
-        <TabsContent value="tasks">
+      <div>
           {loading ? <div className="grid grid-cols-1 gap-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32" />)}</div> : error ? <div className="space-y-3">
             <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>
             <Button variant="outline" size="sm" onClick={() => { setError(null); setLoading(true); void fetchCrons() }}><RefreshCw />{i18n.t("重试")}</Button>
@@ -321,10 +310,10 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
                       <span className="console-cron-schedule">{describeCron(job.cronExpression, i18n.locale) ?? i18n.t("自定义执行时间")}</span>
                     </button>
                     {!readOnly && persistentAvailable && <div className="console-cron-actions">
-                      <Button variant="ghost" size="icon" title={job.enabled ? i18n.t("暂停") : i18n.t("恢复")} disabled={togglePending !== null} onClick={() => handleToggle(job)}>
+                      <Button variant="ghost" size="icon" aria-label={job.enabled ? i18n.t("暂停") : i18n.t("恢复")} title={job.enabled ? i18n.t("暂停") : i18n.t("恢复")} disabled={togglePending !== null} onClick={() => handleToggle(job)}>
                         {job.enabled ? <Pause /> : <Play />}
                       </Button>
-                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" title={i18n.t("删除")} disabled={togglePending !== null} onClick={() => setDeleteTarget(job)}><Trash2 /></Button>
+                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" aria-label={i18n.t("删除")} title={i18n.t("删除")} disabled={togglePending !== null} onClick={() => setDeleteTarget(job)}><Trash2 /></Button>
                     </div>}
                   </div>
                   <PersistentRunStatus state={jobStates.get(job.id)} job={job} now={now} />
@@ -333,7 +322,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
                       <div><p className="console-cron-detail-label">{i18n.t("任务内容")}</p><pre className="whitespace-pre-wrap [overflow-wrap:anywhere] text-sm">{job.prompt}</pre></div>
                       <dl className="console-cron-metadata">
                         <div><dt>{i18n.t("Cron 表达式")}</dt><dd><code>{job.cronExpression}</code></dd></div>
-                        <div><dt>{i18n.t("任务 ID")}</dt><dd className="flex items-start gap-2"><code className="min-w-0 flex-1">{job.id}</code><Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" title={i18n.t("复制 ID")} onClick={async () => {
+                        <div><dt>{i18n.t("任务 ID")}</dt><dd className="flex items-start gap-2"><code className="min-w-0 flex-1">{job.id}</code><Button variant="ghost" size="icon" className="shrink-0" aria-label={i18n.t("复制 ID")} title={i18n.t("复制 ID")} onClick={async () => {
                           if (!isInboxCacheScopeActive(connectionScope)) return
                           try {
                             await navigator.clipboard.writeText(job.id)
@@ -388,8 +377,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
       </section>
 
           </>}
-        </TabsContent>
-      </Tabs>
+      </div>
 
       {/* Add Dialog */}
       {!readOnly && persistentAvailable && <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>

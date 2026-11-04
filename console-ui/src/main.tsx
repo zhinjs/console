@@ -19,7 +19,6 @@ import LoginPage from './pages/login'
 import DashboardLayout from './layouts/dashboard'
 import { hasToken } from './utils/auth'
 import { resetConsoleRuntime } from './utils/console-runtime'
-import { registerOptionalConsoleRoutes } from './registerOptionalRoutes'
 import './style.css'
 import { initializeTheme } from './theme'
 import { TooltipProvider } from './components/ui/tooltip'
@@ -70,7 +69,6 @@ function ConsoleShell() {
   useWebSocket()
 
   React.useEffect(() => {
-    void registerOptionalConsoleRoutes()
     loadConsoleEntries()
       .then(() => React.startTransition(() => setReady(true)))
       .catch(() => setReady(true))

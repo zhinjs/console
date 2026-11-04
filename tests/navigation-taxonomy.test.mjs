@@ -48,7 +48,7 @@ test('explicit third-party navigation groups and pathless registrations stay unc
 async function registeredBuiltinRoutes() {
  const source = ts.createSourceFile('registerBuiltinShell.tsx',await readFile(new URL('registerBuiltinShell.tsx',root),'utf8'),ts.ScriptTarget.ES2022,true,ts.ScriptKind.TSX)
  const imports = source.statements.filter(ts.isImportDeclaration)
- const defaults = imports.flatMap(statement=>statement.importClause?.name ? [statement.importClause.name.text] : [])
+ const defaults = imports.flatMap(statement=>[...(statement.importClause?.name ? [statement.importClause.name.text] : []),...(statement.importClause?.namedBindings && ts.isNamedImports(statement.importClause.namedBindings) ? statement.importClause.namedBindings.elements.map(item=>item.name.text).filter(name=>name==='LegacyTaskRoute') : [])])
  const declarations = defaults.map(name=>`const ${name}=${JSON.stringify(name)};`).join('\n')
  const body = source.statements.filter(statement=>!ts.isImportDeclaration(statement)).map(statement=>ts.createPrinter().printNode(ts.EmitHint.Unspecified,statement,source)).join('\n')
  let code = compile(`${declarations}\nconst NAV_GROUPS=${JSON.stringify(NAV_GROUPS)};\nconst REPLAY_PERMISSION='replay',AMBIENT_STATUS_PERMISSION='ambient',SKILLS_STATUS_PERMISSION='skills';\nexport const routes=[]; const app={addRoute:route=>routes.push(route)};\n${body}`,'registerBuiltinShell.tsx')
@@ -62,7 +62,7 @@ test('builtin route regrouping preserves deep links, hidden detail ownership and
  const routes = await registeredBuiltinRoutes()
  const byPath = new Map(routes.map(route=>[route.path,route]))
  const expected = {
-  '/dashboard':'OPERATIONS','/logs':'OPERATIONS','/tasks':'TASKS','/use-cases/group-welcome':'TASKS','/cron':'TASKS',
+  '/dashboard':'OPERATIONS','/logs':'OPERATIONS','/tasks':'TASKS','/use-cases/group-welcome':'TASKS','/cron':'TASKS','/assistant/jobs':'TASKS',
   '/endpoints':'ACCOUNTS','/agent/workbench':'OPERATIONS','/agent/replay':'OPERATIONS','/agent/ambient':'SETTINGS','/agent/skills':'SETTINGS',
   '/agent/usage':'OPERATIONS','/agent/workrooms':'TASKS','/agent/workrooms/catalog':'TASKS','/scenario-lab':'OPERATIONS','/introspection':'OPERATIONS',
   '/permissions':'OPERATIONS','/agent/sessions':'WORK','/agent/models':'SETTINGS','/plugins':'PLUGINS','/plugins/:name':'PLUGINS','/marketplace':'PLUGINS',
@@ -70,7 +70,7 @@ test('builtin route regrouping preserves deep links, hidden detail ownership and
  }
  assert.deepEqual([...byPath.keys()].sort(),Object.keys(expected).sort())
  for (const [path,group] of Object.entries(expected)) assert.equal(byPath.get(path).meta.group,NAV_GROUPS[group],path)
- for (const [path,parent] of [['/plugins/:name','/plugins'],['/agent/replay','/agent/workbench'],['/permissions','/introspection'],['/agent/workrooms/catalog','/agent/workrooms'],['/endpoints/:adapter/:endpointId','/endpoints'],['/use-cases/group-welcome','/tasks']]) {
+ for (const [path,parent] of [['/plugins/:name','/plugins'],['/agent/replay','/agent/workbench'],['/permissions','/introspection'],['/agent/workrooms/catalog','/agent/workrooms'],['/endpoints/:adapter/:endpointId','/endpoints'],['/use-cases/group-welcome','/tasks'],['/cron','/tasks'],['/assistant/jobs','/tasks']]) {
   assert.equal(byPath.get(path).parent,parent)
   assert.equal(byPath.get(path).meta.hideInMenu,true)
  }

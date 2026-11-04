@@ -1,14 +1,11 @@
 import { translate } from '../i18n/locale.mjs'
 import { useI18n } from '../i18n'
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { assistantNavigation } from '../bootstrap/assistant-navigation'
 import { Brain, RefreshCw } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import { readErrorSummary } from '../utils/read-error.mjs'
 import { useConsoleRead } from '../hooks/use-console-read'
-import { PageHeader } from '../components/PageHeader'
-import { PageShell } from '../components/PageShell'
 import { ErrorAlert } from '../components/error-alert'
 import { Card, CardContent } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
@@ -23,7 +20,6 @@ type JobRead = { unavailable: true } | { unavailable: false; data: AssistantJobs
 
 export default function AssistantJobsPage() {
   const i18n = useI18n()
-  const reportAvailability = useRef(assistantNavigation.capture())
   const [searchParams] = useSearchParams()
   const [query, setQuery] = useState(() => searchParams.get('q') ?? '')
   const [status, setStatus] = useState('all')
@@ -33,16 +29,12 @@ export default function AssistantJobsPage() {
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     return { unavailable: false, data: validateAssistantJobs(await response.json(), i18n.locale) }
   }, null)
-  useEffect(() => {
-    if (!read.loading && (read.loaded || read.error)) {
-      reportAvailability.current(Boolean(read.loaded && !read.error && read.data && !read.data.unavailable))
-    }
-  }, [read.loading, read.loaded, read.error, read.data])
   const data = read.data && !read.data.unavailable ? read.data.data : null
   const jobs = data ? filterAssistantJobs(data.jobs, query, status) : []
   const refresh = () => { void read.refresh().catch(() => {}) }
-  return <PageShell>
-    <PageHeader title={i18n.t("助手任务")} description={i18n.t("这些任务在「定时提醒」里创建、暂停和删除；这里查看执行状态与原始数据。")} actions={<Button variant="outline" size="sm" onClick={refresh} disabled={read.loading}><RefreshCw className={read.loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>} />
+  return <div className="console-page">
+    <p className="text-sm text-muted-foreground">{i18n.t("这些任务在「定时提醒」里创建、暂停和删除；这里查看执行状态与原始数据。")}</p>
+    <div className="flex justify-end"><Button variant="outline" size="sm" onClick={refresh} disabled={read.loading}><RefreshCw className={read.loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button></div>
     {read.error && <div><ErrorAlert error={readErrorSummary(read.error, i18n.t("助手任务"), i18n.locale)} onRetry={refresh} />{read.loaded && <p className="mt-2 text-xs text-muted-foreground">{i18n.t("以下为上次读取的任务。")}</p>}<details className="mt-2 text-xs text-muted-foreground"><summary className="cursor-pointer">{i18n.t("错误详情")}</summary><p className="mt-2 break-all">{read.error}</p></details></div>}
     {read.loading && !read.loaded ? <Skeleton className="h-32 w-full" /> : read.data?.unavailable ? <Card><CardContent className="flex flex-col items-center gap-3 py-12"><Brain className="h-10 w-10 text-muted-foreground/40" /><h2 className="text-base font-medium">{i18n.t("助手未启用")}</h2><p className="text-sm text-muted-foreground">{i18n.t("启用助手后，可在这里查看任务。")}</p></CardContent></Card> : data ? <>
       <div className="flex flex-wrap items-center gap-3">
@@ -57,7 +49,7 @@ export default function AssistantJobsPage() {
         <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">{i18n.t("任务详情")}</summary><div className="mt-3 space-y-3"><p>{i18n.t("编号：")}{job.id}</p>{job.createdAt != null && <p>{i18n.t("创建时间：")}{new Date(job.createdAt).toLocaleString(i18n.locale)}</p>}{job.state.nextRunAtMs != null && <p>{i18n.t("下次执行：")}{new Date(job.state.nextRunAtMs).toLocaleString(i18n.locale)}</p>}<details><summary className="cursor-pointer">{i18n.t("原始数据")}</summary><div className="mt-2"><JsonViewer value={job} /></div></details></div></details>
       </CardContent></Card>)}</div>}
     </> : null}
-  </PageShell>
+  </div>
 }
 
 export async function probeAssistantEnabled(locale: 'zh-CN' | 'en' = 'zh-CN'): Promise<boolean> {
