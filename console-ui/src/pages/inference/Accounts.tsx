@@ -11,7 +11,8 @@ import {
   DialogDescription,
 } from '../../components/ui/dialog'
 import { ErrorAlert } from '../../components/error-alert'
-import { driverLabel } from './model.mjs'
+import { SupportLabel, SupportNotice, supportLabel } from './SupportInfo'
+import { driverLabel, serviceDriver } from './model.mjs'
 import { Card } from '../../components/ui/card'
 import { useConfirm } from '../../components/confirm-dialog'
 import { driverKey, type Account, type ObjectValue } from './model.mjs'
@@ -37,6 +38,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
     [credential, setCredential] = useState<{ account: Account; source: InferenceSource } | null>(null)
   const [login, setLogin] = useState<{
     account: Account
+    source: InferenceSource
     challenge: { loginId: string; authorizationUrl: string; redirectUri: string }
   } | null>(null)
   const [callback, setCallback] = useState(''),
@@ -80,7 +82,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
       redirectUri: string
     }>('/login/begin', { accountId: account.id })
     if (challenge) {
-      setLogin({ account, challenge })
+      setLogin({ account, challenge, source: m.source! })
       setCallback('')
     }
   }
@@ -109,7 +111,12 @@ export function Accounts({ management: m }: { management: InferenceManagement })
                 className="flex flex-wrap items-center justify-between gap-4 p-4"
               >
                 <div className="min-w-0">
-                  <p className="font-medium">{account.label ?? account.id}</p>
+                  <p className="font-medium">
+                    <SupportLabel
+                      label={account.label ?? account.id}
+                      support={serviceDriver(view, account.serviceId)?.support}
+                    />
+                  </p>
                   <p className="text-sm text-muted-foreground break-all">
                     {service.label ?? service.driver.id} ·{' '}
                     {statusLabels[status?.status] ?? '状态未知'}
@@ -231,6 +238,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
               account={editing.account}
               replacement={editing.replacement}
               source={editing.source}
+              showNotice={!credential && !login}
               management={m}
               onSaved={() => setEditing(null)}
             />
@@ -254,6 +262,9 @@ export function Accounts({ management: m }: { management: InferenceManagement })
             <DialogDescription>{credential?.account.label ?? credential?.account.id}</DialogDescription>
           </DialogHeader>
           {m.error ? <ErrorAlert error={m.error} /> : null}
+          {credential && !login ? (
+            <SupportNotice support={serviceDriver(credential.source.view, credential.account.serviceId)?.support} />
+          ) : null}
           <form
             className="space-y-4"
             onSubmit={async (event) => {
@@ -310,6 +321,9 @@ export function Accounts({ management: m }: { management: InferenceManagement })
             <DialogDescription>在浏览器中授权后，粘贴最终回调地址。</DialogDescription>
           </DialogHeader>
           {m.error ? <ErrorAlert error={m.error} /> : null}
+          {login ? (
+            <SupportNotice support={serviceDriver(login.source.view, login.account.serviceId)?.support} />
+          ) : null}
           {login ? (
             <form
               className="space-y-4"
@@ -376,12 +390,14 @@ export function Accounts({ management: m }: { management: InferenceManagement })
 function AccountForm({
   management: m,
   source,
+  showNotice,
   account,
   replacement = false,
   onSaved,
 }: {
   management: InferenceManagement
   source: InferenceSource
+  showNotice: boolean
   account?: Account
   replacement?: boolean
   onSaved: () => void
@@ -447,6 +463,7 @@ function AccountForm({
     <form onSubmit={(event) => void submit(event)}>
       <fieldset disabled={disabled} className="space-y-4">
         {m.error ? <ErrorAlert error={m.error} /> : null}
+        {driver && showNotice ? <SupportNotice support={driver.support} /> : null}
         <label className="block space-y-2 text-sm">
           <span>账号名称</span>
           <Input value={label} onChange={(event) => setLabel(event.target.value)} required />
@@ -461,7 +478,7 @@ function AccountForm({
               { value: '', label: '新增服务' },
               ...Object.values(view.services).map((value) => ({
                 value: value.id,
-                label: value.label ?? value.driver.id,
+                label: supportLabel(value.label ?? value.driver.id, serviceDriver(view, value.id)?.support),
               })),
             ]}
           />
@@ -486,7 +503,7 @@ function AccountForm({
                   )
                   .map((value) => ({
                     value: driverKey(value),
-                    label: driverLabel(value, view.drivers),
+                    label: supportLabel(driverLabel(value, view.drivers), value.support),
                   })),
               ]}
             />

@@ -18,7 +18,7 @@ async function fixture({ actualPicker = false } = {}) {
   let scope = 'connection-a', sessionKey = key, selected = 'alice', epoch = 0, preferredOwnerId, viewReady = true
   const management = () => {
     const captured = { scope, selected, epoch }
-    return { owners, ownerId: selected, view: viewReady ? { ownerId: selected, rootId: '/host', deployment: [], profiles: { profile: { id: 'profile', model: 'native', accountId: 'account' } }, accounts: { account: { serviceId: 'service', incarnation: 'new' } }, services: { service: { models: { native: { kinds: ['language'] } } } } } : null, error: '', busy: false,
+    return { owners, ownerId: selected, view: viewReady ? { drivers: [], ownerId: selected, rootId: '/host', deployment: [], profiles: { profile: { id: 'profile', model: 'native', accountId: 'account' } }, accounts: { account: { serviceId: 'service', incarnation: 'new' } }, services: { service: { models: { native: { kinds: ['language'] } } } } } : null, error: '', busy: false,
       setOwnerId(id) { selected = id; epoch++ }, active: () => captured.scope === scope && captured.selected === selected && captured.epoch === epoch,
       request: path => new Promise((resolve, reject) => calls.push({ ...captured, path, resolve, reject })),
     }
@@ -28,6 +28,7 @@ async function fixture({ actualPicker = false } = {}) {
       compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
     }).outputText
     const allDependencies = { react: runtime.api,
+      './inference/SupportInfo': { SupportLabel: 'support-label', SupportNotice: 'support-notice', supportLabel: label => label },
       'react/jsx-runtime': { jsx: (type, props, key) => ({ type, props, key }), jsxs: (type, props, key) => ({ type, props, key }) },
       ...dependencies,
     }

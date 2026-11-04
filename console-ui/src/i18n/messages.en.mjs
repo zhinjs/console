@@ -1,5 +1,8 @@
 /** Authored Console UI copy. Interpolated content is never translated. */
 export const englishMessages = Object.freeze({
+  "实验": "Experimental",
+  "实验 · 不受官方支持 · 可能违反供应商条款 · 风险由使用者自行承担。": "Experimental · Not officially supported · May violate the provider’s terms · Use at your own risk.",
+  "未经 OpenAI 对第三方客户端的明确授权。": "No explicit authorization from OpenAI for third-party clients.",
   "管理模型用途": "Manage model purposes",
   "保存回执：{0}": "Save receipt: {0}",
   "正在应用已保存配置…": "Applying saved configuration…",

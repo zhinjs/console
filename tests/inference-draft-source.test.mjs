@@ -32,6 +32,7 @@ async function fixture(page) {
     '../../components/ui/dialog': { Dialog, DialogContent: 'content', DialogHeader: 'header', DialogTitle: 'title', DialogDescription: 'description' },
     '../../components/error-alert': { ErrorAlert: 'error' },
     '../../components/confirm-dialog': { useConfirm: () => ({ ConfirmDialog: null, confirm: () => new Promise(resolve => confirms.push(resolve)) }) },
+    './SupportInfo': { SupportLabel: 'support-label', SupportNotice: 'support-notice', supportLabel: label => label },
     './ModelCapabilities': { ModelCapabilities: 'capabilities' }, './SchemaFields': { SchemaFields: 'schema' }, './model.mjs': model,
     './useInferenceManagement': { useInferenceManagement: management },
     './Profiles': { Profiles: 'profiles' }, './Accounts': { Accounts: 'accounts' }, './Purposes': { Purposes: 'purposes' }, './PersonalSessions': { PersonalSessions: 'sessions' },

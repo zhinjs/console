@@ -7,7 +7,13 @@ export interface DriverRef {
   owner: string
   contractVersion: string
 }
+/** Display metadata from the held Driver declaration; never execution policy. */
+export interface SupportMetadata {
+  readonly status: 'standard' | 'experimental'
+  readonly notice?: string
+}
 export interface Driver extends DriverRef {
+  support?: SupportMetadata
   label: string
   source?: string
   authentication: string[]
@@ -69,6 +75,7 @@ export interface View {
     accountId: string
     accountIncarnation: string
     definition: ModelDefinition
+    support?: SupportMetadata
   }>
   purposes?: Purposes
 }
@@ -122,10 +129,12 @@ export function resourceBindings(
   view: View
 ): Record<'services' | 'accounts' | 'profiles', Record<string, string>>
 export function driverKey(driver: DriverRef): string
+export function serviceDriver(view: View, serviceId: string): Driver | undefined
+export function profileSupport(view: View, profile: Profile): SupportMetadata | undefined
 export function profileSelection(view: View, profile: Profile, kind?: 'language'): ProfileSelection
 export function selectableLanguageProfiles(
   view: View
-): Array<{ id: string; label: string; selection: ProfileSelection }>
+): Array<{ id: string; label: string; selection: ProfileSelection; support?: SupportMetadata }>
 export function schemaField(schema?: Record<string, unknown>): SchemaField
 export function purposePlan(draft: Purposes, original?: Purposes): unknown
 export interface Targets {

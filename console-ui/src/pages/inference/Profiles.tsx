@@ -12,7 +12,8 @@ import {
 } from '../../components/ui/dialog'
 import { ErrorAlert } from '../../components/error-alert'
 import { ModelCapabilities } from './ModelCapabilities'
-import { inferenceError } from './model.mjs'
+import { SupportLabel, SupportNotice, supportLabel } from './SupportInfo'
+import { inferenceError, profileSupport, serviceDriver } from './model.mjs'
 import { Card } from '../../components/ui/card'
 import { useConfirm } from '../../components/confirm-dialog'
 import {
@@ -63,7 +64,12 @@ export function Profiles({ management: m }: { management: InferenceManagement })
             return (
               <div key={profile.id} className="flex items-center justify-between gap-4 p-4">
                 <div className="min-w-0">
-                  <p className="font-medium">{profile.label ?? profile.model}</p>
+                  <p className="font-medium">
+                    <SupportLabel
+                      label={profile.label ?? profile.model}
+                      support={profileSupport(view, profile)}
+                    />
+                  </p>
                   <p className="text-sm text-muted-foreground break-all">
                     {profile.model} · {account.label ?? account.id}
                   </p>
@@ -255,6 +261,7 @@ function ProfileForm({
     <form onSubmit={(event) => void submit(event)}>
       <fieldset disabled={disabled} className="space-y-4">
         {management.error ? <ErrorAlert error={management.error} /> : null}
+        {driver ? <SupportNotice support={driver.support} /> : null}
         <label className="block space-y-2 text-sm">
           <span>名称</span>
           <Input
@@ -273,7 +280,7 @@ function ProfileForm({
               { value: '', label: '选择账号' },
               ...Object.values(view.accounts).map((value) => ({
                 value: value.id,
-                label: value.label ?? value.id,
+                label: supportLabel(value.label ?? value.id, serviceDriver(view, value.serviceId)?.support),
               })),
             ]}
           />

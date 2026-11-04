@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
+import { supportLabel, SupportNotice } from './inference/SupportInfo'
 import { Button } from '../components/ui/button'
 import { SelectField } from '../components/ui/select'
 import { ErrorAlert } from '../components/error-alert'
@@ -114,7 +115,10 @@ export function PersonalSessionModelPicker({
   }
   const options = [
     { value: '', label: '继承会话模型设置' },
-    ...choices.map((value) => ({ value: value.id, label: value.label })),
+    ...choices.map((value) => ({
+      value: value.id,
+      label: supportLabel(value.label, value.support),
+    })),
   ]
   if (selected && !options.some((value) => value.value === selected))
     options.push({ value: selected, label: '当前模型不可用' })
@@ -149,6 +153,7 @@ export function PersonalSessionModelPicker({
           <RefreshCw />
         </Button>
       </div>
+      {chosen ? <SupportNotice support={chosen.support} /> : null}
       {error ? <ErrorAlert error={error} /> : null}
       {saved ? (
         <p role="status" className="text-sm">

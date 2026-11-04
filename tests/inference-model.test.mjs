@@ -145,6 +145,7 @@ test('purpose edits preserve every existing purpose and clear only explicit remo
 })
 test('Session choices are durable account incarnation references and include consumable Host models without exposing Host credentials', () => {
   const view = {
+    drivers: [],
     rootId: '/host',
     accounts: { a: { incarnation: 'first', serviceId: 's' } },
     services: { s: { models: { m: { kinds: ['language'] }, i: { kinds: ['image'] } } } },

@@ -210,6 +210,8 @@ async function component(runtime, path, mocks) {
       jsx: (type, props) => ({ type, props }),
       jsxs: (type, props) => ({ type, props }),
     },
+    './SupportInfo': { SupportLabel: 'support-label', SupportNotice: 'support-notice', supportLabel: label => label },
+    './inference/SupportInfo': { SupportLabel: 'support-label', SupportNotice: 'support-notice', supportLabel: label => label },
     ...mocks,
   }
   new Function('require', 'module', 'exports', code)(
@@ -324,6 +326,7 @@ test('confirming a rebound Profile saves its complete new account identity; nati
   }
   const current = { ...previous, accountId: 'new', accountIncarnation: 'new-incarnation' }
   let models = {
+    drivers: [],
     rootId: '/host',
     accounts: { new: { incarnation: 'new-incarnation', serviceId: 'service' } },
     services: { service: { models: { native: { kinds: ['language'] } } } },

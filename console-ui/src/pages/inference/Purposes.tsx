@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
-import { SelectField } from '../../components/ui/select'
+import { SelectField, type SelectFieldOption } from '../../components/ui/select'
+import { supportLabel } from './SupportInfo'
 import { Card } from '../../components/ui/card'
 import {
   purposePlan,
+  profileSupport,
   inferenceError,
   type Purposes as PurposeState,
   type ScopeModels,
@@ -59,7 +61,10 @@ export function Purposes({ management: m }: { management: InferenceManagement })
         const account = view.accounts[profile.accountId]
         return view.services[account.serviceId].models[profile.model].kinds.includes(kind)
       })
-      .map((profile) => ({ value: profile.id, label: profile.label ?? profile.model })),
+      .map((profile) => ({
+        value: profile.id,
+        label: supportLabel(profile.label ?? profile.model, profileSupport(view, profile)),
+      })),
   ]
   function defaultValue(key: 'chat' | 'summary' | 'ambient' | 'image', value: string) {
     setDraft((previous) => ({
@@ -354,7 +359,7 @@ function Perception({
   onChange,
 }: {
   value?: { profile: string; fallbacks?: string[] }
-  choices: Array<{ value: string; label: string }>
+  choices: SelectFieldOption[]
   onChange: (value: { profile: string; fallbacks?: string[] } | undefined) => void
 }) {
   return (

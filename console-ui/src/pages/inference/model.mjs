@@ -74,6 +74,14 @@ export function resourceBindings(view) {
 export function driverKey(driver) {
   return JSON.stringify([driver.owner, driver.id, driver.contractVersion])
 }
+/** Resolve display metadata by the same complete Driver reference used by the graph. */
+export function serviceDriver(view, serviceId) {
+  const service = view.services[serviceId]
+  return service && view.drivers.find(driver => driverKey(driver) === driverKey(service.driver))
+}
+export function profileSupport(view, profile) {
+  return serviceDriver(view, view.accounts[profile.accountId].serviceId)?.support
+}
 export function profileSelection(view, profile, kind = 'language') {
   const account = view.accounts[profile.accountId]
   return {
@@ -88,13 +96,15 @@ export function selectableLanguageProfiles(view) {
   return [
     ...Object.values(view.profiles).flatMap((profile) => {
       const account = view.accounts[profile.accountId],
-        model = view.services[account.serviceId].models[profile.model]
+        model = view.services[account.serviceId].models[profile.model],
+        support = profileSupport(view, profile)
       return model.kinds.includes('language')
         ? [
             {
               id: profile.id,
               label: profile.label ?? profile.model,
               selection: profileSelection(view, profile),
+              ...(support ? { support } : {}),
             },
           ]
         : []
@@ -107,6 +117,7 @@ export function selectableLanguageProfiles(view) {
       .map((profile) => ({
         id: profile.id,
         label: `${profile.label ?? profile.model} · 部署模型`,
+        ...(profile.support ? { support: profile.support } : {}),
         selection: {
           id: profile.id,
           rootId: view.rootId,
