@@ -98,7 +98,7 @@ function fixture(query = '') {
     './ModelPolicySettings': { ModelPolicySettings: 'model-policy-settings' },
     './SchemaFieldEditor': { SchemaFieldEditor: 'field-editor' }, '../ui/card': { Card: 'article' }, '../ui/badge': { Badge: 'span' },
     '../ui/button': { Button: 'button' }, '../ui/alert': { Alert: 'aside', AlertDescription: 'p' },
-    '../components/ui/card': { Card: 'article', CardContent: 'section' }, '../components/ui/button': { Button: 'button' },
+    '../components/ui/card': { Card: 'article', CardContent: 'section' }, '../components/ui/list-item-button': { ListItemButton: 'button' }, '../components/ui/button': { Button: 'button' },
     '../components/ui/alert': { Alert: 'aside', AlertDescription: 'p' }, '../components/ui/badge': { Badge: 'span' },
     '../components/ui/tabs': { Tabs: 'tabs', TabsList: 'tabs-list', TabsTrigger: 'tabs-trigger', TabsContent: 'tabs-content' },
     '../components/ui/textarea': { Textarea: 'textarea' }, '../components/ui/input': { Input: 'input' },
