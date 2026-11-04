@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import ts from 'typescript'
 import {
-  TASK_HUB_TABS, DEFAULT_TASK_TAB, visibleTaskTabs, resolveTaskTab, taskTabHref, legacyTaskRedirect,
+  TASK_HUB_TABS, DEFAULT_TASK_TAB, resolveTaskTab, taskTabHref, legacyTaskRedirect,
 } from '../console-ui/src/pages/task-hub-model.mjs'
 
 const src = path => readFile(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')
@@ -22,22 +22,6 @@ test('tab id from the URL resolves to a visible tab, unknown ids fall back', () 
   assert.equal(resolveTaskTab(null), DEFAULT_TASK_TAB)
   assert.equal(resolveTaskTab('bogus'), DEFAULT_TASK_TAB)
   for (const tab of TASK_HUB_TABS) assert.equal(resolveTaskTab(tab.id), tab.id)
-})
-
-test('tabs only appear when their required permissions are held', () => {
-  const tabs = [
-    { id: 'admin', label: 'a', permissions: [] },
-    { id: 'schedule', label: 's', permissions: ['schedule:read'] },
-    { id: 'history', label: 'h', permissions: ['full'] },
-  ]
-  const gated = (granted) => tabs.filter(tab => tab.permissions.every(permission => new Set(granted).has(permission)))
-  assert.deepEqual(gated([]).map(tab => tab.id), ['admin'])
-  assert.deepEqual(resolveTaskTab('schedule', gated([])), 'admin', 'a hidden tab cannot be opened through the URL')
-  assert.deepEqual(resolveTaskTab('schedule', gated(['schedule:read'])), 'schedule')
-  assert.deepEqual(resolveTaskTab('x', []), DEFAULT_TASK_TAB)
-  // Current tabs declare no permission, so they are all visible with or without a permission set.
-  assert.equal(visibleTaskTabs().length, 4)
-  assert.equal(visibleTaskTabs([]).length, 4)
 })
 
 test('the sidebar has one task entry; /cron and /assistant/jobs are hidden redirects', async () => {

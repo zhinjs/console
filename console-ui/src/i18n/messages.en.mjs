@@ -856,7 +856,6 @@ export const englishMessages = Object.freeze({
   "任务视图": "Task views",
   "管理员任务、定时提醒、助手任务和执行记录集中在这里。": "Administrator tasks, scheduled reminders, assistant tasks and execution history live here.",
   "管理员任务、定时提醒、助手任务与执行记录": "Administrator tasks, scheduled reminders, assistant tasks and execution history",
-  "当前身份没有可查看的任务。": "This identity has no task views available.",
   "从用途创建管理员任务；聊天中创建的个人任务仍归原用户，本页不会导入。": "Create administrator tasks by use case. Personal tasks created in chat remain owned by their users and are not imported here.",
   "刷新核对": "Refresh and verify",
   "Demo 仅展示；创建、修改、暂停、恢复和取消均已禁用。": "Demo is view-only. Creation, editing, pausing, resuming and cancellation are disabled.",

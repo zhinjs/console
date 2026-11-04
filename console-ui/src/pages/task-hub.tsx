@@ -10,7 +10,7 @@ import TaskCenterPage from './task-center'
 import CronPage from './cron'
 import AssistantJobsPage from './assistant-jobs'
 import { ScheduleExecutions } from './ScheduleExecutions'
-import { legacyTaskRedirect, resolveTaskTab, visibleTaskTabs, type TaskTabId } from './task-hub-model.mjs'
+import { legacyTaskRedirect, resolveTaskTab, TASK_HUB_TABS, type TaskTabId } from './task-hub-model.mjs'
 
 /** Old /cron and /assistant/jobs bookmarks land on the matching hub tab. */
 export function LegacyTaskRoute() {
@@ -28,10 +28,9 @@ function HistoryPanel() {
 export default function TaskHubPage() {
   const i18n = useI18n()
   const [params, setParams] = useSearchParams()
-  const tabs = visibleTaskTabs()
+  const tabs = TASK_HUB_TABS
   const active = resolveTaskTab(params.get('tab'), tabs)
   const select = (next: string) => setParams({ tab: next })
-  if (!tabs.length) return <div className="console-page"><PageHeader title={i18n.t("任务")} /><Alert><AlertDescription>{i18n.t("当前身份没有可查看的任务。")}</AlertDescription></Alert></div>
   const panels: Record<TaskTabId, ReactNode> = {
     admin: <TaskCenterPage />, schedule: <CronPage />, assistant: <AssistantJobsPage />, history: <HistoryPanel />,
   }
