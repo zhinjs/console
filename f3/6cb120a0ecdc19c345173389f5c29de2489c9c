@@ -1,0 +1,25 @@
+console-ui/src/i18n/messages.en.mjs
+  s_9477e63ef5cee5::t_ea66816d6ff37f 1601-1602
+console-ui/src/pages/dashboard.tsx
+  s_9477e63ef5cee5::t_ff584273adc2d4 23,429-431
+console-ui/src/pages/marketplace.tsx
+  s_9477e63ef5cee5::t_d2c46f1ecdc651 520
+console-ui/src/pages/token-usage.tsx
+  s_9477e63ef5cee5::t_c4483639eff6b7 65-66,89,94,143,150-151
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f36cb120a0ecdc19c345173389f5c29de2489c9c",
+  "prompts": {},
+  "sessions": {
+    "s_9477e63ef5cee5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4e622535-6dd6-4e23-9811-302f91a2903b",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
