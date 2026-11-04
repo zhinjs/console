@@ -1,12 +1,9 @@
 import { useI18n } from '../i18n'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
-import { ConfigurationLiveStatus } from '../components/PluginConfigForm/ConfigurationLiveStatus'
-import { configurationReceiptForRead, type ConfigurationApplicationStatus } from '../components/PluginConfigForm/config-live-status.mjs'
-import { useState, useRef, useCallback, type ReactNode } from 'react'
-import { parse as parseConfigSource } from 'yaml'
-import { RefreshCw, RotateCw } from 'lucide-react'
-import { requestConsole } from '../utils/console-rpc'
+import { useRef, useCallback } from 'react'
+import { Link } from 'react-router-dom'
+import { RefreshCw } from 'lucide-react'
 import { pluginRpc } from '../utils/plugin-rpc'
 import { readErrorSummary } from '../utils/read-error.mjs'
 import { useConsoleRead } from '../hooks/use-console-read'
@@ -17,49 +14,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Skeleton } from '../components/ui/skeleton'
-import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group'
-import {
-  ASSISTANT_TASKS,
-  MODE_CHOICES,
-  MODE_EXPLANATION,
-  buildSkillsPatches,
-  describeSaveResult,
-  describeSkillsStatus,
-  hasSkillsChanges,
-  isPermissionDenied,
-  readSkillsSettings,
-  validateSkillsStatus,
-  type SaveFeedback,
-  type SkillsSettings,
-  type SkillsStatus,
-  type TaskModes,
-} from './skills-assistant-model.mjs'
+import { describeSkillsStatus, isPermissionDenied, validateSkillsStatus, type SkillsStatus } from './skills-assistant-model.mjs'
 
-type ConfigSource = ConfigurationApplicationStatus & { source: string; revision: string }
 type StatusRead = { denied: true } | { denied: false; status: SkillsStatus }
-type SettingsRead = { settings: SkillsSettings; revision: string; application?: ConfigurationApplicationStatus; readEpoch?: number }
-type PatchResult = ConfigurationApplicationStatus & {
-  status?: string
-  revision?: string
-  errors?: Array<{ path: string; message: string }>
-}
 
 async function readSkillsStatus(locale: 'zh-CN' | 'en'): Promise<StatusRead> {
   try {
     const data = await pluginRpc<unknown>('root', 'skills')
-    const status = validateSkillsStatus(data, locale)
-    return { denied: false, status }
+    return { denied: false, status: validateSkillsStatus(data, locale) }
   } catch (error) {
     if (isPermissionDenied(error)) return { denied: true }
     throw error
   }
-}
-
-async function readSkillsSettingsFromHost(): Promise<SettingsRead> {
-  const configSource = await requestConsole<ConfigSource>({ type: 'config:get-source' })
-  const configDocument: unknown = parseConfigSource(configSource.source)
-  const settings = readSkillsSettings(configDocument)
-  return { settings, revision: configSource.revision, application: { application: configSource.application, applicationError: configSource.applicationError } }
 }
 
 function formatTime(timestamp: number, locale: 'zh-CN' | 'en'): string {
@@ -77,24 +43,14 @@ function SkillsAssistantSession() {
   const messages = useRef(i18n); messages.current = i18n
   const readStatus = useCallback(() => readSkillsStatus(messages.current.locale), [])
   const statusRead = useConsoleRead<StatusRead | null>(readStatus, null)
-  const configurationReadEpoch = useRef(0)
-  const settingsRead = useConsoleRead<SettingsRead | null>(async () => {
-    const readEpoch = ++configurationReadEpoch.current
-    return { ...await readSkillsSettingsFromHost(), readEpoch }
-  }, null)
-  const refreshAll = () => {
-    void statusRead.refresh().catch(() => {})
-    void settingsRead.refresh().catch(() => {})
-  }
-  const loading = statusRead.loading || settingsRead.loading
   return <PageShell>
     <PageHeader
       title={i18n.t("技能助手")}
       description={i18n.t("让一个专门的小助手帮机器人挑技能、挑工具、判断要不要接话。")}
-      actions={<Button variant="outline" size="sm" onClick={refreshAll} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>}
+      actions={<Button variant="outline" size="sm" onClick={() => void statusRead.refresh().catch(() => {})} disabled={statusRead.loading}><RefreshCw className={statusRead.loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>}
     />
+    <Button asChild variant="outline"><Link to="/agent/models">{i18n.t("管理模型用途")}</Link></Button>
     <SkillsStatusSection read={statusRead} onRetry={() => { void statusRead.refresh().catch(() => {}) }} />
-    <SkillsSettingsSection read={settingsRead} onReload={() => settingsRead.refresh()} currentReadEpoch={() => configurationReadEpoch.current} />
   </PageShell>
 }
 
@@ -143,133 +99,4 @@ function SkillsStatusSection({ read, onRetry }: { read: StatusReadState; onRetry
       </div>}
     </CardContent>
   </Card>
-}
-
-type SettingsReadState = ReturnType<typeof useConsoleRead<SettingsRead | null>>
-
-function SettingsNotice({ children }: { children: ReactNode }) {
-  const i18n = useI18n()
-  return <Card>
-    <CardHeader><CardTitle className="text-base">{i18n.t("设置")}</CardTitle></CardHeader>
-    <CardContent className="space-y-2 text-sm text-muted-foreground">{children}</CardContent>
-  </Card>
-}
-
-function SkillsSettingsSection({ read, onReload, currentReadEpoch }: { read: SettingsReadState; onReload: () => Promise<SettingsRead | null>; currentReadEpoch: () => number }) {
-  const i18n = useI18n()
-  if (read.loading && !read.loaded) return <Skeleton className="h-56 w-full" />
-  if (read.error && !read.loaded) {
-    return <SettingsNotice>
-      <p>{i18n.t("暂时不能在这里修改设置。只有管理员账号可以修改。")}</p>
-      <details className="text-xs"><summary className="cursor-pointer">{i18n.t("错误详情")}</summary><p className="mt-2 break-all">{read.error}</p></details>
-    </SettingsNotice>
-  }
-  if (!read.data) return null
-  const settings = read.data.settings
-  if (!settings.instanceKey) {
-    return <SettingsNotice>
-      <p>{i18n.t("还没有安装技能助手服务。")}</p>
-      <p>{i18n.t("在机器人所在的电脑上运行 ")}<code className="rounded bg-muted px-1">zhin setup --decisions</code>{i18n.t("，按提示填好密钥，然后重启机器人。")}</p>
-    </SettingsNotice>
-  }
-  if (settings.usesOtherService) {
-    return <SettingsNotice>
-      <p>{i18n.t("当前判断由其他服务提供，请到设置中调整。")}</p>
-    </SettingsNotice>
-  }
-  return <SkillsSettingsForm key={read.data.revision} initial={read.data} onReload={onReload} currentReadEpoch={currentReadEpoch} />
-}
-
-function SkillsSettingsForm({ initial, onReload, currentReadEpoch }: { initial: SettingsRead; onReload: () => Promise<SettingsRead | null>; currentReadEpoch?: () => number }) {
-  const scope = useInboxCacheScope()
-  const i18n = useI18n()
-  const [modes, setModes] = useState<TaskModes>(initial.settings.modes)
-  const [saving, setSaving] = useState(false)
-  const [feedback, setFeedback] = useState<SaveFeedback | null>(null)
-  const [receipt, setReceipt] = useState<{ value: PatchResult; observedReadEpoch: number } | null>(null)
-  const currentReceipt = configurationReceiptForRead(initial, receipt)
-  const [serverProblems, setServerProblems] = useState<string[]>([])
-  const changed = hasSkillsChanges(initial.settings, modes)
-
-  const chooseMode = (task: keyof TaskModes, mode: TaskModes[keyof TaskModes]) => {
-    setModes((previous) => ({ ...previous, [task]: mode }))
-    setServerProblems([])
-  }
-
-  const save = async () => {
-    if (!isInboxCacheScopeActive(scope)) return
-    setSaving(true)
-    setFeedback(null)
-    try {
-      const result = await requestConsole<PatchResult>({
-        type: 'config:patch',
-        instanceKey: initial.settings.instanceKey,
-        expectedRevision: initial.revision,
-        patches: buildSkillsPatches(initial.settings, modes),
-      })
-      if (!isInboxCacheScopeActive(scope)) return
-      const saveFeedback = describeSaveResult(result, i18n.locale)
-      if (result.status === 'saved') setReceipt({ value: result, observedReadEpoch: currentReadEpoch?.() ?? initial.readEpoch ?? 0 })
-      if (saveFeedback.kind === 'invalid') {
-        const messages = (result.errors ?? []).map((error) => error.message)
-        setServerProblems(messages)
-      }
-      if (saveFeedback.kind === 'saved' || saveFeedback.kind === 'conflict') {
-        await onReload().catch(() => null)
-      }
-      if (isInboxCacheScopeActive(scope)) setFeedback(saveFeedback)
-    } catch (error) {
-      if (!isInboxCacheScopeActive(scope)) return
-      const message = error instanceof Error ? error.message : String(error)
-      setFeedback({ kind: 'error', text: i18n.t("保存失败：{0}", [message]) })
-    } finally {
-      if (isInboxCacheScopeActive(scope)) setSaving(false)
-    }
-  }
-
-  return <Card>
-    <CardHeader>
-      <CardTitle className="text-base">{i18n.t("设置")}</CardTitle>
-      <CardDescription>{i18n.t(MODE_EXPLANATION)}</CardDescription>
-    </CardHeader>
-    <CardContent className="space-y-4">
-      <div className="console-setting-list">
-      {ASSISTANT_TASKS.map((entry) => <fieldset key={entry.task} className="console-setting-row">
-        <div className="min-w-0">
-          <legend className="text-sm font-medium">{i18n.t(entry.label)}</legend>
-          <p className="mt-0.5 text-xs text-muted-foreground">{i18n.t(entry.hint)}</p>
-        </div>
-        <RadioGroup aria-label={i18n.t(entry.label)} name={`skills-mode-${entry.task}`} value={modes[entry.task]} onValueChange={value => chooseMode(entry.task, value as TaskModes[keyof TaskModes])} className="console-segmented flex gap-1">
-          {MODE_CHOICES.map((choice) => <label key={choice.value}>
-            <RadioGroupItem
-              value={choice.value}
-            />
-            <span>{i18n.t(choice.label, undefined, 'state')}</span>
-          </label>)}
-        </RadioGroup>
-      </fieldset>)}
-      </div>
-
-      {serverProblems.length > 0 && <ul className="list-disc space-y-1 pl-5 text-sm text-destructive">
-        {serverProblems.map((problem) => <li key={problem}>{problem}</li>)}
-      </ul>}
-
-      <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={() => { void save() }} disabled={saving || !changed}>{saving ? i18n.t("正在保存…") : i18n.t("保存")}</Button>
-        {feedback && <SaveFeedbackNotice feedback={feedback} />}
-      </div>
-      <ConfigurationLiveStatus result={currentReceipt ?? initial.application} revision={currentReceipt?.revision ?? initial.revision} />
-    </CardContent>
-  </Card>
-}
-
-function SaveFeedbackNotice({ feedback }: { feedback: SaveFeedback }) {
-  const i18n = useI18n()
-  if (feedback.kind === 'saved') {
-    return <span className="flex items-center gap-1 text-sm">
-      {feedback.restartRequired && <RotateCw className="size-4 text-amber-600" />}
-      <span className={feedback.applicationKind === 'applied' ? 'text-emerald-700 dark:text-emerald-400' : feedback.applicationKind === 'failed' ? 'text-destructive' : feedback.restartRequired || feedback.applicationKind ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}>{i18n.t('保存回执：{0}', [feedback.text])}</span>
-    </span>
-  }
-  return <span className="text-sm text-destructive">{feedback.text}</span>
 }

@@ -1,0 +1,301 @@
+{
+  "rootId": "/synthetic/inference-support-host",
+  "revision": 1,
+  "ownerId": "host-owner:v1:33338ec219b88c7ed03d10221074eb8affbefa919f44ce1b0b263807650a4c02",
+  "hostAdministrator": true,
+  "services": {
+    "chosen": {
+      "id": "chosen",
+      "rootId": "/synthetic/inference-support-host",
+      "ownerId": "host-owner:v1:33338ec219b88c7ed03d10221074eb8affbefa919f44ce1b0b263807650a4c02",
+      "revision": 1,
+      "driver": {
+        "id": "same",
+        "owner": "root",
+        "contractVersion": "1"
+      },
+      "options": {
+        "privateMarker": "not-a-member-service"
+      },
+      "models": {
+        "native": {
+          "id": "native",
+          "kinds": [
+            "language"
+          ],
+          "protocol": "fixture"
+        }
+      }
+    },
+    "other": {
+      "id": "other",
+      "rootId": "/synthetic/inference-support-host",
+      "ownerId": "host-owner:v1:33338ec219b88c7ed03d10221074eb8affbefa919f44ce1b0b263807650a4c02",
+      "revision": 1,
+      "driver": {
+        "id": "same",
+        "owner": "root/community",
+        "contractVersion": "1"
+      },
+      "options": {
+        "privateMarker": "not-a-member-service"
+      },
+      "models": {
+        "native": {
+          "id": "native",
+          "kinds": [
+            "language"
+          ],
+          "protocol": "fixture"
+        }
+      }
+    },
+    "stale": {
+      "id": "stale",
+      "rootId": "/synthetic/inference-support-host",
+      "ownerId": "host-owner:v1:33338ec219b88c7ed03d10221074eb8affbefa919f44ce1b0b263807650a4c02",
+      "revision": 1,
+      "driver": {
+        "id": "same",
+        "owner": "root",
+        "contractVersion": "not-installed"
+      },
+      "options": {
+        "privateMarker": "not-a-member-service"
+      },
+      "models": {
+        "native": {
+          "id": "native",
+          "kinds": [
+            "language"
+          ],
+          "protocol": "fixture"
+        }
+      }
+    },
+    "missing": {
+      "id": "missing",
+      "rootId": "/synthetic/inference-support-host",
+      "ownerId": "host-owner:v1:33338ec219b88c7ed03d10221074eb8affbefa919f44ce1b0b263807650a4c02",
+      "revision": 1,
+      "driver": {
+        "id": "not-installed",
+        "owner": "root",
+        "contractVersion": "1"
+      },
+      "options": {
+        "privateMarker": "not-a-member-service"
+      },
+      "models": {
+        "native": {
+          "id": "native",
+          "kinds": [
+            "language"
+          ],
+          "protocol": "fixture"
+        }
+      }
+    }
+  },
+  "accounts": {
+    "chosen": {
+      "id": "chosen",
+      "rootId": "/synthetic/inference-support-host",
+      "ownerId": "host-owner:v1:33338ec219b88c7ed03d10221074eb8affbefa919f44ce1b0b263807650a4c02",
+      "revision": 1,
+      "serviceId": "chosen",
+      "incarnation": "chosen",
+      "authentication": {
+        "method": "none"
+      }
+    },
+    "other": {
+      "id": "other",
+      "rootId": "/synthetic/inference-support-host",
+      "ownerId": "host-owner:v1:33338ec219b88c7ed03d10221074eb8affbefa919f44ce1b0b263807650a4c02",
+      "revision": 1,
+      "serviceId": "other",
+      "incarnation": "other",
+      "authentication": {
+        "method": "none"
+      }
+    },
+    "stale": {
+      "id": "stale",
+      "rootId": "/synthetic/inference-support-host",
+      "ownerId": "host-owner:v1:33338ec219b88c7ed03d10221074eb8affbefa919f44ce1b0b263807650a4c02",
+      "revision": 1,
+      "serviceId": "stale",
+      "incarnation": "stale",
+      "authentication": {
+        "method": "none"
+      }
+    },
+    "missing": {
+      "id": "missing",
+      "rootId": "/synthetic/inference-support-host",
+      "ownerId": "host-owner:v1:33338ec219b88c7ed03d10221074eb8affbefa919f44ce1b0b263807650a4c02",
+      "revision": 1,
+      "serviceId": "missing",
+      "incarnation": "missing",
+      "authentication": {
+        "method": "none"
+      }
+    }
+  },
+  "profiles": {
+    "chosen": {
+      "id": "chosen",
+      "rootId": "/synthetic/inference-support-host",
+      "ownerId": "host-owner:v1:33338ec219b88c7ed03d10221074eb8affbefa919f44ce1b0b263807650a4c02",
+      "revision": 1,
+      "accountId": "chosen",
+      "model": "native",
+      "parameters": {}
+    },
+    "other": {
+      "id": "other",
+      "rootId": "/synthetic/inference-support-host",
+      "ownerId": "host-owner:v1:33338ec219b88c7ed03d10221074eb8affbefa919f44ce1b0b263807650a4c02",
+      "revision": 1,
+      "accountId": "other",
+      "model": "native",
+      "parameters": {}
+    },
+    "stale": {
+      "id": "stale",
+      "rootId": "/synthetic/inference-support-host",
+      "ownerId": "host-owner:v1:33338ec219b88c7ed03d10221074eb8affbefa919f44ce1b0b263807650a4c02",
+      "revision": 1,
+      "accountId": "stale",
+      "model": "native",
+      "parameters": {}
+    },
+    "missing": {
+      "id": "missing",
+      "rootId": "/synthetic/inference-support-host",
+      "ownerId": "host-owner:v1:33338ec219b88c7ed03d10221074eb8affbefa919f44ce1b0b263807650a4c02",
+      "revision": 1,
+      "accountId": "missing",
+      "model": "native",
+      "parameters": {}
+    }
+  },
+  "statuses": {
+    "chosen": {
+      "status": "ready",
+      "revision": 0
+    },
+    "other": {
+      "status": "ready",
+      "revision": 0
+    },
+    "stale": {
+      "status": "ready",
+      "revision": 0
+    },
+    "missing": {
+      "status": "ready",
+      "revision": 0
+    }
+  },
+  "deployment": [
+    {
+      "id": "chosen",
+      "model": "native",
+      "accountId": "chosen",
+      "accountIncarnation": "chosen",
+      "definition": {
+        "id": "native",
+        "kinds": [
+          "language"
+        ],
+        "protocol": "fixture"
+      },
+      "support": {
+        "status": "experimental",
+        "notice": "Experimental fixture"
+      }
+    },
+    {
+      "id": "other",
+      "model": "native",
+      "accountId": "other",
+      "accountIncarnation": "other",
+      "definition": {
+        "id": "native",
+        "kinds": [
+          "language"
+        ],
+        "protocol": "fixture"
+      },
+      "support": {
+        "status": "standard",
+        "notice": "Other owner"
+      }
+    },
+    {
+      "id": "stale",
+      "model": "native",
+      "accountId": "stale",
+      "accountIncarnation": "stale",
+      "definition": {
+        "id": "native",
+        "kinds": [
+          "language"
+        ],
+        "protocol": "fixture"
+      }
+    },
+    {
+      "id": "missing",
+      "model": "native",
+      "accountId": "missing",
+      "accountIncarnation": "missing",
+      "definition": {
+        "id": "native",
+        "kinds": [
+          "language"
+        ],
+        "protocol": "fixture"
+      }
+    }
+  ],
+  "drivers": [
+    {
+      "owner": "root",
+      "id": "same",
+      "contractVersion": "1",
+      "label": "Same name",
+      "source": "@test/synthetic",
+      "authentication": [
+        "none"
+      ],
+      "modelContracts": [],
+      "support": {
+        "status": "experimental",
+        "notice": "Experimental fixture"
+      }
+    },
+    {
+      "owner": "root/community",
+      "id": "same",
+      "contractVersion": "1",
+      "label": "Same name",
+      "source": "@test/synthetic",
+      "authentication": [
+        "none"
+      ],
+      "modelContracts": [],
+      "support": {
+        "status": "standard",
+        "notice": "Other owner"
+      }
+    }
+  ],
+  "purposes": {
+    "defaults": {
+      "chat": "chosen"
+    }
+  }
+}

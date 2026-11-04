@@ -1,4 +1,4 @@
-import { isPersonalSessionKey } from '../pages/personal-models-model.mjs'
+import { isPersonalSessionKey } from '../pages/personal-session-model.mjs'
 
 /** 聊天记录（Agent 会话）sessionKey 与深链（与 @zhin.js/ai resolveIMSessionId 一致） */
 

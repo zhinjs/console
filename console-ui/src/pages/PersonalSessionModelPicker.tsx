@@ -1,92 +1,165 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Loader2, RefreshCw } from 'lucide-react'
-import { useI18n } from '../i18n'
+import { useEffect, useRef, useState } from 'react'
+import { RefreshCw } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
+import { supportLabel, SupportNotice } from './inference/SupportInfo'
 import { Button } from '../components/ui/button'
 import { SelectField } from '../components/ui/select'
 import { ErrorAlert } from '../components/error-alert'
-import { Alert, AlertDescription } from '../components/ui/alert'
-import { isDemoMode } from '../utils/demo-mode'
 import {
-  isPersonalSessionKey, personalSessionAddressQuery, readPersonalSessionView, personalModelFailure,
-  type PersonalAddress, type PersonalOwnerModels, type PersonalSessionView,
-} from './personal-models-model.mjs'
+  inferenceRequest,
+  inferenceError,
+  selectableLanguageProfiles,
+  type View,
+} from './inference/model.mjs'
+import {
+  readPersonalSessionState,
+  samePersonalSessionSelection,
+  type PersonalAddress,
+  type PersonalSessionState,
+} from './personal-session-model.mjs'
 
-/** Only a server-resolved complete personal address can choose a preset. */
-export function PersonalSessionModelPicker({ sessionKey, address, ownerModels, connectionScope }: {
-  sessionKey: string; address: PersonalAddress; ownerModels: PersonalOwnerModels; connectionScope?: string
+/** The complete server-resolved address and account-bound selection are checked again on every save. */
+export function PersonalSessionModelPicker({
+  sessionKey,
+  address,
+  models,
+  ownerId,
+  connectionScope,
+}: {
+  sessionKey: string
+  address: PersonalAddress
+  models: View
+  ownerId: string
+  connectionScope?: string
 }) {
-  const i18n = useI18n()
-  const [view, setView] = useState<PersonalSessionView | null>(null)
-  const [selected, setSelected] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-  const [saved, setSaved] = useState(false)
-  const sequence = useRef(0)
-  const controller = useRef<AbortController | null>(null)
-  const mounted = useRef(true)
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false; sequence.current += 1; controller.current?.abort() } }, [])
-  const active = () => mounted.current && isInboxCacheScopeActive(connectionScope)
-  const load = useCallback(async () => {
-    if (!isPersonalSessionKey(sessionKey) || !isInboxCacheScopeActive(connectionScope)) return
-    controller.current?.abort()
-    const abort = new AbortController(); controller.current = abort
-    const current = ++sequence.current
-    setLoading(true); setError(''); setSaved(false)
+  const [state, setState] = useState<PersonalSessionState | null>(null),
+    [selected, setSelected] = useState(''),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(''),
+    [saved, setSaved] = useState(false)
+  const alive = useRef(true),
+    sequence = useRef(0),
+    abort = useRef<AbortController | null>(null)
+  const active = () => alive.current && isInboxCacheScopeActive(connectionScope)
+  async function load() {
+    if (!active()) return
+    const id = ++sequence.current
+    abort.current?.abort()
+    const controller = new AbortController()
+    abort.current = controller
+    setBusy(true)
+    setError('')
     try {
-      const response = await apiFetch(personalSessionAddressQuery(address), { cache: 'no-store', signal: abort.signal })
-      const body = await response.json()
-      if (!response.ok || body.success !== true) throw new Error(personalModelFailure(response.status, body.code))
-      const result = readPersonalSessionView(body, sessionKey, address)
-      if (mounted.current && current === sequence.current && isInboxCacheScopeActive(connectionScope)) {
-        setView(result); setSelected(result.state.selection.kind === 'inherit' ? '' : result.state.selection.presetId)
+      const value = await inferenceRequest(apiFetch, {
+        path: `/session?address=${encodeURIComponent(JSON.stringify(address))}`,
+        ownerId,
+        signal: controller.signal,
+      })
+      const next = readPersonalSessionState(value, sessionKey, address)
+      if (active() && id === sequence.current) {
+        setState(next)
+        setSelected(next.selection.kind === 'profile' ? next.selection.profile.id : '')
       }
     } catch (failure) {
-      if (!abort.signal.aborted && mounted.current && current === sequence.current && isInboxCacheScopeActive(connectionScope)) {
-        setView(null); setError(failure instanceof Error && failure.message !== 'invalid_response' ? failure.message : '会话身份无法确认，未切换模型。')
+      if (active() && id === sequence.current && !controller.signal.aborted) {
+        setState(null)
+        setError(inferenceError(failure))
       }
-    } finally { if (mounted.current && current === sequence.current) setLoading(false) }
-  }, [address, sessionKey, connectionScope])
-  useEffect(() => { void load() }, [load])
-  const original = view?.state.selection.kind === 'preset' ? view.state.selection.presetId : ''
-  const choices = [{ value: '', label: i18n.t('继承会话模型设置') },
-    ...(view?.presets.personal ?? []).map(preset => ({ value: preset.id, label: ownerModels.models.find(model => model.id === preset.modelId)?.model ?? preset.id })),
-    ...(view?.presets.deployment ?? []).map(preset => ({ value: preset.id, label: `${preset.model} · ${i18n.t('部署模型')}` }))]
-  if (selected && !choices.some(choice => choice.value === selected)) choices.push({ value: selected, label: i18n.t('当前预设不可用') })
-  const save = async () => {
-    if (!view || view.state.identity.key !== sessionKey || saving || !active() || isDemoMode()) return
-    const current = ++sequence.current
-    setSaving(true); setError(''); setSaved(false)
-    try {
-      const response = await apiFetch('/api/agent/personal-session', { method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address, expectedRevision: view.state.revision, selection: selected ? { kind: 'preset', presetId: selected } : { kind: 'inherit' } }) })
-      const body = await response.json()
-      if (!response.ok || body.success !== true) throw new Error(response.status >= 500 ? '提交结果尚未确认，请刷新查看后再操作。' : personalModelFailure(response.status, body.code))
-      const result = readPersonalSessionView({ success: true, data: { state: body.data, presets: view.presets } }, sessionKey, address)
-      if (active() && current === sequence.current) { setView(result); setSaved(true) }
-    } catch (failure) {
-      if (active() && current === sequence.current) setError(failure instanceof Error && failure.message !== 'invalid_response' && failure.name !== 'TypeError' ? failure.message : '提交结果尚未确认，请刷新查看后再操作。')
-    } finally { if (mounted.current && current === sequence.current) setSaving(false) }
+    } finally {
+      if (active() && id === sequence.current) setBusy(false)
+    }
   }
-  if (!isPersonalSessionKey(sessionKey)) return null
-  return <section className="space-y-4" aria-label={i18n.t('此会话的模型')}>
-    <div className="flex flex-wrap items-end gap-3">
-      <label className="min-w-0 flex-1 space-y-2 text-sm font-medium">
-        <span>{i18n.t('此会话的模型')}</span>
-        <SelectField value={selected} onValueChange={value => { setSelected(value); setSaved(false) }} options={choices}
-          aria-label={i18n.t('此会话的模型')} disabled={!view || loading || saving || isDemoMode()} />
-      </label>
-      <Button onClick={() => void save()} disabled={!view || loading || saving || selected === original || isDemoMode()}>
-        {saving ? <Loader2 className="animate-spin" /> : null}{i18n.t('保存模型选择')}
-      </Button>
-      <Button variant="outline" size="icon" onClick={() => void load()} disabled={loading || saving} aria-label={i18n.t('刷新')}>
-        <RefreshCw className={loading ? 'animate-spin' : ''} />
-      </Button>
-    </div>
-    <p className="text-xs text-muted-foreground">{address.platform} · {address.endpoint} · {address.conversation.id} · {address.subjectId}</p>
-    {error ? <ErrorAlert error={i18n.t(error)} /> : null}
-    {saved ? <Alert variant="success"><AlertDescription>{i18n.t('模型选择已保存。')}</AlertDescription></Alert> : null}
-  </section>
+  useEffect(() => {
+    alive.current = true
+    void load()
+    return () => {
+      alive.current = false
+      sequence.current++
+      abort.current?.abort()
+    }
+  }, [sessionKey, address, ownerId, connectionScope])
+  const choices = selectableLanguageProfiles(models),
+    chosen = choices.find((value) => value.id === selected)
+  const selection: PersonalSessionState['selection'] = chosen
+    ? { kind: 'profile', profile: chosen.selection }
+    : { kind: 'inherit' }
+  const unchanged = samePersonalSessionSelection(state?.selection, selection)
+  async function save() {
+    if (!state || !active() || busy) return
+    if (selected && !chosen) return
+    setBusy(true)
+    setError('')
+    setSaved(false)
+    try {
+      const result = await inferenceRequest(apiFetch, {
+        path: '/session',
+        ownerId,
+        method: 'PUT',
+        body: {
+          address,
+          expectedRevision: state.revision,
+          selection,
+        },
+      })
+      const next = readPersonalSessionState(result, sessionKey, address)
+      if (active()) {
+        setState(next)
+        setSaved(true)
+      }
+    } catch (failure) {
+      if (active()) setError(inferenceError(failure))
+    } finally {
+      if (active()) setBusy(false)
+    }
+  }
+  const options = [
+    { value: '', label: '继承会话模型设置' },
+    ...choices.map((value) => ({
+      value: value.id,
+      label: supportLabel(value.label, value.support),
+    })),
+  ]
+  if (selected && !options.some((value) => value.value === selected))
+    options.push({ value: selected, label: '当前模型不可用' })
+  return (
+    <section className="space-y-3">
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="min-w-0 flex-1 space-y-2 text-sm">
+          <span>此会话的模型</span>
+          <SelectField
+            value={selected}
+            onValueChange={(value) => {
+              setSelected(value)
+              setSaved(false)
+            }}
+            options={options}
+            disabled={!state || busy}
+          />
+        </label>
+        <Button
+          onClick={() => void save()}
+          disabled={!state || busy || unchanged || (!!selected && !chosen)}
+        >
+          保存
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label="重新读取会话模型"
+          onClick={() => void load()}
+          disabled={busy}
+        >
+          <RefreshCw />
+        </Button>
+      </div>
+      {chosen ? <SupportNotice support={chosen.support} /> : null}
+      {error ? <ErrorAlert error={error} /> : null}
+      {saved ? (
+        <p role="status" className="text-sm">
+          已保存，下一回合生效。
+        </p>
+      ) : null}
+    </section>
+  )
 }

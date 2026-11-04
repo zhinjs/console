@@ -1,0 +1,104 @@
+{
+  "rootId": "/synthetic/inference-support-host",
+  "revision": 1,
+  "ownerId": "personal-owner:v1:34503af93c90c8d70ee20967db45bff929dbfbba037772954957e520f90f45f8",
+  "hostAdministrator": false,
+  "services": {},
+  "accounts": {},
+  "profiles": {},
+  "statuses": {},
+  "deployment": [
+    {
+      "id": "chosen",
+      "model": "native",
+      "accountId": "chosen",
+      "accountIncarnation": "chosen",
+      "definition": {
+        "id": "native",
+        "kinds": [
+          "language"
+        ],
+        "protocol": "fixture"
+      },
+      "support": {
+        "status": "experimental",
+        "notice": "Experimental fixture"
+      }
+    },
+    {
+      "id": "other",
+      "model": "native",
+      "accountId": "other",
+      "accountIncarnation": "other",
+      "definition": {
+        "id": "native",
+        "kinds": [
+          "language"
+        ],
+        "protocol": "fixture"
+      },
+      "support": {
+        "status": "standard",
+        "notice": "Other owner"
+      }
+    },
+    {
+      "id": "stale",
+      "model": "native",
+      "accountId": "stale",
+      "accountIncarnation": "stale",
+      "definition": {
+        "id": "native",
+        "kinds": [
+          "language"
+        ],
+        "protocol": "fixture"
+      }
+    },
+    {
+      "id": "missing",
+      "model": "native",
+      "accountId": "missing",
+      "accountIncarnation": "missing",
+      "definition": {
+        "id": "native",
+        "kinds": [
+          "language"
+        ],
+        "protocol": "fixture"
+      }
+    }
+  ],
+  "drivers": [
+    {
+      "owner": "root",
+      "id": "same",
+      "contractVersion": "1",
+      "label": "Same name",
+      "source": "@test/synthetic",
+      "authentication": [
+        "none"
+      ],
+      "modelContracts": [],
+      "support": {
+        "status": "experimental",
+        "notice": "Experimental fixture"
+      }
+    },
+    {
+      "owner": "root/community",
+      "id": "same",
+      "contractVersion": "1",
+      "label": "Same name",
+      "source": "@test/synthetic",
+      "authentication": [
+        "none"
+      ],
+      "modelContracts": [],
+      "support": {
+        "status": "standard",
+        "notice": "Other owner"
+      }
+    }
+  ]
+}

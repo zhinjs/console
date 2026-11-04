@@ -26,9 +26,9 @@ const AI_CAPABILITIES = [
   { id: 'ai:services', title: '外部服务', description: '管理 Agent 使用的 MCP 和 GitHub 服务。', fieldNames: ['mcpServers', 'githubMcp'] },
   { id: 'ai:responses', title: '回复与访问', description: '设置机器人何时回复，以及谁可以使用 AI。', fieldNames: ['trigger', 'access'] },
   { id: 'ai:usage', title: '用量与审计', description: '管理 AI 用量限制和审计记录。', fieldNames: ['usage', 'audit'] },
-  { id: 'ai:collaboration', title: '协作与决策', description: '设置 Workroom 协作和决策能力。', fieldNames: ['workroom', 'decisions'] },
+  { id: 'ai:collaboration', title: '协作', description: '设置 Workroom 协作能力。', fieldNames: ['workroom'] },
 ]
-const NAMED_AI_FIELDS = ['providers', 'modelCatalog', 'modelPolicy', 'agents', ...AI_CAPABILITIES.flatMap(entry => entry.fieldNames)]
+const NAMED_AI_FIELDS = ['providers', 'modelCatalog', 'modelPolicy', 'decisions', 'agents', ...AI_CAPABILITIES.flatMap(entry => entry.fieldNames)]
 const SECTIONS = {
   general: ['基础运行', 'general'],
   builtin: ['内置能力', 'builtin'],
@@ -82,12 +82,10 @@ export function buildSettingsCatalog(config, configKeys, configPaths) {
     } else if (hostOwned && Object.hasOwn(BUILTIN, key)) {
       const entry = configEntry(key, 'plugins', 'builtin', BUILTIN[key], writable)
       if (key === 'ai') {
-        byGroup.models.entries.push({ ...entry, id: 'ai:providers', group: 'models', title: '部署模型目录',
-          description: '管理部署模型目录和初始聊天模型。', fieldNames: ['modelCatalog'] })
-        byGroup.models.entries.push({ ...entry, id: 'ai:model-policy', group: 'models', title: '运行时模型策略',
-          description: '按用途和作用域选择预设，下一轮生效。', editor: 'runtime-model-policy', fieldNames: ['modelPolicy'] })
+        byGroup.models.entries.push({ ...entry, id: 'ai:inference', group: 'models', title: '模型',
+          description: '管理账号、模型与用途。', editor: 'inference' })
         byGroup.presets.entries.push({ ...entry, id: 'ai:agents', group: 'presets', title: 'Agent 预设',
-          description: '为已有 Agent 配置模型、名称与可用服务。', fieldNames: ['agents'] })
+          description: '为已有 Agent 配置名称与可用服务。', fieldNames: ['agents'] })
         byGroup.plugins.entries.push(...AI_CAPABILITIES.map(capability => ({ ...entry, ...capability,
           fieldNames: [...capability.fieldNames] })), { ...entry, id: 'ai:other', title: '其他 AI 设置',
           description: '查看当前 Host 提供的其他 AI 配置字段。', excludedFieldNames: [...NAMED_AI_FIELDS] })

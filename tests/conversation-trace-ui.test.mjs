@@ -5,7 +5,7 @@ import { createRequire } from 'node:module'
 import { renderToStaticMarkup } from 'react-dom/server'
 import ts from 'typescript'
 import { localeModule, isLocaleImport } from './locale-fixture.mjs'
-import * as personalModels from '../console-ui/src/pages/personal-models-model.mjs'
+import * as personalModels from '../console-ui/src/pages/personal-session-model.mjs'
 import * as model from '../console-ui/src/pages/conversation-trace-model.mjs'
 import { createDiagnosticRequestGate, diagnosticConversationKey } from '../console-ui/src/pages/endpoint-detail/message-diagnostics.mjs'
 import { createInboxCacheAuthority } from '../console-ui/src/utils/inbox-cache-scope.mjs'
@@ -15,7 +15,7 @@ const sources = Object.fromEntries(await Promise.all(['ConversationTrace', 'Conv
 const compile = (name, mocks) => {
   const module = { exports: {} }
   const code = ts.transpileModule(sources[name], { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
-  new Function('require','exports','module',code)(key => isLocaleImport(key) ? localeModule : key === './personal-models-model.mjs' ? personalModels : mocks[key] ?? require(key), module.exports, module)
+  new Function('require','exports','module',code)(key => isLocaleImport(key) ? localeModule : key === './personal-session-model.mjs' ? personalModels : mocks[key] ?? require(key), module.exports, module)
   return module.exports
 }
 const conversation = { endpoint: { adapter: 'root/icqq', id: 'canonical-bot' }, kind: 'group', id: 'group-a' }
@@ -43,7 +43,7 @@ function fixture(kind='list') {
   const authority=createInboxCacheAuthority(()=>connection,()=>`scope-${++scopeId}`)
   const hooks=runtime(),calls=[]
   const props={connectionScope:authority.current(),sessionKey:session,turnId:'turn-a',requestId:'request-a',conversation,turn}
-  const mocks={ './personal-models-model.mjs':personalModels,
+  const mocks={ './personal-session-model.mjs':personalModels,
     react:{...require('react'),...hooks.hooks},
     '../utils/auth':{apiFetch:(url,options)=>new Promise((resolve,reject)=>calls.push({url,...options,resolve,reject}))},
     '../utils/inbox-cache':{getInboxCacheScope:()=>authority.current(),isInboxCacheScopeActive:scope=>authority.active(scope)},

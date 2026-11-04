@@ -20,7 +20,7 @@ import { isDemoMode } from '../utils/demo-mode'
 import { buildSettingsCatalog, resolveSettingsSelection, type SettingsEntry } from './settings-model.mjs'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
-import { ModelPolicySettings } from './ModelPolicySettings'
+import { InferenceWorkspace } from './inference/Workspace'
 import { WelcomeFlowContext } from './WelcomeFlowContext'
 
 function EditableConfigPage() {
@@ -148,7 +148,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
             </Button>
           </div> : null}
 
-          {runtimeVisited ? <section hidden={activeEntry?.editor !== 'runtime-model-policy'}><ModelPolicySettings connectionScope={connectionScope} /></section> : null}
+          {runtimeVisited ? <section hidden={activeEntry?.editor !== 'inference'}><InferenceWorkspace connectionScope={connectionScope} /></section> : null}
 
           {ownerKeys.map(key => {
             // A configuration owner has exactly one form and CAS-bound draft. In

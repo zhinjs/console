@@ -7,7 +7,7 @@ import { ErrorAlert } from '../components/error-alert'
 import { apiFetch } from '../utils/auth'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import type { DiagnosticConversation } from './endpoint-detail/types'
-import { isPersonalSessionKey } from './personal-models-model.mjs'
+import { isPersonalSessionKey } from './personal-session-model.mjs'
 import { ContextUsage, UsageSummary } from './ConversationUsage'
 import {
   formatTraceMetric, promptContent, readTraceDetail, readTraceRequest, traceBodyStatus, traceFailure,

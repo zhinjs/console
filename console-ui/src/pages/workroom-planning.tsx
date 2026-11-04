@@ -2,6 +2,7 @@ import { translate } from '../i18n/locale.mjs'
 import { useI18n } from '../i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { stringify as stringifyYaml } from 'yaml'
 import {
   CheckCircle2,
   Clipboard,
@@ -35,7 +36,7 @@ interface PlanningSetupStatus {
   disclosureReady: boolean
   disclosureConfigReady: boolean
   disclosureStatusSupported: boolean
-  modelProviderAlias?: string
+  modelServiceId?: string
   availableAgents: string[]
   availableTools: string[]
   availableSkills: string[]
@@ -231,8 +232,8 @@ function PlanningStatus(props: {
 
         <div className="space-y-3">
           {!status.principalId || !status.trustedPackPublisher ? <SponsorConfigSnippet /> : null}
-          {!status.disclosureReady && status.modelProviderAlias && !status.disclosureConfigReady
-            ? <DisclosureConfigSnippet providerAlias={status.modelProviderAlias} />
+          {!status.disclosureReady && status.modelServiceId && !status.disclosureConfigReady
+            ? <DisclosureConfigSnippet serviceId={status.modelServiceId} />
             : null}
           {status.ready ? (
             <div className="rounded-xl border border-border bg-muted/10 p-4 text-xs leading-relaxed text-muted-foreground">
@@ -269,14 +270,23 @@ function SponsorConfigSnippet() {
   />
 }
 
-function DisclosureConfigSnippet({ providerAlias }: { providerAlias: string }) {
+function DisclosureConfigSnippet({ serviceId }: { serviceId: string }) {
   const i18n = useI18n()
   return <ConfigSnippet
     icon={ShieldCheck}
     title={i18n.t("模型处理方披露契约")}
     description={i18n.t("按真实合同填写数据处理策略；外部模型服务必须禁止训练后才能初始化。")}
     technicalDescription={i18n.t("占位符必须按 Provider 合同和账号策略填写。OpenRouter 还需在 Privacy/Guardrail 中启用 ZDR 并关闭 data collection；YAML 不会替你修改第三方账号策略。")}
-    code={`ai:\n  workroom:\n    disclosure:\n      modelProviders:\n        ${providerAlias}:\n          endpoint: REPLACE_WITH_CONTRACTED_ENDPOINT\n          processingRegions: [REPLACE_WITH_CONTRACTED_REGION]\n          maxConfidentiality: project_internal\n          external: true\n          noTraining: REPLACE_WITH_PROVIDER_GUARANTEE\n          loggingMode: REPLACE_WITH_LOGGING_MODE\n          maximumRetentionSeconds: REPLACE_WITH_MAX_RETENTION_SECONDS\n          allowsRedisclosure: REPLACE_WITH_PROVIDER_GUARANTEE\n          supportsDeletion: REPLACE_WITH_PROVIDER_GUARANTEE`}
+    code={stringifyYaml({ ai: { workroom: { disclosure: { modelServices: { [serviceId]: {
+      endpoint: 'REPLACE_WITH_CONTRACTED_ENDPOINT',
+      processingRegions: ['REPLACE_WITH_CONTRACTED_REGION'],
+      maxConfidentiality: 'project_internal', external: true,
+      noTraining: 'REPLACE_WITH_PROVIDER_GUARANTEE',
+      loggingMode: 'REPLACE_WITH_LOGGING_MODE',
+      maximumRetentionSeconds: 'REPLACE_WITH_MAX_RETENTION_SECONDS',
+      allowsRedisclosure: 'REPLACE_WITH_PROVIDER_GUARANTEE',
+      supportsDeletion: 'REPLACE_WITH_PROVIDER_GUARANTEE',
+    } } } } } })}
   />
 }
 
