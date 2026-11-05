@@ -1,0 +1,111 @@
+README.md
+  s_9622fd28aba994::t_30460fc406e9f0 76,80,111-113
+console-ui/src/components/PluginConfigForm/AgentPresetsEditor.tsx
+  s_9622fd28aba994::t_7ae2414b2a6634 6,20-21
+console-ui/src/components/PluginConfigForm/index.tsx
+  s_9622fd28aba994::t_37722fa290faf1 158
+console-ui/src/i18n/messages.en.mjs
+  s_9622fd28aba994::t_4f6b27248db2ef 3-6
+console-ui/src/pages/ConversationTrace.tsx
+  s_9622fd28aba994::t_3bae14ad1a203e 10
+console-ui/src/pages/PersonalSessionModelPicker.tsx
+  s_9622fd28aba994::t_816033ae763557 1-2,5,10-20,22-34,36-52,54-62,65-67,69-93,95-109,111-114,116-164
+console-ui/src/pages/agent-session-recent.mjs
+  s_9622fd28aba994::t_ee7783ce569fbe 1
+console-ui/src/pages/agent-sessions.tsx
+  s_9622fd28aba994::t_9c971f69a1f7a1 2
+console-ui/src/pages/config.tsx
+  s_9622fd28aba994::t_00bbf3392f8687 23,152
+console-ui/src/pages/inference/Accounts.tsx
+  s_9622fd28aba994::t_9cc5a29e0f3e8b 1-567
+console-ui/src/pages/inference/ModelCapabilities.tsx
+  s_9622fd28aba994::t_c865dc953f165d 1-132
+console-ui/src/pages/inference/PersonalSessions.tsx
+  s_9622fd28aba994::t_a8ef6a72dcc5bf 2-8,10-25,27,30-40,42-99
+console-ui/src/pages/inference/Profiles.tsx
+  s_9622fd28aba994::t_1d41bf2a62838c 1-27,29-41,43-99,101-390
+console-ui/src/pages/inference/Purposes.tsx
+  s_9622fd28aba994::t_ce5b71fe9ed3e2 1-426
+console-ui/src/pages/inference/SchemaFields.tsx
+  s_9622fd28aba994::t_da1aff666fcf3e 1-41
+console-ui/src/pages/inference/SupportInfo.tsx
+  s_9622fd28aba994::t_1f9770a8ff9ae6 1-40
+console-ui/src/pages/inference/Workspace.tsx
+  s_9622fd28aba994::t_bdb89017bd07a9 1-187
+console-ui/src/pages/inference/model.d.mts
+  s_9622fd28aba994::t_a8f07ef788e69c 1-182
+console-ui/src/pages/inference/model.mjs
+  s_9622fd28aba994::t_d042bbf56da0d7 1-248
+console-ui/src/pages/inference/useInferenceManagement.ts
+  s_9622fd28aba994::t_89b7f2047ace4a 1-329
+console-ui/src/pages/personal-session-model.d.mts
+  s_9622fd28aba994::t_895be6071b413d 2-30,35-43
+console-ui/src/pages/personal-session-model.mjs
+  s_9622fd28aba994::t_32917c367f1a1f 2-6,8-15,20-29,31-32,34-46,49-55,58-64,66-72,77,79-116,119-126
+console-ui/src/pages/settings-model.d.mts
+  s_9622fd28aba994::t_e6cf3395489f98 11
+console-ui/src/pages/settings-model.mjs
+  s_9622fd28aba994::t_225ede1b421328 29,31,85-86,88
+console-ui/src/pages/skills-assistant-model.mjs
+  s_9622fd28aba994::t_a4b818f5d7bc64 3,12
+console-ui/src/pages/useConversationTraces.ts
+  s_9622fd28aba994::t_c34f429ba0b781 7
+console-ui/src/pages/workroom-planning.tsx
+  s_9622fd28aba994::t_6eb81b5c7055c4 5,39,235-236,273,280-289
+console-ui/src/registerBuiltinShell.tsx
+  s_9622fd28aba994::t_755d858053aae3 186
+console-ui/src/utils/agent-session.ts
+  s_9622fd28aba994::t_984884682b08f3 1
+tests/config-connection-scope.test.mjs
+  s_9622fd28aba994::t_aa7c59295a2683 96-97,983,995,1004-1008,1010,1222-1223,1251-1253,1255-1256,1258,1260-1261,1263-1264
+tests/config-live-status.test.mjs
+  s_9622fd28aba994::t_72da9255a180ec 56-57,101,110
+tests/conversation-page.test.mjs
+  s_9622fd28aba994::t_901d679543f1ce 7,18,35
+tests/conversation-trace-ui.test.mjs
+  s_9622fd28aba994::t_23b6a0fdf8c6e4 8,18,46
+tests/fixtures/inference-support/README.md
+  s_9622fd28aba994::t_2565518554772b 1-29
+tests/fixtures/inference-support/member.json
+  s_9622fd28aba994::t_0432988f91983f 1-104
+tests/fixtures/inference-support/operator.json
+  s_9622fd28aba994::t_e1ef22ead56d2e 1-301
+tests/helpers/inference-page-runtime.mjs
+  s_9622fd28aba994::t_9fcb29f34805ba 1-60
+tests/inference-draft-source.test.mjs
+  s_9622fd28aba994::t_f18f603eb3ca90 1-122
+tests/inference-management-ui.test.mjs
+  s_9622fd28aba994::t_c7473d799e0467 1-828
+tests/inference-model.test.mjs
+  s_9622fd28aba994::t_4e9d14827111b8 1-310
+tests/inference-support-display.test.mjs
+  s_9622fd28aba994::t_bfe8aa1039a177 1-249
+tests/localization-lifecycle.test.mjs
+  s_9622fd28aba994::t_27127a3078a0b6 220-242
+tests/personal-session-model.test.mjs
+  s_9622fd28aba994::t_fb1a966e0edc39 3-8,12-61,66-72,75-78,81-92,94-96,98-106,108-127,129-142
+tests/personal-session-panel-scope.test.mjs
+  s_9622fd28aba994::t_c57acebaf7eb11 1-145
+tests/provider-authority-boundaries.test.mjs
+  s_9622fd28aba994::t_ca7b422ec390f0 3-7,9-11,13-27,29-60,63-89
+tests/settings-model.test.mjs
+  s_9622fd28aba994::t_cfdb924716fa05 20,24,37,43,46,52,87
+tests/skills-assistant.test.mjs
+  s_9622fd28aba994::t_16324a4ee1458d 61-67,77,80-81,86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6c780ff4ea4433cd042482aae18309c47db58327",
+  "prompts": {},
+  "sessions": {
+    "s_9622fd28aba994": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a166a4-5b4c-7e22-80f0-d3374c43b4fb",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
