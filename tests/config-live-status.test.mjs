@@ -9,7 +9,6 @@ import { translate } from '../console-ui/src/i18n/locale.mjs'
 import * as live from '../console-ui/src/components/PluginConfigForm/config-live-status.mjs'
 import { configurationSaveSummary } from '../console-ui/src/components/PluginConfigForm/config-evidence-model.mjs'
 import { describeSaveResult as ambientSaved } from '../console-ui/src/pages/ambient-engagement-model.mjs'
-import { describeSaveResult as skillsSaved } from '../console-ui/src/pages/skills-assistant-model.mjs'
 
 const require = createRequire(import.meta.url)
 const application = (statuses = ['applied']) => ({ operationId: 'config:1', sourceRevision: 'file-r2', saved: true,
@@ -54,8 +53,8 @@ test('malformed application metadata is unconfirmed and does not become a save f
   assert.match(configurationSaveSummary({ success: true, revision: 'r1', restartRequired: false }), /另行核对/)
 })
 
-test('ambient and skills save summaries use the same runtime evidence without claiming business verification', () => {
-  for (const describe of [ambientSaved, skillsSaved]) {
+test('file-backed ambient save summaries use runtime evidence without claiming business verification', () => {
+  for (const describe of [ambientSaved]) {
     const mixed = describe({ status: 'saved', ...result(['applied', 'restart-pending']), restartRequired: true })
     assert.equal(mixed.kind, 'saved'); assert.equal(mixed.applicationKind, 'partial'); assert.match(mixed.text, /部分配置已生效/)
     const unknown = describe({ status: 'saved', ...result(), applicationError: 'unconfirmed' })
@@ -99,7 +98,7 @@ test('the actual component localizes metadata and only refreshes on explicit use
   assert.doesNotMatch(markup, /运行生效|原地更新|结果未确认/)
 })
 
-for (const page of ['ambient-engagement', 'skills-assistant']) test(`${page} rejects old-connection saves and ignores late receipts after a Host switch`, async () => {
+for (const page of ['ambient-engagement']) test(`${page} rejects old-connection saves and ignores late receipts after a Host switch`, async () => {
   const text = await readFile(new URL(`../console-ui/src/pages/${page}.tsx`, import.meta.url), 'utf8')
   const body = /const save = async \(\) => \{([\s\S]*?)\n  \}/.exec(text)?.[1]
   assert.ok(body)
@@ -108,8 +107,7 @@ for (const page of ['ambient-engagement', 'skills-assistant']) test(`${page} rej
     requestConsole: () => { requests++; return new Promise(done => { resolve = done }) },
     setSaving() {}, setFeedback() { feedback++ }, setReceipt() { receipts++ }, setServerProblems() {},
     initial: { revision: 'r1', settings: {} }, draft: {}, modes: {},
-    buildAmbientPatches: () => [], buildSkillsPatches: () => [],
-    describeSaveResult: page === 'ambient-engagement' ? ambientSaved : skillsSaved,
+    buildAmbientPatches: () => [], describeSaveResult: ambientSaved,
     onReload: async () => { reloads++; return null }, i18n: { locale: 'zh-CN', t: value => value } }
   const executable = ts.transpileModule(`function build(context){const {${Object.keys(context).join(',')}}=context; return async()=>{${body}}}`,
     { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText

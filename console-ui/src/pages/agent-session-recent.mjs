@@ -1,4 +1,4 @@
-import { isPersonalSessionKey } from './personal-models-model.mjs'
+import { isPersonalSessionKey } from './personal-session-model.mjs'
 import { translate } from '../i18n/locale.mjs'
 const SCOPES = new Set(['private', 'group', 'channel'])
 const validKey = key => {

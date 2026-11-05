@@ -1,67 +1,119 @@
 import { useEffect, useRef, useState } from 'react'
-import { Loader2 } from 'lucide-react'
-import { useI18n } from '../i18n'
-import { apiFetch } from '../utils/auth'
-import { usePersonalModels } from '../hooks/use-personal-models'
-import { isInboxCacheScopeActive } from '../utils/inbox-cache'
-import { ErrorAlert } from '../components/error-alert'
 import { SelectField } from '../components/ui/select'
+import { ErrorAlert } from '../components/error-alert'
+import { useInferenceManagement, type InferenceManagement } from './inference/useInferenceManagement'
+import { inferenceError } from './inference/model.mjs'
 import { PersonalSessionModelPicker } from './PersonalSessionModelPicker'
-import { addressBelongsToOwner, isPersonalSessionKey, personalModelFailure, personalSessionQuery, readPersonalSessionRows,
-  type PersonalSessionRow } from './personal-models-model.mjs'
+import {
+  isPersonalSessionKey,
+  readPersonalSessionRows,
+  type PersonalSessionRow,
+} from './personal-session-model.mjs'
 
-/** A personal hash never grants access to the legacy all-conversation history APIs. */
-export function PersonalSessionPanel({ sessionKey, connectionScope, preferredOwnerId }: {
-  sessionKey: string; connectionScope?: string; preferredOwnerId?: string | null
+interface PersonalSessionPanelProps {
+  sessionKey: string
+  connectionScope?: string
+  preferredOwnerId?: string | null
+}
+
+/** A personal hash never grants access to the all-conversation history API. */
+export function PersonalSessionPanel(props: PersonalSessionPanelProps) {
+  return (
+    <PersonalSessionScope
+      key={JSON.stringify([props.connectionScope, props.preferredOwnerId])}
+      {...props}
+    />
+  )
+}
+
+function PersonalSessionScope({ sessionKey, connectionScope, preferredOwnerId }: PersonalSessionPanelProps) {
+  const m = useInferenceManagement(connectionScope, preferredOwnerId)
+  const owner = m.owners.find((value) => value.id === m.ownerId)?.personal
+  return (
+    <div className="space-y-4 rounded-md border p-5">
+      {m.owners.length > 1 ? (
+        <SelectField
+          aria-label="个人身份"
+          value={m.ownerId}
+          onValueChange={m.setOwnerId}
+          options={m.owners.map((value) => ({ value: value.id, label: value.label }))}
+        />
+      ) : null}
+      {m.error ? <ErrorAlert error={m.error} /> : null}
+      {!owner && !m.busy ? (
+        <p className="text-sm text-muted-foreground">请使用关联此会话的个人身份登录。</p>
+      ) : null}
+      {owner && isPersonalSessionKey(sessionKey) ? (
+        <PersonalSessionReader
+          key={JSON.stringify([
+            m.ownerId, owner.rootId, owner.platform, owner.endpoint,
+            owner.adapterId, owner.subjectId, sessionKey,
+          ])}
+          management={m}
+          owner={owner}
+          sessionKey={sessionKey}
+          connectionScope={connectionScope}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+/** The row, lookup error and model picker belong to one resolved personal identity. */
+function PersonalSessionReader({ management: m, owner, sessionKey, connectionScope }: {
+  management: InferenceManagement
+  owner: NonNullable<InferenceManagement['owners'][number]['personal']>
+  sessionKey: string
+  connectionScope?: string
 }) {
-  const i18n = useI18n()
-  const [ownerId, setOwnerId] = useState('')
-  const [row, setRow] = useState<PersonalSessionRow | null>(null)
-  const [rowLoading, setRowLoading] = useState(false)
-  const [rowError, setRowError] = useState('')
-  const sequence = useRef(0)
-  const personal = isPersonalSessionKey(sessionKey) && isInboxCacheScopeActive(connectionScope)
-  const { view: models, loading: modelsLoading, error: modelsError } = usePersonalModels(personal ? connectionScope : undefined)
+  const [row, setRow] = useState<PersonalSessionRow | null>(null),
+    [error, setError] = useState(''),
+    sequence = useRef(0)
   useEffect(() => {
-    if (!models) return
-    setOwnerId(models.owners.some(owner => owner.ownerId === preferredOwnerId) ? preferredOwnerId!
-      : models.owners.length === 1 ? models.owners[0].ownerId : '')
-  }, [models, preferredOwnerId])
-  const owner = models?.owners.find(owner => owner.ownerId === ownerId)
-  useEffect(() => {
-    if (!owner || !isPersonalSessionKey(sessionKey) || !isInboxCacheScopeActive(connectionScope)) return
-    const current = ++sequence.current
-    const abort = new AbortController()
-    setRow(null); setRowLoading(true); setRowError('')
+    let stopped = false
+    const id = ++sequence.current
+    setRow(null)
+    setError('')
     void (async () => {
       try {
         let offset = 0
         for (;;) {
-          const response = await apiFetch(personalSessionQuery(owner.owner, offset), { signal: abort.signal, cache: 'no-store' })
-          const body = await response.json()
-          if (abort.signal.aborted || current !== sequence.current || !isInboxCacheScopeActive(connectionScope)) return
-          if (!response.ok || body.success !== true) { setRowError(personalModelFailure(response.status, body.code)); return }
-          const page = readPersonalSessionRows(body, owner.owner)
-          const match = page.rows.find(row => row.sessionKey === sessionKey)
-          if (match) { setRow(match); return }
-          if (!page.hasMore) { setRowError('在此个人身份下未找到该会话。'); return }
-          if (page.rows.length === 0) throw new Error('invalid_response')
+          const result = await m.request(`/sessions?limit=50&offset=${offset}`)
+          if (stopped || id !== sequence.current || !m.active()) return
+          const page = readPersonalSessionRows({ success: true, data: result }, owner),
+            match = page.rows.find((value) => value.sessionKey === sessionKey)
+          if (match) {
+            setRow(match)
+            return
+          }
+          if (!page.hasMore) {
+            setError('在此个人身份下未找到该会话。')
+            return
+          }
+          if (!page.rows.length) throw new Error('invalid_response')
           offset += page.rows.length
         }
-      } catch { if (!abort.signal.aborted && current === sequence.current && isInboxCacheScopeActive(connectionScope)) setRowError('个人会话目录读取失败。') }
-      finally { if (current === sequence.current && !abort.signal.aborted) setRowLoading(false) }
+      } catch (failure) {
+        if (!stopped && id === sequence.current && m.active()) setError(inferenceError(failure))
+      }
     })()
-    return () => { sequence.current += 1; abort.abort() }
-  }, [owner, sessionKey, connectionScope])
-  const error = modelsError || rowError
-  const loading = rowLoading || modelsLoading
-  const resolvedRow = row && row.sessionKey === sessionKey && owner && addressBelongsToOwner(row.address, owner.owner) ? row : null
-  return <div className="space-y-5 rounded-md border p-5">
-    {models && models.owners.length > 1 ? <label className="block max-w-lg space-y-2 text-sm font-medium"><span>{i18n.t('个人身份')}</span>
-      <SelectField value={ownerId} onValueChange={setOwnerId} options={[{ value: '', label: i18n.t('请选择个人身份') }, ...models.owners.map(owner => ({ value: owner.ownerId, label: `${owner.owner.platform} · ${owner.owner.endpoint} · ${owner.owner.subjectId}` }))]} />
-    </label> : null}
-    {loading ? <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin" />{i18n.t('正在加载…')}</p> : null}
-    {error ? <ErrorAlert error={i18n.t(error)} /> : null}
-    {resolvedRow && owner ? <PersonalSessionModelPicker key={resolvedRow.sessionKey} sessionKey={resolvedRow.sessionKey} address={resolvedRow.address} ownerModels={owner} connectionScope={connectionScope} /> : null}
-  </div>
+    return () => {
+      stopped = true
+      sequence.current++
+    }
+  }, [m.revisionEpoch])
+  return (
+    <>
+      {error ? <ErrorAlert error={error} /> : null}
+      {row && m.view ? (
+        <PersonalSessionModelPicker
+          sessionKey={row.sessionKey}
+          address={row.address}
+          models={m.view}
+          ownerId={m.ownerId}
+          connectionScope={connectionScope}
+        />
+      ) : null}
+    </>
+  )
 }
