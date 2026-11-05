@@ -1,0 +1,47 @@
+tests/inference-support-display.test.mjs
+  s_9622fd28aba994::t_398e794a18c0aa 271-284
+  s_9622fd28aba994::t_e073d875ed7bcd 250-270
+  s_9622fd28aba994::t_fcab6f3277effb 285-298
+console-ui/src/pages/inference/Accounts.tsx
+  s_9622fd28aba994::t_89734b5aa2636e 18,31-39,131
+  s_9622fd28aba994::t_2e4a89aa812179 307-308
+console-ui/src/pages/inference/Profiles.tsx
+  s_9622fd28aba994::t_2d4a2a73b5d30f 344-349
+  s_9622fd28aba994::t_928f5e55549078 1,147-148,174,176-180,184-186,189,191,195,198-203,205-207,213-214,227,249-256,276,281,315-316
+  s_9622fd28aba994::t_786be715991c45 155,217-222,241-248,282
+  s_9622fd28aba994::t_32e242e5d95247 364
+  s_9622fd28aba994::t_39b3fba05dab55 127-131,154,175,181-183,188,193,208-211,371,382,389
+  s_9622fd28aba994::t_e167457835dd4e 29,49-50,53,58,187,192,197
+console-ui/src/pages/inference/model.d.mts
+  s_9622fd28aba994::t_89734b5aa2636e 61-67
+  s_9622fd28aba994::t_2d4a2a73b5d30f 20
+tests/inference-draft-source.test.mjs
+  s_9622fd28aba994::t_928f5e55549078 17-18,21,172,239-260
+  s_9622fd28aba994::t_ccc7c6107f9959 123-152,173,176
+  s_9622fd28aba994::t_2d4a2a73b5d30f 153-162,261-262
+  s_9622fd28aba994::t_644a6a8dc0ccb3 168,171,186,263-286
+  s_9622fd28aba994::t_23b047934d194c 164,169-170,178,180,182-183,192-193,199-200,209,216-217,224,229-230,327-363
+  s_9622fd28aba994::t_ca1ced6b22270c 287-326
+  s_9622fd28aba994::t_39e89b4377641f 38,52,54,163,165-167,174-175,177,179,181,184-185,187-191,194-198,201-208,210-215,218-223,225-228,231-238
+console-ui/src/pages/inference/Services.tsx
+  s_9622fd28aba994::t_362b8e4b1a8b38 18-206
+  s_9622fd28aba994::t_97d046b6528c19 1-17,207
+console-ui/src/pages/inference/Workspace.tsx
+  s_9622fd28aba994::t_e1b94242edf724 17,19,109,164-200
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "86522919d56cc5af4cef8e73519c3da7940db916",
+  "prompts": {},
+  "sessions": {
+    "s_9622fd28aba994": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a166a4-5b4c-7e22-80f0-d3374c43b4fb",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
