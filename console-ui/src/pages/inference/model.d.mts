@@ -17,6 +17,7 @@ export interface Driver extends DriverRef {
   label: string
   source?: string
   authentication: string[]
+  discovery?: boolean
   serviceSchema?: Record<string, unknown>
   modelContracts: { protocol: string; kinds: Kind[] }[]
 }
@@ -57,6 +58,13 @@ export interface AccountStatus {
   status: string
   revision: number
   preparation?: string
+  source?: 'environment-expression'
+  retryAt?: number
+  failure?: {
+    kind: 'temporary-response' | 'response-error' | 'transport-unknown' | 'invalid-response'
+    status?: number
+    oauthError?: string
+  }
 }
 export interface View {
   rootId: string

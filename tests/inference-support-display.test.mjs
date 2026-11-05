@@ -247,3 +247,52 @@ for (const principal of ['operator', 'member'])
     }
     f.runtime.unmount()
   })
+
+
+test('the existing API Key dialog sends a private expression only to the authenticated prepare entry', async () => {
+  const f = await fixture(), view = producerView(), m = f.management(view), saved = []
+  view.accounts.experimental.authentication = { method: 'api-key' }
+  m.save = async (...args) => { saved.push(args); return true }
+  const { Accounts } = await f.load('inference/Accounts.tsx')
+  f.runtime.mount(() => createElement(Accounts, { management: m })); await f.runtime.settle()
+  button(f, '设置密钥').props.onClick(); await f.runtime.settle()
+  let input = f.all().find(node => node.type === 'input' && node.props.type === 'password')
+  assert.equal(input.props.placeholder, 'API Key 或 ${ENV_VAR:-默认值}')
+  const expression = '${API_KEY:-synthetic-private-default}'
+  input.props.onChange({ target: { value: expression } }); await f.runtime.settle()
+  await f.all().find(node => node.type === 'form').props.onSubmit({ preventDefault() {} }); await f.runtime.settle()
+  assert.equal(saved.length, 1)
+  assert.equal(saved[0][0], '/key/prepare')
+  assert.deepEqual(saved[0][1], { accountId: 'experimental', expectedRevision: 1, key: expression })
+  assert.equal(f.all().some(node => node.type === 'input' && node.props.value === expression), false)
+  assert.equal(f.text().includes('synthetic-private-default'), false)
+  f.runtime.unmount()
+})
+
+for (const [status, label] of [
+  [{ status: 'ready', revision: 2, retryAt: 5000 }, '认证限流'],
+  [{ status: 'uncertain', revision: 2, failure: { kind: 'temporary-response', status: 503, oauthError: 'server_error' } }, '认证服务暂时不可用'],
+  [{ status: 'uncertain', revision: 2, failure: { kind: 'transport-unknown' } }, '结果待确认'],
+]) test(`account status renders the Host authentication outcome: ${label}`, async () => {
+  const f = await fixture(), view = producerView(), { Accounts } = await f.load('inference/Accounts.tsx')
+  view.statuses.experimental = status
+  f.runtime.mount(() => createElement(Accounts, { management: f.management(view) })); await f.runtime.settle()
+  assert.ok(f.text().includes(label))
+  if (status.retryAt) assert.equal(f.text().includes('· 可用'), true, 'other accounts remain available')
+  assert.deepEqual(f.calls, [], 'reading the status does not retry authorization or add polling')
+  f.runtime.unmount()
+})
+
+if (process.env.INFERENCE_AUTH_STATUS_FIXTURE) {
+  const captured = JSON.parse(await readFile(process.env.INFERENCE_AUTH_STATUS_FIXTURE, 'utf8'))
+  const labels = { cooldown: '认证限流', 'temporary-response': '认证服务暂时不可用', 'transport-unknown': '结果待确认' }
+  for (const item of captured) test(`renders the actual Host status DTO: ${item.case}`, async () => {
+    assert.ok(Object.hasOwn(labels, item.case))
+    const f = await fixture(), view = producerView(), { Accounts } = await f.load('inference/Accounts.tsx')
+    view.statuses.experimental = item.status
+    f.runtime.mount(() => createElement(Accounts, { management: f.management(view) })); await f.runtime.settle()
+    assert.ok(f.text().includes(labels[item.case]))
+    assert.deepEqual(f.calls, [])
+    f.runtime.unmount()
+  })
+}

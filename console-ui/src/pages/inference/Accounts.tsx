@@ -15,7 +15,7 @@ import { SupportLabel, SupportNotice, supportLabel } from './SupportInfo'
 import { driverLabel, serviceDriver } from './model.mjs'
 import { Card } from '../../components/ui/card'
 import { useConfirm } from '../../components/confirm-dialog'
-import { driverKey, type Account, type ObjectValue } from './model.mjs'
+import { driverKey, type Account, type AccountStatus, type ObjectValue } from './model.mjs'
 import { SchemaFields } from './SchemaFields'
 import type { InferenceManagement, InferenceSource } from './useInferenceManagement'
 
@@ -27,6 +27,15 @@ const statusLabels: Record<string, string> = {
   reauthorize: '需重新登录',
   uncertain: '结果待确认',
   'exchange-pending': '授权处理中',
+}
+function accountStatusLabel(status: AccountStatus | undefined): string {
+  if (status?.status === 'ready' && status.retryAt !== undefined) return '认证限流'
+  if (status?.status === 'uncertain' && status.failure) {
+    if (status.failure.kind === 'temporary-response') return '认证服务暂时不可用'
+    if (status.failure.kind === 'transport-unknown') return '结果待确认'
+    return '认证响应异常'
+  }
+  return statusLabels[status?.status ?? ''] ?? '状态未知'
 }
 export function Accounts({ management: m }: { management: InferenceManagement }) {
   const view = m.view!,
@@ -119,7 +128,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
                   </p>
                   <p className="text-sm text-muted-foreground break-all">
                     {service.label ?? service.driver.id} ·{' '}
-                    {statusLabels[status?.status] ?? '状态未知'}
+                    {accountStatusLabel(status)}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -295,6 +304,8 @@ export function Accounts({ management: m }: { management: InferenceManagement })
               <Input
                 type="password"
                 autoComplete="off"
+                placeholder={credential?.source.view.hostAdministrator && credential.account.authentication.method === 'api-key'
+                  ? 'API Key 或 ${ENV_VAR:-默认值}' : undefined}
                 value={clientSecret}
                 onChange={(event) => setClientSecret(event.target.value)}
                 required
