@@ -14,8 +14,9 @@ import { ErrorAlert } from '../../components/error-alert'
 import { Alert, AlertDescription } from '../../components/ui/alert'
 import { Textarea } from '../../components/ui/textarea'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
-import { useInferenceManagement, type InferenceSource } from './useInferenceManagement'
+import { useInferenceManagement, type InferenceSource, type InferenceManagement } from './useInferenceManagement'
 import { Profiles } from './Profiles'
+import { Services } from './Services'
 import { Accounts } from './Accounts'
 import { Purposes } from './Purposes'
 import { PersonalSessions } from './PersonalSessions'
@@ -105,32 +106,7 @@ export function InferenceWorkspace({ connectionScope }: { connectionScope?: stri
         </p>
       ) : null}
       {m.view ? (
-        <Tabs defaultValue="profiles" key={`${connectionScope}:${m.ownerId}`}>
-          <TabsList>
-            <TabsTrigger value="profiles">模型</TabsTrigger>
-            <TabsTrigger value="accounts">账号</TabsTrigger>
-            {m.view.hostAdministrator ? (
-              <TabsTrigger value="purposes">用途</TabsTrigger>
-            ) : (
-              <TabsTrigger value="sessions">会话</TabsTrigger>
-            )}
-          </TabsList>
-          <TabsContent value="profiles">
-            <Profiles management={m} />
-          </TabsContent>
-          <TabsContent value="accounts">
-            <Accounts management={m} />
-          </TabsContent>
-          {m.view.hostAdministrator ? (
-            <TabsContent value="purposes">
-              <Purposes management={m} />
-            </TabsContent>
-          ) : (
-            <TabsContent value="sessions">
-              <PersonalSessions management={m} connectionScope={connectionScope} />
-            </TabsContent>
-          )}
-        </Tabs>
+        <InferencePages key={`${connectionScope}:${m.ownerId}`} management={m} connectionScope={connectionScope} />
       ) : m.busy ? (
         <p role="status" className="text-muted-foreground">
           正在读取模型…
@@ -183,5 +159,42 @@ export function InferenceWorkspace({ connectionScope }: { connectionScope?: stri
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+
+/** A new owner/connection gets a fresh tab selection; editing state remains owned by each page. */
+function InferencePages({ management: m, connectionScope }: { management: InferenceManagement; connectionScope?: string }) {
+  const [tab, setTab] = useState('profiles')
+  if (!m.view) return null
+  return (
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList>
+            <TabsTrigger value="profiles">模型</TabsTrigger>
+            <TabsTrigger value="accounts">账号</TabsTrigger>
+            <TabsTrigger value="services">服务</TabsTrigger>
+            {m.view.hostAdministrator ? (
+              <TabsTrigger value="purposes">用途</TabsTrigger>
+            ) : (
+              <TabsTrigger value="sessions">会话</TabsTrigger>
+            )}
+          </TabsList>
+          <TabsContent value="profiles">
+            <Profiles management={m} onCreateAccount={() => setTab('accounts')} />
+          </TabsContent>
+          <TabsContent value="services"><Services management={m} /></TabsContent>
+          <TabsContent value="accounts">
+            <Accounts management={m} />
+          </TabsContent>
+          {m.view.hostAdministrator ? (
+            <TabsContent value="purposes">
+              <Purposes management={m} />
+            </TabsContent>
+          ) : (
+            <TabsContent value="sessions">
+              <PersonalSessions management={m} connectionScope={connectionScope} />
+            </TabsContent>
+          )}
+        </Tabs>
   )
 }
