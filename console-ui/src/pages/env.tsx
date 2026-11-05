@@ -127,7 +127,7 @@ function EnvFileEditor({
   return (
     <div className="space-y-3">
       {shouldShowMissingEnv({ loaded, exists, dirty, readFailed: message?.type === 'error' }) && (
-        <Alert className="py-2 border-yellow-500/50 text-yellow-700 dark:text-yellow-400">
+        <Alert className="py-2 border-warning/50 text-warning">
           <FileWarning className="h-4 w-4" />
           <AlertDescription>{readOnly ? i18n.t("文件不存在") : i18n.t("文件不存在，保存后将自动创建")}</AlertDescription>
         </Alert>
@@ -243,7 +243,7 @@ export default function EnvManagePage() {
       />
 
       {error && (
-        <div className="space-y-2"><ErrorAlert error={readErrorSummary(error, i18n.t("环境变量文件列表"), i18n.locale)} onRetry={handleRefresh} /><details className="text-xs"><summary className="cursor-pointer">{i18n.t("技术详情")}</summary><pre className="mt-2 whitespace-pre-wrap break-words">{error}</pre></details></div>
+        <ErrorAlert error={readErrorSummary(error, i18n.t("环境变量文件列表"), i18n.locale)} technicalDetail={error} onRetry={handleRefresh} />
       )}
 
       <Tabs value={activeTab} onValueChange={selectTab} className="space-y-4">
@@ -255,7 +255,7 @@ export default function EnvManagePage() {
                 <KeyRound className="w-3.5 h-3.5" />
                 {name}
                 {fileInfo && !fileInfo.exists && (
-                  <Badge variant="outline" className="text-[10px] px-1 py-0 ml-1">{i18n.t("新")}</Badge>
+                  <Badge variant="outline" size="sm" className="ml-1">{i18n.t("新")}</Badge>
                 )}
               </TabsTrigger>
             )

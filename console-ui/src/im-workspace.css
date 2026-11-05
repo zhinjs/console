@@ -14,7 +14,7 @@
 .im-sidebar-header { display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 16px 12px; border-bottom: 1px solid hsl(var(--border)); }
 .im-sidebar-endpoint { flex: 1; min-width: 0; }
 .im-sidebar-endpoint-icon { display: grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; border-radius: 10px; background: hsl(var(--muted)); color: hsl(var(--foreground)); }
-.im-connection-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border: 1px solid transparent; border-radius: 5px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.im-connection-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border: 1px solid transparent; border-radius: 5px; font-size: var(--console-text-label); font-weight: 600; white-space: nowrap; }
 .im-connection-pill--on { background: hsl(var(--success) / .1); color: hsl(var(--success)); }
 .im-connection-pill--off { background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
 .im-sidebar-search { position: relative; flex-shrink: 0; margin: 12px; border: 1px solid hsl(var(--border)); border-radius: 8px; background: hsl(var(--card)); }
@@ -29,7 +29,7 @@
 .im-section-header:hover { color: hsl(var(--foreground)); background: hsl(var(--im-row-hover)); }
 .im-section-chevron { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex-shrink: 0; }
 .im-section-title { flex: 1; min-width: 0; }
-.im-section-count-badge { display: inline-flex; justify-content: center; align-items: center; min-width: 22px; padding: 1px 5px; border-radius: 5px; font-size: 11px; background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); font-variant-numeric: tabular-nums; }
+.im-section-count-badge { display: inline-flex; justify-content: center; align-items: center; min-width: 22px; padding: 1px 5px; border-radius: 5px; font-size: var(--console-text-label); background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); font-variant-numeric: tabular-nums; }
 .im-section-panel { overflow: hidden; background: transparent; }
 .im-section-empty { padding: 16px 10px; text-align: center; color: hsl(var(--muted-foreground)); font-size: 12px; }
 .im-conversation-row { display: grid; grid-template-columns: 36px minmax(0,1fr); align-items: center; gap: 10px; width: 100%; min-height: 68px; padding: 10px 8px; border: 0; border-radius: 8px; background: transparent; color: inherit; cursor: pointer; text-align: left; transition: background-color 120ms; }
@@ -40,10 +40,10 @@
 .im-conversation-body { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .im-conversation-title-row, .im-conversation-preview-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .im-conversation-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 600; line-height: 1.4; }
-.im-conversation-time { flex-shrink: 0; font-size: 11px; color: hsl(var(--muted-foreground)); font-variant-numeric: tabular-nums; }
+.im-conversation-time { flex-shrink: 0; font-size: var(--console-text-label); color: hsl(var(--muted-foreground)); font-variant-numeric: tabular-nums; }
 .im-conversation-preview { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 1.5; color: hsl(var(--muted-foreground)); }
 .im-conversation-preview--empty { color: hsl(var(--muted-foreground)); }
-.im-conversation-unread { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; padding: 1px 5px; border-radius: 5px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.im-conversation-unread { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; padding: 1px 5px; border-radius: 5px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); font-size: var(--console-text-label); font-weight: 600; font-variant-numeric: tabular-nums; }
 .im-system-section { margin-top: 8px; }
 .im-system-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 8px; border: 0; border-radius: 8px; background: transparent; color: inherit; text-align: left; cursor: pointer; }
 .im-system-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0; background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }

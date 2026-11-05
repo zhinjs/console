@@ -24,7 +24,7 @@ import {
 const W = 720
 const H = 220
 const PAD = { left: 48, right: 12, top: 10, bottom: 26 }
-const SEGMENT_COLORS: Record<string, string> = { history: '#2563eb', fixed: '#7c5cff', user: '#0f9d76' }
+const SEGMENT_COLORS: Record<string, string> = { history: 'hsl(var(--chart-1))', fixed: 'hsl(var(--chart-5))', user: 'hsl(var(--chart-3))' }
 
 function xLabelEvery(count: number): number {
   return Math.max(1, Math.ceil(count / 8))
@@ -52,7 +52,7 @@ export function StackedBarChart({ series, keys, colors, bucket }: { series: Usag
   return <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label={i18n.t("输入 tokens 随时间变化")}>
     {[0, 0.25, 0.5, 0.75, 1].map(tick => <g key={tick}>
       <line x1={PAD.left} x2={W - PAD.right} y1={y(top * tick)} y2={y(top * tick)} stroke="currentColor" strokeOpacity={0.12} />
-      <text x={PAD.left - 6} y={y(top * tick) + 3} textAnchor="end" fontSize={10} fill="currentColor" fillOpacity={0.65}>{formatTokens(top * tick, i18n.locale)}</text>
+      <text x={PAD.left - 6} y={y(top * tick) + 3} textAnchor="end" fontSize={12} fill="currentColor" fillOpacity={0.65}>{formatTokens(top * tick, i18n.locale)}</text>
     </g>)}
     {bars.map((bar, index) => {
       const x = PAD.left + index * slot + (slot - barW) / 2
@@ -65,7 +65,7 @@ export function StackedBarChart({ series, keys, colors, bucket }: { series: Usag
           acc += part.value
           return <rect key={part.key} x={x} y={y(acc)} width={barW} height={h} fill={part.key === '__other__' ? OTHER_COLOR : colorFor(colors, part.key)} />
         })}
-        {index % every === 0 ? <text x={x + barW / 2} y={H - 8} textAnchor="middle" fontSize={10} fill="currentColor" fillOpacity={0.65}>{label}</text> : null}
+        {index % every === 0 ? <text x={x + barW / 2} y={H - 8} textAnchor="middle" fontSize={12} fill="currentColor" fillOpacity={0.65}>{label}</text> : null}
       </g>
     })}
   </svg>
@@ -91,14 +91,14 @@ export function CacheLineChart({ series, bucket }: { series: UsagePoint[]; bucke
   return <svg viewBox={`0 0 ${W} 120`} className="h-auto w-full" role="img" aria-label={i18n.t("缓存命中率随时间变化")}>
     {[0, 0.5, 1].map(tick => <g key={tick}>
       <line x1={PAD.left} x2={W - PAD.right} y1={y(tick)} y2={y(tick)} stroke="currentColor" strokeOpacity={0.12} />
-      <text x={PAD.left - 6} y={y(tick) + 3} textAnchor="end" fontSize={10} fill="currentColor" fillOpacity={0.65}>{formatPercent(tick, i18n.locale)}</text>
+      <text x={PAD.left - 6} y={y(tick) + 3} textAnchor="end" fontSize={12} fill="currentColor" fillOpacity={0.65}>{formatPercent(tick, i18n.locale)}</text>
     </g>)}
-    {path ? <path d={path} fill="none" stroke="#0f9d76" strokeWidth={2} strokeLinejoin="round" /> : null}
+    {path ? <path d={path} fill="none" stroke="hsl(var(--chart-3))" strokeWidth={2} strokeLinejoin="round" /> : null}
     {points.map((point, index) => {
       const label = formatBucketLabel(point.bucketStart, bucket, i18n.locale)
       return <g key={point.bucketStart}>
-        {point.value !== null ? <circle cx={x(index)} cy={y(point.value)} r={points.length > 60 ? 1.5 : 3} fill="#0f9d76"><title>{`${label} · ${formatPercent(point.value, i18n.locale)}`}</title></circle> : null}
-        {index % every === 0 ? <text x={x(index)} y={120 - 8} textAnchor="middle" fontSize={10} fill="currentColor" fillOpacity={0.65}>{label}</text> : null}
+        {point.value !== null ? <circle cx={x(index)} cy={y(point.value)} r={points.length > 60 ? 1.5 : 3} fill="hsl(var(--chart-3))"><title>{`${label} · ${formatPercent(point.value, i18n.locale)}`}</title></circle> : null}
+        {index % every === 0 ? <text x={x(index)} y={120 - 8} textAnchor="middle" fontSize={12} fill="currentColor" fillOpacity={0.65}>{label}</text> : null}
       </g>
     })}
   </svg>

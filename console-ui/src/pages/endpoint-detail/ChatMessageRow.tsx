@@ -50,7 +50,7 @@ export function ChatMessageRow({ message, onQuote, onForward }: ChatMessageRowPr
   return (
     <article className={cn('im-message-row', out && 'im-message-row--out')}>
       <div className={cn('im-bubble', out ? 'im-bubble-out' : 'im-bubble-in')}>
-        <div className={cn('im-meta flex items-center gap-2 text-[10px] mb-0.5', out ? '' : 'text-muted-foreground')}>
+        <div className={cn('im-meta flex items-center gap-2 text-xs mb-0.5', out ? '' : 'text-muted-foreground')}>
           <span className={cn('font-medium', out ? '' : 'text-foreground/90')}>{senderName}</span>
           <span className="tabular-nums">{timeLabel}</span>
           {message.directionUnknown && <span className="im-direction-note">{i18n.t("历史方向未记录")}</span>}
@@ -62,9 +62,9 @@ export function ChatMessageRow({ message, onQuote, onForward }: ChatMessageRowPr
       </div>
       <div className="im-message-actions" aria-label={i18n.t("消息操作")}>
         {!out && !message.local && <MessageDiagnosticsAction message={message} />}
-        <button type="button" title={i18n.t("引用")} onClick={() => onQuote(draftRef)}><Quote className="h-3.5 w-3.5" /></button>
-        <button type="button" title={i18n.t("转发")} onClick={() => onForward(draftRef)}><Forward className="h-3.5 w-3.5" /></button>
-        <button type="button" title={i18n.t("复制摘要")} onClick={copySummary}><Copy className="h-3.5 w-3.5" /></button>
+        <button type="button" title={i18n.t("引用")} aria-label={i18n.t("引用")} onClick={() => onQuote(draftRef)}><Quote className="size-4" /></button>
+        <button type="button" title={i18n.t("转发")} aria-label={i18n.t("转发")} onClick={() => onForward(draftRef)}><Forward className="size-4" /></button>
+        <button type="button" title={i18n.t("复制摘要")} aria-label={i18n.t("复制摘要")} onClick={copySummary}><Copy className="size-4" /></button>
       </div>
     </article>
   )

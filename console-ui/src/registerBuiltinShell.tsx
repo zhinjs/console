@@ -46,7 +46,7 @@ export function registerBuiltinConsolePages() {
 
   app.addRoute({
     path: '/logs',
-    name: '运行记录',
+    name: '运行日志',
     parent: null,
     icon: 'FileText',
     element: <LogsPage />,
@@ -196,7 +196,7 @@ export function registerBuiltinConsolePages() {
 
   app.addRoute({
     path: '/plugins',
-    name: '功能管理',
+    name: '插件管理',
     parent: null,
     icon: 'Package',
     element: <PluginsPage />,
@@ -213,7 +213,7 @@ export function registerBuiltinConsolePages() {
 
   app.addRoute({
     path: '/marketplace',
-    name: '功能商店',
+    name: '插件市场',
     parent: null,
     icon: 'Store',
     element: <MarketplacePage />,
@@ -258,7 +258,7 @@ export function registerBuiltinConsolePages() {
 
   app.addRoute({
     path: '/endpoints/:adapter/:endpointId',
-    name: '渠道详情',
+    name: '聊天账号详情',
     parent: '/endpoints',
     element: <EndpointDetailPage />,
     meta: { hideInMenu: true, fullWidth: true, group: NAV_GROUPS.ACCOUNTS },

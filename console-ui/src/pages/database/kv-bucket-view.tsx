@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react'
 import type { KvEntry } from '@zhin.js/client'
 import { Plus, Trash2, Pencil, RefreshCw, Loader2, AlertCircle, CheckCircle, Save, Key } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { Alert, AlertDescription } from '../../components/ui/alert'
 import {
   Dialog,
@@ -127,43 +128,43 @@ export function KvBucketView({
         role="region"
         aria-label={i18n.t("键值表，宽表可在此区域内左右滑动")}
       >
-        <table className="w-full min-w-[28rem] table-fixed border-collapse text-sm">
-          <thead className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm">
-            <tr className="border-b border-border/80">
-              <th className="px-3 py-2 text-left font-medium text-muted-foreground w-[30%]">Key</th>
-              <th className="px-3 py-2 text-left font-medium text-muted-foreground ">Value</th>
-              {!readOnly && <th className="px-3 py-2 text-right font-medium text-muted-foreground w-28">{i18n.t("操作")}</th>}
-            </tr>
-          </thead>
-          <tbody>
+        <Table containerClassName="overflow-visible" className="min-w-[28rem] table-fixed">
+          <TableHeader sticky>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="w-[30%]">Key</TableHead>
+              <TableHead>Value</TableHead>
+              {!readOnly && <TableHead numeric className="w-28">{i18n.t("操作")}</TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {loading && !entries.length ? (
-              <tr><td colSpan={readOnly ? 2 : 3} className="text-center py-8"><Loader2 className="w-4 h-4 animate-spin inline-block" /></td></tr>
+              <TableRow><TableCell colSpan={readOnly ? 2 : 3} className="py-8 text-center"><Loader2 className="w-4 h-4 animate-spin inline-block" /></TableCell></TableRow>
             ) : !entries.length ? (
-              <tr><td colSpan={readOnly ? 2 : 3} className="text-center py-8 text-muted-foreground">{i18n.t("暂无数据")}</td></tr>
+              <TableRow><TableCell colSpan={readOnly ? 2 : 3} className="py-8 text-center text-muted-foreground">{i18n.t("暂无数据")}</TableCell></TableRow>
             ) : entries.map((entry) => (
-              <tr key={entry.key} className="border-b border-border/60 hover:bg-muted/30 transition-colors">
-                <td className="px-3 py-2 align-top">
+              <TableRow key={entry.key}>
+                <TableCell className="align-top">
                   <div className="flex min-w-0 items-start gap-1">
                     <Key className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" />
                     <span className="line-clamp-2 break-all font-mono text-xs" title={entry.key}>{entry.key}</span>
                   </div>
-                </td>
-                <td className="min-w-0 px-3 py-2 align-top">
+                </TableCell>
+                <TableCell className="min-w-0 align-top">
                   <RecordValueDisclosure value={entry.value} />
-                </td>
-                {!readOnly && <td className="px-3 py-2 text-right align-top space-x-1 whitespace-nowrap">
-                  <Button size="sm" variant="outline" disabled={busy} aria-label={i18n.t("编辑记录")} className="h-8 px-2" onClick={() => {
+                </TableCell>
+                {!readOnly && <TableCell numeric className="space-x-1 whitespace-nowrap align-top">
+                  <Button size="sm" variant="outline" disabled={busy} aria-label={i18n.t("编辑记录")} onClick={() => {
                     setEditEntry(entry)
                     setAddEntry(false)
                     setKeyInput(entry.key)
                     setValueInput(typeof entry.value === 'object' ? JSON.stringify(entry.value, null, 2) : String(entry.value ?? ''))
                   }}><Pencil className="mr-1 h-3 w-3" />{i18n.t("编辑")}</Button>
-                  <Button size="sm" variant="ghost" disabled={busy} aria-label={i18n.t("删除记录")} className="h-8 w-8 p-0 text-destructive" onClick={() => handleDelete(entry.key)}><Trash2 className="w-3 h-3" /></Button>
-                </td>}
-              </tr>
+                  <Button size="icon" variant="ghost" disabled={busy} aria-label={i18n.t("删除记录")} className="text-destructive" onClick={() => handleDelete(entry.key)}><Trash2 /></Button>
+                </TableCell>}
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {!readOnly && <Dialog open={editEntry !== null || addEntry} onOpenChange={(open) => { if (!open && !gate.pending) { setEditEntry(null); setAddEntry(false) } }}>

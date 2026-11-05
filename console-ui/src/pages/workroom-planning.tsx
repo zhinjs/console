@@ -186,7 +186,7 @@ function PlanningStatus(props: {
             'rounded-xl border border-border bg-muted/10 p-4',
           )}>
             <div className="flex items-start gap-3">
-              <span className={cn('rounded-lg border border-border p-2', status.ready ? 'text-emerald-600' : 'text-amber-600')}>
+              <span className={cn('rounded-lg border border-border p-2', status.ready ? 'text-success' : 'text-warning')}>
                 {status.ready ? <ShieldCheck className="h-5 w-5" /> : <ShieldAlert className="h-5 w-5" />}
               </span>
               <div className="min-w-0">
@@ -209,7 +209,7 @@ function PlanningStatus(props: {
 
           {status.diagnostics.length ? (
             <div className="rounded-xl border border-border bg-muted/10 p-4">
-              <h3 className="flex items-center gap-2 text-xs font-semibold"><ShieldAlert className="h-4 w-4 text-amber-600" />{i18n.t("需要处理")}</h3>
+              <h3 className="flex items-center gap-2 text-xs font-semibold"><ShieldAlert className="h-4 w-4 text-warning" />{i18n.t("需要处理")}</h3>
               <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-muted-foreground">
                 {status.diagnostics.map((diagnostic) => <li key={diagnostic} className="flex gap-2"><span aria-hidden="true">•</span><span>{diagnostic}</span></li>)}
               </ul>
@@ -237,7 +237,7 @@ function PlanningStatus(props: {
             : null}
           {status.ready ? (
             <div className="rounded-xl border border-border bg-muted/10 p-4 text-xs leading-relaxed text-muted-foreground">
-              <h3 className="flex items-center gap-2 font-semibold text-foreground"><ShieldCheck className="h-4 w-4 text-emerald-600" />{i18n.t("规划权限已确认")}</h3>
+              <h3 className="flex items-center gap-2 font-semibold text-foreground"><ShieldCheck className="h-4 w-4 text-success" />{i18n.t("规划权限已确认")}</h3>
               <p className="mt-2">{i18n.t("任务规划会使用已确认的能力与数据处理权限；后续能力变化不会自动扩大已有运行的权限。")}</p>
             </div>
           ) : null}
@@ -252,7 +252,7 @@ function CapabilityStage(props: { label: string; ready: boolean; detail: string 
     <article className="rounded-lg border border-border bg-muted/10 px-3 py-2.5">
       <div className="flex items-center justify-between gap-2">
         <strong className="text-xs">{props.label}</strong>
-        {props.ready ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <span className="h-2 w-2 rounded-full bg-amber-500" />}
+        {props.ready ? <CheckCircle2 className="h-3.5 w-3.5 text-success" /> : <span className="h-2 w-2 rounded-full bg-warning" />}
       </div>
       <p className="mt-1 truncate text-xs text-muted-foreground" title={props.detail}>{props.detail}</p>
     </article>

@@ -20,6 +20,7 @@ import "./workspace-navigation.css"
 import { resolveNavigationLocation } from "../navigation-location.mjs"
 
 import { useIsMobile } from '../hooks/useIsMobile'
+import { ListItemButton } from '../components/ui/list-item-button'
 const EXPANDED_GROUPS_KEY = "zhin.console.nav.expanded-groups"
 const SIDEBAR_COLLAPSED_KEY = "zhin.console.nav.collapsed"
 
@@ -198,7 +199,7 @@ export default function DashboardLayout() {
     <div className="console-app-shell flex h-[100dvh] bg-background overflow-hidden">
       <a href="#console-main-content" className="console-skip-link">{i18n.t("跳到主要内容")}</a>
       {isMobile ? (
-        <button
+        <ListItemButton
           type="button"
           className={cn("console-nav-scrim", mobileNavOpen && "is-open")}
           aria-label={i18n.t("关闭菜单")}
@@ -250,10 +251,10 @@ export default function DashboardLayout() {
               const showGroupLabel = !items.some((route) => routeLabel(route, i18n.locale) === i18n.t(groupName))
               return (
                 <div key={i18n.t(groupName)} className="console-nav-group">
-                  {showLabels ? collapsible ? <button type="button" aria-expanded={open}
+                  {showLabels ? collapsible ? <ListItemButton type="button" aria-expanded={open}
                     onClick={() => toggleGroup(groupName)} className="console-nav-group-label is-toggle">
                     {i18n.t(groupName)}<ChevronRight className={cn("console-nav-group-chevron", open && "is-open")} aria-hidden="true" />
-                  </button> : showGroupLabel && <div className="console-nav-group-label">{i18n.t(groupName)}</div>
+                  </ListItemButton> : showGroupLabel && <div className="console-nav-group-label">{i18n.t(groupName)}</div>
                     : <div className="console-nav-group-rule" aria-hidden="true" />}
                   {open && items.map((route, index) => {
                     const itemKey = route.path || `menu-item-${i18n.t(groupName)}-${index}`
@@ -297,7 +298,7 @@ export default function DashboardLayout() {
             const label = i18n.t(groupName)
             return <DropdownMenu key={groupName}>
               <DropdownMenuTrigger asChild>
-                <button
+                <ListItemButton
                   type="button"
                   className={cn("console-nav-item console-secondary-trigger", active && "is-active")}
                   aria-label={label}
@@ -305,7 +306,7 @@ export default function DashboardLayout() {
                 >
                   <span className="console-nav-icon">{groupName === NAV_GROUPS.SETTINGS ? <Settings2 /> : <Activity />}</span>
                   {showLabels ? <><span className="min-w-0 flex-1 truncate text-left">{label}</span><ChevronRight className="console-secondary-chevron" aria-hidden="true" /></> : null}
-                </button>
+                </ListItemButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent side={isMobile ? "top" : "right"} align="end" sideOffset={8} className="console-secondary-menu">
                 <DropdownMenuLabel>{label}</DropdownMenuLabel>
@@ -331,7 +332,7 @@ export default function DashboardLayout() {
             {showLabels ? <span>{connected ? i18n.t("实时事件已连接") : i18n.t("实时事件未连接")}</span> : null}
           </span>
           {!isMobile ? (
-            <button
+            <ListItemButton
               type="button"
               className="console-sidebar-collapse"
               onClick={toggleSidebar}
@@ -340,7 +341,7 @@ export default function DashboardLayout() {
               title={desktopSidebarOpen ? i18n.t("收起侧边栏") : i18n.t("展开侧边栏")}
             >
               {desktopSidebarOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
-            </button>
+            </ListItemButton>
           ) : null}
         </div>
       </aside>

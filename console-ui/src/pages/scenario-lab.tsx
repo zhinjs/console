@@ -7,6 +7,7 @@ import { Card } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Checkbox } from '../components/ui/checkbox'
 import { Input } from '../components/ui/input'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
 import { Textarea } from '../components/ui/textarea'
 import { SelectField } from '../components/ui/select'
 import { readScenario, readScenarioJson, readScenarioSegments, scenarioPreviewItems, scenarioMarkdownBlocks, scenarioExportIssues, scenarioJson, exportScenarioRegression, SCENARIO_PROFILES, type Scenario, type ScenarioTarget } from './scenario-lab/scenario-model.mjs'
@@ -99,7 +100,7 @@ export default function ScenarioLabPage() {
           <label className="flex items-start gap-2 text-sm"><Checkbox checked={withAssertions} onCheckedChange={checked => setWithAssertions(checked === true)} />{i18n.t("我单独编写最终派发与投递断言")}</label>
           {withAssertions && <><Field label={i18n.t("预期派发状态")}><SelectField aria-label={i18n.t("预期派发状态")} value={status} onValueChange={setStatus} options={[{ value: '', label: i18n.t("请选择") }, { value: 'executed', label: i18n.t("指令已执行") }, { value: 'invalid', label: i18n.t("参数无效") }, { value: 'denied', label: i18n.t("权限拒绝") }, { value: 'unmatched', label: i18n.t("未匹配指令") }, { value: 'limited', label: i18n.t("准入限制（需支持此状态的 Runtime）") }]} /></Field><Field label={i18n.t("最终 payload 数组 JSON")}><Textarea aria-label={i18n.t("最终 payload 数组 JSON")} className="min-h-32 font-mono text-xs" value={deliveries} maxLength={64000} onChange={e => setDeliveries(e.target.value)} /></Field><p className="text-xs text-muted-foreground">{i18n.t("每项是一条最终 payload（字符串或原生消息段数组）；[] 明确断言没有投递。首版要求全部输出投递到来源会话映射后的合成账号，跨会话主动发送请另写测试。不会把上方浏览器预览自动复制为断言。")}</p></>}
           <p className="text-xs text-muted-foreground">{i18n.t("运行时必须显式指定 ZHIN_SCENARIO_FIXTURE_ROOT 的绝对路径。测试项目内的依赖、插件和 config 由开发者准备；不会自动安装、读取当前生产配置或执行。")}</p>
-          <p className="text-xs text-amber-700">{i18n.t("PluginTestKit 不是安全沙箱：插件 import/setup 可访问文件、网络或启动适配器。只运行可信、无生产凭据的独立测试项目。")}</p>
+          <p className="text-xs text-warning">{i18n.t("PluginTestKit 不是安全沙箱：插件 import/setup 可访问文件、网络或启动适配器。只运行可信、无生产凭据的独立测试项目。")}</p>
           {result.error && <p role="alert" className="break-words text-sm text-destructive">{i18n.t("场景尚不完整：")}{result.error}</p>}{result.issues.length > 0 && <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">{result.issues.map(issue => <li key={issue}>{issue}</li>)}</ul>}
           <div className="flex flex-wrap gap-2"><Button variant="outline" disabled={!result.scene} onClick={() => result.scene && download('scenario.json', scenarioJson(result.scene, i18n.locale))}><Download className="mr-1 h-4 w-4" />{i18n.t("导出场景 JSON")}</Button><Button disabled={!exported} onClick={() => exported && download('scenario.test.mjs', exported.testSource)}>{i18n.t("导出回归文件")}</Button><Button variant="outline" disabled={!exported} onClick={() => exported && download('README.md', exported.readme)}>{i18n.t("导出运行说明")}</Button></div>
         </Card>
@@ -121,7 +122,7 @@ export function ScenarioMarkdown({ source }: { source: string }) {
     if (block.kind === 'heading') return <p key={index} role="heading" aria-level={block.level} className={block.level === 1 ? 'text-lg font-semibold' : 'font-semibold'}>{block.text}</p>
     if (block.kind === 'list') return block.ordered ? <ol key={index} className="list-decimal space-y-1 pl-5">{block.items?.map((item, i) => <li key={i}>{item}</li>)}</ol> : <ul key={index} className="list-disc space-y-1 pl-5">{block.items?.map((item, i) => <li key={i}>{item}</li>)}</ul>
     if (block.kind === 'quote') return <blockquote key={index} className="whitespace-pre-wrap border-l-2 pl-3 text-muted-foreground">{block.text}</blockquote>
-    if (block.kind === 'table') return <div key={index} className="max-w-full overflow-auto"><table className="w-full border-collapse text-xs"><thead><tr>{block.rows?.[0].map((cell, i) => <th key={i} className="border bg-muted p-2 text-left">{cell}</th>)}</tr></thead><tbody>{block.rows?.slice(1).map((row, i) => <tr key={i}>{row.map((cell, j) => <td key={j} className="border p-2">{cell}</td>)}</tr>)}</tbody></table></div>
+    if (block.kind === 'table') return <Table key={index} className="text-xs"><TableHeader><TableRow className="hover:bg-transparent">{block.rows?.[0].map((cell, i) => <TableHead key={i}>{cell}</TableHead>)}</TableRow></TableHeader><TableBody>{block.rows?.slice(1).map((row, i) => <TableRow key={i}>{row.map((cell, j) => <TableCell key={j}>{cell}</TableCell>)}</TableRow>)}</TableBody></Table>
     if (block.kind === 'source') return <div key={index}><p className="text-xs text-muted-foreground">{block.label}</p><pre className="whitespace-pre-wrap break-all text-xs">{block.text}</pre></div>
     return <p key={index} className="whitespace-pre-wrap break-words">{block.text}</p>
   })}</div>

@@ -517,9 +517,9 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                   </div>
                   <div className="flex gap-1 shrink-0">
                     {belongsToZhinScope(plugin.name) && (
-                      <Badge variant="default" className="text-[10px]" title={i18n.t("包属于 @zhin.js 命名空间，不表示安全审计或兼容性保证")}>@zhin.js</Badge>
+                      <Badge variant="outline" size="sm" title={i18n.t("包属于 @zhin.js 命名空间，不表示安全审计或兼容性保证")}>@zhin.js</Badge>
                     )}
-                    <Badge variant="secondary" className="text-[10px]">{plugin.versionSource === 'registry' ? 'latest' : i18n.t("索引")} v{plugin.version}</Badge>
+                    <Badge variant="secondary">{plugin.versionSource === 'registry' ? 'latest' : i18n.t("索引")} v{plugin.version}</Badge>
                   </div>
                 </div>
 
@@ -546,10 +546,10 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                 {plugin.keywords?.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {plugin.keywords.slice(0, 3).map(kw => (
-                      <Badge key={kw} variant="outline" className="text-[10px] px-1.5 py-0">{kw}</Badge>
+                      <Badge key={kw} variant="outline" size="sm">{kw}</Badge>
                     ))}
                     {plugin.keywords.length > 3 && (
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                      <Badge variant="outline" size="sm">
                         +{plugin.keywords.length - 3}
                       </Badge>
                     )}
@@ -622,15 +622,15 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div className="rounded-md bg-secondary p-2">
                     <div className="text-lg font-bold">{formatDownloads(detail.downloads?.weekly || 0)}</div>
-                    <div className="text-[10px] text-muted-foreground">{i18n.t("周下载")}</div>
+                    <div className="text-xs text-muted-foreground">{i18n.t("周下载")}</div>
                   </div>
                   <div className="rounded-md bg-secondary p-2">
                     <div className="text-lg font-bold">{formatDownloads(detail.downloads?.monthly || 0)}</div>
-                    <div className="text-[10px] text-muted-foreground">{i18n.t("月下载")}</div>
+                    <div className="text-xs text-muted-foreground">{i18n.t("月下载")}</div>
                   </div>
                   <div className="rounded-md bg-secondary p-2">
                     <div className="text-lg font-bold">{detail.versions?.length || 0}</div>
-                    <div className="text-[10px] text-muted-foreground">{i18n.t("版本数")}</div>
+                    <div className="text-xs text-muted-foreground">{i18n.t("版本数")}</div>
                   </div>
                 </div>
 
@@ -665,23 +665,21 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                 </div>
 
                 {/* Tabs: readme / versions / deps */}
-                <div className="flex border-b gap-0">
-                  {([['readme', 'README'], ['versions', i18n.t("版本")], ['deps', i18n.t("依赖")]] as [DetailTab, string][]).map(
-                    ([key, label]) => (
-                      <button
-                        key={key}
-                        className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
-                          detailTab === key
-                            ? 'border-primary text-foreground'
-                            : 'border-transparent text-muted-foreground hover:text-foreground'
-                        }`}
-                        onClick={() => setDetailTab(key)}
-                      >
-                        {label}
-                      </button>
-                    ),
-                  )}
-                </div>
+                <Tabs value={detailTab} onValueChange={(value) => setDetailTab(value as DetailTab)}>
+                  <TabsList className="h-auto w-full justify-start gap-0 rounded-none border-b bg-transparent p-0">
+                    {([['readme', 'README'], ['versions', i18n.t("版本")], ['deps', i18n.t("依赖")]] as [DetailTab, string][]).map(
+                      ([key, label]) => (
+                        <TabsTrigger
+                          key={key}
+                          value={key}
+                          className="rounded-none border-b-2 border-transparent px-3 py-2 data-[state=active]:border-primary data-[state=active]:bg-transparent max-md:min-h-11"
+                        >
+                          {label}
+                        </TabsTrigger>
+                      ),
+                    )}
+                  </TabsList>
+                </Tabs>
 
                 {/* Tab content */}
                 {detailTab === 'readme' && (

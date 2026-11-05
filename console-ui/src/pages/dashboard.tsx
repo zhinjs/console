@@ -20,7 +20,7 @@ import {
   Package,
   Radio,
   RefreshCw,
-  RotateCw,
+  Power,
   Server,
   Settings2,
   Sparkles,
@@ -35,15 +35,8 @@ import { useToast } from '../components/toast'
 import { Button } from '../components/ui/button'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { Skeleton } from '../components/ui/skeleton'
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../components/ui/dialog'
+import { useConfirm } from '../components/confirm-dialog'
+import { ListItemButton } from '../components/ui/list-item-button'
 
 interface Stats {
   plugins: { total: number; active: number }
@@ -169,7 +162,7 @@ export default function HomePage() {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null)
-  const [restartDialogOpen, setRestartDialogOpen] = useState(false)
+  const { confirm, ConfirmDialog: ConfirmDialogHost } = useConfirm()
   const [restarting, setRestarting] = useState(false)
   const requestRef = useRef(0)
   const requestAbortRef = useRef<AbortController | null>(null)
@@ -364,6 +357,16 @@ export default function HomePage() {
     }
   }
 
+  const confirmRestart = async () => {
+    const ok = await confirm({
+      title: i18n.t("重启 Zhin 服务"),
+      description: i18n.t("所有连接将断开，进行中的对话可能被中止。通过 zhin runtime start 启动的前台和 daemon 服务会自动重新启动；--once 模式不会自动恢复。若使用自定义启动器，请确认其重启机制。"),
+      confirmLabel: i18n.t("确认重启"),
+      variant: 'destructive',
+    })
+    if (ok) await handleRestart()
+  }
+
   if (loading) {
     return (
       <div className="console-dashboard console-overview-page space-y-5" aria-label={i18n.t("正在加载工作台")}>
@@ -421,11 +424,11 @@ export default function HomePage() {
               {!readOnly ? (
                 <Button
                   variant="ghost"
-                  size="icon"
-                  onClick={() => setRestartDialogOpen(true)}
-                  aria-label={i18n.t("重启服务")}
-                >
-                  <RotateCw />
+                  disabled={restarting}
+                  onClick={() => { void confirmRestart() }}
+                  >
+                    <Power />
+                    {i18n.t("重启")}
                 </Button>
               ) : null}
             </div>
@@ -483,7 +486,7 @@ export default function HomePage() {
           ) : (
             <div className="space-y-2">
               {attentionItems.map((item) => (
-                <button
+                <ListItemButton
                   key={item.title}
                   type="button"
                   className={`console-attention-item is-${item.tone}`}
@@ -495,7 +498,7 @@ export default function HomePage() {
                     <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">{item.detail}</span>
                   </span>
                   <ArrowUpRight />
-                </button>
+                </ListItemButton>
               ))}
             </div>
           )}
@@ -528,7 +531,7 @@ export default function HomePage() {
             {capabilities.map((capability) => {
               const Icon = capability.icon
               return (
-                <button
+                <ListItemButton
                   key={capability.label}
                   type="button"
                   className="console-capability-item"
@@ -540,7 +543,7 @@ export default function HomePage() {
                     <span className="mt-1 block truncate text-xs text-muted-foreground">{capability.detail}</span>
                   </span>
                   <strong>{capability.value ?? '—'}</strong>
-                </button>
+                </ListItemButton>
               )
             })}
           </div>
@@ -557,61 +560,37 @@ export default function HomePage() {
         </div>
 
         <div className="console-action-grid">
-          <button type="button" className="console-primary-action" onClick={() => navigate('/endpoints')}>
+          <ListItemButton type="button" className="console-primary-action" onClick={() => navigate('/endpoints')}>
             <span className="console-primary-action-icon"><Bot /></span>
             <span className="min-w-0 text-left">
               <span className="block text-base font-semibold">{i18n.t("连接和管理会话")}</span>
               <span className="mt-1 block text-sm text-muted-foreground">{i18n.t("查看好友、群组、统一收件箱并直接收发消息。")}</span>
             </span>
             <ArrowUpRight />
-          </button>
+          </ListItemButton>
 
           <div className="console-secondary-actions">
-            <button type="button" onClick={() => navigate('/agent/workrooms')}>
+            <ListItemButton type="button" onClick={() => navigate('/agent/workrooms')}>
               <span><Workflow />{i18n.t("查看 Workroom 任务")}</span>
               <ArrowUpRight />
-            </button>
-            <button type="button" onClick={() => navigate('/marketplace')}>
+            </ListItemButton>
+            <ListItemButton type="button" onClick={() => navigate('/marketplace')}>
               <span><Package />{i18n.t("从市场添加能力")}</span>
               <ArrowUpRight />
-            </button>
-            <button type="button" onClick={() => navigate('/config')}>
+            </ListItemButton>
+            <ListItemButton type="button" onClick={() => navigate('/config')}>
               <span><Settings2 />{i18n.t("调整运行配置")}</span>
               <ArrowUpRight />
-            </button>
-            <button type="button" onClick={() => navigate('/logs')}>
-              <span><FileText />{i18n.t("检查运行记录")}</span>
+            </ListItemButton>
+            <ListItemButton type="button" onClick={() => navigate('/logs')}>
+              <span><FileText />{i18n.t("检查运行日志")}</span>
               <ArrowUpRight />
-            </button>
+            </ListItemButton>
           </div>
         </div>
       </section>
 
-      {!readOnly && <Dialog open={restartDialogOpen} onOpenChange={setRestartDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{i18n.t("重启 Zhin 服务")}</DialogTitle>
-            <DialogDescription>
-              {i18n.t("所有连接将断开，进行中的对话可能被中止。通过 zhin runtime start 启动的前台和 daemon 服务会自动重新启动；--once 模式不会自动恢复。若使用自定义启动器，请确认其重启机制。")}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">{i18n.t("取消")}</Button>
-            </DialogClose>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setRestartDialogOpen(false)
-                void handleRestart()
-              }}
-              disabled={restarting}
-            >
-              {restarting ? <RotateCw className="animate-spin" /> : <RotateCw />}
-              {restarting ? i18n.t("正在重启") : i18n.t("确认重启")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>}
+      {ConfirmDialogHost}
     </div>
   )
 }

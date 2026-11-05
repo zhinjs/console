@@ -127,11 +127,12 @@ export function modelKey(provider, model) {
   return `${provider}/${model}`
 }
 
-// 色盲友好的分类色（Okabe-Ito 变体），亮 / 暗主题都可读。
+// 分类色来自 theme-tokens.css 的 --chart-1..8，随亮 / 暗主题切换。
 export const MODEL_PALETTE = Object.freeze([
-  '#2563eb', '#e08a00', '#0f9d76', '#d6409f', '#7c5cff', '#c8553d', '#0ea5c6', '#8a8f98',
+  'hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))',
+  'hsl(var(--chart-5))', 'hsl(var(--chart-6))', 'hsl(var(--chart-7))', 'hsl(var(--chart-8))',
 ])
-export const OTHER_COLOR = '#9aa0a6'
+export const OTHER_COLOR = 'hsl(var(--chart-other))'
 
 function hashKey(text) {
   let hash = 2166136261

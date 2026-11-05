@@ -108,9 +108,9 @@ export function ConversationSidebar({
       aria-label={mobileDialog ? i18n.t('会话列表') : undefined} aria-hidden={isMobile && !showChannelList}
       inert={isMobile && !showChannelList} onKeyDown={onDrawerKeyDown}>
       <div className="im-sidebar-header">
-        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" asChild>
+        <Button variant="ghost" size="icon" className="shrink-0" asChild>
           <Link to="/endpoints" aria-label={i18n.t("返回聊天账号")}>
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft />
           </Link>
         </Button>
         <div className="im-sidebar-endpoint">
@@ -123,7 +123,7 @@ export function ConversationSidebar({
                 {info?.name || endpointId}
               </p>
               <div className="flex items-center gap-1.5 mt-1">
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 font-medium h-5">
+                <Badge variant="secondary" size="sm" className="h-5">
                   {adapter}
                 </Badge>
                 <span
@@ -173,7 +173,7 @@ export function ConversationSidebar({
 
         {!listLoading && listNotice && (
           <div className="px-3 py-2 mb-1 text-xs leading-relaxed" role={listNotice.tone === 'error' ? 'alert' : 'status'}>
-            <p className={listNotice.tone === 'error' ? 'text-destructive' : listNotice.tone === 'warning' ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}>{listNotice.text}</p>
+            <p className={listNotice.tone === 'error' ? 'text-destructive' : listNotice.tone === 'warning' ? 'text-warning' : 'text-muted-foreground'}>{listNotice.text}</p>
             {listNotice.details && <details className="mt-2 text-muted-foreground"><summary className="cursor-pointer">{i18n.t("技术详情")}</summary><p className="mt-2 break-words">{listNotice.details}</p></details>}
           </div>
         )}

@@ -10,7 +10,7 @@ const source=await readFile(new URL('../console-ui/src/pages/scenario-lab.tsx',i
 const ast=ts.createSourceFile('scenario-lab.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX)
 const definitions=['ScenarioPreview','ScenarioMarkdown'].map(name=>ast.statements.find(node=>ts.isFunctionDeclaration(node)&&node.name?.text===name))
 assert.ok(definitions.every(Boolean))
-const code=`import{scenarioMarkdownBlocks}from ${JSON.stringify(new URL('../console-ui/src/pages/scenario-lab/scenario-model.mjs',import.meta.url).href)};const Card=({children,...props})=><section {...props}>{children}</section>;${definitions.map(node=>node.getText(ast)).join('\n')}`
+const code=`import{scenarioMarkdownBlocks}from ${JSON.stringify(new URL('../console-ui/src/pages/scenario-lab/scenario-model.mjs',import.meta.url).href)};const Card=({children,...props})=><section {...props}>{children}</section>;const Table=({children,...props})=><table {...props}>{children}</table>,TableHeader=({children})=><thead>{children}</thead>,TableBody=({children})=><tbody>{children}</tbody>,TableRow=({children})=><tr>{children}</tr>,TableHead=({children})=><th>{children}</th>,TableCell=({children})=><td>{children}</td>;${definitions.map(node=>node.getText(ast)).join('\n')}`
 let js=ts.transpileModule(code,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext,jsx:ts.JsxEmit.ReactJSX}}).outputText
 js=js.replaceAll('"react/jsx-runtime"',JSON.stringify(import.meta.resolve('react/jsx-runtime')))
 const {ScenarioPreview}=await import(`data:text/javascript;base64,${Buffer.from(prepareLocaleModule(js)).toString('base64')}`)

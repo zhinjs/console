@@ -2,7 +2,8 @@ import { translate } from '../i18n/locale.mjs'
 import { useI18n } from '../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { parse as parseConfigSource } from 'yaml'
-import { RefreshCw, RotateCw } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
+import { ApplyFeedback } from '../components/ApplyFeedback'
 import { requestConsole } from '../utils/console-rpc'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
@@ -17,6 +18,7 @@ import { ErrorAlert } from '../components/error-alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
 import { Input } from '../components/ui/input'
 import { Textarea } from '../components/ui/textarea'
 import { Skeleton } from '../components/ui/skeleton'
@@ -143,12 +145,14 @@ function AmbientStatusSection({ read, onRetry }: { read: StatusReadState; onRetr
 }
 
 /** Best-effort group names from connected accounts of the platforms that appear in the records. */
-function useAmbientGroupNames(groups: string[]): Map<string, string> | null {
+function useAmbientGroupNames(groups: string[]): { names: Map<string, string> | null; failed: boolean } {
   const [names, setNames] = useState<Map<string, string> | null>(null)
+  const [failed, setFailed] = useState(false)
   const platforms = [...new Set(groups.map((group) => group.split(':')[0] ?? '').filter(Boolean))].sort().join(',')
   useEffect(() => {
     if (!platforms) return
     let active = true
+    setFailed(false)
     const wanted = new Set(platforms.split(','))
     void (async () => {
       const { endpoints = [] } = await requestConsole<{ endpoints?: Array<{ name: string; adapter: string; connected: boolean }> }>({ type: ENDPOINT_RPC.LIST })
@@ -157,6 +161,7 @@ function useAmbientGroupNames(groups: string[]): Map<string, string> | null {
           .then((result) => ({ adapter: endpoint.adapter, groups: result.groups ?? [] }))
           .catch(() => null)))
       const next = new Map<string, string>()
+      if (active && lists.some((list) => list === null)) setFailed(true)
       for (const list of lists) {
         for (const raw of list?.groups ?? []) {
           if (!raw || typeof raw !== 'object') continue
@@ -165,32 +170,33 @@ function useAmbientGroupNames(groups: string[]): Map<string, string> | null {
         }
       }
       if (active) setNames(next)
-    })().catch(() => {})
+    })().catch(() => { if (active) setFailed(true) })
     return () => { active = false }
   }, [platforms])
-  return names
+  return { names, failed }
 }
 
 function AmbientRecentActivity({ recent }: { recent: AmbientStatusView['recent'] }) {
   const i18n = useI18n()
-  const names = useAmbientGroupNames(recent.map((entry) => entry.group))
+  const { names, failed: namesFailed } = useAmbientGroupNames(recent.map((entry) => entry.group))
   const groups = summarizeRecentByGroup(recent, i18n.locale)
   return <div className="space-y-3">
     <h3 className="text-sm font-medium">{i18n.t("最近的记录")}</h3>
-    <div className="console-table-card">
-      <table className="console-table">
-        <thead><tr><th scope="col">{i18n.t("群")}</th><th scope="col">{i18n.t("记录")}</th><th scope="col">{i18n.t("最近一次")}</th></tr></thead>
-        <tbody>
+    {namesFailed ? <p role="status" className="text-xs text-warning">{i18n.t("群名未能读取，暂以群号显示。")}</p> : null}
+    <div className="overflow-hidden rounded-lg border bg-card">
+      <Table>
+        <TableHeader><TableRow className="hover:bg-transparent"><TableHead>{i18n.t("群")}</TableHead><TableHead>{i18n.t("记录")}</TableHead><TableHead>{i18n.t("最近一次")}</TableHead></TableRow></TableHeader>
+        <TableBody>
           {groups.map((row) => {
             const label = ambientGroupLabel(row.group, names)
-            return <tr key={row.group}>
-              <td><span className="block font-medium">{label.name}</span>{label.id ? <span className="console-table-sub">{label.id}</span> : null}</td>
-              <td><div className="flex flex-wrap gap-1.5">{row.outcomes.map((item) => <span key={item.outcome} className={`console-outcome-chip is-${item.outcome}`}>{item.label} × {item.count}</span>)}</div></td>
-              <td><span className="block">{row.lastText}</span><span className="console-table-sub">{formatTime(row.lastAt, i18n.locale)}</span></td>
-            </tr>
+            return <TableRow key={row.group}>
+              <TableCell><span className="block font-medium">{label.name}</span>{label.id ? <span className="console-table-sub">{label.id}</span> : null}</TableCell>
+              <TableCell><div className="flex flex-wrap gap-1.5">{row.outcomes.map((item) => <span key={item.outcome} className={`console-outcome-chip is-${item.outcome}`}>{item.label} × {item.count}</span>)}</div></TableCell>
+              <TableCell><span className="block">{row.lastText}</span><span className="console-table-sub">{formatTime(row.lastAt, i18n.locale)}</span></TableCell>
+            </TableRow>
           })}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
     <details>
       <summary className="text-xs font-medium text-muted-foreground">{i18n.t("逐条记录（{0}）", [recent.length])}</summary>
@@ -325,21 +331,10 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch }: { initial:
 
       <div className="flex flex-wrap items-center gap-3">
         <Button onClick={() => { void save() }} disabled={saving || problems.length > 0}>{saving ? i18n.t("正在保存…") : i18n.t("保存")}</Button>
-        {feedback && <SaveFeedbackNotice feedback={feedback} />}
+        {feedback && <ApplyFeedback feedback={feedback} />}
       </div>
       <ConfigurationLiveStatus result={currentReceipt ?? initial.application} revision={currentReceipt?.revision ?? initial.revision} />
     </CardContent>
   </Card>
-}
-
-function SaveFeedbackNotice({ feedback }: { feedback: SaveFeedback }) {
-  const i18n = useI18n()
-  if (feedback.kind === 'saved') {
-    return <span className="flex items-center gap-1 text-sm">
-      {feedback.restartRequired && <RotateCw className="size-4 text-amber-600" />}
-      <span className={feedback.applicationKind === 'applied' ? 'text-emerald-700 dark:text-emerald-400' : feedback.applicationKind === 'failed' ? 'text-destructive' : feedback.restartRequired || feedback.applicationKind ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}>{i18n.t('保存回执：{0}', [feedback.text])}</span>
-    </span>
-  }
-  return <span className="text-sm text-destructive">{feedback.text}</span>
 }
 

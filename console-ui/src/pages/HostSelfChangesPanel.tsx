@@ -42,9 +42,9 @@ interface Owner {
 const RECENT_SHOWN = 10
 const DIFF_TONE_CLASS: Record<ReturnType<typeof diffLineTone>, string> = {
   header: 'text-muted-foreground',
-  hunk: 'text-sky-700 dark:text-sky-300',
-  added: 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300',
-  removed: 'bg-rose-500/10 text-rose-800 dark:text-rose-300',
+  hunk: 'text-info',
+  added: 'bg-success/10 text-success',
+  removed: 'bg-destructive/10 text-destructive',
   context: '',
 }
 const UNAVAILABLE_LABELS: Record<string, string> = {
@@ -229,7 +229,7 @@ export function HostSelfChangeSession({ scope }: { scope?: string }) {
         {files.map(file => <li key={file.path} className="break-all font-mono">{file.kind} {file.path}（+{file.added} -{file.removed}）</li>)}
       </ul>}
       {change.configPaths.length > 0 && <p className="text-xs break-all">{i18n.t('配置：')}{change.configPaths.join('，')}</p>}
-      {skipped.length > 0 && <p className="text-xs text-amber-700 dark:text-amber-300 break-all">{i18n.t('试跑跳过：')}{skipped.join('，')}</p>}
+      {skipped.length > 0 && <p className="text-xs text-warning break-all">{i18n.t('试跑跳过：')}{skipped.join('，')}</p>}
       {change.error && <p className="text-xs text-destructive break-all">{change.error}</p>}
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" disabled={demo || !current || detailLoading} onClick={() => void loadDetail(change)}>{i18n.t('查看完整 diff')}</Button>
@@ -289,7 +289,7 @@ export function HostSelfChangeSession({ scope }: { scope?: string }) {
         {review && current && <div className="max-h-[50vh] overflow-auto space-y-2 text-xs">
           <p className="break-all">{review.change.id}</p>
           <p className="break-all">{i18n.t('内容摘要：')}{review.change.contentHash}</p>
-          {review.decision === 'approve' && !reviewedDetail && <p className="text-amber-700 dark:text-amber-300">{i18n.t('你还没有查看这个变更的完整 diff，请先查看再批准，不要盲批。')}</p>}
+          {review.decision === 'approve' && !reviewedDetail && <p className="text-warning">{i18n.t('你还没有查看这个变更的完整 diff，请先查看再批准，不要盲批。')}</p>}
           {review.decision === 'approve' && <p>{i18n.t('批准只对这一版内容有效；批准后会写入生产目录并按影响面热重载或受控重启。')}</p>}
         </div>}
       </ConfirmDialog>
@@ -315,7 +315,7 @@ function SelfChangeDetailView({ detail, loading, error, onClose }: {
       {!detail.bodiesAvailable && <Alert><AlertDescription>{i18n.t('正文已按保留规则清理，无法展示 diff')}</AlertDescription></Alert>}
       {detail.bodiesAvailable && <p className="text-xs text-muted-foreground">
         {i18n.t(detail.baseline === 'snapshot' ? '改动前：回滚快照' : '改动前：生产目录现有文件')} · {i18n.t('diff {0} / {1}', [formatBytes(detail.diffBytes), formatBytes(detail.maxDiffBytes)])}
-        {detail.diffTruncated && <> · <span className="text-amber-700 dark:text-amber-300">{i18n.t('部分内容已截断')}</span></>}
+        {detail.diffTruncated && <> · <span className="text-warning">{i18n.t('部分内容已截断')}</span></>}
       </p>}
       {detail.files.map(file => <SelfChangeFileDiffView key={file.path} file={file} />)}
       {detail.configPatch && <div className="space-y-1">
@@ -324,10 +324,10 @@ function SelfChangeDetailView({ detail, loading, error, onClose }: {
       </div>}
       {detail.trial && <div className="space-y-1">
         <h5 className="text-xs font-medium">{i18n.t(detail.trial.passed ? '试跑：通过' : '试跑：未通过或未知')}</h5>
-        {detail.trial.skippedChecks.length > 0 && <p className="text-xs text-amber-700 dark:text-amber-300 break-all">{i18n.t('试跑跳过：')}{detail.trial.skippedChecks.join('，')}</p>}
+        {detail.trial.skippedChecks.length > 0 && <p className="text-xs text-warning break-all">{i18n.t('试跑跳过：')}{detail.trial.skippedChecks.join('，')}</p>}
         {detail.trial.pendingStages.length > 0 && <p className="text-xs text-muted-foreground break-all">{i18n.t('未执行的阶段：')}{detail.trial.pendingStages.join('，')}</p>}
         <ul className="space-y-1 text-xs font-mono">
-          {detail.trial.checks.map((check, index) => <li key={index} className={check.status === 'skipped' ? 'text-amber-700 dark:text-amber-300' : check.status === 'failed' ? 'text-destructive' : ''}>
+          {detail.trial.checks.map((check, index) => <li key={index} className={check.status === 'skipped' ? 'text-warning' : check.status === 'failed' ? 'text-destructive' : ''}>
             {check.status} {check.check} {check.path}{check.message ? ` — ${check.message}` : ''}
           </li>)}
         </ul>
@@ -347,7 +347,7 @@ function SelfChangeFileDiffView({ file }: { file: SelfChangeDetailFile }) {
     {file.diff && <pre className="max-h-96 overflow-auto rounded-md bg-muted/40 p-3 text-xs font-mono leading-5">
       {file.diff.split('\n').map((line, index) => <div key={index} className={`whitespace-pre ${DIFF_TONE_CLASS[diffLineTone(line)]}`}>{line || ' '}</div>)}
     </pre>}
-    {file.diff !== null && file.truncated && <p className="text-xs text-amber-700 dark:text-amber-300">{i18n.t('该文件 diff 已按展示预算截断')}</p>}
+    {file.diff !== null && file.truncated && <p className="text-xs text-warning">{i18n.t('该文件 diff 已按展示预算截断')}</p>}
   </div>
 }
 
