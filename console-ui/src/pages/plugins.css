@@ -7,6 +7,48 @@
     gap: 0.75rem;
   }
 
+  .console-plugin-catalog-toolbar-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .console-plugin-catalog-filters {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem;
+    border: var(--console-border-width) solid var(--console-border-subtle);
+    border-radius: 999px;
+    background: var(--console-surface-inset);
+  }
+
+  .console-plugin-filter-pill {
+    border: 0;
+    border-radius: 999px;
+    padding: 0.25rem 0.75rem;
+    background: transparent;
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-label);
+    font-weight: 500;
+    line-height: 1.4;
+    cursor: pointer;
+    transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+  }
+
+  .console-plugin-filter-pill:hover {
+    color: hsl(var(--foreground));
+  }
+
+  .console-plugin-filter-pill.is-active {
+    background: hsl(var(--card));
+    color: hsl(var(--foreground));
+    font-weight: 600;
+    box-shadow: var(--console-shadow-xs);
+  }
+
   .console-plugin-catalog-count {
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-body);
@@ -40,8 +82,23 @@
     border-top: var(--console-border-width) solid var(--console-border-subtle);
   }
 
+  .console-plugin-catalog-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border-radius: var(--console-radius-md);
+    transition: background-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  }
+
+  .console-plugin-catalog-item:hover {
+    background: var(--console-surface-inset);
+    box-shadow: var(--console-shadow-xs);
+  }
+
   .console-plugin-catalog-row {
     display: grid;
+    flex: 1;
     min-width: 0;
     grid-template-columns: auto minmax(0, 1fr) minmax(8rem, auto) auto;
     align-items: center;
@@ -50,11 +107,7 @@
     padding: 1.125rem 0.75rem;
     color: hsl(var(--foreground));
     text-decoration: none;
-    transition: background-color 150ms ease;
-  }
-
-  .console-plugin-catalog-row:hover {
-    background: var(--console-surface-inset);
+    transition: background-color 150ms ease, box-shadow 150ms ease;
   }
 
   .console-plugin-catalog-row:focus-visible {
@@ -63,6 +116,7 @@
   }
 
   .console-plugin-catalog-icon {
+    position: relative;
     display: grid;
     width: 2.25rem;
     height: 2.25rem;
@@ -70,6 +124,37 @@
     border-radius: var(--console-radius-md);
     background: hsl(var(--muted));
     color: hsl(var(--muted-foreground));
+  }
+
+  .console-plugin-status-dot {
+    position: absolute;
+    right: -0.15rem;
+    bottom: -0.15rem;
+    width: 0.55rem;
+    height: 0.55rem;
+    border: 2px solid hsl(var(--card));
+    border-radius: 999px;
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  .console-plugin-status-dot.is-enabled {
+    background: hsl(var(--success));
+  }
+
+  .console-plugin-status-dot.is-warning {
+    background: hsl(var(--warning));
+  }
+
+  .console-plugin-status-dot.is-disabled {
+    background: hsl(var(--muted-foreground) / 0.55);
+  }
+
+  .console-plugin-catalog-actions {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.375rem;
+    padding-right: 0.75rem;
   }
 
   .console-plugin-catalog-icon > svg,
@@ -144,6 +229,18 @@
   @media (max-width: 767px) {
     .console-plugin-catalog-search {
       width: 100%;
+    }
+
+    .console-plugin-catalog-item {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.25rem;
+      padding-bottom: 0.5rem;
+    }
+
+    .console-plugin-catalog-actions {
+      justify-content: flex-end;
+      padding-inline: 0.5rem;
     }
 
     .console-plugin-catalog-row {

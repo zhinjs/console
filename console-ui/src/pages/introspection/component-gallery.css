@@ -17,5 +17,257 @@
 @keyframes console-drawer-enter { from { opacity:0; margin-right:-24px; } to { opacity:1; margin-right:0; } }
 @media(prefers-reduced-motion:reduce) { .console-component-drawer[data-state=open] { animation:none !important; } }
 
-
 .console-component-preview-error { flex-direction:column; align-items:flex-start; }
+
+/* Owner / Plugin quick filter pills */
+.console-capability-owner-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid hsl(var(--border) / 0.55);
+  background: hsl(var(--muted) / 0.14);
+}
+
+.console-capability-owner-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 1.75rem;
+  padding: 0 0.65rem;
+  border: 1px solid hsl(var(--border) / 0.7);
+  border-radius: 9999px;
+  background: hsl(var(--background) / 0.85);
+  color: hsl(var(--muted-foreground));
+  font-size: var(--console-text-label);
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+
+.console-capability-owner-pill:hover {
+  border-color: hsl(var(--primary) / 0.4);
+  color: hsl(var(--foreground));
+  background: hsl(var(--accent) / 0.5);
+}
+
+.console-capability-owner-pill.is-active {
+  border-color: hsl(var(--primary) / 0.55);
+  background: hsl(var(--primary) / 0.12);
+  color: hsl(var(--primary));
+  font-weight: 600;
+}
+
+.console-capability-owner-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.15rem;
+  height: 1.1rem;
+  padding: 0 0.3rem;
+  border-radius: 9999px;
+  background: hsl(var(--muted) / 0.85);
+  color: hsl(var(--muted-foreground));
+  font-family: var(--console-font-mono);
+  font-size: var(--console-text-label);
+}
+
+.console-capability-owner-pill.is-active .console-capability-owner-count {
+  background: hsl(var(--primary) / 0.2);
+  color: hsl(var(--primary));
+}
+
+/* Status indicator dots for Endpoints / MCP */
+.console-runtime-status-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  flex: none;
+}
+
+.console-runtime-status-dot.is-online {
+  background-color: hsl(var(--success));
+  box-shadow: 0 0 0 3px hsl(var(--success) / 0.2);
+  animation: console-status-pulse 2s infinite ease-in-out;
+}
+
+.console-runtime-status-dot.is-offline {
+  background-color: hsl(var(--destructive));
+  box-shadow: 0 0 0 3px hsl(var(--destructive) / 0.16);
+}
+
+@keyframes console-status-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px hsl(var(--success) / 0.24); }
+  50% { box-shadow: 0 0 0 5px hsl(var(--success) / 0.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .console-runtime-status-dot.is-online {
+    animation: none;
+  }
+}
+
+/* Command card shell with sibling copy button */
+.console-runtime-command-shell {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border: 1px solid hsl(var(--border) / 0.65);
+  border-radius: var(--console-radius-lg);
+  background: hsl(var(--card) / 0.65);
+  padding-right: 0.75rem;
+  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+
+.console-runtime-command-shell:hover {
+  border-color: hsl(var(--primary) / 0.24);
+  background: hsl(var(--accent) / 0.42);
+}
+
+.console-runtime-command-shell.is-selected {
+  border-color: hsl(var(--foreground) / 0.28);
+  background: var(--console-surface-raised);
+  box-shadow: var(--console-shadow-sm);
+}
+
+.console-runtime-command-shell > .console-runtime-card {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.console-runtime-command-shell > .console-runtime-card:hover {
+  transform: none;
+  background: transparent;
+}
+
+.console-runtime-command-shell > .console-capability-copy-pill {
+  flex: none;
+  margin-top: 0.75rem;
+}
+
+/* Endpoint card shell with quick actions */
+.console-runtime-endpoint-shell {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid hsl(var(--border) / 0.65);
+  border-radius: var(--console-radius-lg);
+  background: hsl(var(--card) / 0.65);
+  overflow: hidden;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.console-runtime-endpoint-shell.is-selected {
+  border-color: hsl(var(--foreground) / 0.28);
+  background: var(--console-surface-raised);
+  box-shadow: var(--console-shadow-sm);
+}
+
+.console-runtime-endpoint-shell > .console-runtime-card {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.console-runtime-endpoint-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  padding: 0.4rem 0.65rem;
+  border-top: 1px solid hsl(var(--border) / 0.45);
+  background: hsl(var(--muted) / 0.2);
+}
+
+/* Command card quick copy pill */
+.console-capability-copy-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid hsl(var(--border) / 0.75);
+  border-radius: var(--console-radius-sm);
+  background: hsl(var(--background) / 0.9);
+  color: hsl(var(--muted-foreground));
+  font-size: var(--console-text-label);
+  font-family: var(--console-font-sans);
+  cursor: pointer;
+  transition: border-color 140ms ease, color 140ms ease, background-color 140ms ease;
+}
+
+.console-capability-copy-pill:hover {
+  border-color: hsl(var(--primary) / 0.45);
+  color: hsl(var(--foreground));
+  background: hsl(var(--accent) / 0.6);
+}
+
+.console-capability-copy-pill svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+/* Inspector structured visual hierarchy */
+.console-inspector-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.console-inspector-meta-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid hsl(var(--border) / 0.6);
+  border-radius: var(--console-radius-md);
+  background: hsl(var(--background) / 0.65);
+  min-width: 0;
+}
+
+.console-inspector-meta-card span {
+  color: hsl(var(--muted-foreground));
+  font-size: var(--console-text-label);
+}
+
+.console-inspector-meta-card strong {
+  font-size: var(--console-text-body-sm);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.console-inspector-section {
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid hsl(var(--border) / 0.6);
+  border-radius: var(--console-radius-md);
+  background: hsl(var(--background) / 0.55);
+}
+
+.console-inspector-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-bottom: 0.45rem;
+  color: hsl(var(--muted-foreground));
+  font-size: var(--console-text-label);
+  font-weight: 600;
+}
+
+.console-command-runner {
+  margin-top: 0.85rem;
+  padding: 0.75rem;
+  border: 1px solid hsl(var(--primary) / 0.28);
+  border-radius: var(--console-radius-lg);
+  background: hsl(var(--primary) / 0.04);
+}
+
