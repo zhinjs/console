@@ -14,6 +14,9 @@ importers:
       '@zhin.js/client':
         specifier: ^2.1.11
         version: 2.1.11(ai@7.0.32(zod@4.4.3))(react@19.2.6)(zod@4.4.3)
+      '@zhin.js/client-sdk':
+        specifier: npm:@zhin.js/client@^1.1.27
+        version: '@zhin.js/client@1.1.27(ai@7.0.32(zod@4.4.3))(react@19.2.6)(zod@4.4.3)'
       '@zhin.js/contract':
         specifier: ^1.0.16
         version: 1.0.16(ai@7.0.32(zod@4.4.3))(zod@4.4.3)
@@ -1205,6 +1208,32 @@ packages:
   '@zeit/schemas@2.36.0':
     resolution: {integrity: sha512-7kjMwcChYEzMKjeex9ZFXkt1AyNov9R5HZtjBKVsmVpw7pa7ZtlCGvCBC2vnnXctaYN+aRI61HjIqeetZW5ROg==}
 
+  '@zhin.js/ai@1.1.54':
+    resolution: {integrity: sha512-nEZosrXAhEfivRciorMY3EG/yhzmo2Q4IziXkpYMAiaXIIZVB53Y+ZfFsBMdTHszjtO1+Uo8gmEZ2mScq9RM4w==}
+    engines: {node: '>=22.19.0'}
+    peerDependencies:
+      '@ai-sdk/anthropic': ^4.0.9
+      '@ai-sdk/deepseek': ^3.0.5
+      '@ai-sdk/google': ^4.0.9
+      '@ai-sdk/minimax': ^3.0.15
+      '@ai-sdk/openai': ^4.0.8
+      '@ai-sdk/openai-compatible': ^3.0.5
+      ai: ^7.0.35
+      zod: ^4.0.0
+    peerDependenciesMeta:
+      '@ai-sdk/anthropic':
+        optional: true
+      '@ai-sdk/deepseek':
+        optional: true
+      '@ai-sdk/google':
+        optional: true
+      '@ai-sdk/minimax':
+        optional: true
+      '@ai-sdk/openai':
+        optional: true
+      '@ai-sdk/openai-compatible':
+        optional: true
+
   '@zhin.js/ai@1.5.6':
     resolution: {integrity: sha512-P2T3M6goZqSyVAwS1R/aYRA92ZlysUjqXNsCaBEcrD1V3xekA+c3SsXRf/3PpPi8qgleYS8JzASxlbaUa6lGfA==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -1228,11 +1257,21 @@ packages:
       '@ai-sdk/openai-compatible':
         optional: true
 
+  '@zhin.js/client@1.1.27':
+    resolution: {integrity: sha512-IRW/7r6A3VQNN+f+eRLx9Z3v/Ofm/DWQFCDFLaswXYwxcXAr5Why63Xoyybgm3m0s9OnHKXxK4qL8vm08BVNUg==}
+    engines: {node: '>=22.19.0'}
+    peerDependencies:
+      react: '>=18'
+
   '@zhin.js/client@2.1.11':
     resolution: {integrity: sha512-PnVkYp9y9jVWB36xRijwOvhdsDgKCcYm8aFhGITREMoiJDeje7l1j8oX/Zq4a8N8cIg+E+l1xjgDlEbeMkMFgg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     peerDependencies:
       react: '>=18'
+
+  '@zhin.js/console-protocol@1.1.14':
+    resolution: {integrity: sha512-3ask2ErxHew9BoMpoxCT/NocfQALq8/k97X4M1JafYu5giS9eScwqDkmUtHOOy7snhsGgcpfH8kqET6lZxhcGw==}
+    engines: {node: '>=22.19.0'}
 
   '@zhin.js/console-protocol@1.1.4':
     resolution: {integrity: sha512-szcmaTZsnAS60hkmSaQSPd4gJGgB8orJlcNFl+Z1C2WhEUP6n/yl2KfkJ1j4rsjF5jyrCvVFfJKHuoRRvi3w4w==}
@@ -1242,8 +1281,19 @@ packages:
     resolution: {integrity: sha512-g+DsPMAm1ikGbndo0esLVZI9XIWl3tpKdC1tVGJ/n6XOFA7S72G2AZTqra85dfgwOG393dd9KM90eCLRUJPP/A==}
     engines: {node: ^20.19.0 || >=22.12.0}
 
+  '@zhin.js/contract@1.1.22':
+    resolution: {integrity: sha512-6ow06yeKUPRZEIj0SpYs/x68AKWLxgwiEUiU/k8f30KNkdkkc58ZvqrmAVOAhoNJYmc6RN8F0226QmwSLri+Qg==}
+    engines: {node: '>=22.19.0'}
+
   '@zhin.js/logger@1.0.76':
     resolution: {integrity: sha512-6lQH1qYk8n7FY1OnKFeJ7eKNESFzCJm/YhFPutGz20k4Qog1PeNadCK+q/JBF3ev+N66CXcKhAr5PbMI8kWRHQ==}
+
+  '@zhin.js/logger@1.1.2':
+    resolution: {integrity: sha512-LJXedGOldz9PmWl/ujRqelxwVUJdiBzTQVv6NCDswpZNil+hmEkGUerG4Ha6qRxUGj8BY+8SUFq24O/F9BGy6Q==}
+
+  '@zhin.js/plugin-runtime@1.1.23':
+    resolution: {integrity: sha512-nNhDQBqs9lMuxUegj5FuLB3TqzieaVwagVfmLFG6pfWTfXBUAK4xsSFOA1p/jDnl7wopA4SwZH1ypOAUBaoaZQ==}
+    engines: {node: '>=22.19.0'}
 
   accepts@1.3.8:
     resolution: {integrity: sha512-PYAthTa2m2VKxuvSD3DPC/Gy+U+sOA1LAuT8mkmRuvw+NACSaeXEQ+NHcVF7rONl6qcaxV3Uuemwawk+7+SJLw==}
@@ -2722,6 +2772,10 @@ packages:
     resolution: {integrity: sha512-HvltHd7avK13QIw/oLe4qoOLyoVSoafqJ2jYOrtMRBkbYT31eiBQ8O0ehRKZiEZCMEyLFQNIADpgCWC5fALvYQ==}
     engines: {node: '>=22.19.0'}
 
+  undici@8.12.4:
+    resolution: {integrity: sha512-8Mx+uNKKER2bA4AdtedkqRbwUCIJFr2nJckXRe5yrDqzePqwLP7VNcctN8/XdmDSbF7mS+jJKIszlL+vbam1VA==}
+    engines: {node: '>=22.19.0'}
+
   universalify@0.1.2:
     resolution: {integrity: sha512-rBJeI5CXAlmy1pV+617WB9J63U6XcazHHF2f2dbJix4XzpUF0RS3Zbj0FGIOCAva5P/d/GBOYaACQ1w+0azUkg==}
     engines: {node: '>= 4.0.0'}
@@ -4072,12 +4126,37 @@ snapshots:
 
   '@zeit/schemas@2.36.0': {}
 
+  '@zhin.js/ai@1.1.54(ai@7.0.32(zod@4.4.3))(zod@4.4.3)':
+    dependencies:
+      '@zhin.js/logger': 1.1.2
+      '@zhin.js/plugin-runtime': 1.1.23
+      ai: 7.0.32(zod@4.4.3)
+      undici: 8.12.4
+      zod: 4.4.3
+
   '@zhin.js/ai@1.5.6(ai@7.0.32(zod@4.4.3))(zod@4.4.3)':
     dependencies:
       '@zhin.js/logger': 1.0.76
       ai: 7.0.32(zod@4.4.3)
       undici: 8.10.0
       zod: 4.4.3
+
+  '@zhin.js/client@1.1.27(ai@7.0.32(zod@4.4.3))(react@19.2.6)(zod@4.4.3)':
+    dependencies:
+      '@zhin.js/console-protocol': 1.1.14
+      '@zhin.js/contract': 1.1.22(ai@7.0.32(zod@4.4.3))(zod@4.4.3)
+      clsx: 2.1.1
+      react: 19.2.6
+      tailwind-merge: 3.6.0
+    transitivePeerDependencies:
+      - '@ai-sdk/anthropic'
+      - '@ai-sdk/deepseek'
+      - '@ai-sdk/google'
+      - '@ai-sdk/minimax'
+      - '@ai-sdk/openai'
+      - '@ai-sdk/openai-compatible'
+      - ai
+      - zod
 
   '@zhin.js/client@2.1.11(ai@7.0.32(zod@4.4.3))(react@19.2.6)(zod@4.4.3)':
     dependencies:
@@ -4095,6 +4174,8 @@ snapshots:
       - ai
       - zod
 
+  '@zhin.js/console-protocol@1.1.14': {}
+
   '@zhin.js/console-protocol@1.1.4': {}
 
   '@zhin.js/contract@1.0.16(ai@7.0.32(zod@4.4.3))(zod@4.4.3)':
@@ -4110,10 +4191,31 @@ snapshots:
       - ai
       - zod
 
+  '@zhin.js/contract@1.1.22(ai@7.0.32(zod@4.4.3))(zod@4.4.3)':
+    dependencies:
+      '@zhin.js/ai': 1.1.54(ai@7.0.32(zod@4.4.3))(zod@4.4.3)
+      '@zhin.js/console-protocol': 1.1.14
+    transitivePeerDependencies:
+      - '@ai-sdk/anthropic'
+      - '@ai-sdk/deepseek'
+      - '@ai-sdk/google'
+      - '@ai-sdk/minimax'
+      - '@ai-sdk/openai'
+      - '@ai-sdk/openai-compatible'
+      - ai
+      - zod
+
   '@zhin.js/logger@1.0.76':
     dependencies:
       chalk: 5.6.2
       string-width: 8.2.2
+
+  '@zhin.js/logger@1.1.2':
+    dependencies:
+      chalk: 5.6.2
+      string-width: 8.2.2
+
+  '@zhin.js/plugin-runtime@1.1.23': {}
 
   accepts@1.3.8:
     dependencies:
@@ -5529,6 +5631,8 @@ snapshots:
   undici-types@7.24.6: {}
 
   undici@8.10.0: {}
+
+  undici@8.12.4: {}
 
   universalify@0.1.2: {}
 

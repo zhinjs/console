@@ -2935,5 +2935,17 @@ export const englishMessages = Object.freeze({
 "1 分钟到 30 天（43200 分钟）。": "1 minute to 30 days (43200 minutes).",
 "取消管理": "Revoke admin",
 "设为管理": "Make admin",
-"Workroom": "Workroom"
+"Workroom": "Workroom",
+"预览画布宽度": "Preview canvas width",
+"自适应宽": "Auto width",
+"预览画布背景": "Preview canvas background",
+"默认底色": "Default background",
+"深色底": "Dark background",
+"网格底": "Grid background",
+"📐 辅助线": "📐 Outlines",
+"调试预览 Props (JSON)": "Debug preview Props (JSON)",
+"实时修改传入组件 render(props) 的参数以调试不同长度文案、状态或主题。": "Edit the props passed to render(props) live to test different text lengths, states, or themes.",
+"组件预览 Props JSON": "Component preview Props JSON",
+"应用 Props 预览": "Apply Props preview",
+"重置默认 Props": "Reset default Props"
 })
