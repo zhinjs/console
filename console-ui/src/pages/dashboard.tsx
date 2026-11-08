@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import {
+  Activity,
   AlertCircle,
   AlertTriangle,
   ArrowUpRight,
@@ -14,21 +15,17 @@ import {
   Bot,
   Brain,
   CheckCircle2,
+  Clock,
   Command,
-  Cpu,
   Eye,
-  FileText,
-  MemoryStick,
   Package,
+  Power,
   Radio,
   RefreshCw,
-  Power,
   Server,
-  Settings2,
   ShieldAlert,
   Sparkles,
   VolumeX,
-  Workflow,
   Wrench,
 } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
@@ -81,7 +78,14 @@ interface CapabilityItem {
   detail: string
   icon: LucideIcon
   path: string
-  progress?: number | null
+}
+
+interface RecentLogEvent {
+  id: string
+  timestamp: string
+  level: 'info' | 'warn' | 'error' | 'debug'
+  source: string
+  message: string
 }
 
 type ControlSwitchKey = 'emergency_stop' | 'muted' | 'read_only' | 'mention_only'
@@ -153,6 +157,37 @@ function readMcpSummary(value: unknown): { total: number | null; connected: numb
   }
 }
 
+function parseRecentLogEvents(raw: unknown): RecentLogEvent[] {
+  const rows = Array.isArray(raw)
+    ? raw
+    : raw && typeof raw === 'object' && Array.isArray((raw as { logs?: unknown[]; items?: unknown[] }).logs)
+      ? (raw as { logs: unknown[] }).logs
+      : raw && typeof raw === 'object' && Array.isArray((raw as { items?: unknown[] }).items)
+        ? (raw as { items: unknown[] }).items
+        : []
+  return rows.slice(0, 6).map((item, idx) => {
+    const r = (item && typeof item === 'object' ? item : {}) as Record<string, unknown>
+    const rawLevel = String(r.level ?? 'info').toLowerCase()
+    const level: RecentLogEvent['level'] =
+      rawLevel.includes('err') ? 'error' : rawLevel.includes('warn') ? 'warn' : rawLevel.includes('debug') ? 'debug' : 'info'
+    const tsRaw = r.timestamp ?? r.time ?? r.createdAt
+    let timestamp = '--:--:--'
+    if (typeof tsRaw === 'string' || typeof tsRaw === 'number') {
+      const d = new Date(tsRaw)
+      if (!Number.isNaN(d.getTime())) {
+        timestamp = d.toTimeString().slice(0, 8)
+      }
+    }
+    return {
+      id: String(r.id ?? `evt-${idx}`),
+      timestamp,
+      level,
+      source: String(r.source ?? r.name ?? r.module ?? 'runtime'),
+      message: String(r.message ?? r.msg ?? ''),
+    }
+  }).filter((item) => item.message.length > 0)
+}
+
 function formatUptime(seconds: number, locale: 'zh-CN' | 'en' = 'zh-CN'): string {
   const days = Math.floor(seconds / 86400)
   const hours = Math.floor((seconds % 86400) / 3600)
@@ -173,6 +208,7 @@ export default function HomePage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null)
   const [optional, setOptional] = useState<OptionalOverview>(EMPTY_OPTIONAL)
+  const [recentEvents, setRecentEvents] = useState<RecentLogEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -197,10 +233,11 @@ export default function HomePage() {
         controller.signal,
         AbortSignal.timeout(DASHBOARD_REQUEST_TIMEOUT_MS),
       ])
-      const [statsResponse, statusResponse, logs, tools, agents, mcp, control] = await Promise.all([
+      const [statsResponse, statusResponse, logs, recentLogsRaw, tools, agents, mcp, control] = await Promise.all([
         apiFetch(CONSOLE_REST.STATS, { signal }),
         apiFetch(CONSOLE_REST.SYSTEM_STATUS, { signal }),
         fetchLogOverview(signal, i18n.locale),
+        fetchOptionalData(`${CONSOLE_REST.LOGS}?limit=6`, signal),
         fetchOptionalData(`${CONSOLE_REST.INTROSPECTION}/tools?page=1&pageSize=1`, signal),
         fetchOptionalData(`${CONSOLE_REST.INTROSPECTION}/bindings?page=1&pageSize=1`, signal),
         fetchOptionalData(`${CONSOLE_REST.INTROSPECTION}/mcp?page=1&pageSize=100`, signal),
@@ -220,6 +257,7 @@ export default function HomePage() {
       setSystemStatus(statusBody.data)
       setError(null)
       setControlState(control && typeof control === 'object' && control.available ? control : null)
+      setRecentEvents(parseRecentLogEvents(recentLogsRaw))
 
       const optionalSummary = summarizeOptional(logs.data, agents)
       const mcpSummary = readMcpSummary(mcp)
@@ -267,15 +305,6 @@ export default function HomePage() {
   const endpointRate = stats && stats.endpoints.total > 0
     ? Math.min(100, Math.max(0, Math.round((stats.endpoints.online / stats.endpoints.total) * 100)))
     : null
-  const pluginRate = stats && stats.plugins.total > 0
-    ? Math.min(100, Math.max(0, Math.round((stats.plugins.active / stats.plugins.total) * 100)))
-    : null
-  const mcpRate = optional.mcpServices && optional.mcpServices > 0
-    ? Math.min(100, Math.max(0, Math.round(((optional.connectedMcp ?? 0) / optional.mcpServices) * 100)))
-    : null
-  const heapRate = systemStatus && systemStatus.memory.heapTotal > 0
-    ? Math.min(100, Math.max(0, Math.round((systemStatus.memory.heapUsed / systemStatus.memory.heapTotal) * 100)))
-    : null
 
   const capabilities = useMemo<CapabilityItem[]>(() => [
     {
@@ -284,7 +313,6 @@ export default function HomePage() {
       detail: stats ? i18n.t("{0} 个在线连接", [stats.endpoints.online]) : i18n.t("等待 Host 状态"),
       icon: Radio,
       path: '/endpoints',
-      progress: endpointRate,
     },
     {
       label: i18n.t("命令"),
@@ -315,7 +343,6 @@ export default function HomePage() {
         : disconnectedMcp > 0 ? i18n.t("{0} 个未连接", [disconnectedMcp]) : i18n.t("{0} 个连接正常", [optional.connectedMcp ?? 0]),
       icon: Server,
       path: '/introspection?tab=mcp',
-      progress: mcpRate,
     },
     {
       label: i18n.t("子插件"),
@@ -323,9 +350,8 @@ export default function HomePage() {
       detail: stats ? i18n.t("{0} 个子插件正在运行", [stats.plugins.active]) : i18n.t("等待 Host 状态"),
       icon: Package,
       path: '/plugins',
-      progress: pluginRate,
     },
-  ], [optional, stats, i18n, endpointRate, mcpRate, pluginRate, disconnectedMcp])
+  ], [optional, stats, i18n, disconnectedMcp])
 
   const attentionItems = useMemo<AttentionItem[]>(() => {
     const items: AttentionItem[] = []
@@ -381,6 +407,28 @@ export default function HomePage() {
     }
     return items.slice(0, 4)
   }, [error, offlineEndpoints, disconnectedMcp, optional, stats, i18n])
+
+  const displayEvents = useMemo<RecentLogEvent[]>(() => {
+    if (recentEvents.length > 0) return recentEvents
+    if (!stats || !systemStatus) return []
+    const nowTime = new Date(lastUpdatedAt ?? Date.now()).toTimeString().slice(0, 8)
+    return [
+      {
+        id: 'synth-1',
+        timestamp: nowTime,
+        level: offlineEndpoints > 0 ? 'warn' : 'info',
+        source: 'adapter-host',
+        message: `${stats.endpoints.online}/${stats.endpoints.total} 个平台账号在线，已加载 ${stats.plugins.active} 个子插件与 ${stats.commands} 条命令`,
+      },
+      {
+        id: 'synth-2',
+        timestamp: nowTime,
+        level: 'info',
+        source: 'runtime',
+        message: `Node ${systemStatus.nodeVersion} (${systemStatus.platform}) 持续运行 ${formatUptime(systemStatus.uptime, i18n.locale)} · RSS ${formatMemory(systemStatus.memory.rss)}`,
+      },
+    ]
+  }, [recentEvents, stats, systemStatus, lastUpdatedAt, offlineEndpoints, i18n.locale])
 
   const handleRestart = async () => {
     setRestarting(true)
@@ -450,10 +498,10 @@ export default function HomePage() {
   if (loading) {
     return (
       <div className="console-dashboard console-overview-page space-y-5" aria-label={i18n.t("正在加载工作台")}>
-        <Skeleton className="h-48 rounded-[var(--console-radius-md)]" />
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.7fr)]">
-          <Skeleton className="h-72 rounded-[var(--console-radius-md)]" />
-          <Skeleton className="h-72 rounded-[var(--console-radius-md)]" />
+        <Skeleton className="h-44 rounded-[var(--console-radius-lg)]" />
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.65fr)_minmax(20rem,0.95fr)]">
+          <Skeleton className="h-72 rounded-[var(--console-radius-lg)]" />
+          <Skeleton className="h-72 rounded-[var(--console-radius-lg)]" />
         </div>
       </div>
     )
@@ -462,21 +510,25 @@ export default function HomePage() {
   return (
     <div className="console-dashboard console-overview-page space-y-5">
       <section className="console-dashboard-hero" aria-labelledby="dashboard-title">
-        <div className="flex flex-col gap-5">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0 max-w-3xl">
-              <div className={healthy ? 'console-health-pill' : 'console-health-pill is-warning'}>
-                <span className={healthy ? 'console-status-dot' : 'console-status-dot is-warning'} />
-                {!hostAvailable ? i18n.t("Host 连接需要恢复") : healthy ? i18n.t("所有核心服务运行正常") : i18n.t("有事项需要处理")}
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h1 id="dashboard-title" className="console-dashboard-title">
+                  {!hostAvailable
+                    ? <>{i18n.t("Host 暂时不可达，")}{i18n.t("控制面仍可继续使用")}</>
+                    : i18n.t("运行概览")}
+                </h1>
+                <div className={healthy ? 'console-health-pill !mb-0' : 'console-health-pill is-warning !mb-0'}>
+                  <span className={healthy ? 'console-status-dot' : 'console-status-dot is-warning'} />
+                  {!hostAvailable ? i18n.t("Host 连接需要恢复") : healthy ? i18n.t("所有核心服务运行正常") : i18n.t("有事项需要处理")}
+                </div>
               </div>
-              <h1 id="dashboard-title" className="console-dashboard-title">
+              <p className="console-dashboard-lede">
                 {!hostAvailable
-                  ? <>{i18n.t("Host 暂时不可达，")}{i18n.t("控制面仍可继续使用")}</>
-                  : i18n.t("运行概览")}
-              </h1>
-              {!hostAvailable ? <p className="console-dashboard-lede">
-                {i18n.t("页面导航、配置入口和能力目录保持可用。重新连接后，渠道、Agent 与运行状态会在这里恢复。")}
-              </p> : null}
+                  ? i18n.t("页面导航、配置入口和能力目录保持可用。重新连接后，渠道、Agent 与运行状态会在这里恢复。")
+                  : i18n.t("消息通道、实例能力、AI 运行控制与实时事件流")}
+              </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -488,35 +540,28 @@ export default function HomePage() {
               ) : (
                 <Button onClick={() => void fetchDashboard(true)} disabled={refreshing}>
                   <RefreshCw className={refreshing ? 'animate-spin' : ''} />
-                  {i18n.t("重新连接")}</Button>
+                  {i18n.t("重新连接")}
+                </Button>
               )}
-              <Button variant="outline" onClick={() => navigate('/plugins')}>
-                <Package className="h-4 w-4" />
-                {i18n.t("插件管理")}
-              </Button>
-              <Button variant="outline" onClick={() => navigate('/config')}>
-                <Settings2 className="h-4 w-4" />
-                {i18n.t("配置")}
-              </Button>
               {hostAvailable ? (
                 <Button
                   variant="outline"
-                  size="icon"
                   onClick={() => void fetchDashboard(true)}
                   disabled={refreshing}
                   aria-label={i18n.t("刷新工作台")}
                 >
                   <RefreshCw className={refreshing ? 'animate-spin' : ''} />
+                  {i18n.t("刷新")}
                 </Button>
               ) : null}
               {!readOnly ? (
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   disabled={restarting}
                   onClick={() => { void confirmRestart() }}
-                  >
-                    <Power />
-                    {i18n.t("重启")}
+                >
+                  <Power />
+                  {i18n.t("重启")}
                 </Button>
               ) : null}
             </div>
@@ -524,74 +569,44 @@ export default function HomePage() {
 
           <div className="console-dashboard-metrics">
             <div className="console-dashboard-metric">
-              <span>{i18n.t("在线渠道")}</span>
+              <div className="console-metric-head">
+                <span>{i18n.t("在线渠道")}</span>
+                <span className="console-metric-icon"><Radio /></span>
+              </div>
               <strong>{stats ? stats.endpoints.online : '—'}{stats ? <small> / {stats.endpoints.total}</small> : null}</strong>
-              {endpointRate !== null ? (
-                <div className="console-metric-progress" aria-hidden="true">
-                  <span style={{ width: `${endpointRate}%` }} />
-                </div>
-              ) : null}
+              <p className="console-metric-sub">
+                {endpointRate !== null ? i18n.t("在线率 {0}% · 点击渠道卡片管理", [endpointRate]) : i18n.t("已连接平台账号")}
+              </p>
             </div>
             <div className="console-dashboard-metric">
-              <span>{i18n.t("运行子插件")}</span>
+              <div className="console-metric-head">
+                <span>{i18n.t("运行子插件")}</span>
+                <span className="console-metric-icon"><Package /></span>
+              </div>
               <strong>{stats ? stats.plugins.active : '—'}{stats ? <small> / {stats.plugins.total}</small> : null}</strong>
-              {pluginRate !== null ? (
-                <div className="console-metric-progress" aria-hidden="true">
-                  <span style={{ width: `${pluginRate}%` }} />
-                </div>
-              ) : null}
+              <p className="console-metric-sub">{i18n.t("已启用运行时功能模块")}</p>
             </div>
             <div className="console-dashboard-metric">
-              <span>{i18n.t("可用命令")}</span>
+              <div className="console-metric-head">
+                <span>{i18n.t("可用命令")}</span>
+                <span className="console-metric-icon"><Command /></span>
+              </div>
               <strong>{stats?.commands ?? '—'}</strong>
+              <p className="console-metric-sub">{i18n.t("消息指令与交互触发器")}</p>
             </div>
             <div className="console-dashboard-metric">
-              <span>{i18n.t("持续运行")}</span>
-              <strong className="text-base sm:text-lg">{systemStatus ? formatUptime(systemStatus.uptime, i18n.locale) : '—'}</strong>
+              <div className="console-metric-head">
+                <span>{i18n.t("持续运行")}</span>
+                <span className="console-metric-icon"><Clock /></span>
+              </div>
+              <strong className="text-lg sm:text-xl">{systemStatus ? formatUptime(systemStatus.uptime, i18n.locale) : '—'}</strong>
+              <p className="console-metric-sub">
+                {systemStatus ? `Node ${systemStatus.nodeVersion} · ${systemStatus.platform}` : i18n.t("进程运行时长")}
+              </p>
             </div>
           </div>
         </div>
       </section>
-
-      {hostAvailable && !readOnly && controlState?.available ? (
-        <section className="console-dashboard-panel console-control-bar" aria-labelledby="ai-control-title">
-          <div className="console-control-bar-header">
-            <div className="flex items-center gap-2">
-              <Brain className="h-4 w-4 text-primary" />
-              <h2 id="ai-control-title" className="text-sm font-semibold">{i18n.t("AI 运行控制开关")}</h2>
-            </div>
-          </div>
-          <div className="console-control-switches">
-            {controlSwitches.map((item) => {
-              const Icon = item.icon
-              const active = Boolean(controlState.instance?.[item.key])
-              const busy = controlUpdating === item.key
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  role="switch"
-                  aria-checked={active}
-                  disabled={controlUpdating !== null}
-                  onClick={() => { void handleToggleControl(item.key) }}
-                  className={[
-                    'console-control-switch',
-                    active ? 'is-active' : '',
-                    active && item.danger ? 'is-danger' : '',
-                    busy ? 'opacity-60' : '',
-                  ].filter(Boolean).join(' ')}
-                >
-                  <span className="console-control-switch-icon"><Icon /></span>
-                  <span className="console-control-switch-label">{item.label}</span>
-                  <span className="console-control-switch-track" aria-hidden="true">
-                    <span className="console-control-switch-thumb" />
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </section>
-      ) : null}
 
       {error ? (
         <Alert variant="destructive">
@@ -603,18 +618,112 @@ export default function HomePage() {
         </Alert>
       ) : null}
 
-      <div className="console-overview-columns grid items-start gap-5 lg:grid-cols-[minmax(19rem,0.7fr)_minmax(0,1.45fr)]">
-        <aside className="console-dashboard-panel console-attention-panel" aria-labelledby="attention-title">
-          <div className="console-panel-heading">
-            <div>
-
-              <h2 id="attention-title">{i18n.t("状态与日志")}</h2>
+      <div className="console-overview-columns grid items-stretch gap-5 lg:grid-cols-[minmax(0,1.65fr)_minmax(20rem,0.95fr)]">
+        <section className="console-dashboard-panel flex flex-col justify-between gap-4" aria-labelledby="capability-title">
+          <div className="space-y-4">
+            <div className="console-panel-heading !mb-0">
+              <div>
+                <h2 id="capability-title">{i18n.t("当前实例的能力")}</h2>
+                <p>{i18n.t("运行时能力矩阵与全局 AI 行为开关")}</p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/introspection')}>
+                {i18n.t("打开能力中心")}<ArrowUpRight />
+              </Button>
             </div>
-            <span className="text-xs tabular-nums text-muted-foreground">{attentionItems.length} {i18n.t(" 项")}</span>
+
+            {hostAvailable && !readOnly && controlState?.available ? (
+              <div className="console-control-bar" aria-label={i18n.t("AI 运行控制开关")}>
+                <div className="console-control-switches">
+                  {controlSwitches.map((item) => {
+                    const Icon = item.icon
+                    const active = Boolean(controlState.instance?.[item.key])
+                    const busy = controlUpdating === item.key
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        role="switch"
+                        aria-checked={active}
+                        disabled={controlUpdating !== null}
+                        onClick={() => { void handleToggleControl(item.key) }}
+                        className={[
+                          'console-control-switch',
+                          active ? 'is-active' : '',
+                          active && item.danger ? 'is-danger' : '',
+                          busy ? 'opacity-60' : '',
+                        ].filter(Boolean).join(' ')}
+                      >
+                        <span className="console-control-switch-icon"><Icon /></span>
+                        <span className="console-control-switch-label">{item.label}</span>
+                        <span className="console-control-switch-track" aria-hidden="true">
+                          <span className="console-control-switch-thumb" />
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="console-capability-grid">
+              {capabilities.map((capability) => {
+                const Icon = capability.icon
+                return (
+                  <ListItemButton
+                    key={capability.label}
+                    type="button"
+                    className="console-capability-item"
+                    onClick={() => navigate(capability.path)}
+                  >
+                    <span className="console-capability-icon"><Icon /></span>
+                    <span className="min-w-0 flex-1 text-left">
+                      <span className="block text-sm font-semibold">{capability.label}</span>
+                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">{capability.detail}</span>
+                    </span>
+                    <strong>{capability.value ?? '—'}</strong>
+                  </ListItemButton>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+
+        <aside className="console-dashboard-panel console-attention-panel gap-4" aria-labelledby="attention-title">
+          <div className="console-panel-heading !mb-0">
+            <div>
+              <h2 id="attention-title">{i18n.t("运行信息与状态诊断")}</h2>
+              <p>{i18n.t("环境资源占用与待处理告警")}</p>
+            </div>
+            <span className="text-xs font-medium tabular-nums text-muted-foreground">
+              {attentionItems.length === 0 ? i18n.t("运行正常") : `${attentionItems.length} ${i18n.t(" 项")}`}
+            </span>
+          </div>
+
+          <div className="console-runtime-kv-grid">
+            <div className="console-runtime-kv-item">
+              <span>{i18n.t("运行环境")}</span>
+              <strong>{systemStatus ? `Node ${systemStatus.nodeVersion}` : '—'}</strong>
+            </div>
+            <div className="console-runtime-kv-item">
+              <span>{i18n.t("系统平台")}</span>
+              <strong>{systemStatus?.platform ?? '—'}</strong>
+            </div>
+            <div className="console-runtime-kv-item">
+              <span>{i18n.t("RSS 内存")}</span>
+              <strong>{systemStatus ? formatMemory(systemStatus.memory.rss) : '—'}</strong>
+            </div>
+            <div className="console-runtime-kv-item">
+              <span>{i18n.t("堆内存")}</span>
+              <strong>
+                {systemStatus
+                  ? `${formatMemory(systemStatus.memory.heapUsed)} / ${formatMemory(systemStatus.memory.heapTotal)}`
+                  : '—'}
+              </strong>
+            </div>
           </div>
 
           {attentionItems.length === 0 ? (
-            <div className="console-all-clear">
+            <div className="console-all-clear mt-auto">
               <CheckCircle2 />
               <div>
                 <h3>{i18n.t("渠道在线")}</h3>
@@ -622,7 +731,7 @@ export default function HomePage() {
               </div>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2 mt-auto">
               {attentionItems.map((item) => (
                 <ListItemButton
                   key={item.title}
@@ -640,106 +749,50 @@ export default function HomePage() {
               ))}
             </div>
           )}
-
-          <div className="console-runtime-strip">
-            <div>
-              <Cpu />
-              <span>{systemStatus?.platform ?? '—'} · Node {systemStatus?.nodeVersion ?? '—'}</span>
-            </div>
-            <div>
-              <MemoryStick />
-              <span>
-                {systemStatus
-                  ? `${formatMemory(systemStatus.memory.rss)} RSS · ${i18n.t("堆内存")} ${formatMemory(systemStatus.memory.heapUsed)} / ${formatMemory(systemStatus.memory.heapTotal)}`
-                  : i18n.t("等待运行状态")}
-              </span>
-            </div>
-            {heapRate !== null ? (
-              <div className="console-metric-progress" aria-hidden="true">
-                <span className={heapRate > 85 ? 'is-warning' : ''} style={{ width: `${heapRate}%` }} />
-              </div>
-            ) : null}
-          </div>
         </aside>
-
-        <section className="console-dashboard-panel" aria-labelledby="capability-title">
-          <div className="console-panel-heading">
-            <div>
-
-              <h2 id="capability-title">{i18n.t("当前实例的能力")}</h2>
-
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/introspection')}>
-              {i18n.t("打开能力中心")}<ArrowUpRight />
-            </Button>
-          </div>
-
-          <div className="console-capability-grid">
-            {capabilities.map((capability) => {
-              const Icon = capability.icon
-              return (
-                <ListItemButton
-                  key={capability.label}
-                  type="button"
-                  className="console-capability-item"
-                  onClick={() => navigate(capability.path)}
-                >
-                  <span className="console-capability-icon"><Icon /></span>
-                  <span className="min-w-0 flex-1 text-left">
-                    <span className="block text-sm font-semibold">{capability.label}</span>
-                    <span className="mt-1 block truncate text-xs text-muted-foreground">{capability.detail}</span>
-                    {capability.progress !== null && capability.progress !== undefined ? (
-                      <span className="console-metric-progress mt-2 block" aria-hidden="true">
-                        <span style={{ width: `${capability.progress}%` }} />
-                      </span>
-                    ) : null}
-                  </span>
-                  <strong>{capability.value ?? '—'}</strong>
-                </ListItemButton>
-              )
-            })}
-          </div>
-        </section>
       </div>
 
-      <section className="console-dashboard-panel" aria-labelledby="next-title">
-        <div className="console-panel-heading">
+      <section className="console-dashboard-panel console-event-feed-panel" aria-labelledby="event-feed-title">
+        <div className="console-panel-heading !mb-3">
           <div>
-
-            <h2 id="next-title">{i18n.t("常用操作")}</h2>
-
+            <h2 id="event-feed-title">{i18n.t("实时事件")}</h2>
+            <p>{i18n.t("最近运行事件与适配器消息日志")}</p>
           </div>
-        </div>
-
-        <div className="console-action-grid">
-          <ListItemButton type="button" className="console-primary-action" onClick={() => navigate('/endpoints')}>
-            <span className="console-primary-action-icon"><Bot /></span>
-            <span className="min-w-0 text-left">
-              <span className="block text-base font-semibold">{i18n.t("连接和管理会话")}</span>
-              <span className="mt-1 block text-sm text-muted-foreground">{i18n.t("查看好友、群组、统一收件箱并直接收发消息。")}</span>
+          <div className="flex items-center gap-2">
+            <span className="console-event-live-badge">
+              <span className="console-event-live-dot" aria-hidden="true" />
+              {i18n.t("实时监听")}
             </span>
-            <ArrowUpRight />
-          </ListItemButton>
-
-          <div className="console-secondary-actions">
-            <ListItemButton type="button" onClick={() => navigate('/agent/workrooms')}>
-              <span><Workflow />{i18n.t("查看 Workroom 任务")}</span>
-              <ArrowUpRight />
-            </ListItemButton>
-            <ListItemButton type="button" onClick={() => navigate('/marketplace')}>
-              <span><Package />{i18n.t("从市场添加能力")}</span>
-              <ArrowUpRight />
-            </ListItemButton>
-            <ListItemButton type="button" onClick={() => navigate('/config')}>
-              <span><Settings2 />{i18n.t("调整运行配置")}</span>
-              <ArrowUpRight />
-            </ListItemButton>
-            <ListItemButton type="button" onClick={() => navigate('/logs')}>
-              <span><FileText />{i18n.t("检查运行日志")}</span>
-              <ArrowUpRight />
-            </ListItemButton>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/logs')}>
+              {i18n.t("运行日志")}<ArrowUpRight />
+            </Button>
           </div>
         </div>
+
+        {displayEvents.length > 0 ? (
+          <div className="console-event-feed">
+            {displayEvents.map((evt) => (
+              <button
+                key={evt.id}
+                type="button"
+                className="console-event-feed-row"
+                onClick={() => navigate('/logs')}
+              >
+                <time className="console-event-feed-time">{evt.timestamp}</time>
+                <span className={`console-event-feed-level is-${evt.level}`}>
+                  {evt.level.toUpperCase()}
+                </span>
+                <span className="console-event-feed-source">{evt.source}</span>
+                <span className="console-event-feed-msg">{evt.message}</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="console-event-feed-empty">
+            <Activity className="h-4 w-4 text-muted-foreground" />
+            <span>{i18n.t("等待新事件进入...")}</span>
+          </div>
+        )}
       </section>
 
       {ConfirmDialogHost}
