@@ -10,11 +10,13 @@ import {
   AlertCircle,
   AlertTriangle,
   ArrowUpRight,
+  AtSign,
   Bot,
   Brain,
   CheckCircle2,
   Command,
   Cpu,
+  Eye,
   FileText,
   MemoryStick,
   Package,
@@ -23,13 +25,16 @@ import {
   Power,
   Server,
   Settings2,
+  ShieldAlert,
   Sparkles,
+  VolumeX,
   Workflow,
   Wrench,
 } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import { CONSOLE_REST, CONSOLE_RPC } from '../contracts/zhin-console'
 import { requestConsole } from '../utils/console-rpc'
+import { pluginRpc } from '../utils/plugin-rpc'
 import { isDemoMode } from '../utils/demo-mode'
 import { useToast } from '../components/toast'
 import { Button } from '../components/ui/button'
@@ -76,6 +81,16 @@ interface CapabilityItem {
   detail: string
   icon: LucideIcon
   path: string
+  progress?: number | null
+}
+
+type ControlSwitchKey = 'emergency_stop' | 'muted' | 'read_only' | 'mention_only'
+
+interface ControlState {
+  revision: number
+  available: boolean
+  persistent?: boolean
+  instance: Record<ControlSwitchKey, boolean>
 }
 
 interface AttentionItem {
@@ -162,6 +177,8 @@ export default function HomePage() {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null)
+  const [controlState, setControlState] = useState<ControlState | null>(null)
+  const [controlUpdating, setControlUpdating] = useState<ControlSwitchKey | null>(null)
   const { confirm, ConfirmDialog: ConfirmDialogHost } = useConfirm()
   const [restarting, setRestarting] = useState(false)
   const requestRef = useRef(0)
@@ -180,26 +197,29 @@ export default function HomePage() {
         controller.signal,
         AbortSignal.timeout(DASHBOARD_REQUEST_TIMEOUT_MS),
       ])
-      const [statsResponse, statusResponse, logs, tools, agents, mcp] = await Promise.all([
+      const [statsResponse, statusResponse, logs, tools, agents, mcp, control] = await Promise.all([
         apiFetch(CONSOLE_REST.STATS, { signal }),
         apiFetch(CONSOLE_REST.SYSTEM_STATUS, { signal }),
         fetchLogOverview(signal, i18n.locale),
         fetchOptionalData(`${CONSOLE_REST.INTROSPECTION}/tools?page=1&pageSize=1`, signal),
         fetchOptionalData(`${CONSOLE_REST.INTROSPECTION}/bindings?page=1&pageSize=1`, signal),
         fetchOptionalData(`${CONSOLE_REST.INTROSPECTION}/mcp?page=1&pageSize=100`, signal),
+        readOnly ? Promise.resolve(null) : pluginRpc<ControlState>('root', 'control', undefined, { signal }).catch(() => null),
       ])
-      if (requestId !== requestRef.current) return
+      if (requestId !== requestRef.current || controller.signal.aborted) return
       if (!statsResponse.ok || !statusResponse.ok) throw new Error(i18n.t("无法读取 Host 状态"))
 
       const [statsBody, statusBody] = await Promise.all([
         statsResponse.json(),
         statusResponse.json(),
       ])
+      if (requestId !== requestRef.current || controller.signal.aborted) return
       if (!statsBody.success || !statusBody.success) throw new Error(i18n.t("Host 返回了无效状态"))
 
       setStats(statsBody.data)
       setSystemStatus(statusBody.data)
       setError(null)
+      setControlState(control && typeof control === 'object' && control.available ? control : null)
 
       const optionalSummary = summarizeOptional(logs.data, agents)
       const mcpSummary = readMcpSummary(mcp)
@@ -218,13 +238,14 @@ export default function HomePage() {
       setStats(null)
       setSystemStatus(null)
       setOptional(EMPTY_OPTIONAL)
+      setControlState(null)
       setError(reason.name === 'TimeoutError' ? i18n.t("Host 响应超时，请检查连接或服务状态") : reason.message)
     } finally {
       if (requestId !== requestRef.current) return
       setLoading(false)
       setRefreshing(false)
     }
-  }, [i18n])
+  }, [i18n, readOnly])
 
   useEffect(() => {
     void fetchDashboard()
@@ -243,6 +264,19 @@ export default function HomePage() {
   const disconnectedMcp = Math.max(0, (optional.mcpServices ?? 0) - (optional.connectedMcp ?? 0))
   const healthy = hostAvailable && offlineEndpoints === 0 && disconnectedMcp === 0 && optional.errorLogs === 0
 
+  const endpointRate = stats && stats.endpoints.total > 0
+    ? Math.min(100, Math.max(0, Math.round((stats.endpoints.online / stats.endpoints.total) * 100)))
+    : null
+  const pluginRate = stats && stats.plugins.total > 0
+    ? Math.min(100, Math.max(0, Math.round((stats.plugins.active / stats.plugins.total) * 100)))
+    : null
+  const mcpRate = optional.mcpServices && optional.mcpServices > 0
+    ? Math.min(100, Math.max(0, Math.round(((optional.connectedMcp ?? 0) / optional.mcpServices) * 100)))
+    : null
+  const heapRate = systemStatus && systemStatus.memory.heapTotal > 0
+    ? Math.min(100, Math.max(0, Math.round((systemStatus.memory.heapUsed / systemStatus.memory.heapTotal) * 100)))
+    : null
+
   const capabilities = useMemo<CapabilityItem[]>(() => [
     {
       label: i18n.t("渠道"),
@@ -250,6 +284,7 @@ export default function HomePage() {
       detail: stats ? i18n.t("{0} 个在线连接", [stats.endpoints.online]) : i18n.t("等待 Host 状态"),
       icon: Radio,
       path: '/endpoints',
+      progress: endpointRate,
     },
     {
       label: i18n.t("命令"),
@@ -280,6 +315,7 @@ export default function HomePage() {
         : disconnectedMcp > 0 ? i18n.t("{0} 个未连接", [disconnectedMcp]) : i18n.t("{0} 个连接正常", [optional.connectedMcp ?? 0]),
       icon: Server,
       path: '/introspection?tab=mcp',
+      progress: mcpRate,
     },
     {
       label: i18n.t("子插件"),
@@ -287,8 +323,9 @@ export default function HomePage() {
       detail: stats ? i18n.t("{0} 个子插件正在运行", [stats.plugins.active]) : i18n.t("等待 Host 状态"),
       icon: Package,
       path: '/plugins',
+      progress: pluginRate,
     },
-  ], [optional, stats, i18n])
+  ], [optional, stats, i18n, endpointRate, mcpRate, pluginRate, disconnectedMcp])
 
   const attentionItems = useMemo<AttentionItem[]>(() => {
     const items: AttentionItem[] = []
@@ -367,6 +404,49 @@ export default function HomePage() {
     if (ok) await handleRestart()
   }
 
+  const handleToggleControl = async (key: ControlSwitchKey) => {
+    if (!controlState?.available || readOnly || controlUpdating) return
+    const currentValue = Boolean(controlState.instance?.[key])
+    setControlUpdating(key)
+    try {
+      const updated = await pluginRpc<ControlState>('root', 'control-set', {
+        expectedRevision: controlState.revision,
+        instance: { [key]: !currentValue },
+      })
+      if (updated && typeof updated === 'object' && updated.instance) {
+        setControlState(updated)
+      } else {
+        setControlState((prev) =>
+          prev
+            ? {
+                ...prev,
+                revision: prev.revision + 1,
+                instance: { ...prev.instance, [key]: !currentValue },
+              }
+            : prev,
+        )
+      }
+      success(i18n.t("已更新 AI 运行控制开关"))
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : i18n.t("更新 AI 运行控制开关失败"))
+      try {
+        const fresh = await pluginRpc<ControlState>('root', 'control')
+        if (fresh && typeof fresh === 'object' && fresh.available) setControlState(fresh)
+      } catch {
+        // ignore
+      }
+    } finally {
+      setControlUpdating(null)
+    }
+  }
+
+  const controlSwitches: Array<{ key: ControlSwitchKey; label: string; icon: LucideIcon; danger?: boolean }> = [
+    { key: 'emergency_stop', label: i18n.t("紧急停机"), icon: ShieldAlert, danger: true },
+    { key: 'muted', label: i18n.t("全局静默"), icon: VolumeX },
+    { key: 'read_only', label: i18n.t("只读观察"), icon: Eye },
+    { key: 'mention_only', label: i18n.t("仅提及响应"), icon: AtSign },
+  ]
+
   if (loading) {
     return (
       <div className="console-dashboard console-overview-page space-y-5" aria-label={i18n.t("正在加载工作台")}>
@@ -410,6 +490,14 @@ export default function HomePage() {
                   <RefreshCw className={refreshing ? 'animate-spin' : ''} />
                   {i18n.t("重新连接")}</Button>
               )}
+              <Button variant="outline" onClick={() => navigate('/plugins')}>
+                <Package className="h-4 w-4" />
+                {i18n.t("插件管理")}
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/config')}>
+                <Settings2 className="h-4 w-4" />
+                {i18n.t("配置")}
+              </Button>
               {hostAvailable ? (
                 <Button
                   variant="outline"
@@ -438,10 +526,20 @@ export default function HomePage() {
             <div className="console-dashboard-metric">
               <span>{i18n.t("在线渠道")}</span>
               <strong>{stats ? stats.endpoints.online : '—'}{stats ? <small> / {stats.endpoints.total}</small> : null}</strong>
+              {endpointRate !== null ? (
+                <div className="console-metric-progress" aria-hidden="true">
+                  <span style={{ width: `${endpointRate}%` }} />
+                </div>
+              ) : null}
             </div>
             <div className="console-dashboard-metric">
               <span>{i18n.t("运行子插件")}</span>
               <strong>{stats ? stats.plugins.active : '—'}{stats ? <small> / {stats.plugins.total}</small> : null}</strong>
+              {pluginRate !== null ? (
+                <div className="console-metric-progress" aria-hidden="true">
+                  <span style={{ width: `${pluginRate}%` }} />
+                </div>
+              ) : null}
             </div>
             <div className="console-dashboard-metric">
               <span>{i18n.t("可用命令")}</span>
@@ -454,6 +552,46 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {hostAvailable && !readOnly && controlState?.available ? (
+        <section className="console-dashboard-panel console-control-bar" aria-labelledby="ai-control-title">
+          <div className="console-control-bar-header">
+            <div className="flex items-center gap-2">
+              <Brain className="h-4 w-4 text-primary" />
+              <h2 id="ai-control-title" className="text-sm font-semibold">{i18n.t("AI 运行控制开关")}</h2>
+            </div>
+          </div>
+          <div className="console-control-switches">
+            {controlSwitches.map((item) => {
+              const Icon = item.icon
+              const active = Boolean(controlState.instance?.[item.key])
+              const busy = controlUpdating === item.key
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  role="switch"
+                  aria-checked={active}
+                  disabled={controlUpdating !== null}
+                  onClick={() => { void handleToggleControl(item.key) }}
+                  className={[
+                    'console-control-switch',
+                    active ? 'is-active' : '',
+                    active && item.danger ? 'is-danger' : '',
+                    busy ? 'opacity-60' : '',
+                  ].filter(Boolean).join(' ')}
+                >
+                  <span className="console-control-switch-icon"><Icon /></span>
+                  <span className="console-control-switch-label">{item.label}</span>
+                  <span className="console-control-switch-track" aria-hidden="true">
+                    <span className="console-control-switch-thumb" />
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </section>
+      ) : null}
 
       {error ? (
         <Alert variant="destructive">
@@ -510,8 +648,17 @@ export default function HomePage() {
             </div>
             <div>
               <MemoryStick />
-              <span>{systemStatus ? `${formatMemory(systemStatus.memory.rss)} RSS` : i18n.t("等待运行状态")}</span>
+              <span>
+                {systemStatus
+                  ? `${formatMemory(systemStatus.memory.rss)} RSS · ${i18n.t("堆内存")} ${formatMemory(systemStatus.memory.heapUsed)} / ${formatMemory(systemStatus.memory.heapTotal)}`
+                  : i18n.t("等待运行状态")}
+              </span>
             </div>
+            {heapRate !== null ? (
+              <div className="console-metric-progress" aria-hidden="true">
+                <span className={heapRate > 85 ? 'is-warning' : ''} style={{ width: `${heapRate}%` }} />
+              </div>
+            ) : null}
           </div>
         </aside>
 
@@ -541,6 +688,11 @@ export default function HomePage() {
                   <span className="min-w-0 flex-1 text-left">
                     <span className="block text-sm font-semibold">{capability.label}</span>
                     <span className="mt-1 block truncate text-xs text-muted-foreground">{capability.detail}</span>
+                    {capability.progress !== null && capability.progress !== undefined ? (
+                      <span className="console-metric-progress mt-2 block" aria-hidden="true">
+                        <span style={{ width: `${capability.progress}%` }} />
+                      </span>
+                    ) : null}
                   </span>
                   <strong>{capability.value ?? '—'}</strong>
                 </ListItemButton>
