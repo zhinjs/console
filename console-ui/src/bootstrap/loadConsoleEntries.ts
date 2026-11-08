@@ -1,17 +1,24 @@
 import { translate } from '../i18n/locale.mjs'
 import * as React from 'react'
 import {
+  app,
   configureConsole,
   createPluginRegisterHostApi,
+  type CreatePluginRegisterHostApiOptions,
+} from '@zhin.js/client'
+import {
+  AdapterConsolePage,
+  DeclarativePageView,
   fetchConsoleEntries,
   getRegisterFn,
   loadConsoleEntries as loadEntriesFromSdk,
   registerConsolePluginsFromEntries,
-  type CreatePluginRegisterHostApiOptions,
+  resolveEntryRegister,
+  type DeclarativePageComponentProps,
+  type DeclarativePageSpec,
   type FetchConsoleEntriesOptions,
   type LoadConsoleEntriesOptions,
-} from '@zhin.js/client'
-import { app } from '@zhin.js/client'
+} from '@zhin.js/client-sdk'
 import { createHostRegistration } from './host-registration.mjs'
 import { getApiBase, getToken } from '../utils/auth'
 import { placePluginRoute } from '../navigation-taxonomy'
@@ -19,14 +26,41 @@ import { withSandboxConversationDetails } from './sandbox-conversation-details'
 
 export type {
   CreatePluginRegisterHostApiOptions,
+  DeclarativePageComponentProps,
+  DeclarativePageSpec,
   FetchConsoleEntriesOptions,
   LoadConsoleEntriesOptions,
 }
 export {
+  AdapterConsolePage,
   createPluginRegisterHostApi,
+  DeclarativePageView,
   fetchConsoleEntries,
   getRegisterFn,
   registerConsolePluginsFromEntries,
+  resolveEntryRegister,
+}
+
+const g = globalThis as unknown as {
+  __ZHIN_RENDER_BLUEPRINT__?: (specOrBp: unknown, pageProps?: DeclarativePageComponentProps) => React.ReactElement
+  __ZHIN_RENDER_ADAPTER_PAGE__?: (bpOrKey: string | { adapterKey?: unknown }) => React.ReactElement
+}
+if (!g.__ZHIN_RENDER_BLUEPRINT__) {
+  g.__ZHIN_RENDER_BLUEPRINT__ = (specOrBp, pageProps) => {
+    const raw = specOrBp as { reviewSpec?: unknown; spec?: DeclarativePageSpec } | null | undefined
+    const spec = (raw && typeof raw === 'object' && raw.reviewSpec != null
+      ? raw
+      : (raw && typeof raw === 'object' ? (raw.spec ?? raw) : specOrBp)) as DeclarativePageSpec
+    return React.createElement(DeclarativePageView as unknown as React.ComponentType<Record<string, unknown>>, { spec, pageProps })
+  }
+}
+if (!g.__ZHIN_RENDER_ADAPTER_PAGE__) {
+  g.__ZHIN_RENDER_ADAPTER_PAGE__ = (bpOrKey) => {
+    const adapterKey = typeof bpOrKey === 'string'
+      ? bpOrKey
+      : String((bpOrKey as { adapterKey?: unknown } | null | undefined)?.adapterKey ?? '')
+    return React.createElement(AdapterConsolePage as unknown as React.ComponentType<Record<string, unknown>>, { adapterKey })
+  }
 }
 
 type AddToolInput = Parameters<typeof app.addTool>[0]
@@ -79,17 +113,18 @@ async function doLoadConsoleEntries(options?: LoadConsoleEntriesOptions, locale:
     addRoute: (input) => {
       if (!session.active()) return
       const placed = withSandboxConversationDetails(placePluginRoute(input as Parameters<typeof app.addRoute>[0]))
-      if (requestedApi) requestedApi.addRoute(placed as typeof input)
+      if (requestedApi) requestedApi.addRoute(placed as Parameters<typeof requestedApi.addRoute>[0])
       else session.addRoute(placed)
     },
     addTool: (input) => {
       if (!session.active()) throw new Error('Host connection changed; stale tool registration ignored')
-      return requestedApi ? requestedApi.addTool(input) : session.addTool(input as AddToolInput)
+      return requestedApi ? requestedApi.addTool(input as Parameters<typeof requestedApi.addTool>[0]) : session.addTool(input as AddToolInput)
     },
   })
 
   await loadEntriesFromSdk({
     ...options,
+    locale: options?.locale ?? locale,
     entriesUrl: options?.entriesUrl ?? entriesUrlForApiBase(apiBase),
     assetOrigin: options?.assetOrigin ?? apiBase,
     hostApi,
