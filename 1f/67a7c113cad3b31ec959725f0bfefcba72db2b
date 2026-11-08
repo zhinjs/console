@@ -1,0 +1,36 @@
+console-ui/src/design-system.css
+  h_b680f75345178a 46-51,96,98-99,127-129,131-135,137,139,678,682,684-717,729-730,738,744-752,790,796,799,802-803,945-956,962-1094
+console-ui/src/i18n/messages.en.mjs
+  h_b680f75345178a 3043-3071
+console-ui/src/layouts/dashboard.tsx
+  h_b680f75345178a 376-382
+console-ui/src/pages/dashboard.tsx
+  h_b680f75345178a 10,18,22,81-88,160-190,211,236,240,260,354,411-432,501-504,513-514,516-525,527,529-531,543-544,554,559,562-564,572-575,577-579,582-585,587,590-593,595,598-605,621-692,694-700,702-721,726,734,755-756,758-759,761-764,766-768,771-795
+console-ui/src/pages/endpoints.tsx
+  h_b680f75345178a 810,848-897,1033-1046
+console-ui/src/pages/plugins.css
+  h_b680f75345178a 21,23-24,30-31,35,48,52-97,121-123,132,135-140,144-146,153-155,157,170-171,174-175,182-183,202,205-208,218,226,237-240,242-243,247-248
+console-ui/src/pages/plugins.tsx
+  h_b680f75345178a 185-220,287
+console-ui/src/pages/resource-pages.css
+  h_b680f75345178a 24-32,37,41-42,49,53,90,92,393-459
+console-ui/src/shell.css
+  h_b680f75345178a 323-324,330,337,344,348-349,351,371-373,380-384,391-425
+console-ui/src/theme-tokens.css
+  h_b680f75345178a 4,18-19,73,75
+package.json
+  h_b680f75345178a 19
+pnpm-lock.yaml
+  h_b680f75345178a 18-19,1260-1261,4144
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1f67a7c113cad3b31ec959725f0bfefcba72db2b",
+  "prompts": {},
+  "humans": {
+    "h_b680f75345178a": {
+      "author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
