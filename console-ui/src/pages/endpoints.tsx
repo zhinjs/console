@@ -807,7 +807,7 @@ export default function EndpointsPage() {
         </section>
       )}
 
-      {(onboardingOpen || endpoints.length === 0) && (
+      {endpoints.length === 0 && (
         <section className="console-onboarding-launcher" aria-label={i18n.t("快速接入平台账号")}>
           <div className="console-onboarding-head">
             <div>
@@ -843,6 +843,56 @@ export default function EndpointsPage() {
             ))}
           </div>
         </section>
+      )}
+
+      {onboardingOpen && endpoints.length > 0 && (
+        <div
+          className="console-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label={i18n.t("选择要接入的平台")}
+          onClick={() => setOnboardingOpen(false)}
+        >
+          <div className="console-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="console-modal-head">
+              <div>
+                <h2 className="text-base font-semibold">{i18n.t("选择要接入的平台")}</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {i18n.t("选择平台后将进入该适配器的专属工作台完成账号配置或扫码登录。")}
+                </p>
+              </div>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setOnboardingOpen(false)}>
+                {i18n.t("关闭")}
+              </Button>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+              {ONBOARDING_PLATFORMS.map((platform) => (
+                <Link
+                  key={platform.id}
+                  to={platform.to}
+                  className="console-onboarding-card group"
+                  onClick={() => setOnboardingOpen(false)}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold text-foreground">
+                      {i18n.t(platform.title)}
+                    </span>
+                    <span className="console-platform-brand-badge">
+                      {i18n.t(platform.badge)}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+                    {i18n.t(platform.desc)}
+                  </p>
+                  <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary">
+                    {i18n.t("前往接入")}
+                    <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="console-resource-list console-endpoint-list">
@@ -980,6 +1030,20 @@ export default function EndpointsPage() {
             </div>
           )
         })}
+
+        {endpoints.length > 0 && (
+          <button
+            type="button"
+            className="console-endpoint-card console-endpoint-card--add"
+            onClick={() => setOnboardingOpen(true)}
+          >
+            <span className="console-endpoint-add-icon" aria-hidden="true">+</span>
+            <span className="text-sm font-semibold text-foreground">{i18n.t("接入新平台账号")}</span>
+            <span className="text-xs text-muted-foreground text-center max-w-[16rem]">
+              {i18n.t("选择 QQ、Telegram、Discord、飞书、OneBot 等平台新增机器人实例")}
+            </span>
+          </button>
+        )}
       </div>
 
       {endpoints.length > 0 && filteredEndpoints.length === 0 && (

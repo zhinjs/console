@@ -373,6 +373,13 @@ export default function DashboardLayout() {
           </div>
 
           <div className="console-topbar-actions">
+            <span
+              className={cn("console-topbar-live-pill hidden sm:inline-flex", connected ? "is-online" : "is-offline")}
+              title={connected ? i18n.t("Console 实时事件已连接") : i18n.t("Console 实时事件未连接")}
+            >
+              <span className="console-topbar-live-pill__dot" aria-hidden="true" />
+              <span>{connected ? i18n.t("实时已连") : i18n.t("连接断开")}</span>
+            </span>
             {isDemoMode() ? (
               <>
                 <Button

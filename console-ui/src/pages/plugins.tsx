@@ -182,7 +182,42 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
 
   return (
     <PageShell className="console-plugins-page">
-      <PageHeader title={i18n.t("插件管理")} actions={<Button variant="outline" size="sm" disabled={loading} onClick={() => void refreshCurrent()}>{i18n.t("刷新")}</Button>} />
+      <PageHeader
+        title={i18n.t("插件管理")}
+        description={i18n.t("管理当前实例已加载的功能插件、适配器与服务模块，支持热启停与参数配置。")}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="console-plugin-catalog-filters" role="group" aria-label={i18n.t("扩展视图")}>
+              <button type="button" className="console-plugin-filter-pill is-active">
+                {i18n.t("已装插件")}
+              </button>
+              <button
+                type="button"
+                className="console-plugin-filter-pill"
+                onClick={() => {
+                  if (navigate) navigate('/marketplace')
+                  else if (typeof window !== 'undefined') window.location.assign('/marketplace')
+                }}
+              >
+                {i18n.t("插件市场")}
+              </button>
+              <button
+                type="button"
+                className="console-plugin-filter-pill"
+                onClick={() => {
+                  if (navigate) navigate('/introspection')
+                  else if (typeof window !== 'undefined') window.location.assign('/introspection')
+                }}
+              >
+                {i18n.t("能力中心")}
+              </button>
+            </div>
+            <Button variant="outline" size="sm" disabled={loading} onClick={() => void refreshCurrent()}>
+              {i18n.t("刷新")}
+            </Button>
+          </div>
+        }
+      />
       {error ? <Alert variant="warning"><AlertCircle className="h-4 w-4" /><AlertDescription className="flex items-center justify-between gap-3"><span>{error}{i18n.t("。以下是上次读取的列表。")}</span><Button variant="outline" size="sm" onClick={() => void refreshCurrent()}>{i18n.t("重试")}</Button></AlertDescription></Alert> : null}
 
       <div className="console-plugin-catalog-toolbar">
@@ -249,6 +284,7 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
                       type="button"
                       variant="outline"
                       size="sm"
+                      className={isEnabled ? 'console-plugin-toggle-btn is-on' : 'console-plugin-toggle-btn'}
                       disabled={inFlightToggles.has(toggleKey)}
                       onClick={async (e: { preventDefault?: () => void; stopPropagation?: () => void }) => {
                         e?.preventDefault?.()
