@@ -1,0 +1,19 @@
+console-ui/src/i18n/messages.en.mjs
+  s_4a3da79bf26c58::t_2a08cc857fee71 3-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2d2365ce4f7738c86c44ce1d91c33bff1e323fc8",
+  "prompts": {},
+  "sessions": {
+    "s_4a3da79bf26c58": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "66214013-1784-4c6a-9edd-9039237b51db",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
