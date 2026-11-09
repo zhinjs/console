@@ -1,31 +1,51 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {readFileSync} from 'node:fs'
-const root=new URL('../',import.meta.url)
-const css=readFileSync(new URL('console-ui/src/theme-tokens.css',root),'utf8')
-const themes=[...css.matchAll(/(?:\:root|\.dark)\s*\{([^}]+)/g)].map(match=>Object.fromEntries([...match[1].matchAll(/--([\w-]+):\s*(\d+)\s+(\d+)%\s+([\d.]+)%/g)].map(m=>[m[1],{h:Number(m[2]),s:Number(m[3]),l:Number(m[4])}])) )
-const linear=value=>value<=.04045?value/12.92:((value+.055)/1.055)**2.4
-const luminance=({h,s,l})=>{
- const saturation=s/100,lightness=l/100,chroma=(1-Math.abs(2*lightness-1))*saturation
- const hue=h/60,x=chroma*(1-Math.abs(hue%2-1)),m=lightness-chroma/2
- const channels=hue<1?[chroma,x,0]:hue<2?[x,chroma,0]:hue<3?[0,chroma,x]:hue<4?[0,x,chroma]:hue<5?[x,0,chroma]:[chroma,0,x]
- return channels.map(channel=>linear(channel+m)).reduce((sum,value,index)=>sum+value*[.2126,.7152,.0722][index],0)
+import { readFileSync } from 'node:fs'
+import postcss from 'postcss'
+import { THEME_PALETTES } from '../console-ui/src/theme/index.ts'
+const root = new URL('../', import.meta.url)
+const css = postcss.parse(readFileSync(new URL('console-ui/src/theme-tokens.css', root), 'utf8'))
+function tokensFor(palette, dark) {
+  const values = new Map()
+  css.walkRules(rule => {
+    if (!rule.selectors.some(selector => selector === ':root' || selector === `:root[data-palette="${palette}"]` || dark && selector === '.dark')) return
+    rule.walkDecls(declaration => { if (declaration.prop.startsWith('--')) values.set(declaration.prop.slice(2), declaration.value) })
+  })
+  const resolve = (value, depth = 0) => {
+    assert.ok(depth < 32, 'color variables must not cycle')
+    return value.replace(/var\(--([\w-]+)\)/g, (_match, name) => { assert.ok(values.has(name), `missing ${name}`); return resolve(values.get(name), depth + 1) })
+  }
+  return new Proxy({}, { get(_target, name) { assert.ok(values.has(name), `missing ${name}`); const [h, s, l] = resolve(values.get(name)).split(/\s+/).map(parseFloat); assert.ok([h, s, l].every(Number.isFinite), `invalid HSL ${name}`); return { h, s, l } } })
 }
-const ratio=(a,b)=>{const la=luminance(a),lb=luminance(b);return(Math.max(la,lb)+.05)/(Math.min(la,lb)+.05)}
-test('both neutral themes preserve readable type and visible control boundaries',()=>{
- assert.equal(themes.length,2)
- for(const tokens of themes){
-  for(const [name,value] of Object.entries(tokens)) if(!/^(primary|success|info|warning|destructive|chart|ring|sidebar-primary|sidebar-ring)(-|$)/.test(name)) assert.equal(value.s,0,`${name} is neutral`)
-  for(const [foreground,background] of [['foreground','background'],['card-foreground','card'],['muted-foreground','background'],['muted-foreground','card'],['primary-foreground','primary'],['im-bubble-out-fg','im-bubble-out'],['im-row-active-fg','im-row-active'],['destructive-foreground','destructive'],['success-foreground','success'],['info-foreground','info'],['warning-foreground','warning']]) assert.ok(ratio(tokens[foreground],tokens[background])>=4.5,`${foreground}/${background} text contrast`)
-  for(const [foreground,background] of [['input','card'],['input','background'],['ring','background'],['destructive','background'],['success','background'],['info','background'],['warning','background'],...[1,2,3,4,5,6,7,8].map(n=>['chart-'+n,'background'])]) assert.ok(ratio(tokens[foreground],tokens[background])>=3,`${foreground}/${background} control contrast`)
- }
+const linear = value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4
+const luminance = ({ h, s, l }) => {
+  const chroma = (1 - Math.abs(2 * l / 100 - 1)) * s / 100, hue = h / 60, x = chroma * (1 - Math.abs(hue % 2 - 1)), m = l / 100 - chroma / 2
+  const channels = hue < 1 ? [chroma, x, 0] : hue < 2 ? [x, chroma, 0] : hue < 3 ? [0, chroma, x] : hue < 4 ? [0, x, chroma] : hue < 5 ? [x, 0, chroma] : [chroma, 0, x]
+  return channels.map(channel => linear(channel + m)).reduce((sum, value, index) => sum + value * [.2126, .7152, .0722][index], 0)
+}
+const ratio = (a, b) => { const la = luminance(a), lb = luminance(b); return (Math.max(la, lb) + .05) / (Math.min(la, lb) + .05) }
+for (const palette of THEME_PALETTES) for (const dark of [false, true]) {
+  test(`${palette.id}/${dark ? 'dark' : 'light'} preserves readable text and visible controls`, () => {
+    const tokens = tokensFor(palette.id, dark)
+    for (const [foreground, background] of [['foreground', 'background'], ['card-foreground', 'card'], ['muted-foreground', 'background'], ['muted-foreground', 'card'], ['primary-foreground', 'primary'], ['sidebar-foreground', 'sidebar'], ['im-bubble-out-fg', 'im-bubble-out'], ['im-row-active-fg', 'im-row-active'], ['destructive-foreground', 'destructive'], ['success-foreground', 'success'], ['info-foreground', 'info'], ['warning-foreground', 'warning']]) {
+      const contrast = ratio(tokens[foreground], tokens[background]); assert.ok(contrast >= 4.5, `${foreground}/${background}: ${contrast.toFixed(2)}`)
+    }
+    for (const [foreground, background] of [['input', 'card'], ['input', 'background'], ['ring', 'background'], ['destructive', 'background'], ['success', 'background'], ['info', 'background'], ['warning', 'background'], ...[1, 2, 3, 4, 5, 6, 7, 8].map(n => ['chart-' + n, 'background'])]) {
+      const contrast = ratio(tokens[foreground], tokens[background]); assert.ok(contrast >= 3, `${foreground}/${background}: ${contrast.toFixed(2)}`)
+    }
+    assert.equal(tokens.background.s === 0, palette.id === 'graphite', 'only Graphite intentionally removes surface tint')
+  })
+}
+test('status semantics and chart category colors do not change with decorative palette selection', () => {
+  for (const dark of [false, true]) for (const palette of THEME_PALETTES) {
+    const current = tokensFor(palette.id, dark), reference = tokensFor('forest', dark)
+    for (const name of ['destructive', 'success', 'info', 'warning', ...[1, 2, 3, 4, 5, 6, 7, 8].map(n => 'chart-' + n)]) assert.deepEqual(current[name], reference[name])
+  }
 })
-test('real and secondary Console entries share one palette without remote font requests',()=>{
- const design=readFileSync(new URL('console-ui/src/design-system.css',root),'utf8')
- assert.match(design,/@import "\.\/theme-tokens\.css"/)
- for(const path of ['client/style.css','console-ui/src/style.css']){
-  const entry=readFileSync(new URL(path,root),'utf8')
-  assert.match(entry,/@import .*design-system\.css/)
-  assert.doesNotMatch(entry,/--background:\s|fonts\.googleapis\.com/)
- }
+test('real and secondary Console entries share one palette without remote font requests', () => {
+  const design = readFileSync(new URL('console-ui/src/design-system.css', root), 'utf8')
+  assert.match(design, /@import "\.\/theme-tokens\.css"/)
+  for (const path of ['client/style.css', 'console-ui/src/style.css']) {
+    const entry = readFileSync(new URL(path, root), 'utf8'); assert.match(entry, /@import .*design-system\.css/); assert.doesNotMatch(entry, /--background:\s|fonts\.googleapis\.com/)
+  }
 })
