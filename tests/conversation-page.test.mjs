@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import ts from 'typescript'
 import { localeModule, isLocaleImport } from './locale-fixture.mjs'
-import * as personalModels from '../console-ui/src/pages/personal-models-model.mjs'
+import * as personalModels from '../console-ui/src/pages/personal-session-model.mjs'
 import { readRecentSessions } from '../console-ui/src/pages/agent-session-recent.mjs'
 
 const require = createRequire(import.meta.url)
@@ -15,7 +15,7 @@ function compile(source, mocks = {}) {
   return module.exports
 }
 const source = await readFile(new URL('../console-ui/src/pages/agent-sessions.tsx', import.meta.url), 'utf8')
-const sessions = compile(await readFile(new URL('../console-ui/src/utils/agent-session.ts', import.meta.url), 'utf8'), { '../pages/personal-models-model.mjs': personalModels })
+const sessions = compile(await readFile(new URL('../console-ui/src/utils/agent-session.ts', import.meta.url), 'utf8'), { '../pages/personal-session-model.mjs': personalModels })
 const elements = node => node && typeof node === 'object' ? [node, ...[node.props?.children].flat(Infinity).flatMap(elements)] : []
 // Radix Dialog does not mount its content while closed.
 const text = node => typeof node === 'string' ? node : node && typeof node === 'object' ? node.type === 'Dialog' && !node.props.open ? '' : [node.props?.children].flat(Infinity).map(text).join('') : ''
@@ -32,7 +32,7 @@ function fixture(initialKey = 'icqq:bot:group:room') {
   const ui = Object.fromEntries(['Dialog','DialogContent','DialogHeader','DialogFooter','DialogTitle','DialogDescription','DialogClose'].map(name=>[name,name]))
   const module = compile(source, {
     react: hooks,
-    './personal-models-model.mjs': personalModels,
+    './personal-session-model.mjs': personalModels,
     './PersonalSessionPanel': { PersonalSessionPanel: 'personal-session-panel' },
     'react-router-dom': { useSearchParams: () => [params, next=>{params=next}] },
     '../utils/agent-session': sessions,

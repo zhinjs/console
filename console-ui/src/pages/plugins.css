@@ -7,6 +7,94 @@
     gap: 0.75rem;
   }
 
+  .console-plugin-catalog-toolbar-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .console-plugin-catalog-filters {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.2rem;
+    border: var(--console-border-width) solid var(--console-border-default);
+    border-radius: var(--console-radius-md);
+    background: var(--console-surface-inset);
+  }
+
+  .console-plugin-filter-pill {
+    border: 0;
+    border-radius: calc(var(--console-radius-md) - 3px);
+    padding: 0.28rem 0.75rem;
+    background: transparent;
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-label);
+    font-weight: 550;
+    line-height: 1.4;
+    cursor: pointer;
+    transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+  }
+
+  .console-plugin-filter-pill:hover {
+    color: hsl(var(--foreground));
+  }
+
+  .console-plugin-filter-pill.is-active {
+    background: hsl(var(--card));
+    color: hsl(var(--foreground));
+    font-weight: 650;
+    box-shadow: var(--console-shadow-xs);
+  }
+
+  .console-plugin-toggle-btn {
+    position: relative;
+    padding-left: 1.85rem !important;
+    border-radius: 999px !important;
+  }
+
+  .console-plugin-toggle-btn::before {
+    content: "";
+    position: absolute;
+    left: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0.95rem;
+    height: 0.55rem;
+    border-radius: 999px;
+    background: hsl(var(--muted-foreground) / 0.35);
+    transition: background-color 150ms ease;
+  }
+
+  .console-plugin-toggle-btn::after {
+    content: "";
+    position: absolute;
+    left: 0.58rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0.38rem;
+    height: 0.38rem;
+    border-radius: 50%;
+    background: hsl(var(--card));
+    transition: transform 150ms ease;
+  }
+
+  .console-plugin-toggle-btn.is-on {
+    border-color: hsl(var(--primary) / 0.35);
+    background: hsl(var(--primary) / 0.08);
+    color: hsl(var(--primary));
+  }
+
+  .console-plugin-toggle-btn.is-on::before {
+    background: hsl(var(--primary));
+  }
+
+  .console-plugin-toggle-btn.is-on::after {
+    transform: translate(0.4rem, -50%);
+  }
+
   .console-plugin-catalog-count {
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-body);
@@ -30,31 +118,45 @@
   }
 
   .console-plugin-catalog-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    gap: 0.875rem;
     min-width: 0;
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
-  .console-plugin-catalog-list > li + li {
-    border-top: var(--console-border-width) solid var(--console-border-subtle);
+  .console-plugin-catalog-item {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 1rem 1.125rem;
+    border: var(--console-border-width) solid var(--console-border-default);
+    border-radius: var(--console-radius-lg);
+    background: hsl(var(--card));
+    box-shadow: var(--console-shadow-xs);
+    transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  }
+
+  .console-plugin-catalog-item:hover {
+    border-color: hsl(var(--primary) / 0.35);
+    box-shadow: var(--console-shadow-md);
+    transform: translateY(-1px);
   }
 
   .console-plugin-catalog-row {
     display: grid;
+    flex: 1;
     min-width: 0;
-    grid-template-columns: auto minmax(0, 1fr) minmax(8rem, auto) auto;
-    align-items: center;
-    gap: 1rem;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0.875rem;
     border-radius: var(--console-radius-md);
-    padding: 1.125rem 0.75rem;
+    padding: 0;
     color: hsl(var(--foreground));
     text-decoration: none;
-    transition: background-color 150ms ease;
-  }
-
-  .console-plugin-catalog-row:hover {
-    background: var(--console-surface-inset);
   }
 
   .console-plugin-catalog-row:focus-visible {
@@ -63,13 +165,47 @@
   }
 
   .console-plugin-catalog-icon {
+    position: relative;
     display: grid;
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 2.35rem;
+    height: 2.35rem;
     place-items: center;
     border-radius: var(--console-radius-md);
-    background: hsl(var(--muted));
-    color: hsl(var(--muted-foreground));
+    background: hsl(var(--primary) / 0.1);
+    color: hsl(var(--primary));
+  }
+
+  .console-plugin-status-dot {
+    position: absolute;
+    right: -0.15rem;
+    bottom: -0.15rem;
+    width: 0.6rem;
+    height: 0.6rem;
+    border: 2px solid hsl(var(--card));
+    border-radius: 999px;
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  .console-plugin-status-dot.is-enabled {
+    background: hsl(var(--success));
+  }
+
+  .console-plugin-status-dot.is-warning {
+    background: hsl(var(--warning));
+  }
+
+  .console-plugin-status-dot.is-disabled {
+    background: hsl(var(--muted-foreground) / 0.55);
+  }
+
+  .console-plugin-catalog-actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid var(--console-border-subtle);
   }
 
   .console-plugin-catalog-icon > svg,
@@ -79,7 +215,7 @@
   }
 
   .console-plugin-catalog-arrow {
-    color: hsl(var(--muted-foreground));
+    display: none;
   }
 
   .console-plugin-catalog-identity,
@@ -87,7 +223,7 @@
     display: flex;
     min-width: 0;
     flex-direction: column;
-    gap: 0.375rem;
+    gap: 0.25rem;
     overflow-wrap: anywhere;
   }
 
@@ -98,14 +234,18 @@
   }
 
   .console-plugin-catalog-identity > span {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
     color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-body);
-    line-height: var(--console-leading-body);
+    font-size: var(--console-text-body-sm);
+    line-height: 1.5;
   }
 
   .console-plugin-catalog-state {
-    align-items: flex-start;
-    max-width: 20rem;
+    align-items: flex-end;
+    max-width: 12rem;
     justify-self: end;
   }
 
@@ -144,6 +284,18 @@
   @media (max-width: 767px) {
     .console-plugin-catalog-search {
       width: 100%;
+    }
+
+    .console-plugin-catalog-item {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.25rem;
+      padding-bottom: 0.5rem;
+    }
+
+    .console-plugin-catalog-actions {
+      justify-content: flex-end;
+      padding-inline: 0.5rem;
     }
 
     .console-plugin-catalog-row {

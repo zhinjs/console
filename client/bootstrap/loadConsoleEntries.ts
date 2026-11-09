@@ -5,6 +5,7 @@ export {
   loadConsoleEntries,
   registerConsolePluginsFromEntries,
   resetConsoleEntries,
+  resolveEntryRegister,
   type CreatePluginRegisterHostApiOptions,
   type FetchConsoleEntriesOptions,
   type LoadConsoleEntriesOptions,

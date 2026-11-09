@@ -73,11 +73,11 @@ Console 面向普通用户（[zhin#970](https://github.com/zhinjs/zhin/issues/97
 
 「机器人」分组名是对外约定，后续新页挂在它下面。
 
-「群聊插话」（`/agent/ambient`）：状态来自 `pluginRpc('root', 'ambient')`（Host 方法 `plugin.root.ambient`，需要令牌持有 `ambient:read`），设置用 `config:patch` + `expectedRevision` 只写 `ai.trigger.ambient` 下的几个键，保存后总会提示是否需要重启。
+「群聊插话」（`/agent/ambient`）：状态来自 `pluginRpc('root', 'ambient')`（Host 方法 `plugin.root.ambient`，需要令牌持有 `ambient:read`）。行为和范围设置用 `config:patch` + `expectedRevision` 只写 `ai.trigger.ambient`，文件保存与运行生效分别显示。旁听模型与旁听决策模型在统一模型用途页配置。
 
 「决策回放」（`/agent/replay`，从「机器人状态」页的快捷入口进入，不在菜单里）：读 `ai_decision_events`（zhinjs/zhin ADR 0036 切片 C）。列表用 `pluginRpc('root', 'decisions')`（新的在前，`nextBefore` 翻页），点一行看整个回合用 `decision-turn`，导出用 `decisions-export` 按 `nextSince` 逐页拼成一个 JSON 文件；三者都需要令牌持有 `decisions:read`。
 
-「技能助手」（`/agent/skills`）：状态来自 `pluginRpc('root', 'skills')`（Host 方法 `plugin.root.skills`，需要令牌持有 `skills:read`）。设置用 `config:patch` + `instanceKey`（`plugins` 里 `@zhin.js/service-typesafe` 的实例名）+ `expectedRevision`，只写 `ai.decisions.<事项>.mode`（该插件 `schema.json` 声明的 `x-zhin-config.patchPaths: ["ai.decisions"]`）；还没绑定时顺带写 `ai.decisions.provider: root/<实例名>`，已绑定其他服务时不允许在页面里改。
+「技能助手」（`/agent/skills`）：状态来自 `pluginRpc('root', 'skills')`（Host 方法 `plugin.root.skills`，需要令牌持有 `skills:read`），页面只读统计并提供“管理模型用途”入口。管理员在 `/agent/models` 的“用途”页管理六种决策用途的模式与 Profile；不再读取、猜测或写入旧的 `ai.decisions`／插件 Provider 绑定。
 
 插件约定页没有分组字段，已知页面按路由在 `PLUGIN_PAGE_PLACEMENT` 里归组，其余进「其他」。原有路由路径不变，旧链接继续可用。
 
@@ -108,7 +108,9 @@ Console 面向普通用户（[zhin#970](https://github.com/zhinjs/zhin/issues/97
 
 安装回执丢失时先只读核对；仅当相同版本已经安装、尚未声明且没有依赖问题，才能生成新的补全挂载计划，确认后继续配置，不能自动重放旧操作。业务检查先披露范围与副作用，再批准一次；旧代结果与未知执行结果不能用当前插件状态替代。
 
-设置页（保留 `/config` 和原有 `?plugin=` 链接）按通用设置、模型、Agent 预设和插件配置组织。通用设置与插件先展示用途列表，点击后进入详情；插件区分内置能力、已安装与自定义、未识别的已保存配置。模型只编辑 `ai.providers`，Agent 预设只编辑 `ai.agents`；其他 AI 设置按对话与执行、会话、记忆、图片、外部服务等能力分别进入。它们共用同一份 `ai` 草稿和保存版本。分类只影响呈现，不改变配置路径或插件结构。
+设置页（保留 `/config` 和原有 `?plugin=` 链接）按通用设置、模型、Agent 预设和插件配置组织。通用设置与插件先展示用途列表，点击后进入详情；插件区分内置能力、已安装与自定义、未识别的已保存配置。“模型”与 `/agent/models` 共用运行时 Service／账号／Profile／用途管理，使用 `/api/agent/inference` 的 plan/apply 与持久 mutation 回查，不创建文件草稿，也不把文件应用状态当作图提交回执。Agent 预设编辑 `ai.agents`；其他静态 AI 设置按对话与执行、会话、记忆、图片、外部服务等能力分别进入，共用同一份 `ai` 文件草稿和保存版本。模型 plan 只在用户显式导入时处理，密钥与登录状态不随 plan 导入导出。 模型草稿绑定打开时读取的图版本；刷新列表不重置或替旧草稿更新基线，冲突后需重新打开编辑。只有本人已确认提交对应的读取结果可以开始下一次保存，结果未知时只查询回执。
+
+模型接入状态沿用 Host 的 Driver 展示声明；仅实验项显示短标识，必要说明只在选定详情或当前登录流程展示。它不改变账号状态、权限、可选范围或保存参数。
 
 设置详情复用 Host 的 Schema，支持嵌套对象、数组、字典、联合类型、元组和顶层单值。未修改的可选字段保持省略并沿用声明默认值；明确修改才产生覆盖。任意 JSON 字段只在该字段内编辑，不使整份配置退回源码；配置编辑通过保存提交；运行应用由状态面板单独处理；直接编辑 YAML/JSON 请使用文件管理。插件声明通过插件管理调整。Host 提供精确路径与原始 Schema 校验，草稿绑定开始编辑时的文件修订；切换配置项保留草稿，刷新不能为旧草稿背书。插件挂载与启停通过插件管理入口操作。Host 未提供可编辑路径时，只展示说明和文件管理入口；第三方未声明 Schema 时明确显示缺失，不按现有值猜字段类型。
 

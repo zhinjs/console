@@ -1,5 +1,5 @@
 import { useI18n } from '../i18n'
-import { isPersonalSessionKey } from './personal-models-model.mjs'
+import { isPersonalSessionKey } from './personal-session-model.mjs'
 import { PersonalSessionPanel } from './PersonalSessionPanel'
 import { ConversationHistory } from './ConversationHistory'
 import { ConversationTrace } from './ConversationTrace'

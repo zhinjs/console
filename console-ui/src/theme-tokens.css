@@ -1,7 +1,7 @@
 /* Shared neutral surfaces with restrained blue interaction and semantic accents for both Console entry points. Status colors remain semantic. */
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 0 0% 97.5%;
     --foreground: 0 0% 12%;
     --card: 0 0% 100%;
     --card-foreground: 0 0% 12%;
@@ -15,8 +15,8 @@
     --muted-foreground: 0 0% 39%;
     --accent: 0 0% 95%;
     --accent-foreground: 0 0% 15%;
-    --border: 0 0% 90%;
-    --input: 0 0% 57%;
+    --border: 0 0% 89%;
+    --input: 0 0% 54%;
     --ring: 222 62% 50%;
     --sidebar: 0 0% 97%;
     --sidebar-foreground: 0 0% 32%;
@@ -70,9 +70,9 @@
   }
 
   .dark {
-    --background: 0 0% 9%;
+    --background: 0 0% 7.5%;
     --foreground: 0 0% 95%;
-    --card: 0 0% 11%;
+    --card: 0 0% 11.5%;
     --card-foreground: 0 0% 95%;
     --popover: 0 0% 13%;
     --popover-foreground: 0 0% 95%;
