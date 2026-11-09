@@ -10,7 +10,7 @@
         const root = document.documentElement;
         let mode = 'system', palette = 'forest';
         try { const value = localStorage.getItem('theme'); if (['light', 'dark', 'system'].includes(value)) mode = value; } catch {}
-        try { const value = localStorage.getItem('zhin.console.palette'); if (['forest', 'ocean', 'plum', 'graphite'].includes(value)) palette = value; } catch {}
+        try { const value = localStorage.getItem('zhin.console.palette'); if (['forest', 'ocean', 'plum', 'graphite', 'sky', 'peach', 'sunny', 'mint'].includes(value)) palette = value; } catch {}
         root.dataset.themeMode = mode;
         root.dataset.palette = palette;
         const dark = mode === 'dark' || (mode === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);

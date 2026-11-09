@@ -3,10 +3,14 @@ export type Theme = 'light' | 'dark'
 export const THEME_MODES = ['light', 'dark', 'system'] as const
 export type ThemeMode = typeof THEME_MODES[number]
 export const THEME_PALETTES = [
-  { id: 'forest', label: '松青', swatch: '#317d61', light: '#f8faf9', dark: '#131b18' },
-  { id: 'ocean', label: '海蓝', swatch: '#316aaf', light: '#f7f8fa', dark: '#12161c' },
-  { id: 'plum', label: '暮紫', swatch: '#754c94', light: '#f9f8fa', dark: '#17131b' },
-  { id: 'graphite', label: '石墨', swatch: '#4d4d4d', light: '#f9f9f9', dark: '#171717' },
+  { id: 'sky', group: 'fresh', label: '晴空', swatch: '#2c9ff2', light: '#f1f7fb', dark: '#161f25' },
+  { id: 'peach', group: 'fresh', label: '蜜桃', swatch: '#f58266', light: '#fcf3f0', dark: '#241916' },
+  { id: 'sunny', group: 'fresh', label: '暖阳', swatch: '#fbc64b', light: '#fdf9f0', dark: '#242017' },
+  { id: 'mint', group: 'fresh', label: '薄荷', swatch: '#2ee5b7', light: '#f1fbf9', dark: '#162421' },
+  { id: 'forest', group: 'calm', label: '松青', swatch: '#317d61', light: '#f8faf9', dark: '#131b18' },
+  { id: 'ocean', group: 'calm', label: '海蓝', swatch: '#316aaf', light: '#f7f8fa', dark: '#12161c' },
+  { id: 'plum', group: 'calm', label: '暮紫', swatch: '#754c94', light: '#f9f8fa', dark: '#17131b' },
+  { id: 'graphite', group: 'calm', label: '石墨', swatch: '#4d4d4d', light: '#f9f9f9', dark: '#171717' },
 ] as const
 export type Palette = typeof THEME_PALETTES[number]['id']
 export interface ThemePreferences { mode: ThemeMode; palette: Palette }

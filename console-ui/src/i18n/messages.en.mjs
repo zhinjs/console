@@ -1,5 +1,11 @@
 /** Authored Console UI copy. Interpolated content is never translated. */
 export const englishMessages = Object.freeze({
+  "鲜活配色": "Fresh palettes",
+  "沉静配色": "Calm palettes",
+  "晴空": "Sky",
+  "蜜桃": "Peach",
+  "暖阳": "Sunshine",
+  "薄荷": "Mint",
   "外观与主题": "Appearance and theme",
   "显示模式": "Display mode",
   "亮色": "Light",

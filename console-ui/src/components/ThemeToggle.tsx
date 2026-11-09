@@ -25,12 +25,16 @@ export function ThemeToggle() {
           <span><item.icon aria-hidden="true" />{item.label}</span>
         </label>)}
       </div></fieldset>
-      <fieldset className="console-appearance-section"><legend>{i18n.t('配色方案')}</legend><div className="console-appearance-palettes">
-        {THEME_PALETTES.map(item => <label key={item.id} className="console-palette-choice">
-          <input type="radio" name={`${id}-palette`} value={item.id} checked={palette === item.id} onChange={() => setPalette(item.id)} />
-          <span><span className="console-palette-swatch" style={{ backgroundColor: item.swatch }} aria-hidden="true" />{i18n.t(item.label)}<Check className="console-palette-check" aria-hidden="true" /></span>
-        </label>)}
-      </div></fieldset>
+      <fieldset className="console-appearance-section"><legend>{i18n.t('配色方案')}</legend>
+        {[{ id: 'fresh', title: i18n.t('鲜活配色') }, { id: 'calm', title: i18n.t('沉静配色') }].map(group => <div key={group.id} className="console-palette-group">
+          <h3>{group.title}</h3><div className="console-appearance-palettes">
+            {THEME_PALETTES.filter(item => item.group === group.id).map(item => <label key={item.id} className="console-palette-choice">
+              <input type="radio" name={`${id}-palette`} value={item.id} checked={palette === item.id} onChange={() => setPalette(item.id)} />
+              <span><span className="console-palette-swatch" style={{ backgroundColor: item.swatch }} aria-hidden="true" />{i18n.t(item.label)}<Check className="console-palette-check" aria-hidden="true" /></span>
+            </label>)}
+          </div>
+        </div>)}
+      </fieldset>
       <div className="console-appearance-footer"><p>{i18n.t('立即预览，仅保存在当前浏览器。')}</p><button type="button" onClick={resetTheme}><RotateCcw aria-hidden="true" />{i18n.t('恢复默认外观')}</button></div>
     </PopoverContent>
   </Popover>

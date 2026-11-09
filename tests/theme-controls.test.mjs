@@ -24,7 +24,9 @@ function fixture() {
 }
 test('appearance panel exposes independent native radio groups with named palettes and modes', () => {
   const f = fixture(), tree = f.render(), radios = nodes(tree).filter(node => node.type === 'input')
-  assert.equal(radios.length, 7); assert.ok(radios.every(node => node.props.type === 'radio'))
+  assert.equal(radios.length, 3 + THEME_PALETTES.length); assert.ok(radios.every(node => node.props.type === 'radio'))
+  assert.equal(THEME_PALETTES.filter(palette => palette.group === 'fresh').length, 4)
+  assert.equal(THEME_PALETTES.filter(palette => palette.group === 'calm').length, 4)
   assert.deepEqual(radios.filter(node => node.props.checked).map(node => node.props.value), ['system', 'forest'])
   assert.equal(new Set(radios.map(node => node.props.name)).size, 2)
   assert.equal(nodes(tree).find(node => node.props?.['aria-label'] === translate('en', '切换主题')).type, 'button')

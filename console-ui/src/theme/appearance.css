@@ -1,6 +1,8 @@
 .console-theme-trigger { position: relative; }
 .console-theme-trigger-dot { position: absolute; right: 7px; bottom: 7px; width: 7px; height: 7px; border: 1px solid hsl(var(--card)); border-radius: 50%; background: hsl(var(--primary)); }
-.console-appearance-panel { width: min(330px, calc(100vw - 24px)); padding: 18px; }
+.console-appearance-panel { width: min(330px, calc(100vw - 24px)); max-height: min(620px, var(--radix-popover-content-available-height, calc(100dvh - 24px))); overflow-y: auto; padding: 18px; }
+.console-palette-group + .console-palette-group { margin-top: 12px; }
+.console-palette-group h3 { margin: 0 0 8px; font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground)); }
 .console-appearance-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
 .console-appearance-heading h2 { margin: 0; font-size: 15px; font-weight: 600; }
 .console-appearance-section { min-width: 0; padding: 0; margin: 0 0 18px; border: 0; }

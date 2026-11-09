@@ -1,14 +1,31 @@
-/* Four paired palettes. Hue/chroma vary together; danger/success/warning and chart categories stay semantic. */
+/* Paired fresh and calm palettes. Text/focus colors stay distinct from bright action fills. */
 @layer base {
   :root {
     --palette-hue: 158;
     --palette-chroma: 16%;
+    --palette-dark-chroma: 16%;
+    --surface-chroma: var(--palette-chroma);
     --palette-ink: 22%;
     --palette-brand-saturation: 44%;
     --palette-brand-lightness: 34%;
     --palette-dark-brand-saturation: 38%;
     --palette-dark-brand-lightness: 70%;
-    --background: var(--palette-hue) var(--palette-chroma) 97.5%;
+    --palette-background-lightness: 97.5%;
+    --palette-sidebar-lightness: 95.5%;
+    --palette-chat-lightness: 98.5%;
+    --palette-accent-lightness: 91%;
+    --palette-bubble-lightness: 90%;
+    --palette-dark-background-lightness: 9%;
+    --palette-dark-card-lightness: 14%;
+    --palette-dark-popover-lightness: 16%;
+    --palette-dark-sidebar-lightness: 11%;
+    --palette-dark-chat-lightness: 11.5%;
+    --palette-dark-accent-lightness: 23%;
+    --palette-muted-saturation: var(--surface-chroma);
+    --palette-input-saturation: var(--surface-chroma);
+    --palette-action: var(--primary);
+    --palette-action-foreground: var(--primary-foreground);
+    --background: var(--palette-hue) var(--surface-chroma) var(--palette-background-lightness);
     --foreground: var(--palette-hue) var(--palette-ink) 14%;
     --card: var(--palette-hue) 8% 100%;
     --card-foreground: var(--foreground);
@@ -16,16 +33,18 @@
     --popover-foreground: var(--foreground);
     --primary: var(--palette-hue) var(--palette-brand-saturation) var(--palette-brand-lightness);
     --primary-foreground: 0 0% 100%;
-    --secondary: var(--palette-hue) var(--palette-chroma) 95%;
+    --primary-action: var(--palette-action);
+    --primary-action-foreground: var(--palette-action-foreground);
+    --secondary: var(--palette-hue) var(--surface-chroma) 95%;
     --secondary-foreground: var(--palette-hue) var(--palette-ink) 20%;
     --muted: var(--secondary);
-    --muted-foreground: var(--palette-hue) var(--palette-chroma) 37%;
-    --accent: var(--palette-hue) var(--palette-chroma) 91%;
+    --muted-foreground: var(--palette-hue) var(--palette-muted-saturation) 37%;
+    --accent: var(--palette-hue) var(--surface-chroma) var(--palette-accent-lightness);
     --accent-foreground: var(--palette-hue) var(--palette-ink) 20%;
-    --border: var(--palette-hue) var(--palette-chroma) 87%;
-    --input: var(--palette-hue) var(--palette-chroma) 51%;
+    --border: var(--palette-hue) var(--surface-chroma) 87%;
+    --input: var(--palette-hue) var(--palette-input-saturation) 51%;
     --ring: var(--primary);
-    --sidebar: var(--palette-hue) var(--palette-chroma) 95.5%;
+    --sidebar: var(--palette-hue) var(--surface-chroma) var(--palette-sidebar-lightness);
     --sidebar-foreground: var(--palette-hue) var(--palette-ink) 28%;
     --sidebar-primary: var(--primary);
     --sidebar-primary-foreground: var(--primary-foreground);
@@ -36,17 +55,17 @@
     --im-shell-bg: var(--sidebar);
     --im-list-bg: var(--sidebar);
     --im-list-surface: var(--card);
-    --im-chat-bg: var(--palette-hue) var(--palette-chroma) 98.5%;
+    --im-chat-bg: var(--palette-hue) var(--surface-chroma) var(--palette-chat-lightness);
     --im-chat-wash: var(--secondary);
-    --im-line: var(--palette-hue) var(--palette-chroma) 82%;
+    --im-line: var(--palette-hue) var(--surface-chroma) 82%;
     --im-shadow: 0 0% 10%;
     --im-bubble-in: var(--card);
-    --im-bubble-out: var(--palette-hue) var(--palette-chroma) 90%;
+    --im-bubble-out: var(--palette-hue) var(--surface-chroma) var(--palette-bubble-lightness);
     --im-bubble-out-fg: var(--foreground);
     --im-date-bg: var(--card);
     --im-date-fg: var(--muted-foreground);
     --im-at: var(--primary);
-    --im-row-hover: var(--palette-hue) var(--palette-chroma) 93%;
+    --im-row-hover: var(--palette-hue) var(--surface-chroma) 93%;
     --im-row-active: var(--accent);
     --im-row-active-fg: var(--accent-foreground);
     --im-row-active-muted: var(--muted-foreground);
@@ -75,9 +94,75 @@
     --chart-other: 220 6% 58%;
     color-scheme: light;
   }
+  :root[data-palette="sky"], :root[data-palette="peach"], :root[data-palette="sunny"], :root[data-palette="mint"] {
+    --palette-background-lightness: 96.5%;
+    --palette-sidebar-lightness: 94.5%;
+    --palette-chat-lightness: 98%;
+    --palette-accent-lightness: 88%;
+    --palette-bubble-lightness: 87%;
+    --palette-dark-background-lightness: 11.5%;
+    --palette-dark-card-lightness: 17%;
+    --palette-dark-popover-lightness: 19%;
+    --palette-dark-sidebar-lightness: 14%;
+    --palette-dark-chat-lightness: 14.5%;
+    --palette-dark-accent-lightness: 27%;
+    --palette-muted-saturation: 12%;
+    --palette-input-saturation: 14%;
+    --palette-action: var(--palette-hue) var(--palette-action-saturation) var(--palette-action-lightness);
+    --palette-action-foreground: var(--palette-hue) 24% 14%;
+  }
+  :root[data-palette="sky"] {
+    --palette-hue: 205;
+    --palette-chroma: 55%;
+    --palette-dark-chroma: 26%;
+    --palette-ink: 24%;
+    --palette-brand-saturation: 88%;
+    --palette-brand-lightness: 34%;
+    --palette-action-saturation: 88%;
+    --palette-action-lightness: 56%;
+    --palette-dark-brand-saturation: 58%;
+    --palette-dark-brand-lightness: 72%;
+  }
+  :root[data-palette="peach"] {
+    --palette-hue: 12;
+    --palette-chroma: 64%;
+    --palette-dark-chroma: 24%;
+    --palette-ink: 24%;
+    --palette-brand-saturation: 80%;
+    --palette-brand-lightness: 38%;
+    --palette-action-saturation: 88%;
+    --palette-action-lightness: 68%;
+    --palette-dark-brand-saturation: 58%;
+    --palette-dark-brand-lightness: 74%;
+  }
+  :root[data-palette="sunny"] {
+    --palette-hue: 42;
+    --palette-chroma: 72%;
+    --palette-dark-chroma: 22%;
+    --palette-ink: 24%;
+    --palette-brand-saturation: 90%;
+    --palette-brand-lightness: 30%;
+    --palette-action-saturation: 96%;
+    --palette-action-lightness: 64%;
+    --palette-dark-brand-saturation: 64%;
+    --palette-dark-brand-lightness: 70%;
+  }
+  :root[data-palette="mint"] {
+    --palette-hue: 165;
+    --palette-chroma: 58%;
+    --palette-dark-chroma: 24%;
+    --palette-ink: 24%;
+    --palette-brand-saturation: 78%;
+    --palette-brand-lightness: 27%;
+    --palette-action-saturation: 78%;
+    --palette-action-lightness: 54%;
+    --palette-dark-brand-saturation: 54%;
+    --palette-dark-brand-lightness: 72%;
+  }
   :root[data-palette="ocean"] {
     --palette-hue: 213;
     --palette-chroma: 20%;
+    --palette-dark-chroma: 20%;
     --palette-ink: 24%;
     --palette-brand-saturation: 56%;
     --palette-brand-lightness: 44%;
@@ -87,6 +172,7 @@
   :root[data-palette="plum"] {
     --palette-hue: 274;
     --palette-chroma: 17%;
+    --palette-dark-chroma: 17%;
     --palette-ink: 19%;
     --palette-brand-saturation: 32%;
     --palette-brand-lightness: 44%;
@@ -96,6 +182,7 @@
   :root[data-palette="graphite"] {
     --palette-hue: 0;
     --palette-chroma: 0%;
+    --palette-dark-chroma: 0%;
     --palette-ink: 0%;
     --palette-brand-saturation: 0%;
     --palette-brand-lightness: 30%;
@@ -103,27 +190,30 @@
     --palette-dark-brand-lightness: 76%;
   }
   .dark {
-    --background: var(--palette-hue) var(--palette-chroma) 9%;
-    --foreground: var(--palette-hue) var(--palette-chroma) 94%;
-    --card: var(--palette-hue) var(--palette-chroma) 14%;
-    --popover: var(--palette-hue) var(--palette-chroma) 16%;
+    --surface-chroma: var(--palette-dark-chroma);
+    --background: var(--palette-hue) var(--surface-chroma) var(--palette-dark-background-lightness);
+    --foreground: var(--palette-hue) var(--surface-chroma) 94%;
+    --card: var(--palette-hue) var(--surface-chroma) var(--palette-dark-card-lightness);
+    --popover: var(--palette-hue) var(--surface-chroma) var(--palette-dark-popover-lightness);
     --primary: var(--palette-hue) var(--palette-dark-brand-saturation) var(--palette-dark-brand-lightness);
     --primary-foreground: var(--palette-hue) var(--palette-ink) 12%;
-    --secondary: var(--palette-hue) var(--palette-chroma) 17%;
+    --primary-action: var(--primary);
+    --primary-action-foreground: var(--primary-foreground);
+    --secondary: var(--palette-hue) var(--surface-chroma) 17%;
     --secondary-foreground: var(--foreground);
-    --muted-foreground: var(--palette-hue) var(--palette-chroma) 72%;
-    --accent: var(--palette-hue) var(--palette-chroma) 23%;
+    --muted-foreground: var(--palette-hue) var(--surface-chroma) 72%;
+    --accent: var(--palette-hue) var(--surface-chroma) var(--palette-dark-accent-lightness);
     --accent-foreground: var(--foreground);
-    --border: var(--palette-hue) var(--palette-chroma) 26%;
-    --input: var(--palette-hue) var(--palette-chroma) 48%;
-    --sidebar: var(--palette-hue) var(--palette-chroma) 11%;
-    --sidebar-foreground: var(--palette-hue) var(--palette-chroma) 78%;
-    --im-chat-bg: var(--palette-hue) var(--palette-chroma) 11.5%;
-    --im-line: var(--palette-hue) var(--palette-chroma) 28%;
+    --border: var(--palette-hue) var(--surface-chroma) 26%;
+    --input: var(--palette-hue) var(--surface-chroma) 48%;
+    --sidebar: var(--palette-hue) var(--surface-chroma) var(--palette-dark-sidebar-lightness);
+    --sidebar-foreground: var(--palette-hue) var(--surface-chroma) 78%;
+    --im-chat-bg: var(--palette-hue) var(--surface-chroma) var(--palette-dark-chat-lightness);
+    --im-line: var(--palette-hue) var(--surface-chroma) 28%;
     --im-shadow: 0 0% 0%;
-    --im-bubble-in: var(--palette-hue) var(--palette-chroma) 17%;
-    --im-bubble-out: var(--palette-hue) var(--palette-chroma) 23%;
-    --im-row-hover: var(--palette-hue) var(--palette-chroma) 19%;
+    --im-bubble-in: var(--card);
+    --im-bubble-out: var(--accent);
+    --im-row-hover: var(--palette-hue) var(--surface-chroma) 19%;
     --destructive: 0 62% 65%;
     --destructive-foreground: 0 0% 10%;
     --success: 145 52% 64%;

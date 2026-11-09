@@ -27,7 +27,7 @@ const ratio = (a, b) => { const la = luminance(a), lb = luminance(b); return (Ma
 for (const palette of THEME_PALETTES) for (const dark of [false, true]) {
   test(`${palette.id}/${dark ? 'dark' : 'light'} preserves readable text and visible controls`, () => {
     const tokens = tokensFor(palette.id, dark)
-    for (const [foreground, background] of [['foreground', 'background'], ['card-foreground', 'card'], ['muted-foreground', 'background'], ['muted-foreground', 'card'], ['primary-foreground', 'primary'], ['sidebar-foreground', 'sidebar'], ['im-bubble-out-fg', 'im-bubble-out'], ['im-row-active-fg', 'im-row-active'], ['destructive-foreground', 'destructive'], ['success-foreground', 'success'], ['info-foreground', 'info'], ['warning-foreground', 'warning']]) {
+    for (const [foreground, background] of [['foreground', 'background'], ['card-foreground', 'card'], ['muted-foreground', 'background'], ['muted-foreground', 'card'], ['primary-foreground', 'primary'], ['primary-action-foreground', 'primary-action'], ['primary', 'card'], ['sidebar-foreground', 'sidebar'], ['im-bubble-out-fg', 'im-bubble-out'], ['im-row-active-fg', 'im-row-active'], ['destructive-foreground', 'destructive'], ['success-foreground', 'success'], ['info-foreground', 'info'], ['warning-foreground', 'warning']]) {
       const contrast = ratio(tokens[foreground], tokens[background]); assert.ok(contrast >= 4.5, `${foreground}/${background}: ${contrast.toFixed(2)}`)
     }
     for (const [foreground, background] of [['input', 'card'], ['input', 'background'], ['ring', 'background'], ['destructive', 'background'], ['success', 'background'], ['info', 'background'], ['warning', 'background'], ...[1, 2, 3, 4, 5, 6, 7, 8].map(n => ['chart-' + n, 'background'])]) {
@@ -36,11 +36,31 @@ for (const palette of THEME_PALETTES) for (const dark of [false, true]) {
     assert.equal(tokens.background.s === 0, palette.id === 'graphite', 'only Graphite intentionally removes surface tint')
   })
 }
+test('fresh palettes brighten surfaces and action fills without weakening link text or calm themes', () => {
+  for (const palette of THEME_PALETTES) {
+    const tokens = tokensFor(palette.id, false)
+    if (palette.group === 'fresh') {
+      assert.ok(tokens['primary-action'].s >= 75 && tokens['primary-action'].l >= 50)
+      assert.ok(tokens.background.s >= 50 && tokens.background.l >= 96)
+      assert.ok(tokens['im-bubble-out'].s >= 50)
+      assert.notDeepEqual(tokens['primary-action'], tokens.primary, 'bright fills and readable link colors have different jobs')
+    } else assert.deepEqual(tokens['primary-action'], tokens.primary, 'existing calm button colors are preserved')
+  }
+})
 test('status semantics and chart category colors do not change with decorative palette selection', () => {
   for (const dark of [false, true]) for (const palette of THEME_PALETTES) {
     const current = tokensFor(palette.id, dark), reference = tokensFor('forest', dark)
     for (const name of ['destructive', 'success', 'info', 'warning', ...[1, 2, 3, 4, 5, 6, 7, 8].map(n => 'chart-' + n)]) assert.deepEqual(current[name], reference[name])
   }
+})
+test('primary buttons and the composer use action fills, while links and destructive controls keep their roles', () => {
+  const button = readFileSync(new URL('console-ui/src/components/ui/button.tsx', root), 'utf8')
+  const composer = readFileSync(new URL('console-ui/src/im-workspace.css', root), 'utf8')
+  assert.ok(button.includes('bg-[hsl(var(--primary-action))]'))
+  assert.ok(button.includes('text-[hsl(var(--primary-action-foreground))]'))
+  assert.ok(button.includes('link: "text-primary'))
+  assert.ok(button.includes('destructive: "bg-destructive'))
+  assert.match(composer, /\.im-insert-button, \.im-send-button \{ background: hsl\(var\(--primary-action\)\); color: hsl\(var\(--primary-action-foreground\)\)/)
 })
 test('real and secondary Console entries share one palette without remote font requests', () => {
   const design = readFileSync(new URL('console-ui/src/design-system.css', root), 'utf8')

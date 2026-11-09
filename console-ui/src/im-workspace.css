@@ -152,8 +152,8 @@
 .im-composer-textarea:not(.font-mono) { font-family: var(--console-font-sans); }
 .im-composer-textarea { padding: 12px 14px; }
 .im-media-input:focus-visible, .im-composer-textarea:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
-.im-insert-button, .im-send-button { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); box-shadow: none; }
-.im-insert-button:hover:not(:disabled), .im-send-button:hover:not(:disabled) { background: hsl(var(--primary) / .9); }
+.im-insert-button, .im-send-button { background: hsl(var(--primary-action)); color: hsl(var(--primary-action-foreground)); box-shadow: none; }
+.im-insert-button:hover:not(:disabled), .im-send-button:hover:not(:disabled) { background: hsl(var(--primary-action) / .9); }
 .im-composer-hint { font-size: 12px; color: hsl(var(--muted-foreground)); }
 .im-system-page { background: hsl(var(--im-chat-bg)); }
 .im-system-page-header h2 { letter-spacing: 0; }
