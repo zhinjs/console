@@ -1,0 +1,153 @@
+console-ui/src/pages/PersonalSessionPanel.tsx
+  s_7e0a99692db689::t_68392bee36f38a 3-5,7-11,13-67,69-71,73-76,81-93,96-98,100-118
+console-ui/src/pages/dashboard.tsx
+  s_7e0a99692db689::t_d53c8e7d9c21a8 10,14,18,20,22,26,28,34,83-99,160-190,211,216-217,236,240,244,246,253,259-260,279,286,305-308,354,411-432,455-497,501-504,513-514,516-525,527,529-531,543-544,554,559,562-564,572-575,577-579,582-585,587,590-593,595,598-605,621-692,694-700,702-721,726,734,755-756,758-759,761-764,766-768,771-795
+console-ui/src/pages/introspection/CapabilityExplorer.tsx
+  s_7e0a99692db689::t_cf9e151f50e6ef 12,15,18-19,21,23,25,33-36,40-41,43,46,124-139,153,155-171,177-187,189,214,218-246,250,252,254,256,258,260,262,264,306-319,325-326,328-338,340-350,363,371,379-380,444-445,447-470,537,546-547,567,569,590-810,817-823,825-852,856-868,870,872-877,882-885,888-973,988
+console-ui/src/pages/introspection/GalleryPreview.tsx
+  s_7e0a99692db689::t_c1094439af1f37 42-50,54,58-62,67,113-128,131-167,172-188,207-215,230,249-259,272-278,280
+console-ui/src/pages/personal-models.tsx
+  s_7e0a99692db689::t_c9985f4365941b 3-4,8-13
+console-ui/src/pages/plugins.tsx
+  s_7e0a99692db689::t_f061554a2ac6f8 3,15-16,21-22,28,33-86,115-116,118-120,127-138,142,145-151,185-220,224-239,254-346,352
+console-ui/src/pages/skills-assistant.tsx
+  s_7e0a99692db689::t_1ca6f1bbc1fea7 4-5,17,24,50,52
+console-ui/src/i18n/messages.en.mjs
+  s_7e0a99692db689::t_ecc58be8941056 3-6,2938-3071
+README.md
+  s_7e0a99692db689::t_d99450ff417bd2 76,80,111-113
+client/bootstrap/loadConsoleEntries.ts
+  s_7e0a99692db689::t_c1b9880fa76929 8
+console-ui/src/bootstrap/loadConsoleEntries.ts
+  s_7e0a99692db689::t_e7790e8151b87d 4,7-11,16-18,21,29-30,35,37,41-63,116,121,127
+console-ui/src/components/PluginConfigForm/AgentPresetsEditor.tsx
+  s_7e0a99692db689::t_7af9a5738f86d3 6,20-21
+console-ui/src/components/PluginConfigForm/index.tsx
+  s_7e0a99692db689::t_8b36461b4da996 158
+console-ui/src/design-system.css
+  s_7e0a99692db689::t_6d0ec449f6d935 46-51,96,98-99,127-129,131-135,137,139,678,682,684-717,729-730,738,744-902,945-956,962-1094
+console-ui/src/layouts/dashboard.tsx
+  s_7e0a99692db689::t_e00a138dab6ac2 376-382
+console-ui/src/pages/ConversationTrace.tsx
+  s_7e0a99692db689::t_a7d2b6c9a074e2 10
+console-ui/src/pages/PersonalSessionModelPicker.tsx
+  s_7e0a99692db689::t_2c1f3a396da392 1-2,5,10-20,22-34,36-52,54-62,65-67,69-93,95-109,111-114,116-164
+console-ui/src/pages/agent-session-recent.mjs
+  s_7e0a99692db689::t_09edd7115d37f6 1
+console-ui/src/pages/agent-sessions.tsx
+  s_7e0a99692db689::t_e55ab46627935d 2
+console-ui/src/pages/config.tsx
+  s_7e0a99692db689::t_b21fdf6f822857 23,152
+console-ui/src/pages/endpoints.tsx
+  s_7e0a99692db689::t_fc517fe0ecdba5 2,4-23,29-30,36-38,51-263,266-267,269-270,272,274-288,290-296,298-299,302-304,306-309,311,319-325,328-473,484,488,495-526,529-894,899,901-908,910,914-943,947-973,975-999,1001-1028,1030,1033-1046,1049-1068
+console-ui/src/pages/inference/Accounts.tsx
+  s_7e0a99692db689::t_407a87e5a7235d 1-578
+console-ui/src/pages/inference/ModelCapabilities.tsx
+  s_7e0a99692db689::t_0c2a1b7070da25 1-132
+console-ui/src/pages/inference/PersonalSessions.tsx
+  s_7e0a99692db689::t_fc7e91a308b6e4 2-8,10-25,27,30-40,42-99
+console-ui/src/pages/inference/Profiles.tsx
+  s_7e0a99692db689::t_0bb91ca6ec6d6a 1-407
+console-ui/src/pages/inference/Purposes.tsx
+  s_7e0a99692db689::t_6a14a203e9e52f 1-426
+console-ui/src/pages/inference/SchemaFields.tsx
+  s_7e0a99692db689::t_39b5802b7866ba 1-41
+console-ui/src/pages/inference/Services.tsx
+  s_7e0a99692db689::t_2feb5e956af6f9 1-207
+console-ui/src/pages/inference/SupportInfo.tsx
+  s_7e0a99692db689::t_a1df2072137708 1-40
+console-ui/src/pages/inference/Workspace.tsx
+  s_7e0a99692db689::t_a06bd797321ec6 2-22,24-38,40-84,86-199
+console-ui/src/pages/inference/model.d.mts
+  s_7e0a99692db689::t_b874b3eb510644 1-190
+console-ui/src/pages/inference/model.mjs
+  s_7e0a99692db689::t_00eb879a6048a5 1-248
+console-ui/src/pages/inference/useInferenceManagement.ts
+  s_7e0a99692db689::t_da8850ecc1c56f 1-329
+console-ui/src/pages/introspection/component-gallery.css
+  s_7e0a99692db689::t_c49c1a4679e1a1 21-273
+console-ui/src/pages/personal-session-model.d.mts
+  s_7e0a99692db689::t_23e41b5cbd9db0 2-30,35-43
+console-ui/src/pages/personal-session-model.mjs
+  s_7e0a99692db689::t_43cd626071476e 2-6,8-15,20-29,31-32,34-46,49-55,58-64,66-72,77,79-116,119-126
+console-ui/src/pages/plugins.css
+  s_7e0a99692db689::t_ec020b0e26dce4 10-97,121-123,130-146,151,153-155,157,168,170-171,174-208,218,226,237-240,242-243,247-248,289-300
+console-ui/src/pages/resource-pages.css
+  s_7e0a99692db689::t_e1e51191f2941e 24-32,37,41-42,49,53,75-81,84-92,95-457
+console-ui/src/pages/settings-model.d.mts
+  s_7e0a99692db689::t_e0c9faf7ab1553 11
+console-ui/src/pages/settings-model.mjs
+  s_7e0a99692db689::t_122e4c155b899e 29,31,85-86,88
+console-ui/src/pages/skills-assistant-model.mjs
+  s_7e0a99692db689::t_98bc7e624552a2 3,12
+console-ui/src/pages/useConversationTraces.ts
+  s_7e0a99692db689::t_c9b78f7c46eebf 7
+console-ui/src/pages/workroom-planning.tsx
+  s_7e0a99692db689::t_a97ff33187566f 5,39,235-236,273,280-289
+console-ui/src/registerBuiltinShell.tsx
+  s_7e0a99692db689::t_b59059525be845 186
+console-ui/src/shell.css
+  s_7e0a99692db689::t_97af19d91f7d34 323-324,330,337,344,348-349,351,371-373,380-384,391-425
+console-ui/src/theme-tokens.css
+  s_7e0a99692db689::t_b0b92fa34efb96 4,18-19,73,75
+console-ui/src/utils/agent-session.ts
+  s_7e0a99692db689::t_e656de251b5d29 1
+farm.config.ts
+  s_7e0a99692db689::t_eb2393e272e94e 36-38
+package.json
+  s_7e0a99692db689::t_5651d63a41efce 19
+pnpm-lock.yaml
+  s_7e0a99692db689::t_d1615c1ff902f1 17-19,1211-1236,1260-1265,1272-1275,1284-1287,1291-1297,2775-2778,4129-4136,4144-4160,4177-4178,4194-4207,4213-4219,5635-5636
+tests/config-connection-scope.test.mjs
+  s_7e0a99692db689::t_a56056f7d91175 96-97,983,995,1004-1008,1010,1222-1223,1251-1253,1255-1256,1258,1260-1261,1263-1264
+tests/config-live-status.test.mjs
+  s_7e0a99692db689::t_17b48aaeb11b09 56-57,101,110
+tests/conversation-page.test.mjs
+  s_7e0a99692db689::t_b8b4cb83ec0167 7,18,35
+tests/conversation-trace-ui.test.mjs
+  s_7e0a99692db689::t_de61d2d965a6c0 8,18,46
+tests/fixtures/inference-support/README.md
+  s_7e0a99692db689::t_a2592b20d6d30f 1,3-5,7-16,18-29
+tests/fixtures/inference-support/member.json
+  s_7e0a99692db689::t_992e0f748c90d2 1-104
+tests/fixtures/inference-support/operator.json
+  s_7e0a99692db689::t_f0c3e759c9c0c6 1-301
+tests/helpers/inference-page-runtime.mjs
+  s_7e0a99692db689::t_f4f6edb94af9bb 1-60
+tests/inference-draft-source.test.mjs
+  s_7e0a99692db689::t_b15feee55bc1a3 1-363
+tests/inference-management-ui.test.mjs
+  s_7e0a99692db689::t_905d2ce3b24d80 1-828
+tests/inference-model.test.mjs
+  s_7e0a99692db689::t_1c10a12d8db970 1-310
+tests/inference-support-display.test.mjs
+  s_7e0a99692db689::t_abda7577be8e0e 1-298
+tests/localization-lifecycle.test.mjs
+  s_7e0a99692db689::t_2f79b53e002ad3 220-242
+tests/personal-session-model.test.mjs
+  s_7e0a99692db689::t_e8b1c0e6d7bb9b 3-8,12-61,66-72,75-78,81-92,94-96,98-106,108-127,129-142
+tests/personal-session-panel-scope.test.mjs
+  s_7e0a99692db689::t_4c7fb248734d78 1-145
+tests/provider-authority-boundaries.test.mjs
+  s_7e0a99692db689::t_b5925100ddce93 3-7,9-11,13-27,29-60,63-89
+tests/settings-model.test.mjs
+  s_7e0a99692db689::t_db27ff41fd077a 20,24,37,43,46,52,87
+tests/skills-assistant.test.mjs
+  s_7e0a99692db689::t_13185eb967719d 61-67,77,80-81,86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "897f172538d2262204a8f23e271060368594859f",
+  "prompts": {},
+  "sessions": {
+    "s_7e0a99692db689": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "78592411-7daa-449b-8d51-49f23429c0c0",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
