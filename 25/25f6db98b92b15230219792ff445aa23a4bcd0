@@ -1,0 +1,60 @@
+console-ui/src/pages/endpoint-detail/AccountSwitcher.tsx
+  s_7e0a99692db689::t_8c6d02bcf3f337 2-18,21-28,30-49,51-55,58-60,65-69,71-78,80-96,98-99
+  s_7e0a99692db689::t_aec7eed1f6dce6 29
+  s_7e0a99692db689::t_c33f83d278ca42 70
+  s_7e0a99692db689::t_9bcd0e5067c551 50
+  s_7e0a99692db689::t_be4996c95744d6 1
+  s_7e0a99692db689::t_8377acd4c91404 79
+  s_7e0a99692db689::t_970dc573c77a12 61-64
+  s_7e0a99692db689::t_0953a543f5ac6a 97
+  s_7e0a99692db689::t_8a24262207672c 56-57
+  s_7e0a99692db689::t_80c3015a090be0 19-20
+docs/ui-refactor-handoff.md
+  s_7e0a99692db689::t_a712d3b2c76839 58
+  s_7e0a99692db689::t_6993268bef9d5a 46
+  s_7e0a99692db689::t_1812f72245b439 42
+  s_7e0a99692db689::t_c6a5deb15d2635 38-39,41,43-45,47-52
+  s_7e0a99692db689::t_b009902c3cc3ed 1-2,4-37
+  s_7e0a99692db689::t_d39ccd79be8429 53-57
+  s_7e0a99692db689::t_31e4a35974e85c 3
+  s_7e0a99692db689::t_536bd2e5791061 40
+console-ui/src/pages/endpoint-detail/ConversationSidebar.tsx
+  s_7e0a99692db689::t_51463437c99b0a 42-43
+  s_7e0a99692db689::t_b0cd2b3be7369b 2
+  s_7e0a99692db689::t_49221efbb2dfd0 7
+  s_7e0a99692db689::t_665654743ee0a5 72-73
+  s_7e0a99692db689::t_da7036e81bbdca 118
+tests/workspace-chat-controls.test.mjs
+  s_7e0a99692db689::t_c66838b2d7be05 1-68,70-118,121-123,130-179
+  s_7e0a99692db689::t_1e428917ed4851 119-120,124-129
+  s_7e0a99692db689::t_8951f9df21ee0f 69
+console-ui/src/pages/endpoint-detail/ComposerAttachmentMenu.tsx
+  s_7e0a99692db689::t_642bb1c319320f 1-21
+console-ui/src/im-workspace.css
+  s_7e0a99692db689::t_e76d5fe770bb7d 16-24
+console-ui/src/i18n/messages.en.mjs
+  s_7e0a99692db689::t_646ea8208af2e0 3-11
+console-ui/src/pages/endpoint-detail/index.tsx
+  s_7e0a99692db689::t_b47377a11d9ae4 489-490
+  s_7e0a99692db689::t_f1dbc1d66b5625 102-106
+  s_7e0a99692db689::t_bd649416d9d226 6-7
+  s_7e0a99692db689::t_20ac9cb0257506 671-676
+tests/conversation-drawer.test.mjs
+  s_7e0a99692db689::t_b84784bc3e84d4 23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2525f6db98b92b15230219792ff445aa23a4bcd0",
+  "prompts": {},
+  "sessions": {
+    "s_7e0a99692db689": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "78592411-7daa-449b-8d51-49f23429c0c0",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
