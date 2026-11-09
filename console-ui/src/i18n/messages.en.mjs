@@ -1,5 +1,14 @@
 /** Authored Console UI copy. Interpolated content is never translated. */
 export const englishMessages = Object.freeze({
+  "离开当前聊天？": "Leave this chat?",
+  "未发送的文字、附件和引用不会带到另一个账号。": "Unsent text, attachments and references will not carry over to another account.",
+  "放弃草稿并继续": "Discard draft and continue",
+  "切换聊天账号": "Switch chat account",
+  "没有可切换的聊天账号": "No chat accounts to switch to",
+  "当前账号": "Current account",
+  "管理聊天账号": "Manage chat accounts",
+  "添加附件": "Add attachment",
+  "附件": "Attachments",
   "实验": "Experimental",
   "实验 · 不受官方支持 · 可能违反供应商条款 · 风险由使用者自行承担。": "Experimental · Not officially supported · May violate the provider’s terms · Use at your own risk.",
   "未经 OpenAI 对第三方客户端的明确授权。": "No explicit authorization from OpenAI for third-party clients.",
