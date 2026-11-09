@@ -1,0 +1,48 @@
+console-ui/src/theme/index.ts
+  s_7e0a99692db689::t_f0ee0aa126dc66 6-13
+console-ui/src/theme-tokens.css
+  s_7e0a99692db689::t_622bb04b6c8937 105
+  s_7e0a99692db689::t_30e500ab07b53e 20
+  s_7e0a99692db689::t_111a238def7b32 1,6-7,13-19,21-28,36-38,41-42,44-45,47,58,60,63,68,97-104,106-161,165,175,185,193-196,200-202,204-205,207-212,214-216
+  s_7e0a99692db689::t_8cf0b6a7837d88 197
+console-ui/src/components/ui/button.tsx
+  s_7e0a99692db689::t_2554ea2738cc32 12
+tests/theme-controls.test.mjs
+  s_7e0a99692db689::t_c95f103178f9ea 27-29
+docs/appearance.md
+  s_7e0a99692db689::t_892d56646a9c3b 23
+  s_7e0a99692db689::t_b58368aa478f0c 27
+  s_7e0a99692db689::t_142fc7c97c535c 44
+  s_7e0a99692db689::t_fa3f98aa3e8eb1 7-9,12
+  s_7e0a99692db689::t_6b59a50b804b28 19-21
+client/index.html
+  s_7e0a99692db689::t_e73a92982ebbb9 13
+console-ui/src/components/ThemeToggle.tsx
+  s_7e0a99692db689::t_e640cee16f759e 28-37
+console-ui/src/theme/appearance.css
+  s_7e0a99692db689::t_8ede96a6792b68 3-5
+console-ui/src/im-workspace.css
+  s_7e0a99692db689::t_d5da6114d2db43 155-156
+console-ui/src/i18n/messages.en.mjs
+  s_7e0a99692db689::t_224c4e6b32a230 3-8
+tests/visual-foundation.test.mjs
+  s_7e0a99692db689::t_6b56b7fa3db5f4 56-64
+  s_7e0a99692db689::t_bb18220045410b 39-49
+  s_7e0a99692db689::t_08f9d9e782b725 30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a17302b0c1af17e86b06437399d878883fdda9ff",
+  "prompts": {},
+  "sessions": {
+    "s_7e0a99692db689": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "78592411-7daa-449b-8d51-49f23429c0c0",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
