@@ -1,13 +1,13 @@
 import { useI18n } from '../../i18n'
+import { AccountSwitcher } from './AccountSwitcher'
 import { useEffect, useRef, type KeyboardEvent } from 'react'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import type { ConversationListNotice } from './conversation-list-notice.mjs'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Bot, Loader2, RefreshCw, Search, Wifi, WifiOff, X } from 'lucide-react'
+import { ArrowLeft, Loader2, RefreshCw, Search, Wifi, X } from 'lucide-react'
 import { cn } from '@zhin.js/client'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
-import { Badge } from '../../components/ui/badge'
 import type { EndpointInfo, SidebarSelection } from './types'
 import type { ConversationSection as ConversationSectionType, ConversationSectionId } from './types'
 import { ConversationSection } from './ConversationSection'
@@ -39,6 +39,8 @@ interface ConversationSidebarProps {
   onRefresh: () => void
   showChannelList: boolean
   onCloseMobileList?: () => void
+  hasDraft?: boolean
+  sending?: boolean
 }
 
 export function ConversationSidebar({
@@ -67,6 +69,8 @@ export function ConversationSidebar({
   onRefresh,
   showChannelList,
   onCloseMobileList,
+  hasDraft,
+  sending,
 }: ConversationSidebarProps) {
   const i18n = useI18n()
   const isMobile = useIsMobile()
@@ -89,8 +93,6 @@ export function ConversationSidebar({
     if (event.shiftKey && document.activeElement === first && last) { event.preventDefault(); last.focus() }
     else if (!event.shiftKey && document.activeElement === last && first) { event.preventDefault(); first.focus() }
   }
-  const channelConnected = info?.connected === true && !loadErr
-  const channelKnown = info !== null && !loadErr
   const selectionKey =
     selection?.type === 'channel' ? `${selection.channelType}-${selection.id}` : null
 
@@ -113,32 +115,7 @@ export function ConversationSidebar({
             <ArrowLeft />
           </Link>
         </Button>
-        <div className="im-sidebar-endpoint">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span className="im-sidebar-endpoint-icon">
-              <Bot className="h-4 w-4" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold truncate text-[15px] leading-tight tracking-tight">
-                {info?.name || endpointId}
-              </p>
-              <div className="flex items-center gap-1.5 mt-1">
-                <Badge variant="secondary" size="sm" className="h-5">
-                  {adapter}
-                </Badge>
-                <span
-                  className={cn(
-                    'im-connection-pill',
-                    channelConnected ? 'im-connection-pill--on' : 'im-connection-pill--off',
-                  )}
-                >
-                  {channelConnected ? <Wifi size={10} /> : <WifiOff size={10} />}
-                  {!channelKnown ? i18n.t("状态未知") : channelConnected ? i18n.t("在线") : i18n.t("离线")}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
+        <AccountSwitcher adapter={adapter} endpointId={endpointId} info={info} loadErr={loadErr} hasDraft={hasDraft} sending={sending} onBeforeLeave={isMobile ? onCloseMobileList : undefined} />
         {isMobile && onCloseMobileList && <Button type="button" variant="ghost" size="icon" className="shrink-0" onClick={onCloseMobileList} aria-label={i18n.t('关闭会话列表')}><X className="h-4 w-4" /></Button>}
       </div>
 

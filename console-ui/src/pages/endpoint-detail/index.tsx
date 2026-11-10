@@ -3,7 +3,8 @@ import { useI18n } from '../../i18n'
 import type * as React from 'react'
 import type { ReactNode } from 'react'
 import { Fragment, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
+import { ComposerAttachmentMenu } from './ComposerAttachmentMenu'
 import {
   Bell,
   Check,
@@ -12,11 +13,9 @@ import {
   FileText,
   Forward,
   Image,
-  Link2,
   Loader2,
   MessageSquare,
   Music,
-  Paperclip,
   Quote,
   Search,
   Send,
@@ -100,6 +99,11 @@ function MuteDurationField({ valueRef }: { valueRef: { current: string } }) {
 }
 
 export default function EndpointDetailPage() {
+  const params = useParams<{ adapter: string; endpointId: string }>()
+  return <EndpointWorkspace key={`${params.adapter}\u0000${params.endpointId}`} />
+}
+
+function EndpointWorkspace() {
   const i18n = useI18n()
   const ctx = useEndpointConsole()
   const readOnly = isDemoMode()
@@ -482,6 +486,8 @@ export default function EndpointDetailPage() {
         onRefresh={() => void loadLists()}
         showChannelList={showChannelList}
         onCloseMobileList={() => setShowChannelList(false)}
+        hasDraft={!!msgContent.trim() || composerAttachments.length > 0 || !!quoteDraft || !!forwardDraft || !!mediaUrl.trim()}
+        sending={sending}
       />
 
       {showChannelList && (
@@ -662,67 +668,12 @@ export default function EndpointDetailPage() {
                   >
                     <Smile className="w-3.5 h-3.5 mr-1" />
                     <span className="im-tool-label">{i18n.t("表情")}</span></Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="im-tool-button h-8 px-2 text-xs"
-                    title={i18n.t("选择本地图片（插入为 data URL）")}
-                    aria-label={i18n.t("图片文件")}
-                    onClick={() => imageFileRef.current?.click()}
-                  >
-                    <Image className="w-3.5 h-3.5 mr-1" />
-                    <span className="im-tool-label">{i18n.t("图片文件")}</span></Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="im-tool-button h-8 px-2 text-xs"
-                    title={i18n.t("选择本地文件（插入为 data URL 文件段）")}
-                    aria-label={i18n.t("文件")}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Paperclip className="w-3.5 h-3.5 mr-1" />
-                    <span className="im-tool-label">{i18n.t("文件")}</span></Button>
-                  <Button
-                    type="button"
-                    variant={mediaPanel === 'image' ? 'secondary' : 'outline'}
-                    aria-label={i18n.t('图片链接')}
-                    aria-pressed={mediaPanel === 'image'}
-                    size="sm"
-                    className="im-tool-button h-8 px-2 text-xs"
-                    onClick={() => {
-                      setMediaPanel((p) => (p === 'image' ? null : 'image'))
-                    }}
-                  >
-                    <Link2 className="w-3.5 h-3.5 mr-1" />
-                    <span className="im-tool-label">{i18n.t("图片链接")}</span></Button>
-                  <Button
-                    type="button"
-                    variant={mediaPanel === 'video' ? 'secondary' : 'outline'}
-                    aria-label={i18n.t('视频')}
-                    aria-pressed={mediaPanel === 'video'}
-                    size="sm"
-                    className="im-tool-button h-8 px-2 text-xs"
-                    onClick={() => {
-                      setMediaPanel((p) => (p === 'video' ? null : 'video'))
-                    }}
-                  >
-                    <Video className="w-3.5 h-3.5 mr-1" />
-                    <span className="im-tool-label">{i18n.t("视频")}</span></Button>
-                  <Button
-                    type="button"
-                    variant={mediaPanel === 'audio' ? 'secondary' : 'outline'}
-                    aria-label={i18n.t('音频')}
-                    aria-pressed={mediaPanel === 'audio'}
-                    size="sm"
-                    className="im-tool-button h-8 px-2 text-xs"
-                    onClick={() => {
-                      setMediaPanel((p) => (p === 'audio' ? null : 'audio'))
-                    }}
-                  >
-                    <Music className="w-3.5 h-3.5 mr-1" />
-                    <span className="im-tool-label">{i18n.t("音频")}</span></Button>
+                  <ComposerAttachmentMenu
+                    disabled={sending}
+                    onImage={() => imageFileRef.current?.click()}
+                    onFile={() => fileInputRef.current?.click()}
+                    onMedia={(type) => setMediaPanel(type)}
+                  />
                 </div>
                 {mediaPanel && (
                   <div className="im-media-panel flex flex-wrap items-end gap-2 p-2">

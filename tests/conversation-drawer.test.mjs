@@ -20,6 +20,7 @@ function render(mobile, open, close = () => {}) {
     '../../components/ui/button': { Button: 'button' },
     '../../components/ui/input': { Input: 'input' },
     '../../components/ui/badge': { Badge: 'badge' },
+    './AccountSwitcher': { AccountSwitcher: 'account-switcher' },
     './ConversationSection': { ConversationSection: 'conversation-section' },
     './SystemInboxSection': { SystemInboxSection: 'system-inbox-section' },
   }
