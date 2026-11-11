@@ -7,6 +7,7 @@ import { JsonViewer } from './JsonViewer'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import {
+  ArrowLeft,
   ArrowRight,
   Bot,
   Boxes,
@@ -40,6 +41,9 @@ import { Button } from '../../components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog'
 import { Input } from '../../components/ui/input'
 import { SelectField } from '../../components/ui/select'
+import { Sheet, SheetClose, SheetContent, SheetTitle } from '../../components/ui/sheet'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
+import { CAPABILITY_DETAIL_SHEET_QUERY, capabilityCountSummary } from './capability-layout-model.mjs'
 import { capabilityEmptyState } from './empty-state.mjs'
 import { readPreviewEndpoints, type PreviewEndpoint } from './target-preview.mjs'
 import type { CapabilityItem, CapabilityRowMap, IntrospectionTab } from './capability-model'
@@ -150,6 +154,9 @@ function itemTitle(kind: IntrospectionTab, item: CapabilityItem, locale: 'zh-CN'
 export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, readOnly, filter, total, onClearFilter }: CapabilityExplorerProps<K>) {
   const i18n = useI18n()
   const [detailsOpen, setDetailsOpen] = useState(false)
+  // Narrow workspaces stack the inspector under the whole list; there the detail opens as a sheet.
+  const narrow = useMediaQuery(CAPABILITY_DETAIL_SHEET_QUERY)
+  const [sheetOpen, setSheetOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [ownerFilter, setOwnerFilter] = useState<string>('')
   const indexedItems = useMemo(() => items.map((item, index) => ({ kind, item, id: identity(item, index) })), [items, kind])
@@ -169,6 +176,7 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
     return indexedItems.filter(({ item }) => itemOwner(item) === ownerFilter)
   }, [indexedItems, ownerFilter])
 
+  const counts = capabilityCountSummary({ pageCount: indexedItems.length, visibleCount: visibleItems.length, total, ownerFilter })
   const selected = visibleItems.find(({ id }) => id === selectedId)?.item ?? visibleItems[0]?.item ?? null
   const authoredMeta = KIND_META[kind]
   const meta = { ...authoredMeta, title: i18n.t(authoredMeta.title), description: i18n.t(authoredMeta.description), eyebrow: i18n.t(authoredMeta.eyebrow) }
@@ -187,7 +195,17 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
   useEffect(() => {
     setSelectedId(visibleItems[0]?.id ?? null)
     setDetailsOpen(false)
+    setSheetOpen(false)
   }, [visibleItems, kind])
+
+  useEffect(() => {
+    if (!narrow) setSheetOpen(false)
+  }, [narrow])
+
+  const selectItem = (id: string) => {
+    setSelectedId(id)
+    if (narrow) setSheetOpen(true)
+  }
 
   if (!items.length) {
     const empty = capabilityEmptyState({ title: kind === 'components' ? i18n.t("组件") : meta.title, filter, total }, i18n.locale)
@@ -212,12 +230,15 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
           <h2 id="capability-collection-title">{meta.title}</h2>
           {kind !== 'components' ? <p>{meta.description}</p> : null}
         </div>
-        <div className="console-capability-count"><strong>{visibleItems.length}</strong><span>{kind === 'components' ? i18n.t("个组件") : i18n.t("项")}</span></div>
+        <div className="console-capability-count"><strong>{counts.count}</strong><span>{kind === 'components' ? (counts.pageOnly ? i18n.t("个组件（本页）") : i18n.t("个组件")) : (counts.pageOnly ? i18n.t("项（本页）") : i18n.t("项"))}</span></div>
         {kind === 'commands' && <Button asChild size="sm" variant="outline"><Link to="/permissions"><ShieldCheck className="size-4 mr-2" />{i18n.t("查看权限说明")}</Link></Button>}
       </header>
 
       {ownerGroups.length > 1 ? (
         <div className="console-capability-owner-bar" role="group" aria-label={i18n.t("按所属插件筛选")}>
+          {counts.ownerCountsPageOnly ? (
+            <span className="console-capability-owner-scope" title={i18n.t("服务端共 {0} 项；插件筛选与计数只覆盖本页的 {1} 项", [total ?? indexedItems.length, indexedItems.length])}>{i18n.t("本页统计")}</span>
+          ) : null}
           <button
             type="button"
             className={cn('console-capability-owner-pill', !ownerFilter && 'is-active')}
@@ -248,21 +269,21 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
       <div className={cn("console-capability-workspace", kind === 'components' && "console-component-gallery-workspace")}>
         <div className="console-capability-collection">
           {kind === 'commands' ? (
-            <CommandCatalog entries={entriesForKind(visibleItems, 'commands')} selectedId={selectedId} onSelect={setSelectedId} />
+            <CommandCatalog entries={entriesForKind(visibleItems, 'commands')} selectedId={selectedId} onSelect={selectItem} />
           ) : kind === 'middlewares' ? (
-            <MiddlewarePipeline entries={entriesForKind(visibleItems, 'middlewares')} selectedId={selectedId} onSelect={setSelectedId} />
+            <MiddlewarePipeline entries={entriesForKind(visibleItems, 'middlewares')} selectedId={selectedId} onSelect={selectItem} />
           ) : kind === 'components' ? (
             <ComponentGallery entries={entriesForKind(visibleItems, 'components')} selectedId={selectedId} readOnly={readOnly} onSelect={(id) => { setSelectedId(id); setDetailsOpen(true) }} />
           ) : kind === 'endpoints' ? (
-            <EndpointGrid entries={entriesForKind(visibleItems, 'endpoints')} selectedId={selectedId} onSelect={setSelectedId} />
+            <EndpointGrid entries={entriesForKind(visibleItems, 'endpoints')} selectedId={selectedId} onSelect={selectItem} />
           ) : kind === 'bindings' ? (
-            <BindingMap entries={entriesForKind(visibleItems, 'bindings')} selectedId={selectedId} onSelect={setSelectedId} />
+            <BindingMap entries={entriesForKind(visibleItems, 'bindings')} selectedId={selectedId} onSelect={selectItem} />
           ) : kind === 'tools' ? (
-            <ToolCatalog entries={entriesForKind(visibleItems, 'tools')} selectedId={selectedId} onSelect={setSelectedId} />
+            <ToolCatalog entries={entriesForKind(visibleItems, 'tools')} selectedId={selectedId} onSelect={selectItem} />
           ) : kind === 'prompt-sections' ? (
-            <PromptSectionCatalog entries={entriesForKind(visibleItems, 'prompt-sections')} selectedId={selectedId} onSelect={setSelectedId} />
+            <PromptSectionCatalog entries={entriesForKind(visibleItems, 'prompt-sections')} selectedId={selectedId} onSelect={selectItem} />
           ) : (
-            <McpGrid entries={entriesForKind(visibleItems, 'mcp')} selectedId={selectedId} onSelect={setSelectedId} />
+            <McpGrid entries={entriesForKind(visibleItems, 'mcp')} selectedId={selectedId} onSelect={selectItem} />
           )}
         </div>
         {kind === 'components' ? <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
@@ -273,7 +294,15 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
             <DialogTitle className="sr-only">{i18n.t("组件详情")}</DialogTitle>
             <CapabilityInspector kind={kind} item={selected} readOnly={readOnly} />
           </DialogContent>
-        </Dialog> : <CapabilityInspector kind={kind} item={selected} readOnly={readOnly} />}
+        </Dialog> : narrow ? <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+          <SheetContent side="right" className="console-capability-sheet" aria-describedby={undefined}>
+            <SheetTitle className="sr-only">{i18n.t("能力详情")}</SheetTitle>
+            <SheetClose asChild>
+              <Button type="button" variant="ghost" size="sm" className="console-capability-sheet-back"><ArrowLeft className="size-4 mr-1.5" />{i18n.t("返回列表")}</Button>
+            </SheetClose>
+            <CapabilityInspector kind={kind} item={selected} readOnly={readOnly} />
+          </SheetContent>
+        </Sheet> : <CapabilityInspector kind={kind} item={selected} readOnly={readOnly} />}
       </div>
     </section>
   )

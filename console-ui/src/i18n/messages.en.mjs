@@ -3023,4 +3023,9 @@ export const englishMessages = Object.freeze({
   "查看插件详情": "View plugin details",
   "{0}中的搜索结果": "Search results in {0}",
   "在所有分类中找到 {0} 项。": "{0} matches across all categories.",
+  "项（本页）": " items (this page)",
+  "个组件（本页）": " components (this page)",
+  "本页统计": "This page",
+  "服务端共 {0} 项；插件筛选与计数只覆盖本页的 {1} 项": "{0} items on the server; plugin filters and counts cover only the {1} items on this page",
+  "返回列表": "Back to list",
 })
