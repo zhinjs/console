@@ -3175,4 +3175,5 @@ export const englishMessages = Object.freeze({
   "按会话最后一轮的结果统计": "Based on each conversation's last turn",
   "群聊已切换，请重新选择成员": "The group changed. Select the member again.",
   "成员加载失败，请点击「加载成员」重试": "Couldn't load members. Click \"Load members\" to try again.",
+  "设置菜单": "Settings menu",
 })
