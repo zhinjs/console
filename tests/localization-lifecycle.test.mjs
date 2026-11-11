@@ -237,7 +237,7 @@ test('skills status language refresh keeps its reader identity and uses the curr
   locale = messages('en'); runtime.render(); await runtime.settle()
   assert.deepEqual(reads, ['zh-CN'], 'locale changes do not trigger reads or graph mutations')
   const link = elements(runtime.value).find(node => node.type === 'Link')
-  assert.equal(link.props.to, '/agent/models')
+  assert.equal(link.props.to, '/agent/models?tab=purposes')
   assert.equal(link.children.join(''), 'Manage model purposes')
   const header = elements(runtime.value).find(node => node.type === 'PageHeader')
   await header.props.actions.props.onClick(); await runtime.settle()

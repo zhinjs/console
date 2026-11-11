@@ -1,4 +1,4 @@
-export type SettingsGroupId = 'general' | 'models' | 'presets' | 'plugins'
+export type SettingsGroupId = 'general' | 'presets' | 'plugins'
 export type SettingsSection = 'general' | 'builtin' | 'extensions' | 'unavailable'
 export interface SettingsEntry {
   readonly id: string
@@ -8,7 +8,6 @@ export interface SettingsEntry {
   readonly sectionTitle: string
   readonly title: string
   readonly description: string
-  readonly editor?: 'inference'
   readonly fieldNames?: readonly string[]
   readonly excludedFieldNames?: readonly string[]
   readonly writable: boolean

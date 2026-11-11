@@ -1,5 +1,6 @@
 import { useI18n } from '../../i18n'
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { RefreshCw, Download, Upload } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { SelectField } from '../../components/ui/select'
@@ -21,6 +22,7 @@ import { Services } from './Services'
 import { Accounts } from './Accounts'
 import { Purposes } from './Purposes'
 import { PersonalSessions } from './PersonalSessions'
+import { inferenceTabParams, resolveInferenceTab } from './models-entry.mjs'
 
 export function InferenceWorkspace({ connectionScope }: { connectionScope?: string }) {
   const i18n = useI18n()
@@ -165,10 +167,16 @@ export function InferenceWorkspace({ connectionScope }: { connectionScope?: stri
 }
 
 
-/** A new owner/connection gets a fresh tab selection; editing state remains owned by each page. */
+/**
+ * The tab lives in the URL (`?tab=`), so refresh and shared links reopen it; switching tabs
+ * replaces the history entry. A tab the current owner does not have (e.g. purposes for a
+ * personal owner) or an unknown value shows the default tab. Editing state remains owned by each page.
+ */
 function InferencePages({ management: m, connectionScope }: { management: InferenceManagement; connectionScope?: string }) {
   const i18n = useI18n()
-  const [tab, setTab] = useState('profiles')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tab = resolveInferenceTab(searchParams.get('tab'), m.view?.hostAdministrator)
+  const setTab = (next: string) => setSearchParams(current => inferenceTabParams(current, next), { replace: true })
   if (!m.view) return null
   return (
         <Tabs value={tab} onValueChange={setTab}>
