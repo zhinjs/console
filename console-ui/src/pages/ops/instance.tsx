@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowDownToLine, Download, Pause, Play, Power, RefreshCw, RotateCcw, Server, Square, Trash2, Upload } from 'lucide-react'
+import { ArrowDownToLine, Download, Pause, Play, RefreshCw, RotateCcw, Server, Square, Trash2, Upload } from 'lucide-react'
 import { useI18n } from '../../i18n'
 import { PageShell } from '../../components/PageShell'
 import { PageHeader } from '../../components/PageHeader'
@@ -16,14 +16,16 @@ import { EmptyState } from '../../components/empty-state'
 import { useToast } from '../../components/toast'
 import { useConsoleAccess } from '../../hooks/use-console-access'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
-import type { GatewayInstanceLogLine, GatewayInstanceStatus, GatewayInstalledPackage, GatewayPackageOperation, GatewayPackagePlan } from '../../contracts/gateway'
+import type {
+  GatewayInstanceLogLine, GatewayInstanceStatus, GatewayInstalledPackage, GatewayPackageOperation, GatewayPackagePlan, GatewayPluginConfigurationNeed,
+} from '../../contracts/gateway'
 import {
-  EMPTY_PROGRESS, GATEWAY_RPC, failureReasonLabel, formatDuration, instanceActions, instanceStateLabel, instanceStateTone, mergeLogLines,
-  operationLabel, parsePackageSpecs, phaseLabel, readInstanceStatus, readLogLines, readPackageList, readPackagePlan, readTransactionResult,
-  reducePackageProgress, transactionSummary, uptimeMs, type PackageProgressState,
+  GATEWAY_RPC, failureReasonLabel, formatDuration, instanceActions, instanceStateLabel, instanceStateTone, mergeLogLines,
+  operationLabel, parsePackageSpecs, readInstanceStatus, readLogLines, readPackageList, readPackagePlan, transactionSummary, uptimeMs,
 } from './gateway-model.mjs'
-import { GatewayLoadError } from './ops-components'
-import { gatewayRequest, subscribePackageProgress, useGatewayRead } from './use-gateway'
+import { GatewayLoadError, TransactionProgress } from './ops-components'
+import { ConfigurationNeedsPanel } from './plugin-declare'
+import { gatewayRequest, useGatewayRead, useGatewayTransaction } from './use-gateway'
 
 const STATUS_POLL_MS = 3_000
 const LOGS_POLL_MS = 2_000
@@ -237,13 +239,14 @@ function DependencyPanel({ canManage, onActiveChange, onFinished }: { canManage:
   const [enable, setEnable] = useState(true)
   const [planning, setPlanning] = useState(false)
   const [pending, setPending] = useState<PendingTransaction | null>(null)
-  const [running, setRunning] = useState(false)
-  const [progress, setProgress] = useState<PackageProgressState>(EMPTY_PROGRESS)
-  const [runError, setRunError] = useState<string | null>(null)
+  const transaction = useGatewayTransaction()
+  const { running, progress, error: runError } = transaction
+  const [needs, setNeeds] = useState<readonly GatewayPluginConfigurationNeed[]>([])
+  const [declaring, setDeclaring] = useState(false)
   const parsed = parsePackageSpecs(specText, i18n.t)
   const unsupported = list.errorKind === 'unsupported'
 
-  useEffect(() => { onActiveChange(running) }, [running, onActiveChange])
+  useEffect(() => { onActiveChange(running || declaring) }, [running, declaring, onActiveChange])
 
   const prepare = async (operation: GatewayPackageOperation, packages: readonly string[] | 'all', extra: { enable?: boolean } = {}) => {
     setPlanning(true)
@@ -258,30 +261,20 @@ function DependencyPanel({ canManage, onActiveChange, onFinished }: { canManage:
     }
   }
 
-  const execute = async (transaction: PendingTransaction) => {
-    setRunning(true)
-    setRunError(null)
-    setProgress(EMPTY_PROGRESS)
-    // Subscribe before sending, so the first events are not missed.
-    const unsubscribe = subscribePackageProgress(event => setProgress(previous => reducePackageProgress(previous, event)))
-    try {
-      const type = transaction.operation === 'install' ? GATEWAY_RPC.PACKAGES_INSTALL : transaction.operation === 'uninstall' ? GATEWAY_RPC.PACKAGES_UNINSTALL : GATEWAY_RPC.PACKAGES_UPDATE
-      const data: Record<string, unknown> = { packages: transaction.packages }
-      if (transaction.operation === 'install' && transaction.enable !== undefined) data.enable = transaction.enable
-      const result = readTransactionResult(await gatewayRequest(type, data, i18n.t))
-      if (result) setProgress(previous => (previous.result ? previous : { ...previous, id: previous.id ?? result.id, result }))
-      if (result?.status === 'succeeded') {
-        toast.success(transactionSummary(result, i18n.t).title)
-        if (transaction.operation === 'install') setSpecText('')
-      }
-    } catch (error) {
-      setRunError(error instanceof Error ? error.message : String(error))
-    } finally {
-      unsubscribe()
-      setRunning(false)
-      list.refresh()
-      onFinished()
+  const execute = async (pendingTransaction: PendingTransaction) => {
+    const type = transactionType(pendingTransaction.operation)
+    const data: Record<string, unknown> = { packages: pendingTransaction.packages }
+    if (pendingTransaction.operation === 'install' && pendingTransaction.enable !== undefined) data.enable = pendingTransaction.enable
+    if (pendingTransaction.operation === 'install') setNeeds([])
+    const { result } = await transaction.run(type, data)
+    if (result?.status === 'succeeded') {
+      toast.success(transactionSummary(result, i18n.t).title)
+      if (pendingTransaction.operation === 'install') setSpecText('')
     }
+    // Installed but undeclared plugins wait for their first configuration (ADR 0053 §2 step 4).
+    if (result?.needsConfiguration?.length) setNeeds(result.needsConfiguration)
+    list.refresh()
+    onFinished()
   }
 
   const submitInstall = () => {
@@ -290,7 +283,7 @@ function DependencyPanel({ canManage, onActiveChange, onFinished }: { canManage:
     void prepare('install', parsed.specs, { enable })
   }
 
-  const busy = running || planning
+  const busy = running || planning || declaring
   return (
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0">
@@ -330,6 +323,10 @@ function DependencyPanel({ canManage, onActiveChange, onFinished }: { canManage:
         ) : null}
         {!canManage && !unsupported ? <p className="text-sm text-muted-foreground" role="note">{i18n.t("当前身份只能查看依赖；安装、卸载与更新需要 plugin.manage 权限。")}</p> : null}
         {running || progress.id || runError ? <TransactionProgress progress={progress} running={running} error={runError} /> : null}
+        {needs.length ? (
+          <ConfigurationNeedsPanel needs={needs} disabled={running} onBusyChange={setDeclaring}
+            onDeclared={need => { setNeeds(previous => previous.filter(item => item.instanceKey !== need.instanceKey)); list.refresh(); onFinished() }} />
+        ) : null}
         {unsupported ? null : list.loading && !list.loaded ? (
           <div className="space-y-2">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>
         ) : !list.data.packages.length ? (
@@ -388,59 +385,16 @@ function DependencyPanel({ canManage, onActiveChange, onFinished }: { canManage:
   )
 }
 
-function TransactionProgress({ progress, running, error }: { progress: PackageProgressState; running: boolean; error: string | null }) {
-  const i18n = useI18n()
-  const output = useRef<HTMLPreElement>(null)
-  useEffect(() => {
-    if (output.current) output.current.scrollTop = output.current.scrollHeight
-  }, [progress.output])
-  const result = progress.result
-  const summary = result ? transactionSummary(result, i18n.t) : null
-  const failedPhase = result?.failedPhase
-  return (
-    <section className="space-y-3 rounded-md border p-3" aria-label={i18n.t("依赖事务进度")} aria-busy={running}>
-      <div className="flex items-center gap-2 text-sm font-medium">
-        {running ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Power className="h-4 w-4" />}
-        {running ? i18n.t("正在执行依赖事务…") : i18n.t("依赖事务")}
-        {progress.operation ? <Badge size="sm" variant="secondary">{operationLabel(progress.operation, i18n.t)}</Badge> : null}
-      </div>
-      {progress.phases.length ? (
-        <ol className="space-y-1 text-sm" role="status">
-          {progress.phases.map((phase, index) => {
-            const current = running && index === progress.phases.length - 1
-            const failed = !running && phase === failedPhase
-            return (
-              <li key={`${phase}-${index}`} className={failed ? 'text-destructive' : current ? 'font-medium' : 'text-muted-foreground'}>
-                {failed ? '✕' : current ? '…' : '✓'} {phaseLabel(phase, i18n.t)}
-              </li>
-            )
-          })}
-        </ol>
-      ) : running ? <p className="text-sm text-muted-foreground">{i18n.t("等待网关报告进度…")}</p> : null}
-      {progress.output ? (
-        <pre ref={output} aria-label={i18n.t("包管理器输出")} className="max-h-56 overflow-auto rounded-md bg-muted p-2 font-mono text-xs leading-relaxed">{progress.output}</pre>
-      ) : null}
-      {error ? <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert> : null}
-      {result && summary ? (
-        <Alert variant={summary.tone === 'success' ? 'success' : summary.tone === 'warning' ? 'warning' : 'destructive'}>
-          <AlertTitle>{summary.title}</AlertTitle>
-          <AlertDescription className="space-y-1 text-sm">
-            {result.failedPhase ? <p>{i18n.t("失败阶段：{0}", [phaseLabel(result.failedPhase, i18n.t)])}</p> : null}
-            {result.error ? <p>{i18n.t("错误：{0}", [result.error])}</p> : null}
-            {result.rollbackError ? <p>{i18n.t("回滚未完成：{0}", [result.rollbackError])}</p> : null}
-            <p className="text-xs text-muted-foreground">
-              {i18n.t("实例状态：{0} → {1}", [instanceStateOrUnmanaged(result.instance.before, i18n.t), instanceStateOrUnmanaged(result.instance.after, i18n.t)])}
-            </p>
-            {result.logTail.length ? (
-              <pre aria-label={i18n.t("实例日志尾部")} className="max-h-40 overflow-auto rounded-md bg-muted p-2 font-mono text-xs">{result.logTail.join('\n')}</pre>
-            ) : null}
-          </AlertDescription>
-        </Alert>
-      ) : null}
-    </section>
-  )
+/** The RPC of a package operation; every operation has one. */
+function transactionType(operation: GatewayPackageOperation): string {
+  switch (operation) {
+    case 'install': return GATEWAY_RPC.PACKAGES_INSTALL
+    case 'uninstall': return GATEWAY_RPC.PACKAGES_UNINSTALL
+    case 'update': return GATEWAY_RPC.PACKAGES_UPDATE
+    default: return assertNever(operation)
+  }
 }
 
-function instanceStateOrUnmanaged(state: string, t: (message: string, values?: readonly unknown[]) => string): string {
-  return state === 'unmanaged' ? t('未托管') : instanceStateLabel(state, t)
+function assertNever(value: never): never {
+  throw new Error(`unexpected gateway operation ${String(value)}`)
 }

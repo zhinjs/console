@@ -3,7 +3,10 @@ import { useI18n } from '../../i18n'
 import { apiFetch } from '../../utils/auth'
 import { getConsoleTransport } from '../../utils/console-client'
 import { startVisiblePolling } from '../../hooks/visible-polling.mjs'
-import { GATEWAY_PACKAGES_PROGRESS, gatewayErrorKind, gatewayRequestBody, readGatewayReply, type GatewayErrorKind } from './gateway-model.mjs'
+import {
+  EMPTY_PROGRESS, GATEWAY_PACKAGES_PROGRESS, GatewayRequestError, gatewayErrorKind, gatewayRequestBody, readGatewayReply, readTransactionResult,
+  reducePackageProgress, type GatewayErrorKind, type PackageProgressState,
+} from './gateway-model.mjs'
 
 type Translate = (message: string, values?: readonly unknown[]) => string
 
@@ -78,4 +81,51 @@ export function useGatewayRead<T>(
 /** `gateway.packages.progress` events from the Console event stream. */
 export function subscribePackageProgress(listener: (event: unknown) => void): () => void {
   return getConsoleTransport().onConsoleEvent(GATEWAY_PACKAGES_PROGRESS, envelope => listener(envelope.data))
+}
+
+type TransactionResult = NonNullable<PackageProgressState['result']>
+
+export interface GatewayTransactionOutcome {
+  readonly result: TransactionResult | null
+  /** The request failure, when the gateway refused or the call failed. */
+  readonly error: unknown
+}
+
+/**
+ * Runs one gateway transaction (`gateway.packages.install|uninstall|update`,
+ * `gateway.plugins.declare`) and folds its `gateway.packages.progress` events. With
+ * `keepInvalidInput`, a 400 `invalid_input` refusal (nothing was touched) is returned to the
+ * caller only, so a form can show it inline.
+ */
+export function useGatewayTransaction() {
+  const i18n = useI18n()
+  const [running, setRunning] = useState(false)
+  const [progress, setProgress] = useState<PackageProgressState>(EMPTY_PROGRESS)
+  const [error, setError] = useState<string | null>(null)
+  const active = useRef(false)
+  const run = useCallback(async (type: string, data: Record<string, unknown>, options: { keepInvalidInput?: boolean } = {}): Promise<GatewayTransactionOutcome> => {
+    if (active.current) return { result: null, error: new GatewayRequestError(i18n.t('另一个依赖事务正在进行，请等待它结束'), { status: 409, code: 'conflict' }) }
+    active.current = true
+    setRunning(true)
+    setError(null)
+    setProgress(EMPTY_PROGRESS)
+    // Subscribe before sending, so the first events are not missed.
+    const unsubscribe = subscribePackageProgress(event => setProgress(previous => reducePackageProgress(previous, event)))
+    try {
+      const result = readTransactionResult(await gatewayRequest(type, data, i18n.t))
+      if (result) setProgress(previous => (previous.result ? previous : { ...previous, id: previous.id ?? result.id, operation: previous.operation ?? result.operation, result }))
+      return { result, error: null }
+    } catch (caught) {
+      const invalid = caught instanceof GatewayRequestError && (caught.status === 400 || caught.code === 'invalid_input')
+      if (options.keepInvalidInput && invalid) setProgress(EMPTY_PROGRESS)
+      else setError(caught instanceof Error ? caught.message : String(caught))
+      return { result: null, error: caught }
+    } finally {
+      unsubscribe()
+      active.current = false
+      setRunning(false)
+    }
+  }, [i18n])
+  const reset = useCallback(() => { setProgress(EMPTY_PROGRESS); setError(null) }, [])
+  return { running, progress, error, run, reset }
 }

@@ -4,6 +4,8 @@
  * mirror in `contracts/gateway.ts`.
  */
 
+import { declaredDefaults, initialSchemaValue } from '../../components/PluginConfigForm/schema-model.mjs'
+
 export const GATEWAY_RPC = Object.freeze({
   PACKAGES_LIST: 'gateway.packages.list',
   PACKAGES_PLAN: 'gateway.packages.plan',
@@ -15,6 +17,7 @@ export const GATEWAY_RPC = Object.freeze({
   INSTANCE_STOP: 'gateway.instance.stop',
   INSTANCE_RESTART: 'gateway.instance.restart',
   INSTANCE_LOGS: 'gateway.instance.logs',
+  PLUGINS_DECLARE: 'gateway.plugins.declare',
 })
 
 export const GATEWAY_PACKAGES_PROGRESS = 'gateway.packages.progress'
@@ -22,8 +25,11 @@ export const GATEWAY_PACKAGES_PROGRESS = 'gateway.packages.progress'
 export const INSTANCE_STATES = Object.freeze(['stopped', 'starting', 'running', 'stopping', 'backoff', 'crashed'])
 
 export const PACKAGE_PHASES = Object.freeze([
-  'snapshot', 'stop-instance', 'package-manager', 'start-instance', 'rollback', 'restore-files', 'reinstall', 'restart-instance', 'done',
+  'snapshot', 'stop-instance', 'package-manager', 'configure', 'start-instance', 'rollback', 'restore-files', 'reinstall', 'restart-instance', 'done',
 ])
+
+/** Package specs one request may carry (gateway limit). */
+export const TRANSACTION_OPERATIONS = Object.freeze(['install', 'uninstall', 'update', 'declare'])
 
 /** Package specs one request may carry (gateway limit). */
 export const MAX_PACKAGE_SPECS = 32
@@ -235,6 +241,7 @@ export function readPackagePlan(value) {
 export function readTransactionResult(value) {
   if (!isRecord(value) || !['succeeded', 'rolledBack', 'rollbackFailed'].includes(value.status)) return null
   const instance = isRecord(value.instance) ? value.instance : {}
+  const needs = readConfigurationNeeds(value.needsConfiguration)
   return {
     id: typeof value.id === 'string' ? value.id : '',
     operation: value.operation,
@@ -245,6 +252,7 @@ export function readTransactionResult(value) {
     ...(typeof value.error === 'string' ? { error: value.error } : {}),
     ...(typeof value.rollbackError === 'string' ? { rollbackError: value.rollbackError } : {}),
     logTail: stringList(value.logTail),
+    ...(needs.length ? { needsConfiguration: needs } : {}),
     instance: { before: String(instance.before ?? 'unmanaged'), after: String(instance.after ?? 'unmanaged') },
     startedAt: numberOr(value.startedAt, 0),
     finishedAt: numberOr(value.finishedAt, 0),
@@ -256,6 +264,7 @@ export function phaseLabel(phase, t) {
     case 'snapshot': return t('备份 package.json、锁文件与配置')
     case 'stop-instance': return t('停止实例')
     case 'package-manager': return t('运行包管理器')
+    case 'configure': return t('写入插件声明与配置')
     case 'start-instance': return t('启动实例并等待就绪')
     case 'rollback': return t('回滚')
     case 'restore-files': return t('恢复备份文件')
@@ -270,6 +279,7 @@ export function operationLabel(operation, t) {
   if (operation === 'install') return t('安装')
   if (operation === 'uninstall') return t('卸载')
   if (operation === 'update') return t('更新')
+  if (operation === 'declare') return t('声明')
   return String(operation)
 }
 
@@ -308,7 +318,129 @@ export function reducePackageProgress(state, event) {
 export function transactionSummary(result, t) {
   if (result.status === 'succeeded') return { tone: 'success', title: t('{0}成功', [operationLabel(result.operation, t)]) }
   if (result.status === 'rolledBack') {
+    // A failed declaration restores the configuration file only; dependencies are untouched.
+    if (result.operation === 'declare') return { tone: 'warning', title: t('声明失败，已恢复原来的配置并启动旧实例') }
     return { tone: 'warning', title: t('{0}失败，已回滚到原来的依赖', [operationLabel(result.operation, t)]) }
   }
   return { tone: 'destructive', title: t('{0}失败，回滚也未完成，需要人工处理', [operationLabel(result.operation, t)]) }
+}
+
+// ---- needsConfiguration / gateway.plugins.declare (ADR 0053 §2 step 4, ADR 0054 §4) ----
+
+const INSTANCE_KEY = /^[a-z0-9][a-z0-9-]*$/u
+
+/** `@zhin.js/adapter-sandbox` → `sandbox` (same rule as the gateway's default instance key). */
+export function instanceKeyFromPackage(name) {
+  const base = String(name ?? '').split('/').pop() ?? ''
+  return base.replace(/^(adapter|plugin|service)-/u, '')
+}
+
+const readNeed = value => {
+  if (!isRecord(value) || typeof value.name !== 'string' || !value.name) return null
+  const instanceKey = typeof value.instanceKey === 'string' && value.instanceKey ? value.instanceKey : instanceKeyFromPackage(value.name)
+  return { name: value.name, instanceKey, missing: stringList(value.missing), missingEnv: stringList(value.missingEnv) }
+}
+
+/**
+ * Configuration needs from a transaction result (`needsConfiguration: [...]`), a single
+ * workflow need (`plugin:install` replies carry one object) or the list itself. Deduplicated by
+ * instance key, first wins.
+ */
+export function readConfigurationNeeds(value) {
+  const source = Array.isArray(value) ? value
+    : isRecord(value) && 'needsConfiguration' in value ? (Array.isArray(value.needsConfiguration) ? value.needsConfiguration : [value.needsConfiguration])
+      : isRecord(value) && typeof value.name === 'string' ? [value] : []
+  const seen = new Set()
+  const needs = []
+  for (const item of source) {
+    const need = readNeed(item)
+    if (!need || seen.has(need.instanceKey)) continue
+    seen.add(need.instanceKey)
+    needs.push(need)
+  }
+  return needs
+}
+
+/** Problems with an instance key typed by the user, or null. */
+export function instanceKeyProblem(key, t) {
+  const value = String(key ?? '')
+  if (!value) return t('请填写实例名。')
+  if (value.length > 128 || !INSTANCE_KEY.test(value)) return t('实例名只能包含小写字母、数字和连字符，且以字母或数字开头。')
+  return null
+}
+
+/**
+ * Body of `gateway.plugins.declare`. `config` must be a plain object (the instance section);
+ * the instance key is always sent so the Host never has to guess it.
+ */
+export function declareRequestBody({ package: name, instanceKey, config, startInstance } = {}) {
+  if (typeof name !== 'string' || !name) throw new TypeError('package is required')
+  const body = { package: name, instanceKey: typeof instanceKey === 'string' && instanceKey ? instanceKey : instanceKeyFromPackage(name) }
+  body.config = isRecord(config) ? structuredClone(config) : {}
+  if (typeof startInstance === 'boolean') body.startInstance = startInstance
+  return body
+}
+
+/** Instance-relative path (`endpoints.0.id`) of a Host validation path (`$.endpoints.0.id`, `$`). */
+export function relativeConfigPath(path) {
+  return String(path ?? '').replace(/^\$\.?/u, '')
+}
+
+const DECLARATION_SCHEMA_FAILURE = /^(?:配置未通过插件 Schema 校验，未声明|Configuration failed the plugin schema[^:：]*)[:：]\s*/u
+const MISSING_ENV = /^(?:缺少环境变量|missing environment variable)\s+(\S+)$/iu
+
+/**
+ * Field errors of a refused declaration (400 `invalid_input`). The gateway reports them in the
+ * message (`…未声明：$.endpoints required；缺少环境变量 QQ_SECRET`); anything that is not that
+ * shape stays a general error so the form can show it above the fields.
+ */
+export function readDeclarationErrors(message) {
+  const text = String(message ?? '')
+  const match = DECLARATION_SCHEMA_FAILURE.exec(text)
+  if (!match) return { general: text, fields: [], missingEnv: [] }
+  const fields = []
+  const missingEnv = []
+  for (const part of text.slice(match[0].length).split(/[；;]\s*/u).map(item => item.trim()).filter(Boolean)) {
+    const env = MISSING_ENV.exec(part)
+    if (env) { missingEnv.push(env[1]); continue }
+    const space = part.indexOf(' ')
+    const head = space < 0 ? part : part.slice(0, space)
+    if (head.startsWith('$')) fields.push({ path: relativeConfigPath(head), message: space < 0 ? '' : part.slice(space + 1).trim() })
+    else fields.push({ path: '', message: part })
+  }
+  return { general: null, fields, missingEnv }
+}
+
+/** Field errors whose path is `path` or below it (`''` collects the section-level ones). */
+export function fieldErrorsAt(errors, path) {
+  return (errors?.fields ?? []).filter(error => path === '' ? error.path === '' : error.path === path || error.path.startsWith(`${path}.`))
+}
+
+/**
+ * First draft of an undeclared plugin's section: the schema seed (required fields, consts and
+ * declared defaults) completed with defaults; `{}` without a usable object schema.
+ */
+export function declarationDraft(schema) {
+  if (!isRecord(schema) || schema.type !== 'object') return {}
+  const seed = initialSchemaValue(schema)
+  const draft = declaredDefaults(schema, isRecord(seed) ? seed : {})
+  return isRecord(draft) ? draft : {}
+}
+
+/** The draft as the `config` of a declare request, or a problem when it is not an object. */
+export function declarationConfig(value, t) {
+  if (value === undefined) return { config: {}, problem: null }
+  if (!isRecord(value)) return { config: null, problem: t('配置必须是对象。') }
+  return { config: value, problem: null }
+}
+
+/** Parses the raw JSON editor used when the Host has no schema for the package. */
+export function parseDeclarationJson(text, t) {
+  const trimmed = String(text ?? '').trim()
+  if (!trimmed) return { config: {}, problem: null }
+  try {
+    return declarationConfig(JSON.parse(trimmed), t)
+  } catch {
+    return { config: null, problem: t('不是有效的 JSON。') }
+  }
 }

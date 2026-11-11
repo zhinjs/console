@@ -11,6 +11,7 @@ export declare const TERMINAL_MAX_SIZE: number
 
 export function terminalPaths(base?: string): Readonly<{ targets: string; tickets: string; socket: string }>
 export function readTerminalTargets(value: unknown): TerminalTarget[]
+export function terminalNeedsConfirmation(target: TerminalTarget | null | undefined): boolean
 export function terminalSocketUrl(apiBase: string, ticket: string, base?: string, location?: { href: string }): string
 export function clampTerminalSize(value: unknown): number
 export function parseServerControl(text: string): (TerminalServerControl & Record<string, unknown>) | null

@@ -1,7 +1,10 @@
 import type {
   GatewayAuthorizedPackage, GatewayInstalledPackage, GatewayInstanceLogLine, GatewayInstanceState, GatewayInstanceStatus,
-  GatewayPackageOperation, GatewayPackagePhase, GatewayPackagePlan, GatewayPackageTransactionResult,
+  GatewayPackagePhase, GatewayPackagePlan, GatewayPackageTransactionResult,
+  GatewayPluginConfigurationNeed, GatewayPluginsDeclareRequest, GatewayTransactionOperation,
 } from '../../contracts/gateway'
+
+import type { SchemaField } from '../../components/PluginConfigForm/types'
 
 type Translate = (message: string, values?: readonly unknown[]) => string
 
@@ -16,10 +19,12 @@ export declare const GATEWAY_RPC: Readonly<{
   INSTANCE_STOP: 'gateway.instance.stop'
   INSTANCE_RESTART: 'gateway.instance.restart'
   INSTANCE_LOGS: 'gateway.instance.logs'
+  PLUGINS_DECLARE: 'gateway.plugins.declare'
 }>
 export declare const GATEWAY_PACKAGES_PROGRESS: 'gateway.packages.progress'
 export declare const INSTANCE_STATES: readonly GatewayInstanceState[]
 export declare const PACKAGE_PHASES: readonly GatewayPackagePhase[]
+export declare const TRANSACTION_OPERATIONS: readonly GatewayTransactionOperation[]
 export declare const MAX_PACKAGE_SPECS: number
 export declare const MAX_LOG_LINES: number
 export declare const MAX_PROGRESS_OUTPUT: number
@@ -56,7 +61,7 @@ export function operationLabel(operation: string, t: Translate): string
 
 export interface PackageProgressState {
   readonly id: string | null
-  readonly operation: GatewayPackageOperation | null
+  readonly operation: GatewayTransactionOperation | null
   readonly packages: readonly GatewayAuthorizedPackage[]
   readonly phases: readonly GatewayPackagePhase[]
   readonly output: string
@@ -65,3 +70,21 @@ export interface PackageProgressState {
 export declare const EMPTY_PROGRESS: PackageProgressState
 export function reducePackageProgress(state: PackageProgressState, event: unknown): PackageProgressState
 export function transactionSummary(result: GatewayPackageTransactionResult, t: Translate): { tone: 'success' | 'warning' | 'destructive'; title: string }
+
+export function instanceKeyFromPackage(name: string): string
+export function readConfigurationNeeds(value: unknown): GatewayPluginConfigurationNeed[]
+export function instanceKeyProblem(key: string, t: Translate): string | null
+export function declareRequestBody(input: { package: string; instanceKey?: string; config?: unknown; startInstance?: boolean }): GatewayPluginsDeclareRequest & { instanceKey: string; config: Record<string, unknown> }
+export function relativeConfigPath(path: string): string
+export interface DeclarationFieldError { readonly path: string; readonly message: string }
+export interface DeclarationErrors {
+  /** Set when the message is not a schema failure; shown above the form. */
+  readonly general: string | null
+  readonly fields: readonly DeclarationFieldError[]
+  readonly missingEnv: readonly string[]
+}
+export function readDeclarationErrors(message: string): DeclarationErrors
+export function fieldErrorsAt(errors: DeclarationErrors | null | undefined, path: string): DeclarationFieldError[]
+export function declarationDraft(schema: SchemaField | null | undefined): Record<string, unknown>
+export function declarationConfig(value: unknown, t: Translate): { config: Record<string, unknown> | null; problem: string | null }
+export function parseDeclarationJson(text: string, t: Translate): { config: Record<string, unknown> | null; problem: string | null }

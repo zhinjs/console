@@ -30,6 +30,11 @@ export const GATEWAY_INSTANCE_RPC = Object.freeze({
   LOGS: 'gateway.instance.logs',
 } as const)
 
+/** Plugin declarations written by the gateway (ADR 0053 §2 step 4, ADR 0054 §4). */
+export const GATEWAY_PLUGINS_RPC = Object.freeze({
+  DECLARE: 'gateway.plugins.declare',
+} as const)
+
 export const GATEWAY_PACKAGES_PROGRESS = 'gateway.packages.progress' as const
 
 /** Permissions per RPC (mirror of `GATEWAY_RPC_PERMISSIONS`). There is no `ops.instance`. */
@@ -44,6 +49,8 @@ export const GATEWAY_PERMISSIONS = Object.freeze({
 // ---- gateway.packages.* ----
 
 export type GatewayPackageOperation = 'install' | 'uninstall' | 'update'
+/** Every gateway transaction: package operations plus `declare` (`gateway.plugins.declare`). */
+export type GatewayTransactionOperation = GatewayPackageOperation | 'declare'
 export type GatewayPackageSource = 'database-driver' | 'adapter' | 'ai' | 'market' | 'npm'
 
 export interface GatewayPackagesInstallRequest {
@@ -51,8 +58,36 @@ export interface GatewayPackagesInstallRequest {
   readonly enable?: boolean
   readonly startInstance?: boolean
 }
+/**
+ * `gateway.plugins.declare` (`plugin.manage`): declare an installed plugin package as
+ * `plugins.<instanceKey>` with its first configuration (validated against the plugin schema,
+ * written atomically, instance restarted, rolled back when it does not come up). Refused with
+ * `invalid_input` when the key is already declared or the configuration does not validate.
+ */
+export interface GatewayPluginsDeclareRequest {
+  /** Installed plugin package name, without a version. */
+  readonly package: string
+  /** Default: derived from the package name (`@zhin.js/adapter-sandbox` → `sandbox`). */
+  readonly instanceKey?: string
+  /** The instance's configuration section; default `{}`. */
+  readonly config?: Readonly<Record<string, unknown>>
+  readonly startInstance?: boolean
+}
+
+/** An installed plugin left undeclared because its configuration is incomplete. */
+export interface GatewayPluginConfigurationNeed {
+  readonly name: string
+  readonly instanceKey: string
+  /** Config paths to fill or fix, relative to the instance section (`endpoints`, `endpoints.0.id`). */
+  readonly missing: readonly string[]
+  /** Environment variables referenced by defaults that are not set. */
+  readonly missingEnv: readonly string[]
+}
+
 export interface GatewayPackagesUninstallRequest {
   readonly packages: readonly string[]
+  /** Also remove the npm dependency when nothing else references it (default true). */
+  readonly removeDependency?: boolean
   readonly startInstance?: boolean
 }
 export interface GatewayPackagesUpdateRequest {
@@ -94,14 +129,14 @@ export interface GatewayPackageList {
 }
 
 export type GatewayPackagePhase =
-  | 'snapshot' | 'stop-instance' | 'package-manager' | 'start-instance'
+  | 'snapshot' | 'stop-instance' | 'package-manager' | 'configure' | 'start-instance'
   | 'rollback' | 'restore-files' | 'reinstall' | 'restart-instance' | 'done'
 
 export type GatewayPackageTransactionStatus = 'succeeded' | 'rolledBack' | 'rollbackFailed'
 
 export interface GatewayPackageTransactionResult {
   readonly id: string
-  readonly operation: GatewayPackageOperation
+  readonly operation: GatewayTransactionOperation
   readonly packages: readonly GatewayAuthorizedPackage[]
   readonly ok: boolean
   readonly status: GatewayPackageTransactionStatus
@@ -109,13 +144,15 @@ export interface GatewayPackageTransactionResult {
   readonly error?: string
   readonly rollbackError?: string
   readonly logTail?: readonly string[]
+  /** `install` only: plugins installed but left undeclared because their configuration is incomplete. */
+  readonly needsConfiguration?: readonly GatewayPluginConfigurationNeed[]
   readonly instance: Readonly<{ before: GatewayInstanceState | 'unmanaged'; after: GatewayInstanceState | 'unmanaged' }>
   readonly startedAt: number
   readonly finishedAt: number
 }
 
 export type GatewayPackageEvent =
-  | Readonly<{ type: 'start'; id: string; operation: GatewayPackageOperation; packages: readonly GatewayAuthorizedPackage[] }>
+  | Readonly<{ type: 'start'; id: string; operation: GatewayTransactionOperation; packages: readonly GatewayAuthorizedPackage[] }>
   | Readonly<{ type: 'phase'; id: string; phase: GatewayPackagePhase }>
   | Readonly<{ type: 'output'; id: string; stream: 'stdout' | 'stderr'; chunk: string }>
   | Readonly<{ type: 'result'; id: string; result: GatewayPackageTransactionResult }>
@@ -170,6 +207,8 @@ export interface TerminalTarget {
   readonly label: string
   readonly available: boolean
   readonly reason?: string
+  /** SSH target configured with `insecureAcceptAnyHostKey`: the host key is not verified. */
+  readonly insecureHostKey?: true
 }
 
 export interface TerminalTicket {

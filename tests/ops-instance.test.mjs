@@ -19,6 +19,7 @@ test('the local mirror names the gateway RPCs of ADR 0054 §4–§5', () => {
   assert.deepEqual(Object.values(GATEWAY_RPC).sort(), [
     'gateway.instance.logs', 'gateway.instance.restart', 'gateway.instance.start', 'gateway.instance.status', 'gateway.instance.stop',
     'gateway.packages.install', 'gateway.packages.list', 'gateway.packages.plan', 'gateway.packages.uninstall', 'gateway.packages.update',
+    'gateway.plugins.declare',
   ])
   const contract = read('contracts/gateway.ts')
   assert.match(contract, /TODO\(gateway-protocol\)/u, 'the mirror is marked provisional')
@@ -174,7 +175,9 @@ test('the instance page confirms lifecycle actions, plans before mutating and su
   const page = read('pages/ops/instance.tsx')
   assert.match(page, /ConfirmDialog/u)
   assert.match(page, /GATEWAY_RPC\.PACKAGES_PLAN/u)
-  assert.ok(page.indexOf('subscribePackageProgress(event') < page.indexOf('await gatewayRequest(type, data'), 'subscribe before sending')
+  assert.match(page, /useGatewayTransaction\(\)/u, 'transactions run through the shared runner')
+  const runner = read('pages/ops/use-gateway.ts')
+  assert.ok(runner.indexOf('subscribePackageProgress(event') < runner.indexOf('await gatewayRequest(type, data'), 'subscribe before sending')
   assert.match(page, /hasConsolePermission\('ops\.restart'/u)
   assert.match(read('pages/ops/use-gateway.ts'), /onConsoleEvent\(GATEWAY_PACKAGES_PROGRESS/u)
 })

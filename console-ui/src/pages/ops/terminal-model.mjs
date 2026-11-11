@@ -34,7 +34,14 @@ export function readTerminalTargets(value) {
     label: typeof item.label === 'string' && item.label ? item.label : item.id,
     available: item.available === true,
     ...(typeof item.reason === 'string' && item.reason ? { reason: item.reason } : {}),
+    // Only an explicit `true` marks an unverified host key; anything else is the safe default.
+    ...(item.kind === 'ssh' && item.insecureHostKey === true ? { insecureHostKey: true } : {}),
   }))
+}
+
+/** SSH targets that skip host key verification need an explicit confirmation before connecting. */
+export function terminalNeedsConfirmation(target) {
+  return Boolean(target && target.kind === 'ssh' && target.insecureHostKey === true)
 }
 
 /** `ws(s)://host/api/console/terminal?ticket=…` from the Host API base (`http(s)://host`). */

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Clipboard, ClipboardPaste, Eraser, Plus, RefreshCw, RotateCcw, SquareTerminal, Unplug, X } from 'lucide-react'
+import { Clipboard, ClipboardPaste, Eraser, Plus, RefreshCw, RotateCcw, ShieldAlert, SquareTerminal, Unplug, X } from 'lucide-react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
@@ -13,12 +13,13 @@ import { Card } from '../../components/ui/card'
 import { SelectField } from '../../components/ui/select'
 import { Skeleton } from '../../components/ui/skeleton'
 import { ErrorAlert } from '../../components/error-alert'
+import { ConfirmDialog } from '../../components/confirm-dialog'
 import { useToast } from '../../components/toast'
 import { apiFetch, getApiBase } from '../../utils/auth'
 import { copyText } from '../clipboard-copy.mjs'
 import type { TerminalTarget } from '../../contracts/gateway'
 import {
-  createTerminalConnection, readTerminalTargets, terminalHttpError, terminalPaths, terminalSocketUrl,
+  createTerminalConnection, readTerminalTargets, terminalHttpError, terminalNeedsConfirmation, terminalPaths, terminalSocketUrl,
   type TerminalConnection, type TerminalEnd, type TerminalSocketLike,
 } from './terminal-model.mjs'
 
@@ -83,9 +84,17 @@ export default function OpsTerminalPage() {
   }, [i18n])
   useEffect(() => { load() }, [load])
 
+  const [confirmInsecure, setConfirmInsecure] = useState<TerminalTarget | null>(null)
+  const selectedTarget = targets.find(item => item.id === selected) ?? null
+
   const open = () => {
     const target = targets.find(item => item.id === selected && item.available)
     if (!target) return
+    // An unverified SSH host key could be a man in the middle: ask before every new session.
+    if (terminalNeedsConfirmation(target)) { setConfirmInsecure(target); return }
+    openTab(target)
+  }
+  const openTab = (target: TerminalTarget) => {
     const key = ++tabSequence
     setTabs(previous => [...previous, { key, target }])
     setActive(key)
@@ -123,7 +132,15 @@ export default function OpsTerminalPage() {
               }))} />
           </div>
           <Button size="sm" onClick={open} disabled={!targets.some(item => item.id === selected && item.available)}><Plus />{i18n.t("打开终端")}</Button>
+          {terminalNeedsConfirmation(selectedTarget) ? <InsecureHostKeyBadge /> : null}
         </div>
+      ) : null}
+      {confirmInsecure ? (
+        <ConfirmDialog open onOpenChange={value => { if (!value) setConfirmInsecure(null) }} variant="destructive"
+          title={i18n.t("连接未校验主机密钥的 SSH 目标？")}
+          description={i18n.t("{0} 配置了 insecureAcceptAnyHostKey：网关不会校验对方的主机密钥，无法发现中间人攻击，输入的命令和密码可能被截获。只在可信网络中使用，并尽快在 Host 配置中填写 hostKey。", [confirmInsecure.label])}
+          confirmLabel={i18n.t("仍然连接")}
+          onConfirm={() => { const target = confirmInsecure; setConfirmInsecure(null); openTab(target) }} />
       ) : null}
       {targets.filter(item => !item.available && item.reason).map(item => (
         <p key={item.id} className="text-xs text-muted-foreground">{i18n.t("{0} 不可用：{1}", [item.label, item.reason])}</p>
@@ -137,6 +154,7 @@ export default function OpsTerminalPage() {
                 <button type="button" role="tab" aria-selected={tab.key === active} aria-controls={`ops-terminal-panel-${tab.key}`}
                   className="px-3 py-1 text-sm" onClick={() => setActive(tab.key)}>
                   {tab.target.label} <span className="text-muted-foreground">#{index + 1}</span>
+                  {terminalNeedsConfirmation(tab.target) ? <ShieldAlert className="ml-1 inline h-3.5 w-3.5 text-destructive" aria-label={i18n.t("未校验主机密钥")} /> : null}
                 </button>
                 <button type="button" className="mr-1 rounded p-1 text-muted-foreground hover:text-foreground" aria-label={i18n.t("关闭终端 {0}", [tab.target.label])} onClick={() => close(tab.key)}>
                   <X className="h-3.5 w-3.5" />
@@ -284,6 +302,7 @@ function TerminalPane({ target, active }: { target: TerminalTarget; active: bool
             {status.phase === 'ready' ? i18n.t("已连接") : status.phase === 'connecting' ? i18n.t("连接中") : i18n.t("已断开")}
           </Badge>
           <span className="text-muted-foreground">{target.kind === 'local' ? i18n.t("本机 Shell") : i18n.t("SSH：{0}", [target.label])}</span>
+          {terminalNeedsConfirmation(target) ? <InsecureHostKeyBadge /> : null}
         </div>
         <div className="flex flex-wrap gap-1">
           <Button size="sm" variant="ghost" onClick={() => void copySelection()} title="Ctrl+Shift+C"><Clipboard />{i18n.t("复制")}</Button>
@@ -305,5 +324,15 @@ function TerminalPane({ target, active }: { target: TerminalTarget; active: bool
       ) : null}
       <div ref={host} className="h-[60vh] min-h-72 w-full overflow-hidden rounded-md bg-[#0f1115] p-1" aria-label={i18n.t("终端 {0}", [target.label])} />
     </div>
+  )
+}
+
+/** Explicit warning for SSH targets with `insecureHostKey: true` (besides the Host's label suffix). */
+function InsecureHostKeyBadge() {
+  const i18n = useI18n()
+  return (
+    <Badge size="sm" variant="destructive" title={i18n.t("网关不会校验这个 SSH 目标的主机密钥（insecureAcceptAnyHostKey）。")}>
+      <ShieldAlert className="mr-1 h-3 w-3" />{i18n.t("未校验主机密钥")}
+    </Badge>
   )
 }

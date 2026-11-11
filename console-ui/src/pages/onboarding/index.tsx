@@ -16,6 +16,7 @@ import { nextOnboardingStep, onboardingComplete, type OnboardingFlowStep } from 
 import { markOnboarding } from '../../utils/onboarding-store'
 import { CONSOLE_PATHS as P } from '../../console-routes.mjs'
 import type { OnboardingStepStatus } from '../../contracts/console-auth'
+import { AdapterInstallSection } from './adapter-install'
 import './onboarding.css'
 
 /**
@@ -31,6 +32,7 @@ export default function OnboardingPage() {
   const state = currentOnboarding(session)
   const [active, setActive] = useState<OnboardingFlowStep>(() => nextOnboardingStep(state))
   const [saving, setSaving] = useState(false)
+  const [adapterReady, setAdapterReady] = useState(false)
 
   const canInstall = hasConsolePermission('plugin.manage', access)
   const statusOf = (step: OnboardingFlowStep): OnboardingStepStatus | 'complete' =>
@@ -101,6 +103,8 @@ export default function OnboardingPage() {
       <CardContent className="space-y-4 text-sm">
         <p>{i18n.t('选择机器人要上线的平台（可以多选）：在插件市场安装适配器，再到「适配器」为每个平台添加第一个账号并测试上线。')}</p>
         <p className="text-muted-foreground">{i18n.t('暂时只想在 Console 里试聊，可以跳过这一步。')}</p>
+        {canInstall && <AdapterInstallSection onAdapterReady={() => setAdapterReady(true)} />}
+        {adapterReady && <p role="status" className="text-sm">{i18n.t('适配器已启用。可以到「查看聊天账号」确认账号上线，或继续安装其他平台。')}</p>}
         <div className="console-onboarding-links">
           <Button asChild variant="outline"><Link to={P.marketplace}>{i18n.t('打开插件市场')}</Link></Button>
           <Button asChild variant="outline"><Link to={P.adapters}>{i18n.t('打开适配器')}</Link></Button>
