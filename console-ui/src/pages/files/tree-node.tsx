@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FileTreeNode } from '@zhin.js/client'
 import { Folder, FolderOpen, ChevronRight, ChevronDown } from 'lucide-react'
 import { getFileIcon } from './file-icons'
@@ -8,19 +8,32 @@ export function TreeNode({
   selectedPath,
   onSelect,
   depth = 0,
+  expansion,
+  onToggle,
 }: {
   node: FileTreeNode
   selectedPath: string | null
   onSelect: (path: string) => void
   depth?: number
+  /** Explicit expanded state by directory path; unset paths fall back to "top level open". */
+  expansion?: ReadonlyMap<string, boolean>
+  onToggle?: (path: string, expanded: boolean) => void
 }) {
-  const [expanded, setExpanded] = useState(depth < 1)
+  const [localExpanded, setLocalExpanded] = useState(depth < 1)
+  const expanded = expansion?.get(node.path) ?? localExpanded
   const isSelected = node.path === selectedPath
   const isDir = node.type === 'directory'
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  // Deep links and search results reveal ancestors first; the selected row then
+  // mounts (or becomes selected) and scrolls itself into view.
+  useEffect(() => {
+    if (isSelected && !isDir) buttonRef.current?.scrollIntoView?.({ block: 'nearest' })
+  }, [isSelected, isDir])
 
   return (
     <div>
       <button
+        ref={buttonRef}
         className={`
           w-full min-w-0 flex items-center gap-1.5 px-2 py-1 text-sm rounded-sm text-left
           hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset
@@ -29,7 +42,8 @@ export function TreeNode({
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
         onClick={() => {
           if (isDir) {
-            setExpanded(!expanded)
+            if (onToggle) onToggle(node.path, !expanded)
+            else setLocalExpanded(!expanded)
           } else {
             onSelect(node.path)
           }
@@ -64,6 +78,8 @@ export function TreeNode({
               selectedPath={selectedPath}
               onSelect={onSelect}
               depth={depth + 1}
+              expansion={expansion}
+              onToggle={onToggle}
             />
           ))}
         </div>

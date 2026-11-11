@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import ts from 'typescript'
 import { createFileDraftSessions } from '../console-ui/src/pages/files/draft-session.mjs'
+import * as fileTreeModel from '../console-ui/src/pages/files/file-tree-model.mjs'
 import { localeModule, isLocaleImport } from './locale-fixture.mjs'
 
 const require = createRequire(import.meta.url)
@@ -46,10 +47,14 @@ function runtime() {
 }
 const elements = value => value && typeof value === 'object' ? [value, ...[value.props?.children, value.props?.actions].flat(Infinity).flatMap(elements)] : []
 const find = (r, type) => elements(r.value).find(item => item.type === type)
+const text = value => typeof value === 'string' || typeof value === 'number' ? String(value) : value && typeof value === 'object' ? [value.props?.children].flat(Infinity).map(text).join('') : ''
 
-function fixture(initialQuery = '') {
+function fixture(initialQuery = '', treeRead = { data: [], loaded: true, error: null }) {
   const r = runtime(), sessions = createFileDraftSessions(), updates = [], calls = []
   let manager = { name: 'host-A' }, scope = 'scope-A', active = true, params = new URLSearchParams(initialQuery), demo = false
+  // A stable read object, like React state between renders; retry counts Host tree reads.
+  const read = { loading: false, ...treeRead, refreshes: 0 }
+  read.refresh = async () => { read.refreshes += 1 }
   globalThis.window = { addEventListener() {}, removeEventListener() {} }
   const setSearchParams = (next, options) => { params = typeof next === 'function' ? next(params) : next; updates.push({ query: params.toString(), options }); r.invalidate() }
   const mocks = {
@@ -60,7 +65,9 @@ function fixture(initialQuery = '') {
     '../../utils/useInboxCacheScope': { useInboxCacheScope: () => scope },
     '../../utils/inbox-cache': { isInboxCacheScopeActive: () => active },
     '../../utils/demo-mode': { isDemoMode: () => demo },
-    '../../hooks/use-console-read': { useConsoleRead: () => ({ data: [], loaded: true, loading: false, error: null, refresh: async () => {} }) },
+    '../../hooks/use-console-read': { useConsoleRead: () => read },
+    './file-tree-model.mjs': fileTreeModel,
+    '../../components/ui/input': { Input: 'input' },
     '../../utils/read-error.mjs': { readErrorSummary: value => String(value) },
     './file-tree.css': {}, './file-icons': { getFileIcon: () => null }, './language': { getLanguage: () => 'text' },
     './file-editor': { FileEditor: 'file-editor' }, './tree-node': { TreeNode: 'tree-node' },
@@ -87,7 +94,7 @@ function fixture(initialQuery = '') {
   }
   installManager(manager)
   return {
-    r, page, editor, sessions, calls, updates,
+    r, page, editor, sessions, calls, updates, read,
     get manager() { return manager }, get query() { return params },
     mount() {
       // Render the keyed production session just as React does under the scope boundary.
@@ -173,4 +180,92 @@ test('Host authority retires the previous session and new reads use only the new
   f.setActive(false)
   // An inactive authority never renders the old session; it shows the shared re-login state instead of a blank page.
   assert.equal(f.page.default().type, 'connection-required')
+})
+
+const nestedTree = [
+  { type: 'directory', name: 'src', path: 'src', children: [
+    { type: 'directory', name: 'a', path: 'src/a', children: [
+      { type: 'directory', name: 'b', path: 'src/a/b', children: [
+        { type: 'file', name: 'target.ts', path: 'src/a/b/target.ts' },
+        { type: 'directory', name: 'deep', path: 'src/a/b/deep', children: [] },
+      ] },
+    ] },
+    { type: 'file', name: 'index.ts', path: 'src/index.ts' },
+  ] },
+  { type: 'file', name: 'package.json', path: 'package.json' },
+]
+
+test('a deep link expands every ancestor directory of the linked file in the tree', () => {
+  const f = fixture('path=src%2Fa%2Fb%2Ftarget.ts', { data: nestedTree, loaded: true, error: null })
+  f.mount()
+  const root = elements(f.r.value).find(item => item.type === 'tree-node' && item.props.node.path === 'src')
+  assert.equal(root.props.selectedPath, 'src/a/b/target.ts')
+  assert.ok(root.props.expansion, 'the page owns expansion so it can reveal nested files')
+  for (const ancestor of ['src', 'src/a', 'src/a/b']) assert.equal(root.props.expansion.get(ancestor), true, ancestor)
+  assert.equal(root.props.expansion.has('src/a/b/deep'), false)
+  // A manual collapse is kept until the selection changes.
+  root.props.onToggle('src/a', false); f.r.render()
+  assert.equal(elements(f.r.value).find(item => item.type === 'tree-node').props.expansion.get('src/a'), false)
+  assert.doesNotMatch(text(f.r.value), /文件树中没有/)
+})
+
+test('a deep link to a path the loaded tree does not contain explains it instead of silently showing nothing', () => {
+  const missing = fixture('path=src%2Fa%2Fgone.ts', { data: nestedTree, loaded: true, error: null })
+  missing.mount()
+  assert.match(text(missing.r.value), /文件树中没有 src\/a\/gone\.ts/)
+  assert.equal(find(missing.r, 'file-editor').props.filePath, 'src/a/gone.ts', 'the Host read still decides and reports the final error')
+  const deep = fixture('path=src%2Fa%2Fb%2Fdeep%2Fx.ts', { data: nestedTree, loaded: true, error: null })
+  deep.mount()
+  assert.match(text(deep.r.value), /超出 Host 文件树返回的目录深度/)
+  for (const ancestor of ['src', 'src/a', 'src/a/b', 'src/a/b/deep']) assert.equal(find(deep.r, 'tree-node').props.expansion.get(ancestor), true)
+})
+
+test('file-name search filters only the loaded tree, says so, and selecting a result reveals it', () => {
+  const f = fixture('', { data: nestedTree, loaded: true, error: null })
+  f.mount()
+  const input = find(f.r, 'input')
+  assert.ok(input, 'a search field is rendered once the tree has entries')
+  assert.equal(input.props['aria-label'], '搜索文件名')
+  input.props.onChange({ target: { value: 'TARGET' } }); f.r.render()
+  assert.equal(find(f.r, 'tree-node'), undefined)
+  assert.match(text(f.r.value), /仅搜索已加载的目录/)
+  const results = elements(f.r.value).filter(item => item.type === 'button' && item.props['data-search-result'])
+  assert.deepEqual(results.map(item => item.props.title), ['src/a/b/target.ts'])
+  results[0].props.onClick(); f.r.render()
+  assert.equal(find(f.r, 'file-editor').props.filePath, 'src/a/b/target.ts')
+  assert.equal(f.query.get('path'), 'src/a/b/target.ts')
+  assert.equal(find(f.r, 'input').props.value, '')
+  assert.equal(find(f.r, 'tree-node').props.expansion.get('src/a/b'), true)
+  find(f.r, 'input').props.onChange({ target: { value: 'nothing-here' } }); f.r.render()
+  assert.match(text(f.r.value), /已加载的目录中没有名称包含「nothing-here」的文件/)
+})
+
+test('a failed tree read shows the error with retry and no empty state', async () => {
+  const f = fixture('', { data: [], loaded: false, error: 'tree denied' })
+  f.mount()
+  assert.equal(find(f.r, 'empty'), undefined, 'an error is not an empty directory')
+  const alerts = elements(f.r.value).filter(item => item.type === 'aside' && item.props.onRetry)
+  assert.equal(alerts.length, 1, 'exactly one retry entry point')
+  await alerts[0].props.onRetry()
+  assert.equal(f.read.refreshes, 1)
+  // A refresh failure with a cached tree keeps the tree and still offers retry.
+  const stale = fixture('', { data: nestedTree, loaded: true, error: 'refresh failed' })
+  stale.mount()
+  assert.ok(find(stale.r, 'tree-node'))
+  assert.equal(elements(stale.r.value).filter(item => item.type === 'aside' && item.props.onRetry).length, 1)
+})
+
+test('a failed file read shows the error with retry instead of an empty editor, and retry reloads it', async () => {
+  const f = fixture()
+  let attempts = 0
+  const props = { filePath: 'src/a.ts', readOnly: false, onClose() {}, onDraftChange() {}, saveFile: async () => {},
+    readFile: async () => { attempts += 1; if (attempts === 1) throw new Error('read denied'); return 'loaded text' } }
+  f.r.mount(() => f.editor.FileEditor(props)); await f.r.settle()
+  assert.equal(find(f.r, 'code-editor'), undefined, 'no blank editable buffer after a failed read')
+  assert.match(text(f.r.value), /read denied/)
+  const retry = elements(f.r.value).find(item => item.type === 'button' && text(item).includes('重试'))
+  assert.ok(retry)
+  await retry.props.onClick(); await f.r.settle()
+  assert.equal(attempts, 2)
+  assert.equal(find(f.r, 'code-editor').props.value, 'loaded text')
 })
