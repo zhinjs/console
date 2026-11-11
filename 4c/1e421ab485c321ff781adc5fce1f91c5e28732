@@ -1,0 +1,19 @@
+console-ui/src/pages/dashboard.tsx
+  s_7e0a99692db689::t_18d3da117bd968 20,43-51,128-159,540-554,628,633-638,643,648-651,654,776-781,783,785-803,842,844-855,873,892-961
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4c1e421ab485c321ff781adc5fce1f91c5e28732",
+  "prompts": {},
+  "sessions": {
+    "s_7e0a99692db689": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "78592411-7daa-449b-8d51-49f23429c0c0",
+        "model": "unknown"
+      },
+      "human_author": "凉菜 <admin@liucl.cn>"
+    }
+  }
+}
