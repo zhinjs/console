@@ -71,6 +71,7 @@ function fixture(initialQuery = '') {
     '../../components/ui/button': { Button: 'button' }, '../../components/ui/badge': { Badge: 'span' },
     '../../components/ui/alert': { Alert: 'aside', AlertDescription: 'p' }, '../../components/error-alert': { ErrorAlert: 'aside' },
     '../../components/ui/scroll-area': { ScrollArea: 'div' },
+    '../../components/connection-required': { ConnectionRequiredState: 'connection-required' },
     'lucide-react': new Proxy({}, { get: () => 'i' }),
   }
   function compile(source) {
@@ -170,5 +171,6 @@ test('Host authority retires the previous session and new reads use only the new
   assert.equal(f.calls.at(-1).host, 'host-B')
   assert.equal(f.sessions.get(oldManager).drafts.get('src/a.ts').content, 'private A draft')
   f.setActive(false)
-  assert.equal(f.page.default(), null)
+  // An inactive authority never renders the old session; it shows the shared re-login state instead of a blank page.
+  assert.equal(f.page.default().type, 'connection-required')
 })

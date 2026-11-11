@@ -3173,4 +3173,9 @@ export const englishMessages = Object.freeze({
   "打开会话查看对话追踪": "Open a conversation to see its trace",
   "没有出错的会话": "No failed conversations",
   "按会话最后一轮的结果统计": "Based on each conversation's last turn",
+  "未连接到 Host": "Not connected to the Host",
+  "连接已断开或登录状态已失效，请重新登录后继续。": "The connection was lost or your sign-in has expired. Sign in again to continue.",
+  "重新登录": "Sign in again",
+  "个人会话没有聊天记录": "No chat history for personal sessions",
+  "个人会话不保存聊天记录，每一轮的处理过程请在「轨迹」页签查看。": "Personal sessions don't keep chat history. Open the Trace tab to see how each turn was handled.",
 })

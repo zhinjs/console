@@ -7,6 +7,7 @@ import { ApplyFeedback } from '../components/ApplyFeedback'
 import { requestConsole } from '../utils/console-rpc'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
+import { ConnectionRequiredState } from '../components/connection-required'
 import { ENDPOINT_RPC } from '../contracts/zhin-console'
 import { normalizeGroupRecord } from './endpoint-detail/conversation-labels'
 import { pluginRpc } from '../utils/plugin-rpc'
@@ -75,8 +76,9 @@ function formatTime(timestamp: number, locale: 'zh-CN' | 'en' = 'zh-CN'): string
 }
 
 export default function AmbientEngagementPage() {
+  const i18n = useI18n()
   const scope = useInboxCacheScope()
-  if (!scope || !isInboxCacheScopeActive(scope)) return null
+  if (!scope || !isInboxCacheScopeActive(scope)) return <ConnectionRequiredState title={i18n.t("群聊插话")} />
   return <AmbientEngagementSession key={scope} />
 }
 

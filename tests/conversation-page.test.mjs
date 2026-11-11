@@ -203,3 +203,34 @@ test('already-authorized recent personal sessions stay visible without querying 
   assert.equal(find(f, 'session-picker').props.recent, null)
   f.close()
 })
+
+
+test('personal sessions open on the trace tab and explain, without an error, that chat history is not kept', () => {
+  const key = `personal-session:v1:${'e'.repeat(64)}`
+  const f = fixture(key); f.render()
+  assert.equal(find(f, 'tabs').props.value, 'trace')
+  assert.ok(find(f, 'conversation-trace'))
+  const panel = elements(f.tree).find(node => node.type === 'tabs-content' && node.props.value === 'conversation')
+  assert.equal(elements(panel).find(node => node.type === 'error-alert'), undefined)
+  assert.ok(!text(f.tree).includes('聊天记录暂不可用'))
+  const notice = elements(panel).find(node => node.type === 'empty-state')
+  assert.ok(notice, 'the conversation tab carries a neutral notice')
+  assert.match(notice.props.description, /个人会话不保存聊天记录/)
+  assert.match(notice.props.description, /轨迹/)
+  const toTrace = elements(panel).find(node => node.type === 'button' && text(node) === '查看轨迹')
+  find(f, 'tabs').props.onValueChange('conversation'); f.render()
+  assert.equal(find(f, 'tabs').props.value, 'conversation')
+  toTrace.props.onClick(); f.render()
+  assert.equal(find(f, 'tabs').props.value, 'trace')
+  f.close()
+})
+
+test('a tab chosen for a group conversation does not carry the conversation tab into a personal session', () => {
+  const f = fixture(); assert.equal(find(f, 'tabs').props.value, 'conversation')
+  find(f, 'tabs').props.onValueChange('conversation'); f.render()
+  f.navigate(`personal-session:v1:${'f'.repeat(64)}`); f.render()
+  assert.equal(find(f, 'tabs').props.value, 'trace')
+  f.navigate('icqq:bot:group:room'); f.render()
+  assert.equal(find(f, 'tabs').props.value, 'conversation')
+  f.close()
+})

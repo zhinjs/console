@@ -20,6 +20,7 @@ import { useConsoleRead } from '../../hooks/use-console-read'
 import { readErrorSummary } from '../../utils/read-error.mjs'
 import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../../utils/inbox-cache'
+import { ConnectionRequiredState } from '../../components/connection-required'
 
 // Navigation keeps drafts in memory only, scoped to the current Host client.
 // A new connection/reset receives a new manager and cannot reuse old files.
@@ -36,8 +37,9 @@ function ensureUnloadGuard() {
 }
 
 export default function FileManagePage() {
+  const i18n = useI18n()
   const scope = useInboxCacheScope()
-  if (!isInboxCacheScopeActive(scope)) return null
+  if (!isInboxCacheScopeActive(scope)) return <ConnectionRequiredState title={i18n.t("项目文件")} />
   return <FileManageSession key={scope} />
 }
 

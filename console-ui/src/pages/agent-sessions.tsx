@@ -65,12 +65,15 @@ export default function AgentSessionsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const sessionKeyFromUrl = parseSessionKeyFromQuery(searchParams.get('sessionKey'))
   const [sessionKey, setSessionKey] = useState(sessionKeyFromUrl)
-  const [view, setView] = useState('conversation')
   const [directoryOpen, setDirectoryOpen] = useState(!sessionKeyFromUrl)
   const selectedKey = isLikelySessionKey(sessionKeyFromUrl) ? sessionKeyFromUrl : ''
   const [resolvedConversation, setResolvedConversation] = useState<{ identity: string; conversation?: DiagnosticConversation; error?: string; retry?: () => void } | null>(null)
   const resolved = resolvedConversation?.identity === JSON.stringify([scope, selectedKey]) ? resolvedConversation : null
   const personal = isPersonalSessionKey(selectedKey)
+  // 个人会话不保存聊天记录，默认打开「轨迹」；切换页签的选择只在同类会话之间沿用。
+  const [viewChoice, setViewChoice] = useState<{ personal: boolean; view: string } | null>(null)
+  const view = viewChoice?.personal === personal ? viewChoice.view : personal ? 'trace' : 'conversation'
+  const setView = (next: string) => setViewChoice({ personal, view: next })
   const traces = useConversationTraces(readOnly ? '' : selectedKey, scope, resolved?.conversation)
   const [traceSelection, setTraceSelection] = useState<{ identity: string; turnId: string } | null>(null)
   const selected = parseImSessionKey(selectedKey)
@@ -379,7 +382,18 @@ export default function AgentSessionsPage() {
                   <TabsTrigger value="branches">{i18n.t('会话分支')}</TabsTrigger>
                 </TabsList>
                 <TabsContent value="conversation" forceMount className="data-[state=inactive]:hidden">
-                  {personal ? <ErrorAlert kind="503" error={i18n.t('聊天记录暂不可用，请稍后重试。')} /> : <ConversationHistory
+                  {personal ? (
+                    <div className="flex flex-col items-center pb-6">
+                      <EmptyState
+                        compact
+                        icon={MessagesSquare}
+                        title={i18n.t('个人会话没有聊天记录')}
+                        description={i18n.t('个人会话不保存聊天记录，每一轮的处理过程请在「轨迹」页签查看。')}
+                        className="pb-3"
+                      />
+                      <Button variant="outline" size="sm" onClick={() => setView('trace')}>{i18n.t('查看轨迹')}</Button>
+                    </div>
+                  ) : <ConversationHistory
                     key={`${scope}:${selectedKey}`}
                     sessionKey={selectedKey}
                     connectionScope={scope}
