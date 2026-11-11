@@ -3211,4 +3211,7 @@ export const englishMessages = Object.freeze({
   "管理模型服务、账号密钥，以及各场景用哪个模型": "Manage model services, account keys, and which model each scenario uses",
   "查看命令权限规则为什么匹配，可做假设检查": "See why command permission rules match, and try what-if checks",
   "预览插件的预期消息，并导出回归测试": "Preview a plugin's expected messages and export regression tests",
+  "已是最新，没有可更新的插件": "Already up to date. No plugin updates available.",
+  "发现 {0} 个可更新插件": "Found {0} plugin update(s)",
+  "检查失败：{0}": "Update check failed: {0}",
 })
