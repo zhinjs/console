@@ -1,6 +1,7 @@
 import { translate } from '../../i18n/locale.mjs'
 import { useI18n } from '../../i18n'
 import type * as React from 'react'
+import type { SetStateAction } from 'react'
 import type { ReactNode } from 'react'
 import { Fragment, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -51,6 +52,16 @@ import { dayKey, dayLabel } from './date-utils'
 import { ENDPOINT_RPC } from '../../contracts/zhin-console'
 import { isDemoMode } from '../../utils/demo-mode'
 import type { GroupAction } from './useGroupActions'
+import {
+  EMPTY_COMPOSER_EXTRAS,
+  clearSentComposerExtras,
+  conversationSelectionKey,
+  isEmptyComposerExtras,
+  readComposerDraft,
+  shouldSubmitOnEnter,
+  writeComposerDraft,
+  type ComposerExtras,
+} from './composer-draft-model.mjs'
 
 type ComposerMode = 'plain' | 'markdown'
 
@@ -61,6 +72,8 @@ type ComposerAttachment = {
   name: string
   source: 'local' | 'url'
 }
+
+type Extras = ComposerExtras<ComposerAttachment, MessageDraftReference>
 
 function createAttachmentId(type: ComposerAttachment['type']) {
   return `${type}-${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -145,6 +158,8 @@ function EndpointWorkspace() {
     toggleSystemSection,
     members,
     membersLoading,
+    membersGroupKey,
+    membersFailed,
     channelMessages,
     inboxMessagesLoading,
     inboxMessagesError,
@@ -190,12 +205,25 @@ function EndpointWorkspace() {
     showRightPanel,
   } = ctx
 
-  const [mediaPanel, setMediaPanel] = useState<null | 'image' | 'video' | 'audio'>(null)
-  const [mediaUrl, setMediaUrl] = useState('')
   const [composerMode, setComposerMode] = useState<ComposerMode>('plain')
-  const [composerAttachments, setComposerAttachments] = useState<ComposerAttachment[]>([])
-  const [quoteDraft, setQuoteDraft] = useState<MessageDraftReference | null>(null)
-  const [forwardDraft, setForwardDraft] = useState<MessageDraftReference | null>(null)
+  // Attachments, quote/forward and the half-typed media URL are kept per conversation, like the
+  // message text: another chat never shows (or sends) this chat's draft.
+  const draftKey = conversationSelectionKey(selection)
+  const [extrasDrafts, setExtrasDrafts] = useState<Record<string, Extras>>({})
+  const composerExtras = readComposerDraft<Extras>(extrasDrafts, draftKey, EMPTY_COMPOSER_EXTRAS)
+  const updateComposerExtras = <K extends keyof Extras>(field: K, next: SetStateAction<Extras[K]>) => {
+    setExtrasDrafts((prev) => {
+      const current = readComposerDraft<Extras>(prev, draftKey, EMPTY_COMPOSER_EXTRAS)
+      const value = typeof next === 'function' ? (next as (previous: Extras[K]) => Extras[K])(current[field]) : next
+      return writeComposerDraft<Extras>(prev, draftKey, { ...current, [field]: value }, isEmptyComposerExtras)
+    })
+  }
+  const { mediaPanel, mediaUrl, attachments: composerAttachments, quote: quoteDraft, forward: forwardDraft } = composerExtras
+  const setMediaPanel = (next: SetStateAction<Extras['mediaPanel']>) => updateComposerExtras('mediaPanel', next)
+  const setMediaUrl = (next: SetStateAction<string>) => updateComposerExtras('mediaUrl', next)
+  const setComposerAttachments = (next: SetStateAction<readonly ComposerAttachment[]>) => updateComposerExtras('attachments', next)
+  const setQuoteDraft = (next: SetStateAction<MessageDraftReference | null>) => updateComposerExtras('quote', next)
+  const setForwardDraft = (next: SetStateAction<MessageDraftReference | null>) => updateComposerExtras('forward', next)
   const [memberSearch, setMemberSearch] = useState('')
   const [memberRoleFilter, setMemberRoleFilter] = useState<'all' | 'owner' | 'admin' | 'member'>('all')
   const { confirm, ConfirmDialog: ConfirmDialogHost } = useConfirm()
@@ -220,6 +248,8 @@ function EndpointWorkspace() {
     memberName: string,
     extra?: { enable?: boolean },
   ) => {
+    // The member was picked from this group's list; the action is refused if the group changes meanwhile.
+    const targetGroupKey = membersGroupKey
     muteMinutesRef.current = String(DEFAULT_MUTE_MINUTES)
     const revoke = type === ENDPOINT_RPC.GROUP_ADMIN && extra?.enable === false
     const prompts: Record<typeof type, { title: string; description: string; confirmLabel: string; destructive?: boolean; children?: ReactNode }> = {
@@ -252,10 +282,10 @@ function EndpointWorkspace() {
     if (!ok) return
     if (type === ENDPOINT_RPC.GROUP_MUTE) {
       const minutes = Math.min(MAX_MUTE_MINUTES, Math.max(1, Math.round(Number(muteMinutesRef.current)) || DEFAULT_MUTE_MINUTES))
-      await groupAction(type, userId, { ...extra, duration: minutes * 60 })
+      await groupAction(type, userId, { ...extra, duration: minutes * 60 }, targetGroupKey)
       return
     }
-    await groupAction(type, userId, extra)
+    await groupAction(type, userId, extra, targetGroupKey)
   }
 
   const appendComposerToken = (token: string) => {
@@ -394,15 +424,15 @@ function EndpointWorkspace() {
           ? i18n.t("转发 {0}: {1}", [forwardDraft.senderName, forwardDraft.summary])
           : undefined
 
+    const sentExtras = composerExtras
     void handleSend({
       overrideSegments,
       displayPrefixSegments,
       textPrefix,
-      onSent: () => {
-        clearMessageDrafts()
-        setComposerAttachments([])
-        setMediaPanel(null)
-        setMediaUrl('')
+      // Clear what was sent from the conversation it was sent to, even if the user switched away.
+      onSent: ({ draftKey: sentKey }) => {
+        setExtrasDrafts((prev) => writeComposerDraft<Extras>(prev, sentKey,
+          clearSentComposerExtras(readComposerDraft<Extras>(prev, sentKey, EMPTY_COMPOSER_EXTRAS), sentExtras), isEmptyComposerExtras))
       },
     })
   }
@@ -689,7 +719,7 @@ function EndpointWorkspace() {
                       }
                       className="im-media-input flex-1 min-w-0 sm:min-w-[12rem] h-9 text-sm"
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
+                        if (shouldSubmitOnEnter(e, { allowShift: true })) {
                           e.preventDefault()
                           commitMediaUrl()
                         }
@@ -739,7 +769,8 @@ function EndpointWorkspace() {
                     value={msgContent}
                     onChange={(e) => setMsgContent(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
+                      // Enter that confirms an IME candidate (pinyin etc.) must not send the message.
+                      if (shouldSubmitOnEnter(e)) {
                         e.preventDefault()
                         handleSendWithDrafts()
                       }
@@ -1050,7 +1081,7 @@ function EndpointWorkspace() {
               {filteredMembers.length === 0 && (
                 <div className="im-member-empty">
                   <User className="h-8 w-8 opacity-30" />
-                  <span>{membersLoading ? i18n.t("正在加载成员") : i18n.t("暂无匹配成员")}</span>
+                  <span>{membersLoading ? i18n.t("正在加载成员") : membersFailed ? i18n.t("成员加载失败，请点击「加载成员」重试") : i18n.t("暂无匹配成员")}</span>
                 </div>
               )}
               {filteredMembers.map((item) => {

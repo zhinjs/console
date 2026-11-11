@@ -1,5 +1,5 @@
 import { useI18n } from '../../i18n'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from 'react'
 import type {
   ChatRow,
   InboxMessageRow,
@@ -22,6 +22,7 @@ import {
 import { correlateChatRows, matchesMessageConversation, readMessagePush } from './rendering-diagnostics.mjs'
 import { readMessageHistory, mergeHistoryRows } from './inbox-history-model.mjs'
 import { toRpcChannelParent } from './conversation-labels'
+import { conversationSelectionKey, readComposerDraft, writeComposerDraft } from './composer-draft-model.mjs'
 import { useToast } from '../../components/toast'
 import { ENDPOINT_RPC, INBOX_RPC, SIDE_EVENT_PUSH } from '../../contracts/zhin-console'
 import { requestConsole } from '../../utils/console-rpc'
@@ -42,7 +43,8 @@ interface SendMessageOptions {
   overrideSegments?: MessageContent
   displayPrefixSegments?: MessageContent
   textPrefix?: string
-  onSent?: () => void
+  /** Called after a successful send with the conversation it went to (the user may have switched since). */
+  onSent?: (sent: { draftKey: string | null }) => void
 }
 
 export function useMessageHistory(params: {
@@ -59,7 +61,15 @@ export function useMessageHistory(params: {
 
   const [receivedMessages, setReceivedMessages] = useState<ReceivedMessage[]>([])
   const [localSent, setLocalSent] = useState<LocalSentMessage[]>([])
-  const [msgContent, setMsgContent] = useState('')
+  // Unsent text is kept per conversation: switching chats shows that chat's own draft, never the
+  // previous one, and coming back restores it.
+  const draftKey = conversationSelectionKey(selection)
+  const [msgDrafts, setMsgDrafts] = useState<Record<string, string>>({})
+  const msgContent = readComposerDraft(msgDrafts, draftKey, '')
+  const setMsgContent = useCallback((next: SetStateAction<string>) => {
+    setMsgDrafts((prev) => writeComposerDraft(prev, draftKey,
+      typeof next === 'function' ? next(readComposerDraft(prev, draftKey, '')) : next))
+  }, [draftKey])
   const [sending, setSending] = useState(false)
 
   const [inboxMessages, setInboxMessages] = useState<InboxMessageRow[]>([])
@@ -70,12 +80,10 @@ export function useMessageHistory(params: {
   // 递增序号：切换会话后在途的旧请求 resolve 时序号已过期，直接丢弃，避免覆盖/混入新会话数据
   const inboxLoadSeqRef = useRef(0)
   const endpointEpoch = useRef(0)
-  const viewKey = JSON.stringify([adapter, endpointId, selection])
-  const viewKeyRef = useRef(viewKey)
-  viewKeyRef.current = viewKey
   useEffect(() => {
     endpointEpoch.current++; inboxLoadSeqRef.current++
     setReceivedMessages([]); setLocalSent([]); setSending(false)
+    setMsgDrafts((prev) => (Object.keys(prev).length ? {} : prev))
     return () => { endpointEpoch.current++; inboxLoadSeqRef.current++ }
   }, [adapter, endpointId, cacheScope])
 
@@ -266,7 +274,8 @@ export function useMessageHistory(params: {
     ]
     if (!targetId || !hasRenderableComposerSegments(outgoingSegments)) return
     const epoch = endpointEpoch.current
-    const requestedView = viewKeyRef.current
+    const sentDraftKey = draftKey
+    const sentText = msgContent
     setSending(true)
     try {
       const rpcParent = selection?.type === 'channel' ? toRpcChannelParent(selection.parent) : undefined
@@ -295,13 +304,15 @@ export function useMessageHistory(params: {
           timestamp: Date.now(),
         },
       ].slice(-500))
-      if (requestedView === viewKeyRef.current) { setMsgContent(current => current === msgContent ? '' : current); options?.onSent?.() }
+      // Clear the draft of the conversation this was sent to, even if the user has moved on.
+      setMsgDrafts((prev) => readComposerDraft(prev, sentDraftKey, '') === sentText ? writeComposerDraft(prev, sentDraftKey, '') : prev)
+      options?.onSent?.({ draftKey: sentDraftKey })
     } catch (e) {
       if (epoch === endpointEpoch.current) toastError((e as Error).message, i18n.t("发送到 {0} 失败", [targetId]))
     } finally {
       if (epoch === endpointEpoch.current) setSending(false)
     }
-  }, [selection, msgContent, adapter, endpointId, endpoint, toastError, i18n])
+  }, [selection, draftKey, msgContent, adapter, endpointId, endpoint, toastError, i18n])
 
   return {
     receivedMessages,
