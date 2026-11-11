@@ -1,6 +1,7 @@
 import { useI18n } from '../../i18n'
 import { readRequestHistory, readNoticeHistory, mergeHistoryRows } from './inbox-history-model.mjs'
 import { readPendingRequests, pendingRequestKey } from './pending-request-model.mjs'
+import { readEndpointTestResult, endpointTestError, type EndpointTestResult } from '../endpoint-test-result-model.mjs'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import {
@@ -57,7 +58,7 @@ export function useEndpointConsole() {
   const [info, setInfo] = useState<EndpointInfo | null>(null)
   const [loadErr, setLoadErr] = useState<string | null>(null)
   const [testLoading, setTestLoading] = useState(false)
-  const [testMessage, setTestMessage] = useState<string | null>(null)
+  const [testMessage, setTestMessage] = useState<EndpointTestResult | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
   // --- Endpoint info ---
@@ -85,20 +86,30 @@ export function useEndpointConsole() {
     return () => { clearInterval(t); infoSequence.current++ }
   }, [loadInfo])
 
+  // A result belongs to one account; never show it (or a late reply) for another one.
+  const testSequence = useRef(0)
+  useEffect(() => {
+    testSequence.current++
+    setTestMessage(null)
+    setTestLoading(false)
+  }, [adapter, endpointId])
+
   const testEndpoint = useCallback(async () => {
     if (!adapter || !endpointId) return
+    const sequence = ++testSequence.current
     setTestLoading(true)
+    setTestMessage(null)
     try {
-      const result = await requestConsole<{ reachable: boolean; message: string; latencyMs: number }>({
+      const result = await requestConsole<unknown>({
         type: 'endpoint.test',
         adapter,
         endpointKey: endpointId,
       })
-      setTestMessage(`${result.message} · ${result.latencyMs}ms`)
+      if (sequence === testSequence.current) setTestMessage(readEndpointTestResult(result))
     } catch (error) {
-      setTestMessage(i18n.t("测试失败：{0}", [(error as Error).message]))
+      if (sequence === testSequence.current) setTestMessage(endpointTestError(i18n.t("测试失败：{0}", [(error as Error).message])))
     } finally {
-      setTestLoading(false)
+      if (sequence === testSequence.current) setTestLoading(false)
     }
   }, [adapter, endpointId, cacheScope, i18n])
 
