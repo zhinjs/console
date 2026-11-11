@@ -1,4 +1,5 @@
 import test from 'node:test'
+import { localeModule } from './locale-fixture.mjs'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
@@ -27,7 +28,7 @@ async function fixture({ actualPicker = false } = {}) {
     const code = ts.transpileModule(await readFile(new URL(path, import.meta.url), 'utf8'), {
       compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
     }).outputText
-    const allDependencies = { react: runtime.api,
+    const allDependencies = { react: runtime.api, '../i18n': localeModule, '../../i18n': localeModule,
       './inference/SupportInfo': { SupportLabel: 'support-label', SupportNotice: 'support-notice', supportLabel: label => label },
       'react/jsx-runtime': { jsx: (type, props, key) => ({ type, props, key }), jsxs: (type, props, key) => ({ type, props, key }) },
       ...dependencies,

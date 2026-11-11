@@ -597,14 +597,14 @@ export default function HomePage() {
         timestamp: nowTime,
         level: offlineEndpoints > 0 ? 'warn' : 'info',
         source: 'adapter-host',
-        message: `${stats.endpoints.online}/${stats.endpoints.total} 个平台账号在线，已加载 ${stats.plugins.active} 个子插件与 ${stats.commands} 条命令`,
+        message: i18n.t("{0}/{1} 个平台账号在线，已加载 {2} 个子插件与 {3} 条命令", [stats.endpoints.online, stats.endpoints.total, stats.plugins.active, stats.commands]),
       },
       {
         id: 'synth-2',
         timestamp: nowTime,
         level: 'info',
         source: 'runtime',
-        message: `Node ${systemStatus.nodeVersion} (${systemStatus.platform}) 持续运行 ${formatUptime(systemStatus.uptime, i18n.locale)} · RSS ${formatMemory(systemStatus.memory.rss)}`,
+        message: i18n.t("Node {0} ({1}) 持续运行 {2} · RSS {3}", [systemStatus.nodeVersion, systemStatus.platform, formatUptime(systemStatus.uptime, i18n.locale), formatMemory(systemStatus.memory.rss)]),
       },
     ]
   }, [recentEvents, stats, systemStatus, lastUpdatedAt, offlineEndpoints, i18n.locale])

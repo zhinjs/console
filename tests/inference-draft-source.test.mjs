@@ -1,4 +1,5 @@
 import test from 'node:test'
+import { localeModule } from './locale-fixture.mjs'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
@@ -27,6 +28,7 @@ async function fixture(page, options = {}) {
     react: runtime.api,
     'react/jsx-runtime': { jsx: (type, props, key) => ({ type, props, key }), jsxs: (type, props, key) => ({ type, props, key }) },
     'lucide-react': { Plus: 'icon', Pencil: 'icon', Trash2: 'icon', RefreshCw: 'icon', KeyRound: 'icon', LogIn: 'icon', Unplug: 'icon', Download: 'icon', Upload: 'icon' },
+    '../../i18n': localeModule,
     '../../components/ui/button': { Button: 'button' }, '../../components/ui/input': { Input: 'input' },
     '../../components/ui/select': { SelectField: 'select' }, '../../components/ui/card': { Card: 'card' },
     '../../components/ui/dialog': { Dialog, DialogContent: 'content', DialogHeader: 'header', DialogTitle: 'title', DialogDescription: 'description' },

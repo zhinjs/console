@@ -56,7 +56,8 @@ async function fixture() {
   let locale = 'zh-CN'
   const dependencies = {
     react: runtime.api, 'react/jsx-runtime': jsxRuntime,
-    '../../i18n': { useI18n: () => ({ locale, t: message => translate(locale, message) }) },
+    '../../i18n': { useI18n: () => ({ locale, t: (message, values, context) => translate(locale, message, values, context) }) },
+    '../i18n': { useI18n: () => ({ locale, t: (message, values, context) => translate(locale, message, values, context) }) },
     '../../components/ui/badge': { Badge: props => createElement('span', { 'data-experimental-badge': true }, props.children) },
     '../../components/ui/button': { Button: 'button' }, '../components/ui/button': { Button: 'button' },
     '../../components/ui/input': { Input: 'input' },

@@ -3422,4 +3422,6 @@ export const englishMessages = Object.freeze({
   "plural\u0004会话": "Sessions",
   "plural\u0004个人会话": "Personal sessions",
   "state\u0004启用": "On",
+  "{0}/{1} 个平台账号在线，已加载 {2} 个子插件与 {3} 条命令": "{0}/{1} platform accounts online; {2} sub-plugins and {3} commands loaded",
+  "Node {0} ({1}) 持续运行 {2} · RSS {3}": "Node {0} ({1}) up for {2} · RSS {3}",
 })
