@@ -3205,4 +3205,7 @@ export const englishMessages = Object.freeze({
   "设置菜单": "Settings menu",
   "离开设置页后，尚未保存的配置修改将会丢失。": "If you leave Settings, configuration changes that have not been saved will be lost.",
   "放弃修改并离开": "Discard changes and leave",
+  "已是最新，没有可更新的插件": "Already up to date. No plugin updates available.",
+  "发现 {0} 个可更新插件": "Found {0} plugin update(s)",
+  "检查失败：{0}": "Update check failed: {0}",
 })
