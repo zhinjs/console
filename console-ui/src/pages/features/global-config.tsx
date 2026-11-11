@@ -17,6 +17,8 @@ import { isInboxCacheScopeActive } from '../../utils/inbox-cache'
 import { useUnsavedChangesGuard } from '../../utils/useUnsavedChangesGuard'
 import { buildSettingsCatalog, resolveSettingsSelection, settingsLocationFromParams, unresolvedSettingsLocation } from '../settings-model.mjs'
 import { WelcomeFlowContext } from '../WelcomeFlowContext'
+import { FEATURE_OVERRIDES_KEY } from '../../components/PluginConfigForm/feature-overrides-guard.mjs'
+import { GlobalFeatureSummary } from './global-feature-summary'
 
 /** `/features/global/:plugin`: one plugin's global (Schema form) configuration. */
 export default function GlobalFeatureConfigPage() {
@@ -55,6 +57,7 @@ function GlobalFeatureConfig({ plugin, connectionScope }: { plugin: string; conn
         description={i18n.t("全局配置：对所有适配器和账号生效，除非下级另有覆盖。")}
         actions={<Button asChild variant="outline" size="sm"><Link to={`/plugins/${encodeURIComponent(plugin)}`}><Package />{i18n.t("插件详情")}</Link></Button>}
       />
+      <GlobalFeatureSummary plugin={plugin} />
       {searchParams.get('useCase') === 'group-welcome' && entry ? <WelcomeFlowContext instanceKey={plugin} kind="config" /> : null}
       {error ? (
         <Alert variant="destructive">
@@ -82,7 +85,7 @@ function GlobalFeatureConfig({ plugin, connectionScope }: { plugin: string; conn
       {entry && entry.writable ? (
         <PluginConfigForm pluginName={entry.configKey} sourceRevision={snapshot?.revision}
           displayTitle={title}
-          fieldNames={entry.fieldNames} excludedFieldNames={entry.excludedFieldNames ?? []}
+          fieldNames={entry.fieldNames} excludedFieldNames={[...(entry.excludedFieldNames ?? []), FEATURE_OVERRIDES_KEY]}
           onDirtyChange={setDirty}
           onSuccess={reload} />
       ) : null}
