@@ -7,10 +7,13 @@ import { databaseSaveError } from './save-error.mjs'
 import { relatedRowIssues } from './related-row-validation.mjs'
 import { parseRelatedRow } from './related-row-draft.mjs'
 import { useMutation } from './use-mutation'
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { filterableColumns, filterOperators, relatedFilterWhere, sortCurrentPageRows, type FilterOperator } from './record-query.mjs'
+import { useState, useEffect, useCallback, useMemo, useRef, type ChangeEvent, type FormEvent } from 'react'
 import type { TableInfo, SelectResult } from '@zhin.js/client'
-import { Plus, Trash2, Pencil, RefreshCw, Loader2, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Save, ArrowUp, ArrowDown } from 'lucide-react'
+import { Plus, Trash2, Pencil, RefreshCw, Loader2, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Save, ArrowUp, ArrowDown, Search, X } from 'lucide-react'
 import { Button } from '../../components/ui/button'
+import { Input } from '../../components/ui/input'
+import { SelectField } from '../../components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { Alert, AlertDescription } from '../../components/ui/alert'
 import {
@@ -56,30 +59,40 @@ export function RelatedTableView({
   const [deleteTarget, setDeleteTarget] = useState<any>(null)
   const [sortCol, setSortCol] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [filterDraft, setFilterDraft] = useState<{ column: string; operator: FilterOperator | ''; value: string }>({ column: '', operator: '', value: '' })
+  const [filterError, setFilterError] = useState<string | null>(null)
+  // The condition Host applies to the whole table (rows and total); null shows every record.
+  const [applied, setApplied] = useState<{ column: string; operator: FilterOperator; value: string; where: Record<string, unknown> } | null>(null)
+  const [loadedFilter, setLoadedFilter] = useState<typeof applied>(null)
+  const requestSeq = useRef(0)
   const { success, error: toastError } = useToast()
   const pageSize = 50
 
   const load = useCallback(async () => {
+    const seq = ++requestSeq.current
     setLoading(true)
     setReadError(null)
     setMsg(null)
     try {
-      const result = await select(tableName, page, pageSize)
+      const result = await select(tableName, page, pageSize, applied?.where)
+      if (seq !== requestSeq.current) return true
       const lastPage = Math.max(1, Math.ceil(result.total / pageSize))
       if (page > lastPage) {
         setPage(lastPage)
         return true
       }
       setData(result)
+      setLoadedFilter(applied)
       setSavedAwaitingRefresh(false)
       return true
     } catch (err) {
+      if (seq !== requestSeq.current) return true
       setReadError(err instanceof Error ? err.message : String(err))
       return false
     } finally {
-      setLoading(false)
+      if (seq === requestSeq.current) setLoading(false)
     }
-  }, [tableName, page, select])
+  }, [tableName, page, select, applied])
 
   useEffect(() => { load() }, [load])
 
@@ -88,6 +101,29 @@ export function RelatedTableView({
     if (data?.rows?.length) return Object.keys(data.rows[0] as Record<string, unknown>)
     return []
   }, [tableInfo, data])
+
+  const sampleRow = data?.rows?.[0] as Record<string, unknown> | undefined
+  const searchable = useMemo(() => filterableColumns(columns, tableInfo?.columns, sampleRow), [columns, tableInfo, sampleRow])
+  const draftColumn = searchable.find(column => column.name === filterDraft.column) ?? searchable[0]
+  const draftOperators = filterOperators(draftColumn?.kind ?? null)
+  const draftOperator = draftOperators.includes(filterDraft.operator as FilterOperator) ? filterDraft.operator as FilterOperator : draftOperators[0]
+
+  const applyFilter = (event?: FormEvent) => {
+    event?.preventDefault()
+    if (!draftColumn) return
+    const result = relatedFilterWhere({ column: draftColumn.name, operator: draftOperator, value: filterDraft.value }, tableInfo?.columns, sampleRow, i18n.locale)
+    if (result.error !== undefined) { setFilterError(result.error); return }
+    setFilterError(null)
+    setApplied({ column: draftColumn.name, operator: result.operator ?? draftOperator, value: filterDraft.value, where: result.where })
+    setPage(1)
+  }
+
+  const clearFilter = () => {
+    setFilterDraft(prev => ({ ...prev, value: '' }))
+    setFilterError(null)
+    setApplied(null)
+    setPage(1)
+  }
 
   const primaryKeys = useMemo(() => relatedPrimaryKeys(tableInfo?.columns), [tableInfo])
   const canIdentify = primaryKeys.length > 0
@@ -167,7 +203,7 @@ export function RelatedTableView({
     setFormData(fd)
   }
 
-  const hasCurrentPage = !!data && data.page === page
+  const hasCurrentPage = !!data && data.page === page && loadedFilter === applied
   const totalPages = data ? Math.ceil(data.total / pageSize) : 0
 
   const handleSortClick = (col: string) => {
@@ -179,21 +215,9 @@ export function RelatedTableView({
     }
   }
 
-  const sortedRows = useMemo(() => {
-    if (!data?.rows?.length || !sortCol) return data?.rows ?? []
-    const sorted = (data.rows as Record<string, unknown>[]).slice().sort((a, b) => {
-      const aVal = a[sortCol]
-      const bVal = b[sortCol]
-      if (aVal == null && bVal == null) return 0
-      if (aVal == null) return 1
-      if (bVal == null) return -1
-      const aStr = typeof aVal === 'object' ? JSON.stringify(aVal) : String(aVal)
-      const bStr = typeof bVal === 'object' ? JSON.stringify(bVal) : String(bVal)
-      const cmp = aStr.localeCompare(bStr, undefined, { numeric: true, sensitivity: 'base' })
-      return sortDir === 'asc' ? cmp : -cmp
-    })
-    return sorted
-  }, [data?.rows, sortCol, sortDir])
+  // Host `db:select` has no ordering parameter, so this only reorders the rows of the loaded page.
+  const sortedRows = useMemo(() => sortCurrentPageRows(data?.rows as Record<string, unknown>[] | undefined, sortCol, sortDir), [data?.rows, sortCol, sortDir])
+  const operatorLabel = (operator: FilterOperator) => operator === 'contains' ? i18n.t("包含") : i18n.t("等于")
 
   return (
     <div className="flex flex-col h-full min-h-0 gap-3">
@@ -215,9 +239,36 @@ export function RelatedTableView({
           <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新")}</Button>
         {!readOnly && <Button size="sm" disabled={loading || busy || !!readError} onClick={openAdd}><Plus className="w-3.5 h-3.5 mr-1" />{i18n.t("添加")}</Button>}
         <span className="text-xs text-muted-foreground sm:ml-auto basis-full sm:basis-auto">
-          {loading && !hasCurrentPage ? i18n.t("正在加载第 {0} 页…", [page]) : data ? i18n.t("共 {0} 条 · 第 {1}/{2} 页{3}", [data.total, page, totalPages || 1, sortCol ? i18n.t(" · 本页排序") : '']) : loading ? i18n.t("加载中…") : i18n.t("未加载")}
+          {loading && !hasCurrentPage ? i18n.t("正在加载第 {0} 页…", [page]) : data ? i18n.t("共 {0} 条 · 第 {1}/{2} 页{3}", [data.total, page, totalPages || 1, `${loadedFilter ? i18n.t(" · 已筛选") : ''}${sortCol ? i18n.t(" · 本页排序") : ''}`]) : loading ? i18n.t("加载中…") : i18n.t("未加载")}
         </span>
       </div>
+
+      {searchable.length ? <form role="search" aria-label={i18n.t("按列查找记录")} onSubmit={applyFilter} className="flex flex-wrap items-start gap-2 shrink-0">
+        <SelectField className="w-40" aria-label={i18n.t("查找的列")} disabled={loading || busy}
+          value={draftColumn?.name ?? ''}
+          options={searchable.map(column => ({ value: column.name, label: column.name }))}
+          onValueChange={(column: string) => { setFilterDraft(prev => ({ ...prev, column })); setFilterError(null) }} />
+        <SelectField className="w-24" aria-label={i18n.t("查找方式")} disabled={loading || busy || draftOperators.length < 2}
+          value={draftOperator ?? ''}
+          options={draftOperators.map(operator => ({ value: operator, label: operatorLabel(operator) }))}
+          onValueChange={(operator: string) => { setFilterDraft(prev => ({ ...prev, operator: operator as FilterOperator })); setFilterError(null) }} />
+        <div className="min-w-[10rem] flex-1 space-y-1">
+          <Input aria-label={i18n.t("查找的值")} disabled={loading || busy} value={filterDraft.value}
+            aria-invalid={filterError ? true : undefined}
+            placeholder={draftColumn?.kind === 'boolean' ? 'true / false' : draftColumn?.kind === 'text' ? i18n.t("输入文本") : i18n.t("输入数字")}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => { const value = event.target.value; setFilterDraft(prev => ({ ...prev, value })); setFilterError(null) }} />
+          {filterError ? <p role="alert" className="text-xs text-destructive">{filterError}</p> : null}
+        </div>
+        <Button type="submit" size="sm" variant="outline" disabled={loading || busy}><Search className="w-3.5 h-3.5 mr-1" />{i18n.t("查找")}</Button>
+      </form> : null}
+      {applied ? <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground shrink-0" data-filter-summary>
+        <span>{i18n.t("全表查找：{0} {1} “{2}”", [applied.column, operatorLabel(applied.operator), applied.value])}{applied.operator === 'contains' ? i18n.t("（% 与 _ 按通配符处理）") : ''}</span>
+        <Button type="button" size="sm" variant="ghost" className="h-auto px-1 py-0 text-xs" data-action="clear-filter" disabled={busy} onClick={clearFilter}><X className="w-3 h-3 mr-1" />{i18n.t("清除条件")}</Button>
+      </p> : null}
+      {sortCol && totalPages > 1 ? <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground shrink-0" data-sort-scope>
+        {i18n.t("排序只作用于当前页已加载的 {0} 条记录，Host 暂不支持全表排序。", [data?.rows?.length ?? 0])}
+        <Button type="button" size="sm" variant="ghost" className="h-auto px-1 py-0 text-xs" onClick={() => setSortCol(null)}>{i18n.t("取消排序")}</Button>
+      </p> : null}
 
       {!readOnly && !canIdentify ? <p className="text-xs text-muted-foreground">{i18n.t("此表未声明主键，暂不支持编辑或删除记录。")}</p> : null}
 
@@ -258,7 +309,7 @@ export function RelatedTableView({
             ) : readError && !hasCurrentPage ? (
               <TableRow><TableCell colSpan={columns.length + (readOnly ? 0 : 1)} className="py-8 text-center text-muted-foreground">{i18n.t("数据未加载")}</TableCell></TableRow>
             ) : !data?.rows?.length ? (
-              <TableRow><TableCell colSpan={columns.length + (readOnly ? 0 : 1)} className="py-8 text-center text-muted-foreground">{i18n.t("暂无数据")}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={columns.length + (readOnly ? 0 : 1)} className="py-8 text-center text-muted-foreground">{loadedFilter ? i18n.t("没有符合条件的记录") : i18n.t("暂无数据")}</TableCell></TableRow>
             ) : sortedRows.map((row: any, i: number) => (
               <TableRow key={i}>
                 {columns.map((col: string) => (

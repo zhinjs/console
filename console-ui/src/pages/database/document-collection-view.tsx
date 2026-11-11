@@ -3,11 +3,13 @@ import { RecordValueDisclosure } from './RecordValueDisclosure'
 import { valuePreview, fullValueText } from './record-value-preview.mjs'
 import { documentTarget, parseDocument } from './mutation-model.mjs'
 import { useMutation } from './use-mutation'
-import { useState, useEffect, useCallback, type ChangeEvent } from 'react'
+import { documentFilterWhere } from './record-query.mjs'
+import { useState, useEffect, useCallback, useRef, type ChangeEvent, type FormEvent } from 'react'
 import type { SelectResult } from '@zhin.js/client'
-import { Plus, Trash2, Pencil, RefreshCw, Loader2, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Save } from 'lucide-react'
+import { Plus, Trash2, Pencil, RefreshCw, Loader2, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Save, Search, X } from 'lucide-react'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
+import { Input } from '../../components/ui/input'
 import { Alert, AlertDescription } from '../../components/ui/alert'
 import {
   Dialog,
@@ -45,21 +47,47 @@ export function DocumentCollectionView({
   const [addDoc, setAddDoc] = useState(false)
   const [jsonText, setJsonText] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<any>(null)
+  const [filterDraft, setFilterDraft] = useState({ field: '', value: '' })
+  const [filterError, setFilterError] = useState<string | null>(null)
+  // Equality condition Host applies to the whole collection (documents and total).
+  const [applied, setApplied] = useState<{ field: string; value: string; where: Record<string, unknown> } | null>(null)
+  const [loadedFilter, setLoadedFilter] = useState<typeof applied>(null)
+  const requestSeq = useRef(0)
   const { success, error: toastError } = useToast()
   const pageSize = 20
 
   const load = useCallback(async () => {
+    const seq = ++requestSeq.current
     setLoading(true)
     setMsg(null)
     try {
-      const result = await select(tableName, page, pageSize)
+      const result = await select(tableName, page, pageSize, applied?.where)
+      if (seq !== requestSeq.current) return
       setData(result)
+      setLoadedFilter(applied)
     } catch (err) {
+      if (seq !== requestSeq.current) return
       setMsg({ type: 'error', text: (err as Error).message })
     } finally {
-      setLoading(false)
+      if (seq === requestSeq.current) setLoading(false)
     }
-  }, [tableName, page, select])
+  }, [tableName, page, select, applied])
+
+  const applyFilter = (event?: FormEvent) => {
+    event?.preventDefault()
+    const result = documentFilterWhere(filterDraft, i18n.locale)
+    if (result.error !== undefined) { setFilterError(result.error); return }
+    setFilterError(null)
+    setApplied({ field: filterDraft.field.trim(), value: filterDraft.value, where: result.where })
+    setPage(1)
+  }
+
+  const clearFilter = () => {
+    setFilterDraft(prev => ({ ...prev, value: '' }))
+    setFilterError(null)
+    setApplied(null)
+    setPage(1)
+  }
 
   useEffect(() => { load() }, [load])
 
@@ -124,14 +152,31 @@ export function DocumentCollectionView({
           <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新")}</Button>
         {!readOnly && <Button size="sm" disabled={busy} onClick={() => { setAddDoc(true); setJsonText('{\n  \n}') }}>
           <Plus className="w-3.5 h-3.5 mr-1" />{i18n.t("添加文档")}</Button>}
-        <span className="text-xs text-muted-foreground sm:ml-auto basis-full sm:basis-auto">{i18n.t("共 ")}{data?.total ?? 0} {i18n.t(" 条 · 第 ")}{page}/{totalPages || 1} {i18n.t(" 页")}</span>
+        <span className="text-xs text-muted-foreground sm:ml-auto basis-full sm:basis-auto">{i18n.t("共 ")}{data?.total ?? 0} {i18n.t(" 条 · 第 ")}{page}/{totalPages || 1} {i18n.t(" 页")}{loadedFilter ? i18n.t(" · 已筛选") : ''}</span>
       </div>
+
+      <form role="search" aria-label={i18n.t("按字段查找文档")} onSubmit={applyFilter} className="flex flex-wrap items-start gap-2 shrink-0">
+        <Input className="w-40" aria-label={i18n.t("字段名")} placeholder={i18n.t("字段名")} disabled={loading || busy} value={filterDraft.field}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => { const field = event.target.value; setFilterDraft(prev => ({ ...prev, field })); setFilterError(null) }} />
+        <span className="self-center text-xs text-muted-foreground">{i18n.t("等于")}</span>
+        <div className="min-w-[10rem] flex-1 space-y-1">
+          <Input aria-label={i18n.t("查找的值")} placeholder={i18n.t("值（按 JSON 解析，如 42、true、\"42\"）")} disabled={loading || busy} value={filterDraft.value}
+            aria-invalid={filterError ? true : undefined}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => { const value = event.target.value; setFilterDraft(prev => ({ ...prev, value })); setFilterError(null) }} />
+          {filterError ? <p role="alert" className="text-xs text-destructive">{filterError}</p> : null}
+        </div>
+        <Button type="submit" size="sm" variant="outline" disabled={loading || busy}><Search className="w-3.5 h-3.5 mr-1" />{i18n.t("查找")}</Button>
+      </form>
+      {applied ? <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground shrink-0" data-filter-summary>
+        <span>{i18n.t("全表查找：{0} {1} “{2}”", [applied.field, i18n.t("等于"), applied.value])}</span>
+        <Button type="button" size="sm" variant="ghost" className="h-auto px-1 py-0 text-xs" data-action="clear-filter" disabled={busy} onClick={clearFilter}><X className="w-3 h-3 mr-1" />{i18n.t("清除条件")}</Button>
+      </p> : null}
 
       <div className="flex-1 min-h-0 min-w-0 overflow-y-auto space-y-2 overscroll-contain">
         {loading && !data ? (
           <div className="text-center py-8"><Loader2 className="w-4 h-4 animate-spin inline-block" /></div>
         ) : !data?.rows?.length ? (
-          <p className="text-center py-8 text-muted-foreground text-sm">{i18n.t("暂无文档")}</p>
+          <p className="text-center py-8 text-muted-foreground text-sm">{loadedFilter ? i18n.t("没有符合条件的文档") : i18n.t("暂无文档")}</p>
         ) : data.rows.map((doc: any, i: number) => (
           <Card key={`${tableName}:${page}:${doc._id ?? i}`} className="min-w-0 overflow-hidden">
             <CardContent className="p-3">
