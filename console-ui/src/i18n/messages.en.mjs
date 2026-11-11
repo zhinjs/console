@@ -3095,4 +3095,7 @@ export const englishMessages = Object.freeze({
   "加入": "Add",
   "群聊插话设置": "Group participation settings",
   "当前账号不能查看或修改群聊插话设置，只有管理员账号可以修改。": "This account cannot view or change group participation settings. Only administrator accounts can change them.",
+  "管理账号、模型与用途。": "Manage accounts, models and purposes.",
+  "为已有 Agent 配置名称与可用服务。": "Set names and available services for existing Agents.",
+  "设置 Workroom 协作能力。": "Configure Workroom collaboration.",
 })
