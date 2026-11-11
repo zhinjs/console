@@ -49,6 +49,7 @@ import {
   shouldResetMemberDrawer,
 } from './group-panel-model.mjs'
 import { ChatMessageRow, type MessageDraftReference } from './ChatMessageRow'
+import { textReferenceSendOptions } from './message-reference-model.mjs'
 import { ChatScrollArea } from './ChatScrollArea'
 import { MessageDiagnosticsAction, MessageDiagnosticsProvider } from './MessageDiagnostics'
 import { canShowReadEmpty } from './endpoint-request.mjs'
@@ -410,37 +411,7 @@ function EndpointWorkspace() {
 
   const handleSendWithDrafts = () => {
     const overrideSegments = buildComposerSegments()
-    const displayPrefixSegments =
-      quoteDraft != null
-        ? [
-            {
-              type: 'quote',
-              data: {
-                id: quoteDraft.id,
-                senderName: quoteDraft.senderName,
-                summary: quoteDraft.summary,
-              },
-            },
-          ]
-        : forwardDraft != null
-          ? [
-              {
-                type: 'forward',
-                data: {
-                  id: forwardDraft.id,
-                  senderName: forwardDraft.senderName,
-                  summary: forwardDraft.summary,
-                },
-              },
-            ]
-          : undefined
-
-    const textPrefix =
-      quoteDraft != null
-        ? i18n.t("引用 {0}: {1}", [quoteDraft.senderName, quoteDraft.summary])
-        : forwardDraft != null
-          ? i18n.t("转发 {0}: {1}", [forwardDraft.senderName, forwardDraft.summary])
-          : undefined
+    const { textPrefix, displayPrefixSegments } = textReferenceSendOptions({ quote: quoteDraft, forward: forwardDraft }, i18n.t)
 
     const sentExtras = composerExtras
     void handleSend({
@@ -804,13 +775,16 @@ function EndpointWorkspace() {
                     </span>
                     <span className="im-draft-reference-main">
                       <span className="im-draft-reference-title">
-                        {quoteDraft ? i18n.t("引用 {0}", [quoteDraft.senderName]) : i18n.t("转发 {0}", [forwardDraft?.senderName])}
+                        {quoteDraft ? i18n.t("引用文本 · {0}", [quoteDraft.senderName]) : i18n.t("以文本转发 · {0}", [forwardDraft?.senderName])}
                       </span>
                       <span className="im-draft-reference-summary">
                         {quoteDraft?.summary ?? forwardDraft?.summary}
                       </span>
+                      <span className="im-draft-reference-hint">
+                        {i18n.t("将作为纯文本摘要发送，不关联原消息")}
+                      </span>
                     </span>
-                    <button type="button" className="im-draft-reference-close" onClick={clearMessageDrafts} aria-label={i18n.t("取消")}>
+                    <button type="button" className="im-draft-reference-close" onClick={clearMessageDrafts} aria-label={quoteDraft ? i18n.t("取消引用文本") : i18n.t("取消以文本转发")}>
                       <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
