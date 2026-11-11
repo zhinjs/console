@@ -3226,4 +3226,6 @@ export const englishMessages = Object.freeze({
   "项目目录暂时无法读取；重试成功后在上方选择项目，或按 Project ID 查询。": "The project catalog can't be loaded right now. Retry and pick a project above, or look up a Project ID.",
   "仅显示前 {0} 个，共 {1} 个": "Showing the first {0} of {1}",
   "在能力目录查看全部": "View all in the capability catalog",
+  "CPU 占用": "CPU usage",
+  "进程 CPU 时间占单核的比例，按两次刷新之间的差值计算": "Process CPU time as a share of one core, measured between two refreshes",
 })
