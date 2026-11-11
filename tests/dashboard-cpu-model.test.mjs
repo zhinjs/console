@@ -45,5 +45,5 @@ test('dashboard resource card shows CPU from sampled deltas with a dash when mis
   assert.match(dashboard, /from '\.\/dashboard-cpu-model\.mjs'/)
   assert.match(dashboard, /i18n\.t\("CPU 占用"\)/)
   assert.match(dashboard, /cpuRate !== null \? `\$\{cpuRate\}%` : '—'/)
-  assert.match(dashboard, /cpuRate >= 80 \? 'is-warning' : ''/)
+  assert.match(dashboard, /cpuRate >= 85 \? 'is-warning' : ''/)
 })

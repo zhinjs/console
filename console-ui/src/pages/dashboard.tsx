@@ -863,7 +863,7 @@ export default function HomePage() {
             <div>
               <dt>{i18n.t("CPU 占用")}</dt>
               <dd title={i18n.t("进程 CPU 时间占单核的比例，按两次刷新之间的差值计算")}>{cpuRate !== null ? `${cpuRate}%` : '—'}</dd>
-              {cpuRate !== null ? <span className="console-meter" aria-hidden="true"><span style={{ width: `${cpuMeterWidth(cpuRate)}%` }} className={cpuRate >= 80 ? 'is-warning' : ''} /></span> : null}
+              {cpuRate !== null ? <span className="console-meter" aria-hidden="true"><span style={{ width: `${cpuMeterWidth(cpuRate)}%` }} className={cpuRate >= 85 ? 'is-warning' : ''} /></span> : null}
             </div>
             <div><dt>{i18n.t("运行环境")}</dt><dd>{systemStatus ? `Node ${systemStatus.nodeVersion} · ${systemStatus.platform}` : '—'}</dd></div>
           </dl>
