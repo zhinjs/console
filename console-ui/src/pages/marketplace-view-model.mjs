@@ -54,3 +54,60 @@ export function updateCheckFeedback(result, locale = 'zh-CN') {
   }
   return { variant: 'error', description: translate(locale, "检查失败：{0}", [result.reason]) }
 }
+
+function text(value) {
+  return typeof value === 'string' && value ? value : ''
+}
+
+/**
+ * Installed plugin packages from `GET /api/plugins` (the list behind the /plugins page).
+ * Each item carries `packageName` and `instanceKey` (the Host's managed plugin list); one package may
+ * back several instances. Returns `packageName → { instanceKeys, version }`, or null when the list
+ * could not be read — callers must then show no install status rather than "not installed".
+ * Declared instances whose package the Host reports as missing (`management.installed === false`)
+ * are not counted as installed.
+ */
+export function readInstalledPackages(body) {
+  if (!body || typeof body !== 'object' || body.success !== true || !Array.isArray(body.data)) return null
+  const index = new Map()
+  for (const item of body.data) {
+    if (!item || typeof item !== 'object') continue
+    const management = item.management && typeof item.management === 'object' ? item.management : null
+    const packageName = text(item.packageName) || text(management?.packageName)
+    const instanceKey = text(item.instanceKey) || text(management?.instanceKey) || text(item.name)
+    if (!packageName || !instanceKey || management?.installed === false) continue
+    const entry = index.get(packageName) ?? { instanceKeys: [], version: null }
+    if (!entry.instanceKeys.includes(instanceKey)) entry.instanceKeys.push(instanceKey)
+    entry.version ??= text(management?.version) || text(item.version) || null
+    index.set(packageName, entry)
+  }
+  return index
+}
+
+/**
+ * What the marketplace knows about a package on this Host.
+ * `update` comes only from a finished update check; `unknown` means the installed list is unavailable.
+ */
+export function marketplacePluginStatus(name, installed, updates) {
+  const entry = installed?.get(name) ?? null
+  const instanceKey = entry?.instanceKeys[0] ?? null
+  const instanceCount = entry?.instanceKeys.length ?? 0
+  const update = Array.isArray(updates) ? updates.find(item => item?.name === name && hasUpdate(item)) : undefined
+  if (update) return { kind: 'update', current: update.current, latest: update.latest, version: update.current, instanceKey, instanceCount }
+  if (entry) return { kind: 'installed', version: entry.version, instanceKey, instanceCount }
+  return { kind: installed ? 'not-installed' : 'unknown', version: null, instanceKey: null, instanceCount: 0 }
+}
+
+/**
+ * The local plugin detail page, which holds the update action (`plugin:plan-update` → confirm → `plugin:update`).
+ * The Host resolves `/api/plugins/:name` by instance key or package name, so the package name works when
+ * the instance is not known.
+ */
+export function pluginManageUrl(packageName, instanceKey) {
+  return `/plugins/${encodeURIComponent(instanceKey || packageName)}`
+}
+
+/** The settings page selects a plugin section from `?plugin=<instanceKey>`. */
+export function pluginConfigUrl(instanceKey) {
+  return `/config?plugin=${encodeURIComponent(instanceKey)}`
+}

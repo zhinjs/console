@@ -28,7 +28,8 @@ const json = (body, ok = true, status = 200) => ({ ok, status, json: async () =>
 const plugin = name => ({ name, displayName: name, version: '1.0.0', description: 'desc', author: 'me', isOfficial: false,
   official: false, category: 'util', keywords: [], npm: '', date: '', downloads: { weekly: 0, monthly: 0 } })
 
-function fixture({ search = async () => json({ success: true, data: [], total: 0 }), updates = async () => json({ success: true, data: [] }) } = {}) {
+function fixture({ search = async () => json({ success: true, data: [], total: 0 }), updates = async () => json({ success: true, data: [] }),
+  plugins = async () => json({ success: true, data: [] }), detail = null, requestConsole = async () => ({}) } = {}) {
   const calls = [], toasts = []
   let slots = [], cursor = 0, effects = []
   const hooks = {
@@ -56,10 +57,11 @@ function fixture({ search = async () => json({ success: true, data: [], total: 0
       calls.push(path)
       if (path.startsWith('/pub/marketplace/search')) return search(path)
       if (path === '/api/marketplace/updates') return updates(path)
-      if (path.startsWith('/pub/marketplace/detail/')) return json({ success: false, error: 'not in test' }, false, 404)
+      if (path === '/api/plugins') return plugins(path)
+      if (path.startsWith('/pub/marketplace/detail/')) return detail ? detail(path) : json({ success: false, error: 'not in test' }, false, 404)
       throw new Error(`unexpected ${path}`)
     } },
-    '../utils/console-rpc': { requestConsole: async () => ({}) },
+    '../utils/console-rpc': { requestConsole: (...args) => requestConsole(...args) },
     'react-router-dom': { Link: 'a', useSearchParams: () => [new URLSearchParams()] },
     '../utils/demo-mode': { isDemoMode: () => false },
     '../utils/useInboxCacheScope': { useInboxCacheScope: () => 'scope-a' },
@@ -163,3 +165,108 @@ test('checking for updates always reports its result: up to date, updates found,
   ({ f } = await checkWith(async () => { throw new Error('network down') }))
   assert.deepEqual(f.toasts, [{ variant: 'error', title: undefined, description: '检查失败：network down' }])
 })
+
+const links = tree => elements(tree).filter(item => item.type === 'a' && typeof item.props.to === 'string')
+const cardFor = (tree, name) => elements(tree).find(item => item.type === 'card' && item.props.role === 'button' && label(item).includes(name))
+const installedList = (...items) => async () => json({ success: true, data: items.map(([packageName, instanceKey, version]) => ({
+  name: instanceKey, status: 'active', description: '', features: [], packageName, instanceKey,
+  management: { packageName, instanceKey, installed: true, version } })) })
+
+test('cards show installed and update status from the Host plugin list and the update check', async () => {
+  let { f, tree } = await checkWithFixture({
+    search: async () => json({ success: true, data: [plugin('alpha'), plugin('beta'), plugin('gamma')], total: 3 }),
+    plugins: installedList(['alpha', 'alpha-main', '1.0.0'], ['gamma', 'gamma-main', '2.0.0']),
+    updates: async () => json({ success: true, data: [{ name: 'gamma', current: '2.0.0', latest: '2.1.0' }, { name: 'alpha', current: '1.0.0', latest: '1.0.0' }] }),
+  })
+  assert.ok(f.calls.includes('/api/plugins'))
+  const badges = card => elements(card).filter(item => item.type === 'badge').map(label)
+  assert.ok(badges(cardFor(tree, 'alpha')).includes('已安装'))
+  assert.equal(badges(cardFor(tree, 'alpha')).includes('有更新'), false)
+  assert.ok(badges(cardFor(tree, 'gamma')).includes('有更新'))
+  assert.equal(badges(cardFor(tree, 'gamma')).includes('已安装'), false)
+  assert.deepEqual(badges(cardFor(tree, 'beta')).filter(text => text === '已安装' || text === '有更新'), [])
+})
+
+test('an unreadable installed list shows no install status instead of guessing', async () => {
+  const f = fixture({
+    search: async () => json({ success: true, data: [plugin('alpha')], total: 1 }),
+    plugins: async () => json({ success: false, error: 'forbidden' }, false, 403),
+  })
+  const tree = await f.load()
+  assert.equal(label(cardFor(tree, 'alpha')).includes('已安装'), false)
+})
+
+test('the update banner links each update to the plugin detail page that performs it', async () => {
+  const many = Array.from({ length: 7 }, (_, i) => ({ name: `p${i}`, current: '1.0.0', latest: '1.1.0' }))
+  const { f, tree } = await checkWithFixture({
+    plugins: installedList(['p0', 'p0-main', '1.0.0']),
+    updates: async () => json({ success: true, data: many }),
+  })
+  const banner = elements(tree).find(item => item.type === 'alert' && label(item).includes('个插件的本地版本与注册表 latest 不同'))
+  assert.ok(banner)
+  const update = links(banner).filter(link => label(link) === '去更新')
+  assert.equal(update.length, 5)
+  assert.equal(update[0].props.to, '/plugins/p0-main', 'known instance goes to its detail page')
+  assert.equal(update[1].props.to, '/plugins/p1', 'unknown instance falls back to the package name the Host also resolves')
+  assert.ok(update[0].props['aria-label'].includes('p0'))
+  const overflow = links(banner).find(link => link.props.to === '/plugins')
+  assert.ok(overflow && label(overflow).includes('另有 2 个'))
+  const details = elements(banner).find(item => item.type === 'button' && label(item) === '市场详情')
+  await details.props.onClick(); await settle()
+  assert.ok(f.calls.includes('/pub/marketplace/detail/p0'))
+})
+
+test('a confirmed install offers a direct link to the plugin settings', async () => {
+  const fixtureState = JSON.parse(await readFile(new URL('./fixtures/welcome-flow-provider.json', import.meta.url), 'utf8')).initialState
+  const { packageName, instanceKey, version, projectRevision } = fixtureState
+  const rpc = []
+  const f = fixture({
+    search: async () => json({ success: true, data: [plugin(packageName)], total: 1 }),
+    detail: async () => json({ success: true, data: { name: packageName, version, description: '', license: '', author: '', homepage: '', repository: '',
+      keywords: [], engines: {}, peerDependencies: {}, downloads: { weekly: 0, monthly: 0 }, readme: '', versions: [version], lastPublish: '' } }),
+    requestConsole: async request => {
+      rpc.push(request.type)
+      if (request.type === 'plugin:plan-install') return { packageName, instanceKey, projectRevision, alreadyDeclared: false, alreadyInstalled: false,
+        restartRequired: false, changes: { packageManifest: 'added', config: 'added' }, warnings: [] }
+      if (request.type === 'plugin:inspect') return fixtureState
+      return {}
+    },
+  })
+  let tree = await f.load()
+  cardFor(tree, packageName).props.onClick(); await settle()
+  tree = f.render()
+  assert.equal(links(tree).some(link => label(link).includes('去配置')), false, 'not offered before anything is installed')
+  await elements(tree).find(item => item.type === 'button' && label(item) === '安装').props.onClick(); await settle()
+  tree = f.render()
+  await buttonLabelled(tree, '确认安装').props.onClick(); await settle()
+  tree = f.render()
+  assert.deepEqual(rpc, ['plugin:plan-install', 'plugin:install', 'plugin:inspect'])
+  const configure = links(tree).filter(link => label(link).includes('去配置'))
+  assert.equal(configure.length, 1)
+  assert.equal(configure[0].props.to, `/config?plugin=${encodeURIComponent(instanceKey)}`)
+  const summary = elements(tree).find(item => item.type === 'plugin-management-summary')
+  assert.equal(summary.props.showNavigation, false, 'the summary does not repeat the same links')
+  assert.equal(f.calls.filter(path => path === '/api/plugins').length, 2, 'the installed list is re-read after the install')
+})
+
+test('details of an already installed package link to its settings and its update', async () => {
+  const f = fixture({
+    search: async () => json({ success: true, data: [plugin('alpha')], total: 1 }),
+    plugins: installedList(['alpha', 'alpha-main', '1.0.0']),
+    detail: async () => json({ success: true, data: { name: 'alpha', version: '1.1.0', description: '', license: '', author: '', homepage: '', repository: '',
+      keywords: [], engines: {}, peerDependencies: {}, downloads: { weekly: 0, monthly: 0 }, readme: '', versions: ['1.1.0'], lastPublish: '' } }),
+  })
+  let tree = await f.load()
+  cardFor(tree, 'alpha').props.onClick(); await settle()
+  tree = f.render()
+  assert.ok(label(tree).includes('此 Host 已安装 1.0.0。'))
+  assert.equal(links(tree).find(link => label(link).includes('去配置')).props.to, '/config?plugin=alpha-main')
+  assert.equal(links(tree).find(link => label(link) === '插件详情').props.to, '/plugins/alpha-main')
+})
+
+async function checkWithFixture(options) {
+  const f = fixture(options)
+  let tree = await f.load()
+  await buttonLabelled(tree, '检查更新').props.onClick(); await settle()
+  return { f, tree: f.render() }
+}

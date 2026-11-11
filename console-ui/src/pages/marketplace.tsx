@@ -4,12 +4,15 @@ import { copyText } from './clipboard-copy.mjs'
 import { useToast } from '../components/toast'
 import { reconcileInstall, canResumeInstall, planInstallRecovery } from './marketplace-install-model.mjs'
 import { applyRegistryVersion, belongsToZhinScope } from './marketplace-version.mjs'
-import { marketplaceListView, isCardActivationKey, classifyUpdateCheck, updateCheckFeedback, type UpdateCheckOutcome } from './marketplace-view-model.mjs'
+import {
+  marketplaceListView, isCardActivationKey, classifyUpdateCheck, updateCheckFeedback, readInstalledPackages,
+  marketplacePluginStatus, pluginManageUrl, pluginConfigUrl, type UpdateCheckOutcome, type InstalledPackages,
+} from './marketplace-view-model.mjs'
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import {
   Search, Package, Download, ExternalLink, AlertCircle,
   ArrowUpDown, RefreshCw, ShieldCheck, Globe, Copy, Check,
-  ChevronLeft, ChevronRight, GitBranch, Calendar, Scale,
+  ChevronLeft, ChevronRight, GitBranch, Calendar, Scale, Settings, CheckCircle2,
   type LucideIcon,
 } from 'lucide-react'
 import { Card, CardContent } from '../components/ui/card'
@@ -156,6 +159,8 @@ function MarketplaceSession({ scope }: { scope?: string }) {
   const [updates, setUpdates] = useState<UpdateInfo[]>([])
   const [updatesLoading, setUpdatesLoading] = useState(false)
   const [updatesDismissed, setUpdatesDismissed] = useState(false)
+  // Installed packages on this Host (from the /plugins list); null until read or when unreadable.
+  const [installed, setInstalled] = useState<InstalledPackages | null>(null)
 
   // Detail dialog
   const registryDetails = useRef(new Map<string, PluginDetail>())
@@ -221,6 +226,21 @@ function MarketplaceSession({ scope }: { scope?: string }) {
 
   // Reset page when filters change
   useEffect(() => { setPage(1) }, [category, officialOnly, sortKey])
+
+  /** Read which marketplace packages this Host already has; failures leave card status hidden. */
+  const loadInstalled = useCallback(async () => {
+    if (!isInboxCacheScopeActive(scope)) return
+    try {
+      const res = await apiFetch('/api/plugins')
+      const body = res.ok ? await res.json().catch(() => null) : null
+      if (!isInboxCacheScopeActive(scope)) return
+      setInstalled(readInstalledPackages(body))
+    } catch {
+      if (isInboxCacheScopeActive(scope)) setInstalled(null)
+    }
+  }, [scope])
+
+  useEffect(() => { void loadInstalled() }, [loadInstalled])
 
   /** `silent` refreshes the banner after an install without announcing the result. */
   const checkUpdates = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
@@ -383,6 +403,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
         setInstallMessage(i18n.t("安装步骤已完成。请按当前状态完善配置、申请应用并选择业务检查；尚未证明功能可用。"))
       }
       void checkUpdates({ silent: true })
+      void loadInstalled()
     } catch (err) {
       if (submitted) await recheckInstall(packageName)
       else if (request === detailRequest.current) setInstallError((err as Error).message)
@@ -390,7 +411,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
       installInFlight.current = false
       setInstallLoading(false)
     }
-  }, [checkUpdates, installPlan, uncertainPackage, recheckInstall, readOnly, scope, requestForScope, i18n])
+  }, [checkUpdates, loadInstalled, installPlan, uncertainPackage, recheckInstall, readOnly, scope, requestForScope, i18n])
 
   const handleCopyInstall = useCallback(async (name: string) => {
     const request = detailRequest.current
@@ -407,6 +428,8 @@ function MarketplaceSession({ scope }: { scope?: string }) {
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
   const listView = marketplaceListView({ loading, error, count: plugins.length })
+  const detailStatus = detail ? marketplacePluginStatus(detail.name, installed, updates) : null
+  const installedConfigKey = installedState?.declared && installedState.plugin && welcomePackage !== installedState.packageName ? installedState.instanceKey : null
 
   return (
     <div className="space-y-4">
@@ -428,20 +451,35 @@ function MarketplaceSession({ scope }: { scope?: string }) {
       {/* Updates banner */}
       {updates.length > 0 && !updatesDismissed && (
         <Alert>
-          <div className="flex items-start justify-between w-full">
-            <div className="flex items-start gap-2">
+          <div className="flex items-start justify-between gap-2 w-full">
+            <div className="flex items-start gap-2 min-w-0">
               <RefreshCw className="h-4 w-4 mt-0.5 shrink-0" />
-              <AlertDescription>
-                {i18n.t("有 ")}{updates.length} {i18n.t(" 个插件的本地版本与注册表 latest 不同：")}<div className="flex flex-wrap gap-1 mt-1">
-                  {updates.slice(0, 5).map(u => (
-                    <Badge key={u.name} variant="secondary" className="text-xs">
-                      {u.name}：{u.current} → latest {u.latest}
-                    </Badge>
-                  ))}
-                  {updates.length > 5 && (
-                    <span className="text-xs text-muted-foreground">+{updates.length - 5} {i18n.t(" 更多")}</span>
-                  )}
-                </div>
+              <AlertDescription className="space-y-2 min-w-0">
+                <p>{i18n.t("有 ")}{updates.length} {i18n.t(" 个插件的本地版本与注册表 latest 不同：")}</p>
+                <ul className="space-y-1.5" aria-label={i18n.t("可更新插件")}>
+                  {updates.slice(0, 5).map(u => {
+                    const status = marketplacePluginStatus(u.name, installed, updates)
+                    return (
+                      <li key={u.name} className="flex flex-wrap items-center gap-2">
+                        <Badge variant="secondary" className="text-xs">
+                          {u.name}：{u.current} → latest {u.latest}
+                        </Badge>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link to={pluginManageUrl(u.name, status.instanceKey)} aria-label={i18n.t("前往 {0} 的插件详情更新", [u.name])}>
+                            {i18n.t("去更新")}
+                          </Link>
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => void openDetail(u.name)} aria-label={i18n.t("在市场查看 {0} 的详情", [u.name])}>
+                          {i18n.t("市场详情")}
+                        </Button>
+                      </li>
+                    )
+                  })}
+                </ul>
+                <p className="text-xs text-muted-foreground">
+                  {i18n.t("更新在插件详情页执行：会先生成更新计划并确认，完成后需重启 Host。")}
+                  {updates.length > 5 && <> <Link className="underline" to="/plugins">{i18n.t("另有 {0} 个，在插件管理中查看", [updates.length - 5])}</Link></>}
+                </p>
               </AlertDescription>
             </div>
             <Button variant="ghost" size="sm" className="shrink-0 -mt-1" onClick={() => setUpdatesDismissed(true)}>
@@ -541,7 +579,13 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                       {plugin.displayName || plugin.name}
                     </span>
                   </div>
-                  <div className="flex gap-1 shrink-0">
+                  <div className="flex flex-wrap justify-end gap-1 shrink-0">
+                    {(() => {
+                      const status = marketplacePluginStatus(plugin.name, installed, updates)
+                      if (status.kind === 'update') return <Badge variant="warning" size="sm" title={i18n.t("本地 {0}，latest {1}", [status.current, status.latest])}>{i18n.t("有更新")}</Badge>
+                      if (status.kind === 'installed') return <Badge variant="success" size="sm" title={status.version ? i18n.t("本地版本 {0}", [status.version]) : undefined}>{i18n.t("已安装")}</Badge>
+                      return null
+                    })()}
                     {belongsToZhinScope(plugin.name) && (
                       <Badge variant="outline" size="sm" title={i18n.t("包属于 @zhin.js 命名空间，不表示安全审计或兼容性保证")}>@zhin.js</Badge>
                     )}
@@ -774,6 +818,30 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                   </div>
                 )}
 
+                {!installedState && detailStatus && (detailStatus.kind === 'installed' || detailStatus.kind === 'update') && (
+                  <Alert>
+                    <CheckCircle2 className="h-4 w-4" />
+                    <AlertDescription className="space-y-2">
+                      <p>
+                        {detailStatus.kind === 'update'
+                          ? i18n.t("此 Host 已安装 {0}，latest 为 {1}。更新在插件详情页执行。", [detailStatus.current, detailStatus.latest])
+                          : detailStatus.version ? i18n.t("此 Host 已安装 {0}。", [detailStatus.version]) : i18n.t("此 Host 已安装该插件。")}
+                        {detailStatus.instanceCount > 1 && i18n.t("共 {0} 个实例，以下入口打开 {1}。", [detailStatus.instanceCount, detailStatus.instanceKey ?? ''])}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {detailStatus.instanceKey && (
+                          <Button size="sm" asChild>
+                            <Link to={pluginConfigUrl(detailStatus.instanceKey)}><Settings className="w-3 h-3 mr-1" />{readOnly ? i18n.t("查看配置") : i18n.t("去配置")}</Link>
+                          </Button>
+                        )}
+                        <Button variant="outline" size="sm" asChild>
+                          <Link to={pluginManageUrl(detail!.name, detailStatus.instanceKey)}>{detailStatus.kind === 'update' ? i18n.t("去更新") : i18n.t("插件详情")}</Link>
+                        </Button>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 {/* Install command */}
                 <div>
                   <h4 className="text-sm font-medium mb-2">{i18n.t("安装命令")}</h4>
@@ -807,7 +875,17 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                 )}
                 {uncertainPackage && <Button variant="outline" size="sm" disabled={installLoading} onClick={() => void recheckInstall(uncertainPackage)}>{installLoading ? i18n.t("核对中…") : i18n.t("重新核对安装状态")}</Button>}
                 {!readOnly && uncertainPackage && canResumeInstall(installedState, uncertainPackage, pendingInstalls.current.get(uncertainPackage)) && <Button size="sm" disabled={installLoading} onClick={() => void resumeInstall()}>{i18n.t("生成补全挂载与配置的计划")}</Button>}
-                {installedState && <div className="rounded-md border p-3 space-y-3"><PluginManagementSummary state={installedState} />{welcomePackage === installedState.packageName && installedState.declared && <Button asChild size="sm"><Link to={welcomeReturnUrl(installedState.instanceKey)}>{i18n.t("继续配置实际实例 ")}{installedState.instanceKey}</Link></Button>}</div>}
+                {installedConfigKey && (
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" asChild>
+                      <Link to={pluginConfigUrl(installedConfigKey)}><Settings className="w-3 h-3 mr-1" />{i18n.t("去配置")}</Link>
+                    </Button>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to={pluginManageUrl(installedState!.packageName, installedConfigKey)}>{i18n.t("插件详情")}</Link>
+                    </Button>
+                  </div>
+                )}
+                {installedState && <div className="rounded-md border p-3 space-y-3"><PluginManagementSummary state={installedState} showNavigation={false} />{welcomePackage === installedState.packageName && installedState.declared && <Button asChild size="sm"><Link to={welcomeReturnUrl(installedState.instanceKey)}>{i18n.t("继续配置实际实例 ")}{installedState.instanceKey}</Link></Button>}</div>}
                 {installPlan && (
                   <div className="rounded-md border p-3 space-y-2 text-sm">
                     <div className="font-medium">{i18n.t("安装计划")}</div>
