@@ -5,6 +5,12 @@ declare global {
 }
 
 const SHELL_ROUTE_NAMES = new Set([
+  "agent",
+  "assistant",
+  "introspection",
+  "permissions",
+  "scenario-lab",
+  "use-cases",
   "dashboard",
   "endpoints",
   "logs",
