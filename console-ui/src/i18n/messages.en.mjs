@@ -3095,5 +3095,16 @@ export const englishMessages = Object.freeze({
 "管理当前实例已加载的功能插件、适配器与服务模块，支持热启停与参数配置。": "Manage loaded feature plugins, adapters and service modules with hot toggle and configuration.",
 "扩展视图": "Extension views",
 "已装插件": "Installed",
-"能力中心": "Capabilities"
+"能力中心": "Capabilities",
+"最近运行事件与适配器消息日志 · 点击单条事件可在侧边抽屉快速检视详情": "Recent runtime events and adapter message logs · Click any event to inspect details in a side drawer",
+"运行事件详情": "Runtime event details",
+"来源模块": "Source module",
+"事件级别": "Severity",
+"来源组件": "Source component",
+"已复制事件内容": "Event copied to clipboard",
+"剪贴板复制失败": "Failed to copy to clipboard",
+"打开日志工作台": "Open log workbench",
+"当前时段": "Hovered bucket",
+"峰值时段": "Peak bucket",
+"最近有效时段": "Latest active bucket"
 })

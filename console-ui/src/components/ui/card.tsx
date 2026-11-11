@@ -2,12 +2,17 @@ import type * as React from "react"
 import { forwardRef } from "react"
 import { cn } from "@zhin.js/client"
 
-const Card = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
+export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  interactive?: boolean
+}
+
+const Card = forwardRef<HTMLDivElement, CardProps>(
+  ({ className, interactive, ...props }, ref) => (
     <div
       ref={ref}
       className={cn(
         "console-card text-card-foreground",
+        interactive && "console-card--interactive",
         className,
       )}
       {...props}

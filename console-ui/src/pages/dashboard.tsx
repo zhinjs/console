@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   Clock,
   Command,
+  Copy,
   Eye,
   Package,
   Power,
@@ -39,6 +40,15 @@ import { Alert, AlertDescription } from '../components/ui/alert'
 import { Skeleton } from '../components/ui/skeleton'
 import { useConfirm } from '../components/confirm-dialog'
 import { ListItemButton } from '../components/ui/list-item-button'
+import {
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '../components/ui/sheet'
 
 interface Stats {
   plugins: { total: number; active: number }
@@ -113,6 +123,38 @@ const EMPTY_OPTIONAL: OptionalOverview = {
   agents: null,
   mcpServices: null,
   connectedMcp: null,
+}
+
+function MiniRingGauge({ percent, tone = 'primary' }: { percent: number; tone?: 'primary' | 'success' | 'warning' }) {
+  const clamped = Math.max(0, Math.min(100, percent))
+  const r = 16
+  const c = 2 * Math.PI * r
+  const offset = c - (clamped / 100) * c
+  const stroke =
+    tone === 'success'
+      ? 'hsl(var(--success))'
+      : tone === 'warning'
+        ? 'hsl(var(--warning))'
+        : 'hsl(var(--primary))'
+  return (
+    <span className="console-ring-gauge" aria-hidden="true">
+      <svg viewBox="0 0 40 40">
+        <circle cx="20" cy="20" r={r} fill="none" stroke="currentColor" strokeOpacity={0.12} strokeWidth="3.5" />
+        <circle
+          cx="20"
+          cy="20"
+          r={r}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="3.5"
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={offset}
+        />
+      </svg>
+      <span className="console-ring-gauge-label">{clamped}%</span>
+    </span>
+  )
 }
 
 const DASHBOARD_REQUEST_TIMEOUT_MS = 8_000
@@ -495,6 +537,21 @@ export default function HomePage() {
     { key: 'mention_only', label: i18n.t("仅提及响应"), icon: AtSign },
   ]
 
+  const [selectedEvent, setSelectedEvent] = useState<RecentLogEvent | null>(null)
+  const pluginRate = stats && stats.plugins.total > 0 ? Math.round((stats.plugins.active / stats.plugins.total) * 100) : null
+  const heapPercent = systemStatus && systemStatus.memory.heapTotal > 0
+    ? Math.min(100, Math.round((systemStatus.memory.heapUsed / systemStatus.memory.heapTotal) * 100))
+    : null
+  const eventCounts = useMemo(() => {
+    const counts = { info: 0, warn: 0, error: 0 }
+    for (const evt of displayEvents) {
+      if (evt.level === 'error') counts.error += 1
+      else if (evt.level === 'warn') counts.warn += 1
+      else counts.info += 1
+    }
+    return counts
+  }, [displayEvents])
+
   if (loading) {
     return (
       <div className="console-dashboard console-overview-page space-y-5" aria-label={i18n.t("正在加载工作台")}>
@@ -568,25 +625,33 @@ export default function HomePage() {
           </div>
 
           <div className="console-dashboard-metrics">
-            <div className="console-dashboard-metric">
+            <div className="console-dashboard-metric cursor-pointer" onClick={() => navigate('/endpoints')}>
               <div className="console-metric-head">
                 <span>{i18n.t("在线渠道")}</span>
                 <span className="console-metric-icon"><Radio /></span>
               </div>
-              <strong>{stats ? stats.endpoints.online : '—'}{stats ? <small> / {stats.endpoints.total}</small> : null}</strong>
+              <div className="console-metric-value-row">
+                <strong>{stats ? stats.endpoints.online : '—'}{stats ? <small> / {stats.endpoints.total}</small> : null}</strong>
+                {endpointRate !== null ? (
+                  <MiniRingGauge percent={endpointRate} tone={endpointRate === 100 ? 'success' : endpointRate >= 60 ? 'primary' : 'warning'} />
+                ) : null}
+              </div>
               <p className="console-metric-sub">
                 {endpointRate !== null ? i18n.t("在线率 {0}% · 点击渠道卡片管理", [endpointRate]) : i18n.t("已连接平台账号")}
               </p>
             </div>
-            <div className="console-dashboard-metric">
+            <div className="console-dashboard-metric cursor-pointer" onClick={() => navigate('/plugins')}>
               <div className="console-metric-head">
                 <span>{i18n.t("运行子插件")}</span>
                 <span className="console-metric-icon"><Package /></span>
               </div>
-              <strong>{stats ? stats.plugins.active : '—'}{stats ? <small> / {stats.plugins.total}</small> : null}</strong>
+              <div className="console-metric-value-row">
+                <strong>{stats ? stats.plugins.active : '—'}{stats ? <small> / {stats.plugins.total}</small> : null}</strong>
+                {pluginRate !== null ? <MiniRingGauge percent={pluginRate} tone="primary" /> : null}
+              </div>
               <p className="console-metric-sub">{i18n.t("已启用运行时功能模块")}</p>
             </div>
-            <div className="console-dashboard-metric">
+            <div className="console-dashboard-metric cursor-pointer" onClick={() => navigate('/introspection?tab=commands')}>
               <div className="console-metric-head">
                 <span>{i18n.t("可用命令")}</span>
                 <span className="console-metric-icon"><Command /></span>
@@ -708,16 +773,34 @@ export default function HomePage() {
               <span>{i18n.t("系统平台")}</span>
               <strong>{systemStatus?.platform ?? '—'}</strong>
             </div>
-            <div className="console-runtime-kv-item">
-              <span>{i18n.t("RSS 内存")}</span>
-              <strong>{systemStatus ? formatMemory(systemStatus.memory.rss) : '—'}</strong>
-            </div>
-            <div className="console-runtime-kv-item">
-              <span>{i18n.t("堆内存")}</span>
-              <strong>
+          </div>
+
+          <div className="console-memory-meter">
+            <div className="console-memory-meter-head">
+              <span className="text-xs font-medium text-muted-foreground">{i18n.t("堆内存")}</span>
+              <span className="font-mono text-xs font-semibold tabular-nums text-foreground">
                 {systemStatus
-                  ? `${formatMemory(systemStatus.memory.heapUsed)} / ${formatMemory(systemStatus.memory.heapTotal)}`
+                  ? `${formatMemory(systemStatus.memory.heapUsed)} / ${formatMemory(systemStatus.memory.heapTotal)}${heapPercent !== null ? ` (${heapPercent}%)` : ''}`
                   : '—'}
+              </span>
+            </div>
+            <div className="console-memory-meter-track" aria-hidden="true">
+              <span
+                className={[
+                  'console-memory-meter-fill',
+                  heapPercent !== null && heapPercent >= 90
+                    ? 'is-danger'
+                    : heapPercent !== null && heapPercent >= 75
+                      ? 'is-warning'
+                      : '',
+                ].filter(Boolean).join(' ')}
+                style={{ width: `${heapPercent ?? 0}%` }}
+              />
+            </div>
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+              <span>{i18n.t("RSS 内存")}</span>
+              <strong className="font-mono font-semibold text-foreground">
+                {systemStatus ? formatMemory(systemStatus.memory.rss) : '—'}
               </strong>
             </div>
           </div>
@@ -756,9 +839,20 @@ export default function HomePage() {
         <div className="console-panel-heading !mb-3">
           <div>
             <h2 id="event-feed-title">{i18n.t("实时事件")}</h2>
-            <p>{i18n.t("最近运行事件与适配器消息日志")}</p>
+            <p>{i18n.t("最近运行事件与适配器消息日志 · 点击单条事件可在侧边抽屉快速检视详情")}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {displayEvents.length > 0 ? (
+              <div className="hidden items-center gap-1.5 text-xs tabular-nums sm:flex">
+                <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">INFO {eventCounts.info}</span>
+                {eventCounts.warn > 0 ? (
+                  <span className="rounded-full bg-[hsl(var(--warning)/0.12)] px-2 py-0.5 font-medium text-[hsl(var(--warning))]">WARN {eventCounts.warn}</span>
+                ) : null}
+                {eventCounts.error > 0 ? (
+                  <span className="rounded-full bg-destructive/12 px-2 py-0.5 font-medium text-destructive">ERROR {eventCounts.error}</span>
+                ) : null}
+              </div>
+            ) : null}
             <span className="console-event-live-badge">
               <span className="console-event-live-dot" aria-hidden="true" />
               {i18n.t("实时监听")}
@@ -776,7 +870,7 @@ export default function HomePage() {
                 key={evt.id}
                 type="button"
                 className="console-event-feed-row"
-                onClick={() => navigate('/logs')}
+                onClick={() => setSelectedEvent(evt)}
               >
                 <time className="console-event-feed-time">{evt.timestamp}</time>
                 <span className={`console-event-feed-level is-${evt.level}`}>
@@ -794,6 +888,76 @@ export default function HomePage() {
           </div>
         )}
       </section>
+
+      <Sheet open={Boolean(selectedEvent)} onOpenChange={(open) => { if (!open) setSelectedEvent(null) }}>
+        <SheetContent side="right">
+          <SheetHeader>
+            <div className="flex items-center gap-2">
+              {selectedEvent ? (
+                <span className={`console-event-feed-level is-${selectedEvent.level}`}>
+                  {selectedEvent.level.toUpperCase()}
+                </span>
+              ) : null}
+              <span className="font-mono text-xs text-muted-foreground">{selectedEvent?.timestamp}</span>
+            </div>
+            <SheetTitle>{i18n.t("运行事件详情")}</SheetTitle>
+            <SheetDescription>
+              {selectedEvent ? `${i18n.t("来源模块")}：${selectedEvent.source}` : ''}
+            </SheetDescription>
+          </SheetHeader>
+          {selectedEvent ? (
+            <SheetBody>
+              <div className="console-surface-inset p-3.5">
+                <p className="font-mono text-xs leading-relaxed whitespace-pre-wrap break-words text-foreground">
+                  {selectedEvent.message}
+                </p>
+              </div>
+              <dl className="console-runtime-kv-grid">
+                <div className="console-runtime-kv-item">
+                  <span>{i18n.t("事件级别")}</span>
+                  <strong>{selectedEvent.level.toUpperCase()}</strong>
+                </div>
+                <div className="console-runtime-kv-item">
+                  <span>{i18n.t("来源组件")}</span>
+                  <strong>{selectedEvent.source || 'runtime'}</strong>
+                </div>
+              </dl>
+            </SheetBody>
+          ) : null}
+          <SheetFooter>
+            {selectedEvent ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(
+                      `[${selectedEvent.timestamp}] [${selectedEvent.level.toUpperCase()}] [${selectedEvent.source}] ${selectedEvent.message}`,
+                    )
+                    success(i18n.t("已复制事件内容"))
+                  } catch {
+                    toastError(i18n.t("剪贴板复制失败"))
+                  }
+                }}
+              >
+                <Copy className="h-3.5 w-3.5" />
+                {i18n.t("复制事件")}
+              </Button>
+            ) : null}
+            <Button
+              size="sm"
+              onClick={() => {
+                const src = selectedEvent?.source
+                setSelectedEvent(null)
+                navigate(src && !src.startsWith('synth') ? `/logs?q=${encodeURIComponent(src)}` : '/logs')
+              }}
+            >
+              {i18n.t("打开日志工作台")}
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       {ConfirmDialogHost}
     </div>

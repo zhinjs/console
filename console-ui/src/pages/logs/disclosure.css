@@ -11,7 +11,7 @@
 .console-logs-page .console-page-header { margin-bottom: 0; gap: .5rem; }
 .console-logs-page .console-page-title { font-size: var(--console-text-title-compact); line-height: var(--console-leading-title); }
 .console-logs-page .console-page-description { font-size: var(--log-caption); line-height: 1.5; }
-.console-log-workbench { border-radius: var(--console-radius-md, .875rem); background: hsl(var(--card)); box-shadow: none; }
+.console-log-workbench { border-radius: var(--console-radius-lg, 1.125rem); background: hsl(var(--card)); box-shadow: var(--console-shadow-sm); }
 .console-log-overview { grid-template-columns: repeat(4,minmax(0,1fr)); min-height: 3rem; background: hsl(var(--muted) / .45); }
 .console-log-signal, .console-log-signal:first-child { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: .45rem; padding: .625rem .875rem; }
 .console-log-signal > svg { width: .9375rem; height: .9375rem; flex: none; margin: 0; }
