@@ -1,5 +1,6 @@
 import { getWebSocketManager, type TableInfo, type DatabaseInfo } from '@zhin.js/client'
 import { useConsoleRead } from '../../hooks/use-console-read'
+import { dropThenRefresh } from './drop-table-model.mjs'
 export function useDatabaseConsole() {
   const manager = getWebSocketManager()
   const infoRead = useConsoleRead<DatabaseInfo | null>(() => manager.getDbInfo(), null)
@@ -8,7 +9,8 @@ export function useDatabaseConsole() {
     info: infoRead.data, tables: tablesRead.data, loaded: tablesRead.loaded,
     loading: infoRead.loading || tablesRead.loading, error: tablesRead.error || infoRead.error,
     loadInfo: infoRead.refresh, loadTables: tablesRead.refresh,
-    dropTable: async (table: string) => { const result = await manager.dbDropTable(table); await tablesRead.refresh(); return result },
+    /** Rejects only when the drop fails; a failed list refresh is reported as `refreshError`. */
+    dropTable: (table: string) => dropThenRefresh(() => manager.dbDropTable(table), tablesRead.refresh),
     select: (table: string, page = 1, pageSize = 10, where?: unknown) => manager.dbSelect(table, page, pageSize, where),
     insert: (table: string, row: unknown) => manager.dbInsert(table, row),
     update: (table: string, row: unknown, where: unknown) => manager.dbUpdate(table, row, where),

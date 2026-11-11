@@ -1,5 +1,5 @@
 import { useI18n } from '../i18n'
-import { useState, useCallback, type ReactNode } from 'react'
+import { useState, useCallback, useEffect, useId, type ReactNode } from 'react'
 import { AlertTriangle, Info } from 'lucide-react'
 import { cn } from '@zhin.js/client'
 import {
@@ -7,6 +7,8 @@ import {
   DialogTitle, DialogDescription, DialogClose,
 } from './ui/dialog'
 import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { canSubmitConfirm, confirmErrorMessage } from './confirm-dialog-model.mjs'
 
 interface ConfirmDialogProps {
   open: boolean
@@ -17,26 +19,48 @@ interface ConfirmDialogProps {
   confirmLabel?: string
   cancelLabel?: string
   variant?: 'default' | 'destructive'
+  /**
+   * Irreversible actions: the user must type this exact text (e.g. a table name)
+   * before the confirm button is enabled.
+   */
+  confirmText?: string
+  /**
+   * May throw or reject: the dialog then stays open, shows the error (role="alert")
+   * and lets the user retry or cancel. Resolve to close the dialog.
+   */
   onConfirm: () => void | Promise<void>
 }
 
 export function ConfirmDialog({
   open, onOpenChange, title, description, children,
   confirmLabel, cancelLabel,
-  variant = 'default', onConfirm,
+  variant = 'default', confirmText, onConfirm,
 }: ConfirmDialogProps) {
   const i18n = useI18n()
+  const inputId = useId()
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [typed, setTyped] = useState('')
+  const canSubmit = canSubmitConfirm({ loading, typed, confirmText })
+
+  // A closed dialog must not carry a stale error or typed name into its next opening.
+  useEffect(() => {
+    if (!open) { setError(null); setTyped('') }
+  }, [open])
 
   const handleConfirm = useCallback(async () => {
+    if (!canSubmit) return
     setLoading(true)
+    setError(null)
     try {
       await onConfirm()
       onOpenChange(false)
+    } catch (caught) {
+      setError(confirmErrorMessage(caught) ?? i18n.t("操作失败，请重试或取消。"))
     } finally {
       setLoading(false)
     }
-  }, [onConfirm, onOpenChange])
+  }, [canSubmit, onConfirm, onOpenChange, i18n])
 
   const Icon = variant === 'destructive' ? AlertTriangle : Info
 
@@ -55,6 +79,29 @@ export function ConfirmDialog({
           </div>
         </DialogHeader>
         {children}
+        {confirmText != null && confirmText !== '' && (
+          <div className="space-y-1.5">
+            <label htmlFor={inputId} className="block text-sm text-muted-foreground">
+              {i18n.t("请输入 {0} 以确认：", [confirmText])}
+            </label>
+            <Input
+              id={inputId}
+              value={typed}
+              autoComplete="off"
+              spellCheck={false}
+              disabled={loading}
+              onChange={event => setTyped(event.target.value)}
+              onKeyDown={event => {
+                if (event.key === 'Enter') { event.preventDefault(); void handleConfirm() }
+              }}
+            />
+          </div>
+        )}
+        {error && (
+          <p role="alert" className="text-sm text-destructive break-words">
+            {i18n.t("操作未完成：{0}", [error])}
+          </p>
+        )}
         <DialogFooter className="gap-2 border-t border-[color:var(--console-border-subtle)] pt-3">
           <DialogClose asChild>
             <Button variant="outline" size="sm">{cancelLabel ?? i18n.t('取消')}</Button>
@@ -63,7 +110,7 @@ export function ConfirmDialog({
             variant={variant === 'destructive' ? 'destructive' : 'default'}
             size="sm"
             onClick={handleConfirm}
-            disabled={loading}
+            disabled={!canSubmit}
           >
             {loading ? i18n.t("处理中...") : (confirmLabel ?? i18n.t('确认'))}
           </Button>
