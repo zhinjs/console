@@ -3178,4 +3178,5 @@ export const englishMessages = Object.freeze({
   "重新登录": "Sign in again",
   "个人会话没有聊天记录": "No chat history for personal sessions",
   "个人会话不保存聊天记录，每一轮的处理过程请在「轨迹」页签查看。": "Personal sessions don't keep chat history. Open the Trace tab to see how each turn was handled.",
+  "设置菜单": "Settings menu",
 })
