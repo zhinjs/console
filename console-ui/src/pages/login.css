@@ -11,6 +11,9 @@
   .console-login-panel { padding: 28px; border: 1px solid hsl(var(--border)); border-radius: 14px; background: hsl(var(--card)); }
   .console-login-panel-head { display: flex; justify-content: flex-end; margin-bottom: 24px; }
   .console-login-form { display: grid; gap: 20px; }
+  .console-login-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 20px; padding: 4px; border-radius: 10px; background: hsl(var(--muted) / .6); }
+  .console-login-modes > button { justify-content: center; gap: 6px; }
+  .console-login-modes svg { width: 15px; height: 15px; }
   .console-login-field { display: grid; gap: 7px; min-width: 0; font-size: 13px; font-weight: 500; }
   .console-login-field small { color: hsl(var(--muted-foreground)); font-size: 12px; font-weight: 400; line-height: 1.6; }
   .console-login-field input { font-size: 14px; }

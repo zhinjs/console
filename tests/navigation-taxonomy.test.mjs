@@ -91,6 +91,7 @@ test('builtin route regrouping preserves deep links, hidden detail ownership and
   '/scenario-lab':'FEATURES','/use-cases/group-welcome':'FEATURES',
   '/plugins':'PLUGINS','/plugins/:name':'PLUGINS','/marketplace':'PLUGINS',
   '/ops/database':'OPS','/ops/config':'OPS','/ops/env':'OPS','/ops/schedules':'OPS','/ops/files':'OPS',
+  '/onboarding':'OVERVIEW','/account':'OVERVIEW',
  }
  const pages = routes.filter(route=>!Object.hasOwn(LEGACY_ROUTE_REDIRECTS,route.path))
  assert.deepEqual(pages.map(route=>route.path).sort(),Object.keys(expected).sort())
@@ -103,6 +104,8 @@ test('builtin route regrouping preserves deep links, hidden detail ownership and
  assert.deepEqual(byPath.get('/features/ai/ambient').requiredPermissions,['ambient'])
  assert.deepEqual(byPath.get('/features/ai/skills').requiredPermissions,['skills'])
  assert.deepEqual(byPath.get('/agent/usage').requiredPermissions,['control:read'])
+ // Onboarding and personal settings are reached from the banner and the top bar, not the sidebar.
+ for (const path of ['/onboarding','/account']) assert.equal(byPath.get(path).meta.hideInMenu,true,path)
  // No 访问控制 or 终端 pages yet (phase B); every registered page sits in one of the first five sections.
  assert.ok(pages.every(route=>routeSectionId(route)!=='access'))
 })

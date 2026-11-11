@@ -39,6 +39,9 @@ export const CONSOLE_PATHS = Object.freeze({
   opsEnv: '/ops/env',
   opsSchedules: '/ops/schedules',
   opsFiles: '/ops/files',
+  // 个人（不在菜单里，从顶栏进入）
+  onboarding: '/onboarding',
+  account: '/account',
 })
 
 const segment = value => encodeURIComponent(String(value))

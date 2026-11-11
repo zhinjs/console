@@ -1,7 +1,7 @@
 import { LanguageSelect } from '../components/LanguageSelect'
 import { useI18n } from '../i18n'
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
-import { Trash2, ShieldCheck, Eye, EyeOff } from 'lucide-react'
+import { Trash2, ShieldCheck, Eye, EyeOff, KeyRound, UserRound } from 'lucide-react'
 import { Input } from '../components/ui/input'
 import { Button } from '../components/ui/button'
 import { Checkbox } from '../components/ui/checkbox'
@@ -11,7 +11,12 @@ import {
   touchSavedLogin, upsertSavedLogin, verifyAndStoreCredentials,
 } from '../utils/auth'
 import { ConfirmDialog } from '../components/confirm-dialog'
-import { linkNeedsConfirmation, loginFailureField, normalizeHostAddress, type HostAddressResult, type LoginField } from './login-model.mjs'
+import { signInWithPassword } from '../utils/console-auth-api'
+import { authErrorMessage } from '../utils/console-auth-model.mjs'
+import {
+  initialLoginMode, linkNeedsConfirmation, lockoutMs, loginFailureField, normalizeHostAddress, passwordFailureField, saveLoginMode,
+  type HostAddressResult, type LoginField, type LoginMode,
+} from './login-model.mjs'
 import './login.css'
 
 interface LoginPageProps {
@@ -24,6 +29,8 @@ interface LoginPageProps {
   queryTokenRejected?: boolean
   /** Called once the link token has been used, so it is not tried again after a later sign-out. */
   onInitialTokenConsumed?: () => void
+  /** Sign-in method to open with; defaults to {@link initialLoginMode}. */
+  initialMode?: LoginMode
 }
 
 type LoginErrors = Partial<Record<LoginField, string>>
@@ -34,12 +41,26 @@ const ADDRESS_ERROR_ID = 'console-login-address-error'
 const TOKEN_ID = 'console-login-token'
 const TOKEN_ERROR_ID = 'console-login-token-error'
 const SUMMARY_ID = 'console-login-error'
+const USERNAME_ID = 'console-login-username'
+const USERNAME_ERROR_ID = 'console-login-username-error'
+const PASSWORD_ID = 'console-login-password'
+const PASSWORD_ERROR_ID = 'console-login-password-error'
 
-export default function LoginPage({ onSuccess, initialApiBase, initialToken, queryTokenRejected, onInitialTokenConsumed }: LoginPageProps) {
+function browserStorage(): Storage | null {
+  try { return typeof window === 'undefined' ? null : window.localStorage } catch { return null }
+}
+
+export default function LoginPage({ onSuccess, initialApiBase, initialToken, queryTokenRejected, onInitialTokenConsumed, initialMode }: LoginPageProps) {
   const i18n = useI18n()
   const [savedLogins, setSavedLogins] = useState(() => listSavedLogins())
   const [apiBase, setApiBaseValue] = useState(() => initialApiBase || getStoredApiBase() || 'http://localhost:8086')
   const [token, setTokenValue] = useState('')
+  const [mode, setMode] = useState<LoginMode>(() => initialToken ? 'token' : initialMode ?? initialLoginMode({ initialToken, savedCount: savedLogins.length, storage: browserStorage() }))
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  // A rate-limited sign-in (429) keeps the button disabled until the Host's Retry-After passes.
+  const [lockedUntil, setLockedUntil] = useState(0)
   const [remember, setRemember] = useState(false)
   const [showToken, setShowToken] = useState(false)
   const [errors, setErrors] = useState<LoginErrors>(() => queryTokenRejected
@@ -52,6 +73,8 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
   const [focusRequest, setFocusRequest] = useState<{ field: LoginField } | null>(null)
   const addressRef = useRef<HTMLInputElement | null>(null)
   const tokenRef = useRef<HTMLInputElement | null>(null)
+  const usernameRef = useRef<HTMLInputElement | null>(null)
+  const passwordRef = useRef<HTMLInputElement | null>(null)
   const summaryRef = useRef<HTMLParagraphElement | null>(null)
   const linkAttempted = useRef(false)
 
@@ -93,8 +116,10 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
     setLoading(true)
     const result = await verifyAndStoreCredentials(base, rawToken, i18n.locale, remember)
     if (result.ok) {
-      if (remember) upsertSavedLogin(base, rawToken)
+      // A bootstrap token stops working once the owner exists: it is never saved.
+      if (remember && result.kind !== 'bootstrap') upsertSavedLogin(base, rawToken)
       else touchSavedLogin(base)
+      saveLoginMode(browserStorage(), 'token')
       setSavedLogins(listSavedLogins())
       setShowToken(false)
       setLoading(false)
@@ -107,11 +132,54 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
     setFocusRequest({ field })
   }, [remember, onSuccess, i18n, loading, addressError])
 
+  const handlePasswordLogin = useCallback(async (rawBase: string) => {
+    if (loading || lockedUntil > Date.now()) return
+    const address = normalizeHostAddress(rawBase)
+    const next: LoginErrors = {}
+    if (!address.ok) next.apiBase = addressError(address)
+    if (!username.trim()) next.username = i18n.t('请输入用户名。')
+    if (!password) next.password = i18n.t('请输入密码。')
+    if (next.apiBase || next.username || next.password) {
+      setErrors(next)
+      setFocusRequest({ field: next.apiBase ? 'apiBase' : next.username ? 'username' : 'password' })
+      return
+    }
+    const base = (address as { value: string }).value
+    setApiBaseValue(base)
+    setErrors({})
+    setLoading(true)
+    const result = await signInWithPassword(base, username, password, remember)
+    setLoading(false)
+    if (result.ok) {
+      setPassword('')
+      touchSavedLogin(base)
+      saveLoginMode(browserStorage(), 'password')
+      onSuccess()
+      return
+    }
+    const wait = lockoutMs(result)
+    if (wait) setLockedUntil(Date.now() + wait)
+    const field = passwordFailureField(result)
+    setErrors({ [field]: authErrorMessage(result, i18n.t, 'login') })
+    setFocusRequest({ field })
+  }, [loading, lockedUntil, username, password, remember, onSuccess, i18n, addressError])
+
+  useEffect(() => {
+    if (!lockedUntil) return
+    const timer = setTimeout(() => setLockedUntil(0), Math.max(0, lockedUntil - Date.now()))
+    return () => clearTimeout(timer)
+  }, [lockedUntil])
+
   useEffect(() => {
     if (!focusRequest) return
-    const target = focusRequest.field === 'apiBase' ? addressRef : focusRequest.field === 'token' ? tokenRef : summaryRef
-    target.current?.focus()
+    const refs = { apiBase: addressRef, token: tokenRef, username: usernameRef, password: passwordRef, form: summaryRef }
+    refs[focusRequest.field].current?.focus()
   }, [focusRequest])
+
+  const switchMode = useCallback((next: LoginMode) => {
+    setMode(next)
+    setErrors(current => ({ apiBase: current.apiBase }))
+  }, [])
 
   const handleRemoveSaved = useCallback(() => {
     if (!selectedSavedBase) return
@@ -144,6 +212,7 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
   const confirmLink = useCallback(() => {
     if (!pendingLink) return
     setPendingLink(null)
+    setMode('token')
     setTokenValue(pendingLink.token)
     void handleLogin(pendingLink.apiBase, pendingLink.token)
   }, [pendingLink, handleLogin])
@@ -162,8 +231,18 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
       </section>
       <section className="console-login-panel" aria-label={i18n.t('连接设置')}>
         <div className="console-login-panel-head"><LanguageSelect /></div>
-        <form className="console-login-form" noValidate onSubmit={event => { event.preventDefault(); void handleLogin(apiBase, token) }}>
-          {savedLogins.length > 0 && <div className="console-login-field">
+        <div className="console-login-modes" role="group" aria-label={i18n.t('登录方式')}>
+          <Button type="button" variant={mode === 'password' ? 'secondary' : 'ghost'} size="sm" aria-pressed={mode === 'password'} disabled={loading}
+            onClick={() => switchMode('password')}><UserRound />{i18n.t('账号登录')}</Button>
+          <Button type="button" variant={mode === 'token' ? 'secondary' : 'ghost'} size="sm" aria-pressed={mode === 'token'} disabled={loading}
+            onClick={() => switchMode('token')}><KeyRound />{i18n.t('访问令牌')}</Button>
+        </div>
+        <form className="console-login-form" noValidate onSubmit={event => {
+          event.preventDefault()
+          if (mode === 'password') void handlePasswordLogin(apiBase)
+          else void handleLogin(apiBase, token)
+        }}>
+          {mode === 'token' && savedLogins.length > 0 && <div className="console-login-field">
             <label htmlFor="console-login-saved">{i18n.t('已保存的连接')}</label>
             <div className="console-login-saved">
               <Select value={selectedSavedBase || undefined} onValueChange={applySavedLogin} disabled={loading}>
@@ -186,7 +265,28 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
             <small id={ADDRESS_HINT_ID}>{i18n.t('填写机器人启动日志中的地址。')}</small>
             {errors.apiBase && <p id={ADDRESS_ERROR_ID} className="console-login-error">{errors.apiBase}</p>}
           </div>
-          <div className="console-login-field">
+          {mode === 'password' && <>
+            <div className="console-login-field">
+              <label htmlFor={USERNAME_ID}>{i18n.t('用户名')}</label>
+              <Input id={USERNAME_ID} ref={usernameRef} type="text" required disabled={loading} autoComplete="username" spellCheck={false}
+                autoCapitalize="none" value={username}
+                aria-invalid={errors.username ? true : undefined} aria-describedby={describedBy(errors.username && USERNAME_ERROR_ID)}
+                onChange={event => { setUsername(event.target.value); setErrors(current => ({ ...current, username: undefined, form: undefined })) }} />
+              {errors.username && <p id={USERNAME_ERROR_ID} className="console-login-error">{errors.username}</p>}
+            </div>
+            <div className="console-login-field">
+              <label htmlFor={PASSWORD_ID}>{i18n.t('密码')}</label>
+              <div className="console-login-token">
+                <Input id={PASSWORD_ID} ref={passwordRef} type={showPassword ? 'text' : 'password'} required disabled={loading} autoComplete="current-password"
+                  value={password} aria-invalid={errors.password ? true : undefined} aria-describedby={describedBy(errors.password && PASSWORD_ERROR_ID)}
+                  onChange={event => { setPassword(event.target.value); setErrors(current => ({ ...current, password: undefined, form: undefined })) }} />
+                <Button type="button" variant="ghost" size="icon" disabled={loading} aria-pressed={showPassword}
+                  aria-label={i18n.t(showPassword ? '隐藏密码' : '显示密码')} onClick={() => setShowPassword(visible => !visible)}>{showPassword ? <EyeOff /> : <Eye />}</Button>
+              </div>
+              {errors.password && <p id={PASSWORD_ERROR_ID} className="console-login-error">{errors.password}</p>}
+            </div>
+          </>}
+          {mode === 'token' && <div className="console-login-field">
             <label htmlFor={TOKEN_ID}>{i18n.t('访问令牌')}</label>
             <div className="console-login-token">
               <Input id={TOKEN_ID} ref={tokenRef} type={showToken ? 'text' : 'password'} required disabled={loading} autoComplete="off" spellCheck={false}
@@ -198,11 +298,14 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
                 aria-label={i18n.t(showToken ? '隐藏令牌' : '显示令牌')} onClick={() => setShowToken(visible => !visible)}>{showToken ? <EyeOff /> : <Eye />}</Button>
             </div>
             {errors.token && <p id={TOKEN_ERROR_ID} className="console-login-error">{errors.token}</p>}
-          </div>
+            <small>{i18n.t('API 令牌，或首次初始化时使用的初始化令牌。')}</small>
+          </div>}
           {errors.form && <p id={SUMMARY_ID} ref={summaryRef} className="console-login-error" role="alert" tabIndex={-1}>{errors.form}</p>}
           <label className="console-login-remember"><Checkbox checked={remember} disabled={loading} onCheckedChange={value => setRemember(value === true)} /><span>{i18n.t('记住此连接')}</span></label>
-          {!remember && <p className="console-login-session-note">{i18n.t('访问令牌仅保留在本次浏览器会话。')}</p>}
-          <Button type="submit" disabled={loading}>{loading ? i18n.t('验证中...') : selectedSavedBase && token ? i18n.t('快速连接') : i18n.t('连接')}</Button>
+          {!remember && <p className="console-login-session-note">{i18n.t(mode === 'password' ? '登录状态仅保留在本次浏览器会话。' : '访问令牌仅保留在本次浏览器会话。')}</p>}
+          <Button type="submit" disabled={loading || lockedUntil > 0}>{loading ? i18n.t('验证中...')
+            : mode === 'password' ? i18n.t('登录')
+            : selectedSavedBase && token ? i18n.t('快速连接') : i18n.t('连接')}</Button>
           <details className="console-login-help"><summary>{i18n.t('无法连接？')}</summary><p>{i18n.t('填写 Bot 启动日志中的 Host 地址。使用本地地址时，请确保 Host 的 corsOrigins 允许当前 Console 来源。')}</p></details>
         </form>
         {/* Cancelling (or closing after confirmLink ran) drops the link token; the address stays prefilled. */}

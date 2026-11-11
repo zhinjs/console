@@ -5,6 +5,7 @@ import { createRequire } from 'node:module'
 import ts from 'typescript'
 import { localeModule, isLocaleImport } from './locale-fixture.mjs'
 import * as loginModel from '../console-ui/src/pages/login-model.mjs'
+import * as authModel from '../console-ui/src/utils/console-auth-model.mjs'
 
 const pageUrl = new URL('../console-ui/src/pages/login.tsx', import.meta.url)
 const source = await readFile(pageUrl, 'utf8')
@@ -52,8 +53,8 @@ const text = value => value == null || typeof value === 'boolean' ? ''
   : text(value.props?.children)
 const flush = async () => { for (let i = 0; i < 10; i++) await Promise.resolve() }
 
-function fixture({ verify = async () => ({ ok: true }), props: initialProps = {}, saved = [] } = {}) {
-  const r = runtime(), calls = { verify: [], saved: [], success: 0, consumed: 0 }
+function fixture({ verify = async () => ({ ok: true }), password = async () => ({ ok: true, status: 200, data: { kind: 'user' } }), props: initialProps = {}, saved = [] } = {}) {
+  const r = runtime(), calls = { verify: [], password: [], saved: [], success: 0, consumed: 0 }
   const auth = {
     getSavedLogin: () => null, getStoredApiBase: () => null, listSavedLogins: () => saved.map(apiBase => ({ apiBase, token: 'saved-secret', savedAt: 1, lastUsedAt: 1 })), normalizeApiBase: value => value.trim().replace(/\/$/, ''),
     removeSavedLogin() {}, touchSavedLogin() {}, upsertSavedLogin: (...args) => calls.saved.push(args),
@@ -69,6 +70,8 @@ function fixture({ verify = async () => ({ ok: true }), props: initialProps = {}
     '../components/ui/select': { Select: 'select', SelectContent: 'select-content', SelectItem: 'option', SelectTrigger: 'select-trigger', SelectValue: 'select-value' },
     '../utils/auth': auth,
     './login-model.mjs': loginModel,
+    '../utils/console-auth-model.mjs': authModel,
+    '../utils/console-auth-api': { signInWithPassword: (...args) => { calls.password.push(args); return password(...args) } },
     './login.css': {},
     'lucide-react': new Proxy({}, { get: () => 'i' }),
   }
@@ -76,7 +79,8 @@ function fixture({ verify = async () => ({ ok: true }), props: initialProps = {}
   const code = ts.transpileModule(source, { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   new Function('require', 'exports', 'module', code)(name => isLocaleImport(name) ? localeModule : Object.hasOwn(mocks, name) ? mocks[name] : requireFromPage(name), module.exports, module)
   const LoginPage = module.exports.default
-  const props = { onSuccess: () => { calls.success++ }, onInitialTokenConsumed: () => { calls.consumed++ }, ...initialProps }
+  // The existing cases exercise the token form; password sign-in cases pass `initialMode: 'password'`.
+  const props = { onSuccess: () => { calls.success++ }, onInitialTokenConsumed: () => { calls.consumed++ }, initialMode: 'token', ...initialProps }
   const focused = []
   const all = () => elements(r.value)
   const byId = id => all().find(node => node.props?.id === id)
@@ -241,4 +245,82 @@ test('a rejected ?token= is explained on the login page', () => {
   assert.equal(summary.props.role, 'alert')
   assert.match(text(summary), /token 不能放在 \? 参数里/)
   assert.equal(f.calls.verify.length, 0)
+})
+
+const passwordFixture = options => {
+  const f = fixture({ ...options, props: { initialMode: 'password', ...options?.props } }).mount()
+  const field = id => f.all().find(node => node.type === 'input' && node.props.id === id)
+  f.fill = (id, value) => { field(id).props.onChange({ target: { value } }); f.r.render() }
+  f.field = field
+  f.button = label => f.all().find(node => node.type === 'button' && text(node).includes(label))
+  return f
+}
+
+test('account sign-in is the default form with labelled username and password fields', () => {
+  const f = fixture({ props: { initialMode: undefined } }).mount()
+  assert.equal(f.input('console-login-token'), undefined, 'the token form is one switch away')
+  for (const [id, label] of [['console-login-username', '用户名'], ['console-login-password', '密码']]) {
+    const field = f.all().find(node => node.type === 'input' && node.props.id === id)
+    assert.ok(field, id)
+    assert.equal(text(f.labelFor(id)).trim(), label)
+  }
+  const password = f.all().find(node => node.type === 'input' && node.props.id === 'console-login-password')
+  assert.equal(password.props.type, 'password')
+  assert.equal(password.props.autoComplete, 'current-password')
+  // Switching to the token form keeps the address.
+  const tokenSwitch = f.all().find(node => node.type === 'button' && text(node).includes('访问令牌'))
+  tokenSwitch.props.onClick(); f.r.render()
+  assert.ok(f.input('console-login-token'))
+})
+
+test('a #token= link always opens the token form', () => {
+  const f = fixture({ props: { initialMode: undefined, initialToken: 'link-secret', initialApiBase: 'https://unknown.example' } }).mount()
+  assert.ok(f.input('console-login-token'))
+})
+
+test('account sign-in validates in place, then signs in with the normalized Host', async () => {
+  const f = passwordFixture()
+  await f.submit()
+  assert.equal(f.calls.password.length, 0)
+  assert.equal(f.field('console-login-username').props['aria-invalid'], true)
+  f.fill('console-login-address', '127.0.0.1:8086')
+  f.fill('console-login-username', 'alice')
+  f.fill('console-login-password', 'correct horse')
+  await f.submit()
+  assert.deepEqual(f.calls.password[0].slice(0, 3), ['http://127.0.0.1:8086', 'alice', 'correct horse'])
+  assert.equal(f.calls.success, 1)
+  assert.equal(f.calls.saved.length, 0, 'session tokens are not added to saved token connections')
+})
+
+test('wrong credentials land on the password field; a fresh Host points to the setup token', async () => {
+  const wrong = passwordFixture({ password: async () => ({ ok: false, status: 401, code: 'unauthorized', message: '' }) })
+  wrong.fill('console-login-username', 'alice'); wrong.fill('console-login-password', 'nope')
+  await wrong.submit()
+  assert.equal(wrong.field('console-login-password').props['aria-invalid'], true)
+  assert.match(text(wrong.byId('console-login-password-error')), /用户名或密码错误/)
+
+  const fresh = passwordFixture({ password: async () => ({ ok: false, status: 401, code: 'not_initialized', message: '' }) })
+  fresh.fill('console-login-username', 'alice'); fresh.fill('console-login-password', 'nope')
+  await fresh.submit()
+  assert.match(text(fresh.byId('console-login-error')), /尚未初始化/)
+})
+
+test('a rate-limited sign-in says how long to wait and disables the button meanwhile', async () => {
+  const f = passwordFixture({ password: async () => ({ ok: false, status: 429, code: 'rate_limited', message: '', retryAfterSec: 2 }) })
+  f.fill('console-login-username', 'alice'); f.fill('console-login-password', 'nope')
+  await f.submit()
+  assert.match(text(f.byId('console-login-error')), /2 秒后重试/)
+  const submit = f.all().find(node => node.type === 'button' && node.props.type === 'submit')
+  assert.equal(submit.props.disabled, true)
+  await f.submit()
+  assert.equal(f.calls.password.length, 1, 'no further attempt while locked')
+})
+
+test('a bootstrap token signs in but is never saved, even when remembering is chosen', async () => {
+  const f = fixture({ verify: async () => ({ ok: true, kind: 'bootstrap' }) }).mount()
+  f.all().find(node => node.type === 'checkbox').props.onCheckedChange(true); f.r.render()
+  f.type('console-login-token', 'bootstrap-secret')
+  await f.submit()
+  assert.equal(f.calls.success, 1)
+  assert.equal(f.calls.saved.length, 0)
 })

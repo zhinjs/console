@@ -109,3 +109,38 @@ export function loginFailureField(result) {
   if (result?.status === undefined) return 'apiBase'
   return 'form'
 }
+
+/** Sign-in methods: account (ADR 0049 username + password) or a token (API token, bootstrap token, older Hosts). */
+export const LOGIN_MODES = Object.freeze(['password', 'token'])
+export const LOGIN_MODE_STORAGE_KEY = 'zhin.console.login-mode'
+
+/**
+ * Which method the page opens with: a `#token=` link always uses its token; then the last method
+ * that worked in this browser; people with saved token connections keep the token form.
+ */
+export function initialLoginMode({ initialToken, savedCount = 0, storage } = {}) {
+  if (initialToken) return 'token'
+  let stored = null
+  try { stored = storage?.getItem(LOGIN_MODE_STORAGE_KEY) ?? null } catch { stored = null }
+  if (LOGIN_MODES.includes(stored)) return stored
+  return savedCount > 0 ? 'token' : 'password'
+}
+
+export function saveLoginMode(storage, mode) {
+  if (!LOGIN_MODES.includes(mode)) return
+  try { storage?.setItem(LOGIN_MODE_STORAGE_KEY, mode) } catch { /* private mode: the default applies next time */ }
+}
+
+/** Field a failed password sign-in belongs to: unreachable → address, wrong credentials → password. */
+export function passwordFailureField(result) {
+  if (result?.code === 'unreachable') return 'apiBase'
+  if (result?.code === 'unauthorized') return 'password'
+  return 'form'
+}
+
+/** Milliseconds until a rate-limited sign-in may retry, or 0. */
+export function lockoutMs(result, now = Date.now()) {
+  if (result?.code !== 'rate_limited') return 0
+  const seconds = typeof result.retryAfterSec === 'number' && result.retryAfterSec > 0 ? result.retryAfterSec : 0
+  return seconds > 0 ? Math.min(seconds, 15 * 60) * 1000 : 0
+}

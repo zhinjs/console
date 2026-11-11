@@ -46,6 +46,15 @@ export function setToken(token: string, persistent = true): void {
   storage.setItem(TOKEN_KEY, token)
 }
 
+/** Whether the stored credential survives the browser session ("记住此连接"). */
+export function isTokenPersistent(): boolean {
+  try {
+    return localStorage.getItem(TOKEN_KEY) !== null
+  } catch {
+    return false
+  }
+}
+
 /** 写入运行时 Token（不落盘） */
 export function setRuntimeToken(token: string): void {
   if (typeof window === 'undefined') return
@@ -198,7 +207,8 @@ export function stripApiBaseUrlFromQuery(): void {
 }
 
 export type VerifyCredentialsResult =
-  | { ok: true }
+  /** `bootstrap`: the token is the first-run setup token (ADR 0049 §1); it only opens the setup wizard. */
+  | { ok: true; kind?: 'bootstrap' }
   | { ok: false; message: string; status?: number }
 
 export type ProbeHealthResult =
@@ -257,9 +267,37 @@ export async function verifyAndStoreCredentials(
     if (res.status === 401) {
       return { ok: false, status: 401, message: translate(locale, "Token 无效，请检查后重试") }
     }
+    // A bootstrap token is refused everywhere but `/auth/setup*` (403 `setup_required`): ask `/auth/me`.
+    if (res.status === 403) {
+      const principal = await readPrincipalKind(base, trimmed)
+      if (principal?.kind === 'bootstrap' && principal.setupRequired) {
+        clearRuntimeToken()
+        setApiBase(base)
+        // Valid only until the owner exists: never kept beyond this browser session.
+        setToken(trimmed, false)
+        stripApiBaseUrlFromQuery()
+        return { ok: true, kind: 'bootstrap' }
+      }
+      return { ok: false, status: 403, message: translate(locale, "此令牌没有查看系统状态的权限 (HTTP 403)") }
+    }
     return { ok: false, status: res.status, message: translate(locale, "验证失败 (HTTP {0})", [res.status]) }
   } catch {
     return { ok: false, message: translate(locale, "无法连接到 API，请检查 Base URL 与网络") }
+  }
+}
+
+/** `GET /api/auth/me` with `token`: `{ kind, setupRequired }`, or null for Hosts without `/auth/*`. */
+async function readPrincipalKind(base: string, token: string): Promise<{ kind: string; setupRequired: boolean } | null> {
+  try {
+    const res = await fetch(`${base}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(8_000),
+    })
+    if (!res.ok) return null
+    const body = await res.json() as { data?: { kind?: unknown; setupRequired?: unknown } }
+    return typeof body?.data?.kind === 'string' ? { kind: body.data.kind, setupRequired: body.data.setupRequired === true } : null
+  } catch {
+    return null
   }
 }
 

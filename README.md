@@ -44,6 +44,15 @@ https://console.zhin.dev/#apiBaseUrl=127.0.0.1:8086&token=<令牌>
 - `?token=` 不被接受：会被立即移除且不使用，并提示「token 不能放在 ? 参数里」。
 - 链接仍会留在发送渠道（聊天记录、邮件）中，只在可信渠道分享。
 
+### 账号登录、初始化与引导（zhinjs/zhin ADR 0049 / 0053）
+
+- 登录页默认「账号登录」（用户名 + 密码，`POST /api/auth/login`，返回的会话令牌与访问令牌一样以 Bearer 保存）；「访问令牌」用于 API 令牌、初始化令牌和不支持账号的旧 Host。`#token=` 链接总是走令牌登录。
+- 登录后先读 `GET /api/auth/me`：`permissions` 交给 `setConsoleAccess`，侧栏按权限隐藏分区；旧 Host（404）按不受限处理。
+- 初始化令牌（`/api/system/status` 返回 403 且 `/auth/me` 报告 `bootstrap` + `setupRequired`）只打开初始化向导：第 1 步数据库（保持当前数据库，或选择驱动、填写连接、测试、保存后等待 Host 重启），第 2 步创建所有者；完成后改用所有者会话并进入 `/onboarding`。初始化令牌不会保存到「已保存的连接」，也只保留在本次浏览器会话。
+- 引导页 `/onboarding`：AI、聊天平台、完成三步，可跳过；进度优先读 Host 报告的 `onboarding`（`/auth/setup` 或 `/auth/me`），用 `onboarding.update` RPC 记录；Host 不支持时保存在本浏览器。未完成时页面顶部显示入口横幅。
+- 个人设置 `/account`（顶栏用户名进入）：修改密码（`POST /api/auth/password`，成功后换用 Host 返回的新会话），我的 API 令牌（`/api/auth/tokens` 列表 / 新建 / 吊销，明文只显示一次）。
+- 409 = 已初始化（初始化令牌失效，提示改用账号登录）；429 = 登录限速（读 `Retry-After`，期间禁用登录按钮）。接口类型在 `console-ui/src/contracts/console-auth.ts` 本地镜像，待 `@zhin.js/console-protocol` 发布后替换。
+
 Console 没有单独的演示构建：公开演示是一台真实 Host，访客用只读身份登录，看到的分区与按钮由 Host 报告的权限决定（`console-ui/src/utils/console-access.mjs`）。
 
 ## 导航

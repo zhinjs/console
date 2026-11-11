@@ -1,5 +1,8 @@
+import { authMessages } from './messages.en.auth.mjs'
+
 /** Authored Console UI copy. Interpolated content is never translated. */
 export const englishMessages = Object.freeze({
+  ...authMessages,
   "鲜活配色": "Fresh palettes",
   "沉静配色": "Calm palettes",
   "晴空": "Sky",

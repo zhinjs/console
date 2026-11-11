@@ -35,6 +35,8 @@ export const ROUTE_SEARCH_HINTS = Object.freeze({
   '/ops/env': { description: '管理运行环境变量', keywords: ['环境变量', '变量', '密钥', '.env', 'env', 'environment', 'secret'] },
   '/ops/files': { description: '浏览和编辑项目文件', keywords: ['文件', '项目文件', '代码', '编辑', '目录', 'file', 'files', 'editor'] },
   '/ops/database': { description: '检查数据表、记录与持久化状态', keywords: ['数据库', '数据表', '表', '记录', '数据', 'database', 'db', 'sql', 'table'] },
+  '/onboarding': { description: '接入 AI 和聊天平台，完成首次引导', keywords: ['引导', '开始使用', '初始化', '向导', '上手', 'onboarding', 'setup', 'getting started'] },
+  '/account': { description: '修改密码、管理我的 API 令牌', keywords: ['个人设置', '我的账号', '密码', '修改密码', 'API 令牌', '令牌', 'account', 'password', 'token', 'profile'] },
 })
 
 /** Legacy paths only redirect to another page; that page carries their keywords. */

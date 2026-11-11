@@ -3,7 +3,7 @@ import { LanguageSelect } from '../components/LanguageSelect'
 import { useI18n } from '../i18n'
 import { useMemo, useRef, useState, useEffect, useLayoutEffect, useSyncExternalStore } from "react"
 import { Outlet, Link, useLocation, matchPath } from "react-router-dom"
-import { Menu, LogOut, X, ChevronRight, PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import { Menu, LogOut, X, ChevronRight, PanelLeftClose, PanelLeftOpen, UserRound } from "lucide-react"
 import { cn, type ConsoleRouteRecord } from "@zhin.js/client"
 import { useConsoleConnected } from "../hooks/use-console-connected"
 import { app } from "../utils/console-client"
@@ -12,7 +12,11 @@ import { ThemeToggle } from "../components/ThemeToggle"
 import { Button } from "../components/ui/button"
 import { ScrollArea } from "../components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipTrigger } from "../components/ui/tooltip"
-import { notifyAuthRequired } from "../utils/auth"
+import { signOut } from "../utils/console-auth-api"
+import { principalLabel } from "../utils/console-auth-model.mjs"
+import { useConsoleSession } from "../hooks/use-console-session"
+import { OnboardingBanner } from "../components/onboarding-banner"
+import { CONSOLE_PATHS } from "../console-routes.mjs"
 import { ConsoleCommandCenter } from "../components/ConsoleCommandCenter"
 import "./workspace-navigation.css"
 import { resolveNavigationLocation } from "../navigation-location.mjs"
@@ -81,6 +85,8 @@ export default function DashboardLayout() {
     () => app.getRoutes(),
   )
   const access = useConsoleAccess()
+  const { me } = useConsoleSession()
+  const accountLabel = principalLabel(me, i18n.t)
   // Sections the principal has no page in are omitted entirely (ADR 0052).
   const navTiers = useMemo(() => buildNavigation(routes, access), [routes, access])
 
@@ -289,13 +295,21 @@ export default function DashboardLayout() {
             </span>
             <LanguageSelect />
             <ThemeToggle />
+            {me?.user ? (
+              <Button asChild variant="ghost" size="sm" className="console-topbar-account">
+                <Link to={CONSOLE_PATHS.account} title={i18n.t("个人设置")} aria-label={i18n.t("个人设置：{0}", [accountLabel])}>
+                  <UserRound className="h-4 w-4" />
+                  <span className="hidden md:inline max-w-[10rem] truncate">{accountLabel}</span>
+                </Link>
+              </Button>
+            ) : null}
             <Button
               variant="ghost"
               size="icon"
               title={i18n.t("退出登录")}
               aria-label={i18n.t("退出登录")}
               onClick={() => {
-                notifyAuthRequired()
+                void signOut(me)
               }}
             >
               <LogOut className="h-4 w-4" />
@@ -319,6 +333,7 @@ export default function DashboardLayout() {
               contentFullWidth ? "max-w-none" : "console-content-frame",
             )}
           >
+            {contentFlush ? null : <OnboardingBanner />}
             <Outlet />
           </div>
         </main>

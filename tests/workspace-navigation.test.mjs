@@ -73,6 +73,9 @@ function fixture({ routes, path = '/sandbox', mobile = false, collapsed = false,
     './ui/dialog': ui(['Dialog', 'DialogContent', 'DialogDescription', 'DialogTitle']), './command-center-model.mjs': commandCenterModel,
     '../utils/auth': { notifyAuthRequired() {} }, '../components/ConsoleCommandCenter': { ConsoleCommandCenter: 'command-center' },
     '../navigation-sections.mjs': sections, '../hooks/use-console-access': { useConsoleAccess: () => access },
+    '../utils/console-auth-api': { signOut() {} }, '../utils/console-auth-model.mjs': { principalLabel: () => '' },
+    '../hooks/use-console-session': { useConsoleSession: () => ({ me: null }) },
+    '../components/onboarding-banner': { OnboardingBanner: 'onboarding-banner' }, '../console-routes.mjs': { CONSOLE_PATHS: { account: '/account' } },
   }
   mocks['../hooks/useIsMobile'] = compile(mobileHookSource, { react: hooks })
   const module = compile(command ? commandSource : layoutSource, mocks)

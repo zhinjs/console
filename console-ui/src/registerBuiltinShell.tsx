@@ -32,6 +32,8 @@ import GlobalFeatureConfigPage from './pages/features/global-config'
 import AdaptersPage from './pages/features/adapters'
 import AdapterDetailPage from './pages/features/adapter-detail'
 import EndpointFeaturesPage from './pages/features/endpoint-features'
+import OnboardingPage from './pages/onboarding'
+import AccountPage from './pages/account'
 import { LegacyRedirect } from './components/legacy-redirect'
 import { CONSOLE_PATHS as P, LEGACY_ROUTE_REDIRECTS } from './console-routes.mjs'
 import { NAV_GROUPS } from './navigation-taxonomy'
@@ -132,6 +134,10 @@ export function registerBuiltinConsolePages() {
   app.addRoute({ path: P.opsFiles, name: '项目文件', parent: null, icon: 'FolderOpen', element: <FileManagePage />, meta: { group: NAV_GROUPS.OPS, order: 4 } })
 
   // 访问控制（用户、角色、API 令牌、审计）：ADR 0049，后续阶段。
+
+  // 个人：引导（ADR 0053）与个人设置（ADR 0049），不在菜单里，从横幅与顶栏进入。
+  app.addRoute({ path: P.onboarding, name: '开始使用', parent: null, icon: 'Rocket', element: <OnboardingPage />, meta: { group: NAV_GROUPS.OVERVIEW, hideInMenu: true } })
+  app.addRoute({ path: P.account, name: '个人设置', parent: null, icon: 'UserRound', element: <AccountPage />, meta: { group: NAV_GROUPS.OVERVIEW, hideInMenu: true } })
 
   // Old routes stay as hidden redirects (ADR 0052 迁移).
   for (const [path, rule] of Object.entries(LEGACY_ROUTE_REDIRECTS)) {
