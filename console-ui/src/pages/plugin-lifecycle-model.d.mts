@@ -1,1 +1,0 @@
-export function waitForPluginStatus<T extends { status: string }>(read: () => Promise<T>, status: string, signal: AbortSignal, options?: { attempts?: number; pause?: (ms: number, signal: AbortSignal) => Promise<void> }): Promise<T | null>;

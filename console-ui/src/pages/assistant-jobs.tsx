@@ -14,7 +14,7 @@ import { Input } from '../components/ui/input'
 import { SelectField } from '../components/ui/select'
 import { Skeleton } from '../components/ui/skeleton'
 import { JsonViewer } from './introspection/JsonViewer'
-import { validateAssistantJobs, filterAssistantJobs, probeAssistantJobs, explainJobError, type AssistantJobsResponse } from './assistant-jobs-model.mjs'
+import { validateAssistantJobs, filterAssistantJobs, explainJobError, type AssistantJobsResponse } from './assistant-jobs-model.mjs'
 
 type JobRead = { unavailable: true } | { unavailable: false; data: AssistantJobsResponse }
 
