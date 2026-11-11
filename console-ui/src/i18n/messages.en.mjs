@@ -3023,4 +3023,9 @@ export const englishMessages = Object.freeze({
   "{0} 超出 Host 文件树返回的目录深度，无法在文件树中定位，已直接打开。": "{0} is deeper than the Host file tree goes, so it cannot be shown in the tree. It was opened directly.",
   "{0} 是目录，请在文件树中选择其中的文件。": "{0} is a folder. Choose a file inside it in the file tree.",
   "文件树中没有 {0}：该路径可能不存在、被隐藏或不在可管理范围内。": "{0} is not in the file tree. The path may not exist, may be hidden, or may be outside the manageable folders.",
+  "项（本页）": " items (this page)",
+  "个组件（本页）": " components (this page)",
+  "本页统计": "This page",
+  "服务端共 {0} 项；插件筛选与计数只覆盖本页的 {1} 项": "{0} items on the server; plugin filters and counts cover only the {1} items on this page",
+  "返回列表": "Back to list",
 })
