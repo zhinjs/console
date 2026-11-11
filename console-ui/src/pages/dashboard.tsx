@@ -45,10 +45,10 @@ import {
 } from 'lucide-react'
 import { fetchConsoleEventHistory, SIDE_EVENT_PUSH } from '@zhin.js/client'
 import { useConsoleConnected } from '../hooks/use-console-connected'
+import { useHostRestart } from '../hooks/use-host-restart'
 import { getConsoleTransport } from '../utils/console-client'
 import { apiFetch } from '../utils/auth'
-import { CONSOLE_REST, CONSOLE_RPC } from '../contracts/zhin-console'
-import { requestConsole } from '../utils/console-rpc'
+import { CONSOLE_REST } from '../contracts/zhin-console'
 import { pluginRpc } from '../utils/plugin-rpc'
 import { isDemoMode } from '../utils/demo-mode'
 import { useToast } from '../components/toast'
@@ -352,7 +352,7 @@ export default function HomePage() {
   const [controlState, setControlState] = useState<ControlState | null>(null)
   const [controlUpdating, setControlUpdating] = useState<ControlSwitchKey | null>(null)
   const { confirm, ConfirmDialog: ConfirmDialogHost } = useConfirm()
-  const [restarting, setRestarting] = useState(false)
+  const { restarting, confirmRestart } = useHostRestart(confirm)
   const requestRef = useRef(0)
   const requestAbortRef = useRef<AbortController | null>(null)
   const readOnly = isDemoMode()
@@ -619,28 +619,6 @@ export default function HomePage() {
       },
     ]
   }, [recentEvents, stats, systemStatus, lastUpdatedAt, offlineEndpoints, i18n.locale])
-
-  const handleRestart = async () => {
-    setRestarting(true)
-    try {
-      await requestConsole({ type: CONSOLE_RPC.SYSTEM_RESTART })
-      success(i18n.t("重启请求已发送，连接将在服务恢复后自动重连"))
-      window.setTimeout(() => window.location.reload(), 3000)
-    } catch {
-      toastError(i18n.t("重启请求未能发送"))
-      setRestarting(false)
-    }
-  }
-
-  const confirmRestart = async () => {
-    const ok = await confirm({
-      title: i18n.t("重启 Zhin 服务"),
-      description: i18n.t("所有连接将断开，进行中的对话可能被中止。通过 zhin runtime start 启动的前台和 daemon 服务会自动重新启动；--once 模式不会自动恢复。若使用自定义启动器，请确认其重启机制。"),
-      confirmLabel: i18n.t("确认重启"),
-      variant: 'destructive',
-    })
-    if (ok) await handleRestart()
-  }
 
   const handleToggleControl = async (key: ControlSwitchKey) => {
     if (!controlState?.available || readOnly || controlUpdating) return
