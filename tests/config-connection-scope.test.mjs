@@ -12,6 +12,7 @@ import * as schemaModel from '../console-ui/src/components/PluginConfigForm/sche
 import { createConfigDraftGuard } from '../console-ui/src/components/PluginConfigForm/draft-guard.mjs'
 import * as configNavigation from '../console-ui/src/pages/config-navigation.mjs'
 import * as settingsModel from '../console-ui/src/pages/settings-model.mjs'
+import * as modelsEntry from '../console-ui/src/pages/inference/models-entry.mjs'
 import { numericFieldIssue } from '../console-ui/src/components/PluginConfigForm/numeric-validation.mjs'
 import { isConversationScopeField } from '../console-ui/src/components/PluginConfigForm/conversation-scope-model.mjs'
 import { translate } from '../console-ui/src/i18n/locale.mjs'
@@ -94,13 +95,13 @@ function fixture(query = '') {
     '../components/PluginConfigForm/ConfigurationLiveStatus': { ConfigurationLiveStatus: 'configuration-live-status' },
     '../components/PluginConfigForm/config-evidence-model.mjs': configEvidenceModel,
     '../components/PluginConfigForm/config-live-status.mjs': configLiveStatus,
-    'react-router-dom': { Link: 'a', useSearchParams: () => [new URLSearchParams(url.query), (next, options) => {
+    'react-router-dom': { Link: 'a', Navigate: 'navigate', useSearchParams: () => [new URLSearchParams(url.query), (next, options) => {
       const value = typeof next === 'function' ? next(new URLSearchParams(url.query)) : new URLSearchParams(next)
       url.query = value.toString(); url.writes.push({ query: url.query, replace: options?.replace === true }); runtime.invalidate()
     }] },
     'lucide-react': new Proxy({}, { get: () => 'i' }),
     './AgentPresetsEditor': { AgentPresetsEditor: 'agent-presets-editor' },
-    './inference/Workspace': { InferenceWorkspace: 'inference-workspace' },
+    './inference/models-entry.mjs': modelsEntry,
     './SchemaFieldEditor': { SchemaFieldEditor: 'field-editor' }, '../ui/card': { Card: 'article' }, '../ui/badge': { Badge: 'span' },
     '../ui/button': { Button: 'button' }, '../ui/table': { Table: 'table', TableHeader: 'thead', TableBody: 'tbody', TableRow: 'tr', TableHead: 'th', TableCell: 'td' }, '../ui/alert': { Alert: 'aside', AlertDescription: 'p' },
     '../components/ui/card': { Card: 'article', CardContent: 'section' }, '../components/ui/list-item-button': { ListItemButton: 'button' }, '../components/ui/button': { Button: 'button' },
@@ -1021,19 +1022,16 @@ async function settingsPage(query = '') {
   return f
 }
 
-test('actual settings separates runtime model management from the single static AI behavior and role owner', async () => {
+test('actual settings leaves runtime model management to /agent/models and keeps the single static AI behavior and role owner', async () => {
   const f = await settingsPage()
-  for (const title of ['通用设置', '模型', 'Agent 预设', '插件配置']) assert.ok(button(f.runtime.value, title))
+  for (const title of ['通用设置', 'Agent 预设', '插件配置']) assert.ok(button(f.runtime.value, title))
   const navigation = elements(f.runtime.value).find(element => element.type === 'nav' && element.props['aria-label'] === '设置分类')
-  assert.deepEqual(elements(navigation).filter(element => element.type === 'button').map(label), ['通用设置', '模型', 'Agent 预设', '插件配置'])
+  // Model management has one entry (/agent/models); settings no longer embeds a second copy.
+  assert.deepEqual(elements(navigation).filter(element => element.type === 'button').map(label), ['通用设置', 'Agent 预设', '插件配置'])
   assert.ok(!label(navigation).includes('高级')); assert.ok(!label(navigation).includes('完整源码')); assert.ok(!label(navigation).includes('插件声明'))
   assert.ok(!label(f.runtime.value).includes('已读取文件版本：'))
   assert.equal(pageForm(f, 'ai').length, 0, 'category landing does not request every form')
-  button(f.runtime.value, '模型').props.onClick(); await f.runtime.settle()
-  assert.ok(elements(f.runtime.value).some(item => item.type === 'inference-workspace'))
-  assert.equal(pageForm(f, 'ai').length, 0, 'runtime models must not instantiate a source-file draft')
-  assert.equal(elements(f.runtime.value).some(item => item.type === 'configuration-live-status'), false,
-    'file save/apply evidence cannot represent the model graph transaction')
+  assert.equal(elements(f.runtime.value).some(item => item.type === 'inference-workspace'), false)
   let forms
   button(f.runtime.value, 'Agent 预设').props.onClick(); await f.runtime.settle()
   forms = pageForm(f, 'ai'); assert.equal(forms.length, 1); assert.deepEqual(forms[0].props.fieldNames, ['agents'])
@@ -1359,6 +1357,15 @@ test('AI settings save all owner modifications without redundant paths or preven
   f.runtime.unmount()
 })
 
+test('old settings model links redirect to the single model entry and keep their tab', () => {
+  for (const [query, to] of [['section=models', '/agent/models'], ['section=ai%3Ainference&tab=accounts', '/agent/models?tab=accounts'], ['section=models&tab=purposes', '/agent/models?tab=purposes']]) {
+    const element = fixture(query).page.default()
+    assert.equal(element.type, 'navigate', query)
+    assert.deepEqual(element.props, { to, replace: true })
+  }
+  for (const query of ['', 'section=presets', 'plugin=ai']) assert.notEqual(fixture(query).page.default().type, 'navigate', query)
+})
+
 test('settings page has no file editor or refresh path, and actual read-error retry stays isolated across Hosts', async () => {
   const f = fixture(), rootA = f.page.EditableConfigPage(), scopeA = rootA.props.connectionScope
   f.runtime.mount(() => f.page.EditableConfigSession(rootA.props))
@@ -1377,9 +1384,8 @@ test('settings page has no file editor or refresh path, and actual read-error re
   assert.equal(button(f.runtime.value, '刷新'), undefined)
   assert.equal(button(f.runtime.value, '保存'), undefined)
   assert.equal(elements(f.runtime.value).some(item => item.type === 'code-editor'), false)
-  button(f.runtime.value, '模型').props.onClick(); await f.runtime.settle()
+  assert.equal(button(f.runtime.value, '模型'), undefined, 'model management is reached through /agent/models')
   assert.equal(pageForm(f, 'ai').length, 0)
-  assert.ok(elements(f.runtime.value).some(item => item.type === 'inference-workspace'))
   assert.equal(f.calls.some(call => call.input.type === 'config:replace-source'), false)
   f.runtime.unmount()
 })

@@ -1,13 +1,13 @@
 import { useI18n } from '../i18n'
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useConfigSource } from '../hooks/useConfigSource'
 import { PluginConfigForm } from '../components/PluginConfigForm'
 import { ConfigurationLiveStatus } from '../components/PluginConfigForm/ConfigurationLiveStatus'
 import { configurationSupportsApply } from '../components/PluginConfigForm/config-live-status.mjs'
 import { parse as parseYaml } from 'yaml'
 import {
-  Settings, AlertCircle, ChevronRight, ArrowLeft, SlidersHorizontal, Brain, Bot, Blocks
+  Settings, AlertCircle, ChevronRight, ArrowLeft, SlidersHorizontal, Bot, Blocks
 } from 'lucide-react'
 import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
@@ -23,7 +23,7 @@ import {
 } from './settings-model.mjs'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
-import { InferenceWorkspace } from './inference/Workspace'
+import { legacySettingsModelsRedirect } from './inference/models-entry.mjs'
 import { WelcomeFlowContext } from './WelcomeFlowContext'
 import { ListItemButton } from '../components/ui/list-item-button'
 import { useUnsavedChangesGuard } from '../utils/useUnsavedChangesGuard'
@@ -42,7 +42,6 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
   const pluginFromUrl = searchParams.get('plugin')?.trim() ?? ''
   const { source, format, configKeys: pluginKeys, loading, loaded, error, load, snapshot, applyConfiguration, applyLoading, applyError, applyBlocked } = useConfigSource()
   const [visitedEntries, setVisitedEntries] = useState<Map<string, SettingsEntry>>(() => new Map())
-  const [runtimeVisited, setRuntimeVisited] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
   // The search box owns its text (router updates run as transitions, which would fight a
   // controlled input); the URL mirrors it so refresh and shared links restore the search.
@@ -85,10 +84,9 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
     ? filterSettingsCatalog(catalog, sectionFilter, message => i18n.t(message)).filter(group => group.entries.length) : []
   const listEntries = activeGroup.entries
   const sections = [...new Set(listEntries.map(entry => entry.section ?? 'general'))]
-  const ownerKeys = [...new Set(catalog.flatMap(group => group.entries.filter(entry => !entry.editor).map(entry => entry.configKey)))]
+  const ownerKeys = [...new Set(catalog.flatMap(group => group.entries.map(entry => entry.configKey)))]
   useEffect(() => {
-    if (loaded && activeEntry?.editor) setRuntimeVisited(true)
-    if (loaded && activeEntry && !activeEntry.editor) setVisitedEntries(previous => previous.get(activeEntry.configKey)?.id === activeEntry.id
+    if (loaded && activeEntry) setVisitedEntries(previous => previous.get(activeEntry.configKey)?.id === activeEntry.id
       ? previous : new Map(previous).set(activeEntry.configKey, activeEntry))
   }, [loaded, activeEntry])
 
@@ -141,12 +139,12 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
         <nav className="console-settings-nav" aria-label={i18n.t("设置分类")}>
           <div className="console-settings-nav-primary">
             {catalog.map(group => {
-              const Icon = group.id === 'general' ? SlidersHorizontal : group.id === 'models' ? Brain : group.id === 'presets' ? Bot : Blocks
+              const Icon = group.id === 'general' ? SlidersHorizontal : group.id === 'presets' ? Bot : Blocks
               return <ListItemButton key={group.id} type="button" className="console-settings-nav-item"
                 aria-current={activeGroup.id === group.id ? 'page' : undefined}
                 onClick={() => showLocation(group.id)}>
                 <Icon aria-hidden="true" /><span>{i18n.t(group.title)}</span>
-                {group.entries.some(entry => !entry.editor && dirtyOwners.has(entry.configKey)) ? <small className="console-dirty-pill">{i18n.t("未保存")}</small> : null}
+                {group.entries.some(entry => dirtyOwners.has(entry.configKey)) ? <small className="console-dirty-pill">{i18n.t("未保存")}</small> : null}
               </ListItemButton>
             })}
           </div>
@@ -189,7 +187,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
                   <span className="console-settings-entry-copy"><strong>{i18n.t(entry.title)}</strong><span>{i18n.t(entry.description)}</span>
                     <small>{entry.section === 'general' ? i18n.t(group.title) : i18n.t("{0} · {1}", [i18n.t(group.title), i18n.t(entry.sectionTitle)])}</small>
                     {!entry.writable ? <small>{i18n.t("只读")}</small> : null}
-                    {dirtyOwners.has(entry.configKey) && !entry.editor ? <small className="console-dirty-pill">{i18n.t("未保存")}</small> : null}</span>
+                    {dirtyOwners.has(entry.configKey) ? <small className="console-dirty-pill">{i18n.t("未保存")}</small> : null}</span>
                   <ChevronRight className="console-settings-entry-arrow" aria-hidden="true" />
                 </ListItemButton>)}
               </div>
@@ -201,7 +199,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
                   <span className="console-settings-entry-icon" aria-hidden="true"><Settings /></span>
                   <span className="console-settings-entry-copy"><strong>{i18n.t(entry.title)}</strong><span>{i18n.t(entry.description)}</span>
                     {!entry.writable ? <small>{i18n.t("只读")}</small> : null}
-                    {dirtyOwners.has(entry.configKey) && !entry.editor ? <small className="console-dirty-pill">{i18n.t("未保存")}</small> : null}</span>
+                    {dirtyOwners.has(entry.configKey) ? <small className="console-dirty-pill">{i18n.t("未保存")}</small> : null}</span>
                   <ChevronRight className="console-settings-entry-arrow" aria-hidden="true" />
                 </ListItemButton>)}
               </div>
@@ -219,13 +217,11 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
             </Button>
           </div> : null}
 
-          {runtimeVisited ? <section hidden={activeEntry?.editor !== 'inference'}><InferenceWorkspace connectionScope={connectionScope} /></section> : null}
-
           {ownerKeys.map(key => {
             // A configuration owner has exactly one form and CAS-bound draft. In
             // particular, switching AI views never creates independent ai drafts.
-            const entry = activeEntry?.configKey === key && !activeEntry.editor ? activeEntry : visitedEntries.get(key)
-            const visible = activeEntry?.configKey === key && !activeEntry.editor
+            const entry = activeEntry?.configKey === key ? activeEntry : visitedEntries.get(key)
+            const visible = activeEntry?.configKey === key
             return <section key={key} hidden={!visible} className="console-settings-form" aria-label={entry ? i18n.t(entry.title) : key}>
               {entry && !entry.writable ? <Card className="console-settings-empty">
                 <Settings aria-hidden="true" /><h3>{i18n.t(entry.title)}</h3>
@@ -265,5 +261,9 @@ function DemoConfigPage() {
 }
 
 export default function ConfigPage() {
+  // Model management lives only at /agent/models; old `?section=models` links land on it.
+  const [searchParams] = useSearchParams()
+  const models = legacySettingsModelsRedirect(searchParams)
+  if (models) return <Navigate to={models} replace />
   return isDemoMode() ? <DemoConfigPage /> : <EditableConfigPage />
 }

@@ -373,7 +373,6 @@ export const englishMessages = Object.freeze({
   "配置 Host 提供的 Agent 互联服务。": "Configure agent connection services provided by the Host.",
   "通用设置": "General",
   "管理机器人的基础运行设置。": "Manage the bot’s basic runtime settings.",
-  "连接模型服务并管理可用模型。": "Connect model services and manage available models.",
   "Agent 预设": "Agent presets",
   "组合模型、角色和能力，设置不同助手的工作方式。": "Combine models, roles and capabilities to configure how each assistant works.",
   "按能力查看插件，需要调整时再打开具体设置。": "Browse plugins by capability and open their settings when needed.",
@@ -3082,7 +3081,6 @@ export const englishMessages = Object.freeze({
   "将作为纯文本摘要发送，不关联原消息": "Sent as a plain-text summary, not linked to the original message",
   "取消引用文本": "Cancel text quote",
   "取消以文本转发": "Cancel text forward",
-  "管理账号、模型与用途。": "Manage accounts, models and purposes.",
   "为已有 Agent 配置名称与可用服务。": "Set names and available services for existing Agents.",
   "设置 Workroom 协作能力。": "Configure Workroom collaboration.",
 })
