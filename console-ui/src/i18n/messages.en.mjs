@@ -3225,4 +3225,6 @@ export const englishMessages = Object.freeze({
   "链接中的命令对应多个插件实例，请从列表中选择。": "The linked command matches several plugin instances. Choose one from the list.",
   "当前目录中没有找到链接中的命令，请搜索或从列表中选择。": "The linked command was not found in the current directory. Search or choose one from the list.",
   "查看此命令的权限说明": "View this command's permissions",
+  "CPU 占用": "CPU usage",
+  "进程 CPU 时间占单核的比例，按两次刷新之间的差值计算": "Process CPU time as a share of one core, measured between two refreshes",
 })
