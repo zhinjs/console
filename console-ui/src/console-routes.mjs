@@ -20,6 +20,7 @@ export const CONSOLE_PATHS = Object.freeze({
   adapters: '/features/adapters',
   adapter: '/features/adapters/:adapter',
   adapterEndpoint: '/features/adapters/:adapter/endpoints/:endpoint',
+  adapterConversation: '/features/adapters/:adapter/endpoints/:endpoint/conversations/:conversation',
   ai: '/features/ai',
   aiSkills: '/features/ai/skills',
   aiAmbient: '/features/ai/ambient',
@@ -69,6 +70,19 @@ export function adapterHref(adapter) {
 
 export function adapterEndpointHref(adapter, endpoint) {
   return `/features/adapters/${segment(adapter)}/endpoints/${segment(endpoint)}`
+}
+
+/** The endpoint page with its 「会话」 tab open. */
+export function endpointConversationsHref(adapter, endpoint) {
+  return `${adapterEndpointHref(adapter, endpoint)}?tab=conversations`
+}
+
+/**
+ * One conversation's feature page. The segment is `<kind>:<id>` URI-encoded as a whole, so ids with
+ * `/`, `:`, `?` or `#` stay in one path segment.
+ */
+export function conversationFeatureHref(adapter, endpoint, kind, id) {
+  return `${adapterEndpointHref(adapter, endpoint)}/conversations/${segment(`${kind}:${id}`)}`
 }
 
 export function endpointWorkspaceHref(adapter, endpoint) {

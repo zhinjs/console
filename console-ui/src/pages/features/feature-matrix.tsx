@@ -13,6 +13,7 @@ import { ErrorAlert } from '../../components/error-alert'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { adapterHref, featureGlobalHref } from '../../console-routes.mjs'
 import { cellState, setEnabledRequest, type FeatureCell } from './feature-model.mjs'
+import { ConversationOverrideLinks } from './conversation-list'
 import { useFeatureMatrix, useFeatureWriter } from './use-feature-data'
 import { FeatureSwitch } from './feature-switch'
 import { useConfirm } from '../../components/confirm-dialog'
@@ -23,7 +24,7 @@ function CellBadge({ cell, to }: { cell: FeatureCell | undefined; to?: string })
   const i18n = useI18n()
   const state = cellState(cell)
   const badge = state === 'locked'
-    ? <Badge variant="secondary" title={cell?.lockedBy === 'global' ? i18n.t("已在全局禁用") : i18n.t("已在适配器禁用")}><Lock aria-hidden="true" />{i18n.t("被上级禁用")}</Badge>
+    ? <Badge variant="secondary" title={cell?.lockedBy === 'global' ? i18n.t("已在全局禁用") : cell?.lockedBy === 'endpoint' ? i18n.t("已在账号禁用") : i18n.t("已在适配器禁用")}><Lock aria-hidden="true" />{i18n.t("被上级禁用")}</Badge>
     : state === 'enabled' ? <Badge variant="success">{i18n.t("启用")}</Badge>
       : state === 'disabled' ? <Badge variant="outline">{i18n.t("禁用")}</Badge>
         : <span className="text-muted-foreground">—</span>
@@ -33,7 +34,7 @@ function CellBadge({ cell, to }: { cell: FeatureCell | undefined; to?: string })
 
 export default function FeatureMatrixPage() {
   const i18n = useI18n()
-  const { rows, adapters, revision, source, loading, error, refresh } = useFeatureMatrix()
+  const { rows, adapters, revision, conversationOverrides, source, loading, error, refresh } = useFeatureMatrix()
   const adapterColumns = source === 'rpc' ? adapters : []
   const access = useConsoleAccess()
   const canToggle = source === 'rpc' && hasConsolePermission('feature.toggle', access)
@@ -48,8 +49,11 @@ export default function FeatureMatrixPage() {
     })
     if (ok) await write(setEnabledRequest({ plugin, level: 'global', enabled, revision }), refresh, `${plugin}\u0000global`)
   }
-  const toggleAdapter = (plugin: string, adapter: string, enabled: boolean) =>
+  const toggleAdapter = (plugin: string, adapter: string, cell: FeatureCell, enabled: boolean) => {
+    // A cell disabled higher up is locked: neither enabled nor disabled here.
+    if (cell.lockedBy) return
     void write(setEnabledRequest({ plugin, level: 'adapter', key: adapter, enabled, revision }), refresh, `${plugin}\u0000${adapter}`)
+  }
   return (
     <PageShell>
       <PageHeader
@@ -82,7 +86,12 @@ export default function FeatureMatrixPage() {
               <TableRow>
                 <TableHead>{i18n.t("功能")}</TableHead>
                 <TableHead>{i18n.t("全局")}</TableHead>
-                {adapterColumns.map(adapter => <TableHead key={adapter}><Link to={adapterHref(adapter)} className="hover:underline">{adapter}</Link></TableHead>)}
+                {adapterColumns.map(adapter => (
+                  <TableHead key={adapter} className="align-top">
+                    <Link to={adapterHref(adapter)} className="hover:underline">{adapter}</Link>
+                    <ConversationOverrideLinks counts={conversationOverrides} adapter={adapter} />
+                  </TableHead>
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -109,7 +118,7 @@ export default function FeatureMatrixPage() {
                             <FeatureSwitch label={i18n.t("{0} · {1}", [row.plugin, adapter])} plugin={row.plugin} adapter={adapter}
                               enabled={cell.enabled} lockedBy={cell.lockedBy} overridden={cell.overridden}
                               canToggle={canToggle} pending={pending === `${row.plugin}\u0000${adapter}`}
-                              onToggle={enabled => toggleAdapter(row.plugin, adapter, enabled)} />
+                              onToggle={enabled => toggleAdapter(row.plugin, adapter, cell, enabled)} />
                             <Link to={adapterHref(adapter)} className="text-xs text-muted-foreground hover:underline" aria-label={i18n.t("打开 {0}", [adapter])}>{i18n.t("配置")}</Link>
                           </span>
                         ) : <CellBadge cell={cell} />}

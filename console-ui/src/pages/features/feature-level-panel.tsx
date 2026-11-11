@@ -24,25 +24,29 @@ import { FeatureOverridesNotice } from './feature-overrides-notice'
 
 interface LevelTarget {
   readonly level: FeatureOverrideLevel
-  /** `alias` (adapter) or `<alias>/<endpointId>` (endpoint). */
+  /** `alias` (adapter), `<alias>/<endpointId>` (endpoint) or `<alias>/<endpointId>/<kind>:<id>` (conversation). */
   readonly levelKey: string
   readonly adapter: string
+  /** Endpoint id on the endpoint and conversation levels (lock links). */
+  readonly endpoint?: string
 }
 
-/** Feature switches and field overrides of one adapter or endpoint level (ADR 0050 / 0052). */
-export function FeatureLevelPanel({ level, levelKey, adapter }: LevelTarget) {
+function levelHeading(level: FeatureOverrideLevel, i18n: ReturnType<typeof useI18n>): { title: string; description: string } {
+  if (level === 'adapter') return { title: i18n.t("功能覆盖"), description: i18n.t("在这里的修改只作用于该适配器下的账号；未覆盖的字段继承全局配置。") }
+  if (level === 'endpoint') return { title: i18n.t("该账号的功能"), description: i18n.t("在这里的修改只作用于该账号；未覆盖的字段继承适配器或全局配置。") }
+  return { title: i18n.t("该会话的功能"), description: i18n.t("在这里的修改只作用于这个会话；未覆盖的字段继承账号、适配器或全局配置。上级禁用的功能在这里不能打开。") }
+}
+
+/** Feature switches and field overrides of one adapter, endpoint or conversation level (ADR 0050 / 0052 / 0055). */
+export function FeatureLevelPanel({ level, levelKey, adapter, endpoint }: LevelTarget) {
   const i18n = useI18n()
   const list = useFeatureList()
   const features = list.value ? featuresAtLevel(list.value.features, level) : []
   if (list.status === 'unsupported' || list.status === 'forbidden') return <FeatureOverridesNotice status={list.status} level={level} />
   return (
     <section aria-labelledby={`features-${level}`} className="space-y-3">
-      <h2 id={`features-${level}`} className="text-base font-semibold">{level === 'adapter' ? i18n.t("功能覆盖") : i18n.t("该账号的功能")}</h2>
-      <p className="text-sm text-muted-foreground">
-        {level === 'adapter'
-          ? i18n.t("在这里的修改只作用于该适配器下的账号；未覆盖的字段继承全局配置。")
-          : i18n.t("在这里的修改只作用于该账号；未覆盖的字段继承适配器或全局配置。")}
-      </p>
+      <h2 id={`features-${level}`} className="text-base font-semibold">{levelHeading(level, i18n).title}</h2>
+      <p className="text-sm text-muted-foreground">{levelHeading(level, i18n).description}</p>
       {list.error && list.status === 'error' ? <ErrorAlert error={list.error} onRetry={list.refresh} /> : null}
       {list.status === 'loading' ? (
         <div className="space-y-2">{[0, 1].map(index => <Skeleton key={index} className="h-14" />)}</div>
@@ -51,14 +55,14 @@ export function FeatureLevelPanel({ level, levelKey, adapter }: LevelTarget) {
           description={i18n.t("只支持全局配置的功能不会出现在这里。")} /></Card>
       ) : (
         <div className="space-y-2">
-          {features.map(feature => <FeatureLevelCard key={feature.plugin} feature={feature} level={level} levelKey={levelKey} adapter={adapter} />)}
+          {features.map(feature => <FeatureLevelCard key={feature.plugin} feature={feature} level={level} levelKey={levelKey} adapter={adapter} endpoint={endpoint} />)}
         </div>
       )}
     </section>
   )
 }
 
-function FeatureLevelCard({ feature, level, levelKey, adapter }: LevelTarget & { feature: FeatureSummary }) {
+function FeatureLevelCard({ feature, level, levelKey, adapter, endpoint }: LevelTarget & { feature: FeatureSummary }) {
   const i18n = useI18n()
   const access = useConsoleAccess()
   const canToggle = hasConsolePermission('feature.toggle', access)
@@ -67,12 +71,16 @@ function FeatureLevelCard({ feature, level, levelKey, adapter }: LevelTarget & {
   const { write, pending } = useFeatureWriter()
   const [open, setOpen] = useState(false)
   const value = detail.value
-  const rows = useMemo(() => value ? featureFieldRows(value) : [], [value])
+  const rows = useMemo(() => value ? featureFieldRows(value, feature.conversationFields) : [], [value, feature.conversationFields])
   const overrides = rows.filter(row => row.overridden).length
   const configurable = feature.levels.includes(level)
   const revision = value?.revision
   const reload = detail.refresh
-  const toggle = (enabled: boolean) => void write(setEnabledRequest({ plugin: feature.plugin, level, key: levelKey, enabled, revision }), reload, 'enabled')
+  const toggle = (enabled: boolean) => {
+    // Locked by a higher level: neither enabling nor disabling here (the switch is inert, too).
+    if (!value || value.lockedBy) return
+    void write(setEnabledRequest({ plugin: feature.plugin, level, key: levelKey, enabled, revision }), reload, 'enabled')
+  }
   const clearLevel = () => void write(removeOverrideRequest({ plugin: feature.plugin, level, key: levelKey, revision }), reload, 'clear')
   return (
     <Card className="p-0">
@@ -90,7 +98,7 @@ function FeatureLevelCard({ feature, level, levelKey, adapter }: LevelTarget & {
           </div>
         </div>
         {value ? (
-          <FeatureSwitch label={i18n.t("{0} · 启用", [feature.plugin])} plugin={feature.plugin} adapter={adapter}
+          <FeatureSwitch label={i18n.t("{0} · 启用", [feature.plugin])} plugin={feature.plugin} adapter={adapter} endpoint={endpoint}
             enabled={value.enabled} lockedBy={value.lockedBy} canToggle={canToggle} pending={pending === 'enabled'} onToggle={toggle} />
         ) : detail.status === 'loading' ? <Skeleton className="h-5 w-9" /> : null}
       </div>
@@ -125,7 +133,8 @@ function valuePreview(value: unknown, i18n: ReturnType<typeof useI18n>): string 
 function SourceBadge({ row, level }: { row: FeatureFieldRow; level: FeatureOverrideLevel }) {
   const i18n = useI18n()
   if (row.badge === 'here') return <Badge variant="info" size="sm">{i18n.t("在此覆盖")}</Badge>
-  if (row.badge === 'adapter' && level === 'endpoint') return <Badge variant="secondary" size="sm">{i18n.t("继承自适配器")}</Badge>
+  if (row.badge === 'endpoint' && level === 'conversation') return <Badge variant="secondary" size="sm">{i18n.t("继承自账号")}</Badge>
+  if (row.badge === 'adapter' && level !== 'adapter') return <Badge variant="secondary" size="sm">{i18n.t("继承自适配器")}</Badge>
   if (row.badge === 'global') return <Badge variant="secondary" size="sm">{i18n.t("继承自全局")}</Badge>
   return <Badge variant="outline" size="sm">{i18n.t("未设置")}</Badge>
 }
@@ -161,7 +170,7 @@ function FieldOverrideRow({ row, level, canConfigure, pending, onSave, onRemove 
             <span className="font-medium">{title}</span>
             {title !== row.name ? <code className="text-xs text-muted-foreground">{row.name}</code> : null}
             <SourceBadge row={row} level={level} />
-            {!row.editable ? <Badge variant="outline" size="sm">{i18n.t("仅全局")}</Badge> : null}
+            {!row.editable ? <Badge variant="outline" size="sm">{level === 'conversation' ? i18n.t("会话层不可改") : i18n.t("仅全局")}</Badge> : null}
           </div>
           {field.description ? <p className="mt-0.5 text-xs text-muted-foreground">{field.description}</p> : null}
           <p className="mt-1 break-all text-sm"><span className="text-muted-foreground">{i18n.t("有效值：")}</span>{valuePreview(row.effective, i18n)}</p>

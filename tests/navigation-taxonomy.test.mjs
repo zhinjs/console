@@ -86,7 +86,7 @@ test('builtin route regrouping preserves deep links, hidden detail ownership and
   '/dashboard':'OVERVIEW','/logs':'OVERVIEW','/agent/workbench':'OVERVIEW','/agent/replay':'OVERVIEW','/agent/usage':'OVERVIEW',
   '/endpoints':'WORK','/endpoints/:adapter/:endpointId':'WORK','/agent/sessions':'WORK',
   '/features':'FEATURES','/features/global/:plugin':'FEATURES','/features/adapters':'FEATURES','/features/adapters/:adapter':'FEATURES',
-  '/features/adapters/:adapter/endpoints/:endpoint':'FEATURES','/features/ai':'FEATURES','/features/ai/skills':'FEATURES','/features/ai/ambient':'FEATURES',
+  '/features/adapters/:adapter/endpoints/:endpoint':'FEATURES','/features/adapters/:adapter/endpoints/:endpoint/conversations/:conversation':'FEATURES','/features/ai':'FEATURES','/features/ai/skills':'FEATURES','/features/ai/ambient':'FEATURES',
   '/features/ai/workrooms':'FEATURES','/features/ai/workrooms/catalog':'FEATURES','/introspection':'FEATURES','/permissions':'FEATURES',
   '/scenario-lab':'FEATURES','/use-cases/group-welcome':'FEATURES',
   '/plugins':'PLUGINS','/plugins/:name':'PLUGINS','/marketplace':'PLUGINS',
@@ -97,7 +97,7 @@ test('builtin route regrouping preserves deep links, hidden detail ownership and
  const pages = routes.filter(route=>!Object.hasOwn(LEGACY_ROUTE_REDIRECTS,route.path))
  assert.deepEqual(pages.map(route=>route.path).sort(),Object.keys(expected).sort())
  for (const [path,group] of Object.entries(expected)) assert.equal(byPath.get(path).meta.group,NAV_GROUPS[group],path)
- for (const [path,parent] of [['/plugins/:name','/plugins'],['/agent/replay','/agent/workbench'],['/permissions','/introspection'],['/features/ai/workrooms/catalog','/features/ai/workrooms'],['/endpoints/:adapter/:endpointId','/endpoints'],['/use-cases/group-welcome','/features'],['/features/global/:plugin','/features'],['/features/adapters/:adapter','/features/adapters'],['/features/adapters/:adapter/endpoints/:endpoint','/features/adapters/:adapter']]) {
+ for (const [path,parent] of [['/plugins/:name','/plugins'],['/agent/replay','/agent/workbench'],['/permissions','/introspection'],['/features/ai/workrooms/catalog','/features/ai/workrooms'],['/endpoints/:adapter/:endpointId','/endpoints'],['/use-cases/group-welcome','/features'],['/features/global/:plugin','/features'],['/features/adapters/:adapter','/features/adapters'],['/features/adapters/:adapter/endpoints/:endpoint','/features/adapters/:adapter'],['/features/adapters/:adapter/endpoints/:endpoint/conversations/:conversation','/features/adapters/:adapter/endpoints/:endpoint']]) {
   assert.equal(byPath.get(path).parent,parent,path)
   assert.equal(byPath.get(path).meta.hideInMenu,true,path)
  }

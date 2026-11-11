@@ -127,7 +127,8 @@ test('write requests carry the read revision and only target override levels', (
     { type: 'feature.set-enabled', plugin: 'rss', level: 'global', enabled: false, expectedRevision: 'r1' })
   assert.deepEqual(setEnabledRequest({ plugin: 'rss', level: 'adapter', key: 'qq', enabled: true }),
     { type: 'feature.set-enabled', plugin: 'rss', level: 'adapter', key: 'qq', enabled: true })
-  assert.throws(() => setOverrideRequest({ plugin: 'rss', level: 'global', key: '', field: 'a', value: 1 }), /adapter and endpoint/)
+  assert.throws(() => setOverrideRequest({ plugin: 'rss', level: 'global', key: '', field: 'a', value: 1 }), /below the global level/)
+  assert.throws(() => removeOverrideRequest({ plugin: 'rss', level: 'global', key: '' }), /below the global level/)
   assert.throws(() => setOverrideRequest({ plugin: 'rss', level: 'adapter', key: 'qq', field: 'a', value: undefined }), /value/)
 })
 

@@ -33,6 +33,8 @@ export const FEATURE_RPC = {
   SET_OVERRIDE: 'feature.set-override',
   REMOVE_OVERRIDE: 'feature.remove-override',
   SET_ENABLED: 'feature.set-enabled',
+  /** ADR 0055: conversations with overrides, paginated. */
+  CONVERSATIONS: 'feature.conversations',
 } as const
 
 export const CONSOLE_REST = {

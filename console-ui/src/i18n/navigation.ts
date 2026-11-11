@@ -16,6 +16,7 @@ const builtinNames: Readonly<Record<string, string>> = {
   "/features/adapters": "适配器",
   "/features/adapters/:adapter": "适配器详情",
   "/features/adapters/:adapter/endpoints/:endpoint": "账号功能配置",
+  "/features/adapters/:adapter/endpoints/:endpoint/conversations/:conversation": "会话功能配置",
   "/features/ai": "AI 与模型",
   "/features/ai/skills": "技能助手",
   "/features/ai/ambient": "群聊插话",

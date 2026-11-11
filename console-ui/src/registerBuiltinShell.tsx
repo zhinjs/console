@@ -32,6 +32,7 @@ import GlobalFeatureConfigPage from './pages/features/global-config'
 import AdaptersPage from './pages/features/adapters'
 import AdapterDetailPage from './pages/features/adapter-detail'
 import EndpointFeaturesPage from './pages/features/endpoint-features'
+import ConversationFeaturesPage from './pages/features/conversation-features'
 import OnboardingPage from './pages/onboarding'
 import AccountPage from './pages/account'
 import OpsInstancePage from './pages/ops/instance'
@@ -94,6 +95,7 @@ export function registerBuiltinConsolePages() {
   app.addRoute({ path: P.adapters, name: '适配器', parent: null, icon: 'Cable', element: <AdaptersPage />, meta: { group: NAV_GROUPS.FEATURES, order: 1 } })
   app.addRoute({ path: P.adapter, name: '适配器详情', parent: P.adapters, element: <AdapterDetailPage />, meta: { group: NAV_GROUPS.FEATURES, hideInMenu: true } })
   app.addRoute({ path: P.adapterEndpoint, name: '账号功能配置', parent: P.adapter, element: <EndpointFeaturesPage />, meta: { group: NAV_GROUPS.FEATURES, hideInMenu: true } })
+  app.addRoute({ path: P.adapterConversation, name: '会话功能配置', parent: P.adapterEndpoint, element: <ConversationFeaturesPage />, meta: { group: NAV_GROUPS.FEATURES, hideInMenu: true } })
   app.addRoute({ path: P.ai, name: 'AI 与模型', parent: null, icon: 'KeyRound', element: <PersonalModelsPage />, meta: { group: NAV_GROUPS.FEATURES, order: 2 } })
   app.addRoute({
     path: P.aiSkills,

@@ -13,6 +13,31 @@ export function classifyFeatureRpcError(error) {
   return 'error'
 }
 
+const LOCKS = ['global', 'adapter', 'endpoint']
+
+function readLock(value) {
+  return LOCKS.includes(value) ? value : undefined
+}
+
+/**
+ * A write the Host refused because a higher level disabled the plugin (409 `locked`). The
+ * transport only keeps the error text, so `lockedBy` is recovered from it when present.
+ * Returns `{ lockedBy? }` or null.
+ */
+export function featureLockError(error) {
+  const code = isRecord(error) ? error.code : undefined
+  const message = error instanceof Error ? error.message : String(error ?? '')
+  if (code !== 'locked' && !/\blocked\b|lockedBy|锁定|已在\s*(全局|适配器|账号)\S*\s*禁用/i.test(message)) return null
+  const named = /lockedBy["'\s:=]+["']?(global|adapter|endpoint)/i.exec(message)?.[1]
+    ?? /\b(?:locked|disabled) (?:by|at) (?:the )?(global|adapter|endpoint)\b/i.exec(message)?.[1]
+  // Chinese Host messages name the level: 已在全局 / 适配器 / 账号禁用.
+  const zh = /已在\s*(?:(全局)|(适配器)|(账号))/.exec(message)
+  const lockedBy = readLock(isRecord(error) ? error.lockedBy : undefined)
+    ?? readLock(named?.toLowerCase())
+    ?? (zh ? LOCKS[zh.slice(1).findIndex(Boolean)] : undefined)
+  return lockedBy ? { lockedBy } : {}
+}
+
 /**
  * Capability probe result: any answer that is not "this RPC does not exist" means the Host
  * knows `feature.*` (a validation error for a probe without a plugin still proves support).
@@ -48,7 +73,7 @@ export function globalFeatureRows(plugins) {
 
 function readCell(value) {
   if (!value || typeof value !== 'object' || typeof value.enabled !== 'boolean') return null
-  const lockedBy = value.lockedBy === 'global' || value.lockedBy === 'adapter' ? value.lockedBy : undefined
+  const lockedBy = readLock(value.lockedBy)
   return { enabled: value.enabled, overridden: value.overridden === true, ...(lockedBy ? { lockedBy } : {}) }
 }
 
@@ -74,9 +99,38 @@ export function readFeatureMatrix(payload) {
       const cell = readCell(row.adapters?.[adapter])
       if (cell) cells[adapter] = cell
     }
-    return { plugin: row.plugin, ...(typeof row.displayName === 'string' && row.displayName ? { displayName: row.displayName } : {}), global, adapters: cells }
+    const counts = readConversationCounts(row.conversationOverrides)
+    return { plugin: row.plugin, ...(typeof row.displayName === 'string' && row.displayName ? { displayName: row.displayName } : {}), global, adapters: cells,
+      ...(counts ? { conversationOverrides: counts } : {}) }
   })
-  return { revision: typeof payload.revision === 'string' ? payload.revision : '', adapters, endpoints, rows }
+  const counts = readConversationCounts(payload.conversationOverrides)
+  return { revision: typeof payload.revision === 'string' ? payload.revision : '', adapters, endpoints, rows, ...(counts ? { conversationOverrides: counts } : {}) }
+}
+
+/**
+ * Optional `conversationOverrides: { [alias]: { [endpointId]: number } }` (ADR 0055) on the matrix
+ * and on its rows: how many conversations of an endpoint store overrides. Absent on older Hosts.
+ */
+function readConversationCounts(value) {
+  if (!isRecord(value)) return undefined
+  const counts = {}
+  for (const [alias, byEndpoint] of Object.entries(value)) {
+    if (!isRecord(byEndpoint)) continue
+    for (const [endpoint, count] of Object.entries(byEndpoint)) {
+      if (!Number.isInteger(count) || count < 0) continue
+      ;(counts[alias] ??= {})[endpoint] = count
+    }
+  }
+  return counts
+}
+
+/** Endpoints of one alias with at least one overriding conversation, ordered by endpoint id. */
+export function conversationOverrideCounts(counts, alias) {
+  const byEndpoint = isRecord(counts) && isRecord(counts[alias]) ? counts[alias] : {}
+  return Object.entries(byEndpoint)
+    .filter(([, count]) => Number.isInteger(count) && count > 0)
+    .map(([endpoint, count]) => ({ endpoint, count }))
+    .sort((a, b) => a.endpoint.localeCompare(b.endpoint))
 }
 
 /** Global rows stay authoritative for names; a matrix adds adapter columns. */
@@ -85,15 +139,19 @@ export function mergeFeatureMatrix(globalRows, matrix) {
   const byPlugin = new Map(matrix.rows.map(row => [row.plugin, row]))
   const rows = globalRows.map(row => {
     const remote = byPlugin.get(row.plugin)
-    return remote ? { ...row, global: remote.global, adapters: remote.adapters } : { ...row, adapters: {} }
+    return remote
+      ? { ...row, global: remote.global, adapters: remote.adapters, ...(remote.conversationOverrides ? { conversationOverrides: remote.conversationOverrides } : {}) }
+      : { ...row, adapters: {} }
   })
   // Nested Plugin instances (`parent/child`) are matrix rows the plugin list does not show.
   const known = new Set(globalRows.map(row => row.plugin))
   for (const remote of matrix.rows) {
     if (known.has(remote.plugin)) continue
-    rows.push({ plugin: remote.plugin, name: remote.displayName ?? remote.plugin, description: '', hasSchema: false, global: remote.global, adapters: remote.adapters })
+    rows.push({ plugin: remote.plugin, name: remote.displayName ?? remote.plugin, description: '', hasSchema: false, global: remote.global, adapters: remote.adapters,
+      ...(remote.conversationOverrides ? { conversationOverrides: remote.conversationOverrides } : {}) })
   }
-  return { revision: matrix.revision ?? '', adapters: matrix.adapters, endpoints: matrix.endpoints ?? {}, rows }
+  return { revision: matrix.revision ?? '', adapters: matrix.adapters, endpoints: matrix.endpoints ?? {}, rows,
+    ...(matrix.conversationOverrides ? { conversationOverrides: matrix.conversationOverrides } : {}) }
 }
 
 /** Adapter instances with account and online counts, from `endpoint.list`. */
@@ -119,8 +177,13 @@ function isRecord(value) {
   return !!value && typeof value === 'object' && !Array.isArray(value)
 }
 
-const LEVELS = ['global', 'adapter', 'endpoint']
-const LEVEL_RANK = { global: 0, adapter: 1, endpoint: 2 }
+const LEVELS = ['global', 'adapter', 'endpoint', 'conversation']
+const OVERRIDE_LEVELS = ['adapter', 'endpoint', 'conversation']
+const LEVEL_RANK = { global: 0, adapter: 1, endpoint: 2, conversation: 3 }
+
+function stringList(value) {
+  return Array.isArray(value) ? [...new Set(value.filter(item => typeof item === 'string' && item))] : undefined
+}
 
 function readLevels(value) {
   const levels = Array.isArray(value) ? LEVELS.filter(level => value.includes(level)) : []
@@ -139,6 +202,7 @@ export function readFeatureList(payload) {
       hasSchema: item.hasSchema === true,
       globalEnabled: item.globalEnabled !== false,
       adapter: item.adapter === true,
+      ...(stringList(item.conversationFields) ? { conversationFields: stringList(item.conversationFields) } : {}),
     }
   })
   return { revision: typeof payload.revision === 'string' ? payload.revision : '', features }
@@ -169,7 +233,8 @@ export function readFeatureDetail(payload) {
     effective: isRecord(payload.effective) ? payload.effective : {},
     sources,
     enabled: payload.enabled !== false,
-    ...(payload.lockedBy === 'global' || payload.lockedBy === 'adapter' ? { lockedBy: payload.lockedBy } : {}),
+    ...(readLock(payload.lockedBy) ? { lockedBy: readLock(payload.lockedBy) } : {}),
+    ...(stringList(payload.conversationFields) ? { conversationFields: stringList(payload.conversationFields) } : {}),
   }
 }
 
@@ -198,13 +263,18 @@ export function fieldSource(sources, name) {
   return best
 }
 
+const SOURCE_BADGE = { global: 'global', adapter: 'adapter', endpoint: 'endpoint', conversation: 'here' }
+
 /**
  * One row per field on an override level: editable fields come from the level-narrowed schema;
- * other effective fields (global-only, ADR 0052) are listed read-only.
+ * other effective fields (global-only, ADR 0052) are listed read-only. On the conversation level
+ * only `conversationFields` are editable (ADR 0055 §2).
  */
-export function featureFieldRows(detail) {
+export function featureFieldRows(detail, conversationFields) {
   const properties = isRecord(detail.schema?.properties) ? detail.schema.properties : {}
-  const editable = Object.keys(properties)
+  // The Host already narrows the schema to the level; a known `conversationFields` list narrows again.
+  const allowed = detail.level === 'conversation' ? (conversationFields ?? detail.conversationFields ?? null) : null
+  const editable = Object.keys(properties).filter(name => allowed === null || allowed.includes(name))
   const names = [...new Set([...editable, ...Object.keys(detail.values), ...Object.keys(detail.effective)])]
   return names.map(name => {
     const overridden = detail.level !== 'global' && Object.hasOwn(detail.values, name)
@@ -215,7 +285,7 @@ export function featureFieldRows(detail) {
       schema: isRecord(properties[name]) ? properties[name] : null,
       overridden,
       source,
-      badge: overridden ? 'here' : source === 'adapter' ? 'adapter' : source === 'global' ? 'global' : 'unset',
+      badge: overridden || source === detail.level ? 'here' : source ? SOURCE_BADGE[source] : 'unset',
       effective: detail.effective[name],
       stored: detail.values[name],
     }
@@ -234,7 +304,7 @@ export function overrideDraftSeed(row) {
 
 /** `feature.set-override` body for one top-level field. */
 export function setOverrideRequest({ plugin, level, key, field, value, revision }) {
-  if (level !== 'adapter' && level !== 'endpoint') throw new Error('Overrides exist only for adapter and endpoint levels')
+  if (!OVERRIDE_LEVELS.includes(level)) throw new Error('Overrides exist only below the global level')
   if (value === undefined) throw new Error('An override needs a value')
   if (containsRedacted(value)) throw new Error('A masked value cannot be saved')
   return { type: 'feature.set-override', plugin, level, key, patch: { [field]: value }, ...(revision ? { expectedRevision: revision } : {}) }
@@ -242,21 +312,26 @@ export function setOverrideRequest({ plugin, level, key, field, value, revision 
 
 /** `feature.remove-override` body; without `field` the whole level entry is removed. */
 export function removeOverrideRequest({ plugin, level, key, field, revision }) {
-  if (level !== 'adapter' && level !== 'endpoint') throw new Error('Overrides exist only for adapter and endpoint levels')
+  if (!OVERRIDE_LEVELS.includes(level)) throw new Error('Overrides exist only below the global level')
   return { type: 'feature.remove-override', plugin, level, key, ...(field ? { paths: [[field]] } : {}), ...(revision ? { expectedRevision: revision } : {}) }
 }
 
-/** `feature.set-enabled` body. */
-export function setEnabledRequest({ plugin, level, key, enabled, revision }) {
+/**
+ * `feature.set-enabled` body. A level whose plugin is disabled higher up is locked: it can be
+ * neither enabled nor disabled there (ADR 0050 §4 / 0055 §4), so a locked target never builds one.
+ */
+export function setEnabledRequest({ plugin, level, key, enabled, revision, lockedBy }) {
   if (!LEVELS.includes(level)) throw new Error('Unknown feature level')
+  if (lockedBy) throw new Error(`The plugin is disabled at the ${lockedBy} level`)
   return { type: 'feature.set-enabled', plugin, level, ...(level === 'global' ? {} : { key }), enabled: enabled === true, ...(revision ? { expectedRevision: revision } : {}) }
 }
 
 /** Validates a `feature.*` write result (`saved` / `unchanged` / `conflict` / `invalid`). */
 export function readFeatureWriteResult(payload) {
-  if (!isRecord(payload) || !['saved', 'unchanged', 'conflict', 'invalid'].includes(payload.status)) throw new Error('Invalid feature write response')
+  if (!isRecord(payload) || !['saved', 'unchanged', 'conflict', 'invalid', 'locked'].includes(payload.status)) throw new Error('Invalid feature write response')
   return {
     status: payload.status,
+    ...(readLock(payload.lockedBy) ? { lockedBy: readLock(payload.lockedBy) } : {}),
     revision: typeof payload.revision === 'string' ? payload.revision : '',
     message: typeof payload.message === 'string' ? payload.message : '',
     restartRequired: payload.restartRequired === true,
@@ -268,6 +343,147 @@ export function readFeatureWriteResult(payload) {
 /** Whether a cell's switch can be operated: locked cells and missing permission cannot. */
 export function cellToggleable(cell, canToggle) {
   return !!cell && canToggle === true && !cell.lockedBy
+}
+
+/**
+ * Top-down lock (ADR 0050 §4 / 0055 §4): the highest level above `level` that disables the
+ * plugin, or undefined. `states` holds each level's own enabled state (missing = enabled).
+ */
+export function lockFor(states, level) {
+  const rank = LEVEL_RANK[level]
+  if (rank === undefined) throw new Error('Unknown feature level')
+  return LOCKS.find(upper => LEVEL_RANK[upper] < rank && states?.[upper] === false)
+}
+
+/** Switch state on a level: a locked switch is off and inert whatever the level stores. */
+export function featureSwitchState({ enabled, lockedBy }, canToggle, pending = false) {
+  const locked = !!lockedBy
+  return { checked: !locked && enabled === true, disabled: locked || canToggle !== true || pending === true, locked }
+}
+
+export const CONVERSATION_KINDS = Object.freeze(['group', 'private', 'channel'])
+
+// Mirrors `@zhin.js/console-protocol` feature.ts (ADR 0055 §1 / §6).
+const CONVERSATION_ALIAS = /^[a-z0-9][a-z0-9-]*$/u
+const CONVERSATION_ENDPOINT_ID = /^[^/~\0]{1,128}$/u
+// eslint-disable-next-line no-control-regex
+const CONVERSATION_CONTROL = /[\u0000-\u001f\u007f]/u
+export const CONVERSATION_ID_MAX_LENGTH = 256
+
+/** `%` -> `%25`, `/` -> `%2F`; nothing else changes. */
+export function escapeConversationId(id) {
+  return id.replaceAll('%', '%25').replaceAll('/', '%2F')
+}
+
+/** Inverse of {@link escapeConversationId}; undefined for any other `%` sequence. */
+export function unescapeConversationId(escaped) {
+  if (/%(?!25|2[fF])/u.test(escaped) || escaped.includes('/')) return undefined
+  return escaped.replace(/%2[fF]|%25/gu, match => match === '%25' ? '%' : '/')
+}
+
+/** Resolution key `<alias>/<endpointId>/<kind>:<escaped id>`; throws on an invalid reference. */
+export function conversationKey({ adapter, endpoint, kind, id }) {
+  if (typeof adapter !== 'string' || !CONVERSATION_ALIAS.test(adapter)) throw new Error('Conversation key adapter must be an instance alias')
+  if (typeof endpoint !== 'string' || !CONVERSATION_ENDPOINT_ID.test(endpoint)) throw new Error('Conversation key endpoint id is invalid')
+  if (!CONVERSATION_KINDS.includes(kind)) throw new Error('Conversation kind must be group, private or channel')
+  if (typeof id !== 'string' || !id || id.length > CONVERSATION_ID_MAX_LENGTH || CONVERSATION_CONTROL.test(id)) throw new Error('Conversation id is invalid')
+  return `${adapter}/${endpoint}/${kind}:${escapeConversationId(id)}`
+}
+
+/** Parses a conversation key (canonical form only); null when it is not one. */
+export function parseConversationKey(key) {
+  if (typeof key !== 'string') return null
+  const first = key.indexOf('/')
+  const second = first < 0 ? -1 : key.indexOf('/', first + 1)
+  if (first <= 0 || second < 0) return null
+  const rest = key.slice(second + 1)
+  const colon = rest.indexOf(':')
+  if (colon <= 0) return null
+  const id = unescapeConversationId(rest.slice(colon + 1))
+  if (id === undefined) return null
+  const ref = { adapter: key.slice(0, first), endpoint: key.slice(first + 1, second), kind: rest.slice(0, colon), id }
+  try {
+    return conversationKey(ref) === key ? ref : null
+  } catch {
+    return null
+  }
+}
+
+/** URL segment of a conversation inside an endpoint (`<kind>:<id>`, before URI encoding). */
+export function conversationSegment(kind, id) {
+  return `${kind}:${id}`
+}
+
+export function parseConversationSegment(segment) {
+  if (typeof segment !== 'string') return null
+  const colon = segment.indexOf(':')
+  const kind = segment.slice(0, colon)
+  const id = segment.slice(colon + 1)
+  return colon > 0 && CONVERSATION_KINDS.includes(kind) && id ? { kind, id } : null
+}
+
+/** `feature.conversations` body (ADR 0055 §6); empty filters are left out. */
+export function conversationsRequest({ plugin, adapter, endpoint, query, cursor, limit } = {}) {
+  const body = { type: 'feature.conversations' }
+  for (const [name, value] of Object.entries({ plugin, adapter, endpoint, cursor })) if (typeof value === 'string' && value) body[name] = value
+  if (typeof query === 'string' && query.trim()) body.query = query.trim()
+  if (Number.isInteger(limit) && limit > 0) body.limit = limit
+  return body
+}
+
+/**
+ * One `feature.conversations` entry: `{ key, adapter, endpointId, kind, id, name?, hasOverrides,
+ * overrides: [{ plugin, enabled?: false, fields, revision, updatedAt, updatedBy? }], lastActiveAt? }`.
+ * The key is authoritative; an entry whose key does not parse is dropped.
+ */
+function readConversationItem(item) {
+  if (!isRecord(item) || typeof item.key !== 'string') return null
+  const parsed = parseConversationKey(item.key)
+  if (!parsed) return null
+  const overrides = Array.isArray(item.overrides)
+    ? item.overrides.filter(entry => isRecord(entry) && typeof entry.plugin === 'string' && entry.plugin)
+      .map(entry => ({
+        plugin: entry.plugin,
+        disabled: entry.enabled === false,
+        fields: stringList(entry.fields) ?? [],
+        ...(typeof entry.updatedAt === 'number' ? { updatedAt: entry.updatedAt } : {}),
+        ...(typeof entry.updatedBy === 'string' && entry.updatedBy ? { updatedBy: entry.updatedBy } : {}),
+      }))
+    : undefined
+  return {
+    key: item.key, adapter: parsed.adapter, endpoint: parsed.endpoint, kind: parsed.kind, id: parsed.id,
+    ...(typeof item.name === 'string' && item.name ? { name: item.name } : {}),
+    hasOverrides: item.hasOverrides === true || !!overrides?.length,
+    ...(overrides ? { overrides } : {}),
+    // Plugins overriding this conversation; null when the Host does not list them.
+    overrideCount: overrides ? overrides.length : null,
+    ...(typeof item.lastActiveAt === 'number' ? { lastActiveAt: item.lastActiveAt } : {}),
+  }
+}
+
+/**
+ * Validates a `feature.conversations` page: `{ conversations, nextCursor?, recentAvailable }`.
+ * Malformed entries are dropped.
+ */
+export function readConversationPage(payload) {
+  if (!isRecord(payload) || !Array.isArray(payload.conversations)) throw new Error('Invalid feature.conversations response')
+  return {
+    items: payload.conversations.map(readConversationItem).filter(Boolean),
+    ...(typeof payload.nextCursor === 'string' && payload.nextCursor ? { cursor: payload.nextCursor } : {}),
+    recentAvailable: payload.recentAvailable === true,
+  }
+}
+
+/** Appends a further page, keeping first-seen order and the newest copy of a repeated key. */
+export function appendConversationPage(previous, page) {
+  const byKey = new Map((previous?.items ?? []).map(item => [item.key, item]))
+  for (const item of page.items) byKey.set(item.key, item)
+  return { items: [...byKey.values()], ...(page.cursor ? { cursor: page.cursor } : {}), recentAvailable: page.recentAvailable === true }
+}
+
+/** The "only with overrides" filter. */
+export function filterConversations(items, onlyOverridden) {
+  return onlyOverridden ? items.filter(item => item.hasOverrides) : items
 }
 
 /** Display state of one cell: enabled / disabled / locked by a higher level. */
