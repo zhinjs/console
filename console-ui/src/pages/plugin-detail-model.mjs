@@ -26,3 +26,12 @@ export function pluginDiagnosticSummary(diagnostic) {
   const status = validation?.valid === false || errors.length ? 'invalid' : missingEnv.length ? 'missing-env' : validation?.schemaAvailable === false ? 'unknown' : validation?.valid === true ? 'valid' : 'unknown';
   return {status, errors, missingEnv, warnings};
 }
+
+/**
+ * Which body the detail page shows. Only the first read (no plugin yet) uses the skeleton
+ * or the full-page error; once data is shown, refreshes keep it and errors become a notice.
+ */
+export function pluginDetailView({ loading, plugin, error }) {
+  if (plugin) return { view: 'content', staleError: error || null };
+  return { view: loading ? 'skeleton' : 'error', staleError: null };
+}

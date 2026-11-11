@@ -1,7 +1,7 @@
 import { useI18n } from '../i18n'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { AlertCircle, CheckCircle2, ChevronRight, Clock, Package, PauseCircle, Search } from 'lucide-react'
+import { AlertCircle, CheckCircle2, ChevronRight, Clock, Loader2, Package, PauseCircle, Search } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import { Badge } from '../components/ui/badge'
 import { Alert, AlertDescription } from '../components/ui/alert'
@@ -13,7 +13,10 @@ import { useConsoleRead } from '../hooks/use-console-read'
 import { validatePluginList } from './plugin-list-model.mjs'
 import { PageShell } from '../components/PageShell'
 import { StatCard, StatGrid } from '../components/StatCard'
+import { useToast } from '../components/toast'
+import { useConfirm } from '../components/confirm-dialog'
 import { managementLabel, waitForEnabledManagementState, type PluginManagementState } from './plugin-management-model.mjs'
+import { disableConfirmation, toggleFeedback, withPendingToggle } from './plugin-toggle-model.mjs'
 import type { ConsoleRpcRequest } from '../utils/console-rpc'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
@@ -25,6 +28,7 @@ interface Plugin {
   name: string
   status: 'active' | 'inactive'
   description: string
+  features?: { name: string; count?: number }[]
   instanceKey?: string
   config?: { configured?: boolean; hasSchema?: boolean }
   management?: PluginManagementState
@@ -39,8 +43,6 @@ async function requestConsole<T = unknown>(request: ConsoleRpcRequest): Promise<
   const { requestConsole: send } = await import('../utils/console-rpc')
   return send<T>(request)
 }
-
-const inFlightToggles = new Set<string>()
 
 function matchesStatusFilter(plugin: Plugin, filter: PluginStatusFilter): boolean {
   if (filter === 'all') return true
@@ -113,6 +115,53 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
   const refreshCurrent = useCallback(async () => {
     if (isInboxCacheScopeActive(connectionScope)) await refresh().catch(() => {})
   }, [connectionScope, refresh])
+  const toast = useToast()
+  const { confirm, ConfirmDialog: ConfirmDialogHost } = useConfirm()
+  // State drives the disabled/loading button; the ref guards double clicks before React re-renders.
+  const [pendingToggles, setPendingToggles] = useState<ReadonlySet<string>>(() => new Set())
+  const togglesInFlight = useRef(new Set<string>())
+  const togglePlugin = async (plugin: Plugin, instanceKey: string, toggleKey: string, isEnabled: boolean) => {
+    const previous = plugin.management
+    if (!previous || togglesInFlight.current.has(toggleKey)) return
+    const nextEnabled = !isEnabled
+    if (!nextEnabled) {
+      if (!await confirm(disableConfirmation(plugin, i18n.locale))) return
+      if (togglesInFlight.current.has(toggleKey) || !isInboxCacheScopeActive(connectionScope)) return
+    }
+    togglesInFlight.current.add(toggleKey)
+    setPendingToggles(current => withPendingToggle(current, toggleKey, true))
+    let rpcError: unknown = null
+    let result: PluginManagementState | null = null
+    let failure: unknown = null
+    try {
+      try {
+        await requestConsole({ type: 'plugin:set-enabled', instanceKey, enabled: nextEnabled })
+      } catch (err) {
+        // The Host may restart before the reply arrives; the inspect polling below decides the outcome.
+        rpcError = err
+      }
+      result = await waitForEnabledManagementState(
+        () => requestConsole({ type: 'plugin:inspect', instanceKey }),
+        previous,
+        nextEnabled,
+        AbortSignal.timeout(20_000),
+        undefined,
+        i18n.locale,
+      )
+    } catch (err) {
+      failure = err
+    }
+    try {
+      if (!isInboxCacheScopeActive(connectionScope)) return
+      const feedback = toggleFeedback({ name: plugin.name, enabled: nextEnabled, result, rpcError, error: failure }, i18n.locale)
+      if (feedback.variant === 'success') toast.success(feedback.description, feedback.title)
+      else toast.error(feedback.description, feedback.title)
+      await refreshCurrent()
+    } finally {
+      togglesInFlight.current.delete(toggleKey)
+      setPendingToggles(current => withPendingToggle(current, toggleKey, false))
+    }
+  }
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = typeof useNavigate === 'function' ? useNavigate() : undefined
   const readOnly = isDemoMode()
@@ -301,6 +350,7 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
           const tone = pluginStatusTone(plugin)
           const canToggle = Boolean(plugin.management?.declared)
           const isEnabled = plugin.management ? !plugin.management.disabled : plugin.status === 'active'
+          const toggling = pendingToggles.has(toggleKey)
           return (
             <li key={`${plugin.name}-${index}`} className="console-plugin-catalog-item">
               <Link className="console-plugin-catalog-row" to={detailUrl(instanceKey)}>
@@ -329,41 +379,18 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
                       variant="outline"
                       size="sm"
                       className={isEnabled ? 'console-plugin-toggle-btn is-on' : 'console-plugin-toggle-btn'}
-                      disabled={inFlightToggles.has(toggleKey)}
+                      disabled={toggling}
+                      aria-busy={toggling}
                       onClick={async (e: { preventDefault?: () => void; stopPropagation?: () => void }) => {
                         e?.preventDefault?.()
                         e?.stopPropagation?.()
-                        const previous = plugin.management
-                        if (!previous || inFlightToggles.has(toggleKey)) return
-                        inFlightToggles.add(toggleKey)
-                        const nextEnabled = !isEnabled
-                        try {
-                          try {
-                            await requestConsole({
-                              type: 'plugin:set-enabled',
-                              instanceKey,
-                              enabled: nextEnabled,
-                            })
-                          } catch {
-                            // Host may restart before RPC response returns; reconcile via inspect polling
-                          }
-                          await waitForEnabledManagementState(
-                            () => requestConsole({ type: 'plugin:inspect', instanceKey }),
-                            previous,
-                            nextEnabled,
-                            AbortSignal.timeout(20_000),
-                            undefined,
-                            i18n.locale,
-                          )
-                        } catch {
-                          // Poll timeout or inspect failure; refreshCurrent in finally will sync latest list state
-                        } finally {
-                          inFlightToggles.delete(toggleKey)
-                          await refreshCurrent()
-                        }
+                        await togglePlugin(plugin, instanceKey, toggleKey, isEnabled)
                       }}
                     >
-                      {isEnabled ? i18n.t("停用") : i18n.t("启用")}
+                      {toggling ? <Loader2 className="animate-spin" aria-hidden="true" /> : null}
+                      {toggling
+                        ? isEnabled ? i18n.t("停用中…") : i18n.t("启用中…")
+                        : isEnabled ? i18n.t("停用") : i18n.t("启用")}
                     </Button>
                   ) : null}
                   <Button
@@ -399,6 +426,7 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
         <Package aria-hidden="true" />
         <h2>{i18n.t("暂无子插件")}</h2>
       </div> : null}
+      {ConfirmDialogHost}
     </PageShell>
   )
 }
