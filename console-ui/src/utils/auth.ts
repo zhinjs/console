@@ -182,7 +182,10 @@ export function notifyAuthRequired(): void {
   }
 }
 
-/** 登录链接由 `pages/login-model.mjs` 读取，并在启动时（含 `?token=`）立即从地址栏移除。 */
+/**
+ * 登录链接由 `pages/login-model.mjs` 读取并在启动时立即从地址栏移除。
+ * token 只能放在 # 片段中（`#token=`，片段不会发给服务器）；`?token=` 会被移除且不会被使用。
+ */
 export const QUERY_API_BASE_URL = "apiBaseUrl";
 
 export function stripApiBaseUrlFromQuery(): void {

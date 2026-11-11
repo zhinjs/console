@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  consumeLoginLink, isLocalNetworkHost, loginFailureField, normalizeHostAddress, readLoginLink, withoutLoginLink,
+  consumeLoginLink, isLocalNetworkHost, linkNeedsConfirmation, loginFailureField, normalizeHostAddress, readLoginLink, withoutLoginLink,
 } from '../console-ui/src/pages/login-model.mjs'
 
 test('a Host address without a scheme gets http:// for IP and local-network hosts and https:// for public names', () => {
@@ -42,29 +42,56 @@ test('local-network detection covers loopback and private ranges only', () => {
     assert.equal(isLocalNetworkHost(host), false, host)
 })
 
-test('a login link yields its Host address and token; empty values count as absent', () => {
-  assert.deepEqual(readLoginLink('?apiBaseUrl=127.0.0.1%3A8086&token=%20secret-1%20'), { apiBase: '127.0.0.1:8086', token: 'secret-1' })
-  assert.deepEqual(readLoginLink('?token='), { apiBase: null, token: null })
-  assert.deepEqual(readLoginLink(''), { apiBase: null, token: null })
+const at = href => { const url = new URL(href); return { href: url.href, search: url.search, hash: url.hash } }
+
+test('a login link takes the token only from the fragment and the Host from the fragment or the query', () => {
+  assert.deepEqual(readLoginLink(at('https://c.example/#apiBaseUrl=127.0.0.1%3A8086&token=%20secret-1%20')), { apiBase: '127.0.0.1:8086', token: 'secret-1', queryTokenRejected: false })
+  assert.deepEqual(readLoginLink(at('https://c.example/?apiBaseUrl=http://host-q:8086#token=secret-1')), { apiBase: 'http://host-q:8086', token: 'secret-1', queryTokenRejected: false })
+  assert.deepEqual(readLoginLink(at('https://c.example/?apiBaseUrl=http://host-q#apiBaseUrl=http://host-f')).apiBase, 'http://host-f')
+  assert.deepEqual(readLoginLink(at('https://c.example/#token=')), { apiBase: null, token: null, queryTokenRejected: false })
+  assert.deepEqual(readLoginLink(at('https://c.example/#section')), { apiBase: null, token: null, queryTokenRejected: false })
 })
 
-test('the token is removed from the address bar with replaceState, keeping other parameters and the hash', () => {
+test('a ?token= is reported as rejected and never used as the link token', () => {
+  assert.deepEqual(readLoginLink(at('https://c.example/?token=query-secret')), { apiBase: null, token: null, queryTokenRejected: true })
+  assert.deepEqual(readLoginLink(at('https://c.example/?token=query-secret#token=fragment-secret')).token, 'fragment-secret')
+})
+
+test('the fragment token is removed from the address bar with replaceState, keeping other parameters and fragment values', () => {
   const calls = []
   const history = { state: { idx: 3 }, replaceState: (...args) => calls.push(args) }
-  const location = { href: 'https://console.example/app/?lang=en&token=secret-1&apiBaseUrl=127.0.0.1:8086#/chat', search: '?lang=en&token=secret-1&apiBaseUrl=127.0.0.1:8086' }
-  assert.deepEqual(consumeLoginLink(location, history), { apiBase: '127.0.0.1:8086', token: 'secret-1' })
-  assert.deepEqual(calls, [[{ idx: 3 }, '', '/app/?lang=en#/chat']])
-  assert.ok(!calls[0][2].includes('secret-1'))
+  assert.deepEqual(consumeLoginLink(at('https://console.example/app/?lang=en#tab=a&token=secret-1&apiBaseUrl=127.0.0.1:8086'), history), { apiBase: '127.0.0.1:8086', token: 'secret-1', queryTokenRejected: false })
+  consumeLoginLink(at('https://console.example/app/?lang=en#token=secret-2'), history)
+  assert.deepEqual(calls, [[{ idx: 3 }, '', '/app/?lang=en#tab=a'], [{ idx: 3 }, '', '/app/?lang=en']])
+  assert.ok(calls.every(call => !call[2].includes('secret')))
 })
 
-test('an empty or token-only parameter is still removed, and a clean address is left untouched', () => {
+test('a ?token= is removed from the address bar immediately and not used', () => {
   const calls = []
   const history = { state: null, replaceState: (...args) => calls.push(args) }
-  consumeLoginLink({ href: 'https://console.example/?token=', search: '?token=' }, history)
-  consumeLoginLink({ href: 'https://console.example/?token=abc', search: '?token=abc' }, history)
-  consumeLoginLink({ href: 'https://console.example/settings?tab=a', search: '?tab=a' }, history)
+  const link = consumeLoginLink(at('https://console.example/?token=query-secret&lang=en#/chat'), history)
+  assert.equal(link.token, null); assert.equal(link.queryTokenRejected, true)
+  assert.deepEqual(calls.map(call => call[2]), ['/?lang=en#/chat'])
+})
+
+test('empty token parameters are still removed, and a clean address is left untouched', () => {
+  const calls = []
+  const history = { state: null, replaceState: (...args) => calls.push(args) }
+  consumeLoginLink(at('https://console.example/#token='), history)
+  consumeLoginLink(at('https://console.example/?token='), history)
+  consumeLoginLink(at('https://console.example/settings?tab=a#section'), history)
   assert.deepEqual(calls.map(call => call[2]), ['/', '/'])
-  assert.equal(withoutLoginLink('https://console.example/settings?tab=a'), null)
+  assert.equal(withoutLoginLink('https://console.example/settings?tab=a#section'), null)
+})
+
+test('a link signs in without asking only to a Host among the saved connections', () => {
+  const saved = ['http://127.0.0.1:8086/', 'https://bot.example.com']
+  assert.equal(linkNeedsConfirmation('127.0.0.1:8086', saved), false)
+  assert.equal(linkNeedsConfirmation('https://bot.example.com/', saved), false)
+  assert.equal(linkNeedsConfirmation('https://evil.example', saved), true)
+  assert.equal(linkNeedsConfirmation('http://bot.example.com', saved), true, 'a different scheme is a different Host')
+  assert.equal(linkNeedsConfirmation('ftp://x', saved), true)
+  assert.equal(linkNeedsConfirmation('http://127.0.0.1:8086', []), true)
 })
 
 test('failed sign-ins are placed on the field that caused them', () => {

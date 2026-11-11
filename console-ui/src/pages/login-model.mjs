@@ -1,8 +1,11 @@
 // Pure login-page logic: Host address normalization, login links and failure placement.
 
-/** Existing link convention (README): `?apiBaseUrl=` prefills the Host address. */
+/** Existing link convention (README): `?apiBaseUrl=` or `#apiBaseUrl=` prefills the Host address. */
 export const LINK_API_BASE_PARAM = 'apiBaseUrl'
-/** `?token=` signs in directly; it is removed from the address bar as soon as it is read. */
+/**
+ * `#token=` signs in directly. The token is accepted only in the URL fragment, which browsers never
+ * send to the server; a `?token=` is removed from the address bar and never used.
+ */
 export const LINK_TOKEN_PARAM = 'token'
 
 const SCHEME = /^([a-z][a-z0-9+.-]*):\/\//i
@@ -50,21 +53,35 @@ export function normalizeHostAddress(input) {
   return { ok: true, value: `${url.protocol}//${url.host}${url.pathname.replace(/\/+$/, '')}` }
 }
 
-/** Reads a login link's Host address and token (trimmed; empty values count as absent). */
-export function readLoginLink(search) {
-  const params = new URLSearchParams(search ?? '')
-  const apiBase = params.get(LINK_API_BASE_PARAM)?.trim() || null
-  const token = params.get(LINK_TOKEN_PARAM)?.trim() || null
-  return { apiBase, token }
+function fragmentParams(hash) {
+  const body = String(hash ?? '').replace(/^#/, '')
+  return body.includes('=') ? new URLSearchParams(body) : new URLSearchParams()
 }
 
-/** The same address without login-link parameters, or `null` when there is nothing to remove. */
+/**
+ * Reads a login link. The token comes only from the fragment (`#token=`); the Host address from
+ * `#apiBaseUrl=` or, for existing links, `?apiBaseUrl=`. Values are trimmed; empty ones count as absent.
+ * `queryTokenRejected` reports a `?token=` that was present and must not be used.
+ */
+export function readLoginLink(location) {
+  const query = new URLSearchParams(location?.search ?? '')
+  const fragment = fragmentParams(location?.hash)
+  const apiBase = fragment.get(LINK_API_BASE_PARAM)?.trim() || query.get(LINK_API_BASE_PARAM)?.trim() || null
+  const token = fragment.get(LINK_TOKEN_PARAM)?.trim() || null
+  return { apiBase, token, queryTokenRejected: query.has(LINK_TOKEN_PARAM) }
+}
+
+/** The same address without login-link parameters (query and fragment), or `null` when there is nothing to remove. */
 export function withoutLoginLink(href) {
   const url = new URL(href)
-  if (!url.searchParams.has(LINK_API_BASE_PARAM) && !url.searchParams.has(LINK_TOKEN_PARAM)) return null
-  url.searchParams.delete(LINK_API_BASE_PARAM)
-  url.searchParams.delete(LINK_TOKEN_PARAM)
-  return `${url.pathname}${url.search}${url.hash}`
+  const fragment = fragmentParams(url.hash)
+  const names = [LINK_API_BASE_PARAM, LINK_TOKEN_PARAM]
+  const inQuery = names.some(name => url.searchParams.has(name)), inFragment = names.some(name => fragment.has(name))
+  if (!inQuery && !inFragment) return null
+  for (const name of names) { url.searchParams.delete(name); fragment.delete(name) }
+  const rest = fragment.toString()
+  const hash = inFragment ? (rest ? `#${rest}` : '') : url.hash
+  return `${url.pathname}${url.search}${hash}`
 }
 
 /**
@@ -72,11 +89,18 @@ export function withoutLoginLink(href) {
  * so the token never stays in the address bar or history, whatever the sign-in result.
  */
 export function consumeLoginLink(location, history) {
-  if (!location?.href) return { apiBase: null, token: null }
-  const link = readLoginLink(location.search)
+  if (!location?.href) return { apiBase: null, token: null, queryTokenRejected: false }
+  const link = readLoginLink(location)
   const next = withoutLoginLink(location.href)
   if (next !== null) history.replaceState(history.state, '', next)
   return link
+}
+
+/** Whether a link may sign in without asking: only to a Host the person already saved. */
+export function linkNeedsConfirmation(apiBase, savedBases) {
+  const target = normalizeHostAddress(apiBase)
+  if (!target.ok) return true
+  return !savedBases.some(saved => { const known = normalizeHostAddress(saved); return known.ok && known.value === target.value })
 }
 
 /** Which field a failed sign-in belongs to: 401 is the token, an unreachable Host is the address. */

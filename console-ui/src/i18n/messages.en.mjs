@@ -3078,4 +3078,8 @@ export const englishMessages = Object.freeze({
   "Host 地址只支持 http:// 或 https://。": "The Host address must start with http:// or https://.",
   "Host 地址无效，请填写如 http://127.0.0.1:8086 的地址。": "This Host address is not valid. Enter an address such as http://127.0.0.1:8086.",
   "请输入访问令牌。": "Enter your access token.",
+  "token 不能放在 ? 参数里：它已从地址栏移除且未被使用。请改用 #token= 链接，或在下方手动输入。": "A token cannot go in a ? parameter. It was removed from the address bar and not used. Use a #token= link, or enter it below.",
+  "token 不能放在 ? 参数里：它已从地址栏移除且未被使用。": "A token cannot go in a ? parameter. It was removed from the address bar and not used.",
+  "连接到这个 Host？": "Connect to this Host?",
+  "此链接会用其中的访问令牌登录 {0}。该地址不在已保存的连接中，只有信任它时才继续；取消则只填入地址。": "This link signs in to {0} with the access token it contains. That address is not among your saved connections, so continue only if you trust it. Cancel to fill in the address only.",
 })

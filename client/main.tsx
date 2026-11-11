@@ -21,8 +21,8 @@ import { registerBuiltinConsolePages } from "@console/registerBuiltinShell";
 import { initializeTheme } from "@console/theme";
 import LoginPage from "@console/pages/login";
 import { TooltipProvider } from "@console/components/ui/tooltip";
-import { ToastProvider } from "@console/components/toast";
-import { runQueryPrefillMiddleware, takeLoginLink } from "./middleware/queryPrefill";
+import { ToastProvider, useToast } from "@console/components/toast";
+import { runQueryPrefillMiddleware, takeLoginLink, type InitialSession } from "./middleware/queryPrefill";
 import { runDemoBootstrap } from "./middleware/demoBootstrap";
 import { isDemoMode } from "@console/utils/demo-mode";
 
@@ -49,11 +49,11 @@ sharedModules.set("react-router-dom", ReactRouterDOM);
 
 registerBuiltinConsolePages();
 
-// Removes a `?token=` from the address bar before anything else, including in demo builds.
+// Removes `#token=` (and a rejected `?token=`) from the address bar before anything else, including in demo builds.
 const loginLink = takeLoginLink();
 const demoSession = runDemoBootstrap();
-const initialSession = demoSession
-  ? { ...demoSession, loginToken: null }
+const initialSession: InitialSession = demoSession
+  ? { ...demoSession, loginToken: null, queryTokenRejected: loginLink.queryTokenRejected }
   : runQueryPrefillMiddleware(loginLink);
 
 function ConsoleConnection() {
@@ -77,8 +77,23 @@ function App() {
   const loginApiBase = initialSession.loginApiBase;
   // Used for one sign-in attempt only; a later sign-out must not retry the link token.
   const [linkToken, setLinkToken] = React.useState(initialSession.loginToken);
-  const handleLogin = React.useCallback(() => setAuthed(true), []);
-  const consumeLinkToken = React.useCallback(() => setLinkToken(null), []);
+  const handleLogin = React.useCallback(() => {
+    // The login page already showed the `?token=` notice; do not repeat it as a toast or after a sign-out.
+    initialSession.queryTokenRejected = false;
+    setAuthed(true);
+  }, []);
+  const consumeLinkToken = React.useCallback(() => {
+    initialSession.loginToken = null;
+    setLinkToken(null);
+  }, []);
+  const toast = useToast();
+
+  // Signed in already: the login page cannot show why a `?token=` was ignored, so say it here once.
+  React.useEffect(() => {
+    if (!authed || !initialSession.queryTokenRejected) return;
+    initialSession.queryTokenRejected = false;
+    toast.warning(i18n.t("token 不能放在 ? 参数里：它已从地址栏移除且未被使用。"));
+  }, [authed, toast, i18n]);
 
   React.useEffect(() => {
     const onAuthRequired = () => {
@@ -100,7 +115,8 @@ function App() {
     }
     return (
       <LoginPage onSuccess={handleLogin} initialApiBase={loginApiBase}
-        initialToken={linkToken} onInitialTokenConsumed={consumeLinkToken} />
+        initialToken={linkToken} onInitialTokenConsumed={consumeLinkToken}
+        queryTokenRejected={initialSession.queryTokenRejected} />
     );
   }
 

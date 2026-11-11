@@ -10,15 +10,18 @@ import {
   getSavedLogin, getStoredApiBase, listSavedLogins, normalizeApiBase, removeSavedLogin,
   touchSavedLogin, upsertSavedLogin, verifyAndStoreCredentials,
 } from '../utils/auth'
-import { loginFailureField, normalizeHostAddress, type HostAddressResult, type LoginField } from './login-model.mjs'
+import { ConfirmDialog } from '../components/confirm-dialog'
+import { linkNeedsConfirmation, loginFailureField, normalizeHostAddress, type HostAddressResult, type LoginField } from './login-model.mjs'
 import './login.css'
 
 interface LoginPageProps {
   onSuccess: () => void
-  /** Host address from a login link (`?apiBaseUrl=`). */
+  /** Host address from a login link (`#apiBaseUrl=` or `?apiBaseUrl=`). */
   initialApiBase?: string | null
-  /** Token from a `?token=` link; the caller has already removed it from the address bar. */
+  /** Token from a `#token=` link; the caller has already removed it from the address bar. */
   initialToken?: string | null
+  /** The link carried `?token=`, which was removed from the address bar and not used. */
+  queryTokenRejected?: boolean
   /** Called once the link token has been used, so it is not tried again after a later sign-out. */
   onInitialTokenConsumed?: () => void
 }
@@ -32,14 +35,18 @@ const TOKEN_ID = 'console-login-token'
 const TOKEN_ERROR_ID = 'console-login-token-error'
 const SUMMARY_ID = 'console-login-error'
 
-export default function LoginPage({ onSuccess, initialApiBase, initialToken, onInitialTokenConsumed }: LoginPageProps) {
+export default function LoginPage({ onSuccess, initialApiBase, initialToken, queryTokenRejected, onInitialTokenConsumed }: LoginPageProps) {
   const i18n = useI18n()
   const [savedLogins, setSavedLogins] = useState(() => listSavedLogins())
   const [apiBase, setApiBaseValue] = useState(() => initialApiBase || getStoredApiBase() || 'http://localhost:8086')
   const [token, setTokenValue] = useState('')
   const [remember, setRemember] = useState(false)
   const [showToken, setShowToken] = useState(false)
-  const [errors, setErrors] = useState<LoginErrors>({})
+  const [errors, setErrors] = useState<LoginErrors>(() => queryTokenRejected
+    ? { form: i18n.t('token 不能放在 ? 参数里：它已从地址栏移除且未被使用。请改用 #token= 链接，或在下方手动输入。') }
+    : {})
+  // A link to a Host that is not among the saved connections waits for the person to confirm it.
+  const [pendingLink, setPendingLink] = useState<{ apiBase: string; token: string } | null>(null)
   const [loading, setLoading] = useState(false)
   // A fresh object per failure, so focus moves again even when the same field fails twice.
   const [focusRequest, setFocusRequest] = useState<{ field: LoginField } | null>(null)
@@ -120,14 +127,28 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, onI
     const saved = getSavedLogin(initialApiBase || getStoredApiBase() || apiBase)
     if (saved) setTokenValue(saved.token)
   }, [initialApiBase])
-  // A `?token=` link signs in once; on failure the fields stay editable for a manual retry.
+  // A `#token=` link signs in once (after confirmation for an unsaved Host); on failure the fields stay editable.
   useEffect(() => {
     if (!initialToken || linkAttempted.current) return
     linkAttempted.current = true
     onInitialTokenConsumed?.()
+    const target = initialApiBase || apiBase
+    if (linkNeedsConfirmation(target, savedLogins.map(saved => saved.apiBase))) {
+      setPendingLink({ apiBase: target, token: initialToken })
+      return
+    }
     setTokenValue(initialToken)
-    void handleLogin(initialApiBase || apiBase, initialToken)
+    void handleLogin(target, initialToken)
   }, [initialToken])
+
+  const confirmLink = useCallback(() => {
+    if (!pendingLink) return
+    setPendingLink(null)
+    setTokenValue(pendingLink.token)
+    void handleLogin(pendingLink.apiBase, pendingLink.token)
+  }, [pendingLink, handleLogin])
+
+  const pendingHost = pendingLink ? normalizeHostAddress(pendingLink.apiBase) : null
 
   const describedBy = (...ids: Array<string | false | undefined>) => ids.filter(Boolean).join(' ') || undefined
 
@@ -184,6 +205,11 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, onI
           <Button type="submit" disabled={loading}>{loading ? i18n.t('验证中...') : selectedSavedBase && token ? i18n.t('快速连接') : i18n.t('连接')}</Button>
           <details className="console-login-help"><summary>{i18n.t('无法连接？')}</summary><p>{i18n.t('填写 Bot 启动日志中的 Host 地址。使用本地地址时，请确保 Host 的 corsOrigins 允许当前 Console 来源。')}</p></details>
         </form>
+        {/* Cancelling (or closing after confirmLink ran) drops the link token; the address stays prefilled. */}
+        <ConfirmDialog open={pendingLink !== null} title={i18n.t('连接到这个 Host？')}
+          description={i18n.t('此链接会用其中的访问令牌登录 {0}。该地址不在已保存的连接中，只有信任它时才继续；取消则只填入地址。', [pendingHost?.ok ? pendingHost.value : pendingLink?.apiBase ?? ''])}
+          confirmLabel={i18n.t('连接')} onConfirm={confirmLink}
+          onOpenChange={open => { if (!open) setPendingLink(null) }} />
       </section>
     </div>
   </div>

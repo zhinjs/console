@@ -52,16 +52,17 @@ const text = value => value == null || typeof value === 'boolean' ? ''
   : text(value.props?.children)
 const flush = async () => { for (let i = 0; i < 10; i++) await Promise.resolve() }
 
-function fixture({ verify = async () => ({ ok: true }), props: initialProps = {} } = {}) {
+function fixture({ verify = async () => ({ ok: true }), props: initialProps = {}, saved = [] } = {}) {
   const r = runtime(), calls = { verify: [], saved: [], success: 0, consumed: 0 }
   const auth = {
-    getSavedLogin: () => null, getStoredApiBase: () => null, listSavedLogins: () => [], normalizeApiBase: value => value.trim().replace(/\/$/, ''),
+    getSavedLogin: () => null, getStoredApiBase: () => null, listSavedLogins: () => saved.map(apiBase => ({ apiBase, token: 'saved-secret', savedAt: 1, lastUsedAt: 1 })), normalizeApiBase: value => value.trim().replace(/\/$/, ''),
     removeSavedLogin() {}, touchSavedLogin() {}, upsertSavedLogin: (...args) => calls.saved.push(args),
     verifyAndStoreCredentials: (...args) => { calls.verify.push(args); return verify(...args) },
   }
   const mocks = {
     react: { ...r.hooks },
     '../components/LanguageSelect': { LanguageSelect: 'language-select' },
+    '../components/confirm-dialog': { ConfirmDialog: 'confirm-dialog' },
     '../components/ui/input': { Input: 'input' },
     '../components/ui/button': { Button: 'button' },
     '../components/ui/checkbox': { Checkbox: 'checkbox' },
@@ -91,6 +92,7 @@ function fixture({ verify = async () => ({ ok: true }), props: initialProps = {}
     type(id, value) { input(id).props.onChange({ target: { value } }); r.render(); input('console-login-address'); input('console-login-token') },
     async submit() { all().find(node => node.type === 'form').props.onSubmit({ preventDefault() {} }); r.render(); input('console-login-address'); input('console-login-token'); await flush(); r.render() },
     describedText(id) { return String(input(id).props['aria-describedby'] ?? '').split(/\s+/).filter(Boolean).map(ref => text(byId(ref))).join(' ') },
+    dialog() { return all().find(node => node.type === 'confirm-dialog') },
     labelFor(id) { return all().find(node => node.type === 'label' && node.props.htmlFor === id) },
   }
   return f
@@ -170,18 +172,19 @@ test('server failures land on the field that caused them, or on a focused summar
   assert.deepEqual(focusedSummary, ['summary'])
 })
 
-test('a ?token= link signs in once, is consumed, and a failure keeps manual sign-in available', async () => {
+test('a #token= link to a saved Host signs in once, is consumed, and a failure keeps manual sign-in available', async () => {
   const logged = []
   const originals = Object.fromEntries(['log', 'info', 'warn', 'error', 'debug'].map(name => [name, console[name]]))
   for (const name of Object.keys(originals)) console[name] = (...args) => logged.push(args.join(' '))
   try {
     let answer = { ok: false, status: 401, message: 'Token 无效，请检查后重试' }
-    const f = fixture({ verify: async () => answer, props: { initialApiBase: '127.0.0.1:8086', initialToken: 'link-secret' } }).mount()
+    const f = fixture({ verify: async () => answer, saved: ['http://127.0.0.1:8086'], props: { initialApiBase: '127.0.0.1:8086', initialToken: 'link-secret' } }).mount()
     await flush(); f.r.render(); f.r.render()
     assert.equal(f.calls.verify.length, 1, 'the link signs in exactly once')
     assert.deepEqual(f.calls.verify[0].slice(0, 2), ['http://127.0.0.1:8086', 'link-secret'])
     assert.equal(f.calls.consumed, 1)
     assert.equal(f.calls.success, 0)
+    assert.equal(f.dialog().props.open, false, 'a saved Host needs no confirmation')
     assert.equal(f.input('console-login-token').props['aria-invalid'], true)
     assert.match(f.describedText('console-login-token'), /Token 无效/)
     assert.equal(f.input('console-login-token').props.disabled, false)
@@ -196,9 +199,46 @@ test('a ?token= link signs in once, is consumed, and a failure keeps manual sign
   assert.ok(!logged.some(line => line.includes('secret')), 'tokens are never logged')
 })
 
-test('a successful ?token= link signs in without any input', async () => {
-  const f = fixture({ props: { initialToken: 'link-secret' } }).mount()
+test('a successful #token= link to a saved Host signs in without any input', async () => {
+  const f = fixture({ saved: ['http://localhost:8086/'], props: { initialToken: 'link-secret' } }).mount()
   await flush(); f.r.render()
   assert.deepEqual(f.calls.verify[0].slice(0, 2), ['http://localhost:8086', 'link-secret'])
   assert.equal(f.calls.success, 1)
+})
+
+test('a link to a Host that is not saved asks first and shows the Host it will connect to', async () => {
+  const f = fixture({ saved: ['http://127.0.0.1:8086'], props: { initialApiBase: 'https://unknown.example', initialToken: 'link-secret' } }).mount()
+  await flush(); f.r.render()
+  assert.equal(f.calls.verify.length, 0, 'nothing is sent before the person confirms')
+  assert.equal(f.calls.consumed, 1)
+  const dialog = f.dialog()
+  assert.equal(dialog.props.open, true)
+  assert.match(dialog.props.description, /https:\/\/unknown\.example/)
+  assert.equal(f.input('console-login-token').props.value, '', 'the token is not filled in before confirmation')
+  dialog.props.onConfirm(); dialog.props.onOpenChange(false); f.r.render(); await flush(); f.r.render()
+  assert.deepEqual(f.calls.verify[0].slice(0, 2), ['https://unknown.example', 'link-secret'])
+  assert.equal(f.calls.success, 1)
+  assert.equal(f.dialog().props.open, false)
+})
+
+test('cancelling the confirmation only prefills the address and never signs in', async () => {
+  const f = fixture({ props: { initialApiBase: 'http://192.168.1.9:8086', initialToken: 'link-secret' } }).mount()
+  await flush(); f.r.render()
+  assert.equal(f.dialog().props.open, true)
+  f.dialog().props.onOpenChange(false); f.r.render(); await flush(); f.r.render()
+  assert.equal(f.dialog().props.open, false)
+  assert.equal(f.calls.verify.length, 0)
+  assert.equal(f.input('console-login-address').props.value, 'http://192.168.1.9:8086')
+  assert.equal(f.input('console-login-token').props.value, '', 'the link token is dropped')
+  // The person can still sign in by hand, and the dropped link token is not reused.
+  f.type('console-login-token', 'typed-secret'); await f.submit()
+  assert.deepEqual(f.calls.verify.map(call => call[1]), ['typed-secret'])
+})
+
+test('a rejected ?token= is explained on the login page', () => {
+  const f = fixture({ props: { queryTokenRejected: true } }).mount()
+  const summary = f.byId('console-login-error')
+  assert.equal(summary.props.role, 'alert')
+  assert.match(text(summary), /token 不能放在 \? 参数里/)
+  assert.equal(f.calls.verify.length, 0)
 })
