@@ -39,6 +39,11 @@ export const CONSOLE_PATHS = Object.freeze({
   opsEnv: '/ops/env',
   opsSchedules: '/ops/schedules',
   opsFiles: '/ops/files',
+  // 访问控制
+  accessUsers: '/access/users',
+  accessRoles: '/access/roles',
+  accessTokens: '/access/tokens',
+  accessAudit: '/access/audit',
 })
 
 const segment = value => encodeURIComponent(String(value))

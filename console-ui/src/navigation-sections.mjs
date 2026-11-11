@@ -82,6 +82,10 @@ export const ROUTE_PERMISSIONS = Object.freeze({
   '/ops/env': ['ops.env.read', 'ops.env.write'],
   '/ops/schedules': ['ops.schedule.read', 'ops.schedule.write'],
   '/ops/files': ['ops.files.read', 'ops.files.write'],
+  '/access/users': ['iam.view'],
+  '/access/roles': ['iam.view'],
+  '/access/tokens': ['iam.view'],
+  '/access/audit': ['iam.view'],
 })
 
 export function routePermissions(route) {
