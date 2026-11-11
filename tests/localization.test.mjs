@@ -151,6 +151,7 @@ const FULLY_LOCALIZED_SOURCES = [
   'pages/inference', 'pages/personal-models.tsx', 'pages/PersonalSessionModelPicker.tsx', 'pages/PersonalSessionPanel.tsx',
   'pages/personal-session-model.mjs', 'pages/ConversationHistory.tsx', 'pages/conversation-history-model.mjs',
   'pages/dashboard.tsx', 'pages/workrooms.tsx', 'pages/engagements-model.mjs',
+  'pages/access',
 ]
 
 test('model management, personal sessions, chat history and the dashboard show no Chinese text outside the i18n helper', () => {

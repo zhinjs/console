@@ -42,6 +42,11 @@ export const CONSOLE_PATHS = Object.freeze({
   // 个人（不在菜单里，从顶栏进入）
   onboarding: '/onboarding',
   account: '/account',
+  // 访问控制
+  accessUsers: '/access/users',
+  accessRoles: '/access/roles',
+  accessTokens: '/access/tokens',
+  accessAudit: '/access/audit',
 })
 
 const segment = value => encodeURIComponent(String(value))

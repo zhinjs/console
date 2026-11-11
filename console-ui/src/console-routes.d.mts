@@ -8,6 +8,7 @@ export const CONSOLE_PATHS: Readonly<{
   plugins: '/plugins'; pluginDetail: '/plugins/:name'; marketplace: '/marketplace'
   opsDatabase: '/ops/database'; opsConfig: '/ops/config'; opsEnv: '/ops/env'; opsSchedules: '/ops/schedules'; opsFiles: '/ops/files'
   onboarding: '/onboarding'; account: '/account'
+  accessUsers: '/access/users'; accessRoles: '/access/roles'; accessTokens: '/access/tokens'; accessAudit: '/access/audit'
 }>
 export function featureGlobalHref(plugin: string, params?: URLSearchParams | Record<string, string>): string
 export function adapterHref(adapter: string): string

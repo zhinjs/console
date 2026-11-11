@@ -85,6 +85,10 @@ export const ROUTE_PERMISSIONS = Object.freeze({
   '/onboarding': ['plugin.manage'],
   // Every signed-in principal has personal settings.
   '/account': [],
+  '/access/users': ['iam.view'],
+  '/access/roles': ['iam.view'],
+  '/access/tokens': ['iam.view'],
+  '/access/audit': ['iam.view'],
 })
 
 export function routePermissions(route) {
