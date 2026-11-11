@@ -40,6 +40,7 @@ import { Alert, AlertDescription } from '../../components/ui/alert'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs'
 import { ConversationSidebar } from './ConversationSidebar'
 import { ChatMessageRow, type MessageDraftReference } from './ChatMessageRow'
+import { ChatScrollArea } from './ChatScrollArea'
 import { MessageDiagnosticsAction, MessageDiagnosticsProvider } from './MessageDiagnostics'
 import { canShowReadEmpty } from './endpoint-request.mjs'
 import { useEndpointConsole } from './useEndpointConsole'
@@ -584,23 +585,16 @@ function EndpointWorkspace() {
                 </div>
               </header>
 
-              <div className="im-message-list flex-1 overflow-y-auto px-3 py-2 min-h-0 flex flex-col">
-                {inboxMessagesEnabled && inboxMessagesHasMore && (
-                  <div className="flex-shrink-0 py-2 flex justify-center">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs"
-                      disabled={inboxMessagesLoading}
-                      onClick={() => {
-                        const oldest = Math.min(...inboxMessages.map((m) => m.timestamp))
-                        void loadInboxMessages(oldest)
-                      }}
-                    >
-                      {inboxMessagesLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : i18n.t("加载更早消息")}
-                    </Button>
-                  </div>
-                )}
+              <ChatScrollArea
+                conversationKey={draftKey}
+                rows={channelMessages}
+                hasMore={inboxMessagesEnabled && inboxMessagesHasMore}
+                loadingOlder={inboxMessagesLoading}
+                onLoadOlder={() => {
+                  const oldest = Math.min(...inboxMessages.map((m) => m.timestamp))
+                  void loadInboxMessages(oldest)
+                }}
+              >
                 {inboxMessagesError ? <Alert variant="destructive"><AlertDescription>{i18n.t("消息历史读取失败：")}{inboxMessagesError}</AlertDescription></Alert> : null}
                 {channelMessages.length === 0 && canShowReadEmpty(inboxMessagesLoading, inboxMessagesError) ? (
                   <div className="im-empty-state flex flex-col items-center justify-center flex-1 gap-2 text-muted-foreground text-sm py-12">
@@ -635,7 +629,7 @@ function EndpointWorkspace() {
                     })}
                   </div>
                 )}
-              </div>
+              </ChatScrollArea>
 
               {readOnly ? (
                 <div className="im-composer shrink-0 border-t px-4 py-3 text-xs text-muted-foreground">
