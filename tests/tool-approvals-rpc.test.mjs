@@ -9,6 +9,8 @@ const authSource = await readFile(new URL('../console-ui/src/utils/auth.ts', imp
 const rpcSource = await readFile(new URL('../console-ui/src/utils/plugin-rpc.ts', import.meta.url), 'utf8')
 const compile = source => ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
 const authCode = compile(authSource), rpcCode = compile(rpcSource)
+// The real SDK class, loaded without the package's React entry.
+const { PluginRpcError: sdkPluginRpcError } = await import(new URL('console-utils/remoteApi.js', import.meta.resolve('@zhin.js/client')))
 
 function fixture() {
   const items = new Map(), requests = [], auth = {}, rpc = {}
@@ -16,7 +18,7 @@ function fixture() {
   const globals = { Headers, URL, localStorage: storage, sessionStorage: storage, window: { location: { origin: 'http://console.invalid' }, dispatchEvent() {} },
     CustomEvent: class {}, fetch: (url, init) => new Promise(resolve => requests.push({ url, init, resolve })) }
   vm.runInNewContext(authCode, { ...globals, exports: auth, require: name => { assert(isLocaleImport(name)); return localeModule } })
-  vm.runInNewContext(rpcCode, { ...globals, exports: rpc, require: name => { assert.equal(name, './auth'); return auth } })
+  vm.runInNewContext(rpcCode, { ...globals, exports: rpc, require: name => name === '@zhin.js/client' ? { PluginRpcError: sdkPluginRpcError } : (assert.equal(name, './auth'), auth) })
   auth.setApiBase('https://host-a.invalid'); auth.setToken('synthetic-A')
   return { auth, rpc, requests }
 }

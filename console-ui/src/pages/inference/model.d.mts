@@ -132,7 +132,7 @@ export function inferenceRequest<T = unknown>(
   fetch: typeof globalThis.fetch,
   input: { path?: string; ownerId?: string; body?: unknown; method?: string; signal?: AbortSignal }
 ): Promise<T>
-export function inferenceError(error: unknown): string
+export function inferenceError(error: unknown, locale?: 'zh-CN' | 'en'): string
 export function resourceBindings(
   view: View
 ): Record<'services' | 'accounts' | 'profiles', Record<string, string>>
@@ -141,7 +141,8 @@ export function serviceDriver(view: View, serviceId: string): Driver | undefined
 export function profileSupport(view: View, profile: Profile): SupportMetadata | undefined
 export function profileSelection(view: View, profile: Profile, kind?: 'language'): ProfileSelection
 export function selectableLanguageProfiles(
-  view: View
+  view: View,
+  locale?: 'zh-CN' | 'en'
 ): Array<{ id: string; label: string; selection: ProfileSelection; support?: SupportMetadata }>
 export function schemaField(schema?: Record<string, unknown>): SchemaField
 export function purposePlan(draft: Purposes, original?: Purposes): unknown

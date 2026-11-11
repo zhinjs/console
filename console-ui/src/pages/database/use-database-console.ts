@@ -1,8 +1,9 @@
-import { getWebSocketManager, type TableInfo, type DatabaseInfo } from '@zhin.js/client'
+import { type TableInfo, type DatabaseInfo } from '@zhin.js/client'
+import { getConsoleTransport } from '../../utils/console-client'
 import { useConsoleRead } from '../../hooks/use-console-read'
 import { dropThenRefresh } from './drop-table-model.mjs'
 export function useDatabaseConsole() {
-  const manager = getWebSocketManager()
+  const manager = getConsoleTransport()
   const infoRead = useConsoleRead<DatabaseInfo | null>(() => manager.getDbInfo(), null)
   const tablesRead = useConsoleRead<TableInfo[]>(async () => (await manager.getDbTables()).tables, [])
   return {

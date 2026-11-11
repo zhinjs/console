@@ -1,3 +1,4 @@
+import { translate } from '../../i18n/locale.mjs'
 const base = '/api/agent/inference'
 export class InferenceRequestError extends Error {
   constructor(code, status = 503, mutationOutcome) {
@@ -38,30 +39,30 @@ export async function inferenceRequest(fetch, { path = '', ownerId, body, method
     )
   return result.data
 }
-export function inferenceError(error) {
+export function inferenceError(error, locale = 'zh-CN') {
   const code = error instanceof InferenceRequestError ? error.code : 'unavailable'
-  if (code === 'forbidden') return '当前身份无权执行此操作。'
-  if (code === 'plan-conflict') return '连接或模型身份发生变化，请新增账号或模型并明确重新绑定。'
+  if (code === 'forbidden') return translate(locale, '当前身份无权执行此操作。')
+  if (code === 'plan-conflict') return translate(locale, '连接或模型身份发生变化，请新增账号或模型并明确重新绑定。')
   if (['conflict', 'stale-reference', 'revision-conflict'].includes(code))
-    return '配置已变化，请重新读取；已有草稿需重新打开编辑后再保存。'
+    return translate(locale, '配置已变化，请重新读取；已有草稿需重新打开编辑后再保存。')
   if (['invalid-input', 'invalid-plan', 'invalid-graph'].includes(code))
-    return '请检查必填项、参数和模型能力。'
-  if (code === 'identity-change') return '凭据属于不同或无法核实的账号，请新增账号并重新绑定模型。'
-  if (code === 'not-authorized') return '尚未授权或本次登录信息不匹配，请检查授权信息。'
-  if (code === 'reauthorize') return '账号授权已失效，请重新登录。'
-  if (code === 'disconnected') return '账号已断开，请登录或设置密钥后再使用。'
-  if (code === 'target-denied') return '请求地址不在此账号的授权范围内。'
-  if (code === 'rejected') return '服务拒绝了本次授权，请检查登录信息。'
-  if (code === 'not-submitted') return '本次请求尚未提交，请检查登录配置。'
-  if (code === 'operation-closed') return '本次操作已结束。'
+    return translate(locale, '请检查必填项、参数和模型能力。')
+  if (code === 'identity-change') return translate(locale, '凭据属于不同或无法核实的账号，请新增账号并重新绑定模型。')
+  if (code === 'not-authorized') return translate(locale, '尚未授权或本次登录信息不匹配，请检查授权信息。')
+  if (code === 'reauthorize') return translate(locale, '账号授权已失效，请重新登录。')
+  if (code === 'disconnected') return translate(locale, '账号已断开，请登录或设置密钥后再使用。')
+  if (code === 'target-denied') return translate(locale, '请求地址不在此账号的授权范围内。')
+  if (code === 'rejected') return translate(locale, '服务拒绝了本次授权，请检查登录信息。')
+  if (code === 'not-submitted') return translate(locale, '本次请求尚未提交，请检查登录配置。')
+  if (code === 'operation-closed') return translate(locale, '本次操作已结束。')
 
-  if (code === 'migration-required') return '此记录需要显式迁移后才能调整。'
-  if (code === 'receipt-storage-unavailable') return '浏览器无法保存操作编号，尚未提交修改。'
-  if (code === 'unsupported') return '此服务不提供该功能。'
-  if (code === 'not-prepared') return '已登录，请先完成账号准备。'
-  if (code === 'storage-integrity') return '模型存储完整性异常，请由管理员检查。'
-  if (code === 'outcome-unknown') return '操作结果尚未确认，请查询结果后再操作。'
-  return '操作未完成，请稍后重新读取。'
+  if (code === 'migration-required') return translate(locale, '此记录需要显式迁移后才能调整。')
+  if (code === 'receipt-storage-unavailable') return translate(locale, '浏览器无法保存操作编号，尚未提交修改。')
+  if (code === 'unsupported') return translate(locale, '此服务不提供该功能。')
+  if (code === 'not-prepared') return translate(locale, '已登录，请先完成账号准备。')
+  if (code === 'storage-integrity') return translate(locale, '模型存储完整性异常，请由管理员检查。')
+  if (code === 'outcome-unknown') return translate(locale, '操作结果尚未确认，请查询结果后再操作。')
+  return translate(locale, '操作未完成，请稍后重新读取。')
 }
 export function resourceBindings(view) {
   return Object.fromEntries(
@@ -92,7 +93,7 @@ export function profileSelection(view, profile, kind = 'language') {
     kind,
   }
 }
-export function selectableLanguageProfiles(view) {
+export function selectableLanguageProfiles(view, locale = 'zh-CN') {
   return [
     ...Object.values(view.profiles).flatMap((profile) => {
       const account = view.accounts[profile.accountId],
@@ -116,7 +117,7 @@ export function selectableLanguageProfiles(view) {
       )
       .map((profile) => ({
         id: profile.id,
-        label: `${profile.label ?? profile.model} · 部署模型`,
+        label: translate(locale, '{0} · 部署模型', [profile.label ?? profile.model]),
         ...(profile.support ? { support: profile.support } : {}),
         selection: {
           id: profile.id,

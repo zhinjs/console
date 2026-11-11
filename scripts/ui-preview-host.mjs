@@ -13,6 +13,19 @@ const logs = [
   { id: 2, timestamp: Date.now() - 40_000, level: 'warn', name: 'preview', plugin: 'preview', message: '客服账号尚未启动。请在账号页检查状态。' },
   { id: 1, timestamp: Date.now() - 60_000, level: 'info', name: 'preview', plugin: 'preview', message: '会话目录已加载。' },
 ]
+const engagement = {
+  summary: { engagementId: 'preview-engagement-1', venue: 'preview-room', status: 'completed', startedAt: Date.now() - 300_000, endedAt: Date.now() - 296_000,
+    eventCount: 5, hops: 2, turns: 3, tokensUsed: 1840, wallClockMs: 4200, participants: ['agent:planner', 'agent:reviewer'], stopReason: 'done' },
+  events: [
+    { kind: 'engagement.started', initiator: { kind: 'human', principalId: 'preview-user' }, venue: 'preview-room' },
+    { kind: 'mail.sent', envelope: { from: { kind: 'agent', name: 'planner' }, to: { kind: 'agent', name: 'reviewer' }, kind: 'request' } },
+    { kind: 'board.updated', entry: { key: 'plan', version: 2, updatedBy: { kind: 'agent', name: 'planner' } } },
+    { kind: 'budget.recorded', hops: 2, turns: 3, tokensUsed: 1840 },
+    { kind: 'engagement.stopped', status: 'completed', reason: 'done' },
+  ],
+  board: [{ key: 'plan', value: { steps: ['draft', 'review'] }, version: 2, updatedBy: { kind: 'agent', name: 'planner' }, updatedAt: Date.now() - 297_000 }],
+}
+const venues = [{ key: 'preview-room', channel: { endpoint: { adapter: 'icqq', id: 'preview-community' }, kind: 'group', id: '20001' }, floor: 'moderated' }]
 const envelope = data => ({ success: true, data })
 
 const server = createServer(async (request, response) => {
@@ -59,6 +72,13 @@ const server = createServer(async (request, response) => {
     const type = String(body.type)
     const endpoint = endpoints.find(endpoint => endpoint.name === (body.endpointKey ?? body.endpointId ?? body.data?.endpointKey)) ?? endpoints[0]
     if (type === 'endpoint.list') { json(envelope({ endpoints })); return }
+    if (type === 'agent.engagements.list') { json(envelope({ engagements: [engagement.summary] })); return }
+    if (type === 'agent.engagements.get') {
+      if (body.engagementId === engagement.summary.engagementId) json(envelope(engagement))
+      else json({ success: false, error: 'Engagement 不存在' }, 404)
+      return
+    }
+    if (type === 'agent.venues.list') { json(envelope({ venues })); return }
     if (type === 'endpoint.info' || type === 'endpoint.get') { json(envelope(endpoint)); return }
     if (type === 'endpoint.test') { json(envelope({ reachable: true, connected: true, latencyMs: 24, message: '本地预览连接正常' })); return }
     if (type === 'endpoint.friends') { json(envelope({ friends: [{ user_id: 10001, nickname: '演示用户', remark: '界面测试' }] })); return }

@@ -4,7 +4,9 @@ import { useI18n } from '../i18n'
 import { useMemo, useRef, useState, useEffect, useLayoutEffect, useSyncExternalStore } from "react"
 import { Outlet, Link, useLocation, matchPath } from "react-router-dom"
 import { Menu, LogOut, X, ChevronRight, PanelLeftClose, PanelLeftOpen, Settings2, Activity } from "lucide-react"
-import { app, cn, useWebSocket, type ConsoleRouteRecord } from "@zhin.js/client"
+import { cn, type ConsoleRouteRecord } from "@zhin.js/client"
+import { useConsoleConnected } from "../hooks/use-console-connected"
+import { app } from "../utils/console-client"
 import { getSidebarLucideIcon } from "../components/sidebarMenuIcons"
 import { ThemeToggle } from "../components/ThemeToggle"
 import { Button, buttonVariants } from "../components/ui/button"
@@ -96,7 +98,7 @@ export default function DashboardLayout() {
   const sidebarRef = useRef<HTMLElement>(null)
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const { connected } = useWebSocket()
+  const connected = useConsoleConnected()
 
   const showLabels = isMobile || desktopSidebarOpen
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(readExpandedGroups)
@@ -112,7 +114,7 @@ export default function DashboardLayout() {
 
   const routes = useSyncExternalStore(
     app.subscribe,
-    () => app._getRoutes(),
+    () => app.getRoutes(),
   )
 
   const menuRoutes = useMemo(() => {

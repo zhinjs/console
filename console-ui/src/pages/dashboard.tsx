@@ -1,3 +1,4 @@
+import { startVisiblePolling } from '../hooks/visible-polling.mjs'
 import { translate } from '../i18n/locale.mjs'
 import { useI18n } from '../i18n'
 import { readErrorSummary } from '../utils/read-error.mjs'
@@ -42,7 +43,9 @@ import {
   VolumeX,
   Wrench,
 } from 'lucide-react'
-import { fetchConsoleEventHistory, getWebSocketManager, SIDE_EVENT_PUSH, useWebSocket } from '@zhin.js/client'
+import { fetchConsoleEventHistory, SIDE_EVENT_PUSH } from '@zhin.js/client'
+import { useConsoleConnected } from '../hooks/use-console-connected'
+import { getConsoleTransport } from '../utils/console-client'
 import { apiFetch } from '../utils/auth'
 import { CONSOLE_REST, CONSOLE_RPC } from '../contracts/zhin-console'
 import { requestConsole } from '../utils/console-rpc'
@@ -354,7 +357,7 @@ export default function HomePage() {
   const requestAbortRef = useRef<AbortController | null>(null)
   const readOnly = isDemoMode()
   const { success, error: toastError } = useToast()
-  const { connected } = useWebSocket()
+  const connected = useConsoleConnected()
   const [messageEvents, setMessageEvents] = useState<unknown[]>([])
   const [messagesLoaded, setMessagesLoaded] = useState(false)
   const messageAbortRef = useRef<AbortController | null>(null)
@@ -378,7 +381,7 @@ export default function HomePage() {
 
   useEffect(() => {
     void loadMessages()
-    const manager = getWebSocketManager()
+    const manager = getConsoleTransport()
     const offMessage = manager.onConsoleEvent(SIDE_EVENT_PUSH.MESSAGE_RECEIVE, (event) => {
       setMessageEvents((previous) => [...previous, event].slice(-MESSAGE_EVENT_LIMIT))
     })
@@ -474,10 +477,10 @@ export default function HomePage() {
 
   useEffect(() => {
     void fetchDashboard()
-    const interval = window.setInterval(() => void fetchDashboard(), 10000)
+    const stopPolling = startVisiblePolling(() => void fetchDashboard(), 10000)
     return () => {
       requestAbortRef.current?.abort()
-      window.clearInterval(interval)
+      stopPolling()
     }
   }, [fetchDashboard])
 
@@ -605,14 +608,14 @@ export default function HomePage() {
         timestamp: nowTime,
         level: offlineEndpoints > 0 ? 'warn' : 'info',
         source: 'adapter-host',
-        message: `${stats.endpoints.online}/${stats.endpoints.total} 个平台账号在线，已加载 ${stats.plugins.active} 个子插件与 ${stats.commands} 条命令`,
+        message: i18n.t("{0}/{1} 个平台账号在线，已加载 {2} 个子插件与 {3} 条命令", [stats.endpoints.online, stats.endpoints.total, stats.plugins.active, stats.commands]),
       },
       {
         id: 'synth-2',
         timestamp: nowTime,
         level: 'info',
         source: 'runtime',
-        message: `Node ${systemStatus.nodeVersion} (${systemStatus.platform}) 持续运行 ${formatUptime(systemStatus.uptime, i18n.locale)} · RSS ${formatMemory(systemStatus.memory.rss)}`,
+        message: i18n.t("Node {0} ({1}) 持续运行 {2} · RSS {3}", [systemStatus.nodeVersion, systemStatus.platform, formatUptime(systemStatus.uptime, i18n.locale), formatMemory(systemStatus.memory.rss)]),
       },
     ]
   }, [recentEvents, stats, systemStatus, lastUpdatedAt, offlineEndpoints, i18n.locale])

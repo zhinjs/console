@@ -1,24 +1,15 @@
+import { PluginRpcError } from '@zhin.js/client'
 import { apiFetch, type ApiRequestContext } from './auth'
 
-/** Error from a plugin Console RPC; `message` is safe to show, `code` is stable. */
-export class PluginRpcError extends Error {
-  readonly code: string
-  readonly status: number
-
-  constructor(message: string, code: string, status: number) {
-    super(message)
-    this.name = 'PluginRpcError'
-    this.code = code
-    this.status = status
-  }
-}
+export { PluginRpcError }
 
 type PluginRpcResponseBody<T> = { success?: boolean; data?: T; error?: string; code?: string }
 
 /**
  * Calls a plugin-registered Console RPC (`plugin.<pluginId>.<method>`, zhinjs/zhin#970).
- * Same wire shape as `pluginRpc` in `@zhin.js/client`; kept here until the site moves to a
- * client release that exports it. Host-owned status lives under the root PluginId, e.g.
+ * Same wire shape and error as `pluginRpc` in `@zhin.js/client`. This variant stays because the
+ * SDK one takes neither an abort signal nor a pinned Host/credential context, which the approval
+ * and self-change panels need. Host-owned status lives under the root PluginId, e.g.
  * `pluginRpc('root', 'ambient')`.
  */
 export async function pluginRpc<T>(

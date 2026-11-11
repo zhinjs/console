@@ -59,32 +59,3 @@ test('the actual skills page reads status only and links to the single graph pur
   await header.props.actions.props.onClick()
   assert.deepEqual(calls, [['root', 'skills'], ['root', 'skills']], 'refresh cannot restore file-based decision writes')
 })
-
-test('Workroom disclosure uses the actual Service ID and preserves all existing policy fields', async () => {
-  const { PlanningStatus, DisclosureConfigSnippet } = await page('workroom-planning', ['PlanningStatus', 'DisclosureConfigSnippet'], {
-    '../i18n/locale.mjs': { translate: (_locale, message) => message },
-    '../i18n': { useI18n: () => defaultI18n },
-    react: {}, 'react-router-dom': { Link: 'link' },
-    '@zhin.js/client': { cn: (...parts) => parts.filter(Boolean).join(' ') },
-    '../contracts/zhin-console': { CONSOLE_RPC: {} },
-    '../utils/console-rpc': {}, yaml: { stringify: (await import('yaml')).stringify },
-  })
-  const serviceId = 'actual service: primary'
-  const status = { projectId: 'project', ready: false, principalId: 'principal', trustedPackPublisher: true,
-    projectSponsor: true, catalogReady: true, registryRevision: 2, planningPolicyReady: false,
-    disclosureReady: false, disclosureConfigReady: false, disclosureStatusSupported: true,
-    modelServiceId: serviceId, availableAgents: [], availableTools: [], availableSkills: [], diagnostics: [] }
-  const rendered = PlanningStatus({ status, busy: false, onBootstrap() {} })
-  const snippet = nodes(rendered).find(node => node.type === DisclosureConfigSnippet)
-  assert.ok(snippet, 'a new Host Service ID must reveal the existing disclosure setup')
-  const parsed = parse(DisclosureConfigSnippet(snippet.props).props.code)
-  assert.equal(parsed.ai.workroom.disclosure.modelProviders, undefined)
-  const services = parsed.ai.workroom.disclosure.modelServices
-  assert.deepEqual(Object.keys(services), [serviceId])
-  assert.deepEqual(services[serviceId], {
-    endpoint: 'REPLACE_WITH_CONTRACTED_ENDPOINT', processingRegions: ['REPLACE_WITH_CONTRACTED_REGION'],
-    maxConfidentiality: 'project_internal', external: true, noTraining: 'REPLACE_WITH_PROVIDER_GUARANTEE',
-    loggingMode: 'REPLACE_WITH_LOGGING_MODE', maximumRetentionSeconds: 'REPLACE_WITH_MAX_RETENTION_SECONDS',
-    allowsRedisclosure: 'REPLACE_WITH_PROVIDER_GUARANTEE', supportsDeletion: 'REPLACE_WITH_PROVIDER_GUARANTEE',
-  })
-})

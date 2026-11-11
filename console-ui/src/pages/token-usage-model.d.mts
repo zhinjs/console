@@ -9,7 +9,6 @@ export const MODEL_PALETTE: readonly string[]
 export const OTHER_COLOR: string
 export const SEGMENT_KEYS: readonly ['history', 'fixed', 'user']
 export const SEGMENT_LABELS: Readonly<Record<string, string>>
-export const SESSION_SORT_KEYS: readonly string[]
 
 export type UsageBucket = 'hour' | 'day'
 export interface UsageTokens { calls: number; inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheShare?: number; cacheWriteTokens?: number }

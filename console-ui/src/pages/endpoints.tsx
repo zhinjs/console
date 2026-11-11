@@ -1,3 +1,4 @@
+import { startVisiblePolling } from '../hooks/visible-polling.mjs'
 import { useI18n } from '../i18n'
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { Link } from 'react-router-dom'
@@ -324,11 +325,9 @@ export default function EndpointsPage() {
   }, [fetchEndpoints])
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      void fetchEndpoints()
-    }, 8000)
+    const stopPolling = startVisiblePolling(() => void fetchEndpoints(), 8000)
     return () => {
-      clearInterval(interval)
+      stopPolling()
       fetchSeqRef.current++
     }
   }, [fetchEndpoints])

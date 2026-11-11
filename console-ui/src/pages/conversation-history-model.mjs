@@ -56,8 +56,8 @@ export function prependConversationHistory(current, earlier) {
 }
 
 export function conversationHistoryFailure(status, body, locale = 'zh-CN') {
-  if (status === 404) return { kind: '404', message: translate(locale, body?.code === 'history_not_recorded'
-    ? '尚无可读取的聊天记录。' : '尚无可读取的聊天记录，或当前 Host 尚不支持此功能。') }
+  if (status === 404) return { kind: '404', message: body?.code === 'history_not_recorded'
+    ? translate(locale, '尚无可读取的聊天记录。') : translate(locale, '尚无可读取的聊天记录，或当前 Host 尚不支持此功能。') }
   if (status === 409) return { kind: 'other', message: translate(locale, '此会话对应多个频道或话题，无法准确读取。') }
   if (status === 503) return { kind: '503', message: translate(locale, '聊天记录暂不可用，请稍后重试。') }
   if (status === 400) return { kind: 'other', message: translate(locale, '会话标识或分页参数无效。') }

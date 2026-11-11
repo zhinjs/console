@@ -1,3 +1,5 @@
+import { useConsoleConnected } from '../../hooks/use-console-connected'
+import { startVisiblePolling } from '../../hooks/visible-polling.mjs'
 import { useI18n } from '../../i18n'
 import { readRequestHistory, readNoticeHistory, mergeHistoryRows } from './inbox-history-model.mjs'
 import { readPendingRequests, pendingRequestKey } from './pending-request-model.mjs'
@@ -5,7 +7,6 @@ import { readEndpointTestResult, endpointTestError, type EndpointTestResult } fr
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import {
-  useWebSocket,
   type ConsoleInboxNoticesQuery,
   type ConsoleInboxNoticesResult,
 } from '@zhin.js/client'
@@ -54,7 +55,7 @@ export function useEndpointConsole() {
     : undefined
   const initialChannelId = searchParams.get('channelId')?.trim() || undefined
 
-  const { connected } = useWebSocket()
+  const connected = useConsoleConnected()
   const [info, setInfo] = useState<EndpointInfo | null>(null)
   const [loadErr, setLoadErr] = useState<string | null>(null)
   const [testLoading, setTestLoading] = useState(false)
@@ -82,8 +83,8 @@ export function useEndpointConsole() {
   useEffect(() => {
     setInfo(null)
     void loadInfo()
-    const t = setInterval(loadInfo, 8000)
-    return () => { clearInterval(t); infoSequence.current++ }
+    const stopPolling = startVisiblePolling(() => void loadInfo(), 8000)
+    return () => { stopPolling(); infoSequence.current++ }
   }, [loadInfo])
 
   // A result belongs to one account; never show it (or a late reply) for another one.

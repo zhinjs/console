@@ -247,7 +247,7 @@ test('Endpoint transport uses canonical endpointKey and the public typed client 
   assert.match(endpointSources, /endpointKey/)
 
   const push = sourceText(join(SOURCE_ROOT, 'utils', 'endpoint-push.ts'))
-  assert.match(push, /getWebSocketManager/)
+  assert.match(push, /getConsoleTransport/)
   assert.match(push, /onConsoleEvent\(/)
   assert.match(push, /onConsoleEventRecoveryGap\(/)
   assert.match(push, /KnownConsoleEventEnvelope/)
@@ -289,43 +289,28 @@ test('plugin management requires plans, revision checks and config validation', 
   assert.match(config, /missingEnv/)
 })
 
-test('Workroom selection is represented by projectId and runId in the URL', () => {
+test('Workroom records read the Engagement projection the current Host serves', () => {
   const source = sourceText(join(SOURCE_ROOT, 'pages', 'workrooms.tsx'))
-  assert.match(source, /searchParams\.get\('projectId'\)/)
-  assert.match(source, /searchParams\.get\('runId'\)/)
-  assert.match(source, /setSearchParams\(\{ projectId, runId \}\)/)
-})
-
-test('Workroom board exposes governed planning and disclosure setup', () => {
   const contract = sourceText(join(SOURCE_ROOT, 'contracts', 'zhin-console.ts'))
-  const source = [
-    sourceText(join(SOURCE_ROOT, 'pages', 'workrooms.tsx')),
-    sourceText(join(SOURCE_ROOT, 'pages', 'workroom-planning.tsx')),
-  ].join('\n')
-
-  assert.match(contract, /WORKROOM_PROFILE_STATUS: 'workroom\.profile\.status'/)
-  assert.match(contract, /WORKROOM_PROFILE_BOOTSTRAP: 'workroom\.profile\.bootstrap'/)
-  assert.match(source, /规划与披露配置/)
-  assert.match(source, /初始化披露能力/)
-  assert.match(source, /disclosureConfigReady/)
-  assert.match(source, /disclosureStatusSupported/)
-  assert.match(source, /response\.ready === true && disclosureStatusSupported && response\.disclosureReady === true/)
-  assert.match(source, /Host 版本待升级/)
-  assert.match(source, /升级 @zhin\.js\/cli 到最新版/)
-  assert.match(source, /expectedRegistryRevision: status\.registryRevision/)
-  assert.match(source, /includeTools: status\.availableTools/)
-  assert.match(source, /includeSkills: status\.availableSkills/)
-  assert.match(source, /模型处理方披露契约/)
-  assert.match(source, /OpenRouter.*ZDR.*data collection/)
+  // ADR 0048 replaced Run/Task/Assignment with Engagements; the removed REST path must not return.
+  for (const text of [source, contract]) assert.doesNotMatch(text, /agent\/workroom\/runs|WORKROOM_RUNS|workroom\.profile/)
+  assert.match(source, /useEngagements\(ENGAGEMENT_LIMIT\)/)
+  assert.match(source, /useEngagementDetail\(selectedId\)/)
+  assert.match(source, /useVenues\(\)/)
+  assert.match(source, /from '@zhin\.js\/client'/)
 })
 
-test('Workroom run errors never masquerade as empty project data', () => {
+test('Workroom selection is represented by engagementId in the URL', () => {
   const source = sourceText(join(SOURCE_ROOT, 'pages', 'workrooms.tsx'))
-  assert.match(source, /const \[runsAvailable, setRunsAvailable\] = useState\(false\)/)
-  assert.match(source, /projectId && runsAvailable/)
-  assert.match(source, /projectId && !runsAvailable/)
-  assert.match(source, /catch \(caught\)[\s\S]*setRuns\(\[\]\)[\s\S]*setSelectedRun\(null\)[\s\S]*setRunsAvailable\(false\)/)
-  assert.match(source, /无法读取 Workroom Run/)
+  assert.match(source, /searchParams\.get\('engagementId'\)/)
+  assert.match(source, /setSearchParams\(\{ engagementId: item\.engagementId \}\)/)
+})
+
+test('Workroom read errors never masquerade as an empty record list', () => {
+  const source = sourceText(join(SOURCE_ROOT, 'pages', 'workrooms.tsx'))
+  assert.match(source, /error \? <ErrorAlert error=\{error\} onRetry=\{refresh\} \/>/)
+  assert.match(source, /\) : error \? \([\s\S]*无法读取协作记录[\s\S]*\) : \([\s\S]*还没有协作记录/)
+  assert.match(source, /detail\.summary\.engagementId === selectedId/)
 })
 
 test('Workroom configuration uses the runtime Catalog CAS contract', () => {
@@ -404,8 +389,16 @@ test('released Zhin rich-message renderer is the single Markdown implementation'
 
 test('package manifest targets the released Zhin contract generation', () => {
   const manifest = JSON.parse(sourceText(join(ROOT, 'package.json')))
-  assert.equal(manifest.dependencies['@zhin.js/client'], '^2.1.11')
-  assert.equal(manifest.dependencies['@zhin.js/contract'], '^1.0.16')
-  assert.equal(manifest.dependencies['@zhin.js/ai'], '^1.5.6')
+  // One SDK generation: the tilde ranges keep npm from resolving the unrelated 1.5.x / 2.x lines.
+  assert.equal(manifest.dependencies['@zhin.js/client'], '~1.1.31')
+  assert.equal(manifest.dependencies['@zhin.js/contract'], '~1.1.22')
+  assert.equal(manifest.dependencies['@zhin.js/ai'], '~1.1.54')
+  assert.equal(Object.keys(manifest.dependencies).some(name => name.startsWith('@zhin.js/client-')), false)
+  const lock = sourceText(join(ROOT, 'pnpm-lock.yaml'))
+  for (const name of ['client', 'contract', 'console-protocol', 'ai']) {
+    const versions = new Set([...lock.matchAll(new RegExp(`^  '@zhin\\.js/${name}@([^'(]+)`, 'gm'))].map(match => match[1]))
+    assert.equal(versions.size, 1, `@zhin.js/${name} resolves to ${[...versions].join(', ')}`)
+  }
+  assert.equal(sourceFiles().some(path => /@zhin\.js\/client-sdk|getWebSocketManager|useWebSocket\b/.test(sourceText(path))), false)
   assert.match(manifest.dependencies.zod, /^\^4\./)
 })

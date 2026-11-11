@@ -2,7 +2,8 @@ import { useI18n } from '../../i18n'
 import { useState, useCallback, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import './file-tree.css'
-import { getWebSocketManager, type FileTreeNode } from '@zhin.js/client'
+import { type FileTreeNode } from '@zhin.js/client'
+import { getConsoleTransport } from '../../utils/console-client'
 import { RefreshCw, AlertCircle, FolderOpen } from 'lucide-react'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
@@ -30,7 +31,7 @@ function ensureUnloadGuard() {
   if (unloadGuardInstalled) return
   unloadGuardInstalled = true
   window.addEventListener('beforeunload', (event) => {
-    if (!draftSessions.hasUnsaved(getWebSocketManager())) return
+    if (!draftSessions.hasUnsaved(getConsoleTransport())) return
     event.preventDefault()
     event.returnValue = ''
   })
@@ -48,7 +49,7 @@ function FileManageSession() {
   const readOnly = isDemoMode()
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedPath = searchParams.get('path') || null
-  const fileManager = getWebSocketManager()
+  const fileManager = getConsoleTransport()
   const { data: tree, loaded, loading, error, refresh: loadTree } = useConsoleRead<FileTreeNode[]>(async () => (await fileManager.getFileTree()).tree, [])
   const readFile = async (path: string) => (await fileManager.readFile(path)).content
   const saveFile = (path: string, content: string) => fileManager.saveFile(path, content)

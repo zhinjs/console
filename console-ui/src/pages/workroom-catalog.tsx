@@ -16,7 +16,8 @@ import {
   Trash2,
   UsersRound,
 } from 'lucide-react'
-import { cn, getWebSocketManager } from '@zhin.js/client'
+import { cn } from '@zhin.js/client'
+import { getConsoleTransport } from '../utils/console-client'
 import { createWorkroomDraftSessions } from './workroom-draft-session.mjs'
 import { CONSOLE_RPC, ENDPOINT_RPC } from '../contracts/zhin-console'
 import { requestConsole } from '../utils/console-rpc'
@@ -138,7 +139,7 @@ function ensureUnloadGuard() {
   if (unloadGuardInstalled) return
   unloadGuardInstalled = true
   window.addEventListener('beforeunload', (event) => {
-    if (!draftSessions.hasUnsaved(getWebSocketManager())) return
+    if (!draftSessions.hasUnsaved(getConsoleTransport())) return
     event.preventDefault()
     event.returnValue = ''
   })
@@ -149,7 +150,7 @@ export default function WorkroomCatalogPage() {
   const messages = useRef(i18n)
   messages.current = i18n
   const readOnly = isDemoMode()
-  const connection = getWebSocketManager()
+  const connection = getConsoleTransport()
   const restoredDraft = useRef(readOnly ? undefined : draftSessions.get(connection))
   ensureUnloadGuard()
   const [catalog, setCatalog] = useState<WorkroomCatalog | null>(restoredDraft.current?.catalog ?? null)

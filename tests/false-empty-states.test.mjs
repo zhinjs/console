@@ -4,11 +4,9 @@ import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import ts from 'typescript'
 import { localeModule, isLocaleImport } from './locale-fixture.mjs'
-import * as runsModel from '../console-ui/src/pages/workroom-runs-model.mjs'
-import * as projectsModel from '../console-ui/src/pages/workroom-projects-model.mjs'
+import * as engagementsModel from '../console-ui/src/pages/engagements-model.mjs'
 import * as workbenchModel from '../console-ui/src/pages/agent-workbench-model.mjs'
 
-const { projectsFromCatalog, projectListView } = projectsModel
 const { introspectionTotal, fetchAllIntrospection } = workbenchModel
 const require = createRequire(import.meta.url)
 const compilerOptions = { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX }
@@ -51,80 +49,60 @@ const text = node => typeof node === 'string' || typeof node === 'number' ? Stri
 const ofType = (tree, type) => elements(tree).filter(node => node.type === type)
 
 // ---------------------------------------------------------------------------
-// Workroom project catalog
+// Workroom collaboration records (Engagements)
 // ---------------------------------------------------------------------------
 
 const workroomSource = await read('pages/workrooms.tsx')
-function workroomFixture() {
-  const runtime = hookRuntime(), calls = []
+function workroomFixture(initial) {
+  const runtime = hookRuntime()
   const params = new URLSearchParams()
+  const state = { engagements: [], loading: true, error: null, reloads: 0, ...initial }
   const module = compile(workroomSource + '\nexport { WorkroomBoardPage };', {
     react: runtime.hooks,
     'react-router-dom': { Link: 'a', useSearchParams: () => [params, () => {}] },
     'lucide-react': new Proxy({}, { get: () => 'i' }),
-    '@zhin.js/client': { cn: (...classes) => classes.filter(Boolean).join(' ') },
-    '../contracts/zhin-console': { CONSOLE_REST: { WORKROOM_RUNS: '/api/workroom/runs' }, CONSOLE_RPC: { WORKROOMS_GET: 'workrooms:get' } },
-    '../utils/console-rpc': { requestConsole: input => new Promise((resolve, reject) => calls.push({ input, resolve, reject })) },
-    '../utils/auth': { apiFetch: () => new Promise(() => {}), getApiBase: () => 'https://host' },
+    '@zhin.js/client': {
+      cn: (...classes) => classes.filter(Boolean).join(' '),
+      useEngagements: () => ({ engagements: state.engagements, loading: state.loading, error: state.error, reload: async () => { state.reloads++ } }),
+      useEngagementDetail: () => ({ detail: null, loading: false, error: null, reload: async () => {} }),
+      useVenues: () => ({ venues: [] }),
+    },
+    '../hooks/visible-polling.mjs': { startVisiblePolling: () => () => {} },
     '../components/PageHeader': { PageHeader: 'page-header' }, '../components/PageShell': { PageShell: 'page-shell' },
     '../components/error-alert': { ErrorAlert: 'error-alert' }, '../components/empty-state': { EmptyState: 'empty-state' },
     '../components/ui/badge': { Badge: 'span' }, '../components/ui/button': { Button: 'button' },
-    '../components/ui/card': { Card: 'article', CardContent: 'section' }, '../components/ui/input': { Input: 'input' },
+    '../components/ui/card': { Card: 'article', CardContent: 'section' },
     '../components/ui/skeleton': { Skeleton: 'skeleton' }, '../components/ui/list-item-button': { ListItemButton: 'list-item' },
-    '../utils/demo-mode': { isDemoMode: () => false }, './workroom-planning': { PlanningDisclosurePanel: 'planning' },
-    './workroom-runs-model.mjs': runsModel, './workroom-projects-model.mjs': projectsModel,
-  }, { window: { setInterval: () => 1, clearInterval: () => {} }, document: { visibilityState: 'visible' } })
+    '../utils/demo-mode': { isDemoMode: () => false },
+    './engagements-model.mjs': engagementsModel,
+  })
   const view = runtime.mount(() => module.WorkroomBoardPage())
   view.render()
-  return Object.assign(view, { calls, pending: () => calls.filter(call => call.input.type === 'workrooms:get' && !call.done) })
+  // The page shows its skeleton until the first load finishes: finish it with the given outcome.
+  const finish = async (outcome) => { Object.assign(state, { loading: false }, outcome); view.render(); await view.settle() }
+  return Object.assign(view, { state, finish })
 }
-const answer = (f, outcome) => { const [call] = f.pending(); assert.ok(call, 'expected a pending workrooms:get'); call.done = true; outcome instanceof Error ? call.reject(outcome) : call.resolve(outcome) }
+const emptyTitles = tree => ofType(tree, 'empty-state').map(node => node.props.title)
 
-test('Workroom project catalog read failure shows an error with retry, not the "no projects" empty state', async () => {
+test('Workroom collaboration read failure shows an error with retry, not the "no records yet" empty state', async () => {
   const f = workroomFixture()
-  answer(f, new Error('连接已断开'))
-  await f.settle()
-  const page = text(f.tree)
-  assert.doesNotMatch(page, /还没有读取到已配置的项目/, 'a failed read must not claim nothing is configured')
-  assert.doesNotMatch(page, /还没有项目时/, 'the board-level empty state must not suggest creating projects after a failed read')
+  await f.finish({ error: '连接已断开' })
+  assert.ok(!emptyTitles(f.tree).includes('还没有协作记录'), 'a failed read must not claim there are no records')
   const alerts = ofType(f.tree, 'error-alert')
   assert.equal(alerts.length, 1)
-  assert.match(alerts[0].props.error, /无法读取 Workroom 项目目录/)
   assert.match(alerts[0].props.error, /连接已断开/)
   assert.equal(typeof alerts[0].props.onRetry, 'function')
-
   alerts[0].props.onRetry()
-  f.render()
-  assert.equal(ofType(f.tree, 'error-alert').length, 0, 'retrying clears the stale error while the catalog reloads')
-  answer(f, { workrooms: { alpha: { name: 'Alpha 项目' } } })
-  await f.settle()
-  assert.equal(ofType(f.tree, 'error-alert').length, 0)
-  assert.match(text(f.tree), /Alpha 项目/)
+  assert.equal(f.state.reloads, 1, 'retry reloads the collaboration records')
   f.close()
 })
 
-test('Workroom project catalog that is genuinely empty still shows the empty guidance without an error', async () => {
+test('Workroom collaboration list that is genuinely empty shows the empty guidance without an error', async () => {
   const f = workroomFixture()
-  answer(f, { workrooms: {} })
-  await f.settle()
+  await f.finish({ engagements: [] })
   assert.equal(ofType(f.tree, 'error-alert').length, 0)
-  assert.match(text(f.tree), /还没有读取到已配置的项目/)
+  assert.ok(emptyTitles(f.tree).includes('还没有协作记录'))
   f.close()
-})
-
-test('Workroom project model treats a malformed catalog as an error and keeps view states exclusive', () => {
-  assert.deepEqual(projectsFromCatalog({ workrooms: { a: { name: 'A', description: 'd' }, b: { enabled: false } } }), [
-    { id: 'a', name: 'A', description: 'd', enabled: true },
-    { id: 'b', name: 'b', description: undefined, enabled: false },
-  ])
-  assert.deepEqual(projectsFromCatalog({}), [])
-  for (const bad of [null, 'x', [], { workrooms: [] }, { workrooms: 'x' }]) assert.throws(() => projectsFromCatalog(bad), /Workroom 项目目录格式无效/)
-  assert.throws(() => projectsFromCatalog(null, 'en'), /Invalid Workroom project catalog/)
-  assert.equal(projectListView(null, null), 'loading')
-  assert.equal(projectListView([], null), 'empty')
-  assert.equal(projectListView([{ id: 'a' }], null), 'ready')
-  assert.equal(projectListView([], 'boom'), 'error')
-  assert.equal(projectListView(null, 'boom'), 'error')
 })
 
 // ---------------------------------------------------------------------------

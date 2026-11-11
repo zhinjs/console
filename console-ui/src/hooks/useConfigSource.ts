@@ -1,6 +1,6 @@
 import { useI18n } from '../i18n'
 import { useCallback, useEffect, useRef, useState, useReducer } from 'react'
-import { getWebSocketManager } from '@zhin.js/client'
+import { getConsoleTransport } from '../utils/console-client'
 import { configErrorReducer } from './config-error-state.mjs'
 import { requestConsole } from '../utils/console-rpc'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
@@ -35,7 +35,7 @@ export function useConfigSource({ autoLoad = true }: { autoLoad?: boolean } = {}
   const i18n = useI18n()
   const messages = useRef(i18n)
   messages.current = i18n
-  const manager = getWebSocketManager()
+  const manager = getConsoleTransport()
   const scope = useInboxCacheScope()
   const [connected, setConnected] = useState(manager.isConnected())
   const [config, setConfig] = useState<ConfigSource | null>(null)

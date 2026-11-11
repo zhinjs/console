@@ -1,0 +1,24 @@
+{
+  "source": "Shape of GET /api/agent/engagements/:id (zhin basic/cli agent-routes.ts, ConsoleEngagementDetail)",
+  "body": {
+    "success": true,
+    "data": {
+      "summary": {
+        "engagementId": "eng-1", "venue": "war-room", "status": "completed", "startedAt": 1760000000000, "endedAt": 1760000004200,
+        "eventCount": 6, "hops": 2, "turns": 3, "tokensUsed": 1840, "wallClockMs": 4200,
+        "participants": ["agent:planner", "agent:reviewer"], "stopReason": "done"
+      },
+      "events": [
+        { "kind": "engagement.started", "initiator": { "kind": "human", "principalId": "u-1" }, "venue": "war-room" },
+        { "kind": "mail.sent", "envelope": { "from": { "kind": "agent", "name": "planner" }, "to": { "kind": "agent", "name": "reviewer" }, "kind": "request" } },
+        { "kind": "mail.delivered", "messageId": "m-1", "recipient": { "kind": "external", "peer": "a2a://peer" }, "outcome": "accepted" },
+        { "kind": "board.updated", "entry": { "key": "plan", "version": 2, "updatedBy": { "kind": "agent", "name": "planner" } } },
+        { "kind": "budget.recorded", "hops": 2, "turns": 3, "tokensUsed": 1840 },
+        { "kind": "engagement.stopped", "status": "completed", "reason": "done" }
+      ],
+      "board": [
+        { "key": "plan", "value": { "steps": 2 }, "version": 2, "updatedBy": { "kind": "agent", "name": "planner" }, "updatedAt": 1760000003000 }
+      ]
+    }
+  }
+}

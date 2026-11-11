@@ -1,4 +1,5 @@
 import test from 'node:test'
+import { localeModule } from './locale-fixture.mjs'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
@@ -98,6 +99,7 @@ function fixture(storage = new Map(), { preferredOwnerId } = {}) {
     )
   const mocks = {
     react: runtime.api,
+    '../../i18n': localeModule,
     '../../utils/auth': { apiFetch: fetch, getApiBase: () => connection.base },
     '../../utils/inbox-cache': { isInboxCacheScopeActive: (scope) => scope === connection.scope },
     './model.mjs': model,
@@ -206,6 +208,8 @@ async function component(runtime, path, mocks) {
   const module = { exports: {} }
   const dependencies = {
     react: runtime.api,
+    '../../i18n': localeModule,
+    '../i18n': localeModule,
     'react/jsx-runtime': {
       jsx: (type, props) => ({ type, props }),
       jsxs: (type, props) => ({ type, props }),

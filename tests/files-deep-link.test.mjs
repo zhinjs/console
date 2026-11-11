@@ -55,7 +55,7 @@ function fixture(initialQuery = '') {
   const mocks = {
     react: { ...r.hooks },
     'react-router-dom': { useSearchParams: () => [params, setSearchParams] },
-    '@zhin.js/client': { getWebSocketManager: () => manager },
+    '../../utils/console-client': { getConsoleTransport: () => manager },
     './draft-session.mjs': { createFileDraftSessions: () => sessions },
     '../../utils/useInboxCacheScope': { useInboxCacheScope: () => scope },
     '../../utils/inbox-cache': { isInboxCacheScopeActive: () => active },

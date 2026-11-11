@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import { useCallback, useRef } from 'react'
 import { SchemaFieldEditor } from '../../components/PluginConfigForm/SchemaFieldEditor'
 import type { SchemaEditorDrafts } from '../../components/PluginConfigForm/types'
@@ -15,6 +16,7 @@ export function SchemaFields({
   onChange: (value: ObjectValue) => void
   onValidityChange?: (valid: boolean) => void
 }) {
+  const i18n = useI18n()
   const drafts = useRef<SchemaEditorDrafts>({ json: new Map(), unions: new Map() }),
     invalid = useRef(new Set<string>())
   const validity = useCallback(
@@ -27,7 +29,7 @@ export function SchemaFields({
   )
   return (
     <SchemaFieldEditor
-      name="参数"
+      name={i18n.t("参数")}
       field={schemaField(schema ?? { type: 'object', properties: {} })}
       value={value}
       onChange={(next) => onChange(next as ObjectValue)}

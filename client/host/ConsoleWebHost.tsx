@@ -4,7 +4,7 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { loadConsoleEntries } from "../bootstrap/loadConsoleEntries";
 import { ConsoleView } from "../console-app/ConsoleView";
 import { useConsoleRouteElements } from "../console-app/ConsoleRoutes";
-import { app } from "@zhin.js/client";
+import { app } from "@console/utils/console-client";
 import { resolveConsoleEntry } from "@console/bootstrap/default-entry.mjs";
 import { CONSOLE_SHELL_PATH, CONSOLE_UI_LEGACY_PREFIX, normalizeShellBase } from "../paths";
 
@@ -47,7 +47,7 @@ function DashboardHome() {
 export function ConsoleWebHost() {
   const [ready, setReady] = React.useState(false);
   const registeredRoutes = useConsoleRouteElements();
-  const defaultHomePath = `${shellBase}${resolveConsoleEntry(app._getRoutes())}`;
+  const defaultHomePath = `${shellBase}${resolveConsoleEntry(app.getRoutes())}`;
 
   React.useEffect(() => {
     loadConsoleEntries()

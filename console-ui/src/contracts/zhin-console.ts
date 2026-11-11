@@ -14,12 +14,9 @@ import {
 export { ENDPOINT_RPC, INBOX_RPC, SIDE_EVENT_PUSH, SIDE_EVENT_RPC }
 
 export const CONSOLE_RPC = {
-  CONFIG_EXPLAIN: 'config:explain',
   SYSTEM_RESTART: 'system:restart',
   WORKROOMS_GET: 'workrooms:get',
   WORKROOMS_SET: 'workrooms:set',
-  WORKROOM_PROFILE_STATUS: 'workroom.profile.status',
-  WORKROOM_PROFILE_BOOTSTRAP: 'workroom.profile.bootstrap',
   SCHEDULE_LIST: 'schedule:list',
   CRON_VALIDATE: 'cron:validate',
   CRON_ADD: 'cron:add',
@@ -44,7 +41,6 @@ export const CONSOLE_REST = {
   TASK_CREATE: '/api/tasks/create',
   TASK_CHANGE: '/api/tasks/change',
   AGENT_SESSIONS: '/api/agent/sessions',
-  WORKROOM_RUNS: '/api/agent/workroom/runs',
 } as const
 
 export type SupportedIntrospectionKind =

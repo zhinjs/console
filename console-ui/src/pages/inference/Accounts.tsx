@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import { useState, type FormEvent } from 'react'
 import { Plus, Pencil, KeyRound, LogIn, Unplug, Trash2 } from 'lucide-react'
 import { Button } from '../../components/ui/button'
@@ -19,25 +20,27 @@ import { driverKey, type Account, type AccountStatus, type ObjectValue } from '.
 import { SchemaFields } from './SchemaFields'
 import type { InferenceManagement, InferenceSource } from './useInferenceManagement'
 
-const statusLabels: Record<string, string> = {
-  ready: '可用',
-  authenticated: '待完成准备',
-  'not-authorized': '未授权',
-  disconnected: '已断开',
-  reauthorize: '需重新登录',
-  uncertain: '结果待确认',
-  'exchange-pending': '授权处理中',
-}
-function accountStatusLabel(status: AccountStatus | undefined): string {
-  if (status?.status === 'ready' && status.retryAt !== undefined) return '认证限流'
+type Translate = ReturnType<typeof useI18n>['t']
+function accountStatusLabel(status: AccountStatus | undefined, t: Translate): string {
+  if (status?.status === 'ready' && status.retryAt !== undefined) return t('认证限流')
   if (status?.status === 'uncertain' && status.failure) {
-    if (status.failure.kind === 'temporary-response') return '认证服务暂时不可用'
-    if (status.failure.kind === 'transport-unknown') return '结果待确认'
-    return '认证响应异常'
+    if (status.failure.kind === 'temporary-response') return t('认证服务暂时不可用')
+    if (status.failure.kind === 'transport-unknown') return t('结果待确认')
+    return t('认证响应异常')
   }
-  return statusLabels[status?.status ?? ''] ?? '状态未知'
+  switch (status?.status) {
+    case 'ready': return t('可用')
+    case 'authenticated': return t('待完成准备')
+    case 'not-authorized': return t('未授权')
+    case 'disconnected': return t('已断开')
+    case 'reauthorize': return t('需重新登录')
+    case 'uncertain': return t('结果待确认')
+    case 'exchange-pending': return t('授权处理中')
+    default: return t('状态未知')
+  }
 }
 export function Accounts({ management: m }: { management: InferenceManagement }) {
+  const i18n = useI18n()
   const view = m.view!,
     [editing, setEditing] = useState<{
       account?: Account
@@ -57,8 +60,8 @@ export function Accounts({ management: m }: { management: InferenceManagement })
   async function disconnect(account: Account) {
     if (
       await confirm({
-        title: `断开 ${account.label ?? account.id}？`,
-        description: '在途模型请求将取消；账号和模型配置保留。',
+        title: i18n.t("断开 {0}？", [account.label ?? account.id]),
+        description: i18n.t("在途模型请求将取消；账号和模型配置保留。"),
         variant: 'destructive',
       })
     )
@@ -72,13 +75,13 @@ export function Accounts({ management: m }: { management: InferenceManagement })
       (profile) => profile.accountId === account.id
     )
     if (profiles.length) {
-      m.setError('请先在模型中删除或调整该账号关联的模型，再删除账号。')
+      m.setError(i18n.t("请先在模型中删除或调整该账号关联的模型，再删除账号。"))
       return
     }
     if (
       await confirm({
-        title: `删除 ${account.label ?? account.id}？`,
-        description: '删除后重新新增不会继承原账号身份。',
+        title: i18n.t("删除 {0}？", [account.label ?? account.id]),
+        description: i18n.t("删除后重新新增不会继承原账号身份。"),
         variant: 'destructive',
       })
     )
@@ -99,15 +102,15 @@ export function Accounts({ management: m }: { management: InferenceManagement })
     <div className="space-y-4">
       {dialog}
       <div className="flex items-center justify-between gap-3">
-        <h3 className="font-semibold">账号</h3>
+        <h3 className="font-semibold">{i18n.t("账号", undefined, 'plural')}</h3>
         <Button onClick={() => setEditing({ source: m.source! })} disabled={disabled}>
           <Plus />
-          新增账号
+          {i18n.t("新增账号")}
         </Button>
       </div>
       {!Object.keys(view.accounts).length ? (
         <Card className="p-8 text-center text-muted-foreground">
-          添加一个模型账号，开始配置模型。
+          {i18n.t("添加一个模型账号，开始配置模型。")}
         </Card>
       ) : (
         <div className="divide-y rounded-lg border">
@@ -128,7 +131,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
                   </p>
                   <p className="text-sm text-muted-foreground break-all">
                     {service.label ?? service.driver.id} ·{' '}
-                    {accountStatusLabel(status)}
+                    {accountStatusLabel(status, i18n.t)}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -139,7 +142,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
                     disabled={disabled}
                   >
                     <Pencil />
-                    编辑
+                    {i18n.t("编辑")}
                   </Button>
                   <Button
                     variant="ghost"
@@ -147,7 +150,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
                     onClick={() => setEditing({ account, replacement: true, source: m.source! })}
                     disabled={disabled}
                   >
-                    新增替代账号
+                    {i18n.t("新增替代账号")}
                   </Button>
                   {account.authentication.method === 'api-key' && !account.authentication.source ? (
                     <Button
@@ -157,7 +160,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
                       disabled={disabled}
                     >
                       <KeyRound />
-                      设置密钥
+                      {i18n.t("设置密钥")}
                     </Button>
                   ) : null}
                   {account.authentication.method === 'oauth' && view.hostAdministrator ? (
@@ -169,7 +172,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
                         onClick={() => void begin(account)}
                       >
                         <LogIn />
-                        登录
+                        {i18n.t("登录")}
                       </Button>
                       <Button
                         variant="ghost"
@@ -177,7 +180,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
                         disabled={disabled}
                         onClick={() => setCredential({ account, source: m.source! })}
                       >
-                        客户端凭据
+                        {i18n.t("客户端凭据")}
                       </Button>
                       {status?.preparation === 'required' ? (
                         <Button
@@ -191,7 +194,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
                             })
                           }
                         >
-                          完成准备
+                          {i18n.t("完成准备")}
                         </Button>
                       ) : null}
                     </>
@@ -204,13 +207,13 @@ export function Accounts({ management: m }: { management: InferenceManagement })
                       onClick={() => void disconnect(account)}
                     >
                       <Unplug />
-                      断开
+                      {i18n.t("断开")}
                     </Button>
                   ) : null}
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label={`删除 ${account.label ?? account.id}`}
+                    aria-label={i18n.t("删除 {0}", [account.label ?? account.id])}
                     disabled={disabled}
                     onClick={() => void remove(account)}
                   >
@@ -231,14 +234,14 @@ export function Accounts({ management: m }: { management: InferenceManagement })
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editing?.replacement ? '新增替代账号' : editing?.account ? '编辑账号' : '新增账号'}
+              {editing?.replacement ? i18n.t("新增替代账号") : editing?.account ? i18n.t("编辑账号") : i18n.t("新增账号")}
             </DialogTitle>
             <DialogDescription>
               {editing?.replacement
-                ? '创建独立账号；原账号保留，模型需明确重新配置。'
+                ? i18n.t("创建独立账号；原账号保留，模型需明确重新配置。")
                 : editing?.account
-                ? '连接身份变化时，请新增替代账号。'
-                : '保存配置后再登录或设置密钥。'}
+                ? i18n.t("连接身份变化时，请新增替代账号。")
+                : i18n.t("保存配置后再登录或设置密钥。")}
             </DialogDescription>
           </DialogHeader>
           {editing ? (
@@ -266,7 +269,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {credential?.account.authentication.method === 'oauth' ? '客户端凭据' : '设置 API Key'}
+              {credential?.account.authentication.method === 'oauth' ? i18n.t("客户端凭据") : i18n.t("设置 API Key")}
             </DialogTitle>
             <DialogDescription>{credential?.account.label ?? credential?.account.id}</DialogDescription>
           </DialogHeader>
@@ -305,14 +308,14 @@ export function Accounts({ management: m }: { management: InferenceManagement })
                 type="password"
                 autoComplete="off"
                 placeholder={credential?.source.view.hostAdministrator && credential.account.authentication.method === 'api-key'
-                  ? 'API Key 或 ${ENV_VAR:-默认值}' : undefined}
+                  ? i18n.t("API Key 或 ${ENV_VAR:-默认值}") : undefined}
                 value={clientSecret}
                 onChange={(event) => setClientSecret(event.target.value)}
                 required
               />
             </label>
             <Button type="submit" disabled={disabled}>
-              保存
+              {i18n.t("保存")}
             </Button>
           </form>
         </DialogContent>
@@ -328,8 +331,8 @@ export function Accounts({ management: m }: { management: InferenceManagement })
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>登录 {login?.account.label ?? ''}</DialogTitle>
-            <DialogDescription>在浏览器中授权后，粘贴最终回调地址。</DialogDescription>
+            <DialogTitle>{i18n.t("登录 {0}", [login?.account.label ?? ''])}</DialogTitle>
+            <DialogDescription>{i18n.t("在浏览器中授权后，粘贴最终回调地址。")}</DialogDescription>
           </DialogHeader>
           {m.error ? <ErrorAlert error={m.error} /> : null}
           {login ? (
@@ -355,14 +358,14 @@ export function Accounts({ management: m }: { management: InferenceManagement })
             >
               <Button asChild variant="outline">
                 <a href={login.challenge.authorizationUrl} target="_blank" rel="noreferrer">
-                  打开授权页面
+                  {i18n.t("打开授权页面")}
                 </a>
               </Button>
               <p className="text-sm text-muted-foreground break-all">
-                回调地址：{login.challenge.redirectUri}
+                {i18n.t("回调地址：")}{login.challenge.redirectUri}
               </p>
               <label className="block space-y-2 text-sm">
-                <span>最终回调地址</span>
+                <span>{i18n.t("最终回调地址")}</span>
                 <Input
                   value={callback}
                   type="url"
@@ -373,7 +376,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
               </label>
               <div className="flex gap-2">
                 <Button type="submit" disabled={disabled}>
-                  完成登录
+                  {i18n.t("完成登录")}
                 </Button>
                 <Button
                   variant="outline"
@@ -388,7 +391,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
                     setCallback('')
                   }}
                 >
-                  取消授权
+                  {i18n.t("取消授权")}
                 </Button>
               </div>
             </form>
@@ -413,13 +416,14 @@ function AccountForm({
   replacement?: boolean
   onSaved: () => void
 }) {
+  const i18n = useI18n()
   const view = source.view
   const originalService = account && view.services[account.serviceId]
   const updating = !!account && !replacement
   const [serviceId, setServiceId] = useState(updating ? account.serviceId : '')
   const [driverId, setDriverId] = useState(originalService ? driverKey(originalService.driver) : '')
   const [label, setLabel] = useState(
-    account ? `${account.label ?? account.id}${replacement ? '（新）' : ''}` : ''
+    account ? `${account.label ?? account.id}${replacement ? i18n.t("（新）") : ''}` : ''
   )
   const [optionsValid, setOptionsValid] = useState(true)
   const [options, setOptions] = useState<ObjectValue>(originalService?.options ?? {})
@@ -476,17 +480,17 @@ function AccountForm({
         {m.error ? <ErrorAlert error={m.error} /> : null}
         {driver && showNotice ? <SupportNotice support={driver.support} /> : null}
         <label className="block space-y-2 text-sm">
-          <span>账号名称</span>
+          <span>{i18n.t("账号名称")}</span>
           <Input value={label} onChange={(event) => setLabel(event.target.value)} required />
         </label>
         <label className="block space-y-2 text-sm">
-          <span>服务</span>
+          <span>{i18n.t("服务")}</span>
           <SelectField
             disabled={updating}
             value={serviceId}
             onValueChange={chooseService}
             options={[
-              { value: '', label: '新增服务' },
+              { value: '', label: i18n.t("新增服务") },
               ...Object.values(view.services).map((value) => ({
                 value: value.id,
                 label: supportLabel(value.label ?? value.driver.id, serviceDriver(view, value.id)?.support),
@@ -496,7 +500,7 @@ function AccountForm({
         </label>
         {!service ? (
           <label className="block space-y-2 text-sm">
-            <span>服务类型</span>
+            <span>{i18n.t("服务类型")}</span>
             <SelectField
               value={driverId}
               onValueChange={(value) => {
@@ -505,7 +509,7 @@ function AccountForm({
                 setMethod('')
               }}
               options={[
-                { value: '', label: '选择服务类型' },
+                { value: '', label: i18n.t("选择服务类型") },
                 ...view.drivers
                   .filter(
                     (value) =>
@@ -522,12 +526,12 @@ function AccountForm({
         ) : null}
         {driver && ((updating && canEditService) || !service) ? (
           <section className="space-y-3">
-            <h4 className="text-sm font-medium">服务设置</h4>
+            <h4 className="text-sm font-medium">{i18n.t("服务设置")}</h4>
             {updating &&
             Object.values(view.accounts).filter((value) => value.serviceId === service.id).length >
               1 ? (
               <p className="text-sm text-muted-foreground">
-                此服务设置也会应用于使用它的其他账号。
+                {i18n.t("此服务设置也会应用于使用它的其他账号。")}
               </p>
             ) : null}
             <SchemaFields
@@ -541,17 +545,17 @@ function AccountForm({
         ) : null}
         {driver ? (
           <label className="block space-y-2 text-sm">
-            <span>认证方式</span>
+            <span>{i18n.t("认证方式")}</span>
             <SelectField
               disabled={updating}
               value={method}
               onValueChange={setMethod}
               options={[
-                { value: '', label: '选择认证方式' },
+                { value: '', label: i18n.t("选择认证方式") },
                 ...methods.map((value) => ({
                   value,
                   label:
-                    { none: '无需认证', 'api-key': 'API Key', oauth: '订阅登录' }[value] ?? value,
+                    { none: i18n.t("无需认证"), 'api-key': 'API Key', oauth: i18n.t("订阅登录") }[value] ?? value,
                 })),
               ]}
             />
@@ -559,7 +563,7 @@ function AccountForm({
         ) : null}
         {view.hostAdministrator && method === 'api-key' ? (
           <label className="block space-y-2 text-sm">
-            <span>环境变量引用（可选）</span>
+            <span>{i18n.t("环境变量引用（可选）")}</span>
             <Input
               disabled={updating}
               value={authSource}
@@ -570,7 +574,7 @@ function AccountForm({
           </label>
         ) : null}
         <Button type="submit" disabled={!optionsValid || !method || !driver}>
-          保存
+          {i18n.t("保存")}
         </Button>
       </fieldset>
     </form>

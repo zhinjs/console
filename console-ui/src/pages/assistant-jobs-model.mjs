@@ -13,15 +13,6 @@ export function filterAssistantJobs(jobs, query, status) {
   return jobs.filter(job => (!term || `${job.label ?? ''} ${job.id}`.toLowerCase().includes(term)) && (status === 'all' || status === 'enabled' && job.enabled || status === 'paused' && !job.enabled || status === 'error' && job.state.lastStatus === 'error'));
 }
 
-export async function probeAssistantJobs(fetchJobs, locale = 'zh-CN') {
-  try {
-    const response = await fetchJobs()
-    if (!response.ok) return false
-    validateAssistantJobs(await response.json(), locale)
-    return true
-  } catch { return false }
-}
-
 const KNOWN_JOB_ERRORS = [
   [/endpoint not found/i, "发送目标的聊天账号不存在或已改名。请确认该账号仍在“聊天账号”中在线，或修改任务的发送目标。"],
   [/timeout|timed out/i, "执行超时。请检查模型服务与网络，稍后会按计划重试。"],

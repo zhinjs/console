@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Plus, Pencil, Trash2, RefreshCw } from 'lucide-react'
 import { Button } from '../../components/ui/button'
@@ -27,14 +28,15 @@ import { SchemaFields } from './SchemaFields'
 import type { InferenceManagement, InferenceSource } from './useInferenceManagement'
 
 export function Profiles({ management: m, onCreateAccount }: { management: InferenceManagement; onCreateAccount: () => void }) {
+  const i18n = useI18n()
   const view = m.view!,
     [editing, setEditing] = useState<{ profile: Profile | null; source: InferenceSource } | null>(null),
     { confirm, ConfirmDialog: dialog } = useConfirm()
   async function remove(profile: Profile) {
     if (
       await confirm({
-        title: `删除 ${profile.label ?? profile.model}？`,
-        description: '已使用此模型的用途和会话需要重新选择。',
+        title: i18n.t("删除 {0}？", [profile.label ?? profile.model]),
+        description: i18n.t("已使用此模型的用途和会话需要重新选择。"),
         variant: 'destructive',
       })
     )
@@ -44,18 +46,18 @@ export function Profiles({ management: m, onCreateAccount }: { management: Infer
     <div className="space-y-4">
       {dialog}
       <div className="flex items-center justify-between gap-3">
-        <h3 className="font-semibold">模型</h3>
+        <h3 className="font-semibold">{i18n.t("模型", undefined, 'plural')}</h3>
         <Button
           disabled={m.busy || !!m.pending}
           onClick={() => Object.keys(view.accounts).length ? setEditing({ profile: null, source: m.source! }) : onCreateAccount()}
         >
           <Plus />
-          {Object.keys(view.accounts).length ? '添加模型' : '添加账号'}
+          {Object.keys(view.accounts).length ? i18n.t("添加模型") : i18n.t("添加账号")}
         </Button>
       </div>
       {!Object.keys(view.profiles).length ? (
         <Card className="p-8 text-center text-muted-foreground">
-          先添加账号，再选择模型。
+          {i18n.t("先添加账号，再选择模型。")}
         </Card>
       ) : (
         <div className="divide-y rounded-lg border">
@@ -78,7 +80,7 @@ export function Profiles({ management: m, onCreateAccount }: { management: Infer
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label={`编辑 ${profile.label ?? profile.model}`}
+                    aria-label={i18n.t("编辑 {0}", [profile.label ?? profile.model])}
                     disabled={m.busy || !!m.pending}
                     onClick={() => setEditing({ profile, source: m.source! })}
                   >
@@ -87,7 +89,7 @@ export function Profiles({ management: m, onCreateAccount }: { management: Infer
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label={`删除 ${profile.label ?? profile.model}`}
+                    aria-label={i18n.t("删除 {0}", [profile.label ?? profile.model])}
                     disabled={m.busy || !!m.pending}
                     onClick={() => void remove(profile)}
                   >
@@ -107,8 +109,8 @@ export function Profiles({ management: m, onCreateAccount }: { management: Infer
       >
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editing?.profile ? '编辑模型' : '添加模型'}</DialogTitle>
-            <DialogDescription>同一账号可添加多个模型，无需重复认证。</DialogDescription>
+            <DialogTitle>{editing?.profile ? i18n.t("编辑模型") : i18n.t("添加模型")}</DialogTitle>
+            <DialogDescription>{i18n.t("同一账号可添加多个模型，无需重复认证。")}</DialogDescription>
           </DialogHeader>
           {editing ? (
             <ProfileForm
@@ -140,6 +142,7 @@ function ProfileForm({
   management: InferenceManagement
   onSaved: () => void
 }) {
+  const i18n = useI18n()
   const view = source.view
   const [accountId, setAccountId] = useState(profile?.accountId ?? '')
   const [label, setLabel] = useState(profile?.label ?? '')
@@ -190,7 +193,7 @@ function ProfileForm({
       })
       .catch(error => {
         if (schemaRequest.current?.promise === promise && currentSchemaKey.current === key && management.active()) {
-          setSchemaResult({ key, status: 'failed', error: inferenceError(error) })
+          setSchemaResult({ key, status: 'failed', error: inferenceError(error, i18n.locale) })
         }
         return undefined
       })
@@ -238,13 +241,13 @@ function ProfileForm({
   }
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (!account || !service) { setFormError('请选择账号。'); return }
-    if (!driver) { setFormError('此服务的 Driver 不可用，请检查服务配置。'); return }
-    if (!modelId.trim()) { setFormError('请填写模型 ID。'); return }
-    if (!declaration?.protocol) { setFormError('请选择模型协议。'); return }
-    if (!declaration.kinds.length) { setFormError('请选择模型用途。'); return }
-    if (modelDraft && !canEditDeclaration) { setFormError('请在自己可管理的服务中声明模型。'); return }
-    if (!parametersValid) { setFormError('请检查生成参数。'); return }
+    if (!account || !service) { setFormError(i18n.t("请选择账号。")); return }
+    if (!driver) { setFormError(i18n.t("此服务的 Driver 不可用，请检查服务配置。")); return }
+    if (!modelId.trim()) { setFormError(i18n.t("请填写模型 ID。")); return }
+    if (!declaration?.protocol) { setFormError(i18n.t("请选择模型协议。")); return }
+    if (!declaration.kinds.length) { setFormError(i18n.t("请选择模型用途。")); return }
+    if (modelDraft && !canEditDeclaration) { setFormError(i18n.t("请在自己可管理的服务中声明模型。")); return }
+    if (!parametersValid) { setFormError(i18n.t("请检查生成参数。")); return }
     setFormError('')
     setCommittedModelId(modelId)
     setValidating(true)
@@ -283,21 +286,21 @@ function ProfileForm({
         {management.error ? <ErrorAlert error={management.error} /> : null}
         {driver ? <SupportNotice support={driver.support} /> : null}
         <label className="block space-y-2 text-sm">
-          <span>名称</span>
+          <span>{i18n.t("名称")}</span>
           <Input
             value={label}
             onChange={(event) => setLabel(event.target.value)}
-            placeholder="如：日常聊天"
+            placeholder={i18n.t("如：日常聊天")}
           />
         </label>
         <label className="block space-y-2 text-sm">
-          <span>账号</span>
+          <span>{i18n.t("账号")}</span>
           <SelectField
             disabled={!!profile}
             value={accountId}
             onValueChange={chooseAccount}
             options={[
-              { value: '', label: '选择账号' },
+              { value: '', label: i18n.t("选择账号") },
               ...Object.values(view.accounts).map((value) => ({
                 value: value.id,
                 label: supportLabel(value.label ?? value.id, serviceDriver(view, value.serviceId)?.support),
@@ -308,7 +311,7 @@ function ProfileForm({
         {service ? (
           <>
             <label className="block space-y-2 text-sm">
-              <span>模型</span>
+              <span>{i18n.t("模型")}</span>
               {manualEntry || profile ? (
                 <Input
                   value={modelId}
@@ -316,14 +319,14 @@ function ProfileForm({
                   onBlur={() => setCommittedModelId(modelId)}
                   required
                   autoComplete="off"
-                  placeholder="填写服务的真实模型 ID"
+                  placeholder={i18n.t("填写服务的真实模型 ID")}
                 />
               ) : (
                 <SelectField
                   value={modelId}
                   onValueChange={chooseModel}
                   options={[
-                    { value: '', label: '选择模型' },
+                    { value: '', label: i18n.t("选择模型") },
                     ...choices.map((value) => ({
                       value: value.id,
                       label: value.label ?? value.id,
@@ -339,12 +342,12 @@ function ProfileForm({
                 size="sm"
                 onClick={() => setManualEntry((value) => !value)}
               >
-                {manualEntry ? '从目录选择' : '输入模型 ID'}
+                {manualEntry ? i18n.t("从目录选择") : i18n.t("输入模型 ID")}
               </Button>
               {driver?.discovery === true ? (
                 <Button type="button" variant="outline" size="sm" onClick={() => void discover()}>
                   <RefreshCw />
-                  从服务读取模型
+                  {i18n.t("从服务读取模型")}
                 </Button>
               ) : null}
             </div>
@@ -357,7 +360,7 @@ function ProfileForm({
             size="sm"
             onClick={() => setModelDraft(structuredClone(known))}
           >
-            调整模型能力
+            {i18n.t("调整模型能力")}
           </Button>
         ) : null}
         {modelDraft && driver && canEditDeclaration ? (
@@ -365,12 +368,12 @@ function ProfileForm({
         ) : null}
         {modelDraft && !canEditDeclaration ? (
           <p role="alert" className="text-sm text-destructive">
-            此服务的模型目录由部署管理员维护；可新增自己的服务声明模型。
+            {i18n.t("此服务的模型目录由部署管理员维护；可新增自己的服务声明模型。")}
           </p>
         ) : null}
         {currentSchema?.status === 'loading' ? (
           <p role="status" className="text-sm text-muted-foreground">
-            正在读取生成参数…
+            {i18n.t("正在读取生成参数…")}
           </p>
         ) : null}
         {schemaError ? (
@@ -381,7 +384,7 @@ function ProfileForm({
               variant="outline"
               onClick={() => void readSchema()}
             >
-              重新读取参数
+              {i18n.t("重新读取参数")}
             </Button>
           </div>
         ) : null}
@@ -399,7 +402,7 @@ function ProfileForm({
         <Button
           type="submit"
         >
-          保存
+          {i18n.t("保存")}
         </Button>
       </fieldset>
     </form>

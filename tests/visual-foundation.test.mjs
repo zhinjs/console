@@ -62,10 +62,10 @@ test('primary buttons and the composer use action fills, while links and destruc
   assert.ok(button.includes('destructive: "bg-destructive'))
   assert.match(composer, /\.im-insert-button, \.im-send-button \{ background: hsl\(var\(--primary-action\)\); color: hsl\(var\(--primary-action-foreground\)\)/)
 })
-test('real and secondary Console entries share one palette without remote font requests', () => {
+test('the Console entry stylesheet shares the design-system palette without remote font requests', () => {
   const design = readFileSync(new URL('console-ui/src/design-system.css', root), 'utf8')
   assert.match(design, /@import "\.\/theme-tokens\.css"/)
-  for (const path of ['client/style.css', 'console-ui/src/style.css']) {
+  for (const path of ['client/style.css']) {
     const entry = readFileSync(new URL(path, root), 'utf8'); assert.match(entry, /@import .*design-system\.css/); assert.doesNotMatch(entry, /--background:\s|fonts\.googleapis\.com/)
   }
 })

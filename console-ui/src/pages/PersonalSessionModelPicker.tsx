@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
@@ -33,6 +34,7 @@ export function PersonalSessionModelPicker({
   ownerId: string
   connectionScope?: string
 }) {
+  const i18n = useI18n()
   const [state, setState] = useState<PersonalSessionState | null>(null),
     [selected, setSelected] = useState(''),
     [busy, setBusy] = useState(false),
@@ -64,7 +66,7 @@ export function PersonalSessionModelPicker({
     } catch (failure) {
       if (active() && id === sequence.current && !controller.signal.aborted) {
         setState(null)
-        setError(inferenceError(failure))
+        setError(inferenceError(failure, i18n.locale))
       }
     } finally {
       if (active() && id === sequence.current) setBusy(false)
@@ -79,7 +81,7 @@ export function PersonalSessionModelPicker({
       abort.current?.abort()
     }
   }, [sessionKey, address, ownerId, connectionScope])
-  const choices = selectableLanguageProfiles(models),
+  const choices = selectableLanguageProfiles(models, i18n.locale),
     chosen = choices.find((value) => value.id === selected)
   const selection: PersonalSessionState['selection'] = chosen
     ? { kind: 'profile', profile: chosen.selection }
@@ -108,25 +110,25 @@ export function PersonalSessionModelPicker({
         setSaved(true)
       }
     } catch (failure) {
-      if (active()) setError(inferenceError(failure))
+      if (active()) setError(inferenceError(failure, i18n.locale))
     } finally {
       if (active()) setBusy(false)
     }
   }
   const options = [
-    { value: '', label: '继承会话模型设置' },
+    { value: '', label: i18n.t("继承会话模型设置") },
     ...choices.map((value) => ({
       value: value.id,
       label: supportLabel(value.label, value.support),
     })),
   ]
   if (selected && !options.some((value) => value.value === selected))
-    options.push({ value: selected, label: '当前模型不可用' })
+    options.push({ value: selected, label: i18n.t("当前模型不可用") })
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-end gap-3">
         <label className="min-w-0 flex-1 space-y-2 text-sm">
-          <span>此会话的模型</span>
+          <span>{i18n.t("此会话的模型")}</span>
           <SelectField
             value={selected}
             onValueChange={(value) => {
@@ -141,12 +143,12 @@ export function PersonalSessionModelPicker({
           onClick={() => void save()}
           disabled={!state || busy || unchanged || (!!selected && !chosen)}
         >
-          保存
+          {i18n.t("保存")}
         </Button>
         <Button
           variant="outline"
           size="icon"
-          aria-label="重新读取会话模型"
+          aria-label={i18n.t("重新读取会话模型")}
           onClick={() => void load()}
           disabled={busy}
         >
@@ -157,7 +159,7 @@ export function PersonalSessionModelPicker({
       {error ? <ErrorAlert error={error} /> : null}
       {saved ? (
         <p role="status" className="text-sm">
-          已保存，下一回合生效。
+          {i18n.t("已保存，下一回合生效。")}
         </p>
       ) : null}
     </section>

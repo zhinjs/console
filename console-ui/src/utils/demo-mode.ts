@@ -26,6 +26,3 @@ export function getDemoBuildCredentials(): { apiBase: string; apiToken: string }
     apiToken,
   }
 }
-
-/** Demo 构建下默认 landing：Sandbox 插件路由 */
-export const DEMO_DEFAULT_PATH = '/sandbox'

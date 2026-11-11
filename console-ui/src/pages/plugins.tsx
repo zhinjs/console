@@ -1,3 +1,4 @@
+import { startVisiblePolling } from '../hooks/visible-polling.mjs'
 import { useI18n } from '../i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
@@ -207,8 +208,7 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
   ]
 
   useEffect(() => {
-    const interval = setInterval(() => void refreshCurrent(), 10000)
-    return () => clearInterval(interval)
+    return startVisiblePolling(() => void refreshCurrent(), 10000)
   }, [refreshCurrent])
 
   if (!isInboxCacheScopeActive(connectionScope)) return null
