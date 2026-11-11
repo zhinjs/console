@@ -405,7 +405,7 @@ export default function PluginDetailPage() {
         </div>
         <div className="min-w-0">
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
-            <h1 className="text-xl font-bold truncate">{plugin.name}</h1>
+            <h1 className="console-page-title truncate">{plugin.name}</h1>
             <Badge variant={plugin.management?.status === 'enabled' ? 'success' : plugin.management?.status === 'missing-config' || plugin.management?.status === 'degraded' ? 'warning' : 'secondary'} className="shrink-0">
               {plugin.management ? managementLabel(plugin.management, i18n.locale) : plugin.status === 'active' ? i18n.t("代内已加载") : i18n.t("未加载")}
             </Badge>

@@ -402,7 +402,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{i18n.t("插件市场")}</h1>
+          <h1 className="console-page-title">{i18n.t("插件市场")}</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {i18n.t("探索 Zhin.js 生态中的插件。列表为发现索引，打开详情后核验注册表 latest。")}</p>
         </div>
