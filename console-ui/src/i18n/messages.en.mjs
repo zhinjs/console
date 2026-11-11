@@ -3222,4 +3222,6 @@ export const englishMessages = Object.freeze({
   "检查失败：{0}": "Update check failed: {0}",
   "群成员": "Group members",
   "群成员（{0}）": "Group members ({0})",
+  "CPU 占用": "CPU usage",
+  "进程 CPU 时间占单核的比例，按两次刷新之间的差值计算": "Process CPU time as a share of one core, measured between two refreshes",
 })
