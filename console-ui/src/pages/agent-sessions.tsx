@@ -13,7 +13,7 @@ import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { GitBranch, CheckCircle, Loader2 } from 'lucide-react'
+import { GitBranch, CheckCircle, Loader2, MessagesSquare, Repeat2, Users, AlertTriangle } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import { isLikelySessionKey, parseSessionKeyFromQuery, parseImSessionKey } from '../utils/agent-session'
 import { loadAgentSessionHistory, pushAgentSessionHistory } from '../utils/agent-session-history'
@@ -37,7 +37,8 @@ import {
 import { cn } from '@zhin.js/client'
 import { CONSOLE_REST } from '../contracts/zhin-console'
 import { isDemoMode } from '../utils/demo-mode'
-import { readRecentSessions, type RecentSession } from './agent-session-recent.mjs'
+import { readRecentSessions, summarizeRecentSessions, type RecentSession, type RecentSessionSummary } from './agent-session-recent.mjs'
+import { StatCard, StatGrid } from '../components/StatCard'
 
 const RECENT_SESSIONS_PATH = '/api/agent/trace-archive/sessions'
 
@@ -75,11 +76,10 @@ export default function AgentSessionsPage() {
   const selected = parseImSessionKey(selectedKey)
   const [history, setHistory] = useState<string[]>(() => loadAgentSessionHistory())
   const [recentFailed, setRecentFailed] = useState(false)
-  const [recentResult, setRecent] = useState<{ connectionScope?: string; rows: RecentSession[] } | null>(null)
-  const recent =
-    recentResult && isInboxCacheScopeActive(scope) && recentResult.connectionScope === scope
-      ? recentResult.rows
-      : null
+  const [recentResult, setRecent] = useState<{ connectionScope?: string; rows: RecentSession[]; summary: RecentSessionSummary | null } | null>(null)
+  const recentCurrent = recentResult && isInboxCacheScopeActive(scope) && recentResult.connectionScope === scope ? recentResult : null
+  const recent = recentCurrent ? recentCurrent.rows : null
+  const sessionSummary = recentCurrent?.summary ?? null
   const [loadedTree, setTree] = useState<SessionTree | null>(null)
   const tree =
     isInboxCacheScopeActive(scope) &&
@@ -246,10 +246,14 @@ export default function AgentSessionsPage() {
     setRecent(null)
     setRecentFailed(false)
     void apiFetch(RECENT_SESSIONS_PATH, { cache: 'no-store' })
-      .then(async (res) => (res.ok ? { rows: readRecentSessions(await res.json()), failed: false } : { rows: [] as RecentSession[], failed: true }))
-      .catch(() => ({ rows: [] as RecentSession[], failed: true }))
-      .then(({ rows, failed }) => {
-        if (active && isInboxCacheScopeActive(scope)) { setRecent({ connectionScope: scope, rows }); setRecentFailed(failed) }
+      .then(async (res) => {
+        if (!res.ok) return { rows: [] as RecentSession[], summary: null, failed: true }
+        const body: unknown = await res.json()
+        return { rows: readRecentSessions(body), summary: summarizeRecentSessions(body), failed: false }
+      })
+      .catch(() => ({ rows: [] as RecentSession[], summary: null, failed: true }))
+      .then(({ rows, summary, failed }) => {
+        if (active && isInboxCacheScopeActive(scope)) { setRecent({ connectionScope: scope, rows, summary }); setRecentFailed(failed) }
       })
     return () => {
       active = false
@@ -278,6 +282,38 @@ export default function AgentSessionsPage() {
         title={i18n.t('聊天记录')}
         description={readOnly ? i18n.t('按聊天账号和会话查看机器人和大家聊过什么（Demo 只读）。') : undefined}
       />
+
+      {!personal && recentResult ? (
+        <StatGrid label={i18n.t('会话概况')}>
+          <StatCard
+            icon={MessagesSquare}
+            label={i18n.t('Agent 会话')}
+            value={sessionSummary?.sessions ?? '—'}
+            sub={sessionSummary ? i18n.t('近 24 小时活跃 {0} 个', [sessionSummary.active]) : i18n.t('未启用或暂时无法读取')}
+          />
+          <StatCard
+            icon={Repeat2}
+            label={i18n.t('对话轮次')}
+            value={sessionSummary?.turns ?? '—'}
+            sub={sessionSummary && sessionSummary.sessions > 0
+              ? i18n.t('平均每个会话 {0} 轮', [Math.round((sessionSummary.turns / sessionSummary.sessions) * 10) / 10])
+              : i18n.t('Agent 处理过的消息轮次')}
+          />
+          <StatCard
+            icon={Users}
+            label={i18n.t('群聊与频道')}
+            value={sessionSummary?.groups ?? '—'}
+            sub={sessionSummary ? i18n.t('私聊 {0} 个', [sessionSummary.privates]) : i18n.t('按会话类型统计')}
+          />
+          <StatCard
+            icon={AlertTriangle}
+            label={i18n.t('最后一轮出错')}
+            value={sessionSummary?.failed ?? '—'}
+            sub={sessionSummary ? sessionSummary.failed > 0 ? i18n.t('打开会话查看对话追踪') : i18n.t('没有出错的会话') : i18n.t('按会话最后一轮的结果统计')}
+            tone={sessionSummary && sessionSummary.failed > 0 ? 'danger' : undefined}
+          />
+        </StatGrid>
+      ) : null}
 
       <div className="console-session-workspace">
         <aside className={cn('console-session-directory', directoryOpen && 'is-open')}>
