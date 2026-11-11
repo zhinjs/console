@@ -1,4 +1,5 @@
 import { translate } from '../i18n/locale.mjs'
+import { featureGlobalHref } from '../console-routes.mjs'
 import { readTaskUseCases } from './task-center-model.mjs'
 import { validatePluginList } from './plugin-list-model.mjs'
 import { validateManagementState } from './plugin-management-model.mjs'
@@ -29,7 +30,7 @@ export function welcomeReturnUrl(instanceKey) {
   return `/use-cases/group-welcome${instanceKey ? `?instance=${encodeURIComponent(instanceKey)}` : ''}`
 }
 export function welcomeConfigUrl(instanceKey) {
-  return `/config?plugin=${encodeURIComponent(instanceKey)}&useCase=group-welcome`
+  return featureGlobalHref(instanceKey, { useCase: 'group-welcome' })
 }
 export function welcomeDetailUrl(instanceKey) {
   return `/plugins/${encodeURIComponent(instanceKey)}?useCase=group-welcome`

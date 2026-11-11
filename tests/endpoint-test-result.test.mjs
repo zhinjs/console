@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import ts from 'typescript'
 import * as model from '../console-ui/src/pages/endpoint-test-result-model.mjs'
+import * as consoleRoutes from '../console-ui/src/console-routes.mjs'
 
 const { readEndpointTestResult, endpointTestError, endpointTestPresentation } = model
 const require = createRequire(import.meta.url)
@@ -53,6 +54,7 @@ function renderSidebar(props) {
     '../../components/ui/button': { Button: 'button' },
     '../../components/ui/input': { Input: 'input' },
     './AccountSwitcher': { AccountSwitcher: 'account-switcher' },
+    '../../console-routes.mjs': consoleRoutes,
     './ConversationSection': { ConversationSection: 'conversation-section' },
     './SystemInboxSection': { SystemInboxSection: 'system-inbox-section' },
     '../endpoint-test-result-model.mjs': model,

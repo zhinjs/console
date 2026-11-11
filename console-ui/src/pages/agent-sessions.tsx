@@ -36,7 +36,7 @@ import {
 } from '../components/ui/dialog'
 import { cn } from '@zhin.js/client'
 import { CONSOLE_REST } from '../contracts/zhin-console'
-import { isDemoMode } from '../utils/demo-mode'
+import { hasConsolePermission } from '../utils/console-access.mjs'
 import { readRecentSessions, summarizeRecentSessions, type RecentSession, type RecentSessionSummary } from './agent-session-recent.mjs'
 import { StatCard, StatGrid } from '../components/StatCard'
 
@@ -60,7 +60,7 @@ interface SessionTree {
 
 export default function AgentSessionsPage() {
   const i18n = useI18n()
-  const readOnly = isDemoMode()
+  const readOnly = !hasConsolePermission('endpoint.operate')
   const scope = useInboxCacheScope()
   const [searchParams, setSearchParams] = useSearchParams()
   const sessionKeyFromUrl = parseSessionKeyFromQuery(searchParams.get('sessionKey'))
@@ -283,7 +283,7 @@ export default function AgentSessionsPage() {
     <div className="console-page console-conversations-page">
       <PageHeader
         title={i18n.t('聊天记录')}
-        description={readOnly ? i18n.t('按聊天账号和会话查看机器人和大家聊过什么（Demo 只读）。') : undefined}
+        description={readOnly ? i18n.t('按聊天账号和会话查看机器人和大家聊过什么（只读）。') : undefined}
       />
 
       {!personal && recentResult ? (

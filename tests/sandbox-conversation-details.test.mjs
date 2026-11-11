@@ -114,16 +114,16 @@ test('a page-provided renderer is preserved and the shell only fills an undefine
   assert.equal(typeof withSandboxConversationDetails(route).element.props.renderConversationDetails, 'function')
 })
 
-test('read-only connections and Demo never mount history or trace readers', async () => {
-  let demo = false
+test('read-only connections and identities without endpoint.operate never mount history or trace readers', async () => {
+  let operate = true
   const fail = () => { throw Error('unauthorized reader mounted') }
   const { SandboxConversationDetails } = await loadComponents('pages/SandboxConversationDetails.tsx', {
-    isDemoMode: () => demo, useInboxCacheScope: fail, useConversationTraces: fail,
+    hasConsolePermission: () => operate, useInboxCacheScope: fail, useConversationTraces: fail,
   })
   assert.equal(SandboxConversationDetails({ sessionKey: 'sandbox:bot:private:owner', canExecute: false }), null)
-  demo = true
+  operate = false
   assert.equal(SandboxConversationDetails({ sessionKey: 'sandbox:bot:private:owner', canExecute: true }), null)
-  demo = false
+  operate = true
   assert.equal(SandboxConversationDetails({ sessionKey: 'sandbox:bot:private:owner', canExecute: true, connectionId: 'live-connection' }).props.connectionId, 'live-connection')
 })
 

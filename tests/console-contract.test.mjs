@@ -52,11 +52,11 @@ test('Console does not call removed Zhin APIs or legacy Endpoint aliases', () =>
 
 test('built-in Agent navigation exposes Workbench, Workroom board/catalog and Sessions', () => {
   const source = sourceText(join(SOURCE_ROOT, 'registerBuiltinShell.tsx'))
-  assert.match(source, /path: '\/agent\/workbench'/)
-  assert.match(source, /path: '\/agent\/workrooms'/)
-  assert.match(source, /path: '\/agent\/workrooms\/catalog'/)
-  assert.match(source, /path: '\/agent\/sessions'/)
-  assert.match(source, /path: '\/agent\/workrooms\/catalog'[\s\S]*hideInMenu: true/)
+  assert.match(source, /path: P\.agentWorkbench,/)
+  assert.match(source, /path: P\.aiWorkrooms,/)
+  assert.match(source, /path: P\.aiWorkroomCatalog,/)
+  assert.match(source, /path: P\.agentSessions,/)
+  assert.match(source, /path: P\.aiWorkroomCatalog,[\s\S]*?hideInMenu: true/)
   assert.doesNotMatch(source, /\/agent\/(?:studio|orchestration)/)
 })
 
@@ -66,37 +66,33 @@ test('work-oriented navigation preserves ordinary-user names and legacy plugin g
   // Published plugin groups remain compatible; builtin placement follows the approved work navigation.
   assert.match(taxonomy, /BOT: '机器人'/)
   assert.match(taxonomy, /ADVANCED: '高级'/)
-  assert.match(taxonomy, /COLLAPSED_BY_DEFAULT_NAV_GROUPS[^\n]*NAV_GROUPS\.ADVANCED/)
   assert.match(taxonomy, /'\/sandbox': \{ group: NAV_GROUPS\.WORK/)
-  const routeGroup = (path) => {
-    const start = source.indexOf(`path: '${path}'`)
-    assert.notEqual(start, -1, path)
+  const routeGroup = (key) => {
+    const start = source.indexOf(`path: P.${key},`)
+    assert.notEqual(start, -1, key)
     const block = source.slice(start, source.indexOf('})', start))
     return { name: /name: '([^']+)'/.exec(block)?.[1], group: /group: NAV_GROUPS\.(\w+)/.exec(block)?.[1], hidden: /hideInMenu: true/.test(block) }
   }
-  const primary = { '/dashboard': ['首页','OPERATIONS'], '/endpoints': ['聊天账号','ACCOUNTS'], '/agent/sessions': ['聊天记录','WORK'], '/tasks': ['任务','TASKS'], '/logs': ['运行日志','OPERATIONS'] }
-  for (const [path, [name,group]] of Object.entries(primary)) assert.deepEqual(routeGroup(path), { name, group, hidden: false })
-  assert.deepEqual(routeGroup('/cron'), { name: '定时提醒', group: 'TASKS', hidden: true })
-  assert.deepEqual(routeGroup('/assistant/jobs'), { name: '助手任务', group: 'TASKS', hidden: true })
-  assert.deepEqual(routeGroup('/plugins'), { name: '插件管理', group: 'PLUGINS', hidden: false })
-  assert.deepEqual(routeGroup('/marketplace'), { name: '插件市场', group: 'PLUGINS', hidden: false })
-  assert.deepEqual(routeGroup('/agent/ambient'), { name: '群聊插话', group: 'SETTINGS', hidden: false })
-  assert.match(source, /path: '\/agent\/ambient'[\s\S]*?requiredPermissions: \[AMBIENT_STATUS_PERMISSION\]/)
-  assert.deepEqual(routeGroup('/agent/skills'), { name: '技能助手', group: 'SETTINGS', hidden: false })
-  assert.match(source, /path: '\/agent\/skills'[\s\S]*?requiredPermissions: \[SKILLS_STATUS_PERMISSION\]/)
-  assert.equal(routeGroup('/agent/workbench').group, 'OPERATIONS')
+  const primary = { dashboard: ['首页','OVERVIEW'], logs: ['运行日志','OVERVIEW'], endpoints: ['聊天账号','WORK'], agentSessions: ['聊天记录','WORK'], opsSchedules: ['定时任务','OPS'] }
+  for (const [key, [name,group]] of Object.entries(primary)) assert.deepEqual(routeGroup(key), { name, group, hidden: false })
+  assert.deepEqual(routeGroup('plugins'), { name: '插件管理', group: 'PLUGINS', hidden: false })
+  assert.deepEqual(routeGroup('marketplace'), { name: '插件市场', group: 'PLUGINS', hidden: false })
+  assert.deepEqual(routeGroup('aiAmbient'), { name: '群聊插话', group: 'FEATURES', hidden: false })
+  assert.match(source, /path: P\.aiAmbient,[\s\S]*?requiredPermissions: \[AMBIENT_STATUS_PERMISSION\]/)
+  assert.deepEqual(routeGroup('aiSkills'), { name: '技能助手', group: 'FEATURES', hidden: false })
+  assert.match(source, /path: P\.aiSkills,[\s\S]*?requiredPermissions: \[SKILLS_STATUS_PERMISSION\]/)
+  assert.equal(routeGroup('agentWorkbench').group, 'OVERVIEW')
   // 决策回放挂在「机器人状态」下（ADR 0036 切片 C），不进菜单，入口在机器人状态页
-  assert.deepEqual(routeGroup('/agent/replay'), { name: '决策回放', group: 'OPERATIONS', hidden: true })
-  assert.match(source, /path: '\/agent\/replay'[\s\S]*?parent: '\/agent\/workbench'[\s\S]*?requiredPermissions: \[REPLAY_PERMISSION\]/)
+  assert.deepEqual(routeGroup('agentReplay'), { name: '决策回放', group: 'OVERVIEW', hidden: true })
+  assert.match(source, /path: P\.agentReplay,[\s\S]*?parent: P\.agentWorkbench,[\s\S]*?requiredPermissions: \[REPLAY_PERMISSION\]/)
   assert.match(sourceText(join(SOURCE_ROOT, 'pages', 'agent-workbench.tsx')), /to="\/agent\/replay"/)
-  for (const path of ['/config', '/env']) assert.equal(routeGroup(path).group, 'SETTINGS', path)
-  for (const path of ['/files', '/database', '/introspection', '/scenario-lab']) assert.equal(routeGroup(path).group, 'ADVANCED', path)
-  assert.equal(routeGroup('/agent/workrooms').group, 'TASKS')
+  for (const key of ['opsConfig', 'opsEnv', 'opsFiles', 'opsDatabase']) assert.equal(routeGroup(key).group, 'OPS', key)
+  for (const key of ['features', 'adapters', 'ai', 'introspection', 'scenarioLab', 'aiWorkrooms']) assert.equal(routeGroup(key).group, 'FEATURES', key)
   assert.doesNotMatch(source, /'对话分支'|'Agent 概览'|judge|decision|TypeSafe|shadow/)
   const entries = sourceText(join(SOURCE_ROOT, 'bootstrap', 'loadConsoleEntries.ts'))
-  assert.match(entries, /placePluginRoute\(/)
+  assert.match(entries, /placePluginRoute\(route, declaredSections\.get\(route\.path\)\)/)
   const layout = sourceText(join(SOURCE_ROOT, 'layouts', 'dashboard.tsx'))
-  assert.match(layout, /aria-expanded=\{open\}/)
+  assert.match(layout, /buildNavigation\(routes, access\)/)
 })
 
 test('Command Center exposes task-oriented actions in addition to route navigation', () => {
@@ -343,34 +339,34 @@ test('Workroom members can bind a dedicated message projection Endpoint', () => 
   assert.match(source, /已由 .* 使用/)
 })
 
-test('Demo-capable mutation pages expose explicit read-only branches', () => {
-  for (const path of [
-    'pages/config.tsx',
-    'pages/env.tsx',
-    'pages/files/files-page.tsx',
-    'pages/database/database-page.tsx',
-    'pages/agent-sessions.tsx',
-    'pages/endpoint-detail/index.tsx',
-    'pages/logs.tsx',
-    'pages/cron.tsx',
-    'pages/dashboard.tsx',
-    'pages/workroom-catalog.tsx',
-    'pages/workrooms.tsx',
+test('mutation pages derive their read-only state from Host-reported permissions', () => {
+  for (const [path, permission] of [
+    ['pages/env.tsx', 'ops.env.write'],
+    ['pages/files/files-page.tsx', 'ops.files.write'],
+    ['pages/database/database-page.tsx', 'ops.database.write'],
+    ['pages/agent-sessions.tsx', 'endpoint.operate'],
+    ['pages/endpoint-detail/index.tsx', 'endpoint.operate'],
+    ['pages/logs.tsx', 'ops.config.write'],
+    ['pages/cron.tsx', 'ops.schedule.write'],
+    ['pages/dashboard.tsx', 'agent.configure'],
+    ['pages/workroom-catalog.tsx', 'agent.configure'],
   ]) {
     const source = sourceText(join(SOURCE_ROOT, path))
-    assert.match(source, /isDemoMode/, `${path} must derive its Demo permission boundary`)
-    assert.match(source, /readOnly|DemoConfigPage|DemoWorkroom/, `${path} must render a read-only Demo state`)
+    assert.ok(source.includes(`const readOnly = !hasConsolePermission('${permission}')`), `${path} must gate writes on ${permission}`)
   }
 })
 
-test('Demo config is split before the full-config hook can execute', () => {
-  const source = sourceText(join(SOURCE_ROOT, 'pages', 'config.tsx'))
-  const editableStart = source.indexOf('function EditableConfigPage()')
-  const hookCall = source.indexOf('useConfigSource()', editableStart)
-  const wrapper = source.indexOf('export default function ConfigPage()')
-  assert.ok(editableStart >= 0 && hookCall > editableStart)
-  assert.ok(wrapper > hookCall)
-  assert.match(source.slice(wrapper), /isDemoMode\(\) \? <DemoConfigPage \/> : <EditableConfigPage \/>/)
+test('demo mode is removed: no build flag, bootstrap, onboarding or demo-only branches remain', () => {
+  const clientFiles = ['main.tsx', 'console-app/ConsoleView.tsx', 'host/ConsoleWebHost.tsx'].map(file => join(ROOT, 'client', file))
+  for (const path of [...sourceFiles(), ...clientFiles, join(ROOT, 'farm.config.ts')]) {
+    const source = sourceText(path)
+    assert.doesNotMatch(source, /isDemoMode|VITE_DEMO_MODE|demo-mode|DemoOnboarding|runDemoBootstrap|__ZHIN_DEMO_MODE__/, relative(ROOT, path))
+  }
+  const config = sourceText(join(SOURCE_ROOT, 'pages', 'config.tsx'))
+  assert.match(config.slice(config.indexOf('export default function ConfigPage()')), /return <EditableConfigPage \/>/)
+  const pkg = JSON.parse(sourceText(join(ROOT, 'package.json')))
+  assert.equal(pkg.scripts['dev:demo'], undefined)
+  assert.equal(pkg.scripts['build:demo'], undefined)
 })
 
 test('full config editor uses revision-checked source RPCs', () => {

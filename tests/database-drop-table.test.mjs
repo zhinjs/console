@@ -63,7 +63,7 @@ function fixture({ dropTable }) {
     react: { ...r.hooks },
     './use-database-console': { useDatabaseConsole: () => console },
     '../../utils/read-error.mjs': { readErrorSummary: value => String(value) },
-    '../../utils/demo-mode': { isDemoMode: () => false },
+    '../../utils/console-access.mjs': { hasConsolePermission: () => true },
     '../../components/toast': { useToast: () => ({ success: m => toasts.push(['success', m]), warning: m => toasts.push(['warning', m]), error: m => toasts.push(['error', m]) }) },
     './constants': { DB_TYPE_LABELS: { related: '关系型数据库', document: '文档数据库', keyvalue: '键值数据库' }, DIALECT_LABELS: { sqlite: 'SQLite' } },
     './related-table-view': { RelatedTableView: 'related-view' },

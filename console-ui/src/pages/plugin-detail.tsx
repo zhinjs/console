@@ -16,7 +16,8 @@ import { validatePluginDetail, requirePluginUpdate, pluginDiagnosticSummary, plu
 import { disableConfirmation } from './plugin-toggle-model.mjs'
 import { JsonViewer } from './introspection/JsonViewer'
 import { PluginManagementSummary } from './PluginManagementSummary'
-import { isDemoMode } from '../utils/demo-mode'
+import { hasConsolePermission } from '../utils/console-access.mjs'
+import { featureGlobalHref } from '../console-routes.mjs'
 import { WelcomeFlowContext } from './WelcomeFlowContext'
 import { welcomeConfigUrl } from './welcome-use-case-model.mjs'
 import { validateManagementState, managementLabel, canApplyPlugin, canVerifyPlugin, captureVerificationPlan, verifyApprovedPlugin, verificationSummary, verificationCheckDisplay, verificationResultDisplay, mutationRequest, applyRequest, waitForManagementState, waitForEnabledManagementState, verificationIsCurrent, type PluginManagementState, type VerificationPlan, type VerificationResult, type MutationPlan } from './plugin-management-model.mjs'
@@ -90,7 +91,7 @@ export default function PluginDetailPage() {
   const [verificationPlan, setVerificationPlan] = useState<VerificationPlan | null>(null)
   const [verificationResult, setVerificationResult] = useState<{ outcome: VerificationResult; plan: VerificationPlan } | null>(null)
   const [verificationInvalidated, setVerificationInvalidated] = useState(false)
-  const writable = !!plugin?.manageable && !plugin?.readOnly && !isDemoMode()
+  const writable = !!plugin?.manageable && !plugin?.readOnly && hasConsolePermission('plugin.manage')
   const { confirm, ConfirmDialog: ConfirmDialogHost } = useConfirm()
 
   useEffect(() => {
@@ -448,8 +449,8 @@ export default function PluginDetailPage() {
                 <Link to={`/logs?q=${encodeURIComponent(plugin.name)}`}><Activity />{i18n.t("相关日志")}</Link>
               </Button>
               <Button variant="outline" size="sm" asChild>
-                <Link to={searchParams.get('useCase') === 'group-welcome' ? welcomeConfigUrl(plugin.instanceKey) : `/config?plugin=${encodeURIComponent(plugin.instanceKey)}`}>
-                  <Settings className="w-4 h-4 mr-1" />{i18n.t("编辑配置")}</Link>
+                <Link to={searchParams.get('useCase') === 'group-welcome' ? welcomeConfigUrl(plugin.instanceKey) : featureGlobalHref(plugin.instanceKey)}>
+                  <Settings className="w-4 h-4 mr-1" />{i18n.t("功能配置")}</Link>
               </Button>
             </div>
           )}

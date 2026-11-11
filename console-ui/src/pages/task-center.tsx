@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from '../components/ui/alert'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog'
 import { SchemaFieldEditor } from '../components/PluginConfigForm/SchemaFieldEditor'
 import { apiFetch, getApiBase } from '../utils/auth'
-import { isDemoMode } from '../utils/demo-mode'
+import { hasConsolePermission } from '../utils/console-access.mjs'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { getInboxCacheScope, isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { requestConsole } from '../utils/console-rpc'
@@ -81,11 +81,11 @@ export default function TaskCenterPage() {
   const [loading, setLoading] = useState(false), [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null), [notice, setNotice] = useState<string | null>(null)
   const [endpointError, setEndpointError] = useState<string | null>(null)
-  const demo = isDemoMode(), provider = catalog?.providers.find(item => item.owner === selectedOwner)
+  const readOnly = !hasConsolePermission('ops.schedule.write'), provider = catalog?.providers.find(item => item.owner === selectedOwner)
   const selectedEndpoint = endpoints.find(item => JSON.stringify(item.endpoint) === endpointKey)
   const accountName = (target: DiagnosticConversation) => endpoints.find(item => item.endpoint.id === target.endpoint.id && item.endpoint.adapter === target.endpoint.adapter)?.name
   const current = isInboxCacheScopeActive(scope)
-  const disabled = demo || !current || busy || pending !== null || loading || !catalogReadable
+  const disabled = readOnly || !current || busy || pending !== null || loading || !catalogReadable
   const stale = !!base && (catalog?.generation !== base.generation || provider?.revision !== base.provider.revision)
 
   const refresh = useCallback(async () => {
@@ -225,11 +225,11 @@ export default function TaskCenterPage() {
     <div className="flex justify-end"><Button variant="outline" size="sm" disabled={loading || busy || !current} onClick={() => { void refresh(); void loadUseCases() }}><RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新核对")}</Button></div>
     <HostToolApprovalsPanel />
     <HostSelfChangesPanel />
-    {demo && <Alert><AlertDescription>{i18n.t("Demo 仅展示；创建、修改、暂停、恢复和取消均已禁用。")}</AlertDescription></Alert>}
+    {readOnly && <Alert><AlertDescription>{i18n.t("当前身份只读；创建、修改、暂停、恢复和取消均已禁用。")}</AlertDescription></Alert>}
     {error && current && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
     {notice && current && <Alert><AlertDescription>{notice}</AlertDescription></Alert>}
     {pending && current && <Alert><AlertDescription>{i18n.t("保留操作 ID：")}<code className="break-all">{pending.requestId}</code>。{busy ? i18n.t("等待当前操作回执。") : i18n.t("结果尚未确认，写操作已锁定。请只读核对任务与目标会话；没有匹配的持久确认不能视为未执行。")}
-      {pending.scope !== scope && <div className="mt-2 space-y-2"><p>{i18n.t("连接身份已变化，请确认当前 Host 与账号确实有权核对原操作。不会用其他 Host 的结果冒认。")}</p><Button size="sm" variant="outline" disabled={demo || pending.host !== getApiBase() || !catalog} onClick={() => {
+      {pending.scope !== scope && <div className="mt-2 space-y-2"><p>{i18n.t("连接身份已变化，请确认当前 Host 与账号确实有权核对原操作。不会用其他 Host 的结果冒认。")}</p><Button size="sm" variant="outline" disabled={readOnly || pending.host !== getApiBase() || !catalog} onClick={() => {
         if (!scope || pending.host !== getApiBase()) return
         const acknowledged = { ...pending, scope }; sessionStorage.setItem(pendingStorageKey(), JSON.stringify(acknowledged)); pendingRef.current = acknowledged; setPending(acknowledged); void refresh()
       }}>{i18n.t("确认以当前身份只读核对原操作")}</Button></div>}

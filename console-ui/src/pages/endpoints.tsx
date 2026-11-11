@@ -44,7 +44,7 @@ import { readEndpointList } from './endpoint-list-model.mjs'
 import { endpointLifecycleLabel } from './endpoint-presentation.mjs'
 import { endpointTestError, endpointTestPresentation, readEndpointTestResult, type EndpointTestResult } from './endpoint-test-result-model.mjs'
 import { requestConsole } from '../utils/console-rpc'
-import { isDemoMode } from '../utils/demo-mode'
+import { hasConsolePermission } from '../utils/console-access.mjs'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 
@@ -272,7 +272,8 @@ const ONBOARDING_PLATFORMS = [
 
 export default function EndpointsPage() {
   const i18n = useI18n()
-  const demo = isDemoMode()
+  // Login assistance is an operator action (ADR 0049 endpoint.operate).
+  const loginReadOnly = !hasConsolePermission('endpoint.operate')
   const cacheScope = useInboxCacheScope()
   const [endpoints, setEndpoints] = useState<EndpointInfo[]>([])
   const [loginTasks, setLoginTasks] = useState<LoginTask[]>([])
@@ -298,7 +299,7 @@ export default function EndpointsPage() {
     try {
       const [data, loginData] = await Promise.all([
         requestConsole<{ endpoints: EndpointInfo[] }>({ type: ENDPOINT_RPC.LIST }),
-        demo
+        loginReadOnly
           ? Promise.resolve({ tasks: [] as LoginTask[] })
           : requestConsole<{ tasks?: LoginTask[] }>({ type: 'login.list' }).catch(() => ({ tasks: [] as LoginTask[] })),
       ])
@@ -317,7 +318,7 @@ export default function EndpointsPage() {
         if (manual) setRefreshing(false)
       }
     }
-  }, [cacheScope, demo, i18n.locale])
+  }, [cacheScope, loginReadOnly, i18n.locale])
 
   useEffect(() => {
     setLoading(true)
@@ -350,7 +351,7 @@ export default function EndpointsPage() {
   }
 
   const handleSubmitLoginTask = async (task: LoginTask, rawInput?: string) => {
-    if (demo) return
+    if (loginReadOnly) return
     const needsInput = task.type === 'slider' || task.type === 'sms' || task.type === 'device' || task.type === 'other'
     const extracted = needsInput ? extractVerificationValue(rawInput ?? loginInputs[task.id] ?? '') : { value: 'ok' }
     if (needsInput && !extracted.value) return
@@ -381,7 +382,7 @@ export default function EndpointsPage() {
   }
 
   const handleCancelLoginTask = async (task: LoginTask) => {
-    if (demo) return
+    if (loginReadOnly) return
     setLoginBusy((prev) => ({ ...prev, [`cancel:${task.id}`]: true }))
     setLoginFeedback(null)
     try {

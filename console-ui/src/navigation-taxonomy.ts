@@ -1,13 +1,17 @@
+import { NAV_SECTIONS, resolveSectionId, sectionById } from './navigation-sections.mjs'
+
 /**
- * Task-oriented navigation vocabulary shared by route registration and shell surfaces.
+ * Navigation vocabulary shared by route registration and shell surfaces.
  *
- * Builtin pages follow the user's work: conversations, tasks, accounts, plugins and
- * day-to-day operations (bot status, logs, usage). Low-level tools (capabilities, files,
- * database, scenario lab) sit in a collapsed Advanced group; only settings live in the
- * sidebar footer. Legacy group values remain available to plugins that declare their own
- * navigation metadata.
+ * The sidebar has six sections (ADR 0052): 概览 / 会话 / 功能 / 插件 are day-to-day work,
+ * 运维 / 访问控制 are administration. A route's `meta.group` names its section; legacy
+ * group values below stay valid for published plugins and land in 功能 unless they name a
+ * section.
  */
 export const NAV_GROUPS = {
+  OVERVIEW: '概览',
+  OPS: '运维',
+  ACCESS: '访问控制',
   WORK: '会话',
   TASKS: '任务',
   ACCOUNTS: '聊天账号',
@@ -22,33 +26,23 @@ export const NAV_GROUPS = {
   OTHER: '其他',
 } as const
 
-export const PRIMARY_NAV_GROUP_ORDER = [
-  NAV_GROUPS.WORK,
-  NAV_GROUPS.TASKS,
-  NAV_GROUPS.ACCOUNTS,
-  NAV_GROUPS.PLUGINS,
-  NAV_GROUPS.OPERATIONS,
-  NAV_GROUPS.ADVANCED,
-] as const
-
-export const FOOTER_NAV_GROUP_ORDER = [NAV_GROUPS.SETTINGS] as const
-
-export const NAV_GROUP_ORDER = [...PRIMARY_NAV_GROUP_ORDER, ...FOOTER_NAV_GROUP_ORDER] as const
-
-/** Low-level tools stay folded until opened (or until one of their pages is active). */
-export const COLLAPSED_BY_DEFAULT_NAV_GROUPS: readonly string[] = [NAV_GROUPS.ADVANCED]
+/** Section labels in sidebar order. */
+export const NAV_GROUP_ORDER: readonly string[] = NAV_SECTIONS.map(section => section.label)
 
 /**
- * The Sandbox is the conversation entry. Other ungrouped plugin pages belong to
- * plugins; explicit provider groups and display metadata are preserved.
+ * The Sandbox is the conversation entry. Other plugin pages go to the section they
+ * declare (`metadata.section`), else 功能; explicit provider groups are preserved.
  */
 export const PLUGIN_PAGE_PLACEMENT: Readonly<Record<string, { group: string; order: number }>> = {
   '/sandbox': { group: NAV_GROUPS.WORK, order: 0 },
 }
 
-export function placePluginRoute<T extends { path?: string; meta?: Record<string, unknown> }>(route: T): T {
-  if (route.meta?.group || !route.path) return route
-  const placement: { group: string; order?: number } = PLUGIN_PAGE_PLACEMENT[route.path] ?? { group: NAV_GROUPS.PLUGINS }
+export function placePluginRoute<T extends { path?: string; meta?: Record<string, unknown> }>(route: T, declaredSection?: unknown): T {
+  if (!route.path) return route
+  const section = resolveSectionId(declaredSection) ?? resolveSectionId(route.meta?.section)
+  if (section) return { ...route, meta: { ...route.meta, group: sectionById(section)!.label } }
+  if (route.meta?.group) return route
+  const placement: { group: string; order?: number } = PLUGIN_PAGE_PLACEMENT[route.path] ?? { group: NAV_GROUPS.FEATURES }
   return { ...route, meta: { ...route.meta, group: placement.group, order: route.meta?.order ?? placement.order } }
 }
 

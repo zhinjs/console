@@ -7,4 +7,4 @@ export function readPermissionLink(params: { get(key: string): string | null } |
 export function permissionLinkSearch(command: { id?: string; name?: string; owner?: string } | null | undefined): URLSearchParams
 export function permissionLinkFor(name: string, owner?: string): string
 export function matchPermissionLink(commands: readonly PermissionCommand[] | null | undefined, link: PermissionLink | null): PermissionLinkMatch
-export function permissionCatalogState(input: { demo: boolean; active: boolean; loading: boolean; error: string | null; catalog: PermissionCatalog | null }): PermissionCatalogState
+export function permissionCatalogState(input: { denied: boolean; active: boolean; loading: boolean; error: string | null; catalog: PermissionCatalog | null }): PermissionCatalogState

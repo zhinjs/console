@@ -111,7 +111,7 @@ test('task review display follows refreshed locale while mutation identity and d
     'chooseProvider, setParameters, parameters, base, review, reviewTitle, reviewEffects, prepareCreateOrUpdate, refresh, mutationEpoch', {
       ...runtime.api, ...taskModel, useI18n: () => locale, useInboxCacheScope: () => scope, createDiagnosticRequestGate,
       getInboxCacheScope: () => scope, isInboxCacheScopeActive: value => value === scope,
-      emptyTarget: { kind: 'private', id: '', parentKind: '', parentId: '', threadId: '' }, savedPending: () => null, isDemoMode: () => false,
+      emptyTarget: { kind: 'private', id: '', parentKind: '', parentId: '', threadId: '' }, savedPending: () => null, hasConsolePermission: () => true,
       window: { addEventListener() {}, removeEventListener() {} }, CONSOLE_REST: { TASK_PROVIDERS: '/providers', TASK_USE_CASES: '/use-cases' },
       buildPreviewTarget: () => ({ endpoint: { adapter: 'memory', id: 'fixture' }, kind: 'group', id: 'room', threadId: 'topic' }),
       apiFetch: async path => {
@@ -178,7 +178,7 @@ test('task language refresh preserves the operation epoch, target and draft whil
  const runtime=hooks();let locale=messages('zh-CN');const requests=[];const scope='fixture-scope'
  const component=await lifecycle('pages/task-center.tsx','TaskCenterPage','  const chooseProvider', 'setParameters, parameters, setTargetFields, targetFields, mutationEpoch, setReview, review',{
   ...runtime.api,useI18n:()=>locale,useInboxCacheScope:()=>scope,createDiagnosticRequestGate,getInboxCacheScope:()=>scope,isInboxCacheScopeActive:v=>v===scope,
-  emptyTarget:{kind:'private',id:'',parentKind:'',parentId:'',threadId:''},savedPending:()=>null,isDemoMode:()=>false,
+  emptyTarget:{kind:'private',id:'',parentKind:'',parentId:'',threadId:''},savedPending:()=>null,hasConsolePermission:()=>true,
   apiFetch:async path=>{requests.push(path);return {ok:true,json:async()=>({success:true,data:path.includes('use-cases')?[]:{generation:1,providers:[]}})}},
   readTaskProviders,readTaskUseCases,reconcileTaskMutation,CONSOLE_REST:{TASK_PROVIDERS:'/providers',TASK_USE_CASES:'/use-cases'},window:{addEventListener(){},removeEventListener(){}},
  })
@@ -198,7 +198,7 @@ test('permission requests use the selected language without clearing hypotheses 
  const component=await lifecycle('pages/command-permissions.tsx','CommandPermissionsPage','  return <div',
   'loadCatalog, explain, choose, setSenderId, senderId, setRoles, roles, setTarget, target, setIncludeTarget, setHypothesis, hypothesis, selected, current', {
   ...runtime.api, useI18n:()=>locale, useInboxCacheScope:()=>scope, createDiagnosticRequestGate, getInboxCacheScope:()=>scope,
-  isInboxCacheScopeActive:value=>value===scope, isDemoMode:()=>false, permissionRequest, readPermissionCatalog, readPermissionExplanation, permissionHttpError,
+  isInboxCacheScopeActive:value=>value===scope, hasConsolePermission:()=>true, permissionRequest, readPermissionCatalog, readPermissionExplanation, permissionHttpError,
   ...permissionLinkModel, useSearchParams:()=>[new URLSearchParams(),()=>{}],
   CONSOLE_REST:{COMMAND_PERMISSIONS:'/permissions',COMMAND_PERMISSION_EXPLAIN:'/explain'},
   apiFetch:async (url, options)=>{requests.push({url,options});return {ok:true,json:async()=>options.method==='POST'?
@@ -237,7 +237,7 @@ test('skills status language refresh keeps its reader identity and uses the curr
   locale = messages('en'); runtime.render(); await runtime.settle()
   assert.deepEqual(reads, ['zh-CN'], 'locale changes do not trigger reads or graph mutations')
   const link = elements(runtime.value).find(node => node.type === 'Link')
-  assert.equal(link.props.to, '/agent/models?tab=purposes')
+  assert.equal(link.props.to, '/features/ai?tab=purposes')
   assert.equal(link.children.join(''), 'Manage model purposes')
   const header = elements(runtime.value).find(node => node.type === 'PageHeader')
   await header.props.actions.props.onClick(); await runtime.settle()

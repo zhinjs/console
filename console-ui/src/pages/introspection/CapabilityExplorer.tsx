@@ -494,7 +494,7 @@ function EndpointGrid({ entries, selectedId, onSelect }: CollectionProps<'endpoi
                 <Link to="/endpoints"><MessageSquare className="size-3.5 mr-1" />{i18n.t("进入会话工作台")}</Link>
               </Button>
               <Button asChild size="sm" variant="ghost" className="h-7 px-2 text-xs">
-                <Link to="/config"><Settings className="size-3.5 mr-1" />{i18n.t("管理配置")}</Link>
+                <Link to="/ops/config"><Settings className="size-3.5 mr-1" />{i18n.t("管理配置")}</Link>
               </Button>
             </div>
           </div>
@@ -914,7 +914,7 @@ function CapabilityInspector(props: {
         {kind === 'endpoints' ? (
           <>
             <Button asChild size="sm"><Link to="/endpoints">{i18n.t("进入会话工作台")}<ArrowRight /></Link></Button>
-            <Button asChild size="sm" variant="outline"><Link to="/config"><Settings className="size-3.5 mr-1.5" />{i18n.t("管理配置")}</Link></Button>
+            <Button asChild size="sm" variant="outline"><Link to="/ops/config"><Settings className="size-3.5 mr-1.5" />{i18n.t("管理配置")}</Link></Button>
           </>
         ) : null}
       </div>

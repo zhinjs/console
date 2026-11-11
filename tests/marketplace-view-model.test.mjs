@@ -84,5 +84,5 @@ test('plugin status prefers a real update, then installed, and separates unknown
 test('navigation targets use the routes that handle updates and settings', () => {
   assert.equal(pluginManageUrl('@x/a', 'a-main'), '/plugins/a-main')
   assert.equal(pluginManageUrl('@x/a', null), '/plugins/%40x%2Fa')
-  assert.equal(pluginConfigUrl('a main/1'), '/config?plugin=a%20main%2F1')
+  assert.equal(pluginConfigUrl('a main/1'), '/features/global/a%20main%2F1')
 })

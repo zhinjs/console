@@ -17,7 +17,7 @@ function trimTrailingSlash(value: string): string {
   return value.endsWith('/') ? value.slice(0, -1) : value
 }
 
-/** Demo / 构建预置 Token：优先于 localStorage（对齐 @zhin.js/client remoteApi） */
+/** 页面注入的运行时 Token（如 Host 同源部署的 boot 脚本）：优先于 localStorage（对齐 @zhin.js/client remoteApi） */
 function getRuntimeToken(): string | null {
   if (typeof window === 'undefined') return null
   const token = (window as ZhinWindow).__ZHIN_API_TOKEN
@@ -46,7 +46,7 @@ export function setToken(token: string, persistent = true): void {
   storage.setItem(TOKEN_KEY, token)
 }
 
-/** 写入运行时 Token（不落盘；Demo 用） */
+/** 写入运行时 Token（不落盘） */
 export function setRuntimeToken(token: string): void {
   if (typeof window === 'undefined') return
   ;(window as ZhinWindow).__ZHIN_API_TOKEN = token.trim()
@@ -173,7 +173,7 @@ export function reconcileAuthWithApiBase(incomingApiBase: string | null): {
 }
 
 export function notifyAuthRequired(): void {
-  // Demo 预置的 runtime token 过期后同样要失效，否则 getToken() 永远优先命中它，造成 401 死循环；
+  // 预置的 runtime token 过期后同样要失效，否则 getToken() 永远优先命中它，造成 401 死循环；
   // 重新登录（verifyAndStoreCredentials 成功）会再次写入新的 token。
   clearRuntimeToken()
   clearToken()

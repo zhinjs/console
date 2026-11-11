@@ -20,7 +20,6 @@ import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { Skeleton } from '../components/ui/skeleton'
 import { ListItemButton } from '../components/ui/list-item-button'
-import { isDemoMode } from '../utils/demo-mode'
 import {
   actorLabel,
   collaborationEventSummary,
@@ -78,7 +77,7 @@ function WorkroomBoardPage() {
         description={i18n.t("查看多 Agent 协作（Engagement）的参与方、预算消耗、共享黑板与事件。此页只读。")}
         actions={
           <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm"><Link to="/agent/workrooms/catalog"><Settings2 />{i18n.t("配置 Workrooms")}</Link></Button>
+            <Button asChild variant="outline" size="sm"><Link to="/features/ai/workrooms/catalog"><Settings2 />{i18n.t("配置 Workrooms")}</Link></Button>
             <Button variant="outline" size="sm" disabled={loading} onClick={refresh}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
           </div>
         }
@@ -194,24 +193,8 @@ function WorkroomBoardPage() {
   )
 }
 
-function DemoWorkroomBoardPage() {
-  const i18n = useI18n()
-  return (
-    <PageShell className="max-w-[1200px]">
-      <PageHeader
-        title={i18n.t("Workroom 协作记录")}
-        description={i18n.t("查看多 Agent 协作的参与方、预算消耗与事件。")}
-        actions={<Button asChild variant="outline" size="sm"><Link to="/agent/workrooms/catalog"><Settings2 />{i18n.t("查看公开目录")}</Link></Button>}
-      />
-      <div className="console-dashboard-panel flex min-h-[28rem] items-center justify-center p-6">
-        <EmptyState title={i18n.t("协作记录需要完整权限")} description={i18n.t("演示模式不提供协作记录。可查看项目目录。")} />
-      </div>
-    </PageShell>
-  )
-}
-
 export default function WorkroomsPage() {
-  return isDemoMode() ? <DemoWorkroomBoardPage /> : <WorkroomBoardPage />
+  return <WorkroomBoardPage />
 }
 
 function EngagementDetail({ detail, statusLabel }: {

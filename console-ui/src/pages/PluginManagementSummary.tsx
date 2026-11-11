@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { managementLabel, type PluginManagementState } from './plugin-management-model.mjs'
+import { featureGlobalHref } from '../console-routes.mjs'
 
 export function PluginManagementSummary({ state, error, readOnly = false, showNavigation = true }: { readOnly?: boolean; showNavigation?: boolean; state?: PluginManagementState | null; error?: string | null }) {
   const i18n = useI18n()
@@ -15,6 +16,6 @@ export function PluginManagementSummary({ state, error, readOnly = false, showNa
     {!!state.validation?.missingEnv.length && <p className="text-warning">{i18n.t("缺少环境变量：")}{state.validation.missingEnv.join('、')}</p>}
     {failures.length > 0 && <ul className="list-disc pl-5 text-destructive">{failures.map((issue,index) => <li key={index}>{issue}</li>)}</ul>}
     <p className="text-xs text-muted-foreground">{i18n.t("安装、应用与平台就绪不代表业务功能已经验证。")}</p>
-    {state.declared && showNavigation && <div className="flex gap-2"><Button variant="outline" size="sm" asChild><Link to={`/plugins/${encodeURIComponent(state.instanceKey)}`}>{i18n.t("插件详情")}</Link></Button><Button variant="outline" size="sm" asChild><Link to={`/config?plugin=${encodeURIComponent(state.instanceKey)}`}>{readOnly ? i18n.t("查看配置") : i18n.t("配置此实例")}</Link></Button></div>}
+    {state.declared && showNavigation && <div className="flex gap-2"><Button variant="outline" size="sm" asChild><Link to={`/plugins/${encodeURIComponent(state.instanceKey)}`}>{i18n.t("插件详情")}</Link></Button><Button variant="outline" size="sm" asChild><Link to={featureGlobalHref(state.instanceKey)}>{readOnly ? i18n.t("查看配置") : i18n.t("配置此实例")}</Link></Button></div>}
   </section>
 }

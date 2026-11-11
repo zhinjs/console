@@ -111,7 +111,7 @@ function fixture(query = '') {
     '../components/ui/skeleton': { Skeleton: 'div' }, '../components/ui/separator': { Separator: 'hr' },
     '../components/ui/switch': { Switch: 'switch' }, '../components/PageHeader': { PageHeader: 'header' },
     '../components/toast': { useToast: () => ({ success: message => successes.push(message), error: message => errors.push(message) }) },
-    '../utils/read-error.mjs': { readErrorSummary: value => value }, '../utils/demo-mode': { isDemoMode: () => false },
+    '../utils/read-error.mjs': { readErrorSummary: value => value }, '../utils/console-access.mjs': { hasConsolePermission: () => true },
     './config-navigation.mjs': configNavigation, './settings-model.mjs': settingsModel,
     './WelcomeFlowContext': { WelcomeFlowContext: 'welcome-flow-context' },
     '../utils/useUnsavedChangesGuard': { useUnsavedChangesGuard: active => { unsavedGuard.push(active); return 'unsaved-guard-dialog' } },
@@ -634,7 +634,7 @@ test('empty object needs no fields, missing Schema stays explicit, and all known
   assert.ok(label(empty.runtime.value).includes('此项无需配置。')); assert.ok(!label(empty.runtime.value).includes('配置需要源码编辑')); empty.runtime.unmount()
   const missing = await customForm({}, null)
   assert.ok(label(missing.runtime.value).includes('配置字段定义不可用')); assert.equal(button(missing.runtime.value, '保存配置'), undefined)
-  assert.ok(elements(missing.runtime.value).some(item => item.type === 'a' && item.props.to === '/files')); missing.runtime.unmount()
+  assert.ok(elements(missing.runtime.value).some(item => item.type === 'a' && item.props.to === '/ops/files')); missing.runtime.unmount()
   const full = await customForm({ optional: 'kept' }, { type: 'object', object: { optional: { type: 'string' }, extra: { type: 'number' } } })
   assert.deepEqual(elements(full.runtime.value).filter(item => item.type === 'field-editor').map(item => item.props.name), ['optional', 'extra']); full.runtime.unmount()
 })
@@ -1084,7 +1084,7 @@ test('actual settings page searches catalog metadata and explains an unknown sav
   assert.equal(pageForm(f, 'unknown_saved').length, 0)
   assert.ok(label(f.runtime.value).includes('此项暂不支持表单编辑。'))
   assert.equal(f.calls.filter(call => call.input.type === 'schema:get').length, 0)
-  assert.ok(elements(f.runtime.value).some(element => element.type === 'a' && element.props.to === '/files'))
+  assert.ok(elements(f.runtime.value).some(element => element.type === 'a' && element.props.to === '/ops/files'))
   assert.equal(f.calls.filter(call => call.input.type === 'config:replace-source').length, 0)
   f.runtime.unmount()
 })
@@ -1358,7 +1358,7 @@ test('AI settings save all owner modifications without redundant paths or preven
 })
 
 test('old settings model links redirect to the single model entry and keep their tab', () => {
-  for (const [query, to] of [['section=models', '/agent/models'], ['section=ai%3Ainference&tab=accounts', '/agent/models?tab=accounts'], ['section=models&tab=purposes', '/agent/models?tab=purposes']]) {
+  for (const [query, to] of [['section=models', '/features/ai'], ['section=ai%3Ainference&tab=accounts', '/features/ai?tab=accounts'], ['section=models&tab=purposes', '/features/ai?tab=purposes']]) {
     const element = fixture(query).page.default()
     assert.equal(element.type, 'navigate', query)
     assert.deepEqual(element.props, { to, replace: true })

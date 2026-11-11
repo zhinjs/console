@@ -10,6 +10,8 @@ import * as management from '../console-ui/src/pages/plugin-management-model.mjs
 import * as toggleModel from '../console-ui/src/pages/plugin-toggle-model.mjs'
 import * as readState from '../console-ui/src/hooks/console-read-state.mjs'
 import { createInboxCacheAuthority } from '../console-ui/src/utils/inbox-cache-scope.mjs'
+import * as consoleAccess from '../console-ui/src/utils/console-access.mjs'
+import * as consoleRoutes from '../console-ui/src/console-routes.mjs'
 
 const require = createRequire(import.meta.url)
 const source = await readFile(new URL('../console-ui/src/pages/plugins.tsx', import.meta.url), 'utf8')
@@ -60,6 +62,7 @@ function fixture({ data = [], query = '', loaded = true, loading = false, error 
     '../components/ui/input': { Input: 'input' }, '../components/PageHeader': { PageHeader: 'page-header' },
     '../components/PageShell': { PageShell: 'main' }, '../components/StatCard': { StatCard: 'stat-card', StatGrid: 'stat-grid' },
     '../hooks/visible-polling.mjs': { startVisiblePolling },
+    '../utils/console-access.mjs': consoleAccess, '../console-routes.mjs': consoleRoutes,
   }
   new Function('require', 'exports', 'module', code)(name => mocks[name] ?? require(name), module.exports, module)
   const render = () => { cursor = 0; return module.exports.PluginsPageSession({ connectionScope: 'scope-static' }) }
@@ -170,6 +173,7 @@ function connectedFixture() {
     '../components/toast': { useToast: () => ({ success() {}, error() {}, warning() {}, info() {}, toast() {} }) },
     '../components/confirm-dialog': { useConfirm: () => ({ confirm: async () => false, ConfirmDialog: null }) },
     '../hooks/visible-polling.mjs': { startVisiblePolling: (poll, delay) => startVisiblePolling(poll, delay, pollingEnv) },
+    '../utils/console-access.mjs': consoleAccess, '../console-routes.mjs': consoleRoutes,
   }
   const module = { exports: {} }
   new Function('require', 'exports', 'module', code)(name => mocks[name] ?? require(name), module.exports, module)

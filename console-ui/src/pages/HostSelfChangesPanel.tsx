@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from '../components/ui/alert'
 import { ConfirmDialog } from '../components/confirm-dialog'
 import { captureApiRequestContext, type ApiRequestContext } from '../utils/auth'
 import { pluginRpc } from '../utils/plugin-rpc'
-import { isDemoMode } from '../utils/demo-mode'
+import { hasConsolePermission } from '../utils/console-access.mjs'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { isKnownApprovalRejection } from './tool-approvals-model.mjs'
@@ -73,13 +73,13 @@ export function HostSelfChangeSession({ scope }: { scope?: string }) {
   const [review, setReview] = useState<Review | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [uncertain, setUncertain] = useState(false)
-  const demo = isDemoMode()
+  const denied = !hasConsolePermission('agent.configure')
   const current = isInboxCacheScopeActive(scope)
   const owns = (candidate: Owner) => owner.current === candidate && candidate.active && isInboxCacheScopeActive(scope)
 
   const refresh = useCallback(async () => {
     const active = owner.current
-    if (!active || !owns(active) || active.writing || demo) return
+    if (!active || !owns(active) || active.writing || denied) return
     if (active.read) return active.read
     active.review = undefined
     setReview(null)
@@ -107,10 +107,10 @@ export function HostSelfChangeSession({ scope }: { scope?: string }) {
       }
     })()
     return active.read
-  }, [scope, demo])
+  }, [scope, denied])
 
   useEffect(() => {
-    if (demo || !isInboxCacheScopeActive(scope)) return
+    if (denied || !isInboxCacheScopeActive(scope)) return
     const active: Owner = {
       context: captureApiRequestContext(),
       controller: new AbortController(),
@@ -125,11 +125,11 @@ export function HostSelfChangeSession({ scope }: { scope?: string }) {
       active.controller.abort()
       if (owner.current === active) owner.current = null
     }
-  }, [scope, demo, refresh])
+  }, [scope, denied, refresh])
 
   const loadDetail = async (change: SelfChangeCard) => {
     const active = owner.current
-    if (!active || !owns(active) || demo) return
+    if (!active || !owns(active) || denied) return
     setDetailId(change.id)
     setDetail(null)
     setDetailError(null)
@@ -161,7 +161,7 @@ export function HostSelfChangeSession({ scope }: { scope?: string }) {
 
   const prepare = (change: SelfChangeCard, decision: Decision) => {
     const active = owner.current
-    if (!active || !owns(active) || active.writing || active.read || active.uncertain || demo) return
+    if (!active || !owns(active) || active.writing || active.read || active.uncertain || denied) return
     active.review = { change, decision }
     setReview(active.review)
   }
@@ -169,7 +169,7 @@ export function HostSelfChangeSession({ scope }: { scope?: string }) {
   const decide = async () => {
     const active = owner.current
     const confirmed = review
-    if (!active || !confirmed || active.review !== confirmed || !owns(active) || active.writing || active.read || active.uncertain || demo) return
+    if (!active || !confirmed || active.review !== confirmed || !owns(active) || active.writing || active.read || active.uncertain || denied) return
     active.writing = true
     active.review = undefined
     setBusy(true)
@@ -211,7 +211,7 @@ export function HostSelfChangeSession({ scope }: { scope?: string }) {
     }
   }
 
-  const disabled = demo || !current || loading || busy || uncertain
+  const disabled = denied || !current || loading || busy || uncertain
   const failed = catalog?.recent.filter(needsHandling) ?? []
   const recent = catalog?.recent.filter(change => !needsHandling(change)).slice(0, RECENT_SHOWN) ?? []
   const reviewedDetail = review && detail?.change.id === review.change.id ? detail : null
@@ -232,7 +232,7 @@ export function HostSelfChangeSession({ scope }: { scope?: string }) {
       {skipped.length > 0 && <p className="text-xs text-warning break-all">{i18n.t('试跑跳过：')}{skipped.join('，')}</p>}
       {change.error && <p className="text-xs text-destructive break-all">{change.error}</p>}
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" disabled={demo || !current || detailLoading} onClick={() => void loadDetail(change)}>{i18n.t('查看完整 diff')}</Button>
+        <Button size="sm" variant="outline" disabled={denied || !current || detailLoading} onClick={() => void loadDetail(change)}>{i18n.t('查看完整 diff')}</Button>
         {actions === 'pending' && <>
           <Button size="sm" disabled={disabled} onClick={() => prepare(change, 'approve')}>{i18n.t('批准变更')}</Button>
           <Button size="sm" variant="outline" disabled={disabled} onClick={() => prepare(change, 'reject')}>{i18n.t('驳回变更')}</Button>
@@ -246,11 +246,11 @@ export function HostSelfChangeSession({ scope }: { scope?: string }) {
   return <Card id="self-changes">
     <CardHeader className="flex-row items-center justify-between gap-3">
       <CardTitle>{i18n.t('自我变更审批')}</CardTitle>
-      <Button variant="outline" size="sm" disabled={demo || !current || loading || busy} onClick={() => void refresh()} aria-label={i18n.t('刷新自我变更')}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>
+      <Button variant="outline" size="sm" disabled={denied || !current || loading || busy} onClick={() => void refresh()} aria-label={i18n.t('刷新自我变更')}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>
     </CardHeader>
     <CardContent className="space-y-3">
       {error && current && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
-      {demo ? <p className="text-sm text-muted-foreground">{i18n.t('Demo 只读')}</p>
+      {denied ? <p className="text-sm text-muted-foreground">{i18n.t('只读')}</p>
         : !current ? <p className="text-sm text-muted-foreground">{i18n.t('连接 Host 后读取自我变更')}</p>
         : loading && !catalog ? <p role="status">{i18n.t('正在读取自我变更…')}</p>
         : catalog?.available === false ? <p className="text-sm text-muted-foreground">{i18n.t('当前 Agent 未启用自我变更')}</p>
@@ -268,7 +268,7 @@ export function HostSelfChangeSession({ scope }: { scope?: string }) {
             <div className="flex flex-wrap items-center gap-2">
               <span className="break-all">{selfChangeSummary(change)}</span>
               <span className="text-muted-foreground">{change.status}</span>
-              <Button size="sm" variant="ghost" disabled={demo || !current || detailLoading} onClick={() => void loadDetail(change)}>{i18n.t('详情')}</Button>
+              <Button size="sm" variant="ghost" disabled={denied || !current || detailLoading} onClick={() => void loadDetail(change)}>{i18n.t('详情')}</Button>
             </div>
             {detailId === change.id && <SelfChangeDetailView detail={detail} loading={detailLoading} error={detailError} onClose={closeDetail} />}
           </li>)}

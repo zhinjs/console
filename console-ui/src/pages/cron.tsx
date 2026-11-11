@@ -19,7 +19,7 @@ import {
 import { useToast } from '../components/toast'
 import { CONSOLE_RPC } from '../contracts/zhin-console'
 import { requestConsole } from '../utils/console-rpc'
-import { isDemoMode } from '../utils/demo-mode'
+import { hasConsolePermission } from '../utils/console-access.mjs'
 import { describeCron, relativeUntil } from './cron-schedule.mjs'
 import { taskTabHref } from './task-hub-model.mjs'
 import { validateAssistantJobs, explainJobError, type AssistantJob } from './assistant-jobs-model.mjs'
@@ -122,7 +122,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const { error: toastError } = useToast()
-  const readOnly = isDemoMode()
+  const readOnly = !hasConsolePermission('ops.schedule.write')
 
   const fetchCrons = useCallback(async () => {
     if (!isInboxCacheScopeActive(connectionScope)) return
@@ -289,7 +289,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
           <Card><CardContent className="py-8 text-center text-muted-foreground">
             <Clock className="w-10 h-10 mx-auto mb-3 opacity-40" aria-hidden="true" />
             <p>{i18n.t("暂无持久化定时任务")}</p>
-            <p className="text-xs mt-1">{readOnly ? i18n.t("Demo 仅展示实例中已存在的任务") : persistentAvailable ? i18n.t("点击「新建任务」添加一个定时 AI 任务") : i18n.t("启用持久化 AI 调度后可在这里管理任务")}</p>
+            <p className="text-xs mt-1">{readOnly ? i18n.t("当前身份只能查看实例中已存在的任务") : persistentAvailable ? i18n.t("点击「新建任务」添加一个定时 AI 任务") : i18n.t("启用持久化 AI 调度后可在这里管理任务")}</p>
           </CardContent></Card>
         ) : visiblePersistentCrons.length === 0 ? <p className="console-cron-filter-empty">{i18n.t("没有匹配的任务")}</p> : (
           <div className="console-resource-list console-schedule-list">

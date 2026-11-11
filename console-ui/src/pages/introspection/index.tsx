@@ -23,7 +23,7 @@ import { Alert, AlertDescription } from '../../components/ui/alert'
 import { Button } from '../../components/ui/button'
 import { Skeleton } from '../../components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
-import { isDemoMode } from '../../utils/demo-mode'
+import { hasConsolePermission } from '../../utils/console-access.mjs'
 import { CapabilityExplorer } from './CapabilityExplorer'
 import type { CapabilityItem, IntrospectionTab } from './capability-model'
 
@@ -61,7 +61,7 @@ function parseTab(value: string | null): IntrospectionTab {
 
 export default function IntrospectionPage() {
   const i18n = useI18n()
-  const readOnly = isDemoMode()
+  const readOnly = !hasConsolePermission('feature.configure')
   const [searchParams, setSearchParams] = useSearchParams()
   const tabFromUrl = parseTab(searchParams.get('tab'))
   const filterFromUrl = searchParams.get('filter') ?? ''

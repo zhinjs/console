@@ -59,9 +59,10 @@ test('without a token the existing Host-only prefill is unchanged', () => {
   assert.equal(window.location.href, 'https://console.example/')
 })
 
-test('the token is taken from the address bar at startup, before the demo bootstrap, and cleared once used', () => {
-  const take = mainSource.indexOf('takeLoginLink()'), demo = mainSource.indexOf('runDemoBootstrap()')
-  assert.ok(take > 0 && demo > take, 'takeLoginLink() must run before runDemoBootstrap()')
+test('the token is taken from the address bar at startup, before the session is resolved, and cleared once used', () => {
+  const take = mainSource.indexOf('takeLoginLink()'), prefill = mainSource.indexOf('runQueryPrefillMiddleware(loginLink)')
+  assert.ok(take > 0 && prefill > take, 'takeLoginLink() must run before the session prefill')
+  assert.doesNotMatch(mainSource, /runDemoBootstrap|isDemoMode/, 'there is no demo bootstrap any more')
   assert.match(mainSource, /initialToken=\{/)
   assert.match(mainSource, /initialSession\.loginToken = null/)
   assert.match(mainSource, /queryTokenRejected=\{/)

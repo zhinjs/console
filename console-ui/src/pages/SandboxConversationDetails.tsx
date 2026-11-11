@@ -3,7 +3,7 @@ import { useI18n } from '../i18n'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
-import { isDemoMode } from '../utils/demo-mode'
+import { hasConsolePermission } from '../utils/console-access.mjs'
 import { ConversationHistory } from './ConversationHistory'
 import { ConversationTrace } from './ConversationTrace'
 import { useConversationTraces } from './useConversationTraces'
@@ -19,7 +19,7 @@ export interface SandboxConversationContext {
 
 /** Mounted only when the Sandbox asks its Console shell for conversation details. */
 export function SandboxConversationDetails({ sessionKey, canExecute, connectionId }: SandboxConversationContext) {
-  if (!canExecute || isDemoMode()) return null
+  if (!canExecute || !hasConsolePermission('endpoint.operate')) return null
   return <ScopedConversationDetails sessionKey={sessionKey} connectionId={connectionId} />
 }
 

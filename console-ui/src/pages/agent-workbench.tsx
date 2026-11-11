@@ -154,7 +154,7 @@ export default function AgentWorkbenchPage() {
       label: i18n.t("Agent 绑定"),
       detail: agentStatus === 'unavailable' ? i18n.t("未安装或装配 Agent") : bindings.length ? i18n.t("{0} 个 Agent 配置绑定", [bindingTotal]) : i18n.t("尚未配置模型与 Agent"),
       ready: bindings.length > 0,
-      path: bindings.length ? '/introspection?tab=bindings' : '/config',
+      path: bindings.length ? '/introspection?tab=bindings' : '/ops/config',
     },
     {
       label: i18n.t("工具目录"),
@@ -209,8 +209,8 @@ export default function AgentWorkbenchPage() {
             {!error && (!ready || disconnectedMcp > 0) ? (
               <ul className="console-agent-missing" aria-label={i18n.t("待完成配置")}>
                 {disconnectedMcp > 0 ? <li><Link to="/introspection?tab=mcp">{i18n.t("{0} 个 MCP 服务未连接，检查服务地址与凭据 →", [disconnectedMcp])}</Link></li> : null}
-                {ready ? null : agentStatus === 'unavailable' ? <li><Link to="/config">{i18n.t("安装并装配可选 Agent 能力 →")}</Link></li>
-                  : bindings.length === 0 ? <li><Link to="/config">{i18n.t("配置模型与 Agent 绑定 →")}</Link></li> : null}
+                {ready ? null : agentStatus === 'unavailable' ? <li><Link to="/ops/config">{i18n.t("安装并装配可选 Agent 能力 →")}</Link></li>
+                  : bindings.length === 0 ? <li><Link to="/ops/config">{i18n.t("配置模型与 Agent 绑定 →")}</Link></li> : null}
                 {!ready && onlineEndpoints === 0 ? <li><Link to="/endpoints">{i18n.t("连接一个机器人渠道 →")}</Link></li> : null}
               </ul>
             ) : null}
@@ -218,7 +218,7 @@ export default function AgentWorkbenchPage() {
           <div className="flex shrink-0 flex-wrap gap-2">
             {error ? <Button variant="outline" onClick={() => void loadWorkbench(true)} disabled={refreshing}><RefreshCw />{i18n.t("重试读取")}</Button>
               : ready ? <Button asChild><Link to="/agent/sessions"><GitBranch />{i18n.t("打开聊天记录")}</Link></Button>
-                : <Button asChild><Link to={agentStatus === 'unavailable' || bindings.length === 0 ? '/config' : '/endpoints'}><Settings2 />{agentStatus === 'unavailable' || bindings.length === 0 ? i18n.t("配置 Agent") : i18n.t("连接渠道")}</Link></Button>}
+                : <Button asChild><Link to={agentStatus === 'unavailable' || bindings.length === 0 ? '/ops/config' : '/endpoints'}><Settings2 />{agentStatus === 'unavailable' || bindings.length === 0 ? i18n.t("配置 Agent") : i18n.t("连接渠道")}</Link></Button>}
           </div>
         </div>
         <details className="console-agent-state-explanation">
@@ -282,7 +282,7 @@ export default function AgentWorkbenchPage() {
             <div className="console-agent-empty">
               <Brain />
               <div><h3>{agentStatus === 'unavailable' ? i18n.t("未安装或装配 Agent") : i18n.t("尚未发现 Agent 绑定")}</h3><p>{agentStatus === 'unavailable' ? i18n.t("IM 核心可独立使用；需要 AI 时先安装 @zhin.js/agent、zod、ai 和所选 Provider，再配置模型。") : i18n.t("Agent 是可选能力，IM 核心可独立使用。需要 AI 时安装 @zhin.js/agent、zod、ai 和所选 Provider，然后配置模型与 Agent。")}</p></div>
-              <Button size="sm" asChild><Link to="/config">{i18n.t("打开配置")}</Link></Button>
+              <Button size="sm" asChild><Link to="/ops/config">{i18n.t("打开配置")}</Link></Button>
             </div>
           )}
         </section>
@@ -331,7 +331,7 @@ export default function AgentWorkbenchPage() {
         <Link to="/introspection?tab=mcp"><Server /><span><strong>{i18n.t("MCP 服务")}</strong><small>{i18n.t("检查连接健康度")}</small></span><ArrowUpRight /></Link>
         <Link to="/agent/replay"><History /><span><strong>{i18n.t("决策回放")}</strong><small>{i18n.t("每次回或不回的原因")}</small></span><ArrowUpRight /></Link>
         <Link to="/agent/sessions"><GitBranch /><span><strong>{i18n.t("聊天记录")}</strong><small>{i18n.t("继续最近上下文")}</small></span><ArrowUpRight /></Link>
-        <Link to="/agent/workrooms"><Workflow /><span><strong>{i18n.t("Workroom 看板")}</strong><small>{i18n.t("按 Project 查看 Run、Task 与 Assignment")}</small></span><ArrowUpRight /></Link>
+        <Link to="/features/ai/workrooms"><Workflow /><span><strong>{i18n.t("Workroom 看板")}</strong><small>{i18n.t("按 Project 查看 Run、Task 与 Assignment")}</small></span><ArrowUpRight /></Link>
       </section>
     </div>
   )

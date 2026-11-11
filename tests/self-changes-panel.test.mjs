@@ -64,7 +64,7 @@ function hooks() {
   }
 }
 
-function fixture({ demo = false } = {}) {
+function fixture({ readOnly = false } = {}) {
   const runtime = hooks(), calls = []
   const connection = { host: 'https://host-a.invalid', credential: 'synthetic-A' }
   let nonce = 0
@@ -79,7 +79,7 @@ function fixture({ demo = false } = {}) {
     '../components/confirm-dialog': { ConfirmDialog: 'confirm-dialog' },
     '../utils/auth': { captureApiRequestContext: () => ({ apiBase: connection.host, token: connection.credential }) },
     '../utils/plugin-rpc': { pluginRpc: request },
-    '../utils/demo-mode': { isDemoMode: () => demo },
+    '../utils/console-access.mjs': { hasConsolePermission: () => !readOnly },
     '../utils/useInboxCacheScope': { useInboxCacheScope: () => authority.current() },
     '../utils/inbox-cache': { isInboxCacheScopeActive: value => authority.active(value) },
     './tool-approvals-model.mjs': approvalModel,
@@ -217,10 +217,10 @@ test('an unknown decision outcome is not retried and locks decisions until a fre
   f.runtime.unmount()
 })
 
-test('Demo mounts read-only without reads or actions', async () => {
-  const f = fixture({ demo: true }); await f.runtime.settle()
+test('an identity without agent.configure mounts read-only without reads or actions', async () => {
+  const f = fixture({ readOnly: true }); await f.runtime.settle()
   assert.equal(f.calls.length, 0)
-  assert.match(text(f.runtime.value), /Demo 只读/)
+  assert.match(text(f.runtime.value), /只读/)
   f.runtime.unmount()
 })
 

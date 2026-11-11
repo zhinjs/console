@@ -138,6 +138,31 @@
     padding-inline: 0.75rem;
   }
 
+  .console-nav-tier {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .console-sidebar.is-collapsed .console-nav-tier {
+    gap: 0.25rem;
+  }
+
+  /* 日常 / 管理: a quiet divider above the section labels. */
+  .console-nav-tier + .console-nav-tier {
+    border-top: 1px solid hsl(var(--border));
+    padding-top: 0.875rem;
+  }
+
+  .console-nav-tier-label {
+    padding: 0 0.75rem;
+    color: hsl(var(--muted-foreground) / 0.75);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
   .console-nav-group {
     display: flex;
     flex-direction: column;

@@ -73,7 +73,7 @@ function workroomFixture(initial) {
     '../components/ui/badge': { Badge: 'span' }, '../components/ui/button': { Button: 'button' },
     '../components/ui/card': { Card: 'article', CardContent: 'section' },
     '../components/ui/skeleton': { Skeleton: 'skeleton' }, '../components/ui/list-item-button': { ListItemButton: 'list-item' },
-    '../utils/demo-mode': { isDemoMode: () => false },
+    '../utils/console-access.mjs': { hasConsolePermission: () => true },
     './engagements-model.mjs': engagementsModel,
   })
   const view = runtime.mount(() => module.WorkroomBoardPage())

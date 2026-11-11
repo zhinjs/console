@@ -48,7 +48,7 @@ function fixture(initialKey = 'icqq:bot:group:room') {
     './SessionMessageDetails':{SessionMessageDetails:'message-details'}, './ConversationHistory':{ConversationHistory:'conversation-history'},
     './ConversationTrace':{ConversationTrace:'conversation-trace'}, './useConversationTraces':{useConversationTraces:(...args)=>{ traceReads.push(args); return {turns:[],loading:false,error:null,refresh(){}} }},
     '@zhin.js/client':{cn:(...parts)=>parts.filter(Boolean).join(' ')}, '../contracts/zhin-console':{CONSOLE_REST:{AGENT_SESSIONS:'/api/agent/sessions'}},
-    '../utils/demo-mode':{isDemoMode:()=>false}, './agent-session-recent.mjs':{readRecentSessions,summarizeRecentSessions}, '../components/StatCard':{StatCard:'stat-card',StatGrid:'stat-grid'},
+    '../utils/console-access.mjs':{hasConsolePermission:()=>true}, './agent-session-recent.mjs':{readRecentSessions,summarizeRecentSessions}, '../components/StatCard':{StatCard:'stat-card',StatGrid:'stat-grid'},
   })
   const f = {calls,traceReads,render(){cursor=0;tree=module.default(); const run=effects;effects=[];run.forEach(fn=>fn());return tree},get tree(){return tree},setScope(value){scope=value},navigate(key){params=new URLSearchParams({sessionKey:key})},close(){slots.forEach(slot=>slot?.cleanup?.())}}
   f.render();return f

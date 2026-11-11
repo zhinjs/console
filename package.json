@@ -5,9 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "farm start",
-    "dev:demo": "VITE_DEMO_MODE=1 farm start",
     "build": "farm build",
-    "build:demo": "VITE_DEMO_MODE=1 farm build",
     "typecheck": "tsc --noEmit",
     "test": "node --test tests/*.test.mjs",
     "preview": "serve -s dist -l tcp://127.0.0.1:5173",

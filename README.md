@@ -44,58 +44,33 @@ https://console.zhin.dev/#apiBaseUrl=127.0.0.1:8086&token=<令牌>
 - `?token=` 不被接受：会被立即移除且不使用，并提示「token 不能放在 ? 参数里」。
 - 链接仍会留在发送渠道（聊天记录、邮件）中，只在可信渠道分享。
 
-Demo 构建会写入 `window.__ZHIN_API_TOKEN`（对齐 zhin `deploy/zhin-demo`），UI 与 SDK 均优先读该运行时 Token，避免仅依赖 localStorage。
-## Demo 站点（demo.zhin.dev）
-
-**与 console.zhin.dev 不同**：Demo 构建固定预连 `https://zhinjs-demo.hf.space`（Token `zhin-demo`），跳过登录，默认打开 **试聊一下**（沙盒）；菜单与正式站一致，不再隐藏管理页。
-
-### 本地联调
-
-```bash
-pnpm dev:demo
-# 或覆盖为本机 Host
-VITE_DEMO_MODE=1 VITE_API_BASE=http://127.0.0.1:8086 VITE_API_TOKEN=... pnpm dev
-```
-
-### 生产构建
-
-```bash
-cp .env.demo.example .env.demo   # 默认已指向 hf.space / zhin-demo
-set -a && source .env.demo && set +a && pnpm build:demo
-pnpm pages:prepare   # CONSOLE_PAGES_CNAME=demo.zhin.dev
-```
-
-### 部署
-
-- **实际托管**：Cloudflare Pages 项目 `console`（自定义域 `demo.zhin.dev`），监听 **`main`**，构建命令 `pnpm run build:demo`
-- push `main` 即自动部署；Demo 站没有 GitHub Actions 部署流程（GitHub Pages 环境只发布 console.zhin.dev）
-- **Host 侧**：Hugging Face Space [`zhinjs-demo.hf.space`](https://zhinjs-demo.hf.space)（Token `zhin-demo`）
+Console 没有单独的演示构建：公开演示是一台真实 Host，访客用只读身份登录，看到的分区与按钮由 Host 报告的权限决定（`console-ui/src/utils/console-access.mjs`）。
 
 ## 导航
 
-Console 面向普通用户（[zhin#970](https://github.com/zhinjs/zhin/issues/970)），侧栏分组定义在 `console-ui/src/navigation-taxonomy.ts`：
+侧栏按 zhinjs/zhin ADR 0052 分为六个区，前四个是「日常」，后两个是「管理」（`console-ui/src/navigation-sections.mjs`，路由表 `console-ui/src/console-routes.mjs`）：
 
-| 分组 | 菜单里的页面 | 不在菜单里、从上级页面进入 |
+| 区 | 菜单里的页面 | 不在菜单里、从上级页面进入 |
 |------|------|------|
-| 会话 | 试聊一下（`/sandbox`，sandbox 插件页）、聊天记录 | — |
-| 任务 | 任务、Workroom | 群欢迎配置流程、定时提醒、助手任务（从「任务」进入）；Workroom 配置 |
-| 聊天账号 | 聊天账号 | 聊天账号详情 |
-| 插件 | 插件管理、插件市场，以及没有声明分组的插件页 | 插件详情 |
-| 运行维护 | 首页、机器人状态、运行日志、Token 用量 | 决策回放（从「机器人状态」进入） |
-| 高级（默认折叠） | 运行时能力、项目文件、数据库、消息场景试验台 | 命令权限说明（从「运行时能力」进入） |
-| 设置（侧栏底部） | 设置、环境变量、群聊插话、技能助手、模型 | — |
+| 概览 | 首页 `/dashboard`、运行日志 `/logs`、机器人状态 `/agent/workbench`、Token 用量 `/agent/usage` | 决策回放 `/agent/replay` |
+| 会话 | 试聊一下（`/sandbox`，sandbox 插件页）、聊天账号 `/endpoints`、聊天记录 `/agent/sessions` | 账号工作区 `/endpoints/:adapter/:endpointId`（侧栏顶部有「功能配置」入口） |
+| 功能 | 功能矩阵 `/features`、适配器 `/features/adapters`、AI 与模型 `/features/ai`、技能助手 `/features/ai/skills`、群聊插话 `/features/ai/ambient`、Workroom `/features/ai/workrooms`、运行时能力、消息场景试验台，以及没有声明分区的插件页 | 全局配置 `/features/global/:plugin`、适配器页 `/features/adapters/:adapter`、账号配置 `/features/adapters/:adapter/endpoints/:endpoint`、Workroom 配置、命令权限说明、群欢迎配置流程 |
+| 插件 | 插件管理 `/plugins`、插件市场 `/marketplace` | 插件详情 `/plugins/:name`（不含配置，配置在全局配置页） |
+| 运维 | 数据库 `/ops/database`、配置文件 `/ops/config`、环境变量 `/ops/env`、定时任务 `/ops/schedules`、项目文件 `/ops/files` | — |
+| 访问控制 | （下一阶段：用户、角色、API 令牌、审计日志） | — |
 
-内置页面在 `console-ui/src/registerBuiltinShell.tsx` 注册。「群聊插话」「技能助手」「决策回放」只对持有相应权限的令牌显示。
+- 某个区里没有当前身份能看的页面时，整个区不显示。Host 还没有报告权限时（RBAC 之前的所有 Host）按不受限处理，由 Host 自己拒绝越权请求。
+- 功能矩阵目前只有「全局」一列（来自插件启用状态）；Host 提供 `feature.matrix` 后自动出现每个适配器的列（`pages/features/use-feature-data.ts` 的 `useFeatureMatrix`）。账号配置页用 `feature.get` 探测 Host 是否支持分层配置，旧 Host 返回 “Unknown RPC type” 时提示需要更新。
+- 旧路由保留为隐藏重定向（`LEGACY_ROUTE_REDIRECTS`）：`/config` → `/ops/config`（`/config?plugin=x` → `/features/global/x`）、`/env` `/files` `/database` → `/ops/*`、`/tasks` `/cron` `/assistant/jobs` → `/ops/schedules`、`/agent/models` `/agent/skills` `/agent/ambient` `/agent/workrooms*` → `/features/ai/*`。
+- 插件页面按 `/entries` 里声明的 `section`（区 id 如 `ops`，或区名如 `运维`）落区，未声明的进「功能」。`常用`、`机器人`、`高级` 等旧分组名仍可用，不是区名的分组显示在「功能」里。
 
-`常用`、`机器人`、`功能`、`高级`、`其他` 是已发布插件使用的分组名，继续保留：插件声明了这些分组时按原名显示。
-
-「群聊插话」（`/agent/ambient`）：状态来自 `pluginRpc('root', 'ambient')`（Host 方法 `plugin.root.ambient`，需要令牌持有 `ambient:read`）。行为和范围设置用 `config:patch` + `expectedRevision` 只写 `ai.trigger.ambient`，文件保存与运行生效分别显示。旁听模型与旁听决策模型在统一模型用途页配置。
+「群聊插话」（`/features/ai/ambient`）：状态来自 `pluginRpc('root', 'ambient')`（Host 方法 `plugin.root.ambient`，需要令牌持有 `ambient:read`）。行为和范围设置用 `config:patch` + `expectedRevision` 只写 `ai.trigger.ambient`，文件保存与运行生效分别显示。旁听模型与旁听决策模型在统一模型用途页配置。
 
 「决策回放」（`/agent/replay`，从「机器人状态」页的快捷入口进入，不在菜单里）：读 `ai_decision_events`（zhinjs/zhin ADR 0036 切片 C）。列表用 `pluginRpc('root', 'decisions')`（新的在前，`nextBefore` 翻页），点一行看整个回合用 `decision-turn`，导出用 `decisions-export` 按 `nextSince` 逐页拼成一个 JSON 文件；三者都需要令牌持有 `decisions:read`。
 
-「技能助手」（`/agent/skills`）：状态来自 `pluginRpc('root', 'skills')`（Host 方法 `plugin.root.skills`，需要令牌持有 `skills:read`），页面只读统计并提供“管理模型用途”入口。管理员在 `/agent/models?tab=purposes`（“用途”页）管理六种决策用途的模式与 Profile；不再读取、猜测或写入旧的 `ai.decisions`／插件 Provider 绑定。
+「技能助手」（`/features/ai/skills`）：状态来自 `pluginRpc('root', 'skills')`（Host 方法 `plugin.root.skills`，需要令牌持有 `skills:read`），页面只读统计并提供“管理模型用途”入口。管理员在 `/features/ai?tab=purposes`（“用途”页）管理六种决策用途的模式与 Profile；不再读取、猜测或写入旧的 `ai.decisions`／插件 Provider 绑定。
 
-插件约定页没有声明分组时，按路由在 `PLUGIN_PAGE_PLACEMENT` 里归组（目前只有 `/sandbox` → 会话），其余进「插件」。原有路由路径不变，旧链接继续可用。
+插件约定页没有声明分区时，按路由在 `PLUGIN_PAGE_PLACEMENT` 里归区（目前只有 `/sandbox` → 会话），其余进「功能」。
 
 ## 目录
 
@@ -133,7 +108,7 @@ Console 面向普通用户（[zhin#970](https://github.com/zhinjs/zhin/issues/97
 
 安装回执丢失时先只读核对；仅当相同版本已经安装、尚未声明且没有依赖问题，才能生成新的补全挂载计划，确认后继续配置，不能自动重放旧操作。业务检查先披露范围与副作用，再批准一次；旧代结果与未知执行结果不能用当前插件状态替代。
 
-设置页（保留 `/config` 和原有 `?plugin=` 链接）按通用设置、Agent 预设和插件配置组织。通用设置与插件先展示用途列表，点击后进入详情；插件区分内置能力、已安装与自定义、未识别的已保存配置。模型管理只有 `/agent/models` 一个入口（导航与命令面板各一处）：当前标签页写入 `?tab=`（`profiles`／`accounts`／`services`／`purposes` 或个人的 `sessions`，无效值回到 `profiles`），刷新和分享链接可直达；旧的 `/config?section=models`（含 `ai:inference`）重定向到该页并保留 `tab`。它管理运行时 Service／账号／Profile／用途，使用 `/api/agent/inference` 的 plan/apply 与持久 mutation 回查，不创建文件草稿，也不把文件应用状态当作图提交回执。Agent 预设编辑 `ai.agents`；其他静态 AI 设置按对话与执行、会话、记忆、图片、外部服务等能力分别进入，共用同一份 `ai` 文件草稿和保存版本。模型 plan 只在用户显式导入时处理，密钥与登录状态不随 plan 导入导出。 模型草稿绑定打开时读取的图版本；刷新列表不重置或替旧草稿更新基线，冲突后需重新打开编辑。只有本人已确认提交对应的读取结果可以开始下一次保存，结果未知时只查询回执。
+配置文件页（`/ops/config`；旧 `/config` 重定向到这里，`/config?plugin=` 重定向到对应的 `/features/global/:plugin`）按通用设置、Agent 预设和插件配置组织。通用设置与插件先展示用途列表，点击后进入详情；插件区分内置能力、已安装与自定义、未识别的已保存配置。模型管理只有 `/features/ai` 一个入口（导航与命令面板各一处）：当前标签页写入 `?tab=`（`profiles`／`accounts`／`services`／`purposes` 或个人的 `sessions`，无效值回到 `profiles`），刷新和分享链接可直达；旧的 `/config?section=models`（含 `ai:inference`）重定向到该页并保留 `tab`。它管理运行时 Service／账号／Profile／用途，使用 `/api/agent/inference` 的 plan/apply 与持久 mutation 回查，不创建文件草稿，也不把文件应用状态当作图提交回执。Agent 预设编辑 `ai.agents`；其他静态 AI 设置按对话与执行、会话、记忆、图片、外部服务等能力分别进入，共用同一份 `ai` 文件草稿和保存版本。模型 plan 只在用户显式导入时处理，密钥与登录状态不随 plan 导入导出。 模型草稿绑定打开时读取的图版本；刷新列表不重置或替旧草稿更新基线，冲突后需重新打开编辑。只有本人已确认提交对应的读取结果可以开始下一次保存，结果未知时只查询回执。
 
 模型接入状态沿用 Host 的 Driver 展示声明；仅实验项显示短标识，必要说明只在选定详情或当前登录流程展示。它不改变账号状态、权限、可选范围或保存参数。
 
@@ -149,7 +124,7 @@ Console 面向普通用户（[zhin#970](https://github.com/zhinjs/zhin/issues/97
 
 创建前选择 Host 返回的完整 Endpoint，再明确填写会话、父容器与话题，核对完整目标、提供方所需参数与执行规则及未来影响。表单编辑复用 SchemaFieldEditor，不写 Root 配置或发送测试消息；复杂 Schema 保守拒绝部分保存。修改、暂停、恢复和取消以提供方的实际 actions 为准，修改保留原始投递目标。`unknown` 任务只能按提供方允许的方式取消，不能恢复或重试；取消不能撤回在途发送。
 
-操作回执丢失时保留原 requestId 并冻结写入，只读刷新后按持久 mutation receipt 核对 taskId。该确认只证明任务变更，不证明平台投递。找不到确认不代表未执行，也不会自动重发。会话存储只保存操作身份、Host 地址和不含凭据的连接 scope，不保存任务正文或目标参数；换登录或重载后需要管理员明确选择用当前身份核对原操作。Demo 禁用所有任务写操作。
+操作回执丢失时保留原 requestId 并冻结写入，只读刷新后按持久 mutation receipt 核对 taskId。该确认只证明任务变更，不证明平台投递。找不到确认不代表未执行，也不会自动重发。会话存储只保存操作身份、Host 地址和不含凭据的连接 scope，不保存任务正文或目标参数；换登录或重载后需要管理员明确选择用当前身份核对原操作。没有 `ops.schedule.write` 的身份不能执行任务写操作。
 
 ## 消息处理诊断
 

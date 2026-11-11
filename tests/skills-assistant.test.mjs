@@ -77,7 +77,7 @@ test('401 and 403 from the Host mean the account lacks skills:read', () => {
 test('the page keeps status permission and routes configuration to graph purposes', () => {
   const page = readFileSync(new URL('../console-ui/src/pages/skills-assistant.tsx', import.meta.url), 'utf8')
   assert.match(page, /pluginRpc<unknown>\('root', 'skills'\)/)
-  assert.match(page, /to="\/agent\/models\?tab=purposes"/)
+  assert.match(page, /to="\/features\/ai\?tab=purposes"/)
   assert.doesNotMatch(page, /config:(?:set|patch|get-source)|ai\.decisions|root\/\$\{|instanceKey/)
   assert.doesNotMatch(page, /判官|决策模型|judge|TypeSafe|Jev/)
 })

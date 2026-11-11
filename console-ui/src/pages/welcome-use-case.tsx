@@ -10,7 +10,7 @@ import { ConversationTargetEditor, ConversationTargetSummary } from '../componen
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { getInboxCacheScope, isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { apiFetch } from '../utils/auth'
-import { isDemoMode } from '../utils/demo-mode'
+import { hasConsolePermission } from '../utils/console-access.mjs'
 import { CONSOLE_REST } from '../contracts/zhin-console'
 import { createDiagnosticRequestGate } from './endpoint-detail/message-diagnostics.mjs'
 import { readWelcomeUseCase, readWelcomeInstances, welcomeConfigUrl, welcomeDetailUrl, welcomeEvidenceKey, welcomeApplied, welcomeReady, welcomeReturnUrl, welcomeTargetKey, type WelcomeInstance } from './welcome-use-case-model.mjs'
@@ -20,7 +20,7 @@ import { useWelcomeInspection } from './useWelcomeInspection'
 export default function WelcomeUseCasePage() {
   const i18n = useI18n()
   const scope = useInboxCacheScope()
-  if (!scope || !isInboxCacheScopeActive(scope) || isDemoMode()) return <Alert><AlertDescription>{i18n.t("请连接具有管理权限的 Host 后配置群欢迎。Demo 不读取或修改此配置。")}</AlertDescription></Alert>
+  if (!scope || !isInboxCacheScopeActive(scope) || !hasConsolePermission('feature.configure')) return <Alert><AlertDescription>{i18n.t("请连接具有管理权限的 Host 后配置群欢迎。只读身份不读取或修改此配置。")}</AlertDescription></Alert>
   return <WelcomeUseCaseSession key={scope} scope={scope} />
 }
 
@@ -52,7 +52,7 @@ export function WelcomeUseCaseSession({ scope }: { scope: string }) {
   const active = isInboxCacheScopeActive(scope), applied = welcomeApplied(inspection.evidence)
   const ready = active && selected && welcomeReady(inspection.evidence, target)
   return <div className="mx-auto max-w-3xl space-y-5 p-4 md:p-6">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="console-page-title">{i18n.t("配置新成员欢迎")}</h1><p className="mt-1 text-sm text-muted-foreground">{i18n.t("选择实例、限定范围、核对应用，再到真实群完成人工验证。")}</p></div><Button asChild variant="outline"><Link to="/tasks">{i18n.t("返回用途目录")}</Link></Button></div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="console-page-title">{i18n.t("配置新成员欢迎")}</h1><p className="mt-1 text-sm text-muted-foreground">{i18n.t("选择实例、限定范围、核对应用，再到真实群完成人工验证。")}</p></div><Button asChild variant="outline"><Link to="/ops/schedules">{i18n.t("返回用途目录")}</Link></Button></div>
     {catalogError && <Alert variant="destructive"><AlertDescription>{catalogError}</AlertDescription></Alert>}
     <Card><CardHeader><CardTitle>{i18n.t("1 · 选择明确实例")}</CardTitle></CardHeader><CardContent className="space-y-3">
       <Button variant="outline" disabled={loading || !active} onClick={() => void load()}>{loading ? i18n.t("读取中…") : i18n.t("刷新用途与实例")}</Button>

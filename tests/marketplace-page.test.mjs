@@ -63,7 +63,7 @@ function fixture({ search = async () => json({ success: true, data: [], total: 0
     } },
     '../utils/console-rpc': { requestConsole: (...args) => requestConsole(...args) },
     'react-router-dom': { Link: 'a', useSearchParams: () => [new URLSearchParams()] },
-    '../utils/demo-mode': { isDemoMode: () => false },
+    '../utils/console-access.mjs': { hasConsolePermission: () => true },
     '../utils/useInboxCacheScope': { useInboxCacheScope: () => 'scope-a' },
     '../utils/inbox-cache': { isInboxCacheScopeActive: scope => scope === 'scope-a' },
     '../contracts/zhin-console': { CONSOLE_REST: { TASK_USE_CASES: '/api/task-use-cases' } },
@@ -243,7 +243,7 @@ test('a confirmed install offers a direct link to the plugin settings', async ()
   assert.deepEqual(rpc, ['plugin:plan-install', 'plugin:install', 'plugin:inspect'])
   const configure = links(tree).filter(link => label(link).includes('去配置'))
   assert.equal(configure.length, 1)
-  assert.equal(configure[0].props.to, `/config?plugin=${encodeURIComponent(instanceKey)}`)
+  assert.equal(configure[0].props.to, `/features/global/${encodeURIComponent(instanceKey)}`)
   const summary = elements(tree).find(item => item.type === 'plugin-management-summary')
   assert.equal(summary.props.showNavigation, false, 'the summary does not repeat the same links')
   assert.equal(f.calls.filter(path => path === '/api/plugins').length, 2, 'the installed list is re-read after the install')
@@ -260,7 +260,7 @@ test('details of an already installed package link to its settings and its updat
   cardFor(tree, 'alpha').props.onClick(); await settle()
   tree = f.render()
   assert.ok(label(tree).includes('此 Host 已安装 1.0.0。'))
-  assert.equal(links(tree).find(link => label(link).includes('去配置')).props.to, '/config?plugin=alpha-main')
+  assert.equal(links(tree).find(link => label(link).includes('去配置')).props.to, '/features/global/alpha-main')
   assert.equal(links(tree).find(link => label(link) === '插件详情').props.to, '/plugins/alpha-main')
 })
 

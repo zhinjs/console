@@ -51,7 +51,7 @@ function SkillsAssistantSession() {
       description={i18n.t("让一个专门的小助手帮机器人挑技能、挑工具、判断要不要接话。")}
       actions={<Button variant="outline" size="sm" onClick={() => void statusRead.refresh().catch(() => {})} disabled={statusRead.loading}><RefreshCw className={statusRead.loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>}
     />
-    <Button asChild variant="outline"><Link to="/agent/models?tab=purposes">{i18n.t("管理模型用途")}</Link></Button>
+    <Button asChild variant="outline"><Link to="/features/ai?tab=purposes">{i18n.t("管理模型用途")}</Link></Button>
     <SkillsStatusSection read={statusRead} onRetry={() => { void statusRead.refresh().catch(() => {}) }} />
   </PageShell>
 }

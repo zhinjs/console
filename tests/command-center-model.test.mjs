@@ -3,10 +3,12 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { COMMAND_EXCLUDED_PATHS, ROUTE_SEARCH_HINTS, commandScore, isCommandRoute } from '../console-ui/src/components/command-center-model.mjs'
 import { LEGACY_TASK_ROUTES } from '../console-ui/src/pages/task-hub-model.mjs'
+import { CONSOLE_PATHS, LEGACY_ROUTE_REDIRECTS } from '../console-ui/src/console-routes.mjs'
 import { englishMessages } from '../console-ui/src/i18n/messages.en.mjs'
 
 const shell = await readFile(new URL('../console-ui/src/registerBuiltinShell.tsx', import.meta.url), 'utf8')
-const builtinPaths = [...shell.matchAll(/app\.addRoute\(\{[\s\S]*?path: '([^']+)'/g)].map(match => match[1])
+// Builtin pages are registered by `CONSOLE_PATHS` key (`path: P.dashboard`).
+const builtinPaths = [...shell.matchAll(/app\.addRoute\(\{\s*path: P\.(\w+)/g)].map(match => CONSOLE_PATHS[match[1]])
 
 test('palette routes include hidden pages but exclude parameterised, legacy redirect and opted-out routes', () => {
   assert.equal(isCommandRoute({ path: '/agent/replay', meta: { hideInMenu: true } }), true)
@@ -19,13 +21,16 @@ test('palette routes include hidden pages but exclude parameterised, legacy redi
   assert.equal(isCommandRoute({ path: '/assistant/jobs', meta: { hideInMenu: true } }), false)
   assert.equal(isCommandRoute({ path: '/plugin-internal', meta: { hideInMenu: true, commandPalette: false } }), false)
   for (const route of [null, undefined, {}, { path: '' }, { path: 'relative' }]) assert.equal(isCommandRoute(route), false)
-  assert.deepEqual([...COMMAND_EXCLUDED_PATHS].sort(), Object.keys(LEGACY_TASK_ROUTES).sort(), 'exclusions follow the task hub redirects')
+  assert.deepEqual([...COMMAND_EXCLUDED_PATHS].sort(), Object.keys(LEGACY_ROUTE_REDIRECTS).sort(), 'exclusions follow the legacy redirects')
+  for (const path of Object.keys(LEGACY_TASK_ROUTES)) assert.ok(COMMAND_EXCLUDED_PATHS.includes(path), path)
+  for (const path of ['/config', '/agent/models', '/tasks']) assert.equal(isCommandRoute({ path, meta: { hideInMenu: true } }), false, path)
 })
 
 test('every builtin page reachable from the palette has a translated description and search keywords', () => {
   assert.ok(builtinPaths.length > 20)
   const reachable = builtinPaths.filter(path => isCommandRoute({ path }))
-  for (const path of ['/agent/ambient', '/agent/skills', '/agent/usage', '/agent/models', '/scenario-lab', '/agent/replay', '/permissions']) assert.ok(reachable.includes(path), path)
+  assert.ok(builtinPaths.every(Boolean), 'every P.<key> names a CONSOLE_PATHS entry')
+  for (const path of ['/features/ai/ambient', '/features/ai/skills', '/agent/usage', '/features/ai', '/features', '/features/adapters', '/ops/config', '/scenario-lab', '/agent/replay', '/permissions']) assert.ok(reachable.includes(path), path)
   for (const path of reachable) {
     const hint = ROUTE_SEARCH_HINTS[path]
     assert.ok(hint, `${path} has a search hint`)

@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from '../components/ui/alert'
 import { ConfirmDialog } from '../components/confirm-dialog'
 import { captureApiRequestContext, type ApiRequestContext } from '../utils/auth'
 import { pluginRpc } from '../utils/plugin-rpc'
-import { isDemoMode } from '../utils/demo-mode'
+import { hasConsolePermission } from '../utils/console-access.mjs'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { isKnownApprovalRejection, readToolApprovalCard, readToolApprovals, type ToolApprovalCard, type ToolApprovals } from './tool-approvals-model.mjs'
@@ -38,12 +38,12 @@ export function HostToolApprovalSession({ scope }: { scope?: string }) {
   const [review, setReview] = useState<Review | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [uncertain, setUncertain] = useState(false)
-  const demo = isDemoMode(), current = isInboxCacheScopeActive(scope)
+  const denied = !hasConsolePermission('agent.configure'), current = isInboxCacheScopeActive(scope)
   const owns = (candidate: Owner) => owner.current === candidate && candidate.active && isInboxCacheScopeActive(scope)
 
   const refresh = useCallback(async () => {
     const active = owner.current
-    if (!active || !owns(active) || active.writing || demo) return
+    if (!active || !owns(active) || active.writing || denied) return
     if (active.read) return active.read
     active.review = undefined
     setReview(null)
@@ -66,10 +66,10 @@ export function HostToolApprovalSession({ scope }: { scope?: string }) {
       }
     })()
     return active.read
-  }, [scope, demo])
+  }, [scope, denied])
 
   useEffect(() => {
-    if (demo || !isInboxCacheScopeActive(scope)) return
+    if (denied || !isInboxCacheScopeActive(scope)) return
     const active: Owner = { context: captureApiRequestContext(), controller: new AbortController(), active: true, writing: false, uncertain: false }
     owner.current = active
     void refresh()
@@ -78,18 +78,18 @@ export function HostToolApprovalSession({ scope }: { scope?: string }) {
       active.controller.abort()
       if (owner.current === active) owner.current = null
     }
-  }, [scope, demo, refresh])
+  }, [scope, denied, refresh])
 
   const prepare = (card: ToolApprovalCard, decision: Review['decision']) => {
     const active = owner.current
-    if (!active || !owns(active) || active.writing || active.read || active.uncertain || demo) return
+    if (!active || !owns(active) || active.writing || active.read || active.uncertain || denied) return
     active.review = { card, decision }
     setReview(active.review)
   }
 
   const decide = async () => {
     const active = owner.current, confirmed = review
-    if (!active || !confirmed || active.review !== confirmed || !owns(active) || active.writing || active.read || active.uncertain || demo) return
+    if (!active || !confirmed || active.review !== confirmed || !owns(active) || active.writing || active.read || active.uncertain || denied) return
     active.writing = true
     active.review = undefined
     setBusy(true)
@@ -127,15 +127,15 @@ export function HostToolApprovalSession({ scope }: { scope?: string }) {
     }
   }
 
-  const disabled = demo || !current || loading || busy || uncertain
+  const disabled = denied || !current || loading || busy || uncertain
   return <Card id="tool-approvals">
     <CardHeader className="flex-row items-center justify-between gap-3">
       <CardTitle>{i18n.t('Host 工具审批')}</CardTitle>
-      <Button variant="outline" size="sm" disabled={demo || !current || loading || busy} onClick={() => void refresh()} aria-label={i18n.t('刷新工具审批')}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>
+      <Button variant="outline" size="sm" disabled={denied || !current || loading || busy} onClick={() => void refresh()} aria-label={i18n.t('刷新工具审批')}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>
     </CardHeader>
     <CardContent className="space-y-3">
       {error && current && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
-      {demo ? <p className="text-sm text-muted-foreground">{i18n.t('Demo 只读')}</p>
+      {denied ? <p className="text-sm text-muted-foreground">{i18n.t('只读')}</p>
         : !current ? <p className="text-sm text-muted-foreground">{i18n.t('连接 Host 后读取工具审批')}</p>
         : loading && !catalog ? <p role="status">{i18n.t('正在读取工具审批…')}</p>
         : catalog?.available === false ? <p className="text-sm text-muted-foreground">{i18n.t('当前 Agent 未提供工具审批队列')}</p>

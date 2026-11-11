@@ -44,10 +44,7 @@ const consoleDevProxy = {
 const pagesBase = (process.env.CONSOLE_PAGES_BASE ?? "").replace(/\/$/, "");
 const assetPublicPath = pagesBase ? `${pagesBase}/` : "/";
 
-const demoBuildEnv = {
-  "import.meta.env.VITE_DEMO_MODE": JSON.stringify(process.env.VITE_DEMO_MODE ?? ""),
-  "import.meta.env.VITE_API_BASE": JSON.stringify(process.env.VITE_API_BASE ?? ""),
-  "import.meta.env.VITE_API_TOKEN": JSON.stringify(process.env.VITE_API_TOKEN ?? ""),
+const buildEnv = {
   "import.meta.env.VITE_CONSOLE_SHELL_PATH": JSON.stringify(
     process.env.VITE_CONSOLE_SHELL_PATH ?? "",
   ),
@@ -61,9 +58,9 @@ export default defineConfig({
     lazyCompilation: false,
     // Cache lives in node_modules/.farm. It was once switched off because a local tool's
     // .codegraph/daemon.sock made the module cache panic; that directory is git-ignored now and
-    // builds (cold, warm, demo) and `farm start` pass with the socket present.
+    // builds (cold and warm) and `farm start` pass with the socket present.
     persistentCache: true,
-    define: demoBuildEnv,
+    define: buildEnv,
     partialBundling: {
       enforceResources: [
         { name: "lucide-react", test: ["[\\\\/]lucide-react[\\\\/]", "lucide-react"] },

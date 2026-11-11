@@ -1,6 +1,6 @@
-// Model management has one entry: /agent/models. Its tab lives in the URL (?tab=...) so a
-// refresh or a shared link reopens the same tab; older settings links redirect here.
-export const MODELS_PATH = '/agent/models'
+// Model management has one entry: /features/ai (ADR 0052). Its tab lives in the URL (?tab=...)
+// so a refresh or a shared link reopens the same tab; older settings links redirect here.
+export const MODELS_PATH = '/features/ai'
 
 export const DEFAULT_INFERENCE_TAB = 'profiles'
 
@@ -34,7 +34,7 @@ export function modelsHref(tab) {
 /** Settings locations that used to embed the same model workspace. */
 export const LEGACY_SETTINGS_MODEL_SECTIONS = Object.freeze(['models', 'ai:inference'])
 
-/** `/config?section=models[&tab=…]` -> `/agent/models[?tab=…]`; any other settings location stays. */
+/** `/config?section=models[&tab=…]` -> `/features/ai[?tab=…]`; any other settings location stays. */
 export function legacySettingsModelsRedirect(params) {
   const section = params.get('section')?.trim() ?? ''
   if (params.get('plugin')?.trim() || !LEGACY_SETTINGS_MODEL_SECTIONS.includes(section)) return null

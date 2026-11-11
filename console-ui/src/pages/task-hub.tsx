@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Bot, CalendarClock, ClipboardList, History } from 'lucide-react'
 import { useI18n } from '../i18n'
-import { Navigate, useLocation, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { PageHeader } from '../components/PageHeader'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
@@ -11,7 +11,7 @@ import TaskCenterPage from './task-center'
 import CronPage from './cron'
 import AssistantJobsPage from './assistant-jobs'
 import { ScheduleExecutions } from './ScheduleExecutions'
-import { legacyTaskRedirect, resolveTaskTab, TASK_HUB_TABS, type TaskTabId } from './task-hub-model.mjs'
+import { resolveTaskTab, TASK_HUB_TABS, type TaskTabId } from './task-hub-model.mjs'
 import { StatCard, StatGrid } from '../components/StatCard'
 import { apiFetch } from '../utils/auth'
 import { requestConsole } from '../utils/console-rpc'
@@ -68,12 +68,6 @@ function useTaskHubSummary(scope: string | null | undefined, refreshKey: string)
   return summary
 }
 
-/** Old /cron and /assistant/jobs bookmarks land on the matching hub tab. */
-export function LegacyTaskRoute() {
-  const { pathname, search } = useLocation()
-  return <Navigate to={legacyTaskRedirect(pathname, search) ?? '/tasks'} replace />
-}
-
 function HistoryPanel() {
   const i18n = useI18n()
   const scope = useInboxCacheScope()
@@ -94,7 +88,7 @@ export default function TaskHubPage() {
     admin: <TaskCenterPage />, schedule: <CronPage />, assistant: <AssistantJobsPage />, history: <HistoryPanel />,
   }
   return <div className="console-page console-resource-page console-tasks-hub">
-    <PageHeader title={i18n.t("任务")} description={i18n.t("管理员任务、定时提醒、助手任务和执行记录集中在这里。")} />
+    <PageHeader title={i18n.t("定时任务")}description={i18n.t("管理员任务、定时提醒、助手任务和执行记录集中在这里。")} />
     <StatGrid label={i18n.t("任务概况")}>
       <StatCard
         icon={ClipboardList}

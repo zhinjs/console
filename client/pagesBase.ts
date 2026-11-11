@@ -24,6 +24,8 @@ const SHELL_ROUTE_NAMES = new Set([
   "env",
   "files",
   "database",
+  "features",
+  "ops",
 ]);
 
 /** GitHub project site: https://zhinjs.github.io/zhin/dashboard → /zhin */

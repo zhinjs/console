@@ -124,7 +124,7 @@ test('attachments, quotes and forwards stay with their conversation', async () =
   const runtime = hooks(); const sent = []
   let ctx
   const EndpointWorkspace = await lifecycle('pages/endpoint-detail/index.tsx', 'EndpointWorkspace', '  let lastDay', 'composerAttachments, quoteDraft, forwardDraft, setQuoteDraft, setForwardDraft, setComposerAttachments, handleSendWithDrafts, mediaUrl, setMediaUrl', {
-    ...runtime.api, ...draftModel, ...groupPanelModel, ...referenceModel, useMediaQuery: () => false, useI18n: () => i18n, useEndpointConsole: () => ctx, isDemoMode: () => false, useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }),
+    ...runtime.api, ...draftModel, ...groupPanelModel, ...referenceModel, useMediaQuery: () => false, useI18n: () => i18n, useEndpointConsole: () => ctx, hasConsolePermission: () => true, useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }),
     translate, DEFAULT_MUTE_MINUTES: 10, MAX_MUTE_MINUTES: 43200, ENDPOINT_RPC: {}, memberRoleOf: () => 'member', createAttachmentId: type => `${type}-fixture`,
     parseComposerToSegments: text => text ? [{ type: 'text', data: { text } }] : [], hasRenderableComposerSegments: segments => segments.length > 0,
     Alert: 'alert', AlertDescription: 'alert-description',
