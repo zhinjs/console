@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
 import { translate } from '../console-ui/src/i18n/locale.mjs'
-import { envEditorAccess, maskEnvContent } from '../console-ui/src/pages/env-editor-model.mjs'
+import * as envEditorModel from '../console-ui/src/pages/env-editor-model.mjs'
 import { createDiagnosticRequestGate } from '../console-ui/src/pages/endpoint-detail/message-diagnostics.mjs'
 import { readTaskProviders, readTaskUseCases, reconcileTaskMutation } from '../console-ui/src/pages/task-center-model.mjs'
 import * as taskModel from '../console-ui/src/pages/task-center-model.mjs'
@@ -162,7 +162,7 @@ for(const [file,name,prop,reader] of [['pages/files/file-editor.tsx','FileEditor
  test(`${name}: changing locale preserves an edited draft without a reload or extra write`,async()=>{
   const runtime=hooks();let locale=messages('zh-CN'),reads=0,writes=0;const drafts=[]
   const component=await lifecycle(file,name,'  if (loading', 'content, originalContent, setContent, loadContent',{
-   ...runtime.api,useI18n:()=>locale,readErrorSummary:String,envEditorAccess,maskEnvContent,window:{addEventListener(){},removeEventListener(){}},
+   ...runtime.api,useI18n:()=>locale,readErrorSummary:String,...envEditorModel,window:{addEventListener(){},removeEventListener(){}},
   })
   const props={[prop]:'fixture.txt',[reader]:async()=>{reads++;return 'original'},saveFile:async()=>{writes++},readOnly:false,onDraftChange:draft=>drafts.push(draft),onClose(){}}
   runtime.mount(()=>component(props));await runtime.settle();assert.equal(runtime.value.content,'original')
