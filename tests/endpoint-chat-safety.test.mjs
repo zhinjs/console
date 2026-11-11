@@ -9,6 +9,7 @@ import { matchesMessageConversation } from '../console-ui/src/pages/endpoint-det
 // behaviour, not on a missing import) against code that predates them.
 const draftModel = await import('../console-ui/src/pages/endpoint-detail/composer-draft-model.mjs').catch(() => ({}))
 const memberModel = await import('../console-ui/src/pages/endpoint-detail/group-members-model.mjs').catch(() => ({}))
+const groupPanelModel = await import('../console-ui/src/pages/endpoint-detail/group-panel-model.mjs').catch(() => ({}))
 
 function hooks() {
   const slots = []; let cursor = 0, pending = [], dirty = false, render, value
@@ -122,7 +123,7 @@ test('attachments, quotes and forwards stay with their conversation', async () =
   const runtime = hooks(); const sent = []
   let ctx
   const EndpointWorkspace = await lifecycle('pages/endpoint-detail/index.tsx', 'EndpointWorkspace', '  let lastDay', 'composerAttachments, quoteDraft, forwardDraft, setQuoteDraft, setForwardDraft, setComposerAttachments, handleSendWithDrafts, mediaUrl, setMediaUrl', {
-    ...runtime.api, ...draftModel, useI18n: () => i18n, useEndpointConsole: () => ctx, isDemoMode: () => false, useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }),
+    ...runtime.api, ...draftModel, ...groupPanelModel, useMediaQuery: () => false, useI18n: () => i18n, useEndpointConsole: () => ctx, isDemoMode: () => false, useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }),
     translate, DEFAULT_MUTE_MINUTES: 10, MAX_MUTE_MINUTES: 43200, ENDPOINT_RPC: {}, memberRoleOf: () => 'member', createAttachmentId: type => `${type}-fixture`,
     parseComposerToSegments: text => text ? [{ type: 'text', data: { text } }] : [], hasRenderableComposerSegments: segments => segments.length > 0,
     Alert: 'alert', AlertDescription: 'alert-description',

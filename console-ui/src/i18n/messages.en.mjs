@@ -3220,4 +3220,6 @@ export const englishMessages = Object.freeze({
   "已是最新，没有可更新的插件": "Already up to date. No plugin updates available.",
   "发现 {0} 个可更新插件": "Found {0} plugin update(s)",
   "检查失败：{0}": "Update check failed: {0}",
+  "群成员": "Group members",
+  "群成员（{0}）": "Group members ({0})",
 })
