@@ -10,6 +10,7 @@ import { matchesMessageConversation } from '../console-ui/src/pages/endpoint-det
 const draftModel = await import('../console-ui/src/pages/endpoint-detail/composer-draft-model.mjs').catch(() => ({}))
 const memberModel = await import('../console-ui/src/pages/endpoint-detail/group-members-model.mjs').catch(() => ({}))
 const groupPanelModel = await import('../console-ui/src/pages/endpoint-detail/group-panel-model.mjs').catch(() => ({}))
+const referenceModel = await import('../console-ui/src/pages/endpoint-detail/message-reference-model.mjs').catch(() => ({}))
 
 function hooks() {
   const slots = []; let cursor = 0, pending = [], dirty = false, render, value
@@ -123,7 +124,7 @@ test('attachments, quotes and forwards stay with their conversation', async () =
   const runtime = hooks(); const sent = []
   let ctx
   const EndpointWorkspace = await lifecycle('pages/endpoint-detail/index.tsx', 'EndpointWorkspace', '  let lastDay', 'composerAttachments, quoteDraft, forwardDraft, setQuoteDraft, setForwardDraft, setComposerAttachments, handleSendWithDrafts, mediaUrl, setMediaUrl', {
-    ...runtime.api, ...draftModel, ...groupPanelModel, useMediaQuery: () => false, useI18n: () => i18n, useEndpointConsole: () => ctx, isDemoMode: () => false, useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }),
+    ...runtime.api, ...draftModel, ...groupPanelModel, ...referenceModel, useMediaQuery: () => false, useI18n: () => i18n, useEndpointConsole: () => ctx, isDemoMode: () => false, useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }),
     translate, DEFAULT_MUTE_MINUTES: 10, MAX_MUTE_MINUTES: 43200, ENDPOINT_RPC: {}, memberRoleOf: () => 'member', createAttachmentId: type => `${type}-fixture`,
     parseComposerToSegments: text => text ? [{ type: 'text', data: { text } }] : [], hasRenderableComposerSegments: segments => segments.length > 0,
     Alert: 'alert', AlertDescription: 'alert-description',
@@ -150,6 +151,10 @@ test('attachments, quotes and forwards stay with their conversation', async () =
   assert.equal(runtime.value.forwardDraft, null)
 
   runtime.value.handleSendWithDrafts(); assert.equal(sent.length, 1)
+  // The Console cannot read the adapter's quote capability, so the quote is honest plain text.
+  assert.equal(sent[0].textPrefix, '引用 甲: 群 A 的消息')
+  assert.deepEqual(sent[0].displayPrefixSegments, [{ type: 'text', data: { text: '引用 甲: 群 A 的消息\n' } }],
+    'the local echo shows the text that was sent, not a platform quote card')
   ctx = contextFor(group('B')); runtime.render(); await runtime.settle()
   // useMessageHistory reports the conversation the message went to.
   sent[0].onSent?.({ draftKey: draftModel.conversationSelectionKey?.(group('A')) }); runtime.render(); await runtime.settle()
