@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
 import { mutationRequest } from '../console-ui/src/pages/plugin-management-model.mjs'
 import { reconcileInstall, canResumeInstall, planInstallRecovery } from '../console-ui/src/pages/marketplace-install-model.mjs'
-import { marketplaceListView, isCardActivationKey, classifyUpdateCheck, updateCheckFeedback } from '../console-ui/src/pages/marketplace-view-model.mjs'
+import { marketplaceListView, isCardActivationKey, classifyUpdateCheck, updateCheckFeedback, readInstalledPackages, marketplacePluginStatus, pluginManageUrl, pluginConfigUrl } from '../console-ui/src/pages/marketplace-view-model.mjs'
 
 const source = await readFile(new URL('../console-ui/src/pages/marketplace.tsx', import.meta.url), 'utf8')
 const ast = ts.createSourceFile('marketplace.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
@@ -27,6 +27,7 @@ function setup() {
     requestConsole: input => new Promise((resolve, reject) => calls.push({ input, scope: active, resolve, reject })),
     mutationRequest, reconcileInstall, canResumeInstall, planInstallRecovery, PAGE_SIZE: 20,
     marketplaceListView, isCardActivationKey, classifyUpdateCheck, updateCheckFeedback,
+    readInstalledPackages, marketplacePluginStatus, pluginManageUrl, pluginConfigUrl,
     apiFetch: async () => ({ ok: true, json: async () => ({ success: true, data: [] }) }),
   }
   const module = { exports: {} }
