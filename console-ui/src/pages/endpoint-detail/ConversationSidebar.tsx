@@ -4,7 +4,7 @@ import { useEffect, useRef, type KeyboardEvent } from 'react'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import type { ConversationListNotice } from './conversation-list-notice.mjs'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Loader2, RefreshCw, Search, Wifi, X } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Loader2, RefreshCw, Search, Wifi, X, XCircle } from 'lucide-react'
 import { cn } from '@zhin.js/client'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -12,6 +12,7 @@ import type { EndpointInfo, SidebarSelection } from './types'
 import type { ConversationSection as ConversationSectionType, ConversationSectionId } from './types'
 import { ConversationSection } from './ConversationSection'
 import { SystemInboxSection } from './SystemInboxSection'
+import { endpointTestPresentation, type EndpointTestResult } from '../endpoint-test-result-model.mjs'
 
 interface ConversationSidebarProps {
   adapter: string
@@ -19,7 +20,7 @@ interface ConversationSidebarProps {
   info: EndpointInfo | null
   loadErr: string | null
   testLoading: boolean
-  testMessage: string | null
+  testMessage: EndpointTestResult | null
   onTest: () => void
   listLoading: boolean
   listNotice: ConversationListNotice | null
@@ -76,6 +77,7 @@ export function ConversationSidebar({
   const isMobile = useIsMobile()
   const sidebarRef = useRef<HTMLDivElement>(null)
   const mobileDialog = isMobile && !!onCloseMobileList
+  const testPresentation = testMessage ? endpointTestPresentation(testMessage, i18n.locale) : null
   useEffect(() => {
     if (!mobileDialog || !showChannelList) return
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -124,9 +126,21 @@ export function ConversationSidebar({
           <p className="text-xs text-destructive leading-relaxed">{loadErr}</p>
         </div>
       )}
-      {testMessage && (
-        <div className="px-3 py-2 border-b border-border/40">
-          <p className="text-xs text-muted-foreground leading-relaxed">{testMessage}</p>
+      {testPresentation && (
+        <div
+          role={testPresentation.role}
+          className={cn(
+            'flex items-start gap-1.5 px-3 py-2 border-b border-border/40 text-xs leading-relaxed',
+            testPresentation.tone === 'success' ? 'text-success bg-success/5' : 'text-destructive bg-destructive/5',
+          )}
+        >
+          {testPresentation.tone === 'success'
+            ? <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0" aria-hidden="true" />
+            : <XCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" aria-hidden="true" />}
+          <p className="min-w-0 break-words">
+            <span className="font-medium">{testPresentation.label}</span>
+            {testPresentation.detail ? <span>{' · '}{testPresentation.detail}</span> : null}
+          </p>
         </div>
       )}
 
@@ -200,7 +214,7 @@ export function ConversationSidebar({
           disabled={testLoading}
         >
           {testLoading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Wifi className="h-3.5 w-3.5 mr-1.5" />}
-          {i18n.t("测试连接")}</Button>
+          {testLoading ? i18n.t("测试中…") : i18n.t("测试连接")}</Button>
         <Button
           variant="ghost"
           size="sm"
