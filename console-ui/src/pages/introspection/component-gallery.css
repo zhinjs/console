@@ -271,3 +271,19 @@
   background: hsl(var(--primary) / 0.04);
 }
 
+
+/* Narrow-screen capability detail sheet (CapabilityExplorer, below the 880px workspace breakpoint) */
+.console-sheet-content.console-capability-sheet { gap: 0.5rem; }
+.console-capability-sheet .console-capability-inspector { border: 0; background: transparent; box-shadow: none; padding: 0; animation: none; }
+.console-capability-sheet .console-capability-inspector > header { padding-right: 2.5rem; }
+.console-capability-sheet-back { align-self: flex-start; min-height: var(--console-control-height-sm); margin-left: -0.5rem; }
+
+.console-capability-owner-scope {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border: 1px dashed hsl(var(--border));
+  border-radius: 999px;
+  color: hsl(var(--muted-foreground));
+  font-size: var(--console-text-label);
+}

@@ -3017,4 +3017,9 @@ export const englishMessages = Object.freeze({
   "查看此命令的权限说明": "View this command's permissions",
   "CPU 占用": "CPU usage",
   "进程 CPU 时间占单核的比例，按两次刷新之间的差值计算": "Process CPU time as a share of one core, measured between two refreshes",
+  "项（本页）": " items (this page)",
+  "个组件（本页）": " components (this page)",
+  "本页统计": "This page",
+  "服务端共 {0} 项；插件筛选与计数只覆盖本页的 {1} 项": "{0} items on the server; plugin filters and counts cover only the {1} items on this page",
+  "返回列表": "Back to list",
 })
