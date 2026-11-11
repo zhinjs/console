@@ -34,6 +34,8 @@ import AdapterDetailPage from './pages/features/adapter-detail'
 import EndpointFeaturesPage from './pages/features/endpoint-features'
 import OnboardingPage from './pages/onboarding'
 import AccountPage from './pages/account'
+import OpsInstancePage from './pages/ops/instance'
+import OpsTerminalPage from './pages/ops/terminal'
 import AccessUsersPage from './pages/access/users'
 import AccessRolesPage from './pages/access/roles'
 import AccessTokensPage from './pages/access/tokens'
@@ -130,12 +132,14 @@ export function registerBuiltinConsolePages() {
   app.addRoute({ path: P.pluginDetail, name: '插件详情', parent: P.plugins, element: <PluginDetailPage />, meta: { hideInMenu: true, group: NAV_GROUPS.PLUGINS } })
   app.addRoute({ path: P.marketplace, name: '插件市场', parent: null, icon: 'Store', element: <MarketplacePage />, meta: { group: NAV_GROUPS.PLUGINS, order: 1 } })
 
-  // 运维 — 宿主机怎么样？（终端：ADR 0051，后续阶段）
+  // 运维 — 宿主机怎么样？（实例：ADR 0054；终端：ADR 0051）
+  app.addRoute({ path: P.opsInstance, name: '实例', parent: null, icon: 'Server', element: <OpsInstancePage />, meta: { group: NAV_GROUPS.OPS, order: -1 } })
   app.addRoute({ path: P.opsDatabase, name: '数据库', parent: null, icon: 'Database', element: <DatabasePage />, meta: { group: NAV_GROUPS.OPS, order: 0, fullWidth: true } })
   app.addRoute({ path: P.opsConfig, name: '配置文件', parent: null, icon: 'Settings', element: <ConfigPage />, meta: { group: NAV_GROUPS.OPS, order: 1 } })
   app.addRoute({ path: P.opsEnv, name: '环境变量', parent: null, icon: 'KeyRound', element: <EnvManagePage />, meta: { group: NAV_GROUPS.OPS, order: 2 } })
   app.addRoute({ path: P.opsSchedules, name: '定时任务', parent: null, icon: 'ClipboardList', element: <TaskHubPage />, meta: { group: NAV_GROUPS.OPS, order: 3 } })
   app.addRoute({ path: P.opsFiles, name: '项目文件', parent: null, icon: 'FolderOpen', element: <FileManagePage />, meta: { group: NAV_GROUPS.OPS, order: 4 } })
+  app.addRoute({ path: P.opsTerminal, name: '终端', parent: null, icon: 'Terminal', element: <OpsTerminalPage />, meta: { group: NAV_GROUPS.OPS, order: 5, fullWidth: true } })
 
   // 访问控制 — 谁能做什么？（ADR 0049）
   app.addRoute({ path: P.accessUsers, name: '用户', parent: null, icon: 'Users', element: <AccessUsersPage />, meta: { group: NAV_GROUPS.ACCESS, order: 0 } })

@@ -65,7 +65,7 @@ Console 没有单独的演示构建：公开演示是一台真实 Host，访客�
 | 会话 | 试聊一下（`/sandbox`，sandbox 插件页）、聊天账号 `/endpoints`、聊天记录 `/agent/sessions` | 账号工作区 `/endpoints/:adapter/:endpointId`（侧栏顶部有「功能配置」入口） |
 | 功能 | 功能矩阵 `/features`、适配器 `/features/adapters`、AI 与模型 `/features/ai`、技能助手 `/features/ai/skills`、群聊插话 `/features/ai/ambient`、Workroom `/features/ai/workrooms`、运行时能力、消息场景试验台，以及没有声明分区的插件页 | 全局配置 `/features/global/:plugin`、适配器页 `/features/adapters/:adapter`、账号配置 `/features/adapters/:adapter/endpoints/:endpoint`、Workroom 配置、命令权限说明、群欢迎配置流程 |
 | 插件 | 插件管理 `/plugins`、插件市场 `/marketplace` | 插件详情 `/plugins/:name`（不含配置，配置在全局配置页） |
-| 运维 | 数据库 `/ops/database`、配置文件 `/ops/config`、环境变量 `/ops/env`、定时任务 `/ops/schedules`、项目文件 `/ops/files` | — |
+| 运维 | 数据库 `/ops/database`、配置文件 `/ops/config`、环境变量 `/ops/env`、定时任务 `/ops/schedules`、项目文件 `/ops/files`、实例 `/ops/instance`、终端 `/ops/terminal` | — |
 | 访问控制 | 用户 `/access/users`、角色 `/access/roles`、API 令牌 `/access/tokens`、审计日志 `/access/audit` | — |
 
 - 某个区里没有当前身份能看的页面时，整个区不显示。Host 还没有报告权限时（RBAC 之前的所有 Host）按不受限处理，由 Host 自己拒绝越权请求。
@@ -78,6 +78,10 @@ Console 没有单独的演示构建：公开演示是一台真实 Host，访客�
 「决策回放」（`/agent/replay`，从「机器人状态」页的快捷入口进入，不在菜单里）：读 `ai_decision_events`（zhinjs/zhin ADR 0036 切片 C）。列表用 `pluginRpc('root', 'decisions')`（新的在前，`nextBefore` 翻页），点一行看整个回合用 `decision-turn`，导出用 `decisions-export` 按 `nextSince` 逐页拼成一个 JSON 文件；三者都需要令牌持有 `decisions:read`。
 
 「技能助手」（`/features/ai/skills`）：状态来自 `pluginRpc('root', 'skills')`（Host 方法 `plugin.root.skills`，需要令牌持有 `skills:read`），页面只读统计并提供“管理模型用途”入口。管理员在 `/features/ai?tab=purposes`（“用途”页）管理六种决策用途的模式与 Profile；不再读取、猜测或写入旧的 `ai.decisions`／插件 Provider 绑定。
+
+「运维 → 实例」（zhinjs/zhin ADR 0054 §4–§5，`pages/ops/instance.tsx`）：`gateway.instance.status` / `logs`（`status.view`，每 3 秒 / 2 秒轮询可见页）、`start` / `stop` / `restart`（`ops.restart`，先确认）；依赖面板 `gateway.packages.list`（`feature.view`），安装 / 卸载 / 更新（`plugin.manage`）先调 `gateway.packages.plan` 再确认，执行时订阅事件流 `gateway.packages.progress` 显示阶段、包管理器输出与回滚结果。网关 RPC 类型暂时镜像在 `contracts/gateway.ts`（TODO：协议包发布后改为导入）；Host 不认识这些 RPC 时显示「需要新版网关」。
+
+「运维 → 终端」（ADR 0051，`pages/ops/terminal.tsx`，需要 `ops.terminal`）：`GET /api/console/terminal/targets` 选目标 → `POST /api/console/terminal/tickets` 取一次性票据 → `WS /api/console/terminal?ticket=`；xterm.js + fit 插件，多标签各一个会话，断开后显示原因（空闲超时、被吊销、终端关闭、错误）与「重新连接」。票据不写日志、不留存。
 
 「访问控制」（zhinjs/zhin ADR 0049）：四个页面都走 `iam.*` RPC（`pages/access/`），需要 `iam.view`；新建、改角色、禁用、删除、重置密码、角色增删改、吊销令牌需要 `iam.manage`，没有时页面只读。删除、禁用、吊销先确认，删除用户/角色要输入名称。Host 拒绝移除最后一个所有者（`code: last_owner`）时显示专门的提示。权限目录与 `IAM_RPC` 暂时在 `pages/access/access-model.mjs` 里镜像 `@zhin.js/console-protocol`，协议包发布后改为直接导入；插件声明的权限（`iam.roles.list` 回复里的 `pluginPermissions`）按插件分组显示，Host 没有报告时只显示内置目录。
 

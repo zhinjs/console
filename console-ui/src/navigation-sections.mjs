@@ -82,6 +82,9 @@ export const ROUTE_PERMISSIONS = Object.freeze({
   '/ops/env': ['ops.env.read', 'ops.env.write'],
   '/ops/schedules': ['ops.schedule.read', 'ops.schedule.write'],
   '/ops/files': ['ops.files.read', 'ops.files.write'],
+  // Instance status / logs need status.view, lifecycle ops.restart, dependencies plugin.manage (ADR 0054 §4–§5).
+  '/ops/instance': ['status.view', 'ops.restart', 'plugin.manage'],
+  '/ops/terminal': ['ops.terminal'],
   '/onboarding': ['plugin.manage'],
   // Every signed-in principal has personal settings.
   '/account': [],

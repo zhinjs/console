@@ -90,7 +90,7 @@ test('builtin route regrouping preserves deep links, hidden detail ownership and
   '/features/ai/workrooms':'FEATURES','/features/ai/workrooms/catalog':'FEATURES','/introspection':'FEATURES','/permissions':'FEATURES',
   '/scenario-lab':'FEATURES','/use-cases/group-welcome':'FEATURES',
   '/plugins':'PLUGINS','/plugins/:name':'PLUGINS','/marketplace':'PLUGINS',
-  '/ops/database':'OPS','/ops/config':'OPS','/ops/env':'OPS','/ops/schedules':'OPS','/ops/files':'OPS',
+  '/ops/database':'OPS','/ops/config':'OPS','/ops/env':'OPS','/ops/schedules':'OPS','/ops/files':'OPS','/ops/instance':'OPS','/ops/terminal':'OPS',
   '/onboarding':'OVERVIEW','/account':'OVERVIEW',
   '/access/users':'ACCESS','/access/roles':'ACCESS','/access/tokens':'ACCESS','/access/audit':'ACCESS',
  }
