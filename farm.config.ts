@@ -83,10 +83,6 @@ export default defineConfig({
         react: path.resolve(siteRoot, "node_modules/react"),
         "react-dom": path.resolve(siteRoot, "node_modules/react-dom"),
         "react-router-dom": path.resolve(siteRoot, "node_modules/react-router-dom"),
-        "react-router": path.resolve(
-          siteRoot,
-          "node_modules/react-router-dom/node_modules/react-router",
-        ),
         "react-refresh": path.resolve(siteRoot, "node_modules/react-refresh"),
         "lucide-react": path.resolve(siteRoot, "node_modules/lucide-react"),
         "radix-ui": path.resolve(siteRoot, "node_modules/radix-ui"),

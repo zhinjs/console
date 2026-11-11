@@ -3183,6 +3183,8 @@ export const englishMessages = Object.freeze({
   "重新登录": "Sign in again",
   "个人会话没有聊天记录": "No chat history for personal sessions",
   "个人会话不保存聊天记录，每一轮的处理过程请在「轨迹」页签查看。": "Personal sessions don't keep chat history. Open the Trace tab to see how each turn was handled.",
+  "群聊已切换，请重新选择成员": "The group changed. Select the member again.",
+  "成员加载失败，请点击「加载成员」重试": "Couldn't load members. Click \"Load members\" to try again.",
   "停用后该插件提供的命令、中间件等功能将不可用；如果它是适配器插件，对应的聊天账号会掉线。Host 可能需要重启来应用变更。": "Commands, middleware and other features from this plugin will stop working. If it is an adapter plugin, its chat accounts will go offline. The Host may need to restart to apply the change.",
   "这是适配器插件，停用后它接入的 {0} 个聊天账号会掉线，无法收发消息。Host 可能需要重启来应用变更。": "This is an adapter plugin. Disabling it takes its {0} chat accounts offline, so they can no longer send or receive messages. The Host may need to restart to apply the change.",
   "这是适配器插件，停用后它接入的聊天账号会掉线，无法收发消息。Host 可能需要重启来应用变更。": "This is an adapter plugin. Disabling it takes its chat accounts offline, so they can no longer send or receive messages. The Host may need to restart to apply the change.",

@@ -5,6 +5,7 @@
 @import "../console-ui/src/settings.css";
 @import "../console-ui/src/pages/resource-pages.css";
 @import "../console-ui/src/im-workspace.css";
+@import "../console-ui/src/markdown-content.css";
 
 /* ============================================
    shadcn/ui Base Styles - Zinc Black/White/Gray

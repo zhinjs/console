@@ -3,7 +3,7 @@
 Remote Console 静态前端，独立仓库部署到 GitHub Pages（与 [zhin](https://github.com/zhinjs/zhin) 文档站分离）。
 
 - **站点**：`https://console.zhin.dev`（Settings → Pages → Custom domain）
-- **Host API**：用户自托管 Zhin（默认 `http://127.0.0.1:8086`），见 [console-remote](https://github.com/zhinjs/zhin/blob/main/docs/console-remote.md)
+- **Host API**：用户自托管 Zhin（默认 `http://127.0.0.1:8086`），见 [Console 文档](https://github.com/zhinjs/zhin/blob/main/docs/console/index.md)
 
 ## 本地开发
 
