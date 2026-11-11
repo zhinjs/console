@@ -11,19 +11,17 @@ const catalog = () => buildSettingsCatalog({ configVersion: 2, plugins: { qq: '@
 ['http', 'database', 'locale', 'log_level', 'ai', 'speech', 'plugin', 'qq'],
 { http: ['http'], database: ['database'], locale: ['locale'], log_level: ['log_level'], ai: ['ai'], speech: ['speech'], plugin: ['plugin'], qq: ['qq'] })
 
-test('organizes authoritative Host settings and keeps one AI owner across models, presets and remaining capabilities', () => {
+test('organizes authoritative Host settings and keeps one AI owner across presets and remaining capabilities', () => {
   const result = catalog()
-  assert.deepEqual(result.map(item => item.id), ['general', 'models', 'presets', 'plugins'])
+  // Runtime model management lives only at /agent/models; settings no longer embeds it as a group.
+  assert.deepEqual(result.map(item => item.id), ['general', 'presets', 'plugins'])
   assert.deepEqual(group(result, 'general').entries.map(item => item.configKey), ['locale', 'log_level', 'http', 'database'])
-  const models = group(result, 'models').entries[0]
   const presets = group(result, 'presets').entries[0]
   const dialogue = group(result, 'plugins').entries.find(item => item.id === 'config:ai')
   const remaining = group(result, 'plugins').entries.find(item => item.id === 'ai:other')
-  assert.equal(models.configKey, 'ai'); assert.equal(models.editor, 'inference'); assert.equal(models.fieldNames, undefined)
   assert.equal(presets.configKey, 'ai'); assert.deepEqual(presets.fieldNames, ['agents'])
   assert.deepEqual(dialogue.fieldNames, ['enabled', 'agent'])
   assert.ok(remaining.excludedFieldNames.includes('modelCatalog')); assert.ok(remaining.excludedFieldNames.includes('modelPolicy'));
-  assert.equal(group(result, 'models').entries.length, 1);
   assert.ok(remaining.excludedFieldNames.includes('providers')); assert.ok(remaining.excludedFieldNames.includes('agents'))
   assert.equal(remaining.fieldNames, undefined, 'future Host fields remain visible in the remaining AI capability')
   assert.ok(group(result, 'plugins').entries.find(item => item.configKey === 'speech').builtin)
@@ -42,10 +40,10 @@ test('classifies every current Host AI field once and keeps future fields reacha
   const before = structuredClone(document)
   const result = buildSettingsCatalog(document, ['ai'], { ai: ['ai'] })
   const entries = result.flatMap(item => item.entries).filter(entry => entry.configKey === 'ai')
-  assert.equal(entries.length, 11, 'runtime models, role metadata, eight capabilities and future fields')
+  assert.equal(entries.length, 10, 'role metadata, eight capabilities and future fields')
   assert.equal(new Set(entries.map(entry => entry.id)).size, entries.length)
   for (const field of [...hostFields, 'futureCapability']) {
-    const owners = entries.filter(entry => !entry.editor).filter(entry => entry.fieldNames ? entry.fieldNames.includes(field)
+    const owners = entries.filter(entry => entry.fieldNames ? entry.fieldNames.includes(field)
       : entry.excludedFieldNames ? !entry.excludedFieldNames.includes(field) : true)
     assert.equal(owners.length, 1, `${field} belongs to exactly one presentation entry`)
     if (field === 'futureCapability') assert.equal(owners[0].id, 'ai:other')
@@ -61,7 +59,6 @@ test('only declared Host paths authorize editing; missing and aliased paths neve
   const before = structuredClone(input)
   const result = buildSettingsCatalog(input, ['ai', 'http', 'speech', 'nested'],
     { ai: ['plugins', 'ai'], http: ['http'], nested: ['parent', 'child'] })
-  assert.deepEqual(group(result, 'models').entries, [])
   assert.deepEqual(group(result, 'presets').entries, [])
   assert.deepEqual(group(result, 'general').entries, [])
   const entries = group(result, 'plugins').entries
@@ -74,19 +71,18 @@ test('only declared Host paths authorize editing; missing and aliased paths neve
 })
 
 test('keeps schema-declared but unset sections reachable and tolerates empty/no-AI catalogs', () => {
-  assert.deepEqual(buildSettingsCatalog({}, []).map(item => item.entries), [[], [], [], []])
+  assert.deepEqual(buildSettingsCatalog({}, []).map(item => item.entries), [[], [], []])
   const result = buildSettingsCatalog({}, ['http', 'speech', 'plugin'], { http: ['http'], speech: ['speech'], plugin: ['plugin'] })
   assert.equal(group(result, 'general').entries[0].configKey, 'http')
   assert.equal(group(result, 'plugins').entries.find(item => item.configKey === 'speech').writable, true)
-  assert.equal(group(result, 'models').entries.length, 0)
   assert.equal(group(result, 'presets').entries.length, 0)
 })
 
-test('preserves legacy plugin links, rejects removed source selections and opens scoped model/preset entries', () => {
+test('preserves legacy plugin links, rejects removed source selections and opens the scoped preset entry', () => {
   const result = catalog()
   assert.equal(resolveSettingsSelection('plugin:qq', result).entry.configKey, 'qq')
   assert.equal(resolveSettingsSelection('plugin:ai', result).entry.id, 'config:ai')
-  assert.equal(resolveSettingsSelection('models', result).entry.editor, 'inference')
+  assert.deepEqual(resolveSettingsSelection('models', result), { group: 'general' }, 'old model links are redirected by the page, not resolved here')
   assert.equal(resolveSettingsSelection('presets', result).entry.id, 'ai:agents')
   assert.deepEqual(resolveSettingsSelection('general', result), { group: 'general' })
   assert.deepEqual(resolveSettingsSelection('plugins', result), { group: 'plugins' })

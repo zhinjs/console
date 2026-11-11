@@ -61,7 +61,6 @@ function configEntry(key, group, section, definition, writable) {
 export function buildSettingsCatalog(config, configKeys, configPaths) {
   const groups = [
     { id: 'general', title: '通用设置', description: '管理机器人的基础运行设置。', entries: [] },
-    { id: 'models', title: '模型', description: '连接模型服务并管理可用模型。', entries: [] },
     { id: 'presets', title: 'Agent 预设', description: '组合模型、角色和能力，设置不同助手的工作方式。', entries: [] },
     { id: 'plugins', title: '插件配置', description: '按能力查看插件，需要调整时再打开具体设置。', entries: [] },
   ]
@@ -82,8 +81,8 @@ export function buildSettingsCatalog(config, configKeys, configPaths) {
     } else if (hostOwned && Object.hasOwn(BUILTIN, key)) {
       const entry = configEntry(key, 'plugins', 'builtin', BUILTIN[key], writable)
       if (key === 'ai') {
-        byGroup.models.entries.push({ ...entry, id: 'ai:inference', group: 'models', title: '模型',
-          description: '管理账号、模型与用途。', editor: 'inference' })
+        // Model management (Services, Accounts, Profiles, purposes) has its own page, /agent/models;
+        // old `?section=models` links redirect there (see inference/models-entry.mjs).
         byGroup.presets.entries.push({ ...entry, id: 'ai:agents', group: 'presets', title: 'Agent 预设',
           description: '为已有 Agent 配置名称与可用服务。', fieldNames: ['agents'] })
         byGroup.plugins.entries.push(...AI_CAPABILITIES.map(capability => ({ ...entry, ...capability,
@@ -126,7 +125,7 @@ export function resolveSettingsSelection(selection, catalog) {
     const entry = group.entries.find(candidate => candidate.id === entryId)
     if (entry) return { group: group.id, entry }
     if (group.id === selection) return { group: group.id,
-      ...((group.id === 'models' || group.id === 'presets') && group.entries.length === 1 ? { entry: group.entries[0] } : {}) }
+      ...(group.id === 'presets' && group.entries.length === 1 ? { entry: group.entries[0] } : {}) }
   }
   return { group: 'general' }
 }
