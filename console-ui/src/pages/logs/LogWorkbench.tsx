@@ -133,6 +133,14 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
         })}
 
       </header>
+      {state.stats && state.stats.total > 0 ? (
+        <div className="console-severity-strip" aria-hidden="true">
+          <span style={{ width: `${(levelCount('info') / state.stats.total) * 100}%`, background: 'hsl(var(--primary) / 0.72)' }} />
+          <span style={{ width: `${(levelCount('warn') / state.stats.total) * 100}%`, background: 'hsl(var(--status-warning, var(--warning)) / 0.85)' }} />
+          <span style={{ width: `${(levelCount('error') / state.stats.total) * 100}%`, background: 'hsl(var(--destructive) / 0.88)' }} />
+          <span style={{ width: `${(levelCount('debug') / state.stats.total) * 100}%`, background: 'hsl(var(--muted-foreground) / 0.3)' }} />
+        </div>
+      ) : null}
 
       <div className="console-log-toolbar">
         <div className="relative min-w-0 flex-1 sm:max-w-md">

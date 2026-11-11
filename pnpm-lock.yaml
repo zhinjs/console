@@ -15,8 +15,8 @@ importers:
         specifier: ^2.1.11
         version: 2.1.11(ai@7.0.32(zod@4.4.3))(react@19.2.6)(zod@4.4.3)
       '@zhin.js/client-sdk':
-        specifier: npm:@zhin.js/client@^1.1.30
-        version: '@zhin.js/client@1.1.30(ai@7.0.32(zod@4.4.3))(react@19.2.6)(zod@4.4.3)'
+        specifier: npm:@zhin.js/client@^1.1.31
+        version: '@zhin.js/client@1.1.31(ai@7.0.32(zod@4.4.3))(react@19.2.6)(zod@4.4.3)'
       '@zhin.js/contract':
         specifier: ^1.0.16
         version: 1.0.16(ai@7.0.32(zod@4.4.3))(zod@4.4.3)
@@ -1257,8 +1257,8 @@ packages:
       '@ai-sdk/openai-compatible':
         optional: true
 
-  '@zhin.js/client@1.1.30':
-    resolution: {integrity: sha512-95FpqeN7hEJFUyldh303HVw5PewOoXQUuSAPi36ggcxyQscsMwic7yR22QLca8j5Gad46XsohVfAZ6suQHIu+A==}
+  '@zhin.js/client@1.1.31':
+    resolution: {integrity: sha512-yUrrGsFpA2QolxMvPX3t8+luqjEqQNL1FC0BFgEIQA+PM4qgfdtsdkMATTm/9bvFP+k4SCpmGY0zBzLMNeof4A==}
     engines: {node: '>=22.19.0'}
     peerDependencies:
       react: '>=18'
@@ -4141,7 +4141,7 @@ snapshots:
       undici: 8.10.0
       zod: 4.4.3
 
-  '@zhin.js/client@1.1.30(ai@7.0.32(zod@4.4.3))(react@19.2.6)(zod@4.4.3)':
+  '@zhin.js/client@1.1.31(ai@7.0.32(zod@4.4.3))(react@19.2.6)(zod@4.4.3)':
     dependencies:
       '@zhin.js/console-protocol': 1.1.14
       '@zhin.js/contract': 1.1.22(ai@7.0.32(zod@4.4.3))(zod@4.4.3)
@@ -4310,7 +4310,7 @@ snapshots:
     dependencies:
       ansi-align: 3.0.1
       camelcase: 7.0.1
-      chalk: 5.0.1
+      chalk: 5.6.2
       cli-boxes: 3.0.0
       string-width: 5.1.2
       type-fest: 2.19.0

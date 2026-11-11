@@ -51,20 +51,22 @@
     --console-border-default: hsl(var(--border) / 0.85);
     --console-border-strong: hsl(var(--border));
 
-    --console-shadow-color: 0 0% 0%;
-    --console-shadow-opacity: 0.04;
-    --console-shadow-contact-opacity: 0.04;
-    --console-shadow-ambient-opacity: 0.025;
-    --console-highlight-opacity: 0.52;
-    --console-shadow-blur-sm: 6px;
-    --console-shadow-blur-md: 12px;
-    --console-shadow-blur-lg: 20px;
-    --console-shadow-xs: 0 1px 2px -1px hsl(var(--console-shadow-color) / var(--console-shadow-contact-opacity)), 0 3px var(--console-shadow-blur-sm) -3px hsl(var(--console-shadow-color) / var(--console-shadow-opacity)), 0 6px var(--console-shadow-blur-md) -7px hsl(var(--console-shadow-color) / var(--console-shadow-ambient-opacity));
-    --console-shadow-sm: 0 1px 3px -1px hsl(var(--console-shadow-color) / var(--console-shadow-contact-opacity)), 0 4px var(--console-shadow-blur-md) -5px hsl(var(--console-shadow-color) / var(--console-shadow-opacity)), 0 8px var(--console-shadow-blur-lg) -10px hsl(var(--console-shadow-color) / var(--console-shadow-ambient-opacity));
-    --console-shadow-md: 0 2px 4px -2px hsl(var(--console-shadow-color) / var(--console-shadow-contact-opacity)), 0 6px var(--console-shadow-blur-md) -6px hsl(var(--console-shadow-color) / var(--console-shadow-opacity)), 0 12px var(--console-shadow-blur-lg) -12px hsl(var(--console-shadow-color) / var(--console-shadow-ambient-opacity));
-    --console-shadow-lg: 0 2px 5px -2px hsl(var(--console-shadow-color) / var(--console-shadow-contact-opacity)), 0 8px var(--console-shadow-blur-md) -7px hsl(var(--console-shadow-color) / var(--console-shadow-opacity)), 0 16px var(--console-shadow-blur-lg) -14px hsl(var(--console-shadow-color) / var(--console-shadow-ambient-opacity));
+    --console-shadow-color: 222 28% 12%;
+    --console-shadow-opacity: 0.065;
+    --console-shadow-contact-opacity: 0.055;
+    --console-shadow-ambient-opacity: 0.04;
+    --console-highlight-opacity: 0.65;
+    --console-shadow-blur-sm: 8px;
+    --console-shadow-blur-md: 18px;
+    --console-shadow-blur-lg: 32px;
+    --console-shadow-blur-xl: 52px;
+    --console-shadow-xs: 0 1px 2px hsl(var(--console-shadow-color) / var(--console-shadow-contact-opacity)), 0 3px var(--console-shadow-blur-sm) -2px hsl(var(--console-shadow-color) / var(--console-shadow-opacity)), inset 0 1px 0 hsl(0 0% 100% / var(--console-highlight-opacity));
+    --console-shadow-sm: 0 1px 2px hsl(var(--console-shadow-color) / var(--console-shadow-contact-opacity)), 0 6px var(--console-shadow-blur-md) -6px hsl(var(--console-shadow-color) / var(--console-shadow-opacity)), 0 12px var(--console-shadow-blur-lg) -12px hsl(var(--console-shadow-color) / var(--console-shadow-ambient-opacity)), inset 0 1px 0 hsl(0 0% 100% / var(--console-highlight-opacity));
+    --console-shadow-md: 0 2px 5px -1px hsl(var(--console-shadow-color) / var(--console-shadow-contact-opacity)), 0 10px var(--console-shadow-blur-md) -6px hsl(var(--console-shadow-color) / calc(var(--console-shadow-opacity) * 1.25)), 0 18px var(--console-shadow-blur-lg) -10px hsl(var(--console-shadow-color) / calc(var(--console-shadow-ambient-opacity) * 1.35)), inset 0 1px 0 hsl(0 0% 100% / var(--console-highlight-opacity));
+    --console-shadow-lg: 0 4px 10px -2px hsl(var(--console-shadow-color) / calc(var(--console-shadow-contact-opacity) * 1.2)), 0 16px var(--console-shadow-blur-lg) -8px hsl(var(--console-shadow-color) / calc(var(--console-shadow-opacity) * 1.5)), 0 28px var(--console-shadow-blur-xl) -14px hsl(var(--console-shadow-color) / calc(var(--console-shadow-ambient-opacity) * 1.6)), inset 0 1px 0 hsl(0 0% 100% / var(--console-highlight-opacity));
+    --console-shadow-xl: 0 8px 20px -4px hsl(var(--console-shadow-color) / calc(var(--console-shadow-contact-opacity) * 1.5)), 0 24px var(--console-shadow-blur-xl) -10px hsl(var(--console-shadow-color) / calc(var(--console-shadow-opacity) * 2.1)), 0 40px 72px -18px hsl(var(--console-shadow-color) / calc(var(--console-shadow-ambient-opacity) * 2.2)), inset 0 1px 0 hsl(0 0% 100% / var(--console-highlight-opacity));
     --console-shadow-hover: var(--console-shadow-md);
-    --console-shadow-button: none;
+    --console-shadow-button: 0 1px 2px hsl(var(--console-shadow-color) / 0.05);
   }
 
   .dark {
@@ -75,10 +77,11 @@
     --console-border-subtle: hsl(var(--border) / 0.55);
     --console-border-default: hsl(var(--border) / 0.85);
     --console-border-strong: hsl(var(--border) / 0.98);
-    --console-shadow-opacity: 0.24;
-    --console-shadow-contact-opacity: 0.32;
-    --console-shadow-ambient-opacity: 0.15;
-    --console-highlight-opacity: 0.075;
+    --console-shadow-color: 0 0% 0%;
+    --console-shadow-opacity: 0.34;
+    --console-shadow-contact-opacity: 0.42;
+    --console-shadow-ambient-opacity: 0.22;
+    --console-highlight-opacity: 0.06;
   }
 
   @media (max-width: 767px) {
@@ -514,7 +517,7 @@
     border: var(--console-border-width) solid var(--console-border-default);
     background: var(--console-surface-raised);
     color: hsl(var(--card-foreground));
-    box-shadow: none;
+    box-shadow: var(--console-shadow-sm);
   }
 
   .console-surface-muted {
@@ -528,11 +531,11 @@
     border-radius: var(--console-radius-md);
     border: var(--console-border-width) solid var(--console-border-subtle);
     background: var(--console-surface-inset);
-    box-shadow: none;
+    box-shadow: inset 0 1px 2px hsl(var(--console-shadow-color) / 0.025);
   }
 
   .dark .console-surface-inset {
-    box-shadow: none;
+    box-shadow: inset 0 1px 2px hsl(0 0% 0% / 0.18);
   }
 
   .console-surface-interactive {
@@ -540,20 +543,25 @@
     border: var(--console-border-width) solid var(--console-border-default);
     background: var(--console-surface-raised);
     color: hsl(var(--card-foreground));
-    box-shadow: none;
+    box-shadow: var(--console-shadow-xs);
     cursor: pointer;
     transition:
       border-color 180ms ease,
-      background-color 180ms ease;
+      background-color 180ms ease,
+      box-shadow 180ms ease,
+      transform 180ms ease;
   }
 
   .console-surface-interactive:hover {
-    border-color: hsl(var(--primary) / 0.35);
-    background: var(--console-surface-inset);
+    border-color: hsl(var(--primary) / 0.38);
+    background: var(--console-surface-raised);
+    box-shadow: var(--console-shadow-md);
+    transform: translateY(-1px);
   }
 
   .console-surface-interactive:active {
-    background: var(--console-surface-muted);
+    transform: translateY(0);
+    box-shadow: var(--console-shadow-xs);
   }
 
   .console-divider {
@@ -672,21 +680,23 @@
   }
 
   .console-dashboard-metric {
+    position: relative;
     display: flex;
     min-width: 0;
     flex-direction: column;
-    gap: 0.45rem;
+    gap: 0.5rem;
     border: var(--console-border-width) solid var(--console-border-default);
     border-radius: var(--console-radius-lg);
     background: hsl(var(--card));
     padding: 1rem 1.15rem;
-    box-shadow: var(--console-shadow-xs);
-    transition: border-color 150ms ease, box-shadow 150ms ease;
+    box-shadow: var(--console-shadow-sm);
+    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
   }
 
   .console-dashboard-metric:hover {
-    border-color: hsl(var(--foreground) / 0.16);
-    box-shadow: var(--console-shadow-sm);
+    border-color: hsl(var(--primary) / 0.32);
+    box-shadow: var(--console-shadow-md);
+    transform: translateY(-1px);
   }
 
   .console-metric-head {
@@ -905,7 +915,8 @@
     border-radius: var(--console-radius-lg);
     padding: var(--console-space-card);
     background: hsl(var(--card));
-    box-shadow: var(--console-shadow-xs);
+    box-shadow: var(--console-shadow-sm);
+    transition: border-color 180ms ease, box-shadow 180ms ease;
   }
 
   .console-panel-heading {
@@ -2097,9 +2108,11 @@
 
   .console-log-inspector {
     min-width: 0;
-    padding: 0.9rem;
-    border-left: 1px solid hsl(var(--border) / 0.56);
-    background: hsl(var(--muted) / 0.12);
+    padding: 1rem;
+    border-left: 1px solid hsl(var(--border) / 0.65);
+    background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--muted) / 0.18) 100%);
+    box-shadow: inset 1px 0 0 hsl(0 0% 100% / var(--console-highlight-opacity)), -8px 0 24px -16px hsl(var(--console-shadow-color) / var(--console-shadow-opacity));
+    animation: console-inspector-slide-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .console-log-inspector.is-empty {
@@ -2661,9 +2674,11 @@
 
   .console-capability-inspector {
     min-width: 0;
-    padding: 1rem;
-    border-left: 1px solid hsl(var(--border) / 0.62);
-    background: hsl(var(--muted) / 0.16);
+    padding: 1.05rem;
+    border-left: 1px solid hsl(var(--border) / 0.68);
+    background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--muted) / 0.2) 100%);
+    box-shadow: inset 1px 0 0 hsl(0 0% 100% / var(--console-highlight-opacity)), -8px 0 24px -16px hsl(var(--console-shadow-color) / var(--console-shadow-opacity));
+    animation: console-inspector-slide-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .console-capability-inspector > header {
@@ -3005,7 +3020,21 @@
   .console-control[aria-invalid="true"]:focus-visible { outline-color: hsl(var(--destructive)); }
   .console-control:disabled { cursor: not-allowed; }
   .console-control[data-disabled] { opacity: 0.5; cursor: not-allowed; }
-  .console-card { border: var(--console-border-width) solid var(--console-border-default); border-radius: var(--console-radius-lg); background: var(--console-surface-raised); box-shadow: none; }
+  .console-card {
+    border: var(--console-border-width) solid var(--console-border-default);
+    border-radius: var(--console-radius-lg);
+    background: var(--console-surface-raised);
+    box-shadow: var(--console-shadow-sm);
+    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  }
+  .console-card--interactive {
+    cursor: pointer;
+  }
+  .console-card--interactive:hover {
+    border-color: hsl(var(--primary) / 0.36);
+    box-shadow: var(--console-shadow-md);
+    transform: translateY(-1px);
+  }
   .console-section-title { font-size: var(--console-text-section); line-height: var(--console-leading-section); font-weight: 600; letter-spacing: 0; }
   @media (min-width: 640px) {
     .console-page-header { flex-direction: row; align-items: flex-start; justify-content: space-between; gap: 1.5rem; }
@@ -3258,7 +3287,7 @@
     border: var(--console-border-width) solid var(--console-border-default);
     border-radius: var(--console-radius-lg);
     background: hsl(var(--card));
-    box-shadow: none;
+    box-shadow: var(--console-shadow-sm);
   }
 
   .console-table {
@@ -3340,5 +3369,346 @@
     color: hsl(var(--foreground));
     font-size: var(--console-text-label);
     font-weight: 600;
+  }
+}
+
+@keyframes console-inspector-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes console-modal-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes console-sheet-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes console-sheet-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes console-sheet-in-bottom {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@layer components {
+  /* ── Dialog, ConfirmDialog & Sheet / Drawer Primitives ── */
+  .console-dialog-overlay,
+  .console-sheet-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: hsl(224 24% 8% / 0.44);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+
+  .dark .console-dialog-overlay,
+  .dark .console-sheet-overlay {
+    background: hsl(0 0% 0% / 0.68);
+  }
+
+  .console-dialog-close {
+    position: absolute;
+    right: 0.875rem;
+    top: 0.875rem;
+    display: inline-grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--console-radius-md);
+    border: 1px solid transparent;
+    background: transparent;
+    color: hsl(var(--muted-foreground));
+    cursor: pointer;
+    transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+  }
+
+  .console-dialog-close:hover {
+    background: var(--console-surface-muted);
+    border-color: var(--console-border-subtle);
+    color: hsl(var(--foreground));
+  }
+
+  .console-dialog-close:focus-visible {
+    outline: var(--console-focus-width) solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  .console-sheet-content {
+    position: fixed;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    background: hsl(var(--popover));
+    color: hsl(var(--popover-foreground));
+    box-shadow: var(--console-shadow-xl);
+    padding: 1.35rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .console-sheet-content[data-side="right"] {
+    inset: 0 0 0 auto;
+    width: min(34rem, 94vw);
+    height: 100dvh;
+    border-left: var(--console-border-width) solid var(--console-border-default);
+    border-radius: var(--console-radius-xl) 0 0 var(--console-radius-xl);
+    animation: console-sheet-in-right 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .console-sheet-content[data-side="left"] {
+    inset: 0 auto 0 0;
+    width: min(24rem, 90vw);
+    height: 100dvh;
+    border-right: var(--console-border-width) solid var(--console-border-default);
+    border-radius: 0 var(--console-radius-xl) var(--console-radius-xl) 0;
+    animation: console-sheet-in-left 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .console-sheet-content[data-side="bottom"] {
+    inset: auto 0 0 0;
+    width: 100%;
+    max-height: 86dvh;
+    border-top: var(--console-border-width) solid var(--console-border-default);
+    border-radius: var(--console-radius-xl) var(--console-radius-xl) 0 0;
+    animation: console-sheet-in-bottom 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @media (max-width: 639px) {
+    .console-sheet-content[data-side="right"] {
+      width: 100vw;
+      border-radius: 0;
+      padding: 1.1rem;
+    }
+  }
+
+  .console-sheet-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding-right: 2.25rem;
+    padding-bottom: 0.875rem;
+    border-bottom: 1px solid var(--console-border-subtle);
+  }
+
+  .console-sheet-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .console-sheet-footer {
+    margin-top: auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding-top: 0.875rem;
+    border-top: 1px solid var(--console-border-subtle);
+  }
+
+  .console-confirm-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    flex-shrink: 0;
+    border-radius: var(--console-radius-md);
+    background: hsl(var(--primary) / 0.1);
+    border: 1px solid hsl(var(--primary) / 0.22);
+    color: hsl(var(--primary));
+  }
+
+  .console-confirm-icon.is-destructive {
+    background: hsl(var(--destructive) / 0.1);
+    border-color: hsl(var(--destructive) / 0.24);
+    color: hsl(var(--destructive));
+  }
+
+  /* ── Dashboard & Telemetry Visual Meters ── */
+  .console-metric-value-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  .console-ring-gauge {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 2.65rem;
+    height: 2.65rem;
+    flex-shrink: 0;
+  }
+
+  .console-ring-gauge svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  .console-ring-gauge-label {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 0.66rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: hsl(var(--foreground));
+  }
+
+  .console-memory-meter {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding: 0.75rem 0.85rem;
+    border-radius: var(--console-radius-md);
+    border: var(--console-border-width) solid var(--console-border-subtle);
+    background: var(--console-surface-inset);
+  }
+
+  .console-memory-meter-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .console-memory-meter-track {
+    width: 100%;
+    height: 0.42rem;
+    border-radius: 999px;
+    background: hsl(var(--muted));
+    overflow: hidden;
+  }
+
+  .console-memory-meter-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: hsl(var(--primary));
+    transition: width 260ms ease;
+  }
+
+  .console-memory-meter-fill.is-warning {
+    background: hsl(var(--warning));
+  }
+
+  .console-memory-meter-fill.is-danger {
+    background: hsl(var(--destructive));
+  }
+
+  .console-severity-strip {
+    display: flex;
+    width: 100%;
+    height: 0.32rem;
+    overflow: hidden;
+    background: hsl(var(--muted) / 0.6);
+  }
+
+  .console-severity-strip > span {
+    display: block;
+    height: 100%;
+    transition: width 240ms ease;
+  }
+
+  /* ── Interactive Chart Surfaces & Readouts ── */
+  .console-chart-readout {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    min-height: 2.25rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: var(--console-radius-md);
+    border: 1px solid var(--console-border-subtle);
+    background: var(--console-surface-inset);
+    font-size: var(--console-text-label);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .console-model-bar-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding: 0.85rem 1rem;
+    border-radius: var(--console-radius-md);
+    border: 1px solid var(--console-border-subtle);
+    background: var(--console-surface-inset);
+    transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+  }
+
+  .console-model-bar-card:hover {
+    border-color: var(--console-border-default);
+    background: hsl(var(--card));
+    box-shadow: var(--console-shadow-xs);
+  }
+
+  .console-donut-legend-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: var(--console-radius-md);
+    border: 1px solid var(--console-border-subtle);
+    background: var(--console-surface-inset);
+    transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease;
+  }
+
+  .console-donut-legend-card.is-active,
+  .console-donut-legend-card:hover {
+    border-color: hsl(var(--primary) / 0.35);
+    background: hsl(var(--card));
+    box-shadow: var(--console-shadow-xs);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .console-log-inspector,
+    .console-capability-inspector,
+    .console-sheet-content[data-side="right"],
+    .console-sheet-content[data-side="left"],
+    .console-sheet-content[data-side="bottom"],
+    .console-modal {
+      animation: none !important;
+    }
   }
 }

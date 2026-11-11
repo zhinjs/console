@@ -430,8 +430,13 @@
     display: grid;
     place-items: center;
     padding: 1.25rem;
-    background: hsl(0 0% 0% / 0.42);
-    backdrop-filter: blur(4px);
+    background: hsl(224 24% 8% / 0.46);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+
+  .dark .console-modal-backdrop {
+    background: hsl(0 0% 0% / 0.68);
   }
 
   .console-modal {
@@ -441,11 +446,12 @@
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    padding: 1.35rem;
+    padding: 1.4rem;
     border: 1px solid var(--console-border-default);
     border-radius: var(--console-radius-xl);
     background: hsl(var(--card));
-    box-shadow: var(--console-shadow-lg);
+    box-shadow: var(--console-shadow-xl);
+    animation: console-modal-enter 180ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .console-modal-head {
@@ -453,7 +459,7 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 1rem;
-    padding-bottom: 0.75rem;
+    padding-bottom: 0.85rem;
     border-bottom: 1px solid var(--console-border-subtle);
   }
 
@@ -482,29 +488,17 @@
   }
 
   .console-task-use-cases,
-  .console-task-setup,
-  .console-task-row {
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-
-  .console-task-use-cases > :first-child,
-  .console-task-setup > :first-child {
-    padding-inline: 0;
-    padding-top: 0;
-  }
-
-  .console-task-use-cases > :last-child,
-  .console-task-setup > :last-child {
-    padding-inline: 0;
+  .console-task-setup {
+    border: var(--console-border-width) solid var(--console-border-default);
+    border-radius: var(--console-radius-lg);
+    background: hsl(var(--card));
+    box-shadow: var(--console-shadow-sm);
   }
 
   .console-task-use-cases .console-disclosure-card {
-    border-inline: 0;
-    border-radius: 0;
-    background: transparent;
+    border-radius: var(--console-radius-md);
+    border: 1px solid var(--console-border-subtle);
+    background: var(--console-surface-inset);
     box-shadow: none;
   }
 
@@ -514,15 +508,24 @@
   }
 
   .console-task-row {
-    border-bottom: 1px solid var(--console-border-subtle);
+    border: var(--console-border-width) solid var(--console-border-default);
+    border-radius: var(--console-radius-lg);
+    background: hsl(var(--card));
+    box-shadow: var(--console-shadow-xs);
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+  }
+
+  .console-task-row:hover {
+    border-color: hsl(var(--primary) / 0.32);
+    box-shadow: var(--console-shadow-sm);
   }
 
   .console-task-row-content {
-    padding: 0.75rem 0 1.125rem;
+    padding: 1rem 1.15rem;
   }
 
   .console-task-form {
-    box-shadow: none;
+    box-shadow: var(--console-shadow-sm);
   }
 
   @container (min-width: 52rem) {

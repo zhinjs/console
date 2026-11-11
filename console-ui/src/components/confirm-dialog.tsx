@@ -1,5 +1,7 @@
 import { useI18n } from '../i18n'
 import { useState, useCallback, type ReactNode } from 'react'
+import { AlertTriangle, Info } from 'lucide-react'
+import { cn } from '@zhin.js/client'
 import {
   Dialog, DialogContent, DialogHeader, DialogFooter,
   DialogTitle, DialogDescription, DialogClose,
@@ -36,15 +38,24 @@ export function ConfirmDialog({
     }
   }, [onConfirm, onOpenChange])
 
+  const Icon = variant === 'destructive' ? AlertTriangle : Info
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          {description && <DialogDescription>{description}</DialogDescription>}
+          <div className="flex items-start gap-3">
+            <span className={cn('console-confirm-icon', variant === 'destructive' && 'is-destructive')} aria-hidden="true">
+              <Icon className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1 space-y-1">
+              <DialogTitle>{title}</DialogTitle>
+              {description && <DialogDescription>{description}</DialogDescription>}
+            </div>
+          </div>
         </DialogHeader>
         {children}
-        <DialogFooter className="gap-2">
+        <DialogFooter className="gap-2 border-t border-[color:var(--console-border-subtle)] pt-3">
           <DialogClose asChild>
             <Button variant="outline" size="sm">{cancelLabel ?? i18n.t('取消')}</Button>
           </DialogClose>

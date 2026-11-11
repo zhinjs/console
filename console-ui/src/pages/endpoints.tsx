@@ -29,6 +29,13 @@ import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Skeleton } from '../components/ui/skeleton'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog'
 import { ENDPOINT_RPC } from '../contracts/zhin-console'
 import { readEndpointList } from './endpoint-list-model.mjs'
 import { endpointLifecycleLabel } from './endpoint-presentation.mjs'
@@ -509,13 +516,13 @@ export default function EndpointsPage() {
             </Button>
             <Button
               type="button"
-              variant={onboardingOpen ? 'secondary' : 'default'}
+              variant="default"
               size="sm"
               aria-expanded={onboardingOpen}
-              onClick={() => setOnboardingOpen((prev) => !prev)}
+              onClick={() => setOnboardingOpen(true)}
             >
               <Plus className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
-              {onboardingOpen ? i18n.t("收起接入向导") : i18n.t("接入新平台账号")}
+              {i18n.t("接入新平台账号")}
             </Button>
           </div>
         }
@@ -845,55 +852,42 @@ export default function EndpointsPage() {
         </section>
       )}
 
-      {onboardingOpen && endpoints.length > 0 && (
-        <div
-          className="console-modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-label={i18n.t("选择要接入的平台")}
-          onClick={() => setOnboardingOpen(false)}
-        >
-          <div className="console-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="console-modal-head">
-              <div>
-                <h2 className="text-base font-semibold">{i18n.t("选择要接入的平台")}</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {i18n.t("选择平台后将进入该适配器的专属工作台完成账号配置或扫码登录。")}
-                </p>
-              </div>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setOnboardingOpen(false)}>
-                {i18n.t("关闭")}
-              </Button>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
-              {ONBOARDING_PLATFORMS.map((platform) => (
-                <Link
-                  key={platform.id}
-                  to={platform.to}
-                  className="console-onboarding-card group"
-                  onClick={() => setOnboardingOpen(false)}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold text-foreground">
-                      {i18n.t(platform.title)}
-                    </span>
-                    <span className="console-platform-brand-badge">
-                      {i18n.t(platform.badge)}
-                    </span>
-                  </div>
-                  <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-                    {i18n.t(platform.desc)}
-                  </p>
-                  <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary">
-                    {i18n.t("前往接入")}
-                    <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+      <Dialog open={onboardingOpen && endpoints.length > 0} onOpenChange={setOnboardingOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader className="border-b border-[color:var(--console-border-subtle)] pb-3">
+            <DialogTitle>{i18n.t("选择要接入的平台")}</DialogTitle>
+            <DialogDescription>
+              {i18n.t("选择平台后将进入该适配器的专属工作台完成账号配置或扫码登录。")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+            {ONBOARDING_PLATFORMS.map((platform) => (
+              <Link
+                key={platform.id}
+                to={platform.to}
+                className="console-onboarding-card group"
+                onClick={() => setOnboardingOpen(false)}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-semibold text-foreground">
+                    {i18n.t(platform.title)}
                   </span>
-                </Link>
-              ))}
-            </div>
+                  <span className="console-platform-brand-badge">
+                    {i18n.t(platform.badge)}
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+                  {i18n.t(platform.desc)}
+                </p>
+                <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary">
+                  {i18n.t("前往接入")}
+                  <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+                </span>
+              </Link>
+            ))}
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       <div className="console-resource-list console-endpoint-list">
         {filteredEndpoints.map((endpoint, index) => {

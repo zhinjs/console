@@ -37,7 +37,7 @@
 
   .console-sidebar.is-mobile.is-open {
     transform: translateX(0);
-    box-shadow: var(--console-shadow-lg);
+    box-shadow: var(--console-shadow-xl);
     pointer-events: auto;
   }
 
@@ -46,11 +46,12 @@
     inset: 0;
     z-index: 40;
     border: 0;
-    background: hsl(0 0% 0% / 0.4);
+    background: hsl(224 24% 8% / 0.44);
     opacity: 0;
     pointer-events: none;
     transition: opacity 240ms ease;
-    backdrop-filter: blur(2px);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
   }
 
   .console-nav-scrim.is-open {

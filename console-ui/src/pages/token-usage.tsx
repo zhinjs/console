@@ -1,6 +1,6 @@
 import { useI18n } from '../i18n'
-import { useEffect, useMemo, useState } from 'react'
-import { ArrowDown, ArrowUp, RefreshCw, X } from 'lucide-react'
+import { useEffect, useMemo, useState, type ComponentType } from 'react'
+import { ArrowDown, ArrowDownToLine, ArrowUp, ArrowUpFromLine, Cpu, Layers, RefreshCw, X, Zap } from 'lucide-react'
 import { pluginRpc } from '../utils/plugin-rpc'
 import { PageHeader } from '../components/PageHeader'
 import { PageShell } from '../components/PageShell'
@@ -40,12 +40,34 @@ import {
 
 type SortKey = 'turns' | 'calls' | 'inputTokens' | 'outputTokens' | 'cacheReadTokens' | 'cache'
 
-function Metric({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return <div className="console-dashboard-metric">
-    <span>{label}</span>
-    <strong className="text-2xl font-semibold tabular-nums">{value}</strong>
-    {hint ? <span className="text-xs text-muted-foreground">{hint}</span> : null}
-  </div>
+function Metric({
+  label,
+  value,
+  hint,
+  icon: Icon,
+  progress,
+}: {
+  label: string
+  value: string
+  hint?: string
+  icon: ComponentType<{ className?: string }>
+  progress?: number
+}) {
+  return (
+    <div className="console-dashboard-metric">
+      <div className="console-metric-head">
+        <span>{label}</span>
+        <span className="console-metric-icon" aria-hidden="true"><Icon /></span>
+      </div>
+      <strong className="text-2xl font-semibold tabular-nums">{value}</strong>
+      {progress !== undefined ? (
+        <div className="console-metric-progress" aria-hidden="true">
+          <span style={{ width: `${Math.max(0, Math.min(100, progress * 100))}%` }} />
+        </div>
+      ) : null}
+      {hint ? <span className="text-xs text-muted-foreground">{hint}</span> : null}
+    </div>
+  )
 }
 
 /** 「机器人 → Token 用量」：读 plugin.root.usage-stats（只读），按时间 / 模型 / 会话看 token 花在哪。 */
@@ -153,18 +175,20 @@ export default function TokenUsagePage() {
           : stats && view ? <>
             {error ? <ErrorAlert error={error} onRetry={() => setRefreshTick(tick => tick + 1)} /> : null}
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-5" aria-busy={loading}>
-              <Metric label={i18n.t("总输入 tokens")} value={formatTokens(stats.totals.inputTokens, i18n.locale)} />
-              <Metric label={i18n.t("输出 tokens")} value={formatTokens(stats.totals.outputTokens, i18n.locale)} />
+              <Metric label={i18n.t("总输入 tokens")} value={formatTokens(stats.totals.inputTokens, i18n.locale)} icon={ArrowDownToLine} />
+              <Metric label={i18n.t("输出 tokens")} value={formatTokens(stats.totals.outputTokens, i18n.locale)} icon={ArrowUpFromLine} />
               <Metric
                 label={i18n.t("缓存命中率")}
                 value={formatPercent(cacheRatio(stats.totals), i18n.locale)}
+                icon={Zap}
+                progress={cacheRatio(stats.totals)}
                 hint={[
                   view.quantiles ? `${i18n.t("单次调用")} P50 ${formatPercent(view.quantiles.p50, i18n.locale)} · P90 ${formatPercent(view.quantiles.p90, i18n.locale)}` : '',
                   view.showWrite && stats.totals.cacheWriteTokens ? `${i18n.t("缓存写入")} ${formatTokens(stats.totals.cacheWriteTokens, i18n.locale)}` : '',
                 ].filter(Boolean).join(' · ') || undefined}
               />
-              <Metric label={i18n.t("模型调用次数")} value={formatTokens(stats.totals.calls, i18n.locale)} />
-              <Metric label={i18n.t("回合数")} value={formatTokens(stats.totals.turns, i18n.locale)} />
+              <Metric label={i18n.t("模型调用次数")} value={formatTokens(stats.totals.calls, i18n.locale)} icon={Cpu} />
+              <Metric label={i18n.t("回合数")} value={formatTokens(stats.totals.turns, i18n.locale)} icon={Layers} />
             </div>
 
             {empty ? <Card><CardContent><EmptyState title={i18n.t("这段时间没有模型调用记录。")} description={i18n.t("换一个时间范围或清除会话筛选试试。")} /></CardContent></Card> : <>
@@ -184,7 +208,7 @@ export default function TokenUsagePage() {
                   <CardTitle className="text-base">{i18n.t("缓存命中率随时间变化")}</CardTitle>
                   <CardDescription>{i18n.t("命中率 = 缓存读取 / 输入；没有调用的时段不画点。")}</CardDescription>
                 </CardHeader>
-                <CardContent className="text-foreground"><CacheLineChart series={stats.series} bucket={stats.range.bucket} /></CardContent>
+                <CardContent className="text-foreground"><CacheLineChart series={stats.series} bucket={stats.range.bucket} quantiles={view.quantiles} /></CardContent>
               </Card>
 
               <div className="grid gap-3 lg:grid-cols-2">
