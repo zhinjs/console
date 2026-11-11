@@ -25,6 +25,8 @@ type EditableConfigProps = Omit<PluginConfigFormProps, 'schema' | 'initialConfig
   /** Presentation only: the owner retains one complete draft and CAS baseline. */
   fieldNames?: readonly string[]; excludedFieldNames?: readonly string[]
   displayTitle?: string
+  /** Reports whether this form holds an unsaved draft; reported false again on unmount. */
+  onDirtyChange?: (dirty: boolean) => void
 }
 
 function initialFormDraft(schema: SchemaField | null, config: unknown, scoped: boolean): unknown {
@@ -41,7 +43,7 @@ export function PluginConfigForm(props: EditableConfigProps) {
   return <PluginConfigFormSession key={JSON.stringify([scope, props.pluginName])} {...props} connectionScope={scope} />
 }
 
-function PluginConfigFormSession({ pluginName, onSuccess, sourceRevision, fieldNames, excludedFieldNames, displayTitle, connectionScope }: EditableConfigProps & { connectionScope: string }) {
+function PluginConfigFormSession({ pluginName, onSuccess, onDirtyChange, sourceRevision, fieldNames, excludedFieldNames, displayTitle, connectionScope }: EditableConfigProps & { connectionScope: string }) {
   const i18n = useI18n()
   const scoped = fieldNames !== undefined || excludedFieldNames !== undefined
   const filtersRootFields = fieldNames !== undefined || Boolean(excludedFieldNames?.length)
@@ -77,6 +79,11 @@ function PluginConfigFormSession({ pluginName, onSuccess, sourceRevision, fieldN
       setSaveError(null); setValidation(null)
     }
   }, [pluginName, form.loaded, form.config, form.schema, form.snapshot])
+  const dirty = guard.current.dirty
+  const reportDirty = useRef(onDirtyChange)
+  reportDirty.current = onDirtyChange
+  useEffect(() => { reportDirty.current?.(dirty) }, [dirty])
+  useEffect(() => () => { reportDirty.current?.(false) }, [])
   const externalRevision = useRef(sourceRevision)
   useEffect(() => {
     if (sourceRevision === externalRevision.current) return
@@ -144,7 +151,7 @@ function PluginConfigFormSession({ pluginName, onSuccess, sourceRevision, fieldN
   </Card>
   return <Card className="mt-0 p-4 pt-0 space-y-4">
     <div ref={actionbarRef} className="console-config-actionbar">
-      <div className="flex min-w-0 items-center gap-2"><Settings className="h-4 w-4 shrink-0" /><h3 className="truncate font-semibold">{displayTitle ?? `${i18n.t("配置 · ")}${pluginName}`}</h3>{guard.current.dirty ? <span className="console-dirty-pill" role="status">{i18n.t("有未保存的修改")}</span> : null}</div>
+      <div className="flex min-w-0 items-center gap-2"><Settings className="h-4 w-4 shrink-0" /><h3 className="truncate font-semibold">{displayTitle ?? `${i18n.t("配置 · ")}${pluginName}`}</h3>{dirty ? <span className="console-dirty-pill" role="status">{i18n.t("有未保存的修改")}</span> : null}</div>
       <Button size="sm" onClick={() => void handleSave()} disabled={saving || draftName !== pluginName || form.loading || !!form.error || hasInvalidFields}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{scoped && pluginName === 'ai' ? i18n.t("保存全部修改") : i18n.t("保存配置")}</Button>
     </div>
     {(saveError || form.error) ? <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{saveError ?? form.error}{i18n.t("。草稿已保留。")}<Link className="ml-2 underline" to="/files">{i18n.t("打开文件管理")}</Link>{form.errorOperation === 'read' ? <Button variant="outline" size="sm" onClick={() => void form.load()}>{i18n.t("重试读取")}</Button> : null}</AlertDescription></Alert> : null}

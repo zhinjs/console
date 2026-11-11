@@ -17,6 +17,7 @@ import { isConversationScopeField } from '../console-ui/src/components/PluginCon
 import { translate } from '../console-ui/src/i18n/locale.mjs'
 import * as configEvidenceModel from '../console-ui/src/components/PluginConfigForm/config-evidence-model.mjs'
 import * as configLiveStatus from '../console-ui/src/components/PluginConfigForm/config-live-status.mjs'
+import * as unsavedChangesGuard from '../console-ui/src/utils/unsaved-changes-guard.mjs'
 
 const require = createRequire(import.meta.url)
 const files = await Promise.all(['hooks/useConfigSource.ts', 'components/PluginConfigForm/usePluginConfigDraft.ts', 'components/PluginConfigForm/index.tsx', 'pages/config.tsx', 'components/PluginConfigForm/SchemaFieldEditor.tsx']
@@ -67,7 +68,7 @@ function fixture(query = '') {
   const runtime = hookRuntime(); let connection = { host: 'https://host-a', credential: 'credential-a' }, nextScope = 0
   const authority = createInboxCacheAuthority(() => connection, () => `opaque-${++nextScope}`)
   const calls = []
-  const successes = [], errors = []
+  const successes = [], errors = [], unsavedGuard = []
   const requestConsole = input => new Promise((resolve, reject) => { calls.push({ input, scope: authority.current(), resolve, reject, answered: false }) })
   const mocks = {
     react: { ...runtime.hooks, useId: () => 'test-field', createElement: require('react').createElement },
@@ -107,6 +108,8 @@ function fixture(query = '') {
     '../utils/read-error.mjs': { readErrorSummary: value => value }, '../utils/demo-mode': { isDemoMode: () => false },
     './config-navigation.mjs': configNavigation, './settings-model.mjs': settingsModel,
     './WelcomeFlowContext': { WelcomeFlowContext: 'welcome-flow-context' },
+    '../utils/useUnsavedChangesGuard': { useUnsavedChangesGuard: active => { unsavedGuard.push(active); return 'unsaved-guard-dialog' } },
+    '../utils/unsaved-changes-guard.mjs': unsavedChangesGuard,
   }
   function compile(source) {
     const module = { exports: {} }
@@ -120,7 +123,7 @@ function fixture(query = '') {
   mocks['../hooks/useConfigSource'] = source; mocks['../components/PluginConfigForm'] = form
   const page = compile(`${files[3]}\nexport { EditableConfigPage, EditableConfigSession };`)
   const editor = compile(`${files[4]}\nexport { JsonValueEditor, UnionValueEditor, ObjectValueEditor, SequenceValueEditor, SecretTextEditor };`)
-  return { runtime, calls, source, plugin, form, page, editor, authority, successes, errors,
+  return { runtime, calls, source, plugin, form, page, editor, authority, successes, errors, unsavedGuard,
     switchLocale(next) { locale = next; messages = { ...localeModule.useI18n(), locale, t: (message, values) => translate(locale, message, values) } },
     switchHost() { connection = { host: 'https://host-b', credential: 'credential-b' } },
     switchCredential() { connection = { ...connection, credential: 'credential-b' } },
@@ -560,6 +563,25 @@ test('the normal form validation/save path still saves edited content and report
   assert.equal(label(f.runtime.value).includes('opaque-private-revision-123456'), false)
   assert.deepEqual(successes, ['saved']); f.answer('config:get-source', snapshot('changed')); f.answer('schema:get', schema); await f.runtime.settle()
   f.runtime.unmount()
+})
+
+test('a form reports its unsaved draft to the settings page and clears it after a successful save', async () => {
+  const f = fixture(), reports = [], connectionScope = f.authority.current()
+  f.runtime.mount(() => f.form.PluginConfigFormSession({ pluginName: 'group-suite', connectionScope, onDirtyChange: dirty => reports.push(dirty) }))
+  f.answer('config:get-source', snapshot('A')); f.answer('schema:get', schema); await f.runtime.settle()
+  assert.equal(reports.at(-1) ?? false, false, 'a freshly loaded form is clean')
+  elements(f.runtime.value).find(item => item.type === 'field-editor' && item.props.name === 'welcomeMessage').props.onChange('changed'); await f.runtime.settle()
+  assert.equal(reports.at(-1), true)
+  button(f.runtime.value, '保存配置').props.onClick(); f.answer('plugin:validate-config', valid); await f.runtime.settle()
+  f.answer('config:replace-source', Error('CAS conflict'), undefined, true); await f.runtime.settle()
+  assert.equal(reports.at(-1), true, 'a failed save keeps the draft guarded')
+  button(f.runtime.value, '保存配置').props.onClick(); f.answer('plugin:validate-config', valid); await f.runtime.settle()
+  f.answer('config:replace-source', { success: true, revision: 'saved-r2', restartRequired: false }); await f.runtime.settle()
+  assert.equal(reports.at(-1), false, 'a successful save no longer blocks leaving')
+  f.answer('config:get-source', snapshot('changed')); f.answer('schema:get', schema); await f.runtime.settle()
+  assert.equal(reports.at(-1), false)
+  f.runtime.unmount()
+  assert.equal(reports.at(-1), false, 'an unmounted form cannot leave a stale dirty owner behind')
 })
 
 test('canonical scalar forms remount on credential change and cannot save the previous scalar draft', async () => {
@@ -1016,6 +1038,30 @@ test('actual settings separates runtime model management from the single static 
   forms = pageForm(f, 'ai'); assert.equal(forms.length, 1); assert.deepEqual(forms[0].props.fieldNames, ['enabled', 'agent'])
   assert.ok(!label(f.runtime.value).includes('保存会包含这份草稿中的全部修改'), 'clean settings do not display a shared-draft warning')
   assert.equal(f.calls.filter(call => call.input.type === 'config:replace-source').length, 0, 'navigation never writes configuration')
+  f.runtime.unmount()
+})
+
+test('settings page guards leaving while any form is dirty, keeps hidden drafts mounted and marks where they are', async () => {
+  const f = await settingsPage()
+  assert.equal(f.unsavedGuard.at(-1), false, 'a clean settings page does not guard navigation')
+  button(f.runtime.value, '通用设置').props.onClick(); await f.runtime.settle()
+  elements(f.runtime.value).find(element => element.type === 'button' && label(element).includes('连接与访问')).props.onClick(); await f.runtime.settle()
+  const httpForm = pageForm(f, 'http')[0]
+  assert.ok(httpForm); httpForm.props.onDirtyChange(true); await f.runtime.settle()
+  assert.equal(f.unsavedGuard.at(-1), true, 'refresh, close and in-app links are guarded')
+  assert.ok([f.runtime.value.props.children].flat(Infinity).includes('unsaved-guard-dialog'), 'the leave confirmation is rendered by the page')
+  button(f.runtime.value, '插件配置').props.onClick(); await f.runtime.settle()
+  const hidden = elements(f.runtime.value).find(element => element.type === 'section' && element.key === 'http')
+  assert.equal(hidden.props.hidden, true)
+  assert.equal(pageForm(f, 'http').length, 1, 'switching categories keeps the dirty form mounted, so its draft is not discarded')
+  assert.equal(f.unsavedGuard.at(-1), true)
+  const navigation = elements(f.runtime.value).find(element => element.type === 'nav' && element.props['aria-label'] === '设置分类')
+  assert.ok(label(button(navigation, '通用设置未保存') ?? {}).length, 'the category holding the draft is marked as unsaved')
+  button(f.runtime.value, '通用设置未保存').props.onClick(); await f.runtime.settle()
+  assert.ok(elements(f.runtime.value).some(element => element.type === 'button' && label(element).includes('连接与访问') && label(element).includes('未保存')))
+  pageForm(f, 'http')[0].props.onDirtyChange(false); await f.runtime.settle()
+  assert.equal(f.unsavedGuard.at(-1), false, 'saving or discarding the draft releases the guard')
+  assert.ok(button(f.runtime.value, '通用设置'))
   f.runtime.unmount()
 })
 

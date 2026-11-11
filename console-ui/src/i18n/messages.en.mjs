@@ -3203,6 +3203,8 @@ export const englishMessages = Object.freeze({
   "正在刷新…": "Refreshing…",
   "刷新失败：{0}。以下是上次读取的内容。": "Refresh failed: {0}. Showing the last loaded details.",
   "设置菜单": "Settings menu",
+  "离开设置页后，尚未保存的配置修改将会丢失。": "If you leave Settings, configuration changes that have not been saved will be lost.",
+  "放弃修改并离开": "Discard changes and leave",
   "一步步配置新成员入群欢迎并到真实群验证": "Set up a welcome for new group members step by step, then verify it in a real group",
   "逐回合查看机器人为什么回或不回、调了哪些模型和工具": "See turn by turn why the bot replied or stayed quiet, and which models and tools it used",
   "没人 @ 机器人时，它要不要自己在群里接话": "Whether the bot joins a group conversation on its own when nobody @-mentions it",

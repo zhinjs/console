@@ -1,5 +1,5 @@
 import { useI18n } from '../i18n'
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useConfigSource } from '../hooks/useConfigSource'
 import { PluginConfigForm } from '../components/PluginConfigForm'
@@ -23,6 +23,8 @@ import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { InferenceWorkspace } from './inference/Workspace'
 import { WelcomeFlowContext } from './WelcomeFlowContext'
 import { ListItemButton } from '../components/ui/list-item-button'
+import { useUnsavedChangesGuard } from '../utils/useUnsavedChangesGuard'
+import { setOwnerDirty } from '../utils/unsaved-changes-guard.mjs'
 
 function EditableConfigPage() {
   const i18n = useI18n()
@@ -40,6 +42,10 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
   const [visitedEntries, setVisitedEntries] = useState<Map<string, SettingsEntry>>(() => new Map())
   const [runtimeVisited, setRuntimeVisited] = useState(false)
   const [sectionFilter, setSectionFilter] = useState('')
+  // Hidden forms stay mounted, so switching sections keeps their drafts; leaving the page does not.
+  const [dirtyOwners, setDirtyOwners] = useState<ReadonlySet<string>>(() => new Set())
+  const reportDirty = useCallback((key: string, dirty: boolean) => setDirtyOwners(previous => setOwnerDirty(previous, key, dirty)), [])
+  const leaveConfirmation = useUnsavedChangesGuard(dirtyOwners.size > 0)
   const parsedConfig = useMemo(() => {
     try {
       return (format === 'json' ? JSON.parse(source) : parseYaml(source)) || {}
@@ -108,6 +114,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
                 aria-current={activeGroup.id === group.id ? 'page' : undefined}
                 onClick={() => { setActiveSection(group.id); setSectionFilter('') }}>
                 <Icon aria-hidden="true" /><span>{i18n.t(group.title)}</span>
+                {group.entries.some(entry => !entry.editor && dirtyOwners.has(entry.configKey)) ? <small className="console-dirty-pill">{i18n.t("未保存")}</small> : null}
               </ListItemButton>
             })}
           </div>
@@ -131,7 +138,8 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
                   className="console-settings-entry" onClick={() => setActiveSection(entry.id)}>
                   <span className="console-settings-entry-icon" aria-hidden="true"><Settings /></span>
                   <span className="console-settings-entry-copy"><strong>{i18n.t(entry.title)}</strong><span>{i18n.t(entry.description)}</span>
-                    {!entry.writable ? <small>{i18n.t("只读")}</small> : null}</span>
+                    {!entry.writable ? <small>{i18n.t("只读")}</small> : null}
+                    {dirtyOwners.has(entry.configKey) && !entry.editor ? <small className="console-dirty-pill">{i18n.t("未保存")}</small> : null}</span>
                   <ChevronRight className="console-settings-entry-arrow" aria-hidden="true" />
                 </ListItemButton>)}
               </div>
@@ -164,12 +172,14 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
               </Card> : entry ? <PluginConfigForm pluginName={key} sourceRevision={snapshot?.revision}
                 displayTitle={i18n.t(entry.title)}
                 fieldNames={entry.fieldNames} excludedFieldNames={entry.excludedFieldNames ?? []}
+                onDirtyChange={dirty => reportDirty(key, dirty)}
                 onSuccess={() => { if (isInboxCacheScopeActive(connectionScope)) void load().catch(() => {}) }} /> : null}
             </section>
           })}
 
         </div>
       </div> : null}
+      {leaveConfirmation}
     </div>
   )
 }
