@@ -101,32 +101,39 @@ const nav = (tree, label) => nodes(tree).find(node => node.type === 'nav' && nod
 test('working navigation separates management menus without dropping dynamic or ungrouped plugin routes', () => {
   const f = fixture({ routes })
   try {
-    const tree = f.render(), primary = nav(tree, '主导航'), secondary = nav(tree, '设置与运行维护')
-    assert.deepEqual(nodes(primary).filter(node => node.type === 'a').map(node => node.props.to), ['/sandbox', '/tasks', '/endpoints', '/unclassified', '/calendar'])
-    assert.deepEqual(nodes(secondary).filter(node => node.type === 'DropdownMenu').map(node => text(nodes(node).find(child => child.type === 'DropdownMenuTrigger'))), ['设置', '运行维护'])
-    assert.deepEqual(nodes(secondary).filter(node => node.type === 'a').map(node => node.props.to), ['/config', '/logs'])
+    const tree = f.render(), primary = nav(tree, '主导航'), secondary = nav(tree, '设置菜单')
+    // Operations pages (e.g. logs) are primary destinations; only settings stay in the footer menu.
+    assert.deepEqual(nodes(primary).filter(node => node.type === 'a').map(node => node.props.to), ['/sandbox', '/tasks', '/endpoints', '/unclassified', '/logs', '/calendar'])
+    assert.deepEqual(nodes(secondary).filter(node => node.type === 'DropdownMenu').map(node => text(nodes(node).find(child => child.type === 'DropdownMenuTrigger'))), ['设置'])
+    assert.deepEqual(nodes(secondary).filter(node => node.type === 'a').map(node => node.props.to), ['/config'])
     assert.equal(nodes(primary).filter(node => node.props?.className === 'console-nav-group-label').some(node => text(node) === '聊天账号'), false)
     assert.equal(nodes(tree).find(node => node.props?.className === 'console-sidebar-brand').props.to, '/')
   } finally { f.close() }
 })
 
-test('a nested channel URL selects the account menu while management routes select their footer group', () => {
+test('a nested channel URL selects the account menu, an operations route is selected in primary navigation and settings select their footer group', () => {
   const account = fixture({ routes, path: '/endpoints/qq/bot' })
   try { assert.equal(nodes(nav(account.render(), '主导航')).find(node => node.props?.['aria-current'] === 'page').props.to, '/endpoints') } finally { account.close() }
-  const management = fixture({ routes, path: '/logs' })
+  const operations = fixture({ routes, path: '/logs' })
   try {
-    const secondary = nav(management.render(), '设置与运行维护')
+    const tree = operations.render()
+    assert.equal(nodes(nav(tree, '主导航')).find(node => node.props?.['aria-current'] === 'page').props.to, '/logs')
+    assert.equal(nodes(nav(tree, '设置菜单')).some(node => node.type === 'button' && node.props.className.includes('is-active')), false)
+  } finally { operations.close() }
+  const management = fixture({ routes, path: '/config' })
+  try {
+    const secondary = nav(management.render(), '设置菜单')
     const selected = nodes(secondary).find(node => node.type === 'button' && node.props.className.includes('is-active'))
-    assert.equal(selected.props['aria-label'], '运行维护')
-    assert.equal(nodes(secondary).find(node => node.props?.['aria-current'] === 'page').props.to, '/logs')
+    assert.equal(selected.props['aria-label'], '设置')
+    assert.equal(nodes(secondary).find(node => node.props?.['aria-current'] === 'page').props.to, '/config')
   } finally { management.close() }
 })
 
 test('collapsed navigation retains named controls and mobile hidden navigation cannot receive focus', () => {
   const compact = fixture({ routes, collapsed: true })
   try {
-    const tree = compact.render(), secondary = nav(tree, '设置与运行维护')
-    assert.deepEqual(nodes(secondary).filter(node => node.type === 'button').map(node => node.props['aria-label']), ['设置', '运行维护'])
+    const tree = compact.render(), secondary = nav(tree, '设置菜单')
+    assert.deepEqual(nodes(secondary).filter(node => node.type === 'button').map(node => node.props['aria-label']), ['设置'])
     assert.equal(nodes(nav(tree, '主导航')).find(node => node.type === 'a' && node.props.to === '/calendar').props['aria-label'], 'Calendar')
   } finally { compact.close() }
   const mobile = fixture({ routes, mobile: true })
@@ -137,7 +144,7 @@ test('collapsed navigation retains named controls and mobile hidden navigation c
     tree = mobile.render()
     assert.equal(nodes(tree).find(node => node.type === 'aside').props.inert, false)
     assert.equal(nodes(tree).find(node => node.props?.className === 'flex flex-col flex-1 overflow-hidden min-w-0 w-full').props.inert, true)
-    nodes(nav(tree, '设置与运行维护')).find(node => node.type === 'a').props.onClick()
+    nodes(nav(tree, '设置菜单')).find(node => node.type === 'a').props.onClick()
     assert.equal(nodes(mobile.render()).find(node => node.type === 'aside').props.inert, true)
   } finally { mobile.close() }
 })
@@ -201,7 +208,7 @@ test('a primary group with a same-named destination omits its repeated heading w
   const f = fixture({ routes: [...routes, { path: '/agent/sessions', name: '聊天记录', meta: { group: '会话', order: 1 } }] })
   try {
     const primary = nav(f.render(), '主导航')
-    assert.deepEqual(nodes(primary).filter(node => node.type === 'a').map(node => node.props.to), ['/sandbox', '/agent/sessions', '/tasks', '/endpoints', '/unclassified', '/calendar'])
+    assert.deepEqual(nodes(primary).filter(node => node.type === 'a').map(node => node.props.to), ['/sandbox', '/agent/sessions', '/tasks', '/endpoints', '/unclassified', '/logs', '/calendar'])
     const headings = nodes(primary).filter(node => node.props?.className === 'console-nav-group-label').map(text)
     assert.ok(!headings.includes('会话'))
     assert.ok(headings.includes('任务'), 'a distinct group heading remains when no destination carries its name')
