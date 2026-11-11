@@ -3203,4 +3203,6 @@ export const englishMessages = Object.freeze({
   "正在刷新…": "Refreshing…",
   "刷新失败：{0}。以下是上次读取的内容。": "Refresh failed: {0}. Showing the last loaded details.",
   "设置菜单": "Settings menu",
+  "离开设置页后，尚未保存的配置修改将会丢失。": "If you leave Settings, configuration changes that have not been saved will be lost.",
+  "放弃修改并离开": "Discard changes and leave",
 })
