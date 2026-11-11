@@ -14,34 +14,18 @@ import {
 } from './ui/dialog'
 import { COMMAND_GROUP_ORDER, NAV_GROUPS } from '../navigation-taxonomy'
 import { ListItemButton } from '../components/ui/list-item-button'
+import { commandScore, isCommandRoute, ROUTE_SEARCH_HINTS } from './command-center-model.mjs'
 
 const RECENT_KEY = 'zhin.console.command-center.recent'
 const RECENT_LIMIT = 5
-
-const ROUTE_DESCRIPTIONS: Record<string, string> = {
-  '/dashboard': '机器人是否正常、有什么要处理',
-  '/sandbox': '与 Agent 对话并处理工作',
-  '/tasks': '管理员任务、定时提醒、助手任务与执行记录',
-  '/agent/workbench': '看看 AI 机器人是否准备好、最近做了什么',
-  '/agent/workrooms': '按 Project 查看 Workroom Run、Task 与 Assignment',
-  '/agent/workrooms/catalog': '配置协作空间、Bot Endpoint 与成员 Agent 映射',
-  '/agent/sessions': '看看机器人和大家聊过什么，并从某段继续聊',
-  '/endpoints': '查看聊天账号、群和好友申请',
-  '/introspection': '检查命令、中间件、组件、Endpoint、Agent、工具与 MCP',
-  '/logs': '查看出错、警告和运行过程',
-  '/plugins': '开关和设置已装的功能',
-  '/marketplace': '找新功能并安装',
-  '/config': '配置模型、Agent 和插件',
-  '/env': '管理运行环境变量',
-  '/files': '浏览和编辑项目文件',
-  '/database': '检查数据表、记录与持久化状态',
-}
 
 interface CommandTarget {
   path: string
   title: string
   group: string
   description: string
+  /** Search-only words; never displayed. */
+  keywords?: readonly string[]
   icon?: React.ReactNode | string
   kind?: 'page' | 'action'
 }
@@ -121,26 +105,6 @@ function rememberPath(path: string): string[] {
   return next
 }
 
-function commandScore(target: CommandTarget, rawQuery: string): number {
-  const query = rawQuery.trim().toLocaleLowerCase()
-  if (!query) return 1
-  const title = target.title.toLocaleLowerCase()
-  const path = target.path.toLocaleLowerCase()
-  const group = target.group.toLocaleLowerCase()
-  const description = target.description.toLocaleLowerCase()
-  const terms = query.split(/\s+/u).filter(Boolean)
-  if (!terms.every((term) => `${title} ${path} ${group} ${description}`.includes(term))) return 0
-  return terms.reduce((score, term) => {
-    if (title === term) return score + 120
-    if (title.startsWith(term)) return score + 90
-    if (title.includes(term)) return score + 70
-    if (group.includes(term)) return score + 45
-    if (description.includes(term)) return score + 35
-    if (path.includes(term)) return score + 20
-    return score
-  }, 0)
-}
-
 function groupedTargets(
   targets: CommandTarget[],
   query: string,
@@ -194,17 +158,28 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
   const targets = useMemo<CommandTarget[]>(() => {
     const actions = QUICK_ACTIONS.filter(action => routes.some(route => route.path === action.path.split('?')[0]))
     return [
-      ...actions.map(action => ({ ...action, title: i18n.t(action.title), description: i18n.t(action.description) })),
+      ...actions.map(action => ({
+        ...action,
+        title: i18n.t(action.title),
+        description: i18n.t(action.description),
+        keywords: [action.title, action.description, ...(ROUTE_SEARCH_HINTS[action.path]?.keywords ?? [])],
+      })),
       ...routes
-        .filter((route) => !route.meta?.hideInMenu && route.path && !actions.some(action => action.path === route.path))
-        .map((route) => ({
-          path: route.path,
-          title: routeLabel(route, i18n.locale),
-          group: route.meta?.group ?? NAV_GROUPS.PLUGINS,
-          description: (ROUTE_DESCRIPTIONS[route.path] ? i18n.t(ROUTE_DESCRIPTIONS[route.path]) : undefined) ?? i18n.t("打开 {0}", [routeLabel(route, i18n.locale)]),
-          icon: route.icon,
-          kind: 'page' as const,
-        })),
+        .filter((route) => isCommandRoute(route) && !actions.some(action => action.path === route.path))
+        .map((route) => {
+          const title = routeLabel(route, i18n.locale)
+          const hint = ROUTE_SEARCH_HINTS[route.path]
+          return {
+            path: route.path,
+            title,
+            group: route.meta?.group ?? NAV_GROUPS.PLUGINS,
+            description: hint ? i18n.t(hint.description) : i18n.t("打开 {0}", [title]),
+            // Match the authored Chinese name and description too, so either language finds a page.
+            keywords: [...(hint?.keywords ?? []), route.name, hint?.description ?? ''].filter(Boolean),
+            icon: route.icon,
+            kind: 'page' as const,
+          }
+        }),
     ]
   }, [routes, i18n])
   const groups = useMemo(
