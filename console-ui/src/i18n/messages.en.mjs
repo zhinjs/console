@@ -3074,4 +3074,8 @@ export const englishMessages = Object.freeze({
   "本页统计": "This page",
   "服务端共 {0} 项；插件筛选与计数只覆盖本页的 {1} 项": "{0} items on the server; plugin filters and counts cover only the {1} items on this page",
   "返回列表": "Back to list",
+  "请填写 Host 地址。": "Enter the Host address.",
+  "Host 地址只支持 http:// 或 https://。": "The Host address must start with http:// or https://.",
+  "Host 地址无效，请填写如 http://127.0.0.1:8086 的地址。": "This Host address is not valid. Enter an address such as http://127.0.0.1:8086.",
+  "请输入访问令牌。": "Enter your access token.",
 })

@@ -22,7 +22,7 @@ import { initializeTheme } from "@console/theme";
 import LoginPage from "@console/pages/login";
 import { TooltipProvider } from "@console/components/ui/tooltip";
 import { ToastProvider } from "@console/components/toast";
-import { runQueryPrefillMiddleware } from "./middleware/queryPrefill";
+import { runQueryPrefillMiddleware, takeLoginLink } from "./middleware/queryPrefill";
 import { runDemoBootstrap } from "./middleware/demoBootstrap";
 import { isDemoMode } from "@console/utils/demo-mode";
 
@@ -49,8 +49,12 @@ sharedModules.set("react-router-dom", ReactRouterDOM);
 
 registerBuiltinConsolePages();
 
+// Removes a `?token=` from the address bar before anything else, including in demo builds.
+const loginLink = takeLoginLink();
 const demoSession = runDemoBootstrap();
-const initialSession = demoSession ?? runQueryPrefillMiddleware();
+const initialSession = demoSession
+  ? { ...demoSession, loginToken: null }
+  : runQueryPrefillMiddleware(loginLink);
 
 function ConsoleConnection() {
   useConsoleTransport();
@@ -71,7 +75,10 @@ function App() {
   const i18n = useI18n()
   const [authed, setAuthed] = React.useState(initialSession.authed);
   const loginApiBase = initialSession.loginApiBase;
+  // Used for one sign-in attempt only; a later sign-out must not retry the link token.
+  const [linkToken, setLinkToken] = React.useState(initialSession.loginToken);
   const handleLogin = React.useCallback(() => setAuthed(true), []);
+  const consumeLinkToken = React.useCallback(() => setLinkToken(null), []);
 
   React.useEffect(() => {
     const onAuthRequired = () => {
@@ -92,7 +99,8 @@ function App() {
       );
     }
     return (
-      <LoginPage onSuccess={handleLogin} initialApiBase={loginApiBase} />
+      <LoginPage onSuccess={handleLogin} initialApiBase={loginApiBase}
+        initialToken={linkToken} onInitialTokenConsumed={consumeLinkToken} />
     );
   }
 

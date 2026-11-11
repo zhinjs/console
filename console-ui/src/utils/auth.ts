@@ -182,15 +182,8 @@ export function notifyAuthRequired(): void {
   }
 }
 
+/** 登录链接由 `pages/login-model.mjs` 读取，并在启动时（含 `?token=`）立即从地址栏移除。 */
 export const QUERY_API_BASE_URL = "apiBaseUrl";
-
-/** 仅允许 URL 预填 Host 地址；token 不得出现在 URL 中 */
-export function readApiBaseUrlFromQuery(
-  search = typeof window !== "undefined" ? window.location.search : "",
-): string | null {
-  const apiBaseUrl = new URLSearchParams(search).get(QUERY_API_BASE_URL)?.trim();
-  return apiBaseUrl || null;
-}
 
 export function stripApiBaseUrlFromQuery(): void {
   if (typeof window === "undefined") return;

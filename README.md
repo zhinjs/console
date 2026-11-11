@@ -27,10 +27,16 @@ pnpm preview
 
 传输只走 REST + SSE，不连 `wss://…/server`。SDK 版本见下文「SDK 版本」。
 
-可通过 URL **仅预填** Host 地址（`token` 须在登录页手动输入，勿放在 URL 中）：
+可通过 URL 预填 Host 地址（可省略协议：IP 与本机/局域网地址补 `http://`，其他域名补 `https://`）：
 
 ```
 https://console.zhin.dev/?apiBaseUrl=http://127.0.0.1:8086
+```
+
+也可附带 `token` 直接登录。Console 启动时会立即用 `history.replaceState` 把 `token` 从地址栏移除（无论登录成功与否），失败时停留在登录页并显示错误。由于链接本身仍会出现在发送渠道与静态站点的访问日志中，只在可信渠道分享此类链接：
+
+```
+https://console.zhin.dev/?apiBaseUrl=127.0.0.1:8086&token=<令牌>
 ```
 
 Demo 构建会写入 `window.__ZHIN_API_TOKEN`（对齐 zhin `deploy/zhin-demo`），UI 与 SDK 均优先读该运行时 Token，避免仅依赖 localStorage。
