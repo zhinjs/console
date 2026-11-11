@@ -3173,4 +3173,5 @@ export const englishMessages = Object.freeze({
   "打开会话查看对话追踪": "Open a conversation to see its trace",
   "没有出错的会话": "No failed conversations",
   "按会话最后一轮的结果统计": "Based on each conversation's last turn",
+  "设置菜单": "Settings menu",
 })
