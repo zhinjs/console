@@ -202,6 +202,11 @@
 .rich-text-editor .editor-at-symbol { font-weight: 600; }
 .mobile-channel-toggle, .channel-overlay { display: none; }
 @media (min-width: 900px) { .im-right-panel.im-right-visible { display: flex; } }
+/* Below 900px the member column above is hidden; the conversation header opens the same panel as a Sheet. */
+.console-sheet-content.im-member-sheet { width: min(360px, 100vw); padding: 0; gap: 0; overflow: hidden; background: hsl(var(--im-list-bg)); }
+.im-member-sheet .im-right-header { padding-right: 56px; }
+.im-member-sheet .im-member-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+@media (max-width: 479px) { .im-member-drawer-label { display: none; } }
 @media (min-width: 1400px) { .im-layout > .channel-sidebar, .im-sidebar.channel-sidebar { width: 300px; } }
 @media (max-width: 767px) {
   .sandbox-container.im-layout { flex-direction: column; }

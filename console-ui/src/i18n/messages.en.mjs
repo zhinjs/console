@@ -3236,6 +3236,8 @@ export const englishMessages = Object.freeze({
   "此 Host 已安装 {0}。": "This Host has {0} installed.",
   "此 Host 已安装该插件。": "This Host already has this plugin installed.",
   "共 {0} 个实例，以下入口打开 {1}。": " {0} instances; the links below open {1}.",
+  "群成员": "Group members",
+  "群成员（{0}）": "Group members ({0})",
   "Workroom 项目目录格式无效": "Invalid Workroom project catalog",
   "项目目录读取失败，可以重试，或按 Project ID 查询。": "Couldn't load the project catalog. Retry, or look up a Project ID.",
   "无法读取 Workroom 项目目录：{0}": "Couldn't load the Workroom project catalog: {0}",
