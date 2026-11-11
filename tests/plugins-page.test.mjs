@@ -43,7 +43,7 @@ function fixture({ data = [], query = '', loaded = true, loading = false, error 
     '../components/ui/badge': { Badge: 'badge' }, '../components/ui/alert': { Alert: 'alert', AlertDescription: 'p' },
     '../components/ui/skeleton': { Skeleton: 'skeleton' }, '../components/ui/button': { Button: 'button' },
     '../components/ui/input': { Input: 'input' }, '../components/PageHeader': { PageHeader: 'page-header' },
-    '../components/PageShell': { PageShell: 'main' },
+    '../components/PageShell': { PageShell: 'main' }, '../components/StatCard': { StatCard: 'stat-card', StatGrid: 'stat-grid' },
   }
   new Function('require', 'exports', 'module', code)(name => mocks[name] ?? require(name), module.exports, module)
   const render = () => module.exports.PluginsPageSession({ connectionScope: 'scope-static' })
@@ -147,7 +147,7 @@ function connectedFixture() {
     '../utils/useInboxCacheScope': { useInboxCacheScope: () => authority.current() }, '../utils/inbox-cache': { isInboxCacheScopeActive: scope => authority.active(scope) },
     '../components/ui/badge': { Badge: 'badge' }, '../components/ui/alert': { Alert: 'alert', AlertDescription: 'p' },
     '../components/ui/skeleton': { Skeleton: 'skeleton' }, '../components/ui/button': { Button: 'button' }, '../components/ui/input': { Input: 'input' },
-    '../components/PageHeader': { PageHeader: 'page-header' }, '../components/PageShell': { PageShell: 'main' }, './plugins.css': {},
+    '../components/PageHeader': { PageHeader: 'page-header' }, '../components/PageShell': { PageShell: 'main' }, '../components/StatCard': { StatCard: 'stat-card', StatGrid: 'stat-grid' }, './plugins.css': {},
   }
   const module = { exports: {} }
   new Function('require', 'exports', 'module', 'setInterval', 'clearInterval', code)(name => mocks[name] ?? require(name), module.exports, module,

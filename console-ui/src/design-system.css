@@ -3712,3 +3712,109 @@
     }
   }
 }
+
+@layer components {
+  /* 指标卡：总览页与列表页共用（components/StatCard.tsx） */
+  .console-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .console-stat-card {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.5rem;
+    border: var(--console-border-width) solid var(--console-border-default);
+    border-radius: var(--console-radius-lg);
+    background: hsl(var(--card));
+    padding: 1.05rem 1.2rem 1rem;
+    box-shadow: var(--console-shadow-xs);
+  }
+
+  button.console-stat-card {
+    width: 100%;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+  }
+
+  .console-stat-card.is-link:hover {
+    border-color: hsl(var(--primary) / 0.35);
+    box-shadow: var(--console-shadow-sm);
+  }
+
+  .console-stat-card.is-link:focus-visible {
+    outline: var(--console-focus-width) solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  .console-stat-value-row {
+    display: flex;
+    min-width: 0;
+    /* 与环形进度同高，保证四张卡片的数字在同一水平线上 */
+    min-height: 2.65rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .console-stat-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-body-sm);
+    font-weight: 500;
+  }
+
+  .console-stat-label svg { width: 0.95rem; height: 0.95rem; }
+
+  .console-stat-value {
+    overflow: hidden;
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .console-stat-value small {
+    margin-left: 0.15rem;
+    color: hsl(var(--muted-foreground));
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+
+  .console-stat-sub {
+    overflow: hidden;
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-label);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .console-stat-card.is-danger .console-stat-value,
+  .console-stat-card.is-danger .console-stat-label svg { color: hsl(var(--destructive)); }
+  .console-stat-card.is-warning .console-stat-value,
+  .console-stat-card.is-warning .console-stat-label svg { color: hsl(var(--warning)); }
+
+  .console-stat-card.is-pressed {
+    border-color: hsl(var(--primary) / 0.55);
+    background: hsl(var(--primary) / 0.05);
+  }
+
+  @media (max-width: 1023px) {
+    .console-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+  }
+
+  @media (max-width: 639px) {
+    .console-stat-value { font-size: 1.5rem; }
+  }
+}

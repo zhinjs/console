@@ -53,6 +53,7 @@ import { Alert, AlertDescription } from '../components/ui/alert'
 import { Skeleton } from '../components/ui/skeleton'
 import { useConfirm } from '../components/confirm-dialog'
 import { ListItemButton } from '../components/ui/list-item-button'
+import { MiniRingGauge, StatCard, StatGrid } from '../components/StatCard'
 import {
   Sheet,
   SheetBody,
@@ -138,38 +139,6 @@ const EMPTY_OPTIONAL: OptionalOverview = {
   agents: null,
   mcpServices: null,
   connectedMcp: null,
-}
-
-function MiniRingGauge({ percent, tone = 'primary' }: { percent: number; tone?: 'primary' | 'success' | 'warning' }) {
-  const clamped = Math.max(0, Math.min(100, percent))
-  const r = 16
-  const c = 2 * Math.PI * r
-  const offset = c - (clamped / 100) * c
-  const stroke =
-    tone === 'success'
-      ? 'hsl(var(--success))'
-      : tone === 'warning'
-        ? 'hsl(var(--warning))'
-        : 'hsl(var(--primary))'
-  return (
-    <span className="console-ring-gauge" aria-hidden="true">
-      <svg viewBox="0 0 40 40">
-        <circle cx="20" cy="20" r={r} fill="none" stroke="currentColor" strokeOpacity={0.12} strokeWidth="3.5" />
-        <circle
-          cx="20"
-          cy="20"
-          r={r}
-          fill="none"
-          stroke={stroke}
-          strokeWidth="3.5"
-          strokeLinecap="round"
-          strokeDasharray={c}
-          strokeDashoffset={offset}
-        />
-      </svg>
-      <span className="console-ring-gauge-label">{clamped}%</span>
-    </span>
-  )
 }
 
 const DASHBOARD_REQUEST_TIMEOUT_MS = 8_000
@@ -284,31 +253,6 @@ function formatAgo(timestamp: number, now: number, locale: 'zh-CN' | 'en'): stri
 function percent(part: number, total: number): number | null {
   if (!Number.isFinite(part) || !Number.isFinite(total) || total <= 0) return null
   return Math.min(100, Math.max(0, Math.round((part / total) * 100)))
-}
-
-function StatCard({ icon: Icon, label, value, sub, tone, aside, onOpen }: {
-  icon: LucideIcon
-  label: string
-  value: React.ReactNode
-  sub: React.ReactNode
-  tone?: 'danger' | 'warning'
-  aside?: React.ReactNode
-  onOpen?: () => void
-}) {
-  const className = ['console-stat-card', tone ? `is-${tone}` : '', onOpen ? 'is-link' : ''].filter(Boolean).join(' ')
-  const content = (
-    <>
-      <span className="console-stat-label"><Icon aria-hidden="true" />{label}</span>
-      <span className="console-stat-value-row">
-        <strong className="console-stat-value">{value}</strong>
-        {aside}
-      </span>
-      <span className="console-stat-sub">{sub}</span>
-    </>
-  )
-  return onOpen
-    ? <button type="button" className={className} onClick={onOpen}>{content}</button>
-    : <div className={className}>{content}</div>
 }
 
 function MessageVolumeChart({ buckets, describe, summary }: {
@@ -819,7 +763,7 @@ export default function HomePage() {
         </Alert>
       ) : null}
 
-      <section className="console-stat-grid" aria-label={i18n.t("关键指标")}>
+      <StatGrid label={i18n.t("关键指标")}>
         <StatCard
           icon={MessageSquare}
           label={i18n.t("收到消息")}
@@ -853,7 +797,7 @@ export default function HomePage() {
             : null}
           onOpen={() => navigate('/endpoints')}
         />
-      </section>
+      </StatGrid>
 
       <div className="console-overview-row">
         <section className="console-dashboard-panel console-volume-panel" aria-labelledby="volume-title">
