@@ -33,6 +33,7 @@ import { PageHeader } from '../components/PageHeader'
 import { Button, buttonVariants } from '../components/ui/button'
 import { Skeleton } from '../components/ui/skeleton'
 import { ErrorAlert } from '../components/error-alert'
+import { fetchAllIntrospection, type IntrospectionEnvelope } from './agent-workbench-model.mjs'
 
 interface BindingItem {
   name: string
@@ -60,19 +61,18 @@ interface EndpointItem {
   connected: boolean
 }
 
-interface IntrospectionEnvelope<T> {
-  items: T[]
-  total: number
-  note?: string
-}
-
-async function fetchIntrospection<T>(kind: string, locale: 'zh-CN' | 'en' = 'zh-CN'): Promise<IntrospectionEnvelope<T>> {
-  const response = await apiFetch(`${CONSOLE_REST.INTROSPECTION}/${kind}?page=1&pageSize=100`)
+async function fetchIntrospectionPage<T>(kind: string, page: number, pageSize: number, locale: 'zh-CN' | 'en' = 'zh-CN'): Promise<IntrospectionEnvelope<T>> {
+  const response = await apiFetch(`${CONSOLE_REST.INTROSPECTION}/${kind}?page=${page}&pageSize=${pageSize}`)
   const body = await response.json()
   if (!response.ok || body.success === false) {
     throw new Error(body.error ?? translate(locale, "无法读取 {0}", [kind]))
   }
   return body.data as IntrospectionEnvelope<T>
+}
+
+/** The Host paginates introspection; read every page so counts and lists are never silently capped. */
+function fetchIntrospection<T>(kind: string, locale: 'zh-CN' | 'en' = 'zh-CN') {
+  return fetchAllIntrospection<T>((page, pageSize) => fetchIntrospectionPage<T>(kind, page, pageSize, locale))
 }
 
 function SessionCard({ sessionKey }: { sessionKey: string }) {
@@ -99,7 +99,8 @@ function SessionCard({ sessionKey }: { sessionKey: string }) {
 export default function AgentWorkbenchPage() {
   const i18n = useI18n()
   const [bindings, setBindings] = useState<BindingItem[]>([])
-  const [tools, setTools] = useState<ToolItem[]>([])
+  const [bindingTotal, setBindingTotal] = useState(0)
+  const [toolTotal, setToolTotal] = useState(0)
   const [mcpServices, setMcpServices] = useState<McpItem[]>([])
   const [endpoints, setEndpoints] = useState<EndpointItem[]>([])
   const [agentStatus, setAgentStatus] = useState<'unknown' | 'unavailable' | 'available'>('unknown')
@@ -117,9 +118,10 @@ export default function AgentWorkbenchPage() {
         fetchIntrospection<McpItem>('mcp', i18n.locale),
       ])
       setAgentStatus(summarizeOptional(null, bindingData).agentStatus)
-      setBindings(bindingData.items ?? [])
-      setTools(toolData.items ?? [])
-      setMcpServices(mcpData.items ?? [])
+      setBindings(bindingData.items)
+      setBindingTotal(bindingData.total)
+      setToolTotal(toolData.total)
+      setMcpServices(mcpData.items)
 
       const endpointData = await requestConsole<{ endpoints: EndpointItem[] }>({ type: ENDPOINT_RPC.LIST })
       setEndpoints(endpointData.endpoints)
@@ -150,14 +152,14 @@ export default function AgentWorkbenchPage() {
     },
     {
       label: i18n.t("Agent 绑定"),
-      detail: agentStatus === 'unavailable' ? i18n.t("未安装或装配 Agent") : bindings.length ? i18n.t("{0} 个 Agent 配置绑定", [bindings.length]) : i18n.t("尚未配置模型与 Agent"),
+      detail: agentStatus === 'unavailable' ? i18n.t("未安装或装配 Agent") : bindings.length ? i18n.t("{0} 个 Agent 配置绑定", [bindingTotal]) : i18n.t("尚未配置模型与 Agent"),
       ready: bindings.length > 0,
       path: bindings.length ? '/introspection?tab=bindings' : '/config',
     },
     {
       label: i18n.t("工具目录"),
-      detail: tools.length ? i18n.t("{0} 个工具已注册", [tools.length]) : i18n.t("当前没有可调用工具"),
-      ready: tools.length > 0,
+      detail: toolTotal ? i18n.t("{0} 个工具已注册", [toolTotal]) : i18n.t("当前没有可调用工具"),
+      ready: toolTotal > 0,
       path: '/introspection?tab=tools',
     },
     {
@@ -225,8 +227,8 @@ export default function AgentWorkbenchPage() {
         </details>
 
         <div className="console-agent-metrics">
-          <div><Brain /><span>Agent</span><strong>{bindings.length}</strong></div>
-          <div><Wrench /><span>{i18n.t("工具")}</span><strong>{tools.length}</strong></div>
+          <div><Brain /><span>Agent</span><strong>{bindingTotal}</strong></div>
+          <div><Wrench /><span>{i18n.t("工具")}</span><strong>{toolTotal}</strong></div>
           <div><Server /><span>MCP</span><strong>{connectedMcp}<small> / {mcpServices.length}</small></strong></div>
           <div><Bot /><span>{i18n.t("在线渠道")}</span><strong>{onlineEndpoints}<small> / {endpoints.length}</small></strong></div>
         </div>
@@ -269,6 +271,12 @@ export default function AgentWorkbenchPage() {
                   <Link to="/introspection?tab=bindings" aria-label={i18n.t("查看 {0} 详情", [binding.name])}><ArrowUpRight /></Link>
                 </article>
               ))}
+              {bindingTotal > bindings.length ? (
+                <p className="text-xs text-muted-foreground">
+                  {i18n.t("仅显示前 {0} 个，共 {1} 个", [bindings.length, bindingTotal])}{' '}
+                  <Link to="/introspection?tab=bindings" className="underline underline-offset-2">{i18n.t("在能力目录查看全部")}</Link>
+                </p>
+              ) : null}
             </div>
           ) : (
             <div className="console-agent-empty">

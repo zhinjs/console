@@ -51,6 +51,8 @@
   .console-settings-entry-copy strong { font-size: var(--console-text-body); font-weight: 600; }
   .console-settings-entry-copy > span { color: hsl(var(--muted-foreground)); font-size: var(--console-text-body); line-height: 1.6; }
   .console-settings-entry-copy small { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
+  .console-settings-entry-copy .console-dirty-pill { justify-self: start; color: hsl(var(--warning)); }
+  .console-settings-nav-item .console-dirty-pill { margin-left: auto; }
   .console-settings-entry-arrow { width: 1rem; height: 1rem; flex-shrink: 0; color: hsl(var(--muted-foreground)); }
   .console-settings-detail-heading { display: grid; justify-items: start; gap: 0.5rem; margin-bottom: 1rem; }
   .console-settings-empty { display: grid; justify-items: center; gap: 0.75rem; padding: 3rem 1rem; border: 1px dashed var(--console-border-default); border-radius: var(--console-radius-lg); text-align: center; }
@@ -63,6 +65,7 @@
     .console-settings-nav { position: static; gap: 0.5rem; }
     .console-settings-nav-primary { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.25rem; }
     .console-settings-nav-item { justify-content: center; flex-wrap: wrap; gap: 0.375rem; padding: 0.625rem 0.375rem; font-size: var(--console-text-label); }
+    .console-settings-nav-item .console-dirty-pill { margin-left: 0; }
   }
 
   @media (max-width: 600px) {

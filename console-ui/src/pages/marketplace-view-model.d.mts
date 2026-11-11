@@ -10,3 +10,14 @@ export type UpdateCheckResult =
   | { kind: 'failed'; updates: []; reason: string }
 export function classifyUpdateCheck(outcome: UpdateCheckOutcome, locale?: 'zh-CN' | 'en'): UpdateCheckResult
 export function updateCheckFeedback(result: UpdateCheckResult, locale?: 'zh-CN' | 'en'): { variant: 'success' | 'info' | 'error'; description: string }
+
+export interface InstalledPackage { instanceKeys: string[]; version: string | null }
+export type InstalledPackages = ReadonlyMap<string, InstalledPackage>
+export function readInstalledPackages(body: unknown): InstalledPackages | null
+export type MarketplacePluginStatus =
+  | { kind: 'update'; current: string; latest: string; version: string; instanceKey: string | null; instanceCount: number }
+  | { kind: 'installed'; version: string | null; instanceKey: string | null; instanceCount: number }
+  | { kind: 'not-installed' | 'unknown'; version: null; instanceKey: null; instanceCount: 0 }
+export function marketplacePluginStatus(name: string, installed: InstalledPackages | null, updates: readonly UpdateCandidate[]): MarketplacePluginStatus
+export function pluginManageUrl(packageName: string, instanceKey?: string | null): string
+export function pluginConfigUrl(instanceKey: string): string
