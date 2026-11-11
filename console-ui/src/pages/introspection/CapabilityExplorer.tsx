@@ -1,6 +1,7 @@
 import { translate } from '../../i18n/locale.mjs'
 import { useI18n } from '../../i18n'
 import { masonryLayout } from './masonry-layout.mjs'
+import { permissionLinkFor } from '../permission-link-model.mjs'
 import { GalleryPreview } from './GalleryPreview'
 import { JsonViewer } from './JsonViewer'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -874,6 +875,9 @@ function CapabilityInspector(props: {
             {copied ? <Check className="size-3.5 mr-1.5" /> : <Copy className="size-3.5 mr-1.5" />}
             {copied ? i18n.t("已复制") : i18n.t("复制命令")}
           </Button>
+        ) : null}
+        {kind === 'commands' && extractCommandTrigger(item, true) ? (
+          <Button asChild size="sm" variant="outline"><Link to={permissionLinkFor(extractCommandTrigger(item, true), owner)}><ShieldCheck className="size-3.5 mr-1.5" />{i18n.t("查看此命令的权限说明")}</Link></Button>
         ) : null}
         {kind === 'bindings' ? (
           <Button asChild size="sm"><Link to="/agent/workbench">{i18n.t("查看机器人状态")}<ArrowRight /></Link></Button>

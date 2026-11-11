@@ -15,6 +15,7 @@ import { readMessageHistory, mergeHistoryRows } from '../console-ui/src/pages/en
 import * as composerDraftModel from '../console-ui/src/pages/endpoint-detail/composer-draft-model.mjs'
 
 import { permissionRequest, readPermissionCatalog, readPermissionExplanation, permissionHttpError } from '../console-ui/src/pages/permission-explanation-model.mjs'
+import * as permissionLinkModel from '../console-ui/src/pages/permission-link-model.mjs'
 
 function hooks() {
   const slots=[]; let cursor=0, pending=[], dirty=false, render, value
@@ -198,6 +199,7 @@ test('permission requests use the selected language without clearing hypotheses 
   'loadCatalog, explain, choose, setSenderId, senderId, setRoles, roles, setTarget, target, setIncludeTarget, setHypothesis, hypothesis, selected, current', {
   ...runtime.api, useI18n:()=>locale, useInboxCacheScope:()=>scope, createDiagnosticRequestGate, getInboxCacheScope:()=>scope,
   isInboxCacheScopeActive:value=>value===scope, isDemoMode:()=>false, permissionRequest, readPermissionCatalog, readPermissionExplanation, permissionHttpError,
+  ...permissionLinkModel, useSearchParams:()=>[new URLSearchParams(),()=>{}],
   CONSOLE_REST:{COMMAND_PERMISSIONS:'/permissions',COMMAND_PERMISSION_EXPLAIN:'/explain'},
   apiFetch:async (url, options)=>{requests.push({url,options});return {ok:true,json:async()=>options.method==='POST'?
    {success:true,data:{generation:3,simulation:true,command,permissionHost:'present',adapter:{outcome:'not_evaluated',reason:'fixture'},rules:[],summary:{outcome:'unknown',reason:'fixture'},unconstrained:[],assumptions:[],...JSON.parse(options.body)}}:
