@@ -34,7 +34,7 @@ export function untranslatedCjk(file) {
 
 export function sourceFilesUnder(path) {
   if (!statSync(path).isDirectory()) return [path]
-  return readdirSync(path).flatMap(name => sourceFilesUnder(join(path, name))).filter(file => /\.(?:tsx?|mjs)$/.test(file) && !/\.d\.mts$/.test(file))
+  return readdirSync(path).filter(name => name !== 'node_modules').flatMap(name => sourceFilesUnder(join(path, name))).filter(file => /\.(?:tsx?|mjs)$/.test(file) && !/\.d\.mts$/.test(file))
 }
 
 /** JSX collapses the indentation and line breaks around text; catalog keys use the collapsed form. */

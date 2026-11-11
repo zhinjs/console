@@ -59,8 +59,9 @@ export default defineConfig({
   compilation: {
     presetEnv: false,
     lazyCompilation: false,
-    // module cache 读取 .codegraph/daemon.sock（unix socket）会 panic，
-    // watch 排除无法覆盖该路径，先关闭 persistentCache
+    // Cache lives in node_modules/.farm. It was once switched off because a local tool's
+    // .codegraph/daemon.sock made the module cache panic; that directory is git-ignored now and
+    // builds (cold, warm, demo) and `farm start` pass with the socket present.
     persistentCache: true,
     define: demoBuildEnv,
     partialBundling: {
@@ -90,7 +91,7 @@ export default defineConfig({
         clsx: path.resolve(siteRoot, "node_modules/clsx"),
         "tailwind-merge": path.resolve(siteRoot, "node_modules/tailwind-merge"),
         yaml: path.resolve(siteRoot, "node_modules/yaml"),
-        // npm 发布的 @zhin.js/ai 不含 src/，其 exports development 条件悬空；
+        // @zhin.js/contract re-exports these two; npm 发布的 @zhin.js/ai 不含 src/，其 exports development 条件悬空；
         // dev 模式 farm 强制 development 条件，子路径解析必挂，这里指到 lib 产物
         "@zhin.js/ai/agent-stream": path.resolve(
           siteRoot, "node_modules/@zhin.js/ai/lib/agent-stream.js",

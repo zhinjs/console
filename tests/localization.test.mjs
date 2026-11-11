@@ -99,7 +99,7 @@ test('every explicit authored translation literal has an English catalog entry',
   async function scan(dir) {
     for (const entry of await readdir(dir,{withFileTypes:true})) {
       const file = new URL(entry.name + (entry.isDirectory()?'/':''),dir)
-      if(entry.isDirectory()) { await scan(file); continue }
+      if(entry.isDirectory()) { if(entry.name!=='node_modules') await scan(file); continue }
       if(!/\.(tsx?|mjs)$/.test(entry.name) || file.pathname.includes('/i18n/')) continue
       const text = await readFile(file,'utf8')
       const ast = ts.createSourceFile(file.pathname,text,ts.ScriptTarget.Latest,true,entry.name.endsWith('tsx')?ts.ScriptKind.TSX:ts.ScriptKind.TS)

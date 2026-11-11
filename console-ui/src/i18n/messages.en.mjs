@@ -187,7 +187,6 @@ export const englishMessages = Object.freeze({
   "摘要": "Summary",
   "角色设置": "Role settings",
   "个人会话": "Personal session",
-  "个人模型": "Personal models",
   "个人身份": "Personal identity",
   "协议": "Protocol",
   "流式输出": "Streaming output",
