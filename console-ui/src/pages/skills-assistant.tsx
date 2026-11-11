@@ -1,6 +1,7 @@
 import { useI18n } from '../i18n'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
+import { ConnectionRequiredState } from '../components/connection-required'
 import { useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { RefreshCw } from 'lucide-react'
@@ -33,8 +34,9 @@ function formatTime(timestamp: number, locale: 'zh-CN' | 'en'): string {
 }
 
 export default function SkillsAssistantPage() {
+  const i18n = useI18n()
   const scope = useInboxCacheScope()
-  if (!scope || !isInboxCacheScopeActive(scope)) return null
+  if (!scope || !isInboxCacheScopeActive(scope)) return <ConnectionRequiredState title={i18n.t("技能助手")} />
   return <SkillsAssistantSession key={scope} />
 }
 
