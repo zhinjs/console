@@ -76,7 +76,7 @@ export default function CommandPermissionsPage() {
   const choose = (command: PermissionCommand) => { explanations.current.cancel(); setHypothesis(false); setSelected(command); setResult(null); void explain(command, false) }
 
   return <div className="space-y-5 p-4 md:p-6 max-w-6xl mx-auto">
-    <header className="space-y-2"><h1 className="text-2xl font-semibold flex items-center gap-2"><ShieldCheck aria-hidden="true" />{i18n.t("命令权限说明")}</h1>
+    <header className="space-y-2"><h1 className="console-page-title flex items-center gap-2"><ShieldCheck aria-hidden="true" />{i18n.t("命令权限说明")}</h1>
       <p className="text-sm text-muted-foreground">{i18n.t("查看规则为什么匹配。这里只做说明与假设检查，不执行命令，也不向平台查询或验证权限。")}</p>
       <Button asChild variant="link" className="px-0"><Link to="/introspection?tab=commands">{i18n.t("返回命令目录")}</Link></Button></header>
     {(demo || !active) && <Alert><AlertDescription>{i18n.t("需要连接当前 Host 并使用 full scope Token；演示模式不能读取权限说明。")}</AlertDescription></Alert>}

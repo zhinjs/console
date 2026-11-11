@@ -1,7 +1,7 @@
 import { useI18n } from '../i18n'
 import { useCallback, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { AlertCircle, ChevronRight, Package, Search } from 'lucide-react'
+import { AlertCircle, CheckCircle2, ChevronRight, Clock, Package, PauseCircle, Search } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import { Badge } from '../components/ui/badge'
 import { Alert, AlertDescription } from '../components/ui/alert'
@@ -12,6 +12,7 @@ import { PageHeader } from '../components/PageHeader'
 import { useConsoleRead } from '../hooks/use-console-read'
 import { validatePluginList } from './plugin-list-model.mjs'
 import { PageShell } from '../components/PageShell'
+import { StatCard, StatGrid } from '../components/StatCard'
 import { managementLabel, waitForEnabledManagementState, type PluginManagementState } from './plugin-management-model.mjs'
 import type { ConsoleRpcRequest } from '../utils/console-rpc'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
@@ -54,6 +55,7 @@ function matchesStatusFilter(plugin: Plugin, filter: PluginStatusFilter): boolea
     return (
       m.status === 'missing-config' ||
       m.status === 'degraded' ||
+      m.status === 'pending-restart' ||
       statusText === 'failed' ||
       m.dependencies === 'failed' ||
       !m.published
@@ -142,6 +144,12 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
     p.name.toLowerCase().includes(search.trim().toLowerCase()) && matchesStatusFilter(p, statusFilter)
   )
 
+  const statusCounts = {
+    enabled: plugins.filter(p => matchesStatusFilter(p, 'enabled')).length,
+    pending: plugins.filter(p => matchesStatusFilter(p, 'pending')).length,
+    disabled: plugins.filter(p => matchesStatusFilter(p, 'disabled')).length,
+  }
+
   const filterOptions: Array<{ key: PluginStatusFilter; label: string }> = [
     { key: 'all', label: i18n.t("全部") },
     { key: 'enabled', label: i18n.t("已启用") },
@@ -219,6 +227,42 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
         }
       />
       {error ? <Alert variant="warning"><AlertCircle className="h-4 w-4" /><AlertDescription className="flex items-center justify-between gap-3"><span>{error}{i18n.t("。以下是上次读取的列表。")}</span><Button variant="outline" size="sm" onClick={() => void refreshCurrent()}>{i18n.t("重试")}</Button></AlertDescription></Alert> : null}
+
+      <StatGrid label={i18n.t("插件概况")}>
+        <StatCard
+          icon={Package}
+          label={i18n.t("子插件")}
+          value={plugins.length}
+          sub={i18n.t("当前实例已加载")}
+          onOpen={() => setStatusFilter('all')}
+          pressed={statusFilter === 'all'}
+        />
+        <StatCard
+          icon={CheckCircle2}
+          label={i18n.t("已启用")}
+          value={statusCounts.enabled}
+          sub={i18n.t("正在提供功能")}
+          onOpen={() => setStatusFilter('enabled')}
+          pressed={statusFilter === 'enabled'}
+        />
+        <StatCard
+          icon={Clock}
+          label={i18n.t("待处理")}
+          value={statusCounts.pending}
+          sub={statusCounts.pending > 0 ? i18n.t("缺少配置、待重启或运行异常") : i18n.t("无需处理")}
+          tone={statusCounts.pending > 0 ? 'warning' : undefined}
+          onOpen={() => setStatusFilter('pending')}
+          pressed={statusFilter === 'pending'}
+        />
+        <StatCard
+          icon={PauseCircle}
+          label={i18n.t("已停用")}
+          value={statusCounts.disabled}
+          sub={i18n.t("已关闭，可随时重新启用")}
+          onOpen={() => setStatusFilter('disabled')}
+          pressed={statusFilter === 'disabled'}
+        />
+      </StatGrid>
 
       <div className="console-plugin-catalog-toolbar">
         <div className="console-plugin-catalog-toolbar-meta">

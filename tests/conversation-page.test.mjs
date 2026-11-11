@@ -5,7 +5,7 @@ import { createRequire } from 'node:module'
 import ts from 'typescript'
 import { localeModule, isLocaleImport } from './locale-fixture.mjs'
 import * as personalModels from '../console-ui/src/pages/personal-session-model.mjs'
-import { readRecentSessions } from '../console-ui/src/pages/agent-session-recent.mjs'
+import { readRecentSessions, summarizeRecentSessions } from '../console-ui/src/pages/agent-session-recent.mjs'
 
 const require = createRequire(import.meta.url)
 const options = { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX }
@@ -48,7 +48,7 @@ function fixture(initialKey = 'icqq:bot:group:room') {
     './SessionMessageDetails':{SessionMessageDetails:'message-details'}, './ConversationHistory':{ConversationHistory:'conversation-history'},
     './ConversationTrace':{ConversationTrace:'conversation-trace'}, './useConversationTraces':{useConversationTraces:(...args)=>{ traceReads.push(args); return {turns:[],loading:false,error:null,refresh(){}} }},
     '@zhin.js/client':{cn:(...parts)=>parts.filter(Boolean).join(' ')}, '../contracts/zhin-console':{CONSOLE_REST:{AGENT_SESSIONS:'/api/agent/sessions'}},
-    '../utils/demo-mode':{isDemoMode:()=>false}, './agent-session-recent.mjs':{readRecentSessions},
+    '../utils/demo-mode':{isDemoMode:()=>false}, './agent-session-recent.mjs':{readRecentSessions,summarizeRecentSessions}, '../components/StatCard':{StatCard:'stat-card',StatGrid:'stat-grid'},
   })
   const f = {calls,traceReads,render(){cursor=0;tree=module.default(); const run=effects;effects=[];run.forEach(fn=>fn());return tree},get tree(){return tree},setScope(value){scope=value},navigate(key){params=new URLSearchParams({sessionKey:key})},close(){slots.forEach(slot=>slot?.cleanup?.())}}
   f.render();return f

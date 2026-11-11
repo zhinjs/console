@@ -20,9 +20,11 @@ import {
   ExternalLink,
   SlidersHorizontal,
   MessageSquare,
+  Inbox,
 } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
 import { PageShell } from '../components/PageShell'
+import { MiniRingGauge, StatCard, StatGrid } from '../components/StatCard'
 import { ErrorAlert } from '../components/error-alert'
 import { Card, CardContent } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
@@ -452,6 +454,9 @@ export default function EndpointsPage() {
     [endpoints],
   )
 
+  const pendingLoginTotal = Math.max(pendingLoginEndpointCount, loginTasks.length)
+  const onlineRate = endpoints.length > 0 ? Math.round((onlineCount / endpoints.length) * 100) : 0
+
   const uniqueAdapters = useMemo(() => {
     const seen = new Set<string>()
     for (const ep of endpoints) {
@@ -534,31 +539,41 @@ export default function EndpointsPage() {
 
       {endpoints.length > 0 && (
         <div className="console-endpoints-summary-strip">
-          <div className="console-page-meta">
-            <span>{i18n.t("共 {0} 个账号", [String(endpoints.length)])}</span>
-            <span aria-hidden="true">·</span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="console-status-dot" aria-hidden="true" />
-              {i18n.t("{0} 个在线", [String(onlineCount)])}
-            </span>
-            {(pendingLoginEndpointCount > 0 || loginTasks.length > 0) && (
-              <>
-                <span aria-hidden="true">·</span>
-                <span className="console-endpoint-summary-pill is-warning">
-                  <QrCode className="h-3.5 w-3.5" aria-hidden="true" />
-                  {i18n.t("{0} 个等待登录", [String(Math.max(pendingLoginEndpointCount, loginTasks.length))])}
-                </span>
-              </>
-            )}
-            {totalPendingEvents > 0 && (
-              <>
-                <span aria-hidden="true">·</span>
-                <span className="console-endpoint-summary-pill is-info">
-                  {totalPendingEvents} {i18n.t(" 条待处理")}
-                </span>
-              </>
-            )}
-          </div>
+          <StatGrid label={i18n.t("账号概况")}>
+            <StatCard
+              icon={Bot}
+              label={i18n.t("全部账号")}
+              value={endpoints.length}
+              sub={i18n.t("{0} 个平台", [uniqueAdapters.length])}
+              onOpen={() => setStatusFilter('all')}
+              pressed={statusFilter === 'all'}
+            />
+            <StatCard
+              icon={Wifi}
+              label={i18n.t("在线")}
+              value={onlineCount}
+              sub={i18n.t("在线率 {0}%", [onlineRate])}
+              aside={<MiniRingGauge percent={onlineRate} tone={onlineRate === 100 ? 'success' : onlineRate >= 60 ? 'primary' : 'warning'} />}
+              tone={onlineCount < endpoints.length ? 'warning' : undefined}
+              onOpen={() => setStatusFilter('online')}
+              pressed={statusFilter === 'online'}
+            />
+            <StatCard
+              icon={QrCode}
+              label={i18n.t("等待登录")}
+              value={pendingLoginTotal}
+              sub={pendingLoginTotal > 0 ? i18n.t("需要扫码或验证") : i18n.t("无需处理")}
+              tone={pendingLoginTotal > 0 ? 'warning' : undefined}
+              onOpen={() => setStatusFilter('pending_login')}
+              pressed={statusFilter === 'pending_login'}
+            />
+            <StatCard
+              icon={Inbox}
+              label={i18n.t("待处理事件")}
+              value={totalPendingEvents}
+              sub={i18n.t("好友申请、入群邀请与通知")}
+            />
+          </StatGrid>
 
           <div className="console-endpoints-toolbar" role="region" aria-label={i18n.t("账号筛选")}>
             <div className="console-endpoints-filter-group" role="group" aria-label={i18n.t("运行状态")}>

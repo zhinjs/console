@@ -10,6 +10,7 @@ import {
   FileText,
   Filter,
   Info,
+  Layers,
   MoreHorizontal,
   X,
   RefreshCw,
@@ -26,6 +27,7 @@ import { Input } from '../../components/ui/input'
 import { SelectField } from '../../components/ui/select'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '../../components/ui/dropdown-menu'
 import './disclosure.css'
+import { StatCard, StatGrid } from '../../components/StatCard'
 import { EmptyState } from '../../components/empty-state'
 import { ErrorAlert } from '../../components/error-alert'
 import { ListItemButton } from '../../components/ui/list-item-button'
@@ -112,27 +114,42 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
   const visibleTotal = state.logs.length
 
 
+  const levelShare = (level: KnownLogLevel) => state.stats && state.stats.total > 0
+    ? Math.round((levelCount(level) / state.stats.total) * 100)
+    : null
+
   return (
+    <>
+    <StatGrid label={i18n.t("日志概况")}>
+      <StatCard
+        icon={Layers}
+        label={i18n.t("总日志")}
+        value={state.stats?.total ?? '—'}
+        sub={state.stats?.oldestTimestamp
+          ? i18n.t("最早 {0}", [new Date(state.stats.oldestTimestamp).toLocaleString(i18n.locale)])
+          : i18n.t("全部历史记录")}
+        onOpen={() => actions.selectLevel('all')}
+        pressed={state.level === 'all'}
+      />
+      {OVERVIEW_LEVELS.map((level) => {
+        const meta = LEVEL_META[level]
+        const share = levelShare(level)
+        const count = levelCount(level)
+        return (
+          <StatCard
+            key={level}
+            icon={meta.icon}
+            label={meta.label}
+            value={state.stats ? levelCount(level) : '—'}
+            sub={share !== null ? i18n.t("占全部 {0}%", [share]) : i18n.t("点击只看此级别")}
+            tone={state.stats && count > 0 ? level === 'error' ? 'danger' : level === 'warn' ? 'warning' : undefined : undefined}
+            onOpen={() => actions.selectLevel(level)}
+            pressed={state.level === level}
+          />
+        )
+      })}
+    </StatGrid>
     <section className="console-log-workbench" aria-label={i18n.t("日志诊断工作台")}>
-      <header className="console-log-overview">
-        <ListItemButton type="button" className={cn('console-log-signal', state.level === 'all' && 'is-selected')} onClick={() => actions.selectLevel('all')} aria-pressed={state.level === 'all'}>
-
-          <strong>{state.stats?.total ?? '—'}</strong>
-          <small>{i18n.t("总日志")}</small>
-        </ListItemButton>
-        {OVERVIEW_LEVELS.map((level) => {
-          const meta = LEVEL_META[level]
-          const Icon = meta.icon
-          return (
-            <ListItemButton key={level} type="button" className={cn('console-log-signal', meta.className, state.level === level && 'is-selected')} onClick={() => actions.selectLevel(level)} aria-pressed={state.level === level}>
-              <Icon aria-hidden="true" />
-              <strong>{state.stats ? levelCount(level) : '—'}</strong>
-              <small>{meta.label}</small>
-            </ListItemButton>
-          )
-        })}
-
-      </header>
       {state.stats && state.stats.total > 0 ? (
         <div className="console-severity-strip" aria-hidden="true">
           <span style={{ width: `${(levelCount('info') / state.stats.total) * 100}%`, background: 'hsl(var(--primary) / 0.72)' }} />
@@ -223,6 +240,7 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
         {selected ? <LogInspector key={String(selected.id)} log={selected} offPage={!selectedOnPage} onFilterSource={actions.selectSource} onClose={() => setSelection(null)} /> : null}
       </div>
     </section>
+    </>
   )
 }
 

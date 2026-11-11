@@ -33,3 +33,22 @@ test('full-authorized directories retain valid personal hashes without pretendin
   assert.equal(readRecentSessions({ success: true, data: [row] })[0].sessionKey, key)
   assert.deepEqual(readRecentSessions({ success: true, data: [{ ...row, session_key: 'personal-session:v1:incomplete' }] }), [])
 })
+
+test('session summary counts every archived session, not only the recent picker slice', async () => {
+  const { summarizeRecentSessions } = await import('../console-ui/src/pages/agent-session-recent.mjs')
+  const now = Date.UTC(2026, 10, 11, 12)
+  const row = (key, turns, hoursAgo, status = 'completed') => ({ session_key: key, turns, last_started_at: now - hoursAgo * 3_600_000, last_status: status })
+  const rows = [
+    row('icqq:bot:group:g1', 10, 1),
+    row('icqq:bot:group:g1', 4, 30),
+    row('icqq:bot:private:u1', 3, 2, 'failed'),
+    row('telegram:bot:channel:c1', 5, 48),
+    row('broken-key', 99, 1),
+    ...Array.from({ length: 14 }, (_, i) => row(`sandbox:bot:private:p${i}`, 1, 72)),
+  ]
+  assert.deepEqual(summarizeRecentSessions({ success: true, data: rows }, now),
+    { sessions: 17, turns: 10 + 3 + 5 + 14, active: 2, groups: 2, privates: 15, failed: 1 })
+  assert.equal(summarizeRecentSessions({ success: false }, now), null)
+  assert.equal(summarizeRecentSessions(null, now), null)
+  assert.deepEqual(summarizeRecentSessions({ success: true, data: [] }, now), { sessions: 0, turns: 0, active: 0, groups: 0, privates: 0, failed: 0 })
+})

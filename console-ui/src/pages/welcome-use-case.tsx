@@ -52,7 +52,7 @@ export function WelcomeUseCaseSession({ scope }: { scope: string }) {
   const active = isInboxCacheScopeActive(scope), applied = welcomeApplied(inspection.evidence)
   const ready = active && selected && welcomeReady(inspection.evidence, target)
   return <div className="mx-auto max-w-3xl space-y-5 p-4 md:p-6">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-xl font-semibold">{i18n.t("配置新成员欢迎")}</h1><p className="mt-1 text-sm text-muted-foreground">{i18n.t("选择实例、限定范围、核对应用，再到真实群完成人工验证。")}</p></div><Button asChild variant="outline"><Link to="/tasks">{i18n.t("返回用途目录")}</Link></Button></div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="console-page-title">{i18n.t("配置新成员欢迎")}</h1><p className="mt-1 text-sm text-muted-foreground">{i18n.t("选择实例、限定范围、核对应用，再到真实群完成人工验证。")}</p></div><Button asChild variant="outline"><Link to="/tasks">{i18n.t("返回用途目录")}</Link></Button></div>
     {catalogError && <Alert variant="destructive"><AlertDescription>{catalogError}</AlertDescription></Alert>}
     <Card><CardHeader><CardTitle>{i18n.t("1 · 选择明确实例")}</CardTitle></CardHeader><CardContent className="space-y-3">
       <Button variant="outline" disabled={loading || !active} onClick={() => void load()}>{loading ? i18n.t("读取中…") : i18n.t("刷新用途与实例")}</Button>
