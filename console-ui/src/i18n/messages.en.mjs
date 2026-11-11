@@ -3220,6 +3220,8 @@ export const englishMessages = Object.freeze({
   "已是最新，没有可更新的插件": "Already up to date. No plugin updates available.",
   "发现 {0} 个可更新插件": "Found {0} plugin update(s)",
   "检查失败：{0}": "Update check failed: {0}",
+  "群成员": "Group members",
+  "群成员（{0}）": "Group members ({0})",
   "Workroom 项目目录格式无效": "Invalid Workroom project catalog",
   "项目目录读取失败，可以重试，或按 Project ID 查询。": "Couldn't load the project catalog. Retry, or look up a Project ID.",
   "无法读取 Workroom 项目目录：{0}": "Couldn't load the Workroom project catalog: {0}",

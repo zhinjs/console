@@ -2,7 +2,7 @@ import { translate } from '../../i18n/locale.mjs'
 import { useI18n } from '../../i18n'
 import type * as React from 'react'
 import type { SetStateAction } from 'react'
-import type { ReactNode } from 'react'
+import type { ElementType, ReactNode } from 'react'
 import { Fragment, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ComposerAttachmentMenu } from './ComposerAttachmentMenu'
@@ -39,6 +39,15 @@ import { Badge } from '../../components/ui/badge'
 import { Alert, AlertDescription } from '../../components/ui/alert'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs'
 import { ConversationSidebar } from './ConversationSidebar'
+import { GroupMembersDrawer } from './GroupMembersDrawer'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
+import {
+  GROUP_PANEL_DRAWER_QUERY,
+  memberDrawerAvailable,
+  memberDrawerOpen,
+  nextMemberDrawerTarget,
+  shouldResetMemberDrawer,
+} from './group-panel-model.mjs'
 import { ChatMessageRow, type MessageDraftReference } from './ChatMessageRow'
 import { ChatScrollArea } from './ChatScrollArea'
 import { MessageDiagnosticsAction, MessageDiagnosticsProvider } from './MessageDiagnostics'
@@ -227,6 +236,14 @@ function EndpointWorkspace() {
   const setForwardDraft = (next: SetStateAction<MessageDraftReference | null>) => updateComposerExtras('forward', next)
   const [memberSearch, setMemberSearch] = useState('')
   const [memberRoleFilter, setMemberRoleFilter] = useState<'all' | 'owner' | 'admin' | 'member'>('all')
+  // Below 900px the member column is hidden (im-workspace.css); the header offers it as a drawer.
+  const narrowWorkspace = useMediaQuery(GROUP_PANEL_DRAWER_QUERY)
+  const [memberDrawerFor, setMemberDrawerFor] = useState<string | null>(null)
+  const showMemberDrawer = memberDrawerAvailable({ showRightPanel, narrow: narrowWorkspace })
+  const memberDrawerIsOpen = memberDrawerOpen(memberDrawerFor, membersGroupKey, showMemberDrawer)
+  // Switching conversation or widening the window closes the drawer (adjust-state-during-render).
+  if (shouldResetMemberDrawer(memberDrawerFor, membersGroupKey, showMemberDrawer)) setMemberDrawerFor(null)
+  const setMemberDrawerIsOpen = (open: boolean) => setMemberDrawerFor(nextMemberDrawerTarget(open, membersGroupKey))
   const { confirm, ConfirmDialog: ConfirmDialogHost } = useConfirm()
   const muteMinutesRef = useRef(String(DEFAULT_MUTE_MINUTES))
   const imageFileRef = useRef<HTMLInputElement>(null)
@@ -471,6 +488,128 @@ function EndpointWorkspace() {
     { total: 0, owner: 0, admin: 0, member: 0 },
   )
 
+  /** Member list and moderation, shown as the right column on wide screens and in a drawer below 900px. */
+  const renderMemberPanel = (Title: ElementType, Description: ElementType) => (
+    <>
+      <div className="im-right-header p-3 border-b border-border/60">
+        <div className="im-member-panel-title">
+          <div>
+            <Title className="text-sm font-semibold">{i18n.t("群成员与管理")}</Title>
+            <Description className="text-xs text-muted-foreground mt-0.5">{i18n.t("仅 ICQQ 群聊")}</Description>
+          </div>
+          <Badge variant="secondary" className="im-member-total">
+            {memberCounts.total}
+          </Badge>
+        </div>
+      </div>
+      <div className="im-right-actions p-2 border-b border-border/60">
+        <Button
+          size="sm"
+          variant="outline"
+          className="im-secondary-action w-full"
+          onClick={() => void loadMembers()}
+          disabled={membersLoading}
+        >
+          {membersLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+          {i18n.t("加载成员")}</Button>
+        <div className="im-member-search">
+          <Search className="h-3.5 w-3.5" />
+          <Input
+            value={memberSearch}
+            onChange={(e) => setMemberSearch(e.target.value)}
+            aria-label={i18n.t("搜索成员")}
+            placeholder={i18n.t("搜索成员昵称、ID 或角色")}
+            className="h-8 border-0 bg-transparent px-0 text-xs shadow-none focus-visible:ring-0"
+          />
+        </div>
+        <div className="im-member-role-tabs">
+          {[
+            ['all', i18n.t("全部 {0}", [memberCounts.total])],
+            ['owner', i18n.t("群主 {0}", [memberCounts.owner])],
+            ['admin', i18n.t("管理 {0}", [memberCounts.admin])],
+            ['member', i18n.t("成员 {0}", [memberCounts.member])],
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              className={cn(memberRoleFilter === value && 'active')}
+              onClick={() => setMemberRoleFilter(value as typeof memberRoleFilter)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="im-member-list flex-1 overflow-y-auto p-2 space-y-2 min-h-0">
+        {filteredMembers.length === 0 && (
+          <div className="im-member-empty">
+            <User className="h-8 w-8 opacity-30" />
+            <span>{membersLoading ? i18n.t("正在加载成员") : membersFailed ? i18n.t("成员加载失败，请点击「加载成员」重试") : i18n.t("暂无匹配成员")}</span>
+          </div>
+        )}
+        {filteredMembers.map((item) => {
+          const uid = item.uid
+          const roleKind = roleFilterValue(item.role)
+          return (
+            <div
+              key={`${uid}-${item.index}`}
+              className={cn('im-member-card flex flex-col gap-1.5 text-xs p-2 border border-border/70 rounded-md bg-background/60', `im-member-card--${roleKind}`)}
+            >
+              <div className="im-member-card-main">
+                <span className="im-member-avatar">
+                  {memberInitials(item.name)}
+                </span>
+                <span className="im-member-identity">
+                  <span className="im-member-name">{item.name}</span>
+                  <span className="im-member-id">{uid}</span>
+                </span>
+                <span className="im-member-role">
+                  {roleKind === 'owner' ? (
+                    <Crown className="h-3.5 w-3.5" />
+                  ) : roleKind === 'admin' ? (
+                    <Shield className="h-3.5 w-3.5" />
+                  ) : (
+                    <User className="h-3.5 w-3.5" />
+                  )}
+                  <Badge variant="outline">
+                    {memberRoleLabel(item.role, i18n.locale)}
+                  </Badge>
+                </span>
+              </div>
+              {!readOnly && <div className="im-member-actions">
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="im-member-danger"
+                  onClick={() =>
+                    void handleGroupAction(ENDPOINT_RPC.GROUP_KICK, uid, item.name)
+                  }
+                >
+                  {i18n.t("踢")}</Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    void handleGroupAction(ENDPOINT_RPC.GROUP_MUTE, uid, item.name)
+                  }
+                >
+                  {i18n.t("禁言")}</Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    void handleGroupAction(ENDPOINT_RPC.GROUP_ADMIN, uid, item.name, { enable: roleKind !== 'admin' })
+                  }
+                >
+                  {roleKind === 'admin' ? i18n.t("取消管理") : i18n.t("设为管理")}</Button>
+              </div>}
+            </div>
+          )
+        })}
+      </div>
+    </>
+  )
+
   let lastDay = ''
 
   return (
@@ -554,6 +693,15 @@ function EndpointWorkspace() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  {showMemberDrawer && (
+                    <GroupMembersDrawer
+                      open={memberDrawerIsOpen}
+                      onOpenChange={setMemberDrawerIsOpen}
+                      memberCount={memberCounts.total}
+                    >
+                      {({ Title, Description }) => renderMemberPanel(Title, Description)}
+                    </GroupMembersDrawer>
+                  )}
                   <MessageDiagnosticsAction endpoint={info?.endpoint} selection={selection} />
                   <Button
                     variant="ghost"
@@ -1020,124 +1168,9 @@ function EndpointWorkspace() {
           )}
         </div>
 
-        {showRightPanel && (
+        {showRightPanel && !narrowWorkspace && (
           <aside className={cn('im-right-panel im-right-visible')}>
-            <div className="im-right-header p-3 border-b border-border/60">
-              <div className="im-member-panel-title">
-                <div>
-                  <h3 className="text-sm font-semibold">{i18n.t("群成员与管理")}</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">{i18n.t("仅 ICQQ 群聊")}</p>
-                </div>
-                <Badge variant="secondary" className="im-member-total">
-                  {memberCounts.total}
-                </Badge>
-              </div>
-            </div>
-            <div className="im-right-actions p-2 border-b border-border/60">
-              <Button
-                size="sm"
-                variant="outline"
-                className="im-secondary-action w-full"
-                onClick={() => void loadMembers()}
-                disabled={membersLoading}
-              >
-                {membersLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                {i18n.t("加载成员")}</Button>
-              <div className="im-member-search">
-                <Search className="h-3.5 w-3.5" />
-                <Input
-                  value={memberSearch}
-                  onChange={(e) => setMemberSearch(e.target.value)}
-                  aria-label={i18n.t("搜索成员")}
-                  placeholder={i18n.t("搜索成员昵称、ID 或角色")}
-                  className="h-8 border-0 bg-transparent px-0 text-xs shadow-none focus-visible:ring-0"
-                />
-              </div>
-              <div className="im-member-role-tabs">
-                {[
-                  ['all', i18n.t("全部 {0}", [memberCounts.total])],
-                  ['owner', i18n.t("群主 {0}", [memberCounts.owner])],
-                  ['admin', i18n.t("管理 {0}", [memberCounts.admin])],
-                  ['member', i18n.t("成员 {0}", [memberCounts.member])],
-                ].map(([value, label]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className={cn(memberRoleFilter === value && 'active')}
-                    onClick={() => setMemberRoleFilter(value as typeof memberRoleFilter)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="im-member-list flex-1 overflow-y-auto p-2 space-y-2 min-h-0">
-              {filteredMembers.length === 0 && (
-                <div className="im-member-empty">
-                  <User className="h-8 w-8 opacity-30" />
-                  <span>{membersLoading ? i18n.t("正在加载成员") : membersFailed ? i18n.t("成员加载失败，请点击「加载成员」重试") : i18n.t("暂无匹配成员")}</span>
-                </div>
-              )}
-              {filteredMembers.map((item) => {
-                const uid = item.uid
-                const roleKind = roleFilterValue(item.role)
-                return (
-                  <div
-                    key={`${uid}-${item.index}`}
-                    className={cn('im-member-card flex flex-col gap-1.5 text-xs p-2 border border-border/70 rounded-md bg-background/60', `im-member-card--${roleKind}`)}
-                  >
-                    <div className="im-member-card-main">
-                      <span className="im-member-avatar">
-                        {memberInitials(item.name)}
-                      </span>
-                      <span className="im-member-identity">
-                        <span className="im-member-name">{item.name}</span>
-                        <span className="im-member-id">{uid}</span>
-                      </span>
-                      <span className="im-member-role">
-                        {roleKind === 'owner' ? (
-                          <Crown className="h-3.5 w-3.5" />
-                        ) : roleKind === 'admin' ? (
-                          <Shield className="h-3.5 w-3.5" />
-                        ) : (
-                          <User className="h-3.5 w-3.5" />
-                        )}
-                        <Badge variant="outline">
-                          {memberRoleLabel(item.role, i18n.locale)}
-                        </Badge>
-                      </span>
-                    </div>
-                    {!readOnly && <div className="im-member-actions">
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="im-member-danger"
-                        onClick={() =>
-                          void handleGroupAction(ENDPOINT_RPC.GROUP_KICK, uid, item.name)
-                        }
-                      >
-                        {i18n.t("踢")}</Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          void handleGroupAction(ENDPOINT_RPC.GROUP_MUTE, uid, item.name)
-                        }
-                      >
-                        {i18n.t("禁言")}</Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          void handleGroupAction(ENDPOINT_RPC.GROUP_ADMIN, uid, item.name, { enable: roleKind !== 'admin' })
-                        }
-                      >
-                        {roleKind === 'admin' ? i18n.t("取消管理") : i18n.t("设为管理")}</Button>
-                    </div>}
-                  </div>
-                )
-              })}
-            </div>
+            {renderMemberPanel('h3', 'p')}
           </aside>
         )}
       </div>
