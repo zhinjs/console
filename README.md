@@ -22,10 +22,10 @@ pnpm preview
 
 - `GET /entries` — 插件清单
 - `POST /api/console/request` — Console RPC（原 WebSocket `type` 信封）
-- `GET /api/events` — SSE 推送（`@zhin.js/client` ≥ 1.1.0）
+- `GET /api/events` — SSE 推送
 - `GET /api/system/status` — 登录校验
 
-依赖 `@zhin.js/client` **≥ 2.0.5**、`@zhin.js/contract` **≥ 1.0.3**（REST+SSE，不再连 `wss://…/server`；含 agent-stream 与 runtime Token）。
+传输只走 REST + SSE，不连 `wss://…/server`。SDK 版本见下文「SDK 版本」。
 
 可通过 URL **仅预填** Host 地址（`token` 须在登录页手动输入，勿放在 URL 中）：
 
@@ -57,21 +57,26 @@ pnpm pages:prepare   # CONSOLE_PAGES_CNAME=demo.zhin.dev
 ### 部署
 
 - **实际托管**：Cloudflare Pages 项目 `console`（自定义域 `demo.zhin.dev`），监听 **`main`**，构建命令 `pnpm run build:demo`
-- push `main` 即自动部署；GitHub Actions `demo-pages.yml` 仅作备用（Pages 环境目前只允许 `main`）
+- push `main` 即自动部署；Demo 站没有 GitHub Actions 部署流程（GitHub Pages 环境只发布 console.zhin.dev）
 - **Host 侧**：Hugging Face Space [`zhinjs-demo.hf.space`](https://zhinjs-demo.hf.space)（Token `zhin-demo`）
 
 ## 导航
 
 Console 面向普通用户（[zhin#970](https://github.com/zhinjs/zhin/issues/970)），侧栏分组定义在 `console-ui/src/navigation-taxonomy.ts`：
 
-| 分组 | 页面 |
-|------|------|
-| 常用 | 首页、聊天账号、聊天记录、定时提醒、运行日志 |
-| 机器人 | 机器人状态、试聊一下（sandbox 插件页）、助手任务（启用助手时）、群聊插话、技能助手、Token 用量 |
-| 功能 | 插件管理、插件市场、任务中心 |
-| 高级（默认折叠） | 设置、环境变量、项目文件、数据库、运行时能力、消息场景试验台、Workroom |
+| 分组 | 菜单里的页面 | 不在菜单里、从上级页面进入 |
+|------|------|------|
+| 会话 | 试聊一下（`/sandbox`，sandbox 插件页）、聊天记录 | — |
+| 任务 | 任务、Workroom | 群欢迎配置流程、定时提醒、助手任务（从「任务」进入）；Workroom 配置 |
+| 聊天账号 | 聊天账号 | 聊天账号详情 |
+| 插件 | 插件管理、插件市场，以及没有声明分组的插件页 | 插件详情 |
+| 运行维护 | 首页、机器人状态、运行日志、Token 用量 | 决策回放（从「机器人状态」进入） |
+| 高级（默认折叠） | 运行时能力、项目文件、数据库、消息场景试验台 | 命令权限说明（从「运行时能力」进入） |
+| 设置（侧栏底部） | 设置、环境变量、群聊插话、技能助手、模型 | — |
 
-「机器人」分组名是对外约定，后续新页挂在它下面。
+内置页面在 `console-ui/src/registerBuiltinShell.tsx` 注册。「群聊插话」「技能助手」「决策回放」只对持有相应权限的令牌显示。
+
+`常用`、`机器人`、`功能`、`高级`、`其他` 是已发布插件使用的分组名，继续保留：插件声明了这些分组时按原名显示。
 
 「群聊插话」（`/agent/ambient`）：状态来自 `pluginRpc('root', 'ambient')`（Host 方法 `plugin.root.ambient`，需要令牌持有 `ambient:read`）。行为和范围设置用 `config:patch` + `expectedRevision` 只写 `ai.trigger.ambient`，文件保存与运行生效分别显示。旁听模型与旁听决策模型在统一模型用途页配置。
 
@@ -79,7 +84,7 @@ Console 面向普通用户（[zhin#970](https://github.com/zhinjs/zhin/issues/97
 
 「技能助手」（`/agent/skills`）：状态来自 `pluginRpc('root', 'skills')`（Host 方法 `plugin.root.skills`，需要令牌持有 `skills:read`），页面只读统计并提供“管理模型用途”入口。管理员在 `/agent/models` 的“用途”页管理六种决策用途的模式与 Profile；不再读取、猜测或写入旧的 `ai.decisions`／插件 Provider 绑定。
 
-插件约定页没有分组字段，已知页面按路由在 `PLUGIN_PAGE_PLACEMENT` 里归组，其余进「其他」。原有路由路径不变，旧链接继续可用。
+插件约定页没有声明分组时，按路由在 `PLUGIN_PAGE_PLACEMENT` 里归组（目前只有 `/sandbox` → 会话），其余进「插件」。原有路由路径不变，旧链接继续可用。
 
 ## 目录
 
@@ -93,9 +98,18 @@ Console 面向普通用户（[zhin#970](https://github.com/zhinjs/zhin/issues/97
 
 运行时依赖 [@zhin.js/client](https://www.npmjs.com/package/@zhin.js/client)（SDK）与 [@zhin.js/contract](https://www.npmjs.com/package/@zhin.js/contract)（契约常量/类型）。
 
+### SDK 版本
+
+只使用一代 SDK：`@zhin.js/client` 1.1.x、`@zhin.js/contract` 1.1.x、`@zhin.js/ai` 1.1.x，与 zhin 仓库 `packages/console/*` 当前发布线一致（npm 的 `latest`）。`package.json` 用 `~` 范围，因为 npm 上还有不属于这条线的 `@zhin.js/client` 2.x 和 `@zhin.js/ai` 1.5.x，`^` 会把它们装进来并在 lockfile 里产生第二份 contract / console-protocol / ai。`tests/console-contract.test.mjs` 检查这些范围，以及 lockfile 里每个包只有一个版本。
+
+- 路由/工具注册表（`createConsoleApp()`）和当前 Host 会话的 `ConsoleClient` 由 `console-ui/src/utils/console-client.ts` 持有；`client/main.tsx` 用 `ConsoleClientProvider` 把它交给 SDK 的 hooks（`useConsoleTransport`、`useEnvFiles`、`useEngagements` 等）。
+- React 之外的代码用 `getConsoleTransport()`。登出、401 或更换 Host 时 `resetConsoleRuntime()` 丢弃旧 transport，路由注册表保留。
+- 需要 Node.js ≥ 22.19（与 SDK 的 `engines` 一致）。
+
 ## CI / Pages
 
-`.github/workflows/pages.yml`：push `main` 即部署。
+- `.github/workflows/ci.yml`：对 `main` 的 pull request 以及 push 到 `main` / `codex/**` 时运行 typecheck、test、build。
+- `.github/workflows/pages.yml`：push `main` 时先跑 typecheck 和 test，通过后构建并部署 GitHub Pages。
 
 可选仓库变量：
 

@@ -61,7 +61,7 @@ export default defineConfig({
     lazyCompilation: false,
     // module cache 读取 .codegraph/daemon.sock（unix socket）会 panic，
     // watch 排除无法覆盖该路径，先关闭 persistentCache
-    persistentCache: false,
+    persistentCache: true,
     define: demoBuildEnv,
     partialBundling: {
       enforceResources: [
