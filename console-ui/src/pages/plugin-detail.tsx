@@ -12,7 +12,8 @@ import { Skeleton } from '../components/ui/skeleton'
 import { Separator } from '../components/ui/separator'
 import { requestConsole } from '../utils/console-rpc'
 import { useConfirm } from '../components/confirm-dialog'
-import { validatePluginDetail, requirePluginUpdate, pluginDiagnosticSummary } from './plugin-detail-model.mjs'
+import { validatePluginDetail, requirePluginUpdate, pluginDiagnosticSummary, pluginDetailView } from './plugin-detail-model.mjs'
+import { disableConfirmation } from './plugin-toggle-model.mjs'
 import { JsonViewer } from './introspection/JsonViewer'
 import { PluginManagementSummary } from './PluginManagementSummary'
 import { isDemoMode } from '../utils/demo-mode'
@@ -102,6 +103,9 @@ export default function PluginDetailPage() {
     setActionMessage(null)
     setActionError(null)
     setActionErrorDetail(null)
+    // A different plugin starts from the skeleton; data from the previous route is never shown under it.
+    setPlugin(null)
+    setError(null)
     if (name) fetchPluginDetail(name)
     return () => { lifecycleAbort.current?.abort(); detailSequence.current += 1 }
   }, [name])
@@ -169,6 +173,10 @@ export default function PluginDetailPage() {
 
   const setEnabled = async (enabled: boolean) => {
     if (!plugin?.management || !writable || actionInFlight.current || actionUnconfirmed) return
+    if (!enabled) {
+      if (!await confirm(disableConfirmation(plugin, i18n.locale))) return
+      if (routeIdentity.current !== name || actionInFlight.current) return
+    }
     const previous = plugin.management
     const instanceKey = plugin.instanceKey
     const controller = new AbortController()
@@ -369,7 +377,9 @@ export default function PluginDetailPage() {
 
   const verificationDisplay = verificationResult ? verificationResultDisplay(verificationResult.outcome, i18n.locale) : null
 
-  if (loading) {
+  const detailView = pluginDetailView({ loading, plugin, error })
+
+  if (detailView.view === 'skeleton') {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-24" />
@@ -379,7 +389,7 @@ export default function PluginDetailPage() {
     )
   }
 
-  if (error || !plugin) {
+  if (detailView.view === 'error' || !plugin) {
     return (
       <div>
         <Button variant="ghost" onClick={() => navigate(listUrl)} className="mb-4">
@@ -398,6 +408,16 @@ export default function PluginDetailPage() {
       {/* Header */}
       <Button variant="ghost" size="sm" onClick={() => navigate(listUrl)}>
         <ArrowLeft className="w-4 h-4 mr-1" /> {i18n.t(" 返回")}</Button>
+      {detailView.staleError && (
+        <Alert variant="warning">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span>{i18n.t("刷新失败：{0}。以下是上次读取的内容。", [detailView.staleError])}</span>
+            <Button variant="outline" size="sm" disabled={loading} onClick={() => void fetchPluginDetail(plugin.instanceKey)}>
+              <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("重试")}</Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="flex items-center gap-3 min-w-0">
         <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-secondary shrink-0">
@@ -446,7 +466,7 @@ export default function PluginDetailPage() {
           setVerificationPlan(null)
         }}>{i18n.t("已核对外部结果")}</Button>
       </AlertDescription></Alert>}
-      <Card><CardHeader><CardTitle className="text-base">{i18n.t("安装与应用状态")}</CardTitle></CardHeader><CardContent><PluginManagementSummary state={plugin.management} error={plugin.managementError} readOnly={!writable} /><Button variant="outline" size="sm" className="mt-3" disabled={actionLoading} onClick={() => void fetchPluginDetail(plugin.instanceKey)}>{i18n.t("刷新状态证据")}</Button></CardContent></Card>
+      <Card><CardHeader><CardTitle className="text-base">{i18n.t("安装与应用状态")}</CardTitle></CardHeader><CardContent><PluginManagementSummary state={plugin.management} error={plugin.managementError} readOnly={!writable} /><Button variant="outline" size="sm" className="mt-3" disabled={actionLoading || loading} aria-busy={loading} onClick={() => void fetchPluginDetail(plugin.instanceKey)}><RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />{loading ? i18n.t("正在刷新…") : i18n.t("刷新状态证据")}</Button></CardContent></Card>
       {searchParams.get('useCase') === 'group-welcome' && <WelcomeFlowContext instanceKey={plugin.instanceKey} kind="detail" />}
       {writable && (
       <Card className="border-border/80">
@@ -474,7 +494,7 @@ export default function PluginDetailPage() {
             {actionError && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{actionError}{actionErrorDetail && <details className="mt-2 text-xs"><summary className="cursor-pointer">{i18n.t("错误详情")}</summary><p className="mt-2 break-all">{actionErrorDetail}</p></details>}{actionUnconfirmed && <Button variant="outline" size="sm" onClick={() => void fetchPluginDetail(plugin.instanceKey)}>{i18n.t("刷新核对状态")}</Button>}</AlertDescription>
+                <AlertDescription>{actionError}{actionErrorDetail && <details className="mt-2 text-xs"><summary className="cursor-pointer">{i18n.t("错误详情")}</summary><p className="mt-2 break-all">{actionErrorDetail}</p></details>}{actionUnconfirmed && <Button variant="outline" size="sm" disabled={loading} aria-busy={loading} onClick={() => void fetchPluginDetail(plugin.instanceKey)}><RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新核对状态")}</Button>}</AlertDescription>
               </Alert>
             )}
             {verificationPlan && <section aria-label={i18n.t("业务验证计划")} className="space-y-3 rounded-md border p-3"><p className="font-medium">{i18n.t("第 ")}{verificationPlan.generation} {i18n.t(" 代业务检查 · 尚未执行")}</p>{verificationPlan.checks.length === 0 ? <p>{i18n.t("插件未提供可执行检查。")}</p> : verificationPlan.checks.map(check => { const display = verificationCheckDisplay(check, i18n.locale); return <div key={check.id} className="space-y-2"><p>{display.title} <Badge variant="secondary">{check.scope === 'local' ? i18n.t("本地") : i18n.t("平台")}</Badge></p><ul className="list-disc pl-5 text-xs text-muted-foreground">{display.effects.map((effect,index) => <li key={index}>{effect}</li>)}</ul><Button size="sm" disabled={actionLoading || actionUnconfirmed} onClick={() => void runVerification(check.id)}>{i18n.t("审阅并批准一次")}</Button></div> })}</section>}
