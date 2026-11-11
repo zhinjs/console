@@ -157,7 +157,7 @@ test('useDatabaseConsole separates the drop result from the list refresh', async
   const manager = { dbDropTable: async name => { calls.push(`drop:${name}`); return { success: true } } }
   let reads = 0
   const { useDatabaseConsole } = compile(hookSource, {
-    '@zhin.js/client': { getWebSocketManager: () => manager },
+    '../../utils/console-client': { getConsoleTransport: () => manager },
     '../../hooks/use-console-read': { useConsoleRead: () => (reads++ % 2 === 0 ? { ...tablesRead, data: null } : tablesRead) },
   })
   const db = useDatabaseConsole()

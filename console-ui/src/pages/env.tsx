@@ -1,6 +1,7 @@
 import { useI18n } from '../i18n'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useEnvFiles, getWebSocketManager } from '@zhin.js/client'
+import { useEnvFiles } from '@zhin.js/client'
+import { getConsoleTransport } from '../utils/console-client'
 import {
   KeyRound, AlertCircle, CheckCircle, Save, Loader2,
   RefreshCw, FileWarning, Eye, EyeOff
@@ -26,7 +27,7 @@ function ensureEnvUnloadGuard() {
   if (unloadGuardInstalled) return
   unloadGuardInstalled = true
   window.addEventListener('beforeunload', (event) => {
-    if (!envDraftSessions.hasUnsaved(getWebSocketManager())) return
+    if (!envDraftSessions.hasUnsaved(getConsoleTransport())) return
     event.preventDefault()
     event.returnValue = ''
   })
@@ -198,7 +199,7 @@ export default function EnvManagePage() {
   const readOnly = isDemoMode()
   const { files, loading, error, listFiles, getFile, saveFile } = useEnvFiles()
   ensureEnvUnloadGuard()
-  const session = envDraftSessions.get(getWebSocketManager())
+  const session = envDraftSessions.get(getConsoleTransport())
   const [activeTab, setActiveTab] = useState(session.selected ?? '.env')
   const updateDraft = useCallback((draft: FileDraft | null) => {
     if (draft) session.drafts.set(activeTab, draft)

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { getWebSocketManager } from '@zhin.js/client'
+import { getConsoleTransport } from '../utils/console-client'
 import { createReadState, pendingRead, successfulRead, failedRead } from './console-read-state.mjs'
 
 /** Track successful reads separately from empty values, retaining cached data on failure. */
 export function useConsoleRead<T>(reader: () => Promise<T>, initial: T) {
-  const manager = getWebSocketManager()
+  const manager = getConsoleTransport()
   const latestReader = useRef(reader)
   latestReader.current = reader
   const sequence = useRef(0)

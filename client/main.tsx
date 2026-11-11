@@ -11,7 +11,8 @@ import {
   CONSOLE_HOST_REACT_NAMESPACE_KEY,
   CONSOLE_SHARED_MODULES_KEY,
 } from "@zhin.js/contract";
-import { useWebSocket } from "@zhin.js/client";
+import { ConsoleClientProvider, useConsoleTransport } from "@zhin.js/client";
+import { getConsoleClient } from "@console/utils/console-client";
 import { resetConsoleRuntime } from "@console/utils/console-runtime";
 import { BrowserRouter } from "react-router-dom";
 import { getRouterBasename } from "./pagesBase";
@@ -51,10 +52,19 @@ registerBuiltinConsolePages();
 const demoSession = runDemoBootstrap();
 const initialSession = demoSession ?? runQueryPrefillMiddleware();
 
-function ConsoleShell() {
-  useWebSocket();
-
+function ConsoleConnection() {
+  useConsoleTransport();
   return <ConsoleWebHost />;
+}
+
+function ConsoleShell() {
+  // The shell only mounts while signed in; a 401 unmounts it, so each mount sees the session's client.
+  const [client] = React.useState(getConsoleClient);
+  return (
+    <ConsoleClientProvider client={client}>
+      <ConsoleConnection />
+    </ConsoleClientProvider>
+  );
 }
 
 function App() {

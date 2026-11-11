@@ -1,4 +1,4 @@
-import { app } from '@zhin.js/client'
+import { app } from './utils/console-client'
 import HomePage from './pages/dashboard'
 import PluginsPage from './pages/plugins'
 import PluginDetailPage from './pages/plugin-detail'

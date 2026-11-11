@@ -247,7 +247,7 @@ test('Endpoint transport uses canonical endpointKey and the public typed client 
   assert.match(endpointSources, /endpointKey/)
 
   const push = sourceText(join(SOURCE_ROOT, 'utils', 'endpoint-push.ts'))
-  assert.match(push, /getWebSocketManager/)
+  assert.match(push, /getConsoleTransport/)
   assert.match(push, /onConsoleEvent\(/)
   assert.match(push, /onConsoleEventRecoveryGap\(/)
   assert.match(push, /KnownConsoleEventEnvelope/)
@@ -404,8 +404,16 @@ test('released Zhin rich-message renderer is the single Markdown implementation'
 
 test('package manifest targets the released Zhin contract generation', () => {
   const manifest = JSON.parse(sourceText(join(ROOT, 'package.json')))
-  assert.equal(manifest.dependencies['@zhin.js/client'], '^2.1.11')
-  assert.equal(manifest.dependencies['@zhin.js/contract'], '^1.0.16')
-  assert.equal(manifest.dependencies['@zhin.js/ai'], '^1.5.6')
+  // One SDK generation: the tilde ranges keep npm from resolving the unrelated 1.5.x / 2.x lines.
+  assert.equal(manifest.dependencies['@zhin.js/client'], '~1.1.31')
+  assert.equal(manifest.dependencies['@zhin.js/contract'], '~1.1.22')
+  assert.equal(manifest.dependencies['@zhin.js/ai'], '~1.1.54')
+  assert.equal(Object.keys(manifest.dependencies).some(name => name.startsWith('@zhin.js/client-')), false)
+  const lock = sourceText(join(ROOT, 'pnpm-lock.yaml'))
+  for (const name of ['client', 'contract', 'console-protocol', 'ai']) {
+    const versions = new Set([...lock.matchAll(new RegExp(`^  '@zhin\\.js/${name}@([^'(]+)`, 'gm'))].map(match => match[1]))
+    assert.equal(versions.size, 1, `@zhin.js/${name} resolves to ${[...versions].join(', ')}`)
+  }
+  assert.equal(sourceFiles().some(path => /@zhin\.js\/client-sdk|getWebSocketManager|useWebSocket\b/.test(sourceText(path))), false)
   assert.match(manifest.dependencies.zod, /^\^4\./)
 })

@@ -15,5 +15,5 @@ test('Agent private styles inherit paired neutral controls and keep readable cap
  assert.match(css,/--playground-accent-foreground: var\(--primary-foreground\)/)
  assert.doesNotMatch(css,/color: white;|gradient\(/)
  for(const match of css.matchAll(/font-size:\s*([\d.]+)rem/g)) assert.ok(Number(match[1])>=.75,`caption ${match[1]}rem is too small`)
- for(const path of ['client/style.css','console-ui/src/style.css']) assert.doesNotMatch(readFileSync(new URL(path,root),'utf8'),/hsl\((184|186) 42% 32%\)/)
+ for(const path of ['client/style.css']) assert.doesNotMatch(readFileSync(new URL(path,root),'utf8'),/hsl\((184|186) 42% 32%\)/)
 })

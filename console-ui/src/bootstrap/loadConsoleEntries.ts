@@ -1,45 +1,19 @@
 import { translate } from '../i18n/locale.mjs'
 import * as React from 'react'
 import {
-  app,
-  configureConsole,
-  createPluginRegisterHostApi,
-  type CreatePluginRegisterHostApiOptions,
-} from '@zhin.js/client'
-import {
   AdapterConsolePage,
   DeclarativePageView,
-  fetchConsoleEntries,
-  getRegisterFn,
   loadConsoleEntries as loadEntriesFromSdk,
-  registerConsolePluginsFromEntries,
-  resolveEntryRegister,
   type DeclarativePageComponentProps,
   type DeclarativePageSpec,
-  type FetchConsoleEntriesOptions,
   type LoadConsoleEntriesOptions,
-} from '@zhin.js/client-sdk'
+} from '@zhin.js/client'
+import type { PluginRegisterHostApi } from '@zhin.js/contract'
+import { app } from '../utils/console-client'
 import { createHostRegistration } from './host-registration.mjs'
 import { getApiBase, getToken } from '../utils/auth'
 import { placePluginRoute } from '../navigation-taxonomy'
 import { withSandboxConversationDetails } from './sandbox-conversation-details'
-
-export type {
-  CreatePluginRegisterHostApiOptions,
-  DeclarativePageComponentProps,
-  DeclarativePageSpec,
-  FetchConsoleEntriesOptions,
-  LoadConsoleEntriesOptions,
-}
-export {
-  AdapterConsolePage,
-  createPluginRegisterHostApi,
-  DeclarativePageView,
-  fetchConsoleEntries,
-  getRegisterFn,
-  registerConsolePluginsFromEntries,
-  resolveEntryRegister,
-}
 
 const g = globalThis as unknown as {
   __ZHIN_RENDER_BLUEPRINT__?: (specOrBp: unknown, pageProps?: DeclarativePageComponentProps) => React.ReactElement
@@ -92,7 +66,7 @@ function idempotentAddTool(input: AddToolInput): string {
 export const hostRegistrations = createHostRegistration({
   addRoute: app.addRoute.bind(app),
   removeRoute: app.removeRoute.bind(app),
-  readRoutes: () => app._getRoutes(),
+  readRoutes: () => app.getRoutes(),
   addTool: idempotentAddTool,
 })
 
@@ -108,7 +82,7 @@ async function doLoadConsoleEntries(options?: LoadConsoleEntriesOptions, locale:
   const apiBase = getApiBase()
   const session = hostRegistrations.capture()
   const requestedApi = options?.hostApi
-  const hostApi = createPluginRegisterHostApi({
+  const hostApi: PluginRegisterHostApi = {
     React,
     addRoute: (input) => {
       if (!session.active()) return
@@ -120,7 +94,7 @@ async function doLoadConsoleEntries(options?: LoadConsoleEntriesOptions, locale:
       if (!session.active()) throw new Error('Host connection changed; stale tool registration ignored')
       return requestedApi ? requestedApi.addTool(input as Parameters<typeof requestedApi.addTool>[0]) : session.addTool(input as AddToolInput)
     },
-  })
+  }
 
   await loadEntriesFromSdk({
     ...options,
@@ -128,15 +102,7 @@ async function doLoadConsoleEntries(options?: LoadConsoleEntriesOptions, locale:
     entriesUrl: options?.entriesUrl ?? entriesUrlForApiBase(apiBase),
     assetOrigin: options?.assetOrigin ?? apiBase,
     hostApi,
-    beforeLoad: () => {
-      configureConsole({
-        getRuntimeEnv: () =>
-          (import.meta as unknown as { env?: { MODE?: string } }).env?.MODE === 'development'
-            ? 'development'
-            : 'production',
-      })
-      options?.beforeLoad?.()
-    },
+    beforeLoad: () => options?.beforeLoad?.(),
     fetchInit:
       options?.fetchInit ??
       (() => {

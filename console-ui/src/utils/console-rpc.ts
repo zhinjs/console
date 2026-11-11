@@ -1,4 +1,4 @@
-import { getWebSocketManager } from '@zhin.js/client'
+import { getConsoleTransport } from './console-client'
 
 export interface ConsoleRpcRequest {
   readonly type: string
@@ -10,5 +10,5 @@ export interface ConsoleRpcRequest {
  * SSE 只负责实时事件；短暂断流不得阻止用户读取或提交 RPC。
  */
 export function requestConsole<T>(request: ConsoleRpcRequest): Promise<T> {
-  return getWebSocketManager().sendRequest<T>(request)
+  return getConsoleTransport().sendRequest<T>(request)
 }

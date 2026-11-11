@@ -1,10 +1,10 @@
 import * as React from "react";
 import { Route } from "react-router-dom";
-import { app } from "@zhin.js/client";
+import { app } from "@console/utils/console-client";
 import { PageErrorBoundary } from "@console/components/page-error-boundary";
 
-function RouteContent({ route }: { route: ReturnType<typeof app._getRoutes>[number] }) {
-  return <>{app._renderRouteElement(route)}</>;
+function RouteContent({ route }: { route: ReturnType<typeof app.getRoutes>[number] }) {
+  return <>{app.renderRouteElement(route)}</>;
 }
 import { CONSOLE_UI_LEGACY_PREFIX } from "../paths";
 
@@ -21,7 +21,7 @@ function toRelativeRoutePath(abs: string): string {
 export function useConsoleRouteElements(): React.ReactElement {
   const v = React.useSyncExternalStore(app.subscribe, app.getVersion, app.getVersion);
   void v;
-  const routeRecords = app._getRoutes();
+  const routeRecords = app.getRoutes();
 
   return (
     <>

@@ -1,3 +1,4 @@
+import { startVisiblePolling } from '../hooks/visible-polling.mjs'
 import { useI18n } from '../i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { requestConsole } from '../utils/console-rpc'
@@ -43,8 +44,8 @@ export function useWelcomeInspection(instanceKey: string, packageName: string, t
   useEffect(() => {
     reads.current.cancel(); setEntry(null); setRecord(null)
     void refresh()
-    const timer = setInterval(() => void refresh(), 10_000)
-    return () => { clearInterval(timer); reads.current.cancel() }
+    const stopPolling = startVisiblePolling(() => void refresh(), 10_000)
+    return () => { stopPolling(); reads.current.cancel() }
   }, [refresh])
   useEffect(() => { setRecord(null) }, [targetKey])
   const visible = isInboxCacheScopeActive(scope) && entry?.binding === binding ? entry : null

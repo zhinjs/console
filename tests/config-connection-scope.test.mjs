@@ -71,7 +71,7 @@ function fixture(query = '') {
   const requestConsole = input => new Promise((resolve, reject) => { calls.push({ input, scope: authority.current(), resolve, reject, answered: false }) })
   const mocks = {
     react: { ...runtime.hooks, useId: () => 'test-field', createElement: require('react').createElement },
-    '@zhin.js/client': { getWebSocketManager: () => ({ isConnected: () => true, onConnectionChange: () => () => {} }) },
+    '../utils/console-client': { getConsoleTransport: () => ({ isConnected: () => true, onConnectionChange: () => () => {} }) },
     './config-error-state.mjs': { configErrorReducer },
     '../utils/console-rpc': { requestConsole }, '../../utils/console-rpc': { requestConsole },
     '../utils/useInboxCacheScope': { useInboxCacheScope: () => authority.current() }, '../../utils/useInboxCacheScope': { useInboxCacheScope: () => authority.current() },

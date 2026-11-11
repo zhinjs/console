@@ -151,7 +151,7 @@ function connectedFixture() {
   const read = { exports: {} }
   new Function('require', 'exports', 'module', readCode)(name => {
     if (name === 'react') return hooks
-    if (name === '@zhin.js/client') return { getWebSocketManager: () => manager }
+    if (name === '../utils/console-client') return { getConsoleTransport: () => manager }
     if (name === './console-read-state.mjs') return readState
     return require(name)
   }, read.exports, read)

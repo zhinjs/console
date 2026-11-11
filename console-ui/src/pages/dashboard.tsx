@@ -1,3 +1,4 @@
+import { startVisiblePolling } from '../hooks/visible-polling.mjs'
 import { translate } from '../i18n/locale.mjs'
 import { useI18n } from '../i18n'
 import { readErrorSummary } from '../utils/read-error.mjs'
@@ -41,7 +42,8 @@ import {
   VolumeX,
   Wrench,
 } from 'lucide-react'
-import { fetchConsoleEventHistory, getWebSocketManager, SIDE_EVENT_PUSH, useWebSocket } from '@zhin.js/client'
+import { fetchConsoleEventHistory, SIDE_EVENT_PUSH, useConsoleTransport } from '@zhin.js/client'
+import { getConsoleTransport } from '../utils/console-client'
 import { apiFetch } from '../utils/auth'
 import { CONSOLE_REST, CONSOLE_RPC } from '../contracts/zhin-console'
 import { requestConsole } from '../utils/console-rpc'
@@ -349,7 +351,7 @@ export default function HomePage() {
   const requestAbortRef = useRef<AbortController | null>(null)
   const readOnly = isDemoMode()
   const { success, error: toastError } = useToast()
-  const { connected } = useWebSocket()
+  const { connected } = useConsoleTransport()
   const [messageEvents, setMessageEvents] = useState<unknown[]>([])
   const [messagesLoaded, setMessagesLoaded] = useState(false)
   const messageAbortRef = useRef<AbortController | null>(null)
@@ -373,7 +375,7 @@ export default function HomePage() {
 
   useEffect(() => {
     void loadMessages()
-    const manager = getWebSocketManager()
+    const manager = getConsoleTransport()
     const offMessage = manager.onConsoleEvent(SIDE_EVENT_PUSH.MESSAGE_RECEIVE, (event) => {
       setMessageEvents((previous) => [...previous, event].slice(-MESSAGE_EVENT_LIMIT))
     })
@@ -464,10 +466,10 @@ export default function HomePage() {
 
   useEffect(() => {
     void fetchDashboard()
-    const interval = window.setInterval(() => void fetchDashboard(), 10000)
+    const stopPolling = startVisiblePolling(() => void fetchDashboard(), 10000)
     return () => {
       requestAbortRef.current?.abort()
-      window.clearInterval(interval)
+      stopPolling()
     }
   }, [fetchDashboard])
 

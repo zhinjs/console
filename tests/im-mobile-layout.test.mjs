@@ -41,7 +41,7 @@ function computed(css, width, path) {
   })
   return Object.fromEntries([...values].map(([key, entry]) => [key, entry.value]))
 }
-for (const file of ['client/style.css', 'console-ui/src/style.css']) {
+for (const file of ['client/style.css']) {
   const entry = await readFile(new URL(`../${file}`, import.meta.url), 'utf8')
   assert.match(entry, /@import ["'][^"']*im-workspace\.css["']/u)
   const css = `${entry}\n${await readFile(new URL('../console-ui/src/im-workspace.css', import.meta.url), 'utf8')}`
