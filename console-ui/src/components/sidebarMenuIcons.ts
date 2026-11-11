@@ -6,6 +6,7 @@ import {
   Activity,
   BarChart3,
   Bell,
+  Blocks,
   Bot,
   Brain,
   Clock,
@@ -33,6 +34,7 @@ import {
   Circle,
   FlaskConical,
   MessagesSquare,
+  Network,
 } from "lucide-react";
 
 /** 内置 registerBuiltinShell 与各插件常用名；未知名称回退 Circle */
@@ -59,6 +61,7 @@ const SIDEBAR_LUCIDE_BY_NAME: Record<string, LucideIcon> = {
   Activity,
   BarChart3,
   Bell,
+  Blocks,
   Brain,
   GitBranch,
   Globe,
@@ -66,6 +69,7 @@ const SIDEBAR_LUCIDE_BY_NAME: Record<string, LucideIcon> = {
   Sparkles,
   Wrench,
   Workflow,
+  Network,
 };
 
 export function getSidebarLucideIcon(name: string): LucideIcon {

@@ -327,7 +327,7 @@ export default function DashboardLayout() {
           </nav>
         </ScrollArea>
 
-        {footerGroups.length ? <nav className="console-sidebar-secondary" aria-label={i18n.t("设置与运行维护")}>
+        {footerGroups.length ? <nav className="console-sidebar-secondary" aria-label={i18n.t("设置菜单")}>
           {footerGroups.map((groupName) => {
             const items = menuByGroup.get(groupName) ?? []
             const active = !onHome && navigation.group === groupName

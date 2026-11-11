@@ -3190,4 +3190,5 @@ export const englishMessages = Object.freeze({
   "启用中…": "Enabling…",
   "正在刷新…": "Refreshing…",
   "刷新失败：{0}。以下是上次读取的内容。": "Refresh failed: {0}. Showing the last loaded details.",
+  "设置菜单": "Settings menu",
 })

@@ -90,7 +90,7 @@ test('work-oriented navigation preserves ordinary-user names and legacy plugin g
   assert.match(source, /path: '\/agent\/replay'[\s\S]*?parent: '\/agent\/workbench'[\s\S]*?requiredPermissions: \[REPLAY_PERMISSION\]/)
   assert.match(sourceText(join(SOURCE_ROOT, 'pages', 'agent-workbench.tsx')), /to="\/agent\/replay"/)
   for (const path of ['/config', '/env']) assert.equal(routeGroup(path).group, 'SETTINGS', path)
-  for (const path of ['/files', '/database', '/introspection', '/scenario-lab']) assert.equal(routeGroup(path).group, 'OPERATIONS', path)
+  for (const path of ['/files', '/database', '/introspection', '/scenario-lab']) assert.equal(routeGroup(path).group, 'ADVANCED', path)
   assert.equal(routeGroup('/agent/workrooms').group, 'TASKS')
   assert.doesNotMatch(source, /'对话分支'|'Agent 概览'|judge|decision|TypeSafe|shadow/)
   const entries = sourceText(join(SOURCE_ROOT, 'bootstrap', 'loadConsoleEntries.ts'))

@@ -163,7 +163,7 @@ export function registerBuiltinConsolePages() {
     meta: { group: NAV_GROUPS.TASKS, order: 2, fullWidth: true, hideInMenu: true },
   })
 
-  app.addRoute({ path: '/scenario-lab', name: '消息场景试验台', parent: null, icon: 'FlaskConical', element: <ScenarioLabPage />, meta: { group: NAV_GROUPS.OPERATIONS, order: 7, fullWidth: true } })
+  app.addRoute({ path: '/scenario-lab', name: '消息场景试验台', parent: null, icon: 'FlaskConical', element: <ScenarioLabPage />, meta: { group: NAV_GROUPS.ADVANCED, order: 7, fullWidth: true } })
 
   app.addRoute({
     path: '/introspection',
@@ -171,7 +171,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Blocks',
     element: <IntrospectionPage />,
-    meta: { group: NAV_GROUPS.OPERATIONS, order: 4, fullWidth: true },
+    meta: { group: NAV_GROUPS.ADVANCED, order: 4, fullWidth: true },
   })
 
   app.addRoute({
@@ -180,7 +180,7 @@ export function registerBuiltinConsolePages() {
     parent: '/introspection',
     icon: 'Shield',
     element: <CommandPermissionsPage />,
-    meta: { group: NAV_GROUPS.OPERATIONS, order: 4, hideInMenu: true },
+    meta: { group: NAV_GROUPS.ADVANCED, order: 4, hideInMenu: true },
   })
 
   app.addRoute({ path: '/agent/models', name: '模型', parent: null, icon: 'KeyRound', element: <PersonalModelsPage />, meta: { group: NAV_GROUPS.SETTINGS, order: 4 } })
@@ -244,7 +244,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'FolderOpen',
     element: <FileManagePage />,
-    meta: { group: NAV_GROUPS.OPERATIONS, order: 5 },
+    meta: { group: NAV_GROUPS.ADVANCED, order: 5 },
   })
 
   app.addRoute({
@@ -253,7 +253,7 @@ export function registerBuiltinConsolePages() {
     parent: null,
     icon: 'Database',
     element: <DatabasePage />,
-    meta: { group: NAV_GROUPS.OPERATIONS, order: 6, fullWidth: true },
+    meta: { group: NAV_GROUPS.ADVANCED, order: 6, fullWidth: true },
   })
 
   app.addRoute({

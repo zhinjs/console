@@ -12,8 +12,9 @@ const taxonomy = await import(moduleUrl(compile(await readFile(new URL('navigati
 const {NAV_GROUPS,PRIMARY_NAV_GROUP_ORDER,FOOTER_NAV_GROUP_ORDER,NAV_GROUP_ORDER,placePluginRoute} = taxonomy
 
 test('work and management navigation have distinct ordered groups without changing legacy plugin values', () => {
- assert.deepEqual(PRIMARY_NAV_GROUP_ORDER,['会话','任务','聊天账号','插件'])
- assert.deepEqual(FOOTER_NAV_GROUP_ORDER,['设置','运行维护'])
+ // Day-to-day operations are primary navigation; low-level tools sit in a folded Advanced group; only settings stay in the footer.
+ assert.deepEqual(PRIMARY_NAV_GROUP_ORDER,['会话','任务','聊天账号','插件','运行维护','高级'])
+ assert.deepEqual(FOOTER_NAV_GROUP_ORDER,['设置'])
  assert.deepEqual(NAV_GROUP_ORDER,[...PRIMARY_NAV_GROUP_ORDER,...FOOTER_NAV_GROUP_ORDER])
  assert.equal(NAV_GROUPS.BOT,'机器人')
  assert.equal(NAV_GROUPS.ADVANCED,'高级')
@@ -64,9 +65,9 @@ test('builtin route regrouping preserves deep links, hidden detail ownership and
  const expected = {
   '/dashboard':'OPERATIONS','/logs':'OPERATIONS','/tasks':'TASKS','/use-cases/group-welcome':'TASKS','/cron':'TASKS','/assistant/jobs':'TASKS',
   '/endpoints':'ACCOUNTS','/agent/workbench':'OPERATIONS','/agent/replay':'OPERATIONS','/agent/ambient':'SETTINGS','/agent/skills':'SETTINGS',
-  '/agent/usage':'OPERATIONS','/agent/workrooms':'TASKS','/agent/workrooms/catalog':'TASKS','/scenario-lab':'OPERATIONS','/introspection':'OPERATIONS',
-  '/permissions':'OPERATIONS','/agent/sessions':'WORK','/agent/models':'SETTINGS','/plugins':'PLUGINS','/plugins/:name':'PLUGINS','/marketplace':'PLUGINS',
-  '/config':'SETTINGS','/env':'SETTINGS','/files':'OPERATIONS','/database':'OPERATIONS','/endpoints/:adapter/:endpointId':'ACCOUNTS',
+  '/agent/usage':'OPERATIONS','/agent/workrooms':'TASKS','/agent/workrooms/catalog':'TASKS','/scenario-lab':'ADVANCED','/introspection':'ADVANCED',
+  '/permissions':'ADVANCED','/agent/sessions':'WORK','/agent/models':'SETTINGS','/plugins':'PLUGINS','/plugins/:name':'PLUGINS','/marketplace':'PLUGINS',
+  '/config':'SETTINGS','/env':'SETTINGS','/files':'ADVANCED','/database':'ADVANCED','/endpoints/:adapter/:endpointId':'ACCOUNTS',
  }
  assert.deepEqual([...byPath.keys()].sort(),Object.keys(expected).sort())
  for (const [path,group] of Object.entries(expected)) assert.equal(byPath.get(path).meta.group,NAV_GROUPS[group],path)
