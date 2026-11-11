@@ -21,6 +21,7 @@ import { registerBuiltinConsolePages } from "@console/registerBuiltinShell";
 import { initializeTheme } from "@console/theme";
 import LoginPage from "@console/pages/login";
 import { TooltipProvider } from "@console/components/ui/tooltip";
+import { ConsoleSessionGate } from "@console/components/console-session-gate";
 import { ToastProvider, useToast } from "@console/components/toast";
 import { runQueryPrefillMiddleware, takeLoginLink, type InitialSession } from "./middleware/queryPrefill";
 
@@ -107,7 +108,8 @@ function App() {
     );
   }
 
-  return <ConsoleShell />;
+  // `/auth/me` decides between the setup wizard and the shell, and feeds navigation permissions.
+  return <ConsoleSessionGate><ConsoleShell /></ConsoleSessionGate>;
 }
 
 ReactDOMClient.createRoot(document.getElementById("root")!).render(

@@ -7,6 +7,9 @@ export const CONSOLE_PATHS: Readonly<{
   introspection: '/introspection'; permissions: '/permissions'; scenarioLab: '/scenario-lab'; groupWelcome: '/use-cases/group-welcome'
   plugins: '/plugins'; pluginDetail: '/plugins/:name'; marketplace: '/marketplace'
   opsDatabase: '/ops/database'; opsConfig: '/ops/config'; opsEnv: '/ops/env'; opsSchedules: '/ops/schedules'; opsFiles: '/ops/files'
+  opsInstance: '/ops/instance'; opsTerminal: '/ops/terminal'
+  onboarding: '/onboarding'; account: '/account'
+  accessUsers: '/access/users'; accessRoles: '/access/roles'; accessTokens: '/access/tokens'; accessAudit: '/access/audit'
 }>
 export function featureGlobalHref(plugin: string, params?: URLSearchParams | Record<string, string>): string
 export function adapterHref(adapter: string): string

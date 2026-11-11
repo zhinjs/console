@@ -38,6 +38,9 @@ import { CONSOLE_REST } from '../contracts/zhin-console'
 import { readWelcomeUseCase, welcomeReturnUrl } from './welcome-use-case-model.mjs'
 import { validateManagementState, mutationRequest, type PluginManagementState } from './plugin-management-model.mjs'
 import { PluginManagementSummary } from './PluginManagementSummary'
+import { readConfigurationNeeds } from './ops/gateway-model.mjs'
+import { ConfigurationNeedsPanel } from './ops/plugin-declare'
+import type { GatewayPluginConfigurationNeed } from '../contracts/gateway'
 
 interface MarketPlugin {
   name: string
@@ -179,6 +182,9 @@ function MarketplaceSession({ scope }: { scope?: string }) {
   const [installMessage, setInstallMessage] = useState<string | null>(null)
   const [installedState, setInstalledState] = useState<PluginManagementState | null>(null)
   const [installError, setInstallError] = useState<string | null>(null)
+  /** Plugins the last install left undeclared until their first configuration (ADR 0053 §2 step 4). */
+  const [configurationNeeds, setConfigurationNeeds] = useState<readonly GatewayPluginConfigurationNeed[]>([])
+  const [declaring, setDeclaring] = useState(false)
 
   const fetchPlugins = useCallback(async (p: number) => {
     setLoading(true)
@@ -274,6 +280,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
     setCopied(false)
     setInstallPlan(null)
     setInstalledState(null)
+    setConfigurationNeeds([])
     setInstallMessage(null)
     setInstallError(pendingInstalls.current.get(name)?.message ?? null)
     setUncertainPackage(pendingInstalls.current.has(name) ? name : null)
@@ -391,8 +398,20 @@ function MarketplaceSession({ scope }: { scope?: string }) {
       const unknown = i18n.t("安装已提交，结果正在核对；请勿重复安装。")
       pendingInstalls.current.set(packageName, { message: unknown, instanceKey: installPlan.instanceKey, version: installPlan.targetVersion! })
       setUncertainPackage(packageName)
-      await requestForScope(installRequest)
+      const installReply = await requestForScope(installRequest)
       if (!isInboxCacheScopeActive(scope)) return
+      // Installed but not declared: the plugin needs its first configuration before it can load.
+      const needs = readConfigurationNeeds(installReply)
+      if (needs.length) {
+        pendingInstalls.current.delete(packageName)
+        if (request === detailRequest.current) {
+          setUncertainPackage(null)
+          setConfigurationNeeds(needs)
+          setInstallMessage(i18n.t("依赖已安装，但插件需要先填写配置才能启用。"))
+        }
+        void loadInstalled()
+        return
+      }
       const reconciled = await reconcileInstall(packageName, () => requestForScope({ type: 'plugin:inspect', instanceKey: installPlan.instanceKey }), { instanceKey: installPlan.instanceKey, version: installPlan.targetVersion! }, i18n.locale)
       if (!reconciled.confirmed || !reconciled.state) { await recheckInstall(packageName); return }
       const state = reconciled.state
@@ -885,6 +904,14 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                     </Button>
                   </div>
                 )}
+                {configurationNeeds.length > 0 && !readOnly && (
+                  <ConfigurationNeedsPanel needs={configurationNeeds} disabled={installLoading} onBusyChange={setDeclaring}
+                    onDeclared={need => {
+                      setConfigurationNeeds(previous => previous.filter(item => item.instanceKey !== need.instanceKey))
+                      setInstallMessage(i18n.t("已启用 {0}（实例名 {1}）。", [need.name, need.instanceKey]))
+                      void loadInstalled()
+                    }} />
+                )}
                 {installedState && <div className="rounded-md border p-3 space-y-3"><PluginManagementSummary state={installedState} showNavigation={false} />{welcomePackage === installedState.packageName && installedState.declared && <Button asChild size="sm"><Link to={welcomeReturnUrl(installedState.instanceKey)}>{i18n.t("继续配置实际实例 ")}{installedState.instanceKey}</Link></Button>}</div>}
                 {installPlan && (
                   <div className="rounded-md border p-3 space-y-2 text-sm">
@@ -939,7 +966,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                   </a>
                 </Button>
                 {!readOnly && !installPlan && !installMessage && !uncertainPackage && (
-                  <Button size="sm" onClick={() => void previewInstall(detail.name)} disabled={installLoading}>
+                  <Button size="sm" onClick={() => void previewInstall(detail.name)} disabled={installLoading || declaring}>
                     <Download className="w-3 h-3 mr-1" />
                     {installLoading ? i18n.t("检查中…") : i18n.t("安装")}
                   </Button>

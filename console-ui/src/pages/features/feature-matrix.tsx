@@ -12,14 +12,18 @@ import { EmptyState } from '../../components/empty-state'
 import { ErrorAlert } from '../../components/error-alert'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { adapterHref, featureGlobalHref } from '../../console-routes.mjs'
-import { cellState, type FeatureCell } from './feature-model.mjs'
-import { useFeatureMatrix } from './use-feature-data'
+import { cellState, setEnabledRequest, type FeatureCell } from './feature-model.mjs'
+import { useFeatureMatrix, useFeatureWriter } from './use-feature-data'
+import { FeatureSwitch } from './feature-switch'
+import { useConfirm } from '../../components/confirm-dialog'
+import { useConsoleAccess } from '../../hooks/use-console-access'
+import { hasConsolePermission } from '../../utils/console-access.mjs'
 
 function CellBadge({ cell, to }: { cell: FeatureCell | undefined; to?: string }) {
   const i18n = useI18n()
   const state = cellState(cell)
   const badge = state === 'locked'
-    ? <Badge variant="secondary" title={i18n.t(cell?.lockedBy === 'global' ? "已在全局禁用" : "已在适配器禁用")}><Lock aria-hidden="true" />{i18n.t("被上级禁用")}</Badge>
+    ? <Badge variant="secondary" title={cell?.lockedBy === 'global' ? i18n.t("已在全局禁用") : i18n.t("已在适配器禁用")}><Lock aria-hidden="true" />{i18n.t("被上级禁用")}</Badge>
     : state === 'enabled' ? <Badge variant="success">{i18n.t("启用")}</Badge>
       : state === 'disabled' ? <Badge variant="outline">{i18n.t("禁用")}</Badge>
         : <span className="text-muted-foreground">—</span>
@@ -29,8 +33,23 @@ function CellBadge({ cell, to }: { cell: FeatureCell | undefined; to?: string })
 
 export default function FeatureMatrixPage() {
   const i18n = useI18n()
-  const { rows, adapters, source, loading, error, refresh } = useFeatureMatrix()
+  const { rows, adapters, revision, source, loading, error, refresh } = useFeatureMatrix()
   const adapterColumns = source === 'rpc' ? adapters : []
+  const access = useConsoleAccess()
+  const canToggle = source === 'rpc' && hasConsolePermission('feature.toggle', access)
+  const { write, pending } = useFeatureWriter()
+  const { confirm, ConfirmDialog } = useConfirm()
+  const toggleGlobal = async (plugin: string, enabled: boolean) => {
+    // The global switch is `disable_plugins`, which restarts the Host (ADR 0050 §7).
+    const ok = await confirm({
+      title: enabled ? i18n.t("启用 {0}？", [plugin]) : i18n.t("在全局禁用 {0}？", [plugin]),
+      description: enabled ? i18n.t("全局开关会重启 Host。") : i18n.t("全局开关会重启 Host；所有适配器和账号上的该功能都会停用。"),
+      variant: enabled ? 'default' : 'destructive',
+    })
+    if (ok) await write(setEnabledRequest({ plugin, level: 'global', enabled, revision }), refresh, `${plugin}\u0000global`)
+  }
+  const toggleAdapter = (plugin: string, adapter: string, enabled: boolean) =>
+    void write(setEnabledRequest({ plugin, level: 'adapter', key: adapter, enabled, revision }), refresh, `${plugin}\u0000${adapter}`)
   return (
     <PageShell>
       <PageHeader
@@ -50,6 +69,7 @@ export default function FeatureMatrixPage() {
           </AlertDescription>
         </Alert>
       ) : null}
+      {source === 'rpc' && !canToggle ? <Alert role="status"><AlertDescription>{i18n.t("当前身份只能查看功能开关，无法启停。")}</AlertDescription></Alert> : null}
       {error ? <ErrorAlert error={error} onRetry={refresh} /> : null}
       <Card className="overflow-hidden p-0">
         {loading && !rows.length ? (
@@ -73,14 +93,36 @@ export default function FeatureMatrixPage() {
                     {row.name !== row.plugin ? <span className="ml-2 text-xs text-muted-foreground">{row.name}</span> : null}
                     {row.description ? <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{row.description}</p> : null}
                   </TableCell>
-                  <TableCell><CellBadge cell={row.global} to={featureGlobalHref(row.plugin)} /></TableCell>
-                  {adapterColumns.map(adapter => <TableCell key={adapter}><CellBadge cell={row.adapters[adapter]} to={adapterHref(adapter)} /></TableCell>)}
+                  <TableCell>
+                    {source === 'rpc' ? (
+                      <FeatureSwitch label={i18n.t("{0} · 全局", [row.plugin])} plugin={row.plugin} enabled={row.global.enabled}
+                        canToggle={canToggle && !row.plugin.includes('/')} pending={pending === `${row.plugin}\u0000global`}
+                        onToggle={enabled => void toggleGlobal(row.plugin, enabled)} />
+                    ) : <CellBadge cell={row.global} to={featureGlobalHref(row.plugin)} />}
+                  </TableCell>
+                  {adapterColumns.map(adapter => {
+                    const cell = row.adapters[adapter]
+                    return (
+                      <TableCell key={adapter}>
+                        {cell ? (
+                          <span className="inline-flex items-center gap-2">
+                            <FeatureSwitch label={i18n.t("{0} · {1}", [row.plugin, adapter])} plugin={row.plugin} adapter={adapter}
+                              enabled={cell.enabled} lockedBy={cell.lockedBy} overridden={cell.overridden}
+                              canToggle={canToggle} pending={pending === `${row.plugin}\u0000${adapter}`}
+                              onToggle={enabled => toggleAdapter(row.plugin, adapter, enabled)} />
+                            <Link to={adapterHref(adapter)} className="text-xs text-muted-foreground hover:underline" aria-label={i18n.t("打开 {0}", [adapter])}>{i18n.t("配置")}</Link>
+                          </span>
+                        ) : <CellBadge cell={cell} />}
+                      </TableCell>
+                    )
+                  })}
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         )}
       </Card>
+      {ConfirmDialog}
     </PageShell>
   )
 }

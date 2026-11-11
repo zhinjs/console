@@ -14,8 +14,8 @@ import { requestConsole } from '../../utils/console-rpc'
 import { ENDPOINT_RPC } from '../../contracts/zhin-console'
 import { endpointAddress } from '../endpoint-detail/endpoint-request.mjs'
 import { readEndpointList } from '../endpoint-list-model.mjs'
-import { useFeatureRpcProbe, type EndpointSummaryItem } from './use-feature-data'
-import { FeatureOverridesNotice } from './feature-overrides-notice'
+import { type EndpointSummaryItem } from './use-feature-data'
+import { FeatureLevelPanel, FeatureReadOnlyNote } from './feature-level-panel'
 
 export default function EndpointFeaturesPage() {
   const { adapter = '', endpoint = '' } = useParams<{ adapter: string; endpoint: string }>()
@@ -26,7 +26,6 @@ function EndpointFeatures({ adapter, endpoint }: { adapter: string; endpoint: st
   const i18n = useI18n()
   const [info, setInfo] = useState<EndpointSummaryItem | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const probe = useFeatureRpcProbe('endpoint', `${adapter}/${endpoint}`)
   useEffect(() => {
     let cancelled = false
     requestConsole<unknown>({ type: ENDPOINT_RPC.INFO, ...endpointAddress(adapter, endpoint) }).then(
@@ -43,7 +42,6 @@ function EndpointFeatures({ adapter, endpoint }: { adapter: string; endpoint: st
         description={i18n.t("{0} · {1}", [adapter, endpoint])}
         actions={<Button asChild variant="outline" size="sm"><Link to={endpointWorkspaceHref(adapter, endpoint)}><MessageSquare />{i18n.t("账号工作区")}</Link></Button>}
       />
-      <FeatureOverridesNotice status={probe} level="endpoint" />
       {error ? <ErrorAlert error={error} /> : null}
       <Card>
         <CardContent className="grid gap-3 p-4 sm:grid-cols-3">
@@ -54,6 +52,8 @@ function EndpointFeatures({ adapter, endpoint }: { adapter: string; endpoint: st
           </> : error ? null : <><Skeleton className="h-10" /><Skeleton className="h-10" /><Skeleton className="h-10" /></>}
         </CardContent>
       </Card>
+      <FeatureReadOnlyNote />
+      <FeatureLevelPanel level="endpoint" levelKey={`${adapter}/${endpoint}`} adapter={adapter} />
     </PageShell>
   )
 }

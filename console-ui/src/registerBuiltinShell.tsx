@@ -32,6 +32,14 @@ import GlobalFeatureConfigPage from './pages/features/global-config'
 import AdaptersPage from './pages/features/adapters'
 import AdapterDetailPage from './pages/features/adapter-detail'
 import EndpointFeaturesPage from './pages/features/endpoint-features'
+import OnboardingPage from './pages/onboarding'
+import AccountPage from './pages/account'
+import OpsInstancePage from './pages/ops/instance'
+import OpsTerminalPage from './pages/ops/terminal'
+import AccessUsersPage from './pages/access/users'
+import AccessRolesPage from './pages/access/roles'
+import AccessTokensPage from './pages/access/tokens'
+import AccessAuditPage from './pages/access/audit'
 import { LegacyRedirect } from './components/legacy-redirect'
 import { CONSOLE_PATHS as P, LEGACY_ROUTE_REDIRECTS } from './console-routes.mjs'
 import { NAV_GROUPS } from './navigation-taxonomy'
@@ -124,14 +132,24 @@ export function registerBuiltinConsolePages() {
   app.addRoute({ path: P.pluginDetail, name: '插件详情', parent: P.plugins, element: <PluginDetailPage />, meta: { hideInMenu: true, group: NAV_GROUPS.PLUGINS } })
   app.addRoute({ path: P.marketplace, name: '插件市场', parent: null, icon: 'Store', element: <MarketplacePage />, meta: { group: NAV_GROUPS.PLUGINS, order: 1 } })
 
-  // 运维 — 宿主机怎么样？（终端：ADR 0051，后续阶段）
+  // 运维 — 宿主机怎么样？（实例：ADR 0054；终端：ADR 0051）
+  app.addRoute({ path: P.opsInstance, name: '实例', parent: null, icon: 'Server', element: <OpsInstancePage />, meta: { group: NAV_GROUPS.OPS, order: -1 } })
   app.addRoute({ path: P.opsDatabase, name: '数据库', parent: null, icon: 'Database', element: <DatabasePage />, meta: { group: NAV_GROUPS.OPS, order: 0, fullWidth: true } })
   app.addRoute({ path: P.opsConfig, name: '配置文件', parent: null, icon: 'Settings', element: <ConfigPage />, meta: { group: NAV_GROUPS.OPS, order: 1 } })
   app.addRoute({ path: P.opsEnv, name: '环境变量', parent: null, icon: 'KeyRound', element: <EnvManagePage />, meta: { group: NAV_GROUPS.OPS, order: 2 } })
   app.addRoute({ path: P.opsSchedules, name: '定时任务', parent: null, icon: 'ClipboardList', element: <TaskHubPage />, meta: { group: NAV_GROUPS.OPS, order: 3 } })
   app.addRoute({ path: P.opsFiles, name: '项目文件', parent: null, icon: 'FolderOpen', element: <FileManagePage />, meta: { group: NAV_GROUPS.OPS, order: 4 } })
+  app.addRoute({ path: P.opsTerminal, name: '终端', parent: null, icon: 'Terminal', element: <OpsTerminalPage />, meta: { group: NAV_GROUPS.OPS, order: 5, fullWidth: true } })
 
-  // 访问控制（用户、角色、API 令牌、审计）：ADR 0049，后续阶段。
+  // 访问控制 — 谁能做什么？（ADR 0049）
+  app.addRoute({ path: P.accessUsers, name: '用户', parent: null, icon: 'Users', element: <AccessUsersPage />, meta: { group: NAV_GROUPS.ACCESS, order: 0 } })
+  app.addRoute({ path: P.accessRoles, name: '角色', parent: null, icon: 'Shield', element: <AccessRolesPage />, meta: { group: NAV_GROUPS.ACCESS, order: 1 } })
+  app.addRoute({ path: P.accessTokens, name: 'API 令牌', parent: null, icon: 'KeyRound', element: <AccessTokensPage />, meta: { group: NAV_GROUPS.ACCESS, order: 2 } })
+  app.addRoute({ path: P.accessAudit, name: '审计日志', parent: null, icon: 'Activity', element: <AccessAuditPage />, meta: { group: NAV_GROUPS.ACCESS, order: 3, fullWidth: true } })
+
+  // 个人：引导（ADR 0053）与个人设置（ADR 0049），不在菜单里，从横幅与顶栏进入。
+  app.addRoute({ path: P.onboarding, name: '开始使用', parent: null, icon: 'Rocket', element: <OnboardingPage />, meta: { group: NAV_GROUPS.OVERVIEW, hideInMenu: true } })
+  app.addRoute({ path: P.account, name: '个人设置', parent: null, icon: 'UserRound', element: <AccountPage />, meta: { group: NAV_GROUPS.OVERVIEW, hideInMenu: true } })
 
   // Old routes stay as hidden redirects (ADR 0052 迁移).
   for (const [path, rule] of Object.entries(LEGACY_ROUTE_REDIRECTS)) {

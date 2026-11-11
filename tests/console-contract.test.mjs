@@ -86,7 +86,7 @@ test('work-oriented navigation preserves ordinary-user names and legacy plugin g
   assert.deepEqual(routeGroup('agentReplay'), { name: '决策回放', group: 'OVERVIEW', hidden: true })
   assert.match(source, /path: P\.agentReplay,[\s\S]*?parent: P\.agentWorkbench,[\s\S]*?requiredPermissions: \[REPLAY_PERMISSION\]/)
   assert.match(sourceText(join(SOURCE_ROOT, 'pages', 'agent-workbench.tsx')), /to="\/agent\/replay"/)
-  for (const key of ['opsConfig', 'opsEnv', 'opsFiles', 'opsDatabase']) assert.equal(routeGroup(key).group, 'OPS', key)
+  for (const key of ['opsConfig', 'opsEnv', 'opsFiles', 'opsDatabase', 'opsInstance', 'opsTerminal']) assert.equal(routeGroup(key).group, 'OPS', key)
   for (const key of ['features', 'adapters', 'ai', 'introspection', 'scenarioLab', 'aiWorkrooms']) assert.equal(routeGroup(key).group, 'FEATURES', key)
   assert.doesNotMatch(source, /'对话分支'|'Agent 概览'|judge|decision|TypeSafe|shadow/)
   const entries = sourceText(join(SOURCE_ROOT, 'bootstrap', 'loadConsoleEntries.ts'))

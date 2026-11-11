@@ -34,7 +34,15 @@ export const ROUTE_SEARCH_HINTS = Object.freeze({
   '/ops/config': { description: '配置模型、Agent 和插件', keywords: ['设置', '配置', '选项', '配置文件', 'settings', 'config', 'configuration'] },
   '/ops/env': { description: '管理运行环境变量', keywords: ['环境变量', '变量', '密钥', '.env', 'env', 'environment', 'secret'] },
   '/ops/files': { description: '浏览和编辑项目文件', keywords: ['文件', '项目文件', '代码', '编辑', '目录', 'file', 'files', 'editor'] },
+  '/ops/instance': { description: '查看实例状态与日志，启停实例，安装或更新依赖', keywords: ['实例', '重启', '启动', '停止', '依赖', '安装', '更新', '回滚', 'instance', 'restart', 'dependencies', 'install'] },
+  '/ops/terminal': { description: '打开宿主机 Shell 或白名单 SSH 终端', keywords: ['终端', '命令行', 'Shell', 'SSH', '控制台', 'terminal', 'shell', 'ssh', 'console'] },
   '/ops/database': { description: '检查数据表、记录与持久化状态', keywords: ['数据库', '数据表', '表', '记录', '数据', 'database', 'db', 'sql', 'table'] },
+  '/onboarding': { description: '接入 AI 和聊天平台，完成首次引导', keywords: ['引导', '开始使用', '初始化', '向导', '上手', 'onboarding', 'setup', 'getting started'] },
+  '/account': { description: '修改密码、管理我的 API 令牌', keywords: ['个人设置', '我的账号', '密码', '修改密码', 'API 令牌', '令牌', 'account', 'password', 'token', 'profile'] },
+  '/access/users': { description: '管理能登录 Console 的用户与角色绑定', keywords: ['用户', '账户', '成员', '密码', '禁用', 'user', 'users', 'account'] },
+  '/access/roles': { description: '查看内置角色，创建自定义角色与权限', keywords: ['角色', '权限', '所有者', '管理员', 'role', 'roles', 'permission', 'rbac'] },
+  '/access/tokens': { description: '查看并吊销所有用户的 API 令牌', keywords: ['令牌', 'API 令牌', '吊销', 'token', 'tokens', 'api key', 'revoke'] },
+  '/access/audit': { description: '查看登录、权限变更与被拒绝的请求', keywords: ['审计', '日志', '登录记录', '安全', 'audit', 'log', 'security'] },
 })
 
 /** Legacy paths only redirect to another page; that page carries their keywords. */

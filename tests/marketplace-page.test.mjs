@@ -10,6 +10,7 @@ import * as viewModel from '../console-ui/src/pages/marketplace-view-model.mjs'
 import * as welcomeModel from '../console-ui/src/pages/welcome-use-case-model.mjs'
 import * as management from '../console-ui/src/pages/plugin-management-model.mjs'
 import * as clipboard from '../console-ui/src/pages/clipboard-copy.mjs'
+import * as gatewayModel from '../console-ui/src/pages/ops/gateway-model.mjs'
 
 const require = createRequire(import.meta.url)
 const source = await readFile(new URL('../console-ui/src/pages/marketplace.tsx', import.meta.url), 'utf8')
@@ -46,6 +47,7 @@ function fixture({ search = async () => json({ success: true, data: [], total: 0
     './marketplace-install-model.mjs': installModel, './marketplace-version.mjs': versionModel, './marketplace-view-model.mjs': viewModel,
     './welcome-use-case-model.mjs': welcomeModel, './plugin-management-model.mjs': management,
     './PluginManagementSummary': { PluginManagementSummary: 'plugin-management-summary' },
+    './ops/gateway-model.mjs': gatewayModel, './ops/plugin-declare': { ConfigurationNeedsPanel: 'configuration-needs-panel' },
     '../components/ui/card': { Card: 'card', CardContent: 'card-content' }, '../components/ui/badge': { Badge: 'badge' },
     '../components/ui/button': { Button: 'button' }, '../components/ui/input': { Input: 'input' },
     '../components/ui/select': { SelectField: 'select-field' }, '../components/ui/alert': { Alert: 'alert', AlertDescription: 'alert-description' },
@@ -247,6 +249,40 @@ test('a confirmed install offers a direct link to the plugin settings', async ()
   const summary = elements(tree).find(item => item.type === 'plugin-management-summary')
   assert.equal(summary.props.showNavigation, false, 'the summary does not repeat the same links')
   assert.equal(f.calls.filter(path => path === '/api/plugins').length, 2, 'the installed list is re-read after the install')
+})
+
+test('an install that needs configuration guides into the declaration form instead of an unconfirmed result', async () => {
+  const packageName = '@zhin.js/adapter-qq'
+  const rpc = []
+  const f = fixture({
+    search: async () => json({ success: true, data: [plugin(packageName)], total: 1 }),
+    detail: async () => json({ success: true, data: { name: packageName, version: '1.0.0', description: '', license: '', author: '', homepage: '', repository: '',
+      keywords: [], engines: {}, peerDependencies: {}, downloads: { weekly: 0, monthly: 0 }, readme: '', versions: ['1.0.0'], lastPublish: '' } }),
+    requestConsole: async request => {
+      rpc.push(request.type)
+      if (request.type === 'plugin:plan-install') return { packageName, instanceKey: 'qq', projectRevision: 'r1', alreadyDeclared: false, alreadyInstalled: false,
+        restartRequired: false, changes: { packageManifest: 'added', config: 'added' }, warnings: [] }
+      if (request.type === 'plugin:install') return { restartRequired: false, needsConfiguration: { name: packageName, instanceKey: 'qq', missing: ['endpoints'], missingEnv: [] } }
+      return {}
+    },
+  })
+  let tree = await f.load()
+  cardFor(tree, packageName).props.onClick(); await settle()
+  tree = f.render()
+  await elements(tree).find(item => item.type === 'button' && label(item) === '安装').props.onClick(); await settle()
+  tree = f.render()
+  await buttonLabelled(tree, '确认安装').props.onClick(); await settle()
+  tree = f.render()
+  assert.deepEqual(rpc, ['plugin:plan-install', 'plugin:install'], 'no reconcile guess: the reply already says what is missing')
+  const panel = elements(tree).find(item => item.type === 'configuration-needs-panel')
+  assert.ok(panel, 'the needs panel is shown')
+  assert.deepEqual(panel.props.needs, [{ name: packageName, instanceKey: 'qq', missing: ['endpoints'], missingEnv: [] }])
+  assert.ok(label(tree).includes('依赖已安装，但插件需要先填写配置才能启用。'))
+  assert.equal(destructive(tree).length, 0, 'not reported as an uncertain install')
+  panel.props.onDeclared(panel.props.needs[0]); await settle()
+  tree = f.render()
+  assert.equal(elements(tree).some(item => item.type === 'configuration-needs-panel'), false)
+  assert.ok(label(tree).includes('已启用 @zhin.js/adapter-qq（实例名 qq）。'))
 })
 
 test('details of an already installed package link to its settings and its update', async () => {

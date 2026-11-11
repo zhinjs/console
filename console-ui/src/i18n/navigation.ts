@@ -33,6 +33,10 @@ const builtinNames: Readonly<Record<string, string>> = {
   "/ops/env": "环境变量",
   "/ops/schedules": "定时任务",
   "/ops/files": "项目文件",
+  "/access/users": "用户",
+  "/access/roles": "角色",
+  "/access/tokens": "API 令牌",
+  "/access/audit": "审计日志",
 }
 
 export function routeLabel(route: ConsoleRouteRecord, locale: Locale): string {

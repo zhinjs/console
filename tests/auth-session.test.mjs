@@ -95,3 +95,36 @@ test('absolute URLs in the configured Host path can expire that session, but sib
     assert.equal(events.length, owned ? 1 : 0)
   }
 })
+
+test('a bootstrap token (403 setup_required) is recognised through /auth/me and kept for this browser session only', async () => {
+  const { auth, requests, localStorage, sessionStorage } = harness()
+  const pending = auth.verifyAndStoreCredentials('https://host-c.example', 'bootstrap-credential', 'zh-CN', true)
+  requests[0].resolve({ ok: true })
+  for (let index = 0; index < 8; index++) await Promise.resolve()
+  assert.equal(requests[1].url, 'https://host-c.example/api/system/status')
+  requests[1].resolve({ ok: false, status: 403 })
+  for (let index = 0; index < 8; index++) await Promise.resolve()
+  assert.equal(requests[2].url, 'https://host-c.example/api/auth/me')
+  assert.equal(requests[2].init.headers.Authorization, 'Bearer bootstrap-credential')
+  requests[2].resolve({ ok: true, json: async () => ({ success: true, data: { kind: 'bootstrap', open: false, setupRequired: true } }) })
+  const result = await pending
+  assert.equal(result.ok, true)
+  assert.equal(result.kind, 'bootstrap')
+  assert.equal(localStorage.getItem('zhin_api_token'), null, 'never persisted, even when remembering was asked')
+  assert.equal(sessionStorage.getItem('zhin_api_token'), 'bootstrap-credential')
+  assert.equal(auth.getApiBase(), 'https://host-c.example')
+})
+
+test('a 403 from a token that is not the bootstrap token stays a failure', async () => {
+  const { auth, requests } = harness()
+  const pending = auth.verifyAndStoreCredentials('https://host-d.example', 'narrow-token', 'zh-CN', true)
+  requests[0].resolve({ ok: true })
+  for (let index = 0; index < 8; index++) await Promise.resolve()
+  requests[1].resolve({ ok: false, status: 403 })
+  for (let index = 0; index < 8; index++) await Promise.resolve()
+  requests[2].resolve({ ok: true, json: async () => ({ success: true, data: { kind: 'api-token', setupRequired: false } }) })
+  const result = await pending
+  assert.equal(result.ok, false)
+  assert.equal(result.status, 403)
+  assert.equal(auth.getToken(), 'test-credential-a', 'the previous credential is untouched')
+})
