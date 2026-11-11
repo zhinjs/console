@@ -3082,4 +3082,7 @@ export const englishMessages = Object.freeze({
   "将作为纯文本摘要发送，不关联原消息": "Sent as a plain-text summary, not linked to the original message",
   "取消引用文本": "Cancel text quote",
   "取消以文本转发": "Cancel text forward",
+  "管理账号、模型与用途。": "Manage accounts, models and purposes.",
+  "为已有 Agent 配置名称与可用服务。": "Set names and available services for existing Agents.",
+  "设置 Workroom 协作能力。": "Configure Workroom collaboration.",
 })
