@@ -3236,4 +3236,6 @@ export const englishMessages = Object.freeze({
   "此 Host 已安装 {0}。": "This Host has {0} installed.",
   "此 Host 已安装该插件。": "This Host already has this plugin installed.",
   "共 {0} 个实例，以下入口打开 {1}。": " {0} instances; the links below open {1}.",
+  "CPU 占用": "CPU usage",
+  "进程 CPU 时间占单核的比例，按两次刷新之间的差值计算": "Process CPU time as a share of one core, measured between two refreshes",
 })
