@@ -3236,6 +3236,11 @@ export const englishMessages = Object.freeze({
   "此 Host 已安装 {0}。": "This Host has {0} installed.",
   "此 Host 已安装该插件。": "This Host already has this plugin installed.",
   "共 {0} 个实例，以下入口打开 {1}。": " {0} instances; the links below open {1}.",
+  "命令目录读取失败：": "Could not read the command directory: ",
+  "尚未读取命令目录。": "The command directory has not been read yet.",
+  "链接中的命令对应多个插件实例，请从列表中选择。": "The linked command matches several plugin instances. Choose one from the list.",
+  "当前目录中没有找到链接中的命令，请搜索或从列表中选择。": "The linked command was not found in the current directory. Search or choose one from the list.",
+  "查看此命令的权限说明": "View this command's permissions",
   "CPU 占用": "CPU usage",
   "进程 CPU 时间占单核的比例，按两次刷新之间的差值计算": "Process CPU time as a share of one core, measured between two refreshes",
 })

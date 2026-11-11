@@ -1,6 +1,6 @@
 import { useI18n } from '../i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { ShieldCheck, RefreshCw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
@@ -16,15 +16,20 @@ import { CONSOLE_REST } from '../contracts/zhin-console'
 import { createDiagnosticRequestGate } from './endpoint-detail/message-diagnostics.mjs'
 import { permissionHttpError, permissionOutcomeLabel, permissionRequest, readPermissionCatalog, readPermissionExplanation,
   type PermissionCatalog, type PermissionCommand, type PermissionExplanation, type PermissionRequest } from './permission-explanation-model.mjs'
+import { matchPermissionLink, permissionCatalogState, permissionLinkSearch, readPermissionLink, type PermissionLink } from './permission-link-model.mjs'
 
 export default function CommandPermissionsPage() {
   const i18n = useI18n()
   const scope = useInboxCacheScope()
+  const [searchParams, setSearchParams] = useSearchParams()
   const catalogReads = useRef(createDiagnosticRequestGate(getInboxCacheScope)), explanations = useRef(createDiagnosticRequestGate(getInboxCacheScope))
   const [catalog, setCatalog] = useState<{ scope: typeof scope; value: PermissionCatalog } | null>(null)
   const [selected, setSelected] = useState<PermissionCommand | null>(null)
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(false), [checking, setChecking] = useState(false), [error, setError] = useState<string | null>(null)
+  const [catalogError, setCatalogError] = useState<string | null>(null), [linkNotice, setLinkNotice] = useState<'missing' | 'ambiguous' | null>(null)
+  // Command requested by the URL (deep link or reload); consumed by the next catalog read.
+  const pendingLink = useRef<PermissionLink | null>(null), lastPage = useRef(1)
   const [hypothesis, setHypothesis] = useState(false), [target, setTarget] = useState<unknown>(undefined)
   const [includeTarget, setIncludeTarget] = useState(false)
   const [senderId, setSenderId] = useState(''), [roles, setRoles] = useState('')
@@ -34,26 +39,39 @@ export default function CommandPermissionsPage() {
   const visible = current && result && result.scope === scope && result.request.generation === current.generation
     && result.request.commandId === selected?.id ? result.value : null
 
-  const loadCatalog = useCallback(async (nextPage = 1) => {
+  const loadCatalog = useCallback(async (nextPage = lastPage.current, q = query) => {
     if (!isInboxCacheScopeActive(scope) || demo) return
+    lastPage.current = nextPage
     explanations.current.cancel(); setResult(null); setSelected(null); setChecking(false); setCatalog(null)
-    const request = catalogReads.current.begin(); setLoading(true); setError(null)
+    const request = catalogReads.current.begin(); setLoading(true); setError(null); setCatalogError(null); setLinkNotice(null)
     try {
-      const search = new URLSearchParams({ page: String(nextPage), pageSize: '50', q: query, locale: i18n.locale })
+      const search = new URLSearchParams({ page: String(nextPage), pageSize: '50', q, locale: i18n.locale })
       const response = await apiFetch(`${CONSOLE_REST.COMMAND_PERMISSIONS}?${search}`, { signal: request.signal, cache: 'no-store' })
       if (!request.current() || !isInboxCacheScopeActive(scope)) return
       if (!response.ok) throw new Error(permissionHttpError(response.status, i18n.locale))
       const next = readPermissionCatalog(await response.json(), i18n.locale)
       if (request.current() && isInboxCacheScopeActive(scope)) setCatalog({ scope, value: next })
-    } catch (caught) { if (request.current() && isInboxCacheScopeActive(scope)) setError(caught instanceof Error ? caught.message : i18n.t("权限目录读取失败，请刷新。")) }
+    } catch (caught) { if (request.current() && isInboxCacheScopeActive(scope)) setCatalogError(caught instanceof Error ? caught.message : i18n.t("权限目录读取失败，请刷新。")) }
     finally { if (request.current()) setLoading(false) }
   }, [scope, demo, query, i18n])
+  const loadRef = useRef(loadCatalog); loadRef.current = loadCatalog
+  const linkRef = useRef(searchParams); linkRef.current = searchParams
 
   useEffect(() => {
     catalogReads.current.cancel(); explanations.current.cancel(); setCatalog(null); setSelected(null); setResult(null)
     setTarget(undefined); setSenderId(''); setRoles(''); setHypothesis(false); setIncludeTarget(false); setQuery(''); setChecking(false); setLoading(false); setError(null)
+    setCatalogError(null); setLinkNotice(null); pendingLink.current = null; lastPage.current = 1
     return () => { catalogReads.current.cancel(); explanations.current.cancel() }
   }, [scope])
+
+  // Read the catalog on entry (and whenever the Host scope becomes usable) instead of waiting for a click.
+  // Only scope/availability changes re-run this, so a language switch never discards the current selection.
+  useEffect(() => {
+    if (!active || demo) return
+    const link = readPermissionLink(linkRef.current)
+    pendingLink.current = link; setQuery(link?.name ?? '')
+    void loadRef.current(1, link?.name ?? '')
+  }, [scope, active, demo])
 
   const explain = async (command: PermissionCommand, useHypothesis: boolean) => {
     if (!current || !isInboxCacheScopeActive(scope) || loading || demo) return
@@ -73,7 +91,23 @@ export default function CommandPermissionsPage() {
     finally { if (request.current()) setChecking(false) }
   }
   const invalidateHypothesis = () => { explanations.current.cancel(); setChecking(false); setResult(null); setError(null) }
-  const choose = (command: PermissionCommand) => { explanations.current.cancel(); setHypothesis(false); setSelected(command); setResult(null); void explain(command, false) }
+  const choose = (command: PermissionCommand) => {
+    explanations.current.cancel(); setHypothesis(false); setSelected(command); setResult(null); setLinkNotice(null)
+    setSearchParams(permissionLinkSearch(command), { replace: true }); void explain(command, false)
+  }
+  // A manual read clears the selection, so drop the stale command from the URL as well.
+  const reload = (nextPage: number) => { pendingLink.current = null; if (readPermissionLink(searchParams)) setSearchParams(new URLSearchParams(), { replace: true }); void loadCatalog(nextPage) }
+
+  // Once the catalog requested by a link arrives, select that command if it is unambiguous.
+  useEffect(() => {
+    const link = pendingLink.current
+    if (!current || !link) return
+    pendingLink.current = null
+    const match = matchPermissionLink(current.commands, link)
+    if (match.status === 'matched') choose(match.command)
+    else setLinkNotice(match.status === 'ambiguous' ? 'ambiguous' : 'missing')
+  }, [current])
+  const catalogState = permissionCatalogState({ demo, active, loading, error: catalogError, catalog: current })
 
   return <div className="space-y-5 p-4 md:p-6 max-w-6xl mx-auto">
     <header className="space-y-2"><h1 className="console-page-title flex items-center gap-2"><ShieldCheck aria-hidden="true" />{i18n.t("命令权限说明")}</h1>
@@ -81,17 +115,22 @@ export default function CommandPermissionsPage() {
       <Button asChild variant="link" className="px-0"><Link to="/introspection?tab=commands">{i18n.t("返回命令目录")}</Link></Button></header>
     {(demo || !active) && <Alert><AlertDescription>{i18n.t("需要连接当前 Host 并使用 full scope Token；演示模式不能读取权限说明。")}</AlertDescription></Alert>}
     <Card><CardHeader><CardTitle>{i18n.t("选择当前运行代的命令")}</CardTitle></CardHeader><CardContent className="space-y-3">
-      <form className="flex flex-wrap gap-2" onSubmit={event => { event.preventDefault(); void loadCatalog(1) }}>
+      <form className="flex flex-wrap gap-2" onSubmit={event => { event.preventDefault(); reload(1) }}>
         <Input aria-label={i18n.t("搜索权限命令")} placeholder={i18n.t("搜索命令或插件实例")} maxLength={200} value={query} onChange={event => setQuery(event.target.value)} className="min-w-0 flex-1" />
-        <Button type="submit" disabled={demo || !active || loading}><RefreshCw className="size-4 mr-2" />{i18n.t("读取目录")}</Button>
+        <Button type="submit" disabled={demo || !active || loading}><RefreshCw className="size-4 mr-2" />{current || catalogError ? i18n.t("重新读取") : i18n.t("读取目录")}</Button>
       </form>
-      {loading && <p role="status" className="text-sm">{i18n.t("正在读取当前命令目录…")}</p>}
+      {catalogState === 'loading' && <p role="status" className="text-sm">{i18n.t("正在读取当前命令目录…")}</p>}
+      {catalogState === 'error' && <Alert variant="destructive"><AlertDescription role="alert" className="flex flex-wrap items-center gap-2">
+        <span className="min-w-0 flex-1">{i18n.t("命令目录读取失败：")}{catalogError}</span>
+        <Button size="sm" variant="outline" onClick={() => void loadCatalog()}><RefreshCw className="size-4 mr-2" />{i18n.t("重试")}</Button></AlertDescription></Alert>}
+      {catalogState === 'idle' && <p className="text-sm text-muted-foreground">{i18n.t("尚未读取命令目录。")}</p>}
+      {linkNotice && <Alert><AlertDescription>{linkNotice === 'ambiguous' ? i18n.t("链接中的命令对应多个插件实例，请从列表中选择。") : i18n.t("当前目录中没有找到链接中的命令，请搜索或从列表中选择。")}</AlertDescription></Alert>}
       {current && <><p className="text-xs text-muted-foreground">{i18n.t("运行代 ")}{current.generation} {i18n.t(" · 共 ")}{current.total} {i18n.t(" 项 · 第 ")}{current.page} {i18n.t(" 页")}</p>
         {!current.commands.length ? <p className="text-sm">{i18n.t("当前筛选没有命令。")}</p> : <div className="grid gap-2 sm:grid-cols-2">{current.commands.map(command => <button type="button" key={command.id} aria-pressed={selected?.id === command.id}
           className={`min-w-0 text-left rounded-md border p-3 space-y-1 ${selected?.id === command.id ? 'border-primary bg-muted/40' : ''}`} onClick={() => choose(command)}>
           <span className="block font-medium break-words">{command.name}</span><span className="block text-xs text-muted-foreground break-all">{command.owner}</span><span className="block text-sm break-words">{command.description}</span></button>)}</div>}
-        <div className="flex gap-2"><Button variant="outline" disabled={loading || current.page <= 1} onClick={() => void loadCatalog(current.page - 1)}>{i18n.t("上一页")}</Button>
-          <Button variant="outline" disabled={loading || current.page * current.pageSize >= current.total} onClick={() => void loadCatalog(current.page + 1)}>{i18n.t("下一页")}</Button></div></>}
+        <div className="flex gap-2"><Button variant="outline" disabled={loading || current.page <= 1} onClick={() => reload(current.page - 1)}>{i18n.t("上一页")}</Button>
+          <Button variant="outline" disabled={loading || current.page * current.pageSize >= current.total} onClick={() => reload(current.page + 1)}>{i18n.t("下一页")}</Button></div></>}
     </CardContent></Card>
     {selected && current && <div className="grid gap-5 lg:grid-cols-2"><Card><CardHeader><CardTitle className="break-words">{selected.name}</CardTitle></CardHeader><CardContent className="space-y-4">
       <p className="text-sm">{i18n.t("permit 数组中的条件必须全部满足；同一项括号内的逗号表示任选一个。平台和自定义 checker 均不会执行。")}</p>
