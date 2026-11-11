@@ -93,7 +93,7 @@ Console 面向普通用户（[zhin#970](https://github.com/zhinjs/zhin/issues/97
 | `client/` | 入口 `main.tsx`、Host 壳、`bootstrap/` |
 | `console-ui/` | 内置 Console UI（`src/`），构建别名 `@console` |
 | `farm.config.ts` | `@console` → `console-ui/src` |
-| `client/paths.ts` | Host API 路径常量；UI 默认根路径 `/dashboard` |
+| `client/paths.ts` | UI 路由前缀（`VITE_CONSOLE_SHELL_PATH`、旧 `/console` 前缀） |
 | `scripts/prepare-github-pages.mjs` | Pages SPA 回退与 CNAME |
 
 运行时依赖 [@zhin.js/client](https://www.npmjs.com/package/@zhin.js/client)（SDK）与 [@zhin.js/contract](https://www.npmjs.com/package/@zhin.js/contract)（契约常量/类型）。

@@ -42,7 +42,8 @@ import {
   VolumeX,
   Wrench,
 } from 'lucide-react'
-import { fetchConsoleEventHistory, SIDE_EVENT_PUSH, useConsoleTransport } from '@zhin.js/client'
+import { fetchConsoleEventHistory, SIDE_EVENT_PUSH } from '@zhin.js/client'
+import { useConsoleConnected } from '../hooks/use-console-connected'
 import { getConsoleTransport } from '../utils/console-client'
 import { apiFetch } from '../utils/auth'
 import { CONSOLE_REST, CONSOLE_RPC } from '../contracts/zhin-console'
@@ -351,7 +352,7 @@ export default function HomePage() {
   const requestAbortRef = useRef<AbortController | null>(null)
   const readOnly = isDemoMode()
   const { success, error: toastError } = useToast()
-  const { connected } = useConsoleTransport()
+  const connected = useConsoleConnected()
   const [messageEvents, setMessageEvents] = useState<unknown[]>([])
   const [messagesLoaded, setMessagesLoaded] = useState(false)
   const messageAbortRef = useRef<AbortController | null>(null)

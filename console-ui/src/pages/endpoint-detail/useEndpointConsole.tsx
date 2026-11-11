@@ -1,3 +1,4 @@
+import { useConsoleConnected } from '../../hooks/use-console-connected'
 import { startVisiblePolling } from '../../hooks/visible-polling.mjs'
 import { useI18n } from '../../i18n'
 import { readRequestHistory, readNoticeHistory, mergeHistoryRows } from './inbox-history-model.mjs'
@@ -6,7 +7,6 @@ import { readEndpointTestResult, endpointTestError, type EndpointTestResult } fr
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import {
-  useConsoleTransport,
   type ConsoleInboxNoticesQuery,
   type ConsoleInboxNoticesResult,
 } from '@zhin.js/client'
@@ -55,7 +55,7 @@ export function useEndpointConsole() {
     : undefined
   const initialChannelId = searchParams.get('channelId')?.trim() || undefined
 
-  const { connected } = useConsoleTransport()
+  const connected = useConsoleConnected()
   const [info, setInfo] = useState<EndpointInfo | null>(null)
   const [loadErr, setLoadErr] = useState<string | null>(null)
   const [testLoading, setTestLoading] = useState(false)
