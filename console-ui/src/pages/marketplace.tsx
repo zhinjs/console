@@ -4,6 +4,7 @@ import { copyText } from './clipboard-copy.mjs'
 import { useToast } from '../components/toast'
 import { reconcileInstall, canResumeInstall, planInstallRecovery } from './marketplace-install-model.mjs'
 import { applyRegistryVersion, belongsToZhinScope } from './marketplace-version.mjs'
+import { marketplaceListView, isCardActivationKey, classifyUpdateCheck, updateCheckFeedback, type UpdateCheckOutcome } from './marketplace-view-model.mjs'
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import {
   Search, Package, Download, ExternalLink, AlertCircle,
@@ -221,17 +222,27 @@ function MarketplaceSession({ scope }: { scope?: string }) {
   // Reset page when filters change
   useEffect(() => { setPage(1) }, [category, officialOnly, sortKey])
 
-  const checkUpdates = useCallback(async () => {
+  /** `silent` refreshes the banner after an install without announcing the result. */
+  const checkUpdates = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
     setUpdatesLoading(true)
+    let outcome: UpdateCheckOutcome
     try {
       const res = await apiFetch('/api/marketplace/updates')
-      if (res.ok) {
-        const data = await res.json()
-        if (data.success) setUpdates(data.data.filter((item: UpdateInfo) => item.current && item.latest && item.current !== item.latest))
-      }
-    } catch { /* ignore */ }
-    finally { setUpdatesLoading(false) }
-  }, [])
+      const body = await res.json().catch(() => null)
+      outcome = { ok: res.ok, status: res.status, body }
+    } catch (error) {
+      outcome = { error }
+    }
+    const result = classifyUpdateCheck(outcome, messages.current.locale)
+    if (result.kind !== 'failed') {
+      setUpdates(result.updates as UpdateInfo[])
+      if (!silent) setUpdatesDismissed(false)
+    }
+    setUpdatesLoading(false)
+    if (silent) return
+    const feedback = updateCheckFeedback(result, messages.current.locale)
+    toast[feedback.variant](feedback.description)
+  }, [toast])
 
   const openDetail = useCallback(async (name: string) => {
     const request = ++detailRequest.current
@@ -371,7 +382,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
         setInstalledState(state)
         setInstallMessage(i18n.t("安装步骤已完成。请按当前状态完善配置、申请应用并选择业务检查；尚未证明功能可用。"))
       }
-      void checkUpdates()
+      void checkUpdates({ silent: true })
     } catch (err) {
       if (submitted) await recheckInstall(packageName)
       else if (request === detailRequest.current) setInstallError((err as Error).message)
@@ -395,6 +406,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
   }, [toast, i18n])
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
+  const listView = marketplaceListView({ loading, error, count: plugins.length })
 
   return (
     <div className="space-y-4">
@@ -407,9 +419,9 @@ function MarketplaceSession({ scope }: { scope?: string }) {
             {i18n.t("探索 Zhin.js 生态中的插件。列表为发现索引，打开详情后核验注册表 latest。")}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={checkUpdates} disabled={updatesLoading}>
+          <Button variant="outline" size="sm" onClick={() => checkUpdates()} disabled={updatesLoading} aria-busy={updatesLoading || undefined}>
             <RefreshCw className={`w-4 h-4 mr-1 ${updatesLoading ? 'animate-spin' : ''}`} />
-            {i18n.t("检查更新")}</Button>
+            {updatesLoading ? i18n.t("检查中…") : i18n.t("检查更新")}</Button>
         </div>
       </div>
 
@@ -444,6 +456,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={i18n.t("搜索插件名称、描述...")}
+            aria-label={i18n.t("搜索插件名称、描述...")}
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-9"
@@ -476,35 +489,48 @@ function MarketplaceSession({ scope }: { scope?: string }) {
       </Tabs>
 
       {/* Results info */}
-      {!loading && (
+      {(listView === 'results' || listView === 'empty') && (
         <div className="text-xs text-muted-foreground">
           {i18n.t("共 ")}{total} {i18n.t(" 个插件")}{totalPages > 1 && i18n.t("，第 {0}/{1} 页", [page, totalPages])}
         </div>
       )}
 
       {/* Error */}
-      {error && (
+      {listView === 'error' && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+            <span>{error}</span>
+            <Button variant="outline" size="sm" onClick={() => fetchPlugins(page)}>
+              <RefreshCw className="w-4 h-4 mr-1" />
+              {i18n.t("重试")}</Button>
+          </AlertDescription>
         </Alert>
       )}
 
       {/* Loading */}
-      {loading && (
+      {listView === 'loading' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
           {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-44" />)}
         </div>
       )}
 
       {/* Plugin Grid */}
-      {!loading && (
+      {listView === 'results' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
           {plugins.map(plugin => (
             <Card
               key={plugin.name}
-              className="cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5"
+              role="button"
+              tabIndex={0}
+              aria-haspopup="dialog"
+              className="cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               onClick={() => openDetail(plugin.name)}
+              onKeyDown={event => {
+                if (event.target !== event.currentTarget || !isCardActivationKey(event.key)) return
+                event.preventDefault()
+                void openDetail(plugin.name)
+              }}
             >
               <CardContent className="p-4 space-y-2.5">
                 {/* Name & Badge */}
@@ -562,7 +588,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
       )}
 
       {/* Empty */}
-      {!loading && plugins.length === 0 && (
+      {listView === 'empty' && (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-12">
             <Package className="w-12 h-12 text-muted-foreground" />
@@ -573,7 +599,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
       )}
 
       {/* Pagination */}
-      {totalPages > 1 && (
+      {totalPages > 1 && listView !== 'error' && (
         <div className="flex items-center justify-center gap-2">
           <Button
             variant="outline"

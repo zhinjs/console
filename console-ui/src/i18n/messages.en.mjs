@@ -3204,4 +3204,7 @@ export const englishMessages = Object.freeze({
   "刷新失败：{0}。以下是上次读取的内容。": "Refresh failed: {0}. Showing the last loaded details.",
   "设置菜单": "Settings menu",
   "有 {0} 条新消息": "{0} new messages",
+  "已是最新，没有可更新的插件": "Already up to date. No plugin updates available.",
+  "发现 {0} 个可更新插件": "Found {0} plugin update(s)",
+  "检查失败：{0}": "Update check failed: {0}",
 })
