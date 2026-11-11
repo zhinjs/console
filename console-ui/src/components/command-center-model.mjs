@@ -1,4 +1,4 @@
-import { LEGACY_TASK_ROUTES } from '../pages/task-hub-model.mjs'
+import { LEGACY_ROUTE_REDIRECTS } from '../console-routes.mjs'
 
 /**
  * Purpose text and search keywords for builtin Console pages.
@@ -11,16 +11,16 @@ import { LEGACY_TASK_ROUTES } from '../pages/task-hub-model.mjs'
 export const ROUTE_SEARCH_HINTS = Object.freeze({
   '/dashboard': { description: '机器人是否正常、有什么要处理', keywords: ['首页', '总览', '概览', '健康', '状态', '消息量', 'home', 'overview', 'health'] },
   '/sandbox': { description: '与 Agent 对话并处理工作', keywords: ['对话', '聊天', '会话', '提问', 'chat', 'conversation'] },
-  '/tasks': { description: '管理员任务、定时提醒、助手任务与执行记录', keywords: ['任务', '定时', '提醒', '定时任务', 'cron', '计划', '助手任务', '执行记录', '待办', 'schedule', 'reminder', 'job'] },
+  '/ops/schedules': { description: '管理员任务、定时提醒、助手任务与执行记录', keywords: ['任务', '定时', '提醒', '定时任务', 'cron', '计划', '助手任务', '执行记录', '待办', 'schedule', 'reminder', 'job'] },
   '/use-cases/group-welcome': { description: '一步步配置新成员入群欢迎并到真实群验证', keywords: ['欢迎', '新成员', '入群', '进群', '欢迎语', 'welcome', 'new member', 'onboarding'] },
   '/agent/workbench': { description: '看看 AI 机器人是否准备好、最近做了什么', keywords: ['机器人', 'AI', 'Agent', '就绪', '状态', '最近活动', 'bot', 'status', 'readiness'] },
   '/agent/replay': { description: '逐回合查看机器人为什么回或不回、调了哪些模型和工具', keywords: ['回放', '决策', '为什么没回', '为什么回复', '不回复', '排查', '回合', '调用过程', 'replay', 'decision', 'trace', 'debug'] },
-  '/agent/ambient': { description: '没人 @ 机器人时，它要不要自己在群里接话', keywords: ['插话', '接话', '主动发言', '主动回复', '冒泡', '群聊', '没有 @', 'ambient', 'interject', 'proactive'] },
-  '/agent/skills': { description: '让小助手帮机器人挑技能、挑工具、判断要不要接话', keywords: ['技能', '挑技能', '工具选择', '路由', '小助手', 'skill', 'skills', 'tool routing'] },
+  '/features/ai/ambient': { description: '没人 @ 机器人时，它要不要自己在群里接话', keywords: ['插话', '接话', '主动发言', '主动回复', '冒泡', '群聊', '没有 @', 'ambient', 'interject', 'proactive'] },
+  '/features/ai/skills': { description: '让小助手帮机器人挑技能、挑工具、判断要不要接话', keywords: ['技能', '挑技能', '工具选择', '路由', '小助手', 'skill', 'skills', 'tool routing'] },
   '/agent/usage': { description: '按时间、模型和会话查看 token 花费与缓存命中', keywords: ['用量', '花费', '费用', '成本', '消耗', '账单', '缓存命中', 'token', 'usage', 'cost', 'billing', 'spend'] },
-  '/agent/models': { description: '管理模型服务、账号密钥，以及各场景用哪个模型', keywords: ['模型', '大模型', '服务商', '密钥', 'API Key', '备用模型', '场景模型', 'LLM', 'provider', 'model', 'key'] },
-  '/agent/workrooms': { description: '按 Project 查看 Workroom Run、Task 与 Assignment', keywords: ['协作', '协作空间', '多 Agent', '项目', 'workroom', 'project', 'run', 'assignment'] },
-  '/agent/workrooms/catalog': { description: '配置协作空间、Bot Endpoint 与成员 Agent 映射', keywords: ['协作配置', '映射', '成员', 'workroom', 'catalog', 'mapping'] },
+  '/features/ai': { description: '管理模型服务、账号密钥，以及各场景用哪个模型', keywords: ['模型', '大模型', '服务商', '密钥', 'API Key', '备用模型', '场景模型', 'LLM', 'provider', 'model', 'key'] },
+  '/features/ai/workrooms': { description: '按 Project 查看 Workroom Run、Task 与 Assignment', keywords: ['协作', '协作空间', '多 Agent', '项目', 'workroom', 'project', 'run', 'assignment'] },
+  '/features/ai/workrooms/catalog': { description: '配置协作空间、Bot Endpoint 与成员 Agent 映射', keywords: ['协作配置', '映射', '成员', 'workroom', 'catalog', 'mapping'] },
   '/agent/sessions': { description: '看看机器人和大家聊过什么，并从某段继续聊', keywords: ['聊天记录', '历史', '会话记录', '记录', '分支', '继续聊', 'history', 'sessions', 'transcript'] },
   '/endpoints': { description: '查看聊天账号、群和好友申请', keywords: ['账号', '机器人账号', '平台', '登录', '扫码', '群', '好友', '好友申请', '入群申请', 'endpoint', 'account', 'adapter', 'qq'] },
   '/introspection': { description: '检查命令、中间件、组件、Endpoint、Agent、工具与 MCP', keywords: ['命令', '指令', '中间件', '组件', '工具', '能力', '自检', 'command', 'middleware', 'component', 'tool', 'mcp', 'capability'] },
@@ -29,14 +29,16 @@ export const ROUTE_SEARCH_HINTS = Object.freeze({
   '/logs': { description: '查看出错、警告和运行过程', keywords: ['日志', '报错', '错误', '警告', '异常', '排查', 'log', 'logs', 'error', 'warning'] },
   '/plugins': { description: '开关和设置已装的功能', keywords: ['插件', '功能', '启用', '停用', '已安装', 'plugin', 'plugins', 'enable', 'disable'] },
   '/marketplace': { description: '找新功能并安装', keywords: ['市场', '插件市场', '安装', '下载', '新插件', 'marketplace', 'install', 'store'] },
-  '/config': { description: '配置模型、Agent 和插件', keywords: ['设置', '配置', '选项', '配置文件', 'settings', 'config', 'configuration'] },
-  '/env': { description: '管理运行环境变量', keywords: ['环境变量', '变量', '密钥', '.env', 'env', 'environment', 'secret'] },
-  '/files': { description: '浏览和编辑项目文件', keywords: ['文件', '项目文件', '代码', '编辑', '目录', 'file', 'files', 'editor'] },
-  '/database': { description: '检查数据表、记录与持久化状态', keywords: ['数据库', '数据表', '表', '记录', '数据', 'database', 'db', 'sql', 'table'] },
+  '/features': { description: '查看每个功能在全局和各适配器的启用状态', keywords: ['功能', '功能矩阵', '开关', '启用', '禁用', '全局配置', 'feature', 'features', 'matrix', 'toggle'] },
+  '/features/adapters': { description: '适配器实例的账号数与在线情况，管理账号连接', keywords: ['适配器', '平台', '账号连接', '实例', '登录', 'adapter', 'adapters', 'connection'] },
+  '/ops/config': { description: '配置模型、Agent 和插件', keywords: ['设置', '配置', '选项', '配置文件', 'settings', 'config', 'configuration'] },
+  '/ops/env': { description: '管理运行环境变量', keywords: ['环境变量', '变量', '密钥', '.env', 'env', 'environment', 'secret'] },
+  '/ops/files': { description: '浏览和编辑项目文件', keywords: ['文件', '项目文件', '代码', '编辑', '目录', 'file', 'files', 'editor'] },
+  '/ops/database': { description: '检查数据表、记录与持久化状态', keywords: ['数据库', '数据表', '表', '记录', '数据', 'database', 'db', 'sql', 'table'] },
 })
 
-/** Legacy paths that only redirect to another page's tab; that page carries their keywords. */
-export const COMMAND_EXCLUDED_PATHS = Object.freeze(Object.keys(LEGACY_TASK_ROUTES))
+/** Legacy paths only redirect to another page; that page carries their keywords. */
+export const COMMAND_EXCLUDED_PATHS = Object.freeze(Object.keys(LEGACY_ROUTE_REDIRECTS))
 
 /**
  * Whether a registered route can be opened directly from the command palette.

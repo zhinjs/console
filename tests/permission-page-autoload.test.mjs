@@ -43,8 +43,8 @@ test('selects only an unambiguous command and never guesses between plugin insta
 })
 
 test('catalog state distinguishes unavailable, loading, failure, unread and empty', () => {
-  const base = { demo: false, active: true, loading: false, error: null, catalog: null }
-  assert.equal(permissionCatalogState({ ...base, demo: true }), 'unavailable')
+  const base = { denied: false, active: true, loading: false, error: null, catalog: null }
+  assert.equal(permissionCatalogState({ ...base, denied: true }), 'unavailable')
   assert.equal(permissionCatalogState({ ...base, active: false }), 'unavailable')
   assert.equal(permissionCatalogState({ ...base, loading: true }), 'loading')
   assert.equal(permissionCatalogState({ ...base, error: 'boom' }), 'error')
@@ -80,7 +80,7 @@ function harness({ search = '', active = true, fail = 0 } = {}) {
   let params = new URLSearchParams(search), failures = fail
   const bindings = {
     ...runtime.api, ...linkModel, useI18n: () => ({ locale: 'zh-CN', t: (message, values) => translate('zh-CN', message, values) }),
-    useInboxCacheScope: () => scope, getInboxCacheScope: () => scope, isInboxCacheScopeActive: value => active && value === scope, isDemoMode: () => false,
+    useInboxCacheScope: () => scope, getInboxCacheScope: () => scope, isInboxCacheScopeActive: value => active && value === scope, hasConsolePermission: () => true,
     useSearchParams: () => [params, (next, options) => { params = new URLSearchParams(next); writes.push({ search: params.toString(), options }) }],
     createDiagnosticRequestGate, permissionRequest, readPermissionCatalog, readPermissionExplanation, permissionHttpError,
     CONSOLE_REST: { COMMAND_PERMISSIONS: '/catalog', COMMAND_PERMISSION_EXPLAIN: '/explain' },

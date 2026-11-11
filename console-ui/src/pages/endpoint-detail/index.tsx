@@ -61,7 +61,7 @@ import {
 } from '../../utils/parseComposerContent'
 import { dayKey, dayLabel } from './date-utils'
 import { ENDPOINT_RPC } from '../../contracts/zhin-console'
-import { isDemoMode } from '../../utils/demo-mode'
+import { hasConsolePermission } from '../../utils/console-access.mjs'
 import type { GroupAction } from './useGroupActions'
 import {
   EMPTY_COMPOSER_EXTRAS,
@@ -130,7 +130,7 @@ export default function EndpointDetailPage() {
 function EndpointWorkspace() {
   const i18n = useI18n()
   const ctx = useEndpointConsole()
-  const readOnly = isDemoMode()
+  const readOnly = !hasConsolePermission('endpoint.operate')
 
   if (!ctx.valid) {
     return (
@@ -752,7 +752,7 @@ function EndpointWorkspace() {
 
               {readOnly ? (
                 <div className="im-composer shrink-0 border-t px-4 py-3 text-xs text-muted-foreground">
-                  {i18n.t("Demo 仅读消息记录，不提供消息编辑器。")}</div>
+                  {i18n.t("当前身份只能读取消息记录，不提供消息编辑器。")}</div>
               ) : (
               <div className="im-composer p-3 shrink-0 space-y-2">
                 <input

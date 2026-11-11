@@ -1,4 +1,5 @@
 import { translate } from '../i18n/locale.mjs'
+import { featureGlobalHref } from '../console-routes.mjs'
 
 /**
  * Which part of the plugin list area is shown.
@@ -107,7 +108,7 @@ export function pluginManageUrl(packageName, instanceKey) {
   return `/plugins/${encodeURIComponent(instanceKey || packageName)}`
 }
 
-/** The settings page selects a plugin section from `?plugin=<instanceKey>`. */
+/** A plugin's global feature configuration (ADR 0052). */
 export function pluginConfigUrl(instanceKey) {
-  return `/config?plugin=${encodeURIComponent(instanceKey)}`
+  return featureGlobalHref(instanceKey)
 }

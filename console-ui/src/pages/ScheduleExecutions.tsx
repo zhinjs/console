@@ -3,7 +3,9 @@ import { RefreshCw, ChevronRight, Clock, Trash2 } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { apiFetch } from '../utils/auth'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
-import { isDemoMode } from '../utils/demo-mode'
+import { hasConsolePermission } from '../utils/console-access.mjs'
+
+const canCleanup = () => hasConsolePermission('ops.schedule.write')
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
 import { Alert, AlertDescription } from '../components/ui/alert'
@@ -156,7 +158,7 @@ export function ScheduleExecutions({ jobId, label, connectionScope }: { jobId?: 
   }
   useEffect(() => { mounted.current = true; void load(); return () => { mounted.current = false; sequence.current++; pending.current?.abort(); cleanupRequest.current?.abort() } }, [jobId, connectionScope])
   const cleanup = async () => {
-    if (!active() || cleaning || cleanupRequest.current || !page || isDemoMode()) return
+    if (!active() || cleaning || cleanupRequest.current || !page || !canCleanup()) return
     const controller = new AbortController(); cleanupRequest.current = controller
     setCleaning(true); setCleanupResult(null)
     try {
@@ -174,7 +176,7 @@ export function ScheduleExecutions({ jobId, label, connectionScope }: { jobId?: 
   }
   if (!active()) return null
   return <section className="schedule-executions" aria-label={i18n.t('执行记录')}>
-    <div className="schedule-executions-heading"><h3>{i18n.t('执行记录')}</h3><div><Button variant="ghost" size="sm" disabled={loading} onClick={() => { void load() }}><RefreshCw />{i18n.t('刷新记录')}</Button>{page && !isDemoMode() ? <Button variant="ghost" size="sm" disabled={cleaning} onClick={() => { if (cleanupRequest.current) return; setCleanupResult(null); setCleanupOpen(true) }}><Trash2 />{i18n.t('清理过期记录')}</Button> : null}</div></div>
+    <div className="schedule-executions-heading"><h3>{i18n.t('执行记录')}</h3><div><Button variant="ghost" size="sm" disabled={loading} onClick={() => { void load() }}><RefreshCw />{i18n.t('刷新记录')}</Button>{page && canCleanup() ?<Button variant="ghost" size="sm" disabled={cleaning} onClick={() => { if (cleanupRequest.current) return; setCleanupResult(null); setCleanupOpen(true) }}><Trash2 />{i18n.t('清理过期记录')}</Button> : null}</div></div>
     {cleanupResult ? <p role="status" className="text-sm text-muted-foreground">{cleanupResult}</p> : null}
     {page && (page.recordingHealth.activeWriteFailures > 0 || page.recordingHealth.incompleteCompletedRuns > 0) ? <Alert><AlertDescription>{i18n.t('部分执行记录未完整保存。')}</AlertDescription></Alert> : null}
     {error ? <ReadError error={error} retry={() => { void load(page?.nextCursor ?? undefined) }} /> : null}

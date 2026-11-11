@@ -9,14 +9,13 @@ import { parse as parseYaml } from 'yaml'
 import {
   Settings, AlertCircle, ChevronRight, ArrowLeft, SlidersHorizontal, Bot, Blocks
 } from 'lucide-react'
-import { Card, CardContent } from '../components/ui/card'
+import { Card } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { Input } from '../components/ui/input'
 import { Skeleton } from '../components/ui/skeleton'
 import { PageHeader } from '../components/PageHeader'
 import { readErrorSummary } from '../utils/read-error.mjs'
-import { isDemoMode } from '../utils/demo-mode'
 import {
   buildSettingsCatalog, filterSettingsCatalog, resolveSettingsSelection, settingsLocationFromParams, settingsLocationParams,
   unresolvedSettingsLocation, type SettingsEntry,
@@ -226,7 +225,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
               {entry && !entry.writable ? <Card className="console-settings-empty">
                 <Settings aria-hidden="true" /><h3>{i18n.t(entry.title)}</h3>
                 <p>{i18n.t("此项暂不支持表单编辑。")}</p>
-                <Button asChild variant="outline"><Link to="/files">{i18n.t("打开文件管理")}</Link></Button>
+                <Button asChild variant="outline"><Link to="/ops/files">{i18n.t("打开文件管理")}</Link></Button>
               </Card> : entry ? <PluginConfigForm pluginName={key} sourceRevision={snapshot?.revision}
                 displayTitle={i18n.t(entry.title)}
                 fieldNames={entry.fieldNames} excludedFieldNames={entry.excludedFieldNames ?? []}
@@ -242,28 +241,10 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
   )
 }
 
-function DemoConfigPage() {
-  const i18n = useI18n()
-  return (
-    <div className="space-y-4">
-      <PageHeader title={i18n.t("设置")} />
-      <Card>
-        <CardContent className="flex min-h-56 flex-col items-center justify-center gap-3 text-center">
-          <Settings className="h-8 w-8 text-muted-foreground" />
-          <div>
-            <h2 className="font-semibold">{i18n.t("演示模式")}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{i18n.t("连接自己的 Host 后管理设置。")}</p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
 export default function ConfigPage() {
-  // Model management lives only at /agent/models; old `?section=models` links land on it.
+  // Model management lives only in the AI section; old `?section=models` links land on it.
   const [searchParams] = useSearchParams()
   const models = legacySettingsModelsRedirect(searchParams)
   if (models) return <Navigate to={models} replace />
-  return isDemoMode() ? <DemoConfigPage /> : <EditableConfigPage />
+  return <EditableConfigPage />
 }

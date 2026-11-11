@@ -23,7 +23,7 @@ import {
   validateEnvRow, diffEnvContent, applyEnvChanges, type EnvRow, type EnvRowError,
 } from './env-editor-model.mjs'
 import { readErrorSummary, shouldShowMissingEnv } from '../utils/read-error.mjs'
-import { isDemoMode } from '../utils/demo-mode'
+import { hasConsolePermission } from '../utils/console-access.mjs'
 import { useHostRestart } from '../hooks/use-host-restart'
 
 const envDraftSessions = createFileDraftSessions()
@@ -296,7 +296,7 @@ function EnvFileEditor({
           <Button variant="outline" size="sm" disabled={saving} onClick={() => setDiscardOpen(true)}>
             {i18n.t("撤销")}</Button>
         )}
-        {readOnly && <span className="text-xs text-muted-foreground">{i18n.t("Demo 只读 · 敏感值始终遮罩")}</span>}
+        {readOnly && <span className="text-xs text-muted-foreground">{i18n.t("只读 · 敏感值始终遮罩")}</span>}
         {editor && <span className="text-xs text-muted-foreground">{i18n.t("先应用或取消正在编辑的行再保存")}</span>}
         {dirty && <span className="text-xs text-muted-foreground">{i18n.t("有未保存的更改")}</span>}
       </div>
@@ -316,7 +316,7 @@ function EnvFileEditor({
 
 export default function EnvManagePage() {
   const i18n = useI18n()
-  const readOnly = isDemoMode()
+  const readOnly = !hasConsolePermission('ops.env.write')
   const { files, loading, error, listFiles, getFile, saveFile } = useEnvFiles()
   const { confirm, ConfirmDialog: ConfirmDialogHost } = useConfirm()
   const { restarting, confirmRestart } = useHostRestart(confirm)
@@ -357,7 +357,7 @@ export default function EnvManagePage() {
     <div className="space-y-6">
       <PageHeader
         title={i18n.t("环境变量")}
-        description={readOnly ? i18n.t("查看 .env / .env.* 中的键值；Demo 只读且敏感值不可揭示。") : i18n.t("敏感值默认遮罩，可逐行显示或编辑；保存只写入改动的变量，需重启 Host 后生效。")}
+        description={readOnly ? i18n.t("查看 .env / .env.* 中的键值；只读且敏感值不可揭示。") : i18n.t("敏感值默认遮罩，可逐行显示或编辑；保存只写入改动的变量，需重启 Host 后生效。")}
         actions={
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />

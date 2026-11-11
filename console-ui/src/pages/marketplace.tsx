@@ -31,7 +31,7 @@ import {
 import { apiFetch } from '../utils/auth'
 import { requestConsole, type ConsoleRpcRequest } from '../utils/console-rpc'
 import { Link, useSearchParams } from 'react-router-dom'
-import { isDemoMode } from '../utils/demo-mode'
+import { hasConsolePermission } from '../utils/console-access.mjs'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { CONSOLE_REST } from '../contracts/zhin-console'
@@ -140,7 +140,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
   const welcomeRequested = searchParams.get('useCase') === 'group-welcome'
   const [welcomePackage, setWelcomePackage] = useState<string | null>(null)
   const [welcomeError, setWelcomeError] = useState<string | null>(null)
-  const readOnly = isDemoMode() || !isInboxCacheScopeActive(scope)
+  const readOnly = !hasConsolePermission('plugin.manage') || !isInboxCacheScopeActive(scope)
   const requestForScope = useCallback((request: ConsoleRpcRequest) => {
     if (!isInboxCacheScopeActive(scope)) return Promise.reject(new Error(messages.current.t("连接身份已变化，请在原 Host 核对；不会向新连接继续操作。")))
     return requestConsole(request)
@@ -295,7 +295,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
   }, [i18n])
 
   useEffect(() => {
-    if (!welcomeRequested || !scope || !isInboxCacheScopeActive(scope) || isDemoMode()) return
+    if (!welcomeRequested || !scope || !isInboxCacheScopeActive(scope) || !hasConsolePermission('plugin.manage')) return
     let cancelled = false
     setWelcomePackage(null); setWelcomeError(null)
     void (async () => {
@@ -944,7 +944,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                     {installLoading ? i18n.t("检查中…") : i18n.t("安装")}
                   </Button>
                 )}
-                {readOnly && <span className="text-xs text-muted-foreground">{i18n.t("当前为 Demo，只能查看市场，安装需完整权限。")}</span>}
+                {readOnly && <span className="text-xs text-muted-foreground">{i18n.t("当前身份只能查看市场，安装需插件管理权限。")}</span>}
                 <Button variant="outline" size="sm" asChild><Link to="/plugins">{i18n.t("查看本地插件状态")}</Link></Button>
                 <DialogClose asChild>
                   <Button variant="secondary" size="sm">{i18n.t("关闭")}</Button>

@@ -53,7 +53,7 @@ test('the actual skills page reads status only and links to the single graph pur
   assert.deepEqual(calls, [['root', 'skills']])
   const statusTree = module.SkillsStatusSection({ read: { data, loaded: true, loading: false }, onRetry() {} })
   assert.match(JSON.stringify(statusTree), /给出了建议/)
-  const destination = nodes(rendered).find(node => node.type === 'link' && node.props.to === '/agent/models?tab=purposes')
+  const destination = nodes(rendered).find(node => node.type === 'link' && node.props.to === '/features/ai?tab=purposes')
   assert.ok(destination, 'the supported graph editor must remain reachable')
   const header = nodes(rendered).find(node => node.type === 'PageHeader')
   await header.props.actions.props.onClick()

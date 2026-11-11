@@ -50,7 +50,7 @@ import { getConsoleTransport } from '../utils/console-client'
 import { apiFetch } from '../utils/auth'
 import { CONSOLE_REST } from '../contracts/zhin-console'
 import { pluginRpc } from '../utils/plugin-rpc'
-import { isDemoMode } from '../utils/demo-mode'
+import { hasConsolePermission } from '../utils/console-access.mjs'
 import { useToast } from '../components/toast'
 import { Button } from '../components/ui/button'
 import { Alert, AlertDescription } from '../components/ui/alert'
@@ -355,7 +355,7 @@ export default function HomePage() {
   const { restarting, confirmRestart } = useHostRestart(confirm)
   const requestRef = useRef(0)
   const requestAbortRef = useRef<AbortController | null>(null)
-  const readOnly = isDemoMode()
+  const readOnly = !hasConsolePermission('agent.configure')
   const { success, error: toastError } = useToast()
   const connected = useConsoleConnected()
   const [messageEvents, setMessageEvents] = useState<unknown[]>([])

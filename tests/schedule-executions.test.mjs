@@ -45,7 +45,7 @@ test('queries retain exact opaque IDs/cursors, bounded pagination and truthful d
 
 const source = await readFile(new URL('../console-ui/src/pages/ScheduleExecutions.tsx', import.meta.url), 'utf8')
 const require = createRequire(import.meta.url)
-function fixture({ component = 'ScheduleExecutions', props = { jobId: run.jobId }, demo = false } = {}) {
+function fixture({ component = 'ScheduleExecutions', props = { jobId: run.jobId }, readOnly = false } = {}) {
   let connection = { host: 'https://host-a', credential: 'a' }, count = 0
   const authority = createInboxCacheAuthority(() => connection, () => `scope-${++count}`)
   const scope = authority.current()
@@ -59,7 +59,7 @@ function fixture({ component = 'ScheduleExecutions', props = { jobId: run.jobId 
   }
   const mocks = {
     react: hooks, 'lucide-react': new Proxy({}, { get: () => 'icon' }), '../utils/auth': { apiFetch: (path, init) => new Promise((resolve, reject) => requests.push({ path, init, resolve, reject })) },
-    '../utils/inbox-cache': { isInboxCacheScopeActive: value => authority.active(value) }, '../utils/demo-mode': { isDemoMode: () => demo },
+    '../utils/inbox-cache': { isInboxCacheScopeActive: value => authority.active(value) }, '../utils/console-access.mjs': { hasConsolePermission: () => !readOnly },
     '../components/ui/button': { Button: 'button' }, '../components/ui/badge': { Badge: 'badge' }, '../components/ui/alert': { Alert: 'alert', AlertDescription: 'p' },
     '../components/ui/dialog': Object.fromEntries(['Dialog', 'DialogContent', 'DialogHeader', 'DialogTitle', 'DialogDescription', 'DialogFooter', 'DialogClose'].map(name => [name, name])),
     '../components/ui/tabs': Object.fromEntries(['Tabs', 'TabsContent', 'TabsList', 'TabsTrigger'].map(name => [name, name])),
@@ -148,14 +148,14 @@ test('submitted cleanup settling after Host/credential change cannot refresh or 
   }
 })
 
-test('a successful cleanup refreshes once without recreating or replaying a task; demo never exposes cleanup', async () => {
+test('a successful cleanup refreshes once without recreating or replaying a task; a read-only identity never sees cleanup', async () => {
   const f = fixture(); f.respond(0, envelope({ runs: [run], nextCursor: null })); await f.settle()
   button(f.tree, '清理过期记录').props.onClick(); f.render()
   elements(f.tree).filter(node => node.type === 'button' && text(node) === '清理过期记录').at(-1).props.onClick()
   f.respond(1, envelope({ deleted: 1, cutoff: 500 })); await f.settle()
   assert.equal(f.requests.length, 3); assert.match(f.requests[2].path, /^\/api\/assistant\/executions\?/)
   assert.equal(f.requests.filter(request => request.init.method === 'POST').length, 1); assert.match(text(f.tree), /已清理 1 条/); f.close()
-  const demo = fixture({ demo: true }); demo.respond(0, envelope({ runs: [run], nextCursor: null })); await demo.settle(); assert.equal(button(demo.tree, '清理过期记录'), undefined); demo.close()
+  const viewer = fixture({ readOnly: true }); viewer.respond(0, envelope({ runs: [run], nextCursor: null })); await viewer.settle(); assert.equal(button(viewer.tree, '清理过期记录'), undefined); viewer.close()
 })
 
 test('a hung cleanup leaves dismissal available without cancelling it or admitting a duplicate submission', async () => {

@@ -49,8 +49,8 @@ export function matchPermissionLink(commands, link) {
 }
 
 // Never present a failed or not-yet-run read as an empty catalog.
-export function permissionCatalogState({ demo, active, loading, error, catalog }) {
-  if (demo || !active) return 'unavailable'
+export function permissionCatalogState({ denied, active, loading, error, catalog }) {
+  if (denied || !active) return 'unavailable'
   if (loading) return 'loading'
   if (error) return 'error'
   if (catalog) return catalog.commands.length ? 'ready' : 'empty'

@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AlertCircle, CheckCircle2, ChevronRight, Clock, Loader2, Package, PauseCircle, Search } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
+import { hasConsolePermission } from '../utils/console-access.mjs'
+import { featureGlobalHref } from '../console-routes.mjs'
 import { Badge } from '../components/ui/badge'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { Skeleton } from '../components/ui/skeleton'
@@ -34,10 +36,6 @@ interface Plugin {
   config?: { configured?: boolean; hasSchema?: boolean }
   management?: PluginManagementState
   managementError?: string
-}
-
-function isDemoMode(): boolean {
-  return Boolean((globalThis as { __ZHIN_DEMO_MODE__?: boolean }).__ZHIN_DEMO_MODE__)
 }
 
 async function requestConsole<T = unknown>(request: ConsoleRpcRequest): Promise<T> {
@@ -165,7 +163,7 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
   }
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = typeof useNavigate === 'function' ? useNavigate() : undefined
-  const readOnly = isDemoMode()
+  const readOnly = !hasConsolePermission('plugin.manage')
   const search = searchParams.get('q') ?? ''
   const rawStatus = searchParams.get('status')
   const statusFilter: PluginStatusFilter =
@@ -402,7 +400,7 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
                       e?.stopPropagation?.()
                       const target =
                         plugin.config?.configured || plugin.config?.hasSchema
-                          ? `/config?plugin=${encodeURIComponent(instanceKey)}`
+                          ? featureGlobalHref(instanceKey)
                           : detailUrl(instanceKey)
                       if (navigate) navigate(target)
                       else if (typeof window !== 'undefined') window.location.assign(target)

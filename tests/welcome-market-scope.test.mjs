@@ -22,7 +22,7 @@ function setup() {
     useState(initial) { const i = cursor++; if (!(i in slots)) slots[i] = typeof initial === 'function' ? initial() : initial; return [slots[i], next => { slots[i] = typeof next === 'function' ? next(slots[i]) : next }] },
     useRef(initial) { const i = cursor++; return slots[i] ?? (slots[i] = { current: initial }) },
     useCallback: fn => fn, useMemo: fn => fn(), useEffect() {},
-    useToast: () => ({ success() {}, info() {}, warning() {}, error() {} }), useSearchParams: () => [new URLSearchParams()], isDemoMode: () => false,
+    useToast: () => ({ success() {}, info() {}, warning() {}, error() {} }), useSearchParams: () => [new URLSearchParams()], hasConsolePermission: () => true,
     isInboxCacheScopeActive: scope => scope === active,
     requestConsole: input => new Promise((resolve, reject) => calls.push({ input, scope: active, resolve, reject })),
     mutationRequest, reconcileInstall, canResumeInstall, planInstallRecovery, PAGE_SIZE: 20,

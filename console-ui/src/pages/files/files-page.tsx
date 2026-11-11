@@ -19,7 +19,7 @@ import { getFileIcon } from './file-icons'
 import { FileEditor } from './file-editor'
 import { createFileDraftSessions, type FileDraft } from './draft-session.mjs'
 import { locateTreePath, searchTreeFiles } from './file-tree-model.mjs'
-import { isDemoMode } from '../../utils/demo-mode'
+import { hasConsolePermission } from '../../utils/console-access.mjs'
 import { useConsoleRead } from '../../hooks/use-console-read'
 import { readErrorSummary } from '../../utils/read-error.mjs'
 import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
@@ -49,7 +49,7 @@ export default function FileManagePage() {
 
 function FileManageSession() {
   const i18n = useI18n()
-  const readOnly = isDemoMode()
+  const readOnly = !hasConsolePermission('ops.files.write')
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedPath = searchParams.get('path') || null
   const fileManager = getConsoleTransport()
@@ -125,7 +125,7 @@ function FileManageSession() {
     <div className="space-y-4">
       <PageHeader
         title={i18n.t("项目文件")}
-        description={readOnly ? i18n.t("浏览工作空间中的配置文件和源代码（Demo 只读）") : i18n.t("浏览和编辑工作空间中的配置文件和源代码")}
+        description={readOnly ? i18n.t("浏览工作空间中的配置文件和源代码（只读）") : i18n.t("浏览和编辑工作空间中的配置文件和源代码")}
         actions={
           <Button className="file-control" variant="outline" size="sm" onClick={() => void loadTree().catch(() => {})} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />

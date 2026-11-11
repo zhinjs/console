@@ -21,17 +21,17 @@ test('tab ids resolve per owner and anything unknown falls back to the default t
 test('tab URLs keep unrelated parameters and the default tab uses the plain path', () => {
   assert.equal(entry.inferenceTabParams(new URLSearchParams('tab=services&from=skills'), 'profiles').toString(), 'from=skills')
   assert.equal(entry.inferenceTabParams(new URLSearchParams('from=skills'), 'accounts').toString(), 'from=skills&tab=accounts')
-  assert.equal(entry.modelsHref(), '/agent/models')
-  assert.equal(entry.modelsHref('profiles'), '/agent/models')
-  assert.equal(entry.modelsHref('purposes'), '/agent/models?tab=purposes')
+  assert.equal(entry.modelsHref(), '/features/ai')
+  assert.equal(entry.modelsHref('profiles'), '/features/ai')
+  assert.equal(entry.modelsHref('purposes'), '/features/ai?tab=purposes')
 })
 
 test('old settings model links redirect to the single entry with their tab; other settings links stay', () => {
   const redirect = query => entry.legacySettingsModelsRedirect(new URLSearchParams(query))
-  assert.equal(redirect('section=models'), '/agent/models')
-  assert.equal(redirect('section=ai:inference'), '/agent/models')
-  assert.equal(redirect('section=models&tab=accounts'), '/agent/models?tab=accounts')
-  assert.equal(redirect('section=ai%3Ainference&tab=purposes&q=x'), '/agent/models?tab=purposes')
+  assert.equal(redirect('section=models'), '/features/ai')
+  assert.equal(redirect('section=ai:inference'), '/features/ai')
+  assert.equal(redirect('section=models&tab=accounts'), '/features/ai?tab=accounts')
+  assert.equal(redirect('section=ai%3Ainference&tab=purposes&q=x'), '/features/ai?tab=purposes')
   for (const query of ['', 'section=presets', 'section=general', 'plugin=ai', 'plugin=qq&section=models', 'q=模型']) assert.equal(redirect(query), null, query)
 })
 
@@ -45,7 +45,7 @@ test('settings no longer embeds a second model workspace, so model management ha
   const config = await readFile(new URL('../console-ui/src/pages/config.tsx', import.meta.url), 'utf8')
   assert.doesNotMatch(config, /InferenceWorkspace/, 'the settings page links out instead of mounting the workspace')
   const hinted = Object.entries(ROUTE_SEARCH_HINTS).filter(([, hint]) => hint.keywords.includes('API Key') || hint.keywords.includes('provider'))
-  assert.deepEqual(hinted.map(([path]) => path), ['/agent/models'], 'the command palette offers one model destination')
+  assert.deepEqual(hinted.map(([path]) => path), ['/features/ai'], 'the command palette offers one model destination')
 })
 
 // Run the real Workspace with a memory address bar that records replace vs push writes.
@@ -80,7 +80,7 @@ async function workspace({ query = '', hostAdministrator = true } = {}) {
   return { runtime, url, tabs, triggers: () => nodes(runtime.value).filter(node => node.type === 'tab').map(node => node.props.value) }
 }
 
-test('a shared /agent/models?tab= link opens that tab after refresh', async () => {
+test('a shared /features/ai?tab= link opens that tab after refresh', async () => {
   const f = await workspace({ query: 'tab=accounts' })
   try {
     assert.equal(f.tabs().props.value, 'accounts')

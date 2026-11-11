@@ -35,6 +35,8 @@ import {
   FlaskConical,
   MessagesSquare,
   Network,
+  ToggleLeft,
+  Cable,
 } from "lucide-react";
 
 /** 内置 registerBuiltinShell 与各插件常用名；未知名称回退 Circle */
@@ -70,6 +72,8 @@ const SIDEBAR_LUCIDE_BY_NAME: Record<string, LucideIcon> = {
   Wrench,
   Workflow,
   Network,
+  ToggleLeft,
+  Cable,
 };
 
 export function getSidebarLucideIcon(name: string): LucideIcon {

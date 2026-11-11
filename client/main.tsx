@@ -23,8 +23,6 @@ import LoginPage from "@console/pages/login";
 import { TooltipProvider } from "@console/components/ui/tooltip";
 import { ToastProvider, useToast } from "@console/components/toast";
 import { runQueryPrefillMiddleware, takeLoginLink, type InitialSession } from "./middleware/queryPrefill";
-import { runDemoBootstrap } from "./middleware/demoBootstrap";
-import { isDemoMode } from "@console/utils/demo-mode";
 
 initializeTheme();
 
@@ -49,12 +47,9 @@ sharedModules.set("react-router-dom", ReactRouterDOM);
 
 registerBuiltinConsolePages();
 
-// Removes `#token=` (and a rejected `?token=`) from the address bar before anything else, including in demo builds.
+// Removes `#token=` (and a rejected `?token=`) from the address bar before anything else.
 const loginLink = takeLoginLink();
-const demoSession = runDemoBootstrap();
-const initialSession: InitialSession = demoSession
-  ? { ...demoSession, loginToken: null, queryTokenRejected: loginLink.queryTokenRejected }
-  : runQueryPrefillMiddleware(loginLink);
+const initialSession: InitialSession = runQueryPrefillMiddleware(loginLink);
 
 function ConsoleConnection() {
   useConsoleTransport();
@@ -105,14 +100,6 @@ function App() {
   }, []);
 
   if (!authed) {
-    if (isDemoMode()) {
-      return (
-        <div className="flex items-center justify-center min-h-screen bg-background p-6">
-          <p className="text-sm text-destructive text-center max-w-md">
-            {i18n.t("演示 Host 拒绝了预置令牌，或暂时不可用。请稍后刷新重试。")}</p>
-        </div>
-      );
-    }
     return (
       <LoginPage onSuccess={handleLogin} initialApiBase={loginApiBase}
         initialToken={linkToken} onInitialTokenConsumed={consumeLinkToken}

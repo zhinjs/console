@@ -28,7 +28,7 @@ const persistent = [
   { type: 'persistent', id: 'task:unknown', label: '待确认结果', prompt: '检查服务', cronExpression: '0 0 9 1 * *', enabled: true },
 ]
 const memory = [{ type: 'memory', id: 'plugin-cron', plugin: 'root/reminder', description: '检查新提醒', expression: '0 */5 * * * *', running: true }]
-function fixture({ demo = false, available = true, jobs = [], deferJobs = false, autoLoad = true } = {}) {
+function fixture({ readOnly = false, available = true, jobs = [], deferJobs = false, autoLoad = true } = {}) {
   let connection = { host: 'https://host-a', credential: 'credential-a' }, scopeCounter = 0, slots = [], mountedKey
   const authority = createInboxCacheAuthority(() => connection, () => `scope-${++scopeCounter}`)
   const calls = [], httpCalls = [], effects = [], timers = [], errors = []; let cursor = 0, dirty = false
@@ -49,7 +49,7 @@ function fixture({ demo = false, available = true, jobs = [], deferJobs = false,
     '../contracts/zhin-console': { CONSOLE_RPC: { SCHEDULE_LIST: 'schedule:list', CRON_VALIDATE: 'cron:validate', CRON_ADD: 'cron:add', CRON_REMOVE: 'cron:remove', CRON_PAUSE: 'cron:pause', CRON_RESUME: 'cron:resume' } },
     '../utils/console-rpc': { requestConsole: input => new Promise((resolve, reject) => calls.push({ input, resolve, reject, answered: false, scope: authority.current() })) },
     '../utils/useInboxCacheScope': { useInboxCacheScope: () => authority.current() }, '../utils/inbox-cache': { isInboxCacheScopeActive: scope => authority.active(scope) },
-    '../utils/demo-mode': { isDemoMode: () => demo }, './cron-schedule.mjs': { describeCron, relativeUntil },
+    '../utils/console-access.mjs': { hasConsolePermission: () => !readOnly }, './cron-schedule.mjs': { describeCron, relativeUntil },
     './assistant-jobs-model.mjs': { validateAssistantJobs, explainJobError }, './task-hub-model.mjs': { taskTabHref },
     '../components/ui/tabs': { Tabs: 'tabs', TabsList: 'tab-list', TabsTrigger: 'tab-trigger', TabsContent: 'tab-panel' },
     './ScheduleExecutions': { ScheduleExecutions: 'schedule-executions' },
@@ -148,7 +148,7 @@ test('pause/resume retain their exact calls and delete first opens the existing 
 })
 
 test('read-only and unsupported persistent scheduling expose no creation or mutation controls', async () => {
-  for (const options of [{ demo: true }, { available: false }]) {
+  for (const options of [{ readOnly: true }, { available: false }]) {
     const f = fixture(options); await f.settle()
     assert.equal(button(f.tree, '新建任务'), undefined)
     assert.equal(elements(row(f.tree, 'task:daily')).filter(node => node.type === 'button' && ['暂停', '恢复', '删除'].includes(node.props.title)).length, 0)

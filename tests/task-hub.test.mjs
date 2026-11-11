@@ -5,16 +5,21 @@ import ts from 'typescript'
 import {
   TASK_HUB_TABS, DEFAULT_TASK_TAB, resolveTaskTab, taskTabHref, legacyTaskRedirect,
 } from '../console-ui/src/pages/task-hub-model.mjs'
+import { resolveLegacyRedirect } from '../console-ui/src/console-routes.mjs'
 
 const src = path => readFile(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')
 
 test('legacy routes redirect to the matching task tab and keep the query', () => {
-  assert.equal(legacyTaskRedirect('/cron'), '/tasks?tab=schedule')
-  assert.equal(legacyTaskRedirect('/assistant/jobs'), '/tasks?tab=assistant')
-  assert.equal(legacyTaskRedirect('/assistant/jobs', '?q=task%3Adaily'), '/tasks?tab=assistant&q=task%3Adaily')
-  assert.equal(legacyTaskRedirect('/assistant/jobs', '?tab=history&q=x'), '/tasks?tab=assistant&q=x')
+  assert.equal(legacyTaskRedirect('/cron'), '/ops/schedules?tab=schedule')
+  assert.equal(legacyTaskRedirect('/assistant/jobs'), '/ops/schedules?tab=assistant')
+  assert.equal(legacyTaskRedirect('/assistant/jobs', '?q=task%3Adaily'), '/ops/schedules?tab=assistant&q=task%3Adaily')
+  assert.equal(legacyTaskRedirect('/assistant/jobs', '?tab=history&q=x'), '/ops/schedules?tab=assistant&q=x')
   assert.equal(legacyTaskRedirect('/logs'), null)
-  assert.equal(taskTabHref('assistant', { q: 'a b' }), '/tasks?tab=assistant&q=a+b')
+  assert.equal(taskTabHref('assistant', { q: 'a b' }), '/ops/schedules?tab=assistant&q=a+b')
+  // The shell-wide redirect table agrees with the hub's own legacy mapping.
+  for (const [path, search] of [['/cron', ''], ['/assistant/jobs', '?q=task%3Adaily'], ['/assistant/jobs', '?tab=history&q=x']]) {
+    assert.equal(resolveLegacyRedirect(path, search), legacyTaskRedirect(path, search), path + search)
+  }
 })
 
 test('tab id from the URL resolves to a visible tab, unknown ids fall back', () => {
@@ -24,21 +29,12 @@ test('tab id from the URL resolves to a visible tab, unknown ids fall back', () 
   for (const tab of TASK_HUB_TABS) assert.equal(resolveTaskTab(tab.id), tab.id)
 })
 
-test('the sidebar has one task entry; /cron and /assistant/jobs are hidden redirects', async () => {
-  const source = ts.createSourceFile('r.tsx', await src('registerBuiltinShell.tsx'), ts.ScriptTarget.ES2022, true, ts.ScriptKind.TSX)
+test('the 运维 section has one schedule entry; /tasks, /cron and /assistant/jobs are hidden redirects', async () => {
   const text = await src('registerBuiltinShell.tsx')
-  const block = path => { const start = text.indexOf(`path: '${path}'`); return text.slice(start, text.indexOf('})', start)) }
-  assert.ok(source)
-  assert.match(block('/tasks'), /name: '任务'/)
-  assert.doesNotMatch(block('/tasks'), /hideInMenu/)
-  for (const path of ['/cron', '/assistant/jobs']) {
-    assert.match(block(path), /LegacyTaskRoute/)
-    assert.match(block(path), /hideInMenu: true/)
-  }
+  assert.match(text, /path: P\.opsSchedules, name: '定时任务'[^\n]*element: <TaskHubPage \/>[^\n]*group: NAV_GROUPS\.OPS/)
   assert.doesNotMatch(text, /pages\/cron'|pages\/assistant-jobs'/, 'the shell registers the hub, not the old pages')
-  const visibleTaskGroupEntries = [...text.matchAll(/path: '([^']+)'[\s\S]*?\}\)/g)]
-    .filter(([block]) => /NAV_GROUPS\.TASKS/.test(block) && !/hideInMenu: true/.test(block)).map(([, path]) => path)
-  assert.deepEqual(visibleTaskGroupEntries.filter(path => ['/tasks', '/cron', '/assistant/jobs'].includes(path)), ['/tasks'])
+  assert.match(text, /LEGACY_ROUTE_REDIRECTS\)\) \{\s*app\.addRoute\(\{ path, name: path, parent: rule\.to, element: <LegacyRedirect \/>, meta: \{ hideInMenu: true \} \}\)/)
+  for (const path of ['/tasks', '/cron', '/assistant/jobs']) assert.ok(resolveLegacyRedirect(path)?.startsWith('/ops/schedules'), path)
 })
 
 test('in-app links point at hub tabs, not retired routes', async () => {

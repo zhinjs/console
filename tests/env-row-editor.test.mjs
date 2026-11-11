@@ -84,7 +84,7 @@ function editorFixture({ file, fresh = () => file, readOnly = false, onRestart, 
     './files/draft-session.mjs': draftSession,
     './env-editor-model.mjs': envModel,
     '../utils/read-error.mjs': readError,
-    '../utils/demo-mode': { isDemoMode: () => readOnly },
+    '../utils/console-access.mjs': { hasConsolePermission: () => !readOnly },
     '../hooks/use-host-restart': { useHostRestart: () => ({ restarting: false, confirmRestart: async () => {} }) },
   }
   const { EnvFileEditor } = load(envCode, mocks)

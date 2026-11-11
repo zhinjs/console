@@ -3,29 +3,25 @@ import { LanguageSelect } from '../components/LanguageSelect'
 import { useI18n } from '../i18n'
 import { useMemo, useRef, useState, useEffect, useLayoutEffect, useSyncExternalStore } from "react"
 import { Outlet, Link, useLocation, matchPath } from "react-router-dom"
-import { Menu, LogOut, X, ChevronRight, PanelLeftClose, PanelLeftOpen, Settings2, Activity } from "lucide-react"
+import { Menu, LogOut, X, ChevronRight, PanelLeftClose, PanelLeftOpen } from "lucide-react"
 import { cn, type ConsoleRouteRecord } from "@zhin.js/client"
 import { useConsoleConnected } from "../hooks/use-console-connected"
 import { app } from "../utils/console-client"
 import { getSidebarLucideIcon } from "../components/sidebarMenuIcons"
 import { ThemeToggle } from "../components/ThemeToggle"
-import { Button, buttonVariants } from "../components/ui/button"
+import { Button } from "../components/ui/button"
 import { ScrollArea } from "../components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipTrigger } from "../components/ui/tooltip"
 import { notifyAuthRequired } from "../utils/auth"
-import { isDemoMode } from "../utils/demo-mode"
-import { reopenDemoOnboarding } from "../components/DemoOnboarding"
 import { ConsoleCommandCenter } from "../components/ConsoleCommandCenter"
-import { COLLAPSED_BY_DEFAULT_NAV_GROUPS, FOOTER_NAV_GROUP_ORDER, NAV_GROUP_ORDER, NAV_GROUPS } from "../navigation-taxonomy"
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel } from "../components/ui/dropdown-menu"
 import "./workspace-navigation.css"
 import { resolveNavigationLocation } from "../navigation-location.mjs"
+import { buildNavigation, routeSectionId, sectionById } from "../navigation-sections.mjs"
+import { useConsoleAccess } from "../hooks/use-console-access"
 
 import { useIsMobile } from '../hooks/useIsMobile'
 import { ListItemButton } from '../components/ui/list-item-button'
-const EXPANDED_GROUPS_KEY = "zhin.console.nav.expanded-groups"
 const SIDEBAR_COLLAPSED_KEY = "zhin.console.nav.collapsed"
-/** 总览固定在侧边栏第一项，不随所属分组折进底部菜单。 */
 const HOME_PATH = "/dashboard"
 
 function readSidebarOpen(): boolean {
@@ -44,24 +40,6 @@ function writeSidebarOpen(open: boolean): void {
   }
 }
 
-function readExpandedGroups(): Set<string> {
-  try {
-    const raw = window.localStorage.getItem(EXPANDED_GROUPS_KEY)
-    const parsed: unknown = raw ? JSON.parse(raw) : []
-    return new Set(Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : [])
-  } catch {
-    return new Set()
-  }
-}
-
-function writeExpandedGroups(groups: ReadonlySet<string>): void {
-  try {
-    window.localStorage.setItem(EXPANDED_GROUPS_KEY, JSON.stringify([...groups]))
-  } catch {
-    // Storage may be unavailable (private mode); folding still works for this session.
-  }
-}
-
 function SidebarMenuIcon({ icon }: { icon?: React.ReactNode | string }) {
   if (icon == null) return null
   if (typeof icon === "string") {
@@ -69,10 +47,6 @@ function SidebarMenuIcon({ icon }: { icon?: React.ReactNode | string }) {
     return <Cmp className="w-4 h-4" />
   }
   return <>{icon}</>
-}
-
-function collectMenuRoutes(routes: readonly ConsoleRouteRecord[]): ConsoleRouteRecord[] {
-  return routes.filter((r) => !r.meta?.hideInMenu)
 }
 
 function useRouteMetaFlag(
@@ -101,43 +75,14 @@ export default function DashboardLayout() {
   const connected = useConsoleConnected()
 
   const showLabels = isMobile || desktopSidebarOpen
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(readExpandedGroups)
-  const toggleGroup = (groupName: string) => {
-    setExpandedGroups((prev) => {
-      const next = new Set(prev)
-      if (next.has(groupName)) next.delete(groupName)
-      else next.add(groupName)
-      writeExpandedGroups(next)
-      return next
-    })
-  }
 
   const routes = useSyncExternalStore(
     app.subscribe,
     () => app.getRoutes(),
   )
-
-  const menuRoutes = useMemo(() => {
-    return collectMenuRoutes(routes).sort(
-      (a, b) => (a.meta?.order ?? 999) - (b.meta?.order ?? 999),
-    )
-  }, [routes])
-
-  const homeRoute = useMemo(() => menuRoutes.find((r) => r.path === HOME_PATH) ?? null, [menuRoutes])
-
-  const menuByGroup = useMemo(() => {
-    const map = new Map<string, ConsoleRouteRecord[]>()
-    for (const r of menuRoutes) {
-      if (r.path === HOME_PATH) continue
-      const g = r.meta?.group ?? NAV_GROUPS.PLUGINS
-      if (!map.has(g)) map.set(g, [])
-      map.get(g)!.push(r)
-    }
-    for (const [, items] of map) {
-      items.sort((a, b) => (a.meta?.order ?? 999) - (b.meta?.order ?? 999))
-    }
-    return map
-  }, [menuRoutes])
+  const access = useConsoleAccess()
+  // Sections the principal has no page in are omitted entirely (ADR 0052).
+  const navTiers = useMemo(() => buildNavigation(routes, access), [routes, access])
 
   const contentFullWidth = useRouteMetaFlag(routes, location.pathname, "fullWidth")
   const contentFlush = matchPath(
@@ -149,25 +94,10 @@ export default function DashboardLayout() {
     [location.pathname, routes, i18n],
   )
 
-  const orderedGroups = useMemo(() => {
-    const seen = new Set<string>()
-    const out: string[] = []
-    for (const g of NAV_GROUP_ORDER) {
-      if (menuByGroup.has(g) && menuByGroup.get(g)!.length) {
-        out.push(g)
-        seen.add(g)
-      }
-    }
-    for (const g of menuByGroup.keys()) {
-      if (!seen.has(g) && menuByGroup.get(g)!.length) out.push(g)
-    }
-    return out
-  }, [menuByGroup])
-  const primaryGroups = orderedGroups.filter((group) => !FOOTER_NAV_GROUP_ORDER.some((footerGroup) => footerGroup === group))
-  const footerGroups = FOOTER_NAV_GROUP_ORDER.filter((group) => menuByGroup.has(group))
-  const currentLabel = navigation.current ? routeLabel(navigation.current, i18n.locale) : isDemoMode() ? i18n.t("在线 Demo") : i18n.t("首页")
+  const currentLabel = navigation.current ? routeLabel(navigation.current, i18n.locale) : i18n.t("首页")
   const onHome = navigation.current?.path === HOME_PATH
-  const groupLabel = i18n.t(navigation.group)
+  const navOwner = navigation.current ?? navigation.parent ?? navigation.visible
+  const groupLabel = i18n.t(navOwner ? sectionById(routeSectionId(navOwner))?.label ?? navigation.group : navigation.group)
   const parentLabel = navigation.parent ? routeLabel(navigation.parent, i18n.locale) : null
 
   useEffect(() => {
@@ -227,12 +157,12 @@ export default function DashboardLayout() {
         inert={isMobile && !mobileNavOpen}
       >
         <div className="console-sidebar-header">
-          <Link to="/" className="console-sidebar-brand" aria-label={isDemoMode() ? "Zhin.js Demo" : "Zhin.js"}>
+          <Link to="/" className="console-sidebar-brand" aria-label="Zhin.js">
             <span className="console-brand-mark" aria-hidden="true"><span>Z</span></span>
             {showLabels && (
               <span className="console-sidebar-brand-text">
-                <strong>{isDemoMode() ? "Zhin.js Demo" : "Zhin.js"}</strong>
-                <small>{isDemoMode() ? i18n.t("零安装 Sandbox") : i18n.t("Bot 工作台")}</small>
+                <strong>Zhin.js</strong>
+                <small>{i18n.t("Bot 工作台")}</small>
               </span>
             )}
           </Link>
@@ -251,51 +181,19 @@ export default function DashboardLayout() {
 
         <ScrollArea className="flex-1 min-h-0">
           <nav className="console-sidebar-nav" aria-label={i18n.t("主导航")}>
-            {homeRoute ? (() => {
-              const label = routeLabel(homeRoute, i18n.locale)
-              const isActive = navigation.visible?.path === HOME_PATH
-              const link = (
-                <Link
-                  to={HOME_PATH}
-                  aria-current={isActive ? "page" : undefined}
-                  aria-label={showLabels ? undefined : label}
-                  onClick={() => {
-                    if (isMobile) setMobileNavOpen(false)
-                  }}
-                  className={cn("console-nav-item", isActive && "is-active")}
-                >
-                  <span className="console-nav-icon">
-                    <SidebarMenuIcon icon={homeRoute.icon} />
-                  </span>
-                  {showLabels && <span className="truncate">{label}</span>}
-                </Link>
-              )
+            {navTiers.map((tier) => <div key={tier.id} className="console-nav-tier" data-tier={tier.id}>
+              {showLabels ? <div className="console-nav-tier-label">{i18n.t(tier.label)}</div> : null}
+              {tier.sections.map((section) => {
+              const items = section.routes
+              const groupName = section.label
+              // A section whose only page carries the section's own name (e.g. Sandbox "会话") needs no heading.
+              const showGroupLabel = !(items.length === 1 && routeLabel(items[0], i18n.locale) === i18n.t(groupName))
               return (
-                <div className="console-nav-group console-nav-home">
-                  {showLabels ? link : (
-                    <Tooltip delayDuration={120}>
-                      <TooltipTrigger asChild>{link}</TooltipTrigger>
-                      <TooltipContent side="right" sideOffset={10}>{label}</TooltipContent>
-                    </Tooltip>
-                  )}
-                </div>
-              )
-            })() : null}
-            {primaryGroups.map((groupName) => {
-              const items = menuByGroup.get(groupName) ?? []
-              if (!items.length) return null
-              const collapsible = COLLAPSED_BY_DEFAULT_NAV_GROUPS.includes(groupName)
-              const open = !collapsible || !showLabels || expandedGroups.has(groupName) || navigation.group === groupName
-              const showGroupLabel = !items.some((route) => routeLabel(route, i18n.locale) === i18n.t(groupName))
-              return (
-                <div key={i18n.t(groupName)} className="console-nav-group">
-                  {showLabels ? collapsible ? <ListItemButton type="button" aria-expanded={open}
-                    onClick={() => toggleGroup(groupName)} className="console-nav-group-label is-toggle">
-                    {i18n.t(groupName)}<ChevronRight className={cn("console-nav-group-chevron", open && "is-open")} aria-hidden="true" />
-                  </ListItemButton> : showGroupLabel && <div className="console-nav-group-label">{i18n.t(groupName)}</div>
+                <div key={section.id} className="console-nav-group" data-section={section.id}>
+                  {showLabels ? showGroupLabel && <div className="console-nav-group-label">{i18n.t(groupName)}</div>
                     : <div className="console-nav-group-rule" aria-hidden="true" />}
-                  {open && items.map((route, index) => {
-                    const itemKey = route.path || `menu-item-${i18n.t(groupName)}-${index}`
+                  {items.map((route, index) => {
+                    const itemKey = route.path || `menu-item-${section.id}-${index}`
                     const isActive = navigation.visible?.path === route.path
                     const label = routeLabel(route, i18n.locale)
                     const link = (
@@ -326,38 +224,9 @@ export default function DashboardLayout() {
                 </div>
               )
             })}
+            </div>)}
           </nav>
         </ScrollArea>
-
-        {footerGroups.length ? <nav className="console-sidebar-secondary" aria-label={i18n.t("设置菜单")}>
-          {footerGroups.map((groupName) => {
-            const items = menuByGroup.get(groupName) ?? []
-            const active = !onHome && navigation.group === groupName
-            const label = i18n.t(groupName)
-            return <DropdownMenu key={groupName}>
-              <DropdownMenuTrigger asChild>
-                <ListItemButton
-                  type="button"
-                  className={cn("console-nav-item console-secondary-trigger", active && "is-active")}
-                  aria-label={label}
-                  title={!showLabels ? label : undefined}
-                >
-                  <span className="console-nav-icon">{groupName === NAV_GROUPS.SETTINGS ? <Settings2 /> : <Activity />}</span>
-                  {showLabels ? <><span className="min-w-0 flex-1 truncate text-left">{label}</span><ChevronRight className="console-secondary-chevron" aria-hidden="true" /></> : null}
-                </ListItemButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side={isMobile ? "top" : "right"} align="end" sideOffset={8} className="console-secondary-menu">
-                <DropdownMenuLabel>{label}</DropdownMenuLabel>
-                {items.map((route) => <DropdownMenuItem key={route.path} asChild>
-                  <Link to={route.path} aria-current={navigation.visible?.path === route.path ? "page" : undefined}
-                    onClick={() => { if (isMobile) setMobileNavOpen(false) }}>
-                    <SidebarMenuIcon icon={route.icon} /><span>{routeLabel(route, i18n.locale)}</span>
-                  </Link>
-                </DropdownMenuItem>)}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          })}
-        </nav> : null}
 
         <div className="console-sidebar-footer">
           <span
@@ -418,38 +287,8 @@ export default function DashboardLayout() {
               <span className="console-topbar-live-pill__dot" aria-hidden="true" />
               <span>{connected ? i18n.t("实时已连") : i18n.t("连接断开")}</span>
             </span>
-            {isDemoMode() ? (
-              <>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="console-topbar-link hidden lg:inline-flex text-xs"
-                  onClick={() => reopenDemoOnboarding()}
-                >
-                  {i18n.t("使用说明")}</Button>
-                <a
-                  href="https://zhin.js.org/getting-started/first-run"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "console-topbar-link text-xs h-8 px-2.5")}
-                >
-                  <span className="sm:hidden">{i18n.t("部署")}</span>
-                  <span className="hidden sm:inline">{i18n.t("部署到本机")}</span>
-                </a>
-                <a
-                  href="https://zhin.js.org/adapters/icqq"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "console-topbar-link text-xs h-8 px-2.5 hidden lg:inline-flex")}
-                >
-                  {i18n.t("接 QQ Bot")}</a>
-                <span className="console-topbar-divider" aria-hidden="true" />
-              </>
-            ) : null}
             <LanguageSelect />
             <ThemeToggle />
-            {!isDemoMode() ? (
             <Button
               variant="ghost"
               size="icon"
@@ -461,7 +300,6 @@ export default function DashboardLayout() {
             >
               <LogOut className="h-4 w-4" />
             </Button>
-            ) : null}
           </div>
         </header>
 

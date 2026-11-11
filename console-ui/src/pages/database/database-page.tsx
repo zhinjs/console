@@ -17,13 +17,13 @@ import { DB_TYPE_LABELS, DIALECT_LABELS } from './constants'
 import { RelatedTableView } from './related-table-view'
 import { DocumentCollectionView } from './document-collection-view'
 import { KvBucketView } from './kv-bucket-view'
-import { isDemoMode } from '../../utils/demo-mode'
+import { hasConsolePermission } from '../../utils/console-access.mjs'
 import { useToast } from '../../components/toast'
 import { withoutDroppedTables, type DroppedTables } from './drop-table-model.mjs'
 
 export default function DatabasePage() {
   const i18n = useI18n()
-  const readOnly = isDemoMode()
+  const readOnly = !hasConsolePermission('ops.database.write')
   const {
     info, tables, loaded, loading, error,
     loadInfo, loadTables, dropTable,
@@ -46,7 +46,7 @@ export default function DatabasePage() {
     <div className="space-y-4 sm:space-y-6">
       <PageHeader
         title={i18n.t("数据库")}
-        description={readOnly ? i18n.t("浏览 {0} 中的数据（Demo 只读）。", [i18n.t(DB_TYPE_LABELS[dbType])]) : i18n.t("浏览和管理 {0} 中的数据；左栏选择对象，右侧查看与编辑。", [i18n.t(DB_TYPE_LABELS[dbType])])}
+        description={readOnly ? i18n.t("浏览 {0} 中的数据（只读）。", [i18n.t(DB_TYPE_LABELS[dbType])]) : i18n.t("浏览和管理 {0} 中的数据；左栏选择对象，右侧查看与编辑。", [i18n.t(DB_TYPE_LABELS[dbType])])}
         actions={
           <div className="flex items-center gap-2">
             {info && (

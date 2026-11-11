@@ -4,7 +4,7 @@ import { RefreshCw, Stethoscope } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog'
 import { Button } from '../../components/ui/button'
 import { apiFetch } from '../../utils/auth'
-import { isDemoMode } from '../../utils/demo-mode'
+import { hasConsolePermission } from '../../utils/console-access.mjs'
 import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
 import { getInboxCacheScope, isInboxCacheScopeActive } from '../../utils/inbox-cache'
 import { CONSOLE_REST } from '../../contracts/zhin-console'
@@ -41,7 +41,7 @@ export function MessageDiagnosticsAction({ message, endpoint, selection }: { mes
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [owner, setOwner] = useState(identity)
-  const demo = isDemoMode()
+  const denied = !hasConsolePermission('status.view')
   const title = message ? i18n.t("消息处理诊断") : i18n.t("本会话最近诊断")
   useEffect(() => {
     gate.current.cancel(); setOpen(false); setRecords([]); setError(null); setLoading(false)
@@ -50,7 +50,7 @@ export function MessageDiagnosticsAction({ message, endpoint, selection }: { mes
 
   const close = () => { gate.current.cancel(); setOpen(false); setLoading(false); setRecords([]); setError(null) }
   const load = async () => {
-    if ('reason' in target || demo || !isInboxCacheScopeActive(scope)) return
+    if ('reason' in target || denied ||!isInboxCacheScopeActive(scope)) return
     const requestedIdentity = identity
     const request = gate.current.begin()
     const current = () => request.current() && identityRef.current === requestedIdentity && isInboxCacheScopeActive(scope)
@@ -73,7 +73,7 @@ export function MessageDiagnosticsAction({ message, endpoint, selection }: { mes
   const visible = owner === identity && isInboxCacheScopeActive(scope)
   return <>
     <button type="button" className={message ? undefined : 'im-header-icon-button h-8 px-2 text-xs inline-flex items-center gap-1 rounded-md hover:bg-accent'}
-      disabled={demo || !isInboxCacheScopeActive(scope)} title={demo ? i18n.t("Demo 不开放消息诊断") : !isInboxCacheScopeActive(scope) ? i18n.t("请先连接 Host") : reason ?? title}
+      disabled={denied || !isInboxCacheScopeActive(scope)} title={denied ? i18n.t("当前身份无权查看消息诊断") : !isInboxCacheScopeActive(scope) ? i18n.t("请先连接 Host") : reason ?? title}
       aria-label={message ? i18n.t("诊断这条入站消息") : title} onClick={() => { setOpen(true); if (!reason) void load() }}>
       <Stethoscope className="h-3.5 w-3.5" />{!message && i18n.t("最近诊断")}
     </button>
@@ -82,7 +82,7 @@ export function MessageDiagnosticsAction({ message, endpoint, selection }: { mes
         <DialogHeader><DialogTitle>{title}</DialogTitle><DialogDescription>{i18n.t("只读查看实际处理阶段，不发送或重放消息。")}{i18n.t(DIAGNOSTIC_RETENTION)}</DialogDescription></DialogHeader>
         {reason ? <p role="status" className="text-sm text-muted-foreground">{reason} {i18n.t(" 可从会话顶部查看“最近诊断”。")}</p> : <>
           <div className="flex items-center justify-between gap-3"><span className="text-xs text-muted-foreground">{message ? i18n.t("按原始完整会话与平台消息 ID 查询") : i18n.t("按当前完整会话查询最近 50 条记录")}</span>
-            <Button variant="outline" size="sm" disabled={loading || demo} onClick={() => void load()}><RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新")}</Button></div>
+            <Button variant="outline" size="sm" disabled={loading || denied} onClick={() => void load()}><RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新")}</Button></div>
           {visible && error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           {visible && loading && <p role="status" className="text-sm text-muted-foreground">{i18n.t("正在读取处理记录…")}</p>}
           {visible && !loading && !error && !records.length && <p role="status" className="text-sm text-muted-foreground">{i18n.t("没有找到该范围的近期记录。")}{i18n.t(DIAGNOSTIC_RETENTION)}</p>}

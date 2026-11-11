@@ -64,7 +64,7 @@ function fixture(initialQuery = '', treeRead = { data: [], loaded: true, error: 
     './draft-session.mjs': { createFileDraftSessions: () => sessions },
     '../../utils/useInboxCacheScope': { useInboxCacheScope: () => scope },
     '../../utils/inbox-cache': { isInboxCacheScopeActive: () => active },
-    '../../utils/demo-mode': { isDemoMode: () => demo },
+    '../../utils/console-access.mjs': { hasConsolePermission: () => !demo },
     '../../hooks/use-console-read': { useConsoleRead: () => read },
     './file-tree-model.mjs': fileTreeModel,
     '../../components/ui/input': { Input: 'input' },

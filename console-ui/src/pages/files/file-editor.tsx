@@ -187,7 +187,7 @@ export function FileEditor({
             {i18n.t("撤销更改")}</Button>
         )}
         <span className="text-xs text-muted-foreground sm:ml-auto basis-full sm:basis-auto">
-          {readOnly ? i18n.t("Demo 只读 · {0} 行", [content.split('\n').length]) : i18n.t("{0} 行 · Ctrl+S 保存", [content.split('\n').length])}
+          {readOnly ? i18n.t("只读 · {0} 行", [content.split('\n').length]) : i18n.t("{0} 行 · Ctrl+S 保存", [content.split('\n').length])}
         </span>
       </div>
       <ConfirmDialog

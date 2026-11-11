@@ -4,7 +4,8 @@ import { useEffect, useRef, type KeyboardEvent } from 'react'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import type { ConversationListNotice } from './conversation-list-notice.mjs'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, Loader2, RefreshCw, Search, Wifi, X, XCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Loader2, RefreshCw, Search, SlidersHorizontal, Wifi, X, XCircle } from 'lucide-react'
+import { adapterEndpointHref } from '../../console-routes.mjs'
 import { cn } from '@zhin.js/client'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -118,6 +119,11 @@ export function ConversationSidebar({
           </Link>
         </Button>
         <AccountSwitcher adapter={adapter} endpointId={endpointId} info={info} loadErr={loadErr} hasDraft={hasDraft} sending={sending} onBeforeLeave={isMobile ? onCloseMobileList : undefined} />
+        <Button variant="ghost" size="icon" className="shrink-0" asChild>
+          <Link to={adapterEndpointHref(adapter, endpointId)} aria-label={i18n.t("功能配置")} title={i18n.t("功能配置")}>
+            <SlidersHorizontal />
+          </Link>
+        </Button>
         {isMobile && onCloseMobileList && <Button type="button" variant="ghost" size="icon" className="shrink-0" onClick={onCloseMobileList} aria-label={i18n.t('关闭会话列表')}><X className="h-4 w-4" /></Button>}
       </div>
 

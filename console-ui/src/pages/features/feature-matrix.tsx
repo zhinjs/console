@@ -1,0 +1,86 @@
+import { Link } from 'react-router-dom'
+import { Lock, RefreshCw, ToggleLeft } from 'lucide-react'
+import { useI18n } from '../../i18n'
+import { PageShell } from '../../components/PageShell'
+import { PageHeader } from '../../components/PageHeader'
+import { Alert, AlertDescription } from '../../components/ui/alert'
+import { Badge } from '../../components/ui/badge'
+import { Button } from '../../components/ui/button'
+import { Card } from '../../components/ui/card'
+import { Skeleton } from '../../components/ui/skeleton'
+import { EmptyState } from '../../components/empty-state'
+import { ErrorAlert } from '../../components/error-alert'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
+import { adapterHref, featureGlobalHref } from '../../console-routes.mjs'
+import { cellState, type FeatureCell } from './feature-model.mjs'
+import { useFeatureMatrix } from './use-feature-data'
+
+function CellBadge({ cell, to }: { cell: FeatureCell | undefined; to?: string }) {
+  const i18n = useI18n()
+  const state = cellState(cell)
+  const badge = state === 'locked'
+    ? <Badge variant="secondary" title={i18n.t(cell?.lockedBy === 'global' ? "已在全局禁用" : "已在适配器禁用")}><Lock aria-hidden="true" />{i18n.t("被上级禁用")}</Badge>
+    : state === 'enabled' ? <Badge variant="success">{i18n.t("启用")}</Badge>
+      : state === 'disabled' ? <Badge variant="outline">{i18n.t("禁用")}</Badge>
+        : <span className="text-muted-foreground">—</span>
+  const content = <span className="inline-flex items-center gap-1.5">{badge}{cell?.overridden ? <Badge variant="info" size="sm">{i18n.t("有覆盖")}</Badge> : null}</span>
+  return to ? <Link to={to} className="inline-flex rounded-md focus-visible:outline-2">{content}</Link> : content
+}
+
+export default function FeatureMatrixPage() {
+  const i18n = useI18n()
+  const { rows, adapters, source, loading, error, refresh } = useFeatureMatrix()
+  const adapterColumns = source === 'rpc' ? adapters : []
+  return (
+    <PageShell>
+      <PageHeader
+        title={i18n.t("功能矩阵")}
+        description={i18n.t("机器人在哪里启用了哪些功能。点击功能名进入全局配置。")}
+        actions={<Button variant="outline" size="sm" onClick={refresh} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>}
+      />
+      {source !== 'rpc' && source !== 'loading' && !error ? (
+        <Alert role="status">
+          <AlertDescription>
+            {source === 'forbidden'
+              ? i18n.t("当前身份无权读取按适配器的功能开关，只显示全局状态。")
+              : source === 'unsupported'
+                ? i18n.t("当前 Host 还不支持按适配器和账号配置功能，只显示全局状态。升级 Host 后会出现每个适配器的列。")
+                : i18n.t("暂时无法读取按适配器的功能开关，只显示全局状态。")}
+            {' '}<Link className="underline" to="/features/adapters">{i18n.t("查看适配器")}</Link>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      {error ? <ErrorAlert error={error} onRetry={refresh} /> : null}
+      <Card className="overflow-hidden p-0">
+        {loading && !rows.length ? (
+          <div className="space-y-2 p-4">{[0, 1, 2, 3].map(index => <Skeleton key={index} className="h-9" />)}</div>
+        ) : !rows.length ? (
+          <EmptyState icon={ToggleLeft} title={i18n.t("还没有功能")} description={i18n.t("安装插件后，它们的功能会出现在这里。")} />
+        ) : (
+          <Table aria-label={i18n.t("功能矩阵")}>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{i18n.t("功能")}</TableHead>
+                <TableHead>{i18n.t("全局")}</TableHead>
+                {adapterColumns.map(adapter => <TableHead key={adapter}><Link to={adapterHref(adapter)} className="hover:underline">{adapter}</Link></TableHead>)}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map(row => (
+                <TableRow key={row.plugin}>
+                  <TableCell>
+                    <Link to={featureGlobalHref(row.plugin)} className="font-medium hover:underline">{row.plugin}</Link>
+                    {row.name !== row.plugin ? <span className="ml-2 text-xs text-muted-foreground">{row.name}</span> : null}
+                    {row.description ? <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{row.description}</p> : null}
+                  </TableCell>
+                  <TableCell><CellBadge cell={row.global} to={featureGlobalHref(row.plugin)} /></TableCell>
+                  {adapterColumns.map(adapter => <TableCell key={adapter}><CellBadge cell={row.adapters[adapter]} to={adapterHref(adapter)} /></TableCell>)}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </Card>
+    </PageShell>
+  )
+}

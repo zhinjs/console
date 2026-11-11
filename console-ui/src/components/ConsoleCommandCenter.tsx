@@ -15,6 +15,8 @@ import {
 import { COMMAND_GROUP_ORDER, NAV_GROUPS } from '../navigation-taxonomy'
 import { ListItemButton } from '../components/ui/list-item-button'
 import { commandScore, isCommandRoute, ROUTE_SEARCH_HINTS } from './command-center-model.mjs'
+import { canSeeRoute, routeSectionId, sectionById } from '../navigation-sections.mjs'
+import { useConsoleAccess } from '../hooks/use-console-access'
 
 const RECENT_KEY = 'zhin.console.command-center.recent'
 const RECENT_LIMIT = 5
@@ -69,7 +71,7 @@ const QUICK_ACTIONS: readonly CommandTarget[] = [
     kind: 'action',
   },
   {
-    path: '/agent/workrooms/catalog',
+    path: '/features/ai/workrooms/catalog',
     title: '配置 Workroom 关系',
     group: '快捷动作',
     description: '管理 Project、协作空间、Bot 与 Agent 映射',
@@ -154,6 +156,7 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [recentPaths, setRecentPaths] = useState<string[]>(() => readRecentPaths())
   const [shortcut, setShortcut] = useState('Ctrl K')
+  const access = useConsoleAccess()
 
   const targets = useMemo<CommandTarget[]>(() => {
     const actions = QUICK_ACTIONS.filter(action => routes.some(route => route.path === action.path.split('?')[0]))
@@ -165,14 +168,14 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
         keywords: [action.title, action.description, ...(ROUTE_SEARCH_HINTS[action.path]?.keywords ?? [])],
       })),
       ...routes
-        .filter((route) => isCommandRoute(route) && !actions.some(action => action.path === route.path))
+        .filter((route) => isCommandRoute(route) && canSeeRoute(route, access) && !actions.some(action => action.path === route.path))
         .map((route) => {
           const title = routeLabel(route, i18n.locale)
           const hint = ROUTE_SEARCH_HINTS[route.path]
           return {
             path: route.path,
             title,
-            group: route.meta?.group ?? NAV_GROUPS.PLUGINS,
+            group: sectionById(routeSectionId(route))?.label ?? NAV_GROUPS.FEATURES,
             description: hint ? i18n.t(hint.description) : i18n.t("打开 {0}", [title]),
             // Match the authored Chinese name and description too, so either language finds a page.
             keywords: [...(hint?.keywords ?? []), route.name, hint?.description ?? ''].filter(Boolean),
@@ -181,7 +184,7 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
           }
         }),
     ]
-  }, [routes, i18n])
+  }, [routes, i18n, access])
   const groups = useMemo(
     () => groupedTargets(targets, query, recentPaths, i18n.locale),
     [query, recentPaths, targets, i18n],

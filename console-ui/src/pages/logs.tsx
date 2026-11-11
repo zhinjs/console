@@ -9,7 +9,7 @@ import { ConfirmDialog } from '../components/confirm-dialog'
 import { CONSOLE_REST } from '../contracts/zhin-console'
 import { readErrorSummary } from '../utils/read-error.mjs'
 import { logReadState, logPayloadAvailability } from './logs/read-state.mjs'
-import { isDemoMode } from '../utils/demo-mode'
+import { hasConsolePermission } from '../utils/console-access.mjs'
 import { LogWorkbench, type LogEntry, type LogStats } from './logs/LogWorkbench'
 
 import { historyQuery, historyParams, changeHistoryFilter, isCurrentHistoryRequest, validateHistoryResponse, type HistoryPayload } from './logs/history-model.mjs'
@@ -18,7 +18,8 @@ const LOG_STATS_TIMEOUT_MS = 8_000
 
 export default function LogsPage() {
   const i18n = useI18n()
-  const readOnly = isDemoMode()
+  // Clearing logs is a host operation; viewers only read.
+  const readOnly = !hasConsolePermission('ops.config.write')
   const [searchParams, setSearchParams] = useSearchParams()
   const searchParamsRef = useRef(searchParams)
   searchParamsRef.current = searchParams
@@ -247,7 +248,7 @@ export default function LogsPage() {
     <PageShell className="console-logs-page max-w-[1800px]">
       <PageHeader
         title={i18n.t("运行日志")}
-        description={readOnly ? i18n.t("实时查看与筛选系统运行日志（Demo 只读）。") : i18n.t("查看历史与实时日志，定位运行异常。")}
+        description={readOnly ? i18n.t("实时查看与筛选系统运行日志（只读）。") : i18n.t("查看历史与实时日志，定位运行异常。")}
       />
 
       <LogWorkbench

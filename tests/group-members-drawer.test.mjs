@@ -130,7 +130,7 @@ test('opening, closing, switching conversation and widening the window drive the
   let ctx, narrow = true
   const EndpointWorkspace = await workspaceLifecycle({
     ...runtime.api, ...draftModel, ...panelModel, useMediaQuery: query => { assert.equal(query, GROUP_PANEL_DRAWER_QUERY); return narrow },
-    useI18n: () => ({ t: value => value }), useEndpointConsole: () => ctx, isDemoMode: () => false,
+    useI18n: () => ({ t: value => value }), useEndpointConsole: () => ctx, hasConsolePermission: () => true,
     useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }), DEFAULT_MUTE_MINUTES: 10,
   })
   const group = id => ({ valid: true, selection: { type: 'channel', channelType: 'group', id, name: id }, showRightPanel: true, membersGroupKey: `group:${id}` })

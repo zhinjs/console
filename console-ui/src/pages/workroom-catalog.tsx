@@ -21,7 +21,7 @@ import { getConsoleTransport } from '../utils/console-client'
 import { createWorkroomDraftSessions } from './workroom-draft-session.mjs'
 import { CONSOLE_RPC, ENDPOINT_RPC } from '../contracts/zhin-console'
 import { requestConsole } from '../utils/console-rpc'
-import { isDemoMode } from '../utils/demo-mode'
+import { hasConsolePermission } from '../utils/console-access.mjs'
 import { PageHeader } from '../components/PageHeader'
 import { PageShell } from '../components/PageShell'
 import { ConfirmDialog } from '../components/confirm-dialog'
@@ -149,7 +149,7 @@ export default function WorkroomCatalogPage() {
   const i18n = useI18n()
   const messages = useRef(i18n)
   messages.current = i18n
-  const readOnly = isDemoMode()
+  const readOnly = !hasConsolePermission('agent.configure')
   const connection = getConsoleTransport()
   const restoredDraft = useRef(readOnly ? undefined : draftSessions.get(connection))
   ensureUnloadGuard()
@@ -347,14 +347,14 @@ export default function WorkroomCatalogPage() {
         description={i18n.t("配置协作空间、成员和消息渠道。")}
         actions={
           <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm"><Link to="/agent/workrooms"><LayoutDashboard />{i18n.t("任务看板")}</Link></Button>
+            <Button asChild variant="outline" size="sm"><Link to="/features/ai/workrooms"><LayoutDashboard />{i18n.t("任务看板")}</Link></Button>
             <Button variant="outline" size="sm" disabled={loading || saving} onClick={() => void load(false)}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
             {!readOnly ? <Button size="sm" disabled={!availability.canPublish || publishUnconfirmed || Boolean(firstProjectIdIssue || firstBasicIssue || firstMemberIssue || firstMessageRouteIssue || firstSponsorIssue)} onClick={() => void save()}>{saving ? <Loader2 className="animate-spin" /> : <Save />}{saving ? i18n.t("发布中") : i18n.t("发布目录")}</Button> : null}
           </div>
         }
       />
 
-      {readOnly ? <div className="rounded-lg border border-warning/25 bg-warning/[0.06] px-4 py-3 text-sm text-warning">{i18n.t("Demo 只读展示目录；发布仅在私有 full 模式开放。")}</div> : null}
+      {readOnly ? <div className="rounded-lg border border-warning/25 bg-warning/[0.06] px-4 py-3 text-sm text-warning">{i18n.t("当前身份只读展示目录；发布需要 Agent 配置权限。")}</div> : null}
       {error || publishUnconfirmed ? <ErrorAlert error={publishUnconfirmed ? i18n.t("未能确认发布结果。本地草稿已保留，请刷新并核对最新配置。") : error ?? ''} onRetry={catalogError || publishUnconfirmed ? () => load(false, true) : undefined} /> : null}
       {error && publishUnconfirmed ? <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">{i18n.t("错误详情")}</summary><pre className="mt-2 whitespace-pre-wrap break-words">{error}</pre></details> : null}
       {!loading && !catalog ? <EmptyState title={i18n.t("Workroom 目录未就绪")} description={i18n.t("尚未取得目录，暂不能新建、编辑或发布。请先在 Host 安装并配置可选 Workroom Catalog 服务及 Agent，再刷新；无需重建本地草稿。")} /> : null}
@@ -461,7 +461,7 @@ function WorkroomEditor(props: {
           <div><Field label={i18n.t("名称")}><Input value={value.name} required aria-invalid={Boolean(props.basicIssues.name)} aria-describedby={props.basicIssues.name ? nameErrorId : undefined} disabled={readOnly} onChange={(event) => patch({ name: event.target.value })} placeholder={i18n.t("协作项目名称")} /></Field>{props.basicIssues.name ? <p id={nameErrorId} className="mt-1 text-xs text-destructive">{props.basicIssues.name}</p> : null}</div>
         </div>
         <div className="flex items-center gap-2">
-          {props.persisted ? <Button asChild variant="outline" size="sm"><Link to={`/agent/workrooms?projectId=${encodeURIComponent(value.projectId.trim())}`}><LayoutDashboard />{i18n.t("查看任务")}</Link></Button> : null}
+          {props.persisted ? <Button asChild variant="outline" size="sm"><Link to={`/features/ai/workrooms?projectId=${encodeURIComponent(value.projectId.trim())}`}><LayoutDashboard />{i18n.t("查看任务")}</Link></Button> : null}
           <label className="flex cursor-pointer items-center gap-2 text-sm"><Checkbox checked={value.enabled !== false} disabled={readOnly} onCheckedChange={checked => patch({ enabled: checked === true })} />{i18n.t("启用")}</label>
           {!readOnly ? <Button variant="ghost" size="icon" aria-label={i18n.t("删除 {0}", [value.projectId])} onClick={props.onDelete}><Trash2 /></Button> : null}
         </div>

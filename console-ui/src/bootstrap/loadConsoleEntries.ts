@@ -3,7 +3,8 @@ import * as React from 'react'
 import {
   AdapterConsolePage,
   DeclarativePageView,
-  loadConsoleEntries as loadEntriesFromSdk,
+  fetchConsoleEntries,
+  registerConsolePluginsFromEntries,
   type DeclarativePageComponentProps,
   type DeclarativePageSpec,
   type LoadConsoleEntriesOptions,
@@ -78,6 +79,9 @@ function entriesUrlForApiBase(apiBase: string): string {
 /** 成功加载后复用同一 Promise，避免 React StrictMode 二次 effect 重复注册插件 */
 let entriesLoadPromise: Promise<void> | null = null
 
+/** Sections declared by `/entries` for plugin page paths; read when the page registers. */
+const declaredSections = new Map<string, string>()
+
 async function doLoadConsoleEntries(options?: LoadConsoleEntriesOptions, locale: 'zh-CN' | 'en' = 'zh-CN'): Promise<void> {
   const apiBase = getApiBase()
   const session = hostRegistrations.capture()
@@ -86,7 +90,8 @@ async function doLoadConsoleEntries(options?: LoadConsoleEntriesOptions, locale:
     React,
     addRoute: (input) => {
       if (!session.active()) return
-      const placed = withSandboxConversationDetails(placePluginRoute(input as Parameters<typeof app.addRoute>[0]))
+      const route = input as Parameters<typeof app.addRoute>[0]
+      const placed = withSandboxConversationDetails(placePluginRoute(route, declaredSections.get(route.path)))
       if (requestedApi) requestedApi.addRoute(placed as Parameters<typeof requestedApi.addRoute>[0])
       else session.addRoute(placed)
     },
@@ -96,37 +101,53 @@ async function doLoadConsoleEntries(options?: LoadConsoleEntriesOptions, locale:
     },
   }
 
-  await loadEntriesFromSdk({
-    ...options,
-    locale: options?.locale ?? locale,
-    entriesUrl: options?.entriesUrl ?? entriesUrlForApiBase(apiBase),
-    assetOrigin: options?.assetOrigin ?? apiBase,
-    hostApi,
-    beforeLoad: () => options?.beforeLoad?.(),
-    fetchInit:
-      options?.fetchInit ??
-      (() => {
-        const token = getToken()
-        const headers: Record<string, string> = {}
-        if (token) headers.Authorization = `Bearer ${token}`
-        return { headers }
-      }),
-    onFetchError: (status) => {
-      console.warn(
-        `[zhin-console] GET ${entriesUrlForApiBase(apiBase)} failed (HTTP ${status}). ` +
-          translate(locale, "确认 Host 已启动、API Base 与 corsOrigins 一致。"),
-      )
-      options?.onFetchError?.(status)
-    },
-    onEmpty: () => {
-      console.warn('[zhin-console] /entries returned empty list.')
-      options?.onEmpty?.()
-    },
-    onEntryError: (entry, error) => {
-      console.error(`[zhin-console] Failed to load plugin "${entry.id}":`, error)
-      options?.onEntryError?.(entry, error)
-    },
-  })
+  const resolvedLocale = options?.locale ?? locale
+  const fetchInit = options?.fetchInit ??
+    (() => {
+      const token = getToken()
+      const headers: Record<string, string> = {}
+      if (token) headers.Authorization = `Bearer ${token}`
+      return { headers }
+    })
+  options?.beforeLoad?.()
+  // Fetched here rather than by the SDK loader so an entry's `section` (ADR 0052) reaches
+  // placement: the SDK's convention-page adapter does not forward it.
+  let response: Awaited<ReturnType<typeof fetchConsoleEntries>>
+  try {
+    response = await fetchConsoleEntries({ entriesUrl: options?.entriesUrl ?? entriesUrlForApiBase(apiBase), signal: options?.signal, fetchInit })
+  } catch (error) {
+    const status = typeof (error as { status?: unknown }).status === 'number' ? (error as { status: number }).status : 0
+    console.warn(
+      `[zhin-console] GET ${entriesUrlForApiBase(apiBase)} failed (HTTP ${status}). ` +
+        translate(locale, "确认 Host 已启动、API Base 与 corsOrigins 一致。"),
+    )
+    options?.onFetchError?.(status)
+    return
+  }
+  const entries = response.entries ?? []
+  if (!entries.length) {
+    console.warn('[zhin-console] /entries returned empty list.')
+    options?.onEmpty?.()
+    return
+  }
+  for (const [path, section] of entrySections(entries)) declaredSections.set(path, section)
+  await registerConsolePluginsFromEntries(entries, hostApi, (entry, error) => {
+    console.error(`[zhin-console] Failed to load plugin "${entry.id}":`, error)
+    options?.onEntryError?.(entry, error)
+  }, options?.assetOrigin ?? apiBase, resolvedLocale)
+}
+
+/** Route path -> declared section for entries that carry `section` (top level, `meta` or `metadata`). */
+function entrySections(entries: readonly unknown[]): Array<[string, string]> {
+  const out: Array<[string, string]> = []
+  for (const raw of entries) {
+    const entry = raw as { id?: unknown; route?: unknown; section?: unknown; meta?: { section?: unknown }; metadata?: { section?: unknown } }
+    const section = entry.section ?? entry.meta?.section ?? entry.metadata?.section
+    if (typeof section !== 'string' || !section) continue
+    const path = typeof entry.route === 'string' && entry.route ? entry.route : `/${String(entry.id ?? '')}`
+    out.push([path, section])
+  }
+  return out
 }
 
 export function loadConsoleEntries(options?: LoadConsoleEntriesOptions, locale: 'zh-CN' | 'en' = 'zh-CN'): Promise<void> {
@@ -142,6 +163,7 @@ export function loadConsoleEntries(options?: LoadConsoleEntriesOptions, locale: 
 /** 登出 / 换 Host 后清空插件加载缓存，下次登录会重新拉 /entries */
 export function resetConsoleEntries(): void {
   entriesLoadPromise = null
+  declaredSections.clear()
   hostRegistrations.reset()
   // Published SDK has no removeTool. Preserve known IDs to avoid duplicate
   // registrations; stale asynchronous calls are rejected by the epoch guard.

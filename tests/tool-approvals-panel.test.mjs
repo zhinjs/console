@@ -36,7 +36,7 @@ function hooks() {
   }
 }
 
-function fixture({ demo = false } = {}) {
+function fixture({ readOnly = false } = {}) {
   const runtime = hooks(), calls = []
   let connection = { host: 'https://host-a.invalid', credential: 'synthetic-A' }, nonce = 0
   const authority = createInboxCacheAuthority(() => connection, () => `scope-${++nonce}`)
@@ -50,7 +50,7 @@ function fixture({ demo = false } = {}) {
     '../components/confirm-dialog': { ConfirmDialog: 'confirm-dialog' },
     '../utils/auth': { captureApiRequestContext: () => ({ apiBase: connection.host, token: connection.credential }) },
     '../utils/plugin-rpc': { pluginRpc: request },
-    '../utils/demo-mode': { isDemoMode: () => demo },
+    '../utils/console-access.mjs': { hasConsolePermission: () => !readOnly },
     '../utils/useInboxCacheScope': { useInboxCacheScope: () => authority.current() },
     '../utils/inbox-cache': { isInboxCacheScopeActive: value => authority.active(value) },
     './tool-approvals-model.mjs': model,
@@ -197,10 +197,10 @@ test('permission and unavailable reads stay errors/unavailable states rather tha
   unavailable.runtime.unmount()
 })
 
-test('Demo mounts a read-only panel without issuing approval reads, actions, or recurring work', async () => {
-  const f = fixture({ demo: true }); await f.runtime.settle()
+test('an identity without agent.configure mounts a read-only panel without approval reads, actions, or recurring work', async () => {
+  const f = fixture({ readOnly: true }); await f.runtime.settle()
   assert.equal(f.calls.length, 0)
-  assert.match(text(f.runtime.value), /Demo 只读/)
+  assert.match(text(f.runtime.value), /只读/)
   assert.equal(f.dialog().props.open, false)
   f.runtime.unmount()
 })
