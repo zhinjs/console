@@ -1,5 +1,5 @@
 import { useI18n } from '../../i18n'
-import { useState, useMemo, type MouseEvent } from 'react'
+import { useState, useMemo } from 'react'
 import { useDatabaseConsole } from './use-database-console'
 import { readErrorSummary } from '../../utils/read-error.mjs'
 import type { DatabaseType, TableInfo } from '@zhin.js/client'
@@ -18,6 +18,8 @@ import { RelatedTableView } from './related-table-view'
 import { DocumentCollectionView } from './document-collection-view'
 import { KvBucketView } from './kv-bucket-view'
 import { isDemoMode } from '../../utils/demo-mode'
+import { useToast } from '../../components/toast'
+import { withoutDroppedTables, type DroppedTables } from './drop-table-model.mjs'
 
 export default function DatabasePage() {
   const i18n = useI18n()
@@ -28,10 +30,14 @@ export default function DatabasePage() {
     select, insert, update, remove,
     kvGet, kvSet, kvDelete, kvEntries,
   } = useDatabaseConsole()
+  const toast = useToast()
 
   const [selectedTable, setSelectedTable] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ name: string; label: string } | null>(null)
-  const selectedTableInfo = useMemo(() => tables.find((t: TableInfo) => t.name === selectedTable), [tables, selectedTable])
+  // Tables already dropped while the list could not be refreshed: never offer them again from the stale snapshot.
+  const [dropped, setDropped] = useState<DroppedTables<TableInfo> | null>(null)
+  const visibleTables = useMemo(() => withoutDroppedTables(tables, dropped), [tables, dropped])
+  const selectedTableInfo = useMemo(() => visibleTables.find((t: TableInfo) => t.name === selectedTable), [visibleTables, selectedTable])
   const dbType: DatabaseType = info?.type ?? 'related'
   const objectLabel = dbType === 'related' ? i18n.t("表") : dbType === 'document' ? i18n.t("集合") : i18n.t("桶")
 
@@ -77,42 +83,28 @@ export default function DatabasePage() {
                     <div className="space-y-2 p-3">
                       {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
                     </div>
-                  ) : !tables.length && (!loaded || error) ? (
+                  ) : !visibleTables.length && (!loaded || error) ? (
                     <EmptyState compact title={error ? i18n.t("数据库对象尚未读取成功") : i18n.t("等待读取数据库对象")} />
-                  ) : !tables.length ? (
+                  ) : !visibleTables.length ? (
                     <EmptyState compact title={i18n.t("暂无数据")} />
-                  ) : tables.map((t: TableInfo) => (
-                    <div
+                  ) : visibleTables.map((t: TableInfo) => (
+                    <button
                       key={t.name}
-                      role="button"
-                      tabIndex={0}
+                      type="button"
+                      data-table={t.name}
+                      aria-current={selectedTable === t.name ? 'true' : undefined}
                       className={`
-                        group w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left
+                        w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left
                         hover:bg-accent transition-colors rounded-sm cursor-pointer
+                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset
                         ${selectedTable === t.name ? 'bg-accent text-accent-foreground font-medium' : ''}
                       `}
                       onClick={() => setSelectedTable(t.name)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault()
-                          setSelectedTable(t.name)
-                        }
-                      }}
                     >
                       {dbType === 'keyvalue' ? <Key className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <Table2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
                       <span className="truncate flex-1">{t.name}</span>
                       {t.columns && <Badge variant="secondary" size="sm" className="ml-auto">{Object.keys(t.columns).length} {i18n.t(" 列")}</Badge>}
-                      {!readOnly && <Button
-                        size="sm" variant="ghost" aria-label={i18n.t("删除{0} {1}", [objectLabel, t.name])}
-                        className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 text-destructive shrink-0"
-                        onClick={(e: MouseEvent) => {
-                          e.stopPropagation()
-                          setDeleteTarget({ name: t.name, label: objectLabel })
-                        }}
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>}
-                    </div>
+                    </button>
                   ))}
                 </div>
               </ScrollArea>
@@ -142,6 +134,20 @@ export default function DatabasePage() {
                       <Table2 className="w-4 h-4 text-muted-foreground shrink-0 hidden sm:block" />
                     )}
                     <h2 className="text-base sm:text-lg font-semibold truncate min-w-0">{selectedTable}</h2>
+                    {!readOnly && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        data-action="drop-table"
+                        className="ml-auto order-last shrink-0 text-destructive"
+                        aria-label={i18n.t("删除{0} {1}", [objectLabel, selectedTable])}
+                        onClick={() => setDeleteTarget({ name: selectedTable, label: objectLabel })}
+                      >
+                        <Trash2 className="w-3.5 h-3.5 sm:mr-1" />
+                        <span className="hidden sm:inline">{i18n.t("删除{0}", [objectLabel])}</span>
+                      </Button>
+                    )}
                     {selectedTableInfo?.columns && (
                       <div className="hidden lg:flex gap-1 ml-2 flex-wrap min-w-0">
                         {(Object.entries(selectedTableInfo.columns) as [string, { type: string; primary?: boolean }][]).slice(0, 8).map(([col, def]) => (
@@ -213,11 +219,20 @@ export default function DatabasePage() {
       description={i18n.t("确定要删除{0} \"{1}\" 吗？此操作不可撤销！", [deleteTarget?.label || '', deleteTarget?.name])}
       variant="destructive"
       confirmLabel={i18n.t("删除")}
+      confirmText={deleteTarget?.name}
       onConfirm={async () => {
         if (!deleteTarget) return
-        await dropTable(deleteTarget.name)
-        if (selectedTable === deleteTarget.name) setSelectedTable(null)
+        const { name, label } = deleteTarget
+        // A failed drop rejects here and ConfirmDialog shows the error; only the drop decides that.
+        const { refreshError } = await dropTable(name)
+        if (selectedTable === name) setSelectedTable(null)
         setDeleteTarget(null)
+        if (refreshError) {
+          setDropped(previous => ({ source: tables, names: previous?.source === tables ? [...previous.names, name] : [name] }))
+          toast.warning(i18n.t("已删除{0} \"{1}\"，但刷新列表失败，请稍后点击刷新。", [label, name]))
+        } else {
+          toast.success(i18n.t("已删除{0} \"{1}\"", [label, name]))
+        }
       }}
     />}
     </>
