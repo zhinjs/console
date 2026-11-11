@@ -6,6 +6,7 @@ import ts from 'typescript'
 import { matchPath } from 'react-router-dom'
 import { translate } from '../console-ui/src/i18n/locale.mjs'
 import { resolveNavigationLocation } from '../console-ui/src/navigation-location.mjs'
+import * as commandCenterModel from '../console-ui/src/components/command-center-model.mjs'
 
 const require = createRequire(import.meta.url)
 const source = path => readFile(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')
@@ -64,7 +65,7 @@ function fixture({ routes, path = '/sandbox', mobile = false, collapsed = false,
     '../components/ui/list-item-button': { ListItemButton: 'button' }, '../components/ui/button': { Button: 'button', buttonVariants: () => '' }, '../components/ui/scroll-area': { ScrollArea: 'scroll-area' },
     '../components/ui/tooltip': ui(['Tooltip', 'TooltipTrigger', 'TooltipContent']),
     '../components/ui/dropdown-menu': ui(['DropdownMenu', 'DropdownMenuTrigger', 'DropdownMenuContent', 'DropdownMenuItem', 'DropdownMenuLabel']),
-    './ui/dialog': ui(['Dialog', 'DialogContent', 'DialogDescription', 'DialogTitle']),
+    './ui/dialog': ui(['Dialog', 'DialogContent', 'DialogDescription', 'DialogTitle']), './command-center-model.mjs': commandCenterModel,
     '../utils/auth': { notifyAuthRequired() {} }, '../utils/demo-mode': { isDemoMode: () => false },
     '../components/DemoOnboarding': { reopenDemoOnboarding() {} }, '../components/ConsoleCommandCenter': { ConsoleCommandCenter: 'command-center' },
   }
@@ -182,6 +183,53 @@ test('command jumps follow currently registered routes and do not retain removed
   try { assert.ok(!text(missing.render()).includes('进入会话')) } finally { missing.close() }
 })
 
+
+const builtinShellSource = await source('registerBuiltinShell.tsx')
+/** Builtin route records as registered by registerBuiltinShell.tsx (path, name, group, hidden). */
+const builtinRoutes = builtinShellSource.split('app.addRoute(').slice(1).map(chunk => {
+  const group = chunk.match(/group: NAV_GROUPS\.(\w+)/)?.[1]
+  return {
+    path: chunk.match(/path: '([^']+)'/)[1],
+    name: chunk.match(/name: '([^']+)'/)[1],
+    meta: { group: group ? taxonomy.NAV_GROUPS[group] : undefined, ...(/hideInMenu: true/.test(chunk) ? { hideInMenu: true } : {}) },
+  }
+})
+const paletteRoutes = [{ path: '/sandbox', name: '会话', meta: { group: '会话', order: 0 } }, ...builtinRoutes]
+const paletteItemPaths = tree => nodes(tree).filter(node => node.type === 'button' && node.props.role === 'option').map(node => node.key)
+function searchPalette(f, query) {
+  f.render()
+  nodes(f.tree).find(node => node.type === 'input').props.onChange({ target: { value: query } })
+  return paletteItemPaths(f.render())
+}
+
+test('command palette lists hidden builtin pages without route parameters but skips detail and legacy redirect routes', () => {
+  assert.ok(builtinRoutes.length > 20, 'the builtin route parser found the registered pages')
+  const f = fixture({ routes: paletteRoutes, path: '/dashboard', command: true })
+  try {
+    const paths = paletteItemPaths(f.render())
+    for (const path of ['/agent/replay', '/permissions', '/use-cases/group-welcome', '/agent/workrooms/catalog']) assert.ok(paths.includes(path), `${path} is reachable from the palette`)
+    for (const path of ['/plugins/:name', '/endpoints/:adapter/:endpointId']) assert.ok(!paths.includes(path), `${path} needs parameters and stays out`)
+    for (const path of ['/cron', '/assistant/jobs']) assert.ok(!paths.includes(path), `${path} redirects to a /tasks tab and stays out`)
+    assert.equal(paths.length, new Set(paths).size, 'every destination appears once')
+  } finally { f.close() }
+})
+
+test('command palette search matches each builtin page by purpose keywords, not only by title', () => {
+  const f = fixture({ routes: paletteRoutes, path: '/dashboard', command: true })
+  try {
+    const expectations = {
+      '插话': '/agent/ambient', '花费': '/agent/usage', '回归测试': '/scenario-lab', 'API Key': '/agent/models',
+      '挑技能': '/agent/skills', '为什么没回': '/agent/replay', '权限': '/permissions', '定时': '/tasks', '欢迎': '/use-cases/group-welcome',
+    }
+    for (const [query, path] of Object.entries(expectations)) assert.ok(searchPalette(f, query).includes(path), `“${query}” finds ${path}`)
+    assert.deepEqual(searchPalette(f, '完全无关的词'), [])
+  } finally { f.close() }
+  const english = fixture({ routes: paletteRoutes, path: '/dashboard', command: true, locale: 'en' })
+  try {
+    assert.ok(searchPalette(english, 'cost').includes('/agent/usage'), 'English keywords find the usage page')
+    assert.ok(searchPalette(english, '插话').includes('/agent/ambient'), 'Chinese keywords still match in English')
+  } finally { english.close() }
+})
 
 test('mobile Escape leaves a top-level Radix dismissal consumed before closing the drawer on the next Escape', () => {
   const f = fixture({ routes, mobile: true, runEffects: true })
