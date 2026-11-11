@@ -2,10 +2,10 @@
 
 ## Visual language
 
-- Keep surfaces, navigation, avatars, and ordinary copy neutral. Use blue for primary actions, and small semantic accents for feedback and status.
+- Colour comes from the selectable palettes described in [appearance.md](appearance.md); feedback and status keep small semantic accents.
 - Use the browser's normal font scale instead of multiplying the entire app by 125%. Native browser zoom and preferred font size still work.
 - Match the adapter pages' system-font stack, restrained radii, and readable content hierarchy.
-- Conversation surfaces are defined once in `console-ui/src/im-workspace.css`, shared by both entry stylesheets. No grid wallpaper, glass layers, or decorative bubble shadows.
+- Conversation surfaces are defined once in `console-ui/src/im-workspace.css`, imported by the entry stylesheet `client/style.css`. No grid wallpaper, glass layers, or decorative bubble shadows.
 - Preserve syntax highlighting and meaningful data colors; do not replace information with decoration.
 
 ## Interaction changes
@@ -53,10 +53,6 @@ pnpm typecheck
 pnpm test
 ```
 
-```bash
-node scripts/check-visual-build.mjs
-```
-
-The compiled-style check reads the actual stylesheet links from dist and checks 390/768/1920px in both themes. It does not replace browser interaction testing or prove that messages reached a platform.
+These checks do not replace browser interaction testing or prove that messages reached a platform.
 
 The application continues to use its declared published SDK dependencies. This refresh does not restore removed APIs in Zhin or change RPC/event names.

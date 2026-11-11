@@ -36,3 +36,29 @@ export function sourceFilesUnder(path) {
   if (!statSync(path).isDirectory()) return [path]
   return readdirSync(path).flatMap(name => sourceFilesUnder(join(path, name))).filter(file => /\.(?:tsx?|mjs)$/.test(file) && !/\.d\.mts$/.test(file))
 }
+
+/** JSX collapses the indentation and line breaks around text; catalog keys use the collapsed form. */
+function jsxTextValue(text) {
+  const lines = text.split('\n')
+  return lines.map((line, index) => {
+    let value = line
+    if (index > 0) value = value.replace(/^[ \t]+/, '')
+    if (index < lines.length - 1) value = value.replace(/[ \t]+$/, '')
+    return value
+  }).filter(Boolean).join(' ')
+}
+
+/** Every string a source file can hand to the i18n helper, directly or through a label table. */
+export function sourceLiterals(file) {
+  const text = readFileSync(file, 'utf8')
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, file.endsWith('x') ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
+  const literals = new Set()
+  const visit = node => {
+    if (ts.isStringLiteralLike(node)) literals.add(node.text)
+    else if (ts.isJsxText(node)) literals.add(jsxTextValue(node.text))
+    else if (ts.isTemplateExpression(node)) { literals.add(node.head.text); for (const span of node.templateSpans) literals.add(span.literal.text) }
+    ts.forEachChild(node, visit)
+  }
+  visit(source)
+  return literals
+}

@@ -9,6 +9,7 @@ import { englishMessages } from '../console-ui/src/i18n/messages.en.mjs'
 import { taskParameterFields, taskParameterSummary, taskDateTimeLabel, taskMutationBody } from '../console-ui/src/pages/task-center-model.mjs'
 import { renderingLabels } from '../console-ui/src/pages/endpoint-detail/rendering-diagnostics.mjs'
 import { readScenarioJson } from '../console-ui/src/pages/scenario-lab/scenario-model.mjs'
+import { sourceFilesUnder, sourceLiterals, untranslatedCjk } from './cjk-fixture.mjs'
 
 test('only an explicit valid preference changes the Chinese default, including blocked storage', () => {
   assert.equal(DEFAULT_LOCALE, 'zh-CN')
@@ -105,7 +106,7 @@ test('every explicit authored translation literal has an English catalog entry',
       function visit(node) {
         if(ts.isCallExpression(node)) {
           const name = node.expression.getText(ast)
-          const index = name.endsWith('.t') ? 0 : name === 'translate' ? 1 : -1
+          const index = name === 't' || name.endsWith('.t') ? 0 : name === 'translate' ? 1 : -1
           const arg = node.arguments[index]
           if(arg && ts.isStringLiteralLike(arg) && /[\u3400-\u9fff]/.test(arg.text)) {
             assert.ok(Object.hasOwn(englishMessages,arg.text),`${file.pathname}: missing ${arg.text}`); count++
@@ -118,6 +119,61 @@ test('every explicit authored translation literal has an English catalog entry',
   }
   for(const root of roots) await scan(root)
   assert.ok(count>2000,'guard must inspect production copy, not only the locale selector')
+})
+
+
+// Text the Host supplies at runtime and the Console translates when it recognises it
+// (`SupportNotice` renders a Driver's declared notice). Nothing in this repository spells these out.
+const RUNTIME_SUPPLIED_KEYS = new Set([
+  '实验 · 不受官方支持 · 可能违反供应商条款 · 风险由使用者自行承担。',
+  '未经 OpenAI 对第三方客户端的明确授权。',
+])
+
+test('every English catalog entry is still referenced by the application', async () => {
+  const root = new URL('../', import.meta.url).pathname
+  const files = [`${root}client`, `${root}console-ui/src`].flatMap(sourceFilesUnder).filter(file => !file.includes('/i18n/messages.'))
+  const literals = new Set()
+  for (const file of files) for (const literal of sourceLiterals(file)) literals.add(literal)
+  // index.html carries the document title and description that LocaleProvider translates.
+  const markup = await readFile(new URL('../client/index.html', import.meta.url), 'utf8')
+  const unused = Object.keys(englishMessages).filter(key => {
+    const message = key.includes('\u0004') ? key.slice(key.indexOf('\u0004') + 1) : key
+    return !literals.has(message) && !markup.includes(message) && !RUNTIME_SUPPLIED_KEYS.has(key)
+  })
+  assert.deepEqual(unused, [], 'remove catalog entries whose source text is gone, or list Host-supplied text in RUNTIME_SUPPLIED_KEYS')
+  for (const key of RUNTIME_SUPPLIED_KEYS) assert.ok(Object.hasOwn(englishMessages, key), `${key} is listed as Host-supplied but has no entry`)
+})
+
+// Model management and the pages built with it once bypassed the helper entirely. In these files
+// every Chinese literal must be the message argument of t()/translate(), so label tables are
+// written as functions of `t` rather than looked up later.
+const FULLY_LOCALIZED_SOURCES = [
+  'pages/inference', 'pages/personal-models.tsx', 'pages/PersonalSessionModelPicker.tsx', 'pages/PersonalSessionPanel.tsx',
+  'pages/personal-session-model.mjs', 'pages/ConversationHistory.tsx', 'pages/conversation-history-model.mjs',
+  'pages/dashboard.tsx', 'pages/workrooms.tsx', 'pages/engagements-model.mjs',
+]
+
+test('model management, personal sessions, chat history and the dashboard show no Chinese text outside the i18n helper', () => {
+  const root = new URL('../console-ui/src/', import.meta.url).pathname
+  const offences = FULLY_LOCALIZED_SOURCES.flatMap(path => sourceFilesUnder(`${root}${path}`))
+    .flatMap(file => untranslatedCjk(file).map(found => `${file.slice(root.length)}:${found}`))
+  assert.deepEqual(offences, [])
+})
+
+test('the Chinese-text guard reports JSX text, attributes, plain and template literals but not translated copy', async () => {
+  const { mkdtemp, writeFile, rm } = await import('node:fs/promises')
+  const { tmpdir } = await import('node:os')
+  const directory = await mkdtemp(`${tmpdir()}/console-cjk-`)
+  try {
+    const file = `${directory}/Sample.tsx`
+    await writeFile(file, [
+      'export function Sample({ i18n, name }) {',
+      '  const label = "裸字符串"',
+      '  return <p title="属性">{i18n.t("已翻译")}{translate(i18n.locale, "也已翻译")}正文{`模板 ${name}`}{label}</p>',
+      '}',
+    ].join('\n'))
+    assert.deepEqual(untranslatedCjk(file), ['2: "裸字符串"', '3: "属性"', '3: 正文', '3: `模板 ${name}`'])
+  } finally { await rm(directory, { recursive: true, force: true }) }
 })
 
 
