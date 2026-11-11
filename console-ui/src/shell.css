@@ -115,8 +115,9 @@
     min-width: 2rem;
     place-items: center;
     border-radius: var(--console-radius-md);
-    background: hsl(var(--foreground));
-    color: hsl(var(--background));
+    background: linear-gradient(140deg, hsl(var(--primary-action)), hsl(var(--primary-action) / 0.78));
+    color: hsl(var(--primary-action-foreground));
+    box-shadow: 0 4px 12px -5px hsl(var(--primary-action) / 0.6);
   }
 
   .console-brand-mark span {
@@ -215,13 +216,13 @@
   }
 
   .console-nav-item.is-active {
-    background: hsl(var(--sidebar-accent));
-    color: hsl(var(--sidebar-accent-foreground));
+    background: hsl(var(--primary) / 0.11);
+    color: hsl(var(--primary));
     font-weight: 600;
   }
 
   .dark .console-nav-item.is-active {
-    background: hsl(var(--sidebar-accent));
+    background: hsl(var(--primary) / 0.14);
   }
 
   .console-nav-icon {
@@ -236,9 +237,12 @@
     height: 1rem;
   }
 
-  .console-nav-item:hover .console-nav-icon,
-  .console-nav-item.is-active .console-nav-icon {
+  .console-nav-item:hover .console-nav-icon {
     color: hsl(var(--foreground));
+  }
+
+  .console-nav-item.is-active .console-nav-icon {
+    color: hsl(var(--primary));
   }
 
   .console-sidebar-footer {

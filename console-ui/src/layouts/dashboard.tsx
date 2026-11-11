@@ -23,6 +23,8 @@ import { useIsMobile } from '../hooks/useIsMobile'
 import { ListItemButton } from '../components/ui/list-item-button'
 const EXPANDED_GROUPS_KEY = "zhin.console.nav.expanded-groups"
 const SIDEBAR_COLLAPSED_KEY = "zhin.console.nav.collapsed"
+/** 总览固定在侧边栏第一项，不随所属分组折进底部菜单。 */
+const HOME_PATH = "/dashboard"
 
 function readSidebarOpen(): boolean {
   try {
@@ -119,9 +121,12 @@ export default function DashboardLayout() {
     )
   }, [routes])
 
+  const homeRoute = useMemo(() => menuRoutes.find((r) => r.path === HOME_PATH) ?? null, [menuRoutes])
+
   const menuByGroup = useMemo(() => {
     const map = new Map<string, ConsoleRouteRecord[]>()
     for (const r of menuRoutes) {
+      if (r.path === HOME_PATH) continue
       const g = r.meta?.group ?? NAV_GROUPS.PLUGINS
       if (!map.has(g)) map.set(g, [])
       map.get(g)!.push(r)
@@ -159,6 +164,7 @@ export default function DashboardLayout() {
   const primaryGroups = orderedGroups.filter((group) => !FOOTER_NAV_GROUP_ORDER.some((footerGroup) => footerGroup === group))
   const footerGroups = FOOTER_NAV_GROUP_ORDER.filter((group) => menuByGroup.has(group))
   const currentLabel = navigation.current ? routeLabel(navigation.current, i18n.locale) : isDemoMode() ? i18n.t("在线 Demo") : i18n.t("首页")
+  const onHome = navigation.current?.path === HOME_PATH
   const groupLabel = i18n.t(navigation.group)
   const parentLabel = navigation.parent ? routeLabel(navigation.parent, i18n.locale) : null
 
@@ -243,6 +249,36 @@ export default function DashboardLayout() {
 
         <ScrollArea className="flex-1 min-h-0">
           <nav className="console-sidebar-nav" aria-label={i18n.t("主导航")}>
+            {homeRoute ? (() => {
+              const label = routeLabel(homeRoute, i18n.locale)
+              const isActive = navigation.visible?.path === HOME_PATH
+              const link = (
+                <Link
+                  to={HOME_PATH}
+                  aria-current={isActive ? "page" : undefined}
+                  aria-label={showLabels ? undefined : label}
+                  onClick={() => {
+                    if (isMobile) setMobileNavOpen(false)
+                  }}
+                  className={cn("console-nav-item", isActive && "is-active")}
+                >
+                  <span className="console-nav-icon">
+                    <SidebarMenuIcon icon={homeRoute.icon} />
+                  </span>
+                  {showLabels && <span className="truncate">{label}</span>}
+                </Link>
+              )
+              return (
+                <div className="console-nav-group console-nav-home">
+                  {showLabels ? link : (
+                    <Tooltip delayDuration={120}>
+                      <TooltipTrigger asChild>{link}</TooltipTrigger>
+                      <TooltipContent side="right" sideOffset={10}>{label}</TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+              )
+            })() : null}
             {primaryGroups.map((groupName) => {
               const items = menuByGroup.get(groupName) ?? []
               if (!items.length) return null
@@ -294,7 +330,7 @@ export default function DashboardLayout() {
         {footerGroups.length ? <nav className="console-sidebar-secondary" aria-label={i18n.t("设置与运行维护")}>
           {footerGroups.map((groupName) => {
             const items = menuByGroup.get(groupName) ?? []
-            const active = navigation.group === groupName
+            const active = !onHome && navigation.group === groupName
             const label = i18n.t(groupName)
             return <DropdownMenu key={groupName}>
               <DropdownMenuTrigger asChild>
@@ -362,7 +398,7 @@ export default function DashboardLayout() {
               </Button>
             ) : null}
             <nav aria-label={i18n.t("当前位置")} className="console-breadcrumb">
-              {groupLabel !== currentLabel && groupLabel !== parentLabel ? <><span className="console-breadcrumb-group">{groupLabel}</span><ChevronRight aria-hidden="true" className="console-breadcrumb-sep" /></> : null}
+              {!onHome && groupLabel !== currentLabel && groupLabel !== parentLabel ? <><span className="console-breadcrumb-group">{groupLabel}</span><ChevronRight aria-hidden="true" className="console-breadcrumb-sep" /></> : null}
               {navigation.parent && parentLabel !== currentLabel ? <><Link className="console-breadcrumb-link" to={navigation.parent.path}>{parentLabel}</Link><ChevronRight aria-hidden="true" className="console-breadcrumb-sep" /></> : null}
               <span aria-current="page" className="console-breadcrumb-current">{currentLabel}</span>
             </nav>

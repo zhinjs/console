@@ -3,7 +3,8 @@
   :root {
     --palette-hue: 158;
     --palette-chroma: 16%;
-    --palette-dark-chroma: 16%;
+    /* 深色表面只保留一点色相，颜色交给强调色，避免整页发灰绿 */
+    --palette-dark-chroma: 6%;
     --surface-chroma: var(--palette-chroma);
     --palette-ink: 22%;
     --palette-brand-saturation: 44%;
