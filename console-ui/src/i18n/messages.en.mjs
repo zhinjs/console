@@ -3203,6 +3203,7 @@ export const englishMessages = Object.freeze({
   "正在刷新…": "Refreshing…",
   "刷新失败：{0}。以下是上次读取的内容。": "Refresh failed: {0}. Showing the last loaded details.",
   "设置菜单": "Settings menu",
+  "有 {0} 条新消息": "{0} new messages",
   "连接失败": "Connection failed",
   "已连接，但运行状态为 {0}": "Connected, but the runtime status is {0}",
   "测试中…": "Testing…",
