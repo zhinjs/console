@@ -3211,6 +3211,7 @@ export const englishMessages = Object.freeze({
   "管理模型服务、账号密钥，以及各场景用哪个模型": "Manage model services, account keys, and which model each scenario uses",
   "查看命令权限规则为什么匹配，可做假设检查": "See why command permission rules match, and try what-if checks",
   "预览插件的预期消息，并导出回归测试": "Preview a plugin's expected messages and export regression tests",
+  "有 {0} 条新消息": "{0} new messages",
   "连接失败": "Connection failed",
   "已连接，但运行状态为 {0}": "Connected, but the runtime status is {0}",
   "测试中…": "Testing…",
