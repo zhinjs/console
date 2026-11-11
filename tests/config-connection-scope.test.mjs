@@ -57,11 +57,14 @@ function hookRuntime() {
     },
     async settle() { for (let i = 0; i < 12; i++) { await Promise.resolve(); if (dirty || effects.length) this.render() }; return value },
     unmount() { for (const slot of slots) slot?.cleanup?.(); effects = [] },
+    invalidate() { dirty = true },
     get value() { return value },
   }
 }
 
 function fixture(query = '') {
+  // The address bar: setSearchParams writes it (recording replace vs push) and the next render reads it.
+  const url = { query, writes: [] }
   let locale = 'zh-CN'
   let messages = localeModule.useI18n()
   const localized = { ...localeModule, useI18n: () => messages }
@@ -91,7 +94,10 @@ function fixture(query = '') {
     '../components/PluginConfigForm/ConfigurationLiveStatus': { ConfigurationLiveStatus: 'configuration-live-status' },
     '../components/PluginConfigForm/config-evidence-model.mjs': configEvidenceModel,
     '../components/PluginConfigForm/config-live-status.mjs': configLiveStatus,
-    'react-router-dom': { Link: 'a', useSearchParams: () => [new URLSearchParams(query), () => {}] },
+    'react-router-dom': { Link: 'a', useSearchParams: () => [new URLSearchParams(url.query), (next, options) => {
+      const value = typeof next === 'function' ? next(new URLSearchParams(url.query)) : new URLSearchParams(next)
+      url.query = value.toString(); url.writes.push({ query: url.query, replace: options?.replace === true }); runtime.invalidate()
+    }] },
     'lucide-react': new Proxy({}, { get: () => 'i' }),
     './AgentPresetsEditor': { AgentPresetsEditor: 'agent-presets-editor' },
     './inference/Workspace': { InferenceWorkspace: 'inference-workspace' },
@@ -122,7 +128,9 @@ function fixture(query = '') {
   mocks['../hooks/useConfigSource'] = source; mocks['../components/PluginConfigForm'] = form
   const page = compile(`${files[3]}\nexport { EditableConfigPage, EditableConfigSession };`)
   const editor = compile(`${files[4]}\nexport { JsonValueEditor, UnionValueEditor, ObjectValueEditor, SequenceValueEditor, SecretTextEditor };`)
-  return { runtime, calls, source, plugin, form, page, editor, authority, successes, errors, unsavedGuard,
+  return { runtime, calls, source, plugin, form, page, editor, authority, successes, errors, unsavedGuard, url,
+    /** Another page's link to the settings page: only the query changes, so the page stays mounted. */
+    visit(next) { url.query = next; runtime.invalidate() },
     switchLocale(next) { locale = next; messages = { ...localeModule.useI18n(), locale, t: (message, values) => translate(locale, message, values) } },
     switchHost() { connection = { host: 'https://host-b', credential: 'credential-b' } },
     switchCredential() { connection = { ...connection, credential: 'credential-b' } },
@@ -1007,8 +1015,8 @@ const settingsSnapshot = {
   configPaths: { locale: ['locale'], http: ['http'], ai: ['ai'], 'calendar-custom': ['calendar-custom'] },
 }
 const pageForm = (f, name) => elements(f.runtime.value).filter(element => element.type === f.form.PluginConfigForm && element.props.pluginName === name)
-async function settingsPage() {
-  const f = fixture(), root = f.page.EditableConfigPage()
+async function settingsPage(query = '') {
+  const f = fixture(query), root = f.page.EditableConfigPage()
   f.runtime.mount(() => f.page.EditableConfigSession(root.props)); f.answer('config:get-source', settingsSnapshot); await f.runtime.settle()
   return f
 }
@@ -1081,6 +1089,112 @@ test('actual settings page searches catalog metadata and explains an unknown sav
   assert.ok(elements(f.runtime.value).some(element => element.type === 'a' && element.props.to === '/files'))
   assert.equal(f.calls.filter(call => call.input.type === 'config:replace-source').length, 0)
   f.runtime.unmount()
+})
+
+const visibleSection = (f, key) => elements(f.runtime.value).find(element => element.type === 'section' && element.key === key)
+const entryButton = (f, text) => elements(f.runtime.value).find(element => element.type === 'button' && element.props.className === 'console-settings-entry' && label(element).includes(text))
+const settingsSearch = f => elements(f.runtime.value).find(element => element.type === 'input' && element.props['aria-label'] === '搜索设置')
+
+test('settings location is written to the URL with replace and a refresh restores the same group and entry', async () => {
+  const f = await settingsPage()
+  button(f.runtime.value, '插件配置').props.onClick(); await f.runtime.settle()
+  assert.deepEqual(f.url.writes.at(-1), { query: 'section=plugins', replace: true }, 'the group is in the URL without a new history entry')
+  entryButton(f, 'calendar-custom').props.onClick(); await f.runtime.settle()
+  assert.deepEqual(f.url.writes.at(-1), { query: 'plugin=calendar-custom', replace: true }, 'an entry uses the same ?plugin= link other pages build')
+  assert.equal(visibleSection(f, 'calendar-custom').props.hidden, false)
+  button(f.runtime.value, '返回 插件配置').props.onClick(); await f.runtime.settle()
+  assert.deepEqual(f.url.writes.at(-1), { query: 'section=plugins', replace: true })
+  entryButton(f, '对话与执行').props.onClick(); await f.runtime.settle()
+  assert.deepEqual(f.url.writes.at(-1), { query: 'plugin=ai', replace: true })
+  button(f.runtime.value, '返回 插件配置').props.onClick(); await f.runtime.settle()
+  entryButton(f, '会话与上下文').props.onClick(); await f.runtime.settle()
+  assert.deepEqual(f.url.writes.at(-1), { query: 'section=ai%3Asessions', replace: true })
+  assert.ok(f.url.writes.every(write => write.replace), 'switching categories never adds history entries')
+  const saved = f.url.query
+  f.runtime.unmount()
+
+  const reloaded = await settingsPage(saved)
+  const forms = pageForm(reloaded, 'ai')
+  assert.equal(forms.length, 1); assert.deepEqual(forms[0].props.fieldNames, ['sessions', 'context'])
+  assert.equal(visibleSection(reloaded, 'ai').props.hidden, false)
+  const groups = elements(reloaded.runtime.value).find(element => element.type === 'nav' && element.props['aria-label'] === '设置分类')
+  assert.equal(elements(groups).find(element => element.props?.['aria-current'] === 'page').props.children[1].props.children, '插件配置')
+  reloaded.runtime.unmount()
+  for (const [query, title] of [['section=plugins', '插件配置'], ['section=general', '通用设置'], ['', '通用设置']]) {
+    const page = await settingsPage(query)
+    assert.equal(elements(page.runtime.value).find(element => element.props?.id === 'settings-category-title').props.children, title)
+    page.runtime.unmount()
+  }
+})
+
+test('switching categories through the URL keeps a hidden dirty draft mounted and the leave guard active', async () => {
+  const f = await settingsPage('plugin=http')
+  pageForm(f, 'http')[0].props.onDirtyChange(true); await f.runtime.settle()
+  button(f.runtime.value, '插件配置').props.onClick(); await f.runtime.settle()
+  assert.equal(f.url.query, 'section=plugins')
+  assert.equal(visibleSection(f, 'http').props.hidden, true)
+  assert.equal(pageForm(f, 'http').length, 1, 'the draft form stays mounted')
+  assert.equal(f.unsavedGuard.at(-1), true)
+  f.visit('plugin=http'); await f.runtime.settle()
+  assert.equal(visibleSection(f, 'http').props.hidden, false)
+  f.runtime.unmount()
+})
+
+test('links from other pages select their entry even after the user moved elsewhere, and package names resolve to their instance', async () => {
+  const f = await settingsPage('plugin=calendar-custom')
+  assert.equal(visibleSection(f, 'calendar-custom').props.hidden, false)
+  button(f.runtime.value, '通用设置').props.onClick(); await f.runtime.settle()
+  assert.equal(visibleSection(f, 'calendar-custom').props.hidden, true)
+  f.visit('plugin=calendar-custom'); await f.runtime.settle()
+  assert.equal(visibleSection(f, 'calendar-custom').props.hidden, false, 'the same "去配置" link opens the plugin again')
+  f.visit(''); await f.runtime.settle()
+  assert.equal(elements(f.runtime.value).find(element => element.props?.id === 'settings-category-title').props.children, '通用设置')
+  f.runtime.unmount()
+  const byPackage = await settingsPage('plugin=%40example%2Fcalendar')
+  assert.equal(visibleSection(byPackage, 'calendar-custom').props.hidden, false)
+  assert.ok(!label(byPackage.runtime.value).includes('已显示'))
+  byPackage.runtime.unmount()
+})
+
+test('an unknown ?plugin= or ?section= explains where the page landed instead of silently showing general settings', async () => {
+  for (const [query, text, detail] of [
+    ['plugin=missing-plugin', '当前 Host 没有名为「missing-plugin」的插件配置，已显示通用设置。', '/plugins/missing-plugin'],
+    ['section=nowhere', '链接中的设置位置「nowhere」不存在，已显示通用设置。', undefined],
+  ]) {
+    const f = await settingsPage(query)
+    assert.ok(label(f.runtime.value).includes(text), text)
+    assert.equal(elements(f.runtime.value).find(element => element.type === 'a')?.props.to, detail)
+    button(f.runtime.value, '插件配置').props.onClick(); await f.runtime.settle()
+    assert.ok(!label(f.runtime.value).includes('已显示'), 'the notice goes away once the user picks a location')
+    f.runtime.unmount()
+  }
+  const declared = fixture('plugin=declared-only'), root = declared.page.EditableConfigPage()
+  declared.runtime.mount(() => declared.page.EditableConfigSession(root.props))
+  declared.answer('config:get-source', { ...settingsSnapshot, source: JSON.stringify({ plugins: { 'declared-only': '@example/plain' } }) }); await declared.runtime.settle()
+  assert.ok(label(declared.runtime.value).includes('插件「declared-only」没有可在此编辑的配置项，已显示通用设置。'))
+  declared.runtime.unmount()
+})
+
+test('settings search covers every group, labels the owning group and opens the result where it lives', async () => {
+  const f = await settingsPage()
+  assert.equal(elements(f.runtime.value).find(element => element.props?.id === 'settings-category-title').props.children, '通用设置')
+  settingsSearch(f).props.onChange({ target: { value: '会话' } }); await f.runtime.settle()
+  assert.deepEqual(f.url.writes.at(-1), { query: 'q=%E4%BC%9A%E8%AF%9D', replace: true }, 'the search survives a refresh')
+  const results = elements(f.runtime.value).filter(element => element.type === 'section' && element.props['aria-label']?.endsWith('中的搜索结果'))
+  assert.deepEqual(results.map(element => element.props['aria-label']), ['插件配置中的搜索结果'])
+  const result = entryButton(f, '会话与上下文')
+  assert.ok(label(result).includes('插件配置 · 内置能力'), 'each result names its group')
+  result.props.onClick(); await f.runtime.settle()
+  assert.equal(f.url.query, 'section=ai%3Asessions')
+  assert.deepEqual(pageForm(f, 'ai')[0].props.fieldNames, ['sessions', 'context'])
+  button(f.runtime.value, '返回 插件配置').props.onClick(); await f.runtime.settle()
+  settingsSearch(f).props.onChange({ target: { value: '连接' } }); await f.runtime.settle()
+  assert.ok(entryButton(f, '连接与访问'), 'a general setting is found from the plugins group')
+  f.runtime.unmount()
+  const restored = await settingsPage('q=calendar')
+  assert.equal(settingsSearch(restored).props.value, 'calendar')
+  assert.ok(entryButton(restored, 'calendar-custom'))
+  restored.runtime.unmount()
 })
 
 test('whole-root settings with an empty exclusion retain scalar, array and dictionary editors without guessing defaults', async () => {

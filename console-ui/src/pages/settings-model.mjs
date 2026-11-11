@@ -106,12 +106,16 @@ export function buildSettingsCatalog(config, configKeys, configPaths) {
   return groups
 }
 
-/** Search labels and stable identities only; never inspect saved configuration values. */
-export function filterSettingsCatalog(catalog, query) {
+/**
+ * Search labels and stable identities of every group; never inspect saved configuration values.
+ * `translate` lets the visible (localized) labels match as well as the authored ones.
+ */
+export function filterSettingsCatalog(catalog, query, translate) {
   const search = query.trim().toLocaleLowerCase()
   if (!search) return catalog
+  const labels = value => translate ? [value, translate(value)] : [value]
   return catalog.map(group => ({ ...group, entries: group.entries.filter(entry =>
-    [group.title, entry.title, entry.description, entry.configKey, entry.sectionTitle]
+    [group.title, entry.title, entry.description, entry.sectionTitle].flatMap(labels).concat(entry.configKey)
       .some(value => value.toLocaleLowerCase().includes(search))) }))
 }
 
@@ -125,4 +129,53 @@ export function resolveSettingsSelection(selection, catalog) {
       ...((group.id === 'models' || group.id === 'presets') && group.entries.length === 1 ? { entry: group.entries[0] } : {}) }
   }
   return { group: 'general' }
+}
+
+const LOCATION_KEYS = ['plugin', 'section', 'q']
+
+/**
+ * Read the settings location from the URL. `?plugin=<configKey>` is the link other pages build
+ * (marketplace, plugin list and detail); `?section=` holds a group or presentation entry id and
+ * `?q=` the cross-group search. A package name declared by exactly one instance selects that instance.
+ */
+export function settingsLocationFromParams(params, config) {
+  const plugin = params.get('plugin')?.trim() ?? ''
+  const section = params.get('section')?.trim() ?? ''
+  const query = params.get('q') ?? ''
+  if (plugin) {
+    const declarations = config?.plugins && typeof config.plugins === 'object' && !Array.isArray(config.plugins) ? config.plugins : {}
+    const instances = Object.hasOwn(declarations, plugin) || Object.hasOwn(config ?? {}, plugin) ? []
+      : Object.keys(declarations).filter(key => declarations[key] === plugin)
+    return { selection: `plugin:${instances.length === 1 ? instances[0] : plugin}`, requested: plugin, query }
+  }
+  return { selection: section || 'general', requested: section, query }
+}
+
+/** The URL for a settings location; unrelated parameters survive, and a flow context only while its plugin stays selected. */
+export function settingsLocationParams(current, selection, query = '') {
+  const next = new URLSearchParams()
+  const plugin = selection.startsWith('plugin:') ? selection.slice(7)
+    : selection.startsWith('config:') ? decodeURIComponent(selection.slice(7)) : ''
+  if (plugin) next.set('plugin', plugin)
+  else if (selection && selection !== 'general') next.set('section', selection)
+  if (query.trim()) next.set('q', query)
+  for (const [key, value] of current) {
+    if (LOCATION_KEYS.includes(key) || (key === 'useCase' && plugin !== current.get('plugin'))) continue
+    next.append(key, value)
+  }
+  return next
+}
+
+/** A requested location that resolves to nothing, so the page can say so instead of silently showing general settings. */
+export function unresolvedSettingsLocation(location, catalog, config) {
+  if (!location.requested) return null
+  const { selection } = location
+  const resolved = resolveSettingsSelection(selection, catalog)
+  if (resolved.entry || resolved.group === selection) return null
+  if (selection.startsWith('plugin:')) {
+    const key = selection.slice(7)
+    const declarations = config?.plugins && typeof config.plugins === 'object' && !Array.isArray(config.plugins) ? config.plugins : {}
+    return { kind: Object.hasOwn(declarations, key) ? 'plugin-without-settings' : 'unknown-plugin', value: location.requested }
+  }
+  return { kind: 'unknown-section', value: location.requested }
 }

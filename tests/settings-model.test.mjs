@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { buildSettingsCatalog, filterSettingsCatalog, resolveSettingsSelection } from '../console-ui/src/pages/settings-model.mjs'
+import {
+  buildSettingsCatalog, filterSettingsCatalog, resolveSettingsSelection, settingsLocationFromParams, settingsLocationParams, unresolvedSettingsLocation,
+} from '../console-ui/src/pages/settings-model.mjs'
 
 const group = (catalog, id) => catalog.find(item => item.id === id)
 const catalog = () => buildSettingsCatalog({ configVersion: 2, plugins: { qq: '@zhin.js/adapter-icqq' },
@@ -103,4 +105,47 @@ test('search matches readable catalog metadata and owner keys without inspecting
   assert.equal(filterSettingsCatalog(result, 'private-model').flatMap(item => item.entries).length, 0)
   assert.equal(filterSettingsCatalog(result, '  '), result)
   assert.deepEqual(result, catalog(), 'search does not mutate the source catalog')
+})
+
+test('search also matches the localized labels the user actually sees', () => {
+  const english = { '语音': 'Speech', '管理语音识别和语音合成。': 'Manage speech recognition and synthesis.' }
+  const result = filterSettingsCatalog(catalog(), 'speech', message => english[message] ?? message)
+  assert.deepEqual(result.flatMap(item => item.entries).map(entry => entry.configKey), ['speech'])
+  assert.equal(filterSettingsCatalog(catalog(), 'SYNTHETIC-SECRET', message => message).flatMap(item => item.entries).length, 0)
+})
+
+test('settings locations round-trip through the URL and keep unrelated parameters', () => {
+  const read = query => settingsLocationFromParams(new URLSearchParams(query))
+  const write = (query, selection, search) => settingsLocationParams(new URLSearchParams(query), selection, search).toString()
+  assert.deepEqual(read(''), { selection: 'general', requested: '', query: '' })
+  assert.deepEqual(read('plugin=qq'), { selection: 'plugin:qq', requested: 'qq', query: '' })
+  assert.deepEqual(read('section=ai%3Asessions&q=x'), { selection: 'ai:sessions', requested: 'ai:sessions', query: 'x' })
+  assert.equal(write('', 'general'), '')
+  assert.equal(write('', 'plugins'), 'section=plugins')
+  assert.equal(write('', 'config:team%2Fbot'), 'plugin=team%2Fbot')
+  assert.equal(write('', 'plugin:qq'), 'plugin=qq')
+  assert.equal(write('', 'ai:sessions'), 'section=ai%3Asessions')
+  assert.equal(write('section=plugins', 'plugins', '语音'), `section=plugins&q=${encodeURIComponent('语音')}`)
+  assert.equal(write('plugin=qq&q=old&tab=x', 'general', '  '), 'tab=x')
+  assert.equal(write('plugin=qq&useCase=group-welcome', 'config:qq'), 'plugin=qq&useCase=group-welcome', 'a flow context stays with its plugin')
+  assert.equal(write('plugin=qq&useCase=group-welcome', 'general'), '', 'and is dropped when the user leaves it')
+  const result = catalog()
+  for (const entry of result.flatMap(group => group.entries)) {
+    assert.equal(resolveSettingsSelection(read(write('', entry.id)).selection, result).entry?.id, entry.id, entry.id)
+  }
+})
+
+test('a package-name link selects its only instance; unresolved links are reported by kind', () => {
+  const config = { plugins: { qq: '@zhin.js/adapter-icqq', a: '@x/dup', b: '@x/dup', bare: '@x/bare' }, qq: {} }
+  const result = catalog()
+  assert.equal(settingsLocationFromParams(new URLSearchParams('plugin=%40zhin.js%2Fadapter-icqq'), config).selection, 'plugin:qq')
+  assert.equal(settingsLocationFromParams(new URLSearchParams('plugin=%40x%2Fdup'), config).selection, 'plugin:@x/dup', 'ambiguous packages are not guessed')
+  const unresolved = query => unresolvedSettingsLocation(settingsLocationFromParams(new URLSearchParams(query), config), result, config)
+  assert.equal(unresolved(''), null)
+  assert.equal(unresolved('plugin=qq'), null)
+  assert.equal(unresolved('section=plugins'), null)
+  assert.equal(unresolved('section=ai%3Amemory'), null)
+  assert.deepEqual(unresolved('plugin=bare'), { kind: 'plugin-without-settings', value: 'bare' })
+  assert.deepEqual(unresolved('plugin=nope'), { kind: 'unknown-plugin', value: 'nope' })
+  assert.deepEqual(unresolved('section=yaml'), { kind: 'unknown-section', value: 'yaml' })
 })

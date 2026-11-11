@@ -17,7 +17,10 @@ import { Skeleton } from '../components/ui/skeleton'
 import { PageHeader } from '../components/PageHeader'
 import { readErrorSummary } from '../utils/read-error.mjs'
 import { isDemoMode } from '../utils/demo-mode'
-import { buildSettingsCatalog, resolveSettingsSelection, type SettingsEntry } from './settings-model.mjs'
+import {
+  buildSettingsCatalog, filterSettingsCatalog, resolveSettingsSelection, settingsLocationFromParams, settingsLocationParams,
+  unresolvedSettingsLocation, type SettingsEntry,
+} from './settings-model.mjs'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { InferenceWorkspace } from './inference/Workspace'
@@ -35,13 +38,17 @@ function EditableConfigPage() {
 
 function EditableConfigSession({ connectionScope }: { connectionScope: string }) {
   const i18n = useI18n()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const pluginFromUrl = searchParams.get('plugin')?.trim() ?? ''
   const { source, format, configKeys: pluginKeys, loading, loaded, error, load, snapshot, applyConfiguration, applyLoading, applyError, applyBlocked } = useConfigSource()
-  const [activeSection, setActiveSection] = useState<string>(() => pluginFromUrl ? `plugin:${pluginFromUrl}` : 'general')
   const [visitedEntries, setVisitedEntries] = useState<Map<string, SettingsEntry>>(() => new Map())
   const [runtimeVisited, setRuntimeVisited] = useState(false)
-  const [sectionFilter, setSectionFilter] = useState('')
+  const contentRef = useRef<HTMLDivElement>(null)
+  // The search box owns its text (router updates run as transitions, which would fight a
+  // controlled input); the URL mirrors it so refresh and shared links restore the search.
+  const urlQuery = searchParams.get('q') ?? ''
+  const [sectionFilter, setFilterText] = useState(urlQuery)
+  const writtenQuery = useRef(urlQuery)
   // Hidden forms stay mounted, so switching sections keeps their drafts; leaving the page does not.
   const [dirtyOwners, setDirtyOwners] = useState<ReadonlySet<string>>(() => new Set())
   const reportDirty = useCallback((key: string, dirty: boolean) => setDirtyOwners(previous => setOwnerDirty(previous, key, dirty)), [])
@@ -55,12 +62,28 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
   }, [source, format])
 
   const catalog = useMemo(() => buildSettingsCatalog(parsedConfig, pluginKeys, snapshot?.configPaths), [parsedConfig, pluginKeys, snapshot?.configPaths])
+  // The URL is the only record of where the user is, so refresh, shared links and links from
+  // other pages (`?plugin=<instance>`) all land on the same place. Writes replace the current
+  // history entry: Back leaves the settings page instead of stepping through every category,
+  // and the page itself stays mounted so hidden forms keep their drafts.
+  const settingsLocation = settingsLocationFromParams(searchParams, parsedConfig)
+  const activeSection = settingsLocation.selection
+  const showLocation = useCallback((selection: string, query = '') => {
+    setFilterText(query)
+    writtenQuery.current = query.trim() ? query : ''
+    setSearchParams(current => settingsLocationParams(current, selection, query), { replace: true })
+  }, [setSearchParams])
+  const setActiveSection = (selection: string) => showLocation(selection)
+  const setSectionFilter = (query: string) => showLocation(activeGroup.id, query)
   const selection = resolveSettingsSelection(activeSection, catalog)
+  const unresolved = loaded ? unresolvedSettingsLocation(settingsLocation, catalog, parsedConfig) : null
   const activeEntry = selection.entry
   const activeGroup = catalog.find(group => group.id === selection.group) ?? catalog[0]
   const normalizedFilter = sectionFilter.trim().toLocaleLowerCase()
-  const listEntries = activeGroup.entries.filter(entry =>
-    [entry.title, entry.description, entry.configKey].some(value => i18n.t(value).toLocaleLowerCase().includes(normalizedFilter)))
+  // Search covers every group; results are listed under the group they belong to.
+  const searchResults = normalizedFilter
+    ? filterSettingsCatalog(catalog, sectionFilter, message => i18n.t(message)).filter(group => group.entries.length) : []
+  const listEntries = activeGroup.entries
   const sections = [...new Set(listEntries.map(entry => entry.section ?? 'general'))]
   const ownerKeys = [...new Set(catalog.flatMap(group => group.entries.filter(entry => !entry.editor).map(entry => entry.configKey)))]
   useEffect(() => {
@@ -69,12 +92,21 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
       ? previous : new Map(previous).set(activeEntry.configKey, activeEntry))
   }, [loaded, activeEntry])
 
-  const previousPluginUrl = useRef(pluginFromUrl)
+  // Another link to this page (for example the command center's plain /config) replaces the search.
   useEffect(() => {
-    if (previousPluginUrl.current === pluginFromUrl) return
-    previousPluginUrl.current = pluginFromUrl
-    setActiveSection(pluginFromUrl ? `plugin:${pluginFromUrl}` : 'general')
-  }, [pluginFromUrl])
+    if (urlQuery === writtenQuery.current) return
+    writtenQuery.current = urlQuery
+    setFilterText(urlQuery)
+  }, [urlQuery])
+
+  // Query-only navigation keeps the scroll position; bring an opened entry into view when the
+  // list that led to it was scrolled past the top of the settings content.
+  const activeEntryId = activeEntry?.id
+  useEffect(() => {
+    const content = contentRef.current
+    if (!loaded || !activeEntryId || !content) return
+    if (content.getBoundingClientRect().top < 0) content.scrollIntoView({ block: 'start' })
+  }, [loaded, activeEntryId])
 
   if (loading && !source) {
     return (
@@ -112,7 +144,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
               const Icon = group.id === 'general' ? SlidersHorizontal : group.id === 'models' ? Brain : group.id === 'presets' ? Bot : Blocks
               return <ListItemButton key={group.id} type="button" className="console-settings-nav-item"
                 aria-current={activeGroup.id === group.id ? 'page' : undefined}
-                onClick={() => { setActiveSection(group.id); setSectionFilter('') }}>
+                onClick={() => showLocation(group.id)}>
                 <Icon aria-hidden="true" /><span>{i18n.t(group.title)}</span>
                 {group.entries.some(entry => !entry.editor && dirtyOwners.has(entry.configKey)) ? <small className="console-dirty-pill">{i18n.t("未保存")}</small> : null}
               </ListItemButton>
@@ -120,18 +152,48 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
           </div>
         </nav>
 
-        <div className="console-settings-content">
+        <div className="console-settings-content" ref={contentRef}>
+          {unresolved ? <Alert role="status">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="space-y-2">
+              <p>{unresolved.kind === 'plugin-without-settings'
+                ? i18n.t("插件「{0}」没有可在此编辑的配置项，已显示{1}。", [unresolved.value, i18n.t(activeGroup.title)])
+                : unresolved.kind === 'unknown-plugin'
+                  ? i18n.t("当前 Host 没有名为「{0}」的插件配置，已显示{1}。", [unresolved.value, i18n.t(activeGroup.title)])
+                  : i18n.t("链接中的设置位置「{0}」不存在，已显示{1}。", [unresolved.value, i18n.t(activeGroup.title)])}</p>
+              {unresolved.kind !== 'unknown-section' ? <Button asChild variant="outline" size="sm">
+                <Link to={`/plugins/${encodeURIComponent(unresolved.value)}`}>{i18n.t("查看插件详情")}</Link>
+              </Button> : null}
+            </AlertDescription>
+          </Alert> : null}
           {!activeEntry ? <ConfigurationLiveStatus result={snapshot} revision={snapshot?.revision}
             onRefresh={() => void load().catch(() => {})}
             onApply={configurationSupportsApply(snapshot) ? () => void applyConfiguration() : undefined}
             disabled={loading || applyBlocked} applying={applyLoading} actionError={applyError} /> : null}
           {!activeEntry ? <section aria-labelledby="settings-category-title" className="console-settings-category">
             <header className="console-settings-category-heading">
-              <div><h2 id="settings-category-title">{i18n.t(activeGroup.title)}</h2><p>{i18n.t(activeGroup.description)}</p></div>
-              {activeGroup.entries.length > 0 ? <Input type="search" aria-label={i18n.t("搜索设置")}
+              {normalizedFilter
+                ? <div><h2 id="settings-category-title">{i18n.t("搜索结果")}</h2>
+                  <p>{i18n.t("在所有分类中找到 {0} 项。", [searchResults.reduce((count, group) => count + group.entries.length, 0)])}</p></div>
+                : <div><h2 id="settings-category-title">{i18n.t(activeGroup.title)}</h2><p>{i18n.t(activeGroup.description)}</p></div>}
+              {catalog.some(group => group.entries.length > 0) ? <Input type="search" aria-label={i18n.t("搜索设置")}
                 placeholder={i18n.t("搜索名称或用途…")} value={sectionFilter} onChange={event => setSectionFilter(event.target.value)} /> : null}
             </header>
-            {sections.map(section => <section className="console-settings-section" key={section}>
+            {normalizedFilter ? searchResults.map(group => <section className="console-settings-section" key={group.id}
+              aria-label={i18n.t("{0}中的搜索结果", [i18n.t(group.title)])}>
+              <h3>{i18n.t(group.title)}</h3>
+              <div className="console-settings-list">
+                {group.entries.map(entry => <ListItemButton key={entry.id} type="button"
+                  className="console-settings-entry" onClick={() => setActiveSection(entry.id)}>
+                  <span className="console-settings-entry-icon" aria-hidden="true"><Settings /></span>
+                  <span className="console-settings-entry-copy"><strong>{i18n.t(entry.title)}</strong><span>{i18n.t(entry.description)}</span>
+                    <small>{entry.section === 'general' ? i18n.t(group.title) : i18n.t("{0} · {1}", [i18n.t(group.title), i18n.t(entry.sectionTitle)])}</small>
+                    {!entry.writable ? <small>{i18n.t("只读")}</small> : null}
+                    {dirtyOwners.has(entry.configKey) && !entry.editor ? <small className="console-dirty-pill">{i18n.t("未保存")}</small> : null}</span>
+                  <ChevronRight className="console-settings-entry-arrow" aria-hidden="true" />
+                </ListItemButton>)}
+              </div>
+            </section>) : sections.map(section => <section className="console-settings-section" key={section}>
               {section !== 'general' ? <h3>{i18n.t(section === 'builtin' ? '内置能力' : section === 'extensions' ? '已安装与自定义' : '未识别配置')}</h3> : null}
               <div className="console-settings-list">
                 {listEntries.filter(entry => (entry.section ?? 'general') === section).map(entry => <ListItemButton key={entry.id} type="button"
@@ -144,15 +206,15 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
                 </ListItemButton>)}
               </div>
             </section>)}
-            {!listEntries.length ? <div className="console-settings-empty" role="status">
-              <Settings aria-hidden="true" /><h3>{i18n.t(activeGroup.entries.length ? '没有匹配的设置' : '当前没有可配置项目')}</h3>
-              {activeGroup.entries.length ? <p>{i18n.t("换一个名称或用途重新搜索。")}</p> : null}
+            {(normalizedFilter ? !searchResults.length : !listEntries.length) ? <div className="console-settings-empty" role="status">
+              <Settings aria-hidden="true" /><h3>{i18n.t(normalizedFilter ? '没有匹配的设置' : '当前没有可配置项目')}</h3>
+              {normalizedFilter ? <p>{i18n.t("换一个名称或用途重新搜索。")}</p> : null}
               {normalizedFilter ? <Button variant="outline" onClick={() => setSectionFilter('')}>{i18n.t("清除搜索")}</Button> : null}
             </div> : null}
           </section> : null}
 
           {activeEntry && (activeGroup.id === 'general' || activeGroup.id === 'plugins') ? <div className="console-settings-detail-heading">
-            <Button type="button" variant="ghost" size="sm" onClick={() => { setActiveSection(activeGroup.id); setSectionFilter('') }}>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setActiveSection(activeGroup.id)}>
               <ArrowLeft aria-hidden="true" />{i18n.t("返回 {0}", [i18n.t(activeGroup.title)])}
             </Button>
           </div> : null}
