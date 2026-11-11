@@ -3205,6 +3205,7 @@ export const englishMessages = Object.freeze({
   "设置菜单": "Settings menu",
   "离开设置页后，尚未保存的配置修改将会丢失。": "If you leave Settings, configuration changes that have not been saved will be lost.",
   "放弃修改并离开": "Discard changes and leave",
+  "有 {0} 条新消息": "{0} new messages",
   "连接失败": "Connection failed",
   "已连接，但运行状态为 {0}": "Connected, but the runtime status is {0}",
   "测试中…": "Testing…",

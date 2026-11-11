@@ -60,6 +60,10 @@
 .im-system-title { font-size: 13px; font-weight: 600; }
 .im-system-desc { font-size: 12px; color: hsl(var(--muted-foreground)); }
 .im-message-list { padding: 24px clamp(16px, 3vw, 40px); background: hsl(var(--im-chat-bg)); }
+.im-chat-scroll { position: relative; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.im-new-messages { position: absolute; left: 50%; bottom: 12px; z-index: 1; display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 6px 12px; border: 1px solid hsl(var(--border)); border-radius: 999px; background: hsl(var(--card)); color: hsl(var(--primary)); font-size: 12px; font-weight: 600; box-shadow: 0 4px 12px hsl(var(--foreground) / .12); transform: translateX(-50%); cursor: pointer; }
+.im-new-messages:hover { background: hsl(var(--accent)); }
+.im-new-messages:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
 .im-message-stack { gap: 8px; }
 .im-date-pill { align-self: center; margin: 12px 0; padding: 4px 8px; border-radius: 6px; background: hsl(var(--im-date-bg)); color: hsl(var(--im-date-fg)); font-size: 12px; font-weight: 400; }
 .im-bubble { position: relative; max-width: min(80%, 40rem); padding: 12px 16px; border: 1px solid hsl(var(--border)); font-size: var(--console-text-body); }
