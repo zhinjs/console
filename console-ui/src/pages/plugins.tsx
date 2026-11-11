@@ -55,6 +55,7 @@ function matchesStatusFilter(plugin: Plugin, filter: PluginStatusFilter): boolea
     return (
       m.status === 'missing-config' ||
       m.status === 'degraded' ||
+      m.status === 'pending-restart' ||
       statusText === 'failed' ||
       m.dependencies === 'failed' ||
       !m.published

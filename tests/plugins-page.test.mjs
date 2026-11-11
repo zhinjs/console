@@ -205,3 +205,12 @@ for (const change of ['switchHost', 'switchCredential']) test(`production functi
   assert.equal(f.listeners.size, 0)
   f.unmount()
 })
+
+test('the pending filter includes plugins waiting for a restart, matching their warning status dot', () => {
+  const restart = { ...pending, status: 'pending-restart', published: true, restartRequired: true }
+  const data = [plugin('needs-restart', { management: restart }),
+    plugin('applied', { management: { ...pending, status: 'enabled', published: true, restartRequired: false } })]
+  const tree = fixture({ data, query: 'status=pending' }).render()
+  const links = elements(tree).filter(item => item.type === 'a')
+  assert.deepEqual(links.map(link => label(link).includes('needs-restart')), [true])
+})
