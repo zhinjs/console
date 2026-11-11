@@ -1,5 +1,6 @@
 import { translate } from '../../i18n/locale.mjs'
 import { parse, parseDocument, stringify, visit } from 'yaml'
+import { preserveFeatureOverrides } from './feature-overrides-guard.mjs'
 export function parseConfigDocument(source, format, locale = 'zh-CN') {
   const document = format === 'json' ? JSON.parse(source) : parse(source)
   if (!document || typeof document !== 'object' || Array.isArray(document)) throw new Error(translate(locale, "配置源码必须是键值对象"))
@@ -28,8 +29,11 @@ export function replaceConfigAtPath(document, path, value, locale = 'zh-CN') {
   }
   return result
 }
-export function configSourceForPlugin(source, format, path, value, locale = 'zh-CN') {
-  const next = replaceConfigAtPath(parseConfigDocument(source, format, locale), path, value, locale)
+export function configSourceForPlugin(source, format, path, rawValue, locale = 'zh-CN') {
+  const parsed = parseConfigDocument(source, format, locale)
+  // Feature overrides (ADR 0050) are written only through `feature.*`; a block save keeps them.
+  const value = preserveFeatureOverrides(rawValue, Array.isArray(path) && path.length ? configAtPath(parsed, path, locale) : undefined)
+  const next = replaceConfigAtPath(parsed, path, value, locale)
   if (format === 'json') return `${JSON.stringify(next, null, 2)}\n`
   const document = parseDocument(source)
   let hasAlias = false

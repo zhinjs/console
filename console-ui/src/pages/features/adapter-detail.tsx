@@ -15,8 +15,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { adapterEndpointHref, endpointWorkspaceHref } from '../../console-routes.mjs'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
 import { endpointsOfAdapter } from './feature-model.mjs'
-import { useEndpointList, useFeatureRpcProbe } from './use-feature-data'
-import { FeatureOverridesNotice } from './feature-overrides-notice'
+import { useEndpointList, useFeatureMatrix } from './use-feature-data'
+import { FeatureLevelPanel, FeatureReadOnlyNote } from './feature-level-panel'
 
 export default function AdapterDetailPage() {
   const { adapter = '' } = useParams<{ adapter: string }>()
@@ -27,7 +27,9 @@ function AdapterDetail({ adapter }: { adapter: string }) {
   const i18n = useI18n()
   const { endpoints, loading, loaded, error, refresh } = useEndpointList()
   const accounts = endpointsOfAdapter(endpoints, adapter)
-  const probe = useFeatureRpcProbe('adapter', adapter)
+  const matrix = useFeatureMatrix()
+  // Endpoint ids the Host knows for this alias (configuration and stored overrides).
+  const knownEndpoints = (matrix.endpoints[adapter] ?? []).filter(id => !accounts.some(account => account.name === id))
   return (
     <PageShell>
       <div><Button asChild variant="ghost" size="sm"><Link to="/features/adapters"><ArrowLeft />{i18n.t("全部适配器")}</Link></Button></div>
@@ -36,8 +38,9 @@ function AdapterDetail({ adapter }: { adapter: string }) {
         description={i18n.t("该适配器下的功能覆盖与账号连接。")}
         actions={<Button variant="outline" size="sm" onClick={refresh} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>}
       />
-      <FeatureOverridesNotice status={probe} level="adapter" />
       {error ? <ErrorAlert error={error} onRetry={refresh} /> : null}
+      <FeatureReadOnlyNote />
+      <FeatureLevelPanel level="adapter" levelKey={adapter} adapter={adapter} />
       <section aria-labelledby="adapter-accounts" className="space-y-3">
         <h2 id="adapter-accounts" className="text-base font-semibold">{i18n.t("账号")}</h2>
         <Card className="overflow-hidden p-0">
@@ -71,6 +74,14 @@ function AdapterDetail({ adapter }: { adapter: string }) {
             </Table>
           )}
         </Card>
+        {knownEndpoints.length ? (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted-foreground">{i18n.t("配置中的其他账号：")}</span>
+            {knownEndpoints.map(id => (
+              <Button key={id} asChild variant="outline" size="sm"><Link to={adapterEndpointHref(adapter, id)}><SlidersHorizontal />{id}</Link></Button>
+            ))}
+          </div>
+        ) : null}
       </section>
       {hasConsolePermission('endpoint.manage') ? (
         <section aria-labelledby="adapter-connections" className="space-y-3">
