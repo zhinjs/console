@@ -188,3 +188,24 @@ test('plugin navigation uses explicit title translations and leaves missing or t
  assert.equal(exports.routeLabel({path:'/third-party',name:'保存'},'en'),'保存')
  assert.equal(exports.routeLabel({...route,meta:{titleI18n:{en:''}}},'en'),'试聊一下')
 })
+
+test('model configuration reads English from its settings entry and the copy its model helpers return', async () => {
+  const { buildSettingsCatalog } = await import('../console-ui/src/pages/settings-model.mjs')
+  const { inferenceError, InferenceRequestError, selectableLanguageProfiles } = await import('../console-ui/src/pages/inference/model.mjs')
+  const cjk = /[㐀-鿿]/
+  // Settings lists model configuration from a label table that config.tsx hands to t() at render time.
+  const models = buildSettingsCatalog({ ai: {} }, ['ai'], { ai: ['ai'] }).find(group => group.id === 'models')
+  for (const text of [models.title, models.description, ...models.entries.flatMap(entry => [entry.title, entry.description])])
+    assert.doesNotMatch(translate('en', text), cjk, text)
+  const codes = ['forbidden', 'plan-conflict', 'conflict', 'invalid-input', 'identity-change', 'not-authorized', 'reauthorize',
+    'disconnected', 'target-denied', 'rejected', 'not-submitted', 'operation-closed', 'migration-required',
+    'receipt-storage-unavailable', 'unsupported', 'not-prepared', 'storage-integrity', 'outcome-unknown', 'stale-operation']
+  for (const code of [...codes, undefined]) {
+    const error = code ? new InferenceRequestError(code) : new Error('network')
+    assert.doesNotMatch(inferenceError(error, 'en'), cjk, code)
+    assert.match(inferenceError(error, 'zh-CN'), cjk, code)
+  }
+  const view = { rootId: '/root', profiles: {}, accounts: {}, services: {}, drivers: [],
+    deployment: [{ id: 'shared', label: 'Shared', model: 'native', accountId: 'a', accountIncarnation: 1, definition: { kinds: ['language'] } }] }
+  assert.deepEqual(selectableLanguageProfiles(view, 'en').map(choice => choice.label), ['Shared · Deployment model'])
+})
