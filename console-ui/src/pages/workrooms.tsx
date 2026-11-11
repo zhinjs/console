@@ -28,6 +28,7 @@ import { Skeleton } from '../components/ui/skeleton'
 import { isDemoMode } from '../utils/demo-mode'
 import { PlanningDisclosurePanel } from './workroom-planning'
 import { runTotals, retainRunDetail, validateRuns, validateDetail } from './workroom-runs-model.mjs'
+import { projectsFromCatalog, projectListView, type ConfiguredProject } from './workroom-projects-model.mjs'
 import { ListItemButton } from '../components/ui/list-item-button'
 
 type RunStatus = 'active' | 'blocked' | 'needs_replan' | 'cancelling' | 'completed' | 'cancelled'
@@ -44,7 +45,6 @@ interface WorkroomRun extends WorkroomRunSummary {
   assignments: { ref: string; taskRef: string; status: string; role: string; revision: number; attempt: number; fence: number; outcome?: string }[]
   blockers: { taskRef: string; blockerRef: string; kind: string; deadline?: number; allowedActions: string[] }[]
 }
-interface ConfiguredProject { id: string; name: string; description?: string; enabled: boolean }
 interface RunsEnvelope { projectId: string; runs: WorkroomRunSummary[] }
 
 function recentProjectsKey(): string {
@@ -111,6 +111,7 @@ function WorkroomBoardPage() {
   const [projectId, setProjectId] = useState(projectFromUrl)
   const [recentProjects, setRecentProjects] = useState(readRecentProjects)
   const [configuredProjects, setConfiguredProjects] = useState<ConfiguredProject[] | null>(null)
+  const [projectsError, setProjectsError] = useState<string | null>(null)
   const [runs, setRuns] = useState<WorkroomRunSummary[]>([])
   const [runsAvailable, setRunsAvailable] = useState(false)
   const [selectedRun, setSelectedRun] = useState<WorkroomRun | null>(null)
@@ -230,20 +231,30 @@ function WorkroomBoardPage() {
   }, [loadRuns, projectFromUrl, runFromUrl, setSearchParams])
 
   // Configured projects come from the Catalog so nobody has to remember a Project ID; manual entry stays as a fallback.
+  // A failed read is reported with a retry; it must never look like "no projects configured".
+  const projectsRequestRef = useRef(0)
+  const loadProjects = useCallback(async (autoSelect: boolean) => {
+    const requestId = ++projectsRequestRef.current
+    setConfiguredProjects(null)
+    setProjectsError(null)
+    try {
+      const catalog = await requestConsole<unknown>({ type: CONSOLE_RPC.WORKROOMS_GET })
+      const projects = projectsFromCatalog(catalog, messages.current.locale)
+      if (requestId !== projectsRequestRef.current) return
+      setConfiguredProjects(projects)
+      if (autoSelect && projects.length === 1) setSearchParams({ projectId: projects[0]!.id }, { replace: true })
+    } catch (caught) {
+      if (requestId !== projectsRequestRef.current) return
+      setProjectsError(caught instanceof Error ? caught.message : String(caught))
+    }
+  }, [setSearchParams])
   useEffect(() => {
-    let active = true
-    void requestConsole<{ workrooms?: Record<string, { name?: string; description?: string; enabled?: boolean }> }>({ type: CONSOLE_RPC.WORKROOMS_GET })
-      .then((catalog) => Object.entries(catalog.workrooms ?? {}).map(([id, room]) => ({ id, name: room.name || id, description: room.description, enabled: room.enabled !== false })))
-      .catch(() => [] as ConfiguredProject[])
-      .then((projects) => {
-        if (!active) return
-        setConfiguredProjects(projects)
-        if (!projectFromUrl && projects.length === 1) setSearchParams({ projectId: projects[0]!.id }, { replace: true })
-      })
-    return () => { active = false }
+    void loadProjects(!projectFromUrl)
+    return () => { projectsRequestRef.current++ }
     // Read once per page visit; selecting a project must not refetch the Catalog.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+  const projectsView = projectListView(configuredProjects, projectsError)
 
   const selectRun = useCallback((runId: string) => {
     if (!projectId) return
@@ -282,10 +293,12 @@ function WorkroomBoardPage() {
         <div className="console-panel-heading mb-3">
           <div>
             <h2 id="workroom-project-title">{i18n.t("选择项目")}</h2>
-            <p>{configuredProjects?.length ? i18n.t("已配置的 Workroom 项目，选一个查看任务。") : i18n.t("还没有读取到已配置的项目，可以按 Project ID 查询。")}</p>
+            <p>{projectsView === 'error' ? i18n.t("项目目录读取失败，可以重试，或按 Project ID 查询。") : projectsView === 'empty' ? i18n.t("还没有读取到已配置的项目，可以按 Project ID 查询。") : i18n.t("已配置的 Workroom 项目，选一个查看任务。")}</p>
           </div>
         </div>
-        {configuredProjects === null ? <Skeleton className="h-16 w-full" /> : configuredProjects.length ? (
+        {projectsView === 'error' ? (
+          <ErrorAlert error={i18n.t("无法读取 Workroom 项目目录：{0}", [projectsError ?? ''])} onRetry={() => void loadProjects(!projectId)} />
+        ) : projectsView === 'loading' ? <Skeleton className="h-16 w-full" /> : configuredProjects?.length ? (
           <div className="console-workroom-projects" aria-label={i18n.t("已配置的 Workroom 项目")}>
             {configuredProjects.map((project) => (
               <ListItemButton
@@ -304,7 +317,7 @@ function WorkroomBoardPage() {
             ))}
           </div>
         ) : null}
-        <details className="mt-3" open={configuredProjects !== null && configuredProjects.length === 0}>
+        <details className="mt-3" open={projectsView === 'empty' || projectsView === 'error'}>
           <summary className="text-xs font-medium text-muted-foreground">{i18n.t("按 Project ID 查询")}</summary>
           <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
             <div className="flex gap-2">
@@ -427,7 +440,9 @@ function WorkroomBoardPage() {
         <div className="console-dashboard-panel flex min-h-[28rem] items-center justify-center p-6">
           <EmptyState
             title={i18n.t("选择要查看的 Workroom")}
-            description={i18n.t("在上方选择一个已配置的项目；还没有项目时，先打开「配置 Workrooms」创建。")}
+            description={projectsView === 'error'
+              ? i18n.t("项目目录暂时无法读取；重试成功后在上方选择项目，或按 Project ID 查询。")
+              : i18n.t("在上方选择一个已配置的项目；还没有项目时，先打开「配置 Workrooms」创建。")}
           />
         </div>
       )}
