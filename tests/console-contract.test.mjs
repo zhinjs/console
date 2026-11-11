@@ -366,7 +366,8 @@ test('demo mode is removed: no build flag, bootstrap, onboarding or demo-only br
   assert.match(config.slice(config.indexOf('export default function ConfigPage()')), /return <EditableConfigPage \/>/)
   const pkg = JSON.parse(sourceText(join(ROOT, 'package.json')))
   assert.equal(pkg.scripts['dev:demo'], undefined)
-  assert.equal(pkg.scripts['build:demo'], undefined)
+  // The hosted demo deployment still runs build:demo; it must be the plain build, never a demo mode.
+  assert.equal(pkg.scripts['build:demo'], 'farm build')
 })
 
 test('full config editor uses revision-checked source RPCs', () => {
