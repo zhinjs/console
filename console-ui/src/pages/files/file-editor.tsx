@@ -1,6 +1,6 @@
 import { useI18n } from '../../i18n'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Save, Loader2, AlertCircle, CheckCircle, X } from 'lucide-react'
+import { Save, Loader2, AlertCircle, CheckCircle, X, RefreshCw } from 'lucide-react'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
 import { ConfirmDialog } from '../../components/confirm-dialog'
@@ -116,6 +116,8 @@ export function FileEditor({
   }, [dirty, saving, handleSave, readOnly])
 
   const fileName = filePath.split('/').pop() || filePath
+  // A failed read has no content to edit: show the error with retry, never an empty buffer.
+  const readFailed = !loaded && message?.type === 'error'
 
   if (loading) {
     return (
@@ -141,6 +143,20 @@ export function FileEditor({
         </div>
       </div>
 
+      {readFailed && message ? (
+        <div className="flex-1 min-h-0 overflow-auto p-4">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="space-y-2">
+              <p>{message.text}</p>
+              {message.details ? <details><summary className="cursor-pointer">{i18n.t("技术详情")}</summary><pre className="mt-2 whitespace-pre-wrap break-words text-xs">{message.details}</pre></details> : null}
+              <Button className="file-control" variant="outline" size="sm" onClick={() => loadContent()}>
+                <RefreshCw className="w-4 h-4 mr-1" />
+                {i18n.t("重试")}</Button>
+            </AlertDescription>
+          </Alert>
+        </div>
+      ) : <>
       {draft && dirty && <p className="px-4 pt-2 text-xs text-muted-foreground">{i18n.t("已恢复本标签页内的未保存修改。刷新或关闭标签页前请保存。")}</p>}
       {message && (
         <Alert variant={message.type === 'error' ? 'destructive' : 'success'} className="mx-4 mt-2 py-2">
@@ -184,6 +200,7 @@ export function FileEditor({
         variant="destructive"
         onConfirm={() => { setContent(originalContent); setMessage(null) }}
       />
+      </>}
     </div>
   )
 }
