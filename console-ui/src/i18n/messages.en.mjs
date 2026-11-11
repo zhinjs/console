@@ -3073,4 +3073,7 @@ export const englishMessages = Object.freeze({
   "本页统计": "This page",
   "服务端共 {0} 项；插件筛选与计数只覆盖本页的 {1} 项": "{0} items on the server; plugin filters and counts cover only the {1} items on this page",
   "返回列表": "Back to list",
+  "管理账号、模型与用途。": "Manage accounts, models and purposes.",
+  "为已有 Agent 配置名称与可用服务。": "Set names and available services for existing Agents.",
+  "设置 Workroom 协作能力。": "Configure Workroom collaboration.",
 })
