@@ -82,7 +82,7 @@ Console 面向普通用户（[zhin#970](https://github.com/zhinjs/zhin/issues/97
 
 「决策回放」（`/agent/replay`，从「机器人状态」页的快捷入口进入，不在菜单里）：读 `ai_decision_events`（zhinjs/zhin ADR 0036 切片 C）。列表用 `pluginRpc('root', 'decisions')`（新的在前，`nextBefore` 翻页），点一行看整个回合用 `decision-turn`，导出用 `decisions-export` 按 `nextSince` 逐页拼成一个 JSON 文件；三者都需要令牌持有 `decisions:read`。
 
-「技能助手」（`/agent/skills`）：状态来自 `pluginRpc('root', 'skills')`（Host 方法 `plugin.root.skills`，需要令牌持有 `skills:read`），页面只读统计并提供“管理模型用途”入口。管理员在 `/agent/models` 的“用途”页管理六种决策用途的模式与 Profile；不再读取、猜测或写入旧的 `ai.decisions`／插件 Provider 绑定。
+「技能助手」（`/agent/skills`）：状态来自 `pluginRpc('root', 'skills')`（Host 方法 `plugin.root.skills`，需要令牌持有 `skills:read`），页面只读统计并提供“管理模型用途”入口。管理员在 `/agent/models?tab=purposes`（“用途”页）管理六种决策用途的模式与 Profile；不再读取、猜测或写入旧的 `ai.decisions`／插件 Provider 绑定。
 
 插件约定页没有声明分组时，按路由在 `PLUGIN_PAGE_PLACEMENT` 里归组（目前只有 `/sandbox` → 会话），其余进「插件」。原有路由路径不变，旧链接继续可用。
 
@@ -122,7 +122,7 @@ Console 面向普通用户（[zhin#970](https://github.com/zhinjs/zhin/issues/97
 
 安装回执丢失时先只读核对；仅当相同版本已经安装、尚未声明且没有依赖问题，才能生成新的补全挂载计划，确认后继续配置，不能自动重放旧操作。业务检查先披露范围与副作用，再批准一次；旧代结果与未知执行结果不能用当前插件状态替代。
 
-设置页（保留 `/config` 和原有 `?plugin=` 链接）按通用设置、模型、Agent 预设和插件配置组织。通用设置与插件先展示用途列表，点击后进入详情；插件区分内置能力、已安装与自定义、未识别的已保存配置。“模型”与 `/agent/models` 共用运行时 Service／账号／Profile／用途管理，使用 `/api/agent/inference` 的 plan/apply 与持久 mutation 回查，不创建文件草稿，也不把文件应用状态当作图提交回执。Agent 预设编辑 `ai.agents`；其他静态 AI 设置按对话与执行、会话、记忆、图片、外部服务等能力分别进入，共用同一份 `ai` 文件草稿和保存版本。模型 plan 只在用户显式导入时处理，密钥与登录状态不随 plan 导入导出。 模型草稿绑定打开时读取的图版本；刷新列表不重置或替旧草稿更新基线，冲突后需重新打开编辑。只有本人已确认提交对应的读取结果可以开始下一次保存，结果未知时只查询回执。
+设置页（保留 `/config` 和原有 `?plugin=` 链接）按通用设置、Agent 预设和插件配置组织。通用设置与插件先展示用途列表，点击后进入详情；插件区分内置能力、已安装与自定义、未识别的已保存配置。模型管理只有 `/agent/models` 一个入口（导航与命令面板各一处）：当前标签页写入 `?tab=`（`profiles`／`accounts`／`services`／`purposes` 或个人的 `sessions`，无效值回到 `profiles`），刷新和分享链接可直达；旧的 `/config?section=models`（含 `ai:inference`）重定向到该页并保留 `tab`。它管理运行时 Service／账号／Profile／用途，使用 `/api/agent/inference` 的 plan/apply 与持久 mutation 回查，不创建文件草稿，也不把文件应用状态当作图提交回执。Agent 预设编辑 `ai.agents`；其他静态 AI 设置按对话与执行、会话、记忆、图片、外部服务等能力分别进入，共用同一份 `ai` 文件草稿和保存版本。模型 plan 只在用户显式导入时处理，密钥与登录状态不随 plan 导入导出。 模型草稿绑定打开时读取的图版本；刷新列表不重置或替旧草稿更新基线，冲突后需重新打开编辑。只有本人已确认提交对应的读取结果可以开始下一次保存，结果未知时只查询回执。
 
 模型接入状态沿用 Host 的 Driver 展示声明；仅实验项显示短标识，必要说明只在选定详情或当前登录流程展示。它不改变账号状态、权限、可选范围或保存参数。
 

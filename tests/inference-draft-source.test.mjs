@@ -6,6 +6,7 @@ import { basename, join } from 'node:path'
 import ts from 'typescript'
 import { pageRuntime, nodes } from './helpers/inference-page-runtime.mjs'
 import * as model from '../console-ui/src/pages/inference/model.mjs'
+import * as modelsEntry from '../console-ui/src/pages/inference/models-entry.mjs'
 
 const source = revision => ({ connectionScope: 'connection', base: 'https://host.test', view: {
   rootId: '/host', ownerId: 'host', revision, hostAdministrator: true, deployment: [],
@@ -17,7 +18,7 @@ const source = revision => ({ connectionScope: 'connection', base: 'https://host
 } })
 async function fixture(page, options = {}) {
   const runtime = pageRuntime(), saved = [], credentials = [], confirms = [], requests = [], navigation = []
-  let current = source(1)
+  let current = source(1), query = ''
   const management = () => ({ source: current, view: current.view, owners: [], ownerId: 'host', busy: false, pending: null, error: '', revisionEpoch: current.view.revision,
     request: async (...args) => { requests.push(args); return options.request ? options.request(...args) : { inputSchema: {} } }, active: () => true, setError: assert.fail,
     savePlan: async (plan, options) => { saved.push({ plan, options }); return false },
@@ -42,6 +43,11 @@ async function fixture(page, options = {}) {
     '../../components/ui/alert': { Alert: 'alert', AlertDescription: 'alert-description' },
     '../../components/ui/textarea': { Textarea: 'textarea' },
     yaml: { parse: text => JSON.parse(text), stringify: JSON.stringify },
+    // The Workspace tab lives in the address bar; a write re-renders like a router navigation.
+    'react-router-dom': { useSearchParams: () => [new URLSearchParams(query), next => {
+      query = (typeof next === 'function' ? next(new URLSearchParams(query)) : new URLSearchParams(next)).toString(); runtime.render()
+    }] },
+    './models-entry.mjs': modelsEntry,
   }
   const filename = `${page}.tsx`
   const path = process.env.CONSOLE_FIXTURE_SOURCE_ROOT
