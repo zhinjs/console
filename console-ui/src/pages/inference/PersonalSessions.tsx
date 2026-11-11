@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/button'
@@ -14,6 +15,7 @@ export function PersonalSessions({
   management: InferenceManagement
   connectionScope?: string
 }) {
+  const i18n = useI18n()
   const [rows, setRows] = useState<PersonalSessionRow[]>([]),
     [hasMore, setHasMore] = useState(false),
     [offset, setOffset] = useState(0),
@@ -34,7 +36,7 @@ export function PersonalSessions({
       setHasMore(page.hasMore)
       setOffset((first ? 0 : offset) + page.rows.length)
     } catch (error) {
-      if (active()) m.setError(inferenceError(error))
+      if (active()) m.setError(inferenceError(error, i18n.locale))
     } finally {
       if (active()) setLoading(false)
     }
@@ -52,7 +54,7 @@ export function PersonalSessions({
   }, [m.ownerId, m.revisionEpoch, connectionScope])
   return (
     <div className="space-y-4">
-      <h3 className="font-semibold">个人会话</h3>
+      <h3 className="font-semibold">{i18n.t("个人会话", undefined, 'plural')}</h3>
       <div className="divide-y rounded-lg border">
         {rows.map((row) => (
           <div key={row.sessionKey} className="flex items-center justify-between gap-3 p-4">
@@ -62,7 +64,7 @@ export function PersonalSessions({
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => setSelected(row)}>
-                选择模型
+                {i18n.t("选择模型")}
               </Button>
               <Button variant="ghost" size="sm" asChild>
                 <Link
@@ -70,7 +72,7 @@ export function PersonalSessions({
                     m.ownerId
                   )}`}
                 >
-                  查看
+                  {i18n.t("查看")}
                 </Link>
               </Button>
             </div>
@@ -78,11 +80,11 @@ export function PersonalSessions({
         ))}
       </div>
       {!rows.length && !loading ? (
-        <p className="text-sm text-muted-foreground">暂无已保存的个人会话。</p>
+        <p className="text-sm text-muted-foreground">{i18n.t("暂无已保存的个人会话。")}</p>
       ) : null}
       {hasMore ? (
         <Button variant="outline" onClick={() => void load()} disabled={loading}>
-          加载更多
+          {i18n.t("加载更多")}
         </Button>
       ) : null}
       {selected ? (

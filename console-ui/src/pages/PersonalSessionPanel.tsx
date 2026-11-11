@@ -1,3 +1,4 @@
+import { useI18n } from '../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { SelectField } from '../components/ui/select'
 import { ErrorAlert } from '../components/error-alert'
@@ -27,13 +28,14 @@ export function PersonalSessionPanel(props: PersonalSessionPanelProps) {
 }
 
 function PersonalSessionScope({ sessionKey, connectionScope, preferredOwnerId }: PersonalSessionPanelProps) {
+  const i18n = useI18n()
   const m = useInferenceManagement(connectionScope, preferredOwnerId)
   const owner = m.owners.find((value) => value.id === m.ownerId)?.personal
   return (
     <div className="space-y-4 rounded-md border p-5">
       {m.owners.length > 1 ? (
         <SelectField
-          aria-label="个人身份"
+          aria-label={i18n.t("个人身份")}
           value={m.ownerId}
           onValueChange={m.setOwnerId}
           options={m.owners.map((value) => ({ value: value.id, label: value.label }))}
@@ -41,7 +43,7 @@ function PersonalSessionScope({ sessionKey, connectionScope, preferredOwnerId }:
       ) : null}
       {m.error ? <ErrorAlert error={m.error} /> : null}
       {!owner && !m.busy ? (
-        <p className="text-sm text-muted-foreground">请使用关联此会话的个人身份登录。</p>
+        <p className="text-sm text-muted-foreground">{i18n.t("请使用关联此会话的个人身份登录。")}</p>
       ) : null}
       {owner && isPersonalSessionKey(sessionKey) ? (
         <PersonalSessionReader
@@ -66,6 +68,7 @@ function PersonalSessionReader({ management: m, owner, sessionKey, connectionSco
   sessionKey: string
   connectionScope?: string
 }) {
+  const i18n = useI18n()
   const [row, setRow] = useState<PersonalSessionRow | null>(null),
     [error, setError] = useState(''),
     sequence = useRef(0)
@@ -87,14 +90,14 @@ function PersonalSessionReader({ management: m, owner, sessionKey, connectionSco
             return
           }
           if (!page.hasMore) {
-            setError('在此个人身份下未找到该会话。')
+            setError(i18n.t("在此个人身份下未找到该会话。"))
             return
           }
           if (!page.rows.length) throw new Error('invalid_response')
           offset += page.rows.length
         }
       } catch (failure) {
-        if (!stopped && id === sequence.current && m.active()) setError(inferenceError(failure))
+        if (!stopped && id === sequence.current && m.active()) setError(inferenceError(failure, i18n.locale))
       }
     })()
     return () => {

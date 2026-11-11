@@ -54,7 +54,7 @@ export function ConversationHistory({ sessionKey, connectionScope, connectionId,
       if (!active()) return
       let body: unknown
       try { body = await response.json() }
-      catch { if (response.ok) throw new Error('聊天记录响应格式不正确。') }
+      catch { if (response.ok) throw new Error(i18n.t("聊天记录响应格式不正确。")) }
       if (!active()) return
       if (!response.ok) {
         const failure = conversationHistoryFailure(response.status, body)
@@ -67,7 +67,7 @@ export function ConversationHistory({ sessionKey, connectionScope, connectionId,
       setState({ sessionKey, connectionScope, connectionId, page: mode === 'earlier' ? prependConversationHistory(previous.page, page) : page, loading: false, error: null })
     } catch (cause) {
       if (active()) {
-        const message = cause instanceof Error ? cause.message : '聊天记录读取失败。'
+        const message = cause instanceof Error ? cause.message : i18n.t("聊天记录读取失败。")
         reportConversation.current?.(undefined, message, () => void load('latest'))
         setState({ ...previous, loading: false, error: { kind: 'other', message, mode } })
       }

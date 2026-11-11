@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { apiFetch, getApiBase } from '../../utils/auth'
 import { isInboxCacheScopeActive } from '../../utils/inbox-cache'
@@ -42,6 +43,10 @@ interface PlanSaveOptions extends SaveOptions {
 
 /** One authenticated connection owns this workspace; a saved receipt belongs to one Host and owner. */
 export function useInferenceManagement(connectionScope?: string, initialOwnerId?: string | null) {
+  // Request callbacks outlive a render; they read the current language when they report.
+  const i18n = useI18n()
+  const copy = useRef(i18n)
+  copy.current = i18n
   const [owners, setOwners] = useState<Owner[]>([])
   const [ownerId, setOwnerId] = useState('')
   const [observed, setObserved] = useState<InferenceSource | null>(null)
@@ -73,7 +78,7 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
       pendingId.current = id
       setPending(id)
     } catch {
-      setError('浏览器暂时无法读取保存编号；读取配置不受影响。')
+      setError(copy.current.t("浏览器暂时无法读取保存编号；读取配置不受影响。"))
     }
   }
   function remember(identity: RequestIdentity, id: string | null) {
@@ -92,7 +97,7 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
       remember(identity, null)
     } catch {
       // The transaction is already proved; browser cleanup cannot change its result.
-      if (current(identity)) setError('已保存；浏览器暂未清除操作编号，可再次查询保存结果。')
+      if (current(identity)) setError(copy.current.t("已保存；浏览器暂未清除操作编号，可再次查询保存结果。"))
     }
   }
 
@@ -141,7 +146,7 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
           owner.current = ''
           setOwnerId('')
         }
-        setError(inferenceError(failure))
+        setError(inferenceError(failure, copy.current.locale))
       }
     } finally {
       if (connectionActive() && busyOperation.current === id) {
@@ -193,7 +198,7 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
     if (!active() || busyOperation.current !== null || pendingId.current) return false
     if (!origin || origin.connectionScope !== connectionScope || origin.base !== getApiBase()
       || origin.view.ownerId !== renderedIdentity.ownerId || origin.view.rootId !== view?.rootId) {
-      setError(inferenceError(new InferenceRequestError('stale-operation')))
+      setError(inferenceError(new InferenceRequestError('stale-operation'), copy.current.locale))
       return false
     }
     const identity = renderedIdentity
@@ -231,7 +236,7 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
         options.onCommitted?.(committed)
       return true
     } catch (failure) {
-      if (current(identity)) setError(inferenceError(failure))
+      if (current(identity)) setError(inferenceError(failure, copy.current.locale))
       return false
     } finally {
       if (current(identity) && busyOperation.current === identity.epoch) {
@@ -257,13 +262,13 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
       )
       if (!current(identity)) return
       if (!receipt) {
-        setError('尚未查到保存回执；结果仍未确认，请稍后再次查询。')
+        setError(copy.current.t("尚未查到保存回执；结果仍未确认，请稍后再次查询。"))
         return
       }
       forgetProvedReceipt(identity)
       await load(identity.ownerId)
     } catch (failure) {
-      if (current(identity)) setError(inferenceError(failure))
+      if (current(identity)) setError(inferenceError(failure, copy.current.locale))
     } finally {
       if (current(identity) && busyOperation.current === identity.epoch) {
         busyOperation.current = null
@@ -283,7 +288,7 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
       await load(identity.ownerId)
       return result
     } catch (failure) {
-      if (current(identity)) setError(inferenceError(failure))
+      if (current(identity)) setError(inferenceError(failure, copy.current.locale))
       return undefined
     } finally {
       if (current(identity) && busyOperation.current === identity.epoch) {

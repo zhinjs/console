@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n'
 import { useState, type FormEvent } from 'react'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '../../components/ui/button'
@@ -14,6 +15,7 @@ import type { InferenceManagement, InferenceSource } from './useInferenceManagem
 
 /** Services are saved independently of accounts and model discovery through the existing plan API. */
 export function Services({ management: m }: { management: InferenceManagement }) {
+  const i18n = useI18n()
   const view = m.view!
   const [editing, setEditing] = useState<{ service?: Service; source: InferenceSource } | null>(
     null
@@ -23,8 +25,8 @@ export function Services({ management: m }: { management: InferenceManagement })
     const source = m.source!
     if (
       await confirm({
-        title: `删除 ${service.label ?? service.id}？`,
-        description: '仍被账号引用的服务需要先处理关联账号。',
+        title: i18n.t("删除 {0}？", [service.label ?? service.id]),
+        description: i18n.t("仍被账号引用的服务需要先处理关联账号。"),
         variant: 'destructive'
       })
     )
@@ -34,14 +36,14 @@ export function Services({ management: m }: { management: InferenceManagement })
     <div className="space-y-4">
       {dialog}
       <div className="flex items-center justify-between gap-3">
-        <h3 className="font-semibold">服务</h3>
+        <h3 className="font-semibold">{i18n.t("服务")}</h3>
         <Button disabled={m.busy || !!m.pending} onClick={() => setEditing({ source: m.source! })}>
           <Plus />
-          添加服务
+          {i18n.t("添加服务")}
         </Button>
       </div>
       {!Object.keys(view.services).length ? (
-        <Card className="p-8 text-center text-muted-foreground">添加一个模型服务。</Card>
+        <Card className="p-8 text-center text-muted-foreground">{i18n.t("添加一个模型服务。")}</Card>
       ) : (
         <div className="divide-y rounded-lg border">
           {Object.values(view.services).map((service) => (
@@ -62,7 +64,7 @@ export function Services({ management: m }: { management: InferenceManagement })
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label={`编辑服务 ${service.label ?? service.id}`}
+                    aria-label={i18n.t("编辑服务 {0}", [service.label ?? service.id])}
                     disabled={m.busy || !!m.pending}
                     onClick={() => setEditing({ service, source: m.source! })}
                   >
@@ -71,7 +73,7 @@ export function Services({ management: m }: { management: InferenceManagement })
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label={`删除服务 ${service.label ?? service.id}`}
+                    aria-label={i18n.t("删除服务 {0}", [service.label ?? service.id])}
                     disabled={m.busy || !!m.pending}
                     onClick={() => void remove(service)}
                   >
@@ -91,7 +93,7 @@ export function Services({ management: m }: { management: InferenceManagement })
       >
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editing?.service ? '编辑服务' : '添加服务'}</DialogTitle>
+            <DialogTitle>{editing?.service ? i18n.t("编辑服务") : i18n.t("添加服务")}</DialogTitle>
           </DialogHeader>
           {editing ? (
             <ServiceForm
@@ -118,6 +120,7 @@ function ServiceForm({
   management: InferenceManagement
   onSaved: () => void
 }) {
+  const i18n = useI18n()
   const [driverId, setDriverId] = useState(service ? driverKey(service.driver) : '')
   const [label, setLabel] = useState(service?.label ?? '')
   const [options, setOptions] = useState<ObjectValue>(service?.options ?? {})
@@ -127,11 +130,11 @@ function ServiceForm({
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (!driver) {
-      setError('请选择服务类型。')
+      setError(i18n.t("请选择服务类型。"))
       return
     }
     if (!valid) {
-      setError('请检查连接参数。')
+      setError(i18n.t("请检查连接参数。"))
       return
     }
     setError('')
@@ -165,15 +168,15 @@ function ServiceForm({
         {m.error ? <ErrorAlert error={m.error} /> : null}
         {driver ? <SupportNotice support={driver.support} /> : null}
         <label className="block space-y-2 text-sm">
-          <span>名称</span>
+          <span>{i18n.t("名称")}</span>
           <Input
             value={label}
             onChange={(event) => setLabel(event.target.value)}
-            placeholder="如：我的模型服务"
+            placeholder={i18n.t("如：我的模型服务")}
           />
         </label>
         <label className="block space-y-2 text-sm">
-          <span>服务类型</span>
+          <span>{i18n.t("服务类型")}</span>
           <SelectField
             value={driverId}
             disabled={!!service}
@@ -183,7 +186,7 @@ function ServiceForm({
               setValid(true)
             }}
             options={[
-              { value: '', label: '选择服务类型' },
+              { value: '', label: i18n.t("选择服务类型") },
               ...source.view.drivers.map((value) => ({
                 value: driverKey(value),
                 label: supportLabel(value.label, value.support)
@@ -200,7 +203,7 @@ function ServiceForm({
             onValidityChange={setValid}
           />
         ) : null}
-        <Button type="submit">保存</Button>
+        <Button type="submit">{i18n.t("保存")}</Button>
       </fieldset>
     </form>
   )
