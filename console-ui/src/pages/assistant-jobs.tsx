@@ -51,7 +51,3 @@ export default function AssistantJobsPage() {
     </> : null}
   </div>
 }
-
-export async function probeAssistantEnabled(locale: 'zh-CN' | 'en' = 'zh-CN'): Promise<boolean> {
-  return probeAssistantJobs(() => apiFetch('/api/assistant/jobs'), locale)
-}

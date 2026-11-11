@@ -1,21 +1,16 @@
-import { translate } from '../i18n/locale.mjs'
 import { useI18n } from '../i18n'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { Activity, AlertTriangle, Coins, MessagesSquare, RefreshCw, Settings2, Workflow } from 'lucide-react'
 import {
-  Activity,
-  AlertTriangle,
-  FolderKanban,
-  RefreshCw,
-  Search,
-  Settings2,
-  UserRoundCog,
-  Workflow,
-} from 'lucide-react'
-import { cn } from '@zhin.js/client'
-import { CONSOLE_REST, CONSOLE_RPC } from '../contracts/zhin-console'
-import { requestConsole } from '../utils/console-rpc'
-import { apiFetch, getApiBase } from '../utils/auth'
+  cn,
+  useEngagementDetail,
+  useEngagements,
+  useVenues,
+  type ConsoleEngagementDetail,
+  type ConsoleEngagementSummary,
+} from '@zhin.js/client'
+import { startVisiblePolling } from '../hooks/visible-polling.mjs'
 import { PageHeader } from '../components/PageHeader'
 import { PageShell } from '../components/PageShell'
 import { ErrorAlert } from '../components/error-alert'
@@ -23,412 +18,176 @@ import { EmptyState } from '../components/empty-state'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
-import { Input } from '../components/ui/input'
 import { Skeleton } from '../components/ui/skeleton'
-import { isDemoMode } from '../utils/demo-mode'
-import { PlanningDisclosurePanel } from './workroom-planning'
-import { runTotals, retainRunDetail, validateRuns, validateDetail } from './workroom-runs-model.mjs'
 import { ListItemButton } from '../components/ui/list-item-button'
+import { isDemoMode } from '../utils/demo-mode'
+import {
+  actorLabel,
+  collaborationEventSummary,
+  engagementTotals,
+  hasRunningEngagement,
+  venueChannelLabel,
+} from './engagements-model.mjs'
 
-type RunStatus = 'active' | 'blocked' | 'needs_replan' | 'cancelling' | 'completed' | 'cancelled'
-interface WorkroomRunSummary {
-  projectId: string
-  runId: string
-  status: RunStatus
-  sequence: number
-  cancelRequested: boolean
-  counts: { tasks: number; assignments: number; reviewerAssignments: number; sponsorGates: number }
-}
-interface WorkroomRun extends WorkroomRunSummary {
-  tasks: { ref: string; status: string; revision: number; attempt: number; required: boolean; blockerCount: number; hasCurrentAssignment: boolean }[]
-  assignments: { ref: string; taskRef: string; status: string; role: string; revision: number; attempt: number; fence: number; outcome?: string }[]
-  blockers: { taskRef: string; blockerRef: string; kind: string; deadline?: number; allowedActions: string[] }[]
-}
-interface ConfiguredProject { id: string; name: string; description?: string; enabled: boolean }
-interface RunsEnvelope { projectId: string; runs: WorkroomRunSummary[] }
+const ENGAGEMENT_LIMIT = 50
+type DetailView = 'timeline' | 'board' | 'raw'
 
-function recentProjectsKey(): string {
-  return `zhin.console.workroom.projects:${encodeURIComponent(getApiBase())}`
-}
-const ACTIVE_RUN_STATUSES = new Set<RunStatus>(['active', 'blocked', 'needs_replan', 'cancelling'])
-
-function readRecentProjects(): string[] {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(recentProjectsKey()) ?? '[]') as unknown
-    return Array.isArray(parsed)
-      ? parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, 8)
-      : []
-  } catch {
-    return []
-  }
-}
-
-function rememberProject(projectId: string): string[] {
-  const next = [projectId, ...readRecentProjects().filter((item) => item !== projectId)].slice(0, 8)
-  try {
-    localStorage.setItem(recentProjectsKey(), JSON.stringify(next))
-  } catch {
-    // URL remains the durable deep link when browser storage is unavailable.
-  }
-  return next
-}
-
-function statusVariant(status: string): 'success' | 'secondary' | 'destructive' | 'outline' | 'warning' {
-  if (status === 'completed' || status === 'accepted' || status === 'execution_completed') return 'success'
-  if (status === 'failed' || status === 'lost') return 'destructive'
-  if (status === 'blocked' || status === 'needs_replan' || status === 'cancelling' || status === 'cancel_requested') return 'warning'
-  if (status === 'active' || status === 'executing' || status === 'running' || status === 'leased') return 'secondary'
-  return 'outline'
-}
-
-function formatTime(value: number | undefined, locale: 'zh-CN' | 'en' = 'zh-CN'): string {
-  if (!value || !Number.isFinite(value)) return '—'
-  return new Date(value).toLocaleString(locale)
-}
-
-async function readStrictJson<T>(response: Response, locale: 'zh-CN' | 'en' = 'zh-CN'): Promise<T> {
-  const raw = await response.text()
-  let body: { success: boolean; data?: T; error?: string }
-  try {
-    body = JSON.parse(raw) as { success: boolean; data?: T; error?: string }
-  } catch {
-    throw new Error(response.ok ? translate(locale, "服务端返回了无效 JSON") : `HTTP ${response.status}`)
-  }
-  if (!response.ok || body.success !== true || body.data === undefined) {
-    throw new Error(body.error ?? `HTTP ${response.status}`)
-  }
-  return body.data
+function statusVariant(status: ConsoleEngagementSummary['status']): 'success' | 'secondary' | 'destructive' {
+  if (status === 'completed') return 'success'
+  if (status === 'failed') return 'destructive'
+  return 'secondary'
 }
 
 function WorkroomBoardPage() {
   const i18n = useI18n()
-  const messages = useRef(i18n)
-  messages.current = i18n
   const [searchParams, setSearchParams] = useSearchParams()
-  const projectFromUrl = searchParams.get('projectId')?.trim() ?? ''
-  const runFromUrl = searchParams.get('runId')?.trim() ?? ''
-  const [projectInput, setProjectInput] = useState(projectFromUrl)
-  const [projectId, setProjectId] = useState(projectFromUrl)
-  const [recentProjects, setRecentProjects] = useState(readRecentProjects)
-  const [configuredProjects, setConfiguredProjects] = useState<ConfiguredProject[] | null>(null)
-  const [runs, setRuns] = useState<WorkroomRunSummary[]>([])
-  const [runsAvailable, setRunsAvailable] = useState(false)
-  const [selectedRun, setSelectedRun] = useState<WorkroomRun | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [refreshing, setRefreshing] = useState(false)
-  const [detailLoading, setDetailLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const listAbortRef = useRef<AbortController | null>(null)
-  const detailAbortRef = useRef<AbortController | null>(null)
-
-  const loadRuns = useCallback(async (target: string, background = false) => {
-    const normalized = target.trim()
-    if (!normalized) {
-      setError(messages.current.t("请输入 Workroom Project ID"))
-      return
-    }
-    listAbortRef.current?.abort()
-    const controller = new AbortController()
-    listAbortRef.current = controller
-    if (!background) {
-      setProjectId(normalized)
-      setProjectInput(normalized)
-      setRunsAvailable(false)
-    }
-    background ? setRefreshing(true) : setLoading(true)
-    setError(null)
-    try {
-      const response = await apiFetch(
-        `${CONSOLE_REST.WORKROOM_RUNS}?projectId=${encodeURIComponent(normalized)}`,
-        { signal: controller.signal },
-      )
-      const data = await readStrictJson<RunsEnvelope>(response, messages.current.locale)
-      validateRuns(data, messages.current.locale)
-      if (controller.signal.aborted) return
-      setProjectId(data.projectId)
-      setProjectInput(data.projectId)
-      setRuns(data.runs)
-      setRunsAvailable(true)
-      setRecentProjects(rememberProject(data.projectId))
-      setSelectedRun((current) => {
-        if (!current) return null
-        return retainRunDetail(current, data.runs)
-      })
-    } catch (caught) {
-      if (!controller.signal.aborted) {
-        setRuns([])
-        setSelectedRun(null)
-        setRunsAvailable(false)
-        setError(caught instanceof Error ? caught.message : String(caught))
-      }
-    } finally {
-      if (!controller.signal.aborted) {
-        setLoading(false)
-        setRefreshing(false)
-      }
-    }
-  }, [])
-
-  const loadRunDetail = useCallback(async (targetProjectId: string, runId: string) => {
-    if (!targetProjectId) return
-    detailAbortRef.current?.abort()
-    const controller = new AbortController()
-    detailAbortRef.current = controller
-    setDetailLoading(true)
-    setError(null)
-    try {
-      const response = await apiFetch(
-        `${CONSOLE_REST.WORKROOM_RUNS}/${encodeURIComponent(runId)}?projectId=${encodeURIComponent(targetProjectId)}`,
-        { signal: controller.signal },
-      )
-      const detail = await readStrictJson<WorkroomRun>(response, messages.current.locale)
-      validateDetail(detail, messages.current.locale)
-      if (!controller.signal.aborted) setSelectedRun(detail)
-    } catch (caught) {
-      if (!controller.signal.aborted) setError(caught instanceof Error ? caught.message : String(caught))
-    } finally {
-      if (!controller.signal.aborted) setDetailLoading(false)
-    }
-  }, [])
-
+  const selectedId = searchParams.get('engagementId')?.trim() || null
+  // The SDK hooks read the Host's Engagement projection (agent.engagements.* RPC, REST fallback).
+  const { engagements, loading, error, reload } = useEngagements(ENGAGEMENT_LIMIT)
+  const { detail, loading: detailLoading, error: detailError, reload: reloadDetail } = useEngagementDetail(selectedId)
+  const { venues } = useVenues()
+  // `loading` also turns on for background refreshes; only the first load shows the skeleton.
+  const [loaded, setLoaded] = useState(false)
+  const started = useRef(false)
   useEffect(() => {
-    if (projectFromUrl) {
-      void loadRuns(projectFromUrl)
-    } else {
-      setProjectId('')
-      setProjectInput('')
-      setRuns([])
-      setRunsAvailable(false)
-      setSelectedRun(null)
-      setError(null)
-    }
-  }, [loadRuns, projectFromUrl])
+    if (loading) started.current = true
+    else if (started.current) setLoaded(true)
+  }, [loading])
 
+  const live = hasRunningEngagement(engagements)
   useEffect(() => {
-    if (!projectFromUrl || !runFromUrl) {
-      setSelectedRun(null)
-      return
-    }
-    void loadRunDetail(projectFromUrl, runFromUrl)
-  }, [loadRunDetail, projectFromUrl, runFromUrl])
-
-  useEffect(() => {
-    return () => {
-      listAbortRef.current?.abort()
-      detailAbortRef.current?.abort()
-    }
-  }, [])
-
-  const selectProject = useCallback((target: string) => {
-    const normalized = target.trim()
-    if (!normalized) return
-    if (normalized === projectFromUrl && !runFromUrl) {
-      void loadRuns(normalized)
-      return
-    }
-    setSearchParams({ projectId: normalized })
-  }, [loadRuns, projectFromUrl, runFromUrl, setSearchParams])
-
-  // Configured projects come from the Catalog so nobody has to remember a Project ID; manual entry stays as a fallback.
-  useEffect(() => {
-    let active = true
-    void requestConsole<{ workrooms?: Record<string, { name?: string; description?: string; enabled?: boolean }> }>({ type: CONSOLE_RPC.WORKROOMS_GET })
-      .then((catalog) => Object.entries(catalog.workrooms ?? {}).map(([id, room]) => ({ id, name: room.name || id, description: room.description, enabled: room.enabled !== false })))
-      .catch(() => [] as ConfiguredProject[])
-      .then((projects) => {
-        if (!active) return
-        setConfiguredProjects(projects)
-        if (!projectFromUrl && projects.length === 1) setSearchParams({ projectId: projects[0]!.id }, { replace: true })
-      })
-    return () => { active = false }
-    // Read once per page visit; selecting a project must not refetch the Catalog.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const selectRun = useCallback((runId: string) => {
-    if (!projectId) return
-    if (runId === runFromUrl) {
-      void loadRunDetail(projectId, runId)
-      return
-    }
-    setSearchParams({ projectId, runId })
-  }, [loadRunDetail, projectId, runFromUrl, setSearchParams])
-
-  const hasActiveRuns = runs.some((run) => ACTIVE_RUN_STATUSES.has(run.status))
-  useEffect(() => {
-    if (!projectId || !hasActiveRuns) return
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === 'visible') void loadRuns(projectId, true)
+    if (!live) return
+    return startVisiblePolling(() => {
+      void reload()
+      if (selectedId) void reloadDetail(selectedId)
     }, 5_000)
-    return () => window.clearInterval(timer)
-  }, [hasActiveRuns, loadRuns, projectId])
+  }, [live, reload, reloadDetail, selectedId])
 
-  const totals = useMemo(() => runTotals(runs), [runs])
+  const refresh = useCallback(() => {
+    void reload()
+    if (selectedId) void reloadDetail(selectedId)
+  }, [reload, reloadDetail, selectedId])
+  const totals = useMemo(() => engagementTotals(engagements), [engagements])
+  const statusLabel = (status: ConsoleEngagementSummary['status']) =>
+    status === 'running' ? i18n.t("进行中") : status === 'completed' ? i18n.t("已完成") : i18n.t("失败")
 
   return (
     <PageShell className="max-w-[1680px]">
       <PageHeader
-        title={i18n.t("Workroom 任务看板")}
-        description={i18n.t("查看项目运行、任务分配与阻塞情况；规划和权限初始化需要显式确认。")}
+        title={i18n.t("Workroom 协作记录")}
+        description={i18n.t("查看多 Agent 协作（Engagement）的参与方、预算消耗、共享黑板与事件。此页只读。")}
         actions={
           <div className="flex items-center gap-2">
             <Button asChild variant="outline" size="sm"><Link to="/agent/workrooms/catalog"><Settings2 />{i18n.t("配置 Workrooms")}</Link></Button>
-            <Button variant="outline" size="sm" disabled={!projectId || loading || refreshing} onClick={() => void loadRuns(projectId, true)}><RefreshCw className={refreshing ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
+            <Button variant="outline" size="sm" disabled={loading} onClick={refresh}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
           </div>
         }
       />
 
-      <section className="console-dashboard-panel p-4 sm:p-5" aria-labelledby="workroom-project-title">
-        <div className="console-panel-heading mb-3">
-          <div>
-            <h2 id="workroom-project-title">{i18n.t("选择项目")}</h2>
-            <p>{configuredProjects?.length ? i18n.t("已配置的 Workroom 项目，选一个查看任务。") : i18n.t("还没有读取到已配置的项目，可以按 Project ID 查询。")}</p>
-          </div>
-        </div>
-        {configuredProjects === null ? <Skeleton className="h-16 w-full" /> : configuredProjects.length ? (
-          <div className="console-workroom-projects" aria-label={i18n.t("已配置的 Workroom 项目")}>
-            {configuredProjects.map((project) => (
-              <ListItemButton
-                key={project.id}
-                type="button"
-                aria-current={project.id === projectId ? 'true' : undefined}
-                className={cn('console-workroom-project', project.id === projectId && 'is-active', !project.enabled && 'is-disabled')}
-                onClick={() => selectProject(project.id)}
-              >
-                <span className="min-w-0 flex-1 text-left">
-                  <span className="block truncate text-sm font-semibold">{project.name}</span>
-                  <span className="mt-0.5 block truncate text-xs text-muted-foreground">{project.description || project.id}</span>
-                </span>
-                {!project.enabled ? <Badge variant="secondary">{i18n.t("已停用")}</Badge> : null}
-              </ListItemButton>
-            ))}
-          </div>
-        ) : null}
-        <details className="mt-3" open={configuredProjects !== null && configuredProjects.length === 0}>
-          <summary className="text-xs font-medium text-muted-foreground">{i18n.t("按 Project ID 查询")}</summary>
-          <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-            <div className="flex gap-2">
-              <Input
-                value={projectInput}
-                onChange={(event) => setProjectInput(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') selectProject(projectInput)
-                }}
-                placeholder={i18n.t("填写 Workroom 配置中的 Project ID")}
-                aria-label="Workroom Project ID"
-              />
-              <Button disabled={loading || !projectInput.trim()} onClick={() => selectProject(projectInput)}>
-                {loading ? <RefreshCw className="animate-spin" /> : <Search />}
-                {i18n.t("查询")}</Button>
+      {error ? <ErrorAlert error={error} onRetry={refresh} /> : null}
+
+      {venues.length ? (
+        <section className="console-dashboard-panel p-4 sm:p-5" aria-labelledby="workroom-venues-title">
+          <div className="console-panel-heading mb-3">
+            <div>
+              <h2 id="workroom-venues-title">{i18n.t("协作场所 · {0}", [venues.length])}</h2>
+              <p>{i18n.t("配置中声明的 Venue，以及各自绑定的会话。")}</p>
             </div>
-            {recentProjects.length ? (
-              <div className="flex max-w-2xl flex-wrap gap-1.5" aria-label={i18n.t("最近查询的 Project")}>
-                {recentProjects.map((item) => (
-                  <Button
-                    key={item}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className={cn(item === projectId && 'border-primary/35 bg-primary/[0.06] text-primary')}
-                    onClick={() => selectProject(item)}
-                  >
-                    {item}
-                  </Button>
-                ))}
-              </div>
-            ) : null}
           </div>
-        </details>
-      </section>
-
-      {error ? <ErrorAlert error={error} onRetry={projectInput.trim() ? () => loadRuns(projectInput) : undefined} /> : null}
-
-      {projectId ? <PlanningDisclosurePanel projectId={projectId} /> : null}
-
-      {projectId && runsAvailable ? (
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label={i18n.t("Workroom 摘要")}>
-          <Metric icon={Workflow} label={i18n.t("运行")} value={runs.length} detail={i18n.t("{0} 个仍在运行", [totals.activeRuns])} />
-          <Metric icon={FolderKanban} label={i18n.t("任务")} value={totals.tasks} detail={i18n.t("总任务数")} />
-          <Metric icon={AlertTriangle} label={i18n.t("阻塞运行")} value={totals.blocked} detail={i18n.t("打开运行记录查看原因")} tone={totals.blocked ? 'warning' : 'success'} />
-          <Metric icon={UserRoundCog} label={i18n.t("执行分配")} value={totals.assignments} detail={i18n.t("执行、审核与集成")} />
+          <ul className="flex flex-wrap gap-2">
+            {venues.map((venue) => (
+              <li key={venue.key} className="rounded-lg border bg-muted/20 px-3 py-1.5 text-xs">
+                <code className="font-medium">{venue.key}</code>
+                <span className="ml-2 text-muted-foreground">{venueChannelLabel(venue)}</span>
+                <Badge variant="outline" className="ml-2">{venue.floor === 'moderated' ? i18n.t("主持发言") : i18n.t("自由发言")}</Badge>
+              </li>
+            ))}
+          </ul>
         </section>
       ) : null}
 
-      {loading ? (
+      {loaded && !error ? (
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label={i18n.t("Workroom 摘要")}>
+          <Metric icon={Workflow} label={i18n.t("协作")} value={i18n.number(engagements.length)} detail={i18n.t("{0} 个仍在进行", [totals.running])} />
+          <Metric icon={AlertTriangle} label={i18n.t("失败")} value={i18n.number(totals.failed)} detail={i18n.t("打开记录查看终止原因")} tone={totals.failed ? 'warning' : 'success'} />
+          <Metric icon={MessagesSquare} label={i18n.t("轮次")} value={i18n.number(totals.turns)} detail={i18n.t("所有协作的 Agent 轮次")} />
+          <Metric icon={Coins} label="Tokens" value={i18n.number(totals.tokens)} detail={i18n.t("所有协作的 Token 消耗")} />
+        </section>
+      ) : null}
+
+      {!loaded ? (
         <div className="grid gap-4 xl:grid-cols-[minmax(18rem,0.7fr)_minmax(0,1.3fr)]">
           <Skeleton className="h-[34rem] rounded-xl" />
           <Skeleton className="h-[34rem] rounded-xl" />
         </div>
-      ) : projectId && !runsAvailable ? (
+      ) : error ? (
         <div className="console-dashboard-panel flex min-h-[20rem] items-center justify-center p-6">
           <EmptyState
-            title={i18n.t("无法读取 Workroom Run")}
-            description={i18n.t("无法读取此项目的运行记录。请检查连接与项目授权。")}
+            title={i18n.t("无法读取协作记录")}
+            description={i18n.t("请检查连接，并确认当前令牌具有完整权限。")}
           />
         </div>
-      ) : projectId ? (
+      ) : (
         <div className="grid items-start gap-4 xl:grid-cols-[minmax(19rem,0.72fr)_minmax(0,1.28fr)]">
-          <section className="console-dashboard-panel overflow-hidden" aria-labelledby="workroom-runs-title">
+          <section className="console-dashboard-panel overflow-hidden" aria-labelledby="workroom-engagements-title">
             <div className="console-panel-heading px-4 pt-4 sm:px-5 sm:pt-5">
               <div>
-                <span className="console-eyebrow">{projectId}</span>
-                <h2 id="workroom-runs-title">{i18n.t("Run 时间线")}</h2>
-                <p>{i18n.t("选择一条运行，查看任务状态、执行分配与阻塞项。")}</p>
+                <h2 id="workroom-engagements-title">{i18n.t("最近的协作")}</h2>
+                <p>{i18n.t("选择一条记录，查看协作链路、共享黑板与事件。")}</p>
               </div>
-              {hasActiveRuns ? <Badge variant="secondary"><Activity className="mr-1 h-3 w-3" />Live</Badge> : null}
+              {live ? <Badge variant="secondary"><Activity className="mr-1 h-3 w-3" />Live</Badge> : null}
             </div>
             <div className="space-y-2 p-3 sm:p-4">
-              {runs.map((run) => (
+              {engagements.map((item) => (
                 <ListItemButton
-                  key={run.runId}
+                  key={item.engagementId}
                   type="button"
+                  aria-current={item.engagementId === selectedId ? 'true' : undefined}
                   className={cn(
                     'w-full rounded-lg border p-3 text-left transition-colors hover:bg-muted/45',
-                    selectedRun?.runId === run.runId && 'border-primary/35 bg-primary/[0.055]',
+                    item.engagementId === selectedId && 'border-primary/35 bg-primary/[0.055]',
                   )}
-                  onClick={() => selectRun(run.runId)}
+                  onClick={() => setSearchParams({ engagementId: item.engagementId })}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold">{run.runId}</p>
-                    </div>
-                    <Badge variant={statusVariant(run.status)}>{run.status}</Badge>
+                    <p className="min-w-0 truncate text-sm font-semibold">{item.engagementId}</p>
+                    <Badge variant={statusVariant(item.status)}>{statusLabel(item.status)}</Badge>
                   </div>
-                  <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
-                    <span>{run.counts.tasks} tasks</span>
-                    <span>{run.counts.assignments} assignments</span>
-                    <span>{run.counts.reviewerAssignments + run.counts.sponsorGates} waits</span>
-                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {i18n.date(item.startedAt, { dateStyle: 'short', timeStyle: 'short' })}
+                    {item.venue ? ` · ${item.venue}` : ''}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {i18n.t("{0} 次跳转 · {1} 轮 · {2} Tokens", [item.hops, item.turns, i18n.number(item.tokensUsed)])}
+                  </p>
+                  {item.participants.length ? (
+                    <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">{item.participants.join(', ')}</p>
+                  ) : null}
                 </ListItemButton>
               ))}
-              {runs.length === 0 ? (
-                <EmptyState compact title={i18n.t("这个 Project 还没有 Run")} description={i18n.t("WorkroomKernel 创建首个 Run 后会出现在这里。")} />
+              {engagements.length === 0 ? (
+                <EmptyState compact title={i18n.t("还没有协作记录")} description={i18n.t("Agent 之间发生协作后，记录会出现在这里。")} />
               ) : null}
             </div>
           </section>
 
           <section className="console-dashboard-panel min-h-[34rem]" aria-labelledby="workroom-detail-title">
-            {detailLoading ? (
+            {detailError ? (
+              <div className="p-5"><ErrorAlert error={detailError} onRetry={() => void reloadDetail(selectedId)} /></div>
+            ) : detail && detail.summary.engagementId === selectedId ? (
+              <EngagementDetail detail={detail} statusLabel={statusLabel} />
+            ) : detailLoading ? (
               <div className="space-y-3 p-5">
                 <Skeleton className="h-20 rounded-lg" />
                 <Skeleton className="h-28 rounded-lg" />
                 <Skeleton className="h-28 rounded-lg" />
               </div>
-            ) : selectedRun ? (
-              <RunDetail run={selectedRun} />
             ) : (
               <div className="flex min-h-[34rem] items-center justify-center p-6">
-                <EmptyState title={i18n.t("选择一个 Run")} description={i18n.t("右侧将展示 Kernel 的 Task、Assignment、Blocker 与交付引用。")} />
+                <EmptyState title={i18n.t("选择一条协作记录")} description={i18n.t("右侧将展示协作链路、预算消耗与共享黑板。")} />
               </div>
             )}
           </section>
-        </div>
-      ) : (
-        <div className="console-dashboard-panel flex min-h-[28rem] items-center justify-center p-6">
-          <EmptyState
-            title={i18n.t("选择要查看的 Workroom")}
-            description={i18n.t("在上方选择一个已配置的项目；还没有项目时，先打开「配置 Workrooms」创建。")}
-          />
         </div>
       )}
     </PageShell>
@@ -440,12 +199,12 @@ function DemoWorkroomBoardPage() {
   return (
     <PageShell className="max-w-[1200px]">
       <PageHeader
-        title={i18n.t("Workroom 任务看板")}
-        description={i18n.t("查看项目任务、审批与执行记录。")}
+        title={i18n.t("Workroom 协作记录")}
+        description={i18n.t("查看多 Agent 协作的参与方、预算消耗与事件。")}
         actions={<Button asChild variant="outline" size="sm"><Link to="/agent/workrooms/catalog"><Settings2 />{i18n.t("查看公开目录")}</Link></Button>}
       />
       <div className="console-dashboard-panel flex min-h-[28rem] items-center justify-center p-6">
-        <EmptyState title={i18n.t("任务详情需要项目授权")} description={i18n.t("演示模式不提供任务详情。可查看项目目录。")} />
+        <EmptyState title={i18n.t("协作记录需要完整权限")} description={i18n.t("演示模式不提供协作记录。可查看项目目录。")} />
       </div>
     </PageShell>
   )
@@ -455,31 +214,107 @@ export default function WorkroomsPage() {
   return isDemoMode() ? <DemoWorkroomBoardPage /> : <WorkroomBoardPage />
 }
 
-function RunDetail({ run }: { run: WorkroomRun }) {
+function EngagementDetail({ detail, statusLabel }: {
+  detail: ConsoleEngagementDetail
+  statusLabel: (status: ConsoleEngagementSummary['status']) => string
+}) {
   const i18n = useI18n()
-  return <div className="space-y-5 p-4 sm:p-5">
-    <header><h2 id="workroom-detail-title" className="text-lg font-semibold">{i18n.t("运行详情")}</h2><Badge variant={statusVariant(run.status)}>{run.status}</Badge><p className="text-sm text-muted-foreground">{run.cancelRequested ? i18n.t("已请求取消") : i18n.t("未请求取消")}</p></header>
-    <p className="text-sm text-muted-foreground">{i18n.t("当前账号仅可查看任务状态，无法查看任务内容与证据。")}</p>
-    <details className="rounded-lg border p-3 text-sm"><summary className="cursor-pointer font-medium">{i18n.t("运行标识与版本")}</summary><p className="mt-2 break-all">Run ID：<code>{run.runId}</code> · Sequence {run.sequence}</p></details>
-    <section><h3 className="text-sm font-semibold">{i18n.t("任务 · ")}{run.counts.tasks}</h3>{run.tasks.map((task,index) => <article key={task.ref} className="my-2 rounded-lg border p-3">
-      <div className="flex items-center justify-between gap-2"><strong className="text-sm">{i18n.t("任务 ")}{index + 1}</strong><Badge variant={statusVariant(task.status)}>{task.status}</Badge></div>
-      <p className="mt-2 text-sm text-muted-foreground">{task.required ? i18n.t("必需") : i18n.t("可选")} · {task.blockerCount} {i18n.t(" 个阻塞项 · ")}{task.hasCurrentAssignment ? i18n.t("已有执行分配") : i18n.t("未分配执行")}</p>
-      <details className="mt-2 text-sm"><summary className="cursor-pointer">{i18n.t("任务技术标识")}</summary><p className="mt-2 break-all"><code>{task.ref}</code> · revision {task.revision} · attempt {task.attempt}</p></details>
-    </article>)}{!run.tasks.length && <EmptyState compact title={i18n.t("尚无任务")} />}</section>
-    <section><h3 className="text-sm font-semibold">{i18n.t("执行分配 · ")}{run.counts.assignments}</h3>{run.assignments.map((item,index) => <article key={item.ref} className="my-2 rounded-lg border p-3">
-      <div className="flex items-center justify-between gap-2"><strong className="text-sm">{i18n.t("执行分配 ")}{index + 1} · {item.role}</strong><Badge variant={statusVariant(item.status)}>{item.status}</Badge></div>
-      {item.outcome ? <p className="mt-2 text-sm">{item.outcome}</p> : null}
-      <details className="mt-2 text-sm"><summary className="cursor-pointer">{i18n.t("执行分配技术标识")}</summary><p className="mt-2 break-all"><code>{item.ref}</code> · task <code>{item.taskRef}</code> · revision {item.revision} · attempt {item.attempt} · fence {item.fence}</p></details>
-    </article>)}{!run.assignments.length && <EmptyState compact title={i18n.t("尚无执行分配")} />}</section>
-    <section><h3 className="text-sm font-semibold">{i18n.t("阻塞项")}</h3>{run.blockers.map(item => <article key={item.blockerRef} className="my-2 rounded-lg border p-3"><strong className="text-sm">{item.kind}</strong><p className="text-sm">{i18n.t("截止时间 ")}{formatTime(item.deadline, i18n.locale)}</p><p className="text-sm text-muted-foreground">{i18n.t("允许动作：")}{item.allowedActions.join(' / ') || i18n.t("无")}</p><details className="mt-2 text-sm"><summary className="cursor-pointer">{i18n.t("阻塞项技术标识")}</summary><p className="mt-2 break-all">Task：<code>{item.taskRef}</code> · Blocker：<code>{item.blockerRef}</code></p></details></article>)}{!run.blockers.length && <EmptyState compact title={i18n.t("当前没有阻塞项")} />}</section>
-    <p className="text-sm text-muted-foreground">{i18n.t("Reviewer 等待：")}{run.counts.reviewerAssignments} {i18n.t(" · Sponsor 等待：")}{run.counts.sponsorGates}{i18n.t("（此接口仅提供计数）")}</p>
-  </div>
+  const [view, setView] = useState<DetailView>('timeline')
+  const { summary } = detail
+  const views: { key: DetailView; label: string }[] = [
+    { key: 'timeline', label: i18n.t("协作链路") },
+    { key: 'board', label: i18n.t("共享黑板 · {0}", [detail.board.length]) },
+    { key: 'raw', label: i18n.t("原始事件 · {0}", [detail.events.length]) },
+  ]
+  return (
+    <div className="space-y-4 p-4 sm:p-5">
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 id="workroom-detail-title" className="text-lg font-semibold">{i18n.t("协作详情")}</h2>
+          <p className="mt-1 break-all text-xs text-muted-foreground"><code>{summary.engagementId}</code></p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {summary.venue ? i18n.t("场所：{0}", [summary.venue]) : i18n.t("临时协作（未绑定场所）")}
+            {' · '}{i18n.t("参与方：{0}", [summary.participants.join(', ') || '—'])}
+            {summary.stopReason ? <>{' · '}{i18n.t("终止原因：{0}", [summary.stopReason])}</> : null}
+          </p>
+        </div>
+        <Badge variant={statusVariant(summary.status)}>{statusLabel(summary.status)}</Badge>
+      </header>
+
+      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border text-sm sm:grid-cols-4">
+        {([
+          [i18n.t("跳转"), i18n.number(summary.hops)],
+          [i18n.t("轮次"), i18n.number(summary.turns)],
+          ['Tokens', i18n.number(summary.tokensUsed)],
+          [i18n.t("耗时"), i18n.t("{0} 毫秒", [i18n.number(summary.wallClockMs)])],
+        ] as const).map(([label, value]) => (
+          <div key={label} className="bg-background p-2.5">
+            <dt className="text-xs text-muted-foreground">{label}</dt>
+            <dd className="mt-0.5 font-medium tabular-nums">{value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      <div className="flex gap-1 rounded-lg bg-muted/35 p-1" role="tablist" aria-label={i18n.t("协作详情视图")}>
+        {views.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            role="tab"
+            aria-selected={view === item.key}
+            className={cn(
+              'flex-1 rounded-md px-2 py-1.5 text-xs font-medium',
+              view === item.key ? 'bg-background shadow-console-xs' : 'text-muted-foreground hover:text-foreground',
+            )}
+            onClick={() => setView(item.key)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {view === 'timeline' ? (
+        detail.events.length ? (
+          <ol className="space-y-2 font-mono text-xs">
+            {detail.events.map((event, index) => (
+              <li key={index} className="break-all rounded-lg border p-2.5">
+                <span className="font-semibold text-foreground">{String(event.kind ?? 'event')}</span>
+                <span className="ml-2 text-muted-foreground">{collaborationEventSummary(event)}</span>
+              </li>
+            ))}
+          </ol>
+        ) : <EmptyState compact title={i18n.t("尚无事件")} />
+      ) : null}
+
+      {view === 'board' ? (
+        detail.board.length ? (
+          <ul className="space-y-2 text-sm">
+            {detail.board.map((entry) => (
+              <li key={entry.key} className="space-y-1 rounded-lg border p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <code className="text-xs font-semibold">{entry.key}</code>
+                  <span className="text-xs text-muted-foreground">v{entry.version} · {actorLabel(entry.updatedBy)}</span>
+                </div>
+                <pre className="overflow-auto rounded bg-muted/35 p-2 font-mono text-xs">
+                  {typeof entry.value === 'string' ? entry.value : JSON.stringify(entry.value, null, 2)}
+                </pre>
+              </li>
+            ))}
+          </ul>
+        ) : <EmptyState compact title={i18n.t("黑板上还没有内容")} />
+      ) : null}
+
+      {view === 'raw' ? (
+        <pre className="max-h-96 overflow-auto rounded-lg border bg-muted/25 p-3 font-mono text-xs">{JSON.stringify(detail.events, null, 2)}</pre>
+      ) : null}
+    </div>
+  )
 }
 
 function Metric(props: {
   icon: typeof Workflow
   label: string
-  value: number
+  value: string
   detail: string
   tone?: 'warning' | 'success'
 }) {

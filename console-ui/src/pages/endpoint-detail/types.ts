@@ -144,8 +144,6 @@ export interface ConversationSection {
   hidden?: boolean
 }
 
-export type SystemInboxSectionId = 'requests' | 'notices'
-
 export type MemberRow = {
   user_id?: number
   nickname?: string

@@ -259,8 +259,6 @@ export function splitSessionKey(row) {
   }
 }
 
-export const SESSION_SORT_KEYS = Object.freeze(['turns', 'calls', 'inputTokens', 'outputTokens', 'cacheReadTokens', 'cache'])
-
 function sortValue(row, key) {
   return key === 'cache' ? cacheRatio(row) : row[key] ?? 0
 }

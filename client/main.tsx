@@ -87,7 +87,7 @@ function App() {
       return (
         <div className="flex items-center justify-center min-h-screen bg-background p-6">
           <p className="text-sm text-destructive text-center max-w-md">
-            {i18n.t("Demo 构建缺少 VITE_API_BASE / VITE_API_TOKEN，无法连接 demo-api。")}</p>
+            {i18n.t("演示 Host 拒绝了预置令牌，或暂时不可用。请稍后刷新重试。")}</p>
         </div>
       );
     }

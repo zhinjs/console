@@ -1,4 +1,5 @@
 import test from 'node:test'
+import { startVisiblePolling } from '../console-ui/src/hooks/visible-polling.mjs'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
@@ -58,6 +59,7 @@ function fixture({ data = [], query = '', loaded = true, loading = false, error 
     '../components/ui/skeleton': { Skeleton: 'skeleton' }, '../components/ui/button': { Button: 'button' },
     '../components/ui/input': { Input: 'input' }, '../components/PageHeader': { PageHeader: 'page-header' },
     '../components/PageShell': { PageShell: 'main' }, '../components/StatCard': { StatCard: 'stat-card', StatGrid: 'stat-grid' },
+    '../hooks/visible-polling.mjs': { startVisiblePolling },
   }
   new Function('require', 'exports', 'module', code)(name => mocks[name] ?? require(name), module.exports, module)
   const render = () => { cursor = 0; return module.exports.PluginsPageSession({ connectionScope: 'scope-static' }) }
@@ -139,6 +141,7 @@ function connectedFixture() {
   const authority = createInboxCacheAuthority(() => connection, () => `scope-${++scopeCounter}`)
   let slots = [], cursor = 0, dirty = false, effects = [], mountedKey, mountedProps, tree
   const calls = [], timers = [], cleared = [], listeners = new Set()
+  const pollingEnv = { setInterval: (fn, delay) => { timers.push({ fn, delay }); return timers.length }, clearInterval: id => cleared.push(id) }
   const manager = { onConnectionChange(fn) { listeners.add(fn); return () => listeners.delete(fn) } }
   const equal = (a, b) => a && b && a.length === b.length && a.every((value, index) => Object.is(value, b[index]))
   const hooks = {
@@ -166,10 +169,10 @@ function connectedFixture() {
     '../utils/console-rpc': { requestConsole: async () => { throw new Error('not used by connection tests') } },
     '../components/toast': { useToast: () => ({ success() {}, error() {}, warning() {}, info() {}, toast() {} }) },
     '../components/confirm-dialog': { useConfirm: () => ({ confirm: async () => false, ConfirmDialog: null }) },
+    '../hooks/visible-polling.mjs': { startVisiblePolling: (poll, delay) => startVisiblePolling(poll, delay, pollingEnv) },
   }
   const module = { exports: {} }
-  new Function('require', 'exports', 'module', 'setInterval', 'clearInterval', code)(name => mocks[name] ?? require(name), module.exports, module,
-    (fn, delay) => { timers.push({ fn, delay }); return timers.length }, id => cleared.push(id))
+  new Function('require', 'exports', 'module', code)(name => mocks[name] ?? require(name), module.exports, module)
   const cleanup = () => { slots.forEach(slot => slot?.cleanup?.()); slots = []; effects = []; mountedKey = undefined }
   const f = { calls, timers, cleared, listeners,
     render() { let count = 0; do {

@@ -71,7 +71,6 @@ export function setThemePreferences(update: Partial<ThemePreferences>): void {
 }
 /** Compatibility for existing consumers selecting a resolved light/dark mode. */
 export function applyTheme(theme: Theme) { setThemePreferences({ mode: theme }) }
-export function getInitialTheme(): Theme { return resolveTheme(readStoredPreferences().mode) }
 /** Stable primitive snapshot shared by every theme control, including other browser tabs. */
 export function getThemeSnapshot(): string {
   const preferences = getThemePreferences()

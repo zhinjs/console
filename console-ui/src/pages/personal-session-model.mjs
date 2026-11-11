@@ -4,16 +4,6 @@ const object = (value) => value && typeof value === 'object' && !Array.isArray(v
 export function isPersonalSessionKey(value) {
   return typeof value === 'string' && /^personal-session:v1:[a-f0-9]{64}$/.test(value)
 }
-export function readPersonalOwner(value) {
-  if (
-    !object(value) ||
-    !['rootId', 'platform', 'endpoint', 'adapterId', 'subjectId'].every((key) => text(value[key]))
-  )
-    return null
-  return Object.fromEntries(
-    ['rootId', 'platform', 'endpoint', 'adapterId', 'subjectId'].map((key) => [key, value[key]])
-  )
-}
 export function readPersonalAddress(value) {
   if (!object(value)) return null
   const conversation = value.conversation
