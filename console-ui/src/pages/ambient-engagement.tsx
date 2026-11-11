@@ -11,7 +11,6 @@ import { ConnectionRequiredState } from '../components/connection-required'
 import { ENDPOINT_RPC } from '../contracts/zhin-console'
 import { normalizeGroupRecord } from './endpoint-detail/conversation-labels'
 import { pluginRpc } from '../utils/plugin-rpc'
-import { readErrorSummary } from '../utils/read-error.mjs'
 import { useConsoleRead } from '../hooks/use-console-read'
 import { PageHeader } from '../components/PageHeader'
 import { PageShell } from '../components/PageShell'
@@ -21,9 +20,9 @@ import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
 import { Input } from '../components/ui/input'
-import { Textarea } from '../components/ui/textarea'
 import { Skeleton } from '../components/ui/skeleton'
 import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group'
+import { AmbientGroupPicker } from './AmbientGroupPicker'
 import { ConfigurationLiveStatus } from '../components/PluginConfigForm/ConfigurationLiveStatus'
 import { configurationReceiptForRead, type ConfigurationApplicationStatus } from '../components/PluginConfigForm/config-live-status.mjs'
 import {
@@ -31,9 +30,9 @@ import {
   ambientGroupLabel,
   buildAmbientPatches,
   describeAmbientStatus,
+  describeReadFailure,
   describeSaveResult,
   isPermissionDenied,
-  parseGroupList,
   readAmbientSettings,
   summarizeRecentByGroup,
   validateAmbientSettings,
@@ -115,11 +114,10 @@ type StatusReadState = ReturnType<typeof useConsoleRead<StatusRead | null>>
 function AmbientStatusSection({ read, onRetry }: { read: StatusReadState; onRetry: () => void }) {
   const i18n = useI18n()
   if (read.loading && !read.loaded) return <Skeleton className="h-40 w-full" />
-  if (read.error && !read.loaded) {
-    return <ErrorAlert error={readErrorSummary(read.error, i18n.t("群聊插话状态"), i18n.locale)} onRetry={onRetry} />
-  }
-  if (!read.data) return null
-  if (read.data.denied) {
+  const failure = read.error ? describeReadFailure(read.error, i18n.t("群聊插话状态"), i18n.locale) : null
+  if (failure && !read.loaded && !failure.denied) return <ErrorAlert error={failure.text} onRetry={onRetry} />
+  if (!read.data && !failure?.denied) return null
+  if (!read.data || read.data.denied) {
     return <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">{i18n.t("当前账号没有查看群聊插话的权限，请联系管理员开通。")}</CardContent></Card>
   }
   const view = read.data.view
@@ -132,7 +130,7 @@ function AmbientStatusSection({ read, onRetry }: { read: StatusReadState; onRetr
       <CardDescription>{i18n.t("下面是最近 24 小时的情况。重启机器人后会重新计数。")}</CardDescription>
     </CardHeader>
     <CardContent className="space-y-4">
-      {read.error && <p className="text-xs text-destructive">{i18n.t("刷新失败，下面是上次读到的数据。")}</p>}
+      {failure && <p className="text-xs text-destructive">{i18n.t("刷新失败，下面是上次读到的数据。")} {failure.text}</p>}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {view.counts.map((count) => <div key={count.key} className="rounded-md border p-3">
           <div className="text-2xl font-semibold">{count.value}</div>
@@ -219,11 +217,13 @@ function AmbientSettingsSection({ read, onReload, currentReadEpoch }: { read: Se
   const i18n = useI18n()
   if (read.loading && !read.loaded) return <Skeleton className="h-56 w-full" />
   if (read.error && !read.loaded) {
+    const failure = describeReadFailure(read.error, i18n.t("群聊插话设置"), i18n.locale)
     return <Card>
       <CardHeader><CardTitle className="text-base">{i18n.t("设置")}</CardTitle></CardHeader>
       <CardContent className="space-y-2 text-sm text-muted-foreground">
-        <p>{i18n.t("暂时不能在这里修改设置。只有管理员账号可以修改。")}</p>
-        <details className="text-xs"><summary className="cursor-pointer">{i18n.t("错误详情")}</summary><p className="mt-2 break-all">{read.error}</p></details>
+        {failure.denied
+          ? <p>{i18n.t("当前账号不能查看或修改群聊插话设置，只有管理员账号可以修改。")}</p>
+          : <ErrorAlert error={failure.text} onRetry={() => { void onReload().catch(() => {}) }} />}
       </CardContent>
     </Card>
   }
@@ -236,7 +236,7 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch }: { initial:
   const i18n = useI18n()
   const [behavior, setBehavior] = useState<AmbientBehavior>(initial.settings.behavior)
   const [groupScope, setGroupScope] = useState(initial.settings.groupScope)
-  const [groupText, setGroupText] = useState(initial.settings.groups.join('\n'))
+  const [groups, setGroups] = useState<string[]>(initial.settings.groups)
   const [maxPerHourText, setMaxPerHourText] = useState(String(initial.settings.maxPerHour))
   const [saving, setSaving] = useState(false)
   const [feedback, setFeedback] = useState<SaveFeedback | null>(null)
@@ -246,12 +246,12 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch }: { initial:
 
   useEffect(() => {
     setServerProblems([])
-  }, [behavior, groupScope, groupText, maxPerHourText])
+  }, [behavior, groupScope, groups, maxPerHourText])
 
   const draft: AmbientSettings = {
     behavior,
     groupScope,
-    groups: parseGroupList(groupText),
+    groups,
     maxPerHour: Number(maxPerHourText),
   }
   const problems = validateAmbientSettings(draft, i18n.locale)
@@ -313,13 +313,7 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch }: { initial:
           <RadioGroupItem value="some" />
           <span>{i18n.t("只在这些群")}</span></label>
         </RadioGroup>
-        {groupScope === 'some' && <Textarea
-          aria-label={i18n.t("群列表")}
-          placeholder={i18n.t("每行一个，写成「平台:群号」，例如\nqq:123456")}
-          value={groupText}
-          onChange={(event) => setGroupText(event.target.value)}
-          rows={4}
-        />}
+        {groupScope === 'some' && <AmbientGroupPicker groups={groups} onChange={setGroups} />}
       </fieldset>}
 
       {showsGroupOptions && <label className="block space-y-1 text-sm">

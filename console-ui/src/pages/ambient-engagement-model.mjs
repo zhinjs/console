@@ -219,9 +219,25 @@ export function describeSaveResult(result, locale = 'zh-CN') {
   return { kind: 'error', text: translate(locale, "保存失败，请稍后再试。") }
 }
 
-/** 调用者没有 ambient:read 或未登录时，Host 返回 401/403。 */
+/**
+ * Host 用 401/403 表示没登录或没权限（例如调用者没有 ambient:read）。
+ * Console RPC 的传输层只留下错误文字，所以也认 Host 401/403 响应的固定文字；
+ * 其他失败（超时、Host 500、适配器不支持、格式不对……）都不是权限问题。
+ */
+const PERMISSION_DENIED_TEXT = /\bHTTP 40[13]\b|Token scope does not allow this route|Invalid or missing token|^Demo scope: RPC .* is forbidden$/i
+
 export function isPermissionDenied(error) {
-  return Boolean(error) && (error.status === 401 || error.status === 403)
+  if (!error) return false
+  if (typeof error === 'object' && typeof error.status === 'number') return error.status === 401 || error.status === 403
+  const text = typeof error === 'string' ? error : error instanceof Error ? error.message : ''
+  return PERMISSION_DENIED_TEXT.test(text.trim())
+}
+
+/** 读取失败时给用户看的提示：只有权限问题才说权限，其余带上真实原因。 */
+export function describeReadFailure(error, resource, locale = 'zh-CN') {
+  const reason = (typeof error === 'string' ? error : error instanceof Error ? error.message : String(error ?? '')).trim()
+  if (isPermissionDenied(error)) return { denied: true, text: translate(locale, "当前账号没有读取{0}的权限，请联系管理员开通。", [resource]), detail: reason }
+  return { denied: false, text: reason ? translate(locale, "{0}读取失败：{1}", [resource, reason]) : translate(locale, "{0}读取失败，请稍后重试。", [resource]), detail: reason }
 }
 
 const SHORT_OUTCOME_LABELS = Object.freeze({ spoke: '接了话', watched: '想接话', stayed_quiet: '不接话', skipped: '未判断' })
