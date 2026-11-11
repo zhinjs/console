@@ -3206,4 +3206,7 @@ export const englishMessages = Object.freeze({
   "连接失败": "Connection failed",
   "已连接，但运行状态为 {0}": "Connected, but the runtime status is {0}",
   "测试中…": "Testing…",
+  "已是最新，没有可更新的插件": "Already up to date. No plugin updates available.",
+  "发现 {0} 个可更新插件": "Found {0} plugin update(s)",
+  "检查失败：{0}": "Update check failed: {0}",
 })
