@@ -12,6 +12,7 @@ import * as taskModel from '../console-ui/src/pages/task-center-model.mjs'
 import * as schemaModel from '../console-ui/src/components/PluginConfigForm/schema-model.mjs'
 import { createConfigDraftGuard } from '../console-ui/src/components/PluginConfigForm/draft-guard.mjs'
 import { readMessageHistory, mergeHistoryRows } from '../console-ui/src/pages/endpoint-detail/inbox-history-model.mjs'
+import * as composerDraftModel from '../console-ui/src/pages/endpoint-detail/composer-draft-model.mjs'
 
 import { permissionRequest, readPermissionCatalog, readPermissionExplanation, permissionHttpError } from '../console-ui/src/pages/permission-explanation-model.mjs'
 
@@ -142,7 +143,7 @@ test('switching language preserves loaded chat history pages and composer withou
     sender: { id: 'fixture' }, channel: { id: 'room', type: 'group' }, content: `user original ${i + 1}` }))
   const Component = await lifecycle('pages/endpoint-detail/useMessageHistory.ts', 'useMessageHistory', '  // A bounded event-history gap',
     'inboxMessages, loadInboxMessages, setMsgContent, msgContent, inboxMessagesError', {
-      ...runtime.api, useI18n: () => locale, useInboxCacheScope: () => 'fixture', isInboxCacheScopeActive: () => true,
+      ...runtime.api, ...composerDraftModel, useI18n: () => locale, useInboxCacheScope: () => 'fixture', isInboxCacheScopeActive: () => true,
       useToast: () => ({ error() {} }), toRpcChannelParent: () => undefined, readMessageHistory, mergeHistoryRows, INBOX_RPC: { MESSAGES: 'fixture' },
       requestConsole: async request => { requests.push(request); return { inboxEnabled: true, messages: request.beforeTs === undefined ? rows.slice(50) : rows.slice(0, 50) } },
     })

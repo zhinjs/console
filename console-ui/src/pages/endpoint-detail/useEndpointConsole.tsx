@@ -610,6 +610,8 @@ export function useEndpointConsole() {
     // group actions
     members: groupAct.members,
     membersLoading: groupAct.membersLoading,
+    membersGroupKey: groupAct.membersGroupKey,
+    membersFailed: groupAct.membersFailed,
     loadMembers: groupAct.loadMembers,
     groupAction: groupAct.groupAction,
     // requests & notices
