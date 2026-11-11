@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import ts from 'typescript'
+import * as endpointTestResultModel from '../console-ui/src/pages/endpoint-test-result-model.mjs'
 
 const require = createRequire(import.meta.url)
 const source = await readFile(new URL('../console-ui/src/pages/endpoint-detail/ConversationSidebar.tsx', import.meta.url), 'utf8')
@@ -23,6 +24,7 @@ function render(mobile, open, close = () => {}) {
     './AccountSwitcher': { AccountSwitcher: 'account-switcher' },
     './ConversationSection': { ConversationSection: 'conversation-section' },
     './SystemInboxSection': { SystemInboxSection: 'system-inbox-section' },
+    '../endpoint-test-result-model.mjs': endpointTestResultModel,
   }
   new Function('require', 'module', 'exports', compiled)(name => Object.hasOwn(mocks, name) ? mocks[name] : require(name), module, module.exports)
   return module.exports.ConversationSidebar({ adapter: 'icqq', endpointId: 'preview', info: null, loadErr: null, listSearch: '', conversationSections: [], sectionCollapsed: {}, selection: null, requestCount: 0, noticeCount: 0, showChannelList: open, onCloseMobileList: close })

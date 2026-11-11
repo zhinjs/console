@@ -41,6 +41,7 @@ import {
 import { ENDPOINT_RPC } from '../contracts/zhin-console'
 import { readEndpointList } from './endpoint-list-model.mjs'
 import { endpointLifecycleLabel } from './endpoint-presentation.mjs'
+import { endpointTestError, endpointTestPresentation, readEndpointTestResult, type EndpointTestResult } from './endpoint-test-result-model.mjs'
 import { requestConsole } from '../utils/console-rpc'
 import { isDemoMode } from '../utils/demo-mode'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
@@ -82,11 +83,9 @@ interface LoginTask {
   expiresAt?: number
 }
 
-interface EndpointTestResult {
+interface EndpointTestState {
   loading: boolean
-  ok?: boolean
-  latencyMs?: number
-  message?: string
+  result?: EndpointTestResult
 }
 
 type EndpointStatusFilter = 'all' | 'online' | 'pending_login' | 'offline'
@@ -290,7 +289,7 @@ export default function EndpointsPage() {
   const [loginInputs, setLoginInputs] = useState<Record<string, string>>({})
   const [loginBusy, setLoginBusy] = useState<Record<string, boolean>>({})
   const [loginFeedback, setLoginFeedback] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
-  const [testResults, setTestResults] = useState<Record<string, EndpointTestResult>>({})
+  const [testResults, setTestResults] = useState<Record<string, EndpointTestState>>({})
 
   const fetchEndpoints = useCallback(async (manual = false) => {
     const seq = ++fetchSeqRef.current
@@ -408,29 +407,16 @@ export default function EndpointsPage() {
     const key = `${endpoint.adapter}:${endpoint.name}`
     setTestResults((prev) => ({ ...prev, [key]: { loading: true } }))
     try {
-      const res = await requestConsole<{ reachable?: boolean; connected?: boolean; latencyMs?: number; message?: string }>({
+      const res = await requestConsole<unknown>({
         type: (ENDPOINT_RPC as { TEST?: string }).TEST ?? 'endpoint.test',
         adapter: endpoint.adapter,
         endpointKey: endpoint.name,
       })
-      const ok = res.reachable !== false && res.connected !== false
-      setTestResults((prev) => ({
-        ...prev,
-        [key]: {
-          loading: false,
-          ok,
-          latencyMs: typeof res.latencyMs === 'number' ? res.latencyMs : undefined,
-          message: res.message,
-        },
-      }))
+      setTestResults((prev) => ({ ...prev, [key]: { loading: false, result: readEndpointTestResult(res) } }))
     } catch (err) {
       setTestResults((prev) => ({
         ...prev,
-        [key]: {
-          loading: false,
-          ok: false,
-          message: i18n.t("测试失败：{0}", [(err as Error).message]),
-        },
+        [key]: { loading: false, result: endpointTestError(i18n.t("测试失败：{0}", [(err as Error).message])) },
       }))
     }
   }
@@ -910,6 +896,7 @@ export default function EndpointsPage() {
           const brand = getPlatformBrand(endpoint.adapter)
           const testKey = `${endpoint.adapter}:${endpoint.name}`
           const testState = testResults[testKey]
+          const presentation = testState?.result ? endpointTestPresentation(testState.result, i18n.locale) : null
           const hasPendingLogin =
             Boolean(endpoint.pendingLogin) ||
             loginTasks.some((t) => t.adapter === endpoint.adapter && t.endpointKey === endpoint.name)
@@ -984,27 +971,29 @@ export default function EndpointsPage() {
               </Link>
 
               <div className="console-endpoint-actions">
-                {testState && !testState.loading && (
+                {presentation && !testState?.loading && (
                   <span
+                    role={presentation.role}
                     className={
-                      testState.ok
+                      presentation.tone === 'success'
                         ? 'console-endpoint-test-pill is-ok'
                         : 'console-endpoint-test-pill is-error'
                     }
-                    title={testState.message}
+                    title={`${presentation.label}${presentation.detail ? ` · ${presentation.detail}` : ''}`}
                   >
-                    {testState.ok ? (
+                    {presentation.tone === 'success' ? (
                       <CheckCircle2 className="h-3 w-3 shrink-0" aria-hidden="true" />
                     ) : (
                       <XCircle className="h-3 w-3 shrink-0" aria-hidden="true" />
                     )}
-                    <span>
-                      {testState.ok
-                        ? typeof testState.latencyMs === 'number'
-                          ? `${testState.latencyMs} ms`
-                          : i18n.t("连接正常")
-                        : testState.message || i18n.t("连接异常")}
-                    </span>
+                    {presentation.tone === 'success' && !presentation.latencyText ? (
+                      <span>{presentation.label}</span>
+                    ) : (
+                      <>
+                        <span className="sr-only">{presentation.label}{': '}</span>
+                        <span>{presentation.tone === 'success' ? presentation.latencyText : presentation.reason}</span>
+                      </>
+                    )}
                   </span>
                 )}
 
@@ -1017,7 +1006,7 @@ export default function EndpointsPage() {
                   onClick={() => void handleTestEndpoint(endpoint)}
                 >
                   <Zap className="h-3 w-3 mr-1" aria-hidden="true" />
-                  {testState?.loading ? i18n.t("测速中…") : i18n.t("测试连接")}
+                  {testState?.loading ? i18n.t("测试中…") : i18n.t("测试连接")}
                 </Button>
 
                 <Link
