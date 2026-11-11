@@ -3,6 +3,7 @@ import { useI18n } from '../i18n'
 import { readErrorSummary } from '../utils/read-error.mjs'
 import { logPayloadAvailability } from './logs/read-state.mjs'
 import { summarizeOptional } from './dashboard-health'
+import { cpuMeterWidth, cpuUsagePercent, readCpuSample, type CpuSample } from './dashboard-cpu-model.mjs'
 import {
   buildMessageFeed,
   hourlyMessageActivity,
@@ -76,10 +77,12 @@ interface Stats {
 interface SystemStatus {
   uptime: number
   memory: { rss: number; heapTotal: number; heapUsed: number; external: number }
-  cpu: { user: number; system: number }
+  /** Cumulative `process.cpuUsage()` in microseconds; absent on non-Node hosts. */
+  cpu?: { user: number; system: number }
   osMemory?: { freeMem: number; totalMem: number }
   platform: string
   nodeVersion: string
+  pid?: number
 }
 
 interface OptionalOverview {
@@ -335,6 +338,8 @@ export default function HomePage() {
   const navigate = useNavigate()
   const [stats, setStats] = useState<Stats | null>(null)
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null)
+  const [cpuRate, setCpuRate] = useState<number | null>(null)
+  const cpuSampleRef = useRef<CpuSample | null>(null)
   const [optional, setOptional] = useState<OptionalOverview>(EMPTY_OPTIONAL)
   const [recentEvents, setRecentEvents] = useState<RecentLogEvent[]>([])
   const [loading, setLoading] = useState(true)
@@ -432,6 +437,9 @@ export default function HomePage() {
 
       setStats(statsBody.data)
       setSystemStatus(statusBody.data)
+      const cpuSample = readCpuSample(statusBody.data)
+      setCpuRate(cpuUsagePercent(cpuSampleRef.current, cpuSample))
+      cpuSampleRef.current = cpuSample
       setError(null)
       setControlState(control && typeof control === 'object' && control.available ? control : null)
       setRecentEvents(parseRecentLogEvents(recentLogsRaw))
@@ -452,6 +460,8 @@ export default function HomePage() {
       const reason = caught as Error
       setStats(null)
       setSystemStatus(null)
+      setCpuRate(null)
+      cpuSampleRef.current = null
       setOptional(EMPTY_OPTIONAL)
       setControlState(null)
       setError(reason.name === 'TimeoutError' ? i18n.t("Host 响应超时，请检查连接或服务状态") : reason.message)
@@ -849,6 +859,11 @@ export default function HomePage() {
               <dt>{i18n.t("系统内存")}</dt>
               <dd>{osMemoryRate !== null ? `${osMemoryRate}%` : '—'}</dd>
               {osMemoryRate !== null ? <span className="console-meter" aria-hidden="true"><span style={{ width: `${osMemoryRate}%` }} className={osMemoryRate >= 85 ? 'is-warning' : ''} /></span> : null}
+            </div>
+            <div>
+              <dt>{i18n.t("CPU 占用")}</dt>
+              <dd title={i18n.t("进程 CPU 时间占单核的比例，按两次刷新之间的差值计算")}>{cpuRate !== null ? `${cpuRate}%` : '—'}</dd>
+              {cpuRate !== null ? <span className="console-meter" aria-hidden="true"><span style={{ width: `${cpuMeterWidth(cpuRate)}%` }} className={cpuRate >= 80 ? 'is-warning' : ''} /></span> : null}
             </div>
             <div><dt>{i18n.t("运行环境")}</dt><dd>{systemStatus ? `Node ${systemStatus.nodeVersion} · ${systemStatus.platform}` : '—'}</dd></div>
           </dl>
