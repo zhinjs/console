@@ -193,10 +193,11 @@ test('model configuration reads English from its settings entry and the copy its
   const { buildSettingsCatalog } = await import('../console-ui/src/pages/settings-model.mjs')
   const { inferenceError, InferenceRequestError, selectableLanguageProfiles } = await import('../console-ui/src/pages/inference/model.mjs')
   const cjk = /[㐀-鿿]/
-  // Settings lists model configuration from a label table that config.tsx hands to t() at render time.
-  const models = buildSettingsCatalog({ ai: {} }, ['ai'], { ai: ['ai'] }).find(group => group.id === 'models')
-  for (const text of [models.title, models.description, ...models.entries.flatMap(entry => [entry.title, entry.description])])
-    assert.doesNotMatch(translate('en', text), cjk, text)
+  // Settings lists its groups and entries from a label table that config.tsx hands to t() at render time.
+  // Model management itself lives at /agent/models; every remaining settings group must still read English.
+  for (const group of buildSettingsCatalog({ ai: {} }, ['ai'], { ai: ['ai'] }))
+    for (const text of [group.title, group.description, ...group.entries.flatMap(entry => [entry.title, entry.description])])
+      assert.doesNotMatch(translate('en', text), cjk, text)
   const codes = ['forbidden', 'plan-conflict', 'conflict', 'invalid-input', 'identity-change', 'not-authorized', 'reauthorize',
     'disconnected', 'target-denied', 'rejected', 'not-submitted', 'operation-closed', 'migration-required',
     'receipt-storage-unavailable', 'unsupported', 'not-prepared', 'storage-integrity', 'outcome-unknown', 'stale-operation']
