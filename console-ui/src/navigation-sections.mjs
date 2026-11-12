@@ -1,7 +1,7 @@
 import { hasAnyConsolePermission, hasConsolePermission, UNRESTRICTED_ACCESS } from './utils/console-access.mjs'
 
 /**
- * The six Console sections (ADR 0052). The first four are day-to-day work, the last two
+ * The six Console sections (ADR 0052). `icon` names a lucide icon (components/sidebarMenuIcons.ts). The first four are day-to-day work, the last two
  * administration. `permissions` is the any-of set that makes a section's pages visible
  * when a page declares nothing more specific (ADR 0049 permission names).
  */
@@ -11,15 +11,15 @@ export const NAV_TIERS = Object.freeze([
 ])
 
 export const NAV_SECTIONS = Object.freeze([
-  Object.freeze({ id: 'overview', label: '概览', tier: 'daily', permissions: Object.freeze(['status.view']) }),
-  Object.freeze({ id: 'sessions', label: '会话', tier: 'daily', permissions: Object.freeze(['endpoint.view', 'endpoint.operate']) }),
-  Object.freeze({ id: 'features', label: '功能', tier: 'daily', permissions: Object.freeze(['feature.view', 'feature.configure', 'feature.toggle', 'agent.view', 'agent.configure']) }),
-  Object.freeze({ id: 'plugins', label: '插件', tier: 'daily', permissions: Object.freeze(['plugin.manage']) }),
-  Object.freeze({ id: 'ops', label: '运维', tier: 'admin', permissions: Object.freeze([
+  Object.freeze({ id: 'overview', icon: 'LayoutDashboard', label: '概览', tier: 'daily', permissions: Object.freeze(['status.view']) }),
+  Object.freeze({ id: 'sessions', icon: 'MessagesSquare', label: '会话', tier: 'daily', permissions: Object.freeze(['endpoint.view', 'endpoint.operate']) }),
+  Object.freeze({ id: 'features', icon: 'Sparkles', label: '功能', tier: 'daily', permissions: Object.freeze(['feature.view', 'feature.configure', 'feature.toggle', 'agent.view', 'agent.configure']) }),
+  Object.freeze({ id: 'plugins', icon: 'Puzzle', label: '插件', tier: 'daily', permissions: Object.freeze(['plugin.manage']) }),
+  Object.freeze({ id: 'ops', icon: 'Wrench', label: '运维', tier: 'admin', permissions: Object.freeze([
     'ops.config.read', 'ops.config.write', 'ops.env.read', 'ops.env.write', 'ops.database.read', 'ops.database.write',
     'ops.schedule.read', 'ops.schedule.write', 'ops.files.read', 'ops.files.write', 'ops.restart', 'ops.terminal',
   ]) }),
-  Object.freeze({ id: 'access', label: '访问控制', tier: 'admin', permissions: Object.freeze(['iam.view', 'iam.manage']) }),
+  Object.freeze({ id: 'access', icon: 'Shield', label: '访问控制', tier: 'admin', permissions: Object.freeze(['iam.view', 'iam.manage']) }),
 ])
 
 /** Section a page lands in when it declares none (ADR 0052: plugin pages default to 功能). */

@@ -27,10 +27,10 @@ test('first load follows system without freezing its resolved mode into storage'
   const f = fixture({ dark: true })
   try {
     assert.equal(initializeTheme(), 'dark')
-    assert.deepEqual(getThemePreferences(), { mode: 'system', palette: 'forest' })
+    assert.deepEqual(getThemePreferences(), { mode: 'system', palette: 'ocean' })
     assert.deepEqual(f.writes, [])
     f.system(false); assert.deepEqual([...f.classes], ['light'])
-    assert.equal(getThemeSnapshot(), 'system:forest:light')
+    assert.equal(getThemeSnapshot(), 'system:ocean:light')
   } finally { f.close() }
 })
 
@@ -58,7 +58,7 @@ test('mode and palette are independent, explicit mode ignores OS changes, and Sy
 test('invalid and blocked storage defaults safely; blocked writes preserve session-only choices', () => {
   for (const options of [{ mode: 'invalid', palette: 'url(attack)' }, { blocked: true, dark: true }]) {
     const f = fixture(options)
-    try { initializeTheme(); assert.deepEqual(getThemePreferences(), { mode: 'system', palette: 'forest' }); setThemePreferences({ mode: 'dark', palette: 'ocean' }); assert.equal(getThemeSnapshot(), 'dark:ocean:dark') } finally { f.close() }
+    try { initializeTheme(); assert.deepEqual(getThemePreferences(), { mode: 'system', palette: 'ocean' }); setThemePreferences({ mode: 'dark', palette: 'forest' }); assert.equal(getThemeSnapshot(), 'dark:forest:dark') } finally { f.close() }
   }
   const f = fixture()
   try { initializeTheme(); assert.throws(() => setThemePreferences({ mode: 'auto' }), /Invalid/); assert.throws(() => setThemePreferences({ palette: 'unknown' }), /Invalid/) } finally { f.close() }
@@ -71,7 +71,7 @@ test('browser tabs synchronize preferences, cleared storage resets defaults, unr
     f.saved.set(THEME_STORAGE_KEY, 'dark'); f.saved.set(PALETTE_STORAGE_KEY, 'graphite'); f.storageEvent(PALETTE_STORAGE_KEY)
     assert.equal(getThemeSnapshot(), 'dark:graphite:dark'); assert.equal(updates, 1); assert.equal(f.writes.length, 0)
     f.storageEvent('zhin_api_token'); assert.equal(updates, 1)
-    f.saved.clear(); f.storageEvent(null); assert.equal(getThemeSnapshot(), 'system:forest:light')
+    f.saved.clear(); f.storageEvent(null); assert.equal(getThemeSnapshot(), 'system:ocean:light')
     stop(); setThemePreferences({ palette: 'plum' }); assert.equal(updates, 2)
   } finally { f.close() }
 })
@@ -82,7 +82,7 @@ test('reinitialization replaces runtime listeners, and every UI subscriber sees 
     initializeTheme(); initializeTheme()
     const stopFirst = subscribeTheme(() => first++), stopSecond = subscribeTheme(() => second++)
     f.system(true); assert.equal(first, 1); assert.equal(second, 1)
-    stopFirst(); setThemePreferences({ palette: 'ocean' }); assert.equal(first, 1); assert.equal(second, 2)
+    stopFirst(); setThemePreferences({ palette: 'forest' }); assert.equal(first, 1); assert.equal(second, 2)
     stopSecond()
   } finally { f.close() }
 })

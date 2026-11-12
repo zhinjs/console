@@ -49,7 +49,7 @@ export const COMMAND_EXCLUDED_PATHS = Object.freeze(Object.keys(LEGACY_ROUTE_RED
 
 /**
  * Whether a registered route can be opened directly from the command palette.
- * Hidden routes are included: hiding only removes them from the sidebar. Routes whose
+ * Hidden routes are included: hiding only removes them from the navigation. Routes whose
  * path needs a value (`:name`, `*`) cannot be opened without one, legacy redirects would
  * duplicate their target, and a route may opt out with `meta.commandPalette: false`.
  */

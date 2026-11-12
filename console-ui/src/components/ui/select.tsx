@@ -17,7 +17,7 @@ const SelectTrigger = forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "console-control flex h-[var(--console-control-height)] w-full items-center justify-between whitespace-nowrap rounded-[var(--console-radius-md)] border-[length:var(--console-border-width)] border-input bg-card px-3 py-2 text-[length:var(--console-text-body)] ring-offset-background placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-60 [&>span]:line-clamp-1",
+      "console-control flex h-[var(--console-control-height)] w-full items-center justify-between whitespace-nowrap rounded-[var(--console-radius-md)] border-[length:var(--console-border-width)] border-input bg-card hover:border-[hsl(var(--foreground)/0.45)] focus-visible:border-[hsl(var(--primary))] shadow-[var(--console-shadow-xs)] px-3 py-2 text-[length:var(--console-text-body)] ring-offset-background placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-60 [&>span]:line-clamp-1",
       className
     )}
     {...props}
@@ -68,7 +68,7 @@ const SelectContent = forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        "relative z-50 max-h-[min(24rem,var(--radix-select-content-available-height,calc(100dvh-1rem)))] min-w-[8rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-[var(--console-radius-md)] border-[length:var(--console-border-width)] border-border bg-popover text-popover-foreground shadow-[var(--console-shadow-md)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        "relative z-50 max-h-[min(24rem,var(--radix-select-content-available-height,calc(100dvh-1rem)))] min-w-[8rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-[var(--console-radius-lg)] border-[length:var(--console-border-width)] border-border bg-popover text-popover-foreground shadow-[var(--console-shadow-md)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
         position === "popper" &&
           "w-[var(--radix-select-trigger-width)]",
         className

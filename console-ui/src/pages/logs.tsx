@@ -82,7 +82,7 @@ export default function LogsPage() {
 
   useEffect(() => {
     if (autoScroll && page === 1 && logSnapshot && logSnapshot !== prevLogSnapshotRef.current) {
-      logsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      logsEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }
     prevLogSnapshotRef.current = logSnapshot
   }, [autoScroll, page, logSnapshot])

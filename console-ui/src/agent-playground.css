@@ -6,12 +6,13 @@
   display: grid;
   grid-template-columns: minmax(13.5rem, 15.5rem) minmax(0, 1fr);
   width: 100%;
-  height: calc(100dvh - 5.5rem);
+  height: calc(100dvh - var(--console-header-h, 4.5rem) - var(--console-space-page-y, 2rem) - 1rem);
   min-height: 36rem;
   overflow: hidden;
-  border: 1px solid hsl(var(--playground-line) / 0.84);
-  border-radius: var(--console-radius-lg);
-  background: hsl(var(--background));
+  border: 1px solid transparent;
+  border-radius: var(--console-radius-xl);
+  background: hsl(var(--card));
+  box-shadow: var(--console-shadow-sm);
   box-shadow: none;
   isolation: isolate;
 }
@@ -1784,7 +1785,7 @@
 
 @media (max-width: 900px) {
   .agent-playground-shell {
-    height: calc(100dvh - 4.25rem);
+    height: calc(100dvh - var(--console-header-h, 4.5rem) - var(--console-space-page-y, 2rem) - 1rem);
     min-height: 32rem;
     border-radius: 0.85rem;
   }
@@ -1795,7 +1796,7 @@
 
 @media (max-width: 640px) {
   .agent-playground-shell {
-    height: calc(100dvh - 3.5rem);
+    height: calc(100dvh - var(--console-header-h, 4.5rem) - var(--console-space-page-y, 2rem) - 1rem);
     min-height: 29rem;
     border-right: 0;
     border-left: 0;

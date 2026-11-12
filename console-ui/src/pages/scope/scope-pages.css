@@ -19,7 +19,7 @@ a.console-scope-task:focus-visible { outline: var(--console-focus-width) solid h
   border-bottom: var(--console-border-width, 1px) solid var(--console-border-subtle); padding: 0.625rem 1rem; color: hsl(var(--muted-foreground));
   font-size: var(--console-text-caption); font-weight: 600;
 }
-.console-scope-split { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr)); }
+.console-scope-split { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(min(26rem, 100%), 1fr)); }
 
 .console-scope-known { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; font-size: var(--console-text-body-sm); }
 .console-scope-chip {

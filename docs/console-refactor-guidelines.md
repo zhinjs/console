@@ -19,25 +19,41 @@
 - 旧路由只做隐藏重定向（`LEGACY_ROUTE_REDIRECTS`），书签不失效。新增重定向时同步补 `tests/console-routes.test.mjs`。
 - 功能矩阵 `/features` 保留为总览入口；插件详情只讲插件本身，「在哪开了」链到对象树，不再重复列表。
 
-## 2. 布局栅格与断点
+## 2. 外壳、布局栅格与断点
+
+外壳（`layouts/dashboard.tsx` + `shell.css`）：灰色画布上方悬浮一条胶囊导航栏（距顶 12px、高 60px，半透明白底 + 背景模糊，页面滚动后底色加深），内容是居中的单列，最宽 1440px（`--console-content-max`），左右留 `--console-space-page-x`。整页随窗口滚动，导航栏固定；吸顶元素与锚点跳转都要让出导航栏高度（`--console-header-h`，`html` 上设了 `scroll-padding-top`）。
+
+导航栏从左到右：品牌 → 六个区（日常、管理两组，中间一条竖线）→ 快速跳转（Ctrl/⌘ K）、实时连接状态点、语言、外观、个人设置、退出。
+
+- 只有一个页面的区是直接链接（显示页面名），有多个页面的区是下拉菜单（显示区名，当前页在其中时按钮高亮）。导航模型只有一个：`buildNavigation(routes, access)`，不要在别处另排菜单。
+- 宽度不到 1100px（`useIsCompactNav`）时，区不再放在栏里，改由左上角菜单按钮打开左侧抽屉：抽屉按 日常 / 管理 → 区 → 页面列出全部页面；关闭时 `inert`，打开时页面与导航栏 `inert`，Esc（先让开 Radix 弹层自己的 Esc）或点遮罩关闭，焦点回到菜单按钮。
+- `fullWidth` 路由（日志、数据库、终端、对象树的账号与会话层等）内容不受 1440px 限制，导航栏跟着放宽，两侧边缘对齐。
+- 换页时内容 200ms 淡入并上移 8px（`--console-ease-out`，`prefers-reduced-motion` 下关闭）；只改查询参数（页签、筛选）不触发动画，也不回到顶部。
 
 | 断点 | 宽度 | 布局 |
 |---|---|---|
-| 手机 | 320–767px | 单列；页头动作占满一行；页签横向滚动，不换行；详情用底部抽屉（`Sheet side="bottom"`） |
-| 平板 / 笔记本 | 768–1439px | 单列内容区，最大宽度跟随 `console-content-frame`；对象页 `fullWidth` 的层级（账号、会话）铺满 |
-| 宽屏 | ≥1440px | 有 `aside`（下级对象列表）时两列：`18rem` 侧栏 + 内容，侧栏 `sticky` |
+| 手机 | 320–767px | 单列；控件高度 44px；页头动作占满一行；页签横向滚动，不换行；详情用底部抽屉（`Sheet side="bottom"`）；导航栏只留菜单、品牌标志、搜索图标与账号操作 |
+| 平板 / 窄笔记本 | 768–1099px | 单列内容区；导航在抽屉里，栏内保留完整搜索框 |
+| 笔记本 | 1100–1439px | 导航栏放下六个区；品牌文字与搜索提示文字收起，只留图标与快捷键 |
+| 宽屏 | ≥1440px | 有 `aside`（下级对象列表）时两列：`18rem` 侧列 + 内容，侧列 `sticky`（让出导航栏高度） |
 
 - 移动端路径是「列表 → 内容 → 详情」：在上级对象页的列表里点对象进入它的页面（内容），对象内的单条明细用抽屉打开（详情），返回靠浏览器后退或面包屑，不在同一屏同时摆三栏。
 - 所有页面在 320px 宽下不得出现横向滚动条（表格放进 `Card overflow-hidden`，宽表格在小屏改为卡片或只保留关键列）。
-- 截图验收：1440 与 375 两个宽度 × 亮暗两种主题。
+- 截图验收：1440、768 与 375 三个宽度 × 亮暗两种主题。
 
-## 3. 间距与字号
+## 3. 令牌、间距与字号
 
-只用设计令牌（`theme-tokens.css` / `design-system.css`），不写死颜色和像素字号。
+只用设计令牌，不写死颜色和像素字号。令牌分三层：
 
+- **基础**（`design-system.css`，不分亮暗）：圆角 6 / 10 / 14 / 18 / 22px（`--console-radius-sm|md|lg|xl|2xl`）；控件高度三档 32 / 36 / 40px（`--console-control-height-sm|…|-lg`，手机统一 44px）；字体 Inter / MiSans，代码 JetBrains Mono（只用本机已有字体，不请求远程字体）；页面边距、区块间距；内容宽 1440px；动效时长与曲线。
+- **语义**（`theme-tokens.css`，分亮暗）：画布 `background`（浅灰）、卡片 `card`（白）、卡片内分组 `secondary` / `muted`（更浅的灰，不描边）、文字 `foreground` / `muted-foreground`、强调 `primary`、柔和主操作 `primary-action`（色相的浅色填充）+ `primary-action-foreground`（色相文字）+ `primary-action-border`、状态色与图表色。阴影 `--console-shadow-*`：一圈发丝描边加一层短而柔的投影。
+- **组件**（写在组件旁边）：导航栏 `--console-header-h`、`--console-nav-*`（`shell.css`）等。
+
+- 卡片 `Card` / `console-card`：白底、无边框、`--console-shadow-sm`，圆角 18px；卡片里的分组块用浅灰填充，不再描边、不再加阴影。可点击卡片悬停时阴影加深、上移 1px。
+- 按钮：主按钮是浅色强调填充 + 强调色描边与文字（不是实心色块）；次要按钮 `outline` 白底细边；`ghost` 只在悬停时出现浅灰底；危险操作仍用实心 `destructive`。
 - 区块间距：页面内区块之间 `var(--console-space-section)`；页头与页签之间 `1rem`（手机 `0.75rem`）；同一区块内元素 `0.75rem`；行内控件 `0.5rem`。
 - 卡片内边距：`p-4`（16px），紧凑表格行为表格默认值。
-- 字号角色：页标题 `console-page-title`，区块标题 `console-section-title`，正文 `--console-text-body`，辅助说明 `--console-text-body-sm` + `muted-foreground`，标签与徽标 `--console-text-caption`。徽标不小于 12px。
+- 字号角色：页标题 `console-page-title`（22px、600），区块标题 `console-section-title`，正文 `--console-text-body`，辅助说明 `--console-text-body-sm` + `muted-foreground`，标签与徽标 `--console-text-caption`。徽标不小于 12px。
 - 身份（适配器别名、账号 ID、会话 ID、范围键）用等宽字体 `code`，超长截断并保留 `title`。
 
 ## 4. 页头
@@ -50,7 +66,7 @@
 4. 完整身份 `qq / bot-1 / group:123`，旁边复制按钮复制 Host 范围键。
 5. 右侧动作：页面自己的动作（刷新、打开聊天）+ 固定的「切换范围」`ScopePicker`。切换范围只改变查看对象，不授予权限，选择器底部写明这一点。
 
-非对象页（运维、访问控制等）继续用 `PageShell` + `PageHeader`，标题与说明的写法相同。
+非对象页（运维、访问控制等）继续用 `PageShell` + `PageHeader`，标题与说明的写法相同；这些页的面包屑（区 › 页面）由外壳画在页头上方，页面不要自己再放。
 
 ## 5. 页签
 
@@ -119,11 +135,12 @@
 - 加载中用骨架（`Skeleton`），不要把「暂无数据」当加载态；读取失败不能显示成空列表。
 - 实例不可用时，全局横幅（`InstanceUnavailableBanner`，挂在 shell）显示 Retry-After 倒计时、自动重试与「查看实例」入口，恢复后自动消失。横幅不遮挡页面：访问控制、实例、终端等网关页继续可用。页面自身只需在对应区块显示 `instance-unavailable`，不要整页拦截。
 
-## 10. 亮暗主题
+## 10. 亮暗主题与配色
 
-- 颜色只用语义令牌：`foreground` / `muted-foreground` / `card` / `muted` / `primary` / `success` / `warning` / `destructive` / `info`，透明度用 `hsl(var(--token) / 0.1)`。
+- 颜色只用语义令牌：`foreground` / `muted-foreground` / `card` / `secondary` / `muted` / `primary` / `primary-action` / `success` / `warning` / `destructive` / `info`，透明度用 `hsl(var(--token) / 0.1)`。
 - 不写死 `#fff`、`black`、`gray-500` 等；阴影用 `--console-shadow-*`。
-- 状态色语义不随配色方案变化（`tests/visual-foundation.test.mjs` 保证对比度），新组件不要引入新的状态色。
+- 八种配色（外观面板）只改变色相：画布与卡片保持中性（只带一点色相），色相用在链接、焦点、选中态与柔和主操作上。默认配色是「海蓝」（蓝色强调）。
+- 状态色与图表色不随配色变化（`tests/visual-foundation.test.mjs` 保证对比度与中性表面），新组件不要引入新的状态色。
 - 每次改页面都在亮色与暗色下各截一张图检查文字对比、边框可见与徽标可读。
 
 ## 11. 文案与国际化

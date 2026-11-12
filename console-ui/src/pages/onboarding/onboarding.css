@@ -1,6 +1,8 @@
 @layer components {
   .console-onboarding-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
-  .console-onboarding-step { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px 8px; width: 100%; padding: 10px 12px; border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--card)); text-align: left; font-size: 13px; }
+  .console-onboarding-step { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px 8px; width: 100%; padding: 10px 12px; border: var(--console-border-width) solid transparent; border-radius: 10px; background: hsl(var(--card)); text-align: left; font-size: 13px;
+    box-shadow: var(--console-shadow-sm);
+  }
   .console-onboarding-step svg { width: 16px; height: 16px; grid-row: span 2; }
   .console-onboarding-step small { color: hsl(var(--muted-foreground)); font-size: 12px; }
   .console-onboarding-step[aria-current='step'] { border-color: hsl(var(--primary)); box-shadow: 0 0 0 1px hsl(var(--primary) / .4); }

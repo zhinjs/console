@@ -42,9 +42,10 @@
 }
 .console-task-overview-card {
   display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.25rem 0.75rem;
-  border: var(--console-border-width, 1px) solid var(--console-border-default); border-radius: var(--console-radius-md);
+  border: var(--console-border-width) solid transparent; border-radius: var(--console-radius-md);
   background: hsl(var(--card)); padding: 0.75rem; font-size: var(--console-text-body-sm);
-}
+    box-shadow: var(--console-shadow-sm);
+  }
 .console-task-overview-card h3 { grid-column: 1 / -1; font-weight: 600; overflow-wrap: anywhere; }
 .console-task-overview-card dt { color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); }
 .console-task-overview-card dd { min-width: 0; overflow-wrap: anywhere; }

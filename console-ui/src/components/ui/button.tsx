@@ -5,22 +5,22 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@zhin.js/client"
 
 const buttonVariants = cva(
-  "console-control inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--console-radius-md)] text-[length:var(--console-text-body)] font-medium transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "console-control inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--console-radius-md)] border border-transparent text-[length:var(--console-text-body)] font-medium transition-[background-color,border-color,color,box-shadow] duration-150 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-[hsl(var(--primary-action))] text-[hsl(var(--primary-action-foreground))] hover:bg-[hsl(var(--primary-action)/0.9)]",
+        default: "border-[hsl(var(--primary-action-border))] bg-[hsl(var(--primary-action))] text-[hsl(var(--primary-action-foreground))] hover:border-[hsl(var(--primary))] hover:bg-[hsl(var(--primary-action)/0.72)]",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border border-border bg-card hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
+        outline: "border-[color:var(--console-border-strong)] bg-card text-foreground hover:bg-[var(--console-surface-hover)]",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-accent",
+        ghost: "text-foreground hover:bg-[var(--console-surface-hover)]",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-[var(--console-control-height)] px-4 py-2 max-md:min-h-11",
-        sm: "h-[var(--console-control-height-sm)] rounded-[var(--console-radius-md)] px-3 text-[length:var(--console-text-caption)]",
-        lg: "h-[var(--console-control-height)] rounded-[var(--console-radius-md)] px-8 max-md:min-h-11",
-        icon: "h-[var(--console-control-height)] w-[var(--console-control-height)]",
+        default: "h-[var(--console-control-height)] px-3.5 py-1.5",
+        sm: "h-[var(--console-control-height-sm)] rounded-[var(--console-radius-md)] px-3 text-[length:var(--console-text-body-sm)]",
+        lg: "h-[var(--console-control-height-lg)] rounded-[var(--console-radius-md)] px-5",
+        icon: "h-[var(--console-control-height)] w-[var(--console-control-height)] shrink-0",
       },
     },
     defaultVariants: {

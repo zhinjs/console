@@ -28,8 +28,8 @@ const commandSource = await source('components/ConsoleCommandCenter.tsx')
 const nodes = node => node && typeof node === 'object' ? [node, ...[node.props?.children].flat(Infinity).flatMap(nodes)] : []
 const text = node => typeof node === 'string' ? node : node && typeof node === 'object' ? [node.props?.children].flat(Infinity).map(text).join('') : ''
 const ui = names => Object.fromEntries(names.map(name => [name, name]))
-function fixture({ routes, path = '/sandbox', mobile = false, collapsed = false, locale = 'zh-CN', command = false, runEffects = false, access = UNRESTRICTED_ACCESS }) {
-  const slots = [], events = [], saved = new Map(collapsed ? [['zhin.console.nav.collapsed', '1']] : [])
+function fixture({ routes, path = '/sandbox', mobile = false, locale = 'zh-CN', command = false, runEffects = false, access = UNRESTRICTED_ACCESS }) {
+  const slots = [], events = [], saved = new Map()
   let cursor = 0, tree, pendingEffects = []
   const listeners = new Map()
   const hooks = {
@@ -113,7 +113,9 @@ const routes = [
 ]
 const navLinks = tree => nodes(nav(tree, '主导航')).filter(node => node.type === 'a').map(node => node.props.to)
 const sectionIds = tree => nodes(nav(tree, '主导航')).filter(node => node.props?.['data-section']).map(node => node.props['data-section'])
-const tierLabels = tree => nodes(nav(tree, '主导航')).filter(node => node.props?.className === 'console-nav-tier-label').map(text)
+// The top bar names each tier on its group; the drawer prints the tier label.
+const tierLabels = tree => nodes(nav(tree, '主导航')).filter(node => node.props?.className === 'console-nav-tier')
+  .map(node => node.props['aria-label'] ?? text(nodes(node).find(child => child.props?.className === 'console-nav-tier-label')))
 const nav = (tree, label) => nodes(tree).find(node => node.type === 'nav' && node.props['aria-label'] === label)
 
 test('six sections in two tiers (日常 / 管理); plugin pages without a section land in 功能 and a declared section is honoured', () => {
@@ -124,7 +126,34 @@ test('six sections in two tiers (日常 / 管理); plugin pages without a sectio
     assert.deepEqual(sectionIds(tree), ['overview', 'sessions', 'features', 'plugins', 'ops'])
     assert.deepEqual(navLinks(tree), ['/dashboard', '/logs', '/sandbox', '/scope', '/features', '/calendar', '/unclassified', '/plugins', '/ops/config', '/ops/schedules', '/backup'])
     assert.equal(nav(tree, '设置菜单'), undefined, 'settings no longer live in a footer menu')
-    assert.equal(nodes(tree).find(node => node.props?.className === 'console-sidebar-brand').props.to, '/')
+    assert.equal(nodes(tree).find(node => node.props?.className === 'console-brand').props.to, '/')
+  } finally { f.close() }
+  const drawer = fixture({ routes, mobile: true })
+  try {
+    const tree = drawer.render()
+    assert.deepEqual(tierLabels(tree), ['日常', '管理'], 'the drawer keeps the same two tiers')
+    assert.deepEqual(navLinks(tree), ['/dashboard', '/logs', '/sandbox', '/scope', '/features', '/calendar', '/unclassified', '/plugins', '/ops/config', '/ops/schedules', '/backup'])
+  } finally { drawer.close() }
+})
+
+test('the top bar shows a one-page section as a link and opens a menu for a section with several pages', () => {
+  const f = fixture({ routes, path: '/ops/config' })
+  try {
+    const bar = nav(f.render(), '主导航')
+    const section = id => nodes(bar).find(node => node.props?.['data-section'] === id)
+    // 插件 has one page: a direct link carrying the page name.
+    const plugins = nodes(section('plugins'))
+    assert.ok(!plugins.some(node => node.type === 'DropdownMenu'))
+    assert.equal(plugins.find(node => node.type === 'a').props.to, '/plugins')
+    // 运维 has several: a menu trigger named after the section, marked active when one of its pages is open.
+    const ops = nodes(section('ops'))
+    const trigger = ops.find(node => node.type === 'button')
+    assert.ok(ops.some(node => node.type === 'DropdownMenu'))
+    assert.equal(text(trigger), '运维')
+    assert.equal(trigger.props['data-active'], 'true')
+    assert.deepEqual(ops.filter(node => node.type === 'a').map(node => node.props.to), ['/ops/config', '/ops/schedules', '/backup'])
+    assert.equal(ops.find(node => node.type === 'a' && node.props.to === '/ops/config').props['aria-current'], 'page')
+    assert.equal(nodes(section('overview')).find(node => node.type === 'button').props['data-active'], undefined)
   } finally { f.close() }
 })
 
@@ -156,13 +185,13 @@ test('a nested channel URL selects the account menu and an 运维 route is selec
   }
 })
 
-test('collapsed navigation retains named controls and mobile hidden navigation cannot receive focus', () => {
-  const compact = fixture({ routes, collapsed: true })
+test('every navigation item is named, and the closed drawer on narrow screens cannot receive focus', () => {
+  const wide = fixture({ routes })
   try {
-    const tree = compact.render()
-    assert.deepEqual(tierLabels(tree), [], 'tier labels are hidden in the icon rail')
-    assert.equal(nodes(nav(tree, '主导航')).find(node => node.type === 'a' && node.props.to === '/calendar').props['aria-label'], 'Calendar')
-  } finally { compact.close() }
+    const tree = wide.render()
+    assert.equal(nodes(tree).find(node => node.type === 'aside'), undefined, 'wide screens have no drawer')
+    for (const link of nodes(nav(tree, '主导航')).filter(node => node.type === 'a')) assert.ok(text(link).trim(), `${link.props.to} has a visible name`)
+  } finally { wide.close() }
   const mobile = fixture({ routes, mobile: true })
   try {
     let tree = mobile.render()
@@ -170,7 +199,8 @@ test('collapsed navigation retains named controls and mobile hidden navigation c
     nodes(tree).find(node => node.type === 'button' && node.props['aria-label'] === '打开菜单').props.onClick()
     tree = mobile.render()
     assert.equal(nodes(tree).find(node => node.type === 'aside').props.inert, false)
-    assert.equal(nodes(tree).find(node => node.props?.className === 'flex flex-col flex-1 overflow-hidden min-w-0 w-full').props.inert, true)
+    assert.equal(nodes(tree).find(node => node.type === 'main').props.inert, true, 'the page behind the open drawer is inert')
+    assert.equal(nodes(tree).find(node => node.type === 'header').props.inert, true, 'so is the top bar')
     nodes(nav(tree, '主导航')).find(node => node.type === 'a' && node.props.to === '/ops/config').props.onClick()
     assert.equal(nodes(mobile.render()).find(node => node.type === 'aside').props.inert, true)
   } finally { mobile.close() }
@@ -290,7 +320,7 @@ test('mobile Escape leaves a top-level Radix dismissal consumed before closing t
 
 
 test('a section whose only page carries the section name omits its repeated heading', () => {
-  const f = fixture({ routes: routes.filter(route => route.path !== '/scope') })
+  const f = fixture({ routes: routes.filter(route => route.path !== '/scope'), mobile: true })
   try {
     const primary = nav(f.render(), '主导航')
     assert.ok(nodes(primary).some(node => node.type === 'a' && node.props.to === '/sandbox'))

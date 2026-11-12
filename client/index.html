@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f8faf9" />
+    <meta name="theme-color" content="#f2f3f5" />
     <script>
       // Apply bounded appearance preferences before styles or the app can paint.
       (() => {
         const root = document.documentElement;
-        let mode = 'system', palette = 'forest';
+        let mode = 'system', palette = 'ocean';
         try { const value = localStorage.getItem('theme'); if (['light', 'dark', 'system'].includes(value)) mode = value; } catch {}
-        try { const value = localStorage.getItem('zhin.console.palette'); if (['forest', 'ocean', 'plum', 'graphite', 'sky', 'peach', 'sunny', 'mint'].includes(value)) palette = value; } catch {}
+        try { const value = localStorage.getItem('zhin.console.palette'); if (['ocean', 'forest', 'plum', 'graphite', 'sky', 'peach', 'sunny', 'mint'].includes(value)) palette = value; } catch {}
         root.dataset.themeMode = mode;
         root.dataset.palette = palette;
         const dark = mode === 'dark' || (mode === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);

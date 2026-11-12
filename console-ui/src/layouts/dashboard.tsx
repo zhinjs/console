@@ -3,7 +3,7 @@ import { LanguageSelect } from '../components/LanguageSelect'
 import { useI18n } from '../i18n'
 import { useMemo, useRef, useState, useEffect, useLayoutEffect, useSyncExternalStore } from "react"
 import { Outlet, Link, useLocation, matchPath } from "react-router-dom"
-import { Menu, LogOut, X, ChevronRight, PanelLeftClose, PanelLeftOpen, UserRound } from "lucide-react"
+import { Menu, LogOut, X, ChevronRight, ChevronDown, UserRound } from "lucide-react"
 import { cn, type ConsoleRouteRecord } from "@zhin.js/client"
 import { useConsoleConnected } from "../hooks/use-console-connected"
 import { app } from "../utils/console-client"
@@ -11,7 +11,7 @@ import { getSidebarLucideIcon } from "../components/sidebarMenuIcons"
 import { ThemeToggle } from "../components/ThemeToggle"
 import { Button } from "../components/ui/button"
 import { ScrollArea } from "../components/ui/scroll-area"
-import { Tooltip, TooltipContent, TooltipTrigger } from "../components/ui/tooltip"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu"
 import { signOut } from "../utils/console-auth-api"
 import { principalLabel } from "../utils/console-auth-model.mjs"
 import { useConsoleSession } from "../hooks/use-console-session"
@@ -25,33 +25,11 @@ import { resolveNavigationLocation } from "../navigation-location.mjs"
 import { buildNavigation, routeSectionId, sectionById } from "../navigation-sections.mjs"
 import { useConsoleAccess } from "../hooks/use-console-access"
 
-import { useIsMobile } from '../hooks/useIsMobile'
+import { useIsCompactNav } from '../hooks/useIsMobile'
 import { ListItemButton } from '../components/ui/list-item-button'
-const SIDEBAR_COLLAPSED_KEY = "zhin.console.nav.collapsed"
 const HOME_PATH = "/dashboard"
 
-/** An explicit choice wins; otherwise tablets and small laptops (<1024px) start with the icon rail so tables keep their width. */
-function readSidebarOpen(): boolean {
-  let stored: string | null = null
-  try {
-    stored = window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY)
-  } catch {
-    stored = null
-  }
-  if (stored === "1") return false
-  if (stored === "0") return true
-  return !(typeof window.matchMedia === "function" && window.matchMedia("(max-width: 1023px)").matches)
-}
-
-function writeSidebarOpen(open: boolean): void {
-  try {
-    window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, open ? "0" : "1")
-  } catch {
-    // Storage may be unavailable (private mode); the preference lasts for this session.
-  }
-}
-
-function SidebarMenuIcon({ icon }: { icon?: React.ReactNode | string }) {
+function NavIcon({ icon }: { icon?: React.ReactNode | string }) {
   if (icon == null) return null
   if (typeof icon === "string") {
     const Cmp = getSidebarLucideIcon(icon)
@@ -74,18 +52,20 @@ function useRouteMetaFlag(
   }, [routes, pathname, flag])
 }
 
+/**
+ * Console shell: a floating capsule navigation bar over a gray canvas, content centered below it.
+ * Wide screens show the six sections in the bar (a section with one page is a link, a section with
+ * several pages opens a menu); narrower screens move the same navigation into a drawer.
+ */
 export default function DashboardLayout() {
   const i18n = useI18n()
   const location = useLocation()
-  const isMobile = useIsMobile()
-  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(readSidebarOpen)
-  const mainRef = useRef<HTMLElement>(null)
-  const sidebarRef = useRef<HTMLElement>(null)
-  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null)
-  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const compact = useIsCompactNav()
+  const drawerRef = useRef<HTMLElement>(null)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const connected = useConsoleConnected()
-
-  const showLabels = isMobile || desktopSidebarOpen
 
   const routes = useSyncExternalStore(
     app.subscribe,
@@ -108,202 +88,173 @@ export default function DashboardLayout() {
   const navOwner = navigation.current ?? navigation.parent ?? navigation.visible
   const groupLabel = i18n.t(navOwner ? sectionById(routeSectionId(navOwner))?.label ?? navigation.group : navigation.group)
   const parentLabel = navigation.parent ? routeLabel(navigation.parent, i18n.locale) : null
+  const activePath = navigation.visible?.path
+  const drawerVisible = compact && drawerOpen
 
   useEffect(() => {
-    setMobileNavOpen(false)
+    setDrawerOpen(false)
   }, [location.pathname])
 
   // A new page starts at its top; query-only changes (filters, tabs) keep the scroll position.
   useLayoutEffect(() => {
-    mainRef.current?.scrollTo({ top: 0 })
+    window.scrollTo({ top: 0 })
   }, [location.pathname])
 
+  // The bar turns more opaque once content scrolls beneath it.
   useEffect(() => {
-    if (!isMobile || !mobileNavOpen) return
+    const onScroll = () => setScrolled(window.scrollY > 4)
+    onScroll()
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
+
+  useEffect(() => {
+    if (!drawerVisible) return
     const onKeyDown = (e: globalThis.KeyboardEvent) => {
-      if (e.key === "Escape" && !e.defaultPrevented) setMobileNavOpen(false)
+      // A Radix layer (menu, popover) consumes its own Escape first; the next one closes the drawer.
+      if (e.key === "Escape" && !e.defaultPrevented) setDrawerOpen(false)
     }
-    sidebarRef.current?.querySelector<HTMLElement>("button, a")?.focus()
+    drawerRef.current?.querySelector<HTMLElement>("button, a")?.focus()
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
     window.addEventListener("keydown", onKeyDown)
     return () => {
       document.body.style.overflow = prevOverflow
       window.removeEventListener("keydown", onKeyDown)
-      mobileMenuButtonRef.current?.focus()
+      menuButtonRef.current?.focus()
     }
-  }, [isMobile, mobileNavOpen])
+  }, [drawerVisible])
 
-  const toggleSidebar = () => {
-    if (isMobile) setMobileNavOpen((v) => !v)
-    else setDesktopSidebarOpen((v) => {
-      writeSidebarOpen(!v)
-      return !v
-    })
-  }
+  const connectionTitle = connected ? i18n.t("Console 实时事件已连接") : i18n.t("Console 实时事件未连接")
+
+  /** Wide-screen bar: one item per section, separated into the 日常 and 管理 tiers. */
+  const barNavigation = (
+    <nav className="console-topnav-nav" aria-label={i18n.t("主导航")}>
+      {navTiers.map((tier, tierIndex) => <div key={tier.id} className="console-nav-tier" data-tier={tier.id} role="group" aria-label={i18n.t(tier.label)}>
+        {tierIndex > 0 ? <span className="console-nav-tier-rule" aria-hidden="true" /> : null}
+        {tier.sections.map((section) => {
+          const sectionActive = section.routes.some((route) => route.path === activePath)
+          if (section.routes.length === 1) {
+            const route = section.routes[0]
+            const isActive = route.path === activePath
+            return (
+              <div key={section.id} className="console-nav-group" data-section={section.id}>
+                <Link
+                  to={route.path}
+                  aria-current={isActive ? "page" : undefined}
+                  className={cn("console-topnav-item", isActive && "is-active")}
+                >
+                  <span className="console-nav-icon"><NavIcon icon={route.icon ?? section.icon} /></span>
+                  <span className="truncate">{routeLabel(route, i18n.locale)}</span>
+                </Link>
+              </div>
+            )
+          }
+          return (
+            <div key={section.id} className="console-nav-group" data-section={section.id}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button type="button" className={cn("console-topnav-item", sectionActive && "is-active")} data-active={sectionActive ? "true" : undefined}>
+                    <span className="console-nav-icon"><NavIcon icon={section.icon} /></span>
+                    <span className="truncate">{i18n.t(section.label)}</span>
+                    <ChevronDown aria-hidden="true" className="console-topnav-chevron" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" sideOffset={10} className="console-topnav-menu">
+                  {section.routes.map((route, index) => {
+                    const isActive = route.path === activePath
+                    return (
+                      <DropdownMenuItem key={route.path || `menu-item-${section.id}-${index}`} asChild>
+                        <Link to={route.path} aria-current={isActive ? "page" : undefined} className={cn("console-topnav-menu-item", isActive && "is-active")}>
+                          <span className="console-topnav-menu-icon"><NavIcon icon={route.icon} /></span>
+                          <span className="min-w-0 truncate">{routeLabel(route, i18n.locale)}</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    )
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )
+        })}
+      </div>)}
+    </nav>
+  )
+
+  /** Drawer navigation (narrow screens): every page listed under its tier and section. */
+  const drawerNavigation = (
+    <nav className="console-drawer-nav" aria-label={i18n.t("主导航")}>
+      {navTiers.map((tier) => <div key={tier.id} className="console-nav-tier" data-tier={tier.id}>
+        <div className="console-nav-tier-label">{i18n.t(tier.label)}</div>
+        {tier.sections.map((section) => {
+          // A section whose only page carries the section's own name (e.g. Sandbox "会话") needs no heading.
+          const showGroupLabel = !(section.routes.length === 1 && routeLabel(section.routes[0], i18n.locale) === i18n.t(section.label))
+          return (
+            <div key={section.id} className="console-nav-group" data-section={section.id}>
+              {showGroupLabel ? <div className="console-nav-group-label">{i18n.t(section.label)}</div> : null}
+              {section.routes.map((route, index) => {
+                const isActive = route.path === activePath
+                return (
+                  <Link
+                    key={route.path || `menu-item-${section.id}-${index}`}
+                    to={route.path}
+                    aria-current={isActive ? "page" : undefined}
+                    onClick={() => setDrawerOpen(false)}
+                    className={cn("console-nav-item", isActive && "is-active")}
+                  >
+                    <span className="console-nav-icon"><NavIcon icon={route.icon} /></span>
+                    <span className="truncate">{routeLabel(route, i18n.locale)}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          )
+        })}
+      </div>)}
+    </nav>
+  )
 
   return (
-    <div className="console-app-shell flex h-[100dvh] bg-background overflow-hidden">
+    <div className="console-app-shell" data-wide={contentFullWidth ? "true" : undefined}>
       <a href="#console-main-content" className="console-skip-link">{i18n.t("跳到主要内容")}</a>
-      {isMobile ? (
-        <ListItemButton
-          type="button"
-          className={cn("console-nav-scrim", mobileNavOpen && "is-open")}
-          aria-label={i18n.t("关闭菜单")}
-          aria-hidden={!mobileNavOpen}
-          tabIndex={mobileNavOpen ? 0 : -1}
-          onClick={() => setMobileNavOpen(false)}
-        />
-      ) : null}
 
-      <aside
-        className={cn(
-          "console-sidebar",
-          isMobile ? cn("is-mobile", mobileNavOpen && "is-open") : !desktopSidebarOpen && "is-collapsed",
-        )}
-        ref={sidebarRef}
-        aria-hidden={isMobile && !mobileNavOpen}
-        inert={isMobile && !mobileNavOpen}
-      >
-        <div className="console-sidebar-header">
-          <Link to="/" className="console-sidebar-brand" aria-label="Zhin.js">
-            <span className="console-brand-mark" aria-hidden="true"><span>Z</span></span>
-            {showLabels && (
-              <span className="console-sidebar-brand-text">
-                <strong>Zhin.js</strong>
-                <small>{i18n.t("Bot 工作台")}</small>
-              </span>
-            )}
-          </Link>
-          {isMobile ? (
+      <header className={cn("console-topnav", scrolled && "is-scrolled")} inert={drawerVisible}>
+        <div className="console-topnav-capsule">
+          {compact ? (
             <Button
               variant="ghost"
               size="icon"
-              className="shrink-0"
-              onClick={() => setMobileNavOpen(false)}
-              aria-label={i18n.t("关闭菜单")}
+              className="console-topnav-menu-button"
+              ref={menuButtonRef}
+              onClick={() => setDrawerOpen((v) => !v)}
+              aria-label={drawerOpen ? i18n.t("关闭菜单") : i18n.t("打开菜单")}
+              aria-expanded={drawerOpen}
             >
-              <X className="h-4 w-4" />
+              <Menu className="h-5 w-5" />
             </Button>
           ) : null}
-        </div>
+          <Link to="/" className="console-brand" aria-label="Zhin.js">
+            <span className="console-brand-mark" aria-hidden="true"><span>Z</span></span>
+            <span className="console-brand-text">Zhin.js</span>
+          </Link>
 
-        <ScrollArea className="flex-1 min-h-0">
-          <nav className="console-sidebar-nav" aria-label={i18n.t("主导航")}>
-            {navTiers.map((tier) => <div key={tier.id} className="console-nav-tier" data-tier={tier.id}>
-              {showLabels ? <div className="console-nav-tier-label">{i18n.t(tier.label)}</div> : null}
-              {tier.sections.map((section) => {
-              const items = section.routes
-              const groupName = section.label
-              // A section whose only page carries the section's own name (e.g. Sandbox "会话") needs no heading.
-              const showGroupLabel = !(items.length === 1 && routeLabel(items[0], i18n.locale) === i18n.t(groupName))
-              return (
-                <div key={section.id} className="console-nav-group" data-section={section.id}>
-                  {showLabels ? showGroupLabel && <div className="console-nav-group-label">{i18n.t(groupName)}</div>
-                    : <div className="console-nav-group-rule" aria-hidden="true" />}
-                  {items.map((route, index) => {
-                    const itemKey = route.path || `menu-item-${section.id}-${index}`
-                    const isActive = navigation.visible?.path === route.path
-                    const label = routeLabel(route, i18n.locale)
-                    const link = (
-                      <Link
-                        key={itemKey}
-                        to={route.path}
-                        aria-current={isActive ? "page" : undefined}
-                        aria-label={showLabels ? undefined : label}
-                        onClick={() => {
-                          if (isMobile) setMobileNavOpen(false)
-                        }}
-                        className={cn("console-nav-item", isActive && "is-active")}
-                      >
-                        <span className="console-nav-icon">
-                          <SidebarMenuIcon icon={route.icon} />
-                        </span>
-                        {showLabels && <span className="truncate">{label}</span>}
-                      </Link>
-                    )
-                    if (showLabels) return link
-                    return (
-                      <Tooltip key={itemKey} delayDuration={120}>
-                        <TooltipTrigger asChild>{link}</TooltipTrigger>
-                        <TooltipContent side="right" sideOffset={10}>{label}</TooltipContent>
-                      </Tooltip>
-                    )
-                  })}
-                </div>
-              )
-            })}
-            </div>)}
-          </nav>
-        </ScrollArea>
+          {compact ? null : barNavigation}
 
-        <div className="console-sidebar-footer">
-          <span
-            className={cn("console-connection-state", connected ? "is-online" : "is-offline")}
-            title={connected ? i18n.t("Console 实时事件已连接") : i18n.t("Console 实时事件未连接")}
-            aria-label={connected ? i18n.t("Console 实时事件已连接") : i18n.t("Console 实时事件未连接")}
-            role="status"
-          >
-            <span aria-hidden="true" />
-            {showLabels ? <span>{connected ? i18n.t("实时事件已连接") : i18n.t("实时事件未连接")}</span> : null}
-          </span>
-          {!isMobile ? (
-            <ListItemButton
-              type="button"
-              className="console-sidebar-collapse"
-              onClick={toggleSidebar}
-              aria-label={desktopSidebarOpen ? i18n.t("收起侧边栏") : i18n.t("展开侧边栏")}
-              aria-expanded={desktopSidebarOpen}
-              title={desktopSidebarOpen ? i18n.t("收起侧边栏") : i18n.t("展开侧边栏")}
-            >
-              {desktopSidebarOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
-            </ListItemButton>
-          ) : null}
-        </div>
-      </aside>
-
-      <div className="flex flex-col flex-1 overflow-hidden min-w-0 w-full" inert={isMobile && mobileNavOpen}>
-        <header className="console-topbar">
-          <div className="console-topbar-location flex items-center gap-2 min-w-0">
-            {isMobile ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                ref={mobileMenuButtonRef}
-                onClick={toggleSidebar}
-                aria-label={mobileNavOpen ? i18n.t("关闭菜单") : i18n.t("打开菜单")}
-                aria-expanded={mobileNavOpen}
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
-            ) : null}
-            {/* Object pages below 全局 render their own scope breadcrumb; one breadcrumb per page. */}
-            {objectPageOwnsBreadcrumb(location.pathname) ? null : <nav aria-label={i18n.t("当前位置")} className="console-breadcrumb">
-              {!onHome && groupLabel !== currentLabel && groupLabel !== parentLabel ? <><span className="console-breadcrumb-group">{groupLabel}</span><ChevronRight aria-hidden="true" className="console-breadcrumb-sep" /></> : null}
-              {navigation.parent && parentLabel !== currentLabel ? <><Link className="console-breadcrumb-link" to={navigation.parent.path}>{parentLabel}</Link><ChevronRight aria-hidden="true" className="console-breadcrumb-sep" /></> : null}
-              <span aria-current="page" className="console-breadcrumb-current">{currentLabel}</span>
-            </nav>}
-          </div>
-
-          <div className="console-topbar-search">
+          <div className="console-topnav-actions">
             <ConsoleCommandCenter routes={routes} />
-          </div>
-
-          <div className="console-topbar-actions">
             <span
-              className={cn("console-topbar-live-pill hidden sm:inline-flex", connected ? "is-online" : "is-offline")}
-              title={connected ? i18n.t("Console 实时事件已连接") : i18n.t("Console 实时事件未连接")}
-            >
-              <span className="console-topbar-live-pill__dot" aria-hidden="true" />
-              <span>{connected ? i18n.t("实时已连") : i18n.t("连接断开")}</span>
-            </span>
+              className={cn("console-connection-dot", connected ? "is-online" : "is-offline")}
+              title={connectionTitle}
+              aria-label={connectionTitle}
+              role="status"
+            />
             <LanguageSelect />
             <ThemeToggle />
             {me?.user ? (
-              <Button asChild variant="ghost" size="sm" className="console-topbar-account">
+              <Button asChild variant="ghost" size="sm" className="console-topnav-account">
                 <Link to={CONSOLE_PATHS.account} title={i18n.t("个人设置")} aria-label={i18n.t("个人设置：{0}", [accountLabel])}>
                   <UserRound className="h-4 w-4" />
-                  <span className="hidden md:inline max-w-[10rem] truncate">{accountLabel}</span>
+                  <span className="hidden xl:inline max-w-[8rem] truncate">{accountLabel}</span>
                 </Link>
               </Button>
             ) : null}
@@ -319,31 +270,70 @@ export default function DashboardLayout() {
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
-        </header>
+        </div>
+      </header>
 
-        <InstanceUnavailableBanner />
+      {compact ? (
+        <ListItemButton
+          type="button"
+          className={cn("console-nav-scrim", drawerOpen && "is-open")}
+          aria-label={i18n.t("关闭菜单")}
+          aria-hidden={!drawerOpen}
+          tabIndex={drawerOpen ? 0 : -1}
+          onClick={() => setDrawerOpen(false)}
+        />
+      ) : null}
+      {compact ? (
+        <aside
+          className={cn("console-nav-drawer", drawerOpen && "is-open")}
+          ref={drawerRef}
+          aria-hidden={!drawerOpen}
+          inert={!drawerOpen}
+          aria-label={i18n.t("主导航")}
+        >
+          <div className="console-nav-drawer-header">
+            <Link to="/" className="console-brand" aria-label="Zhin.js" onClick={() => setDrawerOpen(false)}>
+              <span className="console-brand-mark" aria-hidden="true"><span>Z</span></span>
+              <span className="console-brand-text">Zhin.js</span>
+            </Link>
+            <Button variant="ghost" size="icon" className="shrink-0" onClick={() => setDrawerOpen(false)} aria-label={i18n.t("关闭菜单")}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <ScrollArea className="flex-1 min-h-0">{drawerNavigation}</ScrollArea>
+          <div className="console-nav-drawer-footer">
+            <span className={cn("console-connection-state", connected ? "is-online" : "is-offline")} title={connectionTitle} role="status">
+              <span aria-hidden="true" />
+              <span>{connected ? i18n.t("实时事件已连接") : i18n.t("实时事件未连接")}</span>
+            </span>
+          </div>
+        </aside>
+      ) : null}
 
-        <main
-          id="console-main-content"
-          ref={mainRef}
+      <main
+        id="console-main-content"
+        className="console-main-scroll"
+        inert={drawerVisible}
+      >
+        <div
           className={cn(
-            "console-main-scroll flex-1 min-h-0 min-w-0",
-            "overflow-y-auto overflow-x-hidden",
+            "console-main mx-auto w-full min-w-0",
+            contentFullWidth ? "max-w-none" : "console-content-frame",
           )}
         >
-          <div
-            key={location.pathname}
-            className={cn(
-              "console-route-view mx-auto w-full min-w-0",
-              "console-main",
-              contentFullWidth ? "max-w-none" : "console-content-frame",
-            )}
-          >
-            <OnboardingBanner />
+          <InstanceUnavailableBanner />
+          <OnboardingBanner />
+          {/* Object pages below 全局 render their own scope breadcrumb; one breadcrumb per page. */}
+          {onHome || objectPageOwnsBreadcrumb(location.pathname) ? null : <nav aria-label={i18n.t("当前位置")} className="console-breadcrumb">
+            {groupLabel !== currentLabel && groupLabel !== parentLabel ? <><span className="console-breadcrumb-group">{groupLabel}</span><ChevronRight aria-hidden="true" className="console-breadcrumb-sep" /></> : null}
+            {navigation.parent && parentLabel !== currentLabel ? <><Link className="console-breadcrumb-link" to={navigation.parent.path}>{parentLabel}</Link><ChevronRight aria-hidden="true" className="console-breadcrumb-sep" /></> : null}
+            <span aria-current="page" className="console-breadcrumb-current">{currentLabel}</span>
+          </nav>}
+          <div key={location.pathname} className="console-route-view">
             <Outlet />
           </div>
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   )
 }

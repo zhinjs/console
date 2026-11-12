@@ -3,7 +3,7 @@ import { NAV_SECTIONS, resolveSectionId, sectionById } from './navigation-sectio
 /**
  * Navigation vocabulary shared by route registration and shell surfaces.
  *
- * The sidebar has six sections (ADR 0052): 概览 / 会话 / 功能 / 插件 are day-to-day work,
+ * The navigation has six sections (ADR 0052): 概览 / 会话 / 功能 / 插件 are day-to-day work,
  * 运维 / 访问控制 are administration. A route's `meta.group` names its section; legacy
  * group values below stay valid for published plugins and land in 功能 unless they name a
  * section.
@@ -26,7 +26,7 @@ export const NAV_GROUPS = {
   OTHER: '其他',
 } as const
 
-/** Section labels in sidebar order. */
+/** Section labels in navigation order. */
 export const NAV_GROUP_ORDER: readonly string[] = NAV_SECTIONS.map(section => section.label)
 
 /**

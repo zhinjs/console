@@ -10,14 +10,16 @@ import * as usageModel from '../console-ui/src/pages/token-usage-model.mjs'
 
 const require = createRequire(import.meta.url)
 
-test('cards, task rows, modals and sheets use layered optical elevation instead of flat none shadows', async () => {
+test('cards, task rows, modals and sheets are lifted by shadow tokens (a hairline ring plus a soft drop), not borders', async () => {
   const design = await readFile(new URL('../console-ui/src/design-system.css', import.meta.url), 'utf8')
   const resources = await readFile(new URL('../console-ui/src/pages/resource-pages.css', import.meta.url), 'utf8')
   assert.match(design, /--console-shadow-xl:/)
   assert.match(design, /\.console-card\s*\{[\s\S]*?box-shadow:\s*var\(--console-shadow-sm\)/)
   assert.match(design, /\.console-sheet-content\[data-side="right"\]/)
-  assert.match(design, /\.console-dialog-overlay[\s\S]*?backdrop-filter:\s*blur\(6px\)/)
-  assert.match(resources, /\.console-task-row\s*\{[\s\S]*?box-shadow:\s*var\(--console-shadow-xs\)/)
+  assert.match(design, /--console-shadow-ring:/)
+  assert.match(design, /\.console-card\s*\{[\s\S]*?border:[^;]*transparent/)
+  assert.match(design, /\.console-dialog-overlay[\s\S]*?backdrop-filter:\s*blur\(4px\)/)
+  assert.match(resources, /\.console-task-row\s*\{[\s\S]*?box-shadow:\s*var\(--console-shadow-sm\)/)
 })
 
 test('Sheet primitive and DialogContent drawer variant expose accessible slide-over structure', async () => {

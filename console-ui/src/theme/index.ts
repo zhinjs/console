@@ -3,16 +3,18 @@ export type Theme = 'light' | 'dark'
 export const THEME_MODES = ['light', 'dark', 'system'] as const
 export type ThemeMode = typeof THEME_MODES[number]
 export const THEME_PALETTES = [
-  { id: 'sky', group: 'fresh', label: '晴空', swatch: '#2c9ff2', light: '#f1f7fb', dark: '#161f25' },
-  { id: 'peach', group: 'fresh', label: '蜜桃', swatch: '#f58266', light: '#fcf3f0', dark: '#241916' },
-  { id: 'sunny', group: 'fresh', label: '暖阳', swatch: '#fbc64b', light: '#fdf9f0', dark: '#242017' },
-  { id: 'mint', group: 'fresh', label: '薄荷', swatch: '#2ee5b7', light: '#f1fbf9', dark: '#162421' },
-  { id: 'forest', group: 'calm', label: '松青', swatch: '#317d61', light: '#f8faf9', dark: '#131b18' },
-  { id: 'ocean', group: 'calm', label: '海蓝', swatch: '#316aaf', light: '#f7f8fa', dark: '#12161c' },
-  { id: 'plum', group: 'calm', label: '暮紫', swatch: '#754c94', light: '#f9f8fa', dark: '#17131b' },
-  { id: 'graphite', group: 'calm', label: '石墨', swatch: '#4d4d4d', light: '#f9f9f9', dark: '#171717' },
+  { id: 'sky', group: 'fresh', label: '晴空', swatch: '#2c9ff2', light: '#f2f4f5', dark: '#0b0d0e' },
+  { id: 'peach', group: 'fresh', label: '蜜桃', swatch: '#f58266', light: '#f5f2f2', dark: '#0e0c0b' },
+  { id: 'sunny', group: 'fresh', label: '暖阳', swatch: '#fbc64b', light: '#f5f4f2', dark: '#0e0d0b' },
+  { id: 'mint', group: 'fresh', label: '薄荷', swatch: '#2ee5b7', light: '#f2f5f4', dark: '#0b0e0d' },
+  { id: 'ocean', group: 'calm', label: '海蓝', swatch: '#1668dc', light: '#f2f3f5', dark: '#0b0d0e' },
+  { id: 'forest', group: 'calm', label: '松青', swatch: '#2e765b', light: '#f2f5f4', dark: '#0b0e0d' },
+  { id: 'plum', group: 'calm', label: '暮紫', swatch: '#764899', light: '#f3f2f5', dark: '#0d0b0e' },
+  { id: 'graphite', group: 'calm', label: '石墨', swatch: '#3d3d3d', light: '#f3f3f3', dark: '#0d0d0d' },
 ] as const
 export type Palette = typeof THEME_PALETTES[number]['id']
+/** Default palette: neutral surfaces with a blue accent. */
+export const DEFAULT_PALETTE: Palette = 'ocean'
 export interface ThemePreferences { mode: ThemeMode; palette: Palette }
 export const THEME_STORAGE_KEY = 'theme'
 export const PALETTE_STORAGE_KEY = 'zhin.console.palette'
@@ -31,7 +33,7 @@ function storage(): Storage | undefined { try { return typeof window === 'undefi
 function stored(key: string): string | null { try { return storage()?.getItem(key) ?? null } catch { return null } }
 function readStoredPreferences(): ThemePreferences {
   const mode = stored(THEME_STORAGE_KEY), palette = stored(PALETTE_STORAGE_KEY)
-  return { mode: isThemeMode(mode) ? mode : 'system', palette: isPalette(palette) ? palette : 'forest' }
+  return { mode: isThemeMode(mode) ? mode : 'system', palette: isPalette(palette) ? palette : DEFAULT_PALETTE }
 }
 export function getThemePreferences(): ThemePreferences {
   const saved = readStoredPreferences()
