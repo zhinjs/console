@@ -120,6 +120,8 @@ const LEVELS = ['global', 'adapter', 'endpoint', 'conversation']
 const features = [
   { plugin: 'welcome', displayName: '群欢迎', levels: LEVELS, hasSchema: true, globalEnabled: true, conversationFields: ['text'] },
   { plugin: 'repeater', displayName: '复读机', levels: LEVELS, hasSchema: false, globalEnabled: true, conversationFields: [] },
+  // Nested plugin: locked wherever its parent (repeater) is off above, here below the preview-community account.
+  { plugin: 'repeater/echo', displayName: '复读机 · 回声', levels: LEVELS, hasSchema: false, globalEnabled: true, conversationFields: [] },
   { plugin: 'rss', displayName: '订阅推送', levels: ['global', 'adapter', 'endpoint'], hasSchema: true, globalEnabled: false },
 ]
 const conversations = [
@@ -130,6 +132,7 @@ const conversations = [
 const chatRoles = [
   { level: 'global', key: '', adapter: 'icqq', userId: '10000', role: 'owner', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 30 * 86_400_000 },
   { level: 'adapter', key: 'icqq', adapter: 'icqq', userId: '10002', role: 'admin', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 86_400_000 },
+  { level: 'adapter', key: 'icqq', adapter: 'icqq', userId: '10006', role: 'owner', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 2 * 86_400_000 },
   { level: 'endpoint', key: 'icqq/preview-community', adapter: 'icqq', userId: '10003', role: 'trusted', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 7_200_000 },
   { level: 'conversation', key: 'icqq/preview-community/group:20001', adapter: 'icqq', userId: '10004', role: 'admin', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 3_600_000 },
 ]
@@ -175,7 +178,19 @@ const pluginPermissions = [
 const previewCommands = [
   { id: 'root/welcome\u0000zhin.command\u0000welcome', owner: 'root/welcome', name: 'welcome', description: '查看或修改欢迎语', permits: ['group(admin)'] },
   { id: 'root/rss\u0000zhin.command\u0000rss add', owner: 'root/rss', name: 'rss add', description: '添加订阅', permits: [] },
+  { id: 'root/admin\u0000zhin.command\u0000kick', owner: 'root/admin', name: 'kick', description: '把成员移出群聊', permits: ['group()', 'role(owner@global,admin@adapter)', 'bot:admin', 'platform-permission:kick'] },
 ]
+/** Permit explanation in the Host's shape (`@zhin.js/permission` explainPermitRules), simplified. */
+function permitPreview(rule, index, body) {
+  const call = /^(adapter|group|private|channel|user|role)\(([^)]*)\)$/u.exec(rule)
+  const prefixed = /^(platform|platform-role|platform-permission|bot|bot-role|bot-permission):(.+)$/u.exec(rule)
+  const kind = call ? call[1] : prefixed ? prefixed[1] : /^(owner|admin|trusted)(@\w+)?$/u.test(rule) ? 'role' : 'unknown'
+  const values = call ? call[2].split(',').map(item => item.trim()).filter(Boolean) : prefixed ? [prefixed[2]] : kind === 'role' ? [rule] : undefined
+  if (kind === 'group') return { index, rule, kind, values: values?.length ? values : [''], outcome: body.target ? (body.target.kind === 'group' ? 'match' : 'mismatch') : 'unknown', reason: '会话类型条件' }
+  if (kind.startsWith('bot')) return { index, rule, kind, values, outcome: 'unknown', reason: '机器人账号在本会话的平台身份未知（未声明 scene.selfStanding）' }
+  if (kind === 'role') return { index, rule, kind, values, outcome: body.sender?.chatRole === undefined ? 'unknown' : 'mismatch', reason: '按当前会话的层级链计算 zhin 角色' }
+  return { index, rule, kind, ...(values ? { values } : {}), outcome: 'unknown', reason: '没有提供假设平台身份' }
+}
 function transactionResult(operation, packages) {
   const authorized = packages.map(spec => { const at = spec.lastIndexOf('@'); const name = at > 0 ? spec.slice(0, at) : spec; return { name, ...(at > 0 ? { version: spec.slice(at + 1) } : {}), spec, source: 'market' } })
   const base = { id: `preview-${Date.now()}`, operation, packages: authorized, instance: { before: 'running', after: 'running' }, startedAt: Date.now() - 4200, finishedAt: Date.now(), logTail: [] }
@@ -196,6 +211,8 @@ function featureDetail(body) {
   const level = body.level
   const key = body.key ?? ''
   const base = { revision: 'preview-1', plugin: feature.plugin, level, key, levels: feature.levels, conversationFields: feature.conversationFields ?? [] }
+  // UI_PREVIEW_DB=memory: the project database cannot store conversation overrides (lost on restart).
+  const persistence = { persistent: !memoryDatabase }
   if (feature.plugin === 'welcome') {
     const properties = { text: { type: 'string', title: '欢迎语', default: '欢迎新朋友' }, mention: { type: 'boolean', title: '@新成员', default: true } }
     const schema = { type: 'object', properties: level === 'conversation' ? { text: properties.text } : properties }
@@ -203,7 +220,11 @@ function featureDetail(body) {
     const inGroup = key === 'icqq/preview-community/group:20001'
     const text = inGroup ? '欢迎来到产品试验群' : onIcqq ? '欢迎来到 icqq 社区' : '欢迎新朋友'
     const values = level === 'global' ? { text: '欢迎新朋友', mention: true } : level === 'adapter' && onIcqq ? { text } : inGroup ? { text } : {}
-    return { ...base, schema, values, effective: { text, mention: true }, sources: { '/text': inGroup ? 'conversation' : onIcqq ? 'adapter' : 'global', '/mention': 'global' }, enabled: true }
+    return { ...base, ...persistence, schema, values, effective: { text, mention: true }, sources: { '/text': inGroup ? 'conversation' : onIcqq ? 'adapter' : 'global', '/mention': 'global' }, enabled: true }
+  }
+  if (feature.plugin === 'repeater/echo') {
+    const below = key.startsWith('icqq/preview-community/') || key === 'icqq/preview-community'
+    return { ...base, ...persistence, schema: null, values: {}, effective: {}, sources: {}, enabled: !below, ...(below && key !== 'icqq/preview-community' ? { lockedBy: 'endpoint' } : {}) }
   }
   if (feature.plugin === 'repeater') {
     const account = key === 'icqq/preview-community'
@@ -227,6 +248,10 @@ const adapterStatus = { adapterKey: 'icqq', displayName: 'ICQQ', page: '/icqq', 
 // forwarded route answers 503 instance_unavailable. UI_PREVIEW_SETUP=1: no owner yet, the
 // synthetic token is the bootstrap token (setup wizard).
 const instanceOffline = process.env.UI_PREVIEW_INSTANCE === 'offline'
+// UI_PREVIEW_DB=memory: conversation overrides and chat roles cannot be persisted (MongoDB / Redis / memory).
+const memoryDatabase = process.env.UI_PREVIEW_DB === 'memory'
+// UI_PREVIEW_ACCESS=scoped: an account that manages roles only on the icqq adapter (no global iam.manage).
+const scopedAccess = process.env.UI_PREVIEW_ACCESS === 'scoped'
 const setupMode = process.env.UI_PREVIEW_SETUP === '1'
 const ALL_PERMISSIONS = ['status.view', 'endpoint.view', 'endpoint.operate', 'endpoint.manage', 'feature.view', 'feature.configure', 'feature.toggle',
   'plugin.manage', 'plugin.perms.read', 'plugin.perms.operate', 'plugin.perms.manage', 'agent.view', 'agent.configure', 'ops.config.read', 'ops.config.write',
@@ -270,6 +295,10 @@ const instanceLogs = () => ({ lines: [
 ] })
 const meReport = () => setupMode
   ? { kind: 'bootstrap', open: false, permissions: [], bindings: [], setupRequired: true }
+  : scopedAccess ? { kind: 'user', user: { id: 'u-alice', username: 'alice', displayName: '适配器管理员' },
+    permissions: ALL_PERMISSIONS.filter(item => item !== 'iam.manage' && item !== 'ops.env.write'),
+    bindings: [{ role: 'adapter-admin', scope: { kind: 'adapter', key: 'icqq' }, permissions: ['iam.manage', 'feature.view', 'feature.configure', 'feature.toggle'] }], setupRequired: false,
+    onboarding: { version: 1, steps: { database: 'done', owner: 'done', ai: 'skipped', adapters: 'done' } } }
   : { kind: 'user', user: { id: 'u-owner', username: 'owner', displayName: '演示所有者' }, permissions: ALL_PERMISSIONS,
     bindings: [{ role: 'owner', scope: { kind: 'global' }, permissions: ALL_PERMISSIONS }], setupRequired: false,
     onboarding: { version: 1, steps: { database: 'done', owner: 'done', ai: 'skipped', adapters: 'pending' } } }
@@ -416,7 +445,7 @@ const server = createServer(async (request, response) => {
     // ADR 0056: sender is { id, chatRole?, platform? }; the old `roles` field is refused.
     if (body.sender && Object.hasOwn(body.sender, 'roles')) { json({ success: false, code: 'invalid_input', error: 'sender.roles is no longer accepted' }, 400); return }
     json(envelope({ generation: 4, simulation: true, command, ...(body.target ? { target: body.target } : {}), ...(body.sender ? { sender: body.sender } : {}), permissionHost: 'present', adapter: { outcome: 'not_evaluated', reason: '本地预览不评估适配器约束' },
-      rules: command.permits.map((rule, index) => ({ index, rule, kind: 'role', outcome: 'unknown', reason: '没有提供假设角色' })),
+      rules: command.permits.map((rule, index) => permitPreview(rule, index, body)),
       summary: { outcome: command.permits.length ? 'unknown' : 'match', reason: command.permits.length ? '缺少角色依据' : '没有声明 permit 限制' }, unconstrained: [], assumptions: ['本地预览数据'] }))
     return
   }
@@ -461,7 +490,24 @@ const server = createServer(async (request, response) => {
     }
     if (type === 'chat-roles.list') {
       const keys = chain(body.key ?? '')
-      json(envelope({ roles: chatRoles.filter(entry => keys.includes(entry.key)) })); return
+      // A scoped caller sees identities only at scopes it manages (icqq and below); global entries are redacted.
+      const view = entry => scopedAccess && entry.level === 'global' ? { level: entry.level, key: entry.key, role: entry.role, source: entry.source, redacted: true } : entry
+      json(envelope({ roles: chatRoles.filter(entry => keys.includes(entry.key)).map(view) })); return
+    }
+    if (type === 'chat-roles.grant' || type === 'chat-roles.revoke') {
+      if (scopedAccess && body.role === 'owner') { json({ success: false, error: '授予或撤销 owner 需要全局 iam.manage 权限', type }, 403); return }
+      if (memoryDatabase) { json({ success: false, code: 'chat-roles-unpersisted', error: '聊天角色需要关系型项目数据库（sqlite / mysql / pg）', type }, 503); return }
+      json({ success: false, error: '不能授予或覆盖与你同级或更高的角色', type }, 403); return
+    }
+    if (type === 'feature.set-override') {
+      const text = JSON.stringify(body.patch ?? {})
+      if (text.includes('${') || /env:\/\//iu.test(text)) { json({ success: false, code: 'environment-reference', error: '值不能包含环境变量引用（${…} / env://）', type }, 400); return }
+      const persistent = !(memoryDatabase && body.level === 'conversation')
+      json(envelope({ status: 'saved', revision: 'preview-2', restartRequired: false, warnings: [], persistent,
+        message: persistent ? '已保存' : '会话覆盖已保存，立即生效；当前数据库不支持持久化，重启后丢失' })); return
+    }
+    if (type === 'feature.set-enabled' && body.plugin === 'repeater/echo') {
+      json({ success: false, code: 'locked', lockedBy: 'endpoint', error: '已被账号层停用，下级开关已锁定', type }, 409); return
     }
     if (type === 'gateway.packages.plan') {
       const specs = Array.isArray(body.data?.packages) ? body.data.packages : []

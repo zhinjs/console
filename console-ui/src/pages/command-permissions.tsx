@@ -18,7 +18,7 @@ import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { getInboxCacheScope, isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { CONSOLE_REST } from '../contracts/zhin-console'
 import { createDiagnosticRequestGate } from './endpoint-detail/message-diagnostics.mjs'
-import { HYPOTHETICAL_CHAT_ROLES, HYPOTHETICAL_STANDINGS, permissionHttpError, permissionOutcomeLabel, permissionRequest, readPermissionCatalog, readPermissionExplanation,
+import { HYPOTHETICAL_CHAT_ROLES, HYPOTHETICAL_STANDINGS, permissionHttpError, permissionOutcomeLabel, permissionRequest, permitRuleMeaning, readPermissionCatalog, readPermissionExplanation,
   type HypotheticalChatRole, type HypotheticalStanding,
   type PermissionCatalog, type PermissionCommand, type PermissionExplanation, type PermissionRequest } from './permission-explanation-model.mjs'
 import { matchPermissionLink, permissionCatalogState, permissionLinkSearch, readPermissionLink, type PermissionLink } from './permission-link-model.mjs'
@@ -166,7 +166,7 @@ export default function CommandPermissionsPage() {
         <p className="text-xs text-muted-foreground">Permission Host：{visible.permissionHost === 'present' ? i18n.t("当前存在") : visible.permissionHost === 'missing' ? i18n.t("当前缺失") : i18n.t("未核实")} {i18n.t(" · 运行代 ")}{visible.generation}</p>
         <div className="rounded-md border p-3 text-sm"><p className="font-medium">{i18n.t("Adapter 约束 · ")}{permissionOutcomeLabel(visible.adapter.outcome, i18n.locale)}</p><p className="mt-1 text-muted-foreground">{visible.adapter.reason}</p></div>
         {!visible.rules.length && <p className="text-sm">{i18n.t("没有声明 permit 限制；这不等于已获得平台执行权限。")}</p>}
-        <ol className="space-y-3">{visible.rules.map(rule => <li key={rule.index} className="rounded-md border p-3 space-y-1"><div className="flex flex-wrap gap-2 justify-between"><code className="text-sm break-all">{rule.rule}</code><span className="text-xs shrink-0">{permissionOutcomeLabel(rule.outcome, i18n.locale)}</span></div><p className="text-sm text-muted-foreground">{rule.reason}</p></li>)}</ol>
+        <ol className="space-y-3">{visible.rules.map(rule => <li key={rule.index} className="rounded-md border p-3 space-y-1"><div className="flex flex-wrap gap-2 justify-between"><code className="text-sm break-all">{rule.rule}</code><span className="text-xs shrink-0">{permissionOutcomeLabel(rule.outcome, i18n.locale)}</span></div>{permitRuleMeaning(rule, i18n.locale) ? <p className="text-sm font-medium">{permitRuleMeaning(rule, i18n.locale)}</p> : null}<p className="text-sm text-muted-foreground">{rule.reason}</p></li>)}</ol>
         {visible.target && <div className="space-y-2"><p className="text-sm font-medium">{i18n.t("本次假设会话")}</p><ConversationTargetSummary value={visible.target} /></div>}
         <ul className="list-disc pl-4 text-xs text-muted-foreground space-y-1">{[...visible.unconstrained, ...visible.assumptions].map((item, index) => <li key={index}>{item}</li>)}</ul></>}
       {!checking && !visible && <p className="text-sm text-muted-foreground">{i18n.t("选择命令查看规则；修改假设后需要重新检查，不沿用旧结果。")}</p>}

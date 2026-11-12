@@ -57,6 +57,8 @@ export interface FeatureDetail {
   readonly enabled: boolean
   readonly lockedBy?: FeatureLock
   readonly conversationFields?: readonly string[]
+  /** False when conversation overrides are kept in memory only (lost on restart). */
+  readonly persistent?: boolean
 }
 export interface FeatureFieldRow {
   readonly name: string
@@ -76,6 +78,8 @@ export interface FeatureWriteResult {
   readonly restartRequired: boolean
   readonly warnings: ReadonlyArray<{ code: string; path: string; message: string }>
   readonly errors: ReadonlyArray<{ path: string; message: string }>
+  /** Conversation level: false when the write is kept in memory and lost on restart. */
+  readonly persistent?: boolean
 }
 export interface FeatureRpcBody { readonly type: string; readonly [key: string]: unknown }
 export interface ConversationRef { readonly adapter: string; readonly endpoint: string; readonly kind: ConversationKind; readonly id: string }
@@ -95,7 +99,7 @@ export interface ConversationItem extends ConversationRef {
   readonly overrideCount: number | null
   readonly lastActiveAt?: number
 }
-export interface ConversationPage { readonly items: ConversationItem[]; readonly cursor?: string; readonly recentAvailable: boolean }
+export interface ConversationPage { readonly items: ConversationItem[]; readonly cursor?: string; readonly recentAvailable: boolean; readonly persistent?: boolean }
 export interface ConversationQuery {
   readonly plugin?: string; readonly adapter?: string; readonly endpoint?: string
   readonly query?: string; readonly cursor?: string; readonly limit?: number
@@ -137,5 +141,6 @@ export function conversationSegment(kind: ConversationKind, id: string): string
 export function parseConversationSegment(segment: unknown): { kind: ConversationKind; id: string } | null
 export function conversationsRequest(query?: ConversationQuery): FeatureRpcBody
 export function readConversationPage(payload: unknown): ConversationPage
+export function containsEnvironmentReference(value: unknown, depth?: number): boolean
 export function appendConversationPage(previous: ConversationPage | null | undefined, page: ConversationPage): ConversationPage
 export function filterConversations<T extends { hasOverrides: boolean }>(items: readonly T[], onlyOverridden: boolean): T[]

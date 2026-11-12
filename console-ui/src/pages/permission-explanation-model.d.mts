@@ -18,5 +18,6 @@ export interface PermissionExplanation {
 export function readPermissionCatalog(body: unknown, locale?: 'zh-CN' | 'en'): PermissionCatalog
 export function permissionRequest(generation: number, selected: PermissionCommand, input?: { target?: unknown; requireTarget?: boolean; senderId?: string; chatRole?: HypotheticalChatRole; standing?: HypotheticalStanding; platformRoles?: string }, locale?: 'zh-CN' | 'en'): PermissionRequest
 export function readPermissionExplanation(body: unknown, requested: PermissionRequest, locale?: 'zh-CN' | 'en'): PermissionExplanation
+export function permitRuleMeaning(rule: { kind: string; values?: readonly string[] }, locale?: 'zh-CN' | 'en'): string | null
 export function permissionOutcomeLabel(outcome: string, locale?: 'zh-CN' | 'en'): string
 export function permissionHttpError(status: number, locale?: 'zh-CN' | 'en'): string

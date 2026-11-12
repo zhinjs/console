@@ -15,15 +15,16 @@ import { ActionReceipt, useActionReceipt } from '../../components/ActionReceipt'
 import { receiptBlocksActions, type ReceiptPlan } from '../../components/action-receipt-model.mjs'
 import { SchemaFieldEditor } from '../../components/PluginConfigForm/SchemaFieldEditor'
 import type { SchemaEditorDrafts } from '../../components/PluginConfigForm/types'
-import { featureGlobalHref } from '../../console-routes.mjs'
+import { CONSOLE_PATHS, featureGlobalHref } from '../../console-routes.mjs'
 import { FEATURE_RPC } from '../../contracts/zhin-console'
 import { useConsoleAccess } from '../../hooks/use-console-access'
 import { hasConsolePermission, scopePermissionTarget } from '../../utils/console-access.mjs'
 import { requestConsole } from '../../utils/console-rpc'
+import { statusFromError } from '../../components/status-state-model.mjs'
 import { ObjectSection } from '../../scope/ObjectPageLayout'
 import { SCOPE_LEVEL_LABELS, scopeKey, type Scope } from '../../scope/scope-tree.mjs'
 import {
-  featuresAtLevel, jsonSchemaToField, overrideDraftSeed, readFeatureDetail, readFeatureWriteResult, removeOverrideRequest, setEnabledRequest,
+  containsEnvironmentReference, featuresAtLevel, jsonSchemaToField, overrideDraftSeed, readFeatureDetail, readFeatureWriteResult, removeOverrideRequest, setEnabledRequest,
   setOverrideRequest, type FeatureDetail, type FeatureFieldRow, type FeatureLevel, type FeatureOverrideLevel, type FeatureSummary,
 } from './feature-model.mjs'
 import {
@@ -117,6 +118,9 @@ export function FeatureLevelPanel({ scope }: { scope: Scope }) {
     <ObjectSection title={copy.title} description={copy.description}
       actions={<Button variant="outline" size="sm" onClick={refresh} disabled={list.status === 'loading'}><RefreshCw className={list.status === 'loading' ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>}>
       <FeatureReadOnlyNote scope={scope} />
+      {level === 'conversation' && Object.values(details).some(state => state.value?.persistent === false) ? (
+        <Alert role="status" variant="warning"><AlertDescription>{i18n.t('当前数据库不支持持久化，重启后丢失')}</AlertDescription></Alert>
+      ) : null}
       {list.status === 'error' ? <StatusState error={list.error} onRetry={list.refresh} /> : null}
       {list.status === 'loading' && !list.value ? (
         <div className="space-y-2">{[0, 1, 2].map(index => <Skeleton key={index} className="h-16" />)}</div>
@@ -170,10 +174,16 @@ function LockLink({ row, scope }: { row: FeatureLevelRow; scope: Scope }) {
   if (!row.lockedBy) return null
   const target = row.lockedBy === 'global' ? i18n.t('全局')
     : row.lockedBy === 'adapter' ? `${i18n.t('适配器')} ${scope.adapter}` : `${i18n.t('账号')} ${scope.endpoint}`
+  // A nested plugin is locked wherever an ancestor is off at a level above (ADR 0050 §4): the Host
+  // names the level, not which of the two switched it off.
+  const parent = row.plugin.includes('/') ? row.plugin.slice(0, row.plugin.lastIndexOf('/')) : null
   return (
-    <Link to={featureLockHref(row.lockedBy, scope)} className="console-feature-lock-link">
-      <Lock aria-hidden="true" />{i18n.t('被 {0} 锁定', [target])}
-    </Link>
+    <span className="console-feature-lock">
+      <Link to={featureLockHref(row.lockedBy, scope)} className="console-feature-lock-link">
+        <Lock aria-hidden="true" />{i18n.t('被 {0} 锁定', [target])}
+      </Link>
+      {parent ? <span className="console-feature-source">{i18n.t('本插件或上级插件 {0} 在那一层停用', [parent])}</span> : null}
+    </span>
   )
 }
 
@@ -211,10 +221,24 @@ function FeatureRow({ scope, level, levelKey, feature, row, detail, reload, adop
       const current = pendingOf(plan)
       if (!current) throw new Error('No change')
       try {
-        const result = readFeatureWriteResult(await requestConsole<unknown>(current.body))
+        let reply: unknown
+        try {
+          reply = await requestConsole<unknown>(current.body)
+        } catch (error) {
+          // 400 `environment-reference`: refused, nothing written; the field editor says why in place.
+          if (statusFromError(error).serverCode === 'environment-reference') {
+            return { status: 'failed', message: i18n.t('不能在这里引用环境变量；如需使用密钥，请在环境变量页配置'), reason: 'environment-reference' }
+          }
+          throw error
+        }
+        const result = readFeatureWriteResult(reply)
         if (result.status === 'saved' || result.status === 'unchanged') adoptRevision?.(result.revision)
         const outcome = featureReceiptOutcome(result)
         if (outcome.locked) throw Object.assign(new Error(outcome.message), { code: 'locked', lockedBy: outcome.lockedBy })
+        // Saved, but only in memory: say so next to the receipt (ADR 0055 §6).
+        if (result.status === 'saved' && result.persistent === false) {
+          return { ...outcome, message: [outcome.message, i18n.t('当前数据库不支持持久化，重启后丢失')].filter(Boolean).join('\n') }
+        }
         return outcome
       } finally {
         // Every outcome re-reads: a conflict or lock shows the newer state, a success its effect.
@@ -231,6 +255,12 @@ function FeatureRow({ scope, level, levelKey, feature, row, detail, reload, adop
     onSettled: () => setEditing(null),
   })
   const busy = receiptBlocksActions(receipt.state)
+  // The field whose last save the Host refused for an environment reference (shown in its editor).
+  const envRefusedField = receipt.state.phase === 'failed' && receipt.state.status?.reason === 'environment-reference'
+    ? (receipt.state.plan ? pendingOf(receipt.state.plan)?.change : undefined) : undefined
+  const envRefused = envRefusedField?.kind === 'set' ? envRefusedField.field : null
+  // Values are environment-expanded: only a global ops.env.write may plant `${…}` / `env://`.
+  const canReferenceEnv = hasConsolePermission('ops.env.write', access)
   const valueCopy = { unset: i18n.t('未设置'), masked: i18n.t('已隐藏的敏感值') }
   // 「在会话 group:1 关闭 X」: the identity is set off by spaces; 全局 has none (「在全局关闭 X」).
   const identity = level === 'conversation' ? `${scope.kind}:${scope.id}` : level === 'endpoint' ? `${scope.adapter} / ${scope.endpoint}` : level === 'adapter' ? scope.adapter : ''
@@ -314,7 +344,7 @@ function FeatureRow({ scope, level, levelKey, feature, row, detail, reload, adop
       {open && value ? (
         <div className="console-feature-row-body">
           <FeatureFields scope={scope} feature={feature} level={level} detail={value} row={row} editing={editing} setEditing={setEditing}
-            canConfigure={canConfigure} busy={busy} onSave={saveField} onRemove={removeField} />
+            canConfigure={canConfigure} busy={busy} onSave={saveField} onRemove={removeField} canReferenceEnv={canReferenceEnv} envRefused={envRefused} />
           {row.overriddenHere && canConfigure ? (
             <div className="flex justify-end">
               <Button variant="outline" size="sm" disabled={busy} onClick={clearAll}><Eraser />{i18n.t('移除此层全部覆盖')}</Button>
@@ -338,6 +368,10 @@ interface FeatureFieldsProps {
   readonly busy: boolean
   readonly onSave: (field: FeatureFieldRow, value: unknown) => void
   readonly onRemove: (field: FeatureFieldRow) => void
+  /** Global ops.env.write: values may hold `${…}` / `env://` references. */
+  readonly canReferenceEnv: boolean
+  /** Field whose last save was refused for an environment reference. */
+  readonly envRefused: string | null
 }
 
 /** Parent level's `feature.get`, only when a field is overridden (its 继承值 is not in this level's reply). */
@@ -358,7 +392,7 @@ function useParentDetail(plugin: string, level: FeatureOverrideLevel, key: strin
   return state
 }
 
-function FeatureFields({ scope, feature, level, detail, row, editing, setEditing, canConfigure, busy, onSave, onRemove }: FeatureFieldsProps) {
+function FeatureFields({ scope, feature, level, detail, row, editing, setEditing, canConfigure, busy, onSave, onRemove, canReferenceEnv, envRefused }: FeatureFieldsProps) {
   const i18n = useI18n()
   const parent = useParentDetail(feature.plugin, level, scopeKey(scope) ?? undefined, row.fieldOverrides > 0)
   if (!row.fields.length) {
@@ -412,7 +446,8 @@ function FeatureFields({ scope, feature, level, detail, row, editing, setEditing
                 </span>
               </div>
               {editing === field.name ? (
-                <FieldEditor field={field} busy={busy} onCancel={() => setEditing(null)} onSave={next => onSave(field, next)} />
+                <FieldEditor field={field} busy={busy} onCancel={() => setEditing(null)} onSave={next => onSave(field, next)}
+                  canReferenceEnv={canReferenceEnv} refused={envRefused === field.name} />
               ) : null}
             </div>
           )
@@ -422,12 +457,20 @@ function FeatureFields({ scope, feature, level, detail, row, editing, setEditing
   )
 }
 
-function FieldEditor({ field, busy, onCancel, onSave }: { field: FeatureFieldRow; busy: boolean; onCancel: () => void; onSave: (value: unknown) => void }) {
+function FieldEditor({ field, busy, onCancel, onSave, canReferenceEnv, refused }: {
+  field: FeatureFieldRow; busy: boolean; onCancel: () => void; onSave: (value: unknown) => void
+  /** Global ops.env.write: the Host accepts environment references from this identity. */
+  canReferenceEnv: boolean
+  /** The Host refused the last save of this field (400 `environment-reference`). */
+  refused: boolean
+}) {
   const i18n = useI18n()
   const [draft, setDraft] = useState<unknown>(() => overrideDraftSeed(field))
   const [invalid, setInvalid] = useState<ReadonlySet<string>>(new Set())
   const [drafts] = useState<SchemaEditorDrafts>(() => ({ json: new Map(), unions: new Map(), originals: new Map() }))
   const schema = useMemo(() => jsonSchemaToField(field.schema), [field.schema])
+  // The Host refuses `${…}` / `env://` from identities without a global ops.env.write; say so before sending.
+  const referenceBlocked = !canReferenceEnv && containsEnvironmentReference(draft)
   return (
     <div className="console-feature-editor">
       <SchemaFieldEditor name={field.name} field={schema} value={draft} onChange={setDraft} path={`$/${field.name}`} drafts={drafts}
@@ -436,9 +479,14 @@ function FieldEditor({ field, busy, onCancel, onSave }: { field: FeatureFieldRow
           const next = new Set(previous); if (bad) next.add(path); else next.delete(path); return next
         })} />
       {draft === undefined ? <p className="console-feature-note">{i18n.t('填写一个值后才能保存覆盖。')}</p> : null}
+      {referenceBlocked || refused ? (
+        <p role="alert" className="console-feature-env-note">
+          {i18n.t('不能在这里引用环境变量；如需使用密钥，请在环境变量页配置')} <Link to={CONSOLE_PATHS.opsEnv}>{i18n.t('打开环境变量')}</Link>
+        </p>
+      ) : null}
       <div className="flex justify-end gap-2">
         <Button variant="ghost" size="sm" onClick={onCancel}><X />{i18n.t('取消')}</Button>
-        <Button size="sm" disabled={busy || draft === undefined || invalid.size > 0} onClick={() => onSave(draft)}><Save />{i18n.t('预览修改')}</Button>
+        <Button size="sm" disabled={busy || draft === undefined || invalid.size > 0 || referenceBlocked} onClick={() => onSave(draft)}><Save />{i18n.t('预览修改')}</Button>
       </div>
     </div>
   )

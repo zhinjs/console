@@ -14,3 +14,5 @@
 .console-chat-role-identity code { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--console-font-mono); font-size: var(--console-text-body-sm); }
 .console-chat-role-sub { display: block; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); }
 .console-chat-role-empty { padding: 0.75rem 1rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); }
+.console-chat-role-identity.is-redacted { color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); font-style: italic; }
+.console-chat-role-blocked { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 0.125rem; }

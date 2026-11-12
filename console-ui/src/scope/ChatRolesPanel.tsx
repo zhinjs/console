@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, RefreshCw, ShieldCheck, Trash2, UserRound } from 'lucide-react'
+import { EyeOff, Plus, RefreshCw, ShieldCheck, Trash2, UserRound } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
@@ -13,12 +13,14 @@ import { StatusState } from '../components/StatusState'
 import { ActionReceipt, useActionReceipt } from '../components/ActionReceipt'
 import { receiptBlocksActions, type ReceiptPlan } from '../components/action-receipt-model.mjs'
 import { requestConsole } from '../utils/console-rpc'
+import { useConsoleAccess } from '../hooks/use-console-access'
+import { hasConsolePermission } from '../utils/console-access.mjs'
 import { statusFromError, type StatusReading } from '../components/status-state-model.mjs'
 import { ObjectSection } from './ObjectPageLayout'
 import {
-  CHAT_ROLE_LABELS, CHAT_ROLES,
-  chatRoleApplied, chatRoleGrantRequest, chatRoleRevokeRequest, chatRoleRows, chatRolesListRequest,
-  readChatRoleChange, readChatRoles,
+  CHAT_ROLE_COPY, CHAT_ROLE_LABELS, CHAT_ROLES,
+  chatRoleApplied, chatRoleGrantRequest, chatRoleNeedsGlobalManage, chatRoleRefusal, chatRoleRevokeRequest, chatRoleRows, chatRolesListRequest,
+  grantableChatRoles, readChatRoleChange, readChatRoles,
   type ChatRole, type ChatRoleEntry, type ChatRoleRow,
 } from './chat-roles-model.mjs'
 import { SCOPE_LEVEL_LABELS, parseScopeKey, scopeHref, scopeKey, type Scope } from './scope-tree.mjs'
@@ -50,14 +52,17 @@ function useChatRoles(scope: Scope) {
 
 const ROLE_BADGE: Record<ChatRole, 'warning' | 'info' | 'outline'> = { owner: 'warning', admin: 'info', trusted: 'outline' }
 
-function RoleTable({ rows, label, busy, onRevoke, inheritedFrom }: {
+function RoleTable({ rows, label, busy, globalManage, onRevoke, inheritedFrom }: {
   rows: readonly ChatRoleRow[]
   label: string
   busy: boolean
+  /** Global `iam.manage`: needed to revoke an owner grant at any level. */
+  globalManage: boolean
   onRevoke: (row: ChatRoleRow) => void
   inheritedFrom: (row: ChatRoleRow) => string
 }) {
   const i18n = useI18n()
+  const idPrefix = useId()
   return (
     <Table aria-label={label} className="table-fixed">
       <TableHeader>
@@ -69,10 +74,16 @@ function RoleTable({ rows, label, busy, onRevoke, inheritedFrom }: {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {rows.map(row => (
+        {rows.map((row, index) => (
           <TableRow key={row.id}>
             <TableCell>
-              <span className="console-chat-role-identity">
+              {row.redacted ? (
+                // An inherited grant at a scope this identity does not manage: role and level only.
+                <span className="console-chat-role-identity is-redacted">
+                  <EyeOff aria-hidden="true" />
+                  <span className="min-w-0">{i18n.t(CHAT_ROLE_COPY.redacted)}</span>
+                </span>
+              ) : <span className="console-chat-role-identity">
                 <UserRound aria-hidden="true" />
                 <span className="min-w-0">
                   <code title={`${row.adapter} / ${row.userId}`}>{row.adapter} / {row.userId}</code>
@@ -82,7 +93,7 @@ function RoleTable({ rows, label, busy, onRevoke, inheritedFrom }: {
                     </span>
                   ) : null}
                 </span>
-              </span>
+              </span>}
             </TableCell>
             <TableCell><Badge variant={ROLE_BADGE[row.role]} size="sm">{i18n.t(CHAT_ROLE_LABELS[row.role])}</Badge></TableCell>
             <TableCell className="max-md:hidden">
@@ -95,9 +106,15 @@ function RoleTable({ rows, label, busy, onRevoke, inheritedFrom }: {
               </span>
             </TableCell>
             <TableCell className="text-right">
-              {row.revocable ? (
-                <Button variant="ghost" size="sm" onClick={() => onRevoke(row)} disabled={busy} aria-label={i18n.t('撤销 {0}', [`${row.adapter} / ${row.userId}`])}><Trash2 />{i18n.t('撤销')}</Button>
-              ) : <span className="text-xs text-muted-foreground">{i18n.t('在上级撤销')}</span>}
+              {row.redacted ? <span className="text-xs text-muted-foreground">{i18n.t('不可操作')}</span>
+                : row.revocable && chatRoleNeedsGlobalManage(row.role) && !globalManage ? (
+                  <span className="console-chat-role-blocked">
+                    <Button variant="ghost" size="sm" disabled title={i18n.t(CHAT_ROLE_COPY.ownerNeedsGlobal)} aria-describedby={`${idPrefix}-blocked-${index}`}><Trash2 />{i18n.t('撤销')}</Button>
+                    <span id={`${idPrefix}-blocked-${index}`} className="console-chat-role-sub">{i18n.t('需要全局 iam.manage')}</span>
+                  </span>
+                ) : row.revocable ? (
+                  <Button variant="ghost" size="sm" onClick={() => onRevoke(row)} disabled={busy} aria-label={i18n.t('撤销 {0}', [`${row.adapter} / ${row.userId}`])}><Trash2 />{i18n.t('撤销')}</Button>
+                ) : <span className="text-xs text-muted-foreground">{i18n.t('在上级撤销')}</span>}
             </TableCell>
           </TableRow>
         ))}
@@ -119,6 +136,10 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
   const i18n = useI18n()
   const key = scopeKey(scope)
   const roles = useChatRoles(scope)
+  const access = useConsoleAccess()
+  // Owner grants need a global iam.manage whatever the scope (ADR 0056 §3); a scoped binding is not enough.
+  const globalManage = hasConsolePermission('iam.manage', access)
+  const offered = grantableChatRoles(globalManage)
   const [userId, setUserId] = useState('')
   const [platform, setPlatform] = useState('')
   const [role, setRole] = useState<ChatRole>('admin')
@@ -133,7 +154,14 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
       const request = target.action === 'grant'
         ? chatRoleGrantRequest(scope, { adapter: target.adapter, userId: target.userId, role: target.role! })
         : chatRoleRevokeRequest(scope, { adapter: target.adapter, userId: target.userId })
-      return readChatRoleChange(await requestConsole<unknown>(request))
+      try {
+        return readChatRoleChange(await requestConsole<unknown>(request))
+      } catch (error) {
+        // A certain refusal shows its reason in the receipt (未执行); anything else stays 结果未知.
+        const refusal = chatRoleRefusal(statusFromError(error))
+        if (!refusal) throw error
+        return { status: 'failed', message: refusal.code === 'unpersisted' ? i18n.t(CHAT_ROLE_COPY.unpersisted) : refusal.message }
+      }
     },
     verify: async plan => {
       const target = pendingRoleAction(plan)
@@ -154,7 +182,9 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
   const direct = rows.filter(row => row.relation === 'direct')
   const inherited = rows.filter(row => row.relation !== 'direct')
   const counts = CHAT_ROLES.map(item => ({ role: item, count: rows.filter(row => row.role === item && row.relation !== 'below').length }))
+  const grantRole: ChatRole = offered.includes(role) ? role : 'admin'
   const prepareGrant = () => {
+    const role = grantRole
     const adapter = alias ?? platform.trim()
     try {
       chatRoleGrantRequest(scope, { adapter, userId, role })
@@ -166,12 +196,14 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
     receipt.prepare({
       payload: { action: 'grant', adapter, userId: userId.trim(), role } satisfies PendingRoleAction,
       title: i18n.t('授予 {0}：{1} / {2}', [i18n.t(CHAT_ROLE_LABELS[role]), adapter, userId.trim()]),
-      summary: i18n.t('在这一层及其下所有范围生效。授予者需要不低于该角色的权限。'),
+      summary: i18n.t('在这一层及其下所有范围生效。不能授予或覆盖与你同级或更高的角色；Host 拒绝时这里显示原因。'),
       confirmLabel: i18n.t('授予'),
       danger: role === 'owner',
     })
   }
   const prepareRevoke = (row: ChatRoleRow) => {
+    // Redacted rows have no identity and are never revocable.
+    if (!row.revocable || row.adapter === undefined || row.userId === undefined) return
     receipt.prepare({
       payload: { action: 'revoke', adapter: row.adapter, userId: row.userId } satisfies PendingRoleAction,
       title: i18n.t('撤销 {0}：{1} / {2}', [i18n.t(CHAT_ROLE_LABELS[row.role]), row.adapter, row.userId]),
@@ -212,13 +244,13 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
             </div>
             <Card className="overflow-hidden p-0">
               <h3 className="console-chat-role-card-title">{i18n.t('在这一层授予')}<span>{direct.length}</span></h3>
-              {direct.length ? <RoleTable rows={direct} label={i18n.t('在这一层授予')} busy={busy} onRevoke={prepareRevoke} inheritedFrom={inheritedFrom} />
+              {direct.length ? <RoleTable rows={direct} label={i18n.t('在这一层授予')} busy={busy} globalManage={globalManage} onRevoke={prepareRevoke} inheritedFrom={inheritedFrom} />
                 : <p className="console-chat-role-empty">{i18n.t('这一层没有直接授予的角色。')}</p>}
             </Card>
             {inherited.length ? (
               <Card className="overflow-hidden p-0">
                 <h3 className="console-chat-role-card-title">{i18n.t('从上级继承')}<span>{inherited.length}</span></h3>
-                <RoleTable rows={inherited} label={i18n.t('从上级继承')} busy={busy} onRevoke={prepareRevoke} inheritedFrom={inheritedFrom} />
+                <RoleTable rows={inherited} label={i18n.t('从上级继承')} busy={busy} globalManage={globalManage} onRevoke={prepareRevoke} inheritedFrom={inheritedFrom} />
               </Card>
             ) : null}
           </>
@@ -238,11 +270,12 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
           </label>
           <div className="grid gap-1 text-sm">
             <span className="text-muted-foreground">{i18n.t('角色')}</span>
-            <SelectField aria-label={i18n.t('角色')} value={role} onValueChange={value => setRole(value as ChatRole)}
-              options={CHAT_ROLES.map(value => ({ value, label: i18n.t(CHAT_ROLE_LABELS[value]) }))} />
+            <SelectField aria-label={i18n.t('角色')} value={grantRole} onValueChange={value => setRole(value as ChatRole)}
+              options={offered.map(value => ({ value, label: i18n.t(CHAT_ROLE_LABELS[value]) }))} />
           </div>
           <Button onClick={prepareGrant} disabled={busy || !userId.trim() || (!alias && !platform.trim())}><Plus />{i18n.t('授予')}</Button>
         </Card>
+        {!globalManage ? <p className="text-xs text-muted-foreground">{i18n.t('授予或撤销所有者需要全局 iam.manage 权限；当前身份可以授予管理员和受信任。')}</p> : null}
         {formError ? <p role="alert" className="text-sm text-destructive">{i18n.t('无法授予：{0}', [formError])}</p> : null}
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />{i18n.t('聊天角色只影响机器人在聊天里的权限，不影响 Console 登录与权限。')}</p>
       </ObjectSection>

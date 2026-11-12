@@ -235,6 +235,7 @@ export function readFeatureDetail(payload) {
     enabled: payload.enabled !== false,
     ...(readLock(payload.lockedBy) ? { lockedBy: readLock(payload.lockedBy) } : {}),
     ...(stringList(payload.conversationFields) ? { conversationFields: stringList(payload.conversationFields) } : {}),
+    ...(typeof payload.persistent === 'boolean' ? { persistent: payload.persistent } : {}),
   }
 }
 
@@ -337,8 +338,23 @@ export function readFeatureWriteResult(payload) {
     restartRequired: payload.restartRequired === true,
     warnings: Array.isArray(payload.warnings) ? payload.warnings.filter(isRecord).map(item => ({ code: String(item.code ?? ''), path: String(item.path ?? ''), message: String(item.message ?? '') })) : [],
     errors: Array.isArray(payload.errors) ? payload.errors.filter(isRecord).map(item => ({ path: String(item.path ?? ''), message: String(item.message ?? '') })) : [],
+    ...(typeof payload.persistent === 'boolean' ? { persistent: payload.persistent } : {}),
   }
 }
+
+/**
+ * True when a value (keys included) holds a `${…}` or `env://` reference anywhere — what
+ * `feature.set-override` refuses (400 `environment-reference`) unless the principal holds a global
+ * `ops.env.write` (mirror of the Host's `containsEnvironmentReference`).
+ */
+export function containsEnvironmentReference(value, depth = 0) {
+  if (depth > 32) return true
+  if (typeof value === 'string') return value.includes('${') || /env:\/\//iu.test(value)
+  if (Array.isArray(value)) return value.some(item => containsEnvironmentReference(item, depth + 1))
+  if (isRecord(value)) return Object.entries(value).some(([key, item]) => containsEnvironmentReference(key, depth + 1) || containsEnvironmentReference(item, depth + 1))
+  return false
+}
+
 
 /** Whether a cell's switch can be operated: locked cells and missing permission cannot. */
 export function cellToggleable(cell, canToggle) {
@@ -471,6 +487,7 @@ export function readConversationPage(payload) {
     items: payload.conversations.map(readConversationItem).filter(Boolean),
     ...(typeof payload.nextCursor === 'string' && payload.nextCursor ? { cursor: payload.nextCursor } : {}),
     recentAvailable: payload.recentAvailable === true,
+    ...(typeof payload.persistent === 'boolean' ? { persistent: payload.persistent } : {}),
   }
 }
 
@@ -478,7 +495,8 @@ export function readConversationPage(payload) {
 export function appendConversationPage(previous, page) {
   const byKey = new Map((previous?.items ?? []).map(item => [item.key, item]))
   for (const item of page.items) byKey.set(item.key, item)
-  return { items: [...byKey.values()], ...(page.cursor ? { cursor: page.cursor } : {}), recentAvailable: page.recentAvailable === true }
+  return { items: [...byKey.values()], ...(page.cursor ? { cursor: page.cursor } : {}), recentAvailable: page.recentAvailable === true,
+    ...(typeof page.persistent === 'boolean' ? { persistent: page.persistent } : {}) }
 }
 
 /** The "only with overrides" filter. */

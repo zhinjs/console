@@ -2,7 +2,9 @@ import { translate } from '../i18n/locale.mjs'
 import { targetDraftIssue } from '../components/PluginConfigForm/conversation-scope-model.mjs'
 
 const outcomes = new Set(['match', 'mismatch', 'unknown', 'not_evaluated'])
-const kinds = new Set(['adapter', 'group', 'private', 'channel', 'user', 'role', 'platform', 'unknown'])
+/** `PermitKind` of `@zhin.js/permission` (ADR 0056 §5), plus `unknown` for a rule the Host cannot parse. */
+const kinds = new Set(['adapter', 'group', 'private', 'channel', 'user', 'role',
+  'platform', 'platform-role', 'platform-permission', 'bot', 'bot-role', 'bot-permission', 'unknown'])
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value)
 const text = value => typeof value === 'string'
 const strings = value => Array.isArray(value) && value.every(text)
@@ -81,6 +83,40 @@ export function readPermissionExplanation(body, requested, locale = 'zh-CN') {
   return { generation: data.generation, simulation: true, command: selected, target: data.target, sender: data.sender,
     permissionHost: data.permissionHost, adapter: result(data.adapter, locale), rules, summary: result(data.summary, locale),
     unconstrained: [...data.unconstrained], assumptions: [...data.assumptions] }
+}
+
+const ROLE_LABELS = Object.freeze({ owner: '所有者', admin: '管理员', trusted: '受信任' })
+const STANDING_LABELS = Object.freeze({ owner: '群主', admin: '管理员' })
+const LEVEL_NOTES = Object.freeze({ global: '须在全局授予', adapter: '须在适配器层或更高层授予', endpoint: '须在账号层或更高层授予', conversation: '在当前会话链上任一层授予' })
+
+/** `owner` / `owner@global` → 「所有者（须在全局授予）」; the bare role keeps no level note. */
+function roleRequirementLabel(value, locale) {
+  const at = value.indexOf('@')
+  const role = at < 0 ? value : value.slice(0, at)
+  const level = at < 0 ? null : value.slice(at + 1)
+  if (!Object.hasOwn(ROLE_LABELS, role) || (level !== null && !Object.hasOwn(LEVEL_NOTES, level))) return value
+  const name = translate(locale, ROLE_LABELS[role])
+  return level === null ? name : translate(locale, '{0}（{1}）', [name, translate(locale, LEVEL_NOTES[level])])
+}
+
+/**
+ * What a permit rule asks for, in words, for the dimensions that are easy to misread: zhin chat
+ * roles (with the `<角色>@<层级>` form), the sender's platform standing and the bot account's own
+ * standing (`bot:*`). Null for session conditions (`group()` …), whose code reads plainly.
+ */
+export function permitRuleMeaning(rule, locale = 'zh-CN') {
+  const values = Array.isArray(rule?.values) ? rule.values.filter(text) : []
+  const list = values.join(translate(locale, '、'))
+  switch (rule?.kind) {
+    case 'role': return values.length ? translate(locale, 'zhin 聊天角色：{0}', [values.map(value => roleRequirementLabel(value, locale)).join(translate(locale, ' 或 '))]) : null
+    case 'platform': return translate(locale, '发送者的平台身份：{0}', [Object.hasOwn(STANDING_LABELS, values[0]) ? translate(locale, STANDING_LABELS[values[0]]) : list])
+    case 'platform-role': return translate(locale, '发送者的平台角色：{0}', [list])
+    case 'platform-permission': return translate(locale, '发送者的平台权限：{0}', [list])
+    case 'bot': return translate(locale, '机器人账号在本会话的平台身份：{0}', [Object.hasOwn(STANDING_LABELS, values[0]) ? translate(locale, STANDING_LABELS[values[0]]) : list])
+    case 'bot-role': return translate(locale, '机器人账号在本会话的平台角色：{0}', [list])
+    case 'bot-permission': return translate(locale, '机器人账号在本会话的平台权限：{0}', [list])
+    default: return null
+  }
 }
 
 export function permissionOutcomeLabel(outcome, locale = 'zh-CN') {

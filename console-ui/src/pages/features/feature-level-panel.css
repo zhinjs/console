@@ -91,3 +91,6 @@
   .console-feature-field-actions { grid-column: 1 / -1; justify-content: flex-start; }
 }
 @media (min-width: 768px) and (max-width: 1023px) { .console-feature-search { width: min(100%, 16rem); } }
+.console-feature-lock { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.5rem; min-width: 0; }
+.console-feature-env-note { color: hsl(var(--warning)); font-size: var(--console-text-body-sm); }
+.console-feature-env-note a { text-decoration: underline; text-underline-offset: 2px; }

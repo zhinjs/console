@@ -6,8 +6,12 @@ export type ChatRoleSource = 'grant'
 export interface ChatRoleEntry {
   readonly level: ScopeLevel
   readonly key: string
-  readonly adapter: string
-  readonly userId: string
+  /** Absent on a `redacted` entry. */
+  readonly adapter?: string
+  /** Absent on a `redacted` entry. */
+  readonly userId?: string
+  /** A scope the caller does not manage: role and level only (上级授予，身份不显示). */
+  readonly redacted?: true
   readonly role: ChatRole
   readonly source: ChatRoleSource
   readonly grantedBy?: string
@@ -35,3 +39,7 @@ export function chatRoleGrantRequest(scope: ScopeRef, input: { adapter?: string;
 export function chatRoleRevokeRequest(scope: ScopeRef, input: { adapter: string; userId: string }): { type: 'chat-roles.revoke'; level: ScopeLevel; key?: string; adapter: string; userId: string }
 export function readChatRoleChange(payload: unknown): { status: 'saved' | 'unchanged' }
 export function chatRoleApplied(entries: readonly ChatRoleEntry[], scope: ScopeRef, target: { adapter: string; userId: string; role?: ChatRole }, action: 'grant' | 'revoke'): boolean
+export function chatRoleNeedsGlobalManage(role: ChatRole): boolean
+export function grantableChatRoles(globalManage: boolean): ChatRole[]
+export const CHAT_ROLE_COPY: Readonly<{ unpersisted: string; ownerNeedsGlobal: string; redacted: string }>
+export function chatRoleRefusal(classified: { kind?: string; message?: string; serverCode?: string } | null | undefined): { code: 'unpersisted' } | { code: 'refused'; message: string } | null

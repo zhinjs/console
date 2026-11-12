@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { readPermissionCatalog, readPermissionExplanation, permissionRequest, permissionOutcomeLabel } from '../console-ui/src/pages/permission-explanation-model.mjs'
+import { readPermissionCatalog, readPermissionExplanation, permissionRequest, permissionOutcomeLabel, permitRuleMeaning } from '../console-ui/src/pages/permission-explanation-model.mjs'
 
 const selected = { id: 'root/demo\0zhin.command\0status', owner: 'root/demo', name: 'status', description: '状态', permits: ['group()', 'role(admin)', 'platform(qq,admin)'] }
 const target = { endpoint: { adapter: 'qq', id: 'root/qq\0zhin.adapter\0qq~first' }, kind: 'group', id: 'room', parent: { kind: 'channel', id: 'guild' }, threadId: 'topic' }
@@ -94,4 +94,30 @@ test('consumes actual authenticated Host DTOs without upgrading unknown or skipp
   assert.equal(fixtures.admin.data.summary.outcome, 'match')
   assert.equal(fixtures.unknownRole.data.rules.find(rule => rule.kind === 'role').outcome, 'unknown')
   assert.equal(fixtures.platform.data.rules[0].outcome, 'not_evaluated')
+})
+
+test('level-qualified roles and bot / platform permits are read and described', () => {
+  const permits = ['owner@global', 'role(admin@adapter,trusted)', 'bot:admin', 'bot-role:mod', 'bot-permission:kick', 'platform:owner', 'platform-role:helper', 'platform-permission:mute']
+  const kinds = ['role', 'role', 'bot', 'bot-role', 'bot-permission', 'platform', 'platform-role', 'platform-permission']
+  const values = [['owner@global'], ['admin@adapter', 'trusted'], ['admin'], ['mod'], ['kick'], ['owner'], ['helper'], ['mute']]
+  const command = { ...selected, permits }
+  const body = response()
+  body.data.command = command
+  body.data.rules = permits.map((rule, index) => ({ index, rule, kind: kinds[index], values: values[index], outcome: 'unknown', reason: '缺少依据' }))
+  const explanation = readPermissionExplanation(body, { ...request, commandId: command.id })
+  assert.deepEqual(explanation.rules.map(rule => rule.kind), kinds)
+  assert.equal(permitRuleMeaning(explanation.rules[0]), 'zhin 聊天角色：所有者（须在全局授予）')
+  assert.equal(permitRuleMeaning(explanation.rules[1]), 'zhin 聊天角色：管理员（须在适配器层或更高层授予） 或 受信任')
+  assert.equal(permitRuleMeaning(explanation.rules[2]), '机器人账号在本会话的平台身份：管理员')
+  assert.equal(permitRuleMeaning(explanation.rules[3]), '机器人账号在本会话的平台角色：mod')
+  assert.equal(permitRuleMeaning(explanation.rules[4]), '机器人账号在本会话的平台权限：kick')
+  assert.equal(permitRuleMeaning(explanation.rules[5]), '发送者的平台身份：群主')
+  assert.equal(permitRuleMeaning(explanation.rules[6]), '发送者的平台角色：helper')
+  assert.equal(permitRuleMeaning(explanation.rules[7]), '发送者的平台权限：mute')
+  assert.equal(permitRuleMeaning(explanation.rules[0], 'en'), 'zhin chat role: Owner (granted globally)')
+  assert.equal(permitRuleMeaning(explanation.rules[2], 'en'), "Bot account's own platform standing in this conversation: Administrator")
+  assert.equal(permitRuleMeaning({ kind: 'group', values: [''] }), null)
+  assert.equal(permitRuleMeaning({ kind: 'role', values: ['admin'] }), 'zhin 聊天角色：管理员')
+  const unknownKind = response(); unknownKind.data.rules[0].kind = 'mystery'
+  assert.throws(() => readPermissionExplanation(unknownKind, request), /响应无效/)
 })

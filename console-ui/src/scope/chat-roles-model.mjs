@@ -33,9 +33,12 @@ export function chatRolesListRequest(scope, { descendants = false } = {}) {
 function readEntry(item) {
   if (!item || typeof item !== 'object') return null
   const { level, key, adapter, userId, role, source } = item
-  if (!SCOPE_LEVELS.includes(level) || typeof key !== 'string' || typeof adapter !== 'string' || !adapter || typeof userId !== 'string' || !userId) return null
+  if (!SCOPE_LEVELS.includes(level) || typeof key !== 'string') return null
   if (!CHAT_ROLES.includes(role) || !CHAT_ROLE_SOURCES.includes(source)) return null
   if (level === 'global' ? key !== '' : parseScopeKey(key)?.level !== level) return null
+  // A scope the caller does not manage (inherited from above): role and level only, no identity.
+  if (item.redacted === true) return Object.freeze({ level, key, role, source, redacted: true })
+  if (typeof adapter !== 'string' || !adapter || typeof userId !== 'string' || !userId) return null
   return Object.freeze({
     level, key, adapter, userId, role, source,
     ...(typeof item.grantedBy === 'string' && item.grantedBy ? { grantedBy: item.grantedBy } : {}),
@@ -53,17 +56,24 @@ export function readChatRoles(payload) {
 /**
  * Rows for one scope's 角色 tab: `relation` is `direct` (held at this scope), `inherited` (held
  * above, effective here) or `below` (held under this scope; only with `descendants`). Sorted by
- * relation, then role (owner first), then identity. `revocable`: only a stored grant at this scope.
+ * relation, then role (owner first), then identity (redacted rows last). `revocable`: only a stored
+ * grant at this scope whose identity is shown; a `redacted` row (上级授予，身份不显示) never is.
  */
 export function chatRoleRows(entries, scope) {
   const key = scopeKey(scope)
   const chain = new Set(scopeChain(scope).map(item => scopeKey(item)))
   const order = { direct: 0, inherited: 1, below: 2 }
+  const seen = new Map()
   return entries.map(entry => {
     const relation = entry.key === key ? 'direct' : chain.has(entry.key) ? 'inherited' : 'below'
-    return { ...entry, relation, revocable: relation === 'direct' && entry.source === 'grant', id: `${entry.level}\u0000${entry.key}\u0000${entry.adapter}\u0000${entry.userId}\u0000${entry.source}` }
+    const base = entry.redacted ? `${entry.level}\u0000${entry.key}\u0000\u0000${entry.role}` : `${entry.level}\u0000${entry.key}\u0000${entry.adapter}\u0000${entry.userId}`
+    const count = seen.get(base) ?? 0
+    seen.set(base, count + 1)
+    const id = `${base}\u0000${entry.source}${entry.redacted ? `\u0000redacted:${count}` : ''}`
+    return { ...entry, relation, revocable: !entry.redacted && relation === 'direct' && entry.source === 'grant', id }
   }).sort((a, b) => order[a.relation] - order[b.relation] || rank(a.role) - rank(b.role)
-    || a.adapter.localeCompare(b.adapter) || a.userId.localeCompare(b.userId))
+    || Number(Boolean(a.redacted)) - Number(Boolean(b.redacted))
+    || (a.adapter ?? '').localeCompare(b.adapter ?? '') || (a.userId ?? '').localeCompare(b.userId ?? ''))
 }
 
 /** The highest role an identity holds at the scope (its own and inherited entries), or null. */
@@ -71,7 +81,7 @@ export function effectiveChatRole(entries, scope, adapter, userId) {
   const chain = new Set(scopeChain(scope).map(item => scopeKey(item)))
   let best = null
   for (const entry of entries) {
-    if (!chain.has(entry.key) || entry.adapter !== adapter || entry.userId !== userId) continue
+    if (entry.redacted || !chain.has(entry.key) || entry.adapter !== adapter || entry.userId !== userId) continue
     if (best === null || rank(entry.role) < rank(best)) best = entry.role
   }
   return best
@@ -116,6 +126,44 @@ export function readChatRoleChange(payload) {
 /** Read-only check after an unknown outcome: whether the grant is (or is no longer) stored here. */
 export function chatRoleApplied(entries, scope, { adapter, userId, role }, action) {
   const key = scopeKey(scope)
-  const stored = entries.find(entry => entry.key === key && entry.source === 'grant' && entry.adapter === adapter && entry.userId === userId)
+  const stored = entries.find(entry => !entry.redacted && entry.key === key && entry.source === 'grant' && entry.adapter === adapter && entry.userId === userId)
   return action === 'revoke' ? !stored : stored?.role === role
+}
+
+/**
+ * Granting / revoking `owner` — or replacing / removing an existing owner grant — needs a **global**
+ * `iam.manage` binding whatever the scope (ADR 0056 §3); `admin` / `trusted` need it at the scope.
+ */
+export function chatRoleNeedsGlobalManage(role) {
+  return role === 'owner'
+}
+
+/** Roles the grant form offers: `owner` only with a global `iam.manage`. */
+export function grantableChatRoles(globalManage) {
+  return CHAT_ROLES.filter(role => globalManage || !chatRoleNeedsGlobalManage(role))
+}
+
+/** Authored copy (displayed through i18n). */
+export const CHAT_ROLE_COPY = Object.freeze({
+  unpersisted: '当前数据库不支持持久化角色，未保存',
+  ownerNeedsGlobal: '授予或撤销所有者需要全局 iam.manage 权限',
+  redacted: '上级授予（身份不显示）',
+})
+
+/**
+ * A grant / revoke the Host certainly refused, as the reason the receipt shows; null for anything
+ * else (an unknown outcome stays 结果未知 and is only re-read). `classified` is `statusFromError`.
+ * - 503 `chat-roles-unpersisted`: the project database cannot store grants, nothing was saved.
+ * - 403 / 400 with the Host's own sentence (owner needs global iam.manage, cannot grant above or
+ *   equal to your own role, wrong adapter …): that sentence is the answer.
+ */
+export function chatRoleRefusal(classified) {
+  if (!classified || typeof classified !== 'object') return null
+  if (classified.serverCode === 'chat-roles-unpersisted') return { code: 'unpersisted' }
+  if (classified.serverCode) return null
+  if ((classified.kind === 'forbidden' || classified.kind === 'error') && typeof classified.message === 'string' && classified.message.trim()
+    && !/^(?:REST request failed|HTTP \d+)$/u.test(classified.message.trim())) {
+    return { code: 'refused', message: classified.message.trim() }
+  }
+  return null
 }

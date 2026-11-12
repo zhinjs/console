@@ -54,7 +54,8 @@ export function receiptCanSubmit(receipt) {
  * Normalises what `submit` resolved with:
  * - nothing / `{ status: 'saved' | 'succeeded' | 'unchanged' }` → succeeded
  * - `{ status: 'partial', items }` or items with a failure → partial
- * - `{ status: 'conflict' | 'invalid' | 'failed', message }` → failed (the Host did not apply it)
+ * - `{ status: 'conflict' | 'invalid' | 'failed', message, reason? }` → failed (the Host did not apply it);
+ *   `reason` is the page's own refusal tag (e.g. `environment-reference`) so it can react in place
  * `items` are `{ label, ok, message? }`.
  */
 export function readSubmitResult(value) {
@@ -65,7 +66,8 @@ export function readSubmitResult(value) {
   const message = typeof record.message === 'string' ? record.message : undefined
   const status = typeof record.status === 'string' ? record.status : undefined
   if (status === 'conflict' || status === 'invalid' || status === 'failed') {
-    return { phase: 'failed', status: { kind: status === 'conflict' ? 'conflict' : 'error', message: message ?? status }, items }
+    const reason = typeof record.reason === 'string' && record.reason ? record.reason : undefined
+    return { phase: 'failed', status: { kind: status === 'conflict' ? 'conflict' : 'error', message: message ?? status, ...(reason ? { reason } : {}) }, items }
   }
   if (status === 'unknown') return { phase: 'unknown', items, ...(message ? { message } : {}) }
   const failedItems = items.filter(item => !item.ok)

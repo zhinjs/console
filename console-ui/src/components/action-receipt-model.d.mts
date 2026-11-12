@@ -24,7 +24,7 @@ export interface ActionReceiptState {
   readonly phase: ReceiptPhase
   readonly plan?: ReceiptPlan
   readonly items?: readonly ReceiptItem[]
-  readonly status?: Partial<StatusReading> & { readonly kind: StatusReading['kind']; readonly message: string }
+  readonly status?: Partial<StatusReading> & { readonly kind: StatusReading['kind']; readonly message: string; readonly reason?: string }
   readonly message?: string
   readonly unchanged?: boolean
   readonly verified?: boolean
