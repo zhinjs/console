@@ -1,20 +1,17 @@
 /**
  * Chat roles (ADR 0056): `owner` ⊃ `admin` ⊃ `trusted`, held by a platform identity
- * `(adapter alias, userId)` at one scope of the four-level chain. Mirrors
- * `@zhin.js/console-protocol` chat-roles.ts until the package is published.
+ * `(adapter alias, userId)` at one scope of the four-level chain. RPC names and roles come from
+ * the protocol mirror (`contracts/console-protocol-mirror.mjs`).
  */
 import { SCOPE_LEVELS, parseScopeKey, scopeChain, scopeKey } from './scope-tree.mjs'
+import { CHAT_ROLES_RPC, CHAT_ROLES_RPC_PERMISSIONS, CONSOLE_CHAT_ROLES } from '../contracts/console-protocol-mirror.mjs'
 
-export const CHAT_ROLES_RPC = Object.freeze({
-  LIST: 'chat-roles.list',
-  GRANT: 'chat-roles.grant',
-  REVOKE: 'chat-roles.revoke',
-})
+export { CHAT_ROLES_RPC }
 
 /** Every `chat-roles.*` RPC needs `iam.manage` (scoped bindings count for scopes under them). */
-export const CHAT_ROLES_PERMISSION = 'iam.manage'
+export const CHAT_ROLES_PERMISSION = CHAT_ROLES_RPC_PERMISSIONS[CHAT_ROLES_RPC.LIST]
 
-export const CHAT_ROLES = Object.freeze(['owner', 'admin', 'trusted'])
+export const CHAT_ROLES = CONSOLE_CHAT_ROLES
 export const CHAT_ROLE_SOURCES = Object.freeze(['grant', 'config', 'mapping'])
 
 /** Authored labels (displayed through i18n). */

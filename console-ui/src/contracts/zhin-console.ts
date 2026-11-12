@@ -25,17 +25,8 @@ export const CONSOLE_RPC = {
   CRON_RESUME: 'cron:resume',
 } as const
 
-/** Layered feature configuration (ADR 0050 §8). Older Hosts answer "Unknown RPC type". */
-export const FEATURE_RPC = {
-  LIST: 'feature.list',
-  MATRIX: 'feature.matrix',
-  GET: 'feature.get',
-  SET_OVERRIDE: 'feature.set-override',
-  REMOVE_OVERRIDE: 'feature.remove-override',
-  SET_ENABLED: 'feature.set-enabled',
-  /** ADR 0055: conversations with overrides, paginated. */
-  CONVERSATIONS: 'feature.conversations',
-} as const
+/** Layered feature configuration (ADR 0050 §8 / ADR 0055). Older Hosts answer "Unknown RPC type". */
+export { FEATURE_RPC } from './console-protocol-mirror.mjs'
 
 export const CONSOLE_REST = {
   SYSTEM_STATUS: '/api/system/status',

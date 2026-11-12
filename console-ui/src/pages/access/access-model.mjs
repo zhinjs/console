@@ -1,29 +1,17 @@
 /**
  * 访问控制区（ADR 0049）的纯数据与校验。
  *
- * Mirrors `@zhin.js/console-protocol` (`CONSOLE_PERMISSIONS`, `IAM_RPC`, binding scopes) and the
- * Host's `iam.*` reply shapes (`packages/host/gateway/src/iam/{rpc,service}.ts` in zhinjs/zhin).
- * The protocol version that carries them is not published yet; replace these mirrors with the
- * package exports once it is. Readers here tolerate missing fields and never invent data.
+ * Protocol constants (`IAM_RPC`, the permission catalog, scoped permissions) come from
+ * `contracts/console-protocol-mirror.mjs`; reply readers follow the Host's `iam.*` shapes
+ * (`packages/host/gateway/src/iam/{rpc,service}.ts` in zhinjs/zhin). Readers tolerate missing
+ * fields and never invent data.
  */
 
-export const IAM_RPC = Object.freeze({
-  USERS_LIST: 'iam.users.list',
-  USERS_CREATE: 'iam.users.create',
-  USERS_UPDATE: 'iam.users.update',
-  USERS_DISABLE: 'iam.users.disable',
-  USERS_DELETE: 'iam.users.delete',
-  USERS_RESET_PASSWORD: 'iam.users.reset-password',
-  ROLES_LIST: 'iam.roles.list',
-  ROLES_CREATE: 'iam.roles.create',
-  ROLES_UPDATE: 'iam.roles.update',
-  ROLES_DELETE: 'iam.roles.delete',
-  BINDINGS_SET: 'iam.bindings.set',
-  TOKENS_LIST: 'iam.tokens.list',
-  TOKENS_CREATE: 'iam.tokens.create',
-  TOKENS_REVOKE: 'iam.tokens.revoke',
-  AUDIT_LIST: 'iam.audit.list',
-})
+import {
+  CONSOLE_BUILTIN_ROLE_NAMES, CONSOLE_PERMISSION_LIST as PROTOCOL_PERMISSION_LIST, CONSOLE_SCOPED_PERMISSIONS, IAM_RPC,
+} from '../../contracts/console-protocol-mirror.mjs'
+
+export { IAM_RPC }
 
 export const IAM_VIEW = 'iam.view'
 export const IAM_MANAGE = 'iam.manage'
@@ -33,7 +21,7 @@ export const PERMISSION_AREAS = Object.freeze([
   Object.freeze({ id: 'status', permissions: Object.freeze(['status.view']) }),
   Object.freeze({ id: 'endpoint', permissions: Object.freeze(['endpoint.view', 'endpoint.operate', 'endpoint.manage']) }),
   Object.freeze({ id: 'feature', permissions: Object.freeze(['feature.view', 'feature.configure', 'feature.toggle']) }),
-  Object.freeze({ id: 'plugin', permissions: Object.freeze(['plugin.manage']) }),
+  Object.freeze({ id: 'plugin', permissions: Object.freeze(['plugin.manage', 'plugin.perms.read', 'plugin.perms.operate', 'plugin.perms.manage']) }),
   Object.freeze({ id: 'agent', permissions: Object.freeze(['agent.view', 'agent.configure']) }),
   Object.freeze({ id: 'ops', permissions: Object.freeze([
     'ops.config.read', 'ops.config.write', 'ops.env.read', 'ops.env.write', 'ops.database.read', 'ops.database.write',
@@ -43,17 +31,21 @@ export const PERMISSION_AREAS = Object.freeze([
   Object.freeze({ id: 'external', permissions: Object.freeze(['mcp.access', 'a2a.access']) }),
 ])
 
+/** Every catalog permission, in checklist order (the areas cover the protocol catalog exactly; tested). */
 export const CONSOLE_PERMISSION_LIST = Object.freeze(PERMISSION_AREAS.flatMap(area => area.permissions))
-const knownPermissions = new Set(CONSOLE_PERMISSION_LIST)
+const knownPermissions = new Set(PROTOCOL_PERMISSION_LIST)
 
 export function isConsolePermission(value) {
   return typeof value === 'string' && knownPermissions.has(value)
 }
 
-/** Permissions an adapter / endpoint binding can narrow; the rest only count at global scope. */
-export const SCOPED_PERMISSIONS = Object.freeze(['endpoint.view', 'endpoint.operate', 'endpoint.manage', 'feature.configure', 'feature.toggle'])
+/**
+ * Permissions an adapter / endpoint binding can narrow; the rest only count at global scope.
+ * `iam.manage` narrows to `chat-roles.*` of scopes under the binding (ADR 0056 §3).
+ */
+export const SCOPED_PERMISSIONS = CONSOLE_SCOPED_PERMISSIONS
 
-export const BUILTIN_ROLE_NAMES = Object.freeze(['owner', 'admin', 'operator', 'viewer'])
+export const BUILTIN_ROLE_NAMES = CONSOLE_BUILTIN_ROLE_NAMES
 export const OWNER_ROLE = 'owner'
 
 export function areaLabel(id, t) {
@@ -80,6 +72,9 @@ export function permissionLabel(permission, t) {
     'feature.configure': t('修改功能配置'),
     'feature.toggle': t('启用或禁用功能'),
     'plugin.manage': t('安装、更新、卸载插件'),
+    'plugin.perms.read': t('插件权限：读取级'),
+    'plugin.perms.operate': t('插件权限：操作级'),
+    'plugin.perms.manage': t('插件权限：管理级'),
     'agent.view': t('查看 AI 与 Agent 设置'),
     'agent.configure': t('修改 AI 与 Agent 设置'),
     'ops.config.read': t('读取配置文件'),

@@ -12,18 +12,14 @@ import { ROUTE_PERMISSIONS, buildNavigation } from '../console-ui/src/navigation
 import { CONSOLE_PATHS } from '../console-ui/src/console-routes.mjs'
 import { createConsoleAccess } from '../console-ui/src/utils/console-access.mjs'
 import { translate } from '../console-ui/src/i18n/locale.mjs'
+import { CONSOLE_PERMISSION_LIST as MIRROR_PERMISSION_LIST } from '../console-ui/src/contracts/console-protocol-mirror.mjs'
 
 const zh = (message, values) => translate('zh-CN', message, values)
 const en = (message, values) => translate('en', message, values)
 const read = path => readFileSync(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')
 
-// zhinjs/zhin packages/console/protocol/src/permissions.ts (CONSOLE_PERMISSIONS, IAM_RPC) at ADR 0049.
-const PROTOCOL_PERMISSIONS = [
-  'status.view', 'endpoint.view', 'endpoint.operate', 'endpoint.manage', 'feature.view', 'feature.configure', 'feature.toggle',
-  'plugin.manage', 'agent.view', 'agent.configure', 'ops.config.read', 'ops.config.write', 'ops.env.read', 'ops.env.write',
-  'ops.database.read', 'ops.database.write', 'ops.schedule.read', 'ops.schedule.write', 'ops.files.read', 'ops.files.write',
-  'ops.restart', 'ops.terminal', 'iam.view', 'iam.manage', 'mcp.access', 'a2a.access',
-]
+// The protocol catalog, from the single hand copy (`tests/protocol-mirror.test.mjs` compares it with the protocol source).
+const PROTOCOL_PERMISSIONS = [...MIRROR_PERMISSION_LIST]
 
 const user = (id, bindings, extra = {}) => ({ id, username: id, displayName: id, disabled: false, bindings, ...extra })
 const owner = { role: 'owner', scope: { kind: 'global' } }

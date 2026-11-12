@@ -1,26 +1,29 @@
 /**
  * Pure helpers of the 运维 → 实例 page: the gateway RPC envelope (ADR 0054 §4 / §5), status and
  * log readers, and the package transaction progress reducer. Shapes follow the provisional
- * mirror in `contracts/gateway.ts`.
+ * mirror in `contracts/gateway.ts` (constants: `contracts/console-protocol-mirror.mjs`).
  */
 
 import { declaredDefaults, initialSchemaValue } from '../../components/PluginConfigForm/schema-model.mjs'
 
+import { GATEWAY_INSTANCE_RPC, GATEWAY_PACKAGES_RPC, GATEWAY_PLUGINS_RPC } from '../../contracts/console-protocol-mirror.mjs'
+
+/** Gateway RPC names (protocol mirror) under the flat keys the ops pages use. */
 export const GATEWAY_RPC = Object.freeze({
-  PACKAGES_LIST: 'gateway.packages.list',
-  PACKAGES_PLAN: 'gateway.packages.plan',
-  PACKAGES_INSTALL: 'gateway.packages.install',
-  PACKAGES_UNINSTALL: 'gateway.packages.uninstall',
-  PACKAGES_UPDATE: 'gateway.packages.update',
-  INSTANCE_STATUS: 'gateway.instance.status',
-  INSTANCE_START: 'gateway.instance.start',
-  INSTANCE_STOP: 'gateway.instance.stop',
-  INSTANCE_RESTART: 'gateway.instance.restart',
-  INSTANCE_LOGS: 'gateway.instance.logs',
-  PLUGINS_DECLARE: 'gateway.plugins.declare',
+  PACKAGES_LIST: GATEWAY_PACKAGES_RPC.LIST,
+  PACKAGES_PLAN: GATEWAY_PACKAGES_RPC.PLAN,
+  PACKAGES_INSTALL: GATEWAY_PACKAGES_RPC.INSTALL,
+  PACKAGES_UNINSTALL: GATEWAY_PACKAGES_RPC.UNINSTALL,
+  PACKAGES_UPDATE: GATEWAY_PACKAGES_RPC.UPDATE,
+  INSTANCE_STATUS: GATEWAY_INSTANCE_RPC.STATUS,
+  INSTANCE_START: GATEWAY_INSTANCE_RPC.START,
+  INSTANCE_STOP: GATEWAY_INSTANCE_RPC.STOP,
+  INSTANCE_RESTART: GATEWAY_INSTANCE_RPC.RESTART,
+  INSTANCE_LOGS: GATEWAY_INSTANCE_RPC.LOGS,
+  PLUGINS_DECLARE: GATEWAY_PLUGINS_RPC.DECLARE,
 })
 
-export const GATEWAY_PACKAGES_PROGRESS = 'gateway.packages.progress'
+export { GATEWAY_PACKAGES_PROGRESS } from '../../contracts/console-protocol-mirror.mjs'
 
 export const INSTANCE_STATES = Object.freeze(['stopped', 'starting', 'running', 'stopping', 'backoff', 'crashed'])
 
