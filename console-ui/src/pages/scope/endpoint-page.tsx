@@ -8,7 +8,7 @@ import type { Scope } from '../../scope/scope-tree.mjs'
 import { EndpointAccessPanel } from './endpoint-access'
 import { useEndpointsAndLogin, WaitingLoginBadge } from './login-tasks'
 import { EndpointOverview } from './overview-panels'
-import { endpointAccessState, loginTasksFor } from './scope-overview-model.mjs'
+import { endpointAccessState, loginTasksFor, platformLabel } from './scope-overview-model.mjs'
 import { ScopeFeaturesPanel, ScopeRecordsPanel, useEndpointInfo } from './scope-panels'
 
 /**
@@ -40,7 +40,7 @@ export function EndpointObjectPage({ scope }: { scope: Scope & { level: 'endpoin
       title={endpoint}
       description={i18n.t('账号的接入、会话、功能与聊天角色。')}
       icon={Bot}
-      platform={adapter}
+      platform={i18n.t(platformLabel(adapter))}
       status={status}
       flushTabs={['chat']}
       badges={{ access: waiting || undefined }}

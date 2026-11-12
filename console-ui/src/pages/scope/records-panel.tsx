@@ -131,7 +131,7 @@ export function ScopeRecordsPanel({ scope }: { scope: Scope }) {
                   </div>
                   <p className="console-records-source-description">{i18n.t(copy.description)}</p>
                   <p className="console-records-source-note">{i18n.t(source.note)}</p>
-                  {source.filter ? <p className="console-records-source-filter">{i18n.t('筛选：')}<code title={source.filter}>{source.filter}</code></p> : null}
+                  {source.filter ? <p className="console-records-source-filter"><span className="shrink-0 whitespace-nowrap">{i18n.t('筛选：')}</span><code title={source.filter}>{source.filter}</code></p> : null}
                   <Button asChild variant="outline" size="sm" className="console-records-source-open">
                     <Link to={source.href}>{i18n.t('打开{0}', [i18n.t(copy.title)])}<ArrowUpRight /></Link>
                   </Button>

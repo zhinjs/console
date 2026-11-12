@@ -31,7 +31,6 @@ export function AdapterObjectPage({ scope }: { scope: Scope & { level: 'adapter'
       platform={platform !== scope.adapter ? i18n.t(platform) : undefined}
       status={data.loaded ? <Badge variant={accounts.length && online === accounts.length ? 'success' : online ? 'warning' : 'outline'}>{i18n.t('{0} / {1} 在线', [online, accounts.length])}</Badge> : null}
       actions={<Button variant="outline" size="sm" onClick={data.refresh} disabled={data.loading}><RefreshCw className={data.loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>}
-      badges={{ overview: data.loaded ? accounts.length : undefined }}
       panels={{
         overview: <AdapterOverview scope={scope} data={data} management={<ConnectionManagement adapter={scope.adapter!} />} />,
         features: <ScopeFeaturesPanel scope={scope} />,

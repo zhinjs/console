@@ -140,7 +140,7 @@ export function mergeFeatureMatrix(globalRows, matrix) {
   const rows = globalRows.map(row => {
     const remote = byPlugin.get(row.plugin)
     return remote
-      ? { ...row, global: remote.global, adapters: remote.adapters, ...(remote.conversationOverrides ? { conversationOverrides: remote.conversationOverrides } : {}) }
+      ? { ...row, ...(remote.displayName ? { name: remote.displayName } : {}), global: remote.global, adapters: remote.adapters, ...(remote.conversationOverrides ? { conversationOverrides: remote.conversationOverrides } : {}) }
       : { ...row, adapters: {} }
   })
   // Nested Plugin instances (`parent/child`) are matrix rows the plugin list does not show.

@@ -115,8 +115,8 @@ export default function FeatureMatrixPage({ embedded = false, heading }: {
               {rows.map(row => (
                 <TableRow key={row.plugin}>
                   <TableCell>
-                    <Link to={featureGlobalHref(row.plugin)} className="font-medium hover:underline">{row.plugin}</Link>
-                    {row.name !== row.plugin ? <span className="ml-2 text-xs text-muted-foreground">{row.name}</span> : null}
+                    <Link to={featureGlobalHref(row.plugin)} className="font-medium hover:underline">{row.name}</Link>
+                    {row.name !== row.plugin ? <code className="ml-2 text-xs text-muted-foreground">{row.plugin}</code> : null}
                     {row.description ? <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{row.description}</p> : null}
                   </TableCell>
                   <TableCell>

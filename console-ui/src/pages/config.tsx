@@ -108,7 +108,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
   if (loading && !source) {
     return (
       <div className="space-y-4">
-        <PageHeader title={i18n.t("设置")} description={i18n.t("加载配置中...")} />
+        <PageHeader title={i18n.t("配置文件")} description={i18n.t("加载配置中...")} />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24" />)}
         </div>
@@ -118,7 +118,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
 
   return (
     <div className="space-y-4">
-      <PageHeader title={i18n.t("设置")} />
+      <PageHeader title={i18n.t("配置文件")} />
 
       {error && (
         <Alert variant="destructive">

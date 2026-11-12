@@ -718,7 +718,7 @@ export default function HomePage() {
   return (
     <PageShell className="console-dashboard console-overview-page">
       <PageHeader
-        title={!hostAvailable ? `${i18n.t("Host 暂时不可达，")}${i18n.t("控制面仍可继续使用")}` : i18n.t("总览")}
+        title={!hostAvailable ? `${i18n.t("Host 暂时不可达，")}${i18n.t("控制面仍可继续使用")}` : i18n.t("首页")}
         description={!hostAvailable
           ? i18n.t("页面导航、配置入口和能力目录保持可用。重新连接后，聊天账号、Agent 与运行状态会在这里恢复。")
           : i18n.t("现在需要处理什么、消息量和最近的消息。")}
