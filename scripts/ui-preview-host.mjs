@@ -474,7 +474,7 @@ const server = createServer(async (request, response) => {
       json({ success: false, code: 'invalid_input', error: '配置未通过插件 Schema 校验，未声明：$.endpoints required；缺少环境变量 QQ_SECRET', errors: [{ path: '$.endpoints', message: 'required' }], missingEnv: ['QQ_SECRET'] }, 400)
       return
     }
-    if (type === 'schema:get') { json(envelope({ type: 'object', properties: { endpoints: { type: 'array', title: '机器人账号', items: { type: 'object', properties: { id: { type: 'string', title: 'AppID' } } } } }, required: ['endpoints'] })); return }
+    if (type === 'schema:get') { json(envelope({ type: 'object', object: { endpoints: { type: 'list', title: '机器人账号', required: true, inner: { type: 'object', object: { id: { type: 'string', title: 'AppID', required: true } } } } } })); return }
     if (type === 'chat-roles.mappings') {
       // Draft protocol (ADR 0056 §4): icqq answers, other adapters behave like an older Host.
       if (!String(body.key ?? '').startsWith('icqq')) { json({ success: false, error: `Unknown RPC type: ${type}` }, 400); return }
