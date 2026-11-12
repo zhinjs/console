@@ -116,15 +116,25 @@ export function conversationHighlights(items = [], limit = 5) {
  * live at the adapter's plugin route; the rest go to plugins / the marketplace.
  */
 export const ONBOARDING_PLATFORMS = Object.freeze([
-  { id: 'icqq', title: 'ICQQ (QQ个人号)', badge: '扫码 / 滑块验证', desc: '接入个人 QQ 账号，支持群管、私聊、二维码扫码与滑块票据辅助登录。', to: '/icqq' },
-  { id: 'qq', title: 'QQ 官方机器人', badge: '官方 API', desc: '通过 QQ 开放平台 AppID 与 Secret 接入官方频道与群聊机器人。', to: '/qq' },
-  { id: 'onebot11', title: 'NapCat / OneBot 11', badge: 'WebSocket', desc: '通过正向或反向 WebSocket 连接 NapCat、Lagrange 等 OneBot v11 协议端。', to: '/onebot11' },
-  { id: 'telegram', title: 'Telegram', badge: 'Bot Token', desc: '使用 BotFather 签发的 Token 接入 Telegram 私聊、群组与内联按钮。', to: '/telegram' },
-  { id: 'discord', title: 'Discord', badge: 'Gateway / Slash', desc: '接入 Discord 服务器频道、私信会话与机器人交互组件。', to: '/discord' },
+  { id: 'icqq', title: 'ICQQ (QQ个人号)', badge: '扫码 / 滑块验证', desc: '接入个人 QQ 账号，支持群管、私聊、二维码扫码与滑块票据辅助登录。', to: '/icqq', package: '@zhin.js/adapter-icqq' },
+  { id: 'qq', title: 'QQ 官方机器人', badge: '官方 API', desc: '通过 QQ 开放平台 AppID 与 Secret 接入官方频道与群聊机器人。', to: '/qq', package: '@zhin.js/adapter-qq' },
+  { id: 'onebot11', title: 'NapCat / OneBot 11', badge: 'WebSocket', desc: '通过正向或反向 WebSocket 连接 NapCat、Lagrange 等 OneBot v11 协议端。', to: '/onebot11', package: '@zhin.js/adapter-onebot11' },
+  { id: 'telegram', title: 'Telegram', badge: 'Bot Token', desc: '使用 BotFather 签发的 Token 接入 Telegram 私聊、群组与内联按钮。', to: '/telegram', package: '@zhin.js/adapter-telegram' },
+  { id: 'discord', title: 'Discord', badge: 'Gateway / Slash', desc: '接入 Discord 服务器频道、私信会话与机器人交互组件。', to: '/discord', package: '@zhin.js/adapter-discord' },
   { id: 'enterprise', title: '飞书 / 钉钉 / 企微', badge: '企业办公 IM', desc: '前往插件配置页启用飞书 Lark、钉钉 DingTalk 或企业微信适配器。', to: '/plugins' },
-  { id: 'email', title: 'Email 邮件', badge: 'IMAP / SMTP', desc: '配置邮箱收发通道，让机器人通过邮件接收指令与发送通知。', to: '/email' },
+  { id: 'email', title: 'Email 邮件', badge: 'IMAP / SMTP', desc: '配置邮箱收发通道，让机器人通过邮件接收指令与发送通知。', to: '/email', package: '@zhin.js/adapter-email' },
   { id: 'marketplace', title: '探索更多平台适配器', badge: '插件市场', desc: '浏览 KOOK、Slack、LINE、GitHub、Satori 等更多社区与官方适配器。', to: '/marketplace' },
 ].map(item => Object.freeze(item)))
+
+/**
+ * Where a 「接入新平台账号」 card goes. An adapter's Console page exists only when its plugin is
+ * installed; otherwise the card searches the marketplace for the package instead of landing on an
+ * unregistered route (which would silently show the home page).
+ */
+export function onboardingTarget(platform, registeredPaths) {
+  if (!platform.package || registeredPaths.has(platform.to)) return { to: platform.to, install: false }
+  return { to: `/marketplace?${new URLSearchParams({ category: 'adapter', q: platform.package })}`, install: true }
+}
 
 /** Display label of an adapter type (`@zhin.js/adapter-icqq` → `ICQQ 协议端`); unknown ones stay as given. */
 export function platformLabel(adapter) {
@@ -137,14 +147,3 @@ const PLATFORM_LABELS = Object.freeze({
   telegram: 'Telegram', discord: 'Discord', lark: '飞书 Lark', feishu: '飞书 Lark', dingtalk: '钉钉 DingTalk', wecom: '企业微信', 'work-weixin': '企业微信',
   slack: 'Slack', kook: 'KOOK', line: 'LINE', email: 'Email', github: 'GitHub', sandbox: 'Sandbox',
 })
-
-/**
- * 群聊插话设置 for a group conversation, preselected by query (the ambient page reads `adapter`,
- * `endpoint` and `conversation`, the latter `<kind>:<id>` URI-encoded like the object-tree segment).
- * Null for private chats and channels.
- */
-export function ambientSettingsHref(scope) {
-  if (!scope || scope.kind !== 'group' || !scope.adapter || !scope.endpoint || !scope.id) return null
-  const segment = value => encodeURIComponent(String(value))
-  return `/agent/ambient?adapter=${segment(scope.adapter)}&endpoint=${segment(scope.endpoint)}&conversation=${segment(`group:${scope.id}`)}`
-}

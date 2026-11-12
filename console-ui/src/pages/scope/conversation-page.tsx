@@ -8,9 +8,10 @@ import { ConversationChatPanel } from './chat-panels'
 import { useConversationList } from '../features/use-feature-data'
 import { ObjectPageLayout, ObjectSection, useScopeTab } from '../../scope/ObjectPageLayout'
 import { ChatRolesPanel } from '../../scope/ChatRolesPanel'
+import { platformLabel } from './scope-overview-model.mjs'
 import { scopeHref, scopeKey, type Scope } from '../../scope/scope-tree.mjs'
 import { ConversationOverview } from './overview-panels'
-import { ambientSettingsHref } from './scope-overview-model.mjs'
+import { ambientSettingsHref } from '../insights/scope-filter.mjs'
 import { ScopeFeaturesPanel, ScopeRecordsPanel } from './scope-panels'
 
 /**
@@ -34,7 +35,7 @@ export function ConversationObjectPage({ scope }: { scope: Scope & { level: 'con
       title={name ?? scope.id!}
       description={i18n.t('这个会话的聊天、功能与聊天角色。')}
       icon={MessagesSquare}
-      platform={scope.adapter}
+      platform={i18n.t(platformLabel(scope.adapter!))}
       names={name ? { conversation: name } : undefined}
       status={item?.hasOverrides ? <Badge variant="info" size="sm">{i18n.t('有覆盖')}</Badge> : null}
       actions={<>

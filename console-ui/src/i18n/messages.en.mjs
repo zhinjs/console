@@ -2595,6 +2595,7 @@ export const englishMessages = Object.freeze({
 "登录确认": "Login confirmation",
 "安全验证": "Security verification",
 "接入新平台账号": "Connect platform account",
+"先安装适配器": "Install the adapter first",
 "等待登录": "Pending login",
 "搜索账号…": "Search accounts…",
 "验证手机号：{0}": "Verification phone: {0}",

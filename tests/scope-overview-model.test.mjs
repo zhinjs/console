@@ -3,8 +3,10 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
   ONBOARDING_PLATFORMS, accountCounts, accountStatus, adapterOverview, conversationHighlights, endpointAccessState, filterAccounts, loginTasksFor,
-  overviewTotals, platformLabel, ambientSettingsHref,
+  overviewTotals, platformLabel, onboardingTarget,
 } from '../console-ui/src/pages/scope/scope-overview-model.mjs'
+import { ambientSettingsHref } from '../console-ui/src/pages/insights/scope-filter.mjs'
+import { resolveLegacyRedirect } from '../console-ui/src/console-routes.mjs'
 import { chatRoleMappingsRequest, mappingMatchParts, readChatRoleMappings } from '../console-ui/src/scope/chat-roles-model.mjs'
 import { objectPageOwnsBreadcrumb } from '../console-ui/src/scope/scope-tree.mjs'
 import { englishMessages } from '../console-ui/src/i18n/messages.en.mjs'
@@ -96,11 +98,24 @@ test('one breadcrumb per page: object pages below 全局 own it, the shell keeps
   assert.match(layout, /objectPageOwnsBreadcrumb\(location\.pathname\)/)
 })
 
-test('group conversations link to 群聊插话设置 with the object-tree encoding; private chats do not', () => {
+test('group conversations link straight to 群聊插话 (not the legacy redirect); private chats do not', () => {
   assert.equal(ambientSettingsHref({ level: 'conversation', adapter: 'qq', endpoint: 'bot/1', kind: 'group', id: 'a/b%c' }),
-    '/agent/ambient?adapter=qq&endpoint=bot%2F1&conversation=group%3Aa%2Fb%25c')
+    '/features/ai/ambient?adapter=qq&endpoint=bot%2F1&conversation=group%3Aa%2Fb%25c')
+  // Old bookmarks keep their scope through the redirect.
+  assert.equal(resolveLegacyRedirect('/agent/ambient', '?adapter=qq&endpoint=bot%2F1&conversation=group%3Aa%2Fb%25c'),
+    '/features/ai/ambient?adapter=qq&endpoint=bot%2F1&conversation=group%3Aa%2Fb%25c')
   assert.equal(ambientSettingsHref({ level: 'conversation', adapter: 'qq', endpoint: 'bot', kind: 'private', id: '1' }), null)
   assert.equal(ambientSettingsHref({ level: 'conversation', adapter: 'qq', endpoint: 'bot', kind: 'channel', id: '1' }), null)
   const page = readFileSync(new URL('../console-ui/src/pages/scope/conversation-page.tsx', import.meta.url), 'utf8')
   assert.match(page, /ambientSettingsHref\(scope\)/)
+  assert.match(page, /from '\.\.\/insights\/scope-filter\.mjs'/)
+})
+
+test('接入新平台账号: an adapter page that is not registered sends the card to the marketplace', () => {
+  const icqq = ONBOARDING_PLATFORMS.find(item => item.id === 'icqq')
+  assert.deepEqual(onboardingTarget(icqq, new Set(['/icqq'])), { to: '/icqq', install: false })
+  assert.deepEqual(onboardingTarget(icqq, new Set()), { to: '/marketplace?category=adapter&q=%40zhin.js%2Fadapter-icqq', install: true })
+  const market = ONBOARDING_PLATFORMS.find(item => item.id === 'marketplace')
+  assert.deepEqual(onboardingTarget(market, new Set()), { to: '/marketplace', install: false })
+  assert.ok(englishMessages['先安装适配器'])
 })

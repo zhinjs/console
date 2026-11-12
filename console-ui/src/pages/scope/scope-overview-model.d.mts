@@ -25,7 +25,7 @@ export type EndpointAccessState<E extends OverviewEndpoint = OverviewEndpoint> =
   | { readonly kind: 'failed'; readonly error: unknown }
   | { readonly kind: 'listed'; readonly endpoint: E; readonly siblings: number }
   | { readonly kind: 'unlisted'; readonly siblings: number }
-export interface OnboardingPlatform { readonly id: string; readonly title: string; readonly badge: string; readonly desc: string; readonly to: string }
+export interface OnboardingPlatform { readonly id: string; readonly title: string; readonly badge: string; readonly desc: string; readonly to: string; readonly package?: string }
 
 export function adapterOverview(endpoints?: readonly OverviewEndpoint[], options?: { tasks?: readonly OverviewLoginTask[]; known?: Readonly<Record<string, readonly string[]>> }): AdapterOverviewItem[]
 export function overviewTotals(adapters: readonly AdapterOverviewItem[]): { adapters: number; accounts: number; online: number; pending: number; waitingLogin: number }
@@ -38,5 +38,5 @@ export function accountCounts(endpoints?: readonly OverviewEndpoint[], tasks?: r
 export function endpointAccessState<E extends OverviewEndpoint>(list: { loaded?: boolean; error?: unknown; endpoints?: readonly E[] }, adapter: string, endpoint: string): EndpointAccessState<E>
 export function conversationHighlights(items?: readonly ConversationItem[], limit?: number): { overridden: ConversationItem[]; recent: ConversationItem[]; total: number }
 export const ONBOARDING_PLATFORMS: readonly OnboardingPlatform[]
+export function onboardingTarget(platform: OnboardingPlatform, registeredPaths: ReadonlySet<string>): { to: string; install: boolean }
 export function platformLabel(adapter: string): string
-export function ambientSettingsHref(scope: { kind?: string; adapter?: string; endpoint?: string; id?: string } | null | undefined): string | null

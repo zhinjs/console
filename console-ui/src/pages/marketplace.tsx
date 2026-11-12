@@ -133,10 +133,14 @@ function MarketplaceSession({ scope }: { scope?: string }) {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
+  // `?q=` / `?category=` prefill the catalog (e.g. 「接入新平台账号」 for an adapter that is not installed).
+  const [search, setSearch] = useState(() => searchParams.get('q')?.trim() ?? '')
+  const [debouncedSearch, setDebouncedSearch] = useState(() => searchParams.get('q')?.trim() ?? '')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [category, setCategory] = useState<Category>('')
+  const [category, setCategory] = useState<Category>(() => {
+    const requested = searchParams.get('category')
+    return CATEGORIES.find(item => item.value === requested)?.value ?? ''
+  })
   const [officialOnly, setOfficialOnly] = useState(false)
   const [sortKey, setSortKey] = useState<SortKey>('relevance')
   const [updates, setUpdates] = useState<UpdateInfo[]>([])

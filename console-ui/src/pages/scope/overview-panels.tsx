@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Bot, Cable, ChevronRight, KeyRound, MessageSquare, MessagesSquare, Plus, RefreshCw, Search, SlidersHorizontal } from 'lucide-react'
 import { cn } from '@zhin.js/client'
@@ -11,15 +11,16 @@ import { Skeleton } from '../../components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { StatusState } from '../../components/StatusState'
 import { adapterHref, conversationHref, endpointHref } from '../../console-routes.mjs'
+import { app } from '../../utils/console-client'
 import { endpointLifecycleLabel } from '../endpoint-presentation.mjs'
 import { ConversationKindBadge } from '../features/conversation-list'
 import type { ConversationItem } from '../features/feature-model.mjs'
-import { useConversationList, useFeatureMatrix } from '../features/use-feature-data'
+import { useConversationList, useFeatureList, useFeatureMatrix } from '../features/use-feature-data'
 import { ObjectSection } from '../../scope/ObjectPageLayout'
 import { scopeHref, scopeKey, type Scope } from '../../scope/scope-tree.mjs'
 import { ObjectFacts, type useEndpointInfo } from './scope-panels'
 import {
-  ACCOUNT_FILTER_LABELS, ACCOUNT_FILTERS, ONBOARDING_PLATFORMS, accountCounts, accountStatus, adapterOverview, conversationHighlights, filterAccounts,
+  ACCOUNT_FILTER_LABELS, ACCOUNT_FILTERS, ONBOARDING_PLATFORMS, accountCounts, onboardingTarget, accountStatus, adapterOverview, conversationHighlights, filterAccounts,
   loginTasksFor, overviewTotals, platformLabel, type AccountFilter,
 } from './scope-overview-model.mjs'
 import { WaitingLoginBadge, useEndpointsAndLogin, useLoginTaskTypeLabel, type EndpointsAndLogin, type ScopeEndpoint } from './login-tasks'
@@ -39,20 +40,25 @@ function TableSkeleton({ rows = 2 }: { rows?: number }) {
 /** 「接入新平台账号」: where each platform is set up. */
 function OnboardingSection({ first }: { first: boolean }) {
   const i18n = useI18n()
+  const routes = useSyncExternalStore(app.subscribe, () => app.getRoutes())
+  const registered = useMemo(() => new Set(routes.map(route => route.path)), [routes])
   return (
     <ObjectSection title={i18n.t('接入新平台账号')}
       description={first ? i18n.t('还没有聊天账号。选择平台，在它的适配器页面添加账号、填写 Token 或扫码登录。') : i18n.t('选择平台，在它的适配器页面添加账号、填写 Token 或扫码登录。')}>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-4">
-        {ONBOARDING_PLATFORMS.map(platform => (
-          <Link key={platform.id} to={platform.to} className="console-onboarding-card group">
+        {ONBOARDING_PLATFORMS.map(platform => {
+          const target = onboardingTarget(platform, registered)
+          return (
+          <Link key={platform.id} to={target.to} className="console-onboarding-card group">
             <span className="flex items-center justify-between gap-2">
               <span className="text-sm font-semibold text-foreground">{i18n.t(platform.title)}</span>
               <span className="console-platform-brand-badge max-sm:hidden">{i18n.t(platform.badge)}</span>
             </span>
             <span className="mt-1.5 block text-xs leading-relaxed text-muted-foreground max-sm:hidden">{i18n.t(platform.desc)}</span>
-            <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary">{i18n.t('前往接入')}<ChevronRight className="h-3.5 w-3.5" aria-hidden="true" /></span>
+            <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary">{target.install ? i18n.t('先安装适配器') : i18n.t('前往接入')}<ChevronRight className="h-3.5 w-3.5" aria-hidden="true" /></span>
           </Link>
-        ))}
+          )
+        })}
       </div>
     </ObjectSection>
   )
@@ -364,6 +370,9 @@ export function EndpointOverview({ scope, endpointInfo, onOpenTab }: {
 export function ConversationOverview({ scope, item, levelMissing }: { scope: Scope; item: ConversationItem | undefined; levelMissing: 'unsupported' | 'forbidden' | null }) {
   const i18n = useI18n()
   const key = scopeKey(scope)
+  // Display names come from `feature.list`, like the 功能 tab; the plugin id stays as the secondary label.
+  const featureList = useFeatureList()
+  const displayNames = useMemo(() => new Map((featureList.value?.features ?? []).map(feature => [feature.plugin, feature.displayName])), [featureList.value])
   return (
     <>
       <ObjectFacts items={[
@@ -386,7 +395,10 @@ export function ConversationOverview({ scope, item, levelMissing }: { scope: Sco
                 {item.overrides.map(entry => (
                   <li key={entry.plugin}>
                     <Link to={scopeHref(scope, 'features')} className="console-scope-task">
-                    <span className="min-w-0 flex-1 truncate font-medium">{entry.plugin}</span>
+                    <span className="min-w-0 flex-1 truncate">
+                      <span className="font-medium">{displayNames.get(entry.plugin) ?? entry.plugin}</span>
+                      {displayNames.get(entry.plugin) && displayNames.get(entry.plugin) !== entry.plugin ? <code className="ml-2 text-xs text-muted-foreground">{entry.plugin}</code> : null}
+                    </span>
                     {entry.disabled ? <Badge variant="outline" size="sm">{i18n.t('已关闭')}</Badge> : null}
                     {entry.fields.length ? <span className="text-xs text-muted-foreground">{i18n.t('字段：{0}', [entry.fields.join('、')])}</span> : null}
                     {entry.updatedAt ? <span className="text-xs text-muted-foreground max-md:hidden">{new Date(entry.updatedAt).toLocaleString(i18n.locale)}</span> : null}
