@@ -3,6 +3,7 @@ import { useI18n } from '../i18n'
 import { useMemo, useState, type ReactNode } from 'react'
 import { Download } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
+import { PageShell } from '../components/PageShell'
 import { Card } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Checkbox } from '../components/ui/checkbox'
@@ -73,9 +74,10 @@ export default function ScenarioLabPage() {
       setImportError('')
     } catch (error) { setImportError(error instanceof Error ? error.message : i18n.t("导入失败")) }
   }
-  return <div className="space-y-5 pb-6">
-    <PageHeader title={i18n.t("消息场景试验台")} description={i18n.t("先预览作者预期消息，再导出可在独立测试项目显式运行的回归。")} />
-    <Card className="space-y-2 p-4 text-sm"><p className="font-medium">{i18n.t("本地只读预览，不执行插件")}</p><p className="text-muted-foreground">{i18n.t("不读取当前 Host 配置，不发送或重放消息，不运行组件、业务工具或 Shotium，不注册交互。账号、发送者及角色都是你提供的测试场景；示例身份不代表真实登录。")}</p><p className="text-xs text-muted-foreground">{i18n.t("导出不等于执行通过；合成端点回归、浏览器外观与真实平台投递是不同证据。此页不保存草稿，离开前可导出场景 JSON；请勿填写凭据。")}</p></Card>
+  return <PageShell className="pb-6">
+    <PageHeader title={i18n.t("消息场景试验台")} description={i18n.t("先预览作者预期消息，再导出可在独立测试项目显式运行的回归。")}
+      actions={<Button variant="outline" size="sm" disabled={!result.scene} onClick={() => result.scene && download('scenario.json', scenarioJson(result.scene, i18n.locale))}><Download className="mr-1 h-4 w-4" />{i18n.t("导出场景 JSON")}</Button>} />
+    <Card className="space-y-2 border-[hsl(var(--info)/0.35)] bg-[hsl(var(--info)/0.06)] p-4 text-sm" role="note"><p className="font-medium">{i18n.t("本地只读预览，不执行插件")}</p><p className="text-muted-foreground">{i18n.t("不读取当前 Host 配置，不发送或重放消息，不运行组件、业务工具或 Shotium，不注册交互。账号、发送者及角色都是你提供的测试场景；示例身份不代表真实登录。")}</p><p className="text-xs text-muted-foreground">{i18n.t("导出不等于执行通过；合成端点回归、浏览器外观与真实平台投递是不同证据。此页不保存草稿，离开前可导出场景 JSON；请勿填写凭据。")}</p></Card>
     <details className="rounded-md border p-4"><summary className="cursor-pointer text-sm font-medium">{i18n.t("导入已有场景 JSON")}</summary><div className="mt-3 space-y-3"><Textarea aria-label={i18n.t("导入场景 JSON")} className="min-h-32 font-mono text-xs" maxLength={96000} value={importText} onChange={e => setImportText(e.target.value)} /><Button variant="outline" onClick={load}>{i18n.t("读取本地场景")}</Button>{importError && <p role="alert">{importError}</p>}</div></details>
     <div className="grid min-w-0 gap-5 xl:grid-cols-2">
       <div className="min-w-0 space-y-5">
@@ -107,7 +109,7 @@ export default function ScenarioLabPage() {
         {result.scene && <details className="rounded-md border p-4"><summary className="cursor-pointer text-sm">{i18n.t("完整场景与身份")}</summary><pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap break-all text-xs">{scenarioJson(result.scene, i18n.locale)}</pre></details>}
       </div>
     </div>
-  </div>
+  </PageShell>
 }
 function Field({ label, children }: { label: string; children: ReactNode }) { return <div className="min-w-0 space-y-1.5"><p className="text-sm font-medium">{label}</p>{children}</div> }
 export function ScenarioPreview({ items, error }: { items: ReturnType<typeof scenarioPreviewItems>; error: string }) {
@@ -118,7 +120,7 @@ export function ScenarioPreview({ items, error }: { items: ReturnType<typeof sce
 export function ScenarioMarkdown({ source }: { source: string }) {
   const i18n = useI18n()
   return <div className="space-y-3 text-sm" aria-label={i18n.t("Markdown 子集预览")}>{scenarioMarkdownBlocks(source, i18n.locale).map((block, index) => {
-    if (block.kind === 'code') return <div key={index} className="overflow-hidden rounded-md border"><div className="bg-muted px-3 py-1 text-xs text-muted-foreground">{block.language || i18n.t("代码")}</div><pre className="overflow-auto bg-slate-950 p-3 text-xs text-slate-100"><code>{block.text}</code></pre></div>
+    if (block.kind === 'code') return <div key={index} className="overflow-hidden rounded-md border"><div className="bg-muted px-3 py-1 text-xs text-muted-foreground">{block.language || i18n.t("代码")}</div><pre className="overflow-auto bg-muted p-3 text-xs text-foreground"><code>{block.text}</code></pre></div>
     if (block.kind === 'heading') return <p key={index} role="heading" aria-level={block.level} className={block.level === 1 ? 'text-lg font-semibold' : 'font-semibold'}>{block.text}</p>
     if (block.kind === 'list') return block.ordered ? <ol key={index} className="list-decimal space-y-1 pl-5">{block.items?.map((item, i) => <li key={i}>{item}</li>)}</ol> : <ul key={index} className="list-disc space-y-1 pl-5">{block.items?.map((item, i) => <li key={i}>{item}</li>)}</ul>
     if (block.kind === 'quote') return <blockquote key={index} className="whitespace-pre-wrap border-l-2 pl-3 text-muted-foreground">{block.text}</blockquote>

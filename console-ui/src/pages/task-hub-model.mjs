@@ -1,14 +1,15 @@
-// Task hub: one /tasks entry that hosts the administrator task catalog, scheduled reminders,
+// Task hub: one /tasks entry that opens on a unified list of every task, then hosts the administrator task catalog, scheduled reminders,
 // assistant job status and execution history. Tab state lives in the URL (?tab=...).
 export const TASK_HUB_PATH = '/ops/schedules'
 
 export const TASK_HUB_TABS = Object.freeze([
+  Object.freeze({ id: 'overview', label: '全部任务' }),
   Object.freeze({ id: 'admin', label: '管理员任务' }),
   Object.freeze({ id: 'schedule', label: '定时提醒' }),
   Object.freeze({ id: 'assistant', label: '助手任务' }),
   Object.freeze({ id: 'history', label: '执行记录' }),
 ])
-export const DEFAULT_TASK_TAB = 'admin'
+export const DEFAULT_TASK_TAB = 'overview'
 
 /** Unknown or missing tab ids fall back to the first tab. */
 export function resolveTaskTab(value, tabs = TASK_HUB_TABS) {

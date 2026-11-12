@@ -1,11 +1,14 @@
 import { useI18n } from '../i18n'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Download, RefreshCw } from 'lucide-react'
 import { pluginRpc } from '../utils/plugin-rpc'
 import { PageHeader } from '../components/PageHeader'
 import { PageShell } from '../components/PageShell'
 import { ErrorAlert } from '../components/error-alert'
+import { StatusState } from '../components/StatusState'
+import { ScopeFilterBar, useScopeFilter } from './insights/ScopeFilterBar'
+import { replayScopeApproximate, replayScopeFilter } from './insights/scope-filter.mjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
@@ -19,6 +22,7 @@ import {
   REPLAY_LIST_METHOD,
   REPLAY_OUTCOMES,
   REPLAY_PAGE_SIZE,
+  REPLAY_PERMISSION,
   REPLAY_TURN_METHOD,
   buildReplayFilter,
   collectReplayExport,
@@ -51,8 +55,19 @@ type ListState = { rows: ReplayRow[]; nextBefore: number | null; persistent: boo
 /** 「机器人状态 → 决策回放」：机器人每次回 / 不回的原因（ADR 0036 切片 C）。只读，需要 decisions:read。 */
 export default function BotReplayPage() {
   const i18n = useI18n()
-  const [draft, setDraft] = useState<ReplayFilterInput>({})
-  const [filter, setFilter] = useState<Record<string, string>>({})
+  // 范围参数（adapter / endpoint / conversation）预填平台与会话；页内筛选仍可改。
+  const scopeFilter = useScopeFilter()
+  const scoped = replayScopeFilter(scopeFilter.scope)
+  const [draft, setDraft] = useState<ReplayFilterInput>(() => scoped)
+  const [filter, setFilter] = useState<Record<string, string>>(() => buildReplayFilter(scoped))
+  const appliedScope = useRef(scopeFilter.identity)
+  useEffect(() => {
+    if (appliedScope.current === scopeFilter.identity) return
+    appliedScope.current = scopeFilter.identity
+    const next = replayScopeFilter(scopeFilter.scope)
+    setDraft(next)
+    setFilter(buildReplayFilter(next))
+  }, [scopeFilter.identity]) // eslint-disable-line react-hooks/exhaustive-deps
   const [list, setList] = useState<ListState | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -144,7 +159,14 @@ export default function BotReplayPage() {
       </div>}
     />
 
-    {denied ? <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">{i18n.t("当前账号没有查看决策回放的权限，请联系管理员开通。")}</CardContent></Card> : <>
+    <ScopeFilterBar
+      filter={scopeFilter}
+      note={replayScopeApproximate(scopeFilter.scope)
+        ? i18n.t("决策记录没有账号字段：账号范围只能按适配器（平台）过滤，会包含同一适配器下其他账号的记录。")
+        : i18n.t("按平台（适配器）与会话（<类型>:<ID>）过滤；可在下方改动筛选条件。")}
+    />
+
+    {denied ? <StatusState kind="forbidden" permissions={[REPLAY_PERMISSION]} /> : <>
       <Card>
         <CardContent className="flex flex-wrap items-end gap-3 pt-6">
           <Input className="w-36" aria-label={i18n.t("平台")} placeholder={i18n.t("平台，如 icqq")} value={draft.platform ?? ''} onChange={event => setDraft({ ...draft, platform: event.target.value })} />
@@ -185,7 +207,7 @@ export default function BotReplayPage() {
       </Card> : null}
 
       {loading && !list ? <Skeleton className="h-64 w-full" />
-        : error && !list ? <ErrorAlert error={error} onRetry={() => void refresh(filter)} />
+        : error && !list ? <StatusState error={error} onRetry={() => void refresh(filter)} />
           : list ? <Card>
             <CardHeader>
               <CardTitle className="text-base">{i18n.t("最近的决策")}</CardTitle>
@@ -206,7 +228,7 @@ export default function BotReplayPage() {
                     <Button variant="ghost" size="sm" onClick={() => void openTurn(view.turnId)}>{i18n.t("看这个回合")}</Button>
                   </li>
                 })}
-              </ul> : <p className="text-sm text-muted-foreground">{i18n.t("还没有决策记录。")}</p>}
+              </ul> : <StatusState kind="empty" compact title={i18n.t("还没有决策记录。")} description={Object.keys(filter).length ? i18n.t("当前筛选条件下没有记录，换一个条件或清除范围试试。") : i18n.t("机器人每次判断回不回、调不调模型都会记在这里。")} />}
               {list.nextBefore !== null ? <Button variant="outline" size="sm" onClick={() => void loadMore()} disabled={loadingMore}>{loadingMore ? i18n.t("加载中…") : i18n.t("加载更多")}</Button> : null}
             </CardContent>
           </Card> : null}

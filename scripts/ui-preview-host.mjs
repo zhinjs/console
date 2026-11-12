@@ -9,6 +9,7 @@ const endpoints = [
   { name: 'preview-support', adapter: 'telegram', connected: false, status: 'offline', transportState: 'stopped', phase: 'stopped', endpoint: { adapter: 'telegram', id: 'preview-support' }, managementCapabilities: [], pendingRequestCount: 0, pendingNoticeCount: 0 },
 ]
 const logs = [
+  { id: 4, timestamp: Date.now() - 10_000, level: 'info', name: 'icqq', plugin: 'icqq', message: 'preview-community 向 group 20001 发送消息成功' },
   { id: 3, timestamp: Date.now() - 20_000, level: 'info', name: 'preview', plugin: 'preview', message: '这是本地界面预览，不连接真实平台。' },
   { id: 2, timestamp: Date.now() - 40_000, level: 'warn', name: 'preview', plugin: 'preview', message: '客服账号尚未启动。请在账号页检查状态。' },
   { id: 1, timestamp: Date.now() - 60_000, level: 'info', name: 'preview', plugin: 'preview', message: '会话目录已加载。' },
@@ -27,6 +28,62 @@ const engagement = {
 }
 const venues = [{ key: 'preview-room', channel: { endpoint: { adapter: 'icqq', id: 'preview-community' }, kind: 'group', id: '20001' }, floor: 'moderated' }]
 const envelope = data => ({ success: true, data })
+// Message events in the bounded Console journal (首页消息量与最近消息).
+const now = Date.now()
+const conversation = (kind, id) => ({ endpoint: { adapter: 'icqq', id: 'preview-community' }, kind, id })
+const messageEvent = (eventId, minutesAgo, direction, kind, id, text, sender) => ({ runtimeId: 'ui-preview', eventId, type: 'message.receive', timestamp: now - minutesAgo * 60_000,
+  data: { direction, timestamp: now - minutesAgo * 60_000, endpointKey: 'preview-community', adapter: 'icqq', conversation: conversation(kind, id), channelType: kind, channelId: id,
+    content: [{ type: 'text', data: { text } }], ...(sender ? { sender } : {}) } })
+const messageEvents = [
+  messageEvent(1, 300, 'inbound', 'group', '20001', '早上好，今天的例会几点？', { id: '10001', name: '演示同事' }),
+  messageEvent(2, 299, 'outbound', 'group', '20001', '例会在上午 10 点，会议室 3。'),
+  messageEvent(3, 180, 'inbound', 'private', '10001', '帮我查一下昨天的发布记录', { id: '10001', name: '演示用户' }),
+  messageEvent(4, 179, 'outbound', 'private', '10001', '昨天共发布 2 次，均已完成。'),
+  messageEvent(5, 42, 'inbound', 'group', '20001', '有人知道新版本什么时候上线吗？', { id: '10005', name: '产品同学' }),
+  messageEvent(6, 12, 'inbound', 'group', '20001', '今天的发布准备完成了吗？', { id: '10001', name: '演示同事' }),
+  messageEvent(7, 11, 'outbound', 'group', '20001', '准备完成，等待最后确认。'),
+]
+// plugin.root.* fixtures (决策回放、Token 用量、群聊插话、技能助手、工具审批).
+const decisionRow = (minutesAgo, extra) => ({ id: `d-${minutesAgo}`, ts: now - minutesAgo * 60_000, turn_id: `turn-${minutesAgo}`, instance_id: 'preview-community', platform: 'icqq',
+  scene_id: 'group:20001', user_id: '10001', kind: 'speak_gate', outcome: 'allow', reason_code: 'addressed', reason_detail: null, payload: {}, actor: 'policy', actor_id: null, ...extra })
+const decisions = [decisionRow(11, {}), decisionRow(42, { outcome: 'deny', reason_code: 'cannot_speak_muted' }), decisionRow(180, { scene_id: 'private:10001' })]
+const HOUR = 3_600_000
+const usageStats = (session) => {
+  const sessions = [
+    { sessionKey: 'icqq:preview-community:group:20001', turns: 6, calls: 9, inputTokens: 18_400, outputTokens: 2_100, cacheReadTokens: 9_800 },
+    { sessionKey: 'icqq:preview-community:private:10001', turns: 2, calls: 3, inputTokens: 4_200, outputTokens: 600, cacheReadTokens: 1_100 },
+  ].filter(row => !session || (session.endsWith('*') ? row.sessionKey.startsWith(session.slice(0, -1)) : row.sessionKey.includes(session)))
+  const sum = key => sessions.reduce((total, row) => total + row[key], 0)
+  const start = Math.floor((now - 7 * 24 * HOUR) / (24 * HOUR)) * 24 * HOUR
+  return { range: { since: now - 7 * 24 * HOUR, until: now, bucket: 'day', timeZone: 'Asia/Shanghai' },
+    totals: { turns: sum('turns'), calls: sum('calls'), inputTokens: sum('inputTokens'), outputTokens: sum('outputTokens'), cacheReadTokens: sum('cacheReadTokens'), cacheShare: sum('inputTokens') ? sum('cacheReadTokens') / sum('inputTokens') : 0 },
+    byModel: sum('calls') ? [{ provider: 'preview', model: 'chat-small', calls: sum('calls'), inputTokens: sum('inputTokens'), outputTokens: sum('outputTokens'), cacheReadTokens: sum('cacheReadTokens') }] : [],
+    bySession: sessions,
+    series: Array.from({ length: 7 }, (_, index) => ({ bucketStart: start + index * 24 * HOUR, calls: index > 3 ? 4 : 0, inputTokens: index > 3 ? Math.round(sum('inputTokens') / 3) : 0, outputTokens: index > 3 ? 900 : 0, cacheReadTokens: index > 3 ? Math.round(sum('cacheReadTokens') / 3) : 0, byModel: index > 3 ? { 'preview/chat-small': Math.round(sum('inputTokens') / 3) } : {} })),
+    segments: { history: 12_000, fixed: 6_000, user: 4_600 }, filesRead: 1, malformedLines: 0 }
+}
+const ambientStatus = { enabled: true, mode: 'shadow', groups: 1, judges: ['preview/chat-small'], last24h: { spoke: 0, watched: 3, stayed_quiet: 5, skipped: 1 }, decisionShadow: { agreed: 3, disagreed: 0 },
+  recent: [{ at: now - 42 * 60_000, group: 'icqq:20001', outcome: 'watched', confidence: 0.7, judge: 'decision' }, { at: now - 90 * 60_000, group: 'icqq:20001', outcome: 'stayed_quiet' }], updatedAt: now - 42 * 60_000 }
+const configSource = 'ai:\n  trigger:\n    ambient:\n      mode: shadow\n      conversations:\n        - icqq:30002\n      maxPerHour: 4\n'
+const target = { endpoint: { adapter: 'icqq', id: 'preview-community' }, kind: 'group', id: '20001' }
+const taskProviders = { generation: 1, providers: [{ owner: 'root/reminder', packageName: '@zhin.js/plugin-reminder', title: '群提醒', description: '按时间在会话里发一条提醒。', schema: { type: 'object', properties: { text: { type: 'string', title: '提醒内容' }, at: { type: 'string', title: '时间' } }, required: ['text'] },
+  effects: ['到点后在目标会话发送一条消息'], revision: 'r1', receipts: [], tasks: [
+    { id: 'task-1', ownership: 'administrator', title: '周会提醒', target, state: 'scheduled', createdAt: now - 86_400_000, nextRunAt: now + 5 * HOUR, timezone: 'Asia/Shanghai', parameters: { text: '10 点周会' }, actions: ['pause', 'cancel', 'update'] },
+    { id: 'task-2', ownership: 'administrator', title: '发布检查', target: { ...target, kind: 'private', id: '10001' }, state: 'failed', createdAt: now - 2 * 86_400_000, lastRunAt: now - 3 * HOUR, detail: '目标会话不可达', parameters: { text: '检查发布' }, actions: ['cancel'] },
+  ] }] }
+const scheduleList = { memory: [{ type: 'memory', id: 'heartbeat', description: '心跳检测', expression: '0 */5 * * * *', running: true, nextExecution: now + 4 * 60_000, plugin: 'heartbeat' }],
+  persistent: [{ type: 'persistent', id: 'job-daily', cronExpression: '0 0 9 * * *', prompt: '总结昨天的群聊要点', label: '每日群聊摘要', enabled: true, nextExecution: now + 14 * HOUR, lastStatus: 'ok', lastExecutedAt: now - 10 * HOUR }],
+  capabilities: { persistent: true } }
+const assistantJobs = { eventsActive: true, jobs: [{ id: 'job-daily', label: '每日群聊摘要', enabled: true, state: { lastStatus: 'ok', nextRunAtMs: now + 14 * HOUR } }, { id: 'job-watch', label: '错误巡检', enabled: true, state: { lastStatus: 'error', lastError: 'timeout', nextRunAtMs: now + HOUR } }] }
+const toolApprovals = { available: true, pending: [{ id: 'approval-1', toolName: 'shell.exec', sessionKey: 'icqq:preview-community:group:20001', requesterId: '10001', createdAt: now - 5 * 60_000, expiresAt: now + 25 * 60_000, status: 'pending', args: { command: 'ls' } }] }
+const pluginRoot = {
+  decisions: body => ({ persistent: true, items: decisions.filter(row => (!body.platform || row.platform === body.platform) && (!body.sceneId || row.scene_id === body.sceneId)), nextBefore: null }),
+  'usage-stats': body => usageStats(body.session),
+  ambient: () => ambientStatus,
+  skills: () => ({ enabled: true, tasks: [], recent: [], updatedAt: null }),
+  'tool-approvals': () => toolApprovals,
+  control: () => ({ available: true, revision: 1, persistent: true, instance: { emergency_stop: false, muted: false, read_only: false, mention_only: true } }),
+}
 // Object tree fixtures (feature.* ADR 0050 / 0055, chat-roles.* ADR 0056).
 const LEVELS = ['global', 'adapter', 'endpoint', 'conversation']
 const features = [
@@ -73,7 +130,10 @@ const server = createServer(async (request, response) => {
   if (request.headers.authorization !== 'Bearer ui-preview' && url.searchParams.get('token') !== 'ui-preview') {
     json({ success: false, error: 'Use the synthetic preview token: ui-preview' }, 401); return
   }
-  if (url.pathname === '/api/events/history') { json(envelope({ items: [], hasMore: false, nextAfter: 0, runtimeId: 'ui-preview', latestEventId: 0, oldestAvailableEventId: 0, gap: false })); return }
+  if (url.pathname === '/api/events/history') { json(envelope({ items: messageEvents, hasMore: false, nextAfter: messageEvents.length, runtimeId: 'ui-preview', latestEventId: messageEvents.length, oldestAvailableEventId: 1, gap: false })); return }
+  if (url.pathname === '/api/tasks/providers') { json(envelope(taskProviders)); return }
+  if (url.pathname === '/api/tasks/use-cases') { json(envelope({ useCases: [] })); return }
+  if (url.pathname === '/api/assistant/jobs') { json(envelope(assistantJobs)); return }
   if (url.pathname === '/api/events') {
     response.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' })
     response.write(': local UI fixture\n\n')
@@ -85,8 +145,13 @@ const server = createServer(async (request, response) => {
     json(envelope({ uptime: 3812, platform: 'darwin', nodeVersion: 'v24.19.0', memory: { rss: 64_000_000, heapTotal: 32_000_000, heapUsed: 24_000_000, external: 0 }, cpu: { user: 0, system: 0 }, scope: 'full' })); return
   }
   if (url.pathname === '/api/stats') { json(envelope({ plugins: { total: 3, active: 2 }, endpoints: { total: 2, online: 1 }, commands: 12, uptime: 3812, memory: 64_000_000 })); return }
-  if (url.pathname === '/api/logs/stats') { json(envelope({ total: 3, byLevel: { trace: 0, debug: 0, info: 2, warn: 1, error: 0, fatal: 0 }, levels: { info: 2, warn: 1, error: 0 }, oldest: logs[2].timestamp, newest: logs[0].timestamp })); return }
-  if (url.pathname === '/api/logs') { json(envelope({ logs, total: logs.length, page: 1, pageSize: 50, hasMore: false })); return }
+  if (url.pathname === '/api/logs/stats') { json(envelope({ total: 3, byLevel: { trace: 0, debug: 0, info: 2, warn: 1, error: 0, fatal: 0 }, levels: { info: 2, warn: 1, error: 0 }, oldestTimestamp: new Date(logs[2].timestamp).toISOString(), oldest: logs[2].timestamp, newest: logs[0].timestamp })); return }
+  if (url.pathname === '/api/logs') {
+    const q = (url.searchParams.get('q') ?? '').toLowerCase()
+    const rows = logs.filter(log => !q || `${log.message} ${log.name}`.toLowerCase().includes(q))
+      .map(log => ({ id: log.id, level: log.level, message: log.message, source: log.name, timestamp: new Date(log.timestamp).toISOString() }))
+    json({ success: true, data: rows, total: rows.length, page: 1, pageSize: 100, totalPages: 1, sources: [{ source: 'preview', count: rows.length }] }); return
+  }
   if (url.pathname === '/api/plugins') {
     json(envelope(features.map(item => ({ name: item.plugin, description: item.displayName, status: item.globalEnabled ? 'active' : 'inactive', features: [], config: { hasSchema: item.hasSchema } }))))
     return
@@ -105,6 +170,9 @@ const server = createServer(async (request, response) => {
     const type = String(body.type)
     const endpoint = endpoints.find(endpoint => endpoint.name === (body.endpointKey ?? body.endpointId ?? body.data?.endpointKey)) ?? endpoints[0]
     if (type === 'endpoint.list') { json(envelope({ endpoints })); return }
+    if (type.startsWith('plugin.root.') && Object.hasOwn(pluginRoot, type.slice('plugin.root.'.length))) { json(envelope(pluginRoot[type.slice('plugin.root.'.length)](body.data ?? {}))); return }
+    if (type === 'schedule:list') { json(envelope(scheduleList)); return }
+    if (type === 'config:get-source') { json(envelope({ source: configSource, revision: 'preview-1' })); return }
     if (type === 'feature.list') { json(envelope({ revision: 'preview-1', features })); return }
     if (type === 'feature.get') { json(envelope(featureDetail(body))); return }
     if (type === 'feature.matrix') {

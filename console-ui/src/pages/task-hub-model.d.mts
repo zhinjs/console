@@ -1,5 +1,5 @@
 export const TASK_HUB_PATH: '/tasks'
-export type TaskTabId = 'admin' | 'schedule' | 'assistant' | 'history'
+export type TaskTabId = 'overview' | 'admin' | 'schedule' | 'assistant' | 'history'
 export interface TaskHubTab { readonly id: TaskTabId; readonly label: string }
 export const TASK_HUB_TABS: readonly TaskHubTab[]
 export const DEFAULT_TASK_TAB: TaskTabId

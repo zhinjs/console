@@ -304,7 +304,7 @@ test('Workroom selection is represented by engagementId in the URL', () => {
 
 test('Workroom read errors never masquerade as an empty record list', () => {
   const source = sourceText(join(SOURCE_ROOT, 'pages', 'workrooms.tsx'))
-  assert.match(source, /error \? <ErrorAlert error=\{error\} onRetry=\{refresh\} \/>/)
+  assert.match(source, /\) : error \? \(\s*<StatusState error=\{error\}[^\n]*onRetry=\{refresh\} \/>/)
   assert.match(source, /\) : error \? \([\s\S]*无法读取协作记录[\s\S]*\) : \([\s\S]*还没有协作记录/)
   assert.match(source, /detail\.summary\.engagementId === selectedId/)
 })
