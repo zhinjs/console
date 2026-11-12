@@ -57,7 +57,8 @@
 - 页签由层级决定（`SCOPE_TABS`），页面只提供各页签的内容 `panels`；不要在页签内容里再套一层 Tabs 作为主导航。
 - 当前页签写在 `?tab=`，切换用 `replace`，不产生历史记录；无效值回到概览。
 - 无权限的页签仍然显示（带锁图标），内容是 `StatusState kind="forbidden"` 并列出需要的权限（`SCOPE_TAB_PERMISSIONS`）。不要悄悄隐藏。
-- 只挂载当前页签，离开即卸载；需要保留草稿的页签自己用未保存修改守卫。
+- 只挂载当前页签，离开即卸载；需要保留草稿的页签自己用未保存修改守卫。页签里的写操作回执给 `useActionReceipt({ persistKey })`（范围 + 动作，如 `feature:adapter:qq:ai`），回执存在模块级 store（`components/action-receipt-store.mjs`），切走页签时请求照样落到回执里，切回来恢复「提交中 / 结果未知」，不会重新放开按钮；`submit` / `verify` 从 `plan.payload` 读要写什么，不读组件 ref。
+- 页签权限在本对象上检查（`scopeTabAllowed`）：适配器 / 账号级绑定（`/auth/me` 的 `bindings`，只含 `CONSOLE_SCOPED_PERMISSIONS`）在其下的对象有效，会话算作它的账号；页内按钮用 `hasConsolePermission(name, access, scopePermissionTarget(scope))`。
 - 「聊天」页签铺满（`flushTabs`），工作区放在 `.console-object-chat` 容器里，有固定工作高度。
 
 ## 6. 列表与详情
@@ -84,7 +85,10 @@
 
 - `prepare(plan)`：`title` 写清动作与对象（「授予 管理员：qq / 10001」），`changes` 逐条列出变化，危险操作 `danger: true`。
 - 提交中不能取消、不能重复提交；按钮在提交期间禁用。
-- **结果未知**（超时、断连、网关 504 `instance_timeout` / 502 `instance_error`）：只提供「核对当前状态」（`verify`，只读重新读取），绝不自动或手动重放写操作。
+- **结果未知**（超时、断连、读不出的答复、网关 504 `instance_timeout` / 502 `instance_error` 且 `requestOutcome: 'unknown'`）：只提供「核对当前状态」（`verify`，只读重新读取），绝不自动或手动重放写操作。回执不能关闭、取消，也不能被新的 `prepare` 覆盖；核对确认已生效 → 成功，确认未生效 → 未执行，用户点「放弃并重新开始」才回到空闲。
+- 页面的写按钮统一用 `receiptBlocksActions(receipt.state)` 判定忙碌（待确认、提交中、核对中、结果未知都算），不要自己枚举阶段。
+- 危险操作的「确认执行」把「取消」放在前面并聚焦，且出现后 `CONFIRM_GUARD_MS`（400ms）内忽略确认，双击或连按回车不会越过二次确认。
+- 已发布 SDK 的 `sendRequest` 丢掉 Host 的 `code`、`requestOutcome`、`lockedBy` 与 `Retry-After`，并把超时、断网、非 JSON 答复都报成 `MessageError('REST request failed')`；`requestConsole` 经 `utils/rpc-reply-capture.mjs` 记录答复，把这些放回 `error.details`。
 - **未执行**（Host 明确拒绝：权限、校验、冲突、锁定，或 503 `instance_unavailable` 的 `not-dispatched`）：显示原因，可以重新准备。
 - 回执就地显示在发起操作的控件附近，直到用户关闭；toast 只用于不需要追踪结果的轻提示。
 - 删除、撤销、全局停用等不可逆或影响面大的操作必须 `danger: true`；删除类再要求输入名称的，沿用现有 `confirm-dialog`。

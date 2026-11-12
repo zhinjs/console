@@ -132,3 +132,15 @@ test('the global overview lists where lower levels change a feature', () => {
   assert.equal(rows[1].levels, null)
   assert.deepEqual(globalFeatureCounts(rows), { total: 2, enabled: 1, disabled: 1, customized: 1 })
 })
+
+test('a file-level feature write moves every row of the level to the new revision', async () => {
+  const { featureWriteSharesRevision } = await import('../console-ui/src/pages/features/feature-scope-model.mjs')
+  assert.equal(featureWriteSharesRevision('adapter'), true, 'adapter overrides live in the configuration file')
+  assert.equal(featureWriteSharesRevision('endpoint'), true)
+  assert.equal(featureWriteSharesRevision('conversation'), false, 'conversation overrides have their own revision per row')
+  const { readFileSync } = await import('node:fs')
+  const panel = readFileSync(new URL('../console-ui/src/pages/features/feature-level-panel.tsx', import.meta.url), 'utf8')
+  assert.match(panel, /reload=\{\(\) => \{ if \(featureWriteSharesRevision\(level\)\) reloadAll\(\); else reload\(row\.plugin\) \}\}/, 'the whole level is re-read')
+  assert.match(panel, /if \(result\.status === 'saved' \|\| result\.status === 'unchanged'\) adoptRevision\?\.\(result\.revision\)/, 'and adopts the answered revision at once')
+  assert.match(panel, /state\.value \? \{ \.\.\.state, value: \{ \.\.\.state\.value, revision \} \} : state/)
+})

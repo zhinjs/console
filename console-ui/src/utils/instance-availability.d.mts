@@ -21,3 +21,6 @@ export function rearmInstanceRetry(now?: number): void
 export function instanceStateAnswers(value: unknown): boolean
 export function clearInstanceAvailability(): void
 export function onInstanceRecovered(listener: () => void): () => void
+export const GATEWAY_OWNED_RPC_TYPES: readonly string[]
+export const INSTANCE_PROBE_RPC: string
+export function probeInstance(request: (request: { type: string }) => Promise<unknown>): Promise<boolean>

@@ -523,7 +523,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
       )}
 
       {/* Detail Dialog */}
-      <Dialog open={detailOpen} onOpenChange={(open) => { if (!open && packageAction.busy) return; if (!open) detailRequest.current++; setDetailOpen(open) }}>
+      <Dialog open={detailOpen} onOpenChange={(open) => { if (!open && packageAction.inFlight) return; if (!open) detailRequest.current++; setDetailOpen(open) }}>
         <DialogContent className="w-[calc(100%-2rem)] max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
           {detailLoading ? (
             <div className="space-y-3 p-1">
@@ -698,7 +698,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                 {!readOnly && packageAction.planning && <Button size="sm" disabled aria-busy><RefreshCw className="animate-spin" />{i18n.t("生成计划中…")}</Button>}
                 {readOnly && <span className="text-xs text-muted-foreground">{i18n.t("当前身份只能查看市场，安装需要 plugin.manage 权限。")}</span>}
                 <DialogClose asChild>
-                  <Button variant="secondary" size="sm" disabled={packageAction.busy}>{i18n.t("关闭")}</Button>
+                  <Button variant="secondary" size="sm" disabled={packageAction.inFlight}>{i18n.t("关闭")}</Button>
                 </DialogClose>
               </DialogFooter>
             </>

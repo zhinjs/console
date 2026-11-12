@@ -6,6 +6,7 @@ import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { ActionReceipt, useActionReceipt } from '../../components/ActionReceipt'
+import { receiptBlocksActions } from '../../components/action-receipt-model.mjs'
 import { ENDPOINT_RPC } from '../../contracts/zhin-console'
 import { startVisiblePolling } from '../../hooks/visible-polling.mjs'
 import { useConsoleAccess } from '../../hooks/use-console-access'
@@ -132,18 +133,23 @@ export function useLoginTaskTypeLabel() {
  * One open login task of an account (二维码 / 滑块 / 短信 / 设备锁): its prompt, and submitting or
  * cancelling it through an ActionReceipt. An unknown outcome is checked by re-reading `login.list`.
  */
+interface PendingLoginAction { readonly kind: 'submit' | 'cancel'; readonly value: string }
+
 export function LoginTaskCard({ task, onSettled, readOnly }: { task: LoginTask; onSettled: () => void; readOnly: boolean }) {
   const i18n = useI18n()
   const typeLabel = useLoginTaskTypeLabel()
   const [input, setInput] = useState('')
-  const action = useRef<'submit' | 'cancel'>('submit')
-  const value = useRef('')
+  // What is sent rides on the plan; the receipt outlives the tab (action-receipt-store), so an
+  // unknown submission stays 结果未知 after switching tabs and back.
   const receipt = useActionReceipt({
-    submit: async () => {
+    persistKey: `login:${task.id}`,
+    submit: async plan => {
+      const { kind, value } = (plan.payload ?? {}) as Partial<PendingLoginAction>
+      if (kind !== 'submit' && kind !== 'cancel') throw new Error('No action')
       const identity = task.endpointIdentity ? { endpointIdentity: task.endpointIdentity } : {}
-      if (action.current === 'cancel') await requestConsole({ type: 'login.cancel', taskId: task.id, reason: 'console_cancelled', ...identity })
-      else await requestConsole({ type: 'login.submit', taskId: task.id, value: value.current, ...identity })
-      return { status: 'saved', message: action.current === 'cancel' ? i18n.t('已取消这次登录验证。') : i18n.t('已提交，请稍候查看连接状态。') }
+      if (kind === 'cancel') await requestConsole({ type: 'login.cancel', taskId: task.id, reason: 'console_cancelled', ...identity })
+      else await requestConsole({ type: 'login.submit', taskId: task.id, value, ...identity })
+      return { status: 'saved', message: kind === 'cancel' ? i18n.t('已取消这次登录验证。') : i18n.t('已提交，请稍候查看连接状态。') }
     },
     // The task disappears from login.list once the Host accepted the answer (or the cancellation).
     verify: async () => {
@@ -159,13 +165,14 @@ export function LoginTaskCard({ task, onSettled, readOnly }: { task: LoginTask; 
   const phone = typeof task.payload?.phone === 'string' ? task.payload.phone : undefined
   const asksInput = needsInput(task.type)
   const extracted = asksInput ? extractVerificationValue(input) : { value: 'ok' }
-  const busy = receipt.state.phase !== 'idle' && receipt.state.phase !== 'failed' && receipt.state.phase !== 'unknown'
+  // A settled submission keeps the card busy too: the task is answered (it leaves login.list).
+  const busy = receiptBlocksActions(receipt.state) || receipt.state.phase === 'succeeded' || receipt.state.phase === 'partial'
   const prepare = (kind: 'submit' | 'cancel') => {
-    action.current = kind
-    value.current = asksInput ? extracted.value : 'ok'
+    const value = asksInput ? extracted.value : 'ok'
+    const payload: PendingLoginAction = { kind, value }
     receipt.prepare(kind === 'cancel'
-      ? { title: i18n.t('取消 {0} 的登录验证', [task.endpointKey]), danger: false, confirmLabel: i18n.t('取消验证') }
-      : { title: i18n.t('提交 {0} 的{1}', [task.endpointKey, typeLabel(task.type)]), ...(asksInput ? { changes: [i18n.t('验证值：{0}', [value.current.length > 28 ? `${value.current.slice(0, 28)}…` : value.current])] } : {}), confirmLabel: i18n.t('提交验证') })
+      ? { title: i18n.t('取消 {0} 的登录验证', [task.endpointKey]), danger: false, confirmLabel: i18n.t('取消验证'), payload }
+      : { title: i18n.t('提交 {0} 的{1}', [task.endpointKey, typeLabel(task.type)]), ...(asksInput ? { changes: [i18n.t('验证值：{0}', [value.length > 28 ? `${value.slice(0, 28)}…` : value])] } : {}), confirmLabel: i18n.t('提交验证'), payload })
   }
   return (
     <div className="console-login-card">

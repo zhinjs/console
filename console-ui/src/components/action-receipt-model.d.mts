@@ -11,6 +11,11 @@ export interface ReceiptPlan {
   /** Danger: a second confirmation step before submitting. */
   readonly danger?: boolean
   readonly confirmLabel?: string
+  /**
+   * What the write needs (request body, the change to check). Kept with the receipt, so a check after
+   * the panel was unmounted and mounted again still knows what it is checking.
+   */
+  readonly payload?: unknown
 }
 
 export interface ReceiptItem { readonly label: string; readonly ok: boolean; readonly message?: string }
@@ -24,6 +29,8 @@ export interface ActionReceiptState {
   readonly unchanged?: boolean
   readonly verified?: boolean
   readonly startedAt?: number
+  /** When the 「确认执行」 step appeared (danger plans). */
+  readonly confirmingAt?: number
   readonly finishedAt?: number
 }
 
@@ -41,6 +48,9 @@ export type ReceiptEvent =
 
 export const RECEIPT_PHASES: readonly ReceiptPhase[]
 export const IDLE_RECEIPT: ActionReceiptState
+export const CONFIRM_GUARD_MS: number
+export function receiptBlocksActions(receipt: ActionReceiptState | null | undefined): boolean
+export function receiptConfirmGuarded(receipt: ActionReceiptState | null | undefined, now?: number): boolean
 export const RECEIPT_COPY: Readonly<Record<Exclude<ReceiptPhase, 'idle'>, string>>
 export function receiptSettled(receipt: ActionReceiptState | null | undefined): boolean
 export function receiptCanSubmit(receipt: ActionReceiptState | null | undefined): boolean

@@ -141,7 +141,9 @@ export function sessionView(me) {
 export function meAccessReport(me) {
   if (!me || me.kind === 'anonymous') return { permissions: [] }
   if (me.kind === 'bootstrap') return me.open ? null : { permissions: [] }
-  return { permissions: Array.isArray(me.permissions) ? me.permissions : [] }
+  // `permissions` are the global bindings only (the gateway does not expand scoped ones into it);
+  // adapter / endpoint bindings come along so pages can check a permission at their own scope.
+  return { permissions: Array.isArray(me.permissions) ? me.permissions : [], bindings: Array.isArray(me.bindings) ? me.bindings : [] }
 }
 
 /** Parses `GET /auth/me` data; `null` when it is not a principal report. */

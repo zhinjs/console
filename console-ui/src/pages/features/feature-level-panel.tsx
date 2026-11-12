@@ -12,12 +12,13 @@ import { Skeleton } from '../../components/ui/skeleton'
 import { Switch } from '../../components/ui/switch'
 import { StatusState } from '../../components/StatusState'
 import { ActionReceipt, useActionReceipt } from '../../components/ActionReceipt'
+import { receiptBlocksActions, type ReceiptPlan } from '../../components/action-receipt-model.mjs'
 import { SchemaFieldEditor } from '../../components/PluginConfigForm/SchemaFieldEditor'
 import type { SchemaEditorDrafts } from '../../components/PluginConfigForm/types'
 import { featureGlobalHref } from '../../console-routes.mjs'
 import { FEATURE_RPC } from '../../contracts/zhin-console'
 import { useConsoleAccess } from '../../hooks/use-console-access'
-import { hasConsolePermission } from '../../utils/console-access.mjs'
+import { hasConsolePermission, scopePermissionTarget } from '../../utils/console-access.mjs'
 import { requestConsole } from '../../utils/console-rpc'
 import { ObjectSection } from '../../scope/ObjectPageLayout'
 import { SCOPE_LEVEL_LABELS, scopeKey, type Scope } from '../../scope/scope-tree.mjs'
@@ -27,7 +28,7 @@ import {
 } from './feature-model.mjs'
 import {
   FEATURE_ROW_FILTERS, featureChangeApplied, featureFieldView, featureLevelRow, featureLockHref,
-  featureReceiptOutcome, featureRowCounts, featureValueText, filterFeatureRows, parentFeatureTarget,
+  featureReceiptOutcome, featureRowCounts, featureValueText, featureWriteSharesRevision, filterFeatureRows, parentFeatureTarget,
   type FeatureChange, type FeatureLevelRow, type FeatureRowFilter,
 } from './feature-scope-model.mjs'
 import { useFeatureList } from './use-feature-data'
@@ -74,7 +75,14 @@ function useLevelDetails(plugins: readonly string[], level: FeatureLevel, key: s
     loadAll()
     return () => { generation.current += 1 }
   }, [loadAll])
-  return { details, reload: loadOne, reloadAll: loadAll }
+  // A file-level write answers with the file's new revision: every row adopts it at once, before
+  // the re-read lands, so a second row written meanwhile does not send the old one.
+  const adoptRevision = useCallback((revision: string) => {
+    if (!revision) return
+    setDetails(previous => Object.fromEntries(Object.entries(previous).map(([plugin, state]) => [plugin,
+      state.value ? { ...state, value: { ...state.value, revision } } : state])))
+  }, [])
+  return { details, reload: loadOne, reloadAll: loadAll, adoptRevision }
 }
 
 /**
@@ -91,7 +99,7 @@ export function FeatureLevelPanel({ scope }: { scope: Scope }) {
   const list = useFeatureList()
   const features = useMemo(() => list.value ? featuresAtLevel(list.value.features, level) : [], [list.value, level])
   const plugins = useMemo(() => features.map(feature => feature.plugin), [features])
-  const { details, reload, reloadAll } = useLevelDetails(plugins, level, key)
+  const { details, reload, reloadAll, adoptRevision } = useLevelDetails(plugins, level, key)
   const [filter, setFilter] = useState<FeatureRowFilter>('all')
   const [query, setQuery] = useState('')
   const rows = useMemo(() => features.map(feature => featureLevelRow(feature, details[feature.plugin]?.value ?? null, level)), [features, details, level])
@@ -108,7 +116,7 @@ export function FeatureLevelPanel({ scope }: { scope: Scope }) {
   return (
     <ObjectSection title={copy.title} description={copy.description}
       actions={<Button variant="outline" size="sm" onClick={refresh} disabled={list.status === 'loading'}><RefreshCw className={list.status === 'loading' ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>}>
-      <FeatureReadOnlyNote />
+      <FeatureReadOnlyNote scope={scope} />
       {list.status === 'error' ? <StatusState error={list.error} onRetry={list.refresh} /> : null}
       {list.status === 'loading' && !list.value ? (
         <div className="space-y-2">{[0, 1, 2].map(index => <Skeleton key={index} className="h-16" />)}</div>
@@ -136,7 +144,9 @@ export function FeatureLevelPanel({ scope }: { scope: Scope }) {
               {visible.map(row => {
                 const feature = features.find(item => item.plugin === row.plugin)!
                 return <FeatureRow key={row.plugin} scope={scope} level={level} levelKey={key} feature={feature} row={row}
-                  detail={details[row.plugin] ?? { status: 'loading', value: null, error: null }} reload={() => reload(row.plugin)} />
+                  detail={details[row.plugin] ?? { status: 'loading', value: null, error: null }}
+                  reload={() => { if (featureWriteSharesRevision(level)) reloadAll(); else reload(row.plugin) }}
+                  adoptRevision={featureWriteSharesRevision(level) ? adoptRevision : undefined} />
               })}
             </Card>
           )}
@@ -169,6 +179,8 @@ function LockLink({ row, scope }: { row: FeatureLevelRow; scope: Scope }) {
 
 interface PendingChange { readonly body: Record<string, unknown> & { type: string }; readonly change: FeatureChange }
 
+const pendingOf = (plan: ReceiptPlan) => plan.payload as PendingChange | undefined
+
 interface FeatureRowProps {
   readonly scope: Scope
   readonly level: FeatureOverrideLevel
@@ -177,23 +189,31 @@ interface FeatureRowProps {
   readonly row: FeatureLevelRow
   readonly detail: DetailState
   readonly reload: () => void
+  /** File levels: the new revision a write answered with, for every row of the level. */
+  readonly adoptRevision?: (revision: string) => void
 }
 
-function FeatureRow({ scope, level, levelKey, feature, row, detail, reload }: FeatureRowProps) {
+function FeatureRow({ scope, level, levelKey, feature, row, detail, reload, adoptRevision }: FeatureRowProps) {
   const i18n = useI18n()
   const access = useConsoleAccess()
-  const canToggle = hasConsolePermission('feature.toggle', access)
-  const canConfigure = hasConsolePermission('feature.configure', access)
+  // An adapter- or account-scoped binding may toggle / configure here (a conversation counts as its account).
+  const target = scopePermissionTarget(scope)
+  const canToggle = hasConsolePermission('feature.toggle', access, target)
+  const canConfigure = hasConsolePermission('feature.configure', access, target)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<string | null>(null)
   const value = detail.value
-  const pending = useRef<PendingChange | null>(null)
+  // Kept per scope + plugin outside the tab (action-receipt-store): leaving 功能 mid-write or with an
+  // unknown outcome and coming back shows the same receipt, so the write cannot be sent twice.
   const receipt = useActionReceipt({
-    submit: async () => {
-      const current = pending.current
+    persistKey: `feature:${level}:${levelKey}:${feature.plugin}`,
+    submit: async plan => {
+      const current = pendingOf(plan)
       if (!current) throw new Error('No change')
       try {
-        const outcome = featureReceiptOutcome(readFeatureWriteResult(await requestConsole<unknown>(current.body)))
+        const result = readFeatureWriteResult(await requestConsole<unknown>(current.body))
+        if (result.status === 'saved' || result.status === 'unchanged') adoptRevision?.(result.revision)
+        const outcome = featureReceiptOutcome(result)
         if (outcome.locked) throw Object.assign(new Error(outcome.message), { code: 'locked', lockedBy: outcome.lockedBy })
         return outcome
       } finally {
@@ -201,21 +221,22 @@ function FeatureRow({ scope, level, levelKey, feature, row, detail, reload }: Fe
         reload()
       }
     },
-    verify: async () => {
-      const current = pending.current
+    verify: async plan => {
+      const current = pendingOf(plan)
       if (!current) return undefined
-      return { applied: featureChangeApplied(await readDetail(feature.plugin, level, levelKey), current.change) }
+      const applied = featureChangeApplied(await readDetail(feature.plugin, level, levelKey), current.change)
+      reload()
+      return { applied }
     },
     onSettled: () => setEditing(null),
   })
-  const busy = receipt.state.phase === 'submitting' || receipt.state.phase === 'verifying' || receipt.state.phase === 'prepared' || receipt.state.phase === 'confirming'
+  const busy = receiptBlocksActions(receipt.state)
   const valueCopy = { unset: i18n.t('未设置'), masked: i18n.t('已隐藏的敏感值') }
   // 「在会话 group:1 关闭 X」: the identity is set off by spaces; 全局 has none (「在全局关闭 X」).
   const identity = level === 'conversation' ? `${scope.kind}:${scope.id}` : level === 'endpoint' ? `${scope.adapter} / ${scope.endpoint}` : level === 'adapter' ? scope.adapter : ''
   const where = identity ? `${i18n.t(SCOPE_LEVEL_LABELS[level])} ${identity}${i18n.locale.startsWith("zh") ? " " : ""}` : i18n.t(SCOPE_LEVEL_LABELS[level])
   const prepare = (change: PendingChange, plan: { title: string; changes?: string[]; danger?: boolean; confirmLabel?: string; summary?: string }) => {
-    pending.current = change
-    receipt.prepare(plan)
+    receipt.prepare({ ...plan, payload: change })
   }
   const toggle = (enabled: boolean) => {
     if (!value || value.lockedBy) return
@@ -423,10 +444,11 @@ function FieldEditor({ field, busy, onCancel, onSave }: { field: FeatureFieldRow
   )
 }
 
-/** Shown above the rows when the identity may only read. */
-export function FeatureReadOnlyNote() {
+/** Shown above the rows when the identity may only read (at `scope`, scoped bindings included). */
+export function FeatureReadOnlyNote({ scope }: { scope?: Scope }) {
   const i18n = useI18n()
   const access = useConsoleAccess()
-  if (hasConsolePermission('feature.configure', access) && hasConsolePermission('feature.toggle', access)) return null
+  const target = scopePermissionTarget(scope)
+  if (hasConsolePermission('feature.configure', access, target) && hasConsolePermission('feature.toggle', access, target)) return null
   return <Alert role="status"><AlertDescription>{i18n.t('当前身份只能查看部分功能设置，无法修改。')}</AlertDescription></Alert>
 }

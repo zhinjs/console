@@ -222,3 +222,14 @@ export function globalFeatureCounts(rows) {
     customized: rows.filter(row => row.below.length || row.conversations.length).length,
   }
 }
+
+/**
+ * Below 全局 the adapter and account levels write the configuration file, and `feature.get` reports
+ * the file's revision for every plugin: one plugin's saved override changes the `expectedRevision`
+ * every other row of the page must send. So after a write at such a level the panel re-reads the
+ * whole level, not just the row (the next write of another row would conflict otherwise).
+ * Conversation overrides have their own revision per row.
+ */
+export function featureWriteSharesRevision(level) {
+  return level !== 'conversation'
+}

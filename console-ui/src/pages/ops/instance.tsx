@@ -13,6 +13,7 @@ import { Skeleton } from '../../components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { StatusState } from '../../components/StatusState'
 import { ActionReceipt, useActionReceipt } from '../../components/ActionReceipt'
+import { receiptBlocksActions } from '../../components/action-receipt-model.mjs'
 import { ObjectSection } from '../../scope/ObjectPageLayout'
 import { useToast } from '../../components/toast'
 import { useConsoleAccess } from '../../hooks/use-console-access'
@@ -21,7 +22,7 @@ import type {
   GatewayInstanceLogLine, GatewayInstanceStatus, GatewayInstalledPackage, GatewayPackageOperation, GatewayPackagePlan, GatewayPluginConfigurationNeed,
 } from '../../contracts/gateway'
 import {
-  GATEWAY_RPC, failureReasonLabel, formatDuration, instanceActions, instanceStateLabel, instanceStateTone, mergeLogLines,
+  GATEWAY_RPC, failureReasonLabel, formatDuration, instanceActions, instanceLifecycleApplied, instanceStateLabel, instanceStateTone, mergeLogLines,
   operationLabel, parsePackageSpecs, readInstanceStatus, readLogLines, readPackageList, readPackagePlan, transactionSummary, uptimeMs,
 } from './gateway-model.mjs'
 import { GatewayLoadError, TransactionProgress } from './ops-components'
@@ -106,6 +107,8 @@ const LIFECYCLE_TYPES: Record<LifecycleAction, string> = {
   restart: GATEWAY_RPC.INSTANCE_RESTART,
 }
 
+interface LifecyclePlan { readonly action: LifecycleAction; readonly before: GatewayInstanceStatus | null | undefined }
+
 function InstanceStatusSection({ status, canControl, locked }: {
   status: ReturnType<typeof useGatewayRead<GatewayInstanceStatus | null>>
   canControl: boolean
@@ -117,41 +120,42 @@ function InstanceStatusSection({ status, canControl, locked }: {
   const actions = data ? instanceActions(data.state) : { start: false, stop: false, restart: false }
   const uptime = uptimeMs(data, now)
   const when = (value: number) => i18n.date(value, { dateStyle: 'medium', timeStyle: 'medium' })
-  const action = useRef<LifecycleAction>('start')
-  // 准备 → 确认（停止 / 重启再确认一次）→ 提交；结果未知时只读核对状态，不重放。
+  // 准备 → 确认（停止 / 重启再确认一次）→ 提交；结果未知时只读核对状态，不重放。The plan carries the
+  // action and the status it was prepared from: a restart is only 已生效 when the run changed.
   const receipt = useActionReceipt({
-    submit: async () => {
-      const next = readInstanceStatus(await gatewayRequest<unknown>(LIFECYCLE_TYPES[action.current], {}, i18n.t))
+    submit: async plan => {
+      const { action } = plan.payload as LifecyclePlan
+      const next = readInstanceStatus(await gatewayRequest<unknown>(LIFECYCLE_TYPES[action], {}, i18n.t))
       if (next) status.set(next)
       else status.refresh()
     },
-    verify: async () => {
+    verify: async plan => {
+      const { action, before } = plan.payload as LifecyclePlan
       const next = readInstanceStatus(await gatewayRequest<unknown>(GATEWAY_RPC.INSTANCE_STATUS, {}, i18n.t))
       if (!next) return undefined
       status.set(next)
-      const running = next.state === 'running' || next.state === 'starting'
-      return { applied: action.current === 'stop' ? next.state === 'stopped' : running }
+      return { applied: instanceLifecycleApplied(action, before, next) }
     },
   })
   const prepare = (next: LifecycleAction) => {
-    action.current = next
+    const payload: LifecyclePlan = { action: next, before: data }
     if (next === 'start') {
-      receipt.prepare({ title: i18n.t('启动实例'), changes: [i18n.t('网关拉起实例并等待就绪')], confirmLabel: i18n.t('启动') })
+      receipt.prepare({ title: i18n.t('启动实例'), changes: [i18n.t('网关拉起实例并等待就绪')], confirmLabel: i18n.t('启动'), payload })
     } else if (next === 'stop') {
       receipt.prepare({
         title: i18n.t('停止实例'),
         changes: [i18n.t('机器人离线，直到再次启动'), i18n.t('访问控制、终端、实例日志和本页仍由网关提供')],
-        danger: true, confirmLabel: i18n.t('停止'),
+        danger: true, confirmLabel: i18n.t('停止'), payload,
       })
     } else {
       receipt.prepare({
         title: i18n.t('重启实例'),
         changes: [i18n.t('机器人短暂离线，正在进行的对话可能中断'), i18n.t('网关等待新实例就绪')],
-        danger: true, confirmLabel: i18n.t('重启'),
+        danger: true, confirmLabel: i18n.t('重启'), payload,
       })
     }
   }
-  const pending = receipt.state.phase === 'submitting' || receipt.state.phase === 'verifying'
+  const pending = receiptBlocksActions(receipt.state)
 
   return (
     <div id={INSTANCE_SECTION_IDS.status} className="scroll-mt-4">
@@ -342,7 +346,7 @@ function DependencyPanel({ canManage, onActiveChange, onFinished }: { canManage:
     void prepare('install', parsed.specs, { enable })
   }
 
-  const busy = running || planning || declaring || receipt.state.phase === 'submitting'
+  const busy = running || planning || declaring || receiptBlocksActions(receipt.state)
   return (
     <div id={INSTANCE_SECTION_IDS.dependencies} className="scroll-mt-4">
       <ObjectSection title={i18n.t("项目依赖")}

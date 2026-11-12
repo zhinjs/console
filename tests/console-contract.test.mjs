@@ -355,8 +355,11 @@ test('mutation pages derive their read-only state from Host-reported permissions
     ['pages/workroom-catalog.tsx', 'agent.configure'],
   ]) {
     const source = sourceText(join(SOURCE_ROOT, path))
-    assert.ok(source.includes(`const readOnly = !hasConsolePermission('${permission}')`), `${path} must gate writes on ${permission}`)
+    // The account workspace checks at its account, so an account- or adapter-scoped binding counts (ADR 0049 §3).
+    assert.ok(source.includes(`const readOnly = !hasConsolePermission('${permission}'`), `${path} must gate writes on ${permission}`)
   }
+  const workspace = sourceText(join(SOURCE_ROOT, 'pages/endpoint-detail/index.tsx'))
+  assert.match(workspace, /hasConsolePermission\('endpoint\.operate', undefined, target\?\.adapter && target\.endpointId\s*\? \{ kind: 'endpoint', adapter: target\.adapter, endpoint: target\.endpointId \}/)
 })
 
 test('demo mode is removed: no build flag, bootstrap, onboarding or demo-only branches remain', () => {

@@ -36,6 +36,8 @@ export const SCOPE_TAB_PARAM: 'tab'
 export const SCOPE_TAB_LABELS: Readonly<Record<ScopeTab, string>>
 export const SCOPE_LEVEL_LABELS: Readonly<Record<ScopeLevel, string>>
 export const SCOPE_TAB_PERMISSIONS: Readonly<Record<ScopeTab, readonly string[]>>
+export function scopeTabTarget(scope: Scope, tab: ScopeTab): import('../utils/console-access.mjs').ConsolePermissionTarget
+export function scopeTabAllowed(tab: ScopeTab, scope: Scope, access: import('../utils/console-access.mjs').ConsoleAccess): boolean
 export const CONVERSATION_KIND_LABELS: Readonly<Record<ConversationKind, string>>
 
 export function scopeLevel(scope: ScopeRef | null | undefined): ScopeLevel

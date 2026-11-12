@@ -163,7 +163,9 @@ export function EndpointWorkspaceView({ target, mode = 'account', onSelectionCha
 function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack }: EndpointWorkspaceProps = {}) {
   const i18n = useI18n()
   const ctx = useEndpointConsole(target)
-  const readOnly = !hasConsolePermission('endpoint.operate')
+  // Sending names the account (adapter + endpointKey), so an account- or adapter-scoped binding counts.
+  const readOnly = !hasConsolePermission('endpoint.operate', undefined, target?.adapter && target.endpointId
+    ? { kind: 'endpoint', adapter: target.adapter, endpoint: target.endpointId } : undefined)
 
   if (!ctx.valid) {
     return (

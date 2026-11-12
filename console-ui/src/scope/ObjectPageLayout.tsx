@@ -9,13 +9,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { StatusState } from '../components/StatusState'
 import { PageShell } from '../components/PageShell'
 import { useConsoleAccess } from '../hooks/use-console-access'
-import { hasAnyConsolePermission } from '../utils/console-access.mjs'
 import { copyText } from '../pages/clipboard-copy.mjs'
 import { ScopeBreadcrumb, type ScopeNames } from './ScopeBreadcrumb'
 import { ScopePicker } from './ScopePicker'
 import {
   CONVERSATION_KIND_LABELS, DEFAULT_SCOPE_TAB, SCOPE_LEVEL_LABELS, SCOPE_TAB_LABELS, SCOPE_TAB_PARAM, SCOPE_TAB_PERMISSIONS, SCOPE_TABS,
-  resolveScopeTab, scopeIdentity, scopeKey, type Scope, type ScopeTab,
+  resolveScopeTab, scopeIdentity, scopeKey, scopeTabAllowed, type Scope, type ScopeTab,
 } from './scope-tree.mjs'
 import './object-page.css'
 
@@ -122,7 +121,7 @@ export function ObjectPageLayout({
           <div className="console-object-tablist-scroll">
             <TabsList aria-label={i18n.t('页签')}>
               {tabs.map(id => {
-                const allowed = hasAnyConsolePermission(SCOPE_TAB_PERMISSIONS[id], access)
+                const allowed = scopeTabAllowed(id, scope, access)
                 return (
                   <TabsTrigger key={id} value={id} className="console-object-tab">
                     {allowed ? null : <Lock className="console-object-tab-lock" aria-label={i18n.t('无权限')} />}
@@ -135,7 +134,7 @@ export function ObjectPageLayout({
           </div>
           {tabs.map(id => (
             <TabsContent key={id} value={id} className={cn('console-object-panel', flushTabs.includes(id) && 'is-flush')}>
-              {hasAnyConsolePermission(SCOPE_TAB_PERMISSIONS[id], access)
+              {scopeTabAllowed(id, scope, access)
                 ? panels[id] ?? <StatusState kind="empty" title={i18n.t('这一页签还没有内容')} />
                 : <StatusState kind="forbidden" permissions={SCOPE_TAB_PERMISSIONS[id]} />}
             </TabsContent>

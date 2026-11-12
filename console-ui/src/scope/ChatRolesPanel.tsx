@@ -11,6 +11,7 @@ import { Skeleton } from '../components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
 import { StatusState } from '../components/StatusState'
 import { ActionReceipt, useActionReceipt } from '../components/ActionReceipt'
+import { receiptBlocksActions, type ReceiptPlan } from '../components/action-receipt-model.mjs'
 import { requestConsole } from '../utils/console-rpc'
 import { statusFromError, type StatusReading } from '../components/status-state-model.mjs'
 import { ObjectSection } from './ObjectPageLayout'
@@ -111,6 +112,9 @@ function RoleTable({ rows, label, busy, onRevoke, inheritedFrom }: {
  * platform identity and is not shown here. Grant and revoke go through an ActionReceipt; an unknown
  * outcome is only re-read, never resent.
  */
+interface PendingRoleAction { readonly action: 'grant' | 'revoke'; readonly adapter: string; readonly userId: string; readonly role?: ChatRole }
+const pendingRoleAction = (plan: ReceiptPlan) => plan.payload as PendingRoleAction | undefined
+
 export function ChatRolesPanel({ scope }: { scope: Scope }) {
   const i18n = useI18n()
   const key = scopeKey(scope)
@@ -119,18 +123,20 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
   const [platform, setPlatform] = useState('')
   const [role, setRole] = useState<ChatRole>('admin')
   const [formError, setFormError] = useState<string | null>(null)
-  const pendingAction = useRef<{ action: 'grant' | 'revoke'; adapter: string; userId: string; role?: ChatRole } | null>(null)
+  // The action rides on the plan, and the receipt outlives the tab (action-receipt-store): an
+  // unknown grant / revoke stays 结果未知 after switching tabs and back, never resent.
   const receipt = useActionReceipt({
-    submit: async () => {
-      const target = pendingAction.current
+    persistKey: `chat-roles:${key ?? ''}`,
+    submit: async plan => {
+      const target = pendingRoleAction(plan)
       if (!target) throw new Error('No action')
       const request = target.action === 'grant'
         ? chatRoleGrantRequest(scope, { adapter: target.adapter, userId: target.userId, role: target.role! })
         : chatRoleRevokeRequest(scope, { adapter: target.adapter, userId: target.userId })
       return readChatRoleChange(await requestConsole<unknown>(request))
     },
-    verify: async () => {
-      const target = pendingAction.current
+    verify: async plan => {
+      const target = pendingRoleAction(plan)
       if (!target) return undefined
       return { applied: chatRoleApplied(await roles.read(), scope, target, target.action) }
     },
@@ -157,8 +163,8 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
       return
     }
     setFormError(null)
-    pendingAction.current = { action: 'grant', adapter, userId: userId.trim(), role }
     receipt.prepare({
+      payload: { action: 'grant', adapter, userId: userId.trim(), role } satisfies PendingRoleAction,
       title: i18n.t('授予 {0}：{1} / {2}', [i18n.t(CHAT_ROLE_LABELS[role]), adapter, userId.trim()]),
       summary: i18n.t('在这一层及其下所有范围生效。授予者需要不低于该角色的权限。'),
       confirmLabel: i18n.t('授予'),
@@ -166,15 +172,15 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
     })
   }
   const prepareRevoke = (row: ChatRoleRow) => {
-    pendingAction.current = { action: 'revoke', adapter: row.adapter, userId: row.userId }
     receipt.prepare({
+      payload: { action: 'revoke', adapter: row.adapter, userId: row.userId } satisfies PendingRoleAction,
       title: i18n.t('撤销 {0}：{1} / {2}', [i18n.t(CHAT_ROLE_LABELS[row.role]), row.adapter, row.userId]),
       summary: i18n.t('只撤销在这一层直接授予的角色；从上级继承的角色不受影响。'),
       confirmLabel: i18n.t('撤销'),
       danger: true,
     })
   }
-  const busy = receipt.state.phase !== 'idle' && receipt.state.phase !== 'succeeded' && receipt.state.phase !== 'failed' && receipt.state.phase !== 'partial'
+  const busy = receiptBlocksActions(receipt.state)
   const inheritedFrom = (row: ChatRoleRow) => {
     const from = parseScopeKey(row.key)
     if (!from) return row.key

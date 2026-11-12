@@ -181,3 +181,22 @@ test('the instance page confirms lifecycle actions, plans before mutating and su
   assert.match(page, /hasConsolePermission\('ops\.restart'/u)
   assert.match(read('pages/ops/use-gateway.ts'), /onConsoleEvent\(GATEWAY_PACKAGES_PROGRESS/u)
 })
+
+test('an unknown restart is 已生效 only when the run changed; a still-running same run was not restarted', async () => {
+  const { instanceLifecycleApplied } = await import('../console-ui/src/pages/ops/gateway-model.mjs')
+  const before = { state: 'running', pid: 100, startedAt: 1000, generation: 3 }
+  assert.equal(instanceLifecycleApplied('restart', before, { ...before }), false, 'same generation, pid and start time: not restarted')
+  assert.equal(instanceLifecycleApplied('restart', before, { state: 'running', pid: 101, startedAt: 2000, generation: 4 }), true)
+  assert.equal(instanceLifecycleApplied('restart', before, { state: 'starting', generation: 4 }), true, 'a new generation is enough')
+  assert.equal(instanceLifecycleApplied('restart', before, { state: 'starting', generation: 3 }), undefined, 'same run, not running: still unknown')
+  assert.equal(instanceLifecycleApplied('restart', { state: 'running' }, { state: 'running' }), undefined, 'no run facts: cannot tell')
+  assert.equal(instanceLifecycleApplied('restart', before, { state: 'crashed', pid: 101 }), undefined)
+  assert.equal(instanceLifecycleApplied('stop', before, { state: 'stopped' }), true)
+  assert.equal(instanceLifecycleApplied('stop', before, { ...before }), false)
+  assert.equal(instanceLifecycleApplied('stop', before, { state: 'stopping', pid: 100 }), undefined)
+  assert.equal(instanceLifecycleApplied('start', { state: 'stopped' }, { state: 'starting' }), true)
+  assert.equal(instanceLifecycleApplied('start', { state: 'stopped' }, { state: 'stopped' }), undefined)
+  const page = read('pages/ops/instance.tsx')
+  assert.match(page, /const payload: LifecyclePlan = \{ action: next, before: data \}/, 'the plan keeps the status it was prepared from')
+  assert.match(page, /return \{ applied: instanceLifecycleApplied\(action, before, next\) \}/)
+})

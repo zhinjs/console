@@ -4,13 +4,28 @@
  * its own. Gateway-owned requests (访问控制、实例、终端、登录) keep working while the instance is down,
  * so their success says nothing about the instance and never clears the banner.
  */
-import { DEFAULT_INSTANCE_RETRY_SECONDS, statusFromError } from '../components/status-state-model.mjs'
+import { DEFAULT_INSTANCE_RETRY_SECONDS, outcomeUnknown, statusFromError } from '../components/status-state-model.mjs'
+import {
+  CONSOLE_GATEWAY_OWNED_RPC_PERMISSIONS, GATEWAY_INSTANCE_RPC, GATEWAY_RPC, IAM_RPC, ONBOARDING_RPC,
+} from '../contracts/console-protocol-mirror.mjs'
 
-/** Request types the gateway answers itself (ADR 0054 §2); they work while the instance is down. */
-const GATEWAY_OWNED = /^(?:gateway|iam|auth|terminal|console)\./u
+/**
+ * RPC types the gateway answers itself on `POST {base}/console/request`, from the protocol mirror:
+ * every `gateway.*` type (the gateway refuses unknown ones itself, `GATEWAY_RPC_PREFIX`), `iam.*`
+ * (`IAM_RPC`) and `onboarding.update` (`gateway-console.ts` `createGatewayAccountRpc`). They work
+ * while the instance is down, so their answers say nothing about it.
+ */
+const GATEWAY_RPC_PREFIX = 'gateway.'
+export const GATEWAY_OWNED_RPC_TYPES = Object.freeze([...new Set([
+  ...Object.values(GATEWAY_RPC),
+  ...Object.values(IAM_RPC),
+  ONBOARDING_RPC.UPDATE,
+  ...Object.keys(CONSOLE_GATEWAY_OWNED_RPC_PERMISSIONS),
+])])
+const GATEWAY_OWNED = new Set(GATEWAY_OWNED_RPC_TYPES)
 
 export function isGatewayOwnedRequest(type) {
-  return typeof type === 'string' && GATEWAY_OWNED.test(type)
+  return typeof type === 'string' && (type.startsWith(GATEWAY_RPC_PREFIX) || GATEWAY_OWNED.has(type))
 }
 
 /** `{ instance, retryAfterSeconds, since, retryAt, failures }` while unavailable, else null. */
@@ -111,6 +126,32 @@ export function rearmInstanceRetry(now = Date.now()) {
 /** Gateway instance states in which instance requests are answered. */
 export function instanceStateAnswers(value) {
   return value === 'running'
+}
+
+/** An instance request used to probe when the gateway does not report the state. */
+export const INSTANCE_PROBE_RPC = 'endpoint.list'
+
+/**
+ * Probe once whether the instance answers. `request` is `requestConsole`. The gateway's own
+ * `gateway.instance.status` decides when it answers (`running` → yes, anything else → no); without it
+ * (older gateway, no `status.view`) an instance request decides: any answer the instance itself gave
+ * counts, a refusal (403 for a user without `endpoint.view`) included. Only instance failures and
+ * requests without a trustworthy answer say no.
+ */
+export async function probeInstance(request) {
+  try {
+    const status = await request({ type: GATEWAY_INSTANCE_RPC.STATUS })
+    if (status && typeof status === 'object' && typeof status.state === 'string') return instanceStateAnswers(status.state)
+  } catch {
+    // Fall through to an instance request.
+  }
+  try {
+    await request({ type: INSTANCE_PROBE_RPC })
+    return true
+  } catch (error) {
+    const reading = statusFromError(error)
+    return reading.kind !== 'instance-unavailable' && !outcomeUnknown(reading)
+  }
 }
 
 export function clearInstanceAvailability() {

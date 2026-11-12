@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, RefreshCw, Trash2, UserCog } from 'lucide-react'
 import { useI18n } from '../../i18n'
@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog'
 import { StatusState } from '../../components/StatusState'
 import { ActionReceipt, useActionReceipt } from '../../components/ActionReceipt'
+import { receiptBlocksActions } from '../../components/action-receipt-model.mjs'
 import { useToast } from '../../components/toast'
 import { ObjectSection } from '../../scope/ObjectPageLayout'
 import { useConsoleSession } from '../../hooks/use-console-session'
@@ -137,7 +138,6 @@ function TokensSection() {
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [created, setCreated] = useState<{ name: string; token: string } | null>(null)
-  const target = useRef<ConsoleApiTokenView | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -148,13 +148,14 @@ function TokensSection() {
   useEffect(() => { void load() }, [load])
 
   const receipt = useActionReceipt({
-    submit: async () => {
-      if (!target.current) throw new Error('no target')
-      const result = await revokeOwnToken(target.current.id)
+    submit: async plan => {
+      const target = plan.payload as ConsoleApiTokenView | undefined
+      if (!target) throw new Error('no target')
+      const result = await revokeOwnToken(target.id)
       if (!result.ok) return { status: 'failed', message: authErrorMessage(result, i18n.t, 'tokens') }
     },
-    verify: async () => {
-      const current = target.current
+    verify: async plan => {
+      const current = plan.payload as ConsoleApiTokenView | undefined
       const result = await listOwnTokens()
       if (!result.ok || !current) return undefined
       setTokens(result.data)
@@ -163,8 +164,8 @@ function TokensSection() {
     onSettled: () => { void load() },
   })
   const prepareRevoke = (token: ConsoleApiTokenView) => {
-    target.current = token
     receipt.prepare({
+      payload: token,
       title: i18n.t('吊销令牌 {0}', [token.name]),
       changes: [i18n.t('使用这个令牌的脚本会立即无法访问'), i18n.t('吊销不可恢复；需要时重新签发一个新令牌')],
       danger: true,
@@ -202,7 +203,7 @@ function TokensSection() {
           {when(token.expiresAt)}{tokenState(token) === 'expired' && <Badge variant="outline" className="ml-2">{i18n.t('已过期')}</Badge>}
         </>}</TableCell>
         <TableCell className="text-right">
-          <Button size="sm" variant="ghost" className="text-destructive" aria-label={i18n.t('吊销 {0}', [token.name])} onClick={() => prepareRevoke(token)}><Trash2 /><span className="hidden sm:inline">{i18n.t('吊销')}</span></Button>
+          <Button size="sm" variant="ghost" className="text-destructive" aria-label={i18n.t('吊销 {0}', [token.name])} disabled={receiptBlocksActions(receipt.state)} onClick={() => prepareRevoke(token)}><Trash2 /><span className="hidden sm:inline">{i18n.t('吊销')}</span></Button>
         </TableCell>
       </TableRow>)}</TableBody>
     </Table></Card> : null}

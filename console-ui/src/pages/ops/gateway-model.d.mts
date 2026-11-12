@@ -55,6 +55,11 @@ export function readInstanceStatus(value: unknown): GatewayInstanceStatus | null
 export function instanceStateLabel(state: string, t: Translate): string
 export function instanceStateTone(state: string): 'success' | 'destructive' | 'warning' | 'secondary'
 export function instanceActions(state: GatewayInstanceState): { start: boolean; stop: boolean; restart: boolean }
+export function instanceLifecycleApplied(
+  action: 'start' | 'stop' | 'restart',
+  before: Partial<GatewayInstanceStatus> | null | undefined,
+  after: Partial<GatewayInstanceStatus> | null | undefined,
+): boolean | undefined
 export function formatDuration(ms: number, t: Translate): string
 export function uptimeMs(status: GatewayInstanceStatus | null | undefined, now: number): number | null
 export function failureReasonLabel(reason: string, t: Translate): string

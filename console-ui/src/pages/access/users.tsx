@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { StatusState } from '../../components/StatusState'
 import { ActionReceipt, useActionReceipt } from '../../components/ActionReceipt'
+import { receiptBlocksActions } from '../../components/action-receipt-model.mjs'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../../components/ui/dropdown-menu'
 import { ConfirmDialog } from '../../components/confirm-dialog'
 import { useToast } from '../../components/toast'
@@ -80,7 +81,7 @@ export default function AccessUsersPage() {
     await iamRequest(IAM_RPC.USERS_DELETE, { id: user.id }, i18n.t)
     done(i18n.t("已删除 {0}", [user.username]))
   }
-  const busy = receipt.state.phase === 'submitting' || receipt.state.phase === 'verifying'
+  const busy = receiptBlocksActions(receipt.state)
 
   return (
     <PageShell>

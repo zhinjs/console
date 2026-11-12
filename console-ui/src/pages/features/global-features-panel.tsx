@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Grid3x3, List, RefreshCw } from 'lucide-react'
 import { useI18n } from '../../i18n'
@@ -11,6 +11,7 @@ import { Switch } from '../../components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { StatusState } from '../../components/StatusState'
 import { ActionReceipt, useActionReceipt } from '../../components/ActionReceipt'
+import { receiptBlocksActions, type ReceiptPlan } from '../../components/action-receipt-model.mjs'
 import { adapterHref, endpointHref, featureGlobalHref } from '../../console-routes.mjs'
 import { useConsoleAccess } from '../../hooks/use-console-access'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
@@ -61,30 +62,34 @@ function GlobalFeatureList({ switcher }: { switcher: ReactNode }) {
   const rows = globalFeatureOverview(matrix.rows, matrix.source === 'rpc' ? matrix.adapters : [], list.value?.features ?? null)
   const counts = globalFeatureCounts(rows)
   const canToggle = matrix.source === 'rpc' && hasConsolePermission('feature.toggle', access)
-  const pending = useRef<{ plugin: string; enabled: boolean } | null>(null)
+  type Pending = { plugin: string; enabled: boolean; revision: string | undefined }
+  const pendingOf = (plan: ReceiptPlan) => plan.payload as Pending | undefined
+  // Outlives the tab (action-receipt-store), so an unknown outcome cannot be sent again after
+  // switching tabs and back.
   const receipt = useActionReceipt({
-    submit: async () => {
-      const target = pending.current
+    persistKey: 'feature:global',
+    submit: async plan => {
+      const target = pendingOf(plan)
       if (!target) throw new Error('No change')
       try {
-        const outcome = featureReceiptOutcome(readFeatureWriteResult(await requestConsole<unknown>(setEnabledRequest({ plugin: target.plugin, level: 'global', enabled: target.enabled, revision: matrix.revision }))))
+        const outcome = featureReceiptOutcome(readFeatureWriteResult(await requestConsole<unknown>(setEnabledRequest({ plugin: target.plugin, level: 'global', enabled: target.enabled, revision: target.revision }))))
         if (outcome.locked) throw Object.assign(new Error(outcome.message), { code: 'locked', lockedBy: outcome.lockedBy })
         return outcome
       } finally {
         matrix.refresh()
       }
     },
-    verify: async () => {
-      const target = pending.current
+    verify: async plan => {
+      const target = pendingOf(plan)
       if (!target) return undefined
       const reply = await requestConsole<{ enabled?: boolean }>({ type: 'feature.get', plugin: target.plugin, level: 'global' })
       return { applied: reply?.enabled === target.enabled }
     },
   })
-  const busy = receipt.state.phase !== 'idle' && receipt.state.phase !== 'succeeded' && receipt.state.phase !== 'failed' && receipt.state.phase !== 'partial' && receipt.state.phase !== 'unknown'
+  const busy = receiptBlocksActions(receipt.state)
   const prepareToggle = (row: GlobalFeatureOverviewRow, enabled: boolean) => {
-    pending.current = { plugin: row.plugin, enabled }
     receipt.prepare({
+      payload: { plugin: row.plugin, enabled, revision: matrix.revision } satisfies Pending,
       title: enabled ? i18n.t('在全局启用 {0}', [row.name]) : i18n.t('在全局关闭 {0}', [row.name]),
       summary: enabled ? i18n.t('全局开关会重启 Host。') : i18n.t('全局开关会重启 Host；所有适配器、账号与会话上的这个功能都会停用。'),
       changes: [i18n.t('{0}：{1} → {2}', [row.plugin, row.enabled ? i18n.t('启用') : i18n.t('关闭'), enabled ? i18n.t('启用') : i18n.t('关闭')])],

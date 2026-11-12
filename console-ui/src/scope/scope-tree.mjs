@@ -7,6 +7,7 @@
  * `<alias>/<endpointId>/<kind>:<escaped id>` (`%` -> `%25`, `/` -> `%2F`).
  */
 import { CONVERSATION_KINDS, conversationKey, parseConversationKey, parseConversationSegment } from '../pages/features/feature-model.mjs'
+import { ANY_TARGET, hasAnyConsolePermission, scopePermissionTarget } from '../utils/console-access.mjs'
 
 export const SCOPE_LEVELS = Object.freeze(['global', 'adapter', 'endpoint', 'conversation'])
 
@@ -60,6 +61,21 @@ export const SCOPE_TAB_PERMISSIONS = Object.freeze({
   roles: Object.freeze(['iam.manage']),
   records: Object.freeze(['status.view']),
 })
+
+/**
+ * Where a tab's permissions are checked (ADR 0049 §3 scoped bindings): at the page's own object
+ * (an adapter, an account; a conversation counts as its account), so an adapter- or
+ * account-scoped `iam.manage` / `endpoint.*` opens the tabs under it. 概览 reads `endpoint.list`,
+ * which the Host answers at any scope (listing only what the binding covers).
+ */
+export function scopeTabTarget(scope, tab) {
+  return tab === 'overview' ? ANY_TARGET : scopePermissionTarget(scope)
+}
+
+/** Whether the principal may open `tab` of `scope` (any one of its permissions). */
+export function scopeTabAllowed(tab, scope, access) {
+  return hasAnyConsolePermission(SCOPE_TAB_PERMISSIONS[tab] ?? [], access, scopeTabTarget(scope, tab))
+}
 
 const segment = value => encodeURIComponent(String(value))
 

@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useReducer, useRef } from 'react'
-import { AlertTriangle, CheckCircle2, CircleHelp, Loader2, RefreshCw, X, XCircle } from 'lucide-react'
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react'
+import { AlertTriangle, CheckCircle2, CircleHelp, Loader2, RefreshCw, RotateCcw, X, XCircle } from 'lucide-react'
 import { cn } from '@zhin.js/client'
 import './status-surfaces.css'
 import { useI18n } from '../i18n'
 import { Button } from './ui/button'
 import { StatusState } from './StatusState'
 import {
-  IDLE_RECEIPT, RECEIPT_COPY, receiptReducer, type ActionReceiptState, type ReceiptPlan,
+  RECEIPT_COPY, type ActionReceiptState, type ReceiptEvent, type ReceiptPlan,
 } from './action-receipt-model.mjs'
+import { createReceiptStore, sharedReceipts, type ReceiptStore } from './action-receipt-store.mjs'
 
 export interface UseActionReceiptOptions {
   /** Performs the write. Resolve with nothing or `{ status, items?, message? }` (see readSubmitResult). */
@@ -16,11 +17,18 @@ export interface UseActionReceiptOptions {
   readonly verify?: (plan: ReceiptPlan) => Promise<{ applied?: boolean; message?: string } | undefined>
   /** Called once the action settled as succeeded / partial (e.g. reload the list). */
   readonly onSettled?: (state: ActionReceiptState) => void
+  /**
+   * Scope + action key (e.g. `feature:adapter:qq:ai`). With it the receipt outlives its component
+   * (`action-receipt-store.mjs`): leaving a tab mid-write or with an unknown outcome and coming back
+   * shows the same receipt, so the write cannot be sent again. `submit` / `verify` then read what
+   * they need from `plan.payload`, not from component state.
+   */
+  readonly persistKey?: string
 }
 
 export interface ActionReceiptController {
   readonly state: ActionReceiptState
-  /** Shows the plan (准备). */
+  /** Shows the plan (准备). Ignored while a request is in flight or its outcome is unknown. */
   readonly prepare: (plan: ReceiptPlan) => void
   /** 确认: submits, or asks once more for a danger plan. */
   readonly confirm: () => void
@@ -28,59 +36,62 @@ export interface ActionReceiptController {
   readonly verify: () => void
   /** Whether a read-only check was provided. */
   readonly canVerify: boolean
+  /** Closes a settled receipt (放弃并重新开始 after a check showed nothing was applied). */
   readonly reset: () => void
 }
 
+const LOCAL_KEY = 'local'
+
 /** State machine of one write: 准备 → 确认 → 提交 → 成功 / 部分失败 / 结果未知 / 未执行. */
-export function useActionReceipt({ submit, verify, onSettled }: UseActionReceiptOptions): ActionReceiptController {
-  const [state, dispatch] = useReducer(receiptReducer, IDLE_RECEIPT)
-  const stateRef = useRef(state)
-  stateRef.current = state
+export function useActionReceipt({ submit, verify, onSettled, persistKey }: UseActionReceiptOptions): ActionReceiptController {
+  const local = useRef<ReceiptStore | null>(null)
+  if (!local.current) local.current = createReceiptStore()
+  const store = persistKey ? sharedReceipts : local.current
+  const key = persistKey ?? LOCAL_KEY
+  const subscribe = useCallback((listener: () => void) => store.subscribe(key, listener), [store, key])
+  const read = useCallback(() => store.get(key), [store, key])
+  const state = useSyncExternalStore(subscribe, read, read)
   const callbacks = useRef({ submit, verify, onSettled })
   callbacks.current = { submit, verify, onSettled }
+  // Each request settles into the receipt it started from, even if the component is gone by then.
   const run = useCallback((plan: ReceiptPlan) => {
+    const send = (event: ReceiptEvent) => store.dispatch(key, event)
     callbacks.current.submit(plan).then(
       value => {
-        dispatch({ type: 'resolve', value })
-        const next = receiptReducer({ phase: 'submitting', plan }, { type: 'resolve', value })
+        const next = send({ type: 'resolve', value })
         if (next.phase === 'succeeded' || next.phase === 'partial') callbacks.current.onSettled?.(next)
       },
-      (error: unknown) => dispatch({ type: 'reject', error }),
+      (error: unknown) => { send({ type: 'reject', error }) },
     )
-  }, [])
+  }, [store, key])
   const confirm = useCallback(() => {
-    const current = stateRef.current
-    if (current.phase === 'prepared' && current.plan && !current.plan.danger) {
-      dispatch({ type: 'confirm' })
-      run(current.plan)
-    } else if (current.phase === 'prepared') {
-      dispatch({ type: 'confirm' })
-    } else if (current.phase === 'confirming' && current.plan) {
-      dispatch({ type: 'submit' })
-      run(current.plan)
-    }
-  }, [run])
+    const current = store.get(key)
+    if (current.phase !== 'prepared' && current.phase !== 'confirming') return
+    // The reducer decides (danger → second step; 「确认执行」 ignores confirms right after it appeared).
+    const next = store.dispatch(key, { type: current.phase === 'prepared' ? 'confirm' : 'submit', now: Date.now() })
+    if (next.phase === 'submitting' && next.plan) run(next.plan)
+  }, [store, key, run])
   const verifyNow = useCallback(() => {
-    const current = stateRef.current
+    const current = store.get(key)
     const check = callbacks.current.verify
     if (current.phase !== 'unknown' || !check || !current.plan) return
-    dispatch({ type: 'verify' })
+    store.dispatch(key, { type: 'verify' })
     check(current.plan).then(
       value => {
-        dispatch({ type: 'verified', value })
-        if (value?.applied === true) callbacks.current.onSettled?.({ ...current, phase: 'succeeded', verified: true })
+        const next = store.dispatch(key, { type: 'verified', value })
+        if (next.phase === 'succeeded') callbacks.current.onSettled?.(next)
       },
-      (error: unknown) => dispatch({ type: 'verify-failed', error }),
+      (error: unknown) => { store.dispatch(key, { type: 'verify-failed', error }) },
     )
-  }, [])
+  }, [store, key])
   return {
     state,
-    prepare: useCallback((plan: ReceiptPlan) => dispatch({ type: 'prepare', plan }), []),
+    prepare: useCallback((plan: ReceiptPlan) => { store.dispatch(key, { type: 'prepare', plan }) }, [store, key]),
     confirm,
-    cancel: useCallback(() => dispatch({ type: 'cancel' }), []),
+    cancel: useCallback(() => { store.dispatch(key, { type: 'cancel' }) }, [store, key]),
     verify: verifyNow,
     canVerify: Boolean(verify),
-    reset: useCallback(() => dispatch({ type: 'reset' }), []),
+    reset: useCallback(() => { store.dispatch(key, { type: 'reset' }) }, [store, key]),
   }
 }
 
@@ -105,8 +116,10 @@ export function ActionReceipt({ controller, className, lockHref }: {
     const node = panel.current
     if (!node || !hadFocus.current) return
     const active = document.activeElement
-    if (active && active !== document.body && node.contains(active)) return
-    const target = node.querySelector<HTMLElement>('.console-receipt-actions button:not([disabled]), .console-receipt-close')
+    // Entering 「确认执行」 always moves the focus to 取消, wherever it was inside the receipt.
+    if (active && active !== document.body && node.contains(active) && state.phase !== 'confirming') return
+    const target = node.querySelector<HTMLElement>('.console-receipt-actions [data-receipt-cancel]')
+      ?? node.querySelector<HTMLElement>('.console-receipt-actions button:not([disabled]), .console-receipt-close')
     ;(target ?? node).focus()
   }, [state.phase])
   if (state.phase === 'idle') { hadFocus.current = false; return null }
@@ -134,7 +147,8 @@ export function ActionReceipt({ controller, className, lockHref }: {
           <p className="console-receipt-phase">{i18n.t(RECEIPT_COPY[state.phase])}</p>
           {plan ? <p className="console-receipt-title">{plan.title}</p> : null}
         </div>
-        {!busy && state.phase !== 'prepared' && state.phase !== 'confirming' ? (
+        {/* An unknown outcome cannot be dismissed: only a check settles it. */}
+        {!busy && state.phase !== 'prepared' && state.phase !== 'confirming' && state.phase !== 'unknown' ? (
           <Button variant="ghost" size="icon" className="console-receipt-close" onClick={reset} aria-label={i18n.t('关闭回执')}><X /></Button>
         ) : null}
       </header>
@@ -171,15 +185,21 @@ export function ActionReceipt({ controller, className, lockHref }: {
       ) : null}
       <footer className="console-receipt-actions">
         {state.phase === 'prepared' ? <>
-          <Button size="sm" variant={plan?.danger ? 'destructive' : 'default'} onClick={confirm}>{plan?.confirmLabel ?? i18n.t('确认')}</Button>
-          <Button size="sm" variant="outline" onClick={cancel}>{i18n.t('取消')}</Button>
+          <Button key="confirm" size="sm" variant={plan?.danger ? 'destructive' : 'default'} onClick={confirm}>{plan?.confirmLabel ?? i18n.t('确认')}</Button>
+          <Button key="cancel" size="sm" variant="outline" onClick={cancel}>{i18n.t('取消')}</Button>
         </> : null}
+        {/* The second step puts 取消 first (it takes the focus) and 确认执行 where 取消 was, so a double
+            click or a repeated Enter on 「确认」 lands on 取消; the reducer also ignores confirms for
+            CONFIRM_GUARD_MS after this step appeared. */}
         {state.phase === 'confirming' ? <>
-          <Button size="sm" variant="destructive" onClick={confirm}>{i18n.t('确认执行')}</Button>
-          <Button size="sm" variant="outline" onClick={cancel}>{i18n.t('取消')}</Button>
+          <Button key="cancel" size="sm" variant="outline" onClick={cancel} data-receipt-cancel>{i18n.t('取消')}</Button>
+          <Button key="execute" size="sm" variant="destructive" onClick={confirm} data-receipt-execute>{i18n.t('确认执行')}</Button>
         </> : null}
         {state.phase === 'unknown' ? (
           <Button size="sm" variant="outline" onClick={verify} disabled={!canVerify}><RefreshCw />{i18n.t('核对当前状态')}</Button>
+        ) : null}
+        {state.phase === 'failed' && state.verified ? (
+          <Button size="sm" variant="outline" onClick={reset}><RotateCcw />{i18n.t('放弃并重新开始')}</Button>
         ) : null}
       </footer>
     </section>

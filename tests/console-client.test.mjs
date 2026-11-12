@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import ts from 'typescript'
+import * as replyCapture from '../console-ui/src/utils/rpc-reply-capture.mjs'
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 const compile = source => ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
@@ -30,7 +31,7 @@ function fixture() {
   const module = { exports: {} }
   const globals = { window: {}, fetch: async () => responses.shift() }
   new Function('require', 'exports', 'module', 'window', 'fetch', compile(read('console-ui/src/utils/console-client.ts').replace('import.meta', '({ env: {} })')))(
-    name => name === '@zhin.js/client' ? sdk : name === './auth' ? auth : assert.fail(`unexpected dependency ${name}`),
+    name => name === '@zhin.js/client' ? sdk : name === './auth' ? auth : name === './rpc-reply-capture.mjs' ? replyCapture : assert.fail(`unexpected dependency ${name}`),
     module.exports, module, globals.window, globals.fetch,
   )
   return { ...module.exports, created, cleared, observed, responses, registry: app, switchSession(next) { session = next } }

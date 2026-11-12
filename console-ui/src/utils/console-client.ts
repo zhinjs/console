@@ -5,6 +5,7 @@ import {
   type ConsoleTransport,
 } from '@zhin.js/client'
 import { captureApiRequestContext, clearRuntimeToken, clearToken, getApiBase, getToken, observeHostGatewayReply } from './auth'
+import { capturingFetch } from './rpc-reply-capture.mjs'
 
 /** Built-in and plugin routes outlive a Host session, so the registry is owned here, not by a client. */
 export const app = createConsoleApp()
@@ -20,7 +21,8 @@ function runtimeEnv(): 'development' | 'production' {
 /**
  * The transport raises `zhin:auth-required` on a 401 but leaves the credential in place.
  * Drop a rejected credential first (as `apiFetch` does) so the next load does not retry it.
- * Its 502 / 503 / 504 `instance_*` replies reach the 实例不可用 banner like `apiFetch`'s do.
+ * Its 502 / 503 / 504 `instance_*` replies reach the 实例不可用 banner like `apiFetch`'s do. RPC replies are
+ * also recorded (`capturingFetch`) so `requestConsole` keeps the Host's code and Retry-After the SDK drops.
  */
 const transportFetch: typeof fetch = async (input, init) => {
   const { apiBase, token } = captureApiRequestContext()
@@ -36,7 +38,7 @@ const transportFetch: typeof fetch = async (input, init) => {
 /** The client of the current Host session; created and connected on first use. */
 export function getConsoleClient(): ConsoleClient {
   if (!client) {
-    client = createConsoleClient({ app, getRuntimeEnv: runtimeEnv, transportConfig: { fetch: transportFetch } })
+    client = createConsoleClient({ app, getRuntimeEnv: runtimeEnv, transportConfig: { fetch: capturingFetch(transportFetch) } })
     if (typeof window !== 'undefined') client.connect()
   }
   return client

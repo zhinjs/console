@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { ActionReceipt, useActionReceipt, type ActionReceiptController } from '../components/ActionReceipt'
-import type { ActionReceiptState } from '../components/action-receipt-model.mjs'
+import { receiptBlocksActions, type ActionReceiptState, type ReceiptPlan } from '../components/action-receipt-model.mjs'
 import { StatusState } from '../components/StatusState'
 import type { GatewayPackageOperation, GatewayPluginConfigurationNeed } from '../contracts/gateway'
 import { GATEWAY_RPC, readPackageList, readPackagePlan, type PackageProgressState } from './ops/gateway-model.mjs'
@@ -13,6 +13,9 @@ import {
 } from './plugin-package-model.mjs'
 
 type TransactionResult = NonNullable<PackageProgressState['result']>
+
+interface PendingPackage { readonly operation: GatewayPackageOperation; readonly subject: PackageActionSubject; readonly spec: string }
+const pendingPackage = (plan: ReceiptPlan) => plan.payload as PendingPackage | undefined
 
 export interface PackageActionSubject {
   /** npm package name. */
@@ -35,7 +38,10 @@ export interface PackageAction {
   readonly result: TransactionResult | null
   /** The operation the receipt is about. */
   readonly operation: GatewayPackageOperation | null
+  /** No new action may start: planning, a plan waiting, a transaction or check running, or an unknown outcome. */
   readonly busy: boolean
+  /** A request is in flight (the transaction or its check): the surface must stay open. */
+  readonly inFlight: boolean
   /** Reads `gateway.packages.plan` and shows the receipt plan. */
   readonly prepare: (operation: GatewayPackageOperation, subject: PackageActionSubject) => Promise<void>
   readonly clearNeed: (instanceKey: string) => void
@@ -50,7 +56,6 @@ export interface PackageAction {
 export function usePackageAction({ onSettled }: { onSettled?: (state: ActionReceiptState, result: TransactionResult | null) => void } = {}): PackageAction {
   const i18n = useI18n()
   const transaction = useGatewayTransaction()
-  const pending = useRef<{ operation: GatewayPackageOperation; subject: PackageActionSubject; spec: string } | null>(null)
   const [planning, setPlanning] = useState(false)
   const [planError, setPlanError] = useState<unknown>(null)
   const [needs, setNeeds] = useState<readonly GatewayPluginConfigurationNeed[]>([])
@@ -59,8 +64,8 @@ export function usePackageAction({ onSettled }: { onSettled?: (state: ActionRece
   const resultRef = useRef<TransactionResult | null>(null)
 
   const receipt = useActionReceipt({
-    submit: async () => {
-      const current = pending.current
+    submit: async plan => {
+      const current = pendingPackage(plan)
       if (!current) throw new Error(i18n.t('没有要执行的依赖事务。'))
       const request = packageTransactionRequest(current.operation, { packages: [current.spec] })
       const outcome = await transaction.run(request.type, request.data)
@@ -70,8 +75,9 @@ export function usePackageAction({ onSettled }: { onSettled?: (state: ActionRece
       setNeeds(outcome.result?.needsConfiguration ?? [])
       return transactionReceiptValue(outcome.result, i18n.t)
     },
-    verify: async () => {
-      const current = pending.current
+    // The transaction rides on the plan, so a check still knows what it checks after `reset`.
+    verify: async plan => {
+      const current = pendingPackage(plan)
       if (!current) return undefined
       const list = readPackageList(await gatewayRequest(GATEWAY_RPC.PACKAGES_LIST, {}, i18n.t))
       return verifyPackageState(current.operation, current.subject.name, current.subject.version, list, i18n.t)
@@ -80,7 +86,8 @@ export function usePackageAction({ onSettled }: { onSettled?: (state: ActionRece
   })
 
   const prepare = useCallback(async (nextOperation: GatewayPackageOperation, subject: PackageActionSubject) => {
-    if (planning || transaction.running) return
+    // An unknown outcome keeps its receipt until checked: no new plan replaces it.
+    if (planning || transaction.running || receiptBlocksActions(receipt.state)) return
     const spec = packageSpec(nextOperation, subject.name, subject.version)
     setPlanning(true)
     setPlanError(null)
@@ -91,9 +98,8 @@ export function usePackageAction({ onSettled }: { onSettled?: (state: ActionRece
     receipt.reset()
     try {
       const plan = readPackagePlan(await gatewayRequest(GATEWAY_RPC.PACKAGES_PLAN, packagePlanRequest(nextOperation, [spec]), i18n.t))
-      pending.current = { operation: nextOperation, subject, spec }
       setOperation(nextOperation)
-      receipt.prepare(packageReceiptPlan(nextOperation, plan, subject, i18n.t))
+      receipt.prepare({ ...packageReceiptPlan(nextOperation, plan, subject, i18n.t), payload: { operation: nextOperation, subject, spec } satisfies PendingPackage })
     } catch (error) {
       setPlanError(error)
     } finally {
@@ -102,13 +108,16 @@ export function usePackageAction({ onSettled }: { onSettled?: (state: ActionRece
   }, [planning, transaction, receipt, i18n])
 
   const clearNeed = useCallback((instanceKey: string) => setNeeds(previous => previous.filter(need => need.instanceKey !== instanceKey)), [])
+  // Closing the surface: an unknown outcome (or a request in flight) keeps its receipt and operation.
   const reset = useCallback(() => {
-    receipt.reset(); transaction.reset(); setPlanError(null); setNeeds([]); setResult(null); setOperation(null); pending.current = null; resultRef.current = null
+    if (receiptBlocksActions(receipt.state) && receipt.state.phase !== 'prepared' && receipt.state.phase !== 'confirming') return
+    receipt.reset(); receipt.cancel(); transaction.reset(); setPlanError(null); setNeeds([]); setResult(null); setOperation(null); resultRef.current = null
   }, [receipt, transaction])
 
   return {
     receipt, progress: transaction.progress, running: transaction.running, planning, planError, needs, result, operation,
-    busy: planning || transaction.running || receipt.state.phase === 'submitting' || receipt.state.phase === 'verifying',
+    busy: planning || transaction.running || receiptBlocksActions(receipt.state),
+    inFlight: transaction.running || receipt.state.phase === 'submitting' || receipt.state.phase === 'verifying',
     prepare, clearNeed, reset,
   }
 }

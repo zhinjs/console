@@ -71,3 +71,4 @@ export function globalFeatureOverview(
   features?: readonly FeatureSummary[] | null,
 ): GlobalFeatureOverviewRow[]
 export function globalFeatureCounts(rows: readonly GlobalFeatureOverviewRow[]): { total: number; enabled: number; disabled: number; customized: number }
+export function featureWriteSharesRevision(level: string): boolean

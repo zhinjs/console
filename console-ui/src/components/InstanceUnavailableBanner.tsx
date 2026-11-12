@@ -5,41 +5,25 @@ import './status-surfaces.css'
 import { useI18n } from '../i18n'
 import { Button } from './ui/button'
 import { requestConsole } from '../utils/console-rpc'
-import { GATEWAY_INSTANCE_RPC, type GatewayInstanceStatus } from '../contracts/gateway'
 import { onHostGatewayReply } from '../utils/auth'
 import {
-  clearInstanceAvailability, reportHttpReply, getInstanceAvailability, instanceStateAnswers, rearmInstanceRetry, secondsUntilRetry, subscribeInstanceAvailability,
+  clearInstanceAvailability, reportHttpReply, getInstanceAvailability, probeInstance, rearmInstanceRetry, secondsUntilRetry, subscribeInstanceAvailability,
 } from '../utils/instance-availability.mjs'
 
 // Raw `apiFetch` replies (plugin RPCs, approvals) report instance failures too.
 onHostGatewayReply(reply => { reportHttpReply(reply) })
 
-/**
- * Probe once: the gateway's own `gateway.instance.status` says whether the instance runs; when the
- * gateway does not answer it (older gateway, no `status.view`), an instance request answers instead
- * (its success clears the banner through requestConsole).
- */
-async function probeInstance(): Promise<boolean> {
-  try {
-    const status = await requestConsole<GatewayInstanceStatus>({ type: GATEWAY_INSTANCE_RPC.STATUS })
-    if (status && typeof status === 'object' && typeof status.state === 'string') {
-      if (!instanceStateAnswers(status.state)) return false
-    }
-  } catch {
-    // Fall through to an instance request.
-  }
-  try {
-    await requestConsole({ type: 'endpoint.list' })
-    return true
-  } catch {
-    return getInstanceAvailability() === null
-  }
+function subscribeVisibility(listener: () => void): () => void {
+  document.addEventListener('visibilitychange', listener)
+  return () => document.removeEventListener('visibilitychange', listener)
 }
+const pageVisible = () => typeof document === 'undefined' || !document.hidden
 
 /**
  * Shell banner while the Zhin instance does not answer (gateway 503 `instance_unavailable`, 504
  * `instance_timeout`, 502 `instance_error`). It never covers the page: gateway pages (访问控制、实例、
  * 终端) keep working. Counts down the Retry-After, probes automatically and disappears on recovery.
+ * In a hidden tab the countdown and the automatic probes pause; showing the tab probes once at once.
  */
 export function InstanceUnavailableBanner() {
   const i18n = useI18n()
@@ -47,18 +31,20 @@ export function InstanceUnavailableBanner() {
   const [now, setNow] = useState(() => Date.now())
   const [probing, setProbing] = useState(false)
   const probingRef = useRef(false)
+  const visible = useSyncExternalStore(subscribeVisibility, pageVisible, () => true)
 
   useEffect(() => {
-    if (!state) return
+    if (!state || !visible) return
+    setNow(Date.now())
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(timer)
-  }, [state])
+  }, [state, visible])
 
   const probe = () => {
     if (probingRef.current) return
     probingRef.current = true
     setProbing(true)
-    void probeInstance().then(ok => {
+    void probeInstance(requestConsole).then(ok => {
       if (ok) clearInstanceAvailability(); else rearmInstanceRetry()
     }).finally(() => {
       probingRef.current = false
@@ -68,9 +54,17 @@ export function InstanceUnavailableBanner() {
 
   const remaining = secondsUntilRetry(state, now)
   useEffect(() => {
-    if (state && remaining === 0 && !probingRef.current) probe()
+    if (visible && state && remaining === 0 && !probingRef.current) probe()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, remaining])
+  }, [state, remaining, visible])
+  // Coming back to the tab: check at once instead of finishing a countdown that was paused.
+  const wasVisible = useRef(visible)
+  useEffect(() => {
+    const shown = visible && !wasVisible.current
+    wasVisible.current = visible
+    if (shown && getInstanceAvailability()) probe()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible])
 
   if (!state) return null
   const reason = state.instance === 'timeout' ? i18n.t('实例没有在限定时间内答复，刚才的操作结果未知，请核对后再决定是否重试。')

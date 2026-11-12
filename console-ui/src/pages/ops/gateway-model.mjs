@@ -174,6 +174,51 @@ export function instanceActions(state) {
   }
 }
 
+const RUN_FIELDS = Object.freeze(['generation', 'pid', 'startedAt'])
+
+/**
+ * Whether two statuses describe the same run of the instance: compared on the run facts both report
+ * (`generation`, `pid`, `startedAt`). true / false, or null when they share none.
+ */
+function sameInstanceRun(before, after) {
+  let compared = false
+  for (const field of RUN_FIELDS) {
+    const was = before?.[field]
+    const now = after?.[field]
+    if (typeof was !== 'number' || typeof now !== 'number') continue
+    if (was !== now) return false
+    compared = true
+  }
+  return compared ? true : null
+}
+
+/**
+ * Read-only check of a lifecycle action whose outcome is unknown (`before`: the status the action
+ * was prepared from, `after`: a fresh read). Returns true / false / undefined (still unknown):
+ * - stop: `stopped` is applied; still `running` with the same run was not.
+ * - start: `running` / `starting` is applied (it was offered only while not running).
+ * - restart: `running` / `starting` alone proves nothing (it was running before): applied only when
+ *   the run changed (generation, pid or start time); the same run still `running` was not
+ *   restarted; without run facts on either side it stays unknown.
+ */
+export function instanceLifecycleApplied(action, before, after) {
+  const state = after?.state
+  if (typeof state !== 'string') return undefined
+  const live = state === 'running' || state === 'starting'
+  const same = sameInstanceRun(before, after)
+  if (action === 'stop') {
+    if (state === 'stopped') return true
+    return state === 'running' && same === true ? false : undefined
+  }
+  if (action === 'start') return live ? true : undefined
+  if (action === 'restart') {
+    if (!live || same === null) return undefined
+    if (same === false) return true
+    return state === 'running' ? false : undefined
+  }
+  return undefined
+}
+
 /** Compact duration (`3 天 4 小时`, `5 分 2 秒`). */
 export function formatDuration(ms, t) {
   const total = Math.max(0, Math.floor(ms / 1000))

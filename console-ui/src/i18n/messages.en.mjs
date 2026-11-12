@@ -3156,6 +3156,7 @@ export const englishMessages = Object.freeze({
   // Console 重构：对象树、统一状态与回执、聊天角色、实例横幅
   "操作回执": "Action receipt",
   "关闭回执": "Dismiss receipt",
+  "放弃并重新开始": "Discard and start over",
   "内容没有变化。": "Nothing changed.",
   "已核对：修改已生效。": "Checked: the change is in effect.",
   "请求已发出但没有收到可信答复，修改可能已经生效。请先只读核对，不要重复提交。": "The request was sent but no reliable answer came back; the change may already be in effect. Check first (read-only) instead of submitting again.",

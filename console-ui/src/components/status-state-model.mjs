@@ -35,12 +35,41 @@ const INSTANCE_CODES = Object.freeze({
   instance_error: 'error',
 })
 
+/**
+ * The gateway's fixed English texts of the same replies, for SDKs that keep only `json.error`.
+ * Only these exact texts and the codes count: an upstream 「HTTP 502 Bad Gateway」 (a platform the
+ * instance called) is the instance answering, not the instance being unavailable.
+ */
+const INSTANCE_TEXTS = Object.freeze([
+  [/The Zhin instance is not running/u, 'unavailable', 'not-dispatched'],
+  [/The instance did not answer in time/u, 'timeout', 'unknown'],
+  [/The instance is overloaded/u, 'error', 'not-dispatched'],
+  [/The instance failed to answer/u, 'error', 'unknown'],
+])
+
 function instanceFailureOf(serverCode, message) {
-  if (serverCode && Object.hasOwn(INSTANCE_CODES, serverCode)) return INSTANCE_CODES[serverCode]
-  if (/The Zhin instance is not running|instance_unavailable|HTTP 503\b.*instance/iu.test(message)) return 'unavailable'
-  if (/The instance did not answer in time|instance_timeout|HTTP 504\b/iu.test(message)) return 'timeout'
-  if (/The instance (?:is overloaded|failed to answer)|instance_error|HTTP 502\b/iu.test(message)) return 'error'
+  if (serverCode && Object.hasOwn(INSTANCE_CODES, serverCode)) return { instance: INSTANCE_CODES[serverCode] }
+  if (serverCode) return undefined
+  for (const [pattern, instance, outcome] of INSTANCE_TEXTS) if (pattern.test(message)) return { instance, outcome }
+  if (/\binstance_unavailable\b/u.test(message)) return { instance: 'unavailable' }
+  if (/\binstance_timeout\b/u.test(message)) return { instance: 'timeout' }
+  if (/\binstance_error\b/u.test(message)) return { instance: 'error' }
   return undefined
+}
+
+/**
+ * How a request that got no trustworthy answer failed (`details.transport`, set by
+ * `utils/rpc-reply-capture.mjs`; else read from the published SDK's `MessageError`, code
+ * `MESSAGE_ERROR`, whose `originalError` is the fetch failure).
+ */
+function transportFailureOf(error, transport, details) {
+  if (typeof details.transport === 'string') return details.transport
+  if (transport !== 'MESSAGE_ERROR') return undefined
+  const original = isRecord(error) ? error.originalError : undefined
+  const name = isRecord(original) || original instanceof Error ? String(original.name ?? '') : ''
+  if (name === 'TimeoutError' || name === 'AbortError') return 'timeout'
+  if (name === 'TypeError') return 'network'
+  return 'no-answer'
 }
 
 const LOCK_LEVELS = ['global', 'adapter', 'endpoint']
@@ -109,17 +138,27 @@ export function statusFromError(error) {
   const base = { message, ...(serverCode ? { serverCode } : {}) }
   const missingEnv = Array.isArray(details.missingEnv) ? details.missingEnv.filter(item => typeof item === 'string') : []
 
+  const httpStatus = Number(details.httpStatus)
+  // No trustworthy answer (timeout, network failure, unreadable reply): the write may have run.
+  const failure = serverCode ? undefined : transportFailureOf(error, transport, details)
+  if (failure === 'network') return { ...base, kind: 'disconnected' }
+  if (failure === 'timeout' || failure === 'invalid-response' || failure === 'no-answer') return { ...base, kind: 'unknown' }
+  if (failure === 'refused' && (httpStatus === 401 || httpStatus === 403)) return { ...base, kind: 'forbidden' }
+  if (failure === 'refused') return { ...base, kind: 'error' }
+
   if (serverCode === 'locked' || (!serverCode && /\blocked\b|lockedBy|已在\s*(?:全局|适配器|账号)\S*\s*禁用|已被\S*层停用/iu.test(message))) {
     const lockedBy = lockedByOf(error, message)
     return { ...base, kind: 'locked', ...(lockedBy ? { lockedBy } : {}) }
   }
-  if (serverCode === 'conflict' || serverCode === 'revision_conflict' || (!serverCode && /revision conflict|\bconflict\b.*revision|修订冲突|版本冲突|已被其他人修改|请重新读取后再/iu.test(message))) {
+  if (serverCode === 'conflict' || serverCode === 'revision_conflict' || (!serverCode && /revision conflict|\bconflict\b.*revision|修订冲突|版本冲突|已被其他(?:人|地方)修改|已被修改[，,]\s*请刷新|请重新读取后再/iu.test(message))) {
     return { ...base, kind: 'conflict' }
   }
-  const instance = instanceFailureOf(serverCode, message)
-  if (instance) {
+  const instanceFailure = instanceFailureOf(serverCode, message)
+  if (instanceFailure) {
+    const { instance } = instanceFailure
     const retryAfterSeconds = retryAfterOf(error, message) ?? DEFAULT_INSTANCE_RETRY_SECONDS
-    const outcome = instance === 'unavailable' || details.requestOutcome === 'not-dispatched' ? 'not-dispatched' : 'unknown'
+    const said = details.requestOutcome === 'not-dispatched' || details.requestOutcome === 'unknown' ? details.requestOutcome : instanceFailure.outcome
+    const outcome = said ?? (instance === 'unavailable' ? 'not-dispatched' : 'unknown')
     return { ...base, kind: 'instance-unavailable', instance, outcome, retryAfterSeconds }
   }
   if (serverCode === 'database_busy' || /数据库正忙|database (?:is )?busy/iu.test(message)) {
@@ -130,7 +169,7 @@ export function statusFromError(error) {
   if (needs.length || serverCode === 'needs_configuration' || serverCode === 'configuration_required') {
     return { ...base, kind: 'needs-configuration', ...(needs.length ? { needsConfiguration: needs } : {}), ...(missingEnv.length ? { missingEnv } : {}) }
   }
-  if (serverCode === 'forbidden' || serverCode === 'permission_denied' || /\bHTTP 40[13]\b|\bforbidden\b|permission denied|not allowed|scope does not allow|没有\s*\S+\s*权限|无权|权限不足/iu.test(message)) {
+  if (serverCode === 'forbidden' || serverCode === 'permission_denied' || httpStatus === 401 || httpStatus === 403 || /\bHTTP 40[13]\b|\bforbidden\b|permission denied|not allowed|scope does not allow|没有\s*\S+\s*权限|无权|权限不足/iu.test(message)) {
     return { ...base, kind: 'forbidden' }
   }
   if (serverCode === 'not_installed' || serverCode === 'plugin_not_found' || /plugin (?:is )?not installed|未安装/iu.test(message)) {

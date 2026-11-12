@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { StatusState } from '../../components/StatusState'
 import { ActionReceipt, useActionReceipt } from '../../components/ActionReceipt'
+import { receiptBlocksActions } from '../../components/action-receipt-model.mjs'
 import { useToast } from '../../components/toast'
 import { TOKEN_EXPIRY_DAYS, tokenExpiresAt, tokenNameProblem } from '../../utils/console-auth-model.mjs'
 import { copyText } from '../clipboard-copy.mjs'
@@ -65,7 +66,7 @@ export default function AccessTokensPage() {
       confirmLabel: i18n.t('吊销'),
     })
   }
-  const busy = receipt.state.phase === 'submitting' || receipt.state.phase === 'verifying'
+  const busy = receiptBlocksActions(receipt.state)
 
   return (
     <PageShell>
