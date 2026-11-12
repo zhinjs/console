@@ -55,7 +55,7 @@ export function GlobalFeatureSummary({ plugin }: { plugin: string }) {
         {adapters.length ? (
           <div className="flex flex-wrap items-center gap-1">
             <span className="text-sm text-muted-foreground">{i18n.t("下级有覆盖：")}</span>
-            {adapters.map(alias => <Link key={alias} to={adapterHref(alias)}><Badge variant="info" size="sm">{alias}</Badge></Link>)}
+            {adapters.map(alias => <Link key={alias} to={adapterHref(alias, 'features')}><Badge variant="info" size="sm">{alias}</Badge></Link>)}
           </div>
         ) : null}
         {conversationAdapters.length ? (

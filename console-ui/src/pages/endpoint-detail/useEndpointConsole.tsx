@@ -33,27 +33,45 @@ import { readEndpointList } from '../endpoint-list-model.mjs'
 import { readEndpointIdentity, endpointAddress, requestApproval, consumedRows } from './endpoint-request.mjs'
 import { requestConsole } from '../../utils/console-rpc'
 
-export function useEndpointConsole() {
+/** The account (and optionally the conversation) an embedded workspace shows, instead of route parameters. */
+export interface EndpointWorkspaceTarget {
+  readonly adapter: string
+  readonly endpointId: string
+  readonly channelType?: 'private' | 'group' | 'channel'
+  readonly channelId?: string
+}
+
+function decodeParam(value: string | undefined): string {
+  if (!value) return ''
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
+
+export function useEndpointConsole(target?: EndpointWorkspaceTarget) {
   const i18n = useI18n()
   const { adapter: adapterParam, endpointId: endpointIdParam } = useParams<{
     adapter: string
     endpointId: string
   }>()
-  const adapter = adapterParam ? decodeURIComponent(adapterParam) : ''
-  const endpointId = endpointIdParam ? decodeURIComponent(endpointIdParam) : ''
+  // Object pages pass the decoded identity; the router's parameters are already decoded too.
+  const adapter = target ? target.adapter : decodeParam(adapterParam)
+  const endpointId = target ? target.endpointId : decodeParam(endpointIdParam)
   const endpointIdentity = `${adapter}\u0000${endpointId}`
   const endpointIdentityRef = useRef(endpointIdentity)
   endpointIdentityRef.current = endpointIdentity
   const valid = Boolean(adapter && endpointId)
   const cacheScope = useInboxCacheScope()
   const [searchParams] = useSearchParams()
-  const requestedChannelType = searchParams.get('channelType')
+  const requestedChannelType = target ? target.channelType ?? null : searchParams.get('channelType')
   const initialChannelType = requestedChannelType === 'private'
     || requestedChannelType === 'group'
     || requestedChannelType === 'channel'
     ? requestedChannelType
     : undefined
-  const initialChannelId = searchParams.get('channelId')?.trim() || undefined
+  const initialChannelId = (target ? target.channelId : searchParams.get('channelId'))?.trim() || undefined
 
   const connected = useConsoleConnected()
   const [info, setInfo] = useState<EndpointInfo | null>(null)

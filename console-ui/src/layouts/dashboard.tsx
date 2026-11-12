@@ -16,6 +16,7 @@ import { signOut } from "../utils/console-auth-api"
 import { principalLabel } from "../utils/console-auth-model.mjs"
 import { useConsoleSession } from "../hooks/use-console-session"
 import { OnboardingBanner } from "../components/onboarding-banner"
+import { InstanceUnavailableBanner } from "../components/InstanceUnavailableBanner"
 import { CONSOLE_PATHS } from "../console-routes.mjs"
 import { ConsoleCommandCenter } from "../components/ConsoleCommandCenter"
 import "./workspace-navigation.css"
@@ -91,10 +92,6 @@ export default function DashboardLayout() {
   const navTiers = useMemo(() => buildNavigation(routes, access), [routes, access])
 
   const contentFullWidth = useRouteMetaFlag(routes, location.pathname, "fullWidth")
-  const contentFlush = matchPath(
-    { path: '/endpoints/:adapter/:endpointId', end: true },
-    location.pathname,
-  ) !== null
   const navigation = useMemo(
     () => resolveNavigationLocation(routes, location.pathname, (pattern, pathname) => matchPath({ path: pattern, end: true }, pathname) !== null, i18n.locale),
     [location.pathname, routes, i18n],
@@ -317,23 +314,25 @@ export default function DashboardLayout() {
           </div>
         </header>
 
+        <InstanceUnavailableBanner />
+
         <main
           id="console-main-content"
           ref={mainRef}
           className={cn(
             "console-main-scroll flex-1 min-h-0 min-w-0",
-            contentFlush ? "overflow-hidden flex flex-col" : "overflow-y-auto overflow-x-hidden",
+            "overflow-y-auto overflow-x-hidden",
           )}
         >
           <div
             key={location.pathname}
             className={cn(
               "console-route-view mx-auto w-full min-w-0",
-              contentFlush ? "console-page-flush flex-1 min-h-0 h-full p-0" : "console-main",
+              "console-main",
               contentFullWidth ? "max-w-none" : "console-content-frame",
             )}
           >
-            {contentFlush ? null : <OnboardingBanner />}
+            <OnboardingBanner />
             <Outlet />
           </div>
         </main>

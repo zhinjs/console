@@ -11,7 +11,7 @@ import { Skeleton } from '../../components/ui/skeleton'
 import { EmptyState } from '../../components/empty-state'
 import { ErrorAlert } from '../../components/error-alert'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
-import { conversationFeatureHref, endpointConversationsHref } from '../../console-routes.mjs'
+import { conversationHref, endpointHref } from '../../console-routes.mjs'
 import { conversationOverrideCounts, filterConversations, type ConversationItem, type ConversationKind, type ConversationOverrideCounts } from './feature-model.mjs'
 import { type ConversationListState } from './use-feature-data'
 
@@ -29,7 +29,7 @@ export function ConversationOverrideLinks({ counts, adapter }: { counts: Convers
   return (
     <span className="flex flex-col gap-0.5 font-normal">
       {entries.map(({ endpoint, count }) => (
-        <Link key={endpoint} to={endpointConversationsHref(adapter, endpoint)} className="text-xs text-muted-foreground hover:underline">
+        <Link key={endpoint} to={endpointHref(adapter, endpoint)} className="text-xs text-muted-foreground hover:underline">
           {i18n.t("{0}：{1} 个会话有覆盖", [endpoint, count])}
         </Link>
       ))}
@@ -61,7 +61,7 @@ interface ConversationListProps {
   readonly onQueryChange: (query: string) => void
 }
 
-/** The 「会话」 tab of an endpoint (ADR 0055 §6): searchable, paginated, "only with overrides" filter. */
+/** An account's conversations (ADR 0055 §6), each linking to its object page: searchable, paginated, "only with overrides" filter. */
 export function ConversationList({ adapter, endpoint, list, query, onQueryChange }: ConversationListProps) {
   const i18n = useI18n()
   const [draft, setDraft] = useState(query)
@@ -115,13 +115,13 @@ export function ConversationList({ adapter, endpoint, list, query, onQueryChange
                 <TableRow key={item.key}>
                   <TableCell><ConversationKindBadge kind={item.kind} /></TableCell>
                   <TableCell>
-                    <span className="font-medium">{item.name ?? item.id}</span>
+                    <Link to={conversationHref(adapter, endpoint, item.kind, item.id)} className="font-medium hover:underline">{item.name ?? item.id}</Link>
                     {item.name ? <code className="ml-2 text-xs text-muted-foreground">{item.id}</code> : null}
                   </TableCell>
                   <TableCell><OverrideSummary item={item} /></TableCell>
                   <TableCell className="text-right">
                     <Button asChild variant="outline" size="sm">
-                      <Link to={conversationFeatureHref(adapter, endpoint, item.kind, item.id)}>{i18n.t("功能配置")}</Link>
+                      <Link to={conversationHref(adapter, endpoint, item.kind, item.id, 'features')}>{i18n.t("功能配置")}</Link>
                     </Button>
                   </TableCell>
                 </TableRow>

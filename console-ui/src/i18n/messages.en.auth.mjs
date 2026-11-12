@@ -98,7 +98,6 @@ export const authMessages = Object.freeze({
   "接入聊天平台": "Connect chat platforms",
   "选择机器人要上线的平台（可以多选）：在插件市场安装适配器，再到「适配器」为每个平台添加第一个账号并测试上线。": "Pick the platforms the bot should join (several are fine): install their adapters from the marketplace, then under Adapters add and test the first account for each.",
   "暂时只想在 Console 里试聊，可以跳过这一步。": "Skip this if you only want to try the bot in the Console for now.",
-  "打开适配器": "Open adapters",
   "查看聊天账号": "View chat accounts",
   "完成引导": "Finish onboarding",
   "跳过的步骤以后可以在「功能 → AI 与模型」「功能 → 适配器」完成。": "Skipped steps can be completed later under Features → AI & models and Features → Adapters.",

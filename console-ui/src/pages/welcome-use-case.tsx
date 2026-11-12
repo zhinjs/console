@@ -75,7 +75,7 @@ export function WelcomeUseCaseSession({ scope }: { scope: string }) {
         {confirmError && <p role="alert" className="text-destructive">{confirmError}</p>}
         {inspection.manualRecord && <Alert><AlertDescription>{i18n.t("人工确认 · ")}{new Date(inspection.manualRecord.at).toLocaleString(i18n.locale)}{i18n.t("。这是当时的人工观察记录，不是平台自动验收，也不保证持续可用。配置、实例、运行代、完整测试目标或连接身份变化后失效；重读失败不保留确认。")}</AlertDescription></Alert>}
         <p className="text-xs text-muted-foreground">{i18n.t("记录仅保留在本页内存，离开或刷新页面后丢失。后台每 10 秒只读核对；核对存在间隔，不承诺实时有效。投递结果不确定时先看原群与日志，不自动重发。")}</p>
-        <div className="flex flex-wrap gap-3"><Link className="underline" to="/endpoints">{i18n.t("到账号与会话核对")}</Link><Link className="underline" to={`/logs?q=${encodeURIComponent(selected.instanceKey)}`}>{i18n.t("查看相关日志")}</Link><Link className="underline" to={welcomeReturnUrl()}>{i18n.t("重新开始本用途")}</Link></div>
+        <div className="flex flex-wrap gap-3"><Link className="underline" to="/scope">{i18n.t("到账号与会话核对")}</Link><Link className="underline" to={`/logs?q=${encodeURIComponent(selected.instanceKey)}`}>{i18n.t("查看相关日志")}</Link><Link className="underline" to={welcomeReturnUrl()}>{i18n.t("重新开始本用途")}</Link></div>
       </CardContent></Card></>}
   </div>
 }

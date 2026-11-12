@@ -16,5 +16,5 @@ test('every built-in and optional route name has an English entry', () => {
 test('route names follow the glossary: plugins, logs, chat accounts', () => {
   const names = routeNames('console-ui/src/registerBuiltinShell.tsx')
   for (const retired of ['功能管理', '功能商店', '运行记录', '渠道详情']) assert.ok(!names.includes(retired), `${retired} was replaced`)
-  for (const required of ['插件管理', '插件市场', '插件详情', '运行日志', '聊天账号详情']) assert.ok(names.includes(required), `${required} is a route name`)
+  for (const required of ['插件管理', '插件市场', '插件详情', '运行日志', '账号与会话', '聊天账号详情', '会话详情']) assert.ok(names.includes(required), `${required} is a route name`)
 })

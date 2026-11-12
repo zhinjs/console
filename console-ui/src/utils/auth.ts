@@ -338,7 +338,23 @@ export async function apiFetch(
   if (res.status === 401 && belongsToHost && token && getApiBase() === apiBase && getToken() === token) {
     notifyAuthRequired()
   }
+  // The gateway answers for a stopped or stuck instance with 502 / 503 / 504 `instance_*` (ADR 0054).
+  if (belongsToHost && hostReplyListeners.size && (res.status === 502 || res.status === 503 || res.status === 504)) {
+    const retryAfter = res.headers.get('retry-after')
+    void res.clone().json().then(body => {
+      for (const listener of [...hostReplyListeners]) listener({ status: res.status, body, retryAfter })
+    }, () => {})
+  }
   return res
+}
+
+export interface HostGatewayReply { readonly status: number; readonly body: unknown; readonly retryAfter: string | null }
+const hostReplyListeners = new Set<(reply: HostGatewayReply) => void>()
+
+/** Observes the Host's 502 / 503 / 504 replies (the shell's 实例不可用 banner); returns an unsubscribe. */
+export function onHostGatewayReply(listener: (reply: HostGatewayReply) => void): () => void {
+  hostReplyListeners.add(listener)
+  return () => { hostReplyListeners.delete(listener) }
 }
 
 function requestBelongsToHost(input: RequestInfo | URL, apiBase: string): boolean {

@@ -5,7 +5,7 @@ import { useIsMobile } from '../../hooks/useIsMobile'
 import type { ConversationListNotice } from './conversation-list-notice.mjs'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, CheckCircle2, Loader2, RefreshCw, Search, SlidersHorizontal, Wifi, X, XCircle } from 'lucide-react'
-import { adapterEndpointHref } from '../../console-routes.mjs'
+import { endpointHref } from '../../console-routes.mjs'
 import { cn } from '@zhin.js/client'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -114,13 +114,13 @@ export function ConversationSidebar({
       inert={isMobile && !showChannelList} onKeyDown={onDrawerKeyDown}>
       <div className="im-sidebar-header">
         <Button variant="ghost" size="icon" className="shrink-0" asChild>
-          <Link to="/endpoints" aria-label={i18n.t("返回聊天账号")}>
+          <Link to={endpointHref(adapter, endpointId)} aria-label={i18n.t("返回账号概览")}>
             <ArrowLeft />
           </Link>
         </Button>
         <AccountSwitcher adapter={adapter} endpointId={endpointId} info={info} loadErr={loadErr} hasDraft={hasDraft} sending={sending} onBeforeLeave={isMobile ? onCloseMobileList : undefined} />
         <Button variant="ghost" size="icon" className="shrink-0" asChild>
-          <Link to={adapterEndpointHref(adapter, endpointId)} aria-label={i18n.t("功能配置")} title={i18n.t("功能配置")}>
+          <Link to={endpointHref(adapter, endpointId, 'features')} aria-label={i18n.t("功能配置")} title={i18n.t("功能配置")}>
             <SlidersHorizontal />
           </Link>
         </Button>

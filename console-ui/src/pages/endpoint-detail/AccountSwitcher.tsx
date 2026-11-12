@@ -11,9 +11,11 @@ import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../../utils/inbox-cache'
 import { readEndpointList } from '../endpoint-list-model.mjs'
 import type { EndpointInfo } from './types'
+import { endpointHref } from '../../console-routes.mjs'
+import { SCOPE_ROOT } from '../../scope/scope-tree.mjs'
 
 type DirectoryState = { scope?: string; endpoints: ReturnType<typeof readEndpointList>; loading: boolean; error: string | null }
-const accountPath = (adapter: string, name: string) => `/endpoints/${encodeURIComponent(adapter)}/${encodeURIComponent(name)}`
+const accountPath = (adapter: string, name: string) => endpointHref(adapter, name, 'chat')
 
 /** A read-only directory, scoped to the current Host and credentials. */
 export function AccountSwitcher({ adapter, endpointId, info, loadErr, hasDraft = false, sending = false, onBeforeLeave }: {
@@ -91,7 +93,7 @@ export function AccountSwitcher({ adapter, endpointId, info, loadErr, hasDraft =
             </DropdownMenuItem>
           })}
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild disabled={sending}><Link to="/endpoints" onClick={event => void guardNavigation(event, '/endpoints')}>{i18n.t('管理聊天账号')}</Link></DropdownMenuItem>
+        <DropdownMenuItem asChild disabled={sending}><Link to={SCOPE_ROOT} onClick={event => void guardNavigation(event, SCOPE_ROOT)}>{i18n.t('管理聊天账号')}</Link></DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
     {ConfirmDialog}

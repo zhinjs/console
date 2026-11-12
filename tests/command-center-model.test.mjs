@@ -15,7 +15,8 @@ test('palette routes include hidden pages but exclude parameterised, legacy redi
   assert.equal(isCommandRoute({ path: '/permissions', meta: { hideInMenu: true } }), true)
   assert.equal(isCommandRoute({ path: '/logs' }), true)
   assert.equal(isCommandRoute({ path: '/plugins/:name', meta: { hideInMenu: true } }), false)
-  assert.equal(isCommandRoute({ path: '/endpoints/:adapter/:endpointId' }), false)
+  assert.equal(isCommandRoute({ path: '/scope/:adapter/:endpoint' }), false)
+  assert.equal(isCommandRoute({ path: '/endpoints' }), false, 'legacy redirect')
   assert.equal(isCommandRoute({ path: '/files/*' }), false)
   assert.equal(isCommandRoute({ path: '/cron', meta: { hideInMenu: true } }), false)
   assert.equal(isCommandRoute({ path: '/assistant/jobs', meta: { hideInMenu: true } }), false)
@@ -30,7 +31,7 @@ test('every builtin page reachable from the palette has a translated description
   assert.ok(builtinPaths.length > 20)
   const reachable = builtinPaths.filter(path => isCommandRoute({ path }))
   assert.ok(builtinPaths.every(Boolean), 'every P.<key> names a CONSOLE_PATHS entry')
-  for (const path of ['/features/ai/ambient', '/features/ai/skills', '/agent/usage', '/features/ai', '/features', '/features/adapters', '/ops/config', '/scenario-lab', '/agent/replay', '/permissions']) assert.ok(reachable.includes(path), path)
+  for (const path of ['/features/ai/ambient', '/features/ai/skills', '/agent/usage', '/features/ai', '/features', '/scope', '/ops/config', '/scenario-lab', '/agent/replay', '/permissions']) assert.ok(reachable.includes(path), path)
   for (const path of reachable) {
     const hint = ROUTE_SEARCH_HINTS[path]
     assert.ok(hint, `${path} has a search hint`)

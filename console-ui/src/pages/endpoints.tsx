@@ -47,6 +47,7 @@ import { requestConsole } from '../utils/console-rpc'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
+import { endpointHref } from '../console-routes.mjs'
 
 interface EndpointInfo {
   name: string
@@ -270,8 +271,19 @@ const ONBOARDING_PLATFORMS = [
   },
 ] as const
 
-export default function EndpointsPage() {
+export interface EndpointsPageProps {
+  /** Inside an object page (no page header). */
+  readonly embedded?: boolean
+  /** Only this adapter's accounts (adapter object page). */
+  readonly adapter?: string
+  /** Only this account (the account's 接入 tab): login, connection test and platform management. */
+  readonly endpoint?: string
+}
+
+export default function EndpointsPage({ embedded = false, adapter: scopeAdapter, endpoint: scopeEndpoint }: EndpointsPageProps = {}) {
   const i18n = useI18n()
+  const inScope = useCallback((adapter: string, name: string) =>
+    (!scopeAdapter || adapter === scopeAdapter) && (!scopeEndpoint || name === scopeEndpoint), [scopeAdapter, scopeEndpoint])
   // Login assistance is an operator action (ADR 0049 endpoint.operate).
   const loginReadOnly = !hasConsolePermission('endpoint.operate')
   const cacheScope = useInboxCacheScope()
@@ -304,8 +316,8 @@ export default function EndpointsPage() {
           : requestConsole<{ tasks?: LoginTask[] }>({ type: 'login.list' }).catch(() => ({ tasks: [] as LoginTask[] })),
       ])
       if (seq !== fetchSeqRef.current || !isInboxCacheScopeActive(cacheScope)) return
-      setEndpoints(readEndpointList(data, i18n.locale))
-      setLoginTasks(Array.isArray(loginData?.tasks) ? loginData.tasks : [])
+      setEndpoints(readEndpointList(data, i18n.locale).filter(item => inScope(item.adapter, item.name)))
+      setLoginTasks(Array.isArray(loginData?.tasks) ? loginData.tasks.filter(task => inScope(task.adapter, task.endpointKey)) : [])
       setLoaded(true)
       setError(null)
     } catch (err) {
@@ -318,7 +330,7 @@ export default function EndpointsPage() {
         if (manual) setRefreshing(false)
       }
     }
-  }, [cacheScope, loginReadOnly, i18n.locale])
+  }, [cacheScope, loginReadOnly, i18n.locale, inScope])
 
   useEffect(() => {
     setLoading(true)
@@ -482,48 +494,52 @@ export default function EndpointsPage() {
   if (error && !loaded) {
     return (
       <PageShell className="console-resource-page console-endpoints-page">
-        <PageHeader title={i18n.t("聊天账号")} />
+        {embedded ? null : <PageHeader title={i18n.t("聊天账号")} />}
         <ErrorAlert error={i18n.t("加载失败：{0}", [error])} onRetry={() => void fetchEndpoints(true)} />
       </PageShell>
     )
   }
 
+  const headerActions = (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={refreshing}
+        onClick={() => void fetchEndpoints(true)}
+      >
+        <RefreshCw className={refreshing ? 'h-3.5 w-3.5 mr-1.5 animate-spin' : 'h-3.5 w-3.5 mr-1.5'} aria-hidden="true" />
+        {refreshing ? i18n.t("刷新中…") : i18n.t("刷新")}
+      </Button>
+      <Button
+        type="button"
+        variant="default"
+        size="sm"
+        aria-expanded={onboardingOpen}
+        onClick={() => setOnboardingOpen(true)}
+      >
+        <Plus className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
+        {i18n.t("接入新平台账号")}
+      </Button>
+    </div>
+  )
+
   return (
     <PageShell className="console-resource-page console-endpoints-page">
-      <PageHeader
-        title={i18n.t("聊天账号")}
-        description={i18n.t("统一管理多平台机器人账号、扫码与滑块登录验证、连接测速及会话入口。")}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={refreshing}
-              onClick={() => void fetchEndpoints(true)}
-            >
-              <RefreshCw className={refreshing ? 'h-3.5 w-3.5 mr-1.5 animate-spin' : 'h-3.5 w-3.5 mr-1.5'} aria-hidden="true" />
-              {refreshing ? i18n.t("刷新中…") : i18n.t("刷新")}
-            </Button>
-            <Button
-              type="button"
-              variant="default"
-              size="sm"
-              aria-expanded={onboardingOpen}
-              onClick={() => setOnboardingOpen(true)}
-            >
-              <Plus className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
-              {i18n.t("接入新平台账号")}
-            </Button>
-          </div>
-        }
-      />
+      {embedded
+        ? <div className="flex flex-wrap justify-end gap-2">{headerActions}</div>
+        : <PageHeader
+            title={i18n.t("聊天账号")}
+            description={i18n.t("统一管理多平台机器人账号、扫码与滑块登录验证、连接测速及会话入口。")}
+            actions={headerActions}
+          />}
 
       {error && loaded && (
         <ErrorAlert error={i18n.t("加载失败：{0}", [error])} onRetry={() => void fetchEndpoints(true)} />
       )}
 
-      {endpoints.length > 0 && (
+      {endpoints.length > 0 && !scopeEndpoint && (
         <div className="console-endpoints-summary-strip">
           <StatGrid label={i18n.t("账号概况")}>
             <StatCard
@@ -900,7 +916,8 @@ export default function EndpointsPage() {
           const hasPendingLogin =
             Boolean(endpoint.pendingLogin) ||
             loginTasks.some((t) => t.adapter === endpoint.adapter && t.endpointKey === endpoint.name)
-          const workspaceUrl = `/endpoints/${encodeURIComponent(endpoint.adapter)}/${encodeURIComponent(endpoint.name)}`
+          const workspaceUrl = endpointHref(endpoint.adapter, endpoint.name)
+          const chatUrl = endpointHref(endpoint.adapter, endpoint.name, 'chat')
 
           return (
             <div
@@ -1018,7 +1035,7 @@ export default function EndpointsPage() {
                 </Link>
 
                 <Link
-                  to={workspaceUrl}
+                  to={chatUrl}
                   className="console-endpoint-action-link is-primary"
                 >
                   <MessageSquare className="h-3 w-3" aria-hidden="true" />
@@ -1029,7 +1046,7 @@ export default function EndpointsPage() {
           )
         })}
 
-        {endpoints.length > 0 && (
+        {endpoints.length > 0 && !scopeEndpoint && (
           <button
             type="button"
             className="console-endpoint-card console-endpoint-card--add"

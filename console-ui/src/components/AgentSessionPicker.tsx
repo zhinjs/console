@@ -70,7 +70,7 @@ export function AgentSessionPicker({
 
         </div>
         <Button variant="ghost" size="sm" asChild>
-          <Link to="/endpoints">
+          <Link to="/scope">
             <MessagesSquare />
             {i18n.t("浏览渠道会话")}</Link>
         </Button>
@@ -108,7 +108,7 @@ export function AgentSessionPicker({
             <p>{i18n.t("从“聊天账号”选择联系人、群组或频道。")}</p>
           </div>
           <Button size="sm" asChild>
-            <Link to="/endpoints">{i18n.t("选择会话")}</Link>
+            <Link to="/scope">{i18n.t("选择会话")}</Link>
           </Button>
         </div>
       )}

@@ -3,14 +3,14 @@ import { Loader2, Lock } from 'lucide-react'
 import { useI18n } from '../../i18n'
 import { Badge } from '../../components/ui/badge'
 import { Switch } from '../../components/ui/switch'
-import { adapterEndpointHref, adapterHref, featureGlobalHref } from '../../console-routes.mjs'
+import { adapterHref, endpointHref, featureGlobalHref } from '../../console-routes.mjs'
 import { featureSwitchState, type FeatureLock } from './feature-model.mjs'
 
 /** Where a lock comes from, with a link to the level that disabled the feature. */
 export function FeatureLockNote({ lockedBy, plugin, adapter, endpoint }: { lockedBy: FeatureLock; plugin: string; adapter?: string; endpoint?: string }) {
   const i18n = useI18n()
-  const to = lockedBy === 'endpoint' && adapter && endpoint ? adapterEndpointHref(adapter, endpoint)
-    : lockedBy === 'adapter' && adapter ? adapterHref(adapter)
+  const to = lockedBy === 'endpoint' && adapter && endpoint ? endpointHref(adapter, endpoint, 'features')
+    : lockedBy === 'adapter' && adapter ? adapterHref(adapter, 'features')
       : featureGlobalHref(plugin)
   const text = lockedBy === 'global' ? i18n.t("已在全局禁用")
     : lockedBy === 'adapter' ? i18n.t("已在适配器 {0} 禁用", [adapter ?? ''])

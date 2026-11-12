@@ -502,7 +502,7 @@ export default function HomePage() {
       value: stats?.endpoints.total ?? null,
       detail: stats ? i18n.t("{0} 个在线连接", [stats.endpoints.online]) : i18n.t("等待 Host 状态"),
       icon: Radio,
-      path: '/endpoints',
+      path: '/scope',
     },
     {
       label: i18n.t("命令"),
@@ -557,14 +557,14 @@ export default function HomePage() {
       items.push({
         title: i18n.t("还没有连接渠道"),
         detail: i18n.t("先用 Sandbox 验证，再接入真实平台。"),
-        path: '/endpoints',
+        path: '/scope',
         tone: 'neutral',
       })
     } else if (offlineEndpoints > 0) {
       items.push({
         title: i18n.t("{0} 个渠道离线", [offlineEndpoints]),
         detail: i18n.t("检查凭据、网络和适配器日志。"),
-        path: '/endpoints',
+        path: '/scope',
         tone: 'warning',
       })
     }
@@ -736,7 +736,7 @@ export default function HomePage() {
             {hostAvailable ? i18n.t("刷新") : i18n.t("重新连接")}
           </Button>
           {hostAvailable ? (
-            <Button onClick={() => navigate('/endpoints')}>
+            <Button onClick={() => navigate('/scope')}>
               <Bot className="h-4 w-4" />
               {i18n.t("进入会话")}
             </Button>
@@ -786,7 +786,7 @@ export default function HomePage() {
           aside={endpointRate !== null
             ? <MiniRingGauge percent={endpointRate} tone={endpointRate === 100 ? 'success' : endpointRate >= 60 ? 'primary' : 'warning'} />
             : null}
-          onOpen={() => navigate('/endpoints')}
+          onOpen={() => navigate('/scope')}
         />
       </StatGrid>
 

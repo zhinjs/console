@@ -2,8 +2,7 @@ import { app } from './utils/console-client'
 import HomePage from './pages/dashboard'
 import PluginsPage from './pages/plugins'
 import PluginDetailPage from './pages/plugin-detail'
-import EndpointsPage from './pages/endpoints'
-import EndpointDetailPage from './pages/endpoint-detail'
+import ScopeObjectRoute from './pages/scope'
 import LogsPage from './pages/logs'
 import ConfigPage from './pages/config'
 import EnvManagePage from './pages/env'
@@ -29,10 +28,6 @@ import WorkroomsPage from './pages/workrooms'
 import WorkroomCatalogPage from './pages/workroom-catalog'
 import FeatureMatrixPage from './pages/features/feature-matrix'
 import GlobalFeatureConfigPage from './pages/features/global-config'
-import AdaptersPage from './pages/features/adapters'
-import AdapterDetailPage from './pages/features/adapter-detail'
-import EndpointFeaturesPage from './pages/features/endpoint-features'
-import ConversationFeaturesPage from './pages/features/conversation-features'
 import OnboardingPage from './pages/onboarding'
 import AccountPage from './pages/account'
 import OpsInstancePage from './pages/ops/instance'
@@ -78,24 +73,16 @@ export function registerBuiltinConsolePages() {
     meta: { group: NAV_GROUPS.OVERVIEW, order: 3 },
   })
 
-  // 会话 — 在和谁说话？（沙盒由插件页面注册，见 PLUGIN_PAGE_PLACEMENT）
-  app.addRoute({ path: P.endpoints, name: '聊天账号', parent: null, icon: 'Bot', element: <EndpointsPage />, meta: { group: NAV_GROUPS.WORK, order: 1 } })
-  app.addRoute({
-    path: P.endpointWorkspace,
-    name: '聊天账号详情',
-    parent: P.endpoints,
-    element: <EndpointDetailPage />,
-    meta: { hideInMenu: true, fullWidth: true, group: NAV_GROUPS.WORK },
-  })
+  // 会话 — 在和谁说话？对象树 全局 ─ 适配器 ─ 账号 ─ 会话，每级一个对象页（沙盒由插件页面注册，见 PLUGIN_PAGE_PLACEMENT）
+  app.addRoute({ path: P.scope, name: '账号与会话', parent: null, icon: 'Bot', element: <ScopeObjectRoute />, meta: { group: NAV_GROUPS.WORK, order: 1 } })
+  app.addRoute({ path: P.scopeAdapter, name: '适配器详情', parent: P.scope, element: <ScopeObjectRoute />, meta: { group: NAV_GROUPS.WORK, hideInMenu: true } })
+  app.addRoute({ path: P.scopeEndpoint, name: '聊天账号详情', parent: P.scopeAdapter, element: <ScopeObjectRoute />, meta: { group: NAV_GROUPS.WORK, hideInMenu: true, fullWidth: true } })
+  app.addRoute({ path: P.scopeConversation, name: '会话详情', parent: P.scopeEndpoint, element: <ScopeObjectRoute />, meta: { group: NAV_GROUPS.WORK, hideInMenu: true, fullWidth: true } })
   app.addRoute({ path: P.agentSessions, name: '聊天记录', parent: null, icon: 'GitBranch', element: <AgentSessionsPage />, meta: { group: NAV_GROUPS.WORK, order: 2 } })
 
   // 功能 — 机器人能做什么、在哪里做？
   app.addRoute({ path: P.features, name: '功能矩阵', parent: null, icon: 'ToggleLeft', element: <FeatureMatrixPage />, meta: { group: NAV_GROUPS.FEATURES, order: 0, fullWidth: true } })
   app.addRoute({ path: P.featureGlobal, name: '全局配置', parent: P.features, element: <GlobalFeatureConfigPage />, meta: { group: NAV_GROUPS.FEATURES, hideInMenu: true } })
-  app.addRoute({ path: P.adapters, name: '适配器', parent: null, icon: 'Cable', element: <AdaptersPage />, meta: { group: NAV_GROUPS.FEATURES, order: 1 } })
-  app.addRoute({ path: P.adapter, name: '适配器详情', parent: P.adapters, element: <AdapterDetailPage />, meta: { group: NAV_GROUPS.FEATURES, hideInMenu: true } })
-  app.addRoute({ path: P.adapterEndpoint, name: '账号功能配置', parent: P.adapter, element: <EndpointFeaturesPage />, meta: { group: NAV_GROUPS.FEATURES, hideInMenu: true } })
-  app.addRoute({ path: P.adapterConversation, name: '会话功能配置', parent: P.adapterEndpoint, element: <ConversationFeaturesPage />, meta: { group: NAV_GROUPS.FEATURES, hideInMenu: true } })
   app.addRoute({ path: P.ai, name: 'AI 与模型', parent: null, icon: 'KeyRound', element: <PersonalModelsPage />, meta: { group: NAV_GROUPS.FEATURES, order: 2 } })
   app.addRoute({
     path: P.aiSkills,

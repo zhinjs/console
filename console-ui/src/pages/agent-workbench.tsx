@@ -148,7 +148,7 @@ export default function AgentWorkbenchPage() {
       label: i18n.t("渠道入口"),
       detail: i18n.t("{0} / {1} 个 Endpoint 在线", [onlineEndpoints, endpoints.length]),
       ready: onlineEndpoints > 0,
-      path: '/endpoints',
+      path: '/scope',
     },
     {
       label: i18n.t("Agent 绑定"),
@@ -211,14 +211,14 @@ export default function AgentWorkbenchPage() {
                 {disconnectedMcp > 0 ? <li><Link to="/introspection?tab=mcp">{i18n.t("{0} 个 MCP 服务未连接，检查服务地址与凭据 →", [disconnectedMcp])}</Link></li> : null}
                 {ready ? null : agentStatus === 'unavailable' ? <li><Link to="/ops/config">{i18n.t("安装并装配可选 Agent 能力 →")}</Link></li>
                   : bindings.length === 0 ? <li><Link to="/ops/config">{i18n.t("配置模型与 Agent 绑定 →")}</Link></li> : null}
-                {!ready && onlineEndpoints === 0 ? <li><Link to="/endpoints">{i18n.t("连接一个机器人渠道 →")}</Link></li> : null}
+                {!ready && onlineEndpoints === 0 ? <li><Link to="/scope">{i18n.t("连接一个机器人渠道 →")}</Link></li> : null}
               </ul>
             ) : null}
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
             {error ? <Button variant="outline" onClick={() => void loadWorkbench(true)} disabled={refreshing}><RefreshCw />{i18n.t("重试读取")}</Button>
               : ready ? <Button asChild><Link to="/agent/sessions"><GitBranch />{i18n.t("打开聊天记录")}</Link></Button>
-                : <Button asChild><Link to={agentStatus === 'unavailable' || bindings.length === 0 ? '/ops/config' : '/endpoints'}><Settings2 />{agentStatus === 'unavailable' || bindings.length === 0 ? i18n.t("配置 Agent") : i18n.t("连接渠道")}</Link></Button>}
+                : <Button asChild><Link to={agentStatus === 'unavailable' || bindings.length === 0 ? '/ops/config' : '/scope'}><Settings2 />{agentStatus === 'unavailable' || bindings.length === 0 ? i18n.t("配置 Agent") : i18n.t("连接渠道")}</Link></Button>}
           </div>
         </div>
         <details className="console-agent-state-explanation">
@@ -310,7 +310,7 @@ export default function AgentWorkbenchPage() {
           <div>
             <h2 id="recent-title">{i18n.t("最近的 Agent 对话")}</h2>
           </div>
-          <Button variant="ghost" size="sm" asChild><Link to="/endpoints">{i18n.t("全部渠道")}<ArrowUpRight /></Link></Button>
+          <Button variant="ghost" size="sm" asChild><Link to="/scope">{i18n.t("全部渠道")}<ArrowUpRight /></Link></Button>
         </div>
 
         {history.length ? (
@@ -321,7 +321,7 @@ export default function AgentWorkbenchPage() {
           <div className="console-agent-empty is-compact">
             <MessagesSquare />
             <div><h3>{i18n.t("最近还没有打开过 Agent 对话")}</h3><p>{i18n.t("前往渠道会话，选择一个对话后点击分支图标即可开始。")}</p></div>
-            <Button size="sm" asChild><Link to="/endpoints">{i18n.t("选择会话")}</Link></Button>
+            <Button size="sm" asChild><Link to="/scope">{i18n.t("选择会话")}</Link></Button>
           </div>
         )}
       </section>

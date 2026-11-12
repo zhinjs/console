@@ -73,7 +73,7 @@ test('work-oriented navigation preserves ordinary-user names and legacy plugin g
     const block = source.slice(start, source.indexOf('})', start))
     return { name: /name: '([^']+)'/.exec(block)?.[1], group: /group: NAV_GROUPS\.(\w+)/.exec(block)?.[1], hidden: /hideInMenu: true/.test(block) }
   }
-  const primary = { dashboard: ['首页','OVERVIEW'], logs: ['运行日志','OVERVIEW'], endpoints: ['聊天账号','WORK'], agentSessions: ['聊天记录','WORK'], opsSchedules: ['定时任务','OPS'] }
+  const primary = { dashboard: ['首页','OVERVIEW'], logs: ['运行日志','OVERVIEW'], scope: ['账号与会话','WORK'], agentSessions: ['聊天记录','WORK'], opsSchedules: ['定时任务','OPS'] }
   for (const [key, [name,group]] of Object.entries(primary)) assert.deepEqual(routeGroup(key), { name, group, hidden: false })
   assert.deepEqual(routeGroup('plugins'), { name: '插件管理', group: 'PLUGINS', hidden: false })
   assert.deepEqual(routeGroup('marketplace'), { name: '插件市场', group: 'PLUGINS', hidden: false })
@@ -87,7 +87,7 @@ test('work-oriented navigation preserves ordinary-user names and legacy plugin g
   assert.match(source, /path: P\.agentReplay,[\s\S]*?parent: P\.agentWorkbench,[\s\S]*?requiredPermissions: \[REPLAY_PERMISSION\]/)
   assert.match(sourceText(join(SOURCE_ROOT, 'pages', 'agent-workbench.tsx')), /to="\/agent\/replay"/)
   for (const key of ['opsConfig', 'opsEnv', 'opsFiles', 'opsDatabase', 'opsInstance', 'opsTerminal']) assert.equal(routeGroup(key).group, 'OPS', key)
-  for (const key of ['features', 'adapters', 'ai', 'introspection', 'scenarioLab', 'aiWorkrooms']) assert.equal(routeGroup(key).group, 'FEATURES', key)
+  for (const key of ['features', 'ai', 'introspection', 'scenarioLab', 'aiWorkrooms']) assert.equal(routeGroup(key).group, 'FEATURES', key)
   assert.doesNotMatch(source, /'对话分支'|'Agent 概览'|judge|decision|TypeSafe|shadow/)
   const entries = sourceText(join(SOURCE_ROOT, 'bootstrap', 'loadConsoleEntries.ts'))
   assert.match(entries, /placePluginRoute\(route, declaredSections\.get\(route\.path\)\)/)

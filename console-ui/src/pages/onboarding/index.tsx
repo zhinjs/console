@@ -107,8 +107,7 @@ export default function OnboardingPage() {
         {adapterReady && <p role="status" className="text-sm">{i18n.t('适配器已启用。可以到「查看聊天账号」确认账号上线，或继续安装其他平台。')}</p>}
         <div className="console-onboarding-links">
           <Button asChild variant="outline"><Link to={P.marketplace}>{i18n.t('打开插件市场')}</Link></Button>
-          <Button asChild variant="outline"><Link to={P.adapters}>{i18n.t('打开适配器')}</Link></Button>
-          <Button asChild variant="outline"><Link to={P.endpoints}>{i18n.t('查看聊天账号')}</Link></Button>
+          <Button asChild variant="outline"><Link to={P.scope}>{i18n.t('查看聊天账号')}</Link></Button>
         </div>
         <StepActions saving={saving} onDone={() => void mark('adapters', 'done')} onSkip={() => void mark('adapters', 'skipped')} />
       </CardContent>

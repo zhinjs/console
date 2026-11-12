@@ -6,7 +6,7 @@ import {
   parseConversationSegment, readConversationPage, readFeatureDetail, readFeatureList, readFeatureMatrix, readFeatureWriteResult,
   removeOverrideRequest, setEnabledRequest, setOverrideRequest, unescapeConversationId,
 } from '../console-ui/src/pages/features/feature-model.mjs'
-import { CONSOLE_PATHS, conversationFeatureHref, endpointConversationsHref } from '../console-ui/src/console-routes.mjs'
+import { CONSOLE_PATHS, conversationHref, endpointHref } from '../console-ui/src/console-routes.mjs'
 import { ROUTE_PERMISSIONS } from '../console-ui/src/navigation-sections.mjs'
 
 test('conversation keys follow the Host escaping: only % and / in the id are escaped', () => {
@@ -38,16 +38,16 @@ test('conversation keys round-trip and only the canonical form parses', () => {
 })
 
 test('the conversation route encodes <kind>:<id> as one path segment', () => {
-  assert.equal(CONSOLE_PATHS.adapterConversation, '/features/adapters/:adapter/endpoints/:endpoint/conversations/:conversation')
-  assert.deepEqual(ROUTE_PERMISSIONS[CONSOLE_PATHS.adapterConversation], ['feature.view'])
-  const href = conversationFeatureHref('qq', '10001', 'group', 'a/b?#c')
-  assert.equal(href, '/features/adapters/qq/endpoints/10001/conversations/group%3Aa%2Fb%3F%23c')
-  const segment = decodeURIComponent(href.split('/').at(-1))
+  assert.equal(CONSOLE_PATHS.scopeConversation, '/scope/:adapter/:endpoint/:conversation')
+  assert.deepEqual(ROUTE_PERMISSIONS[CONSOLE_PATHS.scopeConversation], ['endpoint.view', 'feature.view'])
+  const href = conversationHref('qq', '10001', 'group', 'a/b?#c', 'features')
+  assert.equal(href, '/scope/qq/10001/group%3Aa%2Fb%3F%23c?tab=features')
+  const segment = decodeURIComponent(href.split('?')[0].split('/').at(-1))
   assert.deepEqual(parseConversationSegment(segment), { kind: 'group', id: 'a/b?#c' })
   assert.equal(conversationSegment('private', 'u:1'), 'private:u:1')
   assert.deepEqual(parseConversationSegment('private:u:1'), { kind: 'private', id: 'u:1' })
   for (const bad of ['group', 'group:', ':1', 'room:1', undefined]) assert.equal(parseConversationSegment(bad), null)
-  assert.equal(endpointConversationsHref('qq', 'a b'), '/features/adapters/qq/endpoints/a%20b?tab=conversations')
+  assert.equal(endpointHref('qq', 'a b'), '/scope/qq/a%20b')
 })
 
 test('locks resolve top-down across the four levels', () => {

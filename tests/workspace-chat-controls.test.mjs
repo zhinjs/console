@@ -5,6 +5,8 @@ import { createRequire } from 'node:module'
 import ts from 'typescript'
 import { translate } from '../console-ui/src/i18n/locale.mjs'
 import { readEndpointList } from '../console-ui/src/pages/endpoint-list-model.mjs'
+import * as consoleRoutes from '../console-ui/src/console-routes.mjs'
+import * as scopeTree from '../console-ui/src/scope/scope-tree.mjs'
 
 const require = createRequire(import.meta.url)
 const source = path => readFile(new URL(`../console-ui/src/pages/endpoint-detail/${path}`, import.meta.url), 'utf8')
@@ -41,6 +43,8 @@ function fixture(props = {}) {
     '../../utils/useInboxCacheScope': { useInboxCacheScope: () => scope },
     '../../utils/inbox-cache': { isInboxCacheScopeActive: expected => expected === scope },
     '../endpoint-list-model.mjs': { readEndpointList },
+    '../../console-routes.mjs': consoleRoutes,
+    '../../scope/scope-tree.mjs': scopeTree,
   })
   const settings = { adapter: 'root/icqq', endpointId: 'bot:1', info: null, loadErr: null, ...props }
   const f = {
@@ -69,11 +73,11 @@ test('account directory reads only when opened and retains encoded identity, cur
     assert.ok(text(f.tree).includes(translate('en', '状态未知')))
     f.open(); assert.deepEqual(f.calls[0].input, { type: 'endpoint.list' })
     f.calls[0].resolve({ endpoints }); await settle(); f.render()
-    const current = findLink(f, '/endpoints/root%2Ficqq/bot%3A1')
+    const current = findLink(f, '/scope/root%2Ficqq/bot%3A1?tab=chat')
     assert.equal(current.props['aria-current'], 'page')
     const event = click(); current.props.onClick(event); assert.equal(event.defaultPrevented, true)
-    assert.ok(text(findLink(f, '/endpoints/telegram/support%20bot')).includes('Offline'))
-    assert.ok(findLink(f, '/endpoints'))
+    assert.ok(text(findLink(f, '/scope/telegram/support%20bot?tab=chat')).includes('Offline'))
+    assert.ok(findLink(f, '/scope'))
     assert.equal(f.navigations.length, 0)
   } finally { f.close() }
 })
@@ -120,7 +124,7 @@ test('drafts require explicit confirmation, cancellation stays put, and only app
   const f = fixture({ hasDraft: true, onBeforeLeave: () => { drawersClosed++ } })
   try {
     f.open(); f.calls[0].resolve({ endpoints }); await settle(); f.render()
-    let event = click(); findLink(f, '/endpoints/telegram/support%20bot').props.onClick(event)
+    let event = click(); findLink(f, '/scope/telegram/support%20bot?tab=chat').props.onClick(event)
     f.render()
     assert.equal(nodes(f.tree).find(node => node.type === 'DropdownMenu').props.open, false, 'the menu closes before opening the confirmation')
     assert.equal(drawersClosed, 1, 'the mobile drawer closes before opening the confirmation')
@@ -130,9 +134,9 @@ test('drafts require explicit confirmation, cancellation stays put, and only app
     assert.equal(event.defaultPrevented, true); assert.equal(f.navigations.length, 0)
     f.confirmations[0].resolve(false); await settle()
     assert.equal(f.navigations.length, 0)
-    event = click(); findLink(f, '/endpoints').props.onClick(event)
+    event = click(); findLink(f, '/scope').props.onClick(event)
     f.confirmations[1].resolve(true); await settle()
-    assert.deepEqual(f.navigations, ['/endpoints'])
+    assert.deepEqual(f.navigations, ['/scope'])
   } finally { f.close() }
 })
 
@@ -140,7 +144,7 @@ test('confirmation from a former Host cannot navigate the new connection', async
   const f = fixture({ hasDraft: true })
   try {
     f.open(); f.calls[0].resolve({ endpoints }); await settle(); f.render()
-    findLink(f, '/endpoints/telegram/support%20bot').props.onClick(click())
+    findLink(f, '/scope/telegram/support%20bot?tab=chat').props.onClick(click())
     f.setScope('host-b'); f.render(); f.confirmations[0].resolve(true); await settle()
     assert.equal(f.navigations.length, 0)
   } finally { f.close() }
@@ -152,7 +156,7 @@ test('sending disables account switching while ordinary links and modified click
   const f = fixture({ hasDraft: true })
   try {
     f.open(); f.calls[0].resolve({ endpoints }); await settle(); f.render()
-    const event = click({ ctrlKey: true }); findLink(f, '/endpoints/telegram/support%20bot').props.onClick(event)
+    const event = click({ ctrlKey: true }); findLink(f, '/scope/telegram/support%20bot?tab=chat').props.onClick(event)
     assert.equal(event.defaultPrevented, false); assert.equal(f.confirmations.length, 0)
   } finally { f.close() }
 })
@@ -173,7 +177,7 @@ test('attachment menu keeps all five actions, correct media types, and a named d
 
 test('account routes remount the workspace and explicitly guard text, attachments, references and unfinished URLs', async () => {
   const page = await source('index.tsx')
-  assert.match(page, /<EndpointWorkspace key=\{`\$\{params\.adapter\}\\u0000\$\{params\.endpointId\}`\}/)
+  assert.match(page, /<EndpointWorkspace key=\{`\$\{target\.adapter\}\\u0000\$\{target\.endpointId\}\\u0000\$\{target\.channelType \?\? ''\}\\u0000\$\{target\.channelId \?\? ''\}`\} target=\{target\} \/>/)
   assert.match(page, /hasDraft=\{.*msgContent\.trim\(\).*composerAttachments\.length.*quoteDraft.*forwardDraft.*mediaUrl\.trim\(\)/)
   assert.match(page, /<ComposerAttachmentMenu[\s\S]*?disabled=\{sending\}/)
 })

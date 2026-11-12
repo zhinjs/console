@@ -4,7 +4,7 @@ import type * as React from 'react'
 import type { SetStateAction } from 'react'
 import type { ElementType, ReactNode } from 'react'
 import { Fragment, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { ComposerAttachmentMenu } from './ComposerAttachmentMenu'
 import {
   Bell,
@@ -53,7 +53,7 @@ import { textReferenceSendOptions } from './message-reference-model.mjs'
 import { ChatScrollArea } from './ChatScrollArea'
 import { MessageDiagnosticsAction, MessageDiagnosticsProvider } from './MessageDiagnostics'
 import { canShowReadEmpty } from './endpoint-request.mjs'
-import { useEndpointConsole } from './useEndpointConsole'
+import { useEndpointConsole, type EndpointWorkspaceTarget } from './useEndpointConsole'
 import {
   hasRenderableComposerSegments,
   parseComposerToSegments,
@@ -122,14 +122,17 @@ function MuteDurationField({ valueRef }: { valueRef: { current: string } }) {
   </label>
 }
 
-export default function EndpointDetailPage() {
-  const params = useParams<{ adapter: string; endpointId: string }>()
-  return <EndpointWorkspace key={`${params.adapter}\u0000${params.endpointId}`} />
+/**
+ * The account workspace (conversation list, chat, members, inbox) for an object page's 聊天 tab.
+ * `target.channelType` / `channelId` preselect one conversation (the conversation object page).
+ */
+export function EndpointWorkspaceView({ target }: { target: EndpointWorkspaceTarget }) {
+  return <EndpointWorkspace key={`${target.adapter}\u0000${target.endpointId}\u0000${target.channelType ?? ''}\u0000${target.channelId ?? ''}`} target={target} />
 }
 
-function EndpointWorkspace() {
+function EndpointWorkspace({ target }: { target?: EndpointWorkspaceTarget } = {}) {
   const i18n = useI18n()
-  const ctx = useEndpointConsole()
+  const ctx = useEndpointConsole(target)
   const readOnly = !hasConsolePermission('endpoint.operate')
 
   if (!ctx.valid) {
