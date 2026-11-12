@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Lock, RefreshCw, ToggleLeft } from 'lucide-react'
 import { useI18n } from '../../i18n'
@@ -18,6 +19,7 @@ import { ConversationOverrideLinks } from './conversation-list'
 import { useFeatureMatrix, useFeatureWriter } from './use-feature-data'
 import { FeatureSwitch } from './feature-switch'
 import { useConfirm } from '../../components/confirm-dialog'
+import { ObjectSection } from '../../scope/ObjectPageLayout'
 import { useConsoleAccess } from '../../hooks/use-console-access'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
 
@@ -37,7 +39,11 @@ function CellBadge({ cell, to }: { cell: FeatureCell | undefined; to?: string })
  * `/features` (功能矩阵): where each feature is enabled. Also the 功能 tab of the 全局 object page
  * (`embedded`: no page header, the object page has one).
  */
-export default function FeatureMatrixPage({ embedded = false }: { embedded?: boolean } = {}) {
+export default function FeatureMatrixPage({ embedded = false, heading }: {
+  embedded?: boolean
+  /** Embedded only: the section around the matrix; its actions get the refresh button. */
+  heading?: { title: string; description: string; actions?: ReactNode }
+} = {}) {
   const i18n = useI18n()
   const { rows, adapters, revision, conversationOverrides, source, loading, error, refresh } = useFeatureMatrix()
   const adapterColumns = source === 'rpc' ? adapters : []
@@ -59,15 +65,17 @@ export default function FeatureMatrixPage({ embedded = false }: { embedded?: boo
     if (cell.lockedBy) return
     void write(setEnabledRequest({ plugin, level: 'adapter', key: adapter, enabled, revision }), refresh, `${plugin}\u0000${adapter}`)
   }
-  return (
-    <PageShell>
-      {embedded ? (
-        <div className="flex justify-end"><Button variant="outline" size="sm" onClick={refresh} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button></div>
-      ) : (
+  const refreshButton = <Button variant="outline" size="sm" onClick={refresh} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
+  const frame = (children: ReactNode) => embedded
+    ? <ObjectSection title={heading?.title ?? i18n.t("功能矩阵")} description={heading?.description} actions={<>{heading?.actions}{refreshButton}</>}>{children}</ObjectSection>
+    : <PageShell>{children}</PageShell>
+  return frame(
+    <>
+      {embedded ? null : (
         <PageHeader
           title={i18n.t("功能矩阵")}
           description={i18n.t("机器人在哪里启用了哪些功能。点击功能名进入全局配置。")}
-          actions={<Button variant="outline" size="sm" onClick={refresh} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>}
+          actions={refreshButton}
         />
       )}
       {source !== 'rpc' && source !== 'loading' && !error ? (
@@ -141,6 +149,6 @@ export default function FeatureMatrixPage({ embedded = false }: { embedded?: boo
         )}
       </Card>
       {ConfirmDialog}
-    </PageShell>
+    </>,
   )
 }

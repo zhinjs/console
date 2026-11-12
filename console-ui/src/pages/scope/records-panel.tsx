@@ -24,7 +24,7 @@ const RECENT_SESSIONS_PATH = '/api/agent/trace-archive/sessions'
 const SESSION_LIMIT = 8
 
 const SOURCE_ICONS: Record<RecordSourceId, LucideIcon> = { sessions: MessagesSquare, replay: BrainCircuit, logs: FileText, audit: Activity }
-const ASSOCIATION_VARIANT: Record<RecordAssociation, 'success' | 'warning' | 'outline' | 'secondary'> = { exact: 'success', partial: 'warning', page: 'outline', all: 'secondary' }
+const ASSOCIATION_VARIANT: Record<RecordAssociation, 'success' | 'warning' | 'outline' | 'secondary'> = { exact: 'success', partial: 'warning', text: 'outline', all: 'secondary' }
 
 type SessionsState = { status: 'loading' } | { status: 'error'; error: unknown } | { status: 'ready'; rows: RecentSession[]; total: number }
 

@@ -10,6 +10,7 @@ import * as commandCenterModel from '../console-ui/src/components/command-center
 import * as sections from '../console-ui/src/navigation-sections.mjs'
 import { createConsoleAccess, UNRESTRICTED_ACCESS } from '../console-ui/src/utils/console-access.mjs'
 import { CONSOLE_PATHS } from '../console-ui/src/console-routes.mjs'
+import * as scopeTree from '../console-ui/src/scope/scope-tree.mjs'
 
 const require = createRequire(import.meta.url)
 const source = path => readFile(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')
@@ -76,6 +77,7 @@ function fixture({ routes, path = '/sandbox', mobile = false, collapsed = false,
     '../utils/console-auth-api': { signOut() {} }, '../utils/console-auth-model.mjs': { principalLabel: () => '' },
     '../hooks/use-console-session': { useConsoleSession: () => ({ me: null }) },
     '../components/onboarding-banner': { OnboardingBanner: 'onboarding-banner' }, '../components/InstanceUnavailableBanner': { InstanceUnavailableBanner: 'instance-banner' }, '../console-routes.mjs': { CONSOLE_PATHS: { account: '/account' } },
+    '../scope/scope-tree.mjs': scopeTree,
   }
   mocks['../hooks/useIsMobile'] = compile(mobileHookSource, { react: hooks })
   const module = compile(command ? commandSource : layoutSource, mocks)
@@ -191,6 +193,16 @@ test('breadcrumbs omit repeated group names and explicit translated plugin title
     assert.equal(text(breadcrumb), `${translate('en', '会话')}Accounts and conversations`)
     assert.ok(nodes(nav(tree, translate('en', '主导航'))).some(node => node.type === 'a' && text(node) === 'Team calendar'))
   } finally { f.close() }
+})
+
+test('object pages below 全局 keep only their own scope breadcrumb; the top bar drops its one', () => {
+  for (const path of ['/scope/qq', '/scope/qq/bot', '/scope/qq/bot/group%3A1']) {
+    const f = fixture({ routes, path })
+    try {
+      const breadcrumbs = nodes(f.render()).filter(node => node.type === 'nav' && node.props?.['aria-label'] === '当前位置')
+      assert.equal(breadcrumbs.length, 0, path)
+    } finally { f.close() }
+  }
 })
 
 test('command jumps follow currently registered routes and do not retain removed Host destinations', () => {

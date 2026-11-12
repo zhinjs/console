@@ -197,7 +197,7 @@ test('task language refresh preserves the operation epoch, target and draft whil
 test('permission requests use the selected language without clearing hypotheses or automatically rerunning checks', async () => {
  const runtime=hooks(); let locale=messages('zh-CN'); const requests=[]; const scope='permission-fixture';
  const command={id:'root/demo\0zhin.command\0status',owner:'root/demo',name:'status',description:'状态',permits:[]};
- const component=await lifecycle('pages/command-permissions.tsx','CommandPermissionsPage','  return <div',
+ const component=await lifecycle('pages/command-permissions.tsx','CommandPermissionsPage','  return <PageShell',
   'loadCatalog, explain, choose, setSenderId, senderId, setRoles, roles, setTarget, target, setIncludeTarget, setHypothesis, hypothesis, selected, current', {
   ...runtime.api, useI18n:()=>locale, useInboxCacheScope:()=>scope, createDiagnosticRequestGate, getInboxCacheScope:()=>scope,
   isInboxCacheScopeActive:value=>value===scope, hasConsolePermission:()=>true, permissionRequest, readPermissionCatalog, readPermissionExplanation, permissionHttpError,

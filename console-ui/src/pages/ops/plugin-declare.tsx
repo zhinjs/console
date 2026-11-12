@@ -152,7 +152,7 @@ export function DeclarePluginDialog({ need, onClose, onDeclared, onBusyChange }:
     const { result, error } = await transaction.run(GATEWAY_RPC.PLUGINS_DECLARE, { ...body }, { keepInvalidInput: true })
     if (error instanceof GatewayRequestError && (error.status === 400 || error.code === 'invalid_input')) {
       // Nothing was touched; keep the draft and show what the schema check reported.
-      setErrors(readDeclarationErrors(error.hostMessage || error.message))
+      setErrors(readDeclarationErrors(error.hostMessage || error.message, error.details))
       return
     }
     if (result?.status === 'succeeded') {

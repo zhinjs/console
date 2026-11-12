@@ -247,3 +247,63 @@ export function driverLabel(driver, drivers) {
     ? `${driver.label} · ${driver.source ?? driver.owner.split('\0').join('/')}`
     : driver.label
 }
+
+/**
+ * 「谁在用」：一个模型（Profile）被哪些用途引用。只读现有的用途配置（`view.purposes`），
+ * 不推测运行时实际调用。纯函数。
+ */
+
+const decisionLabels = t => ({
+  skills: t('技能选择'),
+  tools: t('工具选择'),
+  memory: t('记忆选择'),
+  agents: t('Agent 选择'),
+  approval: t('工具审批建议'),
+  ambient: t('旁听参与判断'),
+})
+
+function scopeUses(models, profileId) {
+  const uses = []
+  if (models?.chat === profileId) uses.push('chat')
+  if (models?.perception?.profile === profileId || models?.perception?.fallbacks?.includes(profileId)) uses.push('perception')
+  return uses
+}
+
+/**
+ * `[{ key, label, level }]`，`level` 为 `default` / `decision` / `agent` / `adapter` / `endpoint` / `scene`。
+ * 没有用途配置（个人身份看不到用途）时返回 null，表示「不知道」而不是「没人用」。
+ */
+export function profileUsages(purposes, profileId, locale = 'zh-CN') {
+  if (!purposes || typeof purposes !== 'object') return null
+  const t = (text, values) => translate(locale, text, values)
+  const rows = []
+  const defaults = purposes.defaults ?? {}
+  const defaultLabels = { chat: t('默认聊天'), summary: t('默认摘要'), ambient: t('默认旁听'), image: t('默认图片生成') }
+  for (const key of ['chat', 'summary', 'ambient', 'image']) {
+    if (defaults[key] === profileId) rows.push({ key: `default:${key}`, level: 'default', label: defaultLabels[key] })
+  }
+  if (defaults.perception?.profile === profileId) rows.push({ key: 'default:perception', level: 'default', label: t('默认识图') })
+  else if (defaults.perception?.fallbacks?.includes(profileId)) rows.push({ key: 'default:perception-fallback', level: 'default', label: t('默认识图（备选）') })
+  const decisions = decisionLabels(t)
+  for (const [task, policy] of Object.entries(purposes.decisions ?? {})) {
+    if (policy?.profile !== profileId) continue
+    const name = Object.hasOwn(decisions, task) ? decisions[task] : task
+    rows.push({ key: `decision:${task}`, level: 'decision', label: t('决策：{0}', [name]) })
+  }
+  for (const [agent, profile] of Object.entries(purposes.agents ?? {})) {
+    if (profile === profileId) rows.push({ key: `agent:${agent}`, level: 'agent', label: t('Agent {0}', [agent]) })
+  }
+  const scoped = (level, record, label) => {
+    for (const [key, models] of Object.entries(record ?? {})) {
+      for (const use of scopeUses(models, profileId)) {
+        rows.push({ key: `${level}:${key}:${use}`, level, label: label(key, use === 'chat' ? t('聊天') : t('识图')) })
+      }
+    }
+  }
+  scoped('adapter', purposes.adapters, (key, use) => t('适配器 {0} 的{1}', [key, use]))
+  scoped('endpoint', purposes.endpoints, (key, use) => t('账号 {0} 的{1}', [key, use]))
+  for (const [key, models] of Object.entries(purposes.scenes ?? {})) {
+    if (models?.chat === profileId) rows.push({ key: `scene:${key}`, level: 'scene', label: t('会话 {0} 的聊天', [key]) })
+  }
+  return rows
+}

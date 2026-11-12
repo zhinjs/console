@@ -1,7 +1,7 @@
 import type { Scope } from '../../scope/scope-tree.mjs'
 
 export type RecordSourceId = 'sessions' | 'replay' | 'logs' | 'audit'
-export type RecordAssociation = 'exact' | 'partial' | 'page' | 'all'
+export type RecordAssociation = 'exact' | 'partial' | 'text' | 'all'
 export interface RecordSource {
   readonly id: RecordSourceId
   readonly href: string

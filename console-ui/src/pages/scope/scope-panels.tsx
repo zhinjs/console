@@ -7,7 +7,7 @@ import { ENDPOINT_RPC } from '../../contracts/zhin-console'
 import { endpointAddress } from '../endpoint-detail/endpoint-request.mjs'
 import { readEndpointList } from '../endpoint-list-model.mjs'
 import type { EndpointSummaryItem } from '../features/use-feature-data'
-import { FeatureLevelPanel, FeatureReadOnlyNote } from '../features/feature-level-panel'
+import { FeatureLevelPanel } from '../features/feature-level-panel'
 import { scopeKey, type Scope } from '../../scope/scope-tree.mjs'
 
 /** Label / value pairs at the top of an 概览 tab. */
@@ -45,12 +45,7 @@ export function ScopeFeaturesPanel({ scope }: { scope: Scope }) {
     return <StatusState kind="unsupported" title={i18n.t('这个范围不能单独配置功能')}
       description={i18n.t('适配器名称不是实例别名，或账号 ID 含有不支持的字符；这里沿用上级配置。')} />
   }
-  return (
-    <>
-      <FeatureReadOnlyNote />
-      <FeatureLevelPanel level={scope.level} levelKey={key} adapter={scope.adapter!} endpoint={scope.endpoint} />
-    </>
-  )
+  return <FeatureLevelPanel scope={scope} />
 }
 
 /** 记录 tab: see records-panel.tsx. */

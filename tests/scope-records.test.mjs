@@ -17,7 +17,7 @@ const byId = scope => Object.fromEntries(recordSources(scope).map(source => [sou
 test('every level links each record page already narrowed to the scope', () => {
   const c = byId(conversation)
   const scopeQuery = `adapter=qq&endpoint=bot-1&conversation=${encodeURIComponent('group:a/b:1')}`
-  assert.equal(c.sessions.href, `/agent/sessions?sessionKey=${encodeURIComponent('qq:bot-1:group:a/b:1')}&${scopeQuery}`)
+  assert.equal(c.sessions.href, `/agent/sessions?${scopeQuery}&sessionKey=${encodeURIComponent('qq:bot-1:group:a/b:1')}`)
   assert.equal(c.replay.href, `/agent/replay?${scopeQuery}`)
   assert.equal(c.logs.href, `/logs?${scopeQuery}`, 'the shared scope parameters, not a text search')
   assert.equal(c.audit.href, `/access/audit?target=${encodeURIComponent('endpoint:qq/bot-1')}`)
@@ -36,10 +36,12 @@ test('every level links each record page already narrowed to the scope', () => {
 
 test('each source says how exact its filter is; nothing is matched by time', () => {
   assert.equal(byId(conversation).sessions.association, 'exact')
-  assert.equal(byId(conversation).replay.association, 'page', 'the replay page filters by its own fields')
+  assert.equal(byId(conversation).replay.association, 'partial', 'decisions do not record the account')
+  assert.equal(byId(endpoint).replay.association, 'partial')
+  assert.equal(byId(adapter).replay.association, 'exact')
   assert.equal(byId(conversation).audit.association, 'partial', 'audit targets stop at the account')
   assert.equal(byId(endpoint).audit.association, 'exact')
-  for (const scope of [adapter, endpoint, conversation]) assert.equal(byId(scope).logs.association, 'page')
+  for (const scope of [adapter, endpoint, conversation]) assert.equal(byId(scope).logs.association, 'text')
   for (const scope of [global, adapter, endpoint, conversation]) {
     for (const source of recordSources(scope)) {
       assert.doesNotMatch(source.href, /since|until|before|after/, 'no time window stands in for an association')
@@ -66,12 +68,11 @@ test('session keys and audit targets are matched exactly', () => {
 })
 
 test('the shared scope parameters round-trip; a child without its parent drops the whole group', () => {
-  for (const scope of [adapter, endpoint, conversation]) assert.deepEqual(readScopeFilterParams(new URL(scopeFilterHref('/x?keep=1', scope), 'http://h').searchParams), scope)
+  for (const scope of [adapter, endpoint, conversation]) assert.deepEqual(readScopeFilterParams(new URL(scopeFilterHref('/x', scope, { keep: 1 }), 'http://h').searchParams), scope)
   assert.equal(scopeFilterHref('/logs', global), '/logs')
-  assert.equal(scopeFilterHref('/logs?adapter=old&level=warn', adapter), '/logs?level=warn&adapter=qq')
   assert.equal(readScopeFilterParams(new URLSearchParams('endpoint=bot-1')), null)
-  assert.equal(readScopeFilterParams(new URLSearchParams('adapter=qq&conversation=group:1')), null)
-  assert.equal(readScopeFilterParams(new URLSearchParams('adapter=qq&endpoint=b&conversation=room:1')), null)
+  assert.deepEqual(readScopeFilterParams(new URLSearchParams('adapter=qq&conversation=group:1')), adapter, 'a conversation without its account is dropped')
+  assert.equal(readScopeFilterParams(new URLSearchParams('adapter=qq&endpoint=b&conversation=room:1')), null, 'a malformed conversation names no scope')
 })
 
 test('the sessions page links continuable sessions to their chat', () => {

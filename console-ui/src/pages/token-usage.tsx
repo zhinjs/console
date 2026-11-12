@@ -1,11 +1,13 @@
 import { useI18n } from '../i18n'
-import { useEffect, useMemo, useState, type ComponentType } from 'react'
+import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react'
+import { StatusState } from '../components/StatusState'
+import { ScopeFilterBar, useScopeFilter } from './insights/ScopeFilterBar'
+import { usageSessionPattern } from './insights/scope-filter.mjs'
 import { ArrowDown, ArrowDownToLine, ArrowUp, ArrowUpFromLine, Cpu, Layers, RefreshCw, X, Zap } from 'lucide-react'
 import { pluginRpc } from '../utils/plugin-rpc'
 import { PageHeader } from '../components/PageHeader'
 import { PageShell } from '../components/PageShell'
 import { ErrorAlert } from '../components/error-alert'
-import { EmptyState } from '../components/empty-state'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { ListItemButton } from '../components/ui/list-item-button'
@@ -77,8 +79,18 @@ export default function TokenUsagePage() {
   const [bucket, setBucket] = useState('auto')
   const [customSince, setCustomSince] = useState(() => toLocalDateTime(Date.now() - 24 * 3600_000))
   const [customUntil, setCustomUntil] = useState(() => toLocalDateTime(Date.now()))
-  const [sessionDraft, setSessionDraft] = useState('')
-  const [session, setSession] = useState('')
+  // 范围参数（adapter / endpoint / conversation）换成会话键条件，上级层用 `*` 通配。
+  const scopeFilter = useScopeFilter()
+  const [sessionDraft, setSessionDraft] = useState(() => usageSessionPattern(scopeFilter.scope))
+  const [session, setSession] = useState(() => usageSessionPattern(scopeFilter.scope))
+  const appliedScope = useRef(scopeFilter.identity)
+  useEffect(() => {
+    if (appliedScope.current === scopeFilter.identity) return
+    appliedScope.current = scopeFilter.identity
+    const pattern = usageSessionPattern(scopeFilter.scope)
+    setSessionDraft(pattern)
+    setSession(pattern)
+  }, [scopeFilter.identity]) // eslint-disable-line react-hooks/exhaustive-deps
   const [refreshTick, setRefreshTick] = useState(0)
   const [stats, setStats] = useState<UsageStats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -151,7 +163,12 @@ export default function TokenUsagePage() {
       actions={<Button variant="outline" size="sm" onClick={() => setRefreshTick(tick => tick + 1)} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>}
     />
 
-    {denied ? <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">{i18n.t("当前账号没有查看 Token 用量的权限，请联系管理员开通。")}</CardContent></Card> : <>
+    <ScopeFilterBar
+      filter={scopeFilter}
+      note={i18n.t("按会话键 {0} 统计；可在下方改动会话条件。", [usageSessionPattern(scopeFilter.scope)])}
+    />
+
+    {denied ? <StatusState kind="forbidden" permissions={['control:read']} /> : <>
       <Card>
         <CardContent className="flex flex-wrap items-end gap-3 pt-6">
           <SelectField aria-label={i18n.t("时间范围")} className="w-auto" value={range} onValueChange={setRange} options={USAGE_RANGES.map(item => ({ value: item.value, label: i18n.t(item.label) }))} />
@@ -169,9 +186,9 @@ export default function TokenUsagePage() {
         {built.error ? <p className="px-6 pb-4 text-xs text-destructive">{i18n.t("自定义范围的开始时间必须早于结束时间。")}</p> : null}
       </Card>
 
-      {unavailable && !stats ? <Card><CardContent><EmptyState title={i18n.t("还没有用量数据")} description={unavailable} /></CardContent></Card>
+      {unavailable && !stats ? <StatusState kind="empty" title={i18n.t("还没有用量数据")} description={unavailable} />
         : loading && !stats ? <Skeleton className="h-64 w-full" />
-        : error && !stats ? <ErrorAlert error={error} onRetry={() => setRefreshTick(tick => tick + 1)} />
+        : error && !stats ? <StatusState error={error} onRetry={() => setRefreshTick(tick => tick + 1)} />
           : stats && view ? <>
             {error ? <ErrorAlert error={error} onRetry={() => setRefreshTick(tick => tick + 1)} /> : null}
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-5" aria-busy={loading}>
@@ -191,7 +208,8 @@ export default function TokenUsagePage() {
               <Metric label={i18n.t("回合数")} value={formatTokens(stats.totals.turns, i18n.locale)} icon={Layers} />
             </div>
 
-            {empty ? <Card><CardContent><EmptyState title={i18n.t("这段时间没有模型调用记录。")} description={i18n.t("换一个时间范围或清除会话筛选试试。")} /></CardContent></Card> : <>
+            <p className="console-basis-note"><strong>{i18n.t("持久统计")}</strong><span>{i18n.t("来自回合追踪文件，覆盖 {0} 至 {1}", [new Date(stats.range.since).toLocaleString(i18n.locale), new Date(stats.range.until).toLocaleString(i18n.locale)])}</span></p>
+            {empty ? <StatusState kind="empty" title={i18n.t("这段时间没有模型调用记录。")} description={i18n.t("换一个时间范围或清除会话筛选试试。")} /> : <>
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">{i18n.t("输入 tokens 随时间变化")}</CardTitle>
@@ -224,7 +242,7 @@ export default function TokenUsagePage() {
 
               <Card>
                 <CardHeader><CardTitle className="text-base">{i18n.t("用量最高的会话")}</CardTitle><CardDescription>{i18n.t("最多 50 个；点一行只看这个会话。")}</CardDescription></CardHeader>
-                <CardContent>
+                <CardContent className="overflow-x-auto">
                   <Table className="min-w-[720px]">
                       <TableHeader>
                         <TableRow className="hover:bg-transparent">

@@ -5,9 +5,11 @@
  *
  * `association`:
  * - `exact`   the record carries this scope's identity (session key, audit target)
- * - `partial` the record names a wider scope (audit targets stop at the account)
- * - `page`    the page receives the shared scope parameters (`adapter` / `endpoint` /
- *             `conversation`, see insights/scope-filter.mjs) and filters by its own fields
+ * - `partial` the record names a wider scope (decisions name the platform and the conversation, not
+ *             the account; audit targets stop at the account)
+ * - `text`    运行日志 has no scope fields: the page matches the identities as text
+ * Links carry the shared scope parameters (`adapter` / `endpoint` / `conversation`,
+ * insights/scope-filter.mjs); 审计日志 takes its audit `target`.
  * - `all`     全局: everything, no filter
  */
 import { scopeLevel } from '../../scope/scope-tree.mjs'
@@ -34,15 +36,15 @@ const NOTES = Object.freeze({
   }),
   replay: Object.freeze({
     global: '全部决策。',
-    adapter: '带上这个范围打开，由决策回放按它记录的字段筛选。',
-    endpoint: '带上这个范围打开，由决策回放按它记录的字段筛选。',
-    conversation: '带上这个范围打开，由决策回放按它记录的字段筛选。',
+    adapter: '按平台筛选。',
+    endpoint: '决策只记录平台与会话，不能按账号筛选：这里是这个平台全部账号的决策。',
+    conversation: '按平台与会话筛选；同一平台的其他账号在这个会话里的决策也会列出。',
   }),
   logs: Object.freeze({
     global: '全部日志。',
-    adapter: '带上这个范围打开，由运行日志按它记录的字段筛选。',
-    endpoint: '带上这个范围打开，由运行日志按它记录的字段筛选。',
-    conversation: '带上这个范围打开，由运行日志按它记录的字段筛选。',
+    adapter: '日志是自由文本：按适配器名做文本匹配，结果可能包含无关的行。',
+    endpoint: '日志是自由文本：按适配器名与账号 ID 做文本匹配，结果可能包含无关的行。',
+    conversation: '日志是自由文本：按适配器名、账号 ID 与会话 ID 做文本匹配，结果可能包含无关的行。',
   }),
   audit: Object.freeze({
     global: '全部审计记录。',
@@ -54,13 +56,14 @@ const NOTES = Object.freeze({
 
 const ASSOCIATION = Object.freeze({
   sessions: { global: 'all', adapter: 'exact', endpoint: 'exact', conversation: 'exact' },
-  replay: { global: 'all', adapter: 'page', endpoint: 'page', conversation: 'page' },
-  logs: { global: 'all', adapter: 'page', endpoint: 'page', conversation: 'page' },
+  // Same readings as the target pages (insights/scope-filter.mjs: replayScopeFilter, logScopeTokens).
+  replay: { global: 'all', adapter: 'exact', endpoint: 'partial', conversation: 'partial' },
+  logs: { global: 'all', adapter: 'text', endpoint: 'text', conversation: 'text' },
   audit: { global: 'all', adapter: 'exact', endpoint: 'exact', conversation: 'partial' },
 })
 
 /** Authored badge per association (displayed through i18n). */
-export const ASSOCIATION_LABELS = Object.freeze({ exact: '精确', partial: '范围更宽', page: '按范围', all: '全部' })
+export const ASSOCIATION_LABELS = Object.freeze({ exact: '精确', partial: '范围更宽', text: '文本匹配', all: '全部' })
 
 /** Session key of an IM conversation (`@zhin.js/ai` resolveIMSessionId): `<platform>:<endpoint>:<kind>:<id>`. */
 export function conversationSessionKey(scope) {
@@ -84,8 +87,7 @@ const query = (path, params) => {
 /** Link to the sessions page narrowed to the scope (a conversation also opens its own session). */
 export function sessionsHref(scope) {
   const level = scopeLevel(scope)
-  const path = level === 'conversation' ? query('/agent/sessions', { sessionKey: conversationSessionKey(scope) }) : '/agent/sessions'
-  return scopeFilterHref(path, scope)
+  return scopeFilterHref('/agent/sessions', scope, level === 'conversation' ? { sessionKey: conversationSessionKey(scope) } : undefined)
 }
 
 /**

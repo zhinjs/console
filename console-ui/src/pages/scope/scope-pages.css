@@ -1,0 +1,70 @@
+/*
+ * 概览 / 接入 tabs of the object pages (overview-panels.tsx, endpoint-access.tsx, login-tasks.tsx).
+ * Tokens only (theme-tokens.css); breakpoints 768 / 1440.
+ */
+.console-scope-row-link { display: inline-flex; max-width: 100%; align-items: center; gap: 0.5rem; color: hsl(var(--foreground)); font-weight: 600; text-decoration: none; }
+.console-scope-row-link:hover { text-decoration: underline; }
+.console-scope-row-link svg { width: 1rem; height: 1rem; flex-shrink: 0; color: hsl(var(--muted-foreground)); }
+.console-scope-row-link code { font-family: var(--console-font-mono); }
+.console-scope-row-sub { display: block; margin-top: 0.125rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); font-weight: 400; }
+.console-scope-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 0.75rem; }
+
+.console-scope-task-list { margin: 0; padding: 0; list-style: none; }
+.console-scope-task-list > li + li { border-top: var(--console-border-width, 1px) solid var(--console-border-subtle); }
+.console-scope-task { display: flex; min-height: 2.75rem; align-items: center; gap: 0.625rem; padding: 0.5rem 1rem; color: hsl(var(--foreground)); font-size: var(--console-text-body-sm); text-decoration: none; }
+a.console-scope-task:hover { background: hsl(var(--accent)); }
+a.console-scope-task:focus-visible { outline: var(--console-focus-width) solid hsl(var(--ring)); outline-offset: -2px; }
+.console-scope-task > svg:last-child { width: 1rem; height: 1rem; flex-shrink: 0; color: hsl(var(--muted-foreground)); }
+.console-scope-card-title {
+  border-bottom: var(--console-border-width, 1px) solid var(--console-border-subtle); padding: 0.625rem 1rem; color: hsl(var(--muted-foreground));
+  font-size: var(--console-text-caption); font-weight: 600;
+}
+.console-scope-split { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr)); }
+
+.console-scope-known { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; font-size: var(--console-text-body-sm); }
+.console-scope-chip {
+  display: inline-flex; align-items: center; gap: 0.375rem; border: var(--console-border-width, 1px) solid var(--console-border-default); border-radius: 999px;
+  padding: 0.125rem 0.625rem; color: hsl(var(--foreground)); font-size: var(--console-text-caption); text-decoration: none;
+}
+.console-scope-chip:hover { background: hsl(var(--accent)); }
+.console-scope-chip svg { width: 0.75rem; height: 0.75rem; }
+
+/* 接入 */
+.console-scope-test { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; }
+.console-scope-test-result { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.375rem; font-size: var(--console-text-body-sm); }
+.console-scope-test-result svg { width: 1rem; height: 1rem; }
+.console-scope-test-result.is-ok svg { color: hsl(var(--success)); }
+.console-scope-test-result.is-error svg { color: hsl(var(--destructive)); }
+.console-scope-links { display: grid; gap: 0.5rem; grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr)); }
+.console-scope-link-card {
+  display: flex; align-items: flex-start; gap: 0.75rem; border-radius: var(--console-radius-md); padding: 0.625rem 0.75rem; color: hsl(var(--foreground));
+  font-size: var(--console-text-body-sm); text-decoration: none;
+}
+.console-scope-link-card:hover { background: hsl(var(--accent)); }
+.console-scope-link-card:focus-visible { outline: var(--console-focus-width) solid hsl(var(--ring)); outline-offset: -2px; }
+.console-scope-link-card > svg { width: 1.125rem; height: 1.125rem; flex-shrink: 0; margin-top: 0.125rem; color: hsl(var(--primary)); }
+.console-scope-link-card .console-scope-row-sub { white-space: normal; }
+
+.console-scope-login-grid { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fill, minmax(min(24rem, 100%), 1fr)); }
+.console-login-card {
+  display: flex; flex-direction: column; gap: 0.75rem; border: var(--console-border-width, 1px) solid hsl(var(--warning) / 0.45); border-radius: var(--console-radius-lg);
+  background: hsl(var(--card)); padding: 1rem;
+}
+.console-login-card-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.console-login-card-head svg { width: 1rem; height: 1rem; color: hsl(var(--warning)); }
+.console-login-card-body { display: flex; flex-wrap: wrap; gap: 1rem; }
+.console-login-card-qr { width: 10rem; height: 10rem; border-radius: var(--console-radius-md); background: hsl(0 0% 100%); object-fit: contain; padding: 0.375rem; }
+.console-login-card-controls { display: flex; min-width: min(14rem, 100%); flex: 1; flex-direction: column; gap: 0.625rem; }
+.console-login-card-link { display: inline-flex; align-items: center; gap: 0.375rem; color: hsl(var(--primary)); font-size: var(--console-text-body-sm); }
+.console-login-card-link svg { width: 0.875rem; height: 0.875rem; }
+
+/* SDK adapter Console page inside the adapter 概览 (连接管理): page chrome replaced by the object page. */
+.console-adapter-console .zk-page { max-width: none; margin: 0; padding: 0; gap: var(--console-space-section); }
+.console-adapter-console .zk-page-header { padding-bottom: 0.75rem; }
+.console-adapter-console .zk-page-header h1 { font-size: var(--console-text-section); }
+.console-adapter-console .zk-page-header .zk-mark { display: none; }
+
+@media (max-width: 767px) {
+  .console-scope-task { padding-inline: 0.75rem; }
+  .console-login-card-qr { width: 8rem; height: 8rem; }
+}

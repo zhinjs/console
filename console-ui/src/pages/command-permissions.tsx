@@ -1,12 +1,15 @@
 import { useI18n } from '../i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ShieldCheck, RefreshCw } from 'lucide-react'
+import { Blocks, RefreshCw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Checkbox } from '../components/ui/checkbox'
 import { Input } from '../components/ui/input'
 import { Alert, AlertDescription } from '../components/ui/alert'
+import { PageHeader } from '../components/PageHeader'
+import { PageShell } from '../components/PageShell'
+import { StatusState } from '../components/StatusState'
 import { ConversationTargetEditor, ConversationTargetSummary } from '../components/PluginConfigForm/ConversationTargetEditor'
 import { apiFetch } from '../utils/auth'
 import { hasConsolePermission } from '../utils/console-access.mjs'
@@ -69,8 +72,10 @@ export default function CommandPermissionsPage() {
   useEffect(() => {
     if (!active || denied) return
     const link = readPermissionLink(linkRef.current)
-    pendingLink.current = link; setQuery(link?.name ?? '')
-    void loadRef.current(1, link?.name ?? '')
+    // `?q=` (from the plugin detail page) pre-fills the search with a plugin instance.
+    const initial = link?.name ?? linkRef.current.get('q')?.trim().slice(0, 200) ?? ''
+    pendingLink.current = link; setQuery(initial)
+    void loadRef.current(1, initial)
   }, [scope, active, denied])
 
   const explain = async (command: PermissionCommand, useHypothesis: boolean) => {
@@ -109,24 +114,23 @@ export default function CommandPermissionsPage() {
   }, [current])
   const catalogState = permissionCatalogState({ denied, active, loading, error: catalogError, catalog: current })
 
-  return <div className="space-y-5 p-4 md:p-6 max-w-6xl mx-auto">
-    <header className="space-y-2"><h1 className="console-page-title flex items-center gap-2"><ShieldCheck aria-hidden="true" />{i18n.t("命令权限说明")}</h1>
-      <p className="text-sm text-muted-foreground">{i18n.t("查看规则为什么匹配。这里只做说明与假设检查，不执行命令，也不向平台查询或验证权限。")}</p>
-      <Button asChild variant="link" className="px-0"><Link to="/introspection?tab=commands">{i18n.t("返回命令目录")}</Link></Button></header>
-    {(denied || !active) && <Alert><AlertDescription>{i18n.t("需要连接当前 Host 并使用有状态查看权限的身份读取权限说明。")}</AlertDescription></Alert>}
+  return <PageShell className="max-w-6xl">
+    <PageHeader title={i18n.t("命令权限说明")}
+      description={i18n.t("查看规则为什么匹配。这里只做说明与假设检查，不执行命令，也不向平台查询或验证权限。")}
+      actions={<Button asChild variant="outline" size="sm"><Link to="/introspection?tab=commands"><Blocks />{i18n.t("返回命令目录")}</Link></Button>} />
+    {denied ? <StatusState kind="forbidden" permissions={['status.view']} />
+      : !active ? <StatusState kind="disconnected" description={i18n.t("需要连接当前 Host 并使用有状态查看权限的身份读取权限说明。")} /> : null}
     <Card><CardHeader><CardTitle>{i18n.t("选择当前运行代的命令")}</CardTitle></CardHeader><CardContent className="space-y-3">
       <form className="flex flex-wrap gap-2" onSubmit={event => { event.preventDefault(); reload(1) }}>
         <Input aria-label={i18n.t("搜索权限命令")} placeholder={i18n.t("搜索命令或插件实例")} maxLength={200} value={query} onChange={event => setQuery(event.target.value)} className="min-w-0 flex-1" />
         <Button type="submit" disabled={denied || !active || loading}><RefreshCw className="size-4 mr-2" />{current || catalogError ? i18n.t("重新读取") : i18n.t("读取目录")}</Button>
       </form>
       {catalogState === 'loading' && <p role="status" className="text-sm">{i18n.t("正在读取当前命令目录…")}</p>}
-      {catalogState === 'error' && <Alert variant="destructive"><AlertDescription role="alert" className="flex flex-wrap items-center gap-2">
-        <span className="min-w-0 flex-1">{i18n.t("命令目录读取失败：")}{catalogError}</span>
-        <Button size="sm" variant="outline" onClick={() => void loadCatalog()}><RefreshCw className="size-4 mr-2" />{i18n.t("重试")}</Button></AlertDescription></Alert>}
+      {catalogState === 'error' && <StatusState compact error={catalogError} title={i18n.t("命令目录读取失败")} onRetry={() => void loadCatalog()} />}
       {catalogState === 'idle' && <p className="text-sm text-muted-foreground">{i18n.t("尚未读取命令目录。")}</p>}
       {linkNotice && <Alert><AlertDescription>{linkNotice === 'ambiguous' ? i18n.t("链接中的命令对应多个插件实例，请从列表中选择。") : i18n.t("当前目录中没有找到链接中的命令，请搜索或从列表中选择。")}</AlertDescription></Alert>}
       {current && <><p className="text-xs text-muted-foreground">{i18n.t("运行代 ")}{current.generation} {i18n.t(" · 共 ")}{current.total} {i18n.t(" 项 · 第 ")}{current.page} {i18n.t(" 页")}</p>
-        {!current.commands.length ? <p className="text-sm">{i18n.t("当前筛选没有命令。")}</p> : <div className="grid gap-2 sm:grid-cols-2">{current.commands.map(command => <button type="button" key={command.id} aria-pressed={selected?.id === command.id}
+        {!current.commands.length ? <StatusState compact kind="empty" title={i18n.t("当前筛选没有命令。")} description={i18n.t("换个关键词，或清空搜索查看全部命令。")} /> : <div className="grid gap-2 sm:grid-cols-2">{current.commands.map(command => <button type="button" key={command.id} aria-pressed={selected?.id === command.id}
           className={`min-w-0 text-left rounded-md border p-3 space-y-1 ${selected?.id === command.id ? 'border-primary bg-muted/40' : ''}`} onClick={() => choose(command)}>
           <span className="block font-medium break-words">{command.name}</span><span className="block text-xs text-muted-foreground break-all">{command.owner}</span><span className="block text-sm break-words">{command.description}</span></button>)}</div>}
         <div className="flex gap-2"><Button variant="outline" disabled={loading || current.page <= 1} onClick={() => reload(current.page - 1)}>{i18n.t("上一页")}</Button>
@@ -152,6 +156,6 @@ export default function CommandPermissionsPage() {
         <ul className="list-disc pl-4 text-xs text-muted-foreground space-y-1">{[...visible.unconstrained, ...visible.assumptions].map((item, index) => <li key={index}>{item}</li>)}</ul></>}
       {!checking && !visible && <p className="text-sm text-muted-foreground">{i18n.t("选择命令查看规则；修改假设后需要重新检查，不沿用旧结果。")}</p>}
     </CardContent></Card></div>}
-    {error && <Alert variant="destructive"><AlertDescription role="alert">{error}</AlertDescription></Alert>}
-  </div>
+    {error && <StatusState compact error={error} />}
+  </PageShell>
 }

@@ -30,11 +30,17 @@ export declare const MAX_LOG_LINES: number
 export declare const MAX_PROGRESS_OUTPUT: number
 
 export declare class GatewayRequestError extends Error {
-  constructor(message: string, options?: { status?: number; code?: string; hostMessage?: string })
+  constructor(message: string, options?: { status?: number; code?: string; hostMessage?: string; details?: GatewayErrorDetails })
   readonly status: number
   readonly code: string
   readonly hostMessage: string
+  readonly details?: GatewayErrorDetails
 }
+export interface GatewayErrorDetails {
+  readonly errors?: readonly { readonly path: string; readonly message: string }[]
+  readonly missingEnv?: readonly string[]
+}
+export function readErrorDetails(value: unknown): GatewayErrorDetails | undefined
 export type GatewayErrorKind = 'unsupported' | 'forbidden' | 'conflict' | 'unavailable' | 'failed'
 
 export function gatewayRequestBody(type: string, data: unknown, requestId: number): { type: string; requestId: number; data: unknown }
@@ -83,7 +89,7 @@ export interface DeclarationErrors {
   readonly fields: readonly DeclarationFieldError[]
   readonly missingEnv: readonly string[]
 }
-export function readDeclarationErrors(message: string): DeclarationErrors
+export function readDeclarationErrors(message: string, details?: GatewayErrorDetails): DeclarationErrors
 export function fieldErrorsAt(errors: DeclarationErrors | null | undefined, path: string): DeclarationFieldError[]
 export function declarationDraft(schema: SchemaField | null | undefined): Record<string, unknown>
 export function declarationConfig(value: unknown, t: Translate): { config: Record<string, unknown> | null; problem: string | null }

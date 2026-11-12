@@ -39,12 +39,14 @@ export const MAX_LOG_LINES = 2000
 export const MAX_PROGRESS_OUTPUT = 64 * 1024
 
 export class GatewayRequestError extends Error {
-  constructor(message, { status = 0, code = 'failed', hostMessage = '' } = {}) {
+  constructor(message, { status = 0, code = 'failed', hostMessage = '', details } = {}) {
     super(message)
     this.name = 'GatewayRequestError'
     this.status = status
     this.code = code
     this.hostMessage = hostMessage
+    // Structured `invalid_input` feedback (`errors` / `missingEnv`, GatewayRpcErrorDetails); absent when empty.
+    if (details && (details.errors?.length || details.missingEnv?.length)) this.details = details
   }
 }
 
@@ -67,13 +69,24 @@ export function readGatewayReply(status, json, t) {
   const hostMessage = nested ? String(nested.message ?? '') : typeof body.error === 'string' ? body.error : ''
   const code = nested && typeof nested.code === 'string' ? nested.code : typeof body.code === 'string' ? body.code : ''
   const effective = nested && typeof nested.status === 'number' && status < 400 ? nested.status : status
+  const details = readErrorDetails(nested ?? body)
   if (code === 'unmapped' || UNKNOWN_RPC.test(hostMessage)) {
     throw new GatewayRequestError(t('需要新版网关：当前 Host 不支持实例与依赖管理（ADR 0054）。'), { status: effective, code: 'unsupported', hostMessage })
   }
   if (effective === 401) throw new GatewayRequestError(t('登录已失效，请重新登录。'), { status: effective, code: code || 'unauthorized', hostMessage })
   if (effective === 403 && !hostMessage) throw new GatewayRequestError(t('当前身份没有执行此操作的权限。'), { status: effective, code: 'forbidden', hostMessage })
   const message = hostMessage || t('请求失败（HTTP {0}）', [effective])
-  throw new GatewayRequestError(message, { status: effective, code: code || (effective === 403 ? 'forbidden' : 'failed'), hostMessage })
+  throw new GatewayRequestError(message, { status: effective, code: code || (effective === 403 ? 'forbidden' : 'failed'), hostMessage, details })
+}
+
+/** `errors` / `missingEnv` of a gateway error reply (`GatewayRpcErrorDetails`), or undefined. */
+export function readErrorDetails(value) {
+  if (!value || typeof value !== 'object') return undefined
+  const errors = (Array.isArray(value.errors) ? value.errors : [])
+    .filter(item => item && typeof item === 'object' && typeof item.message === 'string')
+    .map(item => ({ path: typeof item.path === 'string' ? item.path : '$', message: item.message }))
+  const missingEnv = (Array.isArray(value.missingEnv) ? value.missingEnv : []).filter(item => typeof item === 'string' && item)
+  return errors.length || missingEnv.length ? { ...(errors.length ? { errors } : {}), ...(missingEnv.length ? { missingEnv } : {}) } : undefined
 }
 
 export function gatewayErrorKind(error) {
@@ -394,7 +407,15 @@ const MISSING_ENV = /^(?:缺少环境变量|missing environment variable)\s+(\S+
  * message (`…未声明：$.endpoints required；缺少环境变量 QQ_SECRET`); anything that is not that
  * shape stays a general error so the form can show it above the fields.
  */
-export function readDeclarationErrors(message) {
+export function readDeclarationErrors(message, details) {
+  // Newer gateways send the violations structured (GatewayRpcErrorDetails); prefer them to the text.
+  if (details && (details.errors?.length || details.missingEnv?.length)) {
+    return {
+      general: null,
+      fields: (details.errors ?? []).map(error => ({ path: relativeConfigPath(error.path), message: String(error.message ?? '') })),
+      missingEnv: [...(details.missingEnv ?? [])],
+    }
+  }
   const text = String(message ?? '')
   const match = DECLARATION_SCHEMA_FAILURE.exec(text)
   if (!match) return { general: text, fields: [], missingEnv: [] }

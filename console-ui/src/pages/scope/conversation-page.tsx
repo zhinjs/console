@@ -1,16 +1,17 @@
 import { Link } from 'react-router-dom'
-import { MessageSquare, MessagesSquare } from 'lucide-react'
+import { MessageSquare, MessagesSquare, Radio } from 'lucide-react'
 import { useI18n } from '../../i18n'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
 import { StatusState } from '../../components/StatusState'
 import { ConversationChatPanel } from './chat-panels'
-import { ConversationKindBadge } from '../features/conversation-list'
 import { useConversationList } from '../features/use-feature-data'
 import { ObjectPageLayout, ObjectSection, useScopeTab } from '../../scope/ObjectPageLayout'
 import { ChatRolesPanel } from '../../scope/ChatRolesPanel'
 import { scopeHref, scopeKey, type Scope } from '../../scope/scope-tree.mjs'
-import { ObjectFacts, ScopeFeaturesPanel, ScopeRecordsPanel } from './scope-panels'
+import { ConversationOverview } from './overview-panels'
+import { ambientSettingsHref } from './scope-overview-model.mjs'
+import { ScopeFeaturesPanel, ScopeRecordsPanel } from './scope-panels'
 
 /**
  * `/scope/:adapter/:endpoint/:conversation` (`<kind>:<id>`) — 会话: what used to be a row of the
@@ -24,6 +25,8 @@ export function ConversationObjectPage({ scope }: { scope: Scope & { level: 'con
   const key = scopeKey(scope)
   const item = key ? lookup.page?.items.find(entry => entry.key === key) : undefined
   const name = item?.name
+  // Private chats have no ambient (群聊插话) settings.
+  const ambient = ambientSettingsHref(scope)
   const levelMissing = lookup.status === 'unsupported' || lookup.status === 'forbidden'
   return (
     <ObjectPageLayout
@@ -34,28 +37,13 @@ export function ConversationObjectPage({ scope }: { scope: Scope & { level: 'con
       platform={scope.adapter}
       names={name ? { conversation: name } : undefined}
       status={item?.hasOverrides ? <Badge variant="info" size="sm">{i18n.t('有覆盖')}</Badge> : null}
-      actions={<Button variant="outline" size="sm" onClick={() => selectTab('chat')}><MessageSquare />{i18n.t('打开聊天')}</Button>}
+      actions={<>
+        <Button variant="outline" size="sm" onClick={() => selectTab('chat')}><MessageSquare />{i18n.t('打开聊天')}</Button>
+        {ambient ? <Button asChild variant="outline" size="sm"><Link to={ambient}><Radio />{i18n.t('群聊插话设置')}</Link></Button> : null}
+      </>}
       flushTabs={['chat']}
       panels={{
-        overview: (
-          <>
-            <ObjectFacts items={[
-              { label: i18n.t('类型'), value: <ConversationKindBadge kind={scope.kind!} /> },
-              { label: i18n.t('会话 ID'), value: <code className="text-sm">{scope.id}</code> },
-              { label: i18n.t('账号'), value: <Link className="underline" to={scopeHref({ adapter: scope.adapter, endpoint: scope.endpoint })}>{scope.endpoint}</Link> },
-              { label: i18n.t('覆盖'), value: item ? (item.overrideCount ?? (item.hasOverrides ? '✓' : 0)) : '—' },
-            ]} />
-            {levelMissing ? (
-              <StatusState kind={lookup.status === 'unsupported' ? 'unsupported' : 'forbidden'}
-                description={lookup.status === 'unsupported' ? i18n.t('按会话配置功能需要新版 Host。当前会话使用账号的配置。') : undefined}
-                permissions={lookup.status === 'forbidden' ? ['feature.view'] : undefined} />
-            ) : null}
-            {key === null ? (
-              <StatusState kind="unsupported" title={i18n.t('这个会话不能单独配置')}
-                description={i18n.t('适配器名称不是实例别名，或账号 ID 含有不支持的字符；聊天仍可使用。')} />
-            ) : null}
-          </>
-        ),
+        overview: <ConversationOverview scope={scope} item={item} levelMissing={levelMissing ? (lookup.status as 'unsupported' | 'forbidden') : null} />,
         chat: <ConversationChatPanel scope={scope} />,
         features: levelMissing
           ? <StatusState kind={lookup.status === 'unsupported' ? 'unsupported' : 'forbidden'} permissions={['feature.view']}

@@ -18,6 +18,7 @@ import { useConsoleSession } from "../hooks/use-console-session"
 import { OnboardingBanner } from "../components/onboarding-banner"
 import { InstanceUnavailableBanner } from "../components/InstanceUnavailableBanner"
 import { CONSOLE_PATHS } from "../console-routes.mjs"
+import { objectPageOwnsBreadcrumb } from "../scope/scope-tree.mjs"
 import { ConsoleCommandCenter } from "../components/ConsoleCommandCenter"
 import "./workspace-navigation.css"
 import { resolveNavigationLocation } from "../navigation-location.mjs"
@@ -271,11 +272,12 @@ export default function DashboardLayout() {
                 <Menu className="h-5 w-5" />
               </Button>
             ) : null}
-            <nav aria-label={i18n.t("当前位置")} className="console-breadcrumb">
+            {/* Object pages below 全局 render their own scope breadcrumb; one breadcrumb per page. */}
+            {objectPageOwnsBreadcrumb(location.pathname) ? null : <nav aria-label={i18n.t("当前位置")} className="console-breadcrumb">
               {!onHome && groupLabel !== currentLabel && groupLabel !== parentLabel ? <><span className="console-breadcrumb-group">{groupLabel}</span><ChevronRight aria-hidden="true" className="console-breadcrumb-sep" /></> : null}
               {navigation.parent && parentLabel !== currentLabel ? <><Link className="console-breadcrumb-link" to={navigation.parent.path}>{parentLabel}</Link><ChevronRight aria-hidden="true" className="console-breadcrumb-sep" /></> : null}
               <span aria-current="page" className="console-breadcrumb-current">{currentLabel}</span>
-            </nav>
+            </nav>}
           </div>
 
           <div className="console-topbar-search">
