@@ -110,7 +110,7 @@ export const scopeMessages = Object.freeze({
   "好友申请与邀请": "Friend requests and invitations",
   "账号未连接": "Account not connected",
   "在「接入」页签完成登录或测试连接。": "Log in or test the connection in the Connection tab.",
-  "打开接入": "Open Connection",
+  "打开接入": "Open Access",
   "有覆盖的会话与最近活跃的会话。全部会话在「聊天」页签里。": "Conversations with overrides and the most recently active ones. Every conversation is in the Chat tab.",
   "全部会话": "All conversations",
   "会话摘要需要新版 Host。会话仍可在「聊天」页签中查看。": "The conversation summary needs a newer Host. Conversations are still in the Chat tab.",
