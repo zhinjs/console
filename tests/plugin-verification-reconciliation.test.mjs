@@ -29,7 +29,7 @@ test('lost business-check reply stays unknown after actual page state refresh an
  await run('roundtrip');assert.equal(calls,1);assert.equal(locked,true);assert.equal(unknown,'平台投递');assert.match(error,/刷新插件状态不能确认/)
  const refresh=await handler('fetchPluginDetail',{
   detailSequence:{current:0},setLoading:noop,apiFetch:async()=>({ok:true,json:async()=>({success:true,data:{instanceKey:'plugin',management:{status:'enabled'}}})}),
-  validatePluginDetail:noop,validateManagementState:noop,setPlugin:noop,setError:noop,actionUnconfirmed:locked,unconfirmedCheck:unknown,
+  validatePluginDetail:noop,validateManagementState:noop,setPlugin:noop,setError:noop,setDetailError:noop,actionUnconfirmed:locked,unconfirmedCheck:unknown,
   setActionError:v=>{error=v},setActionErrorDetail:noop,setActionMessage:noop,setActionUnconfirmed:v=>{locked=v},setVerificationPlan:noop
  })
  await refresh('plugin');assert.equal(locked,true);assert.match(error,/结果未知/);assert.equal(calls,1)

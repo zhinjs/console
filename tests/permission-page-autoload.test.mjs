@@ -66,7 +66,7 @@ function hooks() {
   return { api, mount(fn) { render = fn; return this.render() }, render() { let n = 0; do { assert.ok(++n < 50); dirty = false; cursor = 0; value = render(); const effects = pending; pending = []; effects.forEach(fn => fn()) } while (dirty); return value }, async settle() { for (let i = 0; i < 12; i++) { await Promise.resolve(); if (dirty || pending.length) this.render() } return value }, get value() { return value } }
 }
 async function page(bindings) {
-  const file = 'pages/command-permissions.tsx', name = 'CommandPermissionsPage', stop = '  return <div'
+  const file = 'pages/command-permissions.tsx', name = 'CommandPermissionsPage', stop = '  return <PageShell'
   const source = await readFile(new URL(`../console-ui/src/${file}`, import.meta.url), 'utf8')
   const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
   let declaration; const find = n => { if (ts.isFunctionDeclaration(n) && n.name?.text === name) declaration = n; ts.forEachChild(n, find) }; find(ast); assert.ok(declaration)

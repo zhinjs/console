@@ -138,7 +138,12 @@ export function ActionReceipt({ controller, className }: { controller: ActionRec
         <StatusState compact kind="unknown" error={state.status?.message ? state.status.message : undefined}
           description={i18n.t('请求已发出但没有收到可信答复，修改可能已经生效。请先只读核对，不要重复提交。')} />
       ) : null}
-      {state.phase === 'failed' && state.status ? <StatusState compact kind={state.status.kind} error={state.status.message || undefined} /> : null}
+      {state.phase === 'failed' && state.status ? (
+        // A Host-reported reason (`{ status: 'failed', message }`) is the answer itself, not a read error.
+        state.status.kind === 'error' && state.status.message && !state.status.serverCode
+          ? <StatusState compact kind="error" title={i18n.t('操作没有完成')} description={state.status.message} />
+          : <StatusState compact kind={state.status.kind} error={state.status.message || undefined} />
+      ) : null}
       <footer className="console-receipt-actions">
         {state.phase === 'prepared' ? <>
           <Button size="sm" variant={plan?.danger ? 'destructive' : 'default'} onClick={confirm}>{plan?.confirmLabel ?? i18n.t('确认')}</Button>

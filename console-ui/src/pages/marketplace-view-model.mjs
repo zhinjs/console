@@ -1,5 +1,8 @@
 import { translate } from '../i18n/locale.mjs'
 import { featureGlobalHref } from '../console-routes.mjs'
+import { scopeHref } from '../scope/scope-tree.mjs'
+import { instanceKeyFromPackage } from './ops/gateway-model.mjs'
+import { welcomeReturnUrl } from './welcome-use-case-model.mjs'
 
 /**
  * Which part of the plugin list area is shown.
@@ -100,7 +103,7 @@ export function marketplacePluginStatus(name, installed, updates) {
 }
 
 /**
- * The local plugin detail page, which holds the update action (`plugin:plan-update` → confirm → `plugin:update`).
+ * The local plugin detail page, which holds the update action (`gateway.packages.plan` → confirm → `gateway.packages.update`).
  * The Host resolves `/api/plugins/:name` by instance key or package name, so the package name works when
  * the instance is not known.
  */
@@ -111,4 +114,38 @@ export function pluginManageUrl(packageName, instanceKey) {
 /** A plugin's global feature configuration (ADR 0052). */
 export function pluginConfigUrl(instanceKey) {
   return featureGlobalHref(instanceKey)
+}
+
+/**
+ * Installed packages from the gateway (`gateway.packages.list`, read with `readPackageList`), for
+ * when the instance cannot answer `/api/plugins`. Instance keys are the gateway's default for the
+ * package name; only packages present in node_modules count.
+ */
+export function installedFromPackageList(list) {
+  if (!list || !Array.isArray(list.packages)) return null
+  const index = new Map()
+  for (const item of list.packages) {
+    if (!item || typeof item.name !== 'string' || !item.installedVersion || item.dependencyType === 'devDependencies') continue
+    index.set(item.name, { instanceKeys: [instanceKeyFromPackage(item.name)], version: item.installedVersion })
+  }
+  return index
+}
+
+/**
+ * Where to go after an install from the marketplace (安装后闭环). Nothing before the install
+ * settled; `partial` (needs configuration) only offers the declaration form shown inline, so no
+ * configuration link is guessed; `succeeded` links the plugin's configuration, the feature tab
+ * of the object tree and the plugin detail page (plus the welcome flow when it asked for this package).
+ */
+export function installFollowUps({ phase, operation, packageName, instanceKey, welcomePackage } = {}) {
+  if (operation !== 'install' || !packageName) return []
+  if (phase !== 'succeeded') return []
+  const key = instanceKey || instanceKeyFromPackage(packageName)
+  const links = [
+    { kind: 'configure', to: featureGlobalHref(key) },
+    { kind: 'features', to: scopeHref({}, 'features') },
+    { kind: 'detail', to: pluginManageUrl(packageName, key) },
+  ]
+  if (welcomePackage && welcomePackage === packageName) links.unshift({ kind: 'welcome', to: welcomeReturnUrl(key) })
+  return links
 }

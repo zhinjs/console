@@ -25,7 +25,7 @@ test('dashboard requires known zero errors and labels root-excluding statistics 
   assert.match(dashboard, /运行子插件/)
   const plugins = readFileSync(new URL('../console-ui/src/pages/plugins.tsx', import.meta.url), 'utf8')
   assert.match(plugins, /title=\{i18n\.t\("插件管理"\)\}/)
-  assert.match(plugins, /plugins\.length\} \{i18n\.t\(" 个子插件"\)/)
+  assert.match(plugins, /i18n\.t\("共 \{0\} 个", \[rows\.length\]\)/)
 })
 
 test('optional empty Agent does not become an operational incident and unreadable logs never look stable', () => {

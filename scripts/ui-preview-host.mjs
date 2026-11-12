@@ -49,6 +49,58 @@ const chain = key => {
   const parts = key ? key.split('/') : []
   return ['', parts[0], parts.slice(0, 2).join('/'), parts.length > 2 ? key : undefined].filter((value, index) => index === 0 || (value && index <= parts.length))
 }
+// Plugin pages (插件管理 / 详情 / 市场, ADR 0054 §4): instance plugins, gateway packages and transactions.
+const management = (instanceKey, packageName, version, extra = {}) => ({ packageName, instanceKey, installed: true, plugin: true, declared: true, version, revision: 'preview-r1',
+  projectRevision: 'preview-p1', status: 'enabled', dependencies: 'passed', validation: { valid: true, errors: [], missingEnv: [] }, generation: 4, published: true,
+  readiness: 'ready', restartRequired: false, disabled: false, issues: [], verification: 'not-configured', ...extra })
+const instancePlugins = [
+  { name: 'welcome', description: '新成员入群时发送欢迎语', status: 'active', instanceKey: 'welcome', packageName: '@zhin.js/plugin-welcome', version: '1.4.0', manageable: true, packageRoot: './node_modules/@zhin.js/plugin-welcome',
+    features: [{ name: 'command', icon: 'Terminal', desc: '命令', count: 2, items: [{ name: 'welcome', desc: '查看或修改欢迎语' }, { name: 'welcome-test' }] }, { name: 'middleware', icon: 'Layers', desc: '中间件', count: 1, items: [{ name: 'welcome-join' }] }],
+    management: management('welcome', '@zhin.js/plugin-welcome', '1.4.0') },
+  { name: 'repeater', description: '复读群里连续出现的消息', status: 'active', instanceKey: 'repeater', packageName: '@zhin.js/plugin-repeater', version: '1.1.4', manageable: true, packageRoot: './node_modules/@zhin.js/plugin-repeater',
+    features: [{ name: 'middleware', icon: 'Layers', desc: '中间件', count: 1, items: [{ name: 'repeater' }] }], management: management('repeater', '@zhin.js/plugin-repeater', '1.1.4') },
+  { name: 'rss', description: '订阅 RSS 并推送到会话', status: 'inactive', instanceKey: 'rss', packageName: '@zhin.js/plugin-rss', version: '0.9.2', manageable: true, packageRoot: './node_modules/@zhin.js/plugin-rss',
+    features: [], management: management('rss', '@zhin.js/plugin-rss', '0.9.2', { status: 'missing-config', published: false, generation: null, readiness: 'unknown', validation: { valid: false, errors: [{ path: '$.feeds', message: '至少需要一个订阅源' }], missingEnv: ['RSS_PROXY'] } }) },
+]
+const gatewayPackages = { packageManager: 'pnpm@9.0.2', packages: [
+  { name: '@zhin.js/plugin-welcome', range: '^1.4.0', dependencyType: 'dependencies', installedVersion: '1.4.0', catalog: 'market' },
+  { name: '@zhin.js/plugin-repeater', range: '^1.1.0', dependencyType: 'dependencies', installedVersion: '1.1.4', catalog: 'market' },
+  { name: '@zhin.js/plugin-rss', range: '^0.9.0', dependencyType: 'dependencies', installedVersion: '0.9.2', catalog: 'market' },
+  { name: '@zhin.js/adapter-qq', range: '^2.0.0', dependencyType: 'dependencies', installedVersion: '2.0.1', catalog: 'adapter' },
+  { name: 'zhin.js', range: '^1.1.0', dependencyType: 'dependencies', installedVersion: '1.1.9' },
+] }
+const marketUpdates = [{ name: '@zhin.js/plugin-repeater', current: '1.1.4', latest: '1.2.0' }]
+const marketPlugins = [
+  ['@zhin.js/plugin-welcome', '群欢迎', '新成员入群时发送欢迎语，可按会话覆盖。', 'feature', 3200],
+  ['@zhin.js/plugin-repeater', '复读机', '复读群里连续出现的消息。', 'game', 2100],
+  ['@zhin.js/plugin-rss', 'RSS 订阅', '订阅 RSS 并推送到会话。', 'service', 1800],
+  ['@zhin.js/adapter-qq', 'QQ 官方机器人', '接入 QQ 官方机器人平台。', 'adapter', 5400],
+  ['@zhin.js/plugin-calendar', '日程提醒', '在会话里创建日程并按时提醒。', 'util', 960],
+  ['zhin-plugin-weather', '天气', '查询城市天气，第三方插件。', 'util', 420],
+].map(([name, displayName, description, category, monthly]) => ({ name, displayName, version: '1.2.0', description, author: name.startsWith('@zhin.js') ? 'zhinjs' : 'community', isOfficial: name.startsWith('@zhin.js'),
+  official: name.startsWith('@zhin.js'), category, keywords: ['zhin', category], npm: `https://www.npmjs.com/package/${name}`, date: '2026-10-28T00:00:00Z', downloads: { weekly: Math.round(monthly / 4), monthly } }))
+const pluginPermissions = [
+  { permission: 'welcome:read', plugin: 'welcome', level: 'read', description: '查看欢迎语统计' },
+  { permission: 'welcome:test', plugin: 'welcome', level: 'operate', description: '发送测试欢迎语' },
+  { permission: 'welcome:config.write', plugin: 'welcome', level: 'manage', description: '修改欢迎模板' },
+]
+const previewCommands = [
+  { id: 'root/welcome\u0000zhin.command\u0000welcome', owner: 'root/welcome', name: 'welcome', description: '查看或修改欢迎语', permits: ['group(admin)'] },
+  { id: 'root/rss\u0000zhin.command\u0000rss add', owner: 'root/rss', name: 'rss add', description: '添加订阅', permits: [] },
+]
+function transactionResult(operation, packages) {
+  const authorized = packages.map(spec => { const at = spec.lastIndexOf('@'); const name = at > 0 ? spec.slice(0, at) : spec; return { name, ...(at > 0 ? { version: spec.slice(at + 1) } : {}), spec, source: 'market' } })
+  const base = { id: `preview-${Date.now()}`, operation, packages: authorized, instance: { before: 'running', after: 'running' }, startedAt: Date.now() - 4200, finishedAt: Date.now(), logTail: [] }
+  // The adapter needs its first configuration (needsConfiguration); the calendar update shows a rollback.
+  if (operation === 'install' && authorized.some(item => item.name === '@zhin.js/adapter-qq')) {
+    return { ...base, ok: true, status: 'succeeded', needsConfiguration: [{ name: '@zhin.js/adapter-qq', instanceKey: 'qq', missing: ['endpoints'], missingEnv: ['QQ_SECRET'] }] }
+  }
+  if (operation === 'uninstall' && authorized.some(item => item.name === '@zhin.js/plugin-rss')) {
+    return { ...base, ok: false, status: 'rolledBack', failedPhase: 'start-instance', error: '实例在 30 秒内没有就绪', logTail: ['[rss] feeds is required', 'instance exited with code 1'] }
+  }
+  return { ...base, ok: true, status: 'succeeded' }
+}
+
 function featureDetail(body) {
   const feature = features.find(item => item.plugin === body.plugin) ?? features[0]
   const schema = feature.hasSchema ? { type: 'object', properties: { text: { type: 'string', title: '欢迎语', default: '欢迎新朋友' } } } : null
@@ -88,10 +140,55 @@ const server = createServer(async (request, response) => {
   if (url.pathname === '/api/logs/stats') { json(envelope({ total: 3, byLevel: { trace: 0, debug: 0, info: 2, warn: 1, error: 0, fatal: 0 }, levels: { info: 2, warn: 1, error: 0 }, oldest: logs[2].timestamp, newest: logs[0].timestamp })); return }
   if (url.pathname === '/api/logs') { json(envelope({ logs, total: logs.length, page: 1, pageSize: 50, hasMore: false })); return }
   if (url.pathname === '/api/plugins') {
-    json(envelope(features.map(item => ({ name: item.plugin, description: item.displayName, status: item.globalEnabled ? 'active' : 'inactive', features: [], config: { hasSchema: item.hasSchema } }))))
+    if (process.env.UI_PREVIEW_INSTANCE_DOWN) { json({ success: false, code: 'instance_unavailable', requestOutcome: 'not-dispatched', state: 'crashed', error: 'The Zhin instance is not running' }, 503); return }
+    json(envelope(instancePlugins.map(({ features: list, ...item }) => ({ ...item, features: list.map(({ items, ...rest }) => rest), config: { hasSchema: true } }))))
     return
   }
-  if (url.pathname.startsWith('/api/introspection/')) { json(envelope({ items: [], total: 0, page: 1, pageSize: 20 })); return }
+  if (url.pathname.startsWith('/api/plugins/')) {
+    if (process.env.UI_PREVIEW_INSTANCE_DOWN) { json({ success: false, code: 'instance_unavailable', requestOutcome: 'not-dispatched', state: 'crashed', error: 'The Zhin instance is not running' }, 503); return }
+    const key = decodeURIComponent(url.pathname.slice('/api/plugins/'.length))
+    const found = instancePlugins.find(item => item.instanceKey === key || item.packageName === key)
+    if (found) json(envelope(found)); else json({ success: false, error: 'Plugin not found' }, 404)
+    return
+  }
+  if (url.pathname === '/api/marketplace/updates') { json(envelope(marketUpdates)); return }
+  if (url.pathname === '/pub/marketplace/search') {
+    const q = (url.searchParams.get('q') ?? '').toLowerCase(), category = url.searchParams.get('category')
+    const items = marketPlugins.filter(item => (!q || `${item.name} ${item.description}`.toLowerCase().includes(q)) && (!category || item.category === category))
+    json({ success: true, data: items, total: items.length }); return
+  }
+  if (url.pathname.startsWith('/pub/marketplace/detail/')) {
+    const name = decodeURIComponent(url.pathname.slice('/pub/marketplace/detail/'.length))
+    const item = marketPlugins.find(entry => entry.name === name)
+    if (!item) { json({ success: false, error: 'Not in the preview index' }, 404); return }
+    json(envelope({ name, version: item.version, description: item.description, license: 'MIT', author: item.author, homepage: '', repository: 'git+https://github.com/zhinjs/zhin.git', keywords: item.keywords,
+      engines: { node: '>=22.19.0' }, peerDependencies: { 'zhin.js': '^1.1.0' }, downloads: item.downloads, readme: `# ${item.displayName}\n\n${item.description}\n\n本地预览数据。`, versions: ['1.0.0', '1.1.0', '1.2.0'], lastPublish: item.date }))
+    return
+  }
+  if (url.pathname === '/api/commands/permissions') {
+    const q = (url.searchParams.get('q') ?? '').toLowerCase()
+    const commands = previewCommands.filter(item => !q || `${item.name} ${item.owner}`.toLowerCase().includes(q))
+    json(envelope({ generation: 4, page: 1, pageSize: 50, total: commands.length, commands })); return
+  }
+  if (url.pathname === '/api/commands/permissions/explain' && request.method === 'POST') {
+    let raw = ''
+    for await (const chunk of request) raw += chunk
+    const body = JSON.parse(raw || '{}')
+    const command = previewCommands.find(item => item.id === body.commandId) ?? previewCommands[0]
+    json(envelope({ generation: 4, simulation: true, command, permissionHost: 'present', adapter: { outcome: 'not_evaluated', reason: '本地预览不评估适配器约束' },
+      rules: command.permits.map((rule, index) => ({ index, rule, kind: 'role', outcome: 'unknown', reason: '没有提供假设角色' })),
+      summary: { outcome: command.permits.length ? 'unknown' : 'match', reason: command.permits.length ? '缺少角色依据' : '没有声明 permit 限制' }, unconstrained: [], assumptions: ['本地预览数据'] }))
+    return
+  }
+  if (url.pathname.startsWith('/api/introspection/')) {
+    const kind = url.pathname.split('/').pop()
+    const rows = kind === 'commands' ? [
+      { pattern: 'welcome [text]', desc: '查看或修改欢迎语', plugin: 'welcome', permissions: ['group(admin)'] },
+      { pattern: 'welcome-test', desc: '发送一条测试欢迎语', plugin: 'welcome' },
+      { pattern: 'rss add <url>', desc: '添加订阅', plugin: 'rss' },
+    ] : kind === 'middlewares' ? [{ name: 'repeater', phase: 'receive', order: 10, owner: 'root/repeater' }, { name: 'welcome-join', phase: 'notice', order: 20, owner: 'root/welcome' }] : []
+    json(envelope({ items: rows, total: rows.length, page: 1, pageSize: 25, totalPages: 1 })); return
+  }
   if (url.pathname === '/api/agent/sessions') { json(envelope({ sessions: [], total: 0, items: [] })); return }
   if (url.pathname === '/console/api/pages') { json({ pages: [] }); return }
   if (url.pathname === '/api/console/request' && request.method === 'POST') {
@@ -111,6 +208,7 @@ const server = createServer(async (request, response) => {
       json(envelope({ revision: 'preview-1', adapters: ['icqq', 'telegram'], endpoints: { icqq: ['preview-community'], telegram: ['preview-support'] },
         conversationOverrides: { icqq: { 'preview-community': 2 } },
         rows: features.map(item => ({ plugin: item.plugin, displayName: item.displayName, global: { enabled: item.globalEnabled, overridden: false },
+          ...(item.plugin === 'welcome' ? { conversationOverrides: { icqq: { 'preview-community': 2 } } } : {}),
           adapters: { icqq: { enabled: item.globalEnabled, overridden: item.plugin === 'welcome', ...(item.globalEnabled ? {} : { lockedBy: 'global' }) }, telegram: { enabled: item.globalEnabled, overridden: false, ...(item.globalEnabled ? {} : { lockedBy: 'global' }) } } })) }))
       return
     }
@@ -124,6 +222,22 @@ const server = createServer(async (request, response) => {
       const keys = chain(body.key ?? '')
       json(envelope({ roles: chatRoles.filter(entry => keys.includes(entry.key)) })); return
     }
+    if (type === 'gateway.packages.list') { json(envelope(gatewayPackages)); return }
+    if (type === 'gateway.packages.plan') {
+      const specs = Array.isArray(body.data?.packages) ? body.data.packages : []
+      json(envelope({ operation: body.data?.operation ?? 'install', packages: transactionResult('install', specs).packages, all: false, packageManager: gatewayPackages.packageManager, instanceState: 'running', restartsInstance: true }))
+      return
+    }
+    if (type === 'gateway.packages.install' || type === 'gateway.packages.update' || type === 'gateway.packages.uninstall') {
+      await new Promise(resolve => setTimeout(resolve, 600))
+      json(envelope(transactionResult(type.split('.').pop(), Array.isArray(body.data?.packages) ? body.data.packages : []))); return
+    }
+    if (type === 'gateway.plugins.declare') {
+      json({ success: false, code: 'invalid_input', error: '配置未通过插件 Schema 校验，未声明：$.endpoints required；缺少环境变量 QQ_SECRET', errors: [{ path: '$.endpoints', message: 'required' }], missingEnv: ['QQ_SECRET'] }, 400)
+      return
+    }
+    if (type === 'iam.roles.list') { json(envelope({ roles: [], pluginPermissions })); return }
+    if (type === 'schema:get') { json(envelope({ type: 'object', properties: { endpoints: { type: 'array', title: '机器人账号', items: { type: 'object', properties: { id: { type: 'string', title: 'AppID' } } } } }, required: ['endpoints'] })); return }
     if (type === 'gateway.instance.status') { json(envelope({ instanceId: 'preview', state: 'running', lastExitCode: null, lastExitSignal: null, recentRestarts: 0 })); return }
     if (type === 'agent.engagements.list') { json(envelope({ engagements: [engagement.summary] })); return }
     if (type === 'agent.engagements.get') {

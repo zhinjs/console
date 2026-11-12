@@ -4,11 +4,9 @@ import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import ts from 'typescript'
 import { localeModule, translate } from './locale-fixture.mjs'
-import * as installModel from '../console-ui/src/pages/marketplace-install-model.mjs'
 import * as versionModel from '../console-ui/src/pages/marketplace-version.mjs'
 import * as viewModel from '../console-ui/src/pages/marketplace-view-model.mjs'
 import * as welcomeModel from '../console-ui/src/pages/welcome-use-case-model.mjs'
-import * as management from '../console-ui/src/pages/plugin-management-model.mjs'
 import * as clipboard from '../console-ui/src/pages/clipboard-copy.mjs'
 import * as gatewayModel from '../console-ui/src/pages/ops/gateway-model.mjs'
 
@@ -20,7 +18,7 @@ const code = ts.transpileModule(source + '\nexport { MarketplaceSession };', {
 
 function elements(value) {
   if (Array.isArray(value)) return value.flatMap(elements)
-  return value && typeof value === 'object' ? [value, ...[value.props?.children].flat(Infinity).flatMap(elements)] : []
+  return value && typeof value === 'object' ? [value, ...[value.props?.children, value.props?.actions].flat(Infinity).flatMap(elements)] : []
 }
 const label = value => typeof value === 'string' || typeof value === 'number' ? String(value) : Array.isArray(value)
   ? value.map(label).join('') : value && typeof value === 'object' ? label(value.props?.children ?? '') : ''
@@ -30,8 +28,8 @@ const plugin = name => ({ name, displayName: name, version: '1.0.0', description
   official: false, category: 'util', keywords: [], npm: '', date: '', downloads: { weekly: 0, monthly: 0 } })
 
 function fixture({ search = async () => json({ success: true, data: [], total: 0 }), updates = async () => json({ success: true, data: [] }),
-  plugins = async () => json({ success: true, data: [] }), detail = null, requestConsole = async () => ({}) } = {}) {
-  const calls = [], toasts = []
+  plugins = async () => json({ success: true, data: [] }), detail = null, gateway = async () => ({ packageManager: 'pnpm', packages: [] }), action = {} } = {}) {
+  const calls = [], toasts = [], prepared = []
   let slots = [], cursor = 0, effects = []
   const hooks = {
     useState(initial) { const index = cursor++; if (!(index in slots)) slots[index] = typeof initial === 'function' ? initial() : initial
@@ -44,10 +42,16 @@ function fixture({ search = async () => json({ success: true, data: [], total: 0
     '../i18n': localeModule, '../i18n/locale.mjs': { translate },
     './clipboard-copy.mjs': clipboard,
     '../components/toast': { useToast: () => ({ success: toast('success'), error: toast('error'), warning: toast('warning'), info: toast('info'), toast: () => {} }) },
-    './marketplace-install-model.mjs': installModel, './marketplace-version.mjs': versionModel, './marketplace-view-model.mjs': viewModel,
-    './welcome-use-case-model.mjs': welcomeModel, './plugin-management-model.mjs': management,
-    './PluginManagementSummary': { PluginManagementSummary: 'plugin-management-summary' },
-    './ops/gateway-model.mjs': gatewayModel, './ops/plugin-declare': { ConfigurationNeedsPanel: 'configuration-needs-panel' },
+    './marketplace-version.mjs': versionModel, './marketplace-view-model.mjs': viewModel,
+    './welcome-use-case-model.mjs': welcomeModel,
+    './ops/gateway-model.mjs': gatewayModel, './ops/use-gateway': { gatewayRequest: async (type, data) => { calls.push(type); return gateway(type, data) } },
+    './PackageAction': {
+      PackageActionPanel: 'package-action-panel',
+      usePackageAction: () => ({ receipt: { state: { phase: 'idle' } }, planning: false, busy: false, needs: [], operation: null, reset() {},
+        prepare: async (operation, subject) => { prepared.push({ operation, subject }) }, ...action }),
+    },
+    './plugins.css': {}, '../components/PageHeader': { PageHeader: 'page-header' }, '../components/PageShell': { PageShell: 'main' },
+    '../components/StatusState': { StatusState: 'status-state' },
     '../components/ui/card': { Card: 'card', CardContent: 'card-content' }, '../components/ui/badge': { Badge: 'badge' },
     '../components/ui/button': { Button: 'button' }, '../components/ui/input': { Input: 'input' },
     '../components/ui/select': { SelectField: 'select-field' }, '../components/ui/alert': { Alert: 'alert', AlertDescription: 'alert-description' },
@@ -63,7 +67,6 @@ function fixture({ search = async () => json({ success: true, data: [], total: 0
       if (path.startsWith('/pub/marketplace/detail/')) return detail ? detail(path) : json({ success: false, error: 'not in test' }, false, 404)
       throw new Error(`unexpected ${path}`)
     } },
-    '../utils/console-rpc': { requestConsole: (...args) => requestConsole(...args) },
     'react-router-dom': { Link: 'a', useSearchParams: () => [new URLSearchParams()] },
     '../utils/console-access.mjs': { hasConsolePermission: () => true },
     '../utils/useInboxCacheScope': { useInboxCacheScope: () => 'scope-a' },
@@ -82,39 +85,38 @@ function fixture({ search = async () => json({ success: true, data: [], total: 0
     await settle()
     return render()
   }
-  return { render, load, calls, toasts }
+  return { render, load, calls, toasts, prepared }
 }
 
 // The (closed) detail dialog has its own error alert; only the page body is checked here.
 const pageElements = tree => elements(tree).filter(item => item.type !== 'dialog' && !elements(elements(tree).find(node => node.type === 'dialog')).includes(item))
-const destructive = tree => pageElements(tree).filter(item => item.type === 'alert' && item.props.variant === 'destructive')
+const failures = tree => pageElements(tree).filter(item => item.type === 'status-state' && item.props.error)
 const buttonLabelled = (tree, text) => elements(tree).find(item => item.type === 'button' && label(item).includes(text))
 
 test('a failed search shows the error with a retry, and not the misleading empty state', async () => {
   let attempts = 0
   const f = fixture({ search: async () => { attempts++; return attempts === 1 ? json({}, false, 503) : json({ success: true, data: [plugin('alpha')], total: 1 }) } })
   let tree = await f.load()
-  assert.equal(destructive(tree).length, 1)
-  assert.ok(label(destructive(tree)[0]).includes('搜索失败'))
-  assert.equal(label(tree).includes('未找到插件'), false)
-  assert.equal(label(tree).includes('尝试调整搜索条件'), false)
+  assert.equal(failures(tree).length, 1)
+  assert.equal(failures(tree)[0].props.title, '搜索失败')
+  assert.equal(pageElements(tree).some(item => item.type === 'status-state' && item.props.kind === 'empty'), false)
   assert.equal(label(tree).includes('共 0 个插件'), false)
-  const retry = elements(destructive(tree)[0]).find(item => item.type === 'button' && label(item).includes('重试'))
-  assert.ok(retry, 'error alert offers a retry button')
-  await retry.props.onClick()
+  assert.equal(typeof failures(tree)[0].props.onRetry, 'function', 'the failure offers a retry')
+  await failures(tree)[0].props.onRetry()
   await settle()
   tree = f.render()
   assert.equal(attempts, 2)
-  assert.equal(destructive(tree).length, 0)
+  assert.equal(failures(tree).length, 0)
   assert.equal(elements(tree).filter(item => item.type === 'card' && item.props.role === 'button').length, 1)
 })
 
 test('a successful search with no results keeps the empty state and no error', async () => {
   const f = fixture()
   const tree = await f.load()
-  assert.equal(destructive(tree).length, 0)
-  assert.ok(label(tree).includes('未找到插件'))
-  assert.ok(label(tree).includes('尝试调整搜索条件或分类筛选'))
+  assert.equal(failures(tree).length, 0)
+  const empty = pageElements(tree).find(item => item.type === 'status-state' && item.props.kind === 'empty')
+  assert.equal(empty.props.title, '未找到插件')
+  assert.equal(empty.props.description, '尝试调整搜索条件或分类筛选')
 })
 
 test('plugin cards open details from the keyboard and the search box has an accessible name', async () => {
@@ -218,71 +220,60 @@ test('the update banner links each update to the plugin detail page that perform
   assert.ok(f.calls.includes('/pub/marketplace/detail/p0'))
 })
 
-test('a confirmed install offers a direct link to the plugin settings', async () => {
-  const fixtureState = JSON.parse(await readFile(new URL('./fixtures/welcome-flow-provider.json', import.meta.url), 'utf8')).initialState
-  const { packageName, instanceKey, version, projectRevision } = fixtureState
-  const rpc = []
-  const f = fixture({
-    search: async () => json({ success: true, data: [plugin(packageName)], total: 1 }),
-    detail: async () => json({ success: true, data: { name: packageName, version, description: '', license: '', author: '', homepage: '', repository: '',
-      keywords: [], engines: {}, peerDependencies: {}, downloads: { weekly: 0, monthly: 0 }, readme: '', versions: [version], lastPublish: '' } }),
-    requestConsole: async request => {
-      rpc.push(request.type)
-      if (request.type === 'plugin:plan-install') return { packageName, instanceKey, projectRevision, alreadyDeclared: false, alreadyInstalled: false,
-        restartRequired: false, changes: { packageManifest: 'added', config: 'added' }, warnings: [] }
-      if (request.type === 'plugin:inspect') return fixtureState
-      return {}
-    },
-  })
+const registryDetail = (name, version) => async () => json({ success: true, data: { name, version, description: '', license: '', author: '', homepage: '', repository: '',
+  keywords: [], engines: {}, peerDependencies: {}, downloads: { weekly: 0, monthly: 0 }, readme: '', versions: [version], lastPublish: '' } })
+
+test('install asks the gateway for a plan of the exact registry version; nothing calls the instance install path', async () => {
+  const f = fixture({ search: async () => json({ success: true, data: [plugin('@zhin.js/reminder')], total: 1 }), detail: registryDetail('@zhin.js/reminder', '2.0.0') })
   let tree = await f.load()
-  cardFor(tree, packageName).props.onClick(); await settle()
+  cardFor(tree, '@zhin.js/reminder').props.onClick(); await settle()
   tree = f.render()
   assert.equal(links(tree).some(link => label(link).includes('去配置')), false, 'not offered before anything is installed')
   await elements(tree).find(item => item.type === 'button' && label(item) === '安装').props.onClick(); await settle()
-  tree = f.render()
-  await buttonLabelled(tree, '确认安装').props.onClick(); await settle()
-  tree = f.render()
-  assert.deepEqual(rpc, ['plugin:plan-install', 'plugin:install', 'plugin:inspect'])
-  const configure = links(tree).filter(link => label(link).includes('去配置'))
-  assert.equal(configure.length, 1)
-  assert.equal(configure[0].props.to, `/features/global/${encodeURIComponent(instanceKey)}`)
-  const summary = elements(tree).find(item => item.type === 'plugin-management-summary')
-  assert.equal(summary.props.showNavigation, false, 'the summary does not repeat the same links')
-  assert.equal(f.calls.filter(path => path === '/api/plugins').length, 2, 'the installed list is re-read after the install')
+  assert.deepEqual(f.prepared, [{ operation: 'install', subject: { name: '@zhin.js/reminder', version: '2.0.0' } }])
+  assert.ok(elements(tree).some(item => item.type === 'package-action-panel'), 'the receipt panel sits in the detail')
+  assert.equal(source.includes("'plugin:install'"), false)
 })
 
-test('an install that needs configuration guides into the declaration form instead of an unconfirmed result', async () => {
-  const packageName = '@zhin.js/adapter-qq'
-  const rpc = []
+test('a finished install closes the loop: configuration, the feature tab and the plugin detail', async () => {
   const f = fixture({
-    search: async () => json({ success: true, data: [plugin(packageName)], total: 1 }),
-    detail: async () => json({ success: true, data: { name: packageName, version: '1.0.0', description: '', license: '', author: '', homepage: '', repository: '',
-      keywords: [], engines: {}, peerDependencies: {}, downloads: { weekly: 0, monthly: 0 }, readme: '', versions: ['1.0.0'], lastPublish: '' } }),
-    requestConsole: async request => {
-      rpc.push(request.type)
-      if (request.type === 'plugin:plan-install') return { packageName, instanceKey: 'qq', projectRevision: 'r1', alreadyDeclared: false, alreadyInstalled: false,
-        restartRequired: false, changes: { packageManifest: 'added', config: 'added' }, warnings: [] }
-      if (request.type === 'plugin:install') return { restartRequired: false, needsConfiguration: { name: packageName, instanceKey: 'qq', missing: ['endpoints'], missingEnv: [] } }
-      return {}
-    },
+    search: async () => json({ success: true, data: [plugin('@zhin.js/reminder')], total: 1 }), detail: registryDetail('@zhin.js/reminder', '2.0.0'),
+    action: { receipt: { state: { phase: 'succeeded' } }, operation: 'install' },
   })
   let tree = await f.load()
-  cardFor(tree, packageName).props.onClick(); await settle()
+  cardFor(tree, '@zhin.js/reminder').props.onClick(); await settle()
   tree = f.render()
-  await elements(tree).find(item => item.type === 'button' && label(item) === '安装').props.onClick(); await settle()
+  const next = elements(tree).find(item => item.type === 'nav')
+  assert.deepEqual(links(next).map(link => [label(link), link.props.to]), [
+    ['去配置', '/features/global/reminder'], ['去功能页签', '/scope?tab=features'], ['插件详情', '/plugins/reminder'],
+  ])
+  assert.equal(elements(tree).some(item => item.type === 'button' && label(item) === '安装'), false, 'no second install while the receipt is shown')
+})
+
+test('an install that needs configuration hands the needs to the declaration form; declaring opens the follow-ups', async () => {
+  const f = fixture({
+    search: async () => json({ success: true, data: [plugin('@zhin.js/adapter-qq')], total: 1 }), detail: registryDetail('@zhin.js/adapter-qq', '1.0.0'),
+    action: { receipt: { state: { phase: 'partial' } }, operation: 'install', needs: [{ name: '@zhin.js/adapter-qq', instanceKey: 'qq', missing: ['endpoints'], missingEnv: [] }] },
+  })
+  let tree = await f.load()
+  cardFor(tree, '@zhin.js/adapter-qq').props.onClick(); await settle()
   tree = f.render()
-  await buttonLabelled(tree, '确认安装').props.onClick(); await settle()
+  assert.equal(elements(tree).some(item => item.type === 'nav'), false, 'no configuration link is guessed before the plugin is declared')
+  const panel = elements(tree).find(item => item.type === 'package-action-panel')
+  panel.props.onDeclared({ name: '@zhin.js/adapter-qq', instanceKey: 'qq-main', missing: [], missingEnv: [] }); await settle()
   tree = f.render()
-  assert.deepEqual(rpc, ['plugin:plan-install', 'plugin:install'], 'no reconcile guess: the reply already says what is missing')
-  const panel = elements(tree).find(item => item.type === 'configuration-needs-panel')
-  assert.ok(panel, 'the needs panel is shown')
-  assert.deepEqual(panel.props.needs, [{ name: packageName, instanceKey: 'qq', missing: ['endpoints'], missingEnv: [] }])
-  assert.ok(label(tree).includes('依赖已安装，但插件需要先填写配置才能启用。'))
-  assert.equal(destructive(tree).length, 0, 'not reported as an uncertain install')
-  panel.props.onDeclared(panel.props.needs[0]); await settle()
-  tree = f.render()
-  assert.equal(elements(tree).some(item => item.type === 'configuration-needs-panel'), false)
-  assert.ok(label(tree).includes('已启用 @zhin.js/adapter-qq（实例名 qq）。'))
+  assert.equal(links(elements(tree).find(item => item.type === 'nav')).find(link => label(link) === '去配置').props.to, '/features/global/qq-main')
+})
+
+test('while the instance cannot list plugins, installed status comes from the gateway dependency list', async () => {
+  const f = fixture({
+    search: async () => json({ success: true, data: [plugin('@zhin.js/rss')], total: 1 }),
+    plugins: async () => json({ success: false, code: 'instance_unavailable', error: 'The Zhin instance is not running' }, false, 503),
+    gateway: async () => ({ packageManager: 'pnpm', packages: [{ name: '@zhin.js/rss', range: '^1.0.0', dependencyType: 'dependencies', installedVersion: '1.2.0', catalog: 'market' }] }),
+  })
+  const tree = await f.load()
+  assert.ok(f.calls.includes('gateway.packages.list'))
+  assert.ok(elements(cardFor(tree, '@zhin.js/rss')).some(item => item.type === 'badge' && label(item) === '已安装'))
 })
 
 test('details of an already installed package link to its settings and its update', async () => {

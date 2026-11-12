@@ -49,11 +49,6 @@ export function verificationCheckDisplay(check, locale = 'zh-CN') {
 export function verificationResultDisplay(result, locale = 'zh-CN') {
   return { summary: displayTranslation(result.summary, result.summaryI18n, locale, text), evidence: displayTranslation(result.evidence, result.evidenceI18n, locale, value => textList(value, result.evidence)) };
 }
-export function mutationRequest(type, plan, extra = {}, locale = 'zh-CN') {
-  if (!plan || !text(plan.packageName) || !text(plan.instanceKey) || !text(plan.projectRevision)) throw Error(translate(locale, "操作计划缺少项目版本，请重新读取计划后确认"));
-  if (type === 'plugin:install' && plan.requestedSpec && plan.requestedSpec !== plan.packageName && !plan.requestedSpec.startsWith(`${plan.packageName}@`)) throw Error(translate(locale, "安装请求与批准的包身份不一致"));
-  return { ...extra, type, packageName: type === 'plugin:install' ? plan.requestedSpec ?? plan.packageName : plan.instanceKey, expectedProjectRevision: plan.projectRevision, ...(text(plan.configurationRevision) ? { expectedRevision: plan.configurationRevision } : {}) };
-}
 export function applyRequest(state, locale = 'zh-CN') {
   validateManagementState(state, undefined, locale);
   if (!canApplyPlugin(state)) throw Error(translate(locale, "插件未满足应用条件，请先完善配置或处理依赖问题"));
@@ -80,10 +75,6 @@ async function waitForCurrentManagement(read, previous, signal, matches, options
 export function waitForManagementState(read, previous, signal, options = {}, locale = 'zh-CN') {
   return waitForCurrentManagement(read, previous, signal,
     state => state.projectRevision === previous.projectRevision && matchesAppliedState(state, previous.disabled), options, locale);
-}
-/** Lifecycle changes alter projectRevision; current publication, exact config and package remain required. */
-export function waitForEnabledManagementState(read, previous, enabled, signal, options = {}, locale = 'zh-CN') {
-  return waitForCurrentManagement(read, previous, signal, state => matchesAppliedState(state, !enabled), options, locale);
 }
 export function verificationIsCurrent(result, plan, state, currentPlan, locale = 'zh-CN') {
   if (currentPlan !== undefined) {
