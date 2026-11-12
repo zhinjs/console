@@ -36,7 +36,9 @@ test('binds explanations to exact command, generation, canonical target and assu
     value => { value.data.target.threadId = 'other' },
     value => { delete value.data.target.threadId },
     value => { value.data.sender.id = 'bob' },
-    value => { value.data.sender.roles = ['admin'] },
+    value => { value.data.sender.chatRole = 'admin' },
+    value => { value.data.sender.chatRole = null },
+    value => { value.data.sender.platform = { standing: 'admin' } },
     value => { value.data.rules[0].rule = 'private()' },
     value => { value.data.simulation = false },
     value => { value.data.summary.outcome = 'allowed' },
@@ -49,21 +51,26 @@ test('binds explanations to exact command, generation, canonical target and assu
 test('builds read-only hypothetical requests without inventing conversation or role identity', () => {
   assert.deepEqual(permissionRequest(3, selected), { generation: 3, commandId: selected.id })
   assert.deepEqual(permissionRequest(3, selected, { senderId: 'alice' }), { generation: 3, commandId: selected.id, sender: { id: 'alice' } })
-  const body = permissionRequest(3, selected, { target, senderId: 'alice', roles: ' admin，trusted, admin ' })
-  assert.deepEqual(body.sender.roles, ['admin', 'trusted'])
+  const body = permissionRequest(3, selected, { target, senderId: 'alice', chatRole: 'admin', standing: 'owner', platformRoles: ' mod，helper, mod ' })
+  assert.deepEqual(body.sender, { id: 'alice', chatRole: 'admin', platform: { standing: 'owner', roles: ['mod', 'helper'] } })
+  assert.equal(Object.hasOwn(body.sender, 'roles'), false, 'the old roles field is gone (400 on new Hosts)')
   assert.deepEqual(body.target, target)
+  assert.deepEqual(permissionRequest(3, selected, { senderId: 'alice', chatRole: 'none' }).sender, { id: 'alice', chatRole: null }, 'an ordinary user is null, not omitted')
   const longEndpoint = { ...target, endpoint: { ...target.endpoint, id: 'e'.repeat(4096) } }
   assert.equal(permissionRequest(3, selected, { target: longEndpoint }).target.endpoint.id.length, 4096)
   assert.equal(permissionRequest(3, selected, { senderId: ' alice ' }).sender.id, ' alice ')
   assert.equal(Object.hasOwn(body, 'permits'), false)
-  assert.throws(() => permissionRequest(3, selected, { roles: 'admin' }), /发送者 ID/)
+  assert.throws(() => permissionRequest(3, selected, { chatRole: 'admin' }), /发送者 ID/)
+  assert.throws(() => permissionRequest(3, selected, { standing: 'admin' }), /发送者 ID/)
+  assert.throws(() => permissionRequest(3, selected, { senderId: 'alice', platformRoles: 'mod' }), /平台身份/)
+  assert.throws(() => permissionRequest(3, selected, { senderId: 'alice', chatRole: 'boss' }), /格式/)
   assert.throws(() => permissionRequest(3, selected, { requireTarget: true }), /完整/)
   assert.throws(() => permissionRequest(3, selected, { target: { ...target, parent: { id: 'guild' } } }), /完整/)
 })
 
-test('preserves spaces inside exact role names and separates roles only by commas', () => {
-  const body = permissionRequest(3, selected, { senderId: 'alice', roles: ' project admin, on call reviewer，project admin ' })
-  assert.deepEqual(body.sender.roles, ['project admin', 'on call reviewer'])
+test('preserves spaces inside exact platform role names and separates roles only by commas', () => {
+  const body = permissionRequest(3, selected, { senderId: 'alice', standing: 'member', platformRoles: ' project admin, on call reviewer，project admin ' })
+  assert.deepEqual(body.sender.platform.roles, ['project admin', 'on call reviewer'])
 })
 
 test('rejects malformed catalogs and duplicate identities instead of guessing a command', () => {

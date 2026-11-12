@@ -12,11 +12,12 @@ export { CHAT_ROLES_RPC }
 export const CHAT_ROLES_PERMISSION = CHAT_ROLES_RPC_PERMISSIONS[CHAT_ROLES_RPC.LIST]
 
 export const CHAT_ROLES = CONSOLE_CHAT_ROLES
-export const CHAT_ROLE_SOURCES = Object.freeze(['grant', 'config', 'mapping'])
+/** zhin chat roles come only from grants (ADR 0056); platform standing (群主 / 管理员) is a separate platform identity. */
+export const CHAT_ROLE_SOURCES = Object.freeze(['grant'])
 
 /** Authored labels (displayed through i18n). */
 export const CHAT_ROLE_LABELS = Object.freeze({ owner: '所有者', admin: '管理员', trusted: '受信任' })
-export const CHAT_ROLE_SOURCE_LABELS = Object.freeze({ grant: '直接授予', config: '配置文件', mapping: '平台映射' })
+export const CHAT_ROLE_SOURCE_LABELS = Object.freeze({ grant: '直接授予' })
 
 const ALIAS = /^[a-z0-9][a-z0-9-]*$/u
 const rank = role => CHAT_ROLES.indexOf(role)
@@ -118,63 +119,3 @@ export function chatRoleApplied(entries, scope, { adapter, userId, role }, actio
   const stored = entries.find(entry => entry.key === key && entry.source === 'grant' && entry.adapter === adapter && entry.userId === userId)
   return action === 'revoke' ? !stored : stored?.role === role
 }
-
-/**
- * Mapping rules (ADR 0056 §4): platform standing → chat role, declared per level. The protocol is
- * still being settled (draft `chat-roles.mappings` in zhinjs/zhin); a Host without it answers
- * "Unknown RPC type" and the section says a newer Host is needed. Read-only here: conversation
- * rules are edited once `chat-roles.set-mappings` is final.
- */
-export const CHAT_ROLE_MAPPINGS_RPC = Object.freeze({ LIST: 'chat-roles.mappings' })
-
-export const CHAT_ROLE_MAPPING_LEVELS = Object.freeze(['default', 'adapter', 'endpoint', 'conversation'])
-export const CHAT_ROLE_MAPPING_LEVEL_LABELS = Object.freeze({ default: '内置默认', adapter: '适配器', endpoint: '账号', conversation: '会话' })
-export const PLATFORM_STANDING_LABELS = Object.freeze({ owner: '群主', admin: '管理员', member: '成员', guest: '访客' })
-
-/** `chat-roles.mappings` body; null for 全局 (rules start at the adapter level). */
-export function chatRoleMappingsRequest(scope) {
-  const key = scopeKey(scope)
-  if (key === null || key === '') return null
-  return { type: CHAT_ROLE_MAPPINGS_RPC.LIST, level: parseScopeKey(key).level, key }
-}
-
-const strings = value => Array.isArray(value) ? value.filter(item => typeof item === 'string' && item) : []
-
-function readRule(item) {
-  if (!item || typeof item !== 'object') return null
-  const match = item.match && typeof item.match === 'object' ? item.match : {}
-  const grant = item.grant === 'none' || CHAT_ROLES.includes(item.grant) ? item.grant : null
-  if (!grant) return null
-  const rule = { match: { standing: strings(match.standing), role: strings(match.role), permission: strings(match.permission) }, grant }
-  return CHAT_ROLE_MAPPING_LEVELS.includes(item.level) ? { ...rule, level: item.level } : rule
-}
-
-/**
- * `chat-roles.mappings` reply -> `{ layers: [{ level, rules, inherit, revision?, updatedAt?, updatedBy? }], effective: [{ match, grant, level }] }`.
- * Malformed layers and rules are dropped.
- */
-export function readChatRoleMappings(payload) {
-  const record = payload && typeof payload === 'object' ? payload : {}
-  const layers = (Array.isArray(record.layers) ? record.layers : []).filter(layer => layer && CHAT_ROLE_MAPPING_LEVELS.includes(layer.level)).map(layer => ({
-    level: layer.level,
-    rules: (Array.isArray(layer.rules) ? layer.rules : []).map(readRule).filter(Boolean),
-    inherit: layer.inherit !== false,
-    ...(Number.isInteger(layer.revision) ? { revision: layer.revision } : {}),
-    ...(Number.isFinite(layer.updatedAt) ? { updatedAt: layer.updatedAt } : {}),
-    ...(typeof layer.updatedBy === 'string' && layer.updatedBy ? { updatedBy: layer.updatedBy } : {}),
-  }))
-  const effective = (Array.isArray(record.effective) ? record.effective : []).map(readRule).filter(rule => rule && rule.level && rule.grant !== 'none')
-  return { layers, effective }
-}
-
-/** One-line description parts of a rule's match: standings, platform roles, permissions. */
-export function mappingMatchParts(match) {
-  return {
-    standing: strings(match?.standing),
-    role: strings(match?.role),
-    permission: strings(match?.permission),
-  }
-}
-
-/** Remembered (per browser) whether the mapping section is collapsed. */
-export const CHAT_ROLE_MAPPINGS_HIDDEN_KEY = 'zhin-console.chat-role-mappings.hidden'

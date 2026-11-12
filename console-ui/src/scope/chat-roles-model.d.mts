@@ -1,7 +1,7 @@
 import type { ScopeLevel, ScopeRef } from './scope-tree.mjs'
 
 export type ChatRole = 'owner' | 'admin' | 'trusted'
-export type ChatRoleSource = 'grant' | 'config' | 'mapping'
+export type ChatRoleSource = 'grant'
 
 export interface ChatRoleEntry {
   readonly level: ScopeLevel
@@ -35,25 +35,3 @@ export function chatRoleGrantRequest(scope: ScopeRef, input: { adapter?: string;
 export function chatRoleRevokeRequest(scope: ScopeRef, input: { adapter: string; userId: string }): { type: 'chat-roles.revoke'; level: ScopeLevel; key?: string; adapter: string; userId: string }
 export function readChatRoleChange(payload: unknown): { status: 'saved' | 'unchanged' }
 export function chatRoleApplied(entries: readonly ChatRoleEntry[], scope: ScopeRef, target: { adapter: string; userId: string; role?: ChatRole }, action: 'grant' | 'revoke'): boolean
-
-export type ChatRoleMappingLevel = 'default' | 'adapter' | 'endpoint' | 'conversation'
-export type PlatformStanding = 'owner' | 'admin' | 'member' | 'guest'
-export interface ChatRoleMappingMatch { readonly standing: readonly string[]; readonly role: readonly string[]; readonly permission: readonly string[] }
-export interface ChatRoleMappingRule { readonly match: ChatRoleMappingMatch; readonly grant: ChatRole | 'none'; readonly level?: ChatRoleMappingLevel }
-export interface ChatRoleMappingLayer {
-  readonly level: ChatRoleMappingLevel
-  readonly rules: readonly ChatRoleMappingRule[]
-  readonly inherit: boolean
-  readonly revision?: number
-  readonly updatedAt?: number
-  readonly updatedBy?: string
-}
-export interface ChatRoleMappings { readonly layers: readonly ChatRoleMappingLayer[]; readonly effective: readonly (ChatRoleMappingRule & { level: ChatRoleMappingLevel })[] }
-export const CHAT_ROLE_MAPPINGS_RPC: Readonly<{ LIST: 'chat-roles.mappings' }>
-export const CHAT_ROLE_MAPPING_LEVELS: readonly ChatRoleMappingLevel[]
-export const CHAT_ROLE_MAPPING_LEVEL_LABELS: Readonly<Record<ChatRoleMappingLevel, string>>
-export const PLATFORM_STANDING_LABELS: Readonly<Record<PlatformStanding, string>>
-export const CHAT_ROLE_MAPPINGS_HIDDEN_KEY: string
-export function chatRoleMappingsRequest(scope: ScopeRef): { type: 'chat-roles.mappings'; level: 'adapter' | 'endpoint' | 'conversation'; key: string } | null
-export function readChatRoleMappings(payload: unknown): ChatRoleMappings
-export function mappingMatchParts(match: Partial<ChatRoleMappingMatch> | undefined): ChatRoleMappingMatch

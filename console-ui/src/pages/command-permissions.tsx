@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Checkbox } from '../components/ui/checkbox'
 import { Input } from '../components/ui/input'
+import { SelectField } from '../components/ui/select'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { PageHeader } from '../components/PageHeader'
 import { PageShell } from '../components/PageShell'
@@ -17,9 +18,14 @@ import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { getInboxCacheScope, isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { CONSOLE_REST } from '../contracts/zhin-console'
 import { createDiagnosticRequestGate } from './endpoint-detail/message-diagnostics.mjs'
-import { permissionHttpError, permissionOutcomeLabel, permissionRequest, readPermissionCatalog, readPermissionExplanation,
+import { HYPOTHETICAL_CHAT_ROLES, HYPOTHETICAL_STANDINGS, permissionHttpError, permissionOutcomeLabel, permissionRequest, readPermissionCatalog, readPermissionExplanation,
+  type HypotheticalChatRole, type HypotheticalStanding,
   type PermissionCatalog, type PermissionCommand, type PermissionExplanation, type PermissionRequest } from './permission-explanation-model.mjs'
 import { matchPermissionLink, permissionCatalogState, permissionLinkSearch, readPermissionLink, type PermissionLink } from './permission-link-model.mjs'
+
+
+const CHAT_ROLE_OPTION_LABELS: Record<HypotheticalChatRole, string> = { '': '未知', none: '普通用户（没有 zhin 角色）', owner: '所有者', admin: '管理员', trusted: '受信任' }
+const STANDING_OPTION_LABELS: Record<HypotheticalStanding, string> = { '': '未知', owner: '群主', admin: '管理员', member: '成员', guest: '访客' }
 
 export default function CommandPermissionsPage() {
   const i18n = useI18n()
@@ -36,6 +42,7 @@ export default function CommandPermissionsPage() {
   const [hypothesis, setHypothesis] = useState(false), [target, setTarget] = useState<unknown>(undefined)
   const [includeTarget, setIncludeTarget] = useState(false)
   const [senderId, setSenderId] = useState(''), [roles, setRoles] = useState('')
+  const [chatRole, setChatRole] = useState<HypotheticalChatRole>(''), [standing, setStanding] = useState<HypotheticalStanding>('')
   const [result, setResult] = useState<{ scope: typeof scope; request: PermissionRequest; value: PermissionExplanation } | null>(null)
   const active = isInboxCacheScopeActive(scope), denied = !hasConsolePermission('status.view')
   const current = active && catalog && catalog.scope === scope ? catalog.value : null
@@ -82,7 +89,7 @@ export default function CommandPermissionsPage() {
     if (!current || !isInboxCacheScopeActive(scope) || loading || denied) return
     explanations.current.cancel(); setResult(null); setError(null)
     let body: PermissionRequest
-    try { body = permissionRequest(current.generation, command, useHypothesis ? { target: includeTarget ? target : undefined, requireTarget: includeTarget, senderId, roles } : undefined, i18n.locale) }
+    try { body = permissionRequest(current.generation, command, useHypothesis ? { target: includeTarget ? target : undefined, requireTarget: includeTarget, senderId, chatRole, standing, platformRoles: roles } : undefined, i18n.locale) }
     catch (caught) { setError((caught as Error).message); return }
     const request = explanations.current.begin(); setChecking(true)
     try {
@@ -142,8 +149,16 @@ export default function CommandPermissionsPage() {
       {hypothesis && <div className="space-y-3"><label className="flex gap-2 items-start text-sm"><Checkbox checked={includeTarget} onCheckedChange={checked => { invalidateHypothesis(); setIncludeTarget(checked === true) }} />{i18n.t("提供假设会话与账号（可选）")}</label>
         {includeTarget && <ConversationTargetEditor value={target} onChange={value => { invalidateHypothesis(); setTarget(value) }} idPrefix="permission-target" disabled={checking} />}
         <label className="block space-y-1 text-sm"><span>{i18n.t("假设发送者 ID（可选）")}</span><Input value={senderId} maxLength={200} onChange={event => { invalidateHypothesis(); setSenderId(event.target.value) }} /></label>
-        <label className="block space-y-1 text-sm"><span>{i18n.t("假设角色（逗号分隔，可选）")}</span><Input value={roles} maxLength={2000} placeholder={i18n.t("例如 admin、trusted；留空表示未知")} onChange={event => { invalidateHypothesis(); setRoles(event.target.value) }} /></label>
-        <p className="text-xs text-muted-foreground">{i18n.t("这里的身份完全由你假设，未向平台核实。留空角色不会被当作已知管理员，也不能据此获得执行权限。")}</p></div>}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1 text-sm"><span>{i18n.t("假设 zhin 角色（可选）")}</span>
+            <SelectField aria-label={i18n.t("假设 zhin 角色（可选）")} value={chatRole || 'unknown'} onValueChange={value => { invalidateHypothesis(); setChatRole(value === 'unknown' ? '' : value as HypotheticalChatRole) }}
+              options={HYPOTHETICAL_CHAT_ROLES.map(value => ({ value: value || 'unknown', label: i18n.t(CHAT_ROLE_OPTION_LABELS[value]) }))} /></div>
+          <div className="space-y-1 text-sm"><span>{i18n.t("假设平台身份（可选）")}</span>
+            <SelectField aria-label={i18n.t("假设平台身份（可选）")} value={standing || 'unknown'} onValueChange={value => { invalidateHypothesis(); setStanding(value === 'unknown' ? '' : value as HypotheticalStanding) }}
+              options={HYPOTHETICAL_STANDINGS.map(value => ({ value: value || 'unknown', label: i18n.t(STANDING_OPTION_LABELS[value]) }))} /></div>
+        </div>
+        {standing ? <label className="block space-y-1 text-sm"><span>{i18n.t("平台角色（逗号分隔，可选）")}</span><Input value={roles} maxLength={2000} placeholder={i18n.t("平台自定义的角色 ID；留空表示未知")} onChange={event => { invalidateHypothesis(); setRoles(event.target.value) }} /></label> : null}
+        <p className="text-xs text-muted-foreground">{i18n.t("这里的身份完全由你假设，未向平台核实。zhin 角色只来自授予；平台群主/管理员是平台身份，单独影响平台相关条件。留空表示未知，不会被当作已知角色。")}</p></div>}
       <Button disabled={checking || loading || !active || denied} onClick={() => void explain(selected, hypothesis)}>{checking ? i18n.t("读取中…") : hypothesis ? i18n.t("检查假设条件") : i18n.t("重新查看规则")}</Button>
     </CardContent></Card><Card><CardHeader><CardTitle>{i18n.t("条件说明")}</CardTitle></CardHeader><CardContent className="space-y-4">
       {checking && <p role="status">{i18n.t("正在读取规则说明…")}</p>}

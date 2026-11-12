@@ -7,7 +7,6 @@ import {
 } from '../console-ui/src/pages/scope/scope-overview-model.mjs'
 import { ambientSettingsHref } from '../console-ui/src/pages/insights/scope-filter.mjs'
 import { resolveLegacyRedirect } from '../console-ui/src/console-routes.mjs'
-import { chatRoleMappingsRequest, mappingMatchParts, readChatRoleMappings } from '../console-ui/src/scope/chat-roles-model.mjs'
 import { objectPageOwnsBreadcrumb } from '../console-ui/src/scope/scope-tree.mjs'
 import { englishMessages } from '../console-ui/src/i18n/messages.en.mjs'
 
@@ -70,22 +69,6 @@ test('platform labels and onboarding copy have English entries', () => {
   assert.equal(platformLabel('@zhin.js/adapter-icqq'), 'ICQQ 协议端')
   assert.equal(platformLabel('custom'), 'custom')
   for (const platform of ONBOARDING_PLATFORMS) for (const text of [platform.title, platform.badge, platform.desc]) if (/[\u3400-\u9fff]/u.test(text)) assert.ok(englishMessages[text], text)
-})
-
-test('mapping rules: no request at 全局; malformed layers and removed rules are dropped', () => {
-  assert.equal(chatRoleMappingsRequest({ level: 'global' }), null)
-  assert.deepEqual(chatRoleMappingsRequest({ adapter: 'qq', endpoint: 'bot' }), { type: 'chat-roles.mappings', level: 'endpoint', key: 'qq/bot' })
-  const read = readChatRoleMappings({
-    layers: [{ level: 'default', rules: [{ match: { standing: ['owner', 1] }, grant: 'admin' }, { match: {}, grant: 'boss' }] }, { level: 'nope', rules: [] },
-      { level: 'conversation', rules: [], inherit: false, revision: 3 }],
-    effective: [{ match: { standing: ['owner'] }, grant: 'admin', level: 'default' }, { match: { role: ['x'] }, grant: 'none', level: 'adapter' }, { match: {}, grant: 'admin' }],
-  })
-  assert.deepEqual(read.layers.map(layer => [layer.level, layer.rules.length, layer.inherit]), [['default', 1, true], ['conversation', 0, false]])
-  assert.deepEqual(read.layers[0].rules[0].match, { standing: ['owner'], role: [], permission: [] })
-  assert.equal(read.layers[1].revision, 3)
-  assert.deepEqual(read.effective, [{ match: { standing: ['owner'], role: [], permission: [] }, grant: 'admin', level: 'default' }])
-  assert.deepEqual(readChatRoleMappings(null), { layers: [], effective: [] })
-  assert.deepEqual(mappingMatchParts(undefined), { standing: [], role: [], permission: [] })
 })
 
 test('one breadcrumb per page: object pages below 全局 own it, the shell keeps it elsewhere', () => {

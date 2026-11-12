@@ -19,9 +19,10 @@ test('chat-roles.list asks for the scope by level and resolution key', () => {
   for (const label of Object.values(CHAT_ROLE_SOURCE_LABELS)) assert.ok(Object.hasOwn(englishMessages, label), label)
 })
 
-test('entries are validated; rows separate this level, inherited and lower scopes with their sources', () => {
+test('entries are validated; only grants are zhin roles; rows separate this level, inherited and lower scopes', () => {
   const entries = readChatRoles({ roles: [
-    entry('global', '', 'g', 'owner', 'config', { detail: 'ai.trigger.masters' }),
+    entry('global', '', 'g', 'owner'),
+    entry('global', '', 'cfg', 'owner', 'config', { detail: 'ai.trigger.masters' }),
     entry('adapter', 'qq', 'a', 'admin'),
     entry('conversation', KEY, 'c', 'trusted', 'grant', { grantedBy: 'console:owner', grantedAt: 5 }),
     entry('conversation', KEY, 'm', 'admin', 'mapping'),
@@ -32,12 +33,12 @@ test('entries are validated; rows separate this level, inherited and lower scope
     { ...entry('global', '', 'bad', 'admin', 'guess') },
     null,
   ] })
-  assert.equal(entries.length, 5)
+  assert.equal(entries.length, 4)
   const rows = chatRoleRows(entries, CONVERSATION)
   assert.deepEqual(rows.map(row => [row.userId, row.relation, row.revocable]), [
-    ['m', 'direct', false], ['c', 'direct', true], ['g', 'inherited', false], ['a', 'inherited', false], ['x', 'below', false],
+    ['c', 'direct', true], ['g', 'inherited', false], ['a', 'inherited', false], ['x', 'below', false],
   ])
-  assert.equal(rows.find(row => row.userId === 'g').detail, 'ai.trigger.masters')
+  assert.ok(!rows.some(row => row.userId === 'm' || row.userId === 'cfg'), 'platform standing (mapping) and config entries are not zhin roles')
   assert.equal(new Set(rows.map(row => row.id)).size, rows.length)
   assert.deepEqual(readChatRoles(null), [])
 })
@@ -65,7 +66,7 @@ test('after an unknown outcome a re-read tells whether the grant is stored', () 
   const stored = [entry('conversation', KEY, '1', 'admin'), entry('conversation', KEY, '2', 'admin', 'mapping')]
   assert.equal(chatRoleApplied(stored, CONVERSATION, { adapter: 'qq', userId: '1', role: 'admin' }, 'grant'), true)
   assert.equal(chatRoleApplied(stored, CONVERSATION, { adapter: 'qq', userId: '1', role: 'owner' }, 'grant'), false)
-  assert.equal(chatRoleApplied(stored, CONVERSATION, { adapter: 'qq', userId: '2', role: 'admin' }, 'grant'), false, 'a mapping is not a grant')
+  assert.equal(chatRoleApplied(stored, CONVERSATION, { adapter: 'qq', userId: '2', role: 'admin' }, 'grant'), false, 'only a stored grant counts')
   assert.equal(chatRoleApplied(stored, CONVERSATION, { adapter: 'qq', userId: '1' }, 'revoke'), false)
   assert.equal(chatRoleApplied(stored, CONVERSATION, { adapter: 'qq', userId: '3' }, 'revoke'), true)
 })
