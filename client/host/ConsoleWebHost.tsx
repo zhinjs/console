@@ -39,7 +39,7 @@ function DashboardHome() {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
       <h1 className="text-2xl font-semibold mb-2 text-foreground">Zhin Console</h1>
-      <p className="text-sm">{i18n.t("从侧栏选择一个页面，或安装注册控制台路由的插件。")}</p>
+      <p className="text-sm">{i18n.t("从顶部导航选择一个页面，或安装注册控制台路由的插件。")}</p>
     </div>
   );
 }

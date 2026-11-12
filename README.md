@@ -47,7 +47,7 @@ https://console.zhin.dev/#apiBaseUrl=127.0.0.1:8086&token=<令牌>
 ### 账号登录、初始化与引导（zhinjs/zhin ADR 0049 / 0053）
 
 - 登录页默认「账号登录」（用户名 + 密码，`POST /api/auth/login`，返回的会话令牌与访问令牌一样以 Bearer 保存）；「访问令牌」用于 API 令牌、初始化令牌和不支持账号的旧 Host。`#token=` 链接总是走令牌登录。
-- 登录后先读 `GET /api/auth/me`：`permissions` 交给 `setConsoleAccess`，侧栏按权限隐藏分区；旧 Host（404）按不受限处理。
+- 登录后先读 `GET /api/auth/me`：`permissions` 交给 `setConsoleAccess`，导航按权限隐藏分区；旧 Host（404）按不受限处理。
 - 初始化令牌（`/api/system/status` 返回 403 且 `/auth/me` 报告 `bootstrap` + `setupRequired`）只打开初始化向导：第 1 步数据库（保持当前数据库，或选择驱动、填写连接、测试、保存后等待 Host 重启），第 2 步创建所有者；完成后改用所有者会话并进入 `/onboarding`。初始化令牌不会保存到「已保存的连接」，也只保留在本次浏览器会话。
 - 引导页 `/onboarding`：AI、聊天平台、完成三步，可跳过；进度优先读 Host 报告的 `onboarding`（`/auth/setup` 或 `/auth/me`），用 `onboarding.update` RPC 记录；Host 不支持时保存在本浏览器。未完成时页面顶部显示入口横幅。
 - 个人设置 `/account`（顶栏用户名进入）：修改密码（`POST /api/auth/password`，成功后换用 Host 返回的新会话），我的 API 令牌（`/api/auth/tokens` 列表 / 新建 / 吊销，明文只显示一次）。
@@ -57,7 +57,7 @@ Console 没有单独的演示构建：公开演示是一台真实 Host，访客�
 
 ## 导航
 
-侧栏按 zhinjs/zhin ADR 0052 分为六个区，前四个是「日常」，后两个是「管理」（`console-ui/src/navigation-sections.mjs`，路由表 `console-ui/src/console-routes.mjs`）：
+导航按 zhinjs/zhin ADR 0052 分为六个区，前四个是「日常」，后两个是「管理」（`console-ui/src/navigation-sections.mjs`，路由表 `console-ui/src/console-routes.mjs`）。宽屏（≥1100px）时它们排在页面顶部的悬浮导航栏里：只有一个页面的区是直接链接，有多个页面的区点开是下拉菜单；更窄的屏幕把同样的导航放进左侧抽屉（左上角菜单按钮打开，Esc 或点遮罩关闭）。导航栏右侧是快速跳转（Ctrl/⌘ K）、实时连接状态、语言、外观、个人设置与退出：
 
 | 区 | 菜单里的页面 | 不在菜单里、从上级页面进入 |
 |------|------|------|
@@ -70,7 +70,7 @@ Console 没有单独的演示构建：公开演示是一台真实 Host，访客�
 
 - 某个区里没有当前身份能看的页面时，整个区不显示。Host 还没有报告权限时（RBAC 之前的所有 Host）按不受限处理，由 Host 自己拒绝越权请求。
 - 功能矩阵目前只有「全局」一列（来自插件启用状态）；Host 提供 `feature.matrix` 后自动出现每个适配器的列（`pages/features/use-feature-data.ts` 的 `useFeatureMatrix`）。账号配置页用 `feature.get` 探测 Host 是否支持分层配置，旧 Host 返回 “Unknown RPC type” 时提示需要更新。
-- 对象树（`console-ui/src/scope/`）：每个对象一页，页签由层级决定——全局 / 适配器：概览 · 功能 · 角色 · 记录；账号另有聊天（账号工作区）与接入（登录、测试连接）；会话另有聊天。`?tab=` 记住页签。「功能」页签每个插件一行（有效状态、来源层级、本层覆盖、锁定层级链接），展开逐字段显示继承值 / 本层覆盖 / 有效值 / 来源，写操作走操作回执；全局「功能」是功能总览，`?view=matrix` 切到矩阵（`/features` 仍是矩阵的独立入口）。账号「接入」只讲这个账号：连接与测试、登录验证、配置入口；Host 当前没有运行的账号会说明原因，不显示空列表。角色页签读写 `chat-roles.list|grant|revoke`（ADR 0056，需要 `iam.manage`）。zhin 角色只来自授予；平台群主/管理员是平台身份，不映射为 zhin 角色，单独影响平台相关能力。对象页（全局以下）只显示自己的范围面包屑，顶栏面包屑让位。设计与排版规范见 `docs/console-refactor-guidelines.md`。
+- 对象树（`console-ui/src/scope/`）：每个对象一页，页签由层级决定——全局 / 适配器：概览 · 功能 · 角色 · 记录；账号另有聊天（账号工作区）与接入（登录、测试连接）；会话另有聊天。`?tab=` 记住页签。「功能」页签每个插件一行（有效状态、来源层级、本层覆盖、锁定层级链接），展开逐字段显示继承值 / 本层覆盖 / 有效值 / 来源，写操作走操作回执；全局「功能」是功能总览，`?view=matrix` 切到矩阵（`/features` 仍是矩阵的独立入口）。账号「接入」只讲这个账号：连接与测试、登录验证、配置入口；Host 当前没有运行的账号会说明原因，不显示空列表。角色页签读写 `chat-roles.list|grant|revoke`（ADR 0056，需要 `iam.manage`）。zhin 角色只来自授予；平台群主/管理员是平台身份，不映射为 zhin 角色，单独影响平台相关能力。对象页（全局以下）只显示自己的范围面包屑，页面顶部的通用面包屑让位。设计与排版规范见 `docs/console-refactor-guidelines.md`。
 - 实例不可用（网关 503 `instance_unavailable` / 504 `instance_timeout` / 502 `instance_error`）时 shell 顶部显示横幅：Retry-After 倒计时、自动重试、去「实例」页；访问控制、实例、终端等网关页不受影响。
 - 旧路由保留为隐藏重定向（`LEGACY_ROUTE_REDIRECTS`）：`/endpoints` → `/scope`、`/endpoints/:a/:e` → 账号「聊天」（带 `channelType` + `channelId` 时到该会话的「聊天」）、`/features/adapters[/:a]` → `/scope[/:a]`、`/features/adapters/:a/endpoints/:e` → 账号「功能」（`?tab=conversations` → 账号概览）、`…/conversations/:c` → 会话「功能」；`/config` → `/ops/config`（`/config?plugin=x` → `/features/global/x`）、`/env` `/files` `/database` → `/ops/*`、`/tasks` `/cron` `/assistant/jobs` → `/ops/schedules`、`/agent/models` `/agent/skills` `/agent/ambient` `/agent/workrooms*` → `/features/ai/*`。
 - 插件页面按 `/entries` 里声明的 `section`（区 id 如 `ops`，或区名如 `运维`）落区，未声明的进「功能」。`常用`、`机器人`、`高级` 等旧分组名仍可用，不是区名的分组显示在「功能」里。

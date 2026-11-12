@@ -496,7 +496,7 @@
   @media (min-width: 1100px) and (max-width: 1399px) {
     .console-topnav-actions .console-command-trigger { min-width: 0; }
     .console-topnav-actions .console-command-trigger > span { display: none; }
-    .console-brand-text { display: none; }
+    .console-topnav .console-brand-text { display: none; }
     .console-topnav-item { padding: 0 0.625rem; }
   }
 
@@ -508,7 +508,7 @@
   @media (max-width: 767px) {
     .console-app-shell { --console-header-h: 4.25rem; --console-nav-capsule-h: 3.25rem; --console-nav-logo: 2rem; }
     .console-topnav { padding: 0.625rem 0.75rem 0; }
-    .console-brand-text { display: none; }
+    .console-topnav .console-brand-text { display: none; }
     .console-topnav-actions { gap: 0.125rem; }
     .console-topnav-actions .console-command-trigger { width: 2.75rem; height: 2.75rem; justify-content: center; padding: 0; border-radius: 999px; }
     .console-topnav-actions .console-command-trigger > span,
