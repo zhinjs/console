@@ -22,7 +22,7 @@
 
 /* ---- ActionReceipt ---- */
 .console-receipt {
-  display: flex; flex-direction: column; gap: 0.5rem; border: 1px solid var(--console-border-default); border-radius: var(--console-radius-lg);
+  display: flex; flex-direction: column; gap: 0.5rem; border: var(--console-border-width) solid transparent; border-radius: var(--console-radius-lg);
   background: hsl(var(--card)); padding: 0.875rem 1rem; box-shadow: var(--console-shadow-sm);
 }
 .console-receipt--succeeded { border-color: hsl(var(--success) / 0.45); }

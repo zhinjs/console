@@ -182,7 +182,7 @@
 .im-tabs-list { border: 1px solid hsl(var(--border)); border-radius: 8px; background: hsl(var(--muted)); }
 .im-tabs-list [data-state="active"] { background: hsl(var(--card)); color: hsl(var(--foreground)); }
 .im-system-content { padding: 20px; }
-.im-inbox-card { border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--card)); box-shadow: none; }
+.im-inbox-card { border: var(--console-border-width) solid transparent; border-radius: 10px; background: hsl(var(--card)); box-shadow: var(--console-shadow-sm); }
 .im-empty-state { flex: 0 1 auto; align-self: center; width: min(100%,400px); min-height: 150px; padding: 24px; border: 1px dashed hsl(var(--border)); border-radius: 12px; background: transparent; text-align: center; }
 .im-message-list > .im-empty-state, .im-center > .im-empty-state { margin: auto; }
 .im-empty-state--hero { min-height: 200px; }
@@ -198,7 +198,7 @@
 .im-member-role-tabs { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
 .im-member-role-tabs button { min-width: 0; min-height: 32px; border: 1px solid hsl(var(--border)); border-radius: 6px; background: hsl(var(--card)); color: hsl(var(--muted-foreground)); font-size: 12px; cursor: pointer; }
 .im-member-role-tabs button.active { background: hsl(var(--accent)); color: hsl(var(--foreground)); }
-.im-member-card { border: 1px solid hsl(var(--border)); border-radius: 10px; background: hsl(var(--card)); box-shadow: var(--console-shadow-xs); transition: border-color 150ms ease, box-shadow 150ms ease; }
+.im-member-card { border: var(--console-border-width) solid transparent; border-radius: 10px; background: hsl(var(--card)); box-shadow: var(--console-shadow-sm); transition: border-color 150ms ease, box-shadow 150ms ease; }
 .im-member-card:hover { border-color: hsl(var(--primary) / .3); box-shadow: var(--console-shadow-sm); }
 .im-member-card--owner { border-color: hsl(var(--warning) / .3); }
 .im-member-card--admin { border-color: hsl(var(--info) / .3); }

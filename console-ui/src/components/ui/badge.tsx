@@ -7,10 +7,10 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "border-transparent bg-primary text-primary-foreground",
-        secondary: "border-transparent bg-secondary text-secondary-foreground",
+        default: "border-[hsl(var(--primary-action-border))] bg-[hsl(var(--primary-action))] text-[hsl(var(--primary-action-foreground))]",
+        secondary: "border-transparent bg-[hsl(var(--foreground)/0.06)] text-secondary-foreground",
         destructive: "border-transparent bg-destructive text-destructive-foreground",
-        outline: "text-foreground",
+        outline: "border-[color:var(--console-border-strong)] text-foreground",
         success: "console-badge-success",
         warning: "console-badge-warning",
         info: "console-badge-info",

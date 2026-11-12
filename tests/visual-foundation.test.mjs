@@ -36,20 +36,34 @@ for (const palette of THEME_PALETTES) for (const dark of [false, true]) {
     assert.equal(tokens.background.s === 0, palette.id === 'graphite', 'only Graphite intentionally removes surface tint')
   })
 }
-test('fresh palettes brighten surfaces and action fills without weakening link text or calm themes', () => {
-  for (const palette of THEME_PALETTES) {
-    const tokens = tokensFor(palette.id, false)
-    if (palette.group === 'fresh') {
-      assert.ok(tokens['primary-action'].s >= 75 && tokens['primary-action'].l >= 50)
-      assert.ok(tokens.background.s >= 50 && tokens.background.l >= 96)
-      assert.ok(tokens['im-bubble-out'].s >= 50)
-      assert.notDeepEqual(tokens['primary-action'], tokens.primary, 'bright fills and readable link colors have different jobs')
-    } else assert.deepEqual(tokens['primary-action'], tokens.primary, 'existing calm button colors are preserved')
+test('surfaces stay neutral: a gray canvas carries white cards, and the palette hue tints only faintly', () => {
+  for (const palette of THEME_PALETTES) for (const dark of [false, true]) {
+    const tokens = tokensFor(palette.id, dark)
+    assert.ok(tokens.background.s <= 16, `${palette.id}: canvas saturation ${tokens.background.s}`)
+    if (!dark) {
+      assert.equal(tokens.card.l, 100, 'cards are white in the light theme')
+      assert.ok(tokens.background.l >= 94 && tokens.background.l <= 97, 'the canvas is a light gray, not white')
+      assert.ok(tokens.secondary.l > tokens.background.l && tokens.secondary.l < tokens.card.l, 'grouped fills sit between canvas and card')
+    } else {
+      assert.ok(tokens.background.l < tokens.card.l && tokens.card.l < tokens.secondary.l, 'dark surfaces step up from canvas to card to grouped fill')
+    }
   }
+})
+test('primary actions are a soft tint of the palette hue with hue-colored text; links keep the readable accent', () => {
+  for (const palette of THEME_PALETTES) for (const dark of [false, true]) {
+    const tokens = tokensFor(palette.id, dark)
+    assert.deepEqual(tokens['primary-action-foreground'], tokens.primary, 'action text is the accent color')
+    assert.equal(tokens['primary-action'].h, tokens.primary.h, 'the tint shares the accent hue')
+    if (!dark) assert.ok(tokens['primary-action'].l >= 92, `${palette.id}: tint lightness ${tokens['primary-action'].l}`)
+    else assert.ok(tokens['primary-action'].l <= 22, `${palette.id}: dark tint lightness ${tokens['primary-action'].l}`)
+  }
+  // The default palette is the blue accent.
+  const ocean = tokensFor('ocean', false).primary
+  assert.ok(ocean.h >= 205 && ocean.h <= 222 && ocean.s >= 70)
 })
 test('status semantics and chart category colors do not change with decorative palette selection', () => {
   for (const dark of [false, true]) for (const palette of THEME_PALETTES) {
-    const current = tokensFor(palette.id, dark), reference = tokensFor('forest', dark)
+    const current = tokensFor(palette.id, dark), reference = tokensFor('ocean', dark)
     for (const name of ['destructive', 'success', 'info', 'warning', ...[1, 2, 3, 4, 5, 6, 7, 8].map(n => 'chart-' + n)]) assert.deepEqual(current[name], reference[name])
   }
 })

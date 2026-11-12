@@ -137,9 +137,10 @@
     justify-content: space-between;
     gap: 0.625rem 1rem;
     padding: 0.625rem 0.75rem;
-    border: 1px solid var(--console-border-default);
+    border: var(--console-border-width) solid transparent;
     border-radius: var(--console-radius-md);
     background: hsl(var(--card));
+    box-shadow: var(--console-shadow-sm);
   }
 
   .console-endpoints-filter-group {
@@ -241,9 +242,10 @@
     flex-direction: column;
     gap: 0.75rem;
     padding: 0.875rem;
-    border: 1px solid var(--console-border-default);
+    border: var(--console-border-width) solid transparent;
     border-radius: var(--console-radius-sm);
     background: hsl(var(--card));
+    box-shadow: var(--console-shadow-sm);
   }
 
   .console-login-task-header {
@@ -309,9 +311,10 @@
     flex-direction: column;
     gap: 0.875rem;
     padding: 1rem;
-    border: 1px solid var(--console-border-default);
+    border: var(--console-border-width) solid transparent;
     border-radius: var(--console-radius-md);
     background: hsl(var(--card));
+    box-shadow: var(--console-shadow-sm);
   }
 
   .console-onboarding-head {
@@ -403,10 +406,10 @@
   }
 
   .console-task-row {
-    border: var(--console-border-width) solid var(--console-border-default);
+    border: var(--console-border-width) solid transparent;
     border-radius: var(--console-radius-lg);
     background: hsl(var(--card));
-    box-shadow: var(--console-shadow-xs);
+    box-shadow: var(--console-shadow-sm);
     transition: border-color 160ms ease, box-shadow 160ms ease;
   }
 

@@ -8,7 +8,9 @@
   .console-login-intro p { margin: 0; color: hsl(var(--muted-foreground)); font-size: 14px; line-height: 1.8; }
   .console-login-notes { display: flex; align-items: center; gap: 8px; margin-top: 24px; color: hsl(var(--muted-foreground)); font-size: 12px; }
   .console-login-notes svg { width: 15px; height: 15px; flex: none; }
-  .console-login-panel { padding: 28px; border: 1px solid hsl(var(--border)); border-radius: 14px; background: hsl(var(--card)); }
+  .console-login-panel { padding: 28px; border: var(--console-border-width) solid transparent; border-radius: 14px; background: hsl(var(--card));
+    box-shadow: var(--console-shadow-sm);
+  }
   .console-login-panel-head { display: flex; justify-content: flex-end; margin-bottom: 24px; }
   .console-login-form { display: grid; gap: 20px; }
   .console-login-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 20px; padding: 4px; border-radius: 10px; background: hsl(var(--muted) / .6); }
@@ -33,6 +35,8 @@
     .console-login-brand { margin-bottom: 24px; }
     .console-login-intro h1 { font-size: 26px; margin-bottom: 10px; }
     .console-login-notes { margin-top: 12px; }
-    .console-login-panel { padding: 20px; }
+    .console-login-panel { padding: 20px;
+    box-shadow: var(--console-shadow-sm);
+  }
   }
 }

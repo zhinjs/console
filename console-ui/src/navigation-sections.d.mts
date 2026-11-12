@@ -3,7 +3,7 @@ import type { ConsoleAccess } from './utils/console-access.mjs'
 export type NavTierId = 'daily' | 'admin'
 export type NavSectionId = 'overview' | 'sessions' | 'features' | 'plugins' | 'ops' | 'access'
 export interface NavTier { readonly id: NavTierId; readonly label: string }
-export interface NavSection { readonly id: NavSectionId; readonly label: string; readonly tier: NavTierId; readonly permissions: readonly string[] }
+export interface NavSection { readonly id: NavSectionId; readonly icon: string; readonly label: string; readonly tier: NavTierId; readonly permissions: readonly string[] }
 type RouteLike = { path: string; requiredPermissions?: readonly string[]; section?: unknown; meta?: { hideInMenu?: boolean; group?: string; order?: number; [key: string]: unknown } }
 
 export const NAV_TIERS: readonly NavTier[]

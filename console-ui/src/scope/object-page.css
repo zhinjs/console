@@ -10,7 +10,7 @@
 .console-object-heading { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.75rem 1rem; min-width: 0; }
 .console-object-avatar {
   display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem;
-  border-radius: var(--console-radius-lg); background: hsl(var(--primary) / 0.1); color: hsl(var(--primary));
+  border-radius: var(--console-radius-lg); background: hsl(var(--primary-action)); color: hsl(var(--primary)); box-shadow: inset 0 0 0 1px hsl(var(--primary-action-border) / 0.6);
 }
 .console-object-avatar svg { width: 1.375rem; height: 1.375rem; }
 .console-object-titles { display: flex; min-width: 0; flex: 1 1 24rem; flex-direction: column; gap: 0.25rem; }
@@ -48,12 +48,12 @@
 /* The account / conversation chat workspace keeps a fixed working height inside the tab. */
 .console-object-chat {
   height: clamp(28rem, calc(100dvh - 17rem), 64rem); min-height: 0; overflow: hidden;
-  border: var(--console-border-width, 1px) solid var(--console-border-default); border-radius: var(--console-radius-lg); background: hsl(var(--card));
+  border: var(--console-border-width, 1px) solid transparent; border-radius: var(--console-radius-xl); background: hsl(var(--card)); box-shadow: var(--console-shadow-sm);
 }
 
 @media (min-width: 1440px) {
   .console-object-page.has-aside .console-object-body { display: grid; grid-template-columns: 18rem minmax(0, 1fr); align-items: start; gap: 1.5rem; }
-  .console-object-aside { position: sticky; top: 0; }
+  .console-object-aside { position: sticky; top: calc(var(--console-header-h, 4.5rem) + 1rem); }
 }
 @media (max-width: 767px) {
   .console-object-page { gap: 0.75rem; }
@@ -69,7 +69,7 @@
 .console-scope-breadcrumb ol { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; margin: 0; padding: 0; list-style: none; font-size: var(--console-text-caption); }
 .console-scope-breadcrumb li { display: inline-flex; min-width: 0; align-items: center; gap: 0.25rem; }
 .console-scope-crumb { display: inline-flex; max-width: 16rem; align-items: baseline; gap: 0.25rem; border-radius: var(--console-radius-sm); padding: 0.125rem 0.25rem; color: hsl(var(--muted-foreground)); text-decoration: none; }
-a.console-scope-crumb:hover { background: hsl(var(--accent)); color: hsl(var(--accent-foreground)); }
+a.console-scope-crumb:hover { background: var(--console-surface-hover); color: hsl(var(--foreground)); }
 a.console-scope-crumb:focus-visible { outline: var(--console-focus-width) solid hsl(var(--ring)); outline-offset: 1px; }
 .console-scope-crumb.is-current { color: hsl(var(--foreground)); font-weight: 600; }
 .console-scope-crumb-level { flex-shrink: 0; opacity: 0.75; font-weight: 400; }
@@ -86,9 +86,9 @@ a.console-scope-crumb:focus-visible { outline: var(--console-focus-width) solid 
   display: flex; min-height: 2.5rem; align-items: center; gap: 0.5rem; border-radius: var(--console-radius-md); padding-block: 0.375rem; padding-inline-end: 0.5rem;
   color: hsl(var(--foreground)); text-decoration: none;
 }
-.console-scope-picker-item:hover { background: hsl(var(--accent)); }
+.console-scope-picker-item:hover { background: var(--console-surface-hover); }
 .console-scope-picker-item:focus-visible { outline: var(--console-focus-width) solid hsl(var(--ring)); outline-offset: -2px; }
-.console-scope-picker-item.is-current { background: hsl(var(--primary) / 0.1); color: hsl(var(--primary)); font-weight: 600; }
+.console-scope-picker-item.is-current { background: hsl(var(--primary-action)); color: hsl(var(--primary)); font-weight: 600; }
 .console-scope-picker-icon { width: 1rem; height: 1rem; flex-shrink: 0; opacity: 0.8; }
 .console-scope-picker-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--console-text-body-sm); }
 .console-scope-picker-identity { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); font-weight: 400; }
