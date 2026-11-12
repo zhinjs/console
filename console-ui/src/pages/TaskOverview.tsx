@@ -18,25 +18,21 @@ import { readTaskProviders } from './task-center-model.mjs'
 import { validateAssistantJobs } from './assistant-jobs-model.mjs'
 import { readToolApprovals } from './tool-approvals-model.mjs'
 import { taskTabHref } from './task-hub-model.mjs'
-import { filterTaskOverview, taskOverviewRows, type TaskOverviewRow, type TaskOverviewSources } from './task-overview-model.mjs'
+import { filterTaskOverview, TASK_OVERVIEW_FILTERS, taskOverviewRows, type TaskOverviewFilter, type TaskOverviewRow, type TaskOverviewSources } from './task-overview-model.mjs'
 import './insights/insights.css'
 
 const READ_TIMEOUT_MS = 8_000
-const TYPE_FILTERS = [
-  { id: 'all', label: '全部' },
-  { id: 'admin', label: '管理员任务' },
-  { id: 'schedule', label: '定时提醒' },
-  { id: 'assistant', label: '助手任务' },
-  { id: 'approval', label: '待审批' },
-] as const
 const SOURCE_LABELS: Record<string, string> = { admin: '管理员任务', schedule: '定时提醒', assistant: '助手任务', approvals: '工具审批' }
 
-/** 「全部任务」：四个来源各读一次，任一失败只在顶部列出，其余照常显示。 */
+/**
+ * 「全部任务」：四个来源各读一次，任一失败只在顶部列出，其余照常显示。
+ * 按类型看由上方页签负责，这里只按状态筛（需要处理 / 已暂停），类型作为表格的一列。
+ */
 export function TaskOverview({ connectionScope }: { connectionScope: string }) {
   const i18n = useI18n()
   const [sources, setSources] = useState<TaskOverviewSources | null>(null)
   const [loading, setLoading] = useState(true)
-  const [type, setType] = useState<string>('all')
+  const [filter, setFilter] = useState<TaskOverviewFilter>('all')
   const approvalsReadable = hasConsolePermission('agent.configure')
 
   const load = useCallback(async () => {
@@ -64,19 +60,19 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
 
   if (loading && !sources) return <div className="space-y-2" aria-label={i18n.t("正在读取任务")}><Skeleton className="h-10" /><Skeleton className="h-40" /></div>
   const { rows, unavailable } = taskOverviewRows(sources ?? {}, i18n.locale)
-  const shown = filterTaskOverview(rows, type)
+  const shown = filterTaskOverview(rows, filter)
   const time = (value: number | null | undefined) => value ? new Date(value).toLocaleString(i18n.locale) : '—'
   const allFailed = unavailable.length >= 3 && rows.length === 0
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap gap-1" role="group" aria-label={i18n.t("按类型筛选")}>
-          {TYPE_FILTERS.map(filter => {
-            const count = filter.id === 'all' ? rows.length : rows.filter(row => row.type === filter.id).length
+        <div className="flex flex-wrap gap-1" role="group" aria-label={i18n.t("按状态筛选")}>
+          {TASK_OVERVIEW_FILTERS.map(option => {
+            const count = filterTaskOverview(rows, option.id).length
             return (
-              <Button key={filter.id} size="sm" variant={type === filter.id ? 'secondary' : 'ghost'} aria-pressed={type === filter.id} onClick={() => setType(filter.id)}>
-                {i18n.t(filter.label)} <span className="tabular-nums text-muted-foreground">{count}</span>
+              <Button key={option.id} size="sm" variant={filter === option.id ? 'secondary' : 'ghost'} aria-pressed={filter === option.id} onClick={() => setFilter(option.id)}>
+                {i18n.t(option.label)} <span className="tabular-nums text-muted-foreground">{count}</span>
               </Button>
             )
           })}
@@ -92,9 +88,17 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
       {allFailed ? (
         <StatusState kind="error" title={i18n.t("任务暂时读不到")} description={i18n.t("管理员任务、定时提醒和助手任务都没有读到；连接恢复后刷新。")} onRetry={() => void load()} />
       ) : !shown.length ? (
-        <StatusState kind="empty" title={type === 'all' ? i18n.t("还没有任务") : i18n.t("这一类还没有任务")}
-          description={i18n.t("管理员任务在「管理员任务」页签创建；定时提醒由插件或 AI 助手创建。")}
-          actions={<Button asChild size="sm" variant="outline"><Link to={taskTabHref('admin')}>{i18n.t("创建管理员任务")}</Link></Button>} />
+        filter === 'all' ? (
+          <StatusState kind="empty" title={i18n.t("还没有任务")}
+            description={i18n.t("管理员任务在「管理员任务」页签创建；定时提醒由插件或 AI 助手创建。")}
+            actions={<Button asChild size="sm" variant="outline"><Link to={taskTabHref('admin')}>{i18n.t("创建管理员任务")}</Link></Button>} />
+        ) : (
+          <StatusState kind="empty" title={filter === 'attention' ? i18n.t("没有需要处理的任务") : i18n.t("没有已暂停的任务")}
+            description={filter === 'attention'
+              ? i18n.t("运行失败、结果不确定的任务和等待审批的工具调用会列在这里。")
+              : i18n.t("暂停的任务会列在这里，到它所在的页签恢复。")}
+            actions={<Button size="sm" variant="outline" onClick={() => setFilter('all')}>{i18n.t("查看全部任务")}</Button>} />
+        )
       ) : (
         <>
           <Card className="console-task-overview-table overflow-hidden">

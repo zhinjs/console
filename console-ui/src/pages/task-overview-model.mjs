@@ -165,7 +165,24 @@ export function taskOverviewRows(sources, locale = 'zh-CN') {
   return { rows, unavailable }
 }
 
-/** 按类型筛选；`all` 不筛。 */
-export function filterTaskOverview(rows, type) {
-  return !type || type === 'all' ? rows : rows.filter(row => row.type === type)
+/**
+ * 状态筛选（不按类型：类型由上方页签负责）。`attention` 是需要人处理的行——待审批、失败、结果不确定或
+ * 最近一次运行失败；`paused` 是已暂停；`all` 不筛。
+ */
+export const TASK_OVERVIEW_FILTERS = Object.freeze([
+  Object.freeze({ id: 'all', label: '全部' }),
+  Object.freeze({ id: 'attention', label: '需要处理' }),
+  Object.freeze({ id: 'paused', label: '已暂停' }),
+])
+
+export function needsAttention(row) {
+  return row.type === 'approval'
+    || row.status.tone === 'destructive' || row.status.tone === 'warning'
+    || row.lastResult?.tone === 'destructive'
+}
+
+export function filterTaskOverview(rows, filter) {
+  if (filter === 'attention') return rows.filter(needsAttention)
+  if (filter === 'paused') return rows.filter(row => row.status.code === 'paused')
+  return rows
 }

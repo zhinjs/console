@@ -22,4 +22,7 @@ export interface TaskOverviewSources {
   approvals?: { pending: ReadonlyArray<Record<string, any>> } | null
 }
 export function taskOverviewRows(sources: TaskOverviewSources, locale?: 'zh-CN' | 'en'): { rows: TaskOverviewRow[]; unavailable: string[] }
-export function filterTaskOverview(rows: TaskOverviewRow[], type: string): TaskOverviewRow[]
+export type TaskOverviewFilter = 'all' | 'attention' | 'paused'
+export const TASK_OVERVIEW_FILTERS: ReadonlyArray<{ readonly id: TaskOverviewFilter; readonly label: string }>
+export function needsAttention(row: TaskOverviewRow): boolean
+export function filterTaskOverview(rows: TaskOverviewRow[], filter: string): TaskOverviewRow[]

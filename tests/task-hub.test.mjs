@@ -45,3 +45,17 @@ test('in-app links point at hub tabs, not retired routes', async () => {
   for (const panel of ['TaskCenterPage', 'CronPage', 'AssistantJobsPage', 'ScheduleExecutions']) assert.match(hub, new RegExp(`<${panel}\\b`))
   assert.match(hub, /useSearchParams/)
 })
+
+test('the summary cards live inside 全部任务, so tabs are the only task navigation', async () => {
+  const hub = await src('pages/task-hub.tsx')
+  const page = hub.slice(hub.indexOf('export default function TaskHubPage'))
+  assert.doesNotMatch(page, /<StatGrid/, 'no stat cards above the tabs')
+  assert.match(hub.slice(hub.indexOf('function OverviewPanel'), hub.indexOf('export default function TaskHubPage')), /<StatGrid[\s\S]*<TaskOverview/)
+  assert.doesNotMatch(hub, /pressed=/, 'cards open a tab; they are not a filter')
+})
+
+test('tab and filter labels are authored constants with English entries', async () => {
+  const { englishMessages } = await import('../console-ui/src/i18n/messages.en.mjs')
+  const { TASK_OVERVIEW_FILTERS } = await import('../console-ui/src/pages/task-overview-model.mjs')
+  for (const { label } of [...TASK_HUB_TABS, ...TASK_OVERVIEW_FILTERS]) assert.equal(typeof englishMessages[label], 'string', label)
+})

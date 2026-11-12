@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { filterTaskOverview, taskOverviewRows } from '../console-ui/src/pages/task-overview-model.mjs'
+import { filterTaskOverview, TASK_OVERVIEW_FILTERS, taskOverviewRows } from '../console-ui/src/pages/task-overview-model.mjs'
 import { profileUsages } from '../console-ui/src/pages/inference/model.mjs'
 
 const target = { endpoint: { id: 'bot-1', adapter: 'qq' }, kind: 'group', id: 'room/1' }
@@ -32,8 +32,18 @@ test('one list covers every source with type, status, next run, last result, tar
   assert.equal(rows.find(row => row.key === 'persistent:job-1').status.code, 'paused')
   assert.equal(rows.filter(row => row.key.endsWith('job-1')).length, 1, 'a stored reminder is also an assistant job; it is listed once')
   assert.equal(rows[0].approval.startsWith('等待审批'), true)
-  assert.deepEqual(filterTaskOverview(rows, 'schedule').map(row => row.type), ['schedule', 'schedule'])
   assert.equal(filterTaskOverview(rows, 'all').length, rows.length)
+})
+
+test('the overview filters by status; task types are the hub tabs, not a second set of filters', () => {
+  const { rows } = taskOverviewRows(sources, 'zh-CN')
+  assert.deepEqual(TASK_OVERVIEW_FILTERS.map(filter => filter.id), ['all', 'attention', 'paused'])
+  assert.deepEqual(filterTaskOverview(rows, 'attention').map(row => row.key), ['approval:a1', 'assistant:job-2', 'admin:root/reminder:t2'])
+  assert.deepEqual(filterTaskOverview(rows, 'paused').map(row => row.key), ['persistent:job-1'])
+  assert.equal(filterTaskOverview(rows, 'bogus').length, rows.length)
+  const view = readFileSync(new URL('../console-ui/src/pages/TaskOverview.tsx', import.meta.url), 'utf8')
+  assert.doesNotMatch(view, /管理员任务' \}|按类型筛选/, 'no type filter repeats the tab labels')
+  assert.match(view, /TASK_OVERVIEW_FILTERS\.map/)
 })
 
 test('a source that could not be read is reported, not shown as having no tasks', () => {
