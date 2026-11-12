@@ -259,8 +259,10 @@ test('Endpoint transport uses canonical endpointKey and the public typed client 
   assert.match(endpointConsole, /loadInboxRequests\(false\)/)
   assert.match(endpointConsole, /loadInboxNotices\(false\)/)
   assert.match(endpointConsole, /unreadOnly:\s*true/)
-  assert.match(endpointConsole, /type: 'endpoint\.test'/)
-  assert.match(endpointConsole, /测试失败/)
+  // The connection test lives in the 接入 tab (endpoints.tsx), not in the chat workspace.
+  const access = sourceText(join(SOURCE_ROOT, 'pages', 'endpoints.tsx'))
+  assert.match(access, /'endpoint\.test'/)
+  assert.doesNotMatch(endpointConsole, /endpoint\.test/)
   assert.match(history, /loadInboxMessages\(\)/)
 })
 

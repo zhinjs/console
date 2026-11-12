@@ -4,7 +4,7 @@ import { useI18n } from '../../i18n'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
 import { StatusState } from '../../components/StatusState'
-import { EndpointWorkspaceView } from '../endpoint-detail'
+import { ConversationChatPanel } from './chat-panels'
 import { ConversationKindBadge } from '../features/conversation-list'
 import { useConversationList } from '../features/use-feature-data'
 import { ObjectPageLayout, ObjectSection, useScopeTab } from '../../scope/ObjectPageLayout'
@@ -56,11 +56,7 @@ export function ConversationObjectPage({ scope }: { scope: Scope & { level: 'con
             ) : null}
           </>
         ),
-        chat: (
-          <div className="console-object-chat">
-            <EndpointWorkspaceView target={{ adapter: scope.adapter!, endpointId: scope.endpoint!, channelType: scope.kind, channelId: scope.id }} />
-          </div>
-        ),
+        chat: <ConversationChatPanel scope={scope} />,
         features: levelMissing
           ? <StatusState kind={lookup.status === 'unsupported' ? 'unsupported' : 'forbidden'} permissions={['feature.view']}
             description={lookup.status === 'unsupported' ? i18n.t('按会话配置功能需要新版 Host。当前会话使用账号的配置。') : undefined} />

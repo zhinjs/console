@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { RefreshCw, ScrollText, Search, X } from 'lucide-react'
 import { useI18n } from '../../i18n'
 import { PageShell } from '../../components/PageShell'
@@ -16,6 +17,7 @@ import {
 import { iamErrorKind, type IamErrorKind } from './iam-request.mjs'
 import { FormField, IamLoadError } from './access-components'
 import { iamRequest, useIamUsers } from './use-iam'
+import { auditEntriesForTarget } from '../scope/records-model.mjs'
 
 const EMPTY_FILTER = { actor: '', action: '', since: '', until: '' }
 const KNOWN_ACTIONS = ['auth.login', 'auth.logout', 'auth.password', ...Object.values(IAM_RPC)]
@@ -33,6 +35,12 @@ export default function AccessAuditPage() {
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState<{ message: string; kind: IamErrorKind } | null>(null)
   const sequence = useRef(0)
+  // `?target=adapter:<alias>` / `endpoint:<alias>/<id>` from an object page's 记录 tab. The Host
+  // cannot filter by target, so the loaded pages are filtered here (and say so).
+  const [searchParams, setSearchParams] = useSearchParams()
+  const target = searchParams.get('target')?.trim() ?? ''
+  const shown = useMemo(() => auditEntriesForTarget(entries, target), [entries, target])
+  const clearTarget = () => setSearchParams(previous => { const next = new URLSearchParams(previous); next.delete('target'); return next }, { replace: true })
 
   const load = useCallback((before?: number) => {
     const request = ++sequence.current
@@ -94,13 +102,20 @@ export default function AccessAuditPage() {
           </div>
         </form>
         <p className="mt-2 text-xs text-muted-foreground">{i18n.t("主体与动作按完整值匹配，例如 user:<ID>、api-token:<ID>、auth.login、iam.users.create。")}</p>
+        {target ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3 text-sm" role="status">
+            <span>{i18n.t("只显示目标为")} <code className="font-mono text-xs">{target}</code> {i18n.t("的记录（在已读取的 {0} 条中筛选）。", [entries.length])}</span>
+            <Button type="button" variant="ghost" size="sm" onClick={clearTarget}><X />{i18n.t("显示全部目标")}</Button>
+          </div>
+        ) : null}
       </Card>
       {error ? <IamLoadError error={error.message} kind={error.kind} onRetry={() => load()} /> : null}
       <Card className="overflow-hidden p-0">
         {loading && !loaded ? (
           <div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>
-        ) : !entries.length ? (
-          <EmptyState icon={ScrollText} title={hasFilter ? i18n.t("没有符合条件的记录") : i18n.t("还没有审计记录")} />
+        ) : !shown.length ? (
+          <EmptyState icon={ScrollText} title={hasFilter || target ? i18n.t("没有符合条件的记录") : i18n.t("还没有审计记录")}
+            description={target && entries.length ? i18n.t("已读取的记录里没有这个目标，可以加载更早的记录继续查找。") : undefined} />
         ) : (
           <Table aria-label={i18n.t("审计日志")}>
             <TableHeader>
@@ -115,7 +130,7 @@ export default function AccessAuditPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {entries.map(entry => (
+              {shown.map(entry => (
                 <TableRow key={entry.id}>
                   <TableCell className="whitespace-nowrap text-muted-foreground">{i18n.date(entry.at, { dateStyle: 'medium', timeStyle: 'medium' })}</TableCell>
                   <TableCell><span title={entry.actor}>{actorLabel(entry.actor, usersById, i18n.t)}</span></TableCell>

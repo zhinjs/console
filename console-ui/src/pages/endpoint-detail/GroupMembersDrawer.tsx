@@ -12,18 +12,21 @@ export interface MemberPanelSlots {
 
 /**
  * Narrow-screen entry to the group member panel: a header button that opens the same panel in a
- * right-side Sheet. Radix provides Esc, overlay click, the close button, `aria-controls` and focus
+ * Sheet (right side; bottom on phones). Radix provides Esc, overlay click, the close button, `aria-controls` and focus
  * return to the button.
  */
 export function GroupMembersDrawer({
   open,
   onOpenChange,
   memberCount,
+  side = 'right',
   children,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   memberCount: number
+  /** Phones open details from the bottom (list → chat → details). */
+  side?: 'right' | 'bottom'
   children: (slots: MemberPanelSlots) => ReactNode
 }) {
   const i18n = useI18n()
@@ -44,7 +47,7 @@ export function GroupMembersDrawer({
           <span className="im-member-drawer-label text-xs">{label}</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="im-member-sheet">
+      <SheetContent side={side} className={side === 'bottom' ? 'im-member-sheet im-member-sheet--bottom' : 'im-member-sheet'}>
         {children({ Title: SheetTitle, Description: SheetDescription })}
       </SheetContent>
     </Sheet>

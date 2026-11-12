@@ -5,7 +5,7 @@ import { Badge } from '../../components/ui/badge'
 import { Skeleton } from '../../components/ui/skeleton'
 import { StatusState } from '../../components/StatusState'
 import EndpointsPage from '../endpoints'
-import { EndpointWorkspaceView } from '../endpoint-detail'
+import { AccountChatPanel } from './chat-panels'
 import { ConversationList } from '../features/conversation-list'
 import { useConversationList } from '../features/use-feature-data'
 import { ObjectPageLayout, ObjectSection } from '../../scope/ObjectPageLayout'
@@ -37,7 +37,7 @@ export function EndpointObjectPage({ scope }: { scope: Scope & { level: 'endpoin
       flushTabs={['chat']}
       panels={{
         overview: <EndpointOverview scope={scope} info={info} error={error} loaded={loaded} />,
-        chat: <div className="console-object-chat"><EndpointWorkspaceView target={{ adapter, endpointId: endpoint }} /></div>,
+        chat: <AccountChatPanel scope={scope} />,
         access: <EndpointsPage embedded adapter={adapter} endpoint={endpoint} />,
         features: <ScopeFeaturesPanel scope={scope} />,
         roles: <ChatRolesPanel scope={scope} />,

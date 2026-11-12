@@ -21,7 +21,7 @@ test('the drawer query is the exact complement of the CSS breakpoint that shows 
     let shown = false; rule.walkDecls('display', decl => { shown = decl.value === 'flex' })
     if (shown) breakpoint = /min-width:\s*(\d+)px/u.exec(rule.parent.params)?.[1]
   })
-  assert.equal(breakpoint, '900', 'the member column is shown from 900px')
+  assert.equal(breakpoint, '1440', 'the member column is shown from 1440px (list + chat need the width below)')
   assert.equal(GROUP_PANEL_DRAWER_QUERY, `not all and (min-width: ${breakpoint}px)`)
 })
 
@@ -51,7 +51,7 @@ test('the drawer is open only for the group it was opened in, and resets once it
 const drawerSource = await read('pages/endpoint-detail/GroupMembersDrawer.tsx')
 const drawerCompiled = ts.transpileModule(drawerSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
 const SheetTitle = 'sheet-title', SheetDescription = 'sheet-description'
-function renderDrawer({ open, memberCount = 0, onOpenChange = () => {}, slots = [] }) {
+function renderDrawer({ open, memberCount = 0, onOpenChange = () => {}, slots = [], side }) {
   const module = { exports: {} }
   const mocks = {
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) },
@@ -61,7 +61,7 @@ function renderDrawer({ open, memberCount = 0, onOpenChange = () => {}, slots = 
     '../../components/ui/sheet': { Sheet: 'sheet', SheetContent: 'sheet-content', SheetTrigger: 'sheet-trigger', SheetTitle, SheetDescription },
   }
   new Function('require', 'module', 'exports', drawerCompiled)(name => Object.hasOwn(mocks, name) ? mocks[name] : require(name), module, module.exports)
-  return module.exports.GroupMembersDrawer({ open, memberCount, onOpenChange, children: s => { slots.push(s); return 'panel' } })
+  return module.exports.GroupMembersDrawer({ open, memberCount, onOpenChange, side, children: s => { slots.push(s); return 'panel' } })
 }
 const kids = node => [node.props.children].flat()
 
@@ -78,6 +78,7 @@ test('the header entry is a labelled trigger that reports the drawer state', () 
   assert.equal(kids(button)[0].type, 'Users', 'the button carries an icon')
   assert.equal(content.type, 'sheet-content')
   assert.equal(content.props.side, 'right')
+  assert.equal(kids(renderDrawer({ open: false, side: 'bottom' }))[1].props.side, 'bottom', 'phones open it from the bottom')
 
   const open = renderDrawer({ open: true, memberCount: 12 })
   const openButton = kids(open)[0].props.children
@@ -132,6 +133,7 @@ test('opening, closing, switching conversation and widening the window drive the
     ...runtime.api, ...draftModel, ...panelModel, useMediaQuery: query => { assert.equal(query, GROUP_PANEL_DRAWER_QUERY); return narrow },
     useI18n: () => ({ t: value => value }), useEndpointConsole: () => ctx, hasConsolePermission: () => true,
     useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }), DEFAULT_MUTE_MINUTES: 10,
+    readDraftStore: () => undefined,
   })
   const group = id => ({ valid: true, selection: { type: 'channel', channelType: 'group', id, name: id }, showRightPanel: true, membersGroupKey: `group:${id}` })
   const privateChat = { valid: true, selection: { type: 'channel', channelType: 'private', id: 'p', name: 'p' }, showRightPanel: false, membersGroupKey: null }

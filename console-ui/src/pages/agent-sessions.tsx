@@ -12,8 +12,8 @@ import { SessionMessageDetails } from './SessionMessageDetails'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { GitBranch, CheckCircle, Loader2, MessagesSquare, Repeat2, Users, AlertTriangle } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { CheckCircle, Loader2, MessageSquare, MessagesSquare, Repeat2, Users, AlertTriangle, X } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import { isLikelySessionKey, parseSessionKeyFromQuery, parseImSessionKey } from '../utils/agent-session'
 import { loadAgentSessionHistory, pushAgentSessionHistory } from '../utils/agent-session-history'
@@ -39,6 +39,9 @@ import { CONSOLE_REST } from '../contracts/zhin-console'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { readRecentSessions, summarizeRecentSessions, type RecentSession, type RecentSessionSummary } from './agent-session-recent.mjs'
 import { StatCard, StatGrid } from '../components/StatCard'
+import { sessionConversationScope, sessionKeyInScope } from './scope/records-model.mjs'
+import { readScopeFilterParams } from './insights/scope-filter.mjs'
+import { scopeHref, scopeIdentity } from '../scope/scope-tree.mjs'
 
 const RECENT_SESSIONS_PATH = '/api/agent/trace-archive/sessions'
 
@@ -64,6 +67,10 @@ export default function AgentSessionsPage() {
   const scope = useInboxCacheScope()
   const [searchParams, setSearchParams] = useSearchParams()
   const sessionKeyFromUrl = parseSessionKeyFromQuery(searchParams.get('sessionKey'))
+  // `?adapter=&endpoint=&conversation=` (the shared scope parameters, e.g. from an object page's
+  // 记录 tab): only that scope's sessions.
+  const scopeFilter = readScopeFilterParams(searchParams)
+  const clearScopeFilter = () => setSearchParams(previous => { const next = new URLSearchParams(previous); for (const key of ['adapter', 'endpoint', 'conversation']) next.delete(key); return next }, { replace: true })
   const [sessionKey, setSessionKey] = useState(sessionKeyFromUrl)
   const [directoryOpen, setDirectoryOpen] = useState(!sessionKeyFromUrl)
   const selectedKey = isLikelySessionKey(sessionKeyFromUrl) ? sessionKeyFromUrl : ''
@@ -77,11 +84,12 @@ export default function AgentSessionsPage() {
   const traces = useConversationTraces(readOnly ? '' : selectedKey, scope, resolved?.conversation)
   const [traceSelection, setTraceSelection] = useState<{ identity: string; turnId: string } | null>(null)
   const selected = parseImSessionKey(selectedKey)
+  const continueScope = personal ? null : sessionConversationScope(selectedKey)
   const [history, setHistory] = useState<string[]>(() => loadAgentSessionHistory())
   const [recentFailed, setRecentFailed] = useState(false)
   const [recentResult, setRecent] = useState<{ connectionScope?: string; rows: RecentSession[]; summary: RecentSessionSummary | null } | null>(null)
   const recentCurrent = recentResult && isInboxCacheScopeActive(scope) && recentResult.connectionScope === scope ? recentResult : null
-  const recent = recentCurrent ? recentCurrent.rows : null
+  const recent = recentCurrent ? (scopeFilter ? recentCurrent.rows.filter(row => sessionKeyInScope(row.sessionKey, scopeFilter)) : recentCurrent.rows).slice(0, 12) : null
   const sessionSummary = recentCurrent?.summary ?? null
   const [loadedTree, setTree] = useState<SessionTree | null>(null)
   const tree =
@@ -252,7 +260,7 @@ export default function AgentSessionsPage() {
       .then(async (res) => {
         if (!res.ok) return { rows: [] as RecentSession[], summary: null, failed: true }
         const body: unknown = await res.json()
-        return { rows: readRecentSessions(body), summary: summarizeRecentSessions(body), failed: false }
+        return { rows: readRecentSessions(body, Number.POSITIVE_INFINITY), summary: summarizeRecentSessions(body), failed: false }
       })
       .catch(() => ({ rows: [] as RecentSession[], summary: null, failed: true }))
       .then(({ rows, summary, failed }) => {
@@ -331,9 +339,15 @@ export default function AgentSessionsPage() {
           </Button>
           <div id="session-directory">
             {recentFailed ? <p role="status" className="mb-2 text-xs text-warning">{i18n.t('最近会话未能读取，仅显示本机历史。')}</p> : null}
+            {scopeFilter ? (
+              <p role="status" className="console-session-scope-filter">
+                <span>{i18n.t('只显示 {0} 的会话', [scopeIdentity(scopeFilter)])}</span>
+                <Button variant="ghost" size="sm" onClick={clearScopeFilter}><X />{i18n.t('显示全部')}</Button>
+              </p>
+            ) : null}
             <AgentSessionPicker
               value={sessionKey}
-              history={history}
+              history={scopeFilter ? history.filter(key => sessionKeyInScope(key, scopeFilter)) : history}
               recent={recent}
               loading={loading}
               actionLabel={i18n.t('查看记录')}
@@ -363,8 +377,16 @@ export default function AgentSessionsPage() {
           {selectedKey ? (
             <>
               <header className="console-session-heading">
-                <h2>{personal ? i18n.t('个人会话') : selected?.sceneId}</h2>
-                {selected ? <p>{selected.platform} · {selected.endpointId}</p> : null}
+                <div className="min-w-0">
+                  <h2>{personal ? i18n.t('个人会话') : selected?.sceneId}</h2>
+                  {selected ? <p>{selected.platform} · {selected.endpointId}</p> : null}
+                </div>
+                {/* A conversation session can be continued in its chat; anything else is history only. */}
+                {continueScope ? (
+                  <Button asChild variant="outline" size="sm">
+                    <Link to={scopeHref(continueScope, 'chat')}><MessageSquare />{i18n.t('在会话中继续聊天')}</Link>
+                  </Button>
+                ) : <span className="console-session-readonly">{i18n.t('仅可查看')}</span>}
               </header>
               {personal ? <PersonalSessionPanel key={`${scope}:${selectedKey}`} sessionKey={selectedKey} connectionScope={scope} preferredOwnerId={searchParams.get('personalOwner')} /> : null}
               <Tabs

@@ -3,7 +3,6 @@ import { startVisiblePolling } from '../../hooks/visible-polling.mjs'
 import { useI18n } from '../../i18n'
 import { readRequestHistory, readNoticeHistory, mergeHistoryRows } from './inbox-history-model.mjs'
 import { readPendingRequests, pendingRequestKey } from './pending-request-model.mjs'
-import { readEndpointTestResult, endpointTestError, type EndpointTestResult } from '../endpoint-test-result-model.mjs'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import {
@@ -39,6 +38,8 @@ export interface EndpointWorkspaceTarget {
   readonly endpointId: string
   readonly channelType?: 'private' | 'group' | 'channel'
   readonly channelId?: string
+  /** 请求 / 通知 (account chat only). */
+  readonly view?: 'requests' | 'notices'
 }
 
 function decodeParam(value: string | undefined): string {
@@ -76,8 +77,6 @@ export function useEndpointConsole(target?: EndpointWorkspaceTarget) {
   const connected = useConsoleConnected()
   const [info, setInfo] = useState<EndpointInfo | null>(null)
   const [loadErr, setLoadErr] = useState<string | null>(null)
-  const [testLoading, setTestLoading] = useState(false)
-  const [testMessage, setTestMessage] = useState<EndpointTestResult | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
   // --- Endpoint info ---
@@ -105,33 +104,6 @@ export function useEndpointConsole(target?: EndpointWorkspaceTarget) {
     return () => { stopPolling(); infoSequence.current++ }
   }, [loadInfo])
 
-  // A result belongs to one account; never show it (or a late reply) for another one.
-  const testSequence = useRef(0)
-  useEffect(() => {
-    testSequence.current++
-    setTestMessage(null)
-    setTestLoading(false)
-  }, [adapter, endpointId])
-
-  const testEndpoint = useCallback(async () => {
-    if (!adapter || !endpointId) return
-    const sequence = ++testSequence.current
-    setTestLoading(true)
-    setTestMessage(null)
-    try {
-      const result = await requestConsole<unknown>({
-        type: 'endpoint.test',
-        adapter,
-        endpointKey: endpointId,
-      })
-      if (sequence === testSequence.current) setTestMessage(readEndpointTestResult(result))
-    } catch (error) {
-      if (sequence === testSequence.current) setTestMessage(endpointTestError(i18n.t("测试失败：{0}", [(error as Error).message])))
-    } finally {
-      if (sequence === testSequence.current) setTestLoading(false)
-    }
-  }, [adapter, endpointId, cacheScope, i18n])
-
   // --- Channel manager ---
   const channelMgr = useChannelManager({
     adapter,
@@ -139,6 +111,7 @@ export function useEndpointConsole(target?: EndpointWorkspaceTarget) {
     info,
     initialChannelType,
     initialChannelId,
+    initialView: target?.view,
   })
 
   // --- Message history ---
@@ -600,9 +573,6 @@ export function useEndpointConsole(target?: EndpointWorkspaceTarget) {
     connected,
     info,
     loadErr,
-    testLoading,
-    testMessage,
-    testEndpoint,
     actionError,
     // message sending
     msgContent: msgHistory.msgContent,
@@ -613,8 +583,6 @@ export function useEndpointConsole(target?: EndpointWorkspaceTarget) {
     listNotice: channelMgr.listNotice,
     selection: channelMgr.selection,
     setSelection: channelMgr.setSelection,
-    showChannelList: channelMgr.showChannelList,
-    setShowChannelList: channelMgr.setShowChannelList,
     listSearch: channelMgr.listSearch,
     setListSearch: channelMgr.setListSearch,
     channels: channelMgr.channels,
@@ -637,6 +605,10 @@ export function useEndpointConsole(target?: EndpointWorkspaceTarget) {
     loadInboxMessages: msgHistory.loadInboxMessages,
     inboxMessages: msgHistory.inboxMessages,
     handleSend: msgHistory.handleSend,
+    dismissLocal: msgHistory.dismissLocal,
+    restoreLocal: msgHistory.restoreLocal,
+    hasTextDrafts: msgHistory.hasTextDrafts,
+    draftStoreKey: msgHistory.draftStoreKey,
     // group actions
     members: groupAct.members,
     membersLoading: groupAct.membersLoading,

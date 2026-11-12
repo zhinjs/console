@@ -27,6 +27,37 @@ const engagement = {
 }
 const venues = [{ key: 'preview-room', channel: { endpoint: { adapter: 'icqq', id: 'preview-community' }, kind: 'group', id: '20001' }, floor: 'moderated' }]
 const envelope = data => ({ success: true, data })
+// Chat fixtures (聊天 / 记录 tabs): several senders in one group, a private chat, members, sessions.
+const MINUTE = 60_000
+const chatHistory = {
+  'group:20001': [
+    { sender: { id: '10001', name: '演示同事' }, at: 26 * 60 * MINUTE, direction: 'inbound', text: '昨天的版本已经合并了，今天上午开始灰度。' },
+    { sender: { id: '10002', name: '测试同学' }, at: 25.9 * 60 * MINUTE, direction: 'inbound', text: '收到，我先看一下监控。' },
+    { sender: { id: '10001', name: '演示同事' }, at: 14 * MINUTE, direction: 'inbound', text: '今天的发布准备完成了吗？' },
+    { sender: { id: '10001', name: '演示同事' }, at: 13 * MINUTE, direction: 'inbound', text: '我想确认一下机器人账号和任务的运行情况。' },
+    { sender: { id: 'self', name: 'Zhin' }, at: 12 * MINUTE, direction: 'outbound', text: '账号已连接，定时任务在 10:00 正常执行过一次。' },
+    { sender: { id: 'self', name: 'Zhin' }, at: 11.5 * MINUTE, direction: 'outbound', text: '运行记录也已检查，没有失败的回合。' },
+    { sender: { id: '10002', name: '测试同学' }, at: 4 * MINUTE, direction: 'inbound', text: '好的，那我这边开始回归。有问题在群里说。' },
+  ],
+  'private:10001': [
+    { sender: { id: '10001', name: '演示用户' }, at: 30 * MINUTE, direction: 'inbound', text: '你好，帮我看看今天的提醒有没有发出去？' },
+    { sender: { id: 'self', name: 'Zhin' }, at: 29 * MINUTE, direction: 'outbound', text: '已发送：今天 9:00 的站会提醒。' },
+  ],
+}
+const groupMembers = [
+  { user_id: 10000, nickname: '群主小王', role: 'owner' },
+  { user_id: 10001, nickname: '演示同事', role: 'admin' },
+  { user_id: 10002, nickname: '测试同学', role: 'member' },
+  { user_id: 10005, nickname: '新同学', role: 'member' },
+]
+const traceSessions = [
+  { session_key: 'icqq:preview-community:group:20001', turns: 18, last_started_at: Date.now() - 12 * MINUTE, last_status: 'completed' },
+  { session_key: 'icqq:preview-community:private:10001', turns: 4, last_started_at: Date.now() - 29 * MINUTE, last_status: 'failed' },
+  { session_key: 'telegram:preview-support:private:777', turns: 2, last_started_at: Date.now() - 26 * 60 * MINUTE, last_status: 'completed' },
+]
+let sentCount = 0
+// One clock for every chat fixture, so repeated reads (list, previews, history) agree on timestamps.
+const CHAT_NOW = Date.now()
 // Object tree fixtures (feature.* ADR 0050 / 0055, chat-roles.* ADR 0056).
 const LEVELS = ['global', 'adapter', 'endpoint', 'conversation']
 const features = [
@@ -93,6 +124,7 @@ const server = createServer(async (request, response) => {
   }
   if (url.pathname.startsWith('/api/introspection/')) { json(envelope({ items: [], total: 0, page: 1, pageSize: 20 })); return }
   if (url.pathname === '/api/agent/sessions') { json(envelope({ sessions: [], total: 0, items: [] })); return }
+  if (url.pathname === '/api/agent/trace-archive/sessions') { json(envelope(traceSessions)); return }
   if (url.pathname === '/console/api/pages') { json({ pages: [] }); return }
   if (url.pathname === '/api/console/request' && request.method === 'POST') {
     let raw = ''
@@ -135,19 +167,39 @@ const server = createServer(async (request, response) => {
     if (type === 'endpoint.info' || type === 'endpoint.get') { json(envelope(endpoint)); return }
     if (type === 'endpoint.test') { json(envelope({ reachable: true, connected: true, latencyMs: 24, message: '本地预览连接正常' })); return }
     if (type === 'endpoint.friends') { json(envelope({ friends: [{ user_id: 10001, nickname: '演示用户', remark: '界面测试' }] })); return }
-    if (type === 'endpoint.groups') { json(envelope({ groups: [{ group_id: 20001, name: '产品试验群' }] })); return }
+    if (type === 'endpoint.groups') { json(envelope({ groups: [{ group_id: 20001, name: '产品试验群' }, { group_id: 20002, name: '运维值班群' }] })); return }
     if (type === 'endpoint.channels') { json(envelope({ channels: [] })); return }
-    if (type === 'endpoint.group_members' || type === 'endpoint.groupMembers') { json(envelope({ members: [] })); return }
+    if (type === 'endpoint.group_members' || type === 'endpoint.groupMembers') { json(envelope({ members: groupMembers })); return }
+    // Synthetic send receipts for screenshots: text with #ok "succeeds", #timeout is a gateway timeout, anything else is refused.
+    if (type === 'endpoint.send_message') {
+      const text = JSON.stringify(body.content ?? '')
+      if (text.includes('#ok')) { json(envelope({ messageId: `preview-sent-${++sentCount}` })); return }
+      if (text.includes('#timeout')) { json({ success: false, code: 'instance_timeout', error: 'The instance did not answer in time' }, 504); return }
+      json({ success: false, code: 'preview_read_only', error: '本地预览不发送消息。请使用真实 Host 验证。' }, 403); return
+    }
     if (/endpoint\.(?:requests|inboxRequests|inboxNotices|inboxMessages)/u.test(type)) { json(envelope({ requests: [], notices: [], messages: [], total: 0, hasMore: false })); return }
     if (type === 'inbox.messages') {
       const channel = { id: String(body.channelId ?? '10001'), type: body.channelType ?? 'private', name: body.channelType === 'group' ? '产品试验群' : '演示用户' }
-      json(envelope({ inboxEnabled: true, messages: [
-        { id: 1, platformMessageId: 'preview-inbound-1', endpoint: endpoint.endpoint, channel, sender: { id: '10001', name: '演示同事' }, timestamp: Date.now() - 120_000, direction: 'inbound', content: [{ type: 'text', data: { text: '今天的发布准备完成了吗？我想确认一下机器人账号和任务的运行情况。' } }] },
-        { id: 2, platformMessageId: 'preview-outbound-2', endpoint: endpoint.endpoint, channel, sender: { id: 'self', name: 'Zhin' }, timestamp: Date.now() - 60_000, direction: 'outbound', content: [{ type: 'text', data: { text: '账号已连接，运行记录也已检查。\n\n这是一段本地界面预览消息，不会发送到真实平台。' } }] },
-      ] })); return
+      const rows = endpoint.name === 'preview-community' ? chatHistory[`${channel.type}:${channel.id}`] ?? [] : []
+      const now = CHAT_NOW
+      json(envelope({ inboxEnabled: true, messages: rows.map((row, index) => ({
+        id: index + 1, platformMessageId: `preview-${channel.type}-${channel.id}-${index + 1}`, endpoint: endpoint.endpoint, channel,
+        conversation: { endpoint: endpoint.endpoint, kind: channel.type, id: channel.id },
+        sender: row.sender, timestamp: now - row.at, direction: row.direction, content: [{ type: 'text', data: { text: row.text } }],
+      })) })); return
     }
     if (type === 'inbox.requests') { json(envelope({ inboxEnabled: true, requests: [] })); return }
     if (type === 'inbox.notices') { json(envelope({ inboxEnabled: true, notices: [] })); return }
+    if (type === 'db:select' && body.table === 'unified_inbox_message' && body.where?.endpoint_id === 'preview-community') {
+      // Last message per conversation for the list previews and unread counts.
+      const now = CHAT_NOW
+      const rows = Object.entries(chatHistory).flatMap(([key, items]) => {
+        const [kind, id] = key.split(':')
+        return items.map(item => ({ channel_id: id, channel_type: kind, channel_name: kind === 'group' ? '产品试验群' : null, sender_name: kind === 'private' ? '演示用户' : item.sender.name,
+          content: JSON.stringify([{ type: 'text', data: { text: item.text } }]), created_at: now - item.at }))
+      })
+      json(envelope({ rows, total: rows.length, columns: [] })); return
+    }
     if (type === 'db:select') { json(envelope({ rows: [], total: 0, columns: [] })); return }
     if (type === 'endpoint.history') { json(envelope({ messages: [], total: 0, hasMore: false })); return }
     if (type === 'config:get') { json(envelope({ configVersion: 2, plugin: { name: 'ui-preview' }, plugins: {} })); return }
