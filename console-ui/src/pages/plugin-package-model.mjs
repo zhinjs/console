@@ -1,5 +1,5 @@
 /**
- * Plugin package actions from the plugin pages (插件管理 / 插件详情 / 插件市场). Every install,
+ * Plugin package actions from the plugin pages (插件 / 插件详情 / 插件市场). Every install,
  * update and uninstall is a gateway dependency transaction (`gateway.packages.*`, ADR 0054 §4):
  * the gateway stops the instance, runs the package manager, checks the result and starts the
  * instance again, rolling back on failure. The instance-side `plugin:install|update|uninstall`

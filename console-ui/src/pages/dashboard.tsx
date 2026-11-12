@@ -557,9 +557,9 @@ export default function HomePage() {
       path: '/introspection?tab=mcp',
     },
     {
-      label: i18n.t("子插件"),
+      label: i18n.t("插件"),
       value: stats?.plugins.total ?? null,
-      detail: stats ? i18n.t("{0} 个子插件正在运行", [stats.plugins.active]) : i18n.t("等待 Host 状态"),
+      detail: stats ? i18n.t("{0} 个正在运行", [stats.plugins.active]) : i18n.t("等待 Host 状态"),
       icon: Package,
       path: '/plugins',
     },

@@ -27,7 +27,7 @@ export const ROUTE_SEARCH_HINTS = Object.freeze({
   '/permissions': { description: '查看命令权限规则为什么匹配，可做假设检查', keywords: ['权限', '命令权限', '谁能用', '规则', '授权', '为什么不能用', 'permission', 'rbac', 'access'] },
   '/scenario-lab': { description: '预览插件的预期消息，并导出回归测试', keywords: ['场景', '试验台', '测试', '回归测试', '预览消息', '模拟', 'scenario', 'test', 'regression', 'preview'] },
   '/logs': { description: '查看出错、警告和运行过程', keywords: ['日志', '报错', '错误', '警告', '异常', '排查', 'log', 'logs', 'error', 'warning'] },
-  '/plugins': { description: '开关和设置已装的功能', keywords: ['插件', '功能', '启用', '停用', '已安装', 'plugin', 'plugins', 'enable', 'disable'] },
+  '/plugins': { description: '查看已安装插件的来源、版本与健康状态，更新或卸载', keywords: ['插件', '插件管理', '已安装', '已装插件', '更新', '卸载', '健康状态', '启用', '停用', 'plugin', 'plugins', 'installed', 'update', 'uninstall', 'enable', 'disable'] },
   '/marketplace': { description: '找新功能并安装', keywords: ['市场', '插件市场', '安装', '下载', '新插件', 'marketplace', 'install', 'store'] },
   '/features': { description: '查看每个功能在全局和各适配器的启用状态', keywords: ['功能', '功能矩阵', '开关', '启用', '禁用', '全局配置', 'feature', 'features', 'matrix', 'toggle'] },
   '/ops/config': { description: '配置模型、Agent 和插件', keywords: ['设置', '配置', '选项', '配置文件', 'settings', 'config', 'configuration'] },

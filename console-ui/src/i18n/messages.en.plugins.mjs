@@ -1,4 +1,4 @@
-/** 插件管理 / 插件详情 / 插件市场 / 运行时能力 / 命令权限说明 (ADR 0054 §4 package transactions). */
+/** 插件 / 插件详情 / 插件市场 / 运行时能力 / 命令权限说明 (ADR 0054 §4 package transactions). */
 export const pluginsMessages = Object.freeze({
   // Marketplace
   "去功能页签": "Go to the Features tab",
@@ -21,7 +21,6 @@ export const pluginsMessages = Object.freeze({
   "查看（read）": "View (read)",
   "操作（operate）": "Operate (operate)",
   "管理（manage）": "Manage (manage)",
-  "全部插件": "All plugins",
   "此 Host 上没有名为 {0} 的插件实例，也没有同名依赖。可以去插件市场安装。": "This Host has no plugin instance or dependency named {0}. You can install it from the marketplace.",
   "实例未报告": "Not reported by the instance",
   "插件本身的信息：版本与依赖、声明与配置、权限和能力。在哪些范围开启，请到对象树的「功能」页签。": "The plugin itself: version and dependencies, declaration and configuration, permissions and capabilities. Where it is switched on lives in the Features tab of the object tree.",
@@ -39,7 +38,7 @@ export const pluginsMessages = Object.freeze({
   "网关依赖列表读取失败；版本以实例报告为准。": "The gateway dependency list could not be read; the version is what the instance reports.",
   "项目 package.json 里没有 {0}：它可能随其他包一起安装，网关不能单独卸载它。": "{0} is not in the project package.json: it may come with another package, and the gateway cannot uninstall it on its own.",
   "安装、更新与卸载需要 plugin.manage 权限。": "Installing, updating and uninstalling need the plugin.manage permission.",
-  "返回插件列表": "Back to the plugin list",
+  "返回插件": "Back to Plugins",
   "在哪开了": "Where it is on",
   "开关与覆盖在对象树里设置；这里只汇总。": "Switches and overrides are set in the object tree; this is only a summary.",
   "没有开关记录": "No switch records",

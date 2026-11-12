@@ -75,7 +75,7 @@ test('work-oriented navigation preserves ordinary-user names and legacy plugin g
   }
   const primary = { dashboard: ['首页','OVERVIEW'], logs: ['运行日志','OVERVIEW'], scope: ['账号与会话','WORK'], agentSessions: ['聊天记录','WORK'], opsSchedules: ['定时任务','OPS'] }
   for (const [key, [name,group]] of Object.entries(primary)) assert.deepEqual(routeGroup(key), { name, group, hidden: false })
-  assert.deepEqual(routeGroup('plugins'), { name: '插件管理', group: 'PLUGINS', hidden: false })
+  assert.deepEqual(routeGroup('plugins'), { name: '插件', group: 'PLUGINS', hidden: false })
   assert.deepEqual(routeGroup('marketplace'), { name: '插件市场', group: 'PLUGINS', hidden: false })
   assert.deepEqual(routeGroup('aiAmbient'), { name: '群聊插话', group: 'FEATURES', hidden: false })
   assert.match(source, /path: P\.aiAmbient,[\s\S]*?requiredPermissions: \[AMBIENT_STATUS_PERMISSION\]/)

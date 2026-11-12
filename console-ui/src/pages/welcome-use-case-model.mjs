@@ -14,7 +14,7 @@ const targetHasReference = item => [item?.endpoint?.adapter, item?.endpoint?.id,
   item?.parent?.kind, item?.parent?.id, item?.threadId].some(envReference)
 export function readWelcomeUseCase(payload, locale = 'zh-CN') {
   const value = readTaskUseCases(payload, locale).find(item => item.id === WELCOME_USE_CASE && item.mode === 'plugin-configuration')
-  if (!value) throw Error(translate(locale, "当前 Host 未提供群欢迎用途，请更新 Host 或使用原插件管理入口。"))
+  if (!value) throw Error(translate(locale, "当前 Host 未提供群欢迎用途，请更新 Host，或到「插件」页打开对应插件配置。"))
   return value
 }
 export function readWelcomeInstances(payload, packageName, locale = 'zh-CN') {

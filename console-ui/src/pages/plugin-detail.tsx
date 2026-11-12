@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import {
   Activity, Package, Settings, Terminal, Box as IconBox, Layers, Clock, Database, Brain, Wrench, Shield, Plug, Server, RefreshCw,
-  Stethoscope, Trash2, ArrowUpCircle, ToggleLeft, Blocks, type LucideIcon,
+  Stethoscope, Trash2, ArrowUpCircle, ToggleLeft, Blocks, ArrowLeft, type LucideIcon,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { apiFetch } from '../utils/auth'
@@ -374,7 +374,7 @@ export default function PluginDetailPage() {
   if ((detailView.view === 'error' || !plugin) && !entry) {
     return (
       <PageShell>
-        <PageHeader title={title} actions={<Button variant="outline" size="sm" asChild><Link to={listUrl}>{i18n.t("全部插件")}</Link></Button>} />
+        <PageHeader title={title} actions={<Button variant="outline" size="sm" asChild><Link to={listUrl}><ArrowLeft />{i18n.t("返回插件")}</Link></Button>} />
         {detailView.view === 'skeleton' ? <Skeleton className="h-36" /> : (
           <StatusState error={detailError ?? error} kind={(detailError as { status?: number } | null)?.status === 404 ? 'not-installed' : undefined}
             title={(detailError as { status?: number } | null)?.status === 404 ? i18n.t("插件不存在") : undefined}
@@ -397,7 +397,7 @@ export default function PluginDetailPage() {
         title={title}
         description={plugin?.description || i18n.t("插件本身的信息：版本与依赖、声明与配置、权限和能力。在哪些范围开启，请到对象树的「功能」页签。")}
         actions={<>
-          <Button variant="outline" size="sm" asChild><Link to={listUrl}>{i18n.t("全部插件")}</Link></Button>
+          <Button variant="outline" size="sm" asChild><Link to={listUrl}><ArrowLeft />{i18n.t("返回插件")}</Link></Button>
           <Button variant="outline" size="sm" disabled={loading} aria-busy={loading || undefined} onClick={refreshAll}>
             <RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
           {plugin ? (
@@ -450,7 +450,7 @@ export default function PluginDetailPage() {
             {!canManagePackages ? <p className="text-xs text-muted-foreground">{i18n.t("安装、更新与卸载需要 plugin.manage 权限。")}</p> : null}
             <PackageActionPanel action={packageAction} readOnly={!canManagePackages} onDeclared={() => name && void fetchPluginDetail(name)} />
             {packageAction.operation === 'uninstall' && packageAction.receipt.state.phase === 'succeeded' ? (
-              <Button size="sm" variant="outline" asChild><Link to={listUrl}>{i18n.t("返回插件列表")}</Link></Button>
+              <Button size="sm" variant="outline" asChild><Link to={listUrl}><ArrowLeft />{i18n.t("返回插件")}</Link></Button>
             ) : null}
           </CardContent></Card>
         </ObjectSection>

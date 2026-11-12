@@ -36,7 +36,7 @@ const HEALTH_TONES: Record<PluginHealth, 'enabled' | 'warning' | 'disabled'> = {
   healthy: 'enabled', pending: 'warning', inactive: 'disabled', undeclared: 'warning', unreported: 'disabled',
 }
 const FILTERS: { key: HealthFilter; label: string }[] = [
-  { key: 'all', label: '全部' },
+  { key: 'all', label: '已安装' },
   { key: 'healthy', label: '运行正常' },
   { key: 'pending', label: '需要处理' },
   { key: 'inactive', label: '未加载' },
@@ -48,7 +48,7 @@ export default function PluginsPage() {
   const i18n = useI18n()
   const scope = useInboxCacheScope()
   if (!scope || !isInboxCacheScopeActive(scope)) return <PageShell className="console-plugins-page">
-    <PageHeader title={i18n.t("插件管理")} />
+    <PageHeader title={i18n.t("插件")} />
     <StatusState kind="disconnected" description={i18n.t("请连接 Host 后读取功能。")} />
   </PageShell>
   return <PluginsPageSession key={scope} connectionScope={scope} />
@@ -126,7 +126,7 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
   return (
     <PageShell className="console-plugins-page">
       <PageHeader
-        title={i18n.t("插件管理")}
+        title={i18n.t("插件")}
         description={i18n.t("已安装的插件：来源、版本与健康状态。插件在哪些范围开启，在功能矩阵和对象树里设置。")}
         actions={<>
           <Button variant="outline" size="sm" asChild><Link to={CONSOLE_PATHS.marketplace}><Store />{i18n.t("插件市场")}</Link></Button>

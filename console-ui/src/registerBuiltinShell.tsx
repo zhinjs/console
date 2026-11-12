@@ -117,7 +117,7 @@ export function registerBuiltinConsolePages() {
   app.addRoute({ path: P.groupWelcome, name: '群欢迎配置流程', parent: P.features, element: <WelcomeUseCasePage />, meta: { hideInMenu: true, group: NAV_GROUPS.FEATURES } })
 
   // 插件 — 装了什么？
-  app.addRoute({ path: P.plugins, name: '插件管理', parent: null, icon: 'Package', element: <PluginsPage />, meta: { group: NAV_GROUPS.PLUGINS, order: 0 } })
+  app.addRoute({ path: P.plugins, name: '插件', parent: null, icon: 'Package', element: <PluginsPage />, meta: { group: NAV_GROUPS.PLUGINS, order: 0 } })
   app.addRoute({ path: P.pluginDetail, name: '插件详情', parent: P.plugins, element: <PluginDetailPage />, meta: { hideInMenu: true, group: NAV_GROUPS.PLUGINS } })
   app.addRoute({ path: P.marketplace, name: '插件市场', parent: null, icon: 'Store', element: <MarketplacePage />, meta: { group: NAV_GROUPS.PLUGINS, order: 1 } })
 

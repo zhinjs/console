@@ -22,9 +22,9 @@ test('dashboard requires known zero errors and labels root-excluding statistics 
   const dashboard = readFileSync(new URL('../console-ui/src/pages/dashboard.tsx', import.meta.url), 'utf8')
   assert.match(dashboard, /optional\.errorLogs === 0/)
   assert.match(dashboard, /\.\.\.optionalSummary/)
-  assert.match(dashboard, /个子插件正在运行/)
+  assert.match(dashboard, /i18n\.t\("\{0\} 个正在运行", \[stats\.plugins\.active\]\)/)
   const plugins = readFileSync(new URL('../console-ui/src/pages/plugins.tsx', import.meta.url), 'utf8')
-  assert.match(plugins, /title=\{i18n\.t\("插件管理"\)\}/)
+  assert.match(plugins, /title=\{i18n\.t\("插件"\)\}/)
   assert.match(plugins, /i18n\.t\("共 \{0\} 个", \[rows\.length\]\)/)
 })
 

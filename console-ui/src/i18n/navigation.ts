@@ -24,7 +24,7 @@ const builtinNames: Readonly<Record<string, string>> = {
   "/permissions": "命令权限说明",
   "/scenario-lab": "消息场景试验台",
   "/use-cases/group-welcome": "群欢迎配置流程",
-  "/plugins": "插件管理",
+  "/plugins": "插件",
   "/plugins/:name": "插件详情",
   "/marketplace": "插件市场",
   "/ops/database": "数据库",

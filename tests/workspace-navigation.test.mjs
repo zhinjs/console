@@ -104,7 +104,7 @@ const routes = [
   { path: '/logs', name: '运行日志', meta: { group: '概览', order: 1 } },
   { path: '/secret-diagnostic', name: 'Hidden diagnostic', meta: { group: '概览', hideInMenu: true } },
   { path: '/features', name: '功能矩阵', meta: { group: '功能', order: 0 } },
-  { path: '/plugins', name: '插件管理', meta: { group: '插件', order: 0 } },
+  { path: '/plugins', name: '插件', meta: { group: '插件', order: 0 } },
   { path: '/ops/config', name: '配置文件', meta: { group: '运维', order: 1 } },
   { path: '/ops/schedules', name: '定时任务', meta: { group: '运维', order: 3 } },
   { path: '/calendar', name: 'Calendar', meta: { group: 'My tools' } },

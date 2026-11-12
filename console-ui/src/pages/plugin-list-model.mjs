@@ -16,7 +16,7 @@ const CATALOG_PLUGINS = new Set(['adapter', 'ai', 'market'])
 const clean = value => typeof value === 'string' && value ? value : ''
 
 /**
- * Health of one instance plugin for the 插件管理 list (安装与健康状态, not 开没开):
+ * Health of one instance plugin for the 插件 list (安装与健康状态, not 开没开):
  * - `healthy`  当前代已应用（或旧 Host 只报告已加载）
  * - `pending`  需要处理：缺配置、降级、等待应用、依赖失败或状态读取失败
  * - `inactive` 未加载 / 已停用
@@ -34,7 +34,7 @@ export function pluginHealth(plugin) {
 }
 
 /**
- * Rows of the 插件管理 list: every instance plugin (`/api/plugins`), plus catalog packages the
+ * Rows of the 插件 list: every instance plugin (`/api/plugins`), plus catalog packages the
  * gateway installed (`gateway.packages.list`) that no instance plugin uses yet (`undeclared`:
  * installed, waiting for its first configuration). When the instance cannot answer, `plugins` is
  * null and the gateway packages are listed as `unreported`.

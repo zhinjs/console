@@ -137,7 +137,7 @@ const chain = key => {
   const parts = key ? key.split('/') : []
   return ['', parts[0], parts.slice(0, 2).join('/'), parts.length > 2 ? key : undefined].filter((value, index) => index === 0 || (value && index <= parts.length))
 }
-// Plugin pages (插件管理 / 详情 / 市场, ADR 0054 §4): instance plugins, gateway packages and transactions.
+// Plugin pages (插件 / 详情 / 市场, ADR 0054 §4): instance plugins, gateway packages and transactions.
 const management = (instanceKey, packageName, version, extra = {}) => ({ packageName, instanceKey, installed: true, plugin: true, declared: true, version, revision: 'preview-r1',
   projectRevision: 'preview-p1', status: 'enabled', dependencies: 'passed', validation: { valid: true, errors: [], missingEnv: [] }, generation: 4, published: true,
   readiness: 'ready', restartRequired: false, disabled: false, issues: [], verification: 'not-configured', ...extra })
@@ -218,7 +218,7 @@ function featureDetail(body) {
 const loginTasks = [
   { id: 'preview-login-1', adapter: 'telegram', endpointKey: 'preview-support', type: 'sms', payload: { message: '平台要求输入短信验证码完成登录。', phone: '+86 138****0000' }, createdAt: Date.now() - 60_000, expiresAt: Date.now() + 240_000 },
 ]
-const adapterStatus = { adapterKey: 'icqq', displayName: 'ICQQ', page: '/icqq', canAdd: true, canRemove: true, configStore: true,
+const adapterStatus = { adapterKey: 'icqq', displayName: 'ICQQ', page: '/icqq', docsUrl: 'https://example.invalid/docs/icqq', canAdd: true, canRemove: true, configStore: true,
   fields: [{ key: 'uin', type: 'string', required: true, env: false, secret: false, label: 'QQ 号' }, { key: 'password', type: 'string', required: false, env: true, secret: true, label: '密码' }],
   running: [{ id: 'preview-community', mode: 'qrcode' }], configured: [{ id: 'preview-community', values: { uin: '10000' } }, { id: 'preview-archive', values: { uin: '10009' } }], actions: [] }
 

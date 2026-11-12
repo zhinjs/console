@@ -340,7 +340,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
         title={i18n.t("插件市场")}
         description={i18n.t("探索 Zhin.js 生态中的插件。列表为发现索引，打开详情后核验注册表 latest；安装由管理网关作为依赖事务执行。")}
         actions={<>
-          <Button variant="outline" size="sm" asChild><Link to="/plugins">{i18n.t("已装插件")}</Link></Button>
+          <Button variant="outline" size="sm" asChild><Link to="/plugins"><Package />{i18n.t("插件")}</Link></Button>
           <Button variant="outline" size="sm" onClick={() => checkUpdates()} disabled={updatesLoading} aria-busy={updatesLoading || undefined}>
             <RefreshCw className={updatesLoading ? 'animate-spin' : ''} />
             {updatesLoading ? i18n.t("检查中…") : i18n.t("检查更新")}</Button>
@@ -377,7 +377,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                 </ul>
                 <p className="text-xs text-muted-foreground">
                   {i18n.t("更新在插件详情页执行：网关先生成计划，确认后停止实例、安装新版本、校验并重新启动，失败自动回滚。")}
-                  {updates.length > 5 && <> <Link className="underline" to="/plugins">{i18n.t("另有 {0} 个，在插件管理中查看", [updates.length - 5])}</Link></>}
+                  {updates.length > 5 && <> <Link className="underline" to="/plugins">{i18n.t("另有 {0} 个，在「插件」页查看", [updates.length - 5])}</Link></>}
                 </p>
               </AlertDescription>
             </div>
@@ -696,7 +696,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                   </Button>
                 )}
                 {!readOnly && packageAction.planning && <Button size="sm" disabled aria-busy><RefreshCw className="animate-spin" />{i18n.t("生成计划中…")}</Button>}
-                {readOnly && <span className="text-xs text-muted-foreground">{i18n.t("当前身份只能查看市场，安装需插件管理权限。")}</span>}
+                {readOnly && <span className="text-xs text-muted-foreground">{i18n.t("当前身份只能查看市场，安装需要 plugin.manage 权限。")}</span>}
                 <DialogClose asChild>
                   <Button variant="secondary" size="sm" disabled={packageAction.busy}>{i18n.t("关闭")}</Button>
                 </DialogClose>
