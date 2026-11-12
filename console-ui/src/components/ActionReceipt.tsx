@@ -89,7 +89,12 @@ export function useActionReceipt({ submit, verify, onSettled }: UseActionReceipt
  * next to the control that started the action (inline), not as a toast: the outcome stays visible
  * until dismissed.
  */
-export function ActionReceipt({ controller, className }: { controller: ActionReceiptController; className?: string }) {
+export function ActionReceipt({ controller, className, lockHref }: {
+  controller: ActionReceiptController
+  className?: string
+  /** Where a `locked` refusal can be lifted (the locking level's page). */
+  lockHref?: string
+}) {
   const i18n = useI18n()
   const { state, confirm, cancel, verify, canVerify, reset } = controller
   if (state.phase === 'idle') return null
@@ -142,7 +147,7 @@ export function ActionReceipt({ controller, className }: { controller: ActionRec
         // A Host-reported reason (`{ status: 'failed', message }`) is the answer itself, not a read error.
         state.status.kind === 'error' && state.status.message && !state.status.serverCode
           ? <StatusState compact kind="error" title={i18n.t('操作没有完成')} description={state.status.message} />
-          : <StatusState compact kind={state.status.kind} error={state.status.message || undefined} />
+          : <StatusState compact kind={state.status.kind} error={state.status.message || undefined} lockedBy={state.status.lockedBy} lockHref={lockHref} />
       ) : null}
       <footer className="console-receipt-actions">
         {state.phase === 'prepared' ? <>

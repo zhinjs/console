@@ -33,7 +33,7 @@ test('polling still runs where there is no document', () => {
 
 test('every recurring Host poll goes through the visibility-aware helper', () => {
   const read = path => readFileSync(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')
-  for (const path of ['pages/dashboard.tsx', 'pages/endpoints.tsx', 'pages/endpoint-detail/useEndpointConsole.tsx', 'pages/plugins.tsx', 'pages/useWelcomeInspection.ts', 'pages/workrooms.tsx']) {
+  for (const path of ['pages/dashboard.tsx', 'pages/scope/login-tasks.tsx', 'pages/endpoint-detail/useEndpointConsole.tsx', 'pages/plugins.tsx', 'pages/useWelcomeInspection.ts', 'pages/workrooms.tsx']) {
     const source = read(path)
     assert.match(source, /startVisiblePolling\(/, path)
     assert.doesNotMatch(source, /setInterval\(/, path)
