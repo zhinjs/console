@@ -17,6 +17,7 @@ import { hasConsolePermission } from '../../utils/console-access.mjs'
 import { endpointsOfAdapter } from './feature-model.mjs'
 import { useEndpointList, useFeatureMatrix } from './use-feature-data'
 import { FeatureLevelPanel, FeatureReadOnlyNote } from './feature-level-panel'
+import { FeatureAdminsSection } from './feature-admins'
 
 export default function AdapterDetailPage() {
   const { adapter = '' } = useParams<{ adapter: string }>()
@@ -41,6 +42,7 @@ function AdapterDetail({ adapter }: { adapter: string }) {
       {error ? <ErrorAlert error={error} onRetry={refresh} /> : null}
       <FeatureReadOnlyNote />
       <FeatureLevelPanel level="adapter" levelKey={adapter} adapter={adapter} />
+      <FeatureAdminsSection level="adapter" levelKey={adapter} />
       <section aria-labelledby="adapter-accounts" className="space-y-3">
         <h2 id="adapter-accounts" className="text-base font-semibold">{i18n.t("账号")}</h2>
         <Card className="overflow-hidden p-0">

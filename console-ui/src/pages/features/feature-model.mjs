@@ -30,8 +30,8 @@ export function featureLockError(error) {
   if (code !== 'locked' && !/\blocked\b|lockedBy|锁定|已在\s*(全局|适配器|账号)\S*\s*禁用/i.test(message)) return null
   const named = /lockedBy["'\s:=]+["']?(global|adapter|endpoint)/i.exec(message)?.[1]
     ?? /\b(?:locked|disabled) (?:by|at) (?:the )?(global|adapter|endpoint)\b/i.exec(message)?.[1]
-  // Chinese Host messages name the level: 已在全局 / 适配器 / 账号禁用.
-  const zh = /已在\s*(?:(全局)|(适配器)|(账号))/.exec(message)
+  // Chinese Host messages name the level: 已被全局层停用 / 已在账号禁用 …
+  const zh = /已(?:在|被)\s*(?:(全局)|(适配器)|(账号))/.exec(message)
   const lockedBy = readLock(isRecord(error) ? error.lockedBy : undefined)
     ?? readLock(named?.toLowerCase())
     ?? (zh ? LOCKS[zh.slice(1).findIndex(Boolean)] : undefined)

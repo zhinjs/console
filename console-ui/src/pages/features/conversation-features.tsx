@@ -13,6 +13,7 @@ import { useConversationList } from './use-feature-data'
 import { FeatureLevelPanel, FeatureReadOnlyNote } from './feature-level-panel'
 import { FeatureOverridesNotice } from './feature-overrides-notice'
 import { ConversationKindBadge } from './conversation-list'
+import { FeatureAdminsSection } from './feature-admins'
 
 /** `/features/adapters/:adapter/endpoints/:endpoint/conversations/:conversation` (ADR 0055 §6). */
 export default function ConversationFeaturesPage() {
@@ -75,6 +76,7 @@ function ConversationDetail({ adapter, endpoint, kind, id, conversationKey: key,
         <>
           <FeatureReadOnlyNote />
           <FeatureLevelPanel level="conversation" levelKey={key} adapter={adapter} endpoint={endpoint} />
+          <FeatureAdminsSection level="conversation" levelKey={key} />
         </>
       )}
     </PageShell>

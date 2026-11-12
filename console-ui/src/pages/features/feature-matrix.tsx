@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { adapterHref, featureGlobalHref } from '../../console-routes.mjs'
 import { cellState, setEnabledRequest, type FeatureCell } from './feature-model.mjs'
 import { ConversationOverrideLinks } from './conversation-list'
+import { FeatureAdminsSection } from './feature-admins'
 import { useFeatureMatrix, useFeatureWriter } from './use-feature-data'
 import { FeatureSwitch } from './feature-switch'
 import { useConfirm } from '../../components/confirm-dialog'
@@ -131,6 +132,7 @@ export default function FeatureMatrixPage() {
           </Table>
         )}
       </Card>
+      {source === 'rpc' ? <FeatureAdminsSection level="global" adapters={adapters} /> : null}
       {ConfirmDialog}
     </PageShell>
   )

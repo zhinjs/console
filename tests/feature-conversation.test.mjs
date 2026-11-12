@@ -96,6 +96,10 @@ test('a Host lock refusal (409 locked) is recognised, with the level when it is 
   assert.deepEqual(featureLockError(new Error('Feature rss is locked: lockedBy=endpoint')), { lockedBy: 'endpoint' })
   assert.deepEqual(featureLockError(new Error('rss is locked by the global level')), { lockedBy: 'global' })
   assert.deepEqual(featureLockError(new Error('插件 rss 已在账号禁用，下级不能修改开关')), { lockedBy: 'endpoint' })
+  // The Host's 409 text (the transport keeps only the message).
+  assert.deepEqual(featureLockError(new Error('已被全局层停用，下级开关已锁定')), { lockedBy: 'global' })
+  assert.deepEqual(featureLockError(new Error('已被适配器层停用，下级开关已锁定')), { lockedBy: 'adapter' })
+  assert.deepEqual(featureLockError(new Error('已被账号层停用，下级开关已锁定')), { lockedBy: 'endpoint' })
   assert.deepEqual(featureLockError(new Error('locked')), {})
   assert.equal(featureLockError(new Error('HTTP 500')), null)
   assert.equal(featureLockError(new Error('Unknown RPC type: feature.set-enabled')), null)

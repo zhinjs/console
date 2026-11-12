@@ -19,6 +19,7 @@ import { readEndpointList } from '../endpoint-list-model.mjs'
 import { useConversationList, type EndpointSummaryItem } from './use-feature-data'
 import { FeatureLevelPanel, FeatureReadOnlyNote } from './feature-level-panel'
 import { ConversationList } from './conversation-list'
+import { FeatureAdminsSection } from './feature-admins'
 
 export default function EndpointFeaturesPage() {
   const { adapter = '', endpoint = '' } = useParams<{ adapter: string; endpoint: string }>()
@@ -89,6 +90,7 @@ function EndpointFeatures({ adapter, endpoint }: { adapter: string; endpoint: st
           {panel}
         </>
       )}
+      <FeatureAdminsSection level="endpoint" levelKey={`${adapter}/${endpoint}`} />
     </PageShell>
   )
 }
