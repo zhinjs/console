@@ -86,7 +86,8 @@ export default function AmbientEngagementPage() {
 
 function AmbientEngagementSession() {
   const i18n = useI18n()
-  const statusRead = useConsoleRead<StatusRead | null>(readAmbientStatus, null)
+  // Labels are rendered into the view at read time: read in the current interface language.
+  const statusRead = useConsoleRead<StatusRead | null>(() => readAmbientStatus(i18n.locale), null)
   const configurationReadEpoch = useRef(0)
   const settingsRead = useConsoleRead<SettingsRead | null>(async () => {
     const readEpoch = ++configurationReadEpoch.current
