@@ -998,7 +998,7 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
                   {requestList.length === 0 && canShowReadEmpty(requestsLoading, requestsError) && (
                     <div className="im-empty-state flex flex-col items-center justify-center py-16 gap-2 text-muted-foreground text-sm">
                       <UserPlus size={40} className="opacity-25" />
-                      <span>{requestsAvailable === false ? i18n.t("此渠道未提供请求管理，且未启用请求收件箱") : i18n.t("暂无未处理请求")}</span>
+                      <span>{requestsAvailable === false ? i18n.t("此账号未提供请求管理，且未启用请求收件箱") : i18n.t("暂无未处理请求")}</span>
                     </div>
                   )}
                   {requestList.map((r) => (

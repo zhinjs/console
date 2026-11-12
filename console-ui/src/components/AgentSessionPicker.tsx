@@ -72,7 +72,7 @@ export function AgentSessionPicker({
         <Button variant="ghost" size="sm" asChild>
           <Link to="/scope">
             <MessagesSquare />
-            {i18n.t("浏览渠道会话")}</Link>
+            {i18n.t("浏览账号与会话")}</Link>
         </Button>
       </div>
 
@@ -135,7 +135,7 @@ export function AgentSessionPicker({
             {actionLabel ?? i18n.t('打开会话')}
           </Button>
         </div>
-        {invalid ? <p id="session-key-error" className="mt-2 text-xs text-destructive">{i18n.t("请输入完整标识：平台:渠道:private|group|channel:会话。")}</p> : null}
+        {invalid ? <p id="session-key-error" className="mt-2 text-xs text-destructive">{i18n.t("请输入完整标识：平台:账号:private|group|channel:会话。")}</p> : null}
       </details>
     </section>
   )

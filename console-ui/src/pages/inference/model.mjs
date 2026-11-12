@@ -27,11 +27,12 @@ export async function inferenceRequest(fetch, { path = '', ownerId, body, method
     })
     result = await response.json()
   } catch {
-    throw new InferenceRequestError('unavailable')
+    // A Host without the Agent has no inference routes at all (404, possibly not JSON).
+    throw new InferenceRequestError(response?.status === 404 ? 'not-installed' : 'unavailable', response?.status)
   }
   if (!response.ok || result.success !== true)
     throw new InferenceRequestError(
-      typeof result.code === 'string' ? result.code : 'unavailable',
+      typeof result.code === 'string' ? result.code : response.status === 404 ? 'not-installed' : 'unavailable',
       response.status,
       result.mutationOutcome === 'not-committed' || result.requestOutcome === 'not-dispatched'
         ? 'not-committed'
@@ -61,6 +62,7 @@ export function inferenceError(error, locale = 'zh-CN') {
   if (code === 'unsupported') return translate(locale, '此服务不提供该功能。')
   if (code === 'not-prepared') return translate(locale, '已登录，请先完成账号准备。')
   if (code === 'storage-integrity') return translate(locale, '模型存储完整性异常，请由管理员检查。')
+  if (code === 'not-installed') return translate(locale, '这个 Host 没有模型接口：没有安装 Agent，或 Host 版本较旧。只用 IM 时可以忽略；需要 AI 回复时先在插件市场安装 Agent。')
   if (code === 'outcome-unknown') return translate(locale, '操作结果尚未确认，请查询结果后再操作。')
   return translate(locale, '操作未完成，请稍后重新读取。')
 }

@@ -126,7 +126,7 @@ export default function AgentSessionsPage() {
         setTree(null)
         setConfirmPoint(null)
         setErrorKind('other')
-        setError(i18n.t('会话标识不完整，请检查平台、渠道、类型与会话。'))
+        setError(i18n.t('会话标识不完整，请检查平台、账号、类型与会话。'))
         return
       }
       const sequence = ++requestSequence.current
@@ -291,7 +291,7 @@ export default function AgentSessionsPage() {
     <div className="console-page console-conversations-page">
       <PageHeader
         title={i18n.t('聊天记录')}
-        description={readOnly ? i18n.t('按聊天账号和会话查看机器人和大家聊过什么（只读）。') : undefined}
+        description={readOnly ? i18n.t('按聊天账号和会话查看机器人和大家聊过什么（只读）。') : i18n.t('按聊天账号和会话查看机器人和大家聊过什么，也可以接着聊。')}
       />
 
       {!personal && recentResult ? (
@@ -543,7 +543,7 @@ export default function AgentSessionsPage() {
               </Tabs>
             </>
           ) : sessionKeyFromUrl ? (
-            <ErrorAlert error={i18n.t('会话标识不完整，请检查平台、渠道、类型与会话。')} />
+            <ErrorAlert error={i18n.t('会话标识不完整，请检查平台、账号、类型与会话。')} />
           ) : (
             <EmptyState compact title={i18n.t('选择一个对话')} />
           )}

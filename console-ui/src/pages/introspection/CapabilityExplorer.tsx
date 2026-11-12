@@ -753,7 +753,7 @@ function CommandRunnerPanel({ item }: { item: CapabilityItem }) {
         </span>
         <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={loadingEndpoints} onClick={() => void loadChannels()}>
           {loadingEndpoints ? <Loader2 className="size-3 animate-spin mr-1" /> : <RefreshCw className="size-3 mr-1" />}
-          {i18n.t("加载渠道")}
+          {i18n.t("加载账号")}
         </Button>
       </div>
       <div className="mt-2.5 grid gap-2 text-xs">
@@ -775,7 +775,7 @@ function CommandRunnerPanel({ item }: { item: CapabilityItem }) {
             value={endpointIndex}
             onValueChange={setEndpointIndex}
             options={[
-              { value: '', label: endpoints.length ? i18n.t("请选择账号") : i18n.t("请先点击“加载渠道”") },
+              { value: '', label: endpoints.length ? i18n.t("请选择账号") : i18n.t("请先点击“加载账号”") },
               ...endpoints.map((ep, idx) => ({
                 value: String(idx),
                 label: `${ep.name} · ${ep.endpoint.adapter}${ep.connected ? '' : i18n.t("（离线）")}`,

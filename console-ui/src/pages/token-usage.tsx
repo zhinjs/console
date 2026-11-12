@@ -1,4 +1,5 @@
 import { useI18n } from '../i18n'
+import { ConversationKindBadge } from './features/conversation-list'
 import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react'
 import { StatusState } from '../components/StatusState'
 import { ScopeFilterBar, useScopeFilter } from './insights/ScopeFilterBar'
@@ -265,7 +266,7 @@ export default function TokenUsagePage() {
                           return <TableRow key={row.sessionKey} className="cursor-pointer hover:bg-muted/50" title={row.sessionKey} onClick={() => pickSession(row)}>
                             <TableCell>{parts.platform || '—'}</TableCell>
                             {view.showEndpoint ? <TableCell>{parts.endpoint || '—'}</TableCell> : null}
-                            <TableCell>{parts.scope || '—'}</TableCell>
+                            <TableCell>{parts.scope === 'group' || parts.scope === 'private' || parts.scope === 'channel' ? <ConversationKindBadge kind={parts.scope} /> : parts.scope || '—'}</TableCell>
                             <TableCell className="break-all font-mono text-xs"><ListItemButton className="underline-offset-2 hover:underline" onClick={event => { event.stopPropagation(); pickSession(row) }}>{parts.sceneId || row.sessionKey}</ListItemButton></TableCell>
                             <TableCell numeric>{formatTokens(row.turns, i18n.locale)}</TableCell>
                             <TableCell numeric>{formatTokens(row.calls, i18n.locale)}</TableCell>
