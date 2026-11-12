@@ -15,7 +15,7 @@ import { requestConsole } from '../utils/console-rpc'
 import { statusFromError, type StatusReading } from '../components/status-state-model.mjs'
 import { ObjectSection } from './ObjectPageLayout'
 import {
-  CHAT_ROLE_LABELS, CHAT_ROLE_SOURCE_LABELS, CHAT_ROLES,
+  CHAT_ROLE_LABELS, CHAT_ROLES,
   chatRoleApplied, chatRoleGrantRequest, chatRoleRevokeRequest, chatRoleRows, chatRolesListRequest,
   readChatRoleChange, readChatRoles,
   type ChatRole, type ChatRoleEntry, type ChatRoleRow,
@@ -63,7 +63,7 @@ function RoleTable({ rows, label, busy, onRevoke, inheritedFrom }: {
         <TableRow>
           <TableHead className="w-[42%] max-md:w-[55%]">{i18n.t('身份')}</TableHead>
           <TableHead className="w-[14%] max-md:w-[20%]">{i18n.t('角色')}</TableHead>
-          <TableHead className="w-[28%] max-md:hidden">{i18n.t('来源')}</TableHead>
+          <TableHead className="w-[28%] max-md:hidden">{i18n.t('授予于')}</TableHead>
           <TableHead className="w-[16%] max-md:w-[25%] text-right">{i18n.t('操作')}</TableHead>
         </TableRow>
       </TableHeader>
@@ -86,10 +86,10 @@ function RoleTable({ rows, label, busy, onRevoke, inheritedFrom }: {
             <TableCell><Badge variant={ROLE_BADGE[row.role]} size="sm">{i18n.t(CHAT_ROLE_LABELS[row.role])}</Badge></TableCell>
             <TableCell className="max-md:hidden">
               <span className="inline-flex flex-col">
-                <span className="text-sm">{i18n.t(CHAT_ROLE_SOURCE_LABELS[row.source])}</span>
+                {/* Every zhin role is a grant (ADR 0056); what matters is the level it was granted at. */}
                 {row.relation === 'inherited'
-                  ? <Link className="console-chat-role-sub underline" to={scopeHref(parseScopeKey(row.key) ?? {}, 'roles')}>{i18n.t('继承自 {0}', [inheritedFrom(row)])}</Link>
-                  : row.relation === 'below' ? <code className="console-chat-role-sub">{row.key}</code> : null}
+                  ? <Link className="text-sm underline" to={scopeHref(parseScopeKey(row.key) ?? {}, 'roles')}>{inheritedFrom(row)}</Link>
+                  : row.relation === 'below' ? <code className="text-sm">{row.key}</code> : <span className="text-sm">{i18n.t('这一层')}</span>}
                 {row.detail ? <code className="console-chat-role-sub">{row.detail}</code> : null}
               </span>
             </TableCell>
