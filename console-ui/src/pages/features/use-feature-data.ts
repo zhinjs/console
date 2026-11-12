@@ -72,6 +72,7 @@ export interface EndpointSummaryItem {
   adapter: string
   connected: boolean
   status: 'online' | 'offline'
+  transportState?: string
   pendingRequestCount?: number
   pendingNoticeCount?: number
 }

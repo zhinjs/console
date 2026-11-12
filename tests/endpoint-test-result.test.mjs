@@ -108,10 +108,10 @@ test('sidebar test button is disabled and labelled while a test runs', () => {
   assert.equal(findAll(renderSidebar({}), node => node.props.role === 'alert' || node.props.role === 'status').length, 0)
 })
 
-test('endpoint cards announce test results and label the running state', async () => {
-  const list = await readFile(new URL('../console-ui/src/pages/endpoints.tsx', import.meta.url), 'utf8')
+test('the account 接入 tab announces test results and labels the running state', async () => {
+  const list = await readFile(new URL('../console-ui/src/pages/scope/endpoint-access.tsx', import.meta.url), 'utf8')
   assert.match(list, /endpointTestPresentation\(/)
   assert.match(list, /role=\{presentation\.role\}/)
-  assert.match(list, /i18n\.t\("测试中…"\)/)
+  assert.match(list, /i18n\.t\('测试中…'\)/)
   assert.doesNotMatch(list, /测速中/)
 })

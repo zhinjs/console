@@ -196,7 +196,7 @@ test('operations pages form a URL-addressable diagnostic loop', () => {
 test('the shared shell adapts across PC, Pad and Phone widths', () => {
   const layout = sourceText(join(SOURCE_ROOT, 'layouts', 'dashboard.tsx'))
   const design = sourceText(join(SOURCE_ROOT, 'design-system.css'))
-  const grids = ['pages/endpoints.tsx', 'pages/plugins.tsx', 'pages/marketplace.tsx']
+  const grids = ['pages/scope/overview-panels.tsx', 'pages/plugins.tsx', 'pages/marketplace.tsx']
     .map((path) => sourceText(join(SOURCE_ROOT, path))).join('\n')
 
   assert.match(layout, /console-content-frame/)

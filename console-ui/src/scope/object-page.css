@@ -13,7 +13,7 @@
   border-radius: var(--console-radius-lg); background: hsl(var(--primary) / 0.1); color: hsl(var(--primary));
 }
 .console-object-avatar svg { width: 1.375rem; height: 1.375rem; }
-.console-object-titles { display: flex; min-width: 0; flex: 1 1 16rem; flex-direction: column; gap: 0.25rem; }
+.console-object-titles { display: flex; min-width: 0; flex: 1 1 24rem; flex-direction: column; gap: 0.25rem; }
 .console-object-title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; min-width: 0; }
 .console-object-title-row .console-page-title { overflow-wrap: anywhere; }
 .console-object-titles .console-page-description { margin-top: 0; }

@@ -2595,7 +2595,9 @@
   }
   .console-section-title { font-size: var(--console-text-section); line-height: var(--console-leading-section); font-weight: 600; letter-spacing: 0; }
   @media (min-width: 640px) {
-    .console-page-header { flex-direction: row; align-items: flex-start; justify-content: space-between; gap: 1.5rem; }
+    /* Actions wrap under the title once the title block would drop below ~24rem (Pad widths), instead of squeezing the description. */
+    .console-page-header { flex-direction: row; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 0.875rem 1.5rem; }
+    .console-page-header > :first-child { flex: 1 1 24rem; }
   }
 }
 

@@ -31,7 +31,7 @@ const envelope = data => ({ success: true, data })
 const LEVELS = ['global', 'adapter', 'endpoint', 'conversation']
 const features = [
   { plugin: 'welcome', displayName: '群欢迎', levels: LEVELS, hasSchema: true, globalEnabled: true, conversationFields: ['text'] },
-  { plugin: 'repeater', displayName: '复读机', levels: LEVELS, hasSchema: false, globalEnabled: true },
+  { plugin: 'repeater', displayName: '复读机', levels: LEVELS, hasSchema: false, globalEnabled: true, conversationFields: [] },
   { plugin: 'rss', displayName: '订阅推送', levels: ['global', 'adapter', 'endpoint'], hasSchema: true, globalEnabled: false },
 ]
 const conversations = [
@@ -49,14 +49,38 @@ const chain = key => {
   const parts = key ? key.split('/') : []
   return ['', parts[0], parts.slice(0, 2).join('/'), parts.length > 2 ? key : undefined].filter((value, index) => index === 0 || (value && index <= parts.length))
 }
+// Layered values for the 功能 tab: welcome.text overridden on the icqq adapter and in group 20001,
+// repeater switched off on the preview-community account (so its conversations are locked), rss off globally.
 function featureDetail(body) {
   const feature = features.find(item => item.plugin === body.plugin) ?? features[0]
-  const schema = feature.hasSchema ? { type: 'object', properties: { text: { type: 'string', title: '欢迎语', default: '欢迎新朋友' } } } : null
-  const overridden = body.level === 'conversation' && body.key === 'icqq/preview-community/group:20001'
-  return { revision: 'preview-1', plugin: feature.plugin, level: body.level, key: body.key ?? '', levels: feature.levels, schema,
-    values: overridden ? { text: '欢迎来到产品试验群' } : {}, effective: { text: overridden ? '欢迎来到产品试验群' : '欢迎新朋友' },
-    sources: { text: overridden ? 'conversation' : 'global' }, enabled: feature.globalEnabled, ...(feature.globalEnabled ? {} : { lockedBy: 'global' }) }
+  const level = body.level
+  const key = body.key ?? ''
+  const base = { revision: 'preview-1', plugin: feature.plugin, level, key, levels: feature.levels, conversationFields: feature.conversationFields ?? [] }
+  if (feature.plugin === 'welcome') {
+    const properties = { text: { type: 'string', title: '欢迎语', default: '欢迎新朋友' }, mention: { type: 'boolean', title: '@新成员', default: true } }
+    const schema = { type: 'object', properties: level === 'conversation' ? { text: properties.text } : properties }
+    const onIcqq = key === 'icqq' || key.startsWith('icqq/')
+    const inGroup = key === 'icqq/preview-community/group:20001'
+    const text = inGroup ? '欢迎来到产品试验群' : onIcqq ? '欢迎来到 icqq 社区' : '欢迎新朋友'
+    const values = level === 'global' ? { text: '欢迎新朋友', mention: true } : level === 'adapter' && onIcqq ? { text } : inGroup ? { text } : {}
+    return { ...base, schema, values, effective: { text, mention: true }, sources: { '/text': inGroup ? 'conversation' : onIcqq ? 'adapter' : 'global', '/mention': 'global' }, enabled: true }
+  }
+  if (feature.plugin === 'repeater') {
+    const account = key === 'icqq/preview-community'
+    const below = key.startsWith('icqq/preview-community/')
+    return { ...base, schema: null, values: account ? { enabled: false } : {}, effective: {}, sources: account ? { '/enabled': 'endpoint' } : {},
+      enabled: !(account || below), ...(below ? { lockedBy: 'endpoint' } : {}) }
+  }
+  const schema = { type: 'object', properties: { interval: { type: 'integer', title: '检查间隔（分钟）', default: 30 } } }
+  return { ...base, schema, values: level === 'global' ? { interval: 30 } : {}, effective: { interval: 30 }, sources: { '/interval': 'global' }, enabled: false,
+    ...(level === 'global' ? {} : { lockedBy: 'global' }) }
 }
+const loginTasks = [
+  { id: 'preview-login-1', adapter: 'telegram', endpointKey: 'preview-support', type: 'sms', payload: { message: '平台要求输入短信验证码完成登录。', phone: '+86 138****0000' }, createdAt: Date.now() - 60_000, expiresAt: Date.now() + 240_000 },
+]
+const adapterStatus = { adapterKey: 'icqq', displayName: 'ICQQ', page: '/icqq', canAdd: true, canRemove: true, configStore: true,
+  fields: [{ key: 'uin', type: 'string', required: true, env: false, secret: false, label: 'QQ 号' }, { key: 'password', type: 'string', required: false, env: true, secret: true, label: '密码' }],
+  running: [{ id: 'preview-community', mode: 'qrcode' }], configured: [{ id: 'preview-community', values: { uin: '10000' } }, { id: 'preview-archive', values: { uin: '10009' } }], actions: [] }
 
 const server = createServer(async (request, response) => {
   const origin = request.headers.origin
@@ -93,7 +117,7 @@ const server = createServer(async (request, response) => {
   }
   if (url.pathname.startsWith('/api/introspection/')) { json(envelope({ items: [], total: 0, page: 1, pageSize: 20 })); return }
   if (url.pathname === '/api/agent/sessions') { json(envelope({ sessions: [], total: 0, items: [] })); return }
-  if (url.pathname === '/console/api/pages') { json({ pages: [] }); return }
+  if (url.pathname === '/console/api/pages') { json({ pages: [{ route: '/icqq', localName: 'index', owner: 'adapter-icqq', source: 'plugins/adapters/icqq/pages/index/index.tsx' }] }); return }
   if (url.pathname === '/api/console/request' && request.method === 'POST') {
     let raw = ''
     for await (const chunk of request) {
@@ -105,13 +129,16 @@ const server = createServer(async (request, response) => {
     const type = String(body.type)
     const endpoint = endpoints.find(endpoint => endpoint.name === (body.endpointKey ?? body.endpointId ?? body.data?.endpointKey)) ?? endpoints[0]
     if (type === 'endpoint.list') { json(envelope({ endpoints })); return }
+    if (type === 'login.list') { json(envelope({ tasks: loginTasks })); return }
+    if (type === 'plugin.adapter-icqq.status') { json(envelope(adapterStatus)); return }
     if (type === 'feature.list') { json(envelope({ revision: 'preview-1', features })); return }
     if (type === 'feature.get') { json(envelope(featureDetail(body))); return }
     if (type === 'feature.matrix') {
-      json(envelope({ revision: 'preview-1', adapters: ['icqq', 'telegram'], endpoints: { icqq: ['preview-community'], telegram: ['preview-support'] },
+      json(envelope({ revision: 'preview-1', adapters: ['icqq', 'telegram'], endpoints: { icqq: ['preview-community', 'preview-archive'], telegram: ['preview-support'] },
         conversationOverrides: { icqq: { 'preview-community': 2 } },
         rows: features.map(item => ({ plugin: item.plugin, displayName: item.displayName, global: { enabled: item.globalEnabled, overridden: false },
-          adapters: { icqq: { enabled: item.globalEnabled, overridden: item.plugin === 'welcome', ...(item.globalEnabled ? {} : { lockedBy: 'global' }) }, telegram: { enabled: item.globalEnabled, overridden: false, ...(item.globalEnabled ? {} : { lockedBy: 'global' }) } } })) }))
+          adapters: { icqq: { enabled: item.globalEnabled, overridden: item.plugin === 'welcome', ...(item.globalEnabled ? {} : { lockedBy: 'global' }) }, telegram: { enabled: item.globalEnabled, overridden: false, ...(item.globalEnabled ? {} : { lockedBy: 'global' }) } },
+          ...(item.plugin === 'rss' ? {} : { conversationOverrides: { icqq: { 'preview-community': 1 } } }) })) }))
       return
     }
     if (type === 'feature.conversations') {
@@ -124,6 +151,14 @@ const server = createServer(async (request, response) => {
       const keys = chain(body.key ?? '')
       json(envelope({ roles: chatRoles.filter(entry => keys.includes(entry.key)) })); return
     }
+    if (type === 'chat-roles.mappings') {
+      // Draft protocol (ADR 0056 §4): icqq answers, other adapters behave like an older Host.
+      if (!String(body.key ?? '').startsWith('icqq')) { json({ success: false, error: `Unknown RPC type: ${type}` }, 400); return }
+      const rule = { match: { standing: ['owner', 'admin'] }, grant: 'admin' }
+      json(envelope({ layers: [{ level: 'default', rules: [rule], inherit: true }, { level: 'adapter', rules: [{ match: { role: ['moderator'] }, grant: 'trusted' }], inherit: true }],
+        effective: [{ ...rule, level: 'default' }, { match: { role: ['moderator'] }, grant: 'trusted', level: 'adapter' }] }))
+      return
+    }
     if (type === 'gateway.instance.status') { json(envelope({ instanceId: 'preview', state: 'running', lastExitCode: null, lastExitSignal: null, recentRestarts: 0 })); return }
     if (type === 'agent.engagements.list') { json(envelope({ engagements: [engagement.summary] })); return }
     if (type === 'agent.engagements.get') {
@@ -132,7 +167,11 @@ const server = createServer(async (request, response) => {
       return
     }
     if (type === 'agent.venues.list') { json(envelope({ venues })); return }
-    if (type === 'endpoint.info' || type === 'endpoint.get') { json(envelope(endpoint)); return }
+    if (type === 'endpoint.info' || type === 'endpoint.get') {
+      const known = endpoints.find(item => item.name === (body.endpointKey ?? body.endpointId ?? body.data?.endpointKey))
+      if (known) json(envelope(known)); else json({ success: false, error: '账号不存在' }, 404)
+      return
+    }
     if (type === 'endpoint.test') { json(envelope({ reachable: true, connected: true, latencyMs: 24, message: '本地预览连接正常' })); return }
     if (type === 'endpoint.friends') { json(envelope({ friends: [{ user_id: 10001, nickname: '演示用户', remark: '界面测试' }] })); return }
     if (type === 'endpoint.groups') { json(envelope({ groups: [{ group_id: 20001, name: '产品试验群' }] })); return }

@@ -55,3 +55,4 @@ export function scopePickerTree(
   current?: ScopeRef,
   conversations?: readonly { readonly kind: string; readonly id: string; readonly name?: string }[],
 ): ScopePickerAdapter[]
+export function objectPageOwnsBreadcrumb(pathname: unknown): boolean
