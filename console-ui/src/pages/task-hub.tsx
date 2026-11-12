@@ -11,6 +11,9 @@ import TaskCenterPage from './task-center'
 import CronPage from './cron'
 import AssistantJobsPage from './assistant-jobs'
 import { ScheduleExecutions } from './ScheduleExecutions'
+import { TaskOverview } from './TaskOverview'
+import { StatusState } from '../components/StatusState'
+import { PageShell } from '../components/PageShell'
 import { resolveTaskTab, TASK_HUB_TABS, type TaskTabId } from './task-hub-model.mjs'
 import { StatCard, StatGrid } from '../components/StatCard'
 import { apiFetch } from '../utils/auth'
@@ -75,6 +78,12 @@ function HistoryPanel() {
   return <ScheduleExecutions key={scope} connectionScope={scope} />
 }
 
+function OverviewPanel() {
+  const scope = useInboxCacheScope()
+  if (!scope || !isInboxCacheScopeActive(scope)) return <StatusState kind="disconnected" />
+  return <TaskOverview key={scope} connectionScope={scope} />
+}
+
 export default function TaskHubPage() {
   const i18n = useI18n()
   const [params, setParams] = useSearchParams()
@@ -85,10 +94,10 @@ export default function TaskHubPage() {
   const summary = useTaskHubSummary(scope, active)
   const unknown = '—'
   const panels: Record<TaskTabId, ReactNode> = {
-    admin: <TaskCenterPage />, schedule: <CronPage />, assistant: <AssistantJobsPage />, history: <HistoryPanel />,
+    overview: <OverviewPanel />, admin: <TaskCenterPage />, schedule: <CronPage />, assistant: <AssistantJobsPage />, history: <HistoryPanel />,
   }
-  return <div className="console-page console-resource-page console-tasks-hub">
-    <PageHeader title={i18n.t("定时任务")}description={i18n.t("管理员任务、定时提醒、助手任务和执行记录集中在这里。")} />
+  return <PageShell className="console-resource-page console-tasks-hub">
+    <PageHeader title={i18n.t("定时任务")} description={i18n.t("所有任务先在「全部任务」里看类型、状态、下次运行、最近结果、目标与审批；具体操作在各自页签。")} />
     <StatGrid label={i18n.t("任务概况")}>
       <StatCard
         icon={ClipboardList}
@@ -138,5 +147,5 @@ export default function TaskHubPage() {
       </TabsList>
       {tabs.map(tab => <TabsContent key={tab.id} value={tab.id}>{tab.id === active ? panels[tab.id] : null}</TabsContent>)}
     </Tabs>
-  </div>
+  </PageShell>
 }

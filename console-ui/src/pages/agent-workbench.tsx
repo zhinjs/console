@@ -30,9 +30,12 @@ import {
   SESSION_SCOPE_LABELS,
 } from '../utils/agent-session'
 import { PageHeader } from '../components/PageHeader'
+import { PageShell } from '../components/PageShell'
+import { StatusState } from '../components/StatusState'
+import { CONSOLE_PATHS } from '../console-routes.mjs'
+import './insights/insights.css'
 import { Button, buttonVariants } from '../components/ui/button'
 import { Skeleton } from '../components/ui/skeleton'
-import { ErrorAlert } from '../components/error-alert'
 import { fetchAllIntrospection, type IntrospectionEnvelope } from './agent-workbench-model.mjs'
 
 interface BindingItem {
@@ -142,14 +145,10 @@ export default function AgentWorkbenchPage() {
   const onlineEndpoints = endpoints.filter((endpoint) => endpoint.connected).length
   const ready = agentStatus !== 'unavailable' && bindings.length > 0 && onlineEndpoints > 0
   const disconnectedMcp = mcpServices.length - connectedMcp
+  // 没装 Agent 是一种正常的部署（只用 IM），不是故障：不标红、不列「缺项」。
+  const imOnly = !error && agentStatus === 'unavailable'
 
   const readiness = [
-    {
-      label: i18n.t("渠道入口"),
-      detail: i18n.t("{0} / {1} 个 Endpoint 在线", [onlineEndpoints, endpoints.length]),
-      ready: onlineEndpoints > 0,
-      path: '/scope',
-    },
     {
       label: i18n.t("Agent 绑定"),
       detail: agentStatus === 'unavailable' ? i18n.t("未安装或装配 Agent") : bindings.length ? i18n.t("{0} 个 Agent 配置绑定", [bindingTotal]) : i18n.t("尚未配置模型与 Agent"),
@@ -168,11 +167,17 @@ export default function AgentWorkbenchPage() {
       ready: mcpServices.length === 0 || connectedMcp === mcpServices.length,
       path: '/introspection?tab=mcp',
     },
+    {
+      label: i18n.t("可对话的聊天账号"),
+      detail: i18n.t("{0} / {1} 个聊天账号在线", [onlineEndpoints, endpoints.length]),
+      ready: onlineEndpoints > 0,
+      path: '/scope',
+    },
   ]
 
   if (loading) {
     return (
-      <div className="space-y-5">
+      <div className="space-y-5" aria-label={i18n.t("正在读取机器人状态")}>
         <Skeleton className="h-56 rounded-[1.6rem]" />
         <div className="grid gap-5 lg:grid-cols-[1.4fr_0.7fr]">
           <Skeleton className="h-96 rounded-[1.4rem]" />
@@ -183,15 +188,16 @@ export default function AgentWorkbenchPage() {
   }
 
   return (
-    <div className="console-agent-workbench space-y-5">
+    <PageShell className="console-agent-workbench">
       <PageHeader
         title={i18n.t("机器人状态")}
-        description={i18n.t("检查 Agent 配置与渠道状态，选择下一步操作。")}
-        actions={
+        description={i18n.t("AI 是否就绪、Agent 绑定了哪些模型与服务、下一步做什么。进程与实例的运行状态在「实例」页。")}
+        actions={<>
+          <Button variant="ghost" size="sm" asChild><Link to={CONSOLE_PATHS.opsInstance}><Server />{i18n.t("实例运行状态")}<ArrowUpRight /></Link></Button>
           <Button variant="outline" size="sm" onClick={() => void loadWorkbench(true)} disabled={refreshing}>
             <RefreshCw className={refreshing ? 'animate-spin' : ''} />
             {i18n.t("刷新")}</Button>
-        }
+        </>}
       />
 
       <section className="console-agent-hero" aria-label={i18n.t("Agent 就绪状态")}>
@@ -199,42 +205,44 @@ export default function AgentWorkbenchPage() {
           <div className="min-w-0">
             <h2 className="flex items-center gap-2 text-base font-semibold">
               {!error && ready ? <CheckCircle2 /> : <CircleDashed />}
-              {error ? i18n.t("当前状态未确认") : ready ? disconnectedMcp > 0 ? i18n.t("可以对话，但有服务未连接") : i18n.t("配置与渠道已齐备") : i18n.t("继续完成 Agent 配置")}
+              {error ? i18n.t("当前状态未确认") : imOnly ? i18n.t("只用 IM：没有安装 Agent") : ready ? disconnectedMcp > 0 ? i18n.t("可以对话，但有服务未连接") : i18n.t("AI 配置与聊天账号已齐备") : i18n.t("继续完成 Agent 配置")}
             </h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               {error ? i18n.t("本次读取未完成，下方可能保留上次数据。请先重试读取。")
+                : imOnly ? i18n.t("命令、插件和聊天账号照常工作；需要 AI 回复时再安装 Agent。")
                 : ready ? i18n.t("可以打开会话验证模型连接与实际对话结果。")
                   : i18n.t("先处理下列缺项，再通过真实会话确认收发与模型连接。")}
             </p>
-            {!error && (!ready || disconnectedMcp > 0) ? (
+            {imOnly ? (
+              <p className="mt-2 text-sm"><Link className="underline underline-offset-2" to="/ops/config">{i18n.t("安装并装配可选 Agent 能力 →")}</Link></p>
+            ) : !error && (!ready || disconnectedMcp > 0) ? (
               <ul className="console-agent-missing" aria-label={i18n.t("待完成配置")}>
                 {disconnectedMcp > 0 ? <li><Link to="/introspection?tab=mcp">{i18n.t("{0} 个 MCP 服务未连接，检查服务地址与凭据 →", [disconnectedMcp])}</Link></li> : null}
-                {ready ? null : agentStatus === 'unavailable' ? <li><Link to="/ops/config">{i18n.t("安装并装配可选 Agent 能力 →")}</Link></li>
-                  : bindings.length === 0 ? <li><Link to="/ops/config">{i18n.t("配置模型与 Agent 绑定 →")}</Link></li> : null}
-                {!ready && onlineEndpoints === 0 ? <li><Link to="/scope">{i18n.t("连接一个机器人渠道 →")}</Link></li> : null}
+                {ready ? null : bindings.length === 0 ? <li><Link to={CONSOLE_PATHS.ai}>{i18n.t("配置模型与 Agent 绑定 →")}</Link></li> : null}
+                {!ready && onlineEndpoints === 0 ? <li><Link to="/scope">{i18n.t("让一个聊天账号上线 →")}</Link></li> : null}
               </ul>
             ) : null}
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
             {error ? <Button variant="outline" onClick={() => void loadWorkbench(true)} disabled={refreshing}><RefreshCw />{i18n.t("重试读取")}</Button>
+              : imOnly ? <Button variant="outline" asChild><Link to="/scope"><Bot />{i18n.t("查看聊天账号")}</Link></Button>
               : ready ? <Button asChild><Link to="/agent/sessions"><GitBranch />{i18n.t("打开聊天记录")}</Link></Button>
-                : <Button asChild><Link to={agentStatus === 'unavailable' || bindings.length === 0 ? '/ops/config' : '/scope'}><Settings2 />{agentStatus === 'unavailable' || bindings.length === 0 ? i18n.t("配置 Agent") : i18n.t("连接渠道")}</Link></Button>}
+                : <Button asChild><Link to={bindings.length === 0 ? CONSOLE_PATHS.ai : '/scope'}><Settings2 />{bindings.length === 0 ? i18n.t("配置 Agent") : i18n.t("查看聊天账号")}</Link></Button>}
           </div>
         </div>
         <details className="console-agent-state-explanation">
           <summary>{i18n.t("状态说明")}</summary>
-          <p>{i18n.t("此处展示已发现的配置与渠道状态；模型连接及实际对话结果需在对应会话中验证。选择下方 Agent 查看模型与 MCP 服务，或从最近对话检查分支。")}</p>
+          <p>{i18n.t("此处展示已发现的 Agent 配置与聊天账号在线情况；模型连接及实际对话结果需在对应会话中验证。进程、内存与重启记录看「实例」页。")}</p>
         </details>
 
         <div className="console-agent-metrics">
           <div><Brain /><span>Agent</span><strong>{bindingTotal}</strong></div>
           <div><Wrench /><span>{i18n.t("工具")}</span><strong>{toolTotal}</strong></div>
           <div><Server /><span>MCP</span><strong>{connectedMcp}<small> / {mcpServices.length}</small></strong></div>
-          <div><Bot /><span>{i18n.t("在线渠道")}</span><strong>{onlineEndpoints}<small> / {endpoints.length}</small></strong></div>
         </div>
       </section>
 
-      {error ? <ErrorAlert error={error} onRetry={() => loadWorkbench()} /> : null}
+      {error ? <StatusState error={error} onRetry={() => void loadWorkbench()} /> : null}
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)]">
         <section className="console-dashboard-panel" aria-labelledby="agents-title">
@@ -279,11 +287,12 @@ export default function AgentWorkbenchPage() {
               ) : null}
             </div>
           ) : (
-            <div className="console-agent-empty">
-              <Brain />
-              <div><h3>{agentStatus === 'unavailable' ? i18n.t("未安装或装配 Agent") : i18n.t("尚未发现 Agent 绑定")}</h3><p>{agentStatus === 'unavailable' ? i18n.t("IM 核心可独立使用；需要 AI 时先安装 @zhin.js/agent、zod、ai 和所选 Provider，再配置模型。") : i18n.t("Agent 是可选能力，IM 核心可独立使用。需要 AI 时安装 @zhin.js/agent、zod、ai 和所选 Provider，然后配置模型与 Agent。")}</p></div>
-              <Button size="sm" asChild><Link to="/ops/config">{i18n.t("打开配置")}</Link></Button>
-            </div>
+            <StatusState
+              kind={agentStatus === 'unavailable' ? 'not-installed' : 'empty'}
+              title={agentStatus === 'unavailable' ? i18n.t("未安装 Agent") : i18n.t("尚未发现 Agent 绑定")}
+              description={agentStatus === 'unavailable' ? i18n.t("IM 核心可独立使用；需要 AI 时先安装 @zhin.js/agent、zod、ai 和所选 Provider，再配置模型。") : i18n.t("Agent 是可选能力，IM 核心可独立使用。需要 AI 时安装 @zhin.js/agent、zod、ai 和所选 Provider，然后配置模型与 Agent。")}
+              actions={<Button size="sm" variant="outline" asChild><Link to={agentStatus === 'unavailable' ? '/ops/config' : CONSOLE_PATHS.ai}>{agentStatus === 'unavailable' ? i18n.t("打开配置") : i18n.t("AI 与模型")}</Link></Button>}
+            />
           )}
         </section>
 
@@ -297,7 +306,7 @@ export default function AgentWorkbenchPage() {
             {readiness.map((item) => (
               <Link key={item.label} to={item.path} className="console-readiness-row">
                 <span className={item.ready ? 'is-ready' : ''}>{item.ready ? <CheckCircle2 /> : <CircleDashed />}</span>
-                <span className="min-w-0 flex-1"><strong>{item.label}</strong><small>{item.detail}</small></span>
+                <span className="min-w-0 flex-1"><strong>{item.label}</strong><small>{imOnly && item.path !== '/scope' ? i18n.t("未安装 Agent，不适用") : item.detail}</small></span>
                 <ArrowUpRight />
               </Link>
             ))}
@@ -310,7 +319,7 @@ export default function AgentWorkbenchPage() {
           <div>
             <h2 id="recent-title">{i18n.t("最近的 Agent 对话")}</h2>
           </div>
-          <Button variant="ghost" size="sm" asChild><Link to="/scope">{i18n.t("全部渠道")}<ArrowUpRight /></Link></Button>
+          <Button variant="ghost" size="sm" asChild><Link to="/scope">{i18n.t("全部会话")}<ArrowUpRight /></Link></Button>
         </div>
 
         {history.length ? (
@@ -320,7 +329,7 @@ export default function AgentWorkbenchPage() {
         ) : (
           <div className="console-agent-empty is-compact">
             <MessagesSquare />
-            <div><h3>{i18n.t("最近还没有打开过 Agent 对话")}</h3><p>{i18n.t("前往渠道会话，选择一个对话后点击分支图标即可开始。")}</p></div>
+            <div><h3>{i18n.t("最近还没有打开过 Agent 对话")}</h3><p>{i18n.t("在账号与会话里选择一个对话，点击分支图标即可开始。")}</p></div>
             <Button size="sm" asChild><Link to="/scope">{i18n.t("选择会话")}</Link></Button>
           </div>
         )}
@@ -333,6 +342,6 @@ export default function AgentWorkbenchPage() {
         <Link to="/agent/sessions"><GitBranch /><span><strong>{i18n.t("聊天记录")}</strong><small>{i18n.t("继续最近上下文")}</small></span><ArrowUpRight /></Link>
         <Link to="/features/ai/workrooms"><Workflow /><span><strong>{i18n.t("Workroom 看板")}</strong><small>{i18n.t("按 Project 查看 Run、Task 与 Assignment")}</small></span><ArrowUpRight /></Link>
       </section>
-    </div>
+    </PageShell>
   )
 }

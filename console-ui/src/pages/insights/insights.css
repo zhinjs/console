@@ -1,0 +1,66 @@
+/*
+ * 观察类页面（首页、运行日志、决策回放、Token 用量、群聊插话、任务）共用的小部件：范围条、
+ * 统计口径说明、统一任务列表。只用设计令牌，亮暗主题跟随配色方案。
+ */
+
+/* ---- 范围条 ---- */
+.console-scope-filter {
+  display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.5rem 0.75rem; min-width: 0;
+  border: var(--console-border-width, 1px) solid hsl(var(--info) / 0.35); border-radius: var(--console-radius-md);
+  background: hsl(var(--info) / 0.08); padding: 0.625rem 0.75rem;
+}
+.console-scope-filter-icon { width: 1rem; height: 1rem; flex-shrink: 0; margin-top: 0.2rem; color: hsl(var(--info)); }
+.console-scope-filter-text { display: flex; min-width: 0; flex: 1 1 14rem; flex-direction: column; gap: 0.125rem; }
+.console-scope-filter-text > p:first-child { display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem; min-width: 0; font-size: var(--console-text-body-sm); }
+.console-scope-filter-label { font-weight: 600; }
+.console-scope-filter-level {
+  border-radius: 999px; background: hsl(var(--muted)); padding: 0 0.5rem; color: hsl(var(--muted-foreground));
+  font-size: var(--console-text-caption); line-height: 1.25rem;
+}
+.console-scope-filter code { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--console-font-mono); font-size: var(--console-text-caption); }
+.console-scope-filter-note { color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); }
+.console-scope-filter-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+/* ---- 统计口径 ---- */
+.console-basis-note {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem;
+  color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption);
+}
+.console-basis-note strong { color: hsl(var(--foreground)); font-weight: 600; }
+.console-basis-note .is-partial { color: hsl(var(--warning)); }
+.console-sample-missing { color: hsl(var(--muted-foreground)); font-size: var(--console-text-body); font-weight: 550; }
+
+/* ---- 统一任务列表 ---- */
+.console-task-overview-table td { vertical-align: top; }
+.console-task-overview-sub { display: block; margin-top: 0.125rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); overflow-wrap: anywhere; }
+.console-task-overview-cards { display: none; }
+@media (max-width: 767px) {
+  .console-task-overview-table { display: none; }
+  .console-task-overview-cards { display: flex; flex-direction: column; gap: 0.5rem; }
+  .console-scope-filter-actions { width: 100%; }
+  .console-scope-filter-actions > * { flex: 1 1 auto; }
+}
+.console-task-overview-card {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.25rem 0.75rem;
+  border: var(--console-border-width, 1px) solid var(--console-border-default); border-radius: var(--console-radius-md);
+  background: hsl(var(--card)); padding: 0.75rem; font-size: var(--console-text-body-sm);
+}
+.console-task-overview-card h3 { grid-column: 1 / -1; font-weight: 600; overflow-wrap: anywhere; }
+.console-task-overview-card dt { color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); }
+.console-task-overview-card dd { min-width: 0; overflow-wrap: anywhere; }
+
+/* ---- 会话选择 ---- */
+.console-conversation-choice-list { display: flex; max-height: 16rem; flex-direction: column; overflow-y: auto; border: var(--console-border-width, 1px) solid var(--console-border-default); border-radius: var(--console-radius-md); }
+.console-conversation-choice {
+  display: flex; align-items: center; gap: 0.5rem; min-width: 0; border-bottom: var(--console-border-width, 1px) solid var(--console-border-default);
+  padding: 0.5rem 0.75rem; text-align: start; font-size: var(--console-text-body-sm);
+}
+.console-conversation-choice:last-child { border-bottom: 0; }
+.console-conversation-choice:hover { background: hsl(var(--muted) / 0.6); }
+.console-conversation-choice[aria-pressed="true"] { background: hsl(var(--primary) / 0.1); }
+.console-conversation-choice code { margin-inline-start: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-family: var(--console-font-mono); font-size: var(--console-text-caption); }
+
+/* ---- 机器人状态：三项指标（Agent / 工具 / MCP），聊天账号在线情况在「能力链路」里 ---- */
+@media (min-width: 641px) {
+  .console-agent-workbench .console-agent-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

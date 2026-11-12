@@ -189,3 +189,7 @@ export function storePendingMutation(
   input: { base: string; ownerId: string; mutationId: string | null }
 ): void
 export function driverLabel(driver: Driver, drivers: readonly Driver[]): string
+
+export type ProfileUsageLevel = 'default' | 'decision' | 'agent' | 'adapter' | 'endpoint' | 'scene'
+export interface ProfileUsage { key: string; level: ProfileUsageLevel; label: string }
+export function profileUsages(purposes: Purposes | null | undefined, profileId: string, locale?: 'zh-CN' | 'en'): ProfileUsage[] | null

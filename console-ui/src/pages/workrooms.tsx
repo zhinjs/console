@@ -13,13 +13,15 @@ import {
 import { startVisiblePolling } from '../hooks/visible-polling.mjs'
 import { PageHeader } from '../components/PageHeader'
 import { PageShell } from '../components/PageShell'
-import { ErrorAlert } from '../components/error-alert'
 import { EmptyState } from '../components/empty-state'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { Skeleton } from '../components/ui/skeleton'
 import { ListItemButton } from '../components/ui/list-item-button'
+import { StatusState } from '../components/StatusState'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../components/ui/sheet'
+import { useIsMobile } from '../hooks/useIsMobile'
 import {
   actorLabel,
   collaborationEventSummary,
@@ -40,6 +42,8 @@ function statusVariant(status: ConsoleEngagementSummary['status']): 'success' | 
 function WorkroomBoardPage() {
   const i18n = useI18n()
   const [searchParams, setSearchParams] = useSearchParams()
+  // 手机上「列表 → 详情」：明细放底部抽屉，不和列表同屏。
+  const mobile = useIsMobile()
   const selectedId = searchParams.get('engagementId')?.trim() || null
   // The SDK hooks read the Host's Engagement projection (agent.engagements.* RPC, REST fallback).
   const { engagements, loading, error, reload } = useEngagements(ENGAGEMENT_LIMIT)
@@ -83,7 +87,6 @@ function WorkroomBoardPage() {
         }
       />
 
-      {error ? <ErrorAlert error={error} onRetry={refresh} /> : null}
 
       {venues.length ? (
         <section className="console-dashboard-panel p-4 sm:p-5" aria-labelledby="workroom-venues-title">
@@ -120,12 +123,7 @@ function WorkroomBoardPage() {
           <Skeleton className="h-[34rem] rounded-xl" />
         </div>
       ) : error ? (
-        <div className="console-dashboard-panel flex min-h-[20rem] items-center justify-center p-6">
-          <EmptyState
-            title={i18n.t("无法读取协作记录")}
-            description={i18n.t("请检查连接，并确认当前令牌具有完整权限。")}
-          />
-        </div>
+        <StatusState error={error} title={i18n.t("无法读取协作记录")} description={i18n.t("请检查连接，并确认当前令牌具有完整权限。")} onRetry={refresh} />
       ) : (
         <div className="grid items-start gap-4 xl:grid-cols-[minmax(19rem,0.72fr)_minmax(0,1.28fr)]">
           <section className="console-dashboard-panel overflow-hidden" aria-labelledby="workroom-engagements-title">
@@ -170,9 +168,9 @@ function WorkroomBoardPage() {
             </div>
           </section>
 
-          <section className="console-dashboard-panel min-h-[34rem]" aria-labelledby="workroom-detail-title">
+          {mobile ? null : <section className="console-dashboard-panel min-h-[34rem]" aria-labelledby="workroom-detail-title">
             {detailError ? (
-              <div className="p-5"><ErrorAlert error={detailError} onRetry={() => void reloadDetail(selectedId)} /></div>
+              <div className="p-5"><StatusState error={detailError} onRetry={() => void reloadDetail(selectedId)} /></div>
             ) : detail && detail.summary.engagementId === selectedId ? (
               <EngagementDetail detail={detail} statusLabel={statusLabel} />
             ) : detailLoading ? (
@@ -186,9 +184,24 @@ function WorkroomBoardPage() {
                 <EmptyState title={i18n.t("选择一条协作记录")} description={i18n.t("右侧将展示协作链路、预算消耗与共享黑板。")} />
               </div>
             )}
-          </section>
+          </section>}
         </div>
       )}
+      {mobile ? (
+        <Sheet open={Boolean(selectedId)} onOpenChange={(open) => { if (!open) setSearchParams({}, { replace: true }) }}>
+          <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto p-0">
+            <SheetHeader className="sr-only">
+              <SheetTitle>{i18n.t("协作详情")}</SheetTitle>
+              <SheetDescription>{selectedId ?? ''}</SheetDescription>
+            </SheetHeader>
+            {detailError ? (
+              <div className="p-4"><StatusState error={detailError} onRetry={() => void reloadDetail(selectedId)} /></div>
+            ) : detail && detail.summary.engagementId === selectedId ? (
+              <EngagementDetail detail={detail} statusLabel={statusLabel} />
+            ) : <div className="space-y-3 p-4"><Skeleton className="h-20 rounded-lg" /><Skeleton className="h-28 rounded-lg" /></div>}
+          </SheetContent>
+        </Sheet>
+      ) : null}
     </PageShell>
   )
 }

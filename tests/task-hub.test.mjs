@@ -23,7 +23,7 @@ test('legacy routes redirect to the matching task tab and keep the query', () =>
 })
 
 test('tab id from the URL resolves to a visible tab, unknown ids fall back', () => {
-  assert.deepEqual(TASK_HUB_TABS.map(tab => tab.id), ['admin', 'schedule', 'assistant', 'history'])
+  assert.deepEqual(TASK_HUB_TABS.map(tab => tab.id), ['overview', 'admin', 'schedule', 'assistant', 'history'])
   assert.equal(resolveTaskTab(null), DEFAULT_TASK_TAB)
   assert.equal(resolveTaskTab('bogus'), DEFAULT_TASK_TAB)
   for (const tab of TASK_HUB_TABS) assert.equal(resolveTaskTab(tab.id), tab.id)
