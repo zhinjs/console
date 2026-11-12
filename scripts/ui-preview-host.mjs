@@ -111,7 +111,7 @@ const pluginRoot = {
   decisions: body => ({ persistent: true, items: decisions.filter(row => (!body.platform || row.platform === body.platform) && (!body.sceneId || row.scene_id === body.sceneId)), nextBefore: null }),
   'usage-stats': body => usageStats(body.session),
   ambient: () => ambientStatus,
-  skills: () => ({ enabled: true, tasks: [], recent: [], updatedAt: null }),
+  skills: () => ({ enabled: true, tasks: [], totals: { calls: 0 }, recent: [], updatedAt: null }),
   'tool-approvals': () => toolApprovals,
   control: () => ({ available: true, revision: 1, persistent: true, instance: { emergency_stop: false, muted: false, read_only: false, mention_only: true } }),
 }
@@ -357,7 +357,7 @@ const server = createServer(async (request, response) => {
   }
   if (url.pathname === '/api/events/history') { json(envelope({ items: messageEvents, hasMore: false, nextAfter: messageEvents.length, runtimeId: 'ui-preview', latestEventId: messageEvents.length, oldestAvailableEventId: 1, gap: false })); return }
   if (url.pathname === '/api/tasks/providers') { json(envelope(taskProviders)); return }
-  if (url.pathname === '/api/tasks/use-cases') { json(envelope({ useCases: [] })); return }
+  if (url.pathname === '/api/tasks/use-cases') { json(envelope([])); return }
   if (url.pathname === '/api/assistant/jobs') { json(envelope(assistantJobs)); return }
   if (url.pathname === '/api/events') {
     response.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' })
