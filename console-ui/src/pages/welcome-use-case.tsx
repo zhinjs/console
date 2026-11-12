@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
+import { PageShell } from '../components/PageShell'
+import { PageHeader } from '../components/PageHeader'
 import { Checkbox } from '../components/ui/checkbox'
 import { SelectField } from '../components/ui/select'
 import { Alert, AlertDescription } from '../components/ui/alert'
@@ -51,8 +53,9 @@ export function WelcomeUseCaseSession({ scope }: { scope: string }) {
   useEffect(() => { setObserved(false); setConfirmError(null) }, [binding])
   const active = isInboxCacheScopeActive(scope), applied = welcomeApplied(inspection.evidence)
   const ready = active && selected && welcomeReady(inspection.evidence, target)
-  return <div className="mx-auto max-w-3xl space-y-5 p-4 md:p-6">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="console-page-title">{i18n.t("配置新成员欢迎")}</h1><p className="mt-1 text-sm text-muted-foreground">{i18n.t("选择实例、限定范围、核对应用，再到真实群完成人工验证。")}</p></div><Button asChild variant="outline"><Link to="/ops/schedules">{i18n.t("返回用途目录")}</Link></Button></div>
+  return <PageShell className="mx-auto max-w-3xl">
+    <PageHeader title={i18n.t("配置新成员欢迎")} description={i18n.t("选择实例、限定范围、核对应用，再到真实群完成人工验证。")}
+      actions={<Button asChild variant="outline" size="sm"><Link to="/ops/schedules">{i18n.t("返回用途目录")}</Link></Button>} />
     {catalogError && <Alert variant="destructive"><AlertDescription>{catalogError}</AlertDescription></Alert>}
     <Card><CardHeader><CardTitle>{i18n.t("1 · 选择明确实例")}</CardTitle></CardHeader><CardContent className="space-y-3">
       <Button variant="outline" disabled={loading || !active} onClick={() => void load()}>{loading ? i18n.t("读取中…") : i18n.t("刷新用途与实例")}</Button>
@@ -75,7 +78,7 @@ export function WelcomeUseCaseSession({ scope }: { scope: string }) {
         {confirmError && <p role="alert" className="text-destructive">{confirmError}</p>}
         {inspection.manualRecord && <Alert><AlertDescription>{i18n.t("人工确认 · ")}{new Date(inspection.manualRecord.at).toLocaleString(i18n.locale)}{i18n.t("。这是当时的人工观察记录，不是平台自动验收，也不保证持续可用。配置、实例、运行代、完整测试目标或连接身份变化后失效；重读失败不保留确认。")}</AlertDescription></Alert>}
         <p className="text-xs text-muted-foreground">{i18n.t("记录仅保留在本页内存，离开或刷新页面后丢失。后台每 10 秒只读核对；核对存在间隔，不承诺实时有效。投递结果不确定时先看原群与日志，不自动重发。")}</p>
-        <div className="flex flex-wrap gap-3"><Link className="underline" to="/endpoints">{i18n.t("到账号与会话核对")}</Link><Link className="underline" to={`/logs?q=${encodeURIComponent(selected.instanceKey)}`}>{i18n.t("查看相关日志")}</Link><Link className="underline" to={welcomeReturnUrl()}>{i18n.t("重新开始本用途")}</Link></div>
+        <div className="flex flex-wrap gap-3"><Link className="underline" to="/scope">{i18n.t("到账号与会话核对")}</Link><Link className="underline" to={`/logs?q=${encodeURIComponent(selected.instanceKey)}`}>{i18n.t("查看相关日志")}</Link><Link className="underline" to={welcomeReturnUrl()}>{i18n.t("重新开始本用途")}</Link></div>
       </CardContent></Card></>}
-  </div>
+  </PageShell>
 }

@@ -10,12 +10,12 @@ import { readErrorSummary } from '../utils/read-error.mjs'
 import { useConsoleRead } from '../hooks/use-console-read'
 import { PageHeader } from '../components/PageHeader'
 import { PageShell } from '../components/PageShell'
-import { ErrorAlert } from '../components/error-alert'
+import { StatusState } from '../components/StatusState'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Skeleton } from '../components/ui/skeleton'
-import { describeSkillsStatus, isPermissionDenied, validateSkillsStatus, type SkillsStatus } from './skills-assistant-model.mjs'
+import { describeSkillsStatus, isPermissionDenied, validateSkillsStatus, SKILLS_STATUS_PERMISSION, type SkillsStatus } from './skills-assistant-model.mjs'
 
 type StatusRead = { denied: true } | { denied: false; status: SkillsStatus }
 
@@ -51,7 +51,7 @@ function SkillsAssistantSession() {
       description={i18n.t("让一个专门的小助手帮机器人挑技能、挑工具、判断要不要接话。")}
       actions={<Button variant="outline" size="sm" onClick={() => void statusRead.refresh().catch(() => {})} disabled={statusRead.loading}><RefreshCw className={statusRead.loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>}
     />
-    <Button asChild variant="outline"><Link to="/features/ai?tab=purposes">{i18n.t("管理模型用途")}</Link></Button>
+    <div><Button asChild variant="outline" size="sm"><Link to="/features/ai?tab=purposes">{i18n.t("管理模型用途")}</Link></Button></div>
     <SkillsStatusSection read={statusRead} onRetry={() => { void statusRead.refresh().catch(() => {}) }} />
   </PageShell>
 }
@@ -62,17 +62,17 @@ function SkillsStatusSection({ read, onRetry }: { read: StatusReadState; onRetry
   const i18n = useI18n()
   if (read.loading && !read.loaded) return <Skeleton className="h-40 w-full" />
   if (read.error && !read.loaded) {
-    return <ErrorAlert error={readErrorSummary(read.error, i18n.t("技能助手状态"))} onRetry={onRetry} />
+    return <StatusState error={read.error} description={readErrorSummary(read.error, i18n.t("技能助手状态"), i18n.locale)} onRetry={onRetry} />
   }
   if (!read.data) return null
   if (read.data.denied) {
-    return <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">{i18n.t("当前账号没有查看技能助手的权限，请联系管理员开通。")}</CardContent></Card>
+    return <StatusState kind="forbidden" permissions={[SKILLS_STATUS_PERMISSION]} />
   }
   const view = describeSkillsStatus(read.data.status, i18n.locale)
   return <Card>
     <CardHeader>
       <CardTitle className="text-base">{i18n.t("最近 24 小时帮了 {0} 次", [view.totalCalls])}{view.failedCalls > 0 ? i18n.t("，其中 {0} 次没成功", [view.failedCalls]) : ''}</CardTitle>
-      <CardDescription>{i18n.t("重启机器人后会重新计数。")}</CardDescription>
+      <CardDescription>{i18n.t("缓冲内观察：只统计实例这次启动以来、最近 24 小时的调用，重启后重新计数。")}</CardDescription>
     </CardHeader>
     <CardContent className="space-y-4">
       {read.error && <p className="text-xs text-destructive">{i18n.t("刷新失败，下面是上次读到的数据。")}</p>}
@@ -87,7 +87,7 @@ function SkillsStatusSection({ read, onRetry }: { read: StatusReadState; onRetry
             <p className="text-xs text-muted-foreground">{i18n.t("平均每次 ")}{row.averageTime}</p>
           </div>)}
         </div>
-        : <p className="text-sm text-muted-foreground">{i18n.t("最近 24 小时还没有用到技能助手。")}</p>}
+        : <StatusState kind="empty" compact title={i18n.t("最近 24 小时还没有用到技能助手。")} description={i18n.t("在「AI 与模型 → 用途」给技能助手指定模型后，机器人挑技能或工具时会调用它。")} />}
       {view.hasActivity && <div className="space-y-1">
         <h3 className="text-sm font-medium">{i18n.t("最近的记录")}</h3>
         <ul className="divide-y rounded-md border text-sm">

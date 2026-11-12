@@ -1,20 +1,10 @@
 // Pure sign-in / setup / onboarding logic (zhinjs/zhin ADR 0049 §5/§7, ADR 0053). No DOM, no fetch.
 
-/** REST paths under `{apiBase}/api` (mirrors `CONSOLE_AUTH_ROUTES` of `@zhin.js/console-protocol`). */
-export const CONSOLE_AUTH_ROUTES = Object.freeze({
-  LOGIN: '/auth/login',
-  LOGOUT: '/auth/logout',
-  ME: '/auth/me',
-  PASSWORD: '/auth/password',
-  TOKENS: '/auth/tokens',
-  TOKENS_REVOKE: '/auth/tokens/revoke',
-  SETUP: '/auth/setup',
-  SETUP_DATABASE: '/auth/setup/database',
-  SETUP_DATABASE_TEST: '/auth/setup/database/test',
-})
-
-/** ADR 0053 §4: marks onboarding steps 3–5 done or skipped (`plugin.manage`). */
-export const ONBOARDING_RPC = Object.freeze({ UPDATE: 'onboarding.update' })
+/**
+ * REST paths under `{apiBase}/api` (`CONSOLE_AUTH_ROUTES`) and `onboarding.update` (ADR 0053 §4),
+ * from the protocol mirror.
+ */
+export { CONSOLE_AUTH_ROUTES, ONBOARDING_RPC } from '../contracts/console-protocol-mirror.mjs'
 
 export const API_PREFIX = '/api'
 
@@ -61,7 +51,7 @@ export function readAuthResponse({ status, body, retryAfter, now }) {
   const message = envelope && typeof body.error === 'string' ? body.error.slice(0, 500) : ''
   return {
     ok: false, status, code, message,
-    ...(status === 429 ? { retryAfterSec: retryAfterSeconds(retryAfter, body, now) } : {}),
+    ...(status === 429 || status === 503 ? { retryAfterSec: retryAfterSeconds(retryAfter, body, now) } : {}),
   }
 }
 
@@ -92,6 +82,11 @@ export function authErrorMessage(error, t, context = 'generic') {
     case 'conflict':
       if (context === 'setup') return t('此 Host 已完成初始化，初始化令牌已失效。请用账号登录。')
       return error.message || t('操作与当前状态冲突，请刷新后重试。')
+    case 'database_busy': return typeof error.retryAfterSec === 'number'
+      ? t('网关的数据库正忙，请在 {0} 秒后重试。', [error.retryAfterSec])
+      : t('网关的数据库正忙，请稍后重试。')
+    case 'instance_unavailable': case 'instance_timeout': case 'instance_error':
+      return t('Zhin 实例没有响应，这项操作需要实例在线。可以在「运维 → 实例」查看状态与日志。')
     case 'last_owner': return t('不能移除最后一个所有者。')
     case 'setup_required': return t('初始化令牌只能用于创建第一个所有者。')
     case 'forbidden': return context === 'setup'
@@ -146,7 +141,9 @@ export function sessionView(me) {
 export function meAccessReport(me) {
   if (!me || me.kind === 'anonymous') return { permissions: [] }
   if (me.kind === 'bootstrap') return me.open ? null : { permissions: [] }
-  return { permissions: Array.isArray(me.permissions) ? me.permissions : [] }
+  // `permissions` are the global bindings only (the gateway does not expand scoped ones into it);
+  // adapter / endpoint bindings come along so pages can check a permission at their own scope.
+  return { permissions: Array.isArray(me.permissions) ? me.permissions : [], bindings: Array.isArray(me.bindings) ? me.bindings : [] }
 }
 
 /** Parses `GET /auth/me` data; `null` when it is not a principal report. */

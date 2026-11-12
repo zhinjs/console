@@ -206,16 +206,32 @@ export function stripApiBaseUrlFromQuery(): void {
   window.history.replaceState(window.history.state, "", next);
 }
 
+/** Instance state reported by the gateway's `GET /pub/health` (absent on older Hosts). */
+export interface HostInstanceHealth {
+  readonly state: string
+  readonly ready: boolean
+}
+
 export type VerifyCredentialsResult =
-  /** `bootstrap`: the token is the first-run setup token (ADR 0049 §1); it only opens the setup wizard. */
-  | { ok: true; kind?: 'bootstrap' }
-  | { ok: false; message: string; status?: number }
+  /**
+   * `bootstrap`: the token is the first-run setup token (ADR 0049 §1); it only opens the setup wizard.
+   * `instance`: what `/pub/health` said about the Zhin instance; sign-in does not depend on it.
+   */
+  | { ok: true; kind?: 'bootstrap'; instance?: HostInstanceHealth }
+  | { ok: false; message: string; status?: number; code?: string; retryAfterSec?: number }
 
 export type ProbeHealthResult =
-  | { ok: true }
+  | { ok: true; instance?: HostInstanceHealth }
   | { ok: false; message: string }
 
-/** 登录前探测 Host 连通性（无需 Token） */
+function readInstanceHealth(body: unknown): HostInstanceHealth | undefined {
+  const instance = body && typeof body === 'object' ? (body as { instance?: unknown }).instance : undefined
+  if (!instance || typeof instance !== 'object') return undefined
+  const { state, ready } = instance as { state?: unknown; ready?: unknown }
+  return typeof state === 'string' ? { state, ready: ready === true } : undefined
+}
+
+/** 登录前探测 Host 连通性（无需 Token）。网关的 `/pub/health` 同时报告实例状态。 */
 export async function probeHealth(apiBase: string, locale: 'zh-CN' | 'en' = 'zh-CN'): Promise<ProbeHealthResult> {
   const base = normalizeApiBase(apiBase)
   if (!base) {
@@ -223,8 +239,11 @@ export async function probeHealth(apiBase: string, locale: 'zh-CN' | 'en' = 'zh-
   }
   try {
     const res = await fetch(`${base}/pub/health`, { signal: AbortSignal.timeout(8_000) })
-    if (res.ok) return { ok: true }
-    return { ok: false, message: translate(locale, "Host 健康检查失败 (HTTP {0})", [res.status]) }
+    if (!res.ok) return { ok: false, message: translate(locale, "Host 健康检查失败 (HTTP {0})", [res.status]) }
+    let body: unknown
+    try { body = typeof res.json === 'function' ? await res.json() : undefined } catch { body = undefined }
+    const instance = readInstanceHealth(body)
+    return instance ? { ok: true, instance } : { ok: true }
   } catch {
     return {
       ok: false,
@@ -233,7 +252,21 @@ export async function probeHealth(apiBase: string, locale: 'zh-CN' | 'en' = 'zh-
   }
 }
 
-/** 校验 Host API Base + Token，成功则写入 localStorage */
+function storeVerified(base: string, token: string, persistent: boolean): void {
+  clearRuntimeToken()
+  setApiBase(base)
+  setToken(token, persistent)
+  stripApiBaseUrlFromQuery()
+}
+
+/**
+ * 校验 Host API Base + Token，成功则写入 localStorage。
+ *
+ * The credential is checked with the gateway's own `GET /api/auth/me` (ADR 0049 §5 / ADR 0054 §3),
+ * which answers while the Zhin instance is stopped, so an API token or the bootstrap token signs in
+ * (and reaches the setup wizard, the instance page and the logs) even when the instance is down.
+ * Only Hosts that predate `/auth/*` fall back to `GET /api/system/status`.
+ */
 export async function verifyAndStoreCredentials(
   apiBase: string,
   token: string, locale: 'zh-CN' | 'en' = 'zh-CN', persistent = true
@@ -252,53 +285,89 @@ export async function verifyAndStoreCredentials(
     if (!health.ok) {
       return { ok: false, message: health.message }
     }
+    const instance = health.instance ? { instance: health.instance } : {}
 
-    const res = await fetch(`${base}/api/system/status`, {
-      headers: { Authorization: `Bearer ${trimmed}` },
-      signal: AbortSignal.timeout(8_000),
-    })
-    if (res.ok) {
-      clearRuntimeToken()
-      setApiBase(base)
-      setToken(trimmed, persistent)
-      stripApiBaseUrlFromQuery()
-      return { ok: true }
-    }
-    if (res.status === 401) {
-      return { ok: false, status: 401, message: translate(locale, "Token 无效，请检查后重试") }
-    }
-    // A bootstrap token is refused everywhere but `/auth/setup*` (403 `setup_required`): ask `/auth/me`.
-    if (res.status === 403) {
-      const principal = await readPrincipalKind(base, trimmed)
-      if (principal?.kind === 'bootstrap' && principal.setupRequired) {
-        clearRuntimeToken()
-        setApiBase(base)
-        // Valid only until the owner exists: never kept beyond this browser session.
-        setToken(trimmed, false)
-        stripApiBaseUrlFromQuery()
-        return { ok: true, kind: 'bootstrap' }
+    const principal = await readPrincipal(base, trimmed)
+    if (principal.kind === 'legacy') return verifyLegacy(base, trimmed, locale, persistent)
+    if (principal.kind === 'failed') {
+      if (principal.code === 'database_busy') {
+        return {
+          ok: false, status: principal.status, code: principal.code, ...(principal.retryAfterSec ? { retryAfterSec: principal.retryAfterSec } : {}),
+          message: principal.retryAfterSec
+            ? translate(locale, "网关的数据库正忙，暂时无法验证令牌。请在 {0} 秒后重试。", [principal.retryAfterSec])
+            : translate(locale, "网关的数据库正忙，暂时无法验证令牌。请稍后重试。"),
+        }
       }
-      return { ok: false, status: 403, message: translate(locale, "此令牌没有查看系统状态的权限 (HTTP 403)") }
+      if (principal.code === 'instance_unavailable' || principal.code === 'instance_timeout' || principal.code === 'instance_error') {
+        return { ok: false, status: principal.status, code: principal.code,
+          message: translate(locale, "此 Host 在实例未运行时无法验证令牌（网关版本较旧）。请先在服务器上运行 zhin start 启动实例，或升级网关。") }
+      }
+      return { ok: false, status: principal.status, message: translate(locale, "验证失败 (HTTP {0})", [principal.status]) }
     }
-    return { ok: false, status: res.status, message: translate(locale, "验证失败 (HTTP {0})", [res.status]) }
+    const me = principal.me
+    if (me.kind === 'user' || me.kind === 'api-token' || (me.kind === 'bootstrap' && me.open)) {
+      storeVerified(base, trimmed, persistent)
+      return { ok: true, ...instance }
+    }
+    if (me.kind === 'bootstrap' && me.setupRequired) {
+      // Valid only until the owner exists: never kept beyond this browser session.
+      storeVerified(base, trimmed, false)
+      return { ok: true, kind: 'bootstrap', ...instance }
+    }
+    // `anonymous`: the gateway did not accept the token (wrong, revoked, expired, or a bootstrap
+    // token after the first owner exists).
+    return {
+      ok: false, status: 401,
+      message: me.setupRequired
+        ? translate(locale, "令牌无效。初始化时请使用启动日志中的初始化链接，或 .env 里的 HTTP_TOKEN。")
+        : translate(locale, "令牌无效或已失效。初始化令牌在创建所有者后失效：请改用账号登录，或在个人设置里签发 API 令牌。"),
+    }
   } catch {
     return { ok: false, message: translate(locale, "无法连接到 API，请检查 Base URL 与网络") }
   }
 }
 
-/** `GET /api/auth/me` with `token`: `{ kind, setupRequired }`, or null for Hosts without `/auth/*`. */
-async function readPrincipalKind(base: string, token: string): Promise<{ kind: string; setupRequired: boolean } | null> {
-  try {
-    const res = await fetch(`${base}/api/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: AbortSignal.timeout(8_000),
-    })
-    if (!res.ok) return null
-    const body = await res.json() as { data?: { kind?: unknown; setupRequired?: unknown } }
-    return typeof body?.data?.kind === 'string' ? { kind: body.data.kind, setupRequired: body.data.setupRequired === true } : null
-  } catch {
-    return null
+type PrincipalRead =
+  | { kind: 'me'; me: { kind: string; open: boolean; setupRequired: boolean } }
+  | { kind: 'legacy' }
+  | { kind: 'failed'; status: number; code?: string; retryAfterSec?: number }
+
+/** `GET /api/auth/me` with `token`. A 404/405 without the Host envelope: the Host predates `/auth/*`. */
+async function readPrincipal(base: string, token: string): Promise<PrincipalRead> {
+  const res = await fetch(`${base}/api/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(8_000),
+  })
+  let body: { success?: unknown; code?: unknown; data?: { kind?: unknown; open?: unknown; setupRequired?: unknown } } | undefined
+  try { body = typeof res.json === 'function' ? await res.json() : undefined } catch { body = undefined }
+  const envelope = body !== undefined && body !== null && typeof body === 'object' && typeof body.success === 'boolean'
+  if (res.ok && typeof body?.data?.kind === 'string') {
+    return { kind: 'me', me: { kind: body.data.kind, open: body.data.open === true, setupRequired: body.data.setupRequired === true } }
   }
+  if ((res.status === 404 || res.status === 405) && !envelope) return { kind: 'legacy' }
+  if (res.ok) return { kind: 'legacy' }
+  const header = typeof res.headers?.get === 'function' ? res.headers.get('retry-after') : null
+  const retryAfterSec = header && /^\d+$/u.test(header.trim()) ? Math.max(1, Number(header.trim())) : undefined
+  return { kind: 'failed', status: res.status, ...(typeof body?.code === 'string' ? { code: body.code } : {}), ...(retryAfterSec ? { retryAfterSec } : {}) }
+}
+
+/** Hosts without `/auth/*`: the token is checked against the instance's status route. */
+async function verifyLegacy(base: string, token: string, locale: 'zh-CN' | 'en', persistent: boolean): Promise<VerifyCredentialsResult> {
+  const res = await fetch(`${base}/api/system/status`, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(8_000),
+  })
+  if (res.ok) {
+    storeVerified(base, token, persistent)
+    return { ok: true }
+  }
+  if (res.status === 401) {
+    return { ok: false, status: 401, message: translate(locale, "Token 无效，请检查后重试") }
+  }
+  if (res.status === 403) {
+    return { ok: false, status: 403, message: translate(locale, "此令牌没有查看系统状态的权限 (HTTP 403)") }
+  }
+  return { ok: false, status: res.status, message: translate(locale, "验证失败 (HTTP {0})", [res.status]) }
 }
 
 export function resolveApiUrl(path: string): string {
@@ -338,7 +407,30 @@ export async function apiFetch(
   if (res.status === 401 && belongsToHost && token && getApiBase() === apiBase && getToken() === token) {
     notifyAuthRequired()
   }
+  if (belongsToHost) observeHostGatewayReply(res)
   return res
+}
+
+/**
+ * The gateway answers for a stopped or stuck instance with 502 / 503 / 504 `instance_*` (ADR 0054).
+ * Every Host request path reports its replies here: `apiFetch`, and the SDK console transport
+ * (`utils/console-client.ts` hands it a fetch that calls this), so the 实例不可用 banner sees both.
+ */
+export function observeHostGatewayReply(res: Response): void {
+  if (!hostReplyListeners.size || (res.status !== 502 && res.status !== 503 && res.status !== 504)) return
+  const retryAfter = res.headers.get('retry-after')
+  void res.clone().json().then(body => {
+    for (const listener of [...hostReplyListeners]) listener({ status: res.status, body, retryAfter })
+  }, () => {})
+}
+
+export interface HostGatewayReply { readonly status: number; readonly body: unknown; readonly retryAfter: string | null }
+const hostReplyListeners = new Set<(reply: HostGatewayReply) => void>()
+
+/** Observes the Host's 502 / 503 / 504 replies (the shell's 实例不可用 banner); returns an unsubscribe. */
+export function onHostGatewayReply(listener: (reply: HostGatewayReply) => void): () => void {
+  hostReplyListeners.add(listener)
+  return () => { hostReplyListeners.delete(listener) }
 }
 
 function requestBelongsToHost(input: RequestInfo | URL, apiBase: string): boolean {

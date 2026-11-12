@@ -1,0 +1,28 @@
+/* 记录 tab: the scope's sessions and the narrowed record pages. Tokens only. */
+.console-records-sessions { margin: 0; padding: 0; list-style: none; }
+.console-records-session { display: flex; min-width: 0; align-items: center; gap: 0.75rem; padding: 0.625rem 1rem; }
+.console-records-session + .console-records-session { border-top: 1px solid var(--console-border-subtle); }
+.console-records-session-main { flex: 1 1 auto; min-width: 0; }
+.console-records-session-name { display: block; overflow: hidden; color: hsl(var(--foreground)); font-weight: 600; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
+.console-records-session-name:hover { text-decoration: underline; text-underline-offset: 3px; }
+.console-records-session-name:focus-visible { outline: var(--console-focus-width) solid hsl(var(--ring)); outline-offset: 2px; border-radius: var(--console-radius-sm); }
+.console-records-session-meta { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; margin: 0.125rem 0 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); }
+.console-records-session-meta code { font-family: var(--console-font-mono); }
+.console-records-session-action { flex-shrink: 0; }
+.console-records-session-note { flex-shrink: 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); }
+.console-records-more { margin: 0; padding: 0.625rem 1rem; border-top: 1px solid var(--console-border-subtle); color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); }
+.console-records-sources { display: grid; gap: 0.75rem; margin: 0; padding: 0; list-style: none; grid-template-columns: repeat(auto-fill, minmax(min(18rem, 100%), 1fr)); }
+.console-records-sources > li { display: flex; min-width: 0; }
+.console-records-source { display: flex; width: 100%; min-width: 0; flex-direction: column; gap: 0.5rem; padding: 1rem; }
+.console-records-source-head { display: flex; min-width: 0; align-items: center; gap: 0.5rem; }
+.console-records-source-head h3 { flex: 1 1 auto; min-width: 0; margin: 0; font-size: var(--console-text-body); font-weight: 600; }
+.console-records-source-icon { display: inline-flex; width: 2rem; height: 2rem; flex-shrink: 0; align-items: center; justify-content: center; border-radius: var(--console-radius-md); background: hsl(var(--primary) / 0.1); color: hsl(var(--primary)); }
+.console-records-source-icon svg { width: 1rem; height: 1rem; }
+.console-records-source-description { margin: 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); line-height: 1.55; }
+.console-records-source-note { flex: 1 1 auto; margin: 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); line-height: 1.5; }
+.console-records-source-filter { display: flex; min-width: 0; align-items: baseline; gap: 0.25rem; margin: 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); }
+.console-records-source-filter code { overflow: hidden; min-width: 0; color: hsl(var(--foreground)); font-family: var(--console-font-mono); text-overflow: ellipsis; white-space: nowrap; }
+.console-records-source-open { align-self: flex-start; }
+@media (max-width: 767px) {
+  .console-records-session { padding: 0.625rem 0.75rem; }
+}

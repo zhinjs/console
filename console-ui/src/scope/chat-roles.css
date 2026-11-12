@@ -1,0 +1,18 @@
+/* 角色 tab (ChatRolesPanel.tsx). Tokens only. */
+.console-chat-role-counts { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; }
+.console-chat-role-count { display: inline-flex; align-items: center; gap: 0.5rem; font-size: var(--console-text-body-sm); }
+.console-chat-role-count strong { font-variant-numeric: tabular-nums; }
+.console-chat-role-card-title {
+  display: flex; align-items: center; gap: 0.5rem; border-bottom: var(--console-border-width, 1px) solid var(--console-border-subtle); padding: 0.625rem 1rem;
+  color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); font-weight: 600;
+}
+.console-chat-role-card-title span {
+  min-width: 1.25rem; border-radius: 999px; background: hsl(var(--muted-foreground) / 0.15); padding: 0 0.375rem; text-align: center; font-variant-numeric: tabular-nums;
+}
+.console-chat-role-identity { display: inline-flex; max-width: 100%; align-items: flex-start; gap: 0.5rem; }
+.console-chat-role-identity > svg { width: 1rem; height: 1rem; flex-shrink: 0; margin-top: 0.125rem; color: hsl(var(--muted-foreground)); }
+.console-chat-role-identity code { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--console-font-mono); font-size: var(--console-text-body-sm); }
+.console-chat-role-sub { display: block; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); }
+.console-chat-role-empty { padding: 0.75rem 1rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); }
+.console-chat-role-identity.is-redacted { color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); font-style: italic; }
+.console-chat-role-blocked { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 0.125rem; }

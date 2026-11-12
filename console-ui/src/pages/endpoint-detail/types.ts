@@ -33,6 +33,11 @@ export interface ReceivedMessage {
   outgoing?: boolean
   directionUnknown?: boolean
   local?: boolean
+  /** Sent from this Console: what the send receipt says (chat-workspace-model). */
+  delivery?: import('./chat-workspace-model.mjs').DeliveryState
+  failure?: string
+  /** An unknown send whose text can be put back into the box. */
+  restorable?: boolean
   parent?: ChannelParentRef
   threadId?: string
   rendering?: import('./rendering-diagnostics.mjs').RenderingDiagnostic

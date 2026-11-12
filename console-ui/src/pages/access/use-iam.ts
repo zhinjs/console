@@ -19,7 +19,7 @@ export async function iamRequest<T = unknown>(type: string, payload: Record<stri
   })
   let json: unknown = null
   try { json = await response.json() } catch { json = null }
-  return readIamReply(response.status, json, t) as T
+  return readIamReply(response.status, json, t, response.headers.get('retry-after')) as T
 }
 
 export interface IamReadState<T> {
@@ -28,13 +28,15 @@ export interface IamReadState<T> {
   loaded: boolean
   error: string | null
   errorKind: IamErrorKind | null
+  /** The failed request itself, for `StatusState` (keeps the Host code and Retry-After). */
+  failure: unknown
   refresh: () => void
 }
 
 /** Loads one `iam.*` listing; a failed refresh keeps the last good data. */
 export function useIamRead<T>(type: string, read: (payload: unknown) => T, initial: T, payload: Record<string, unknown> = {}): IamReadState<T> {
   const i18n = useI18n()
-  const [state, setState] = useState<Omit<IamReadState<T>, 'refresh'>>({ data: initial, loading: true, loaded: false, error: null, errorKind: null })
+  const [state, setState] = useState<Omit<IamReadState<T>, 'refresh'>>({ data: initial, loading: true, loaded: false, error: null, errorKind: null, failure: null })
   const sequence = useRef(0)
   const readRef = useRef(read)
   readRef.current = read
@@ -44,10 +46,10 @@ export function useIamRead<T>(type: string, read: (payload: unknown) => T, initi
     setState(previous => ({ ...previous, loading: true }))
     iamRequest<unknown>(type, JSON.parse(key) as Record<string, unknown>, i18n.t).then(reply => {
       if (request !== sequence.current) return
-      setState({ data: readRef.current(reply), loading: false, loaded: true, error: null, errorKind: null })
+      setState({ data: readRef.current(reply), loading: false, loaded: true, error: null, errorKind: null, failure: null })
     }, (error: unknown) => {
       if (request !== sequence.current) return
-      setState(previous => ({ ...previous, loading: false, error: error instanceof Error ? error.message : String(error), errorKind: iamErrorKind(error) }))
+      setState(previous => ({ ...previous, loading: false, error: error instanceof Error ? error.message : String(error), errorKind: iamErrorKind(error), failure: error }))
     })
   }, [type, key, i18n])
   useEffect(() => {

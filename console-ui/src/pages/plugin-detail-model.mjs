@@ -7,17 +7,6 @@ export function validatePluginDetail(plugin, locale = 'zh-CN') {
   }
 }
 
-export function requirePluginUpdate(payload, packageName, locale = 'zh-CN') {
-  if (payload?.success !== true || !Array.isArray(payload.data)) {
-    throw new Error(translate(locale, "版本查询响应格式不正确。"));
-  }
-  const update = payload.data.find(item => item && item.name === packageName);
-  if (!update || typeof update.latest !== 'string' || !update.latest.trim()) {
-    throw new Error(translate(locale, "未获取到此插件的版本信息，请稍后重试。"));
-  }
-  return update;
-}
-
 export function pluginDiagnosticSummary(diagnostic) {
   const validation = diagnostic?.validation;
   const errors = Array.isArray(validation?.errors) ? validation.errors.map(error => typeof error === 'string' ? error : `${error?.path ?? ''} ${error?.message ?? ''}`.trim()) : [];

@@ -30,21 +30,36 @@ export declare const MAX_LOG_LINES: number
 export declare const MAX_PROGRESS_OUTPUT: number
 
 export declare class GatewayRequestError extends Error {
-  constructor(message: string, options?: { status?: number; code?: string; hostMessage?: string })
+  constructor(message: string, options?: { status?: number; code?: string; hostMessage?: string; details?: GatewayErrorDetails; retryAfter?: number; requestOutcome?: string })
   readonly status: number
   readonly code: string
   readonly hostMessage: string
+  readonly retryAfter?: number
+  readonly details?: GatewayErrorDetails
 }
-export type GatewayErrorKind = 'unsupported' | 'forbidden' | 'conflict' | 'unavailable' | 'failed'
+export interface GatewayErrorDetails {
+  readonly errors?: readonly { readonly path: string; readonly message: string }[]
+  readonly missingEnv?: readonly string[]
+  /** Instance forward outcome (`instance_*`), read by `statusFromError`. */
+  readonly serverCode?: string
+  readonly requestOutcome?: string
+}
+export function readErrorDetails(value: unknown): GatewayErrorDetails | undefined
+export type GatewayErrorKind = 'unsupported' | 'forbidden' | 'conflict' | 'database_busy' | 'instance' | 'unavailable' | 'failed'
 
 export function gatewayRequestBody(type: string, data: unknown, requestId: number): { type: string; requestId: number; data: unknown }
-export function readGatewayReply(status: number, json: unknown, t: Translate): unknown
+export function readGatewayReply(status: number, json: unknown, t: Translate, retryAfterHeader?: string | null): unknown
 export function gatewayErrorKind(error: unknown): GatewayErrorKind
 
 export function readInstanceStatus(value: unknown): GatewayInstanceStatus | null
 export function instanceStateLabel(state: string, t: Translate): string
 export function instanceStateTone(state: string): 'success' | 'destructive' | 'warning' | 'secondary'
 export function instanceActions(state: GatewayInstanceState): { start: boolean; stop: boolean; restart: boolean }
+export function instanceLifecycleApplied(
+  action: 'start' | 'stop' | 'restart',
+  before: Partial<GatewayInstanceStatus> | null | undefined,
+  after: Partial<GatewayInstanceStatus> | null | undefined,
+): boolean | undefined
 export function formatDuration(ms: number, t: Translate): string
 export function uptimeMs(status: GatewayInstanceStatus | null | undefined, now: number): number | null
 export function failureReasonLabel(reason: string, t: Translate): string
@@ -83,7 +98,7 @@ export interface DeclarationErrors {
   readonly fields: readonly DeclarationFieldError[]
   readonly missingEnv: readonly string[]
 }
-export function readDeclarationErrors(message: string): DeclarationErrors
+export function readDeclarationErrors(message: string, details?: GatewayErrorDetails): DeclarationErrors
 export function fieldErrorsAt(errors: DeclarationErrors | null | undefined, path: string): DeclarationFieldError[]
 export function declarationDraft(schema: SchemaField | null | undefined): Record<string, unknown>
 export function declarationConfig(value: unknown, t: Translate): { config: Record<string, unknown> | null; problem: string | null }

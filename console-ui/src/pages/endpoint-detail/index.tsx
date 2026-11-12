@@ -3,10 +3,11 @@ import { useI18n } from '../../i18n'
 import type * as React from 'react'
 import type { SetStateAction } from 'react'
 import type { ElementType, ReactNode } from 'react'
-import { Fragment, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Fragment, useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { ComposerAttachmentMenu } from './ComposerAttachmentMenu'
 import {
+  ArrowLeft,
   Bell,
   Check,
   Code2,
@@ -27,7 +28,7 @@ import {
   UserPlus,
   Video,
   X,
-  GitBranch,
+  SquareArrowOutUpRight,
 } from 'lucide-react'
 import { agentSessionsPath, buildSessionKey } from '../../utils/agent-session'
 import { cn } from '@zhin.js/client'
@@ -41,6 +42,16 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/ta
 import { ConversationSidebar } from './ConversationSidebar'
 import { GroupMembersDrawer } from './GroupMembersDrawer'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
+import { useIsMobile } from '../../hooks/useIsMobile'
+import { scopeHref } from '../../scope/scope-tree.mjs'
+import {
+  COMPOSER_NOTICE_COPY,
+  chatPane,
+  composerAvailability,
+  continuationFlags,
+} from './chat-workspace-model.mjs'
+import { readDraftStore, updateDraftStore, writeDraftStore } from './chat-draft-store.mjs'
+import type { SidebarSelection } from './types'
 import {
   GROUP_PANEL_DRAWER_QUERY,
   memberDrawerAvailable,
@@ -53,7 +64,7 @@ import { textReferenceSendOptions } from './message-reference-model.mjs'
 import { ChatScrollArea } from './ChatScrollArea'
 import { MessageDiagnosticsAction, MessageDiagnosticsProvider } from './MessageDiagnostics'
 import { canShowReadEmpty } from './endpoint-request.mjs'
-import { useEndpointConsole } from './useEndpointConsole'
+import { useEndpointConsole, type EndpointWorkspaceTarget } from './useEndpointConsole'
 import {
   hasRenderableComposerSegments,
   parseComposerToSegments,
@@ -122,15 +133,39 @@ function MuteDurationField({ valueRef }: { valueRef: { current: string } }) {
   </label>
 }
 
-export default function EndpointDetailPage() {
-  const params = useParams<{ adapter: string; endpointId: string }>()
-  return <EndpointWorkspace key={`${params.adapter}\u0000${params.endpointId}`} />
+export type ChatWorkspaceMode = 'account' | 'conversation'
+
+export interface EndpointWorkspaceProps {
+  readonly target?: EndpointWorkspaceTarget
+  /**
+   * `account`: the account's 聊天 tab — the conversation list beside the chat; the URL decides the
+   * selected conversation (`target` follows it) and every pick is reported through
+   * `onSelectionChange`. `conversation`: one conversation's own chat, no list.
+   */
+  readonly mode?: ChatWorkspaceMode
+  readonly onSelectionChange?: (selection: SidebarSelection | null) => void
+  /** Phone only: back from the chat pane to the list pane. */
+  readonly onBack?: () => void
 }
 
-function EndpointWorkspace() {
+/**
+ * The chat of an object page's 聊天 tab. The account workspace stays mounted while the URL moves
+ * between its conversations (drafts, scroll and history caches stay); a conversation page mounts
+ * one per conversation.
+ */
+export function EndpointWorkspaceView({ target, mode = 'account', onSelectionChange, onBack }: EndpointWorkspaceProps & { target: EndpointWorkspaceTarget }) {
+  const key = mode === 'conversation'
+    ? `${target.adapter}\u0000${target.endpointId}\u0000${target.channelType ?? ''}\u0000${target.channelId ?? ''}`
+    : `${target.adapter}\u0000${target.endpointId}`
+  return <EndpointWorkspace key={key} target={target} mode={mode} onSelectionChange={onSelectionChange} onBack={onBack} />
+}
+
+function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack }: EndpointWorkspaceProps = {}) {
   const i18n = useI18n()
-  const ctx = useEndpointConsole()
-  const readOnly = !hasConsolePermission('endpoint.operate')
+  const ctx = useEndpointConsole(target)
+  // Sending names the account (adapter + endpointKey), so an account- or adapter-scoped binding counts.
+  const readOnly = !hasConsolePermission('endpoint.operate', undefined, target?.adapter && target.endpointId
+    ? { kind: 'endpoint', adapter: target.adapter, endpoint: target.endpointId } : undefined)
 
   if (!ctx.valid) {
     return (
@@ -148,9 +183,6 @@ function EndpointWorkspace() {
     info,
     loadErr,
     actionError,
-    testLoading,
-    testMessage,
-    testEndpoint,
     msgContent,
     setMsgContent,
     sending,
@@ -158,8 +190,7 @@ function EndpointWorkspace() {
     listNotice,
     selection,
     setSelection,
-    showChannelList,
-    setShowChannelList,
+    channels,
     listSearch,
     setListSearch,
     conversationSections,
@@ -204,6 +235,10 @@ function EndpointWorkspace() {
     loadInboxNotices,
     deleteFriend,
     handleSend,
+    dismissLocal,
+    restoreLocal,
+    hasTextDrafts,
+    draftStoreKey,
     approve,
     dismissRequest,
     dismissNotice,
@@ -220,7 +255,8 @@ function EndpointWorkspace() {
   // Attachments, quote/forward and the half-typed media URL are kept per conversation, like the
   // message text: another chat never shows (or sends) this chat's draft.
   const draftKey = conversationSelectionKey(selection)
-  const [extrasDrafts, setExtrasDrafts] = useState<Record<string, Extras>>({})
+  // Kept in memory per account (chat-draft-store) so leaving the tab does not lose them.
+  const [extrasDrafts, setExtrasDrafts] = useState<Record<string, Extras>>(() => (draftStoreKey ? readDraftStore<Record<string, Extras>>(draftStoreKey, 'extras') : undefined) ?? {})
   const composerExtras = readComposerDraft<Extras>(extrasDrafts, draftKey, EMPTY_COMPOSER_EXTRAS)
   const updateComposerExtras = <K extends keyof Extras>(field: K, next: SetStateAction<Extras[K]>) => {
     setExtrasDrafts((prev) => {
@@ -258,8 +294,26 @@ function EndpointWorkspace() {
       confirmLabel: i18n.t("删除"),
       variant: 'destructive',
     })
-    if (ok) await deleteFriend()
+    if (ok && await deleteFriend()) onSelectionChange?.(null)
   }
+
+  /** Every pick in the list goes to the URL too, so refresh and back restore it. */
+  const select = (next: SidebarSelection | null) => {
+    setSelection(next)
+    onSelectionChange?.(next)
+  }
+
+  const isMobile = useIsMobile()
+  const pane = chatPane(mode, selection)
+  useEffect(() => { if (draftStoreKey) writeDraftStore(draftStoreKey, 'extras', extrasDrafts) }, [draftStoreKey, extrasDrafts])
+  // Unsent text or attachments: ask before a refresh or closing the window drops them.
+  const unsent = hasTextDrafts || Object.keys(extrasDrafts).length > 0
+  useEffect(() => {
+    if (!unsent) return
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [unsent])
 
   const handleGroupAction = async (
     type: GroupAction,
@@ -414,14 +468,18 @@ function EndpointWorkspace() {
     const { textPrefix, displayPrefixSegments } = textReferenceSendOptions({ quote: quoteDraft, forward: forwardDraft }, i18n.t)
 
     const sentExtras = composerExtras
+    const sentStoreKey = draftStoreKey
     void handleSend({
       overrideSegments,
       displayPrefixSegments,
       textPrefix,
-      // Clear what was sent from the conversation it was sent to, even if the user switched away.
+      // Clear what was sent from the conversation it was sent to, even if the user switched away
+      // (or left the tab: the store is cleared as well, so nothing is offered for a second send).
       onSent: ({ draftKey: sentKey }) => {
-        setExtrasDrafts((prev) => writeComposerDraft<Extras>(prev, sentKey,
-          clearSentComposerExtras(readComposerDraft<Extras>(prev, sentKey, EMPTY_COMPOSER_EXTRAS), sentExtras), isEmptyComposerExtras))
+        const clear = (prev: Record<string, Extras>) => writeComposerDraft<Extras>(prev, sentKey,
+          clearSentComposerExtras(readComposerDraft<Extras>(prev, sentKey, EMPTY_COMPOSER_EXTRAS), sentExtras), isEmptyComposerExtras)
+        if (sentStoreKey) updateDraftStore<Record<string, Extras>>(sentStoreKey, 'extras', clear)
+        setExtrasDrafts(clear)
       },
     })
   }
@@ -547,11 +605,12 @@ function EndpointWorkspace() {
                   </Badge>
                 </span>
               </div>
-              {!readOnly && <div className="im-member-actions">
+              {/* The group owner cannot be kicked, muted or demoted by the bot. */}
+              {!readOnly && roleKind !== 'owner' && <div className="im-member-actions">
                 <Button
                   size="sm"
-                  variant="destructive"
-                  className="im-member-danger"
+                  variant="outline"
+                  className="im-member-danger text-destructive hover:text-destructive"
                   onClick={() =>
                     void handleGroupAction(ENDPOINT_RPC.GROUP_KICK, uid, item.name)
                   }
@@ -582,93 +641,77 @@ function EndpointWorkspace() {
   )
 
   let lastDay = ''
+  const continued = continuationFlags(channelMessages)
+  const availability = composerAvailability({ canOperate: !readOnly, connected: info?.connected })
+  const selectedName = selection?.type === 'channel'
+    ? channels.find((entry) => entry.channelType === selection.channelType && entry.id === selection.id)?.name ?? selection.name
+    : ''
 
   return (
     <MessageDiagnosticsProvider>
-    <div className="sandbox-container im-layout">
-      <button
-        type="button"
-        className="mobile-channel-toggle md:hidden"
-        onClick={() => setShowChannelList(!showChannelList)}
-      >
-        <MessageSquare size={20} /> {i18n.t(" 会话列表")}</button>
-
-      <ConversationSidebar
-        adapter={adapter}
-        endpointId={endpointId}
-        info={info}
-        loadErr={loadErr}
-        testLoading={testLoading}
-        testMessage={testMessage}
-        onTest={() => void testEndpoint()}
-        listLoading={listLoading}
-        listNotice={listNotice}
-        listSearch={listSearch}
-        onListSearchChange={setListSearch}
-        conversationSections={conversationSections}
-        sectionCollapsed={sectionCollapsed}
-        systemSectionCollapsed={systemSectionCollapsed}
-        onToggleSection={toggleSection}
-        onToggleSystemSection={toggleSystemSection}
-        selection={selection}
-        onSelectChannel={(entry) =>
-          setSelection({
-            type: 'channel',
-            id: entry.id,
-            name: entry.name,
-            channelType: entry.channelType,
-            ...(entry.parent ? { parent: entry.parent } : {}),
-          })
-        }
-        onSelectRequests={() => setSelection({ type: 'requests' })}
-        onSelectNotices={() => setSelection({ type: 'notices' })}
-        requestCount={requestList.length}
-        noticeCount={noticeList.length}
-        onRefresh={() => void loadLists()}
-        showChannelList={showChannelList}
-        onCloseMobileList={() => setShowChannelList(false)}
-        hasDraft={!!msgContent.trim() || composerAttachments.length > 0 || !!quoteDraft || !!forwardDraft || !!mediaUrl.trim()}
-        sending={sending}
-      />
-
-      {showChannelList && (
-        <div
-          className="channel-overlay md:hidden"
-          onClick={() => setShowChannelList(false)}
-          aria-hidden
+    <div className={cn('sandbox-container im-layout', `im-layout--${mode}`, `is-${pane}-pane`)}>
+      {mode === 'account' ? (
+        <ConversationSidebar
+          loadErr={loadErr}
+          listLoading={listLoading}
+          listNotice={listNotice}
+          listSearch={listSearch}
+          onListSearchChange={setListSearch}
+          conversationSections={conversationSections}
+          sectionCollapsed={sectionCollapsed}
+          systemSectionCollapsed={systemSectionCollapsed}
+          onToggleSection={toggleSection}
+          onToggleSystemSection={toggleSystemSection}
+          selection={selection}
+          onSelectChannel={(entry) =>
+            select({
+              type: 'channel',
+              id: entry.id,
+              name: entry.name,
+              channelType: entry.channelType,
+              ...(entry.parent ? { parent: entry.parent } : {}),
+            })
+          }
+          onSelectRequests={() => select({ type: 'requests' })}
+          onSelectNotices={() => select({ type: 'notices' })}
+          requestCount={requestList.length}
+          noticeCount={noticeList.length}
+          onRefresh={() => void loadLists()}
         />
-      )}
+      ) : null}
 
       <div className="im-main-split">
         <div className="im-center">
           {selection?.type === 'channel' && (
             <>
-              <header className="im-chat-header im-chat-header--channel px-3 py-2.5 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="im-chat-avatar shrink-0">
-                    {getChannelIcon(selection.channelType)}
-                  </div>
-                  <div className="min-w-0">
-                    <h2 className="text-[15px] font-semibold truncate leading-tight">{selection.name}</h2>
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">
-                      {selection.channelType === 'private'
-                        ? i18n.t("私聊")
-                        : selection.channelType === 'group'
-                          ? i18n.t("群聊")
-                          : i18n.t("频道")}
-                      {selection.channelType === 'channel' && selection.parent?.name
-                        ? ` · ${selection.parent.name}`
-                        : ''}{' '}
-                      · {selection.id}
-                    </p>
-                  </div>
+              <header className="im-chat-header im-chat-header--channel">
+                {mode === 'account' && onBack ? (
+                  <Button variant="ghost" size="icon" className="im-chat-back im-header-icon-button h-9 w-9" onClick={onBack} aria-label={i18n.t("返回会话列表")} title={i18n.t("返回会话列表")}>
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                ) : null}
+                <div className="im-chat-avatar shrink-0" aria-hidden>
+                  {getChannelIcon(selection.channelType)}
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="im-chat-title">
+                  <h2 title={selectedName}>{selectedName}</h2>
+                  <p>
+                    <span>{selection.channelType === 'private'
+                      ? i18n.t("私聊")
+                      : selection.channelType === 'group'
+                        ? i18n.t("群聊")
+                        : i18n.t("频道")}</span>
+                    {selection.channelType === 'channel' && selection.parent?.name ? <span>{selection.parent.name}</span> : null}
+                    <code title={selection.id}>{selection.id}</code>
+                  </p>
+                </div>
+                <div className="im-chat-header-actions">
                   {showMemberDrawer && (
                     <GroupMembersDrawer
                       open={memberDrawerIsOpen}
                       onOpenChange={setMemberDrawerIsOpen}
                       memberCount={memberCounts.total}
+                      side={isMobile ? 'bottom' : 'right'}
                     >
                       {({ Title, Description }) => renderMemberPanel(Title, Description)}
                     </GroupMembersDrawer>
@@ -690,12 +733,20 @@ function EndpointWorkspace() {
                       <MessageSquare className="h-4 w-4" />
                     </Link>
                   </Button>
+                  {mode === 'account' ? (
+                    <Button variant="ghost" size="icon" className="im-header-icon-button h-8 w-8" title={i18n.t("打开会话页")} aria-label={i18n.t("打开会话页")} asChild>
+                      <Link to={scopeHref({ adapter, endpoint: endpointId, kind: selection.channelType, id: selection.id })}>
+                        <SquareArrowOutUpRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  ) : null}
                   {!readOnly && selection.channelType === 'private' && (
                     <Button
                       variant="ghost"
                       size="icon"
                       className="im-header-icon-button h-8 w-8 text-destructive hover:text-destructive"
                       title={i18n.t("删除好友")}
+                      aria-label={i18n.t("删除好友")}
                       onClick={() => void handleDeleteFriend()}
                     >
                       <UserMinus className="h-4 w-4" />
@@ -723,17 +774,19 @@ function EndpointWorkspace() {
                     </span>
                   </div>
                 ) : (
-                  <div className="im-message-stack flex flex-col gap-1 pb-2">
-                    {channelMessages.map((m) => {
+                  <div className="im-message-stack">
+                    {channelMessages.map((m, index) => {
                       const dk = dayKey(m.timestamp)
                       const showDate = dk !== lastDay
                       if (showDate) lastDay = dk
-                      const out = m.outgoing === true
                       return (
                         <Fragment key={m.id}>
                           {showDate && <div className="im-date-pill">{dayLabel(m.timestamp, i18n.locale)}</div>}
                           <ChatMessageRow
                             message={m}
+                            continued={continued[index] && !showDate}
+                            onDismiss={dismissLocal}
+                            onRestore={restoreLocal}
                             onQuote={(ref) => {
                               setQuoteDraft(ref)
                               setForwardDraft(null)
@@ -750,9 +803,9 @@ function EndpointWorkspace() {
                 )}
               </ChatScrollArea>
 
-              {readOnly ? (
-                <div className="im-composer shrink-0 border-t px-4 py-3 text-xs text-muted-foreground">
-                  {i18n.t("当前身份只能读取消息记录，不提供消息编辑器。")}</div>
+              {availability.mode === 'notice' ? (
+                <div className="im-composer im-composer--notice" role="note">
+                  {i18n.t(COMPOSER_NOTICE_COPY[availability.reason])}</div>
               ) : (
               <div className="im-composer p-3 shrink-0 space-y-2">
                 <input
@@ -948,7 +1001,7 @@ function EndpointWorkspace() {
                   {requestList.length === 0 && canShowReadEmpty(requestsLoading, requestsError) && (
                     <div className="im-empty-state flex flex-col items-center justify-center py-16 gap-2 text-muted-foreground text-sm">
                       <UserPlus size={40} className="opacity-25" />
-                      <span>{requestsAvailable === false ? i18n.t("此渠道未提供请求管理，且未启用请求收件箱") : i18n.t("暂无未处理请求")}</span>
+                      <span>{requestsAvailable === false ? i18n.t("此账号未提供请求管理，且未启用请求收件箱") : i18n.t("暂无未处理请求")}</span>
                     </div>
                   )}
                   {requestList.map((r) => (

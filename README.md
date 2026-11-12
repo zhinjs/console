@@ -62,15 +62,17 @@ Console 没有单独的演示构建：公开演示是一台真实 Host，访客�
 | 区 | 菜单里的页面 | 不在菜单里、从上级页面进入 |
 |------|------|------|
 | 概览 | 首页 `/dashboard`、运行日志 `/logs`、机器人状态 `/agent/workbench`、Token 用量 `/agent/usage` | 决策回放 `/agent/replay` |
-| 会话 | 试聊一下（`/sandbox`，sandbox 插件页）、聊天账号 `/endpoints`、聊天记录 `/agent/sessions` | 账号工作区 `/endpoints/:adapter/:endpointId`（侧栏顶部有「功能配置」入口） |
-| 功能 | 功能矩阵 `/features`、适配器 `/features/adapters`、AI 与模型 `/features/ai`、技能助手 `/features/ai/skills`、群聊插话 `/features/ai/ambient`、Workroom `/features/ai/workrooms`、运行时能力、消息场景试验台，以及没有声明分区的插件页 | 全局配置 `/features/global/:plugin`、适配器页 `/features/adapters/:adapter`、账号配置 `/features/adapters/:adapter/endpoints/:endpoint`、Workroom 配置、命令权限说明、群欢迎配置流程 |
+| 会话 | 试聊一下（`/sandbox`，sandbox 插件页）、账号与会话 `/scope`（全局对象页）、聊天记录 `/agent/sessions` | 对象树：适配器 `/scope/:adapter`、账号 `/scope/:adapter/:endpoint`、会话 `/scope/:adapter/:endpoint/:conversation`（`<kind>:<id>`） |
+| 功能 | 功能矩阵 `/features`、AI 与模型 `/features/ai`、技能助手 `/features/ai/skills`、群聊插话 `/features/ai/ambient`、Workroom `/features/ai/workrooms`、运行时能力、消息场景试验台，以及没有声明分区的插件页 | 全局配置 `/features/global/:plugin`、Workroom 配置、命令权限说明、群欢迎配置流程 |
 | 插件 | 插件管理 `/plugins`、插件市场 `/marketplace` | 插件详情 `/plugins/:name`（不含配置，配置在全局配置页） |
 | 运维 | 数据库 `/ops/database`、配置文件 `/ops/config`、环境变量 `/ops/env`、定时任务 `/ops/schedules`、项目文件 `/ops/files`、实例 `/ops/instance`、终端 `/ops/terminal` | — |
 | 访问控制 | 用户 `/access/users`、角色 `/access/roles`、API 令牌 `/access/tokens`、审计日志 `/access/audit` | — |
 
 - 某个区里没有当前身份能看的页面时，整个区不显示。Host 还没有报告权限时（RBAC 之前的所有 Host）按不受限处理，由 Host 自己拒绝越权请求。
 - 功能矩阵目前只有「全局」一列（来自插件启用状态）；Host 提供 `feature.matrix` 后自动出现每个适配器的列（`pages/features/use-feature-data.ts` 的 `useFeatureMatrix`）。账号配置页用 `feature.get` 探测 Host 是否支持分层配置，旧 Host 返回 “Unknown RPC type” 时提示需要更新。
-- 旧路由保留为隐藏重定向（`LEGACY_ROUTE_REDIRECTS`）：`/config` → `/ops/config`（`/config?plugin=x` → `/features/global/x`）、`/env` `/files` `/database` → `/ops/*`、`/tasks` `/cron` `/assistant/jobs` → `/ops/schedules`、`/agent/models` `/agent/skills` `/agent/ambient` `/agent/workrooms*` → `/features/ai/*`。
+- 对象树（`console-ui/src/scope/`）：每个对象一页，页签由层级决定——全局 / 适配器：概览 · 功能 · 角色 · 记录；账号另有聊天（账号工作区）与接入（登录、测试连接）；会话另有聊天。`?tab=` 记住页签。「功能」页签每个插件一行（有效状态、来源层级、本层覆盖、锁定层级链接），展开逐字段显示继承值 / 本层覆盖 / 有效值 / 来源，写操作走操作回执；全局「功能」是功能总览，`?view=matrix` 切到矩阵（`/features` 仍是矩阵的独立入口）。账号「接入」只讲这个账号：连接与测试、登录验证、配置入口；Host 当前没有运行的账号会说明原因，不显示空列表。角色页签读写 `chat-roles.list|grant|revoke`（ADR 0056，需要 `iam.manage`）。zhin 角色只来自授予；平台群主/管理员是平台身份，不映射为 zhin 角色，单独影响平台相关能力。对象页（全局以下）只显示自己的范围面包屑，顶栏面包屑让位。设计与排版规范见 `docs/console-refactor-guidelines.md`。
+- 实例不可用（网关 503 `instance_unavailable` / 504 `instance_timeout` / 502 `instance_error`）时 shell 顶部显示横幅：Retry-After 倒计时、自动重试、去「实例」页；访问控制、实例、终端等网关页不受影响。
+- 旧路由保留为隐藏重定向（`LEGACY_ROUTE_REDIRECTS`）：`/endpoints` → `/scope`、`/endpoints/:a/:e` → 账号「聊天」（带 `channelType` + `channelId` 时到该会话的「聊天」）、`/features/adapters[/:a]` → `/scope[/:a]`、`/features/adapters/:a/endpoints/:e` → 账号「功能」（`?tab=conversations` → 账号概览）、`…/conversations/:c` → 会话「功能」；`/config` → `/ops/config`（`/config?plugin=x` → `/features/global/x`）、`/env` `/files` `/database` → `/ops/*`、`/tasks` `/cron` `/assistant/jobs` → `/ops/schedules`、`/agent/models` `/agent/skills` `/agent/ambient` `/agent/workrooms*` → `/features/ai/*`。
 - 插件页面按 `/entries` 里声明的 `section`（区 id 如 `ops`，或区名如 `运维`）落区，未声明的进「功能」。`常用`、`机器人`、`高级` 等旧分组名仍可用，不是区名的分组显示在「功能」里。
 
 「群聊插话」（`/features/ai/ambient`）：状态来自 `pluginRpc('root', 'ambient')`（Host 方法 `plugin.root.ambient`，需要令牌持有 `ambient:read`）。行为和范围设置用 `config:patch` + `expectedRevision` 只写 `ai.trigger.ambient`，文件保存与运行生效分别显示。旁听模型与旁听决策模型在统一模型用途页配置。

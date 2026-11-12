@@ -6,6 +6,9 @@ import ts from 'typescript'
 import { localeModule, isLocaleImport } from './locale-fixture.mjs'
 import * as personalModels from '../console-ui/src/pages/personal-session-model.mjs'
 import { readRecentSessions, summarizeRecentSessions } from '../console-ui/src/pages/agent-session-recent.mjs'
+import * as recordsModel from '../console-ui/src/pages/scope/records-model.mjs'
+import * as scopeTree from '../console-ui/src/scope/scope-tree.mjs'
+import * as scopeFilter from '../console-ui/src/pages/insights/scope-filter.mjs'
 
 const require = createRequire(import.meta.url)
 const options = { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX }
@@ -34,7 +37,8 @@ function fixture(initialKey = 'icqq:bot:group:room') {
     react: hooks,
     './personal-session-model.mjs': personalModels,
     './PersonalSessionPanel': { PersonalSessionPanel: 'personal-session-panel' },
-    'react-router-dom': { useSearchParams: () => [params, next=>{params=next}] },
+    'react-router-dom': { Link: 'a', useSearchParams: () => [params, next=>{params=typeof next==='function'?next(params):next}] },
+    './scope/records-model.mjs': recordsModel, '../scope/scope-tree.mjs': scopeTree, './insights/scope-filter.mjs': scopeFilter,
     '../utils/agent-session': sessions,
     '../utils/agent-session-history': {loadAgentSessionHistory:()=>[],pushAgentSessionHistory:key=>[key]},
     '../utils/useInboxCacheScope':{useInboxCacheScope:()=>scope},

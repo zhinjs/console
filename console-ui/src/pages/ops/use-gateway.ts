@@ -21,7 +21,7 @@ export async function gatewayRequest<T = unknown>(type: string, data: Record<str
   })
   let json: unknown = null
   try { json = await response.json() } catch { json = null }
-  return readGatewayReply(response.status, json, t) as T
+  return readGatewayReply(response.status, json, t, response.headers.get('retry-after')) as T
 }
 
 export interface GatewayReadState<T> {
@@ -30,6 +30,8 @@ export interface GatewayReadState<T> {
   loaded: boolean
   error: string | null
   errorKind: GatewayErrorKind | null
+  /** The failed request itself, for `StatusState` (Host code, Retry-After). */
+  failure: unknown
   refresh: () => void
   /** Replace the data without a request (e.g. the status a lifecycle RPC returned). */
   set: (data: T) => void
@@ -46,7 +48,7 @@ export function useGatewayRead<T>(
   options: { payload?: Record<string, unknown>; pollMs?: number; enabled?: boolean } = {},
 ): GatewayReadState<T> {
   const i18n = useI18n()
-  const [state, setState] = useState<Omit<GatewayReadState<T>, 'refresh' | 'set'>>({ data: initial, loading: true, loaded: false, error: null, errorKind: null })
+  const [state, setState] = useState<Omit<GatewayReadState<T>, 'refresh' | 'set'>>({ data: initial, loading: true, loaded: false, error: null, errorKind: null, failure: null })
   const sequence = useRef(0)
   const readRef = useRef(read)
   readRef.current = read
@@ -57,10 +59,10 @@ export function useGatewayRead<T>(
     setState(previous => ({ ...previous, loading: true }))
     gatewayRequest<unknown>(type, JSON.parse(key) as Record<string, unknown>, i18n.t).then(reply => {
       if (request !== sequence.current) return
-      setState(previous => ({ data: readRef.current(reply, previous.data), loading: false, loaded: true, error: null, errorKind: null }))
+      setState(previous => ({ data: readRef.current(reply, previous.data), loading: false, loaded: true, error: null, errorKind: null, failure: null }))
     }, (error: unknown) => {
       if (request !== sequence.current) return
-      setState(previous => ({ ...previous, loading: false, error: error instanceof Error ? error.message : String(error), errorKind: gatewayErrorKind(error) }))
+      setState(previous => ({ ...previous, loading: false, error: error instanceof Error ? error.message : String(error), errorKind: gatewayErrorKind(error), failure: error }))
     })
   }, [type, key, i18n])
   const unsupported = state.errorKind === 'unsupported' || state.errorKind === 'forbidden'
@@ -74,7 +76,7 @@ export function useGatewayRead<T>(
     if (!enabled || !options.pollMs || unsupported) return
     return startVisiblePolling(load, options.pollMs)
   }, [load, enabled, options.pollMs, unsupported])
-  const set = useCallback((data: T) => setState(previous => ({ ...previous, data, loaded: true, error: null, errorKind: null })), [])
+  const set = useCallback((data: T) => setState(previous => ({ ...previous, data, loaded: true, error: null, errorKind: null, failure: null })), [])
   return { ...state, refresh: load, set }
 }
 

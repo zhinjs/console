@@ -6,6 +6,7 @@ import ts from 'typescript'
 import { localeModule, isLocaleImport } from './locale-fixture.mjs'
 import * as engagementsModel from '../console-ui/src/pages/engagements-model.mjs'
 import * as workbenchModel from '../console-ui/src/pages/agent-workbench-model.mjs'
+import * as instanceSections from '../console-ui/src/pages/ops/instance-sections.mjs'
 
 const { introspectionTotal, fetchAllIntrospection } = workbenchModel
 const require = createRequire(import.meta.url)
@@ -73,6 +74,9 @@ function workroomFixture(initial) {
     '../components/ui/badge': { Badge: 'span' }, '../components/ui/button': { Button: 'button' },
     '../components/ui/card': { Card: 'article', CardContent: 'section' },
     '../components/ui/skeleton': { Skeleton: 'skeleton' }, '../components/ui/list-item-button': { ListItemButton: 'list-item' },
+    '../components/StatusState': { StatusState: 'status-state' },
+    '../components/ui/sheet': { Sheet: 'sheet', SheetContent: 'sheet-content', SheetDescription: 'p', SheetHeader: 'header', SheetTitle: 'h2' },
+    '../hooks/useIsMobile': { useIsMobile: () => false },
     '../utils/console-access.mjs': { hasConsolePermission: () => true },
     './engagements-model.mjs': engagementsModel,
   })
@@ -88,8 +92,8 @@ test('Workroom collaboration read failure shows an error with retry, not the "no
   const f = workroomFixture()
   await f.finish({ error: '连接已断开' })
   assert.ok(!emptyTitles(f.tree).includes('还没有协作记录'), 'a failed read must not claim there are no records')
-  const alerts = ofType(f.tree, 'error-alert')
-  assert.equal(alerts.length, 1)
+  const alerts = ofType(f.tree, 'status-state')
+  assert.equal(alerts.length, 1, 'one error state, not a banner plus a second empty panel')
   assert.match(alerts[0].props.error, /连接已断开/)
   assert.equal(typeof alerts[0].props.onRetry, 'function')
   alerts[0].props.onRetry()
@@ -100,7 +104,7 @@ test('Workroom collaboration read failure shows an error with retry, not the "no
 test('Workroom collaboration list that is genuinely empty shows the empty guidance without an error', async () => {
   const f = workroomFixture()
   await f.finish({ engagements: [] })
-  assert.equal(ofType(f.tree, 'error-alert').length, 0)
+  assert.equal(ofType(f.tree, 'status-state').length, 0)
   assert.ok(emptyTitles(f.tree).includes('还没有协作记录'))
   f.close()
 })
@@ -134,9 +138,11 @@ function workbenchFixture(sizes) {
     '../utils/console-rpc': { requestConsole: async () => ({ endpoints: [{ name: 'e', adapter: 'a', connected: true }] }) },
     '../utils/agent-session-history': { loadAgentSessionHistory: () => [] },
     '../utils/agent-session': { agentSessionsPath: key => `/agent/sessions/${key}`, parseImSessionKey: () => null, SESSION_SCOPE_LABELS: {} },
-    '../components/PageHeader': { PageHeader: 'page-header' },
+    '../components/PageHeader': { PageHeader: 'page-header' }, '../components/PageShell': { PageShell: 'page-shell' },
+    './insights/insights.css': {},
+    '../components/StatusState': { StatusState: 'status-state' }, '../console-routes.mjs': { CONSOLE_PATHS: { opsInstance: '/ops/instance', ai: '/features/ai' } }, './ops/instance-sections.mjs': instanceSections,
     '../components/ui/button': { Button: 'button', buttonVariants: () => '' },
-    '../components/ui/skeleton': { Skeleton: 'skeleton' }, '../components/error-alert': { ErrorAlert: 'error-alert' },
+    '../components/ui/skeleton': { Skeleton: 'skeleton' },
     './agent-workbench-model.mjs': workbenchModel,
   })
   const view = runtime.mount(() => module.default())

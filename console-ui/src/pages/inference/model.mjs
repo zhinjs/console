@@ -27,11 +27,12 @@ export async function inferenceRequest(fetch, { path = '', ownerId, body, method
     })
     result = await response.json()
   } catch {
-    throw new InferenceRequestError('unavailable')
+    // A Host without the Agent has no inference routes at all (404, possibly not JSON).
+    throw new InferenceRequestError(response?.status === 404 ? 'not-installed' : 'unavailable', response?.status)
   }
   if (!response.ok || result.success !== true)
     throw new InferenceRequestError(
-      typeof result.code === 'string' ? result.code : 'unavailable',
+      typeof result.code === 'string' ? result.code : response.status === 404 ? 'not-installed' : 'unavailable',
       response.status,
       result.mutationOutcome === 'not-committed' || result.requestOutcome === 'not-dispatched'
         ? 'not-committed'
@@ -61,6 +62,7 @@ export function inferenceError(error, locale = 'zh-CN') {
   if (code === 'unsupported') return translate(locale, '此服务不提供该功能。')
   if (code === 'not-prepared') return translate(locale, '已登录，请先完成账号准备。')
   if (code === 'storage-integrity') return translate(locale, '模型存储完整性异常，请由管理员检查。')
+  if (code === 'not-installed') return translate(locale, '这个 Host 没有模型接口：没有安装 Agent，或 Host 版本较旧。只用 IM 时可以忽略；需要 AI 回复时先在插件市场安装 Agent。')
   if (code === 'outcome-unknown') return translate(locale, '操作结果尚未确认，请查询结果后再操作。')
   return translate(locale, '操作未完成，请稍后重新读取。')
 }
@@ -246,4 +248,64 @@ export function driverLabel(driver, drivers) {
   return drivers.filter((value) => value.label === driver.label).length > 1
     ? `${driver.label} · ${driver.source ?? driver.owner.split('\0').join('/')}`
     : driver.label
+}
+
+/**
+ * 「谁在用」：一个模型（Profile）被哪些用途引用。只读现有的用途配置（`view.purposes`），
+ * 不推测运行时实际调用。纯函数。
+ */
+
+const decisionLabels = t => ({
+  skills: t('技能选择'),
+  tools: t('工具选择'),
+  memory: t('记忆选择'),
+  agents: t('Agent 选择'),
+  approval: t('工具审批建议'),
+  ambient: t('旁听参与判断'),
+})
+
+function scopeUses(models, profileId) {
+  const uses = []
+  if (models?.chat === profileId) uses.push('chat')
+  if (models?.perception?.profile === profileId || models?.perception?.fallbacks?.includes(profileId)) uses.push('perception')
+  return uses
+}
+
+/**
+ * `[{ key, label, level }]`，`level` 为 `default` / `decision` / `agent` / `adapter` / `endpoint` / `scene`。
+ * 没有用途配置（个人身份看不到用途）时返回 null，表示「不知道」而不是「没人用」。
+ */
+export function profileUsages(purposes, profileId, locale = 'zh-CN') {
+  if (!purposes || typeof purposes !== 'object') return null
+  const t = (text, values) => translate(locale, text, values)
+  const rows = []
+  const defaults = purposes.defaults ?? {}
+  const defaultLabels = { chat: t('默认聊天'), summary: t('默认摘要'), ambient: t('默认旁听'), image: t('默认图片生成') }
+  for (const key of ['chat', 'summary', 'ambient', 'image']) {
+    if (defaults[key] === profileId) rows.push({ key: `default:${key}`, level: 'default', label: defaultLabels[key] })
+  }
+  if (defaults.perception?.profile === profileId) rows.push({ key: 'default:perception', level: 'default', label: t('默认识图') })
+  else if (defaults.perception?.fallbacks?.includes(profileId)) rows.push({ key: 'default:perception-fallback', level: 'default', label: t('默认识图（备选）') })
+  const decisions = decisionLabels(t)
+  for (const [task, policy] of Object.entries(purposes.decisions ?? {})) {
+    if (policy?.profile !== profileId) continue
+    const name = Object.hasOwn(decisions, task) ? decisions[task] : task
+    rows.push({ key: `decision:${task}`, level: 'decision', label: t('决策：{0}', [name]) })
+  }
+  for (const [agent, profile] of Object.entries(purposes.agents ?? {})) {
+    if (profile === profileId) rows.push({ key: `agent:${agent}`, level: 'agent', label: t('Agent {0}', [agent]) })
+  }
+  const scoped = (level, record, label) => {
+    for (const [key, models] of Object.entries(record ?? {})) {
+      for (const use of scopeUses(models, profileId)) {
+        rows.push({ key: `${level}:${key}:${use}`, level, label: label(key, use === 'chat' ? t('聊天') : t('识图')) })
+      }
+    }
+  }
+  scoped('adapter', purposes.adapters, (key, use) => t('适配器 {0} 的{1}', [key, use]))
+  scoped('endpoint', purposes.endpoints, (key, use) => t('账号 {0} 的{1}', [key, use]))
+  for (const [key, models] of Object.entries(purposes.scenes ?? {})) {
+    if (models?.chat === profileId) rows.push({ key: `scene:${key}`, level: 'scene', label: t('会话 {0} 的聊天', [key]) })
+  }
+  return rows
 }

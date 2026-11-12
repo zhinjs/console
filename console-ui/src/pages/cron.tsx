@@ -367,7 +367,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
                 <div className="console-cron-run-facts"><span>{schedule ?? i18n.t("自定义执行时间")}</span><span>{i18n.t("下次执行：")}{cron.nextExecution ? until ?? new Date(cron.nextExecution).toLocaleString(i18n.locale) : '—'}</span></div>
                 <details className="console-cron-memory-details"><summary>{i18n.t("任务详情")}</summary><dl className="console-cron-metadata">
                   <div><dt>{i18n.t("Cron 表达式")}</dt><dd><code>{cron.expression}</code></dd></div>
-                  {cron.plugin && <div><dt>{i18n.t("插件")}</dt><dd><code>{cron.plugin}</code></dd></div>}
+                  {cron.plugin && <div><dt>{i18n.t("插件", undefined, "field")}</dt><dd><code>{cron.plugin}</code></dd></div>}
                   {cron.id && <div><dt>{i18n.t("任务 ID")}</dt><dd><code>{cron.id}</code></dd></div>}
                 </dl></details>
               </article>

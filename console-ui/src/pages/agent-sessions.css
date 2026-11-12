@@ -63,7 +63,30 @@
   }
 
   .console-session-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
     padding-bottom: 1rem;
+  }
+
+  .console-session-readonly {
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-caption);
+  }
+
+  .console-session-scope-filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem 0.5rem;
+    margin-bottom: 0.5rem;
+    border-radius: var(--console-radius-md);
+    background: hsl(var(--info) / 0.08);
+    padding: 0.25rem 0.25rem 0.25rem 0.75rem;
+    font-size: var(--console-text-body-sm);
   }
 
   .console-session-heading h2 {

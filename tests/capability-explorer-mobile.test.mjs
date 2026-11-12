@@ -10,6 +10,8 @@ import * as permissionLink from '../console-ui/src/pages/permission-link-model.m
 import * as emptyState from '../console-ui/src/pages/introspection/empty-state.mjs'
 import * as targetPreview from '../console-ui/src/pages/introspection/target-preview.mjs'
 import * as layoutModel from '../console-ui/src/pages/introspection/capability-layout-model.mjs'
+import * as consoleRoutes from '../console-ui/src/console-routes.mjs'
+import * as featureModel from '../console-ui/src/pages/features/feature-model.mjs'
 
 const require = createRequire(import.meta.url)
 const read = path => readFile(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')
@@ -97,6 +99,8 @@ function loadExplorer(runtime, media) {
     './JsonViewer': { JsonViewer: 'json-viewer' },
     '../../contracts/zhin-console': { ENDPOINT_RPC: {} },
     '../../utils/console-rpc': { requestConsole: async () => ({}) },
+    '../../console-routes.mjs': consoleRoutes,
+    '../features/feature-model.mjs': featureModel,
     '../../utils/useInboxCacheScope': { useInboxCacheScope: () => 'scope' },
     '../../utils/inbox-cache': { isInboxCacheScopeActive: () => true },
     '../../components/ui/badge': { Badge: 'badge' },

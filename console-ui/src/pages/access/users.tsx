@@ -1,5 +1,5 @@
-import { useId, useMemo, useState } from 'react'
-import { KeyRound, Plus, RefreshCw, ShieldCheck, Trash2, UserCheck, UserX, Users } from 'lucide-react'
+import { useId, useMemo, useRef, useState } from 'react'
+import { KeyRound, MoreHorizontal, Pencil, Plus, RefreshCw, ShieldCheck, Trash2, UserCheck, UserX } from 'lucide-react'
 import { useI18n } from '../../i18n'
 import { PageShell } from '../../components/PageShell'
 import { PageHeader } from '../../components/PageHeader'
@@ -10,21 +10,25 @@ import { Input } from '../../components/ui/input'
 import { Skeleton } from '../../components/ui/skeleton'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
-import { EmptyState } from '../../components/empty-state'
+import { StatusState } from '../../components/StatusState'
+import { ActionReceipt, useActionReceipt } from '../../components/ActionReceipt'
+import { receiptBlocksActions } from '../../components/action-receipt-model.mjs'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../../components/ui/dropdown-menu'
 import { ConfirmDialog } from '../../components/confirm-dialog'
 import { useToast } from '../../components/toast'
 import {
-  IAM_RPC, bindingInputs, breaksLastOwner, isGlobalOwner, passwordProblem, readRoles, usernameProblem,
+  IAM_RPC, bindingInputs, breaksLastOwner, displayNameProblem, isGlobalOwner, passwordProblem, readRoles, readUsers, usernameProblem,
   type IamBinding, type IamRole, type IamUser,
 } from './access-model.mjs'
 import { BindingBadges, BindingsEditor, FormField, IamLoadError, ReadOnlyNotice } from './access-components'
 import { iamRequest, useCanManageIam, useIamRead, useIamUsers } from './use-iam'
+import '../admin-pages.css'
 
 type Pending =
   | { kind: 'create' }
+  | { kind: 'profile'; user: IamUser }
   | { kind: 'bindings'; user: IamUser }
   | { kind: 'password'; user: IamUser }
-  | { kind: 'disable'; user: IamUser }
   | { kind: 'delete'; user: IamUser }
 
 const EMPTY_ROLES: IamRole[] = []
@@ -38,15 +42,46 @@ export default function AccessUsersPage() {
   const [pending, setPending] = useState<Pending | null>(null)
   const close = () => setPending(null)
   const done = (message: string) => { toast.success(message); users.refresh() }
-
-  const toggleDisabled = async (user: IamUser) => {
-    await iamRequest(IAM_RPC.USERS_DISABLE, { id: user.id, disabled: !user.disabled }, i18n.t)
-    done(user.disabled ? i18n.t("已启用 {0}", [user.username]) : i18n.t("已禁用 {0}", [user.username]))
+  // Enable / disable goes through the receipt (禁用 is a danger plan); the target rides in a ref.
+  const target = useRef<{ user: IamUser; disabled: boolean } | null>(null)
+  const receipt = useActionReceipt({
+    submit: async () => {
+      const current = target.current
+      if (!current) throw new Error('no target')
+      await iamRequest(IAM_RPC.USERS_DISABLE, { id: current.user.id, disabled: current.disabled }, i18n.t)
+    },
+    verify: async () => {
+      const current = target.current
+      if (!current) return undefined
+      const reply = await iamRequest<unknown>(IAM_RPC.USERS_LIST, {}, i18n.t)
+      const found = readUsers(reply).find(user => user.id === current.user.id)
+      return { applied: found ? found.disabled === current.disabled : undefined }
+    },
+    onSettled: () => users.refresh(),
+  })
+  const prepareDisabled = (user: IamUser, disabled: boolean) => {
+    target.current = { user, disabled }
+    const lastOwner = disabled && breaksLastOwner(users.data, user.id, { disable: true })
+    receipt.prepare(disabled ? {
+      title: i18n.t('禁用用户 {0}', [user.username]),
+      changes: [
+        i18n.t('{0} 的会话和 API 令牌立即失效', [user.username]),
+        i18n.t('之后无法登录，直到重新启用'),
+        ...(lastOwner ? [i18n.t('这是最后一个启用的所有者，Host 会拒绝禁用；请先给另一个用户绑定全局所有者')] : []),
+      ],
+      danger: true,
+      confirmLabel: i18n.t('禁用'),
+    } : {
+      title: i18n.t('启用用户 {0}', [user.username]),
+      changes: [i18n.t('{0} 可以重新登录，角色绑定保持不变', [user.username])],
+      confirmLabel: i18n.t('启用'),
+    })
   }
   const remove = async (user: IamUser) => {
     await iamRequest(IAM_RPC.USERS_DELETE, { id: user.id }, i18n.t)
     done(i18n.t("已删除 {0}", [user.username]))
   }
+  const busy = receiptBlocksActions(receipt.state)
 
   return (
     <PageShell>
@@ -59,60 +94,77 @@ export default function AccessUsersPage() {
         </>}
       />
       {!canManage ? <ReadOnlyNotice /> : null}
-      {users.error ? <IamLoadError error={users.error} kind={users.errorKind} onRetry={users.refresh} /> : null}
-      <Card className="overflow-hidden p-0">
-        {users.loading && !users.loaded ? (
-          <div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>
-        ) : !users.data.length ? (
-          <EmptyState icon={Users} title={i18n.t("还没有用户")} description={users.loaded ? i18n.t("初始化完成后，所有者会出现在这里。") : undefined} />
-        ) : (
-          <Table aria-label={i18n.t("用户")}>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{i18n.t("用户")}</TableHead>
-                <TableHead>{i18n.t("角色")}</TableHead>
-                <TableHead>{i18n.t("状态")}</TableHead>
-                <TableHead>{i18n.t("密码修改于")}</TableHead>
-                {canManage ? <TableHead><span className="sr-only">{i18n.t("操作")}</span></TableHead> : null}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.data.map(user => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    <div className="font-medium">{user.username}</div>
-                    {user.displayName !== user.username ? <div className="text-xs text-muted-foreground">{user.displayName}</div> : null}
-                  </TableCell>
-                  <TableCell><BindingBadges bindings={user.bindings} /></TableCell>
-                  <TableCell>
-                    {user.disabled
-                      ? <Badge variant="outline">{i18n.t("已禁用")}</Badge>
-                      : <Badge variant="success">{i18n.t("启用")}</Badge>}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap text-muted-foreground">
-                    {user.passwordChangedAt ? i18n.date(user.passwordChangedAt, { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
-                  </TableCell>
-                  {canManage ? (
-                    <TableCell className="text-right">
-                      <div className="flex flex-wrap justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => setPending({ kind: 'bindings', user })} disabled={!roles.loaded}><ShieldCheck />{i18n.t("角色")}</Button>
-                        <Button variant="ghost" size="sm" onClick={() => setPending({ kind: 'password', user })}><KeyRound />{i18n.t("重置密码")}</Button>
-                        <Button variant="ghost" size="sm" onClick={() => user.disabled ? void toggleDisabled(user).catch(error => toast.error(error instanceof Error ? error.message : String(error))) : setPending({ kind: 'disable', user })}>
-                          {user.disabled ? <UserCheck /> : <UserX />}{user.disabled ? i18n.t("启用") : i18n.t("禁用")}
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setPending({ kind: 'delete', user })}><Trash2 />{i18n.t("删除")}</Button>
-                      </div>
-                    </TableCell>
-                  ) : null}
+      <ActionReceipt controller={receipt} />
+      {users.error && !users.loaded ? <IamLoadError error={users.error} kind={users.errorKind} failure={users.failure} onRetry={users.refresh} /> : (
+        <Card className="overflow-hidden p-0">
+          {users.error ? <IamLoadError error={users.error} kind={users.errorKind} failure={users.failure} onRetry={users.refresh} /> : null}
+          {users.loading && !users.loaded ? (
+            <div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>
+          ) : !users.data.length ? (
+            <StatusState kind="empty" title={i18n.t("还没有用户")} description={i18n.t("初始化完成后，所有者会出现在这里。用「新建用户」给同事开账号。")} />
+          ) : (
+            <Table aria-label={i18n.t("用户")}>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{i18n.t("用户")}</TableHead>
+                  <TableHead className="hidden md:table-cell">{i18n.t("角色")}</TableHead>
+                  <TableHead>{i18n.t("状态")}</TableHead>
+                  <TableHead className="hidden lg:table-cell">{i18n.t("密码修改于")}</TableHead>
+                  {canManage ? <TableHead><span className="sr-only">{i18n.t("操作")}</span></TableHead> : null}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {users.data.map(user => (
+                  <TableRow key={user.id}>
+                    <TableCell className="min-w-0">
+                      <div className="font-medium break-words">{user.displayName}</div>
+                      <code className="console-access-id" title={user.username}>{user.username}</code>
+                      <div className="mt-1 md:hidden"><BindingBadges bindings={user.bindings} /></div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell"><BindingBadges bindings={user.bindings} /></TableCell>
+                    <TableCell>
+                      {user.disabled
+                        ? <Badge variant="outline" className="whitespace-nowrap">{i18n.t("已禁用")}</Badge>
+                        : <Badge variant="success" className="whitespace-nowrap">{i18n.t("启用")}</Badge>}
+                    </TableCell>
+                    <TableCell className="hidden whitespace-nowrap text-muted-foreground lg:table-cell">
+                      {user.passwordChangedAt ? i18n.date(user.passwordChangedAt, { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
+                    </TableCell>
+                    {canManage ? (
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="sm" className="hidden sm:inline-flex" onClick={() => setPending({ kind: 'bindings', user })} disabled={!roles.loaded}><ShieldCheck />{i18n.t("角色")}</Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" aria-label={i18n.t("管理 {0}", [user.username])} disabled={busy}><MoreHorizontal /></Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onSelect={() => setPending({ kind: 'profile', user })}><Pencil />{i18n.t("修改显示名")}</DropdownMenuItem>
+                              <DropdownMenuItem disabled={!roles.loaded} onSelect={() => setPending({ kind: 'bindings', user })}><ShieldCheck />{i18n.t("角色绑定")}</DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => setPending({ kind: 'password', user })}><KeyRound />{i18n.t("重置密码")}</DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onSelect={() => prepareDisabled(user, !user.disabled)}>
+                                {user.disabled ? <UserCheck /> : <UserX />}{user.disabled ? i18n.t("启用") : i18n.t("禁用")}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive" onSelect={() => setPending({ kind: 'delete', user })}><Trash2 />{i18n.t("删除")}</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    ) : null}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </Card>
+      )}
 
       {pending?.kind === 'create' ? (
         <CreateUserDialog roles={roles.data} onClose={close} onCreated={user => { close(); done(i18n.t("已创建 {0}", [user])) }} />
+      ) : null}
+      {pending?.kind === 'profile' ? (
+        <ProfileDialog user={pending.user} onClose={close} onSaved={() => { close(); done(i18n.t("已更新 {0} 的显示名", [pending.user.username])) }} />
       ) : null}
       {pending?.kind === 'bindings' ? (
         <BindingsDialog user={pending.user} users={users.data} roles={roles.data} onClose={close}
@@ -120,15 +172,6 @@ export default function AccessUsersPage() {
       ) : null}
       {pending?.kind === 'password' ? (
         <ResetPasswordDialog user={pending.user} onClose={close} onDone={() => { close(); toast.success(i18n.t("已重置 {0} 的密码，其会话已全部失效", [pending.user.username])) }} />
-      ) : null}
-      {pending?.kind === 'disable' ? (
-        <ConfirmDialog open onOpenChange={open => { if (!open) close() }} variant="destructive"
-          title={i18n.t("禁用 {0}？", [pending.user.username])}
-          description={breaksLastOwner(users.data, pending.user.id, { disable: true })
-            ? i18n.t("这是最后一个启用的所有者，Host 会拒绝禁用。请先给另一个用户绑定全局所有者。")
-            : i18n.t("该用户的会话和 API 令牌会立即失效，之后无法登录，直到重新启用。")}
-          confirmLabel={i18n.t("禁用")}
-          onConfirm={() => toggleDisabled(pending.user)} />
       ) : null}
       {pending?.kind === 'delete' ? (
         <ConfirmDialog open onOpenChange={open => { if (!open) close() }} variant="destructive"
@@ -141,6 +184,54 @@ export default function AccessUsersPage() {
           onConfirm={() => remove(pending.user)} />
       ) : null}
     </PageShell>
+  )
+}
+
+/** `iam.users.update { id, displayName }` (ADR 0049 §5). The username never changes. */
+function ProfileDialog({ user, onClose, onSaved }: { user: IamUser; onClose: () => void; onSaved: () => void }) {
+  const i18n = useI18n()
+  const id = useId()
+  const [displayName, setDisplayName] = useState(user.displayName)
+  const [touched, setTouched] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<unknown>(null)
+  const problem = displayNameProblem(displayName, i18n.t)
+  const submit = async () => {
+    setTouched(true)
+    if (problem) return
+    setSaving(true)
+    setError(null)
+    try {
+      await iamRequest(IAM_RPC.USERS_UPDATE, { id: user.id, displayName: displayName.trim() }, i18n.t)
+      onSaved()
+    } catch (caught) {
+      setError(caught)
+    } finally {
+      setSaving(false)
+    }
+  }
+  return (
+    <Dialog open onOpenChange={open => { if (!open && !saving) onClose() }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{i18n.t("修改 {0} 的显示名", [user.username])}</DialogTitle>
+          <DialogDescription>{i18n.t("显示名出现在顶栏、审计日志和用户列表里。用户名用于登录，创建后不能修改。")}</DialogDescription>
+        </DialogHeader>
+        <form className="space-y-3" onSubmit={event => { event.preventDefault(); void submit() }}>
+          <FormField htmlFor={`${id}-username`} label={i18n.t("用户名")} hint={i18n.t("用于登录，不能修改")}>
+            <Input id={`${id}-username`} value={user.username} disabled readOnly />
+          </FormField>
+          <FormField htmlFor={`${id}-display`} label={i18n.t("显示名")} error={touched ? problem : null} hint={i18n.t("最多 128 个字符")}>
+            <Input id={`${id}-display`} value={displayName} maxLength={128} autoComplete="off" disabled={saving} onChange={event => setDisplayName(event.target.value)} />
+          </FormField>
+          {error ? <StatusState compact error={error} /> : null}
+          <DialogFooter>
+            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={saving}>{i18n.t("取消")}</Button>
+            <Button type="submit" size="sm" disabled={saving}>{saving ? i18n.t("处理中...") : i18n.t("保存")}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }
 

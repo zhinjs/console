@@ -18,6 +18,7 @@ import { getInboxCacheScope, isInboxCacheScopeActive } from '../utils/inbox-cach
 import { requestConsole } from '../utils/console-rpc'
 import { CONSOLE_REST, ENDPOINT_RPC } from '../contracts/zhin-console'
 import { buildPreviewTarget, readPreviewEndpoints, type PreviewEndpoint } from './introspection/target-preview.mjs'
+import { TaskConversationChoice } from './TaskConversationChoice'
 import { createDiagnosticRequestGate } from './endpoint-detail/message-diagnostics.mjs'
 import type { DiagnosticConversation } from './endpoint-detail/types'
 import { readTaskProviders, readTaskMutation, readTaskUseCases, readPendingTask, reconcileTaskMutation, taskBusinessError, taskParameterFields, taskDefaults, validateTaskParameters, taskMutationBody,
@@ -255,9 +256,12 @@ export default function TaskCenterPage() {
           {!editTask ? <fieldset className="space-y-3"><legend className="font-medium text-sm">{i18n.t("投递目标")}</legend><Button variant="outline" size="sm" disabled={disabled} onClick={() => void loadEndpoints()}>{i18n.t("读取账号列表")}</Button>
             {endpointError && <p className="text-xs text-destructive">{endpointError}</p>}
             <SelectField aria-label={i18n.t("投递账号")} value={endpointKey} disabled={disabled} onValueChange={value => { setEndpointKey(value); setTargetFields(emptyTarget) }} options={[{ value: '', label: i18n.t("请选择账号") }, ...endpoints.map(item => ({ value: JSON.stringify(item.endpoint), label: <>{item.name} · {item.endpoint.adapter} · {item.connected ? i18n.t("已连接") : i18n.t("未连接")}</> }))]} />
+            {selectedEndpoint ? <TaskConversationChoice endpoint={selectedEndpoint.endpoint} disabled={disabled} selected={targetFields} onPick={(kind, id) => setTargetFields(current => ({ ...current, kind, id }))} /> : null}
+            <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">{i18n.t("手动填写会话（高级）")}</summary><div className="mt-3 space-y-3">
+            <p>{i18n.t("列表里没有的会话（例如还没说过话的群）可以手动填写类型与 ID；父容器与话题按平台需要填写。")}</p>
             <label className="text-xs block">{i18n.t("会话类型")}<SelectField aria-label={i18n.t("会话类型")} value={targetFields.kind} disabled={disabled} onValueChange={value => setTargetFields(current => ({ ...current, kind: value }))} options={[{ value: 'private', label: i18n.t("私聊") }, { value: 'group', label: i18n.t("群聊") }, { value: 'channel', label: i18n.t("频道") }]} /></label>
             <Input aria-label={i18n.t("会话 ID")} placeholder={i18n.t("会话 ID")} value={targetFields.id} disabled={disabled} onChange={event => setTargetFields(current => ({ ...current, id: event.target.value }))} />
-            <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">{i18n.t("父容器与话题（可选）")}</summary><div className="mt-3 space-y-3">
+              <p className="font-medium text-foreground">{i18n.t("父容器与话题（可选）")}</p>
               <div className="grid grid-cols-2 gap-2"><SelectField aria-label={i18n.t("父容器类型")} value={targetFields.parentKind} disabled={disabled} onValueChange={value => setTargetFields(current => ({ ...current, parentKind: value }))} options={[{ value: '', label: i18n.t("无父容器") }, { value: 'private', label: 'private' }, { value: 'group', label: 'group' }, { value: 'channel', label: i18n.t("channel（服务器/工作区）") }]} />
                 <Input aria-label={i18n.t("父容器 ID")} placeholder={i18n.t("父容器 ID")} value={targetFields.parentId} disabled={disabled} onChange={event => setTargetFields(current => ({ ...current, parentId: event.target.value }))} /></div>
               <Input aria-label={i18n.t("话题 ID")} placeholder={i18n.t("话题 ID")} value={targetFields.threadId} disabled={disabled} onChange={event => setTargetFields(current => ({ ...current, threadId: event.target.value }))} />

@@ -11,7 +11,7 @@ import { PageHeader } from '../components/PageHeader'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Alert, AlertDescription } from '../components/ui/alert'
-import { ErrorAlert } from '../components/error-alert'
+import { OpsLoadState } from './ops/load-state'
 import { ConfirmDialog, useConfirm } from '../components/confirm-dialog'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
 import { Skeleton } from '../components/ui/skeleton'
@@ -366,7 +366,7 @@ export default function EnvManagePage() {
       />
 
       {error && (
-        <ErrorAlert error={readErrorSummary(error, i18n.t("环境变量文件列表"), i18n.locale)} technicalDetail={error} onRetry={handleRefresh} />
+        <OpsLoadState error={error} resource={i18n.t("环境变量文件列表")} permissions={['ops.env.read']} onRetry={handleRefresh} />
       )}
 
       <Tabs value={activeTab} onValueChange={selectTab} className="space-y-4">

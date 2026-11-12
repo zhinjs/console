@@ -76,7 +76,7 @@ function fixture(initialQuery = '', treeRead = { data: [], loaded: true, error: 
     '../../components/PageHeader': { PageHeader: 'page-header' }, '../../components/empty-state': { EmptyState: 'empty' },
     '../../components/ui/card': { Card: 'article', CardContent: 'section' },
     '../../components/ui/button': { Button: 'button' }, '../../components/ui/badge': { Badge: 'span' },
-    '../../components/ui/alert': { Alert: 'aside', AlertDescription: 'p' }, '../../components/error-alert': { ErrorAlert: 'aside' },
+    '../../components/ui/alert': { Alert: 'aside', AlertDescription: 'p' }, '../../components/error-alert': { ErrorAlert: 'aside' }, '../ops/load-state': { OpsLoadState: 'aside' },
     '../../components/ui/scroll-area': { ScrollArea: 'div' },
     '../../components/connection-required': { ConnectionRequiredState: 'connection-required' },
     'lucide-react': new Proxy({}, { get: () => 'i' }),

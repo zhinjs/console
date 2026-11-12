@@ -1,0 +1,58 @@
+/* StatusState, ActionReceipt and the shell's instance banner. Tokens only; light and dark follow the palette. */
+
+/* ---- StatusState ---- */
+.console-status-state {
+  display: flex; align-items: flex-start; gap: 0.75rem; border: 1px dashed var(--console-border-default); border-radius: var(--console-radius-lg);
+  background: hsl(var(--muted) / 0.35); padding: 1.25rem; color: hsl(var(--foreground));
+}
+.console-status-state--warning { border-style: solid; border-color: hsl(var(--warning) / 0.45); background: hsl(var(--warning) / 0.08); }
+.console-status-state--destructive { border-style: solid; border-color: hsl(var(--destructive) / 0.35); background: hsl(var(--destructive) / 0.05); }
+.console-status-state--compact { padding: 0.75rem; border-radius: var(--console-radius-md); }
+.console-status-state-icon { width: 1.25rem; height: 1.25rem; flex-shrink: 0; margin-top: 0.125rem; color: hsl(var(--muted-foreground)); }
+.console-status-state--warning .console-status-state-icon { color: hsl(var(--warning)); }
+.console-status-state--destructive .console-status-state-icon { color: hsl(var(--destructive)); }
+.console-status-state-text { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 0.25rem; }
+.console-status-state-title { font-weight: 600; }
+.console-status-state-description { max-width: 65ch; color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); }
+.console-status-state-description code { font-family: var(--console-font-mono); font-size: var(--console-text-caption); }
+.console-status-state-detail { font-size: var(--console-text-caption); color: hsl(var(--muted-foreground)); }
+.console-status-state-detail summary { cursor: pointer; }
+.console-status-state-detail pre { margin-top: 0.25rem; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--console-font-mono); }
+.console-status-state-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+
+/* ---- ActionReceipt ---- */
+.console-receipt {
+  display: flex; flex-direction: column; gap: 0.5rem; border: 1px solid var(--console-border-default); border-radius: var(--console-radius-lg);
+  background: hsl(var(--card)); padding: 0.875rem 1rem; box-shadow: var(--console-shadow-sm);
+}
+.console-receipt--succeeded { border-color: hsl(var(--success) / 0.45); }
+.console-receipt--partial, .console-receipt--unknown, .console-receipt--confirming { border-color: hsl(var(--warning) / 0.55); }
+.console-receipt--failed { border-color: hsl(var(--destructive) / 0.4); }
+.console-receipt-head { display: flex; align-items: flex-start; gap: 0.5rem; }
+.console-receipt-icon { width: 1.125rem; height: 1.125rem; flex-shrink: 0; margin-top: 0.125rem; }
+.console-receipt--succeeded .console-receipt-icon { color: hsl(var(--success)); }
+.console-receipt--partial .console-receipt-icon, .console-receipt--unknown .console-receipt-icon { color: hsl(var(--warning)); }
+.console-receipt--failed .console-receipt-icon { color: hsl(var(--destructive)); }
+.console-receipt-phase { font-size: var(--console-text-caption); color: hsl(var(--muted-foreground)); }
+.console-receipt-title { font-weight: 600; overflow-wrap: anywhere; }
+.console-receipt-close { width: 1.75rem; height: 1.75rem; }
+.console-receipt-summary { color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); }
+.console-receipt-changes { margin: 0; padding-inline-start: 1.25rem; list-style: disc; font-size: var(--console-text-body-sm); }
+.console-receipt-items { display: flex; flex-direction: column; gap: 0.25rem; margin: 0; padding: 0; list-style: none; font-size: var(--console-text-body-sm); }
+.console-receipt-items li { display: flex; align-items: center; gap: 0.375rem; }
+.console-receipt-items svg { width: 0.875rem; height: 0.875rem; flex-shrink: 0; }
+.console-receipt-items .is-ok svg { color: hsl(var(--success)); }
+.console-receipt-items .is-failed svg { color: hsl(var(--destructive)); }
+.console-receipt-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.console-receipt-actions:empty { display: none; }
+
+/* ---- Instance unavailable banner (shell) ---- */
+.console-instance-banner {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; border-bottom: 1px solid hsl(var(--warning) / 0.45);
+  background: hsl(var(--warning) / 0.1); padding: 0.625rem var(--console-space-page-x, 1rem); color: hsl(var(--foreground));
+}
+.console-instance-banner-icon { width: 1.125rem; height: 1.125rem; flex-shrink: 0; color: hsl(var(--warning)); }
+.console-instance-banner-title { font-weight: 600; font-size: var(--console-text-body-sm); }
+.console-instance-banner-text { color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); }
+.console-instance-banner-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+@media (max-width: 767px) { .console-instance-banner-actions { width: 100%; } .console-instance-banner-actions > * { flex: 1 1 auto; } }

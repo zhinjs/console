@@ -75,7 +75,7 @@ export function MessageDiagnosticsAction({ message, endpoint, selection }: { mes
     <button type="button" className={message ? undefined : 'im-header-icon-button h-8 px-2 text-xs inline-flex items-center gap-1 rounded-md hover:bg-accent'}
       disabled={denied || !isInboxCacheScopeActive(scope)} title={denied ? i18n.t("当前身份无权查看消息诊断") : !isInboxCacheScopeActive(scope) ? i18n.t("请先连接 Host") : reason ?? title}
       aria-label={message ? i18n.t("诊断这条入站消息") : title} onClick={() => { setOpen(true); if (!reason) void load() }}>
-      <Stethoscope className="h-3.5 w-3.5" />{!message && i18n.t("最近诊断")}
+      <Stethoscope className="h-3.5 w-3.5" />{!message && <span className="im-header-label">{i18n.t("最近诊断")}</span>}
     </button>
     <Dialog open={open} onOpenChange={value => { if (!value) close() }}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">

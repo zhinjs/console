@@ -16,14 +16,14 @@
     "@zhin.js/ai": "~1.1.54",
     "@zhin.js/client": "~1.1.31",
     "@zhin.js/contract": "~1.1.22",
-    "zod": "^4.0.0"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@farmfe/cli": "^1.0.5",
     "@farmfe/core": "^1.7.11",
     "@farmfe/js-plugin-postcss": "^1.12.0",
     "@farmfe/plugin-react": "^1.2.6",
-    "@tailwindcss/postcss": "4",
+    "@tailwindcss/postcss": "^4.3.5",
     "@types/node": "^25.8.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -33,13 +33,13 @@
     "clsx": "^2",
     "highlight.js": "11.11.1",
     "lucide-react": "^1.16.0",
-    "postcss": "^8.5.14",
+    "postcss": "^8.5.32",
     "radix-ui": "^1.4.3",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-refresh": "^0.18.0",
-    "react-router-dom": "^7.15.1",
-    "serve": "^14.2.4",
+    "react-router-dom": "^7.18.5",
+    "serve": "^14.2.7",
     "tailwind-merge": "^3",
     "tailwindcss": "^4.3.0",
     "typescript": "^6.0.2",
@@ -48,5 +48,23 @@
   "engines": {
     "node": ">=22.19.0"
   },
-  "packageManager": "pnpm@9.0.2"
+  "packageManager": "pnpm@9.0.2",
+  "pnpm": {
+    "overrides": {
+      "baseline-browser-mapping@>=2.0.0 <2.11.0": "^2.11.0",
+      "brace-expansion@>=1.0.0 <1.1.21": "^1.1.21",
+      "browserslist@>=4.0.0 <4.28.7": "^4.28.7",
+      "compression@>=1.0.0 <1.8.2": "^1.8.2",
+      "fast-uri@>=3.0.0 <3.1.9": "^3.1.9",
+      "follow-redirects@>=1.0.0 <1.16.2": "^1.16.2",
+      "http-proxy-middleware@>=3.0.0 <3.0.7": "^3.0.7",
+      "js-yaml@>=3.0.0 <3.15.2": "^3.15.2",
+      "js-yaml@>=4.0.0 <4.3.2": "^4.3.2",
+      "nanoid@>=3.0.0 <3.3.18": "^3.3.18",
+      "postcss@>=8.0.0 <8.5.23": "^8.5.23",
+      "source-map-js@>=1.0.0 <1.2.2": "^1.2.2",
+      "tmp@<0.2.6": "^0.2.6",
+      "ws@>=8.0.0 <8.21.0": "^8.21.0"
+    }
+  }
 }

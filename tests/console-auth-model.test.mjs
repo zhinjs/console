@@ -86,7 +86,7 @@ test('/auth/me decides between the wizard, the shell and sign-in, and what navig
   const user = me({ kind: 'user', user: { id: 'u1', username: 'alice', displayName: 'Alice' }, permissions: ['status.view', 7], bindings: [{ role: 'viewer', scope: { kind: 'global' }, permissions: [] }], setupRequired: false })
   assert.deepEqual(user.permissions, ['status.view'])
   assert.equal(sessionView(user), 'shell')
-  assert.deepEqual(meAccessReport(user), { permissions: ['status.view'] })
+  assert.deepEqual(meAccessReport(user), { permissions: ['status.view'], bindings: [{ role: 'viewer', scope: { kind: 'global' }, permissions: [] }] })
   assert.equal(principalLabel(user, zh), 'Alice')
 
   const bootstrap = me({ kind: 'bootstrap', open: false, permissions: [], bindings: [], setupRequired: true })

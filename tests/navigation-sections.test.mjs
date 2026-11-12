@@ -13,7 +13,7 @@ const route = (path, group, extra = {}) => ({ path, name: path, meta: { group, .
 const pages = [
   route('/dashboard', '概览', { meta: { order: 0 } }),
   route('/logs', '概览', { meta: { order: 1 } }),
-  route('/endpoints', '会话'),
+  route('/scope', '会话'),
   route('/features', '功能'),
   route('/features/ai', '功能'),
   route('/plugins', '插件'),
@@ -48,7 +48,7 @@ test('pages without a section default to 功能; a declared section beats the gr
 
 test('an unrestricted session (every Host before RBAC) sees every section that has a page', () => {
   assert.deepEqual(shape(buildNavigation(pages)), [
-    ['daily', [['overview', ['/dashboard', '/logs']], ['sessions', ['/endpoints']], ['features', ['/features', '/features/ai']], ['plugins', ['/plugins']]]],
+    ['daily', [['overview', ['/dashboard', '/logs']], ['sessions', ['/scope']], ['features', ['/features', '/features/ai']], ['plugins', ['/plugins']]]],
     ['admin', [['ops', ['/ops/database', '/ops/config', '/ops/env', '/ops/schedules', '/ops/files']]]],
   ])
   assert.ok(!shape(buildNavigation(pages)).flat(3).includes('/plugins/:name'), 'hidden pages are not menu items')
@@ -58,7 +58,7 @@ test('sections without a visible page disappear for restricted principals', () =
   // ADR 0049 viewer: every *.view / *.read except config and env reads.
   const viewer = access(['status.view', 'endpoint.view', 'feature.view', 'agent.view', 'ops.database.read', 'ops.schedule.read', 'ops.files.read'])
   assert.deepEqual(shape(buildNavigation(pages, viewer)), [
-    ['daily', [['overview', ['/dashboard', '/logs']], ['sessions', ['/endpoints']], ['features', ['/features', '/features/ai']]]],
+    ['daily', [['overview', ['/dashboard', '/logs']], ['sessions', ['/scope']], ['features', ['/features', '/features/ai']]]],
     ['admin', [['ops', ['/ops/database', '/ops/schedules', '/ops/files']]]],
   ])
   // ADR 0049 operator: no plugin or ops pages except schedules.
@@ -66,7 +66,7 @@ test('sections without a visible page disappear for restricted principals', () =
   assert.deepEqual(shape(buildNavigation(pages, operator)).map(([tier, sections]) => [tier, sections.map(([id]) => id)]), [
     ['daily', ['overview', 'sessions', 'features']], ['admin', ['ops']],
   ])
-  assert.deepEqual(shape(buildNavigation(pages, access(['endpoint.view']))), [['daily', [['sessions', ['/endpoints']]]]])
+  assert.deepEqual(shape(buildNavigation(pages, access(['endpoint.view']))), [['daily', [['sessions', ['/scope']]]]])
   assert.deepEqual(buildNavigation(pages, access([])), [], 'no permission, no navigation')
 })
 

@@ -75,7 +75,7 @@ function fixture({ dropTable }) {
     '../../components/ui/badge': { Badge: 'span' },
     '../../components/ui/skeleton': { Skeleton: 'div' },
     '../../components/ui/scroll-area': { ScrollArea: 'div' },
-    '../../components/error-alert': { ErrorAlert: 'aside' },
+    '../../components/error-alert': { ErrorAlert: 'aside' }, '../ops/load-state': { OpsLoadState: 'aside' },
     '../../components/empty-state': { EmptyState: 'empty' },
     '../../components/PageHeader': { PageHeader: 'page-header' },
     'lucide-react': new Proxy({}, { get: () => 'i' }),

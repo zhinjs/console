@@ -1,0 +1,6 @@
+/* 聊天 tab container (account and conversation). The base frame is .console-object-chat (object-page.css). */
+.console-object-chat.console-chat-panel { scroll-margin-top: 0.5rem; }
+/* Phones: the chat pane takes the screen below the top bar; the page header is scrolled past. */
+@media (max-width: 767px) {
+  .console-object-chat.console-chat-panel { height: calc(100dvh - var(--console-topbar-height, 3.5rem) - 1rem); min-height: 22rem; }
+}

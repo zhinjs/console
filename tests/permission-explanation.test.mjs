@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import { readPermissionCatalog, readPermissionExplanation, permissionRequest, permissionOutcomeLabel } from '../console-ui/src/pages/permission-explanation-model.mjs'
+import { readPermissionCatalog, readPermissionExplanation, permissionRequest, permissionOutcomeLabel, permitRuleMeaning } from '../console-ui/src/pages/permission-explanation-model.mjs'
 
 const selected = { id: 'root/demo\0zhin.command\0status', owner: 'root/demo', name: 'status', description: '状态', permits: ['group()', 'role(admin)', 'platform(qq,admin)'] }
 const target = { endpoint: { adapter: 'qq', id: 'root/qq\0zhin.adapter\0qq~first' }, kind: 'group', id: 'room', parent: { kind: 'channel', id: 'guild' }, threadId: 'topic' }
@@ -36,7 +36,9 @@ test('binds explanations to exact command, generation, canonical target and assu
     value => { value.data.target.threadId = 'other' },
     value => { delete value.data.target.threadId },
     value => { value.data.sender.id = 'bob' },
-    value => { value.data.sender.roles = ['admin'] },
+    value => { value.data.sender.chatRole = 'admin' },
+    value => { value.data.sender.chatRole = null },
+    value => { value.data.sender.platform = { standing: 'admin' } },
     value => { value.data.rules[0].rule = 'private()' },
     value => { value.data.simulation = false },
     value => { value.data.summary.outcome = 'allowed' },
@@ -49,21 +51,26 @@ test('binds explanations to exact command, generation, canonical target and assu
 test('builds read-only hypothetical requests without inventing conversation or role identity', () => {
   assert.deepEqual(permissionRequest(3, selected), { generation: 3, commandId: selected.id })
   assert.deepEqual(permissionRequest(3, selected, { senderId: 'alice' }), { generation: 3, commandId: selected.id, sender: { id: 'alice' } })
-  const body = permissionRequest(3, selected, { target, senderId: 'alice', roles: ' admin，trusted, admin ' })
-  assert.deepEqual(body.sender.roles, ['admin', 'trusted'])
+  const body = permissionRequest(3, selected, { target, senderId: 'alice', chatRole: 'admin', standing: 'owner', platformRoles: ' mod，helper, mod ' })
+  assert.deepEqual(body.sender, { id: 'alice', chatRole: 'admin', platform: { standing: 'owner', roles: ['mod', 'helper'] } })
+  assert.equal(Object.hasOwn(body.sender, 'roles'), false, 'the old roles field is gone (400 on new Hosts)')
   assert.deepEqual(body.target, target)
+  assert.deepEqual(permissionRequest(3, selected, { senderId: 'alice', chatRole: 'none' }).sender, { id: 'alice', chatRole: null }, 'an ordinary user is null, not omitted')
   const longEndpoint = { ...target, endpoint: { ...target.endpoint, id: 'e'.repeat(4096) } }
   assert.equal(permissionRequest(3, selected, { target: longEndpoint }).target.endpoint.id.length, 4096)
   assert.equal(permissionRequest(3, selected, { senderId: ' alice ' }).sender.id, ' alice ')
   assert.equal(Object.hasOwn(body, 'permits'), false)
-  assert.throws(() => permissionRequest(3, selected, { roles: 'admin' }), /发送者 ID/)
+  assert.throws(() => permissionRequest(3, selected, { chatRole: 'admin' }), /发送者 ID/)
+  assert.throws(() => permissionRequest(3, selected, { standing: 'admin' }), /发送者 ID/)
+  assert.throws(() => permissionRequest(3, selected, { senderId: 'alice', platformRoles: 'mod' }), /平台身份/)
+  assert.throws(() => permissionRequest(3, selected, { senderId: 'alice', chatRole: 'boss' }), /格式/)
   assert.throws(() => permissionRequest(3, selected, { requireTarget: true }), /完整/)
   assert.throws(() => permissionRequest(3, selected, { target: { ...target, parent: { id: 'guild' } } }), /完整/)
 })
 
-test('preserves spaces inside exact role names and separates roles only by commas', () => {
-  const body = permissionRequest(3, selected, { senderId: 'alice', roles: ' project admin, on call reviewer，project admin ' })
-  assert.deepEqual(body.sender.roles, ['project admin', 'on call reviewer'])
+test('preserves spaces inside exact platform role names and separates roles only by commas', () => {
+  const body = permissionRequest(3, selected, { senderId: 'alice', standing: 'member', platformRoles: ' project admin, on call reviewer，project admin ' })
+  assert.deepEqual(body.sender.platform.roles, ['project admin', 'on call reviewer'])
 })
 
 test('rejects malformed catalogs and duplicate identities instead of guessing a command', () => {
@@ -87,4 +94,30 @@ test('consumes actual authenticated Host DTOs without upgrading unknown or skipp
   assert.equal(fixtures.admin.data.summary.outcome, 'match')
   assert.equal(fixtures.unknownRole.data.rules.find(rule => rule.kind === 'role').outcome, 'unknown')
   assert.equal(fixtures.platform.data.rules[0].outcome, 'not_evaluated')
+})
+
+test('level-qualified roles and bot / platform permits are read and described', () => {
+  const permits = ['owner@global', 'role(admin@adapter,trusted)', 'bot:admin', 'bot-role:mod', 'bot-permission:kick', 'platform:owner', 'platform-role:helper', 'platform-permission:mute']
+  const kinds = ['role', 'role', 'bot', 'bot-role', 'bot-permission', 'platform', 'platform-role', 'platform-permission']
+  const values = [['owner@global'], ['admin@adapter', 'trusted'], ['admin'], ['mod'], ['kick'], ['owner'], ['helper'], ['mute']]
+  const command = { ...selected, permits }
+  const body = response()
+  body.data.command = command
+  body.data.rules = permits.map((rule, index) => ({ index, rule, kind: kinds[index], values: values[index], outcome: 'unknown', reason: '缺少依据' }))
+  const explanation = readPermissionExplanation(body, { ...request, commandId: command.id })
+  assert.deepEqual(explanation.rules.map(rule => rule.kind), kinds)
+  assert.equal(permitRuleMeaning(explanation.rules[0]), 'zhin 聊天角色：所有者（须在全局授予）')
+  assert.equal(permitRuleMeaning(explanation.rules[1]), 'zhin 聊天角色：管理员（须在适配器层或更高层授予） 或 受信任')
+  assert.equal(permitRuleMeaning(explanation.rules[2]), '机器人账号在本会话的平台身份：管理员')
+  assert.equal(permitRuleMeaning(explanation.rules[3]), '机器人账号在本会话的平台角色：mod')
+  assert.equal(permitRuleMeaning(explanation.rules[4]), '机器人账号在本会话的平台权限：kick')
+  assert.equal(permitRuleMeaning(explanation.rules[5]), '发送者的平台身份：群主')
+  assert.equal(permitRuleMeaning(explanation.rules[6]), '发送者的平台角色：helper')
+  assert.equal(permitRuleMeaning(explanation.rules[7]), '发送者的平台权限：mute')
+  assert.equal(permitRuleMeaning(explanation.rules[0], 'en'), 'zhin chat role: Owner (granted globally)')
+  assert.equal(permitRuleMeaning(explanation.rules[2], 'en'), "Bot account's own platform standing in this conversation: Administrator")
+  assert.equal(permitRuleMeaning({ kind: 'group', values: [''] }), null)
+  assert.equal(permitRuleMeaning({ kind: 'role', values: ['admin'] }), 'zhin 聊天角色：管理员')
+  const unknownKind = response(); unknownKind.data.rules[0].kind = 'mystery'
+  assert.throws(() => readPermissionExplanation(unknownKind, request), /响应无效/)
 })

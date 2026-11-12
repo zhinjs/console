@@ -1,0 +1,96 @@
+/*
+ * 功能 tab of the object pages (feature-level-panel.tsx) and the global feature overview.
+ * Tokens only; breakpoints 768 / 1440 (docs/console-refactor-guidelines.md).
+ */
+.console-feature-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 0.75rem; }
+.console-feature-filters { display: flex; flex-wrap: wrap; gap: 0.375rem; }
+.console-feature-filter {
+  display: inline-flex; min-height: var(--console-control-height-sm); align-items: center; gap: 0.375rem; border: var(--console-border-width, 1px) solid var(--console-border-default);
+  border-radius: 999px; background: hsl(var(--card)); padding: 0 0.75rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption);
+}
+.console-feature-filter:hover { color: hsl(var(--foreground)); }
+.console-feature-filter:focus-visible { outline: var(--console-focus-width) solid hsl(var(--ring)); outline-offset: 1px; }
+.console-feature-filter.is-active { border-color: hsl(var(--primary) / 0.4); background: hsl(var(--primary) / 0.1); color: hsl(var(--primary)); font-weight: 600; }
+.console-feature-filter-count { font-variant-numeric: tabular-nums; opacity: 0.8; }
+.console-feature-search { position: relative; display: flex; width: min(100%, 16rem); align-items: center; }
+.console-feature-search svg { position: absolute; left: 0.625rem; width: 0.875rem; height: 0.875rem; color: hsl(var(--muted-foreground)); pointer-events: none; }
+.console-feature-search input { padding-left: 2rem; }
+
+.console-feature-rows { display: flex; flex-direction: column; }
+.console-feature-row + .console-feature-row { border-top: var(--console-border-width, 1px) solid var(--console-border-subtle); }
+.console-feature-row.is-open { background: hsl(var(--muted) / 0.35); }
+.console-feature-row-head {
+  display: grid; grid-template-columns: auto minmax(10rem, 16rem) minmax(0, 1fr) auto; align-items: center; gap: 0.5rem 0.75rem; padding: 0.625rem 1rem 0.625rem 0.5rem;
+}
+.console-feature-expand { width: 2rem; height: 2rem; }
+.console-feature-row-name { display: flex; min-width: 0; flex-direction: column; }
+.console-feature-row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: hsl(var(--foreground)); text-decoration: none; }
+.console-feature-row-title:hover { text-decoration: underline; }
+.console-feature-row-id { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-family: var(--console-font-mono); font-size: var(--console-text-caption); }
+.console-feature-row-meta { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: 0.375rem 0.5rem; }
+.console-feature-source { color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); }
+.console-feature-lock-link { display: inline-flex; align-items: center; gap: 0.25rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); text-decoration: underline; text-underline-offset: 2px; }
+.console-feature-lock-link:hover { color: hsl(var(--foreground)); }
+.console-feature-lock-link svg { width: 0.75rem; height: 0.75rem; }
+.console-feature-row-switch { display: flex; justify-content: flex-end; }
+.console-feature-row-receipt { margin: 0 1rem 0.75rem 3rem; }
+.console-feature-row-body { display: flex; flex-direction: column; gap: 0.75rem; padding: 0 1rem 1rem 3rem; }
+.console-feature-note { color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); }
+
+/* Field table: 字段 · 继承值 · 本层覆盖 · 有效值 · 来源 · 操作; stacked label / value pairs on phones. */
+.console-feature-fields {
+  overflow: hidden; border: var(--console-border-width, 1px) solid var(--console-border-default); border-radius: var(--console-radius-md); background: hsl(var(--card));
+}
+.console-feature-field {
+  display: grid; grid-template-columns: minmax(8rem, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 4.5rem 9rem; align-items: center; gap: 0.75rem; padding: 0.5rem 0.75rem;
+  font-size: var(--console-text-body-sm);
+}
+.console-feature-field.is-head { background: hsl(var(--muted) / 0.6); color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); font-weight: 600; }
+.console-feature-field-group + .console-feature-field-group { border-top: var(--console-border-width, 1px) solid var(--console-border-subtle); }
+.console-feature-field.is-overridden { background: hsl(var(--info) / 0.06); }
+.console-feature-field-name { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; }
+.console-feature-field-name code { color: hsl(var(--muted-foreground)); font-family: var(--console-font-mono); font-size: var(--console-text-caption); }
+.console-feature-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.console-feature-value.is-muted { color: hsl(var(--muted-foreground)); }
+.console-feature-value.is-strong { font-weight: 600; }
+.console-feature-field-actions { display: flex; justify-content: flex-end; gap: 0.25rem; }
+.console-feature-editor { display: flex; flex-direction: column; gap: 0.75rem; border-top: var(--console-border-width, 1px) dashed var(--console-border-default); padding: 0.75rem; }
+
+/* Global overview */
+.console-feature-view-switch { display: inline-flex; gap: 0.25rem; border-radius: var(--console-radius-md); background: hsl(var(--muted)); padding: 0.1875rem; }
+.console-feature-view-switch button {
+  display: inline-flex; min-height: calc(var(--console-control-height-sm) - 0.375rem); align-items: center; gap: 0.375rem; border-radius: var(--console-radius-sm);
+  padding: 0 0.75rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); font-weight: 550;
+}
+.console-feature-view-switch button[aria-pressed="true"] { background: hsl(var(--card)); color: hsl(var(--foreground)); box-shadow: var(--console-shadow-sm); }
+.console-feature-view-switch button:focus-visible { outline: var(--console-focus-width) solid hsl(var(--ring)); outline-offset: 1px; }
+.console-feature-view-switch svg { width: 0.875rem; height: 0.875rem; }
+.console-feature-levels { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.console-feature-below { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; font-size: var(--console-text-caption); }
+.console-feature-below a { color: hsl(var(--foreground)); text-decoration: underline; text-underline-offset: 2px; }
+
+@media (max-width: 1100px) {
+  .console-feature-field { grid-template-columns: minmax(7rem, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto; }
+  .console-feature-field > [role="cell"]:nth-child(5), .console-feature-field.is-head > :nth-child(5) { display: none; }
+}
+/* Pad and phone (the content column is under ~45rem there): rows stack, fields become label / value pairs. */
+@media (max-width: 1023px) {
+  .console-feature-search { width: 100%; }
+  .console-feature-row-head { grid-template-columns: auto minmax(0, 1fr) auto; padding-inline: 0.25rem 0.75rem; }
+  .console-feature-row-meta { grid-column: 2 / -1; grid-row: 2; }
+  .console-feature-row-receipt { margin: 0 0.75rem 0.75rem; }
+  .console-feature-row-body { padding: 0 0.75rem 0.75rem; }
+  .console-feature-field.is-head { display: none; }
+  .console-feature-field { justify-items: start; grid-template-columns: 6.5rem minmax(0, 1fr); gap: 0.25rem 0.75rem; padding: 0.625rem 0.75rem; }
+  .console-feature-field > [role="cell"]:nth-child(5) { display: contents; }
+  .console-feature-field-name { grid-column: 1 / -1; }
+  .console-feature-field > [role="cell"][data-label]:not(.console-feature-field-name)::before {
+    content: attr(data-label); color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); font-weight: 400;
+  }
+  .console-feature-field > [role="cell"][data-label]:not(.console-feature-field-name) { display: contents; }
+  .console-feature-field-actions { grid-column: 1 / -1; justify-content: flex-start; }
+}
+@media (min-width: 768px) and (max-width: 1023px) { .console-feature-search { width: min(100%, 16rem); } }
+.console-feature-lock { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.5rem; min-width: 0; }
+.console-feature-env-note { color: hsl(var(--warning)); font-size: var(--console-text-body-sm); }
+.console-feature-env-note a { text-decoration: underline; text-underline-offset: 2px; }

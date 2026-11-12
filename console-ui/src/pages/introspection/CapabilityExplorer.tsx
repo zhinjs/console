@@ -49,6 +49,8 @@ import { readPreviewEndpoints, type PreviewEndpoint } from './target-preview.mjs
 import type { CapabilityItem, CapabilityRowMap, IntrospectionTab } from './capability-model'
 import { ListItemButton } from '../../components/ui/list-item-button'
 import './component-gallery.css'
+import { conversationHref, endpointHref } from '../../console-routes.mjs'
+import { CONVERSATION_KINDS, type ConversationKind } from '../features/feature-model.mjs'
 
 interface CapabilityExplorerProps<K extends IntrospectionTab> {
   kind: K
@@ -491,7 +493,7 @@ function EndpointGrid({ entries, selectedId, onSelect }: CollectionProps<'endpoi
             </SelectableCard>
             <div className="console-runtime-endpoint-actions">
               <Button asChild size="sm" variant="ghost" className="h-7 px-2 text-xs">
-                <Link to="/endpoints"><MessageSquare className="size-3.5 mr-1" />{i18n.t("进入会话工作台")}</Link>
+                <Link to="/scope"><MessageSquare className="size-3.5 mr-1" />{i18n.t("进入会话工作台")}</Link>
               </Button>
               <Button asChild size="sm" variant="ghost" className="h-7 px-2 text-xs">
                 <Link to="/ops/config"><Settings className="size-3.5 mr-1" />{i18n.t("管理配置")}</Link>
@@ -751,7 +753,7 @@ function CommandRunnerPanel({ item }: { item: CapabilityItem }) {
         </span>
         <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={loadingEndpoints} onClick={() => void loadChannels()}>
           {loadingEndpoints ? <Loader2 className="size-3 animate-spin mr-1" /> : <RefreshCw className="size-3 mr-1" />}
-          {i18n.t("加载渠道")}
+          {i18n.t("加载账号")}
         </Button>
       </div>
       <div className="mt-2.5 grid gap-2 text-xs">
@@ -773,7 +775,7 @@ function CommandRunnerPanel({ item }: { item: CapabilityItem }) {
             value={endpointIndex}
             onValueChange={setEndpointIndex}
             options={[
-              { value: '', label: endpoints.length ? i18n.t("请选择账号") : i18n.t("请先点击“加载渠道”") },
+              { value: '', label: endpoints.length ? i18n.t("请选择账号") : i18n.t("请先点击“加载账号”") },
               ...endpoints.map((ep, idx) => ({
                 value: String(idx),
                 label: `${ep.name} · ${ep.endpoint.adapter}${ep.connected ? '' : i18n.t("（离线）")}`,
@@ -817,7 +819,9 @@ function CommandRunnerPanel({ item }: { item: CapabilityItem }) {
               {receipt.adapter} / {receipt.endpointKey} → {receipt.channelType}:{receipt.channelId}
             </p>
             <Link
-              to={`/endpoints/${encodeURIComponent(receipt.adapter)}/${encodeURIComponent(receipt.endpointKey)}?channelType=${encodeURIComponent(receipt.channelType)}&channelId=${encodeURIComponent(receipt.channelId)}`}
+              to={CONVERSATION_KINDS.includes(receipt.channelType as ConversationKind)
+                ? conversationHref(receipt.adapter, receipt.endpointKey, receipt.channelType as ConversationKind, receipt.channelId, 'chat')
+                : endpointHref(receipt.adapter, receipt.endpointKey, 'chat')}
               className="mt-1 inline-flex items-center gap-1 font-medium text-primary hover:underline"
             >
               {i18n.t("进入会话工作台查看完整对话")}<ArrowRight className="size-3" />
@@ -830,7 +834,7 @@ function CommandRunnerPanel({ item }: { item: CapabilityItem }) {
             {i18n.t("发送执行")}
           </Button>
           <Button asChild size="sm" variant="ghost" className="h-8 text-xs">
-            <Link to="/endpoints">{i18n.t("进入会话工作台")}<ArrowRight className="size-3.5 ml-1" /></Link>
+            <Link to="/scope">{i18n.t("进入会话工作台")}<ArrowRight className="size-3.5 ml-1" /></Link>
           </Button>
         </div>
       </div>
@@ -913,7 +917,7 @@ function CapabilityInspector(props: {
         ) : null}
         {kind === 'endpoints' ? (
           <>
-            <Button asChild size="sm"><Link to="/endpoints">{i18n.t("进入会话工作台")}<ArrowRight /></Link></Button>
+            <Button asChild size="sm"><Link to="/scope">{i18n.t("进入会话工作台")}<ArrowRight /></Link></Button>
             <Button asChild size="sm" variant="outline"><Link to="/ops/config"><Settings className="size-3.5 mr-1.5" />{i18n.t("管理配置")}</Link></Button>
           </>
         ) : null}

@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import ts from 'typescript'
 import { translate } from '../console-ui/src/i18n/locale.mjs'
+import * as chatModel from '../console-ui/src/pages/endpoint-detail/chat-workspace-model.mjs'
 
 // Loaded lazily so the page tests below fail on behaviour, not on a missing import, against old code.
 const referenceModel = await import('../console-ui/src/pages/endpoint-detail/message-reference-model.mjs').catch(() => ({}))
@@ -39,7 +40,7 @@ test('copying a summary reports copied, failed and unavailable clipboards', asyn
 const source = await readFile(new URL('../console-ui/src/pages/endpoint-detail/ChatMessageRow.tsx', import.meta.url), 'utf8')
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
 
-function renderRow({ toasts, onQuote = () => {}, onForward = () => {} }) {
+function renderRow({ toasts, onQuote = () => {}, onForward = () => {}, message: override, ...extra }) {
   const module = { exports: {} }
   const record = variant => (description, title) => { toasts.push({ variant, description, title }) }
   const mocks = {
@@ -52,10 +53,11 @@ function renderRow({ toasts, onQuote = () => {}, onForward = () => {} }) {
     './MessageDiagnostics': { MessageDiagnosticsAction: 'message-diagnostics-action' },
     '../../components/toast': { useToast: () => ({ success: record('success'), error: record('error'), toast() {}, warning() {}, info() {} }) },
     './message-reference-model.mjs': referenceModel,
+    './chat-workspace-model.mjs': chatModel,
   }
   new Function('require', 'module', 'exports', compiled)(name => Object.hasOwn(mocks, name) ? mocks[name] : require(name), module, module.exports)
   const message = { id: 'row-1', messageId: 'platform-1', channelId: 'g', channelType: 'group', sender: { id: 'u1', name: '甲' }, content: [{ type: 'text', data: { text: '你好' } }], timestamp: 0 }
-  return module.exports.ChatMessageRow({ message, onQuote, onForward })
+  return module.exports.ChatMessageRow({ message: override ? { ...message, ...override } : message, onQuote, onForward, ...extra })
 }
 
 function buttons(node, found = []) {
@@ -103,4 +105,28 @@ test('copying a summary always tells the user whether it worked', async () => {
   assert.equal(denied[0]?.variant, 'error'); assert.match(denied[0].description, /手动复制/)
   const unavailable = await clickCopy(undefined, undefined)
   assert.equal(unavailable[0]?.variant, 'error'); assert.match(unavailable[0].description, /无法访问剪贴板/)
+})
+
+test('a Console-sent message shows its receipt state, and only problems offer dismiss / put back', () => {
+  const all = node => node && typeof node === 'object' ? [node, ...[node.props?.children].flat(Infinity).flatMap(all)] : []
+  const text = node => typeof node === 'string' ? node : node && typeof node === 'object' ? [node.props?.children].flat(Infinity).map(text).join('') : ''
+  const sent = renderRow({ toasts: [], message: { local: true, outgoing: true, delivery: 'sent' } })
+  // DeliveryStatus is a component: render it to read its output.
+  const render = tree => { const node = all(tree).find(item => typeof item.type === 'function' && item.type.name === 'DeliveryStatus'); return node ? node.type(node.props) : null }
+  const sentStatus = render(sent)
+  assert.match(text(sentStatus), /已发送/)
+  assert.equal(sentStatus.props.role, undefined)
+  assert.equal(buttons(sentStatus).length, 0, 'nothing to do about a sent message')
+  const dismissed = [], restored = []
+  const unknown = render(renderRow({ toasts: [], message: { local: true, outgoing: true, delivery: 'unknown', restorable: true }, onDismiss: id => dismissed.push(id), onRestore: id => restored.push(id) }))
+  assert.equal(unknown.props.role, 'alert')
+  assert.match(text(unknown), /结果未知/)
+  assert.match(text(unknown), /不要直接重发/)
+  const [restore, dismiss] = buttons(unknown)
+  restore.onClick(); dismiss.onClick()
+  assert.deepEqual(restored, ['row-1']); assert.deepEqual(dismissed, ['row-1'])
+  const failed = render(renderRow({ toasts: [], message: { local: true, outgoing: true, delivery: 'failed', failure: '没有权限' }, onDismiss() {}, onRestore() {} }))
+  assert.match(text(failed), /未发送/); assert.match(text(failed), /没有权限/)
+  assert.equal(buttons(failed).length, 1, 'a refused send is not offered back: its text never left the box')
+  assert.equal(render(renderRow({ toasts: [] })), null, 'received messages carry no receipt')
 })

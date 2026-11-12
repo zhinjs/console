@@ -9,7 +9,7 @@ export default function PersonalModelsPage() {
   const scope = useInboxCacheScope()
   return (
     <PageShell>
-      <PageHeader title={i18n.t("模型", undefined, 'plural')} />
+      <PageHeader title={i18n.t("AI 与模型")} description={i18n.t("模型账号、服务与用途；每个模型下写明哪些用途在用它。")} />
       <InferenceWorkspace key={scope ?? 'disconnected'} connectionScope={scope} />
     </PageShell>
   )

@@ -17,6 +17,8 @@ import {
 import { setHostOnboarding } from '../../utils/console-session.mjs'
 import { notifyAuthRequired } from '../../utils/auth'
 import type { SetupDatabaseChoices, SetupDatabaseField, SetupDatabaseProbe, SetupDriver } from '../../contracts/console-auth'
+import { StatusState } from '../../components/StatusState'
+import { resumeAtOwner, setupBlockedTitle, setupNextStep } from './setup-model.mjs'
 import '../login.css'
 import './setup.css'
 
@@ -60,6 +62,7 @@ export default function SetupWizard({ onComplete, onCancel }: SetupWizardProps) 
   const [error, setError] = useState('')
   const [busy, setBusy] = useState<'test' | 'save' | 'owner' | null>(null)
   const [notice, setNotice] = useState('')
+  const [resumed, setResumed] = useState(false)
   const restartAbort = useRef<AbortController | null>(null)
 
   const load = useCallback(async () => {
@@ -86,6 +89,8 @@ export default function SetupWizard({ onComplete, onCancel }: SetupWizardProps) 
     setChoices(database.data)
     setChoice(defaultDatabaseChoice())
     setProbe(null)
+    // 可保存继续：a database chosen in an earlier visit (or before a restart) is not asked again.
+    if (resumeAtOwner(status.data.onboarding)) { setStep('owner'); setResumed(true) }
     setPhase('ready')
   }, [])
 
@@ -201,19 +206,19 @@ export default function SetupWizard({ onComplete, onCancel }: SetupWizardProps) 
 
         {phase === 'loading' && <p className="console-setup-status" role="status"><Loader2 className="animate-spin" aria-hidden="true" />{i18n.t('正在读取初始化状态…')}</p>}
 
-        {phase === 'blocked' && blocked && <div className="console-setup-blocked">
-          <p className="console-login-error" role="alert">{authErrorMessage(blocked, i18n.t, 'setup')}</p>
-          <div className="console-setup-actions">
-            {blocked.code === 'conflict'
-              ? <Button type="button" onClick={() => notifyAuthRequired()}>{i18n.t('用账号登录')}</Button>
-              : <Button type="button" variant="outline" onClick={() => void load()}>{i18n.t('重试')}</Button>}
-          </div>
-        </div>}
+        {phase === 'blocked' && blocked && <StatusState
+          kind={blocked.code === 'conflict' ? 'empty' : blocked.code === 'forbidden' ? 'forbidden' : blocked.code === 'database_busy' ? 'database-busy' : blocked.code === 'unreachable' ? 'disconnected' : 'error'}
+          title={setupBlockedTitle(blocked, i18n.t)}
+          description={`${authErrorMessage(blocked, i18n.t, 'setup')} ${setupNextStep(blocked, i18n.t)}`.trim()}
+          onRetry={blocked.code === 'conflict' || blocked.code === 'forbidden' ? undefined : () => void load()}
+          actions={blocked.code === 'conflict' || blocked.code === 'forbidden'
+            ? <Button type="button" size="sm" onClick={() => notifyAuthRequired()}>{blocked.code === 'conflict' ? i18n.t('用账号登录') : i18n.t('重新连接')}</Button>
+            : null} />}
 
         {(phase === 'restarting' || phase === 'restart-manual') && <div className="console-setup-restart" role="status">
           {phase === 'restarting'
             ? <p className="console-setup-status"><Loader2 className="animate-spin" aria-hidden="true" />{i18n.t('数据库已保存，Host 正在重启，完成后自动继续…')}</p>
-            : <p>{i18n.t('数据库已保存。重启 Host 后新数据库才会生效。')}</p>}
+            : <p>{i18n.t('数据库已保存。重启 Host 后新数据库才会生效：在服务器上运行 zhin restart（前台运行时先停止再 zhin start），然后点下面的按钮继续。')}</p>}
           {notice && <p className="console-setup-note">{notice}</p>}
           {error && <p className="console-login-error" role="alert">{error}</p>}
           {phase === 'restart-manual' && <Button type="button" onClick={() => void continueAfterManualRestart()}>{i18n.t('Host 已重启，继续')}</Button>}
@@ -221,7 +226,7 @@ export default function SetupWizard({ onComplete, onCancel }: SetupWizardProps) 
 
         {phase === 'ready' && step === 'database' && choices && <div className="console-setup-body">
           <h2>{i18n.t('选择数据库')}</h2>
-          <p className="console-setup-note">{i18n.t('账号、角色与审计日志存放在这里。可以先保持当前数据库，以后在「运维 → 配置文件」里修改。')}</p>
+          <p className="console-setup-note">{i18n.t('账号、角色与审计日志存放在这里。可以先保持当前数据库，以后在「运维 → 配置文件」里修改。每一步都会保存在 Host 上，中途关闭页面后用同一个初始化链接回来会从这里继续。')}</p>
           <RadioGroup aria-label={i18n.t('选择数据库')} name="setup-database" value={choice} onValueChange={selectDriver}>
             <label className="console-choice-card">
               <RadioGroupItem value={KEEP_DATABASE} className="mt-1" />
@@ -285,6 +290,8 @@ export default function SetupWizard({ onComplete, onCancel }: SetupWizardProps) 
               : <Button type="button" onClick={() => { setError(''); setStep('owner') }}>{i18n.t('下一步')}</Button>}
           </div>
         </div>}
+
+        {phase === 'ready' && step === 'owner' && resumed && <p className="console-setup-note" role="status">{i18n.t('已从上次的进度继续：数据库已经选定，接下来创建所有者。')}</p>}
 
         {phase === 'ready' && step === 'owner' && <OwnerForm busy={busy === 'owner'} onBack={() => setStep('database')}
           onSubmit={async input => {
