@@ -113,7 +113,7 @@ test('marketplace sorting retains every existing sort option and the original co
   visit(ast); assert.ok(options)
   const SORT_OPTIONS = Function(`return (${options})`)()
   let sortKey = 'downloads'
-  const sort = await field('marketplace', undefined, { sortKey, SORT_OPTIONS, setSortKey: value => { sortKey = value } })
+  const sort = await field('marketplace', '排序', { sortKey, SORT_OPTIONS, setSortKey: value => { sortKey = value } })
   assert.deepEqual(optionValues(sort), ['relevance', 'downloads', 'newest', 'name'])
   sort.choose('newest'); assert.equal(sortKey, 'newest')
   sort.choose('relevance'); assert.equal(sortKey, 'relevance')

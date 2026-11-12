@@ -120,4 +120,5 @@ export const adminMessages = Object.freeze({
   "浏览和管理项目数据库中的数据；数据库由 Zhin 实例提供。": "Browse and manage the project database; the Zhin instance serves it.",
   "账号与令牌由管理网关验证：机器人实例停止时也能登录，查看实例日志并重新启动。": "The management gateway checks accounts and tokens, so you can sign in while the bot instance is stopped, read its logs and start it again.",
   "已从上次的进度继续：数据库已经选定，接下来创建所有者。": "Continuing where you left off: the database is chosen; now create the owner.",
+  "Host 没有执行这次修改，内容保持原样。查看技术详情后可以重新准备。": "The Host did not apply this change; nothing was modified. Check the technical details, then prepare it again.",
 })

@@ -24,14 +24,16 @@ function fixture() {
   const auth = {
     captureApiRequestContext: () => ({ ...session }), getApiBase: () => session.apiBase, getToken: () => session.token,
     clearRuntimeToken: () => cleared.push('runtime'), clearToken: () => { cleared.push('stored'); session = { ...session, token: null } },
+    observeHostGatewayReply: response => observed.push(response.status),
   }
+  const observed = []
   const module = { exports: {} }
   const globals = { window: {}, fetch: async () => responses.shift() }
   new Function('require', 'exports', 'module', 'window', 'fetch', compile(read('console-ui/src/utils/console-client.ts').replace('import.meta', '({ env: {} })')))(
     name => name === '@zhin.js/client' ? sdk : name === './auth' ? auth : assert.fail(`unexpected dependency ${name}`),
     module.exports, module, globals.window, globals.fetch,
   )
-  return { ...module.exports, created, cleared, responses, registry: app, switchSession(next) { session = next } }
+  return { ...module.exports, created, cleared, observed, responses, registry: app, switchSession(next) { session = next } }
 }
 
 test('one connected client serves the session, and code outside React reads the same transport', () => {
@@ -73,6 +75,15 @@ test('a 401 on a transport request drops the rejected credential, but not one th
   f.responses.push({ status: 401 })
   await fetch('https://host-b.invalid/api/console/request')
   assert.deepEqual(f.cleared, ['runtime', 'stored'])
+})
+
+test('every transport reply reaches the instance banner observer (instance_* replies of SDK reads)', async () => {
+  const f = fixture()
+  const { fetch } = f.getConsoleClient().options.transportConfig
+  f.responses.push({ status: 503 }, { status: 200 })
+  await fetch('https://host-a.invalid/api/console/request')
+  await fetch('https://host-a.invalid/api/console/request')
+  assert.deepEqual(f.observed, [503, 200], 'the observer filters by status itself')
 })
 
 test('the shell hands the session client to the SDK hooks and shows live connection state without a missed update', () => {

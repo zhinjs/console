@@ -269,3 +269,13 @@ export function scopePickerTree(endpoints = [], current = { level: 'global' }, c
     }),
   }))
 }
+
+/**
+ * Whether the shell's top-bar breadcrumb steps aside for the object page's own `ScopeBreadcrumb`:
+ * every object page below 全局 (`/scope/:adapter…`) shows exactly one breadcrumb, its own. 全局
+ * has no scope breadcrumb, so the shell keeps its 「会话 › 账号与会话」 there.
+ */
+export function objectPageOwnsBreadcrumb(pathname) {
+  const parsed = parseScopePath(pathname)
+  return parsed !== null && scopeLevel(parsed.scope) !== 'global'
+}

@@ -407,14 +407,21 @@ export async function apiFetch(
   if (res.status === 401 && belongsToHost && token && getApiBase() === apiBase && getToken() === token) {
     notifyAuthRequired()
   }
-  // The gateway answers for a stopped or stuck instance with 502 / 503 / 504 `instance_*` (ADR 0054).
-  if (belongsToHost && hostReplyListeners.size && (res.status === 502 || res.status === 503 || res.status === 504)) {
-    const retryAfter = res.headers.get('retry-after')
-    void res.clone().json().then(body => {
-      for (const listener of [...hostReplyListeners]) listener({ status: res.status, body, retryAfter })
-    }, () => {})
-  }
+  if (belongsToHost) observeHostGatewayReply(res)
   return res
+}
+
+/**
+ * The gateway answers for a stopped or stuck instance with 502 / 503 / 504 `instance_*` (ADR 0054).
+ * Every Host request path reports its replies here: `apiFetch`, and the SDK console transport
+ * (`utils/console-client.ts` hands it a fetch that calls this), so the 实例不可用 banner sees both.
+ */
+export function observeHostGatewayReply(res: Response): void {
+  if (!hostReplyListeners.size || (res.status !== 502 && res.status !== 503 && res.status !== 504)) return
+  const retryAfter = res.headers.get('retry-after')
+  void res.clone().json().then(body => {
+    for (const listener of [...hostReplyListeners]) listener({ status: res.status, body, retryAfter })
+  }, () => {})
 }
 
 export interface HostGatewayReply { readonly status: number; readonly body: unknown; readonly retryAfter: string | null }

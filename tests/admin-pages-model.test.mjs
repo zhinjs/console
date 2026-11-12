@@ -97,3 +97,21 @@ test('/auth/* failures: database_busy keeps Retry-After, instance codes point to
   const offline = readAuthResponse({ status: 503, body: { success: false, code: 'instance_unavailable', error: 'x' }, retryAfter: null })
   assert.match(authErrorMessage(offline, zh), /运维 → 实例/u)
 })
+
+test('the instance page sections are linkable anchors (机器人状态 and 首页 link to the running state)', async () => {
+  const { INSTANCE_SECTION_IDS, instanceSectionHref } = await import('../console-ui/src/pages/ops/instance-sections.mjs')
+  assert.equal(instanceSectionHref(), '/ops/instance#instance-status')
+  assert.equal(instanceSectionHref('logs'), '/ops/instance#instance-logs')
+  assert.equal(instanceSectionHref('nope'), '/ops/instance')
+  const { readFileSync } = await import('node:fs')
+  const read = path => readFileSync(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')
+  for (const id of Object.values(INSTANCE_SECTION_IDS)) assert.match(read('pages/ops/instance.tsx'), /INSTANCE_SECTION_IDS\.(status|logs|dependencies)/u, id)
+  assert.match(read('pages/agent-workbench.tsx'), /instanceSectionHref\('status'/u)
+})
+
+test('a receipt that was not executed never reads as 读取失败', async () => {
+  const { readFileSync } = await import('node:fs')
+  const source = readFileSync(new URL('../console-ui/src/components/ActionReceipt.tsx', import.meta.url), 'utf8')
+  const failed = source.slice(source.indexOf("state.phase === 'failed' && state.status"), source.indexOf('<footer'))
+  assert.equal((failed.match(/kind="error"/gu) ?? []).length, (failed.match(/title=\{i18n\.t\('操作没有完成'\)\}/gu) ?? []).length)
+})

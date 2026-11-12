@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { validatePluginDetail, requirePluginUpdate, pluginDiagnosticSummary } from '../console-ui/src/pages/plugin-detail-model.mjs';
+import { validatePluginDetail, pluginDiagnosticSummary, pluginDetailView } from '../console-ui/src/pages/plugin-detail-model.mjs';
 const plugin=JSON.parse(readFileSync(new URL('./fixtures/plugin-detail.json',import.meta.url))).data;
 test('formal detail preserves commands and middleware without legacy contexts',()=>{
  assert.equal(plugin.contexts,undefined);validatePluginDetail(plugin);
@@ -10,15 +10,6 @@ test('formal detail preserves commands and middleware without legacy contexts',(
 test('missing or invalid capabilities are errors rather than silent empty groups',()=>{
  assert.throws(()=>validatePluginDetail({...plugin,features:undefined}));
  assert.throws(()=>validatePluginDetail({...plugin,features:[{...plugin.features[0],count:0}]}));
-});
-
-test('a failed or incomplete version check never means the installed plugin is latest', () => {
- assert.throws(() => requirePluginUpdate({success:false,error:'unavailable'}, '@zhin.js/repeater'));
- assert.throws(() => requirePluginUpdate({success:true,data:{}}, '@zhin.js/repeater'));
- assert.throws(() => requirePluginUpdate({success:true,data:[]}, '@zhin.js/repeater'));
- assert.throws(() => requirePluginUpdate({success:true,data:[{name:'@zhin.js/repeater'}]}, '@zhin.js/repeater'));
- const update = {name:'@zhin.js/repeater',current:'1.0.0',latest:'1.0.1'};
- assert.deepEqual(requirePluginUpdate({success:true,data:[update]}, update.name), update);
 });
 
 test('diagnostic summary never hides missing environment variables behind schema validity', () => {
@@ -37,39 +28,25 @@ test('unknown status and malformed management eligibility cannot establish plugi
  validatePluginDetail({...plugin,status:'inactive',manageable:true,readOnly:false});
 });
 
-test('detail page asks before disabling, sends nothing when cancelled, and enables without asking', async () => {
- const ts = (await import('typescript')).default
- const { defaultI18n } = await import('./locale-fixture.mjs')
- const { disableConfirmation } = await import('../console-ui/src/pages/plugin-toggle-model.mjs')
- const source = readFileSync(new URL('../console-ui/src/pages/plugin-detail.tsx', import.meta.url), 'utf8')
- const ast = ts.createSourceFile('plugin-detail.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
- let declaration
- const find = node => { if (ts.isVariableDeclaration(node) && node.name.getText(ast) === 'setEnabled') declaration = node; ts.forEachChild(node, find) }
- find(ast); assert.ok(declaration)
- const code = ts.transpileModule(`const ${declaration.getText(ast)};`, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText
- const run = async (enabled, answer) => {
-  const confirms = [], requests = [], noop = () => {}
-  const management = { instanceKey: 'qq', disabled: !enabled }
-  const bindings = {
-   i18n: defaultI18n, disableConfirmation, confirm: async options => { confirms.push(options); return answer },
-   plugin: { name: 'qq', instanceKey: 'qq', features: [{ name: 'adapter', count: 1 }], management }, writable: true,
-   actionInFlight: { current: false }, actionUnconfirmed: false, lifecycleAbort: { current: null }, routeIdentity: { current: 'qq' }, name: 'qq',
-   detailSequence: { current: 0 }, fetchPluginDetail: async () => {},
-   setActionLoading: noop, setActionError: noop, setActionErrorDetail: noop, setActionMessage: noop, setActionUnconfirmed: noop,
-   requestConsole: async request => { requests.push(request); return management },
-   waitForEnabledManagementState: async () => ({ ...management, disabled: !enabled }),
+test('plugin detail keeps shown content while refreshing and turns refresh errors into an inline notice', () => {
+  const plugin = { name: 'qq' }
+  assert.deepEqual(pluginDetailView({ loading: true, plugin: null, error: null }), { view: 'skeleton', staleError: null })
+  assert.deepEqual(pluginDetailView({ loading: false, plugin: null, error: 'HTTP 500' }), { view: 'error', staleError: null })
+  assert.deepEqual(pluginDetailView({ loading: false, plugin: null, error: null }), { view: 'error', staleError: null })
+  assert.deepEqual(pluginDetailView({ loading: true, plugin, error: null }), { view: 'content', staleError: null })
+  assert.deepEqual(pluginDetailView({ loading: false, plugin, error: 'HTTP 500' }), { view: 'content', staleError: 'HTTP 500' })
+  assert.deepEqual(pluginDetailView({ loading: true, plugin, error: 'HTTP 500' }), { view: 'content', staleError: 'HTTP 500' })
+})
+
+test('the detail page manages packages only through gateway transactions and keeps the switches in the object tree', async () => {
+  const source = readFileSync(new URL('../console-ui/src/pages/plugin-detail.tsx', import.meta.url), 'utf8')
+  for (const removed of ['plugin:install', 'plugin:update', 'plugin:uninstall', 'plugin:plan-update', 'plugin:plan-uninstall', 'plugin:set-enabled']) {
+    assert.equal(source.includes(`'${removed}'`), false, removed)
   }
-  const setEnabled = Function(...Object.keys(bindings), `${code}; return setEnabled;`)(...Object.values(bindings))
-  await setEnabled(enabled)
-  return { confirms, requests: requests.filter(request => request.type === 'plugin:set-enabled') }
- }
- const cancelled = await run(false, false)
- assert.equal(cancelled.confirms.length, 1)
- assert.match(cancelled.confirms[0].description, /聊天账号会掉线/)
- assert.deepEqual(cancelled.requests, [])
- const accepted = await run(false, true)
- assert.deepEqual(accepted.requests, [{ type: 'plugin:set-enabled', instanceKey: 'qq', enabled: false }])
- const enabling = await run(true, false)
- assert.deepEqual(enabling.confirms, [])
- assert.deepEqual(enabling.requests, [{ type: 'plugin:set-enabled', instanceKey: 'qq', enabled: true }])
+  assert.match(source, /packageAction\.prepare\('update'/)
+  assert.match(source, /packageAction\.prepare\('uninstall'/)
+  assert.match(source, /FEATURE_RPC\.MATRIX/)
+  assert.match(source, /pluginScopeSummary\(/)
+  assert.match(source, /IAM_RPC\.ROLES_LIST/)
+  assert.match(source, /DeclarePluginDialog/)
 })

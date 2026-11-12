@@ -148,6 +148,4 @@ export const opsMessages = Object.freeze({
   "安装 {0}？": "Install {0}?",
   "网关会备份配置、停止实例、安装依赖并重新启动；失败会自动回滚。": "The gateway backs up the configuration, stops the instance, installs the packages and starts it again; failures roll back automatically.",
   "适配器已启用。可以到「查看聊天账号」确认账号上线，或继续安装其他平台。": "The adapter is enabled. Open View chat accounts to check that the account comes online, or install another platform.",
-  "依赖已安装，但插件需要先填写配置才能启用。": "The package is installed, but the plugin needs its configuration before it can be enabled.",
-  "已启用 {0}（实例名 {1}）。": "{0} is enabled (instance name {1}).",
 })

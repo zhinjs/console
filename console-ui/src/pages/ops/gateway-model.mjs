@@ -42,15 +42,19 @@ export const MAX_LOG_LINES = 2000
 export const MAX_PROGRESS_OUTPUT = 64 * 1024
 
 export class GatewayRequestError extends Error {
-  constructor(message, { status = 0, code = 'failed', hostMessage = '', retryAfter, requestOutcome } = {}) {
+  constructor(message, { status = 0, code = 'failed', hostMessage = '', details, retryAfter, requestOutcome } = {}) {
     super(message)
     this.name = 'GatewayRequestError'
     this.status = status
     this.code = code
     this.hostMessage = hostMessage
-    // Read by `statusFromError` (database_busy / instance_* Retry-After, instance request outcome).
+    // Read by `statusFromError` (database_busy / instance_* Retry-After).
     if (typeof retryAfter === 'number' && retryAfter > 0) this.retryAfter = retryAfter
-    if (requestOutcome === 'not-dispatched' || requestOutcome === 'unknown') this.details = { serverCode: code, requestOutcome }
+    // Structured `invalid_input` feedback (`errors` / `missingEnv`, GatewayRpcErrorDetails) and the
+    // instance request outcome (`serverCode` + `requestOutcome`); absent when there is neither.
+    const feedback = details && (details.errors?.length || details.missingEnv?.length) ? details : undefined
+    const outcome = requestOutcome === 'not-dispatched' || requestOutcome === 'unknown' ? { serverCode: code, requestOutcome } : undefined
+    if (feedback || outcome) this.details = { ...feedback, ...outcome }
   }
 }
 
@@ -73,6 +77,7 @@ export function readGatewayReply(status, json, t, retryAfterHeader) {
   const hostMessage = nested ? String(nested.message ?? '') : typeof body.error === 'string' ? body.error : ''
   const code = nested && typeof nested.code === 'string' ? nested.code : typeof body.code === 'string' ? body.code : ''
   const effective = nested && typeof nested.status === 'number' && status < 400 ? nested.status : status
+  const details = readErrorDetails(nested ?? body)
   if (code === 'unmapped' || UNKNOWN_RPC.test(hostMessage)) {
     throw new GatewayRequestError(t('需要新版网关：当前 Host 不支持实例与依赖管理（ADR 0054）。'), { status: effective, code: 'unsupported', hostMessage })
   }
@@ -87,7 +92,17 @@ export function readGatewayReply(status, json, t, retryAfterHeader) {
     throw new GatewayRequestError(hostMessage || t('另一个依赖事务正在进行，请等待它结束后再试。'), { status: effective, code: 'conflict', hostMessage })
   }
   const message = hostMessage || t('请求失败（HTTP {0}）', [effective])
-  throw new GatewayRequestError(message, { status: effective, code: code || (effective === 403 ? 'forbidden' : 'failed'), hostMessage, retryAfter, requestOutcome })
+  throw new GatewayRequestError(message, { status: effective, code: code || (effective === 403 ? 'forbidden' : 'failed'), hostMessage, details, retryAfter, requestOutcome })
+}
+
+/** `errors` / `missingEnv` of a gateway error reply (`GatewayRpcErrorDetails`), or undefined. */
+export function readErrorDetails(value) {
+  if (!value || typeof value !== 'object') return undefined
+  const errors = (Array.isArray(value.errors) ? value.errors : [])
+    .filter(item => item && typeof item === 'object' && typeof item.message === 'string')
+    .map(item => ({ path: typeof item.path === 'string' ? item.path : '$', message: item.message }))
+  const missingEnv = (Array.isArray(value.missingEnv) ? value.missingEnv : []).filter(item => typeof item === 'string' && item)
+  return errors.length || missingEnv.length ? { ...(errors.length ? { errors } : {}), ...(missingEnv.length ? { missingEnv } : {}) } : undefined
 }
 
 export function gatewayErrorKind(error) {
@@ -410,7 +425,15 @@ const MISSING_ENV = /^(?:缺少环境变量|missing environment variable)\s+(\S+
  * message (`…未声明：$.endpoints required；缺少环境变量 QQ_SECRET`); anything that is not that
  * shape stays a general error so the form can show it above the fields.
  */
-export function readDeclarationErrors(message) {
+export function readDeclarationErrors(message, details) {
+  // Newer gateways send the violations structured (GatewayRpcErrorDetails); prefer them to the text.
+  if (details && (details.errors?.length || details.missingEnv?.length)) {
+    return {
+      general: null,
+      fields: (details.errors ?? []).map(error => ({ path: relativeConfigPath(error.path), message: String(error.message ?? '') })),
+      missingEnv: [...(details.missingEnv ?? [])],
+    }
+  }
   const text = String(message ?? '')
   const match = DECLARATION_SCHEMA_FAILURE.exec(text)
   if (!match) return { general: text, fields: [], missingEnv: [] }

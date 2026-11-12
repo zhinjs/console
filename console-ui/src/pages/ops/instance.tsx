@@ -29,11 +29,9 @@ import { ConfigurationNeedsPanel } from './plugin-declare'
 import { gatewayRequest, useGatewayRead, useGatewayTransaction } from './use-gateway'
 import '../admin-pages.css'
 
-/**
- * Section anchors of the instance page, the single detail view of the running state (B4a links
- * the bot status card here): `/ops/instance#instance-status` | `#instance-logs` | `#instance-dependencies`.
- */
-export const INSTANCE_SECTION_IDS = Object.freeze({ status: 'instance-status', logs: 'instance-logs', dependencies: 'instance-dependencies' })
+import { INSTANCE_SECTION_IDS } from './instance-sections.mjs'
+
+export { INSTANCE_SECTION_IDS }
 
 const STATUS_POLL_MS = 3_000
 const LOGS_POLL_MS = 2_000

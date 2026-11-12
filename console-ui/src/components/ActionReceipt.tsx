@@ -89,7 +89,12 @@ export function useActionReceipt({ submit, verify, onSettled }: UseActionReceipt
  * next to the control that started the action (inline), not as a toast: the outcome stays visible
  * until dismissed.
  */
-export function ActionReceipt({ controller, className }: { controller: ActionReceiptController; className?: string }) {
+export function ActionReceipt({ controller, className, lockHref }: {
+  controller: ActionReceiptController
+  className?: string
+  /** Where a `locked` refusal can be lifted (the locking level's page). */
+  lockHref?: string
+}) {
   const i18n = useI18n()
   const { state, confirm, cancel, verify, canVerify, reset } = controller
   if (state.phase === 'idle') return null
@@ -138,7 +143,16 @@ export function ActionReceipt({ controller, className }: { controller: ActionRec
         <StatusState compact kind="unknown" error={state.status?.message ? state.status.message : undefined}
           description={i18n.t('请求已发出但没有收到可信答复，修改可能已经生效。请先只读核对，不要重复提交。')} />
       ) : null}
-      {state.phase === 'failed' && state.status ? <StatusState compact kind={state.status.kind} error={state.status.message || undefined} /> : null}
+      {state.phase === 'failed' && state.status ? (
+        // A write that was not applied never reads as 读取失败: a plain failure is 操作没有完成; the
+        // Host's own reason is the answer itself, a coded failure keeps its text under 技术详情.
+        state.status.kind === 'error'
+          ? state.status.message && !state.status.serverCode
+            ? <StatusState compact kind="error" title={i18n.t('操作没有完成')} description={state.status.message} />
+            : <StatusState compact kind="error" title={i18n.t('操作没有完成')} error={state.status.message || undefined}
+              description={i18n.t('Host 没有执行这次修改，内容保持原样。查看技术详情后可以重新准备。')} />
+          : <StatusState compact kind={state.status.kind} error={state.status.message || undefined} lockedBy={state.status.lockedBy} lockHref={lockHref} />
+      ) : null}
       <footer className="console-receipt-actions">
         {state.phase === 'prepared' ? <>
           <Button size="sm" variant={plan?.danger ? 'destructive' : 'default'} onClick={confirm}>{plan?.confirmLabel ?? i18n.t('确认')}</Button>

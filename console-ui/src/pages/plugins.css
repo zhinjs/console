@@ -49,52 +49,6 @@
     box-shadow: var(--console-shadow-xs);
   }
 
-  .console-plugin-toggle-btn {
-    position: relative;
-    padding-left: 1.85rem !important;
-    border-radius: 999px !important;
-  }
-
-  .console-plugin-toggle-btn::before {
-    content: "";
-    position: absolute;
-    left: 0.5rem;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 0.95rem;
-    height: 0.55rem;
-    border-radius: 999px;
-    background: hsl(var(--muted-foreground) / 0.35);
-    transition: background-color 150ms ease;
-  }
-
-  .console-plugin-toggle-btn::after {
-    content: "";
-    position: absolute;
-    left: 0.58rem;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 0.38rem;
-    height: 0.38rem;
-    border-radius: 50%;
-    background: hsl(var(--card));
-    transition: transform 150ms ease;
-  }
-
-  .console-plugin-toggle-btn.is-on {
-    border-color: hsl(var(--primary) / 0.35);
-    background: hsl(var(--primary) / 0.08);
-    color: hsl(var(--primary));
-  }
-
-  .console-plugin-toggle-btn.is-on::before {
-    background: hsl(var(--primary));
-  }
-
-  .console-plugin-toggle-btn.is-on::after {
-    transform: translate(0.4rem, -50%);
-  }
-
   .console-plugin-catalog-count {
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-body);
@@ -233,6 +187,15 @@
     line-height: var(--console-leading-section);
   }
 
+  .console-plugin-catalog-package {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: hsl(var(--muted-foreground));
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: var(--console-text-caption);
+  }
+
   .console-plugin-catalog-identity > span {
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -315,4 +278,47 @@
       grid-row: 1;
     }
   }
+
+  /* Plugin detail (插件详情): identity line, two-column sections on wide screens. */
+  .console-plugin-detail-identity {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: -0.5rem;
+    min-width: 0;
+  }
+  .console-plugin-detail-identity > code {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-radius: var(--console-radius-sm, 0.375rem);
+    background: hsl(var(--muted));
+    padding: 0.125rem 0.5rem;
+    font-size: var(--console-text-caption);
+  }
+  .console-plugin-detail-grid {
+    display: grid;
+    gap: var(--console-space-section, 1.5rem);
+    grid-template-columns: minmax(0, 1fr);
+  }
+  @media (min-width: 1280px) {
+    .console-plugin-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  .console-plugin-scope-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 100%;
+    border: var(--console-border-width, 1px) solid var(--console-border-default, hsl(var(--border)));
+    border-radius: var(--console-radius-md, 0.5rem);
+    padding: 0.25rem 0.625rem;
+    font-size: var(--console-text-body-sm);
+    color: hsl(var(--foreground));
+  }
+  .console-plugin-scope-chip:hover { background: hsl(var(--muted)); }
+  .console-plugin-scope-chip:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+  .console-plugin-scope-chip > code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .console-marketplace-categories { max-width: 100%; overflow-x: auto; flex-wrap: nowrap; }
 }
