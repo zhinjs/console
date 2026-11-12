@@ -1,24 +1,28 @@
 import { useEffect, useRef } from 'react'
-import { Power, RefreshCw, ServerCog } from 'lucide-react'
+import { Power, RefreshCw } from 'lucide-react'
 import { useI18n } from '../../i18n'
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert'
 import { Badge } from '../../components/ui/badge'
-import { ErrorAlert } from '../../components/error-alert'
+import { StatusState } from '../../components/StatusState'
 import { instanceStateLabel, operationLabel, phaseLabel, transactionSummary, type GatewayErrorKind, type PackageProgressState } from './gateway-model.mjs'
 
-/** Load failure of a gateway read; an old Host gets an upgrade notice instead of a retry loop. */
-export function GatewayLoadError({ error, kind, onRetry }: { error: string; kind: GatewayErrorKind | null; onRetry: () => void }) {
+/**
+ * Load failure of a gateway read as one `StatusState`: an old gateway reads 需要新版 Host, a missing
+ * permission 无权限 (with the permission), a busy database 数据库忙; anything else 读取失败 + retry.
+ */
+export function GatewayLoadError({ error, kind, failure, onRetry, permissions }: {
+  error: string
+  kind: GatewayErrorKind | null
+  failure?: unknown
+  onRetry: () => void
+  permissions?: readonly string[]
+}) {
   const i18n = useI18n()
   if (kind === 'unsupported') {
-    return (
-      <Alert variant="warning">
-        <ServerCog className="h-4 w-4" />
-        <AlertTitle>{i18n.t("需要新版网关")}</AlertTitle>
-        <AlertDescription>{error || i18n.t("需要新版网关：当前 Host 不支持实例与依赖管理（ADR 0054）。")}</AlertDescription>
-      </Alert>
-    )
+    return <StatusState kind="unsupported" title={i18n.t("需要新版网关")}
+      description={i18n.t("当前 Host 不支持实例与依赖管理（ADR 0054）。用 zhin start 运行网关后，这里会显示实例状态、日志和依赖。")} />
   }
-  return <ErrorAlert error={error} onRetry={kind === 'forbidden' ? undefined : onRetry} kind={kind === 'unavailable' ? '503' : 'other'} />
+  return <StatusState error={failure ?? error} permissions={permissions} onRetry={onRetry} />
 }
 
 /** Phases, package manager output and the result of one gateway transaction. */

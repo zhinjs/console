@@ -12,7 +12,7 @@ import { Button } from '../../components/ui/button'
 import { Card } from '../../components/ui/card'
 import { SelectField } from '../../components/ui/select'
 import { Skeleton } from '../../components/ui/skeleton'
-import { ErrorAlert } from '../../components/error-alert'
+import { StatusState } from '../../components/StatusState'
 import { ConfirmDialog } from '../../components/confirm-dialog'
 import { useToast } from '../../components/toast'
 import { apiFetch, getApiBase } from '../../utils/auth'
@@ -115,9 +115,14 @@ export default function OpsTerminalPage() {
         actions={<Button variant="outline" size="sm" onClick={load} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新目标")}</Button>}
       />
       {error ? (
-        error.kind === 'disabled' || error.kind === 'forbidden'
-          ? <Alert variant="warning"><SquareTerminal className="h-4 w-4" /><AlertDescription>{error.message}</AlertDescription></Alert>
-          : <ErrorAlert error={error.message} onRetry={load} />
+        error.kind === 'forbidden'
+          ? <StatusState kind="forbidden" permissions={['ops.terminal']} description={error.message} />
+          : error.kind === 'disabled'
+            ? <StatusState kind="needs-configuration" title={i18n.t("终端未启用")} description={error.message} />
+            : <StatusState error={error.message} onRetry={load} />
+      ) : null}
+      {!loading && !error && !targets.length ? (
+        <StatusState kind="empty" title={i18n.t("没有可用的终端目标")} description={i18n.t("在 Host 配置的 console.terminal 里启用本机 Shell 或添加 SSH 目标，重启网关后刷新。")} onRetry={load} />
       ) : null}
       {loading && !targets.length && !error ? <Skeleton className="h-10" /> : null}
       {targets.length ? (

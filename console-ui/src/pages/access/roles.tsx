@@ -1,5 +1,5 @@
 import { useId, useMemo, useState } from 'react'
-import { Copy, Eye, Pencil, Plus, RefreshCw, Shield, Trash2 } from 'lucide-react'
+import { Copy, Eye, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { useI18n } from '../../i18n'
 import { PageShell } from '../../components/PageShell'
 import { PageHeader } from '../../components/PageHeader'
@@ -11,7 +11,7 @@ import { Textarea } from '../../components/ui/textarea'
 import { Skeleton } from '../../components/ui/skeleton'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
-import { EmptyState } from '../../components/empty-state'
+import { StatusState } from '../../components/StatusState'
 import { ConfirmDialog } from '../../components/confirm-dialog'
 import { useToast } from '../../components/toast'
 import {
@@ -20,6 +20,7 @@ import {
 } from './access-model.mjs'
 import { FormField, IamLoadError, PermissionChecklist, ReadOnlyNotice } from './access-components'
 import { iamRequest, useCanManageIam, useIamRead } from './use-iam'
+import '../admin-pages.css'
 
 interface RolesData { roles: IamRole[]; plugins: PluginPermission[] }
 const EMPTY: RolesData = { roles: [], plugins: [] }
@@ -56,18 +57,18 @@ export default function AccessRolesPage() {
         </>}
       />
       {!canManage ? <ReadOnlyNotice /> : null}
-      {state.error ? <IamLoadError error={state.error} kind={state.errorKind} onRetry={state.refresh} /> : null}
+      {state.error ? <IamLoadError error={state.error} kind={state.errorKind} failure={state.failure} onRetry={state.refresh} /> : null}
       <Card className="overflow-hidden p-0">
         {state.loading && !state.loaded ? (
           <div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>
         ) : !roles.length ? (
-          <EmptyState icon={Shield} title={i18n.t("还没有角色")} />
+          <StatusState kind="empty" title={i18n.t("还没有角色")} description={i18n.t("内置角色由 Host 创建。如果这里是空的，请刷新或检查 Host 版本。")} />
         ) : (
           <Table aria-label={i18n.t("角色")}>
             <TableHeader>
               <TableRow>
                 <TableHead>{i18n.t("角色")}</TableHead>
-                <TableHead>{i18n.t("说明")}</TableHead>
+                <TableHead className="hidden md:table-cell">{i18n.t("说明")}</TableHead>
                 <TableHead numeric>{i18n.t("权限数")}</TableHead>
                 <TableHead><span className="sr-only">{i18n.t("操作")}</span></TableHead>
               </TableRow>
@@ -80,18 +81,18 @@ export default function AccessRolesPage() {
                       <span className="font-medium">{builtinRoleLabel(role.name, i18n.t) ?? role.name}</span>
                       {role.builtin ? <Badge variant="outline" size="sm">{i18n.t("内置")}</Badge> : null}
                     </div>
-                    <div className="font-mono text-xs text-muted-foreground">{role.name}</div>
+                    <code className="console-access-id" title={role.name}>{role.name}</code>
                   </TableCell>
-                  <TableCell className="max-w-md text-muted-foreground">{role.description || '—'}</TableCell>
+                  <TableCell className="hidden max-w-md text-muted-foreground md:table-cell">{role.description || '—'}</TableCell>
                   <TableCell numeric>{role.permissions.length}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex flex-wrap justify-end gap-1">
                       {role.builtin || !canManage
                         ? <Button variant="ghost" size="sm" onClick={() => setPending({ kind: 'view', role })}><Eye />{i18n.t("查看")}</Button>
                         : <Button variant="ghost" size="sm" onClick={() => setPending({ kind: 'edit', role, draft: { name: role.name, description: role.description, permissions: [...role.permissions] } })}><Pencil />{i18n.t("编辑")}</Button>}
-                      {canManage ? <Button variant="ghost" size="sm" onClick={() => startCopy(role)}><Copy />{i18n.t("复制")}</Button> : null}
+                      {canManage ? <Button variant="ghost" size="sm" onClick={() => startCopy(role)} aria-label={i18n.t("复制 {0}", [role.name])}><Copy /><span className="hidden sm:inline">{i18n.t("复制")}</span></Button> : null}
                       {canManage && !role.builtin
-                        ? <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setPending({ kind: 'delete', role })}><Trash2 />{i18n.t("删除")}</Button>
+                        ? <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setPending({ kind: 'delete', role })} aria-label={i18n.t("删除 {0}", [role.name])}><Trash2 /><span className="hidden sm:inline">{i18n.t("删除")}</span></Button>
                         : null}
                     </div>
                   </TableCell>
@@ -148,7 +149,7 @@ function RoleEditorDialog({ role, initial, roles, groups, onClose, onSaved }: {
   const [permissions, setPermissions] = useState<string[]>(initial.permissions)
   const [touched, setTouched] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<unknown>(null)
   const nameError = role ? null : roleNameProblem(name, roles, i18n.t)
   const submit = async () => {
     setTouched(true)
@@ -160,7 +161,7 @@ function RoleEditorDialog({ role, initial, roles, groups, onClose, onSaved }: {
       else await iamRequest(IAM_RPC.ROLES_CREATE, { name: name.trim(), description: description.trim(), permissions }, i18n.t)
       onSaved(role ? role.name : name.trim())
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught))
+      setError(caught)
     } finally {
       setSaving(false)
     }
@@ -184,7 +185,7 @@ function RoleEditorDialog({ role, initial, roles, groups, onClose, onSaved }: {
             <h3 className="text-sm font-medium">{i18n.t("权限（已选 {0}）", [permissions.length])}</h3>
             <PermissionChecklist groups={groups} selected={permissions} onChange={setPermissions} disabled={saving} />
           </section>
-          {error ? <p role="alert" className="text-sm text-destructive break-words">{error}</p> : null}
+          {error ? <StatusState compact error={error} /> : null}
           <DialogFooter>
             <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={saving}>{i18n.t("取消")}</Button>
             <Button type="submit" size="sm" disabled={saving}>{saving ? i18n.t("处理中...") : role ? i18n.t("保存") : i18n.t("创建")}</Button>

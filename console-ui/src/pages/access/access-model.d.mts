@@ -110,6 +110,8 @@ export function outcomeVariant(outcome: string): 'success' | 'warning' | 'destru
 export function localDateTimeToMs(value: string | undefined): number | undefined
 export function auditQuery(filter?: AuditFilter, before?: number): Record<string, unknown>
 export function usernameProblem(value: string, t: Translate): string | null
+export declare const DISPLAY_NAME_MAX_LENGTH: 128
+export function displayNameProblem(value: string, t: Translate): string | null
 export function passwordProblem(value: string, confirm: string | undefined, t: Translate): string | null
 export function roleNameProblem(value: string, roles: readonly IamRole[], t: Translate): string | null
 export function copyRoleName(name: string, roles: readonly IamRole[]): string

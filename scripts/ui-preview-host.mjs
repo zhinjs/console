@@ -58,6 +58,103 @@ function featureDetail(body) {
     sources: { text: overridden ? 'conversation' : 'global' }, enabled: feature.globalEnabled, ...(feature.globalEnabled ? {} : { lockedBy: 'global' }) }
 }
 
+// ---- Gateway-owned fixtures (ADR 0049 / 0054): sign-in, access control, instance, terminal. ----
+// UI_PREVIEW_INSTANCE=offline: the instance is down; gateway routes keep answering, every
+// forwarded route answers 503 instance_unavailable. UI_PREVIEW_SETUP=1: no owner yet, the
+// synthetic token is the bootstrap token (setup wizard).
+const instanceOffline = process.env.UI_PREVIEW_INSTANCE === 'offline'
+const setupMode = process.env.UI_PREVIEW_SETUP === '1'
+const ALL_PERMISSIONS = ['status.view', 'endpoint.view', 'endpoint.operate', 'endpoint.manage', 'feature.view', 'feature.configure', 'feature.toggle',
+  'plugin.manage', 'plugin.perms.read', 'plugin.perms.operate', 'plugin.perms.manage', 'agent.view', 'agent.configure', 'ops.config.read', 'ops.config.write',
+  'ops.env.read', 'ops.env.write', 'ops.database.read', 'ops.database.write', 'ops.schedule.read', 'ops.schedule.write', 'ops.files.read', 'ops.files.write',
+  'ops.restart', 'ops.terminal', 'iam.view', 'iam.manage', 'mcp.access', 'a2a.access']
+const HOUR = 3_600_000
+const iamRoles = [
+  { id: 'r-owner', name: 'owner', description: '所有者：全部权限', builtin: true, permissions: ALL_PERMISSIONS },
+  { id: 'r-admin', name: 'admin', description: '管理员：除终端与访问控制管理外的全部权限', builtin: true, permissions: ALL_PERMISSIONS.filter(item => item !== 'ops.terminal' && item !== 'iam.manage') },
+  { id: 'r-operator', name: 'operator', description: '运营：账号与功能日常操作', builtin: true, permissions: ['status.view', 'endpoint.view', 'endpoint.operate', 'feature.view', 'feature.configure', 'feature.toggle', 'agent.view', 'ops.schedule.read'] },
+  { id: 'r-viewer', name: 'viewer', description: '只读：查看（不含原始配置与环境变量）', builtin: true, permissions: ALL_PERMISSIONS.filter(item => /\.(view|read)$/u.test(item) && item !== 'ops.config.read' && item !== 'ops.env.read') },
+  { id: 'r-support', name: 'support', description: '客服值班：处理消息与群管理', builtin: false, permissions: ['status.view', 'endpoint.view', 'endpoint.operate', 'rss:subscribe'] },
+]
+const iamUsers = [
+  { id: 'u-owner', username: 'owner', displayName: '演示所有者', disabled: false, createdAt: Date.now() - 30 * 24 * HOUR, passwordChangedAt: Date.now() - 10 * 24 * HOUR,
+    bindings: [{ id: 'b1', roleId: 'r-owner', role: 'owner', scope: { kind: 'global' } }] },
+  { id: 'u-alice', username: 'alice', displayName: '值班同事 Alice', disabled: false, createdAt: Date.now() - 12 * 24 * HOUR, passwordChangedAt: Date.now() - 12 * 24 * HOUR,
+    bindings: [{ id: 'b2', roleId: 'r-support', role: 'support', scope: { kind: 'adapter', key: 'icqq' } }, { id: 'b3', roleId: 'r-viewer', role: 'viewer', scope: { kind: 'global' } }] },
+  { id: 'u-bob', username: 'bob', displayName: 'bob', disabled: true, createdAt: Date.now() - 40 * 24 * HOUR, passwordChangedAt: null, bindings: [] },
+]
+const iamTokens = [
+  { id: 'tok-deploy', userId: 'u-owner', name: '部署脚本', permissions: null, expiresAt: Date.now() + 80 * 24 * HOUR, lastUsedAt: Date.now() - 2 * HOUR, createdAt: Date.now() - 10 * 24 * HOUR },
+  { id: 'tok-monitor', userId: 'u-alice', name: '监控探针', permissions: ['status.view'], expiresAt: Date.now() - HOUR, lastUsedAt: Date.now() - 3 * 24 * HOUR, createdAt: Date.now() - 95 * 24 * HOUR },
+]
+const audit = [
+  { id: 'a5', at: Date.now() - 5 * 60_000, actor: 'user:u-owner', action: 'rpc:gateway.instance.restart', target: null, outcome: 'ok', ip: '127.0.0.1' },
+  { id: 'a4', at: Date.now() - 40 * 60_000, actor: 'user:u-alice', action: 'http:GET /config', target: null, outcome: 'denied', ip: '192.168.1.20' },
+  { id: 'a3', at: Date.now() - 2 * HOUR, actor: 'user:u-owner', action: 'iam.users.update', target: 'user:u-alice', outcome: 'ok', ip: '127.0.0.1' },
+  { id: 'a2', at: Date.now() - 26 * HOUR, actor: 'api-token:tok-deploy', action: 'rpc:gateway.packages.install', target: null, outcome: 'error', detail: { failedPhase: 'start-instance' }, ip: '10.0.0.4' },
+  { id: 'a1', at: Date.now() - 30 * 24 * HOUR, actor: 'bootstrap', action: 'auth.setup', target: 'user:u-owner', outcome: 'ok', ip: '127.0.0.1' },
+]
+const instanceStatus = () => instanceOffline
+  ? { instanceId: 'default', state: 'crashed', lastExitCode: 1, lastExitSignal: null, recentRestarts: 11,
+    lastFailure: { reason: 'crash-loop', message: '实例一分钟内退出 11 次，已停止自动重启。', at: Date.now() - 90_000, exitCode: 1, signal: null,
+      logTail: ['[preview] 加载插件 adapter-icqq', '[preview] Error: Cannot find module \'icqq\'', '    at importPlugin (plugin-runtime.js:120:11)'] } }
+  : { instanceId: 'default', state: 'running', pid: 4242, startedAt: Date.now() - 3812_000, generation: 3, protocolVersion: 1, lastExitCode: null, lastExitSignal: null, recentRestarts: 0 }
+const instanceLogs = () => ({ lines: [
+  { seq: 1, time: Date.now() - 60_000, stream: 'stdout', line: '[gateway] 实例已启动 (pid 4242)' },
+  { seq: 2, time: Date.now() - 50_000, stream: 'stdout', line: '[icqq] preview-community 已上线' },
+  { seq: 3, time: Date.now() - 30_000, stream: 'stderr', line: '[telegram] preview-support 连接失败：缺少 TELEGRAM_TOKEN' },
+  ...(instanceOffline ? [{ seq: 4, time: Date.now() - 90_000, stream: 'stderr', line: "Error: Cannot find module 'icqq'" }] : []),
+] })
+const meReport = () => setupMode
+  ? { kind: 'bootstrap', open: false, permissions: [], bindings: [], setupRequired: true }
+  : { kind: 'user', user: { id: 'u-owner', username: 'owner', displayName: '演示所有者' }, permissions: ALL_PERMISSIONS,
+    bindings: [{ role: 'owner', scope: { kind: 'global' }, permissions: ALL_PERMISSIONS }], setupRequired: false,
+    onboarding: { version: 1, steps: { database: 'done', owner: 'done', ai: 'skipped', adapters: 'pending' } } }
+/** Answers gateway-owned requests; returns false for everything the gateway forwards to the instance. */
+async function gatewayOwned(url, request, json, readBody) {
+  const path = url.pathname
+  if (path === '/api/auth/me') { json(envelope(meReport())); return true }
+  if (path === '/api/auth/tokens' && request.method === 'GET') { json(envelope({ tokens: iamTokens.filter(item => item.userId === 'u-owner') })); return true }
+  if (path === '/api/auth/tokens' && request.method === 'POST') { json(envelope({ token: 'zhin_preview_token_not_real', record: { ...iamTokens[0], id: 'tok-new', name: '新令牌' } }), 201); return true }
+  if (path === '/api/auth/setup' && request.method === 'GET') {
+    if (!setupMode) { json({ success: false, code: 'conflict', error: '已初始化' }, 409); return true }
+    json(envelope({ setupRequired: true, database: { dialect: 'sqlite', source: 'default', summary: { filename: 'data/zhin.db' } },
+      onboarding: { version: 1, steps: { database: 'done' } } })); return true
+  }
+  if (path === '/api/auth/setup/database') {
+    json(envelope({ dialect: 'sqlite', source: 'default', summary: { filename: 'data/zhin.db' }, drivers: [
+      { dialect: 'sqlite', label: 'SQLite', description: '单文件数据库，适合单机部署。', available: true, fields: [{ name: 'filename', type: 'string', required: true, secret: false, default: 'data/zhin.db' }] },
+      { dialect: 'pg', label: 'PostgreSQL', description: '多实例或需要备份策略时使用。', available: false, missingPackage: 'pg', fields: [] },
+    ] })); return true
+  }
+  if (path.startsWith('/api/auth/')) { json({ success: false, code: 'invalid_input', error: '本地预览不执行此操作。' }, 400); return true }
+  if (path === '/api/console/terminal/targets') { json(envelope({ targets: [{ id: 'local', kind: 'local', label: '本机 Shell', available: true }, { id: 'staging', kind: 'ssh', label: 'staging 服务器', available: false, reason: '未配置私钥' }] })); return true }
+  if (path === '/api/console/request' && request.method === 'POST') {
+    const body = await readBody()
+    if (!body) return true
+    const type = String(body.type)
+    const data = body.data && typeof body.data === 'object' ? body.data : body
+    if (type === 'iam.users.list') { json(envelope({ users: iamUsers })); return true }
+    if (type === 'iam.roles.list') { json(envelope({ roles: iamRoles, pluginPermissions: [{ permission: 'rss:subscribe', plugin: 'rss', level: 'operate', description: '订阅与退订 RSS' }] })); return true }
+    if (type === 'iam.tokens.list') { json(envelope({ tokens: data.userId ? iamTokens.filter(item => item.userId === data.userId) : iamTokens })); return true }
+    if (type === 'iam.audit.list') { json(envelope({ entries: audit, next: null })); return true }
+    if (type === 'gateway.instance.status') { json(envelope(instanceStatus())); return true }
+    if (type === 'gateway.instance.logs') { json(envelope(instanceLogs())); return true }
+    if (type === 'gateway.packages.list') {
+      json(envelope({ packageManager: 'pnpm', packages: [
+        { name: 'zhin.js', range: '^1.8.0', dependencyType: 'dependencies', installedVersion: '1.8.2' },
+        { name: '@zhin.js/adapter-icqq', range: '^1.2.0', dependencyType: 'dependencies', installedVersion: instanceOffline ? null : '1.2.4', catalog: 'adapter' },
+        { name: '@zhin.js/gateway', range: '^1.0.0', dependencyType: 'dependencies', installedVersion: '1.0.1' },
+      ] })); return true
+    }
+    if (/^(iam|gateway|onboarding)\./u.test(type)) { json({ success: false, code: 'invalid_input', error: '本地预览不执行此操作。请使用真实 Host 验证业务效果。' }, 400); return true }
+    // Not gateway-owned: hand the parsed body back to the instance routes.
+    request.previewBody = body
+    return false
+  }
+  return false
+}
+
 const server = createServer(async (request, response) => {
   const origin = request.headers.origin
   if (origin && origins.has(origin)) {
@@ -69,9 +166,29 @@ const server = createServer(async (request, response) => {
   if (request.method === 'OPTIONS') { response.writeHead(204); response.end(); return }
   const url = new URL(request.url ?? '/', `http://127.0.0.1:${port}`)
   const json = (data, status = 200) => { response.writeHead(status, { 'content-type': 'application/json; charset=utf-8' }); response.end(JSON.stringify(data)) }
-  if (url.pathname === '/pub/health' || url.pathname === '/') { json({ status: 'ok', fixture: 'Local UI preview; synthetic data only' }); return }
+  if (url.pathname === '/pub/health' || url.pathname === '/') {
+    json({ success: true, status: 'ok', timestamp: new Date().toISOString(), instance: { state: instanceStatus().state, ready: !instanceOffline }, fixture: 'Local UI preview; synthetic data only' }); return
+  }
+  // `/auth/me` is public on the gateway: an unknown credential reads as `anonymous`.
+  if (url.pathname === '/api/auth/me' && request.headers.authorization !== 'Bearer ui-preview') {
+    json(envelope({ kind: 'anonymous', permissions: [], bindings: [], setupRequired: setupMode })); return
+  }
   if (request.headers.authorization !== 'Bearer ui-preview' && url.searchParams.get('token') !== 'ui-preview') {
     json({ success: false, error: 'Use the synthetic preview token: ui-preview' }, 401); return
+  }
+  const readBody = async () => {
+    let raw = ''
+    for await (const chunk of request) {
+      raw += chunk
+      if (raw.length > 64_000) { json({ success: false, error: 'Preview request is too large' }, 413); return null }
+    }
+    try { return JSON.parse(raw) } catch { json({ success: false, error: 'Invalid JSON' }, 400); return null }
+  }
+  if (await gatewayOwned(url, request, json, readBody)) return
+  if (instanceOffline && url.pathname.startsWith('/api/')) {
+    response.writeHead(503, { 'content-type': 'application/json; charset=utf-8', 'retry-after': '5', 'cache-control': 'no-store' })
+    response.end(JSON.stringify({ success: false, code: 'instance_unavailable', requestOutcome: 'not-dispatched', state: 'crashed', error: 'The Zhin instance is not running' }))
+    return
   }
   if (url.pathname === '/api/events/history') { json(envelope({ items: [], hasMore: false, nextAfter: 0, runtimeId: 'ui-preview', latestEventId: 0, oldestAvailableEventId: 0, gap: false })); return }
   if (url.pathname === '/api/events') {
@@ -95,13 +212,8 @@ const server = createServer(async (request, response) => {
   if (url.pathname === '/api/agent/sessions') { json(envelope({ sessions: [], total: 0, items: [] })); return }
   if (url.pathname === '/console/api/pages') { json({ pages: [] }); return }
   if (url.pathname === '/api/console/request' && request.method === 'POST') {
-    let raw = ''
-    for await (const chunk of request) {
-      raw += chunk
-      if (raw.length > 64_000) { json({ success: false, error: 'Preview request is too large' }, 413); return }
-    }
-    let body
-    try { body = JSON.parse(raw) } catch { json({ success: false, error: 'Invalid JSON' }, 400); return }
+    const body = request.previewBody ?? await readBody()
+    if (!body) return
     const type = String(body.type)
     const endpoint = endpoints.find(endpoint => endpoint.name === (body.endpointKey ?? body.endpointId ?? body.data?.endpointKey)) ?? endpoints[0]
     if (type === 'endpoint.list') { json(envelope({ endpoints })); return }
@@ -124,7 +236,6 @@ const server = createServer(async (request, response) => {
       const keys = chain(body.key ?? '')
       json(envelope({ roles: chatRoles.filter(entry => keys.includes(entry.key)) })); return
     }
-    if (type === 'gateway.instance.status') { json(envelope({ instanceId: 'preview', state: 'running', lastExitCode: null, lastExitSignal: null, recentRestarts: 0 })); return }
     if (type === 'agent.engagements.list') { json(envelope({ engagements: [engagement.summary] })); return }
     if (type === 'agent.engagements.get') {
       if (body.engagementId === engagement.summary.engagementId) json(envelope(engagement))
@@ -148,6 +259,13 @@ const server = createServer(async (request, response) => {
     }
     if (type === 'inbox.requests') { json(envelope({ inboxEnabled: true, requests: [] })); return }
     if (type === 'inbox.notices') { json(envelope({ inboxEnabled: true, notices: [] })); return }
+    if (type === 'db:info') { json(envelope({ dialect: 'sqlite', type: 'related', tables: ['console_users', 'messages', 'rss_feeds'] })); return }
+    if (type === 'db:tables') { json(envelope({ tables: [{ name: 'console_users' }, { name: 'messages' }, { name: 'rss_feeds' }] })); return }
+    if (type === 'env:list') { json(envelope({ files: [{ name: '.env', exists: true }, { name: '.env.production', exists: false }] })); return }
+    if (type === 'env:get') { json(envelope({ content: 'HTTP_TOKEN=preview-not-real\nTELEGRAM_TOKEN=\n' })); return }
+    if (type === 'files:tree') { json(envelope({ tree: [{ name: 'zhin.config.yml', path: 'zhin.config.yml', type: 'file' }, { name: 'plugins', path: 'plugins', type: 'directory', children: [{ name: 'hello.ts', path: 'plugins/hello.ts', type: 'file' }] }] })); return }
+    if (type === 'files:read') { json(envelope({ content: 'plugins:\n  icqq: {}\n', size: 20 })); return }
+    if (type === 'config:get-source') { json(envelope({ content: 'plugins:\n  icqq: {}\n', revision: 'preview-1', path: 'zhin.config.yml' })); return }
     if (type === 'db:select') { json(envelope({ rows: [], total: 0, columns: [] })); return }
     if (type === 'endpoint.history') { json(envelope({ messages: [], total: 0, hasMore: false })); return }
     if (type === 'config:get') { json(envelope({ configVersion: 2, plugin: { name: 'ui-preview' }, plugins: {} })); return }
@@ -156,5 +274,5 @@ const server = createServer(async (request, response) => {
   }
   json({ success: false, error: 'This endpoint is not provided by the local UI fixture.' }, 404)
 })
-server.listen(port, '127.0.0.1', () => console.log(`Read-only UI fixture at http://127.0.0.1:${port}; synthetic token: ui-preview`))
+server.listen(port, '127.0.0.1', () => console.log(`Read-only UI fixture at http://127.0.0.1:${port}; synthetic token: ui-preview${instanceOffline ? ' (instance offline)' : ''}${setupMode ? ' (setup mode)' : ''}`))
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => { server.closeAllConnections(); server.close(() => process.exit(0)) })

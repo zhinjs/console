@@ -132,7 +132,7 @@ test('the declaration form posts gateway.plugins.declare, keeps the draft on inv
   assert.doesNotMatch(form, /config:replace-source/u, 'declarations never go through the config source')
   const instance = read('pages/ops/instance.tsx')
   assert.match(instance, /ConfigurationNeedsPanel/u)
-  assert.match(instance, /result\?\.needsConfiguration/u)
+  assert.match(instance, /result\??\.needsConfiguration/u)
   const onboarding = read('pages/onboarding/adapter-install.tsx')
   assert.match(onboarding, /GATEWAY_RPC\.PACKAGES_INSTALL/u)
   assert.match(onboarding, /ConfigurationNeedsPanel/u)

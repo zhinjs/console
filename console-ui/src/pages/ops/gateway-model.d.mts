@@ -30,15 +30,17 @@ export declare const MAX_LOG_LINES: number
 export declare const MAX_PROGRESS_OUTPUT: number
 
 export declare class GatewayRequestError extends Error {
-  constructor(message: string, options?: { status?: number; code?: string; hostMessage?: string })
+  constructor(message: string, options?: { status?: number; code?: string; hostMessage?: string; retryAfter?: number; requestOutcome?: string })
   readonly status: number
   readonly code: string
   readonly hostMessage: string
+  readonly retryAfter?: number
+  readonly details?: { readonly serverCode: string; readonly requestOutcome: string }
 }
-export type GatewayErrorKind = 'unsupported' | 'forbidden' | 'conflict' | 'unavailable' | 'failed'
+export type GatewayErrorKind = 'unsupported' | 'forbidden' | 'conflict' | 'database_busy' | 'instance' | 'unavailable' | 'failed'
 
 export function gatewayRequestBody(type: string, data: unknown, requestId: number): { type: string; requestId: number; data: unknown }
-export function readGatewayReply(status: number, json: unknown, t: Translate): unknown
+export function readGatewayReply(status: number, json: unknown, t: Translate, retryAfterHeader?: string | null): unknown
 export function gatewayErrorKind(error: unknown): GatewayErrorKind
 
 export function readInstanceStatus(value: unknown): GatewayInstanceStatus | null

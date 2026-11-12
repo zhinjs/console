@@ -227,7 +227,7 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
         <div className="console-login-brand"><span className="console-login-mark" aria-hidden="true">Z</span><span>Zhin Console</span></div>
         <h1>{i18n.t('连接你的机器人')}</h1>
         <p>{i18n.t('连接运行 Zhin 的设备，管理会话、账号和任务。')}</p>
-        <div className="console-login-notes"><ShieldCheck aria-hidden="true" /><span>{i18n.t('令牌用于验证你的访问权限。')}</span></div>
+        <div className="console-login-notes"><ShieldCheck aria-hidden="true" /><span>{i18n.t('账号与令牌由管理网关验证：机器人实例停止时也能登录，查看实例日志并重新启动。')}</span></div>
       </section>
       <section className="console-login-panel" aria-label={i18n.t('连接设置')}>
         <div className="console-login-panel-head"><LanguageSelect /></div>

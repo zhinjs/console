@@ -392,6 +392,17 @@ export function usernameProblem(value, t) {
   return /^[a-z0-9][a-z0-9._-]{1,63}$/u.test(username) ? null : t('用户名需为 2-64 位小写字母、数字或 . _ -')
 }
 
+/** Same rule as the Host's `updateUser`: required, at most 128 characters; no control characters. */
+export const DISPLAY_NAME_MAX_LENGTH = 128
+export function displayNameProblem(value, t) {
+  const name = typeof value === 'string' ? value.trim() : ''
+  if (!name) return t('请填写显示名')
+  if (name.length > DISPLAY_NAME_MAX_LENGTH) return t('显示名最多 128 个字符')
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f\u007f]/u.test(name)) return t('显示名不能包含控制字符')
+  return null
+}
+
 export function passwordProblem(value, confirm, t) {
   if (typeof value !== 'string' || value.length < 10) return t('密码至少 10 位')
   if (confirm !== undefined && confirm !== value) return t('两次输入的密码不一致')

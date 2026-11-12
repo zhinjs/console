@@ -42,12 +42,15 @@ export const MAX_LOG_LINES = 2000
 export const MAX_PROGRESS_OUTPUT = 64 * 1024
 
 export class GatewayRequestError extends Error {
-  constructor(message, { status = 0, code = 'failed', hostMessage = '' } = {}) {
+  constructor(message, { status = 0, code = 'failed', hostMessage = '', retryAfter, requestOutcome } = {}) {
     super(message)
     this.name = 'GatewayRequestError'
     this.status = status
     this.code = code
     this.hostMessage = hostMessage
+    // Read by `statusFromError` (database_busy / instance_* Retry-After, instance request outcome).
+    if (typeof retryAfter === 'number' && retryAfter > 0) this.retryAfter = retryAfter
+    if (requestOutcome === 'not-dispatched' || requestOutcome === 'unknown') this.details = { serverCode: code, requestOutcome }
   }
 }
 
@@ -62,7 +65,7 @@ const UNKNOWN_RPC = /unknown rpc type|未登记权限/iu
  * One reply as data, or a `GatewayRequestError` with localized text. Accepts the Console
  * envelope (`success`) and the gateway's own (`ok` / `error.{code,message,status}`).
  */
-export function readGatewayReply(status, json, t) {
+export function readGatewayReply(status, json, t, retryAfterHeader) {
   const body = json && typeof json === 'object' ? json : {}
   const nested = body.error && typeof body.error === 'object' ? body.error : null
   const failed = body.success === false || body.ok === false || nested !== null
@@ -75,8 +78,16 @@ export function readGatewayReply(status, json, t) {
   }
   if (effective === 401) throw new GatewayRequestError(t('登录已失效，请重新登录。'), { status: effective, code: code || 'unauthorized', hostMessage })
   if (effective === 403 && !hostMessage) throw new GatewayRequestError(t('当前身份没有执行此操作的权限。'), { status: effective, code: 'forbidden', hostMessage })
+  const retryAfter = /^\d+$/u.test(String(retryAfterHeader ?? '').trim()) ? Number(String(retryAfterHeader).trim()) : undefined
+  const requestOutcome = typeof body.requestOutcome === 'string' ? body.requestOutcome : undefined
+  if (code === 'database_busy') {
+    throw new GatewayRequestError(retryAfter ? t('网关的数据库正忙，请在 {0} 秒后重试。', [retryAfter]) : t('网关的数据库正忙，请稍后重试。'), { status: effective, code, hostMessage, retryAfter })
+  }
+  if (effective === 409 && (code === 'conflict' || !code)) {
+    throw new GatewayRequestError(hostMessage || t('另一个依赖事务正在进行，请等待它结束后再试。'), { status: effective, code: 'conflict', hostMessage })
+  }
   const message = hostMessage || t('请求失败（HTTP {0}）', [effective])
-  throw new GatewayRequestError(message, { status: effective, code: code || (effective === 403 ? 'forbidden' : 'failed'), hostMessage })
+  throw new GatewayRequestError(message, { status: effective, code: code || (effective === 403 ? 'forbidden' : 'failed'), hostMessage, retryAfter, requestOutcome })
 }
 
 export function gatewayErrorKind(error) {
@@ -84,6 +95,8 @@ export function gatewayErrorKind(error) {
   if (error.code === 'unsupported') return 'unsupported'
   if (error.status === 403 || error.code === 'forbidden') return 'forbidden'
   if (error.status === 409 || error.code === 'conflict') return 'conflict'
+  if (error.code === 'database_busy') return 'database_busy'
+  if (/^instance_/u.test(error.code)) return 'instance'
   if (error.status === 503 || error.code === 'unavailable') return 'unavailable'
   return 'failed'
 }

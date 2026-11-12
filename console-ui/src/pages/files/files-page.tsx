@@ -10,7 +10,7 @@ import { Button } from '../../components/ui/button'
 import { ConfirmDialog } from '../../components/confirm-dialog'
 import { Alert, AlertDescription } from '../../components/ui/alert'
 import { Input } from '../../components/ui/input'
-import { ErrorAlert } from '../../components/error-alert'
+import { OpsLoadState } from '../ops/load-state'
 import { ScrollArea } from '../../components/ui/scroll-area'
 import { PageHeader } from '../../components/PageHeader'
 import { EmptyState } from '../../components/empty-state'
@@ -136,7 +136,7 @@ function FileManageSession() {
       {selectedFile ? <p className="text-xs text-muted-foreground">{i18n.t("切换页面会保留本标签页内的未保存修改；刷新或关闭标签页前请保存。文件列表刷新不会重新加载编辑内容。")}</p> : null}
 
       {treeError && tree.length > 0 ? (
-        <ErrorAlert error={treeError} technicalDetail={error ?? undefined} onRetry={retryTree} className="py-2" />
+        <OpsLoadState compact error={error ?? ''} resource={i18n.t("文件列表")} permissions={['ops.files.read']} onRetry={retryTree} />
       ) : null}
 
       <Card className="overflow-hidden">
@@ -176,7 +176,7 @@ function FileManageSession() {
                       <RefreshCw className="w-4 h-4 animate-spin text-muted-foreground" />
                     </div>
                   ) : treeError && tree.length === 0 ? (
-                    <ErrorAlert error={treeError} technicalDetail={error ?? undefined} onRetry={retryTree} className="mx-2 my-1 py-2" />
+                    <OpsLoadState compact error={error ?? ''} resource={i18n.t("文件列表")} permissions={['ops.files.read']} onRetry={retryTree} className="mx-2 my-1" />
                   ) : tree.length === 0 && !loaded ? (
                     <EmptyState compact title={i18n.t("等待读取文件列表")} />
                   ) : tree.length === 0 ? (

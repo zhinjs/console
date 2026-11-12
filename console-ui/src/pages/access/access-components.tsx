@@ -1,13 +1,12 @@
 import { useId, useMemo, useState, type ReactNode } from 'react'
-import { Plus, ShieldAlert, X } from 'lucide-react'
+import { Plus, X } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { Alert, AlertDescription } from '../../components/ui/alert'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
 import { Checkbox } from '../../components/ui/checkbox'
 import { Input } from '../../components/ui/input'
 import { SelectField } from '../../components/ui/select'
-import { ErrorAlert } from '../../components/error-alert'
+import { StatusState } from '../../components/StatusState'
 import { useEndpointList } from '../features/use-feature-data'
 import {
   addBinding, areaLabel, builtinRoleLabel, groupCheckState, levelLabel, permissionLabel, removeBinding, scopeLabel, scopeProblem,
@@ -15,17 +14,27 @@ import {
 } from './access-model.mjs'
 import type { IamErrorKind } from './iam-request.mjs'
 
-/** Load failure of an access page; an old Host gets an update hint instead of a retry loop. */
-export function IamLoadError({ error, kind, onRetry }: { error: string; kind: IamErrorKind | null; onRetry: () => void }) {
+/**
+ * Load failure of an access page as one `StatusState`: an old Host reads 需要新版 Host, a missing
+ * permission 无权限, a busy database 数据库忙 with its Retry-After; anything else 读取失败 + retry.
+ */
+export function IamLoadError({ error, kind, failure, onRetry, permissions = ['iam.view'] }: {
+  error: string
+  kind: IamErrorKind | null
+  /** The failed request (keeps the Host code and Retry-After); falls back to the message. */
+  failure?: unknown
+  onRetry: () => void
+  permissions?: readonly string[]
+}) {
+  const i18n = useI18n()
   if (kind === 'unsupported') {
-    return (
-      <Alert variant="warning">
-        <ShieldAlert className="h-4 w-4" />
-        <AlertDescription>{error}</AlertDescription>
-      </Alert>
-    )
+    return <StatusState kind="unsupported" description={i18n.t('当前 Host 不支持访问控制。升级到支持账号与角色（ADR 0049）的 Zhin 版本后，这里会列出用户、角色、令牌和审计。')} />
   }
-  return <ErrorAlert error={error} onRetry={kind === 'forbidden' ? undefined : onRetry} kind={kind === 'unavailable' ? '503' : 'other'} />
+  if (kind === 'unavailable') {
+    return <StatusState kind="error" error={failure ?? error} onRetry={onRetry} title={i18n.t('账号数据库未就绪')}
+      description={i18n.t('用户、角色和审计存放在项目数据库里，当前数据库不能存储账号或尚未就绪。到「运维 → 数据库」检查连接，或在服务器上运行 zhin console init --status 查看。')} />
+  }
+  return <StatusState error={failure ?? error} permissions={permissions} onRetry={onRetry} />
 }
 
 export function ReadOnlyNotice() {

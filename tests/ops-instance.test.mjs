@@ -173,7 +173,7 @@ test('the instance and terminal pages sit in 运维 with their own permissions',
 
 test('the instance page confirms lifecycle actions, plans before mutating and subscribes to progress first', () => {
   const page = read('pages/ops/instance.tsx')
-  assert.match(page, /ConfirmDialog/u)
+  assert.match(page, /useActionReceipt\(/u, 'lifecycle actions and package transactions go through the receipt')
   assert.match(page, /GATEWAY_RPC\.PACKAGES_PLAN/u)
   assert.match(page, /useGatewayTransaction\(\)/u, 'transactions run through the shared runner')
   const runner = read('pages/ops/use-gateway.ts')
