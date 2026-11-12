@@ -2810,6 +2810,7 @@ export const englishMessages = Object.freeze({
   "已使用此模型的用途和会话需要重新选择。": "Purposes and sessions that use this model will need a new selection.",
   "添加模型": "Add model",
   "添加账号": "Add account",
+  "文档": "Docs",
   "先添加账号，再选择模型。": "Add an account first, then choose a model.",
   "编辑 {0}": "Edit {0}",
   "编辑模型": "Edit model",
