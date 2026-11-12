@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useInstanceRecovery } from '../../hooks/use-instance-recovery'
 import { useI18n } from '../../i18n'
 import { useToast } from '../../components/toast'
 import { apiFetch } from '../../utils/auth'
@@ -64,6 +65,7 @@ export function useFeatureMatrix(): FeatureMatrixState {
     load()
     return () => { sequence.current += 1 }
   }, [load])
+  useInstanceRecovery(load)
   return { ...state, refresh: load }
 }
 
@@ -97,6 +99,7 @@ export function useEndpointList() {
     load()
     return () => { sequence.current += 1 }
   }, [load])
+  useInstanceRecovery(load)
   return { ...state, refresh: load }
 }
 
@@ -124,6 +127,7 @@ function useFeatureRead<T>(request: FeatureRpcBody | null, read: (payload: unkno
     load()
     return () => { sequence.current += 1 }
   }, [load])
+  useInstanceRecovery(load)
   return { ...state, refresh: load }
 }
 
@@ -221,5 +225,6 @@ export function useConversationList(filter: Omit<ConversationQuery, 'cursor'>): 
   const cursor = state.page?.cursor
   const loadMore = useCallback(() => { if (cursor) fetchPage(cursor) }, [cursor, fetchPage])
   const refresh = useCallback(() => fetchPage(), [fetchPage])
+  useInstanceRecovery(refresh)
   return { ...state, loadMore, refresh }
 }

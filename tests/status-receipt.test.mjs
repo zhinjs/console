@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import {
   DEFAULT_INSTANCE_RETRY_SECONDS, STATUS_COPY, STATUS_KINDS, outcomeUnknown, serverCodeOf, statusFromError, statusTone,
 } from '../console-ui/src/components/status-state-model.mjs'
@@ -174,4 +175,24 @@ test('raw 502 / 503 / 504 replies with an instance code (apiFetch) raise the ban
     reportHttpReply({ status: 504, body: { code: 'instance_timeout' }, retryAfter: null }, 0)
     assert.deepEqual([getInstanceAvailability().instance, getInstanceAvailability().retryAfterSeconds, getInstanceAvailability().failures], ['timeout', DEFAULT_INSTANCE_RETRY_SECONDS, 2])
   } finally { clearInstanceAvailability() }
+})
+
+test('reads re-run once when the instance comes back, not on every success', async () => {
+  const availability = await import('../console-ui/src/utils/instance-availability.mjs')
+  availability.clearInstanceAvailability()
+  let calls = 0
+  const off = availability.onInstanceRecovered(() => { calls += 1 })
+  availability.reportRequestSuccess('endpoint.list')
+  assert.equal(calls, 0, 'no outage, nothing to recover from')
+  availability.reportInstanceReading({ kind: 'instance-unavailable', instance: 'unavailable', retryAfterSeconds: 5 })
+  availability.reportRequestSuccess('gateway.instance.status')
+  assert.equal(calls, 0, 'a gateway-owned answer says nothing about the instance')
+  availability.reportRequestSuccess('endpoint.list')
+  assert.equal(calls, 1)
+  availability.reportInstanceReading({ kind: 'instance-unavailable', instance: 'unavailable', retryAfterSeconds: 5 })
+  availability.clearInstanceAvailability()
+  assert.equal(calls, 2)
+  off()
+  const hook = readFileSync(new URL('../console-ui/src/hooks/use-console-read.ts', import.meta.url), 'utf8')
+  assert.match(hook, /useInstanceRecovery\(/)
 })

@@ -16,6 +16,18 @@ export function isGatewayOwnedRequest(type) {
 /** `{ instance, retryAfterSeconds, since, retryAt, failures }` while unavailable, else null. */
 let state = null
 const listeners = new Set()
+const recoveryListeners = new Set()
+
+/** The instance answered again after being unavailable: reads that failed meanwhile should re-run. */
+function recovered() {
+  for (const listener of [...recoveryListeners]) listener()
+}
+
+/** Called once each time the instance comes back (banner clears); returns the unsubscribe. */
+export function onInstanceRecovered(listener) {
+  recoveryListeners.add(listener)
+  return () => recoveryListeners.delete(listener)
+}
 
 function emit() {
   for (const listener of [...listeners]) listener()
@@ -58,6 +70,7 @@ export function reportRequestSuccess(type) {
   if (isGatewayOwnedRequest(type) || !state) return false
   state = null
   emit()
+  recovered()
   return true
 }
 
@@ -104,4 +117,5 @@ export function clearInstanceAvailability() {
   if (!state) return
   state = null
   emit()
+  recovered()
 }

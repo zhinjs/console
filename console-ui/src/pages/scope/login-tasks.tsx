@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useInstanceRecovery } from '../../hooks/use-instance-recovery'
 import { ExternalLink, KeyRound, QrCode } from 'lucide-react'
 import { useI18n } from '../../i18n'
 import { Badge } from '../../components/ui/badge'
@@ -73,6 +74,7 @@ export function useEndpointsAndLogin(): EndpointsAndLogin {
     const stop = startVisiblePolling(load, 8000)
     return () => { stop(); sequence.current += 1 }
   }, [load])
+  useInstanceRecovery(load)
   return { ...state, refresh: load }
 }
 

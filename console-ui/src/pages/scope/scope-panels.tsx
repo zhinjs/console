@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { useInstanceRecovery } from '../../hooks/use-instance-recovery'
 import { useI18n } from '../../i18n'
 import { Card } from '../../components/ui/card'
 import { StatusState } from '../../components/StatusState'
@@ -25,6 +26,8 @@ export function ObjectFacts({ items }: { items: readonly { label: string; value:
 export function useEndpointInfo(adapter: string, endpoint: string) {
   const i18n = useI18n()
   const [state, setState] = useState<{ info: EndpointSummaryItem | null; error: unknown; loaded: boolean }>({ info: null, error: null, loaded: false })
+  const [attempt, setAttempt] = useState(0)
+  useInstanceRecovery(() => setAttempt(value => value + 1))
   useEffect(() => {
     let cancelled = false
     requestConsole<unknown>({ type: ENDPOINT_RPC.INFO, ...endpointAddress(adapter, endpoint) }).then(
@@ -32,7 +35,7 @@ export function useEndpointInfo(adapter: string, endpoint: string) {
       (error: unknown) => { if (!cancelled) setState({ info: null, error, loaded: true }) },
     )
     return () => { cancelled = true }
-  }, [adapter, endpoint, i18n.locale])
+  }, [adapter, endpoint, i18n.locale, attempt])
   return state
 }
 

@@ -210,7 +210,9 @@ function FeatureRow({ scope, level, levelKey, feature, row, detail, reload }: Fe
   })
   const busy = receipt.state.phase === 'submitting' || receipt.state.phase === 'verifying' || receipt.state.phase === 'prepared' || receipt.state.phase === 'confirming'
   const valueCopy = { unset: i18n.t('未设置'), masked: i18n.t('已隐藏的敏感值') }
-  const where = `${i18n.t(SCOPE_LEVEL_LABELS[level])} ${level === 'conversation' ? `${scope.kind}:${scope.id}` : level === 'endpoint' ? `${scope.adapter} / ${scope.endpoint}` : scope.adapter}`
+  // 「在会话 group:1 关闭 X」: the identity is set off by spaces; 全局 has none (「在全局关闭 X」).
+  const identity = level === 'conversation' ? `${scope.kind}:${scope.id}` : level === 'endpoint' ? `${scope.adapter} / ${scope.endpoint}` : level === 'adapter' ? scope.adapter : ''
+  const where = identity ? `${i18n.t(SCOPE_LEVEL_LABELS[level])} ${identity}${i18n.locale.startsWith("zh") ? " " : ""}` : i18n.t(SCOPE_LEVEL_LABELS[level])
   const prepare = (change: PendingChange, plan: { title: string; changes?: string[]; danger?: boolean; confirmLabel?: string; summary?: string }) => {
     pending.current = change
     receipt.prepare(plan)

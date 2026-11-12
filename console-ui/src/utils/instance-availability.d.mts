@@ -20,3 +20,4 @@ export function nextRetrySeconds(current: InstanceAvailability | null): number
 export function rearmInstanceRetry(now?: number): void
 export function instanceStateAnswers(value: unknown): boolean
 export function clearInstanceAvailability(): void
+export function onInstanceRecovered(listener: () => void): () => void
