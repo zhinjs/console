@@ -1,28 +1,16 @@
 import { useI18n } from '../../i18n'
-import { AccountSwitcher } from './AccountSwitcher'
-import { useEffect, useRef, type KeyboardEvent } from 'react'
-import { useIsMobile } from '../../hooks/useIsMobile'
 import type { ConversationListNotice } from './conversation-list-notice.mjs'
-import { Link } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, Loader2, RefreshCw, Search, SlidersHorizontal, Wifi, X, XCircle } from 'lucide-react'
-import { endpointHref } from '../../console-routes.mjs'
+import { Loader2, RefreshCw, Search } from 'lucide-react'
 import { cn } from '@zhin.js/client'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
-import type { EndpointInfo, SidebarSelection } from './types'
+import type { SidebarSelection } from './types'
 import type { ConversationSection as ConversationSectionType, ConversationSectionId } from './types'
 import { ConversationSection } from './ConversationSection'
 import { SystemInboxSection } from './SystemInboxSection'
-import { endpointTestPresentation, type EndpointTestResult } from '../endpoint-test-result-model.mjs'
 
 interface ConversationSidebarProps {
-  adapter: string
-  endpointId: string
-  info: EndpointInfo | null
   loadErr: string | null
-  testLoading: boolean
-  testMessage: EndpointTestResult | null
-  onTest: () => void
   listLoading: boolean
   listNotice: ConversationListNotice | null
   listSearch: string
@@ -39,20 +27,16 @@ interface ConversationSidebarProps {
   requestCount: number
   noticeCount: number
   onRefresh: () => void
-  showChannelList: boolean
-  onCloseMobileList?: () => void
-  hasDraft?: boolean
-  sending?: boolean
 }
 
+/**
+ * The account chat's conversation list — the only full one (概览 shows a summary). On a phone it is
+ * the first pane and fills the workspace; picking a conversation opens the chat pane (and writes the
+ * URL, so back returns here). Account switching and the connection test live in the page header and
+ * the 接入 tab, not here.
+ */
 export function ConversationSidebar({
-  adapter,
-  endpointId,
-  info,
   loadErr,
-  testLoading,
-  testMessage,
-  onTest,
   listLoading,
   listNotice,
   listSearch,
@@ -69,86 +53,27 @@ export function ConversationSidebar({
   requestCount,
   noticeCount,
   onRefresh,
-  showChannelList,
-  onCloseMobileList,
-  hasDraft,
-  sending,
 }: ConversationSidebarProps) {
   const i18n = useI18n()
-  const isMobile = useIsMobile()
-  const sidebarRef = useRef<HTMLDivElement>(null)
-  const mobileDialog = isMobile && !!onCloseMobileList
-  const testPresentation = testMessage ? endpointTestPresentation(testMessage, i18n.locale) : null
-  useEffect(() => {
-    if (!mobileDialog || !showChannelList) return
-    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    sidebarRef.current?.querySelector<HTMLElement>('button, a, input')?.focus()
-    return () => { if (previous?.isConnected && !previous.closest('[inert]')) previous.focus() }
-  }, [mobileDialog, showChannelList])
-
-  const onDrawerKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (!mobileDialog || !showChannelList || event.defaultPrevented || event.nativeEvent.isComposing) return
-    if (event.key === 'Escape') { event.preventDefault(); onCloseMobileList?.(); return }
-    if (event.key !== 'Tab') return
-    const targets = [...event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled])')]
-      .filter(element => element.tabIndex >= 0 && element.getClientRects().length > 0)
-    const first = targets[0], last = targets.at(-1)
-    if (event.shiftKey && document.activeElement === first && last) { event.preventDefault(); last.focus() }
-    else if (!event.shiftKey && document.activeElement === last && first) { event.preventDefault(); first.focus() }
-  }
   const selectionKey =
     selection?.type === 'channel' ? `${selection.channelType}-${selection.id}` : null
 
-  const hasVisibleSections = conversationSections.some((s) => s.entries.length > 0)
+  const total = conversationSections.reduce((sum, section) => sum + section.entries.length, 0)
+  const hasVisibleSections = total > 0
   const isSearchEmpty = listSearch.trim() && !hasVisibleSections && !listLoading && listNotice?.tone !== 'error'
 
-  const pickChannel = (entry: ConversationSectionType['entries'][number]) => {
-    onSelectChannel(entry)
-    onCloseMobileList?.()
-  }
-
   return (
-    <div className={cn('channel-sidebar im-sidebar', showChannelList && 'show')} ref={sidebarRef}
-      role={mobileDialog ? 'dialog' : undefined} aria-modal={mobileDialog && showChannelList ? true : undefined}
-      aria-label={mobileDialog ? i18n.t('会话列表') : undefined} aria-hidden={isMobile && !showChannelList}
-      inert={isMobile && !showChannelList} onKeyDown={onDrawerKeyDown}>
+    <nav className="channel-sidebar im-sidebar" aria-label={i18n.t('会话列表')}>
       <div className="im-sidebar-header">
-        <Button variant="ghost" size="icon" className="shrink-0" asChild>
-          <Link to={endpointHref(adapter, endpointId)} aria-label={i18n.t("返回账号概览")}>
-            <ArrowLeft />
-          </Link>
+        <h2 className="im-sidebar-title">
+          {i18n.t('会话')}
+          {!listLoading ? <span className="im-sidebar-count">{total}</span> : null}
+        </h2>
+        <Button variant="ghost" size="icon" className="im-header-icon-button h-8 w-8" onClick={onRefresh} disabled={listLoading}
+          aria-label={i18n.t('刷新列表')} title={i18n.t('刷新列表')}>
+          <RefreshCw className={cn('h-4 w-4', listLoading && 'animate-spin')} />
         </Button>
-        <AccountSwitcher adapter={adapter} endpointId={endpointId} info={info} loadErr={loadErr} hasDraft={hasDraft} sending={sending} onBeforeLeave={isMobile ? onCloseMobileList : undefined} />
-        <Button variant="ghost" size="icon" className="shrink-0" asChild>
-          <Link to={endpointHref(adapter, endpointId, 'features')} aria-label={i18n.t("功能配置")} title={i18n.t("功能配置")}>
-            <SlidersHorizontal />
-          </Link>
-        </Button>
-        {isMobile && onCloseMobileList && <Button type="button" variant="ghost" size="icon" className="shrink-0" onClick={onCloseMobileList} aria-label={i18n.t('关闭会话列表')}><X className="h-4 w-4" /></Button>}
       </div>
-
-      {loadErr && (
-        <div className="px-3 py-2 border-b border-border/40">
-          <p className="text-xs text-destructive leading-relaxed">{loadErr}</p>
-        </div>
-      )}
-      {testPresentation && (
-        <div
-          role={testPresentation.role}
-          className={cn(
-            'flex items-start gap-1.5 px-3 py-2 border-b border-border/40 text-xs leading-relaxed',
-            testPresentation.tone === 'success' ? 'text-success bg-success/5' : 'text-destructive bg-destructive/5',
-          )}
-        >
-          {testPresentation.tone === 'success'
-            ? <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0" aria-hidden="true" />
-            : <XCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" aria-hidden="true" />}
-          <p className="min-w-0 break-words">
-            <span className="font-medium">{testPresentation.label}</span>
-            {testPresentation.detail ? <span>{' · '}{testPresentation.detail}</span> : null}
-          </p>
-        </div>
-      )}
 
       <div className="im-sidebar-search">
         <Search className="im-sidebar-search-icon h-4 w-4" aria-hidden />
@@ -161,9 +86,13 @@ export function ConversationSidebar({
         />
       </div>
 
+      {loadErr && (
+        <p className="im-sidebar-notice text-destructive" role="alert">{i18n.t('读取账号状态失败：{0}', [loadErr])}</p>
+      )}
+
       <div className="im-sidebar-list">
         {listLoading && (
-          <div className="flex items-center justify-center py-10">
+          <div className="flex items-center justify-center py-10" role="status" aria-label={i18n.t('正在读取会话')}>
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         )}
@@ -190,7 +119,7 @@ export function ConversationSidebar({
               collapsed={sectionCollapsed[section.id] ?? false}
               onToggle={() => onToggleSection(section.id)}
               selectionKey={selectionKey}
-              onSelectEntry={pickChannel}
+              onSelectEntry={onSelectChannel}
             />
           ))}
 
@@ -200,37 +129,10 @@ export function ConversationSidebar({
           noticeCount={noticeCount}
           collapsed={systemSectionCollapsed}
           onToggle={onToggleSystemSection}
-          onSelectRequests={() => {
-            onSelectRequests()
-            onCloseMobileList?.()
-          }}
-          onSelectNotices={() => {
-            onSelectNotices()
-            onCloseMobileList?.()
-          }}
+          onSelectRequests={onSelectRequests}
+          onSelectNotices={onSelectNotices}
         />
       </div>
-
-      <div className="im-sidebar-footer">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full text-xs h-9 text-muted-foreground hover:text-foreground"
-          onClick={onTest}
-          disabled={testLoading}
-        >
-          {testLoading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Wifi className="h-3.5 w-3.5 mr-1.5" />}
-          {testLoading ? i18n.t("测试中…") : i18n.t("测试连接")}</Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full text-xs h-9 text-muted-foreground hover:text-foreground"
-          onClick={onRefresh}
-          disabled={listLoading}
-        >
-          <RefreshCw className={cn('h-3.5 w-3.5 mr-1.5', listLoading && 'animate-spin')} />
-          {i18n.t("刷新列表")}</Button>
-      </div>
-    </div>
+    </nav>
   )
 }

@@ -1,6 +1,6 @@
 import { translate } from '../../i18n/locale.mjs'
 import { useI18n } from '../../i18n'
-import { Copy, Forward, Quote } from 'lucide-react'
+import { AlertTriangle, Check, CircleHelp, Copy, Forward, Loader2, Quote, Undo2, X } from 'lucide-react'
 import { cn } from '@zhin.js/client'
 import type { ChatRow } from './types'
 import { RenderingDiagnostics } from './RenderingDiagnostics'
@@ -8,6 +8,7 @@ import { MessageBody, messageContentSummary } from './MessageBody'
 import { MessageDiagnosticsAction } from './MessageDiagnostics'
 import { useToast } from '../../components/toast'
 import { TEXT_REFERENCE_SUMMARY_LIMIT, copyMessageSummary } from './message-reference-model.mjs'
+import { DELIVERY_COPY, type DeliveryState } from './chat-workspace-model.mjs'
 
 export interface MessageDraftReference {
   id: string
@@ -19,6 +20,45 @@ interface ChatMessageRowProps {
   message: ChatRow
   onQuote: (ref: MessageDraftReference) => void
   onForward: (ref: MessageDraftReference) => void
+  /** Same sender shortly after the previous row: the name / time line is left out. */
+  continued?: boolean
+  /** Remove a failed or unknown local bubble. */
+  onDismiss?: (id: string) => void
+  /** Put an unknown send's text back into the box. */
+  onRestore?: (id: string) => void
+}
+
+const DELIVERY_ICONS: Record<DeliveryState, typeof Check> = { sending: Loader2, sent: Check, accepted: Check, unknown: CircleHelp, failed: AlertTriangle }
+
+/** What the send receipt says about a message sent from this Console; nothing more is claimed. */
+function DeliveryStatus({ message, onDismiss, onRestore }: { message: ChatRow; onDismiss?: (id: string) => void; onRestore?: (id: string) => void }) {
+  const i18n = useI18n()
+  const state = message.delivery
+  if (!state) return null
+  const Icon = DELIVERY_ICONS[state]
+  const copy = DELIVERY_COPY[state]
+  const problem = state === 'failed' || state === 'unknown'
+  return (
+    <div className={cn('im-delivery', `im-delivery--${state}`)} role={problem ? 'alert' : undefined}>
+      <div className="im-delivery-line">
+        <span className="im-delivery-state" title={i18n.t(copy.title)}>
+          <Icon className={cn('size-3.5', state === 'sending' && 'animate-spin')} aria-hidden />
+          {i18n.t(copy.label)}
+        </span>
+        {state === 'unknown' && message.restorable && onRestore ? (
+          <button type="button" className="im-delivery-action" onClick={() => onRestore(message.id)}>
+            <Undo2 className="size-3.5" aria-hidden />{i18n.t("核对后放回输入框")}
+          </button>
+        ) : null}
+        {problem && onDismiss ? (
+          <button type="button" className="im-delivery-action" onClick={() => onDismiss(message.id)} aria-label={i18n.t("移除这条提示")} title={i18n.t("移除这条提示")}>
+            <X className="size-3.5" aria-hidden />
+          </button>
+        ) : null}
+      </div>
+      {problem ? <p className="im-delivery-detail">{state === 'unknown' ? i18n.t(copy.title) : message.failure || i18n.t(copy.title)}</p> : null}
+    </div>
+  )
 }
 
 function senderNameOf(message: ChatRow, locale: 'zh-CN' | 'en' = 'zh-CN'): string {
@@ -34,7 +74,7 @@ export function toDraftReference(message: ChatRow, locale: 'zh-CN' | 'en' = 'zh-
   }
 }
 
-export function ChatMessageRow({ message, onQuote, onForward }: ChatMessageRowProps) {
+export function ChatMessageRow({ message, onQuote, onForward, continued = false, onDismiss, onRestore }: ChatMessageRowProps) {
   const i18n = useI18n()
   const toast = useToast()
   const out = message.outgoing === true
@@ -43,6 +83,7 @@ export function ChatMessageRow({ message, onQuote, onForward }: ChatMessageRowPr
     hour: '2-digit',
     minute: '2-digit',
   })
+  const pending = message.delivery === 'sending' || message.delivery === 'failed' || message.delivery === 'unknown'
   const draftRef = toDraftReference(message, i18n.locale)
 
   const copySummary = async () => {
@@ -57,17 +98,23 @@ export function ChatMessageRow({ message, onQuote, onForward }: ChatMessageRowPr
   }
 
   return (
-    <article className={cn('im-message-row', out && 'im-message-row--out')}>
-      <div className={cn('im-bubble', out ? 'im-bubble-out' : 'im-bubble-in')}>
-        <div className={cn('im-meta flex items-center gap-2 text-xs mb-0.5', out ? '' : 'text-muted-foreground')}>
-          <span className={cn('font-medium', out ? '' : 'text-foreground/90')}>{senderName}</span>
-          <span className="tabular-nums">{timeLabel}</span>
-          {message.directionUnknown && <span className="im-direction-note">{i18n.t("历史方向未记录")}</span>}
+    // tabIndex -1: tapping a message on a phone focuses it, which reveals its actions (see im-workspace.css).
+    <article tabIndex={-1} className={cn('im-message-row', out && 'im-message-row--out', continued && 'im-message-row--continued')}>
+      <div className="im-message-main">
+        {continued ? null : (
+          <div className="im-meta">
+            <span className="im-meta-sender">{senderName}</span>
+            <time className="im-meta-time" dateTime={Number.isFinite(message.timestamp) ? new Date(message.timestamp).toISOString() : undefined}>{timeLabel}</time>
+            {message.directionUnknown && <span className="im-direction-note">{i18n.t("历史方向未记录")}</span>}
+          </div>
+        )}
+        <div className={cn('im-bubble', out ? 'im-bubble-out' : 'im-bubble-in', pending && 'im-bubble--pending')} title={continued ? `${senderName} · ${timeLabel}` : undefined}>
+          <div className="im-message-text break-words">
+            <MessageBody content={message.content} />
+            {out && <RenderingDiagnostics rendering={message.rendering} messageId={message.messageId} error={message.renderingError} />}
+          </div>
         </div>
-        <div className="im-message-text text-[14px] leading-snug break-words">
-          <MessageBody content={message.content} />
-          {out && <RenderingDiagnostics rendering={message.rendering} messageId={message.messageId} error={message.renderingError} />}
-        </div>
+        {message.local ? <DeliveryStatus message={message} onDismiss={onDismiss} onRestore={onRestore} /> : null}
       </div>
       <div className="im-message-actions" aria-label={i18n.t("消息操作")}>
         {!out && !message.local && <MessageDiagnosticsAction message={message} />}

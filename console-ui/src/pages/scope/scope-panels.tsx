@@ -1,8 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { Activity, BrainCircuit, FileText, MessagesSquare } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { Button } from '../../components/ui/button'
 import { Card } from '../../components/ui/card'
 import { StatusState } from '../../components/StatusState'
 import { requestConsole } from '../../utils/console-rpc'
@@ -11,8 +8,7 @@ import { endpointAddress } from '../endpoint-detail/endpoint-request.mjs'
 import { readEndpointList } from '../endpoint-list-model.mjs'
 import type { EndpointSummaryItem } from '../features/use-feature-data'
 import { FeatureLevelPanel } from '../features/feature-level-panel'
-import { ObjectSection } from '../../scope/ObjectPageLayout'
-import { scopeIdentity, scopeKey, type Scope } from '../../scope/scope-tree.mjs'
+import { scopeKey, type Scope } from '../../scope/scope-tree.mjs'
 
 /** Label / value pairs at the top of an 概览 tab. */
 export function ObjectFacts({ items }: { items: readonly { label: string; value: ReactNode }[] }) {
@@ -52,25 +48,5 @@ export function ScopeFeaturesPanel({ scope }: { scope: Scope }) {
   return <FeatureLevelPanel scope={scope} />
 }
 
-/**
- * 记录 tab. Per-scope records (回合证据读模型) are not built yet; until then the tab points at the
- * existing record pages with the scope's identity as the search text.
- */
-export function ScopeRecordsPanel({ scope }: { scope: Scope }) {
-  const i18n = useI18n()
-  const identity = scopeIdentity(scope)
-  const query = scope.level === 'conversation' ? scope.id! : scope.level === 'endpoint' ? scope.endpoint! : scope.adapter ?? ''
-  const logs = query ? `/logs?q=${encodeURIComponent(query)}` : '/logs'
-  return (
-    <ObjectSection title={i18n.t('记录')} description={i18n.t('按范围汇总的记录还在建设中。下面的页面可以按这个范围的身份查找。')}>
-      <StatusState kind="empty" title={i18n.t('这个范围还没有汇总记录')}
-        description={identity ? i18n.t('可在下列页面搜索「{0}」。', [query]) : i18n.t('全局记录在下列页面查看。')}
-        actions={<>
-          <Button asChild size="sm" variant="outline"><Link to={logs}><FileText />{i18n.t('运行日志')}</Link></Button>
-          <Button asChild size="sm" variant="outline"><Link to="/agent/sessions"><MessagesSquare />{i18n.t('聊天记录')}</Link></Button>
-          <Button asChild size="sm" variant="outline"><Link to="/agent/replay"><BrainCircuit />{i18n.t('决策回放')}</Link></Button>
-          <Button asChild size="sm" variant="outline"><Link to="/access/audit"><Activity />{i18n.t('审计日志')}</Link></Button>
-        </>} />
-    </ObjectSection>
-  )
-}
+/** 记录 tab: see records-panel.tsx. */
+export { ScopeRecordsPanel } from './records-panel'

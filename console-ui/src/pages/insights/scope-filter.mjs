@@ -121,3 +121,12 @@ export function ambientGroupKey(scope) {
 export function ambientSettingsHref(scope) {
   return ambientGroupKey(scope) ? scopeFilterHref('/features/ai/ambient', scope) : null
 }
+
+/**
+ * The filtered scope itself, or null when the URL names none (or a malformed conversation). Same
+ * reading as {@link readScopeFilter}; for pages that only need the scope (聊天记录).
+ */
+export function readScopeFilterParams(params) {
+  const filter = readScopeFilter(params)
+  return filter.active && !filter.invalid ? filter.scope : null
+}

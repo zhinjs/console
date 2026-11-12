@@ -11,6 +11,8 @@ const draftModel = await import('../console-ui/src/pages/endpoint-detail/compose
 const memberModel = await import('../console-ui/src/pages/endpoint-detail/group-members-model.mjs').catch(() => ({}))
 const groupPanelModel = await import('../console-ui/src/pages/endpoint-detail/group-panel-model.mjs').catch(() => ({}))
 const referenceModel = await import('../console-ui/src/pages/endpoint-detail/message-reference-model.mjs').catch(() => ({}))
+const chatModel = await import('../console-ui/src/pages/endpoint-detail/chat-workspace-model.mjs').catch(() => ({}))
+const draftStore = await import('../console-ui/src/pages/endpoint-detail/chat-draft-store.mjs').catch(() => ({}))
 
 function hooks() {
   const slots = []; let cursor = 0, pending = [], dirty = false, render, value
@@ -48,18 +50,24 @@ const i18n = { locale: 'zh-CN', t: (message, values) => translate('zh-CN', messa
 const group = id => ({ type: 'channel', channelType: 'group', id, name: `群 ${id}` })
 function deferred() { let resolve, reject; const promise = new Promise((ok, fail) => { resolve = ok; reject = fail }); return { promise, resolve, reject } }
 
-test('message composer text belongs to the conversation it was typed in', async () => {
-  const runtime = hooks(); const sends = []
-  const useMessageHistory = await lifecycle('pages/endpoint-detail/useMessageHistory.ts', 'useMessageHistory', '  return {\n    receivedMessages',
-    'msgContent, setMsgContent, handleSend', {
-      ...runtime.api, ...draftModel, useI18n: () => i18n, useInboxCacheScope: () => 'fixture', isInboxCacheScopeActive: () => true,
-      useToast: () => ({ error() {} }), toRpcChannelParent: () => undefined, readMessageHistory: () => [], mergeHistoryRows: (a, b) => [...a, ...b],
+/** useMessageHistory up to its return, with every send held until the test answers it. */
+async function messageHistory(runtime, sends, toasts = []) {
+  return lifecycle('pages/endpoint-detail/useMessageHistory.ts', 'useMessageHistory', '  return {\n    receivedMessages',
+    'msgContent, setMsgContent, handleSend, channelMessages, dismissLocal, restoreLocal, sending', {
+      ...runtime.api, ...draftModel, ...chatModel, ...draftStore, useI18n: () => i18n, useInboxCacheScope: () => 'fixture', isInboxCacheScopeActive: () => true,
+      useToast: () => ({ error: (...args) => toasts.push(args) }), toRpcChannelParent: () => undefined, readMessageHistory: () => [], mergeHistoryRows: (a, b) => [...a, ...b],
       INBOX_RPC: { MESSAGES: 'inbox.messages' }, ENDPOINT_RPC: { SEND_MESSAGE: 'endpoint.send' }, SIDE_EVENT_PUSH: { MESSAGE_RECEIVE: 'message.receive' },
       subscribeConsoleRecoveryGap: () => () => {}, subscribeEndpointPush: () => () => {}, listInboxCache: async () => [], putInboxCache: async () => {},
       readMessagePush: () => undefined, normalizeInboundContent: value => value, correlateChatRows: rows => rows, matchesMessageConversation,
       parseComposerToSegments: text => text ? [{ type: 'text', data: { text } }] : [], hasRenderableComposerSegments: segments => segments.length > 0,
       requestConsole: request => { if (request.type === 'endpoint.send') { const d = deferred(); sends.push({ request, ...d }); return d.promise } return Promise.resolve({ inboxEnabled: false, messages: [] }) },
     })
+}
+
+test('message composer text belongs to the conversation it was typed in', async () => {
+  draftStore.clearDraftStore()
+  const runtime = hooks(); const sends = []
+  const useMessageHistory = await messageHistory(runtime, sends)
   let selection = group('A')
   runtime.mount(() => useMessageHistory({ adapter: 'icqq', endpointId: 'bot', endpoint: { id: 'bot', adapter: 'icqq' }, selection })); await runtime.settle()
   runtime.value.setMsgContent('发给 A 的话'); runtime.render()
@@ -127,7 +135,8 @@ test('attachments, quotes and forwards stay with their conversation', async () =
     ...runtime.api, ...draftModel, ...groupPanelModel, ...referenceModel, useMediaQuery: () => false, useI18n: () => i18n, useEndpointConsole: () => ctx, hasConsolePermission: () => true, useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }),
     translate, DEFAULT_MUTE_MINUTES: 10, MAX_MUTE_MINUTES: 43200, ENDPOINT_RPC: {}, memberRoleOf: () => 'member', createAttachmentId: type => `${type}-fixture`,
     parseComposerToSegments: text => text ? [{ type: 'text', data: { text } }] : [], hasRenderableComposerSegments: segments => segments.length > 0,
-    Alert: 'alert', AlertDescription: 'alert-description',
+    Alert: 'alert', AlertDescription: 'alert-description', ...chatModel, ...draftStore, useIsMobile: () => false,
+    window: { addEventListener() {}, removeEventListener() {} },
   })
   const contextFor = selection => ({ valid: true, adapter: 'icqq', endpointId: 'bot', selection, msgContent: '', setMsgContent() {}, sending: false, members: [], membersLoading: false,
     handleSend: options => { sent.push(options) } })
@@ -174,4 +183,106 @@ test('Enter during IME composition never sends a message or inserts a media URL'
     assert.match(handler, /shouldSubmitOnEnter\(e/, `${label} input checks IME composition before submitting`)
   }
   assert.match(composer, /shouldSubmitOnEnter\(e\)/, 'Shift+Enter still inserts a line break in the message box')
+})
+
+test('a message sent from the Console shows only what its receipt says', async () => {
+  draftStore.clearDraftStore()
+  const runtime = hooks(); const sends = []; const toasts = []
+  const useMessageHistory = await messageHistory(runtime, sends, toasts)
+  let selection = group('A')
+  runtime.mount(() => useMessageHistory({ adapter: 'icqq', endpointId: 'bot', endpoint: { id: 'bot', adapter: 'icqq' }, selection })); await runtime.settle()
+  const local = () => runtime.value.channelMessages.filter(row => row.local)
+
+  runtime.value.setMsgContent('第一条'); runtime.render()
+  void runtime.value.handleSend(); await runtime.settle()
+  assert.deepEqual(local().map(row => row.delivery), ['sending'], 'the bubble appears at once, marked as sending')
+  assert.equal(runtime.value.sending, true, 'a second send waits until this one is answered')
+  sends[0].resolve({ messageId: 'm1' }); await runtime.settle()
+  assert.deepEqual(local().map(row => [row.delivery, row.messageId]), [['sent', 'm1']])
+  assert.equal(runtime.value.msgContent, '')
+
+  runtime.value.setMsgContent('没有消息 ID'); runtime.render()
+  void runtime.value.handleSend(); await runtime.settle()
+  sends[1].resolve({}); await runtime.settle()
+  assert.equal(local()[1].delivery, 'accepted', 'without a message ID it is not called sent')
+
+  // Refused by the Host: nothing went out, the text stays in the box for editing.
+  runtime.value.setMsgContent('被拒绝'); runtime.render()
+  void runtime.value.handleSend(); await runtime.settle()
+  sends[2].reject(Object.assign(new Error('没有 endpoint.operate 权限'), { details: { serverCode: 'forbidden' } })); await runtime.settle()
+  assert.equal(local()[2].delivery, 'failed')
+  assert.equal(local()[2].failure, '没有 endpoint.operate 权限')
+  assert.equal(runtime.value.msgContent, '被拒绝')
+  runtime.value.dismissLocal(local()[2].id); runtime.render()
+  assert.equal(local().length, 2)
+
+  // Timed out: it may be on the platform. The text leaves the box (Enter cannot resend it) and is offered back explicitly.
+  runtime.value.setMsgContent('可能已发出'); runtime.render()
+  void runtime.value.handleSend(); await runtime.settle()
+  sends[3].reject(Object.assign(new Error('The instance did not answer in time'), { details: { serverCode: 'instance_timeout' } })); await runtime.settle()
+  const unknown = local()[2]
+  assert.equal(unknown.delivery, 'unknown')
+  assert.equal(unknown.restorable, true)
+  assert.equal(runtime.value.msgContent, '', 'an unknown outcome is never left ready to send again')
+  assert.equal(sends.length, 4, 'nothing is replayed')
+  runtime.value.restoreLocal(unknown.id); runtime.render()
+  assert.equal(runtime.value.msgContent, '可能已发出', 'the user can put it back after checking')
+  assert.equal(local().length, 2)
+  assert.equal(toasts.length, 0, 'the receipt is on the bubble in the open conversation, no toast on top')
+
+  // A failure in a conversation the user has left is also announced.
+  runtime.value.setMsgContent('离开后失败'); runtime.render()
+  void runtime.value.handleSend(); await runtime.settle()
+  selection = group('B'); runtime.render(); await runtime.settle()
+  sends[4].reject(new Error('参数无效')); await runtime.settle()
+  assert.equal(toasts.length, 1)
+})
+
+test('unsent text survives leaving the chat tab, and a send that finishes meanwhile is not offered again', async () => {
+  draftStore.clearDraftStore()
+  const sends = []
+  const selection = group('A')
+  const props = { adapter: 'icqq', endpointId: 'bot', endpoint: { id: 'bot', adapter: 'icqq' }, selection }
+  let runtime = hooks()
+  let useMessageHistory = await messageHistory(runtime, sends)
+  runtime.mount(() => useMessageHistory(props)); await runtime.settle()
+  runtime.value.setMsgContent('写了一半'); runtime.render(); await runtime.settle()
+
+  // Another tab unmounts the workspace; coming back mounts a fresh one.
+  runtime = hooks(); useMessageHistory = await messageHistory(runtime, sends)
+  runtime.mount(() => useMessageHistory(props)); await runtime.settle()
+  assert.equal(runtime.value.msgContent, '写了一半')
+
+  void runtime.value.handleSend(); await runtime.settle()
+  runtime = hooks(); useMessageHistory = await messageHistory(runtime, sends)
+  sends[0].resolve({ messageId: 'm1' }); await runtime.settle()
+  runtime.mount(() => useMessageHistory(props)); await runtime.settle()
+  assert.equal(runtime.value.msgContent, '', 'the sent text is gone from the store even though its workspace had unmounted')
+})
+
+test('URL requests, panes and the composer follow the chat rules', () => {
+  const { readChatRequest, writeChatRequest, chatRequestKey, chatPane, composerAvailability, continuationFlags, deliveryAfterError, deliveryAfterSend } = chatModel
+  assert.deepEqual(readChatRequest(new URLSearchParams('tab=chat&conversation=group%3A1%3A2')), { type: 'channel', channelType: 'group', id: '1:2' })
+  assert.deepEqual(readChatRequest(new URLSearchParams('inbox=notices')), { type: 'notices' })
+  assert.equal(readChatRequest(new URLSearchParams('conversation=room:1')), null, 'an unknown kind is ignored')
+  assert.equal(readChatRequest(new URLSearchParams('inbox=elsewhere')), null)
+  const written = writeChatRequest(new URLSearchParams('tab=chat&inbox=requests'), { type: 'channel', channelType: 'private', id: 'a/b' })
+  assert.equal(written.toString(), 'tab=chat&conversation=private%3Aa%2Fb', 'the tab stays, the old request goes')
+  assert.equal(writeChatRequest(written, null).toString(), 'tab=chat')
+  assert.equal(chatRequestKey({ type: 'channel', channelType: 'group', id: '1', name: 'x', parent: { type: 'guild', id: 'g' } }), chatRequestKey(readChatRequest(new URLSearchParams('conversation=group:1'))))
+  assert.equal(chatPane('account', null), 'list'); assert.equal(chatPane('account', group('1')), 'chat'); assert.equal(chatPane('conversation', null), 'chat')
+  assert.deepEqual(composerAvailability({ canOperate: false, connected: true }), { mode: 'notice', reason: 'read-only' })
+  assert.deepEqual(composerAvailability({ canOperate: true, connected: false }), { mode: 'notice', reason: 'offline' })
+  assert.deepEqual(composerAvailability({ canOperate: true, connected: undefined }), { mode: 'compose' }, 'an unknown state does not hide the box')
+  const at = minutes => Date.UTC(2026, 0, 1, 10, minutes)
+  const day = timestamp => new Date(timestamp).toISOString().slice(0, 10)
+  assert.deepEqual(continuationFlags([
+    { sender: { id: 'u1' }, timestamp: at(0) }, { sender: { id: 'u1' }, timestamp: at(2) }, { sender: { id: 'u2' }, timestamp: at(3) },
+    { sender: { id: 'u2' }, timestamp: at(20) }, { outgoing: true, timestamp: at(21), delivery: 'failed' }, { outgoing: true, timestamp: at(22) },
+  ], day), [false, true, false, false, false, false])
+  assert.equal(deliveryAfterSend({ messageId: 'x' }), 'sent'); assert.equal(deliveryAfterSend({ messageId: '' }), 'accepted')
+  assert.equal(deliveryAfterError(Object.assign(new Error('timeout'), { code: 'TIMEOUT' })), 'unknown')
+  assert.equal(deliveryAfterError(Object.assign(new Error('x'), { details: { serverCode: 'instance_unavailable' } })), 'failed', 'not dispatched: certainly not sent')
+  assert.equal(deliveryAfterError(new Error('Failed to fetch')), 'unknown')
+  assert.equal(deliveryAfterError(new Error('参数无效')), 'failed')
 })

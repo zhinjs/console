@@ -329,7 +329,8 @@ export function EndpointOverview({ scope, endpointInfo, onOpenTab }: {
       ) : null}
       <ObjectSection title={i18n.t('会话')}
         description={i18n.t('有覆盖的会话与最近活跃的会话。全部会话在「聊天」页签里。')}
-        actions={<Button variant="outline" size="sm" onClick={() => onOpenTab('chat')}><MessagesSquare />{i18n.t('全部会话')}</Button>}>
+        // A real link to the account chat's list pane (?tab=chat, no conversation): back returns here.
+        actions={<Button asChild variant="outline" size="sm"><Link to={scopeHref(scope, 'chat')}><MessagesSquare />{i18n.t('全部会话')}</Link></Button>}>
         {conversations.status === 'unsupported' || conversations.status === 'forbidden' ? (
           <StatusState kind={conversations.status} compact permissions={conversations.status === 'forbidden' ? ['feature.view'] : undefined}
             description={conversations.status === 'unsupported' ? i18n.t('会话摘要需要新版 Host。会话仍可在「聊天」页签中查看。') : undefined} />

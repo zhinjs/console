@@ -22,3 +22,4 @@ export function replayScopeApproximate(scope: ScopeRef): boolean
 export function usageSessionPattern(scope: ScopeRef): string
 export function ambientGroupKey(scope: ScopeRef): string | null
 export function ambientSettingsHref(scope: ScopeRef): string | null
+export function readScopeFilterParams(params: { get(name: string): string | null } | null | undefined): Scope | null

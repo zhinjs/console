@@ -3,6 +3,6 @@ const read=path=>readFileSync(new URL(`../console-ui/src/${path}`,import.meta.ur
 test('channel navigation and conversation searches use clear task labels',()=>{
  const list=read('pages/scope/overview-panels.tsx'),sidebar=read('pages/endpoint-detail/ConversationSidebar.tsx'),detail=read('pages/endpoint-detail/index.tsx');
  assert.doesNotMatch(list,/机器人管理/);assert.match(list,/title=\{i18n\.t\('聊天账号'\)\}/);
- assert.match(sidebar,/aria-label=\{i18n\.t\("返回账号概览"\)\}/);assert.match(sidebar,/aria-label=\{i18n\.t\("搜索会话"\)\}/);
+ assert.match(sidebar,/aria-label=\{i18n\.t\('会话列表'\)\}/);assert.match(detail,/aria-label=\{i18n\.t\("返回会话列表"\)\}/);assert.match(sidebar,/aria-label=\{i18n\.t\("搜索会话"\)\}/);
  assert.match(detail,/aria-label=\{i18n\.t\("搜索成员"\)\}/);assert.doesNotMatch(detail,/Telegram Web/);
 });

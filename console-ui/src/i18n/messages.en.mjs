@@ -1,6 +1,7 @@
 import { authMessages } from './messages.en.auth.mjs'
 import { opsMessages } from './messages.en.ops.mjs'
 import { adminMessages } from './messages.en.admin.mjs'
+import { chatMessages } from './messages.en.chat.mjs'
 import { pluginsMessages } from './messages.en.plugins.mjs'
 import { insightsMessages } from './messages.en.insights.mjs'
 import { scopeMessages } from './messages.en.scope.mjs'
@@ -10,6 +11,7 @@ export const englishMessages = Object.freeze({
   ...authMessages,
   ...opsMessages,
   ...adminMessages,
+  ...chatMessages,
   ...pluginsMessages,
   ...insightsMessages,
   ...scopeMessages,
@@ -170,13 +172,6 @@ export const englishMessages = Object.freeze({
   "查看内置角色，创建自定义角色与权限": "Review built-in roles; create custom roles and permissions",
   "查看并吊销所有用户的 API 令牌": "Review and revoke every user's API tokens",
   "查看登录、权限变更与被拒绝的请求": "Review sign-ins, permission changes and denied requests",
-  "离开当前聊天？": "Leave this chat?",
-  "未发送的文字、附件和引用不会带到另一个账号。": "Unsent text, attachments and references will not carry over to another account.",
-  "放弃草稿并继续": "Discard draft and continue",
-  "切换聊天账号": "Switch chat account",
-  "没有可切换的聊天账号": "No chat accounts to switch to",
-  "当前账号": "Current account",
-  "管理聊天账号": "Manage chat accounts",
   "添加附件": "Add attachment",
   "附件": "Attachments",
   "实验": "Experimental",
@@ -232,7 +227,6 @@ export const englishMessages = Object.freeze({
   "Enter 发送 · Shift+Enter 换行": "Enter to send · Shift+Enter for a new line",
   "会话列表": "Conversation list",
   "发送": "Send",
-  "关闭会话列表": "Close conversation list",
   "等待登录": "Waiting for login",
   "连接中": "Connecting",
   "重连中": "Reconnecting",
@@ -1544,7 +1538,6 @@ export const englishMessages = Object.freeze({
   "本地文件": "Local file",
   "引用 {0}: {1}": "Quote {0}: {1}",
   "转发 {0}: {1}": "Forward {0}: {1}",
-  " 会话列表": " conversations",
   "加载更早消息": "Load earlier messages",
   "消息历史读取失败：": "Could not read message history: ",
   "暂无消息，对方发送的消息会显示在此处": "No messages yet. Incoming messages will appear here.",
@@ -1606,7 +1599,6 @@ export const englishMessages = Object.freeze({
   "删除好友失败": "Could not delete friend",
   "测试失败：{0}": "Test failed: {0}",
   "聊天账号": "Chat accounts",
-  "加载失败：{0}": "Could not load: {0}",
   "运行状态": "Runtime status",
   "已连接": "Connected",
   "未连接": "Disconnected",
@@ -3173,7 +3165,6 @@ export const englishMessages = Object.freeze({
   "建议 {0} 秒后重试。": "Try again in {0} s.",
   "需要以下任一权限：": "Needs any of these permissions:",
   "查看上级设置": "View the upper level",
-  "返回账号概览": "Back to account overview",
   "该适配器下的账号、连接与功能覆盖。": "Accounts, connections and feature overrides of this adapter.",
   "{0} / {1} 在线": "{0} / {1} online",
   "这个会话的聊天、功能与聊天角色。": "Chat, features and chat roles of this conversation.",
@@ -3187,10 +3178,6 @@ export const englishMessages = Object.freeze({
   "地址无效": "Invalid address",
   "这个范围不能单独配置功能": "Features cannot be configured for this scope on its own",
   "适配器名称不是实例别名，或账号 ID 含有不支持的字符；这里沿用上级配置。": "The adapter name is not an instance alias, or the account ID has unsupported characters; the upper level's settings apply.",
-  "按范围汇总的记录还在建设中。下面的页面可以按这个范围的身份查找。": "Per-scope records are still being built. The pages below can search by this scope's identity.",
-  "这个范围还没有汇总记录": "No collected records for this scope yet",
-  "可在下列页面搜索「{0}」。": "Search for “{0}” on these pages.",
-  "全局记录在下列页面查看。": "Global records are on these pages.",
   "这个范围不能设置聊天角色": "Chat roles cannot be set for this scope",
   "适配器名称不是实例别名，或账号 ID 含有不支持的字符。": "The adapter name is not an instance alias, or the account ID has unsupported characters.",
   "授予 {0}：{1} / {2}": "Grant {0}: {1} / {2}",

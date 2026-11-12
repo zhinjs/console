@@ -1,7 +1,7 @@
 import { Bot } from 'lucide-react'
 import { useI18n } from '../../i18n'
 import { Badge } from '../../components/ui/badge'
-import { EndpointWorkspaceView } from '../endpoint-detail'
+import { AccountChatPanel } from './chat-panels'
 import { ObjectPageLayout, useScopeTab } from '../../scope/ObjectPageLayout'
 import { ChatRolesPanel } from '../../scope/ChatRolesPanel'
 import type { Scope } from '../../scope/scope-tree.mjs'
@@ -46,7 +46,7 @@ export function EndpointObjectPage({ scope }: { scope: Scope & { level: 'endpoin
       badges={{ access: waiting || undefined }}
       panels={{
         overview: <EndpointOverview scope={scope} endpointInfo={endpointInfo} onOpenTab={selectTab} />,
-        chat: <div className="console-object-chat"><EndpointWorkspaceView target={{ adapter, endpointId: endpoint }} /></div>,
+        chat: <AccountChatPanel scope={scope} />,
         access: <EndpointAccessPanel scope={scope} data={data} />,
         features: <ScopeFeaturesPanel scope={scope} />,
         roles: <ChatRolesPanel scope={scope} />,
