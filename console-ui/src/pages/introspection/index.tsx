@@ -42,7 +42,7 @@ const TAB_CONFIG: Record<
   commands: { label: '命令', pageSize: 25, icon: Terminal, description: '聊天里可以调用的命令：模式、参数、别名与权限规则。' },
   middlewares: { label: '中间件', pageSize: 30, icon: Network, description: '消息进出时依次经过的处理环节与顺序。' },
   components: { label: '组件', pageSize: 30, icon: Boxes, description: '插件提供的消息组件，可在这里预览输出。' },
-  endpoints: { label: 'Endpoints', pageSize: 30, icon: Bot, description: '当前运行代登记的聊天账号端点。' },
+  endpoints: { label: '聊天账号', pageSize: 30, icon: Bot, description: '当前运行代登记的聊天账号端点。' },
   bindings: { label: 'Agent 绑定', pageSize: 30, icon: Link2, description: 'Agent 绑定仅表示配置关系，不代表已启用。' },
   tools: { label: '工具', pageSize: 15, icon: Wrench, description: 'Agent 可以调用的工具及其来源。' },
   'prompt-sections': { label: '提示词片段', pageSize: 20, icon: ScrollText, description: '拼进系统提示词的片段：层级、顺序与保留策略。' },

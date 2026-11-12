@@ -1,4 +1,4 @@
-import { useCallback, useReducer, useRef } from 'react'
+import { useCallback, useEffect, useReducer, useRef } from 'react'
 import { AlertTriangle, CheckCircle2, CircleHelp, Loader2, RefreshCw, X, XCircle } from 'lucide-react'
 import { cn } from '@zhin.js/client'
 import './status-surfaces.css'
@@ -97,7 +97,19 @@ export function ActionReceipt({ controller, className, lockHref }: {
 }) {
   const i18n = useI18n()
   const { state, confirm, cancel, verify, canVerify, reset } = controller
-  if (state.phase === 'idle') return null
+  // Phases swap the buttons (确认 → 提交中 → 结果), so the focused button unmounts. Keep keyboard
+  // users inside the receipt: move focus to its first action, or the panel itself.
+  const panel = useRef<HTMLElement | null>(null)
+  const hadFocus = useRef(false)
+  useEffect(() => {
+    const node = panel.current
+    if (!node || !hadFocus.current) return
+    const active = document.activeElement
+    if (active && active !== document.body && node.contains(active)) return
+    const target = node.querySelector<HTMLElement>('.console-receipt-actions button:not([disabled]), .console-receipt-close')
+    ;(target ?? node).focus()
+  }, [state.phase])
+  if (state.phase === 'idle') { hadFocus.current = false; return null }
   const plan = state.plan
   const busy = state.phase === 'submitting' || state.phase === 'verifying'
   const Icon = state.phase === 'succeeded' ? CheckCircle2
@@ -107,6 +119,10 @@ export function ActionReceipt({ controller, className, lockHref }: {
           : busy ? Loader2 : null
   return (
     <section
+      ref={panel}
+      tabIndex={-1}
+      onFocusCapture={() => { hadFocus.current = true }}
+      onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null) && event.relatedTarget) hadFocus.current = false }}
       className={cn('console-receipt', `console-receipt--${state.phase}`, className)}
       aria-live="polite"
       aria-busy={busy}

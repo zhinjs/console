@@ -603,11 +603,12 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
                   </Badge>
                 </span>
               </div>
-              {!readOnly && <div className="im-member-actions">
+              {/* The group owner cannot be kicked, muted or demoted by the bot. */}
+              {!readOnly && roleKind !== 'owner' && <div className="im-member-actions">
                 <Button
                   size="sm"
-                  variant="destructive"
-                  className="im-member-danger"
+                  variant="outline"
+                  className="im-member-danger text-destructive hover:text-destructive"
                   onClick={() =>
                     void handleGroupAction(ENDPOINT_RPC.GROUP_KICK, uid, item.name)
                   }

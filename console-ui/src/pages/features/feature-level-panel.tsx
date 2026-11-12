@@ -255,7 +255,9 @@ function FeatureRow({ scope, level, levelKey, feature, row, detail, reload }: Fe
       confirmLabel: i18n.t('全部移除'),
     })
   }
-  const switchState = { checked: row.state === 'enabled', disabled: !value || row.state === 'locked' || !canToggle || busy }
+  // While a write is in flight the switch only reads as disabled (aria-disabled): a real `disabled`
+  // would drop keyboard focus to the page start.
+  const switchState = { checked: row.state === 'enabled', disabled: !value || row.state === 'locked' || !canToggle, busy }
   const sourceLabel = row.stateSource ? i18n.t(SCOPE_LEVEL_LABELS[row.stateSource]) : null
   const expandable = Boolean(value)
   return (
@@ -280,7 +282,8 @@ function FeatureRow({ scope, level, levelKey, feature, row, detail, reload }: Fe
         </div>
         <div className="console-feature-row-switch">
           <Switch aria-label={i18n.t('{0} · 启用', [row.displayName])} checked={switchState.checked} disabled={switchState.disabled}
-            title={!canToggle ? i18n.t('当前身份不能启停功能') : undefined} onCheckedChange={checked => { if (!switchState.disabled) toggle(checked === true) }} />
+            aria-disabled={switchState.disabled || switchState.busy || undefined} className={switchState.busy ? 'cursor-wait opacity-60' : undefined}
+            title={!canToggle ? i18n.t('当前身份不能启停功能') : undefined} onCheckedChange={checked => { if (!switchState.disabled && !switchState.busy) toggle(checked === true) }} />
         </div>
       </div>
       {detail.status === 'failed' ? <div className="console-feature-row-body"><StatusState compact error={detail.error} onRetry={reload} /></div> : null}
