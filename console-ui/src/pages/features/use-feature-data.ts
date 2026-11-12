@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useInstanceRecovery } from '../../hooks/use-instance-recovery'
 import { useI18n } from '../../i18n'
 import { useToast } from '../../components/toast'
 import { apiFetch } from '../../utils/auth'
@@ -7,9 +8,9 @@ import { ENDPOINT_RPC, FEATURE_RPC } from '../../contracts/zhin-console'
 import { validatePluginList } from '../plugin-list-model.mjs'
 import { readEndpointList } from '../endpoint-list-model.mjs'
 import {
-  classifyFeatureRpcError, globalFeatureRows, mergeFeatureMatrix, readFeatureDetail, readFeatureList, readFeatureMatrix,
+  appendConversationPage, classifyFeatureRpcError, conversationsRequest, featureLockError, globalFeatureRows, readConversationPage, mergeFeatureMatrix, readFeatureDetail, readFeatureList, readFeatureMatrix,
   readFeatureWriteResult,
-  type FeatureDetail, type FeatureLevel, type FeatureList, type FeatureMatrixRow, type FeatureRpcBody,
+  type ConversationPage, type ConversationQuery, type ConversationOverrideCounts, type FeatureDetail, type FeatureLevel, type FeatureLock, type FeatureList, type FeatureMatrixRow, type FeatureRpcBody,
   type FeatureRpcFailure, type FeatureWriteResult,
 } from './feature-model.mjs'
 
@@ -22,6 +23,8 @@ export interface FeatureMatrixState {
   endpoints: Readonly<Record<string, readonly string[]>>
   /** Configuration revision the matrix was read at (`expectedRevision` for writes). */
   revision: string
+  /** Conversations with overrides per endpoint, when the Host reports them (ADR 0055). */
+  conversationOverrides?: ConversationOverrideCounts
   /** `rpc` when the Host served `feature.matrix`; otherwise only the global column is real. */
   source: MatrixSource
   loading: boolean
@@ -51,7 +54,8 @@ export function useFeatureMatrix(): FeatureMatrixState {
     void Promise.all([plugins, matrix]).then(([globalRows, remote]) => {
       if (request !== sequence.current) return
       const merged = mergeFeatureMatrix(globalRows, remote.matrix)
-      setState({ rows: merged.rows, adapters: merged.adapters, endpoints: merged.endpoints, revision: merged.revision, source: remote.source, loading: false, error: null })
+      setState({ rows: merged.rows, adapters: merged.adapters, endpoints: merged.endpoints, revision: merged.revision,
+        ...(merged.conversationOverrides ? { conversationOverrides: merged.conversationOverrides } : {}), source: remote.source, loading: false, error: null })
     }, (error: unknown) => {
       if (request !== sequence.current) return
       setState(previous => ({ ...previous, source: previous.source === 'loading' ? 'error' : previous.source, loading: false, error: error instanceof Error ? error.message : String(error) }))
@@ -61,6 +65,7 @@ export function useFeatureMatrix(): FeatureMatrixState {
     load()
     return () => { sequence.current += 1 }
   }, [load])
+  useInstanceRecovery(load)
   return { ...state, refresh: load }
 }
 
@@ -69,6 +74,7 @@ export interface EndpointSummaryItem {
   adapter: string
   connected: boolean
   status: 'online' | 'offline'
+  transportState?: string
   pendingRequestCount?: number
   pendingNoticeCount?: number
 }
@@ -93,6 +99,7 @@ export function useEndpointList() {
     load()
     return () => { sequence.current += 1 }
   }, [load])
+  useInstanceRecovery(load)
   return { ...state, refresh: load }
 }
 
@@ -120,6 +127,7 @@ function useFeatureRead<T>(request: FeatureRpcBody | null, read: (payload: unkno
     load()
     return () => { sequence.current += 1 }
   }, [load])
+  useInstanceRecovery(load)
   return { ...state, refresh: load }
 }
 
@@ -128,14 +136,15 @@ export function useFeatureList() {
   return useFeatureRead<FeatureList>({ type: FEATURE_RPC.LIST }, readFeatureList)
 }
 
-/** `feature.get` for one plugin at one level (`key` is the alias or `<alias>/<endpointId>`). */
+/** `feature.get` for one plugin at one level (`key`: alias, `<alias>/<endpointId>` or a conversation key). */
 export function useFeatureDetail(plugin: string, level: FeatureLevel, key?: string) {
   return useFeatureRead<FeatureDetail>({ type: FEATURE_RPC.GET, plugin, level, ...(key ? { key } : {}) }, readFeatureDetail)
 }
 
 /**
  * Sends one `feature.*` write and reports the outcome. A revision conflict reloads (`reload`) and
- * tells the user the page now shows the newer configuration; every outcome reloads.
+ * tells the user the page now shows the newer configuration; every outcome reloads. A write the
+ * Host refuses because a higher level disabled the plugin (`locked`) is a lock notice, too.
  */
 export function useFeatureWriter() {
   const i18n = useI18n()
@@ -145,7 +154,9 @@ export function useFeatureWriter() {
     setPending(id)
     try {
       const result = readFeatureWriteResult(await requestConsole<unknown>(body))
-      if (result.status === 'conflict') {
+      if (result.status === 'locked') {
+        toast.warning(lockMessage(result.lockedBy), i18n.t("功能已被上级禁用"))
+      } else if (result.status === 'conflict') {
         toast.warning(i18n.t("配置已被其他地方修改，未保存。已重新读取最新配置，请确认后重试。"), i18n.t("配置已变化"))
       } else if (result.status === 'invalid') {
         toast.error([result.message, ...result.errors.map(item => `${item.path}: ${item.message}`)].filter(Boolean).join('\n') || i18n.t("覆盖配置校验失败，未保存"))
@@ -156,11 +167,64 @@ export function useFeatureWriter() {
       reload()
       return result
     } catch (error) {
+      const lock = featureLockError(error)
+      if (lock) {
+        toast.warning(lockMessage(lock.lockedBy), i18n.t("功能已被上级禁用"))
+        reload()
+        return { status: 'locked', ...(lock.lockedBy ? { lockedBy: lock.lockedBy } : {}), revision: '', message: '', restartRequired: false, warnings: [], errors: [] }
+      }
       toast.error(error instanceof Error ? error.message : String(error), i18n.t("保存失败"))
       return null
     } finally {
       setPending(null)
     }
   }, [i18n, toast])
+  function lockMessage(lockedBy?: FeatureLock): string {
+    return lockedBy === 'global' ? i18n.t("该功能已在全局禁用，这里不能启停。已重新读取。")
+      : lockedBy === 'adapter' ? i18n.t("该功能已在适配器禁用，这里不能启停。已重新读取。")
+        : lockedBy === 'endpoint' ? i18n.t("该功能已在账号禁用，这里不能启停。已重新读取。")
+          : i18n.t("该功能已被上级禁用，这里不能启停。已重新读取。")
+  }
   return { write, pending }
+}
+
+export const CONVERSATION_PAGE_SIZE = 50
+
+export interface ConversationListState {
+  page: ConversationPage | null
+  /** `unsupported` on a Host without conversation-level configuration (ADR 0055). */
+  status: 'loading' | 'ready' | FeatureRpcFailure
+  error: string | null
+  loadingMore: boolean
+  loadMore: () => void
+  refresh: () => void
+}
+
+/** `feature.conversations`, first page on every filter change, further pages on demand. */
+export function useConversationList(filter: Omit<ConversationQuery, 'cursor'>): ConversationListState {
+  const [state, setState] = useState<Omit<ConversationListState, 'loadMore' | 'refresh'>>({ page: null, status: 'loading', error: null, loadingMore: false })
+  const sequence = useRef(0)
+  const body = JSON.stringify(conversationsRequest({ limit: CONVERSATION_PAGE_SIZE, ...filter }))
+  const fetchPage = useCallback((cursor?: string) => {
+    const ticket = ++sequence.current
+    const request = { ...(JSON.parse(body) as FeatureRpcBody), ...(cursor ? { cursor } : {}) }
+    setState(previous => cursor ? { ...previous, loadingMore: true } : { ...previous, status: previous.page ? previous.status : 'loading' })
+    requestConsole<unknown>(request).then(payload => {
+      if (ticket !== sequence.current) return
+      const next = readConversationPage(payload)
+      setState(previous => ({ page: cursor ? appendConversationPage(previous.page, next) : next, status: 'ready', error: null, loadingMore: false }))
+    }).catch((error: unknown) => {
+      if (ticket !== sequence.current) return
+      setState(previous => ({ ...previous, status: classifyFeatureRpcError(error), error: error instanceof Error ? error.message : String(error), loadingMore: false }))
+    })
+  }, [body])
+  useEffect(() => {
+    fetchPage()
+    return () => { sequence.current += 1 }
+  }, [fetchPage])
+  const cursor = state.page?.cursor
+  const loadMore = useCallback(() => { if (cursor) fetchPage(cursor) }, [cursor, fetchPage])
+  const refresh = useCallback(() => fetchPage(), [fetchPage])
+  useInstanceRecovery(refresh)
+  return { ...state, loadMore, refresh }
 }

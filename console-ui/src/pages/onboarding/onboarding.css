@@ -13,6 +13,8 @@
   .console-onboarding-summary small { margin-left: auto; color: hsl(var(--muted-foreground)); }
   .console-onboarding-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 16px; padding: 10px 14px; border: 1px solid hsl(var(--primary) / .35); border-radius: 10px; background: hsl(var(--primary) / .06); font-size: 13px; }
   .console-onboarding-banner > svg { width: 16px; height: 16px; flex: none; }
-  .console-onboarding-banner > span { flex: 1; min-width: 12rem; }
+  .console-onboarding-banner > span { flex: 1; min-width: 0; }
+  /* Phones: text, action and close stay on one row instead of leaving the close button alone below. */
+  @media (max-width: 767px) { .console-onboarding-banner { flex-wrap: nowrap; gap: 8px; padding: 8px 10px; } }
   @media (max-width: 767px) { .console-onboarding-steps { grid-template-columns: minmax(0, 1fr); } }
 }

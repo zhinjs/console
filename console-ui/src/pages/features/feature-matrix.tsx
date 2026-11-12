@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Lock, RefreshCw, ToggleLeft } from 'lucide-react'
 import { useI18n } from '../../i18n'
@@ -12,10 +13,13 @@ import { EmptyState } from '../../components/empty-state'
 import { ErrorAlert } from '../../components/error-alert'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { adapterHref, featureGlobalHref } from '../../console-routes.mjs'
+import { scopeHref } from '../../scope/scope-tree.mjs'
 import { cellState, setEnabledRequest, type FeatureCell } from './feature-model.mjs'
+import { ConversationOverrideLinks } from './conversation-list'
 import { useFeatureMatrix, useFeatureWriter } from './use-feature-data'
 import { FeatureSwitch } from './feature-switch'
 import { useConfirm } from '../../components/confirm-dialog'
+import { ObjectSection } from '../../scope/ObjectPageLayout'
 import { useConsoleAccess } from '../../hooks/use-console-access'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
 
@@ -23,7 +27,7 @@ function CellBadge({ cell, to }: { cell: FeatureCell | undefined; to?: string })
   const i18n = useI18n()
   const state = cellState(cell)
   const badge = state === 'locked'
-    ? <Badge variant="secondary" title={cell?.lockedBy === 'global' ? i18n.t("已在全局禁用") : i18n.t("已在适配器禁用")}><Lock aria-hidden="true" />{i18n.t("被上级禁用")}</Badge>
+    ? <Badge variant="secondary" title={cell?.lockedBy === 'global' ? i18n.t("已在全局禁用") : cell?.lockedBy === 'endpoint' ? i18n.t("已在账号禁用") : i18n.t("已在适配器禁用")}><Lock aria-hidden="true" />{i18n.t("被上级禁用")}</Badge>
     : state === 'enabled' ? <Badge variant="success">{i18n.t("启用")}</Badge>
       : state === 'disabled' ? <Badge variant="outline">{i18n.t("禁用")}</Badge>
         : <span className="text-muted-foreground">—</span>
@@ -31,9 +35,17 @@ function CellBadge({ cell, to }: { cell: FeatureCell | undefined; to?: string })
   return to ? <Link to={to} className="inline-flex rounded-md focus-visible:outline-2">{content}</Link> : content
 }
 
-export default function FeatureMatrixPage() {
+/**
+ * `/features` (功能矩阵): where each feature is enabled. Also the 功能 tab of the 全局 object page
+ * (`embedded`: no page header, the object page has one).
+ */
+export default function FeatureMatrixPage({ embedded = false, heading }: {
+  embedded?: boolean
+  /** Embedded only: the section around the matrix; its actions get the refresh button. */
+  heading?: { title: string; description: string; actions?: ReactNode }
+} = {}) {
   const i18n = useI18n()
-  const { rows, adapters, revision, source, loading, error, refresh } = useFeatureMatrix()
+  const { rows, adapters, revision, conversationOverrides, source, loading, error, refresh } = useFeatureMatrix()
   const adapterColumns = source === 'rpc' ? adapters : []
   const access = useConsoleAccess()
   const canToggle = source === 'rpc' && hasConsolePermission('feature.toggle', access)
@@ -48,15 +60,24 @@ export default function FeatureMatrixPage() {
     })
     if (ok) await write(setEnabledRequest({ plugin, level: 'global', enabled, revision }), refresh, `${plugin}\u0000global`)
   }
-  const toggleAdapter = (plugin: string, adapter: string, enabled: boolean) =>
+  const toggleAdapter = (plugin: string, adapter: string, cell: FeatureCell, enabled: boolean) => {
+    // A cell disabled higher up is locked: neither enabled nor disabled here.
+    if (cell.lockedBy) return
     void write(setEnabledRequest({ plugin, level: 'adapter', key: adapter, enabled, revision }), refresh, `${plugin}\u0000${adapter}`)
-  return (
-    <PageShell>
-      <PageHeader
-        title={i18n.t("功能矩阵")}
-        description={i18n.t("机器人在哪里启用了哪些功能。点击功能名进入全局配置。")}
-        actions={<Button variant="outline" size="sm" onClick={refresh} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>}
-      />
+  }
+  const refreshButton = <Button variant="outline" size="sm" onClick={refresh} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
+  const frame = (children: ReactNode) => embedded
+    ? <ObjectSection title={heading?.title ?? i18n.t("功能矩阵")} description={heading?.description} actions={<>{heading?.actions}{refreshButton}</>}>{children}</ObjectSection>
+    : <PageShell>{children}</PageShell>
+  return frame(
+    <>
+      {embedded ? null : (
+        <PageHeader
+          title={i18n.t("功能矩阵")}
+          description={i18n.t("机器人在哪里启用了哪些功能。点击功能名进入全局配置。")}
+          actions={refreshButton}
+        />
+      )}
       {source !== 'rpc' && source !== 'loading' && !error ? (
         <Alert role="status">
           <AlertDescription>
@@ -65,7 +86,7 @@ export default function FeatureMatrixPage() {
               : source === 'unsupported'
                 ? i18n.t("当前 Host 还不支持按适配器和账号配置功能，只显示全局状态。升级 Host 后会出现每个适配器的列。")
                 : i18n.t("暂时无法读取按适配器的功能开关，只显示全局状态。")}
-            {' '}<Link className="underline" to="/features/adapters">{i18n.t("查看适配器")}</Link>
+            {' '}<Link className="underline" to={scopeHref()}>{i18n.t("查看适配器")}</Link>
           </AlertDescription>
         </Alert>
       ) : null}
@@ -82,15 +103,20 @@ export default function FeatureMatrixPage() {
               <TableRow>
                 <TableHead>{i18n.t("功能")}</TableHead>
                 <TableHead>{i18n.t("全局")}</TableHead>
-                {adapterColumns.map(adapter => <TableHead key={adapter}><Link to={adapterHref(adapter)} className="hover:underline">{adapter}</Link></TableHead>)}
+                {adapterColumns.map(adapter => (
+                  <TableHead key={adapter} className="align-top">
+                    <Link to={adapterHref(adapter, 'features')} className="hover:underline">{adapter}</Link>
+                    <ConversationOverrideLinks counts={conversationOverrides} adapter={adapter} />
+                  </TableHead>
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.map(row => (
                 <TableRow key={row.plugin}>
                   <TableCell>
-                    <Link to={featureGlobalHref(row.plugin)} className="font-medium hover:underline">{row.plugin}</Link>
-                    {row.name !== row.plugin ? <span className="ml-2 text-xs text-muted-foreground">{row.name}</span> : null}
+                    <Link to={featureGlobalHref(row.plugin)} className="font-medium hover:underline">{row.name}</Link>
+                    {row.name !== row.plugin ? <code className="ml-2 text-xs text-muted-foreground">{row.plugin}</code> : null}
                     {row.description ? <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{row.description}</p> : null}
                   </TableCell>
                   <TableCell>
@@ -109,8 +135,8 @@ export default function FeatureMatrixPage() {
                             <FeatureSwitch label={i18n.t("{0} · {1}", [row.plugin, adapter])} plugin={row.plugin} adapter={adapter}
                               enabled={cell.enabled} lockedBy={cell.lockedBy} overridden={cell.overridden}
                               canToggle={canToggle} pending={pending === `${row.plugin}\u0000${adapter}`}
-                              onToggle={enabled => toggleAdapter(row.plugin, adapter, enabled)} />
-                            <Link to={adapterHref(adapter)} className="text-xs text-muted-foreground hover:underline" aria-label={i18n.t("打开 {0}", [adapter])}>{i18n.t("配置")}</Link>
+                              onToggle={enabled => toggleAdapter(row.plugin, adapter, cell, enabled)} />
+                            <Link to={adapterHref(adapter, 'features')} className="text-xs text-muted-foreground hover:underline" aria-label={i18n.t("打开 {0}", [adapter])}>{i18n.t("配置")}</Link>
                           </span>
                         ) : <CellBadge cell={cell} />}
                       </TableCell>
@@ -123,6 +149,6 @@ export default function FeatureMatrixPage() {
         )}
       </Card>
       {ConfirmDialog}
-    </PageShell>
+    </>,
   )
 }

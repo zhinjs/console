@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getConsoleTransport } from '../utils/console-client'
+import { useInstanceRecovery } from './use-instance-recovery'
 import { createReadState, pendingRead, successfulRead, failedRead } from './console-read-state.mjs'
 
 /** Track successful reads separately from empty values, retaining cached data on failure. */
@@ -27,5 +28,6 @@ export function useConsoleRead<T>(reader: () => Promise<T>, initial: T) {
     const off = manager.onConnectionChange(connected => { if (connected) void refresh().catch(() => {}) })
     return () => { sequence.current += 1; off() }
   }, [manager, refresh])
+  useInstanceRecovery(() => { void refresh().catch(() => {}) })
   return { ...state, refresh }
 }

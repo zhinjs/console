@@ -201,7 +201,7 @@ test('model configuration reads English from its settings entry and the copy its
       assert.doesNotMatch(translate('en', text), cjk, text)
   const codes = ['forbidden', 'plan-conflict', 'conflict', 'invalid-input', 'identity-change', 'not-authorized', 'reauthorize',
     'disconnected', 'target-denied', 'rejected', 'not-submitted', 'operation-closed', 'migration-required',
-    'receipt-storage-unavailable', 'unsupported', 'not-prepared', 'storage-integrity', 'outcome-unknown', 'stale-operation']
+    'receipt-storage-unavailable', 'unsupported', 'not-prepared', 'storage-integrity', 'outcome-unknown', 'stale-operation', 'not-installed']
   for (const code of [...codes, undefined]) {
     const error = code ? new InferenceRequestError(code) : new Error('network')
     assert.doesNotMatch(inferenceError(error, 'en'), cjk, code)

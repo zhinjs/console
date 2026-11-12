@@ -43,6 +43,9 @@ const ui = {
   '../components/ui/skeleton': { Skeleton: 'skeleton' },
   '../components/ui/radio-group': { RadioGroup: 'radio-group', RadioGroupItem: 'radio' },
   '../components/error-alert': { ErrorAlert: 'error-alert' },
+  '../components/StatusState': { StatusState: 'status-state' },
+  './insights/ScopeFilterBar': { ScopeFilterBar: 'scope-filter-bar', useScopeFilter: () => ({ active: false, scope: { level: 'global' }, identity: '' }) },
+  './insights/scope-filter.mjs': { ambientGroupKey: () => null },
   '../components/ApplyFeedback': { ApplyFeedback: 'apply-feedback' },
   '../components/PageHeader': { PageHeader: 'page-header' },
   '../components/PageShell': { PageShell: 'page-shell' },
@@ -147,21 +150,22 @@ test('a settings read failure is a permission problem only for 401/403', async (
   const reloads = []
   const failed = module.AmbientSettingsSection({ read: { loading: false, loaded: false, error: 'connect ECONNREFUSED 127.0.0.1:8086', data: null }, onReload: async () => { reloads.push(1); return null }, currentReadEpoch: () => 0 })
   assert.doesNotMatch(text(failed), /管理员|权限/)
-  const [alert] = ofType(failed, 'error-alert')
+  const [alert] = ofType(failed, 'status-state')
   assert.ok(alert, 'non-permission failures show an error with retry')
   assert.match(alert.props.error, /ECONNREFUSED/)
   alert.props.onRetry(); assert.equal(reloads.length, 1)
   const denied = module.AmbientSettingsSection({ read: { loading: false, loaded: false, error: 'Token scope does not allow this route', data: null }, onReload: async () => null, currentReadEpoch: () => 0 })
   assert.match(text(denied), /只有管理员账号可以修改/)
-  assert.equal(ofType(denied, 'error-alert').length, 0)
+  assert.equal(ofType(denied, 'status-state').length, 0)
 })
 
 test('a status read failure shows the real reason and retry', async () => {
   const module = await page()
   let retried = 0
   const tree = module.AmbientStatusSection({ read: { loading: false, loaded: false, error: 'HTTP 500', data: null }, onRetry: () => { retried++ } })
-  assert.equal(tree.type, 'error-alert')
-  assert.equal(tree.props.error, '群聊插话状态读取失败：HTTP 500')
+  assert.equal(tree.type, 'status-state')
+  assert.equal(tree.props.error, 'HTTP 500')
+  assert.equal(tree.props.description, '群聊插话状态读取失败：HTTP 500')
   tree.props.onRetry(); assert.equal(retried, 1)
 })
 

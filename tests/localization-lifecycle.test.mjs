@@ -13,8 +13,10 @@ import * as schemaModel from '../console-ui/src/components/PluginConfigForm/sche
 import { createConfigDraftGuard } from '../console-ui/src/components/PluginConfigForm/draft-guard.mjs'
 import { readMessageHistory, mergeHistoryRows } from '../console-ui/src/pages/endpoint-detail/inbox-history-model.mjs'
 import * as composerDraftModel from '../console-ui/src/pages/endpoint-detail/composer-draft-model.mjs'
+import * as chatDraftStore from '../console-ui/src/pages/endpoint-detail/chat-draft-store.mjs'
+import * as chatWorkspaceModel from '../console-ui/src/pages/endpoint-detail/chat-workspace-model.mjs'
 
-import { permissionRequest, readPermissionCatalog, readPermissionExplanation, permissionHttpError } from '../console-ui/src/pages/permission-explanation-model.mjs'
+import { HYPOTHETICAL_CHAT_ROLES, HYPOTHETICAL_STANDINGS, permissionRequest, readPermissionCatalog, readPermissionExplanation, permissionHttpError } from '../console-ui/src/pages/permission-explanation-model.mjs'
 import * as permissionLinkModel from '../console-ui/src/pages/permission-link-model.mjs'
 
 function hooks() {
@@ -144,7 +146,7 @@ test('switching language preserves loaded chat history pages and composer withou
     sender: { id: 'fixture' }, channel: { id: 'room', type: 'group' }, content: `user original ${i + 1}` }))
   const Component = await lifecycle('pages/endpoint-detail/useMessageHistory.ts', 'useMessageHistory', '  // A bounded event-history gap',
     'inboxMessages, loadInboxMessages, setMsgContent, msgContent, inboxMessagesError', {
-      ...runtime.api, ...composerDraftModel, useI18n: () => locale, useInboxCacheScope: () => 'fixture', isInboxCacheScopeActive: () => true,
+      ...runtime.api, ...composerDraftModel, ...chatDraftStore, ...chatWorkspaceModel, useI18n: () => locale, useInboxCacheScope: () => 'fixture', isInboxCacheScopeActive: () => true,
       useToast: () => ({ error() {} }), toRpcChannelParent: () => undefined, readMessageHistory, mergeHistoryRows, INBOX_RPC: { MESSAGES: 'fixture' },
       requestConsole: async request => { requests.push(request); return { inboxEnabled: true, messages: request.beforeTs === undefined ? rows.slice(50) : rows.slice(0, 50) } },
     })
@@ -195,11 +197,11 @@ test('task language refresh preserves the operation epoch, target and draft whil
 test('permission requests use the selected language without clearing hypotheses or automatically rerunning checks', async () => {
  const runtime=hooks(); let locale=messages('zh-CN'); const requests=[]; const scope='permission-fixture';
  const command={id:'root/demo\0zhin.command\0status',owner:'root/demo',name:'status',description:'状态',permits:[]};
- const component=await lifecycle('pages/command-permissions.tsx','CommandPermissionsPage','  return <div',
-  'loadCatalog, explain, choose, setSenderId, senderId, setRoles, roles, setTarget, target, setIncludeTarget, setHypothesis, hypothesis, selected, current', {
+ const component=await lifecycle('pages/command-permissions.tsx','CommandPermissionsPage','  return <PageShell',
+  'loadCatalog, explain, choose, setSenderId, senderId, setRoles, roles, setChatRole, chatRole, setStanding, standing, setTarget, target, setIncludeTarget, setHypothesis, hypothesis, selected, current', {
   ...runtime.api, useI18n:()=>locale, useInboxCacheScope:()=>scope, createDiagnosticRequestGate, getInboxCacheScope:()=>scope,
   isInboxCacheScopeActive:value=>value===scope, hasConsolePermission:()=>true, permissionRequest, readPermissionCatalog, readPermissionExplanation, permissionHttpError,
-  ...permissionLinkModel, useSearchParams:()=>[new URLSearchParams(),()=>{}],
+  HYPOTHETICAL_CHAT_ROLES, HYPOTHETICAL_STANDINGS, ...permissionLinkModel, useSearchParams:()=>[new URLSearchParams(),()=>{}],
   CONSOLE_REST:{COMMAND_PERMISSIONS:'/permissions',COMMAND_PERMISSION_EXPLAIN:'/explain'},
   apiFetch:async (url, options)=>{requests.push({url,options});return {ok:true,json:async()=>options.method==='POST'?
    {success:true,data:{generation:3,simulation:true,command,permissionHost:'present',adapter:{outcome:'not_evaluated',reason:'fixture'},rules:[],summary:{outcome:'unknown',reason:'fixture'},unconstrained:[],assumptions:[],...JSON.parse(options.body)}}:
@@ -207,13 +209,13 @@ test('permission requests use the selected language without clearing hypotheses 
  });
  runtime.mount(()=>component()); await runtime.value.loadCatalog(); await runtime.settle();
  runtime.value.choose(command); await runtime.settle();
- runtime.value.setSenderId('原始用户'); runtime.value.setRoles('project admin'); runtime.value.setTarget({endpoint:{adapter:'qq',id:'endpoint'},kind:'group',id:'room',threadId:'topic'});
+ runtime.value.setSenderId('原始用户'); runtime.value.setChatRole('admin'); runtime.value.setStanding('member'); runtime.value.setRoles('project admin'); runtime.value.setTarget({endpoint:{adapter:'qq',id:'endpoint'},kind:'group',id:'room',threadId:'topic'});
  runtime.value.setIncludeTarget(true); runtime.value.setHypothesis(true); runtime.render();
  const before=requests.length; locale=messages('en'); runtime.render(); await runtime.settle();
- assert.equal(requests.length,before); assert.equal(runtime.value.senderId,'原始用户'); assert.equal(runtime.value.roles,'project admin'); assert.equal(runtime.value.target.threadId,'topic'); assert.equal(runtime.value.selected.id,command.id); assert.equal(runtime.value.hypothesis,true);
+ assert.equal(requests.length,before); assert.equal(runtime.value.senderId,'原始用户'); assert.equal(runtime.value.roles,'project admin'); assert.equal(runtime.value.chatRole,'admin'); assert.equal(runtime.value.standing,'member'); assert.equal(runtime.value.target.threadId,'topic'); assert.equal(runtime.value.selected.id,command.id); assert.equal(runtime.value.hypothesis,true);
  await runtime.value.explain(command,true); await runtime.settle();
  const check=requests.at(-1); assert.equal(check.url,'/explain?locale=en');
- assert.deepEqual(JSON.parse(check.options.body),{generation:3,commandId:command.id,target:runtime.value.target,sender:{id:'原始用户',roles:['project admin']}});
+ assert.deepEqual(JSON.parse(check.options.body),{generation:3,commandId:command.id,target:runtime.value.target,sender:{id:'原始用户',chatRole:'admin',platform:{standing:'member',roles:['project admin']}}});
  await runtime.value.loadCatalog(); await runtime.settle();
  assert.equal(new URL(requests.at(-1).url,'https://example.test').searchParams.get('locale'),'en');
  assert.equal(new URL(requests[0].url,'https://example.test').searchParams.get('locale'),'zh-CN');

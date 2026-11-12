@@ -10,6 +10,7 @@ import * as commandCenterModel from '../console-ui/src/components/command-center
 import * as sections from '../console-ui/src/navigation-sections.mjs'
 import { createConsoleAccess, UNRESTRICTED_ACCESS } from '../console-ui/src/utils/console-access.mjs'
 import { CONSOLE_PATHS } from '../console-ui/src/console-routes.mjs'
+import * as scopeTree from '../console-ui/src/scope/scope-tree.mjs'
 
 const require = createRequire(import.meta.url)
 const source = path => readFile(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')
@@ -75,7 +76,8 @@ function fixture({ routes, path = '/sandbox', mobile = false, collapsed = false,
     '../navigation-sections.mjs': sections, '../hooks/use-console-access': { useConsoleAccess: () => access },
     '../utils/console-auth-api': { signOut() {} }, '../utils/console-auth-model.mjs': { principalLabel: () => '' },
     '../hooks/use-console-session': { useConsoleSession: () => ({ me: null }) },
-    '../components/onboarding-banner': { OnboardingBanner: 'onboarding-banner' }, '../console-routes.mjs': { CONSOLE_PATHS: { account: '/account' } },
+    '../components/onboarding-banner': { OnboardingBanner: 'onboarding-banner' }, '../components/InstanceUnavailableBanner': { InstanceUnavailableBanner: 'instance-banner' }, '../console-routes.mjs': { CONSOLE_PATHS: { account: '/account' } },
+    '../scope/scope-tree.mjs': scopeTree,
   }
   mocks['../hooks/useIsMobile'] = compile(mobileHookSource, { react: hooks })
   const module = compile(command ? commandSource : layoutSource, mocks)
@@ -96,13 +98,13 @@ function fixture({ routes, path = '/sandbox', mobile = false, collapsed = false,
 }
 const routes = [
   { path: '/sandbox', name: '会话', meta: { group: '会话', order: 0 } },
-  { path: '/endpoints', name: '聊天账号', meta: { group: '会话', order: 1 } },
-  { path: '/endpoints/:adapter/:endpointId', name: '聊天账号详情', parent: '/endpoints', meta: { hideInMenu: true, group: '会话' } },
+  { path: '/scope', name: '账号与会话', meta: { group: '会话', order: 1 } },
+  { path: '/scope/:adapter/:endpoint', name: '聊天账号详情', parent: '/scope', meta: { hideInMenu: true, group: '会话' } },
   { path: '/dashboard', name: '首页', meta: { group: '概览', order: 0 } },
   { path: '/logs', name: '运行日志', meta: { group: '概览', order: 1 } },
   { path: '/secret-diagnostic', name: 'Hidden diagnostic', meta: { group: '概览', hideInMenu: true } },
   { path: '/features', name: '功能矩阵', meta: { group: '功能', order: 0 } },
-  { path: '/plugins', name: '插件管理', meta: { group: '插件', order: 0 } },
+  { path: '/plugins', name: '插件', meta: { group: '插件', order: 0 } },
   { path: '/ops/config', name: '配置文件', meta: { group: '运维', order: 1 } },
   { path: '/ops/schedules', name: '定时任务', meta: { group: '运维', order: 3 } },
   { path: '/calendar', name: 'Calendar', meta: { group: 'My tools' } },
@@ -120,7 +122,7 @@ test('six sections in two tiers (日常 / 管理); plugin pages without a sectio
     const tree = f.render()
     assert.deepEqual(tierLabels(tree), ['日常', '管理'])
     assert.deepEqual(sectionIds(tree), ['overview', 'sessions', 'features', 'plugins', 'ops'])
-    assert.deepEqual(navLinks(tree), ['/dashboard', '/logs', '/sandbox', '/endpoints', '/features', '/calendar', '/unclassified', '/plugins', '/ops/config', '/ops/schedules', '/backup'])
+    assert.deepEqual(navLinks(tree), ['/dashboard', '/logs', '/sandbox', '/scope', '/features', '/calendar', '/unclassified', '/plugins', '/ops/config', '/ops/schedules', '/backup'])
     assert.equal(nav(tree, '设置菜单'), undefined, 'settings no longer live in a footer menu')
     assert.equal(nodes(tree).find(node => node.props?.className === 'console-sidebar-brand').props.to, '/')
   } finally { f.close() }
@@ -146,8 +148,8 @@ test('a section with no visible page is hidden, and so is a tier left empty', ()
 })
 
 test('a nested channel URL selects the account menu and an 运维 route is selected in primary navigation', () => {
-  const account = fixture({ routes, path: '/endpoints/qq/bot' })
-  try { assert.equal(nodes(nav(account.render(), '主导航')).find(node => node.props?.['aria-current'] === 'page').props.to, '/endpoints') } finally { account.close() }
+  const account = fixture({ routes, path: '/scope/qq/bot' })
+  try { assert.equal(nodes(nav(account.render(), '主导航')).find(node => node.props?.['aria-current'] === 'page').props.to, '/scope') } finally { account.close() }
   for (const path of ['/logs', '/ops/config']) {
     const f = fixture({ routes, path })
     try { assert.equal(nodes(nav(f.render(), '主导航')).find(node => node.props?.['aria-current'] === 'page').props.to, path) } finally { f.close() }
@@ -184,13 +186,23 @@ test('legacy plugin groups that are not sections show under 功能', () => {
 })
 
 test('breadcrumbs omit repeated group names and explicit translated plugin titles are preserved', () => {
-  const f = fixture({ routes: [...routes, { path: '/translated', name: '日历', meta: { group: '插件', titleI18n: { en: 'Team calendar' } } }], path: '/endpoints', locale: 'en' })
+  const f = fixture({ routes: [...routes, { path: '/translated', name: '日历', meta: { group: '插件', titleI18n: { en: 'Team calendar' } } }], path: '/scope', locale: 'en' })
   try {
     const tree = f.render(), breadcrumb = nav(tree, translate('en', '当前位置'))
     // The breadcrumb leads with the page's section (会话), then the page.
-    assert.equal(text(breadcrumb), `${translate('en', '会话')}Chat accounts`)
+    assert.equal(text(breadcrumb), `${translate('en', '会话')}Accounts and conversations`)
     assert.ok(nodes(nav(tree, translate('en', '主导航'))).some(node => node.type === 'a' && text(node) === 'Team calendar'))
   } finally { f.close() }
+})
+
+test('object pages below 全局 keep only their own scope breadcrumb; the top bar drops its one', () => {
+  for (const path of ['/scope/qq', '/scope/qq/bot', '/scope/qq/bot/group%3A1']) {
+    const f = fixture({ routes, path })
+    try {
+      const breadcrumbs = nodes(f.render()).filter(node => node.type === 'nav' && node.props?.['aria-label'] === '当前位置')
+      assert.equal(breadcrumbs.length, 0, path)
+    } finally { f.close() }
+  }
 })
 
 test('command jumps follow currently registered routes and do not retain removed Host destinations', () => {
@@ -232,7 +244,7 @@ test('command palette lists hidden builtin pages without route parameters but sk
   try {
     const paths = paletteItemPaths(f.render())
     for (const path of ['/agent/replay', '/permissions', '/use-cases/group-welcome', '/features/ai/workrooms/catalog', '/features', '/ops/database']) assert.ok(paths.includes(path), `${path} is reachable from the palette`)
-    for (const path of ['/plugins/:name', '/endpoints/:adapter/:endpointId', '/features/global/:plugin', '/features/adapters/:adapter']) assert.ok(!paths.includes(path), `${path} needs parameters and stays out`)
+    for (const path of ['/plugins/:name', '/scope/:adapter/:endpoint', '/features/global/:plugin', '/scope/:adapter']) assert.ok(!paths.includes(path), `${path} needs parameters and stays out`)
     for (const path of ['/cron', '/assistant/jobs', '/tasks', '/config', '/agent/models']) assert.ok(!paths.includes(path), `${path} is a legacy redirect and stays out`)
     assert.equal(paths.length, new Set(paths).size, 'every destination appears once')
   } finally { f.close() }
@@ -244,7 +256,7 @@ test('command palette search matches each builtin page by purpose keywords, not 
     const expectations = {
       '插话': '/features/ai/ambient', '花费': '/agent/usage', '回归测试': '/scenario-lab', 'API Key': '/features/ai',
       '挑技能': '/features/ai/skills', '为什么没回': '/agent/replay', '权限': '/permissions', '定时': '/ops/schedules', '欢迎': '/use-cases/group-welcome',
-      '功能矩阵': '/features', '适配器': '/features/adapters',
+      '功能矩阵': '/features', '适配器': '/scope', '会话': '/scope',
     }
     for (const [query, path] of Object.entries(expectations)) assert.ok(searchPalette(f, query).includes(path), `“${query}” finds ${path}`)
     assert.deepEqual(searchPalette(f, '完全无关的词'), [])
@@ -278,7 +290,7 @@ test('mobile Escape leaves a top-level Radix dismissal consumed before closing t
 
 
 test('a section whose only page carries the section name omits its repeated heading', () => {
-  const f = fixture({ routes: routes.filter(route => route.path !== '/endpoints') })
+  const f = fixture({ routes: routes.filter(route => route.path !== '/scope') })
   try {
     const primary = nav(f.render(), '主导航')
     assert.ok(nodes(primary).some(node => node.type === 'a' && node.props.to === '/sandbox'))

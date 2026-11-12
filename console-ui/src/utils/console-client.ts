@@ -4,7 +4,7 @@ import {
   type ConsoleClient,
   type ConsoleTransport,
 } from '@zhin.js/client'
-import { captureApiRequestContext, clearRuntimeToken, clearToken, getApiBase, getToken } from './auth'
+import { captureApiRequestContext, clearRuntimeToken, clearToken, getApiBase, getToken, observeHostGatewayReply } from './auth'
 
 /** Built-in and plugin routes outlive a Host session, so the registry is owned here, not by a client. */
 export const app = createConsoleApp()
@@ -20,10 +20,12 @@ function runtimeEnv(): 'development' | 'production' {
 /**
  * The transport raises `zhin:auth-required` on a 401 but leaves the credential in place.
  * Drop a rejected credential first (as `apiFetch` does) so the next load does not retry it.
+ * Its 502 / 503 / 504 `instance_*` replies reach the 实例不可用 banner like `apiFetch`'s do.
  */
 const transportFetch: typeof fetch = async (input, init) => {
   const { apiBase, token } = captureApiRequestContext()
   const response = await fetch(input, init)
+  observeHostGatewayReply(response)
   if (response.status === 401 && token && getApiBase() === apiBase && getToken() === token) {
     clearRuntimeToken()
     clearToken()

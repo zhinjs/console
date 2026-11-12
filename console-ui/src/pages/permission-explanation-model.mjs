@@ -34,14 +34,30 @@ export function readPermissionCatalog(body, locale = 'zh-CN') {
   return { generation: data.generation, page: data.page, pageSize: data.pageSize, total: data.total, commands }
 }
 
-export function permissionRequest(generation, selected, { target, requireTarget = false, senderId = '', roles = '' } = {}, locale = 'zh-CN') {
+/** Hypothetical zhin chat role: '' = unknown (omitted), 'none' = an ordinary user (null). */
+export const HYPOTHETICAL_CHAT_ROLES = Object.freeze(['', 'none', 'owner', 'admin', 'trusted'])
+/** Hypothetical platform standing (群主 / 管理员 …), a platform identity separate from zhin roles. */
+export const HYPOTHETICAL_STANDINGS = Object.freeze(['', 'owner', 'admin', 'member', 'guest'])
+
+/**
+ * `POST /api/commands/permissions/explain` body (ADR 0056): the sender is `{ id, chatRole?, platform? }`;
+ * `chatRole` is the zhin role (null = ordinary user), `platform` the platform standing with optional
+ * platform role ids. Nothing is filled in that the user did not state.
+ */
+export function permissionRequest(generation, selected, { target, requireTarget = false, senderId = '', chatRole = '', standing = '', platformRoles = '' } = {}, locale = 'zh-CN') {
   if (!integer(generation) || !selected?.id) throw new Error(translate(locale, "请先从当前运行代目录选择命令。"))
   if ((target !== undefined || requireTarget) && !validTarget(target)) throw new Error(translate(locale, "请填写完整的假设账号与会话身份。"))
-  if (senderId.length > 200 || roles.length > 2000) throw new Error(translate(locale, "假设身份过长，请精简后重试。"))
-  const values = roles.split(/[,，]/u).map(value => value.trim()).filter(Boolean)
-  if (values.length && !senderId) throw new Error(translate(locale, "填写假设角色时，请同时提供发送者 ID。"))
-  return { generation, commandId: selected.id, ...(target === undefined ? {} : { target }),
-    ...(senderId ? { sender: { id: senderId, ...(values.length ? { roles: [...new Set(values)] } : {}) } } : {}) }
+  if (senderId.length > 200 || platformRoles.length > 2000) throw new Error(translate(locale, "假设身份过长，请精简后重试。"))
+  if (!HYPOTHETICAL_CHAT_ROLES.includes(chatRole) || !HYPOTHETICAL_STANDINGS.includes(standing)) throw new Error(translate(locale, "假设身份或会话格式不完整，请检查填写内容。"))
+  const roles = platformRoles.split(/[,，]/u).map(value => value.trim()).filter(Boolean)
+  if (roles.length && !standing) throw new Error(translate(locale, "填写平台角色时，请同时选择平台身份。"))
+  if ((chatRole || standing) && !senderId) throw new Error(translate(locale, "假设角色或平台身份时，请同时提供发送者 ID。"))
+  const sender = senderId ? {
+    id: senderId,
+    ...(chatRole ? { chatRole: chatRole === 'none' ? null : chatRole } : {}),
+    ...(standing ? { platform: { standing, ...(roles.length ? { roles: [...new Set(roles)] } : {}) } } : {}),
+  } : undefined
+  return { generation, commandId: selected.id, ...(target === undefined ? {} : { target }), ...(sender ? { sender } : {}) }
 }
 
 export function readPermissionExplanation(body, requested, locale = 'zh-CN') {
@@ -55,7 +71,8 @@ export function readPermissionExplanation(body, requested, locale = 'zh-CN') {
     : !validTarget(data.target) || targetKey(data.target) !== targetKey(requested.target)) invalid(locale)
   if (requested.sender === undefined ? data.sender !== undefined
     : !object(data.sender) || data.sender.id !== requested.sender.id
-      || JSON.stringify(data.sender.roles) !== JSON.stringify(requested.sender.roles)) invalid(locale)
+      || JSON.stringify(data.sender.chatRole) !== JSON.stringify(requested.sender.chatRole)
+      || data.sender.platform?.standing !== requested.sender.platform?.standing) invalid(locale)
   const rules = data.rules.map((item, index) => {
     if (!object(item) || item.index !== index || item.rule !== selected.permits[index] || !kinds.has(item.kind)
       || item.values !== undefined && !strings(item.values)) invalid(locale)

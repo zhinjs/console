@@ -12,18 +12,14 @@ import { ROUTE_PERMISSIONS, buildNavigation } from '../console-ui/src/navigation
 import { CONSOLE_PATHS } from '../console-ui/src/console-routes.mjs'
 import { createConsoleAccess } from '../console-ui/src/utils/console-access.mjs'
 import { translate } from '../console-ui/src/i18n/locale.mjs'
+import { CONSOLE_PERMISSION_LIST as MIRROR_PERMISSION_LIST } from '../console-ui/src/contracts/console-protocol-mirror.mjs'
 
 const zh = (message, values) => translate('zh-CN', message, values)
 const en = (message, values) => translate('en', message, values)
 const read = path => readFileSync(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')
 
-// zhinjs/zhin packages/console/protocol/src/permissions.ts (CONSOLE_PERMISSIONS, IAM_RPC) at ADR 0049.
-const PROTOCOL_PERMISSIONS = [
-  'status.view', 'endpoint.view', 'endpoint.operate', 'endpoint.manage', 'feature.view', 'feature.configure', 'feature.toggle',
-  'plugin.manage', 'agent.view', 'agent.configure', 'ops.config.read', 'ops.config.write', 'ops.env.read', 'ops.env.write',
-  'ops.database.read', 'ops.database.write', 'ops.schedule.read', 'ops.schedule.write', 'ops.files.read', 'ops.files.write',
-  'ops.restart', 'ops.terminal', 'iam.view', 'iam.manage', 'mcp.access', 'a2a.access',
-]
+// The protocol catalog, from the single hand copy (`tests/protocol-mirror.test.mjs` compares it with the protocol source).
+const PROTOCOL_PERMISSIONS = [...MIRROR_PERMISSION_LIST]
 
 const user = (id, bindings, extra = {}) => ({ id, username: id, displayName: id, disabled: false, bindings, ...extra })
 const owner = { role: 'owner', scope: { kind: 'global' } }
@@ -201,11 +197,15 @@ test('every write is gated by iam.manage and destructive ones are confirmed', ()
     const source = read(`pages/access/${page}.tsx`)
     assert.match(source, /useCanManageIam\(\)/, page)
     assert.match(source, /<ReadOnlyNotice \/>/, page)
-    assert.match(source, /<ConfirmDialog/, `${page} confirms destructive actions`)
+    assert.match(source, /<ConfirmDialog|danger: true/, `${page} confirms destructive actions`)
   }
   const users = read('pages/access/users.tsx')
   assert.match(users, /confirmText=\{pending\.user\.username\}/, 'deleting a user needs the typed username')
-  assert.match(users, /kind: 'disable'/)
+  assert.match(users, /IAM_RPC\.USERS_DISABLE[\s\S]*danger: true/, 'disabling goes through a danger receipt')
+  assert.match(users, /IAM_RPC\.USERS_UPDATE, \{ id: user\.id, displayName/, 'the display name is editable (iam.users.update)')
+  const tokens = read('pages/access/tokens.tsx')
+  assert.match(tokens, /IAM_RPC\.TOKENS_CREATE, \{ userId/, 'tokens can be issued for a user (iam.tokens.create)')
+  assert.match(tokens, /IAM_RPC\.TOKENS_REVOKE[\s\S]*danger: true/, 'revoking goes through a danger receipt')
   const roles = read('pages/access/roles.tsx')
   assert.match(roles, /canManage && !role\.builtin/, 'built-in roles cannot be deleted from the UI')
   assert.match(roles, /role\.builtin \|\| !canManage/, 'built-in roles open read-only')

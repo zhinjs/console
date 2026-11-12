@@ -20,8 +20,6 @@ export function verifyApprovedPlugin(request:(request:WorkflowRequest)=>Promise<
 export function verificationSummary(result:VerificationResult|null, locale?: 'zh-CN' | 'en'):string;
 export function verificationCheckDisplay(check:VerificationCheck, locale?: 'zh-CN' | 'en'):{title:string;effects:readonly string[]};
 export function verificationResultDisplay(result:VerificationResult, locale?: 'zh-CN' | 'en'):{summary:string;evidence:readonly string[]};
-export function mutationRequest(type:string,plan:MutationPlan,extra?:Readonly<Record<string,unknown>>, locale?: 'zh-CN' | 'en'):WorkflowRequest;
 export function applyRequest(state:PluginManagementState, locale?: 'zh-CN' | 'en'):WorkflowRequest;
 export function waitForManagementState(read:()=>Promise<unknown>,previous:PluginManagementState,signal:AbortSignal,options?:{attempts?:number;pause?:(ms:number,signal?:AbortSignal)=>Promise<void>}, locale?: 'zh-CN' | 'en'):Promise<PluginManagementState|null>;
-export function waitForEnabledManagementState(read:()=>Promise<unknown>,previous:PluginManagementState,enabled:boolean,signal:AbortSignal,options?:{attempts?:number;pause?:(ms:number,signal?:AbortSignal)=>Promise<void>}, locale?: 'zh-CN' | 'en'):Promise<PluginManagementState|null>;
 export function verificationIsCurrent(result:VerificationResult|null,plan:VerificationPlan|null,state?:PluginManagementState|null,currentPlan?:unknown, locale?: 'zh-CN' | 'en'):boolean;

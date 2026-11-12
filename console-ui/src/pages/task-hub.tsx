@@ -11,6 +11,9 @@ import TaskCenterPage from './task-center'
 import CronPage from './cron'
 import AssistantJobsPage from './assistant-jobs'
 import { ScheduleExecutions } from './ScheduleExecutions'
+import { TaskOverview } from './TaskOverview'
+import { StatusState } from '../components/StatusState'
+import { PageShell } from '../components/PageShell'
 import { resolveTaskTab, TASK_HUB_TABS, type TaskTabId } from './task-hub-model.mjs'
 import { StatCard, StatGrid } from '../components/StatCard'
 import { apiFetch } from '../utils/auth'
@@ -75,20 +78,16 @@ function HistoryPanel() {
   return <ScheduleExecutions key={scope} connectionScope={scope} />
 }
 
-export default function TaskHubPage() {
+/**
+ * 「全部任务」总览：上面是各来源的汇总（点卡片进对应页签做操作），下面是按状态筛选的统一列表。
+ * 汇总只在总览里出现，不在每个页签上方重复一遍页签导航。
+ */
+function OverviewPanel({ summary, open }: { summary: TaskHubSummary; open: (tab: TaskTabId) => void }) {
   const i18n = useI18n()
-  const [params, setParams] = useSearchParams()
-  const tabs = TASK_HUB_TABS
-  const active = resolveTaskTab(params.get('tab'), tabs)
-  const select = (next: string) => setParams({ tab: next })
   const scope = useInboxCacheScope()
-  const summary = useTaskHubSummary(scope, active)
+  if (!scope || !isInboxCacheScopeActive(scope)) return <StatusState kind="disconnected" />
   const unknown = '—'
-  const panels: Record<TaskTabId, ReactNode> = {
-    admin: <TaskCenterPage />, schedule: <CronPage />, assistant: <AssistantJobsPage />, history: <HistoryPanel />,
-  }
-  return <div className="console-page console-resource-page console-tasks-hub">
-    <PageHeader title={i18n.t("定时任务")}description={i18n.t("管理员任务、定时提醒、助手任务和执行记录集中在这里。")} />
+  return <div className="space-y-4">
     <StatGrid label={i18n.t("任务概况")}>
       <StatCard
         icon={ClipboardList}
@@ -98,16 +97,14 @@ export default function TaskHubPage() {
           ? summary.admin.failed > 0 ? i18n.t("{0} 个运行失败", [summary.admin.failed]) : i18n.t("{0} 个已暂停", [summary.admin.paused])
           : i18n.t("未启用或暂时无法读取")}
         tone={summary.admin && summary.admin.failed > 0 ? 'danger' : undefined}
-        onOpen={() => select('admin')}
-        pressed={active === 'admin'}
+        onOpen={() => open('admin')}
       />
       <StatCard
         icon={CalendarClock}
         label={i18n.t("定时提醒")}
         value={summary.schedule?.total ?? unknown}
         sub={summary.schedule ? i18n.t("{0} 个已暂停", [summary.schedule.paused]) : i18n.t("未启用或暂时无法读取")}
-        onOpen={() => select('schedule')}
-        pressed={active === 'schedule'}
+        onOpen={() => open('schedule')}
       />
       <StatCard
         icon={Bot}
@@ -117,8 +114,7 @@ export default function TaskHubPage() {
           ? summary.assistant.failing > 0 ? i18n.t("{0} 个最近运行出错", [summary.assistant.failing]) : i18n.t("{0} 个已启用", [summary.assistant.enabled])
           : i18n.t("未启用或暂时无法读取")}
         tone={summary.assistant && summary.assistant.failing > 0 ? 'danger' : undefined}
-        onOpen={() => select('assistant')}
-        pressed={active === 'assistant'}
+        onOpen={() => open('assistant')}
       />
       <StatCard
         icon={History}
@@ -128,15 +124,31 @@ export default function TaskHubPage() {
           ? summary.history.failed > 0 ? i18n.t("其中 {0} 次失败", [summary.history.failed]) : i18n.t("没有失败的执行")
           : i18n.t("未启用或暂时无法读取")}
         tone={summary.history && summary.history.failed > 0 ? 'danger' : undefined}
-        onOpen={() => select('history')}
-        pressed={active === 'history'}
+        onOpen={() => open('history')}
       />
     </StatGrid>
+    <TaskOverview key={scope} connectionScope={scope} />
+  </div>
+}
+
+export default function TaskHubPage() {
+  const i18n = useI18n()
+  const [params, setParams] = useSearchParams()
+  const tabs = TASK_HUB_TABS
+  const active = resolveTaskTab(params.get('tab'), tabs)
+  const select = (next: string) => setParams({ tab: next })
+  const scope = useInboxCacheScope()
+  const summary = useTaskHubSummary(active === 'overview' ? scope : null, active)
+  const panels: Record<TaskTabId, ReactNode> = {
+    overview: <OverviewPanel summary={summary} open={select} />, admin: <TaskCenterPage />, schedule: <CronPage />, assistant: <AssistantJobsPage />, history: <HistoryPanel />,
+  }
+  return <PageShell className="console-resource-page console-tasks-hub">
+    <PageHeader title={i18n.t("定时任务")} description={i18n.t("「全部任务」汇总每个任务的状态、下次运行、最近结果、目标与审批；创建、暂停和查看记录在各自页签。")} />
     <Tabs value={active} onValueChange={select}>
       <TabsList aria-label={i18n.t("任务视图")} className="h-auto max-w-full justify-start overflow-x-auto whitespace-nowrap">
         {tabs.map(tab => <TabsTrigger key={tab.id} value={tab.id}>{i18n.t(tab.label)}</TabsTrigger>)}
       </TabsList>
       {tabs.map(tab => <TabsContent key={tab.id} value={tab.id}>{tab.id === active ? panels[tab.id] : null}</TabsContent>)}
     </Tabs>
-  </div>
+  </PageShell>
 }

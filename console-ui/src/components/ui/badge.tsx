@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@zhin.js/client"
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border-[length:var(--console-border-width)] text-[length:var(--console-text-label)] font-medium leading-5 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center whitespace-nowrap rounded-full border-[length:var(--console-border-width)] text-[length:var(--console-text-label)] font-medium leading-5 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {

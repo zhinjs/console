@@ -21,3 +21,6 @@ export type MarketplacePluginStatus =
 export function marketplacePluginStatus(name: string, installed: InstalledPackages | null, updates: readonly UpdateCandidate[]): MarketplacePluginStatus
 export function pluginManageUrl(packageName: string, instanceKey?: string | null): string
 export function pluginConfigUrl(instanceKey: string): string
+export function installedFromPackageList(list: { packages: readonly { name: string; installedVersion: string | null; dependencyType?: string }[] } | null | undefined): InstalledPackages | null
+export interface InstallFollowUp { kind: 'configure' | 'features' | 'detail' | 'welcome'; to: string }
+export function installFollowUps(input: { phase?: string; operation?: string | null; packageName?: string | null; instanceKey?: string | null; welcomePackage?: string | null }): InstallFollowUp[]

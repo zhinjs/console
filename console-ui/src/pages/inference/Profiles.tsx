@@ -14,7 +14,7 @@ import {
 import { ErrorAlert } from '../../components/error-alert'
 import { ModelCapabilities } from './ModelCapabilities'
 import { SupportLabel, SupportNotice, supportLabel } from './SupportInfo'
-import { inferenceError, profileSupport, serviceDriver } from './model.mjs'
+import { inferenceError, profileSupport, profileUsages, serviceDriver, type ProfileUsage } from './model.mjs'
 import { Card } from '../../components/ui/card'
 import { useConfirm } from '../../components/confirm-dialog'
 import {
@@ -75,6 +75,7 @@ export function Profiles({ management: m, onCreateAccount }: { management: Infer
                   <p className="text-sm text-muted-foreground break-all">
                     {profile.model} · {account.label ?? account.id}
                   </p>
+                  <ProfileUsageLine usages={profileUsages(view.purposes, profile.id, i18n.locale)} />
                 </div>
                 <div className="flex gap-1">
                   <Button
@@ -406,5 +407,20 @@ function ProfileForm({
         </Button>
       </fieldset>
     </form>
+  )
+}
+
+/** 「谁在用」：用途配置里引用这个模型的地方；个人身份看不到用途时不显示。 */
+function ProfileUsageLine({ usages }: { usages: ProfileUsage[] | null }) {
+  const i18n = useI18n()
+  if (usages === null) return null
+  const shown = usages.slice(0, 4)
+  return (
+    <p className="mt-1 text-xs text-muted-foreground">
+      <span className="font-medium text-foreground">{i18n.t("谁在用：")}</span>
+      {usages.length ? shown.map(usage => usage.label).join(' · ') : i18n.t("还没有用途引用它")}
+      {usages.length > shown.length ? i18n.t(" 等 {0} 处", [usages.length]) : ''}
+      <span className="ml-1">{i18n.t("（在「用途」页签修改）")}</span>
+    </p>
   )
 }

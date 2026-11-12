@@ -15,21 +15,25 @@ import {
   type MessageFeedItem,
 } from './dashboard-activity-model.mjs'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { MIN_RATIO_SAMPLE, observationCoverage, countReading, ratioReading, type Reading } from './dashboard-basis-model.mjs'
+import { CONVERSATION_KINDS, type ConversationKind } from './features/feature-model.mjs'
+import { conversationHref, CONSOLE_PATHS } from '../console-routes.mjs'
+import { instanceSectionHref } from './ops/instance-sections.mjs'
+import { PageHeader } from '../components/PageHeader'
+import { PageShell } from '../components/PageShell'
+import { StatusState } from '../components/StatusState'
+import './insights/insights.css'
 import type { LucideIcon } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
-  Activity,
   AlertCircle,
   AlertTriangle,
   ArrowUpRight,
   AtSign,
   Bot,
   Brain,
-  CheckCircle2,
-  Clock,
   Command,
   Copy,
-  Cpu,
   Eye,
   MessageSquare,
   Package,
@@ -90,6 +94,8 @@ interface SystemStatus {
 
 interface OptionalOverview {
   logReadError: string | null
+  /** Oldest row in the persistent log store (ISO), when the Host reports it. */
+  logSince: string | null
   errorLogs: number | null
   warningLogs: number | null
   agentStatus: 'unknown' | 'unavailable' | 'available'
@@ -138,6 +144,7 @@ interface AttentionItem {
 
 const EMPTY_OPTIONAL: OptionalOverview = {
   logReadError: null,
+  logSince: null,
   errorLogs: null,
   warningLogs: null,
   agentStatus: 'unknown',
@@ -150,6 +157,7 @@ const EMPTY_OPTIONAL: OptionalOverview = {
 const DASHBOARD_REQUEST_TIMEOUT_MS = 8_000
 const DAY_MS = 24 * 60 * 60 * 1000
 const MESSAGE_EVENT_LIMIT = 1000
+const MESSAGE_HISTORY_LIMIT = 500
 const FEED_LIMIT = 12
 
 async function fetchOptionalData(path: string, signal: AbortSignal): Promise<unknown | null> {
@@ -174,6 +182,11 @@ async function fetchLogOverview(signal: AbortSignal, locale: 'zh-CN' | 'en' = 'z
   } catch (cause) {
     return { data: null, error: readErrorSummary(cause instanceof Error ? cause.message : cause, translate(locale, "日志统计"), locale) }
   }
+}
+
+function readOldestLog(value: unknown): string | null {
+  const oldest = value && typeof value === 'object' ? (value as { oldestTimestamp?: unknown }).oldestTimestamp : null
+  return typeof oldest === 'string' && !Number.isNaN(new Date(oldest).getTime()) ? oldest : null
 }
 
 function readTotal(value: unknown): number | null {
@@ -309,6 +322,10 @@ function MessageFeedRow({ item, kindLabel, t }: {
       ? `${item.sender.name}（${item.sender.id}）`
       : item.sender.name || item.sender.id
     : null
+  // 能定位到会话对象时，会话标识直接链到它的「记录」页签。
+  const conversation = item.adapter && item.endpoint && CONVERSATION_KINDS.includes(item.kind as never) && item.channelId
+    ? conversationHref(item.adapter, item.endpoint, item.kind as ConversationKind, item.channelId, 'records')
+    : null
   return (
     <li className="console-message-row">
       <time className="console-message-time" dateTime={new Date(item.timestamp).toISOString()}>{formatClock(item.timestamp)}</time>
@@ -316,14 +333,17 @@ function MessageFeedRow({ item, kindLabel, t }: {
         <div className="console-message-meta">
           {item.adapter ? <span className="console-tag">{item.adapter}</span> : null}
           <span className="console-tag is-accent">{kindLabel}</span>
-          {item.channelId ? <span className="console-message-channel">{item.channelId}</span> : null}
+          {item.channelId
+            ? conversation
+              ? <Link to={conversation} className="console-message-channel console-message-link" title={t("打开这个会话的记录")}>{item.channelId}</Link>
+              : <span className="console-message-channel">{item.channelId}</span>
+            : null}
           {sender ? <span className="console-message-sender">{sender}</span> : null}
-          {latency !== null ? <span className="console-message-latency">{latency.toFixed(1)}s</span> : null}
           {item.direction === 'outbound'
-            ? <span className="console-tag is-info">{t("主动发送")}</span>
+            ? <span className="console-tag is-info">{t("机器人发出")}</span>
             : item.replies.length > 0
-              ? <span className="console-tag is-success">{t("已回复")}</span>
-              : <span className="console-tag">{t("未回复")}</span>}
+              ? <span className="console-tag">{t("有可能相关的回复")}</span>
+              : <span className="console-tag">{t("之后两分钟内未发出消息")}</span>}
         </div>
         {item.direction === 'inbound'
           ? <p className="console-message-text">{item.text || '—'}</p>
@@ -331,6 +351,11 @@ function MessageFeedRow({ item, kindLabel, t }: {
         {item.replies.map((reply) => (
           <blockquote key={reply.id} className="console-message-reply"><span>{reply.text || '—'}</span></blockquote>
         ))}
+        {item.replies.length > 0 ? (
+          <span className="console-message-pairing">
+            {latency !== null ? t("可能相关 · 按同一会话的时间先后推测，相隔 {0} 秒", [latency.toFixed(1)]) : t("可能相关 · 按同一会话的时间先后推测")}
+          </span>
+        ) : null}
       </div>
     </li>
   )
@@ -360,6 +385,7 @@ export default function HomePage() {
   const connected = useConsoleConnected()
   const [messageEvents, setMessageEvents] = useState<unknown[]>([])
   const [messagesLoaded, setMessagesLoaded] = useState(false)
+  const [messagesTruncated, setMessagesTruncated] = useState(false)
   const messageAbortRef = useRef<AbortController | null>(null)
 
   const loadMessages = useCallback(async () => {
@@ -367,11 +393,13 @@ export default function HomePage() {
     const controller = new AbortController()
     messageAbortRef.current = controller
     try {
-      const page = await fetchConsoleEventHistory({ limit: 500 }, {
+      const page = await fetchConsoleEventHistory({ limit: MESSAGE_HISTORY_LIMIT }, {
         signal: AbortSignal.any([controller.signal, AbortSignal.timeout(DASHBOARD_REQUEST_TIMEOUT_MS)]),
       })
       if (controller.signal.aborted) return
       setMessageEvents([...page.items].slice(-MESSAGE_EVENT_LIMIT))
+      // 缓冲还有更早的事件、或已经接不上：最早一条之前的消息不在统计里。
+      setMessagesTruncated(page.hasMore || page.gap || page.items.length >= MESSAGE_HISTORY_LIMIT)
     } catch {
       // History is optional: the live subscription still fills the feed.
     } finally {
@@ -452,6 +480,7 @@ export default function HomePage() {
       setOptional({
         ...optionalSummary,
         logReadError: logs.error,
+        logSince: readOldestLog(logs.data),
         tools: readTotal(tools),
         agents: readTotal(agents),
         mcpServices: mcpSummary.total,
@@ -498,13 +527,6 @@ export default function HomePage() {
 
   const capabilities = useMemo<CapabilityItem[]>(() => [
     {
-      label: i18n.t("渠道"),
-      value: stats?.endpoints.total ?? null,
-      detail: stats ? i18n.t("{0} 个在线连接", [stats.endpoints.online]) : i18n.t("等待 Host 状态"),
-      icon: Radio,
-      path: '/endpoints',
-    },
-    {
       label: i18n.t("命令"),
       value: stats?.commands ?? null,
       detail: stats ? i18n.t("可被消息直接调用") : i18n.t("等待 Host 状态"),
@@ -514,9 +536,9 @@ export default function HomePage() {
     {
       label: 'Agent',
       value: optional.agents,
-      detail: optional.agentStatus === 'unavailable' ? i18n.t("未安装或装配 Agent") : optional.agentStatus === 'unknown' ? i18n.t("状态暂时不可读") : optional.agents === 0 ? i18n.t("可选能力：需要 AI 时安装并配置 Agent") : i18n.t("模型与会话绑定"),
+      detail: optional.agentStatus === 'unavailable' ? i18n.t("未安装 Agent（只用 IM 也可以）") : optional.agentStatus === 'unknown' ? i18n.t("状态暂时不可读") : optional.agents === 0 ? i18n.t("可选能力：需要 AI 时安装并配置 Agent") : i18n.t("模型与会话绑定"),
       icon: Brain,
-      path: '/agent/workbench',
+      path: CONSOLE_PATHS.agentWorkbench,
     },
     {
       label: i18n.t("工具"),
@@ -535,9 +557,9 @@ export default function HomePage() {
       path: '/introspection?tab=mcp',
     },
     {
-      label: i18n.t("子插件"),
+      label: i18n.t("插件"),
       value: stats?.plugins.total ?? null,
-      detail: stats ? i18n.t("{0} 个子插件正在运行", [stats.plugins.active]) : i18n.t("等待 Host 状态"),
+      detail: stats ? i18n.t("{0} 个正在运行", [stats.plugins.active]) : i18n.t("等待 Host 状态"),
       icon: Package,
       path: '/plugins',
     },
@@ -549,22 +571,22 @@ export default function HomePage() {
       return [{
         title: i18n.t("Host 暂时不可达"),
         detail: i18n.t("控制面仍可继续使用；恢复连接后会自动刷新运行状态。"),
-        path: '/logs',
+        path: CONSOLE_PATHS.opsInstance,
         tone: 'danger',
       }]
     }
     if ((stats?.endpoints.total ?? 0) === 0) {
       items.push({
-        title: i18n.t("还没有连接渠道"),
+        title: i18n.t("还没有聊天账号"),
         detail: i18n.t("先用 Sandbox 验证，再接入真实平台。"),
-        path: '/endpoints',
+        path: '/scope',
         tone: 'neutral',
       })
     } else if (offlineEndpoints > 0) {
       items.push({
-        title: i18n.t("{0} 个渠道离线", [offlineEndpoints]),
+        title: i18n.t("{0} 个聊天账号离线", [offlineEndpoints]),
         detail: i18n.t("检查凭据、网络和适配器日志。"),
-        path: '/endpoints',
+        path: '/scope',
         tone: 'warning',
       })
     }
@@ -597,28 +619,6 @@ export default function HomePage() {
     }
     return items.slice(0, 4)
   }, [error, offlineEndpoints, disconnectedMcp, optional, stats, i18n])
-
-  const displayEvents = useMemo<RecentLogEvent[]>(() => {
-    if (recentEvents.length > 0) return recentEvents
-    if (!stats || !systemStatus) return []
-    const nowTime = new Date(lastUpdatedAt ?? Date.now()).toTimeString().slice(0, 8)
-    return [
-      {
-        id: 'synth-1',
-        timestamp: nowTime,
-        level: offlineEndpoints > 0 ? 'warn' : 'info',
-        source: 'adapter-host',
-        message: i18n.t("{0}/{1} 个平台账号在线，已加载 {2} 个子插件与 {3} 条命令", [stats.endpoints.online, stats.endpoints.total, stats.plugins.active, stats.commands]),
-      },
-      {
-        id: 'synth-2',
-        timestamp: nowTime,
-        level: 'info',
-        source: 'runtime',
-        message: i18n.t("Node {0} ({1}) 持续运行 {2} · RSS {3}", [systemStatus.nodeVersion, systemStatus.platform, formatUptime(systemStatus.uptime, i18n.locale), formatMemory(systemStatus.memory.rss)]),
-      },
-    ]
-  }, [recentEvents, stats, systemStatus, lastUpdatedAt, offlineEndpoints, i18n.locale])
 
   const handleToggleControl = async (key: ControlSwitchKey) => {
     if (!controlState?.available || readOnly || controlUpdating) return
@@ -663,24 +663,37 @@ export default function HomePage() {
     { key: 'mention_only', label: i18n.t("仅提及响应"), icon: AtSign },
   ]
 
-
   const [selectedEvent, setSelectedEvent] = useState<RecentLogEvent | null>(null)
   const eventCounts = useMemo(() => {
     const counts = { info: 0, warn: 0, error: 0 }
-    for (const evt of displayEvents) {
+    for (const evt of recentEvents) {
       if (evt.level === 'error') counts.error += 1
       else if (evt.level === 'warn') counts.warn += 1
       else counts.info += 1
     }
     return counts
-  }, [displayEvents])
+  }, [recentEvents])
 
-  const replyRate = percent(messageSummary.outbound, messageSummary.inbound)
+  // 统计口径：消息数来自 Host 事件缓冲（缓冲内观察），错误日志来自日志库（持久统计）。
+  const coverage = observationCoverage(records, { now: activityNow, windowMs: DAY_MS, truncated: messagesTruncated })
+  const inboundReading = countReading(messagesLoaded || records.length ? messageSummary.inbound : null)
+  const outboundReading = countReading(messagesLoaded || records.length ? messageSummary.outbound : null)
+  const outboundShare = ratioReading(messageSummary.outbound, messageSummary.inbound)
   const heapRate = systemStatus ? percent(systemStatus.memory.heapUsed, systemStatus.memory.heapTotal) : null
   const osMemoryRate = systemStatus?.osMemory
     ? percent(systemStatus.osMemory.totalMem - systemStatus.osMemory.freeMem, systemStatus.osMemory.totalMem)
     : null
   const errorTone = (optional.errorLogs ?? 0) > 0 ? 'danger' : (optional.warningLogs ?? 0) > 0 ? 'warning' : undefined
+  const formatStamp = (timestamp: number) => new Date(timestamp).toLocaleString(i18n.locale, { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const unrecorded = <span className="console-sample-missing">{i18n.t("未记录")}</span>
+  const readingValue = (reading: Reading) => reading.kind === 'value' ? reading.value.toLocaleString(i18n.locale) : unrecorded
+  const coverageText = coverage.kind === 'none'
+    ? i18n.t("缓冲里还没有消息事件")
+    : coverage.kind === 'full'
+      ? i18n.t("覆盖最近 24 小时")
+      : coverage.kind === 'partial'
+        ? i18n.t("缓冲只保留到 {0}，更早的消息未计入", [formatStamp(coverage.since!)])
+        : i18n.t("自 {0} 起（缓冲里最早的一条）", [formatStamp(coverage.since!)])
 
   const refreshAll = () => {
     void fetchDashboard(true)
@@ -697,34 +710,19 @@ export default function HomePage() {
         <div className="console-overview-row">
           <Skeleton className="h-64 rounded-[var(--console-radius-lg)]" />
           <Skeleton className="h-64 rounded-[var(--console-radius-lg)]" />
-          <Skeleton className="h-64 rounded-[var(--console-radius-lg)]" />
         </div>
       </div>
     )
   }
 
   return (
-    <div className="console-dashboard console-overview-page">
-      <header className="console-overview-head" aria-labelledby="dashboard-title">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h1 id="dashboard-title" className="console-dashboard-title">
-              {!hostAvailable
-                ? <>{i18n.t("Host 暂时不可达，")}{i18n.t("控制面仍可继续使用")}</>
-                : i18n.t("总览")}
-            </h1>
-            <span className={healthy ? 'console-health-pill' : 'console-health-pill is-warning'}>
-              <span className={healthy ? 'console-status-dot' : 'console-status-dot is-warning'} />
-              {!hostAvailable ? i18n.t("Host 连接需要恢复") : healthy ? i18n.t("所有核心服务运行正常") : i18n.t("有事项需要处理")}
-            </span>
-          </div>
-          <p className="console-dashboard-lede">
-            {!hostAvailable
-              ? i18n.t("页面导航、配置入口和能力目录保持可用。重新连接后，渠道、Agent 与运行状态会在这里恢复。")
-              : i18n.t("机器人运行状态、消息量和实时事件")}
-          </p>
-        </div>
-        <div className="console-overview-actions">
+    <PageShell className="console-dashboard console-overview-page">
+      <PageHeader
+        title={!hostAvailable ? `${i18n.t("Host 暂时不可达，")}${i18n.t("控制面仍可继续使用")}` : i18n.t("首页")}
+        description={!hostAvailable
+          ? i18n.t("页面导航、配置入口和能力目录保持可用。重新连接后，聊天账号、Agent 与运行状态会在这里恢复。")
+          : i18n.t("现在需要处理什么、消息量和最近的消息。")}
+        actions={<>
           {!readOnly ? (
             <Button variant="outline" className="console-danger-outline" disabled={restarting} onClick={() => { void confirmRestart() }}>
               <Power />
@@ -736,13 +734,24 @@ export default function HomePage() {
             {hostAvailable ? i18n.t("刷新") : i18n.t("重新连接")}
           </Button>
           {hostAvailable ? (
-            <Button onClick={() => navigate('/endpoints')}>
+            <Button onClick={() => navigate('/scope')}>
               <Bot className="h-4 w-4" />
               {i18n.t("进入会话")}
             </Button>
           ) : null}
-        </div>
-      </header>
+        </>}
+      />
+
+      <div className="console-overview-status">
+        <span className={healthy ? 'console-health-pill' : 'console-health-pill is-warning'}>
+          <span className={healthy ? 'console-status-dot' : 'console-status-dot is-warning'} />
+          {!hostAvailable ? i18n.t("Host 连接需要恢复") : healthy ? i18n.t("所有核心服务运行正常") : i18n.t("有事项需要处理")}
+        </span>
+        {systemStatus ? <span>{i18n.t("已运行 {0}", [formatUptime(systemStatus.uptime, i18n.locale)])}</span> : null}
+        <span>{connected ? i18n.t("实时推送已连接") : i18n.t("实时推送未连接")}</span>
+        {lastUpdatedAt ? <span>{i18n.t("上次更新 {0}", [new Date(lastUpdatedAt).toLocaleTimeString(i18n.locale)])}</span> : null}
+        <Link to={CONSOLE_PATHS.opsInstance}>{i18n.t("查看实例")}</Link>
+      </div>
 
       {error ? (
         <Alert variant="destructive">
@@ -754,41 +763,73 @@ export default function HomePage() {
         </Alert>
       ) : null}
 
+      {attentionItems.length > 0 ? (
+        <section className="console-attention-strip" aria-label={i18n.t("需要关注")}>
+          {attentionItems.map((item) => (
+            <ListItemButton
+              key={item.title}
+              type="button"
+              className={`console-attention-item is-${item.tone}`}
+              onClick={() => navigate(item.path)}
+            >
+              {item.tone === 'neutral' ? <Sparkles /> : <AlertTriangle />}
+              <span className="min-w-0 flex-1 text-left">
+                <span className="block text-sm font-semibold">{item.title}</span>
+                <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">{item.detail}</span>
+              </span>
+              <ArrowUpRight />
+            </ListItemButton>
+          ))}
+        </section>
+      ) : null}
+
       <StatGrid label={i18n.t("关键指标")}>
         <StatCard
           icon={MessageSquare}
           label={i18n.t("收到消息")}
-          value={messageSummary.inbound.toLocaleString(i18n.locale)}
-          sub={i18n.t("近 24 小时 · {0} 个会话", [messageSummary.conversations])}
-          onOpen={() => navigate('/agent/sessions')}
+          value={readingValue(inboundReading)}
+          sub={inboundReading.kind === 'value' ? i18n.t("缓冲内观察 · {0} 个会话", [messageSummary.conversations]) : i18n.t("缓冲内观察 · 事件缓冲读取未完成")}
+          onOpen={() => navigate(CONSOLE_PATHS.agentSessions)}
         />
         <StatCard
           icon={Reply}
-          label={i18n.t("已回复")}
-          value={messageSummary.outbound.toLocaleString(i18n.locale)}
-          sub={replyRate !== null ? i18n.t("回复率 {0}%", [replyRate]) : i18n.t("近 24 小时")}
-          onOpen={() => navigate('/agent/sessions')}
+          label={i18n.t("机器人发出")}
+          value={readingValue(outboundReading)}
+          sub={outboundShare.kind === 'value'
+            ? i18n.t("缓冲内观察 · 发出约为收到的 {0}%", [outboundShare.value])
+            : outboundShare.kind === 'insufficient'
+              ? i18n.t("缓冲内观察 · 收到不足 {0} 条，不计算比例", [MIN_RATIO_SAMPLE])
+              : i18n.t("缓冲内观察")}
+          onOpen={() => navigate(CONSOLE_PATHS.agentSessions)}
         />
         <StatCard
           icon={AlertTriangle}
           label={i18n.t("错误日志")}
-          value={optional.errorLogs ?? '—'}
-          sub={optional.warningLogs !== null ? i18n.t("警告 {0} 条", [optional.warningLogs]) : i18n.t("日志状态暂时不可读")}
+          value={optional.errorLogs ?? unrecorded}
+          sub={optional.warningLogs !== null
+            ? optional.logSince
+              ? i18n.t("持久统计 · 自 {0} 起 · 警告 {1} 条", [formatStamp(new Date(optional.logSince).getTime()), optional.warningLogs])
+              : i18n.t("持久统计 · 警告 {0} 条", [optional.warningLogs])
+            : i18n.t("日志状态暂时不可读")}
           tone={errorTone}
           onOpen={() => navigate((optional.errorLogs ?? 0) > 0 ? '/logs?level=error' : '/logs')}
         />
         <StatCard
           icon={Radio}
-          label={i18n.t("在线渠道")}
-          value={stats ? <>{stats.endpoints.online}<small> / {stats.endpoints.total}</small></> : '—'}
-          sub={endpointRate !== null ? i18n.t("在线率 {0}%", [endpointRate]) : i18n.t("还没有连接渠道")}
+          label={i18n.t("在线聊天账号")}
+          value={stats ? <>{stats.endpoints.online}<small> / {stats.endpoints.total}</small></> : unrecorded}
+          sub={endpointRate !== null ? i18n.t("当前状态 · 在线率 {0}%", [endpointRate]) : stats ? i18n.t("还没有聊天账号") : i18n.t("等待 Host 状态")}
           tone={offlineEndpoints > 0 ? 'warning' : undefined}
           aside={endpointRate !== null
             ? <MiniRingGauge percent={endpointRate} tone={endpointRate === 100 ? 'success' : endpointRate >= 60 ? 'primary' : 'warning'} />
             : null}
-          onOpen={() => navigate('/endpoints')}
+          onOpen={() => navigate('/scope')}
         />
       </StatGrid>
+      <p className="console-basis-note">
+        <span><strong>{i18n.t("缓冲内观察")}</strong>{i18n.t("：消息数来自 Host 的事件缓冲，重启后清空；")}<span className={coverage.kind === 'partial' ? 'is-partial' : undefined}>{coverageText}</span></span>
+        <span><strong>{i18n.t("持久统计")}</strong>{i18n.t("：错误与警告来自日志库，清理日志后重新计数。")}</span>
+      </p>
 
       <div className="console-overview-row">
         <section className="console-dashboard-panel console-volume-panel" aria-labelledby="volume-title">
@@ -798,36 +839,26 @@ export default function HomePage() {
               ? <span className="console-soft-badge">{i18n.t("最近消息 {0}", [formatAgo(latestMessageAt, Date.now(), i18n.locale)])}</span>
               : null}
           </div>
-          <MessageVolumeChart
-            buckets={activity}
-            summary={i18n.t("最近 24 小时收到 {0} 条消息，回复 {1} 条", [messageSummary.inbound, messageSummary.outbound])}
-            describe={(bucket) => i18n.t("{0} · 收到 {1} · 回复 {2}", [formatHour(bucket.start), bucket.inbound, bucket.outbound])}
-          />
+          {coverage.kind === 'none' && messagesLoaded ? (
+            <StatusState kind="empty" compact title={i18n.t("缓冲里还没有消息")} description={i18n.t("机器人收到或发出消息后会出现在这里；实例重启会清空缓冲。")} />
+          ) : (
+            <MessageVolumeChart
+              buckets={activity}
+              summary={i18n.t("最近 24 小时收到 {0} 条消息，机器人发出 {1} 条", [messageSummary.inbound, messageSummary.outbound])}
+              describe={(bucket) => i18n.t("{0} · 收到 {1} · 发出 {2}", [formatHour(bucket.start), bucket.inbound, bucket.outbound])}
+            />
+          )}
           <div className="console-volume-legend">
             <span><i className="is-inbound" aria-hidden="true" />{i18n.t("收到")}</span>
-            <span><i className="is-reply" aria-hidden="true" />{i18n.t("回复")}</span>
-            <small>{i18n.t("按 Host 事件缓冲统计，重启后重新计数")}</small>
+            <span><i className="is-reply" aria-hidden="true" />{i18n.t("发出")}</span>
+            <small className={coverage.kind === 'partial' ? 'text-[hsl(var(--warning))]' : undefined}>{i18n.t("缓冲内观察")} · {coverageText}</small>
           </div>
-        </section>
-
-        <section className="console-dashboard-panel" aria-labelledby="runtime-title">
-          <div className="console-card-heading">
-            <h2 id="runtime-title">{i18n.t("运行信息")}</h2>
-            <Clock className="console-card-heading-icon" aria-hidden="true" />
-          </div>
-          <dl className="console-kv-list">
-            <div><dt>{i18n.t("运行时长")}</dt><dd>{systemStatus ? formatUptime(systemStatus.uptime, i18n.locale) : '—'}</dd></div>
-            <div><dt>{i18n.t("运行子插件")}</dt><dd>{stats ? `${stats.plugins.active} / ${stats.plugins.total}` : '—'}</dd></div>
-            <div><dt>{i18n.t("命令")}</dt><dd>{stats?.commands ?? '—'}</dd></div>
-            <div><dt>Agent</dt><dd>{optional.agents ?? '—'}</dd></div>
-            <div><dt>{i18n.t("实时")}</dt><dd className={connected ? 'is-success' : 'is-warning'}>{connected ? i18n.t("已连接") : i18n.t("未连接")}</dd></div>
-          </dl>
         </section>
 
         <section className="console-dashboard-panel" aria-labelledby="resource-title">
           <div className="console-card-heading">
-            <h2 id="resource-title">{i18n.t("资源占用")}</h2>
-            <Cpu className="console-card-heading-icon" aria-hidden="true" />
+            <h2 id="resource-title">{i18n.t("进程与资源")}</h2>
+            <Button variant="ghost" size="sm" asChild><Link to={instanceSectionHref('status', CONSOLE_PATHS.opsInstance)}>{i18n.t("实例")}<ArrowUpRight /></Link></Button>
           </div>
           <dl className="console-kv-list">
             <div>
@@ -851,36 +882,16 @@ export default function HomePage() {
         </section>
       </div>
 
-      {attentionItems.length > 0 ? (
-        <section className="console-attention-strip" aria-label={i18n.t("需要关注")}>
-          {attentionItems.map((item) => (
-            <ListItemButton
-              key={item.title}
-              type="button"
-              className={`console-attention-item is-${item.tone}`}
-              onClick={() => navigate(item.path)}
-            >
-              {item.tone === 'neutral' ? <Sparkles /> : <AlertTriangle />}
-              <span className="min-w-0 flex-1 text-left">
-                <span className="block text-sm font-semibold">{item.title}</span>
-                <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">{item.detail}</span>
-              </span>
-              <ArrowUpRight />
-            </ListItemButton>
-          ))}
-        </section>
-      ) : null}
-
       <section className="console-dashboard-panel console-event-feed-panel" aria-labelledby="event-feed-title">
         <div className="console-card-heading">
           <div className="flex flex-wrap items-center gap-2.5">
-            <h2 id="event-feed-title">{i18n.t("实时事件")}</h2>
+            <h2 id="event-feed-title">{i18n.t("最近的消息")}</h2>
             <span className={connected ? 'console-event-live-badge' : 'console-event-live-badge is-offline'}>
               <span className="console-event-live-dot" aria-hidden="true" />
               {connected ? i18n.t("实时推送中") : i18n.t("实时事件未连接")}
             </span>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => navigate('/agent/sessions')}>
+          <Button variant="ghost" size="sm" onClick={() => navigate(CONSOLE_PATHS.agentSessions)}>
             {i18n.t("查看明细")}<ArrowUpRight />
           </Button>
         </div>
@@ -896,10 +907,12 @@ export default function HomePage() {
               } t={i18n.t} />
             ))}
           </ol>
-        ) : displayEvents.length > 0 ? (
+        ) : !messagesLoaded ? (
+          <div className="space-y-2" aria-label={i18n.t("正在读取消息事件…")}><Skeleton className="h-10" /><Skeleton className="h-10" /></div>
+        ) : recentEvents.length > 0 ? (
           <>
             <div className="console-event-feed-hint">
-              <span>{messagesLoaded ? i18n.t("暂时还没有消息，先显示最近的运行日志。") : i18n.t("正在读取消息事件…")}</span>
+              <span>{i18n.t("缓冲里还没有消息，先显示最近的运行日志。")}</span>
               <span className="flex items-center gap-1.5 text-xs tabular-nums">
                 <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">INFO {eventCounts.info}</span>
                 {eventCounts.warn > 0 ? (
@@ -911,7 +924,7 @@ export default function HomePage() {
               </span>
             </div>
             <div className="console-event-feed">
-              {displayEvents.map((evt) => (
+              {recentEvents.map((evt) => (
                 <button key={evt.id} type="button" className="console-event-feed-row" onClick={() => setSelectedEvent(evt)}>
                   <time className="console-event-feed-time">{evt.timestamp}</time>
                   <span className={`console-event-feed-level is-${evt.level}`}>{evt.level.toUpperCase()}</span>
@@ -922,10 +935,7 @@ export default function HomePage() {
             </div>
           </>
         ) : (
-          <div className="console-event-feed-empty">
-            <Activity className="h-4 w-4 text-muted-foreground" />
-            <span>{i18n.t("等待新事件进入...")}</span>
-          </div>
+          <StatusState kind="empty" compact title={i18n.t("还没有消息")} description={i18n.t("机器人收到或发出消息后，最近的消息会按会话出现在这里。")} />
         )}
       </section>
 
@@ -1056,7 +1066,7 @@ export default function HomePage() {
               onClick={() => {
                 const src = selectedEvent?.source
                 setSelectedEvent(null)
-                navigate(src && !src.startsWith('synth') ? `/logs?q=${encodeURIComponent(src)}` : '/logs')
+                navigate(src ? `/logs?source=${encodeURIComponent(src)}` : '/logs')
               }}
             >
               {i18n.t("打开日志工作台")}
@@ -1067,6 +1077,6 @@ export default function HomePage() {
       </Sheet>
 
       {ConfirmDialogHost}
-    </div>
+    </PageShell>
   )
 }

@@ -6,9 +6,10 @@ import postcss from 'postcss'
 // Evaluate the relevant class selectors in source order, including specificity
 // and media bounds. A fixed rule earlier in the file is not sufficient: the IM
 // surface rule used to override it and leave the translated drawer in flex flow.
-const layout = [{ classes: ['sandbox-container', 'im-layout'] }]
-const sidebar = [...layout, { classes: ['channel-sidebar', 'im-sidebar'] }]
-const toggle = [...layout, { classes: ['mobile-channel-toggle'] }]
+const shell = pane => [{ classes: ['sandbox-container', 'im-layout', 'im-layout--account', `is-${pane}-pane`] }]
+const sidebar = pane => [...shell(pane), { classes: ['channel-sidebar', 'im-sidebar'] }]
+const main = pane => [...shell(pane), { classes: ['im-main-split'] }]
+const back = [...shell('chat'), { classes: ['im-main-split'] }, { classes: ['im-chat-header'] }, { classes: ['im-chat-back'] }]
 function matches(selector, path) {
   const parts = selector.trim().split(/\s*(>)\s*|\s+/u).filter(Boolean)
   const match = (part, node) => /^(?:\.[\w-]+)+$/u.test(part) && [...part.matchAll(/\.([\w-]+)/gu)].every(([, name]) => node.classes.includes(name))
@@ -45,30 +46,35 @@ for (const file of ['client/style.css']) {
   const entry = await readFile(new URL(`../${file}`, import.meta.url), 'utf8')
   assert.match(entry, /@import ["'][^"']*im-workspace\.css["']/u)
   const css = `${entry}\n${await readFile(new URL('../console-ui/src/im-workspace.css', import.meta.url), 'utf8')}`
-  test(`${file}: a translated mobile sidebar is fixed rather than consuming the conversation's flex height`, () => {
-    const drawer = computed(css, 390, sidebar), shell = computed(css, 390, layout), button = computed(css, 390, toggle)
-    assert.equal(drawer.position, 'fixed')
-    assert.equal(drawer['z-index'], '1000')
-    assert.equal(shell['flex-direction'], 'column')
-    assert.equal(button.display, 'flex')
-    assert.equal(button['flex-shrink'], '0')
+  test(`${file}: below 1024px the list or the chat is shown, never both and never a drawer`, () => {
+    for (const width of [390, 768, 1023]) {
+    assert.equal(computed(css, width, sidebar('list')).width, '100%', 'the list fills the workspace')
+    assert.notEqual(computed(css, width, sidebar('list')).position, 'fixed')
+    assert.equal(computed(css, width, main('list')).display, 'none')
+    assert.equal(computed(css, width, sidebar('chat')).display, 'none')
+    assert.notEqual(computed(css, width, main('chat')).display, 'none')
+    assert.equal(computed(css, width, back).display, 'inline-flex', 'the chat pane has a way back to the list')
+    }
   })
   test(`${file}: message actions do not steal mobile bubble width or precede inbound text`, () => {
     for (const outgoing of [false, true]) {
       const row = [{ classes: ['im-message-row', ...(outgoing ? ['im-message-row--out'] : [])] }]
-      const bubble = [...row, { classes: ['im-bubble'] }]
+      const bubble = [...row, { classes: ['im-message-main'] }]
       const actions = [...row, { classes: ['im-message-actions'] }]
       assert.equal(computed(css, 1440, bubble).order, '1')
       assert.equal(computed(css, 1440, actions).order, outgoing ? '0' : '2')
       assert.equal(computed(css, 390, row)['flex-direction'], 'column')
       assert.equal(computed(css, 390, bubble).order, '1')
       assert.equal(computed(css, 390, actions).order, '2')
+      assert.equal(computed(css, 390, actions).display, 'none', 'on a phone the actions appear only for a tapped (focused) message')
     }
   })
-  test(`${file}: desktop sidebar remains in flow and does not gain mobile drawer positioning`, () => {
-    for (const width of [1024, 1440]) {
-      assert.equal(computed(css, width, sidebar).position, 'relative')
-      assert.equal(computed(css, width, toggle).display, 'none')
+  test(`${file}: from 1024px the list and the chat sit side by side`, () => {
+    for (const width of [1024, 1440]) for (const pane of ['list', 'chat']) {
+      assert.equal(computed(css, width, sidebar(pane)).position, 'relative')
+      assert.notEqual(computed(css, width, sidebar(pane)).display, 'none')
+      assert.notEqual(computed(css, width, main(pane)).display, 'none')
+      assert.equal(computed(css, width, back).display, 'none')
     }
   })
 }

@@ -21,9 +21,9 @@ test('the local mirror names the gateway RPCs of ADR 0054 §4–§5', () => {
     'gateway.packages.install', 'gateway.packages.list', 'gateway.packages.plan', 'gateway.packages.uninstall', 'gateway.packages.update',
     'gateway.plugins.declare',
   ])
-  const contract = read('contracts/gateway.ts')
-  assert.match(contract, /TODO\(gateway-protocol\)/u, 'the mirror is marked provisional')
-  for (const name of Object.values(GATEWAY_RPC)) assert.ok(contract.includes(`'${name}'`), name)
+  const mirror = read('contracts/console-protocol-mirror.mjs')
+  assert.match(read('contracts/gateway.ts'), /from '\.\/console-protocol-mirror\.mjs'/u, 'constants come from the single protocol mirror')
+  for (const name of Object.values(GATEWAY_RPC)) assert.ok(mirror.includes(`'${name}'`), name)
   assert.deepEqual(gatewayRequestBody('gateway.instance.logs', { lines: 10 }, 7), { type: 'gateway.instance.logs', requestId: 7, data: { lines: 10 } })
   assert.deepEqual(gatewayRequestBody('gateway.instance.status', undefined, 1).data, {})
 })
@@ -173,7 +173,7 @@ test('the instance and terminal pages sit in 运维 with their own permissions',
 
 test('the instance page confirms lifecycle actions, plans before mutating and subscribes to progress first', () => {
   const page = read('pages/ops/instance.tsx')
-  assert.match(page, /ConfirmDialog/u)
+  assert.match(page, /useActionReceipt\(/u, 'lifecycle actions and package transactions go through the receipt')
   assert.match(page, /GATEWAY_RPC\.PACKAGES_PLAN/u)
   assert.match(page, /useGatewayTransaction\(\)/u, 'transactions run through the shared runner')
   const runner = read('pages/ops/use-gateway.ts')

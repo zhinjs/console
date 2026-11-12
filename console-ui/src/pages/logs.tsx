@@ -11,6 +11,8 @@ import { readErrorSummary } from '../utils/read-error.mjs'
 import { logReadState, logPayloadAvailability } from './logs/read-state.mjs'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { LogWorkbench, type LogEntry, type LogStats } from './logs/LogWorkbench'
+import { ScopeFilterBar, useScopeFilter } from './insights/ScopeFilterBar'
+import { logScopeTokens, logServerQuery, matchesLogScope } from './insights/scope-filter.mjs'
 
 import { historyQuery, historyParams, changeHistoryFilter, isCurrentHistoryRequest, validateHistoryResponse, type HistoryPayload } from './logs/history-model.mjs'
 
@@ -32,7 +34,11 @@ export default function LogsPage() {
   const [error, setError] = useState<string | null>(null)
   const query = historyQuery(searchParams)
   const {level:levelFilter, q:textFilter, source:sourceFilter, page, pageSize} = query
-  const requestKey = historyParams(query).toString()
+  // 范围（adapter / endpoint / conversation，来自对象页「记录」页签）：日志没有结构化字段，
+  // Host 只接受一个文本条件，其余标识在本页再按文本收窄。
+  const scopeFilter = useScopeFilter()
+  const scopeTokens = useMemo(() => logScopeTokens(scopeFilter.scope), [scopeFilter.identity]) // eslint-disable-line react-hooks/exhaustive-deps
+  const requestKey = historyParams({ ...query, q: logServerQuery(textFilter, scopeFilter.scope) }).toString()
   const activeKeyRef = useRef(requestKey)
   activeKeyRef.current = requestKey
   const [history, setHistory] = useState<HistoryPayload | null>(null)
@@ -188,6 +194,8 @@ export default function LogsPage() {
     statsInFlightRef.current = null
   }
 
+  const scopedLogs = scopeTokens.length ? logs.filter(log => matchesLogScope(log, scopeTokens)) : logs
+
   const access = logReadState({ readOnly, loaded: logsLoaded && loadedKeyRef.current === requestKey, error, statsError, stats })
 
   const handleClearAll = async () => {
@@ -251,8 +259,13 @@ export default function LogsPage() {
         description={readOnly ? i18n.t("实时查看与筛选系统运行日志（只读）。") : i18n.t("查看历史与实时日志，定位运行异常。")}
       />
 
+      <ScopeFilterBar
+        filter={scopeFilter}
+        note={i18n.t("运行日志没有结构化的适配器、账号或会话字段，这里按文本匹配这些标识，可能漏掉或多出条目；页码与总数按 Host 的文本条件统计，本页只显示匹配全部标识的行。")}
+      />
+
       <LogWorkbench
-        state={{ logs: loadedKeyRef.current === requestKey ? logs : [], stats, level: levelFilter, query: textFilter, autoScroll, error: error ?? statsError, readOnly, logsKnown: access.logsKnown, canManage: access.canManage, loading, source: sourceFilter, page, pageSize, total: history?.total ?? null, totalPages: history?.totalPages ?? null, sources: loadedKeyRef.current === requestKey ? history?.sources ?? [] : [] }}
+        state={{ logs: loadedKeyRef.current === requestKey ? scopedLogs : [], stats, level: levelFilter, query: textFilter, autoScroll, error: error ?? statsError, readOnly, logsKnown: access.logsKnown, canManage: access.canManage, loading, source: sourceFilter, page, pageSize, total: history?.total ?? null, totalPages: history?.totalPages ?? null, sources: loadedKeyRef.current === requestKey ? history?.sources ?? [] : [] }}
         actions={{
           selectLevel,
           selectSource: value => changeFilter('source',value),

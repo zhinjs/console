@@ -46,6 +46,7 @@ import {
   type GroupsEntry,
 } from './conversation-labels'
 import { setLastReadAt } from './conversation-read-state'
+import { chatRequestKey } from './chat-workspace-model.mjs'
 
 interface ChannelEntry {
   id: string
@@ -76,9 +77,11 @@ export function useChannelManager(params: {
   info: EndpointInfo | null
   initialChannelType?: ConversationChannelType
   initialChannelId?: string
+  /** 请求 / 通知 asked for by the URL (account chat). */
+  initialView?: 'requests' | 'notices'
 }) {
   const i18n = useI18n()
-  const { adapter, endpointId, info, initialChannelType, initialChannelId } = params
+  const { adapter, endpointId, info, initialChannelType, initialChannelId, initialView } = params
   const cacheScope = useInboxCacheScope()
   const { success, error: toastError } = useToast()
 
@@ -90,16 +93,22 @@ export function useChannelManager(params: {
   const [metaIndex, setMetaIndex] = useState<ConversationMetaIndex>(new Map())
   const [nameIndex, setNameIndex] = useState<ConversationNameIndex>(new Map())
 
-  const [selection, setSelection] = useState<SidebarSelection | null>(() =>
+  const requested = useMemo((): SidebarSelection | null =>
     initialChannelType && initialChannelId
-      ? {
-          type: 'channel',
-          id: initialChannelId,
-          name: initialChannelId,
-          channelType: initialChannelType,
-        }
-      : null,
-  )
+      ? { type: 'channel', id: initialChannelId, name: initialChannelId, channelType: initialChannelType }
+      : initialView ? { type: initialView } : null,
+  [initialChannelType, initialChannelId, initialView])
+  const requestedKey = chatRequestKey(requested)
+  const [selection, setSelection] = useState<SidebarSelection | null>(() => requested)
+  // The URL is the source of truth of the account chat: back / forward (or a link) that asks for
+  // another conversation selects it. A click selects first and then writes the URL, so the full
+  // entry (display name, channel parent) is kept when the request catches up.
+  const appliedRequest = useRef(requestedKey)
+  useEffect(() => {
+    if (appliedRequest.current === requestedKey) return
+    appliedRequest.current = requestedKey
+    setSelection((current) => (chatRequestKey(current) === requestedKey ? current : requested))
+  }, [requestedKey, requested])
   const previousCacheScope = useRef(cacheScope)
   useEffect(() => {
     if (previousCacheScope.current !== cacheScope) setSelection(null)
@@ -108,7 +117,6 @@ export function useChannelManager(params: {
     setFriends([]); setGroups([]); setChannelList([]); setMetaIndex(new Map()); setNameIndex(new Map())
   }, [cacheScope])
 
-  const [showChannelList, setShowChannelList] = useState(false)
   const [listSearch, setListSearch] = useState('')
   const [sectionCollapsed, setSectionCollapsed] = useState<Record<ConversationSectionId, boolean>>({
     private: false,
@@ -424,6 +432,14 @@ export function useChannelManager(params: {
     return sections.filter((s) => !s.hidden)
   }, [adapter, friends, groups, channelList, listSearch, buildEntry, i18n])
 
+  // A conversation opened from the URL only knows its kind and id. Once the list knows the
+  // channel's parent (guild / group) it is added, because sending and history need it.
+  useEffect(() => {
+    if (selection?.type !== 'channel' || selection.parent || selection.channelType !== 'channel') return
+    const entry = channelList.find((item) => item.id === selection.id)
+    if (entry?.parent) setSelection({ ...selection, parent: entry.parent })
+  }, [selection, channelList])
+
   const filteredChannels = useMemo(() => {
     return conversationSections.flatMap((s) => s.entries)
   }, [conversationSections])
@@ -547,8 +563,6 @@ export function useChannelManager(params: {
     listNotice,
     selection,
     setSelection,
-    showChannelList,
-    setShowChannelList,
     listSearch,
     setListSearch,
     channels,

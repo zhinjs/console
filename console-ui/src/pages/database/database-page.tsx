@@ -1,12 +1,11 @@
 import { useI18n } from '../../i18n'
 import { useState, useMemo } from 'react'
 import { useDatabaseConsole } from './use-database-console'
-import { readErrorSummary } from '../../utils/read-error.mjs'
 import type { DatabaseType, TableInfo } from '@zhin.js/client'
 import { Database as DatabaseIcon, Table2, Trash2, RefreshCw, Key, ArrowLeft } from 'lucide-react'
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
-import { ErrorAlert } from '../../components/error-alert'
+import { OpsLoadState } from '../ops/load-state'
 import { EmptyState } from '../../components/empty-state'
 import { Badge } from '../../components/ui/badge'
 import { Skeleton } from '../../components/ui/skeleton'
@@ -46,7 +45,7 @@ export default function DatabasePage() {
     <div className="space-y-4 sm:space-y-6">
       <PageHeader
         title={i18n.t("数据库")}
-        description={readOnly ? i18n.t("浏览 {0} 中的数据（只读）。", [i18n.t(DB_TYPE_LABELS[dbType])]) : i18n.t("浏览和管理 {0} 中的数据；左栏选择对象，右侧查看与编辑。", [i18n.t(DB_TYPE_LABELS[dbType])])}
+        description={!info ? i18n.t("浏览和管理项目数据库中的数据；数据库由 Zhin 实例提供。") : readOnly ? i18n.t("浏览 {0} 中的数据（只读）。", [i18n.t(DB_TYPE_LABELS[dbType])]) : i18n.t("浏览和管理 {0} 中的数据；左栏选择对象，右侧查看与编辑。", [i18n.t(DB_TYPE_LABELS[dbType])])}
         actions={
           <div className="flex items-center gap-2">
             {info && (
@@ -61,10 +60,11 @@ export default function DatabasePage() {
       />
 
       {error && (
-        <ErrorAlert error={readErrorSummary(error, i18n.t("数据库信息"), i18n.locale)} technicalDetail={error} onRetry={() => { void loadInfo().catch(() => {}); void loadTables().catch(() => {}) }} />
+        <OpsLoadState error={error} resource={i18n.t("数据库信息")} permissions={['ops.database.read']} onRetry={() => { void loadInfo().catch(() => {}); void loadTables().catch(() => {}) }} />
       )}
 
-      <Card className="overflow-hidden border-border/80 shadow-sm">
+      {/* A failed first read shows only its state: an empty explorer would read as "no tables". */}
+      {error && !loaded && !tables.length ? null : <Card className="overflow-hidden border-border/80 shadow-sm">
         <CardContent className="p-0">
           <div className="flex flex-col md:flex-row h-[max(28rem,calc(100dvh-11rem))]">
             <div
@@ -210,7 +210,7 @@ export default function DatabasePage() {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Card>}
     </div>
     {!readOnly && <ConfirmDialog
       open={!!deleteTarget}

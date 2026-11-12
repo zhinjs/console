@@ -39,7 +39,7 @@ export function AdapterInstallSection({ onAdapterReady }: { onAdapterReady?: () 
       return
     }
     if (!result) return
-    if (result.status === 'succeeded') setSpecText('')
+    if (result.status === 'succeeded') { setSpecText(''); setTouched(false) }
     if (result.needsConfiguration?.length) setNeeds(result.needsConfiguration)
     else if (result.status === 'succeeded') {
       toast.success(transactionSummary(result, i18n.t).title)

@@ -6,12 +6,13 @@ import { useConfirm } from '../../components/confirm-dialog'
 import { adapterHref } from '../../console-routes.mjs'
 import { useConsoleAccess } from '../../hooks/use-console-access'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
-import { setEnabledRequest, type FeatureLevel } from './feature-model.mjs'
+import { conversationOverrideCounts, setEnabledRequest, type FeatureLevel } from './feature-model.mjs'
 import { useFeatureDetail, useFeatureMatrix, useFeatureWriter } from './use-feature-data'
 import { FeatureSwitch } from './feature-switch'
+import { ConversationOverrideLinks } from './conversation-list'
 
 function levelLabel(level: FeatureLevel, i18n: ReturnType<typeof useI18n>): string {
-  return level === 'global' ? i18n.t("全局") : level === 'adapter' ? i18n.t("适配器") : i18n.t("账号")
+  return level === 'global' ? i18n.t("全局") : level === 'adapter' ? i18n.t("适配器") : level === 'endpoint' ? i18n.t("账号") : i18n.t("会话")
 }
 
 /**
@@ -29,6 +30,8 @@ export function GlobalFeatureSummary({ plugin }: { plugin: string }) {
   if (!value) return null
   const row = matrix.source === 'rpc' ? matrix.rows.find(item => item.plugin === plugin) : undefined
   const adapters = row ? matrix.adapters.filter(alias => row.adapters[alias] && (row.adapters[alias]!.overridden || !row.adapters[alias]!.enabled)) : []
+  // Per-endpoint conversation override counts for this plugin, when the Host reports them.
+  const conversationAdapters = row ? matrix.adapters.filter(alias => conversationOverrideCounts(row.conversationOverrides, alias).length) : []
   const toggle = async (enabled: boolean) => {
     const ok = await confirm({
       title: enabled ? i18n.t("启用 {0}？", [plugin]) : i18n.t("在全局禁用 {0}？", [plugin]),
@@ -52,7 +55,18 @@ export function GlobalFeatureSummary({ plugin }: { plugin: string }) {
         {adapters.length ? (
           <div className="flex flex-wrap items-center gap-1">
             <span className="text-sm text-muted-foreground">{i18n.t("下级有覆盖：")}</span>
-            {adapters.map(alias => <Link key={alias} to={adapterHref(alias)}><Badge variant="info" size="sm">{alias}</Badge></Link>)}
+            {adapters.map(alias => <Link key={alias} to={adapterHref(alias, 'features')}><Badge variant="info" size="sm">{alias}</Badge></Link>)}
+          </div>
+        ) : null}
+        {conversationAdapters.length ? (
+          <div className="flex flex-wrap items-start gap-3">
+            <span className="text-sm text-muted-foreground">{i18n.t("会话覆盖：")}</span>
+            {conversationAdapters.map(alias => (
+              <span key={alias} className="flex flex-col">
+                <span className="text-xs font-medium">{alias}</span>
+                <ConversationOverrideLinks counts={row?.conversationOverrides} adapter={alias} />
+              </span>
+            ))}
           </div>
         ) : null}
       </CardContent>

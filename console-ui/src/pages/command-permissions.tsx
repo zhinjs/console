@@ -1,12 +1,16 @@
 import { useI18n } from '../i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ShieldCheck, RefreshCw } from 'lucide-react'
+import { Blocks, RefreshCw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Checkbox } from '../components/ui/checkbox'
 import { Input } from '../components/ui/input'
+import { SelectField } from '../components/ui/select'
 import { Alert, AlertDescription } from '../components/ui/alert'
+import { PageHeader } from '../components/PageHeader'
+import { PageShell } from '../components/PageShell'
+import { StatusState } from '../components/StatusState'
 import { ConversationTargetEditor, ConversationTargetSummary } from '../components/PluginConfigForm/ConversationTargetEditor'
 import { apiFetch } from '../utils/auth'
 import { hasConsolePermission } from '../utils/console-access.mjs'
@@ -14,9 +18,14 @@ import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { getInboxCacheScope, isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { CONSOLE_REST } from '../contracts/zhin-console'
 import { createDiagnosticRequestGate } from './endpoint-detail/message-diagnostics.mjs'
-import { permissionHttpError, permissionOutcomeLabel, permissionRequest, readPermissionCatalog, readPermissionExplanation,
+import { HYPOTHETICAL_CHAT_ROLES, HYPOTHETICAL_STANDINGS, permissionHttpError, permissionOutcomeLabel, permissionRequest, readPermissionCatalog, readPermissionExplanation,
+  type HypotheticalChatRole, type HypotheticalStanding,
   type PermissionCatalog, type PermissionCommand, type PermissionExplanation, type PermissionRequest } from './permission-explanation-model.mjs'
 import { matchPermissionLink, permissionCatalogState, permissionLinkSearch, readPermissionLink, type PermissionLink } from './permission-link-model.mjs'
+
+
+const CHAT_ROLE_OPTION_LABELS: Record<HypotheticalChatRole, string> = { '': '未知', none: '普通用户（没有 zhin 角色）', owner: '所有者', admin: '管理员', trusted: '受信任' }
+const STANDING_OPTION_LABELS: Record<HypotheticalStanding, string> = { '': '未知', owner: '群主', admin: '管理员', member: '成员', guest: '访客' }
 
 export default function CommandPermissionsPage() {
   const i18n = useI18n()
@@ -33,6 +42,7 @@ export default function CommandPermissionsPage() {
   const [hypothesis, setHypothesis] = useState(false), [target, setTarget] = useState<unknown>(undefined)
   const [includeTarget, setIncludeTarget] = useState(false)
   const [senderId, setSenderId] = useState(''), [roles, setRoles] = useState('')
+  const [chatRole, setChatRole] = useState<HypotheticalChatRole>(''), [standing, setStanding] = useState<HypotheticalStanding>('')
   const [result, setResult] = useState<{ scope: typeof scope; request: PermissionRequest; value: PermissionExplanation } | null>(null)
   const active = isInboxCacheScopeActive(scope), denied = !hasConsolePermission('status.view')
   const current = active && catalog && catalog.scope === scope ? catalog.value : null
@@ -69,15 +79,17 @@ export default function CommandPermissionsPage() {
   useEffect(() => {
     if (!active || denied) return
     const link = readPermissionLink(linkRef.current)
-    pendingLink.current = link; setQuery(link?.name ?? '')
-    void loadRef.current(1, link?.name ?? '')
+    // `?q=` (from the plugin detail page) pre-fills the search with a plugin instance.
+    const initial = link?.name ?? linkRef.current.get('q')?.trim().slice(0, 200) ?? ''
+    pendingLink.current = link; setQuery(initial)
+    void loadRef.current(1, initial)
   }, [scope, active, denied])
 
   const explain = async (command: PermissionCommand, useHypothesis: boolean) => {
     if (!current || !isInboxCacheScopeActive(scope) || loading || denied) return
     explanations.current.cancel(); setResult(null); setError(null)
     let body: PermissionRequest
-    try { body = permissionRequest(current.generation, command, useHypothesis ? { target: includeTarget ? target : undefined, requireTarget: includeTarget, senderId, roles } : undefined, i18n.locale) }
+    try { body = permissionRequest(current.generation, command, useHypothesis ? { target: includeTarget ? target : undefined, requireTarget: includeTarget, senderId, chatRole, standing, platformRoles: roles } : undefined, i18n.locale) }
     catch (caught) { setError((caught as Error).message); return }
     const request = explanations.current.begin(); setChecking(true)
     try {
@@ -109,24 +121,23 @@ export default function CommandPermissionsPage() {
   }, [current])
   const catalogState = permissionCatalogState({ denied, active, loading, error: catalogError, catalog: current })
 
-  return <div className="space-y-5 p-4 md:p-6 max-w-6xl mx-auto">
-    <header className="space-y-2"><h1 className="console-page-title flex items-center gap-2"><ShieldCheck aria-hidden="true" />{i18n.t("命令权限说明")}</h1>
-      <p className="text-sm text-muted-foreground">{i18n.t("查看规则为什么匹配。这里只做说明与假设检查，不执行命令，也不向平台查询或验证权限。")}</p>
-      <Button asChild variant="link" className="px-0"><Link to="/introspection?tab=commands">{i18n.t("返回命令目录")}</Link></Button></header>
-    {(denied || !active) && <Alert><AlertDescription>{i18n.t("需要连接当前 Host 并使用有状态查看权限的身份读取权限说明。")}</AlertDescription></Alert>}
+  return <PageShell className="max-w-6xl">
+    <PageHeader title={i18n.t("命令权限说明")}
+      description={i18n.t("查看规则为什么匹配。这里只做说明与假设检查，不执行命令，也不向平台查询或验证权限。")}
+      actions={<Button asChild variant="outline" size="sm"><Link to="/introspection?tab=commands"><Blocks />{i18n.t("返回命令目录")}</Link></Button>} />
+    {denied ? <StatusState kind="forbidden" permissions={['status.view']} />
+      : !active ? <StatusState kind="disconnected" description={i18n.t("需要连接当前 Host 并使用有状态查看权限的身份读取权限说明。")} /> : null}
     <Card><CardHeader><CardTitle>{i18n.t("选择当前运行代的命令")}</CardTitle></CardHeader><CardContent className="space-y-3">
       <form className="flex flex-wrap gap-2" onSubmit={event => { event.preventDefault(); reload(1) }}>
         <Input aria-label={i18n.t("搜索权限命令")} placeholder={i18n.t("搜索命令或插件实例")} maxLength={200} value={query} onChange={event => setQuery(event.target.value)} className="min-w-0 flex-1" />
         <Button type="submit" disabled={denied || !active || loading}><RefreshCw className="size-4 mr-2" />{current || catalogError ? i18n.t("重新读取") : i18n.t("读取目录")}</Button>
       </form>
       {catalogState === 'loading' && <p role="status" className="text-sm">{i18n.t("正在读取当前命令目录…")}</p>}
-      {catalogState === 'error' && <Alert variant="destructive"><AlertDescription role="alert" className="flex flex-wrap items-center gap-2">
-        <span className="min-w-0 flex-1">{i18n.t("命令目录读取失败：")}{catalogError}</span>
-        <Button size="sm" variant="outline" onClick={() => void loadCatalog()}><RefreshCw className="size-4 mr-2" />{i18n.t("重试")}</Button></AlertDescription></Alert>}
+      {catalogState === 'error' && <StatusState compact error={catalogError} title={i18n.t("命令目录读取失败")} onRetry={() => void loadCatalog()} />}
       {catalogState === 'idle' && <p className="text-sm text-muted-foreground">{i18n.t("尚未读取命令目录。")}</p>}
       {linkNotice && <Alert><AlertDescription>{linkNotice === 'ambiguous' ? i18n.t("链接中的命令对应多个插件实例，请从列表中选择。") : i18n.t("当前目录中没有找到链接中的命令，请搜索或从列表中选择。")}</AlertDescription></Alert>}
       {current && <><p className="text-xs text-muted-foreground">{i18n.t("运行代 ")}{current.generation} {i18n.t(" · 共 ")}{current.total} {i18n.t(" 项 · 第 ")}{current.page} {i18n.t(" 页")}</p>
-        {!current.commands.length ? <p className="text-sm">{i18n.t("当前筛选没有命令。")}</p> : <div className="grid gap-2 sm:grid-cols-2">{current.commands.map(command => <button type="button" key={command.id} aria-pressed={selected?.id === command.id}
+        {!current.commands.length ? <StatusState compact kind="empty" title={i18n.t("当前筛选没有命令。")} description={i18n.t("换个关键词，或清空搜索查看全部命令。")} /> : <div className="grid gap-2 sm:grid-cols-2">{current.commands.map(command => <button type="button" key={command.id} aria-pressed={selected?.id === command.id}
           className={`min-w-0 text-left rounded-md border p-3 space-y-1 ${selected?.id === command.id ? 'border-primary bg-muted/40' : ''}`} onClick={() => choose(command)}>
           <span className="block font-medium break-words">{command.name}</span><span className="block text-xs text-muted-foreground break-all">{command.owner}</span><span className="block text-sm break-words">{command.description}</span></button>)}</div>}
         <div className="flex gap-2"><Button variant="outline" disabled={loading || current.page <= 1} onClick={() => reload(current.page - 1)}>{i18n.t("上一页")}</Button>
@@ -138,8 +149,16 @@ export default function CommandPermissionsPage() {
       {hypothesis && <div className="space-y-3"><label className="flex gap-2 items-start text-sm"><Checkbox checked={includeTarget} onCheckedChange={checked => { invalidateHypothesis(); setIncludeTarget(checked === true) }} />{i18n.t("提供假设会话与账号（可选）")}</label>
         {includeTarget && <ConversationTargetEditor value={target} onChange={value => { invalidateHypothesis(); setTarget(value) }} idPrefix="permission-target" disabled={checking} />}
         <label className="block space-y-1 text-sm"><span>{i18n.t("假设发送者 ID（可选）")}</span><Input value={senderId} maxLength={200} onChange={event => { invalidateHypothesis(); setSenderId(event.target.value) }} /></label>
-        <label className="block space-y-1 text-sm"><span>{i18n.t("假设角色（逗号分隔，可选）")}</span><Input value={roles} maxLength={2000} placeholder={i18n.t("例如 admin、trusted；留空表示未知")} onChange={event => { invalidateHypothesis(); setRoles(event.target.value) }} /></label>
-        <p className="text-xs text-muted-foreground">{i18n.t("这里的身份完全由你假设，未向平台核实。留空角色不会被当作已知管理员，也不能据此获得执行权限。")}</p></div>}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1 text-sm"><span>{i18n.t("假设 zhin 角色（可选）")}</span>
+            <SelectField aria-label={i18n.t("假设 zhin 角色（可选）")} value={chatRole || 'unknown'} onValueChange={value => { invalidateHypothesis(); setChatRole(value === 'unknown' ? '' : value as HypotheticalChatRole) }}
+              options={HYPOTHETICAL_CHAT_ROLES.map(value => ({ value: value || 'unknown', label: i18n.t(CHAT_ROLE_OPTION_LABELS[value]) }))} /></div>
+          <div className="space-y-1 text-sm"><span>{i18n.t("假设平台身份（可选）")}</span>
+            <SelectField aria-label={i18n.t("假设平台身份（可选）")} value={standing || 'unknown'} onValueChange={value => { invalidateHypothesis(); setStanding(value === 'unknown' ? '' : value as HypotheticalStanding) }}
+              options={HYPOTHETICAL_STANDINGS.map(value => ({ value: value || 'unknown', label: i18n.t(STANDING_OPTION_LABELS[value]) }))} /></div>
+        </div>
+        {standing ? <label className="block space-y-1 text-sm"><span>{i18n.t("平台角色（逗号分隔，可选）")}</span><Input value={roles} maxLength={2000} placeholder={i18n.t("平台自定义的角色 ID；留空表示未知")} onChange={event => { invalidateHypothesis(); setRoles(event.target.value) }} /></label> : null}
+        <p className="text-xs text-muted-foreground">{i18n.t("这里的身份完全由你假设，未向平台核实。zhin 角色只来自授予；平台群主/管理员是平台身份，单独影响平台相关条件。留空表示未知，不会被当作已知角色。")}</p></div>}
       <Button disabled={checking || loading || !active || denied} onClick={() => void explain(selected, hypothesis)}>{checking ? i18n.t("读取中…") : hypothesis ? i18n.t("检查假设条件") : i18n.t("重新查看规则")}</Button>
     </CardContent></Card><Card><CardHeader><CardTitle>{i18n.t("条件说明")}</CardTitle></CardHeader><CardContent className="space-y-4">
       {checking && <p role="status">{i18n.t("正在读取规则说明…")}</p>}
@@ -152,6 +171,6 @@ export default function CommandPermissionsPage() {
         <ul className="list-disc pl-4 text-xs text-muted-foreground space-y-1">{[...visible.unconstrained, ...visible.assumptions].map((item, index) => <li key={index}>{item}</li>)}</ul></>}
       {!checking && !visible && <p className="text-sm text-muted-foreground">{i18n.t("选择命令查看规则；修改假设后需要重新检查，不沿用旧结果。")}</p>}
     </CardContent></Card></div>}
-    {error && <Alert variant="destructive"><AlertDescription role="alert">{error}</AlertDescription></Alert>}
-  </div>
+    {error && <StatusState compact error={error} />}
+  </PageShell>
 }

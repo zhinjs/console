@@ -73,9 +73,9 @@ test('work-oriented navigation preserves ordinary-user names and legacy plugin g
     const block = source.slice(start, source.indexOf('})', start))
     return { name: /name: '([^']+)'/.exec(block)?.[1], group: /group: NAV_GROUPS\.(\w+)/.exec(block)?.[1], hidden: /hideInMenu: true/.test(block) }
   }
-  const primary = { dashboard: ['首页','OVERVIEW'], logs: ['运行日志','OVERVIEW'], endpoints: ['聊天账号','WORK'], agentSessions: ['聊天记录','WORK'], opsSchedules: ['定时任务','OPS'] }
+  const primary = { dashboard: ['首页','OVERVIEW'], logs: ['运行日志','OVERVIEW'], scope: ['账号与会话','WORK'], agentSessions: ['聊天记录','WORK'], opsSchedules: ['定时任务','OPS'] }
   for (const [key, [name,group]] of Object.entries(primary)) assert.deepEqual(routeGroup(key), { name, group, hidden: false })
-  assert.deepEqual(routeGroup('plugins'), { name: '插件管理', group: 'PLUGINS', hidden: false })
+  assert.deepEqual(routeGroup('plugins'), { name: '插件', group: 'PLUGINS', hidden: false })
   assert.deepEqual(routeGroup('marketplace'), { name: '插件市场', group: 'PLUGINS', hidden: false })
   assert.deepEqual(routeGroup('aiAmbient'), { name: '群聊插话', group: 'FEATURES', hidden: false })
   assert.match(source, /path: P\.aiAmbient,[\s\S]*?requiredPermissions: \[AMBIENT_STATUS_PERMISSION\]/)
@@ -87,7 +87,7 @@ test('work-oriented navigation preserves ordinary-user names and legacy plugin g
   assert.match(source, /path: P\.agentReplay,[\s\S]*?parent: P\.agentWorkbench,[\s\S]*?requiredPermissions: \[REPLAY_PERMISSION\]/)
   assert.match(sourceText(join(SOURCE_ROOT, 'pages', 'agent-workbench.tsx')), /to="\/agent\/replay"/)
   for (const key of ['opsConfig', 'opsEnv', 'opsFiles', 'opsDatabase', 'opsInstance', 'opsTerminal']) assert.equal(routeGroup(key).group, 'OPS', key)
-  for (const key of ['features', 'adapters', 'ai', 'introspection', 'scenarioLab', 'aiWorkrooms']) assert.equal(routeGroup(key).group, 'FEATURES', key)
+  for (const key of ['features', 'ai', 'introspection', 'scenarioLab', 'aiWorkrooms']) assert.equal(routeGroup(key).group, 'FEATURES', key)
   assert.doesNotMatch(source, /'对话分支'|'Agent 概览'|judge|decision|TypeSafe|shadow/)
   const entries = sourceText(join(SOURCE_ROOT, 'bootstrap', 'loadConsoleEntries.ts'))
   assert.match(entries, /placePluginRoute\(route, declaredSections\.get\(route\.path\)\)/)
@@ -156,7 +156,7 @@ test('runtime capabilities use purpose-built views with a shared inspector', () 
   assert.match(explorer, /Preserve that projection order/)
   assert.doesNotMatch(explorer, /sort\(\(a, b\).*item\.order/)
   assert.match(explorer, /console-runtime-binding-provider/)
-  assert.match(page, /error \? null : \(/)
+  assert.match(page, /error && !data \? null : \(/)
   const model = sourceText(join(SOURCE_ROOT, 'pages', 'introspection', 'capability-model.ts'))
   assert.match(model, /interface CapabilityRowMap/)
   assert.match(model, /commands: CommandRow/)
@@ -196,7 +196,7 @@ test('operations pages form a URL-addressable diagnostic loop', () => {
 test('the shared shell adapts across PC, Pad and Phone widths', () => {
   const layout = sourceText(join(SOURCE_ROOT, 'layouts', 'dashboard.tsx'))
   const design = sourceText(join(SOURCE_ROOT, 'design-system.css'))
-  const grids = ['pages/endpoints.tsx', 'pages/plugins.tsx', 'pages/marketplace.tsx']
+  const grids = ['pages/scope/overview-panels.tsx', 'pages/plugins.tsx', 'pages/marketplace.tsx']
     .map((path) => sourceText(join(SOURCE_ROOT, path))).join('\n')
 
   assert.match(layout, /console-content-frame/)
@@ -259,28 +259,31 @@ test('Endpoint transport uses canonical endpointKey and the public typed client 
   assert.match(endpointConsole, /loadInboxRequests\(false\)/)
   assert.match(endpointConsole, /loadInboxNotices\(false\)/)
   assert.match(endpointConsole, /unreadOnly:\s*true/)
-  assert.match(endpointConsole, /type: 'endpoint\.test'/)
-  assert.match(endpointConsole, /测试失败/)
+  // The connection test lives in the 接入 tab (scope/endpoint-access.tsx), not in the chat workspace.
+  const access = sourceText(join(SOURCE_ROOT, 'pages', 'scope', 'endpoint-access.tsx'))
+  assert.match(access, /'endpoint\.test'/)
+  assert.doesNotMatch(endpointConsole, /endpoint\.test/)
   assert.match(history, /loadInboxMessages\(\)/)
 })
 
-test('plugin management requires plans, revision checks and config validation', () => {
+test('plugin package changes are gateway transactions with a plan, and config validation stays', () => {
   const marketplace = sourceText(join(SOURCE_ROOT, 'pages', 'marketplace.tsx'))
   const detail = sourceText(join(SOURCE_ROOT, 'pages', 'plugin-detail.tsx'))
+  const action = sourceText(join(SOURCE_ROOT, 'pages', 'PackageAction.tsx'))
+  const model = sourceText(join(SOURCE_ROOT, 'pages', 'plugin-package-model.mjs'))
   const config = sourceText(join(SOURCE_ROOT, 'components', 'PluginConfigForm', 'index.tsx'))
 
-  assert.match(marketplace, /plugin:plan-install/)
-  assert.match(marketplace, /plugin:install/)
-  const workflow = sourceText(join(SOURCE_ROOT, 'pages', 'plugin-management-model.mjs'))
-  assert.match(marketplace, /mutationRequest\('plugin:install'/)
-  assert.match(workflow, /expectedRevision: plan\.configurationRevision/)
-  assert.match(workflow, /expectedProjectRevision: plan\.projectRevision/)
+  // ADR 0054 §4: the instance-side install path is gone from every page.
+  for (const text of [marketplace, detail, action, model]) assert.doesNotMatch(text, /'plugin:(?:install|update|uninstall|plan-install|plan-update|plan-uninstall)'/)
+  assert.match(marketplace, /packageAction\.prepare\('install'/)
+  assert.match(action, /GATEWAY_RPC\.PACKAGES_PLAN/)
+  assert.match(action, /GATEWAY_RPC\.PACKAGES_LIST/)
+  assert.match(model, /GATEWAY_RPC\.PACKAGES_INSTALL/)
+  assert.match(model, /GATEWAY_RPC\.PACKAGES_UPDATE/)
+  assert.match(model, /GATEWAY_RPC\.PACKAGES_UNINSTALL/)
+  assert.match(action, /useActionReceipt/)
+  assert.match(action, /ConfigurationNeedsPanel/)
   assert.match(detail, /plugin:diagnose/)
-  assert.match(detail, /plugin:plan-update/)
-  assert.match(detail, /plugin:update/)
-  assert.match(detail, /plugin:plan-uninstall/)
-  assert.match(detail, /plugin:uninstall/)
-  assert.match(detail, /plugin:set-enabled/)
   assert.match(config, /plugin:validate-config/)
   assert.match(config, /missingEnv/)
 })
@@ -304,7 +307,7 @@ test('Workroom selection is represented by engagementId in the URL', () => {
 
 test('Workroom read errors never masquerade as an empty record list', () => {
   const source = sourceText(join(SOURCE_ROOT, 'pages', 'workrooms.tsx'))
-  assert.match(source, /error \? <ErrorAlert error=\{error\} onRetry=\{refresh\} \/>/)
+  assert.match(source, /\) : error \? \(\s*<StatusState error=\{error\}[^\n]*onRetry=\{refresh\} \/>/)
   assert.match(source, /\) : error \? \([\s\S]*无法读取协作记录[\s\S]*\) : \([\s\S]*还没有协作记录/)
   assert.match(source, /detail\.summary\.engagementId === selectedId/)
 })

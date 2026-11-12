@@ -23,6 +23,8 @@ import { correlateChatRows, matchesMessageConversation, readMessagePush } from '
 import { readMessageHistory, mergeHistoryRows } from './inbox-history-model.mjs'
 import { toRpcChannelParent } from './conversation-labels'
 import { conversationSelectionKey, readComposerDraft, writeComposerDraft } from './composer-draft-model.mjs'
+import { deliveryAfterError, deliveryAfterSend, type DeliveryState } from './chat-workspace-model.mjs'
+import { draftStoreKey, readDraftStore, updateDraftStore, writeDraftStore } from './chat-draft-store.mjs'
 import { useToast } from '../../components/toast'
 import { ENDPOINT_RPC, INBOX_RPC, SIDE_EVENT_PUSH } from '../../contracts/zhin-console'
 import { requestConsole } from '../../utils/console-rpc'
@@ -37,6 +39,13 @@ interface LocalSentMessage {
   channelType: string
   segments: MessageContent
   timestamp: number
+  /** What the send receipt says (chat-workspace-model DELIVERY_STATES). */
+  delivery: DeliveryState
+  /** Host's reason for a refused send, shown under the bubble. */
+  failure?: string
+  /** Composer text it was sent from, offered back after an unknown outcome. */
+  draftText?: string
+  draftKey?: string | null
 }
 
 interface SendMessageOptions {
@@ -62,9 +71,12 @@ export function useMessageHistory(params: {
   const [receivedMessages, setReceivedMessages] = useState<ReceivedMessage[]>([])
   const [localSent, setLocalSent] = useState<LocalSentMessage[]>([])
   // Unsent text is kept per conversation: switching chats shows that chat's own draft, never the
-  // previous one, and coming back restores it.
+  // previous one, and coming back restores it. The in-memory store keeps it across tab switches.
   const draftKey = conversationSelectionKey(selection)
-  const [msgDrafts, setMsgDrafts] = useState<Record<string, string>>({})
+  // The conversation on screen now: a failed send there is shown on its bubble; elsewhere it also toasts.
+  const visibleKey = useRef(draftKey); visibleKey.current = draftKey
+  const storeKey = draftStoreKey(cacheScope, adapter, endpointId)
+  const [msgDrafts, setMsgDrafts] = useState<Record<string, string>>(() => readDraftStore<Record<string, string>>(storeKey, 'text') ?? {})
   const msgContent = readComposerDraft(msgDrafts, draftKey, '')
   const setMsgContent = useCallback((next: SetStateAction<string>) => {
     setMsgDrafts((prev) => writeComposerDraft(prev, draftKey,
@@ -83,9 +95,11 @@ export function useMessageHistory(params: {
   useEffect(() => {
     endpointEpoch.current++; inboxLoadSeqRef.current++
     setReceivedMessages([]); setLocalSent([]); setSending(false)
-    setMsgDrafts((prev) => (Object.keys(prev).length ? {} : prev))
+    const stored = readDraftStore<Record<string, string>>(storeKey, 'text') ?? {}
+    setMsgDrafts((prev) => (Object.keys(prev).length || Object.keys(stored).length ? stored : prev))
     return () => { endpointEpoch.current++; inboxLoadSeqRef.current++ }
-  }, [adapter, endpointId, cacheScope])
+  }, [adapter, endpointId, cacheScope, storeKey])
+  useEffect(() => { writeDraftStore(storeKey, 'text', msgDrafts) }, [storeKey, msgDrafts])
 
   const loadInboxMessages = useCallback(
     async (beforeTs?: number) => {
@@ -249,6 +263,7 @@ export function useMessageHistory(params: {
       .filter((m) => matchesMessageConversation(m, selection))
       .map((m) => ({
         id: m.id, messageId: m.messageId, endpoint: m.endpoint, parent: m.parent, threadId: m.threadId, local: true,
+        delivery: m.delivery, failure: m.failure, restorable: m.delivery === 'unknown' && !!m.draftText,
         channelId: m.channelId,
         channelType: m.channelType,
         sender: { id: 'self', name: i18n.t("我") },
@@ -276,7 +291,30 @@ export function useMessageHistory(params: {
     const epoch = endpointEpoch.current
     const sentDraftKey = draftKey
     const sentText = msgContent
+    const sentStoreKey = storeKey
+    const localId = `local-${crypto.randomUUID()}`
+    const updateLocal = (patch: Partial<LocalSentMessage>) =>
+      setLocalSent((prev) => prev.map((row) => (row.id === localId ? { ...row, ...patch } : row)))
+    // Clear the draft of the conversation this was sent to, even if the user has moved on (or left
+    // the tab: the store is updated too, so the text is not offered again and sent twice).
+    const clearSentText = (prev: Record<string, string>) =>
+      readComposerDraft(prev, sentDraftKey, '') === sentText ? writeComposerDraft(prev, sentDraftKey, '') : prev
     setSending(true)
+    setLocalSent((prev) => [
+      ...prev,
+      {
+        id: localId, endpoint,
+        parent: selection?.type === 'channel' ? selection.parent : undefined,
+        threadId: selection?.type === 'channel' ? selection.threadId : undefined,
+        channelId: targetId,
+        channelType: msgType,
+        segments: displaySegments.length ? displaySegments : outgoingSegments,
+        timestamp: Date.now(),
+        delivery: 'sending' as const,
+        draftText: sentText,
+        draftKey: sentDraftKey,
+      },
+    ].slice(-500))
     try {
       const rpcParent = selection?.type === 'channel' ? toRpcChannelParent(selection.parent) : undefined
       const response = await requestConsole<{ messageId: string }>({
@@ -290,29 +328,45 @@ export function useMessageHistory(params: {
           content: outgoingSegments,
         },
       })
+      updateDraftStore<Record<string, string>>(sentStoreKey, 'text', clearSentText)
       if (epoch !== endpointEpoch.current || !isInboxCacheScopeActive(cacheScope)) return
-      setLocalSent((prev) => [
-        ...prev,
-        {
-          id: `local-${response.messageId || crypto.randomUUID()}`,
-          messageId: response.messageId || undefined, endpoint,
-          parent: selection?.type === 'channel' ? selection.parent : undefined,
-          threadId: selection?.type === 'channel' ? selection.threadId : undefined,
-          channelId: targetId,
-          channelType: msgType,
-          segments: displaySegments.length ? displaySegments : outgoingSegments,
-          timestamp: Date.now(),
-        },
-      ].slice(-500))
-      // Clear the draft of the conversation this was sent to, even if the user has moved on.
-      setMsgDrafts((prev) => readComposerDraft(prev, sentDraftKey, '') === sentText ? writeComposerDraft(prev, sentDraftKey, '') : prev)
+      updateLocal({ messageId: response?.messageId || undefined, delivery: deliveryAfterSend(response) })
+      setMsgDrafts(clearSentText)
       options?.onSent?.({ draftKey: sentDraftKey })
     } catch (e) {
-      if (epoch === endpointEpoch.current) toastError((e as Error).message, i18n.t("发送到 {0} 失败", [targetId]))
+      const delivery = deliveryAfterError(e)
+      // An unknown outcome may already be on the platform: take the text out of the box (it is
+      // offered back on the bubble) so Enter cannot send it a second time by accident.
+      if (delivery === 'unknown') updateDraftStore<Record<string, string>>(sentStoreKey, 'text', clearSentText)
+      if (epoch !== endpointEpoch.current) return
+      updateLocal({ delivery, failure: (e as Error).message })
+      if (delivery === 'unknown') {
+        setMsgDrafts(clearSentText)
+        options?.onSent?.({ draftKey: sentDraftKey })
+      }
+      // The receipt is on the bubble; a toast only when the user has moved to another conversation.
+      if (visibleKey.current !== sentDraftKey) {
+        if (delivery === 'unknown') toastError(i18n.t("发送到 {0} 的结果未知，请先在会话里核对", [targetId]))
+        else toastError((e as Error).message, i18n.t("发送到 {0} 失败", [targetId]))
+      }
     } finally {
       if (epoch === endpointEpoch.current) setSending(false)
     }
-  }, [selection, draftKey, msgContent, adapter, endpointId, endpoint, toastError, i18n])
+  }, [selection, draftKey, storeKey, msgContent, adapter, endpointId, endpoint, toastError, i18n, cacheScope])
+
+  /** Drop a failed / unknown local bubble (the platform record, if any, stays in the history). */
+  const dismissLocal = useCallback((id: string) => {
+    setLocalSent((prev) => prev.filter((row) => row.id !== id || row.delivery === 'sending'))
+  }, [])
+
+  /** Put the text of an unknown send back into its conversation's box; the user decides whether to send again. */
+  const restoreLocal = useCallback((id: string) => {
+    const row = localSent.find((item) => item.id === id)
+    if (!row?.draftText) return
+    const text = row.draftText
+    setMsgDrafts((prev) => writeComposerDraft(prev, row.draftKey ?? null, readComposerDraft(prev, row.draftKey ?? null, '') || text))
+    setLocalSent((prev) => prev.filter((item) => item.id !== id))
+  }, [localSent])
 
   return {
     receivedMessages,
@@ -333,5 +387,10 @@ export function useMessageHistory(params: {
     loadInboxMessages,
     channelMessages,
     handleSend,
+    dismissLocal,
+    restoreLocal,
+    /** Some conversation of this account has unsent text. */
+    hasTextDrafts: Object.keys(msgDrafts).length > 0,
+    draftStoreKey: storeKey,
   }
 }

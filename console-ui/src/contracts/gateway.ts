@@ -1,11 +1,11 @@
 /**
- * PROVISIONAL mirror of the management gateway RPC (ADR 0054 §4 / §5) and the Console terminal
- * protocol (ADR 0051).
+ * Management gateway RPC (ADR 0054 §4 / §5) and Console terminal (ADR 0051) payload types.
  *
- * TODO(gateway-protocol): replace with the types exported by `@zhin.js/console-protocol`
- * (`packages/console/protocol/src/gateway.ts`) once a release ships them. The gateway side was
- * still being written when this was mirrored: names and shapes may change. The pages tolerate a
- * Host that does not know these RPCs ("Unknown RPC type" / `unmapped`) and show "需要新版网关".
+ * Constants come from `./console-protocol-mirror.mjs`, the single hand copy of
+ * `@zhin.js/console-protocol` that `scripts/check-protocol-mirror.mjs` compares with the protocol
+ * source. The payload types below follow `packages/console/protocol/src/gateway.ts`; switch them to
+ * the package's types once it is published. The pages tolerate a Host that does not know these RPCs
+ * ("Unknown RPC type" / `unmapped`) and show "需要新版网关".
  *
  * Request envelope assumed for `POST {base}/console/request`:
  *   `{ type, requestId, data }`; reply `{ success: true, data }` or `{ success: false, error, code? }`
@@ -14,35 +14,18 @@
  * `gateway.packages.progress` with a {@link GatewayPackageEvent} as `data`.
  */
 
-export const GATEWAY_PACKAGES_RPC = Object.freeze({
-  LIST: 'gateway.packages.list',
-  PLAN: 'gateway.packages.plan',
-  INSTALL: 'gateway.packages.install',
-  UNINSTALL: 'gateway.packages.uninstall',
-  UPDATE: 'gateway.packages.update',
-} as const)
+export {
+  GATEWAY_PACKAGES_RPC, GATEWAY_INSTANCE_RPC, GATEWAY_PLUGINS_RPC, GATEWAY_RPC, GATEWAY_RPC_PERMISSIONS,
+  GATEWAY_PACKAGES_PROGRESS, GATEWAY_PACKAGES_PROGRESS_PATH, GATEWAY_INSTANCE_ERROR, GATEWAY_HEALTH_PATH,
+} from './console-protocol-mirror.mjs'
+import { GATEWAY_INSTANCE_RPC, GATEWAY_PACKAGES_RPC, GATEWAY_RPC_PERMISSIONS } from './console-protocol-mirror.mjs'
 
-export const GATEWAY_INSTANCE_RPC = Object.freeze({
-  STATUS: 'gateway.instance.status',
-  START: 'gateway.instance.start',
-  STOP: 'gateway.instance.stop',
-  RESTART: 'gateway.instance.restart',
-  LOGS: 'gateway.instance.logs',
-} as const)
-
-/** Plugin declarations written by the gateway (ADR 0053 §2 step 4, ADR 0054 §4). */
-export const GATEWAY_PLUGINS_RPC = Object.freeze({
-  DECLARE: 'gateway.plugins.declare',
-} as const)
-
-export const GATEWAY_PACKAGES_PROGRESS = 'gateway.packages.progress' as const
-
-/** Permissions per RPC (mirror of `GATEWAY_RPC_PERMISSIONS`). There is no `ops.instance`. */
+/** Permissions the pages gate on (values of `GATEWAY_RPC_PERMISSIONS`). There is no `ops.instance`. */
 export const GATEWAY_PERMISSIONS = Object.freeze({
-  INSTANCE_READ: 'status.view',
-  INSTANCE_CONTROL: 'ops.restart',
-  PACKAGES_READ: 'feature.view',
-  PACKAGES_MANAGE: 'plugin.manage',
+  INSTANCE_READ: GATEWAY_RPC_PERMISSIONS[GATEWAY_INSTANCE_RPC.STATUS],
+  INSTANCE_CONTROL: GATEWAY_RPC_PERMISSIONS[GATEWAY_INSTANCE_RPC.RESTART],
+  PACKAGES_READ: GATEWAY_RPC_PERMISSIONS[GATEWAY_PACKAGES_RPC.LIST],
+  PACKAGES_MANAGE: GATEWAY_RPC_PERMISSIONS[GATEWAY_PACKAGES_RPC.INSTALL],
   TERMINAL: 'ops.terminal',
 } as const)
 

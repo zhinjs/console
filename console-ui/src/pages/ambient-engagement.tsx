@@ -14,7 +14,6 @@ import { pluginRpc } from '../utils/plugin-rpc'
 import { useConsoleRead } from '../hooks/use-console-read'
 import { PageHeader } from '../components/PageHeader'
 import { PageShell } from '../components/PageShell'
-import { ErrorAlert } from '../components/error-alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
@@ -23,6 +22,9 @@ import { Input } from '../components/ui/input'
 import { Skeleton } from '../components/ui/skeleton'
 import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group'
 import { AmbientGroupPicker } from './AmbientGroupPicker'
+import { StatusState } from '../components/StatusState'
+import { ScopeFilterBar, useScopeFilter } from './insights/ScopeFilterBar'
+import { ambientGroupKey } from './insights/scope-filter.mjs'
 import { ConfigurationLiveStatus } from '../components/PluginConfigForm/ConfigurationLiveStatus'
 import { configurationReceiptForRead, type ConfigurationApplicationStatus } from '../components/PluginConfigForm/config-live-status.mjs'
 import {
@@ -33,6 +35,7 @@ import {
   describeReadFailure,
   describeSaveResult,
   isPermissionDenied,
+  AMBIENT_STATUS_PERMISSION,
   readAmbientSettings,
   summarizeRecentByGroup,
   validateAmbientSettings,
@@ -83,7 +86,8 @@ export default function AmbientEngagementPage() {
 
 function AmbientEngagementSession() {
   const i18n = useI18n()
-  const statusRead = useConsoleRead<StatusRead | null>(readAmbientStatus, null)
+  // Labels are rendered into the view at read time: read in the current interface language.
+  const statusRead = useConsoleRead<StatusRead | null>(() => readAmbientStatus(i18n.locale), null)
   const configurationReadEpoch = useRef(0)
   const settingsRead = useConsoleRead<SettingsRead | null>(async () => {
     const readEpoch = ++configurationReadEpoch.current
@@ -94,14 +98,24 @@ function AmbientEngagementSession() {
     void settingsRead.refresh().catch(() => {})
   }
   const loading = statusRead.loading || settingsRead.loading
+  // 从会话对象页进入时带 adapter / endpoint / conversation：设置区预选这个群。
+  const scopeFilter = useScopeFilter()
+  const focusGroup = ambientGroupKey(scopeFilter.scope)
   return <PageShell>
     <PageHeader
       title={i18n.t("群聊插话")}
       description={i18n.t("没人 @ 机器人的时候，它要不要自己在群里接话。")}
       actions={<Button variant="outline" size="sm" onClick={refreshAll} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>}
     />
+    <ScopeFilterBar
+      filter={scopeFilter}
+      note={focusGroup
+        ? i18n.t("下方设置会预选群 {0}；状态与最近记录仍显示全部群。", [focusGroup])
+        : i18n.t("群聊插话只按群设置，这个范围不是群聊，设置不会预选。")}
+    />
     <AmbientStatusSection read={statusRead} onRetry={() => { void statusRead.refresh().catch(() => {}) }} />
     <AmbientSettingsSection
+      focusGroup={focusGroup}
       read={settingsRead}
       onReload={() => settingsRead.refresh()}
       currentReadEpoch={() => configurationReadEpoch.current}
@@ -115,10 +129,10 @@ function AmbientStatusSection({ read, onRetry }: { read: StatusReadState; onRetr
   const i18n = useI18n()
   if (read.loading && !read.loaded) return <Skeleton className="h-40 w-full" />
   const failure = read.error ? describeReadFailure(read.error, i18n.t("群聊插话状态"), i18n.locale) : null
-  if (failure && !read.loaded && !failure.denied) return <ErrorAlert error={failure.text} onRetry={onRetry} />
+  if (failure && !read.loaded && !failure.denied) return <StatusState error={read.error} description={failure.text} onRetry={onRetry} />
   if (!read.data && !failure?.denied) return null
   if (!read.data || read.data.denied) {
-    return <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">{i18n.t("当前账号没有查看群聊插话的权限，请联系管理员开通。")}</CardContent></Card>
+    return <StatusState kind="forbidden" permissions={[AMBIENT_STATUS_PERMISSION]} />
   }
   const view = read.data.view
   return <Card>
@@ -127,7 +141,7 @@ function AmbientStatusSection({ read, onRetry }: { read: StatusReadState; onRetr
         {i18n.t("现在：")}<Badge variant={view.behavior === i18n.t('主动参与') ? 'success' : view.behavior === i18n.t('只观察') ? 'info' : 'secondary'}>{view.behavior}</Badge>
         <span className="text-sm font-normal text-muted-foreground">{i18n.t("范围：")}{view.groupScope}</span>
       </CardTitle>
-      <CardDescription>{i18n.t("下面是最近 24 小时的情况。重启机器人后会重新计数。")}</CardDescription>
+      <CardDescription>{i18n.t("缓冲内观察：最近 24 小时、实例这次启动以来的记录，重启后重新计数。")}</CardDescription>
     </CardHeader>
     <CardContent className="space-y-4">
       {failure && <p className="text-xs text-destructive">{i18n.t("刷新失败，下面是上次读到的数据。")} {failure.text}</p>}
@@ -139,7 +153,7 @@ function AmbientStatusSection({ read, onRetry }: { read: StatusReadState; onRetr
       </div>
       {view.hasActivity
         ? <AmbientRecentActivity recent={view.recent} />
-        : <p className="text-sm text-muted-foreground">{i18n.t("最近 24 小时还没有记录。")}</p>}
+        : <StatusState kind="empty" compact title={i18n.t("最近 24 小时还没有记录。")} description={i18n.t("打开插话并有群消息进来后，这里会记录机器人每次接话或不接话。")} />}
     </CardContent>
   </Card>
 }
@@ -213,7 +227,7 @@ function AmbientRecentActivity({ recent }: { recent: AmbientStatusView['recent']
 
 type SettingsReadState = ReturnType<typeof useConsoleRead<SettingsRead | null>>
 
-function AmbientSettingsSection({ read, onReload, currentReadEpoch }: { read: SettingsReadState; onReload: () => Promise<SettingsRead | null>; currentReadEpoch: () => number }) {
+function AmbientSettingsSection({ read, onReload, currentReadEpoch, focusGroup }: { read: SettingsReadState; onReload: () => Promise<SettingsRead | null>; currentReadEpoch: () => number; focusGroup: string | null }) {
   const i18n = useI18n()
   if (read.loading && !read.loaded) return <Skeleton className="h-56 w-full" />
   if (read.error && !read.loaded) {
@@ -223,15 +237,15 @@ function AmbientSettingsSection({ read, onReload, currentReadEpoch }: { read: Se
       <CardContent className="space-y-2 text-sm text-muted-foreground">
         {failure.denied
           ? <p>{i18n.t("当前账号不能查看或修改群聊插话设置，只有管理员账号可以修改。")}</p>
-          : <ErrorAlert error={failure.text} onRetry={() => { void onReload().catch(() => {}) }} />}
+          : <StatusState error={read.error} description={failure.text} onRetry={() => { void onReload().catch(() => {}) }} />}
       </CardContent>
     </Card>
   }
   if (!read.data) return null
-  return <AmbientSettingsForm key={read.data.revision} initial={read.data} onReload={onReload} currentReadEpoch={currentReadEpoch} />
+  return <AmbientSettingsForm key={read.data.revision} initial={read.data} onReload={onReload} currentReadEpoch={currentReadEpoch} focusGroup={focusGroup} />
 }
 
-function AmbientSettingsForm({ initial, onReload, currentReadEpoch }: { initial: SettingsRead; onReload: () => Promise<SettingsRead | null>; currentReadEpoch?: () => number }) {
+function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup = null }: { initial: SettingsRead; onReload: () => Promise<SettingsRead | null>; currentReadEpoch?: () => number; focusGroup?: string | null }) {
   const scope = useInboxCacheScope()
   const i18n = useI18n()
   const [behavior, setBehavior] = useState<AmbientBehavior>(initial.settings.behavior)
@@ -256,6 +270,13 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch }: { initial:
   }
   const problems = validateAmbientSettings(draft, i18n.locale)
   const showsGroupOptions = behavior !== 'off'
+  const focusIncluded = focusGroup ? behavior !== 'off' && (groupScope === 'all' || groups.includes(focusGroup)) : false
+  const includeFocusGroup = () => {
+    if (!focusGroup) return
+    if (behavior === 'off') setBehavior('watch')
+    if (groupScope === 'all') return
+    setGroups(previous => previous.includes(focusGroup) ? previous : [...previous, focusGroup])
+  }
 
   const save = async () => {
     if (!isInboxCacheScopeActive(scope)) return
@@ -292,6 +313,15 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch }: { initial:
       <CardTitle className="text-base">{i18n.t("设置")}</CardTitle>
     </CardHeader>
     <CardContent className="space-y-5">
+      {focusGroup ? <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/40 p-3 text-sm" role="status">
+        <span className="min-w-0 flex-1">
+          {focusIncluded
+            ? groupScope === 'all' ? i18n.t("群 {0} 已包含在「所有群」里。", [focusGroup]) : i18n.t("群 {0} 已在下面的群列表里。", [focusGroup])
+            : behavior === 'off' ? i18n.t("插话目前关闭，群 {0} 不会被接话。", [focusGroup]) : i18n.t("群 {0} 不在插话范围里。", [focusGroup])}
+        </span>
+        {!focusIncluded ? <Button size="sm" variant="outline" onClick={includeFocusGroup}>{behavior === 'off' ? i18n.t("开启只观察并加入这个群") : i18n.t("加入这个群")}</Button> : null}
+        {!focusIncluded ? <span className="basis-full text-xs text-muted-foreground">{i18n.t("只改动草稿，保存后才会生效。")}</span> : null}
+      </div> : null}
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">{i18n.t("机器人要不要自己接话？")}</legend>
         <RadioGroup aria-label={i18n.t("机器人要不要自己接话？")} name="ambient-behavior" value={behavior} onValueChange={value => setBehavior(value as AmbientBehavior)}>

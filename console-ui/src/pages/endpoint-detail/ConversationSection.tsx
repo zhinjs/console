@@ -24,7 +24,7 @@ export function ConversationSection({
   const count = section.entries.length
 
   return (
-    <section className="im-conversation-section" aria-label={section.title}>
+    <section className="im-conversation-section" aria-label={i18n.t(section.title)}>
       <button
         type="button"
         className="im-section-header"
@@ -34,7 +34,7 @@ export function ConversationSection({
         <span className="im-section-chevron" aria-hidden>
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </span>
-        <span className="im-section-title">{section.title}</span>
+        <span className="im-section-title">{i18n.t(section.title)}</span>
         <span className="im-section-count-badge">{count}</span>
       </button>
       {!collapsed && (

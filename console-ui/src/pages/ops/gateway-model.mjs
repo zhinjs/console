@@ -1,26 +1,29 @@
 /**
  * Pure helpers of the 运维 → 实例 page: the gateway RPC envelope (ADR 0054 §4 / §5), status and
  * log readers, and the package transaction progress reducer. Shapes follow the provisional
- * mirror in `contracts/gateway.ts`.
+ * mirror in `contracts/gateway.ts` (constants: `contracts/console-protocol-mirror.mjs`).
  */
 
 import { declaredDefaults, initialSchemaValue } from '../../components/PluginConfigForm/schema-model.mjs'
 
+import { GATEWAY_INSTANCE_RPC, GATEWAY_PACKAGES_RPC, GATEWAY_PLUGINS_RPC } from '../../contracts/console-protocol-mirror.mjs'
+
+/** Gateway RPC names (protocol mirror) under the flat keys the ops pages use. */
 export const GATEWAY_RPC = Object.freeze({
-  PACKAGES_LIST: 'gateway.packages.list',
-  PACKAGES_PLAN: 'gateway.packages.plan',
-  PACKAGES_INSTALL: 'gateway.packages.install',
-  PACKAGES_UNINSTALL: 'gateway.packages.uninstall',
-  PACKAGES_UPDATE: 'gateway.packages.update',
-  INSTANCE_STATUS: 'gateway.instance.status',
-  INSTANCE_START: 'gateway.instance.start',
-  INSTANCE_STOP: 'gateway.instance.stop',
-  INSTANCE_RESTART: 'gateway.instance.restart',
-  INSTANCE_LOGS: 'gateway.instance.logs',
-  PLUGINS_DECLARE: 'gateway.plugins.declare',
+  PACKAGES_LIST: GATEWAY_PACKAGES_RPC.LIST,
+  PACKAGES_PLAN: GATEWAY_PACKAGES_RPC.PLAN,
+  PACKAGES_INSTALL: GATEWAY_PACKAGES_RPC.INSTALL,
+  PACKAGES_UNINSTALL: GATEWAY_PACKAGES_RPC.UNINSTALL,
+  PACKAGES_UPDATE: GATEWAY_PACKAGES_RPC.UPDATE,
+  INSTANCE_STATUS: GATEWAY_INSTANCE_RPC.STATUS,
+  INSTANCE_START: GATEWAY_INSTANCE_RPC.START,
+  INSTANCE_STOP: GATEWAY_INSTANCE_RPC.STOP,
+  INSTANCE_RESTART: GATEWAY_INSTANCE_RPC.RESTART,
+  INSTANCE_LOGS: GATEWAY_INSTANCE_RPC.LOGS,
+  PLUGINS_DECLARE: GATEWAY_PLUGINS_RPC.DECLARE,
 })
 
-export const GATEWAY_PACKAGES_PROGRESS = 'gateway.packages.progress'
+export { GATEWAY_PACKAGES_PROGRESS } from '../../contracts/console-protocol-mirror.mjs'
 
 export const INSTANCE_STATES = Object.freeze(['stopped', 'starting', 'running', 'stopping', 'backoff', 'crashed'])
 
@@ -39,12 +42,19 @@ export const MAX_LOG_LINES = 2000
 export const MAX_PROGRESS_OUTPUT = 64 * 1024
 
 export class GatewayRequestError extends Error {
-  constructor(message, { status = 0, code = 'failed', hostMessage = '' } = {}) {
+  constructor(message, { status = 0, code = 'failed', hostMessage = '', details, retryAfter, requestOutcome } = {}) {
     super(message)
     this.name = 'GatewayRequestError'
     this.status = status
     this.code = code
     this.hostMessage = hostMessage
+    // Read by `statusFromError` (database_busy / instance_* Retry-After).
+    if (typeof retryAfter === 'number' && retryAfter > 0) this.retryAfter = retryAfter
+    // Structured `invalid_input` feedback (`errors` / `missingEnv`, GatewayRpcErrorDetails) and the
+    // instance request outcome (`serverCode` + `requestOutcome`); absent when there is neither.
+    const feedback = details && (details.errors?.length || details.missingEnv?.length) ? details : undefined
+    const outcome = requestOutcome === 'not-dispatched' || requestOutcome === 'unknown' ? { serverCode: code, requestOutcome } : undefined
+    if (feedback || outcome) this.details = { ...feedback, ...outcome }
   }
 }
 
@@ -59,7 +69,7 @@ const UNKNOWN_RPC = /unknown rpc type|未登记权限/iu
  * One reply as data, or a `GatewayRequestError` with localized text. Accepts the Console
  * envelope (`success`) and the gateway's own (`ok` / `error.{code,message,status}`).
  */
-export function readGatewayReply(status, json, t) {
+export function readGatewayReply(status, json, t, retryAfterHeader) {
   const body = json && typeof json === 'object' ? json : {}
   const nested = body.error && typeof body.error === 'object' ? body.error : null
   const failed = body.success === false || body.ok === false || nested !== null
@@ -67,13 +77,32 @@ export function readGatewayReply(status, json, t) {
   const hostMessage = nested ? String(nested.message ?? '') : typeof body.error === 'string' ? body.error : ''
   const code = nested && typeof nested.code === 'string' ? nested.code : typeof body.code === 'string' ? body.code : ''
   const effective = nested && typeof nested.status === 'number' && status < 400 ? nested.status : status
+  const details = readErrorDetails(nested ?? body)
   if (code === 'unmapped' || UNKNOWN_RPC.test(hostMessage)) {
     throw new GatewayRequestError(t('需要新版网关：当前 Host 不支持实例与依赖管理（ADR 0054）。'), { status: effective, code: 'unsupported', hostMessage })
   }
   if (effective === 401) throw new GatewayRequestError(t('登录已失效，请重新登录。'), { status: effective, code: code || 'unauthorized', hostMessage })
   if (effective === 403 && !hostMessage) throw new GatewayRequestError(t('当前身份没有执行此操作的权限。'), { status: effective, code: 'forbidden', hostMessage })
+  const retryAfter = /^\d+$/u.test(String(retryAfterHeader ?? '').trim()) ? Number(String(retryAfterHeader).trim()) : undefined
+  const requestOutcome = typeof body.requestOutcome === 'string' ? body.requestOutcome : undefined
+  if (code === 'database_busy') {
+    throw new GatewayRequestError(retryAfter ? t('网关的数据库正忙，请在 {0} 秒后重试。', [retryAfter]) : t('网关的数据库正忙，请稍后重试。'), { status: effective, code, hostMessage, retryAfter })
+  }
+  if (effective === 409 && (code === 'conflict' || !code)) {
+    throw new GatewayRequestError(hostMessage || t('另一个依赖事务正在进行，请等待它结束后再试。'), { status: effective, code: 'conflict', hostMessage })
+  }
   const message = hostMessage || t('请求失败（HTTP {0}）', [effective])
-  throw new GatewayRequestError(message, { status: effective, code: code || (effective === 403 ? 'forbidden' : 'failed'), hostMessage })
+  throw new GatewayRequestError(message, { status: effective, code: code || (effective === 403 ? 'forbidden' : 'failed'), hostMessage, details, retryAfter, requestOutcome })
+}
+
+/** `errors` / `missingEnv` of a gateway error reply (`GatewayRpcErrorDetails`), or undefined. */
+export function readErrorDetails(value) {
+  if (!value || typeof value !== 'object') return undefined
+  const errors = (Array.isArray(value.errors) ? value.errors : [])
+    .filter(item => item && typeof item === 'object' && typeof item.message === 'string')
+    .map(item => ({ path: typeof item.path === 'string' ? item.path : '$', message: item.message }))
+  const missingEnv = (Array.isArray(value.missingEnv) ? value.missingEnv : []).filter(item => typeof item === 'string' && item)
+  return errors.length || missingEnv.length ? { ...(errors.length ? { errors } : {}), ...(missingEnv.length ? { missingEnv } : {}) } : undefined
 }
 
 export function gatewayErrorKind(error) {
@@ -81,6 +110,8 @@ export function gatewayErrorKind(error) {
   if (error.code === 'unsupported') return 'unsupported'
   if (error.status === 403 || error.code === 'forbidden') return 'forbidden'
   if (error.status === 409 || error.code === 'conflict') return 'conflict'
+  if (error.code === 'database_busy') return 'database_busy'
+  if (/^instance_/u.test(error.code)) return 'instance'
   if (error.status === 503 || error.code === 'unavailable') return 'unavailable'
   return 'failed'
 }
@@ -394,7 +425,15 @@ const MISSING_ENV = /^(?:缺少环境变量|missing environment variable)\s+(\S+
  * message (`…未声明：$.endpoints required；缺少环境变量 QQ_SECRET`); anything that is not that
  * shape stays a general error so the form can show it above the fields.
  */
-export function readDeclarationErrors(message) {
+export function readDeclarationErrors(message, details) {
+  // Newer gateways send the violations structured (GatewayRpcErrorDetails); prefer them to the text.
+  if (details && (details.errors?.length || details.missingEnv?.length)) {
+    return {
+      general: null,
+      fields: (details.errors ?? []).map(error => ({ path: relativeConfigPath(error.path), message: String(error.message ?? '') })),
+      missingEnv: [...(details.missingEnv ?? [])],
+    }
+  }
   const text = String(message ?? '')
   const match = DECLARATION_SCHEMA_FAILURE.exec(text)
   if (!match) return { general: text, fields: [], missingEnv: [] }
