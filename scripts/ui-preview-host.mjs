@@ -115,7 +115,7 @@ const pluginRoot = {
   'tool-approvals': () => toolApprovals,
   control: () => ({ available: true, revision: 1, persistent: true, instance: { emergency_stop: false, muted: false, read_only: false, mention_only: true } }),
 }
-// Object tree fixtures (feature.* ADR 0050 / 0055, chat-roles.* ADR 0056).
+// Object tree fixtures (feature.* ADR 0050 / 0055, chat-roles.list|grant|revoke ADR 0056).
 const LEVELS = ['global', 'adapter', 'endpoint', 'conversation']
 const features = [
   { plugin: 'welcome', displayName: '群欢迎', levels: LEVELS, hasSchema: true, globalEnabled: true, conversationFields: ['text'] },
@@ -128,10 +128,10 @@ const conversations = [
   { key: 'icqq/preview-community/group:a%2Fb', name: '带斜杠的群 a/b', hasOverrides: true, overrides: [{ plugin: 'repeater', enabled: false, fields: [] }] },
 ]
 const chatRoles = [
-  { level: 'global', key: '', adapter: 'icqq', userId: '10000', role: 'owner', source: 'config', detail: 'ai.trigger.masters' },
+  { level: 'global', key: '', adapter: 'icqq', userId: '10000', role: 'owner', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 30 * 86_400_000 },
   { level: 'adapter', key: 'icqq', adapter: 'icqq', userId: '10002', role: 'admin', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 86_400_000 },
   { level: 'endpoint', key: 'icqq/preview-community', adapter: 'icqq', userId: '10003', role: 'trusted', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 7_200_000 },
-  { level: 'conversation', key: 'icqq/preview-community/group:20001', adapter: 'icqq', userId: '10004', role: 'admin', source: 'mapping', detail: 'standing: owner' },
+  { level: 'conversation', key: 'icqq/preview-community/group:20001', adapter: 'icqq', userId: '10004', role: 'admin', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 3_600_000 },
 ]
 const chain = key => {
   const parts = key ? key.split('/') : []
@@ -413,7 +413,9 @@ const server = createServer(async (request, response) => {
     for await (const chunk of request) raw += chunk
     const body = JSON.parse(raw || '{}')
     const command = previewCommands.find(item => item.id === body.commandId) ?? previewCommands[0]
-    json(envelope({ generation: 4, simulation: true, command, permissionHost: 'present', adapter: { outcome: 'not_evaluated', reason: '本地预览不评估适配器约束' },
+    // ADR 0056: sender is { id, chatRole?, platform? }; the old `roles` field is refused.
+    if (body.sender && Object.hasOwn(body.sender, 'roles')) { json({ success: false, code: 'invalid_input', error: 'sender.roles is no longer accepted' }, 400); return }
+    json(envelope({ generation: 4, simulation: true, command, ...(body.target ? { target: body.target } : {}), ...(body.sender ? { sender: body.sender } : {}), permissionHost: 'present', adapter: { outcome: 'not_evaluated', reason: '本地预览不评估适配器约束' },
       rules: command.permits.map((rule, index) => ({ index, rule, kind: 'role', outcome: 'unknown', reason: '没有提供假设角色' })),
       summary: { outcome: command.permits.length ? 'unknown' : 'match', reason: command.permits.length ? '缺少角色依据' : '没有声明 permit 限制' }, unconstrained: [], assumptions: ['本地预览数据'] }))
     return
@@ -475,14 +477,6 @@ const server = createServer(async (request, response) => {
       return
     }
     if (type === 'schema:get') { json(envelope({ type: 'object', object: { endpoints: { type: 'list', title: '机器人账号', required: true, inner: { type: 'object', object: { id: { type: 'string', title: 'AppID', required: true } } } } } })); return }
-    if (type === 'chat-roles.mappings') {
-      // Draft protocol (ADR 0056 §4): icqq answers, other adapters behave like an older Host.
-      if (!String(body.key ?? '').startsWith('icqq')) { json({ success: false, error: `Unknown RPC type: ${type}` }, 400); return }
-      const rule = { match: { standing: ['owner', 'admin'] }, grant: 'admin' }
-      json(envelope({ layers: [{ level: 'default', rules: [rule], inherit: true }, { level: 'adapter', rules: [{ match: { role: ['moderator'] }, grant: 'trusted' }], inherit: true }],
-        effective: [{ ...rule, level: 'default' }, { match: { role: ['moderator'] }, grant: 'trusted', level: 'adapter' }] }))
-      return
-    }
     if (type === 'agent.engagements.list') { json(envelope({ engagements: [engagement.summary] })); return }
     if (type === 'agent.engagements.get') {
       if (body.engagementId === engagement.summary.engagementId) json(envelope(engagement))
