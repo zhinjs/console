@@ -123,8 +123,8 @@ export default function AccessUsersPage() {
                     <TableCell className="hidden md:table-cell"><BindingBadges bindings={user.bindings} /></TableCell>
                     <TableCell>
                       {user.disabled
-                        ? <Badge variant="outline">{i18n.t("已禁用")}</Badge>
-                        : <Badge variant="success">{i18n.t("启用")}</Badge>}
+                        ? <Badge variant="outline" className="whitespace-nowrap">{i18n.t("已禁用")}</Badge>
+                        : <Badge variant="success" className="whitespace-nowrap">{i18n.t("启用")}</Badge>}
                     </TableCell>
                     <TableCell className="hidden whitespace-nowrap text-muted-foreground lg:table-cell">
                       {user.passwordChangedAt ? i18n.date(user.passwordChangedAt, { dateStyle: 'medium', timeStyle: 'short' }) : '—'}

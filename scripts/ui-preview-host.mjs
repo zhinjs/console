@@ -128,7 +128,7 @@ async function gatewayOwned(url, request, json, readBody) {
     ] })); return true
   }
   if (path.startsWith('/api/auth/')) { json({ success: false, code: 'invalid_input', error: '本地预览不执行此操作。' }, 400); return true }
-  if (path === '/api/console/terminal/targets') { json(envelope({ targets: [{ id: 'local', kind: 'local', label: '本机 Shell', available: true }, { id: 'staging', kind: 'ssh', label: 'staging 服务器', available: false, reason: '未配置私钥' }] })); return true }
+  if (path === '/api/console/terminal/targets') { json(envelope([{ id: 'local', kind: 'local', label: '本机 Shell', available: true }, { id: 'staging', kind: 'ssh', label: 'staging 服务器', available: false, reason: '未配置私钥' }])); return true }
   if (path === '/api/console/request' && request.method === 'POST') {
     const body = await readBody()
     if (!body) return true

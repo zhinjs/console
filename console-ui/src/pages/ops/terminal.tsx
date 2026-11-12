@@ -150,7 +150,6 @@ export default function OpsTerminalPage() {
       {targets.filter(item => !item.available && item.reason).map(item => (
         <p key={item.id} className="text-xs text-muted-foreground">{i18n.t("{0} 不可用：{1}", [item.label, item.reason])}</p>
       ))}
-      {!loading && !error && !targets.length ? <p className="text-sm text-muted-foreground">{i18n.t("Host 没有可用的终端目标。")}</p> : null}
       {tabs.length ? (
         <Card className="overflow-hidden p-0">
           <div role="tablist" aria-label={i18n.t("终端会话")} className="flex flex-wrap gap-1 border-b bg-muted/40 p-1">

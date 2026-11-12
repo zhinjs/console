@@ -81,7 +81,6 @@ export const opsMessages = Object.freeze({
   "本机": "Host",
   "打开终端": "Open terminal",
   "{0} 不可用：{1}": "{0} unavailable: {1}",
-  "Host 没有可用的终端目标。": "The Host offers no terminal targets.",
   "Host 没有返回终端票据。": "The Host returned no terminal ticket.",
   "终端会话": "Terminal sessions",
   "关闭终端 {0}": "Close terminal {0}",
