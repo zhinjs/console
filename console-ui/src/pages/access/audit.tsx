@@ -122,7 +122,7 @@ export default function AccessAuditPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>{i18n.t("时间")}</TableHead>
-                <TableHead>{i18n.t("主体")}</TableHead>
+                <TableHead className="hidden md:table-cell">{i18n.t("主体")}</TableHead>
                 <TableHead>{i18n.t("动作")}</TableHead>
                 <TableHead className="hidden lg:table-cell">{i18n.t("目标")}</TableHead>
                 <TableHead>{i18n.t("结果")}</TableHead>
@@ -133,16 +133,19 @@ export default function AccessAuditPage() {
             <TableBody>
               {shown.map(entry => (
                 <TableRow key={entry.id}>
-                  <TableCell className="text-muted-foreground"><span className="whitespace-nowrap">{i18n.date(entry.at, { dateStyle: 'medium', timeStyle: 'medium' })}</span></TableCell>
-                  <TableCell><span title={entry.actor}>{actorLabel(entry.actor, usersById, i18n.t)}</span></TableCell>
-                  <TableCell className="font-mono text-xs break-all">{entry.action}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    <span className="md:whitespace-nowrap">{i18n.date(entry.at, { dateStyle: 'medium', timeStyle: 'medium' })}</span>
+                    <span className="mt-0.5 block text-xs text-foreground md:hidden" title={entry.actor}>{actorLabel(entry.actor, usersById, i18n.t)}</span>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell"><span title={entry.actor}>{actorLabel(entry.actor, usersById, i18n.t)}</span></TableCell>
+                  <TableCell className="min-w-[8rem] font-mono text-xs break-all">{entry.action}</TableCell>
                   <TableCell className="hidden max-w-[16rem] truncate lg:table-cell" title={entry.target ?? undefined}>{entry.target ?? '—'}</TableCell>
                   <TableCell><Badge variant={outcomeVariant(entry.outcome)} size="sm">{outcomeText(entry.outcome, i18n.t)}</Badge></TableCell>
                   <TableCell className="hidden font-mono text-xs text-muted-foreground lg:table-cell">{entry.ip ?? '—'}</TableCell>
                   <TableCell className="hidden md:table-cell">
                     {entry.detail === null ? '—' : (
                       <details className="text-xs">
-                        <summary className="cursor-pointer">{i18n.t("展开")}</summary>
+                        <summary className="cursor-pointer whitespace-nowrap">{i18n.t("展开")}</summary>
                         <pre className="mt-1 max-w-[24rem] whitespace-pre-wrap break-words">{JSON.stringify(entry.detail, null, 2)}</pre>
                       </details>
                     )}

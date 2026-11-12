@@ -220,7 +220,7 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
         <ActionReceipt controller={receipt} />
       </ObjectSection>
       <ObjectSection title={i18n.t('授予角色')} description={alias ? i18n.t('身份属于适配器 {0}。', [alias]) : i18n.t('全局角色可为每个平台登记一个身份。')}>
-        <Card className="grid gap-3 p-4 md:grid-cols-[minmax(0,10rem)_minmax(0,1fr)_minmax(0,10rem)_auto] md:items-end">
+        <Card className="grid gap-3 p-4 sm:grid-cols-2 sm:items-end xl:grid-cols-[minmax(0,10rem)_minmax(0,1fr)_minmax(0,10rem)_auto]">
           <label className="grid gap-1 text-sm">
             <span className="text-muted-foreground">{i18n.t('适配器')}</span>
             <Input value={alias ?? platform} onChange={event => setPlatform(event.target.value)} disabled={Boolean(alias)} placeholder="qq"

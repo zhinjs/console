@@ -78,7 +78,7 @@ export default function AccessRolesPage() {
                 <TableRow key={role.id}>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{builtinRoleLabel(role.name, i18n.t) ?? role.name}</span>
+                      <span className="whitespace-nowrap font-medium">{builtinRoleLabel(role.name, i18n.t) ?? role.name}</span>
                       {role.builtin ? <Badge variant="outline" size="sm">{i18n.t("内置")}</Badge> : null}
                     </div>
                     <code className="console-access-id" title={role.name}>{role.name}</code>

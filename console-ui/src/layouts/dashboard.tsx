@@ -30,12 +30,17 @@ import { ListItemButton } from '../components/ui/list-item-button'
 const SIDEBAR_COLLAPSED_KEY = "zhin.console.nav.collapsed"
 const HOME_PATH = "/dashboard"
 
+/** An explicit choice wins; otherwise tablets and small laptops (<1024px) start with the icon rail so tables keep their width. */
 function readSidebarOpen(): boolean {
+  let stored: string | null = null
   try {
-    return window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) !== "1"
+    stored = window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY)
   } catch {
-    return true
+    stored = null
   }
+  if (stored === "1") return false
+  if (stored === "0") return true
+  return !(typeof window.matchMedia === "function" && window.matchMedia("(max-width: 1023px)").matches)
 }
 
 function writeSidebarOpen(open: boolean): void {
