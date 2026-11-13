@@ -14,6 +14,7 @@ import { hasConsolePermission } from '../../utils/console-access.mjs'
 import { requestConsole } from '../../utils/console-rpc'
 import { readEndpointList } from '../endpoint-list-model.mjs'
 import { useLogPanel } from '../../components/log-panel/LogPanel'
+import { loginStepBadge } from './login-flow-model.mjs'
 
 export interface ScopeEndpoint {
   name: string
@@ -24,6 +25,10 @@ export interface ScopeEndpoint {
   transportState?: string
   pendingRequestCount?: number
   pendingNoticeCount?: number
+  /** ADR 0058: step of the unfinished login flow (1-based), on newer Hosts. */
+  loginStep?: { index: number; total: number; title: string }
+  /** ADR 0058: the Adapter's login declaration (absent = no Console login actions). */
+  login?: { mode: 'interactive' | 'credential' | 'external'; challenges?: string[]; relogin?: boolean; refreshQr?: boolean }
 }
 
 export interface LoginTask {
@@ -226,8 +231,17 @@ export function LoginTaskCard({ task, onSettled, readOnly }: { task: LoginTask; 
   )
 }
 
-/** Small badge for a waiting login task (lists of accounts). */
-export function WaitingLoginBadge() {
+/**
+ * Small badge for a waiting login (lists of accounts). With the account's `loginStep` (newer Hosts)
+ * it reads 等待登录（第 x/y 步） and names the step in its tooltip.
+ */
+export function WaitingLoginBadge({ endpoint }: { endpoint?: { loginStep?: unknown } } = {}) {
   const i18n = useI18n()
-  return <Badge variant="warning" size="sm" className="whitespace-nowrap"><QrCode className="h-3 w-3" aria-hidden="true" />{i18n.t('等待登录')}</Badge>
+  const step = loginStepBadge(endpoint)
+  return (
+    <Badge variant="warning" size="sm" className="whitespace-nowrap" title={step?.title ? i18n.t(step.title) : undefined}>
+      <QrCode className="h-3 w-3" aria-hidden="true" />
+      {step ? i18n.t('等待登录（第 {0}/{1} 步）', [String(step.index), String(step.total)]) : i18n.t('等待登录')}
+    </Badge>
+  )
 }

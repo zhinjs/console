@@ -243,7 +243,7 @@ test('one busy rule for every write button: a waiting plan, a request in flight 
   for (const [phase, blocked] of Object.entries(blocking)) assert.equal(receiptBlocksActions({ phase }), blocked, phase)
   const pages = [
     'console-ui/src/pages/features/feature-level-panel.tsx', 'console-ui/src/pages/features/use-global-plugin-switch.ts',
-    'console-ui/src/pages/scope/login-tasks.tsx', 'console-ui/src/pages/ops/instance.tsx', 'console-ui/src/pages/PackageAction.tsx',
+    'console-ui/src/pages/scope/login-tasks.tsx', 'console-ui/src/pages/scope/login-flow-card.tsx', 'console-ui/src/pages/ops/instance.tsx', 'console-ui/src/pages/PackageAction.tsx',
     'console-ui/src/scope/ChatRolesPanel.tsx', 'console-ui/src/pages/access/tokens.tsx', 'console-ui/src/pages/access/users.tsx', 'console-ui/src/pages/account/index.tsx',
   ]
   for (const path of pages) {
@@ -291,6 +291,7 @@ test('a receipt with a persist key outlives its tab: in flight and unknown outco
     ['console-ui/src/pages/features/use-global-plugin-switch.ts', /GLOBAL_SWITCH_RECEIPT_KEY = 'feature:global'[\s\S]*persistKey: GLOBAL_SWITCH_RECEIPT_KEY/],
     ['console-ui/src/scope/ChatRolesPanel.tsx', /persistKey: `chat-roles:\$\{key \?\? ''\}`/],
     ['console-ui/src/pages/scope/login-tasks.tsx', /persistKey: `login:\$\{task\.id\}`/],
+    ['console-ui/src/pages/scope/login-flow-card.tsx', /persistKey: `login-flow:\$\{adapter\}:\$\{endpointKey\}`/],
   ]) {
     const source = readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
     assert.match(source, pattern, path)

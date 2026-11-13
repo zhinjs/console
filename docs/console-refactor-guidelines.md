@@ -170,4 +170,5 @@
 | `InstanceUnavailableBanner` / `utils/instance-availability.mjs` | shell | 实例不可用横幅 |
 | `LogPanel` / `LogPanelButton` / `useLogPanel` / `openLogPanel` | `components/log-panel/` | 底部日志面板（shell）；`LogViewer`（`pages/logs/`）是它与 `/logs` 共用的查看器 |
 | `useAttention` / `attention-model.mjs` / `AttentionBadge` | `pages/attention/` | 「需要你处理」：`attention.list` 的共享读取（30 秒、聚焦与推送事件防抖刷新；旧 Host 回退到 Console 推断），本浏览器内的「稍后提醒」/「忽略」，首页区块、`/attention` 页与顶栏角标共用 |
-| `scripts/ui-preview-host.mjs` | 本地 | 合成数据的只读 Host，用于截图（`UI_PREVIEW_ORIGIN` 可加允许的来源；`UI_PREVIEW_ATTENTION=empty` / `legacy` 模拟没有待办 / 旧 Host） |
+| `LoginFlowSection` / `LoginFlowCard` / `ChallengePanel` / `useLoginFlow` / `login-flow-model.mjs` | `pages/scope/` | 账号「接入」页签的登录卡片（zhinjs/zhin ADR 0058）：步骤时间线、按描述符渲染的挑战（引导清单自动勾选、复制并打开、书签小程序、链接二维码、托管滑块辅助页弹窗）、`login.submit { wait: true }` 回执；旧 Host（`login.flow.list` 未知或 403）退回 `LoginTaskCard`。`login-assist-helpers.mjs` 与 core 的 `parseLoginTicket` / 验证码辅助页函数逐字节一致，`qr-code.mjs` 是零依赖的二维码编码器 |
+| `scripts/ui-preview-host.mjs` | 本地 | 合成数据的只读 Host，用于截图（`UI_PREVIEW_ORIGIN` 可加允许的来源；`UI_PREVIEW_ATTENTION=empty` / `legacy` 模拟没有待办 / 旧 Host；`UI_PREVIEW_LOGIN=flows` 打开登录流程演示账号（`scripts/ui-preview-login.mjs`：扫码、滑块 + 辅助页、设备锁 + 短信、身份验证、失败、频率限制、结果待确认），否则 `login.flow.*` 按旧 Host 回答；`UI_PREVIEW_ACCESS=viewer` 只读身份） |

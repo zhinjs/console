@@ -10,7 +10,7 @@ import { StatusState } from '../../components/StatusState'
 import { adapterHref, endpointHref } from '../../console-routes.mjs'
 import { ENDPOINT_RPC } from '../../contracts/zhin-console'
 import { useConsoleAccess } from '../../hooks/use-console-access'
-import { hasConsolePermission } from '../../utils/console-access.mjs'
+import { hasConsolePermission, scopePermissionTarget } from '../../utils/console-access.mjs'
 import { requestConsole } from '../../utils/console-rpc'
 import { endpointLifecycleLabel } from '../endpoint-presentation.mjs'
 import { endpointTestError, endpointTestPresentation, readEndpointTestResult, type EndpointTestResult } from '../endpoint-test-result-model.mjs'
@@ -18,7 +18,8 @@ import { ObjectSection } from '../../scope/ObjectPageLayout'
 import type { Scope } from '../../scope/scope-tree.mjs'
 import { ObjectFacts } from './scope-panels'
 import { endpointAccessState, loginTasksFor, platformLabel } from './scope-overview-model.mjs'
-import { LoginTaskCard, type EndpointsAndLogin, type ScopeEndpoint } from './login-tasks'
+import { type EndpointsAndLogin, type ScopeEndpoint } from './login-tasks'
+import { LoginFlowSection } from './login-flow-card'
 import './scope-pages.css'
 
 /** `endpoint.test` for one account; the result is announced (status / alert) next to the button. */
@@ -63,7 +64,8 @@ export function EndpointAccessPanel({ scope, data }: { scope: Scope; data: Endpo
   const name = scope.endpoint!
   const state = endpointAccessState(data, adapter, name)
   const tasks = loginTasksFor(data.tasks, adapter, name)
-  const canOperate = hasConsolePermission('endpoint.operate', access)
+  // An adapter / account-scoped operator may answer this account's login (ADR 0058 §8).
+  const canOperate = hasConsolePermission('endpoint.operate', access, scopePermissionTarget(scope))
   const canManage = hasConsolePermission('endpoint.manage', access)
   const refresh = <Button variant="outline" size="sm" onClick={data.refresh} disabled={data.loading}><RefreshCw className={data.loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>
   const configSection = (
@@ -115,15 +117,8 @@ export function EndpointAccessPanel({ scope, data }: { scope: Scope; data: Endpo
         ]} />
         <ConnectionTest endpoint={endpoint} />
       </ObjectSection>
-      <ObjectSection title={i18n.t('登录')} description={i18n.t('扫码、滑块 Ticket、短信或设备锁验证。完成后账号会自动上线。')}>
-        {tasks.length ? (
-          <div className="console-scope-login-grid">
-            {tasks.map(task => <LoginTaskCard key={task.id} task={task} readOnly={!canOperate} onSettled={data.refresh} />)}
-          </div>
-        ) : (
-          <StatusState kind="empty" compact title={endpoint.connected ? i18n.t('不需要登录') : i18n.t('没有待完成的登录验证')}
-            description={endpoint.connected ? i18n.t('账号已连接。需要重新登录时，验证会出现在这里。') : i18n.t('账号未连接，但平台没有发来登录验证。可以先测试连接，或在适配器的连接管理里重新启动账号。')} />
-        )}
+      <ObjectSection title={i18n.t('登录')} description={i18n.t('扫码、短信、滑块、设备锁和身份验证按步骤显示在这里，结果实时更新。完成后账号自动上线。')}>
+        <LoginFlowSection endpoint={endpoint} legacyTasks={tasks} canOperate={canOperate} onSettled={data.refresh} />
       </ObjectSection>
       {configSection}
     </>

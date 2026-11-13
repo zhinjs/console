@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   clampSplit, readSplitWidth, saveSplitWidth, splitKeyTarget, SPLIT_DEFAULT, SPLIT_MAX, SPLIT_MIN, SPLIT_STORAGE_KEY,
-  databaseCapabilities, isUnsupportedRpcError, nextSort, columnFiltersWhere, columnFilterOperators, isSensitiveColumn,
+  databaseCapabilities, isUnsupportedRpcError, sqlUnavailableReason, needsConsoleRole, isPrivilegeRefusal, nextSort, columnFiltersWhere, columnFilterOperators, isSensitiveColumn,
   readSqlHistory, pushSqlHistory, clearSqlHistory, SQL_HISTORY_KEY, sqlLooksReadOnly, affectedRows, parseDefaultInput, schemaWarningText,
 } from '../console-ui/src/pages/database/database-console-model.mjs'
 
@@ -36,15 +36,40 @@ test('the separator moves with the keyboard', () => {
 })
 
 test('features are detected from the Host capabilities, absent on older Hosts', () => {
-  assert.deepEqual(databaseCapabilities({ dialect: 'sqlite' }), { reported: false, sort: false, filterOperators: [], sql: false, schema: false, reason: '' })
+  assert.deepEqual(databaseCapabilities({ dialect: 'sqlite' }), { reported: false, sort: false, filterOperators: [], sql: false, schema: false, reason: '', sqlReason: '', sqlIsolation: '', sqlReasonCode: '' })
   assert.deepEqual(databaseCapabilities({ capabilities: { sort: true, filterOperators: ['$eq', 1], sql: true, schema: true } }),
-    { reported: true, sort: true, filterOperators: ['$eq'], sql: true, schema: true, reason: '' })
+    { reported: true, sort: true, filterOperators: ['$eq'], sql: true, schema: true, reason: '', sqlReason: '', sqlIsolation: '', sqlReasonCode: '' })
   assert.equal(databaseCapabilities({ capabilities: { sort: true, sql: false, schema: false, reason: 'mongodb' } }).reason, 'mongodb')
   assert.equal(isUnsupportedRpcError(new Error('Unknown RPC type: db:query')), true)
   assert.equal(isUnsupportedRpcError(new Error('Database RPC is not available on Plugin Runtime Host yet')), true)
   assert.equal(isUnsupportedRpcError({ message: 'RPC "db:query" 未登记权限', details: { serverCode: 'unmapped' } }), true)
   assert.equal(isUnsupportedRpcError({ message: 'x', details: { dataCode: 'unsupported' } }), true)
   assert.equal(isUnsupportedRpcError(new Error('no such table: x')), false)
+})
+
+test('the SQL editor explains a missing restricted account and privilege refusals (ADR 0059)', () => {
+  const restricted = databaseCapabilities({ capabilities: { sort: true, sql: false, schema: true, sqlIsolation: 'restricted-credential', sqlReasonCode: 'console-role-missing', sqlReason: 'run zhin db console-role', reason: 'run zhin db console-role' } })
+  assert.equal(restricted.sqlIsolation, 'restricted-credential')
+  assert.equal(sqlUnavailableReason(restricted), 'run zhin db console-role')
+  assert.equal(needsConsoleRole(restricted), true)
+  // SQLite, a working account, an older Host: no account hint.
+  assert.equal(needsConsoleRole(databaseCapabilities({ capabilities: { sql: false, schema: true, sqlIsolation: 'separate-store', sqlReason: 'in-memory' } })), false)
+  assert.equal(needsConsoleRole(databaseCapabilities({ capabilities: { sql: true, schema: true, sqlIsolation: 'restricted-credential' } })), false)
+  // A probe failure asks for the account too; a server that reads SQL text differently does not.
+  assert.equal(needsConsoleRole(databaseCapabilities({ capabilities: { sql: false, schema: true, sqlIsolation: 'restricted-credential', sqlReasonCode: 'console-role-invalid', sqlReason: 'holds CREATEROLE' } })), true)
+  assert.equal(needsConsoleRole(databaseCapabilities({ capabilities: { sql: false, schema: true, sqlIsolation: 'restricted-credential', sqlReasonCode: 'text-compatibility', sqlReason: 'standard_conforming_strings = off' } })), false)
+  assert.equal(needsConsoleRole(databaseCapabilities({ capabilities: { sql: false, schema: true, reason: 'sql_mode' } })), false)
+  // An older Host reports only `reason`.
+  assert.equal(sqlUnavailableReason(databaseCapabilities({ capabilities: { sql: false, schema: true, reason: 'sql_mode' } })), 'sql_mode')
+  assert.equal(databaseCapabilities({ capabilities: { sqlIsolation: 'other' } }).sqlIsolation, '')
+
+  assert.equal(isPrivilegeRefusal({ message: 'permission denied for schema public', details: { sqlState: '42501' } }), true)
+  assert.equal(isPrivilegeRefusal({ message: "CREATE command denied to user 'x'@'%' for table 't'", details: { sqlState: '42000' } }), true)
+  assert.equal(isPrivilegeRefusal({ message: 'You have an error in your SQL syntax', details: { sqlState: '42000' } }), false)
+  assert.equal(isPrivilegeRefusal({ message: 'relation "x" does not exist', details: { sqlState: '42P01' } }), false)
+  // Host before ADR 0059: no SQLSTATE, PostgreSQL's text.
+  assert.equal(isPrivilegeRefusal(new Error('permission denied for table console_users')), true)
+  assert.equal(isPrivilegeRefusal(new Error('no such table: x')), false)
 })
 
 test('header clicks cycle ascending, descending, none', () => {
@@ -110,4 +135,13 @@ test('schema form defaults parse by column type; warnings are translated', () =>
   assert.match(schemaWarningText('data_loss'), /删除数据/)
   assert.match(schemaWarningText('data_loss', 'en'), /deletes data/)
   assert.equal(schemaWarningText('future_code'), 'future_code')
+})
+
+test('the SQL console gets the dialect id (not the display label) for its PostgreSQL hint', async () => {
+  const { readFileSync } = await import('node:fs')
+  const page = readFileSync(new URL('../console-ui/src/pages/database/database-page.tsx', import.meta.url), 'utf8')
+  const console_ = readFileSync(new URL('../console-ui/src/pages/database/sql-console.tsx', import.meta.url), 'utf8')
+  assert.match(page, /<SqlConsole[^>]*dialect=\{info\?\.dialect \?\? ''\}[^>]*dialectLabel=/s)
+  assert.match(console_, /privilege \? \(dialect === 'pg'/)
+  assert.match(console_, /\{dialectLabel \|\| dialect\}/)
 })

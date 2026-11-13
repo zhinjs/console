@@ -8,6 +8,7 @@ import { scopeMessages } from './messages.en.scope.mjs'
 import { databaseMessages } from './messages.en.database.mjs'
 import { attentionMessages } from './messages.en.attention.mjs'
 import { statusMessages } from './messages.en.status.mjs'
+import { loginMessages } from './messages.en.login.mjs'
 
 /** Authored Console UI copy. Interpolated content is never translated. */
 export const englishMessages = Object.freeze({
@@ -21,6 +22,7 @@ export const englishMessages = Object.freeze({
   ...databaseMessages,
   ...attentionMessages,
   ...statusMessages,
+  ...loginMessages,
   "鲜活配色": "Fresh palettes",
   "沉静配色": "Calm palettes",
   "晴空": "Sky",

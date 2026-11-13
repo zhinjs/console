@@ -10,6 +10,7 @@ import * as scopeFilter from '../console-ui/src/pages/insights/scope-filter.mjs'
 import * as readError from '../console-ui/src/utils/read-error.mjs'
 import * as model from '../console-ui/src/components/log-panel/log-panel-model.mjs'
 import * as storeModule from '../console-ui/src/components/log-panel/log-panel-store.mjs'
+import * as loginFlowModel from '../console-ui/src/pages/scope/login-flow-model.mjs'
 import { createConsoleAccess, UNRESTRICTED_ACCESS } from '../console-ui/src/utils/console-access.mjs'
 
 const require = createRequire(import.meta.url)
@@ -391,6 +392,7 @@ test('login task cards open the panel filtered to their adapter and account, wit
     '../../utils/console-access.mjs': { hasConsolePermission: () => true }, '../../utils/console-rpc': { requestConsole: async () => ({}) },
     '../endpoint-list-model.mjs': { readEndpointList: () => [] },
     '../../components/log-panel/LogPanel': { useLogPanel: () => ({ available, open: storeModule.openLogPanel }) },
+    './login-flow-model.mjs': loginFlowModel,
   })
   const task = { id: 't1', adapter: 'telegram', endpointKey: 'preview-support', type: 'sms', payload: { message: '输入验证码' } }
   storeModule.closeLogPanel()

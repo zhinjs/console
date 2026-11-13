@@ -90,6 +90,11 @@ export const databaseMessages = Object.freeze({
   "创建…": "Create…",
   // SQL console
   "SQL 查询不可用": "SQL query unavailable",
+  "PostgreSQL / MySQL 上 SQL 控制台只用受限数据库账号执行，避免读到其他数据：在服务器上运行 zhin db console-role（主账号不能建号时加 --print-sql 交给 DBA），然后 zhin restart。数据浏览与表结构编辑不受影响。": "On PostgreSQL / MySQL the SQL console runs only on a restricted database account, so it cannot reach other data: run zhin db console-role on the server (add --print-sql for a DBA when the main account may not create accounts), then zhin restart. Data browsing and the schema editor are unaffected.",
+  "Host 报告：{0}": "The Host reports: {0}",
+  "受限账号没有这项权限": "The restricted account lacks this privilege",
+  "PostgreSQL 上 SQL 控制台用受限账号执行，不能建表、改表或删表（CREATE / ALTER / DROP）。请改用「新建表」或表的「结构」编辑器；读写行不受影响。": "On PostgreSQL the SQL console runs on a restricted account and cannot create, alter or drop tables (CREATE / ALTER / DROP). Use \"New table\" or a table's \"Structure\" editor instead; reading and writing rows still works.",
+  "SQL 控制台用受限账号执行，只能操作本库的表与视图（没有触发器、存储过程、事件、文件与其他库的权限）。": "The SQL console runs on a restricted account that works only on tables and views of this database (no triggers, routines, events, files or other databases).",
   "当前 Host 或数据库不支持 SQL 查询（需要 SQLite、MySQL 或 PostgreSQL，并升级 Host）。": "This Host or database does not support SQL queries (needs SQLite, MySQL or PostgreSQL and an up-to-date Host).",
   "只读语句直接执行；写语句会先预估影响行数并要求确认。": "Read statements run directly; write statements show the affected rows first and ask for confirmation.",
   "只能执行单条只读语句（SELECT / WITH / EXPLAIN 等），最多返回 1000 行。": "Only a single read statement (SELECT / WITH / EXPLAIN …) runs, returning at most 1000 rows.",

@@ -99,7 +99,7 @@ test('only the RPC fetch takes the capture, and a success is not parsed twice', 
   const passthrough = capturingFetch(async input => new Response(String(input)))
   assert.equal(await (await passthrough('https://host.invalid/api/events')).text(), 'https://host.invalid/api/events')
   const rpc = readFileSync(new URL('../console-ui/src/utils/console-rpc.ts', import.meta.url), 'utf8')
-  assert.match(rpc, /requestWithCapture\(\(\) => transport\.sendRequest<T>\(request\)\)/)
+  assert.match(rpc, /requestWithCapture\(\(\) => transport\.sendRequest<T>\(request, requestOptions\)\)/)
   const client = readFileSync(new URL('../console-ui/src/utils/console-client.ts', import.meta.url), 'utf8')
   assert.match(client, /transportConfig: \{ fetch: capturingFetch\(transportFetch\) \}/)
 })
@@ -118,4 +118,11 @@ test('upstream "HTTP 502 Bad Gateway" text is not an instance failure; the revie
   assert.equal(statusFromError(new ConsoleTransportError('The instance is overloaded', 'SERVER_ERROR')).outcome, 'not-dispatched', 'the gateway says it never dispatched')
   assert.equal(statusFromError(new ConsoleTransportError('The instance failed to answer', 'SERVER_ERROR')).outcome, 'unknown')
   clearInstanceAvailability()
+})
+
+test('a failed Console SQL statement keeps the server SQLSTATE (restricted account, ADR 0059)', async () => {
+  const t = transport(() => json(400, { success: false, error: 'permission denied for schema public', data: { sqlState: '42501' } }))
+  const error = await failure(t, { type: 'db:execute', sql: 'CREATE TABLE t (a int)' })
+  assert.equal(error.details.sqlState, '42501')
+  assert.equal(error.details.dataCode, undefined)
 })

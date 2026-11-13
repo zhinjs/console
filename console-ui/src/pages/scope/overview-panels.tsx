@@ -29,7 +29,7 @@ import './scope-pages.css'
 function AccountStatusBadge({ endpoint, tasks }: { endpoint: ScopeEndpoint; tasks: EndpointsAndLogin['tasks'] }) {
   const i18n = useI18n()
   const status = accountStatus(endpoint, tasks)
-  if (status === 'waiting') return <WaitingLoginBadge />
+  if (status === 'waiting') return <WaitingLoginBadge endpoint={endpoint} />
   return <Badge variant={status === 'online' ? 'success' : 'outline'} size="sm" className="whitespace-nowrap">{status === 'online' ? i18n.t('在线') : i18n.t('离线')}</Badge>
 }
 

@@ -80,7 +80,6 @@ export const scopeMessages = Object.freeze({
   "打开适配器": "Open adapter",
   "账号与平台之间的连接状态。测试连接只读取状态，不会发送消息。": "The connection between the account and its platform. Testing only reads the state and sends no message.",
   "传输": "Transport",
-  "扫码、滑块 Ticket、短信或设备锁验证。完成后账号会自动上线。": "QR code, slider ticket, SMS or device verification. The account comes online once it is done.",
   "不需要登录": "No login needed",
   "没有待完成的登录验证": "No login verification pending",
   "账号已连接。需要重新登录时，验证会出现在这里。": "The account is connected. When it has to log in again, the verification appears here.",
