@@ -177,4 +177,6 @@ export const statusMessages = Object.freeze({
   "需要时检查：这项会连一次终端的 WebSocket，并在审计日志里留下一条 terminal.denied 记录，所以不会自动运行。": "Check when needed: this connects once to the terminal WebSocket and leaves one terminal.denied entry in the audit log, so it never runs by itself.",
   "需要时检查": "Check when needed",
   "检查 WebSocket 升级": "Check the WebSocket upgrade",
+  "从下一次请求起按新设置鉴权，已登录的会话不需要重新登录。": "From the next request on, access is checked against the new settings; signed-in sessions need not sign in again.",
+  "定时器已按新设置注册或撤销，不需要重启。": "The timer is registered or disposed with the new settings; no restart needed.",
 })

@@ -60,7 +60,8 @@ export function ConnectionIndicator() {
     <Popover>
       <PopoverTrigger asChild>
         <button type="button" className={cn('console-connection-pill', `is-${view.kind}`)} data-connection={view.kind}
-          aria-label={reason ? i18n.t('实时连接：{0}（{1}）', [label, reason]) : i18n.t('实时连接：{0}', [label])}>
+          aria-label={reason ? i18n.t('实时连接：{0}（{1}）', [label, reason]) : i18n.t('实时连接：{0}', [label])}
+          title={reason ? i18n.t('实时连接：{0}（{1}）', [label, reason]) : i18n.t('实时连接：{0}', [label])}>
           {view.kind === 'disconnected' ? <Unplug aria-hidden="true" /> : <Loader2 className="animate-spin" aria-hidden="true" />}
           <span className="console-connection-pill-label">{label}</span>
           {view.kind === 'disconnected' && reason ? <span className="console-connection-pill-reason">（{reason}）</span> : null}

@@ -161,11 +161,18 @@ export async function runReadBack(check) {
   }
 }
 
+/** Saves that do not go through the instance's configuration say what applied in their own words. */
+const BASIS_DESCRIPTION = Object.freeze({
+  'per-request': '从下一次请求起按新设置鉴权，已登录的会话不需要重新登录。',
+  scheduler: '定时器已按新设置注册或撤销，不需要重启。',
+})
+
 /** Title / description keys of an outcome (`unconfirmed` failures have their own copy). */
 export function applyOutcomeCopy(value) {
   if (!value) return null
   if (value.kind === 'failed' && value.unconfirmed) return APPLY_OUTCOME_COPY.unconfirmed
-  return APPLY_OUTCOME_COPY[value.kind] ?? null
+  const copy = APPLY_OUTCOME_COPY[value.kind] ?? null
+  return copy && value.kind === 'applied' && BASIS_DESCRIPTION[value.basis] ? Object.freeze({ ...copy, description: BASIS_DESCRIPTION[value.basis] }) : copy
 }
 
 /** Tone of an outcome surface. */

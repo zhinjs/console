@@ -437,6 +437,13 @@ test('access control, schedules and chat roles end in an outcome whose basis nam
   assert.deepEqual(outcomeFromAccessWrite({ secret: true }), { kind: 'applied', basis: 'per-request', note: 'secret' })
   assert.deepEqual(outcomeFromScheduleWrite(), { kind: 'applied', basis: 'scheduler' })
   assert.deepEqual(outcomeFromChatRoleWrite(), { kind: 'next-message', basis: 'chat-roles' })
+  // Access control and schedules do not touch the instance: their 已生效 says what applied.
+  for (const value of [outcomeFromAccessWrite(), outcomeFromScheduleWrite()]) {
+    const copy = applyOutcomeCopy(value)
+    assert.equal(copy.title, APPLY_OUTCOME_COPY.applied.title)
+    assert.notEqual(copy.description, APPLY_OUTCOME_COPY.applied.description)
+    assert.ok(Object.hasOwn(englishMessages, copy.description), copy.description)
+  }
   assert.match(APPLY_BASIS_COPY['per-request'], /#principal/u)
   assert.match(APPLY_BASIS_COPY.scheduler, /addJob \/ pauseJob \/ resumeJob \/ removeJob/u)
   assert.match(APPLY_BASIS_COPY['chat-roles'], /effectiveRoles/u)
