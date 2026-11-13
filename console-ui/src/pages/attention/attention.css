@@ -1,0 +1,187 @@
+/* 「需要你处理」: the /attention page, the dashboard section and the top bar badge. Tokens only. */
+@layer components {
+  .console-attention-icon { width: 1rem; height: 1rem; flex: none; }
+  .console-attention-icon.is-danger { color: hsl(var(--destructive)); }
+  .console-attention-icon.is-warning { color: hsl(var(--warning)); }
+  .console-attention-icon.is-info { color: hsl(var(--info)); }
+
+  /* ---------- Page ---------- */
+  .console-attention-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 0.75rem;
+  }
+
+  .console-attention-filters { display: flex; flex-wrap: wrap; gap: 0.375rem; }
+
+  .console-attention-filter {
+    display: inline-flex;
+    min-height: var(--console-control-height-sm);
+    align-items: center;
+    gap: 0.375rem;
+    border: var(--console-border-width) solid var(--console-border-default);
+    border-radius: 999px;
+    background: hsl(var(--card));
+    padding: 0 0.75rem;
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-caption);
+  }
+
+  .console-attention-filter:hover { color: hsl(var(--foreground)); }
+  .console-attention-filter:focus-visible { outline: var(--console-focus-width) solid hsl(var(--ring)); outline-offset: 1px; }
+  .console-attention-filter.is-active { border-color: hsl(var(--primary) / 0.4); background: hsl(var(--primary) / 0.1); color: hsl(var(--primary)); font-weight: 600; }
+  .console-attention-filter-count { font-variant-numeric: tabular-nums; opacity: 0.8; }
+
+  .console-attention-checked,
+  .console-attention-note {
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-body-sm);
+  }
+
+  .console-attention-note {
+    border-radius: var(--console-radius-md);
+    background: var(--console-surface-inset);
+    padding: 0.625rem 0.875rem;
+  }
+
+  .console-attention-note.is-warning { background: hsl(var(--warning) / 0.1); color: hsl(var(--foreground)); }
+
+  .console-attention-group { display: flex; flex-direction: column; gap: 0.75rem; }
+
+  .console-attention-group-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: var(--console-text-section);
+    font-weight: 600;
+  }
+
+  .console-attention-group-count {
+    border-radius: 999px;
+    background: hsl(var(--foreground) / 0.06);
+    padding: 0 0.5rem;
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-caption);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .console-attention-list {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: var(--console-radius-xl);
+    background: hsl(var(--card));
+    box-shadow: var(--console-shadow-sm);
+  }
+
+  .console-attention-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .console-attention-row + .console-attention-row { border-top: var(--console-border-width) solid var(--console-border-subtle); }
+  .console-attention-row > .console-attention-icon { margin-top: 0.15rem; }
+  .console-attention-row.is-hidden .console-attention-row-title { color: hsl(var(--muted-foreground)); }
+  .console-attention-row-body { min-width: 0; }
+
+  .console-attention-row-title {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  .console-attention-row-detail {
+    margin-top: 0.25rem;
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-body-sm);
+    overflow-wrap: anywhere;
+  }
+
+  .console-attention-row-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+    margin-top: 0.375rem;
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-caption);
+  }
+
+  .console-attention-row-meta:empty { display: none; }
+
+  .console-attention-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .console-attention-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: var(--console-radius-xl);
+    background: hsl(var(--card));
+    box-shadow: var(--console-shadow-sm);
+    padding: 2.5rem 1rem;
+    text-align: center;
+  }
+
+  .console-attention-empty > svg { width: 2rem; height: 2rem; color: hsl(var(--success)); }
+  .console-attention-empty-title { font-size: var(--console-text-section); font-weight: 600; }
+  .console-attention-empty-detail { color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); }
+
+  /* ---------- Dashboard section ---------- */
+  .console-attention-item.is-warning > svg:first-child { color: hsl(var(--warning)); }
+  .console-attention-item.is-info > svg:first-child { color: hsl(var(--info)); }
+
+  /* ---------- Top bar badge ---------- */
+  .console-attention-badge {
+    position: relative;
+    display: inline-flex;
+    width: var(--console-control-height);
+    height: var(--console-control-height);
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    color: hsl(var(--foreground));
+  }
+
+  .console-attention-badge:hover { background: var(--console-surface-hover); }
+  .console-attention-badge:focus-visible { outline: var(--console-focus-width) solid hsl(var(--ring)); outline-offset: 1px; }
+
+  .console-attention-badge-count {
+    position: absolute;
+    top: 0.125rem;
+    right: 0.125rem;
+    min-width: 1.125rem;
+    height: 1.125rem;
+    border-radius: 999px;
+    background: hsl(var(--warning));
+    padding: 0 0.25rem;
+    color: hsl(var(--warning-foreground));
+    font-size: var(--console-text-caption);
+    font-weight: 600;
+    line-height: 1.125rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .console-attention-badge-count.is-danger { background: hsl(var(--destructive)); color: hsl(var(--destructive-foreground)); }
+
+  /* ---------- Phones: the list stacks, actions take the full width ---------- */
+  @media (max-width: 767px) {
+    .console-attention-row { grid-template-columns: auto minmax(0, 1fr); }
+    .console-attention-row-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; }
+    .console-attention-row-actions > * { width: 100%; min-height: 44px; }
+    /* 去处理 takes the full row; 稍后提醒 / 忽略 (or 恢复) share the next one. */
+    .console-attention-row-actions > :first-child { grid-column: 1 / -1; }
+    .console-attention-row-actions > :last-child:nth-child(2) { grid-column: 1 / -1; }
+    .console-attention-badge { width: 2.75rem; height: 2.75rem; }
+  }
+}

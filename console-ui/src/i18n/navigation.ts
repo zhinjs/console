@@ -4,6 +4,7 @@ import type { ConsoleRouteRecord } from '@zhin.js/client'
 // Plugin titles use only explicit provider metadata; shell-owned path/name pairs use our catalog.
 const builtinNames: Readonly<Record<string, string>> = {
   "/dashboard": "首页",
+  "/attention": "需要你处理",
   "/logs": "运行日志",
   "/agent/workbench": "机器人状态",
   "/agent/replay": "决策回放",

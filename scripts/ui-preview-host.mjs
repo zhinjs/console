@@ -244,6 +244,34 @@ function featureDetail(body) {
 const loginTasks = [
   { id: 'preview-login-1', adapter: 'telegram', endpointKey: 'preview-support', type: 'sms', payload: { message: '平台要求输入短信验证码完成登录。', phone: '+86 138****0000' }, createdAt: Date.now() - 60_000, expiresAt: Date.now() + 240_000 },
 ]
+// 「需要你处理」(attention.list). UI_PREVIEW_ATTENTION=empty: nothing to do; =legacy: an older Host
+// without attention.list (Unknown RPC), so the Console falls back to its own derivation.
+const attentionMode = process.env.UI_PREVIEW_ATTENTION ?? 'items'
+const attentionAt = minutes => new Date(Date.now() - minutes * 60_000).toISOString()
+const attentionItems = en => [
+  { id: 'login.pending:3f1a90c2', revision: 'a1', kind: 'login.pending', severity: 'danger', source: 'login-assist', since: attentionAt(1),
+    subject: { adapter: 'telegram', endpointKey: 'preview-support', loginTaskId: 'preview-login-1' },
+    title: en ? 'telegram / preview-support is waiting to sign in' : 'telegram / preview-support 等待登录',
+    detail: en ? 'Complete the SMS code step to bring it online; the sign-in is cancelled if it times out.' : '需要完成短信验证才能上线，超时后登录会被取消。',
+    action: { label: en ? 'Open sign-in' : '去处理登录', path: '/scope/telegram/preview-support?tab=access' } },
+  { id: 'plugin.dependencies:9b2c11e0', revision: 'b1', kind: 'plugin.dependencies', severity: 'danger', source: 'plugins', since: attentionAt(42), subject: { plugin: 'rss' },
+    title: en ? 'Dependencies of plugin rss are not met' : '插件 rss 的依赖未满足', detail: 'Required service "database" is not provided by any plugin',
+    action: { label: en ? 'Open plugin' : '查看插件', path: '/plugins/rss' } },
+  { id: 'tool-approval.pending:77aa0b13', revision: 'c1', kind: 'tool-approval.pending', severity: 'warning', source: 'tool-approvals', since: attentionAt(3), subject: { approvalId: 'appr-1' },
+    title: en ? 'Tool group_kick is waiting for approval' : '工具 group_kick 等待审批',
+    detail: en ? 'Requested in session icqq:preview-community:group:20001; it is denied if nobody decides in time.' : '来自会话 icqq:preview-community:group:20001；超时无人处理会被拒绝。',
+    action: { label: en ? 'Review' : '去审批', path: '/ops/schedules?tab=admin' } },
+  { id: 'config.literal-secrets:0d0c5e44', revision: 'd1', kind: 'config.literal-secrets', severity: 'warning', source: 'config', since: attentionAt(180),
+    title: en ? 'Secrets stored as plain text in the configuration: 2' : '配置文件中有 2 个明文密钥',
+    detail: en ? 'http.token, telegram.endpoints[0].token. Run zhin doctor --fix to move them to .env as ${…} references.' : 'http.token、telegram.endpoints[0].token。运行 zhin doctor --fix 把它们移到 .env 并改为 ${…} 引用。',
+    action: { label: en ? 'Open configuration' : '打开配置文件', path: '/ops/config' } },
+  { id: 'mcp.disconnected:51e2a7d9', revision: 'e1', kind: 'mcp.disconnected', severity: 'warning', source: 'mcp', since: attentionAt(25), subject: { mcpServer: 'web-search' },
+    title: en ? 'MCP server web-search is not connected' : 'MCP 服务 web-search 未连接', detail: en ? 'The Agent cannot use its tools for now.' : 'Agent 暂时无法调用它提供的工具。',
+    action: { label: en ? 'Open MCP' : '查看 MCP', path: '/introspection?tab=mcp' } },
+  { id: 'logs.errors:811c9dc5', revision: 'f1', kind: 'logs.errors', severity: 'info', source: 'logs', since: attentionAt(95),
+    title: en ? 'Errors in the logs: 7' : '日志里有 7 条错误', detail: en ? 'Persistent log count; it restarts after logs are cleaned up.' : '持久日志统计；清理日志后重新计数。',
+    action: { label: en ? 'Open error logs' : '打开错误日志', path: '/logs?level=error' } },
+]
 const adapterStatus = { adapterKey: 'icqq', displayName: 'ICQQ', page: '/icqq', docsUrl: 'https://example.invalid/docs/icqq', canAdd: true, canRemove: true, configStore: true,
   fields: [{ key: 'uin', type: 'string', required: true, env: false, secret: false, label: 'QQ 号' }, { key: 'password', type: 'string', required: false, env: true, secret: true, label: '密码' }],
   running: [{ id: 'preview-community', mode: 'qrcode' }], configured: [{ id: 'preview-community', values: { uin: '10000' } }, { id: 'preview-archive', values: { uin: '10009' } }], actions: [] }
@@ -472,6 +500,10 @@ const server = createServer(async (request, response) => {
     const type = String(body.type)
     const endpoint = endpoints.find(endpoint => endpoint.name === (body.endpointKey ?? body.endpointId ?? body.data?.endpointKey)) ?? endpoints[0]
     if (type === 'endpoint.list') { json(envelope({ endpoints })); return }
+    if (type === 'attention.list') {
+      if (attentionMode === 'legacy') { json({ success: false, error: 'Unknown RPC type: attention.list' }, 400); return }
+      json(envelope({ items: attentionMode === 'empty' ? [] : attentionItems(body.data?.locale === 'en'), generatedAt: new Date().toISOString() })); return
+    }
     if (type.startsWith('plugin.root.') && Object.hasOwn(pluginRoot, type.slice('plugin.root.'.length))) { json(envelope(pluginRoot[type.slice('plugin.root.'.length)](body.data ?? {}))); return }
     if (type === 'schedule:list') { json(envelope(scheduleList)); return }
     if (type === 'config:get-source') { json(envelope({ source: configSource, revision: 'preview-1' })); return }

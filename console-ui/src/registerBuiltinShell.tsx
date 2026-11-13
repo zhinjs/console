@@ -1,5 +1,6 @@
 import { app } from './utils/console-client'
 import HomePage from './pages/dashboard'
+import AttentionPage from './pages/attention'
 import PluginsPage from './pages/plugins'
 import PluginDetailPage from './pages/plugin-detail'
 import ScopeObjectRoute from './pages/scope'
@@ -52,6 +53,7 @@ export function registerBuiltinConsolePages() {
 
   // 概览 — 现在怎么样？
   app.addRoute({ path: P.dashboard, name: '首页', parent: null, icon: 'Home', element: <HomePage />, meta: { group: NAV_GROUPS.OVERVIEW, order: 0 } })
+  app.addRoute({ path: P.attention, name: '需要你处理', parent: null, icon: 'Bell', element: <AttentionPage />, meta: { group: NAV_GROUPS.OVERVIEW, order: 0.5 } })
   app.addRoute({ path: P.logs, name: '运行日志', parent: null, icon: 'FileText', element: <LogsPage />, meta: { group: NAV_GROUPS.OVERVIEW, order: 1, fullWidth: true } })
   app.addRoute({ path: P.agentWorkbench, name: '机器人状态', parent: null, icon: 'Brain', element: <AgentWorkbenchPage />, meta: { group: NAV_GROUPS.OVERVIEW, order: 2 } })
   app.addRoute({

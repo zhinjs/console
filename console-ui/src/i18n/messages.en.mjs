@@ -6,6 +6,7 @@ import { pluginsMessages } from './messages.en.plugins.mjs'
 import { insightsMessages } from './messages.en.insights.mjs'
 import { scopeMessages } from './messages.en.scope.mjs'
 import { databaseMessages } from './messages.en.database.mjs'
+import { attentionMessages } from './messages.en.attention.mjs'
 
 /** Authored Console UI copy. Interpolated content is never translated. */
 export const englishMessages = Object.freeze({
@@ -17,6 +18,7 @@ export const englishMessages = Object.freeze({
   ...insightsMessages,
   ...scopeMessages,
   ...databaseMessages,
+  ...attentionMessages,
   "鲜活配色": "Fresh palettes",
   "沉静配色": "Calm palettes",
   "晴空": "Sky",
@@ -2676,7 +2678,6 @@ export const englishMessages = Object.freeze({
   "最近消息 {0}": "Last message {0}",
   "收到": "Received",
   "系统内存": "System memory",
-  "需要关注": "Needs attention",
   "实时推送中": "Live",
   "查看明细": "View details",
   "正在读取消息事件…": "Loading message events…",

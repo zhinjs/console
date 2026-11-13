@@ -169,4 +169,5 @@
 | `ActionReceipt` / `useActionReceipt` / `action-receipt-model.mjs` | `components/` | 写操作回执 |
 | `InstanceUnavailableBanner` / `utils/instance-availability.mjs` | shell | 实例不可用横幅 |
 | `LogPanel` / `LogPanelButton` / `useLogPanel` / `openLogPanel` | `components/log-panel/` | 底部日志面板（shell）；`LogViewer`（`pages/logs/`）是它与 `/logs` 共用的查看器 |
-| `scripts/ui-preview-host.mjs` | 本地 | 合成数据的只读 Host，用于截图（`UI_PREVIEW_ORIGIN` 可加允许的来源） |
+| `useAttention` / `attention-model.mjs` / `AttentionBadge` | `pages/attention/` | 「需要你处理」：`attention.list` 的共享读取（30 秒、聚焦与推送事件防抖刷新；旧 Host 回退到 Console 推断），本浏览器内的「稍后提醒」/「忽略」，首页区块、`/attention` 页与顶栏角标共用 |
+| `scripts/ui-preview-host.mjs` | 本地 | 合成数据的只读 Host，用于截图（`UI_PREVIEW_ORIGIN` 可加允许的来源；`UI_PREVIEW_ATTENTION=empty` / `legacy` 模拟没有待办 / 旧 Host） |
