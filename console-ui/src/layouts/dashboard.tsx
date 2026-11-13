@@ -17,6 +17,7 @@ import { principalLabel } from "../utils/console-auth-model.mjs"
 import { useConsoleSession } from "../hooks/use-console-session"
 import { OnboardingBanner } from "../components/onboarding-banner"
 import { InstanceUnavailableBanner } from "../components/InstanceUnavailableBanner"
+import { ConnectionIndicator } from "../components/ConnectionIndicator"
 import { CONSOLE_PATHS } from "../console-routes.mjs"
 import { objectPageOwnsBreadcrumb } from "../scope/scope-tree.mjs"
 import { ConsoleCommandCenter } from "../components/ConsoleCommandCenter"
@@ -249,12 +250,7 @@ export default function DashboardLayout() {
             <ConsoleCommandCenter routes={routes} />
             <LogPanelButton />
             <AttentionBadge />
-            <span
-              className={cn("console-connection-dot", connected ? "is-online" : "is-offline")}
-              title={connectionTitle}
-              aria-label={connectionTitle}
-              role="status"
-            />
+            <ConnectionIndicator />
             <LanguageSelect />
             <ThemeToggle />
             {me?.user ? (

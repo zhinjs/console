@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertTriangle, CheckCircle2, CircleHelp, Loader2, RefreshCw, RotateCcw, ServerOff, X, XCircle } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, CircleHelp, GitCompareArrows, Loader2, RefreshCw, RotateCcw, ServerOff, X, XCircle } from 'lucide-react'
 import { cn } from '@zhin.js/client'
 import './status-surfaces.css'
 import { useI18n } from '../i18n'
 import { Button } from './ui/button'
 import { StatusState } from './StatusState'
+import { ApplyFeedback } from './ApplyFeedback'
+import type { ApplyOutcome } from './apply-outcome-model.mjs'
 import {
   RECEIPT_COPY, type ActionReceiptState, type ReceiptEvent, type ReceiptPlan,
 } from './action-receipt-model.mjs'
@@ -16,7 +18,7 @@ export interface UseActionReceiptOptions {
   /** Performs the write. Resolve with nothing or `{ status, items?, message? }` (see readSubmitResult). */
   readonly submit: (plan: ReceiptPlan) => Promise<unknown>
   /** Read-only check after an unknown outcome: `{ applied: true | false | undefined }`. Never writes. */
-  readonly verify?: (plan: ReceiptPlan) => Promise<{ applied?: boolean; message?: string } | undefined>
+  readonly verify?: (plan: ReceiptPlan) => Promise<{ applied?: boolean; message?: string; apply?: ApplyOutcome } | undefined>
   /** Called once the action settled as succeeded / partial (e.g. reload the list). */
   readonly onSettled?: (state: ActionReceiptState) => void
   /**
@@ -102,11 +104,13 @@ export function useActionReceipt({ submit, verify, onSettled, persistKey }: UseA
  * next to the control that started the action (inline), not as a toast: the outcome stays visible
  * until dismissed.
  */
-export function ActionReceipt({ controller, className, lockHref }: {
+export function ActionReceipt({ controller, className, lockHref, onRestarted }: {
   controller: ActionReceiptController
   className?: string
   /** Where a `locked` refusal can be lifted (the locking level's page). */
   lockHref?: string
+  /** A `需要重启` outcome restarted from the receipt: re-read what the write changed. */
+  onRestarted?: () => Promise<ApplyOutcome | null | void> | void
 }) {
   const i18n = useI18n()
   const { state, confirm, cancel, verify, canVerify, reset } = controller
@@ -130,6 +134,7 @@ export function ActionReceipt({ controller, className, lockHref }: {
   const Icon = state.phase === 'succeeded' ? CheckCircle2
     : state.phase === 'partial' ? AlertTriangle
       : state.phase === 'failed' ? XCircle
+      : state.phase === 'mismatch' ? GitCompareArrows
         : state.phase === 'unknown' ? CircleHelp
           : busy ? Loader2 : null
   return (
@@ -171,6 +176,9 @@ export function ActionReceipt({ controller, className, lockHref }: {
       ) : null}
       {state.phase === 'succeeded' && state.unchanged ? <p className="console-receipt-summary">{i18n.t('内容没有变化。')}</p> : null}
       {state.phase === 'succeeded' && state.verified ? <p className="console-receipt-summary">{i18n.t('已核对：修改已生效。')}</p> : null}
+      {/* What the write did to the running instance; a read-back that differs replaces any success. */}
+      {(state.phase === 'succeeded' || state.phase === 'partial') && state.apply ? <ApplyFeedback outcome={state.apply} onRestarted={onRestarted} /> : null}
+      {state.phase === 'mismatch' ? <ApplyFeedback mismatch={state.mismatch} /> : null}
       {state.message ? <p className="console-receipt-summary">{state.message}</p> : null}
       {state.phase === 'unknown' ? (
         <StatusState compact kind="unknown" error={state.status?.message ? state.status.message : undefined}

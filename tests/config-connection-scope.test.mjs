@@ -19,6 +19,7 @@ import { translate } from '../console-ui/src/i18n/locale.mjs'
 import * as configEvidenceModel from '../console-ui/src/components/PluginConfigForm/config-evidence-model.mjs'
 import * as configLiveStatus from '../console-ui/src/components/PluginConfigForm/config-live-status.mjs'
 import * as unsavedChangesGuard from '../console-ui/src/utils/unsaved-changes-guard.mjs'
+import * as applyOutcomeModel from '../console-ui/src/components/apply-outcome-model.mjs'
 
 const require = createRequire(import.meta.url)
 const files = await Promise.all(['hooks/useConfigSource.ts', 'components/PluginConfigForm/usePluginConfigDraft.ts', 'components/PluginConfigForm/index.tsx', 'pages/config.tsx', 'components/PluginConfigForm/SchemaFieldEditor.tsx']
@@ -91,6 +92,7 @@ function fixture(query = '') {
     '../../pages/files/code-editor': { CodeEditor: 'code-editor' }, './files/code-editor': { CodeEditor: 'code-editor' },
     './config-evidence-model.mjs': configEvidenceModel,
     './config-live-status.mjs': configLiveStatus,
+    '../ApplyFeedback': { ApplyFeedback: 'apply-feedback' }, '../apply-outcome-model.mjs': applyOutcomeModel,
     './ConfigurationLiveStatus': { ConfigurationLiveStatus: 'configuration-live-status' },
     '../components/PluginConfigForm/ConfigurationLiveStatus': { ConfigurationLiveStatus: 'configuration-live-status' },
     '../components/PluginConfigForm/config-evidence-model.mjs': configEvidenceModel,
@@ -1331,7 +1333,12 @@ test('all settings forms offer only Save and report required errors through auto
   f.answer('config:replace-source', { success: true, revision: 'r2', restartRequired: true }); await f.runtime.settle()
   f.answer('config:get-source', { source: '{"group-suite":{"token":"configured"}}', format: 'json', revision: 'r2', configKeys: ['group-suite'], configPaths: { 'group-suite': ['group-suite'] } })
   f.answer('schema:get', { type: 'object', object: { token: { type: 'string', required: true } } }); await f.runtime.settle()
-  assert.ok(label(f.runtime.value).includes('配置已保存'))
+  // The save's outcome sits next to 保存: the Host said a restart is needed, and the read-back matches.
+  const outcome = elements(f.runtime.value).find(item => item.type === 'apply-feedback')
+  assert.ok(outcome, 'the save shows its outcome')
+  assert.deepEqual([outcome.props.outcome.kind, outcome.props.outcome.basis], ['restart', 'restart-flag'])
+  assert.equal(outcome.props.mismatch, null)
+  assert.equal(outcome.props.unverified, false)
   assert.equal(elements(f.runtime.value).some(item => item.type === 'alert'), false)
   f.runtime.unmount()
 })

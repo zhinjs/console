@@ -12,6 +12,7 @@ import { Skeleton } from '../../components/ui/skeleton'
 import { Switch } from '../../components/ui/switch'
 import { StatusState } from '../../components/StatusState'
 import { ActionReceipt, useActionReceipt } from '../../components/ActionReceipt'
+import { outcomeFromFeatureWrite } from '../../components/apply-outcome-model.mjs'
 import { receiptBlocksActions, type ReceiptPlan } from '../../components/action-receipt-model.mjs'
 import { SchemaFieldEditor } from '../../components/PluginConfigForm/SchemaFieldEditor'
 import type { SchemaEditorDrafts } from '../../components/PluginConfigForm/types'
@@ -29,7 +30,7 @@ import {
 } from './feature-model.mjs'
 import {
   FEATURE_ROW_FILTERS, featureChangeApplied, featureFieldView, featureLevelRow, featureLockHref,
-  featureReceiptOutcome, featureRowCounts, featureValueText, featureWriteSharesRevision, filterFeatureRows, parentFeatureTarget,
+  featureReadBackMismatch, featureReceiptOutcome, featureRowCounts, featureValueText, featureWriteSharesRevision, filterFeatureRows, parentFeatureTarget,
   type FeatureChange, type FeatureLevelRow, type FeatureRowFilter,
 } from './feature-scope-model.mjs'
 import { useFeatureList } from './use-feature-data'
@@ -235,11 +236,19 @@ function FeatureRow({ scope, level, levelKey, feature, row, detail, reload, adop
         if (result.status === 'saved' || result.status === 'unchanged') adoptRevision?.(result.revision)
         const outcome = featureReceiptOutcome(result)
         if (outcome.locked) throw Object.assign(new Error(outcome.message), { code: 'locked', lockedBy: outcome.lockedBy })
+        // What the write does to the running instance (features.md「生效方式」) and whether a fresh
+        // read shows it: a read-back that differs is reported instead of success.
+        const apply = outcomeFromFeatureWrite(result, level) ?? undefined
+        let mismatch = null
+        if (result.status === 'saved') {
+          try { mismatch = featureReadBackMismatch(await readDetail(feature.plugin, level, levelKey), current.change) }
+          catch { return { ...outcome, apply, message: [outcome.message, i18n.t('保存后没能重新读取核对，请刷新确认保存的值。')].filter(Boolean).join('\n') } }
+        }
         // Saved, but only in memory: say so next to the receipt (ADR 0055 §6).
         if (result.status === 'saved' && result.persistent === false) {
-          return { ...outcome, message: [outcome.message, i18n.t('当前数据库不支持持久化，重启后丢失')].filter(Boolean).join('\n') }
+          return { ...outcome, apply, ...(mismatch ? { mismatch } : {}), message: [outcome.message, i18n.t('当前数据库不支持持久化，重启后丢失')].filter(Boolean).join('\n') }
         }
-        return outcome
+        return { ...outcome, apply, ...(mismatch ? { mismatch } : {}) }
       } finally {
         // Every outcome re-reads: a conflict or lock shows the newer state, a success its effect.
         reload()
@@ -250,7 +259,8 @@ function FeatureRow({ scope, level, levelKey, feature, row, detail, reload, adop
       if (!current) return undefined
       const applied = featureChangeApplied(await readDetail(feature.plugin, level, levelKey), current.change)
       reload()
-      return { applied }
+      // A verified write applies like any other at this level (features.md「生效方式」).
+      return { applied, ...(applied && (level === 'adapter' || level === 'endpoint' || level === 'conversation') ? { apply: outcomeFromFeatureWrite({ status: 'saved' }, level) ?? undefined } : {}) }
     },
     onSettled: () => setEditing(null),
   })
@@ -340,7 +350,7 @@ function FeatureRow({ scope, level, levelKey, feature, row, detail, reload, adop
         </div>
       </div>
       {detail.status === 'failed' ? <div className="console-feature-row-body"><StatusState compact error={detail.error} onRetry={reload} /></div> : null}
-      <ActionReceipt controller={receipt} className="console-feature-row-receipt" lockHref={featureLockHref(receipt.state.status?.lockedBy ?? row.lockedBy ?? 'global', scope)} />
+      <ActionReceipt controller={receipt} className="console-feature-row-receipt" lockHref={featureLockHref(receipt.state.status?.lockedBy ?? row.lockedBy ?? 'global', scope)} onRestarted={reload} />
       {open && value ? (
         <div className="console-feature-row-body">
           <FeatureFields scope={scope} feature={feature} level={level} detail={value} row={row} editing={editing} setEditing={setEditing}

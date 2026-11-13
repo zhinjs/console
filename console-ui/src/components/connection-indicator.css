@@ -1,0 +1,21 @@
+/* Top bar live-connection indicator (ConnectionIndicator). Tokens only. */
+.console-connection-pill {
+  display: inline-flex; align-items: center; gap: 0.3125rem; flex-shrink: 0; height: 1.75rem; max-width: 18rem;
+  margin: 0 0.25rem; padding: 0 0.625rem; border: 1px solid hsl(var(--warning) / 0.5); border-radius: 999px;
+  background: hsl(var(--warning) / 0.1); color: hsl(var(--foreground)); font-size: var(--console-text-caption); font-weight: 500;
+  white-space: nowrap; cursor: pointer;
+}
+.console-connection-pill:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.console-connection-pill svg { width: 0.875rem; height: 0.875rem; flex-shrink: 0; color: hsl(var(--warning)); }
+.console-connection-pill.is-disconnected { border-color: hsl(var(--destructive) / 0.45); background: hsl(var(--destructive) / 0.08); }
+.console-connection-pill.is-disconnected svg { color: hsl(var(--destructive)); }
+.console-connection-pill-reason { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: hsl(var(--muted-foreground)); }
+.console-connection-popover { width: min(22rem, calc(100vw - 2rem)); }
+.console-connection-popover-title { font-weight: 600; font-size: var(--console-text-body-sm); }
+.console-connection-popover-text { margin-top: 0.375rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); overflow-wrap: anywhere; }
+.console-connection-popover-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+@media (max-width: 1099px) { .console-connection-pill-reason { display: none; } }
+@media (max-width: 767px) {
+  .console-connection-pill { height: 2rem; padding: 0 0.5rem; margin: 0; }
+}
+@media (max-width: 380px) { .console-connection-pill-label { display: none; } .console-connection-pill { width: 2rem; justify-content: center; padding: 0; } }

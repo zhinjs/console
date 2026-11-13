@@ -6,6 +6,7 @@ import {
 } from '@zhin.js/client'
 import { captureApiRequestContext, clearRuntimeToken, clearToken, getApiBase, getToken, observeHostGatewayReply } from './auth'
 import { capturingFetch } from './rpc-reply-capture.mjs'
+import { isEventStreamUrl, reportEventStreamReply } from './event-stream-status.mjs'
 
 /** Built-in and plugin routes outlive a Host session, so the registry is owned here, not by a client. */
 export const app = createConsoleApp()
@@ -26,7 +27,17 @@ function runtimeEnv(): 'development' | 'production' {
  */
 const transportFetch: typeof fetch = async (input, init) => {
   const { apiBase, token } = captureApiRequestContext()
-  const response = await fetch(input, init)
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+  // The live event stream's replies say why the top bar's connection indicator is not connected.
+  const stream = isEventStreamUrl(url)
+  let response: Response
+  try {
+    response = await fetch(input, init)
+  } catch (error) {
+    if (stream) reportEventStreamReply({ error }, url)
+    throw error
+  }
+  if (stream) reportEventStreamReply({ status: response.status, contentType: response.headers?.get?.('content-type') ?? null }, url)
   observeHostGatewayReply(response)
   if (response.status === 401 && token && getApiBase() === apiBase && getToken() === token) {
     clearRuntimeToken()

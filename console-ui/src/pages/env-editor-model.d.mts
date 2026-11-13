@@ -13,3 +13,4 @@ export function validateEnvRow(content: string, row: { key: string; value: strin
 export function diffEnvContent(original: string, draft: string): EnvChange[]
 export function applyEnvChanges(base: string, changes: EnvChange[]): string
 export function envEditorAccess(state: { loaded: boolean; readOnly: boolean; saving: boolean; dirty: boolean; editing?: boolean }): { canEdit: boolean; canSave: boolean }
+export function envReadBackMismatch(submitted: string, readBack: string): import('../components/apply-outcome-model.mjs').ReadBackMismatch | null

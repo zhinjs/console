@@ -1,3 +1,4 @@
+import { readBackMismatch, secretLikeKey } from '../components/apply-outcome-model.mjs'
 const secretName = /PASSWORD|SECRET|TOKEN|KEY|PRIVATE|CREDENTIAL/i
 export const ENV_MASK_CHAR = '●'
 const mask = value => ENV_MASK_CHAR.repeat(Math.min(value.length, 20))
@@ -166,4 +167,18 @@ export function envEditorAccess({ loaded, readOnly, saving, dirty, editing = fal
     canEdit: loaded && !readOnly && !saving,
     canSave: loaded && !readOnly && !saving && dirty && !editing,
   }
+}
+
+/**
+ * Whether the file read back after a save holds the variables that were written. Formatting the Host
+ * may normalise (quotes, blank lines, comments) does not count; a different, missing or extra value
+ * does. Secrets are masked in the result (only their length is shown).
+ */
+export function envReadBackMismatch(submitted, readBack) {
+  if (submitted === readBack) return null
+  // Compare what dotenv reads: matching surrounding quotes are syntax, not part of the value.
+  const unquote = value => /^(["'`])[\s\S]*\1$/u.test(value) && value.length >= 2 ? value.slice(1, -1) : value
+  const values = text => Object.fromEntries(parseEnvRows(text).map(row => [row.key, unquote(row.value)]))
+  const secrets = new Set([...parseEnvRows(submitted), ...parseEnvRows(readBack)].filter(row => row.secret || secretLikeKey(row.key)).map(row => row.key))
+  return readBackMismatch(values(submitted), values(readBack), { isSecret: path => secrets.has(path[0]) || secretName.test(path[0] ?? '') })
 }

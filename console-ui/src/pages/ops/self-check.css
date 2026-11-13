@@ -1,0 +1,33 @@
+/* 连接自检 page. Tokens only. */
+.console-self-check-summary { display: flex; flex-direction: column; gap: 0.5rem; }
+.console-self-check-target { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.25rem 0.75rem; font-size: var(--console-text-body-sm); color: hsl(var(--muted-foreground)); }
+.console-self-check-target code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--console-font-mono); color: hsl(var(--foreground)); }
+.console-self-check-verdict { font-weight: 600; }
+[data-summary="fail"] .console-self-check-verdict { color: hsl(var(--destructive)); }
+[data-summary="warn"] .console-self-check-verdict { color: hsl(var(--warning)); }
+[data-summary="pass"] .console-self-check-verdict { color: hsl(var(--success)); }
+.console-self-check-time { font-size: var(--console-text-caption); color: hsl(var(--muted-foreground)); }
+.console-self-check-list { display: flex; flex-direction: column; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.console-self-check-item {
+  display: flex; align-items: flex-start; gap: 0.75rem; border-radius: var(--console-radius-lg); background: hsl(var(--card));
+  box-shadow: var(--console-shadow-sm); padding: 0.875rem 1rem;
+}
+.console-self-check-item[data-status="fail"] { box-shadow: var(--console-shadow-sm), inset 3px 0 0 hsl(var(--destructive)); }
+.console-self-check-item[data-status="warn"] { box-shadow: var(--console-shadow-sm), inset 3px 0 0 hsl(var(--warning)); }
+.console-self-check-icon { width: 1.25rem; height: 1.25rem; flex-shrink: 0; margin-top: 0.125rem; color: hsl(var(--muted-foreground)); }
+[data-status="pass"] > .console-self-check-icon { color: hsl(var(--success)); }
+[data-status="fail"] > .console-self-check-icon { color: hsl(var(--destructive)); }
+[data-status="warn"] > .console-self-check-icon { color: hsl(var(--warning)); }
+.console-self-check-body { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 0.25rem; }
+.console-self-check-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.console-self-check-title { font-size: var(--console-text-body); font-weight: 600; }
+.console-self-check-explain, .console-self-check-detail { color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); overflow-wrap: anywhere; }
+.console-self-check-detail { color: hsl(var(--foreground)); }
+.console-self-check-fix { border-radius: var(--console-radius-md); background: hsl(var(--muted) / 0.6); padding: 0.5rem 0.625rem; font-size: var(--console-text-body-sm); overflow-wrap: anywhere; }
+.console-self-check-snippet { border-radius: var(--console-radius-lg); background: hsl(var(--card)); box-shadow: var(--console-shadow-sm); padding: 0.75rem 1rem; font-size: var(--console-text-body-sm); }
+.console-self-check-snippet summary { cursor: pointer; font-weight: 600; }
+.console-self-check-snippet p { margin-top: 0.5rem; color: hsl(var(--muted-foreground)); }
+.console-self-check-snippet pre { margin-top: 0.5rem; overflow-x: auto; border-radius: var(--console-radius-md); background: hsl(var(--muted)); padding: 0.75rem; font-family: var(--console-font-mono); font-size: var(--console-text-caption); }
+.console-self-check-more { color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); }
+.console-self-check-more a { color: hsl(var(--primary)); text-decoration: underline; }
+@media (max-width: 767px) { .console-self-check-target { grid-template-columns: minmax(0, 1fr); } .console-self-check-item { padding: 0.75rem; } }

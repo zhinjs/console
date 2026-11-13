@@ -14,8 +14,9 @@ import { createConfigDraftGuard } from './draft-guard.mjs'
 import { requestConsole } from '../../utils/console-rpc'
 import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../../utils/inbox-cache'
-import { configurationSaveSummary } from './config-evidence-model.mjs'
 import { ConfigurationLiveStatus } from './ConfigurationLiveStatus'
+import { ApplyFeedback, type ApplyOutcome, type ReadBackMismatch } from '../ApplyFeedback'
+import { outcomeFromConfigSave, readBackMismatch, schemaSecretAt } from '../apply-outcome-model.mjs'
 import { configurationSupportsApply } from './config-live-status.mjs'
 
 interface ConfigValidation { valid: boolean; schemaAvailable?: boolean; errors: Array<{ path: string; message: string }>; missingEnv: string[] }
@@ -59,7 +60,8 @@ function PluginConfigFormSession({ pluginName, onSuccess, onDirtyChange, sourceR
   const hasInvalidFields = invalidFields.size > 0 || scoped && [...editorDrafts.current.json.values()].some(draft => draft.error)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
+  // The last save's outcome next to 保存: 已生效 / 需要重启 / 未生效, or the read-back that differs.
+  const [message, setMessage] = useState<{ outcome: ApplyOutcome; mismatch: ReadBackMismatch | null; unverified: boolean } | null>(null)
   const [validation, setValidation] = useState<ConfigValidation | null>(null)
   const guard = useRef(createConfigDraftGuard())
   const operation = useRef(0)
@@ -133,12 +135,20 @@ function PluginConfigFormSession({ pluginName, onSuccess, onDirtyChange, sourceR
       setValidation(checked)
       if (checked.schemaAvailable === false) throw new Error(i18n.t("配置字段定义不可用，请在文件管理中查看配置。"))
       if (!checked.valid || checked.missingEnv.length > 0) return
-      const result = await form.setConfig(localConfig, guard.current.snapshot)
+      const submitted = localConfig
+      const result = await form.setConfig(submitted, guard.current.snapshot)
       if (!currentOperation()) return
       guard.current.saved()
-      setMessage(configurationSaveSummary(result, i18n.locale))
       onSuccess?.()
-      await form.load()
+      // Read back what the Host now holds: a value that differs is never reported as saved.
+      const reread = await form.load()
+      if (!currentOperation()) return
+      const schema = reread ? form.schema : null
+      setMessage({
+        outcome: outcomeFromConfigSave(result, result.revision),
+        mismatch: reread ? readBackMismatch(submitted, reread.config, { isSecret: path => schemaSecretAt(schema, path) }) : null,
+        unverified: !reread,
+      })
     } catch (cause) { if (currentOperation()) setSaveError(cause instanceof Error ? cause.message : i18n.t("保存失败，草稿已保留")) }
     finally { if (currentOperation()) setSaving(false) }
   }
@@ -156,7 +166,11 @@ function PluginConfigFormSession({ pluginName, onSuccess, onDirtyChange, sourceR
     </div>
     {(saveError || form.error) ? <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{saveError ?? form.error}{i18n.t("。草稿已保留。")}<Link className="ml-2 underline" to="/ops/files">{i18n.t("打开文件管理")}</Link>{form.errorOperation === 'read' ? <Button variant="outline" size="sm" onClick={() => void form.load()}>{i18n.t("重试读取")}</Button> : null}</AlertDescription></Alert> : null}
     {validation && (!validation.valid || validation.missingEnv.length > 0) ? <Alert variant={validation.valid && !validation.missingEnv.length ? 'default' : 'destructive'}><AlertDescription><p>{hostValidationSummary(validation, i18n.locale)}</p>{validation.errors.map(item => <p key={`${item.path}:${item.message}`}>{item.path}: {item.message}</p>)}{validation.missingEnv.length ? <p>{i18n.t("缺少环境变量：")}{validation.missingEnv.join('、')}。<Link className="underline" to="/ops/env">{i18n.t("配置环境变量")}</Link>{i18n.t("后重新校验。")}</p> : null}</AlertDescription></Alert> : null}
-    {message ? <p role="status" className="text-sm">{i18n.t('保存回执：{0}', [message])}</p> : null}
+    {message ? <ApplyFeedback outcome={message.outcome} mismatch={message.mismatch} unverified={message.unverified} onRestarted={async () => {
+      // After the restart the file's application status for its revision is the evidence.
+      const reread = await form.load()
+      return reread ? outcomeFromConfigSave(reread.snapshot, reread.snapshot.revision) : null
+    }} /> : null}
     <ConfigurationLiveStatus result={applicationSnapshot}
       revision={applicationSnapshot?.revision} onRefresh={() => void form.load()}
       onApply={supportsApply ? () => void form.applyConfiguration() : undefined}

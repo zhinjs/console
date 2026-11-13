@@ -20,20 +20,26 @@ export function usePluginConfigDraft(pluginName: string) {
   const reads = useRef(createDiagnosticRequestGate(getInboxCacheScope))
   const [feedbackScope, setFeedbackScope] = useState<string | undefined>(undefined)
   const loadSource = source.load
-  const load = useCallback(async () => {
-    if (!isInboxCacheScopeActive(scope)) return
+  /** Reads the file and schema again; resolves with what was read (undefined when stale or failed). */
+  const load = useCallback(async (): Promise<{ config: unknown; snapshot: ConfigSource } | undefined> => {
+    if (!isInboxCacheScopeActive(scope)) return undefined
     const request = reads.current.begin()
     setFeedbackScope(scope)
     setLoading(true); setError(null); setSchemaError(null)
     try {
       const [snapshot, schemaResult] = await Promise.all([loadSource(), requestConsole<Schema | null>({ type: 'schema:get', pluginName }).then(schema => ({ schema, error: null as string | null }), cause => ({ schema: null, error: cause instanceof Error ? cause.message : messages.current.t("字段定义读取失败") }))])
-      if (!request.current() || !isInboxCacheScopeActive(scope) || snapshot.connectionScope !== scope) return
+      if (!request.current() || !isInboxCacheScopeActive(scope) || snapshot.connectionScope !== scope) return undefined
       const path = snapshot.configPaths?.[pluginName]
       const document = parseConfigDocument(snapshot.source, snapshot.format, messages.current.locale)
-      setEntry({ name: pluginName, config: path ? configAtPath(document, path, messages.current.locale) : undefined, schema: schemaResult.schema, snapshot })
+      const config = path ? configAtPath(document, path, messages.current.locale) : undefined
+      setEntry({ name: pluginName, config, schema: schemaResult.schema, snapshot })
       setSchemaError(schemaResult.error)
-      if (!path) setError(messages.current.t("Host 未提供此插件的正式配置路径，请刷新或打开完整源码；表单不会猜测保存位置。"))
-    } catch (cause) { if (request.current() && isInboxCacheScopeActive(scope)) setError(cause instanceof Error ? cause.message : messages.current.t("配置读取失败")) }
+      if (!path) {
+        setError(messages.current.t("Host 未提供此插件的正式配置路径，请刷新或打开完整源码；表单不会猜测保存位置。"))
+        return undefined
+      }
+      return { config, snapshot }
+    } catch (cause) { if (request.current() && isInboxCacheScopeActive(scope)) setError(cause instanceof Error ? cause.message : messages.current.t("配置读取失败")); return undefined }
     finally { if (request.current() && isInboxCacheScopeActive(scope)) setLoading(false) }
   }, [pluginName, loadSource, scope])
   useEffect(() => {

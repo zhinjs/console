@@ -1,5 +1,5 @@
 export type StatusKind =
-  | 'unknown' | 'forbidden' | 'not-installed' | 'unsupported' | 'empty' | 'locked' | 'conflict' | 'database-busy'
+  | 'loading' | 'unknown' | 'forbidden' | 'not-installed' | 'unsupported' | 'empty' | 'locked' | 'conflict' | 'database-busy'
   | 'instance-unavailable' | 'needs-configuration' | 'disconnected' | 'error'
 export type StatusLockLevel = 'global' | 'adapter' | 'endpoint'
 export type InstanceFailure = 'unavailable' | 'timeout' | 'error'
@@ -41,3 +41,7 @@ export function serverCodeOf(error: unknown): string | undefined
 export function statusFromError(error: unknown): StatusReading
 export function outcomeUnknown(status: StatusReading | null | undefined): boolean
 export function statusTone(kind: StatusKind): 'destructive' | 'warning' | 'muted'
+export const SLOW_LOADING_MS: number
+export const SLOW_LOADING_COPY: Readonly<{ title: string; description: string; causes: readonly string[] }>
+export function loadingIsSlow(startedAt: number | null | undefined, now?: number, threshold?: number): boolean
+export function loadingSeconds(startedAt: number | null | undefined, now?: number): number

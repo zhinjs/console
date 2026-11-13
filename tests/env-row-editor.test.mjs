@@ -7,6 +7,9 @@ import { localeModule } from './locale-fixture.mjs'
 import * as envModel from '../console-ui/src/pages/env-editor-model.mjs'
 import * as draftSession from '../console-ui/src/pages/files/draft-session.mjs'
 import * as readError from '../console-ui/src/utils/read-error.mjs'
+import * as applyOutcome from '../console-ui/src/components/apply-outcome-model.mjs'
+import * as statusModel from '../console-ui/src/components/status-state-model.mjs'
+import { createRestartTracker } from '../console-ui/src/components/restart-tracker.mjs'
 
 const require = createRequire(import.meta.url)
 const transpile = (source, extra = '') => ts.transpileModule(source + extra, {
@@ -61,7 +64,7 @@ function load(code, mocks) {
   return module.exports
 }
 
-function editorFixture({ file, fresh = () => file, readOnly = false, onRestart, saveFails = false } = {}) {
+function editorFixture({ file, fresh = () => file, readOnly = false, saveFails = false, stored = content => content } = {}) {
   const runtime = hooks(), writes = [], reads = [], drafts = []
   const ui = name => new Proxy({}, { get: (_, key) => key === '__esModule' ? false : `${name}:${String(key)}` })
   const mocks = {
@@ -85,14 +88,16 @@ function editorFixture({ file, fresh = () => file, readOnly = false, onRestart, 
     './env-editor-model.mjs': envModel,
     '../utils/read-error.mjs': readError,
     '../utils/console-access.mjs': { hasConsolePermission: () => !readOnly },
-    '../hooks/use-host-restart': { useHostRestart: () => ({ restarting: false, confirmRestart: async () => {} }) },
+    '../components/ApplyFeedback': { ApplyFeedback: 'apply-feedback' },
+    '../components/apply-outcome-model.mjs': applyOutcome,
   }
   const { EnvFileEditor } = load(envCode, mocks)
   let current = file
   const props = {
-    filename: '.env', exists: true, readOnly, onRestart,
-    getFile: async name => { reads.push(name); return reads.length === 1 ? current : fresh(current) },
-    saveFile: async (name, content) => { if (saveFails) throw new Error('disk full'); writes.push({ name, content }); current = content },
+    filename: '.env', exists: true, readOnly,
+    // First load, then the re-read before the write (`fresh`), then what the Host stored.
+    getFile: async name => { reads.push(name); return writes.length ? current : reads.length === 1 ? current : fresh(current) },
+    saveFile: async (name, content) => { if (saveFails) throw new Error('disk full'); writes.push({ name, content }); current = stored(content) },
     onDraftChange: draft => drafts.push(draft),
   }
   let tree
@@ -150,7 +155,8 @@ test('saving re-reads the Host file and changes only edited keys, keeping lines 
   tree = await f.act(() => buttonWith(tree, '应用').props.onClick())
   tree = await f.act(() => byLabel(tree, '删除 API_SECRET').props.onClick())
   tree = await f.act(() => buttonWith(tree, '保存').props.onClick())
-  assert.deepEqual(f.reads, ['.env', '.env'])
+  // Read before the write (merge), then once after it (read-back verification).
+  assert.deepEqual(f.reads, ['.env', '.env', '.env'])
   assert.equal(f.writes[0].content, '# Bot\nBOT_TOKEN=rotated-elsewhere\nPORT=8080\nADDED_ELSEWHERE=1\nNEW_FLAG=on\n')
 })
 
@@ -166,19 +172,30 @@ test('an invalid row stays open with its error and cannot be saved until it is a
   assert.equal(f.writes.length, 0)
 })
 
-test('a successful save offers the shared Restart Host entry; without restart access it only explains', async () => {
-  let restarts = 0
-  for (const onRestart of [() => { restarts++ }, undefined]) {
-    const f = editorFixture({ file: FILE, onRestart })
-    f.render(); await settle(); let tree = f.render()
-    tree = await f.act(() => byLabel(tree, '删除 PORT').props.onClick())
-    tree = await f.act(() => buttonWith(tree, '保存').props.onClick())
-    const alert = elements(tree).find(node => node.type === 'alert' && node.props.variant === 'success')
-    assert.ok(alert, 'success notice')
-    const restart = buttonWith(alert, '重启 Host')
-    if (onRestart) { assert.ok(restart); restart.props.onClick(); assert.equal(restarts, 1) }
-    else { assert.equal(restart, undefined); assert.ok(text(alert).includes('手动重启')) }
-  }
+test('a successful save says 需要重启 next to 保存 and checks the file it reads back', async () => {
+  const f = editorFixture({ file: FILE })
+  f.render(); await settle(); let tree = f.render()
+  tree = await f.act(() => byLabel(tree, '删除 PORT').props.onClick())
+  tree = await f.act(() => buttonWith(tree, '保存').props.onClick())
+  const [feedback] = elements(tree).filter(node => node.type === 'apply-feedback')
+  assert.ok(feedback, 'the outcome is shown')
+  assert.deepEqual([feedback.props.outcome.kind, feedback.props.outcome.basis], ['restart', 'env-file'])
+  assert.equal(feedback.props.mismatch, null, 'the read-back matches what was written')
+  assert.equal(feedback.props.unverified, false)
+  assert.equal(typeof feedback.props.onRestarted, 'function', '立即重启 refreshes the file afterwards')
+  assert.equal(elements(tree).some(node => node.type === 'alert' && node.props.variant === 'success'), false, 'no second success notice')
+})
+
+test('a read-back that differs from the write is shown instead of success, secrets masked', async () => {
+  const f = editorFixture({ file: FILE, stored: content => content.replace('BOT_TOKEN=fake-bot-token', 'BOT_TOKEN=changed-by-host') })
+  f.render(); await settle(); let tree = f.render()
+  tree = await f.act(() => byLabel(tree, '删除 PORT').props.onClick())
+  tree = await f.act(() => buttonWith(tree, '保存').props.onClick())
+  const [feedback] = elements(tree).filter(node => node.type === 'apply-feedback')
+  assert.equal(feedback.props.mismatch.path, 'BOT_TOKEN')
+  assert.equal(feedback.props.mismatch.masked, true)
+  assert.doesNotMatch(JSON.stringify(feedback.props.mismatch), /fake-bot-token|changed-by-host/)
+  assert.equal(visible(tree).includes('changed-by-host'), false, 'the editor shows the stored file, still masked')
 })
 
 test('Demo read-only keeps every secret masked and offers no reveal or row edits', async () => {
@@ -189,32 +206,43 @@ test('Demo read-only keeps every secret masked and offers no reveal or row edits
   assert.equal(buttonWith(tree, '新增变量'), undefined)
 })
 
-test('Restart Host reuses the one confirm-then-system:restart flow shared with the dashboard', async () => {
-  const requests = [], confirms = [], toasts = [], reloads = []
+test('Restart Host reuses the one confirm-then-system:restart flow shared with the dashboard and the save outcomes', async () => {
+  const requests = [], confirms = []
   let answer = false
   const runtime = hooks()
-  const { useHostRestart } = load(restartCode, {
-    react: { ...require('react'), ...runtime.api },
+  const tracker = []
+  const { useHostRestart, hostRestart } = load(restartCode, {
+    react: { ...require('react'), ...runtime.api, useSyncExternalStore: (_subscribe, read) => read() },
     '../i18n': localeModule,
-    '../components/toast': { useToast: () => ({ success: m => toasts.push(['success', m]), error: m => toasts.push(['error', m]) }) },
     '../contracts/zhin-console': { CONSOLE_RPC: { SYSTEM_RESTART: 'system:restart' } },
-    '../utils/console-rpc': { requestConsole: async request => { requests.push(request) } },
+    '../contracts/gateway': { GATEWAY_INSTANCE_RPC: { STATUS: 'gateway.instance.status' } },
+    '../utils/console-rpc': { requestConsole: async request => { requests.push(request); return request.type === 'gateway.instance.status' ? { state: 'running', generation: 1 } : { success: true } } },
+    '../utils/console-client': { getConsoleTransport: () => ({ isConnected: () => true, onConnectionChange: () => () => {} }) },
+    '../utils/instance-availability.mjs': { probeInstance: async () => true },
+    '../components/status-state-model.mjs': statusModel,
+    '../components/restart-tracker.mjs': { createRestartTracker: deps => { const made = createRestartTracker({ ...deps, setTimer: fn => { tracker.push(fn); return tracker.length }, clearTimer() {} }); return made } },
+    '../components/apply-outcome-model.mjs': applyOutcome,
   })
-  const previousWindow = globalThis.window
-  globalThis.window = { setTimeout: fn => reloads.push(fn), location: { reload() {} } }
-  try {
-    runtime.begin()
-    const { confirmRestart } = useHostRestart(async options => { confirms.push(options); return answer })
-    await confirmRestart()
-    assert.equal(confirms.length, 1); assert.equal(confirms[0].variant, 'destructive'); assert.deepEqual(requests, [])
-    answer = true
-    await confirmRestart()
-    assert.deepEqual(requests, [{ type: 'system:restart' }])
-    assert.equal(toasts[0][0], 'success'); assert.equal(reloads.length, 1)
-  } finally { globalThis.window = previousWindow }
+  runtime.begin()
+  const { confirmRestart } = useHostRestart(async options => { confirms.push(options); return answer })
+  await confirmRestart()
+  assert.equal(confirms.length, 1); assert.equal(confirms[0].variant, 'destructive'); assert.deepEqual(requests, [])
+  answer = true
+  await confirmRestart()
+  // The run facts are read first, then the restart is sent once and the progress waits for the instance.
+  assert.deepEqual(requests.map(request => request.type), ['gateway.instance.status', 'system:restart'])
+  assert.equal(hostRestart.get().phase, 'waiting')
+  assert.deepEqual(hostRestart.get().before, { state: 'running', generation: 1 })
+  await confirmRestart()
+  assert.equal(requests.filter(request => request.type === 'system:restart').length, 1, 'no second restart while one is running')
+  hostRestart.reset()
   for (const page of ['pages/env.tsx', 'pages/dashboard.tsx']) {
     const source = await readFile(new URL(`../console-ui/src/${page}`, import.meta.url), 'utf8')
-    assert.match(source, /useHostRestart\(confirm\)/, page)
     assert.doesNotMatch(source, /SYSTEM_RESTART/, `${page} must not keep its own restart request`)
   }
+  const dashboard = await readFile(new URL('../console-ui/src/pages/dashboard.tsx', import.meta.url), 'utf8')
+  assert.match(dashboard, /useHostRestart\(confirm\)/)
+  assert.match(dashboard, /<RestartProgress onRestarted=\{refreshAll\} \/>/, '首页 shows the restart progress next to its button')
+  const env = await readFile(new URL('../console-ui/src/pages/env.tsx', import.meta.url), 'utf8')
+  assert.match(env, /outcomeFromEnvSave\(\)/, '环境变量 restarts through the save outcome (ApplyFeedback)')
 })

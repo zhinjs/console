@@ -1,5 +1,6 @@
 import { translate } from '../i18n/locale.mjs'
 import { configurationRuntimeStatus } from '../components/PluginConfigForm/config-live-status.mjs'
+import { outcomeFromConfigSave, readBackMismatch } from '../components/apply-outcome-model.mjs'
 /**
  * 群聊插话页（zhinjs/zhin#970）的纯逻辑：校验 Host 状态、把设置翻成大白话、生成 config:patch。
  * 页面面向普通用户，这里不输出判官、决策模型、置信度等内部细节。
@@ -193,6 +194,28 @@ export function buildAmbientPatches(settings) {
     { op: 'set', path: ambientPath('mode'), value: mode },
     { op: 'set', path: ambientPath('maxPerHour'), value: settings.maxPerHour },
   ]
+}
+
+/** The keys a save writes (`ai.trigger.ambient.*` → value), for comparing a read-back with the draft. */
+export function ambientWrittenValues(settings) {
+  return Object.fromEntries(buildAmbientPatches(settings).map(patch => [patch.path.join('.'), patch.value]))
+}
+
+/**
+ * What a saved `config:patch` did: the outcome the Host reported (apply-outcome-model) and whether
+ * the settings read back after the save are the ones submitted. `reread` null = the read failed.
+ */
+export function ambientSaveOutcome(result, submitted, reread) {
+  return {
+    outcome: outcomeFromConfigSave(result, result?.revision),
+    mismatch: reread ? readBackMismatch(ambientWrittenValues(submitted), ambientWrittenValues(reread.settings)) : null,
+    unverified: !reread,
+  }
+}
+
+/** After a restart: the application status the re-read settings carry (null = nothing to say). */
+export function ambientRestartOutcome(reread) {
+  return reread?.application ? outcomeFromConfigSave(reread.application, reread.revision) : null
 }
 
 const RESTART_REQUIRED_TEXT = '已保存。需要重启机器人才会生效。'

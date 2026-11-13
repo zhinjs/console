@@ -49,6 +49,7 @@ import {
 import { fetchConsoleEventHistory, SIDE_EVENT_PUSH } from '@zhin.js/client'
 import { useConsoleConnected } from '../hooks/use-console-connected'
 import { useHostRestart } from '../hooks/use-host-restart'
+import { RestartProgress } from '../components/ApplyFeedback'
 import { getConsoleTransport } from '../utils/console-client'
 import { apiFetch } from '../utils/auth'
 import { CONSOLE_REST } from '../contracts/zhin-console'
@@ -683,6 +684,7 @@ export default function HomePage() {
           ) : null}
         </>}
       />
+      <RestartProgress onRestarted={refreshAll} />
 
       <div className="console-overview-status">
         <span className={healthy ? 'console-health-pill' : 'console-health-pill is-warning'}>

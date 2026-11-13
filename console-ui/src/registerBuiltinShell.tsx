@@ -32,6 +32,7 @@ import GlobalFeatureConfigPage from './pages/features/global-config'
 import OnboardingPage from './pages/onboarding'
 import AccountPage from './pages/account'
 import OpsInstancePage from './pages/ops/instance'
+import SelfCheckPage from './pages/ops/self-check'
 import OpsTerminalPage from './pages/ops/terminal'
 import AccessUsersPage from './pages/access/users'
 import AccessRolesPage from './pages/access/roles'
@@ -131,6 +132,8 @@ export function registerBuiltinConsolePages() {
   app.addRoute({ path: P.opsSchedules, name: '定时任务', parent: null, icon: 'ClipboardList', element: <TaskHubPage />, meta: { group: NAV_GROUPS.OPS, order: 3 } })
   app.addRoute({ path: P.opsFiles, name: '项目文件', parent: null, icon: 'FolderOpen', element: <FileManagePage />, meta: { group: NAV_GROUPS.OPS, order: 4 } })
   app.addRoute({ path: P.opsTerminal, name: '终端', parent: null, icon: 'Terminal', element: <OpsTerminalPage />, meta: { group: NAV_GROUPS.OPS, order: 5, fullWidth: true } })
+  // Reached from 仍在加载… and the connection indicator; every signed-in principal may run it.
+  app.addRoute({ path: P.opsSelfCheck, name: '连接自检', parent: null, icon: 'Stethoscope', element: <SelfCheckPage />, meta: { group: NAV_GROUPS.OPS, order: 6 } })
 
   // 访问控制 — 谁能做什么？（ADR 0049）
   app.addRoute({ path: P.accessUsers, name: '用户', parent: null, icon: 'Users', element: <AccessUsersPage />, meta: { group: NAV_GROUPS.ACCESS, order: 0 } })

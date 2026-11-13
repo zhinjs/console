@@ -36,6 +36,7 @@ export const ROUTE_SEARCH_HINTS = Object.freeze({
   '/ops/files': { description: '浏览和编辑项目文件', keywords: ['文件', '项目文件', '代码', '编辑', '目录', 'file', 'files', 'editor'] },
   '/ops/instance': { description: '查看实例状态与日志，启停实例，安装或更新依赖', keywords: ['实例', '重启', '启动', '停止', '依赖', '安装', '更新', '回滚', 'instance', 'restart', 'dependencies', 'install'] },
   '/ops/terminal': { description: '打开宿主机 Shell 或白名单 SSH 终端', keywords: ['终端', '命令行', 'Shell', 'SSH', '控制台', 'terminal', 'shell', 'ssh', 'console'] },
+  '/ops/self-check': { description: '检查到 Host 的连接：地址、路径、WebSocket、事件流、时钟与登录', keywords: ['自检', '诊断', '连接', '代理', '反向代理', 'WebSocket', 'nginx', 'self-check', 'diagnostics', 'proxy', 'connection'] },
   '/ops/database': { description: '检查数据表、记录与持久化状态', keywords: ['数据库', '数据表', '表', '记录', '数据', 'database', 'db', 'sql', 'table'] },
   '/onboarding': { description: '接入 AI 和聊天平台，完成首次引导', keywords: ['引导', '开始使用', '初始化', '向导', '上手', 'onboarding', 'setup', 'getting started'] },
   '/account': { description: '修改密码、管理我的 API 令牌', keywords: ['个人设置', '我的账号', '密码', '修改密码', 'API 令牌', '令牌', 'account', 'password', 'token', 'profile'] },

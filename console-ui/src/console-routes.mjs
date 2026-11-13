@@ -43,6 +43,8 @@ export const CONSOLE_PATHS = Object.freeze({
   opsFiles: '/ops/files',
   opsInstance: '/ops/instance',
   opsTerminal: '/ops/terminal',
+  // 连接自检：浏览器里检查到 Host 的每一段连接（无新 Host 路由）
+  opsSelfCheck: '/ops/self-check',
   // 个人（不在菜单里，从顶栏进入）
   onboarding: '/onboarding',
   account: '/account',

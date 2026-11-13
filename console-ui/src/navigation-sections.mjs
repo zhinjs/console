@@ -86,6 +86,8 @@ export const ROUTE_PERMISSIONS = Object.freeze({
   // Instance status / logs need status.view, lifecycle ops.restart, dependencies plugin.manage (ADR 0054 §4–§5).
   '/ops/instance': ['status.view', 'ops.restart', 'plugin.manage'],
   '/ops/terminal': ['ops.terminal'],
+  // Browser-side checks of existing public routes only: needs no permission.
+  '/ops/self-check': [],
   '/onboarding': ['plugin.manage'],
   // Every signed-in principal has personal settings.
   '/account': [],

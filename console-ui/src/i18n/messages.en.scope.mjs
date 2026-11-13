@@ -138,7 +138,6 @@ export const scopeMessages = Object.freeze({
   // Global plugin switch: a management gateway transaction (plugin.manage, ADR 0054 §4)
   "管理网关会停止实例、写入插件开关，再重新启动实例，期间机器人暂时不可用。失败会自动回滚到操作前的状态。": "The management gateway stops the instance, writes the plugin switch and starts the instance again; the bot is briefly unavailable meanwhile. A failure is rolled back automatically.",
   "管理网关会停止实例、写入插件开关，再重新启动实例，期间机器人暂时不可用。失败会自动回滚到操作前的状态。所有适配器、账号与会话上的这个功能都会停用。": "The management gateway stops the instance, writes the plugin switch and starts the instance again; the bot is briefly unavailable meanwhile. A failure is rolled back automatically. The feature stops on every adapter, account and conversation.",
-  "管理网关已重启实例，新的开关已生效。": "The management gateway restarted the instance; the new switch is in effect.",
   "操作没有完成，已自动回滚": "Not completed, rolled back automatically",
   "管理网关在切换插件时失败，已把配置和实例恢复到操作前的状态，插件开关没有变化。查看技术详情了解原因后可以重新准备。": "The management gateway failed while switching the plugin and restored the configuration and the instance to their previous state; the plugin switch is unchanged. Check the technical details, then you can prepare it again.",
   "操作失败，回滚也没有完成": "Failed, and the rollback did not complete",
