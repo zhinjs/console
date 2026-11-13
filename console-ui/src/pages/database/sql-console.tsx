@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { StatusState } from '../../components/StatusState'
 import { ConfirmDialog } from '../../components/confirm-dialog'
 import {
-  affectedRows, cellText, clearSqlHistory, databaseRefusalCode, isSensitiveColumn, isUnsupportedRpcError, MASK,
+  affectedRows, cellText, clearSqlHistory, databaseRefusalCode, isPrivilegeRefusal, isSensitiveColumn, isUnsupportedRpcError, MASK,
   pushSqlHistory, readSqlHistory, sqlLooksReadOnly, type SqlHistoryEntry,
 } from './database-console-model.mjs'
 import type { DatabaseAdmin } from './use-database-console'
@@ -27,14 +27,19 @@ type Outcome =
  * Raw SQL console. Reads (`db:query`) run in a read-only transaction on the Host; anything else is a
  * write (`db:execute`, `ops.database.schema`) that is dry-run first to show the affected rows.
  */
-export function SqlConsole({ admin, canWrite, supported, reason, dialect }: {
+export function SqlConsole({ admin, canWrite, supported, reason, needsRole, dialect, dialectLabel }: {
   admin: DatabaseAdmin
   /** The principal holds `ops.database.schema`. */
   canWrite: boolean
   /** The Host reports `capabilities.sql`. */
   supported: boolean
   reason?: string
+  /** Off because PostgreSQL / MySQL have no usable restricted account (ADR 0059). */
+  needsRole?: boolean
+  /** Dialect id from `db:info` (`pg`, `mysql`, `sqlite`, …). */
   dialect: string
+  /** Shown in the badge (defaults to the id). */
+  dialectLabel?: string
 }) {
   const i18n = useI18n()
   const storage = useMemo(browserStorage, [])
@@ -97,17 +102,21 @@ export function SqlConsole({ admin, canWrite, supported, reason, dialect }: {
   }
 
   if (!supported || unsupported) {
+    const fallback = i18n.t('当前 Host 或数据库不支持 SQL 查询（需要 SQLite、MySQL 或 PostgreSQL，并升级 Host）。')
     return <StatusState kind="unsupported" title={i18n.t('SQL 查询不可用')}
-      description={reason || i18n.t('当前 Host 或数据库不支持 SQL 查询（需要 SQLite、MySQL 或 PostgreSQL，并升级 Host）。')} />
+      description={needsRole && !unsupported
+        ? `${i18n.t('PostgreSQL / MySQL 上 SQL 控制台只用受限数据库账号执行，避免读到其他数据：在服务器上运行 zhin db console-role（主账号不能建号时加 --print-sql 交给 DBA），然后 zhin restart。数据浏览与表结构编辑不受影响。')}${reason ? `\n${i18n.t('Host 报告：{0}', [reason])}` : ''}`
+        : reason || fallback} />
   }
 
   const estimate = pendingWrite ? affectedRows(pendingWrite.estimate) : null
   const refusal = outcome?.kind === 'error' ? databaseRefusalCode(outcome.error) : ''
+  const privilege = outcome?.kind === 'error' && !refusal && isPrivilegeRefusal(outcome.error)
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3" data-sql-console>
       <div className="flex flex-wrap items-center gap-2 shrink-0">
-        <Badge variant="secondary" size="sm">{dialect}</Badge>
+        <Badge variant="secondary" size="sm">{dialectLabel || dialect}</Badge>
         <span className="text-xs text-muted-foreground">
           {canWrite ? i18n.t('只读语句直接执行；写语句会先预估影响行数并要求确认。') : i18n.t('只能执行单条只读语句（SELECT / WITH / EXPLAIN 等），最多返回 1000 行。')}
         </span>
@@ -157,11 +166,15 @@ export function SqlConsole({ admin, canWrite, supported, reason, dialect }: {
           : !outcome ? <p className="p-6 text-center text-sm text-muted-foreground">{i18n.t('结果会显示在这里。')}</p>
             : outcome.kind === 'error' ? (
               <div className="p-3">
-                <StatusState compact kind={refusal ? 'error' : undefined} error={outcome.error}
-                  title={refusal === 'read_only' ? i18n.t('这条语句会修改数据') : refusal === 'protected_table' ? i18n.t('受保护的表') : refusal === 'multi_statement' ? i18n.t('一次只能执行一条语句') : i18n.t('执行失败')}
+                <StatusState compact kind={refusal || privilege ? 'error' : undefined} error={outcome.error}
+                  title={refusal === 'read_only' ? i18n.t('这条语句会修改数据') : refusal === 'protected_table' ? i18n.t('受保护的表') : refusal === 'multi_statement' ? i18n.t('一次只能执行一条语句') : privilege ? i18n.t('受限账号没有这项权限') : i18n.t('执行失败')}
                   description={refusal === 'read_only'
                     ? (canWrite ? i18n.t('Host 判断这是写语句，请检查语句类型。') : i18n.t('写 SQL 需要 ops.database.schema 权限；当前身份只能执行只读语句。'))
-                    : refusal === 'protected_table' ? i18n.t('网关账号与审计表不能从实例访问；迁移记录与系统表不能修改。') : undefined} />
+                    : refusal === 'protected_table' ? i18n.t('网关账号与审计表不能从实例访问；迁移记录与系统表不能修改。')
+                      : privilege ? (dialect === 'pg'
+                        ? i18n.t('PostgreSQL 上 SQL 控制台用受限账号执行，不能建表、改表或删表（CREATE / ALTER / DROP）。请改用「新建表」或表的「结构」编辑器；读写行不受影响。')
+                        : i18n.t('SQL 控制台用受限账号执行，只能操作本库的表与视图（没有触发器、存储过程、事件、文件与其他库的权限）。'))
+                        : undefined} />
               </div>
             ) : outcome.kind === 'write' ? (
               <ul className="divide-y text-xs" data-sql-write-result>

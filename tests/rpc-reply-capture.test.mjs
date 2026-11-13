@@ -119,3 +119,10 @@ test('upstream "HTTP 502 Bad Gateway" text is not an instance failure; the revie
   assert.equal(statusFromError(new ConsoleTransportError('The instance failed to answer', 'SERVER_ERROR')).outcome, 'unknown')
   clearInstanceAvailability()
 })
+
+test('a failed Console SQL statement keeps the server SQLSTATE (restricted account, ADR 0059)', async () => {
+  const t = transport(() => json(400, { success: false, error: 'permission denied for schema public', data: { sqlState: '42501' } }))
+  const error = await failure(t, { type: 'db:execute', sql: 'CREATE TABLE t (a int)' })
+  assert.equal(error.details.sqlState, '42501')
+  assert.equal(error.details.dataCode, undefined)
+})

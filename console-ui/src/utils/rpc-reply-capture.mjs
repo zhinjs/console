@@ -61,7 +61,7 @@ const isRecord = value => value !== null && typeof value === 'object' && !Array.
 
 /**
  * The SDK error with `details` from the recorded reply: `httpStatus`, `serverCode`,
- * `requestOutcome`, `lockedBy`, `retryAfter`, `missingEnv`, `errors`, `needsConfiguration`, `transaction`, and
+ * `requestOutcome`, `lockedBy`, `retryAfter`, `missingEnv`, `errors`, `needsConfiguration`, `transaction`, `dataCode`, `sqlState`, and
  * `transport` when a reply arrived but was not JSON (`refused` for a 4xx, else `invalid-response`).
  * Returns the same error object (with `details` set).
  */
@@ -83,6 +83,8 @@ export async function enrichRpcError(error, capture) {
       if (isRecord(body.transaction)) details.transaction = body.transaction
       // A database port refusal (`read_only`, `protected_table`, `confirm_required`, …).
       if (isRecord(body.data) && typeof body.data.code === 'string') details.dataCode = body.data.code
+      // The server's SQLSTATE of a failed Console SQL statement (e.g. `42501` from the restricted account, ADR 0059).
+      if (isRecord(body.data) && typeof body.data.sqlState === 'string') details.sqlState = body.data.sqlState
     }
     const seconds = Number(String(capture.retryAfter ?? '').trim())
     if (capture.retryAfter && Number.isFinite(seconds) && seconds > 0) details.retryAfter = seconds
