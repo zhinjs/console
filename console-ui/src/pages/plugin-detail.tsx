@@ -6,6 +6,7 @@ import {
   Stethoscope, Trash2, ArrowUpCircle, ToggleLeft, Blocks, ArrowLeft, type LucideIcon,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useLogPanel } from '../components/log-panel/LogPanel'
 import { apiFetch } from '../utils/auth'
 import { Card, CardContent } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
@@ -109,6 +110,7 @@ function useOptionalRead<T>(enabled: boolean, load: () => Promise<T>, deps: read
 
 export default function PluginDetailPage() {
   const i18n = useI18n()
+  const logPanel = useLogPanel()
   const { name } = useParams<{ name: string }>()
   const [searchParams] = useSearchParams()
   const query = searchParams.get('q')
@@ -471,7 +473,9 @@ export default function PluginDetailPage() {
         <ObjectSection title={i18n.t("声明与配置")} description={i18n.t("插件在根配置中的声明、配置是否完整，以及当前运行代是否已应用。")}
           actions={<>
             {canDeclare ? <Button size="sm" disabled={actionBusy} onClick={() => setDeclaring(true)}><Settings />{i18n.t("填写配置并启用")}</Button> : null}
-            {!plugin?.readOnly ? <Button size="sm" variant="outline" asChild><Link to={`/logs?q=${encodeURIComponent(title)}`}><Activity />{i18n.t("相关日志")}</Link></Button> : null}
+            {!plugin?.readOnly ? logPanel.available
+              ? <Button size="sm" variant="outline" onClick={() => logPanel.open({ q: title })}><Activity />{i18n.t("相关日志")}</Button>
+              : <Button size="sm" variant="outline" asChild><Link to={`/logs?q=${encodeURIComponent(title)}`}><Activity />{i18n.t("相关日志")}</Link></Button> : null}
           </>}>
           <Card><CardContent className="space-y-3 p-4">
             {plugin ? <PluginManagementSummary state={plugin.management} error={plugin.managementError} readOnly={!writable} showNavigation={false} />

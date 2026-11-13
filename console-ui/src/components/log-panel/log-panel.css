@@ -1,0 +1,333 @@
+/*
+ * 底部日志面板（components/log-panel/LogPanel.tsx）：宽屏停靠在底部、占满内容宽度、非模态；
+ * 窄屏（<768px）是模态的底部抽屉。颜色只用语义令牌，亮暗主题跟随 theme-tokens.css。
+ */
+/* Unlayered on purpose: these rules size Button / Input / SelectField inside the panel and must win over their utility classes. */
+  .console-log-panel {
+    --console-log-panel-x: var(--console-space-page-x);
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 35;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+    box-shadow: 0 -1px 0 hsl(var(--border)), 0 -16px 40px -20px hsl(var(--console-shadow-color) / 0.28);
+    outline: none;
+    animation: console-log-panel-in var(--console-duration-page) var(--console-ease-out) both;
+  }
+
+  .console-log-panel.is-resizing { user-select: none; }
+
+  @keyframes console-log-panel-in {
+    from { opacity: 0; transform: translateY(1.5rem); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* Drag handle on the top edge: a wide hit area with a short grip in the middle. */
+  .console-log-panel-resize {
+    position: absolute;
+    top: -0.375rem;
+    right: 0;
+    left: 0;
+    z-index: 1;
+    display: flex;
+    height: 0.75rem;
+    justify-content: center;
+    align-items: center;
+    cursor: ns-resize;
+    touch-action: none;
+    outline: none;
+  }
+
+  .console-log-panel-resize::after {
+    content: '';
+    width: 2.75rem;
+    height: 0.25rem;
+    border-radius: 999px;
+    background: hsl(var(--muted-foreground) / 0.35);
+    transition: background-color var(--console-duration-fast) ease, width var(--console-duration-fast) ease;
+  }
+
+  .console-log-panel-resize:hover::after,
+  .console-log-panel.is-resizing .console-log-panel-resize::after {
+    width: 4rem;
+    background: hsl(var(--primary) / 0.7);
+  }
+
+  .console-log-panel-resize:focus-visible::after {
+    width: 4rem;
+    background: hsl(var(--primary));
+    box-shadow: 0 0 0 3px hsl(var(--ring) / 0.35);
+  }
+
+  .console-log-panel-header {
+    display: flex;
+    min-width: 0;
+    flex: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.25rem var(--console-log-panel-x);
+  }
+
+  .console-log-panel-title {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .console-log-panel-title > svg {
+    width: 1rem;
+    height: 1rem;
+    flex: none;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .console-log-panel-title h2 {
+    flex: none;
+    font-size: var(--console-text-body);
+    font-weight: 600;
+  }
+
+  .console-log-panel-title code,
+  .console-log-panel-hint {
+    overflow: hidden;
+    min-width: 0;
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-label);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .console-log-panel-title code {
+    border-radius: var(--console-radius-sm);
+    background: hsl(var(--secondary));
+    padding: 0.125rem 0.5rem;
+    color: hsl(var(--secondary-foreground));
+    font-family: var(--console-font-mono, ui-monospace, monospace);
+  }
+
+  .console-log-panel-actions .console-control { height: var(--log-panel-control, 1.75rem); min-height: 1.75rem; }
+
+  .console-log-panel-actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .console-log-panel-body {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0 var(--console-log-panel-x) 0.5rem;
+  }
+
+  /* Range chip in the header: identity, open-object and clear; the text-matching caveat is its tooltip. */
+  .console-log-panel-scope {
+    display: inline-flex;
+    min-width: 0;
+    height: 1.75rem;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 999px;
+    background: hsl(var(--primary-action));
+    padding: 0 0.25rem 0 0.625rem;
+    color: hsl(var(--primary-action-foreground));
+  }
+
+  .console-log-panel-scope > svg { width: 0.875rem; height: 0.875rem; flex: none; }
+
+  .console-log-panel-title .console-log-panel-scope code {
+    background: none;
+    padding: 0;
+    color: inherit;
+  }
+
+  .console-log-panel-chip-button {
+    display: inline-grid;
+    width: 1.375rem;
+    height: 1.375rem;
+    flex: none;
+    place-items: center;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .console-log-panel-chip-button:hover { background: hsl(var(--primary-action-foreground) / 0.12); }
+  .console-log-panel-chip-button svg { width: 0.875rem; height: 0.875rem; }
+
+  /* Dense workbench (pages/logs/LogPanelWorkbench.tsx): one toolbar row, single-line rows, one-line footer. */
+  .console-log-panel-workbench {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    --log-panel-control: 1.75rem;
+  }
+
+  .console-log-panel-toolbar {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.375rem;
+    border-bottom: 1px solid hsl(var(--border) / 0.58);
+  }
+
+  .console-log-panel-search { position: relative; min-width: 8rem; flex: 1; }
+  .console-log-panel-search > svg { position: absolute; top: 50%; left: 0.625rem; width: 0.875rem; height: 0.875rem; transform: translateY(-50%); color: hsl(var(--muted-foreground)); pointer-events: none; }
+  .console-log-panel-toolbar input,
+  .console-log-panel-toolbar [role="combobox"] { height: var(--log-panel-control); min-height: var(--log-panel-control); font-size: var(--console-text-label); }
+  .console-log-panel-search input { padding-left: 2rem; }
+  .console-log-panel-toolbar .console-log-panel-level { width: 7.5rem; flex: none; padding-block: 0; }
+
+  .console-log-panel-follow {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.375rem;
+    color: hsl(var(--muted-foreground));
+    cursor: pointer;
+    font-size: var(--console-text-label);
+    white-space: nowrap;
+  }
+
+  .console-log-panel-tool.console-control { width: var(--log-panel-control); height: var(--log-panel-control); min-height: var(--log-panel-control); flex: none; }
+  .console-log-panel-tool.is-active { background: hsl(var(--primary-action)); color: hsl(var(--primary-action-foreground)); }
+
+  .console-log-panel-layout {
+    display: grid;
+    min-height: 0;
+    flex: 1;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .console-log-panel-layout.has-sources { grid-template-columns: 13rem minmax(0, 1fr); }
+  .console-log-panel-layout.has-inspector { grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem); }
+  .console-log-panel-layout.has-sources.has-inspector { grid-template-columns: 13rem minmax(0, 1fr) minmax(16rem, 22rem); }
+  .console-log-panel-layout > .console-log-sources,
+  .console-log-panel-layout > .console-log-inspector { min-height: 0; overflow-y: auto; }
+
+  .console-log-panel-rows { min-height: 0; overflow-y: auto; padding: 0.125rem 0; }
+
+  .console-log-panel-row {
+    display: grid;
+    width: 100%;
+    height: 1.75rem;
+    grid-template-columns: auto auto minmax(0, 9rem) minmax(0, 1fr);
+    align-items: center;
+    gap: 0.5rem;
+    border: 0;
+    background: transparent;
+    padding: 0 0.625rem;
+    color: hsl(var(--foreground));
+    cursor: pointer;
+    font-size: var(--console-text-label);
+    text-align: left;
+  }
+
+  .console-log-panel-row:hover { background: hsl(var(--muted) / 0.6); }
+  .console-log-panel-row.is-selected { background: hsl(var(--primary-action)); }
+  .console-log-panel-row:focus-visible { outline-offset: -2px; }
+  .console-log-panel-row time { color: hsl(var(--muted-foreground)); font-family: var(--console-font-mono); font-variant-numeric: tabular-nums; }
+  .console-log-panel-row > svg { width: 0.875rem; height: 0.875rem; color: hsl(var(--muted-foreground)); }
+  .console-log-panel-row.is-info > svg { color: hsl(var(--status-info, var(--info))); }
+  .console-log-panel-row.is-warn > svg { color: hsl(var(--status-warning, var(--warning))); }
+  .console-log-panel-row.is-error > svg { color: hsl(var(--destructive)); }
+  .console-log-panel-row.is-error > span { color: hsl(var(--destructive)); }
+  .console-log-panel-row code,
+  .console-log-panel-row > span { overflow: hidden; min-width: 0; text-overflow: ellipsis; white-space: nowrap; }
+  .console-log-panel-row code { color: hsl(var(--muted-foreground)); font-family: var(--console-font-mono); }
+
+  .console-log-panel-note {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-body-sm);
+  }
+
+  .console-log-panel-note > svg { width: 1rem; height: 1rem; }
+
+  .console-log-panel-footer {
+    display: flex;
+    height: 2rem;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-top: 1px solid hsl(var(--border) / 0.58);
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-label);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Top-bar toggle: highlighted while the panel is open. */
+  .console-log-panel-trigger.is-active {
+    background: hsl(var(--primary-action));
+    color: hsl(var(--primary-action-foreground));
+  }
+
+  .console-log-panel-trigger:disabled { cursor: default; opacity: 0.45; }
+
+  /* Phones: a modal bottom sheet over a scrim. */
+  .console-log-panel-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 48;
+    background: hsl(0 0% 0% / 0.4);
+    animation: console-log-scrim-in var(--console-duration-page) ease both;
+  }
+
+  @keyframes console-log-scrim-in { from { opacity: 0; } to { opacity: 1; } }
+
+  .console-log-panel.is-sheet {
+    --console-log-panel-x: 0.75rem;
+    top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+    z-index: 49;
+    border-radius: var(--console-radius-2xl) var(--console-radius-2xl) 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: var(--console-shadow-lg);
+    animation-name: console-log-sheet-in;
+  }
+
+  @keyframes console-log-sheet-in {
+    from { transform: translateY(100%); }
+    to { transform: none; }
+  }
+
+  .console-log-panel.is-sheet .console-log-panel-hint,
+  .console-log-panel.is-sheet .console-log-panel-follow > span,
+  .console-log-panel.is-sheet .console-log-panel-open-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .console-log-panel.is-sheet .console-log-panel-toolbar .console-log-panel-level { width: 5.75rem; }
+  .console-log-panel.is-sheet .console-log-panel-search { min-width: 5rem; }
+  .console-log-panel.is-sheet .console-log-panel-row { grid-template-columns: auto auto minmax(0, 1fr); }
+  .console-log-panel.is-sheet .console-log-panel-row code { display: none; }
+  /* The phone sheet shows one column: the inspector replaces the list instead of squeezing beside it. */
+  .console-log-panel.is-sheet .console-log-panel-layout.has-inspector,
+  .console-log-panel.is-sheet .console-log-panel-layout.has-sources { grid-template-columns: minmax(0, 1fr); }
+  .console-log-panel.is-sheet .console-log-panel-layout.has-inspector > .console-log-panel-rows,
+  .console-log-panel.is-sheet .console-log-panel-layout.has-sources > .console-log-panel-rows { display: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .console-log-panel,
+    .console-log-panel.is-sheet,
+    .console-log-panel-scrim { animation: none; }
+    .console-log-panel-resize::after { transition: none; }
+  }
+
+/* The panel takes focus on open only to move the keyboard into it; it is not a control, so no ring around the whole panel. */
+#console-log-panel:focus-visible { outline: none; }

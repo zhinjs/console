@@ -34,6 +34,6 @@ test('optional empty Agent does not become an operational incident and unreadabl
  const logs = readFileSync(new URL('../console-ui/src/pages/logs/LogWorkbench.tsx', import.meta.url), 'utf8')
  assert.match(logs, /state\.stats \? levelCount\(level\) : '—'/)
  assert.match(logs, /state\.error \?/)
- const page = readFileSync(new URL('../console-ui/src/pages/logs.tsx', import.meta.url), 'utf8')
+ const page = readFileSync(new URL('../console-ui/src/pages/logs/LogViewer.tsx', import.meta.url), 'utf8')
  assert.match(page, /setStats\(null\)/)
 })

@@ -94,7 +94,7 @@ const LEVEL_META = {
 type KnownLogLevel = keyof typeof LEVEL_META
 const OVERVIEW_LEVELS = ['info', 'warn', 'error'] as const
 
-function getLevelMeta(level: string) {
+export function getLevelMeta(level: string) {
   return LEVEL_META[level as KnownLogLevel] ?? {
     label: level ? level.toUpperCase() : 'UNKNOWN',
     icon: Circle,
@@ -244,7 +244,7 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
   )
 }
 
-function LogInspector({ log, offPage, onFilterSource, onClose }: { log: LogEntry | null; offPage:boolean; onFilterSource(source: string): void; onClose(): void }) {
+export function LogInspector({ log, offPage, onFilterSource, onClose }: { log: LogEntry | null; offPage:boolean; onFilterSource(source: string): void; onClose(): void }) {
   const i18n = useI18n()
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle')
   if (!log) {
@@ -295,7 +295,7 @@ function LogInspector({ log, offPage, onFilterSource, onClose }: { log: LogEntry
   )
 }
 
-function formatLogTime(timestamp: string, complete = false, locale: 'zh-CN' | 'en' = 'zh-CN'): string {
+export function formatLogTime(timestamp: string, complete = false, locale: 'zh-CN' | 'en' = 'zh-CN'): string {
   const date = new Date(timestamp)
   if (Number.isNaN(date.getTime())) return timestamp
   return complete ? date.toLocaleString(locale) : date.toLocaleTimeString(locale, { hour12: false })

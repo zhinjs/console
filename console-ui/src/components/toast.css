@@ -1,5 +1,5 @@
 @layer components {
-  .console-toast-stack { position: fixed; bottom: max(16px, env(safe-area-inset-bottom)); right: 16px; z-index: 100; display: grid; gap: 10px; width: min(400px, calc(100vw - 32px)); pointer-events: none; }
+  .console-toast-stack { position: fixed; bottom: calc(max(16px, env(safe-area-inset-bottom)) + var(--console-log-panel-reserve, 0px)); right: 16px; z-index: 100; display: grid; gap: 10px; width: min(400px, calc(100vw - 32px)); pointer-events: none; }
   .console-toast { display: flex; align-items: flex-start; gap: 12px; padding: 16px; border: 1px solid hsl(var(--border)); border-radius: 12px; background: hsl(var(--popover)); color: hsl(var(--popover-foreground)); box-shadow: 0 8px 28px hsl(0 0% 0% / 0.1); pointer-events: auto; }
   .console-toast-icon { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 8px; background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
   .console-toast-icon svg { width: 17px; height: 17px; }

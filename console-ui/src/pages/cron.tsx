@@ -28,6 +28,7 @@ import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { ScheduleExecutions } from './ScheduleExecutions'
 import './cron.css'
+import { useLogPanel } from '../components/log-panel/LogPanel'
 
 function cronValidationMessage(error?: string, locale: 'zh-CN' | 'en' = 'zh-CN'): string {
   if (!error) return translate(locale, "请检查表达式。")
@@ -97,6 +98,7 @@ export default function CronPage() {
 
 function CronPageSession({ connectionScope }: { connectionScope: string }) {
   const i18n = useI18n()
+  const logPanel = useLogPanel()
   const readSequence = useRef(0)
   const jobRead = useRef<AbortController | null>(null)
   useEffect(() => () => { readSequence.current++; jobRead.current?.abort() }, [])
@@ -245,9 +247,10 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
   return (
     <div className="console-page console-resource-page console-schedule-page">
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <Button variant="ghost" size="sm" asChild>
+        {/* Watching a schedule fire is easier without leaving the list: the bottom log panel keeps this page in view. */}
+        {logPanel.available ? <Button variant="ghost" size="sm" onClick={() => logPanel.open({ q: 'schedule' })}><Activity />{i18n.t("调度日志")}</Button> : <Button variant="ghost" size="sm" asChild>
           <Link to="/logs?q=schedule"><Activity />{i18n.t("调度日志")}</Link>
-        </Button>
+        </Button>}
         <Button variant="outline" size="sm" onClick={() => { setLoading(true); fetchCrons() }}>
           <RefreshCw className="w-4 h-4 mr-1" /> {i18n.t(" 刷新")}</Button>
         {!readOnly && persistentAvailable && !loading && !error && (

@@ -20,6 +20,7 @@ import { InstanceUnavailableBanner } from "../components/InstanceUnavailableBann
 import { CONSOLE_PATHS } from "../console-routes.mjs"
 import { objectPageOwnsBreadcrumb } from "../scope/scope-tree.mjs"
 import { ConsoleCommandCenter } from "../components/ConsoleCommandCenter"
+import { LogPanel, LogPanelButton, useLogPanelLayout } from "../components/log-panel/LogPanel"
 import "./workspace-navigation.css"
 import { resolveNavigationLocation } from "../navigation-location.mjs"
 import { buildNavigation, routeSectionId, sectionById } from "../navigation-sections.mjs"
@@ -90,6 +91,9 @@ export default function DashboardLayout() {
   const parentLabel = navigation.parent ? routeLabel(navigation.parent, i18n.locale) : null
   const activePath = navigation.visible?.path
   const drawerVisible = compact && drawerOpen
+  // The docked log panel is non-modal (the page stays interactive); only the phone sheet makes the page inert.
+  const logPanel = useLogPanelLayout()
+  const pageInert = drawerVisible || logPanel.modal
 
   useEffect(() => {
     setDrawerOpen(false)
@@ -218,7 +222,7 @@ export default function DashboardLayout() {
     <div className="console-app-shell" data-wide={contentFullWidth ? "true" : undefined}>
       <a href="#console-main-content" className="console-skip-link">{i18n.t("跳到主要内容")}</a>
 
-      <header className={cn("console-topnav", scrolled && "is-scrolled")} inert={drawerVisible}>
+      <header className={cn("console-topnav", scrolled && "is-scrolled")} inert={pageInert}>
         <div className="console-topnav-capsule">
           {compact ? (
             <Button
@@ -242,6 +246,7 @@ export default function DashboardLayout() {
 
           <div className="console-topnav-actions">
             <ConsoleCommandCenter routes={routes} />
+            <LogPanelButton />
             <span
               className={cn("console-connection-dot", connected ? "is-online" : "is-offline")}
               title={connectionTitle}
@@ -313,7 +318,7 @@ export default function DashboardLayout() {
       <main
         id="console-main-content"
         className="console-main-scroll"
-        inert={drawerVisible}
+        inert={pageInert}
       >
         <div
           className={cn(
@@ -334,6 +339,9 @@ export default function DashboardLayout() {
           </div>
         </div>
       </main>
+
+      {/* Mounted once for every page; opened from the top bar, Ctrl + `, the command center or openLogPanel(). */}
+      <LogPanel />
     </div>
   )
 }

@@ -9,11 +9,15 @@ const endpoints = [
   { name: 'preview-support', adapter: 'telegram', connected: false, status: 'offline', transportState: 'stopped', phase: 'stopped', endpoint: { adapter: 'telegram', id: 'preview-support' }, managementCapabilities: [], pendingRequestCount: 0, pendingNoticeCount: 0 },
 ]
 const logs = [
+  { id: 6, timestamp: Date.now() - 5_000, level: 'warn', name: 'telegram', plugin: 'telegram', message: 'preview-support 等待短信验证码，登录尚未完成' },
+  { id: 5, timestamp: Date.now() - 8_000, level: 'info', name: 'telegram', plugin: 'telegram', message: 'preview-support 已发送登录验证请求（sms）' },
   { id: 4, timestamp: Date.now() - 10_000, level: 'info', name: 'icqq', plugin: 'icqq', message: 'preview-community 向 group 20001 发送消息成功' },
   { id: 3, timestamp: Date.now() - 20_000, level: 'info', name: 'preview', plugin: 'preview', message: '这是本地界面预览，不连接真实平台。' },
   { id: 2, timestamp: Date.now() - 40_000, level: 'warn', name: 'preview', plugin: 'preview', message: '客服账号尚未启动。请在账号页检查状态。' },
   { id: 1, timestamp: Date.now() - 60_000, level: 'info', name: 'preview', plugin: 'preview', message: '会话目录已加载。' },
 ]
+// Routine lines so the log list fills a panel in screenshots.
+for (let index = 0; index < 14; index++) logs.push({ id: -index - 1, timestamp: Date.now() - 70_000 - index * 15_000, level: index % 5 === 0 ? 'warn' : 'info', name: index % 2 ? 'icqq' : 'preview', plugin: 'preview', message: index % 2 ? `preview-community 心跳正常（第 ${index + 1} 次），延迟 ${20 + index} ms` : `定时任务 preview-digest 第 ${index + 1} 次检查完成，没有需要发送的摘要；下一次检查在 15 秒后` })
 const engagement = {
   summary: { engagementId: 'preview-engagement-1', venue: 'preview-room', status: 'completed', startedAt: Date.now() - 300_000, endedAt: Date.now() - 296_000,
     eventCount: 5, hops: 2, turns: 3, tokensUsed: 1840, wallClockMs: 4200, participants: ['agent:planner', 'agent:reviewer'], stopReason: 'done' },
