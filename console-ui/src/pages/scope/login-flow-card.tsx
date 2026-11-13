@@ -133,7 +133,8 @@ export function LoginFlowCard({ flow, endpoint, declaration, canOperate, readErr
           ...(payload.endpointIdentity ? { endpointIdentity: payload.endpointIdentity } : {}),
         }, { timeoutMs: LOGIN_SUBMIT_TIMEOUT_MS })
         const read = readSubmitReply(reply)
-        if (read.flow) onApply(read.flow, true)
+        // Only an outcome reply is stamped at reply time; a timed-out `pending` carries the submit time.
+        if (read.flow) onApply(read.flow, read.kind === 'outcome')
         const result = submitReceiptResult(read)
         return { status: result.status, message: translate(result.message, result.detail) }
       } catch (error) {

@@ -362,8 +362,9 @@ export function CaptchaHelper({ captcha, busy, onReply }: {
       return
     }
     // The helper answers through `window.opener` (no `noopener`), and must not learn the Console's
-    // address (no referrer): openCaptchaPopup does both. A per-attempt name never reuses a window.
-    const popup = openCaptchaPopup(window, url, { name: `zhin-login-captcha-${nonce.slice(0, 12)}` })
+    // address (no referrer): openCaptchaPopup does both. A per-attempt name never reuses a window;
+    // it is its own random value (window.name is readable by any page later loaded there).
+    const popup = openCaptchaPopup(window, url, { name: `zhin-login-captcha-${createCaptchaNonce().slice(0, 12)}` })
     popupRef.current = popup
     const onMessage = (event: MessageEvent) => {
       const reply = gate.accept({ origin: event.origin, data: event.data })

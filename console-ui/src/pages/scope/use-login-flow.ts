@@ -7,7 +7,7 @@ import { requestConsole } from '../../utils/console-rpc'
 import { createDebouncer } from '../attention/attention-model.mjs'
 import {
   LOGIN_FLOW_DEBOUNCE_MS, LOGIN_FLOW_EVENT, LOGIN_FLOW_POLL_MS, LOGIN_RPC, flowsUnsupported, mergeRedactedFlow, newerFlow,
-  readLoginFlow, readLoginFlowGet, readLoginFlowList, serverClockOffset, type LoginFlow,
+  readLoginFlow, readLoginFlowGet, readLoginFlowList, nextClockOffset, isLiveEnvelope, type LoginFlow,
 } from './login-flow-model.mjs'
 
 export interface LoginFlowTarget { readonly adapter: string; readonly endpointKey: string }
@@ -27,7 +27,8 @@ export interface LoginFlowController {
   readonly refresh: () => void
   /**
    * A flow snapshot from a reply (e.g. `login.submit { wait: true }`); the newer revision wins.
-   * `fresh`: produced just now (its `updatedAt` calibrates the server clock offset).
+   * `fresh`: produced just now (its `updatedAt` calibrates the server clock offset when it is the newer
+   * revision); never for replayed history or a reply that only timed out.
    */
   readonly apply: (flow: LoginFlow | null | undefined, fresh?: boolean) => void
 }
@@ -73,11 +74,12 @@ export function useLoginFlow(target: LoginFlowTarget, enabled = true): LoginFlow
 
   const apply = useCallback((incoming: LoginFlow | null | undefined, fresh = false) => {
     if (!incoming || incoming.adapter !== adapter || incoming.endpointKey !== endpointKey) return
-    // An event or a submit reply was produced just now: its updatedAt is the server's "now".
-    if (fresh) offset.current = serverClockOffset(offset.current, incoming.updatedAt, Date.now())
     const previous = current.current
     const chosen = newerFlow(previous, incoming)
     if (chosen === previous) return
+    // A live event or an outcome reply was produced just now: its updatedAt is the server's "now".
+    // Replayed history, stale revisions and timed-out replies (updatedAt = submit time) never calibrate.
+    offset.current = nextClockOffset(offset.current, { incoming, chosen, fresh })
     commit(mergeRedactedFlow(previous, chosen), { refreshing: true })
   }, [adapter, endpointKey, commit])
 
@@ -92,7 +94,8 @@ export function useLoginFlow(target: LoginFlowTarget, enabled = true): LoginFlow
     const offFlow = transport.onConsoleEvent(LOGIN_FLOW_EVENT, envelope => {
       const flow = readLoginFlow((envelope as { data?: unknown }).data)
       if (!flow || flow.adapter !== adapter || flow.endpointKey !== endpointKey) return
-      apply(flow, true)
+      // Recovered history (reconnect / page load) is old: it must not calibrate the clock.
+      apply(flow, isLiveEnvelope(envelope))
       live.trigger()
     })
     const offGap = transport.onConsoleEventRecoveryGap(() => live.trigger())

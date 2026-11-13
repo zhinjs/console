@@ -272,6 +272,17 @@ test('verifying an unknown result goes by the answered step (core drops its task
   const viaVerifying = model.readLoginFlow(flow({ activeTaskId: undefined, steps: [flow().steps[0], { ...flow().steps[1], taskId: undefined, status: 'done' }, { id: 's3', kind: 'verifying', status: 'failed', title: '验证中', at: NOW, outcome: { result: 'rejected', code: 'risk_blocked' } }] }))
   assert.deepEqual(model.verifySubmission(viaVerifying, 's2'), { applied: false, message: '平台风控拒绝了这次登录' })
   assert.equal(model.verifySubmission(null, 's2'), undefined)
+  // Expired while verifying, then reopened with a new challenge (core: expired is not terminal): not taken.
+  const reopened = model.readLoginFlow(flow({ steps: [flow().steps[0], { ...flow().steps[1], taskId: undefined, status: 'done' },
+    { id: 's3', kind: 'verifying', status: 'skipped', title: '验证中', at: NOW },
+    { id: 's4', kind: 'challenge', status: 'active', title: '再次验证', at: NOW, taskId: 't4' }] }))
+  assert.equal(model.verifySubmission(reopened, 's2').applied, false, 'abandoned verification')
+  // A later answer's verdict is not this answer's.
+  const laterVerdict = model.readLoginFlow(flow({ steps: [flow().steps[0], { ...flow().steps[1], taskId: undefined, status: 'done' },
+    { id: 's3', kind: 'verifying', status: 'done', title: '验证中', at: NOW },
+    { id: 's4', kind: 'challenge', status: 'done', title: '再次验证', at: NOW },
+    { id: 's5', kind: 'verifying', status: 'failed', title: '验证中', at: NOW, outcome: { result: 'rejected', code: 'risk_blocked' } }] }))
+  assert.equal(model.verifySubmission(laterVerdict, 's2').applied, true, 'own verification finished; the next challenge followed')
 })
 
 test('real core snapshots: every submission settles (no receipt locked as 结果未知)', () => {
@@ -303,6 +314,10 @@ test('replies without an outcome are decided by the flow that came with them (co
   assert.equal(model.submitReceiptResult(model.readSubmitReply({ accepted: true, flow: flow({ state: 'online' }) })).status, 'saved')
   assert.equal(model.submitReceiptResult(model.readSubmitReply({ accepted: true, flow: flow() })).status, 'unknown', 'still active: wait')
   assert.equal(model.submitReceiptResult(model.readSubmitReply({ success: true })).status, 'saved', 'only a flow-less legacy reply is 已提交')
+  // lastOutcome outlives the flow: a cancelled / expired flow never borrows an earlier rejection.
+  const stale = { result: 'rejected', code: 'code_invalid' }
+  assert.deepEqual(model.submitReceiptResult(model.readSubmitReply({ accepted: true, flow: flow({ state: 'cancelled', lastOutcome: stale }) })), { status: 'failed', message: '已取消' })
+  assert.equal(model.submitReceiptResult(model.readSubmitReply({ accepted: true, flow: flow({ state: 'expired', lastOutcome: stale }) })).message, model.FLOW_STATE_COPY.expired.label)
 })
 
 test('server clock offset: skew counts, latency does not', () => {
@@ -336,4 +351,16 @@ test('overview badge reads loginStep from the account row', () => {
   assert.equal(model.loginStepBadge({}), null)
   assert.equal(translate('en', '等待登录（第 {0}/{1} 步）', ['2', '4']), 'Waiting to sign in (step 2/4)')
   assert.equal(translate('zh-CN', '等待登录（第 {0}/{1} 步）', ['2', '4']), '等待登录（第 2/4 步）')
+})
+
+test('clock offset: only a live, newer snapshot calibrates (history replay and timed-out replies never do)', () => {
+  const now = 1_000_000_000
+  const incoming = model.readLoginFlow(flow({ updatedAt: now + 60_000, revision: 9 }))
+  const older = model.readLoginFlow(flow({ updatedAt: now - 3_600_000, revision: 1 }))
+  assert.equal(model.nextClockOffset(0, { incoming, chosen: incoming, fresh: true, localNow: now }), 60_000)
+  assert.equal(model.nextClockOffset(5_000, { incoming: older, chosen: older, fresh: false, localNow: now }), 5_000, 'history / pending reply')
+  assert.equal(model.nextClockOffset(5_000, { incoming: older, chosen: incoming, fresh: true, localNow: now }), 5_000, 'stale revision')
+  assert.equal(model.isLiveEnvelope({ delivery: 'history', data: {} }), false)
+  assert.equal(model.isLiveEnvelope({ data: {} }), true)
+  assert.equal(model.isLiveEnvelope({ delivery: 'live' }), true)
 })

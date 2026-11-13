@@ -112,6 +112,7 @@ async function cardEnvironment({ locale = 'zh-CN', receiptStates = {}, flow, req
   })
   const flowState = { status: 'ready', flow, refreshing: false, error: null, readAt: NOW }
   const applied = []
+  const appliedFresh = []
   const card = compile(await source('pages/scope/login-flow-card.tsx'), {
     ...common,
     '../../components/ui/badge': { Badge: 'badge' }, '../../components/ui/button': { Button: 'button' }, '../../components/ui/card': { Card: 'card' },
@@ -135,10 +136,10 @@ async function cardEnvironment({ locale = 'zh-CN', receiptStates = {}, flow, req
     '../../utils/console-rpc': { requestConsole: (request, options) => { requests.push({ request, options }); return reply(request) } },
     './login-tasks': { LoginTaskCard: props => ({ type: 'legacy-card', props: { taskId: props.task.id, readOnly: props.readOnly } }) },
     './login-challenge': challengeModule,
-    './use-login-flow': { useLoginFlow: () => ({ state: flowState, refresh() {}, apply: flow => applied.push(flow) }) },
+    './use-login-flow': { useLoginFlow: () => ({ state: flowState, refresh() {}, apply: (flow, fresh) => { applied.push(flow); appliedFresh.push(fresh) } }) },
     './login-flow-model.mjs': flowModel,
   })
-  return { runtime, card, receipts, requests, applied, flowState, challengeModule, i18n }
+  return { runtime, card, receipts, requests, applied, appliedFresh, flowState, challengeModule, i18n }
 }
 
 test('a Host without login.flow.list shows 需要新版 Host and the legacy task cards', async () => {
@@ -216,10 +217,14 @@ test('submitting goes through the receipt with wait: true and maps every reply',
   assert.equal(sent.options.timeoutMs, flowModel.LOGIN_SUBMIT_TIMEOUT_MS)
   assert.ok(flowModel.LOGIN_SUBMIT_TIMEOUT_MS > 15_000, 'longer than the Host waits')
   assert.equal(env.applied.at(-1).revision, 9, 'the reply flow is applied')
+  assert.equal(env.appliedFresh.at(-1), true, 'an outcome reply is stamped now: it calibrates the clock')
   answer = async () => ({ accepted: true, outcome: { result: 'online' } })
   assert.equal(receiptModel.readSubmitResult(await receipt.options.submit(plan)).phase, 'succeeded')
   answer = async () => ({ accepted: true, pending: true })
   assert.equal(receiptModel.readSubmitResult(await receipt.options.submit(plan)).phase, 'unknown', '结果待确认')
+  answer = async () => ({ accepted: true, pending: true, flow: { ...flowWith(smsChallenge), revision: 10 } })
+  await receipt.options.submit(plan)
+  assert.equal(env.appliedFresh.at(-1), false, 'a timed-out reply carries the submit time: it never calibrates')
   // A refused answer (LoginSubmissionError) is 未执行 with its reason; a transport failure stays an error (→ 结果未知).
   answer = async () => { throw Object.assign(new Error('JSON 中没有 ticket 字段'), { details: { dataCode: 'input_invalid' } }) }
   assert.deepEqual(await receipt.options.submit(plan), { status: 'failed', message: '输入的格式不正确：JSON 中没有 ticket 字段' })

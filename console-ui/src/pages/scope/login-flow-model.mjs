@@ -618,7 +618,9 @@ export function submitReceiptResult(read) {
   const flow = read.flow
   if (flow?.state === 'online') return Object.freeze({ status: 'saved', message: '验证通过，账号已上线。' })
   if (flow && (flow.state === 'failed' || flow.state === 'cancelled' || flow.state === 'expired')) {
-    const view = outcomeView(flow.lastOutcome)
+    // lastOutcome survives the end of a flow: only a failed flow is explained by it; a cancelled or
+    // expired one may carry the verdict of an earlier, unrelated answer.
+    const view = flow.state === 'failed' ? outcomeView(flow.lastOutcome) : undefined
     const detail = view?.message ?? view?.description
     return Object.freeze({ status: 'failed', message: view?.title ?? FLOW_STATE_COPY[flow.state].label, ...(detail ? { detail, detailFromHost: Boolean(view?.message) } : {}) })
   }
@@ -643,15 +645,20 @@ export function verifySubmission(flow, stepId) {
   if (index < 0) return Object.freeze({ applied: false, message: ended ? FLOW_STATE_COPY[flow.state].label : '这一步已结束，请按当前步骤继续。' })
   const step = flow.steps[index]
   const later = flow.steps.slice(index + 1)
-  const verdict = [step.outcome, ...later.filter(item => item.kind === 'verifying').map(item => item.outcome)].find(Boolean)
+  // Only the steps up to the next challenge belong to this answer: a later verdict is another answer's.
+  const nextChallenge = later.findIndex(item => item.kind === 'challenge')
+  const own = (nextChallenge < 0 ? later : later.slice(0, nextChallenge)).filter(item => item.kind === 'verifying')
+  const verdict = [step.outcome, ...own.map(item => item.outcome)].find(Boolean)
   if (verdict?.result === 'accepted' || verdict?.result === 'online') return Object.freeze({ applied: true, message: '验证通过，正在继续登录。' })
   if (verdict) return Object.freeze({ applied: false, message: outcomeView(verdict).title })
   if (step.status === 'failed') return Object.freeze({ applied: false, message: '这次验证没有通过。' })
   if (step.status === 'skipped') return Object.freeze({ applied: false, message: '这一步已被新的验证替换。' })
   if (ended) return Object.freeze({ applied: false, message: FLOW_STATE_COPY[flow.state].label })
   if (step.status === 'active') return undefined
-  // Answered (done) and the flow already asks for the next challenge: the answer was taken.
-  if (later.some(item => item.kind === 'challenge')) return Object.freeze({ applied: true, message: '验证通过，正在继续登录。' })
+  // Verification abandoned without a verdict (the flow expired and was reopened): not taken.
+  if (own.some(item => item.status === 'skipped')) return Object.freeze({ applied: false, message: '这次验证已超时，请按当前步骤重新验证。' })
+  // Answered (done), its verification finished and the flow asks for the next challenge: taken.
+  if (nextChallenge >= 0 && own.every(item => item.status === 'done')) return Object.freeze({ applied: true, message: '验证通过，正在继续登录。' })
   return undefined
 }
 
@@ -663,6 +670,22 @@ export function serverClockOffset(previous, serverTimestamp, localNow = Date.now
   if (typeof serverTimestamp !== 'number' || !Number.isFinite(serverTimestamp) || serverTimestamp <= 0) return previous ?? 0
   const delta = serverTimestamp - localNow
   return Math.abs(delta) < 1500 ? 0 : delta
+}
+
+/**
+ * The clock offset after a flow snapshot arrived. Only a fresh snapshot (a live event or an outcome
+ * reply, stamped when it was sent) that is also the newer revision calibrates: replayed history
+ * (`delivery: 'history'`), a stale revision or a timed-out reply (stamped at submit time) keeps the
+ * previous offset.
+ */
+export function nextClockOffset(previous, { incoming, chosen, fresh, localNow = Date.now() }) {
+  if (!fresh || !incoming || chosen !== incoming) return previous ?? 0
+  return serverClockOffset(previous, incoming.updatedAt, localNow)
+}
+
+/** Whether a Console event envelope is live (not recovered history replayed on reconnect / load). */
+export function isLiveEnvelope(envelope) {
+  return !(envelope && typeof envelope === 'object' && envelope.delivery === 'history')
 }
 
 /** Copy for a refused submission (`LoginSubmissionError` codes in `data.code`). */
