@@ -61,7 +61,12 @@ function fixture({ dropTable }) {
   }
   const mocks = {
     react: { ...r.hooks },
-    './use-database-console': { useDatabaseConsole: () => console },
+    './use-database-console': { useDatabaseConsole: () => console, databaseAdmin: {} },
+    './sql-console': { SqlConsole: 'sql-console' },
+    './schema-editor': { SchemaEditor: 'schema-editor', CreateTableEditor: 'create-table' },
+    './resizable-split': { SplitHandle: 'split-handle', useSplitWidth: () => ({ width: 240, setWidth() {}, commit() {} }) },
+    '../../components/ui/tabs': { Tabs: 'tabs', TabsList: 'tabs-list', TabsTrigger: 'tab' },
+    '../../components/StatusState': { StatusState: 'status-state' },
     '../../utils/read-error.mjs': { readErrorSummary: value => String(value) },
     '../../utils/console-access.mjs': { hasConsolePermission: () => true },
     '../../components/toast': { useToast: () => ({ success: m => toasts.push(['success', m]), warning: m => toasts.push(['warning', m]), error: m => toasts.push(['error', m]) }) },
@@ -159,6 +164,7 @@ test('useDatabaseConsole separates the drop result from the list refresh', async
   const { useDatabaseConsole } = compile(hookSource, {
     '../../utils/console-client': { getConsoleTransport: () => manager },
     '../../hooks/use-console-read': { useConsoleRead: () => (reads++ % 2 === 0 ? { ...tablesRead, data: null } : tablesRead) },
+    '../../utils/console-rpc': { requestConsole: async () => { throw new Error('not used') } },
   })
   const db = useDatabaseConsole()
   const outcome = await db.dropTable('users')

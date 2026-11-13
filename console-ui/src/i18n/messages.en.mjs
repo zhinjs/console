@@ -5,6 +5,7 @@ import { chatMessages } from './messages.en.chat.mjs'
 import { pluginsMessages } from './messages.en.plugins.mjs'
 import { insightsMessages } from './messages.en.insights.mjs'
 import { scopeMessages } from './messages.en.scope.mjs'
+import { databaseMessages } from './messages.en.database.mjs'
 
 /** Authored Console UI copy. Interpolated content is never translated. */
 export const englishMessages = Object.freeze({
@@ -15,6 +16,7 @@ export const englishMessages = Object.freeze({
   ...pluginsMessages,
   ...insightsMessages,
   ...scopeMessages,
+  ...databaseMessages,
   "鲜活配色": "Fresh palettes",
   "沉静配色": "Calm palettes",
   "晴空": "Sky",

@@ -81,6 +81,8 @@ export async function enrichRpcError(error, capture) {
       if (body.needsConfiguration !== undefined) details.needsConfiguration = body.needsConfiguration
       // A refused gateway transaction (global plugin switch: `failedPhase`, `logTail`, ADR 0054 §4).
       if (isRecord(body.transaction)) details.transaction = body.transaction
+      // A database port refusal (`read_only`, `protected_table`, `confirm_required`, …).
+      if (isRecord(body.data) && typeof body.data.code === 'string') details.dataCode = body.data.code
     }
     const seconds = Number(String(capture.retryAfter ?? '').trim())
     if (capture.retryAfter && Number.isFinite(seconds) && seconds > 0) details.retryAfter = seconds

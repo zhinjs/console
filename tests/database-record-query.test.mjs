@@ -191,14 +191,14 @@ async function relatedFixture(total = 120) {
 test('a related table search queries the whole table through Host where and returns to page 1', async () => {
   const f = await relatedFixture()
   assert.deepEqual(f.server.calls.at(-1), { table: 'users', page: 1, pageSize: 50, where: undefined })
-  assert.deepEqual(f.select('查找的列').props.options.map(option => option.value), ['id', 'name', 'score', 'active'], 'json/date columns are not offered')
+  assert.deepEqual(f.select('查找的列').props.options.map(option => option.value), ['id', 'name', 'score', 'active', 'meta', 'created'], 'every column can be filtered (json/date by null only)')
 
   f.next().props.onClick(); await f.r.settle()
   f.next().props.onClick(); await f.r.settle()
   assert.equal(f.server.calls.at(-1).page, 3)
 
   f.select('查找的列').props.onValueChange('name'); f.r.render()
-  assert.deepEqual(f.select('查找方式').props.options.map(option => option.value), ['contains', 'eq'])
+  assert.deepEqual(f.select('查找方式').props.options.map(option => option.value), ['contains', 'eq', 'ne', 'gt', 'lt', 'null', 'notnull'])
   await f.type('user11')
   await f.submit()
   assert.deepEqual(f.server.calls.at(-1), { table: 'users', page: 1, pageSize: 50, where: { name: { $like: '%user11%' } } }, 'the condition goes to Host and the page resets')
@@ -216,7 +216,7 @@ test('a related table search queries the whole table through Host where and retu
 test('a typed equality search sends a typed value and invalid input is reported without a request', async () => {
   const f = await relatedFixture()
   const before = f.server.calls.length
-  assert.equal(f.select('查找方式').props.disabled, true, 'integer columns only offer equality')
+  assert.deepEqual(f.select('查找方式').props.options.map(option => option.value), ['eq', 'ne', 'gt', 'lt', 'null', 'notnull'], 'integer columns have no contains')
   await f.type('abc')
   await f.submit()
   assert.equal(f.server.calls.length, before, 'invalid input is not sent')
@@ -280,4 +280,101 @@ test('a document collection search sends an equality where, resets the page and 
   all().find(node => node.props?.['data-action'] === 'clear-filter').props.onClick(); await r.settle()
   assert.deepEqual(calls.at(-1), { page: 1, where: undefined })
   assert.doesNotMatch(text(r.value), /已筛选/)
+})
+
+// ---- Server-side sort, per-column filters, masking and row-change confirmation ----
+
+function orderedServer(total) {
+  const calls = []
+  const rows = Array.from({ length: total }, (_, i) => ({ id: i + 1, name: `user${i + 1}`, score: i % 3 === 0 ? null : i, active: true, api_token: `tok-${i + 1}` }))
+  const select = async (table, page = 1, pageSize = 10, where, orderBy) => {
+    calls.push({ page, pageSize, where, orderBy })
+    let matched = rows
+    if (where?.score && typeof where.score === 'object' && '$eq' in where.score) matched = rows.filter(row => row.score === null)
+    if (where && typeof where.id === 'number') matched = rows.filter(row => row.id === where.id)
+    if (orderBy) matched = [...matched].sort((a, b) => (a[orderBy.column] < b[orderBy.column] ? -1 : 1) * (orderBy.direction === 'desc' ? -1 : 1))
+    return { rows: matched.slice((page - 1) * pageSize, page * pageSize), total: matched.length, page, pageSize }
+  }
+  return { calls, rows, select }
+}
+
+async function serverSortFixture({ readOnly = true } = {}) {
+  const r = runtime(), server = orderedServer(120), updates = []
+  const { RelatedTableView } = compile(relatedSource, sharedMocks(r))
+  const columns = { id: { type: 'integer', primary: true }, name: { type: 'text' }, score: { type: 'integer', nullable: true }, active: { type: 'boolean' }, api_token: { type: 'text' } }
+  const props = {
+    tableName: 'users', tableInfo: { name: 'users', columns }, select: server.select, insert: async () => {},
+    update: async (table, row, where) => { updates.push({ row, where }); const target = server.rows.find(item => item.id === where.id); Object.assign(target, row); return { affected: 1 } },
+    remove: async () => {}, readOnly, serverSort: true,
+  }
+  r.mount(() => RelatedTableView(props))
+  await r.settle()
+  const all = () => elements(r.value)
+  return {
+    r, server, updates, all,
+    sortButton: column => all().find(node => node.type === 'button' && node.props['data-sort-column'] === column),
+    rowIds: () => all().filter(node => node.type === 'tr').slice(1).map(row => text([row.props.children].flat(Infinity)[0])),
+    text: () => text(r.value),
+  }
+}
+
+test('with a Host that sorts, a header click cycles ascending → descending → none across the whole table', async () => {
+  const f = await serverSortFixture()
+  assert.equal(f.server.calls.at(-1).orderBy, undefined)
+  f.sortButton('id').props.onClick(); await f.r.settle()
+  assert.deepEqual(f.server.calls.at(-1).orderBy, { column: 'id', direction: 'asc' })
+  f.sortButton('id').props.onClick(); await f.r.settle()
+  assert.deepEqual(f.server.calls.at(-1), { page: 1, pageSize: 50, where: undefined, orderBy: { column: 'id', direction: 'desc' } })
+  assert.equal(f.rowIds()[0], '120', 'descending starts at the last record of the table, not of the page')
+  assert.doesNotMatch(f.text(), /本页排序|排序只作用于当前页/)
+  assert.match(f.text(), /按 id 降序/)
+  f.sortButton('id').props.onClick(); await f.r.settle()
+  assert.equal(f.server.calls.at(-1).orderBy, undefined, 'the third click removes the order')
+  const header = f.all().find(node => node.type === 'th')
+  assert.equal(header.props['aria-sort'], 'none')
+})
+
+test('null filters need no value, and sensitive columns are masked until a cell is revealed', async () => {
+  const f = await serverSortFixture()
+  const select = label => f.all().find(node => node.type === 'select-field' && node.props['aria-label'] === label)
+  f.all().find(node => node.props?.['data-filter-column'] === 'score').props.onClick(); f.r.render()
+  assert.equal(select('查找的列').props.value, 'score', 'the header filter button picks its column')
+  select('查找方式').props.onValueChange('null'); f.r.render()
+  const input = f.all().find(node => node.type === 'input' && node.props['aria-label'] === '查找的值')
+  assert.equal(input.props.disabled, true)
+  f.all().find(node => node.type === 'form').props.onSubmit({ preventDefault() {} }); await f.r.settle()
+  assert.deepEqual(f.server.calls.at(-1).where, { score: { $eq: null } })
+  assert.match(f.text(), /全表查找：score 为空/)
+  assert.equal(f.all().find(node => node.props?.['data-filter-column'] === 'score').props['aria-pressed'], true)
+
+  const masked = () => f.all().filter(node => node.props?.['data-masked'] === 'true')
+  const before = masked().length
+  assert.ok(before > 0, 'api_token cells are masked')
+  assert.doesNotMatch(f.text(), /tok-1\b/)
+  masked()[0].props.onClick(); f.r.render()
+  assert.equal(masked().length, before - 1, 'only the clicked cell is revealed')
+  assert.match(f.text(), /tok-1/)
+  f.all().find(node => node.props?.['data-action'] === 'clear-filter').props.onClick(); await f.r.settle()
+  assert.equal(masked().length, f.rowIds().length, 'a new read masks every cell again')
+})
+
+test('saving an edit asks with the matching row count and keeps the row where it was', async () => {
+  const f = await serverSortFixture({ readOnly: false })
+  f.sortButton('name').props.onClick(); await f.r.settle()
+  const ids = f.rowIds()
+  const edit = f.all().filter(node => node.type === 'button' && node.props['aria-label'] === '编辑记录')[1]
+  edit.props.onClick(); f.r.render()
+  const nameField = f.all().find(node => node.type === 'json-field' && node.props.label === 'name')
+  nameField.props.onChange('zzz-last'); f.r.render()
+  const save = f.all().find(node => node.type === 'button' && text(node).includes('保存'))
+  await save.props.onClick(); await f.r.settle()
+  const confirm = f.all().find(node => node.type === 'confirm-dialog' && node.props.title === '保存修改')
+  assert.equal(confirm.props.open, true)
+  assert.match(confirm.props.description, /将影响 1 行/)
+  assert.equal(f.updates.length, 0, 'nothing is written before the confirmation')
+  await confirm.props.onConfirm(); await f.r.settle()
+  assert.equal(f.updates.length, 1)
+  assert.deepEqual(f.rowIds(), ids, 'the edited row did not jump to its new sorted position')
+  assert.match(f.text(), /zzz-last/)
+  assert.match(f.text(), /已在原位置显示修改后的记录/)
 })
