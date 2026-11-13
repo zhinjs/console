@@ -305,7 +305,7 @@ function QrChallenge({ challenge, openedAt, scanned, onRefresh, refreshing }: {
   )
 }
 
-type CaptchaState = 'idle' | 'waiting' | 'blocked' | 'received' | 'queued' | 'closed' | 'error'
+type CaptchaState = 'idle' | 'waiting' | 'blocked' | 'received' | 'queued' | 'settled' | 'closed' | 'error'
 
 /**
  * 「开始验证」: opens the hosted helper page (its own origin) in a popup with a fresh nonce and this
@@ -334,6 +334,14 @@ export function CaptchaHelper({ captcha, busy, onReply }: {
   useEffect(() => {
     if (busy || state !== 'queued' || !queued.current) return
     if (latestReply.current(queued.current)) { queued.current = null; setState('received') }
+  }, [busy, state])
+  // The write that carried the reply finished and this step is still on screen (an accepted answer
+  // moves to a new step and unmounts the helper): it was refused or not taken — allow another try.
+  const sawBusy = useRef(false)
+  useEffect(() => {
+    if (state !== 'received') { sawBusy.current = false; return }
+    if (busy) { sawBusy.current = true; return }
+    if (sawBusy.current) { sawBusy.current = false; setState('settled') }
   }, [busy, state])
   const helperUrl = captcha.helperUrl ?? DEFAULT_CAPTCHA_HELPER_URL
   const helperHost = useMemo(() => { try { return new URL(helperUrl).host } catch { return helperUrl } }, [helperUrl])
@@ -404,6 +412,7 @@ export function CaptchaHelper({ captcha, busy, onReply }: {
         {state === 'waiting' ? i18n.t('已打开验证窗口。完成滑块后这里会自动提交。')
           : state === 'received' ? i18n.t('已收到验证结果，正在提交。')
             : state === 'queued' ? i18n.t('已收到验证结果，等当前操作结束后自动提交。')
+              : state === 'settled' ? i18n.t('这次验证结果没有被采用，请看上方的提交结果，需要时重新验证。')
               : state === 'closed' ? i18n.t('验证窗口已关闭，没有收到结果。可以重新打开，或在下方手动粘贴。')
                 : state === 'error' ? i18n.t('无法打开验证页：Console 的地址或验证页地址不正确。请在下方手动粘贴 ticket。')
                   : null}

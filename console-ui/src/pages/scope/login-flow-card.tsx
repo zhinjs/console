@@ -280,7 +280,7 @@ export function LoginFlowCard({ flow, endpoint, declaration, canOperate, readErr
         </p>
         <p className="console-login-flow-sub">
           <code title={`${adapter} / ${endpointKey}`}>{adapter} / {endpointKey}</code>
-          {flow ? <span><SinceText at={flow.startedAt} /></span> : null}
+          {flow ? <span><SinceText at={flow.startedAt} offset={clockOffset} /></span> : null}
           {refreshing ? <Loader2 className="console-login-flow-sync animate-spin" aria-label={i18n.t('正在同步')} /> : null}
         </p>
       </div>
@@ -329,7 +329,7 @@ export function LoginFlowCard({ flow, endpoint, declaration, canOperate, readErr
           ) : receipt.state.phase === 'submitting' ? (
             <SubmitProgress phase={receipt.state.phase} verifyingTitle={verifying?.title} />
           ) : (
-            <FlowResult flow={flow} verifyingTitle={verifying?.title} receiptExplains={receipt.state.phase === 'unknown' || receipt.state.phase === 'verifying'} />
+            <FlowResult flow={flow} clockOffset={clockOffset} verifyingTitle={verifying?.title} receiptExplains={receipt.state.phase === 'unknown' || receipt.state.phase === 'verifying'} />
           )}
           {receipt.state.phase !== 'submitting' ? <ActionReceipt controller={receipt} className="console-login-receipt" /> : null}
         </div>
@@ -356,11 +356,11 @@ function SubmitProgress({ phase, verifyingTitle }: { phase: string; verifyingTit
 }
 
 /** No open challenge: verifying, online, failed, cancelled or expired. */
-function FlowResult({ flow, verifyingTitle, receiptExplains }: { flow: LoginFlow; verifyingTitle?: string; receiptExplains?: boolean }) {
+function FlowResult({ flow, verifyingTitle, receiptExplains, clockOffset = 0 }: { flow: LoginFlow; verifyingTitle?: string; receiptExplains?: boolean; clockOffset?: number }) {
   const i18n = useI18n()
   const outcome = outcomeView(flow.lastOutcome)
   if (flow.state === 'online') {
-    return <div className="console-login-result is-success" role="status"><CheckCircle2 aria-hidden="true" /><div><p className="font-medium">{i18n.t('登录完成，账号已上线')}</p><p className="console-login-muted"><SinceText at={flow.updatedAt} prefix="done" /></p></div></div>
+    return <div className="console-login-result is-success" role="status"><CheckCircle2 aria-hidden="true" /><div><p className="font-medium">{i18n.t('登录完成，账号已上线')}</p><p className="console-login-muted"><SinceText at={flow.updatedAt} offset={clockOffset} prefix="done" /></p></div></div>
   }
   // The receipt below already says 结果待确认 for this submission.
   if (flow.state === 'active' && flow.pendingConfirmation && receiptExplains) return null
@@ -382,10 +382,12 @@ function FlowResult({ flow, verifyingTitle, receiptExplains }: { flow: LoginFlow
   )
 }
 
-function SinceText({ at, prefix }: { at: number; prefix?: 'done' }) {
+/** `at` is a server timestamp; `offset` (server − local) turns it into this browser's clock. */
+function SinceText({ at: serverAt, offset = 0, prefix }: { at: number; offset?: number; prefix?: 'done' }) {
   const i18n = useI18n()
   const now = useNow(true, 30_000)
-  if (!at) return null
+  if (!serverAt) return null
+  const at = serverAt - offset
   const minutes = Math.max(0, Math.round((now - at) / 60_000))
   const time = new Date(at).toLocaleTimeString(i18n.locale, { hour: '2-digit', minute: '2-digit' })
   if (prefix === 'done') return <>{i18n.t('{0} 完成', [time])}</>

@@ -422,6 +422,12 @@ test('hosted captcha: a second click switches to the open window; a reply during
     assert.deepEqual(replies, [{ ticket: 't1', randstr: 'r1' }, { ticket: 't1', randstr: 'r1' }], 'sent once the card is free')
     tree = env.runtime.render(() => env.challengeModule.CaptchaHelper(props))
     assert.match(text(tree), /已收到验证结果，正在提交/u)
+    // The submit runs (busy) and is refused: the step stays, so the helper can be started again.
+    tree = env.runtime.render(() => env.challengeModule.CaptchaHelper({ ...props, busy: true }))
+    tree = env.runtime.render(() => env.challengeModule.CaptchaHelper(props))
+    tree = env.runtime.render(() => env.challengeModule.CaptchaHelper(props))
+    assert.match(text(tree), /没有被采用/u)
+    assert.equal(nodes(tree).find(node => node.props?.['data-captcha-start']).props.disabled, false, 'a refused result never locks the helper')
   } finally {
     globalThis.window = previous
   }

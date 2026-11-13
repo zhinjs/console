@@ -134,6 +134,7 @@ export const loginMessages = Object.freeze({
   "重新打开验证页": "Open the verification page again",
   "已打开验证窗口。完成滑块后这里会自动提交。": "The verification window is open. Finish the slider and this page submits by itself.",
   "已收到验证结果，正在提交。": "Result received; submitting.",
+  "这次验证结果没有被采用，请看上方的提交结果，需要时重新验证。": "This verification result was not taken. Check the submit result above and verify again if needed.",
   "验证窗口已关闭，没有收到结果。可以重新打开，或在下方手动粘贴。": "The verification window was closed without a result. Open it again, or paste the result below.",
   "无法打开验证页：Console 的地址或验证页地址不正确。请在下方手动粘贴 ticket。": "Cannot open the verification page: the Console address or the page address is invalid. Paste the ticket below.",
   "浏览器拦截了弹出窗口。": "The browser blocked the pop-up.",
