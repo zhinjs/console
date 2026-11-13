@@ -69,6 +69,8 @@ export function databaseCapabilities(info) {
     sqlReason: typeof reported?.sqlReason === 'string' ? reported.sqlReason : '',
     // `separate-store` (SQLite) | `restricted-credential` (PostgreSQL / MySQL) | '' (older Host).
     sqlIsolation: reported?.sqlIsolation === 'separate-store' || reported?.sqlIsolation === 'restricted-credential' ? reported.sqlIsolation : '',
+    // `console-role-missing` | `console-role-invalid` | `text-compatibility` | `sqlite-isolation` | '' (older Host).
+    sqlReasonCode: typeof reported?.sqlReasonCode === 'string' ? reported.sqlReasonCode : '',
   })
 }
 
@@ -77,9 +79,14 @@ export function sqlUnavailableReason(capabilities) {
   return capabilities?.sqlReason || capabilities?.reason || ''
 }
 
-/** The SQL editor is off because PostgreSQL / MySQL have no usable restricted account (`zhin db console-role`). */
+/**
+ * The SQL editor is off because PostgreSQL / MySQL have no usable restricted account
+ * (`zhin db console-role`): the Host's `sqlReasonCode` is `console-role-missing` or
+ * `console-role-invalid` — not for other reasons (e.g. `standard_conforming_strings`).
+ */
 export function needsConsoleRole(capabilities) {
-  return capabilities?.sqlIsolation === 'restricted-credential' && capabilities?.sql === false && !!capabilities?.reported
+  return capabilities?.sql === false && !!capabilities?.reported
+    && (capabilities?.sqlReasonCode === 'console-role-missing' || capabilities?.sqlReasonCode === 'console-role-invalid')
 }
 
 /**

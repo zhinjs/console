@@ -20,6 +20,7 @@ export interface DatabaseCapabilities {
   readonly reason: string
   readonly sqlReason: string
   readonly sqlIsolation: '' | 'separate-store' | 'restricted-credential'
+  readonly sqlReasonCode: string
 }
 export function databaseCapabilities(info: unknown): DatabaseCapabilities
 export function sqlUnavailableReason(capabilities: DatabaseCapabilities | null | undefined): string

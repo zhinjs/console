@@ -27,7 +27,7 @@ type Outcome =
  * Raw SQL console. Reads (`db:query`) run in a read-only transaction on the Host; anything else is a
  * write (`db:execute`, `ops.database.schema`) that is dry-run first to show the affected rows.
  */
-export function SqlConsole({ admin, canWrite, supported, reason, needsRole, dialect }: {
+export function SqlConsole({ admin, canWrite, supported, reason, needsRole, dialect, dialectLabel }: {
   admin: DatabaseAdmin
   /** The principal holds `ops.database.schema`. */
   canWrite: boolean
@@ -36,7 +36,10 @@ export function SqlConsole({ admin, canWrite, supported, reason, needsRole, dial
   reason?: string
   /** Off because PostgreSQL / MySQL have no usable restricted account (ADR 0059). */
   needsRole?: boolean
+  /** Dialect id from `db:info` (`pg`, `mysql`, `sqlite`, …). */
   dialect: string
+  /** Shown in the badge (defaults to the id). */
+  dialectLabel?: string
 }) {
   const i18n = useI18n()
   const storage = useMemo(browserStorage, [])
@@ -113,7 +116,7 @@ export function SqlConsole({ admin, canWrite, supported, reason, needsRole, dial
   return (
     <div className="flex h-full min-h-0 flex-col gap-3" data-sql-console>
       <div className="flex flex-wrap items-center gap-2 shrink-0">
-        <Badge variant="secondary" size="sm">{dialect}</Badge>
+        <Badge variant="secondary" size="sm">{dialectLabel || dialect}</Badge>
         <span className="text-xs text-muted-foreground">
           {canWrite ? i18n.t('只读语句直接执行；写语句会先预估影响行数并要求确认。') : i18n.t('只能执行单条只读语句（SELECT / WITH / EXPLAIN 等），最多返回 1000 行。')}
         </span>

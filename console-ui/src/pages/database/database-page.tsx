@@ -167,7 +167,7 @@ export default function DatabasePage() {
                   <div className="flex-1 min-h-0 min-w-0 p-3 sm:p-4 overflow-hidden">
                     {tool === 'sql' ? (
                       <SqlConsole admin={databaseAdmin} canWrite={canSchema} supported={capabilities.sql} reason={capabilities.sql ? undefined : (sqlUnavailableReason(capabilities) || unsupportedReason)} needsRole={needsConsoleRole(capabilities)}
-                        dialect={DIALECT_LABELS[info?.dialect ?? ''] || info?.dialect || ''} />
+                        dialect={info?.dialect ?? ''} dialectLabel={DIALECT_LABELS[info?.dialect ?? ''] || info?.dialect || ''} />
                     ) : (
                       <CreateTableEditor admin={databaseAdmin} supported={capabilities.schema} reason={capabilities.schema ? undefined : unsupportedReason}
                         onCancel={closeDetail}
