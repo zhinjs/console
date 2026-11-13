@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /** Loopback-only, in-memory UI fixture. It never connects to a real Host, platform, model, or database. */
 import { createServer } from 'node:http'
+import { answerDatabaseRpc } from './ui-preview-database.mjs'
 
 const port = Number(process.argv[2] ?? process.env.UI_PREVIEW_PORT ?? 18087)
 const origins = new Set(['http://localhost:9000', 'http://127.0.0.1:9000', 'http://localhost:5173', 'http://127.0.0.1:5173', ...(process.env.UI_PREVIEW_ORIGIN ? [process.env.UI_PREVIEW_ORIGIN] : [])])
@@ -259,11 +260,11 @@ const scopedAccess = process.env.UI_PREVIEW_ACCESS === 'scoped'
 const setupMode = process.env.UI_PREVIEW_SETUP === '1'
 const ALL_PERMISSIONS = ['status.view', 'endpoint.view', 'endpoint.operate', 'endpoint.manage', 'feature.view', 'feature.configure', 'feature.toggle',
   'plugin.manage', 'plugin.perms.read', 'plugin.perms.operate', 'plugin.perms.manage', 'agent.view', 'agent.configure', 'ops.config.read', 'ops.config.write',
-  'ops.env.read', 'ops.env.write', 'ops.database.read', 'ops.database.write', 'ops.schedule.read', 'ops.schedule.write', 'ops.files.read', 'ops.files.write',
+  'ops.env.read', 'ops.env.write', 'ops.database.read', 'ops.database.write', 'ops.database.schema', 'ops.schedule.read', 'ops.schedule.write', 'ops.files.read', 'ops.files.write',
   'ops.restart', 'ops.terminal', 'iam.view', 'iam.manage', 'mcp.access', 'a2a.access']
 const iamRoles = [
   { id: 'r-owner', name: 'owner', description: '所有者：全部权限', builtin: true, permissions: ALL_PERMISSIONS },
-  { id: 'r-admin', name: 'admin', description: '管理员：除终端与访问控制管理外的全部权限', builtin: true, permissions: ALL_PERMISSIONS.filter(item => item !== 'ops.terminal' && item !== 'iam.manage') },
+  { id: 'r-admin', name: 'admin', description: '管理员：除终端与访问控制管理外的全部权限', builtin: true, permissions: ALL_PERMISSIONS.filter(item => item !== 'ops.terminal' && item !== 'iam.manage' && item !== 'ops.database.schema') },
   { id: 'r-operator', name: 'operator', description: '运营：账号与功能日常操作', builtin: true, permissions: ['status.view', 'endpoint.view', 'endpoint.operate', 'feature.view', 'feature.configure', 'feature.toggle', 'agent.view', 'ops.schedule.read'] },
   { id: 'r-viewer', name: 'viewer', description: '只读：查看（不含原始配置与环境变量）', builtin: true, permissions: ALL_PERMISSIONS.filter(item => /\.(view|read)$/u.test(item) && item !== 'ops.config.read' && item !== 'ops.env.read') },
   { id: 'r-support', name: 'support', description: '客服值班：处理消息与群管理', builtin: false, permissions: ['status.view', 'endpoint.view', 'endpoint.operate', 'rss:subscribe'] },
@@ -564,8 +565,6 @@ const server = createServer(async (request, response) => {
     }
     if (type === 'inbox.requests') { json(envelope({ inboxEnabled: true, requests: [] })); return }
     if (type === 'inbox.notices') { json(envelope({ inboxEnabled: true, notices: [] })); return }
-    if (type === 'db:info') { json(envelope({ dialect: 'sqlite', type: 'related', tables: ['console_users', 'messages', 'rss_feeds'] })); return }
-    if (type === 'db:tables') { json(envelope({ tables: [{ name: 'console_users' }, { name: 'messages' }, { name: 'rss_feeds' }] })); return }
     if (type === 'env:list') { json(envelope({ files: [{ name: '.env', exists: true }, { name: '.env.production', exists: false }] })); return }
     if (type === 'env:get') { json(envelope({ content: 'HTTP_TOKEN=preview-not-real\nTELEGRAM_TOKEN=\n' })); return }
     if (type === 'files:tree') { json(envelope({ tree: [{ name: 'zhin.config.yml', path: 'zhin.config.yml', type: 'file' }, { name: 'plugins', path: 'plugins', type: 'directory', children: [{ name: 'hello.ts', path: 'plugins/hello.ts', type: 'file' }] }] })); return }
@@ -581,7 +580,7 @@ const server = createServer(async (request, response) => {
       })
       json(envelope({ rows, total: rows.length, columns: [] })); return
     }
-    if (type === 'db:select') { json(envelope({ rows: [], total: 0, columns: [] })); return }
+    if (answerDatabaseRpc(type, body, json, envelope, { memory: memoryDatabase })) return
     if (type === 'endpoint.history') { json(envelope({ messages: [], total: 0, hasMore: false })); return }
     if (type === 'config:get') { json(envelope({ configVersion: 2, plugin: { name: 'ui-preview' }, plugins: {} })); return }
     if (type === 'config:allSchemas' || type === 'config:schemas') { json(envelope({ schemas: {} })); return }
