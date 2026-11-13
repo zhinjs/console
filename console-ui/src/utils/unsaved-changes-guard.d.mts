@@ -1,10 +1,14 @@
 export function setOwnerDirty(owners: ReadonlySet<string>, key: string, dirty: boolean): ReadonlySet<string>
-export interface GuardedAnchor { href: string; target?: string | null; download?: boolean }
-export interface GuardedClick { defaultPrevented: boolean; button: number; metaKey: boolean; ctrlKey: boolean; shiftKey: boolean; altKey: boolean }
-export function guardedNavigationTarget(anchor: GuardedAnchor | null | undefined, click: GuardedClick, current: { href: string }): string | null
-export interface GuardView {
-  readonly location: { readonly href: string }
-  addEventListener(type: string, listener: (event: any) => void, capture?: boolean): void
-  removeEventListener(type: string, listener: (event: any) => void, capture?: boolean): void
+export interface GuardLocation { readonly pathname: string }
+export function leavesCurrentPage(currentLocation: GuardLocation | null | undefined, nextLocation: GuardLocation | null | undefined): boolean
+export interface GuardBlocker {
+  readonly state: 'unblocked' | 'blocked' | 'proceeding'
+  proceed?(): void
+  reset?(): void
 }
-export function installUnsavedChangesGuard(options: { view: GuardView; confirmLeave: () => boolean | Promise<boolean>; navigate: (path: string) => void }): () => void
+export function createBlockedNavigationHandler(confirmLeave: () => boolean | Promise<boolean>): (blocker: GuardBlocker) => void
+export interface GuardView {
+  addEventListener(type: string, listener: (event: any) => void): void
+  removeEventListener(type: string, listener: (event: any) => void): void
+}
+export function installUnloadGuard(view: GuardView): () => void

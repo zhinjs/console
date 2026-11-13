@@ -7,44 +7,38 @@ export function setOwnerDirty(owners, key, dirty) {
 }
 
 /**
- * The in-app path a plain left click on this anchor would open, or null when the click
- * must be left alone: modified or non-primary clicks, new windows, downloads, other
- * origins, and links that stay on the current page (only the query or hash changes).
+ * Whether a router navigation leaves the current page. Changes that keep the pathname
+ * (only the query or hash differ, e.g. switching plugins inside Settings) keep the page
+ * and its drafts, so they are not guarded.
  */
-export function guardedNavigationTarget(anchor, click, current) {
-  if (!anchor || click.defaultPrevented || click.button !== 0) return null
-  if (click.metaKey || click.ctrlKey || click.shiftKey || click.altKey) return null
-  if (anchor.download || (anchor.target && anchor.target !== '_self')) return null
-  let url
-  try { url = new URL(anchor.href, current.href) } catch { return null }
-  const here = new URL(current.href)
-  if (url.origin !== here.origin || url.pathname === here.pathname) return null
-  return `${url.pathname}${url.search}${url.hash}`
+export function leavesCurrentPage(currentLocation, nextLocation) {
+  if (!currentLocation || !nextLocation) return false
+  return currentLocation.pathname !== nextLocation.pathname
 }
 
 /**
- * While installed: refresh/close triggers the browser's beforeunload prompt, and in-app
- * link clicks are held until the user confirms leaving. Returns the uninstall function.
+ * Settles a react-router blocker: while it is `blocked`, ask once whether to leave, then
+ * `proceed()` or `reset()`. Covers link clicks, programmatic navigate() (command palette)
+ * and browser back/forward alike. Repeated calls during a pending question are ignored.
  */
-export function installUnsavedChangesGuard({ view, confirmLeave, navigate }) {
-  let asking = false
+export function createBlockedNavigationHandler(confirmLeave) {
+  let asking = null
+  return blocker => {
+    if (!blocker || blocker.state !== 'blocked' || asking === blocker) return
+    asking = blocker
+    const settle = leave => {
+      if (asking !== blocker) return
+      asking = null
+      if (blocker.state !== 'blocked') return
+      leave ? blocker.proceed() : blocker.reset()
+    }
+    Promise.resolve().then(confirmLeave).then(settle, () => settle(false))
+  }
+}
+
+/** While installed, refresh/close triggers the browser's beforeunload prompt. Returns the uninstall function. */
+export function installUnloadGuard(view) {
   const beforeUnload = event => { event.preventDefault(); event.returnValue = '' }
-  const click = event => {
-    const anchor = event.target?.closest?.('a[href]')
-    const path = guardedNavigationTarget(anchor && {
-      href: anchor.getAttribute('href') ?? '', target: anchor.getAttribute('target'), download: anchor.hasAttribute('download'),
-    }, event, { href: view.location.href })
-    if (!path) return
-    // Capture phase on window: runs before the router's Link handler and the browser default.
-    event.preventDefault(); event.stopPropagation()
-    if (asking) return
-    asking = true
-    Promise.resolve(confirmLeave()).then(leave => { asking = false; if (leave) navigate(path) }, () => { asking = false })
-  }
   view.addEventListener('beforeunload', beforeUnload)
-  view.addEventListener('click', click, true)
-  return () => {
-    view.removeEventListener('beforeunload', beforeUnload)
-    view.removeEventListener('click', click, true)
-  }
+  return () => view.removeEventListener('beforeunload', beforeUnload)
 }
