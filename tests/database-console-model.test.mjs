@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   clampSplit, readSplitWidth, saveSplitWidth, splitKeyTarget, SPLIT_DEFAULT, SPLIT_MAX, SPLIT_MIN, SPLIT_STORAGE_KEY,
-  databaseCapabilities, isUnsupportedRpcError, nextSort, columnFiltersWhere, columnFilterOperators, isSensitiveColumn,
+  databaseCapabilities, isUnsupportedRpcError, sqlUnavailableReason, needsConsoleRole, isPrivilegeRefusal, nextSort, columnFiltersWhere, columnFilterOperators, isSensitiveColumn,
   readSqlHistory, pushSqlHistory, clearSqlHistory, SQL_HISTORY_KEY, sqlLooksReadOnly, affectedRows, parseDefaultInput, schemaWarningText,
 } from '../console-ui/src/pages/database/database-console-model.mjs'
 
@@ -36,15 +36,37 @@ test('the separator moves with the keyboard', () => {
 })
 
 test('features are detected from the Host capabilities, absent on older Hosts', () => {
-  assert.deepEqual(databaseCapabilities({ dialect: 'sqlite' }), { reported: false, sort: false, filterOperators: [], sql: false, schema: false, reason: '' })
+  assert.deepEqual(databaseCapabilities({ dialect: 'sqlite' }), { reported: false, sort: false, filterOperators: [], sql: false, schema: false, reason: '', sqlReason: '', sqlIsolation: '' })
   assert.deepEqual(databaseCapabilities({ capabilities: { sort: true, filterOperators: ['$eq', 1], sql: true, schema: true } }),
-    { reported: true, sort: true, filterOperators: ['$eq'], sql: true, schema: true, reason: '' })
+    { reported: true, sort: true, filterOperators: ['$eq'], sql: true, schema: true, reason: '', sqlReason: '', sqlIsolation: '' })
   assert.equal(databaseCapabilities({ capabilities: { sort: true, sql: false, schema: false, reason: 'mongodb' } }).reason, 'mongodb')
   assert.equal(isUnsupportedRpcError(new Error('Unknown RPC type: db:query')), true)
   assert.equal(isUnsupportedRpcError(new Error('Database RPC is not available on Plugin Runtime Host yet')), true)
   assert.equal(isUnsupportedRpcError({ message: 'RPC "db:query" 未登记权限', details: { serverCode: 'unmapped' } }), true)
   assert.equal(isUnsupportedRpcError({ message: 'x', details: { dataCode: 'unsupported' } }), true)
   assert.equal(isUnsupportedRpcError(new Error('no such table: x')), false)
+})
+
+test('the SQL editor explains a missing restricted account and privilege refusals (ADR 0059)', () => {
+  const restricted = databaseCapabilities({ capabilities: { sort: true, sql: false, schema: true, sqlIsolation: 'restricted-credential', sqlReason: 'run zhin db console-role', reason: 'run zhin db console-role' } })
+  assert.equal(restricted.sqlIsolation, 'restricted-credential')
+  assert.equal(sqlUnavailableReason(restricted), 'run zhin db console-role')
+  assert.equal(needsConsoleRole(restricted), true)
+  // SQLite, a working account, an older Host: no account hint.
+  assert.equal(needsConsoleRole(databaseCapabilities({ capabilities: { sql: false, schema: true, sqlIsolation: 'separate-store', sqlReason: 'in-memory' } })), false)
+  assert.equal(needsConsoleRole(databaseCapabilities({ capabilities: { sql: true, schema: true, sqlIsolation: 'restricted-credential' } })), false)
+  assert.equal(needsConsoleRole(databaseCapabilities({ capabilities: { sql: false, schema: true, reason: 'sql_mode' } })), false)
+  // An older Host reports only `reason`.
+  assert.equal(sqlUnavailableReason(databaseCapabilities({ capabilities: { sql: false, schema: true, reason: 'sql_mode' } })), 'sql_mode')
+  assert.equal(databaseCapabilities({ capabilities: { sqlIsolation: 'other' } }).sqlIsolation, '')
+
+  assert.equal(isPrivilegeRefusal({ message: 'permission denied for schema public', details: { sqlState: '42501' } }), true)
+  assert.equal(isPrivilegeRefusal({ message: "CREATE command denied to user 'x'@'%' for table 't'", details: { sqlState: '42000' } }), true)
+  assert.equal(isPrivilegeRefusal({ message: 'You have an error in your SQL syntax', details: { sqlState: '42000' } }), false)
+  assert.equal(isPrivilegeRefusal({ message: 'relation "x" does not exist', details: { sqlState: '42P01' } }), false)
+  // Host before ADR 0059: no SQLSTATE, PostgreSQL's text.
+  assert.equal(isPrivilegeRefusal(new Error('permission denied for table console_users')), true)
+  assert.equal(isPrivilegeRefusal(new Error('no such table: x')), false)
 })
 
 test('header clicks cycle ascending, descending, none', () => {

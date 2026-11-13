@@ -18,8 +18,13 @@ export interface DatabaseCapabilities {
   readonly sql: boolean
   readonly schema: boolean
   readonly reason: string
+  readonly sqlReason: string
+  readonly sqlIsolation: '' | 'separate-store' | 'restricted-credential'
 }
 export function databaseCapabilities(info: unknown): DatabaseCapabilities
+export function sqlUnavailableReason(capabilities: DatabaseCapabilities | null | undefined): string
+export function needsConsoleRole(capabilities: DatabaseCapabilities | null | undefined): boolean
+export function isPrivilegeRefusal(error: unknown): boolean
 export function isUnsupportedRpcError(error: unknown): boolean
 export function databaseRefusalCode(error: unknown): string
 

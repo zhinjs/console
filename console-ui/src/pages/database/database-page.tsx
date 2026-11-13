@@ -21,7 +21,7 @@ import { KvBucketView } from './kv-bucket-view'
 import { SqlConsole } from './sql-console'
 import { SchemaEditor, CreateTableEditor } from './schema-editor'
 import { SplitHandle, useSplitWidth } from './resizable-split'
-import { databaseCapabilities } from './database-console-model.mjs'
+import { databaseCapabilities, needsConsoleRole, sqlUnavailableReason } from './database-console-model.mjs'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
 import { useToast } from '../../components/toast'
 import { withoutDroppedTables, type DroppedTables } from './drop-table-model.mjs'
@@ -166,7 +166,7 @@ export default function DatabasePage() {
                   </div>
                   <div className="flex-1 min-h-0 min-w-0 p-3 sm:p-4 overflow-hidden">
                     {tool === 'sql' ? (
-                      <SqlConsole admin={databaseAdmin} canWrite={canSchema} supported={capabilities.sql} reason={capabilities.sql ? undefined : unsupportedReason}
+                      <SqlConsole admin={databaseAdmin} canWrite={canSchema} supported={capabilities.sql} reason={capabilities.sql ? undefined : (sqlUnavailableReason(capabilities) || unsupportedReason)} needsRole={needsConsoleRole(capabilities)}
                         dialect={DIALECT_LABELS[info?.dialect ?? ''] || info?.dialect || ''} />
                     ) : (
                       <CreateTableEditor admin={databaseAdmin} supported={capabilities.schema} reason={capabilities.schema ? undefined : unsupportedReason}

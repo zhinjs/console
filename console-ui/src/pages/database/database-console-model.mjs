@@ -65,7 +65,34 @@ export function databaseCapabilities(info) {
     sql: reported?.sql === true,
     schema: reported?.schema === true,
     reason: typeof reported?.reason === 'string' ? reported.reason : '',
+    // Why raw SQL is off while the schema editor may work (no restricted account, failed probe, ADR 0059).
+    sqlReason: typeof reported?.sqlReason === 'string' ? reported.sqlReason : '',
+    // `separate-store` (SQLite) | `restricted-credential` (PostgreSQL / MySQL) | '' (older Host).
+    sqlIsolation: reported?.sqlIsolation === 'separate-store' || reported?.sqlIsolation === 'restricted-credential' ? reported.sqlIsolation : '',
   })
+}
+
+/** Why the SQL editor is unavailable, as the Host reported it ('' when it gave none). */
+export function sqlUnavailableReason(capabilities) {
+  return capabilities?.sqlReason || capabilities?.reason || ''
+}
+
+/** The SQL editor is off because PostgreSQL / MySQL have no usable restricted account (`zhin db console-role`). */
+export function needsConsoleRole(capabilities) {
+  return capabilities?.sqlIsolation === 'restricted-credential' && capabilities?.sql === false && !!capabilities?.reported
+}
+
+/**
+ * The server refused a statement for lack of privilege (SQLSTATE 42501, or MySQL 42000 with a
+ * "command denied" message): the restricted Console account cannot do it. Hosts before ADR 0059
+ * send no SQLSTATE; PostgreSQL's "permission denied" text is recognised then.
+ */
+export function isPrivilegeRefusal(error) {
+  const state = error?.details?.sqlState
+  if (state === '42501') return true
+  const message = String(error?.message ?? error ?? '')
+  if (state === '42000') return /command denied|access denied/iu.test(message)
+  return state === undefined && /^permission denied for /iu.test(message)
 }
 
 /** An RPC the Host does not know (older Host): hide the feature rather than report a failure. */
