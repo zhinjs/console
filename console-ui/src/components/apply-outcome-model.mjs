@@ -35,14 +35,25 @@ export const APPLY_OUTCOME_COPY = Object.freeze({
 export const APPLY_BASIS_COPY = Object.freeze({
   application: 'Host 返回的生效明细',
   'restart-flag': 'Host 返回的 restartRequired',
-  'apply-table': '功能覆盖原地生效（features.md「生效方式」）',
+  'apply-table': '功能覆盖不需要重启，从下一条消息开始按新设置处理',
   'gateway-transaction': '网关启停事务已重启实例',
   unchanged: '内容没有变化',
-  'env-file': '运行中的实例把 .env 变化记为「待重启」，继续使用旧值（zhin runtime planRuntimeInputs：environment → restart-process / restart-pending，原因 environment-host-consumers）',
+  'env-file': '实例只在启动时读取 .env，运行中会继续使用旧值',
   restart: '实例已重启',
-  'per-request': '网关每次请求都从数据库读取账号、角色绑定与令牌（gateway iam authenticate → #principal）',
-  scheduler: '调度引擎在写入时立即注册或撤销定时器（ScheduleJobEngine addJob / pauseJob / resumeJob / removeJob）',
-  'chat-roles': '每条消息按已存的授予解析聊天角色（ChatRoleService.effectiveRoles）',
+  'per-request': '每次请求都会重新读取账号、角色和令牌，从下一次请求开始按新设置鉴权',
+  scheduler: '定时任务在保存时立即生效，不需要重启',
+  'chat-roles': '聊天角色在每条消息到达时重新判断，从下一条消息开始生效',
+})
+
+/**
+ * The zhin code that makes each user-facing basis true (for maintainers; not shown in the UI).
+ * Re-check these when the Host changes, and update the plain-language copy above with them.
+ */
+export const APPLY_BASIS_SOURCE = Object.freeze({
+  'env-file': 'runtime root-runtime-config planRuntimeInputs: environment → restart-process / restart-pending (reason environment-host-consumers); the instance reads the env store once at startup',
+  'per-request': 'gateway iam/service authenticate → #principal reads roles, bindings and tokens from the database on every request',
+  scheduler: 'agent assistant timer-scheduler addJob / pauseJob / resumeJob / removeJob register or cancel timers on write',
+  'chat-roles': 'core built/roles ChatRoleService.effectiveRoles resolves stored grants for every message',
 })
 
 /** Authored notes an outcome may carry. */

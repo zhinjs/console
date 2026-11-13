@@ -48,6 +48,7 @@ export type RestartEvent =
 export const APPLY_OUTCOME_KINDS: readonly ApplyOutcomeKind[]
 export const APPLY_OUTCOME_COPY: Readonly<Record<ApplyOutcomeKind | 'unconfirmed' | 'restarted', Readonly<{ title: string; description: string }>>>
 export const APPLY_BASIS_COPY: Readonly<Record<ApplyBasis, string>>
+export const APPLY_BASIS_SOURCE: Readonly<Partial<Record<ApplyBasis, string>>>
 export function outcomeFromConfigSave(result: unknown, revision?: string): ApplyOutcome
 export function outcomeFromFeatureWrite(result: unknown, level: string): ApplyOutcome | null
 export function outcomeFromPluginSwitch(result: unknown): ApplyOutcome | null

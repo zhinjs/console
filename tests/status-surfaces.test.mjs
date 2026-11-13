@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
-  APPLY_BASIS_COPY, APPLY_OUTCOME_COPY, IDLE_RESTART, MASKED_VALUE, RESTART_TIMEOUT_MS, applyOutcomeCopy, applyOutcomeTone,
+  APPLY_BASIS_COPY, APPLY_BASIS_SOURCE, APPLY_OUTCOME_COPY, IDLE_RESTART, MASKED_VALUE, RESTART_TIMEOUT_MS, applyOutcomeCopy, applyOutcomeTone,
   APPLY_NOTE_COPY, canonicalJson, outcomeFromAccessWrite, outcomeFromChatRoleWrite, outcomeFromScheduleWrite, recordReadBack, runReadBack, outcomeFromConfigSave, outcomeFromEnvSave, outcomeFromFeatureWrite, outcomeFromPluginSwitch, readBackMismatch,
   restartElapsedSeconds, restartInProgress, restartObservedBack, restartReducer, schemaSecretAt,
 } from '../console-ui/src/components/apply-outcome-model.mjs'
@@ -444,13 +444,15 @@ test('access control, schedules and chat roles end in an outcome whose basis nam
     assert.notEqual(copy.description, APPLY_OUTCOME_COPY.applied.description)
     assert.ok(Object.hasOwn(englishMessages, copy.description), copy.description)
   }
-  assert.match(APPLY_BASIS_COPY['per-request'], /#principal/u)
-  assert.match(APPLY_BASIS_COPY.scheduler, /addJob \/ pauseJob \/ resumeJob \/ removeJob/u)
-  assert.match(APPLY_BASIS_COPY['chat-roles'], /effectiveRoles/u)
+  assert.match(APPLY_BASIS_SOURCE['per-request'], /#principal/u)
+  assert.match(APPLY_BASIS_SOURCE.scheduler, /addJob \/ pauseJob \/ resumeJob \/ removeJob/u)
+  assert.match(APPLY_BASIS_SOURCE['chat-roles'], /effectiveRoles/u)
   // .env: the runtime classifies an environment change as restart-pending and keeps the old layers.
-  assert.match(APPLY_BASIS_COPY['env-file'], /planRuntimeInputs/u)
-  assert.match(APPLY_BASIS_COPY['env-file'], /restart-pending/u)
-  assert.match(APPLY_BASIS_COPY['env-file'], /environment-host-consumers/u)
+  assert.match(APPLY_BASIS_SOURCE['env-file'], /planRuntimeInputs/u)
+  assert.match(APPLY_BASIS_SOURCE['env-file'], /restart-pending/u)
+  assert.match(APPLY_BASIS_SOURCE['env-file'], /environment-host-consumers/u)
+  // The user-facing copy is plain language: no code identifiers.
+  for (const text of Object.values(APPLY_BASIS_COPY)) assert.doesNotMatch(text, /[#.]?[a-z]+[A-Z][A-Za-z]*\(|planRuntimeInputs|#principal|effectiveRoles|addJob|restart-pending/u, text)
   for (const text of [...Object.values(APPLY_BASIS_COPY), ...Object.values(APPLY_NOTE_COPY)]) assert.ok(Object.hasOwn(englishMessages, text), text)
 })
 
