@@ -21,6 +21,7 @@ import { CONSOLE_PATHS } from "../console-routes.mjs"
 import { objectPageOwnsBreadcrumb } from "../scope/scope-tree.mjs"
 import { ConsoleCommandCenter } from "../components/ConsoleCommandCenter"
 import { LogPanel, LogPanelButton, useLogPanelLayout } from "../components/log-panel/LogPanel"
+import { AttentionBadge } from "../pages/attention/AttentionBadge"
 import "./workspace-navigation.css"
 import { resolveNavigationLocation } from "../navigation-location.mjs"
 import { buildNavigation, routeSectionId, sectionById } from "../navigation-sections.mjs"
@@ -247,6 +248,7 @@ export default function DashboardLayout() {
           <div className="console-topnav-actions">
             <ConsoleCommandCenter routes={routes} />
             <LogPanelButton />
+            <AttentionBadge />
             <span
               className={cn("console-connection-dot", connected ? "is-online" : "is-offline")}
               title={connectionTitle}

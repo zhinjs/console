@@ -7,6 +7,7 @@ import { scopeHref } from './scope/scope-tree.mjs'
 export const CONSOLE_PATHS = Object.freeze({
   // 概览
   dashboard: '/dashboard',
+  attention: '/attention',
   logs: '/logs',
   agentWorkbench: '/agent/workbench',
   agentReplay: '/agent/replay',

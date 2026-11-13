@@ -10,6 +10,7 @@ import { LEGACY_ROUTE_REDIRECTS } from '../console-routes.mjs'
  */
 export const ROUTE_SEARCH_HINTS = Object.freeze({
   '/dashboard': { description: '机器人是否正常、有什么要处理', keywords: ['首页', '总览', '概览', '健康', '状态', '消息量', 'home', 'overview', 'health'] },
+  '/attention': { description: '登录、离线账号、插件与配置问题、待审批：需要你动手的事项', keywords: ['需要处理', '待办', '提醒', '告警', '问题', '修复', '审批', 'attention', 'inbox', 'todo', 'issues', 'repairs'] },
   '/sandbox': { description: '与 Agent 对话并处理工作', keywords: ['对话', '聊天', '会话', '提问', 'chat', 'conversation'] },
   '/ops/schedules': { description: '管理员任务、定时提醒、助手任务与执行记录', keywords: ['任务', '定时', '提醒', '定时任务', 'cron', '计划', '助手任务', '执行记录', '待办', 'schedule', 'reminder', 'job'] },
   '/use-cases/group-welcome': { description: '一步步配置新成员入群欢迎并到真实群验证', keywords: ['欢迎', '新成员', '入群', '进群', '欢迎语', 'welcome', 'new member', 'onboarding'] },

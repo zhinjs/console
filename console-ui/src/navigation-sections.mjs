@@ -52,6 +52,7 @@ export function routeSectionId(route) {
  */
 export const ROUTE_PERMISSIONS = Object.freeze({
   '/dashboard': ['status.view'],
+  '/attention': ['status.view'],
   '/logs': ['status.view'],
   '/agent/workbench': ['status.view', 'agent.view'],
   '/agent/replay': ['status.view', 'agent.view'],

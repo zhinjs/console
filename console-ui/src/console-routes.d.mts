@@ -2,7 +2,7 @@ import type { ScopeTab } from './scope/scope-tree.mjs'
 import type { ConversationKind } from './pages/features/feature-model.mjs'
 
 export const CONSOLE_PATHS: Readonly<{
-  dashboard: '/dashboard'; logs: '/logs'; agentWorkbench: '/agent/workbench'; agentReplay: '/agent/replay'; agentUsage: '/agent/usage'
+  dashboard: '/dashboard'; attention: '/attention'; logs: '/logs'; agentWorkbench: '/agent/workbench'; agentReplay: '/agent/replay'; agentUsage: '/agent/usage'
   sandbox: '/sandbox'; scope: '/scope'; scopeAdapter: '/scope/:adapter'; scopeEndpoint: '/scope/:adapter/:endpoint'
   scopeConversation: '/scope/:adapter/:endpoint/:conversation'; agentSessions: '/agent/sessions'
   features: '/features'; featureGlobal: '/features/global/:plugin'; ai: '/features/ai'; aiSkills: '/features/ai/skills'

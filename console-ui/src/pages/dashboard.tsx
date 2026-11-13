@@ -43,7 +43,6 @@ import {
   Reply,
   Server,
   ShieldAlert,
-  Sparkles,
   VolumeX,
   Wrench,
 } from 'lucide-react'
@@ -72,6 +71,10 @@ import {
   SheetTitle,
 } from '../components/ui/sheet'
 import './dashboard.css'
+import { ATTENTION_PATH, DASHBOARD_ATTENTION_LIMIT } from './attention/attention-model.mjs'
+import { AttentionSeverityIcon } from './attention/AttentionItemRow'
+import { useAttention } from './attention/use-attention'
+import './attention/attention.css'
 
 interface Stats {
   plugins: { total: number; active: number }
@@ -133,13 +136,6 @@ interface ControlState {
   available: boolean
   persistent?: boolean
   instance: Record<ControlSwitchKey, boolean>
-}
-
-interface AttentionItem {
-  title: string
-  detail: string
-  path: string
-  tone: 'warning' | 'danger' | 'neutral'
 }
 
 const EMPTY_OPTIONAL: OptionalOverview = {
@@ -383,6 +379,7 @@ export default function HomePage() {
   const readOnly = !hasConsolePermission('agent.configure')
   const { success, error: toastError } = useToast()
   const connected = useConsoleConnected()
+  const attention = useAttention()
   const [messageEvents, setMessageEvents] = useState<unknown[]>([])
   const [messagesLoaded, setMessagesLoaded] = useState(false)
   const [messagesTruncated, setMessagesTruncated] = useState(false)
@@ -565,61 +562,6 @@ export default function HomePage() {
     },
   ], [optional, stats, i18n, disconnectedMcp])
 
-  const attentionItems = useMemo<AttentionItem[]>(() => {
-    const items: AttentionItem[] = []
-    if (!stats && error) {
-      return [{
-        title: i18n.t("Host 暂时不可达"),
-        detail: i18n.t("控制面仍可继续使用；恢复连接后会自动刷新运行状态。"),
-        path: CONSOLE_PATHS.opsInstance,
-        tone: 'danger',
-      }]
-    }
-    if ((stats?.endpoints.total ?? 0) === 0) {
-      items.push({
-        title: i18n.t("还没有聊天账号"),
-        detail: i18n.t("先用 Sandbox 验证，再接入真实平台。"),
-        path: '/scope',
-        tone: 'neutral',
-      })
-    } else if (offlineEndpoints > 0) {
-      items.push({
-        title: i18n.t("{0} 个聊天账号离线", [offlineEndpoints]),
-        detail: i18n.t("检查凭据、网络和适配器日志。"),
-        path: '/scope',
-        tone: 'warning',
-      })
-    }
-    if (disconnectedMcp > 0) {
-      items.push({
-        title: i18n.t("{0} 个 MCP 服务未连接", [disconnectedMcp]),
-        detail: i18n.t("Agent 暂时无法调用这些服务提供的工具。"),
-        path: '/introspection?tab=mcp',
-        tone: 'warning',
-      })
-    }
-    if ((optional.errorLogs ?? 0) > 0) {
-      items.push({
-        title: i18n.t("历史错误 {0} 条", [optional.errorLogs]),
-        detail: i18n.t("打开错误日志"),
-        path: '/logs?level=error',
-        tone: 'danger',
-      })
-    }
-    if ((optional.warningLogs ?? 0) > 0) {
-      items.push({
-        title: i18n.t("历史警告 {0} 条", [optional.warningLogs]),
-        detail: i18n.t("打开警告日志"),
-        path: '/logs?level=warn',
-        tone: 'warning',
-      })
-    }
-    if (optional.errorLogs === null) {
-      items.push({ title: i18n.t("日志状态暂时不可读"), detail: optional.logReadError ?? i18n.t("尚无法确认是否有运行错误，请打开日志页检查读取详情。"), path: '/logs', tone: 'warning' })
-    }
-    return items.slice(0, 4)
-  }, [error, offlineEndpoints, disconnectedMcp, optional, stats, i18n])
-
   const handleToggleControl = async (key: ControlSwitchKey) => {
     if (!controlState?.available || readOnly || controlUpdating) return
     const currentValue = Boolean(controlState.instance?.[key])
@@ -763,23 +705,35 @@ export default function HomePage() {
         </Alert>
       ) : null}
 
-      {attentionItems.length > 0 ? (
-        <section className="console-attention-strip" aria-label={i18n.t("需要关注")}>
-          {attentionItems.map((item) => (
-            <ListItemButton
-              key={item.title}
-              type="button"
-              className={`console-attention-item is-${item.tone}`}
-              onClick={() => navigate(item.path)}
-            >
-              {item.tone === 'neutral' ? <Sparkles /> : <AlertTriangle />}
-              <span className="min-w-0 flex-1 text-left">
-                <span className="block text-sm font-semibold">{item.title}</span>
-                <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">{item.detail}</span>
-              </span>
-              <ArrowUpRight />
-            </ListItemButton>
-          ))}
+      {attention.allowed && (attention.active.length > 0 || (attention.state.status === 'error' && !attention.state.data)) ? (
+        <section className="console-dashboard-panel" aria-labelledby="attention-title">
+          <div className="console-card-heading">
+            <h2 id="attention-title">{i18n.t("需要你处理")}</h2>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to={ATTENTION_PATH}>{i18n.t("查看全部 ({0})", [attention.active.length])}<ArrowUpRight /></Link>
+            </Button>
+          </div>
+          {attention.active.length > 0 ? (
+            <div className="console-attention-strip">
+              {attention.active.slice(0, DASHBOARD_ATTENTION_LIMIT).map((item) => (
+                <ListItemButton
+                  key={item.id}
+                  type="button"
+                  className={`console-attention-item is-${item.severity}`}
+                  onClick={() => navigate(item.action.path)}
+                >
+                  <AttentionSeverityIcon severity={item.severity} />
+                  <span className="min-w-0 flex-1 text-left">
+                    <span className="block text-sm font-semibold">{item.title}</span>
+                    {item.detail ? <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">{item.detail}</span> : null}
+                  </span>
+                  <ArrowUpRight />
+                </ListItemButton>
+              ))}
+            </div>
+          ) : (
+            <StatusState compact error={attention.state.error} onRetry={attention.refresh} />
+          )}
         </section>
       ) : null}
 
