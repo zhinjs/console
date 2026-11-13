@@ -1,10 +1,10 @@
 /**
  * Chat roles (ADR 0056): `owner` ⊃ `admin` ⊃ `trusted`, held by a platform identity
  * `(adapter alias, userId)` at one scope of the four-level chain. RPC names and roles come from
- * the protocol mirror (`contracts/console-protocol-mirror.mjs`).
+ * `@zhin.js/console-protocol`.
  */
 import { SCOPE_LEVELS, parseScopeKey, scopeChain, scopeKey } from './scope-tree.mjs'
-import { CHAT_ROLES_RPC, CHAT_ROLES_RPC_PERMISSIONS, CONSOLE_CHAT_ROLES } from '../contracts/console-protocol-mirror.mjs'
+import { CHAT_ROLES_RPC, CHAT_ROLES_RPC_PERMISSIONS, CONSOLE_CHAT_ROLES } from '@zhin.js/console-protocol'
 
 export { CHAT_ROLES_RPC }
 

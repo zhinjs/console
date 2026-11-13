@@ -2,14 +2,14 @@
  * 访问控制区（ADR 0049）的纯数据与校验。
  *
  * Protocol constants (`IAM_RPC`, the permission catalog, scoped permissions) come from
- * `contracts/console-protocol-mirror.mjs`; reply readers follow the Host's `iam.*` shapes
+ * `@zhin.js/console-protocol`; reply readers follow the Host's `iam.*` shapes
  * (`packages/host/gateway/src/iam/{rpc,service}.ts` in zhinjs/zhin). Readers tolerate missing
  * fields and never invent data.
  */
 
 import {
   CONSOLE_BUILTIN_ROLE_NAMES, CONSOLE_PERMISSION_LIST as PROTOCOL_PERMISSION_LIST, CONSOLE_SCOPED_PERMISSIONS, IAM_RPC,
-} from '../../contracts/console-protocol-mirror.mjs'
+} from '@zhin.js/console-protocol'
 
 export { IAM_RPC }
 
@@ -43,7 +43,7 @@ export function isConsolePermission(value) {
  * Permissions an adapter / endpoint binding can narrow; the rest only count at global scope.
  * `iam.manage` narrows to `chat-roles.*` of scopes under the binding (ADR 0056 §3).
  */
-export const SCOPED_PERMISSIONS = CONSOLE_SCOPED_PERMISSIONS
+export const SCOPED_PERMISSIONS = Object.freeze([...CONSOLE_SCOPED_PERMISSIONS])
 
 export const BUILTIN_ROLE_NAMES = CONSOLE_BUILTIN_ROLE_NAMES
 export const OWNER_ROLE = 'owner'

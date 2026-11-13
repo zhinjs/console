@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-// The published SDK the site is locked to (@zhin.js/client ~1.1.31): its real transport and error classes.
+// The published SDK the site is locked to (@zhin.js/client ~1.1.32): its real transport and error classes.
 import { ConsoleTransport } from '../node_modules/@zhin.js/client/dist/transport/console-transport.js'
 import { ConsoleTransportError, MessageError } from '../node_modules/@zhin.js/client/dist/transport/types.js'
 import { capturingFetch, requestWithCapture } from '../console-ui/src/utils/rpc-reply-capture.mjs'
@@ -29,12 +29,12 @@ async function failure(t, request = { type: 'feature.set-enabled' }) {
 
 const submitting = { phase: 'submitting', plan: { title: 'x' } }
 
-test('the published SDK loses the Host code and the timeout cause (what the Console has to work around)', async () => {
-  // Without the capture, every failure is a bare MessageError / SERVER_ERROR text.
-  const plain = new ConsoleTransport({ fetch: async () => json(409, { success: false, code: 'locked', lockedBy: 'adapter', error: '已锁定' }) })
+test('the published SDK keeps the Host code but loses lockedBy, requestOutcome, the status and Retry-After (what the Console has to work around)', async () => {
+  // Since @zhin.js/client 1.1.32 the SDK reads `code` / `errors` / `missingEnv` into `details`; the rest still needs the capture.
+  const plain = new ConsoleTransport({ fetch: async () => json(503, { success: false, code: 'instance_unavailable', requestOutcome: 'not-dispatched', lockedBy: 'adapter', error: '不可用' }, { 'retry-after': '7' }) })
   const error = await plain.sendRequest({ type: 'feature.set-enabled' }).catch(caught => caught)
   assert.ok(error instanceof ConsoleTransportError)
-  assert.deepEqual([error.code, error.message, error.details], ['SERVER_ERROR', '已锁定', undefined])
+  assert.deepEqual([error.code, error.message, error.details], ['SERVER_ERROR', '不可用', { serverCode: 'instance_unavailable' }])
 })
 
 test('a timeout, a network failure and an unreadable reply are 结果未知 / 断连, never 未执行', async () => {

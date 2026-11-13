@@ -1,10 +1,11 @@
 /**
- * What the published SDK's `ConsoleTransport.sendRequest` (@zhin.js/client ~1.1.31) throws away.
+ * What the published SDK's `ConsoleTransport.sendRequest` (@zhin.js/client ~1.1.32) throws away.
  *
  * It throws `MessageError('REST request failed')` (code `MESSAGE_ERROR`) for a timeout
- * (`AbortSignal.timeout`), a network failure and a reply that is not JSON alike, and keeps only
- * `json.error` of a Host refusal (code `SERVER_ERROR`): the Host's `code`, `requestOutcome`,
- * `lockedBy`, `missingEnv` and the `Retry-After` header are lost. The Console's transport fetch
+ * (`AbortSignal.timeout`), a network failure and a reply that is not JSON alike. For a Host refusal
+ * (code `SERVER_ERROR`) it keeps `json.error` and, since 1.1.32, `code` / `errors` / `missingEnv` in
+ * `details`; the HTTP status, `requestOutcome`, `lockedBy`, `needsConfiguration` and the
+ * `Retry-After` header are still lost. The Console's transport fetch
  * records the reply of each RPC here, and {@link enrichRpcError} puts what the Host said back on the
  * error as `details` (the shape newer SDKs use), so `statusFromError` can tell 结果未知 from 未执行.
  *

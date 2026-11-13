@@ -6,7 +6,7 @@
  * Navigation and read-only affordances read this store; it never grants anything the Host denies.
  */
 
-import { CONSOLE_SCOPED_PERMISSIONS } from '../contracts/console-protocol-mirror.mjs'
+import { CONSOLE_SCOPED_PERMISSIONS } from '@zhin.js/console-protocol'
 
 /**
  * `{ unrestricted: true }` or `{ unrestricted: false, permissions, scoped }`: `permissions` are held

@@ -395,9 +395,10 @@ test('released Zhin rich-message renderer is the single Markdown implementation'
 test('package manifest targets the released Zhin contract generation', () => {
   const manifest = JSON.parse(sourceText(join(ROOT, 'package.json')))
   // One SDK generation: the tilde ranges keep npm from resolving the unrelated 1.5.x / 2.x lines.
-  assert.equal(manifest.dependencies['@zhin.js/client'], '~1.1.31')
-  assert.equal(manifest.dependencies['@zhin.js/contract'], '~1.1.22')
-  assert.equal(manifest.dependencies['@zhin.js/ai'], '~1.1.54')
+  assert.equal(manifest.dependencies['@zhin.js/client'], '~1.1.32')
+  assert.equal(manifest.dependencies['@zhin.js/contract'], '~1.1.23')
+  assert.equal(manifest.dependencies['@zhin.js/ai'], '~1.1.55')
+  assert.equal(manifest.dependencies['@zhin.js/console-protocol'], '~1.2.0')
   assert.equal(Object.keys(manifest.dependencies).some(name => name.startsWith('@zhin.js/client-')), false)
   const lock = sourceText(join(ROOT, 'pnpm-lock.yaml'))
   for (const name of ['client', 'contract', 'console-protocol', 'ai']) {

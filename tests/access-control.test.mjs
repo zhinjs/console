@@ -12,14 +12,14 @@ import { ROUTE_PERMISSIONS, buildNavigation } from '../console-ui/src/navigation
 import { CONSOLE_PATHS } from '../console-ui/src/console-routes.mjs'
 import { createConsoleAccess } from '../console-ui/src/utils/console-access.mjs'
 import { translate } from '../console-ui/src/i18n/locale.mjs'
-import { CONSOLE_PERMISSION_LIST as MIRROR_PERMISSION_LIST } from '../console-ui/src/contracts/console-protocol-mirror.mjs'
+import { CONSOLE_PERMISSION_LIST as UPSTREAM_PERMISSION_LIST } from '@zhin.js/console-protocol'
 
 const zh = (message, values) => translate('zh-CN', message, values)
 const en = (message, values) => translate('en', message, values)
 const read = path => readFileSync(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')
 
-// The protocol catalog, from the single hand copy (`tests/protocol-mirror.test.mjs` compares it with the protocol source).
-const PROTOCOL_PERMISSIONS = [...MIRROR_PERMISSION_LIST]
+// The protocol catalog, from the published `@zhin.js/console-protocol`.
+const PROTOCOL_PERMISSIONS = [...UPSTREAM_PERMISSION_LIST]
 
 const user = (id, bindings, extra = {}) => ({ id, username: id, displayName: id, disabled: false, bindings, ...extra })
 const owner = { role: 'owner', scope: { kind: 'global' } }
