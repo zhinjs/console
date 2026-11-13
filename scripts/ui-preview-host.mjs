@@ -9,6 +9,8 @@ const endpoints = [
   { name: 'preview-support', adapter: 'telegram', connected: false, status: 'offline', transportState: 'stopped', phase: 'stopped', endpoint: { adapter: 'telegram', id: 'preview-support' }, managementCapabilities: [], pendingRequestCount: 0, pendingNoticeCount: 0 },
 ]
 const logs = [
+  { id: 6, timestamp: Date.now() - 5_000, level: 'warn', name: 'telegram', plugin: 'telegram', message: 'preview-support 等待短信验证码，登录尚未完成' },
+  { id: 5, timestamp: Date.now() - 8_000, level: 'info', name: 'telegram', plugin: 'telegram', message: 'preview-support 已发送登录验证请求（sms）' },
   { id: 4, timestamp: Date.now() - 10_000, level: 'info', name: 'icqq', plugin: 'icqq', message: 'preview-community 向 group 20001 发送消息成功' },
   { id: 3, timestamp: Date.now() - 20_000, level: 'info', name: 'preview', plugin: 'preview', message: '这是本地界面预览，不连接真实平台。' },
   { id: 2, timestamp: Date.now() - 40_000, level: 'warn', name: 'preview', plugin: 'preview', message: '客服账号尚未启动。请在账号页检查状态。' },

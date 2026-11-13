@@ -53,6 +53,7 @@ function fixture({ readOnly = false, available = true, jobs = [], deferJobs = fa
     './assistant-jobs-model.mjs': { validateAssistantJobs, explainJobError }, './task-hub-model.mjs': { taskTabHref },
     '../components/ui/tabs': { Tabs: 'tabs', TabsList: 'tab-list', TabsTrigger: 'tab-trigger', TabsContent: 'tab-panel' },
     './ScheduleExecutions': { ScheduleExecutions: 'schedule-executions' },
+    '../components/log-panel/LogPanel': { useLogPanel: () => ({ available: false, open() {} }) },
     '../utils/auth': { apiFetch: (url, options) => new Promise((resolve, reject) => { httpCalls.push({ url, options, resolve, reject, scope: authority.current() }); if (!deferJobs) resolve({ ok: true, json: async () => ({ success: true, data: { jobs, eventsActive: false } }) }) }) }, './cron.css': {},
   }, { window: { setInterval: () => 1, clearInterval: () => {} }, setTimeout: callback => { timers.push(callback); return timers.length }, clearTimeout: () => {} })
   let tree

@@ -23,10 +23,16 @@
 
 外壳（`layouts/dashboard.tsx` + `shell.css`）：灰色画布上方悬浮一条胶囊导航栏（距顶 12px、高 60px，半透明白底 + 背景模糊，页面滚动后底色加深），内容是居中的单列，最宽 1440px（`--console-content-max`），左右留 `--console-space-page-x`。整页随窗口滚动，导航栏固定；吸顶元素与锚点跳转都要让出导航栏高度（`--console-header-h`，`html` 上设了 `scroll-padding-top`）。
 
-导航栏从左到右：品牌 → 六个区（日常、管理两组，中间一条竖线）→ 快速跳转（Ctrl/⌘ K）、实时连接状态点、语言、外观、个人设置、退出。
+导航栏从左到右：品牌 → 六个区（日常、管理两组，中间一条竖线）→ 快速跳转（Ctrl/⌘ K）、底部日志面板（Ctrl `）、实时连接状态点、语言、外观、个人设置、退出。
 
 - 只有一个页面的区是直接链接（显示页面名），有多个页面的区是下拉菜单（显示区名，当前页在其中时按钮高亮）。导航模型只有一个：`buildNavigation(routes, access)`，不要在别处另排菜单。
 - 宽度不到 1100px（`useIsCompactNav`）时，区不再放在栏里，改由左上角菜单按钮打开左侧抽屉：抽屉按 日常 / 管理 → 区 → 页面列出全部页面；关闭时 `inert`，打开时页面与导航栏 `inert`，Esc（先让开 Radix 弹层自己的 Esc）或点遮罩关闭，焦点回到菜单按钮。
+- **底部日志面板**（`components/log-panel/`，外壳挂一次）是全局浮层里唯一的非模态面板：任何页面都能打开它看实时日志，不打断手上的事。
+  - 入口：顶栏图标按钮（`aria-expanded` / `aria-controls`）、快捷键 Ctrl `（两个平台都用 Ctrl：⌘` 是 macOS 切换窗口；不与 Ctrl/⌘ K 冲突，快速跳转的动作与页脚写明了它）、快速跳转的「打开日志面板」，以及页面里的 `openLogPanel({ q, adapter, endpoint, level })`（`useLogPanel()` 同时给出 `available`）。页面里「去日志页看看」的链接，只要留在当前页更好（正在扫码登录、填写配置、只存在内存里的确认记录），就改成打开面板并带上筛选；没有面板时保留原来的 `/logs?q=` 链接。
+  - 内容是与 `/logs` 相同的 `LogViewer`（`pages/logs/LogViewer.tsx`）：筛选由外部控制（`params` + `onParamsChange`）。`/logs` 传地址栏的参数，面板传自己的状态（`log-panel-store.mjs`），**绝不改当前页面的地址**；面板标题栏的「在日志页打开」带着同一组筛选去 `/logs`。上次的筛选与高度记在 localStorage（读写都 try/catch，读不到用默认值）。
+  - 宽屏：停靠在底部、占满内容宽度，**非模态**——没有遮罩，页面不 `inert`，没有焦点陷阱；页面底部让出面板高度（`--console-log-panel-reserve`，toast 也随之上移），最后几行照样能滚到。上边缘拖动条 `role="separator"` 可拖、可用 ↑ / ↓（Shift 加大步长）/ Home / End 调整，180px 到视口 80%。打开时焦点移进面板，关闭时回到打开它的控件（用户已把焦点移到页面别处时不抢）；Esc 只在焦点位于面板内、且没有内层弹层先消费时关闭。
+  - 手机（<768px）：模态底部抽屉，遮罩 + 页面与导航栏 `inert`，没有拖动条。`prefers-reduced-motion` 下不做滑入动画。
+  - 只对能看 `/logs` 的身份出现（`ROUTE_PERMISSIONS['/logs']`，即 `status.view`）：按钮、快捷键、快速跳转动作与页面里的「查看日志」一起隐藏。只在打开时挂载 `LogViewer`，关闭即停止轮询；在 `/logs` 页上面板不显示（按钮禁用），两个查看器不会同时轮询同一个接口，离开 `/logs` 后面板回来。标签页隐藏时轮询跳过请求。
 - `fullWidth` 路由（日志、数据库、终端、对象树的账号与会话层等）内容不受 1440px 限制，导航栏跟着放宽，两侧边缘对齐。
 - 换页时内容 200ms 淡入并上移 8px（`--console-ease-out`，`prefers-reduced-motion` 下关闭）；只改查询参数（页签、筛选）不触发动画，也不回到顶部。
 
@@ -161,4 +167,5 @@
 | `StatusState` / `status-state-model.mjs` | `components/` | 统一状态与错误解析 |
 | `ActionReceipt` / `useActionReceipt` / `action-receipt-model.mjs` | `components/` | 写操作回执 |
 | `InstanceUnavailableBanner` / `utils/instance-availability.mjs` | shell | 实例不可用横幅 |
+| `LogPanel` / `LogPanelButton` / `useLogPanel` / `openLogPanel` | `components/log-panel/` | 底部日志面板（shell）；`LogViewer`（`pages/logs/`）是它与 `/logs` 共用的查看器 |
 | `scripts/ui-preview-host.mjs` | 本地 | 合成数据的只读 Host，用于截图（`UI_PREVIEW_ORIGIN` 可加允许的来源） |

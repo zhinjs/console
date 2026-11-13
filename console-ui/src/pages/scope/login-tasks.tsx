@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useInstanceRecovery } from '../../hooks/use-instance-recovery'
-import { ExternalLink, KeyRound, QrCode } from 'lucide-react'
+import { ExternalLink, FileText, KeyRound, QrCode } from 'lucide-react'
 import { useI18n } from '../../i18n'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
@@ -13,6 +13,7 @@ import { useConsoleAccess } from '../../hooks/use-console-access'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
 import { requestConsole } from '../../utils/console-rpc'
 import { readEndpointList } from '../endpoint-list-model.mjs'
+import { useLogPanel } from '../../components/log-panel/LogPanel'
 
 export interface ScopeEndpoint {
   name: string
@@ -138,6 +139,8 @@ interface PendingLoginAction { readonly kind: 'submit' | 'cancel'; readonly valu
 export function LoginTaskCard({ task, onSettled, readOnly }: { task: LoginTask; onSettled: () => void; readOnly: boolean }) {
   const i18n = useI18n()
   const typeLabel = useLoginTaskTypeLabel()
+  // 登录卡片上的「查看日志」在底部日志面板里打开这个账号的日志，不离开正在扫码 / 输入验证码的页面。
+  const logPanel = useLogPanel()
   const [input, setInput] = useState('')
   // What is sent rides on the plan; the receipt outlives the tab (action-receipt-store), so an
   // unknown submission stays 结果未知 after switching tabs and back.
@@ -180,6 +183,13 @@ export function LoginTaskCard({ task, onSettled, readOnly }: { task: LoginTask; 
         <QrCode aria-hidden="true" />
         <span className="font-medium">{typeLabel(task.type)}</span>
         {task.expiresAt ? <span className="text-xs text-muted-foreground">{i18n.t('{0} 前有效', [new Date(task.expiresAt).toLocaleTimeString(i18n.locale)])}</span> : null}
+        {logPanel.available ? (
+          <Button size="sm" variant="ghost" className="console-login-card-logs"
+            aria-label={i18n.t('查看 {0} 的日志', [task.endpointKey])}
+            onClick={() => logPanel.open({ adapter: task.adapter, endpoint: task.endpointKey })}>
+            <FileText aria-hidden="true" />{i18n.t('查看日志')}
+          </Button>
+        ) : null}
       </div>
       <div className="console-login-card-body">
         {image && isImageSource(image) ? <img src={image} alt={`${typeLabel(task.type)} (${task.endpointKey})`} className="console-login-card-qr" /> : null}

@@ -17,6 +17,8 @@ import { ListItemButton } from '../components/ui/list-item-button'
 import { commandScore, isCommandRoute, ROUTE_SEARCH_HINTS } from './command-center-model.mjs'
 import { canSeeRoute, routeSectionId, sectionById } from '../navigation-sections.mjs'
 import { useConsoleAccess } from '../hooks/use-console-access'
+import { openLogPanel } from './log-panel/log-panel-store.mjs'
+import { LOG_PANEL_SHORTCUT_LABEL, logPanelAvailable } from './log-panel/log-panel-model.mjs'
 
 const RECENT_KEY = 'zhin.console.command-center.recent'
 const RECENT_LIMIT = 5
@@ -30,6 +32,23 @@ interface CommandTarget {
   keywords?: readonly string[]
   icon?: React.ReactNode | string
   kind?: 'page' | 'action'
+  /** Runs in place instead of navigating (`path` is then only the entry's id). */
+  run?: () => void
+  /** Keyboard shortcut shown next to the entry. */
+  shortcut?: string
+}
+
+/** Opens the bottom log panel without leaving the page; listed only for principals who can see /logs. */
+const LOG_PANEL_ACTION: CommandTarget = {
+  path: '#log-panel',
+  title: '打开日志面板',
+  group: '快捷动作',
+  description: '在当前页面底部查看实时日志，不离开页面',
+  keywords: ['日志', '日志面板', '底部', '实时日志', 'log', 'logs', 'panel'],
+  icon: 'FileText',
+  kind: 'action',
+  shortcut: LOG_PANEL_SHORTCUT_LABEL,
+  run: () => { openLogPanel() },
 }
 
 interface CommandGroup {
@@ -159,13 +178,16 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
   const access = useConsoleAccess()
 
   const targets = useMemo<CommandTarget[]>(() => {
-    const actions = QUICK_ACTIONS.filter(action => routes.some(route => route.path === action.path.split('?')[0]))
+    const actions = [
+      ...(logPanelAvailable(routes, access) ? [LOG_PANEL_ACTION] : []),
+      ...QUICK_ACTIONS.filter(action => routes.some(route => route.path === action.path.split('?')[0])),
+    ]
     return [
       ...actions.map(action => ({
         ...action,
         title: i18n.t(action.title),
         description: i18n.t(action.description),
-        keywords: [action.title, action.description, ...(ROUTE_SEARCH_HINTS[action.path]?.keywords ?? [])],
+        keywords: [action.title, action.description, ...(action.keywords ?? []), ...(ROUTE_SEARCH_HINTS[action.path]?.keywords ?? [])],
       })),
       ...routes
         .filter((route) => isCommandRoute(route) && canSeeRoute(route, access) && !actions.some(action => action.path === route.path))
@@ -221,6 +243,8 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
   const runTarget = (target: CommandTarget) => {
     setRecentPaths(rememberPath(target.path))
     setOpen(false)
+    // Let the dialog hand focus back first, so the log panel then takes it and later returns it there.
+    if (target.run) { const run = target.run; requestAnimationFrame(() => run()); return }
     if (target.path !== `${location.pathname}${location.search}`) navigate(target.path)
   }
 
@@ -306,6 +330,7 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
                         </span>
                         <span className="console-command-description">{target.description}</span>
                       </span>
+                      {target.shortcut ? <kbd className="console-command-shortcut">{target.shortcut}</kbd> : null}
                       {current ? <span className="console-command-current"><Check />{i18n.t("当前")}</span> : <ArrowRight />}
                     </ListItemButton>
                   )
@@ -324,6 +349,7 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
             <span><kbd>↑</kbd><kbd>↓</kbd>{i18n.t("选择")}</span>
             <span><kbd><CornerDownLeft /></kbd>{i18n.t("打开")}</span>
             <span><kbd>Esc</kbd>{i18n.t("关闭")}</span>
+            {logPanelAvailable(routes, access) ? <span className="hidden sm:inline-flex"><kbd>{LOG_PANEL_SHORTCUT_LABEL}</kbd>{i18n.t("日志面板")}</span> : null}
             <span className="ml-auto hidden sm:inline">{targets.length} {i18n.t(" 个入口")}</span>
           </footer>
         </DialogContent>

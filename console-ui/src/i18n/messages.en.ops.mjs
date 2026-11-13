@@ -148,4 +148,18 @@ export const opsMessages = Object.freeze({
   "安装 {0}？": "Install {0}?",
   "网关会备份配置、停止实例、安装依赖并重新启动；失败会自动回滚。": "The gateway backs up the configuration, stops the instance, installs the packages and starts it again; failures roll back automatically.",
   "适配器已启用。可以到「查看聊天账号」确认账号上线，或继续安装其他平台。": "The adapter is enabled. Open View chat accounts to check that the account comes online, or install another platform.",
+  // Bottom log panel (components/log-panel)
+  "日志面板": "Log panel",
+  "打开日志面板": "Open log panel",
+  "关闭日志面板": "Close log panel",
+  "底部日志面板": "Bottom log panel",
+  "当前页面就是运行日志": "This page already shows the runtime logs",
+  "调整日志面板高度": "Resize the log panel",
+  "{0} 像素": "{0} pixels",
+  "拖动或用 ↑ / ↓ 调整高度": "Drag, or use ↑ / ↓, to change the height",
+  "不离开当前页面查看实时日志": "Live logs without leaving this page",
+  "在日志页打开": "Open on the logs page",
+  "在当前页面底部查看实时日志，不离开页面": "Show live logs at the bottom of the current page without leaving it",
+  "查看日志": "View logs",
+  "查看 {0} 的日志": "View logs for {0}",
 })

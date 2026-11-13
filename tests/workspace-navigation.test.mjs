@@ -11,6 +11,8 @@ import * as sections from '../console-ui/src/navigation-sections.mjs'
 import { createConsoleAccess, UNRESTRICTED_ACCESS } from '../console-ui/src/utils/console-access.mjs'
 import { CONSOLE_PATHS } from '../console-ui/src/console-routes.mjs'
 import * as scopeTree from '../console-ui/src/scope/scope-tree.mjs'
+import * as logPanelModel from '../console-ui/src/components/log-panel/log-panel-model.mjs'
+import * as logPanelStoreModule from '../console-ui/src/components/log-panel/log-panel-store.mjs'
 
 const require = createRequire(import.meta.url)
 const source = path => readFile(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')
@@ -28,7 +30,7 @@ const commandSource = await source('components/ConsoleCommandCenter.tsx')
 const nodes = node => node && typeof node === 'object' ? [node, ...[node.props?.children].flat(Infinity).flatMap(nodes)] : []
 const text = node => typeof node === 'string' ? node : node && typeof node === 'object' ? [node.props?.children].flat(Infinity).map(text).join('') : ''
 const ui = names => Object.fromEntries(names.map(name => [name, name]))
-function fixture({ routes, path = '/sandbox', mobile = false, locale = 'zh-CN', command = false, runEffects = false, access = UNRESTRICTED_ACCESS }) {
+function fixture({ routes, path = '/sandbox', mobile = false, locale = 'zh-CN', command = false, runEffects = false, access = UNRESTRICTED_ACCESS, logPanel = { visible: false, modal: false } }) {
   const slots = [], events = [], saved = new Map()
   let cursor = 0, tree, pendingEffects = []
   const listeners = new Map()
@@ -78,6 +80,8 @@ function fixture({ routes, path = '/sandbox', mobile = false, locale = 'zh-CN', 
     '../hooks/use-console-session': { useConsoleSession: () => ({ me: null }) },
     '../components/onboarding-banner': { OnboardingBanner: 'onboarding-banner' }, '../components/InstanceUnavailableBanner': { InstanceUnavailableBanner: 'instance-banner' }, '../console-routes.mjs': { CONSOLE_PATHS: { account: '/account' } },
     '../scope/scope-tree.mjs': scopeTree,
+    '../components/log-panel/LogPanel': { LogPanel: 'log-panel', LogPanelButton: 'log-panel-button', useLogPanelLayout: () => logPanel },
+    './log-panel/log-panel-store.mjs': logPanelStoreModule, './log-panel/log-panel-model.mjs': logPanelModel,
   }
   mocks['../hooks/useIsMobile'] = compile(mobileHookSource, { react: hooks })
   const module = compile(command ? commandSource : layoutSource, mocks)
@@ -337,4 +341,53 @@ test('the command palette hides pages the principal cannot see and groups result
     assert.ok(paths.includes('/logs'))
     assert.ok(!paths.includes('/ops/config') && !paths.includes('/plugins'), 'pages outside the granted sections stay out')
   } finally { f.close() }
+})
+
+test('the bottom log panel is non-modal on wide screens: the shell keeps the page interactive, only the phone sheet makes it inert', () => {
+  const inertOf = tree => ({
+    main: nodes(tree).find(node => node.type === 'main').props.inert,
+    header: nodes(tree).find(node => node.type === 'header').props.inert,
+  })
+  const closed = fixture({ routes, path: '/dashboard' })
+  try {
+    const tree = closed.render()
+    assert.equal(nodes(tree).filter(node => node.type === 'log-panel').length, 1, 'mounted once in the shell')
+    const actions = nodes(tree).find(node => node.props?.className === 'console-topnav-actions')
+    assert.ok(nodes(actions).some(node => node.type === 'log-panel-button'), 'the toggle sits with the top-bar actions')
+    assert.deepEqual(inertOf(tree), { main: false, header: false })
+  } finally { closed.close() }
+  const docked = fixture({ routes, path: '/dashboard', logPanel: { visible: true, modal: false } })
+  try {
+    const tree = docked.render()
+    assert.deepEqual(inertOf(tree), { main: false, header: false }, 'no inert while the docked panel is open')
+    assert.ok(!nodes(tree).some(node => typeof node.props?.className === 'string' && /scrim/.test(node.props.className) && node.props.className.includes('is-open')), 'no backdrop')
+  } finally { docked.close() }
+  const sheet = fixture({ routes, path: '/dashboard', mobile: true, logPanel: { visible: true, modal: true } })
+  try { assert.deepEqual(inertOf(sheet.render()), { main: true, header: true }, 'the phone sheet is modal') } finally { sheet.close() }
+})
+
+test('command center offers 打开日志面板 with its shortcut, runs it in place and hides it from principals who cannot see /logs', () => {
+  const oldFrame = globalThis.requestAnimationFrame
+  globalThis.requestAnimationFrame = callback => { callback(); return 1 }
+  logPanelStoreModule.closeLogPanel()
+  const f = fixture({ routes, path: '/ops/schedules', command: true })
+  try {
+    const tree = f.render()
+    const item = nodes(tree).find(node => node.type === 'button' && node.props.role === 'option' && text(node).includes('打开日志面板'))
+    assert.ok(item, 'listed as a quick action')
+    assert.ok(nodes(item).some(node => node.type === 'kbd' && text(node) === logPanelModel.LOG_PANEL_SHORTCUT_LABEL), 'shows Ctrl `')
+    const footer = nodes(tree).find(node => node.type === 'footer')
+    assert.match(text(footer), /Ctrl `日志面板/, 'the footer documents the shortcut')
+    item.props.onClick()
+    assert.equal(logPanelStoreModule.logPanelStore.get().open, true, 'opens the panel')
+    assert.deepEqual(f.events, [], 'and does not navigate')
+  } finally { f.close(); logPanelStoreModule.closeLogPanel(); globalThis.requestAnimationFrame = oldFrame }
+  const noStatus = fixture({ routes, command: true, access: createConsoleAccess({ permissions: ['ops.schedule.read'] }) })
+  try {
+    const tree = noStatus.render()
+    assert.ok(!text(tree).includes('打开日志面板'))
+    assert.ok(!text(nodes(tree).find(node => node.type === 'footer')).includes('日志面板'))
+  } finally { noStatus.close() }
+  const noLogsRoute = fixture({ routes: routes.filter(route => route.path !== '/logs'), command: true })
+  try { assert.ok(!text(noLogsRoute.render()).includes('打开日志面板')) } finally { noLogsRoute.close() }
 })

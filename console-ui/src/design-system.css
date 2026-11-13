@@ -186,7 +186,8 @@
   }
 
   .console-command-trigger kbd,
-  .console-command-footer kbd {
+  .console-command-footer kbd,
+  .console-command-item kbd.console-command-shortcut {
     display: inline-grid;
     min-width: 1.5rem;
     height: 1.4rem;

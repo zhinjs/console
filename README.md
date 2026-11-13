@@ -57,7 +57,7 @@ Console 没有单独的演示构建：公开演示是一台真实 Host，访客�
 
 ## 导航
 
-导航按 zhinjs/zhin ADR 0052 分为六个区，前四个是「日常」，后两个是「管理」（`console-ui/src/navigation-sections.mjs`，路由表 `console-ui/src/console-routes.mjs`）。宽屏（≥1100px）时它们排在页面顶部的悬浮导航栏里：只有一个页面的区是直接链接，有多个页面的区点开是下拉菜单；更窄的屏幕把同样的导航放进左侧抽屉（左上角菜单按钮打开，Esc 或点遮罩关闭）。导航栏右侧是快速跳转（Ctrl/⌘ K）、实时连接状态、语言、外观、个人设置与退出：
+导航按 zhinjs/zhin ADR 0052 分为六个区，前四个是「日常」，后两个是「管理」（`console-ui/src/navigation-sections.mjs`，路由表 `console-ui/src/console-routes.mjs`）。宽屏（≥1100px）时它们排在页面顶部的悬浮导航栏里：只有一个页面的区是直接链接，有多个页面的区点开是下拉菜单；更窄的屏幕把同样的导航放进左侧抽屉（左上角菜单按钮打开，Esc 或点遮罩关闭）。导航栏右侧是快速跳转（Ctrl/⌘ K）、底部日志面板（Ctrl `）、实时连接状态、语言、外观、个人设置与退出：
 
 | 区 | 菜单里的页面 | 不在菜单里、从上级页面进入 |
 |------|------|------|
@@ -71,6 +71,7 @@ Console 没有单独的演示构建：公开演示是一台真实 Host，访客�
 - 某个区里没有当前身份能看的页面时，整个区不显示。Host 还没有报告权限时（RBAC 之前的所有 Host）按不受限处理，由 Host 自己拒绝越权请求。
 - 功能矩阵目前只有「全局」一列（来自插件启用状态）；Host 提供 `feature.matrix` 后自动出现每个适配器的列（`pages/features/use-feature-data.ts` 的 `useFeatureMatrix`）。账号配置页用 `feature.get` 探测 Host 是否支持分层配置，旧 Host 返回 “Unknown RPC type” 时提示需要更新。
 - 对象树（`console-ui/src/scope/`）：每个对象一页，页签由层级决定——全局 / 适配器：概览 · 功能 · 角色 · 记录；账号另有聊天（账号工作区）与接入（登录、测试连接）；会话另有聊天。`?tab=` 记住页签。「功能」页签每个插件一行（有效状态、来源层级、本层覆盖、锁定层级链接），展开逐字段显示继承值 / 本层覆盖 / 有效值 / 来源，写操作走操作回执；全局「功能」是功能总览，`?view=matrix` 切到矩阵（`/features` 仍是矩阵的独立入口）。账号「接入」只讲这个账号：连接与测试、登录验证、配置入口；Host 当前没有运行的账号会说明原因，不显示空列表。角色页签读写 `chat-roles.list|grant|revoke`（ADR 0056，需要 `iam.manage`）。zhin 角色只来自授予；平台群主/管理员是平台身份，不映射为 zhin 角色，单独影响平台相关能力。对象页（全局以下）只显示自己的范围面包屑，页面顶部的通用面包屑让位。设计与排版规范见 `docs/console-refactor-guidelines.md`。
+- 底部日志面板（`components/log-panel/`）：在任何页面打开实时运行日志而不离开当前页——顶栏按钮、快捷键 Ctrl `、快速跳转里的「打开日志面板」，或页面调用 `openLogPanel({ q, adapter, endpoint, level })`（账号「接入」的登录卡片「查看日志」、插件详情「相关日志」、定时任务「调度日志」、入群欢迎「查看相关日志」）。面板渲染与 `/logs` 相同的 `LogViewer`，筛选放在面板自己的状态里（不改地址栏，上次的筛选与高度记在本机），「在日志页打开」带着同一组筛选去 `/logs`。宽屏停靠在底部、占满内容宽度、可拖动或用键盘调高度，非模态（页面照常可用，页面底部让出面板高度）；手机上是模态底部抽屉。只对能看 `/logs`（`status.view`）的身份出现；只在打开时轮询，在 `/logs` 页上不显示。
 - 实例不可用（网关 503 `instance_unavailable` / 504 `instance_timeout` / 502 `instance_error`）时 shell 顶部显示横幅：Retry-After 倒计时、自动重试、去「实例」页；访问控制、实例、终端等网关页不受影响。
 - 旧路由保留为隐藏重定向（`LEGACY_ROUTE_REDIRECTS`）：`/endpoints` → `/scope`、`/endpoints/:a/:e` → 账号「聊天」（带 `channelType` + `channelId` 时到该会话的「聊天」）、`/features/adapters[/:a]` → `/scope[/:a]`、`/features/adapters/:a/endpoints/:e` → 账号「功能」（`?tab=conversations` → 账号概览）、`…/conversations/:c` → 会话「功能」；`/config` → `/ops/config`（`/config?plugin=x` → `/features/global/x`）、`/env` `/files` `/database` → `/ops/*`、`/tasks` `/cron` `/assistant/jobs` → `/ops/schedules`、`/agent/models` `/agent/skills` `/agent/ambient` `/agent/workrooms*` → `/features/ai/*`。
 - 插件页面按 `/entries` 里声明的 `section`（区 id 如 `ops`，或区名如 `运维`）落区，未声明的进「功能」。`常用`、`机器人`、`高级` 等旧分组名仍可用，不是区名的分组显示在「功能」里。

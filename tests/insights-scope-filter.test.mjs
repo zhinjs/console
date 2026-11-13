@@ -67,12 +67,18 @@ test('replay, token usage and ambient translate the range into their own filters
 
 test('pages that read the range use the shared filter', () => {
   const read = path => readFileSync(new URL(`../console-ui/src/pages/${path}`, import.meta.url), 'utf8')
-  for (const page of ['logs.tsx', 'bot-replay.tsx', 'token-usage.tsx', 'ambient-engagement.tsx']) {
+  for (const page of ['bot-replay.tsx', 'token-usage.tsx', 'ambient-engagement.tsx']) {
     const source = read(page)
     assert.match(source, /useScopeFilter\(\)/, page)
     assert.match(source, /<ScopeFilterBar/, page)
   }
-  assert.match(read('logs.tsx'), /logServerQuery\(textFilter, scopeFilter\.scope\)/)
+  // The log viewer is shared by /logs (URL) and the bottom log panel (memory), so it reads the range from its params prop
+  // with the same parser useScopeFilter() uses, and clears it through onParamsChange rather than the URL.
+  const viewer = read('logs/LogViewer.tsx')
+  assert.match(viewer, /readScopeFilter\(params\)/)
+  assert.match(viewer, /<ScopeFilterBar/)
+  assert.match(viewer, /onClear=\{\(\) => commitParams\(clearScopeFilter\(paramsRef\.current\)\)\}/)
+  assert.match(viewer, /logServerQuery\(textFilter, scopeFilter\.scope\)/)
   assert.match(read('bot-replay.tsx'), /replayScopeFilter\(scopeFilter\.scope\)/)
   assert.match(read('token-usage.tsx'), /usageSessionPattern\(scopeFilter\.scope\)/)
   assert.match(read('ambient-engagement.tsx'), /ambientGroupKey\(scopeFilter\.scope\)/)

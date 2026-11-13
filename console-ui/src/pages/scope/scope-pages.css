@@ -70,3 +70,5 @@ a.console-scope-task:focus-visible { outline: var(--console-focus-width) solid h
   .console-scope-task { padding-inline: 0.75rem; }
   .console-login-card-qr { width: 8rem; height: 8rem; }
 }
+.console-login-card-head .console-login-card-logs { margin-left: auto; }
+.console-login-card-head .console-login-card-logs svg { color: currentColor; }

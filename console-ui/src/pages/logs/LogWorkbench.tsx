@@ -82,6 +82,8 @@ interface LogWorkbenchProps {
   state: LogWorkbenchState
   actions: LogWorkbenchActions
   endRef: RefObject<HTMLDivElement | null>
+  /** Bottom log panel: no overview cards, the list fills the panel height. */
+  compact?: boolean
 }
 
 const LEVEL_META = {
@@ -102,7 +104,7 @@ function getLevelMeta(level: string) {
   }
 }
 
-export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
+export function LogWorkbench({ state, actions, endRef, compact = false }: LogWorkbenchProps) {
   const i18n = useI18n()
   const [sourcesOpen, setSourcesOpen] = useState(false)
   const [selection, setSelection] = useState<LogEntry | null>(null)
@@ -120,7 +122,7 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
 
   return (
     <>
-    <StatGrid label={i18n.t("日志概况")}>
+    {compact ? null : <StatGrid label={i18n.t("日志概况")}>
       <StatCard
         icon={Layers}
         label={i18n.t("总日志")}
@@ -148,9 +150,9 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
           />
         )
       })}
-    </StatGrid>
-    <section className="console-log-workbench" aria-label={i18n.t("日志诊断工作台")}>
-      {state.stats && state.stats.total > 0 ? (
+    </StatGrid>}
+    <section className={cn("console-log-workbench", compact && "is-compact")} aria-label={i18n.t("日志诊断工作台")}>
+      {!compact && state.stats && state.stats.total > 0 ? (
         <div className="console-severity-strip" aria-hidden="true">
           <span style={{ width: `${(levelCount('info') / state.stats.total) * 100}%`, background: 'hsl(var(--primary) / 0.72)' }} />
           <span style={{ width: `${(levelCount('warn') / state.stats.total) * 100}%`, background: 'hsl(var(--status-warning, var(--warning)) / 0.85)' }} />

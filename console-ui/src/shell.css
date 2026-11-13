@@ -430,15 +430,18 @@
   }
 
   /* ---------- Content column ---------- */
+  /* The docked log panel sets --console-log-panel-reserve on <html>; the page keeps its last rows reachable above it. */
   .console-main-scroll {
     display: block;
     min-width: 0;
     overflow-x: clip;
     padding-top: var(--console-header-h);
+    padding-bottom: var(--console-log-panel-reserve, 0px);
   }
 
   html:has(.console-app-shell) {
     scroll-padding-top: calc(var(--console-header-h, 4.5rem) + 0.75rem);
+    scroll-padding-bottom: var(--console-log-panel-reserve, 0px);
   }
 
   /* Banners, breadcrumb and the page stack in one column. */

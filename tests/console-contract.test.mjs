@@ -103,9 +103,13 @@ test('Command Center exposes task-oriented actions in addition to route navigati
   assert.match(source, /试运行命令/)
   assert.match(source, /预览消息组件/)
   assert.match(source, /搜索页面或执行动作/)
-  const logs = sourceText(join(SOURCE_ROOT, 'pages', 'logs.tsx'))
-  assert.match(logs, /useSearchParams/)
-  assert.match(logs, /historyQuery\(searchParams\)/)
+  // /logs keeps its filters in the URL; the viewer it renders (shared with the bottom log panel) reads them as props.
+  const page = sourceText(join(SOURCE_ROOT, 'pages', 'logs.tsx'))
+  assert.match(page, /useSearchParams/)
+  assert.match(page, /<LogViewer params=\{searchParams\} onParamsChange=\{next => setSearchParams\(next, \{ replace: true \}\)\} \/>/)
+  const logs = sourceText(join(SOURCE_ROOT, 'pages', 'logs', 'LogViewer.tsx'))
+  assert.match(logs, /historyQuery\(params\)/)
+  assert.doesNotMatch(logs, /useSearchParams|useLocation|useNavigate/, 'the viewer never touches the location itself')
   assert.match(logs, /logsInFlightRef/)
   assert.match(logs, /statsInFlightRef/)
   assert.match(logs, /LOG_STATS_TIMEOUT_MS/)
@@ -169,13 +173,16 @@ test('runtime capabilities use purpose-built views with a shared inspector', () 
 })
 
 test('operations pages form a URL-addressable diagnostic loop', () => {
-  const logs = sourceText(join(SOURCE_ROOT, 'pages', 'logs.tsx'))
+  const page = sourceText(join(SOURCE_ROOT, 'pages', 'logs.tsx'))
+  const logs = sourceText(join(SOURCE_ROOT, 'pages', 'logs', 'LogViewer.tsx'))
   const workbench = sourceText(join(SOURCE_ROOT, 'pages', 'logs', 'LogWorkbench.tsx'))
   const plugin = sourceText(join(SOURCE_ROOT, 'pages', 'plugin-detail.tsx'))
   const cron = sourceText(join(SOURCE_ROOT, 'pages', 'cron.tsx'))
 
-  assert.match(logs, /historyQuery\(searchParams\)/)
-  assert.match(logs, /searchParamsRef/)
+  assert.match(page, /useSearchParams\(\)/)
+  assert.match(page, /params=\{searchParams\}/)
+  assert.match(logs, /historyQuery\(params\)/)
+  assert.match(logs, /paramsRef/)
   assert.match(logs, /LogWorkbench/)
   assert.match(workbench, /事件 Inspector/)
   assert.match(workbench, /全部历史来源/)
@@ -189,8 +196,11 @@ test('operations pages form a URL-addressable diagnostic loop', () => {
   assert.match(workbench, /copyState === 'failed'/)
   assert.match(logs, /statsInFlightRef/)
   assert.match(logs, /logSnapshot/)
+  // Both keep the /logs?q= deep link for principals without the panel, and open the bottom log panel with the same filter otherwise.
   assert.match(plugin, /\/logs\?q=/)
   assert.match(cron, /\/logs\?q=/)
+  assert.match(plugin, /logPanel\.open\(\{ q: title \}\)/)
+  assert.match(cron, /logPanel\.open\(\{ q: 'schedule' \}\)/)
 })
 
 test('the shared shell adapts across PC, Pad and Phone widths', () => {
@@ -352,6 +362,7 @@ test('mutation pages derive their read-only state from Host-reported permissions
     ['pages/agent-sessions.tsx', 'endpoint.operate'],
     ['pages/endpoint-detail/index.tsx', 'endpoint.operate'],
     ['pages/logs.tsx', 'ops.config.write'],
+    ['pages/logs/LogViewer.tsx', 'ops.config.write'],
     ['pages/cron.tsx', 'ops.schedule.write'],
     ['pages/dashboard.tsx', 'agent.configure'],
     ['pages/workroom-catalog.tsx', 'agent.configure'],
