@@ -606,35 +606,63 @@ export const PENDING_RESULT_COPY = '结果待确认：平台还没有给出结�
  * the flow changes).
  */
 export function submitReceiptResult(read) {
-  if (read.kind === 'pending') return Object.freeze({ status: 'unknown', message: PENDING_RESULT_COPY })
-  if (read.kind === 'accepted') return Object.freeze({ status: 'saved', message: '已提交。平台的结果会显示在时间线上。' })
-  if (read.outcome.result === 'online') return Object.freeze({ status: 'saved', message: '验证通过，账号已上线。' })
-  if (read.outcome.result === 'accepted') return Object.freeze({ status: 'saved', message: '验证通过，正在继续登录。' })
-  const view = outcomeView(read.outcome)
-  const detail = view.message ?? view.description
-  return Object.freeze({ status: 'failed', message: view.title, ...(detail ? { detail, detailFromHost: Boolean(view.message) } : {}) })
+  if (read.kind === 'outcome') {
+    if (read.outcome.result === 'online') return Object.freeze({ status: 'saved', message: '验证通过，账号已上线。' })
+    if (read.outcome.result === 'accepted') return Object.freeze({ status: 'saved', message: '验证通过，正在继续登录。' })
+    const view = outcomeView(read.outcome)
+    const detail = view.message ?? view.description
+    return Object.freeze({ status: 'failed', message: view.title, ...(detail ? { detail, detailFromHost: Boolean(view.message) } : {}) })
+  }
+  // No outcome: core also wakes waiters without one when the flow ends (cancelled, superseded,
+  // expired). The flow that came with the reply decides; only a flow-less legacy reply is 已提交.
+  const flow = read.flow
+  if (flow?.state === 'online') return Object.freeze({ status: 'saved', message: '验证通过，账号已上线。' })
+  if (flow && (flow.state === 'failed' || flow.state === 'cancelled' || flow.state === 'expired')) {
+    const view = outcomeView(flow.lastOutcome)
+    const detail = view?.message ?? view?.description
+    return Object.freeze({ status: 'failed', message: view?.title ?? FLOW_STATE_COPY[flow.state].label, ...(detail ? { detail, detailFromHost: Boolean(view?.message) } : {}) })
+  }
+  if (read.kind === 'pending' || flow) return Object.freeze({ status: 'unknown', message: PENDING_RESULT_COPY })
+  return Object.freeze({ status: 'saved', message: '已提交。平台的结果会显示在时间线上。' })
 }
 
 /**
- * Read-only check of a submission whose result was unknown: `{ applied: true }` once the flow is
- * online or the answered challenge was accepted, `{ applied: false }` once it was rejected (the
- * challenge failed or a new one replaced it with an error), `undefined` while still undecided.
- * Never inferred from the task merely disappearing.
+ * Read-only check of a submission whose result was unknown, by the challenge step that was answered
+ * (`stepId`; core drops the step's `taskId` once it is answered, rejected or expired):
+ * `{ applied: true }` once the flow is online or the answer was accepted (a verdict on the step or
+ * the verifying step after it, or the flow moved on to a new challenge without a failure);
+ * `{ applied: false }` once it was rejected, the step failed or was replaced, the step is gone, or
+ * the flow failed / was cancelled / expired; `undefined` while still undecided. Never inferred from
+ * the task merely disappearing.
  */
-export function verifySubmission(flow, taskId) {
+export function verifySubmission(flow, stepId) {
   if (!flow) return undefined
   if (flow.state === 'online') return Object.freeze({ applied: true, message: '账号已上线。' })
-  const index = flow.steps.findIndex(step => step.taskId === taskId)
-  if (index < 0) return undefined
+  const index = flow.steps.findIndex(step => step.id === stepId)
+  const ended = flow.state === 'failed' || flow.state === 'cancelled' || flow.state === 'expired'
+  if (index < 0) return Object.freeze({ applied: false, message: ended ? FLOW_STATE_COPY[flow.state].label : '这一步已结束，请按当前步骤继续。' })
   const step = flow.steps[index]
-  if (step.status === 'active') return undefined
   const later = flow.steps.slice(index + 1)
   const verdict = [step.outcome, ...later.filter(item => item.kind === 'verifying').map(item => item.outcome)].find(Boolean)
   if (verdict?.result === 'accepted' || verdict?.result === 'online') return Object.freeze({ applied: true, message: '验证通过，正在继续登录。' })
   if (verdict) return Object.freeze({ applied: false, message: outcomeView(verdict).title })
   if (step.status === 'failed') return Object.freeze({ applied: false, message: '这次验证没有通过。' })
-  if (flow.state === 'failed' || flow.state === 'cancelled') return Object.freeze({ applied: false, message: FLOW_STATE_COPY[flow.state].label })
+  if (step.status === 'skipped') return Object.freeze({ applied: false, message: '这一步已被新的验证替换。' })
+  if (ended) return Object.freeze({ applied: false, message: FLOW_STATE_COPY[flow.state].label })
+  if (step.status === 'active') return undefined
+  // Answered (done) and the flow already asks for the next challenge: the answer was taken.
+  if (later.some(item => item.kind === 'challenge')) return Object.freeze({ applied: true, message: '验证通过，正在继续登录。' })
   return undefined
+}
+
+/**
+ * Server clock offset (ms, server − local) from a fresh server timestamp (an event or reply that
+ * was just produced). Differences below 1.5 s are latency, not skew (0).
+ */
+export function serverClockOffset(previous, serverTimestamp, localNow = Date.now()) {
+  if (typeof serverTimestamp !== 'number' || !Number.isFinite(serverTimestamp) || serverTimestamp <= 0) return previous ?? 0
+  const delta = serverTimestamp - localNow
+  return Math.abs(delta) < 1500 ? 0 : delta
 }
 
 /** Copy for a refused submission (`LoginSubmissionError` codes in `data.code`). */

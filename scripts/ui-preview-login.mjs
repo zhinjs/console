@@ -163,7 +163,13 @@ function newFlow(key, attempt = 1) {
     case 'pending-demo': open('sms', now - 70 * SECOND); break
   }
   flow.lastOutcome = undefined
+  dropAnsweredTasks(flow)
   return flow
+}
+
+/** Like core: a challenge step keeps its taskId only while it waits for an answer. */
+function dropAnsweredTasks(flow) {
+  for (const step of flow.steps) if (step.status !== 'active') delete step.taskId
 }
 
 function flowOf(key) {
@@ -198,6 +204,7 @@ function redacted(flow) {
 }
 
 function changed(flow) {
+  dropAnsweredTasks(flow)
   flow.revision += 1
   flow.updatedAt = Date.now()
   const frame = `event: endpoint.login.flow\nid: ${++eventId}\nruntime: ui-preview\ndata: ${JSON.stringify(redacted(flow))}\n\n`
@@ -350,6 +357,7 @@ export async function answerLoginRpc(type, body, json, envelope) {
   }
   try {
     const outcome = await submit(flow, step, body.value)
+    dropAnsweredTasks(flow)
     json(envelope(outcome ? { accepted: true, outcome, flow: live(flow) } : { accepted: true, pending: true, flow: live(flow) }))
   } catch (error) {
     if (error instanceof Refusal) { json({ success: false, error: error.message, data: { code: error.code } }, 400); return true }

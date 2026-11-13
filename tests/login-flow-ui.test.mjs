@@ -206,7 +206,7 @@ test('submitting goes through the receipt with wait: true and maps every reply',
   assert.equal(receipt.prepared.length, 1)
   assert.equal(receipt.confirmed, 1, 'answering is one click')
   const plan = receipt.prepared[0]
-  assert.deepEqual(plan.payload, { taskId: 'task-3', value: { action: 'submit', values: { input: '123456' } }, adapter: 'icqq', endpointKey: '10001' })
+  assert.deepEqual(plan.payload, { taskId: 'task-3', stepId: 's3', value: { action: 'submit', values: { input: '123456' } }, adapter: 'icqq', endpointKey: '10001' })
   assert.doesNotMatch(JSON.stringify(plan.changes), /123456/u, 'the value is never shown in the receipt')
 
   answer = async () => ({ accepted: true, outcome: { result: 'rejected', code: 'code_invalid', message: '验证码错误' }, flow: { ...flowWith(smsChallenge), revision: 9 } })
@@ -227,12 +227,19 @@ test('submitting goes through the receipt with wait: true and maps every reply',
   await assert.rejects(receipt.options.submit(plan), /REST request failed/u)
 
   // The check reads the flow (login.flow.get), never the task list.
-  answer = async () => ({ flow: { ...flowWith(smsChallenge), state: 'online', activeTaskId: undefined, revision: 12 } })
+  // As core reports an answered step: no taskId; the check goes by the step.
+  const answeredFlow = extra => ({ ...flowWith(smsChallenge), activeTaskId: undefined, revision: 12, ...extra, steps: flowWith(smsChallenge).steps.map(item => item.id === 's3' ? { ...item, taskId: undefined, status: 'done' } : item) })
+  answer = async () => ({ flow: answeredFlow({ state: 'online' }) })
   assert.deepEqual(await receipt.options.verify(plan), { applied: true, message: '账号已上线。' })
   assert.deepEqual(env.requests.at(-1).request, { type: 'login.flow.get', adapter: 'icqq', endpointKey: '10001' })
   answer = async () => ({ flow: flowWith(smsChallenge) })
   const undecided = await receipt.options.verify(plan)
   assert.equal(undecided.applied, undefined, 'still open: not success')
+  answer = async () => ({ flow: answeredFlow({ state: 'cancelled' }) })
+  assert.equal((await receipt.options.verify(plan)).applied, false, 'a cancelled flow settles as 未执行, never stays unknown')
+  // A flow-ending wake-up without an outcome (core #endFlow) is not success.
+  answer = async () => ({ accepted: true, flow: answeredFlow({ state: 'cancelled' }) })
+  assert.equal(receiptModel.readSubmitResult(await receipt.options.submit(plan)).phase, 'failed')
 })
 
 test('while waiting: 提交中 → 验证中 replaces the receipt; an unknown result is re-checked when the flow moves', async () => {
@@ -277,6 +284,55 @@ test('header actions: refresh is one click; cancel and relogin ask first and car
   assert.deepEqual(env.requests.at(-1).request, { type: 'login.refresh', adapter: 'icqq', endpointKey: '10001' })
   await control.options.submit(control.prepared[2])
   assert.deepEqual(env.requests.find(item => item.request.type === 'login.cancel').request, { type: 'login.cancel', taskId: 'task-3', reason: 'console_cancelled', adapter: 'icqq', endpointKey: '10001' })
+  // A refresh is checked by step: icqq keeps the challenge id (icqq-qrcode) for every new code.
+  assert.equal(control.prepared[0].payload.stepId, 's3')
+  const same = flowWith(qrChallenge)
+  let reply = { flow: same }
+  const verifyEnv = await cardEnvironment({ flow: same, reply: async () => reply })
+  verifyEnv.runtime.render(() => verifyEnv.card.LoginFlowSection({ endpoint, legacyTasks: [], canOperate: true, onSettled() {} }))
+  const verifyControl = verifyEnv.receipts['login-control:icqq:10001']
+  assert.equal(await verifyControl.options.verify(control.prepared[0]), undefined, 'same step still open: not refreshed yet')
+  reply = { flow: { ...same, revision: 9, steps: [...same.steps.map(item => item.id === 's3' ? { ...item, status: 'skipped', taskId: undefined } : item), { id: 's9', kind: 'challenge', status: 'active', title: '扫码登录', at: NOW, taskId: 'task-9', challenge: qrChallenge }] } }
+  assert.deepEqual(await verifyControl.options.verify(control.prepared[0]), { applied: true }, 'a new step with the same challenge id is a refresh')
+})
+
+test('UI state belongs to the step: a re-opened challenge with the same id starts unticked, hidden and empty', async () => {
+  const source_ = await source('pages/scope/login-flow-card.tsx')
+  assert.match(source_, /<ChallengePanel key=\{step\.id\}/u, 'the panel (revealed, expanded, typed state) remounts per step')
+  assert.match(source_, /progress\[step\.id\]/u)
+  const env = await cardEnvironment({ flow: flowWith(smsChallenge) })
+  const render = () => env.runtime.render(() => env.card.LoginFlowSection({ endpoint, legacyTasks: [], canOperate: true, onSettled() {} }))
+  const authHelp = { ...smsChallenge, help: { short: 's', steps: ['打开手机', '输入验证码'] } }
+  env.flowState.flow = flowWith(authHelp)
+  let tree = render()
+  nodes(tree).find(node => node.props?.role === 'checkbox' && node.props['aria-checked'] === false).props.onClick()
+  tree = render()
+  assert.match(text(nodes(tree).find(node => node.props?.className === 'console-login-checklist-progress')), /第 2 \/ 2 步/u)
+  // The same challenge id comes back as a new step (resend, refresh, retry).
+  const next = flowWith(authHelp)
+  env.flowState.flow = { ...next, revision: 7, activeTaskId: 'task-8', currentStep: 's8', steps: [...next.steps.map(item => item.id === 's3' ? { ...item, status: 'skipped', taskId: undefined } : item), { ...next.steps[2], id: 's8', taskId: 'task-8', at: NOW }] }
+  tree = render()
+  assert.match(text(nodes(tree).find(node => node.props?.className === 'console-login-checklist-progress')), /第 1 \/ 2 步/u, 'unticked again')
+})
+
+test('server clock skew: QR deadlines, cooldowns and waits follow the server clock', async () => {
+  // This browser is 10 minutes behind the Host.
+  const skew = 10 * 60_000
+  const serverNow = Date.now() + skew
+  const qr = { ...qrChallenge, media: { ...qrChallenge.media, expiresAt: serverNow + 60_000 } }
+  const env = await cardEnvironment({ flow: flowModel.readLoginFlow({ ...flowWith(qr), steps: flowWith(qr).steps.map(item => item.id === 's3' ? { ...item, at: serverNow - 5_000 } : item) }) })
+  env.flowState.clockOffset = skew
+  const tree = env.runtime.render(() => env.card.LoginFlowSection({ endpoint, legacyTasks: [], canOperate: true, onSettled() {} }))
+  assert.match(text(tree), /1:00 后过期/u, 'not 11:00')
+  const sms = flowModel.readLoginFlow({ ...flowWith(smsChallenge), steps: flowWith(smsChallenge).steps.map(item => item.id === 's3' ? { ...item, at: serverNow - 10_000 } : item) })
+  const smsEnv = await cardEnvironment({ flow: sms })
+  smsEnv.flowState.clockOffset = skew
+  const smsTree = smsEnv.runtime.render(() => smsEnv.card.LoginFlowSection({ endpoint, legacyTasks: [], canOperate: true, onSettled() {} }))
+  assert.match(text(nodes(smsTree).find(node => node.props?.['data-action-id'] === 'resend')), /（50 秒后可用）/u, 'cooldown from the server-side opening time')
+  // Without the offset the opening time looks 10 minutes in the future (650 s cooldown).
+  smsEnv.flowState.clockOffset = 0
+  const naive = smsEnv.runtime.render(() => smsEnv.card.LoginFlowSection({ endpoint, legacyTasks: [], canOperate: true, onSettled() {} }))
+  assert.match(text(nodes(naive).find(node => node.props?.['data-action-id'] === 'resend')), /（650 秒后可用）/u)
 })
 
 test('hosted captcha: one reply from the helper origin with the nonce is submitted as ticket,randstr', async () => {
@@ -286,13 +342,14 @@ test('hosted captcha: one reply from the helper origin with the nonce is submitt
   try {
     const env = await cardEnvironment()
     const replies = []
-    const props = { captcha: { provider: 'tencent', query: 'uin=1&sid=x', helperUrl: 'https://helper.example/tcaptcha.html' }, busy: false, onReply: reply => replies.push(reply) }
+    const props = { captcha: { provider: 'tencent', query: 'uin=1&sid=x', helperUrl: 'https://helper.example/tcaptcha.html' }, busy: false, onReply: reply => { replies.push(reply); return true } }
     let tree = env.runtime.render(() => env.challengeModule.CaptchaHelper(props))
     const start = nodes(tree).find(node => node.props?.['data-captcha-start'])
     assert.equal(text(start), '开始验证')
     start.props.onClick()
     const [{ args, popup }] = win.opened
-    assert.deepEqual(args.slice(0, 2), ['about:blank', 'zhin-login-captcha'], 'no referrer: prepared about:blank first')
+    assert.equal(args[0], 'about:blank', 'no referrer: prepared about:blank first')
+    assert.match(args[1], /^zhin-login-captcha-[A-Za-z0-9_-]{12}$/u, 'a window name per attempt')
     const url = new URL(popup.navigated)
     assert.equal(url.origin, 'https://helper.example')
     const payload = helpers.parseCaptchaHelperPayload(url.hash)
@@ -323,6 +380,43 @@ test('hosted captcha: one reply from the helper origin with the nonce is submitt
     assert.equal(link.props.rel, 'opener')
     assert.equal(link.props.referrerPolicy, 'no-referrer')
     assert.equal(new URL(link.props.href).origin, 'https://helper.example')
+  } finally {
+    globalThis.window = previous
+  }
+})
+
+test('hosted captcha: a second click switches to the open window; a reply during another write waits for it', async () => {
+  const win = fakeWindow()
+  const previous = globalThis.window
+  globalThis.window = win
+  try {
+    const env = await cardEnvironment()
+    let accept = false
+    const replies = []
+    const props = { captcha: { provider: 'tencent', query: 'uin=1&sid=x', helperUrl: 'https://helper.example/tcaptcha.html' }, busy: false, onReply: reply => { replies.push(reply); return accept } }
+    let tree = env.runtime.render(() => env.challengeModule.CaptchaHelper(props))
+    nodes(tree).find(node => node.props?.['data-captcha-start']).props.onClick()
+    const [{ popup }] = win.opened
+    let focused = 0
+    popup.focus = () => { focused += 1 }
+    tree = env.runtime.render(() => env.challengeModule.CaptchaHelper(props))
+    const button = nodes(tree).find(node => node.props?.['data-captcha-start'])
+    assert.equal(text(button), '验证窗口已打开 · 切换到窗口')
+    button.props.onClick()
+    assert.equal(win.opened.length, 1, 'no second window replaces the one in use')
+    assert.equal(focused, 1)
+    // The reply arrives while another write is open: kept, not dropped.
+    const payload = helpers.parseCaptchaHelperPayload(new URL(popup.navigated).hash)
+    win.dispatch('message', { origin: 'https://helper.example', data: { type: helpers.LOGIN_CAPTCHA_MESSAGE_TYPE, nonce: payload.n, ticket: 't1', randstr: 'r1' } })
+    assert.equal(replies.length, 1)
+    tree = env.runtime.render(() => env.challengeModule.CaptchaHelper({ ...props, busy: true }))
+    assert.match(text(tree), /等当前操作结束后自动提交/u)
+    assert.equal(replies.length, 1, 'not retried while busy')
+    accept = true
+    tree = env.runtime.render(() => env.challengeModule.CaptchaHelper(props))
+    assert.deepEqual(replies, [{ ticket: 't1', randstr: 'r1' }, { ticket: 't1', randstr: 'r1' }], 'sent once the card is free')
+    tree = env.runtime.render(() => env.challengeModule.CaptchaHelper(props))
+    assert.match(text(tree), /已收到验证结果，正在提交/u)
   } finally {
     globalThis.window = previous
   }

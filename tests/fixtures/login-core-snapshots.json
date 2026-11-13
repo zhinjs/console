@@ -1,0 +1,588 @@
+{
+ "source": "Snapshots produced by @zhin.js/core LoginAssist (zhinjs/zhin, ADR 0058 P1/P2: beginFlow → challenge → submit / submitAndWait → outcome / online / fail / end). Answered steps carry no taskId.",
+ "cases": [
+  {
+   "name": "submitted, still verifying (wait timed out)",
+   "stepId": "step-27e2d888-d192-44cc-a5f2-617a941e37ca",
+   "taskId": "login-84cf5658-f2b6-4a7c-91d4-ace268f339ef",
+   "reply": {
+    "accepted": true,
+    "pending": true,
+    "flow": {
+     "id": "flow-368eed47-4ce8-4da6-8c69-8729d49bb952",
+     "adapter": "icqq",
+     "endpointKey": "bot1",
+     "startedAt": 1794566014022,
+     "updatedAt": 1794566014026,
+     "revision": 3,
+     "attempt": 1,
+     "state": "active",
+     "currentStep": "step-126890fa-1ca0-4c1f-8e7b-f954cbaee33e",
+     "steps": [
+      {
+       "id": "step-27e2d888-d192-44cc-a5f2-617a941e37ca",
+       "kind": "challenge",
+       "status": "done",
+       "title": "滑块验证",
+       "at": 1794566014023,
+       "challenge": {
+        "id": "icqq-slider",
+        "kind": "slider",
+        "title": "滑块验证",
+        "input": {
+         "kind": "ticket",
+         "label": "ticket",
+         "extract": "ticket-json-or-url"
+        },
+        "actions": [
+         {
+          "id": "submit",
+          "label": "提交",
+          "variant": "primary",
+          "requiresInput": true
+         }
+        ]
+       },
+       "endedAt": 1794566014025
+      },
+      {
+       "id": "step-126890fa-1ca0-4c1f-8e7b-f954cbaee33e",
+       "kind": "verifying",
+       "status": "active",
+       "title": "验证中…",
+       "titleKey": "login.verifying",
+       "at": 1794566014026
+      }
+     ]
+    }
+   },
+   "flow": {
+    "id": "flow-368eed47-4ce8-4da6-8c69-8729d49bb952",
+    "adapter": "icqq",
+    "endpointKey": "bot1",
+    "startedAt": 1794566014022,
+    "updatedAt": 1794566014026,
+    "revision": 3,
+    "attempt": 1,
+    "state": "active",
+    "currentStep": "step-126890fa-1ca0-4c1f-8e7b-f954cbaee33e",
+    "steps": [
+     {
+      "id": "step-27e2d888-d192-44cc-a5f2-617a941e37ca",
+      "kind": "challenge",
+      "status": "done",
+      "title": "滑块验证",
+      "at": 1794566014023,
+      "challenge": {
+       "id": "icqq-slider",
+       "kind": "slider",
+       "title": "滑块验证",
+       "input": {
+        "kind": "ticket",
+        "label": "ticket",
+        "extract": "ticket-json-or-url"
+       },
+       "actions": [
+        {
+         "id": "submit",
+         "label": "提交",
+         "variant": "primary",
+         "requiresInput": true
+        }
+       ]
+      },
+      "endedAt": 1794566014025
+     },
+     {
+      "id": "step-126890fa-1ca0-4c1f-8e7b-f954cbaee33e",
+      "kind": "verifying",
+      "status": "active",
+      "title": "验证中…",
+      "titleKey": "login.verifying",
+      "at": 1794566014026
+     }
+    ]
+   },
+   "expectedApplied": null,
+   "expectedReceipt": "unknown"
+  },
+  {
+   "name": "submitted, then failed (code_invalid)",
+   "stepId": "step-f5d77124-d858-4c82-98bd-d90cf610b90c",
+   "taskId": "login-b43bbac7-044a-4894-8de2-05ba19c1e5aa",
+   "reply": null,
+   "flow": {
+    "id": "flow-49a10487-623f-4310-8faf-6dd34af97ea8",
+    "adapter": "icqq",
+    "endpointKey": "bot2",
+    "startedAt": 1794566014046,
+    "updatedAt": 1794566014047,
+    "revision": 4,
+    "attempt": 1,
+    "state": "failed",
+    "currentStep": "step-4557e701-d7ca-4253-b122-45cb4b3d85ca",
+    "steps": [
+     {
+      "id": "step-f5d77124-d858-4c82-98bd-d90cf610b90c",
+      "kind": "challenge",
+      "status": "done",
+      "title": "滑块验证",
+      "at": 1794566014046,
+      "challenge": {
+       "id": "icqq-slider",
+       "kind": "slider",
+       "title": "滑块验证",
+       "input": {
+        "kind": "ticket",
+        "label": "ticket",
+        "extract": "ticket-json-or-url"
+       },
+       "actions": [
+        {
+         "id": "submit",
+         "label": "提交",
+         "variant": "primary",
+         "requiresInput": true
+        }
+       ]
+      },
+      "endedAt": 1794566014046
+     },
+     {
+      "id": "step-4557e701-d7ca-4253-b122-45cb4b3d85ca",
+      "kind": "verifying",
+      "status": "failed",
+      "title": "验证中…",
+      "titleKey": "login.verifying",
+      "at": 1794566014046,
+      "outcome": {
+       "result": "failed",
+       "code": "code_invalid",
+       "message": "bad ticket",
+       "next": "retry_input"
+      },
+      "endedAt": 1794566014047
+     }
+    ],
+    "lastOutcome": {
+     "result": "failed",
+     "code": "code_invalid",
+     "message": "bad ticket",
+     "next": "retry_input"
+    }
+   },
+   "expectedApplied": false
+  },
+  {
+   "name": "submitted, accepted, next challenge",
+   "stepId": "step-1dc8fd4a-0850-4b16-9d39-78b4e95078c5",
+   "taskId": "login-b4d778c7-1b8a-47d6-9f2a-d445f96ada46",
+   "reply": null,
+   "flow": {
+    "id": "flow-8c905acb-318d-4450-b07c-119b74ef6895",
+    "adapter": "icqq",
+    "endpointKey": "bot3",
+    "startedAt": 1794566014047,
+    "updatedAt": 1794566014047,
+    "revision": 4,
+    "attempt": 1,
+    "state": "active",
+    "currentStep": "step-17716943-baaf-4fa0-a914-d074e075a866",
+    "steps": [
+     {
+      "id": "step-1dc8fd4a-0850-4b16-9d39-78b4e95078c5",
+      "kind": "challenge",
+      "status": "done",
+      "title": "滑块验证",
+      "at": 1794566014047,
+      "challenge": {
+       "id": "icqq-slider",
+       "kind": "slider",
+       "title": "滑块验证",
+       "input": {
+        "kind": "ticket",
+        "label": "ticket",
+        "extract": "ticket-json-or-url"
+       },
+       "actions": [
+        {
+         "id": "submit",
+         "label": "提交",
+         "variant": "primary",
+         "requiresInput": true
+        }
+       ]
+      },
+      "endedAt": 1794566014047
+     },
+     {
+      "id": "step-3e4f89df-62d8-42e7-86ec-a5c44ad4ecce",
+      "kind": "verifying",
+      "status": "done",
+      "title": "验证中…",
+      "titleKey": "login.verifying",
+      "at": 1794566014047,
+      "outcome": {
+       "result": "accepted"
+      },
+      "endedAt": 1794566014047
+     },
+     {
+      "id": "step-17716943-baaf-4fa0-a914-d074e075a866",
+      "kind": "challenge",
+      "status": "active",
+      "title": "设备锁验证",
+      "at": 1794566014047,
+      "challenge": {
+       "id": "icqq-device",
+       "kind": "device",
+       "title": "设备锁验证",
+       "actions": [
+        {
+         "id": "continue",
+         "label": "继续",
+         "variant": "primary"
+        }
+       ]
+      },
+      "taskId": "login-f12aa706-10b7-45e6-89bf-bbd44414cbc4"
+     }
+    ],
+    "activeTaskId": "login-f12aa706-10b7-45e6-89bf-bbd44414cbc4"
+   },
+   "expectedApplied": true
+  },
+  {
+   "name": "submitted, online",
+   "stepId": "step-f990c618-e49d-47da-88f3-ef6e5a79f94f",
+   "taskId": "login-e035dc4b-4e45-420e-9afa-c9a0a70b98b1",
+   "reply": null,
+   "flow": {
+    "id": "flow-8daeeb2d-b3af-4fdc-bd5a-0cbb6a035deb",
+    "adapter": "icqq",
+    "endpointKey": "bot4",
+    "startedAt": 1794566014047,
+    "updatedAt": 1794566014047,
+    "revision": 4,
+    "attempt": 1,
+    "state": "online",
+    "currentStep": "step-1429b186-9333-47a8-93b2-5852218ab07b",
+    "steps": [
+     {
+      "id": "step-f990c618-e49d-47da-88f3-ef6e5a79f94f",
+      "kind": "challenge",
+      "status": "done",
+      "title": "滑块验证",
+      "at": 1794566014047,
+      "challenge": {
+       "id": "icqq-slider",
+       "kind": "slider",
+       "title": "滑块验证",
+       "input": {
+        "kind": "ticket",
+        "label": "ticket",
+        "extract": "ticket-json-or-url"
+       },
+       "actions": [
+        {
+         "id": "submit",
+         "label": "提交",
+         "variant": "primary",
+         "requiresInput": true
+        }
+       ]
+      },
+      "endedAt": 1794566014047
+     },
+     {
+      "id": "step-1429b186-9333-47a8-93b2-5852218ab07b",
+      "kind": "verifying",
+      "status": "done",
+      "title": "验证中…",
+      "titleKey": "login.verifying",
+      "at": 1794566014047,
+      "outcome": {
+       "result": "online"
+      },
+      "endedAt": 1794566014047
+     }
+    ],
+    "lastOutcome": {
+     "result": "online"
+    }
+   },
+   "expectedApplied": true
+  },
+  {
+   "name": "submitted, rejected outcome, new challenge",
+   "stepId": "step-105a4062-d080-413b-9422-b2fa8fe1a915",
+   "taskId": "login-5b11e233-8d5b-4255-8801-b9a209faa2ba",
+   "reply": null,
+   "flow": {
+    "id": "flow-5e59ea5f-de0c-42b9-8462-c24a380d4fd0",
+    "adapter": "icqq",
+    "endpointKey": "bot5",
+    "startedAt": 1794566014047,
+    "updatedAt": 1794566014048,
+    "revision": 5,
+    "attempt": 1,
+    "state": "active",
+    "currentStep": "step-49a37b05-9270-4697-9862-ad24c3cd34eb",
+    "steps": [
+     {
+      "id": "step-105a4062-d080-413b-9422-b2fa8fe1a915",
+      "kind": "challenge",
+      "status": "done",
+      "title": "滑块验证",
+      "at": 1794566014047,
+      "challenge": {
+       "id": "icqq-slider",
+       "kind": "slider",
+       "title": "滑块验证",
+       "input": {
+        "kind": "ticket",
+        "label": "ticket",
+        "extract": "ticket-json-or-url"
+       },
+       "actions": [
+        {
+         "id": "submit",
+         "label": "提交",
+         "variant": "primary",
+         "requiresInput": true
+        }
+       ]
+      },
+      "endedAt": 1794566014048
+     },
+     {
+      "id": "step-d850335d-f978-4fe7-a943-4775688fbc46",
+      "kind": "verifying",
+      "status": "failed",
+      "title": "验证中…",
+      "titleKey": "login.verifying",
+      "at": 1794566014048,
+      "outcome": {
+       "result": "rejected",
+       "code": "code_invalid",
+       "message": "验证码错误"
+      },
+      "endedAt": 1794566014048
+     },
+     {
+      "id": "step-49a37b05-9270-4697-9862-ad24c3cd34eb",
+      "kind": "challenge",
+      "status": "active",
+      "title": "滑块验证",
+      "at": 1794566014048,
+      "challenge": {
+       "id": "icqq-slider",
+       "kind": "slider",
+       "title": "滑块验证",
+       "input": {
+        "kind": "ticket",
+        "label": "ticket",
+        "extract": "ticket-json-or-url"
+       },
+       "actions": [
+        {
+         "id": "submit",
+         "label": "提交",
+         "variant": "primary",
+         "requiresInput": true
+        }
+       ]
+      },
+      "taskId": "login-e12d8f02-9cb4-43b2-b054-783f45d08fa9"
+     }
+    ],
+    "lastOutcome": {
+     "result": "rejected",
+     "code": "code_invalid",
+     "message": "验证码错误"
+    },
+    "activeTaskId": "login-e12d8f02-9cb4-43b2-b054-783f45d08fa9"
+   },
+   "expectedApplied": false
+  },
+  {
+   "name": "flow ended while waiting (cancelled)",
+   "stepId": "step-ccfae678-6c54-48ec-95fe-dcfac5b29afe",
+   "taskId": "login-38781eed-42f9-427b-8712-16c35dbc1990",
+   "reply": {
+    "accepted": true,
+    "flow": {
+     "id": "flow-9ebe1ddf-4925-483c-9129-fc8e15fcde34",
+     "adapter": "icqq",
+     "endpointKey": "bot6",
+     "startedAt": 1794566014048,
+     "updatedAt": 1794566014049,
+     "revision": 4,
+     "attempt": 1,
+     "state": "cancelled",
+     "currentStep": "step-ab6057ae-11b3-4fb2-a6a4-c115dd11f443",
+     "steps": [
+      {
+       "id": "step-ccfae678-6c54-48ec-95fe-dcfac5b29afe",
+       "kind": "challenge",
+       "status": "done",
+       "title": "滑块验证",
+       "at": 1794566014048,
+       "challenge": {
+        "id": "icqq-slider",
+        "kind": "slider",
+        "title": "滑块验证",
+        "input": {
+         "kind": "ticket",
+         "label": "ticket",
+         "extract": "ticket-json-or-url"
+        },
+        "actions": [
+         {
+          "id": "submit",
+          "label": "提交",
+          "variant": "primary",
+          "requiresInput": true
+         }
+        ]
+       },
+       "endedAt": 1794566014048
+      },
+      {
+       "id": "step-ab6057ae-11b3-4fb2-a6a4-c115dd11f443",
+       "kind": "verifying",
+       "status": "skipped",
+       "title": "验证中…",
+       "titleKey": "login.verifying",
+       "at": 1794566014048,
+       "endedAt": 1794566014049
+      }
+     ]
+    }
+   },
+   "flow": {
+    "id": "flow-9ebe1ddf-4925-483c-9129-fc8e15fcde34",
+    "adapter": "icqq",
+    "endpointKey": "bot6",
+    "startedAt": 1794566014048,
+    "updatedAt": 1794566014049,
+    "revision": 4,
+    "attempt": 1,
+    "state": "cancelled",
+    "currentStep": "step-ab6057ae-11b3-4fb2-a6a4-c115dd11f443",
+    "steps": [
+     {
+      "id": "step-ccfae678-6c54-48ec-95fe-dcfac5b29afe",
+      "kind": "challenge",
+      "status": "done",
+      "title": "滑块验证",
+      "at": 1794566014048,
+      "challenge": {
+       "id": "icqq-slider",
+       "kind": "slider",
+       "title": "滑块验证",
+       "input": {
+        "kind": "ticket",
+        "label": "ticket",
+        "extract": "ticket-json-or-url"
+       },
+       "actions": [
+        {
+         "id": "submit",
+         "label": "提交",
+         "variant": "primary",
+         "requiresInput": true
+        }
+       ]
+      },
+      "endedAt": 1794566014048
+     },
+     {
+      "id": "step-ab6057ae-11b3-4fb2-a6a4-c115dd11f443",
+      "kind": "verifying",
+      "status": "skipped",
+      "title": "验证中…",
+      "titleKey": "login.verifying",
+      "at": 1794566014048,
+      "endedAt": 1794566014049
+     }
+    ]
+   },
+   "expectedApplied": false,
+   "expectedReceipt": "failed"
+  },
+  {
+   "name": "challenge replaced before an answer",
+   "stepId": "step-b85a20fc-738e-4c9b-b691-84188020f5a8",
+   "taskId": "login-30380374-0fb3-4af4-a23e-ae45ba2c50a8",
+   "reply": null,
+   "flow": {
+    "id": "flow-36461bb9-9257-456e-9ec6-9cc70bee5977",
+    "adapter": "icqq",
+    "endpointKey": "bot7",
+    "startedAt": 1794566014049,
+    "updatedAt": 1794566014050,
+    "revision": 3,
+    "attempt": 1,
+    "state": "active",
+    "currentStep": "step-bceaccd7-8753-431c-bb70-402bd638d125",
+    "steps": [
+     {
+      "id": "step-b85a20fc-738e-4c9b-b691-84188020f5a8",
+      "kind": "challenge",
+      "status": "skipped",
+      "title": "滑块验证",
+      "at": 1794566014049,
+      "challenge": {
+       "id": "icqq-slider",
+       "kind": "slider",
+       "title": "滑块验证",
+       "input": {
+        "kind": "ticket",
+        "label": "ticket",
+        "extract": "ticket-json-or-url"
+       },
+       "actions": [
+        {
+         "id": "submit",
+         "label": "提交",
+         "variant": "primary",
+         "requiresInput": true
+        }
+       ]
+      },
+      "endedAt": 1794566014050
+     },
+     {
+      "id": "step-bceaccd7-8753-431c-bb70-402bd638d125",
+      "kind": "challenge",
+      "status": "active",
+      "title": "滑块验证",
+      "at": 1794566014049,
+      "challenge": {
+       "id": "icqq-slider",
+       "kind": "slider",
+       "title": "滑块验证",
+       "input": {
+        "kind": "ticket",
+        "label": "ticket",
+        "extract": "ticket-json-or-url"
+       },
+       "actions": [
+        {
+         "id": "submit",
+         "label": "提交",
+         "variant": "primary",
+         "requiresInput": true
+        }
+       ]
+      },
+      "taskId": "login-26f33aa7-6e57-4251-8de0-9843e989a933"
+     }
+    ],
+    "activeTaskId": "login-26f33aa7-6e57-4251-8de0-9843e989a933"
+   },
+   "expectedApplied": false
+  }
+ ]
+}

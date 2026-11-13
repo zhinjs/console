@@ -35,13 +35,15 @@ const BADGE_VARIANT: Record<Tone, 'warning' | 'success' | 'destructive' | 'secon
 /** What `login.submit` sends; rides on the receipt plan so a remounted tab still knows what it checks. */
 interface SubmitPayload {
   readonly taskId: string
+  /** The challenge step answered: core drops the step's taskId once answered, so checks go by step. */
+  readonly stepId: string
   readonly value: LoginSubmitValue
   readonly adapter: string
   readonly endpointKey: string
   readonly endpointIdentity?: LoginFlow['endpointIdentity']
 }
 type ControlKind = 'cancel' | 'relogin' | 'refresh'
-interface ControlPayload { readonly kind: ControlKind; readonly adapter: string; readonly endpointKey: string; readonly taskId?: string; readonly flowId?: string; readonly attempt?: number; readonly challengeId?: string }
+interface ControlPayload { readonly kind: ControlKind; readonly adapter: string; readonly endpointKey: string; readonly taskId?: string; readonly flowId?: string; readonly attempt?: number; readonly stepId?: string }
 
 /** `data.code` of a refused login RPC (LoginSubmissionError / unsupported), read by rpc-reply-capture. */
 function refusalCode(error: unknown): string | undefined {
@@ -88,7 +90,7 @@ export function LoginFlowSection({ endpoint, legacyTasks, canOperate, onSettled 
   if (state.status === 'error') return <StatusState error={state.error} onRetry={flow.refresh} />
   return (
     <LoginFlowCard flow={state.flow} endpoint={endpoint} declaration={declaration} canOperate={canOperate}
-      readError={state.error} refreshing={state.refreshing} onReload={flow.refresh} onApply={flow.apply} onSettled={onSettled} />
+      readError={state.error} refreshing={state.refreshing} onReload={flow.refresh} onApply={flow.apply} onSettled={onSettled} clockOffset={state.clockOffset} />
   )
 }
 
@@ -100,7 +102,9 @@ export interface LoginFlowCardProps {
   readonly readError?: unknown
   readonly refreshing?: boolean
   readonly onReload: () => void
-  readonly onApply: (flow: LoginFlow | null | undefined) => void
+  readonly onApply: (flow: LoginFlow | null | undefined, fresh?: boolean) => void
+  /** Server − local clock (ms): server timestamps (deadlines, waits) are shifted onto this clock. */
+  readonly clockOffset?: number
   readonly onSettled?: () => void
 }
 
@@ -110,7 +114,7 @@ export interface LoginFlowCardProps {
  * outcome; a result that is still unknown stays 结果待确认 and is checked (read-only) whenever the
  * flow changes — never inferred from the task disappearing.
  */
-export function LoginFlowCard({ flow, endpoint, declaration, canOperate, readError, refreshing, onReload, onApply, onSettled }: LoginFlowCardProps) {
+export function LoginFlowCard({ flow, endpoint, declaration, canOperate, readError, refreshing, onReload, onApply, onSettled, clockOffset = 0 }: LoginFlowCardProps) {
   const i18n = useI18n()
   const logPanel = useLogPanel()
   const adapter = endpoint.adapter
@@ -129,7 +133,7 @@ export function LoginFlowCard({ flow, endpoint, declaration, canOperate, readErr
           ...(payload.endpointIdentity ? { endpointIdentity: payload.endpointIdentity } : {}),
         }, { timeoutMs: LOGIN_SUBMIT_TIMEOUT_MS })
         const read = readSubmitReply(reply)
-        if (read.flow) onApply(read.flow)
+        if (read.flow) onApply(read.flow, true)
         const result = submitReceiptResult(read)
         return { status: result.status, message: translate(result.message, result.detail) }
       } catch (error) {
@@ -146,7 +150,7 @@ export function LoginFlowCard({ flow, endpoint, declaration, canOperate, readErr
       const payload = plan.payload as SubmitPayload
       const current = readLoginFlowGet(await requestConsole<unknown>({ type: LOGIN_RPC.FLOW_GET, adapter: payload.adapter, endpointKey: payload.endpointKey }))
       onApply(current)
-      const verdict = verifySubmission(current, payload.taskId)
+      const verdict = verifySubmission(current, payload.stepId)
       return verdict ? { applied: verdict.applied, message: i18n.t(verdict.message) } : { message: i18n.t(PENDING_RESULT_COPY) }
     },
     onSettled: () => onSettled?.(),
@@ -175,8 +179,9 @@ export function LoginFlowCard({ flow, endpoint, declaration, canOperate, readErr
       onApply(current)
       if (payload.kind === 'cancel') return current && current.activeTaskId === payload.taskId && current.state === 'active' ? { applied: false } : { applied: true }
       if (payload.kind === 'relogin') return current && (current.id !== payload.flowId || current.attempt > (payload.attempt ?? 0)) ? { applied: true } : undefined
-      const challenge = activeChallengeStep(current)?.challenge
-      return challenge && challenge.id === payload.challengeId ? undefined : { applied: true }
+      // Challenge ids are stable per kind (icqq-qrcode…): a refresh shows as a new step.
+      const open = activeChallengeStep(current)
+      return open && open.id === payload.stepId ? undefined : { applied: true }
     },
   })
 
@@ -201,12 +206,12 @@ export function LoginFlowCard({ flow, endpoint, declaration, canOperate, readErr
     const before = flow.steps.slice(0, flow.steps.indexOf(openStep)).reverse().find(item => item.kind !== 'info')
     return before?.status === 'failed' && before.outcome ? outcomeView(before.outcome) : null
   })()
-  const settledPlanTask = (receipt.state.plan?.payload as SubmitPayload | undefined)?.taskId
+  const settledPlanStep = (receipt.state.plan?.payload as SubmitPayload | undefined)?.stepId
   const resetLatest = useRef(receipt.reset)
   resetLatest.current = receipt.reset
   useEffect(() => {
-    if (receipt.state.phase === 'failed' && !receipt.state.verified && retryNotice && settledPlanTask && settledPlanTask !== flow?.activeTaskId) resetLatest.current()
-  }, [receipt.state.phase, receipt.state.verified, retryNotice, settledPlanTask, flow?.activeTaskId])
+    if (receipt.state.phase === 'failed' && !receipt.state.verified && retryNotice && settledPlanStep && settledPlanStep !== openStep?.id) resetLatest.current()
+  }, [receipt.state.phase, receipt.state.verified, retryNotice, settledPlanStep, openStep?.id])
 
   const busy = receiptBlocksActions(receipt.state)
   const controlBusy = receiptBlocksActions(control.state)
@@ -220,14 +225,16 @@ export function LoginFlowCard({ flow, endpoint, declaration, canOperate, readErr
   const named = challenge ?? (flow ? [...flow.steps].reverse().find(item => item.challenge)?.challenge : undefined)
   const KindIcon = named ? KIND_ICONS[named.kind] : LogIn
 
-  const submit = (value: LoginSubmitValue, summary: string) => {
-    if (!flow || !step) return
+  /** Sends an answer; `false` when it could not be sent now (another write is open) — the caller keeps it. */
+  const submit = (value: LoginSubmitValue, summary: string): boolean => {
+    if (!flow || !step || receiptBlocksActions(receipt.state) || receiptBlocksActions(control.state)) return false
     const taskId = flow.activeTaskId ?? step.taskId
-    if (!taskId) return
-    const payload: SubmitPayload = { taskId, value, adapter, endpointKey, ...(flow.endpointIdentity ? { endpointIdentity: flow.endpointIdentity } : {}) }
+    if (!taskId) return false
+    const payload: SubmitPayload = { taskId, stepId: step.id, value, adapter, endpointKey, ...(flow.endpointIdentity ? { endpointIdentity: flow.endpointIdentity } : {}) }
     receipt.prepare({ title: i18n.t('提交 {0}：{1}', [`${adapter} / ${endpointKey}`, i18n.t(step.challenge.title)]), changes: [summary], payload })
     // Answering a challenge is the click itself: no extra confirmation step.
     receipt.confirm()
+    return true
   }
   const runControl = (kind: ControlKind) => {
     if (!flow && kind !== 'relogin') return
@@ -235,7 +242,7 @@ export function LoginFlowCard({ flow, endpoint, declaration, canOperate, readErr
       kind, adapter, endpointKey,
       ...(flow?.activeTaskId ? { taskId: flow.activeTaskId } : {}),
       ...(flow ? { flowId: flow.id, attempt: flow.attempt } : {}),
-      ...(challenge ? { challengeId: challenge.id } : {}),
+      ...(step ? { stepId: step.id } : {}),
     }
     if (kind === 'refresh') {
       control.prepare({ title: i18n.t('刷新 {0} 的验证', [`${adapter} / ${endpointKey}`]), payload })
@@ -247,8 +254,9 @@ export function LoginFlowCard({ flow, endpoint, declaration, canOperate, readErr
       : { title: i18n.t('重新登录 {0}', [`${adapter} / ${endpointKey}`]), summary: i18n.t('会结束当前的登录并从头开始；正在进行的验证会失效。'), confirmLabel: i18n.t('重新登录'), payload })
   }
   const onProgress = (event: ProgressEvent) => {
-    if (!challenge) return
-    setProgress(previous => ({ ...previous, [challenge.id]: recordProgress(previous[challenge.id], event) }))
+    // Keyed by step: a re-opened challenge with the same id (icqq-sms…) starts unticked.
+    if (!step) return
+    setProgress(previous => ({ ...previous, [step.id]: recordProgress(previous[step.id], event) }))
   }
   const onNext = (next: NonNullable<OutcomeView['next']>) => {
     if (next === 'retry_input') { inputRef.current?.focus(); inputRef.current?.select(); return }
@@ -257,7 +265,8 @@ export function LoginFlowCard({ flow, endpoint, declaration, canOperate, readErr
   }
   // `rate_limited` (next: wait): answers stay closed until the wait is over.
   const lastFailed = flow ? [...flow.steps].reverse().find(item => item.outcome && item.outcome.result !== 'accepted' && item.outcome.result !== 'online') : undefined
-  const waitUntil = lastFailed?.outcome?.retryAfterMs ? (lastFailed.endedAt ?? lastFailed.at) + lastFailed.outcome.retryAfterMs : undefined
+  // Server time → this browser's clock.
+  const waitUntil = lastFailed?.outcome?.retryAfterMs ? (lastFailed.endedAt ?? lastFailed.at) + lastFailed.outcome.retryAfterMs - clockOffset : undefined
 
   const header = (
     <header className="console-login-flow-head">
@@ -306,11 +315,11 @@ export function LoginFlowCard({ flow, endpoint, declaration, canOperate, readErr
       <ActionReceipt controller={control} className="console-login-receipt" />
       {readError ? <StatusState compact error={readError} onRetry={onReload} description={i18n.t('最近一次同步失败，下面是上次读到的状态。')} /> : null}
       <div className="console-login-flow-body">
-        <Timeline steps={timeline.steps} onNext={canOperate ? onNext : undefined} nextAllowed={next => next === 'retry_input' ? Boolean(challenge?.input) : next === 'wait' ? false : next === 'refresh_challenge' ? controls.refresh || controls.relogin : controls.relogin} disabled={busy || controlBusy} />
+        <Timeline steps={timeline.steps} onNext={canOperate ? onNext : undefined} nextAllowed={next => next === 'retry_input' ? Boolean(challenge?.input) : next === 'wait' ? false : next === 'refresh_challenge' ? controls.refresh || controls.relogin : controls.relogin} disabled={busy || controlBusy} clockOffset={clockOffset} />
         <div className="console-login-flow-main">
           {challenge && step ? (
             <>
-              <ChallengePanel step={step} progress={progress[challenge.id] ?? {}} onProgress={onProgress} onSubmit={submit}
+              <ChallengePanel key={step.id} step={step} progress={progress[step.id] ?? {}} clockOffset={clockOffset} onProgress={onProgress} onSubmit={submit}
                 busy={busy || controlBusy} canOperate={canOperate} infoSteps={activeInfoSteps(flow)}
                 onRefresh={controls.refresh ? () => runControl('refresh') : undefined} refreshing={control.state.phase === 'submitting'}
                 waitUntil={waitUntil} inputRef={inputRef} retryNotice={retryNotice} />
@@ -383,11 +392,12 @@ function SinceText({ at, prefix }: { at: number; prefix?: 'done' }) {
 }
 
 /** Vertical step timeline: done steps one line ✓, the current step highlighted, failures with the next step. */
-function Timeline({ steps, onNext, nextAllowed, disabled }: {
+function Timeline({ steps, onNext, nextAllowed, disabled, clockOffset = 0 }: {
   steps: readonly TimelineStep[]
   onNext?: (next: NonNullable<OutcomeView['next']>) => void
   nextAllowed: (next: NonNullable<OutcomeView['next']>) => boolean
   disabled: boolean
+  clockOffset?: number
 }) {
   const i18n = useI18n()
   // Only the latest failure keeps its full reason and next step; older ones shrink to one line.
@@ -409,7 +419,7 @@ function Timeline({ steps, onNext, nextAllowed, disabled }: {
             </p>
             {!step.collapsed && step.detail ? <p className="console-login-muted">{i18n.t(step.detail)}</p> : null}
             {step.outcome && step.status === 'failed' && step.id !== latestFailed ? <p className="console-login-muted">{i18n.t(step.outcome.title)}</p> : null}
-            {step.outcome && step.status === 'failed' && step.id === latestFailed ? <StepOutcome outcome={step.outcome} at={step.endedAt ?? step.at} onNext={onNext} nextAllowed={nextAllowed} disabled={disabled} /> : null}
+            {step.outcome && step.status === 'failed' && step.id === latestFailed ? <StepOutcome outcome={step.outcome} at={(step.endedAt ?? step.at) - clockOffset} onNext={onNext} nextAllowed={nextAllowed} disabled={disabled} /> : null}
             {step.outcome && step.status !== 'failed' && step.outcome.tone === 'success' && !step.collapsed ? <p className="console-login-muted">{i18n.t(step.outcome.title)}</p> : null}
           </div>
         </li>

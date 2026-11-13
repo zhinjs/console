@@ -200,7 +200,8 @@ export type SubmitReply =
 export function readSubmitReply(reply: unknown): SubmitReply
 export const PENDING_RESULT_COPY: string
 export function submitReceiptResult(read: SubmitReply): Readonly<{ status: 'saved' | 'failed' | 'unknown'; message: string; detail?: string; detailFromHost?: boolean }>
-export function verifySubmission(flow: LoginFlow | null | undefined, taskId: string): Readonly<{ applied: boolean; message: string }> | undefined
+export function verifySubmission(flow: LoginFlow | null | undefined, stepId: string): Readonly<{ applied: boolean; message: string }> | undefined
+export function serverClockOffset(previous: number | undefined, serverTimestamp: unknown, localNow?: number): number
 export const SUBMIT_ERROR_COPY: Readonly<Record<'input_invalid' | 'input_required' | 'invalid_action' | 'unsupported', string>>
 export function flowsUnsupported(status: { kind: string; serverCode?: string; message?: string } | null | undefined): boolean
 export function flowControls(flow: LoginFlow | null | undefined, declaration: LoginDeclaration | undefined, canOperate: boolean): Readonly<{ relogin: boolean; refresh: boolean; cancel: boolean }>

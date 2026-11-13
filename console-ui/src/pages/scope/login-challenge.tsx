@@ -31,14 +31,30 @@ export function useNow(active: boolean, intervalMs = 1000): number {
   return now
 }
 
+/** The step with its server timestamps (opened, deadlines) moved onto the local clock. */
+function localizeStep<S extends LoginStep & { readonly challenge: LoginChallenge }>(step: S, offset: number): S {
+  const challenge = step.challenge
+  const media = challenge.media?.expiresAt ? { ...challenge.media, expiresAt: challenge.media.expiresAt - offset } : challenge.media
+  return {
+    ...step,
+    at: step.at - offset,
+    challenge: { ...challenge, ...(media ? { media } : {}), ...(challenge.expiresAt ? { expiresAt: challenge.expiresAt - offset } : {}) },
+  }
+}
+
 export type ProgressEvent = { type: 'copied' | 'opened'; blockId: string } | { type: 'tick'; number: number }
 
 export interface ChallengePanelProps {
   readonly step: LoginStep & { readonly challenge: LoginChallenge }
   readonly progress: LoginProgress
   readonly onProgress: (event: ProgressEvent) => void
-  /** Sends `login.submit` through the card's ActionReceipt; `summary` names what is sent (never the value). */
-  readonly onSubmit: (value: LoginSubmitValue, summary: string) => void
+  /**
+   * Sends `login.submit` through the card's ActionReceipt; `summary` names what is sent (never the
+   * value). `false`: not sent now (another write is open).
+   */
+  readonly onSubmit: (value: LoginSubmitValue, summary: string) => boolean
+  /** Server − local clock (ms); the step's server timestamps are shifted onto this clock. */
+  readonly clockOffset?: number
   /** A submission is in flight or its result is unknown. */
   readonly busy: boolean
   readonly canOperate: boolean
@@ -61,7 +77,10 @@ export interface ChallengePanelProps {
  */
 export function ChallengePanel(props: ChallengePanelProps) {
   const i18n = useI18n()
-  const { step, progress, onProgress, onSubmit, busy, canOperate, infoSteps } = props
+  const { progress, onProgress, onSubmit, busy, canOperate, infoSteps } = props
+  const clockOffset = props.clockOffset ?? 0
+  // Deadlines and the opening time come from the server: put them on this browser's clock.
+  const step = useMemo(() => clockOffset ? localizeStep(props.step, clockOffset) : props.step, [props.step, clockOffset])
   const challenge = step.challenge
   const checklist = helpChecklist(challenge, progress)
   const blocks = challengeBlocks(challenge)
@@ -159,7 +178,7 @@ export function ChallengePanel(props: ChallengePanelProps) {
 function AnswerForm({ step, busy, onSubmit, waitUntil, inputRef }: {
   step: LoginStep & { readonly challenge: LoginChallenge }
   busy: boolean
-  onSubmit: (value: LoginSubmitValue, summary: string) => void
+  onSubmit: (value: LoginSubmitValue, summary: string) => boolean
   waitUntil?: number
   inputRef?: RefObject<HTMLInputElement | null>
 }) {
@@ -286,33 +305,55 @@ function QrChallenge({ challenge, openedAt, scanned, onRefresh, refreshing }: {
   )
 }
 
-type CaptchaState = 'idle' | 'waiting' | 'blocked' | 'received' | 'closed' | 'error'
+type CaptchaState = 'idle' | 'waiting' | 'blocked' | 'received' | 'queued' | 'closed' | 'error'
 
 /**
  * 「开始验证」: opens the hosted helper page (its own origin) in a popup with a fresh nonce and this
  * Console's origin in the fragment, accepts one reply from the helper origin with that nonce and
- * submits `ticket,randstr`. A blocked popup gets a link; pasting by hand always stays possible.
+ * submits `ticket,randstr`. While the window is open the button switches to it instead of opening
+ * another one (each attempt has its own window name, so nothing replaces a window in use). A reply
+ * that arrives while another write is open waits and is sent once the card is free. A blocked popup
+ * gets a link; pasting by hand always stays possible.
  */
 export function CaptchaHelper({ captcha, busy, onReply }: {
   captcha: { readonly query: string; readonly helperUrl?: string }
   busy: boolean
-  onReply: (reply: CaptchaReply) => void
+  /** `false`: not sent now (another write is open); the helper keeps the reply and retries. */
+  onReply: (reply: CaptchaReply) => boolean
 }) {
   const i18n = useI18n()
   const [state, setState] = useState<CaptchaState>('idle')
   const [fallbackUrl, setFallbackUrl] = useState<string | null>(null)
   const cleanup = useRef<(() => void) | null>(null)
+  const popupRef = useRef<Window | null>(null)
+  const queued = useRef<CaptchaReply | null>(null)
   const latestReply = useRef(onReply)
   latestReply.current = onReply
   useEffect(() => () => cleanup.current?.(), [])
+  // A queued reply goes out as soon as the card is free again.
+  useEffect(() => {
+    if (busy || state !== 'queued' || !queued.current) return
+    if (latestReply.current(queued.current)) { queued.current = null; setState('received') }
+  }, [busy, state])
   const helperUrl = captcha.helperUrl ?? DEFAULT_CAPTCHA_HELPER_URL
   const helperHost = useMemo(() => { try { return new URL(helperUrl).host } catch { return helperUrl } }, [helperUrl])
+  const deliver = (reply: CaptchaReply) => {
+    if (latestReply.current(reply)) { setState('received'); return }
+    queued.current = reply
+    setState('queued')
+  }
+  const windowOpen = state === 'waiting' && Boolean(popupRef.current && !popupRef.current.closed)
   const start = () => {
+    if (windowOpen) {
+      try { popupRef.current?.focus() } catch { /* the browser may refuse; the window stays */ }
+      return
+    }
     cleanup.current?.()
     let url: string
     let gate: ReturnType<typeof createCaptchaReplyGate>
+    let nonce: string
     try {
-      const nonce = createCaptchaNonce()
+      nonce = createCaptchaNonce()
       if (!isValidCaptchaNonce(nonce)) throw new RangeError('invalid nonce')
       url = buildCaptchaHelperUrl({ helperUrl, query: captcha.query, nonce, origin: window.location.origin })
       gate = createCaptchaReplyGate({ helperUrl, nonce })
@@ -321,17 +362,18 @@ export function CaptchaHelper({ captcha, busy, onReply }: {
       return
     }
     // The helper answers through `window.opener` (no `noopener`), and must not learn the Console's
-    // address (no referrer): openCaptchaPopup does both.
-    const popup = openCaptchaPopup(window, url)
+    // address (no referrer): openCaptchaPopup does both. A per-attempt name never reuses a window.
+    const popup = openCaptchaPopup(window, url, { name: `zhin-login-captcha-${nonce.slice(0, 12)}` })
+    popupRef.current = popup
     const onMessage = (event: MessageEvent) => {
       const reply = gate.accept({ origin: event.origin, data: event.data })
       if (!reply) return
-      setState('received')
       stop()
       try { popup?.close() } catch { /* cross-origin close may be refused */ }
-      latestReply.current(reply)
+      popupRef.current = null
+      deliver(reply)
     }
-    const watch = popup ? window.setInterval(() => { if (popup.closed && !gate.used) { setState('closed'); stop() } }, 800) : undefined
+    const watch = popup ? window.setInterval(() => { if (popup.closed && !gate.used) { setState('closed'); popupRef.current = null; stop() } }, 800) : undefined
     const stop = () => {
       window.removeEventListener('message', onMessage)
       if (watch !== undefined) window.clearInterval(watch)
@@ -352,17 +394,18 @@ export function CaptchaHelper({ captcha, busy, onReply }: {
         </div>
       </div>
       <div className="console-login-actions">
-        <Button size="sm" onClick={start} disabled={busy || state === 'received'} data-captcha-start>
-          {state === 'waiting' ? <Loader2 className="animate-spin" /> : <ExternalLink />}
-          {state === 'waiting' ? i18n.t('等待验证完成…') : state === 'idle' ? i18n.t('开始验证') : i18n.t('重新打开验证页')}
+        <Button size="sm" onClick={start} disabled={busy || state === 'received' || state === 'queued'} data-captcha-start>
+          {windowOpen ? <Loader2 className="animate-spin" /> : <ExternalLink />}
+          {windowOpen ? i18n.t('验证窗口已打开 · 切换到窗口') : state === 'idle' ? i18n.t('开始验证') : i18n.t('重新打开验证页')}
         </Button>
       </div>
       <p className="console-login-captcha-status" role="status" aria-live="polite">
         {state === 'waiting' ? i18n.t('已打开验证窗口。完成滑块后这里会自动提交。')
           : state === 'received' ? i18n.t('已收到验证结果，正在提交。')
-            : state === 'closed' ? i18n.t('验证窗口已关闭，没有收到结果。可以重新打开，或在下方手动粘贴。')
-              : state === 'error' ? i18n.t('无法打开验证页：Console 的地址或验证页地址不正确。请在下方手动粘贴 ticket。')
-                : null}
+            : state === 'queued' ? i18n.t('已收到验证结果，等当前操作结束后自动提交。')
+              : state === 'closed' ? i18n.t('验证窗口已关闭，没有收到结果。可以重新打开，或在下方手动粘贴。')
+                : state === 'error' ? i18n.t('无法打开验证页：Console 的地址或验证页地址不正确。请在下方手动粘贴 ticket。')
+                  : null}
         {state === 'blocked' && fallbackUrl ? (
           <>{i18n.t('浏览器拦截了弹出窗口。')}{' '}
             {/* rel="opener": the helper answers through window.opener; referrerPolicy keeps the Console's address out. */}

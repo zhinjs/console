@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { translate } from '../console-ui/src/i18n/locale.mjs'
 import { statusFromError } from '../console-ui/src/components/status-state-model.mjs'
 import { readSubmitResult } from '../console-ui/src/components/action-receipt-model.mjs'
@@ -254,20 +255,63 @@ test('submit replies map to receipt phases; pending never reads as success', () 
   assert.equal(model.readSubmitReply(null).kind, 'accepted')
 })
 
-test('verifying an unknown result reads the flow, never the task disappearing', () => {
-  const answered = (step, extra = {}) => model.readLoginFlow(flow({ activeTaskId: undefined, steps: [flow().steps[0], { ...flow().steps[1], ...step }], ...extra }))
-  assert.equal(model.verifySubmission(model.readLoginFlow(flow()), 'task-2'), undefined, 'still open')
-  // Task gone, verifying with no result yet: still undecided.
-  assert.equal(model.verifySubmission(model.readLoginFlow(flow({ activeTaskId: undefined, steps: [flow().steps[0], { ...flow().steps[1], status: 'done' }, { id: 's3', kind: 'verifying', status: 'active', title: '验证中…', at: NOW }] })), 'task-2'), undefined)
-  assert.deepEqual(model.verifySubmission(answered({ status: 'done', outcome: { result: 'accepted' } }), 'task-2'), { applied: true, message: '验证通过，正在继续登录。' })
-  assert.deepEqual(model.verifySubmission(answered({ status: 'failed', outcome: { result: 'rejected', code: 'code_invalid' } }), 'task-2'), { applied: false, message: '验证码或 ticket 不正确' })
-  assert.equal(model.verifySubmission(answered({ status: 'done' }, { state: 'online' }), 'task-2').applied, true)
-  assert.equal(model.verifySubmission(answered({ status: 'failed' }), 'task-2').applied, false)
+test('verifying an unknown result goes by the answered step (core drops its taskId), never by the task disappearing', () => {
+  // As core reports it: once answered, the challenge step has no taskId.
+  const answered = (step, extra = {}) => model.readLoginFlow(flow({ activeTaskId: undefined, steps: [flow().steps[0], { ...flow().steps[1], taskId: undefined, ...step }], ...extra }))
+  assert.equal(model.verifySubmission(model.readLoginFlow(flow()), 's2'), undefined, 'still open')
+  // Answered, verifying with no result yet: still undecided.
+  assert.equal(model.verifySubmission(answered({ status: 'done' }, { steps: [flow().steps[0], { ...flow().steps[1], taskId: undefined, status: 'done' }, { id: 's3', kind: 'verifying', status: 'active', title: '验证中…', at: NOW }] }), 's2'), undefined)
+  assert.deepEqual(model.verifySubmission(answered({ status: 'done', outcome: { result: 'accepted' } }), 's2'), { applied: true, message: '验证通过，正在继续登录。' })
+  assert.deepEqual(model.verifySubmission(answered({ status: 'failed', outcome: { result: 'rejected', code: 'code_invalid' } }), 's2'), { applied: false, message: '验证码或 ticket 不正确' })
+  assert.equal(model.verifySubmission(answered({ status: 'done' }, { state: 'online' }), 's2').applied, true)
+  assert.equal(model.verifySubmission(answered({ status: 'failed' }), 's2').applied, false)
+  assert.equal(model.verifySubmission(answered({ status: 'skipped' }), 's2').applied, false, 'replaced')
+  assert.equal(model.verifySubmission(answered({ status: 'done' }, { state: 'cancelled' }), 's2').applied, false, 'flow ended')
+  assert.equal(model.verifySubmission(model.readLoginFlow(flow()), 'gone-step').applied, false, 'the answered step is gone')
   // The verdict on the verifying step that followed the answer counts too.
-  const viaVerifying = model.readLoginFlow(flow({ activeTaskId: undefined, steps: [flow().steps[0], { ...flow().steps[1], status: 'done' }, { id: 's3', kind: 'verifying', status: 'failed', title: '验证中', at: NOW, outcome: { result: 'rejected', code: 'risk_blocked' } }] }))
-  assert.deepEqual(model.verifySubmission(viaVerifying, 'task-2'), { applied: false, message: '平台风控拒绝了这次登录' })
-  assert.equal(model.verifySubmission(null, 'task-2'), undefined)
-  assert.equal(model.verifySubmission(model.readLoginFlow(flow()), 'unknown-task'), undefined)
+  const viaVerifying = model.readLoginFlow(flow({ activeTaskId: undefined, steps: [flow().steps[0], { ...flow().steps[1], taskId: undefined, status: 'done' }, { id: 's3', kind: 'verifying', status: 'failed', title: '验证中', at: NOW, outcome: { result: 'rejected', code: 'risk_blocked' } }] }))
+  assert.deepEqual(model.verifySubmission(viaVerifying, 's2'), { applied: false, message: '平台风控拒绝了这次登录' })
+  assert.equal(model.verifySubmission(null, 's2'), undefined)
+})
+
+test('real core snapshots: every submission settles (no receipt locked as 结果未知)', () => {
+  const fixture = JSON.parse(readFileSync(new URL('./fixtures/login-core-snapshots.json', import.meta.url), 'utf8'))
+  assert.ok(fixture.cases.length >= 7)
+  for (const item of fixture.cases) {
+    const snapshot = model.readLoginFlow(item.flow)
+    assert.ok(snapshot, item.name)
+    const answered = snapshot.steps.find(step => step.id === item.stepId)
+    if (answered && answered.status !== 'active') assert.equal(answered.taskId, undefined, `${item.name}: core drops the taskId`)
+    const verdict = model.verifySubmission(snapshot, item.stepId)
+    assert.equal(verdict?.applied ?? null, item.expectedApplied, item.name)
+    // The old lookup by taskId would never have found the step.
+    assert.equal(snapshot.steps.some(step => step.taskId === item.taskId && step.status !== 'active'), false, item.name)
+    if (item.reply) {
+      const receipt = model.submitReceiptResult(model.readSubmitReply(item.reply))
+      assert.equal(readSubmitResult(receipt).phase, { unknown: 'unknown', failed: 'failed', saved: 'succeeded' }[item.expectedReceipt], item.name)
+    }
+  }
+})
+
+test('replies without an outcome are decided by the flow that came with them (core wakes waiters with none when a flow ends)', () => {
+  const ended = model.readSubmitReply({ accepted: true, flow: flow({ state: 'cancelled', activeTaskId: undefined }) })
+  assert.equal(ended.kind, 'accepted')
+  assert.deepEqual(model.submitReceiptResult(ended), { status: 'failed', message: '已取消' })
+  const failed = model.submitReceiptResult(model.readSubmitReply({ accepted: true, pending: true, flow: flow({ state: 'failed', lastOutcome: { result: 'failed', code: 'network', message: '连接断开' } }) }))
+  assert.deepEqual(failed, { status: 'failed', message: '网络错误', detail: '连接断开', detailFromHost: true })
+  assert.equal(model.submitReceiptResult(model.readSubmitReply({ accepted: true, flow: flow({ state: 'expired' }) })).status, 'failed')
+  assert.equal(model.submitReceiptResult(model.readSubmitReply({ accepted: true, flow: flow({ state: 'online' }) })).status, 'saved')
+  assert.equal(model.submitReceiptResult(model.readSubmitReply({ accepted: true, flow: flow() })).status, 'unknown', 'still active: wait')
+  assert.equal(model.submitReceiptResult(model.readSubmitReply({ success: true })).status, 'saved', 'only a flow-less legacy reply is 已提交')
+})
+
+test('server clock offset: skew counts, latency does not', () => {
+  assert.equal(model.serverClockOffset(0, NOW + 600, NOW), 0)
+  assert.equal(model.serverClockOffset(0, NOW - 1200, NOW), 0)
+  assert.equal(model.serverClockOffset(0, NOW + 5 * 60_000, NOW), 5 * 60_000)
+  assert.equal(model.serverClockOffset(0, NOW - 90_000, NOW), -90_000)
+  assert.equal(model.serverClockOffset(42_000, undefined, NOW), 42_000, 'no timestamp keeps the last offset')
+  assert.equal(model.serverClockOffset(undefined, 'x', NOW), 0)
 })
 
 test('an older Host is detected from the refusal; controls follow the declaration and permission', () => {

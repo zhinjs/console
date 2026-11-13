@@ -7,7 +7,7 @@ import { requestConsole } from '../../utils/console-rpc'
 import { createDebouncer } from '../attention/attention-model.mjs'
 import {
   LOGIN_FLOW_DEBOUNCE_MS, LOGIN_FLOW_EVENT, LOGIN_FLOW_POLL_MS, LOGIN_RPC, flowsUnsupported, mergeRedactedFlow, newerFlow,
-  readLoginFlow, readLoginFlowGet, readLoginFlowList, type LoginFlow,
+  readLoginFlow, readLoginFlowGet, readLoginFlowList, serverClockOffset, type LoginFlow,
 } from './login-flow-model.mjs'
 
 export interface LoginFlowTarget { readonly adapter: string; readonly endpointKey: string }
@@ -17,14 +17,19 @@ export type LoginFlowState =
   /** The Host predates Login Assist v2 (`login.flow.list` refused or unknown): use the legacy card. */
   | { readonly status: 'legacy' }
   | { readonly status: 'error'; readonly error: unknown }
-  | { readonly status: 'ready'; readonly flow: LoginFlow | null; readonly refreshing: boolean; readonly error: unknown; readonly readAt: number }
+  | { readonly status: 'ready'; readonly flow: LoginFlow | null; readonly refreshing: boolean; readonly error: unknown; readonly readAt: number
+      /** Server − local clock (ms), from fresh flow timestamps; QR deadlines, cooldowns and waits use it. */
+      readonly clockOffset: number }
 
 export interface LoginFlowController {
   readonly state: LoginFlowState
   /** Re-reads the flow now (live material included). */
   readonly refresh: () => void
-  /** A flow snapshot from a reply (e.g. `login.submit { wait: true }`); the newer revision wins. */
-  readonly apply: (flow: LoginFlow | null | undefined) => void
+  /**
+   * A flow snapshot from a reply (e.g. `login.submit { wait: true }`); the newer revision wins.
+   * `fresh`: produced just now (its `updatedAt` calibrates the server clock offset).
+   */
+  readonly apply: (flow: LoginFlow | null | undefined, fresh?: boolean) => void
 }
 
 /**
@@ -39,9 +44,10 @@ export function useLoginFlow(target: LoginFlowTarget, enabled = true): LoginFlow
   const [state, setState] = useState<LoginFlowState>({ status: 'loading' })
   const sequence = useRef(0)
   const current = useRef<LoginFlow | null>(null)
+  const offset = useRef(0)
   const commit = useCallback((next: LoginFlow | null, patch?: { refreshing?: boolean; error?: unknown }) => {
     current.current = next
-    setState({ status: 'ready', flow: next, refreshing: patch?.refreshing ?? false, error: patch?.error ?? null, readAt: Date.now() })
+    setState({ status: 'ready', flow: next, refreshing: patch?.refreshing ?? false, error: patch?.error ?? null, readAt: Date.now(), clockOffset: offset.current })
   }, [])
 
   const read = useCallback((mode: 'list' | 'get') => {
@@ -65,8 +71,10 @@ export function useLoginFlow(target: LoginFlowTarget, enabled = true): LoginFlow
     })
   }, [adapter, endpointKey, enabled, commit])
 
-  const apply = useCallback((incoming: LoginFlow | null | undefined) => {
+  const apply = useCallback((incoming: LoginFlow | null | undefined, fresh = false) => {
     if (!incoming || incoming.adapter !== adapter || incoming.endpointKey !== endpointKey) return
+    // An event or a submit reply was produced just now: its updatedAt is the server's "now".
+    if (fresh) offset.current = serverClockOffset(offset.current, incoming.updatedAt, Date.now())
     const previous = current.current
     const chosen = newerFlow(previous, incoming)
     if (chosen === previous) return
@@ -84,7 +92,7 @@ export function useLoginFlow(target: LoginFlowTarget, enabled = true): LoginFlow
     const offFlow = transport.onConsoleEvent(LOGIN_FLOW_EVENT, envelope => {
       const flow = readLoginFlow((envelope as { data?: unknown }).data)
       if (!flow || flow.adapter !== adapter || flow.endpointKey !== endpointKey) return
-      apply(flow)
+      apply(flow, true)
       live.trigger()
     })
     const offGap = transport.onConsoleEventRecoveryGap(() => live.trigger())

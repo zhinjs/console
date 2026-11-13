@@ -124,9 +124,12 @@ export const loginMessages = Object.freeze({
   "换一张": "New code",
   // Hosted captcha helper
   "也可以手动完成": "Or do it by hand",
+  "验证窗口已打开 · 切换到窗口": "Verification window open · switch to it",
+  "已收到验证结果，等当前操作结束后自动提交。": "Result received; it is submitted as soon as the current action finishes.",
+  "这一步已结束，请按当前步骤继续。": "This step has ended. Continue with the current step.",
+  "这一步已被新的验证替换。": "This step was replaced by a newer check.",
   "在验证页完成滑块": "Finish the slider on the verification page",
   "打开 {0} 上的验证页，拖动滑块后结果会自动交回这里并提交，不需要开发者工具。": "Opens the verification page on {0}. After you drag the slider, the result comes back here and is submitted. No developer tools needed.",
-  "等待验证完成…": "Waiting for the check…",
   "开始验证": "Start verification",
   "重新打开验证页": "Open the verification page again",
   "已打开验证窗口。完成滑块后这里会自动提交。": "The verification window is open. Finish the slider and this page submits by itself.",
