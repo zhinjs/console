@@ -14,7 +14,7 @@ import {
 import { ConsoleClientProvider, useConsoleTransport } from "@zhin.js/client";
 import { getConsoleClient } from "@console/utils/console-client";
 import { resetConsoleRuntime } from "@console/utils/console-runtime";
-import { BrowserRouter } from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { getRouterBasename } from "./pagesBase";
 import { ConsoleWebHost } from "./host/ConsoleWebHost";
 import { registerBuiltinConsolePages } from "@console/registerBuiltinShell";
@@ -112,16 +112,18 @@ function App() {
   return <ConsoleSessionGate><ConsoleShell /></ConsoleSessionGate>;
 }
 
+// A data router, so pages can use `useBlocker` (unsaved-changes guard covers back/forward and navigate()).
+// The shell's own <Routes> render as descendants of this catch-all route.
+const router = createBrowserRouter([{ path: "*", element: <App /> }], {
+  basename: getRouterBasename(),
+});
+
 ReactDOMClient.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <LocaleProvider>
     <TooltipProvider>
       <ToastProvider>
-        <BrowserRouter
-        basename={getRouterBasename()}
-      >
-        <App />
-      </BrowserRouter>
+        <RouterProvider router={router} />
       </ToastProvider>
     </TooltipProvider>
   </LocaleProvider>

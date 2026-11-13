@@ -1,9 +1,14 @@
+import { localeModule, isLocaleImport } from './locale-fixture.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { setOwnerDirty, guardedNavigationTarget, installUnsavedChangesGuard } from '../console-ui/src/utils/unsaved-changes-guard.mjs'
+import { readFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
+import ts from 'typescript'
+import * as guardModel from '../console-ui/src/utils/unsaved-changes-guard.mjs'
+const { setOwnerDirty, leavesCurrentPage, createBlockedNavigationHandler, installUnloadGuard } = guardModel
 
-const plain = { defaultPrevented: false, button: 0, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false }
-const here = { href: 'https://console.test/config?plugin=a' }
+const require = createRequire(import.meta.url)
+const flush = () => new Promise(resolve => setImmediate(resolve))
 
 test('dirty owners only change identity when an owner actually changes state', () => {
   const empty = new Set()
@@ -15,59 +20,107 @@ test('dirty owners only change identity when an owner actually changes state', (
   assert.deepEqual([...setOwnerDirty(two, 'a', false)], ['b'])
 })
 
-test('only plain same-origin clicks that leave the current page are guarded', () => {
-  assert.equal(guardedNavigationTarget({ href: '/logs?level=warn#top' }, plain, here), '/logs?level=warn#top')
-  assert.equal(guardedNavigationTarget({ href: 'https://console.test/files' }, plain, here), '/files')
-  assert.equal(guardedNavigationTarget({ href: '/config?plugin=b' }, plain, here), null, 'switching inside settings keeps the page and its drafts')
-  assert.equal(guardedNavigationTarget({ href: '#section' }, plain, here), null)
-  assert.equal(guardedNavigationTarget({ href: 'https://elsewhere.test/' }, plain, here), null)
-  assert.equal(guardedNavigationTarget({ href: '/files', target: '_blank' }, plain, here), null)
-  assert.equal(guardedNavigationTarget({ href: '/files', target: '_self' }, plain, here), '/files')
-  assert.equal(guardedNavigationTarget({ href: '/files', download: true }, plain, here), null)
-  for (const key of ['metaKey', 'ctrlKey', 'shiftKey', 'altKey']) assert.equal(guardedNavigationTarget({ href: '/files' }, { ...plain, [key]: true }, here), null)
-  assert.equal(guardedNavigationTarget({ href: '/files' }, { ...plain, button: 1 }, here), null)
-  assert.equal(guardedNavigationTarget({ href: '/files' }, { ...plain, defaultPrevented: true }, here), null)
-  assert.equal(guardedNavigationTarget(null, plain, here), null)
+test('only navigations that change the page are guarded', () => {
+  const here = { pathname: '/config', search: '?plugin=a', hash: '' }
+  assert.equal(leavesCurrentPage(here, { pathname: '/logs', search: '?level=warn', hash: '#top' }), true)
+  assert.equal(leavesCurrentPage(here, { pathname: '/config', search: '?plugin=b', hash: '' }), false, 'switching inside settings keeps the page and its drafts')
+  assert.equal(leavesCurrentPage(here, { pathname: '/config', search: '?plugin=a', hash: '#section' }), false)
+  assert.equal(leavesCurrentPage(here, null), false)
 })
 
-function fakeView() {
-  const listeners = new Map()
-  return {
-    location: here, listeners,
-    addEventListener(type, fn, capture = false) { listeners.set(`${type}:${capture}`, fn) },
-    removeEventListener(type, fn, capture = false) { if (listeners.get(`${type}:${capture}`) === fn) listeners.delete(`${type}:${capture}`) },
-  }
+function fakeBlocker() {
+  const blocker = { state: 'blocked', proceeded: 0, resets: 0, proceed() { this.proceeded++ }, reset() { this.resets++ } }
+  return blocker
 }
-function anchorClick(href, extra = {}) {
-  const anchor = { getAttribute: name => name === 'href' ? href : null, hasAttribute: () => false }
-  const event = { ...plain, ...extra, prevented: 0, stopped: 0, target: { closest: selector => (assert.equal(selector, 'a[href]'), anchor) },
-    preventDefault() { this.prevented++; this.defaultPrevented = true }, stopPropagation() { this.stopped++ } }
-  return event
-}
-const flush = () => new Promise(resolve => setImmediate(resolve))
 
-test('installed guard warns on unload and confirms in-app navigation before leaving', async () => {
-  const view = fakeView(), navigated = [], answers = []
-  const uninstall = installUnsavedChangesGuard({ view, navigate: path => navigated.push(path),
-    confirmLeave: () => new Promise(resolve => answers.push(resolve)) })
-  const unload = { returnValue: undefined, prevented: false, preventDefault() { this.prevented = true } }
-  view.listeners.get('beforeunload:false')(unload)
-  assert.equal(unload.prevented, true); assert.equal(unload.returnValue, '')
+test('a blocked navigation asks once, then proceeds or resets', async () => {
+  const answers = []
+  const settle = createBlockedNavigationHandler(() => new Promise(resolve => answers.push(resolve)))
+  settle({ state: 'unblocked' }); await flush()
+  assert.equal(answers.length, 0, 'nothing to ask while unblocked')
 
-  const click = view.listeners.get('click:true')
-  assert.ok(click, 'link clicks are captured before the router handles them')
-  const first = anchorClick('/logs'); click(first)
-  assert.equal(first.prevented, 1); assert.equal(first.stopped, 1); assert.equal(answers.length, 1)
-  const repeat = anchorClick('/files'); click(repeat)
-  assert.equal(repeat.prevented, 1); assert.equal(answers.length, 1, 'a pending confirmation is not stacked')
+  const back = fakeBlocker()
+  settle(back); settle(back); await flush()
+  assert.equal(answers.length, 1, 'a pending confirmation is not stacked')
   answers[0](false); await flush()
-  assert.deepEqual(navigated, [], 'cancel keeps the user on the page')
-  click(anchorClick('/files')); answers[1](true); await flush()
-  assert.deepEqual(navigated, ['/files'])
+  assert.deepEqual([back.proceeded, back.resets], [0, 1], 'cancel keeps the user on the page')
 
-  const inside = anchorClick('/config?plugin=b'); click(inside)
-  assert.equal(inside.prevented, 0); assert.equal(answers.length, 2)
+  const palette = fakeBlocker()
+  settle(palette); await flush(); answers[1](true); await flush()
+  assert.deepEqual([palette.proceeded, palette.resets], [1, 0])
 
+  const failing = fakeBlocker()
+  createBlockedNavigationHandler(() => Promise.reject(new Error('closed')))(failing); await flush()
+  assert.deepEqual([failing.proceeded, failing.resets], [0, 1], 'a failed confirmation stays on the page')
+})
+
+test('the unload guard warns on refresh/close until uninstalled', () => {
+  const listeners = new Map()
+  const view = { addEventListener: (type, fn) => listeners.set(type, fn), removeEventListener: (type, fn) => { if (listeners.get(type) === fn) listeners.delete(type) } }
+  const uninstall = installUnloadGuard(view)
+  const unload = { returnValue: undefined, prevented: false, preventDefault() { this.prevented = true } }
+  listeners.get('beforeunload')(unload)
+  assert.equal(unload.prevented, true); assert.equal(unload.returnValue, '')
   uninstall()
-  assert.equal(view.listeners.size, 0, 'a clean page no longer blocks unload or navigation')
+  assert.equal(listeners.size, 0)
+})
+
+/** Runs the production hook with a minimal hook runtime and a fake data-router blocker. */
+async function loadHook() {
+  const source = await readFile(new URL('../console-ui/src/utils/useUnsavedChangesGuard.tsx', import.meta.url), 'utf8')
+  const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
+  const slots = []; let cursor = 0; const effects = []
+  const same = (a, b) => a && b && a.length === b.length && a.every((item, i) => Object.is(item, b[i]))
+  const react = {
+    useRef(initial) { const i = cursor++; return slots[i] ?? (slots[i] = { current: initial }) },
+    useCallback(fn, deps) { const i = cursor++; if (!same(slots[i]?.deps, deps)) slots[i] = { deps, fn }; return slots[i].fn },
+    useMemo(fn, deps) { const i = cursor++; if (!same(slots[i]?.deps, deps)) slots[i] = { deps, value: fn() }; return slots[i].value },
+    useEffect(fn, deps) { const i = cursor++; if (!same(slots[i]?.deps, deps)) { const old = slots[i]; slots[i] = { deps }; effects.push(() => { old?.cleanup?.(); slots[i].cleanup = fn() }) } },
+  }
+  const router = { shouldBlock: null, blocker: { state: 'unblocked' } }
+  const asked = []
+  const listeners = new Map()
+  globalThis.window = { addEventListener: (type, fn) => listeners.set(type, fn), removeEventListener: (type, fn) => { if (listeners.get(type) === fn) listeners.delete(type) } }
+  const mocks = {
+    react, './unsaved-changes-guard.mjs': guardModel,
+    'react-router-dom': { useBlocker: fn => { router.shouldBlock = fn; return router.blocker } },
+    '../components/confirm-dialog': { useConfirm: () => ({ confirm: opts => new Promise(resolve => asked.push({ opts, resolve })), ConfirmDialog: 'dialog' }) },
+  }
+  const module = { exports: {} }
+  new Function('require', 'exports', 'module', code)(name => isLocaleImport(name) ? localeModule : Object.hasOwn(mocks, name) ? mocks[name] : require(name), module.exports, module)
+  const render = active => { cursor = 0; const value = module.exports.useUnsavedChangesGuard(active); effects.splice(0).forEach(run => run()); return value }
+  return { render, router, asked, listeners }
+}
+
+test('the guard blocks back/forward and navigate() through the data router, not only link clicks', async () => {
+  const { render, router, asked, listeners } = await loadHook()
+  const config = { pathname: '/config' }
+  assert.equal(render(false), 'dialog')
+  assert.equal(router.shouldBlock({ currentLocation: config, nextLocation: { pathname: '/logs' }, historyAction: 'POP' }), false, 'a clean page never blocks')
+  assert.equal(listeners.size, 0)
+
+  render(true)
+  assert.ok(listeners.has('beforeunload'), 'dirty page warns on refresh/close')
+  assert.equal(router.shouldBlock({ currentLocation: config, nextLocation: { pathname: '/logs' }, historyAction: 'POP' }), true, 'browser back is blocked')
+  assert.equal(router.shouldBlock({ currentLocation: config, nextLocation: { pathname: '/files' }, historyAction: 'PUSH' }), true, 'command palette navigate() is blocked')
+  assert.equal(router.shouldBlock({ currentLocation: config, nextLocation: { pathname: '/config' }, historyAction: 'PUSH' }), false)
+
+  const blocked = fakeBlocker(); router.blocker = blocked
+  render(true); await flush()
+  assert.equal(asked.length, 1)
+  assert.equal(asked[0].opts.variant, 'destructive')
+  asked[0].resolve(true); await flush()
+  assert.equal(blocked.proceeded, 1)
+
+  router.blocker = { state: 'unblocked' }
+  render(false)
+  assert.equal(listeners.size, 0, 'saved page no longer blocks unload')
+  delete globalThis.window
+})
+
+test('the app mounts a data router so useBlocker is available', async () => {
+  const main = await readFile(new URL('../client/main.tsx', import.meta.url), 'utf8')
+  assert.match(main, /createBrowserRouter\(/)
+  assert.match(main, /<RouterProvider router=\{router\} \/>/)
+  assert.doesNotMatch(main, /<BrowserRouter\b/)
 })
