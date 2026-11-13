@@ -3,7 +3,6 @@
  * 筛选状态都是一组 URLSearchParams：/logs 页放在地址栏里，面板放在内存里（并记在 localStorage），
  * 所以面板从不改当前页面的地址。
  */
-import { historyQuery } from '../../pages/logs/history-model.mjs'
 import { canSeeRoute } from '../../navigation-sections.mjs'
 import { CONSOLE_PATHS } from '../../console-routes.mjs'
 
@@ -157,18 +156,4 @@ export function writeLogPanelPrefs(storage, prefs) {
   } catch {
     return false
   }
-}
-
-/** 面板里显示的筛选摘要（标题旁）：级别 + 文本 + 范围。 */
-export function logPanelFilterSummary(params) {
-  const clean = sanitizeLogParams(params)
-  const query = historyQuery(clean)
-  const adapter = text(clean.get('adapter'))
-  const endpoint = adapter ? text(clean.get('endpoint')) : ''
-  const parts = []
-  if (adapter) parts.push(endpoint ? `${adapter} / ${endpoint}` : adapter)
-  if (query.q) parts.push(`“${query.q}”`)
-  if (query.level !== 'all') parts.push(query.level)
-  if (query.source) parts.push(query.source)
-  return parts.join(' · ')
 }

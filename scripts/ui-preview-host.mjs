@@ -16,6 +16,8 @@ const logs = [
   { id: 2, timestamp: Date.now() - 40_000, level: 'warn', name: 'preview', plugin: 'preview', message: '客服账号尚未启动。请在账号页检查状态。' },
   { id: 1, timestamp: Date.now() - 60_000, level: 'info', name: 'preview', plugin: 'preview', message: '会话目录已加载。' },
 ]
+// Routine lines so the log list fills a panel in screenshots.
+for (let index = 0; index < 14; index++) logs.push({ id: -index - 1, timestamp: Date.now() - 70_000 - index * 15_000, level: index % 5 === 0 ? 'warn' : 'info', name: index % 2 ? 'icqq' : 'preview', plugin: 'preview', message: index % 2 ? `preview-community 心跳正常（第 ${index + 1} 次），延迟 ${20 + index} ms` : `定时任务 preview-digest 第 ${index + 1} 次检查完成，没有需要发送的摘要；下一次检查在 15 秒后` })
 const engagement = {
   summary: { engagementId: 'preview-engagement-1', venue: 'preview-room', status: 'completed', startedAt: Date.now() - 300_000, endedAt: Date.now() - 296_000,
     eventCount: 5, hops: 2, turns: 3, tokensUsed: 1840, wallClockMs: 4200, participants: ['agent:planner', 'agent:reviewer'], stopReason: 'done' },

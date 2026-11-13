@@ -7,7 +7,8 @@ import { CONSOLE_REST } from '../../contracts/zhin-console'
 import { readErrorSummary } from '../../utils/read-error.mjs'
 import { logReadState, logPayloadAvailability } from './read-state.mjs'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
-import { LogWorkbench, type LogEntry, type LogStats } from './LogWorkbench'
+import { LogWorkbench, type LogEntry, type LogStats, type LogWorkbenchActions, type LogWorkbenchState } from './LogWorkbench'
+import { LogPanelWorkbench } from './LogPanelWorkbench'
 import { ScopeFilterBar } from '../insights/ScopeFilterBar'
 import { clearScopeFilter, logScopeTokens, logServerQuery, matchesLogScope, readScopeFilter } from '../insights/scope-filter.mjs'
 
@@ -269,31 +270,32 @@ export function LogViewer({ params, onParamsChange, variant = 'page' }: LogViewe
     }
   }
 
+  const workbenchState: LogWorkbenchState = { logs: loadedKeyRef.current === requestKey ? scopedLogs : [], stats, level: levelFilter, query: textFilter, autoScroll, error: error ?? statsError, readOnly, logsKnown: access.logsKnown, canManage: access.canManage, loading, source: sourceFilter, page, pageSize, total: history?.total ?? null, totalPages: history?.totalPages ?? null, sources: loadedKeyRef.current === requestKey ? history?.sources ?? [] : [] }
+  const workbenchActions: LogWorkbenchActions = {
+    selectLevel,
+    selectSource: value => changeFilter('source',value),
+    changePage,
+    changePageSize: value => changeFilter('pageSize',value),
+    changeQuery: changeTextFilter,
+    changeAutoScroll: enabled => { setAutoScroll(enabled); if(enabled) changePage(1) },
+    refresh: () => { void fetchLogs(); void fetchStats() },
+    retry: () => { void fetchLogs() },
+    clearAll: () => { void handleClearAll() },
+    cleanup: (days, maxRecords) => { void handleCleanup(days, maxRecords) },
+  }
+
   return (
     <>
-      <ScopeFilterBar
+      {/* The panel shows the range as a chip in its own header (LogPanel), so only the page renders the range bar. */}
+      {variant === 'page' ? <ScopeFilterBar
         filter={scopeFilter}
         onClear={() => commitParams(clearScopeFilter(paramsRef.current))}
         note={i18n.t("运行日志没有结构化的适配器、账号或会话字段，这里按文本匹配这些标识，可能漏掉或多出条目；页码与总数按 Host 的文本条件统计，本页只显示匹配全部标识的行。")}
-      />
+      /> : null}
 
-      <LogWorkbench
-        compact={variant === 'panel'}
-        state={{ logs: loadedKeyRef.current === requestKey ? scopedLogs : [], stats, level: levelFilter, query: textFilter, autoScroll, error: error ?? statsError, readOnly, logsKnown: access.logsKnown, canManage: access.canManage, loading, source: sourceFilter, page, pageSize, total: history?.total ?? null, totalPages: history?.totalPages ?? null, sources: loadedKeyRef.current === requestKey ? history?.sources ?? [] : [] }}
-        actions={{
-          selectLevel,
-          selectSource: value => changeFilter('source',value),
-          changePage,
-          changePageSize: value => changeFilter('pageSize',value),
-          changeQuery: changeTextFilter,
-          changeAutoScroll: enabled => { setAutoScroll(enabled); if(enabled) changePage(1) },
-          refresh: () => { void fetchLogs(); void fetchStats() },
-          retry: () => { void fetchLogs() },
-          clearAll: () => { void handleClearAll() },
-          cleanup: (days, maxRecords) => { void handleCleanup(days, maxRecords) },
-        }}
-        endRef={logsEndRef}
-      />
+      {variant === 'panel'
+        ? <LogPanelWorkbench state={workbenchState} actions={workbenchActions} endRef={logsEndRef} />
+        : <LogWorkbench state={workbenchState} actions={workbenchActions} endRef={logsEndRef} />}
 
       {!readOnly && <ConfirmDialog
         open={clearConfirmOpen}

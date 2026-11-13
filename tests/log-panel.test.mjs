@@ -164,11 +164,12 @@ function renderViewer(params, onParamsChange, variant) {
     '../../components/toast': { useToast: () => ({ success() {}, error() {} }) }, '../../components/confirm-dialog': { ConfirmDialog: 'confirm-dialog' },
     '../../contracts/zhin-console': { CONSOLE_REST: { LOGS: '/api/logs', LOGS_STATS: '/api/logs/stats', LOGS_CLEANUP: '/api/logs/cleanup' } },
     '../../utils/read-error.mjs': readError, './read-state.mjs': readState, '../../utils/console-access.mjs': { hasConsolePermission: () => true },
-    './LogWorkbench': { LogWorkbench: 'log-workbench' }, '../insights/ScopeFilterBar': { ScopeFilterBar: 'scope-filter-bar' },
+    './LogWorkbench': { LogWorkbench: 'log-workbench' }, './LogPanelWorkbench': { LogPanelWorkbench: 'log-panel-workbench' },
+    '../insights/ScopeFilterBar': { ScopeFilterBar: 'scope-filter-bar' },
     '../insights/scope-filter.mjs': scopeFilter, './history-model.mjs': historyModel,
   })
   const tree = runtime.render(() => mod.LogViewer({ params, onParamsChange, variant }))
-  return { tree, workbench: nodes(tree).find(node => node.type === 'log-workbench'), scopeBar: nodes(tree).find(node => node.type === 'scope-filter-bar') }
+  return { tree, workbench: nodes(tree).find(node => node.type === 'log-workbench' || node.type === 'log-panel-workbench'), scopeBar: nodes(tree).find(node => node.type === 'scope-filter-bar') }
 }
 
 test('LogViewer reads every filter from its params and reports changes through onParamsChange', () => {
@@ -178,7 +179,7 @@ test('LogViewer reads every filter from its params and reports changes through o
   assert.equal(workbench.props.state.level, 'warn')
   assert.equal(workbench.props.state.source, 'icqq')
   assert.equal(workbench.props.state.page, 2)
-  assert.equal(workbench.props.compact, false)
+  assert.equal(workbench.type, 'log-workbench', 'the page keeps the full workbench')
   assert.equal(scopeBar.props.filter.identity, 'qq / bot-1')
   workbench.props.actions.changeQuery('timeout')
   workbench.props.actions.selectLevel('error')
@@ -190,7 +191,9 @@ test('LogViewer reads every filter from its params and reports changes through o
     'q=timeout&level=error&source=icqq&pageSize=50&adapter=qq&endpoint=bot-1&page=3',
     'q=timeout&level=error&source=icqq&pageSize=50',
   ], 'each change builds on the previous one, without waiting for a re-render; filters reset the page')
-  assert.equal(renderViewer(new URLSearchParams(), () => {}, 'panel').workbench.props.compact, true)
+  const panel = renderViewer(new URLSearchParams('adapter=qq'), () => {}, 'panel')
+  assert.equal(panel.workbench.type, 'log-panel-workbench', 'the panel uses the dense workbench with the same state and actions')
+  assert.equal(panel.scopeBar, undefined, 'the panel shows the range as a header chip, not the range bar')
 })
 
 test('/logs keeps URL-backed filters: deep links like /logs?q=… render and changes replace the URL entry', async () => {
@@ -224,7 +227,7 @@ function panelFixture({ pathname = '/scope/qq/bot-1', mobile = false, access = U
     '../../i18n': { useI18n: () => i18n }, '../ui/button': { Button: 'button' }, '../../pages/logs/LogViewer': { LogViewer: 'log-viewer' },
     '../../hooks/useIsMobile': { useIsMobile: () => mobile }, '../../hooks/use-console-access': { useConsoleAccess: () => access },
     '../../utils/console-client': { app: { subscribe() { return () => {} }, getRoutes: () => routes } },
-    './log-panel-store.mjs': storeModule, './log-panel-model.mjs': model,
+    './log-panel-store.mjs': storeModule, './log-panel-model.mjs': model, '../../pages/insights/scope-filter.mjs': scopeFilter,
   })
   return {
     env, mod,
@@ -409,4 +412,58 @@ test('pages where staying put is better open the panel; the /logs?q= link stays 
   assert.match(welcome, /to=\{`\/logs\?q=\$\{encodeURIComponent\(selected\.instanceKey\)\}`\}/)
   const dashboard = await source('pages/dashboard.tsx')
   assert.match(dashboard, /navigate\(.*'\/logs\?level=error'/, 'dashboard alerts still go to the full page')
+})
+
+// ---------- Panel variant structure ----------
+
+test('panel workbench: one toolbar row, single-line rows, no section header, count and pager in a one-line footer', async () => {
+  const runtime = hookRuntime()
+  const mod = compile(await source('pages/logs/LogPanelWorkbench.tsx'), {
+    react: runtime.hooks, 'lucide-react': lucide, '@zhin.js/client': { cn: (...values) => values.filter(Boolean).join(' ') }, '../../i18n': { useI18n: () => i18n },
+    '../../components/ui/button': { Button: 'button' }, '../../components/ui/checkbox': { Checkbox: 'checkbox' }, '../../components/ui/input': { Input: 'input' },
+    '../../components/ui/select': { SelectField: 'select-field' }, '../../components/error-alert': { ErrorAlert: 'error-alert' }, '../../components/ui/list-item-button': { ListItemButton: 'button' },
+    '../../components/ui/dropdown-menu': Object.fromEntries(['DropdownMenu', 'DropdownMenuTrigger', 'DropdownMenuContent', 'DropdownMenuItem', 'DropdownMenuLabel', 'DropdownMenuSeparator', 'DropdownMenuCheckboxItem'].map(name => [name, name])),
+    './history-model.mjs': historyModel,
+    './LogWorkbench': { getLevelMeta: level => ({ label: level, icon: 'LevelIcon', className: `is-${level}` }), formatLogTime: () => '12:00:00', LogInspector: 'log-inspector' },
+  })
+  const logs = Array.from({ length: 3 }, (_, index) => ({ id: index + 1, level: index ? 'info' : 'error', source: 'icqq', message: `message ${index} `.repeat(30), timestamp: '2026-11-13T00:00:00Z' }))
+  const calls = []
+  const actions = new Proxy({}, { get: (_target, name) => (...args) => calls.push([name, ...args]) })
+  const state = { logs, stats: null, level: 'all', query: '', autoScroll: true, error: null, readOnly: false, logsKnown: true, canManage: true, loading: false, source: '', page: 1, pageSize: 100, total: 250, totalPages: 3, sources: [] }
+  const render = () => runtime.render(() => mod.LogPanelWorkbench({ state, actions, endRef: { current: null } }))
+  let tree = render()
+  const toolbar = nodes(tree).find(node => node.props?.className === 'console-log-panel-toolbar')
+  const kinds = nodes(toolbar).filter(node => ['input', 'select-field', 'checkbox', 'button'].includes(node.type)).map(node => node.type === 'button' ? node.props['aria-label'] : node.type)
+  assert.deepEqual(kinds, ['input', 'select-field', 'checkbox', '刷新', '来源筛选', '更多日志选项'], 'search, level, follow, refresh, sources, overflow in one row')
+  for (const button of nodes(toolbar).filter(node => node.type === 'button')) assert.equal(button.props.title, button.props['aria-label'], 'icon buttons carry a tooltip')
+  assert.ok(nodes(toolbar).some(node => node.type === 'DropdownMenuCheckboxItem'), 'page size lives in the overflow menu')
+  assert.ok(!nodes(tree).some(node => node.type === 'h2'), 'no 历史事件 header')
+  const rows = nodes(tree).filter(node => node.type === 'button' && node.props.className?.includes('console-log-panel-row'))
+  assert.equal(rows.length, 3)
+  assert.deepEqual(rows[0].props.children.map(child => child.type), ['time', 'LevelIcon', 'code', 'span'], 'time · level · source · message on one line')
+  assert.equal(rows[0].props.title, logs[0].message, 'the truncated message is available in full')
+  const footer = nodes(tree).find(node => node.type === 'nav')
+  assert.match(text(footer), /1\/3 · 250 条/)
+  nodes(footer).find(node => node.props?.['aria-label'] === '下一页').props.onClick()
+  assert.deepEqual(calls.at(-1), ['changePage', 2])
+  rows[1].props.onClick()
+  tree = render()
+  assert.ok(nodes(tree).some(node => node.type === 'log-inspector'), 'a row opens the shared inspector')
+})
+
+test('panel header: the range is a chip with open-object and clear; the text-matching caveat is its tooltip', () => {
+  storeModule.openLogPanel({ adapter: 'qq', endpoint: 'bot-1', q: 'boom' })
+  const f = panelFixture()
+  try {
+    const tree = f.render()
+    const chip = nodes(tree).find(node => node.props?.className === 'console-log-panel-scope')
+    assert.equal(text(nodes(chip).find(node => node.type === 'code')), 'qq / bot-1')
+    assert.match(chip.props.title, /按文本匹配/)
+    const open = nodes(chip).find(node => node.props?.['aria-label'] === '打开对象页')
+    assert.equal(open.props.to, '/scope/qq/bot-1')
+    assert.equal(open.props.title, '打开对象页')
+    nodes(chip).find(node => node.props?.['aria-label'] === '清除范围').props.onClick()
+    assert.equal(storeModule.logPanelStore.get().params, 'q=boom', 'clearing the range keeps the other filters')
+    assert.ok(!nodes(f.render()).some(node => node.props?.className === 'console-log-panel-scope'))
+  } finally { f.close() }
 })

@@ -1,10 +1,11 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { ArrowUpRight, PanelBottom, X } from 'lucide-react'
+import { ArrowUpRight, Filter, PanelBottom, SquareArrowOutUpRight, X } from 'lucide-react'
 import { cn } from '@zhin.js/client'
 import { useI18n } from '../../i18n'
 import { Button } from '../ui/button'
 import { LogViewer } from '../../pages/logs/LogViewer'
+import { clearScopeFilter, readScopeFilter, scopeObjectHref } from '../../pages/insights/scope-filter.mjs'
 import { useIsMobile } from '../../hooks/useIsMobile'
 import { useConsoleAccess } from '../../hooks/use-console-access'
 import { app } from '../../utils/console-client'
@@ -14,7 +15,6 @@ import {
   isLogPanelShortcut,
   logPageHref,
   logPanelAvailable,
-  logPanelFilterSummary,
   logPanelSuspended,
   LOG_PANEL_ID,
   LOG_PANEL_MIN_HEIGHT,
@@ -131,7 +131,8 @@ export function LogPanel() {
   const [dragHeight, setDragHeight] = useState<number | null>(null)
   const height = clampPanelHeight(dragHeight ?? state.height, viewportHeight)
   const params = useMemo(() => new URLSearchParams(state.params), [state.params])
-  const summary = logPanelFilterSummary(state.params)
+  // The range is the chip in the header (the /logs page shows the full range bar instead).
+  const scopeFilter = readScopeFilter(params)
 
   // Last filters and height come back from localStorage, unless a page already opened the panel with a filter.
   useEffect(() => {
@@ -271,13 +272,21 @@ export function LogPanel() {
           <div className="console-log-panel-title">
             <PanelBottom aria-hidden="true" />
             <h2>{title}</h2>
-            {summary ? <code title={summary}>{summary}</code> : <span className="console-log-panel-hint">{i18n.t('不离开当前页面查看实时日志')}</span>}
+            {scopeFilter.active ? (
+              <span className="console-log-panel-scope" title={i18n.t("运行日志没有结构化的适配器、账号或会话字段，这里按文本匹配这些标识，可能漏掉或多出条目；页码与总数按 Host 的文本条件统计，本页只显示匹配全部标识的行。")}>
+                <Filter aria-hidden="true" />
+                <code>{scopeFilter.identity}</code>
+                <Link className="console-log-panel-chip-button" to={scopeObjectHref(scopeFilter.scope)} aria-label={i18n.t('打开对象页')} title={i18n.t('打开对象页')}><SquareArrowOutUpRight aria-hidden="true" /></Link>
+                <button type="button" className="console-log-panel-chip-button" aria-label={i18n.t('清除范围')} title={i18n.t('清除范围')}
+                  onClick={() => { logPanelStore.setParams(clearScopeFilter(params)) }}><X aria-hidden="true" /></button>
+              </span>
+            ) : <span className="console-log-panel-hint">{i18n.t('不离开当前页面查看实时日志')}</span>}
           </div>
           <div className="console-log-panel-actions">
-            <Button asChild variant="ghost" size="sm">
-              <Link to={logPageHref(params)} onClick={() => closeLogPanel()}>{i18n.t('在日志页打开')}<ArrowUpRight /></Link>
+            <Button asChild variant="ghost" size="sm" className="console-log-panel-open-page">
+              <Link to={logPageHref(params)} onClick={() => closeLogPanel()} title={i18n.t('在日志页打开')}><span className="console-log-panel-open-label">{i18n.t('在日志页打开')}</span><ArrowUpRight aria-hidden="true" /></Link>
             </Button>
-            <Button variant="ghost" size="icon" aria-label={i18n.t('关闭日志面板')} title={`${i18n.t('关闭日志面板')}（Esc）`} onClick={() => closeLogPanel()}>
+            <Button variant="ghost" size="icon" className="console-log-panel-tool" aria-label={i18n.t('关闭日志面板')} title={`${i18n.t('关闭日志面板')}（Esc）`} onClick={() => closeLogPanel()}>
               <X />
             </Button>
           </div>

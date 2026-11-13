@@ -23,4 +23,3 @@ export function logPanelAvailable(routes: readonly { path?: string; requiredPerm
 export function logPanelSuspended(pathname: string): boolean
 export function readLogPanelPrefs(storage: Pick<Storage, 'getItem'> | null | undefined): { height: number; params: string }
 export function writeLogPanelPrefs(storage: Pick<Storage, 'setItem'> | null | undefined, prefs: { height: number; params: URLSearchParams | string }): boolean
-export function logPanelFilterSummary(params: URLSearchParams | string): string

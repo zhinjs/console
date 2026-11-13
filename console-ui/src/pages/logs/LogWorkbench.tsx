@@ -82,8 +82,6 @@ interface LogWorkbenchProps {
   state: LogWorkbenchState
   actions: LogWorkbenchActions
   endRef: RefObject<HTMLDivElement | null>
-  /** Bottom log panel: no overview cards, the list fills the panel height. */
-  compact?: boolean
 }
 
 const LEVEL_META = {
@@ -96,7 +94,7 @@ const LEVEL_META = {
 type KnownLogLevel = keyof typeof LEVEL_META
 const OVERVIEW_LEVELS = ['info', 'warn', 'error'] as const
 
-function getLevelMeta(level: string) {
+export function getLevelMeta(level: string) {
   return LEVEL_META[level as KnownLogLevel] ?? {
     label: level ? level.toUpperCase() : 'UNKNOWN',
     icon: Circle,
@@ -104,7 +102,7 @@ function getLevelMeta(level: string) {
   }
 }
 
-export function LogWorkbench({ state, actions, endRef, compact = false }: LogWorkbenchProps) {
+export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
   const i18n = useI18n()
   const [sourcesOpen, setSourcesOpen] = useState(false)
   const [selection, setSelection] = useState<LogEntry | null>(null)
@@ -122,7 +120,7 @@ export function LogWorkbench({ state, actions, endRef, compact = false }: LogWor
 
   return (
     <>
-    {compact ? null : <StatGrid label={i18n.t("日志概况")}>
+    <StatGrid label={i18n.t("日志概况")}>
       <StatCard
         icon={Layers}
         label={i18n.t("总日志")}
@@ -150,9 +148,9 @@ export function LogWorkbench({ state, actions, endRef, compact = false }: LogWor
           />
         )
       })}
-    </StatGrid>}
-    <section className={cn("console-log-workbench", compact && "is-compact")} aria-label={i18n.t("日志诊断工作台")}>
-      {!compact && state.stats && state.stats.total > 0 ? (
+    </StatGrid>
+    <section className="console-log-workbench" aria-label={i18n.t("日志诊断工作台")}>
+      {state.stats && state.stats.total > 0 ? (
         <div className="console-severity-strip" aria-hidden="true">
           <span style={{ width: `${(levelCount('info') / state.stats.total) * 100}%`, background: 'hsl(var(--primary) / 0.72)' }} />
           <span style={{ width: `${(levelCount('warn') / state.stats.total) * 100}%`, background: 'hsl(var(--status-warning, var(--warning)) / 0.85)' }} />
@@ -246,7 +244,7 @@ export function LogWorkbench({ state, actions, endRef, compact = false }: LogWor
   )
 }
 
-function LogInspector({ log, offPage, onFilterSource, onClose }: { log: LogEntry | null; offPage:boolean; onFilterSource(source: string): void; onClose(): void }) {
+export function LogInspector({ log, offPage, onFilterSource, onClose }: { log: LogEntry | null; offPage:boolean; onFilterSource(source: string): void; onClose(): void }) {
   const i18n = useI18n()
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle')
   if (!log) {
@@ -297,7 +295,7 @@ function LogInspector({ log, offPage, onFilterSource, onClose }: { log: LogEntry
   )
 }
 
-function formatLogTime(timestamp: string, complete = false, locale: 'zh-CN' | 'en' = 'zh-CN'): string {
+export function formatLogTime(timestamp: string, complete = false, locale: 'zh-CN' | 'en' = 'zh-CN'): string {
   const date = new Date(timestamp)
   if (Number.isNaN(date.getTime())) return timestamp
   return complete ? date.toLocaleString(locale) : date.toLocaleTimeString(locale, { hour12: false })

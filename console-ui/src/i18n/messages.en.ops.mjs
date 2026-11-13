@@ -162,4 +162,6 @@ export const opsMessages = Object.freeze({
   "在当前页面底部查看实时日志，不离开页面": "Show live logs at the bottom of the current page without leaving it",
   "查看日志": "View logs",
   "查看 {0} 的日志": "View logs for {0}",
+  "更多日志选项": "More log options",
+  "{0}/{1} · {2} 条": "{0}/{1} · {2} entries",
 })
