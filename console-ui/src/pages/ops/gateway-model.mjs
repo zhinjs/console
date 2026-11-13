@@ -42,7 +42,7 @@ export const MAX_LOG_LINES = 2000
 export const MAX_PROGRESS_OUTPUT = 64 * 1024
 
 export class GatewayRequestError extends Error {
-  constructor(message, { status = 0, code = 'failed', hostMessage = '', details, retryAfter, requestOutcome } = {}) {
+  constructor(message, { status = 0, code = 'failed', hostMessage = '', details, retryAfter, requestOutcome, transaction } = {}) {
     super(message)
     this.name = 'GatewayRequestError'
     this.status = status
@@ -54,7 +54,9 @@ export class GatewayRequestError extends Error {
     // instance request outcome (`serverCode` + `requestOutcome`); absent when there is neither.
     const feedback = details && (details.errors?.length || details.missingEnv?.length) ? details : undefined
     const outcome = requestOutcome === 'not-dispatched' || requestOutcome === 'unknown' ? { serverCode: code, requestOutcome } : undefined
-    if (feedback || outcome) this.details = { ...feedback, ...outcome }
+    // A refused transaction's result (`failedPhase`, `logTail`), read by `statusFromError`.
+    const result = transaction && typeof transaction === 'object' && !Array.isArray(transaction) ? { transaction } : undefined
+    if (feedback || outcome || result) this.details = { ...feedback, ...outcome, ...result }
   }
 }
 
@@ -92,7 +94,8 @@ export function readGatewayReply(status, json, t, retryAfterHeader) {
     throw new GatewayRequestError(hostMessage || t('另一个依赖事务正在进行，请等待它结束后再试。'), { status: effective, code: 'conflict', hostMessage })
   }
   const message = hostMessage || t('请求失败（HTTP {0}）', [effective])
-  throw new GatewayRequestError(message, { status: effective, code: code || (effective === 403 ? 'forbidden' : 'failed'), hostMessage, details, retryAfter, requestOutcome })
+  const transaction = (nested ?? body).transaction
+  throw new GatewayRequestError(message, { status: effective, code: code || (effective === 403 ? 'forbidden' : 'failed'), hostMessage, details, retryAfter, requestOutcome, transaction })
 }
 
 /** `errors` / `missingEnv` of a gateway error reply (`GatewayRpcErrorDetails`), or undefined. */

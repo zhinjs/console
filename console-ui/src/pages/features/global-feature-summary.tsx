@@ -2,12 +2,14 @@ import { Link } from 'react-router-dom'
 import { useI18n } from '../../i18n'
 import { Badge } from '../../components/ui/badge'
 import { Card, CardContent } from '../../components/ui/card'
-import { useConfirm } from '../../components/confirm-dialog'
+import { ActionReceipt } from '../../components/ActionReceipt'
 import { adapterHref } from '../../console-routes.mjs'
 import { useConsoleAccess } from '../../hooks/use-console-access'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
-import { conversationOverrideCounts, setEnabledRequest, type FeatureLevel } from './feature-model.mjs'
-import { useFeatureDetail, useFeatureMatrix, useFeatureWriter } from './use-feature-data'
+import { conversationOverrideCounts, type FeatureLevel } from './feature-model.mjs'
+import { useFeatureDetail, useFeatureMatrix } from './use-feature-data'
+import { useGlobalPluginSwitch } from './use-global-plugin-switch'
+import { GLOBAL_PLUGIN_SWITCH_PERMISSION, globalSwitchDeniedTitle } from './plugin-switch-model.mjs'
 import { FeatureSwitch } from './feature-switch'
 import { ConversationOverrideLinks } from './conversation-list'
 
@@ -24,21 +26,18 @@ export function GlobalFeatureSummary({ plugin }: { plugin: string }) {
   const access = useConsoleAccess()
   const detail = useFeatureDetail(plugin, 'global')
   const matrix = useFeatureMatrix()
-  const { write, pending } = useFeatureWriter()
-  const { confirm, ConfirmDialog } = useConfirm()
+  const globalSwitch = useGlobalPluginSwitch(() => { detail.refresh(); matrix.refresh() })
   const value = detail.value
   if (!value) return null
   const row = matrix.source === 'rpc' ? matrix.rows.find(item => item.plugin === plugin) : undefined
   const adapters = row ? matrix.adapters.filter(alias => row.adapters[alias] && (row.adapters[alias]!.overridden || !row.adapters[alias]!.enabled)) : []
   // Per-endpoint conversation override counts for this plugin, when the Host reports them.
   const conversationAdapters = row ? matrix.adapters.filter(alias => conversationOverrideCounts(row.conversationOverrides, alias).length) : []
-  const toggle = async (enabled: boolean) => {
-    const ok = await confirm({
-      title: enabled ? i18n.t("启用 {0}？", [plugin]) : i18n.t("在全局禁用 {0}？", [plugin]),
-      description: enabled ? i18n.t("全局开关会重启 Host。") : i18n.t("全局开关会重启 Host；所有适配器和账号上的该功能都会停用。"),
-      variant: enabled ? 'default' : 'destructive',
-    })
-    if (ok) await write(setEnabledRequest({ plugin, level: 'global', enabled, revision: value.revision }), () => { detail.refresh(); matrix.refresh() }, 'global')
+  // The global switch is a management gateway transaction (stop → write → start, rollback):
+  // `plugin.manage`, not `feature.toggle` (upstream FEATURE_GLOBAL_SWITCH_PERMISSION).
+  const canToggle = hasConsolePermission(GLOBAL_PLUGIN_SWITCH_PERMISSION, access)
+  const toggle = (enabled: boolean) => {
+    globalSwitch.prepare({ plugin, current: value.enabled, enabled, revision: value.revision })
   }
   return (
     <Card>
@@ -46,7 +45,8 @@ export function GlobalFeatureSummary({ plugin }: { plugin: string }) {
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">{i18n.t("全局开关")}</span>
           <FeatureSwitch label={i18n.t("{0} · 全局", [plugin])} plugin={plugin} enabled={value.enabled}
-            canToggle={hasConsolePermission('feature.toggle', access) && !plugin.includes('/')} pending={pending === 'global'} onToggle={enabled => void toggle(enabled)} />
+            canToggle={canToggle && !plugin.includes('/') && !globalSwitch.busy} deniedTitle={canToggle ? undefined : globalSwitchDeniedTitle(i18n.t)}
+            onToggle={toggle} />
         </div>
         <div className="flex flex-wrap items-center gap-1">
           <span className="text-sm text-muted-foreground">{i18n.t("支持的层级：")}</span>
@@ -70,7 +70,7 @@ export function GlobalFeatureSummary({ plugin }: { plugin: string }) {
           </div>
         ) : null}
       </CardContent>
-      {ConfirmDialog}
+      <ActionReceipt controller={globalSwitch.receipt} className="mx-4 mb-4" />
     </Card>
   )
 }

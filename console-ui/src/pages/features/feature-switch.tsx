@@ -34,6 +34,8 @@ interface FeatureSwitchProps {
   readonly endpoint?: string
   readonly overridden?: boolean
   readonly canToggle: boolean
+  /** Tooltip when the identity may not toggle (default: 当前身份不能启停功能). */
+  readonly deniedTitle?: string
   readonly pending?: boolean
   readonly onToggle: (enabled: boolean) => void
 }
@@ -42,7 +44,7 @@ interface FeatureSwitchProps {
  * Three-state switch: enabled / disabled / locked by a higher level (ADR 0050 §4, 0055 §4). A
  * locked switch can be neither enabled nor disabled, whatever its own level stores.
  */
-export function FeatureSwitch({ label, enabled, lockedBy, plugin, adapter, endpoint, overridden, canToggle, pending, onToggle }: FeatureSwitchProps) {
+export function FeatureSwitch({ label, enabled, lockedBy, plugin, adapter, endpoint, overridden, canToggle, deniedTitle, pending, onToggle }: FeatureSwitchProps) {
   const i18n = useI18n()
   const state = featureSwitchState({ enabled, lockedBy }, canToggle, pending)
   return (
@@ -51,7 +53,7 @@ export function FeatureSwitch({ label, enabled, lockedBy, plugin, adapter, endpo
         aria-label={label}
         checked={state.checked}
         disabled={state.disabled}
-        title={!canToggle && !state.locked ? i18n.t("当前身份不能启停功能") : undefined}
+        title={!canToggle && !state.locked ? deniedTitle ?? i18n.t("当前身份不能启停功能") : undefined}
         onCheckedChange={checked => { if (!state.disabled) onToggle(checked === true) }}
       />
       {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : null}

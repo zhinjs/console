@@ -74,6 +74,38 @@ function transportFailureOf(error, transport, details) {
 
 const LOCK_LEVELS = ['global', 'adapter', 'endpoint']
 
+/**
+ * The global plugin switch is a management gateway transaction (stop the instance → write
+ * `disable_plugins` → start it, restoring both on failure; ADR 0054 §4). Its refusals:
+ * 500 `transaction_failed` (rolled back: nothing changed), 500 `rollback_failed` (the rollback did
+ * not finish: the instance may be stopped) and, under `zhin start --standalone`, 409
+ * `gateway-required`. `transaction` (`failedPhase`, `logTail`, …) rides along when the gateway sent it.
+ */
+const TRANSACTION_CODES = Object.freeze({
+  transaction_failed: 'rolled-back',
+  rollback_failed: 'rollback-failed',
+  'gateway-required': 'gateway-required',
+})
+
+/** `plugin:set-enabled` under `--standalone` answers 400 with this advice only (no code). */
+const GATEWAY_REQUIRED_TEXT = /zhin enable\s*\/\s*zhin disable/u
+
+function transactionOf(error, serverCode, message, details) {
+  const raw = isRecord(details.transaction) ? details.transaction : isRecord(error) && isRecord(error.transaction) ? error.transaction : undefined
+  let outcome = serverCode && Object.hasOwn(TRANSACTION_CODES, serverCode) ? TRANSACTION_CODES[serverCode] : undefined
+  if (!outcome && raw && raw.ok === false) outcome = raw.status === 'rollbackFailed' ? 'rollback-failed' : 'rolled-back'
+  if (!outcome && !serverCode && GATEWAY_REQUIRED_TEXT.test(message)) outcome = 'gateway-required'
+  if (!outcome) return undefined
+  const logTail = Array.isArray(raw?.logTail) ? raw.logTail.filter(line => typeof line === 'string') : []
+  return {
+    outcome,
+    ...(typeof raw?.failedPhase === 'string' && raw.failedPhase ? { failedPhase: raw.failedPhase } : {}),
+    ...(typeof raw?.error === 'string' && raw.error ? { cause: raw.error } : {}),
+    ...(typeof raw?.rollbackError === 'string' && raw.rollbackError ? { rollbackError: raw.rollbackError } : {}),
+    ...(logTail.length ? { logTail } : {}),
+  }
+}
+
 const isRecord = value => value !== null && typeof value === 'object'
 
 function readLock(value) {
@@ -128,7 +160,8 @@ function needsOf(error) {
 
 /**
  * Classifies a failed request (a `ConsoleTransportError`, an `Error`, a Host error body or text).
- * Returns `{ kind, message, serverCode?, lockedBy?, retryAfterSeconds?, needsConfiguration?, missingEnv? }`.
+ * Returns `{ kind, message, serverCode?, lockedBy?, retryAfterSeconds?, needsConfiguration?, missingEnv?, transaction? }`;
+ * `transaction` marks a refused global plugin switch (kind `error`, see {@link TRANSACTION_CODES}).
  */
 export function statusFromError(error) {
   const message = messageOf(error)
@@ -165,6 +198,9 @@ export function statusFromError(error) {
     const retryAfterSeconds = retryAfterOf(error, message)
     return { ...base, kind: 'database-busy', ...(retryAfterSeconds ? { retryAfterSeconds } : {}) }
   }
+  // Before 需要配置 / 无权限: a failed switch transaction may carry `missingEnv`, and its advice text is not a refusal.
+  const transaction = transactionOf(error, serverCode, message, details)
+  if (transaction) return { ...base, kind: 'error', transaction }
   const needs = needsOf(error)
   if (needs.length || serverCode === 'needs_configuration' || serverCode === 'configuration_required') {
     return { ...base, kind: 'needs-configuration', ...(needs.length ? { needsConfiguration: needs } : {}), ...(missingEnv.length ? { missingEnv } : {}) }
