@@ -10,18 +10,17 @@ import { Skeleton } from '../../components/ui/skeleton'
 import { Switch } from '../../components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { StatusState } from '../../components/StatusState'
-import { ActionReceipt, useActionReceipt } from '../../components/ActionReceipt'
-import { receiptBlocksActions, type ReceiptPlan } from '../../components/action-receipt-model.mjs'
+import { ActionReceipt } from '../../components/ActionReceipt'
 import { adapterHref, endpointHref, featureGlobalHref } from '../../console-routes.mjs'
 import { useConsoleAccess } from '../../hooks/use-console-access'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
-import { requestConsole } from '../../utils/console-rpc'
 import { ObjectSection } from '../../scope/ObjectPageLayout'
 import { SCOPE_LEVEL_LABELS } from '../../scope/scope-tree.mjs'
-import { readFeatureWriteResult, setEnabledRequest } from './feature-model.mjs'
-import { featureReceiptOutcome, globalFeatureCounts, globalFeatureOverview, type GlobalFeatureOverviewRow } from './feature-scope-model.mjs'
+import { globalFeatureCounts, globalFeatureOverview, type GlobalFeatureOverviewRow } from './feature-scope-model.mjs'
 import FeatureMatrixPage from './feature-matrix'
 import { useFeatureList, useFeatureMatrix } from './use-feature-data'
+import { useGlobalPluginSwitch } from './use-global-plugin-switch'
+import { GLOBAL_PLUGIN_SWITCH_PERMISSION, globalSwitchDeniedTitle, switchPermissionNote } from './plugin-switch-model.mjs'
 import './feature-level-panel.css'
 
 const VIEW_PARAM = 'view'
@@ -61,41 +60,14 @@ function GlobalFeatureList({ switcher }: { switcher: ReactNode }) {
   const list = useFeatureList()
   const rows = globalFeatureOverview(matrix.rows, matrix.source === 'rpc' ? matrix.adapters : [], list.value?.features ?? null)
   const counts = globalFeatureCounts(rows)
-  const canToggle = matrix.source === 'rpc' && hasConsolePermission('feature.toggle', access)
-  type Pending = { plugin: string; enabled: boolean; revision: string | undefined }
-  const pendingOf = (plan: ReceiptPlan) => plan.payload as Pending | undefined
-  // Outlives the tab (action-receipt-store), so an unknown outcome cannot be sent again after
-  // switching tabs and back.
-  const receipt = useActionReceipt({
-    persistKey: 'feature:global',
-    submit: async plan => {
-      const target = pendingOf(plan)
-      if (!target) throw new Error('No change')
-      try {
-        const outcome = featureReceiptOutcome(readFeatureWriteResult(await requestConsole<unknown>(setEnabledRequest({ plugin: target.plugin, level: 'global', enabled: target.enabled, revision: target.revision }))))
-        if (outcome.locked) throw Object.assign(new Error(outcome.message), { code: 'locked', lockedBy: outcome.lockedBy })
-        return outcome
-      } finally {
-        matrix.refresh()
-      }
-    },
-    verify: async plan => {
-      const target = pendingOf(plan)
-      if (!target) return undefined
-      const reply = await requestConsole<{ enabled?: boolean }>({ type: 'feature.get', plugin: target.plugin, level: 'global' })
-      return { applied: reply?.enabled === target.enabled }
-    },
-  })
-  const busy = receiptBlocksActions(receipt.state)
+  // The global switch is a management gateway transaction (stop → write → start, rollback):
+  // `plugin.manage`, not `feature.toggle` (upstream FEATURE_GLOBAL_SWITCH_PERMISSION).
+  const canToggle = matrix.source === 'rpc' && hasConsolePermission(GLOBAL_PLUGIN_SWITCH_PERMISSION, access)
+  const permissionNote = matrix.source === 'rpc' ? switchPermissionNote({ global: canToggle, lower: false, hasLower: false }, i18n.t) : null
+  const globalSwitch = useGlobalPluginSwitch(matrix.refresh)
+  const { receipt, busy } = globalSwitch
   const prepareToggle = (row: GlobalFeatureOverviewRow, enabled: boolean) => {
-    receipt.prepare({
-      payload: { plugin: row.plugin, enabled, revision: matrix.revision } satisfies Pending,
-      title: enabled ? i18n.t('在全局启用 {0}', [row.name]) : i18n.t('在全局关闭 {0}', [row.name]),
-      summary: enabled ? i18n.t('全局开关会重启 Host。') : i18n.t('全局开关会重启 Host；所有适配器、账号与会话上的这个功能都会停用。'),
-      changes: [i18n.t('{0}：{1} → {2}', [row.plugin, row.enabled ? i18n.t('启用') : i18n.t('关闭'), enabled ? i18n.t('启用') : i18n.t('关闭')])],
-      danger: true,
-      confirmLabel: enabled ? i18n.t('启用') : i18n.t('关闭'),
-    })
+    globalSwitch.prepare({ plugin: row.plugin, name: row.name, current: row.enabled, enabled, revision: matrix.revision })
   }
   const levelSupport = matrix.source === 'rpc' || list.status === 'ready'
   return (
@@ -111,6 +83,7 @@ function GlobalFeatureList({ switcher }: { switcher: ReactNode }) {
               : i18n.t('暂时无法读取按层级的功能设置，只显示全局状态。')}
         </AlertDescription></Alert>
       ) : null}
+      {permissionNote ? <Alert role="status"><AlertDescription>{permissionNote}</AlertDescription></Alert> : null}
       {matrix.error ? <StatusState error={matrix.error} onRetry={matrix.refresh} /> : null}
       <ActionReceipt controller={receipt} />
       <Card className="overflow-hidden p-0">
@@ -143,7 +116,7 @@ function GlobalFeatureList({ switcher }: { switcher: ReactNode }) {
                   <TableCell>
                     <span className="inline-flex items-center gap-2">
                       <Switch aria-label={i18n.t('{0} · 全局', [row.plugin])} checked={row.enabled}
-                        disabled={!canToggle || row.nested || busy} title={!canToggle ? i18n.t('当前身份不能启停功能') : undefined}
+                        disabled={!canToggle || row.nested || busy} title={!canToggle ? globalSwitchDeniedTitle(i18n.t) : undefined}
                         onCheckedChange={checked => prepareToggle(row, checked === true)} />
                       <span className="text-xs text-muted-foreground">{row.enabled ? i18n.t('启用') : i18n.t('关闭')}</span>
                     </span>

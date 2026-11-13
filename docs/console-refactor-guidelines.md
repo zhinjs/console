@@ -106,6 +106,7 @@
 - 危险操作的「确认执行」把「取消」放在前面并聚焦，且出现后 `CONFIRM_GUARD_MS`（400ms）内忽略确认，双击或连按回车不会越过二次确认。
 - 已发布 SDK 的 `sendRequest` 丢掉 Host 的 `code`、`requestOutcome`、`lockedBy` 与 `Retry-After`，并把超时、断网、非 JSON 答复都报成 `MessageError('REST request failed')`；`requestConsole` 经 `utils/rpc-reply-capture.mjs` 记录答复，把这些放回 `error.details`。
 - **未执行**（Host 明确拒绝：权限、校验、冲突、锁定，或 503 `instance_unavailable` 的 `not-dispatched`）：显示原因，可以重新准备。
+- **网关事务**（插件全局启停 `feature.set-enabled` `level: 'global'` / `plugin:set-enabled`，需要 `plugin.manage`；停止实例 → 写入 `disable_plugins` → 启动，失败回滚）：经 `use-global-plugin-switch.ts` 用 `apiFetch` 发送，不受 SDK 10 秒超时限制。500 `transaction_failed` = 未执行（已自动回滚），500 `rollback_failed` = 失败、回滚未完成（链到「实例」页），`gateway-required`（`--standalone`）= 说明用 `zhin start` 或 `zhin enable / zhin disable`；`statusFromError` 读成 `kind: 'error'` + `transaction`，`failedPhase` 与 `logTail` 放在「技术详情」里。
 - 回执就地显示在发起操作的控件附近，直到用户关闭；toast 只用于不需要追踪结果的轻提示。
 - 删除、撤销、全局停用等不可逆或影响面大的操作必须 `danger: true`；删除类再要求输入名称的，沿用现有 `confirm-dialog`。
 

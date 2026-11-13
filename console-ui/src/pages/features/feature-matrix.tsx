@@ -14,11 +14,13 @@ import { ErrorAlert } from '../../components/error-alert'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { adapterHref, featureGlobalHref } from '../../console-routes.mjs'
 import { scopeHref } from '../../scope/scope-tree.mjs'
-import { cellState, setEnabledRequest, type FeatureCell } from './feature-model.mjs'
+import { cellState, setEnabledRequest, type FeatureCell, type FeatureMatrixRow } from './feature-model.mjs'
 import { ConversationOverrideLinks } from './conversation-list'
 import { useFeatureMatrix, useFeatureWriter } from './use-feature-data'
 import { FeatureSwitch } from './feature-switch'
-import { useConfirm } from '../../components/confirm-dialog'
+import { useGlobalPluginSwitch } from './use-global-plugin-switch'
+import { FEATURE_TOGGLE_PERMISSION, GLOBAL_PLUGIN_SWITCH_PERMISSION, globalSwitchDeniedTitle, switchPermissionNote } from './plugin-switch-model.mjs'
+import { ActionReceipt } from '../../components/ActionReceipt'
 import { ObjectSection } from '../../scope/ObjectPageLayout'
 import { useConsoleAccess } from '../../hooks/use-console-access'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
@@ -48,17 +50,15 @@ export default function FeatureMatrixPage({ embedded = false, heading }: {
   const { rows, adapters, revision, conversationOverrides, source, loading, error, refresh } = useFeatureMatrix()
   const adapterColumns = source === 'rpc' ? adapters : []
   const access = useConsoleAccess()
-  const canToggle = source === 'rpc' && hasConsolePermission('feature.toggle', access)
+  // Adapter cells are feature switches (`feature.toggle`); the 全局 column is the global plugin
+  // switch, a management gateway transaction (stop → write → start, rollback) needing `plugin.manage`.
+  const canToggle = source === 'rpc' && hasConsolePermission(FEATURE_TOGGLE_PERMISSION, access)
+  const canToggleGlobal = source === 'rpc' && hasConsolePermission(GLOBAL_PLUGIN_SWITCH_PERMISSION, access)
+  const permissionNote = source === 'rpc' ? switchPermissionNote({ global: canToggleGlobal, lower: canToggle, hasLower: adapterColumns.length > 0 }, i18n.t) : null
   const { write, pending } = useFeatureWriter()
-  const { confirm, ConfirmDialog } = useConfirm()
-  const toggleGlobal = async (plugin: string, enabled: boolean) => {
-    // The global switch is `disable_plugins`, which restarts the Host (ADR 0050 §7).
-    const ok = await confirm({
-      title: enabled ? i18n.t("启用 {0}？", [plugin]) : i18n.t("在全局禁用 {0}？", [plugin]),
-      description: enabled ? i18n.t("全局开关会重启 Host。") : i18n.t("全局开关会重启 Host；所有适配器和账号上的该功能都会停用。"),
-      variant: enabled ? 'default' : 'destructive',
-    })
-    if (ok) await write(setEnabledRequest({ plugin, level: 'global', enabled, revision }), refresh, `${plugin}\u0000global`)
+  const globalSwitch = useGlobalPluginSwitch(refresh)
+  const toggleGlobal = (row: FeatureMatrixRow, enabled: boolean) => {
+    globalSwitch.prepare({ plugin: row.plugin, name: row.name, current: row.global.enabled === true, enabled, revision })
   }
   const toggleAdapter = (plugin: string, adapter: string, cell: FeatureCell, enabled: boolean) => {
     // A cell disabled higher up is locked: neither enabled nor disabled here.
@@ -90,8 +90,9 @@ export default function FeatureMatrixPage({ embedded = false, heading }: {
           </AlertDescription>
         </Alert>
       ) : null}
-      {source === 'rpc' && !canToggle ? <Alert role="status"><AlertDescription>{i18n.t("当前身份只能查看功能开关，无法启停。")}</AlertDescription></Alert> : null}
+      {permissionNote ? <Alert role="status"><AlertDescription>{permissionNote}</AlertDescription></Alert> : null}
       {error ? <ErrorAlert error={error} onRetry={refresh} /> : null}
+      <ActionReceipt controller={globalSwitch.receipt} />
       <Card className="overflow-hidden p-0">
         {loading && !rows.length ? (
           <div className="space-y-2 p-4">{[0, 1, 2, 3].map(index => <Skeleton key={index} className="h-9" />)}</div>
@@ -122,8 +123,8 @@ export default function FeatureMatrixPage({ embedded = false, heading }: {
                   <TableCell>
                     {source === 'rpc' ? (
                       <FeatureSwitch label={i18n.t("{0} · 全局", [row.plugin])} plugin={row.plugin} enabled={row.global.enabled}
-                        canToggle={canToggle && !row.plugin.includes('/')} pending={pending === `${row.plugin}\u0000global`}
-                        onToggle={enabled => void toggleGlobal(row.plugin, enabled)} />
+                        canToggle={canToggleGlobal && !row.plugin.includes('/') && !globalSwitch.busy} deniedTitle={canToggleGlobal ? undefined : globalSwitchDeniedTitle(i18n.t)}
+                        onToggle={enabled => toggleGlobal(row, enabled)} />
                     ) : <CellBadge cell={row.global} to={featureGlobalHref(row.plugin)} />}
                   </TableCell>
                   {adapterColumns.map(adapter => {
@@ -148,7 +149,6 @@ export default function FeatureMatrixPage({ embedded = false, heading }: {
           </Table>
         )}
       </Card>
-      {ConfirmDialog}
     </>,
   )
 }

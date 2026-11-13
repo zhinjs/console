@@ -61,7 +61,7 @@ const isRecord = value => value !== null && typeof value === 'object' && !Array.
 
 /**
  * The SDK error with `details` from the recorded reply: `httpStatus`, `serverCode`,
- * `requestOutcome`, `lockedBy`, `retryAfter`, `missingEnv`, `errors`, `needsConfiguration`, and
+ * `requestOutcome`, `lockedBy`, `retryAfter`, `missingEnv`, `errors`, `needsConfiguration`, `transaction`, and
  * `transport` when a reply arrived but was not JSON (`refused` for a 4xx, else `invalid-response`).
  * Returns the same error object (with `details` set).
  */
@@ -79,6 +79,8 @@ export async function enrichRpcError(error, capture) {
       if (Array.isArray(body.missingEnv)) details.missingEnv = body.missingEnv
       if (Array.isArray(body.errors)) details.errors = body.errors
       if (body.needsConfiguration !== undefined) details.needsConfiguration = body.needsConfiguration
+      // A refused gateway transaction (global plugin switch: `failedPhase`, `logTail`, ADR 0054 §4).
+      if (isRecord(body.transaction)) details.transaction = body.transaction
     }
     const seconds = Number(String(capture.retryAfter ?? '').trim())
     if (capture.retryAfter && Number.isFinite(seconds) && seconds > 0) details.retryAfter = seconds

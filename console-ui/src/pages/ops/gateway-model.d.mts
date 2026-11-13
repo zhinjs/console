@@ -30,7 +30,7 @@ export declare const MAX_LOG_LINES: number
 export declare const MAX_PROGRESS_OUTPUT: number
 
 export declare class GatewayRequestError extends Error {
-  constructor(message: string, options?: { status?: number; code?: string; hostMessage?: string; details?: GatewayErrorDetails; retryAfter?: number; requestOutcome?: string })
+  constructor(message: string, options?: { status?: number; code?: string; hostMessage?: string; details?: GatewayErrorDetails; retryAfter?: number; requestOutcome?: string; transaction?: unknown })
   readonly status: number
   readonly code: string
   readonly hostMessage: string
@@ -43,6 +43,8 @@ export interface GatewayErrorDetails {
   /** Instance forward outcome (`instance_*`), read by `statusFromError`. */
   readonly serverCode?: string
   readonly requestOutcome?: string
+  /** A refused transaction's result (global plugin switch: `failedPhase`, `logTail`). */
+  readonly transaction?: unknown
 }
 export function readErrorDetails(value: unknown): GatewayErrorDetails | undefined
 export type GatewayErrorKind = 'unsupported' | 'forbidden' | 'conflict' | 'database_busy' | 'instance' | 'unavailable' | 'failed'

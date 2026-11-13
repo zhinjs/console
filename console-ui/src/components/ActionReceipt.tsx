@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react'
-import { AlertTriangle, CheckCircle2, CircleHelp, Loader2, RefreshCw, RotateCcw, X, XCircle } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { AlertTriangle, CheckCircle2, CircleHelp, Loader2, RefreshCw, RotateCcw, ServerOff, X, XCircle } from 'lucide-react'
 import { cn } from '@zhin.js/client'
 import './status-surfaces.css'
 import { useI18n } from '../i18n'
@@ -9,6 +10,7 @@ import {
   RECEIPT_COPY, type ActionReceiptState, type ReceiptEvent, type ReceiptPlan,
 } from './action-receipt-model.mjs'
 import { createReceiptStore, sharedReceipts, type ReceiptStore } from './action-receipt-store.mjs'
+import { transactionDetailText, transactionFailureCopy, transactionNeedsInstanceCheck } from '../pages/features/plugin-switch-model.mjs'
 
 export interface UseActionReceiptOptions {
   /** Performs the write. Resolve with nothing or `{ status, items?, message? }` (see readSubmitResult). */
@@ -144,7 +146,8 @@ export function ActionReceipt({ controller, className, lockHref }: {
       <header className="console-receipt-head">
         {Icon ? <Icon className={cn('console-receipt-icon', busy && 'animate-spin')} aria-hidden="true" /> : null}
         <div className="min-w-0 flex-1">
-          <p className="console-receipt-phase">{i18n.t(RECEIPT_COPY[state.phase])}</p>
+          {/* A rollback that did not finish is not 未执行: the instance may have been left stopped. */}
+          <p className="console-receipt-phase">{state.phase === 'failed' && state.status?.transaction?.outcome === 'rollback-failed' ? i18n.t('失败') : i18n.t(RECEIPT_COPY[state.phase])}</p>
           {plan ? <p className="console-receipt-title">{plan.title}</p> : null}
         </div>
         {/* An unknown outcome cannot be dismissed: only a check settles it. */}
@@ -173,7 +176,16 @@ export function ActionReceipt({ controller, className, lockHref }: {
         <StatusState compact kind="unknown" error={state.status?.message ? state.status.message : undefined}
           description={i18n.t('请求已发出但没有收到可信答复，修改可能已经生效。请先只读核对，不要重复提交。')} />
       ) : null}
-      {state.phase === 'failed' && state.status ? (
+      {state.phase === 'failed' && state.status?.transaction ? (
+        // A refused gateway transaction (global plugin switch, ADR 0054 §4): rolled back, rollback
+        // failed or no gateway. The failed phase and the instance log tail go under 技术详情.
+        <StatusState compact kind="error" title={transactionFailureCopy(state.status.transaction.outcome, i18n.t).title}
+          description={transactionFailureCopy(state.status.transaction.outcome, i18n.t).description}
+          error={transactionDetailText(state.status, i18n.t) || undefined}
+          actions={transactionNeedsInstanceCheck(state.status.transaction)
+            ? <Button asChild size="sm" variant="outline"><Link to="/ops/instance"><ServerOff />{i18n.t('查看实例')}</Link></Button>
+            : undefined} />
+      ) : state.phase === 'failed' && state.status ? (
         // A write that was not applied never reads as 读取失败: a plain failure is 操作没有完成; the
         // Host's own reason is the answer itself, a coded failure keeps its text under 技术详情.
         state.status.kind === 'error'

@@ -113,5 +113,6 @@ test('a receipt that was not executed never reads as 读取失败', async () => 
   const { readFileSync } = await import('node:fs')
   const source = readFileSync(new URL('../console-ui/src/components/ActionReceipt.tsx', import.meta.url), 'utf8')
   const failed = source.slice(source.indexOf("state.phase === 'failed' && state.status"), source.indexOf('<footer'))
-  assert.equal((failed.match(/kind="error"/gu) ?? []).length, (failed.match(/title=\{i18n\.t\('操作没有完成'\)\}/gu) ?? []).length)
+  // Every failed surface carries its own title: 操作没有完成, or a refused switch transaction's.
+  assert.equal((failed.match(/kind="error"/gu) ?? []).length, (failed.match(/kind="error" title=\{(?:i18n\.t\('操作没有完成'\)|transactionFailureCopy\()/gu) ?? []).length)
 })

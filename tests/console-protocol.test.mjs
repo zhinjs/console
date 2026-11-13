@@ -40,7 +40,6 @@ const INLINE_ALLOWED = new Map([
   // Request builders (`type: 'feature.set-override'`) owned by the features pages; values are
   // still checked against the protocol below.
   ['pages/features/feature-model.mjs', 'feature.* request builders'],
-  ['pages/features/global-features-panel.tsx', 'feature.get read-back after a global switch'],
 ])
 
 test('no other source file spells a protocol RPC name or auth route', () => {

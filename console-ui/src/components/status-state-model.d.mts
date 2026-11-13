@@ -4,6 +4,21 @@ export type StatusKind =
 export type StatusLockLevel = 'global' | 'adapter' | 'endpoint'
 export type InstanceFailure = 'unavailable' | 'timeout' | 'error'
 
+/**
+ * Refused global plugin switch (gateway transaction, ADR 0054 §4): `rolled-back` (nothing
+ * changed), `rollback-failed` (the instance may be stopped), `gateway-required` (no gateway).
+ */
+export type TransactionFailureOutcome = 'rolled-back' | 'rollback-failed' | 'gateway-required'
+export interface TransactionFailure {
+  readonly outcome: TransactionFailureOutcome
+  readonly failedPhase?: string
+  /** The transaction's original failure. */
+  readonly cause?: string
+  readonly rollbackError?: string
+  /** Last instance log lines when starting the instance failed. */
+  readonly logTail?: readonly string[]
+}
+
 export interface StatusReading {
   readonly kind: StatusKind
   readonly message: string
@@ -15,6 +30,7 @@ export interface StatusReading {
   readonly outcome?: 'not-dispatched' | 'unknown'
   readonly needsConfiguration?: readonly Record<string, unknown>[]
   readonly missingEnv?: readonly string[]
+  readonly transaction?: TransactionFailure
 }
 
 export const STATUS_KINDS: readonly StatusKind[]
