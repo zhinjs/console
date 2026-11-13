@@ -1,5 +1,5 @@
 export type ApplyOutcomeKind = 'applied' | 'next-message' | 'restart' | 'failed'
-export type ApplyBasis = 'application' | 'restart-flag' | 'apply-table' | 'gateway-transaction' | 'unchanged' | 'env-file' | 'restart'
+export type ApplyBasis = 'application' | 'restart-flag' | 'apply-table' | 'gateway-transaction' | 'unchanged' | 'env-file' | 'restart' | 'per-request' | 'scheduler' | 'chat-roles'
 
 export interface ApplyOutcome {
   readonly kind: ApplyOutcomeKind
@@ -12,6 +12,8 @@ export interface ApplyOutcome {
   readonly partial?: boolean
   /** Groups that did not apply (`config` saves). */
   readonly groups?: readonly Readonly<{ id: string; status: string; reasonCode?: string }>[]
+  /** An authored note (APPLY_NOTE_COPY), e.g. `secret`. */
+  readonly note?: 'secret'
 }
 
 export interface ReadBackMismatch {
@@ -65,3 +67,9 @@ export function restartReducer(state: RestartState | null | undefined, event: Re
 export function restartElapsedSeconds(state: RestartState | null | undefined, now?: number): number
 export function restartInProgress(state: RestartState | null | undefined): boolean
 export function schemaSecretAt(schema: unknown, path: readonly string[] | null | undefined): boolean
+export const APPLY_NOTE_COPY: Readonly<Record<'secret', string>>
+export function outcomeFromAccessWrite(options?: { secret?: boolean }): ApplyOutcome
+export function outcomeFromScheduleWrite(): ApplyOutcome
+export function outcomeFromChatRoleWrite(): ApplyOutcome
+export function recordReadBack(record: object | null | undefined, expected: Record<string, unknown> | null, options?: { isSecret?: (path: readonly string[]) => boolean }): ReadBackMismatch | null
+export function runReadBack(check: () => Promise<ReadBackMismatch | null | undefined> | ReadBackMismatch | null | undefined): Promise<{ mismatch: ReadBackMismatch | null; unverified: boolean }>

@@ -38,8 +38,16 @@ export const APPLY_BASIS_COPY = Object.freeze({
   'apply-table': '功能覆盖原地生效（features.md「生效方式」）',
   'gateway-transaction': '网关启停事务已重启实例',
   unchanged: '内容没有变化',
-  'env-file': '环境变量在实例启动时读取',
+  'env-file': '运行中的实例把 .env 变化记为「待重启」，继续使用旧值（zhin runtime planRuntimeInputs：environment → restart-process / restart-pending，原因 environment-host-consumers）',
   restart: '实例已重启',
+  'per-request': '网关每次请求都从数据库读取账号、角色绑定与令牌（gateway iam authenticate → #principal）',
+  scheduler: '调度引擎在写入时立即注册或撤销定时器（ScheduleJobEngine addJob / pauseJob / resumeJob / removeJob）',
+  'chat-roles': '每条消息按已存的授予解析聊天角色（ChatRoleService.effectiveRoles）',
+})
+
+/** Authored notes an outcome may carry. */
+export const APPLY_NOTE_COPY = Object.freeze({
+  secret: '密码与令牌明文不会被读回或显示；核对的是它们的变更记录。',
 })
 
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -112,6 +120,45 @@ export function outcomeFromPluginSwitch(result) {
 /** `env:save`: dotenv files are read when the instance starts (the page's documented contract). */
 export function outcomeFromEnvSave() {
   return outcome('restart', 'env-file')
+}
+
+/**
+ * Access control (users, roles, bindings, API tokens, passwords): the gateway authenticates every
+ * request from the project database, so a saved change applies to the next request.
+ * `secret`: the value written (a password) can never be read back or shown.
+ */
+export function outcomeFromAccessWrite({ secret = false } = {}) {
+  return outcome('applied', 'per-request', secret ? { note: 'secret' } : {})
+}
+
+/** Persistent schedules: the engine registers / disposes the job's timer as part of the write. */
+export function outcomeFromScheduleWrite() {
+  return outcome('applied', 'scheduler')
+}
+
+/** Chat roles: resolved from the stored grants for every message. */
+export function outcomeFromChatRoleWrite() {
+  return outcome('next-message', 'chat-roles')
+}
+
+/**
+ * Read-back of one record in a re-read list: `expected` null = it must be gone; otherwise the
+ * record must exist and match `expected` on its keys. Returns a mismatch or null.
+ */
+export function recordReadBack(record, expected, options) {
+  if (expected === null) return record ? readBackMismatch({ exists: false }, { exists: true }) : null
+  if (!record) return readBackMismatch({ exists: true }, { exists: false })
+  const picked = Object.fromEntries(Object.keys(expected).map(key => [key, record[key]]))
+  return readBackMismatch(expected, picked, options)
+}
+
+/** Runs a read-back check: `{ mismatch, unverified }` (a failed read is unverified, never a match). */
+export async function runReadBack(check) {
+  try {
+    return { mismatch: (await check()) ?? null, unverified: false }
+  } catch {
+    return { mismatch: null, unverified: true }
+  }
 }
 
 /** Title / description keys of an outcome (`unconfirmed` failures have their own copy). */

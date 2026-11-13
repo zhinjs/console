@@ -115,3 +115,6 @@ export function displayNameProblem(value: string, t: Translate): string | null
 export function passwordProblem(value: string, confirm: string | undefined, t: Translate): string | null
 export function roleNameProblem(value: string, roles: readonly IamRole[], t: Translate): string | null
 export function copyRoleName(name: string, roles: readonly IamRole[]): string
+export function bindingKeys(bindings: readonly IamBinding[] | null | undefined): string[]
+export function userReadBackView(user: IamUser | null | undefined): { username: string; displayName: string; disabled: boolean; bindings: string[]; passwordChangedAt: number | null } | null
+export function roleReadBackView(role: IamRole | null | undefined): { name: string; description: string; permissions: string[] } | null

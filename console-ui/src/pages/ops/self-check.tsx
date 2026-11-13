@@ -10,7 +10,7 @@ import { Card } from '../../components/ui/card'
 import { getApiBase, getToken } from '../../utils/auth'
 import { CONSOLE_PATHS } from '../../console-routes.mjs'
 import {
-  SELF_CHECK_IDS, runSelfChecks, selfCheckCopy, selfCheckDetail, selfCheckSummary,
+  SELF_CHECK_IDS, runSelfChecks, runWebSocketCheck, selfCheckCopy, selfCheckDetail, selfCheckSummary,
   type SelfCheckId, type SelfCheckResult,
 } from './self-check-model.mjs'
 import './self-check.css'
@@ -42,20 +42,33 @@ export default function SelfCheckPage() {
   const run = useRef(0)
   const apiBase = getApiBase()
 
+  const deps = useCallback(() => ({
+    fetch: (input: RequestInfo | URL, init?: RequestInit) => window.fetch(input, init),
+    WebSocket: typeof window.WebSocket === 'function' ? window.WebSocket as never : undefined,
+    apiBase: getApiBase(),
+    pageHref: window.location.href,
+    pageProtocol: window.location.protocol,
+    token: getToken(),
+    now: () => Date.now(),
+    setTimer: (fn: () => void, ms: number) => window.setTimeout(fn, ms),
+    clearTimer: (timer: unknown) => window.clearTimeout(timer as number),
+  }), [])
+  // 「需要时检查」: the upgrade probe writes one terminal.denied audit entry, so it never runs by itself.
+  const [socketChecking, setSocketChecking] = useState(false)
+  const checkSocket = () => {
+    const id = run.current
+    setSocketChecking(true)
+    void runWebSocketCheck(deps()).then(check => {
+      if (run.current === id) setResults(previous => new Map(previous).set(check.id, check))
+    }).finally(() => setSocketChecking(false))
+  }
+
   const start = useCallback(() => {
     const id = ++run.current
     setRunning(true)
     setResults(new Map())
     void runSelfChecks({
-      fetch: (input, init) => window.fetch(input, init),
-      WebSocket: typeof window.WebSocket === 'function' ? window.WebSocket as never : undefined,
-      apiBase: getApiBase(),
-      pageHref: window.location.href,
-      pageProtocol: window.location.protocol,
-      token: getToken(),
-      now: () => Date.now(),
-      setTimer: (fn, ms) => window.setTimeout(fn, ms),
-      clearTimer: timer => window.clearTimeout(timer as number),
+      ...deps(),
     }, check => {
       if (run.current === id) setResults(previous => new Map(previous).set(check.id, check))
     }).finally(() => {
@@ -63,7 +76,7 @@ export default function SelfCheckPage() {
       setRunning(false)
       setRanAt(Date.now())
     })
-  }, [])
+  }, [deps])
 
   useEffect(() => {
     start()
@@ -110,10 +123,15 @@ export default function SelfCheckPage() {
               <div className="console-self-check-body">
                 <div className="console-self-check-head">
                   <h2 className="console-self-check-title">{copy.title}</h2>
-                  <Badge variant={check ? STATUS_BADGES[check.status] : 'outline'} size="sm">{check ? statusLabel(check.status) : i18n.t('检查中')}</Badge>
+                  <Badge variant={check ? STATUS_BADGES[check.status] : 'outline'} size="sm">{check?.detail === 'ws-on-demand' ? i18n.t('需要时检查') : check ? statusLabel(check.status) : i18n.t('检查中')}</Badge>
                 </div>
                 <p className="console-self-check-explain">{copy.explain}</p>
                 {detail ? <p className="console-self-check-detail">{detail}</p> : null}
+                {id === 'websocket' && check?.detail === 'ws-on-demand' ? (
+                  <div><Button size="sm" variant="outline" onClick={checkSocket} disabled={socketChecking || running}>
+                    {socketChecking ? <Loader2 className="animate-spin" /> : <RefreshCw />}{i18n.t('检查 WebSocket 升级')}
+                  </Button></div>
+                ) : null}
                 {check && (check.status === 'fail' || check.status === 'warn') ? (
                   <p className="console-self-check-fix"><strong>{i18n.t('怎么修：')}</strong>{copy.fix}</p>
                 ) : null}

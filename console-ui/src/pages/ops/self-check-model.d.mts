@@ -11,6 +11,8 @@ export interface SelfCheckDeps {
   now(): number
   setTimer(fn: () => void, ms: number): unknown
   clearTimer(id: unknown): void
+  /** Run the WebSocket upgrade probe too (it writes one terminal.denied audit entry). */
+  includeWebSocket?: boolean
 }
 export const SELF_CHECK_IDS: readonly SelfCheckId[]
 export const CLOCK_SKEW_LIMIT_MS: number
@@ -27,3 +29,4 @@ export function checkWebSocketOutcome(outcome: { opened?: boolean; code?: number
 export function selfCheckSocketUrl(apiBase: string, pageHref: string): string
 export function runSelfChecks(deps: SelfCheckDeps, onResult?: (check: SelfCheckResult) => void): Promise<SelfCheckResult[]>
 export function selfCheckSummary(results: readonly SelfCheckResult[]): Readonly<{ status: 'pass' | 'warn' | 'fail'; failed: number; warned: number }>
+export function runWebSocketCheck(deps: SelfCheckDeps): Promise<SelfCheckResult>

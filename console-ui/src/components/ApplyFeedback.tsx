@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertTriangle, CheckCircle2, CircleHelp, Clock, GitCompareArrows, Loader2, MessageSquare, RotateCw, Stethoscope, XCircle } from 'lucide-react'
 import { cn } from '@zhin.js/client'
@@ -10,7 +10,7 @@ import { hasConsolePermission } from '../utils/console-access.mjs'
 import { hostRestart, useHostRestartProgress } from '../hooks/use-host-restart'
 import { CONSOLE_PATHS } from '../console-routes.mjs'
 import {
-  APPLY_BASIS_COPY, APPLY_OUTCOME_COPY, RESTART_TIMEOUT_MS, applyOutcomeCopy, applyOutcomeTone, restartElapsedSeconds, restartInProgress,
+  APPLY_BASIS_COPY, APPLY_NOTE_COPY, APPLY_OUTCOME_COPY, RESTART_TIMEOUT_MS, runReadBack, applyOutcomeCopy, applyOutcomeTone, restartElapsedSeconds, restartInProgress,
   type ApplyOutcome, type ReadBackMismatch, type RestartState,
 } from './apply-outcome-model.mjs'
 
@@ -25,6 +25,8 @@ export interface ApplyFeedbackProps {
   readonly failure?: { readonly title?: string; readonly reason: string } | null
   /** The save succeeded but the read-back failed: the outcome stands, the stored value is unchecked. */
   readonly unverified?: boolean
+  /** What was saved (「已创建用户 alice」), above the outcome — for saves made in a closed dialog. */
+  readonly subject?: string
   /**
    * After 立即重启 brought the instance back: re-read the affected data. May resolve with the outcome
    * the re-read shows (e.g. a config file's application status); anything but applied is shown.
@@ -52,7 +54,12 @@ function useElapsed(state: RestartState): number {
  * (立即重启 · 稍后) / 未生效 with the reason — or, when the read-back differs, both values instead of
  * success. Used on its own and inside ActionReceipt.
  */
-export function ApplyFeedback({ outcome, mismatch, failure, unverified, onRestarted, className }: ApplyFeedbackProps) {
+export function ApplyFeedback({ subject, ...props }: ApplyFeedbackProps) {
+  if (!subject) return <ApplyFeedbackBody {...props} />
+  return <div className="console-apply-subject-wrap"><p className="console-apply-subject">{subject}</p><ApplyFeedbackBody {...props} /></div>
+}
+
+function ApplyFeedbackBody({ outcome, mismatch, failure, unverified, onRestarted, className }: ApplyFeedbackProps) {
   const i18n = useI18n()
   // A restart that finished before this outcome existed says nothing about it.
   const [since] = useState(() => Date.now())
@@ -131,6 +138,7 @@ function OutcomeView({ outcome, since, unverified, onRestarted, className }: { o
             {shown.groups.map(group => <li key={group.id}><code>{group.id}</code>{group.reasonCode ? <span> · {group.reasonCode}</span> : null}</li>)}
           </ul>
         ) : null}
+        {shown.note ? <p className="console-apply-description">{i18n.t(APPLY_NOTE_COPY[shown.note])}</p> : null}
         {unverified ? <p className="console-apply-description">{i18n.t('保存后没能重新读取核对，请刷新确认保存的值。')}</p> : null}
         <p className="console-apply-basis">{i18n.t('依据：{0}', [i18n.t(restarted ? APPLY_BASIS_COPY.restart : APPLY_BASIS_COPY[shown.basis])])}</p>
         {outcome.kind === 'restart' && !(settled && shown !== outcome) ? <RestartControls state={restart} relevant={relevant} refreshing={after?.phase === 'refreshing' && after.startedAt === restart.startedAt} /> : null}
@@ -238,4 +246,37 @@ export function RestartProgress({ className, onRestarted }: { className?: string
 function RestartDismiss() {
   const i18n = useI18n()
   return <Button size="sm" variant="ghost" onClick={() => hostRestart.dismiss()}>{i18n.t('关闭')}</Button>
+}
+
+export interface SaveOutcomeState {
+  readonly subject: string
+  readonly outcome: ApplyOutcome
+  readonly mismatch: ReadBackMismatch | null
+  readonly unverified: boolean
+  /** Distinguishes two saves with the same subject (the panel starts afresh). */
+  readonly at: number
+}
+
+/**
+ * The last save of a page whose saves happen in dialogs or menus (访问控制、定时任务): `report` runs
+ * the read-back check (returns a mismatch or null) and keeps the outcome; `element` renders it.
+ */
+export function useSaveOutcome(): {
+  readonly value: SaveOutcomeState | null
+  readonly report: (subject: string, outcome: ApplyOutcome, check?: () => Promise<ReadBackMismatch | null | undefined>) => Promise<SaveOutcomeState>
+  readonly clear: () => void
+  readonly element: ReactNode
+} {
+  const [value, setValue] = useState<SaveOutcomeState | null>(null)
+  const report = useCallback(async (subject: string, outcome: ApplyOutcome, check?: () => Promise<ReadBackMismatch | null | undefined>) => {
+    const read = check ? await runReadBack(check) : { mismatch: null, unverified: false }
+    const next = { subject, outcome, ...read, at: Date.now() }
+    setValue(next)
+    return next
+  }, [])
+  const clear = useCallback(() => setValue(null), [])
+  return {
+    value, report, clear,
+    element: value ? <ApplyFeedback key={value.at} subject={value.subject} outcome={value.outcome} mismatch={value.mismatch} unverified={value.unverified} /> : null,
+  }
 }

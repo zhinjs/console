@@ -8,6 +8,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { localeModule, isLocaleImport } from './locale-fixture.mjs'
 import { describeCron, relativeUntil } from '../console-ui/src/pages/cron-schedule.mjs'
 import { validateAssistantJobs, explainJobError } from '../console-ui/src/pages/assistant-jobs-model.mjs'
+import * as applyOutcome from '../console-ui/src/components/apply-outcome-model.mjs'
 import { taskTabHref } from '../console-ui/src/pages/task-hub-model.mjs'
 import { createInboxCacheAuthority } from '../console-ui/src/utils/inbox-cache-scope.mjs'
 
@@ -31,7 +32,7 @@ const memory = [{ type: 'memory', id: 'plugin-cron', plugin: 'root/reminder', de
 function fixture({ readOnly = false, available = true, jobs = [], deferJobs = false, autoLoad = true } = {}) {
   let connection = { host: 'https://host-a', credential: 'credential-a' }, scopeCounter = 0, slots = [], mountedKey
   const authority = createInboxCacheAuthority(() => connection, () => `scope-${++scopeCounter}`)
-  const calls = [], httpCalls = [], effects = [], timers = [], errors = []; let cursor = 0, dirty = false
+  const calls = [], httpCalls = [], effects = [], timers = [], errors = [], saves = []; let cursor = 0, dirty = false
   const equal = (a, b) => a && b && a.length === b.length && a.every((value, index) => Object.is(value, b[index]))
   const hooks = {
     useState(initial) { const index = cursor++, owned = slots; if (!(index in owned)) owned[index] = typeof initial === 'function' ? initial() : initial; return [owned[index], value => { owned[index] = typeof value === 'function' ? value(owned[index]) : value; if (slots === owned) dirty = true }] },
@@ -41,7 +42,9 @@ function fixture({ readOnly = false, available = true, jobs = [], deferJobs = fa
   }
   const module = compile(source + '\nexport { PersistentRunStatus, CronPageSession };', {
     react: hooks, 'react-router-dom': { Link: 'a' }, 'lucide-react': new Proxy({}, { get: () => 'i' }),
-    '../components/ui/button': { Button: 'button' }, '../components/StatusState': { StatusState: 'status-state' }, '../components/ui/card': { Card: 'article', CardContent: 'section' },
+    '../components/ui/button': { Button: 'button' }, '../components/StatusState': { StatusState: 'status-state' },
+    '../components/ApplyFeedback': { useSaveOutcome: () => ({ value: null, clear() {}, element: null, report: async (subject, outcome, check) => { saves.push({ subject, outcome, check }) } }) },
+    '../components/apply-outcome-model.mjs': applyOutcome, '../components/ui/card': { Card: 'article', CardContent: 'section' },
     '../components/ui/badge': { Badge: 'span' }, '../components/ui/alert': { Alert: 'aside', AlertDescription: 'p' },
     '../components/ui/skeleton': { Skeleton: 'div' }, '../components/ui/input': { Input: 'input' }, '../components/ui/textarea': { Textarea: 'textarea' }, '../components/ui/separator': { Separator: 'hr' }, '../components/ui/select': select,
     '../components/ui/dialog': { Dialog: 'dialog', DialogContent: 'section', DialogHeader: 'header', DialogFooter: 'footer', DialogTitle: 'h2', DialogDescription: 'p', DialogClose: 'close' },
@@ -57,7 +60,7 @@ function fixture({ readOnly = false, available = true, jobs = [], deferJobs = fa
     '../utils/auth': { apiFetch: (url, options) => new Promise((resolve, reject) => { httpCalls.push({ url, options, resolve, reject, scope: authority.current() }); if (!deferJobs) resolve({ ok: true, json: async () => ({ success: true, data: { jobs, eventsActive: false } }) }) }) }, './cron.css': {},
   }, { window: { setInterval: () => 1, clearInterval: () => {} }, setTimeout: callback => { timers.push(callback); return timers.length }, clearTimeout: () => {} })
   let tree
-  const f = { calls, httpCalls, module, timers, errors, authority,
+  const f = { calls, httpCalls, module, timers, errors, authority, saves,
     render() { let count = 0; do {
       assert.ok(++count < 20); dirty = false; cursor = 0
       const root = module.default()
@@ -137,6 +140,15 @@ test('pause/resume retain their exact calls and delete first opens the existing 
   const pause = elements(row(f.tree, 'task:daily')).find(node => node.type === 'button' && node.props.title === '暂停')
   pause.props.onClick(); f.render(); assert.equal(f.calls.at(-1).input.type, 'cron:pause'); assert.equal(f.calls.at(-1).input.id, 'task:daily')
   f.answer('cron:pause', {}); await f.settle(); f.answer('schedule:list', { persistent, memory, capabilities: { persistent: true } }); await f.settle()
+  // The pause ends in one outcome (已生效, the engine disposes the timer on write) checked by a fresh list.
+  assert.equal(f.saves.length, 1)
+  assert.deepEqual([f.saves[0].outcome.kind, f.saves[0].outcome.basis], ['applied', 'scheduler'])
+  const paused = f.saves[0].check(); await f.settle()
+  f.answer('schedule:list', { persistent: persistent.map(job => job.id === 'task:daily' ? { ...job, enabled: false } : job), memory, capabilities: { persistent: true } })
+  assert.equal(await paused, null, 'the re-read shows the task paused')
+  const stillRunning = f.saves[0].check(); await f.settle()
+  f.answer('schedule:list', { persistent, memory, capabilities: { persistent: true } })
+  assert.deepEqual(await stillRunning, { path: 'enabled', submitted: 'false', readBack: 'true' }, 'a re-read that still runs it is a mismatch')
   const resume = elements(row(f.tree, 'task:paused')).find(node => node.type === 'button' && node.props.title === '恢复')
   resume.props.onClick(); f.render(); assert.equal(f.calls.at(-1).input.type, 'cron:resume'); assert.equal(f.calls.at(-1).input.id, 'task:paused')
   f.answer('cron:resume', {}); await f.settle(); f.answer('schedule:list', { persistent, memory, capabilities: { persistent: true } }); await f.settle()

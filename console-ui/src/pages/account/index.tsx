@@ -15,13 +15,15 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { StatusState } from '../../components/StatusState'
 import { ActionReceipt, useActionReceipt } from '../../components/ActionReceipt'
 import { receiptBlocksActions } from '../../components/action-receipt-model.mjs'
-import { useToast } from '../../components/toast'
+import { useSaveOutcome } from '../../components/ApplyFeedback'
+import { outcomeFromAccessWrite, recordReadBack } from '../../components/apply-outcome-model.mjs'
+import { getApiBase, getToken } from '../../utils/auth'
 import { ObjectSection } from '../../scope/ObjectPageLayout'
 import { useConsoleSession } from '../../hooks/use-console-session'
 import { useConsoleAccess } from '../../hooks/use-console-access'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
 import { requestSetup } from '../../utils/console-session.mjs'
-import { changeOwnPassword, createOwnToken, listOwnTokens, revokeOwnToken } from '../../utils/console-auth-api'
+import { changeOwnPassword, createOwnToken, fetchMe, listOwnTokens, revokeOwnToken } from '../../utils/console-auth-api'
 import {
   MIN_PASSWORD_LENGTH, TOKEN_EXPIRY_DAYS, authErrorMessage, newPasswordProblem, principalLabel, tokenExpiresAt,
   tokenNameProblem, tokenState, type AuthFailure,
@@ -89,7 +91,7 @@ function IdentitySection({ me }: { me: ConsoleMe }) {
 
 function PasswordSection() {
   const i18n = useI18n()
-  const toast = useToast()
+  const saved = useSaveOutcome()
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -108,7 +110,11 @@ function PasswordSection() {
     setBusy(false)
     if (!result.ok) { setError(authErrorMessage(result, i18n.t, 'password')); return }
     setCurrent(''); setNext(''); setConfirm('')
-    toast.success(i18n.t('密码已修改。其他设备上的登录已全部退出。'))
+    // The password is never read back: the check is that the new session the Host issued signs in.
+    void saved.report(i18n.t('密码已修改。其他设备上的登录已全部退出。'), outcomeFromAccessWrite({ secret: true }), async () => {
+      const me = await fetchMe(getApiBase(), getToken())
+      return recordReadBack({ newSessionSignsIn: me.ok && me.data?.kind === 'user' }, { newSessionSignsIn: true })
+    })
   }
 
   const row = (id: string, label: string, value: string, set: (value: string) => void, autoComplete: string) => <div className="space-y-1.5">
@@ -126,6 +132,7 @@ function PasswordSection() {
         <p className="console-admin-note">{i18n.t('至少 {0} 位。', [MIN_PASSWORD_LENGTH])}</p>
         {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
         <div><Button type="submit" disabled={busy}>{busy ? i18n.t('保存中…') : i18n.t('修改密码')}</Button></div>
+        {saved.element}
       </form>
     </Card>
   </ObjectSection>
@@ -138,6 +145,7 @@ function TokensSection() {
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [created, setCreated] = useState<{ name: string; token: string } | null>(null)
+  const savedToken = useSaveOutcome()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -153,6 +161,10 @@ function TokensSection() {
       if (!target) throw new Error('no target')
       const result = await revokeOwnToken(target.id)
       if (!result.ok) return { status: 'failed', message: authErrorMessage(result, i18n.t, 'tokens') }
+      // Applies to the next request; a fresh list must not show the token.
+      const list = await listOwnTokens()
+      const mismatch = list.ok ? recordReadBack(list.data.find(token => token.id === target.id) ?? null, null) : null
+      return { status: 'saved', apply: outcomeFromAccessWrite(), ...(mismatch ? { mismatch } : {}), ...(list.ok ? {} : { message: i18n.t('保存后没能重新读取核对，请刷新确认保存的值。') }) }
     },
     verify: async plan => {
       const current = plan.payload as ConsoleApiTokenView | undefined
@@ -208,7 +220,16 @@ function TokensSection() {
       </TableRow>)}</TableBody>
     </Table></Card> : null}
 
-    <CreateTokenDialog open={creating} onOpenChange={setCreating} onCreated={(name, token) => { setCreated({ name, token }); void load() }} />
+    {savedToken.element}
+    <CreateTokenDialog open={creating} onOpenChange={setCreating} onCreated={(name, token) => {
+      setCreated({ name, token }); void load()
+      // The token is shown once in the dialog; the read-back only checks that it is listed.
+      void savedToken.report(i18n.t('已新建令牌 {0}', [name]), outcomeFromAccessWrite({ secret: true }), async () => {
+        const list = await listOwnTokens()
+        if (!list.ok) throw new Error('read failed')
+        return recordReadBack(list.data.find(token => token.name === name) ? { name } : null, { name })
+      })
+    }} />
     <IssuedTokenDialog issued={created} onClose={() => setCreated(null)} />
   </ObjectSection>
 }

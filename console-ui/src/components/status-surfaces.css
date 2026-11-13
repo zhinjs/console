@@ -96,3 +96,5 @@
   .console-apply-actions > button, .console-apply-actions > a { flex: 1 1 auto; }
   .console-apply-compare { grid-template-columns: minmax(0, 1fr); }
 }
+.console-apply-subject-wrap { display: flex; flex-direction: column; gap: 0.375rem; }
+.console-apply-subject { font-size: var(--console-text-body-sm); font-weight: 600; overflow-wrap: anywhere; }

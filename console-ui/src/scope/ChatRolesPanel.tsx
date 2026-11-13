@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { StatusState } from '../components/StatusState'
 import { ActionReceipt, useActionReceipt } from '../components/ActionReceipt'
 import { receiptBlocksActions, type ReceiptPlan } from '../components/action-receipt-model.mjs'
+import { outcomeFromChatRoleWrite } from '../components/apply-outcome-model.mjs'
 import { requestConsole } from '../utils/console-rpc'
 import { useConsoleAccess } from '../hooks/use-console-access'
 import { hasConsolePermission } from '../utils/console-access.mjs'
@@ -19,7 +20,7 @@ import { statusFromError, type StatusReading } from '../components/status-state-
 import { ObjectSection } from './ObjectPageLayout'
 import {
   CHAT_ROLE_COPY, CHAT_ROLE_LABELS, CHAT_ROLES,
-  chatRoleApplied, chatRoleGrantRequest, chatRoleNeedsGlobalManage, chatRoleRefusal, chatRoleRevokeRequest, chatRoleRows, chatRolesListRequest,
+  chatRoleApplied, chatRoleGrantRequest, chatRoleReadBack, chatRoleNeedsGlobalManage, chatRoleRefusal, chatRoleRevokeRequest, chatRoleRows, chatRolesListRequest,
   grantableChatRoles, readChatRoleChange, readChatRoles,
   type ChatRole, type ChatRoleEntry, type ChatRoleRow,
 } from './chat-roles-model.mjs'
@@ -155,7 +156,12 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
         ? chatRoleGrantRequest(scope, { adapter: target.adapter, userId: target.userId, role: target.role! })
         : chatRoleRevokeRequest(scope, { adapter: target.adapter, userId: target.userId })
       try {
-        return readChatRoleChange(await requestConsole<unknown>(request))
+        const change = readChatRoleChange(await requestConsole<unknown>(request))
+        // Resolved from the stored grants for every message (ChatRoleService); a fresh list confirms the grant.
+        let mismatch = null
+        try { mismatch = chatRoleReadBack(await roles.read(), scope, target, target.action) }
+        catch { return { ...change, apply: outcomeFromChatRoleWrite(), message: i18n.t('保存后没能重新读取核对，请刷新确认保存的值。') } }
+        return { ...change, apply: outcomeFromChatRoleWrite(), ...(mismatch ? { mismatch } : {}) }
       } catch (error) {
         // A certain refusal shows its reason in the receipt (未执行); anything else stays 结果未知.
         const refusal = chatRoleRefusal(statusFromError(error))
@@ -166,7 +172,8 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
     verify: async plan => {
       const target = pendingRoleAction(plan)
       if (!target) return undefined
-      return { applied: chatRoleApplied(await roles.read(), scope, target, target.action) }
+      const applied = chatRoleApplied(await roles.read(), scope, target, target.action)
+      return { applied, ...(applied ? { apply: outcomeFromChatRoleWrite() } : {}) }
     },
     onSettled: () => {
       setUserId('')

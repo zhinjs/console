@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
   APPLY_BASIS_COPY, APPLY_OUTCOME_COPY, IDLE_RESTART, MASKED_VALUE, RESTART_TIMEOUT_MS, applyOutcomeCopy, applyOutcomeTone,
-  canonicalJson, outcomeFromConfigSave, outcomeFromEnvSave, outcomeFromFeatureWrite, outcomeFromPluginSwitch, readBackMismatch,
+  APPLY_NOTE_COPY, canonicalJson, outcomeFromAccessWrite, outcomeFromChatRoleWrite, outcomeFromScheduleWrite, recordReadBack, runReadBack, outcomeFromConfigSave, outcomeFromEnvSave, outcomeFromFeatureWrite, outcomeFromPluginSwitch, readBackMismatch,
   restartElapsedSeconds, restartInProgress, restartObservedBack, restartReducer, schemaSecretAt,
 } from '../console-ui/src/components/apply-outcome-model.mjs'
 import { createRestartTracker } from '../console-ui/src/components/restart-tracker.mjs'
@@ -15,9 +15,11 @@ import {
 } from '../console-ui/src/utils/event-stream-status.mjs'
 import {
   CLOCK_SKEW_LIMIT_MS, SELF_CHECK_IDS, checkAuthReply, checkClockSkew, checkEventStreamReply, checkHealthReply, checkMixedContent,
-  checkWebSocketOutcome, runSelfChecks, selfCheckCopy, selfCheckDetail, selfCheckSocketUrl, selfCheckSummary,
+  checkWebSocketOutcome, runSelfChecks, runWebSocketCheck, selfCheckCopy, selfCheckDetail, selfCheckSocketUrl, selfCheckSummary,
 } from '../console-ui/src/pages/ops/self-check-model.mjs'
 import { envReadBackMismatch } from '../console-ui/src/pages/env-editor-model.mjs'
+import { bindingKeys, roleReadBackView, userReadBackView } from '../console-ui/src/pages/access/access-model.mjs'
+import { chatRoleReadBack } from '../console-ui/src/scope/chat-roles-model.mjs'
 import { featureReadBackMismatch } from '../console-ui/src/pages/features/feature-scope-model.mjs'
 import { ambientSaveOutcome, ambientRestartOutcome } from '../console-ui/src/pages/ambient-engagement-model.mjs'
 import { englishMessages } from '../console-ui/src/i18n/messages.en.mjs'
@@ -369,11 +371,18 @@ test('runSelfChecks runs every check against existing routes only and reports ea
     token: 't', now: () => 1_000, setTimer: (fn, ms) => setTimeout(fn, Math.min(ms, 5)), clearTimer: id => clearTimeout(id),
   }, check => seen.push(check.id))
   assert.deepEqual(results.map(check => check.id), SELF_CHECK_IDS)
-  assert.deepEqual(results.map(check => check.status), ['pass', 'pass', 'pass', 'pass', 'pass', 'pass', 'pass'])
+  // The WebSocket probe writes a terminal.denied audit entry: it only runs when asked for.
+  assert.deepEqual(results.map(check => check.status), ['pass', 'pass', 'pass', 'pass', 'pass', 'pass', 'skip'])
+  assert.equal(results.at(-1).detail, 'ws-on-demand')
+  assert.equal(FakeSocket.url, undefined, 'no socket was opened')
   assert.deepEqual(requests, ['https://bot.example/zhin/pub/health', 'https://bot.example/zhin/api/auth/me', 'https://bot.example/zhin/api/events'])
-  assert.equal(FakeSocket.url, 'wss://bot.example/zhin/api/console/terminal?ticket=console-self-check')
   assert.equal(seen.length, SELF_CHECK_IDS.length)
-  assert.deepEqual(selfCheckSummary(results), { status: 'pass', failed: 0, warned: 0 })
+  assert.deepEqual(selfCheckSummary(results), { status: 'pass', failed: 0, warned: 0 }, 'an unrun check is not a failure')
+  const deps = { WebSocket: FakeSocket, apiBase: 'https://bot.example/zhin/', pageHref: 'https://console.zhin.dev/ops/self-check', setTimer: (fn, ms) => setTimeout(fn, Math.min(ms, 5)), clearTimer: id => clearTimeout(id) }
+  assert.deepEqual(await runWebSocketCheck(deps), { id: 'websocket', status: 'pass', detail: 'ws-upgraded', values: ['4401'] })
+  assert.equal(FakeSocket.url, 'wss://bot.example/zhin/api/console/terminal?ticket=console-self-check')
+  const all = await runSelfChecks({ ...deps, fetch, pageProtocol: 'https:', token: 't', now: () => 1_000, includeWebSocket: true })
+  assert.equal(all.at(-1).status, 'pass', 'includeWebSocket runs it in the same pass')
 
   // An unreachable Host skips what depends on it instead of piling up failures.
   const down = await runSelfChecks({
@@ -397,7 +406,7 @@ test('every self-check title, explanation, fix and detail has English copy', () 
   }
   const details = ['http-status', 'network', 'not-json', 'not-gateway', 'blocked-by-mixed', 'mixed-ok', 'loopback-http', 'skew-ok', 'skew-ahead', 'skew-behind',
     'no-server-time', 'auth-user', 'auth-token', 'auth-bootstrap', 'auth-anonymous', 'auth-legacy', 'auth-rejected', 'no-credential', 'events-ok', 'events-buffered',
-    'events-instance-offline', 'events-type', 'ws-upgraded', 'ws-failed', 'ws-timeout', 'ws-unavailable', 'skipped-unreachable']
+    'events-instance-offline', 'events-type', 'ws-upgraded', 'ws-failed', 'ws-timeout', 'ws-unavailable', 'ws-on-demand', 'skipped-unreachable']
   for (const detail of details) {
     const text = selfCheckDetail({ detail, values: ['1', '2'] }, zh)
     assert.ok(text, detail)
@@ -419,4 +428,73 @@ test('the self-check page is a 运维 route every principal may open, linked fro
   // No new Host route or RPC: only the existing public health route, /auth/me, the event stream and the terminal socket.
   const model = readFileSync(new URL('../console-ui/src/pages/ops/self-check-model.mjs', import.meta.url), 'utf8')
   assert.deepEqual([...model.matchAll(/`\$\{base\}(\/[a-z/]+)`/gu)].map(match => match[1]), ['/pub/health', '/api/auth/me', '/api/events'])
+})
+
+// ---------------------------------------------------------------- access control, schedules, chat roles
+
+test('access control, schedules and chat roles end in an outcome whose basis names the Host code that makes it true', () => {
+  assert.deepEqual(outcomeFromAccessWrite(), { kind: 'applied', basis: 'per-request' })
+  assert.deepEqual(outcomeFromAccessWrite({ secret: true }), { kind: 'applied', basis: 'per-request', note: 'secret' })
+  assert.deepEqual(outcomeFromScheduleWrite(), { kind: 'applied', basis: 'scheduler' })
+  assert.deepEqual(outcomeFromChatRoleWrite(), { kind: 'next-message', basis: 'chat-roles' })
+  assert.match(APPLY_BASIS_COPY['per-request'], /#principal/u)
+  assert.match(APPLY_BASIS_COPY.scheduler, /addJob \/ pauseJob \/ resumeJob \/ removeJob/u)
+  assert.match(APPLY_BASIS_COPY['chat-roles'], /effectiveRoles/u)
+  // .env: the runtime classifies an environment change as restart-pending and keeps the old layers.
+  assert.match(APPLY_BASIS_COPY['env-file'], /planRuntimeInputs/u)
+  assert.match(APPLY_BASIS_COPY['env-file'], /restart-pending/u)
+  assert.match(APPLY_BASIS_COPY['env-file'], /environment-host-consumers/u)
+  for (const text of [...Object.values(APPLY_BASIS_COPY), ...Object.values(APPLY_NOTE_COPY)]) assert.ok(Object.hasOwn(englishMessages, text), text)
+})
+
+test('a record read back from a fresh list: present and equal, gone, or the difference', async () => {
+  assert.equal(recordReadBack({ name: 'ci', userId: 'u1', extra: 1 }, { name: 'ci', userId: 'u1' }), null)
+  assert.deepEqual(recordReadBack({ name: 'ci', enabled: true }, { enabled: false }), { path: 'enabled', submitted: 'false', readBack: 'true' })
+  assert.deepEqual(recordReadBack(null, { name: 'ci' }), { path: 'exists', submitted: 'true', readBack: 'false' })
+  assert.equal(recordReadBack(null, null), null, 'a deleted record is gone')
+  assert.deepEqual(recordReadBack({ id: 'x' }, null), { path: 'exists', submitted: 'false', readBack: 'true' })
+  assert.deepEqual(await runReadBack(async () => null), { mismatch: null, unverified: false })
+  assert.deepEqual(await runReadBack(async () => { throw new Error('offline') }), { mismatch: null, unverified: true }, 'a failed read is never a match')
+})
+
+test('users and roles are checked on what the save wrote; passwords never appear', () => {
+  const user = { id: 'u1', username: 'alice', displayName: 'Alice', disabled: false, passwordChangedAt: 5, bindings: [
+    { role: 'operator', scope: { kind: 'adapter', key: 'qq' } }, { role: 'viewer', scope: { kind: 'global' } }] }
+  assert.deepEqual(bindingKeys(user.bindings), ['operator@adapter:qq', 'viewer@global'])
+  const view = userReadBackView(user)
+  assert.deepEqual(view, { username: 'alice', displayName: 'Alice', disabled: false, bindings: ['operator@adapter:qq', 'viewer@global'], passwordChangedAt: 5 })
+  assert.equal(recordReadBack(view, { bindings: bindingKeys([...user.bindings].reverse()) }), null, 'binding order does not matter')
+  assert.deepEqual(recordReadBack(view, { displayName: 'Alicia' }), { path: 'displayName', submitted: '"Alicia"', readBack: '"Alice"' })
+  assert.equal(userReadBackView(null), null)
+  const role = { id: 'r', name: 'ops', description: 'Ops', permissions: ['b', 'a'] }
+  assert.equal(recordReadBack(roleReadBackView(role), { description: 'Ops', permissions: ['a', 'b'] }), null)
+  assert.deepEqual(recordReadBack(roleReadBackView(role), { description: 'Ops', permissions: ['a'] }), { path: 'permissions.1', submitted: null, readBack: '"b"' })
+  // A password reset is checked by its change time only.
+  assert.equal(recordReadBack({ passwordChanged: 9 > 5 }, { passwordChanged: true }), null)
+})
+
+test('chat role grants are read back from the stored list at this scope', () => {
+  const scope = { adapter: 'qq', endpoint: 'bot' }
+  const entries = [{ key: 'qq/bot', source: 'grant', adapter: 'qq', userId: '10001', role: 'admin' }]
+  assert.equal(chatRoleReadBack(entries, scope, { adapter: 'qq', userId: '10001', role: 'admin' }, 'grant'), null)
+  assert.deepEqual(chatRoleReadBack(entries, scope, { adapter: 'qq', userId: '10001', role: 'owner' }, 'grant'), { path: 'role', submitted: '"owner"', readBack: '"admin"' })
+  assert.deepEqual(chatRoleReadBack(entries, scope, { adapter: 'qq', userId: '10001' }, 'revoke'), { path: 'role', submitted: null, readBack: '"admin"' })
+  assert.equal(chatRoleReadBack([], scope, { adapter: 'qq', userId: '10001' }, 'revoke'), null)
+})
+
+test('every access-control, personal, schedule and chat-role save point reports its outcome instead of a toast', () => {
+  const read = path => readFileSync(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')
+  const expectations = {
+    'pages/access/users.tsx': [/outcomeFromAccessWrite\(\)/u, /USERS_DISABLE[\s\S]*apply: outcomeFromAccessWrite/u, /已创建 \{0\}/u, /已更新 \{0\} 的显示名/u, /已更新 \{0\} 的角色/u, /已重置 \{0\} 的密码/u, /已删除 \{0\}/u, /\{saved\.element\}/u],
+    'pages/access/roles.tsx': [/outcomeFromAccessWrite\(\)/u, /roleReadBackView/u, /\{saved\.element\}/u],
+    'pages/access/tokens.tsx': [/TOKENS_REVOKE[\s\S]*apply: outcomeFromAccessWrite/u, /outcomeFromAccessWrite\(\{ secret: true \}\)/u, /\{saved\.element\}/u],
+    'pages/account/index.tsx': [/changeOwnPassword[\s\S]*outcomeFromAccessWrite\(\{ secret: true \}\)/u, /revokeOwnToken[\s\S]*apply: outcomeFromAccessWrite/u, /\{savedToken\.element\}/u],
+    'scope/ChatRolesPanel.tsx': [/apply: outcomeFromChatRoleWrite\(\)/u, /chatRoleReadBack/u],
+    'pages/cron.tsx': [/CRON_ADD[\s\S]*outcomeFromScheduleWrite/u, /CRON_REMOVE[\s\S]*outcomeFromScheduleWrite/u, /\{saved\.element\}/u],
+  }
+  for (const [path, patterns] of Object.entries(expectations)) {
+    const source = read(path)
+    for (const pattern of patterns) assert.match(source, pattern, `${path}: ${pattern}`)
+    assert.doesNotMatch(source, /toast\.success\(/u, `${path} no longer ends a save with a toast`)
+  }
 })

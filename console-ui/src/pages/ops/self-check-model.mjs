@@ -100,6 +100,7 @@ export function selfCheckDetail(check, t) {
     case 'ws-failed': return t('连接在升级前就失败了（关闭码 {0}）。', values)
     case 'ws-timeout': return t('{0} 秒内没有答复。', values)
     case 'ws-unavailable': return t('这个浏览器不支持 WebSocket。', values)
+    case 'ws-on-demand': return t('需要时检查：这项会连一次终端的 WebSocket，并在审计日志里留下一条 terminal.denied 记录，所以不会自动运行。', values)
     case 'skipped-unreachable': return t('Host 不可达，先解决上面的问题。', values)
     default: return null
   }
@@ -246,7 +247,8 @@ function probeWebSocket(deps, url) {
 
 /**
  * Runs every check. `deps`: `{ fetch, WebSocket, apiBase, pageHref, pageProtocol, token, now,
- * setTimer, clearTimer }`. `onResult(check)` reports each check as it finishes. Resolves with the
+ * setTimer, clearTimer, includeWebSocket? }` — the WebSocket check is skipped (`ws-on-demand`) unless
+ * `includeWebSocket` (see {@link runWebSocketCheck}). `onResult(check)` reports each check as it finishes. Resolves with the
  * results in {@link SELF_CHECK_IDS} order.
  */
 export async function runSelfChecks(deps, onResult = () => {}) {
@@ -295,11 +297,20 @@ export async function runSelfChecks(deps, onResult = () => {}) {
       deps.clearTimer(abort)
       controller?.abort()
     }
-    let socketUrl = null
-    try { socketUrl = selfCheckSocketUrl(base, deps.pageHref) } catch { socketUrl = null }
-    report(socketUrl ? checkWebSocketOutcome(await probeWebSocket(deps, socketUrl)) : result('websocket', 'skip', 'ws-unavailable'))
+    // The upgrade probe leaves a terminal.denied audit entry: it runs only when asked for.
+    report(deps.includeWebSocket ? await runWebSocketCheck(deps) : result('websocket', 'skip', 'ws-on-demand'))
   }
   return SELF_CHECK_IDS.map(id => results.get(id)).filter(Boolean)
+}
+
+/**
+ * The WebSocket upgrade check on its own (「需要时检查」): opens one socket to the terminal endpoint
+ * with an invalid ticket. The gateway records it as one terminal.denied audit entry.
+ */
+export async function runWebSocketCheck(deps) {
+  let socketUrl = null
+  try { socketUrl = selfCheckSocketUrl(String(deps.apiBase || '').replace(/\/+$/u, ''), deps.pageHref) } catch { socketUrl = null }
+  return socketUrl ? checkWebSocketOutcome(await probeWebSocket(deps, socketUrl)) : result('websocket', 'skip', 'ws-unavailable')
 }
 
 /** One line for the whole run: `{ status: 'pass' | 'warn' | 'fail', failed, warned }`. */

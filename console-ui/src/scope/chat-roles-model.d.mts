@@ -43,3 +43,4 @@ export function chatRoleNeedsGlobalManage(role: ChatRole): boolean
 export function grantableChatRoles(globalManage: boolean): ChatRole[]
 export const CHAT_ROLE_COPY: Readonly<{ unpersisted: string; ownerNeedsGlobal: string; redacted: string }>
 export function chatRoleRefusal(classified: { kind?: string; message?: string; serverCode?: string } | null | undefined): { code: 'unpersisted' } | { code: 'refused'; message: string } | null
+export function chatRoleReadBack(entries: readonly ChatRoleEntry[], scope: unknown, target: { adapter: string; userId: string; role?: ChatRole }, action: 'grant' | 'revoke'): import('../components/apply-outcome-model.mjs').ReadBackMismatch | null

@@ -9,6 +9,8 @@ import { Badge } from '../components/ui/badge'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { Skeleton } from '../components/ui/skeleton'
 import { StatusState } from '../components/StatusState'
+import { useSaveOutcome } from '../components/ApplyFeedback'
+import { outcomeFromScheduleWrite, recordReadBack } from '../components/apply-outcome-model.mjs'
 import { Input } from '../components/ui/input'
 import { Textarea } from '../components/ui/textarea'
 import { Separator } from '../components/ui/separator'
@@ -127,6 +129,11 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
   const { error: toastError } = useToast()
   const readOnly = !hasConsolePermission('ops.schedule.write')
 
+  // Writes go to the schedule engine, which registers or disposes the timer as part of the write
+  // (已生效); a fresh list confirms what was stored.
+  const saved = useSaveOutcome()
+  const readPersistent = async () => (await requestConsole<{ persistent?: PersistentCron[] }>({ type: CONSOLE_RPC.SCHEDULE_LIST })).persistent ?? []
+
   const fetchCrons = useCallback(async () => {
     if (!isInboxCacheScopeActive(connectionScope)) return
     const sequence = ++readSequence.current
@@ -184,7 +191,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
     if (!isInboxCacheScopeActive(connectionScope) || !persistentAvailable || readOnly || submitting || !validCron || !newCron.prompt.trim()) return
     setSubmitting(true)
     try {
-      await requestConsole({
+      const reply = await requestConsole<{ job?: { id?: unknown } }>({
         type: CONSOLE_RPC.CRON_ADD,
         cronExpression: newCron.cronExpression.trim(),
         prompt: newCron.prompt.trim(),
@@ -192,7 +199,13 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
       })
       if (!isInboxCacheScopeActive(connectionScope)) return
       setAddDialogOpen(false)
+      const submitted = { cronExpression: newCron.cronExpression.trim(), prompt: newCron.prompt.trim() }
       setNewCron({ cronExpression: '', prompt: '', label: '' })
+      const id = typeof reply?.job?.id === 'string' ? reply.job.id : null
+      void saved.report(i18n.t('已新建定时任务'), outcomeFromScheduleWrite(), async () => {
+        const job = (await readPersistent()).find(item => id ? item.id === id : item.prompt === submitted.prompt && item.cronExpression === submitted.cronExpression)
+        return recordReadBack(job ? { cronExpression: job.cronExpression, prompt: job.prompt, enabled: job.enabled } : null, { ...submitted, enabled: true })
+      })
       await fetchCrons()
     } catch (err) {
       if (isInboxCacheScopeActive(connectionScope)) toastError((err as Error).message)
@@ -205,9 +218,12 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
     if (!isInboxCacheScopeActive(connectionScope) || !deleteTarget || !persistentAvailable || readOnly || submitting) return
     setSubmitting(true)
     try {
-      await requestConsole({ type: CONSOLE_RPC.CRON_REMOVE, id: deleteTarget.id })
+      const removed = deleteTarget
+      await requestConsole({ type: CONSOLE_RPC.CRON_REMOVE, id: removed.id })
       if (!isInboxCacheScopeActive(connectionScope)) return
       setDeleteTarget(null)
+      void saved.report(i18n.t('已删除定时任务 {0}', [removed.label || removed.id]), outcomeFromScheduleWrite(),
+        async () => recordReadBack((await readPersistent()).find(item => item.id === removed.id) ?? null, null))
       await fetchCrons()
     } catch (err) {
       if (isInboxCacheScopeActive(connectionScope)) toastError((err as Error).message)
@@ -226,6 +242,10 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
         await requestConsole({ type: CONSOLE_RPC.CRON_RESUME, id: job.id })
       }
       if (!isInboxCacheScopeActive(connectionScope)) return
+      void saved.report(job.enabled ? i18n.t('已暂停定时任务 {0}', [job.label || job.id]) : i18n.t('已恢复定时任务 {0}', [job.label || job.id]), outcomeFromScheduleWrite(), async () => {
+        const found = (await readPersistent()).find(item => item.id === job.id)
+        return recordReadBack(found ? { enabled: found.enabled } : null, { enabled: !job.enabled })
+      })
       await fetchCrons()
     } catch (err) {
       if (isInboxCacheScopeActive(connectionScope)) toastError((err as Error).message)
@@ -283,6 +303,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
         ]} />
       </div>}
 
+      {saved.element}
       <section aria-labelledby="persistent-crons-title">
         <div className="console-resource-section-heading flex items-center gap-2 mb-3">
           <Timer className="w-5 h-5 text-primary" aria-hidden="true" />
