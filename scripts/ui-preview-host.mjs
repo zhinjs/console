@@ -2,8 +2,10 @@
 /** Loopback-only, in-memory UI fixture. It never connects to a real Host, platform, model, or database. */
 import { createServer } from 'node:http'
 import { answerDatabaseRpc } from './ui-preview-database.mjs'
+import { answerLoginRpc, attachLoginEvents, captchaHelperPage, configureLoginFixture, loginEndpointRows } from './ui-preview-login.mjs'
 
 const port = Number(process.argv[2] ?? process.env.UI_PREVIEW_PORT ?? 18087)
+configureLoginFixture({ port })
 const origins = new Set(['http://localhost:9000', 'http://127.0.0.1:9000', 'http://localhost:5173', 'http://127.0.0.1:5173', ...(process.env.UI_PREVIEW_ORIGIN ? [process.env.UI_PREVIEW_ORIGIN] : [])])
 const endpoints = [
   { name: 'preview-community', adapter: 'icqq', connected: true, status: 'online', transportState: 'open', phase: 'ready', endpoint: { adapter: 'icqq', id: 'preview-community' }, managementCapabilities: ['listFriends', 'listGroups', 'listChannels', 'listGroupMembers'], pendingRequestCount: 0, pendingNoticeCount: 0 },
@@ -285,6 +287,8 @@ const instanceOffline = process.env.UI_PREVIEW_INSTANCE === 'offline'
 const memoryDatabase = process.env.UI_PREVIEW_DB === 'memory'
 // UI_PREVIEW_ACCESS=scoped: an account that manages roles only on the icqq adapter (no global iam.manage).
 const scopedAccess = process.env.UI_PREVIEW_ACCESS === 'scoped'
+// UI_PREVIEW_ACCESS=viewer: may view accounts (endpoint.view) but not operate them (read-only login card).
+const viewerAccess = process.env.UI_PREVIEW_ACCESS === 'viewer'
 const setupMode = process.env.UI_PREVIEW_SETUP === '1'
 const ALL_PERMISSIONS = ['status.view', 'endpoint.view', 'endpoint.operate', 'endpoint.manage', 'feature.view', 'feature.configure', 'feature.toggle',
   'plugin.manage', 'plugin.perms.read', 'plugin.perms.operate', 'plugin.perms.manage', 'agent.view', 'agent.configure', 'ops.config.read', 'ops.config.write',
@@ -328,6 +332,10 @@ const instanceLogs = () => ({ lines: [
 ] })
 const meReport = () => setupMode
   ? { kind: 'bootstrap', open: false, permissions: [], bindings: [], setupRequired: true }
+  : viewerAccess ? { kind: 'user', user: { id: 'u-viewer', username: 'viewer', displayName: '只读同事' },
+    permissions: ALL_PERMISSIONS.filter(item => /\.(view|read)$/u.test(item)),
+    bindings: [{ role: 'viewer', scope: { kind: 'global' }, permissions: ALL_PERMISSIONS.filter(item => /\.(view|read)$/u.test(item)) }], setupRequired: false,
+    onboarding: { version: 1, steps: { database: 'done', owner: 'done', ai: 'skipped', adapters: 'done' } } }
   : scopedAccess ? { kind: 'user', user: { id: 'u-alice', username: 'alice', displayName: '适配器管理员' },
     permissions: ALL_PERMISSIONS.filter(item => item !== 'iam.manage' && item !== 'ops.env.write'),
     bindings: [{ role: 'adapter-admin', scope: { kind: 'adapter', key: 'icqq' }, permissions: ['iam.manage', 'feature.view', 'feature.configure', 'feature.toggle'] }], setupRequired: false,
@@ -395,6 +403,8 @@ const server = createServer(async (request, response) => {
   if (url.pathname === '/pub/health' || url.pathname === '/') {
     json({ success: true, status: 'ok', timestamp: new Date().toISOString(), instance: { state: instanceStatus().state, ready: !instanceOffline }, fixture: 'Local UI preview; synthetic data only' }); return
   }
+  // Stand-in captcha helper page (its own origin when opened as http://localhost:<port>).
+  if (url.pathname === '/login-assist/tcaptcha.html') { response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }); response.end(captchaHelperPage()); return }
   // `/auth/me` is public on the gateway: an unknown credential reads as `anonymous`.
   if (url.pathname === '/api/auth/me' && request.headers.authorization !== 'Bearer ui-preview') {
     json(envelope({ kind: 'anonymous', permissions: [], bindings: [], setupRequired: setupMode })); return
@@ -425,6 +435,7 @@ const server = createServer(async (request, response) => {
     response.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' })
     response.write(': local UI fixture\n\n')
     const heartbeat = setInterval(() => response.write(': heartbeat\n\n'), 15_000)
+    attachLoginEvents(response, request)
     request.on('close', () => clearInterval(heartbeat)); return
   }
   if (url.pathname === '/entries') { json([]); return }
@@ -499,7 +510,8 @@ const server = createServer(async (request, response) => {
     if (!body) return
     const type = String(body.type)
     const endpoint = endpoints.find(endpoint => endpoint.name === (body.endpointKey ?? body.endpointId ?? body.data?.endpointKey)) ?? endpoints[0]
-    if (type === 'endpoint.list') { json(envelope({ endpoints })); return }
+    if (await answerLoginRpc(type, body, json, envelope)) return
+    if (type === 'endpoint.list') { json(envelope({ endpoints: [...endpoints, ...loginEndpointRows()] })); return }
     if (type === 'attention.list') {
       if (attentionMode === 'legacy') { json({ success: false, error: 'Unknown RPC type: attention.list' }, 400); return }
       json(envelope({ items: attentionMode === 'empty' ? [] : attentionItems(body.data?.locale === 'en'), generatedAt: new Date().toISOString() })); return

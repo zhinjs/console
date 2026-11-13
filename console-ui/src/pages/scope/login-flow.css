@@ -1,0 +1,222 @@
+/*
+ * Login flow card (ADR 0058, login-flow-card.tsx / login-challenge.tsx): header, step timeline and
+ * the open challenge. Semantic tokens only; QR codes keep a light tile in both themes because
+ * scanners need dark modules on a light quiet zone.
+ */
+.console-login-flow { display: flex; flex-direction: column; gap: 1rem; padding: var(--console-space-card-sm); }
+.console-login-flow-skeleton { display: grid; gap: 0.75rem; }
+
+/* ---------- header ---------- */
+.console-login-flow-head { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.75rem; }
+.console-login-flow-icon {
+  display: inline-flex; width: 2.5rem; height: 2.5rem; flex-shrink: 0; align-items: center; justify-content: center;
+  border-radius: var(--console-radius-lg); background: hsl(var(--warning) / 0.12); color: hsl(var(--warning));
+}
+.console-login-flow-icon svg { width: 1.25rem; height: 1.25rem; }
+.console-login-flow-icon.is-online { background: hsl(var(--success) / 0.12); color: hsl(var(--success)); }
+.console-login-flow-icon.is-failed { background: hsl(var(--destructive) / 0.1); color: hsl(var(--destructive)); }
+.console-login-flow-heading { display: flex; min-width: 0; flex: 1 1 14rem; flex-direction: column; gap: 0.25rem; }
+.console-login-flow-title { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; font-size: var(--console-text-section); font-weight: 600; }
+.console-login-flow-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); }
+.console-login-flow-sub code { overflow: hidden; max-width: 100%; text-overflow: ellipsis; white-space: nowrap; font-family: var(--console-font-mono, ui-monospace, monospace); font-size: var(--console-text-code); }
+.console-login-flow-sync { width: 0.875rem; height: 0.875rem; }
+.console-login-flow-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.console-login-receipt:empty { display: none; }
+
+/* ---------- body: timeline + challenge ---------- */
+.console-login-flow-body { display: grid; gap: 1.25rem; grid-template-columns: minmax(13rem, 16rem) minmax(0, 1fr); align-items: start; }
+.console-login-flow-main { display: flex; min-width: 0; flex-direction: column; gap: 0.75rem; }
+
+.console-login-timeline { position: relative; display: flex; flex-direction: column; margin: 0; padding: 0.75rem; border-radius: var(--console-radius-lg); background: hsl(var(--secondary)); list-style: none; }
+.console-login-timeline-step { position: relative; display: flex; gap: 0.625rem; padding-bottom: 0.875rem; }
+.console-login-timeline-step:last-child { padding-bottom: 0; }
+/* The connecting line between markers. */
+.console-login-timeline-step:not(:last-child)::before {
+  content: ''; position: absolute; top: 1.375rem; bottom: 0.125rem; left: 0.625rem; width: 2px; border-radius: 1px; background: hsl(var(--border-strong));
+}
+.console-login-timeline-step.is-done:not(:last-child)::before { background: hsl(var(--success) / 0.45); }
+.console-login-timeline-marker { position: relative; z-index: 1; display: inline-flex; width: 1.25rem; height: 1.25rem; flex-shrink: 0; align-items: center; justify-content: center; margin-top: 0.0625rem; border-radius: 999px; background: hsl(var(--secondary)); color: hsl(var(--muted-foreground)); }
+.console-login-timeline-marker svg { width: 1.125rem; height: 1.125rem; }
+.console-login-timeline-step.is-done .console-login-timeline-marker { color: hsl(var(--success)); }
+.console-login-timeline-step.is-failed .console-login-timeline-marker { color: hsl(var(--destructive)); }
+.console-login-timeline-step.is-active .console-login-timeline-marker { color: hsl(var(--primary)); }
+.console-login-timeline-step.is-current .console-login-timeline-marker { box-shadow: 0 0 0 4px hsl(var(--primary) / 0.16); }
+.console-login-timeline-content { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 0.25rem; }
+.console-login-timeline-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.5rem; font-size: var(--console-text-body-sm); line-height: 1.35; }
+.console-login-timeline-title time { margin-left: auto; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-variant-numeric: tabular-nums; }
+.console-login-timeline-step.is-collapsed .console-login-timeline-title { color: hsl(var(--muted-foreground)); }
+.console-login-timeline-step.is-current .console-login-timeline-title { color: hsl(var(--foreground)); font-weight: 600; }
+.console-login-timeline-step.is-skipped .console-login-timeline-title > span:not(.console-login-timeline-tag):not(.sr-only) { text-decoration: line-through; text-decoration-color: hsl(var(--muted-foreground) / 0.6); }
+.console-login-timeline-tag { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
+.console-login-timeline-step.is-failed .console-login-timeline-title { color: hsl(var(--destructive)); font-weight: 600; }
+
+.console-login-outcome {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.375rem; margin-top: 0.125rem; padding: 0.625rem 0.75rem;
+  border-radius: var(--console-radius-md); background: hsl(var(--destructive) / 0.07); color: hsl(var(--foreground)); font-size: var(--console-text-body-sm);
+}
+.console-login-outcome-title { color: hsl(var(--destructive)); font-weight: 600; }
+
+/* ---------- challenge ---------- */
+.console-login-challenge { display: flex; flex-direction: column; gap: 0.875rem; }
+.console-login-challenge-head { display: flex; flex-direction: column; gap: 0.25rem; }
+.console-login-challenge-title { font-size: var(--console-text-section); font-weight: 600; }
+.console-login-challenge-short, .console-login-muted { color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); }
+
+.console-login-callout { display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.625rem 0.75rem; border-radius: var(--console-radius-md); font-size: var(--console-text-body-sm); line-height: 1.45; }
+.console-login-callout > svg { width: 1rem; height: 1rem; flex-shrink: 0; margin-top: 0.125rem; }
+.console-login-callout-detail { display: block; color: hsl(var(--muted-foreground)); }
+.console-login-callout--warning { background: hsl(var(--warning) / 0.1); color: hsl(var(--foreground)); }
+.console-login-callout--warning > svg { color: hsl(var(--warning)); }
+.console-login-callout--success { background: hsl(var(--success) / 0.1); }
+.console-login-callout--success > svg { color: hsl(var(--success)); }
+.console-login-callout--info { background: hsl(var(--info) / 0.08); }
+.console-login-callout--info > svg { color: hsl(var(--info)); }
+.console-login-callout--danger { background: hsl(var(--destructive) / 0.08); }
+.console-login-callout--danger > svg { color: hsl(var(--destructive)); }
+.console-login-callout--muted { background: hsl(var(--secondary)); color: hsl(var(--muted-foreground)); }
+
+.console-login-checklist { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.75rem; border-radius: var(--console-radius-lg); background: hsl(var(--secondary)); }
+.console-login-checklist-progress { color: hsl(var(--primary)); font-size: var(--console-text-label); font-weight: 600; letter-spacing: 0.02em; }
+.console-login-checklist ol { display: flex; flex-direction: column; gap: 0.375rem; margin: 0; padding: 0; list-style: none; }
+.console-login-checklist li { display: flex; align-items: flex-start; gap: 0.625rem; padding: 0.375rem 0.5rem; border-radius: var(--console-radius-md); font-size: var(--console-text-body-sm); line-height: 1.45; transition: background-color var(--console-duration-fast) var(--console-ease-out); }
+.console-login-checklist li.is-current { background: hsl(var(--card)); box-shadow: var(--console-shadow-sm); }
+.console-login-checklist li.is-done .console-login-checklist-text { color: hsl(var(--muted-foreground)); text-decoration: line-through; text-decoration-color: hsl(var(--muted-foreground) / 0.5); }
+.console-login-check {
+  display: inline-flex; width: 1.375rem; height: 1.375rem; flex-shrink: 0; align-items: center; justify-content: center; border: 1.5px solid hsl(var(--border-strong));
+  border-radius: 999px; background: hsl(var(--card)); color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-weight: 600; font-variant-numeric: tabular-nums;
+}
+button.console-login-check { cursor: pointer; }
+button.console-login-check:hover { border-color: hsl(var(--primary)); }
+button.console-login-check:focus-visible { outline: var(--console-focus-width, 2px) solid hsl(var(--ring)); outline-offset: 2px; }
+.console-login-check svg { width: 0.875rem; height: 0.875rem; }
+li.is-current .console-login-check { border-color: hsl(var(--primary)); color: hsl(var(--primary)); }
+li.is-done .console-login-check { border-color: hsl(var(--success)); background: hsl(var(--success)); color: hsl(var(--success-foreground)); }
+.console-login-checklist-text { display: flex; flex-direction: column; gap: 0.125rem; padding-top: 0.0625rem; }
+.console-login-checklist-auto { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); text-decoration: none; }
+
+/* ---------- QR ---------- */
+.console-login-challenge-split { display: grid; gap: 1.25rem; grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+.console-login-challenge-side { display: flex; min-width: 0; flex-direction: column; gap: 0.875rem; }
+.console-login-qrcode { display: flex; width: 15rem; max-width: 100%; margin-inline: auto; flex-direction: column; align-items: center; gap: 0.625rem; }
+.console-login-qr-frame {
+  position: relative; display: flex; width: min(15rem, 100%); aspect-ratio: 1; align-items: center; justify-content: center; overflow: hidden;
+  border-radius: var(--console-radius-xl); background: hsl(0 0% 100%); box-shadow: var(--console-shadow-md); padding: 0.75rem;
+}
+.console-login-qr-image { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; transition: filter var(--console-duration-fast) var(--console-ease-out), opacity var(--console-duration-fast) var(--console-ease-out); }
+.console-login-qr-frame.is-dimmed .console-login-qr-image { filter: blur(3px); opacity: 0.25; }
+.console-login-qr-placeholder { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; color: hsl(222 20% 40%); font-size: var(--console-text-body-sm); }
+.console-login-qr-overlay {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.625rem; padding: 1rem;
+  color: hsl(222 30% 14%); font-size: var(--console-text-body-sm); font-weight: 600; text-align: center;
+}
+.console-login-qr-overlay > svg { width: 2.25rem; height: 2.25rem; }
+.console-login-qr-overlay.is-scanned > svg { color: hsl(var(--success)); }
+.console-login-qr-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.5rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); font-variant-numeric: tabular-nums; }
+.console-login-ring { width: 1.75rem; height: 1.75rem; transform: rotate(-90deg); }
+.console-login-ring circle { fill: none; stroke-width: 3.5; }
+.console-login-ring-track { stroke: hsl(var(--border-strong)); }
+.console-login-ring-value { stroke: hsl(var(--primary)); stroke-linecap: round; transition: stroke-dashoffset 1s linear; }
+.console-login-ring-value.is-low { stroke: hsl(var(--warning)); }
+
+/* ---------- captcha helper ---------- */
+.console-login-divider { display: flex; align-items: center; gap: 0.75rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
+.console-login-divider::before, .console-login-divider::after { content: ''; flex: 1; height: 1px; background: hsl(var(--border)); }
+.console-login-captcha { display: flex; flex-direction: column; gap: 0.625rem; padding: 0.875rem; border: 1px solid hsl(var(--primary-action-border)); border-radius: var(--console-radius-lg); background: hsl(var(--primary-action) / 0.55); }
+.console-login-captcha-main { display: flex; align-items: flex-start; gap: 0.625rem; font-size: var(--console-text-body-sm); }
+.console-login-captcha-main > svg { width: 1.25rem; height: 1.25rem; flex-shrink: 0; color: hsl(var(--primary)); }
+.console-login-captcha-status { color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); }
+.console-login-captcha-status:empty { display: none; }
+.console-login-anchor { color: hsl(var(--primary)); text-decoration: underline; text-underline-offset: 2px; }
+
+/* ---------- blocks ---------- */
+.console-login-block-frame { border-radius: var(--console-radius-lg); transition: box-shadow var(--console-duration-fast) var(--console-ease-out); }
+.console-login-block-frame.is-current { box-shadow: 0 0 0 2px hsl(var(--primary) / 0.55); }
+.console-login-step-tag { display: inline-flex; align-items: center; padding: 0 0.4375rem; border-radius: 999px; background: hsl(var(--primary-action)); color: hsl(var(--primary-action-foreground)); font-size: var(--console-text-label); font-weight: 600; }
+.console-login-block-frame.is-current .console-login-step-tag { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+.console-login-blocks { display: flex; flex-direction: column; gap: 0.75rem; }
+.console-login-block { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.75rem; border-radius: var(--console-radius-lg); background: hsl(var(--secondary)); }
+.console-login-block-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.console-login-block-label { display: inline-flex; align-items: center; gap: 0.375rem; font-size: var(--console-text-body-sm); font-weight: 600; }
+.console-login-block-label > svg { width: 0.9375rem; height: 0.9375rem; color: hsl(var(--primary)); }
+.console-login-block-tools { display: flex; gap: 0.25rem; }
+.console-login-copy-box { position: relative; }
+.console-login-code {
+  overflow: auto; max-height: 14rem; margin: 0; padding: 0.625rem 0.75rem; border-radius: var(--console-radius-md); background: hsl(var(--card)); box-shadow: var(--console-shadow-ring);
+  font-family: var(--console-font-mono, ui-monospace, monospace); font-size: var(--console-text-code); line-height: 1.55; white-space: pre-wrap; word-break: break-all;
+}
+.console-login-code.is-hidden { color: hsl(var(--muted-foreground)); font-family: inherit; font-size: var(--console-text-body-sm); white-space: normal; }
+.console-login-code:focus-visible { outline: var(--console-focus-width, 2px) solid hsl(var(--ring)); outline-offset: 2px; }
+.console-login-field-tag { display: inline-flex; align-items: center; padding: 0 0.375rem; border-radius: 999px; background: hsl(var(--foreground) / 0.06); color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-weight: 500; }
+.console-login-field-tag.is-warning { background: hsl(var(--warning) / 0.14); color: hsl(var(--warning)); }
+.console-login-bookmarklet {
+  display: inline-flex; height: var(--console-control-height-sm); align-items: center; gap: 0.375rem; padding: 0 0.75rem; border: 1.5px dashed hsl(var(--primary) / 0.6);
+  border-radius: var(--console-radius-md); color: hsl(var(--primary)); font-size: var(--console-text-body-sm); font-weight: 500; cursor: grab; text-decoration: none; white-space: nowrap;
+}
+.console-login-bookmarklet:active { cursor: grabbing; }
+.console-login-bookmarklet svg { width: 1rem; height: 1rem; }
+.console-login-devtools { font-size: var(--console-text-body-sm); }
+.console-login-devtools summary { cursor: pointer; color: hsl(var(--muted-foreground)); }
+.console-login-devtools ol { margin: 0.5rem 0 0; padding-left: 1.25rem; list-style: decimal; color: hsl(var(--muted-foreground)); }
+.console-login-devtools li + li { margin-top: 0.25rem; }
+
+.console-login-link-block { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+.console-login-link-main { display: flex; min-width: 0; flex: 1 1 12rem; flex-direction: column; gap: 0.375rem; }
+.console-login-link-main code { font-family: var(--console-font-mono, ui-monospace, monospace); font-size: var(--console-text-code); }
+.console-login-link-qr { display: flex; flex-direction: column; align-items: center; gap: 0.375rem; margin: 0; }
+.console-login-link-qr svg { width: 8.5rem; height: 8.5rem; border-radius: var(--console-radius-md); box-shadow: var(--console-shadow-ring); }
+.console-login-link-qr figcaption { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
+.console-login-qr-light { fill: hsl(0 0% 100%); }
+.console-login-qr-dark { fill: hsl(222 30% 10%); }
+
+/* ---------- answer ---------- */
+.console-login-answer { display: flex; flex-direction: column; gap: 0.625rem; }
+.console-login-field { display: flex; flex-direction: column; gap: 0.375rem; }
+.console-login-field-label { font-size: var(--console-text-body-sm); font-weight: 600; }
+.console-login-input--code { max-width: 14rem; font-family: var(--console-font-mono, ui-monospace, monospace); font-size: var(--console-text-section); letter-spacing: 0.3em; }
+.console-login-input--code::placeholder { font-family: inherit; font-size: var(--console-text-body); letter-spacing: normal; }
+.console-login-input.is-invalid { border-color: hsl(var(--destructive)); }
+.console-login-field-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem; min-height: 1.25rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); }
+.console-login-field-hint svg { width: 0.875rem; height: 0.875rem; }
+.console-login-field-hint.is-error { color: hsl(var(--destructive)); }
+.console-login-field-hint.is-ok { color: hsl(var(--success)); }
+.console-login-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+
+.console-login-progress { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.75rem; border-radius: var(--console-radius-lg); background: hsl(var(--info) / 0.08); }
+.console-login-progress ol { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1rem; margin: 0; padding: 0; list-style: none; font-size: var(--console-text-body-sm); }
+.console-login-progress li { display: inline-flex; align-items: center; gap: 0.375rem; color: hsl(var(--muted-foreground)); }
+.console-login-progress li svg { width: 1rem; height: 1rem; }
+.console-login-progress li.is-done { color: hsl(var(--success)); }
+.console-login-progress li.is-current, .console-login-progress li.is-waiting { color: hsl(var(--foreground)); font-weight: 600; }
+.console-login-progress li.is-current svg, .console-login-progress li.is-waiting svg { color: hsl(var(--info)); }
+
+.console-login-result { display: flex; align-items: flex-start; gap: 0.75rem; padding: 1rem; border-radius: var(--console-radius-lg); background: hsl(var(--secondary)); font-size: var(--console-text-body-sm); }
+.console-login-result > svg { width: 1.5rem; height: 1.5rem; flex-shrink: 0; }
+.console-login-result.is-success { background: hsl(var(--success) / 0.1); }
+.console-login-result.is-success > svg { color: hsl(var(--success)); }
+.console-login-result.is-error { background: hsl(var(--destructive) / 0.07); }
+.console-login-result.is-error > svg { color: hsl(var(--destructive)); }
+.console-login-result.is-info > svg { color: hsl(var(--info)); }
+.console-login-result.is-muted > svg { color: hsl(var(--warning)); }
+
+/* ---------- tablet / phone ---------- */
+@media (max-width: 1023px) {
+  .console-login-flow-body { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 767px) {
+  .console-login-challenge-split { grid-template-columns: minmax(0, 1fr); }
+  .console-login-flow { padding: 0.875rem; }
+  .console-login-flow-tools { width: 100%; }
+  .console-login-flow-tools > * { flex: 1 1 calc(50% - 0.25rem); }
+  .console-login-qr-frame { width: min(15rem, 100%); }
+  .console-login-actions > .console-login-action,
+  .console-login-actions > button,
+  .console-login-actions > a { flex: 1 1 100%; }
+  .console-login-input--code { max-width: none; }
+  .console-login-link-block { flex-direction: column; align-items: stretch; }
+  .console-login-link-main { flex: none; }
+  .console-login-link-qr { align-self: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .console-login-flow .animate-spin, .console-login-ring-value, .console-login-qr-image, .console-login-checklist li { animation: none; transition: none; }
+}

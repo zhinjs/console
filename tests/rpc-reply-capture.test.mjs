@@ -99,7 +99,7 @@ test('only the RPC fetch takes the capture, and a success is not parsed twice', 
   const passthrough = capturingFetch(async input => new Response(String(input)))
   assert.equal(await (await passthrough('https://host.invalid/api/events')).text(), 'https://host.invalid/api/events')
   const rpc = readFileSync(new URL('../console-ui/src/utils/console-rpc.ts', import.meta.url), 'utf8')
-  assert.match(rpc, /requestWithCapture\(\(\) => transport\.sendRequest<T>\(request\)\)/)
+  assert.match(rpc, /requestWithCapture\(\(\) => transport\.sendRequest<T>\(request, requestOptions\)\)/)
   const client = readFileSync(new URL('../console-ui/src/utils/console-client.ts', import.meta.url), 'utf8')
   assert.match(client, /transportConfig: \{ fetch: capturingFetch\(transportFetch\) \}/)
 })

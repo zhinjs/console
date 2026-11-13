@@ -11,12 +11,15 @@ export interface ConsoleRpcRequest {
  * RPC 使用 REST transport，与 SSE 在线状态解耦。
  * SSE 只负责实时事件；短暂断流不得阻止用户读取或提交 RPC。
  */
-export function requestConsole<T>(request: ConsoleRpcRequest): Promise<T> {
+export function requestConsole<T>(request: ConsoleRpcRequest, options?: { readonly timeoutMs?: number }): Promise<T> {
   // Every reply also tells the shell whether the Zhin instance is answering (实例不可用横幅). A failure
   // carries the Host's code, requestOutcome, lockedBy and Retry-After (`details`), which the published
   // SDK drops, so 结果未知 and 未执行 are told apart (`rpc-reply-capture.mjs`).
   const transport = getConsoleTransport()
-  return requestWithCapture(() => transport.sendRequest<T>(request)).then(
+  // `timeoutMs` lengthens the SDK's 10 s limit for an RPC the Host answers slowly on purpose
+  // (`login.submit { wait: true }` waits up to 15 s for the login result).
+  const requestOptions = options?.timeoutMs ? { timeoutMs: options.timeoutMs } : undefined
+  return requestWithCapture(() => transport.sendRequest<T>(request, requestOptions)).then(
     value => { reportRequestSuccess(request.type); return value },
     (error: unknown) => { reportRequestFailure(request.type, error); throw error },
   )
