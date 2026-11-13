@@ -1,3 +1,4 @@
+import { StatusState } from '../components/StatusState'
 import { useI18n } from '../i18n'
 import { HostToolApprovalsPanel } from './HostToolApprovalsPanel'
 import { HostSelfChangesPanel } from './HostSelfChangesPanel'
@@ -236,7 +237,7 @@ export default function TaskCenterPage() {
       }}>{i18n.t("确认以当前身份只读核对原操作")}</Button></div>}
     </AlertDescription></Alert>}
     {!current ? <p className="text-sm text-muted-foreground">{i18n.t("请连接 Host 后读取任务。")}</p> : <>
-      {loading && !catalog && <p role="status">{i18n.t("正在读取任务提供方…")}</p>}
+      {loading && !catalog && <StatusState kind="loading" compact title={i18n.t("正在读取任务提供方…")} />}
       <Card className="console-task-use-cases"><CardHeader><CardTitle>{i18n.t("按用途开始")}</CardTitle></CardHeader><CardContent className="space-y-3">
         {useCaseError && <p className="text-xs text-muted-foreground">{useCaseError}</p>}
         {useCases.map(item => <details key={item.id} className="console-disclosure-card"><summary className="font-medium">{item.title}</summary><div className="space-y-3 pt-3 text-sm"><p>{item.summary}</p><ol className="list-decimal pl-5 space-y-1">{item.steps.map(step => <li key={step}>{step}</li>)}</ol><ul className="list-disc pl-5 text-xs text-muted-foreground space-y-1">{item.limitations.map(limitation => <li key={limitation}>{limitation}</li>)}</ul>

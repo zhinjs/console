@@ -364,9 +364,11 @@ export default function PluginDetailPage() {
   if (detailView.view === 'skeleton' && packages.status === 'loading') {
     return (
       <PageShell>
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-4 w-96 max-w-full" />
-        <div className="grid gap-3 md:grid-cols-2">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-36" />)}</div>
+        <StatusState kind="loading" placeholder={<div className="space-y-3">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-96 max-w-full" />
+          <div className="grid gap-3 md:grid-cols-2">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-36" />)}</div>
+        </div>} />
       </PageShell>
     )
   }

@@ -58,7 +58,7 @@ function fixture({ realMessageBody = false, connectionId } = {}) {
   const calls = [], hooks = runtime(), module = { exports: {} }
   const mocks = {
     react: { ...require('react'), ...hooks.hooks }, '../i18n': localeModule,
-    '../components/ui/button': { Button: 'button' }, '../components/error-alert': { ErrorAlert: 'error-alert' },
+    '../components/ui/button': { Button: 'button' }, '../components/StatusState': { StatusState: 'status-state' }, '../components/error-alert': { ErrorAlert: 'error-alert' },
     '../utils/auth': { apiFetch: (url, options) => new Promise((resolve, reject) => calls.push({ url, ...options, resolve, reject })) },
     '../utils/inbox-cache': { getInboxCacheScope: () => authority.current(), isInboxCacheScopeActive: scope => authority.active(scope) },
     './endpoint-detail/message-diagnostics.mjs': { createDiagnosticRequestGate },

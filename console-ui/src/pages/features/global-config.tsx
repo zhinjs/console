@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from '../../components/ui/alert'
 import { Button } from '../../components/ui/button'
 import { Card } from '../../components/ui/card'
 import { Skeleton } from '../../components/ui/skeleton'
+import { StatusState } from '../../components/StatusState'
 import { PluginConfigForm } from '../../components/PluginConfigForm'
 import { useConfigSource } from '../../hooks/useConfigSource'
 import { readErrorSummary } from '../../utils/read-error.mjs'
@@ -68,7 +69,7 @@ function GlobalFeatureConfig({ plugin, connectionScope }: { plugin: string; conn
           </AlertDescription>
         </Alert>
       ) : null}
-      {loading && !loaded ? <Skeleton className="h-48" /> : null}
+      {loading && !loaded ? <StatusState kind="loading" onRetry={() => void load().catch(() => {})} placeholder={<Skeleton className="h-48" />} /> : null}
       {unresolved ? (
         <Alert role="status">
           <AlertCircle className="h-4 w-4" />

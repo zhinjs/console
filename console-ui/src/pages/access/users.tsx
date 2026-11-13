@@ -12,12 +12,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { StatusState } from '../../components/StatusState'
 import { ActionReceipt, useActionReceipt } from '../../components/ActionReceipt'
+import { useSaveOutcome } from '../../components/ApplyFeedback'
+import { outcomeFromAccessWrite, recordReadBack } from '../../components/apply-outcome-model.mjs'
 import { receiptBlocksActions } from '../../components/action-receipt-model.mjs'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../../components/ui/dropdown-menu'
 import { ConfirmDialog } from '../../components/confirm-dialog'
-import { useToast } from '../../components/toast'
 import {
-  IAM_RPC, bindingInputs, breaksLastOwner, displayNameProblem, isGlobalOwner, passwordProblem, readRoles, readUsers, usernameProblem,
+  IAM_RPC, bindingInputs, bindingKeys, breaksLastOwner, userReadBackView, displayNameProblem, isGlobalOwner, passwordProblem, readRoles, readUsers, usernameProblem,
   type IamBinding, type IamRole, type IamUser,
 } from './access-model.mjs'
 import { BindingBadges, BindingsEditor, FormField, IamLoadError, ReadOnlyNotice } from './access-components'
@@ -35,13 +36,19 @@ const EMPTY_ROLES: IamRole[] = []
 
 export default function AccessUsersPage() {
   const i18n = useI18n()
-  const toast = useToast()
   const canManage = useCanManageIam()
   const users = useIamUsers()
   const roles = useIamRead(IAM_RPC.ROLES_LIST, readRoles, EMPTY_ROLES)
   const [pending, setPending] = useState<Pending | null>(null)
   const close = () => setPending(null)
-  const done = (message: string) => { toast.success(message); users.refresh() }
+  // Every save ends in one outcome next to the list: 已生效 (the gateway reads access control on
+  // every request) after a fresh read shows the change — or the read-back that differs.
+  const saved = useSaveOutcome()
+  const readUser = async (match: (user: IamUser) => boolean) => readUsers(await iamRequest<unknown>(IAM_RPC.USERS_LIST, {}, i18n.t)).find(match)
+  const done = (subject: string, check: () => Promise<ReturnType<typeof recordReadBack>>, secret = false) => {
+    void saved.report(subject, outcomeFromAccessWrite({ secret }), check)
+    users.refresh()
+  }
   // Enable / disable goes through the receipt (禁用 is a danger plan); the target rides in a ref.
   const target = useRef<{ user: IamUser; disabled: boolean } | null>(null)
   const receipt = useActionReceipt({
@@ -49,6 +56,9 @@ export default function AccessUsersPage() {
       const current = target.current
       if (!current) throw new Error('no target')
       await iamRequest(IAM_RPC.USERS_DISABLE, { id: current.user.id, disabled: current.disabled }, i18n.t)
+      const user = readUsers(await iamRequest<unknown>(IAM_RPC.USERS_LIST, {}, i18n.t).catch(() => null)).find(item => item.id === current.user.id)
+      const mismatch = recordReadBack(user ? { disabled: user.disabled } : null, { disabled: current.disabled })
+      return { status: 'saved', apply: outcomeFromAccessWrite(), ...(mismatch ? { mismatch } : {}) }
     },
     verify: async () => {
       const current = target.current
@@ -79,7 +89,7 @@ export default function AccessUsersPage() {
   }
   const remove = async (user: IamUser) => {
     await iamRequest(IAM_RPC.USERS_DELETE, { id: user.id }, i18n.t)
-    done(i18n.t("已删除 {0}", [user.username]))
+    done(i18n.t("已删除 {0}", [user.username]), async () => recordReadBack(userReadBackView(await readUser(item => item.id === user.id)), null))
   }
   const busy = receiptBlocksActions(receipt.state)
 
@@ -95,13 +105,15 @@ export default function AccessUsersPage() {
       />
       {!canManage ? <ReadOnlyNotice /> : null}
       <ActionReceipt controller={receipt} />
+      {saved.element}
       {users.error && !users.loaded ? <IamLoadError error={users.error} kind={users.errorKind} failure={users.failure} onRetry={users.refresh} /> : (
         <Card className="overflow-hidden p-0">
           {users.error ? <IamLoadError error={users.error} kind={users.errorKind} failure={users.failure} onRetry={users.refresh} /> : null}
           {users.loading && !users.loaded ? (
-            <div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>
+            <StatusState kind="loading" className="m-4" onRetry={users.refresh} placeholder={<div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>} />
           ) : !users.data.length ? (
-            <StatusState kind="empty" title={i18n.t("还没有用户")} description={i18n.t("初始化完成后，所有者会出现在这里。用「新建用户」给同事开账号。")} />
+            <StatusState kind="empty" title={i18n.t("还没有用户")} description={i18n.t("初始化完成后，所有者会出现在这里。用「新建用户」给同事开账号。")}
+              actions={canManage ? <Button size="sm" onClick={() => setPending({ kind: 'create' })} disabled={!roles.loaded}><Plus />{i18n.t("新建用户")}</Button> : undefined} />
           ) : (
             <Table aria-label={i18n.t("用户")}>
               <TableHeader>
@@ -161,17 +173,25 @@ export default function AccessUsersPage() {
       )}
 
       {pending?.kind === 'create' ? (
-        <CreateUserDialog roles={roles.data} onClose={close} onCreated={user => { close(); done(i18n.t("已创建 {0}", [user])) }} />
+        <CreateUserDialog roles={roles.data} onClose={close} onCreated={(user, expected) => { close(); done(i18n.t("已创建 {0}", [user]), async () => recordReadBack(userReadBackView(await readUser(item => item.username === user)), expected)) }} />
       ) : null}
       {pending?.kind === 'profile' ? (
-        <ProfileDialog user={pending.user} onClose={close} onSaved={() => { close(); done(i18n.t("已更新 {0} 的显示名", [pending.user.username])) }} />
+        <ProfileDialog user={pending.user} onClose={close} onSaved={displayName => { close(); const target = pending.user; done(i18n.t("已更新 {0} 的显示名", [target.username]), async () => recordReadBack(userReadBackView(await readUser(item => item.id === target.id)), { displayName })) }} />
       ) : null}
       {pending?.kind === 'bindings' ? (
         <BindingsDialog user={pending.user} users={users.data} roles={roles.data} onClose={close}
-          onSaved={() => { close(); done(i18n.t("已更新 {0} 的角色", [pending.user.username])) }} />
+          onSaved={bindings => { close(); const target = pending.user; done(i18n.t("已更新 {0} 的角色", [target.username]), async () => recordReadBack(userReadBackView(await readUser(item => item.id === target.id)), { bindings: bindingKeys(bindings) })) }} />
       ) : null}
       {pending?.kind === 'password' ? (
-        <ResetPasswordDialog user={pending.user} onClose={close} onDone={() => { close(); toast.success(i18n.t("已重置 {0} 的密码，其会话已全部失效", [pending.user.username])) }} />
+        <ResetPasswordDialog user={pending.user} onClose={close} onDone={() => {
+          close()
+          const target = pending.user
+          // The password is never read back: its change time must have moved.
+          done(i18n.t("已重置 {0} 的密码，其会话已全部失效", [target.username]), async () => {
+            const after = userReadBackView(await readUser(item => item.id === target.id))
+            return recordReadBack(after ? { passwordChanged: (after.passwordChangedAt ?? 0) > (target.passwordChangedAt ?? 0) } : null, { passwordChanged: true })
+          }, true)
+        }} />
       ) : null}
       {pending?.kind === 'delete' ? (
         <ConfirmDialog open onOpenChange={open => { if (!open) close() }} variant="destructive"
@@ -188,7 +208,7 @@ export default function AccessUsersPage() {
 }
 
 /** `iam.users.update { id, displayName }` (ADR 0049 §5). The username never changes. */
-function ProfileDialog({ user, onClose, onSaved }: { user: IamUser; onClose: () => void; onSaved: () => void }) {
+function ProfileDialog({ user, onClose, onSaved }: { user: IamUser; onClose: () => void; onSaved: (displayName: string) => void }) {
   const i18n = useI18n()
   const id = useId()
   const [displayName, setDisplayName] = useState(user.displayName)
@@ -203,7 +223,7 @@ function ProfileDialog({ user, onClose, onSaved }: { user: IamUser; onClose: () 
     setError(null)
     try {
       await iamRequest(IAM_RPC.USERS_UPDATE, { id: user.id, displayName: displayName.trim() }, i18n.t)
-      onSaved()
+      onSaved(displayName.trim())
     } catch (caught) {
       setError(caught)
     } finally {
@@ -235,7 +255,7 @@ function ProfileDialog({ user, onClose, onSaved }: { user: IamUser; onClose: () 
   )
 }
 
-function CreateUserDialog({ roles, onClose, onCreated }: { roles: readonly IamRole[]; onClose: () => void; onCreated: (username: string) => void }) {
+function CreateUserDialog({ roles, onClose, onCreated }: { roles: readonly IamRole[]; onClose: () => void; onCreated: (username: string, expected: { displayName?: string; bindings: string[]; disabled: boolean }) => void }) {
   const i18n = useI18n()
   const id = useId()
   const [username, setUsername] = useState('')
@@ -260,7 +280,7 @@ function CreateUserDialog({ roles, onClose, onCreated }: { roles: readonly IamRo
         ...(displayName.trim() ? { displayName: displayName.trim() } : {}),
         bindings: bindingInputs(bindings),
       }, i18n.t)
-      onCreated(username.trim().toLowerCase())
+      onCreated(username.trim().toLowerCase(), { ...(displayName.trim() ? { displayName: displayName.trim() } : {}), bindings: bindingKeys(bindings), disabled: false })
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught))
     } finally {
@@ -305,7 +325,7 @@ function CreateUserDialog({ roles, onClose, onCreated }: { roles: readonly IamRo
 }
 
 function BindingsDialog({ user, users, roles, onClose, onSaved }: {
-  user: IamUser; users: readonly IamUser[]; roles: readonly IamRole[]; onClose: () => void; onSaved: () => void
+  user: IamUser; users: readonly IamUser[]; roles: readonly IamRole[]; onClose: () => void; onSaved: (bindings: readonly IamBinding[]) => void
 }) {
   const i18n = useI18n()
   const [bindings, setBindings] = useState<readonly IamBinding[]>(user.bindings)
@@ -317,7 +337,7 @@ function BindingsDialog({ user, users, roles, onClose, onSaved }: {
     setError(null)
     try {
       await iamRequest(IAM_RPC.BINDINGS_SET, { userId: user.id, bindings: bindingInputs(bindings) }, i18n.t)
-      onSaved()
+      onSaved(bindings)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught))
     } finally {

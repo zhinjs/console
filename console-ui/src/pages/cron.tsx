@@ -8,6 +8,9 @@ import { Card, CardContent } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { Skeleton } from '../components/ui/skeleton'
+import { StatusState } from '../components/StatusState'
+import { useSaveOutcome } from '../components/ApplyFeedback'
+import { outcomeFromScheduleWrite, recordReadBack } from '../components/apply-outcome-model.mjs'
 import { Input } from '../components/ui/input'
 import { Textarea } from '../components/ui/textarea'
 import { Separator } from '../components/ui/separator'
@@ -126,6 +129,11 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
   const { error: toastError } = useToast()
   const readOnly = !hasConsolePermission('ops.schedule.write')
 
+  // Writes go to the schedule engine, which registers or disposes the timer as part of the write
+  // (已生效); a fresh list confirms what was stored.
+  const saved = useSaveOutcome()
+  const readPersistent = async () => (await requestConsole<{ persistent?: PersistentCron[] }>({ type: CONSOLE_RPC.SCHEDULE_LIST })).persistent ?? []
+
   const fetchCrons = useCallback(async () => {
     if (!isInboxCacheScopeActive(connectionScope)) return
     const sequence = ++readSequence.current
@@ -183,7 +191,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
     if (!isInboxCacheScopeActive(connectionScope) || !persistentAvailable || readOnly || submitting || !validCron || !newCron.prompt.trim()) return
     setSubmitting(true)
     try {
-      await requestConsole({
+      const reply = await requestConsole<{ job?: { id?: unknown } }>({
         type: CONSOLE_RPC.CRON_ADD,
         cronExpression: newCron.cronExpression.trim(),
         prompt: newCron.prompt.trim(),
@@ -191,7 +199,13 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
       })
       if (!isInboxCacheScopeActive(connectionScope)) return
       setAddDialogOpen(false)
+      const submitted = { cronExpression: newCron.cronExpression.trim(), prompt: newCron.prompt.trim() }
       setNewCron({ cronExpression: '', prompt: '', label: '' })
+      const id = typeof reply?.job?.id === 'string' ? reply.job.id : null
+      void saved.report(i18n.t('已新建定时任务'), outcomeFromScheduleWrite(), async () => {
+        const job = (await readPersistent()).find(item => id ? item.id === id : item.prompt === submitted.prompt && item.cronExpression === submitted.cronExpression)
+        return recordReadBack(job ? { cronExpression: job.cronExpression, prompt: job.prompt, enabled: job.enabled } : null, { ...submitted, enabled: true })
+      })
       await fetchCrons()
     } catch (err) {
       if (isInboxCacheScopeActive(connectionScope)) toastError((err as Error).message)
@@ -204,9 +218,12 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
     if (!isInboxCacheScopeActive(connectionScope) || !deleteTarget || !persistentAvailable || readOnly || submitting) return
     setSubmitting(true)
     try {
-      await requestConsole({ type: CONSOLE_RPC.CRON_REMOVE, id: deleteTarget.id })
+      const removed = deleteTarget
+      await requestConsole({ type: CONSOLE_RPC.CRON_REMOVE, id: removed.id })
       if (!isInboxCacheScopeActive(connectionScope)) return
       setDeleteTarget(null)
+      void saved.report(i18n.t('已删除定时任务 {0}', [removed.label || removed.id]), outcomeFromScheduleWrite(),
+        async () => recordReadBack((await readPersistent()).find(item => item.id === removed.id) ?? null, null))
       await fetchCrons()
     } catch (err) {
       if (isInboxCacheScopeActive(connectionScope)) toastError((err as Error).message)
@@ -225,6 +242,10 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
         await requestConsole({ type: CONSOLE_RPC.CRON_RESUME, id: job.id })
       }
       if (!isInboxCacheScopeActive(connectionScope)) return
+      void saved.report(job.enabled ? i18n.t('已暂停定时任务 {0}', [job.label || job.id]) : i18n.t('已恢复定时任务 {0}', [job.label || job.id]), outcomeFromScheduleWrite(), async () => {
+        const found = (await readPersistent()).find(item => item.id === job.id)
+        return recordReadBack(found ? { enabled: found.enabled } : null, { enabled: !job.enabled })
+      })
       await fetchCrons()
     } catch (err) {
       if (isInboxCacheScopeActive(connectionScope)) toastError((err as Error).message)
@@ -260,7 +281,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
       </div>
 
       <div>
-          {loading ? <div className="grid grid-cols-1 gap-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32" />)}</div> : error ? <div className="space-y-3">
+          {loading ? <StatusState kind="loading" placeholder={<div className="grid grid-cols-1 gap-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32" />)}</div>} /> : error ? <div className="space-y-3">
             <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>
             <Button variant="outline" size="sm" onClick={() => { setError(null); setLoading(true); void fetchCrons() }}><RefreshCw />{i18n.t("重试")}</Button>
           </div> : <>
@@ -282,6 +303,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
         ]} />
       </div>}
 
+      {saved.element}
       <section aria-labelledby="persistent-crons-title">
         <div className="console-resource-section-heading flex items-center gap-2 mb-3">
           <Timer className="w-5 h-5 text-primary" aria-hidden="true" />
@@ -289,12 +311,11 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
           <Badge variant="secondary">{visiblePersistentCrons.length}</Badge>
         </div>
         {persistentCrons.length === 0 ? (
-          <Card><CardContent className="py-8 text-center text-muted-foreground">
-            <Clock className="w-10 h-10 mx-auto mb-3 opacity-40" aria-hidden="true" />
-            <p>{i18n.t("暂无持久化定时任务")}</p>
-            <p className="text-xs mt-1">{readOnly ? i18n.t("当前身份只能查看实例中已存在的任务") : persistentAvailable ? i18n.t("点击「新建任务」添加一个定时 AI 任务") : i18n.t("启用持久化 AI 调度后可在这里管理任务")}</p>
-          </CardContent></Card>
-        ) : visiblePersistentCrons.length === 0 ? <p className="console-cron-filter-empty">{i18n.t("没有匹配的任务")}</p> : (
+          <StatusState kind="empty" title={i18n.t("暂无持久化定时任务")}
+            description={readOnly ? i18n.t("当前身份只能查看实例中已存在的任务") : persistentAvailable ? i18n.t("点击「新建任务」添加一个定时 AI 任务") : i18n.t("启用持久化 AI 调度后可在这里管理任务")}
+            actions={!readOnly && persistentAvailable ? <Button size="sm" onClick={() => setAddDialogOpen(true)}><Plus className="w-4 h-4 mr-1" />{i18n.t(" 新建任务")}</Button> : undefined} />
+        ) : visiblePersistentCrons.length === 0 ? <StatusState kind="empty" compact title={i18n.t("没有匹配的任务")} description={i18n.t("换一个关键词或状态，或清除筛选。")}
+          actions={<Button size="sm" variant="outline" onClick={() => { setSearch(''); setStatusFilter('all') }}>{i18n.t("清除筛选")}</Button>} /> : (
           <div className="console-resource-list console-schedule-list">
             {visiblePersistentCrons.map((job) => {
               const isExpanded = expandedId === job.id

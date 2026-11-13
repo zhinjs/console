@@ -1,3 +1,4 @@
+import { StatusState } from '../../components/StatusState'
 import { useI18n } from '../../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
@@ -167,7 +168,7 @@ export function GalleryPreview({ item, readOnly }: { item: CapabilityItem; readO
       )}
     </div>
     {readOnly ? <span className="console-component-preview-state">{i18n.t("此连接不支持组件渲染")}</span>
-      : loading ? <span className="console-component-preview-state"><Loader2 className="animate-spin" />{i18n.t("加载中")}</span>
+      : loading ? <StatusState kind="loading" compact title={i18n.t("加载中")} />
       : error ? <div className="console-component-preview-state console-component-preview-error"><span role="alert">{i18n.t("无法预览：")}{error}</span><Button size="sm" variant="outline" onClick={(event) => { event.stopPropagation(); setAttempt(value => value + 1) }}>{i18n.t("重试预览")}</Button></div>
       : <div className="px-3 pb-2"><div style={canvasWidth === 'auto' ? undefined : { maxWidth: canvasWidth, margin: '0 auto' }}><ComponentPreviewOutput output={output} showOutline={showOutline} canvasBg={canvasBg} /></div>{target && <RenderingDiagnostics rendering={rendering} preview />}</div>}
     {!readOnly && <details className="border-t p-3 text-xs" onClick={event => event.stopPropagation()}>

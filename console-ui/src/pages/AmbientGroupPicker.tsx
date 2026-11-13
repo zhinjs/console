@@ -1,3 +1,4 @@
+import { StatusState } from '../components/StatusState'
 import { useI18n } from '../i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
@@ -116,7 +117,7 @@ export function AmbientGroupPickerView({ groups, onChange, read }: { groups: str
         disabled={!listUsable}
         onChange={(event) => setQuery(event.target.value)}
       />
-      {view.kind === 'loading' ? <p role="status" className="text-sm text-muted-foreground">{i18n.t("正在读取群列表…")}</p> : null}
+      {view.kind === 'loading' ? <StatusState kind="loading" compact title={i18n.t("正在读取群列表…")} onRetry={read.retry} /> : null}
       {view.kind === 'denied' ? <p role="status" className="text-sm text-muted-foreground">{describeReadFailure(view.error, groupListLabel, i18n.locale).text} {i18n.t("可以在下面手动填写群号。")}</p> : null}
       {view.kind === 'error' ? <ErrorAlert error={describeReadFailure(view.error, groupListLabel, i18n.locale).text} onRetry={read.retry} /> : null}
       {view.kind === 'empty' ? <p className="text-sm text-muted-foreground">{view.noOnlineAccount ? i18n.t("没有在线的账号，读不到群列表。可以在下面手动填写群号。") : i18n.t("在线账号里没有读到群。可以在下面手动填写群号。")}</p> : null}

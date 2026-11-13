@@ -1,6 +1,7 @@
 import type { StatusReading } from './status-state-model.mjs'
+import type { ApplyOutcome, ReadBackMismatch } from './apply-outcome-model.mjs'
 
-export type ReceiptPhase = 'idle' | 'prepared' | 'confirming' | 'submitting' | 'succeeded' | 'partial' | 'unknown' | 'failed' | 'verifying'
+export type ReceiptPhase = 'idle' | 'prepared' | 'confirming' | 'submitting' | 'succeeded' | 'partial' | 'mismatch' | 'unknown' | 'failed' | 'verifying'
 
 export interface ReceiptPlan {
   /** What the action is, already translated (e.g. 「授予 admin」). */
@@ -28,6 +29,10 @@ export interface ActionReceiptState {
   readonly message?: string
   readonly unchanged?: boolean
   readonly verified?: boolean
+  /** What a succeeded write did to the running instance. */
+  readonly apply?: ApplyOutcome
+  /** `mismatch`: the read-back differs from what was submitted. */
+  readonly mismatch?: ReadBackMismatch
   readonly startedAt?: number
   /** When the 「确认执行」 step appeared (danger plans). */
   readonly confirmingAt?: number
@@ -41,7 +46,7 @@ export type ReceiptEvent =
   | { type: 'resolve'; value: unknown; now?: number }
   | { type: 'reject'; error: unknown; now?: number }
   | { type: 'verify' }
-  | { type: 'verified'; value: { applied?: boolean; message?: string } | undefined }
+  | { type: 'verified'; value: { applied?: boolean; message?: string; apply?: ApplyOutcome } | undefined }
   | { type: 'verify-failed'; error: unknown }
   | { type: 'cancel' }
   | { type: 'reset' }

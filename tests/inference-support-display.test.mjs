@@ -59,7 +59,7 @@ async function fixture() {
     '../../i18n': { useI18n: () => ({ locale, t: (message, values, context) => translate(locale, message, values, context) }) },
     '../i18n': { useI18n: () => ({ locale, t: (message, values, context) => translate(locale, message, values, context) }) },
     '../../components/ui/badge': { Badge: props => createElement('span', { 'data-experimental-badge': true }, props.children) },
-    '../../components/ui/button': { Button: 'button' }, '../components/ui/button': { Button: 'button' },
+    '../../components/ui/button': { Button: 'button' }, '../../components/StatusState': { StatusState: 'status-state' }, '../components/ui/button': { Button: 'button' },
     '../../components/ui/input': { Input: 'input' },
     '../../components/ui/select': { SelectField: 'select' }, '../components/ui/select': { SelectField: 'select' },
     '../../components/ui/card': { Card: 'card' },

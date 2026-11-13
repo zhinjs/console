@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  AlertCircle, CircleHelp, DatabaseZap, Inbox, Lock, PackageX, PlugZap, RefreshCw, ServerOff, Settings2, ShieldOff, Sparkles, GitCompareArrows,
+  AlertCircle, CircleHelp, DatabaseZap, Hourglass, Inbox, Loader2, Lock, PackageX, PlugZap, RefreshCw, ServerOff, Settings2, ShieldOff, Sparkles, GitCompareArrows, Stethoscope,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@zhin.js/client'
@@ -9,10 +9,12 @@ import './status-surfaces.css'
 import { useI18n } from '../i18n'
 import { Button } from './ui/button'
 import {
-  LOCK_LEVEL_LABELS, STATUS_COPY, statusFromError, statusTone, type StatusKind, type StatusReading,
+  LOCK_LEVEL_LABELS, SLOW_LOADING_COPY, SLOW_LOADING_MS, STATUS_COPY, loadingSeconds, statusFromError, statusTone, type StatusKind, type StatusReading,
 } from './status-state-model.mjs'
+import { CONSOLE_PATHS } from '../console-routes.mjs'
 
 const ICONS: Record<StatusKind, LucideIcon> = {
+  loading: Loader2,
   unknown: CircleHelp,
   forbidden: ShieldOff,
   'not-installed': PackageX,
@@ -50,6 +52,13 @@ export interface StatusStateProps {
   /** Inline (inside a card or table) instead of a full panel. */
   readonly compact?: boolean
   readonly className?: string
+  /**
+   * `loading`: what to show while the read is young (a skeleton of the content); after
+   * SLOW_LOADING_MS it gives way to 「仍在加载…」 with the likely causes, 重试 and the self-check.
+   */
+  readonly placeholder?: ReactNode
+  /** `loading`: when the read started (default: when this state appeared). */
+  readonly since?: number
 }
 
 const RETRYABLE: ReadonlySet<StatusKind> = new Set(['error', 'database-busy', 'disconnected', 'instance-unavailable', 'conflict', 'unsupported'])
@@ -58,7 +67,60 @@ const RETRYABLE: ReadonlySet<StatusKind> = new Set(['error', 'database-busy', 'd
  * The one way to say why there is nothing to show (Console 重构规范 §空态与错误态):
  * 未知 / 无权限 / 未安装 / 无数据 / 已锁定 / 修订冲突 / 数据库忙 / 实例不可用 / 需要配置 / 断连 / 失败.
  */
-export function StatusState({
+export function StatusState(props: StatusStateProps) {
+  if (props.kind === 'loading') return <LoadingState {...props} />
+  return <SettledState {...props} />
+}
+
+/**
+ * 读取中: the placeholder (or a short line) first; after SLOW_LOADING_MS 「仍在加载…」 with the likely
+ * causes — gateway down, WebSocket / event stream blocked, reverse-proxy path — 重试 and 连接自检.
+ */
+function LoadingState({ title, description, onRetry, actions, compact, className, placeholder, since }: StatusStateProps) {
+  const i18n = useI18n()
+  const [started] = useState(() => since ?? Date.now())
+  const [now, setNow] = useState(() => Date.now())
+  const slow = now - started >= SLOW_LOADING_MS
+  useEffect(() => {
+    const wait = Math.max(0, started + SLOW_LOADING_MS - Date.now())
+    // Until slow: one timer at the threshold; then a once-a-second count of the seconds waited.
+    const timer = slow ? window.setInterval(() => setNow(Date.now()), 1000) : window.setTimeout(() => setNow(Date.now()), wait)
+    return () => { window.clearInterval(timer); window.clearTimeout(timer) }
+  }, [started, slow])
+  if (!slow) {
+    if (placeholder !== undefined) return <div role="status" aria-busy="true" aria-label={title ?? i18n.t(STATUS_COPY.loading.title)} data-status-kind="loading" className={className}>{placeholder}</div>
+    return (
+      <div role="status" aria-busy="true" data-status-kind="loading"
+        className={cn('console-status-state console-status-state--muted console-status-state--loading', compact && 'console-status-state--compact', className)}>
+        <Loader2 className="console-status-state-icon animate-spin" aria-hidden="true" />
+        <div className="console-status-state-text">
+          <p className="console-status-state-title">{title ?? i18n.t(STATUS_COPY.loading.title)}</p>
+          {description ? <p className="console-status-state-description">{description}</p> : null}
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div role="status" aria-live="polite" data-status-kind="loading" data-loading-slow="true"
+      className={cn('console-status-state console-status-state--warning', compact && 'console-status-state--compact', className)}>
+      <Hourglass className="console-status-state-icon" aria-hidden="true" />
+      <div className="console-status-state-text">
+        <p className="console-status-state-title">{i18n.t(SLOW_LOADING_COPY.title)}{title ? <span className="console-status-state-subject"> · {title}</span> : null}</p>
+        <p className="console-status-state-description">{i18n.t(SLOW_LOADING_COPY.description, [loadingSeconds(started, now)])}</p>
+        <ul className="console-status-state-causes">
+          {SLOW_LOADING_COPY.causes.map(cause => <li key={cause}>{i18n.t(cause)}</li>)}
+        </ul>
+        <div className="console-status-state-actions">
+          {onRetry ? <Button size="sm" variant="outline" onClick={onRetry}><RefreshCw />{i18n.t('重试')}</Button> : null}
+          <Button asChild size="sm" variant="outline"><Link to={CONSOLE_PATHS.opsSelfCheck}><Stethoscope />{i18n.t('运行连接自检')}</Link></Button>
+          {actions}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SettledState({
   kind, error, title, description, permissions, lockedBy, lockHref, onRetry, onVerify, actions, compact, className,
 }: StatusStateProps) {
   const i18n = useI18n()

@@ -1,3 +1,4 @@
+import { readBackMismatch } from '../components/apply-outcome-model.mjs'
 /**
  * Chat roles (ADR 0056): `owner` ⊃ `admin` ⊃ `trusted`, held by a platform identity
  * `(adapter alias, userId)` at one scope of the four-level chain. RPC names and roles come from
@@ -128,6 +129,17 @@ export function chatRoleApplied(entries, scope, { adapter, userId, role }, actio
   const key = scopeKey(scope)
   const stored = entries.find(entry => !entry.redacted && entry.key === key && entry.source === 'grant' && entry.adapter === adapter && entry.userId === userId)
   return action === 'revoke' ? !stored : stored?.role === role
+}
+
+/**
+ * After a saved grant / revoke: what a fresh list holds for that identity at this scope, or null
+ * when it shows the change (`chatRoleApplied`).
+ */
+export function chatRoleReadBack(entries, scope, target, action) {
+  if (chatRoleApplied(entries, scope, target, action)) return null
+  const key = scopeKey(scope)
+  const stored = entries.find(entry => !entry.redacted && entry.key === key && entry.source === 'grant' && entry.adapter === target.adapter && entry.userId === target.userId)
+  return readBackMismatch(action === 'revoke' ? {} : { role: target.role }, stored ? { role: stored.role } : {})
 }
 
 /**

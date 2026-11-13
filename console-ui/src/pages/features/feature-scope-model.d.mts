@@ -72,3 +72,4 @@ export function globalFeatureOverview(
 ): GlobalFeatureOverviewRow[]
 export function globalFeatureCounts(rows: readonly GlobalFeatureOverviewRow[]): { total: number; enabled: number; disabled: number; customized: number }
 export function featureWriteSharesRevision(level: string): boolean
+export function featureReadBackMismatch(detail: FeatureDetail | null | undefined, change: FeatureChange): import('../../components/apply-outcome-model.mjs').ReadBackMismatch | null

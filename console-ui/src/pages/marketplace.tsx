@@ -432,9 +432,9 @@ function MarketplaceSession({ scope }: { scope?: string }) {
       )}
 
       {listView === 'loading' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
+        <StatusState kind="loading" placeholder={<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
           {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-44" />)}
-        </div>
+        </div>} />
       )}
 
       {listView === 'results' && (
@@ -511,7 +511,8 @@ function MarketplaceSession({ scope }: { scope?: string }) {
       )}
 
       {listView === 'empty' && (
-        <StatusState kind="empty" title={i18n.t("未找到插件")} description={i18n.t("尝试调整搜索条件或分类筛选")} />
+        <StatusState kind="empty" title={i18n.t("未找到插件")} description={i18n.t("尝试调整搜索条件或分类筛选")}
+          actions={search || category || officialOnly ? <Button size="sm" variant="outline" onClick={() => { setSearch(''); setCategory(''); setOfficialOnly(false) }}>{i18n.t("清除筛选")}</Button> : undefined} />
       )}
 
       {listView === 'results' && hasMore && (

@@ -40,3 +40,10 @@ export function describeReadFailure(error: unknown, resource: string, locale?: '
 export interface AmbientGroupSummary { group: string; count: number; lastAt: number; lastText: string; outcomes: Array<{ outcome: AmbientOutcome; label: string; count: number }> }
 export function summarizeRecentByGroup(recent: AmbientStatusView['recent'], locale?: 'zh-CN' | 'en'): AmbientGroupSummary[]
 export function ambientGroupLabel(group: string, names: ReadonlyMap<string, string> | null | undefined): { name: string; id: string | null }
+export function ambientWrittenValues(settings: AmbientSettings): Record<string, unknown>
+export function ambientSaveOutcome(result: unknown, submitted: AmbientSettings, reread: { settings: AmbientSettings } | null): {
+  outcome: import('../components/apply-outcome-model.mjs').ApplyOutcome
+  mismatch: import('../components/apply-outcome-model.mjs').ReadBackMismatch | null
+  unverified: boolean
+}
+export function ambientRestartOutcome(reread: { application?: unknown; revision?: string } | null): import('../components/apply-outcome-model.mjs').ApplyOutcome | null

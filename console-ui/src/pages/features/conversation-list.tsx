@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { MessagesSquare, RefreshCw, Search } from 'lucide-react'
+import { RefreshCw, Search } from 'lucide-react'
 import { useI18n } from '../../i18n'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
@@ -8,7 +8,7 @@ import { Card } from '../../components/ui/card'
 import { Checkbox } from '../../components/ui/checkbox'
 import { Input } from '../../components/ui/input'
 import { Skeleton } from '../../components/ui/skeleton'
-import { EmptyState } from '../../components/empty-state'
+import { StatusState } from '../../components/StatusState'
 import { ErrorAlert } from '../../components/error-alert'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { conversationHref, endpointHref } from '../../console-routes.mjs'
@@ -93,13 +93,16 @@ export function ConversationList({ adapter, endpoint, list, query, onQueryChange
       {list.error && list.status === 'error' ? <ErrorAlert error={list.error} onRetry={list.refresh} /> : null}
       <Card className="overflow-hidden p-0">
         {list.status === 'loading' && !list.page ? (
-          <div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>
+          <StatusState kind="loading" className="m-4" placeholder={<div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>} />
         ) : !items.length ? (
-          <EmptyState icon={MessagesSquare} compact
+          <StatusState kind="empty" compact className="m-3"
             title={query || onlyOverridden ? i18n.t("没有符合条件的会话") : i18n.t("还没有会话级配置")}
-            description={query || onlyOverridden ? undefined : list.page?.recentAvailable
+            description={query || onlyOverridden ? i18n.t("换一个关键词，或清除筛选。") : list.page?.recentAvailable
               ? i18n.t("机器人在会话里收到消息后，会话会出现在这里。")
-              : i18n.t("在会话里改过开关或参数后，它会出现在这里。")} />
+              : i18n.t("在会话里改过开关或参数后，它会出现在这里。")}
+            actions={query || onlyOverridden
+              ? <Button size="sm" variant="outline" onClick={() => { setDraft(''); onQueryChange(''); setOnlyOverridden(false) }}>{i18n.t("清除筛选")}</Button>
+              : <Button asChild size="sm" variant="outline"><Link to="/scope">{i18n.t("打开账号与会话")}</Link></Button>} />
         ) : (
           <Table aria-label={i18n.t("会话")}>
             <TableHeader>

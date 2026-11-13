@@ -124,7 +124,7 @@ export default function OpsTerminalPage() {
       {!loading && !error && !targets.length ? (
         <StatusState kind="empty" title={i18n.t("没有可用的终端目标")} description={i18n.t("在 Host 配置的 console.terminal 里启用本机 Shell 或添加 SSH 目标，重启网关后刷新。")} onRetry={load} />
       ) : null}
-      {loading && !targets.length && !error ? <Skeleton className="h-10" /> : null}
+      {loading && !targets.length && !error ? <StatusState kind="loading" placeholder={<Skeleton className="h-10" />} /> : null}
       {targets.length ? (
         <div className="flex flex-wrap items-end gap-2">
           <div className="min-w-56 space-y-1">

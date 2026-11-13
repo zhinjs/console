@@ -30,7 +30,7 @@ async function fixture(page, options = {}) {
     'react/jsx-runtime': { jsx: (type, props, key) => ({ type, props, key }), jsxs: (type, props, key) => ({ type, props, key }) },
     'lucide-react': { Plus: 'icon', Pencil: 'icon', Trash2: 'icon', RefreshCw: 'icon', KeyRound: 'icon', LogIn: 'icon', Unplug: 'icon', Download: 'icon', Upload: 'icon' },
     '../../i18n': localeModule,
-    '../../components/ui/button': { Button: 'button' }, '../../components/ui/input': { Input: 'input' },
+    '../../components/ui/button': { Button: 'button' }, '../../components/StatusState': { StatusState: 'status-state' }, '../../components/ui/input': { Input: 'input' },
     '../../components/ui/select': { SelectField: 'select' }, '../../components/ui/card': { Card: 'card' },
     '../../components/ui/dialog': { Dialog, DialogContent: 'content', DialogHeader: 'header', DialogTitle: 'title', DialogDescription: 'description' },
     '../../components/error-alert': { ErrorAlert: 'error' },

@@ -244,9 +244,9 @@ export default function IntrospectionPage() {
               ) : null}
 
               {loading && !data ? (
-                <div className="space-y-2 p-4">
+                <StatusState kind="loading" className="p-4" placeholder={<div className="space-y-2">
                   {Array.from({ length: 5 }, (_, index) => <Skeleton key={index} className="h-11 w-full" />)}
-                </div>
+                </div>} />
               ) : error && !data ? null : (
                 <CapabilityExplorer
                   kind={key}

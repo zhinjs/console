@@ -60,7 +60,7 @@ function fixture({ component = 'ScheduleExecutions', props = { jobId: run.jobId 
   const mocks = {
     react: hooks, 'lucide-react': new Proxy({}, { get: () => 'icon' }), '../utils/auth': { apiFetch: (path, init) => new Promise((resolve, reject) => requests.push({ path, init, resolve, reject })) },
     '../utils/inbox-cache': { isInboxCacheScopeActive: value => authority.active(value) }, '../utils/console-access.mjs': { hasConsolePermission: () => !readOnly },
-    '../components/ui/button': { Button: 'button' }, '../components/ui/badge': { Badge: 'badge' }, '../components/ui/alert': { Alert: 'alert', AlertDescription: 'p' },
+    '../components/ui/button': { Button: 'button' }, '../components/StatusState': { StatusState: 'status-state' }, '../components/ui/badge': { Badge: 'badge' }, '../components/ui/alert': { Alert: 'alert', AlertDescription: 'p' },
     '../components/ui/dialog': Object.fromEntries(['Dialog', 'DialogContent', 'DialogHeader', 'DialogTitle', 'DialogDescription', 'DialogFooter', 'DialogClose'].map(name => [name, name])),
     '../components/ui/tabs': Object.fromEntries(['Tabs', 'TabsContent', 'TabsList', 'TabsTrigger'].map(name => [name, name])),
     './conversation-trace-model.mjs': trace, './schedule-executions-model.mjs': model, './schedule-executions.css': {},

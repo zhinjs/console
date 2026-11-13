@@ -1,3 +1,4 @@
+import { StatusState } from '../../components/StatusState'
 import { useI18n } from '../../i18n'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Plus, Pencil, Trash2, RefreshCw } from 'lucide-react'
@@ -373,9 +374,7 @@ function ProfileForm({
           </p>
         ) : null}
         {currentSchema?.status === 'loading' ? (
-          <p role="status" className="text-sm text-muted-foreground">
-            {i18n.t("正在读取生成参数…")}
-          </p>
+          <StatusState kind="loading" compact title={i18n.t("正在读取生成参数…")} />
         ) : null}
         {schemaError ? (
           <div className="space-y-2">

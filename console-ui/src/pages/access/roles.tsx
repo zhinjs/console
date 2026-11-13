@@ -13,9 +13,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { StatusState } from '../../components/StatusState'
 import { ConfirmDialog } from '../../components/confirm-dialog'
-import { useToast } from '../../components/toast'
+import { useSaveOutcome } from '../../components/ApplyFeedback'
+import { outcomeFromAccessWrite, recordReadBack } from '../../components/apply-outcome-model.mjs'
 import {
-  IAM_RPC, builtinRoleLabel, copyRoleName, permissionGroups, readPluginPermissionCatalog, readRoles, roleNameProblem,
+  IAM_RPC, builtinRoleLabel, copyRoleName, permissionGroups, readPluginPermissionCatalog, readRoles, roleNameProblem, roleReadBackView,
   type IamRole, type PluginPermission,
 } from './access-model.mjs'
 import { FormField, IamLoadError, PermissionChecklist, ReadOnlyNotice } from './access-components'
@@ -33,7 +34,16 @@ type Pending =
 
 export default function AccessRolesPage() {
   const i18n = useI18n()
-  const toast = useToast()
+  // A role change applies to the next request (the gateway reads roles every time); a fresh list confirms it.
+  const saved = useSaveOutcome()
+  const readRole = async (name: string) => readRoles(await iamRequest<unknown>(IAM_RPC.ROLES_LIST, {}, i18n.t)).find(role => role.name === name)
+  const done = (subject: string, name: string, expected: { description: string; permissions: string[] } | null) => {
+    void saved.report(subject, outcomeFromAccessWrite(), async () => {
+      const view = roleReadBackView(await readRole(name))
+      return recordReadBack(view, expected ? { description: expected.description, permissions: [...expected.permissions].sort() } : null)
+    })
+    state.refresh()
+  }
   const canManage = useCanManageIam()
   const state = useIamRead(IAM_RPC.ROLES_LIST, readRolesData, EMPTY)
   const { roles, plugins } = state.data
@@ -57,12 +67,17 @@ export default function AccessRolesPage() {
         </>}
       />
       {!canManage ? <ReadOnlyNotice /> : null}
+      {saved.element}
       {state.error ? <IamLoadError error={state.error} kind={state.errorKind} failure={state.failure} onRetry={state.refresh} /> : null}
       <Card className="overflow-hidden p-0">
         {state.loading && !state.loaded ? (
-          <div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>
+          <StatusState kind="loading" className="m-4" onRetry={state.refresh} placeholder={<div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>} />
         ) : !roles.length ? (
-          <StatusState kind="empty" title={i18n.t("还没有角色")} description={i18n.t("内置角色由 Host 创建。如果这里是空的，请刷新或检查 Host 版本。")} />
+          <StatusState kind="empty" title={i18n.t("还没有角色")} description={i18n.t("内置角色由 Host 创建。如果这里是空的，请刷新或检查 Host 版本。")}
+            actions={<>
+              <Button size="sm" variant="outline" onClick={() => state.refresh()}><RefreshCw />{i18n.t("刷新")}</Button>
+              {canManage ? <Button size="sm" onClick={() => setPending({ kind: 'edit', role: null, draft: { name: '', description: '', permissions: [] } })}><Plus />{i18n.t("新建角色")}</Button> : null}
+            </>} />
         ) : (
           <Table aria-label={i18n.t("角色")}>
             <TableHeader>
@@ -116,7 +131,7 @@ export default function AccessRolesPage() {
       ) : null}
       {pending?.kind === 'edit' ? (
         <RoleEditorDialog role={pending.role} initial={pending.draft} roles={roles} groups={groups} onClose={close}
-          onSaved={name => { close(); toast.success(pending.role ? i18n.t("已保存角色 {0}", [name]) : i18n.t("已创建角色 {0}", [name])); state.refresh() }} />
+          onSaved={(name, expected) => { close(); done(pending.role ? i18n.t("已保存角色 {0}", [name]) : i18n.t("已创建角色 {0}", [name]), name, expected) }} />
       ) : null}
       {pending?.kind === 'delete' ? (
         <ConfirmDialog open onOpenChange={open => { if (!open) close() }} variant="destructive"
@@ -126,8 +141,7 @@ export default function AccessRolesPage() {
           confirmText={pending.role.name}
           onConfirm={async () => {
             await iamRequest(IAM_RPC.ROLES_DELETE, { id: pending.role.id }, i18n.t)
-            toast.success(i18n.t("已删除角色 {0}", [pending.role.name]))
-            state.refresh()
+            done(i18n.t("已删除角色 {0}", [pending.role.name]), pending.role.name, null)
           }} />
       ) : null}
     </PageShell>
@@ -140,7 +154,7 @@ function RoleEditorDialog({ role, initial, roles, groups, onClose, onSaved }: {
   roles: readonly IamRole[]
   groups: ReturnType<typeof permissionGroups>
   onClose: () => void
-  onSaved: (name: string) => void
+  onSaved: (name: string, expected: { description: string; permissions: string[] }) => void
 }) {
   const i18n = useI18n()
   const id = useId()
@@ -159,7 +173,7 @@ function RoleEditorDialog({ role, initial, roles, groups, onClose, onSaved }: {
     try {
       if (role) await iamRequest(IAM_RPC.ROLES_UPDATE, { id: role.id, description: description.trim(), permissions }, i18n.t)
       else await iamRequest(IAM_RPC.ROLES_CREATE, { name: name.trim(), description: description.trim(), permissions }, i18n.t)
-      onSaved(role ? role.name : name.trim())
+      onSaved(role ? role.name : name.trim(), { description: description.trim(), permissions })
     } catch (caught) {
       setError(caught)
     } finally {

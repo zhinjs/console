@@ -7,6 +7,7 @@ import { insightsMessages } from './messages.en.insights.mjs'
 import { scopeMessages } from './messages.en.scope.mjs'
 import { databaseMessages } from './messages.en.database.mjs'
 import { attentionMessages } from './messages.en.attention.mjs'
+import { statusMessages } from './messages.en.status.mjs'
 
 /** Authored Console UI copy. Interpolated content is never translated. */
 export const englishMessages = Object.freeze({
@@ -19,6 +20,7 @@ export const englishMessages = Object.freeze({
   ...scopeMessages,
   ...databaseMessages,
   ...attentionMessages,
+  ...statusMessages,
   "鲜活配色": "Fresh palettes",
   "沉静配色": "Calm palettes",
   "晴空": "Sky",
@@ -182,7 +184,6 @@ export const englishMessages = Object.freeze({
   "实验 · 不受官方支持 · 可能违反供应商条款 · 风险由使用者自行承担。": "Experimental · Not officially supported · May violate the provider’s terms · Use at your own risk.",
   "未经 OpenAI 对第三方客户端的明确授权。": "No explicit authorization from OpenAI for third-party clients.",
   "管理模型用途": "Manage model purposes",
-  "保存回执：{0}": "Save receipt: {0}",
   "正在应用已保存配置…": "Applying saved configuration…",
   "此文件版本与当前运行配置一致。": "This file version matches the active runtime configuration.",
   "配置应用校验失败；请修正配置后再应用。": "Application validation failed. Correct the configuration before applying it again.",
@@ -1296,8 +1297,6 @@ export const englishMessages = Object.freeze({
   "打开警告日志": "Open warning logs",
   "日志状态暂时不可读": "Log status is temporarily unreadable",
   "尚无法确认是否有运行错误，请打开日志页检查读取详情。": "Runtime errors cannot be confirmed yet. Open Logs to inspect read details.",
-  "重启请求已发送，连接将在服务恢复后自动重连": "Restart requested. The connection will reconnect automatically when the service recovers.",
-  "重启请求未能发送": "Could not send the restart request",
   "正在加载工作台": "Loading workspace",
   "Host 连接需要恢复": "Host connection needs recovery",
   "所有核心服务运行正常": "All core services are running normally",
@@ -1603,7 +1602,6 @@ export const englishMessages = Object.freeze({
   "已连接": "Connected",
   "未连接": "Disconnected",
   "环境变量文件": "Environment variable file",
-  "已保存，需重启生效": "Saved; restart required",
   "保存失败；未保存修改已保留，请重试。": "Save failed. Unsaved changes were kept; try again.",
   "加载中...": "Loading…",
   "文件不存在": "File does not exist",
@@ -2980,8 +2978,6 @@ export const englishMessages = Object.freeze({
   "新变量的值": "New variable value",
   "{0} 的值": "Value of {0}",
   "应用": "Apply",
-  "重启 Host": "Restart Host",
-  "当前 Console 无法重启 Host，请在 Host 所在环境手动重启。": "This Console cannot restart the Host; restart it manually where the Host runs.",
   "{0} 中的变量": "Variables in {0}",
   "还没有变量": "No variables yet",
   "隐藏 {0} 的值": "Hide value of {0}",

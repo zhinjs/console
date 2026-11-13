@@ -3,8 +3,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useEnvFiles } from '@zhin.js/client'
 import { getConsoleTransport } from '../utils/console-client'
 import {
-  KeyRound, AlertCircle, CheckCircle, Save, Loader2,
-  RefreshCw, FileWarning, Eye, EyeOff, Pencil, Trash2, Plus, Check, X, RotateCw
+  KeyRound, AlertCircle, Save, Loader2,
+  RefreshCw, FileWarning, Eye, EyeOff, Pencil, Trash2, Plus, Check, X
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { PageHeader } from '../components/PageHeader'
@@ -12,19 +12,21 @@ import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { OpsLoadState } from './ops/load-state'
-import { ConfirmDialog, useConfirm } from '../components/confirm-dialog'
+import { ConfirmDialog } from '../components/confirm-dialog'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
 import { Skeleton } from '../components/ui/skeleton'
+import { StatusState } from '../components/StatusState'
 import { Textarea } from '../components/ui/textarea'
 import { Input } from '../components/ui/input'
 import { createFileDraftSessions, type FileDraft } from './files/draft-session.mjs'
 import {
   envEditorAccess, parseEnvRows, maskEnvValue, updateEnvRow, removeEnvRow, appendEnvRow,
-  validateEnvRow, diffEnvContent, applyEnvChanges, type EnvRow, type EnvRowError,
+  validateEnvRow, diffEnvContent, applyEnvChanges, envReadBackMismatch, type EnvRow, type EnvRowError,
 } from './env-editor-model.mjs'
 import { readErrorSummary, shouldShowMissingEnv } from '../utils/read-error.mjs'
 import { hasConsolePermission } from '../utils/console-access.mjs'
-import { useHostRestart } from '../hooks/use-host-restart'
+import { ApplyFeedback, type ApplyOutcome, type ReadBackMismatch } from '../components/ApplyFeedback'
+import { outcomeFromEnvSave } from '../components/apply-outcome-model.mjs'
 
 const envDraftSessions = createFileDraftSessions()
 let unloadGuardInstalled = false
@@ -39,7 +41,10 @@ function ensureEnvUnloadGuard() {
 }
 
 type RowEditor = { originalKey: string | null; key: string; value: string; error: EnvRowError | null }
-type EditorMessage = { type: 'success' | 'error'; text: string; details?: string; restart?: boolean }
+type EditorMessage =
+  | { type: 'error'; text: string; details?: string }
+  /** A save: what it did (需要重启, env files are read at start) and whether the read-back matches. */
+  | { type: 'saved'; outcome: ApplyOutcome; mismatch: ReadBackMismatch | null; unverified: boolean }
 
 function rowErrorText(i18n: ReturnType<typeof useI18n>, error: EnvRowError) {
   switch (error) {
@@ -59,8 +64,6 @@ function EnvFileEditor({
   readOnly,
   draft,
   onDraftChange,
-  onRestart,
-  restarting = false,
 }: {
   filename: string
   getFile: (f: string) => Promise<string>
@@ -69,9 +72,6 @@ function EnvFileEditor({
   readOnly: boolean
   draft?: FileDraft
   onDraftChange: (draft: FileDraft | null) => void
-  /** The shared Host restart flow (with its confirmation); absent when this Console may not restart. */
-  onRestart?: () => void
-  restarting?: boolean
 }) {
   const i18n = useI18n()
   const [content, setContent] = useState(draft?.content ?? '')
@@ -117,6 +117,15 @@ function EnvFileEditor({
   }, [loadContent])
 
   const dirty = content !== originalContent
+  const dirtyRef = useRef(dirty)
+  dirtyRef.current = dirty
+  // After 立即重启: show the file as the restarted Host holds it, unless a new draft was started meanwhile.
+  const refreshAfterRestart = async () => {
+    const text = await getFileRef.current(filename)
+    if (dirtyRef.current) return
+    setContent(text)
+    setOriginalContent(text)
+  }
   const access = envEditorAccess({ loaded, readOnly, saving, dirty, editing: editor !== null })
 
   const handleSave = async () => {
@@ -132,10 +141,14 @@ function EnvFileEditor({
       const next = applyEnvChanges(latest, changes)
       await saveFile(filename, next)
       onDraftChange(null)
-      setContent(next)
-      setOriginalContent(next)
+      // Read the file back: what the Host now holds must be what was written.
+      let readBack: string | null = null
+      try { readBack = await getFile(filename) } catch { readBack = null }
+      const stored = readBack ?? next
+      setContent(stored)
+      setOriginalContent(stored)
       setRevealed(new Set())
-      setMessage({ type: 'success', text: i18n.t("已保存，需重启生效"), restart: true })
+      setMessage({ type: 'saved', outcome: outcomeFromEnvSave(), mismatch: readBack === null ? null : envReadBackMismatch(next, readBack), unverified: readBack === null })
     } catch (err) {
       setMessage({ type: 'error', text: i18n.t("保存失败；未保存修改已保留，请重试。"), details: err instanceof Error ? err.message : String(err) })
     } finally {
@@ -180,10 +193,7 @@ function EnvFileEditor({
 
   if (loading && !loaded) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-sm text-muted-foreground">{i18n.t("加载中...")}</span>
-      </div>
+      <StatusState kind="loading" compact title={i18n.t("加载中...")} onRetry={() => void loadContent()} />
     )
   }
 
@@ -227,16 +237,11 @@ function EnvFileEditor({
         </Alert>
       )}
 
-      {message && (
-        <Alert variant={message.type === 'error' ? 'destructive' : 'success'} className="py-2">
-          {message.type === 'error'
-            ? <AlertCircle className="h-4 w-4" />
-            : <CheckCircle className="h-4 w-4" />}
+      {message?.type === 'error' && (
+        <Alert variant="destructive" className="py-2">
+          <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             {message.text}
-            {message.restart ? (onRestart
-              ? <Button size="sm" variant="outline" className="ml-2" disabled={restarting} onClick={onRestart}><RotateCw className="w-4 h-4 mr-1" />{i18n.t("重启 Host")}</Button>
-              : <span className="ml-2 text-xs text-muted-foreground">{i18n.t("当前 Console 无法重启 Host，请在 Host 所在环境手动重启。")}</span>) : null}
             {message.details ? <details className="mt-2"><summary className="cursor-pointer">{i18n.t("技术详情")}</summary><pre className="mt-2 whitespace-pre-wrap break-words text-xs">{message.details}</pre></details> : null}
           </AlertDescription>
         </Alert>
@@ -246,7 +251,9 @@ function EnvFileEditor({
       {dirty ? <p className="text-xs text-muted-foreground">{i18n.t("未保存修改只在本标签页内保留；切换页面或文件可恢复，刷新前请保存。")}</p> : null}
       {loaded ? (
         <ul className="space-y-2" aria-label={i18n.t("{0} 中的变量", [filename])}>
-          {rows.length === 0 && !editor ? <li className="text-sm text-muted-foreground">{i18n.t("还没有变量")}</li> : null}
+          {rows.length === 0 && !editor ? <li><StatusState kind="empty" compact title={i18n.t("还没有变量")}
+            description={readOnly ? i18n.t("这个文件里还没有 KEY=VALUE 行。") : i18n.t("新增变量后保存，重启 Host 后生效。")}
+            actions={!readOnly ? <Button size="sm" variant="outline" disabled={!access.canEdit} onClick={() => startEdit(null)}><Plus className="w-4 h-4 mr-1" />{i18n.t("新增变量")}</Button> : undefined} /></li> : null}
           {rows.map(row => {
             const opened = editorRow(row.key)
             if (opened) return opened
@@ -300,6 +307,8 @@ function EnvFileEditor({
         {editor && <span className="text-xs text-muted-foreground">{i18n.t("先应用或取消正在编辑的行再保存")}</span>}
         {dirty && <span className="text-xs text-muted-foreground">{i18n.t("有未保存的更改")}</span>}
       </div>
+      {message?.type === 'saved' ? <ApplyFeedback outcome={message.outcome} mismatch={message.mismatch} unverified={message.unverified}
+        onRestarted={refreshAfterRestart} /> : null}
       <ConfirmDialog
         open={discardOpen}
         onOpenChange={setDiscardOpen}
@@ -318,8 +327,6 @@ export default function EnvManagePage() {
   const i18n = useI18n()
   const readOnly = !hasConsolePermission('ops.env.write')
   const { files, loading, error, listFiles, getFile, saveFile } = useEnvFiles()
-  const { confirm, ConfirmDialog: ConfirmDialogHost } = useConfirm()
-  const { restarting, confirmRestart } = useHostRestart(confirm)
   ensureEnvUnloadGuard()
   const session = envDraftSessions.get(getConsoleTransport())
   const [activeTab, setActiveTab] = useState(session.selected ?? '.env')
@@ -346,9 +353,9 @@ export default function EnvManagePage() {
     return (
       <div className="space-y-6">
         <PageHeader title={i18n.t("环境变量")} description={i18n.t("加载文件列表…")} />
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatusState kind="loading" onRetry={handleRefresh} placeholder={<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48" />)}
-        </div>
+        </div>} />
       </div>
     )
   }
@@ -403,15 +410,12 @@ export default function EnvManagePage() {
                   readOnly={readOnly}
                   draft={session.drafts.get(name)}
                   onDraftChange={updateDraft}
-                  onRestart={readOnly ? undefined : () => { void confirmRestart() }}
-                  restarting={restarting}
                 />
               </CardContent>
             </Card>
           </TabsContent>
         ))}
       </Tabs>
-      {ConfirmDialogHost}
     </div>
   )
 }

@@ -35,6 +35,7 @@ const builtinNames: Readonly<Record<string, string>> = {
   "/ops/files": "项目文件",
   "/ops/instance": "实例",
   "/ops/terminal": "终端",
+  "/ops/self-check": "连接自检",
   "/onboarding": "开始使用",
   "/account": "个人设置",
   "/access/users": "用户",

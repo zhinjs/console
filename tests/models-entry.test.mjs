@@ -63,7 +63,7 @@ async function workspace({ query = '', hostAdministrator = true } = {}) {
     }] },
     'lucide-react': new Proxy({}, { get: () => 'icon' }),
     '../../i18n': localeModule,
-    '../../components/ui/button': { Button: 'button' }, '../../components/ui/select': { SelectField: 'select' },
+    '../../components/ui/button': { Button: 'button' }, '../../components/StatusState': { StatusState: 'status-state' }, '../../components/ui/select': { SelectField: 'select' },
     '../../components/ui/tabs': { Tabs: 'tabs', TabsList: 'tabs-list', TabsTrigger: 'tab', TabsContent: 'tab-content' },
     '../../components/ui/dialog': { Dialog: () => null, DialogContent: 'content', DialogHeader: 'header', DialogTitle: 'title', DialogDescription: 'description' },
     '../../components/error-alert': { ErrorAlert: 'error' }, '../../components/ui/alert': { Alert: 'alert', AlertDescription: 'alert-description' },

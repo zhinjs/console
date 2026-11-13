@@ -3,7 +3,7 @@ import { useI18n } from '../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { parse as parseConfigSource } from 'yaml'
 import { RefreshCw } from 'lucide-react'
-import { ApplyFeedback } from '../components/ApplyFeedback'
+import { ApplyFeedback, type ApplyOutcome, type ReadBackMismatch } from '../components/ApplyFeedback'
 import { requestConsole } from '../utils/console-rpc'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
@@ -34,6 +34,8 @@ import {
   describeAmbientStatus,
   describeReadFailure,
   describeSaveResult,
+  ambientSaveOutcome,
+  ambientRestartOutcome,
   isPermissionDenied,
   AMBIENT_STATUS_PERMISSION,
   readAmbientSettings,
@@ -43,7 +45,6 @@ import {
   type AmbientBehavior,
   type AmbientSettings,
   type AmbientStatusView,
-  type SaveFeedback,
 } from './ambient-engagement-model.mjs'
 
 type ConfigSource = ConfigurationApplicationStatus & { source: string; revision: string }
@@ -127,7 +128,7 @@ type StatusReadState = ReturnType<typeof useConsoleRead<StatusRead | null>>
 
 function AmbientStatusSection({ read, onRetry }: { read: StatusReadState; onRetry: () => void }) {
   const i18n = useI18n()
-  if (read.loading && !read.loaded) return <Skeleton className="h-40 w-full" />
+  if (read.loading && !read.loaded) return <StatusState kind="loading" onRetry={onRetry} placeholder={<Skeleton className="h-40 w-full" />} />
   const failure = read.error ? describeReadFailure(read.error, i18n.t("群聊插话状态"), i18n.locale) : null
   if (failure && !read.loaded && !failure.denied) return <StatusState error={read.error} description={failure.text} onRetry={onRetry} />
   if (!read.data && !failure?.denied) return null
@@ -227,9 +228,15 @@ function AmbientRecentActivity({ recent }: { recent: AmbientStatusView['recent']
 
 type SettingsReadState = ReturnType<typeof useConsoleRead<SettingsRead | null>>
 
+/** The last save's outcome. Kept above the form: a save re-reads, and the new revision remounts the form. */
+type AmbientSaveFeedback =
+  | { kind: 'saved'; outcome: ApplyOutcome; mismatch: ReadBackMismatch | null; unverified: boolean }
+  | { kind: 'failed'; text: string }
+
 function AmbientSettingsSection({ read, onReload, currentReadEpoch, focusGroup }: { read: SettingsReadState; onReload: () => Promise<SettingsRead | null>; currentReadEpoch: () => number; focusGroup: string | null }) {
   const i18n = useI18n()
-  if (read.loading && !read.loaded) return <Skeleton className="h-56 w-full" />
+  const [lastSave, setLastSave] = useState<AmbientSaveFeedback | null>(null)
+  if (read.loading && !read.loaded) return <StatusState kind="loading" onRetry={() => { void onReload().catch(() => {}) }} placeholder={<Skeleton className="h-56 w-full" />} />
   if (read.error && !read.loaded) {
     const failure = describeReadFailure(read.error, i18n.t("群聊插话设置"), i18n.locale)
     return <Card>
@@ -242,10 +249,14 @@ function AmbientSettingsSection({ read, onReload, currentReadEpoch, focusGroup }
     </Card>
   }
   if (!read.data) return null
-  return <AmbientSettingsForm key={read.data.revision} initial={read.data} onReload={onReload} currentReadEpoch={currentReadEpoch} focusGroup={focusGroup} />
+  return <AmbientSettingsForm key={read.data.revision} initial={read.data} onReload={onReload} currentReadEpoch={currentReadEpoch} focusGroup={focusGroup}
+    lastSave={lastSave} onSaved={setLastSave} />
 }
 
-function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup = null }: { initial: SettingsRead; onReload: () => Promise<SettingsRead | null>; currentReadEpoch?: () => number; focusGroup?: string | null }) {
+function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup = null, lastSave = null, onSaved }: {
+  initial: SettingsRead; onReload: () => Promise<SettingsRead | null>; currentReadEpoch?: () => number; focusGroup?: string | null
+  lastSave?: AmbientSaveFeedback | null; onSaved?: (feedback: AmbientSaveFeedback | null) => void
+}) {
   const scope = useInboxCacheScope()
   const i18n = useI18n()
   const [behavior, setBehavior] = useState<AmbientBehavior>(initial.settings.behavior)
@@ -253,7 +264,9 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
   const [groups, setGroups] = useState<string[]>(initial.settings.groups)
   const [maxPerHourText, setMaxPerHourText] = useState(String(initial.settings.maxPerHour))
   const [saving, setSaving] = useState(false)
-  const [feedback, setFeedback] = useState<SaveFeedback | null>(null)
+  const [localFeedback, setLocalFeedback] = useState<AmbientSaveFeedback | null>(null)
+  const feedback = lastSave ?? localFeedback
+  const setFeedback = (next: AmbientSaveFeedback | null) => { setLocalFeedback(next); onSaved?.(next) }
   const [receipt, setReceipt] = useState<{ value: PatchResult; observedReadEpoch: number } | null>(null)
   const currentReceipt = configurationReceiptForRead(initial, receipt)
   const [serverProblems, setServerProblems] = useState<string[]>([])
@@ -295,14 +308,14 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
         const messages = (result.errors ?? []).map((error) => error.message)
         setServerProblems(messages)
       }
-      if (saveFeedback.kind === 'saved' || saveFeedback.kind === 'conflict') {
-        await onReload().catch(() => null)
-      }
-      if (isInboxCacheScopeActive(scope)) setFeedback(saveFeedback)
+      // Every saved or conflicting write re-reads; a saved one is then compared with what was submitted.
+      const reread = saveFeedback.kind === 'saved' || saveFeedback.kind === 'conflict' ? await onReload().catch(() => null) : null
+      if (!isInboxCacheScopeActive(scope)) return
+      setFeedback(saveFeedback.kind === 'saved' ? { kind: 'saved', ...ambientSaveOutcome(result, draft, reread) } : { kind: 'failed', text: saveFeedback.text })
     } catch (error) {
       if (!isInboxCacheScopeActive(scope)) return
       const message = error instanceof Error ? error.message : String(error)
-      setFeedback({ kind: 'error', text: i18n.t("保存失败：{0}", [message]) })
+      setFeedback({ kind: 'failed', text: i18n.t("保存失败：{0}", [message]) })
     } finally {
       if (isInboxCacheScopeActive(scope)) setSaving(false)
     }
@@ -357,7 +370,10 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
 
       <div className="flex flex-wrap items-center gap-3">
         <Button onClick={() => { void save() }} disabled={saving || problems.length > 0}>{saving ? i18n.t("正在保存…") : i18n.t("保存")}</Button>
-        {feedback && <ApplyFeedback feedback={feedback} />}
+        {feedback ? feedback.kind === 'saved'
+          ? <ApplyFeedback outcome={feedback.outcome} mismatch={feedback.mismatch} unverified={feedback.unverified}
+            onRestarted={async () => ambientRestartOutcome(await onReload().catch(() => null))} />
+          : <ApplyFeedback failure={{ reason: feedback.text }} /> : null}
       </div>
       <ConfigurationLiveStatus result={currentReceipt ?? initial.application} revision={currentReceipt?.revision ?? initial.revision} />
     </CardContent>

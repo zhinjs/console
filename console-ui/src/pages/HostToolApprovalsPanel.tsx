@@ -1,3 +1,4 @@
+import { StatusState } from '../components/StatusState'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { useI18n } from '../i18n'
@@ -137,7 +138,7 @@ export function HostToolApprovalSession({ scope }: { scope?: string }) {
       {error && current && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
       {denied ? <p className="text-sm text-muted-foreground">{i18n.t('只读')}</p>
         : !current ? <p className="text-sm text-muted-foreground">{i18n.t('连接 Host 后读取工具审批')}</p>
-        : loading && !catalog ? <p role="status">{i18n.t('正在读取工具审批…')}</p>
+        : loading && !catalog ? <StatusState kind="loading" compact title={i18n.t('正在读取工具审批…')} />
         : catalog?.available === false ? <p className="text-sm text-muted-foreground">{i18n.t('当前 Agent 未提供工具审批队列')}</p>
         : catalog?.pending.length === 0 ? <p className="text-sm text-muted-foreground">{i18n.t('当前没有待审批的工具请求')}</p> : null}
       {current && catalog?.pending.map(card => <article key={card.id} className="space-y-3 rounded-lg border p-4">

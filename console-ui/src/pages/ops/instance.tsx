@@ -170,7 +170,7 @@ function InstanceStatusSection({ status, canControl, locked }: {
         <Card className="console-admin-card">
           {status.error && status.errorKind !== 'unsupported' ? <GatewayLoadError error={status.error} kind={status.errorKind} failure={status.failure} onRetry={status.refresh} permissions={['status.view']} /> : null}
           {locked ? <p className="console-admin-note" role="status">{i18n.t("依赖事务进行中，实例由事务停启。")}</p> : null}
-          {!data && !status.loaded ? <Skeleton className="h-20" /> : null}
+          {!data && !status.loaded ? <StatusState kind="loading" onRetry={status.refresh} placeholder={<Skeleton className="h-20" />} /> : null}
           {data ? (
             <dl className="console-object-facts">
               <div><dt>{i18n.t("状态")}</dt><dd><Badge variant={instanceStateTone(data.state)}>{instanceStateLabel(data.state, i18n.t)}</Badge></dd></div>
@@ -242,7 +242,7 @@ function InstanceLogsSection() {
           ) : null}
         </>}>
         {logs.error && logs.errorKind !== 'unsupported' ? <GatewayLoadError error={logs.error} kind={logs.errorKind} failure={logs.failure} onRetry={logs.refresh} permissions={['status.view']} /> : null}
-        {!logs.loaded && logs.loading ? <Skeleton className="h-64" /> : (
+        {!logs.loaded && logs.loading ? <StatusState kind="loading" placeholder={<Skeleton className="h-64" />} /> : (
           <pre ref={box} onScroll={onScroll} tabIndex={0} aria-label={i18n.t("实例日志")} aria-live="off" className="console-admin-log">
             {shown.length ? shown.map(line => (
               <div key={line.seq} className={line.stream === 'stderr' ? 'is-stderr' : undefined}>
@@ -387,7 +387,7 @@ function DependencyPanel({ canManage, onActiveChange, onFinished }: { canManage:
           {!canManage && !unsupported ? <p className="console-admin-note" role="note">{i18n.t("当前身份只能查看依赖；安装、卸载与更新需要 plugin.manage 权限。")}</p> : null}
         </Card>
         {unsupported ? null : list.loading && !list.loaded ? (
-          <div className="space-y-2">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>
+          <StatusState kind="loading" placeholder={<div className="space-y-2">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>} />
         ) : list.error && !list.loaded ? null : !list.data.packages.length ? (
           <StatusState kind="empty" title={i18n.t("没有依赖")} description={i18n.t("package.json 里还没有声明依赖。用上面的「安装依赖」添加。")} />
         ) : (

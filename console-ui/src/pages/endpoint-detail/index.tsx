@@ -1,3 +1,4 @@
+import { StatusState } from '../../components/StatusState'
 import { translate } from '../../i18n/locale.mjs'
 import { useI18n } from '../../i18n'
 import type * as React from 'react'
@@ -996,7 +997,7 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
                 </TabsList>
                 <TabsContent value="pending" className="im-system-content flex-1 overflow-y-auto p-4 space-y-3 mt-0">
                   {actionError ? <Alert variant="destructive"><AlertDescription>{i18n.t("操作失败：")}{actionError}</AlertDescription></Alert> : null}
-                  {requestsLoading ? <p role="status">{i18n.t("正在读取待处理请求…")}</p> : null}
+                  {requestsLoading ? <StatusState kind="loading" compact title={i18n.t("正在读取待处理请求…")} /> : null}
                   {requestsError ? <Alert variant="destructive"><AlertDescription>{i18n.t("请求读取失败：")}{requestsError}</AlertDescription></Alert> : null}
                   {requestList.length === 0 && canShowReadEmpty(requestsLoading, requestsError) && (
                     <div className="im-empty-state flex flex-col items-center justify-center py-16 gap-2 text-muted-foreground text-sm">
@@ -1107,7 +1108,7 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
                 </TabsList>
                 <TabsContent value="unread" className="im-system-content flex-1 overflow-y-auto p-4 space-y-3 mt-0">
                   {actionError ? <Alert variant="destructive"><AlertDescription>{i18n.t("操作失败：")}{actionError}</AlertDescription></Alert> : null}
-                  {noticesLoading ? <p role="status">{i18n.t("正在读取通知…")}</p> : null}
+                  {noticesLoading ? <StatusState kind="loading" compact title={i18n.t("正在读取通知…")} /> : null}
                   {noticesError ? <Alert variant="destructive"><AlertDescription>{i18n.t("通知读取失败：")}{noticesError}</AlertDescription></Alert> : null}
                   {noticeList.length === 0 && canShowReadEmpty(noticesLoading, noticesError) && (
                     <div className="im-empty-state flex flex-col items-center justify-center py-16 gap-2 text-muted-foreground text-sm">

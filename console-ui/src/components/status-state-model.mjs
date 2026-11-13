@@ -3,6 +3,8 @@
  * inventing their own (Console 重构规范 §空态与错误态). Pure: tests and components share it.
  *
  * Kinds:
+ * - `loading`             读取中；超过 {@link SLOW_LOADING_MS} 变成「仍在加载…」并说明可能的原因（网关、
+ *                         实时事件 / WebSocket 被拦截、反向代理路径），给出重试与连接自检
  * - `unknown`             结果未知：请求已发出但没有可信答复（超时、断流），写操作不得自动重放
  * - `forbidden`           无权限（403 / `forbidden` / Host 的「没有 … 权限」）
  * - `not-installed`       未安装：所需插件或适配器不存在
@@ -18,7 +20,7 @@
  * - `error`               其他失败
  */
 export const STATUS_KINDS = Object.freeze([
-  'unknown', 'forbidden', 'not-installed', 'unsupported', 'empty', 'locked', 'conflict', 'database-busy', 'instance-unavailable',
+  'loading', 'unknown', 'forbidden', 'not-installed', 'unsupported', 'empty', 'locked', 'conflict', 'database-busy', 'instance-unavailable',
   'needs-configuration', 'disconnected', 'error',
 ])
 
@@ -229,6 +231,7 @@ export function outcomeUnknown(status) {
 
 /** Authored title / description per kind (displayed through i18n; `{0}` is the level or the seconds). */
 export const STATUS_COPY = Object.freeze({
+  loading: Object.freeze({ title: '正在读取…', description: '正在从 Host 读取数据。' }),
   unknown: Object.freeze({ title: '结果未知', description: '请求已发出，但没有收到可信的答复。请先核对当前状态，不要直接重试。' }),
   forbidden: Object.freeze({ title: '无权限', description: '当前身份没有查看或修改这里的权限。选择范围不会授予权限。' }),
   'not-installed': Object.freeze({ title: '未安装', description: '所需的插件或适配器尚未安装。' }),
@@ -251,4 +254,28 @@ export function statusTone(kind) {
   if (kind === 'error' || kind === 'unknown') return 'destructive'
   if (kind === 'database-busy' || kind === 'instance-unavailable' || kind === 'conflict' || kind === 'disconnected' || kind === 'needs-configuration' || kind === 'locked') return 'warning'
   return 'muted'
+}
+
+/** How long a read may load before it is reported as slow (「仍在加载…」). */
+export const SLOW_LOADING_MS = 8_000
+
+/** Authored copy of a slow load; `{0}` is the seconds waited. */
+export const SLOW_LOADING_COPY = Object.freeze({
+  title: '仍在加载…',
+  description: '已经等了 {0} 秒还没有答复。常见原因：',
+  causes: Object.freeze([
+    '网关没有响应：Host 进程没有在运行，或 API 地址填错了。',
+    'WebSocket / 实时事件流被拦截：反向代理或防火墙没有放行长连接与 Upgrade 请求。',
+    '反向代理的路径前缀与 API 地址不一致，请求被转给了别的服务。',
+  ]),
+})
+
+/** Whether a load that started at `startedAt` is slow at `now`. */
+export function loadingIsSlow(startedAt, now = Date.now(), threshold = SLOW_LOADING_MS) {
+  return typeof startedAt === 'number' && Number.isFinite(startedAt) && now - startedAt >= threshold
+}
+
+/** Whole seconds a load has been waiting. */
+export function loadingSeconds(startedAt, now = Date.now()) {
+  return typeof startedAt === 'number' && Number.isFinite(startedAt) ? Math.max(0, Math.floor((now - startedAt) / 1000)) : 0
 }

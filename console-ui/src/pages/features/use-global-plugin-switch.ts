@@ -9,6 +9,7 @@ import { FEATURE_RPC } from '../../contracts/zhin-console'
 import { readGatewayReply } from '../ops/gateway-model.mjs'
 import { readFeatureWriteResult, setEnabledRequest } from './feature-model.mjs'
 import { featureReceiptOutcome } from './feature-scope-model.mjs'
+import { outcomeFromPluginSwitch, readBackMismatch } from '../../components/apply-outcome-model.mjs'
 import { globalSwitchPlanCopy, pluginSwitchRequestBody } from './plugin-switch-model.mjs'
 
 type Translate = (message: string, values?: readonly unknown[]) => string
@@ -90,10 +91,17 @@ export function useGlobalPluginSwitch(onSettled?: () => void): {
         const result = readFeatureWriteResult(await requestGlobalPluginSwitch(setEnabledRequest({ plugin: target.plugin, level: 'global', enabled: target.enabled, revision: target.revision }), i18n.t))
         const outcome = featureReceiptOutcome(result)
         if (outcome.locked) throw Object.assign(new Error(outcome.message), { code: 'locked', lockedBy: outcome.lockedBy })
-        if (result.status === 'saved' && result.restartRequired) {
-          return { ...outcome, message: [i18n.t('管理网关已重启实例，新的开关已生效。'), outcome.message].filter(Boolean).join('\n') }
+        // The gateway restarted the instance for it (已生效); then read the switch back.
+        const apply = outcomeFromPluginSwitch(result) ?? undefined
+        if (result.status !== 'saved') return { ...outcome, apply }
+        let enabled: unknown
+        try {
+          enabled = (await requestConsole<{ enabled?: boolean }>({ type: FEATURE_RPC.GET, plugin: target.plugin, level: 'global' }))?.enabled
+        } catch {
+          return { ...outcome, apply, message: [outcome.message, i18n.t('保存后没能重新读取核对，请刷新确认保存的值。')].filter(Boolean).join('\n') }
         }
-        return outcome
+        const mismatch = readBackMismatch({ enabled: target.enabled }, { enabled })
+        return { ...outcome, apply, ...(mismatch ? { mismatch } : {}) }
       } finally {
         settled.current?.()
       }
@@ -102,7 +110,9 @@ export function useGlobalPluginSwitch(onSettled?: () => void): {
       const target = targetOf(plan)
       if (!target) return undefined
       const reply = await requestConsole<{ enabled?: boolean }>({ type: FEATURE_RPC.GET, plugin: target.plugin, level: 'global' })
-      return { applied: reply?.enabled === target.enabled }
+      const applied = reply?.enabled === target.enabled
+      // Checked after an unknown outcome: the switch is a gateway transaction that restarts the instance.
+      return { applied, ...(applied ? { apply: outcomeFromPluginSwitch({ status: 'saved', restartRequired: true }) ?? undefined } : {}) }
     },
   })
   const { prepare: preparePlan } = receipt

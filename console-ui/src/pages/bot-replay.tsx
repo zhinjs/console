@@ -206,7 +206,7 @@ export default function BotReplayPage() {
         </CardContent>
       </Card> : null}
 
-      {loading && !list ? <Skeleton className="h-64 w-full" />
+      {loading && !list ? <StatusState kind="loading" onRetry={() => void refresh(filter)} placeholder={<Skeleton className="h-64 w-full" />} />
         : error && !list ? <StatusState error={error} onRetry={() => void refresh(filter)} />
           : list ? <Card>
             <CardHeader>
@@ -228,7 +228,8 @@ export default function BotReplayPage() {
                     <Button variant="ghost" size="sm" onClick={() => void openTurn(view.turnId)}>{i18n.t("看这个回合")}</Button>
                   </li>
                 })}
-              </ul> : <StatusState kind="empty" compact title={i18n.t("还没有决策记录。")} description={Object.keys(filter).length ? i18n.t("当前筛选条件下没有记录，换一个条件或清除范围试试。") : i18n.t("机器人每次判断回不回、调不调模型都会记在这里。")} />}
+              </ul> : <StatusState kind="empty" compact title={i18n.t("还没有决策记录。")} description={Object.keys(filter).length ? i18n.t("当前筛选条件下没有记录，换一个条件或清除范围试试。") : i18n.t("机器人每次判断回不回、调不调模型都会记在这里。")}
+                actions={Object.keys(filter).length ? <Button size="sm" variant="outline" onClick={() => setFilter({})}>{i18n.t("清除筛选")}</Button> : undefined} />}
               {list.nextBefore !== null ? <Button variant="outline" size="sm" onClick={() => void loadMore()} disabled={loadingMore}>{loadingMore ? i18n.t("加载中…") : i18n.t("加载更多")}</Button> : null}
             </CardContent>
           </Card> : null}

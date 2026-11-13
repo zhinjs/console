@@ -144,9 +144,9 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
       ) : null}
 
       {waiting ? (
-        <div className="space-y-3">
+        <StatusState kind="loading" placeholder={<div className="space-y-3">
           {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 rounded-[var(--console-radius-md)]" />)}
-        </div>
+        </div>} />
       ) : <>
         <StatGrid label={i18n.t("插件概况")}>
           <StatCard icon={Package} label={i18n.t("已安装")} value={counts.all} sub={i18n.t("实例插件与待配置的包")} onOpen={() => setStatusFilter('all')} pressed={statusFilter === 'all'} />

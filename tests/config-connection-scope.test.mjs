@@ -19,6 +19,7 @@ import { translate } from '../console-ui/src/i18n/locale.mjs'
 import * as configEvidenceModel from '../console-ui/src/components/PluginConfigForm/config-evidence-model.mjs'
 import * as configLiveStatus from '../console-ui/src/components/PluginConfigForm/config-live-status.mjs'
 import * as unsavedChangesGuard from '../console-ui/src/utils/unsaved-changes-guard.mjs'
+import * as applyOutcomeModel from '../console-ui/src/components/apply-outcome-model.mjs'
 
 const require = createRequire(import.meta.url)
 const files = await Promise.all(['hooks/useConfigSource.ts', 'components/PluginConfigForm/usePluginConfigDraft.ts', 'components/PluginConfigForm/index.tsx', 'pages/config.tsx', 'components/PluginConfigForm/SchemaFieldEditor.tsx']
@@ -91,6 +92,7 @@ function fixture(query = '') {
     '../../pages/files/code-editor': { CodeEditor: 'code-editor' }, './files/code-editor': { CodeEditor: 'code-editor' },
     './config-evidence-model.mjs': configEvidenceModel,
     './config-live-status.mjs': configLiveStatus,
+    '../ApplyFeedback': { ApplyFeedback: 'apply-feedback' }, '../apply-outcome-model.mjs': applyOutcomeModel,
     './ConfigurationLiveStatus': { ConfigurationLiveStatus: 'configuration-live-status' },
     '../components/PluginConfigForm/ConfigurationLiveStatus': { ConfigurationLiveStatus: 'configuration-live-status' },
     '../components/PluginConfigForm/config-evidence-model.mjs': configEvidenceModel,
@@ -103,8 +105,8 @@ function fixture(query = '') {
     './AgentPresetsEditor': { AgentPresetsEditor: 'agent-presets-editor' },
     './inference/models-entry.mjs': modelsEntry,
     './SchemaFieldEditor': { SchemaFieldEditor: 'field-editor' }, '../ui/card': { Card: 'article' }, '../ui/badge': { Badge: 'span' },
-    '../ui/button': { Button: 'button' }, '../ui/table': { Table: 'table', TableHeader: 'thead', TableBody: 'tbody', TableRow: 'tr', TableHead: 'th', TableCell: 'td' }, '../ui/alert': { Alert: 'aside', AlertDescription: 'p' },
-    '../components/ui/card': { Card: 'article', CardContent: 'section' }, '../components/ui/list-item-button': { ListItemButton: 'button' }, '../components/ui/button': { Button: 'button' },
+    '../ui/button': { Button: 'button' }, '../StatusState': { StatusState: 'status-state' }, '../ui/table': { Table: 'table', TableHeader: 'thead', TableBody: 'tbody', TableRow: 'tr', TableHead: 'th', TableCell: 'td' }, '../ui/alert': { Alert: 'aside', AlertDescription: 'p' },
+    '../components/ui/card': { Card: 'article', CardContent: 'section' }, '../components/StatusState': { StatusState: 'status-state' }, '../components/ui/list-item-button': { ListItemButton: 'button' }, '../components/ui/button': { Button: 'button' },
     '../components/ui/alert': { Alert: 'aside', AlertDescription: 'p' }, '../components/ui/badge': { Badge: 'span' },
     '../components/ui/tabs': { Tabs: 'tabs', TabsList: 'tabs-list', TabsTrigger: 'tabs-trigger', TabsContent: 'tabs-content' },
     '../components/ui/textarea': { Textarea: 'textarea' }, '../components/ui/input': { Input: 'input' },
@@ -1303,6 +1305,31 @@ test('actual root scalar restore-default saves YAML with the override absent rat
   f.runtime.unmount()
 })
 
+test('a save whose read-back is superseded by the page refresh is still verified against the newer read', async () => {
+  const f = fixture(), connectionScope = f.authority.current()
+  const props = { pluginName: 'group-suite', connectionScope, excludedFieldNames: [], sourceRevision: 'r1' }
+  f.runtime.mount(() => f.form.PluginConfigFormSession(props))
+  const source = value => ({ source: JSON.stringify({ 'group-suite': { token: value } }), format: 'json', configKeys: ['group-suite'], configPaths: { 'group-suite': ['group-suite'] } })
+  const schema = { type: 'object', object: { token: { type: 'string' } } }
+  f.answer('config:get-source', { ...source('old'), revision: 'r1' }); f.answer('schema:get', schema); await f.runtime.settle()
+  elements(f.runtime.value).find(item => item.type === 'field-editor' && item.props.name === 'token').props.onChange('new'); await f.runtime.settle()
+  button(f.runtime.value, '保存配置').props.onClick()
+  f.answer('plugin:validate-config', { valid: true, schemaAvailable: true, errors: [], missingEnv: [] }); await f.runtime.settle()
+  f.answer('config:replace-source', { success: true, revision: 'r2', restartRequired: true }); await f.runtime.settle()
+  // The page refreshes after the save (new sourceRevision): a second read starts while the first is pending.
+  props.sourceRevision = 'r2'; f.runtime.render(); await f.runtime.settle()
+  const pending = type => f.calls.filter(call => !call.answered && call.input.type === type)
+  assert.equal(pending('config:get-source').length, 2, 'the save read-back and the refresh read are both in flight')
+  const [older, newer] = pending('config:get-source'), [olderSchema, newerSchema] = pending('schema:get')
+  newer.answered = true; newer.resolve({ ...source('new'), revision: 'r2' }); newerSchema.answered = true; newerSchema.resolve(schema); await f.runtime.settle()
+  older.answered = true; older.resolve({ ...source('new'), revision: 'r2' }); olderSchema.answered = true; olderSchema.resolve(schema); await f.runtime.settle()
+  const outcome = elements(f.runtime.value).find(item => item.type === 'apply-feedback')
+  assert.ok(outcome)
+  assert.equal(outcome.props.unverified, false, 'the superseded read takes the newer read as its read-back')
+  assert.equal(outcome.props.mismatch, null)
+  f.runtime.unmount()
+})
+
 test('all settings forms offer only Save and report required errors through automatic save validation', async () => {
   const f = fixture(), connectionScope = f.authority.current()
   f.runtime.mount(() => f.form.PluginConfigFormSession({
@@ -1331,7 +1358,12 @@ test('all settings forms offer only Save and report required errors through auto
   f.answer('config:replace-source', { success: true, revision: 'r2', restartRequired: true }); await f.runtime.settle()
   f.answer('config:get-source', { source: '{"group-suite":{"token":"configured"}}', format: 'json', revision: 'r2', configKeys: ['group-suite'], configPaths: { 'group-suite': ['group-suite'] } })
   f.answer('schema:get', { type: 'object', object: { token: { type: 'string', required: true } } }); await f.runtime.settle()
-  assert.ok(label(f.runtime.value).includes('配置已保存'))
+  // The save's outcome sits next to 保存: the Host said a restart is needed, and the read-back matches.
+  const outcome = elements(f.runtime.value).find(item => item.type === 'apply-feedback')
+  assert.ok(outcome, 'the save shows its outcome')
+  assert.deepEqual([outcome.props.outcome.kind, outcome.props.outcome.basis], ['restart', 'restart-flag'])
+  assert.equal(outcome.props.mismatch, null)
+  assert.equal(outcome.props.unverified, false)
   assert.equal(elements(f.runtime.value).some(item => item.type === 'alert'), false)
   f.runtime.unmount()
 })

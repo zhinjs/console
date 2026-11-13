@@ -34,7 +34,7 @@ export function TaskConversationChoice({ endpoint, disabled, selected, onPick }:
       <p className="text-xs font-medium">{i18n.t("选择会话")}</p>
       <Input value={draft} disabled={disabled} onChange={event => setDraft(event.target.value)}
         placeholder={i18n.t("搜索会话名称或 ID")} aria-label={i18n.t("搜索会话名称或 ID")} />
-      {list.status === 'loading' && !list.page ? <div className="space-y-1"><Skeleton className="h-9" /><Skeleton className="h-9" /></div>
+      {list.status === 'loading' && !list.page ? <StatusState kind="loading" compact placeholder={<div className="space-y-1"><Skeleton className="h-9" /><Skeleton className="h-9" /></div>} />
         : list.status !== 'ready' && list.status !== 'loading'
           ? <StatusState compact error={list.error ?? list.status} kind={list.status === 'unsupported' ? 'unsupported' : list.status === 'forbidden' ? 'forbidden' : undefined}
             description={i18n.t("会话列表暂时读不到，可以在下方手动填写。")} onRetry={list.refresh} />

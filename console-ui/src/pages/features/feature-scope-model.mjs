@@ -6,6 +6,7 @@
  */
 import { containsRedacted, featureFieldRows, fieldSource, parseConversationKey } from './feature-model.mjs'
 import { scopeHref } from '../../scope/scope-tree.mjs'
+import { readBackMismatch } from '../../components/apply-outcome-model.mjs'
 
 /** Row filters of the 功能 tab, in display order (labels are authored in the panel). */
 export const FEATURE_ROW_FILTERS = Object.freeze(['all', 'overridden', 'disabled', 'locked'])
@@ -175,6 +176,26 @@ export function featureChangeApplied(detail, change) {
   if (change.kind === 'remove') return !Object.hasOwn(values, change.field)
   if (change.kind === 'clear') return Object.keys(values).length === 0 && !switchOverridden(detail)
   return false
+}
+
+/**
+ * After a saved write: what a fresh `feature.get` shows next to what was submitted, or null when it
+ * shows the change ({@link featureChangeApplied}). Masked (redacted) values stay masked.
+ */
+export function featureReadBackMismatch(detail, change) {
+  if (!change || featureChangeApplied(detail, change)) return null
+  const values = detail?.values ?? {}
+  // A secret comes back masked: its presence is all a read can confirm.
+  if (change.kind === 'set' && Object.hasOwn(values, change.field) && containsRedacted(values[change.field])) return null
+  const absent = undefined
+  let submitted, readBack, path
+  if (change.kind === 'enabled') { path = 'enabled'; submitted = change.enabled; readBack = detail?.lockedBy ? `locked:${detail.lockedBy}` : detail?.enabled }
+  else if (change.kind === 'set') { path = change.field; submitted = change.value; readBack = Object.hasOwn(values, change.field) ? values[change.field] : absent }
+  else if (change.kind === 'remove') { path = change.field; submitted = absent; readBack = values[change.field] }
+  else { path = ''; submitted = {}; readBack = values }
+  const masked = containsRedacted(submitted) || containsRedacted(readBack)
+  const found = readBackMismatch({ value: submitted }, { value: readBack }, { isSecret: () => masked })
+  return found ? Object.freeze({ ...found, path }) : Object.freeze({ path, submitted: null, readBack: null })
 }
 
 /**

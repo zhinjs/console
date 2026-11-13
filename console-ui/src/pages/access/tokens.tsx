@@ -1,5 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Copy, KeyRound, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { CONSOLE_PATHS } from '../../console-routes.mjs'
 import { useI18n } from '../../i18n'
 import { PageShell } from '../../components/PageShell'
 import { PageHeader } from '../../components/PageHeader'
@@ -13,6 +15,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { StatusState } from '../../components/StatusState'
 import { ActionReceipt, useActionReceipt } from '../../components/ActionReceipt'
+import { useSaveOutcome } from '../../components/ApplyFeedback'
+import { outcomeFromAccessWrite, recordReadBack } from '../../components/apply-outcome-model.mjs'
 import { receiptBlocksActions } from '../../components/action-receipt-model.mjs'
 import { useToast } from '../../components/toast'
 import { TOKEN_EXPIRY_DAYS, tokenExpiresAt, tokenNameProblem } from '../../utils/console-auth-model.mjs'
@@ -38,11 +42,17 @@ export default function AccessTokensPage() {
   const now = Date.now()
   const when = (value: number | null) => (value ? i18n.date(value, { dateStyle: 'medium', timeStyle: 'short' }) : '—')
 
+  const saved = useSaveOutcome()
   const target = useRef<IamToken | null>(null)
   const receipt = useActionReceipt({
     submit: async () => {
       if (!target.current) throw new Error('no target')
-      await iamRequest(IAM_RPC.TOKENS_REVOKE, { id: target.current.id }, i18n.t)
+      const revoked = target.current
+      await iamRequest(IAM_RPC.TOKENS_REVOKE, { id: revoked.id }, i18n.t)
+      // Applies to the next request (the gateway looks every token up); a fresh list must not show it.
+      const list = readTokens(await iamRequest<unknown>(IAM_RPC.TOKENS_LIST, { userId: revoked.userId }, i18n.t).catch(() => null))
+      const mismatch = recordReadBack(list.find(token => token.id === revoked.id) ?? null, null)
+      return { status: 'saved', apply: outcomeFromAccessWrite(), ...(mismatch ? { mismatch } : {}) }
     },
     verify: async () => {
       const current = target.current
@@ -82,14 +92,19 @@ export default function AccessTokensPage() {
       />
       {!canManage ? <ReadOnlyNotice /> : null}
       <ActionReceipt controller={receipt} />
+      {saved.element}
       {tokens.error && !tokens.loaded ? <IamLoadError error={tokens.error} kind={tokens.errorKind} failure={tokens.failure} onRetry={tokens.refresh} /> : (
         <Card className="overflow-hidden p-0">
           {tokens.error ? <IamLoadError error={tokens.error} kind={tokens.errorKind} failure={tokens.failure} onRetry={tokens.refresh} /> : null}
           {tokens.loading && !tokens.loaded ? (
-            <div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>
+            <StatusState kind="loading" className="m-4" onRetry={tokens.refresh} placeholder={<div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>} />
           ) : !tokens.data.length ? (
             <StatusState kind="empty" title={i18n.t("没有 API 令牌")}
-              description={i18n.t("自动化脚本用 API 令牌访问 Console（环境变量 ZHIN_CONSOLE_TOKEN）。在个人设置里签发自己的令牌，或用「为用户签发」。")} />
+              description={i18n.t("自动化脚本用 API 令牌访问 Console（环境变量 ZHIN_CONSOLE_TOKEN）。在个人设置里签发自己的令牌，或用「为用户签发」。")}
+              actions={<>
+                <Button asChild size="sm" variant="outline"><Link to={CONSOLE_PATHS.account}>{i18n.t("去个人设置签发")}</Link></Button>
+                {canManage ? <Button size="sm" onClick={() => setIssuing(true)} disabled={!users.loaded}><Plus />{i18n.t("为用户签发")}</Button> : null}
+              </>} />
           ) : (
             <Table aria-label={i18n.t("API 令牌")}>
               <TableHeader>
@@ -137,7 +152,15 @@ export default function AccessTokensPage() {
       )}
       {issuing ? (
         <IssueTokenDialog users={users.data} initialUser={userFilter === ALL ? '' : userFilter} onClose={() => setIssuing(false)}
-          onIssued={value => { setIssuing(false); setIssued(value); tokens.refresh() }} />
+          onIssued={value => {
+            setIssuing(false); setIssued(value); tokens.refresh()
+            // The secret is shown once in the dialog; the read-back only checks the token is listed.
+            void saved.report(i18n.t('已为 {0} 签发令牌 {1}', [value.user, value.name]), outcomeFromAccessWrite({ secret: true }), async () => {
+              const list = readTokens(await iamRequest<unknown>(IAM_RPC.TOKENS_LIST, { userId: value.userId }, i18n.t))
+              const found = list.find(token => value.id ? token.id === value.id : token.name === value.name)
+              return recordReadBack(found ? { name: found.name, userId: found.userId } : null, { name: value.name, userId: value.userId })
+            })
+          }} />
       ) : null}
       <IssuedTokenDialog issued={issued} onClose={() => setIssued(null)} />
     </PageShell>
@@ -149,7 +172,7 @@ function IssueTokenDialog({ users, initialUser, onClose, onIssued }: {
   users: readonly IamUser[]
   initialUser: string
   onClose: () => void
-  onIssued: (value: { name: string; token: string; user: string }) => void
+  onIssued: (value: { name: string; token: string; user: string; userId: string; id?: string }) => void
 }) {
   const i18n = useI18n()
   const id = useId()
@@ -169,9 +192,10 @@ function IssueTokenDialog({ users, initialUser, onClose, onIssued }: {
     setError(null)
     try {
       const expiresAt = tokenExpiresAt(Number(days))
-      const reply = await iamRequest<{ token?: unknown; record?: { name?: unknown } }>(IAM_RPC.TOKENS_CREATE, { userId, name: name.trim(), ...(expiresAt ? { expiresAt } : {}) }, i18n.t)
+      const reply = await iamRequest<{ token?: unknown; record?: { name?: unknown; id?: unknown } }>(IAM_RPC.TOKENS_CREATE, { userId, name: name.trim(), ...(expiresAt ? { expiresAt } : {}) }, i18n.t)
       if (typeof reply?.token !== 'string' || !reply.token) throw new Error(i18n.t('Host 没有返回令牌。请在列表里确认后重新签发。'))
-      onIssued({ name: typeof reply.record?.name === 'string' ? reply.record.name : name.trim(), token: reply.token, user: users.find(user => user.id === userId)?.username ?? userId })
+      onIssued({ name: typeof reply.record?.name === 'string' ? reply.record.name : name.trim(), token: reply.token, user: users.find(user => user.id === userId)?.username ?? userId,
+        userId, ...(typeof reply.record?.id === 'string' ? { id: reply.record.id } : {}) })
     } catch (caught) {
       setError(caught)
     } finally {

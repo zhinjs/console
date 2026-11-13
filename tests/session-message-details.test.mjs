@@ -23,6 +23,7 @@ function fixture() {
     if (name === '../utils/auth') return { apiFetch: (url, options) => new Promise(resolve => calls.push({ url, options, resolve })) }
     if (name === '../contracts/zhin-console') return { CONSOLE_REST: { AGENT_SESSIONS: '/api/agent/sessions' } }
     if (name === '../components/error-alert') return { ErrorAlert: 'error-alert' }
+    if (name === '../components/StatusState') return { StatusState: 'status-state' }
     return require(name)
   }, module.exports, module)
   const props = { sessionKey: 'icqq:bot:group:room', sessionId: 'sid-1', messageId: 42, connectionScope: 'scope-a' }

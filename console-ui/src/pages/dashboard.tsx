@@ -49,6 +49,7 @@ import {
 import { fetchConsoleEventHistory, SIDE_EVENT_PUSH } from '@zhin.js/client'
 import { useConsoleConnected } from '../hooks/use-console-connected'
 import { useHostRestart } from '../hooks/use-host-restart'
+import { RestartProgress } from '../components/ApplyFeedback'
 import { getConsoleTransport } from '../utils/console-client'
 import { apiFetch } from '../utils/auth'
 import { CONSOLE_REST } from '../contracts/zhin-console'
@@ -644,7 +645,7 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="console-dashboard console-overview-page space-y-4" aria-label={i18n.t("正在加载工作台")}>
+      <StatusState kind="loading" title={i18n.t("正在加载工作台")} onRetry={refreshAll} placeholder={<div className="console-dashboard console-overview-page space-y-4">
         <Skeleton className="h-14 w-72 rounded-[var(--console-radius-md)]" />
         <div className="console-stat-grid">
           {[0, 1, 2, 3].map((index) => <Skeleton key={index} className="h-[7.25rem] rounded-[var(--console-radius-lg)]" />)}
@@ -653,7 +654,7 @@ export default function HomePage() {
           <Skeleton className="h-64 rounded-[var(--console-radius-lg)]" />
           <Skeleton className="h-64 rounded-[var(--console-radius-lg)]" />
         </div>
-      </div>
+      </div>} />
     )
   }
 
@@ -683,6 +684,7 @@ export default function HomePage() {
           ) : null}
         </>}
       />
+      <RestartProgress onRestarted={refreshAll} />
 
       <div className="console-overview-status">
         <span className={healthy ? 'console-health-pill' : 'console-health-pill is-warning'}>

@@ -84,7 +84,7 @@ export function EndpointAccessPanel({ scope, data }: { scope: Scope; data: Endpo
       </Card>
     </ObjectSection>
   )
-  if (state.kind === 'loading') return <div className="space-y-3"><Skeleton className="h-24" /><Skeleton className="h-32" /></div>
+  if (state.kind === 'loading') return <StatusState kind="loading" placeholder={<div className="space-y-3"><Skeleton className="h-24" /><Skeleton className="h-32" /></div>} />
   if (state.kind === 'failed') return <StatusState error={state.error} onRetry={data.refresh} />
   if (state.kind === 'unlisted') {
     return (

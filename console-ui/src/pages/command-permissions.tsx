@@ -132,7 +132,7 @@ export default function CommandPermissionsPage() {
         <Input aria-label={i18n.t("搜索权限命令")} placeholder={i18n.t("搜索命令或插件实例")} maxLength={200} value={query} onChange={event => setQuery(event.target.value)} className="min-w-0 flex-1" />
         <Button type="submit" disabled={denied || !active || loading}><RefreshCw className="size-4 mr-2" />{current || catalogError ? i18n.t("重新读取") : i18n.t("读取目录")}</Button>
       </form>
-      {catalogState === 'loading' && <p role="status" className="text-sm">{i18n.t("正在读取当前命令目录…")}</p>}
+      {catalogState === 'loading' && <StatusState kind="loading" compact title={i18n.t("正在读取当前命令目录…")} />}
       {catalogState === 'error' && <StatusState compact error={catalogError} title={i18n.t("命令目录读取失败")} onRetry={() => void loadCatalog()} />}
       {catalogState === 'idle' && <p className="text-sm text-muted-foreground">{i18n.t("尚未读取命令目录。")}</p>}
       {linkNotice && <Alert><AlertDescription>{linkNotice === 'ambiguous' ? i18n.t("链接中的命令对应多个插件实例，请从列表中选择。") : i18n.t("当前目录中没有找到链接中的命令，请搜索或从列表中选择。")}</AlertDescription></Alert>}
@@ -161,7 +161,7 @@ export default function CommandPermissionsPage() {
         <p className="text-xs text-muted-foreground">{i18n.t("这里的身份完全由你假设，未向平台核实。zhin 角色只来自授予；平台群主/管理员是平台身份，单独影响平台相关条件。留空表示未知，不会被当作已知角色。")}</p></div>}
       <Button disabled={checking || loading || !active || denied} onClick={() => void explain(selected, hypothesis)}>{checking ? i18n.t("读取中…") : hypothesis ? i18n.t("检查假设条件") : i18n.t("重新查看规则")}</Button>
     </CardContent></Card><Card><CardHeader><CardTitle>{i18n.t("条件说明")}</CardTitle></CardHeader><CardContent className="space-y-4">
-      {checking && <p role="status">{i18n.t("正在读取规则说明…")}</p>}
+      {checking && <StatusState kind="loading" compact title={i18n.t("正在读取规则说明…")} />}
       {visible && <><Alert><AlertDescription><strong>{permissionOutcomeLabel(visible.summary.outcome, i18n.locale)}</strong>：{visible.summary.reason}{i18n.t("。此结果不代表已授权或可执行。")}</AlertDescription></Alert>
         <p className="text-xs text-muted-foreground">Permission Host：{visible.permissionHost === 'present' ? i18n.t("当前存在") : visible.permissionHost === 'missing' ? i18n.t("当前缺失") : i18n.t("未核实")} {i18n.t(" · 运行代 ")}{visible.generation}</p>
         <div className="rounded-md border p-3 text-sm"><p className="font-medium">{i18n.t("Adapter 约束 · ")}{permissionOutcomeLabel(visible.adapter.outcome, i18n.locale)}</p><p className="mt-1 text-muted-foreground">{visible.adapter.reason}</p></div>

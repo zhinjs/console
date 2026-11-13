@@ -16,7 +16,7 @@
  */
 import { outcomeUnknown, statusFromError } from './status-state-model.mjs'
 
-export const RECEIPT_PHASES = Object.freeze(['idle', 'prepared', 'confirming', 'submitting', 'succeeded', 'partial', 'unknown', 'failed', 'verifying'])
+export const RECEIPT_PHASES = Object.freeze(['idle', 'prepared', 'confirming', 'submitting', 'succeeded', 'partial', 'mismatch', 'unknown', 'failed', 'verifying'])
 
 export const IDLE_RECEIPT = Object.freeze({ phase: 'idle' })
 
@@ -42,7 +42,7 @@ export function receiptConfirmGuarded(receipt, now = Date.now()) {
 
 /** Phases with a final answer for the action (the receipt may still verify an `unknown`). */
 export function receiptSettled(receipt) {
-  return ['succeeded', 'partial', 'unknown', 'failed'].includes(receipt?.phase)
+  return ['succeeded', 'partial', 'mismatch', 'unknown', 'failed'].includes(receipt?.phase)
 }
 
 /** Whether the submit button may be pressed: never twice, never after an unknown outcome. */
@@ -57,6 +57,10 @@ export function receiptCanSubmit(receipt) {
  * - `{ status: 'conflict' | 'invalid' | 'failed', message, reason? }` → failed (the Host did not apply it);
  *   `reason` is the page's own refusal tag (e.g. `environment-reference`) so it can react in place
  * `items` are `{ label, ok, message? }`.
+ *
+ * A succeeded write may carry `apply` (what it did to the running instance, apply-outcome-model:
+ * 已生效 / 下一条消息生效 / 需要重启 / 未生效) and `mismatch` (a fresh read differs from what was
+ * submitted, `readBackMismatch`): a mismatch is never 已完成 — the phase is `mismatch`.
  */
 export function readSubmitResult(value) {
   const record = value && typeof value === 'object' ? value : {}
@@ -70,10 +74,13 @@ export function readSubmitResult(value) {
     return { phase: 'failed', status: { kind: status === 'conflict' ? 'conflict' : 'error', message: message ?? status, ...(reason ? { reason } : {}) }, items }
   }
   if (status === 'unknown') return { phase: 'unknown', items, ...(message ? { message } : {}) }
+  const apply = record.apply && typeof record.apply === 'object' && typeof record.apply.kind === 'string' ? record.apply : undefined
+  const mismatch = record.mismatch && typeof record.mismatch === 'object' ? record.mismatch : undefined
+  if (mismatch) return { phase: 'mismatch', items, mismatch, ...(message ? { message } : {}) }
   const failedItems = items.filter(item => !item.ok)
-  if (status === 'partial' || (failedItems.length && failedItems.length < items.length)) return { phase: 'partial', items, ...(message ? { message } : {}) }
+  if (status === 'partial' || (failedItems.length && failedItems.length < items.length)) return { phase: 'partial', items, ...(message ? { message } : {}), ...(apply ? { apply } : {}) }
   if (items.length && failedItems.length === items.length) return { phase: 'failed', status: { kind: 'error', message: message ?? failedItems[0].message ?? '' }, items }
-  return { phase: 'succeeded', items, ...(message ? { message } : {}), ...(status === 'unchanged' ? { unchanged: true } : {}) }
+  return { phase: 'succeeded', items, ...(message ? { message } : {}), ...(status === 'unchanged' ? { unchanged: true } : {}), ...(apply ? { apply } : {}) }
 }
 
 /**
@@ -118,7 +125,8 @@ export function receiptReducer(receipt, event) {
       if (current.phase !== 'verifying') return current
       const applied = event.value?.applied
       const message = typeof event.value?.message === 'string' ? event.value.message : undefined
-      if (applied === true) return { plan: current.plan, phase: 'succeeded', verified: true, ...(message ? { message } : {}) }
+      const apply = event.value?.apply && typeof event.value.apply.kind === 'string' ? event.value.apply : undefined
+      if (applied === true) return { plan: current.plan, phase: 'succeeded', verified: true, ...(message ? { message } : {}), ...(apply ? { apply } : {}) }
       if (applied === false) return { plan: current.plan, phase: 'failed', verified: true, status: { kind: 'error', message: message ?? '' } }
       return { ...current, phase: 'unknown', ...(message ? { message } : {}) }
     }
@@ -145,6 +153,7 @@ export const RECEIPT_COPY = Object.freeze({
   submitting: '正在提交…',
   succeeded: '已完成',
   partial: '部分完成',
+  mismatch: '保存后读取到的值与提交的不一致',
   unknown: '结果未知',
   failed: '未执行',
   verifying: '正在核对当前状态…',

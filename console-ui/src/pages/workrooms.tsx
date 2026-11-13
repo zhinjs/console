@@ -118,10 +118,10 @@ function WorkroomBoardPage() {
       ) : null}
 
       {!loaded ? (
-        <div className="grid gap-4 xl:grid-cols-[minmax(18rem,0.7fr)_minmax(0,1.3fr)]">
+        <StatusState kind="loading" onRetry={refresh} placeholder={<div className="grid gap-4 xl:grid-cols-[minmax(18rem,0.7fr)_minmax(0,1.3fr)]">
           <Skeleton className="h-[34rem] rounded-xl" />
           <Skeleton className="h-[34rem] rounded-xl" />
-        </div>
+        </div>} />
       ) : error ? (
         <StatusState error={error} title={i18n.t("无法读取协作记录")} description={i18n.t("请检查连接，并确认当前令牌具有完整权限。")} onRetry={refresh} />
       ) : (
@@ -163,7 +163,8 @@ function WorkroomBoardPage() {
                 </ListItemButton>
               ))}
               {engagements.length === 0 ? (
-                <EmptyState compact title={i18n.t("还没有协作记录")} description={i18n.t("Agent 之间发生协作后，记录会出现在这里。")} />
+                <StatusState kind="empty" compact title={i18n.t("还没有协作记录")} description={i18n.t("Agent 之间发生协作后，记录会出现在这里。")}
+                  actions={<Button asChild size="sm" variant="outline"><Link to="/features/ai/workrooms/catalog">{i18n.t("配置 Workroom")}</Link></Button>} />
               ) : null}
             </div>
           </section>
@@ -174,11 +175,11 @@ function WorkroomBoardPage() {
             ) : detail && detail.summary.engagementId === selectedId ? (
               <EngagementDetail detail={detail} statusLabel={statusLabel} />
             ) : detailLoading ? (
-              <div className="space-y-3 p-5">
+              <StatusState kind="loading" className="m-5" placeholder={<div className="space-y-3 p-5">
                 <Skeleton className="h-20 rounded-lg" />
                 <Skeleton className="h-28 rounded-lg" />
                 <Skeleton className="h-28 rounded-lg" />
-              </div>
+              </div>} />
             ) : (
               <div className="flex min-h-[34rem] items-center justify-center p-6">
                 <EmptyState title={i18n.t("选择一条协作记录")} description={i18n.t("右侧将展示协作链路、预算消耗与共享黑板。")} />

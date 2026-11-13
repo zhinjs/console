@@ -60,7 +60,7 @@ type StatusReadState = ReturnType<typeof useConsoleRead<StatusRead | null>>
 
 function SkillsStatusSection({ read, onRetry }: { read: StatusReadState; onRetry: () => void }) {
   const i18n = useI18n()
-  if (read.loading && !read.loaded) return <Skeleton className="h-40 w-full" />
+  if (read.loading && !read.loaded) return <StatusState kind="loading" onRetry={() => { void read.refresh().catch(() => {}) }} placeholder={<Skeleton className="h-40 w-full" />} />
   if (read.error && !read.loaded) {
     return <StatusState error={read.error} description={readErrorSummary(read.error, i18n.t("技能助手状态"), i18n.locale)} onRetry={onRetry} />
   }
@@ -87,7 +87,8 @@ function SkillsStatusSection({ read, onRetry }: { read: StatusReadState; onRetry
             <p className="text-xs text-muted-foreground">{i18n.t("平均每次 ")}{row.averageTime}</p>
           </div>)}
         </div>
-        : <StatusState kind="empty" compact title={i18n.t("最近 24 小时还没有用到技能助手。")} description={i18n.t("在「AI 与模型 → 用途」给技能助手指定模型后，机器人挑技能或工具时会调用它。")} />}
+        : <StatusState kind="empty" compact title={i18n.t("最近 24 小时还没有用到技能助手。")} description={i18n.t("在「AI 与模型 → 用途」给技能助手指定模型后，机器人挑技能或工具时会调用它。")}
+          actions={<Button asChild variant="outline" size="sm"><Link to="/features/ai?tab=purposes">{i18n.t("管理模型用途")}</Link></Button>} />}
       {view.hasActivity && <div className="space-y-1">
         <h3 className="text-sm font-medium">{i18n.t("最近的记录")}</h3>
         <ul className="divide-y rounded-md border text-sm">

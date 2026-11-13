@@ -426,3 +426,18 @@ export function copyRoleName(name, roles) {
   }
   return base
 }
+
+/** A binding list as sorted `role@kind:key` strings: what a read-back compares. */
+export function bindingKeys(bindings) {
+  return bindingInputs(bindings ?? []).map(item => `${item.role}@${item.scopeKind}${item.scopeKey ? `:${item.scopeKey}` : ''}`).sort()
+}
+
+/** The fields of a re-read user that a save is checked against. */
+export function userReadBackView(user) {
+  return user ? { username: user.username, displayName: user.displayName, disabled: user.disabled, bindings: bindingKeys(user.bindings), passwordChangedAt: user.passwordChangedAt ?? null } : null
+}
+
+/** The fields of a re-read role that a save is checked against (permissions sorted). */
+export function roleReadBackView(role) {
+  return role ? { name: role.name, description: role.description ?? '', permissions: [...(role.permissions ?? [])].sort() } : null
+}

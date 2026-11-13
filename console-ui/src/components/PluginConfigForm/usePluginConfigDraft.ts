@@ -7,6 +7,8 @@ import { parseConfigDocument, configAtPath, configSourceForPlugin } from './sour
 import { getInboxCacheScope, isInboxCacheScopeActive } from '../../utils/inbox-cache'
 import { createDiagnosticRequestGate } from '../../pages/endpoint-detail/message-diagnostics.mjs'
 
+const SUPERSEDED = Symbol('superseded')
+
 export function usePluginConfigDraft(pluginName: string) {
   const i18n = useI18n()
   const messages = useRef(i18n)
@@ -20,22 +22,44 @@ export function usePluginConfigDraft(pluginName: string) {
   const reads = useRef(createDiagnosticRequestGate(getInboxCacheScope))
   const [feedbackScope, setFeedbackScope] = useState<string | undefined>(undefined)
   const loadSource = source.load
-  const load = useCallback(async () => {
-    if (!isInboxCacheScopeActive(scope)) return
+  /** Reads the file and schema again; resolves with what was read (undefined when stale or failed). */
+  const readOnce = useCallback(async (): Promise<{ config: unknown; snapshot: ConfigSource } | undefined | typeof SUPERSEDED> => {
+    if (!isInboxCacheScopeActive(scope)) return undefined
     const request = reads.current.begin()
     setFeedbackScope(scope)
     setLoading(true); setError(null); setSchemaError(null)
     try {
       const [snapshot, schemaResult] = await Promise.all([loadSource(), requestConsole<Schema | null>({ type: 'schema:get', pluginName }).then(schema => ({ schema, error: null as string | null }), cause => ({ schema: null, error: cause instanceof Error ? cause.message : messages.current.t("字段定义读取失败") }))])
-      if (!request.current() || !isInboxCacheScopeActive(scope) || snapshot.connectionScope !== scope) return
+      if (!isInboxCacheScopeActive(scope) || snapshot.connectionScope !== scope) return undefined
+      if (!request.current()) return SUPERSEDED
       const path = snapshot.configPaths?.[pluginName]
       const document = parseConfigDocument(snapshot.source, snapshot.format, messages.current.locale)
-      setEntry({ name: pluginName, config: path ? configAtPath(document, path, messages.current.locale) : undefined, schema: schemaResult.schema, snapshot })
+      const config = path ? configAtPath(document, path, messages.current.locale) : undefined
+      setEntry({ name: pluginName, config, schema: schemaResult.schema, snapshot })
       setSchemaError(schemaResult.error)
-      if (!path) setError(messages.current.t("Host 未提供此插件的正式配置路径，请刷新或打开完整源码；表单不会猜测保存位置。"))
-    } catch (cause) { if (request.current() && isInboxCacheScopeActive(scope)) setError(cause instanceof Error ? cause.message : messages.current.t("配置读取失败")) }
+      if (!path) {
+        setError(messages.current.t("Host 未提供此插件的正式配置路径，请刷新或打开完整源码；表单不会猜测保存位置。"))
+        return undefined
+      }
+      return { config, snapshot }
+    } catch (cause) {
+      // A newer read replaced this one (the source read reports it as expired): not a failure.
+      if (!request.current()) return isInboxCacheScopeActive(scope) ? SUPERSEDED : undefined
+      if (isInboxCacheScopeActive(scope)) setError(cause instanceof Error ? cause.message : messages.current.t("配置读取失败"))
+      return undefined
+    }
     finally { if (request.current() && isInboxCacheScopeActive(scope)) setLoading(false) }
   }, [pluginName, loadSource, scope])
+  // A newer read (e.g. the page refreshing after a save) supersedes this one: answer with the newer read.
+  const latestRead = useRef<Promise<unknown> | null>(null)
+  const load = useCallback(async (): Promise<{ config: unknown; snapshot: ConfigSource } | undefined> => {
+    const read = readOnce()
+    latestRead.current = read
+    const result = await read
+    if (result !== SUPERSEDED) return result
+    const newer = latestRead.current
+    return newer && newer !== read ? (await newer.then(value => value === SUPERSEDED ? undefined : value as { config: unknown; snapshot: ConfigSource } | undefined)) : undefined
+  }, [readOnce])
   useEffect(() => {
     reads.current.cancel(); setEntry(null); setError(null); setSchemaError(null); setLoading(false)
     void load(); return () => reads.current.cancel()

@@ -1,3 +1,4 @@
+import { StatusState } from '../../components/StatusState'
 import { useI18n } from '../../i18n'
 import { useState, useCallback, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -180,7 +181,8 @@ function FileManageSession() {
                   ) : tree.length === 0 && !loaded ? (
                     <EmptyState compact title={i18n.t("等待读取文件列表")} />
                   ) : tree.length === 0 ? (
-                    <EmptyState compact title={i18n.t("暂无文件")} />
+                    <StatusState kind="empty" compact className="mx-2 my-1" title={i18n.t("暂无文件")} description={i18n.t("项目目录里还没有可显示的文件。")}
+                      actions={retryTree ? <Button className="file-control" size="sm" variant="outline" onClick={retryTree}>{i18n.t("重新读取")}</Button> : undefined} />
                   ) : search ? (
                     search.matches.length === 0 ? (
                       <p className="px-3 py-4 text-sm text-muted-foreground break-all">{i18n.t("已加载的目录中没有名称包含「{0}」的文件。", [searchQuery.trim()])}</p>

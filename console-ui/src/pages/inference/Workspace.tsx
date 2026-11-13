@@ -1,3 +1,4 @@
+import { StatusState } from '../../components/StatusState'
 import { useI18n } from '../../i18n'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -112,9 +113,7 @@ export function InferenceWorkspace({ connectionScope }: { connectionScope?: stri
       {m.view ? (
         <InferencePages key={`${connectionScope}:${m.ownerId}`} management={m} connectionScope={connectionScope} />
       ) : m.busy ? (
-        <p role="status" className="text-muted-foreground">
-          {i18n.t("正在读取模型…")}
-        </p>
+        <StatusState kind="loading" compact title={i18n.t("正在读取模型…")} />
       ) : null}
       <Dialog
         open={!!importing}

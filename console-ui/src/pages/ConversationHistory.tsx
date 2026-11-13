@@ -1,3 +1,4 @@
+import { StatusState } from '../components/StatusState'
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { Button } from '../components/ui/button'
@@ -94,7 +95,7 @@ export function ConversationHistory({ sessionKey, connectionScope, connectionId,
     <div className="conversation-history-navigation">
       <Button variant="ghost" size="sm" disabled={state.loading} onClick={() => { void load('latest'); onRefresh?.() }}>{i18n.t('刷新')}</Button>
       {page?.hasMore ? <Button variant="ghost" size="sm" disabled={state.loading} onClick={() => void load('earlier')}>{state.loading ? i18n.t('加载中…') : i18n.t('加载更早记录')}</Button>
-        : state.loading ? <p role="status">{i18n.t('加载中…')}</p> : null}
+        : state.loading ? <StatusState kind="loading" compact title={i18n.t('加载中…')} /> : null}
     </div>
     {state.error ? <ErrorAlert kind={state.error.kind} error={i18n.t(state.error.message)} onRetry={() => void load(state.error!.mode)} /> : null}
     {page && !items.length ? <p className="conversation-history-empty" role="status">{i18n.t('当前记录中没有聊天消息。')}</p> : null}
