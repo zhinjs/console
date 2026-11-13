@@ -26,7 +26,7 @@ export const CONSOLE_RPC = {
 } as const
 
 /** Layered feature configuration (ADR 0050 §8 / ADR 0055). Older Hosts answer "Unknown RPC type". */
-export { FEATURE_RPC } from './console-protocol-mirror.mjs'
+export { FEATURE_RPC } from '@zhin.js/console-protocol'
 
 export const CONSOLE_REST = {
   SYSTEM_STATUS: '/api/system/status',

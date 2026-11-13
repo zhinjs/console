@@ -8,7 +8,7 @@ test('the adapter page has one 刷新: the header re-reads accounts and the embe
   const page = await src('pages/scope/adapter-page.tsx')
   assert.match(page, /const refresh = \(\) => \{ data\.refresh\(\); setManagementRefresh\(value => value \+ 1\) \}/)
   assert.match(page, /actions=\{<Button variant="outline" size="sm" onClick=\{refresh\}/)
-  assert.match(page, /<SdkAdapterPage adapterKey=\{adapter\} embedded refreshKey=\{refreshKey\} toolbar=\{toolbar\} \/>/)
+  assert.match(page, /<AdapterConsolePage adapterKey=\{adapter\} embedded refreshKey=\{refreshKey\} toolbar=\{toolbar\} \/>/)
   // The toolbar uses the Console's own button variants, never the SDK's zk-btn.
   const toolbar = page.slice(page.indexOf('const toolbar ='), page.indexOf('return (', page.indexOf('const toolbar =')))
   assert.match(toolbar, /<Button asChild variant="outline" size="sm">/)
@@ -16,21 +16,13 @@ test('the adapter page has one 刷新: the header re-reads accounts and the embe
   assert.doesNotMatch(toolbar, /zk-btn/)
 })
 
-test('capability detection: an older SDK keeps working behind the CSS wrapper', async () => {
+test('the published SDK embedded mode replaces the old header-hiding CSS', async () => {
   const page = await src('pages/scope/adapter-page.tsx')
-  assert.match(page, /capabilities\?\.embedded/)
-  assert.match(page, /data-sdk-embedded=\{SDK_ADAPTER_PAGE_EMBEDDABLE \? '' : undefined\}/)
+  assert.match(page, /import \{ AdapterConsolePage, type AdapterConsoleToolbarControls \} from '@zhin\.js\/client'/)
+  assert.doesNotMatch(page, /data-sdk-embedded|capabilities\?\./)
   const css = await src('pages/scope/scope-pages.css')
-  assert.match(css, /\.console-adapter-console:not\(\[data-sdk-embedded\]\) \.zk-page-header__identity \{ display: none; \}/)
-  assert.match(css, /\.console-adapter-console:not\(\[data-sdk-embedded\]\) \.zk-page-header \.zk-row > button\.zk-btn:not\(\.zk-btn--primary\) \{ display: none; \}/)
-})
-
-test('the installed SDK still matches what the compatibility CSS targets', async () => {
+  assert.doesNotMatch(css, /data-sdk-embedded|\.zk-page-header/)
   const sdk = await readFile(new URL('../node_modules/@zhin.js/client/dist/adapter-console/AdapterConsolePage.js', import.meta.url), 'utf8')
-  const supportsEmbedded = /capabilities/.test(sdk) && /embedded/.test(sdk)
-  if (supportsEmbedded) return // released SDK: the wrapper is inert (see report: drop it after upgrading)
-  const header = sdk.slice(sdk.indexOf('_jsx(PageHeader'), sdk.indexOf('status && _jsxs("nav"'))
-  assert.match(header, /className: "zk-btn zk-btn--secondary", children: t\(locale, '文档'\)/, '文档 is a link')
-  assert.match(header, /_jsx\(Button, \{ busy: isBusy\('refresh'\)/, '刷新 is a default (secondary) Button')
-  assert.match(header, /_jsx\(Button, \{ variant: "primary"[^}]*onClick: toggleAdd/, '添加 is the primary Button')
+  assert.match(sdk, /ADAPTER_CONSOLE_PAGE_CAPABILITIES = Object\.freeze\(\{ embedded: true, toolbar: true, refreshKey: true \}\)/)
+  assert.match(sdk, /!embedded && _jsx\(PageHeader/, 'embedded mode draws no SDK page header')
 })

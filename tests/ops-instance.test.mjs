@@ -10,20 +10,20 @@ import { ROUTE_PERMISSIONS, buildNavigation, canSeeRoute } from '../console-ui/s
 import { CONSOLE_PATHS } from '../console-ui/src/console-routes.mjs'
 import { createConsoleAccess } from '../console-ui/src/utils/console-access.mjs'
 import { translate } from '../console-ui/src/i18n/locale.mjs'
+import { GATEWAY_RPC as PROTOCOL_GATEWAY_RPC } from '@zhin.js/console-protocol'
 
 const zh = (message, values) => translate('zh-CN', message, values)
 const en = (message, values) => translate('en', message, values)
 const read = path => readFileSync(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')
 
-test('the local mirror names the gateway RPCs of ADR 0054 §4–§5', () => {
+test('the gateway model names the gateway RPCs of ADR 0054 §4–§5', () => {
   assert.deepEqual(Object.values(GATEWAY_RPC).sort(), [
     'gateway.instance.logs', 'gateway.instance.restart', 'gateway.instance.start', 'gateway.instance.status', 'gateway.instance.stop',
     'gateway.packages.install', 'gateway.packages.list', 'gateway.packages.plan', 'gateway.packages.uninstall', 'gateway.packages.update',
     'gateway.plugins.declare',
   ])
-  const mirror = read('contracts/console-protocol-mirror.mjs')
-  assert.match(read('contracts/gateway.ts'), /from '\.\/console-protocol-mirror\.mjs'/u, 'constants come from the single protocol mirror')
-  for (const name of Object.values(GATEWAY_RPC)) assert.ok(mirror.includes(`'${name}'`), name)
+  assert.match(read('contracts/gateway.ts'), /from '@zhin\.js\/console-protocol'/u, 'constants come from the protocol package')
+  for (const name of Object.values(GATEWAY_RPC)) assert.ok(Object.values(PROTOCOL_GATEWAY_RPC).includes(name), name)
   assert.deepEqual(gatewayRequestBody('gateway.instance.logs', { lines: 10 }, 7), { type: 'gateway.instance.logs', requestId: 7, data: { lines: 10 } })
   assert.deepEqual(gatewayRequestBody('gateway.instance.status', undefined, 1).data, {})
 })

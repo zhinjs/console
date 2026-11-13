@@ -59,31 +59,12 @@ a.console-scope-task:focus-visible { outline: var(--console-focus-width) solid h
 .console-login-card-link svg { width: 0.875rem; height: 0.875rem; }
 
 /*
- * SDK adapter Console page inside the adapter 概览 (连接管理). The object page owns the title and 刷新.
- * An embeddable SDK (data-sdk-embedded) draws no header and renders our toolbar. Until that SDK is
- * released, the installed one still draws its own page header: hide its title block and its 刷新 (the
- * header's non-primary <button>; 文档 is an <a>, 添加 is primary) and restyle what is left with the
- * Console's button variants (outline / default, size sm).
+ * SDK adapter Console page inside the adapter 概览 (连接管理), in the SDK's embedded mode
+ * (`zk-page--embedded`: no header, no page padding or width limit). Only the section gap follows the
+ * Console's spacing scale; the toolbar renders the Console's own buttons.
  */
-.console-adapter-console .zk-page { max-width: none; margin: 0; padding: 0; gap: var(--console-space-section); }
+.console-adapter-console .zk-page.zk-page--embedded { gap: var(--console-space-section); }
 .console-adapter-console-toolbar { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; }
-.console-adapter-console:not([data-sdk-embedded]) .zk-page-header { justify-content: flex-end; padding: 0; border: 0; }
-.console-adapter-console:not([data-sdk-embedded]) .zk-page-header__identity { display: none; }
-/* Nothing left once 刷新 is hidden (no docs link, cannot add): drop the empty header row. */
-.console-adapter-console:not([data-sdk-embedded]) .zk-page-header:not(:has(a.zk-btn, .zk-btn--primary)) { display: none; }
-.console-adapter-console:not([data-sdk-embedded]) .zk-page-header .zk-row > button.zk-btn:not(.zk-btn--primary) { display: none; }
-.console-adapter-console:not([data-sdk-embedded]) .zk-page-header .zk-btn {
-  min-height: var(--console-control-height-sm); height: var(--console-control-height-sm); padding: 0 0.75rem;
-  border-radius: var(--console-radius-md); font-size: var(--console-text-caption); font-weight: 500; box-shadow: none; filter: none;
-}
-.console-adapter-console:not([data-sdk-embedded]) .zk-page-header .zk-btn:not(.zk-btn--primary) {
-  border: var(--console-border-width, 1px) solid hsl(var(--border)); background: hsl(var(--card)); color: hsl(var(--foreground));
-}
-.console-adapter-console:not([data-sdk-embedded]) .zk-page-header .zk-btn--primary {
-  border-color: transparent; background: hsl(var(--primary-action)); color: hsl(var(--primary-action-foreground));
-}
-.console-adapter-console:not([data-sdk-embedded]) .zk-page-header .zk-btn:hover:not(:disabled) { background: hsl(var(--accent)); color: hsl(var(--accent-foreground)); }
-.console-adapter-console:not([data-sdk-embedded]) .zk-page-header .zk-btn--primary:hover:not(:disabled) { background: hsl(var(--primary-action) / 0.9); color: hsl(var(--primary-action-foreground)); }
 
 @media (max-width: 767px) {
   .console-scope-task { padding-inline: 0.75rem; }

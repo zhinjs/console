@@ -2,9 +2,9 @@
 
 /**
  * REST paths under `{apiBase}/api` (`CONSOLE_AUTH_ROUTES`) and `onboarding.update` (ADR 0053 §4),
- * from the protocol mirror.
+ * from `@zhin.js/console-protocol`.
  */
-export { CONSOLE_AUTH_ROUTES, ONBOARDING_RPC } from '../contracts/console-protocol-mirror.mjs'
+export { CONSOLE_AUTH_ROUTES, ONBOARDING_RPC } from '@zhin.js/console-protocol'
 
 export const API_PREFIX = '/api'
 

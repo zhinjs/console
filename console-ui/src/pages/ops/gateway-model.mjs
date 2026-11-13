@@ -1,14 +1,14 @@
 /**
  * Pure helpers of the 运维 → 实例 page: the gateway RPC envelope (ADR 0054 §4 / §5), status and
- * log readers, and the package transaction progress reducer. Shapes follow the provisional
- * mirror in `contracts/gateway.ts` (constants: `contracts/console-protocol-mirror.mjs`).
+ * log readers, and the package transaction progress reducer. Shapes follow the payload types in
+ * `contracts/gateway.ts` (constants: `@zhin.js/console-protocol`).
  */
 
 import { declaredDefaults, initialSchemaValue } from '../../components/PluginConfigForm/schema-model.mjs'
 
-import { GATEWAY_INSTANCE_RPC, GATEWAY_PACKAGES_RPC, GATEWAY_PLUGINS_RPC } from '../../contracts/console-protocol-mirror.mjs'
+import { GATEWAY_INSTANCE_RPC, GATEWAY_PACKAGES_RPC, GATEWAY_PLUGINS_RPC } from '@zhin.js/console-protocol'
 
-/** Gateway RPC names (protocol mirror) under the flat keys the ops pages use. */
+/** Gateway RPC names (`@zhin.js/console-protocol`) under the flat keys the ops pages use. */
 export const GATEWAY_RPC = Object.freeze({
   PACKAGES_LIST: GATEWAY_PACKAGES_RPC.LIST,
   PACKAGES_PLAN: GATEWAY_PACKAGES_RPC.PLAN,
@@ -23,7 +23,7 @@ export const GATEWAY_RPC = Object.freeze({
   PLUGINS_DECLARE: GATEWAY_PLUGINS_RPC.DECLARE,
 })
 
-export { GATEWAY_PACKAGES_PROGRESS } from '../../contracts/console-protocol-mirror.mjs'
+export { GATEWAY_PACKAGES_PROGRESS } from '@zhin.js/console-protocol'
 
 export const INSTANCE_STATES = Object.freeze(['stopped', 'starting', 'running', 'stopping', 'backoff', 'crashed'])
 

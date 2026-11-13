@@ -6,13 +6,14 @@
  */
 import { DEFAULT_INSTANCE_RETRY_SECONDS, outcomeUnknown, statusFromError } from '../components/status-state-model.mjs'
 import {
-  CONSOLE_GATEWAY_OWNED_RPC_PERMISSIONS, GATEWAY_INSTANCE_RPC, GATEWAY_RPC, IAM_RPC, ONBOARDING_RPC,
-} from '../contracts/console-protocol-mirror.mjs'
+  CONSOLE_RPC_PERMISSIONS, GATEWAY_INSTANCE_RPC, GATEWAY_RPC, IAM_RPC, ONBOARDING_RPC,
+} from '@zhin.js/console-protocol'
 
 /**
- * RPC types the gateway answers itself on `POST {base}/console/request`, from the protocol mirror:
+ * RPC types the gateway answers itself on `POST {base}/console/request`, from `@zhin.js/console-protocol`:
  * every `gateway.*` type (the gateway refuses unknown ones itself, `GATEWAY_RPC_PREFIX`), `iam.*`
- * (`IAM_RPC`) and `onboarding.update` (`gateway-console.ts` `createGatewayAccountRpc`). They work
+ * (`IAM_RPC`), `terminal.*` (`CONSOLE_RPC_PERMISSIONS`) and `onboarding.update` (`gateway-console.ts`
+ * `createGatewayAccountRpc`). They work
  * while the instance is down, so their answers say nothing about it.
  */
 const GATEWAY_RPC_PREFIX = 'gateway.'
@@ -20,7 +21,7 @@ export const GATEWAY_OWNED_RPC_TYPES = Object.freeze([...new Set([
   ...Object.values(GATEWAY_RPC),
   ...Object.values(IAM_RPC),
   ONBOARDING_RPC.UPDATE,
-  ...Object.keys(CONSOLE_GATEWAY_OWNED_RPC_PERMISSIONS),
+  ...Object.keys(CONSOLE_RPC_PERMISSIONS).filter(type => type.startsWith('terminal.')),
 ])])
 const GATEWAY_OWNED = new Set(GATEWAY_OWNED_RPC_TYPES)
 

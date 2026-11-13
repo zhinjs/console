@@ -51,7 +51,7 @@ https://console.zhin.dev/#apiBaseUrl=127.0.0.1:8086&token=<令牌>
 - 初始化令牌（`/api/system/status` 返回 403 且 `/auth/me` 报告 `bootstrap` + `setupRequired`）只打开初始化向导：第 1 步数据库（保持当前数据库，或选择驱动、填写连接、测试、保存后等待 Host 重启），第 2 步创建所有者；完成后改用所有者会话并进入 `/onboarding`。初始化令牌不会保存到「已保存的连接」，也只保留在本次浏览器会话。
 - 引导页 `/onboarding`：AI、聊天平台、完成三步，可跳过；进度优先读 Host 报告的 `onboarding`（`/auth/setup` 或 `/auth/me`），用 `onboarding.update` RPC 记录；Host 不支持时保存在本浏览器。未完成时页面顶部显示入口横幅。
 - 个人设置 `/account`（顶栏用户名进入）：修改密码（`POST /api/auth/password`，成功后换用 Host 返回的新会话），我的 API 令牌（`/api/auth/tokens` 列表 / 新建 / 吊销，明文只显示一次）。
-- 409 = 已初始化（初始化令牌失效，提示改用账号登录）；429 = 登录限速（读 `Retry-After`，期间禁用登录按钮）。接口类型在 `console-ui/src/contracts/console-auth.ts` 本地镜像，待 `@zhin.js/console-protocol` 发布后替换。
+- 409 = 已初始化（初始化令牌失效，提示改用账号登录）；429 = 登录限速（读 `Retry-After`，期间禁用登录按钮）。路由常量来自 `@zhin.js/console-protocol`（`CONSOLE_AUTH_ROUTES`）；回复类型在 `console-ui/src/contracts/console-auth.ts`（协议包不导出网关的回复形状）。
 
 Console 没有单独的演示构建：公开演示是一台真实 Host，访客用只读身份登录，看到的分区与按钮由 Host 报告的权限决定（`console-ui/src/utils/console-access.mjs`）。
 
@@ -81,11 +81,11 @@ Console 没有单独的演示构建：公开演示是一台真实 Host，访客�
 
 「技能助手」（`/features/ai/skills`）：状态来自 `pluginRpc('root', 'skills')`（Host 方法 `plugin.root.skills`，需要令牌持有 `skills:read`），页面只读统计并提供“管理模型用途”入口。管理员在 `/features/ai?tab=purposes`（“用途”页）管理六种决策用途的模式与 Profile；不再读取、猜测或写入旧的 `ai.decisions`／插件 Provider 绑定。
 
-「运维 → 实例」（zhinjs/zhin ADR 0054 §4–§5，`pages/ops/instance.tsx`）：`gateway.instance.status` / `logs`（`status.view`，每 3 秒 / 2 秒轮询可见页）、`start` / `stop` / `restart`（`ops.restart`，先确认）；依赖面板 `gateway.packages.list`（`feature.view`），安装 / 卸载 / 更新（`plugin.manage`）先调 `gateway.packages.plan` 再确认，执行时订阅事件流 `gateway.packages.progress` 显示阶段、包管理器输出与回滚结果。安装结果带 `needsConfiguration` 时（插件 Schema 有无默认值的必填字段，ADR 0053 §2 第 4 步），每个插件显示「需要配置」卡片（缺少的配置项与环境变量），按钮打开按 Schema 生成的配置表单（`pages/ops/plugin-declare.tsx`，预填 Schema 默认值；Host 无字段定义时改为 JSON），提交调用 `gateway.plugins.declare { package, instanceKey, config }`（阶段含 `configure`，失败回滚配置；400 `invalid_input` 的字段错误就地显示并保留草稿）。引导第 4 步与插件市场安装后同样进入此表单。网关 RPC 类型暂时镜像在 `contracts/gateway.ts`（TODO：协议包发布后改为导入）；Host 不认识这些 RPC 时显示「需要新版网关」。
+「运维 → 实例」（zhinjs/zhin ADR 0054 §4–§5，`pages/ops/instance.tsx`）：`gateway.instance.status` / `logs`（`status.view`，每 3 秒 / 2 秒轮询可见页）、`start` / `stop` / `restart`（`ops.restart`，先确认）；依赖面板 `gateway.packages.list`（`feature.view`），安装 / 卸载 / 更新（`plugin.manage`）先调 `gateway.packages.plan` 再确认，执行时订阅事件流 `gateway.packages.progress` 显示阶段、包管理器输出与回滚结果。安装结果带 `needsConfiguration` 时（插件 Schema 有无默认值的必填字段，ADR 0053 §2 第 4 步），每个插件显示「需要配置」卡片（缺少的配置项与环境变量），按钮打开按 Schema 生成的配置表单（`pages/ops/plugin-declare.tsx`，预填 Schema 默认值；Host 无字段定义时改为 JSON），提交调用 `gateway.plugins.declare { package, instanceKey, config }`（阶段含 `configure`，失败回滚配置；400 `invalid_input` 的字段错误就地显示并保留草稿）。引导第 4 步与插件市场安装后同样进入此表单。网关 RPC 名称与权限从 `@zhin.js/console-protocol` 导入（`contracts/gateway.ts` 重新导出，并定义回复载荷类型）；Host 不认识这些 RPC 时显示「需要新版网关」。
 
 「运维 → 终端」（ADR 0051，`pages/ops/terminal.tsx`，需要 `ops.terminal`）：`GET /api/console/terminal/targets` 选目标 → `POST /api/console/terminal/tickets` 取一次性票据 → `WS /api/console/terminal?ticket=`；xterm.js + fit 插件，多标签各一个会话，断开后显示原因（空闲超时、被吊销、终端关闭、错误）与「重新连接」。票据不写日志、不留存。`insecureHostKey: true` 的 SSH 目标显示「未校验主机密钥」警示，打开前需再次确认。
 
-「访问控制」（zhinjs/zhin ADR 0049）：四个页面都走 `iam.*` RPC（`pages/access/`），需要 `iam.view`；新建、改角色、禁用、删除、重置密码、角色增删改、吊销令牌需要 `iam.manage`，没有时页面只读。删除、禁用、吊销先确认，删除用户/角色要输入名称。Host 拒绝移除最后一个所有者（`code: last_owner`）时显示专门的提示。权限目录与 `IAM_RPC` 暂时在 `pages/access/access-model.mjs` 里镜像 `@zhin.js/console-protocol`，协议包发布后改为直接导入；插件声明的权限（`iam.roles.list` 回复里的 `pluginPermissions`）按插件分组显示，Host 没有报告时只显示内置目录。
+「访问控制」（zhinjs/zhin ADR 0049）：四个页面都走 `iam.*` RPC（`pages/access/`），需要 `iam.view`；新建、改角色、禁用、删除、重置密码、角色增删改、吊销令牌需要 `iam.manage`，没有时页面只读。删除、禁用、吊销先确认，删除用户/角色要输入名称。Host 拒绝移除最后一个所有者（`code: last_owner`）时显示专门的提示。权限目录与 `IAM_RPC` 从 `@zhin.js/console-protocol` 导入（`pages/access/access-model.mjs` 只按区域排列清单顺序）；插件声明的权限（`iam.roles.list` 回复里的 `pluginPermissions`）按插件分组显示，Host 没有报告时只显示内置目录。
 
 插件约定页没有声明分区时，按路由在 `PLUGIN_PAGE_PLACEMENT` 里归区（目前只有 `/sandbox` → 会话），其余进「功能」。
 
@@ -99,11 +99,11 @@ Console 没有单独的演示构建：公开演示是一台真实 Host，访客�
 | `client/paths.ts` | UI 路由前缀（`VITE_CONSOLE_SHELL_PATH`、旧 `/console` 前缀） |
 | `scripts/prepare-github-pages.mjs` | Pages SPA 回退与 CNAME |
 
-运行时依赖 [@zhin.js/client](https://www.npmjs.com/package/@zhin.js/client)（SDK）与 [@zhin.js/contract](https://www.npmjs.com/package/@zhin.js/contract)（契约常量/类型）。
+运行时依赖 [@zhin.js/client](https://www.npmjs.com/package/@zhin.js/client)（SDK）、[@zhin.js/contract](https://www.npmjs.com/package/@zhin.js/contract)（契约常量/类型）与 [@zhin.js/console-protocol](https://www.npmjs.com/package/@zhin.js/console-protocol)（Console RPC 名称、权限目录与网关协议常量）。
 
 ### SDK 版本
 
-只使用一代 SDK：`@zhin.js/client` 1.1.x、`@zhin.js/contract` 1.1.x、`@zhin.js/ai` 1.1.x，与 zhin 仓库 `packages/console/*` 当前发布线一致（npm 的 `latest`）。`package.json` 用 `~` 范围，因为 npm 上还有不属于这条线的 `@zhin.js/client` 2.x 和 `@zhin.js/ai` 1.5.x，`^` 会把它们装进来并在 lockfile 里产生第二份 contract / console-protocol / ai。`tests/console-contract.test.mjs` 检查这些范围，以及 lockfile 里每个包只有一个版本。
+只使用一代 SDK：`@zhin.js/client` 1.1.x、`@zhin.js/contract` 1.1.x、`@zhin.js/ai` 1.1.x、`@zhin.js/console-protocol` 1.2.x，与 zhin 仓库 `packages/console/*` 当前发布线一致（npm 的 `latest`）。`package.json` 用 `~` 范围，因为 npm 上还有不属于这条线的 `@zhin.js/client` 2.x 和 `@zhin.js/ai` 1.5.x，`^` 会把它们装进来并在 lockfile 里产生第二份 contract / console-protocol / ai。`tests/console-contract.test.mjs` 检查这些范围，以及 lockfile 里每个包只有一个版本。
 
 - 路由/工具注册表（`createConsoleApp()`）和当前 Host 会话的 `ConsoleClient` 由 `console-ui/src/utils/console-client.ts` 持有；`client/main.tsx` 用 `ConsoleClientProvider` 把它交给 SDK 的 hooks（`useConsoleTransport`、`useEnvFiles`、`useEngagements` 等）。
 - React 之外的代码用 `getConsoleTransport()`。登出、401 或更换 Host 时 `resetConsoleRuntime()` 丢弃旧 transport，路由注册表保留。

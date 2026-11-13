@@ -1,10 +1,8 @@
 /**
  * Management gateway RPC (ADR 0054 §4 / §5) and Console terminal (ADR 0051) payload types.
  *
- * Constants come from `./console-protocol-mirror.mjs`, the single hand copy of
- * `@zhin.js/console-protocol` that `scripts/check-protocol-mirror.mjs` compares with the protocol
- * source. The payload types below follow `packages/console/protocol/src/gateway.ts`; switch them to
- * the package's types once it is published. The pages tolerate a Host that does not know these RPCs
+ * Constants are re-exported from `@zhin.js/console-protocol`. The payload types below follow
+ * `packages/console/protocol/src/gateway.ts`. The pages tolerate a Host that does not know these RPCs
  * ("Unknown RPC type" / `unmapped`) and show "需要新版网关".
  *
  * Request envelope assumed for `POST {base}/console/request`:
@@ -17,8 +15,8 @@
 export {
   GATEWAY_PACKAGES_RPC, GATEWAY_INSTANCE_RPC, GATEWAY_PLUGINS_RPC, GATEWAY_RPC, GATEWAY_RPC_PERMISSIONS,
   GATEWAY_PACKAGES_PROGRESS, GATEWAY_PACKAGES_PROGRESS_PATH, GATEWAY_INSTANCE_ERROR, GATEWAY_HEALTH_PATH,
-} from './console-protocol-mirror.mjs'
-import { GATEWAY_INSTANCE_RPC, GATEWAY_PACKAGES_RPC, GATEWAY_RPC_PERMISSIONS } from './console-protocol-mirror.mjs'
+} from '@zhin.js/console-protocol'
+import { GATEWAY_INSTANCE_RPC, GATEWAY_PACKAGES_RPC, GATEWAY_RPC_PERMISSIONS } from '@zhin.js/console-protocol'
 
 /** Permissions the pages gate on (values of `GATEWAY_RPC_PERMISSIONS`). There is no `ops.instance`. */
 export const GATEWAY_PERMISSIONS = Object.freeze({

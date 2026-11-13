@@ -1,6 +1,6 @@
-import { useState, type ComponentType, type ReactNode } from 'react'
+import { useState } from 'react'
 import { BookOpen, Cable, Plus, RefreshCw, X } from 'lucide-react'
-import { AdapterConsolePage } from '@zhin.js/client'
+import { AdapterConsolePage, type AdapterConsoleToolbarControls } from '@zhin.js/client'
 import { useI18n } from '../../i18n'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
@@ -23,7 +23,7 @@ export function AdapterObjectPage({ scope }: { scope: Scope & { level: 'adapter'
   const accounts = data.endpoints.filter(endpoint => endpoint.adapter === scope.adapter)
   const online = accounts.filter(account => account.connected).length
   const platform = platformLabel(scope.adapter!)
-  // One 刷新 for the whole page: the header re-reads accounts and, with an embeddable SDK, its connection management too.
+  // One 刷新 for the whole page: the header re-reads accounts and the embedded connection management too.
   const [managementRefresh, setManagementRefresh] = useState(0)
   const refresh = () => { data.refresh(); setManagementRefresh(value => value + 1) }
   return (
@@ -45,31 +45,15 @@ export function AdapterObjectPage({ scope }: { scope: Scope & { level: 'adapter'
   )
 }
 
-/** Props of the SDK's embedded mode (`@zhin.js/client` after 1.1.31); older SDKs ignore them. */
-interface EmbeddedToolbarControls {
-  readonly docsUrl?: string
-  readonly add?: { readonly open: boolean; readonly disabled: boolean; readonly toggle: () => void; readonly controls: string }
-}
-type EmbeddableAdapterPage = typeof AdapterConsolePage & { capabilities?: { embedded?: boolean; toolbar?: boolean } }
-const SdkAdapterPage = AdapterConsolePage as unknown as ComponentType<{
-  adapterKey: string
-  embedded?: boolean
-  refreshKey?: number
-  toolbar?: (controls: EmbeddedToolbarControls) => ReactNode
-}>
-
 /**
- * Whether the installed SDK renders without its own page header (`embedded`) and hands its actions
- * to us (`toolbar`). Older SDKs draw a header with a second 刷新; for them `console-adapter-console`
- * CSS hides that header's title and 刷新 and keeps 文档 / 添加.
+ * The adapter plugin's own account management (SDK page, `@zhin.js/client` embedded mode), framed like
+ * any other section: no SDK page header; title and 刷新 belong to the object page, and 文档 / 添加
+ * render with the Console's buttons through `toolbar`.
  */
-export const SDK_ADAPTER_PAGE_EMBEDDABLE = Boolean((AdapterConsolePage as EmbeddableAdapterPage).capabilities?.embedded && (AdapterConsolePage as EmbeddableAdapterPage).capabilities?.toolbar)
-
-/** The adapter plugin's own account management (SDK page), framed like any other section; title and 刷新 belong to the object page. */
 function ConnectionManagement({ adapter, refreshKey }: { adapter: string; refreshKey: number }) {
   const i18n = useI18n()
   const access = useConsoleAccess()
-  const toolbar = ({ docsUrl, add }: EmbeddedToolbarControls) => (docsUrl || add) ? (
+  const toolbar = ({ docsUrl, add }: AdapterConsoleToolbarControls) => (docsUrl || add) ? (
     <div className="console-adapter-console-toolbar">
       {docsUrl ? <Button asChild variant="outline" size="sm"><a href={docsUrl} target="_blank" rel="noreferrer"><BookOpen />{i18n.t('文档')}</a></Button> : null}
       {add ? (
@@ -82,8 +66,8 @@ function ConnectionManagement({ adapter, refreshKey }: { adapter: string; refres
   return (
     <ObjectSection title={i18n.t('连接管理')} description={i18n.t('由适配器插件提供：添加、编辑、启停账号与登录方式。')}>
       {hasConsolePermission('endpoint.manage', access) ? (
-        <Card className="console-adapter-console p-4" data-sdk-embedded={SDK_ADAPTER_PAGE_EMBEDDABLE ? '' : undefined}>
-          <SdkAdapterPage adapterKey={adapter} embedded refreshKey={refreshKey} toolbar={toolbar} />
+        <Card className="console-adapter-console p-4">
+          <AdapterConsolePage adapterKey={adapter} embedded refreshKey={refreshKey} toolbar={toolbar} />
         </Card>
       ) : <StatusState kind="forbidden" permissions={['endpoint.manage']} description={i18n.t('当前身份不能管理账号连接。')} />}
     </ObjectSection>

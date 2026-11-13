@@ -1,9 +1,9 @@
 /**
  * Console sign-in, first-run setup and onboarding contract (zhinjs/zhin ADR 0049 §5/§7, ADR 0053 §4).
  *
- * Mirrored from `@zhin.js/console-protocol` (`CONSOLE_AUTH_ROUTES`) and the Host's
- * `packages/host/gateway/src/iam/{routes,service,setup-service}.ts`, which are not published yet.
- * Replace with the published types once `@zhin.js/console-protocol` ships them.
+ * Route constants come from `@zhin.js/console-protocol` (`CONSOLE_AUTH_ROUTES`); the reply types
+ * follow the Host's `packages/host/gateway/src/iam/{routes,service,setup-service}.ts`, which the
+ * protocol package does not export.
  * Route constants live in `utils/console-auth-model.mjs` so plain-JS models and tests share them.
  */
 export { CONSOLE_AUTH_ROUTES, ONBOARDING_RPC } from '../utils/console-auth-model.mjs'

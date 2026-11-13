@@ -13,9 +13,10 @@
     "pages:prepare": "node scripts/prepare-github-pages.mjs"
   },
   "dependencies": {
-    "@zhin.js/ai": "~1.1.54",
-    "@zhin.js/client": "~1.1.31",
-    "@zhin.js/contract": "~1.1.22",
+    "@zhin.js/ai": "~1.1.55",
+    "@zhin.js/client": "~1.1.32",
+    "@zhin.js/console-protocol": "~1.2.0",
+    "@zhin.js/contract": "~1.1.23",
     "zod": "^4.6.7"
   },
   "devDependencies": {
