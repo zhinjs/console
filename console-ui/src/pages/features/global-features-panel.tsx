@@ -88,7 +88,7 @@ function GlobalFeatureList({ switcher }: { switcher: ReactNode }) {
       <ActionReceipt controller={receipt} />
       <Card className="overflow-hidden p-0">
         {matrix.loading && !rows.length ? (
-          <div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-10" />)}</div>
+          <StatusState kind="loading" className="m-4" placeholder={<div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-10" />)}</div>} />
         ) : !rows.length ? (
           <StatusState kind="empty" compact className="m-3" title={i18n.t('还没有功能')} description={i18n.t('安装插件后，它们的功能会出现在这里。')}
             actions={<Button asChild size="sm" variant="outline"><Link to="/marketplace">{i18n.t('去插件市场')}</Link></Button>} />

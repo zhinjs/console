@@ -1,3 +1,4 @@
+import { StatusState } from '../components/StatusState'
 import { useEffect, useRef, useState } from 'react'
 import { ChevronRight, Wrench } from 'lucide-react'
 import { useI18n } from '../i18n'
@@ -64,7 +65,7 @@ export function RequestDetails({ sessionKey, turnId, requestId, connectionScope,
   const result = useTraceRead(traceQuery('request', sessionKey, turnId, requestId, conversation), connectionScope, body => readTraceRequest(body, sessionKey, turnId, requestId))
   if (!isInboxCacheScopeActive(connectionScope)) return null
   if (result.error) return <ErrorAlert error={i18n.t(result.error)} onRetry={result.retry} />
-  return result.data ? <>{result.data.usage ? <UsageSummary turns={[{ usage_calls: [result.data.usage] }]} /> : null}<RequestBody request={result.data} /></> : <p role="status" className="conversation-trace-empty">{i18n.t('加载中…')}</p>
+  return result.data ? <>{result.data.usage ? <UsageSummary turns={[{ usage_calls: [result.data.usage] }]} /> : null}<RequestBody request={result.data} /></> : <StatusState kind="loading" compact title={i18n.t('加载中…')} />
 }
 
 function TurnRequests({ detail, sessionKey, rootTurnId, connectionScope, conversation }: { detail: TraceDetail; sessionKey: string; rootTurnId: string; connectionScope?: string; conversation?: DiagnosticConversation }) {
@@ -92,7 +93,7 @@ export function TurnDetails({ turn, connectionScope, conversation }: { turn: Tra
   return <section className="conversation-turn-detail">
     <UsageSummary turns={[turn]} />
     {turn.context_budget ? <details className="conversation-turn-context"><summary>{i18n.t('上下文构成')}</summary><ContextUsage budget={turn.context_budget} /></details> : null}
-    {result.error ? <ErrorAlert error={i18n.t(result.error)} onRetry={result.retry} /> : result.data ? <TurnRequests key={result.data.turn_id} detail={result.data} sessionKey={turn.session_key} rootTurnId={turn.turn_id} connectionScope={connectionScope} conversation={conversation} /> : <p role="status" className="conversation-trace-empty">{i18n.t('加载中…')}</p>}
+    {result.error ? <ErrorAlert error={i18n.t(result.error)} onRetry={result.retry} /> : result.data ? <TurnRequests key={result.data.turn_id} detail={result.data} sessionKey={turn.session_key} rootTurnId={turn.turn_id} connectionScope={connectionScope} conversation={conversation} /> : <StatusState kind="loading" compact title={i18n.t('加载中…')} onRetry={result.retry} />}
   </section>
 }
 
@@ -104,7 +105,7 @@ export function ConversationTrace({ turns, loading, error, refresh, selectedTurn
   return <section className="conversation-traces" aria-label={i18n.t('轨迹')}>
     <div className="conversation-trace-toolbar"><span>{i18n.t('最近 {0} 个回合', [turns.length])}</span><Button variant="ghost" size="sm" onClick={refresh} disabled={loading}>{i18n.t('刷新')}</Button></div>
     {error ? <ErrorAlert error={i18n.t(error)} onRetry={refresh} /> : null}
-    {loading && !turns.length ? <p role="status" className="conversation-trace-empty">{i18n.t('加载中…')}</p> : !error && !turns.length ? <p className="conversation-trace-empty">{i18n.t('暂无可关联的轨迹')}</p> : null}
+    {loading && !turns.length ? <StatusState kind="loading" compact title={i18n.t('加载中…')} /> : !error && !turns.length ? <p className="conversation-trace-empty">{i18n.t('暂无可关联的轨迹')}</p> : null}
     {turns.map(turn => {
       const selected = selectedTurn === turn.turn_id
       const models = [...new Set(turn.usage_calls?.map(call => call.model).filter(Boolean) ?? [])]

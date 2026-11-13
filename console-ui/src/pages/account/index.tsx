@@ -183,7 +183,7 @@ function TokensSection() {
     </>}>
     <ActionReceipt controller={receipt} />
     {loadError ? <StatusState kind={loadError.code === 'database_busy' ? 'database-busy' : 'error'} description={authErrorMessage(loadError, i18n.t, 'tokens')} onRetry={() => void load()} /> : null}
-    {!tokens && loading ? <Skeleton className="h-24" /> : null}
+    {!tokens && loading ? <StatusState kind="loading" placeholder={<Skeleton className="h-24" />} /> : null}
     {tokens && tokens.length === 0 ? <StatusState kind="empty" title={i18n.t('还没有 API 令牌')} description={i18n.t('新建一个令牌后，在脚本里用它代替你的密码。')} /> : null}
     {tokens && tokens.length > 0 ? <Card className="overflow-hidden p-0"><Table aria-label={i18n.t('我的 API 令牌')}>
       <TableHeader><TableRow>

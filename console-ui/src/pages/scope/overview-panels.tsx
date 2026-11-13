@@ -33,8 +33,16 @@ function AccountStatusBadge({ endpoint, tasks }: { endpoint: ScopeEndpoint; task
   return <Badge variant={status === 'online' ? 'success' : 'outline'} size="sm" className="whitespace-nowrap">{status === 'online' ? i18n.t('在线') : i18n.t('离线')}</Badge>
 }
 
+/** Scrolls a section of this page into view and focuses its first control (an empty list's next step). */
+function revealSection(selector: string) {
+  const section = document.querySelector<HTMLElement>(selector)
+  if (!section) return
+  section.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  section.querySelector<HTMLElement>('a, button, input')?.focus({ preventScroll: true })
+}
+
 function TableSkeleton({ rows = 2 }: { rows?: number }) {
-  return <div className="space-y-2 p-4">{Array.from({ length: rows }, (_, index) => <Skeleton key={index} className="h-9" />)}</div>
+  return <StatusState kind="loading" className="m-4" placeholder={<div className="space-y-2 p-4">{Array.from({ length: rows }, (_, index) => <Skeleton key={index} className="h-9" />)}</div>} />
 }
 
 /** 「接入新平台账号」: where each platform is set up. */
@@ -43,7 +51,7 @@ function OnboardingSection({ first }: { first: boolean }) {
   const routes = useSyncExternalStore(app.subscribe, () => app.getRoutes())
   const registered = useMemo(() => new Set(routes.map(route => route.path)), [routes])
   return (
-    <ObjectSection title={i18n.t('接入新平台账号')}
+    <ObjectSection className="console-connect-platforms" title={i18n.t('接入新平台账号')}
       description={first ? i18n.t('还没有聊天账号。选择平台，在它的适配器页面添加账号、填写 Token 或扫码登录。') : i18n.t('选择平台，在它的适配器页面添加账号、填写 Token 或扫码登录。')}>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-4">
         {ONBOARDING_PLATFORMS.map(platform => {
@@ -170,7 +178,8 @@ export function GlobalOverview() {
       <ObjectSection title={i18n.t('适配器')} description={i18n.t('每个适配器一页：账号、连接管理与功能覆盖。')} actions={refresh}>
         <Card className="overflow-hidden p-0">
           {!data.loaded ? <TableSkeleton /> : !adapters.length ? (
-            <StatusState kind="empty" compact className="m-3" title={i18n.t('还没有运行中的适配器')} description={i18n.t('在下方选择平台接入第一个账号。')} />
+            <StatusState kind="empty" compact className="m-3" title={i18n.t('还没有运行中的适配器')} description={i18n.t('在下方选择平台接入第一个账号。')}
+              actions={<Button size="sm" onClick={() => revealSection('.console-connect-platforms')}><Plus />{i18n.t('接入平台')}</Button>} />
           ) : (
             <Table aria-label={i18n.t('适配器')}>
               <TableHeader>
@@ -264,7 +273,8 @@ export function AdapterOverview({ scope, data, management }: { scope: Scope; dat
         {data.error && !data.loaded ? <StatusState error={data.error} onRetry={data.refresh} /> : (
           <Card className="overflow-hidden p-0">
             {!data.loaded ? <TableSkeleton /> : accounts.length ? <AccountTable endpoints={accounts} tasks={data.tasks} showAdapter={false} label={i18n.t('聊天账号')} /> : (
-              <StatusState kind="empty" compact className="m-3" title={i18n.t('这个适配器还没有运行中的账号')} description={i18n.t('在下方的连接管理里添加账号。')} />
+              <StatusState kind="empty" compact className="m-3" title={i18n.t('这个适配器还没有运行中的账号')} description={i18n.t('在下方的连接管理里添加账号。')}
+                actions={<Button size="sm" onClick={() => revealSection('.console-connection-manager')}><Plus />{i18n.t('添加账号')}</Button>} />
             )}
           </Card>
         )}

@@ -1,3 +1,4 @@
+import { StatusState } from '../../components/StatusState'
 import { translate } from '../../i18n/locale.mjs'
 import { useI18n } from '../../i18n'
 import { useState, type RefObject } from 'react'
@@ -207,7 +208,7 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
           </header>
           <div className="console-log-stream-body">
             <div ref={endRef} />
-            {state.loading && !state.logsKnown ? <p role="status">{i18n.t("正在读取日志历史…")}</p> : state.error ? (
+            {state.loading && !state.logsKnown ? <StatusState kind="loading" compact title={i18n.t("正在读取日志历史…")} /> : state.error ? (
               <ErrorAlert error={state.error} onRetry={actions.retry} />
             ) : state.logs.length === 0 ? (
               <div className="console-log-empty"><FileText /><strong>{i18n.t("当前筛选没有日志")}</strong><p>{i18n.t("日志到达后会自动出现在此处。")}</p></div>

@@ -64,7 +64,7 @@ function ConnectionManagement({ adapter, refreshKey }: { adapter: string; refres
     </div>
   ) : null
   return (
-    <ObjectSection title={i18n.t('连接管理')} description={i18n.t('由适配器插件提供：添加、编辑、启停账号与登录方式。')}>
+    <ObjectSection className="console-connection-manager" title={i18n.t('连接管理')} description={i18n.t('由适配器插件提供：添加、编辑、启停账号与登录方式。')}>
       {hasConsolePermission('endpoint.manage', access) ? (
         <Card className="console-adapter-console p-4">
           <AdapterConsolePage adapterKey={adapter} embedded refreshKey={refreshKey} toolbar={toolbar} />

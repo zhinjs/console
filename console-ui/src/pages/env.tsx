@@ -15,6 +15,7 @@ import { OpsLoadState } from './ops/load-state'
 import { ConfirmDialog } from '../components/confirm-dialog'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
 import { Skeleton } from '../components/ui/skeleton'
+import { StatusState } from '../components/StatusState'
 import { Textarea } from '../components/ui/textarea'
 import { Input } from '../components/ui/input'
 import { createFileDraftSessions, type FileDraft } from './files/draft-session.mjs'
@@ -192,10 +193,7 @@ function EnvFileEditor({
 
   if (loading && !loaded) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-sm text-muted-foreground">{i18n.t("加载中...")}</span>
-      </div>
+      <StatusState kind="loading" compact title={i18n.t("加载中...")} onRetry={() => void loadContent()} />
     )
   }
 
@@ -253,7 +251,9 @@ function EnvFileEditor({
       {dirty ? <p className="text-xs text-muted-foreground">{i18n.t("未保存修改只在本标签页内保留；切换页面或文件可恢复，刷新前请保存。")}</p> : null}
       {loaded ? (
         <ul className="space-y-2" aria-label={i18n.t("{0} 中的变量", [filename])}>
-          {rows.length === 0 && !editor ? <li className="text-sm text-muted-foreground">{i18n.t("还没有变量")}</li> : null}
+          {rows.length === 0 && !editor ? <li><StatusState kind="empty" compact title={i18n.t("还没有变量")}
+            description={readOnly ? i18n.t("这个文件里还没有 KEY=VALUE 行。") : i18n.t("新增变量后保存，重启 Host 后生效。")}
+            actions={!readOnly ? <Button size="sm" variant="outline" disabled={!access.canEdit} onClick={() => startEdit(null)}><Plus className="w-4 h-4 mr-1" />{i18n.t("新增变量")}</Button> : undefined} /></li> : null}
           {rows.map(row => {
             const opened = editorRow(row.key)
             if (opened) return opened
@@ -353,9 +353,9 @@ export default function EnvManagePage() {
     return (
       <div className="space-y-6">
         <PageHeader title={i18n.t("环境变量")} description={i18n.t("加载文件列表…")} />
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatusState kind="loading" onRetry={handleRefresh} placeholder={<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48" />)}
-        </div>
+        </div>} />
       </div>
     )
   }

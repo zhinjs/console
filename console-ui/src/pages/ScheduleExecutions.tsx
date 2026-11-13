@@ -1,3 +1,4 @@
+import { StatusState } from '../components/StatusState'
 import { useEffect, useRef, useState } from 'react'
 import { RefreshCw, ChevronRight, Clock, Trash2 } from 'lucide-react'
 import { useI18n } from '../i18n'
@@ -70,7 +71,7 @@ function AttemptTrace({ attempt, scope }: { attempt: ExecutionAttempt; scope: st
   const read = useExecutionRead<TraceDetail>(traceQuery('turn', sessionKey, attempt.attemptId), scope,
     body => readTraceDetail(body, sessionKey, attempt.attemptId, i18n.locale), status => traceFailure(status, i18n.locale))
   if (read.error) return <ReadError error={read.error} retry={read.refresh} />
-  if (!read.data) return <p role="status">{i18n.t('正在读取诊断轨迹…')}</p>
+  if (!read.data) return <StatusState kind="loading" compact title={i18n.t('正在读取诊断轨迹…')} onRetry={read.refresh} />
   return <div className="schedule-execution-trace">
     <p>{i18n.t('终止状态：{0}', [traceStatus(read.data.termination.status, i18n.locale)])}</p>
     {read.data.termination.reason ? <p className="text-muted-foreground">{read.data.termination.reason}</p> : null}
@@ -122,7 +123,7 @@ const retryReasons: Record<string, string> = { cancelled: '任务已取消', tim
 function ExecutionDetail({ jobId, runId, scope }: { jobId: string; runId: string; scope: string }) {
   const i18n = useI18n()
   const read = useExecutionRead(executionDetailQuery(jobId, runId), scope, body => readExecutionDetail(body, jobId, runId, i18n.locale), status => executionFailure(status, i18n.locale))
-  return <>{read.error ? <ReadError error={read.error} retry={read.refresh} /> : read.data ? <><Button variant="ghost" size="sm" className="justify-self-start" onClick={read.refresh}><RefreshCw />{i18n.t('刷新记录')}</Button><ExecutionRecordContent key={runId} record={read.data} scope={scope} /></> : <p role="status">{i18n.t('正在读取执行记录…')}</p>}</>
+  return <>{read.error ? <ReadError error={read.error} retry={read.refresh} /> : read.data ? <><Button variant="ghost" size="sm" className="justify-self-start" onClick={read.refresh}><RefreshCw />{i18n.t('刷新记录')}</Button><ExecutionRecordContent key={runId} record={read.data} scope={scope} /></> : <StatusState kind="loading" compact title={i18n.t('正在读取执行记录…')} onRetry={read.refresh} />}</>
 }
 
 export function ScheduleExecutions({ jobId, label, connectionScope }: { jobId?: string; label?: string; connectionScope: string }) {
@@ -180,7 +181,7 @@ export function ScheduleExecutions({ jobId, label, connectionScope }: { jobId?: 
     {cleanupResult ? <p role="status" className="text-sm text-muted-foreground">{cleanupResult}</p> : null}
     {page && (page.recordingHealth.activeWriteFailures > 0 || page.recordingHealth.incompleteCompletedRuns > 0) ? <Alert><AlertDescription>{i18n.t('部分执行记录未完整保存。')}</AlertDescription></Alert> : null}
     {error ? <ReadError error={error} retry={() => { void load(page?.nextCursor ?? undefined) }} /> : null}
-    {loading && !page ? <p role="status">{i18n.t('正在读取执行记录…')}</p> : page && !page.runs.length ? <p className="schedule-executions-empty">{i18n.t('暂无可用执行记录。较早的执行可能未保存或已过期。')}</p> : null}
+    {loading && !page ? <StatusState kind="loading" compact title={i18n.t('正在读取执行记录…')} /> : page && !page.runs.length ? <p className="schedule-executions-empty">{i18n.t('暂无可用执行记录。较早的执行可能未保存或已过期。')}</p> : null}
     {page?.runs.length ? <ul className="schedule-executions-list">{page.runs.map(run => <li key={run.runId}><button type="button" onClick={() => { if (active()) setSelected(run) }} className="schedule-execution-row">
       <span>{jobId === undefined ? <strong>{run.label || run.jobId}</strong> : null}<time dateTime={new Date(run.queuedAt).toISOString()}>{new Date(run.queuedAt).toLocaleString(i18n.locale)}</time><span className="schedule-execution-facts">{executionStatus(run.status, i18n.locale)} · {i18n.t('{0} 次尝试', [run.attemptCount])}{run.startedAt !== undefined && run.finishedAt !== undefined ? ` · ${((run.finishedAt - run.startedAt) / 1000).toLocaleString(i18n.locale, { maximumFractionDigits: 1 })} s` : ''}</span></span>
       <span className="schedule-execution-row-end">{run.deliveryStatus ? <Badge variant={run.deliveryStatus === 'failed' ? 'destructive' : 'outline'}>{deliveryStatus(run.deliveryStatus, i18n.locale)}</Badge> : null}{run.recordingIssue ? <span>{i18n.t('记录不完整')}</span> : null}<ChevronRight aria-hidden="true" /></span>

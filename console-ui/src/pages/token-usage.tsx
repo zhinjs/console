@@ -188,7 +188,7 @@ export default function TokenUsagePage() {
       </Card>
 
       {unavailable && !stats ? <StatusState kind="empty" title={i18n.t("还没有用量数据")} description={unavailable} />
-        : loading && !stats ? <Skeleton className="h-64 w-full" />
+        : loading && !stats ? <StatusState kind="loading" onRetry={() => setRefreshTick(tick => tick + 1)} placeholder={<Skeleton className="h-64 w-full" />} />
         : error && !stats ? <StatusState error={error} onRetry={() => setRefreshTick(tick => tick + 1)} />
           : stats && view ? <>
             {error ? <ErrorAlert error={error} onRetry={() => setRefreshTick(tick => tick + 1)} /> : null}
@@ -210,7 +210,11 @@ export default function TokenUsagePage() {
             </div>
 
             <p className="console-basis-note"><strong>{i18n.t("持久统计")}</strong><span>{i18n.t("来自回合追踪文件，覆盖 {0} 至 {1}", [new Date(stats.range.since).toLocaleString(i18n.locale), new Date(stats.range.until).toLocaleString(i18n.locale)])}</span></p>
-            {empty ? <StatusState kind="empty" title={i18n.t("这段时间没有模型调用记录。")} description={i18n.t("换一个时间范围或清除会话筛选试试。")} /> : <>
+            {empty ? <StatusState kind="empty" title={i18n.t("这段时间没有模型调用记录。")} description={i18n.t("换一个时间范围或清除会话筛选试试。")}
+              actions={<>
+                {range !== '30d' ? <Button size="sm" variant="outline" onClick={() => setRange('30d')}>{i18n.t("查看最近 30 天")}</Button> : null}
+                {session ? <Button size="sm" variant="outline" onClick={() => { setSessionDraft(''); setSession('') }}>{i18n.t("清除会话筛选")}</Button> : null}
+              </>} /> : <>
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">{i18n.t("输入 tokens 随时间变化")}</CardTitle>

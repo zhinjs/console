@@ -1,3 +1,4 @@
+import { StatusState } from '../components/StatusState'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { useI18n } from '../i18n'
@@ -252,7 +253,7 @@ export function HostSelfChangeSession({ scope }: { scope?: string }) {
       {error && current && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
       {denied ? <p className="text-sm text-muted-foreground">{i18n.t('只读')}</p>
         : !current ? <p className="text-sm text-muted-foreground">{i18n.t('连接 Host 后读取自我变更')}</p>
-        : loading && !catalog ? <p role="status">{i18n.t('正在读取自我变更…')}</p>
+        : loading && !catalog ? <StatusState kind="loading" compact title={i18n.t('正在读取自我变更…')} />
         : catalog?.available === false ? <p className="text-sm text-muted-foreground">{i18n.t('当前 Agent 未启用自我变更')}</p>
         : catalog?.pending.length === 0 ? <p className="text-sm text-muted-foreground">{i18n.t('当前没有待审批的自我变更')}</p> : null}
       {current && catalog?.available && <p className="text-xs text-muted-foreground">{i18n.t('暂存区占用：{0}', [formatBytes(catalog.usageBytes)])}</p>}
@@ -309,7 +310,7 @@ function SelfChangeDetailView({ detail, loading, error, onClose }: {
       <h4 className="text-sm font-medium">{i18n.t('变更详情')}</h4>
       <Button size="sm" variant="ghost" onClick={onClose}>{i18n.t('收起')}</Button>
     </div>
-    {loading && <p role="status" className="text-xs">{i18n.t('正在读取变更详情…')}</p>}
+    {loading && <StatusState kind="loading" compact title={i18n.t('正在读取变更详情…')} />}
     {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
     {detail && <>
       {!detail.bodiesAvailable && <Alert><AlertDescription>{i18n.t('正文已按保留规则清理，无法展示 diff')}</AlertDescription></Alert>}

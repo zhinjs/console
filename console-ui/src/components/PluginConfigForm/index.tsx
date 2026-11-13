@@ -1,3 +1,4 @@
+import { StatusState } from '../StatusState'
 import { useI18n } from '../../i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -152,7 +153,7 @@ function PluginConfigFormSession({ pluginName, onSuccess, onDirtyChange, sourceR
     } catch (cause) { if (currentOperation()) setSaveError(cause instanceof Error ? cause.message : i18n.t("保存失败，草稿已保留")) }
     finally { if (currentOperation()) setSaving(false) }
   }
-  if (!form.loaded && !form.error) return <Card className="mt-4 p-4" role="status">{i18n.t("正在读取插件配置和字段定义…")}</Card>
+  if (!form.loaded && !form.error) return <StatusState kind="loading" className="mt-4" title={i18n.t("正在读取插件配置和字段定义…")} onRetry={() => void form.load()} />
   if (form.error && !form.loaded) return <Card className="mt-4 p-4 space-y-2" role="alert"><p>{i18n.t("配置读取失败。")}</p><p className="text-xs">{form.error}</p><Button variant="outline" onClick={() => void form.load()}>{i18n.t("重试读取")}</Button><Link className="text-sm underline" to="/ops/files">{i18n.t("打开文件管理")}</Link></Card>
   if (form.schemaError || !form.schema) return <Card className="mt-4 p-4 space-y-2" role="alert">
     <p>{i18n.t("配置字段定义不可用，请在文件管理中查看配置。")}</p>

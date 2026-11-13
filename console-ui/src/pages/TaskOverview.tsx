@@ -58,7 +58,7 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
 
   useEffect(() => { void load() }, [load])
 
-  if (loading && !sources) return <div className="space-y-2" aria-label={i18n.t("正在读取任务")}><Skeleton className="h-10" /><Skeleton className="h-40" /></div>
+  if (loading && !sources) return <StatusState kind="loading" title={i18n.t("正在读取任务")} placeholder={<div className="space-y-2"><Skeleton className="h-10" /><Skeleton className="h-40" /></div>} />
   const { rows, unavailable } = taskOverviewRows(sources ?? {}, i18n.locale)
   const shown = filterTaskOverview(rows, filter)
   const time = (value: number | null | undefined) => value ? new Date(value).toLocaleString(i18n.locale) : '—'

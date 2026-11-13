@@ -128,7 +128,7 @@ type StatusReadState = ReturnType<typeof useConsoleRead<StatusRead | null>>
 
 function AmbientStatusSection({ read, onRetry }: { read: StatusReadState; onRetry: () => void }) {
   const i18n = useI18n()
-  if (read.loading && !read.loaded) return <Skeleton className="h-40 w-full" />
+  if (read.loading && !read.loaded) return <StatusState kind="loading" onRetry={onRetry} placeholder={<Skeleton className="h-40 w-full" />} />
   const failure = read.error ? describeReadFailure(read.error, i18n.t("群聊插话状态"), i18n.locale) : null
   if (failure && !read.loaded && !failure.denied) return <StatusState error={read.error} description={failure.text} onRetry={onRetry} />
   if (!read.data && !failure?.denied) return null
@@ -236,7 +236,7 @@ type AmbientSaveFeedback =
 function AmbientSettingsSection({ read, onReload, currentReadEpoch, focusGroup }: { read: SettingsReadState; onReload: () => Promise<SettingsRead | null>; currentReadEpoch: () => number; focusGroup: string | null }) {
   const i18n = useI18n()
   const [lastSave, setLastSave] = useState<AmbientSaveFeedback | null>(null)
-  if (read.loading && !read.loaded) return <Skeleton className="h-56 w-full" />
+  if (read.loading && !read.loaded) return <StatusState kind="loading" onRetry={() => { void onReload().catch(() => {}) }} placeholder={<Skeleton className="h-56 w-full" />} />
   if (read.error && !read.loaded) {
     const failure = describeReadFailure(read.error, i18n.t("群聊插话设置"), i18n.locale)
     return <Card>

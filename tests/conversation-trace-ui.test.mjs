@@ -49,7 +49,7 @@ function fixture(kind='list') {
     '../utils/inbox-cache':{getInboxCacheScope:()=>authority.current(),isInboxCacheScopeActive:scope=>authority.active(scope)},
     './endpoint-detail/message-diagnostics.mjs':{createDiagnosticRequestGate,diagnosticConversationKey},
     './conversation-trace-model.mjs':model,
-    '../components/ui/button':{Button:'button'}, '../components/error-alert':{ErrorAlert:'error-alert'},
+    '../components/ui/button':{Button:'button'}, '../components/StatusState':{StatusState:'status-state'}, '../components/error-alert':{ErrorAlert:'error-alert'},
     '../components/ui/accordion':Object.fromEntries(['Accordion','AccordionContent','AccordionItem','AccordionTrigger'].map(key=>[key,key])),
     './ConversationUsage':{UsageSummary:'usage-summary',ContextUsage:'context-usage'},
   }
@@ -119,7 +119,7 @@ test('prompt sections render complete escaped text and ordered message roles, wi
   const simple=({children})=>require('react').createElement('section',null,children)
   const module=compile('ConversationTrace',{
     '../utils/auth':{},'../utils/inbox-cache':{},'./conversation-trace-model.mjs':model,
-    '../components/ui/button':{Button:simple},'../components/error-alert':{ErrorAlert:simple},'./ConversationUsage':{UsageSummary:simple,ContextUsage:simple},
+    '../components/ui/button':{Button:simple},'../components/StatusState':{StatusState:simple},'../components/error-alert':{ErrorAlert:simple},'./ConversationUsage':{UsageSummary:simple,ContextUsage:simple},
     '../components/ui/accordion':Object.fromEntries(['Accordion','AccordionContent','AccordionItem','AccordionTrigger'].map(key=>[key,simple])),
   })
   const long='  <script>danger()</script>\n'+'complete '.repeat(2000)+'END\n'
@@ -132,7 +132,7 @@ test('usage summary distinguishes total, cached and non-cached input without inv
   const simple = ({ children }) => children
   const { UsageSummary } = compile('ConversationUsage', {
     './conversation-trace-model.mjs': model,
-    '../components/ui/button': { Button: simple },
+    '../components/ui/button': { Button: simple }, '../components/StatusState': { StatusState: simple },
     '../components/ui/popover': { Popover: simple, PopoverContent: simple, PopoverTrigger: simple },
   })
   const render = calls => renderToStaticMarkup(require('react').createElement(UsageSummary, { turns: [{ usage_calls: calls }] }))

@@ -86,7 +86,8 @@ function workroomFixture(initial) {
   const finish = async (outcome) => { Object.assign(state, { loading: false }, outcome); view.render(); await view.settle() }
   return Object.assign(view, { state, finish })
 }
-const emptyTitles = tree => ofType(tree, 'empty-state').map(node => node.props.title)
+// The empty guidance is an EmptyState or a StatusState of kind "empty"; every other StatusState is an error.
+const emptyTitles = tree => [...ofType(tree, 'empty-state'), ...ofType(tree, 'status-state').filter(node => node.props.kind === 'empty')].map(node => node.props.title)
 
 test('Workroom collaboration read failure shows an error with retry, not the "no records yet" empty state', async () => {
   const f = workroomFixture()
@@ -104,7 +105,7 @@ test('Workroom collaboration read failure shows an error with retry, not the "no
 test('Workroom collaboration list that is genuinely empty shows the empty guidance without an error', async () => {
   const f = workroomFixture()
   await f.finish({ engagements: [] })
-  assert.equal(ofType(f.tree, 'status-state').length, 0)
+  assert.equal(ofType(f.tree, 'status-state').filter(node => node.props.kind !== 'empty').length, 0, 'no error state')
   assert.ok(emptyTitles(f.tree).includes('还没有协作记录'))
   f.close()
 })

@@ -1,3 +1,4 @@
+import { StatusState } from '../../components/StatusState'
 import { useI18n } from '../../i18n'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Save, Loader2, AlertCircle, CheckCircle, X, RefreshCw } from 'lucide-react'
@@ -121,10 +122,7 @@ export function FileEditor({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-sm text-muted-foreground">{i18n.t("加载中...")}</span>
-      </div>
+      <StatusState kind="loading" compact className="m-4" title={i18n.t("加载中...")} />
     )
   }
 

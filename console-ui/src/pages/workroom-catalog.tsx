@@ -34,6 +34,7 @@ import { Card, CardContent } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { SelectField } from '../components/ui/select'
 import { Skeleton } from '../components/ui/skeleton'
+import { StatusState } from '../components/StatusState'
 import { Textarea } from '../components/ui/textarea'
 import {
   catalogAvailability,
@@ -364,7 +365,7 @@ export default function WorkroomCatalogPage() {
       {notice ? <div className="rounded-lg border bg-muted/25 px-4 py-3 text-sm text-muted-foreground">{notice}</div> : null}
 
       {loading && !catalog ? (
-        <div className="space-y-3"><Skeleton className="h-24 rounded-xl" /><Skeleton className="h-96 rounded-xl" /></div>
+        <StatusState kind="loading" placeholder={<div className="space-y-3"><Skeleton className="h-24 rounded-xl" /><Skeleton className="h-96 rounded-xl" /></div>} />
       ) : catalog ? (
         <>
           <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label={i18n.t("Workroom Catalog 摘要")}>

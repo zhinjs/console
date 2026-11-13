@@ -14,6 +14,7 @@ import { Button } from '../components/ui/button'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { Input } from '../components/ui/input'
 import { Skeleton } from '../components/ui/skeleton'
+import { StatusState } from '../components/StatusState'
 import { PageHeader } from '../components/PageHeader'
 import { readErrorSummary } from '../utils/read-error.mjs'
 import {
@@ -109,9 +110,9 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
     return (
       <div className="space-y-4">
         <PageHeader title={i18n.t("配置文件")} description={i18n.t("加载配置中...")} />
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatusState kind="loading" onRetry={() => void load().catch(() => {})} placeholder={<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24" />)}
-        </div>
+        </div>} />
       </div>
     )
   }

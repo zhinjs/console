@@ -76,7 +76,7 @@ function editorFixture({ file, fresh = () => file, readOnly = false, saveFails =
     '../components/ui/card': { Card: 'card', CardContent: 'card-content', CardDescription: 'card-description', CardHeader: 'card-header', CardTitle: 'card-title' },
     '../components/PageHeader': { PageHeader: 'page-header' },
     '../components/ui/badge': { Badge: 'badge' },
-    '../components/ui/button': { Button: 'button' },
+    '../components/ui/button': { Button: 'button' }, '../components/StatusState': { StatusState: 'status-state' },
     '../components/ui/alert': { Alert: 'alert', AlertDescription: 'alert-description' },
     '../components/error-alert': { ErrorAlert: 'error-alert' }, './ops/load-state': { OpsLoadState: 'error-alert' },
     '../components/confirm-dialog': { ConfirmDialog: 'confirm-dialog', useConfirm: () => ({ confirm: async () => false, ConfirmDialog: null }) },

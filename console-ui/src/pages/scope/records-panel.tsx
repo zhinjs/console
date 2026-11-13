@@ -97,12 +97,15 @@ export function ScopeRecordsPanel({ scope }: { scope: Scope }) {
       >
         <Card className="overflow-hidden p-0">
           {sessions.status === 'loading' ? (
-            <div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-10" />)}</div>
+            <StatusState kind="loading" className="m-4" placeholder={<div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-10" />)}</div>} />
           ) : sessions.status === 'error' ? (
             <StatusState compact error={sessions.error} permissions={['status.view']} />
           ) : sessions.rows.length === 0 ? (
             <StatusState compact kind="empty" title={i18n.t('还没有聊天记录')}
-              description={i18n.t('机器人在这个范围里处理过消息后，会话会出现在这里。')} />
+              description={i18n.t('机器人在这个范围里处理过消息后，会话会出现在这里。')}
+              actions={level === 'endpoint' || level === 'conversation'
+                ? <Button asChild size="sm" variant="outline"><Link to={scopeHref(scope, 'chat')}>{i18n.t('打开聊天')}</Link></Button>
+                : <Button asChild size="sm" variant="outline"><Link to={scopeHref(scope)}>{i18n.t('查看聊天账号')}</Link></Button>} />
           ) : (
             <>
               <ul className="console-records-sessions">

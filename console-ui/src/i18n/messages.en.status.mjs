@@ -149,4 +149,18 @@ export const statusMessages = Object.freeze({
   "「实例」页": "Instance page",
   "；也可以在 Host 上运行 zhin status 与 zhin logs。": "; you can also run zhin status and zhin logs on the Host.",
   "检查到 Host 的连接：地址、路径、WebSocket、事件流、时钟与登录": "Check the connection to the Host: address, path, WebSocket, event stream, clock and sign-in",
+  // Empty lists: why empty + the next step
+  "去个人设置签发": "Issue one in personal settings",
+  "换一个关键词或状态，或清除筛选。": "Try another keyword or status, or clear the filters.",
+  "机器人在聊天里答应定时去做的事（提醒、定时汇总）会出现在这里。": "Things the bot agreed in chat to do on a schedule (reminders, digests) appear here.",
+  "打开账号与会话": "Open accounts and conversations",
+  "这个文件里还没有 KEY=VALUE 行。": "This file has no KEY=VALUE lines yet.",
+  "新增变量后保存，重启 Host 后生效。": "Add a variable and save; it applies after the Host restarts.",
+  "换一个关键词，或清除筛选。": "Try another keyword, or clear the filters.",
+  "查看全局功能": "View global features",
+  "项目目录里还没有可显示的文件。": "The project directory has no files to show yet.",
+  "接入平台": "Connect a platform",
+  "查看最近 30 天": "Show the last 30 days",
+  "清除会话筛选": "Clear the conversation filter",
+  "配置 Workroom": "Configure Workrooms",
 })

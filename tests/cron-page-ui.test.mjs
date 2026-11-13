@@ -41,7 +41,7 @@ function fixture({ readOnly = false, available = true, jobs = [], deferJobs = fa
   }
   const module = compile(source + '\nexport { PersistentRunStatus, CronPageSession };', {
     react: hooks, 'react-router-dom': { Link: 'a' }, 'lucide-react': new Proxy({}, { get: () => 'i' }),
-    '../components/ui/button': { Button: 'button' }, '../components/ui/card': { Card: 'article', CardContent: 'section' },
+    '../components/ui/button': { Button: 'button' }, '../components/StatusState': { StatusState: 'status-state' }, '../components/ui/card': { Card: 'article', CardContent: 'section' },
     '../components/ui/badge': { Badge: 'span' }, '../components/ui/alert': { Alert: 'aside', AlertDescription: 'p' },
     '../components/ui/skeleton': { Skeleton: 'div' }, '../components/ui/input': { Input: 'input' }, '../components/ui/textarea': { Textarea: 'textarea' }, '../components/ui/separator': { Separator: 'hr' }, '../components/ui/select': select,
     '../components/ui/dialog': { Dialog: 'dialog', DialogContent: 'section', DialogHeader: 'header', DialogFooter: 'footer', DialogTitle: 'h2', DialogDescription: 'p', DialogClose: 'close' },

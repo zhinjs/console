@@ -178,13 +178,13 @@ export default function AgentWorkbenchPage() {
 
   if (loading) {
     return (
-      <div className="space-y-5" aria-label={i18n.t("正在读取机器人状态")}>
+      <StatusState kind="loading" title={i18n.t("正在读取机器人状态")} placeholder={<div className="space-y-5">
         <Skeleton className="h-56 rounded-[1.6rem]" />
         <div className="grid gap-5 lg:grid-cols-[1.4fr_0.7fr]">
           <Skeleton className="h-96 rounded-[1.4rem]" />
           <Skeleton className="h-96 rounded-[1.4rem]" />
         </div>
-      </div>
+      </div>} />
     )
   }
 

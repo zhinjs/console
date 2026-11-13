@@ -99,9 +99,10 @@ export default function AccessUsersPage() {
         <Card className="overflow-hidden p-0">
           {users.error ? <IamLoadError error={users.error} kind={users.errorKind} failure={users.failure} onRetry={users.refresh} /> : null}
           {users.loading && !users.loaded ? (
-            <div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>
+            <StatusState kind="loading" className="m-4" onRetry={users.refresh} placeholder={<div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>} />
           ) : !users.data.length ? (
-            <StatusState kind="empty" title={i18n.t("还没有用户")} description={i18n.t("初始化完成后，所有者会出现在这里。用「新建用户」给同事开账号。")} />
+            <StatusState kind="empty" title={i18n.t("还没有用户")} description={i18n.t("初始化完成后，所有者会出现在这里。用「新建用户」给同事开账号。")}
+              actions={canManage ? <Button size="sm" onClick={() => setPending({ kind: 'create' })} disabled={!roles.loaded}><Plus />{i18n.t("新建用户")}</Button> : undefined} />
           ) : (
             <Table aria-label={i18n.t("用户")}>
               <TableHeader>

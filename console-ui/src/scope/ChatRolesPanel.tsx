@@ -229,9 +229,14 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
           <StatusState error={roles.error} onRetry={roles.refresh}
             {...(roles.failure.kind === 'unsupported' ? { description: i18n.t('当前 Host 还没有聊天角色（chat-roles.*），升级后可在这里管理。') } : {})} />
         ) : roles.status === 'loading' ? (
-          <div className="space-y-2">{[0, 1, 2].map(index => <Skeleton key={index} className="h-10" />)}</div>
+          <StatusState kind="loading" placeholder={<div className="space-y-2">{[0, 1, 2].map(index => <Skeleton key={index} className="h-10" />)}</div>} />
         ) : !rows.length ? (
-          <StatusState kind="empty" title={i18n.t('这一层还没有聊天角色')} description={i18n.t('在下方授予，或在聊天里用「角色 授予」命令。')} />
+          <StatusState kind="empty" title={i18n.t('这一层还没有聊天角色')} description={i18n.t('在下方授予，或在聊天里用「角色 授予」命令。')}
+            actions={<Button size="sm" variant="outline" onClick={() => {
+              const form = document.querySelector<HTMLElement>('.console-chat-role-grant')
+              form?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              form?.querySelector<HTMLElement>('input, button, [role="combobox"]')?.focus({ preventScroll: true })
+            }}>{i18n.t('授予角色')}</Button>} />
         ) : (
           <>
             <div className="console-chat-role-counts" aria-label={i18n.t('在这一层有效的角色')}>
@@ -257,7 +262,7 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
         )}
         <ActionReceipt controller={receipt} />
       </ObjectSection>
-      <ObjectSection title={i18n.t('授予角色')} description={alias ? i18n.t('身份属于适配器 {0}。', [alias]) : i18n.t('全局角色可为每个平台登记一个身份。')}>
+      <ObjectSection className="console-chat-role-grant" title={i18n.t('授予角色')} description={alias ? i18n.t('身份属于适配器 {0}。', [alias]) : i18n.t('全局角色可为每个平台登记一个身份。')}>
         <Card className="grid gap-3 p-4 sm:grid-cols-2 sm:items-end xl:grid-cols-[minmax(0,10rem)_minmax(0,1fr)_minmax(0,10rem)_auto]">
           <label className="grid gap-1 text-sm">
             <span className="text-muted-foreground">{i18n.t('适配器')}</span>

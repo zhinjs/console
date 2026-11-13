@@ -23,7 +23,7 @@ import { hasConsolePermission, scopePermissionTarget } from '../../utils/console
 import { requestConsole } from '../../utils/console-rpc'
 import { statusFromError } from '../../components/status-state-model.mjs'
 import { ObjectSection } from '../../scope/ObjectPageLayout'
-import { SCOPE_LEVEL_LABELS, scopeKey, type Scope } from '../../scope/scope-tree.mjs'
+import { SCOPE_LEVEL_LABELS, scopeHref, scopeKey, type Scope } from '../../scope/scope-tree.mjs'
 import {
   containsEnvironmentReference, featuresAtLevel, jsonSchemaToField, overrideDraftSeed, readFeatureDetail, readFeatureWriteResult, removeOverrideRequest, setEnabledRequest,
   setOverrideRequest, type FeatureDetail, type FeatureFieldRow, type FeatureLevel, type FeatureOverrideLevel, type FeatureSummary,
@@ -124,9 +124,10 @@ export function FeatureLevelPanel({ scope }: { scope: Scope }) {
       ) : null}
       {list.status === 'error' ? <StatusState error={list.error} onRetry={list.refresh} /> : null}
       {list.status === 'loading' && !list.value ? (
-        <div className="space-y-2">{[0, 1, 2].map(index => <Skeleton key={index} className="h-16" />)}</div>
+        <StatusState kind="loading" onRetry={list.refresh} placeholder={<div className="space-y-2">{[0, 1, 2].map(index => <Skeleton key={index} className="h-16" />)}</div>} />
       ) : list.value && !features.length ? (
-        <StatusState kind="empty" title={i18n.t('没有可在这一层设置的功能')} description={i18n.t('只支持全局配置的功能不会出现在这里；它们在全局「功能」页签里。')} />
+        <StatusState kind="empty" title={i18n.t('没有可在这一层设置的功能')} description={i18n.t('只支持全局配置的功能不会出现在这里；它们在全局「功能」页签里。')}
+          actions={<Button asChild size="sm" variant="outline"><Link to={scopeHref({}, 'features')}>{i18n.t('查看全局功能')}</Link></Button>} />
       ) : list.value ? (
         <>
           <div className="console-feature-toolbar">

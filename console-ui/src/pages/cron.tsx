@@ -8,6 +8,7 @@ import { Card, CardContent } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Alert, AlertDescription } from '../components/ui/alert'
 import { Skeleton } from '../components/ui/skeleton'
+import { StatusState } from '../components/StatusState'
 import { Input } from '../components/ui/input'
 import { Textarea } from '../components/ui/textarea'
 import { Separator } from '../components/ui/separator'
@@ -260,7 +261,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
       </div>
 
       <div>
-          {loading ? <div className="grid grid-cols-1 gap-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32" />)}</div> : error ? <div className="space-y-3">
+          {loading ? <StatusState kind="loading" placeholder={<div className="grid grid-cols-1 gap-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32" />)}</div>} /> : error ? <div className="space-y-3">
             <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>
             <Button variant="outline" size="sm" onClick={() => { setError(null); setLoading(true); void fetchCrons() }}><RefreshCw />{i18n.t("重试")}</Button>
           </div> : <>
@@ -289,12 +290,11 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
           <Badge variant="secondary">{visiblePersistentCrons.length}</Badge>
         </div>
         {persistentCrons.length === 0 ? (
-          <Card><CardContent className="py-8 text-center text-muted-foreground">
-            <Clock className="w-10 h-10 mx-auto mb-3 opacity-40" aria-hidden="true" />
-            <p>{i18n.t("暂无持久化定时任务")}</p>
-            <p className="text-xs mt-1">{readOnly ? i18n.t("当前身份只能查看实例中已存在的任务") : persistentAvailable ? i18n.t("点击「新建任务」添加一个定时 AI 任务") : i18n.t("启用持久化 AI 调度后可在这里管理任务")}</p>
-          </CardContent></Card>
-        ) : visiblePersistentCrons.length === 0 ? <p className="console-cron-filter-empty">{i18n.t("没有匹配的任务")}</p> : (
+          <StatusState kind="empty" title={i18n.t("暂无持久化定时任务")}
+            description={readOnly ? i18n.t("当前身份只能查看实例中已存在的任务") : persistentAvailable ? i18n.t("点击「新建任务」添加一个定时 AI 任务") : i18n.t("启用持久化 AI 调度后可在这里管理任务")}
+            actions={!readOnly && persistentAvailable ? <Button size="sm" onClick={() => setAddDialogOpen(true)}><Plus className="w-4 h-4 mr-1" />{i18n.t(" 新建任务")}</Button> : undefined} />
+        ) : visiblePersistentCrons.length === 0 ? <StatusState kind="empty" compact title={i18n.t("没有匹配的任务")} description={i18n.t("换一个关键词或状态，或清除筛选。")}
+          actions={<Button size="sm" variant="outline" onClick={() => { setSearch(''); setStatusFilter('all') }}>{i18n.t("清除筛选")}</Button>} /> : (
           <div className="console-resource-list console-schedule-list">
             {visiblePersistentCrons.map((job) => {
               const isExpanded = expandedId === job.id

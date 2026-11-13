@@ -1,5 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Copy, KeyRound, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { CONSOLE_PATHS } from '../../console-routes.mjs'
 import { useI18n } from '../../i18n'
 import { PageShell } from '../../components/PageShell'
 import { PageHeader } from '../../components/PageHeader'
@@ -86,10 +88,14 @@ export default function AccessTokensPage() {
         <Card className="overflow-hidden p-0">
           {tokens.error ? <IamLoadError error={tokens.error} kind={tokens.errorKind} failure={tokens.failure} onRetry={tokens.refresh} /> : null}
           {tokens.loading && !tokens.loaded ? (
-            <div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>
+            <StatusState kind="loading" className="m-4" onRetry={tokens.refresh} placeholder={<div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>} />
           ) : !tokens.data.length ? (
             <StatusState kind="empty" title={i18n.t("没有 API 令牌")}
-              description={i18n.t("自动化脚本用 API 令牌访问 Console（环境变量 ZHIN_CONSOLE_TOKEN）。在个人设置里签发自己的令牌，或用「为用户签发」。")} />
+              description={i18n.t("自动化脚本用 API 令牌访问 Console（环境变量 ZHIN_CONSOLE_TOKEN）。在个人设置里签发自己的令牌，或用「为用户签发」。")}
+              actions={<>
+                <Button asChild size="sm" variant="outline"><Link to={CONSOLE_PATHS.account}>{i18n.t("去个人设置签发")}</Link></Button>
+                {canManage ? <Button size="sm" onClick={() => setIssuing(true)} disabled={!users.loaded}><Plus />{i18n.t("为用户签发")}</Button> : null}
+              </>} />
           ) : (
             <Table aria-label={i18n.t("API 令牌")}>
               <TableHeader>

@@ -60,9 +60,13 @@ export default function AccessRolesPage() {
       {state.error ? <IamLoadError error={state.error} kind={state.errorKind} failure={state.failure} onRetry={state.refresh} /> : null}
       <Card className="overflow-hidden p-0">
         {state.loading && !state.loaded ? (
-          <div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>
+          <StatusState kind="loading" className="m-4" onRetry={state.refresh} placeholder={<div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>} />
         ) : !roles.length ? (
-          <StatusState kind="empty" title={i18n.t("还没有角色")} description={i18n.t("内置角色由 Host 创建。如果这里是空的，请刷新或检查 Host 版本。")} />
+          <StatusState kind="empty" title={i18n.t("还没有角色")} description={i18n.t("内置角色由 Host 创建。如果这里是空的，请刷新或检查 Host 版本。")}
+            actions={<>
+              <Button size="sm" variant="outline" onClick={() => state.refresh()}><RefreshCw />{i18n.t("刷新")}</Button>
+              {canManage ? <Button size="sm" onClick={() => setPending({ kind: 'edit', role: null, draft: { name: '', description: '', permissions: [] } })}><Plus />{i18n.t("新建角色")}</Button> : null}
+            </>} />
         ) : (
           <Table aria-label={i18n.t("角色")}>
             <TableHeader>

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Lock, RefreshCw, ToggleLeft } from 'lucide-react'
+import { Lock, RefreshCw } from 'lucide-react'
 import { useI18n } from '../../i18n'
 import { PageShell } from '../../components/PageShell'
 import { PageHeader } from '../../components/PageHeader'
@@ -9,7 +9,7 @@ import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
 import { Card } from '../../components/ui/card'
 import { Skeleton } from '../../components/ui/skeleton'
-import { EmptyState } from '../../components/empty-state'
+import { StatusState } from '../../components/StatusState'
 import { ErrorAlert } from '../../components/error-alert'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { adapterHref, featureGlobalHref } from '../../console-routes.mjs'
@@ -95,9 +95,10 @@ export default function FeatureMatrixPage({ embedded = false, heading }: {
       <ActionReceipt controller={globalSwitch.receipt} />
       <Card className="overflow-hidden p-0">
         {loading && !rows.length ? (
-          <div className="space-y-2 p-4">{[0, 1, 2, 3].map(index => <Skeleton key={index} className="h-9" />)}</div>
+          <StatusState kind="loading" className="m-4" placeholder={<div className="space-y-2 p-4">{[0, 1, 2, 3].map(index => <Skeleton key={index} className="h-9" />)}</div>} />
         ) : !rows.length ? (
-          <EmptyState icon={ToggleLeft} title={i18n.t("还没有功能")} description={i18n.t("安装插件后，它们的功能会出现在这里。")} />
+          <StatusState kind="empty" className="m-3" title={i18n.t("还没有功能")} description={i18n.t("安装插件后，它们的功能会出现在这里。")}
+            actions={<Button asChild size="sm" variant="outline"><Link to="/marketplace">{i18n.t("去插件市场")}</Link></Button>} />
         ) : (
           <Table aria-label={i18n.t("功能矩阵")}>
             <TableHeader>

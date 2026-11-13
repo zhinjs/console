@@ -1,3 +1,4 @@
+import { StatusState } from '../../components/StatusState'
 import { useI18n } from '../../i18n'
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { RefreshCw, Stethoscope } from 'lucide-react'
@@ -84,7 +85,7 @@ export function MessageDiagnosticsAction({ message, endpoint, selection }: { mes
           <div className="flex items-center justify-between gap-3"><span className="text-xs text-muted-foreground">{message ? i18n.t("按原始完整会话与平台消息 ID 查询") : i18n.t("按当前完整会话查询最近 50 条记录")}</span>
             <Button variant="outline" size="sm" disabled={loading || denied} onClick={() => void load()}><RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新")}</Button></div>
           {visible && error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-          {visible && loading && <p role="status" className="text-sm text-muted-foreground">{i18n.t("正在读取处理记录…")}</p>}
+          {visible && loading && <StatusState kind="loading" compact title={i18n.t("正在读取处理记录…")} />}
           {visible && !loading && !error && !records.length && <p role="status" className="text-sm text-muted-foreground">{i18n.t("没有找到该范围的近期记录。")}{i18n.t(DIAGNOSTIC_RETENTION)}</p>}
           {visible && records.map(record => <article key={record.id} className="rounded-lg border p-3 space-y-3 text-sm">
             <div className="flex flex-wrap items-center gap-2 font-medium"><span>{record.status === 'completed' ? i18n.t("入站处理已结束") : diagnosticLabel(record.status, i18n.locale)}</span>

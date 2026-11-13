@@ -1,3 +1,4 @@
+import { StatusState } from '../components/StatusState'
 import { useEffect, useState } from 'react'
 import { useI18n } from '../i18n'
 import { apiFetch } from '../utils/auth'
@@ -44,7 +45,7 @@ export function SessionMessageDetails({ sessionKey, sessionId, messageId, connec
       <summary className="cursor-pointer text-muted-foreground">{i18n.t('查看全文')}</summary>
       {open && <div className="mt-3">
         {error ? <ErrorAlert error={error} onRetry={() => setAttempt(value => value + 1)} />
-          : text === null ? <p role="status" className="text-muted-foreground">{i18n.t('加载中…')}</p>
+          : text === null ? <StatusState kind="loading" compact title={i18n.t('加载中…')} />
             : <p className="whitespace-pre-wrap [overflow-wrap:anywhere] leading-relaxed">{text || i18n.t('（无文字内容）')}</p>}
       </div>}
     </details>
