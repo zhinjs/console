@@ -17,6 +17,7 @@
  * 已重启并生效, or a timeout that says what to check. Pure: tests and components share it.
  */
 import { configurationRuntimeStatus } from './PluginConfigForm/config-live-status.mjs'
+import { SECRET_MASK, maskSecretText } from '../utils/secret-mask.mjs'
 import { instanceLifecycleApplied } from '../pages/ops/gateway-model.mjs'
 
 export const APPLY_OUTCOME_KINDS = Object.freeze(['applied', 'next-message', 'restart', 'failed'])
@@ -238,30 +239,56 @@ export function firstDifference(left, right, path = []) {
   return { path, submitted: a, readBack: b }
 }
 
-export const MASKED_VALUE = '••••••'
+/** The fixed-width mask a secret is shown as (the Host's mask: it never tells the length). */
+export const MASKED_VALUE = SECRET_MASK
 const ABSENT = Symbol('absent')
 
-function display(value, secret) {
+const maskSecret = value => typeof value === 'string' ? maskSecretText(value) || '""' : MASKED_VALUE
+
+/**
+ * A value under a non-secret path can still hold secrets (an object read back without one of its
+ * parents): its secret members are replaced by their masks. `hidden.any` records a replacement.
+ */
+function redactMembers(value, path, isSecretPath, hidden) {
+  if (Array.isArray(value)) return value.map((item, index) => redactMembers(item, [...path, String(index)], isSecretPath, hidden))
+  if (!isRecord(value)) return value
+  const out = {}
+  for (const key of Object.keys(value)) {
+    const memberPath = [...path, key]
+    if (value[key] !== undefined && isSecretPath(memberPath)) {
+      hidden.any = true
+      out[key] = maskSecret(value[key])
+    } else out[key] = redactMembers(value[key], memberPath, isSecretPath, hidden)
+  }
+  return out
+}
+
+function display(value, secret, path, isSecretPath, hidden) {
   if (value === undefined || value === ABSENT) return null
-  if (secret) return `${MASKED_VALUE} (${typeof value === 'string' ? value.length : canonicalJson(value).length})`
-  const text = typeof value === 'string' ? JSON.stringify(value) : canonicalJson(value)
+  // A secret follows the Host's rule: a string by its characters, anything else is the mask alone.
+  if (secret) return maskSecret(value)
+  const shown = redactMembers(value, path, isSecretPath, hidden)
+  const text = typeof shown === 'string' ? JSON.stringify(shown) : canonicalJson(shown)
   return text.length > 200 ? `${text.slice(0, 197)}...` : text
 }
 
 /**
  * Compares what was submitted with what a fresh read returned. Equal → null. Otherwise
  * `{ path, submitted, readBack }` with display text (null = absent); a value on a secret-looking path
- * (`isSecret(path)` or a key name like `token`, `password`) is masked, keeping only its length.
+ * (`isSecret(path)` or a key name like `token`, `password`) is masked by the Host's rule, never with
+ * its length, and so is every secret member of a value shown under a non-secret path.
  */
 export function readBackMismatch(submitted, readBack, { isSecret } = {}) {
   const found = firstDifference(submitted, readBack)
   if (!found) return null
-  const secret = found.path.some(secretLikeKey) || (typeof isSecret === 'function' && isSecret(found.path) === true)
+  const isSecretPath = path => path.some(secretLikeKey) || (typeof isSecret === 'function' && isSecret(path) === true)
+  const secret = isSecretPath(found.path)
+  const hidden = { any: false }
   return Object.freeze({
     path: found.path.join('.'),
-    submitted: display(found.submitted, secret),
-    readBack: display(found.readBack, secret),
-    ...(secret ? { masked: true } : {}),
+    submitted: display(found.submitted, secret, found.path, isSecretPath, hidden),
+    readBack: display(found.readBack, secret, found.path, isSecretPath, hidden),
+    ...(secret || hidden.any ? { masked: true } : {}),
   })
 }
 

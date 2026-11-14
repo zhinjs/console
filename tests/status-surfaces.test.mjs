@@ -100,9 +100,9 @@ test('a read-back is compared by value: key order and dropped undefined members 
   assert.deepEqual(readBackMismatch({ name: 'bot' }, {}), { path: 'name', submitted: '"bot"', readBack: null })
 })
 
-test('a mismatch never shows a secret: secret-looking keys and schema secrets keep only their length', () => {
+test('a mismatch never shows a secret: secret-looking keys and schema secrets show the Host mask only', () => {
   const byName = readBackMismatch({ endpoint: { token: 'abcdef' } }, { endpoint: { token: 'xyz' } })
-  assert.deepEqual(byName, { path: 'endpoint.token', submitted: `${MASKED_VALUE} (6)`, readBack: `${MASKED_VALUE} (3)`, masked: true })
+  assert.deepEqual(byName, { path: 'endpoint.token', submitted: MASKED_VALUE, readBack: MASKED_VALUE, masked: true })
   const schema = { type: 'object', object: { account: { type: 'object', object: { cookie: { type: 'string' }, appSecretValue: { type: 'string', secret: true } } } } }
   assert.equal(schemaSecretAt(schema, ['account', 'appSecretValue']), true)
   assert.equal(schemaSecretAt(schema, ['account', 'name']), false)
@@ -511,4 +511,28 @@ test('every access-control, personal, schedule and chat-role save point reports 
     for (const pattern of patterns) assert.match(source, pattern, `${path}: ${pattern}`)
     assert.doesNotMatch(source, /toast\.success\(/u, `${path} no longer ends a save with a toast`)
   }
+})
+
+test('config secrets in a read-back hint follow the Host mask and never expose their length', () => {
+  assert.equal(MASKED_VALUE, '●'.repeat(8))
+  // Short secrets of any length look the same; long ones keep two characters at each end.
+  const shown = length => readBackMismatch({ bot: { token: 'x'.repeat(length) } }, { bot: { token: 'y' } }).submitted
+  assert.deepEqual([1, 2, 6, 15].map(shown), Array(4).fill(MASKED_VALUE))
+  assert.equal(shown(16), `xx${MASKED_VALUE}xx`)
+  assert.equal(shown(16), shown(900), 'the mask has a fixed width')
+  const long = readBackMismatch({ api_key: 'sk-fake-0123456789abcdef' }, { api_key: 'sk-fake-other-value-9876' })
+  assert.deepEqual(long, { path: 'api_key', submitted: `sk${MASKED_VALUE}ef`, readBack: `sk${MASKED_VALUE}76`, masked: true })
+  for (const mismatch of [long, readBackMismatch({ password: 'abc' }, { password: 'abcdefgh' })]) {
+    assert.doesNotMatch(JSON.stringify(mismatch), /\(\d+\)|\d+ ?(?:chars|字符)/, 'no length anywhere')
+  }
+  // Non-string secrets are the mask alone; an empty secret only shows that it is empty.
+  assert.equal(readBackMismatch({ secret: { a: 1 } }, { secret: [1, 2, 3] }).readBack, MASKED_VALUE)
+  assert.equal(readBackMismatch({ token: '' }, { token: 'x' }).submitted, '""')
+  // A secret inside an object shown under a non-secret path (its parent was not read back) is masked too.
+  const parent = readBackMismatch({ bot: { name: 'n', token: 'fake-bot-token-0123456789' } }, {})
+  assert.deepEqual(parent, { path: 'bot', submitted: `{"name":"n","token":"fa${MASKED_VALUE}89"}`, readBack: null, masked: true })
+  const bySchema = readBackMismatch({ account: { appSecretValue: 'abc', id: 1 } }, {}, { isSecret: path => path.join('.') === 'account.appSecretValue' })
+  assert.deepEqual(bySchema, { path: 'account', submitted: `{"appSecretValue":"${MASKED_VALUE}","id":1}`, readBack: null, masked: true })
+  // Non-secret values are shown as before.
+  assert.deepEqual(readBackMismatch({ name: 'bot-name-longer-than-16' }, { name: 'x' }), { path: 'name', submitted: '"bot-name-longer-than-16"', readBack: '"x"' })
 })

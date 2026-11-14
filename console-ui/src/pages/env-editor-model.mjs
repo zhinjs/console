@@ -1,25 +1,19 @@
 import { readBackMismatch, secretLikeKey } from '../components/apply-outcome-model.mjs'
+import { SECRET_MASK, SECRET_MASK_CHAR, SECRET_MASK_REVEAL_MIN_LENGTH, SECRET_MASK_RUN, maskSecretText } from '../utils/secret-mask.mjs'
 const secretName = /PASSWORD|SECRET|TOKEN|KEY|PRIVATE|CREDENTIAL/i
-// ---- Masking: the Host's rule (`@zhin.js/console-protocol` `maskConsoleEnvValue`, zhinjs/zhin#1250) ----
-// Every masked value is built here, so the Console never shows more than the Host would: values
-// shorter than ENV_MASK_REVEAL_MIN_LENGTH characters become the mask alone, longer ones keep their
-// first and last two characters around it. The mask has a fixed width, so it never tells the length.
+// ---- Masking: the Host's rule (`../utils/secret-mask.mjs`, zhinjs/zhin#1250) ----
+// Every masked value is built with it, so the Console never shows more than the Host would.
 // Values are masked as dotenv reads them (quotes, inline comments and surrounding spaces removed).
 
-/** One masked character. A run of ENV_MASK_RUN of them stands for the hidden part. */
-export const ENV_MASK_CHAR = '●'
-export const ENV_MASK_RUN = 8
+/** One masked character; a run of ENV_MASK_RUN of them stands for the hidden part. */
+export const ENV_MASK_CHAR = SECRET_MASK_CHAR
+export const ENV_MASK_RUN = SECRET_MASK_RUN
 /** Values shorter than this are masked completely; longer ones show their first and last two characters. */
-export const ENV_MASK_REVEAL_MIN_LENGTH = 16
-const MASK_RUN = ENV_MASK_CHAR.repeat(ENV_MASK_RUN)
+export const ENV_MASK_REVEAL_MIN_LENGTH = SECRET_MASK_REVEAL_MIN_LENGTH
+const MASK_RUN = SECRET_MASK
 
 /** The Host's mask of a value as the process reads it: `''`, the mask alone, or 2 + mask + 2 characters. */
-export function maskEnvValueAsRead(value) {
-  const chars = Array.from(String(value ?? ''))
-  if (chars.length === 0) return ''
-  if (chars.length < ENV_MASK_REVEAL_MIN_LENGTH) return MASK_RUN
-  return `${chars.slice(0, 2).join('')}${MASK_RUN}${chars.slice(-2).join('')}`
-}
+export const maskEnvValueAsRead = maskSecretText
 
 // dotenv 17's own line pattern (`lib/main.js` `LINE`), as the Host's gateway scans `.env` with it.
 const DOTENV_LINE = /(?:^|^)\s*(?:export\s+)?([\w.-]+)(?:\s*=\s*?|:\s+?)(\s*'(?:\\'|[^'])*'|\s*"(?:\\"|[^"])*"|\s*`(?:\\`|[^`])*`|[^#\r\n]+)?\s*(?:#.*)?(?:$|$)/mg
