@@ -121,7 +121,11 @@ const taskProviders = { generation: 1, providers: [{ owner: 'root/reminder', pac
     { id: 'task-1', ownership: 'administrator', title: '周会提醒', target, state: 'scheduled', createdAt: now - 86_400_000, nextRunAt: now + 5 * HOUR, timezone: 'Asia/Shanghai', parameters: { text: '10 点周会' }, actions: ['pause', 'cancel', 'update'] },
     { id: 'task-2', ownership: 'administrator', title: '发布检查', target: { ...target, kind: 'private', id: '10001' }, state: 'failed', createdAt: now - 2 * 86_400_000, lastRunAt: now - 3 * HOUR, detail: '目标会话不可达', parameters: { text: '检查发布' }, actions: ['cancel'] },
   ] }] }
-const scheduleList = { memory: [{ type: 'memory', id: 'heartbeat', description: '心跳检测', expression: '0 */5 * * * *', running: true, nextExecution: now + 4 * 60_000, plugin: 'heartbeat' }],
+const scheduleList = { memory: [{ type: 'memory', id: 'heartbeat', kind: 'user-task', description: '心跳检测', expression: '0 */5 * * * *', running: true, nextExecution: now + 4 * 60_000, plugin: 'heartbeat' },
+    // A plugin's own housekeeping (zhinjs/zhin#1250): kind, localized title, last run.
+    { type: 'memory', id: 'rss/poll_feeds', kind: 'plugin-internal', title: '轮询 RSS 订阅', titleI18n: { en: 'Poll RSS feeds' }, displayName: '轮询 RSS 订阅', description: 'Poll RSS subscriptions', expression: '*/20 * * * * *', running: true, nextExecution: now + 12_000, plugin: 'root/rss', lastExecutedAt: now - 8_000, lastStatus: 'succeeded' },
+    { type: 'memory', id: 'blackjack/cleanup', kind: 'plugin-internal', title: '清理超时的 21 点牌局', displayName: '清理超时的 21 点牌局', description: 'Abort stale blackjack sessions', expression: '*/10 * * * * *', running: true, nextExecution: now + 6_000, plugin: 'root/blackjack', lastExecutedAt: now - 4_000, lastStatus: 'succeeded' },
+    { type: 'memory', id: 'bilibili/poll', kind: 'plugin-internal', title: 'B 站动态轮询', displayName: 'B 站动态轮询', expression: '*/30 * * * * *', running: true, nextExecution: now + 20_000, plugin: 'root/bilibili', lastExecutedAt: now - 10_000, lastStatus: 'failed', lastError: 'HTTP 412 风控' }],
   persistent: [{ type: 'persistent', id: 'job-daily', cronExpression: '0 0 9 * * *', prompt: '总结昨天的群聊要点', label: '每日群聊摘要', enabled: true, nextExecution: now + 14 * HOUR, lastStatus: 'ok', lastExecutedAt: now - 10 * HOUR }],
   capabilities: { persistent: true } }
 const assistantJobs = { eventsActive: true, jobs: [{ id: 'job-daily', label: '每日群聊摘要', enabled: true, state: { lastStatus: 'ok', nextRunAtMs: now + 14 * HOUR } }, { id: 'job-watch', label: '错误巡检', enabled: true, state: { lastStatus: 'error', lastError: 'timeout', nextRunAtMs: now + HOUR } }] }
@@ -340,7 +344,12 @@ const instanceLogs = () => ({ lines: [
   { seq: 1, time: Date.now() - 60_000, stream: 'stdout', line: '[gateway] 实例已启动 (pid 4242)' },
   { seq: 2, time: Date.now() - 50_000, stream: 'stdout', line: '[icqq] preview-community 已上线' },
   { seq: 3, time: Date.now() - 30_000, stream: 'stderr', line: '[telegram] preview-support 连接失败：缺少 TELEGRAM_TOKEN' },
-  ...(instanceOffline ? [{ seq: 4, time: Date.now() - 90_000, stream: 'stderr', line: "Error: Cannot find module 'icqq'" }] : []),
+  // The logger's own colours and clock time, as a real instance prints them (zhinjs/zhin#1250).
+  { seq: 4, time: Date.now() - 20_000, stream: 'stdout', line: '\u001b[90m[13:33:58.147]\u001b[39m \u001b[34m[INFO]\u001b[39m \u001b[90m[root/rss]\u001b[39m 轮询 3 个订阅源，\u001b[1m2\u001b[22m 条新内容' },
+  { seq: 5, time: Date.now() - 15_000, stream: 'stdout', line: '\u001b[90m[13:34:02.611]\u001b[39m \u001b[33m[WARN]\u001b[39m \u001b[90m[icqq]\u001b[39m preview-community 心跳延迟 \u001b[33m1.8s\u001b[39m' },
+  { seq: 6, time: Date.now() - 10_000, stream: 'stderr', line: '\u001b[90m[13:34:05.002]\u001b[39m \u001b[31m[ERROR]\u001b[39m \u001b[90m[root/code-runner]\u001b[39m API 请求失败: \u001b[31m404 Not Found\u001b[39m' },
+  { seq: 7, time: Date.now() - 5_000, stream: 'stdout', line: '[90m[13:34:09.420][39m[32m[INFO][39m[90m[gateway][39m 已写入 .zhin/gateway.sock（转义字节被管道去掉的形式）' },
+  ...(instanceOffline ? [{ seq: 8, time: Date.now() - 90_000, stream: 'stderr', line: "Error: Cannot find module 'icqq'" }] : []),
 ] })
 const meReport = () => setupMode
   ? { kind: 'bootstrap', open: false, permissions: [], bindings: [], setupRequired: true }
@@ -401,6 +410,55 @@ async function gatewayOwned(url, request, json, readBody) {
   return false
 }
 
+// ---- Plugin pages for the navigation (UI_PREVIEW_PLUGIN_PAGES=1, zhinjs/zhin#1250 console-nav-ia) ----
+const pluginPagesMode = process.env.UI_PREVIEW_PLUGIN_PAGES === '1'
+const PREVIEW_PLUGIN_PAGES = [
+  { id: 'rss', owner: 'rss', route: '/rss', title: 'RSS 订阅', en: 'RSS feeds', icon: 'Rss', order: 20 },
+  { id: 'calendar', owner: 'calendar', route: '/calendar', title: '日历', en: 'Calendar', icon: 'Calendar', order: 21 },
+  { id: 'lottery', owner: 'lottery', route: '/lottery', title: '彩票', en: 'Lottery', icon: 'Ticket', order: 22 },
+  { id: 'qrcode', owner: 'qrcode', route: '/qrcode', title: '二维码', en: 'QR codes', icon: 'QrCode', order: 23 },
+  { id: 'short-url', owner: 'short-url', route: '/short-url', title: '短链', en: 'Short links', icon: 'Link', order: 24 },
+  // Adapter pages: the same connection management 会话 → 账号与会话 embeds.
+  { id: 'adapter-icqq', owner: 'adapter-icqq', route: '/icqq', title: 'ICQQ', en: 'ICQQ', icon: 'MessageCircle', order: 64, adapter: 'icqq' },
+  { id: 'adapter-github', owner: 'adapter-github', route: '/github', title: 'GitHub', en: 'GitHub', icon: 'Github', order: 63, adapter: 'github' },
+]
+function pluginPageModule(page) {
+  const meta = JSON.stringify({ title: page.title, titleI18n: { en: page.en }, icon: page.icon, order: page.order })
+  return page.adapter
+    ? `export const meta = ${meta};\nexport default { kind: 'zhin.console.adapter-page', adapterKey: ${JSON.stringify(page.adapter)} };\n`
+    : `export const meta = ${meta};\nexport default function PreviewPluginPage() { return ${JSON.stringify(`${page.title}（本地预览插件页）`)} }\n`
+}
+
+// ---- AI 与模型 (/api/agent/inference): three services, ~35 models, Agent-bound profiles ----
+const INFERENCE_OWNER = 'host-owner:v1:ui-preview'
+const INFERENCE_ROOT = '/ui-preview/inference'
+const inferenceResource = (id, extra) => ({ id, rootId: INFERENCE_ROOT, ownerId: INFERENCE_OWNER, revision: 1, ...extra })
+const INFERENCE_SERVICES = [
+  ['night', 'Night Router', ['gemini-3.8-flash', 'gemini-3.8-pro', 'gemini-3.5-flash-lite', 'claude-sonnet-5', 'claude-haiku-5', 'gpt-5.5', 'gpt-5.5-mini', 'llama-5-70b', 'qwen-4-max', 'qwen-4-plus', 'kimi-k3', 'glm-5', 'mistral-large-3', 'grok-5']],
+  ['deepseek', 'DeepSeek', ['deepseek-v4', 'deepseek-v4-flash', 'deepseek-r3', 'deepseek-coder-3', 'deepseek-v4-lite', 'deepseek-vl-3']],
+  ['openai', 'OpenAI', ['gpt-5.5', 'gpt-5.5-mini', 'gpt-5.5-nano', 'o5', 'o5-mini', 'gpt-image-2', 'gpt-5.5-realtime', 'gpt-5-chat', 'o4-mini', 'gpt-4.2']],
+]
+function inferenceView() {
+  const services = {}, accounts = {}, profiles = {}, statuses = {}
+  for (const [id, label, models] of INFERENCE_SERVICES) {
+    services[id] = inferenceResource(id, { label, driver: { id: 'openai-compatible', owner: 'root', contractVersion: '1' }, options: {},
+      models: Object.fromEntries(models.map(model => [model, { id: model, protocol: 'chat', kinds: model.includes('image') ? ['image'] : ['language', 'decision'] }])) })
+    accounts[`${id}-main`] = inferenceResource(`${id}-main`, { serviceId: id, label: `${label} 主账号`, incarnation: 'i1', authentication: { method: 'api-key' } })
+    statuses[`${id}-main`] = { status: 'ready', revision: 1 }
+    for (const model of models) profiles[`${id}:${model}`] = inferenceResource(`${id}:${model}`, { accountId: `${id}-main`, model, parameters: {} })
+  }
+  profiles['agent:planner'] = inferenceResource('agent:planner', { accountId: 'deepseek-main', model: 'deepseek-v4-flash', label: '子 Agent · 小编 planner · DeepSeek Flash', parameters: {} })
+  profiles['agent:main'] = inferenceResource('agent:main', { accountId: 'night-main', model: 'gemini-3.8-flash', label: '主 Agent · Night Router · gemini-3.8-flash', parameters: {} })
+  return {
+    rootId: INFERENCE_ROOT, revision: 1, ownerId: INFERENCE_OWNER, hostAdministrator: true, services, accounts, profiles, statuses, deployment: [],
+    drivers: [{ id: 'openai-compatible', owner: 'root', contractVersion: '1', label: 'OpenAI 兼容', authentication: ['api-key'], modelContracts: [{ protocol: 'chat', kinds: ['language', 'decision', 'image'] }] }],
+    purposes: { defaults: { chat: 'night:gemini-3.8-flash', summary: 'deepseek:deepseek-v4-flash', image: 'openai:gpt-image-2' },
+      decisions: { skills: { mode: 'active', profile: 'deepseek:deepseek-v4-flash' } }, agents: { main: 'agent:main', planner: 'agent:planner' } },
+  }
+}
+const inferenceTargets = { agentsAvailable: true, agents: [{ name: 'main', nickname: '主 Agent' }, { name: 'planner', nickname: '小编 planner' }],
+  adaptersAvailable: true, adapters: [{ capabilityId: 'adapter:icqq', platform: 'icqq' }], endpoints: [], scenesAvailable: false, scenes: [], sceneHasMore: false }
+
 const server = createServer(async (request, response) => {
   const origin = request.headers.origin
   if (origin && origins.has(origin)) {
@@ -417,6 +475,13 @@ const server = createServer(async (request, response) => {
   }
   // Stand-in captcha helper page (its own origin when opened as http://localhost:<port>).
   if (url.pathname === '/login-assist/tcaptcha.html') { response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }); response.end(captchaHelperPage()); return }
+  // Plugin page modules (UI_PREVIEW_PLUGIN_PAGES=1): imported without the Console token, like a Host's assets.
+  if (url.pathname.startsWith('/preview-pages/')) {
+    const page = PREVIEW_PLUGIN_PAGES.find(item => `/preview-pages/${item.id}.js` === url.pathname)
+    if (!page) { json({ success: false, error: 'Not found' }, 404); return }
+    response.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-store' })
+    response.end(pluginPageModule(page)); return
+  }
   // `/auth/me` is public on the gateway: an unknown credential reads as `anonymous`.
   if (url.pathname === '/api/auth/me' && request.headers.authorization !== 'Bearer ui-preview') {
     json(envelope({ kind: 'anonymous', permissions: [], bindings: [], setupRequired: setupMode })); return
@@ -450,7 +515,16 @@ const server = createServer(async (request, response) => {
     attachLoginEvents(response, request)
     request.on('close', () => clearInterval(heartbeat)); return
   }
-  if (url.pathname === '/entries') { json([]); return }
+  if (url.pathname === '/entries') {
+    json(pluginPagesMode ? { entries: PREVIEW_PLUGIN_PAGES.map(page => ({ id: page.id, owner: page.owner, route: page.route, resolvedModule: `/preview-pages/${page.id}.js` })) } : []); return
+  }
+  if (url.pathname.startsWith('/api/agent/inference')) {
+    const sub = url.pathname.slice('/api/agent/inference'.length)
+    if (sub === '/owners') { json(envelope([{ id: INFERENCE_OWNER, label: 'Host', kind: 'host' }])); return }
+    if (sub === '/targets') { json(envelope(inferenceTargets)); return }
+    if (sub === '') { json(envelope(inferenceView())); return }
+    json({ success: false, code: 'invalid_input', error: '本地预览不执行此操作。' }, 400); return
+  }
   if (url.pathname === '/api/system/status') {
     json(envelope({ uptime: 3812, platform: 'darwin', nodeVersion: 'v24.19.0', memory: { rss: 64_000_000, heapTotal: 32_000_000, heapUsed: 24_000_000, external: 0 }, cpu: { user: 0, system: 0 }, scope: 'full' })); return
   }

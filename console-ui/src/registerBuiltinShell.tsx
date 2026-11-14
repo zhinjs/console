@@ -47,6 +47,12 @@ let builtinPagesRegistered = false
 /**
  * Builtin pages in the ADR 0052 sections. `meta.group` is the section label; the order
  * inside a section follows `meta.order`.
+ *
+ * Width: every page sits in the content column (`--console-content-max`, 1440px). Only
+ * workspaces whose panes split the screen opt out with `meta.fullWidth` and fill the canvas
+ * between the same page gutters: 运行日志, the account / conversation workspace (member
+ * column from 1440px), Workroom boards, 消息场景试验台, 数据库 and 终端. Tables and lists
+ * (功能矩阵, 运行时能力, 审计日志) stay in the column (zhinjs/zhin#1250).
  */
 export function registerBuiltinConsolePages() {
   if (builtinPagesRegistered) return
@@ -84,7 +90,7 @@ export function registerBuiltinConsolePages() {
   app.addRoute({ path: P.agentSessions, name: '聊天记录', parent: null, icon: 'GitBranch', element: <AgentSessionsPage />, meta: { group: NAV_GROUPS.WORK, order: 2 } })
 
   // 功能 — 机器人能做什么、在哪里做？
-  app.addRoute({ path: P.features, name: '功能矩阵', parent: null, icon: 'ToggleLeft', element: <FeatureMatrixPage />, meta: { group: NAV_GROUPS.FEATURES, order: 0, fullWidth: true } })
+  app.addRoute({ path: P.features, name: '功能矩阵', parent: null, icon: 'ToggleLeft', element: <FeatureMatrixPage />, meta: { group: NAV_GROUPS.FEATURES, order: 0 } })
   app.addRoute({ path: P.featureGlobal, name: '全局配置', parent: P.features, element: <GlobalFeatureConfigPage />, meta: { group: NAV_GROUPS.FEATURES, hideInMenu: true } })
   app.addRoute({ path: P.ai, name: 'AI 与模型', parent: null, icon: 'KeyRound', element: <PersonalModelsPage />, meta: { group: NAV_GROUPS.FEATURES, order: 2 } })
   app.addRoute({
@@ -114,7 +120,7 @@ export function registerBuiltinConsolePages() {
     element: <WorkroomCatalogPage />,
     meta: { group: NAV_GROUPS.FEATURES, order: 5, fullWidth: true, hideInMenu: true },
   })
-  app.addRoute({ path: P.introspection, name: '运行时能力', parent: null, icon: 'Blocks', element: <IntrospectionPage />, meta: { group: NAV_GROUPS.FEATURES, order: 6, fullWidth: true } })
+  app.addRoute({ path: P.introspection, name: '运行时能力', parent: null, icon: 'Blocks', element: <IntrospectionPage />, meta: { group: NAV_GROUPS.FEATURES, order: 6 } })
   app.addRoute({ path: P.permissions, name: '命令权限说明', parent: P.introspection, icon: 'Shield', element: <CommandPermissionsPage />, meta: { group: NAV_GROUPS.FEATURES, order: 6, hideInMenu: true } })
   app.addRoute({ path: P.scenarioLab, name: '消息场景试验台', parent: null, icon: 'FlaskConical', element: <ScenarioLabPage />, meta: { group: NAV_GROUPS.FEATURES, order: 7, fullWidth: true } })
   app.addRoute({ path: P.groupWelcome, name: '群欢迎配置流程', parent: P.features, element: <WelcomeUseCasePage />, meta: { hideInMenu: true, group: NAV_GROUPS.FEATURES } })
@@ -137,9 +143,9 @@ export function registerBuiltinConsolePages() {
 
   // 访问控制 — 谁能做什么？（ADR 0049）
   app.addRoute({ path: P.accessUsers, name: '用户', parent: null, icon: 'Users', element: <AccessUsersPage />, meta: { group: NAV_GROUPS.ACCESS, order: 0 } })
-  app.addRoute({ path: P.accessRoles, name: '角色', parent: null, icon: 'Shield', element: <AccessRolesPage />, meta: { group: NAV_GROUPS.ACCESS, order: 1 } })
+  app.addRoute({ path: P.accessRoles, name: 'Console 角色', parent: null, icon: 'Shield', element: <AccessRolesPage />, meta: { group: NAV_GROUPS.ACCESS, order: 1 } })
   app.addRoute({ path: P.accessTokens, name: 'API 令牌', parent: null, icon: 'KeyRound', element: <AccessTokensPage />, meta: { group: NAV_GROUPS.ACCESS, order: 2 } })
-  app.addRoute({ path: P.accessAudit, name: '审计日志', parent: null, icon: 'Activity', element: <AccessAuditPage />, meta: { group: NAV_GROUPS.ACCESS, order: 3, fullWidth: true } })
+  app.addRoute({ path: P.accessAudit, name: '审计日志', parent: null, icon: 'Activity', element: <AccessAuditPage />, meta: { group: NAV_GROUPS.ACCESS, order: 3 } })
 
   // 个人：引导（ADR 0053）与个人设置（ADR 0049），不在菜单里，从横幅与顶栏进入。
   app.addRoute({ path: P.onboarding, name: '开始使用', parent: null, icon: 'Rocket', element: <OnboardingPage />, meta: { group: NAV_GROUPS.OVERVIEW, hideInMenu: true } })

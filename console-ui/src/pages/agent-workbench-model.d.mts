@@ -6,3 +6,15 @@ export function fetchAllIntrospection<T>(
   fetchPage: (page: number, pageSize: number) => Promise<IntrospectionEnvelope<T>>,
   options?: { pageSize?: number; maxPages?: number },
 ): Promise<{ note?: string; items: T[]; total: number; truncated: boolean }>;
+export interface BindingModelSource {
+  provider?: string
+  model?: string
+  effective?: { provider?: string; serviceLabel?: string; model?: string; modelLabel?: string; profileLabel?: string } | null
+}
+export function bindingModel(binding: BindingModelSource | null | undefined): { provider: string; model: string; source: 'effective' | 'configured' | 'default' }
+export interface RecentAgentSession { key: string; label: string; turns: number | null; lastAt: number | null; source: 'local' | 'trace' }
+export function recentAgentSessions(
+  localKeys: readonly string[],
+  traceSessions: ReadonlyArray<{ sessionKey: string; turns?: number; lastAt?: number; label?: string; displayName?: string; name?: string }> | null | undefined,
+  limit?: number,
+): RecentAgentSession[]

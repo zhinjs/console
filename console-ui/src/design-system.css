@@ -548,8 +548,6 @@
 
   .console-dashboard {
     width: 100%;
-    max-width: 92rem;
-    margin: 0 auto;
   }
 
   .console-health-pill {

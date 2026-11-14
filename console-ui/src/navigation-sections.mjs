@@ -110,8 +110,34 @@ export function canSeeRoute(route, access = UNRESTRICTED_ACCESS) {
 const order = route => route?.meta?.order ?? 999
 
 /**
+ * Menu groups inside the 功能 section (zhinjs/zhin#1250 `console-nav-ia`): the Console's own pages
+ * first (核心), then pages contributed by plugins (插件页面, routes marked `meta.pluginPage`).
+ */
+export const NAV_MENU_GROUPS = Object.freeze([
+  Object.freeze({ id: 'core', label: '核心' }),
+  Object.freeze({ id: 'plugin', label: '插件页面' }),
+])
+
+/** Only the section where plugin pages land by default is split; elsewhere a plugin page reads like any other. */
+const GROUPED_SECTION_IDS = new Set([DEFAULT_SECTION_ID])
+
+export function isPluginPageRoute(route) {
+  return route?.meta?.pluginPage === true
+}
+
+function menuGroups(sectionId, routes) {
+  if (!GROUPED_SECTION_IDS.has(sectionId)) return [{ ...NAV_MENU_GROUPS[0], routes }]
+  const core = routes.filter(route => !isPluginPageRoute(route))
+  const plugin = routes.filter(isPluginPageRoute)
+  if (!core.length || !plugin.length) return [{ ...NAV_MENU_GROUPS[core.length ? 0 : 1], routes }]
+  return [{ ...NAV_MENU_GROUPS[0], routes: core }, { ...NAV_MENU_GROUPS[1], routes: plugin }]
+}
+
+/**
  * Sidebar model: tiers -> non-empty sections -> visible menu routes in order.
  * A section with no visible page is omitted, and so is a tier with no section.
+ * `routes` keeps the flat order (核心 before 插件页面); `groups` splits the 功能 section into
+ * those two groups when it has both, and is a single group everywhere else.
  */
 export function buildNavigation(routes, access = UNRESTRICTED_ACCESS) {
   const grouped = new Map(NAV_SECTIONS.map(section => [section.id, []]))
@@ -122,6 +148,9 @@ export function buildNavigation(routes, access = UNRESTRICTED_ACCESS) {
   return NAV_TIERS.map(tier => ({
     ...tier,
     sections: NAV_SECTIONS.filter(section => section.tier === tier.id && grouped.get(section.id).length)
-      .map(section => ({ ...section, routes: [...grouped.get(section.id)].sort((a, b) => order(a) - order(b)) })),
+      .map(section => {
+        const groups = menuGroups(section.id, [...grouped.get(section.id)].sort((a, b) => order(a) - order(b)))
+        return { ...section, routes: groups.flatMap(group => group.routes), groups }
+      }),
   })).filter(tier => tier.sections.length)
 }

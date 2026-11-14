@@ -29,8 +29,15 @@ test('schedules combine memory timers and persistent reminders, counting both ki
   assert.deepEqual(summarizeSchedules({
     memory: [{ running: true }, { running: false }],
     persistent: [{ enabled: true }, { enabled: false }, { enabled: true }],
-  }), { total: 5, persistent: 3, paused: 2 })
-  assert.deepEqual(summarizeSchedules({}), { total: 0, persistent: 0, paused: 0 })
+  }), { total: 5, persistent: 3, paused: 2, internal: 0 })
+  assert.deepEqual(summarizeSchedules({}), { total: 0, persistent: 0, paused: 0, internal: 0 })
+})
+
+test('a plugin\'s internal housekeeping is not counted as a reminder (zhinjs/zhin#1250)', () => {
+  assert.deepEqual(summarizeSchedules({
+    memory: [{ running: true, kind: 'plugin-internal' }, { running: false, kind: 'plugin-internal' }, { running: true }],
+    persistent: [{ enabled: true }],
+  }), { total: 2, persistent: 1, paused: 0, internal: 2 })
 })
 
 test('assistant jobs report enabled and failing jobs from their last run', () => {

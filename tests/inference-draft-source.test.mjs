@@ -31,7 +31,7 @@ async function fixture(page, options = {}) {
     'lucide-react': { Plus: 'icon', Pencil: 'icon', Trash2: 'icon', RefreshCw: 'icon', KeyRound: 'icon', LogIn: 'icon', Unplug: 'icon', Download: 'icon', Upload: 'icon' },
     '../../i18n': localeModule,
     '../../components/ui/button': { Button: 'button' }, '../../components/StatusState': { StatusState: 'status-state' }, '../../components/ui/input': { Input: 'input' },
-    '../../components/ui/select': { SelectField: 'select' }, '../../components/ui/card': { Card: 'card' },
+    '../../components/ui/select': { SelectField: 'select' }, '../../components/ui/searchable-select': { SearchableSelectField: 'select' }, '../../components/ui/card': { Card: 'card' },
     '../../components/ui/dialog': { Dialog, DialogContent: 'content', DialogHeader: 'header', DialogTitle: 'title', DialogDescription: 'description' },
     '../../components/error-alert': { ErrorAlert: 'error' },
     '../../components/confirm-dialog': { useConfirm: () => ({ ConfirmDialog: null, confirm: () => new Promise(resolve => confirms.push(resolve)) }) },

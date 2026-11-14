@@ -59,8 +59,8 @@ export default function AccessRolesPage() {
   return (
     <PageShell>
       <PageHeader
-        title={i18n.t("角色")}
-        description={i18n.t("角色是一组权限。内置角色只读，可以复制后修改；自定义角色删除时，绑定到它的用户会失去这些权限。")}
+        title={i18n.t("Console 角色")}
+        description={i18n.t("Console 角色是一组 Console 权限，决定谁能在 Console 里看和改什么。内置角色只读，可以复制后修改；自定义角色删除时，绑定到它的用户会失去这些权限。机器人在聊天里的权限是「聊天角色」，在账号与会话里设置。")}
         actions={<>
           <Button variant="outline" size="sm" onClick={state.refresh} disabled={state.loading}><RefreshCw className={state.loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
           {canManage ? <Button size="sm" onClick={() => setPending({ kind: 'edit', role: null, draft: { name: '', description: '', permissions: [] } })}><Plus />{i18n.t("新建角色")}</Button> : null}

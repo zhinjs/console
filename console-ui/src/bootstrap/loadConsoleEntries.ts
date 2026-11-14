@@ -13,7 +13,7 @@ import type { PluginRegisterHostApi } from '@zhin.js/contract'
 import { app } from '../utils/console-client'
 import { createHostRegistration } from './host-registration.mjs'
 import { getApiBase, getToken } from '../utils/auth'
-import { placePluginRoute } from '../navigation-taxonomy'
+import { markPluginRoute, placePluginRoute } from '../navigation-taxonomy'
 import { withSandboxConversationDetails } from './sandbox-conversation-details'
 
 const g = globalThis as unknown as {
@@ -91,7 +91,8 @@ async function doLoadConsoleEntries(options?: LoadConsoleEntriesOptions, locale:
     addRoute: (input) => {
       if (!session.active()) return
       const route = input as Parameters<typeof app.addRoute>[0]
-      const placed = withSandboxConversationDetails(placePluginRoute(route, declaredSections.get(route.path)))
+      const adapterPage = React.isValidElement(route.element) && route.element.type === AdapterConsolePage
+      const placed = withSandboxConversationDetails(markPluginRoute(placePluginRoute(route, declaredSections.get(route.path)), { adapterPage }))
       if (requestedApi) requestedApi.addRoute(placed as Parameters<typeof requestedApi.addRoute>[0])
       else session.addRoute(placed)
     },

@@ -120,12 +120,16 @@ function isLoopback(hostname) {
   return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]' || hostname === '::1' || hostname.endsWith('.localhost')
 }
 
-/** `mixed`: an https page calling an http, non-loopback Host is blocked by the browser. */
+/**
+ * `mixed`: an https page calling an http, non-loopback Host is blocked by the browser. A loopback
+ * Host (localhost / 127.0.0.1 / ::1) is a secure context the browser allows: it passes, and the
+ * detail line notes that another machine would need HTTPS (zhinjs/zhin#1250).
+ */
 export function checkMixedContent(pageProtocol, apiBase) {
   const api = urlOf(apiBase)
   if (!api) return result('mixed', 'skip')
   if (pageProtocol === 'https:' && api.protocol === 'http:') {
-    return isLoopback(api.hostname) ? result('mixed', 'warn', 'loopback-http') : result('mixed', 'fail', 'blocked-by-mixed', [api.origin])
+    return isLoopback(api.hostname) ? result('mixed', 'pass', 'loopback-http') : result('mixed', 'fail', 'blocked-by-mixed', [api.origin])
   }
   return result('mixed', 'pass', 'mixed-ok', [pageProtocol.replace(':', ''), api.protocol.replace(':', '')])
 }

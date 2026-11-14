@@ -188,3 +188,10 @@
   }
 
 }
+
+/* Plugin housekeeping schedules, folded under the plugin schedules (zhinjs/zhin#1250). */
+.console-cron-internal { margin-top: 0.75rem; border: var(--console-border-width) solid hsl(var(--border)); border-radius: var(--console-radius-md); background: hsl(var(--card)); }
+.console-cron-internal > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.75rem 1rem; font-weight: 600; }
+.console-cron-internal-hint { color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); font-weight: 400; }
+.console-cron-internal[open] > summary { border-bottom: var(--console-border-width) solid hsl(var(--border)); }
+.console-cron-internal > .console-resource-list { padding: 0.75rem; }

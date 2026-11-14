@@ -11,7 +11,7 @@ import { getSidebarLucideIcon } from "../components/sidebarMenuIcons"
 import { UserMenu } from "../components/UserMenu"
 import { Button } from "../components/ui/button"
 import { ScrollArea } from "../components/ui/scroll-area"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "../components/ui/dropdown-menu"
 import { signOut } from "../utils/console-auth-api"
 import { principalLabel } from "../utils/console-auth-model.mjs"
 import { useConsoleSession } from "../hooks/use-console-session"
@@ -166,18 +166,24 @@ export default function DashboardLayout() {
                     <ChevronDown aria-hidden="true" className="console-topnav-chevron" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" sideOffset={10} className="console-topnav-menu">
-                  {section.routes.map((route, index) => {
-                    const isActive = route.path === activePath
-                    return (
-                      <DropdownMenuItem key={route.path || `menu-item-${section.id}-${index}`} asChild>
-                        <Link to={route.path} aria-current={isActive ? "page" : undefined} className={cn("console-topnav-menu-item", isActive && "is-active")}>
-                          <span className="console-topnav-menu-icon"><NavIcon icon={route.icon} /></span>
-                          <span className="min-w-0 truncate">{routeLabel(route, i18n.locale)}</span>
-                        </Link>
-                      </DropdownMenuItem>
-                    )
-                  })}
+                <DropdownMenuContent align="start" sideOffset={10} className={cn("console-topnav-menu", section.groups.length > 1 && "is-grouped")}>
+                  {section.groups.map((group) => (
+                    // 功能 splits into 核心 and 插件页面 (two columns); other sections are one unlabeled group.
+                    <DropdownMenuGroup key={group.id} className="console-topnav-menu-group" data-group={group.id}>
+                      {section.groups.length > 1 ? <DropdownMenuLabel className="console-topnav-menu-label">{i18n.t(group.label)}</DropdownMenuLabel> : null}
+                      {group.routes.map((route, index) => {
+                        const isActive = route.path === activePath
+                        return (
+                          <DropdownMenuItem key={route.path || `menu-item-${section.id}-${index}`} asChild>
+                            <Link to={route.path} aria-current={isActive ? "page" : undefined} className={cn("console-topnav-menu-item", isActive && "is-active")}>
+                              <span className="console-topnav-menu-icon"><NavIcon icon={route.icon} /></span>
+                              <span className="min-w-0 truncate">{routeLabel(route, i18n.locale)}</span>
+                            </Link>
+                          </DropdownMenuItem>
+                        )
+                      })}
+                    </DropdownMenuGroup>
+                  ))}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -198,21 +204,24 @@ export default function DashboardLayout() {
           return (
             <div key={section.id} className="console-nav-group" data-section={section.id}>
               {showGroupLabel ? <div className="console-nav-group-label">{i18n.t(section.label)}</div> : null}
-              {section.routes.map((route, index) => {
-                const isActive = route.path === activePath
-                return (
-                  <Link
-                    key={route.path || `menu-item-${section.id}-${index}`}
-                    to={route.path}
-                    aria-current={isActive ? "page" : undefined}
-                    onClick={() => setDrawerOpen(false)}
-                    className={cn("console-nav-item", isActive && "is-active")}
-                  >
-                    <span className="console-nav-icon"><NavIcon icon={route.icon} /></span>
-                    <span className="truncate">{routeLabel(route, i18n.locale)}</span>
-                  </Link>
-                )
-              })}
+              {section.groups.map((group) => <div key={group.id} className="console-nav-subgroup" data-group={group.id}>
+                {section.groups.length > 1 ? <div className="console-nav-subgroup-label">{i18n.t(group.label)}</div> : null}
+                {group.routes.map((route, index) => {
+                  const isActive = route.path === activePath
+                  return (
+                    <Link
+                      key={route.path || `menu-item-${section.id}-${index}`}
+                      to={route.path}
+                      aria-current={isActive ? "page" : undefined}
+                      onClick={() => setDrawerOpen(false)}
+                      className={cn("console-nav-item", isActive && "is-active")}
+                    >
+                      <span className="console-nav-icon"><NavIcon icon={route.icon} /></span>
+                      <span className="truncate">{routeLabel(route, i18n.locale)}</span>
+                    </Link>
+                  )
+                })}
+              </div>)}
             </div>
           )
         })}

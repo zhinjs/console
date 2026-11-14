@@ -15,4 +15,8 @@ export function sectionById(id: string): NavSection | null
 export function routeSectionId(route: RouteLike): NavSectionId
 export function routePermissions(route: RouteLike): readonly string[]
 export function canSeeRoute(route: RouteLike, access?: ConsoleAccess): boolean
-export function buildNavigation<T extends RouteLike>(routes: readonly T[], access?: ConsoleAccess): Array<NavTier & { sections: Array<NavSection & { routes: T[] }> }>
+export type NavMenuGroupId = 'core' | 'plugin'
+export interface NavMenuGroup { readonly id: NavMenuGroupId; readonly label: string }
+export const NAV_MENU_GROUPS: readonly NavMenuGroup[]
+export function isPluginPageRoute(route: RouteLike | null | undefined): boolean
+export function buildNavigation<T extends RouteLike>(routes: readonly T[], access?: ConsoleAccess): Array<NavTier & { sections: Array<NavSection & { routes: T[]; groups: Array<NavMenuGroup & { routes: T[] }> }> }>

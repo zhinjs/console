@@ -39,7 +39,7 @@ const builtinNames: Readonly<Record<string, string>> = {
   "/onboarding": "开始使用",
   "/account": "个人设置",
   "/access/users": "用户",
-  "/access/roles": "角色",
+  "/access/roles": "Console 角色",
   "/access/tokens": "API 令牌",
   "/access/audit": "审计日志",
 }

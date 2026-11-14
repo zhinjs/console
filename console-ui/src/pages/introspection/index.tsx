@@ -193,7 +193,7 @@ export default function IntrospectionPage() {
   const hasMore = Boolean(data && data.page < data.totalPages)
 
   return (
-    <PageShell className="max-w-[1600px]">
+    <PageShell>
       <PageHeader
         title={i18n.t("运行时能力")}
         description={i18n.t("高级原始视图：当前运行代注册的命令、中间件、组件、工具、提示词与 MCP。哪个插件提供、对哪些范围开放，看下方摘要并链到插件和对象树。")}

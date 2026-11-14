@@ -9,6 +9,7 @@ import { databaseMessages } from './messages.en.database.mjs'
 import { attentionMessages } from './messages.en.attention.mjs'
 import { statusMessages } from './messages.en.status.mjs'
 import { loginMessages } from './messages.en.login.mjs'
+import { feedbackMessages } from './messages.en.feedback.mjs'
 
 /** Authored Console UI copy. Interpolated content is never translated. */
 export const englishMessages = Object.freeze({
@@ -23,6 +24,7 @@ export const englishMessages = Object.freeze({
   ...attentionMessages,
   ...statusMessages,
   ...loginMessages,
+  ...feedbackMessages,
   "鲜活配色": "Fresh palettes",
   "沉静配色": "Calm palettes",
   "晴空": "Sky",
@@ -117,7 +119,6 @@ export const englishMessages = Object.freeze({
   "登录已失效，请重新登录。": "Your sign-in has expired. Sign in again.",
   "当前身份没有执行此操作的权限。": "This identity is not allowed to do this.",
   "请求失败（HTTP {0}）": "Request failed (HTTP {0})",
-  "角色是一组权限。内置角色只读，可以复制后修改；自定义角色删除时，绑定到它的用户会失去这些权限。": "A role is a set of permissions. Built-in roles are read-only; copy one to change it. Deleting a custom role removes its permissions from every user bound to it.",
   "新建角色": "New role",
   "还没有角色": "No roles yet",
   "权限数": "Permissions",
@@ -1145,7 +1146,6 @@ export const englishMessages = Object.freeze({
   "打开配置": "Open configuration",
   "能力链路": "Capability flow",
   "最近的 Agent 对话": "Recent Agent conversations",
-  "最近还没有打开过 Agent 对话": "No Agent conversations opened recently",
   "Agent 快捷入口": "Agent shortcuts",
   "查看输入与来源": "Inspect inputs and sources",
   "MCP 服务": "MCP services",
@@ -2524,13 +2524,11 @@ export const englishMessages = Object.freeze({
 "这段时间没有模型调用记录。": "No model calls in this period.",
 "换一个时间范围或清除会话筛选试试。": "Try another time range or clear the conversation filter.",
 "输入 tokens 随时间变化": "Input tokens over time",
-"按 provider/model 堆叠；鼠标停在柱子上看具体数值。": "Stacked by provider/model; hover a bar for exact values.",
 "缓存命中率随时间变化": "Cache hit rate over time",
 "命中率 = 缓存读取 / 输入；没有调用的时段不画点。": "Hit rate = cache read / input; periods without calls have no point.",
 "按模型": "By model",
 "输入 / 输出 / 缓存读取，按输入从多到少。": "Input / output / cache read, most input first.",
 "输入构成": "Input composition",
-"历史对话、固定提示词、用户输入各占多少。": "How much comes from history, fixed prompts and user input.",
 "用量最高的会话": "Top conversations",
 "最多 50 个；点一行只看这个会话。": "Up to 50; click a row to filter to that conversation.",
 "平台": "Platform",

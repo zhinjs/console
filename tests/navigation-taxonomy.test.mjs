@@ -11,8 +11,8 @@ const compile = (source, fileName) => ts.transpileModule(source, {
 const sectionsUrl = new URL('navigation-sections.mjs',root).href
 const routesUrl = new URL('console-routes.mjs',root).href
 // The taxonomy imports the sections module relatively; a data: URL needs it absolute.
-const taxonomy = await import(moduleUrl(compile(await readFile(new URL('navigation-taxonomy.ts',root),'utf8'),'navigation-taxonomy.ts').replace("'./navigation-sections.mjs'",JSON.stringify(sectionsUrl))))
-const {NAV_GROUPS,NAV_GROUP_ORDER,placePluginRoute} = taxonomy
+const taxonomy = await import(moduleUrl(compile(await readFile(new URL('navigation-taxonomy.ts',root),'utf8'),'navigation-taxonomy.ts').replace("'./navigation-sections.mjs'",JSON.stringify(sectionsUrl)).replace("'./console-routes.mjs'",JSON.stringify(routesUrl))))
+const {NAV_GROUPS,NAV_GROUP_ORDER,placePluginRoute,markPluginRoute} = taxonomy
 const {CONSOLE_PATHS,LEGACY_ROUTE_REDIRECTS} = await import(routesUrl)
 const {routeSectionId} = await import(sectionsUrl)
 
@@ -121,4 +121,39 @@ test('every old route is registered as a hidden redirect to its new place', asyn
   assert.ok(routes.some(item=>item.path===rule.to && !Object.hasOwn(LEGACY_ROUTE_REDIRECTS,item.path)),`${path} -> ${rule.to} is a registered page`)
  }
  for (const path of ['/config','/env','/files','/database','/tasks','/cron','/assistant/jobs','/agent/models','/agent/skills','/agent/ambient','/agent/workrooms','/agent/workrooms/catalog','/endpoints','/endpoints/:adapter/:endpointId','/features/adapters','/features/adapters/:adapter','/features/adapters/:adapter/endpoints/:endpoint','/features/adapters/:adapter/endpoints/:endpoint/conversations/:conversation']) assert.ok(Object.hasOwn(LEGACY_ROUTE_REDIRECTS,path),path)
+})
+
+test('plugin pages are marked for the 插件页面 group; adapter pages leave the menu but keep their route', async () => {
+ const {buildNavigation} = await import(sectionsUrl)
+ const calendar = {path:'/calendar',name:'日历',meta:{group:NAV_GROUPS.FEATURES,order:23}}
+ const marked = markPluginRoute(calendar)
+ assert.equal(marked.meta.pluginPage,true)
+ assert.equal(marked.meta.hideInMenu,undefined)
+ assert.deepEqual(calendar.meta,{group:NAV_GROUPS.FEATURES,order:23},'input is not mutated')
+ const icqq = {path:'/icqq',name:'ICQQ',meta:{group:NAV_GROUPS.FEATURES,order:64}}
+ const adapter = markPluginRoute(icqq,{adapterPage:true})
+ assert.equal(adapter.path,'/icqq','the route stays registered (old links and the palette still work)')
+ assert.equal(adapter.meta.hideInMenu,true)
+ assert.equal(adapter.meta.adapterPage,true)
+ assert.equal(adapter.parent,CONSOLE_PATHS.scope,'its breadcrumb parent is 账号与会话')
+ assert.equal(routeSectionId(adapter),'sessions','and its section is 会话')
+ const core = [
+  {path:CONSOLE_PATHS.features,meta:{group:NAV_GROUPS.FEATURES,order:0}},
+  {path:CONSOLE_PATHS.ai,meta:{group:NAV_GROUPS.FEATURES,order:2}},
+ ]
+ const rss = markPluginRoute({path:'/rss',meta:{group:NAV_GROUPS.FEATURES,order:1}})
+ const sandbox = markPluginRoute(placePluginRoute({path:'/sandbox',meta:{}}))
+ const nav = buildNavigation([...core,rss,marked,adapter,sandbox,{path:CONSOLE_PATHS.scope,meta:{group:NAV_GROUPS.WORK,order:1}}])
+ const sections = nav.flatMap(tier => tier.sections)
+ const features = sections.find(section => section.id === 'features')
+ assert.deepEqual(features.groups.map(group => [group.id,group.label,group.routes.map(route => route.path)]),[
+  ['core','核心',[CONSOLE_PATHS.features,CONSOLE_PATHS.ai]],
+  ['plugin','插件页面',['/rss','/calendar']],
+ ])
+ assert.deepEqual(features.routes.map(route => route.path),[CONSOLE_PATHS.features,CONSOLE_PATHS.ai,'/rss','/calendar'],'core pages come first even when a plugin orders itself earlier')
+ assert.ok(!sections.flatMap(section => section.routes).some(route => route.path === '/icqq'),'adapter pages are not menu items')
+ const sessions = sections.find(section => section.id === 'sessions')
+ assert.equal(sessions.groups.length,1,'only 功能 is split; the Sandbox stays a plain 会话 entry')
+ const onlyPlugins = buildNavigation([rss]).flatMap(tier => tier.sections)[0]
+ assert.deepEqual(onlyPlugins.groups.map(group => group.id),['plugin'])
 })

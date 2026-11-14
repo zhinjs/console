@@ -1,6 +1,6 @@
 import { StatusState } from '../../components/StatusState'
 import { useI18n } from '../../i18n'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Plus, Pencil, Trash2, RefreshCw } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -61,22 +61,26 @@ export function Profiles({ management: m, onCreateAccount }: { management: Infer
           {i18n.t("先添加账号，再选择模型。")}
         </Card>
       ) : (
-        <div className="divide-y rounded-lg border">
-          {Object.values(view.profiles).map((profile) => {
+        <ProfileList
+          profiles={Object.values(view.profiles)}
+          usagesOf={(profile) => profileUsages(view.purposes, profile.id, i18n.locale)}
+          row={(profile, usages) => {
             const account = view.accounts[profile.accountId]
+            const chat = usages?.some((usage) => usage.key === 'default:chat')
             return (
               <div key={profile.id} className="flex items-center justify-between gap-4 p-4">
                 <div className="min-w-0">
-                  <p className="font-medium">
+                  <p className="flex flex-wrap items-center gap-2 font-medium">
                     <SupportLabel
                       label={profile.label ?? profile.model}
                       support={profileSupport(view, profile)}
                     />
+                    {chat ? <span className="inline-flex items-center rounded-full border border-[hsl(var(--success)/0.3)] bg-[hsl(var(--success)/0.1)] px-2 text-[length:var(--console-text-label)] font-medium leading-5 text-[hsl(var(--success))]">{i18n.t("当前聊天模型")}</span> : null}
                   </p>
                   <p className="text-sm text-muted-foreground break-all">
                     {profile.model} · {account.label ?? account.id}
                   </p>
-                  <ProfileUsageLine usages={profileUsages(view.purposes, profile.id, i18n.locale)} />
+                  {usages?.length ? <ProfileUsageLine usages={usages} /> : null}
                 </div>
                 <div className="flex gap-1">
                   <Button
@@ -100,8 +104,8 @@ export function Profiles({ management: m, onCreateAccount }: { management: Infer
                 </div>
               </div>
             )
-          })}
-        </div>
+          }}
+        />
       )}
       <Dialog
         open={editing !== null}
@@ -406,6 +410,47 @@ function ProfileForm({
         </Button>
       </fieldset>
     </form>
+  )
+}
+
+/**
+ * The model list (zhinjs/zhin#1250 `ai-purposes-select`): models a purpose references come first under
+ * 「正在使用」 (the default chat model on top); the rest fold into one 「未被用途引用」 disclosure instead of
+ * repeating 「还没有用途引用它」 on every row. Without purposes (a personal identity cannot read them)
+ * the list stays flat: unknown is not unused.
+ */
+function ProfileList({ profiles, usagesOf, row }: {
+  profiles: Profile[]
+  usagesOf: (profile: Profile) => ProfileUsage[] | null
+  row: (profile: Profile, usages: ProfileUsage[] | null) => ReactNode
+}) {
+  const i18n = useI18n()
+  const entries = profiles.map((profile) => ({ profile, usages: usagesOf(profile) }))
+  if (entries.some((entry) => entry.usages === null)) {
+    return <div className="divide-y rounded-lg border">{entries.map((entry) => row(entry.profile, entry.usages))}</div>
+  }
+  const rank = (usages: ProfileUsage[] | null) => usages?.some((usage) => usage.key === 'default:chat') ? 0 : usages?.some((usage) => usage.level === 'default') ? 1 : 2
+  const used = entries.filter((entry) => entry.usages!.length).sort((a, b) => rank(a.usages) - rank(b.usages))
+  const unused = entries.filter((entry) => !entry.usages!.length)
+  return (
+    <div className="space-y-3">
+      {used.length ? (
+        <section aria-label={i18n.t("正在使用")} className="space-y-2">
+          <h4 className="text-sm font-medium">{i18n.t("正在使用")} <span className="text-muted-foreground tabular-nums">{used.length}</span></h4>
+          <div className="divide-y rounded-lg border">{used.map((entry) => row(entry.profile, entry.usages))}</div>
+        </section>
+      ) : (
+        <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">{i18n.t("还没有用途引用任何模型；在「用途」页签选择聊天等用途使用的模型。")}</p>
+      )}
+      {unused.length ? (
+        <details className="console-profile-unused rounded-lg border" open={!used.length}>
+          <summary className="cursor-pointer p-3 text-sm text-muted-foreground">
+            {i18n.t("未被用途引用的模型（{0}）", [unused.length])}
+          </summary>
+          <div className="divide-y border-t">{unused.map((entry) => row(entry.profile, entry.usages))}</div>
+        </details>
+      ) : null}
+    </div>
   )
 }
 

@@ -138,6 +138,7 @@ function workbenchFixture(sizes) {
     '../utils/auth': { apiFetch },
     '../utils/console-rpc': { requestConsole: async () => ({ endpoints: [{ name: 'e', adapter: 'a', connected: true }] }) },
     '../utils/agent-session-history': { loadAgentSessionHistory: () => [] },
+    '../utils/plugin-rpc': { pluginRpc: async () => { throw Object.assign(new Error('forbidden'), { status: 403 }) } },
     '../utils/agent-session': { agentSessionsPath: key => `/agent/sessions/${key}`, parseImSessionKey: () => null, SESSION_SCOPE_LABELS: {} },
     '../components/PageHeader': { PageHeader: 'page-header' }, '../components/PageShell': { PageShell: 'page-shell' },
     './insights/insights.css': {},

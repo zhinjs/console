@@ -75,7 +75,7 @@ function WorkroomBoardPage() {
     status === 'running' ? i18n.t("进行中") : status === 'completed' ? i18n.t("已完成") : i18n.t("失败")
 
   return (
-    <PageShell className="max-w-[1680px]">
+    <PageShell>
       <PageHeader
         title={i18n.t("Workroom 协作记录")}
         description={i18n.t("查看多 Agent 协作（Engagement）的参与方、预算消耗、共享黑板与事件。此页只读。")}

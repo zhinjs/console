@@ -30,11 +30,13 @@ import {
   formatTokens,
   hasCacheWrite,
   isPermissionDenied,
+  mergeUsageModels,
   parseLocalDateTime,
   sortSessions,
   splitSessionKey,
   toLocalDateTime,
   topModelKeys,
+  usageSessionLabel,
   validateUsageStats,
   type UsageFilter,
   type UsageSessionRow,
@@ -71,6 +73,12 @@ function Metric({
       {hint ? <span className="text-xs text-muted-foreground">{hint}</span> : null}
     </div>
   )
+}
+
+/** Charts are drawn in the browser's time zone; the instance's is named only when it differs. */
+function timeZoneNote(hostZone: string | undefined, t: ReturnType<typeof useI18n>['t']): string {
+  const local = Intl.DateTimeFormat().resolvedOptions().timeZone
+  return hostZone && hostZone !== local ? t("按本机时区 {0} 显示（实例时区 {1}）", [local, hostZone]) : t("按本机时区 {0} 显示", [local])
 }
 
 /** 「机器人 → Token 用量」：读 plugin.root.usage-stats（只读），按时间 / 模型 / 会话看 token 花在哪。 */
@@ -118,7 +126,8 @@ export default function TokenUsagePage() {
     pluginRpc<unknown>('root', USAGE_METHOD, built.input as unknown as Record<string, unknown>)
       .then(data => {
         if (cancelled) return
-        setStats(validateUsageStats(data, i18n.locale))
+        // One row per 「服务名 · 模型」 when the Host labels its models (#1250); raw keys otherwise.
+        setStats(mergeUsageModels(validateUsageStats(data, i18n.locale)))
         setError(null)
         setDenied(false)
         setUnavailable(null)
@@ -193,7 +202,7 @@ export default function TokenUsagePage() {
           : stats && view ? <>
             {error ? <ErrorAlert error={error} onRetry={() => setRefreshTick(tick => tick + 1)} /> : null}
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-5" aria-busy={loading}>
-              <Metric label={i18n.t("总输入 tokens")} value={formatTokens(stats.totals.inputTokens, i18n.locale)} icon={ArrowDownToLine} />
+              <Metric label={i18n.t("总输入 tokens")} value={formatTokens(stats.totals.inputTokens, i18n.locale)} icon={ArrowDownToLine} hint={i18n.t("每次模型调用的实际输入之和，工具循环里的多次调用都计入")} />
               <Metric label={i18n.t("输出 tokens")} value={formatTokens(stats.totals.outputTokens, i18n.locale)} icon={ArrowUpFromLine} />
               <Metric
                 label={i18n.t("缓存命中率")}
@@ -218,7 +227,7 @@ export default function TokenUsagePage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">{i18n.t("输入 tokens 随时间变化")}</CardTitle>
-                  <CardDescription>{i18n.t("按 provider/model 堆叠；鼠标停在柱子上看具体数值。")}{stats.range.timeZone ? ` · ${stats.range.timeZone}` : ''}</CardDescription>
+                  <CardDescription>{i18n.t("按模型堆叠；鼠标停在柱子上看具体数值。")} · {timeZoneNote(stats.range.timeZone, i18n.t)}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3 text-foreground">
                   <ModelLegend keys={view.shown} colors={view.colors} hasOther={view.hasOther} />
@@ -240,7 +249,7 @@ export default function TokenUsagePage() {
                   <CardContent className="text-foreground"><ModelBars rows={stats.byModel} colors={view.colors} showWrite={view.showWrite} /></CardContent>
                 </Card>
                 <Card>
-                  <CardHeader><CardTitle className="text-base">{i18n.t("输入构成")}</CardTitle><CardDescription>{i18n.t("历史对话、固定提示词、用户输入各占多少。")}</CardDescription></CardHeader>
+                  <CardHeader><CardTitle className="text-base">{i18n.t("输入构成")}</CardTitle><CardDescription>{i18n.t("历史对话、固定提示词、用户输入各占多少。按每个回合的上下文预算估算（每回合一次），所以合计小于上方「总输入」。")}</CardDescription></CardHeader>
                   <CardContent className="text-foreground"><SegmentDonut segments={stats.segments} /></CardContent>
                 </Card>
               </div>
@@ -254,7 +263,7 @@ export default function TokenUsagePage() {
                           <TableHead>{i18n.t("平台")}</TableHead>
                           {view.showEndpoint ? <TableHead>{i18n.t("账号")}</TableHead> : null}
                           <TableHead>{i18n.t("类型")}</TableHead>
-                          <TableHead>{i18n.t("会话 ID")}</TableHead>
+                          <TableHead>{i18n.t("会话")}</TableHead>
                           {header('turns', i18n.t("回合"))}
                           {header('calls', i18n.t("调用"))}
                           {header('inputTokens', i18n.t("输入"))}
@@ -271,7 +280,7 @@ export default function TokenUsagePage() {
                             <TableCell>{parts.platform || '—'}</TableCell>
                             {view.showEndpoint ? <TableCell>{parts.endpoint || '—'}</TableCell> : null}
                             <TableCell>{parts.scope === 'group' || parts.scope === 'private' || parts.scope === 'channel' ? <ConversationKindBadge kind={parts.scope} /> : parts.scope || '—'}</TableCell>
-                            <TableCell className="break-all font-mono text-xs"><ListItemButton className="underline-offset-2 hover:underline" onClick={event => { event.stopPropagation(); pickSession(row) }}>{parts.sceneId || row.sessionKey}</ListItemButton></TableCell>
+                            <TableCell className="break-all text-xs"><ListItemButton className="underline-offset-2 hover:underline" onClick={event => { event.stopPropagation(); pickSession(row) }}>{usageSessionLabel(row)}</ListItemButton>{usageSessionLabel(row) !== (parts.sceneId || row.sessionKey) ? <span className="block font-mono text-muted-foreground">{parts.sceneId || row.sessionKey}</span> : null}</TableCell>
                             <TableCell numeric>{formatTokens(row.turns, i18n.locale)}</TableCell>
                             <TableCell numeric>{formatTokens(row.calls, i18n.locale)}</TableCell>
                             <TableCell numeric>{formatTokens(row.inputTokens, i18n.locale)}</TableCell>
