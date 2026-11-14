@@ -164,4 +164,16 @@ export const opsMessages = Object.freeze({
   "查看 {0} 的日志": "View logs for {0}",
   "更多日志选项": "More log options",
   "{0}/{1} · {2} 条": "{0}/{1} · {2} entries",
+  // Environment variables masked by default (zhinjs/zhin#1250)
+  "显示失败：需要 ops.env.read 与 ops.env.write 权限，或变量已被移除。": "Could not show the value: it needs ops.env.read and ops.env.write, or the variable was removed.",
+  "输入新值（当前值未显示）": "Enter a new value (the current value is not shown)",
+  "为保护密钥，值默认打码（只显示前 2 位与后 2 位，8 个字符以内全部打码）。「显示」会单独取回一个变量的原文并记入审计日志；保存只提交改动的变量。": "To protect secrets, values are masked by default (only the first 2 and last 2 characters; values of up to 8 characters are fully masked). Show fetches one variable's value on its own and is recorded in the audit log; saving submits only the variables you changed.",
+  "（空）": "(empty)",
+  "引用": "Reference",
+  "新增，未保存": "Added, not saved",
+  "已修改，未保存": "Changed, not saved",
+  "只读 · 值始终打码": "Read-only · values always masked",
+  "当前 Host 版本会显示原文：页面拿到的是 .env 的全部内容（敏感值只在本页遮罩）。升级 Host 后默认只返回打码值。": "This Host version shows values in plain text: the page receives the whole .env file (sensitive values are only masked on this page). After upgrading the Host, only masked values are returned by default.",
+  "查看 .env / .env.* 中的变量；只读，值始终打码。": "View the variables in .env / .env.*; read-only, values always masked.",
+  "值默认打码，可逐个显示（记入审计）或编辑；保存只写入改动的变量，需重启 Host 后生效。": "Values are masked by default; show (audited) or edit them one at a time. Saving writes only the changed variables and takes effect after the Host restarts.",
 })

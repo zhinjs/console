@@ -182,3 +182,112 @@ export function envReadBackMismatch(submitted, readBack) {
   const secrets = new Set([...parseEnvRows(submitted), ...parseEnvRows(readBack)].filter(row => row.secret || secretLikeKey(row.key)).map(row => row.key))
   return readBackMismatch(values(submitted), values(readBack), { isSecret: path => secrets.has(path[0]) || secretName.test(path[0] ?? '') })
 }
+
+// ---- Masked Hosts (zhinjs/zhin#1250) ----
+// `env:get` answers `{ format: 'masked', variables, lines }` without any value; `env:reveal` returns
+// one value; `env:save { changes }` writes only the submitted keys. Older Hosts answer `{ content }`.
+
+const MASK_RUN = ENV_MASK_CHAR.repeat(8)
+
+/** `{ kind: 'masked', view }` for a masking Host, `{ kind: 'legacy', content }` for an older one. */
+export function readEnvReply(data) {
+  if (data && typeof data === 'object' && data.format === 'masked' && Array.isArray(data.variables) && Array.isArray(data.lines)) {
+    const variables = data.variables
+      .filter(item => item && typeof item.key === 'string')
+      .map(item => ({
+        key: item.key,
+        masked: typeof item.masked === 'string' ? item.masked : MASK_RUN,
+        length: Number.isFinite(item.length) ? item.length : 0,
+        hasValue: item.hasValue === true,
+        ...(item.isReference === true ? { isReference: true } : {}),
+      }))
+    return { kind: 'masked', view: { file: String(data.file ?? ''), variables } }
+  }
+  return { kind: 'legacy', content: typeof data?.content === 'string' ? data.content : '' }
+}
+
+/** The Host's rule, for values typed here: up to 8 characters fully masked, else 2 + mask + 2. */
+export function maskEnvDisplay(value) {
+  const chars = Array.from(String(value ?? ''))
+  if (chars.length === 0) return ''
+  if (chars.length <= 8) return MASK_RUN
+  return `${chars.slice(0, 2).join('')}${MASK_RUN}${chars.slice(-2).join('')}`
+}
+
+/** A masked value sent back by mistake: three mask characters in a row, or only mask characters. */
+export function isEnvMaskPlaceholder(value) {
+  const text = String(value ?? '')
+  const inner = text.trim().replace(/^(["'`])([\s\S]*)\1$/u, '$2').trim()
+  return text.includes(ENV_MASK_CHAR.repeat(3)) || (inner.length > 0 && maskOnly.test(inner))
+}
+
+/**
+ * Rows of a masked file with the pending changes applied: deleted keys drop out, changed keys carry
+ * `pending` (the value typed here), new keys follow in the order they were added.
+ */
+export function maskedEnvRows(view, changes) {
+  const byKey = new Map(changes.map(change => [change.key, change]))
+  const rows = []
+  for (const variable of view.variables) {
+    const change = byKey.get(variable.key)
+    if (change?.delete) continue
+    rows.push({ ...variable, ...(change ? { pending: change.value } : {}) })
+  }
+  const known = new Set(view.variables.map(variable => variable.key))
+  for (const change of changes) {
+    if (change.delete || known.has(change.key)) continue
+    rows.push({ key: change.key, masked: maskEnvDisplay(change.value), length: Array.from(change.value).length, hasValue: change.value.length > 0, pending: change.value, added: true })
+  }
+  return rows
+}
+
+/** Record setting `key`; a later change of the same key replaces the earlier one. */
+export function setEnvChange(changes, key, value) {
+  return [...changes.filter(change => change.key !== key), { key, value }]
+}
+
+/** Record deleting `key`; deleting a key that was only added here just drops that addition. */
+export function deleteEnvChange(view, changes, key) {
+  const rest = changes.filter(change => change.key !== key)
+  return view.variables.some(variable => variable.key === key) ? [...rest, { key, delete: true }] : rest
+}
+
+/** Same checks as {@link validateEnvRow}, against a masked view plus pending changes. */
+export function validateMaskedEnvRow(view, changes, { key, value }, originalKey) {
+  const name = String(key ?? '').trim()
+  if (!name) return 'key-required'
+  if (!validKey.test(name)) return 'key-invalid'
+  if (name !== originalKey && maskedEnvRows(view, changes).some(row => row.key === name)) return 'key-duplicate'
+  const text = String(value ?? '')
+  if (isEnvMaskPlaceholder(text)) return 'value-masked'
+  const quote = /^["'`]/.test(text) ? text[0] : null
+  if (quote) {
+    // The closing quote must exist, with nothing after it on another line.
+    let end = -1
+    for (let i = 1; i < text.length && end < 0; i++) {
+      if (text[i] !== quote) continue
+      let escapes = 0
+      for (let j = i - 1; j >= 0 && text[j] === '\\'; j--) escapes++
+      if (escapes % 2 === 0) end = i
+    }
+    if (end < 0 || /[\r\n]/.test(text.slice(end + 1))) return 'value-multiline'
+  } else if (/[\r\n]/.test(text)) return 'value-multiline'
+  return null
+}
+
+/**
+ * After a per-key save: whether the view read back holds what was submitted — set keys present
+ * (with the submitted length), deleted keys gone. Values are never compared or shown.
+ */
+export function maskedEnvReadBackMismatch(changes, view) {
+  const byKey = new Map(view.variables.map(variable => [variable.key, variable]))
+  for (const change of changes) {
+    const stored = byKey.get(change.key)
+    if (change.delete) {
+      if (stored) return { path: change.key, submitted: null, readBack: stored.masked, masked: true }
+      continue
+    }
+    if (!stored) return { path: change.key, submitted: maskEnvDisplay(change.value), readBack: null, masked: true }
+  }
+  return null
+}

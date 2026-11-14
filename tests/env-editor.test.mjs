@@ -105,3 +105,57 @@ test('a key assigned twice is one row whose edit and delete apply to every assig
   assert.equal(removeEnvRow(twice, 'A'), 'B=2\n')
   assert.equal(applyEnvChanges(twice, diffEnvContent(twice, updateEnvRow(twice, 'A', { key: 'A', value: '9' }))), 'A=9\nB=2\nA=9\n')
 })
+
+// ---- masking Hosts (zhinjs/zhin#1250) ----
+import * as maskedModel from '../console-ui/src/pages/env-editor-model.mjs'
+const RUN = ENV_MASK_CHAR.repeat(8)
+const MASKED_VIEW = { format: 'masked', file: '.env', lines: [], content: '', variables: [
+  { key: 'A', masked: RUN, length: 1, hasValue: true }, { key: 'B', masked: `ab${RUN}yz`, length: 12, hasValue: true, isReference: true },
+] }
+
+test('env:get replies are told apart: masked view vs an older Host returning the file', () => {
+  const masked = maskedModel.readEnvReply(MASKED_VIEW)
+  assert.equal(masked.kind, 'masked')
+  assert.deepEqual(masked.view.variables.map(v => v.key), ['A', 'B'])
+  assert.equal(masked.view.variables[1].isReference, true)
+  assert.deepEqual(maskedModel.readEnvReply({ content: 'A=1' }), { kind: 'legacy', content: 'A=1' })
+  assert.deepEqual(maskedModel.readEnvReply(null), { kind: 'legacy', content: '' })
+})
+
+test('values typed here are masked by the Host rule and mask placeholders are recognised', () => {
+  assert.equal(maskedModel.maskEnvDisplay(''), '')
+  assert.equal(maskedModel.maskEnvDisplay('12345678'), RUN)
+  assert.equal(maskedModel.maskEnvDisplay('123456789'), `12${RUN}89`)
+  for (const value of [RUN, `ab${RUN}yz`, '●', '"●●"']) assert.equal(maskedModel.isEnvMaskPlaceholder(value), true, value)
+  for (const value of ['plain', 'a●b', '']) assert.equal(maskedModel.isEnvMaskPlaceholder(value), false, value)
+})
+
+test('pending changes: set replaces, deleting an added key drops it, rows follow the changes', () => {
+  let changes = maskedModel.setEnvChange([], 'A', '1')
+  changes = maskedModel.setEnvChange(changes, 'A', '2')
+  changes = maskedModel.setEnvChange(changes, 'NEW', 'x')
+  changes = maskedModel.deleteEnvChange(MASKED_VIEW, changes, 'B')
+  assert.deepEqual(changes, [{ key: 'A', value: '2' }, { key: 'NEW', value: 'x' }, { key: 'B', delete: true }])
+  assert.deepEqual(maskedModel.maskedEnvRows(MASKED_VIEW, changes).map(row => [row.key, row.pending]), [['A', '2'], ['NEW', 'x']])
+  assert.deepEqual(maskedModel.deleteEnvChange(MASKED_VIEW, changes, 'NEW'), [{ key: 'A', value: '2' }, { key: 'B', delete: true }])
+})
+
+test('masked rows validate like the Host: placeholders, duplicates and line injection are refused', () => {
+  const check = (row, original = null) => maskedModel.validateMaskedEnvRow(MASKED_VIEW, [], row, original)
+  assert.equal(check({ key: 'C', value: `ab${RUN}yz` }), 'value-masked')
+  assert.equal(check({ key: 'A', value: '1' }), 'key-duplicate')
+  assert.equal(check({ key: 'A', value: '1' }, 'A'), null)
+  assert.equal(check({ key: 'C', value: '1\nINJECTED=1' }), 'value-multiline')
+  assert.equal(check({ key: 'C', value: '"1"\nINJECTED=1' }), 'value-multiline')
+  assert.equal(check({ key: 'C', value: '"line 1\nline 2"' }), null)
+  assert.equal(check({ key: 'bad key', value: '1' }), 'key-invalid')
+})
+
+test('read-back after a per-key save checks presence only and never shows values', () => {
+  const changes = [{ key: 'A', value: 'fake-new' }, { key: 'GONE', delete: true }]
+  assert.equal(maskedModel.maskedEnvReadBackMismatch(changes, MASKED_VIEW), null)
+  const missing = maskedModel.maskedEnvReadBackMismatch([{ key: 'C', value: 'fake-new-value' }], MASKED_VIEW)
+  assert.equal(missing.path, 'C'); assert.equal(missing.masked, true)
+  assert.doesNotMatch(JSON.stringify(missing), /fake-new/)
+  assert.equal(maskedModel.maskedEnvReadBackMismatch([{ key: 'A', delete: true }], MASKED_VIEW).path, 'A')
+})
