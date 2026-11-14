@@ -267,7 +267,7 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
   let runningIndex = 0
   return (
     <>
-      <ListItemButton type="button" className="console-command-trigger" onClick={() => setOpen(true)} aria-label={i18n.t("打开 Console 快速跳转")}>
+      <ListItemButton type="button" className="console-command-trigger max-md:min-h-0" onClick={() => setOpen(true)} aria-label={i18n.t("打开 Console 快速跳转")}>
         <Search aria-hidden="true" />
         <span className="hidden lg:inline">{i18n.t("搜索页面或执行动作")}</span>
         <span className="lg:hidden">{i18n.t("搜索与动作")}</span>
