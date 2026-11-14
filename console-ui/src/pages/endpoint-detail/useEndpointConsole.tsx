@@ -151,8 +151,8 @@ export function useEndpointConsole(target?: EndpointWorkspaceTarget) {
   const [noticesLoading, setNoticesLoading] = useState(true)
   const [noticesError, setNoticesError] = useState<string | null>(null)
   const [noticesAvailable, setNoticesAvailable] = useState<boolean | null>(null)
-  const [inboxRequestsError, setInboxRequestsError] = useState<string | null>(null)
-  const [inboxNoticesError, setInboxNoticesError] = useState<string | null>(null)
+  const [inboxRequestsError, setInboxRequestsError] = useState<unknown>(null)
+  const [inboxNoticesError, setInboxNoticesError] = useState<unknown>(null)
 
   useEffect(() => {
     setRequests(new Map()); setNotices(new Map()); setInboxRequests([]); setInboxNotices([])
@@ -224,7 +224,8 @@ export function useEndpointConsole(target?: EndpointWorkspaceTarget) {
       } catch (caught) {
         // 一次性网络错误不改变 enabled 状态；仅服务端明确 inboxEnabled===false 才置 false
         if (seq !== inboxRequestsSeqRef.current || !isInboxCacheScopeActive(cacheScope)) return
-        setInboxRequestsError(caught instanceof Error ? caught.message : String(caught))
+        // Keep the failure itself: the page classifies it (旧 Host / 无权限 / 实例不可用 …) via StatusState.
+        setInboxRequestsError(caught ?? new Error(String(caught)))
       } finally {
         if (seq === inboxRequestsSeqRef.current && isInboxCacheScopeActive(cacheScope)) setInboxRequestsLoading(false)
       }
@@ -262,7 +263,7 @@ export function useEndpointConsole(target?: EndpointWorkspaceTarget) {
       } catch (caught) {
         // 一次性网络错误不改变 enabled 状态；仅服务端明确 inboxEnabled===false 才置 false
         if (seq !== inboxNoticesSeqRef.current || !isInboxCacheScopeActive(cacheScope)) return
-        setInboxNoticesError(caught instanceof Error ? caught.message : String(caught))
+        setInboxNoticesError(caught ?? new Error(String(caught)))
       } finally {
         if (seq === inboxNoticesSeqRef.current && isInboxCacheScopeActive(cacheScope)) setInboxNoticesLoading(false)
       }
