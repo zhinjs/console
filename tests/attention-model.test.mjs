@@ -265,3 +265,21 @@ test('refresh cadence and limits', () => {
   assert.equal(model.ATTENTION_PATH, '/attention')
   assert.ok(model.DASHBOARD_ATTENTION_LIMIT > 0)
 })
+
+test('a remembered unsupported Host skips attention.list; the memo follows the connected Host', async () => {
+  const fallback = await model.loadAttention({
+    request: async () => { throw new Error('must not be asked again') },
+    loadFallback: async () => ({ stats: { endpoints: { total: 1, online: 1 } }, errorLogs: 0, warningLogs: 0 }),
+    hostListUnsupported: true, now: () => NOW,
+  })
+  assert.equal(fallback.mode, 'fallback')
+  let memo = model.nextAttentionSupport(null, { apiBase: 'a' })
+  assert.deepEqual(memo, { apiBase: 'a', unsupported: false })
+  memo = model.nextAttentionSupport(memo, { apiBase: 'a', data: { mode: 'fallback' } })
+  assert.equal(memo.unsupported, true)
+  assert.equal(model.nextAttentionSupport(memo, { apiBase: 'a', data: { mode: 'instance-not-ready' } }).unsupported, true, 'a starting instance does not forget it')
+  assert.equal(model.nextAttentionSupport(memo, { apiBase: 'a' }).unsupported, true)
+  assert.equal(model.nextAttentionSupport(memo, { apiBase: 'b' }).unsupported, false, 'another Host is asked again')
+  assert.equal(model.nextAttentionSupport(memo, { apiBase: 'a', reset: true }).unsupported, false)
+  assert.equal(model.nextAttentionSupport(memo, { apiBase: 'a', data: { mode: 'host' } }).unsupported, false)
+})

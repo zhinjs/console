@@ -87,7 +87,11 @@ export function loadAttention(options: {
   readonly readInstanceHealth?: () => Promise<unknown>
   readonly locale?: Locale
   readonly now?: () => number
+  /** This Host is already known to lack `attention.list`: read the fallback without asking it again. */
+  readonly hostListUnsupported?: boolean
 }): Promise<AttentionLoad>
+export interface AttentionSupportMemo { readonly apiBase: string; readonly unsupported: boolean }
+export function nextAttentionSupport(memo: AttentionSupportMemo | null, update: { apiBase: string; data?: AttentionLoad | null; reset?: boolean }): AttentionSupportMemo
 
 export function emptyAttentionPrefs(): AttentionPrefs
 export function attentionStorageKey(apiBase: string | null | undefined, userId?: string | null): string
