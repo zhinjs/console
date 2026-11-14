@@ -276,7 +276,11 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
       }
     }
   }
-  async function action<T>(path: string, body: unknown): Promise<T | undefined> {
+  async function action<T>(
+    path: string,
+    body: unknown,
+    describe: (failure: unknown, locale: 'zh-CN' | 'en') => string = inferenceError
+  ): Promise<T | undefined> {
     if (!active() || busyOperation.current !== null || pendingId.current) return undefined
     const identity = renderedIdentity
     busyOperation.current = identity.epoch
@@ -288,7 +292,7 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
       await load(identity.ownerId)
       return result
     } catch (failure) {
-      if (current(identity)) setError(inferenceError(failure, copy.current.locale))
+      if (current(identity)) setError(describe(failure, copy.current.locale))
       return undefined
     } finally {
       if (current(identity) && busyOperation.current === identity.epoch) {

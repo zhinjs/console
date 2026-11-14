@@ -147,6 +147,8 @@ export class InferenceRequestError extends Error {
   reason?: string
 }
 export function canReferenceEnvironment(view: View): boolean
+export function supportsConnectionTest(view: Pick<View, 'environmentReferences'> | null | undefined): boolean
+export function connectionTestError(error: unknown, locale?: 'zh-CN' | 'en'): string
 export function accountEnvironmentVariable(account: Account | undefined): string | undefined
 export function describeLastCall(lastCall: AccountLastCall | undefined, locale?: 'zh-CN' | 'en'): string
 export function describeProbe(result: ProbeResult, locale?: 'zh-CN' | 'en'): string

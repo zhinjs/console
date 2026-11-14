@@ -3402,6 +3402,8 @@ export const englishMessages = Object.freeze({
   "环境变量未设置": "Environment variable not set",
   "该账号还没有模型配置，无法测试连接。": "This account has no model profile yet, so it cannot be tested.",
   "此账号的密钥来自 Host 环境变量 {0}，不能在 Console 中改写。": "This account's key comes from the Host environment variable {0} and cannot be changed in the Console.",
+  "Host 版本较旧，暂不支持测试连接": "This Host version is too old to test connections",
+  "在 Host 上设置该变量后重启 Host；首次使用时生效。": "Set the variable on the Host and restart it; it takes effect on first use.",
   "在 Host 上设置该变量后点「测试连接」，成功即完成激活。": "Set the variable on the Host, then click “Test connection”; a successful test activates it.",
   "要改用另一个变量，请 Host 管理员在本机运行 zhin ai account rename-env。": "To use another variable, the Host administrator runs zhin ai account rename-env locally.",
   "或新增替代账号，直接填写密钥。": "Or add a replacement account and enter the key directly.",

@@ -376,6 +376,19 @@ export function canReferenceEnvironment(view) {
     return view.environmentReferences === 'console-owner' || view.environmentReferences === 'local-cli'
   return view.hostAdministrator
 }
+/**
+ * Whether the Host has 测试连接 (`POST /account/test`, zhinjs/zhin#1250). Those Hosts always send
+ * `environmentReferences` in the view (`'none'` included); older ones have neither.
+ */
+export function supportsConnectionTest(view) {
+  return typeof view?.environmentReferences === 'string'
+}
+/** The message for a failed 测试连接: a missing route means an older Host, not a missing Agent. */
+export function connectionTestError(error, locale = 'zh-CN') {
+  if (error instanceof InferenceRequestError && error.code === 'not-installed')
+    return translate(locale, 'Host 版本较旧，暂不支持测试连接')
+  return inferenceError(error, locale)
+}
 /** The `env://NAME` variable of an account, if it reads one. */
 export function accountEnvironmentVariable(account) {
   return /^env:\/\/([A-Za-z_][A-Za-z0-9_]*)$/u.exec(account?.authentication?.source ?? '')?.[1]

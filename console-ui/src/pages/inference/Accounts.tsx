@@ -19,6 +19,8 @@ import { useConfirm } from '../../components/confirm-dialog'
 import {
   driverKey,
   canReferenceEnvironment,
+  connectionTestError,
+  supportsConnectionTest,
   accountEnvironmentVariable,
   describeLastCall,
   describeProbe,
@@ -106,7 +108,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
       m.setError(i18n.t("该账号还没有模型配置，无法测试连接。"))
       return
     }
-    const tested = await m.action<{ result: ProbeResult }>('/account/test', { accountId: account.id })
+    const tested = await m.action<{ result: ProbeResult }>('/account/test', { accountId: account.id }, connectionTestError)
     if (tested) setTests((previous) => ({ ...previous, [account.id]: tested.result }))
   }
   async function begin(account: Account) {
@@ -184,7 +186,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
                   >
                     {i18n.t("新增替代账号")}
                   </Button>
-                  {Object.values(view.profiles).some((profile) => profile.accountId === account.id) ? (
+                  {supportsConnectionTest(view) && Object.values(view.profiles).some((profile) => profile.accountId === account.id) ? (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -328,23 +330,29 @@ export function Accounts({ management: m }: { management: InferenceManagement })
                 ])}
               </p>
               <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
-                <li>{i18n.t("在 Host 上设置该变量后点「测试连接」，成功即完成激活。")}</li>
+                {supportsConnectionTest(credential.source.view) ? (
+                  <li>{i18n.t("在 Host 上设置该变量后点「测试连接」，成功即完成激活。")}</li>
+                ) : (
+                  <li>{i18n.t("在 Host 上设置该变量后重启 Host；首次使用时生效。")}</li>
+                )}
                 <li>{i18n.t("要改用另一个变量，请 Host 管理员在本机运行 zhin ai account rename-env。")}</li>
                 <li>{i18n.t("或新增替代账号，直接填写密钥。")}</li>
               </ul>
               <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={disabled}
-                  onClick={() => {
-                    const account = credential.account
-                    setCredential(null)
-                    void test(account)
-                  }}
-                >
-                  {i18n.t("测试连接")}
-                </Button>
+                {supportsConnectionTest(credential.source.view) ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={disabled}
+                    onClick={() => {
+                      const account = credential.account
+                      setCredential(null)
+                      void test(account)
+                    }}
+                  >
+                    {i18n.t("测试连接")}
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   variant="ghost"

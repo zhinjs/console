@@ -31,6 +31,8 @@ function hooks() {
   return {
     dirty: () => dirty,
     begin() { cursor = 0; dirty = false },
+    /** Runs every effect cleanup, as React does when the component unmounts. */
+    unmount() { for (const slot of slots) slot?.cleanup?.(); slots = []; pending = [] },
     flush() { const run = pending; pending = []; run.forEach(fn => fn()) },
     api: {
       useState(initial) {
@@ -74,7 +76,7 @@ const VIEW = {
 }
 const SECRET = 'fake-bot-token-0123456789'
 
-function mocks(runtime, { readOnly = false } = {}) {
+function mocks(runtime, { readOnly = false, guards = [] } = {}) {
   return {
     react: { ...require('react'), ...runtime.api },
     '../i18n': localeModule,
@@ -97,6 +99,7 @@ function mocks(runtime, { readOnly = false } = {}) {
     './env-editor-model.mjs': envModel,
     '../utils/read-error.mjs': readError,
     '../utils/console-access.mjs': { hasConsolePermission: () => !readOnly },
+    '../utils/useUnsavedChangesGuard': { useUnsavedChangesGuard: active => { guards.push(active); return null } },
     '../components/ApplyFeedback': { ApplyFeedback: 'apply-feedback' },
     '../components/apply-outcome-model.mjs': applyOutcome,
   }
@@ -228,4 +231,87 @@ test('an older Host ({ content }) switches the tab to the legacy editor with a p
   runtime.begin(); tree = EnvFileTab(props); runtime.flush()
   assert.ok(visible(tree).includes('当前 Host 版本会显示原文'))
   assert.ok(elements(tree).some(node => typeof node.type === 'function' && node.props?.getFile), 'the legacy editor is shown')
+})
+
+// ---- review fixes (zhinjs/console#109) ----
+
+test('an empty input for a value never shown is not applied silently; 确认清空 is the deliberate way to clear it', async () => {
+  const f = maskedFixture()
+  let tree = await f.start()
+  tree = await f.act(() => byLabel(tree, '编辑 BOT_TOKEN').props.onClick())
+  assert.equal(byLabel(tree, 'BOT_TOKEN 的值').props.value, '', 'the unrevealed value is not prefilled')
+  tree = await f.act(() => buttonWith(tree, '应用').props.onClick())
+  assert.ok(visible(tree).includes('当前值未显示，留空会在保存时清空它'))
+  assert.equal(buttonWith(tree, '应用').props.disabled, true, '应用 is disabled while the clear is unconfirmed')
+  assert.equal(visible(tree).includes('已修改，未保存'), false, 'nothing was recorded')
+  assert.deepEqual(f.drafts.filter(Boolean), [])
+  // Typing a value lifts the block.
+  tree = await f.act(() => byLabel(tree, 'BOT_TOKEN 的值').props.onChange({ target: { value: 'x' } }))
+  assert.equal(buttonWith(tree, '应用').props.disabled, false)
+  assert.equal(buttonWith(tree, '确认清空'), undefined)
+  tree = await f.act(() => byLabel(tree, 'BOT_TOKEN 的值').props.onChange({ target: { value: '' } }))
+  tree = await f.act(() => buttonWith(tree, '应用').props.onClick())
+  tree = await f.act(() => buttonWith(tree, '确认清空').props.onClick())
+  assert.ok(visible(tree).includes('已修改，未保存'))
+  tree = await f.act(() => buttonWith(tree, '保存').props.onClick())
+  assert.deepEqual(f.requests.filter(r => r.type === 'env:save'), [{ type: 'env:save', filename: '.env', changes: [{ key: 'BOT_TOKEN', value: '' }] }])
+})
+
+test('emptying a value the user has seen (revealed) applies without the extra confirmation', async () => {
+  const f = maskedFixture()
+  let tree = await f.start()
+  tree = await f.act(() => byLabel(tree, '显示 BOT_TOKEN 的值').props.onClick())
+  tree = await f.act(() => byLabel(tree, '编辑 BOT_TOKEN').props.onClick())
+  assert.equal(byLabel(tree, 'BOT_TOKEN 的值').props.value, SECRET)
+  tree = await f.act(() => byLabel(tree, 'BOT_TOKEN 的值').props.onChange({ target: { value: '' } }))
+  tree = await f.act(() => buttonWith(tree, '应用').props.onClick())
+  assert.ok(visible(tree).includes('已修改，未保存'))
+  assert.equal(buttonWith(tree, '确认清空'), undefined)
+})
+
+test('validateMaskedEnvRow: only an unseen stored value needs the clear confirmation', () => {
+  const check = (changes, row, original, options) => envModel.validateMaskedEnvRow(VIEW_MODEL, changes, row, original, options)
+  const VIEW_MODEL = envModel.readEnvReply(VIEW).view
+  assert.equal(check([], { key: 'BOT_TOKEN', value: '' }, 'BOT_TOKEN'), 'value-clear-unconfirmed')
+  assert.equal(check([], { key: 'BOT_TOKEN', value: '' }, 'BOT_TOKEN', { confirmClear: true }), null)
+  assert.equal(check([], { key: 'BOT_TOKEN', value: '' }, 'BOT_TOKEN', { revealed: true }), null)
+  assert.equal(check([], { key: 'EMPTY', value: '' }, 'EMPTY'), null, 'nothing stored, nothing to lose')
+  assert.equal(check([{ key: 'BOT_TOKEN', value: 'typed' }], { key: 'BOT_TOKEN', value: '' }, 'BOT_TOKEN'), null, 'a value typed here is visible in the editor')
+  assert.equal(check([], { key: 'NEW', value: '' }, null), null, 'a new key may be empty')
+})
+
+test('leaving the page asks first, then drops pending values (they can be secrets) from the module-level draft', async () => {
+  const previousWindow = globalThis.window
+  globalThis.window = { addEventListener() {}, removeEventListener() {} }
+  try {
+    const transport = {}
+    const guards = []
+    const page = runtime => {
+      const base = mocks(runtime, { guards })
+      return load(envCode, {
+        ...base,
+        '../utils/console-client': { getConsoleTransport: () => transport },
+        '@zhin.js/client': { useEnvFiles: () => ({ files: [{ name: '.env', exists: true }], loading: false, error: null, listFiles: async () => {}, getFile: async () => '', saveFile: async () => {} }) },
+      }).default
+    }
+    const runtime = hooks()
+    // One module instance throughout: its module-level draft store is what is checked.
+    const EnvManagePage = page(runtime)
+    const render = () => { let tree; do { runtime.begin(); tree = EnvManagePage(); runtime.flush() } while (runtime.dirty()); return tree }
+    const tab = tree => elements(tree).find(node => typeof node.type === 'function' && node.props?.filename === '.env' && node.props?.onMaskedDraftChange)
+    let tree = render()
+    assert.equal(guards.at(-1), false, 'no confirmation without pending changes')
+    // The editor reports a pending change carrying a revealed-then-edited secret.
+    tab(tree).props.onMaskedDraftChange({ changes: [{ key: 'BOT_TOKEN', value: `${SECRET}-edited` }] })
+    tree = render()
+    assert.equal(guards.at(-1), true, 'leaving now asks for confirmation')
+    assert.match(JSON.stringify(tab(tree).props.maskedDraft), /edited/, 'kept while the page is open (switching files)')
+    // The page is left (navigation confirmed) and opened again: the module-level draft no longer holds the value.
+    runtime.unmount()
+    tree = render()
+    assert.equal(tab(tree).props.maskedDraft, undefined)
+    assert.equal(guards.at(-1), false)
+  } finally {
+    globalThis.window = previousWindow
+  }
 })

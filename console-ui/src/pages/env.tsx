@@ -28,11 +28,17 @@ import {
 } from './env-editor-model.mjs'
 import { readErrorSummary, shouldShowMissingEnv } from '../utils/read-error.mjs'
 import { hasConsolePermission } from '../utils/console-access.mjs'
+import { useUnsavedChangesGuard } from '../utils/useUnsavedChangesGuard'
 import { ApplyFeedback, type ApplyOutcome, type ReadBackMismatch } from '../components/ApplyFeedback'
 import { outcomeFromEnvSave } from '../components/apply-outcome-model.mjs'
 
 const envDraftSessions = createFileDraftSessions()
-/** Pending per-key changes on masking Hosts (never revealed values: those live only in the open page). */
+/**
+ * Pending per-key changes on masking Hosts, kept while the page is open so switching files keeps
+ * them. They hold the values typed in the editor, which can be secrets (including a value that was
+ * revealed and then edited), so `EnvManagePage` drops them when the page is left (after the
+ * unsaved-changes confirmation). Values shown with 显示 alone stay in the editor component only.
+ */
 const maskedEnvDraftSessions = createFileDraftSessions()
 let unloadGuardInstalled = false
 function ensureEnvUnloadGuard() {
@@ -59,6 +65,7 @@ function rowErrorText(i18n: ReturnType<typeof useI18n>, error: EnvRowError) {
     case 'key-duplicate': return i18n.t("已存在同名变量")
     case 'value-masked': return i18n.t("值不能是遮罩占位符，请输入真实值")
     case 'value-multiline': return i18n.t("多行值必须用引号包裹")
+    case 'value-clear-unconfirmed': return i18n.t("当前值未显示，留空会在保存时清空它。要清空请点「确认清空」，否则输入新值或取消。")
   }
 }
 
@@ -431,10 +438,11 @@ function MaskedEnvFileEditor({
       : { originalKey: null, key: '', value: '', error: null })
     setMessage(null)
   }
-  const applyEdit = () => {
+  const applyEdit = (confirmClear = false) => {
     if (!editor || !view || !access.canEdit) return
     const next = { key: editor.originalKey ?? editor.key.trim(), value: editor.value }
-    const error = validateMaskedEnvRow(view, changes, next, editor.originalKey)
+    const shown = editor.originalKey !== null && revealed.has(editor.originalKey)
+    const error = validateMaskedEnvRow(view, changes, next, editor.originalKey, { revealed: shown, confirmClear })
     if (error) { setEditor({ ...editor, error }); return }
     setChanges(setEnvChange(changes, next.key, next.value))
     hide(next.key)
@@ -511,7 +519,10 @@ function MaskedEnvFileEditor({
       </div>
       {editor.error ? <p role="alert" className="text-xs text-destructive">{rowErrorText(i18n, editor.error)}</p> : null}
       <div className="flex items-center gap-2">
-        <Button size="sm" variant="secondary" onClick={applyEdit}><Check className="w-4 h-4 mr-1" />{i18n.t("应用")}</Button>
+        <Button size="sm" variant="secondary" disabled={editor.error === 'value-clear-unconfirmed'} onClick={() => applyEdit()}><Check className="w-4 h-4 mr-1" />{i18n.t("应用")}</Button>
+        {editor.error === 'value-clear-unconfirmed' ? (
+          <Button size="sm" variant="destructive" onClick={() => applyEdit(true)}><Trash2 className="w-4 h-4 mr-1" />{i18n.t("确认清空")}</Button>
+        ) : null}
         <Button size="sm" variant="ghost" onClick={() => setEditor(null)}><X className="w-4 h-4 mr-1" />{i18n.t("取消")}</Button>
       </div>
     </li>
@@ -531,7 +542,7 @@ function MaskedEnvFileEditor({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">{i18n.t("为保护密钥，值默认打码（只显示前 2 位与后 2 位，8 个字符以内全部打码）。「显示」会单独取回一个变量的原文并记入审计日志；保存只提交改动的变量。")}</p>
+      <p className="text-xs text-muted-foreground">{i18n.t("为保护密钥，值默认打码（不足 16 个字符全部打码，更长的值只显示前 2 位与后 2 位；掩码宽度固定，不显示长度）。「显示」会单独取回一个变量的原文并记入审计日志；保存只提交改动的变量。")}</p>
       {message?.type === 'error' && (
         <Alert variant="destructive" className="py-2">
           <AlertCircle className="h-4 w-4" />
@@ -542,7 +553,7 @@ function MaskedEnvFileEditor({
         </Alert>
       )}
       {!loaded && !loading ? <Button variant="outline" size="sm" onClick={() => void loadView()}>{i18n.t("重试读取")}</Button> : null}
-      {dirty ? <p className="text-xs text-muted-foreground">{i18n.t("未保存修改只在本标签页内保留；切换页面或文件可恢复，刷新前请保存。")}</p> : null}
+      {dirty ? <p className="text-xs text-muted-foreground">{i18n.t("未保存修改在切换文件时保留；离开本页前会先确认，离开后丢弃（其中可能有密钥）。刷新前请保存。")}</p> : null}
       {loaded ? (
         <ul className="space-y-2" aria-label={i18n.t("{0} 中的变量", [filename])}>
           {rows.length === 0 && !editor ? <li><StatusState kind="empty" compact title={i18n.t("还没有变量")}
@@ -667,10 +678,15 @@ export default function EnvManagePage() {
     if (draft) session.drafts.set(activeTab, draft)
     else session.drafts.delete(activeTab)
   }, [session, activeTab])
+  const [maskedDirty, setMaskedDirty] = useState(() => maskedSession.drafts.size > 0)
   const updateMaskedDraft = useCallback((draft: MaskedDraft | null) => {
     if (draft) maskedSession.drafts.set(activeTab, draft as unknown as FileDraft)
     else maskedSession.drafts.delete(activeTab)
+    setMaskedDirty(maskedSession.drafts.size > 0)
   }, [maskedSession, activeTab])
+  // Pending values on masking Hosts can be secrets: confirm before leaving, then drop them.
+  const leaveGuard = useUnsavedChangesGuard(maskedDirty)
+  useEffect(() => () => { maskedSession.drafts.clear() }, [maskedSession])
   const selectTab = (tab: string) => { session.selected = tab; setActiveTab(tab) }
   const saveAndRefresh = useCallback(async (filename: string, content: string) => {
     await saveFile(filename, content)
@@ -699,6 +715,7 @@ export default function EnvManagePage() {
 
   return (
     <div className="space-y-6">
+      {leaveGuard}
       <PageHeader
         title={i18n.t("环境变量")}
         description={readOnly ? i18n.t("查看 .env / .env.* 中的变量；只读，值始终打码。") : i18n.t("值默认打码，可逐个显示（记入审计）或编辑；保存只写入改动的变量，需重启 Host 后生效。")}

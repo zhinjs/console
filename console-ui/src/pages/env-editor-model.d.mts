@@ -1,6 +1,6 @@
 export interface EnvRow { key: string; value: string; secret: boolean }
 export type EnvChange = { type: 'set'; key: string; value: string } | { type: 'delete'; key: string }
-export type EnvRowError = 'key-required' | 'key-invalid' | 'key-duplicate' | 'value-masked' | 'value-multiline'
+export type EnvRowError = 'key-required' | 'key-invalid' | 'key-duplicate' | 'value-masked' | 'value-multiline' | 'value-clear-unconfirmed'
 export const ENV_MASK_CHAR: string
 export const ENV_MASK_RUN: number
 export const ENV_MASK_REVEAL_MIN_LENGTH: number
@@ -29,5 +29,5 @@ export function isEnvMaskPlaceholder(value: string): boolean
 export function maskedEnvRows(view: MaskedEnvView, changes: readonly MaskedEnvChange[]): MaskedEnvRow[]
 export function setEnvChange(changes: readonly MaskedEnvChange[], key: string, value: string): MaskedEnvChange[]
 export function deleteEnvChange(view: MaskedEnvView, changes: readonly MaskedEnvChange[], key: string): MaskedEnvChange[]
-export function validateMaskedEnvRow(view: MaskedEnvView, changes: readonly MaskedEnvChange[], row: { key: string; value: string }, originalKey: string | null): EnvRowError | null
+export function validateMaskedEnvRow(view: MaskedEnvView, changes: readonly MaskedEnvChange[], row: { key: string; value: string }, originalKey: string | null, options?: { revealed?: boolean; confirmClear?: boolean }): EnvRowError | null
 export function maskedEnvReadBackMismatch(changes: readonly MaskedEnvChange[], view: MaskedEnvView): import('../components/apply-outcome-model.mjs').ReadBackMismatch | null

@@ -4,6 +4,8 @@ import { readFile } from 'node:fs/promises'
 import {
   accountEnvironmentVariable,
   canReferenceEnvironment,
+  connectionTestError,
+  supportsConnectionTest,
   describeLastCall,
   describeProbe,
   inferenceError,
@@ -71,4 +73,26 @@ test('the account page hides env inputs from callers without authority and keeps
   const purposes = await readFile(new URL('../console-ui/src/pages/inference/Purposes.tsx', import.meta.url), 'utf8')
   assert.match(purposes, /'\/probe'/)
   assert.match(purposes, /if \(!\(await probeNewBindings\(\)\)\) return/)
+})
+
+test('测试连接 appears only on Hosts that have it; a missing route reads as an older Host, not a missing Agent', async () => {
+  // Hosts with `/account/test` always send `environmentReferences` (`'none'` included).
+  for (const environmentReferences of ['none', 'console-owner', 'local-cli'])
+    assert.equal(supportsConnectionTest({ hostAdministrator: false, environmentReferences }), true, environmentReferences)
+  assert.equal(supportsConnectionTest({ hostAdministrator: true }), false)
+  assert.equal(supportsConnectionTest(undefined), false)
+  // An older Host answers the route with 404 (`not-installed`).
+  const missing = await inferenceRequest(async () => new Response('Not Found', { status: 404 }), { path: '/account/test', body: { accountId: 'a' } }).catch((e) => e)
+  assert.equal(missing.code, 'not-installed')
+  assert.equal(connectionTestError(missing), 'Host 版本较旧，暂不支持测试连接')
+  assert.equal(connectionTestError(missing, 'en'), 'This Host version is too old to test connections')
+  assert.doesNotMatch(connectionTestError(missing), /Agent/)
+  // Other failures keep their usual message.
+  assert.equal(connectionTestError(new InferenceRequestError('forbidden', 403)), inferenceError(new InferenceRequestError('forbidden', 403)))
+  // Both entries (account row and the env:// credential dialog) are gated, and the route uses the mapping.
+  const source = await readFile(new URL('../console-ui/src/pages/inference/Accounts.tsx', import.meta.url), 'utf8')
+  assert.match(source, /supportsConnectionTest\(view\) && Object\.values\(view\.profiles\)/)
+  assert.match(source, /supportsConnectionTest\(credential\.source\.view\) \? \(\s*<Button/)
+  assert.match(source, /'\/account\/test', \{ accountId: account\.id \}, connectionTestError\)/)
+  assert.equal((source.match(/\{i18n\.t\("测试连接"\)\}/g) ?? []).length, 2)
 })

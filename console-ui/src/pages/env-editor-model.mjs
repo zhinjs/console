@@ -286,13 +286,22 @@ export function deleteEnvChange(view, changes, key) {
   return view.variables.some(variable => variable.key === key) ? [...rest, { key, delete: true }] : rest
 }
 
-/** Same checks as {@link validateEnvRow}, against a masked view plus pending changes. */
-export function validateMaskedEnvRow(view, changes, { key, value }, originalKey) {
+/**
+ * Same checks as {@link validateEnvRow}, against a masked view plus pending changes. An empty input
+ * for a stored value that was never shown here would clear it on save without the user having seen
+ * it: `value-clear-unconfirmed` until the caller passes `confirmClear` (a deliberate 清空 action).
+ * A value that was revealed, or typed here before, is visible in the editor, so emptying it is not.
+ */
+export function validateMaskedEnvRow(view, changes, { key, value }, originalKey, { revealed = false, confirmClear = false } = {}) {
   const name = String(key ?? '').trim()
   if (!name) return 'key-required'
   if (!validKey.test(name)) return 'key-invalid'
   if (name !== originalKey && maskedEnvRows(view, changes).some(row => row.key === name)) return 'key-duplicate'
   const text = String(value ?? '')
+  if (text === '' && originalKey !== null && !revealed && !confirmClear) {
+    const current = maskedEnvRows(view, changes).find(row => row.key === originalKey)
+    if (current && current.pending === undefined && current.hasValue) return 'value-clear-unconfirmed'
+  }
   if (isEnvMaskPlaceholder(text)) return 'value-masked'
   const quote = /^["'`]/.test(text) ? text[0] : null
   if (quote) {

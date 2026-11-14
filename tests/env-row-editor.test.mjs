@@ -89,6 +89,7 @@ function editorFixture({ file, fresh = () => file, readOnly = false, saveFails =
     './env-editor-model.mjs': envModel,
     '../utils/read-error.mjs': readError,
     '../utils/console-access.mjs': { hasConsolePermission: () => !readOnly },
+    '../utils/useUnsavedChangesGuard': { useUnsavedChangesGuard: () => null },
     '../components/ApplyFeedback': { ApplyFeedback: 'apply-feedback' },
     '../components/apply-outcome-model.mjs': applyOutcome,
   }

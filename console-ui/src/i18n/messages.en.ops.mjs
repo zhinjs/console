@@ -167,8 +167,11 @@ export const opsMessages = Object.freeze({
   // Environment variables masked by default (zhinjs/zhin#1250)
   "显示失败：需要 ops.env.read 与 ops.env.write 权限，或变量已被移除。": "Could not show the value: it needs ops.env.read and ops.env.write, or the variable was removed.",
   "输入新值（当前值未显示）": "Enter a new value (the current value is not shown)",
-  "为保护密钥，值默认打码（只显示前 2 位与后 2 位，8 个字符以内全部打码）。「显示」会单独取回一个变量的原文并记入审计日志；保存只提交改动的变量。": "To protect secrets, values are masked by default (only the first 2 and last 2 characters; values of up to 8 characters are fully masked). Show fetches one variable's value on its own and is recorded in the audit log; saving submits only the variables you changed.",
+  "为保护密钥，值默认打码（不足 16 个字符全部打码，更长的值只显示前 2 位与后 2 位；掩码宽度固定，不显示长度）。「显示」会单独取回一个变量的原文并记入审计日志；保存只提交改动的变量。": "To protect secrets, values are masked by default (values shorter than 16 characters are fully masked; longer ones show only their first 2 and last 2 characters; the mask has a fixed width and never shows the length). Show fetches one variable's value on its own and is recorded in the audit log; saving submits only the variables you changed.",
   "（空）": "(empty)",
+  "未保存修改在切换文件时保留；离开本页前会先确认，离开后丢弃（其中可能有密钥）。刷新前请保存。": "Unsaved changes are kept while you switch files; leaving this page asks first and then discards them (they may contain secrets). Save before refreshing.",
+  "当前值未显示，留空会在保存时清空它。要清空请点「确认清空」，否则输入新值或取消。": "The current value is not shown; leaving this empty clears it when you save. Click “Confirm clear” to clear it, or enter a new value or cancel.",
+  "确认清空": "Confirm clear",
   "引用": "Reference",
   "新增，未保存": "Added, not saved",
   "已修改，未保存": "Changed, not saved",
