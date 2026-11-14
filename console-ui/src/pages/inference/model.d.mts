@@ -54,12 +54,29 @@ export interface Profile extends Resource {
   model: string
   parameters: ObjectValue
 }
+export interface AccountLastCall {
+  outcome: 'ok' | 'auth' | 'rate-limit' | 'server' | 'rejected' | 'timeout' | 'network'
+  status?: number
+  at: number
+}
+export interface ProbeResult {
+  status: 'ok' | 'failed'
+  kind?: string
+  code?: string
+  httpStatus?: number
+  durationMs: number
+  at: number
+  profileId: string
+}
 export interface AccountStatus {
   status: string
   revision: number
   preparation?: string
   source?: 'environment-expression'
   retryAt?: number
+  /** `env://` Host account without a credential record yet (#1250). */
+  environment?: 'present' | 'missing'
+  lastCall?: AccountLastCall
   failure?: {
     kind: 'temporary-response' | 'response-error' | 'transport-unknown' | 'invalid-response'
     status?: number
@@ -71,6 +88,7 @@ export interface View {
   revision: number
   ownerId: string
   hostAdministrator: boolean
+  environmentReferences?: 'local-cli' | 'console-owner' | 'none'
   services: Record<string, Service>
   accounts: Record<string, Account>
   profiles: Record<string, Profile>
@@ -122,11 +140,17 @@ export interface ProfileSelection {
   kind: 'language'
 }
 export class InferenceRequestError extends Error {
-  constructor(code: string, status?: number, mutationOutcome?: 'not-committed')
+  constructor(code: string, status?: number, mutationOutcome?: 'not-committed', reason?: string)
   code: string
   status: number
   mutationOutcome?: 'not-committed'
+  reason?: string
 }
+export function canReferenceEnvironment(view: View): boolean
+export function accountEnvironmentVariable(account: Account | undefined): string | undefined
+export function describeLastCall(lastCall: AccountLastCall | undefined, locale?: 'zh-CN' | 'en'): string
+export function describeProbe(result: ProbeResult, locale?: 'zh-CN' | 'en'): string
+export function newlyBoundLanguageProfiles(draft: Purposes, original: Purposes | undefined): string[]
 export function inferencePath(path?: string, ownerId?: string): string
 export function inferenceRequest<T = unknown>(
   fetch: typeof globalThis.fetch,

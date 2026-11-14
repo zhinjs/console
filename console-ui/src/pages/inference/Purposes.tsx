@@ -7,11 +7,16 @@ import { SelectField } from '../../components/ui/select'
 import { SearchableSelectField, type SearchableSelectOption } from '../../components/ui/searchable-select'
 import { supportLabel } from './SupportInfo'
 import { Card } from '../../components/ui/card'
+import { useConfirm } from '../../components/confirm-dialog'
 import {
   purposePlan,
   profileSupport,
   purposeProfileChoices,
   inferenceError,
+  newlyBoundLanguageProfiles,
+  describeProbe,
+  InferenceRequestError,
+  type ProbeResult,
   type Purposes as PurposeState,
   type ScopeModels,
   type Kind,
@@ -43,7 +48,48 @@ export function Purposes({ management: m }: { management: InferenceManagement })
   const [level, setLevel] = useState<'adapters' | 'endpoints' | 'scenes'>('adapters'),
     [target, setTarget] = useState(''),
     [sceneOffset, setSceneOffset] = useState(0)
-  const disabled = m.busy || !!m.pending
+  const [probing, setProbing] = useState(false)
+  const { confirm, ConfirmDialog: confirmDialog } = useConfirm()
+  const disabled = m.busy || !!m.pending || probing
+  /**
+   * #1250: before saving, send one minimal tool-carrying request to every newly bound model, so a
+   * relay that hangs or rejects tools does not silently break chat. Failures ask for confirmation.
+   */
+  async function probeNewBindings(): Promise<boolean> {
+    const ids = newlyBoundLanguageProfiles(draft, view.purposes)
+    if (!ids.length) return true
+    setProbing(true)
+    const failures: string[] = []
+    try {
+      for (const id of ids) {
+        const label = view.profiles[id]?.label ?? view.profiles[id]?.model ?? id
+        try {
+          const result = await m.request<ProbeResult>('/probe', { profileId: id })
+          if (!m.active()) return false
+          if (result.status !== 'ok') failures.push(`${label}${i18n.locale === 'en' ? ': ' : '：'}${describeProbe(result, i18n.locale)}`)
+        } catch (error) {
+          // A Host before #1250 has no probe route: save as before.
+          if (error instanceof InferenceRequestError && error.code === 'not-installed') return true
+          if (!m.active()) return false
+          failures.push(`${label}${i18n.locale === 'en' ? ': ' : '：'}${inferenceError(error, i18n.locale)}`)
+        }
+      }
+    } finally {
+      setProbing(false)
+    }
+    if (!failures.length) return true
+    return confirm({
+      title: i18n.t("新绑定的模型连通性测试未通过"),
+      description: i18n.t("仍然保存的话，使用这些用途的对话可能没有回复。确定保存吗？"),
+      children: (
+        <ul className="list-disc space-y-1 pl-5 text-sm" role="list">
+          {failures.map((line) => <li key={line}>{line}</li>)}
+        </ul>
+      ),
+      confirmLabel: i18n.t("仍然保存"),
+      variant: 'destructive',
+    })
+  }
   useEffect(() => {
     let alive = true
     void m.request<Targets>('/targets').then(
@@ -117,6 +163,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
       onSubmit={async (event) => {
         event.preventDefault()
         const submitted = editor
+        if (!(await probeNewBindings())) return
         await m.savePlan({ version: 1, purposes: purposePlan(draft, view.purposes!) }, {
           source,
           onCommitted: (next) => setEditor((current) => ({
@@ -127,10 +174,11 @@ export function Purposes({ management: m }: { management: InferenceManagement })
         })
       }}
     >
+      {confirmDialog}
       <div className="flex items-center justify-between gap-3">
         <h3 className="font-semibold">{i18n.t("模型用途")}</h3>
         <Button type="submit" disabled={disabled}>
-          {i18n.t("保存")}
+          {probing ? i18n.t("正在测试连通性…") : i18n.t("保存")}
         </Button>
       </div>
       <Card className="p-4 space-y-4">

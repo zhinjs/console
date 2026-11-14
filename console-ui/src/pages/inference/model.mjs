@@ -1,12 +1,23 @@
 import { translate } from '../../i18n/locale.mjs'
 const base = '/api/agent/inference'
 export class InferenceRequestError extends Error {
-  constructor(code, status = 503, mutationOutcome) {
+  constructor(code, status = 503, mutationOutcome, reason) {
     super(code)
     this.code = code
     this.status = status
     this.mutationOutcome = mutationOutcome
+    if (reason) this.reason = reason
   }
+}
+/** Closed-set Host refusal reasons (#1250); the Host never sends values or provider text. */
+const REFUSAL_TEXT = {
+  'environment-console-user': (locale) => translate(locale, 'Console 用户的账号不能引用 Host 环境变量，请直接填写密钥，或由 Host 管理员在本机用命令添加（zhin ai account add）'),
+  'environment-name': (locale) => translate(locale, '只能引用以 _API_KEY 结尾的环境变量（例如 OPENAI_API_KEY）'),
+  'environment-service-address': (locale) => translate(locale, '引用 Host 环境变量的账号只能使用内置服务的官方地址或已存在的服务，不能在这次导入中新建或改成自定义地址'),
+  'environment-local-only': (locale) => translate(locale, '该操作只能由 Host 管理员在本机用 zhin 命令完成'),
+  'environment-missing': (locale) => translate(locale, '新的环境变量在 Host 上未设置或为空'),
+  'environment-mismatch': (locale) => translate(locale, '新变量的值与当前凭据的指纹不一致；确认是同一账号的新密钥后加 --reauthorize 重试'),
+  'environment-account': (locale) => translate(locale, '只有引用环境变量（env://）的 Host API Key 账号可以修改引用名，且原变量名必须一致'),
 }
 export function inferencePath(path = '', ownerId) {
   const url = new URL(base + path, 'https://console.invalid')
@@ -36,12 +47,14 @@ export async function inferenceRequest(fetch, { path = '', ownerId, body, method
       response.status,
       result.mutationOutcome === 'not-committed' || result.requestOutcome === 'not-dispatched'
         ? 'not-committed'
-        : undefined
+        : undefined,
+      typeof result.reason === 'string' && Object.hasOwn(REFUSAL_TEXT, result.reason) ? result.reason : undefined
     )
   return result.data
 }
 export function inferenceError(error, locale = 'zh-CN') {
   const code = error instanceof InferenceRequestError ? error.code : 'unavailable'
+  if (error instanceof InferenceRequestError && error.reason) return REFUSAL_TEXT[error.reason](locale)
   if (code === 'forbidden') return translate(locale, '当前身份无权执行此操作。')
   if (code === 'plan-conflict') return translate(locale, '连接或模型身份发生变化，请新增账号或模型并明确重新绑定。')
   if (['conflict', 'stale-reference', 'revision-conflict'].includes(code))
@@ -352,4 +365,86 @@ export function purposeProfileChoices(view, kind, locale = 'zh-CN') {
     })
   }
   return [...rows.filter(row => !row.agent), ...rows.filter(row => row.agent)]
+}
+
+/**
+ * Whether this Console caller may type a Host environment reference (`env://NAME`, `${NAME}`).
+ * Hosts before #1250 send no `environmentReferences`: keep their Host-administrator rule.
+ */
+export function canReferenceEnvironment(view) {
+  if (view.environmentReferences !== undefined)
+    return view.environmentReferences === 'console-owner' || view.environmentReferences === 'local-cli'
+  return view.hostAdministrator
+}
+/** The `env://NAME` variable of an account, if it reads one. */
+export function accountEnvironmentVariable(account) {
+  return /^env:\/\/([A-Za-z_][A-Za-z0-9_]*)$/u.exec(account?.authentication?.source ?? '')?.[1]
+}
+const CALL_OUTCOME_TEXT = {
+  ok: (locale) => translate(locale, '成功'),
+  auth: (locale) => translate(locale, '鉴权失败'),
+  'rate-limit': (locale) => translate(locale, '限流'),
+  server: (locale) => translate(locale, '服务异常'),
+  rejected: (locale) => translate(locale, '请求被拒绝'),
+  timeout: (locale) => translate(locale, '超时'),
+  network: (locale) => translate(locale, '网络错误'),
+}
+const PROBE_KIND_TEXT = {
+  auth: (locale) => translate(locale, '鉴权失败'),
+  rate_limit: (locale) => translate(locale, '限流'),
+  quota_exhausted: (locale) => translate(locale, '额度用完'),
+  billing: (locale) => translate(locale, '余额不足'),
+  server: (locale) => translate(locale, '服务异常'),
+  timeout: (locale) => translate(locale, '超时'),
+  no_response: (locale) => translate(locale, '无响应'),
+  network: (locale) => translate(locale, '网络错误'),
+  bad_request: (locale) => translate(locale, '请求被拒绝（可能不支持工具调用）'),
+  credential: (locale) => translate(locale, '凭据不可用'),
+  'profile-not-found': (locale) => translate(locale, '模型配置不存在'),
+  unavailable: (locale) => translate(locale, '模型配置不可用'),
+}
+function clock(at, locale) {
+  try {
+    return new Date(at).toLocaleString(locale === 'en' ? 'en-US' : 'zh-CN', { hour12: false })
+  } catch {
+    return ''
+  }
+}
+/** "最近调用：鉴权失败（HTTP 401）· time" — outcome class, status and time only. */
+export function describeLastCall(lastCall, locale = 'zh-CN') {
+  if (!lastCall) return ''
+  const outcome = CALL_OUTCOME_TEXT[lastCall.outcome]?.(locale) ?? translate(locale, '失败')
+  const status = lastCall.status && lastCall.outcome !== 'ok' ? ` (HTTP ${lastCall.status})` : ''
+  return `${translate(locale, '最近调用：')}${outcome}${status} · ${clock(lastCall.at, locale)}`
+}
+/** One line for a connectivity probe result. */
+export function describeProbe(result, locale = 'zh-CN') {
+  if (result.status === 'ok') return translate(locale, '连接正常（{0} ms）', [String(result.durationMs)])
+  const kind = PROBE_KIND_TEXT[result.kind]?.(locale) ?? translate(locale, '失败')
+  const status = result.httpStatus ? ` HTTP ${result.httpStatus}` : ''
+  return translate(locale, '连接失败：{0}', [`${kind}${status}`])
+}
+/** Language Profiles a purposes draft binds that its baseline did not (probed before saving). */
+export function newlyBoundLanguageProfiles(draft, original) {
+  const collect = (purposes) => {
+    const ids = new Set()
+    const add = (id) => {
+      if (typeof id === 'string' && id) ids.add(id)
+    }
+    const scope = (value) => {
+      add(value?.chat)
+      add(value?.perception?.profile)
+      for (const id of value?.perception?.fallbacks ?? []) add(id)
+    }
+    scope(purposes?.defaults)
+    add(purposes?.defaults?.summary)
+    add(purposes?.defaults?.ambient)
+    for (const value of Object.values(purposes?.adapters ?? {})) scope(value)
+    for (const value of Object.values(purposes?.endpoints ?? {})) scope(value)
+    for (const value of Object.values(purposes?.scenes ?? {})) add(value?.chat)
+    for (const id of Object.values(purposes?.agents ?? {})) add(id)
+    return ids
+  }
+  const before = collect(original)
+  return [...collect(draft)].filter((id) => !before.has(id))
 }
