@@ -18,6 +18,7 @@ function render(props = {}) {
     '@zhin.js/client': { cn: (...values) => values.filter(Boolean).join(' ') },
     '../../components/ui/button': { Button: 'button' },
     '../../components/ui/input': { Input: 'input' },
+    '../../components/StatusState': { StatusState: 'status-state' },
     './ConversationSection': { ConversationSection: 'conversation-section' },
     './SystemInboxSection': { SystemInboxSection: 'system-inbox-section' },
   }
@@ -44,7 +45,14 @@ test('refresh is labelled and disabled while the list loads; account status erro
   const loading = render({ listLoading: true })
   assert.equal(refresh(loading).props.disabled, true)
   assert.ok(nodes(loading).some(node => node.props?.role === 'status'))
-  const failed = render({ loadErr: 'HTTP 503' })
+  const failure = new Error('Unknown RPC type: endpoint.info'), retry = () => {}
+  const failed = render({ loadErr: failure, onRetryInfo: retry })
   const alert = nodes(failed).find(node => node.props?.role === 'alert')
-  assert.match(text(alert), /HTTP 503/)
+  assert.match(text(alert), /读取账号状态失败。会话与其他页签仍可使用。/)
+  assert.doesNotMatch(text(alert), /Unknown RPC type/, 'the English error is no longer spliced into the sentence')
+  const state = nodes(alert).find(node => node.type === 'status-state')
+  assert.equal(state.props.error, failure, 'StatusState classifies the failure itself (旧 Host / 无权限 / 实例不可用 …)')
+  assert.equal(state.props.onRetry, retry)
+  const slow = nodes(loading).find(node => node.type === 'status-state')
+  assert.equal(slow?.props.kind, 'loading', 'a stuck list read turns into 「仍在加载…」 instead of a bare spinner')
 })

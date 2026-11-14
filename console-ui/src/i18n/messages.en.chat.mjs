@@ -4,7 +4,6 @@ export const chatMessages = Object.freeze({
   "返回会话列表": "Back to conversations",
   "打开会话页": "Open conversation page",
   "正在读取会话": "Loading conversations",
-  "读取账号状态失败：{0}": "Could not read the account status: {0}",
   "账号离线，暂时不能发送消息。账号恢复在线后输入框会出现。": "The account is offline, so messages cannot be sent. The message box returns when the account is back online.",
   // 聊天：发送回执
   "发送中": "Sending",

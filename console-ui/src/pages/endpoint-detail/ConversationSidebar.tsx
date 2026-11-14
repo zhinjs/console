@@ -1,16 +1,18 @@
 import { useI18n } from '../../i18n'
 import type { ConversationListNotice } from './conversation-list-notice.mjs'
-import { Loader2, RefreshCw, Search } from 'lucide-react'
+import { RefreshCw, Search } from 'lucide-react'
 import { cn } from '@zhin.js/client'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
+import { StatusState } from '../../components/StatusState'
 import type { SidebarSelection } from './types'
 import type { ConversationSection as ConversationSectionType, ConversationSectionId } from './types'
 import { ConversationSection } from './ConversationSection'
 import { SystemInboxSection } from './SystemInboxSection'
 
 interface ConversationSidebarProps {
-  loadErr: string | null
+  /** Why the account status could not be read (the failure itself; classified by StatusState). */
+  loadErr: unknown
   listLoading: boolean
   listNotice: ConversationListNotice | null
   listSearch: string
@@ -27,6 +29,8 @@ interface ConversationSidebarProps {
   requestCount: number
   noticeCount: number
   onRefresh: () => void
+  /** Re-reads the account status after a failure. */
+  onRetryInfo?: () => void
 }
 
 /**
@@ -53,6 +57,7 @@ export function ConversationSidebar({
   requestCount,
   noticeCount,
   onRefresh,
+  onRetryInfo,
 }: ConversationSidebarProps) {
   const i18n = useI18n()
   const selectionKey =
@@ -86,14 +91,17 @@ export function ConversationSidebar({
         />
       </div>
 
-      {loadErr && (
-        <p className="im-sidebar-notice text-destructive" role="alert">{i18n.t('读取账号状态失败：{0}', [loadErr])}</p>
-      )}
+      {loadErr ? (
+        <div className="im-sidebar-notice" role="alert">
+          <p className="text-xs text-muted-foreground mb-2">{i18n.t('读取账号状态失败。会话与其他页签仍可使用。')}</p>
+          <StatusState error={loadErr} compact onRetry={onRetryInfo} />
+        </div>
+      ) : null}
 
       <div className="im-sidebar-list">
         {listLoading && (
-          <div className="flex items-center justify-center py-10" role="status" aria-label={i18n.t('正在读取会话')}>
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <div className="px-3 py-2" role="status" aria-label={i18n.t('正在读取会话')}>
+            <StatusState kind="loading" compact onRetry={onRefresh} />
           </div>
         )}
 

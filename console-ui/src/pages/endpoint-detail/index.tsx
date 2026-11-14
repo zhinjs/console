@@ -183,6 +183,7 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
     endpointId,
     info,
     loadErr,
+    reloadInfo,
     actionError,
     msgContent,
     setMsgContent,
@@ -654,6 +655,7 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
       {mode === 'account' ? (
         <ConversationSidebar
           loadErr={loadErr}
+          onRetryInfo={() => void reloadInfo()}
           listLoading={listLoading}
           listNotice={listNotice}
           listSearch={listSearch}

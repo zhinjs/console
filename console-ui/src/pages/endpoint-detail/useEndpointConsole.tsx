@@ -76,7 +76,7 @@ export function useEndpointConsole(target?: EndpointWorkspaceTarget) {
 
   const connected = useConsoleConnected()
   const [info, setInfo] = useState<EndpointInfo | null>(null)
-  const [loadErr, setLoadErr] = useState<string | null>(null)
+  const [loadErr, setLoadErr] = useState<unknown>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
   // --- Endpoint info ---
@@ -93,7 +93,7 @@ export function useEndpointConsole(target?: EndpointWorkspaceTarget) {
       setInfo({ ...readEndpointList({ endpoints: [data] }, i18n.locale)[0], endpoint: readEndpointIdentity(data.endpoint, i18n.locale) })
       setLoadErr(null)
     } catch (e) {
-      if (sequence === infoSequence.current && isInboxCacheScopeActive(cacheScope)) setLoadErr((e as Error).message)
+      if (sequence === infoSequence.current && isInboxCacheScopeActive(cacheScope)) setLoadErr(e ?? new Error(String(e)))
     }
   }, [adapter, endpointId, cacheScope, i18n])
 
@@ -574,6 +574,7 @@ export function useEndpointConsole(target?: EndpointWorkspaceTarget) {
     connected,
     info,
     loadErr,
+    reloadInfo: loadInfo,
     actionError,
     // message sending
     msgContent: msgHistory.msgContent,
