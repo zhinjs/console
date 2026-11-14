@@ -1,6 +1,6 @@
 import { useI18n } from '../../i18n'
 import { useState, type FormEvent } from 'react'
-import { Plus, Pencil, KeyRound, LogIn, Unplug, Trash2 } from 'lucide-react'
+import { Plus, Pencil, KeyRound, LogIn, Unplug, Trash2, Activity } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { SelectField } from '../../components/ui/select'
@@ -16,12 +16,25 @@ import { SupportLabel, SupportNotice, supportLabel } from './SupportInfo'
 import { driverLabel, serviceDriver } from './model.mjs'
 import { Card } from '../../components/ui/card'
 import { useConfirm } from '../../components/confirm-dialog'
-import { driverKey, type Account, type AccountStatus, type ObjectValue } from './model.mjs'
+import {
+  driverKey,
+  canReferenceEnvironment,
+  accountEnvironmentVariable,
+  describeLastCall,
+  describeProbe,
+  type Account,
+  type AccountStatus,
+  type ObjectValue,
+  type ProbeResult,
+} from './model.mjs'
 import { SchemaFields } from './SchemaFields'
 import type { InferenceManagement, InferenceSource } from './useInferenceManagement'
 
 type Translate = ReturnType<typeof useI18n>['t']
 function accountStatusLabel(status: AccountStatus | undefined, t: Translate): string {
+  // An env:// Host account gets its credential record on first use (#1250 ai-account-status-stale).
+  if (status?.environment === 'present') return t('环境变量就绪（待首次使用）')
+  if (status?.environment === 'missing') return t('环境变量未设置')
   if (status?.status === 'ready' && status.retryAt !== undefined) return t('认证限流')
   if (status?.status === 'uncertain' && status.failure) {
     if (status.failure.kind === 'temporary-response') return t('认证服务暂时不可用')
@@ -47,7 +60,8 @@ export function Accounts({ management: m }: { management: InferenceManagement })
       replacement?: boolean
       source: InferenceSource
     } | null>(null),
-    [credential, setCredential] = useState<{ account: Account; source: InferenceSource } | null>(null)
+    [credential, setCredential] = useState<{ account: Account; source: InferenceSource } | null>(null),
+    [tests, setTests] = useState<Record<string, ProbeResult>>({})
   const [login, setLogin] = useState<{
     account: Account
     source: InferenceSource
@@ -86,6 +100,14 @@ export function Accounts({ management: m }: { management: InferenceManagement })
       })
     )
       await m.savePlan({ version: 1, remove: { accounts: [account.id] } }, { source: m.source! })
+  }
+  async function test(account: Account) {
+    if (!Object.values(view.profiles).some((profile) => profile.accountId === account.id)) {
+      m.setError(i18n.t("该账号还没有模型配置，无法测试连接。"))
+      return
+    }
+    const tested = await m.action<{ result: ProbeResult }>('/account/test', { accountId: account.id })
+    if (tested) setTests((previous) => ({ ...previous, [account.id]: tested.result }))
   }
   async function begin(account: Account) {
     const challenge = await m.action<{
@@ -133,6 +155,16 @@ export function Accounts({ management: m }: { management: InferenceManagement })
                     {service.label ?? service.driver.id} ·{' '}
                     {accountStatusLabel(status, i18n.t)}
                   </p>
+                  {tests[account.id] ? (
+                    <p
+                      className={`text-sm ${tests[account.id]!.status === 'ok' ? 'text-muted-foreground' : 'text-destructive'}`}
+                      role="status"
+                    >
+                      {describeProbe(tests[account.id]!, i18n.locale)}
+                    </p>
+                  ) : status?.lastCall ? (
+                    <p className="text-sm text-muted-foreground">{describeLastCall(status.lastCall, i18n.locale)}</p>
+                  ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button
@@ -152,7 +184,18 @@ export function Accounts({ management: m }: { management: InferenceManagement })
                   >
                     {i18n.t("新增替代账号")}
                   </Button>
-                  {account.authentication.method === 'api-key' && !account.authentication.source ? (
+                  {Object.values(view.profiles).some((profile) => profile.accountId === account.id) ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => void test(account)}
+                      disabled={disabled}
+                    >
+                      <Activity />
+                      {i18n.t("测试连接")}
+                    </Button>
+                  ) : null}
+                  {account.authentication.method === 'api-key' ? (
                     <Button
                       variant="outline"
                       size="sm"
@@ -277,6 +320,46 @@ export function Accounts({ management: m }: { management: InferenceManagement })
           {credential && !login ? (
             <SupportNotice support={serviceDriver(credential.source.view, credential.account.serviceId)?.support} />
           ) : null}
+          {credential?.account.authentication.source ? (
+            <div className="space-y-3 text-sm">
+              <p>
+                {i18n.t("此账号的密钥来自 Host 环境变量 {0}，不能在 Console 中改写。", [
+                  accountEnvironmentVariable(credential.account) ?? credential.account.authentication.source,
+                ])}
+              </p>
+              <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+                <li>{i18n.t("在 Host 上设置该变量后点「测试连接」，成功即完成激活。")}</li>
+                <li>{i18n.t("要改用另一个变量，请 Host 管理员在本机运行 zhin ai account rename-env。")}</li>
+                <li>{i18n.t("或新增替代账号，直接填写密钥。")}</li>
+              </ul>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={disabled}
+                  onClick={() => {
+                    const account = credential.account
+                    setCredential(null)
+                    void test(account)
+                  }}
+                >
+                  {i18n.t("测试连接")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={disabled}
+                  onClick={() => {
+                    const target = credential
+                    setCredential(null)
+                    setEditing({ account: target.account, replacement: true, source: target.source })
+                  }}
+                >
+                  {i18n.t("新增替代账号")}
+                </Button>
+              </div>
+            </div>
+          ) : (
           <form
             className="space-y-4"
             onSubmit={async (event) => {
@@ -307,7 +390,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
               <Input
                 type="password"
                 autoComplete="off"
-                placeholder={credential?.source.view.hostAdministrator && credential.account.authentication.method === 'api-key'
+                placeholder={credential && canReferenceEnvironment(credential.source.view) && credential.account.authentication.method === 'api-key'
                   ? i18n.t("API Key 或 ${ENV_VAR:-默认值}") : undefined}
                 value={clientSecret}
                 onChange={(event) => setClientSecret(event.target.value)}
@@ -318,6 +401,7 @@ export function Accounts({ management: m }: { management: InferenceManagement })
               {i18n.t("保存")}
             </Button>
           </form>
+          )}
         </DialogContent>
       </Dialog>
       <Dialog
@@ -561,7 +645,7 @@ function AccountForm({
             />
           </label>
         ) : null}
-        {view.hostAdministrator && method === 'api-key' ? (
+        {method === 'api-key' && (canReferenceEnvironment(view) || (updating && authSource)) ? (
           <label className="block space-y-2 text-sm">
             <span>{i18n.t("环境变量引用（可选）")}</span>
             <Input
@@ -571,7 +655,16 @@ function AccountForm({
               placeholder="env://MODEL_API_KEY"
               autoComplete="off"
             />
+            {!updating ? (
+              <span className="block text-muted-foreground">
+                {i18n.t("只能引用以 _API_KEY 结尾的变量；服务需为已有服务或内置服务的官方地址。")}
+              </span>
+            ) : null}
           </label>
+        ) : method === 'api-key' && !updating ? (
+          <p className="text-sm text-muted-foreground">
+            {i18n.t("Console 用户的账号不能引用 Host 环境变量，请直接填写密钥，或由 Host 管理员在本机用命令添加（zhin ai account add）")}
+          </p>
         ) : null}
         <Button type="submit" disabled={!optionsValid || !method || !driver}>
           {i18n.t("保存")}
