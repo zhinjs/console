@@ -342,7 +342,7 @@ export default function WorkroomCatalogPage() {
     .map((binding) => `${binding.adapter}:${binding.endpoint}`))).size
 
   return (
-    <PageShell className="max-w-[1680px]">
+    <PageShell>
       <PageHeader
         title={i18n.t("Workroom 配置")}
         description={i18n.t("配置协作空间、成员和消息渠道。")}

@@ -298,7 +298,12 @@ test('event stream replies are classified into a reason the user can act on', ()
 
 test('self-check: mixed content, health / base path, clock and sign-in readings', () => {
   assert.equal(checkMixedContent('https:', 'http://bot.example:8086').status, 'fail')
-  assert.equal(checkMixedContent('https:', 'http://127.0.0.1:8086').status, 'warn', 'browsers allow loopback')
+  for (const host of ['http://127.0.0.1:8086', 'http://localhost:8086', 'http://[::1]:8086', 'http://bot.localhost']) {
+    const loopback = checkMixedContent('https:', host)
+    assert.equal(loopback.status, 'pass', `browsers allow loopback: ${host}`)
+    assert.equal(loopback.detail, 'loopback-http', 'the pass still says why')
+  }
+  assert.equal(selfCheckSummary([checkMixedContent('https:', 'http://127.0.0.1:8086')]).warned, 0, 'a loopback Host is not counted as needing attention')
   assert.equal(checkMixedContent('https:', 'https://bot.example').status, 'pass')
   assert.equal(checkMixedContent('http:', 'not a url').status, 'skip')
 

@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { useI18n } from '../i18n'
 import { ActionReceipt, useActionReceipt, type ActionReceiptController } from '../components/ActionReceipt'
+import { AnsiLines } from '../components/AnsiText'
 import { receiptBlocksActions, type ActionReceiptState, type ReceiptPlan } from '../components/action-receipt-model.mjs'
 import { StatusState } from '../components/StatusState'
 import type { GatewayPackageOperation, GatewayPluginConfigurationNeed } from '../contracts/gateway'
@@ -149,7 +150,7 @@ export function PackageActionPanel({ action, onDeclared, readOnly }: {
         <details className="text-xs text-muted-foreground">
           <summary className="cursor-pointer">{i18n.t('包管理器输出与实例日志')}</summary>
           {progress.output ? <pre className="mt-2 max-h-56 overflow-auto rounded-md bg-muted p-2 font-mono text-xs">{progress.output}</pre> : null}
-          {progress.result?.logTail.length ? <pre className="mt-2 max-h-40 overflow-auto rounded-md bg-muted p-2 font-mono text-xs">{progress.result.logTail.join('\n')}</pre> : null}
+          {progress.result?.logTail.length ? <pre className="mt-2 max-h-40 overflow-auto rounded-md bg-muted p-2 font-mono text-xs"><AnsiLines lines={progress.result.logTail} /></pre> : null}
         </details>
       ) : null}
       {needs.length && !readOnly ? (

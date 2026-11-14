@@ -15,6 +15,8 @@ export interface ChatRoleEntry {
   readonly role: ChatRole
   readonly source: ChatRoleSource
   readonly grantedBy?: string
+  /** The linked person's name of a Console grantor (ADR 0060 Q12). */
+  readonly grantedByName?: string
   readonly grantedAt?: number
   readonly detail?: string
 }

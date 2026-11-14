@@ -300,7 +300,7 @@ test('top-bar button: icon with tooltip, aria-expanded / aria-controls follow th
     let button = f.button()
     assert.equal(button.props['aria-expanded'], false)
     assert.equal(button.props['aria-controls'], model.LOG_PANEL_ID)
-    assert.match(button.props.title, /打开日志面板（Ctrl `）/)
+    assert.match(button.props['data-tooltip'], /打开日志面板（Ctrl `）/)
     button.props.onClick()
     button = f.button()
     assert.equal(button.props['aria-expanded'], true)

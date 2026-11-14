@@ -72,6 +72,7 @@ function editorFixture({ file, fresh = () => file, readOnly = false, saveFails =
     '../i18n': localeModule,
     '@zhin.js/client': { useEnvFiles: () => { throw new Error('page hook not used by the editor') } },
     '../utils/console-client': { getConsoleTransport: () => ({}) },
+    '../utils/console-rpc': { requestConsole: async () => { throw new Error('legacy editor must not call env RPC directly') } },
     'lucide-react': ui('icon'),
     '../components/ui/card': { Card: 'card', CardContent: 'card-content', CardDescription: 'card-description', CardHeader: 'card-header', CardTitle: 'card-title' },
     '../components/PageHeader': { PageHeader: 'page-header' },

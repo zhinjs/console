@@ -193,3 +193,13 @@ export function driverLabel(driver: Driver, drivers: readonly Driver[]): string
 export type ProfileUsageLevel = 'default' | 'decision' | 'agent' | 'adapter' | 'endpoint' | 'scene'
 export interface ProfileUsage { key: string; level: ProfileUsageLevel; label: string }
 export function profileUsages(purposes: Purposes | null | undefined, profileId: string, locale?: 'zh-CN' | 'en'): ProfileUsage[] | null
+export function profileChoiceGroup(view: View, profile: Profile, locale?: 'zh-CN' | 'en'): { key: string; label: string; agent: boolean }
+export interface PurposeProfileChoice {
+  value: string
+  group: string
+  agent: boolean
+  description: string
+  keywords: string
+  profile: Profile
+}
+export function purposeProfileChoices(view: View, kind: Kind, locale?: 'zh-CN' | 'en'): PurposeProfileChoice[]

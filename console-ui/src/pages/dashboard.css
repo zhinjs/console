@@ -29,9 +29,13 @@
   .console-overview-status .console-health-pill { margin-bottom: 0; }
   .console-overview-status a { color: hsl(var(--foreground)); font-weight: 550; text-underline-offset: 2px; }
   .console-overview-status a:hover { text-decoration: underline; }
-  .console-message-pairing {
-    display: block;
-    margin-top: 0.25rem;
+  /* 统计口径：两个 ⓘ 标签，说明点开才显示 */
+  .console-basis-hints {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+    margin-top: -0.25rem;
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-caption);
   }
@@ -104,7 +108,7 @@
     white-space: nowrap;
   }
 
-  /* 柱状图 */
+  /* 柱状图：从 0 画起，没有消息的小时只留一条基线，悬停显示该小时的收发数。 */
   .console-volume-chart {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
@@ -113,11 +117,14 @@
 
   .console-volume-axis {
     display: flex;
-    height: 7.5rem;
+    height: 8.5rem;
     flex-direction: column;
     justify-content: space-between;
+    margin-top: -0.45rem;
+    margin-bottom: -0.45rem;
     color: hsl(var(--muted-foreground));
-    font-size: 0.6875rem;
+    font-size: var(--console-text-caption);
+    line-height: 0.9rem;
     text-align: right;
     font-variant-numeric: tabular-nums;
   }
@@ -125,11 +132,22 @@
   .console-volume-plot { min-width: 0; }
 
   .console-volume-bars {
+    position: relative;
     display: flex;
-    height: 7.5rem;
+    height: 7.6rem;
     align-items: stretch;
     gap: 3px;
+    border-bottom: var(--console-border-width) solid var(--console-border-strong);
   }
+
+  .console-volume-gridline {
+    position: absolute;
+    inset-inline: 0;
+    border-top: var(--console-border-width) dashed var(--console-border-default);
+    pointer-events: none;
+  }
+  .console-volume-gridline.is-top { top: 0; }
+  .console-volume-gridline.is-mid { top: 50%; }
 
   .console-volume-col {
     position: relative;
@@ -137,9 +155,10 @@
     flex: 1;
     min-width: 0;
     align-items: flex-end;
-    border-radius: 4px;
-    background: hsl(var(--primary) / 0.08);
+    border-radius: 4px 4px 0 0;
   }
+
+  .console-volume-col:hover { background: hsl(var(--foreground) / 0.04); }
 
   .console-volume-bar {
     position: relative;
@@ -147,7 +166,7 @@
     width: 100%;
     align-items: flex-end;
     overflow: hidden;
-    border-radius: 4px;
+    border-radius: 4px 4px 0 0;
     background: hsl(var(--primary) / 0.45);
   }
 
@@ -159,12 +178,38 @@
 
   .console-volume-col:hover .console-volume-bar { filter: brightness(1.08); }
 
+  .console-volume-col::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 0.375rem);
+    left: 50%;
+    z-index: 5;
+    width: max-content;
+    max-width: 14rem;
+    border-radius: var(--console-radius-sm);
+    background: hsl(var(--foreground));
+    padding: 0.3rem 0.55rem;
+    color: hsl(var(--background));
+    font-size: var(--console-text-caption);
+    white-space: nowrap;
+    box-shadow: var(--console-shadow-md);
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, 2px);
+    transition: opacity 100ms ease, transform 100ms ease;
+  }
+  .console-volume-col.is-start::after { left: 0; transform: translate(0, 2px); }
+  .console-volume-col.is-end::after { left: auto; right: 0; transform: translate(0, 2px); }
+  .console-volume-col:hover::after { opacity: 1; transform: translate(-50%, 0); }
+  .console-volume-col.is-start:hover::after,
+  .console-volume-col.is-end:hover::after { transform: none; }
+
   .console-volume-ticks {
     display: flex;
     justify-content: space-between;
     margin-top: 0.4rem;
     color: hsl(var(--muted-foreground));
-    font-size: 0.6875rem;
+    font-size: var(--console-text-caption);
     font-variant-numeric: tabular-nums;
   }
 
@@ -306,7 +351,7 @@
     border-radius: 0.375rem;
     background: hsl(var(--muted));
     color: hsl(var(--foreground) / 0.85);
-    font-size: 0.6875rem;
+    font-size: var(--console-text-caption);
     font-weight: 600;
     white-space: nowrap;
   }

@@ -1,4 +1,5 @@
 import { NAV_SECTIONS, resolveSectionId, sectionById } from './navigation-sections.mjs'
+import { CONSOLE_PATHS } from './console-routes.mjs'
 
 /**
  * Navigation vocabulary shared by route registration and shell surfaces.
@@ -44,6 +45,20 @@ export function placePluginRoute<T extends { path?: string; meta?: Record<string
   if (route.meta?.group) return route
   const placement: { group: string; order?: number } = PLUGIN_PAGE_PLACEMENT[route.path] ?? { group: NAV_GROUPS.FEATURES }
   return { ...route, meta: { ...route.meta, group: placement.group, order: route.meta?.order ?? placement.order } }
+}
+
+/**
+ * Marks a route registered from `/entries` as a plugin page (the 功能 menu lists it under
+ * 插件页面). An adapter's page (`createAdapterConsolePage`) is the same connection management the
+ * account tree embeds under 会话 → 账号与会话, so it leaves the menu: the route stays registered
+ * (old links, the command palette and the adapter object page still reach it) and its breadcrumb
+ * parent becomes 会话 → 账号与会话 (zhinjs/zhin#1250 `console-nav-ia`). Never mutates the input.
+ */
+export function markPluginRoute<T extends { path?: string; parent?: string | null; meta?: Record<string, unknown> }>(route: T, options: { adapterPage?: boolean } = {}): T {
+  if (!route.path) return route
+  const meta = { ...route.meta, pluginPage: true }
+  if (!options.adapterPage) return { ...route, meta }
+  return { ...route, parent: route.parent ?? CONSOLE_PATHS.scope, meta: { ...meta, group: NAV_GROUPS.WORK, section: 'sessions', adapterPage: true, hideInMenu: true } }
 }
 
 export const COMMAND_GROUP_ORDER = [

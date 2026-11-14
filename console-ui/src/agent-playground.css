@@ -1870,3 +1870,27 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+ * Sandbox (plugin page, zhinjs/zhin#1250): framed like a Console card, with the Console's type
+ * scale instead of the plugin's 12px defaults. The shortcut hints stay on one line and scroll
+ * sideways instead of wrapping under the composer. (Collapsing them into a help disclosure and
+ * moving rare run-bar actions into a 「更多」 menu needs the plugin's JSX: zhin
+ * plugins/adapters/sandbox/pages/index/SandboxChat.tsx.)
+ */
+.console-route-view .zhin-sandbox.agent-playground-shell {
+  border-radius: var(--console-radius-xl);
+  box-shadow: var(--console-shadow-sm);
+  font-size: var(--console-text-body);
+}
+.console-route-view .zhin-sandbox .sandbox-hints {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  white-space: nowrap;
+  font-size: var(--console-text-caption);
+  color: hsl(var(--muted-foreground));
+  scrollbar-width: none;
+}
+.console-route-view .zhin-sandbox .sandbox-hints::-webkit-scrollbar { display: none; }
+.console-route-view .zhin-sandbox .sandbox-hint-key { font-size: var(--console-text-caption); }
+.console-route-view .zhin-sandbox .agent-playground-run-actions { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }

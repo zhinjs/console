@@ -60,7 +60,7 @@ function useTaskHubSummary(scope: string | null | undefined, refreshKey: string)
     const settle = <T,>(promise: Promise<T>) => promise.catch(() => null)
     void Promise.all([
       settle(readJson(`${CONSOLE_REST.TASK_PROVIDERS}?locale=${i18n.locale}`).then(body => summarizeAdminTasks(readTaskProviders(body, i18n.locale)))),
-      settle(requestConsole<ScheduleListLike>({ type: CONSOLE_RPC.SCHEDULE_LIST }).then(summarizeSchedules)),
+      settle(requestConsole<ScheduleListLike>({ type: CONSOLE_RPC.SCHEDULE_LIST, locale: i18n.locale }).then(summarizeSchedules)),
       settle(readJson('/api/assistant/jobs').then(body => summarizeAssistantJobs(validateAssistantJobs(body, i18n.locale)))),
       settle(readJson(executionQuery()).then(body => summarizeExecutions(readExecutionPage(body, undefined, i18n.locale)))),
     ]).then(([admin, schedule, assistant, history]) => {
@@ -103,7 +103,9 @@ function OverviewPanel({ summary, open }: { summary: TaskHubSummary; open: (tab:
         icon={CalendarClock}
         label={i18n.t("定时提醒")}
         value={summary.schedule?.total ?? unknown}
-        sub={summary.schedule ? i18n.t("{0} 个已暂停", [summary.schedule.paused]) : i18n.t("未启用或暂时无法读取")}
+        sub={summary.schedule
+          ? summary.schedule.internal ? i18n.t("{0} 个已暂停 · 另有 {1} 个插件内部任务", [summary.schedule.paused, summary.schedule.internal]) : i18n.t("{0} 个已暂停", [summary.schedule.paused])
+          : i18n.t("未启用或暂时无法读取")}
         onOpen={() => open('schedule')}
       />
       <StatCard

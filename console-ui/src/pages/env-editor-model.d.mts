@@ -14,3 +14,16 @@ export function diffEnvContent(original: string, draft: string): EnvChange[]
 export function applyEnvChanges(base: string, changes: EnvChange[]): string
 export function envEditorAccess(state: { loaded: boolean; readOnly: boolean; saving: boolean; dirty: boolean; editing?: boolean }): { canEdit: boolean; canSave: boolean }
 export function envReadBackMismatch(submitted: string, readBack: string): import('../components/apply-outcome-model.mjs').ReadBackMismatch | null
+
+export interface MaskedEnvVariable { key: string; masked: string; length: number; hasValue: boolean; isReference?: true }
+export interface MaskedEnvView { file: string; variables: MaskedEnvVariable[] }
+export type MaskedEnvChange = { key: string; value: string; delete?: undefined } | { key: string; delete: true; value?: undefined }
+export interface MaskedEnvRow extends MaskedEnvVariable { pending?: string; added?: true }
+export function readEnvReply(data: unknown): { kind: 'masked'; view: MaskedEnvView } | { kind: 'legacy'; content: string }
+export function maskEnvDisplay(value: string): string
+export function isEnvMaskPlaceholder(value: string): boolean
+export function maskedEnvRows(view: MaskedEnvView, changes: readonly MaskedEnvChange[]): MaskedEnvRow[]
+export function setEnvChange(changes: readonly MaskedEnvChange[], key: string, value: string): MaskedEnvChange[]
+export function deleteEnvChange(view: MaskedEnvView, changes: readonly MaskedEnvChange[], key: string): MaskedEnvChange[]
+export function validateMaskedEnvRow(view: MaskedEnvView, changes: readonly MaskedEnvChange[], row: { key: string; value: string }, originalKey: string | null): EnvRowError | null
+export function maskedEnvReadBackMismatch(changes: readonly MaskedEnvChange[], view: MaskedEnvView): import('../components/apply-outcome-model.mjs').ReadBackMismatch | null

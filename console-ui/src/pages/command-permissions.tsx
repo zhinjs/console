@@ -121,7 +121,7 @@ export default function CommandPermissionsPage() {
   }, [current])
   const catalogState = permissionCatalogState({ denied, active, loading, error: catalogError, catalog: current })
 
-  return <PageShell className="max-w-6xl">
+  return <PageShell>
     <PageHeader title={i18n.t("命令权限说明")}
       description={i18n.t("查看规则为什么匹配。这里只做说明与假设检查，不执行命令，也不向平台查询或验证权限。")}
       actions={<Button asChild variant="outline" size="sm"><Link to="/introspection?tab=commands"><Blocks />{i18n.t("返回命令目录")}</Link></Button>} />

@@ -61,7 +61,7 @@ async function fixture() {
     '../../components/ui/badge': { Badge: props => createElement('span', { 'data-experimental-badge': true }, props.children) },
     '../../components/ui/button': { Button: 'button' }, '../../components/StatusState': { StatusState: 'status-state' }, '../components/ui/button': { Button: 'button' },
     '../../components/ui/input': { Input: 'input' },
-    '../../components/ui/select': { SelectField: 'select' }, '../components/ui/select': { SelectField: 'select' },
+    '../../components/ui/select': { SelectField: 'select' }, '../../components/ui/searchable-select': { SearchableSelectField: 'select' }, '../components/ui/select': { SelectField: 'select' },
     '../../components/ui/card': { Card: 'card' },
     '../../components/error-alert': { ErrorAlert: 'error' }, '../components/error-alert': { ErrorAlert: 'error' },
     '../../components/ui/dialog': { Dialog: props => props.open ? createElement('dialog', props) : null,

@@ -32,6 +32,10 @@ export interface SchemaField {
   hidden?: boolean
   secret?: boolean
   effect?: string
+  /** Presentation group of a root field (`group` / `x-group` / `x-zhin-config.group`); see configFieldGroup. */
+  group?: string
+  'x-group'?: string
+  'x-zhin-config'?: Readonly<{ group?: string } & Record<string, unknown>>
   options?: ReadonlyArray<{ label: string; value: unknown; 'x-i18n'?: SchemaField['x-i18n'] }>
 }
 

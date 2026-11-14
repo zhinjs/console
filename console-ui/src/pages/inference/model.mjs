@@ -309,3 +309,47 @@ export function profileUsages(purposes, profileId, locale = 'zh-CN') {
   }
   return rows
 }
+
+/** A profile label written for an Agent binding, e.g. 「子 Agent · 小编 planner · DeepSeek Flash」. */
+const AGENT_LABEL = /^(?:主|子)?\s*Agent\s*[·:：|/-]|^sub-?agent\b/iu
+
+/**
+ * Which group a profile is listed under in the purpose pickers (zhinjs/zhin#1250 `ai-purposes-select`):
+ * a profile only Agents use (by its purposes or by an Agent-binding label) goes to 「Agent 绑定」,
+ * every other one under its service. `{ key, label, agent }`.
+ */
+export function profileChoiceGroup(view, profile, locale = 'zh-CN') {
+  const usages = profileUsages(view?.purposes, profile.id, locale)
+  const agentOnly = usages !== null && usages.length > 0 && usages.every(usage => usage.level === 'agent')
+  if (agentOnly || AGENT_LABEL.test(profile.label ?? '')) return { key: 'agent', label: translate(locale, 'Agent 绑定'), agent: true }
+  const account = view?.accounts?.[profile.accountId]
+  const service = account ? view?.services?.[account.serviceId] : undefined
+  const driver = service ? serviceDriver(view, service.id) : undefined
+  const label = service?.label || (driver ? driverLabel(driver, view.drivers ?? []) : '') || service?.id || account?.label || profile.accountId
+  return { key: `service:${service?.id ?? profile.accountId}`, label, agent: false }
+}
+
+/**
+ * The profiles a purpose picker offers for `kind`, as searchable grouped options: `{ value, label, group,
+ * description, keywords, profile, support }`, services first and the 「Agent 绑定」 group last; the
+ * order inside a group is the view's own order.
+ */
+export function purposeProfileChoices(view, kind, locale = 'zh-CN') {
+  const rows = []
+  for (const profile of Object.values(view?.profiles ?? {})) {
+    const account = view.accounts?.[profile.accountId]
+    const service = account ? view.services?.[account.serviceId] : undefined
+    if (!service?.models?.[profile.model]?.kinds?.includes(kind)) continue
+    const group = profileChoiceGroup(view, profile, locale)
+    const name = profile.label ?? profile.model
+    rows.push({
+      value: profile.id,
+      group: group.label,
+      agent: group.agent,
+      description: [profile.model !== name ? profile.model : '', account?.label ?? ''].filter(Boolean).join(' · '),
+      keywords: [name, profile.model, account?.label ?? '', service?.label ?? '', group.label].join(' '),
+      profile,
+    })
+  }
+  return [...rows.filter(row => !row.agent), ...rows.filter(row => row.agent)]
+}

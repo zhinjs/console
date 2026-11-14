@@ -25,6 +25,7 @@ import { requestConsole } from '../utils/console-rpc'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { describeCron, relativeUntil } from './cron-schedule.mjs'
 import { taskTabHref } from './task-hub-model.mjs'
+import { isPluginInternalSchedule, memoryScheduleLastRun, memoryScheduleTitle, type MemoryScheduleLike } from './schedule-memory-model.mjs'
 import { validateAssistantJobs, explainJobError, type AssistantJob } from './assistant-jobs-model.mjs'
 import { apiFetch } from '../utils/auth'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
@@ -51,7 +52,7 @@ function cronValidationMessage(error?: string, locale: 'zh-CN' | 'en' = 'zh-CN')
   return error
 }
 
-interface MemoryCron {
+interface MemoryCron extends MemoryScheduleLike {
   type: 'memory'
   id?: string
   description?: string
@@ -132,7 +133,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
   // Writes go to the schedule engine, which registers or disposes the timer as part of the write
   // (已生效); a fresh list confirms what was stored.
   const saved = useSaveOutcome()
-  const readPersistent = async () => (await requestConsole<{ persistent?: PersistentCron[] }>({ type: CONSOLE_RPC.SCHEDULE_LIST })).persistent ?? []
+  const readPersistent = async () => (await requestConsole<{ persistent?: PersistentCron[] }>({ type: CONSOLE_RPC.SCHEDULE_LIST, locale: i18n.locale })).persistent ?? []
 
   const fetchCrons = useCallback(async () => {
     if (!isInboxCacheScopeActive(connectionScope)) return
@@ -147,7 +148,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
         persistent?: PersistentCron[]
         capabilities?: { persistent?: boolean }
       }
-      const data = await requestConsole<ScheduleListResponse>({ type: CONSOLE_RPC.SCHEDULE_LIST })
+      const data = await requestConsole<ScheduleListResponse>({ type: CONSOLE_RPC.SCHEDULE_LIST, locale: i18n.locale })
       if (!current()) return
       setPersistentAvailable(data.capabilities?.persistent === true)
       setMemoryCrons(data.memory ?? [])
@@ -260,7 +261,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
     && (statusFilter === 'all' || statusFilter === 'enabled' && job.enabled
       || statusFilter === 'paused' && !job.enabled || statusFilter === 'error' && (jobStates.get(job.id)?.lastStatus ?? job.lastStatus) === 'error'))
   const visibleMemoryCrons = memoryCrons.filter(cron =>
-    (!query || [cron.description, cron.plugin, cron.id, cron.expression].some(value => value?.toLocaleLowerCase().includes(query)))
+    (!query || [memoryScheduleTitle(cron, i18n.locale), cron.description, cron.plugin, cron.id, cron.expression].some(value => value?.toLocaleLowerCase().includes(query)))
     && (statusFilter === 'all' || statusFilter === 'enabled' && cron.running || statusFilter === 'paused' && !cron.running))
 
   if (!isInboxCacheScopeActive(connectionScope)) return null
@@ -378,25 +379,25 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
         </div>
         {memoryCrons.length === 0 ? <Card><CardContent className="py-6 text-center text-muted-foreground text-sm">{i18n.t("暂无插件注册的内存定时任务")}</CardContent></Card>
           : visibleMemoryCrons.length === 0 ? <p className="console-cron-filter-empty">{i18n.t("没有匹配的任务")}</p> : (
-          <div className="console-resource-list console-schedule-list">
-            {[...visibleMemoryCrons].sort((x, y) => (x.plugin ?? '').localeCompare(y.plugin ?? '') || (x.nextExecution ?? 0) - (y.nextExecution ?? 0)).map((cron, idx) => {
-              const schedule = describeCron(cron.expression, i18n.locale)
-              const until = relativeUntil(cron.nextExecution, now, i18n.locale)
-              return <article key={cron.id ?? `${cron.plugin}-${cron.expression}-${idx}`} className="console-cron-memory-item">
-                <div className="console-cron-title-row">
-                  <h3 className="console-cron-title">{cron.description || cron.plugin?.replace(/^root\//, '') || i18n.t("插件定时任务")}</h3>
-                  <Badge variant={cron.running ? 'secondary' : 'outline'}>{cron.running ? i18n.t("运行中") : i18n.t("已停止")}</Badge>
+          <>
+            {visibleMemoryCrons.some(cron => !isPluginInternalSchedule(cron)) ? (
+              <div className="console-resource-list console-schedule-list">
+                {sortMemoryCrons(visibleMemoryCrons.filter(cron => !isPluginInternalSchedule(cron))).map((cron, idx) => renderMemoryCron(cron, now, i18n, cron.id ?? `${cron.plugin}-${cron.expression}-${idx}`))}
+              </div>
+            ) : null}
+            {visibleMemoryCrons.some(isPluginInternalSchedule) ? (
+              // A plugin's own polling / cleanup runs every few seconds; folded by default (zhinjs/zhin#1250).
+              <details className="console-cron-internal">
+                <summary>
+                  {i18n.t("插件内部任务")} <Badge variant="outline">{visibleMemoryCrons.filter(isPluginInternalSchedule).length}</Badge>
+                  <span className="console-cron-internal-hint">{i18n.t("插件自己的轮询、清理与刷盘，不需要配置。")}</span>
+                </summary>
+                <div className="console-resource-list console-schedule-list">
+                  {sortMemoryCrons(visibleMemoryCrons.filter(isPluginInternalSchedule)).map((cron, idx) => renderMemoryCron(cron, now, i18n, cron.id ?? `${cron.plugin}-${cron.expression}-${idx}`))}
                 </div>
-                {cron.description && cron.plugin && <p className="console-cron-schedule">{cron.plugin.replace(/^root\//, '')}</p>}
-                <div className="console-cron-run-facts"><span>{schedule ?? i18n.t("自定义执行时间")}</span><span>{i18n.t("下次执行：")}{cron.nextExecution ? until ?? new Date(cron.nextExecution).toLocaleString(i18n.locale) : '—'}</span></div>
-                <details className="console-cron-memory-details"><summary>{i18n.t("任务详情")}</summary><dl className="console-cron-metadata">
-                  <div><dt>{i18n.t("Cron 表达式")}</dt><dd><code>{cron.expression}</code></dd></div>
-                  {cron.plugin && <div><dt>{i18n.t("插件", undefined, "field")}</dt><dd><code>{cron.plugin}</code></dd></div>}
-                  {cron.id && <div><dt>{i18n.t("任务 ID")}</dt><dd><code>{cron.id}</code></dd></div>}
-                </dl></details>
-              </article>
-            })}
-          </div>
+              </details>
+            ) : null}
+          </>
         )}
       </section>
 
@@ -477,4 +478,37 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
       </Dialog>}
     </div>
   )
+}
+
+function sortMemoryCrons(crons: MemoryCron[]): MemoryCron[] {
+  return [...crons].sort((x, y) => (x.plugin ?? '').localeCompare(y.plugin ?? '') || (x.nextExecution ?? 0) - (y.nextExecution ?? 0))
+}
+
+/** One plugin-registered schedule: readable title, cadence, next and (when the Host reports it) last run. */
+function renderMemoryCron(cron: MemoryCron, now: number, i18n: ReturnType<typeof useI18n>, key: string) {
+  const schedule = describeCron(cron.expression, i18n.locale)
+  const until = relativeUntil(cron.nextExecution, now, i18n.locale)
+  const title = memoryScheduleTitle(cron, i18n.locale) || i18n.t("插件定时任务")
+  const plugin = cron.plugin?.replace(/^root\//, '')
+  const last = memoryScheduleLastRun(cron)
+  const failed = last ? /^(error|failed|failure)$/i.test(last.status) : false
+  const lastLabel = !last ? null : failed ? i18n.t("失败") : /^(ok|success|succeeded)$/i.test(last.status) ? i18n.t("成功") : /^skipped$/i.test(last.status) ? i18n.t("已跳过") : last.status || i18n.t("已执行")
+  return <article key={key} className="console-cron-memory-item">
+    <div className="console-cron-title-row">
+      <h3 className="console-cron-title">{title}</h3>
+      <Badge variant={cron.running ? 'secondary' : 'outline'}>{cron.running ? i18n.t("运行中") : i18n.t("已停止")}</Badge>
+    </div>
+    {plugin && title !== plugin && <p className="console-cron-schedule">{plugin}</p>}
+    <div className="console-cron-run-facts">
+      <span>{schedule ?? i18n.t("自定义执行时间")}</span>
+      <span>{i18n.t("下次执行：")}{cron.nextExecution ? until ?? new Date(cron.nextExecution).toLocaleString(i18n.locale) : '—'}</span>
+      {last ? <span title={last.error ?? undefined}>{i18n.t("最近一次：")}<Badge variant={failed ? 'destructive' : 'secondary'} size="sm">{lastLabel}</Badge>{last.at ? ` ${new Date(last.at).toLocaleString(i18n.locale)}` : ''}</span> : null}
+    </div>
+    <details className="console-cron-memory-details"><summary>{i18n.t("任务详情")}</summary><dl className="console-cron-metadata">
+      <div><dt>{i18n.t("Cron 表达式")}</dt><dd><code>{cron.expression}</code></dd></div>
+      {cron.plugin && <div><dt>{i18n.t("插件", undefined, "field")}</dt><dd><code>{cron.plugin}</code></dd></div>}
+      {cron.id && <div><dt>{i18n.t("任务 ID")}</dt><dd><code>{cron.id}</code></dd></div>}
+      {last?.error && <div><dt>{i18n.t("错误")}</dt><dd>{last.error}</dd></div>}
+    </dl></details>
+  </article>
 }
