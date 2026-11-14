@@ -134,6 +134,8 @@
   .console-attention-empty > svg { width: 2rem; height: 2rem; color: hsl(var(--success)); }
   .console-attention-empty-title { font-size: var(--console-text-section); font-weight: 600; }
   .console-attention-empty-detail { color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); }
+  .console-attention-empty.is-instance-not-ready > svg { color: hsl(var(--muted-foreground)); }
+  .console-attention-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 0.5rem; }
 
   /* ---------- Dashboard section ---------- */
   .console-attention-item.is-warning > svg:first-child { color: hsl(var(--warning)); }

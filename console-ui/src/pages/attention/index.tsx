@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle2, RefreshCw } from 'lucide-react'
+import { CheckCircle2, Loader2, RefreshCw, ServerOff } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { cn } from '@zhin.js/client'
 import { useI18n } from '../../i18n'
 import { PageHeader } from '../../components/PageHeader'
@@ -7,7 +8,7 @@ import { PageShell } from '../../components/PageShell'
 import { StatusState } from '../../components/StatusState'
 import { Button } from '../../components/ui/button'
 import { Skeleton } from '../../components/ui/skeleton'
-import { attentionSeverityLabel, groupAttention } from './attention-model.mjs'
+import { attentionInstanceNotice, attentionSeverityLabel, groupAttention } from './attention-model.mjs'
 import { AttentionItemRow, AttentionSeverityIcon } from './AttentionItemRow'
 import { useAttention } from './use-attention'
 import './attention.css'
@@ -66,6 +67,33 @@ export default function AttentionPage() {
         {state.status === 'error'
           ? <StatusState error={state.error} onRetry={attention.refresh} />
           : <div className="space-y-2" aria-label={i18n.t('正在读取需要处理的事项…')}><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /></div>}
+      </PageShell>
+    )
+  }
+
+  if (data.mode === 'instance-not-ready') {
+    // Not an error and not an older Host: the instance has not come up yet, and the list follows it.
+    const notice = attentionInstanceNotice(data.instance, i18n.locale)
+    const Icon = notice.starting ? Loader2 : ServerOff
+    return (
+      <PageShell className="console-attention-page">
+        {header}
+        {state.error ? <StatusState compact error={state.error} onRetry={attention.refresh} description={i18n.t('刷新失败，下面是上次读取的结果。')} /> : null}
+        <div className="console-attention-empty is-instance-not-ready" role="status" aria-live="polite">
+          <Icon className={notice.starting ? 'animate-spin' : undefined} aria-hidden="true" />
+          <p className="console-attention-empty-title">{notice.title}</p>
+          <p className="console-attention-empty-detail">
+            {notice.detail}
+            {checkedAt ? ` ${i18n.t('上次检查 {0}', [checkedAt])}` : ''}
+          </p>
+          <div className="console-attention-empty-actions">
+            <Button variant="outline" size="sm" onClick={attention.refresh} disabled={state.refreshing}>
+              <RefreshCw className={state.refreshing ? 'animate-spin' : ''} />
+              {i18n.t('重试')}
+            </Button>
+            <Button asChild variant="ghost" size="sm"><Link to="/ops/instance">{i18n.t('查看实例')}</Link></Button>
+          </div>
+        </div>
       </PageShell>
     )
   }

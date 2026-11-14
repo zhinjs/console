@@ -23,9 +23,19 @@ export interface AttentionList {
   readonly unavailable: readonly string[]
 }
 
+/** Instance state from the gateway's `/pub/health`. */
+export interface AttentionInstanceHealth {
+  readonly state: string
+  readonly ready: boolean
+}
+
 export interface AttentionLoad extends AttentionList {
-  /** `fallback`: the Host has no `attention.list`; the items are the Console's own derivation. */
-  readonly mode: 'host' | 'fallback'
+  /**
+   * `fallback`: the Host has no `attention.list`; the items are the Console's own derivation.
+   * `instance-not-ready`: the instance is not running and ready yet (`instance`); no items.
+   */
+  readonly mode: 'host' | 'fallback' | 'instance-not-ready'
+  readonly instance?: AttentionInstanceHealth
 }
 
 export interface AttentionFallbackInput {
@@ -50,6 +60,7 @@ export const ATTENTION_PATH: '/attention'
 export const ATTENTION_SEVERITIES: readonly AttentionSeverity[]
 export const ATTENTION_SNOOZE_MS: number
 export const ATTENTION_REFRESH_MS: number
+export const ATTENTION_NOT_READY_REFRESH_MS: number
 export const ATTENTION_PUSH_DEBOUNCE_MS: number
 export const DASHBOARD_ATTENTION_LIMIT: number
 export const ATTENTION_STORAGE_PREFIX: string
@@ -61,9 +72,19 @@ export function sortAttention(items?: readonly AttentionItem[]): AttentionItem[]
 export function normalizeAttentionList(raw: unknown): AttentionList
 export function isAttentionUnsupported(error: unknown): boolean
 export function deriveFallbackAttention(input?: AttentionFallbackInput, locale?: Locale): AttentionItem[]
+export function isAttentionInstanceUnavailable(error: unknown): boolean
+export function normalizeInstanceHealth(raw: unknown): AttentionInstanceHealth | null
+export function isInstanceReady(instance: AttentionInstanceHealth | null | undefined): boolean
+export function attentionInstanceNotice(instance: AttentionInstanceHealth | null | undefined, locale?: Locale): {
+  readonly title: string
+  readonly detail: string
+  readonly starting: boolean
+}
 export function loadAttention(options: {
   readonly request: (request: { readonly type: string; readonly data: { readonly locale: Locale } }) => Promise<unknown>
   readonly loadFallback: () => Promise<AttentionFallbackInput>
+  /** The gateway's `/pub/health` `instance` (null / rejection: unknown). */
+  readonly readInstanceHealth?: () => Promise<unknown>
   readonly locale?: Locale
   readonly now?: () => number
 }): Promise<AttentionLoad>

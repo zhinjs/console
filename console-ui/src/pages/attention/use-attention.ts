@@ -6,7 +6,7 @@ import { CONSOLE_REST } from '../../contracts/zhin-console'
 import { startVisiblePolling } from '../../hooks/visible-polling.mjs'
 import { useConsoleAccess } from '../../hooks/use-console-access'
 import { useConsoleSession } from '../../hooks/use-console-session'
-import { apiFetch, getApiBase } from '../../utils/auth'
+import { apiFetch, getApiBase, probeHealth } from '../../utils/auth'
 import { getConsoleTransport } from '../../utils/console-client'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
 import { requestConsole } from '../../utils/console-rpc'
@@ -15,6 +15,7 @@ import { readErrorSummary } from '../../utils/read-error.mjs'
 import { summarizeOptional } from '../dashboard-health'
 import { logPayloadAvailability } from '../logs/read-state.mjs'
 import {
+  ATTENTION_NOT_READY_REFRESH_MS,
   ATTENTION_PUSH_DEBOUNCE_MS,
   ATTENTION_REFRESH_MS,
   attentionBadgeCount,
@@ -60,6 +61,8 @@ let locale: Locale = 'zh-CN'
 let sequence = 0
 let subscribers = 0
 let stop: (() => void) | null = null
+/** One-shot sooner re-read while the instance is still starting. */
+let notReadyTimer: ReturnType<typeof setTimeout> | null = null
 const listeners = new Set<() => void>()
 
 function setState(next: AttentionState): void {
@@ -106,21 +109,45 @@ async function loadFallbackInput(currentLocale: Locale): Promise<AttentionFallba
   }
 }
 
+/** The gateway's `/pub/health` `instance`; null when it cannot be read or says nothing. */
+async function readInstanceHealth(currentLocale: Locale): Promise<unknown> {
+  const health = await probeHealth(getApiBase(), currentLocale)
+  return health.ok ? health.instance ?? null : null
+}
+
+function clearNotReadyTimer(): void {
+  if (notReadyTimer !== null) clearTimeout(notReadyTimer)
+  notReadyTimer = null
+}
+
+/** While the instance is not ready, read again sooner than the 30 s poll (until it is). */
+function scheduleNotReadyRefresh(data: AttentionLoad): void {
+  clearNotReadyTimer()
+  if (data.mode !== 'instance-not-ready' || subscribers === 0) return
+  notReadyTimer = setTimeout(() => { notReadyTimer = null; void refreshAttention() }, ATTENTION_NOT_READY_REFRESH_MS)
+}
+
 /** Re-reads the list; a newer call supersedes an older one still in flight. */
 export function refreshAttention(): Promise<void> {
   if (!hasConsolePermission('status.view')) {
     setState({ status: 'idle', data: null, error: null, refreshing: false })
     return Promise.resolve()
   }
+  clearNotReadyTimer()
   const ticket = ++sequence
   const currentLocale = locale
   setState(state.data ? { ...state, refreshing: true } : { ...state, status: 'loading', refreshing: true })
   return loadAttention({
     request: request => requestConsole(request),
     loadFallback: () => loadFallbackInput(currentLocale),
+    readInstanceHealth: () => readInstanceHealth(currentLocale),
     locale: currentLocale,
   }).then(
-    data => { if (ticket === sequence) setState({ status: 'ready', data, error: null, refreshing: false }) },
+    data => {
+      if (ticket !== sequence) return
+      setState({ status: 'ready', data, error: null, refreshing: false })
+      scheduleNotReadyRefresh(data)
+    },
     error => {
       if (ticket !== sequence) return
       // A failed refresh keeps the last list but reports the failure.
@@ -147,6 +174,7 @@ function start(): () => void {
     for (const off of offPush) off()
     offGap()
     offRecovered()
+    clearNotReadyTimer()
     sequence += 1
   }
 }
@@ -208,6 +236,8 @@ export interface UseAttention {
   readonly snoozed: readonly AttentionItem[]
   readonly ignored: readonly AttentionItem[]
   readonly badgeCount: number
+  /** The instance is not running and ready yet: the list is not readable, which is not an error. */
+  readonly instanceNotReady: boolean
   refresh(): void
   snooze(item: AttentionItem): void
   ignore(item: AttentionItem): void
@@ -242,6 +272,7 @@ export function useAttention(): UseAttention {
     allowed,
     ...parts,
     badgeCount: allowed ? attentionBadgeCount(parts.active) : 0,
+    instanceNotReady: current.data?.mode === 'instance-not-ready',
     refresh,
     snooze,
     ignore,

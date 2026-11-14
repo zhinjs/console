@@ -76,6 +76,82 @@ test('loadAttention asks the Host in the viewer language, and falls back only fo
   }), /Failed to fetch/)
 })
 
+test('loadAttention reads /pub/health when the RPC is refused or the instance does not answer', async () => {
+  const unmapped = Object.assign(new Error('RPC attention.list 未登记权限'), { details: { serverCode: 'unmapped' } })
+  const unavailable = Object.assign(new Error('instance unavailable'), { details: { serverCode: 'instance_unavailable', httpStatus: 503 } })
+  const timeout = Object.assign(new Error('instance timeout'), { details: { serverCode: 'instance_timeout', httpStatus: 504 } })
+  const noFallback = async () => { throw new Error('must not be called') }
+  const fallbackInput = async () => ({ stats: { endpoints: { total: 1, online: 1 } }, errorLogs: 0, warningLogs: 0 })
+  assert.equal(model.isAttentionInstanceUnavailable(unavailable), true)
+  assert.equal(model.isAttentionInstanceUnavailable(timeout), true)
+  assert.equal(model.isAttentionInstanceUnavailable(Object.assign(new Error('x'), { details: { serverCode: 'instance_error' } })), false)
+  assert.equal(model.isAttentionInstanceUnavailable(new Error('Failed to fetch')), false)
+
+  // Starting: not the old-Host hint, not an error.
+  for (const error of [unmapped, unavailable, timeout]) {
+    const starting = await model.loadAttention({
+      request: async () => { throw error }, loadFallback: noFallback, now: () => NOW,
+      readInstanceHealth: async () => ({ state: 'starting', ready: false }),
+    })
+    assert.equal(starting.mode, 'instance-not-ready')
+    assert.deepEqual(starting.instance, { state: 'starting', ready: false })
+    assert.deepEqual(starting.items, [])
+    assert.equal(starting.generatedAt, new Date(NOW).toISOString())
+  }
+  const notReady = await model.loadAttention({
+    request: async () => { throw unmapped }, loadFallback: noFallback,
+    readInstanceHealth: async () => ({ state: 'running', ready: false }),
+  })
+  assert.equal(notReady.mode, 'instance-not-ready')
+  const crashed = await model.loadAttention({
+    request: async () => { throw unavailable }, loadFallback: noFallback,
+    readInstanceHealth: async () => ({ state: 'crashed', ready: false }),
+  })
+  assert.deepEqual(crashed.instance, { state: 'crashed', ready: false })
+
+  // Running and ready: unmapped is an older Host; instance_unavailable stays an error.
+  const ready = async () => ({ state: 'running', ready: true })
+  const older = await model.loadAttention({ request: async () => { throw unmapped }, loadFallback: fallbackInput, readInstanceHealth: ready })
+  assert.equal(older.mode, 'fallback')
+  await assert.rejects(model.loadAttention({ request: async () => { throw unavailable }, loadFallback: noFallback, readInstanceHealth: ready }), /instance unavailable/)
+
+  // /pub/health unreadable or silent about the instance: as before.
+  for (const readInstanceHealth of [async () => { throw new Error('down') }, async () => null, undefined]) {
+    const before = await model.loadAttention({ request: async () => { throw unmapped }, loadFallback: fallbackInput, readInstanceHealth })
+    assert.equal(before.mode, 'fallback')
+    await assert.rejects(model.loadAttention({ request: async () => { throw unavailable }, loadFallback: noFallback, readInstanceHealth }), /instance unavailable/)
+  }
+
+  // Other failures never ask /pub/health.
+  let asked = false
+  await assert.rejects(model.loadAttention({
+    request: async () => { throw new Error('Failed to fetch') }, loadFallback: noFallback,
+    readInstanceHealth: async () => { asked = true; return { state: 'starting', ready: false } },
+  }), /Failed to fetch/)
+  assert.equal(asked, false)
+})
+
+test('the not-ready notice uses the instance page wording, in both languages', () => {
+  assert.deepEqual(model.normalizeInstanceHealth({ state: 'starting' }), { state: 'starting', ready: false })
+  assert.equal(model.normalizeInstanceHealth({ ready: true }), null)
+  assert.equal(model.normalizeInstanceHealth(null), null)
+  assert.equal(model.isInstanceReady({ state: 'running', ready: true }), true)
+  assert.equal(model.isInstanceReady({ state: 'running', ready: false }), false)
+  const starting = model.attentionInstanceNotice({ state: 'starting', ready: false })
+  assert.equal(starting.title, '实例启动中…')
+  assert.equal(starting.starting, true)
+  assert.match(starting.detail, /自动/)
+  assert.equal(model.attentionInstanceNotice({ state: 'running', ready: false }).title, '实例启动中…')
+  assert.equal(model.attentionInstanceNotice({ state: 'backoff', ready: false }).title, '实例等待重启')
+  const crashed = model.attentionInstanceNotice({ state: 'crashed', ready: false })
+  assert.equal(crashed.title, '实例已崩溃')
+  assert.equal(crashed.starting, false)
+  assert.equal(model.attentionInstanceNotice({ state: 'stopped', ready: false }).title, '实例已停止')
+  assert.equal(model.attentionInstanceNotice({ state: 'starting', ready: false }, 'en').title, 'Instance starting…')
+  assert.equal(model.attentionInstanceNotice({ state: 'crashed', ready: false }, 'en').title, 'Instance: Crashed')
+  assert.ok(model.ATTENTION_NOT_READY_REFRESH_MS < model.ATTENTION_REFRESH_MS)
+})
+
 test('the fallback derivation keeps the dashboard behaviour of older Hosts, in both languages', () => {
   assert.deepEqual(model.deriveFallbackAttention({ stats: null, hostError: 'down' }).map(entry => [entry.kind, entry.severity, entry.action.path]),
     [['host.unreachable', 'danger', '/ops/instance']])
