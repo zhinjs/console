@@ -21,7 +21,7 @@ export const attentionMessages = Object.freeze({
   "已忽略": "Ignored",
   "上次检查 {0}": "Last checked {0}",
   "刷新失败，下面是上次读取的结果。": "Refresh failed; showing the last result.",
-  "当前 Host 版本较旧，还不能汇总登录、插件、配置和审批事项；这里只列出 Console 能从运行状态推断的几项。升级 Host 后会显示完整列表。": "This Host is older and cannot gather sign-in, plugin, configuration and approval items yet; only what the Console can infer from the runtime status is listed. Upgrade the Host to see the full list.",
+  "此 Host 不提供汇总接口，还不能汇总登录、插件、配置和审批事项；这里只列出 Console 能从运行状态推断的几项。Host 提供汇总接口后会显示完整列表。": "This Host does not provide the summary endpoint, so sign-in, plugin, configuration and approval items cannot be gathered yet; only the few items the Console can infer from the runtime state are listed. The full list appears once the Host provides the summary endpoint.",
   "以下来源这次没能读取，列表可能不完整：{0}": "These sources could not be read this time, so the list may be incomplete: {0}",
   "一切正常": "All clear",
   "没有待处理的事项；另有 {0} 项被你推迟或忽略。": "Nothing to do; {0} more items are snoozed or ignored.",

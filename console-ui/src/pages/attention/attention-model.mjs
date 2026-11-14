@@ -168,8 +168,13 @@ export function isInstanceReady(instance) {
  * gets the Console's own derivation (`mode: 'fallback'`). When health cannot be read the behaviour
  * is as before (fallback for unsupported, rejection otherwise). Other failures reject (StatusState).
  */
-export async function loadAttention({ request, loadFallback, readInstanceHealth, locale = 'zh-CN', now = Date.now }) {
+export async function loadAttention({ request, loadFallback, readInstanceHealth, locale = 'zh-CN', now = Date.now, hostListUnsupported = false }) {
   let unsupported = false
+  // Already known to lack `attention.list`: asking again only adds a refused-RPC audit entry on the Host.
+  if (hostListUnsupported) {
+    const input = await loadFallback()
+    return { mode: 'fallback', items: deriveFallbackAttention(input, locale), generatedAt: new Date(now()).toISOString(), unavailable: [] }
+  }
   try {
     const reply = await request({ type: ATTENTION_RPC, data: { locale } })
     return { mode: 'host', ...normalizeAttentionList(reply) }
@@ -187,6 +192,18 @@ export async function loadAttention({ request, loadFallback, readInstanceHealth,
   }
   const input = await loadFallback()
   return { mode: 'fallback', items: deriveFallbackAttention(input, locale), generatedAt: new Date(now()).toISOString(), unavailable: [] }
+}
+
+/**
+ * Whether the next read may skip `attention.list` for this Host (`apiBase`): remembered once a read
+ * fell back, forgotten when the Host answers it, when another Host is connected, or (`reset`) after
+ * the instance restarted, which may have upgraded it. `memo` is `{ apiBase, unsupported }` or null.
+ */
+export function nextAttentionSupport(memo, { apiBase, data = null, reset = false }) {
+  if (reset || !memo || memo.apiBase !== apiBase) memo = { apiBase, unsupported: false }
+  if (data?.mode === 'fallback') return { apiBase, unsupported: true }
+  if (data?.mode === 'host') return { apiBase, unsupported: false }
+  return memo
 }
 
 /**

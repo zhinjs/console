@@ -127,7 +127,7 @@ test('loading, failure, missing permission and older Hosts use StatusState and s
   const forbidden = (await components('zh-CN', attention({ allowed: false }))).page()
   assert.deepEqual(nodes(forbidden).find(node => node.type === 'status-state').props.permissions, ['status.view'])
   const fallback = (await components('zh-CN', attention({ state: { data: { mode: 'fallback', items: [], generatedAt: null, unavailable: [] } } }))).page()
-  assert.match(text(fallback), /当前 Host 版本较旧/)
+  assert.match(text(fallback), /此 Host 不提供汇总接口/)
   const partial = (await components('zh-CN', attention({ state: { data: { mode: 'host', items: [], generatedAt: null, unavailable: ['plugins', 'logs'] } } }))).page()
   assert.match(text(partial), /列表可能不完整：插件、日志/)
 })
@@ -140,7 +140,7 @@ test('while the instance starts the page says so with 重试 and 查看实例, n
   assert.equal(notice.props.role, 'status')
   assert.match(text(notice), /实例启动中…/)
   assert.match(text(notice), /自动读取/)
-  assert.doesNotMatch(text(tree), /当前 Host 版本较旧|一切正常/)
+  assert.doesNotMatch(text(tree), /此 Host 不提供汇总接口|一切正常/)
   assert.equal(nodes(tree).some(node => node.type === 'status-state'), false)
   const retry = nodes(notice).find(node => node.type === 'Button' && node.props.onClick)
   assert.match(text(retry), /重试/)
@@ -311,4 +311,70 @@ test('the dashboard shows the top items from the shared model with 查看全部 
   const css = await source('pages/attention/attention.css')
   assert.match(css, /@media \(max-width: 767px\)[\s\S]*\.console-attention-row-actions \{ grid-column: 1 \/ -1; display: grid; grid-template-columns: 1fr 1fr; \}[\s\S]*\.console-attention-row-actions > \* \{ width: 100%; min-height: 44px; \}/)
   assert.doesNotMatch(css, /#[0-9a-f]{3,6}\b|rgb\(/iu, 'design tokens only')
+})
+
+test('a Host without attention.list is asked once per session, not on every 30 s poll', async () => {
+  const requests = []
+  const polls = []
+  let recovered = null
+  let apiBase = 'http://host-a'
+  globalThis.window = { addEventListener: () => {}, removeEventListener: () => {}, localStorage: { getItem: () => null, setItem: () => {} } }
+  const realSetTimeout = globalThis.setTimeout
+  const timers = []
+  globalThis.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return timers.length }
+  const settle = () => new Promise(resolve => realSetTimeout(resolve, 0))
+  try {
+    const store = compile(await source('pages/attention/use-attention.ts'), {
+      react: environment().common.react,
+      '@zhin.js/client': { SIDE_EVENT_PUSH: {} },
+      '../../i18n': { useI18n: () => ({ locale: 'zh-CN' }) },
+      '../../i18n/locale.mjs': { translate },
+      '../../contracts/zhin-console': { CONSOLE_REST: { STATS: '/api/stats', LOGS_STATS: '/api/logs/stats', INTROSPECTION: '/api/introspection' } },
+      '../../hooks/visible-polling.mjs': { startVisiblePolling: fn => { polls.push(fn); return () => {} } },
+      '../../hooks/use-console-access': { useConsoleAccess: () => ({}) },
+      '../../hooks/use-console-session': { useConsoleSession: () => ({ me: null }) },
+      '../../utils/auth': { apiFetch: async () => { throw new Error('offline') }, getApiBase: () => apiBase, probeHealth: async () => ({ ok: true, instance: { state: 'running', ready: true } }) },
+      '../../utils/console-client': { getConsoleTransport: () => ({ onConsoleEvent: () => () => {}, onConsoleEventRecoveryGap: () => () => {} }) },
+      '../../utils/console-access.mjs': { hasConsolePermission: () => true },
+      '../../utils/console-rpc': { requestConsole: async request => {
+        requests.push(request)
+        throw Object.assign(new Error('RPC attention.list 未登记权限'), { details: { serverCode: 'unmapped' } })
+      } },
+      '../../utils/instance-availability.mjs': { onInstanceRecovered: fn => { recovered = fn; return () => { recovered = null } } },
+      '../../utils/read-error.mjs': { readErrorSummary: () => '' },
+      '../dashboard-health': { summarizeOptional: () => ({}) },
+      '../logs/read-state.mjs': { logPayloadAvailability: () => ({ available: true }) },
+      './attention-model.mjs': model,
+    })
+    const off = store.subscribeAttention(() => {})
+    await settle()
+    assert.equal(store.getAttentionState().data.mode, 'fallback')
+    assert.equal(requests.length, 1)
+    for (let i = 0; i < 5; i++) { polls[0](); await settle() }
+    assert.equal(requests.length, 1, 'each refused attention.list is an audit entry on the Host; polls only refresh the fallback')
+    assert.equal(store.getAttentionState().data.mode, 'fallback')
+
+    // A restarted instance may be an upgraded Host: ask once more.
+    recovered()
+    for (const timer of timers.filter(timer => timer.ms === model.ATTENTION_PUSH_DEBOUNCE_MS)) timer.fn()
+    await settle()
+    assert.equal(requests.length, 2)
+    polls[0](); await settle()
+    assert.equal(requests.length, 2)
+
+    // Another Host is a fresh question.
+    apiBase = 'http://host-b'
+    polls[0](); await settle()
+    assert.equal(requests.length, 3)
+    off()
+  } finally {
+    delete globalThis.window
+    globalThis.setTimeout = realSetTimeout
+  }
+})
+
+test('the fallback note says the Host lacks the summary endpoint, not that it is old', async () => {
+  const page = await source('pages/attention/index.tsx')
+  assert.match(page, /此 Host 不提供汇总接口/)
+  assert.doesNotMatch(page, /版本较旧/)
 })

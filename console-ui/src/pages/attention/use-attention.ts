@@ -24,6 +24,7 @@ import {
   emptyAttentionPrefs,
   ignoreAttention,
   loadAttention,
+  nextAttentionSupport,
   partitionAttention,
   pruneAttentionPrefs,
   readAttentionPrefs,
@@ -35,6 +36,7 @@ import {
   type AttentionItem,
   type AttentionLoad,
   type AttentionPrefs,
+  type AttentionSupportMemo,
 } from './attention-model.mjs'
 
 export interface AttentionState {
@@ -63,6 +65,8 @@ let subscribers = 0
 let stop: (() => void) | null = null
 /** One-shot sooner re-read while the instance is still starting. */
 let notReadyTimer: ReturnType<typeof setTimeout> | null = null
+/** Whether the connected Host is known to lack `attention.list` (so the 30 s poll stops asking it). */
+let support: AttentionSupportMemo | null = null
 const listeners = new Set<() => void>()
 
 function setState(next: AttentionState): void {
@@ -136,15 +140,19 @@ export function refreshAttention(): Promise<void> {
   clearNotReadyTimer()
   const ticket = ++sequence
   const currentLocale = locale
+  const apiBase = getApiBase() ?? ''
+  support = nextAttentionSupport(support, { apiBase })
   setState(state.data ? { ...state, refreshing: true } : { ...state, status: 'loading', refreshing: true })
   return loadAttention({
     request: request => requestConsole(request),
     loadFallback: () => loadFallbackInput(currentLocale),
     readInstanceHealth: () => readInstanceHealth(currentLocale),
     locale: currentLocale,
+    hostListUnsupported: support.unsupported,
   }).then(
     data => {
       if (ticket !== sequence) return
+      support = nextAttentionSupport(support, { apiBase, data })
       setState({ status: 'ready', data, error: null, refreshing: false })
       scheduleNotReadyRefresh(data)
     },
@@ -166,7 +174,11 @@ function start(): () => void {
   const transport = getConsoleTransport()
   const offPush = PUSH_EVENTS.map(type => transport.onConsoleEvent(type, () => debounced.trigger()))
   const offGap = transport.onConsoleEventRecoveryGap(() => debounced.trigger())
-  const offRecovered = onInstanceRecovered(() => debounced.trigger())
+  const offRecovered = onInstanceRecovered(() => {
+    // A restarted instance may be a newer Host: ask `attention.list` again.
+    support = nextAttentionSupport(support, { apiBase: getApiBase() ?? '', reset: true })
+    debounced.trigger()
+  })
   return () => {
     debounced.cancel()
     stopPolling()
