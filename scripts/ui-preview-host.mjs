@@ -292,7 +292,15 @@ const attentionItems = en => [
 ]
 const adapterStatus = { adapterKey: 'icqq', displayName: 'ICQQ', page: '/icqq', docsUrl: 'https://example.invalid/docs/icqq', canAdd: true, canRemove: true, configStore: true,
   fields: [{ key: 'uin', type: 'string', required: true, env: false, secret: false, label: 'QQ 号' }, { key: 'password', type: 'string', required: false, env: true, secret: true, label: '密码' }],
-  running: [{ id: 'preview-community', mode: 'qrcode' }], configured: [{ id: 'preview-community', values: { uin: '10000' } }, { id: 'preview-archive', values: { uin: '10009' } }], actions: [] }
+  running: [{ id: 'preview-community', mode: 'qrcode' }], configured: [{ id: 'preview-community', instanceId: 'preview-i1', values: { uin: '10000' } }, { id: 'preview-archive', instanceId: 'preview-i2', values: { uin: '10009' } }], actions: [],
+  // Managed account directory (headless rows, zhinjs/zhin#1250): one running account, one stopped.
+  // UI_PREVIEW_ADAPTER=migration: the accounts still come from the configuration file (首次迁移).
+  runtime: { adapterId: 'adapter:icqq', generation: 1, revision: process.env.UI_PREVIEW_ADAPTER === 'migration' ? null : 3, needsMigration: process.env.UI_PREVIEW_ADAPTER === 'migration',
+    canManage: true, canMigrate: process.env.UI_PREVIEW_ADAPTER === 'migration', canUpdate: true, canReplace: true, mutableFields: ['password'], identityFields: ['id', 'uin'],
+    endpoints: [
+      { instanceId: 'preview-i1', canonicalId: 'adapter:icqq~preview-i1', endpointId: 'preview-community', revision: 2, desiredEnabled: true, epoch: 1, started: true, admitted: true },
+      { instanceId: 'preview-i2', canonicalId: 'adapter:icqq~preview-i2', endpointId: 'preview-archive', revision: 1, desiredEnabled: false, epoch: 1, started: false, admitted: false },
+    ] } }
 
 // ---- Gateway-owned fixtures (ADR 0049 / 0054): sign-in, access control, instance, terminal. ----
 // UI_PREVIEW_INSTANCE=offline: the instance is down; gateway routes keep answering, every

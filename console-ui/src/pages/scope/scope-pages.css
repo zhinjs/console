@@ -109,3 +109,21 @@ a.console-scope-task:focus-visible { outline: var(--console-focus-width) solid h
   box-shadow: none;
 }
 .console-adapter-console .zk-nav { display: none; }
+
+/*
+ * Managed accounts in the 聊天账号 table (headless SDK accounts, zhinjs/zhin#1250): the start / stop
+ * switch carries its state as visible text, next to 编辑 / 删除 in the same row.
+ */
+.console-account-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding-inline: 0.25rem;
+  font-size: var(--console-text-body-sm);
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+  cursor: pointer;
+}
+.console-account-switch:has(button:disabled) { cursor: not-allowed; }
+.console-account-notice { margin-bottom: 0.75rem; }
+.console-adapter-console .zk-account-editor-host { margin-bottom: var(--console-space-section); }
