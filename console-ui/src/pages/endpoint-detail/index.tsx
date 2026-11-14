@@ -1031,16 +1031,14 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
                   ))}
                 </TabsContent>
                 <TabsContent value="history" className="im-system-content flex-1 overflow-y-auto p-4 space-y-3 mt-0 min-h-0">
-                  {inboxRequestsError ? <Alert variant="destructive"><AlertDescription>{inboxRequestsError}</AlertDescription></Alert> : null}
+                  {inboxRequestsError ? <StatusState error={inboxRequestsError} compact onRetry={() => void loadInboxRequests(false)} /> : null}
                   {!inboxRequestsEnabled && canShowReadEmpty(inboxRequestsLoading, inboxRequestsError) && (
                     <div className="im-empty-state flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground text-sm">
                       <span>{i18n.t("未启用统一收件箱，无历史记录")}</span>
                     </div>
                   )}
                   {inboxRequestsLoading && inboxRequests.length === 0 && (
-                    <div className="flex justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    </div>
+                    <StatusState kind="loading" compact onRetry={() => void loadInboxRequests(false)} />
                   )}
                   {inboxRequestsEnabled && inboxRequests.length === 0 && canShowReadEmpty(inboxRequestsLoading, inboxRequestsError) && (
                     <div className="im-empty-state flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground text-sm">
@@ -1138,16 +1136,14 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
                   ))}
                 </TabsContent>
                 <TabsContent value="history" className="im-system-content flex-1 overflow-y-auto p-4 space-y-3 mt-0 min-h-0">
-                  {inboxNoticesError ? <Alert variant="destructive"><AlertDescription>{inboxNoticesError}</AlertDescription></Alert> : null}
+                  {inboxNoticesError ? <StatusState error={inboxNoticesError} compact onRetry={() => void loadInboxNotices(false)} /> : null}
                   {!inboxNoticesEnabled && canShowReadEmpty(inboxNoticesLoading, inboxNoticesError) && (
                     <div className="im-empty-state flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground text-sm">
                       <span>{i18n.t("未启用统一收件箱，无历史记录")}</span>
                     </div>
                   )}
                   {inboxNoticesLoading && inboxNotices.length === 0 && (
-                    <div className="flex justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    </div>
+                    <StatusState kind="loading" compact onRetry={() => void loadInboxNotices(false)} />
                   )}
                   {inboxNoticesEnabled && inboxNotices.length === 0 && canShowReadEmpty(inboxNoticesLoading, inboxNoticesError) && (
                     <div className="im-empty-state flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground text-sm">
