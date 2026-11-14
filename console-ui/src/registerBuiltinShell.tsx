@@ -38,6 +38,7 @@ import AccessUsersPage from './pages/access/users'
 import AccessRolesPage from './pages/access/roles'
 import AccessTokensPage from './pages/access/tokens'
 import AccessAuditPage from './pages/access/audit'
+import ChatMembersPage from './pages/chat-members'
 import { LegacyRedirect } from './components/legacy-redirect'
 import { CONSOLE_PATHS as P, LEGACY_ROUTE_REDIRECTS } from './console-routes.mjs'
 import { NAV_GROUPS } from './navigation-taxonomy'
@@ -87,6 +88,8 @@ export function registerBuiltinConsolePages() {
   app.addRoute({ path: P.scopeAdapter, name: '适配器详情', parent: P.scope, element: <ScopeObjectRoute />, meta: { group: NAV_GROUPS.WORK, hideInMenu: true } })
   app.addRoute({ path: P.scopeEndpoint, name: '聊天账号详情', parent: P.scopeAdapter, element: <ScopeObjectRoute />, meta: { group: NAV_GROUPS.WORK, hideInMenu: true, fullWidth: true } })
   app.addRoute({ path: P.scopeConversation, name: '会话详情', parent: P.scopeEndpoint, element: <ScopeObjectRoute />, meta: { group: NAV_GROUPS.WORK, hideInMenu: true, fullWidth: true } })
+  // ADR 0060 §7: the people behind chat identities; every signed-in user also finds 「我的聊天身份」 here.
+  app.addRoute({ path: P.chatMembers, name: '聊天成员', parent: null, icon: 'UserRound', element: <ChatMembersPage />, meta: { group: NAV_GROUPS.WORK, order: 1.5 } })
   app.addRoute({ path: P.agentSessions, name: '聊天记录', parent: null, icon: 'GitBranch', element: <AgentSessionsPage />, meta: { group: NAV_GROUPS.WORK, order: 2 } })
 
   // 功能 — 机器人能做什么、在哪里做？

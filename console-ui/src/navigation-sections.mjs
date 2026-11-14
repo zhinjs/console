@@ -95,6 +95,8 @@ export const ROUTE_PERMISSIONS = Object.freeze({
   '/access/roles': ['iam.view'],
   '/access/tokens': ['iam.view'],
   '/access/audit': ['iam.view'],
+  // 「我的聊天身份」 is for every signed-in user (self.chat-identity); the member list is filtered by iam.manage on the Host.
+  '/chat-members': [],
 })
 
 export function routePermissions(route) {

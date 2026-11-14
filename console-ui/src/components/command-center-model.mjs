@@ -23,6 +23,7 @@ export const ROUTE_SEARCH_HINTS = Object.freeze({
   '/features/ai/workrooms': { description: '按 Project 查看 Workroom Run、Task 与 Assignment', keywords: ['协作', '协作空间', '多 Agent', '项目', 'workroom', 'project', 'run', 'assignment'] },
   '/features/ai/workrooms/catalog': { description: '配置协作空间、Bot Endpoint 与成员 Agent 映射', keywords: ['协作配置', '映射', '成员', 'workroom', 'catalog', 'mapping'] },
   '/agent/sessions': { description: '看看机器人和大家聊过什么，并从某段继续聊', keywords: ['聊天记录', '历史', '会话记录', '记录', '分支', '继续聊', 'history', 'sessions', 'transcript'] },
+  '/chat-members': { description: '聊天里的人、他们的平台身份与角色；把聊天身份绑定到我', keywords: ['聊天成员', '成员', '人', '身份', '绑定', '绑定码', '归并', 'members', 'identity', 'bind', 'principal'] },
   '/scope': { description: '按全局、适配器、账号、会话查看接入、聊天、功能与角色', keywords: ['账号', '机器人账号', '平台', '适配器', '会话', '群', '登录', '扫码', '好友申请', '角色', '范围', 'endpoint', 'account', 'adapter', 'scope', 'conversation', 'qq'] },
   '/introspection': { description: '检查命令、中间件、组件、Endpoint、Agent、工具与 MCP', keywords: ['命令', '指令', '中间件', '组件', '工具', '能力', '自检', 'command', 'middleware', 'component', 'tool', 'mcp', 'capability'] },
   '/permissions': { description: '查看命令权限规则为什么匹配，可做假设检查', keywords: ['权限', '命令权限', '谁能用', '规则', '授权', '为什么不能用', 'permission', 'rbac', 'access'] },

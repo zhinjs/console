@@ -153,11 +153,28 @@ const conversations = [
   { key: 'icqq/preview-community/group:a%2Fb', name: '带斜杠的群 a/b', hasOverrides: true, overrides: [{ plugin: 'repeater', enabled: false, fields: [] }] },
 ]
 const chatRoles = [
-  { level: 'global', key: '', adapter: 'icqq', userId: '10000', role: 'owner', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 30 * 86_400_000 },
+  { level: 'global', key: '', adapter: 'icqq', userId: '10000', role: 'owner', source: 'grant', grantedBy: 'console:user:u-owner', grantedByName: '部署者小王', grantedAt: Date.now() - 30 * 86_400_000 },
   { level: 'adapter', key: 'icqq', adapter: 'icqq', userId: '10002', role: 'admin', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 86_400_000 },
   { level: 'adapter', key: 'icqq', adapter: 'icqq', userId: '10006', role: 'owner', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 2 * 86_400_000 },
   { level: 'endpoint', key: 'icqq/preview-community', adapter: 'icqq', userId: '10003', role: 'trusted', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 7_200_000 },
   { level: 'conversation', key: 'icqq/preview-community/group:20001', adapter: 'icqq', userId: '10004', role: 'admin', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 3_600_000 },
+]
+// People behind chat identities (ADR 0060 §7): chat-principals.list, chat-identities.recent|me|bind-code.create.
+const chatPeople = [
+  { id: 'cp_wangowner7k2m4q3x5z6a7b8c9d', displayName: '小王（部署者）', createdAt: Date.now() - 30 * 86_400_000,
+    identities: [{ adapter: 'icqq', userId: '10000', linkMethod: 'code', lastSeenAt: Date.now() - 3 * MINUTE, lastDisplayName: '群主小王' },
+      { adapter: 'telegram', userId: '5551234', linkMethod: 'manual', lastSeenAt: Date.now() - 26 * 60 * MINUTE, lastDisplayName: 'wang' }],
+    roles: [chatRoles[0]], consoleLink: { consoleUserId: 'u-owner', consoleDisplayName: '部署者小王', linkedVia: 'code', linkedAt: Date.now() - 29 * 86_400_000 }, unverified: true },
+  { id: 'cp_demo2colleague3x5z6a7b8c9d', identities: [{ adapter: 'icqq', userId: '10002', linkMethod: 'implicit', lastSeenAt: Date.now() - 4 * MINUTE, lastDisplayName: '测试同学' }],
+    roles: [chatRoles[1]] },
+  { id: 'cp_trusted4helper5z6a7b8c9d2e', displayName: '运维值班', identities: [{ adapter: 'icqq', userId: '10003', linkMethod: 'implicit', lastSeenAt: Date.now() - 50 * MINUTE }],
+    roles: [chatRoles[3]] },
+]
+const recentSpeakers = [
+  { adapter: 'icqq', userId: '10001', lastSeenAt: Date.now() - 2 * MINUTE, lastDisplayName: '演示同事', principalId: 'implicit:icqq:10001' },
+  { adapter: 'icqq', userId: '10002', lastSeenAt: Date.now() - 4 * MINUTE, lastDisplayName: '测试同学', principalId: 'cp_demo2colleague3x5z6a7b8c9d' },
+  { adapter: 'icqq', userId: '10005', lastSeenAt: Date.now() - 14 * MINUTE, lastDisplayName: '新同学', principalId: 'implicit:icqq:10005' },
+  { adapter: 'telegram', userId: '777', lastSeenAt: Date.now() - 26 * 60 * MINUTE, lastDisplayName: 'support-user', principalId: 'implicit:telegram:777' },
 ]
 const chain = key => {
   const parts = key ? key.split('/') : []
@@ -637,6 +654,23 @@ const server = createServer(async (request, response) => {
       const view = entry => scopedAccess && entry.level === 'global' ? { level: entry.level, key: entry.key, role: entry.role, source: entry.source, redacted: true } : entry
       json(envelope({ roles: chatRoles.filter(entry => keys.includes(entry.key)).map(view) })); return
     }
+    if (type === 'chat-principals.list') {
+      const adapter = typeof body.key === 'string' && body.key ? body.key.split('/')[0] : null
+      json(envelope({ principals: chatPeople.map(person => ({ ...person, identities: person.identities.filter(identity => !adapter || identity.adapter === adapter) }))
+        .filter(person => person.identities.length) })); return
+    }
+    if (type === 'chat-identities.recent') {
+      const adapter = typeof body.key === 'string' && body.key ? body.key.split('/')[0] : null
+      json(envelope({ identities: recentSpeakers.filter(identity => !adapter || identity.adapter === adapter) })); return
+    }
+    if (type === 'chat-identities.me') {
+      // UI_PREVIEW_CHAT_ME=unlinked: a user without a link, no global owner yet (offers 设为全局 owner after binding).
+      if (process.env.UI_PREVIEW_CHAT_ME === 'unlinked') { json(envelope({})); return }
+      // UI_PREVIEW_CHAT_ME=suggest: the caller's person holds no role yet and there is no global owner (设为全局 owner).
+      if (process.env.UI_PREVIEW_CHAT_ME === 'suggest') { json(envelope({ principal: { ...chatPeople[0], roles: [] }, suggestGlobalOwner: true })); return }
+      json(envelope({ principal: chatPeople[0] })); return
+    }
+    if (type === 'chat-identities.bind-code.create') { json(envelope({ code: 'K7QH2M9X', expiresAt: Date.now() + 10 * MINUTE })); return }
     if (type === 'chat-roles.grant' || type === 'chat-roles.revoke') {
       if (scopedAccess && body.role === 'owner') { json({ success: false, error: '授予或撤销 owner 需要全局 iam.manage 权限', type }, 403); return }
       if (memoryDatabase) { json({ success: false, code: 'chat-roles-unpersisted', error: '聊天角色需要关系型项目数据库（sqlite / mysql / pg）', type }, 503); return }

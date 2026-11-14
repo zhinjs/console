@@ -14,6 +14,7 @@ const builtinNames: Readonly<Record<string, string>> = {
   "/scope/:adapter/:endpoint": "聊天账号详情",
   "/scope/:adapter/:endpoint/:conversation": "会话详情",
   "/agent/sessions": "聊天记录",
+  "/chat-members": "聊天成员",
   "/features": "功能矩阵",
   "/features/global/:plugin": "全局配置",
   "/features/ai": "AI 与模型",

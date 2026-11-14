@@ -12,7 +12,7 @@ export const CONSOLE_PATHS: Readonly<{
   opsDatabase: '/ops/database'; opsConfig: '/ops/config'; opsEnv: '/ops/env'; opsSchedules: '/ops/schedules'; opsFiles: '/ops/files'
   opsInstance: '/ops/instance'; opsTerminal: '/ops/terminal'; opsSelfCheck: '/ops/self-check'
   onboarding: '/onboarding'; account: '/account'
-  accessUsers: '/access/users'; accessRoles: '/access/roles'; accessTokens: '/access/tokens'; accessAudit: '/access/audit'
+  accessUsers: '/access/users'; accessRoles: '/access/roles'; accessTokens: '/access/tokens'; accessAudit: '/access/audit'; chatMembers: '/chat-members'
 }>
 export function featureGlobalHref(plugin: string, params?: URLSearchParams | Record<string, string>): string
 export function adapterHref(adapter: string, tab?: ScopeTab | null): string

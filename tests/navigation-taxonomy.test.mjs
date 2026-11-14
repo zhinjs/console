@@ -84,7 +84,7 @@ test('builtin route regrouping preserves deep links, hidden detail ownership and
  const byPath = new Map(routes.map(route=>[route.path,route]))
  const expected = {
   '/dashboard':'OVERVIEW','/attention':'OVERVIEW','/logs':'OVERVIEW','/agent/workbench':'OVERVIEW','/agent/replay':'OVERVIEW','/agent/usage':'OVERVIEW',
-  '/scope':'WORK','/scope/:adapter':'WORK','/scope/:adapter/:endpoint':'WORK','/scope/:adapter/:endpoint/:conversation':'WORK','/agent/sessions':'WORK',
+  '/scope':'WORK','/scope/:adapter':'WORK','/scope/:adapter/:endpoint':'WORK','/scope/:adapter/:endpoint/:conversation':'WORK','/agent/sessions':'WORK','/chat-members':'WORK',
   '/features':'FEATURES','/features/global/:plugin':'FEATURES','/features/ai':'FEATURES','/features/ai/skills':'FEATURES','/features/ai/ambient':'FEATURES',
   '/features/ai/workrooms':'FEATURES','/features/ai/workrooms/catalog':'FEATURES','/introspection':'FEATURES','/permissions':'FEATURES',
   '/scenario-lab':'FEATURES','/use-cases/group-welcome':'FEATURES',

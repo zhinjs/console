@@ -32,6 +32,7 @@ import { CONSOLE_PATHS as P } from '../../console-routes.mjs'
 import { builtinRoleLabel, scopeLabel } from '../access/access-model.mjs'
 import { IssuedTokenDialog } from '../access/tokens'
 import type { ConsoleApiTokenView, ConsoleMe } from '../../contracts/console-auth'
+import { MyChatIdentitySection } from '../../scope/ChatIdentityPanels'
 import '../admin-pages.css'
 
 /** Personal settings (ADR 0049 §5): who I am, change my password, my API tokens (`/auth/tokens`). */
@@ -55,6 +56,8 @@ export default function AccountPage() {
     {me && signedInUser ? <>
       <IdentitySection me={me} />
       {me.kind === 'user' ? <PasswordSection /> : null}
+      {/* ADR 0060: 「把聊天身份绑定到我」; hidden on a Host without chat-identities.* */}
+      <MyChatIdentitySection />
       <TokensSection />
     </> : null}
   </PageShell>
