@@ -287,8 +287,8 @@ function ProviderSummary({ plugins, matrix }: { plugins: readonly string[]; matr
           return (
             <li key={plugin} className="console-plugin-scope-chip">
               <Package className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-              <Link to={`/plugins/${encodeURIComponent(plugin)}`} className="font-mono underline-offset-2 hover:underline" title={plugin}>{plugin}</Link>
-              {matrix ? <Badge variant={summary?.global.enabled ? 'secondary' : 'outline'} size="sm">{scopeSummaryLine(summary, i18n.t)}</Badge> : null}
+              <Link to={`/plugins/${encodeURIComponent(plugin)}`} className="min-w-0 truncate font-mono underline-offset-2 hover:underline" title={plugin}>{plugin}</Link>
+              {matrix ? <Badge variant={summary?.global.enabled ? 'secondary' : 'outline'} size="sm" className="max-w-full whitespace-normal">{scopeSummaryLine(summary, i18n.t)}</Badge> : null}
               <Link to={featureGlobalHref(plugin)} className="shrink-0 text-xs underline">{i18n.t("功能")}</Link>
             </li>
           )
