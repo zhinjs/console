@@ -307,10 +307,13 @@
   @media (min-width: 1280px) {
     .console-plugin-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
+  /* Wraps on narrow screens so the scope summary and the 功能 link stay inside the chip. */
   .console-plugin-scope-chip {
     display: inline-flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.25rem 0.5rem;
+    min-width: 0;
     max-width: 100%;
     border: var(--console-border-width, 1px) solid var(--console-border-default, hsl(var(--border)));
     border-radius: var(--console-radius-md, 0.5rem);
