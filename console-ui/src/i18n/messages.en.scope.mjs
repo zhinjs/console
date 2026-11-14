@@ -68,7 +68,6 @@ export const scopeMessages = Object.freeze({
   "{0} 的 {1} 个会话": "{1} conversations of {0}",
   "全部沿用全局": "All use the global setting",
   // 概览 / 接入
-  "由适配器插件提供：添加、编辑、启停账号与登录方式。": "Provided by the adapter plugin: add, edit, start or stop accounts and their login.",
   "账号的连接参数（Token、地址、登录方式）在适配器的连接管理里修改；按账号的功能设置在「功能」页签。": "Connection settings (token, address, login method) are changed in the adapter's connection management; per-account feature settings are in the Features tab.",
   "在适配器 {0} 页面编辑、停用或移除这个账号": "Edit, stop or remove this account on the {0} adapter page",
   "需要 endpoint.manage 权限才能修改": "Changes need the endpoint.manage permission",
@@ -107,7 +106,6 @@ export const scopeMessages = Object.freeze({
   "账号状态": "Account state",
   "有覆盖的会话": "Conversations with overrides",
   "这个适配器还没有运行中的账号": "This adapter has no running account",
-  "配置中的其他账号（当前未运行）：": "Other configured accounts (not running):",
   "读取账号状态失败。会话与其他页签仍可使用。": "Reading the account state failed. Conversations and the other tabs still work.",
   "好友申请与邀请": "Friend requests and invitations",
   "账号未连接": "Account not connected",

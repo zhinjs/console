@@ -9,3 +9,9 @@ export function updateListItem(value: unknown[], index: number, child: unknown):
 export function numericDraft(text: string): string | number | undefined
 export function requiredGuidance(schema: SchemaField, value: unknown, path?: string): string[]
 export function hostValidationSummary(checked: { valid: boolean; missingEnv?: readonly string[] } | null, locale?: 'zh-CN' | 'en'): string | null
+export function configFieldGroup(field: SchemaField | undefined): string | null
+export function isWideConfigField(field: SchemaField | undefined): boolean
+export function configFieldLayout<T extends readonly [string, SchemaField]>(entries: readonly T[]): { title: string | null; fields: T[] }[]
+export function isMillisecondField(name: string | undefined, field: SchemaField | undefined): boolean
+export function secondsText(value: unknown): string
+export function millisecondsFromSecondsText(text: string): string | number | undefined

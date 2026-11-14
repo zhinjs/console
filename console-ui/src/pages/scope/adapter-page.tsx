@@ -1,14 +1,13 @@
 import { useState } from 'react'
-import { BookOpen, Cable, Plus, RefreshCw, X } from 'lucide-react'
+import { BookOpen, Cable, Plus, RefreshCw, Settings2, X } from 'lucide-react'
 import { AdapterConsolePage, type AdapterConsoleToolbarControls } from '@zhin.js/client'
 import { useI18n } from '../../i18n'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
-import { Card } from '../../components/ui/card'
 import { StatusState } from '../../components/StatusState'
 import { useConsoleAccess } from '../../hooks/use-console-access'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
-import { ObjectPageLayout, ObjectSection } from '../../scope/ObjectPageLayout'
+import { ObjectPageLayout } from '../../scope/ObjectPageLayout'
 import { ChatRolesPanel } from '../../scope/ChatRolesPanel'
 import type { Scope } from '../../scope/scope-tree.mjs'
 import { AdapterOverview } from './overview-panels'
@@ -63,13 +62,20 @@ function ConnectionManagement({ adapter, refreshKey }: { adapter: string; refres
       ) : null}
     </div>
   ) : null
+  // Collapsed under the account list: the list above is the one place accounts are read; this is
+  // where they are added, edited, started and stopped (the adapter plugin's own page).
   return (
-    <ObjectSection className="console-connection-manager" title={i18n.t('连接管理')} description={i18n.t('由适配器插件提供：添加、编辑、启停账号与登录方式。')}>
+    <details className="console-connection-manager">
+      <summary>
+        <Settings2 aria-hidden="true" />
+        <span className="console-connection-manager-title">{i18n.t('管理连接')}</span>
+        <span className="console-connection-manager-hint">{i18n.t('添加、编辑、启停账号与登录方式（由适配器插件提供）')}</span>
+      </summary>
       {hasConsolePermission('endpoint.manage', access) ? (
-        <Card className="console-adapter-console p-4">
+        <div className="console-adapter-console">
           <AdapterConsolePage adapterKey={adapter} embedded refreshKey={refreshKey} toolbar={toolbar} />
-        </Card>
-      ) : <StatusState kind="forbidden" permissions={['endpoint.manage']} description={i18n.t('当前身份不能管理账号连接。')} />}
-    </ObjectSection>
+        </div>
+      ) : <StatusState kind="forbidden" compact className="m-3" permissions={['endpoint.manage']} description={i18n.t('当前身份不能管理账号连接。')} />}
+    </details>
   )
 }

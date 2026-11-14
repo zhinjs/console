@@ -103,6 +103,18 @@ const usageStats = (session) => {
 const ambientStatus = { enabled: true, mode: 'shadow', groups: 1, judges: ['preview/chat-small'], last24h: { spoke: 0, watched: 3, stayed_quiet: 5, skipped: 1 }, decisionShadow: { agreed: 3, disagreed: 0 },
   recent: [{ at: now - 42 * 60_000, group: 'icqq:20001', outcome: 'watched', confidence: 0.7, judge: 'decision' }, { at: now - 90 * 60_000, group: 'icqq:20001', outcome: 'stayed_quiet' }], updatedAt: now - 42 * 60_000 }
 const configSource = 'ai:\n  trigger:\n    ambient:\n      mode: shadow\n      conversations:\n        - icqq:30002\n      maxPerHour: 4\n'
+// rss: a plugin form with grouped fields, millisecond fields (shown in seconds) and a list.
+const rssConfigSource = 'rss:\n  interval: 30\n  fetchTimeoutMs: 15000\n  retryDelayMs: 2500\n  maxItems: 10\n  proxy: ${RSS_PROXY}\n'
+const rssSchema = { type: 'object', object: {
+  interval: { type: 'integer', title: '检查间隔（分钟）', description: '多久检查一次订阅源。', default: 30, min: 1, 'x-group': '抓取' },
+  fetchTimeoutMs: { type: 'integer', title: '请求超时', description: '单个订阅源的请求超时。', default: 15000, min: 1000, 'x-group': '抓取' },
+  retryDelayMs: { type: 'integer', title: '重试间隔', default: 2000, min: 0, 'x-group': '抓取' },
+  proxy: { type: 'string', title: '代理地址', description: '访问订阅源使用的 HTTP 代理。', 'x-group': '抓取' },
+  maxItems: { type: 'integer', title: '每次最多推送', default: 10, min: 1, max: 50, 'x-group': '推送' },
+  template: { type: 'string', title: '推送模板', component: 'textarea', description: '可用 {title}、{link}。', 'x-group': '推送' },
+  mention: { type: 'boolean', title: '推送时 @全体成员', default: false, 'x-group': '推送' },
+  feeds: { type: 'list', title: '订阅源', inner: { type: 'object', object: { url: { type: 'string', title: '地址', required: true }, name: { type: 'string', title: '名称' } } } },
+} }
 const target = { endpoint: { adapter: 'icqq', id: 'preview-community' }, kind: 'group', id: '20001' }
 const taskProviders = { generation: 1, providers: [{ owner: 'root/reminder', packageName: '@zhin.js/plugin-reminder', title: '群提醒', description: '按时间在会话里发一条提醒。', schema: { type: 'object', properties: { text: { type: 'string', title: '提醒内容' }, at: { type: 'string', title: '时间' } }, required: ['text'] },
   effects: ['到点后在目标会话发送一条消息'], revision: 'r1', receipts: [], tasks: [
@@ -518,7 +530,7 @@ const server = createServer(async (request, response) => {
     }
     if (type.startsWith('plugin.root.') && Object.hasOwn(pluginRoot, type.slice('plugin.root.'.length))) { json(envelope(pluginRoot[type.slice('plugin.root.'.length)](body.data ?? {}))); return }
     if (type === 'schedule:list') { json(envelope(scheduleList)); return }
-    if (type === 'config:get-source') { json(envelope({ source: configSource, revision: 'preview-1' })); return }
+    if (type === 'config:get-source') { json(envelope({ source: configSource + rssConfigSource, revision: 'preview-1', configKeys: ['ai', 'rss'], configPaths: { ai: ['ai'], rss: ['rss'] } })); return }
     if (type === 'login.list') { json(envelope({ tasks: loginTasks })); return }
     if (type === 'plugin.adapter-icqq.status') { json(envelope(adapterStatus)); return }
     if (type === 'feature.list') { json(envelope({ revision: 'preview-1', features })); return }
@@ -571,6 +583,7 @@ const server = createServer(async (request, response) => {
       json({ success: false, code: 'invalid_input', error: '配置未通过插件 Schema 校验，未声明：$.endpoints required；缺少环境变量 QQ_SECRET', errors: [{ path: '$.endpoints', message: 'required' }], missingEnv: ['QQ_SECRET'] }, 400)
       return
     }
+    if (type === 'schema:get' && body.pluginName === 'rss') { json(envelope(rssSchema)); return }
     if (type === 'schema:get') { json(envelope({ type: 'object', object: { endpoints: { type: 'list', title: '机器人账号', required: true, inner: { type: 'object', object: { id: { type: 'string', title: 'AppID', required: true } } } } } })); return }
     if (type === 'agent.engagements.list') { json(envelope({ engagements: [engagement.summary] })); return }
     if (type === 'agent.engagements.get') {

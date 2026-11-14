@@ -24,6 +24,7 @@ import {
   loginTasksFor, overviewTotals, platformLabel, type AccountFilter,
 } from './scope-overview-model.mjs'
 import { WaitingLoginBadge, useEndpointsAndLogin, useLoginTaskTypeLabel, type EndpointsAndLogin, type ScopeEndpoint } from './login-tasks'
+import { ConfiguredAccountActions } from './configured-account-actions'
 import './scope-pages.css'
 
 function AccountStatusBadge({ endpoint, tasks }: { endpoint: ScopeEndpoint; tasks: EndpointsAndLogin['tasks'] }) {
@@ -31,6 +32,13 @@ function AccountStatusBadge({ endpoint, tasks }: { endpoint: ScopeEndpoint; task
   const status = accountStatus(endpoint, tasks)
   if (status === 'waiting') return <WaitingLoginBadge endpoint={endpoint} />
   return <Badge variant={status === 'online' ? 'success' : 'outline'} size="sm" className="whitespace-nowrap">{status === 'online' ? i18n.t('在线') : i18n.t('离线')}</Badge>
+}
+
+/** Opens the adapter's 「管理连接」 disclosure under the account list and moves to it. */
+function openConnectionManager() {
+  const details = document.querySelector<HTMLDetailsElement>('details.console-connection-manager')
+  if (details) details.open = true
+  revealSection('.console-connection-manager')
 }
 
 /** Scrolls a section of this page into view and focuses its first control (an empty list's next step). */
@@ -73,7 +81,15 @@ function OnboardingSection({ first }: { first: boolean }) {
 }
 
 /** Account table shared by 全局 and 适配器 overviews: the name links to the account page. */
-function AccountTable({ endpoints, tasks, showAdapter, label }: { endpoints: readonly ScopeEndpoint[]; tasks: EndpointsAndLogin['tasks']; showAdapter: boolean; label: string }) {
+/**
+ * `configuredOnly` adds the accounts known only from configuration (not running) as rows of the
+ * same table — status, pending and actions on one row like every account — with their own action
+ * slot (`ConfiguredAccountActions`).
+ */
+function AccountTable({ endpoints, tasks, showAdapter, label, configuredOnly }: {
+  endpoints: readonly ScopeEndpoint[]; tasks: EndpointsAndLogin['tasks']; showAdapter: boolean; label: string
+  configuredOnly?: { adapter: string; ids: readonly string[] }
+}) {
   const i18n = useI18n()
   return (
     <Table aria-label={label}>
@@ -116,6 +132,26 @@ function AccountTable({ endpoints, tasks, showAdapter, label }: { endpoints: rea
             </TableRow>
           )
         })}
+        {configuredOnly?.ids.map(id => (
+          <TableRow key={`configured\u0000${id}`} className="console-account-configured-row">
+            <TableCell className="max-w-[16rem] max-md:max-w-[11rem]">
+              <Link to={endpointHref(configuredOnly.adapter, id)} className="console-scope-row-link" title={`${configuredOnly.adapter} / ${id}`}>
+                <Bot aria-hidden="true" /><span className="truncate">{id}</span>
+              </Link>
+            </TableCell>
+            {showAdapter ? <TableCell className="max-md:hidden"><code>{configuredOnly.adapter}</code></TableCell> : null}
+            <TableCell>
+              <span className="inline-flex flex-col items-start gap-0.5">
+                <Badge variant="outline" size="sm" className="whitespace-nowrap">{i18n.t('仅在配置中')}</Badge>
+                <span className="text-xs text-muted-foreground max-md:hidden">{i18n.t('当前未运行')}</span>
+              </span>
+            </TableCell>
+            <TableCell className="max-md:hidden"><span className="text-muted-foreground">—</span></TableCell>
+            <TableCell className="text-right">
+              <span className="inline-flex flex-wrap justify-end gap-1.5"><ConfiguredAccountActions adapter={configuredOnly.adapter} endpoint={id} /></span>
+            </TableCell>
+          </TableRow>
+        ))}
       </TableBody>
     </Table>
   )
@@ -269,23 +305,20 @@ export function AdapterOverview({ scope, data, management }: { scope: Scope; dat
           { label: i18n.t('有覆盖的会话'), value: matrix.source === 'rpc' ? overriddenConversations : '—' },
         ]} />
       ) : <Skeleton className="h-20" />}
-      <ObjectSection title={i18n.t('聊天账号')} description={i18n.t('点账号进入它的页面：会话、聊天、接入、功能与角色。')}>
+      <ObjectSection title={i18n.t('聊天账号')} description={i18n.t('点账号进入它的页面：会话、聊天、接入、功能与角色。添加、编辑与启停在列表下方的「管理连接」里。')}>
         {data.error && !data.loaded ? <StatusState error={data.error} onRetry={data.refresh} /> : (
           <Card className="overflow-hidden p-0">
-            {!data.loaded ? <TableSkeleton /> : accounts.length ? <AccountTable endpoints={accounts} tasks={data.tasks} showAdapter={false} label={i18n.t('聊天账号')} /> : (
-              <StatusState kind="empty" compact className="m-3" title={i18n.t('这个适配器还没有运行中的账号')} description={i18n.t('在下方的连接管理里添加账号。')}
-                actions={<Button size="sm" onClick={() => revealSection('.console-connection-manager')}><Plus />{i18n.t('添加账号')}</Button>} />
+            {!data.loaded ? <TableSkeleton /> : accounts.length || item?.configuredOnly.length ? (
+              <AccountTable endpoints={accounts} tasks={data.tasks} showAdapter={false} label={i18n.t('聊天账号')}
+                configuredOnly={item?.configuredOnly.length ? { adapter, ids: item.configuredOnly } : undefined} />
+            ) : (
+              <StatusState kind="empty" compact className="m-3" title={i18n.t('这个适配器还没有运行中的账号')} description={i18n.t('在下方的「管理连接」里添加账号。')}
+                actions={<Button size="sm" onClick={() => openConnectionManager()}><Plus />{i18n.t('添加账号')}</Button>} />
             )}
           </Card>
         )}
-        {item?.configuredOnly.length ? (
-          <div className="console-scope-known">
-            <span className="text-muted-foreground">{i18n.t('配置中的其他账号（当前未运行）：')}</span>
-            {item.configuredOnly.map(id => <Link key={id} to={endpointHref(adapter, id)} className="console-scope-chip"><Bot aria-hidden="true" />{id}</Link>)}
-          </div>
-        ) : null}
+        {management}
       </ObjectSection>
-      {management}
     </>
   )
 }

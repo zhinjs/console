@@ -21,7 +21,6 @@ a.console-scope-task:focus-visible { outline: var(--console-focus-width) solid h
 }
 .console-scope-split { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(min(26rem, 100%), 1fr)); }
 
-.console-scope-known { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; font-size: var(--console-text-body-sm); }
 .console-scope-chip {
   display: inline-flex; align-items: center; gap: 0.375rem; border: var(--console-border-width, 1px) solid var(--console-border-default); border-radius: 999px;
   padding: 0.125rem 0.625rem; color: hsl(var(--foreground)); font-size: var(--console-text-caption); text-decoration: none;
@@ -72,3 +71,41 @@ a.console-scope-task:focus-visible { outline: var(--console-focus-width) solid h
 }
 .console-login-card-head .console-login-card-logs { margin-left: auto; }
 .console-login-card-head .console-login-card-logs svg { color: currentColor; }
+
+/*
+ * 管理连接: the adapter plugin's own account management (SDK `AdapterConsolePage`, embedded),
+ * collapsed under the 聊天账号 list so accounts are listed once. Framed as a Console card: the SDK
+ * reads the Console's tokens, its inner cards lose their own border and shadow so the block does
+ * not read as a page pasted into a page.
+ */
+.console-connection-manager {
+  margin-top: 0.75rem;
+  border-radius: var(--console-radius-xl);
+  background: hsl(var(--card));
+  box-shadow: var(--console-shadow-sm);
+}
+.console-connection-manager > summary {
+  display: flex;
+  width: 100%;
+  min-height: 3rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.625rem;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+.console-connection-manager > summary::-webkit-details-marker { display: none; }
+.console-connection-manager > summary > svg { width: 1rem; height: 1rem; flex-shrink: 0; color: hsl(var(--muted-foreground)); }
+.console-connection-manager-title { font-weight: 600; }
+.console-connection-manager-hint { min-width: 0; flex: 1; color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); }
+.console-connection-manager[open] > summary { border-bottom: var(--console-border-width) solid var(--console-border-subtle); }
+.console-connection-manager > .console-adapter-console { padding: 1rem; }
+.console-adapter-console .zk-root { background: transparent; color: hsl(var(--foreground)); font-size: var(--console-text-body); }
+.console-adapter-console .zk-card,
+.console-adapter-console .zk-bot-tile {
+  border-color: var(--console-border-subtle);
+  background: hsl(var(--secondary));
+  box-shadow: none;
+}
+.console-adapter-console .zk-nav { display: none; }
