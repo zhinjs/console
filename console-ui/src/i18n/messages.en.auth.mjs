@@ -33,7 +33,6 @@ export const authMessages = Object.freeze({
   "初始化令牌": "Setup token",
   "此令牌没有查看系统状态的权限 (HTTP 403)": "This token may not read the system status (HTTP 403)",
   "正在确认登录身份…": "Checking who is signed in…",
-  "个人设置：{0}": "Personal settings: {0}",
   // Setup wizard
   "数据库文件": "Database file",
   "主机": "Host",

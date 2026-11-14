@@ -18,7 +18,7 @@ import { readTaskProviders } from './task-center-model.mjs'
 import { validateAssistantJobs } from './assistant-jobs-model.mjs'
 import { readToolApprovals } from './tool-approvals-model.mjs'
 import { taskTabHref } from './task-hub-model.mjs'
-import { filterTaskOverview, TASK_OVERVIEW_FILTERS, taskOverviewRows, type TaskOverviewFilter, type TaskOverviewRow, type TaskOverviewSources } from './task-overview-model.mjs'
+import { filterTaskOverview, splitInternalTasks, TASK_OVERVIEW_FILTERS, taskOverviewRows, type TaskOverviewFilter, type TaskOverviewRow, type TaskOverviewSources } from './task-overview-model.mjs'
 import './insights/insights.css'
 
 const READ_TIMEOUT_MS = 8_000
@@ -47,7 +47,7 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
     const settle = <T,>(promise: Promise<T>) => promise.catch(() => null)
     const [admin, schedules, assistant, approvals] = await Promise.all([
       settle(readJson(`${CONSOLE_REST.TASK_PROVIDERS}?locale=${i18n.locale}`).then(body => readTaskProviders(body, i18n.locale))),
-      settle(requestConsole<NonNullable<TaskOverviewSources['schedules']>>({ type: CONSOLE_RPC.SCHEDULE_LIST })),
+      settle(requestConsole<NonNullable<TaskOverviewSources['schedules']>>({ type: CONSOLE_RPC.SCHEDULE_LIST, locale: i18n.locale })),
       settle(readJson('/api/assistant/jobs').then(body => validateAssistantJobs(body, i18n.locale))),
       approvalsReadable ? settle(pluginRpc('root', 'tool-approvals', undefined, { signal }).then(readToolApprovals)) : Promise.resolve(undefined),
     ])
@@ -59,7 +59,10 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
   useEffect(() => { void load() }, [load])
 
   if (loading && !sources) return <StatusState kind="loading" title={i18n.t("正在读取任务")} placeholder={<div className="space-y-2"><Skeleton className="h-10" /><Skeleton className="h-40" /></div>} />
-  const { rows, unavailable } = taskOverviewRows(sources ?? {}, i18n.locale)
+  const { rows: allRows, unavailable } = taskOverviewRows(sources ?? {}, i18n.locale)
+  // Plugin housekeeping (RSS polling, cleanup…) runs every few seconds; it is listed folded below (#1250).
+  const { main: rows, internal } = splitInternalTasks(allRows)
+  const shownInternal = filterTaskOverview(internal, filter)
   const shown = filterTaskOverview(rows, filter)
   const time = (value: number | null | undefined) => value ? new Date(value).toLocaleString(i18n.locale) : '—'
   const allFailed = unavailable.length >= 3 && rows.length === 0
@@ -87,7 +90,7 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
       ) : null}
       {allFailed ? (
         <StatusState kind="error" title={i18n.t("任务暂时读不到")} description={i18n.t("管理员任务、定时提醒和助手任务都没有读到；连接恢复后刷新。")} onRetry={() => void load()} />
-      ) : !shown.length ? (
+      ) : !shown.length && shownInternal.length ? null : !shown.length ? (
         filter === 'all' ? (
           <StatusState kind="empty" title={i18n.t("还没有任务")}
             description={i18n.t("管理员任务在「管理员任务」页签创建；定时提醒由插件或 AI 助手创建。")}
@@ -100,7 +103,26 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
             actions={<Button size="sm" variant="outline" onClick={() => setFilter('all')}>{i18n.t("查看全部任务")}</Button>} />
         )
       ) : (
-        <>
+        <OverviewTable rows={shown} time={time} />
+      )}
+      {shownInternal.length ? (
+        <details className="console-task-overview-internal">
+          <summary>
+            {i18n.t("插件内部任务")} <span className="tabular-nums text-muted-foreground">{shownInternal.length}</span>
+            <span className="console-task-overview-sub">{i18n.t("插件自己的轮询、清理与刷盘，通常每隔几秒到几分钟运行一次；不需要你处理，出错时会列在上面。")}</span>
+          </summary>
+          <OverviewTable rows={shownInternal} time={time} />
+        </details>
+      ) : null}
+    </div>
+  )
+}
+
+function OverviewTable({ rows, time }: { rows: TaskOverviewRow[]; time: (value: number | null | undefined) => string }) {
+  const i18n = useI18n()
+  const shown = rows
+  return (
+    <>
           <Card className="console-task-overview-table overflow-hidden">
             <Table>
               <TableHeader>
@@ -145,15 +167,13 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
               </dl>
             ))}
           </div>
-        </>
-      )}
-    </div>
+    </>
   )
 }
 
 function LastResult({ row, time }: { row: TaskOverviewRow; time: (value: number | null | undefined) => string }) {
   if (!row.lastResult) return <span className="text-muted-foreground">—</span>
-  return <span><Badge variant={row.lastResult.tone}>{row.lastResult.label}</Badge>{row.lastResult.at ? <span className="console-task-overview-sub">{time(row.lastResult.at)}</span> : null}</span>
+  return <span title={row.lastResult.error}><Badge variant={row.lastResult.tone}>{row.lastResult.label}</Badge>{row.lastResult.at ? <span className="console-task-overview-sub">{time(row.lastResult.at)}</span> : null}</span>
 }
 
 function TargetCell({ row }: { row: TaskOverviewRow }) {

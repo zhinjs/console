@@ -4,6 +4,7 @@ import { useI18n } from '../../i18n'
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert'
 import { Badge } from '../../components/ui/badge'
 import { StatusState } from '../../components/StatusState'
+import { AnsiLines } from '../../components/AnsiText'
 import { instanceStateLabel, operationLabel, phaseLabel, transactionSummary, type GatewayErrorKind, type PackageProgressState } from './gateway-model.mjs'
 
 /**
@@ -70,7 +71,7 @@ export function TransactionProgress({ progress, running, error }: { progress: Pa
               {i18n.t("实例状态：{0} → {1}", [instanceStateOrUnmanaged(result.instance.before, i18n.t), instanceStateOrUnmanaged(result.instance.after, i18n.t)])}
             </p>
             {result.logTail.length ? (
-              <pre aria-label={i18n.t("实例日志尾部")} className="max-h-40 overflow-auto rounded-md bg-muted p-2 font-mono text-xs">{result.logTail.join('\n')}</pre>
+              <pre aria-label={i18n.t("实例日志尾部")} className="max-h-40 overflow-auto rounded-md bg-muted p-2 font-mono text-xs"><AnsiLines lines={result.logTail} /></pre>
             ) : null}
           </AlertDescription>
         </Alert>

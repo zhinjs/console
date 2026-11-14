@@ -1,25 +1,30 @@
-import { useState } from 'react'
-import { BookOpen, Cable, Plus, RefreshCw, X } from 'lucide-react'
-import { AdapterConsolePage, type AdapterConsoleToolbarControls } from '@zhin.js/client'
+import { useEffect, useState, type ComponentType } from 'react'
+import { BookOpen, Cable, Plus, RefreshCw, Settings2, X } from 'lucide-react'
+import { AdapterConsolePage, type AdapterConsolePageProps, type AdapterConsoleToolbarControls } from '@zhin.js/client'
 import { useI18n } from '../../i18n'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
-import { Card } from '../../components/ui/card'
 import { StatusState } from '../../components/StatusState'
 import { useConsoleAccess } from '../../hooks/use-console-access'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
-import { ObjectPageLayout, ObjectSection } from '../../scope/ObjectPageLayout'
+import { ObjectPageLayout } from '../../scope/ObjectPageLayout'
 import { ChatRolesPanel } from '../../scope/ChatRolesPanel'
 import type { Scope } from '../../scope/scope-tree.mjs'
 import { AdapterOverview } from './overview-panels'
 import { useEndpointsAndLogin } from './login-tasks'
 import { platformLabel } from './scope-overview-model.mjs'
 import { ScopeFeaturesPanel, ScopeRecordsPanel } from './scope-panels'
+import { ManagedAccountEditor, ManagedAccountsProvider, useManagedAccounts } from './adapter-accounts'
+
+/** `hostAccounts` exists from the client with the headless account API; older clients ignore it. */
+const ConnectionManagementPage = AdapterConsolePage as ComponentType<AdapterConsolePageProps & { hostAccounts?: boolean }>
 
 /** `/scope/:adapter` — 适配器: its accounts and connection management (概览), overrides (功能), roles, records. */
 export function AdapterObjectPage({ scope }: { scope: Scope & { level: 'adapter' } }) {
   const i18n = useI18n()
   const data = useEndpointsAndLogin()
+  const access = useConsoleAccess()
+  const canManage = hasConsolePermission('endpoint.manage', access)
   const accounts = data.endpoints.filter(endpoint => endpoint.adapter === scope.adapter)
   const online = accounts.filter(account => account.connected).length
   const platform = platformLabel(scope.adapter!)
@@ -36,7 +41,13 @@ export function AdapterObjectPage({ scope }: { scope: Scope & { level: 'adapter'
       status={data.loaded ? <Badge variant={accounts.length && online === accounts.length ? 'success' : online ? 'warning' : 'outline'}>{i18n.t('{0} / {1} 在线', [online, accounts.length])}</Badge> : null}
       actions={<Button variant="outline" size="sm" onClick={refresh} disabled={data.loading}><RefreshCw className={data.loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>}
       panels={{
-        overview: <AdapterOverview scope={scope} data={data} management={<ConnectionManagement adapter={scope.adapter!} refreshKey={managementRefresh} />} />,
+        // One account state for the table rows (status, switch, 编辑 / 删除) and 「管理连接」 (add form,
+        // editor); with an older client the provider is a no-op and 「管理连接」 keeps the SDK's cards.
+        overview: (
+          <ManagedAccountsProvider adapter={scope.adapter!} refreshKey={managementRefresh} enabled={canManage}>
+            <AdapterOverview scope={scope} data={data} management={<ConnectionManagement adapter={scope.adapter!} refreshKey={managementRefresh} />} />
+          </ManagedAccountsProvider>
+        ),
         features: <ScopeFeaturesPanel scope={scope} />,
         roles: <ChatRolesPanel scope={scope} />,
         records: <ScopeRecordsPanel scope={scope} />,
@@ -53,6 +64,16 @@ export function AdapterObjectPage({ scope }: { scope: Scope & { level: 'adapter'
 function ConnectionManagement({ adapter, refreshKey }: { adapter: string; refreshKey: number }) {
   const i18n = useI18n()
   const access = useConsoleAccess()
+  const managed = useManagedAccounts()
+  // 编辑 in a table row opens the editor here: open the disclosure and move to it.
+  const editing = managed?.editing?.instanceId
+  useEffect(() => {
+    if (!editing) return
+    const details = document.querySelector<HTMLDetailsElement>('details.console-connection-manager')
+    if (details) details.open = true
+    details?.querySelector<HTMLElement>('.zk-account-editor-host')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    details?.querySelector<HTMLElement>('.zk-account-editor-host input:not([disabled])')?.focus({ preventScroll: true })
+  }, [editing])
   const toolbar = ({ docsUrl, add }: AdapterConsoleToolbarControls) => (docsUrl || add) ? (
     <div className="console-adapter-console-toolbar">
       {docsUrl ? <Button asChild variant="outline" size="sm"><a href={docsUrl} target="_blank" rel="noreferrer"><BookOpen />{i18n.t('文档')}</a></Button> : null}
@@ -63,13 +84,22 @@ function ConnectionManagement({ adapter, refreshKey }: { adapter: string; refres
       ) : null}
     </div>
   ) : null
+  // Collapsed under the account list. With the headless client the rows above carry each account's
+  // switch and actions, so this keeps only adding accounts, the account editor, logins and platform
+  // actions; with an older client it is the adapter plugin's own page (cards, start / stop, edit).
   return (
-    <ObjectSection className="console-connection-manager" title={i18n.t('连接管理')} description={i18n.t('由适配器插件提供：添加、编辑、启停账号与登录方式。')}>
+    <details className="console-connection-manager">
+      <summary>
+        <Settings2 aria-hidden="true" />
+        <span className="console-connection-manager-title">{i18n.t('管理连接')}</span>
+        <span className="console-connection-manager-hint">{managed ? i18n.t('添加账号、编辑表单、登录与平台操作（由适配器插件提供）') : i18n.t('添加、编辑、启停账号与登录方式（由适配器插件提供）')}</span>
+      </summary>
       {hasConsolePermission('endpoint.manage', access) ? (
-        <Card className="console-adapter-console p-4">
-          <AdapterConsolePage adapterKey={adapter} embedded refreshKey={refreshKey} toolbar={toolbar} />
-        </Card>
-      ) : <StatusState kind="forbidden" permissions={['endpoint.manage']} description={i18n.t('当前身份不能管理账号连接。')} />}
-    </ObjectSection>
+        <div className="console-adapter-console">
+          {managed ? <ManagedAccountEditor /> : null}
+          <ConnectionManagementPage adapterKey={adapter} embedded refreshKey={refreshKey} toolbar={toolbar} hostAccounts={!!managed} />
+        </div>
+      ) : <StatusState kind="forbidden" compact className="m-3" permissions={['endpoint.manage']} description={i18n.t('当前身份不能管理账号连接。')} />}
+    </details>
   )
 }

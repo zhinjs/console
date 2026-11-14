@@ -3,13 +3,20 @@ import { useEffect, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
-import { SelectField, type SelectFieldOption } from '../../components/ui/select'
+import { SelectField } from '../../components/ui/select'
+import { SearchableSelectField, type SearchableSelectOption } from '../../components/ui/searchable-select'
 import { supportLabel } from './SupportInfo'
 import { Card } from '../../components/ui/card'
+import { useConfirm } from '../../components/confirm-dialog'
 import {
   purposePlan,
   profileSupport,
+  purposeProfileChoices,
   inferenceError,
+  newlyBoundLanguageProfiles,
+  describeProbe,
+  InferenceRequestError,
+  type ProbeResult,
   type Purposes as PurposeState,
   type ScopeModels,
   type Kind,
@@ -41,7 +48,48 @@ export function Purposes({ management: m }: { management: InferenceManagement })
   const [level, setLevel] = useState<'adapters' | 'endpoints' | 'scenes'>('adapters'),
     [target, setTarget] = useState(''),
     [sceneOffset, setSceneOffset] = useState(0)
-  const disabled = m.busy || !!m.pending
+  const [probing, setProbing] = useState(false)
+  const { confirm, ConfirmDialog: confirmDialog } = useConfirm()
+  const disabled = m.busy || !!m.pending || probing
+  /**
+   * #1250: before saving, send one minimal tool-carrying request to every newly bound model, so a
+   * relay that hangs or rejects tools does not silently break chat. Failures ask for confirmation.
+   */
+  async function probeNewBindings(): Promise<boolean> {
+    const ids = newlyBoundLanguageProfiles(draft, view.purposes)
+    if (!ids.length) return true
+    setProbing(true)
+    const failures: string[] = []
+    try {
+      for (const id of ids) {
+        const label = view.profiles[id]?.label ?? view.profiles[id]?.model ?? id
+        try {
+          const result = await m.request<ProbeResult>('/probe', { profileId: id })
+          if (!m.active()) return false
+          if (result.status !== 'ok') failures.push(`${label}${i18n.locale === 'en' ? ': ' : '：'}${describeProbe(result, i18n.locale)}`)
+        } catch (error) {
+          // A Host before #1250 has no probe route: save as before.
+          if (error instanceof InferenceRequestError && error.code === 'not-installed') return true
+          if (!m.active()) return false
+          failures.push(`${label}${i18n.locale === 'en' ? ': ' : '：'}${inferenceError(error, i18n.locale)}`)
+        }
+      }
+    } finally {
+      setProbing(false)
+    }
+    if (!failures.length) return true
+    return confirm({
+      title: i18n.t("新绑定的模型连通性测试未通过"),
+      description: i18n.t("仍然保存的话，使用这些用途的对话可能没有回复。确定保存吗？"),
+      children: (
+        <ul className="list-disc space-y-1 pl-5 text-sm" role="list">
+          {failures.map((line) => <li key={line}>{line}</li>)}
+        </ul>
+      ),
+      confirmLabel: i18n.t("仍然保存"),
+      variant: 'destructive',
+    })
+  }
   useEffect(() => {
     let alive = true
     void m.request<Targets>('/targets').then(
@@ -56,17 +104,16 @@ export function Purposes({ management: m }: { management: InferenceManagement })
       alive = false
     }
   }, [view.rootId])
-  const choices = (kind: Kind, inherit = i18n.t("未设置")) => [
+  // Searchable and grouped by service; profiles only Agents use form their own 「Agent 绑定」 group (#1250).
+  const choices = (kind: Kind, inherit = i18n.t("未设置")): SearchableSelectOption[] => [
     { value: '', label: inherit },
-    ...Object.values(view.profiles)
-      .filter((profile) => {
-        const account = view.accounts[profile.accountId]
-        return view.services[account.serviceId].models[profile.model].kinds.includes(kind)
-      })
-      .map((profile) => ({
-        value: profile.id,
-        label: supportLabel(profile.label ?? profile.model, profileSupport(view, profile)),
-      })),
+    ...purposeProfileChoices(view, kind, i18n.locale).map((choice) => ({
+      value: choice.value,
+      label: supportLabel(choice.profile.label ?? choice.profile.model, profileSupport(view, choice.profile)),
+      group: choice.group,
+      description: choice.description,
+      keywords: choice.keywords,
+    })),
   ]
   function defaultValue(key: 'chat' | 'summary' | 'ambient' | 'image', value: string) {
     setDraft((previous) => ({
@@ -116,6 +163,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
       onSubmit={async (event) => {
         event.preventDefault()
         const submitted = editor
+        if (!(await probeNewBindings())) return
         await m.savePlan({ version: 1, purposes: purposePlan(draft, view.purposes!) }, {
           source,
           onCommitted: (next) => setEditor((current) => ({
@@ -126,10 +174,11 @@ export function Purposes({ management: m }: { management: InferenceManagement })
         })
       }}
     >
+      {confirmDialog}
       <div className="flex items-center justify-between gap-3">
         <h3 className="font-semibold">{i18n.t("模型用途")}</h3>
         <Button type="submit" disabled={disabled}>
-          {i18n.t("保存")}
+          {probing ? i18n.t("正在测试连通性…") : i18n.t("保存")}
         </Button>
       </div>
       <Card className="p-4 space-y-4">
@@ -145,7 +194,8 @@ export function Purposes({ management: m }: { management: InferenceManagement })
           ).map(([key, label]) => (
             <label className="space-y-2 text-sm" key={key}>
               <span>{label}</span>
-              <SelectField
+              <SearchableSelectField
+                aria-label={label}
                 value={draft.defaults[key] ?? ''}
                 onValueChange={(value) => defaultValue(key, value)}
                 options={choices(
@@ -191,7 +241,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
                   { value: 'active', label: i18n.t("启用", undefined, 'state') },
                 ]}
               />
-              <SelectField
+              <SearchableSelectField
                 aria-label={i18n.t("{0}模型", [label])}
                 value={policy?.profile ?? ''}
                 onValueChange={(profile) =>
@@ -257,7 +307,8 @@ export function Purposes({ management: m }: { management: InferenceManagement })
             <span className="self-center">
               {targets?.agents.find((agent) => agent.name === name)?.nickname ?? name}
             </span>
-            <SelectField
+            <SearchableSelectField
+              aria-label={targets?.agents.find((agent) => agent.name === name)?.nickname ?? name}
               value={draft.agents?.[name] ?? ''}
               onValueChange={(value) =>
                 setDraft((previous) => {
@@ -289,8 +340,9 @@ export function Purposes({ management: m }: { management: InferenceManagement })
               { value: 'scenes', label: i18n.t("会话场景") },
             ]}
           />
-          <SelectField
+          <SearchableSelectField
             className="min-w-0 flex-1"
+            aria-label={i18n.t("选择目标")}
             value={target}
             onValueChange={setTarget}
             options={[{ value: '', label: i18n.t("选择目标") }, ...candidates]}
@@ -327,7 +379,8 @@ export function Purposes({ management: m }: { management: InferenceManagement })
                 <Trash2 />
               </Button>
             </div>
-            <SelectField
+            <SearchableSelectField
+              aria-label={i18n.t("聊天")}
               value={value.chat ?? ''}
               onValueChange={(chat) => changeScope(key, { ...value, chat: chat || undefined })}
               options={choices('language', i18n.t("继承上层聊天模型"))}
@@ -361,7 +414,7 @@ function Perception({
   onChange,
 }: {
   value?: { profile: string; fallbacks?: string[] }
-  choices: SelectFieldOption[]
+  choices: SearchableSelectOption[]
   onChange: (value: { profile: string; fallbacks?: string[] } | undefined) => void
 }) {
   const i18n = useI18n()
@@ -369,7 +422,8 @@ function Perception({
     <div className="space-y-3">
       <label className="block space-y-2 text-sm">
         <span>{i18n.t("识图")}</span>
-        <SelectField
+        <SearchableSelectField
+          aria-label={i18n.t("识图")}
           value={value?.profile ?? ''}
           onValueChange={(profile) =>
             onChange(profile ? { profile, fallbacks: value?.fallbacks } : undefined)
@@ -381,7 +435,7 @@ function Perception({
         <div className="space-y-2">
           {(value.fallbacks ?? []).map((id, index) => (
             <div key={index} className="flex gap-2">
-              <SelectField
+              <SearchableSelectField
                 className="flex-1"
                 aria-label={i18n.t("识图备用模型 {0}", [index + 1])}
                 value={id}
@@ -406,7 +460,7 @@ function Perception({
               </Button>
             </div>
           ))}
-          <SelectField
+          <SearchableSelectField
             aria-label={i18n.t("添加识图备用模型")}
             value=""
             onValueChange={(id) => {

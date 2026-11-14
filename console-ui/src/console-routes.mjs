@@ -53,6 +53,8 @@ export const CONSOLE_PATHS = Object.freeze({
   accessRoles: '/access/roles',
   accessTokens: '/access/tokens',
   accessAudit: '/access/audit',
+  // 聊天成员（ADR 0060）：聊天中的「人」、平台身份与 Console 链接；「我的聊天身份」也在这里
+  chatMembers: '/chat-members',
 })
 
 const segment = value => encodeURIComponent(String(value))

@@ -54,12 +54,29 @@ export interface Profile extends Resource {
   model: string
   parameters: ObjectValue
 }
+export interface AccountLastCall {
+  outcome: 'ok' | 'auth' | 'rate-limit' | 'server' | 'rejected' | 'timeout' | 'network'
+  status?: number
+  at: number
+}
+export interface ProbeResult {
+  status: 'ok' | 'failed'
+  kind?: string
+  code?: string
+  httpStatus?: number
+  durationMs: number
+  at: number
+  profileId: string
+}
 export interface AccountStatus {
   status: string
   revision: number
   preparation?: string
   source?: 'environment-expression'
   retryAt?: number
+  /** `env://` Host account without a credential record yet (#1250). */
+  environment?: 'present' | 'missing'
+  lastCall?: AccountLastCall
   failure?: {
     kind: 'temporary-response' | 'response-error' | 'transport-unknown' | 'invalid-response'
     status?: number
@@ -71,6 +88,7 @@ export interface View {
   revision: number
   ownerId: string
   hostAdministrator: boolean
+  environmentReferences?: 'local-cli' | 'console-owner' | 'none'
   services: Record<string, Service>
   accounts: Record<string, Account>
   profiles: Record<string, Profile>
@@ -122,11 +140,19 @@ export interface ProfileSelection {
   kind: 'language'
 }
 export class InferenceRequestError extends Error {
-  constructor(code: string, status?: number, mutationOutcome?: 'not-committed')
+  constructor(code: string, status?: number, mutationOutcome?: 'not-committed', reason?: string)
   code: string
   status: number
   mutationOutcome?: 'not-committed'
+  reason?: string
 }
+export function canReferenceEnvironment(view: View): boolean
+export function supportsConnectionTest(view: Pick<View, 'environmentReferences'> | null | undefined): boolean
+export function connectionTestError(error: unknown, locale?: 'zh-CN' | 'en'): string
+export function accountEnvironmentVariable(account: Account | undefined): string | undefined
+export function describeLastCall(lastCall: AccountLastCall | undefined, locale?: 'zh-CN' | 'en'): string
+export function describeProbe(result: ProbeResult, locale?: 'zh-CN' | 'en'): string
+export function newlyBoundLanguageProfiles(draft: Purposes, original: Purposes | undefined): string[]
 export function inferencePath(path?: string, ownerId?: string): string
 export function inferenceRequest<T = unknown>(
   fetch: typeof globalThis.fetch,
@@ -193,3 +219,13 @@ export function driverLabel(driver: Driver, drivers: readonly Driver[]): string
 export type ProfileUsageLevel = 'default' | 'decision' | 'agent' | 'adapter' | 'endpoint' | 'scene'
 export interface ProfileUsage { key: string; level: ProfileUsageLevel; label: string }
 export function profileUsages(purposes: Purposes | null | undefined, profileId: string, locale?: 'zh-CN' | 'en'): ProfileUsage[] | null
+export function profileChoiceGroup(view: View, profile: Profile, locale?: 'zh-CN' | 'en'): { key: string; label: string; agent: boolean }
+export interface PurposeProfileChoice {
+  value: string
+  group: string
+  agent: boolean
+  description: string
+  keywords: string
+  profile: Profile
+}
+export function purposeProfileChoices(view: View, kind: Kind, locale?: 'zh-CN' | 'en'): PurposeProfileChoice[]

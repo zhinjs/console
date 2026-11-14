@@ -34,6 +34,12 @@
 .console-task-overview-table td { vertical-align: top; }
 .console-task-overview-sub { display: block; margin-top: 0.125rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); overflow-wrap: anywhere; }
 .console-task-overview-cards { display: none; }
+/* Plugin housekeeping, folded under the main list (zhinjs/zhin#1250). */
+.console-task-overview-internal { border: var(--console-border-width) solid var(--console-border-default, hsl(var(--border))); border-radius: var(--console-radius-md); background: hsl(var(--card)); }
+.console-task-overview-internal > summary { cursor: pointer; padding: 0.75rem 1rem; font-size: var(--console-text-body); font-weight: 600; }
+.console-task-overview-internal[open] > summary { border-bottom: var(--console-border-width) solid var(--console-border-default, hsl(var(--border))); }
+.console-task-overview-internal > .console-task-overview-table { border: 0; border-radius: 0; box-shadow: none; }
+.console-task-overview-internal > .console-task-overview-cards { padding: 0.5rem; }
 @media (max-width: 767px) {
   .console-task-overview-table { display: none; }
   .console-task-overview-cards { display: flex; flex-direction: column; gap: 0.5rem; }

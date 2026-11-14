@@ -12,6 +12,8 @@ import { Input } from '../../components/ui/input'
 import { Skeleton } from '../../components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { StatusState } from '../../components/StatusState'
+import { AnsiLines, AnsiText } from '../../components/AnsiText'
+import { hasLeadingTime } from '../../utils/ansi-log.mjs'
 import { ActionReceipt, useActionReceipt } from '../../components/ActionReceipt'
 import { receiptBlocksActions } from '../../components/action-receipt-model.mjs'
 import { ObjectSection } from '../../scope/ObjectPageLayout'
@@ -192,7 +194,7 @@ function InstanceStatusSection({ status, canControl, locked }: {
                   {i18n.t("时间 {0} · 退出码 {1}", [data.lastFailure.at ? when(data.lastFailure.at) : '—', data.lastFailure.exitCode ?? data.lastFailure.signal ?? '—'])}
                 </p>
                 {data.lastFailure.logTail.length ? (
-                  <pre aria-label={i18n.t("失败前的日志")} className="console-admin-tail">{data.lastFailure.logTail.join('\n')}</pre>
+                  <pre aria-label={i18n.t("失败前的日志")} className="console-admin-tail"><AnsiLines lines={data.lastFailure.logTail} /></pre>
                 ) : null}
                 {data.state === 'crashed' ? (
                   <p className="text-xs">{i18n.t("下一步：查看下方实例日志找到原因（常见：依赖未安装、配置缺少必填项、环境变量为空），修复后点「启动」。依赖问题可在「项目依赖」里重新安装。")}</p>
@@ -244,11 +246,17 @@ function InstanceLogsSection() {
         {logs.error && logs.errorKind !== 'unsupported' ? <GatewayLoadError error={logs.error} kind={logs.errorKind} failure={logs.failure} onRetry={logs.refresh} permissions={['status.view']} /> : null}
         {!logs.loaded && logs.loading ? <StatusState kind="loading" placeholder={<Skeleton className="h-64" />} /> : (
           <pre ref={box} onScroll={onScroll} tabIndex={0} aria-label={i18n.t("实例日志")} aria-live="off" className="console-admin-log">
-            {shown.length ? shown.map(line => (
-              <div key={line.seq} className={line.stream === 'stderr' ? 'is-stderr' : undefined}>
-                <span className="console-admin-log-time">{line.time ? i18n.date(line.time, { timeStyle: 'medium' }) : ''} </span>{line.line}
-              </div>
-            )) : <span className="text-muted-foreground">{i18n.t("还没有日志。实例启动后，标准输出与标准错误会出现在这里。")}</span>}
+            {shown.length ? shown.map(line => {
+              // A line that carries its own clock time keeps only that one; the collection time moves to the tooltip.
+              const collected = line.time ? i18n.date(line.time, { timeStyle: 'medium' }) : ''
+              const ownTime = hasLeadingTime(line.line)
+              return (
+                <div key={line.seq} className={line.stream === 'stderr' ? 'is-stderr' : undefined}
+                  title={collected ? i18n.t("采集于 {0}", [collected]) : undefined}>
+                  {ownTime || !collected ? null : <span className="console-admin-log-time">{collected} </span>}<AnsiText text={line.line} />
+                </div>
+              )
+            }) : <span className="text-muted-foreground">{i18n.t("还没有日志。实例启动后，标准输出与标准错误会出现在这里。")}</span>}
           </pre>
         )}
       </ObjectSection>

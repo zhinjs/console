@@ -91,7 +91,7 @@ export function LogPanelButton() {
     <button
       type="button"
       className={cn('console-icon-button console-log-panel-trigger', expanded && 'is-active')}
-      title={onLogsPage ? label : `${label}（${LOG_PANEL_SHORTCUT_LABEL}）`}
+      data-tooltip={onLogsPage ? label : `${label}（${LOG_PANEL_SHORTCUT_LABEL}）`}
       aria-label={label}
       aria-expanded={expanded}
       aria-controls={LOG_PANEL_ID}

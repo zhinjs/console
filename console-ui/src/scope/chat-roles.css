@@ -16,3 +16,63 @@
 .console-chat-role-empty { padding: 0.75rem 1rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); }
 .console-chat-role-identity.is-redacted { color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); font-style: italic; }
 .console-chat-role-blocked { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 0.125rem; }
+
+/* ADR 0060: grant picker, 聊天成员 and 我的聊天身份 (ChatIdentityPanels.tsx, pages/chat-members). Tokens only. */
+.console-chat-picker { display: grid; gap: 0.5rem; }
+.console-chat-picker-search { position: relative; display: flex; align-items: center; }
+.console-chat-picker-search > svg { position: absolute; left: 0.625rem; width: 1rem; height: 1rem; color: hsl(var(--muted-foreground)); pointer-events: none; }
+.console-chat-picker-search input { padding-left: 2rem; }
+.console-chat-picker-list { display: grid; max-height: 15rem; overflow-y: auto; border: var(--console-border-width, 1px) solid var(--console-border-subtle); border-radius: var(--radius); }
+.console-chat-picker-option {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name tag" "id tag"; column-gap: 0.75rem; align-items: center;
+  border: 0; border-bottom: var(--console-border-width, 1px) solid var(--console-border-subtle); background: transparent; padding: 0.5rem 0.75rem; text-align: left; color: inherit;
+}
+.console-chat-picker-option:last-child { border-bottom: 0; }
+.console-chat-picker-option:hover { background: hsl(var(--foreground) / 0.04); }
+.console-chat-picker-option.is-selected { background: hsl(var(--primary-action) / 0.16); box-shadow: inset 3px 0 0 hsl(var(--primary-action-border)); }
+.console-chat-picker-name { grid-area: name; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--console-text-body-sm); font-weight: 600; }
+.console-chat-picker-option code { grid-area: id; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-family: var(--console-font-mono); font-size: var(--console-text-caption); }
+.console-chat-picker-option em { grid-area: tag; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); font-style: normal; }
+.console-chat-picker-list > .console-admin-note { padding: 0.75rem; }
+.console-chat-picked { display: flex; min-height: 2.25rem; align-items: center; gap: 0.5rem; overflow: hidden; font-size: var(--console-text-body-sm); }
+.console-chat-picked code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-family: var(--console-font-mono); font-size: var(--console-text-caption); }
+.console-chat-advanced { display: inline-flex; width: fit-content; align-items: center; gap: 0.25rem; border: 0; background: transparent; padding: 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); }
+.console-chat-advanced > svg { width: 0.875rem; height: 0.875rem; }
+.console-chat-advanced[aria-expanded="true"] > svg { transform: rotate(180deg); }
+.console-chat-identity-list, .console-chat-role-list { display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem; }
+.console-chat-identity-chip {
+  display: inline-flex; max-width: 100%; align-items: center; gap: 0.375rem; border: var(--console-border-width, 1px) solid var(--console-border-subtle); border-radius: 999px;
+  padding: 0.125rem 0.625rem; font-size: var(--console-text-caption);
+}
+.console-chat-identity-chip code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--console-font-mono); }
+.console-chat-identity-chip em { color: hsl(var(--muted-foreground)); font-style: normal; }
+.console-chat-person-id { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-family: var(--console-font-mono); font-size: var(--console-text-caption); }
+.console-chat-me-card { display: grid; gap: 0.875rem; padding: 1rem; }
+.console-chat-me.is-highlighted .console-chat-me-card { box-shadow: 0 0 0 2px hsl(var(--primary-action) / 0.5); }
+.console-chat-me-person { display: grid; gap: 0.5rem; }
+.console-chat-me-head, .console-chat-member-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; min-width: 0; }
+.console-chat-me-head > svg, .console-chat-member-head > svg { width: 1rem; height: 1rem; color: hsl(var(--muted-foreground)); }
+.console-chat-me-owner { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; border-radius: var(--radius); background: hsl(var(--warning) / 0.1); padding: 0.625rem 0.75rem; font-size: var(--console-text-body-sm); }
+.console-chat-me-owner > svg { width: 1rem; height: 1rem; }
+.console-chat-me-owner > span { flex: 1 1 16rem; }
+.console-chat-bind { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; border-top: var(--console-border-width, 1px) solid var(--console-border-subtle); padding-top: 0.875rem; }
+.console-chat-bind strong { display: inline-flex; align-items: center; gap: 0.375rem; font-size: var(--console-text-body-sm); }
+.console-chat-bind strong > svg { width: 1rem; height: 1rem; }
+.console-chat-bind-code { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.console-chat-bind-instruction { border-radius: var(--radius); background: hsl(var(--foreground) / 0.06); padding: 0.375rem 0.75rem; font-family: var(--console-font-mono); font-size: 1rem; font-weight: 600; letter-spacing: 0.04em; }
+.console-chat-bind-countdown { color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); font-variant-numeric: tabular-nums; }
+.console-chat-me-notice { color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); }
+.console-chat-members-search { margin-bottom: 0.75rem; max-width: 28rem; }
+.console-chat-members { display: grid; gap: 0.75rem; }
+.console-chat-member { display: grid; gap: 0.75rem; padding: 1rem; }
+.console-chat-member-seen { margin-left: auto; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); }
+.console-chat-member-body { display: grid; gap: 0.75rem; grid-template-columns: minmax(0, 2fr) minmax(0, 1.5fr) minmax(0, 1fr); }
+.console-chat-member-label { display: block; margin-bottom: 0.25rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); font-weight: 600; }
+.console-chat-member-identity { display: inline-flex; max-width: 100%; align-items: center; }
+.console-chat-member-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.console-chat-member-actions .console-admin-note { display: inline-flex; align-items: center; gap: 0.25rem; }
+.console-chat-member-actions .console-admin-note > svg { width: 0.875rem; height: 0.875rem; }
+@media (max-width: 767px) {
+  .console-chat-member-body { grid-template-columns: minmax(0, 1fr); }
+  .console-chat-member-seen { margin-left: 0; flex-basis: 100%; }
+}

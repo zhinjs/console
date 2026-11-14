@@ -12,8 +12,8 @@ export const SEGMENT_LABELS: Readonly<Record<string, string>>
 
 export type UsageBucket = 'hour' | 'day'
 export interface UsageTokens { calls: number; inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheShare?: number; cacheWriteTokens?: number }
-export interface UsageModelRow extends UsageTokens { provider: string; model: string }
-export interface UsageSessionRow extends UsageTokens { sessionKey: string; platform?: string; endpoint?: string; scope?: string; sceneId?: string; turns: number }
+export interface UsageModelRow extends UsageTokens { provider: string; model: string; label?: string; serviceLabel?: string; modelLabel?: string; rawKeys?: string[] }
+export interface UsageSessionRow extends UsageTokens { sessionKey: string; platform?: string; endpoint?: string; scope?: string; sceneId?: string; turns: number; label?: string; displayName?: string; name?: string }
 export interface UsagePoint extends UsageTokens { bucketStart: number; byModel: Record<string, number> }
 export interface UsageStats {
   range: { since: number; until: number; bucket: UsageBucket; timeZone?: string }
@@ -44,6 +44,9 @@ export function hasCacheWrite(stats: UsageStats): boolean
 export function cacheQuantiles(totals: UsageStats['totals']): { p50: number; p90: number } | null
 export function cacheLinePoints(series: UsagePoint[]): Array<{ bucketStart: number; value: number | null }>
 export function modelKey(provider: string, model: string): string
+export function usageModelLabel(row: UsageModelRow): string
+export function mergeUsageModels(stats: UsageStats): UsageStats
+export function usageSessionLabel(row: UsageSessionRow): string
 export function buildColorMap(keys: Iterable<string>): Map<string, string>
 export function colorFor(map: Map<string, string>, key: string): string
 export function collectModelKeys(stats: UsageStats): string[]

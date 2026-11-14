@@ -597,7 +597,7 @@ test('the single graph editor preserves sibling decision modes and model IDs acr
   const { Purposes } = await component(runtime, '../console-ui/src/pages/inference/Purposes.tsx', {
     'lucide-react': { Plus: 'icon', Trash2: 'icon' }, './model.mjs': model,
     '../../components/ui/button': { Button: 'button' }, '../../components/ui/input': { Input: 'input' },
-    '../../components/ui/select': { SelectField: 'select' }, '../../components/ui/card': { Card: 'card' },
+    '../../components/ui/select': { SelectField: 'select' }, '../../components/ui/searchable-select': { SearchableSelectField: 'select' }, '../../components/ui/card': { Card: 'card' }, '../../components/confirm-dialog': { useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }) },
   })
   runtime.mount(() => Purposes({ management })); await runtime.settle()
   const select = label => nodes(runtime.value).find(node => node.type === 'select' && node.props['aria-label'] === label)
@@ -749,7 +749,7 @@ async function purposeFixture() {
   const { Purposes } = await component(runtime, '../console-ui/src/pages/inference/Purposes.tsx', {
     'lucide-react': { Plus: 'icon', Trash2: 'icon' }, './model.mjs': model,
     '../../components/ui/button': { Button: 'button' }, '../../components/ui/input': { Input: 'input' },
-    '../../components/ui/select': { SelectField: 'select' }, '../../components/ui/card': { Card: 'card' },
+    '../../components/ui/select': { SelectField: 'select' }, '../../components/ui/searchable-select': { SearchableSelectField: 'select' }, '../../components/ui/card': { Card: 'card' }, '../../components/confirm-dialog': { useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }) },
   })
   runtime.mount(() => Purposes({ management: { ...f.runtime.value, savePlan: (plan, options) => {
     submissions.push({ plan, options }); return f.runtime.value.savePlan(plan, options)

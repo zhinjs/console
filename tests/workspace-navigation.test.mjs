@@ -22,7 +22,7 @@ function compile(code, mocks) {
   new Function('require', 'module', 'exports', output)(name => Object.hasOwn(mocks, name) ? mocks[name] : name.endsWith('.css') ? {} : require(name), module, module.exports)
   return module.exports
 }
-const taxonomy = compile(await source('navigation-taxonomy.ts'), { './navigation-sections.mjs': sections })
+const taxonomy = compile(await source('navigation-taxonomy.ts'), { './navigation-sections.mjs': sections, './console-routes.mjs': { CONSOLE_PATHS } })
 const navigation = compile(await source('i18n/navigation.ts'), { './locale.mjs': { translate } })
 const layoutSource = await source('layouts/dashboard.tsx')
 const mobileHookSource = await source('hooks/useIsMobile.ts')
@@ -69,10 +69,10 @@ function fixture({ routes, path = '/sandbox', mobile = false, locale = 'zh-CN', 
     '../i18n': { useI18n: () => i18n }, '../i18n/locale.mjs': { translate }, '../i18n/navigation': navigation,
     '../navigation-taxonomy': taxonomy, '../navigation-location.mjs': { resolveNavigationLocation },
     '../components/sidebarMenuIcons': { getSidebarLucideIcon: () => 'icon' }, './sidebarMenuIcons': { getSidebarLucideIcon: () => 'icon' },
-    '../components/LanguageSelect': { LanguageSelect: 'language-select' }, '../components/ThemeToggle': { ThemeToggle: 'theme-toggle' },
+    '../components/LanguageSelect': { LanguageSelect: 'language-select' }, '../components/ThemeToggle': { ThemeToggle: 'theme-toggle' }, '../components/UserMenu': { UserMenu: 'user-menu' },
     '../components/ui/list-item-button': { ListItemButton: 'button' }, '../components/ui/button': { Button: 'button', buttonVariants: () => '' }, '../components/ui/scroll-area': { ScrollArea: 'scroll-area' },
     '../components/ui/tooltip': ui(['Tooltip', 'TooltipTrigger', 'TooltipContent']),
-    '../components/ui/dropdown-menu': ui(['DropdownMenu', 'DropdownMenuTrigger', 'DropdownMenuContent', 'DropdownMenuItem', 'DropdownMenuLabel']),
+    '../components/ui/dropdown-menu': ui(['DropdownMenu', 'DropdownMenuTrigger', 'DropdownMenuContent', 'DropdownMenuGroup', 'DropdownMenuItem', 'DropdownMenuLabel']),
     './ui/dialog': ui(['Dialog', 'DialogContent', 'DialogDescription', 'DialogTitle']), './command-center-model.mjs': commandCenterModel,
     '../utils/auth': { notifyAuthRequired() {} }, '../components/ConsoleCommandCenter': { ConsoleCommandCenter: 'command-center' },
     '../navigation-sections.mjs': sections, '../hooks/use-console-access': { useConsoleAccess: () => access },

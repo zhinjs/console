@@ -111,3 +111,54 @@ export function hostValidationSummary(checked, locale = 'zh-CN') {
   if (checked.missingEnv?.length) return translate(locale, "字段格式已通过校验，但环境变量尚未配置，不能完成最小配置。")
   return translate(locale, "Host 校验通过，可以保存配置。")
 }
+
+/**
+ * Presentation group of one field: an explicit annotation (`group`, `x-group`, or the Host's
+ * `x-zhin-config.group`) when the schema has one. Unannotated fields return null.
+ */
+export function configFieldGroup(field) {
+  const value = field?.group ?? field?.['x-group'] ?? field?.['x-zhin-config']?.group
+  return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
+/** Objects, lists, unions, JSON values and multi-line text need a full row; scalars share one. */
+export function isWideConfigField(field) {
+  if (!field) return true
+  if (field.component === 'textarea') return true
+  if (field.type === 'union') return !(field.list?.length && field.list.every(branch => branch.type === 'const'))
+  return !['string', 'number', 'integer', 'boolean', 'const', 'null'].includes(field.type)
+}
+
+/**
+ * Root fields of a form in display groups: annotated groups in first-seen order, each keeping
+ * declaration order. Without annotations, one unnamed group. Order inside the draft is unchanged.
+ */
+export function configFieldLayout(entries) {
+  const groups = []
+  const byKey = new Map()
+  for (const entry of entries) {
+    const key = configFieldGroup(entry[1])
+    let group = byKey.get(key)
+    if (!group) { group = { title: key, fields: [] }; byKey.set(key, group); groups.push(group) }
+    group.fields.push(entry)
+  }
+  // Unannotated fields come first, so a partly annotated schema does not open with a heading-less tail.
+  return groups.sort((a, b) => (a.title === null ? -1 : 0) - (b.title === null ? -1 : 0))
+}
+
+/** A numeric field whose key ends in `Ms` (`timeoutMs`, `retryDelayMs`) holds milliseconds. */
+export function isMillisecondField(name, field) {
+  return (field?.type === 'number' || field?.type === 'integer') && typeof name === 'string' && /[a-z0-9]Ms$/u.test(name)
+}
+
+/** Milliseconds shown as seconds: `1500` → `'1.5'`; anything else (unset, env reference) passes through as text. */
+export function secondsText(value) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return value === undefined || value === null ? '' : String(value)
+  return String(Number((value / 1000).toFixed(3)))
+}
+
+/** Typed seconds back to the stored milliseconds; text that is not a number stays a draft for validation. */
+export function millisecondsFromSecondsText(text) {
+  const draft = numericDraft(text.trim())
+  return typeof draft === 'number' ? Math.round(draft * 1000) : draft
+}

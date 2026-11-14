@@ -7,6 +7,12 @@
 @import "../console-ui/src/im-workspace.css";
 @import "../console-ui/src/markdown-content.css";
 
+/* Tailwind's `text-xs` is the Console caption size (13px): secondary text never drops to 12px. */
+@theme {
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.25rem;
+}
+
 /* ============================================
    shadcn/ui Base Styles - Zinc Black/White/Gray
    ============================================ */

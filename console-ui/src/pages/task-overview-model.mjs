@@ -5,6 +5,7 @@
  */
 import { translate } from '../i18n/locale.mjs'
 import { conversationHref } from '../console-routes.mjs'
+import { isPluginInternalSchedule, memoryScheduleLastRun, memoryScheduleTitle } from './schedule-memory-model.mjs'
 
 const KINDS = new Set(['private', 'group', 'channel'])
 
@@ -82,15 +83,18 @@ export function taskOverviewRows(sources, locale = 'zh-CN') {
   const persistentIds = new Set()
   if (schedules && typeof schedules === 'object') {
     for (const item of Array.isArray(schedules.memory) ? schedules.memory : []) {
+      // A plugin's own housekeeping (polling, cleanup) is its own type, listed folded (#1250).
+      const internal = isPluginInternalSchedule(item)
+      const last = memoryScheduleLastRun(item)
       rows.push({
         key: `memory:${item.id ?? item.expression}:${item.plugin ?? ''}`,
-        type: 'schedule',
-        typeLabel: t('定时提醒'),
-        title: item.description || item.id || item.expression,
+        type: internal ? 'internal' : 'schedule',
+        typeLabel: internal ? t('插件内部任务') : t('定时提醒'),
+        title: memoryScheduleTitle(item, locale),
         detail: item.expression,
         status: statusOf(item.running === false ? 'paused' : 'running', locale),
         nextRunAt: finite(item.nextExecution),
-        lastResult: null,
+        lastResult: last ? { ...(lastResultOf(last.status, last.at, locale) ?? { label: t('已执行'), tone: 'secondary' }), at: last.at, ...(last.error ? { error: last.error } : {}) } : null,
         target: item.plugin ? t('插件 {0}', [item.plugin]) : null,
         targetHref: null,
         approval: null,
@@ -179,6 +183,15 @@ export function needsAttention(row) {
   return row.type === 'approval'
     || row.status.tone === 'destructive' || row.status.tone === 'warning'
     || row.lastResult?.tone === 'destructive'
+}
+
+/**
+ * Splits a plugin's internal housekeeping off the main list (shown folded under it). An internal task
+ * whose last run failed stays in the main list, where problems are read.
+ */
+export function splitInternalTasks(rows) {
+  const folded = row => row.type === 'internal' && !needsAttention(row)
+  return { main: rows.filter(row => !folded(row)), internal: rows.filter(folded) }
 }
 
 export function filterTaskOverview(rows, filter) {

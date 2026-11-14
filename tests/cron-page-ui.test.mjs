@@ -10,6 +10,7 @@ import { describeCron, relativeUntil } from '../console-ui/src/pages/cron-schedu
 import { validateAssistantJobs, explainJobError } from '../console-ui/src/pages/assistant-jobs-model.mjs'
 import * as applyOutcome from '../console-ui/src/components/apply-outcome-model.mjs'
 import { taskTabHref } from '../console-ui/src/pages/task-hub-model.mjs'
+import * as scheduleMemory from '../console-ui/src/pages/schedule-memory-model.mjs'
 import { createInboxCacheAuthority } from '../console-ui/src/utils/inbox-cache-scope.mjs'
 
 const require = createRequire(import.meta.url)
@@ -53,7 +54,7 @@ function fixture({ readOnly = false, available = true, jobs = [], deferJobs = fa
     '../utils/console-rpc': { requestConsole: input => new Promise((resolve, reject) => calls.push({ input, resolve, reject, answered: false, scope: authority.current() })) },
     '../utils/useInboxCacheScope': { useInboxCacheScope: () => authority.current() }, '../utils/inbox-cache': { isInboxCacheScopeActive: scope => authority.active(scope) },
     '../utils/console-access.mjs': { hasConsolePermission: () => !readOnly }, './cron-schedule.mjs': { describeCron, relativeUntil },
-    './assistant-jobs-model.mjs': { validateAssistantJobs, explainJobError }, './task-hub-model.mjs': { taskTabHref },
+    './assistant-jobs-model.mjs': { validateAssistantJobs, explainJobError }, './task-hub-model.mjs': { taskTabHref }, './schedule-memory-model.mjs': scheduleMemory,
     '../components/ui/tabs': { Tabs: 'tabs', TabsList: 'tab-list', TabsTrigger: 'tab-trigger', TabsContent: 'tab-panel' },
     './ScheduleExecutions': { ScheduleExecutions: 'schedule-executions' },
     '../components/log-panel/LogPanel': { useLogPanel: () => ({ available: false, open() {} }) },

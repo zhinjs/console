@@ -83,6 +83,8 @@ export function toMessageRecord(event, labels = DEFAULT_PREVIEW_LABELS) {
   const endpoint = String(data.endpointKey ?? '')
   const kind = String(conversation?.kind ?? data.channelType ?? '')
   const channelId = String(conversation?.id ?? data.channelId ?? '')
+  const conversationName = [conversation?.name, data.channelName, data.conversationName, data.groupName]
+    .find(value => typeof value === 'string' && value.trim())?.trim() ?? ''
   return {
     id: `${event.runtimeId ?? ''}:${event.eventId ?? `${timestamp}:${data.messageId ?? ''}`}`,
     eventId: Number.isFinite(event.eventId) ? event.eventId : 0,
@@ -92,6 +94,7 @@ export function toMessageRecord(event, labels = DEFAULT_PREVIEW_LABELS) {
     endpoint,
     kind,
     channelId,
+    conversationName,
     conversationKey: `${adapter}\u0000${endpoint}\u0000${kind}\u0000${channelId}`,
     sender: direction === 'inbound' ? readSender(data.sender) : null,
     text: messagePreview(data.content, labels),
