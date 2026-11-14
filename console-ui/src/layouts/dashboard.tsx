@@ -309,6 +309,8 @@ export default function DashboardLayout() {
               <span aria-hidden="true" />
               <span>{connected ? i18n.t("实时事件已连接") : i18n.t("实时事件未连接")}</span>
             </span>
+            {/* Phones hide the top-bar language picker; keep it reachable here. */}
+            <LanguageSelect />
           </div>
         </aside>
       ) : null}

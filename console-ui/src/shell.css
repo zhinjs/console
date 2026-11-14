@@ -402,6 +402,8 @@
     display: flex;
     flex-shrink: 0;
     align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
     border-top: var(--console-border-width) solid hsl(var(--border));
     padding: 0.75rem 1rem;
   }
@@ -512,15 +514,25 @@
     .console-app-shell { --console-header-h: 4.25rem; --console-nav-capsule-h: 3.25rem; --console-nav-logo: 2rem; }
     .console-topnav { padding: 0.625rem 0.75rem 0; }
     .console-topnav .console-brand-text { display: none; }
-    .console-topnav-actions { gap: 0.125rem; }
-    .console-topnav-actions .console-command-trigger { width: 2.75rem; height: 2.75rem; justify-content: center; padding: 0; border-radius: 999px; }
+    /* Phones: menu, logo and up to six actions must fit inside the capsule at 360px. */
+    .console-topnav-capsule { gap: 0.125rem; }
+    .console-topnav .console-brand { padding-right: 0; }
+    .console-topnav-actions {
+      --console-control-height: 2.5rem;
+      --console-control-height-sm: 2.5rem;
+      min-width: 0;
+      gap: 0.125rem;
+    }
+    .console-topnav-actions > .console-command-trigger { margin-right: 0; }
+    .console-topnav-actions .console-command-trigger { width: 2.5rem; height: 2.5rem; justify-content: center; padding: 0; border-radius: 999px; }
     .console-topnav-actions .console-command-trigger > span,
     .console-topnav-actions .console-command-trigger > kbd { display: none; }
     .console-connection-dot { display: none; }
     .console-breadcrumb-group, .console-breadcrumb-group + .console-breadcrumb-sep { display: none; }
   }
 
-  @media (max-width: 380px) {
+  /* Too narrow for the language picker; Personal settings still switches the language. */
+  @media (max-width: 479px) {
     .console-topnav-actions .console-language-select { display: none; }
   }
 
