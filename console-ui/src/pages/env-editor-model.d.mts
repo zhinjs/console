@@ -2,6 +2,10 @@ export interface EnvRow { key: string; value: string; secret: boolean }
 export type EnvChange = { type: 'set'; key: string; value: string } | { type: 'delete'; key: string }
 export type EnvRowError = 'key-required' | 'key-invalid' | 'key-duplicate' | 'value-masked' | 'value-multiline'
 export const ENV_MASK_CHAR: string
+export const ENV_MASK_RUN: number
+export const ENV_MASK_REVEAL_MIN_LENGTH: number
+export function maskEnvValueAsRead(value: string): string
+export function envValueAsRead(raw: string): string
 export function maskEnvContent(content: string): string
 export function isSecretEnvEntry(key: string, value: string): boolean
 export function maskEnvValue(value: string): string
@@ -15,7 +19,7 @@ export function applyEnvChanges(base: string, changes: EnvChange[]): string
 export function envEditorAccess(state: { loaded: boolean; readOnly: boolean; saving: boolean; dirty: boolean; editing?: boolean }): { canEdit: boolean; canSave: boolean }
 export function envReadBackMismatch(submitted: string, readBack: string): import('../components/apply-outcome-model.mjs').ReadBackMismatch | null
 
-export interface MaskedEnvVariable { key: string; masked: string; length: number; hasValue: boolean; isReference?: true }
+export interface MaskedEnvVariable { key: string; masked: string; hasValue: boolean; isReference?: true }
 export interface MaskedEnvView { file: string; variables: MaskedEnvVariable[] }
 export type MaskedEnvChange = { key: string; value: string; delete?: undefined } | { key: string; delete: true; value?: undefined }
 export interface MaskedEnvRow extends MaskedEnvVariable { pending?: string; added?: true }

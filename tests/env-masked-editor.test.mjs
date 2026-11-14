@@ -67,12 +67,12 @@ const VIEW = {
   format: 'masked', file: '.env', content: 'ignored',
   lines: [{ kind: 'comment', text: '# Bot' }, { kind: 'entry', key: 'BOT_TOKEN' }, { kind: 'entry', key: 'PORT' }, { kind: 'entry', key: 'EMPTY' }],
   variables: [
-    { key: 'BOT_TOKEN', masked: `fa${MASK}en`, length: 14, hasValue: true },
-    { key: 'PORT', masked: MASK, length: 4, hasValue: true },
-    { key: 'EMPTY', masked: '', length: 0, hasValue: false },
+    { key: 'BOT_TOKEN', masked: `fa${MASK}89`, hasValue: true },
+    { key: 'PORT', masked: MASK, hasValue: true },
+    { key: 'EMPTY', masked: '', hasValue: false },
   ],
 }
-const SECRET = 'fake-bot-token'
+const SECRET = 'fake-bot-token-0123456789'
 
 function mocks(runtime, { readOnly = false } = {}) {
   return {
@@ -133,7 +133,7 @@ test('a masking Host: every value starts masked and only env:get is requested', 
   const f = maskedFixture()
   const tree = await f.start()
   assert.deepEqual(f.requests, [{ type: 'env:get', filename: '.env' }])
-  assert.ok(visible(tree).includes(`BOT_TOKEN=fa${MASK}en`))
+  assert.ok(visible(tree).includes(`BOT_TOKEN=fa${MASK}89`))
   assert.ok(visible(tree).includes(`PORT=${MASK}`))
   assert.equal(visible(tree).includes(SECRET), false)
   assert.ok(visible(tree).includes('值默认打码'), 'the page says why values are masked')
@@ -189,7 +189,7 @@ test('a mask placeholder typed as a value is refused before anything is sent', a
   const f = maskedFixture()
   let tree = await f.start()
   tree = await f.act(() => byLabel(tree, '编辑 BOT_TOKEN').props.onClick())
-  tree = await f.act(() => byLabel(tree, 'BOT_TOKEN 的值').props.onChange({ target: { value: `fa${MASK}en` } }))
+  tree = await f.act(() => byLabel(tree, 'BOT_TOKEN 的值').props.onChange({ target: { value: `fa${MASK}89` } }))
   tree = await f.act(() => buttonWith(tree, '应用').props.onClick())
   assert.ok(visible(tree).includes('值不能是遮罩占位符'))
   assert.equal(f.requests.some(r => r.type === 'env:save'), false)

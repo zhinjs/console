@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   maskEnvContent, envEditorAccess, parseEnvRows, maskEnvValue, updateEnvRow, removeEnvRow, appendEnvRow,
-  validateEnvRow, diffEnvContent, applyEnvChanges, ENV_MASK_CHAR,
+  validateEnvRow, diffEnvContent, applyEnvChanges, envReadBackMismatch, ENV_MASK_CHAR,
 } from '../console-ui/src/pages/env-editor-model.mjs'
 import { createFileDraftSessions } from '../console-ui/src/pages/files/draft-session.mjs'
 test('fake env fixture masks every secret character without changing the underlying draft', () => {
@@ -110,7 +110,7 @@ test('a key assigned twice is one row whose edit and delete apply to every assig
 import * as maskedModel from '../console-ui/src/pages/env-editor-model.mjs'
 const RUN = ENV_MASK_CHAR.repeat(8)
 const MASKED_VIEW = { format: 'masked', file: '.env', lines: [], content: '', variables: [
-  { key: 'A', masked: RUN, length: 1, hasValue: true }, { key: 'B', masked: `ab${RUN}yz`, length: 12, hasValue: true, isReference: true },
+  { key: 'A', masked: RUN, hasValue: true }, { key: 'B', masked: `ab${RUN}yz`, hasValue: true, isReference: true },
 ] }
 
 test('env:get replies are told apart: masked view vs an older Host returning the file', () => {
@@ -125,7 +125,8 @@ test('env:get replies are told apart: masked view vs an older Host returning the
 test('values typed here are masked by the Host rule and mask placeholders are recognised', () => {
   assert.equal(maskedModel.maskEnvDisplay(''), '')
   assert.equal(maskedModel.maskEnvDisplay('12345678'), RUN)
-  assert.equal(maskedModel.maskEnvDisplay('123456789'), `12${RUN}89`)
+  assert.equal(maskedModel.maskEnvDisplay('123456789'), RUN)
+  assert.equal(maskedModel.maskEnvDisplay('1234567890123456'), `12${RUN}56`)
   for (const value of [RUN, `ab${RUN}yz`, '●', '"●●"']) assert.equal(maskedModel.isEnvMaskPlaceholder(value), true, value)
   for (const value of ['plain', 'a●b', '']) assert.equal(maskedModel.isEnvMaskPlaceholder(value), false, value)
 })
@@ -158,4 +159,95 @@ test('read-back after a per-key save checks presence only and never shows values
   assert.equal(missing.path, 'C'); assert.equal(missing.masked, true)
   assert.doesNotMatch(JSON.stringify(missing), /fake-new/)
   assert.equal(maskedModel.maskedEnvReadBackMismatch([{ key: 'A', delete: true }], MASKED_VIEW).path, 'A')
+})
+
+// ---- the Host's masking rule (zhinjs/zhin#1250, `@zhin.js/console-protocol` `maskConsoleEnvValue`) ----
+
+test('masking matches the Host: under 16 characters only the mask, longer ones 2 + mask + 2, by characters', () => {
+  const { maskEnvValueAsRead: mask, ENV_MASK_REVEAL_MIN_LENGTH, ENV_MASK_RUN } = maskedModel
+  assert.equal(ENV_MASK_REVEAL_MIN_LENGTH, 16)
+  assert.equal(ENV_MASK_RUN, 8)
+  // The Host's own test vectors (packages/console/protocol/tests/env.test.ts).
+  assert.equal(mask(''), '')
+  assert.equal(mask('1'), RUN)
+  assert.equal(mask('12345678'), RUN)
+  assert.equal(mask('123456789'), RUN)
+  assert.equal(mask('123456789012345'), RUN)
+  assert.equal(mask('1234567890123456'), `12${RUN}56`)
+  assert.equal(mask('sk-fake-0123456789abcdef'), `sk${RUN}ef`)
+  assert.equal(mask('密钥密钥密钥密钥密钥'), RUN)
+  assert.equal(mask('密钥'.repeat(8)), `密钥${RUN}密钥`)
+  assert.equal(mask('😀'.repeat(16)), `😀😀${RUN}😀😀`, 'characters, not UTF-16 units')
+})
+
+test('the mask never tells the length: every masked form has a fixed width', () => {
+  const widths = new Set()
+  for (const length of [1, 2, 8, 15]) widths.add(maskedModel.maskEnvDisplay('x'.repeat(length)))
+  assert.deepEqual([...widths], [RUN])
+  const long = [16, 17, 64, 900].map(length => maskedModel.maskEnvDisplay('y'.repeat(length)))
+  assert.equal(new Set(long).size, 1)
+  // The legacy editor and its whole-file display use the same rule.
+  assert.equal(maskEnvValue('fake-bot-token'), RUN)
+  assert.equal(maskEnvValue('x'.repeat(900)), maskEnvValue('x'.repeat(16)))
+  assert.equal(maskEnvContent('BOT_TOKEN=abc\nAPI_TOKEN=abcdefghijklmn\n'), `BOT_TOKEN=${RUN}\nAPI_TOKEN=${RUN}\n`)
+  for (const quote of ['"', "'", '`']) {
+    const masked = maskEnvContent(`PRIVATE_KEY=${quote}a\nbb\n${'c'.repeat(40)}${quote}\nPORT=1`)
+    assert.equal(masked, `PRIVATE_KEY=${RUN}\n${RUN}\n${RUN}\nPORT=1`)
+  }
+})
+
+test('values are masked as dotenv reads them, quotes and inline comments handled like the Host', () => {
+  // [as written after KEY=, as dotenv 17 reads it] — checked against dotenv's own parse.
+  const cases = [
+    ['new-plain', 'new-plain'],
+    ['"new quoted"', 'new quoted'],
+    ["'new single'", 'new single'],
+    ['`bt`', 'bt'],
+    ['"new\nmulti"', 'new\nmulti'],
+    ['"esc\\nline"', 'esc\nline'],
+    ["'esc\\nline'", 'esc\\nline'],
+    ['  spaced  ', 'spaced'],
+    [' "  padded quoted value  " ', '  padded quoted value  '],
+    ['value # inline comment', 'value'],
+    ['"ok" # c', 'ok'],
+    ['p#ss', 'p'],
+    ['"x"zz', '"x"zz'],
+    ['"unterminated', '"unterminated'],
+    ["'it''s'", "it''s"],
+    ["it's", "it's"],
+    ['"a\\"b"', 'a\\"b'],
+    ['${A}', '${A}'],
+    ['"fake-first\r\nfake-second\r\nfake-last"', 'fake-first\nfake-second\nfake-last'],
+    ['', ''],
+  ]
+  for (const [raw, read] of cases) {
+    assert.equal(maskedModel.envValueAsRead(raw), read, JSON.stringify(raw))
+    assert.equal(maskedModel.maskEnvDisplay(raw), maskedModel.maskEnvValueAsRead(read), JSON.stringify(raw))
+  }
+  // Quotes are not counted: a 14-character secret in quotes stays fully masked.
+  assert.equal(maskedModel.maskEnvDisplay('"fake-bot-token"'), RUN)
+  assert.equal(maskedModel.maskEnvDisplay('"sk-fake-0123456789abcdef"'), `sk${RUN}ef`)
+  assert.equal(maskedModel.maskEnvDisplay("'sk-fake-0123456789abcdef'"), `sk${RUN}ef`)
+  assert.equal(maskedModel.maskEnvDisplay('sk-fake-0123456789abcdef # rotated'), `sk${RUN}ef`)
+  // A row added here with only quotes or a comment has no value, like the Host's `hasValue`.
+  const rows = maskedModel.maskedEnvRows({ file: '.env', variables: [] }, [{ key: 'Q', value: '""' }, { key: 'R', value: '"sk-fake-0123456789abcdef"' }])
+  assert.deepEqual(rows.map(row => [row.key, row.masked, row.hasValue, 'length' in row]), [['Q', '', false, false], ['R', `sk${RUN}ef`, true, false]])
+})
+
+test('a length sent by an older Host is not kept; placeholders follow the Host rule everywhere', () => {
+  const reply = maskedModel.readEnvReply({ format: 'masked', file: '.env', lines: [], content: '', variables: [{ key: 'A', masked: RUN, length: 3, hasValue: true }] })
+  assert.equal('length' in reply.view.variables[0], false)
+  // The Host's own placeholder vectors.
+  for (const value of [RUN, `sk${RUN}ef`, '●', '●●', '"●●"', ' ●●●● ', 'prefix●●●suffix']) assert.equal(maskedModel.isEnvMaskPlaceholder(value), true, value)
+  for (const value of ['', 'plain', 'a●b', '●a', '${TOKEN}']) assert.equal(maskedModel.isEnvMaskPlaceholder(value), false, value)
+  // The legacy editor refuses a partially masked value too (it holds a run of mask characters).
+  assert.equal(validateEnvRow(FIXTURE, { key: 'BOT_TOKEN', value: `sk${RUN}ef` }, 'BOT_TOKEN'), 'value-masked')
+  assert.throws(() => applyEnvChanges(FIXTURE, [{ type: 'set', key: 'BOT_TOKEN', value: `sk${RUN}ef` }]), /masked placeholder/)
+})
+
+test('a secret read back differently is shown by the Host mask, never with its length', () => {
+  const mismatch = envReadBackMismatch('BOT_TOKEN=fake-new-token-0123456789\n', 'BOT_TOKEN=fake-old\n')
+  assert.deepEqual(mismatch, { path: 'BOT_TOKEN', submitted: `fa${RUN}89`, readBack: RUN, masked: true })
+  assert.deepEqual(envReadBackMismatch('API_TOKEN=x\n', ''), { path: 'API_TOKEN', submitted: RUN, readBack: null, masked: true })
+  assert.deepEqual(envReadBackMismatch('PORT=1\n', 'PORT=2\n'), { path: 'PORT', submitted: '"1"', readBack: '"2"' })
 })
