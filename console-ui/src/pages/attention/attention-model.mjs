@@ -2,7 +2,9 @@
  * 「需要你处理」(attention inbox): one model for the dashboard section, the /attention page and the
  * top bar badge. The Host gathers the items (`attention.list`, already localized and filtered by
  * the caller's permissions); a Host that predates it answers Unknown RPC / unmapped, and then the
- * Console derives the few items it can from the dashboard reads, as before.
+ * Console derives the few items it can from the dashboard reads, as before. While the instance is
+ * still starting the gateway refuses the RPC too (503 / 504, or unmapped); `/pub/health` tells the
+ * two apart, and a starting instance is shown as such, not as an older Host or an error.
  *
  * Per-viewer choices stay in this browser: 「稍后提醒」 hides an item for 24 hours, 「忽略」 hides it
  * until its fingerprint (`revision`) changes. Storage may be missing or throw; nothing here depends
@@ -11,12 +13,16 @@
 import { translate } from '../../i18n/locale.mjs'
 import { isUnsupportedRpcError } from '../../utils/console-auth-model.mjs'
 import { CONSOLE_PATHS } from '../../console-routes.mjs'
+import { statusFromError } from '../../components/status-state-model.mjs'
+import { instanceStateLabel } from '../ops/gateway-model.mjs'
 
 export const ATTENTION_RPC = 'attention.list'
 export const ATTENTION_PATH = CONSOLE_PATHS.attention
 export const ATTENTION_SEVERITIES = Object.freeze(['danger', 'warning', 'info'])
 export const ATTENTION_SNOOZE_MS = 24 * 60 * 60 * 1000
 export const ATTENTION_REFRESH_MS = 30_000
+/** Re-read sooner while the instance is still starting (or restarting). */
+export const ATTENTION_NOT_READY_REFRESH_MS = 5_000
 export const ATTENTION_PUSH_DEBOUNCE_MS = 1_000
 export const DASHBOARD_ATTENTION_LIMIT = 4
 export const ATTENTION_STORAGE_PREFIX = 'zhin.console.attention:'
@@ -136,18 +142,72 @@ export function deriveFallbackAttention(input = {}, locale = 'zh-CN') {
 }
 
 /**
- * Reads the attention list: `attention.list` first; an older Host gets the Console's own
- * derivation (`mode: 'fallback'`). Other failures reject (shown as StatusState).
+ * The gateway answered for an instance that is not up (yet): 503 `instance_unavailable` or 504
+ * `instance_timeout`, as while the instance is still starting.
  */
-export async function loadAttention({ request, loadFallback, locale = 'zh-CN', now = Date.now }) {
+export function isAttentionInstanceUnavailable(error) {
+  const reading = statusFromError(error)
+  return reading.kind === 'instance-unavailable' && (reading.instance === 'unavailable' || reading.instance === 'timeout')
+}
+
+/** `/pub/health` `instance` → `{ state, ready }`, or null when it says nothing usable. */
+export function normalizeInstanceHealth(raw) {
+  if (!isRecord(raw) || typeof raw.state !== 'string' || !raw.state) return null
+  return Object.freeze({ state: raw.state, ready: raw.ready === true })
+}
+
+export function isInstanceReady(instance) {
+  return instance?.state === 'running' && instance.ready === true
+}
+
+/**
+ * Reads the attention list: `attention.list` first. When it is refused as unmapped / unsupported or
+ * the gateway says the instance is not answering, the gateway's `/pub/health` (`readInstanceHealth`)
+ * tells which: an instance that is not running and ready yet gives `mode: 'instance-not-ready'`
+ * (no items, not an error); a running, ready instance that still lacks the RPC is an older Host and
+ * gets the Console's own derivation (`mode: 'fallback'`). When health cannot be read the behaviour
+ * is as before (fallback for unsupported, rejection otherwise). Other failures reject (StatusState).
+ */
+export async function loadAttention({ request, loadFallback, readInstanceHealth, locale = 'zh-CN', now = Date.now }) {
+  let unsupported = false
   try {
     const reply = await request({ type: ATTENTION_RPC, data: { locale } })
     return { mode: 'host', ...normalizeAttentionList(reply) }
   } catch (error) {
-    if (!isAttentionUnsupported(error)) throw error
+    unsupported = isAttentionUnsupported(error)
+    if (!unsupported && !isAttentionInstanceUnavailable(error)) throw error
+    let instance = null
+    if (readInstanceHealth) {
+      try { instance = normalizeInstanceHealth(await readInstanceHealth()) } catch { instance = null }
+    }
+    if (instance && !isInstanceReady(instance)) {
+      return { mode: 'instance-not-ready', instance, items: [], generatedAt: new Date(now()).toISOString(), unavailable: [] }
+    }
+    if (!unsupported) throw error
   }
   const input = await loadFallback()
   return { mode: 'fallback', items: deriveFallbackAttention(input, locale), generatedAt: new Date(now()).toISOString(), unavailable: [] }
+}
+
+/**
+ * What the page says while the instance is not ready: 「实例启动中…」 for `starting` (and a running
+ * instance that is not ready yet), else the instance state in the 运维 → 实例 wording.
+ * `{ title, detail, starting }`.
+ */
+export function attentionInstanceNotice(instance, locale = 'zh-CN') {
+  const t = (message, values) => translate(locale, message, values)
+  const state = instance?.state ?? 'starting'
+  const starting = state === 'starting' || state === 'running'
+  const title = starting ? t('实例启动中…') : t('实例{0}', [instanceStateLabel(state, t)])
+  let detail
+  switch (state) {
+    case 'backoff': detail = t('实例异常退出，网关稍后会自动重启；重启完成后这里会自动刷新。'); break
+    case 'crashed': detail = t('实例已崩溃，需要处理的事项暂时读不到。到「实例」页查看日志并重新启动。'); break
+    case 'stopped': detail = t('实例未运行，需要处理的事项暂时读不到。到「实例」页启动实例。'); break
+    case 'stopping': detail = t('实例正在停止，需要处理的事项暂时读不到。'); break
+    default: detail = t('实例就绪后会自动读取需要处理的事项，无需手动刷新。')
+  }
+  return { title, detail, starting }
 }
 
 // ---------------------------------------------------------------- per-viewer choices

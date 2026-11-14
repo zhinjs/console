@@ -132,6 +132,29 @@ test('loading, failure, missing permission and older Hosts use StatusState and s
   assert.match(text(partial), /列表可能不完整：插件、日志/)
 })
 
+test('while the instance starts the page says so with 重试 and 查看实例, not the older-Host hint and not an error', async () => {
+  const notReady = state => ({ state: { data: { mode: 'instance-not-ready', instance: { state, ready: false }, items: [], generatedAt: new Date(NOW).toISOString(), unavailable: [] } }, instanceNotReady: true })
+  const fake = attention(notReady('starting'))
+  const tree = (await components('zh-CN', fake)).page()
+  const notice = nodes(tree).find(node => node.props?.className === 'console-attention-empty is-instance-not-ready')
+  assert.equal(notice.props.role, 'status')
+  assert.match(text(notice), /实例启动中…/)
+  assert.match(text(notice), /自动读取/)
+  assert.doesNotMatch(text(tree), /当前 Host 版本较旧|一切正常/)
+  assert.equal(nodes(tree).some(node => node.type === 'status-state'), false)
+  const retry = nodes(notice).find(node => node.type === 'Button' && node.props.onClick)
+  assert.match(text(retry), /重试/)
+  retry.props.onClick()
+  assert.deepEqual(fake.calls, [['refresh']])
+  assert.equal(nodes(notice).find(node => node.type === 'Link').props.to, '/ops/instance')
+  const crashed = (await components('en', attention(notReady('crashed')))).page()
+  assert.match(text(crashed), /Instance: Crashed/)
+  // The badge shows no count and says why.
+  const badge = (await components('zh-CN', attention(notReady('starting')))).badge()
+  assert.equal(badge.props['aria-label'], '需要你处理：实例启动中…')
+  assert.equal(nodes(badge).some(node => node.props?.className?.includes('console-attention-badge-count')), false)
+})
+
 test('the badge counts danger + warning items, links to /attention and hides without status.view', async () => {
   const items = [item(), item({ id: 'b', severity: 'warning' }), item({ id: 'c', severity: 'info' })]
   const tree = (await components('zh-CN', attention({ items }))).badge()
@@ -172,7 +195,7 @@ test('one shared read: refresh every 30 s while visible, on focus and on push ev
       '../../hooks/visible-polling.mjs': { startVisiblePolling: (fn, ms) => { polls.push({ fn, ms, stopped: false }); const entry = polls.at(-1); return () => { entry.stopped = true } } },
       '../../hooks/use-console-access': { useConsoleAccess: () => ({}) },
       '../../hooks/use-console-session': { useConsoleSession: () => ({ me: null }) },
-      '../../utils/auth': { apiFetch: async () => { throw new Error('unused') }, getApiBase: () => '' },
+      '../../utils/auth': { apiFetch: async () => { throw new Error('unused') }, getApiBase: () => '', probeHealth: async () => ({ ok: true, instance: { state: 'running', ready: true } }) },
       '../../utils/console-client': { getConsoleTransport: () => ({
         onConsoleEvent: (type, fn) => { handlers.set(type, fn); return () => handlers.delete(type) },
         onConsoleEventRecoveryGap: fn => { gap = fn; return () => { gap = null } },
@@ -218,6 +241,61 @@ test('one shared read: refresh every 30 s while visible, on focus and on push ev
     globalThis.clearTimeout = clearTimeout
   }
   assert.equal(typeof visiblePolling.startVisiblePolling, 'function')
+})
+
+test('while the instance starts the shared read asks /pub/health and reads again sooner, until it is ready', async () => {
+  const requests = []
+  let health = { ok: true, instance: { state: 'starting', ready: false } }
+  globalThis.window = { addEventListener: () => {}, removeEventListener: () => {}, localStorage: { getItem: () => null, setItem: () => {} } }
+  const timers = []
+  const realSetTimeout = globalThis.setTimeout
+  const realClearTimeout = globalThis.clearTimeout
+  globalThis.setTimeout = (fn, ms) => { timers.push({ fn, ms }); return timers.length }
+  globalThis.clearTimeout = id => { if (timers[id - 1]) timers[id - 1].fn = () => {} }
+  const settle = () => new Promise(resolve => realSetTimeout(resolve, 0))
+  try {
+    const store = compile(await source('pages/attention/use-attention.ts'), {
+      react: environment().common.react,
+      '@zhin.js/client': { SIDE_EVENT_PUSH: {} },
+      '../../i18n': { useI18n: () => ({ locale: 'zh-CN' }) },
+      '../../i18n/locale.mjs': { translate },
+      '../../contracts/zhin-console': { CONSOLE_REST: {} },
+      '../../hooks/visible-polling.mjs': { startVisiblePolling: () => () => {} },
+      '../../hooks/use-console-access': { useConsoleAccess: () => ({}) },
+      '../../hooks/use-console-session': { useConsoleSession: () => ({ me: null }) },
+      '../../utils/auth': { apiFetch: async () => { throw new Error('unused') }, getApiBase: () => 'http://host', probeHealth: async () => health },
+      '../../utils/console-client': { getConsoleTransport: () => ({ onConsoleEvent: () => () => {}, onConsoleEventRecoveryGap: () => () => {} }) },
+      '../../utils/console-access.mjs': { hasConsolePermission: () => true },
+      '../../utils/console-rpc': { requestConsole: async request => {
+        requests.push(request)
+        throw Object.assign(new Error('instance unavailable'), { details: { serverCode: 'instance_unavailable', httpStatus: 503 } })
+      } },
+      '../../utils/instance-availability.mjs': { onInstanceRecovered: () => () => {} },
+      '../../utils/read-error.mjs': { readErrorSummary: () => '' },
+      '../dashboard-health': { summarizeOptional: () => ({}) },
+      '../logs/read-state.mjs': { logPayloadAvailability: () => ({ available: true }) },
+      './attention-model.mjs': model,
+    })
+    const off = store.subscribeAttention(() => {})
+    await settle()
+    assert.equal(store.getAttentionState().status, 'ready')
+    assert.equal(store.getAttentionState().data.mode, 'instance-not-ready')
+    const sooner = timers.filter(timer => timer.ms === model.ATTENTION_NOT_READY_REFRESH_MS)
+    assert.equal(sooner.length, 1)
+    // Ready now, but still refused: the error is reported as before and no sooner read is scheduled.
+    health = { ok: true, instance: { state: 'running', ready: true } }
+    sooner[0].fn()
+    await settle()
+    assert.equal(requests.length, 2)
+    assert.equal(store.getAttentionState().data.mode, 'instance-not-ready', 'the last list stays')
+    assert.match(String(store.getAttentionState().error?.message), /instance unavailable/)
+    assert.equal(timers.filter(timer => timer.ms === model.ATTENTION_NOT_READY_REFRESH_MS).length, 1)
+    off()
+  } finally {
+    delete globalThis.window
+    globalThis.setTimeout = realSetTimeout
+    globalThis.clearTimeout = realClearTimeout
+  }
 })
 
 test('the dashboard shows the top items from the shared model with 查看全部 (count); the shell inserts only the badge', async () => {

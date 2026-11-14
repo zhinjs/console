@@ -29,5 +29,13 @@ export const attentionMessages = Object.freeze({
   "没有推迟或忽略的事项": "Nothing snoozed or ignored",
   "在事项上点「稍后提醒」或「忽略」后，会出现在这里，可随时恢复。": "Items you snooze or ignore appear here, and you can restore them at any time.",
   "查看全部 ({0})": "View all ({0})",
+  "需要你处理：{0}": "Needs your attention: {0}",
+  "实例启动中…": "Instance starting…",
+  "实例{0}": "Instance: {0}",
+  "实例异常退出，网关稍后会自动重启；重启完成后这里会自动刷新。": "The instance exited unexpectedly and the gateway will restart it shortly; this list refreshes on its own once it is back.",
+  "实例已崩溃，需要处理的事项暂时读不到。到「实例」页查看日志并重新启动。": "The instance has crashed, so what needs attention cannot be read. Open the Instance page to check the logs and start it again.",
+  "实例未运行，需要处理的事项暂时读不到。到「实例」页启动实例。": "The instance is not running, so what needs attention cannot be read. Start it from the Instance page.",
+  "实例正在停止，需要处理的事项暂时读不到。": "The instance is stopping, so what needs attention cannot be read.",
+  "实例就绪后会自动读取需要处理的事项，无需手动刷新。": "What needs attention is read automatically once the instance is ready; no need to refresh.",
   "登录、离线账号、插件与配置问题、待审批：需要你动手的事项": "Sign-ins, offline accounts, plugin and configuration problems, approvals: what needs you",
 })
