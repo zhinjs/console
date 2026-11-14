@@ -177,7 +177,7 @@ export default function DatabasePage() {
                 </>
               ) : selectedTable ? (
                 <>
-                  <div className="flex items-center gap-2 px-3 sm:px-4 py-2.5 border-b bg-muted/20 min-w-0 shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 max-sm:gap-y-1 px-3 sm:px-4 py-2.5 border-b bg-muted/20 min-w-0 shrink-0">
                     <Button
                       type="button"
                       variant="ghost"
@@ -193,7 +193,9 @@ export default function DatabasePage() {
                     ) : (
                       <Table2 className="w-4 h-4 text-muted-foreground shrink-0 hidden sm:block" />
                     )}
-                    <h2 className="text-base sm:text-lg font-semibold truncate min-w-0">{selectedTable}</h2>
+                    <h2 className="text-base sm:text-lg font-semibold truncate min-w-0 max-sm:flex-1" title={selectedTable}>{selectedTable}</h2>
+                    {/* Phones: the name keeps the first row; tabs and delete move to a second row. */}
+                    <div className="basis-full h-0 sm:hidden" aria-hidden="true" />
                     {showTools ? (
                       <Tabs value={mode} onValueChange={value => setMode(value as DetailMode)} className="shrink-0">
                         <TabsList className="h-8">
