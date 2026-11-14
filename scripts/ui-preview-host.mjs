@@ -68,7 +68,7 @@ let sentCount = 0
 const CHAT_NOW = Date.now()
 // Message events in the bounded Console journal (首页消息量与最近消息).
 const now = Date.now()
-const conversation = (kind, id) => ({ endpoint: { adapter: 'icqq', id: 'preview-community' }, kind, id })
+const conversation = (kind, id) => ({ endpoint: { adapter: 'icqq', id: 'preview-community' }, kind, id, ...(kind === 'group' ? { name: '发布协调群' } : {}) })
 const messageEvent = (eventId, minutesAgo, direction, kind, id, text, sender) => ({ runtimeId: 'ui-preview', eventId, type: 'message.receive', timestamp: now - minutesAgo * 60_000,
   data: { direction, timestamp: now - minutesAgo * 60_000, endpointKey: 'preview-community', adapter: 'icqq', conversation: conversation(kind, id), channelType: kind, channelId: id,
     content: [{ type: 'text', data: { text } }], ...(sender ? { sender } : {}) } })

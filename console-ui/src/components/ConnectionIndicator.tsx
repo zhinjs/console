@@ -46,8 +46,9 @@ export function ConnectionIndicator() {
 
   const view = connectionIndicatorView({ state, failure, ever: track.current.ever, since: track.current.since, now })
   if (!view) {
-    const title = connected ? i18n.t('Console 实时事件已连接') : i18n.t('Console 实时事件未连接')
-    return <span className={cn('console-connection-dot', connected ? 'is-online' : 'is-offline')} title={title} aria-label={title} role="status" />
+    const title = connected ? i18n.t('实时推送已连接') : i18n.t('实时推送已断开')
+    // Focusable so keyboard users get the same tooltip as a pointer hover.
+    return <span className={cn('console-connection-dot', connected ? 'is-online' : 'is-offline')} data-tooltip={title} aria-label={title} role="status" tabIndex={0} />
   }
   const label = view.kind === 'disconnected' ? i18n.t('已断开') : view.kind === 'reconnecting' ? i18n.t('重连中') : i18n.t('连接中')
   const reason = view.reason ? i18n.t(EVENT_STREAM_REASON_COPY[view.reason.code], [view.reason.status ?? '']) : null

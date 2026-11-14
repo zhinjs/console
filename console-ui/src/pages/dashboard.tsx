@@ -21,6 +21,7 @@ import { conversationHref, CONSOLE_PATHS } from '../console-routes.mjs'
 import { instanceSectionHref } from './ops/instance-sections.mjs'
 import { PageHeader } from '../components/PageHeader'
 import { PageShell } from '../components/PageShell'
+import { InfoHint } from '../components/InfoHint'
 import { StatusState } from '../components/StatusState'
 import './insights/insights.css'
 import type { LucideIcon } from 'lucide-react'
@@ -155,7 +156,8 @@ const DASHBOARD_REQUEST_TIMEOUT_MS = 8_000
 const DAY_MS = 24 * 60 * 60 * 1000
 const MESSAGE_EVENT_LIMIT = 1000
 const MESSAGE_HISTORY_LIMIT = 500
-const FEED_LIMIT = 12
+// 首页只看最近几条；完整记录在「查看明细」。
+const FEED_LIMIT = 8
 
 async function fetchOptionalData(path: string, signal: AbortSignal): Promise<unknown | null> {
   try {
@@ -271,28 +273,39 @@ function percent(part: number, total: number): number | null {
   return Math.min(100, Math.max(0, Math.round((part / total) * 100)))
 }
 
+/** A round, even axis maximum (1, 2, 4, 5 × 10ⁿ, at least 2) at or above the busiest hour, so the scale reads cleanly. */
+function niceAxisMax(peak: number): number {
+  if (peak <= 2) return 2
+  const magnitude = 10 ** Math.floor(Math.log10(peak))
+  for (const step of [1, 2, 4, 5, 10]) if (step * magnitude >= peak) return step * magnitude
+  return 10 * magnitude
+}
+
 function MessageVolumeChart({ buckets, describe, summary }: {
   buckets: HourlyActivityBucket[]
   describe: (bucket: HourlyActivityBucket) => string
   summary: string
 }) {
-  const peak = Math.max(1, ...buckets.map((bucket) => bucket.inbound + bucket.outbound))
-  const tickIndexes = [0, Math.floor(buckets.length / 2), buckets.length - 1]
+  const axisMax = niceAxisMax(Math.max(0, ...buckets.map((bucket) => bucket.inbound + bucket.outbound)))
+  const ticks = [axisMax, axisMax / 2, 0]
+  const tickIndexes = [0, Math.floor(buckets.length / 4), Math.floor(buckets.length / 2), Math.floor((buckets.length * 3) / 4), buckets.length - 1]
   return (
     <div className="console-volume-chart" role="img" aria-label={summary}>
       <div className="console-volume-axis" aria-hidden="true">
-        <span>{peak}</span>
-        <span>{peak % 2 === 0 ? peak / 2 : ''}</span>
-        <span>0</span>
+        {ticks.map((tick) => <span key={tick}>{Number.isInteger(tick) ? tick : ''}</span>)}
       </div>
       <div className="console-volume-plot" aria-hidden="true">
         <div className="console-volume-bars">
-          {buckets.map((bucket) => {
+          <span className="console-volume-gridline is-top" />
+          <span className="console-volume-gridline is-mid" />
+          {buckets.map((bucket, index) => {
             const total = bucket.inbound + bucket.outbound
+            // Tooltips near the edges open inward so they stay inside the card.
+            const side = index < buckets.length / 4 ? ' is-start' : index >= (buckets.length * 3) / 4 ? ' is-end' : ''
             return (
-              <div key={bucket.start} className="console-volume-col" title={describe(bucket)}>
+              <div key={bucket.start} className={`console-volume-col${side}${total > 0 ? '' : ' is-empty'}`} data-tip={describe(bucket)}>
                 {total > 0 ? (
-                  <span className="console-volume-bar" style={{ height: `${Math.max(4, (total / peak) * 100)}%` }}>
+                  <span className="console-volume-bar" style={{ height: `${Math.max(3, (total / axisMax) * 100)}%` }}>
                     {bucket.outbound > 0 ? <span className="console-volume-bar-reply" style={{ height: `${(bucket.outbound / total) * 100}%` }} /> : null}
                   </span>
                 ) : null}
@@ -314,15 +327,17 @@ function MessageFeedRow({ item, kindLabel, t }: {
   t: (message: string, values?: unknown[]) => string
 }) {
   const latency = replyLatencySeconds(item)
-  const sender = item.sender
-    ? item.sender.name && item.sender.id && item.sender.name !== item.sender.id
-      ? `${item.sender.name}（${item.sender.id}）`
-      : item.sender.name || item.sender.id
-    : null
+  // Names first; IDs stay one hover away.
+  const sender = item.sender ? item.sender.name || item.sender.id : null
+  const senderTitle = item.sender?.id ? t("用户 ID：{0}", [item.sender.id]) : undefined
+  const conversationLabel = item.conversationName || item.channelId
+  const conversationTitle = t("会话 ID：{0}", [item.channelId])
   // 能定位到会话对象时，会话标识直接链到它的「记录」页签。
   const conversation = item.adapter && item.endpoint && CONVERSATION_KINDS.includes(item.kind as never) && item.channelId
     ? conversationHref(item.adapter, item.endpoint, item.kind as ConversationKind, item.channelId, 'records')
     : null
+  // How a reply was paired is a detail: it sits in the tag's tooltip, not under every message.
+  const pairing = latency !== null ? t("可能相关 · 按同一会话的时间先后推测，相隔 {0} 秒", [latency.toFixed(1)]) : t("可能相关 · 按同一会话的时间先后推测")
   return (
     <li className="console-message-row">
       <time className="console-message-time" dateTime={new Date(item.timestamp).toISOString()}>{formatClock(item.timestamp)}</time>
@@ -332,27 +347,22 @@ function MessageFeedRow({ item, kindLabel, t }: {
           <span className="console-tag is-accent">{kindLabel}</span>
           {item.channelId
             ? conversation
-              ? <Link to={conversation} className="console-message-channel console-message-link" title={t("打开这个会话的记录")}>{item.channelId}</Link>
-              : <span className="console-message-channel">{item.channelId}</span>
+              ? <Link to={conversation} className="console-message-channel console-message-link" title={`${conversationTitle} · ${t("打开这个会话的记录")}`}>{conversationLabel}</Link>
+              : <span className="console-message-channel" title={conversationTitle}>{conversationLabel}</span>
             : null}
-          {sender ? <span className="console-message-sender">{sender}</span> : null}
+          {sender ? <span className="console-message-sender" title={senderTitle}>{sender}</span> : null}
           {item.direction === 'outbound'
             ? <span className="console-tag is-info">{t("机器人发出")}</span>
             : item.replies.length > 0
-              ? <span className="console-tag">{t("有可能相关的回复")}</span>
+              ? <span className="console-tag" title={pairing}>{t("有可能相关的回复")}</span>
               : <span className="console-tag">{t("之后两分钟内未发出消息")}</span>}
         </div>
         {item.direction === 'inbound'
           ? <p className="console-message-text">{item.text || '—'}</p>
           : <blockquote className="console-message-reply"><span>{item.text || '—'}</span></blockquote>}
         {item.replies.map((reply) => (
-          <blockquote key={reply.id} className="console-message-reply"><span>{reply.text || '—'}</span></blockquote>
+          <blockquote key={reply.id} className="console-message-reply" title={pairing}><span>{reply.text || '—'}</span></blockquote>
         ))}
-        {item.replies.length > 0 ? (
-          <span className="console-message-pairing">
-            {latency !== null ? t("可能相关 · 按同一会话的时间先后推测，相隔 {0} 秒", [latency.toFixed(1)]) : t("可能相关 · 按同一会话的时间先后推测")}
-          </span>
-        ) : null}
       </div>
     </li>
   )
@@ -782,10 +792,16 @@ export default function HomePage() {
           onOpen={() => navigate('/scope')}
         />
       </StatGrid>
-      <p className="console-basis-note">
-        <span><strong>{i18n.t("缓冲内观察")}</strong>{i18n.t("：消息数来自 Host 的事件缓冲，重启后清空；")}<span className={coverage.kind === 'partial' ? 'is-partial' : undefined}>{coverageText}</span></span>
-        <span><strong>{i18n.t("持久统计")}</strong>{i18n.t("：错误与警告来自日志库，清理日志后重新计数。")}</span>
-      </p>
+      <div className="console-basis-hints">
+        <span>{i18n.t("统计口径")}</span>
+        <InfoHint label={i18n.t("缓冲内观察")} tone={coverage.kind === 'partial' ? 'warning' : undefined}>
+          <p>{i18n.t("收到与发出的消息数来自 Host 的事件缓冲，实例重启后清空。")}</p>
+          <p className={coverage.kind === 'partial' ? 'is-partial' : undefined}>{coverageText}</p>
+        </InfoHint>
+        <InfoHint label={i18n.t("持久统计")}>
+          <p>{i18n.t("错误与警告来自日志库，清理日志后重新计数。")}</p>
+        </InfoHint>
+      </div>
 
       <div className="console-overview-row">
         <section className="console-dashboard-panel console-volume-panel" aria-labelledby="volume-title">

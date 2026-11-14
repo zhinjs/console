@@ -5,6 +5,7 @@ import { cn } from '@zhin.js/client'
 
 export const Popover = Primitive.Root
 export const PopoverTrigger = Primitive.Trigger
+export const PopoverAnchor = Primitive.Anchor
 export const PopoverContent = forwardRef<React.ComponentRef<typeof Primitive.Content>, React.ComponentPropsWithoutRef<typeof Primitive.Content>>(
   ({ className, align = 'start', sideOffset = 8, ...props }, ref) => <Primitive.Portal>
     <Primitive.Content ref={ref} align={align} sideOffset={sideOffset} collisionPadding={12}

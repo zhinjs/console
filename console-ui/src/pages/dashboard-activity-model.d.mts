@@ -16,6 +16,8 @@ export interface MessageRecord {
   endpoint: string
   kind: string
   channelId: string
+  /** The conversation's display name when the event carries one (group name, channel title); '' otherwise. */
+  conversationName: string
   conversationKey: string
   sender: { id: string; name: string } | null
   text: string

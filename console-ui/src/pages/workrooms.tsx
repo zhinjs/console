@@ -158,7 +158,7 @@ function WorkroomBoardPage() {
                     {i18n.t("{0} 次跳转 · {1} 轮 · {2} Tokens", [item.hops, item.turns, i18n.number(item.tokensUsed)])}
                   </p>
                   {item.participants.length ? (
-                    <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">{item.participants.join(', ')}</p>
+                    <p className="mt-1 truncate font-mono text-xs text-muted-foreground">{item.participants.join(', ')}</p>
                   ) : null}
                 </ListItemButton>
               ))}

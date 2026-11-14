@@ -3,12 +3,12 @@ import { LanguageSelect } from '../components/LanguageSelect'
 import { useI18n } from '../i18n'
 import { useMemo, useRef, useState, useEffect, useLayoutEffect, useSyncExternalStore } from "react"
 import { Outlet, Link, useLocation, matchPath } from "react-router-dom"
-import { Menu, LogOut, X, ChevronRight, ChevronDown, UserRound } from "lucide-react"
+import { Menu, X, ChevronRight, ChevronDown } from "lucide-react"
 import { cn, type ConsoleRouteRecord } from "@zhin.js/client"
 import { useConsoleConnected } from "../hooks/use-console-connected"
 import { app } from "../utils/console-client"
 import { getSidebarLucideIcon } from "../components/sidebarMenuIcons"
-import { ThemeToggle } from "../components/ThemeToggle"
+import { UserMenu } from "../components/UserMenu"
 import { Button } from "../components/ui/button"
 import { ScrollArea } from "../components/ui/scroll-area"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu"
@@ -251,27 +251,7 @@ export default function DashboardLayout() {
             <LogPanelButton />
             <AttentionBadge />
             <ConnectionIndicator />
-            <LanguageSelect />
-            <ThemeToggle />
-            {me?.user ? (
-              <Button asChild variant="ghost" size="sm" className="console-topnav-account">
-                <Link to={CONSOLE_PATHS.account} title={i18n.t("个人设置")} aria-label={i18n.t("个人设置：{0}", [accountLabel])}>
-                  <UserRound className="h-4 w-4" />
-                  <span className="hidden xl:inline max-w-[8rem] truncate">{accountLabel}</span>
-                </Link>
-              </Button>
-            ) : null}
-            <Button
-              variant="ghost"
-              size="icon"
-              title={i18n.t("退出登录")}
-              aria-label={i18n.t("退出登录")}
-              onClick={() => {
-                void signOut(me)
-              }}
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
+            <UserMenu accountLabel={accountLabel} accountHref={me?.user ? CONSOLE_PATHS.account : undefined} onSignOut={() => { void signOut(me) }} />
           </div>
         </div>
       </header>
