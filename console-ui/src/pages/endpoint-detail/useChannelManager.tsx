@@ -237,6 +237,7 @@ export function useChannelManager(params: {
     setListLoading(true)
     setListNotice(null)
     const errors: string[] = []
+    const causes: unknown[] = []
     let nextFriends: FriendsEntry[] = []
     let nextGroups: GroupsEntry[] = []
     let nextChannels: ChannelsEntry[] = []
@@ -256,7 +257,7 @@ export function useChannelManager(params: {
             (x) => x.user_id > 0,
           )
         } catch (e) {
-          errors.push(i18n.t("好友列表：{0}", [(e as Error).message]))
+          errors.push(i18n.t("好友列表：{0}", [(e as Error).message])); causes.push(e)
         }
         try {
           const g = await requestConsole<{ groups: unknown[] }>({
@@ -267,14 +268,14 @@ export function useChannelManager(params: {
             (x) => x.group_id > 0,
           )
         } catch (e) {
-          errors.push(i18n.t("群列表：{0}", [(e as Error).message]))
+          errors.push(i18n.t("群列表：{0}", [(e as Error).message])); causes.push(e)
         }
       }
 
       try {
         nextChannels = await fetchEndpointChannelCatalog(requestConsole, adapter, endpointId)
       } catch (e) {
-        errors.push(i18n.t("频道列表：{0}", [(e as Error).message]))
+        errors.push(i18n.t("频道列表：{0}", [(e as Error).message])); causes.push(e)
       }
 
       const rpcEmpty =
@@ -300,10 +301,10 @@ export function useChannelManager(params: {
 
       if (!isInboxCacheScopeActive(cacheScope)) return
       const total = nextFriends.length + nextGroups.length + nextChannels.length
-      setListNotice(conversationListNotice({ total, errors, connected: info?.connected, historyOnly: usedInboxFallback }, i18n.locale))
+      setListNotice(conversationListNotice({ total, errors, causes, connected: info?.connected, historyOnly: usedInboxFallback }, i18n.locale))
     } catch (e) {
       if (!isInboxCacheScopeActive(cacheScope)) return
-      setListNotice(conversationListNotice({ total: 0, errors: [(e as Error).message] }, i18n.locale))
+      setListNotice(conversationListNotice({ total: 0, errors: [(e as Error).message], causes: [e] }, i18n.locale))
     } finally {
       if (isInboxCacheScopeActive(cacheScope)) setListLoading(false)
     }
