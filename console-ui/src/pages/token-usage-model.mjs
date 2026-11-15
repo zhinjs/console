@@ -403,3 +403,32 @@ export function formatBucketLabel(ms, bucket, locale = 'zh-CN') {
     ? new Intl.DateTimeFormat(locale, { month: 'numeric', day: 'numeric', hour: 'numeric', hour12: false }).format(date)
     : new Intl.DateTimeFormat(locale, { month: 'numeric', day: 'numeric' }).format(date)
 }
+
+/**
+ * Prompt-cache notes of the usage page (zhinjs/zhin#1250 `usage-cache-unsupported-hint`), from the
+ * Host's `promptCacheHints`: one line per service that likely does not support or pass through
+ * prompt caching (a long run of calls without a cache read while adjacent requests shared their
+ * prefix), and `missed` when no request of the range read the cache although none is suspect.
+ * Null on a Host without `promptCacheHints` (the page then shows what it showed before).
+ */
+export function promptCacheNotices(stats, locale = 'zh-CN') {
+  if (!isPlainObject(stats) || !Array.isArray(stats.promptCacheHints)) return null
+  const hints = []
+  for (const hint of stats.promptCacheHints) {
+    if (!isPlainObject(hint) || typeof hint.provider !== 'string' || !hint.provider) continue
+    if (!isCount(hint.zeroCacheCalls) || !isCount(hint.sessions)) continue
+    const ratio = typeof hint.samePrefixRatio === 'number' && Number.isFinite(hint.samePrefixRatio) ? hint.samePrefixRatio : null
+    const name = typeof hint.label === 'string' && hint.label ? hint.label : hint.provider
+    hints.push({
+      key: hint.provider,
+      name,
+      text: ratio === null
+        ? translate(locale, '{0}：最近连续 {1} 次请求（{2} 个会话）没有命中提示缓存，该服务可能不支持或没有透传提示缓存。', [name, hint.zeroCacheCalls, hint.sessions])
+        : translate(locale, '{0}：最近连续 {1} 次请求（{2} 个会话）没有命中提示缓存，而相邻请求有 {3} 的前缀相同——该服务可能不支持或没有透传提示缓存。',
+          [name, hint.zeroCacheCalls, hint.sessions, formatPercent(ratio, locale)]),
+    })
+  }
+  const totals = stats.totals
+  const missed = !hints.length && isPlainObject(totals) && totals.calls > 0 && totals.inputTokens > 0 && totals.cacheReadTokens === 0
+  return { hints, missed }
+}

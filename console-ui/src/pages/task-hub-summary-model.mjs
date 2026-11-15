@@ -3,6 +3,7 @@
  * 读取失败的来源传 null，对应指标显示为未知而不是 0。
  */
 import { isPluginInternalSchedule } from './schedule-memory-model.mjs'
+import { featureDisabledState } from '../utils/feature-disabled.mjs'
 
 /** 管理员任务：所有用途提供方下的任务总数与已暂停数。 */
 export function summarizeAdminTasks(catalog) {
@@ -34,9 +35,14 @@ export function summarizeSchedules(list) {
   return { total: memory.length + persistent.length, persistent: persistent.length, paused, internal: all.length - memory.length }
 }
 
-/** 助手任务：总数、启用数，以及最近一次运行出错的任务数。 */
-export function summarizeAssistantJobs(data) {
+/**
+ * 助手任务：总数、启用数，以及最近一次运行出错的任务数。Host 说明助手未启用时（#1250 `status: 'disabled'`）
+ * 带上 `disabled`（本地化的原因），卡片显示「未启用」而不是 0 个任务。
+ */
+export function summarizeAssistantJobs(data, locale = 'zh-CN') {
   if (!data || !Array.isArray(data.jobs)) return null
+  const disabled = featureDisabledState(data, locale)
+  if (disabled) return { total: 0, enabled: 0, failing: 0, disabled: disabled.description }
   let enabled = 0
   let failing = 0
   for (const job of data.jobs) {

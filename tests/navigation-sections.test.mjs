@@ -87,7 +87,7 @@ test('plugin pages in a section use that section permission set', () => {
 })
 
 test('every builtin page path has an explicit permission set from the ADR 0049 catalog', () => {
-  const catalog = /^(status\.view|endpoint\.(view|operate|manage)|feature\.(view|configure|toggle)|plugin\.manage|agent\.(view|configure)|ops\.(config|env|database|schedule|files)\.(read|write)|ops\.restart|ops\.terminal|iam\.(view|manage))$/
+  const catalog = /^(status\.view|endpoint\.(view|operate|manage)|feature\.(view|configure|toggle)|plugin\.manage|agent\.(view|configure)|ops\.(config|env|database|schedule|files)\.(read|write)|ops\.restart|ops\.terminal|iam\.(view|manage)|self\.chat-identity)$/
   for (const path of Object.values(CONSOLE_PATHS)) assert.ok(Object.hasOwn(ROUTE_PERMISSIONS, path), path)
   for (const [path, names] of Object.entries(ROUTE_PERMISSIONS)) for (const name of names) assert.match(name, catalog, `${path}: ${name}`)
 })

@@ -5,6 +5,7 @@ import type {
 import type { ScopeRef } from './scope-tree.mjs'
 
 export { CHAT_PRINCIPALS_RPC } from '@zhin.js/console-protocol'
+export const CHAT_IDENTITY_SELF_PERMISSION: 'self.chat-identity'
 
 /** How an identity came to its person (the protocol's `ConsoleChatIdentityLinkMethod`). */
 export type ChatIdentityLinkMethod = ConsoleChatIdentityLinkMethod

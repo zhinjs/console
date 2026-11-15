@@ -10,6 +10,7 @@ import { attentionMessages } from './messages.en.attention.mjs'
 import { statusMessages } from './messages.en.status.mjs'
 import { loginMessages } from './messages.en.login.mjs'
 import { feedbackMessages } from './messages.en.feedback.mjs'
+import { hostFieldMessages } from './messages.en.host.mjs'
 
 /** Authored Console UI copy. Interpolated content is never translated. */
 export const englishMessages = Object.freeze({
@@ -25,6 +26,7 @@ export const englishMessages = Object.freeze({
   ...statusMessages,
   ...loginMessages,
   ...feedbackMessages,
+  ...hostFieldMessages,
   "鲜活配色": "Fresh palettes",
   "沉静配色": "Calm palettes",
   "晴空": "Sky",

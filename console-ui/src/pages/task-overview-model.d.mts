@@ -12,6 +12,8 @@ export interface TaskOverviewRow {
   lastResult: { label: string; tone: TaskOverviewTone; at: number | null; error?: string } | null
   target: string | null
   targetHref: string | null
+  /** Unresolved delivery target (#1250): reason and the next run that will not arrive. */
+  targetIssue?: string | null
   approval: string | null
   tab: 'admin' | 'schedule' | 'assistant'
 }

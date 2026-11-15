@@ -71,3 +71,6 @@ export function collectReplayExport(
 ): Promise<ReplayExport>
 export function exportFileName(window: ReplayWindow): string
 export function isPermissionDenied(error: unknown): boolean
+export const REPLAY_PARENT_KEY: 'parent'
+export interface ReplayEntry { row: ReplayRow; folded: ReplayRow[] }
+export function foldReplayRows(rows: readonly ReplayRow[]): ReplayEntry[]

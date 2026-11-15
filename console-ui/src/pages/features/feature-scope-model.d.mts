@@ -73,3 +73,4 @@ export function globalFeatureOverview(
 export function globalFeatureCounts(rows: readonly GlobalFeatureOverviewRow[]): { total: number; enabled: number; disabled: number; customized: number }
 export function featureWriteSharesRevision(level: string): boolean
 export function featureReadBackMismatch(detail: FeatureDetail | null | undefined, change: FeatureChange): import('../../components/apply-outcome-model.mjs').ReadBackMismatch | null
+export function overrideProvenance(detail: { readonly operator?: import('./feature-model.mjs').FeatureOverrideOperator; readonly updatedAt?: number; readonly conversationName?: string } | null | undefined, locale?: 'zh-CN' | 'en'): string | null

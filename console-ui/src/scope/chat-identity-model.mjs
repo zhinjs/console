@@ -4,12 +4,15 @@
  * `@zhin.js/console-protocol` (`CHAT_PRINCIPALS_RPC`, `ConsoleChatPrincipal`, …). Older Hosts do
  * not serve these RPC; that is detected per call (`isMissingIdentityRpc`) and the entries are hidden.
  */
-import { CHAT_PRINCIPALS_RPC, CONSOLE_CHAT_ROLES } from '@zhin.js/console-protocol'
+import { CHAT_PRINCIPALS_RPC, CHAT_PRINCIPALS_RPC_PERMISSIONS, CONSOLE_CHAT_ROLES } from '@zhin.js/console-protocol'
 import { statusFromError } from '../components/status-state-model.mjs'
 import { SCOPE_LEVELS, parseScopeKey, scopeKey } from './scope-tree.mjs'
 import { CHAT_ROLES_RPC } from './chat-roles-model.mjs'
 
 export { CHAT_PRINCIPALS_RPC }
+
+/** 「我的聊天身份」 (`chat-identities.me` / bind codes) needs `self.chat-identity` (ADR 0060 Q4), per the protocol's table. */
+export const CHAT_IDENTITY_SELF_PERMISSION = CHAT_PRINCIPALS_RPC_PERMISSIONS[CHAT_PRINCIPALS_RPC.ME]
 
 const ROLES = CONSOLE_CHAT_ROLES
 const LEVELS = SCOPE_LEVELS

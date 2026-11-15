@@ -23,6 +23,8 @@ export interface ScopeEndpoint {
   status: 'online' | 'offline'
   pendingLogin?: boolean
   transportState?: string
+  /** Readable `transportState` (#1250); absent from older Hosts. */
+  transportLabel?: string
   pendingRequestCount?: number
   pendingNoticeCount?: number
   /** ADR 0058: step of the unfinished login flow (1-based), on newer Hosts. */

@@ -9,6 +9,7 @@ import { pluginRpc } from '../utils/plugin-rpc'
 import { PageHeader } from '../components/PageHeader'
 import { PageShell } from '../components/PageShell'
 import { ErrorAlert } from '../components/error-alert'
+import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { ListItemButton } from '../components/ui/list-item-button'
@@ -19,6 +20,7 @@ import { Skeleton } from '../components/ui/skeleton'
 import { CacheLineChart, ModelBars, ModelLegend, SegmentDonut, StackedBarChart } from './token-usage-charts'
 import {
   USAGE_BUCKETS,
+  promptCacheNotices,
   USAGE_METHOD,
   USAGE_RANGES,
   buildColorMap,
@@ -147,8 +149,8 @@ export default function TokenUsagePage() {
     const modelKeys = collectModelKeys(stats)
     const colors = buildColorMap(modelKeys)
     const shown = topModelKeys(stats.byModel)
-    return { colors, shown, hasOther: modelKeys.length > shown.length, showWrite: hasCacheWrite(stats), showEndpoint: stats.bySession.some(row => splitSessionKey(row).endpoint !== ''), quantiles: cacheQuantiles(stats.totals) }
-  }, [stats])
+    return { colors, shown, hasOther: modelKeys.length > shown.length, showWrite: hasCacheWrite(stats), showEndpoint: stats.bySession.some(row => splitSessionKey(row).endpoint !== ''), quantiles: cacheQuantiles(stats.totals), cache: promptCacheNotices(stats, i18n.locale) }
+  }, [stats, i18n.locale])
 
   const sessions = useMemo(() => stats ? sortSessions(stats.bySession, sortKey, sortDir) : [], [stats, sortKey, sortDir])
 
@@ -218,6 +220,17 @@ export default function TokenUsagePage() {
               <Metric label={i18n.t("回合数")} value={formatTokens(stats.totals.turns, i18n.locale)} icon={Layers} />
             </div>
 
+            {view.cache?.hints.length ? (
+              <Alert variant="warning" role="status">
+                <Zap aria-hidden="true" />
+                <AlertTitle>{i18n.t("可能不支持提示缓存")}</AlertTitle>
+                <AlertDescription>
+                  <ul className="space-y-1">{view.cache.hints.map(hint => <li key={hint.key} className="break-words">{hint.text}</li>)}</ul>
+                </AlertDescription>
+              </Alert>
+            ) : view.cache?.missed ? (
+              <p className="console-basis-note" role="status"><strong>{i18n.t("缓存未命中")}</strong><span>{i18n.t("这段时间的请求都没有命中提示缓存。系统提示或工具定义每次都在变化时，缓存无法复用。")}</span></p>
+            ) : null}
             <p className="console-basis-note"><strong>{i18n.t("持久统计")}</strong><span>{i18n.t("来自回合追踪文件，覆盖 {0} 至 {1}", [new Date(stats.range.since).toLocaleString(i18n.locale), new Date(stats.range.until).toLocaleString(i18n.locale)])}</span></p>
             {empty ? <StatusState kind="empty" title={i18n.t("这段时间没有模型调用记录。")} description={i18n.t("换一个时间范围或清除会话筛选试试。")}
               actions={<>

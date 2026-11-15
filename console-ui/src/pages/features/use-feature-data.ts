@@ -10,7 +10,7 @@ import { readEndpointList } from '../endpoint-list-model.mjs'
 import {
   appendConversationPage, classifyFeatureRpcError, conversationsRequest, featureLockError, globalFeatureRows, readConversationPage, mergeFeatureMatrix, readFeatureDetail, readFeatureList, readFeatureMatrix,
   readFeatureWriteResult,
-  type ConversationPage, type ConversationQuery, type ConversationOverrideCounts, type FeatureDetail, type FeatureLevel, type FeatureLock, type FeatureList, type FeatureMatrixRow, type FeatureRpcBody,
+  type ConversationPage, type ConversationQuery, type ConversationOverrideCounts, type FeatureDetail, type FeatureLevel, type FeatureLock, type FeatureList, type FeatureMatrixRow, type FeatureRootRow, type FeatureRpcBody,
   type FeatureRpcFailure, type FeatureWriteResult,
 } from './feature-model.mjs'
 
@@ -25,6 +25,8 @@ export interface FeatureMatrixState {
   revision: string
   /** Conversations with overrides per endpoint, when the Host reports them (ADR 0055). */
   conversationOverrides?: ConversationOverrideCounts
+  /** The project's own root plugin row (#1250 `kind: 'root'`), when the Host lists it. */
+  root?: FeatureRootRow
   /** `rpc` when the Host served `feature.matrix`; otherwise only the global column is real. */
   source: MatrixSource
   loading: boolean
@@ -55,7 +57,8 @@ export function useFeatureMatrix(): FeatureMatrixState {
       if (request !== sequence.current) return
       const merged = mergeFeatureMatrix(globalRows, remote.matrix)
       setState({ rows: merged.rows, adapters: merged.adapters, endpoints: merged.endpoints, revision: merged.revision,
-        ...(merged.conversationOverrides ? { conversationOverrides: merged.conversationOverrides } : {}), source: remote.source, loading: false, error: null })
+        ...(merged.conversationOverrides ? { conversationOverrides: merged.conversationOverrides } : {}),
+        ...(merged.root ? { root: merged.root } : {}), source: remote.source, loading: false, error: null })
     }, (error: unknown) => {
       if (request !== sequence.current) return
       setState(previous => ({ ...previous, source: previous.source === 'loading' ? 'error' : previous.source, loading: false, error: error instanceof Error ? error.message : String(error) }))
@@ -75,6 +78,8 @@ export interface EndpointSummaryItem {
   connected: boolean
   status: 'online' | 'offline'
   transportState?: string
+  /** Readable `transportState` (#1250); absent from older Hosts. */
+  transportLabel?: string
   pendingRequestCount?: number
   pendingNoticeCount?: number
 }
