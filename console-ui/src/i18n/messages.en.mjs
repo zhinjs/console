@@ -2222,7 +2222,7 @@ export const englishMessages = Object.freeze({
   "这个页面暂时无法显示": "This page is temporarily unavailable",
   "页面遇到了异常。你可以重试，或通过顶部导航继续使用其他功能。": "The page encountered an error. Retry, or use the top navigation to continue with another feature.",
   "重试当前页面": "Retry this page",
-  "返回 Dashboard": "Back to Dashboard",
+  "返回首页": "Back to Home",
   "常用": "Common",
   "机器人": "Bots",
   "功能": "Features",
