@@ -14,12 +14,12 @@ import { StatusState } from '../../components/StatusState'
 import { statusFromError } from '../../components/status-state-model.mjs'
 import { requestConsole } from '../../utils/console-rpc'
 import { useConsoleAccess } from '../../hooks/use-console-access'
-import { hasConsolePermission } from '../../utils/console-access.mjs'
+import { hasConsolePermission, scopedAdapters } from '../../utils/console-access.mjs'
 import { ObjectSection } from '../../scope/ObjectPageLayout'
 import { IdentityChip, MyChatIdentitySection } from '../../scope/ChatIdentityPanels'
 import { CHAT_ROLE_LABELS } from '../../scope/chat-roles-model.mjs'
 import {
-  filterPrincipals, isMissingIdentityRpc, lastSeen, mergeRequest, principalActions, principalName, principalsListRequest, readPrincipals,
+  filterPrincipals, isMissingIdentityRpc, lastSeen, mergePrincipalPayloads, mergeRequest, principalActions, principalName, principalsListRequests, readPrincipals,
   renameRequest, splitRequest, type ChatIdentityView, type ChatPrincipalView,
 } from '../../scope/chat-identity-model.mjs'
 import '../admin-pages.css'
@@ -51,13 +51,16 @@ export default function ChatMembersPage() {
   const [query, setQuery] = useState('')
   const [editing, setEditing] = useState<Editing | null>(null)
   const ticket = useRef(0)
+  // Without global iam.manage the Host answers only per adapter: ask for each managed adapter.
+  const adapters = scopedAdapters('iam.manage', access).join('\u0000')
   const load = useCallback(() => {
     const current = ++ticket.current
-    requestConsole<unknown>(principalsListRequest()).then(
-      payload => { if (current === ticket.current) setState({ status: 'ready', principals: readPrincipals(payload) }) },
+    const requests = principalsListRequests(adapters ? adapters.split('\u0000') : [])
+    Promise.all(requests.map(request => requestConsole<unknown>(request))).then(
+      payloads => { if (current === ticket.current) setState({ status: 'ready', principals: readPrincipals(payloads.length === 1 ? payloads[0] : mergePrincipalPayloads(payloads)) }) },
       (error: unknown) => { if (current === ticket.current) setState(isMissingIdentityRpc(error) ? { status: 'unsupported' } : { status: 'failed', error }) },
     )
-  }, [])
+  }, [adapters])
   useEffect(() => { load(); return () => { ticket.current += 1 } }, [load])
   const principals = state.status === 'ready' ? state.principals : []
   const shown = useMemo(() => filterPrincipals(principals, query), [principals, query])
@@ -69,7 +72,7 @@ export default function ChatMembersPage() {
         description={i18n.t('聊天里的「人」：一个人可以有多个平台身份，角色授予属于人。在这里核对身份、归并同一个人在不同平台的账号，或拆分误归并的身份。')}
         actions={<Button variant="outline" size="sm" onClick={load} disabled={state.status === 'loading'}><RefreshCw className={state.status === 'loading' ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>} />
       <MyChatIdentitySection highlight={params.get('me') === '1'} />
-      <ObjectSection title={i18n.t('全部成员')} description={i18n.t('只列出你有 iam.manage 的适配器上的身份；其他适配器上的身份只显示数量。')}>
+      <ObjectSection title={i18n.t('全部成员')} description={i18n.t('有全局 iam.manage 时列出全部成员；只在部分适配器上有 iam.manage 时，只列出这些适配器上的身份，同一个人在其他适配器上的身份只显示数量。')}>
         {state.status === 'unsupported' ? <StatusState kind="unsupported" description={i18n.t('当前 Host 还没有「聊天成员」（chat-principals.*），升级后可在这里管理。')} />
           : state.status === 'failed' ? <StatusState error={state.error} onRetry={load} permissions={['iam.manage']} />
           : state.status === 'loading' ? <StatusState kind="loading" placeholder={<div className="space-y-2">{[0, 1, 2].map(index => <Skeleton key={index} className="h-16" />)}</div>} />

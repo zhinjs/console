@@ -11,6 +11,7 @@ import { statusMessages } from './messages.en.status.mjs'
 import { loginMessages } from './messages.en.login.mjs'
 import { feedbackMessages } from './messages.en.feedback.mjs'
 import { hostFieldMessages } from './messages.en.host.mjs'
+import { batch3Messages } from './messages.en.batch3.mjs'
 
 /** Authored Console UI copy. Interpolated content is never translated. */
 export const englishMessages = Object.freeze({
@@ -27,6 +28,7 @@ export const englishMessages = Object.freeze({
   ...loginMessages,
   ...feedbackMessages,
   ...hostFieldMessages,
+  ...batch3Messages,
   "鲜活配色": "Fresh palettes",
   "沉静配色": "Calm palettes",
   "晴空": "Sky",
@@ -2877,9 +2879,7 @@ export const englishMessages = Object.freeze({
   "继承上层识图模型": "Inherit vision model from parent",
   "加载更多场景": "Load more scenes",
   "场景目录暂不可用，已有配置保留。": "The scene catalog is unavailable right now. Existing settings are kept.",
-  "识图备用模型 {0}": "Vision fallback model {0}",
   "删除备用模型": "Remove fallback model",
-  "添加识图备用模型": "Add vision fallback model",
   "添加备用模型": "Add fallback model",
   "仍被账号引用的服务需要先处理关联账号。": "A service still referenced by accounts needs those accounts handled first.",
   "添加服务": "Add service",
@@ -3348,7 +3348,6 @@ export const englishMessages = Object.freeze({
   "聊天成员": "Chat members",
   "聊天里的「人」：一个人可以有多个平台身份，角色授予属于人。在这里核对身份、归并同一个人在不同平台的账号，或拆分误归并的身份。": "The people in your chats: one person can have identities on several platforms, and role grants belong to the person. Check identities here, merge one person's accounts across platforms, or split an identity merged by mistake.",
   "全部成员": "All members",
-  "只列出你有 iam.manage 的适配器上的身份；其他适配器上的身份只显示数量。": "Only identities on adapters where you hold iam.manage are listed; others are only counted.",
   "当前 Host 还没有「聊天成员」（chat-principals.*），升级后可在这里管理。": "This Host has no chat members (chat-principals.*) yet; upgrade it to manage them here.",
   "按名字、平台用户 ID 或 Console 用户搜索": "Search by name, platform user id or Console user",
   "还没有「人」": "No people yet",

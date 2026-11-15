@@ -134,7 +134,7 @@ function AccountTable({ endpoints, tasks, showAdapter, label, configuredOnly, ma
               <TableCell className="max-md:hidden">{pending ? <Badge variant="warning" size="sm">{i18n.t('{0} 条', [pending])}</Badge> : <span className="text-muted-foreground">—</span>}</TableCell>
               <TableCell className="text-right">
                 <span className="inline-flex flex-wrap justify-end gap-1.5">
-                  <Button asChild variant="outline" size="sm"><Link to={endpointHref(endpoint.adapter, endpoint.name, 'chat')} aria-label={i18n.t('聊天')}><MessageSquare /><span className="max-md:sr-only">{i18n.t('聊天')}</span></Link></Button>
+                  <Button asChild variant="outline" size="sm"><Link to={endpointHref(endpoint.adapter, endpoint.name, 'chat')} aria-label={i18n.t('聊天')}><MessageSquare />{i18n.t('聊天')}</Link></Button>
                   <Button asChild variant="ghost" size="sm" className="max-md:hidden"><Link to={endpointHref(endpoint.adapter, endpoint.name, 'access')}><KeyRound />{i18n.t('接入')}</Link></Button>
                   {managedRows.get(endpoint.name) ? <ManagedAccountControls row={managedRows.get(endpoint.name)!} /> : null}
                 </span>

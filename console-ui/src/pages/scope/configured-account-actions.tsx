@@ -129,7 +129,7 @@ function DriftActionButton({ entry, action, permission }: { entry: ConfigDriftEn
   return (
     <Button variant="outline" size="sm" disabled={Boolean(context?.busy)} aria-busy={pending || undefined}
       aria-label={`${label} · ${entry.id}`} onClick={() => { void context?.run(entry, action) }}>
-      {action === 'import' ? <FileDown /> : <FileUp />}<span className="max-md:sr-only">{label}</span>
+      {action === 'import' ? <FileDown /> : <FileUp />}{label}
     </Button>
   )
 }

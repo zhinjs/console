@@ -186,6 +186,50 @@ export function principalsListRequest(scope = {}) {
   return { type: CHAT_PRINCIPALS_RPC.LIST, ...(level === 'global' ? {} : { level, key }) }
 }
 
+/**
+ * The `chat-principals.list` requests of the 聊天成员 page. The Host answers an unscoped list only
+ * for global `iam.manage`; a manager scoped to some adapters asks once per adapter (`level:
+ * 'adapter'`, which the Host checks against that adapter). Anyone else sends the unscoped request,
+ * and the Host's refusal names the missing permission.
+ */
+export function principalsListRequests(adapters = []) {
+  const list = [...new Set(adapters.filter(alias => typeof alias === 'string' && alias))]
+  return list.length ? list.map(adapter => principalsListRequest({ adapter })) : [principalsListRequest()]
+}
+
+/**
+ * One list from per-adapter `chat-principals.list` replies: a person on several of these adapters
+ * appears in each reply with only that adapter's identities, so the identities are united and the
+ * hidden count is what is left of the person's total.
+ */
+export function mergePrincipalPayloads(payloads) {
+  const people = new Map()
+  for (const payload of payloads) {
+    const rows = isRecord(payload) && Array.isArray(payload.principals) ? payload.principals : []
+    for (const row of rows) {
+      if (!isRecord(row) || !text(row.id)) continue
+      const identities = Array.isArray(row.identities) ? row.identities.filter(isRecord) : []
+      const total = identities.length + (Number.isInteger(row.hiddenIdentities) && row.hiddenIdentities > 0 ? row.hiddenIdentities : 0)
+      const previous = people.get(row.id)
+      if (!previous) {
+        people.set(row.id, { row, identities: [...identities], total, unverified: row.unverified === true })
+        continue
+      }
+      const seen = new Set(previous.identities.map(item => `${item.adapter}\u0000${item.userId}`))
+      for (const identity of identities) if (!seen.has(`${identity.adapter}\u0000${identity.userId}`)) previous.identities.push(identity)
+      previous.total = Math.max(previous.total, total)
+      previous.unverified ||= row.unverified === true
+    }
+  }
+  return {
+    principals: [...people.values()].map(({ row, identities, total, unverified }) => {
+      const { hiddenIdentities: _hidden, unverified: _unverified, ...rest } = row
+      const hidden = Math.max(0, total - identities.length)
+      return { ...rest, identities, ...(hidden ? { hiddenIdentities: hidden } : {}), ...(unverified ? { unverified: true } : {}) }
+    }),
+  }
+}
+
 export function recentIdentitiesRequest(scope = {}, limit = 50) {
   const key = scopeKey(scope)
   const level = key === null || key === '' ? 'global' : parseScopeKey(key).level

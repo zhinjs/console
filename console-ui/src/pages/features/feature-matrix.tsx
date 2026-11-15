@@ -49,17 +49,18 @@ function RootRow({ root, adapters }: { root: FeatureRootRow; adapters: readonly 
     components.length ? i18n.t('{0} 个组件', [components.length]) : '',
     tools.length ? i18n.t('{0} 个工具', [tools.length]) : '',
   ].filter(Boolean)
-  const always = <Badge variant="success" title={i18n.t('本项目自己的功能始终启用，不能在这里关闭。')}>{i18n.t('始终启用')}</Badge>
   return (
     <TableRow>
       <TableCell>
         <span className="font-medium">{rootFeatureName(root, i18n.locale)}</span>
-        <p className="mt-0.5 text-xs text-muted-foreground" title={[...commands, ...components, ...tools].join(', ')}>
+        <p className="mt-1 text-xs text-muted-foreground" title={[...commands, ...components, ...tools].join(', ')}>
           {parts.length ? i18n.t('本项目自带：{0}', [parts.join(i18n.t('、'))]) : i18n.t('本项目自带的功能')}
         </p>
       </TableCell>
-      <TableCell>{always}</TableCell>
-      {adapters.map(adapter => <TableCell key={adapter}>{always}</TableCell>)}
+      {/* D15.1: a normal state is muted text, said once across the 全局 and adapter columns. */}
+      <TableCell colSpan={1 + adapters.length} className="text-sm text-muted-foreground" data-root-always-on="">
+        {i18n.t('始终启用，在所有适配器上生效，不能在这里关闭。')}
+      </TableCell>
     </TableRow>
   )
 }
@@ -147,7 +148,7 @@ export default function FeatureMatrixPage({ embedded = false, heading }: {
                   <TableCell>
                     <Link to={featureGlobalHref(row.plugin)} className="font-medium hover:underline">{row.name}</Link>
                     {row.name !== row.plugin ? <code className="ml-2 text-xs text-muted-foreground">{row.plugin}</code> : null}
-                    {row.description ? <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{row.description}</p> : null}
+                    {row.description ? <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{row.description}</p> : null}
                   </TableCell>
                   <TableCell>
                     {source === 'rpc' ? (

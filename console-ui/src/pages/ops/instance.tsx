@@ -419,8 +419,8 @@ function DependencyPanel({ canManage, onActiveChange, onFinished }: { canManage:
                     <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">{item.dependencyType}</TableCell>
                     {canManage ? (
                       <TableCell className="whitespace-nowrap text-right">
-                        <Button variant="ghost" size="sm" disabled={busy} onClick={() => void prepare('update', [item.name])} aria-label={i18n.t("更新 {0}", [item.name])}><Upload /><span className="hidden sm:inline">{i18n.t("更新")}</span></Button>
-                        <Button variant="ghost" size="sm" className="text-destructive" disabled={busy} onClick={() => void prepare('uninstall', [item.name])} aria-label={i18n.t("卸载 {0}", [item.name])}><Trash2 /><span className="hidden sm:inline">{i18n.t("卸载")}</span></Button>
+                        <Button variant="ghost" size="sm" disabled={busy} onClick={() => void prepare('update', [item.name])} aria-label={i18n.t("更新 {0}", [item.name])}><Upload />{i18n.t("更新")}</Button>
+                        <Button variant="ghost" size="sm" className="text-destructive" disabled={busy} onClick={() => void prepare('uninstall', [item.name])} aria-label={i18n.t("卸载 {0}", [item.name])}><Trash2 />{i18n.t("卸载")}</Button>
                       </TableCell>
                     ) : null}
                   </TableRow>

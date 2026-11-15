@@ -595,7 +595,8 @@ test('the single graph editor preserves sibling decision modes and model IDs acr
   }
   management.source = { view: management.view, connectionScope: 'scope', base: 'https://host.test' }
   const { Purposes } = await component(runtime, '../console-ui/src/pages/inference/Purposes.tsx', {
-    'lucide-react': { Plus: 'icon', Trash2: 'icon' }, './model.mjs': model,
+    'lucide-react': { ArrowDown: 'icon', ArrowUp: 'icon', MoreHorizontal: 'icon', Plus: 'icon', Trash2: 'icon' }, './model.mjs': model,
+    '../../components/ui/dropdown-menu': { DropdownMenu: 'dropdown-menu', DropdownMenuContent: 'dropdown-content', DropdownMenuItem: 'dropdown-item', DropdownMenuTrigger: 'dropdown-trigger' }, 
     '../../components/ui/button': { Button: 'button' }, '../../components/ui/input': { Input: 'input' },
     '../../components/ui/select': { SelectField: 'select' }, '../../components/ui/searchable-select': { SearchableSelectField: 'select' }, '../../components/ui/card': { Card: 'card' }, '../../components/confirm-dialog': { useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }) },
   })
@@ -747,7 +748,8 @@ async function purposeFixture() {
   f.answer('/owners', [owner()]); await f.runtime.settle()
   f.answer('/inference', purposeView(1)); await f.runtime.settle()
   const { Purposes } = await component(runtime, '../console-ui/src/pages/inference/Purposes.tsx', {
-    'lucide-react': { Plus: 'icon', Trash2: 'icon' }, './model.mjs': model,
+    'lucide-react': { ArrowDown: 'icon', ArrowUp: 'icon', MoreHorizontal: 'icon', Plus: 'icon', Trash2: 'icon' }, './model.mjs': model,
+    '../../components/ui/dropdown-menu': { DropdownMenu: 'dropdown-menu', DropdownMenuContent: 'dropdown-content', DropdownMenuItem: 'dropdown-item', DropdownMenuTrigger: 'dropdown-trigger' }, 
     '../../components/ui/button': { Button: 'button' }, '../../components/ui/input': { Input: 'input' },
     '../../components/ui/select': { SelectField: 'select' }, '../../components/ui/searchable-select': { SearchableSelectField: 'select' }, '../../components/ui/card': { Card: 'card' }, '../../components/confirm-dialog': { useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }) },
   })

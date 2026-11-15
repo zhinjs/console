@@ -1,4 +1,4 @@
-import { hasAnyConsolePermission, hasConsolePermission, UNRESTRICTED_ACCESS } from './utils/console-access.mjs'
+import { hasAnyConsolePermission, hasConsolePermission, scopedAdapters, UNRESTRICTED_ACCESS } from './utils/console-access.mjs'
 
 /**
  * The six Console sections (ADR 0052). `icon` names a lucide icon (components/sidebarMenuIcons.ts). The first four are day-to-day work, the last two
@@ -100,6 +100,15 @@ export const ROUTE_PERMISSIONS = Object.freeze({
   '/chat-members': ['self.chat-identity', 'iam.manage'],
 })
 
+/**
+ * Routes whose permission also counts when held only on some adapters: the member list asks the
+ * Host per adapter (`chat-principals.list` with `level: 'adapter'`), so an adapter-scoped
+ * `iam.manage` is enough to see the entry.
+ */
+const ADAPTER_SCOPED_ROUTE_PERMISSIONS = Object.freeze({
+  '/chat-members': Object.freeze(['iam.manage']),
+})
+
 export function routePermissions(route) {
   return ROUTE_PERMISSIONS[route?.path] ?? sectionById(routeSectionId(route))?.permissions ?? []
 }
@@ -107,7 +116,10 @@ export function routePermissions(route) {
 export function canSeeRoute(route, access = UNRESTRICTED_ACCESS) {
   if (access.unrestricted) return true
   const required = Array.isArray(route?.requiredPermissions) ? route.requiredPermissions : []
-  return hasAnyConsolePermission(routePermissions(route), access) && required.every(name => hasConsolePermission(name, access))
+  const adapterScoped = ADAPTER_SCOPED_ROUTE_PERMISSIONS[route?.path] ?? []
+  const allowed = hasAnyConsolePermission(routePermissions(route), access)
+    || adapterScoped.some(name => scopedAdapters(name, access).length > 0)
+  return allowed && required.every(name => hasConsolePermission(name, access))
 }
 
 const order = route => route?.meta?.order ?? 999

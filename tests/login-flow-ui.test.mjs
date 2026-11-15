@@ -320,10 +320,12 @@ test('UI state belongs to the step: a re-opened challenge with the same id start
   assert.match(text(nodes(tree).find(node => node.props?.className === 'console-login-checklist-progress')), /第 1 \/ 2 步/u, 'unticked again')
 })
 
-test('server clock skew: QR deadlines, cooldowns and waits follow the server clock', async () => {
+test('server clock skew: QR deadlines, cooldowns and waits follow the server clock', async (t) => {
+  // A fixed browser clock: the countdowns below are exact, however slowly this test runs.
+  t.mock.timers.enable({ apis: ['Date'], now: NOW })
   // This browser is 10 minutes behind the Host.
   const skew = 10 * 60_000
-  const serverNow = Date.now() + skew
+  const serverNow = NOW + skew
   const qr = { ...qrChallenge, media: { ...qrChallenge.media, expiresAt: serverNow + 60_000 } }
   const env = await cardEnvironment({ flow: flowModel.readLoginFlow({ ...flowWith(qr), steps: flowWith(qr).steps.map(item => item.id === 's3' ? { ...item, at: serverNow - 5_000 } : item) }) })
   env.flowState.clockOffset = skew
