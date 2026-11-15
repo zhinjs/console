@@ -131,7 +131,7 @@ export function GalleryPreview({ item, readOnly }: { item: CapabilityItem; readO
   return <div ref={container} className="console-component-live-preview" aria-label={i18n.t("{0} 预览", [name])}>
     <div className="flex flex-wrap items-center justify-between gap-2 px-3 pt-2 text-xs text-muted-foreground">
       <div>
-        {target ? i18n.t("目标预览：{0} / {1} · {2} {3}{4}{5}", [target.endpoint.adapter, targetName, { private: i18n.t("私聊"), group: i18n.t("群聊"), channel: i18n.t("频道") }[target.kind], target.id, target.parent ? ` · 父级 ${target.parent.id}` : '', target.threadId ? ` · 线程 ${target.threadId}` : '']) : i18n.t("作者 HTML / 消息预览")}
+        {target ? i18n.t("目标预览：{0} / {1} · {2} {3}{4}{5}", [target.endpoint.adapter, targetName, { private: i18n.t("私聊"), group: i18n.t("群聊"), channel: i18n.t("频道") }[target.kind], target.id, target.parent ? i18n.t(" · 父级 {0}", [target.parent.id]) : '', target.threadId ? i18n.t(" · 线程 {0}", [target.threadId]) : '']) : i18n.t("作者 HTML / 消息预览")}
         {generation !== undefined && <span> {i18n.t(" · 代次 ")}{generation}</span>}
       </div>
       {!readOnly && (
