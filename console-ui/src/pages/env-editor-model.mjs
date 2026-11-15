@@ -1,19 +1,20 @@
 import { readBackMismatch, secretLikeKey } from '../components/apply-outcome-model.mjs'
-import { SECRET_MASK, SECRET_MASK_CHAR, SECRET_MASK_REVEAL_MIN_LENGTH, SECRET_MASK_RUN, maskSecretText } from '../utils/secret-mask.mjs'
+import {
+  ENV_MASK_CHAR, ENV_MASK_REVEAL_MIN_LENGTH, ENV_MASK_RUN, isConsoleEnvFileView, isConsoleEnvMaskPlaceholder, maskConsoleEnvValue,
+} from '@zhin.js/console-protocol'
 const secretName = /PASSWORD|SECRET|TOKEN|KEY|PRIVATE|CREDENTIAL/i
-// ---- Masking: the Host's rule (`../utils/secret-mask.mjs`, zhinjs/zhin#1250) ----
+// ---- Masking: the Host's rule (`@zhin.js/console-protocol` `maskConsoleEnvValue`, zhinjs/zhin#1250) ----
 // Every masked value is built with it, so the Console never shows more than the Host would.
 // Values are masked as dotenv reads them (quotes, inline comments and surrounding spaces removed).
 
 /** One masked character; a run of ENV_MASK_RUN of them stands for the hidden part. */
-export const ENV_MASK_CHAR = SECRET_MASK_CHAR
-export const ENV_MASK_RUN = SECRET_MASK_RUN
-/** Values shorter than this are masked completely; longer ones show their first and last two characters. */
-export const ENV_MASK_REVEAL_MIN_LENGTH = SECRET_MASK_REVEAL_MIN_LENGTH
-const MASK_RUN = SECRET_MASK
+export { ENV_MASK_CHAR, ENV_MASK_RUN, ENV_MASK_REVEAL_MIN_LENGTH }
+const MASK_RUN = ENV_MASK_CHAR.repeat(ENV_MASK_RUN)
 
 /** The Host's mask of a value as the process reads it: `''`, the mask alone, or 2 + mask + 2 characters. */
-export const maskEnvValueAsRead = maskSecretText
+export function maskEnvValueAsRead(value) {
+  return maskConsoleEnvValue(String(value ?? ''))
+}
 
 // dotenv 17's own line pattern (`lib/main.js` `LINE`), as the Host's gateway scans `.env` with it.
 const DOTENV_LINE = /(?:^|^)\s*(?:export\s+)?([\w.-]+)(?:\s*=\s*?|:\s+?)(\s*'(?:\\'|[^'])*'|\s*"(?:\\"|[^"])*"|\s*`(?:\\`|[^`])*`|[^#\r\n]+)?\s*(?:#.*)?(?:$|$)/mg
@@ -228,7 +229,7 @@ export function envReadBackMismatch(submitted, readBack) {
 
 /** `{ kind: 'masked', view }` for a masking Host, `{ kind: 'legacy', content }` for an older one. */
 export function readEnvReply(data) {
-  if (data && typeof data === 'object' && data.format === 'masked' && Array.isArray(data.variables) && Array.isArray(data.lines)) {
+  if (isConsoleEnvFileView(data)) {
     const variables = data.variables
       .filter(item => item && typeof item.key === 'string')
       .map(item => ({
@@ -248,11 +249,9 @@ export function maskEnvDisplay(value) {
   return mask(value)
 }
 
-/** A masked value sent back by mistake: three mask characters in a row, or only mask characters. */
+/** A masked value sent back by mistake (the Host's `isConsoleEnvMaskPlaceholder`): three mask characters in a row, or only mask characters. */
 export function isEnvMaskPlaceholder(value) {
-  const text = String(value ?? '')
-  const inner = text.trim().replace(/^(["'`])([\s\S]*)\1$/u, '$2').trim()
-  return text.includes(ENV_MASK_CHAR.repeat(3)) || (inner.length > 0 && [...inner].every(char => char === ENV_MASK_CHAR))
+  return isConsoleEnvMaskPlaceholder(String(value ?? ''))
 }
 
 /**

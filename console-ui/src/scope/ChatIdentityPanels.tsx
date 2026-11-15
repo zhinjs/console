@@ -13,7 +13,7 @@ import { statusFromError } from '../components/status-state-model.mjs'
 import { ObjectSection } from './ObjectPageLayout'
 import { CHAT_ROLE_LABELS } from './chat-roles-model.mjs'
 import {
-  CHAT_IDENTITY_RPC, LINK_METHOD_LABELS, bindCountdown, bindInstruction, grantCandidates, isMissingIdentityRpc, principalName,
+  CHAT_PRINCIPALS_RPC, LINK_METHOD_LABELS, bindCountdown, bindInstruction, grantCandidates, isMissingIdentityRpc, principalName,
   promoteGlobalOwnerRequest, readBindCode, readIdentityMe, readPrincipals, readRecentIdentities, recentIdentitiesRequest, principalsListRequest,
   type ChatGrantCandidate, type ChatIdentityMe, type ChatIdentityView, type ChatPrincipalView,
 } from './chat-identity-model.mjs'
@@ -32,7 +32,7 @@ export function useMyChatIdentity() {
   const ticket = useRef(0)
   const load = useCallback(() => {
     const current = ++ticket.current
-    requestConsole<unknown>({ type: CHAT_IDENTITY_RPC.ME }).then(
+    requestConsole<unknown>({ type: CHAT_PRINCIPALS_RPC.ME }).then(
       payload => { if (current === ticket.current) setState({ status: 'ready', me: readIdentityMe(payload) }) },
       (error: unknown) => { if (current === ticket.current) setState(isMissingIdentityRpc(error) ? { status: 'unsupported' } : { status: 'failed', error }) },
     )
@@ -92,7 +92,7 @@ export function MyChatIdentitySection({ highlight = false }: { highlight?: boole
   const createCode = async () => {
     setBusy(true); setError(null); setNotice(null)
     try {
-      setCode(readBindCode(await requestConsole<unknown>({ type: CHAT_IDENTITY_RPC.BIND_CODE_CREATE })))
+      setCode(readBindCode(await requestConsole<unknown>({ type: CHAT_PRINCIPALS_RPC.BIND_CODE_CREATE })))
       setNow(Date.now())
     } catch (failure) {
       setError(statusFromError(failure).message || i18n.t('生成绑定码失败'))

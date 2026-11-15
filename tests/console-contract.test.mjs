@@ -405,14 +405,18 @@ test('released Zhin rich-message renderer is the single Markdown implementation'
 
 test('package manifest targets the released Zhin contract generation', () => {
   const manifest = JSON.parse(sourceText(join(ROOT, 'package.json')))
-  // One SDK generation: the tilde ranges keep npm from resolving the unrelated 1.5.x / 2.x lines.
-  assert.equal(manifest.dependencies['@zhin.js/client'], '~1.1.32')
-  assert.equal(manifest.dependencies['@zhin.js/contract'], '~1.1.23')
-  assert.equal(manifest.dependencies['@zhin.js/ai'], '~1.1.55')
-  assert.equal(manifest.dependencies['@zhin.js/console-protocol'], '~1.2.0')
+  // One SDK generation (zhin 1.4): the tilde ranges keep npm from resolving the unrelated client 2.x line
+  // or a later minor that has not been checked against this Console.
+  assert.equal(manifest.dependencies['@zhin.js/client'], '~1.2.1')
+  assert.equal(manifest.dependencies['@zhin.js/contract'], '~1.1.27')
+  assert.equal(manifest.dependencies['@zhin.js/ai'], '~1.7.0')
+  assert.equal(manifest.dependencies['@zhin.js/console-protocol'], '~1.4.0')
+  for (const [name, range] of Object.entries(manifest.dependencies)) {
+    if (name.startsWith('@zhin.js/')) assert.match(range, /^~\d+\.\d+\.\d+$/, `${name} uses a tilde range`)
+  }
   assert.equal(Object.keys(manifest.dependencies).some(name => name.startsWith('@zhin.js/client-')), false)
   const lock = sourceText(join(ROOT, 'pnpm-lock.yaml'))
-  for (const name of ['client', 'contract', 'console-protocol', 'ai']) {
+  for (const name of ['client', 'contract', 'console-protocol', 'ai', 'logger', 'plugin-runtime']) {
     const versions = new Set([...lock.matchAll(new RegExp(`^  '@zhin\\.js/${name}@([^'(]+)`, 'gm'))].map(match => match[1]))
     assert.equal(versions.size, 1, `@zhin.js/${name} resolves to ${[...versions].join(', ')}`)
   }

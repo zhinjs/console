@@ -25,9 +25,9 @@ export const PERMISSION_AREAS = Object.freeze([
   Object.freeze({ id: 'agent', permissions: Object.freeze(['agent.view', 'agent.configure']) }),
   Object.freeze({ id: 'ops', permissions: Object.freeze([
     'ops.config.read', 'ops.config.write', 'ops.env.read', 'ops.env.write', 'ops.database.read', 'ops.database.write',
-    'ops.schedule.read', 'ops.schedule.write', 'ops.files.read', 'ops.files.write', 'ops.restart', 'ops.terminal',
+    'ops.database.schema', 'ops.schedule.read', 'ops.schedule.write', 'ops.files.read', 'ops.files.write', 'ops.restart', 'ops.terminal',
   ]) }),
-  Object.freeze({ id: 'iam', permissions: Object.freeze(['iam.view', 'iam.manage']) }),
+  Object.freeze({ id: 'iam', permissions: Object.freeze(['iam.view', 'iam.manage', 'self.chat-identity']) }),
   Object.freeze({ id: 'external', permissions: Object.freeze(['mcp.access', 'a2a.access']) }),
 ])
 
@@ -83,6 +83,7 @@ export function permissionLabel(permission, t) {
     'ops.env.write': t('写入环境变量'),
     'ops.database.read': t('浏览数据库'),
     'ops.database.write': t('修改数据库'),
+    'ops.database.schema': t('执行原始 SQL 与修改表结构'),
     'ops.schedule.read': t('查看定时任务'),
     'ops.schedule.write': t('管理定时任务'),
     'ops.files.read': t('读取项目文件'),
@@ -91,6 +92,7 @@ export function permissionLabel(permission, t) {
     'ops.terminal': t('使用终端'),
     'iam.view': t('查看用户、角色、令牌与审计'),
     'iam.manage': t('管理用户、角色与令牌'),
+    'self.chat-identity': t('绑定自己的聊天身份'),
     'mcp.access': t('访问 MCP Server'),
     'a2a.access': t('访问 A2A Server'),
   }

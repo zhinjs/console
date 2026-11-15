@@ -9,6 +9,10 @@ import { CONSOLE_PERMISSION_LIST, IAM_RPC, SCOPED_PERMISSIONS, BUILTIN_ROLE_NAME
 import { GATEWAY_PACKAGES_PROGRESS, GATEWAY_RPC } from '../console-ui/src/pages/ops/gateway-model.mjs'
 import { CHAT_ROLES, CHAT_ROLES_PERMISSION, CHAT_ROLES_RPC } from '../console-ui/src/scope/chat-roles-model.mjs'
 import { GATEWAY_OWNED_RPC_TYPES } from '../console-ui/src/utils/instance-availability.mjs'
+import { CHAT_PRINCIPALS_RPC } from '../console-ui/src/scope/chat-identity-model.mjs'
+import { ATTENTION_RPC } from '../console-ui/src/pages/attention/attention-model.mjs'
+import { LOGIN_FLOW_EVENT, LOGIN_RPC, LOGIN_UNSUPPORTED_CODE } from '../console-ui/src/pages/scope/login-flow-model.mjs'
+import { GLOBAL_PLUGIN_SWITCH_PERMISSION, isGlobalFeatureSwitch } from '../console-ui/src/pages/features/plugin-switch-model.mjs'
 import { sourceFilesUnder } from './cjk-fixture.mjs'
 
 test('models re-export @zhin.js/console-protocol instead of keeping their own copies', () => {
@@ -23,6 +27,14 @@ test('models re-export @zhin.js/console-protocol instead of keeping their own co
   assert.equal(CHAT_ROLES_RPC, protocol.CHAT_ROLES_RPC)
   assert.equal(CHAT_ROLES, protocol.CONSOLE_CHAT_ROLES)
   assert.equal(CHAT_ROLES_PERMISSION, 'iam.manage')
+  // zhin 1.4 (console-protocol 1.4): chat members, attention, Login Assist and the global plugin switch.
+  assert.equal(CHAT_PRINCIPALS_RPC, protocol.CHAT_PRINCIPALS_RPC)
+  assert.equal(ATTENTION_RPC, protocol.ATTENTION_RPC.LIST)
+  assert.equal(LOGIN_RPC, protocol.LOGIN_RPC)
+  assert.equal(LOGIN_FLOW_EVENT, protocol.SIDE_EVENT_PUSH.LOGIN_FLOW)
+  assert.equal(LOGIN_UNSUPPORTED_CODE, protocol.CONSOLE_LOGIN_UNSUPPORTED)
+  assert.equal(GLOBAL_PLUGIN_SWITCH_PERMISSION, protocol.FEATURE_GLOBAL_SWITCH_PERMISSION)
+  assert.equal(isGlobalFeatureSwitch, protocol.isGlobalFeatureSwitch)
   for (const type of ['terminal.open', 'onboarding.update', ...Object.values(protocol.IAM_RPC)]) {
     assert.ok(GATEWAY_OWNED_RPC_TYPES.includes(type), type)
   }
@@ -46,6 +58,7 @@ test('no other source file spells a protocol RPC name or auth route', () => {
   const names = new Set([
     ...Object.values(protocol.IAM_RPC), ...Object.values(protocol.GATEWAY_RPC), ...Object.values(protocol.FEATURE_RPC),
     ...Object.values(protocol.CHAT_ROLES_RPC), ...Object.values(protocol.ONBOARDING_RPC), ...Object.values(protocol.CONSOLE_AUTH_ROUTES),
+    ...Object.values(protocol.CHAT_PRINCIPALS_RPC), ...Object.values(protocol.ATTENTION_RPC), ...Object.values(protocol.LOGIN_RPC),
   ])
   const root = fileURLToPath(new URL('../console-ui/src/', import.meta.url))
   const offenders = []

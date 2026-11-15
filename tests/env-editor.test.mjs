@@ -251,3 +251,19 @@ test('a secret read back differently is shown by the Host mask, never with its l
   assert.deepEqual(envReadBackMismatch('API_TOKEN=x\n', ''), { path: 'API_TOKEN', submitted: RUN, readBack: null, masked: true })
   assert.deepEqual(envReadBackMismatch('PORT=1\n', 'PORT=2\n'), { path: 'PORT', submitted: '"1"', readBack: '"2"' })
 })
+
+test('the Console masks with the published Host rule (`@zhin.js/console-protocol`), not a copy of it', async () => {
+  const protocol = await import('@zhin.js/console-protocol')
+  assert.equal(maskedModel.ENV_MASK_CHAR, protocol.ENV_MASK_CHAR)
+  assert.equal(maskedModel.ENV_MASK_RUN, protocol.ENV_MASK_RUN)
+  assert.equal(maskedModel.ENV_MASK_REVEAL_MIN_LENGTH, protocol.ENV_MASK_REVEAL_MIN_LENGTH)
+  for (const value of ['', 'a', '123456789012345', '1234567890123456', '😀'.repeat(16), `ab${RUN}yz`]) {
+    assert.equal(maskedModel.maskEnvValueAsRead(value), protocol.maskConsoleEnvValue(value), value)
+  }
+  for (const value of [RUN, `ab${RUN}yz`, '●', '"●●"', ' ●● ', 'plain', 'a●b', '']) {
+    assert.equal(maskedModel.isEnvMaskPlaceholder(value), protocol.isConsoleEnvMaskPlaceholder(value), value)
+  }
+  // Non-string input (an absent value) is still safe: the empty mask, not a thrown error.
+  assert.equal(maskedModel.maskEnvValueAsRead(undefined), '')
+  assert.equal(maskedModel.isEnvMaskPlaceholder(undefined), false)
+})
