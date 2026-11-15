@@ -7,6 +7,8 @@ import {
   messageRecords,
   replyLatencySeconds,
   summarizeMessages,
+  visibleReplies,
+  FEED_REPLY_LIMIT,
 } from '../console-ui/src/pages/dashboard-activity-model.mjs'
 
 const HOUR = 3_600_000
@@ -109,4 +111,26 @@ test('replies never pair across conversations or beyond the pairing window', () 
   assert.equal(feed.find((item) => item.text === 'old question').replies.length, 0)
   assert.equal(feed.find((item) => item.text === 'group question').replies.length, 0)
   assert.equal(feed.find((item) => item.text === 'late reply').direction, 'outbound')
+})
+
+test('a burst of replies under one message is capped; the rest are counted', () => {
+  const replies = [5, 1, 4, 2, 3].map(n => ({ id: `r${n}`, text: `reply ${n}`, timestamp: n * 1000 }))
+  const { shown, hidden } = visibleReplies(replies)
+  assert.equal(FEED_REPLY_LIMIT, 2)
+  assert.deepEqual(shown.map(reply => reply.id), ['r1', 'r2'], 'oldest first, at most two')
+  assert.equal(hidden, 3)
+  assert.deepEqual(visibleReplies(replies.slice(0, 2)), { shown: [replies[1], replies[0]], hidden: 0 })
+  assert.deepEqual(visibleReplies([]), { shown: [], hidden: 0 })
+  assert.deepEqual(visibleReplies(undefined), { shown: [], hidden: 0 })
+})
+
+test('the home feed shows the capped replies and states the pairing guess once', async () => {
+  const { readFile } = await import('node:fs/promises')
+  const page = await readFile(new URL('../console-ui/src/pages/dashboard.tsx', import.meta.url), 'utf8')
+  const row = page.slice(page.indexOf('function MessageFeedRow'), page.indexOf('export default function HomePage'))
+  assert.match(row, /const replies = visibleReplies\(item\.replies\)/)
+  assert.match(row, /replies\.shown\.map\(/)
+  assert.doesNotMatch(row, /item\.replies\.map\(/, 'every reply used to be listed')
+  assert.match(row, /另有 \{0\} 条回复，打开会话记录查看/)
+  assert.equal((row.match(/title=\{pairing\}/g) ?? []).length, 1, 'the pairing explanation sits on the tag only, not on every reply')
 })
