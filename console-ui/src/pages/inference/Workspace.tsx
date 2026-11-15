@@ -23,7 +23,7 @@ import { Services } from './Services'
 import { Accounts } from './Accounts'
 import { Purposes } from './Purposes'
 import { PersonalSessions } from './PersonalSessions'
-import { inferenceTabParams, resolveInferenceTab } from './models-entry.mjs'
+import { inferenceFocusAccount, inferenceTabParams, resolveInferenceTab } from './models-entry.mjs'
 
 export function InferenceWorkspace({ connectionScope }: { connectionScope?: string }) {
   const i18n = useI18n()
@@ -167,14 +167,16 @@ export function InferenceWorkspace({ connectionScope }: { connectionScope?: stri
 
 
 /**
- * The tab lives in the URL (`?tab=`), so refresh and shared links reopen it; switching tabs
+ * The tab lives in the URL (`?tab=`), so refresh and shared links reopen it; `?account=<id>` opens
+ * 账号 with that account highlighted (attention items link there). Switching tabs
  * replaces the history entry. A tab the current owner does not have (e.g. purposes for a
  * personal owner) or an unknown value shows the default tab. Editing state remains owned by each page.
  */
 function InferencePages({ management: m, connectionScope }: { management: InferenceManagement; connectionScope?: string }) {
   const i18n = useI18n()
   const [searchParams, setSearchParams] = useSearchParams()
-  const tab = resolveInferenceTab(searchParams.get('tab'), m.view?.hostAdministrator)
+  const focusAccount = inferenceFocusAccount(searchParams.get('account'))
+  const tab = resolveInferenceTab(searchParams.get('tab'), m.view?.hostAdministrator, focusAccount)
   const setTab = (next: string) => setSearchParams(current => inferenceTabParams(current, next), { replace: true })
   if (!m.view) return null
   return (
@@ -194,7 +196,7 @@ function InferencePages({ management: m, connectionScope }: { management: Infere
           </TabsContent>
           <TabsContent value="services"><Services management={m} /></TabsContent>
           <TabsContent value="accounts">
-            <Accounts management={m} />
+            <Accounts management={m} focusAccount={tab === 'accounts' ? focusAccount : undefined} />
           </TabsContent>
           {m.view.hostAdministrator ? (
             <TabsContent value="purposes">

@@ -1,6 +1,6 @@
 import { useI18n } from '../../i18n'
 import { useEffect, useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { SelectField } from '../../components/ui/select'
@@ -8,6 +8,7 @@ import { SearchableSelectField, type SearchableSelectOption } from '../../compon
 import { supportLabel } from './SupportInfo'
 import { Card } from '../../components/ui/card'
 import { useConfirm } from '../../components/confirm-dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu'
 import {
   purposePlan,
   profileSupport,
@@ -16,7 +17,14 @@ import {
   newlyBoundLanguageProfiles,
   describeProbe,
   InferenceRequestError,
+  cleanFallbacks,
+  moveFallback,
+  supportsPurposeFallbacks,
+  profileAvailability,
+  describeUnavailability,
+  recentFallbackRows,
   type ProbeResult,
+  type View,
   type Purposes as PurposeState,
   type ScopeModels,
   type Kind,
@@ -115,11 +123,48 @@ export function Purposes({ management: m }: { management: InferenceManagement })
       keywords: choice.keywords,
     })),
   ]
+  // #1250: every language purpose may carry an ordered fallback chain; older Hosts keep only vision's.
+  const fallbacks = supportsPurposeFallbacks(view)
   function defaultValue(key: 'chat' | 'summary' | 'ambient' | 'image', value: string) {
-    setDraft((previous) => ({
-      ...previous,
-      defaults: { ...previous.defaults, [key]: value || undefined },
-    }))
+    setDraft((previous) => {
+      const defaults: PurposeState['defaults'] = { ...previous.defaults, [key]: value || undefined }
+      if (key !== 'image') {
+        const chainKey = `${key}Fallbacks` as const
+        const chain = value ? cleanFallbacks(value, previous.defaults[chainKey]) : []
+        if (chain.length) defaults[chainKey] = chain
+        else delete defaults[chainKey]
+      }
+      return { ...previous, defaults }
+    })
+  }
+  function defaultChain(key: 'chat' | 'summary' | 'ambient', chain: string[]) {
+    setDraft((previous) => {
+      const defaults: PurposeState['defaults'] = { ...previous.defaults, [`${key}Fallbacks`]: chain }
+      if (!chain.length) delete defaults[`${key}Fallbacks`]
+      return { ...previous, defaults }
+    })
+  }
+  function agentValue(name: string, value: string, chain?: string[]) {
+    setDraft((previous) => {
+      const agents: Record<string, string> = { ...previous.agents }
+      const agentFallbacks: Record<string, string[]> = { ...previous.agentFallbacks }
+      if (value) agents[name] = value
+      else delete agents[name]
+      const next = value ? cleanFallbacks(value, chain ?? previous.agentFallbacks?.[name]) : []
+      if (next.length) agentFallbacks[name] = next
+      else delete agentFallbacks[name]
+      const result: PurposeState = { ...previous, agents, agentFallbacks }
+      if (!Object.keys(agentFallbacks).length) delete result.agentFallbacks
+      return result
+    })
+  }
+  /** A scope override's chat model; its chain follows it (cleared with it, never containing it). */
+  function scopeChat(value: ScopeModels, chat: string, chain?: string[]): ScopeModels {
+    const next: ScopeModels = { ...value, chat: chat || undefined }
+    const list = chat ? cleanFallbacks(chat, chain ?? value.chatFallbacks) : []
+    if (list.length) next.chatFallbacks = list
+    else delete next.chatFallbacks
+    return next
   }
   async function loadScenes() {
     try {
@@ -164,7 +209,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
         event.preventDefault()
         const submitted = editor
         if (!(await probeNewBindings())) return
-        await m.savePlan({ version: 1, purposes: purposePlan(draft, view.purposes!) }, {
+        await m.savePlan({ version: 1, purposes: purposePlan(draft, view.purposes!, { fallbacks }) }, {
           source,
           onCommitted: (next) => setEditor((current) => ({
             source: next,
@@ -181,9 +226,13 @@ export function Purposes({ management: m }: { management: InferenceManagement })
           {probing ? i18n.t("正在测试连通性…") : i18n.t("保存")}
         </Button>
       </div>
+      <p className="text-sm text-muted-foreground">
+        {i18n.t("聊天模型的优先级：子 Agent 的绑定高于适配器、账号和会话场景的聊天覆盖，这些覆盖又高于默认聊天模型。")}
+        {fallbacks ? ' ' + i18n.t("主模型额度用完、余额不足或密钥被拒时，按顺序换用这一层配置的备用模型。") : null}
+      </p>
       <Card className="p-4 space-y-4">
         <h4 className="font-medium">{i18n.t("默认模型")}</h4>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {(
             [
               ['chat', i18n.t("聊天")],
@@ -192,21 +241,34 @@ export function Purposes({ management: m }: { management: InferenceManagement })
               ['image', i18n.t("图片生成")],
             ] as const
           ).map(([key, label]) => (
-            <label className="space-y-2 text-sm" key={key}>
-              <span>{label}</span>
-              <SearchableSelectField
-                aria-label={label}
-                value={draft.defaults[key] ?? ''}
-                onValueChange={(value) => defaultValue(key, value)}
-                options={choices(
-                  key === 'image' ? 'image' : 'language',
-                  key === 'summary' || key === 'ambient' ? i18n.t("跟随部署聊天") : i18n.t("未设置")
-                )}
-              />
-            </label>
+            <div className="min-w-0 space-y-2 text-sm" key={key}>
+              <label className="block space-y-2">
+                <span>{label}</span>
+                <SearchableSelectField
+                  aria-label={label}
+                  value={draft.defaults[key] ?? ''}
+                  onValueChange={(value) => defaultValue(key, value)}
+                  options={choices(
+                    key === 'image' ? 'image' : 'language',
+                    key === 'summary' || key === 'ambient' ? i18n.t("跟随部署聊天") : i18n.t("未设置")
+                  )}
+                />
+              </label>
+              {fallbacks && key !== 'image' ? (
+                <FallbackChain
+                  label={label}
+                  view={view}
+                  primary={draft.defaults[key]}
+                  chain={draft.defaults[`${key}Fallbacks`]}
+                  choices={choices('language')}
+                  onChange={(chain) => defaultChain(key, chain)}
+                />
+              ) : null}
+            </div>
           ))}
         </div>
         <Perception
+          view={view}
           value={draft.defaults.perception}
           choices={choices('language', i18n.t("未设置"))}
           onChange={(value) =>
@@ -227,7 +289,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
                 decisions: { ...previous.decisions, [task]: value },
               }))
           return (
-            <div key={task} className="grid gap-3 border-b pb-4 last:border-0 sm:grid-cols-3">
+            <div key={task} className="grid grid-cols-1 gap-3 border-b pb-4 last:border-0 sm:grid-cols-3">
               <span className="text-sm self-center">{label}</span>
               <SelectField
                 aria-label={i18n.t("{0}模式", [label])}
@@ -252,7 +314,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
               {policy ? (
                 <details className="sm:col-span-3 text-sm">
                   <summary className="cursor-pointer text-muted-foreground">{i18n.t("调整决策参数")}</summary>
-                  <div className="grid gap-3 mt-3 sm:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-3 mt-3 sm:grid-cols-3">
                     {(
                       [
                         'timeoutMs',
@@ -302,26 +364,32 @@ export function Purposes({ management: m }: { management: InferenceManagement })
             ...(targets?.agents.map((agent) => agent.name) ?? []),
             ...Object.keys(draft.agents ?? {}),
           ]),
-        ].map((name) => (
-          <label key={name} className="grid gap-3 sm:grid-cols-2 text-sm">
-            <span className="self-center">
-              {targets?.agents.find((agent) => agent.name === name)?.nickname ?? name}
-            </span>
-            <SearchableSelectField
-              aria-label={targets?.agents.find((agent) => agent.name === name)?.nickname ?? name}
-              value={draft.agents?.[name] ?? ''}
-              onValueChange={(value) =>
-                setDraft((previous) => {
-                  const agents: Record<string, string> = { ...previous.agents }
-                  if (value) agents[name] = value
-                  else delete agents[name]
-                  return { ...previous, agents }
-                })
-              }
-              options={choices('language', i18n.t("跟随聊天"))}
-            />
-          </label>
-        ))}
+        ].map((name) => {
+          const label = targets?.agents.find((agent) => agent.name === name)?.nickname ?? name
+          return (
+            <div key={name} className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm">
+              <span className="self-center">{label}</span>
+              <SearchableSelectField
+                aria-label={label}
+                value={draft.agents?.[name] ?? ''}
+                onValueChange={(value) => agentValue(name, value)}
+                options={choices('language', i18n.t("跟随聊天"))}
+              />
+              {fallbacks ? (
+                <div className="min-w-0 sm:col-span-2">
+                  <FallbackChain
+                    label={label}
+                    view={view}
+                    primary={draft.agents?.[name]}
+                    chain={draft.agentFallbacks?.[name]}
+                    choices={choices('language')}
+                    onChange={(chain) => agentValue(name, draft.agents?.[name] ?? '', chain)}
+                  />
+                </div>
+              ) : null}
+            </div>
+          )
+        })}
       </Card>
       <Card className="p-4 space-y-4">
         <h4 className="font-medium">{i18n.t("按场景选择")}</h4>
@@ -358,7 +426,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
           </Button>
         </div>
         {Object.entries(draft[level] ?? {}).map(([key, value]) => (
-          <div key={key} className="space-y-3 rounded-md border p-3">
+          <div key={key} className="min-w-0 space-y-3 rounded-md border p-3">
             <div className="flex justify-between items-center gap-2">
               <span className="text-sm break-all">
                 {candidates.find((item) => item.value === key)?.label ?? i18n.t("已配置目标（当前未列出）")}
@@ -382,11 +450,22 @@ export function Purposes({ management: m }: { management: InferenceManagement })
             <SearchableSelectField
               aria-label={i18n.t("聊天")}
               value={value.chat ?? ''}
-              onValueChange={(chat) => changeScope(key, { ...value, chat: chat || undefined })}
+              onValueChange={(chat) => changeScope(key, scopeChat(value, chat))}
               options={choices('language', i18n.t("继承上层聊天模型"))}
             />
+            {fallbacks ? (
+              <FallbackChain
+                label={i18n.t("聊天")}
+                view={view}
+                primary={value.chat}
+                chain={value.chatFallbacks}
+                choices={choices('language')}
+                onChange={(chain) => changeScope(key, scopeChat(value, value.chat ?? '', chain))}
+              />
+            ) : null}
             {level !== 'scenes' ? (
               <Perception
+                view={view}
                 value={(value as ScopeModels).perception}
                 choices={choices('language', i18n.t("继承上层识图模型"))}
                 onChange={(perception) => changeScope(key, { ...value, perception })}
@@ -405,14 +484,17 @@ export function Purposes({ management: m }: { management: InferenceManagement })
           </p>
         ) : null}
       </Card>
+      {fallbacks ? <RecentFallbacks view={view} /> : null}
     </form>
   )
 }
 function Perception({
+  view,
   value,
   choices,
   onChange,
 }: {
+  view: View
   value?: { profile: string; fallbacks?: string[] }
   choices: SearchableSelectOption[]
   onChange: (value: { profile: string; fallbacks?: string[] } | undefined) => void
@@ -425,59 +507,127 @@ function Perception({
         <SearchableSelectField
           aria-label={i18n.t("识图")}
           value={value?.profile ?? ''}
-          onValueChange={(profile) =>
-            onChange(profile ? { profile, fallbacks: value?.fallbacks } : undefined)
-          }
+          onValueChange={(profile) => {
+            if (!profile) return onChange(undefined)
+            const fallbacks = cleanFallbacks(profile, value?.fallbacks)
+            onChange(fallbacks.length ? { profile, fallbacks } : { profile })
+          }}
           options={choices}
         />
       </label>
-      {value ? (
-        <div className="space-y-2">
-          {(value.fallbacks ?? []).map((id, index) => (
-            <div key={index} className="flex gap-2">
-              <SearchableSelectField
-                className="flex-1"
-                aria-label={i18n.t("识图备用模型 {0}", [index + 1])}
-                value={id}
-                onValueChange={(selected) =>
-                  onChange({
-                    ...value,
-                    fallbacks: value.fallbacks!.map((item, i) => (i === index ? selected : item)),
-                  })
-                }
-                options={choices.filter((item) => item.value)}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={i18n.t("删除备用模型")}
-                onClick={() =>
-                  onChange({ ...value, fallbacks: value.fallbacks!.filter((_, i) => i !== index) })
-                }
-              >
-                <Trash2 />
-              </Button>
-            </div>
-          ))}
-          <SearchableSelectField
-            aria-label={i18n.t("添加识图备用模型")}
-            value=""
-            onValueChange={(id) => {
-              if (id) onChange({ ...value, fallbacks: [...(value.fallbacks ?? []), id] })
-            }}
-            options={[
-              { value: '', label: i18n.t("添加备用模型") },
-              ...choices.filter(
-                (item) =>
-                  item.value &&
-                  item.value !== value.profile &&
-                  !value.fallbacks?.includes(item.value)
-              ),
-            ]}
-          />
-        </div>
-      ) : null}
+      <FallbackChain
+        label={i18n.t("识图")}
+        view={view}
+        primary={value?.profile}
+        chain={value?.fallbacks}
+        choices={choices}
+        onChange={(fallbacks) => {
+          if (value) onChange(fallbacks.length ? { ...value, fallbacks } : { profile: value.profile })
+        }}
+      />
     </div>
+  )
+}
+
+/** A skipped model's note (`modelAvailability.unavailable`), or nothing while it is usable. */
+function AvailabilityNote({ view, profileId }: { view: View; profileId?: string }) {
+  const i18n = useI18n()
+  const entry = profileId ? profileAvailability(view, profileId) : undefined
+  if (!entry) return null
+  return <p className="text-xs text-destructive" role="status">{describeUnavailability(entry, i18n.locale)}</p>
+}
+
+/**
+ * The ordered fallbacks of one language purpose (#1250): add, remove and reorder. Shown only once
+ * the purpose has its own primary model; the chain is written back with it (`{ profile, fallbacks }`).
+ */
+function FallbackChain({
+  label,
+  view,
+  primary,
+  chain,
+  choices,
+  onChange,
+}: {
+  label: string
+  view: View
+  primary?: string
+  chain?: string[]
+  choices: SearchableSelectOption[]
+  onChange: (chain: string[]) => void
+}) {
+  const i18n = useI18n()
+  if (!primary) return null
+  const list = chain ?? []
+  const options = choices.filter((item) => item.value)
+  return (
+    <div className="min-w-0 space-y-2" data-fallback-chain={label}>
+      <AvailabilityNote view={view} profileId={primary} />
+      {list.map((id, index) => (
+        <div key={`${index}:${id}`} className="space-y-1">
+          <div className="flex items-center gap-2">
+            <SearchableSelectField
+              className="min-w-0 flex-1"
+              aria-label={i18n.t("{0}备用模型 {1}", [label, index + 1])}
+              value={id}
+              onValueChange={(selected) =>
+                onChange(cleanFallbacks(primary, list.map((item, i) => (i === index ? selected : item))))
+              }
+              options={options.filter((item) => item.value === id || (item.value !== primary && !list.includes(item.value)))}
+            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="ghost" size="icon" className="shrink-0" aria-label={i18n.t("调整{0}备用模型 {1}", [label, index + 1])}>
+                  <MoreHorizontal />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem disabled={index === 0} onSelect={() => onChange(moveFallback(list, index, -1))}>
+                  <ArrowUp />{i18n.t("上移")}
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled={index === list.length - 1} onSelect={() => onChange(moveFallback(list, index, 1))}>
+                  <ArrowDown />{i18n.t("下移")}
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-destructive" onSelect={() => onChange(list.filter((_, i) => i !== index))}>
+                  <Trash2 />{i18n.t("删除备用模型")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          <AvailabilityNote view={view} profileId={id} />
+        </div>
+      ))}
+      <SearchableSelectField
+        aria-label={i18n.t("添加{0}备用模型", [label])}
+        value=""
+        onValueChange={(id) => {
+          if (id) onChange(cleanFallbacks(primary, [...list, id]))
+        }}
+        options={[
+          { value: '', label: i18n.t("添加备用模型") },
+          ...options.filter((item) => item.value !== primary && !list.includes(item.value)),
+        ]}
+      />
+    </div>
+  )
+}
+
+/** The Host's recent switches to a fallback model (newest first); nothing when there were none. */
+function RecentFallbacks({ view }: { view: View }) {
+  const i18n = useI18n()
+  const rows = recentFallbackRows(view, i18n.locale)
+  if (!rows.length) return null
+  return (
+    <Card className="p-4 space-y-3">
+      <h4 className="font-medium">{i18n.t("最近的备用模型切换")}</h4>
+      <ul className="space-y-1 text-sm" role="list">
+        {rows.map((row) => (
+          <li key={row.key}>
+            {i18n.t("{0}：{1} → {2}（{3}）", [row.purpose, row.from, row.to, row.reason])}
+            <span className="text-muted-foreground"> · {row.at}{row.selection ? ` · ${i18n.t("主模型已被跳过")}` : ''}</span>
+          </li>
+        ))}
+      </ul>
+    </Card>
   )
 }

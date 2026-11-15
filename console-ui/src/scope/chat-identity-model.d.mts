@@ -62,6 +62,10 @@ export declare function filterPrincipals(principals: readonly ChatPrincipalView[
 export declare function grantorLabel(entry: { grantedBy?: string; grantedByName?: string } | undefined): string | undefined
 export declare function grantCandidates(input: { recent?: readonly ChatIdentityView[]; principals?: readonly ChatPrincipalView[]; alias?: string | null; query?: string }): ChatGrantCandidate[]
 export declare function principalsListRequest(scope?: ScopeRef): { type: string; level?: string; key?: string }
+export interface PrincipalsListPlan { requests: Array<{ adapter?: string; request: { type: string; level?: string; key?: string } }>; skipped: string[] }
+export declare function principalsListPlan(adapters?: readonly string[]): PrincipalsListPlan
+export declare function settlePrincipalLists(plan: PrincipalsListPlan, results: readonly PromiseSettledResult<unknown>[]): { error: unknown } | { payload: unknown; failedAdapters: string[] }
+export declare function mergePrincipalPayloads(payloads: readonly unknown[]): { principals: unknown[] }
 export declare function recentIdentitiesRequest(scope?: ScopeRef, limit?: number): { type: string; level: string; key?: string; limit: number }
 export declare function mergeRequest(intoId: string, fromId: string): { type: string; into: { principalId: string }; from: { principalId: string } }
 export declare function splitRequest(identity: { adapter: string; userId: string }): { type: string; adapter: string; userId: string }

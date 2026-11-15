@@ -1,5 +1,5 @@
 import { useI18n } from '../../i18n'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Plus, Pencil, KeyRound, LogIn, Unplug, Trash2, Activity } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -54,8 +54,16 @@ function accountStatusLabel(status: AccountStatus | undefined, t: Translate): st
     default: return t('状态未知')
   }
 }
-export function Accounts({ management: m }: { management: InferenceManagement }) {
+/** DOM id of an account row, so a `?account=` link can bring it into view. */
+function accountRowId(id: string): string {
+  return `inference-account-${encodeURIComponent(id)}`
+}
+export function Accounts({ management: m, focusAccount }: { management: InferenceManagement; focusAccount?: string }) {
   const i18n = useI18n()
+  const focused = focusAccount && Object.hasOwn(m.view!.accounts, focusAccount) ? focusAccount : undefined
+  useEffect(() => {
+    if (focused) globalThis.document?.getElementById(accountRowId(focused))?.scrollIntoView?.({ block: 'center' })
+  }, [focused])
   const view = m.view!,
     [editing, setEditing] = useState<{
       account?: Account
@@ -132,6 +140,11 @@ export function Accounts({ management: m }: { management: InferenceManagement })
           {i18n.t("新增账号")}
         </Button>
       </div>
+      {focusAccount && !focused ? (
+        <p role="status" className="text-sm text-muted-foreground">
+          {i18n.t("链接指向的账号不在这里：它可能已被删除，或属于另一个模型管理身份。")}
+        </p>
+      ) : null}
       {!Object.keys(view.accounts).length ? (
         <Card className="p-8 text-center text-muted-foreground">
           {i18n.t("添加一个模型账号，开始配置模型。")}
@@ -144,7 +157,9 @@ export function Accounts({ management: m }: { management: InferenceManagement })
             return (
               <div
                 key={account.id}
-                className="flex flex-wrap items-center justify-between gap-4 p-4"
+                id={accountRowId(account.id)}
+                aria-current={account.id === focused ? 'true' : undefined}
+                className={`flex flex-wrap items-center justify-between gap-4 p-4${account.id === focused ? ' bg-accent' : ''}`}
               >
                 <div className="min-w-0">
                   <p className="font-medium">

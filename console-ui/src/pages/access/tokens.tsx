@@ -140,7 +140,7 @@ export default function AccessTokensPage() {
                     {canManage ? (
                       <TableCell className="text-right">
                         <Button variant="ghost" size="sm" className="text-destructive" disabled={busy} onClick={() => prepareRevoke(token)}
-                          aria-label={i18n.t("吊销 {0}", [token.name])}><Trash2 /><span className="hidden sm:inline">{i18n.t("吊销")}</span></Button>
+                          aria-label={i18n.t("吊销 {0}", [token.name])}><Trash2 />{i18n.t("吊销")}</Button>
                       </TableCell>
                     ) : null}
                   </TableRow>

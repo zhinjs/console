@@ -30,4 +30,5 @@ export function setConsoleAccess(report: ConsoleAccessReport | null | undefined)
 export function resetConsoleAccess(): void
 export function subscribeConsoleAccess(listener: () => void): () => void
 export function hasConsolePermission(name: string, access?: ConsoleAccess, target?: ConsolePermissionTarget): boolean
+export function scopedAdapters(name: string, access?: ConsoleAccess): string[]
 export function hasAnyConsolePermission(names: readonly string[], access?: ConsoleAccess, target?: ConsolePermissionTarget): boolean

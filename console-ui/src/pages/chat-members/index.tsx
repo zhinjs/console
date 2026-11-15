@@ -4,6 +4,7 @@ import { GitMerge, Pencil, RefreshCw, Scissors, Search, ShieldAlert, UserRound }
 import { useI18n } from '../../i18n'
 import { PageShell } from '../../components/PageShell'
 import { PageHeader } from '../../components/PageHeader'
+import { Alert, AlertDescription } from '../../components/ui/alert'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
 import { Card } from '../../components/ui/card'
@@ -14,12 +15,12 @@ import { StatusState } from '../../components/StatusState'
 import { statusFromError } from '../../components/status-state-model.mjs'
 import { requestConsole } from '../../utils/console-rpc'
 import { useConsoleAccess } from '../../hooks/use-console-access'
-import { hasConsolePermission } from '../../utils/console-access.mjs'
+import { hasConsolePermission, scopedAdapters } from '../../utils/console-access.mjs'
 import { ObjectSection } from '../../scope/ObjectPageLayout'
 import { IdentityChip, MyChatIdentitySection } from '../../scope/ChatIdentityPanels'
 import { CHAT_ROLE_LABELS } from '../../scope/chat-roles-model.mjs'
 import {
-  filterPrincipals, isMissingIdentityRpc, lastSeen, mergeRequest, principalActions, principalName, principalsListRequest, readPrincipals,
+  filterPrincipals, isMissingIdentityRpc, lastSeen, mergeRequest, principalActions, principalName, principalsListPlan, readPrincipals, settlePrincipalLists,
   renameRequest, splitRequest, type ChatIdentityView, type ChatPrincipalView,
 } from '../../scope/chat-identity-model.mjs'
 import '../admin-pages.css'
@@ -27,7 +28,7 @@ import '../../scope/chat-roles.css'
 
 type ListState =
   | { status: 'loading' }
-  | { status: 'ready'; principals: ChatPrincipalView[] }
+  | { status: 'ready'; principals: ChatPrincipalView[]; failedAdapters: string[] }
   | { status: 'unsupported' }
   | { status: 'failed'; error: unknown }
 
@@ -51,13 +52,19 @@ export default function ChatMembersPage() {
   const [query, setQuery] = useState('')
   const [editing, setEditing] = useState<Editing | null>(null)
   const ticket = useRef(0)
+  // Without global iam.manage the Host answers only per adapter: ask for each managed adapter.
+  const adapters = scopedAdapters('iam.manage', access).join('\u0000')
   const load = useCallback(() => {
     const current = ++ticket.current
-    requestConsole<unknown>(principalsListRequest()).then(
-      payload => { if (current === ticket.current) setState({ status: 'ready', principals: readPrincipals(payload) }) },
-      (error: unknown) => { if (current === ticket.current) setState(isMissingIdentityRpc(error) ? { status: 'unsupported' } : { status: 'failed', error }) },
-    )
-  }, [])
+    // One adapter failing (or an alias that is not a scope key) leaves the others listed.
+    const plan = principalsListPlan(adapters ? adapters.split('\u0000') : [])
+    void Promise.allSettled(plan.requests.map(({ request }) => requestConsole<unknown>(request))).then(results => {
+      if (current !== ticket.current) return
+      const settled = settlePrincipalLists(plan, results)
+      if ('error' in settled) setState(isMissingIdentityRpc(settled.error) ? { status: 'unsupported' } : { status: 'failed', error: settled.error })
+      else setState({ status: 'ready', principals: readPrincipals(settled.payload), failedAdapters: settled.failedAdapters })
+    })
+  }, [adapters])
   useEffect(() => { load(); return () => { ticket.current += 1 } }, [load])
   const principals = state.status === 'ready' ? state.principals : []
   const shown = useMemo(() => filterPrincipals(principals, query), [principals, query])
@@ -69,12 +76,20 @@ export default function ChatMembersPage() {
         description={i18n.t('聊天里的「人」：一个人可以有多个平台身份，角色授予属于人。在这里核对身份、归并同一个人在不同平台的账号，或拆分误归并的身份。')}
         actions={<Button variant="outline" size="sm" onClick={load} disabled={state.status === 'loading'}><RefreshCw className={state.status === 'loading' ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>} />
       <MyChatIdentitySection highlight={params.get('me') === '1'} />
-      <ObjectSection title={i18n.t('全部成员')} description={i18n.t('只列出你有 iam.manage 的适配器上的身份；其他适配器上的身份只显示数量。')}>
+      <ObjectSection title={i18n.t('全部成员')} description={i18n.t('有全局 iam.manage 时列出全部成员；只在部分适配器上有 iam.manage 时，只列出这些适配器上的身份，同一个人在其他适配器上的身份只显示数量。')}>
         {state.status === 'unsupported' ? <StatusState kind="unsupported" description={i18n.t('当前 Host 还没有「聊天成员」（chat-principals.*），升级后可在这里管理。')} />
           : state.status === 'failed' ? <StatusState error={state.error} onRetry={load} permissions={['iam.manage']} />
           : state.status === 'loading' ? <StatusState kind="loading" placeholder={<div className="space-y-2">{[0, 1, 2].map(index => <Skeleton key={index} className="h-16" />)}</div>} />
           : (
             <>
+              {state.failedAdapters.length ? (
+                <Alert variant="warning" role="status">
+                  <AlertDescription className="flex flex-wrap items-center gap-2">
+                    <span>{i18n.t('无法读取这些适配器上的成员：{0}。其他适配器的成员照常列出。', [state.failedAdapters.join(i18n.t('、'))])}</span>
+                    <Button variant="outline" size="sm" onClick={load}><RefreshCw />{i18n.t('重试')}</Button>
+                  </AlertDescription>
+                </Alert>
+              ) : null}
               <label className="console-chat-picker-search console-chat-members-search">
                 <Search aria-hidden="true" />
                 <Input value={query} onChange={event => setQuery(event.target.value)} placeholder={i18n.t('按名字、平台用户 ID 或 Console 用户搜索')} aria-label={i18n.t('搜索成员')} />

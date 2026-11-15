@@ -186,6 +186,73 @@ export function principalsListRequest(scope = {}) {
   return { type: CHAT_PRINCIPALS_RPC.LIST, ...(level === 'global' ? {} : { level, key }) }
 }
 
+/**
+ * The `chat-principals.list` requests of the 聊天成员 page: `{ requests: [{ adapter?, request }], skipped }`.
+ * The Host answers an unscoped list only for global `iam.manage`; a manager scoped to some adapters
+ * asks once per adapter (`level: 'adapter'`, which the Host checks against that adapter). An alias
+ * that is not a valid scope key is skipped (`skipped`), never widened to an unscoped request. With
+ * no adapters at all the unscoped request is sent, and the Host's refusal names the permission.
+ */
+export function principalsListPlan(adapters = []) {
+  const list = [...new Set(adapters.filter(alias => typeof alias === 'string' && alias))]
+  if (!list.length) return { requests: [{ request: principalsListRequest() }], skipped: [] }
+  const requests = [], skipped = []
+  for (const adapter of list) {
+    const key = scopeKey({ adapter })
+    if (key) requests.push({ adapter, request: { type: CHAT_PRINCIPALS_RPC.LIST, level: 'adapter', key } })
+    else skipped.push(adapter)
+  }
+  return { requests, skipped }
+}
+
+/**
+ * The page's list from `Promise.allSettled` over `plan.requests`: `{ payload, failedAdapters }` when
+ * at least one reply arrived (adapters that failed or were skipped are named, the rest is shown),
+ * `{ error }` when every request failed.
+ */
+export function settlePrincipalLists(plan, results) {
+  const payloads = [], failed = [...plan.skipped], errors = []
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled') payloads.push(result.value)
+    else { errors.push(result.reason); if (plan.requests[index]?.adapter) failed.push(plan.requests[index].adapter) }
+  })
+  if (!payloads.length && errors.length) return { error: errors[0] }
+  return { payload: payloads.length === 1 ? payloads[0] : mergePrincipalPayloads(payloads), failedAdapters: failed }
+}
+
+/**
+ * One list from per-adapter `chat-principals.list` replies: a person on several of these adapters
+ * appears in each reply with only that adapter's identities, so the identities are united and the
+ * hidden count is what is left of the person's total.
+ */
+export function mergePrincipalPayloads(payloads) {
+  const people = new Map()
+  for (const payload of payloads) {
+    const rows = isRecord(payload) && Array.isArray(payload.principals) ? payload.principals : []
+    for (const row of rows) {
+      if (!isRecord(row) || !text(row.id)) continue
+      const identities = Array.isArray(row.identities) ? row.identities.filter(isRecord) : []
+      const total = identities.length + (Number.isInteger(row.hiddenIdentities) && row.hiddenIdentities > 0 ? row.hiddenIdentities : 0)
+      const previous = people.get(row.id)
+      if (!previous) {
+        people.set(row.id, { row, identities: [...identities], total, unverified: row.unverified === true })
+        continue
+      }
+      const seen = new Set(previous.identities.map(item => `${item.adapter}\u0000${item.userId}`))
+      for (const identity of identities) if (!seen.has(`${identity.adapter}\u0000${identity.userId}`)) previous.identities.push(identity)
+      previous.total = Math.max(previous.total, total)
+      previous.unverified ||= row.unverified === true
+    }
+  }
+  return {
+    principals: [...people.values()].map(({ row, identities, total, unverified }) => {
+      const { hiddenIdentities: _hidden, unverified: _unverified, ...rest } = row
+      const hidden = Math.max(0, total - identities.length)
+      return { ...rest, identities, ...(hidden ? { hiddenIdentities: hidden } : {}), ...(unverified ? { unverified: true } : {}) }
+    }),
+  }
+}
+
 export function recentIdentitiesRequest(scope = {}, limit = 50) {
   const key = scopeKey(scope)
   const level = key === null || key === '' ? 'global' : parseScopeKey(key).level

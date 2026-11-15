@@ -104,10 +104,32 @@ export interface View {
     support?: SupportMetadata
   }>
   purposes?: Purposes
+  modelAvailability?: ModelAvailabilityView
 }
 export interface ScopeModels {
   chat?: string
+  /** Ordered fallbacks of `chat` (#1250; the Host's graph shape). Absent on older Hosts. */
+  chatFallbacks?: string[]
   perception?: { profile: string; fallbacks?: string[] }
+}
+export type ModelFallbackReason = 'quota_exhausted' | 'billing' | 'auth' | 'timeout' | 'context_overflow'
+export interface ModelUnavailability { accountId: string; model: string; reason: ModelFallbackReason; since: number; until: number }
+export interface ModelFallbackEndpoint { profileId: string; accountId: string; model: string }
+export interface ModelFallbackEvent {
+  purpose: string
+  from: ModelFallbackEndpoint
+  to: ModelFallbackEndpoint
+  reason: ModelFallbackReason
+  phase: 'selection' | 'request'
+  at: number
+  fromUntil?: number
+  notice: string
+}
+/** Host administrators only (#1250): skipped models and recent switches. */
+export interface ModelAvailabilityView {
+  notice: string
+  unavailable: ModelUnavailability[]
+  recentFallbacks: ModelFallbackEvent[]
 }
 export interface DecisionPolicy {
   profile?: string
@@ -119,12 +141,13 @@ export interface DecisionPolicy {
   maxSelections?: number
 }
 export interface Purposes {
-  defaults: ScopeModels & { summary?: string; image?: string; ambient?: string }
+  defaults: ScopeModels & { summary?: string; summaryFallbacks?: string[]; image?: string; ambient?: string; ambientFallbacks?: string[] }
   decisions?: Record<string, DecisionPolicy>
   agents?: Record<string, string>
+  agentFallbacks?: Record<string, string[]>
   adapters?: Record<string, ScopeModels>
   endpoints?: Record<string, ScopeModels>
-  scenes?: Record<string, { chat?: string }>
+  scenes?: Record<string, { chat?: string; chatFallbacks?: string[] }>
 }
 export interface Owner {
   id: string
@@ -171,7 +194,15 @@ export function selectableLanguageProfiles(
   locale?: 'zh-CN' | 'en'
 ): Array<{ id: string; label: string; selection: ProfileSelection; support?: SupportMetadata }>
 export function schemaField(schema?: Record<string, unknown>): SchemaField
-export function purposePlan(draft: Purposes, original?: Purposes): unknown
+export function purposePlan(draft: Purposes, original?: Purposes, options?: { fallbacks?: boolean }): unknown
+export function cleanFallbacks(primary: string, chain: readonly string[] | undefined): string[]
+export function languageReference(profile: string, chain?: readonly string[]): { profile: string; fallbacks?: string[] }
+export function supportsPurposeFallbacks(view: Pick<View, 'modelAvailability'> | null | undefined): boolean
+export function moveFallback(chain: readonly string[] | undefined, index: number, delta: number): string[]
+export function profileAvailability(view: View, profileId: string, now?: number): ModelUnavailability | undefined
+export function describeUnavailability(entry: ModelUnavailability | undefined, locale?: 'zh-CN' | 'en'): string
+export interface RecentFallbackRow { key: string; purpose: string; from: string; to: string; reason: string; at: string; selection: boolean }
+export function recentFallbackRows(view: View, locale?: 'zh-CN' | 'en'): RecentFallbackRow[]
 export interface Targets {
   agentsAvailable: boolean
   agents: Array<{ name: string; nickname?: string }>

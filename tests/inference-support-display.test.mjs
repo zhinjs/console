@@ -68,7 +68,8 @@ async function fixture() {
       DialogContent: 'content', DialogHeader: 'header', DialogTitle: 'title', DialogDescription: 'description' },
     '../../components/confirm-dialog': { useConfirm: () => ({ confirm: () => false, ConfirmDialog: null }) },
     './SchemaFields': { SchemaFields: 'schema' }, './ModelCapabilities': { ModelCapabilities: 'capabilities' },
-    'lucide-react': { Plus: 'icon', Pencil: 'icon', Trash2: 'icon', RefreshCw: 'icon', KeyRound: 'icon', LogIn: 'icon', Unplug: 'icon' },
+    'lucide-react': { Plus: 'icon', Pencil: 'icon', Trash2: 'icon', RefreshCw: 'icon', KeyRound: 'icon', LogIn: 'icon', Unplug: 'icon', ArrowDown: 'icon', ArrowUp: 'icon', MoreHorizontal: 'icon' },
+    '../../components/ui/dropdown-menu': { DropdownMenu: 'dropdown-menu', DropdownMenuContent: 'dropdown-content', DropdownMenuItem: 'dropdown-item', DropdownMenuTrigger: 'dropdown-trigger' }, 
     './model.mjs': model, './inference/model.mjs': model, './personal-session-model.mjs': personal,
   }
   async function load(filename, extra = {}) {

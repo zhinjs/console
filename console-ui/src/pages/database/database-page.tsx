@@ -226,8 +226,8 @@ export default function DatabasePage() {
                         aria-label={i18n.t("删除{0} {1}", [objectLabel, selectedTable])}
                         onClick={() => setDeleteTarget({ name: selectedTable, label: objectLabel })}
                       >
-                        <Trash2 className="w-3.5 h-3.5 sm:mr-1" />
-                        <span className="hidden sm:inline">{i18n.t("删除{0}", [objectLabel])}</span>
+                        <Trash2 />
+                        {i18n.t("删除{0}", [objectLabel])}
                       </Button>
                     )}
                   </div>

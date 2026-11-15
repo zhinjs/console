@@ -219,12 +219,12 @@ export function SchemaFieldEditor({ name, field: sourceField, value: rawValue, o
   const valueActions: ReactNode[] = []
   if (!inheritActions && editable) {
     const original = drafts?.originals?.get(path)
-    if (drafts?.originals?.has(path) && !sameValue(rawValue, original)) valueActions.push(<Button key="revert" type="button" variant="ghost" size="sm" title={i18n.t("撤销修改，恢复原值或默认值")} onClick={event => { keepGroupState(event); clearEditorDraftSubtree(path, drafts, onValidityChange); onChange(original === undefined ? undefined : structuredClone(original)) }}><Undo2 /><span className="sr-only sm:not-sr-only">{i18n.t("撤销")}</span></Button>)
-    if (clearable && rawValue !== undefined) valueActions.push(<Button key="clear" type="button" variant="ghost" size="sm" title={hasDefault ? i18n.t("清空（使用声明默认值）") : i18n.t("清空（保存时省略此项）")} onClick={event => { keepGroupState(event); clearEditorDraftSubtree(path, drafts, onValidityChange); onChange(undefined) }}><Eraser /><span className="sr-only sm:not-sr-only">{useDeclaredDefaults && hasDefault ? i18n.t("恢复默认") : i18n.t("清空")}</span></Button>)
+    if (drafts?.originals?.has(path) && !sameValue(rawValue, original)) valueActions.push(<Button key="revert" type="button" variant="ghost" size="sm" title={i18n.t("撤销修改，恢复原值或默认值")} onClick={event => { keepGroupState(event); clearEditorDraftSubtree(path, drafts, onValidityChange); onChange(original === undefined ? undefined : structuredClone(original)) }}><Undo2 />{i18n.t("撤销")}</Button>)
+    if (clearable && rawValue !== undefined) valueActions.push(<Button key="clear" type="button" variant="ghost" size="sm" title={hasDefault ? i18n.t("清空（使用声明默认值）") : i18n.t("清空（保存时省略此项）")} onClick={event => { keepGroupState(event); clearEditorDraftSubtree(path, drafts, onValidityChange); onChange(undefined) }}><Eraser />{useDeclaredDefaults && hasDefault ? i18n.t("恢复默认") : i18n.t("清空")}</Button>)
   }
   if (field.type === 'union' && !conversationScope && !constUnion) return <UnionValueEditor {...nested} label={title} actions={[...valueActions, ...actionList(actions)]} />
   const contentActions: ReactNode[] = []
-  if (canAppend) contentActions.push(<Button key="add" type="button" variant="outline" size="sm" title={i18n.t("添加列表项")} onClick={event => { keepGroupState(event); event?.currentTarget?.closest('details')?.setAttribute('open', ''); onChange(appendedListItem(field, value)) }}><Plus /><span className="sr-only sm:not-sr-only">{i18n.t("添加列表项")}</span></Button>)
+  if (canAppend) contentActions.push(<Button key="add" type="button" variant="outline" size="sm" title={i18n.t("添加列表项")} onClick={event => { keepGroupState(event); event?.currentTarget?.closest('details')?.setAttribute('open', ''); onChange(appendedListItem(field, value)) }}><Plus />{i18n.t("添加列表项")}</Button>)
   const passed = actionList(actions)
   // Title row holds only buttons; a union branch reuses the union's value controls instead of its own.
   const headerActions = [...contentActions, ...(inheritActions ? [] : valueActions), ...passed]

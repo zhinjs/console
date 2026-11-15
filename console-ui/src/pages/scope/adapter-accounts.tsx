@@ -79,12 +79,12 @@ export function ManagedAccountControls({ row }: { row: HeadlessAccountRow }) {
       ) : null}
       {row.can.edit ? (
         <Button variant="ghost" size="sm" disabled={row.disabled} onClick={row.edit} aria-label={i18n.t('编辑账号 {0}', [row.endpointId])}>
-          <Pencil /><span className="max-md:sr-only">{i18n.t('编辑')}</span>
+          <Pencil />{i18n.t('编辑')}
         </Button>
       ) : null}
       {row.can.remove ? (
         <Button variant="ghost" size="sm" disabled={row.disabled || row.busy.remove} onClick={() => void remove()} aria-label={i18n.t('删除账号 {0}', [row.endpointId])}>
-          <Trash2 /><span className="max-md:sr-only">{i18n.t('删除')}</span>
+          <Trash2 />{i18n.t('删除')}
         </Button>
       ) : null}
       {ConfirmDialog}
