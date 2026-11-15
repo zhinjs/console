@@ -1908,6 +1908,8 @@ export const englishMessages = Object.freeze({
   "频道 {0}": "Channel {0}",
   "部分会话未能读取，当前显示已获取的会话。": "Some conversations could not be loaded. Showing those already retrieved.",
   "会话列表读取失败，请重试。": "Failed to read conversations. Try again.",
+  "Host 的运行列表里没有这个账号，所以没有在线状态可读。在「接入」页签查看它的配置，或把它导入账号管理。": "The Host is not running this account, so there is no live state to read. Open the Access tab to see its configuration or import it into account management.",
+  "打开「接入」": "Open Access",
   "另有 {0} 条回复，打开会话记录查看": "Replies not shown: {0}. Open the conversation records",
   "另有 {0} 条回复": "Replies not shown: {0}",
   "当前 Host 不支持读取会话列表，升级 Host 后再试。": "This Host cannot list conversations yet. Upgrade the Host, then try again.",

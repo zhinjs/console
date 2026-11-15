@@ -22,21 +22,26 @@ export function ObjectFacts({ items }: { items: readonly { label: string; value:
   )
 }
 
-/** `endpoint.info` for one account; `info` stays null while loading or when the Host does not know it. */
-export function useEndpointInfo(adapter: string, endpoint: string) {
+/**
+ * `endpoint.info` for one account; `info` stays null while loading or when the Host does not know it.
+ * `enabled: false` holds the read back (nothing is asked; `loaded` stays false) until the account
+ * list says the Host runs the account.
+ */
+export function useEndpointInfo(adapter: string, endpoint: string, enabled = true) {
   const i18n = useI18n()
   const [state, setState] = useState<{ info: EndpointSummaryItem | null; error: unknown; loaded: boolean }>({ info: null, error: null, loaded: false })
   const [attempt, setAttempt] = useState(0)
   useInstanceRecovery(() => setAttempt(value => value + 1))
   useEffect(() => {
+    if (!enabled) return
     let cancelled = false
     requestConsole<unknown>({ type: ENDPOINT_RPC.INFO, ...endpointAddress(adapter, endpoint) }).then(
       data => { if (!cancelled) setState({ info: readEndpointList({ endpoints: [data] }, i18n.locale)[0] ?? null, error: null, loaded: true }) },
       (error: unknown) => { if (!cancelled) setState({ info: null, error, loaded: true }) },
     )
     return () => { cancelled = true }
-  }, [adapter, endpoint, i18n.locale, attempt])
-  return state
+  }, [adapter, endpoint, i18n.locale, attempt, enabled])
+  return enabled ? state : { info: null, error: null, loaded: false }
 }
 
 /** 功能 tab below 全局: switches and overrides of this level, with what it inherits and what is locked. */

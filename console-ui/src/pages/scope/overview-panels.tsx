@@ -395,9 +395,11 @@ function ConversationLinkList({ items, adapter, endpoint }: { items: readonly Co
  * 概览 of an account: an information card with its key state, and a summary of its conversations
  * (those with overrides and the most recent ones). The full, searchable list is in 聊天.
  */
-export function EndpointOverview({ scope, endpointInfo, onOpenTab }: {
+export function EndpointOverview({ scope, endpointInfo, unlisted = false, onOpenTab }: {
   scope: Scope
   endpointInfo: ReturnType<typeof useEndpointInfo>
+  /** The Host's account list does not contain this account: explain that instead of reading it. */
+  unlisted?: boolean
   onOpenTab: (tab: string) => void
 }) {
   const i18n = useI18n()
@@ -411,7 +413,11 @@ export function EndpointOverview({ scope, endpointInfo, onOpenTab }: {
   const transport = endpointTransportText(info, i18n.locale)
   return (
     <>
-      {loaded && error && !info ? (
+      {unlisted ? (
+        <StatusState compact kind="empty" title={i18n.t('账号 {0} 当前没有运行', [endpoint])}
+          description={i18n.t('Host 的运行列表里没有这个账号，所以没有在线状态可读。在「接入」页签查看它的配置，或把它导入账号管理。')}
+          actions={<Button size="sm" variant="outline" onClick={() => onOpenTab('access')}>{i18n.t('打开「接入」')}</Button>} />
+      ) : loaded && error && !info ? (
         <StatusState compact error={error} description={i18n.t('读取账号状态失败。会话与其他页签仍可使用。')} />
       ) : info ? (
         <ObjectFacts items={[
