@@ -74,7 +74,7 @@ Console 没有单独的演示构建：公开演示是一台真实 Host，访客�
 - 底部日志面板（`components/log-panel/`）：在任何页面打开实时运行日志而不离开当前页——顶栏按钮、快捷键 Ctrl `、快速跳转里的「打开日志面板」，或页面调用 `openLogPanel({ q, adapter, endpoint, level })`（账号「接入」的登录卡片「查看日志」、插件详情「相关日志」、定时任务「调度日志」、入群欢迎「查看相关日志」）。面板渲染与 `/logs` 相同的 `LogViewer`，筛选放在面板自己的状态里（不改地址栏，上次的筛选与高度记在本机），「在日志页打开」带着同一组筛选去 `/logs`。宽屏停靠在底部、占满内容宽度、可拖动或用键盘调高度，非模态（页面照常可用，页面底部让出面板高度）；手机上是模态底部抽屉。只对能看 `/logs`（`status.view`）的身份出现；只在打开时轮询，在 `/logs` 页上不显示。
 - 实例不可用（网关 503 `instance_unavailable` / 504 `instance_timeout` / 502 `instance_error`）时 shell 顶部显示横幅：Retry-After 倒计时、自动重试、去「实例」页；访问控制、实例、终端等网关页不受影响。
 - 旧路由保留为隐藏重定向（`LEGACY_ROUTE_REDIRECTS`）：`/endpoints` → `/scope`、`/endpoints/:a/:e` → 账号「聊天」（带 `channelType` + `channelId` 时到该会话的「聊天」）、`/features/adapters[/:a]` → `/scope[/:a]`、`/features/adapters/:a/endpoints/:e` → 账号「功能」（`?tab=conversations` → 账号概览）、`…/conversations/:c` → 会话「功能」；`/config` → `/ops/config`（`/config?plugin=x` → `/features/global/x`）、`/env` `/files` `/database` → `/ops/*`、`/tasks` `/cron` `/assistant/jobs` → `/ops/schedules`、`/agent/models` `/agent/skills` `/agent/ambient` `/agent/workrooms*` → `/features/ai/*`。
-- 插件页面按 `/entries` 里声明的 `section`（区 id 如 `ops`，或区名如 `运维`）落区，未声明的进「功能」。`常用`、`机器人`、`高级` 等旧分组名仍可用，不是区名的分组显示在「功能」里。
+- 插件页面是插件详情的页签（zhinjs/zhin ADR 0063 决策 3，修订 ADR 0052 的落区规则）：挂在 `/plugins/<插件名>/<页面名>`（`pages/index` 的页面名是 `index`），外壳标题区就是插件详情的标题区，页面自己的标题是页签名，顶栏菜单里没有插件页面。旧的顶层路径（如 `/rss`）重定向到新路径（`registerPluginPageRedirect`，与 `LEGACY_ROUTE_REDIRECTS` 一样保留查询串、不进快速跳转）。适配器页面不再单独挂载：旧路径重定向到适配器对象页 `/scope/<适配器>`，那里的「管理连接」嵌着同一个页面。页面在 `/entries` 里仍声明 `section` 时忽略并在控制台告警一次。快速跳转按插件名、包名、页面标题（各语言）、插件说明和页面的 `keywords`（`string[]` 或 `{ [locale]: string[] }`）搜索插件页面，分组为「插件」；包名与插件说明在 `/entries` 不带时取自 `/api/plugins`。纯逻辑在 `console-ui/src/plugin-pages.mjs` 与 `navigation-taxonomy.ts` 的 `planPluginRoute`。
 
 「群聊插话」（`/features/ai/ambient`）：状态来自 `pluginRpc('root', 'ambient')`（Host 方法 `plugin.root.ambient`，需要令牌持有 `ambient:read`）。行为和范围设置用 `config:patch` + `expectedRevision` 只写 `ai.trigger.ambient`，文件保存与运行生效分别显示。旁听模型与旁听决策模型在统一模型用途页配置。
 
@@ -90,7 +90,7 @@ Console 没有单独的演示构建：公开演示是一台真实 Host，访客�
 
 「访问控制」（zhinjs/zhin ADR 0049）：四个页面都走 `iam.*` RPC（`pages/access/`），需要 `iam.view`；新建、改角色、禁用、删除、重置密码、角色增删改、吊销令牌需要 `iam.manage`，没有时页面只读。删除、禁用、吊销先确认，删除用户/角色要输入名称。Host 拒绝移除最后一个所有者（`code: last_owner`）时显示专门的提示。权限目录与 `IAM_RPC` 从 `@zhin.js/console-protocol` 导入（`pages/access/access-model.mjs` 只按区域排列清单顺序）；插件声明的权限（`iam.roles.list` 回复里的 `pluginPermissions`）按插件分组显示，Host 没有报告时只显示内置目录。
 
-插件约定页没有声明分区时，按路由在 `PLUGIN_PAGE_PLACEMENT` 里归区（目前只有 `/sandbox` → 会话），其余进「功能」。
+唯一留在顶栏的插件页面是 Sandbox：`PLUGIN_PAGE_PLACEMENT` 把 `/sandbox` 放在「会话」（ADR 0063 D12）。项目自己的页面（owner 为 `root`，路径 `/p-<名>`）没有插件详情可挂，仍按声明的分区落区、未声明的进「功能」的「插件页面」组。
 
 ## 目录
 

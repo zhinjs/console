@@ -1,4 +1,4 @@
-import { LEGACY_ROUTE_REDIRECTS } from '../console-routes.mjs'
+import { LEGACY_ROUTE_REDIRECTS, isPluginPageRedirect } from '../console-routes.mjs'
 
 /**
  * Purpose text and search keywords for builtin Console pages.
@@ -61,7 +61,34 @@ export function isCommandRoute(route) {
   if (typeof path !== 'string' || !path.startsWith('/')) return false
   if (/[:*]/u.test(path)) return false
   if (COMMAND_EXCLUDED_PATHS.includes(path)) return false
+  // A plugin page's old path redirects to its tab, which is listed instead. An adapter page's old
+  // path is the one entry for that page (`meta.pluginTab`), opening the adapter object page.
+  if (isPluginPageRedirect(path) && !route.meta?.pluginTab) return false
   return route.meta?.commandPalette !== false
+}
+
+const words = (...values) => values.flat().filter(value => typeof value === 'string' && value.trim())
+
+/**
+ * Palette fields of a plugin page (ADR 0063 决策 3): it opens `href` (its plugin detail tab, or the
+ * adapter object page) and is found by plugin name, package name, page title (every language),
+ * plugin description, page description and the page's `keywords`. `directory` adds the package name
+ * and description `/api/plugins` reports when `/entries` does not carry them. Null for other routes.
+ */
+export function pluginPageCommand(route, directory = {}) {
+  const tab = route?.meta?.pluginTab
+  if (!tab || typeof tab.plugin !== 'string' || typeof tab.href !== 'string') return null
+  const known = Object.hasOwn(directory ?? {}, tab.plugin) ? directory[tab.plugin] : {}
+  const packageName = tab.packageName ?? known.packageName
+  const pluginDescription = tab.pluginDescription ?? known.description
+  const titles = route.meta?.titleI18n && typeof route.meta.titleI18n === 'object' ? Object.values(route.meta.titleI18n) : []
+  return {
+    path: tab.href,
+    plugin: tab.plugin,
+    ...(packageName ? { packageName } : {}),
+    ...(pluginDescription ?? tab.description ? { description: pluginDescription ?? tab.description } : {}),
+    keywords: [...new Set(words(tab.plugin, known.name ?? [], packageName ?? [], route.name ?? [], titles, pluginDescription ?? [], tab.description ?? [], tab.keywords ?? []))],
+  }
 }
 
 /** Relevance of a palette entry for the query; 0 hides it. Every query term must match somewhere. */

@@ -21,3 +21,6 @@ export function conversationHref(adapter: string, endpoint: string, kind: Conver
 export function matchLegacyPattern(pattern: string, pathname: string): Record<string, string> | null
 export const LEGACY_ROUTE_REDIRECTS: Readonly<Record<string, Readonly<{ to: string; tab?: string }>>>
 export function resolveLegacyRedirect(pathname: string, search?: string): string | null
+export function registerPluginPageRedirect(from: string, to: string): void
+export function isPluginPageRedirect(path: string): boolean
+export function clearPluginPageRedirects(): void

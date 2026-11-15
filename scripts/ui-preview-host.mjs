@@ -435,12 +435,12 @@ async function gatewayOwned(url, request, json, readBody) {
   return false
 }
 
-// ---- Plugin pages for the navigation (UI_PREVIEW_PLUGIN_PAGES=1, zhinjs/zhin#1250 console-nav-ia) ----
+// ---- Plugin pages (UI_PREVIEW_PLUGIN_PAGES=1): tabs of their plugin detail page (ADR 0063 决策 3) ----
 const pluginPagesMode = process.env.UI_PREVIEW_PLUGIN_PAGES === '1'
 const PREVIEW_PLUGIN_PAGES = [
   { id: 'rss', owner: 'rss', route: '/rss', title: 'RSS 订阅', en: 'RSS feeds', icon: 'Rss', order: 20 },
   { id: 'calendar', owner: 'calendar', route: '/calendar', title: '日历', en: 'Calendar', icon: 'Calendar', order: 21 },
-  { id: 'lottery', owner: 'lottery', route: '/lottery', title: '彩票', en: 'Lottery', icon: 'Ticket', order: 22 },
+  { id: 'lottery', owner: 'lottery', route: '/lottery', title: '彩票', en: 'Lottery', icon: 'Ticket', order: 22, keywords: { 'zh-CN': ['抽奖'], en: ['raffle'] } },
   { id: 'qrcode', owner: 'qrcode', route: '/qrcode', title: '二维码', en: 'QR codes', icon: 'QrCode', order: 23 },
   { id: 'short-url', owner: 'short-url', route: '/short-url', title: '短链', en: 'Short links', icon: 'Link', order: 24 },
   // Adapter pages: the same connection management 会话 → 账号与会话 embeds.
@@ -541,7 +541,7 @@ const server = createServer(async (request, response) => {
     request.on('close', () => clearInterval(heartbeat)); return
   }
   if (url.pathname === '/entries') {
-    json(pluginPagesMode ? { entries: PREVIEW_PLUGIN_PAGES.map(page => ({ id: page.id, owner: page.owner, route: page.route, resolvedModule: `/preview-pages/${page.id}.js` })) } : []); return
+    json(pluginPagesMode ? { entries: PREVIEW_PLUGIN_PAGES.map(page => ({ id: page.id, owner: page.owner, route: page.route, resolvedModule: `/preview-pages/${page.id}.js`, ...(page.keywords ? { meta: { keywords: page.keywords } } : {}), ...(page.adapter ? { blueprint: { kind: 'zhin.console.adapter-page', adapterKey: page.adapter } } : {}) })) } : []); return
   }
   if (url.pathname.startsWith('/api/agent/inference')) {
     const sub = url.pathname.slice('/api/agent/inference'.length)

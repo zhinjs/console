@@ -6,3 +6,14 @@ export function commandScore(
   target: { title: string; path: string; group: string; description: string; keywords?: readonly string[] },
   rawQuery: string,
 ): number
+export interface PluginPageCommand {
+  readonly path: string
+  readonly plugin: string
+  readonly packageName?: string
+  readonly description?: string
+  readonly keywords: readonly string[]
+}
+export function pluginPageCommand(
+  route: { name?: string; meta?: Record<string, unknown> } | null | undefined,
+  directory?: Readonly<Record<string, { name?: string; packageName?: string; description?: string }>>,
+): PluginPageCommand | null

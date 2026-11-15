@@ -3416,4 +3416,6 @@ export const englishMessages = Object.freeze({
   "仍然保存的话，使用这些用途的对话可能没有回复。确定保存吗？": "If you save anyway, conversations using these purposes may get no reply. Save anyway?",
   "仍然保存": "Save anyway",
   "正在测试连通性…": "Testing connectivity…",
+  "插件页签": "Plugin tabs",
+  "{0} 插件的页面": "Page of the {0} plugin",
 })
