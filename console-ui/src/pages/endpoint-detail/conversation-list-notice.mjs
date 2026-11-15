@@ -12,6 +12,14 @@ const FAILED_LIST_COPY = Object.freeze({
   disconnected: '与 Host 的连接已断开，恢复后点刷新重新读取会话列表。',
 })
 
+/** The adapter has no such list (e.g. sandbox has no channels): not a failure, the section is hidden. */
+const LIST_UNSUPPORTED = /不支持(?:频道|好友|群|群组|私聊)?列表|does not support (?:channel|friend|group)s?(?: list)?|(?:channel|friend|group) list(?:s)? (?:is |are )?not supported/iu
+
+export function listUnsupported(error) {
+  const message = String(error instanceof Error ? error.message : error?.message ?? error ?? '')
+  return LIST_UNSUPPORTED.test(message)
+}
+
 export function conversationListNotice({total, errors = [], causes = [], connected, historyOnly = false}, locale = 'zh-CN') {
   if (errors.length) {
     if (total > 0) return {text: translate(locale, "部分会话未能读取，当前显示已获取的会话。"), tone: 'warning', details: errors.join('；')}

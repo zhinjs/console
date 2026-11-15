@@ -181,7 +181,7 @@ function useAmbientGroupNames(groups: string[]): { names: Map<string, string> | 
         for (const raw of list?.groups ?? []) {
           if (!raw || typeof raw !== 'object') continue
           const group = normalizeGroupRecord(raw as Record<string, unknown>)
-          if (group.group_id > 0 && group.name) next.set(`${list!.adapter}:${group.group_id}`, group.name)
+          if (group.group_id && group.name) next.set(`${list!.adapter}:${group.group_id}`, group.name)
         }
       }
       if (active) setNames(next)

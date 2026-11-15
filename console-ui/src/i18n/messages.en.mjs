@@ -1979,6 +1979,7 @@ export const englishMessages = Object.freeze({
   "加载群成员失败": "Failed to load group members",
   "群管理操作失败": "Group management operation failed",
   "发送到 {0} 失败": "Failed to send to {0}",
+  "平台没有接收这条消息。确认这个账号的客户端已连接后再发送。": "The platform did not accept this message. Make sure this account's client is connected, then send it again.",
   "渠道列表响应格式不正确。": "Invalid endpoint list response.",
   "渠道信息响应格式不正确。": "Invalid endpoint information response.",
   "渠道待办数量响应格式不正确。": "Invalid endpoint pending-count response.",

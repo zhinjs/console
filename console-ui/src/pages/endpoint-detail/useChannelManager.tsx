@@ -1,5 +1,5 @@
 import { useI18n } from '../../i18n'
-import { conversationListNotice, type ConversationListNotice } from './conversation-list-notice.mjs'
+import { conversationListNotice, listUnsupported, type ConversationListNotice } from './conversation-list-notice.mjs'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Hash, MessageSquare, User, Users } from 'lucide-react'
 import { useToast } from '../../components/toast'
@@ -90,6 +90,8 @@ export function useChannelManager(params: {
   const [channelList, setChannelList] = useState<ChannelsEntry[]>([])
   const [listLoading, setListLoading] = useState(false)
   const [listNotice, setListNotice] = useState<ConversationListNotice | null>(null)
+  /** Lists this adapter says it does not have (e.g. sandbox channels): their sections are hidden, not reported. */
+  const [unsupportedLists, setUnsupportedLists] = useState<ReadonlySet<ConversationSectionId>>(() => new Set())
   const [metaIndex, setMetaIndex] = useState<ConversationMetaIndex>(new Map())
   const [nameIndex, setNameIndex] = useState<ConversationNameIndex>(new Map())
 
@@ -238,6 +240,11 @@ export function useChannelManager(params: {
     setListNotice(null)
     const errors: string[] = []
     const causes: unknown[] = []
+    const unsupported = new Set<ConversationSectionId>()
+    const failed = (section: ConversationSectionId, label: string, e: unknown) => {
+      if (listUnsupported(e)) { unsupported.add(section); return }
+      errors.push(i18n.t(label, [(e as Error).message])); causes.push(e)
+    }
     let nextFriends: FriendsEntry[] = []
     let nextGroups: GroupsEntry[] = []
     let nextChannels: ChannelsEntry[] = []
@@ -254,10 +261,10 @@ export function useChannelManager(params: {
             adapter, endpointKey: endpointId,
           })
           nextFriends = normalizeList(f.friends ?? [], normalizeFriendRecord).filter(
-            (x) => x.user_id > 0,
+            (x) => x.user_id !== '',
           )
         } catch (e) {
-          errors.push(i18n.t("好友列表：{0}", [(e as Error).message])); causes.push(e)
+          failed('private', "好友列表：{0}", e)
         }
         try {
           const g = await requestConsole<{ groups: unknown[] }>({
@@ -265,17 +272,17 @@ export function useChannelManager(params: {
             adapter, endpointKey: endpointId,
           })
           nextGroups = normalizeList(g.groups ?? [], normalizeGroupRecord).filter(
-            (x) => x.group_id > 0,
+            (x) => x.group_id !== '',
           )
         } catch (e) {
-          errors.push(i18n.t("群列表：{0}", [(e as Error).message])); causes.push(e)
+          failed('group', "群列表：{0}", e)
         }
       }
 
       try {
         nextChannels = await fetchEndpointChannelCatalog(requestConsole, adapter, endpointId)
       } catch (e) {
-        errors.push(i18n.t("频道列表：{0}", [(e as Error).message])); causes.push(e)
+        failed('channel', "频道列表：{0}", e)
       }
 
       const rpcEmpty =
@@ -297,6 +304,7 @@ export function useChannelManager(params: {
       setFriends(nextFriends)
       setGroups(nextGroups)
       setChannelList(nextChannels)
+      setUnsupportedLists(unsupported)
       await refreshMetadata()
 
       if (!isInboxCacheScopeActive(cacheScope)) return
@@ -383,7 +391,7 @@ export function useChannelManager(params: {
       friends.map((f) =>
         buildEntry(
           String(f.user_id),
-          f.nickname || f.remark || f.user_id.toString(),
+          f.nickname || f.remark || f.user_id,
           'private',
         ),
       ),
@@ -399,9 +407,9 @@ export function useChannelManager(params: {
       channelList.map((c) => buildEntry(c.id, c.name, 'channel', c.parent)),
     ).filter(filterEntry)
 
-    const showPrivate = adapterSupportsPrivateGroups(adapter) || privateEntries.length > 0
-    const showGroup = adapterSupportsPrivateGroups(adapter) || groupEntries.length > 0
-    const showChannel = adapterSupportsChannels(adapter) || channelEntries.length > 0
+    const showPrivate = (adapterSupportsPrivateGroups(adapter) && !unsupportedLists.has('private')) || privateEntries.length > 0
+    const showGroup = (adapterSupportsPrivateGroups(adapter) && !unsupportedLists.has('group')) || groupEntries.length > 0
+    const showChannel = (adapterSupportsChannels(adapter) && !unsupportedLists.has('channel')) || channelEntries.length > 0
 
     const sections: ConversationSection[] = [
       {
@@ -431,7 +439,7 @@ export function useChannelManager(params: {
       return sections.filter((s) => !s.hidden && s.entries.length > 0)
     }
     return sections.filter((s) => !s.hidden)
-  }, [adapter, friends, groups, channelList, listSearch, buildEntry, i18n])
+  }, [adapter, friends, groups, channelList, unsupportedLists, listSearch, buildEntry, i18n])
 
   // A conversation opened from the URL only knows its kind and id. Once the list knows the
   // channel's parent (guild / group) it is added, because sending and history need it.
