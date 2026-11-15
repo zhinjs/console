@@ -17,7 +17,8 @@ import { createConsoleAccess, scopedAdapters } from '../console-ui/src/utils/con
 import { canSeeRoute } from '../console-ui/src/navigation-sections.mjs'
 
 const source = path => readFileSync(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')
-const NOW = Date.UTC(2026, 10, 15, 8, 0, 0)
+// Relative to the real clock: the page compares against Date.now(), so a fixed date turns the cooldown into an expired skip once that hour passes.
+const NOW = Date.now()
 
 function view({ fallbacks = true, purposes } = {}) {
   const profile = (id, model) => ({ id, accountId: 'acc', model, label: id.toUpperCase() })

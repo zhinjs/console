@@ -61,60 +61,29 @@ interface CapabilityExplorerProps<K extends IntrospectionTab> {
   onClearFilter?(): void
 }
 
-const KIND_META: Record<IntrospectionTab, {
-  eyebrow: string
-  title: string
-  description: string
-  icon: typeof Terminal
-}> = {
-  commands: {
-    eyebrow: 'Command catalog',
-    title: '命令目录',
-    description: '按用户入口理解命令路由、参数契约与权限边界。',
-    icon: Terminal,
-  },
-  middlewares: {
-    eyebrow: 'Runtime pipeline',
-    title: '执行管线',
-    description: '按照 Phase 与 Order 查看请求穿过 Runtime 的真实顺序。',
-    icon: GitBranch,
-  },
-  components: {
-    eyebrow: '组件',
-    title: '组件画廊',
-    description: '查看组件并预览效果。',
-    icon: Boxes,
-  },
-  endpoints: {
-    eyebrow: 'Adapter runtime',
-    title: 'Endpoint 状态',
-    description: '从适配器视角检查当前连接与运行状态。',
-    icon: Bot,
-  },
-  bindings: {
-    eyebrow: 'Agent topology',
-    title: 'Agent 关系',
-    description: '理解 Agent、模型 Provider、MCP Server 与 Agent File 的组合。',
-    icon: Network,
-  },
-  tools: {
-    eyebrow: 'Tool registry',
-    title: '工具目录',
-    description: '检查 Agent 可发现的工具、职责说明与注册来源。',
-    icon: Wrench,
-  },
-  'prompt-sections': {
-    eyebrow: 'Prompt governance',
-    title: '提示词片段',
-    description: '查看提示词片段的来源与适用范围。',
-    icon: ScrollText,
-  },
-  mcp: {
-    eyebrow: 'MCP connections',
-    title: 'MCP 服务',
-    description: '观察外部能力服务的连接健康度与工具供给。',
-    icon: Server,
-  },
+const KIND_ICONS: Record<IntrospectionTab, typeof Terminal> = {
+  commands: Terminal,
+  middlewares: GitBranch,
+  components: Boxes,
+  endpoints: Bot,
+  bindings: Network,
+  tools: Wrench,
+  'prompt-sections': ScrollText,
+  mcp: Server,
+}
+
+/** Header copy for each tab, translated through `t` so every string reaches the i18n catalog. */
+function kindCopy(t: (message: string) => string): Record<IntrospectionTab, { eyebrow: string; title: string; description: string }> {
+  return {
+    commands: { eyebrow: t('命令路由'), title: t('命令目录'), description: t('按用户入口理解命令路由、参数契约与权限边界。') },
+    middlewares: { eyebrow: t('运行时管线'), title: t('执行管线'), description: t('按照 Phase 与 Order 查看请求穿过 Runtime 的真实顺序。') },
+    components: { eyebrow: t('组件'), title: t('组件画廊'), description: t('查看组件并预览效果。') },
+    endpoints: { eyebrow: t('适配器运行时'), title: t('Endpoint 状态'), description: t('从适配器视角检查当前连接与运行状态。') },
+    bindings: { eyebrow: t('Agent 拓扑'), title: t('Agent 关系'), description: t('理解 Agent、模型 Provider、MCP Server 与 Agent File 的组合。') },
+    tools: { eyebrow: t('工具注册表'), title: t('工具目录'), description: t('检查 Agent 可发现的工具、职责说明与注册来源。') },
+    'prompt-sections': { eyebrow: t('提示词治理'), title: t('提示词片段'), description: t('查看提示词片段的来源与适用范围。') },
+    mcp: { eyebrow: t('MCP 连接'), title: t('MCP 服务'), description: t('观察外部能力服务的连接健康度与工具供给。') },
+  }
 }
 
 function text(value: unknown, fallback = '—'): string {
@@ -180,9 +149,8 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
 
   const counts = capabilityCountSummary({ pageCount: indexedItems.length, visibleCount: visibleItems.length, total, ownerFilter })
   const selected = visibleItems.find(({ id }) => id === selectedId)?.item ?? visibleItems[0]?.item ?? null
-  const authoredMeta = KIND_META[kind]
-  const meta = { ...authoredMeta, title: i18n.t(authoredMeta.title), description: i18n.t(authoredMeta.description), eyebrow: i18n.t(authoredMeta.eyebrow) }
-  const Icon = meta.icon
+  const meta = kindCopy((message) => i18n.t(message))[kind]
+  const Icon: typeof Terminal = KIND_ICONS[kind]
 
   useEffect(() => {
     setOwnerFilter('')
@@ -606,17 +574,20 @@ function McpGrid({ entries, selectedId, onSelect }: CollectionProps<'mcp'>) {
   )
 }
 
-const PROPERTY_LABELS: Record<string, string> = {
-  name: '名称', pattern: '命令', desc: '说明', description: '说明',
-  owner: '所属插件', plugin: '所属插件', source: '来源文件',
-  parameters: '参数', aliases: '别名', permissions: '权限',
-  phase: '阶段', target: '目标', order: '顺序', adapter: '适配器',
-  online: '在线', status: '状态', provider: '模型提供方', model: '模型',
-  mcpServers: 'MCP 服务', hasAgentFile: 'Agent 文件',
-  qualifiedName: '完整名称', title: '标题', layer: '层级',
-  retention: '保留策略', maxChars: '字符上限', profiles: '适用配置',
-  platforms: '适用平台', generation: '运行代', contentChars: '内容字符数',
-  connected: '已连接', toolCount: '工具数', error: '错误',
+/** Labels for the extra detail fields, translated through `t`. */
+function propertyLabels(t: (message: string) => string): Record<string, string> {
+  return {
+    name: t('名称'), pattern: t('命令'), desc: t('说明'), description: t('说明'),
+    owner: t('所属插件'), plugin: t('所属插件'), source: t('来源文件'),
+    parameters: t('参数'), aliases: t('别名'), permissions: t('权限'),
+    phase: t('阶段'), target: t('目标'), order: t('顺序'), adapter: t('适配器'),
+    online: t('在线'), status: t('状态'), provider: t('模型提供方'), model: t('模型'),
+    mcpServers: t('MCP 服务'), hasAgentFile: t('Agent 文件'),
+    qualifiedName: t('完整名称'), title: t('标题'), layer: t('层级'),
+    retention: t('保留策略'), maxChars: t('字符上限'), profiles: t('适用配置'),
+    platforms: t('适用平台'), generation: t('运行代'), contentChars: t('内容字符数'),
+    connected: t('已连接'), toolCount: t('工具数'), error: t('错误'),
+  }
 }
 
 const STRUCTURED_KEYS = new Set([
@@ -848,6 +819,7 @@ function CapabilityInspector(props: {
   readOnly: boolean
 }) {
   const i18n = useI18n()
+  const labels = propertyLabels((message) => i18n.t(message))
   const { item, kind, readOnly } = props
   const [copied, setCopied] = useState(false)
 
@@ -990,7 +962,7 @@ function CapabilityInspector(props: {
       {extraDetails.length > 0 ? (
         <dl className="console-capability-properties">
           {extraDetails.slice(0, 8).map(([key, value]) => (
-            <div key={key}><dt>{PROPERTY_LABELS[key] ? i18n.t(PROPERTY_LABELS[key]) : key}</dt><dd>{formatValue(value, i18n.locale)}</dd></div>
+            <div key={key}><dt>{labels[key] ?? key}</dt><dd>{formatValue(value, i18n.locale)}</dd></div>
           ))}
         </dl>
       ) : null}
