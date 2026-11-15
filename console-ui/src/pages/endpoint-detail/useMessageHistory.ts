@@ -23,7 +23,7 @@ import { correlateChatRows, matchesMessageConversation, readMessagePush } from '
 import { readMessageHistory, mergeHistoryRows } from './inbox-history-model.mjs'
 import { toRpcChannelParent } from './conversation-labels'
 import { conversationSelectionKey, readComposerDraft, writeComposerDraft } from './composer-draft-model.mjs'
-import { deliveryAfterError, deliveryAfterSend, type DeliveryState } from './chat-workspace-model.mjs'
+import { deliveryAfterError, deliveryAfterSend, deliveryFailureText, type DeliveryState } from './chat-workspace-model.mjs'
 import { draftStoreKey, readDraftStore, updateDraftStore, writeDraftStore } from './chat-draft-store.mjs'
 import { useToast } from '../../components/toast'
 import { ENDPOINT_RPC, INBOX_RPC, SIDE_EVENT_PUSH } from '../../contracts/zhin-console'
@@ -339,7 +339,8 @@ export function useMessageHistory(params: {
       // offered back on the bubble) so Enter cannot send it a second time by accident.
       if (delivery === 'unknown') updateDraftStore<Record<string, string>>(sentStoreKey, 'text', clearSentText)
       if (epoch !== endpointEpoch.current) return
-      updateLocal({ delivery, failure: (e as Error).message })
+      const failure = deliveryFailureText(e, i18n.locale)
+      updateLocal({ delivery, failure })
       if (delivery === 'unknown') {
         setMsgDrafts(clearSentText)
         options?.onSent?.({ draftKey: sentDraftKey })
@@ -347,7 +348,7 @@ export function useMessageHistory(params: {
       // The receipt is on the bubble; a toast only when the user has moved to another conversation.
       if (visibleKey.current !== sentDraftKey) {
         if (delivery === 'unknown') toastError(i18n.t("发送到 {0} 的结果未知，请先在会话里核对", [targetId]))
-        else toastError((e as Error).message, i18n.t("发送到 {0} 失败", [targetId]))
+        else toastError(failure, i18n.t("发送到 {0} 失败", [targetId]))
       }
     } finally {
       if (epoch === endpointEpoch.current) setSending(false)

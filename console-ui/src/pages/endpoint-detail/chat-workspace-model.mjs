@@ -3,7 +3,8 @@
  * which pane a phone shows, whether a composer may exist, how consecutive messages group, and what a
  * message sent from the Console is known to have done. Shared by the components and the tests.
  */
-import { outcomeUnknown, statusFromError } from '../../components/status-state-model.mjs'
+import { STATUS_COPY, outcomeUnknown, statusFromError } from '../../components/status-state-model.mjs'
+import { translate } from '../../i18n/locale.mjs'
 
 /** `?conversation=<kind>:<id>` on the account page's 聊天 tab. */
 export const CHAT_CONVERSATION_PARAM = 'conversation'
@@ -122,4 +123,21 @@ export function deliveryAfterSend(response) {
 /** State after the send RPC failed: `unknown` when it may have been applied (never replay it), else `failed`. */
 export function deliveryAfterError(error) {
   return outcomeUnknown(statusFromError(error)) ? 'unknown' : 'failed'
+}
+
+/** Failures whose cause the user can act on; their own advice replaces the Host's text. */
+const DELIVERY_FAILURE_KINDS = new Set(['forbidden', 'unsupported', 'not-installed', 'instance-unavailable', 'database-busy', 'locked', 'needs-configuration'])
+const CJK = /[\u3400-\u9fff]/u
+
+/**
+ * What a failed send says under the bubble. A Host explanation in Chinese is kept as is (it names the
+ * exact cause); otherwise a known cause gets its advice; a bare English platform error (「Outbound delivery failed.」) becomes a
+ * sentence the user can act on, so the reader never sees untranslated Host text.
+ */
+export function deliveryFailureText(error, locale = 'zh-CN') {
+  const message = String(error instanceof Error ? error.message : error?.message ?? error ?? '').trim()
+  if (message && CJK.test(message) && locale === 'zh-CN') return message
+  const status = statusFromError(error)
+  if (DELIVERY_FAILURE_KINDS.has(status.kind)) return translate(locale, STATUS_COPY[status.kind].description)
+  return translate(locale, '平台没有接收这条消息。确认这个账号的客户端已连接后再发送。')
 }
