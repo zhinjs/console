@@ -390,6 +390,16 @@
   }
 
   /* 截断放在内层，避免内边距里露出半行 */
+  .console-message-more {
+    margin: 0;
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-caption);
+  }
+
+  @media (max-width: 767px) {
+    a.console-message-more { display: inline-flex; min-height: var(--console-touch-target); align-items: center; }
+  }
+
   .console-message-reply > span {
     display: -webkit-box;
     overflow: hidden;

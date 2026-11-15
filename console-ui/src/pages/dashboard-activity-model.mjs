@@ -190,6 +190,19 @@ export function buildMessageFeed(records, limit = 20) {
     .slice(0, limit)
 }
 
+/** Replies shown under one message on the home page; the rest are counted, not listed. */
+export const FEED_REPLY_LIMIT = 2
+
+/**
+ * The replies to show under a feed item, oldest first, and how many more there are. A burst of
+ * replies to one message would otherwise push the rest of the feed off the card.
+ */
+export function visibleReplies(replies, limit = FEED_REPLY_LIMIT) {
+  const ordered = [...(replies ?? [])].sort((a, b) => a.timestamp - b.timestamp)
+  const max = Math.max(0, Math.floor(limit))
+  return { shown: ordered.slice(0, max), hidden: Math.max(0, ordered.length - max) }
+}
+
 /** Seconds between an inbound message and its first reply, when known. */
 export function replyLatencySeconds(item) {
   if (item.direction !== 'inbound' || item.replies.length === 0) return null

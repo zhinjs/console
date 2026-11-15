@@ -1904,6 +1904,8 @@ export const englishMessages = Object.freeze({
   "频道 {0}": "Channel {0}",
   "部分会话未能读取，当前显示已获取的会话。": "Some conversations could not be loaded. Showing those already retrieved.",
   "会话列表读取失败，请重试。": "Failed to read conversations. Try again.",
+  "另有 {0} 条回复，打开会话记录查看": "Replies not shown: {0}. Open the conversation records",
+  "另有 {0} 条回复": "Replies not shown: {0}",
   "当前 Host 不支持读取会话列表，升级 Host 后再试。": "This Host cannot list conversations yet. Upgrade the Host, then try again.",
   "当前身份没有读取会话列表的权限，重试不会成功。请联系管理员授予账号会话的查看权限。": "Your identity is not allowed to list conversations, so retrying will not help. Ask an administrator for permission to view this account's conversations.",
   "Zhin 实例暂时没有响应，会话列表读不到。实例恢复后点刷新。": "The Zhin instance is not responding, so conversations cannot be read. Refresh once the instance is back.",

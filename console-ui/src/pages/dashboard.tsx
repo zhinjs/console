@@ -10,6 +10,7 @@ import {
   hourlyMessageActivity,
   messageRecords,
   replyLatencySeconds,
+  visibleReplies,
   summarizeMessages,
   type HourlyActivityBucket,
   type MessageFeedItem,
@@ -337,6 +338,8 @@ function MessageFeedRow({ item, kindLabel, t }: {
     ? conversationHref(item.adapter, item.endpoint, item.kind as ConversationKind, item.channelId, 'records')
     : null
   // How a reply was paired is a detail: it sits in the tag's tooltip, not under every message.
+  // A burst of replies stays a couple of lines; the rest are one link away.
+  const replies = visibleReplies(item.replies)
   const pairing = latency !== null ? t("可能相关 · 按同一会话的时间先后推测，相隔 {0} 秒", [latency.toFixed(1)]) : t("可能相关 · 按同一会话的时间先后推测")
   return (
     <li className="console-message-row">
@@ -360,9 +363,14 @@ function MessageFeedRow({ item, kindLabel, t }: {
         {item.direction === 'inbound'
           ? <p className="console-message-text">{item.text || '—'}</p>
           : <blockquote className="console-message-reply"><span>{item.text || '—'}</span></blockquote>}
-        {item.replies.map((reply) => (
-          <blockquote key={reply.id} className="console-message-reply" title={pairing}><span>{reply.text || '—'}</span></blockquote>
+        {replies.shown.map((reply) => (
+          <blockquote key={reply.id} className="console-message-reply"><span>{reply.text || '—'}</span></blockquote>
         ))}
+        {replies.hidden > 0
+          ? conversation
+            ? <Link to={conversation} className="console-message-more console-message-link">{t("另有 {0} 条回复，打开会话记录查看", [replies.hidden])}</Link>
+            : <p className="console-message-more">{t("另有 {0} 条回复", [replies.hidden])}</p>
+          : null}
       </div>
     </li>
   )

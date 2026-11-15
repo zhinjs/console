@@ -53,3 +53,5 @@ export function hourlyMessageActivity(records: readonly MessageRecord[], now: nu
 export function summarizeMessages(records: readonly MessageRecord[], since: number): MessageSummary
 export function buildMessageFeed(records: readonly MessageRecord[], limit?: number): MessageFeedItem[]
 export function replyLatencySeconds(item: MessageFeedItem): number | null
+export const FEED_REPLY_LIMIT: number
+export function visibleReplies(replies: readonly MessageReply[] | null | undefined, limit?: number): { shown: MessageReply[]; hidden: number }
