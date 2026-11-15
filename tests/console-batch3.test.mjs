@@ -12,7 +12,7 @@ import { translate } from '../console-ui/src/i18n/locale.mjs'
 import { englishMessages } from '../console-ui/src/i18n/messages.en.mjs'
 import * as model from '../console-ui/src/pages/inference/model.mjs'
 import * as entry from '../console-ui/src/pages/inference/models-entry.mjs'
-import { mergePrincipalPayloads, principalsListRequests, readPrincipals } from '../console-ui/src/scope/chat-identity-model.mjs'
+import { mergePrincipalPayloads, principalsListPlan, readPrincipals, settlePrincipalLists } from '../console-ui/src/scope/chat-identity-model.mjs'
 import { createConsoleAccess, scopedAdapters } from '../console-ui/src/utils/console-access.mjs'
 import { canSeeRoute } from '../console-ui/src/navigation-sections.mjs'
 
@@ -201,9 +201,21 @@ test('chat members: adapter-scoped iam.manage asks the Host per adapter and merg
   ] })
   assert.deepEqual(scopedAdapters('iam.manage', global), [], 'a global grant is not a list of adapters')
   assert.deepEqual(scopedAdapters('iam.manage', scoped), ['qq', 'tg'])
-  assert.deepEqual(principalsListRequests([]), [{ type: 'chat-principals.list' }])
-  assert.deepEqual(principalsListRequests(['qq', 'tg']), [
-    { type: 'chat-principals.list', level: 'adapter', key: 'qq' }, { type: 'chat-principals.list', level: 'adapter', key: 'tg' }])
+  assert.deepEqual(principalsListPlan([]), { requests: [{ request: { type: 'chat-principals.list' } }], skipped: [] })
+  assert.deepEqual(principalsListPlan(['qq', 'tg']).requests, [
+    { adapter: 'qq', request: { type: 'chat-principals.list', level: 'adapter', key: 'qq' } },
+    { adapter: 'tg', request: { type: 'chat-principals.list', level: 'adapter', key: 'tg' } }])
+  // An alias that is no scope key is skipped, never widened to an unscoped (global) request.
+  assert.deepEqual(principalsListPlan(['Bad Alias']), { requests: [], skipped: ['Bad Alias'] })
+  assert.deepEqual(principalsListPlan(['qq', 'Bad Alias']).requests.map(item => item.request.key), ['qq'])
+  // One adapter failing leaves the others listed and names it; every request failing is an error.
+  const plan = principalsListPlan(['qq', 'tg', 'Bad Alias'])
+  const partial = settlePrincipalLists(plan, [{ status: 'rejected', reason: new Error('boom') }, { status: 'fulfilled', value: { principals: [{ id: 'p2', roles: [], identities: [{ adapter: 'tg', userId: '5' }] }] } }])
+  assert.deepEqual(partial.failedAdapters, ['Bad Alias', 'qq'])
+  assert.deepEqual(readPrincipals(partial.payload).map(row => row.id), ['p2'])
+  const none = settlePrincipalLists(principalsListPlan(['qq']), [{ status: 'rejected', reason: 'denied' }])
+  assert.equal(none.error, 'denied')
+  assert.deepEqual(settlePrincipalLists(principalsListPlan(['Bad Alias']), []), { payload: { principals: [] }, failedAdapters: ['Bad Alias'] })
   const person = identities => ({ id: 'p1', displayName: 'Ann', roles: [{ level: 'adapter', key: 'qq', role: 'admin' }], identities, hiddenIdentities: 2 })
   const merged = readPrincipals(mergePrincipalPayloads([
     { principals: [person([{ adapter: 'qq', userId: '1' }])] },
@@ -220,7 +232,8 @@ test('chat members: adapter-scoped iam.manage asks the Host per adapter and merg
   assert.equal(canSeeRoute({ path: '/chat-members' }, endpointOnly), false)
   assert.equal(canSeeRoute({ path: '/access/users' }, onlyScoped), false, 'only the member list counts scoped grants')
   const page = source('pages/chat-members/index.tsx')
-  assert.match(page, /principalsListRequests\(adapters \? adapters\.split\('\\u0000'\) : \[\]\)/u)
+  assert.match(page, /Promise\.allSettled\(plan\.requests\.map/u)
+  assert.match(page, /无法读取这些适配器上的成员：\{0\}。其他适配器的成员照常列出。/u)
   assert.match(page, /只在部分适配器上有 iam\.manage 时，只列出这些适配器上的身份/u)
 })
 
@@ -271,4 +284,32 @@ test('Accounts highlights the linked account, and says so when the link points n
   assert.match(String(status.props.children), /链接指向的账号不在这里/u)
   assert.equal(nodes(runtime.value).some(node => node.props?.['aria-current']), false)
   runtime.unmount()
+})
+
+test('375px: purpose grids use a shrinkable single column and chain rows keep the menu button in view', () => {
+  const purposes = source('pages/inference/Purposes.tsx')
+  // A grid without explicit columns sizes its implicit column to the widest select (content
+  // minimum), which pushed the 「⋯」 buttons past a 375px viewport. `grid-cols-1` is minmax(0,1fr).
+  const grids = [...purposes.matchAll(/className="([^"]*\bgrid\b[^"]*)"/gu)].map(match => match[1])
+  assert.ok(grids.length >= 4)
+  for (const classes of grids) assert.match(classes, /\bgrid-cols-1\b/u, classes)
+  assert.match(purposes, /<div className="min-w-0 space-y-2 text-sm" key=\{key\}>/u, 'default-model cells may shrink')
+  assert.match(purposes, /<div className="min-w-0 space-y-2" data-fallback-chain=\{label\}>/u)
+  assert.match(purposes, /className="min-w-0 flex-1"\s+aria-label=\{i18n\.t\("\{0\}备用模型 \{1\}"/u, 'the chain select truncates instead of growing')
+  assert.match(purposes, /size="icon" className="shrink-0" aria-label=\{i18n\.t\("调整\{0\}备用模型 \{1\}"/u)
+})
+
+test('saving on a new Host keeps the chains of endpoints, scenes and Agents the page did not touch', async () => {
+  const page = await purposesPage(view({ purposes: { defaults: { chat: 'pa' }, decisions: {},
+    agents: { planner: 'pa', other: 'pb' }, agentFallbacks: { planner: ['pb', 'pc'], other: ['pc'] },
+    endpoints: { 'qq/bot': { chat: 'pb', chatFallbacks: ['pc', 'pa'] } }, scenes: { 's:1': { chat: 'pc', chatFallbacks: ['pa'] } } } }))
+  try {
+    page.select('聊天').props.onValueChange('pb'); page.runtime.render()
+    await page.submit()
+    const purposes = page.plans[0].purposes
+    assert.deepEqual(purposes.chat, { profile: 'pb' })
+    assert.deepEqual(purposes.agents, { planner: { profile: 'pa', fallbacks: ['pb', 'pc'] }, other: { profile: 'pb', fallbacks: ['pc'] } })
+    assert.deepEqual(purposes.endpoints, { 'qq/bot': { chat: { profile: 'pb', fallbacks: ['pc', 'pa'] }, perception: null } })
+    assert.deepEqual(purposes.scenes, { 's:1': { chat: { profile: 'pc', fallbacks: ['pa'] } } })
+  } finally { page.runtime.unmount() }
 })

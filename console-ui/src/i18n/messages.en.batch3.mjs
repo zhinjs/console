@@ -22,6 +22,7 @@ export const batch3Messages = Object.freeze({
   "主模型已被跳过": "main model was being skipped",
   // Chat members
   "有全局 iam.manage 时列出全部成员；只在部分适配器上有 iam.manage 时，只列出这些适配器上的身份，同一个人在其他适配器上的身份只显示数量。": "With global iam.manage every member is listed. With iam.manage on some adapters only, identities on those adapters are listed, and a person's identities elsewhere are only counted.",
+  "无法读取这些适配器上的成员：{0}。其他适配器的成员照常列出。": "Could not read the members on these adapters: {0}. Members on the other adapters are listed as usual.",
   // Model accounts deep link
   "链接指向的账号不在这里：它可能已被删除，或属于另一个模型管理身份。": "The account in this link is not here: it may have been deleted, or it belongs to another model owner.",
 })

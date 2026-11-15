@@ -232,7 +232,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
       </p>
       <Card className="p-4 space-y-4">
         <h4 className="font-medium">{i18n.t("默认模型")}</h4>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {(
             [
               ['chat', i18n.t("聊天")],
@@ -241,7 +241,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
               ['image', i18n.t("图片生成")],
             ] as const
           ).map(([key, label]) => (
-            <div className="space-y-2 text-sm" key={key}>
+            <div className="min-w-0 space-y-2 text-sm" key={key}>
               <label className="block space-y-2">
                 <span>{label}</span>
                 <SearchableSelectField
@@ -289,7 +289,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
                 decisions: { ...previous.decisions, [task]: value },
               }))
           return (
-            <div key={task} className="grid gap-3 border-b pb-4 last:border-0 sm:grid-cols-3">
+            <div key={task} className="grid grid-cols-1 gap-3 border-b pb-4 last:border-0 sm:grid-cols-3">
               <span className="text-sm self-center">{label}</span>
               <SelectField
                 aria-label={i18n.t("{0}模式", [label])}
@@ -314,7 +314,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
               {policy ? (
                 <details className="sm:col-span-3 text-sm">
                   <summary className="cursor-pointer text-muted-foreground">{i18n.t("调整决策参数")}</summary>
-                  <div className="grid gap-3 mt-3 sm:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-3 mt-3 sm:grid-cols-3">
                     {(
                       [
                         'timeoutMs',
@@ -367,7 +367,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
         ].map((name) => {
           const label = targets?.agents.find((agent) => agent.name === name)?.nickname ?? name
           return (
-            <div key={name} className="grid gap-3 sm:grid-cols-2 text-sm">
+            <div key={name} className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm">
               <span className="self-center">{label}</span>
               <SearchableSelectField
                 aria-label={label}
@@ -376,7 +376,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
                 options={choices('language', i18n.t("跟随聊天"))}
               />
               {fallbacks ? (
-                <div className="sm:col-span-2">
+                <div className="min-w-0 sm:col-span-2">
                   <FallbackChain
                     label={label}
                     view={view}
@@ -426,7 +426,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
           </Button>
         </div>
         {Object.entries(draft[level] ?? {}).map(([key, value]) => (
-          <div key={key} className="space-y-3 rounded-md border p-3">
+          <div key={key} className="min-w-0 space-y-3 rounded-md border p-3">
             <div className="flex justify-between items-center gap-2">
               <span className="text-sm break-all">
                 {candidates.find((item) => item.value === key)?.label ?? i18n.t("已配置目标（当前未列出）")}
@@ -561,7 +561,7 @@ function FallbackChain({
   const list = chain ?? []
   const options = choices.filter((item) => item.value)
   return (
-    <div className="space-y-2" data-fallback-chain={label}>
+    <div className="min-w-0 space-y-2" data-fallback-chain={label}>
       <AvailabilityNote view={view} profileId={primary} />
       {list.map((id, index) => (
         <div key={`${index}:${id}`} className="space-y-1">
@@ -577,7 +577,7 @@ function FallbackChain({
             />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button type="button" variant="ghost" size="icon" aria-label={i18n.t("调整{0}备用模型 {1}", [label, index + 1])}>
+                <Button type="button" variant="ghost" size="icon" className="shrink-0" aria-label={i18n.t("调整{0}备用模型 {1}", [label, index + 1])}>
                   <MoreHorizontal />
                 </Button>
               </DropdownMenuTrigger>

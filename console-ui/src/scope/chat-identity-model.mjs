@@ -187,14 +187,37 @@ export function principalsListRequest(scope = {}) {
 }
 
 /**
- * The `chat-principals.list` requests of the 聊天成员 page. The Host answers an unscoped list only
- * for global `iam.manage`; a manager scoped to some adapters asks once per adapter (`level:
- * 'adapter'`, which the Host checks against that adapter). Anyone else sends the unscoped request,
- * and the Host's refusal names the missing permission.
+ * The `chat-principals.list` requests of the 聊天成员 page: `{ requests: [{ adapter?, request }], skipped }`.
+ * The Host answers an unscoped list only for global `iam.manage`; a manager scoped to some adapters
+ * asks once per adapter (`level: 'adapter'`, which the Host checks against that adapter). An alias
+ * that is not a valid scope key is skipped (`skipped`), never widened to an unscoped request. With
+ * no adapters at all the unscoped request is sent, and the Host's refusal names the permission.
  */
-export function principalsListRequests(adapters = []) {
+export function principalsListPlan(adapters = []) {
   const list = [...new Set(adapters.filter(alias => typeof alias === 'string' && alias))]
-  return list.length ? list.map(adapter => principalsListRequest({ adapter })) : [principalsListRequest()]
+  if (!list.length) return { requests: [{ request: principalsListRequest() }], skipped: [] }
+  const requests = [], skipped = []
+  for (const adapter of list) {
+    const key = scopeKey({ adapter })
+    if (key) requests.push({ adapter, request: { type: CHAT_PRINCIPALS_RPC.LIST, level: 'adapter', key } })
+    else skipped.push(adapter)
+  }
+  return { requests, skipped }
+}
+
+/**
+ * The page's list from `Promise.allSettled` over `plan.requests`: `{ payload, failedAdapters }` when
+ * at least one reply arrived (adapters that failed or were skipped are named, the rest is shown),
+ * `{ error }` when every request failed.
+ */
+export function settlePrincipalLists(plan, results) {
+  const payloads = [], failed = [...plan.skipped], errors = []
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled') payloads.push(result.value)
+    else { errors.push(result.reason); if (plan.requests[index]?.adapter) failed.push(plan.requests[index].adapter) }
+  })
+  if (!payloads.length && errors.length) return { error: errors[0] }
+  return { payload: payloads.length === 1 ? payloads[0] : mergePrincipalPayloads(payloads), failedAdapters: failed }
 }
 
 /**
