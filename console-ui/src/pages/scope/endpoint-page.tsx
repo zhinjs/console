@@ -8,7 +8,7 @@ import type { Scope } from '../../scope/scope-tree.mjs'
 import { EndpointAccessPanel } from './endpoint-access'
 import { useEndpointsAndLogin, WaitingLoginBadge } from './login-tasks'
 import { EndpointOverview } from './overview-panels'
-import { endpointAccessState, loginTasksFor, platformLabel } from './scope-overview-model.mjs'
+import { endpointAccessState, endpointInfoWanted, loginTasksFor, platformLabel } from './scope-overview-model.mjs'
 import { ScopeFeaturesPanel, ScopeRecordsPanel, useEndpointInfo } from './scope-panels'
 
 /**
@@ -21,12 +21,13 @@ export function EndpointObjectPage({ scope }: { scope: Scope & { level: 'endpoin
   const adapter = scope.adapter!
   const endpoint = scope.endpoint!
   const [, selectTab] = useScopeTab(scope.level)
-  const endpointInfo = useEndpointInfo(adapter, endpoint)
   const data = useEndpointsAndLogin()
+  // endpoint.list decides whether the Host runs the account at all; endpoint.info adds its details,
+  // and is not asked for an account the Host does not run.
+  const listed = endpointAccessState(data, adapter, endpoint)
+  const endpointInfo = useEndpointInfo(adapter, endpoint, endpointInfoWanted(listed))
   const { info, error, loaded } = endpointInfo
   const waiting = loginTasksFor(data.tasks, adapter, endpoint).length
-  // endpoint.list decides whether the Host runs the account at all; endpoint.info adds its details.
-  const listed = endpointAccessState(data, adapter, endpoint)
   const connected = listed.kind === 'listed' ? listed.endpoint.connected : info?.connected
   const status = <>
     {listed.kind === 'unlisted' ? <Badge variant="outline">{i18n.t('未运行')}</Badge>
@@ -45,7 +46,7 @@ export function EndpointObjectPage({ scope }: { scope: Scope & { level: 'endpoin
       flushTabs={['chat']}
       badges={{ access: waiting || undefined }}
       panels={{
-        overview: <EndpointOverview scope={scope} endpointInfo={endpointInfo} onOpenTab={selectTab} />,
+        overview: <EndpointOverview scope={scope} endpointInfo={endpointInfo} unlisted={listed.kind === 'unlisted'} onOpenTab={selectTab} />,
         chat: <AccountChatPanel scope={scope} />,
         access: <EndpointAccessPanel scope={scope} data={data} />,
         features: <ScopeFeaturesPanel scope={scope} />,
