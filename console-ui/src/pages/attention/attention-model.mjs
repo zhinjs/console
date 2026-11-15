@@ -10,15 +10,18 @@
  * until its fingerprint (`revision`) changes. Storage may be missing or throw; nothing here depends
  * on it succeeding.
  */
+import { ATTENTION_RPC as ATTENTION_RPC_NAMES, CONSOLE_ATTENTION_KINDS, CONSOLE_ATTENTION_SEVERITIES } from '@zhin.js/console-protocol'
 import { translate } from '../../i18n/locale.mjs'
 import { isUnsupportedRpcError } from '../../utils/console-auth-model.mjs'
 import { CONSOLE_PATHS } from '../../console-routes.mjs'
 import { statusFromError } from '../../components/status-state-model.mjs'
 import { instanceStateLabel } from '../ops/gateway-model.mjs'
 
-export const ATTENTION_RPC = 'attention.list'
+export const ATTENTION_RPC = ATTENTION_RPC_NAMES.LIST
 export const ATTENTION_PATH = CONSOLE_PATHS.attention
-export const ATTENTION_SEVERITIES = Object.freeze(['danger', 'warning', 'info'])
+export const ATTENTION_SEVERITIES = CONSOLE_ATTENTION_SEVERITIES
+/** Kinds this protocol version defines; a newer Host may send others, which are kept as they are. */
+export const ATTENTION_KINDS = CONSOLE_ATTENTION_KINDS
 export const ATTENTION_SNOOZE_MS = 24 * 60 * 60 * 1000
 export const ATTENTION_REFRESH_MS = 30_000
 /** Re-read sooner while the instance is still starting (or restarting). */

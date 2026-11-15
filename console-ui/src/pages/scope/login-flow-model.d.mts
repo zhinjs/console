@@ -1,11 +1,19 @@
-/** Login Assist v2 wire types (mirror of `@zhin.js/console-protocol` `login.ts`, ADR 0058). */
-export type LoginChallengeKind = 'qrcode' | 'link_verify' | 'slider' | 'sms' | 'device' | 'auth' | 'confirm' | 'other'
-export type LoginFlowState = 'active' | 'online' | 'failed' | 'cancelled' | 'expired'
-export type LoginStepKind = 'connect' | 'challenge' | 'verifying' | 'info'
-export type LoginStepStatus = 'active' | 'done' | 'failed' | 'skipped'
-export type LoginErrorCode = 'code_invalid' | 'rate_limited' | 'challenge_expired' | 'risk_blocked' | 'credential_invalid' | 'network' | 'unknown'
-export type LoginOutcomeResult = 'accepted' | 'rejected' | 'expired' | 'needs_new_challenge' | 'online' | 'failed'
-export type LoginNextAction = 'retry_input' | 'refresh_challenge' | 'relogin' | 'wait' | 'none'
+/**
+ * Login Assist v2 (ADR 0058): the enums are `@zhin.js/console-protocol` `login.ts`; the interfaces
+ * below are what `readLoginFlow` returns — the protocol shapes after normalization (help steps as
+ * objects, blocks grouped for rendering, unknown values dropped).
+ */
+import type {
+  ConsoleLoginChallengeKind, ConsoleLoginErrorCode, ConsoleLoginFlowState, ConsoleLoginNextAction, ConsoleLoginOutcomeResult,
+  ConsoleLoginStepKind, ConsoleLoginStepStatus, LOGIN_RPC as PROTOCOL_LOGIN_RPC,
+} from '@zhin.js/console-protocol'
+export type LoginChallengeKind = ConsoleLoginChallengeKind
+export type LoginFlowState = ConsoleLoginFlowState
+export type LoginStepKind = ConsoleLoginStepKind
+export type LoginStepStatus = ConsoleLoginStepStatus
+export type LoginErrorCode = ConsoleLoginErrorCode
+export type LoginOutcomeResult = ConsoleLoginOutcomeResult
+export type LoginNextAction = ConsoleLoginNextAction
 
 export interface LoginOutcome {
   readonly result: LoginOutcomeResult
@@ -108,9 +116,7 @@ export interface LoginDeclaration {
 export interface LoginSubmitValue { readonly action: string; readonly values: Readonly<Record<string, string>> }
 
 export const LOGIN_FLOW_EVENT: 'endpoint.login.flow'
-export const LOGIN_RPC: Readonly<{
-  LIST: 'login.list'; SUBMIT: 'login.submit'; CANCEL: 'login.cancel'; FLOW_LIST: 'login.flow.list'; FLOW_GET: 'login.flow.get'; RELOGIN: 'login.relogin'; REFRESH: 'login.refresh'
-}>
+export const LOGIN_RPC: typeof PROTOCOL_LOGIN_RPC
 export const LOGIN_FLOW_POLL_MS: number
 export const LOGIN_FLOW_DEBOUNCE_MS: number
 export const LOGIN_SUBMIT_TIMEOUT_MS: number

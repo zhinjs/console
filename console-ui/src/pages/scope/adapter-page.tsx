@@ -1,6 +1,6 @@
-import { useEffect, useState, type ComponentType } from 'react'
+import { useEffect, useState } from 'react'
 import { BookOpen, Cable, Plus, RefreshCw, Settings2, X } from 'lucide-react'
-import { AdapterConsolePage, type AdapterConsolePageProps, type AdapterConsoleToolbarControls } from '@zhin.js/client'
+import { AdapterConsolePage, type AdapterConsoleToolbarControls } from '@zhin.js/client'
 import { useI18n } from '../../i18n'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
@@ -15,9 +15,6 @@ import { useEndpointsAndLogin } from './login-tasks'
 import { platformLabel } from './scope-overview-model.mjs'
 import { ScopeFeaturesPanel, ScopeRecordsPanel } from './scope-panels'
 import { ManagedAccountEditor, ManagedAccountsProvider, useManagedAccounts } from './adapter-accounts'
-
-/** `hostAccounts` exists from the client with the headless account API; older clients ignore it. */
-const ConnectionManagementPage = AdapterConsolePage as ComponentType<AdapterConsolePageProps & { hostAccounts?: boolean }>
 
 /** `/scope/:adapter` — 适配器: its accounts and connection management (概览), overrides (功能), roles, records. */
 export function AdapterObjectPage({ scope }: { scope: Scope & { level: 'adapter' } }) {
@@ -42,7 +39,7 @@ export function AdapterObjectPage({ scope }: { scope: Scope & { level: 'adapter'
       actions={<Button variant="outline" size="sm" onClick={refresh} disabled={data.loading}><RefreshCw className={data.loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>}
       panels={{
         // One account state for the table rows (status, switch, 编辑 / 删除) and 「管理连接」 (add form,
-        // editor); with an older client the provider is a no-op and 「管理连接」 keeps the SDK's cards.
+        // editor); without the right to manage connections the provider is a no-op and 「管理连接」 keeps the SDK's cards.
         overview: (
           <ManagedAccountsProvider adapter={scope.adapter!} refreshKey={managementRefresh} enabled={canManage}>
             <AdapterOverview scope={scope} data={data} management={<ConnectionManagement adapter={scope.adapter!} refreshKey={managementRefresh} />} />
@@ -84,9 +81,9 @@ function ConnectionManagement({ adapter, refreshKey }: { adapter: string; refres
       ) : null}
     </div>
   ) : null
-  // Collapsed under the account list. With the headless client the rows above carry each account's
+  // Collapsed under the account list. Inside the account provider the rows above carry each account's
   // switch and actions, so this keeps only adding accounts, the account editor, logins and platform
-  // actions; with an older client it is the adapter plugin's own page (cards, start / stop, edit).
+  // actions; without it this is the adapter plugin's own page (cards, start / stop, edit).
   return (
     <details className="console-connection-manager">
       <summary>
@@ -97,7 +94,7 @@ function ConnectionManagement({ adapter, refreshKey }: { adapter: string; refres
       {hasConsolePermission('endpoint.manage', access) ? (
         <div className="console-adapter-console">
           {managed ? <ManagedAccountEditor /> : null}
-          <ConnectionManagementPage adapterKey={adapter} embedded refreshKey={refreshKey} toolbar={toolbar} hostAccounts={!!managed} />
+          <AdapterConsolePage adapterKey={adapter} embedded refreshKey={refreshKey} toolbar={toolbar} hostAccounts={!!managed} />
         </div>
       ) : <StatusState kind="forbidden" compact className="m-3" permissions={['endpoint.manage']} description={i18n.t('当前身份不能管理账号连接。')} />}
     </details>

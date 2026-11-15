@@ -17,7 +17,7 @@
  * 已重启并生效, or a timeout that says what to check. Pure: tests and components share it.
  */
 import { configurationRuntimeStatus } from './PluginConfigForm/config-live-status.mjs'
-import { SECRET_MASK, maskSecretText } from '../utils/secret-mask.mjs'
+import { ENV_MASK_CHAR, ENV_MASK_RUN, maskConsoleEnvValue } from '@zhin.js/console-protocol'
 import { instanceLifecycleApplied } from '../pages/ops/gateway-model.mjs'
 
 export const APPLY_OUTCOME_KINDS = Object.freeze(['applied', 'next-message', 'restart', 'failed'])
@@ -240,10 +240,10 @@ export function firstDifference(left, right, path = []) {
 }
 
 /** The fixed-width mask a secret is shown as (the Host's mask: it never tells the length). */
-export const MASKED_VALUE = SECRET_MASK
+export const MASKED_VALUE = ENV_MASK_CHAR.repeat(ENV_MASK_RUN)
 const ABSENT = Symbol('absent')
 
-const maskSecret = value => typeof value === 'string' ? maskSecretText(value) || '""' : MASKED_VALUE
+const maskSecret = value => typeof value === 'string' ? maskConsoleEnvValue(value) || '""' : MASKED_VALUE
 
 /**
  * A value under a non-secret path can still hold secrets (an object read back without one of its

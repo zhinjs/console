@@ -283,3 +283,12 @@ test('a remembered unsupported Host skips attention.list; the memo follows the c
   assert.equal(model.nextAttentionSupport(memo, { apiBase: 'a', reset: true }).unsupported, false)
   assert.equal(model.nextAttentionSupport(memo, { apiBase: 'a', data: { mode: 'host' } }).unsupported, false)
 })
+
+test('the RPC, severities and kinds are the published protocol ones; every protocol kind is kept', async () => {
+  const protocol = await import('@zhin.js/console-protocol')
+  assert.equal(model.ATTENTION_RPC, protocol.ATTENTION_RPC.LIST)
+  assert.equal(model.ATTENTION_SEVERITIES, protocol.CONSOLE_ATTENTION_SEVERITIES)
+  assert.equal(model.ATTENTION_KINDS, protocol.CONSOLE_ATTENTION_KINDS)
+  const list = model.normalizeAttentionList({ items: protocol.CONSOLE_ATTENTION_KINDS.map((kind, index) => item({ id: `${kind}:${index}`, kind })) })
+  assert.deepEqual(list.items.map(entry => entry.kind).sort(), [...protocol.CONSOLE_ATTENTION_KINDS].sort())
+})

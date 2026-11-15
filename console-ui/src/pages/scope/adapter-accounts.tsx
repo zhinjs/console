@@ -1,6 +1,6 @@
-import { createContext, useContext, type ComponentType, type ReactNode } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
-import * as zhinClient from '@zhin.js/client'
+import { AdapterAccountEditor, AdapterAccountsProvider, useAdapterAccounts, type AdapterAccountRow, type AdapterAccounts } from '@zhin.js/client'
 import { useI18n } from '../../i18n'
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert'
 import { Badge } from '../../components/ui/badge'
@@ -10,82 +10,34 @@ import { useConfirm } from '../../components/confirm-dialog'
 
 /**
  * The headless account API of `@zhin.js/client` (`AdapterAccountsProvider` / `useAdapterAccounts` /
- * `AdapterAccountEditor`, zhinjs/zhin#1250), typed here for the parts the Console reads so the page
- * also builds and runs against an older client. With an older client `headlessAccounts` is
- * `undefined` and the adapter page keeps the SDK's own account cards under 「管理连接」.
+ * `AdapterAccountEditor`, zhinjs/zhin#1250) puts each account's state, start / stop switch, 编辑 and
+ * 删除 into the adapter page's own table. Hosts without an account directory are handled by the SDK
+ * (`state: 'unmanaged'` / `'error'`); the page then keeps the SDK's own cards under 「管理连接」.
  */
-type BadgeTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info'
+export type HeadlessAccountRow = AdapterAccountRow
+export type HeadlessAccounts = AdapterAccounts
+type BadgeTone = AdapterAccountRow['state']['tone']
 
-export interface HeadlessAccountRow {
-  readonly key: string
-  readonly endpointId: string
-  readonly instanceId: string
-  readonly enabled: boolean
-  readonly enabledLabel: string
-  readonly retiring: boolean
-  readonly state: { readonly label: string; readonly tone: BadgeTone }
-  readonly execution?: { readonly label: string; readonly tone: BadgeTone }
-  readonly can: { readonly toggle: boolean; readonly edit: boolean; readonly remove: boolean; readonly test: boolean }
-  readonly disabled: boolean
-  readonly busy: { readonly toggle: boolean; readonly remove: boolean; readonly test: boolean }
-  readonly setEnabled: (enabled: boolean) => Promise<void>
-  readonly edit: () => void
-  readonly remove: () => Promise<void>
-}
-
-export interface HeadlessAccounts {
-  readonly state: 'loading' | 'error' | 'unmanaged' | 'ready'
-  readonly rows: readonly HeadlessAccountRow[]
-  readonly readOnly: boolean
-  readonly blocked: boolean
-  readonly needsMigration: boolean
-  readonly canMigrate: boolean
-  readonly migrate?: () => Promise<void>
-  readonly migration?: { readonly ids: readonly string[]; readonly busy: boolean; readonly confirm: () => Promise<void>; readonly cancel: () => void }
-  readonly notice?: { readonly kind: 'ok' | 'error'; readonly message: string; readonly url?: string }
-  readonly dismissNotice: () => void
-  readonly editing?: { readonly instanceId: string; readonly endpointId: string }
-  readonly refresh: () => Promise<void>
-}
-
-interface HeadlessApi {
-  readonly AdapterAccountsProvider: ComponentType<{ adapterKey: string; refreshKey?: string | number; children?: ReactNode }>
-  readonly useAdapterAccounts: () => HeadlessAccounts
-  readonly AdapterAccountEditor: ComponentType
-}
-
-/** Feature detection: the installed client exports the headless API and the page honours `hostAccounts`. */
-export function detectHeadlessAccounts(client: Record<string, unknown>): HeadlessApi | undefined {
-  const page = client.AdapterConsolePage as { capabilities?: { hostAccounts?: boolean } } | undefined
-  return typeof client.useAdapterAccounts === 'function' && typeof client.AdapterAccountsProvider === 'function'
-    && typeof client.AdapterAccountEditor === 'function' && page?.capabilities?.hostAccounts === true
-    ? client as unknown as HeadlessApi : undefined
-}
-
-export const headlessAccounts = detectHeadlessAccounts(zhinClient as unknown as Record<string, unknown>)
-
-/** The account controller for the adapter page's table, or `undefined` (older client, or no provider). */
+/** The account controller for the adapter page's table, or `undefined` (no provider). */
 const AccountsContext = createContext<HeadlessAccounts | undefined>(undefined)
 export const useManagedAccounts = () => useContext(AccountsContext)
 
-function AccountsBridge({ api, children }: { api: HeadlessApi; children?: ReactNode }) {
-  const accounts = api.useAdapterAccounts()
+function AccountsBridge({ children }: { children?: ReactNode }) {
+  const accounts = useAdapterAccounts()
   return <AccountsContext.Provider value={accounts}>{children}</AccountsContext.Provider>
 }
 
 /**
- * Provides the adapter's managed accounts to the page (only with a client that has the headless API
- * and when the viewer may manage connections); otherwise renders its children unchanged.
+ * Provides the adapter's managed accounts to the page when the viewer may manage connections;
+ * otherwise renders its children unchanged.
  */
 export function ManagedAccountsProvider({ adapter, refreshKey, enabled, children }: { adapter: string; refreshKey: number; enabled: boolean; children?: ReactNode }) {
-  const api = headlessAccounts
-  if (!api || !enabled) return <>{children}</>
-  return <api.AdapterAccountsProvider adapterKey={adapter} refreshKey={refreshKey}><AccountsBridge api={api}>{children}</AccountsBridge></api.AdapterAccountsProvider>
+  if (!enabled) return <>{children}</>
+  return <AdapterAccountsProvider adapterKey={adapter} refreshKey={refreshKey}><AccountsBridge>{children}</AccountsBridge></AdapterAccountsProvider>
 }
 
 export function ManagedAccountEditor() {
-  const api = headlessAccounts
-  return api ? <api.AdapterAccountEditor /> : null
+  return <AdapterAccountEditor />
 }
 
 const badgeVariant = (tone: BadgeTone) => tone === 'success' ? 'success' : tone === 'warning' ? 'warning' : tone === 'danger' ? 'destructive' : 'outline'

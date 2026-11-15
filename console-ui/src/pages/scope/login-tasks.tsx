@@ -14,7 +14,7 @@ import { hasConsolePermission } from '../../utils/console-access.mjs'
 import { requestConsole } from '../../utils/console-rpc'
 import { readEndpointList } from '../endpoint-list-model.mjs'
 import { useLogPanel } from '../../components/log-panel/LogPanel'
-import { loginStepBadge } from './login-flow-model.mjs'
+import { LOGIN_RPC, loginStepBadge } from './login-flow-model.mjs'
 
 export interface ScopeEndpoint {
   name: string
@@ -67,7 +67,7 @@ export function useEndpointsAndLogin(): EndpointsAndLogin {
     setState(previous => ({ ...previous, loading: true }))
     Promise.all([
       requestConsole<unknown>({ type: ENDPOINT_RPC.LIST }),
-      canOperate ? requestConsole<{ tasks?: LoginTask[] }>({ type: 'login.list' }).catch(() => ({ tasks: [] as LoginTask[] })) : Promise.resolve({ tasks: [] as LoginTask[] }),
+      canOperate ? requestConsole<{ tasks?: LoginTask[] }>({ type: LOGIN_RPC.LIST }).catch(() => ({ tasks: [] as LoginTask[] })) : Promise.resolve({ tasks: [] as LoginTask[] }),
     ]).then(([list, login]) => {
       if (ticket !== sequence.current) return
       setState({ endpoints: readEndpointList(list, i18n.locale) as ScopeEndpoint[], tasks: Array.isArray(login?.tasks) ? login.tasks : [], loaded: true, loading: false, error: null })
@@ -155,13 +155,13 @@ export function LoginTaskCard({ task, onSettled, readOnly }: { task: LoginTask; 
       const { kind, value } = (plan.payload ?? {}) as Partial<PendingLoginAction>
       if (kind !== 'submit' && kind !== 'cancel') throw new Error('No action')
       const identity = task.endpointIdentity ? { endpointIdentity: task.endpointIdentity } : {}
-      if (kind === 'cancel') await requestConsole({ type: 'login.cancel', taskId: task.id, reason: 'console_cancelled', ...identity })
-      else await requestConsole({ type: 'login.submit', taskId: task.id, value, ...identity })
+      if (kind === 'cancel') await requestConsole({ type: LOGIN_RPC.CANCEL, taskId: task.id, reason: 'console_cancelled', ...identity })
+      else await requestConsole({ type: LOGIN_RPC.SUBMIT, taskId: task.id, value, ...identity })
       return { status: 'saved', message: kind === 'cancel' ? i18n.t('已取消这次登录验证。') : i18n.t('已提交，请稍候查看连接状态。') }
     },
     // The task disappears from login.list once the Host accepted the answer (or the cancellation).
     verify: async () => {
-      const reply = await requestConsole<{ tasks?: LoginTask[] }>({ type: 'login.list' })
+      const reply = await requestConsole<{ tasks?: LoginTask[] }>({ type: LOGIN_RPC.LIST })
       return { applied: !(reply?.tasks ?? []).some(item => item.id === task.id) }
     },
     onSettled: () => { setInput(''); onSettled() },

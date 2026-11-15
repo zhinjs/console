@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  CHAT_IDENTITY_RPC, LINK_METHOD_LABELS, adapterAliases, bindCountdown, bindInstruction, filterPrincipals, grantCandidates, grantorLabel,
+  CHAT_PRINCIPALS_RPC, LINK_METHOD_LABELS, adapterAliases, bindCountdown, bindInstruction, filterPrincipals, grantCandidates, grantorLabel,
   isMissingIdentityRpc, principalActions, principalName, principalsListRequest, promoteGlobalOwnerRequest, readBindCode, readIdentityMe,
   readPrincipals, readRecentIdentities, recentIdentitiesRequest,
 } from '../console-ui/src/scope/chat-identity-model.mjs'
@@ -59,7 +59,7 @@ test('actions follow iam.manage; a person with a global role needs a global bind
 })
 
 test('requests use the ADR 0060 RPC names; 设为全局 owner is a global chat-roles.grant of owner', () => {
-  assert.deepEqual(principalsListRequest(), { type: CHAT_IDENTITY_RPC.PRINCIPALS_LIST })
+  assert.deepEqual(principalsListRequest(), { type: CHAT_PRINCIPALS_RPC.LIST })
   assert.deepEqual(principalsListRequest({ adapter: 'qq' }), { type: 'chat-principals.list', level: 'adapter', key: 'qq' })
   assert.deepEqual(recentIdentitiesRequest({ adapter: 'qq', endpoint: 'bot' }, 20), { type: 'chat-identities.recent', level: 'endpoint', key: 'qq/bot', limit: 20 })
   assert.deepEqual(recentIdentitiesRequest({}), { type: 'chat-identities.recent', level: 'global', limit: 50 })

@@ -1,51 +1,33 @@
+import type {
+  ConsoleChatBindCodeResult, ConsoleChatConsoleLink, ConsoleChatIdentity, ConsoleChatIdentityLinkMethod,
+  ConsoleChatPrincipal, ConsoleChatRoleEntry,
+} from '@zhin.js/console-protocol'
 import type { ScopeRef } from './scope-tree.mjs'
 
-export declare const CHAT_IDENTITY_RPC: Readonly<{
-  PRINCIPALS_LIST: 'chat-principals.list'
-  MERGE: 'chat-principals.merge'
-  SPLIT: 'chat-principals.split'
-  RENAME: 'chat-principals.rename'
-  RECENT: 'chat-identities.recent'
-  BIND_CODE_CREATE: 'chat-identities.bind-code.create'
-  ME: 'chat-identities.me'
-  SIMULATED_ENSURE: 'chat-identities.simulated.ensure'
-}>
+export { CHAT_PRINCIPALS_RPC } from '@zhin.js/console-protocol'
 
-export type ChatIdentityLinkMethod = 'implicit' | 'code' | 'manual' | 'import' | 'console'
+/** How an identity came to its person (the protocol's `ConsoleChatIdentityLinkMethod`). */
+export type ChatIdentityLinkMethod = ConsoleChatIdentityLinkMethod
 
-export interface ChatIdentityView {
-  readonly adapter: string
-  readonly userId: string
-  readonly linkMethod?: ChatIdentityLinkMethod
-  readonly linkedAt?: number
-  readonly lastSeenAt?: number
-  readonly lastDisplayName?: string
+/** A validated `ConsoleChatIdentity` (`chat-identities.recent` rows also carry `principalId`). */
+export interface ChatIdentityView extends ConsoleChatIdentity {
   readonly principalId?: string
 }
 
-export interface ChatPrincipalRole {
-  readonly level: 'global' | 'adapter' | 'endpoint' | 'conversation'
-  readonly key: string
-  readonly role: 'owner' | 'admin' | 'trusted'
-  readonly redacted?: true
-  readonly adapter?: string
-  readonly userId?: string
-  readonly grantedBy?: string
-  readonly grantedByName?: string
-}
+/** A validated `ConsoleChatRoleEntry` (`source` is implied: zhin chat roles come only from grants). */
+export type ChatPrincipalRole = Readonly<Pick<ConsoleChatRoleEntry, 'level' | 'key' | 'role' | 'redacted' | 'adapter' | 'userId' | 'grantedBy' | 'grantedByName'>>
 
-export interface ChatPrincipalView {
-  readonly id: string
+/** A validated `ConsoleChatPrincipal`, plus whether it is a stored person. */
+export interface ChatPrincipalView extends Omit<ConsoleChatPrincipal, 'identities' | 'roles' | 'consoleLink' | 'createdBy' | 'createdAt'> {
   /** A stored person (`cp_…`); false for an identity without one (`implicit:…`). */
   readonly stored: boolean
-  readonly displayName?: string
   readonly identities: readonly ChatIdentityView[]
   readonly roles: readonly ChatPrincipalRole[]
-  readonly hiddenIdentities?: number
-  readonly consoleLink?: Readonly<{ consoleUserId: string; consoleDisplayName?: string; linkedVia?: string }>
-  readonly unverified?: true
+  /** `linkedVia` is kept as sent (a newer Host may add ways to link). */
+  readonly consoleLink?: Readonly<Pick<ConsoleChatConsoleLink, 'consoleUserId' | 'consoleDisplayName'> & { linkedVia?: string }>
 }
 
+/** `ConsoleChatIdentityMeResult`, with the open code's expiry (`pendingCode.expiresAt`) flattened. */
 export interface ChatIdentityMe {
   readonly principal?: ChatPrincipalView
   readonly pendingCodeExpiresAt?: number
@@ -68,7 +50,7 @@ export declare function readPrincipal(item: unknown): ChatPrincipalView | null
 export declare function readPrincipals(payload: unknown): ChatPrincipalView[]
 export declare function readRecentIdentities(payload: unknown): ChatIdentityView[]
 export declare function readIdentityMe(payload: unknown): ChatIdentityMe
-export declare function readBindCode(payload: unknown): Readonly<{ code: string; expiresAt: number }>
+export declare function readBindCode(payload: unknown): ConsoleChatBindCodeResult
 export declare function bindInstruction(code: string, locale?: 'zh-CN' | 'en'): string
 export declare function bindCountdown(expiresAt: number, now?: number): string
 export declare function principalName(principal: ChatPrincipalView): string

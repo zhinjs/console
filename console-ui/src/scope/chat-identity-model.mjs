@@ -1,26 +1,18 @@
 /**
  * Chat members (ADR 0060 §2 / §7): people behind chat identities, their platform identities, roles
- * and the one-to-one link to a Console user. RPC names are spelled out here because the published
- * `@zhin.js/console-protocol` the Console builds against may predate them; a Host without them is
- * detected per call (`isMissingIdentityRpc`) and the entries are hidden.
+ * and the one-to-one link to a Console user. RPC names and wire shapes come from
+ * `@zhin.js/console-protocol` (`CHAT_PRINCIPALS_RPC`, `ConsoleChatPrincipal`, …). Older Hosts do
+ * not serve these RPC; that is detected per call (`isMissingIdentityRpc`) and the entries are hidden.
  */
+import { CHAT_PRINCIPALS_RPC, CONSOLE_CHAT_ROLES } from '@zhin.js/console-protocol'
 import { statusFromError } from '../components/status-state-model.mjs'
-import { parseScopeKey, scopeKey } from './scope-tree.mjs'
+import { SCOPE_LEVELS, parseScopeKey, scopeKey } from './scope-tree.mjs'
 import { CHAT_ROLES_RPC } from './chat-roles-model.mjs'
 
-export const CHAT_IDENTITY_RPC = Object.freeze({
-  PRINCIPALS_LIST: 'chat-principals.list',
-  MERGE: 'chat-principals.merge',
-  SPLIT: 'chat-principals.split',
-  RENAME: 'chat-principals.rename',
-  RECENT: 'chat-identities.recent',
-  BIND_CODE_CREATE: 'chat-identities.bind-code.create',
-  ME: 'chat-identities.me',
-  SIMULATED_ENSURE: 'chat-identities.simulated.ensure',
-})
+export { CHAT_PRINCIPALS_RPC }
 
-const ROLES = ['owner', 'admin', 'trusted']
-const LEVELS = ['global', 'adapter', 'endpoint', 'conversation']
+const ROLES = CONSOLE_CHAT_ROLES
+const LEVELS = SCOPE_LEVELS
 const LINK_METHODS = ['implicit', 'code', 'manual', 'import', 'console']
 const isRecord = value => !!value && typeof value === 'object' && !Array.isArray(value)
 const text = value => typeof value === 'string' && value ? value : undefined
@@ -188,18 +180,18 @@ export function grantCandidates({ recent = [], principals = [], alias = null, qu
 export function principalsListRequest(scope = {}) {
   const key = scopeKey(scope)
   const level = key === null || key === '' ? 'global' : parseScopeKey(key).level
-  return { type: CHAT_IDENTITY_RPC.PRINCIPALS_LIST, ...(level === 'global' ? {} : { level, key }) }
+  return { type: CHAT_PRINCIPALS_RPC.LIST, ...(level === 'global' ? {} : { level, key }) }
 }
 
 export function recentIdentitiesRequest(scope = {}, limit = 50) {
   const key = scopeKey(scope)
   const level = key === null || key === '' ? 'global' : parseScopeKey(key).level
-  return { type: CHAT_IDENTITY_RPC.RECENT, level, ...(level === 'global' ? {} : { key }), limit }
+  return { type: CHAT_PRINCIPALS_RPC.IDENTITIES_RECENT, level, ...(level === 'global' ? {} : { key }), limit }
 }
 
-export const mergeRequest = (intoId, fromId) => ({ type: CHAT_IDENTITY_RPC.MERGE, into: { principalId: intoId }, from: { principalId: fromId } })
-export const splitRequest = identity => ({ type: CHAT_IDENTITY_RPC.SPLIT, adapter: identity.adapter, userId: identity.userId })
-export const renameRequest = (principalId, displayName) => ({ type: CHAT_IDENTITY_RPC.RENAME, principalId, displayName: String(displayName ?? '').trim() })
+export const mergeRequest = (intoId, fromId) => ({ type: CHAT_PRINCIPALS_RPC.MERGE, into: { principalId: intoId }, from: { principalId: fromId } })
+export const splitRequest = identity => ({ type: CHAT_PRINCIPALS_RPC.SPLIT, adapter: identity.adapter, userId: identity.userId })
+export const renameRequest = (principalId, displayName) => ({ type: CHAT_PRINCIPALS_RPC.RENAME, principalId, displayName: String(displayName ?? '').trim() })
 
 /**
  * ADR 0060 §3.1 「设为全局 owner」: a global `chat-roles.grant` of `owner` for one identity of the
