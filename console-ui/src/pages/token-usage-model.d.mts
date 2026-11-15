@@ -24,7 +24,11 @@ export interface UsageStats {
   segments: { history: number; fixed: number; user: number }
   filesRead?: number
   malformedLines?: number
+  /** Services that likely do not support or pass through prompt caching (#1250); absent from older Hosts. */
+  promptCacheHints?: unknown[]
 }
+export interface PromptCacheNotice { key: string; name: string; text: string }
+export function promptCacheNotices(stats: unknown, locale?: Locale): { hints: PromptCacheNotice[]; missed: boolean } | null
 export interface UsageFilter {
   range?: string
   customSince?: number

@@ -11,9 +11,11 @@ import { requestConsole } from '../utils/console-rpc'
 import { copyText } from '../pages/clipboard-copy.mjs'
 import { statusFromError } from '../components/status-state-model.mjs'
 import { ObjectSection } from './ObjectPageLayout'
+import { useConsoleAccess } from '../hooks/use-console-access'
+import { hasConsolePermission } from '../utils/console-access.mjs'
 import { CHAT_ROLE_LABELS } from './chat-roles-model.mjs'
 import {
-  CHAT_PRINCIPALS_RPC, LINK_METHOD_LABELS, bindCountdown, bindInstruction, grantCandidates, isMissingIdentityRpc, principalName,
+  CHAT_IDENTITY_SELF_PERMISSION, CHAT_PRINCIPALS_RPC, LINK_METHOD_LABELS, bindCountdown, bindInstruction, grantCandidates, isMissingIdentityRpc, principalName,
   promoteGlobalOwnerRequest, readBindCode, readIdentityMe, readPrincipals, readRecentIdentities, recentIdentitiesRequest, principalsListRequest,
   type ChatGrantCandidate, type ChatIdentityMe, type ChatIdentityView, type ChatPrincipalView,
 } from './chat-identity-model.mjs'
@@ -24,19 +26,30 @@ type MeState =
   | { status: 'loading' }
   | { status: 'ready'; me: ChatIdentityMe }
   | { status: 'unsupported' }
+  | { status: 'forbidden' }
   | { status: 'failed'; error: unknown }
 
-/** `chat-identities.me`; `unsupported` on a Host without it (the entries stay hidden). */
+/**
+ * `chat-identities.me`; `unsupported` on a Host without it (the entries stay hidden); `forbidden`
+ * without `self.chat-identity` (ADR 0060 Q4) — not asked at all, or refused by the Host.
+ */
 export function useMyChatIdentity() {
-  const [state, setState] = useState<MeState>({ status: 'loading' })
+  const access = useConsoleAccess()
+  const allowed = hasConsolePermission(CHAT_IDENTITY_SELF_PERMISSION, access)
+  const [state, setState] = useState<MeState>(() => allowed ? { status: 'loading' } : { status: 'forbidden' })
   const ticket = useRef(0)
   const load = useCallback(() => {
     const current = ++ticket.current
+    if (!allowed) { setState({ status: 'forbidden' }); return }
+    setState(previous => previous.status === 'forbidden' ? { status: 'loading' } : previous)
     requestConsole<unknown>({ type: CHAT_PRINCIPALS_RPC.ME }).then(
       payload => { if (current === ticket.current) setState({ status: 'ready', me: readIdentityMe(payload) }) },
-      (error: unknown) => { if (current === ticket.current) setState(isMissingIdentityRpc(error) ? { status: 'unsupported' } : { status: 'failed', error }) },
+      (error: unknown) => {
+        if (current !== ticket.current) return
+        setState(isMissingIdentityRpc(error) ? { status: 'unsupported' } : statusFromError(error).kind === 'forbidden' ? { status: 'forbidden' } : { status: 'failed', error })
+      },
     )
-  }, [])
+  }, [allowed])
   useEffect(() => { load(); return () => { ticket.current += 1 } }, [load])
   return { state, refresh: load }
 }
@@ -116,7 +129,8 @@ export function MyChatIdentitySection({ highlight = false }: { highlight?: boole
       <ObjectSection title={i18n.t('我的聊天身份')}
         description={i18n.t('链接到你 Console 账号的「人」：它在各平台的身份与聊天角色。链接不带来任何权限，只用于 Sandbox「以我的聊天身份发言」、个人推理主体与显示授予者。')}
         actions={<Button variant="outline" size="sm" onClick={refresh} disabled={state.status === 'loading'}><RefreshCw className={state.status === 'loading' ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>}>
-        {state.status === 'failed' ? <StatusState error={state.error} onRetry={refresh} />
+        {state.status === 'forbidden' ? <StatusState kind="forbidden" permissions={[CHAT_IDENTITY_SELF_PERMISSION]} />
+          : state.status === 'failed' ? <StatusState error={state.error} onRetry={refresh} />
           : state.status === 'loading' ? <StatusState kind="loading" />
           : (
             <Card className="console-chat-me-card">

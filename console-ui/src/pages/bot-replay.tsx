@@ -27,6 +27,7 @@ import {
   buildReplayFilter,
   collectReplayExport,
   describeReplayRow,
+  foldReplayRows,
   exportFileName,
   exportWindow,
   isPermissionDenied,
@@ -189,7 +190,7 @@ export default function BotReplayPage() {
         <CardContent>
           {turnError ? <ErrorAlert error={turnError} /> : null}
           {turn ? <ol className="space-y-2 border-l pl-4 text-sm">
-            {turn.events.map(row => {
+            {foldReplayRows(turn.events).map(({ row, folded }) => {
               const view = describeReplayRow(row, i18n.locale)
               return <li key={view.id}>
                 <div className="flex flex-wrap items-center gap-2">
@@ -197,8 +198,10 @@ export default function BotReplayPage() {
                   <span className="font-medium">{view.kind}</span>
                   <Badge variant={outcomeVariant(view.outcomeCode)}>{view.outcome}</Badge>
                   <span>{view.reason}</span>
+                  <FoldedRows rows={folded} />
                 </div>
                 <div className="font-mono text-xs text-muted-foreground">{view.code}{view.detail ? ` · ${view.detail}` : ''}</div>
+                {folded.map(child => <div key={child.id} className="font-mono text-xs text-muted-foreground">{describeReplayRow(child, i18n.locale).code}</div>)}
               </li>
             })}
           </ol> : null}
@@ -216,7 +219,7 @@ export default function BotReplayPage() {
             <CardContent className="space-y-3">
               {error ? <p className="text-xs text-destructive">{error}</p> : null}
               {list.rows.length ? <ul className="divide-y rounded-md border text-sm">
-                {list.rows.map(row => {
+                {foldReplayRows(list.rows).map(({ row, folded }) => {
                   const view = describeReplayRow(row, i18n.locale)
                   return <li key={view.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
                     <span className="text-xs text-muted-foreground">{formatTime(view.at, i18n.locale)}</span>
@@ -224,6 +227,7 @@ export default function BotReplayPage() {
                     <span className="font-medium">{view.kind}</span>
                     <Badge variant={outcomeVariant(view.outcomeCode)}>{view.outcome}</Badge>
                     <span className="text-muted-foreground" title={view.code}>{view.reason}</span>
+                    <FoldedRows rows={folded} />
                     <span className="flex-1" />
                     <Button variant="ghost" size="sm" onClick={() => void openTurn(view.turnId)}>{i18n.t("看这个回合")}</Button>
                   </li>
@@ -235,4 +239,13 @@ export default function BotReplayPage() {
           </Card> : null}
     </>}
   </PageShell>
+}
+
+/** Rows folded into their parent decision (#1250 `payload.parent`): what followed, e.g. 「没有调用模型」. */
+function FoldedRows({ rows }: { rows: readonly ReplayRow[] }) {
+  const i18n = useI18n()
+  if (!rows.length) return null
+  return <span className="text-xs text-muted-foreground" title={rows.map(row => describeReplayRow(row, i18n.locale).code).join('\n')}>
+    {i18n.t('随后：{0}', [rows.map(row => describeReplayRow(row, i18n.locale).kind).join(i18n.t('、'))])}
+  </span>
 }

@@ -61,7 +61,7 @@ function useTaskHubSummary(scope: string | null | undefined, refreshKey: string)
     void Promise.all([
       settle(readJson(`${CONSOLE_REST.TASK_PROVIDERS}?locale=${i18n.locale}`).then(body => summarizeAdminTasks(readTaskProviders(body, i18n.locale)))),
       settle(requestConsole<ScheduleListLike>({ type: CONSOLE_RPC.SCHEDULE_LIST, locale: i18n.locale }).then(summarizeSchedules)),
-      settle(readJson('/api/assistant/jobs').then(body => summarizeAssistantJobs(validateAssistantJobs(body, i18n.locale)))),
+      settle(readJson('/api/assistant/jobs').then(body => summarizeAssistantJobs(validateAssistantJobs(body, i18n.locale), i18n.locale))),
       settle(readJson(executionQuery()).then(body => summarizeExecutions(readExecutionPage(body, undefined, i18n.locale)))),
     ]).then(([admin, schedule, assistant, history]) => {
       if (!controller.signal.aborted && isInboxCacheScopeActive(scope)) setSummary({ admin, schedule, assistant, history })
@@ -111,8 +111,9 @@ function OverviewPanel({ summary, open }: { summary: TaskHubSummary; open: (tab:
       <StatCard
         icon={Bot}
         label={i18n.t("助手任务")}
-        value={summary.assistant?.total ?? unknown}
-        sub={summary.assistant
+        value={summary.assistant?.disabled ? unknown : summary.assistant?.total ?? unknown}
+        sub={summary.assistant?.disabled ? i18n.t("未启用：{0}", [summary.assistant.disabled])
+          : summary.assistant
           ? summary.assistant.failing > 0 ? i18n.t("{0} 个最近运行出错", [summary.assistant.failing]) : i18n.t("{0} 个已启用", [summary.assistant.enabled])
           : i18n.t("未启用或暂时无法读取")}
         tone={summary.assistant && summary.assistant.failing > 0 ? 'danger' : undefined}

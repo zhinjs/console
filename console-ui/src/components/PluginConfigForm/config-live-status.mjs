@@ -68,3 +68,46 @@ export function configurationGroupLabel(status, locale = 'zh-CN') {
 export function configurationPath(path) {
   return `/${path.map(part => part.replaceAll('~', '~0').replaceAll('/', '~1')).join('/')}`
 }
+
+/** Readable names of top-level configuration keys; other keys stay as written. */
+const TOP_LEVEL_LABELS = Object.freeze({
+  ai: 'AI',
+  http: 'HTTP 服务',
+  database: '数据库',
+  plugins: '插件',
+  disable_plugins: '停用的插件',
+  log_level: '日志级别',
+  assistant: '助手',
+  schedule: '定时任务',
+  console: 'Console',
+})
+
+function topLevelLabel(key, locale) {
+  return Object.hasOwn(TOP_LEVEL_LABELS, key) ? translate(locale, TOP_LEVEL_LABELS[key]) : key
+}
+
+/**
+ * A configuration path for people (zhinjs/zhin#1250 `config-apply-status-internal-ids`):
+ * `['plugins', 'rss', 'maxItems']` → 「插件 rss › maxItems」, `['ai', 'model']` → 「AI › model」.
+ * The JSON Pointer (`configurationPath`) stays available as the technical detail.
+ */
+export function configurationPathLabel(path, locale = 'zh-CN') {
+  if (!Array.isArray(path) || !path.length) return translate(locale, '整个配置文件')
+  const [first, ...rest] = path
+  if (first === 'plugins' && rest.length) return [translate(locale, '插件 {0}', [rest[0]]), ...rest.slice(1)].join(' › ')
+  return [topLevelLabel(first, locale), ...rest].join(' › ')
+}
+
+/**
+ * Title of an application group: the Host's group ids (`plugins`, `host-document`,
+ * `plugin-host:<key>`, `host:<path>`, or a configuration handler id) in words. An unknown id is
+ * shown as written.
+ */
+export function configurationGroupTitle(id, locale = 'zh-CN') {
+  if (typeof id !== 'string' || !id) return translate(locale, '未命名的配置项')
+  if (id === 'plugins') return translate(locale, '插件列表')
+  if (id === 'host-document') return translate(locale, '基础配置')
+  if (id.startsWith('plugin-host:')) return translate(locale, '插件 {0} 的装配', [id.slice('plugin-host:'.length)])
+  if (id.startsWith('host:')) return translate(locale, '配置项 {0}', [configurationPathLabel(id.slice('host:'.length).split('/'), locale)])
+  return Object.hasOwn(TOP_LEVEL_LABELS, id) ? topLevelLabel(id, locale) : id
+}

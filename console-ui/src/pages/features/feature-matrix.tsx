@@ -14,7 +14,7 @@ import { ErrorAlert } from '../../components/error-alert'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { adapterHref, featureGlobalHref } from '../../console-routes.mjs'
 import { scopeHref } from '../../scope/scope-tree.mjs'
-import { cellState, setEnabledRequest, type FeatureCell, type FeatureMatrixRow } from './feature-model.mjs'
+import { cellState, rootFeatureName, setEnabledRequest, type FeatureCell, type FeatureMatrixRow, type FeatureRootRow } from './feature-model.mjs'
 import { ConversationOverrideLinks } from './conversation-list'
 import { useFeatureMatrix, useFeatureWriter } from './use-feature-data'
 import { FeatureSwitch } from './feature-switch'
@@ -38,6 +38,33 @@ function CellBadge({ cell, to }: { cell: FeatureCell | undefined; to?: string })
 }
 
 /**
+ * The project's own root plugin (#1250 `kind: 'root'`): its commands, components and tools are
+ * features too, but it has no instance alias and is always on — no switch, no global configuration link.
+ */
+function RootRow({ root, adapters }: { root: FeatureRootRow; adapters: readonly string[] }) {
+  const i18n = useI18n()
+  const { commands, components, tools } = root.capabilities
+  const parts = [
+    commands.length ? i18n.t('{0} 个命令', [commands.length]) : '',
+    components.length ? i18n.t('{0} 个组件', [components.length]) : '',
+    tools.length ? i18n.t('{0} 个工具', [tools.length]) : '',
+  ].filter(Boolean)
+  const always = <Badge variant="success" title={i18n.t('本项目自己的功能始终启用，不能在这里关闭。')}>{i18n.t('始终启用')}</Badge>
+  return (
+    <TableRow>
+      <TableCell>
+        <span className="font-medium">{rootFeatureName(root, i18n.locale)}</span>
+        <p className="mt-0.5 text-xs text-muted-foreground" title={[...commands, ...components, ...tools].join(', ')}>
+          {parts.length ? i18n.t('本项目自带：{0}', [parts.join(i18n.t('、'))]) : i18n.t('本项目自带的功能')}
+        </p>
+      </TableCell>
+      <TableCell>{always}</TableCell>
+      {adapters.map(adapter => <TableCell key={adapter}>{always}</TableCell>)}
+    </TableRow>
+  )
+}
+
+/**
  * `/features` (功能矩阵): where each feature is enabled. Also the 功能 tab of the 全局 object page
  * (`embedded`: no page header, the object page has one).
  */
@@ -47,7 +74,7 @@ export default function FeatureMatrixPage({ embedded = false, heading }: {
   heading?: { title: string; description: string; actions?: ReactNode }
 } = {}) {
   const i18n = useI18n()
-  const { rows, adapters, revision, conversationOverrides, source, loading, error, refresh } = useFeatureMatrix()
+  const { rows, adapters, revision, conversationOverrides, root, source, loading, error, refresh } = useFeatureMatrix()
   const adapterColumns = source === 'rpc' ? adapters : []
   const access = useConsoleAccess()
   // Adapter cells are feature switches (`feature.toggle`); the 全局 column is the global plugin
@@ -94,9 +121,9 @@ export default function FeatureMatrixPage({ embedded = false, heading }: {
       {error ? <ErrorAlert error={error} onRetry={refresh} /> : null}
       <ActionReceipt controller={globalSwitch.receipt} />
       <Card className="overflow-hidden p-0">
-        {loading && !rows.length ? (
+        {loading && !rows.length && !root ? (
           <StatusState kind="loading" className="m-4" placeholder={<div className="space-y-2 p-4">{[0, 1, 2, 3].map(index => <Skeleton key={index} className="h-9" />)}</div>} />
-        ) : !rows.length ? (
+        ) : !rows.length && !root ? (
           <StatusState kind="empty" className="m-3" title={i18n.t("还没有功能")} description={i18n.t("安装插件后，它们的功能会出现在这里。")}
             actions={<Button asChild size="sm" variant="outline"><Link to="/marketplace">{i18n.t("去插件市场")}</Link></Button>} />
         ) : (
@@ -114,6 +141,7 @@ export default function FeatureMatrixPage({ embedded = false, heading }: {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {root ? <RootRow root={root} adapters={adapterColumns} /> : null}
               {rows.map(row => (
                 <TableRow key={row.plugin}>
                   <TableCell>

@@ -3,6 +3,8 @@
  * `feature.*` RPC (ADR 0050 §8) treated as optional: older Hosts do not have it.
  */
 
+import { translate } from '../../i18n/locale.mjs'
+
 /** How a failed `feature.*` call should be read. */
 export function classifyFeatureRpcError(error) {
   const message = error instanceof Error ? error.message : String(error ?? '')
@@ -90,7 +92,10 @@ export function readFeatureMatrix(payload) {
     const ids = isRecord(payload.endpoints) && Array.isArray(payload.endpoints[adapter]) ? payload.endpoints[adapter] : []
     endpoints[adapter] = ids.filter(id => typeof id === 'string' && id)
   }
-  const rows = payload.rows.map(row => {
+  // The project's own root plugin (#1250 `kind: 'root'`, plugin `''`): always on, not switchable,
+  // listed apart from the plugin rows so no switch or global configuration link is offered for it.
+  const root = payload.rows.filter(row => isRecord(row) && row.kind === 'root').map(readRootRow).find(Boolean)
+  const rows = payload.rows.filter(row => !(isRecord(row) && row.kind === 'root')).map(row => {
     if (!row || typeof row.plugin !== 'string' || !row.plugin) throw new Error('Invalid feature.matrix row')
     const global = readCell(row.global)
     if (!global) throw new Error('Invalid feature.matrix cell')
@@ -104,7 +109,40 @@ export function readFeatureMatrix(payload) {
       ...(counts ? { conversationOverrides: counts } : {}) }
   })
   const counts = readConversationCounts(payload.conversationOverrides)
-  return { revision: typeof payload.revision === 'string' ? payload.revision : '', adapters, endpoints, rows, ...(counts ? { conversationOverrides: counts } : {}) }
+  return { revision: typeof payload.revision === 'string' ? payload.revision : '', adapters, endpoints, rows, ...(counts ? { conversationOverrides: counts } : {}),
+    ...(root ? { root } : {}) }
+}
+
+function readCapabilityNames(value) {
+  return Array.isArray(value) ? value.filter(item => typeof item === 'string' && item) : []
+}
+
+/** `kind: 'root'` matrix row → `{ displayName, displayNameI18n?, capabilities }`; null when malformed. */
+function readRootRow(row) {
+  if (typeof row.displayName !== 'string' || !row.displayName.trim()) return null
+  const i18n = isRecord(row.displayNameI18n)
+    ? Object.fromEntries(['zh-CN', 'en'].filter(locale => typeof row.displayNameI18n[locale] === 'string' && row.displayNameI18n[locale]).map(locale => [locale, row.displayNameI18n[locale]]))
+    : {}
+  const capabilities = isRecord(row.capabilities) ? row.capabilities : {}
+  return {
+    displayName: row.displayName.trim(),
+    ...(Object.keys(i18n).length ? { displayNameI18n: i18n } : {}),
+    capabilities: { commands: readCapabilityNames(capabilities.commands), components: readCapabilityNames(capabilities.components), tools: readCapabilityNames(capabilities.tools) },
+  }
+}
+
+/**
+ * Display name of the root row: the project's own translation, else the Host's name — whose
+ * default 「本项目」 / 「本项目（<package>）」 is Console copy and is translated here.
+ */
+export function rootFeatureName(root, locale = 'zh-CN') {
+  if (!root) return ''
+  const own = root.displayNameI18n?.[locale]
+  if (own) return own
+  const name = root.displayName
+  const fallback = /^本项目(?:（(.+)）)?$/u.exec(name)
+  if (!fallback) return name
+  return fallback[1] ? translate(locale, '本项目（{0}）', [fallback[1]]) : translate(locale, '本项目')
 }
 
 /**
@@ -151,7 +189,8 @@ export function mergeFeatureMatrix(globalRows, matrix) {
       ...(remote.conversationOverrides ? { conversationOverrides: remote.conversationOverrides } : {}) })
   }
   return { revision: matrix.revision ?? '', adapters: matrix.adapters, endpoints: matrix.endpoints ?? {}, rows,
-    ...(matrix.conversationOverrides ? { conversationOverrides: matrix.conversationOverrides } : {}) }
+    ...(matrix.conversationOverrides ? { conversationOverrides: matrix.conversationOverrides } : {}),
+    ...(matrix.root ? { root: matrix.root } : {}) }
 }
 
 /** Adapter instances with account and online counts, from `endpoint.list`. */
@@ -217,6 +256,18 @@ export function featuresAtLevel(features, level) {
   return features.filter(feature => !feature.adapter && (feature.levels.includes(level) || !feature.hasSchema))
 }
 
+const OPERATOR_SOURCES = ['chat', 'console', 'cli']
+
+/**
+ * Who last wrote a stored override and through what (zhinjs/zhin#1250 `operator`); undefined when
+ * the Host sends none (older Hosts, rows written by migrations).
+ */
+export function readOverrideOperator(value) {
+  if (!isRecord(value) || !OPERATOR_SOURCES.includes(value.source)) return undefined
+  const text = key => typeof value[key] === 'string' && value[key].trim() ? { [key]: value[key].trim() } : {}
+  return { source: value.source, ...text('adapter'), ...text('userId'), ...text('principalId'), ...text('displayName') }
+}
+
 /** Validates `feature.get`. Throws on anything else. */
 export function readFeatureDetail(payload) {
   if (!isRecord(payload) || typeof payload.plugin !== 'string' || !LEVELS.includes(payload.level)) throw new Error('Invalid feature.get response')
@@ -236,6 +287,10 @@ export function readFeatureDetail(payload) {
     ...(readLock(payload.lockedBy) ? { lockedBy: readLock(payload.lockedBy) } : {}),
     ...(stringList(payload.conversationFields) ? { conversationFields: stringList(payload.conversationFields) } : {}),
     ...(typeof payload.persistent === 'boolean' ? { persistent: payload.persistent } : {}),
+    ...(typeof payload.updatedAt === 'number' && Number.isFinite(payload.updatedAt) ? { updatedAt: payload.updatedAt } : {}),
+    ...(readOverrideOperator(payload.operator) ? { operator: readOverrideOperator(payload.operator) } : {}),
+    ...(isRecord(payload.conversation) && typeof payload.conversation.name === 'string' && payload.conversation.name.trim()
+      ? { conversationName: payload.conversation.name.trim() } : {}),
   }
 }
 
@@ -464,6 +519,7 @@ function readConversationItem(item) {
         fields: stringList(entry.fields) ?? [],
         ...(typeof entry.updatedAt === 'number' ? { updatedAt: entry.updatedAt } : {}),
         ...(typeof entry.updatedBy === 'string' && entry.updatedBy ? { updatedBy: entry.updatedBy } : {}),
+        ...(readOverrideOperator(entry.operator) ? { operator: readOverrideOperator(entry.operator) } : {}),
       }))
     : undefined
   return {

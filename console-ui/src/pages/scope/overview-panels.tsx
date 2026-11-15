@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { StatusState } from '../../components/StatusState'
 import { adapterHref, conversationHref, endpointHref } from '../../console-routes.mjs'
 import { app } from '../../utils/console-client'
-import { endpointLifecycleLabel } from '../endpoint-presentation.mjs'
+import { endpointLifecycleLabel, endpointTransportText } from '../endpoint-presentation.mjs'
 import { ConversationKindBadge } from '../features/conversation-list'
 import type { ConversationItem } from '../features/feature-model.mjs'
 import { useConversationList, useFeatureList, useFeatureMatrix } from '../features/use-feature-data'
@@ -24,7 +24,7 @@ import {
   loginTasksFor, overviewTotals, platformLabel, type AccountFilter,
 } from './scope-overview-model.mjs'
 import { WaitingLoginBadge, useEndpointsAndLogin, useLoginTaskTypeLabel, type EndpointsAndLogin, type ScopeEndpoint } from './login-tasks'
-import { ConfiguredAccountActions } from './configured-account-actions'
+import { ConfigDriftProvider, ConfigDriftSection, ConfiguredAccountActions } from './configured-account-actions'
 import { ManagedAccountControls, ManagedAccountState, ManagedAccountsStatus, useManagedAccounts, type HeadlessAccountRow, type HeadlessAccounts } from './adapter-accounts'
 import { adapterAccountsView } from './adapter-accounts-model.mjs'
 import './scope-pages.css'
@@ -350,6 +350,7 @@ export function AdapterOverview({ scope, data, management }: { scope: Scope; dat
         ]} />
       ) : <Skeleton className="h-20" />}
       <ObjectSection title={i18n.t('聊天账号')} description={i18n.t(view.listDescription)}>
+        <ConfigDriftProvider adapter={adapter} onChanged={() => { data.refresh(); void managed?.refresh() }}>
         {hosted ? <ManagedAccountsStatus accounts={hosted} /> : null}
         {data.error && !data.loaded ? <StatusState error={data.error} onRetry={data.refresh} /> : (
           <Card className="overflow-hidden p-0">
@@ -363,6 +364,8 @@ export function AdapterOverview({ scope, data, management }: { scope: Scope; dat
             )}
           </Card>
         )}
+        <ConfigDriftSection />
+        </ConfigDriftProvider>
         {management}
       </ObjectSection>
     </>
@@ -405,6 +408,7 @@ export function EndpointOverview({ scope, endpointInfo, onOpenTab }: {
   const highlights = conversationHighlights(conversations.page?.items ?? [])
   const pendingRequests = info?.pendingRequestCount ?? 0
   const pendingNotices = info?.pendingNoticeCount ?? 0
+  const transport = endpointTransportText(info, i18n.locale)
   return (
     <>
       {loaded && error && !info ? (
@@ -413,7 +417,9 @@ export function EndpointOverview({ scope, endpointInfo, onOpenTab }: {
         <ObjectFacts items={[
           { label: i18n.t('平台'), value: i18n.t(platformLabel(info.adapter)) },
           { label: i18n.t('运行状态'), value: i18n.t(endpointLifecycleLabel(info)) },
-          ...(info.transportState ? [{ label: i18n.t('传输'), value: <code className="text-sm">{info.transportState}</code> }] : []),
+          ...(transport ? [{ label: i18n.t('传输'), value: transport.labeled
+            ? <span title={transport.raw ?? undefined}>{transport.text}</span>
+            : <code className="text-sm">{transport.text}</code> }] : []),
           { label: i18n.t('好友申请与邀请'), value: pendingRequests },
           { label: i18n.t('通知'), value: pendingNotices },
         ]} />

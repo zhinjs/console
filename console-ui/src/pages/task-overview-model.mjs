@@ -6,6 +6,7 @@
 import { translate } from '../i18n/locale.mjs'
 import { conversationHref } from '../console-routes.mjs'
 import { isPluginInternalSchedule, memoryScheduleLastRun, memoryScheduleTitle } from './schedule-memory-model.mjs'
+import { scheduleTargetView, scheduleTargetWarning } from './schedule-target-model.mjs'
 
 const KINDS = new Set(['private', 'group', 'channel'])
 
@@ -46,6 +47,21 @@ function adminTarget(target) {
 }
 
 const finite = value => (Number.isFinite(value) ? value : null)
+
+/**
+ * Target columns of an assistant-run job: the Host's resolved `target` (#1250) when it sends one —
+ * its account and conversation, or 「无效」 with the reason and the next run that will not arrive —
+ * else the previous 「AI 助手」.
+ */
+function assistantTarget(target, nextRunAt, locale) {
+  const view = scheduleTargetView(target, locale)
+  if (!view) return { target: translate(locale, 'AI 助手'), targetHref: null }
+  return {
+    target: view.display ?? (view.valid ? translate(locale, 'AI 助手') : null),
+    targetHref: null,
+    targetIssue: view.valid ? null : scheduleTargetWarning(view, nextRunAt, locale),
+  }
+}
 
 /**
  * `sources`：`{ admin: TaskProviders | null, schedules: { memory, persistent } | null,
@@ -112,8 +128,7 @@ export function taskOverviewRows(sources, locale = 'zh-CN') {
         status: statusOf(item.enabled === false ? 'paused' : 'enabled', locale),
         nextRunAt: finite(item.nextExecution),
         lastResult: lastResultOf(item.lastStatus, finite(item.lastExecutedAt), locale),
-        target: t('AI 助手'),
-        targetHref: null,
+        ...assistantTarget(item.target, finite(item.nextExecution), locale),
         approval: null,
         tab: 'schedule',
       })
@@ -134,8 +149,7 @@ export function taskOverviewRows(sources, locale = 'zh-CN') {
         status: statusOf(job.enabled ? 'enabled' : 'paused', locale),
         nextRunAt: finite(job.state?.nextRunAtMs),
         lastResult: failing ? lastResultOf('error', null, locale) : lastResultOf(job.state?.lastStatus, null, locale),
-        target: t('AI 助手'),
-        targetHref: null,
+        ...assistantTarget(job.target, finite(job.state?.nextRunAtMs), locale),
         approval: null,
         tab: 'assistant',
       })
@@ -162,7 +176,7 @@ export function taskOverviewRows(sources, locale = 'zh-CN') {
     }
   } else if (approvals !== undefined) unavailable.push('approvals')
 
-  const urgency = row => row.type === 'approval' ? 0 : row.status.tone === 'destructive' || row.lastResult?.tone === 'destructive' ? 1 : row.status.tone === 'warning' ? 2 : 3
+  const urgency = row => row.type === 'approval' ? 0 : row.status.tone === 'destructive' || row.lastResult?.tone === 'destructive' ? 1 : row.status.tone === 'warning' || row.targetIssue ? 2 : 3
   rows.sort((a, b) => urgency(a) - urgency(b)
     || (a.nextRunAt ?? Number.MAX_SAFE_INTEGER) - (b.nextRunAt ?? Number.MAX_SAFE_INTEGER)
     || a.title.localeCompare(b.title))
@@ -183,6 +197,7 @@ export function needsAttention(row) {
   return row.type === 'approval'
     || row.status.tone === 'destructive' || row.status.tone === 'warning'
     || row.lastResult?.tone === 'destructive'
+    || Boolean(row.targetIssue)
 }
 
 /**

@@ -7,6 +7,7 @@
 import { containsRedacted, featureFieldRows, fieldSource, parseConversationKey } from './feature-model.mjs'
 import { scopeHref } from '../../scope/scope-tree.mjs'
 import { readBackMismatch } from '../../components/apply-outcome-model.mjs'
+import { translate } from '../../i18n/locale.mjs'
 
 /** Row filters of the 功能 tab, in display order (labels are authored in the panel). */
 export const FEATURE_ROW_FILTERS = Object.freeze(['all', 'overridden', 'disabled', 'locked'])
@@ -253,4 +254,28 @@ export function globalFeatureCounts(rows) {
  */
 export function featureWriteSharesRevision(level) {
   return level !== 'conversation'
+}
+
+/**
+ * Who last changed this level's stored override and through what (zhinjs/zhin#1250
+ * `self-service-scope-feedback`), from `feature.get` `operator` / `updatedAt` / `conversation.name`:
+ * e.g. 「最后修改：张三（qq / 10001）· 在会话「测试群」的聊天里 · 2026/11/15 10:00」. Null without an
+ * `operator` (older Hosts), so the row reads as before.
+ */
+export function overrideProvenance(detail, locale = 'zh-CN') {
+  const operator = detail?.operator
+  if (!isRecord(operator)) return null
+  const t = (text, values) => translate(locale, text, values)
+  const identity = operator.source === 'chat'
+    ? operator.adapter && operator.userId ? `${operator.adapter} / ${operator.userId}` : operator.userId ?? null
+    : operator.principalId ?? null
+  const who = operator.displayName
+    ? identity && identity !== operator.displayName ? `${operator.displayName}（${identity}）` : operator.displayName
+    : identity ?? t('未知用户')
+  const via = operator.source === 'chat'
+    ? detail.conversationName ? t('在会话「{0}」的聊天里', [detail.conversationName]) : t('在聊天里')
+    : operator.source === 'cli' ? t('通过命令行') : t('通过 Console')
+  const parts = [who, via]
+  if (typeof detail.updatedAt === 'number' && Number.isFinite(detail.updatedAt)) parts.push(new Date(detail.updatedAt).toLocaleString(locale))
+  return t('最后修改：{0}', [parts.join(' · ')])
 }

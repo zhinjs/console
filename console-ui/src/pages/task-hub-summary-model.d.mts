@@ -9,5 +9,5 @@ export interface ScheduleListLike {
 
 export function summarizeAdminTasks(catalog: TaskProviders | null): { total: number; paused: number; failed: number; providers: number } | null
 export function summarizeSchedules(list: ScheduleListLike | null): { total: number; persistent: number; paused: number; internal: number } | null
-export function summarizeAssistantJobs(data: AssistantJobsResponse | null): { total: number; enabled: number; failing: number } | null
+export function summarizeAssistantJobs(data: AssistantJobsResponse | null, locale?: 'zh-CN' | 'en'): { total: number; enabled: number; failing: number; disabled?: string } | null
 export function summarizeExecutions(page: ExecutionPage | null): { recent: number; hasMore: boolean; failed: number; running: number } | null

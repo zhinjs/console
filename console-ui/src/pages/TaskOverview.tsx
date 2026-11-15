@@ -16,6 +16,7 @@ import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { CONSOLE_REST, CONSOLE_RPC } from '../contracts/zhin-console'
 import { readTaskProviders } from './task-center-model.mjs'
 import { validateAssistantJobs } from './assistant-jobs-model.mjs'
+import { featureDisabledState } from '../utils/feature-disabled.mjs'
 import { readToolApprovals } from './tool-approvals-model.mjs'
 import { taskTabHref } from './task-hub-model.mjs'
 import { filterTaskOverview, splitInternalTasks, TASK_OVERVIEW_FILTERS, taskOverviewRows, type TaskOverviewFilter, type TaskOverviewRow, type TaskOverviewSources } from './task-overview-model.mjs'
@@ -66,6 +67,8 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
   const shown = filterTaskOverview(rows, filter)
   const time = (value: number | null | undefined) => value ? new Date(value).toLocaleString(i18n.locale) : '—'
   const allFailed = unavailable.length >= 3 && rows.length === 0
+  // The assistant is off (200 `status: 'disabled'`, #1250): a state with a reason, not a read failure.
+  const assistantOff = featureDisabledState(sources?.assistant, i18n.locale)
 
   return (
     <div className="space-y-3">
@@ -87,6 +90,9 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
         <p className="text-xs text-[hsl(var(--warning))]" role="status">
           {i18n.t("未能读取：{0}。这些来源的任务没有列出，不代表没有任务。", [unavailable.map(id => i18n.t(SOURCE_LABELS[id] ?? id)).join(' · ')])}
         </p>
+      ) : null}
+      {assistantOff ? (
+        <p className="text-xs text-muted-foreground" role="status">{i18n.t("助手任务未启用：{0}", [assistantOff.description])}</p>
       ) : null}
       {allFailed ? (
         <StatusState kind="error" title={i18n.t("任务暂时读不到")} description={i18n.t("管理员任务、定时提醒和助手任务都没有读到；连接恢复后刷新。")} onRetry={() => void load()} />
@@ -177,7 +183,12 @@ function LastResult({ row, time }: { row: TaskOverviewRow; time: (value: number 
 }
 
 function TargetCell({ row }: { row: TaskOverviewRow }) {
-  if (!row.target) return <span className="text-muted-foreground">—</span>
+  const i18n = useI18n()
+  // Unresolved delivery target (#1250): 「⚠ 无效」, the reason and the next run whose results will not arrive.
+  const issue = row.targetIssue
+    ? <span className="console-task-overview-sub" role="note"><Badge variant="warning" size="sm">{i18n.t('⚠ 无效')}</Badge> {row.targetIssue}</span>
+    : null
+  if (!row.target) return issue ?? <span className="text-muted-foreground">—</span>
   const code = <code className="break-all text-xs" title={row.target}>{row.target}</code>
-  return row.targetHref ? <Link className="underline-offset-2 hover:underline" to={row.targetHref}>{code}</Link> : code
+  return <>{row.targetHref ? <Link className="underline-offset-2 hover:underline" to={row.targetHref}>{code}</Link> : code}{issue}</>
 }

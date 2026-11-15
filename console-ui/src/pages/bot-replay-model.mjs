@@ -219,3 +219,35 @@ export function exportFileName(window) {
 export function isPermissionDenied(error) {
   return Boolean(error) && (error.status === 401 || error.status === 403)
 }
+
+/** Payload key of a row written only as the consequence of another row in the same turn (#1250). */
+export const REPLAY_PARENT_KEY = 'parent'
+
+/**
+ * One entry per decision (zhinjs/zhin#1250 `replay-two-rows-per-ambient`): a gate that stops a turn
+ * (`ambient_decision` / `control_gate` / `speak_gate`) also writes a `model_skip` whose
+ * `payload.parent` names the gate's kind. Such a row folds into the row of that kind in the same
+ * turn when it is in `rows`; otherwise (older Hosts without `parent`, a parent on another page or
+ * filtered out) it stays its own entry. Order follows `rows`.
+ */
+export function foldReplayRows(rows) {
+  const list = Array.isArray(rows) ? rows : []
+  const parentOf = row => {
+    const parent = row?.kind === 'model_skip' && isPlainObject(row.payload) ? row.payload[REPLAY_PARENT_KEY] : undefined
+    return typeof parent === 'string' && parent && parent !== 'model_skip' ? parent : null
+  }
+  const owners = new Map()
+  for (const row of list) {
+    if (parentOf(row)) continue
+    const key = `${row.turn_id}\u0000${row.kind}`
+    if (!owners.has(key)) owners.set(key, { row, folded: [] })
+  }
+  const entries = []
+  for (const row of list) {
+    const parent = parentOf(row)
+    const owner = parent ? owners.get(`${row.turn_id}\u0000${parent}`) : owners.get(`${row.turn_id}\u0000${row.kind}`)
+    if (parent && owner) { owner.folded.push(row); continue }
+    entries.push(owner && owner.row === row ? owner : { row, folded: [] })
+  }
+  return entries
+}

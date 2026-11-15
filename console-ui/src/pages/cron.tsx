@@ -27,6 +27,8 @@ import { describeCron, relativeUntil } from './cron-schedule.mjs'
 import { taskTabHref } from './task-hub-model.mjs'
 import { isPluginInternalSchedule, memoryScheduleLastRun, memoryScheduleTitle, type MemoryScheduleLike } from './schedule-memory-model.mjs'
 import { validateAssistantJobs, explainJobError, type AssistantJob } from './assistant-jobs-model.mjs'
+import { scheduleTargetView, scheduleTargetWarning } from './schedule-target-model.mjs'
+import { featureDisabledState } from '../utils/feature-disabled.mjs'
 import { apiFetch } from '../utils/auth'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
@@ -73,6 +75,8 @@ interface PersistentCron {
   nextExecution?: number
   lastStatus?: string
   lastExecutedAt?: number
+  /** Resolved delivery target (#1250); absent from older Hosts. */
+  target?: unknown
 }
 
 function PersistentRunStatus({ state, job, now }: { state?: AssistantJob['state']; job: PersistentCron; now: number }) {
@@ -81,9 +85,12 @@ function PersistentRunStatus({ state, job, now }: { state?: AssistantJob['state'
   const failed = lastStatus === 'error'
   const timestamp = state?.nextRunAtMs ?? job.nextExecution
   const next = relativeUntil(timestamp, now, i18n.locale)
+  const target = scheduleTargetView(job.target, i18n.locale)
   return <div className="console-cron-run-status">
     <div className="console-cron-run-facts">
       <span>{i18n.t("下次执行：")}{next ?? (timestamp != null ? new Date(timestamp).toLocaleString(i18n.locale) : '—')}</span>
+      {target?.valid && target.display ? <span>{i18n.t("发送到：")}{target.display}</span> : null}
+      {target && !target.valid ? <span><Badge variant="warning">{i18n.t("⚠ 无效")}</Badge> {target.display ? `${target.display} · ` : ''}{scheduleTargetWarning(target, timestamp, i18n.locale)}</span> : null}
       {lastStatus ? <Badge variant={failed ? 'destructive' : lastStatus === 'ok' ? 'success' : 'secondary'}>{failed ? i18n.t("上次执行失败") : lastStatus === 'ok' ? i18n.t("上次执行成功") : lastStatus === 'skipped' ? i18n.t("上次已跳过") : lastStatus}</Badge> : <span>{i18n.t("最近结果：")}{'—'}</span>}
       {state ? <Link className="font-medium text-foreground hover:underline" to={taskTabHref('assistant', { q: job.id })}>{i18n.t("执行详情 →")}</Link> : null}
     </div>
@@ -122,6 +129,8 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
   }, [])
   const [persistentAvailable, setPersistentAvailable] = useState(false)
   const [jobStates, setJobStates] = useState<Map<string, AssistantJob['state']>>(() => new Map())
+  // The Host reports the assistant as off (200 `status: 'disabled'`, #1250): show 「未启用」 and why.
+  const [assistantOff, setAssistantOff] = useState<string | null>(null)
   const [cronValidation, setCronValidation] = useState<{ expression: string; valid: boolean; error?: string } | null>(null)
   const [togglePending, setTogglePending] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -157,9 +166,13 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
       setError(null)
       // Run status lives in the assistant job API; without the assistant the list simply shows no status.
       void apiFetch('/api/assistant/jobs', { signal: controller.signal, cache: 'no-store' })
-        .then(async (res) => (res.ok ? validateAssistantJobs(await res.json(), i18n.locale).jobs : []))
-        .catch(() => [] as AssistantJob[])
-        .then((jobs) => { if (current()) setJobStates(new Map(jobs.map((job) => [job.id, job.state]))) })
+        .then(async (res) => (res.ok ? validateAssistantJobs(await res.json(), i18n.locale) : null))
+        .catch(() => null)
+        .then((data) => {
+          if (!current()) return
+          setJobStates(new Map((data?.jobs ?? []).map((job) => [job.id, job.state])))
+          setAssistantOff(featureDisabledState(data, i18n.locale)?.description ?? null)
+        })
     } catch (err) {
       if (current()) setError((err as Error).message)
     } finally {
@@ -286,7 +299,9 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
             <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>
             <Button variant="outline" size="sm" onClick={() => { setError(null); setLoading(true); void fetchCrons() }}><RefreshCw />{i18n.t("重试")}</Button>
           </div> : <>
-      {!readOnly && !persistentAvailable && <Alert>
+      {assistantOff ? <Alert role="status">
+        <AlertDescription><strong>{i18n.t("定时 AI 任务未启用")}</strong> {assistantOff}</AlertDescription>
+      </Alert> : !readOnly && !persistentAvailable && <Alert>
         <AlertDescription>
           {i18n.t("当前实例尚未启用持久化 AI 调度，暂不能创建、暂停或删除任务。已有插件注册的任务仍可在下方查看。 如需定时 AI 任务，请在运行实例中安装并配置 Agent 及持久化调度引擎，再刷新本页。")}</AlertDescription>
       </Alert>}
