@@ -1690,6 +1690,8 @@ export const englishMessages = Object.freeze({
   "请选择目标 Endpoint": "Select a target endpoint",
   "{0} 预览": "{0} preview",
   "目标预览：{0} / {1} · {2} {3}{4}{5}": "Target preview: {0} / {1} · {2} {3}{4}{5}",
+  " · 父级 {0}": " · Parent {0}",
+  " · 线程 {0}": " · Thread {0}",
   "作者 HTML / 消息预览": "Author HTML / message preview",
   " · 代次 ": " · Generation ",
   "此连接不支持组件渲染": "This connection does not support component rendering",

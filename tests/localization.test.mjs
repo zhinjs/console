@@ -153,15 +153,10 @@ const FULLY_LOCALIZED_SOURCES = [
   'pages/dashboard.tsx', 'pages/workrooms.tsx', 'pages/engagements-model.mjs',
   'pages/access', 'pages/ops', 'pages/attention', 'pages/introspection',
 ]
-/** Files inside those paths that still have a known gap, each tracked as its own #64 item. */
-const LOCALIZATION_GAPS = new Set([
-  'pages/introspection/GalleryPreview.tsx', // gallery-target-i18n: target labels interpolated in Chinese
-])
 
 test('model management, personal sessions, chat history and the dashboard show no Chinese text outside the i18n helper', () => {
   const root = new URL('../console-ui/src/', import.meta.url).pathname
   const offences = FULLY_LOCALIZED_SOURCES.flatMap(path => sourceFilesUnder(`${root}${path}`))
-    .filter(file => !LOCALIZATION_GAPS.has(file.slice(root.length)))
     .flatMap(file => untranslatedCjk(file).map(found => `${file.slice(root.length)}:${found}`))
   assert.deepEqual(offences, [])
 })
