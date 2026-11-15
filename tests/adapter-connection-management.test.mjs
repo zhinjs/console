@@ -8,7 +8,7 @@ test('the adapter page has one 刷新: the header re-reads accounts and the embe
   const page = await src('pages/scope/adapter-page.tsx')
   assert.match(page, /const refresh = \(\) => \{ data\.refresh\(\); setManagementRefresh\(value => value \+ 1\) \}/)
   assert.match(page, /actions=\{<Button variant="outline" size="sm" onClick=\{refresh\}/)
-  assert.match(page, /<AdapterConsolePage adapterKey=\{adapter\} embedded refreshKey=\{refreshKey\} toolbar=\{toolbar\} hostAccounts=\{!!managed\} \/>/)
+  assert.match(page, /<AdapterConsolePage adapterKey=\{adapter\} embedded refreshKey=\{refreshKey\} toolbar=\{toolbar\} hostAccounts=\{view\.hostAccounts\} \/>/)
   // The same refresh key re-reads the shared account state of the table rows.
   assert.match(page, /<ManagedAccountsProvider adapter=\{scope\.adapter!\} refreshKey=\{managementRefresh\} enabled=\{canManage\}>/)
   // The toolbar uses the Console's own button variants, never the SDK's zk-btn.
@@ -31,9 +31,12 @@ test('the published SDK embedded mode replaces the old header-hiding CSS', async
 
 test('headless accounts come from the installed client, typed by the SDK; only viewers who manage connections get the provider', async () => {
   // The pinned client (~1.2.1) ships the whole headless API and the page honours `hostAccounts`.
-  const sdk = await readFile(new URL('../node_modules/@zhin.js/client/dist/adapter-console/AdapterConsolePage.js', import.meta.url), 'utf8')
-  assert.match(sdk, /ADAPTER_CONSOLE_PAGE_CAPABILITIES = Object\.freeze\(\{[^}]*hostAccounts: true/)
-  for (const name of ['AdapterAccountsProvider', 'useAdapterAccounts', 'AdapterAccountEditor']) assert.match(sdk, new RegExp(`export function ${name}\\(`), name)
+  const client = await import('@zhin.js/client')
+  assert.equal(client.AdapterConsolePage.capabilities?.hostAccounts, true)
+  assert.equal(client.ADAPTER_CONSOLE_PAGE_CAPABILITIES.hostAccounts, true)
+  for (const name of ['AdapterConsolePage', 'AdapterAccountsProvider', 'useAdapterAccounts', 'AdapterAccountEditor']) {
+    assert.equal(typeof client[name], 'function', name)
+  }
   const types = await readFile(new URL('../node_modules/@zhin.js/client/dist/index.d.ts', import.meta.url), 'utf8')
   assert.match(types, /type AdapterAccountRow, type AdapterAccounts,/)
 
@@ -62,10 +65,41 @@ test('each managed account row carries its labelled switch, 编辑 and 删除; �
   assert.match(panels, /managedOnly\.map\(row => <ManagedOnlyRow/)
   assert.match(panels, /const configuredIds = \(configuredOnly\?\.ids \?\? \[\]\)\.filter\(id => !managedRows\.has\(id\)\)/)
   assert.match(panels, /<ConfiguredAccountActions adapter=\{configuredOnly\.adapter\} endpoint=\{id\} \/>/)
-  assert.match(panels, /\{managed \? <ManagedAccountsStatus accounts=\{managed\} \/> : null\}/)
+  assert.match(panels, /\{hosted \? <ManagedAccountsStatus accounts=\{hosted\} \/> : null\}/)
+  assert.match(panels, /managed=\{hosted \? \{ adapter, accounts: hosted \} : undefined\}/)
 
   const page = await src('pages/scope/adapter-page.tsx')
-  assert.match(page, /\{managed \? <ManagedAccountEditor \/> : null\}/)
+  assert.match(page, /\{view\.hostAccounts \? <ManagedAccountEditor \/> : null\}/)
+})
+
+test('the rows carry the account controls only once the controller is ready; otherwise the copy and 管理连接 stay on the SDK cards', async () => {
+  const { adapterAccountsView, hostRendersAccounts, ACCOUNT_LIST_COPY, CONNECTION_MANAGER_COPY } = await import('../console-ui/src/pages/scope/adapter-accounts-model.mjs')
+  assert.deepEqual(adapterAccountsView({ state: 'ready' }), { hostAccounts: true, listDescription: ACCOUNT_LIST_COPY.host, managerHint: CONNECTION_MANAGER_COPY.host })
+  assert.match(ACCOUNT_LIST_COPY.host, /每行的开关启停账号/)
+  // An older Host without an account directory, the first read, a failed read, no provider: the table rows have no
+  // switch, so the copy points to 「管理连接」 and the SDK page keeps its own account cards (hostAccounts off).
+  for (const accounts of [{ state: 'unmanaged' }, { state: 'loading' }, { state: 'error' }, undefined, null]) {
+    const view = adapterAccountsView(accounts)
+    assert.equal(view.hostAccounts, false, String(accounts?.state))
+    assert.equal(hostRendersAccounts(accounts), false)
+    assert.equal(view.listDescription, ACCOUNT_LIST_COPY.sdk)
+    assert.equal(view.managerHint, CONNECTION_MANAGER_COPY.sdk)
+    assert.doesNotMatch(view.listDescription, /每行的开关/)
+    assert.match(view.listDescription, /添加、编辑与启停在列表下方的「管理连接」里/)
+    assert.match(view.managerHint, /添加、编辑、启停账号/)
+  }
+  // Both pages decide by the same view; neither keys the copy or hostAccounts on the provider alone.
+  const page = await src('pages/scope/adapter-page.tsx')
+  const panels = await src('pages/scope/overview-panels.tsx')
+  assert.match(page, /const view = adapterAccountsView\(managed\)/)
+  assert.match(page, /i18n\.t\(view\.managerHint\)/)
+  assert.match(panels, /const view = adapterAccountsView\(managed\)/)
+  assert.match(panels, /const hosted = view\.hostAccounts \? managed : undefined/)
+  assert.match(panels, /description=\{i18n\.t\(view\.listDescription\)\}/)
+  for (const text of [page, panels]) assert.doesNotMatch(text, /hostAccounts=\{!!managed\}|\{managed \? (?:i18n|<Managed)/)
+  // The copy has English translations.
+  const { englishMessages } = await import('../console-ui/src/i18n/messages.en.mjs')
+  for (const copy of [ACCOUNT_LIST_COPY, CONNECTION_MANAGER_COPY]) for (const text of Object.values(copy)) assert.ok(Object.hasOwn(englishMessages, text), text)
 })
 
 test('the migration prompt says what migrating changes and offers 立即迁移 when the SDK can migrate now', async () => {

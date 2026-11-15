@@ -15,6 +15,7 @@ import { useEndpointsAndLogin } from './login-tasks'
 import { platformLabel } from './scope-overview-model.mjs'
 import { ScopeFeaturesPanel, ScopeRecordsPanel } from './scope-panels'
 import { ManagedAccountEditor, ManagedAccountsProvider, useManagedAccounts } from './adapter-accounts'
+import { adapterAccountsView } from './adapter-accounts-model.mjs'
 
 /** `/scope/:adapter` — 适配器: its accounts and connection management (概览), overrides (功能), roles, records. */
 export function AdapterObjectPage({ scope }: { scope: Scope & { level: 'adapter' } }) {
@@ -62,6 +63,9 @@ function ConnectionManagement({ adapter, refreshKey }: { adapter: string; refres
   const i18n = useI18n()
   const access = useConsoleAccess()
   const managed = useManagedAccounts()
+  // The rows carry the controls only once the account controller is ready; until then (loading,
+  // error, a Host without an account directory) the SDK page keeps its own cards and editor.
+  const view = adapterAccountsView(managed)
   // 编辑 in a table row opens the editor here: open the disclosure and move to it.
   const editing = managed?.editing?.instanceId
   useEffect(() => {
@@ -81,20 +85,20 @@ function ConnectionManagement({ adapter, refreshKey }: { adapter: string; refres
       ) : null}
     </div>
   ) : null
-  // Collapsed under the account list. Inside the account provider the rows above carry each account's
-  // switch and actions, so this keeps only adding accounts, the account editor, logins and platform
-  // actions; without it this is the adapter plugin's own page (cards, start / stop, edit).
+  // Collapsed under the account list. With a ready account controller the rows above carry each
+  // account's switch and actions, so this keeps only adding accounts, the account editor, logins and
+  // platform actions; otherwise it is the adapter plugin's own page (cards, start / stop, edit).
   return (
     <details className="console-connection-manager">
       <summary>
         <Settings2 aria-hidden="true" />
         <span className="console-connection-manager-title">{i18n.t('管理连接')}</span>
-        <span className="console-connection-manager-hint">{managed ? i18n.t('添加账号、编辑表单、登录与平台操作（由适配器插件提供）') : i18n.t('添加、编辑、启停账号与登录方式（由适配器插件提供）')}</span>
+        <span className="console-connection-manager-hint">{i18n.t(view.managerHint)}</span>
       </summary>
       {hasConsolePermission('endpoint.manage', access) ? (
         <div className="console-adapter-console">
-          {managed ? <ManagedAccountEditor /> : null}
-          <AdapterConsolePage adapterKey={adapter} embedded refreshKey={refreshKey} toolbar={toolbar} hostAccounts={!!managed} />
+          {view.hostAccounts ? <ManagedAccountEditor /> : null}
+          <AdapterConsolePage adapterKey={adapter} embedded refreshKey={refreshKey} toolbar={toolbar} hostAccounts={view.hostAccounts} />
         </div>
       ) : <StatusState kind="forbidden" compact className="m-3" permissions={['endpoint.manage']} description={i18n.t('当前身份不能管理账号连接。')} />}
     </details>
