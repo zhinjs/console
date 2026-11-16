@@ -36,10 +36,11 @@ function formatTime(timestamp: number, locale: 'zh-CN' | 'en'): string {
   return new Date(timestamp).toLocaleString(locale)
 }
 
-function outcomeVariant(code: string): 'success' | 'info' | 'secondary' | 'destructive' {
-  if (code === 'allow') return 'success'
-  if (code === 'deny' || code === 'error') return 'destructive'
-  if (code === 'defer') return 'info'
+/** Replying is the normal outcome (neutral); a refusal is a warning, an error the loudest (console#125). */
+function outcomeVariant(code: string): 'outline' | 'secondary' | 'warning' | 'destructive' {
+  if (code === 'allow') return 'outline'
+  if (code === 'error') return 'destructive'
+  if (code === 'deny') return 'warning'
   return 'secondary'
 }
 

@@ -81,7 +81,7 @@ function describeTaskRow(row, locale = 'zh-CN') {
   return {
     task: row.task,
     label: taskLabel(row.task, locale),
-    mode: translate(locale, MODE_LABELS[row.mode], [], 'state'), modeVariant: row.mode === 'active' ? 'success' : row.mode === 'shadow' ? 'info' : 'secondary',
+    mode: translate(locale, MODE_LABELS[row.mode], [], 'state'), modeVariant: row.mode === 'active' ? 'outline' : 'secondary',
     calls: row.calls,
     helped: row.selected + row.shadow,
     noSuggestion: row.abstained,

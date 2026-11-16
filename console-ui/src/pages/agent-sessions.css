@@ -157,7 +157,6 @@
     margin-bottom: 0.5rem;
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
-    font-variant-numeric: tabular-nums;
   }
 
   .conversation-message-outgoing .conversation-message-meta {

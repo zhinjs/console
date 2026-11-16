@@ -56,7 +56,7 @@ function Metric({
         <span>{label}</span>
         <span className="console-metric-icon" aria-hidden="true"><Icon /></span>
       </div>
-      <strong className="text-2xl font-semibold tabular-nums">{value}</strong>
+      <strong className="text-2xl font-semibold">{value}</strong>
       {progress !== undefined ? (
         <div className="console-metric-progress" aria-hidden="true">
           <span style={{ width: `${Math.max(0, Math.min(100, progress * 100))}%` }} />

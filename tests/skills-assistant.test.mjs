@@ -86,8 +86,8 @@ test('the page keeps status permission and routes configuration to graph purpose
 test('English display retains status meaning and unknown task names', () => {
   const view=describeSkillsStatus({...hostStatus, tasks:[...hostStatus.tasks,{...hostStatus.tasks[0],task:'第三方任务'}]}, 'en')
   assert.equal(view.tasks[0].label, 'Choose skills for the bot')
-  assert.equal(view.tasks[0].mode, 'Observe only'); assert.equal(view.tasks[0].modeVariant, 'info')
-  assert.equal(view.tasks[1].modeVariant, 'success'); assert.equal(view.tasks[1].averageTime,'1.5 s')
+  assert.equal(view.tasks[0].mode, 'Observe only'); assert.equal(view.tasks[0].modeVariant, 'secondary')
+  assert.equal(view.tasks[1].modeVariant, 'outline'); assert.equal(view.tasks[1].averageTime,'1.5 s')
   assert.equal(view.tasks[2].label,'第三方任务')
   assert.equal(view.recent[0].text,'Unsuccessful attempt')
   assert.throws(()=>validateSkillsStatus({},'en'),/Invalid skills assistant status/)

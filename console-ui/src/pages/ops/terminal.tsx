@@ -294,7 +294,7 @@ function TerminalPane({ target, active }: { target: TerminalTarget; active: bool
     <div className="space-y-2 p-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm">
-          <Badge size="sm" variant={status.phase === 'ready' ? 'success' : status.phase === 'connecting' ? 'warning' : 'secondary'}>
+          <Badge size="sm" variant={status.phase === 'ready' ? 'outline' : status.phase === 'connecting' ? 'secondary' : 'warning'}>
             {status.phase === 'ready' ? i18n.t("已连接") : status.phase === 'connecting' ? i18n.t("连接中") : i18n.t("已断开")}
           </Badge>
           <span className="text-muted-foreground">{target.kind === 'local' ? i18n.t("本机 Shell") : i18n.t("SSH：{0}", [target.label])}</span>

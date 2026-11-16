@@ -42,7 +42,6 @@
   min-width: 22rem;
   border-collapse: collapse;
   font-size: var(--console-text-caption);
-  font-variant-numeric: tabular-nums;
 }
 
 .zhin-markdown-table th,

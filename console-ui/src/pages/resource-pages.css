@@ -101,11 +101,6 @@
     font-weight: 500;
   }
 
-  .console-endpoint-test-pill.is-ok {
-    background: hsl(var(--success) / 0.14);
-    color: hsl(var(--success));
-  }
-
   .console-endpoint-test-pill.is-error {
     background: hsl(var(--destructive) / 0.14);
     color: hsl(var(--destructive));
@@ -219,11 +214,6 @@
     padding: 0.5rem 0.75rem;
     border-radius: var(--console-radius-sm);
     font-size: var(--console-text-caption);
-  }
-
-  .console-login-feedback.is-ok {
-    background: hsl(var(--success) / 0.14);
-    color: hsl(var(--success));
   }
 
   .console-login-feedback.is-error {

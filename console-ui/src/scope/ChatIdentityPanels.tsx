@@ -142,7 +142,7 @@ export function MyChatIdentitySection({ highlight = false }: { highlight?: boole
                   </div>
                   <div className="console-chat-role-list" aria-label={i18n.t('聊天角色')}>
                     {me.principal.roles.length ? me.principal.roles.map((role, index) => (
-                      <Badge key={index} variant={role.role === 'owner' ? 'warning' : role.role === 'admin' ? 'info' : 'outline'} size="sm">
+                      <Badge key={index} variant={role.role === 'owner' ? 'default' : role.role === 'admin' ? 'secondary' : 'outline'} size="sm">
                         {i18n.t(CHAT_ROLE_LABELS[role.role])} · {role.key || i18n.t('全局')}
                       </Badge>
                     )) : <span className="console-admin-note">{i18n.t('还没有聊天角色。')}</span>}

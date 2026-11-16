@@ -94,7 +94,7 @@ export function StackedBarChart({ series, keys, colors, bucket }: { series: Usag
             <strong className="font-semibold text-foreground">
               {formatBucketLabel(activeBar.bucketStart, bucket, i18n.locale)}
             </strong>
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 font-semibold text-primary">
+            <span className="rounded-full bg-[hsl(var(--foreground)/0.06)] px-2 py-0.5 font-semibold text-foreground">
               {formatTokens(activeBar.total, i18n.locale)} tok
             </span>
           </div>
@@ -127,9 +127,9 @@ export function StackedBarChart({ series, keys, colors, bucket }: { series: Usag
               x2={W - PAD.right}
               y1={y(top * tick)}
               y2={y(top * tick)}
-              stroke="currentColor"
-              strokeOpacity={tick === 0 ? 0.2 : 0.1}
-              strokeDasharray={tick === 0 ? undefined : '3 4'}
+              stroke={tick === 0 ? 'var(--console-chart-baseline)' : 'var(--console-chart-grid)'}
+              strokeWidth={1}
+              vectorEffect="non-scaling-stroke"
             />
             <text x={PAD.left - 8} y={y(top * tick) + 4} textAnchor="end" fontSize={11.5} fill="currentColor" fillOpacity={0.62}>
               {formatTokens(top * tick, i18n.locale)}
@@ -281,9 +281,9 @@ export function CacheLineChart({
               x2={W - PAD.right}
               y1={y(tick)}
               y2={y(tick)}
-              stroke="currentColor"
-              strokeOpacity={tick === 0 ? 0.2 : 0.09}
-              strokeDasharray={tick === 0 ? undefined : '3 4'}
+              stroke={tick === 0 ? 'var(--console-chart-baseline)' : 'var(--console-chart-grid)'}
+              strokeWidth={1}
+              vectorEffect="non-scaling-stroke"
             />
             {tick === 0 || tick === 0.5 || tick === 1 ? (
               <text x={PAD.left - 8} y={y(tick) + 4} textAnchor="end" fontSize={11.5} fill="currentColor" fillOpacity={0.62}>
@@ -395,7 +395,7 @@ export function ModelBars({ rows, colors, showWrite }: { rows: UsageModelRow[]; 
                 <span className="break-all font-semibold text-foreground">{key}</span>
               </span>
               <span className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
+                <span className="rounded-full bg-[hsl(var(--foreground)/0.06)] px-2 py-0.5 font-medium text-foreground">
                   {i18n.t("缓存命中率")} {formatPercent(hitRate, i18n.locale)}
                 </span>
                 {showWrite && row.cacheWriteTokens ? (
@@ -403,7 +403,7 @@ export function ModelBars({ rows, colors, showWrite }: { rows: UsageModelRow[]; 
                     {i18n.t("缓存写入")} {formatTokens(row.cacheWriteTokens, i18n.locale)}
                   </span>
                 ) : null}
-                <span className="rounded-full border border-[color:var(--console-border-subtle)] bg-card px-2 py-0.5 tabular-nums">
+                <span className="rounded-full border border-[color:var(--console-border-subtle)] bg-card px-2 py-0.5">
                   {i18n.t("{0} 次调用", [row.calls])}
                 </span>
               </span>
@@ -419,7 +419,7 @@ export function ModelBars({ rows, colors, showWrite }: { rows: UsageModelRow[]; 
                       style={{ width: `${Math.max(row[field] > 0 ? 1.5 : 0, (row[field] / max) * 100)}%`, background: color, opacity }}
                     />
                   </span>
-                  <span className="w-14 shrink-0 text-right font-medium tabular-nums text-foreground">
+                  <span className="w-14 shrink-0 text-right font-medium text-foreground">
                     {formatTokens(row[field], i18n.locale)}
                   </span>
                 </div>
@@ -508,7 +508,7 @@ export function SegmentDonut({ segments }: { segments: UsageStats['segments'] })
                   <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: SEGMENT_COLORS[item.key] }} />
                   <span>{i18n.t(SEGMENT_LABELS[item.key]!)}</span>
                 </span>
-                <span className="tabular-nums text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                   <strong className="font-semibold text-foreground">{formatTokens(item.value, i18n.locale)}</strong>
                   {total > 0 ? ` · ${formatPercent(share, i18n.locale)}` : ''}
                 </span>

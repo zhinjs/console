@@ -342,7 +342,7 @@ export default function WorkroomCatalogPage() {
         }
       />
 
-      {readOnly ? <div className="rounded-lg border border-warning/25 bg-warning/[0.06] px-4 py-3 text-sm text-warning">{i18n.t("当前身份只读展示目录；发布需要 Agent 配置权限。")}</div> : null}
+      {readOnly ? <div className="rounded-lg border border-[color:var(--console-border-default)] bg-[color:var(--console-surface-muted)] px-4 py-3 text-sm text-muted-foreground">{i18n.t("当前身份只读展示目录；发布需要 Agent 配置权限。")}</div> : null}
       {error || publishUnconfirmed ? <ErrorAlert error={publishUnconfirmed ? i18n.t("未能确认发布结果。本地草稿已保留，请刷新并核对最新配置。") : error ?? ''} onRetry={catalogError || publishUnconfirmed ? () => load(false, true) : undefined} /> : null}
       {error && publishUnconfirmed ? <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">{i18n.t("错误详情")}</summary><pre className="mt-2 whitespace-pre-wrap break-words">{error}</pre></details> : null}
       {!loading && !catalog ? <EmptyState title={i18n.t("Workroom 目录未就绪")} description={i18n.t("尚未取得目录，暂不能新建、编辑或发布。请先在 Host 安装并配置可选 Workroom Catalog 服务及 Agent，再刷新；无需重建本地草稿。")} /> : null}

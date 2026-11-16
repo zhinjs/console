@@ -244,7 +244,7 @@ function EngagementDetail({ detail, statusLabel }: {
         ] as const).map(([label, value]) => (
           <div key={label} className="bg-background p-2.5">
             <dt className="text-xs text-muted-foreground">{label}</dt>
-            <dd className="mt-0.5 font-medium tabular-nums">{value}</dd>
+            <dd className="mt-0.5 font-medium">{value}</dd>
           </div>
         ))}
       </dl>

@@ -32,7 +32,7 @@
   .console-attention-filter:hover { color: hsl(var(--foreground)); }
   .console-attention-filter:focus-visible { outline: var(--console-focus-width) solid hsl(var(--ring)); outline-offset: 1px; }
   .console-attention-filter.is-active { border-color: hsl(var(--primary) / 0.4); background: hsl(var(--primary) / 0.1); color: hsl(var(--primary)); font-weight: 600; }
-  .console-attention-filter-count { font-variant-numeric: tabular-nums; opacity: 0.8; }
+  .console-attention-filter-count { opacity: 0.8; }
 
   .console-attention-checked,
   .console-attention-note {
@@ -64,7 +64,6 @@
     padding: 0 0.5rem;
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-caption);
-    font-variant-numeric: tabular-nums;
   }
 
   .console-attention-list {
@@ -131,7 +130,7 @@
     text-align: center;
   }
 
-  .console-attention-empty > svg { width: 2rem; height: 2rem; color: hsl(var(--success)); }
+  .console-attention-empty > svg { width: 2rem; height: 2rem; color: hsl(var(--muted-foreground)); }
   .console-attention-empty-title { font-size: var(--console-text-section); font-weight: 600; }
   .console-attention-empty-detail { color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); }
   .console-attention-empty.is-instance-not-ready > svg { color: hsl(var(--muted-foreground)); }
@@ -171,7 +170,6 @@
     font-weight: 600;
     line-height: 1.125rem;
     text-align: center;
-    font-variant-numeric: tabular-nums;
   }
 
   .console-attention-badge-count.is-danger { background: hsl(var(--destructive)); color: hsl(var(--destructive-foreground)); }

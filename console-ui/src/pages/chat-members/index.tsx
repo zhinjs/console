@@ -134,7 +134,7 @@ function MemberCard({ principal, manage, globalManage, onEdit }: {
           <span className="console-chat-member-label">{i18n.t('聊天角色')}</span>
           <div className="console-chat-role-list">
             {principal.roles.length ? principal.roles.map((role, index) => (
-              <Badge key={index} variant={role.role === 'owner' ? 'warning' : role.role === 'admin' ? 'info' : 'outline'} size="sm"
+              <Badge key={index} variant={role.role === 'owner' ? 'default' : role.role === 'admin' ? 'secondary' : 'outline'} size="sm"
                 title={role.grantedByName ?? role.grantedBy ? i18n.t('由 {0} 授予', [role.grantedByName ?? role.grantedBy!]) : undefined}>
                 {i18n.t(CHAT_ROLE_LABELS[role.role])} · {role.redacted ? i18n.t('上级授予') : role.key || i18n.t('全局')}
               </Badge>

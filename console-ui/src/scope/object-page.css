@@ -33,7 +33,7 @@
 .console-object-tab-lock { width: 0.75rem; height: 0.75rem; opacity: 0.7; }
 .console-object-tab-badge {
   min-width: 1.25rem; border-radius: 999px; background: hsl(var(--muted-foreground) / 0.15); padding: 0 0.375rem;
-  font-size: var(--console-text-caption); font-variant-numeric: tabular-nums; line-height: 1.25rem;
+  font-size: var(--console-text-caption); line-height: 1.25rem;
 }
 .console-object-panel { margin-top: 1rem; display: flex; flex-direction: column; gap: var(--console-space-section); }
 .console-object-panel.is-flush { gap: 0; }
@@ -93,8 +93,9 @@ a.console-scope-crumb:focus-visible { outline: var(--console-focus-width) solid 
 .console-scope-picker-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--console-text-body-sm); }
 .console-scope-picker-identity { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); font-weight: 400; }
 .console-scope-picker-dot { width: 0.5rem; height: 0.5rem; flex-shrink: 0; border-radius: 999px; }
-.console-scope-picker-dot.is-online { background: hsl(var(--success-fill)); }
-.console-scope-picker-dot.is-offline { background: hsl(var(--muted-foreground) / 0.5); }
+/* Online is the steady state (neutral); an offline account is the one that needs a look. console#125. */
+.console-scope-picker-dot.is-online { background: hsl(var(--muted-foreground) / 0.4); }
+.console-scope-picker-dot.is-offline { background: hsl(var(--warning-fill)); }
 .console-scope-picker-note { display: flex; align-items: center; gap: 0.375rem; border-top: 1px solid var(--console-border-subtle); padding-top: 0.5rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); }
 .console-scope-picker-note svg { width: 0.875rem; height: 0.875rem; flex-shrink: 0; }
 @media (max-width: 767px) { .console-scope-picker-item { min-height: 2.75rem; } }

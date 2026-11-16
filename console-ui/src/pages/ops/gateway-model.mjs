@@ -161,11 +161,14 @@ export function instanceStateLabel(state, t) {
   }
 }
 
-/** Badge variant for a state. */
+/**
+ * Badge variant for a state. Running is the steady state (neutral outline, console#125); a crash is an error, waiting
+ * to restart after one needs a look; starting / stopping are expected transitions.
+ */
 export function instanceStateTone(state) {
-  if (state === 'running') return 'success'
+  if (state === 'running') return 'outline'
   if (state === 'crashed') return 'destructive'
-  if (state === 'backoff' || state === 'starting' || state === 'stopping') return 'warning'
+  if (state === 'backoff') return 'warning'
   return 'secondary'
 }
 

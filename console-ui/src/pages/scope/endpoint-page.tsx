@@ -31,7 +31,7 @@ export function EndpointObjectPage({ scope }: { scope: Scope & { level: 'endpoin
   const connected = listed.kind === 'listed' ? listed.endpoint.connected : info?.connected
   const status = <>
     {listed.kind === 'unlisted' ? <Badge variant="outline">{i18n.t('未运行')}</Badge>
-      : connected !== undefined ? <Badge variant={connected ? 'success' : 'outline'}>{connected ? i18n.t('在线') : i18n.t('离线')}</Badge>
+      : connected !== undefined ? <Badge variant={connected ? 'outline' : 'warning'}>{connected ? i18n.t('在线') : i18n.t('离线')}</Badge>
         : loaded && error ? <Badge variant="outline">{i18n.t('状态未知')}</Badge> : null}
     {waiting || (listed.kind === 'listed' && listed.endpoint.loginStep) ? <WaitingLoginBadge endpoint={listed.kind === 'listed' ? listed.endpoint : undefined} /> : null}
   </>

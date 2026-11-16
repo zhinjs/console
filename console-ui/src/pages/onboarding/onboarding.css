@@ -6,7 +6,7 @@
   .console-onboarding-step svg { width: 16px; height: 16px; grid-row: span 2; }
   .console-onboarding-step small { color: hsl(var(--muted-foreground)); font-size: 12px; }
   .console-onboarding-step[aria-current='step'] { border-color: hsl(var(--primary)); box-shadow: 0 0 0 1px hsl(var(--primary) / .4); }
-  .console-onboarding-step[data-status='done'] svg, .console-onboarding-step[data-status='complete'] svg { color: hsl(var(--success)); }
+  .console-onboarding-step[data-status='done'] svg, .console-onboarding-step[data-status='complete'] svg { color: hsl(var(--foreground) / 0.7); }
   .console-onboarding-links, .console-onboarding-actions { display: flex; flex-wrap: wrap; gap: 8px; }
   .console-onboarding-actions { justify-content: flex-end; }
   .console-onboarding-summary { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }

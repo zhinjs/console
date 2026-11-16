@@ -22,7 +22,7 @@ function CellBadge({ cell, to }: { cell: FeatureCell | undefined; to?: string })
   const state = cellState(cell)
   const badge = state === 'locked'
     ? <Badge variant="secondary" title={cell?.lockedBy === 'global' ? i18n.t("已在全局禁用") : cell?.lockedBy === 'endpoint' ? i18n.t("已在账号禁用") : i18n.t("已在适配器禁用")}><Lock aria-hidden="true" />{i18n.t("被上级禁用")}</Badge>
-    : state === 'enabled' ? <Badge variant="success">{i18n.t("启用")}</Badge>
+    : state === 'enabled' ? <Badge variant="outline">{i18n.t("启用")}</Badge>
       : state === 'disabled' ? <Badge variant="outline">{i18n.t("禁用")}</Badge>
         : <span className="text-muted-foreground">—</span>
   const content = <span className="inline-flex items-center gap-1.5">{badge}{cell?.overridden ? <Badge variant="info" size="sm">{i18n.t("有覆盖")}</Badge> : null}</span>
