@@ -47,7 +47,8 @@ function environment(locale = 'zh-CN') {
 
 async function components(locale, attention) {
   const env = environment(locale)
-  const row = compile(await source('pages/attention/AttentionItemRow.tsx'), env.common)
+  const more = compile(await source('pages/attention/AttentionMore.tsx'), env.common)
+  const row = compile(await source('pages/attention/AttentionItemRow.tsx'), { ...env.common, './AttentionMore': more })
   const page = compile(await source('pages/attention/index.tsx'), {
     ...env.common,
     '@zhin.js/console-ui': { ...(env.common)?.['@zhin.js/console-ui'], PageHeader: ({ title, description, actions }) => ({ type: 'header', props: { children: [title, description, actions] } }), PageShell: ({ children }) => ({ type: 'main', props: { children } }), Skeleton: 'Skeleton' },
@@ -92,7 +93,7 @@ test('the page groups items by severity, each with reason, since, 去处理, 稍
   assert.equal(link.props.to, '/scope/icqq/10001?tab=access')
   assert.equal(link.props.title, '去处理登录')
   assert.match(text(link), /去处理/)
-  const buttons = nodes(rows[1]).filter(node => node.type === 'Button' && node.props.onClick)
+  const buttons = nodes(rows[1]).filter(node => node.type === 'Button' && node.props.onClick && !('aria-expanded' in node.props))
   assert.deepEqual(buttons.map(text), ['稍后提醒', '忽略'])
   buttons[0].props.onClick(); buttons[1].props.onClick()
   assert.deepEqual(fake.calls, [['snooze', 'endpoint.offline:2'], ['ignore', 'endpoint.offline:2']])

@@ -1093,48 +1093,6 @@
     stroke-width: 1.8;
   }
 
-  .console-attention-item {
-    display: flex;
-    width: 100%;
-    align-items: flex-start;
-    gap: 0.7rem;
-    padding: 0.78rem;
-    border: var(--console-border-width) solid hsl(var(--border) / 0.62);
-    border-radius: var(--console-radius-md);
-    background: transparent;
-    color: hsl(var(--foreground));
-    transition: background-color var(--console-motion-fast) var(--console-ease-out), border-color var(--console-motion-fast) var(--console-ease-out), transform var(--console-motion-fast) var(--console-ease-out);
-  }
-
-  .console-attention-item:hover {
-    transform: translateX(2px);
-    border-color: hsl(var(--primary) / 0.2);
-    background: hsl(var(--muted) / 0.4);
-  }
-
-  .console-attention-item > svg:first-child {
-    width: 1rem;
-    height: 1rem;
-    flex: none;
-    margin-top: 0.12rem;
-    color: hsl(38 82% 48%);
-  }
-
-  .console-attention-item.is-danger > svg:first-child {
-    color: hsl(var(--destructive));
-  }
-
-  .console-attention-item.is-neutral > svg:first-child {
-    color: hsl(var(--primary));
-  }
-
-  .console-attention-item > svg:last-child {
-    width: 0.9rem;
-    height: 0.9rem;
-    flex: none;
-    color: hsl(var(--muted-foreground));
-  }
-
   .console-agent-session-picker {
     padding: 1.25rem 0;
     border-block: var(--console-border-width) solid var(--console-border-default);

@@ -70,6 +70,7 @@ function fixture({ verify = async () => ({ ok: true }), password = async () => (
     '../utils/console-auth-model.mjs': authModel,
     '../utils/console-auth-api': { signInWithPassword: (...args) => { calls.password.push(args); return password(...args) } },
     './login.css': {},
+    './login-preview': { LoginPreview: 'login-preview' },
     'lucide-react': new Proxy({}, { get: () => 'i' }),
   }
   const module = { exports: {} }

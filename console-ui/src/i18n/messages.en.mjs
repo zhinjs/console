@@ -3447,4 +3447,9 @@ export const englishMessages = Object.freeze({
   "建表后会列在这里。": "Tables appear here once they are created.",
   "这个存储桶还没有键值。": "This bucket has no keys yet.",
   "这张表还没有记录。": "This table has no records yet.",
+  // console#125 phase 4: the login page's product sketch and the attention list's 「详情」.
+  "最近 12 小时": "Last 12 hours",
+  "今晚的值班表发一下？": "Can you post tonight's on-call rota?",
+  "已发到群里：今晚 20:00 起是小周，明早 8:00 交给阿杰。": "Posted to the group: Zhou from 8 pm tonight, handing over to Jie at 8 am.",
+  "编号": "ID",
 })
