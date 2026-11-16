@@ -1283,6 +1283,7 @@ export const englishMessages = Object.freeze({
   "渠道": "Channels",
   "等待 Host 状态": "Waiting for Host status",
   "命令": "Commands",
+  "聊天命令": "Chat command",
   "可被消息直接调用": "Callable directly from messages",
   "状态暂时不可读": "Status is temporarily unreadable",
   "可选能力：需要 AI 时安装并配置 Agent": "Optional: install and configure Agent when you need AI",

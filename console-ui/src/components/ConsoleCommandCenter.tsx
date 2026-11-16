@@ -8,8 +8,10 @@ import { cn, Dialog, DialogContent, DialogDescription, DialogTitle, ListItemButt
 import { type ConsoleRouteRecord } from '@zhin.js/client'
 import { getSidebarLucideIcon } from './sidebarMenuIcons'
 import { COMMAND_GROUP_ORDER, NAV_GROUPS } from '../navigation-taxonomy'
-import { commandScore, isCommandRoute, pluginPageCommand, ROUTE_SEARCH_HINTS } from './command-center-model.mjs'
-import { pluginDirectory, subscribePluginDirectory } from '../plugin-pages.mjs'
+import { commandScore, commandSearchTargets, isCommandRoute, pluginPageCommand, pluginSearchTargets, ROUTE_SEARCH_HINTS } from './command-center-model.mjs'
+import { CONSOLE_REST } from '../contracts/zhin-console'
+import { apiFetch } from '../utils/auth'
+import { pluginDirectory, readPluginDirectory, subscribePluginDirectory } from '../plugin-pages.mjs'
 import { canSeeRoute, routeSectionId, sectionById } from '../navigation-sections.mjs'
 import { useConsoleAccess } from '../hooks/use-console-access'
 import { openLogPanel } from './log-panel/log-panel-store.mjs'
@@ -27,6 +29,8 @@ interface CommandTarget {
   keywords?: readonly string[]
   icon?: React.ReactNode | string
   kind?: 'page' | 'action'
+  /** Listed only for a query (every plugin, every command): the idle palette stays short. */
+  searchOnly?: boolean
   /** Runs in place instead of navigating (`path` is then only the entry's id). */
   run?: () => void
   /** Keyboard shortcut shown next to the entry. */
@@ -128,7 +132,7 @@ function groupedTargets(
 ): CommandGroup[] {
   const ranked = targets
     .map((target) => ({ target, score: commandScore(target, query) }))
-    .filter((entry) => entry.score > 0)
+    .filter((entry) => entry.score > 0 && (!entry.target.searchOnly || query.trim()))
     .sort((left, right) => right.score - left.score || left.target.title.localeCompare(right.target.title))
     .map((entry) => entry.target)
 
@@ -184,6 +188,31 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
   const [shortcut, setShortcut] = useState('Ctrl K')
   const access = useConsoleAccess()
   const plugins = useSyncExternalStore(subscribePluginDirectory, pluginDirectory, pluginDirectory)
+  // Chat commands from the introspection catalog, read when the palette opens (only for identities
+  // that can open 运行时能力). A failed read just leaves commands out of the results.
+  // Installed plugins (/api/plugins) the same way, for identities that can open a plugin's page.
+  const commandsVisible = routes.some(route => route.path === '/introspection' && canSeeRoute(route, access))
+  const pluginsVisible = routes.some(route => route.path === '/plugins/:name' && canSeeRoute(route, access))
+  const [commands, setCommands] = useState<unknown[]>([])
+  const [installed, setInstalled] = useState<ReturnType<typeof readPluginDirectory>>({})
+  useEffect(() => {
+    if (!open) return
+    const controller = new AbortController()
+    const read = (path: string) => apiFetch(path, { signal: controller.signal })
+      .then(response => response.ok ? response.json() : null)
+      .catch(() => null)
+    if (commandsVisible) {
+      void read(`${CONSOLE_REST.INTROSPECTION}/commands?page=1&pageSize=100`).then((body: { success?: boolean; data?: { items?: unknown[] } } | null) => {
+        if (!controller.signal.aborted && body?.success === true && Array.isArray(body.data?.items)) setCommands(body.data.items)
+      })
+    }
+    if (pluginsVisible) {
+      void read('/api/plugins').then((body: unknown) => {
+        if (!controller.signal.aborted && body) setInstalled(readPluginDirectory(body))
+      })
+    }
+    return () => controller.abort()
+  }, [open, commandsVisible, pluginsVisible])
 
   const targets = useMemo<CommandTarget[]>(() => {
     const actions = [
@@ -227,8 +256,12 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
           }
         })
         .filter((target, index, all) => all.findIndex(other => other.path === target.path) === index),
+      ...(pluginsVisible
+        ? pluginSearchTargets(Object.keys(installed).length ? installed : plugins, (message, values) => i18n.t(message, values), routes.flatMap(route => pluginPageCommand(route, plugins)?.plugin ?? [])).map(target => ({ ...target, group: NAV_GROUPS.PLUGINS, icon: 'Puzzle' }))
+        : []),
+      ...commandSearchTargets(commands, (message, values) => i18n.t(message, values)).map(target => ({ ...target, group: i18n.t("命令"), icon: 'Terminal' })),
     ]
-  }, [routes, i18n, access, plugins])
+  }, [routes, i18n, access, plugins, commands, installed, pluginsVisible])
   const groups = useMemo(
     () => groupedTargets(targets, query, recentPaths, i18n.locale),
     [query, recentPaths, targets, i18n],

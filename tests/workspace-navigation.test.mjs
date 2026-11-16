@@ -73,7 +73,8 @@ function fixture({ routes, path = '/sandbox', mobile = false, locale = 'zh-CN', 
     '../components/BrandMark': { BrandMark: 'brand-mark', PRODUCT_NAME: 'Zhin Console' },
     '../components/LanguageSelect': { LanguageSelect: 'language-select' }, '../components/ThemeToggle': { ThemeToggle: 'theme-toggle' }, '../components/UserMenu': { UserMenu: 'user-menu' },
     '@zhin.js/console-ui': { cn: (...values) => values.filter(Boolean).join(' '), ListItemButton: 'button', Button: 'button', buttonVariants: () => '', ScrollArea: 'scroll-area', ...(ui(['Tooltip', 'TooltipTrigger', 'TooltipContent'])), ...(ui(['DropdownMenu', 'DropdownMenuTrigger', 'DropdownMenuContent', 'DropdownMenuGroup', 'DropdownMenuItem', 'DropdownMenuLabel'])), ...(ui(['Dialog', 'DialogContent', 'DialogDescription', 'DialogTitle'])) }, './command-center-model.mjs': commandCenterModel,
-    '../utils/auth': { notifyAuthRequired() {} }, '../components/ConsoleCommandCenter': { ConsoleCommandCenter: 'command-center' },
+    '../utils/auth': { notifyAuthRequired() {}, apiFetch: async () => ({ ok: false, json: async () => null }) },
+    '../contracts/zhin-console': { CONSOLE_REST: { INTROSPECTION: '/api/introspection' } }, '../components/ConsoleCommandCenter': { ConsoleCommandCenter: 'command-center' },
     '../navigation-sections.mjs': sections, '../hooks/use-console-access': { useConsoleAccess: () => access },
     '../utils/console-auth-api': { signOut() {} }, '../utils/console-auth-model.mjs': { principalLabel: () => '' },
     '../hooks/use-console-session': { useConsoleSession: () => ({ me: null }) },
@@ -449,4 +450,19 @@ test('command center offers 打开日志面板 with its shortcut, runs it in pla
   } finally { noStatus.close() }
   const noLogsRoute = fixture({ routes: routes.filter(route => route.path !== '/logs'), command: true })
   try { assert.ok(!text(noLogsRoute.render()).includes('打开日志面板')) } finally { noLogsRoute.close() }
+})
+
+test('the command palette finds installed plugins without a page of their own, only once a query is typed', () => {
+  pluginPages.setPluginDirectory(pluginPages.readPluginDirectory({ data: [
+    { name: 'weather', instanceKey: 'weather', packageName: '@zhin.js/plugin-weather', description: '查询城市天气' },
+    { name: 'sign-in', instanceKey: 'sign-in', description: '每日签到与积分' },
+  ] }))
+  const f = fixture({ routes: paletteRoutes, path: '/dashboard', command: true })
+  try {
+    const idle = paletteItemPaths(f.render())
+    assert.ok(!idle.some(path => path === '/plugins/weather' || path === '/plugins/sign-in'), 'the idle palette does not list every plugin')
+    assert.ok(searchPalette(f, 'weather').includes('/plugins/weather'), '“weather” finds the plugin')
+    assert.ok(searchPalette(f, '天气').includes('/plugins/weather'), 'the description matches')
+    assert.ok(searchPalette(f, '签到').includes('/plugins/sign-in'), '“签到” finds the sign-in plugin')
+  } finally { f.close(); pluginPages.setPluginDirectory(null) }
 })

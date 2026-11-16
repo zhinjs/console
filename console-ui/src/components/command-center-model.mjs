@@ -115,3 +115,65 @@ export function commandScore(target, rawQuery) {
     return score
   }, 0)
 }
+
+/**
+ * Every installed plugin as a search-only entry opening its detail page, so plugins without a page
+ * of their own (weather, sign-in…) are found too. `directory` is the `/api/plugins` index, which
+ * lists each plugin under both its instance key and its name: the first key is the one linked.
+ * `t` renders the fallback description; plugins named in `covered` (those with their own page in the
+ * palette) are left out.
+ */
+export function pluginSearchTargets(directory = {}, t = message => message, covered = []) {
+  const seen = new Set()
+  // A plugin with a page of its own is already listed by that page (its detail tab), once.
+  const skip = new Set((Array.isArray(covered) ? covered : []).filter(value => typeof value === 'string'))
+  const out = []
+  for (const [key, info] of Object.entries(directory ?? {})) {
+    if (!key || !info || typeof info !== 'object' || seen.has(info)) continue
+    seen.add(info)
+    const name = typeof info.name === 'string' && info.name.trim() ? info.name.trim() : key
+    if (skip.has(key) || skip.has(name)) continue
+    out.push({
+      path: `/plugins/${encodeURIComponent(key)}`,
+      title: name,
+      description: info.description || t('插件 {0}', [info.packageName || key]),
+      keywords: [...new Set(words(key, name, info.packageName ?? [], info.description ?? []))],
+      kind: 'page',
+      searchOnly: true,
+    })
+  }
+  return out
+}
+
+/** The command name a pattern starts with (`welcome [text]` → `welcome`). */
+export function commandName(pattern) {
+  return typeof pattern === 'string' ? pattern.trim().split(/[\s<[(]/u)[0] ?? '' : ''
+}
+
+/**
+ * Chat commands from the introspection catalog (`/api/introspection/commands`) as search-only
+ * entries; each opens the 运行时能力 commands tab filtered to that command. Items without a
+ * pattern are skipped.
+ */
+export function commandSearchTargets(items = [], t = message => message) {
+  const out = []
+  const seen = new Set()
+  for (const item of Array.isArray(items) ? items : []) {
+    const pattern = typeof item?.pattern === 'string' ? item.pattern.trim() : ''
+    const name = commandName(pattern)
+    if (!pattern || !name || seen.has(pattern)) continue
+    seen.add(pattern)
+    const desc = typeof item.desc === 'string' ? item.desc.trim() : typeof item.description === 'string' ? item.description.trim() : ''
+    const plugin = typeof item.plugin === 'string' ? item.plugin.trim() : typeof item.owner === 'string' ? item.owner.trim() : ''
+    const aliases = Array.isArray(item.aliases) ? item.aliases.filter(alias => typeof alias === 'string') : []
+    out.push({
+      path: `/introspection?tab=commands&filter=${encodeURIComponent(name)}`,
+      title: pattern,
+      description: [desc || t('聊天命令'), plugin ? t('插件 {0}', [plugin]) : ''].filter(Boolean).join(' · '),
+      keywords: [...new Set(words(name, aliases, desc, plugin))],
+      kind: 'page',
+      searchOnly: true,
+    })
+  }
+  return out
+}
