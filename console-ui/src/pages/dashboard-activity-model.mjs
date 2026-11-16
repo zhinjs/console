@@ -131,6 +131,17 @@ export function hourlyMessageActivity(records, now, hours = 24) {
   return buckets
 }
 
+/**
+ * The part of the hourly series worth drawing: when messages cover only the last few hours, the
+ * leading empty hours are dropped so the bars are not lost in a mostly empty grid. At least
+ * `minHours` remain (ending at the current hour); a series with no messages is returned as is.
+ */
+export function visibleActivityRange(buckets, minHours = 6) {
+  const first = buckets.findIndex(bucket => bucket.inbound + bucket.outbound > 0)
+  if (first <= 0) return buckets
+  return buckets.slice(Math.min(first, Math.max(0, buckets.length - minHours)))
+}
+
 /** Totals over records newer than `since`. */
 export function summarizeMessages(records, since) {
   let inbound = 0

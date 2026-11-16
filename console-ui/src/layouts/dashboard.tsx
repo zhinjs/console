@@ -1,5 +1,6 @@
 import { routeLabel } from '../i18n/navigation'
 import { LanguageSelect } from '../components/LanguageSelect'
+import { BrandMark, PRODUCT_NAME } from '../components/BrandMark'
 import { useI18n } from '../i18n'
 import { useMemo, useRef, useState, useEffect, useLayoutEffect, useSyncExternalStore } from "react"
 import { Outlet, Link, useLocation, matchPath } from "react-router-dom"
@@ -57,6 +58,14 @@ function useRouteMetaFlag(
  * Wide screens show the six sections in the bar (a section with one page is a link, a section with
  * several pages opens a menu); narrower screens move the same navigation into a drawer.
  */
+/** Whether the latest user input was a pointer (mouse, touch, pen) rather than a key. */
+let pointerInput = false
+if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+  window.addEventListener("pointerdown", () => { pointerInput = true }, { capture: true, passive: true })
+  window.addEventListener("keydown", () => { pointerInput = false }, { capture: true, passive: true })
+}
+function lastInputWasPointer(): boolean { return pointerInput }
+
 export default function DashboardLayout() {
   const i18n = useI18n()
   const location = useLocation()
@@ -163,7 +172,10 @@ export default function DashboardLayout() {
                     <ChevronDown aria-hidden="true" className="console-topnav-chevron" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" sideOffset={10} className={cn("console-topnav-menu", section.groups.length > 1 && "is-grouped")}>
+                <DropdownMenuContent align="start" sideOffset={10} className={cn("console-topnav-menu", section.groups.length > 1 && "is-grouped")}
+                  // A menu closed with the mouse does not hand focus back to its trigger: browsers may then
+                  // draw the keyboard focus ring on it. Keyboard users (Escape, Enter) still get focus back.
+                  onCloseAutoFocus={(event) => { if (lastInputWasPointer()) event.preventDefault() }}>
                   {section.groups.map((group) => (
                     // 功能 splits into 核心 and 插件页面 (two columns); other sections are one unlabeled group.
                     <DropdownMenuGroup key={group.id} className="console-topnav-menu-group" data-group={group.id}>
@@ -245,9 +257,9 @@ export default function DashboardLayout() {
               <Menu className="h-5 w-5" />
             </Button>
           ) : null}
-          <Link to="/" className="console-brand" aria-label="Zhin.js">
-            <span className="console-brand-mark" aria-hidden="true"><span>Z</span></span>
-            <span className="console-brand-text">Zhin.js</span>
+          <Link to="/" className="console-brand" aria-label={PRODUCT_NAME}>
+            <BrandMark className="console-brand-mark" />
+            <span className="console-brand-text">{PRODUCT_NAME}</span>
           </Link>
 
           {compact ? null : barNavigation}
@@ -281,9 +293,9 @@ export default function DashboardLayout() {
           aria-label={i18n.t("主导航")}
         >
           <div className="console-nav-drawer-header">
-            <Link to="/" className="console-brand" aria-label="Zhin.js" onClick={() => setDrawerOpen(false)}>
-              <span className="console-brand-mark" aria-hidden="true"><span>Z</span></span>
-              <span className="console-brand-text">Zhin.js</span>
+            <Link to="/" className="console-brand" aria-label={PRODUCT_NAME} onClick={() => setDrawerOpen(false)}>
+              <BrandMark className="console-brand-mark" />
+              <span className="console-brand-text">{PRODUCT_NAME}</span>
             </Link>
             <Button variant="ghost" size="icon" className="shrink-0" onClick={() => setDrawerOpen(false)} aria-label={i18n.t("关闭菜单")}>
               <X className="h-4 w-4" />
@@ -314,8 +326,9 @@ export default function DashboardLayout() {
         >
           <InstanceUnavailableBanner />
           <OnboardingBanner />
-          {/* Object pages below 全局 render their own scope breadcrumb; one breadcrumb per page. */}
-          {onHome || objectPageOwnsBreadcrumb(location.pathname) ? null : <nav aria-label={i18n.t("当前位置")} className="console-breadcrumb">
+          {/* Object pages below 全局 render their own scope breadcrumb; one breadcrumb per page. An address no
+              page matches gets none: the not-found page names the address itself (console#125). */}
+          {onHome || !navigation.current || objectPageOwnsBreadcrumb(location.pathname) ? null : <nav aria-label={i18n.t("当前位置")} className="console-breadcrumb">
             {groupLabel !== currentLabel && groupLabel !== parentLabel ? <><span className="console-breadcrumb-group">{groupLabel}</span><ChevronRight aria-hidden="true" className="console-breadcrumb-sep" /></> : null}
             {navigation.parent && parentLabel !== currentLabel ? <><Link className="console-breadcrumb-link" to={navigation.parent.path}>{parentLabel}</Link><ChevronRight aria-hidden="true" className="console-breadcrumb-sep" /></> : null}
             <span aria-current="page" className="console-breadcrumb-current">{currentLabel}</span>

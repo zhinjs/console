@@ -106,7 +106,7 @@ export function readTokens(payload: unknown): IamToken[]
 export function tokenExpired(token: IamToken, now?: number): boolean
 export function readAuditPage(payload: unknown): { entries: IamAuditEntry[]; next: number | null }
 export function actorLabel(actor: string, usersById: ReadonlyMap<string, IamUser>, t: Translate): string
-export function outcomeVariant(outcome: string): 'success' | 'warning' | 'destructive' | 'outline'
+export function outcomeVariant(outcome: string): 'warning' | 'destructive' | 'outline' | null
 export function localDateTimeToMs(value: string | undefined): number | undefined
 export function auditQuery(filter?: AuditFilter, before?: number): Record<string, unknown>
 export function usernameProblem(value: string, t: Translate): string | null

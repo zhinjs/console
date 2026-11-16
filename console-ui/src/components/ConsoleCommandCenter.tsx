@@ -159,6 +159,18 @@ function groupedTargets(
   return groups
 }
 
+const OPEN_COMMAND_CENTER_EVENT = 'zhin:open-command-center'
+
+/** Opens the ⌘K command center from anywhere (e.g. the not-found page); a no-op until the top bar mounts. */
+export function openCommandCenter(): void {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(OPEN_COMMAND_CENTER_EVENT))
+}
+
+/** The platform's command center shortcut, as shown on keys: ⌘ K on Apple devices, Ctrl K elsewhere. */
+export function commandCenterShortcut(): string {
+  return typeof navigator !== 'undefined' && /Mac|iPhone|iPad/u.test(navigator.platform) ? '⌘ K' : 'Ctrl K'
+}
+
 export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRouteRecord[] }) {
   const i18n = useI18n()
   const navigate = useNavigate()
@@ -224,15 +236,20 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
   const visibleTargets = useMemo(() => groups.flatMap((group) => group.items), [groups])
 
   useEffect(() => {
-    setShortcut(/Mac|iPhone|iPad/u.test(navigator.platform) ? '⌘ K' : 'Ctrl K')
+    setShortcut(commandCenterShortcut())
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase() === 'k') {
         event.preventDefault()
         setOpen((value) => !value)
       }
     }
+    const onOpenRequest = () => setOpen(true)
     window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+    window.addEventListener(OPEN_COMMAND_CENTER_EVENT, onOpenRequest)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener(OPEN_COMMAND_CENTER_EVENT, onOpenRequest)
+    }
   }, [])
 
   useEffect(() => {

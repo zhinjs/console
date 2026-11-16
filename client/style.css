@@ -104,6 +104,11 @@
   outline-offset: 2px;
 }
 
+/* The ⌘K search field is the dialog's whole top row: no ring or border of its own inside the dialog. */
+.console-command-search input:focus-visible {
+  outline: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

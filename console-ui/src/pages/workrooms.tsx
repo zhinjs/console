@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Activity, AlertTriangle, Coins, MessagesSquare, RefreshCw, Settings2, Workflow } from 'lucide-react'
 import { Badge, Button, Card, CardContent, cn, EmptyState, ListItemButton, PageHeader, PageShell, Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, Skeleton } from '@zhin.js/console-ui'
-import { useEngagementDetail, useEngagements, useVenues, type ConsoleEngagementDetail, type ConsoleEngagementSummary } from '@zhin.js/client'
+import { useEngagementDetail, useEngagements, useVenues, type ConsoleEngagementDetail } from '@zhin.js/client'
 import { startVisiblePolling } from '../hooks/visible-polling.mjs'
 import { StatusState } from '../components/StatusState'
 import { useIsMobile } from '../hooks/useIsMobile'
@@ -14,16 +14,22 @@ import {
   engagementTotals,
   hasRunningEngagement,
   listOf,
+  normalizeEngagementSummary,
   venueChannelLabel,
+  type EngagementStatus,
+  type NormalizedEngagementSummary,
 } from './engagements-model.mjs'
 
 const ENGAGEMENT_LIMIT = 50
 type DetailView = 'timeline' | 'board' | 'raw'
 
-function statusVariant(status: ConsoleEngagementSummary['status']): 'success' | 'secondary' | 'destructive' {
-  if (status === 'completed') return 'success'
-  if (status === 'failed') return 'destructive'
-  return 'secondary'
+/**
+ * Completed is the steady state: plain muted text, no badge. A failure is the loudest status on
+ * the page; running and cancelled are neutral badges (console#125).
+ */
+function StatusMark({ status, label }: { status: EngagementStatus; label: string }) {
+  if (status === 'completed') return <span className="shrink-0 text-xs text-muted-foreground">{label}</span>
+  return <Badge variant={status === 'failed' ? 'destructive' : 'secondary'}>{label}</Badge>
 }
 
 function WorkroomBoardPage() {
@@ -33,7 +39,8 @@ function WorkroomBoardPage() {
   const mobile = useIsMobile()
   const selectedId = searchParams.get('engagementId')?.trim() || null
   // The SDK hooks read the Host's Engagement projection (agent.engagements.* RPC, REST fallback).
-  const { engagements, loading, error, reload } = useEngagements(ENGAGEMENT_LIMIT)
+  const { engagements: rawEngagements, loading, error, reload } = useEngagements(ENGAGEMENT_LIMIT)
+  const engagements = useMemo(() => listOf(rawEngagements as unknown[]).map(normalizeEngagementSummary), [rawEngagements])
   const { detail, loading: detailLoading, error: detailError, reload: reloadDetail } = useEngagementDetail(selectedId)
   const { venues } = useVenues()
   // `loading` also turns on for background refreshes; only the first load shows the skeleton.
@@ -58,8 +65,8 @@ function WorkroomBoardPage() {
     if (selectedId) void reloadDetail(selectedId)
   }, [reload, reloadDetail, selectedId])
   const totals = useMemo(() => engagementTotals(engagements), [engagements])
-  const statusLabel = (status: ConsoleEngagementSummary['status']) =>
-    status === 'running' ? i18n.t("进行中") : status === 'completed' ? i18n.t("已完成") : i18n.t("失败")
+  const statusLabel = (status: EngagementStatus) =>
+    status === 'running' ? i18n.t("进行中") : status === 'completed' ? i18n.t("已完成") : status === 'cancelled' ? i18n.t("已取消") : i18n.t("失败")
 
   return (
     <PageShell>
@@ -98,7 +105,7 @@ function WorkroomBoardPage() {
       {loaded && !error ? (
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label={i18n.t("Workroom 摘要")}>
           <Metric icon={Workflow} label={i18n.t("协作")} value={i18n.number(engagements.length)} detail={i18n.t("{0} 个仍在进行", [totals.running])} />
-          <Metric icon={AlertTriangle} label={i18n.t("失败")} value={i18n.number(totals.failed)} detail={i18n.t("打开记录查看终止原因")} tone={totals.failed ? 'warning' : 'success'} />
+          <Metric icon={AlertTriangle} label={i18n.t("失败")} value={i18n.number(totals.failed)} detail={i18n.t("打开记录查看终止原因")} tone={totals.failed ? 'danger' : undefined} />
           <Metric icon={MessagesSquare} label={i18n.t("轮次")} value={i18n.number(totals.turns)} detail={i18n.t("所有协作的 Agent 轮次")} />
           <Metric icon={Coins} label="Tokens" value={i18n.number(totals.tokens)} detail={i18n.t("所有协作的 Token 消耗")} />
         </section>
@@ -135,15 +142,15 @@ function WorkroomBoardPage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <p className="min-w-0 truncate text-sm font-semibold">{item.engagementId}</p>
-                    <Badge variant={statusVariant(item.status)}>{statusLabel(item.status)}</Badge>
+                    <StatusMark status={item.status} label={statusLabel(item.status)} />
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">
                     {i18n.date(item.startedAt, { dateStyle: 'short', timeStyle: 'short' })}
                     {item.venue ? ` · ${item.venue}` : ''}
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {i18n.t("{0} 次跳转 · {1} 轮 · {2} Tokens", [item.hops, item.turns, i18n.number(item.tokensUsed)])}
-                  </p>
+                  {item.hops !== undefined || item.turns !== undefined || item.tokensUsed !== undefined ? <p className="mt-1 text-xs text-muted-foreground">
+                    {i18n.t("{0} 次跳转 · {1} 轮 · {2} Tokens", [item.hops ?? '—', item.turns ?? '—', item.tokensUsed === undefined ? '—' : i18n.number(item.tokensUsed)])}
+                  </p> : null}
                   {engagementParticipants(item).length ? (
                     <p className="mt-1 truncate font-mono text-xs text-muted-foreground">{engagementParticipants(item).join(', ')}</p>
                   ) : null}
@@ -200,11 +207,11 @@ export default function WorkroomsPage() {
 
 function EngagementDetail({ detail, statusLabel }: {
   detail: ConsoleEngagementDetail
-  statusLabel: (status: ConsoleEngagementSummary['status']) => string
+  statusLabel: (status: EngagementStatus) => string
 }) {
   const i18n = useI18n()
   const [view, setView] = useState<DetailView>('timeline')
-  const { summary } = detail
+  const summary: NormalizedEngagementSummary = normalizeEngagementSummary(detail.summary)
   // The protocol marks these required, but a Host that leaves one out must not take the page down.
   const board = listOf(detail.board)
   const events = listOf(detail.events)
@@ -225,15 +232,15 @@ function EngagementDetail({ detail, statusLabel }: {
             {summary.stopReason ? <>{' · '}{i18n.t("终止原因：{0}", [summary.stopReason])}</> : null}
           </p>
         </div>
-        <Badge variant={statusVariant(summary.status)}>{statusLabel(summary.status)}</Badge>
+        <StatusMark status={summary.status} label={statusLabel(summary.status)} />
       </header>
 
       <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border text-sm sm:grid-cols-4">
         {([
-          [i18n.t("跳转"), i18n.number(summary.hops)],
-          [i18n.t("轮次"), i18n.number(summary.turns)],
-          ['Tokens', i18n.number(summary.tokensUsed)],
-          [i18n.t("耗时"), i18n.t("{0} 毫秒", [i18n.number(summary.wallClockMs)])],
+          [i18n.t("跳转"), summary.hops === undefined ? '—' : i18n.number(summary.hops)],
+          [i18n.t("轮次"), summary.turns === undefined ? '—' : i18n.number(summary.turns)],
+          ['Tokens', summary.tokensUsed === undefined ? '—' : i18n.number(summary.tokensUsed)],
+          [i18n.t("耗时"), summary.wallClockMs === undefined ? '—' : i18n.t("{0} 毫秒", [i18n.number(summary.wallClockMs)])],
         ] as const).map(([label, value]) => (
           <div key={label} className="bg-background p-2.5">
             <dt className="text-xs text-muted-foreground">{label}</dt>
@@ -303,14 +310,15 @@ function Metric(props: {
   label: string
   value: string
   detail: string
-  tone?: 'warning' | 'success'
+  /** Only a problem gets a color; zero failures stay plain. */
+  tone?: 'danger'
 }) {
   const Icon = props.icon
   return (
     <Card>
       <CardContent className="p-4">
         <div className="flex items-center gap-2 text-xs text-muted-foreground"><Icon className="h-4 w-4" />{props.label}</div>
-        <strong className={cn('mt-2 block text-2xl', props.tone === 'warning' && 'text-warning', props.tone === 'success' && 'text-success')}>{props.value}</strong>
+        <strong className={cn('mt-2 block text-2xl', props.tone === 'danger' && 'text-destructive')}>{props.value}</strong>
         <p className="mt-1 text-xs text-muted-foreground">{props.detail}</p>
       </CardContent>
     </Card>

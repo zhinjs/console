@@ -137,6 +137,8 @@
   body {
     background: hsl(var(--background));
     color: hsl(var(--foreground));
+    /* Numbers are the main content: equal-width digits keep counters, versions and times aligned. */
+    font-variant-numeric: tabular-nums;
   }
 }
 
@@ -220,7 +222,8 @@
     align-items: center;
     gap: 0.85rem;
     border-bottom: 1px solid hsl(var(--border) / 0.62);
-    padding: 0 1.15rem;
+    /* Room on the right for the dialog's close button, so it does not sit on the ⌘ hint. */
+    padding: 0 3.25rem 0 1.15rem;
   }
 
   .console-command-search > svg {
@@ -456,7 +459,7 @@
 
     .console-command-search {
       min-height: 3.8rem;
-      padding-inline: 0.9rem;
+      padding-inline: 0.9rem 3rem;
     }
 
     .console-command-results {
@@ -591,13 +594,13 @@
     height: 0.5rem;
     flex: none;
     border-radius: 50%;
-    background: hsl(var(--success));
-    box-shadow: 0 0 0 0.2rem hsl(var(--success) / 0.18);
+    background: hsl(var(--success-fill));
+    box-shadow: 0 0 0 0.2rem hsl(var(--success-fill) / 0.18);
   }
 
   .console-status-dot.is-warning {
-    background: hsl(var(--warning));
-    box-shadow: 0 0 0 0.2rem hsl(var(--warning) / 0.18);
+    background: hsl(var(--warning-fill));
+    box-shadow: 0 0 0 0.2rem hsl(var(--warning-fill) / 0.18);
   }
 
   .console-dashboard-metric {
@@ -690,7 +693,7 @@
   }
 
   .console-metric-progress > span.is-warning {
-    background: hsl(var(--warning));
+    background: hsl(var(--warning-fill));
   }
 
   .console-control-bar {
@@ -2627,9 +2630,10 @@
 }
 
 @layer components {
-  .console-badge-success { border-color: hsl(var(--success) / 0.2); background: hsl(var(--success) / 0.08); color: hsl(var(--success)); }
-  .console-badge-info { border-color: hsl(var(--info) / 0.2); background: hsl(var(--info) / 0.08); color: hsl(var(--info)); }
-  .console-badge-warning { border-color: hsl(var(--warning) / 0.2); background: hsl(var(--warning) / 0.08); color: hsl(var(--warning)); }
+  /* Status badges: a tint of the bright fill, text in the darker (light) / lighter (dark) text value. */
+  .console-badge-success { border-color: hsl(var(--success-fill) / 0.3); background: hsl(var(--success-fill) / 0.1); color: hsl(var(--success)); }
+  .console-badge-info { border-color: hsl(var(--info-fill) / 0.3); background: hsl(var(--info-fill) / 0.1); color: hsl(var(--info)); }
+  .console-badge-warning { border-color: hsl(var(--warning-fill) / 0.45); background: hsl(var(--warning-fill) / 0.14); color: hsl(var(--warning)); }
 }
 
 @layer components {
@@ -2704,7 +2708,7 @@
   }
 
   .console-endpoint-avatar.is-online::after {
-    background: hsl(var(--success));
+    background: hsl(var(--success-fill));
   }
 
   .console-endpoint-facts {

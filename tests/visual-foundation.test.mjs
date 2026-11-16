@@ -83,3 +83,28 @@ test('the Console entry stylesheet shares the design-system palette without remo
     const entry = readFileSync(new URL(path, root), 'utf8'); assert.match(entry, /@import .*design-system\.css/); assert.doesNotMatch(entry, /--background:\s|fonts\.googleapis\.com/)
   }
 })
+test('Zhin green is the default palette: light text is the brand hue darkened to 4.5:1, dark uses #7FFFD4 with dark text on it (console#125)', () => {
+  const light = tokensFor('zhin', false), dark = tokensFor('zhin', true)
+  assert.ok(Math.abs(light.primary.h - 160) <= 1 && Math.abs(dark.primary.h - 160) <= 1, 'one hue in both themes')
+  assert.deepEqual(dark.primary, { h: 159.8, s: 100, l: 74.9 }, 'dark primary is #7FFFD4')
+  for (const surface of ['card', 'background']) assert.ok(ratio(light.primary, light[surface]) >= 4.5, `light primary on ${surface}`)
+  assert.ok(ratio(dark['primary-foreground'], dark.primary) >= 4.5, 'fills of the bright brand color carry dark text')
+  assert.ok(dark['primary-foreground'].l < 20)
+})
+test('the brand mark colors are #76EEC6 / #7FFFD4 with a near-black Z, in every palette (console#125)', () => {
+  for (const palette of THEME_PALETTES) for (const dark of [false, true]) {
+    const tokens = tokensFor(palette.id, dark)
+    assert.deepEqual(tokens.brand, dark ? { h: 159.8, s: 100, l: 74.9 } : { h: 160, s: 77.9, l: 69.8 })
+    assert.ok(ratio(tokens['brand-foreground'], tokens.brand) >= 7, `${palette.id}: the Z reads on the mark`)
+  }
+})
+test('each status has a text value and a fill value sharing one hue across themes; warning fill is amber (console#125)', () => {
+  const light = tokensFor('zhin', false), dark = tokensFor('zhin', true)
+  for (const name of ['success', 'warning', 'info', 'destructive']) {
+    const hues = [light[name], light[`${name}-fill`], dark[name], dark[`${name}-fill`]].map(value => value.h)
+    assert.ok(Math.max(...hues) - Math.min(...hues) <= 6, `${name} hues ${hues}`)
+    for (const surface of ['card', 'background']) assert.ok(ratio(light[name], light[surface]) >= 4.5, `${name} text on ${surface}`)
+  }
+  assert.ok(light['warning-fill'].l >= 45 && light['warning-fill'].s >= 85, 'a bright amber, not brown')
+  assert.ok(ratio(light['warning-fill-foreground'], light['warning-fill']) >= 4.5)
+})

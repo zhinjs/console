@@ -30,7 +30,7 @@ export function ThemeToggle({ open, onOpenChange, anchor }: { open?: boolean; on
         </label>)}
       </div></fieldset>
       <fieldset className="console-appearance-section"><legend>{i18n.t('配色方案')}</legend>
-        {[{ id: 'fresh', title: i18n.t('鲜活配色') }, { id: 'calm', title: i18n.t('沉静配色') }].map(group => <div key={group.id} className="console-palette-group">
+        {[{ id: 'brand', title: i18n.t('品牌配色') }, { id: 'fresh', title: i18n.t('鲜活配色') }, { id: 'calm', title: i18n.t('沉静配色') }].map(group => <div key={group.id} className="console-palette-group">
           <h3>{group.title}</h3><div className="console-appearance-palettes">
             {THEME_PALETTES.filter(item => item.group === group.id).map(item => <label key={item.id} className="console-palette-choice">
               <input type="radio" name={`${id}-palette`} value={item.id} checked={palette === item.id} onChange={() => setPalette(item.id)} />
