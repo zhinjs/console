@@ -37,7 +37,7 @@ import { requestConsole } from '../../utils/console-rpc'
 import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../../utils/inbox-cache'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
-import { CAPABILITY_DETAIL_SHEET_QUERY, capabilityCountSummary } from './capability-layout-model.mjs'
+import { CAPABILITY_DETAIL_SHEET_QUERY, capabilityCountSummary, capabilityOwner } from './capability-layout-model.mjs'
 import { capabilityEmptyState } from './empty-state.mjs'
 import { readPreviewEndpoints, type PreviewEndpoint } from './target-preview.mjs'
 import type { CapabilityItem, CapabilityRowMap, IntrospectionTab } from './capability-model'
@@ -90,11 +90,9 @@ function list(value: unknown): string[] {
   return value.map((entry) => typeof entry === 'string' ? entry : JSON.stringify(entry))
 }
 
+/** Plugin pill / inspector name: a source path is shown as its package (the path goes to a tooltip). */
 function itemOwner(item: CapabilityItem): string {
-  for (const candidate of [item.owner, item.plugin, item.source, item.adapter, item.provider]) {
-    if (typeof candidate === 'string' && candidate.trim()) return candidate.trim()
-  }
-  return ''
+  return capabilityOwner(item as Record<string, unknown>).name
 }
 
 function extractCommandTrigger(item: CapabilityItem, stripParams = false): string {
@@ -126,13 +124,14 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
   const indexedItems = useMemo(() => items.map((item, index) => ({ kind, item, id: identity(item, index) })), [items, kind])
 
   const ownerGroups = useMemo(() => {
-    const counts = new Map<string, number>()
+    const counts = new Map<string, { count: number; path?: string }>()
     for (const { item } of indexedItems) {
-      const owner = itemOwner(item)
+      const { name: owner, path } = capabilityOwner(item as Record<string, unknown>)
       if (!owner) continue
-      counts.set(owner, (counts.get(owner) ?? 0) + 1)
+      const entry = counts.get(owner)
+      counts.set(owner, { count: (entry?.count ?? 0) + 1, path: entry?.path ?? path })
     }
-    return [...counts.entries()].map(([owner, count]) => ({ owner, count }))
+    return [...counts.entries()].map(([owner, { count, path }]) => ({ owner, count, path }))
   }, [indexedItems])
 
   const visibleItems = useMemo(() => {
@@ -211,7 +210,7 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
             <span>{i18n.t("全部")}</span>
             <span className="console-capability-owner-count">{indexedItems.length}</span>
           </button>
-          {ownerGroups.map(({ owner, count }) => {
+          {ownerGroups.map(({ owner, count, path }) => {
             const active = ownerFilter === owner
             return (
               <button
@@ -219,6 +218,7 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
                 type="button"
                 className={cn('console-capability-owner-pill', active && 'is-active')}
                 aria-pressed={active}
+                title={path ? i18n.t("由源文件路径推断：{0}", [path]) : undefined}
                 onClick={() => setOwnerFilter(active ? '' : owner)}
               >
                 <span>{owner}</span>
@@ -328,7 +328,10 @@ function CommandCatalog({ entries, selectedId, onSelect }: CollectionProps<'comm
                   {parameters.length ? <Badge variant="outline">{parameters.length} {i18n.t(" 参数")}</Badge> : <Badge variant="secondary">{i18n.t("无参数")}</Badge>}
                   {permissions.length ? <Badge variant="outline"><ShieldCheck />{permissions.length} {i18n.t(" 权限")}</Badge> : null}
                 </span>
-                <span className="console-runtime-source"><span>{text(entry.item.plugin, 'runtime')}</span><ArrowRight /></span>
+                {(() => {
+                  const provider = capabilityOwner(entry.item as Record<string, unknown>)
+                  return <span className="console-runtime-source"><span title={provider.path ? i18n.t("由源文件路径推断：{0}", [provider.path]) : undefined}>{provider.name || 'runtime'}</span><ArrowRight /></span>
+                })()}
               </span>
             </SelectableCard>
             <button
@@ -822,7 +825,9 @@ function CapabilityInspector(props: {
 
   if (!item) return null
 
-  const owner = itemOwner(item)
+  const ownerInfo = capabilityOwner(item as Record<string, unknown>)
+  const owner = ownerInfo.name
+  const ownerTitle = ownerInfo.path ? i18n.t("由源文件路径推断：{0}", [ownerInfo.path]) : undefined
   const description = typeof item.desc === 'string' && item.desc.trim()
     ? item.desc.trim()
     : typeof item.description === 'string' && item.description.trim()
@@ -860,7 +865,7 @@ function CapabilityInspector(props: {
               <span>{endpointOnline ? i18n.t("已连接") : i18n.t("未连接")}</span>
             </span>
           ) : owner ? (
-            <Badge variant="outline">{owner}</Badge>
+            <Badge variant="outline" title={ownerTitle}>{owner}</Badge>
           ) : null}
         </div>
         <h3 className={cn(kind === 'commands' && 'font-mono')}>{itemTitle(kind, item, i18n.locale)}</h3>
@@ -892,7 +897,7 @@ function CapabilityInspector(props: {
         {owner ? (
           <div className="console-inspector-meta-card">
             <span>{i18n.t("所属插件")}</span>
-            <strong>{owner}</strong>
+            <strong title={ownerTitle}>{owner}</strong>
           </div>
         ) : null}
         {item.phase != null || item.order != null ? (

@@ -2597,6 +2597,7 @@ export const englishMessages = Object.freeze({
 "更新 AI 运行控制开关失败": "Failed to update AI runtime controls",
 "堆内存": "Heap memory",
 "按所属插件筛选": "Filter by owner plugin",
+"由源文件路径推断：{0}": "Inferred from the source file path: {0}",
 "复制命令": "Copy command",
 "进入会话工作台": "Open conversation workspace",
 "管理配置": "Manage configuration",
