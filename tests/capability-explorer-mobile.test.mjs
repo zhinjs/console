@@ -207,3 +207,28 @@ test('the header shows the server total and plugin-filtered counts are labelled 
   assert.equal(textOf(children(exact)[0]), '10')
   assert.equal(textOf(children(exact)[1]), '项')
 })
+
+test('commands whose Host sends only a source path are grouped by package, with the path in a tooltip', () => {
+  const pnpm = file => `./node_modules/.pnpm/@zhin.js+plugin-60s@1.1.20_@zhin.js+command@1.2.2_zhin.js@1.2.0/node_modules/@zhin.js/plugin-60s/commands/${file}/index.js`
+  const items = [
+    { pattern: 'bing', source: pnpm('bing') },
+    { pattern: 'weibo', source: pnpm('weibo') },
+    { pattern: 'zhihu', source: pnpm('zhihu') },
+    { pattern: 'roll', plugin: 'dice' },
+  ]
+  const { runtime } = mountExplorer({ total: 4, items })
+  const pills = findAll(runtime.value, byClass('console-capability-owner-pill')).slice(1)
+  assert.deepEqual(pills.map(textOf), ['@zhin.js/plugin-60s3', 'dice1'], 'three files of one package are one group, not three')
+  assert.match(pills[0].props.title, /^由源文件路径推断：\.\/node_modules\/\.pnpm\//)
+  assert.equal(pills[1].props.title, undefined, 'a plugin the Host names needs no tooltip')
+})
+
+test('each command card names the same provider as its plugin pill', async () => {
+  // The shallow runtime above does not expand CommandCatalog, so the card is checked in the source.
+  const source = await readFile(new URL('../console-ui/src/pages/introspection/CapabilityExplorer.tsx', import.meta.url), 'utf8')
+  const start = source.indexOf('function CommandCatalog(')
+  const card = source.slice(start, source.indexOf('\n}\n', start))
+  assert.match(card, /const provider = capabilityOwner\(entry\.item as Record<string, unknown>\)/)
+  assert.match(card, /\{provider\.name \|\| 'runtime'\}/)
+  assert.doesNotMatch(card, /text\(entry\.item\.plugin, 'runtime'\)/)
+})
