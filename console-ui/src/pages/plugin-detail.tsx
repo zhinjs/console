@@ -1,5 +1,5 @@
 import { useI18n } from '../i18n'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import {
   Activity, Package, Settings, Terminal, Box as IconBox, Layers, Clock, Database, Brain, Wrench, Shield, Plug, Server, RefreshCw,
@@ -37,6 +37,8 @@ import { defaultInstanceKey, installedPackage, sourceLabel, type PackageListEntr
 import { pluginPermissionGroups, pluginScopeSummary, type PluginScopeSummary } from './plugin-scope-model.mjs'
 import { classifyUpdateCheck } from './marketplace-view-model.mjs'
 import { validateManagementState, managementLabel, canApplyPlugin, canVerifyPlugin, captureVerificationPlan, verifyApprovedPlugin, verificationSummary, verificationCheckDisplay, verificationResultDisplay, applyRequest, waitForManagementState, verificationIsCurrent, type PluginManagementState, type VerificationPlan, type VerificationResult } from './plugin-management-model.mjs'
+import { PluginPageTabs } from './plugin-page-tabs'
+import { PLUGIN_OVERVIEW_TAB } from '../plugin-pages.mjs'
 import './plugins.css'
 
 /** Feature 序列化格式（与后端 FeatureJSON 一致） */
@@ -108,10 +110,24 @@ function useOptionalRead<T>(enabled: boolean, load: () => Promise<T>, deps: read
   return [state, run]
 }
 
-export default function PluginDetailPage() {
+export interface PluginDetailPageProps {
+  /** Set by a page tab's route, which has no `:name` parameter. */
+  plugin?: string
+  /** The open page tab: its path and the plugin page's own element. */
+  tab?: { href: string; content: ReactNode }
+}
+
+/**
+ * `/plugins/:name` — one plugin: its 概览 (version, scopes, declaration, permissions, capabilities) and
+ * a tab per page it contributes. A page tab is its own route (`/plugins/<plugin>/<page>`, registered
+ * from `/entries`), which renders this page with `plugin` and `tab`: the header stays the plugin's
+ * (name, description, status) and the page's own title is the tab name (ADR 0063 决策 3).
+ */
+export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDetailPageProps = {}) {
   const i18n = useI18n()
   const logPanel = useLogPanel()
-  const { name } = useParams<{ name: string }>()
+  const params = useParams<{ name: string }>()
+  const name = pluginName ?? params.name
   const [searchParams] = useSearchParams()
   const query = searchParams.get('q')
   const listUrl = query ? `/plugins?q=${encodeURIComponent(query)}` : '/plugins'
@@ -361,7 +377,8 @@ export default function PluginDetailPage() {
   const actionBusy = packageAction.busy || actionLoading || declaring
   const title = plugin?.name ?? name ?? ''
 
-  if (detailView.view === 'skeleton' && packages.status === 'loading') {
+  // A page tab renders even when the instance cannot describe the plugin: the page reads its own data.
+  if (!tab && detailView.view === 'skeleton' && packages.status === 'loading') {
     return (
       <PageShell>
         <StatusState kind="loading" placeholder={<div className="space-y-3">
@@ -375,7 +392,7 @@ export default function PluginDetailPage() {
 
   // The instance cannot describe the plugin, but the gateway may still know the package: keep the
   // package section (and its uninstall / update) usable instead of a dead end.
-  if ((detailView.view === 'error' || !plugin) && !entry) {
+  if (!tab && (detailView.view === 'error' || !plugin) && !entry) {
     return (
       <PageShell>
         <PageHeader title={title} actions={<Button variant="outline" size="sm" asChild><Link to={listUrl}><ArrowLeft />{i18n.t("返回插件")}</Link></Button>} />
@@ -418,9 +435,10 @@ export default function PluginDetailPage() {
         {update ? <Badge variant="warning">{i18n.t("有更新 {0}", [update.latest])}</Badge> : null}
       </div>
 
-      {detailView.staleError && (
+      {detailView.staleError && !tab && (
         <StatusState compact error={detailError ?? detailView.staleError} description={i18n.t("刷新失败，以下是上次读取的内容。")} onRetry={() => void fetchPluginDetail(instanceKey)} />
       )}
+      <PluginPageTabs plugin={name ?? ''} names={[name, plugin?.instanceKey, plugin?.packageName]} active={tab?.href ?? PLUGIN_OVERVIEW_TAB} page={tab?.content} overview={<>
       {undeclaredPackage ? (
         <StatusState kind="needs-configuration" title={i18n.t("已安装，待配置")}
           description={i18n.t("这个包已经安装，但还没有声明为插件实例。填写配置后网关会写入声明并重启实例，失败会恢复原配置。")}
@@ -578,6 +596,7 @@ export default function PluginDetailPage() {
               </div>
             )}
       </ObjectSection>
+      </>} />
       {ConfirmDialogHost}
     </PageShell>
   )

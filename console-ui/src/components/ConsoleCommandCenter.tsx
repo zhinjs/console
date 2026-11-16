@@ -1,7 +1,7 @@
 import { routeLabel } from '../i18n/navigation'
 import { translate } from '../i18n/locale.mjs'
 import { useI18n } from '../i18n'
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ArrowRight, Check, Command, CornerDownLeft, Search } from 'lucide-react'
 import { cn, type ConsoleRouteRecord } from '@zhin.js/client'
@@ -14,7 +14,8 @@ import {
 } from './ui/dialog'
 import { COMMAND_GROUP_ORDER, NAV_GROUPS } from '../navigation-taxonomy'
 import { ListItemButton } from '../components/ui/list-item-button'
-import { commandScore, isCommandRoute, ROUTE_SEARCH_HINTS } from './command-center-model.mjs'
+import { commandScore, isCommandRoute, pluginPageCommand, ROUTE_SEARCH_HINTS } from './command-center-model.mjs'
+import { pluginDirectory, subscribePluginDirectory } from '../plugin-pages.mjs'
 import { canSeeRoute, routeSectionId, sectionById } from '../navigation-sections.mjs'
 import { useConsoleAccess } from '../hooks/use-console-access'
 import { openLogPanel } from './log-panel/log-panel-store.mjs'
@@ -176,6 +177,7 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
   const [recentPaths, setRecentPaths] = useState<string[]>(() => readRecentPaths())
   const [shortcut, setShortcut] = useState('Ctrl K')
   const access = useConsoleAccess()
+  const plugins = useSyncExternalStore(subscribePluginDirectory, pluginDirectory, pluginDirectory)
 
   const targets = useMemo<CommandTarget[]>(() => {
     const actions = [
@@ -191,8 +193,21 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
       })),
       ...routes
         .filter((route) => isCommandRoute(route) && canSeeRoute(route, access) && !actions.some(action => action.path === route.path))
-        .map((route) => {
+        .map((route): CommandTarget => {
           const title = routeLabel(route, i18n.locale)
+          // Plugin pages (ADR 0063 决策 3): grouped under 插件, found by plugin, package, title and aliases.
+          const plugin = pluginPageCommand(route, plugins)
+          if (plugin) {
+            return {
+              path: plugin.path,
+              title,
+              group: NAV_GROUPS.PLUGINS,
+              description: plugin.description ? `${plugin.plugin} · ${plugin.description}` : i18n.t("{0} 插件的页面", [plugin.plugin]),
+              keywords: plugin.keywords,
+              icon: route.icon,
+              kind: 'page',
+            }
+          }
           const hint = ROUTE_SEARCH_HINTS[route.path]
           return {
             path: route.path,
@@ -202,11 +217,12 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
             // Match the authored Chinese name and description too, so either language finds a page.
             keywords: [...(hint?.keywords ?? []), route.name, hint?.description ?? ''].filter(Boolean),
             icon: route.icon,
-            kind: 'page' as const,
+            kind: 'page',
           }
-        }),
+        })
+        .filter((target, index, all) => all.findIndex(other => other.path === target.path) === index),
     ]
-  }, [routes, i18n, access])
+  }, [routes, i18n, access, plugins])
   const groups = useMemo(
     () => groupedTargets(targets, query, recentPaths, i18n.locale),
     [query, recentPaths, targets, i18n],

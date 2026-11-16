@@ -9,10 +9,11 @@ import { resolveNavigationLocation } from '../console-ui/src/navigation-location
 import * as commandCenterModel from '../console-ui/src/components/command-center-model.mjs'
 import * as sections from '../console-ui/src/navigation-sections.mjs'
 import { createConsoleAccess, UNRESTRICTED_ACCESS } from '../console-ui/src/utils/console-access.mjs'
-import { CONSOLE_PATHS } from '../console-ui/src/console-routes.mjs'
+import { CONSOLE_PATHS, clearPluginPageRedirects, registerPluginPageRedirect } from '../console-ui/src/console-routes.mjs'
 import * as scopeTree from '../console-ui/src/scope/scope-tree.mjs'
 import * as logPanelModel from '../console-ui/src/components/log-panel/log-panel-model.mjs'
 import * as logPanelStoreModule from '../console-ui/src/components/log-panel/log-panel-store.mjs'
+import * as pluginPages from '../console-ui/src/plugin-pages.mjs'
 
 const require = createRequire(import.meta.url)
 const source = path => readFile(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')
@@ -22,7 +23,7 @@ function compile(code, mocks) {
   new Function('require', 'module', 'exports', output)(name => Object.hasOwn(mocks, name) ? mocks[name] : name.endsWith('.css') ? {} : require(name), module, module.exports)
   return module.exports
 }
-const taxonomy = compile(await source('navigation-taxonomy.ts'), { './navigation-sections.mjs': sections, './console-routes.mjs': { CONSOLE_PATHS } })
+const taxonomy = compile(await source('navigation-taxonomy.ts'), { './navigation-sections.mjs': sections, './console-routes.mjs': { CONSOLE_PATHS }, './plugin-pages.mjs': pluginPages })
 const navigation = compile(await source('i18n/navigation.ts'), { './locale.mjs': { translate } })
 const layoutSource = await source('layouts/dashboard.tsx')
 const mobileHookSource = await source('hooks/useIsMobile.ts')
@@ -82,6 +83,7 @@ function fixture({ routes, path = '/sandbox', mobile = false, locale = 'zh-CN', 
     '../scope/scope-tree.mjs': scopeTree,
     '../components/log-panel/LogPanel': { LogPanel: 'log-panel', LogPanelButton: 'log-panel-button', useLogPanelLayout: () => logPanel },
     './log-panel/log-panel-store.mjs': logPanelStoreModule, './log-panel/log-panel-model.mjs': logPanelModel,
+    '../plugin-pages.mjs': pluginPages,
   }
   mocks['../hooks/useIsMobile'] = compile(mobileHookSource, { react: hooks })
   const module = compile(command ? commandSource : layoutSource, mocks)
@@ -300,6 +302,65 @@ test('command palette search matches each builtin page by purpose keywords, not 
     assert.ok(searchPalette(english, 'cost').includes('/agent/usage'), 'English keywords find the usage page')
     assert.ok(searchPalette(english, '插话').includes('/features/ai/ambient'), 'Chinese keywords still match in English')
   } finally { english.close() }
+})
+
+/**
+ * Plugin pages as `loadConsoleEntries` registers them (ADR 0063 决策 3): the planned tab route plus the
+ * hidden redirect at the old path, which `registerPluginPageRedirect` records. Lottery declares the
+ * alias 抽奖 for 彩票推荐 (`definePage({ keywords })`), RSS still declares a section.
+ */
+function pluginPageRoutes() {
+  const planned = [
+    [{ path: '/lottery', name: '彩票推荐', meta: { titleI18n: { en: 'Lottery picks' } } }, { id: 'index', owner: 'root/lottery', route: '/lottery', meta: { keywords: { 'zh-CN': ['抽奖'], en: ['raffle'] } } }],
+    [{ path: '/rss', name: 'RSS 订阅', meta: { section: 'ops' } }, { id: 'index', owner: 'root/rss', route: '/rss', section: 'ops' }],
+    [{ path: '/icqq', name: 'ICQQ' }, { id: 'index', owner: 'root/adapter-icqq', route: '/icqq', blueprint: { kind: 'zhin.console.adapter-page', adapterKey: 'icqq' } }],
+    [{ path: '/sandbox', name: '会话' }, { id: 'index', owner: 'root/sandbox', route: '/sandbox' }],
+  ].map(([route, entry]) => taxonomy.planPluginRoute(route, pluginPages.describePluginPage(entry)))
+  const out = []
+  for (const plan of planned) {
+    if (plan.page) out.push(plan.page)
+    if (plan.redirect) { registerPluginPageRedirect(plan.redirect.path, plan.redirectTo); out.push(plan.redirect) }
+  }
+  return out
+}
+
+test('plugin pages are not in the top bar: 功能 lists only Console pages, the Sandbox stays in 会话', () => {
+  const plugins = pluginPageRoutes()
+  const f = fixture({ routes: [...routes.filter(route => !['/calendar', '/unclassified', '/backup', '/sandbox'].includes(route.path)), ...plugins], path: '/dashboard' })
+  try {
+    const links = navLinks(f.render())
+    for (const path of ['/lottery', '/plugins/lottery/index', '/rss', '/plugins/rss/index', '/icqq', '/scope/icqq']) assert.ok(!links.includes(path), `${path} is not a menu item`)
+    assert.ok(links.includes('/sandbox'), 'the Sandbox keeps its 会话 entry')
+    const tree = sections.buildNavigation([...routes.filter(route => route.path === '/features'), ...plugins])
+    const features = tree.flatMap(tier => tier.sections).find(section => section.id === 'features')
+    assert.deepEqual(features.routes.map(route => route.path), ['/features'], '功能 holds Console pages only, even for a page that declared a section')
+    assert.ok(!tree.flatMap(tier => tier.sections).some(section => section.id === 'ops'), 'a declared section no longer opens a section')
+  } finally { f.close(); clearPluginPageRedirects() }
+})
+
+test('the command palette finds plugin pages by alias, plugin, package and description, grouped under 插件, once each', () => {
+  const plugins = pluginPageRoutes()
+  pluginPages.setPluginDirectory(pluginPages.readPluginDirectory({ data: [{ name: 'lottery', instanceKey: 'lottery', packageName: '@zhin.js/plugin-lottery', description: '按规则推荐号码' }] }))
+  const f = fixture({ routes: [...paletteRoutes.filter(route => route.path !== '/sandbox'), ...plugins], path: '/dashboard', command: true })
+  try {
+    const paths = paletteItemPaths(f.render())
+    assert.ok(paths.includes('/plugins/lottery/index') && paths.includes('/plugins/rss/index'), 'plugin pages open at their tab')
+    assert.ok(paths.includes('/scope/icqq'), 'the adapter page opens its adapter object page')
+    for (const path of ['/lottery', '/rss', '/icqq']) assert.ok(!paths.includes(path), `${path} redirects and is not listed again`)
+    assert.equal(paths.length, new Set(paths).size, 'every destination appears once')
+    const group = nodes(f.tree).find(node => node.type === 'section' && node.props['aria-label'] === '插件')
+    assert.ok(nodes(group).some(node => node.key === '/plugins/lottery/index'), 'plugin pages are grouped under 插件')
+    for (const query of ['抽奖', 'raffle', 'lottery', '@zhin.js/plugin-lottery', '推荐号码', '彩票推荐']) assert.deepEqual(searchPalette(f, query).filter(path => path.startsWith('/plugins/lottery')), ['/plugins/lottery/index'], `“${query}” finds 彩票推荐`)
+    assert.ok(searchPalette(f, 'rss').includes('/plugins/rss/index'))
+    assert.ok(searchPalette(f, 'icqq').includes('/scope/icqq'))
+    searchPalette(f, 'lottery')
+    assert.ok(text(f.tree).includes('lottery · 按规则推荐号码'), 'the description names the plugin')
+  } finally { f.close() }
+  const english = fixture({ routes: plugins, path: '/dashboard', command: true, locale: 'en' })
+  try {
+    assert.ok(searchPalette(english, '抽奖').includes('/plugins/lottery/index'), 'aliases of every language match in English')
+    assert.ok(searchPalette(english, 'Lottery picks').includes('/plugins/lottery/index'), 'the translated title matches')
+  } finally { english.close(); clearPluginPageRedirects(); pluginPages.setPluginDirectory(null) }
 })
 
 test('mobile Escape leaves a top-level Radix dismissal consumed before closing the drawer on the next Escape', () => {

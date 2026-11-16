@@ -58,3 +58,32 @@ test('search matches keywords, requires every term and still ranks title matches
   const exact = commandScore(usage, 'token'), partial = commandScore(target('X', '/x', { keywords: ['tokenizer'] }), 'token')
   assert.ok(exact > partial, 'an exact keyword outranks a partial one')
 })
+
+test('plugin pages: the palette opens their tab (or adapter object page) and searches plugin, package, titles and aliases', async () => {
+  const { pluginPageCommand } = await import('../console-ui/src/components/command-center-model.mjs')
+  const { registerPluginPageRedirect, clearPluginPageRedirects } = await import('../console-ui/src/console-routes.mjs')
+  const { canSeeRoute } = await import('../console-ui/src/navigation-sections.mjs')
+  const { createConsoleAccess } = await import('../console-ui/src/utils/console-access.mjs')
+  const tab = { kind: 'tab', plugin: 'lottery', page: 'index', href: '/plugins/lottery/index', legacyPath: '/lottery', keywords: ['抽奖'] }
+  const route = { path: '/plugins/lottery/index', name: '彩票推荐', meta: { group: '插件', hideInMenu: true, titleI18n: { en: 'Lottery picks' }, pluginTab: tab } }
+  registerPluginPageRedirect('/lottery', '/plugins/lottery/index')
+  registerPluginPageRedirect('/icqq', '/scope/icqq')
+  try {
+    assert.equal(isCommandRoute(route), true, 'a concrete tab path')
+    assert.equal(isCommandRoute({ path: '/lottery', meta: { hideInMenu: true, commandPalette: false } }), false)
+    assert.equal(isCommandRoute({ path: '/lottery' }), false, 'an old plugin path is excluded even without the opt-out')
+    assert.equal(isCommandRoute({ path: '/icqq', meta: { pluginTab: { kind: 'adapter', plugin: 'adapter-icqq', page: 'index', href: '/scope/icqq', keywords: [] } } }), true, 'the adapter page keeps one entry')
+  } finally { clearPluginPageRedirects() }
+  assert.deepEqual(pluginPageCommand(route), { path: '/plugins/lottery/index', plugin: 'lottery', keywords: ['lottery', '彩票推荐', 'Lottery picks', '抽奖'] })
+  const withDirectory = pluginPageCommand(route, { lottery: { name: 'lottery', packageName: '@zhin.js/plugin-lottery', description: '按规则推荐号码' } })
+  assert.equal(withDirectory.packageName, '@zhin.js/plugin-lottery')
+  assert.equal(withDirectory.description, '按规则推荐号码')
+  assert.ok(withDirectory.keywords.includes('@zhin.js/plugin-lottery') && withDirectory.keywords.includes('按规则推荐号码'))
+  const target = { title: '彩票推荐', path: withDirectory.path, group: '插件', description: '', keywords: withDirectory.keywords }
+  for (const query of ['抽奖', 'plugin-lottery', '推荐号码', 'lottery picks']) assert.ok(commandScore(target, query) > 0, query)
+  for (const other of [null, { path: '/logs' }, { path: '/x', meta: { pluginTab: { plugin: 'x' } } }]) assert.equal(pluginPageCommand(other), null)
+  // A tab keeps the reach the page had in 功能 (plus plugin administrators); others do not see it.
+  assert.equal(canSeeRoute(route, createConsoleAccess({ permissions: ['feature.view'] })), true)
+  assert.equal(canSeeRoute(route, createConsoleAccess({ permissions: ['plugin.manage'] })), true)
+  assert.equal(canSeeRoute(route, createConsoleAccess({ permissions: ['status.view'] })), false)
+})

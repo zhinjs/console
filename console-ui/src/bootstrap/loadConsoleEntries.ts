@@ -12,9 +12,13 @@ import {
 import type { PluginRegisterHostApi } from '@zhin.js/contract'
 import { app } from '../utils/console-client'
 import { createHostRegistration } from './host-registration.mjs'
-import { getApiBase, getToken } from '../utils/auth'
-import { markPluginRoute, placePluginRoute } from '../navigation-taxonomy'
+import { apiFetch, getApiBase, getToken } from '../utils/auth'
+import { planPluginRoute } from '../navigation-taxonomy'
 import { withSandboxConversationDetails } from './sandbox-conversation-details'
+import { clearPluginPageRedirects, registerPluginPageRedirect } from '../console-routes.mjs'
+import { describePluginPage, readPluginDirectory, setPluginDirectory, warnIgnoredSection, type PluginPageDescriptor, type PluginTabMeta } from '../plugin-pages.mjs'
+import { LegacyRedirect } from '../components/legacy-redirect'
+import PluginDetailPage, { type PluginDetailPageProps } from '../pages/plugin-detail'
 
 const g = globalThis as unknown as {
   __ZHIN_RENDER_BLUEPRINT__?: (specOrBp: unknown, pageProps?: DeclarativePageComponentProps) => React.ReactElement
@@ -79,8 +83,11 @@ function entriesUrlForApiBase(apiBase: string): string {
 /** 成功加载后复用同一 Promise，避免 React StrictMode 二次 effect 重复注册插件 */
 let entriesLoadPromise: Promise<void> | null = null
 
-/** Sections declared by `/entries` for plugin page paths; read when the page registers. */
-const declaredSections = new Map<string, string>()
+/**
+ * What `/entries` says about each page, by the path the page registers (its old top-level path):
+ * owner, declared section, keywords, adapter key. Read when the page registers (ADR 0063 决策 3).
+ */
+const pageDescriptors = new Map<string, PluginPageDescriptor>()
 
 async function doLoadConsoleEntries(options?: LoadConsoleEntriesOptions, locale: 'zh-CN' | 'en' = 'zh-CN'): Promise<void> {
   const apiBase = getApiBase()
@@ -91,10 +98,28 @@ async function doLoadConsoleEntries(options?: LoadConsoleEntriesOptions, locale:
     addRoute: (input) => {
       if (!session.active()) return
       const route = input as Parameters<typeof app.addRoute>[0]
-      const adapterPage = React.isValidElement(route.element) && route.element.type === AdapterConsolePage
-      const placed = withSandboxConversationDetails(markPluginRoute(placePluginRoute(route, declaredSections.get(route.path)), { adapterPage }))
-      if (requestedApi) requestedApi.addRoute(placed as Parameters<typeof requestedApi.addRoute>[0])
-      else session.addRoute(placed)
+      // An adapter page from the SDK's convention loader is an AdapterConsolePage element; one built by
+      // the Host's page manager says so in its entry's blueprint (`describePluginPage`).
+      const adapterKey = React.isValidElement<{ adapterKey?: unknown }>(route.element) && route.element.type === AdapterConsolePage
+        ? String(route.element.props.adapterKey ?? '') || undefined
+        : undefined
+      const plan = planPluginRoute(route, pageDescriptors.get(route.path), { adapterKey })
+      const add = (next: Parameters<typeof app.addRoute>[0]) => {
+        if (requestedApi) requestedApi.addRoute(next as Parameters<typeof requestedApi.addRoute>[0])
+        else session.addRoute(next)
+      }
+      if (plan.sectionIgnored && plan.redirect) warnIgnoredSection(route.path, plan.sectionIgnored)
+      if (plan.page) {
+        const tab = (plan.page.meta as { pluginTab?: PluginTabMeta } | undefined)?.pluginTab
+        // A tab renders inside the plugin detail page: its header, the plugin's tabs, then the page.
+        add(withSandboxConversationDetails(tab
+          ? { ...plan.page, element: React.createElement(PluginDetailPage as React.ComponentType<PluginDetailPageProps>, { plugin: tab.plugin, tab: { href: tab.href, content: route.element } }) }
+          : plan.page))
+      }
+      if (plan.redirect && plan.redirectTo) {
+        registerPluginPageRedirect(plan.redirect.path, plan.redirectTo)
+        add({ ...plan.redirect, element: React.createElement(LegacyRedirect) } as Parameters<typeof app.addRoute>[0])
+      }
     },
     addTool: (input) => {
       if (!session.active()) throw new Error('Host connection changed; stale tool registration ignored')
@@ -131,24 +156,29 @@ async function doLoadConsoleEntries(options?: LoadConsoleEntriesOptions, locale:
     options?.onEmpty?.()
     return
   }
-  for (const [path, section] of entrySections(entries)) declaredSections.set(path, section)
+  for (const entry of entries) {
+    const page = describePluginPage(entry)
+    if (page) pageDescriptors.set(page.legacyPath, page)
+  }
   await registerConsolePluginsFromEntries(entries, hostApi, (entry, error) => {
     console.error(`[zhin-console] Failed to load plugin "${entry.id}":`, error)
     options?.onEntryError?.(entry, error)
   }, options?.assetOrigin ?? apiBase, resolvedLocale)
+  if (session.active() && [...pageDescriptors.values()].some(page => page.plugin && !(page.packageName && page.pluginDescription))) void loadPluginDirectory(session.active)
 }
 
-/** Route path -> declared section for entries that carry `section` (top level, `meta` or `metadata`). */
-function entrySections(entries: readonly unknown[]): Array<[string, string]> {
-  const out: Array<[string, string]> = []
-  for (const raw of entries) {
-    const entry = raw as { id?: unknown; route?: unknown; section?: unknown; meta?: { section?: unknown }; metadata?: { section?: unknown } }
-    const section = entry.section ?? entry.meta?.section ?? entry.metadata?.section
-    if (typeof section !== 'string' || !section) continue
-    const path = typeof entry.route === 'string' && entry.route ? entry.route : `/${String(entry.id ?? '')}`
-    out.push([path, section])
+/**
+ * Package names and descriptions for the command palette's plugin pages, which `/entries` does not
+ * carry (yet). Best effort: without them plugin pages are still found by plugin name, title and aliases.
+ */
+async function loadPluginDirectory(active: () => boolean): Promise<void> {
+  try {
+    const response = await apiFetch('/api/plugins')
+    if (!response.ok || !active()) return
+    setPluginDirectory(readPluginDirectory(await response.json()))
+  } catch {
+    // The palette keeps working with what `/entries` provided.
   }
-  return out
 }
 
 export function loadConsoleEntries(options?: LoadConsoleEntriesOptions, locale: 'zh-CN' | 'en' = 'zh-CN'): Promise<void> {
@@ -164,7 +194,9 @@ export function loadConsoleEntries(options?: LoadConsoleEntriesOptions, locale: 
 /** 登出 / 换 Host 后清空插件加载缓存，下次登录会重新拉 /entries */
 export function resetConsoleEntries(): void {
   entriesLoadPromise = null
-  declaredSections.clear()
+  pageDescriptors.clear()
+  clearPluginPageRedirects()
+  setPluginDirectory(null)
   hostRegistrations.reset()
   // Published SDK has no removeTool. Preserve known IDs to avoid duplicate
   // registrations; stale asynchronous calls are rejected by the epoch guard.

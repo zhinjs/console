@@ -90,7 +90,8 @@ test('work-oriented navigation preserves ordinary-user names and legacy plugin g
   for (const key of ['features', 'ai', 'introspection', 'scenarioLab', 'aiWorkrooms']) assert.equal(routeGroup(key).group, 'FEATURES', key)
   assert.doesNotMatch(source, /'对话分支'|'Agent 概览'|judge|decision|TypeSafe|shadow/)
   const entries = sourceText(join(SOURCE_ROOT, 'bootstrap', 'loadConsoleEntries.ts'))
-  assert.match(entries, /placePluginRoute\(route, declaredSections\.get\(route\.path\)\)/)
+  // Placement (ADR 0063 决策 3) reads what `/entries` declared for the page's path.
+  assert.match(entries, /planPluginRoute\(route, pageDescriptors\.get\(route\.path\), \{ adapterKey \}\)/)
   const layout = sourceText(join(SOURCE_ROOT, 'layouts', 'dashboard.tsx'))
   assert.match(layout, /buildNavigation\(routes, access\)/)
 })

@@ -116,6 +116,30 @@ export const LEGACY_ROUTE_REDIRECTS = Object.freeze({
 })
 
 /**
+ * Old top-level paths of plugin pages -> their new place (ADR 0063 决策 3): a tab of the plugin detail
+ * page (`/rss` -> `/plugins/rss/index`) or an adapter's object page (`/icqq` -> `/scope/icqq`). They
+ * depend on which plugins the Host runs, so they are registered from `/entries` instead of being listed
+ * in LEGACY_ROUTE_REDIRECTS; like those, they redirect keeping the query string and stay out of the
+ * command palette. Kept until the `zk-` removal minor (ADR 0063 D6).
+ */
+const PLUGIN_PAGE_REDIRECTS = new Map()
+
+export function registerPluginPageRedirect(from, to) {
+  if (typeof from !== 'string' || !from.startsWith('/') || typeof to !== 'string' || !to.startsWith('/')) return
+  if (Object.hasOwn(LEGACY_ROUTE_REDIRECTS, from) || from === to) return
+  PLUGIN_PAGE_REDIRECTS.set(from, to)
+}
+
+export function isPluginPageRedirect(path) {
+  return PLUGIN_PAGE_REDIRECTS.has(path)
+}
+
+/** Forgets the plugin page redirects (sign-out, another Host). */
+export function clearPluginPageRedirects() {
+  PLUGIN_PAGE_REDIRECTS.clear()
+}
+
+/**
  * Values of a pattern's `:name` segments in a raw (encoded) pathname, decoded once; null when the
  * path does not match. Matching the raw path keeps ids with `/` or `%` exact.
  */
@@ -162,6 +186,8 @@ function withTab(to, tab, params) {
 /** The new location for an old URL, or null when the path is not a legacy route. */
 export function resolveLegacyRedirect(pathname, search = '') {
   const path = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
+  const pluginTarget = PLUGIN_PAGE_REDIRECTS.get(path)
+  if (pluginTarget) return withSearch(pluginTarget, new URLSearchParams(search))
   const match = legacyRule(path)
   if (!match) return null
   const { pattern, rule, params: values } = match

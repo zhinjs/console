@@ -109,7 +109,14 @@ const ADAPTER_SCOPED_ROUTE_PERMISSIONS = Object.freeze({
   '/chat-members': Object.freeze(['iam.manage']),
 })
 
+/**
+ * A plugin page moved from 功能 to a tab of its plugin's detail page (ADR 0063 决策 3) keeps the
+ * reach it had in 功能, and plugin administrators see it too.
+ */
+const PLUGIN_TAB_PERMISSIONS = Object.freeze([...sectionById(DEFAULT_SECTION_ID).permissions, 'plugin.manage'])
+
 export function routePermissions(route) {
+  if (route?.meta?.pluginTab?.kind === 'tab') return PLUGIN_TAB_PERMISSIONS
   return ROUTE_PERMISSIONS[route?.path] ?? sectionById(routeSectionId(route))?.permissions ?? []
 }
 
