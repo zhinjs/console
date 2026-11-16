@@ -1,4 +1,5 @@
 import { LanguageSelect } from '../components/LanguageSelect'
+import { BrandMark, PRODUCT_NAME } from '../components/BrandMark'
 import { useI18n } from '../i18n'
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { Trash2, ShieldCheck, Eye, EyeOff, KeyRound, UserRound } from 'lucide-react'
@@ -220,7 +221,7 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
   return <div className="console-login">
     <div className="console-login-layout">
       <section className="console-login-intro">
-        <div className="console-login-brand"><span className="console-login-mark" aria-hidden="true">Z</span><span>Zhin Console</span></div>
+        <div className="console-login-brand"><BrandMark size={36} className="console-login-mark" /><span>{PRODUCT_NAME}</span></div>
         <h1>{i18n.t('连接你的机器人')}</h1>
         <p>{i18n.t('连接运行 Zhin 的设备，管理会话、账号和任务。')}</p>
         <div className="console-login-notes"><ShieldCheck aria-hidden="true" /><span>{i18n.t('账号与令牌由管理网关验证：机器人实例停止时也能登录，查看实例日志并重新启动。')}</span></div>

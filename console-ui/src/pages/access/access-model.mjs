@@ -357,8 +357,9 @@ export function actorLabel(actor, usersById, t) {
   return actor
 }
 
+/** Badge for an audit outcome; a success is the steady state and gets none (plain text, console#125). */
 export function outcomeVariant(outcome) {
-  if (outcome === 'ok') return 'success'
+  if (outcome === 'ok') return null
   if (outcome === 'denied') return 'warning'
   if (outcome === 'error') return 'destructive'
   return 'outline'

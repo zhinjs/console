@@ -50,6 +50,8 @@ export function messagePreview(content: unknown, labels?: PreviewLabels): string
 export function toMessageRecord(event: unknown, labels?: PreviewLabels): MessageRecord | null
 export function messageRecords(events: readonly unknown[] | null | undefined, labels?: PreviewLabels): MessageRecord[]
 export function hourlyMessageActivity(records: readonly MessageRecord[], now: number, hours?: number): HourlyActivityBucket[]
+/** Drops leading empty hours (keeping at least `minHours`, default 6) so short activity fills the chart. */
+export function visibleActivityRange<T extends HourlyActivityBucket>(buckets: readonly T[], minHours?: number): T[]
 export function summarizeMessages(records: readonly MessageRecord[], since: number): MessageSummary
 export function buildMessageFeed(records: readonly MessageRecord[], limit?: number): MessageFeedItem[]
 export function replyLatencySeconds(item: MessageFeedItem): number | null

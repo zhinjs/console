@@ -164,9 +164,9 @@
     min-width: 1.125rem;
     height: 1.125rem;
     border-radius: 999px;
-    background: hsl(var(--warning));
+    background: hsl(var(--warning-fill));
     padding: 0 0.25rem;
-    color: hsl(var(--warning-foreground));
+    color: hsl(var(--warning-fill-foreground));
     font-size: var(--console-text-caption);
     font-weight: 600;
     line-height: 1.125rem;

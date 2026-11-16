@@ -78,14 +78,26 @@
     --im-row-active-fg: var(--foreground);
     --im-row-active-muted: var(--muted-foreground);
     --im-unread: var(--primary);
+    /*
+     * Status colors come in two values that share one hue across light and dark:
+     *   --<status>       text, icons and thin lines (>= 4.5:1 on cards and the canvas);
+     *   --<status>-fill  solid fills — dots, bars, meters, badge tints (bright, never carries text
+     *                    except with --<status>-fill-foreground).
+     * Steady states (running, succeeded, 0 failures) use neither; console#125.
+     */
     --destructive: 0 68% 42%;
     --destructive-foreground: 0 0% 100%;
+    --destructive-fill: 0 80% 55%;
     --success: 145 52% 28%;
     --success-foreground: 0 0% 100%;
-    --info: 222 62% 50%;
+    --success-fill: 145 63% 42%;
+    --info: 220 62% 48%;
     --info-foreground: 0 0% 100%;
-    --warning: 32 80% 30%;
+    --info-fill: 220 80% 56%;
+    --warning: 38 80% 30%;
     --warning-foreground: 0 0% 100%;
+    --warning-fill: 38 92% 50%;
+    --warning-fill-foreground: 38 70% 12%;
     --radius: var(--console-radius-md);
     --status-info: var(--info);
     --status-success: var(--success);
@@ -100,7 +112,34 @@
     --chart-7: 188 75% 34%;
     --chart-8: 220 8% 46%;
     --chart-other: 220 6% 58%;
+    /*
+     * Brand (palette-independent): the brand mark and any surface filled with the brand color.
+     * #76EEC6 in light, #7FFFD4 in dark; both are too light for white text, so content on them uses
+     * --brand-foreground (a near-black deep green). Brand-colored text on light surfaces uses the
+     * darkened --primary of the Zhin palette instead.
+     */
+    --brand: 160 77.9% 69.8%;
+    --brand-foreground: 163.3 75% 9.4%;
+    --brand-dot: 162 74.1% 21.2%;
     color-scheme: light;
+  }
+  /*
+   * Zhin green (default palette). Light: the brand hue darkened to #0A7551 (5.7:1 on white, 5.2:1 on the canvas) for text,
+   * links and focus rings; dark: the brand color #7FFFD4 itself, with dark text on its fills.
+   */
+  :root[data-palette="zhin"] {
+    --palette-hue: 159.8;
+    --palette-surface-chroma: 10%;
+    --palette-dark-surface-chroma: 10%;
+    --palette-ink-chroma: 26%;
+    --palette-brand-saturation: 84%;
+    --palette-brand-lightness: 25%;
+    --palette-tint-saturation: 64%;
+    --palette-tint-lightness: 94%;
+    --palette-dark-brand-saturation: 100%;
+    --palette-dark-brand-lightness: 74.9%;
+    --palette-dark-tint-saturation: 30%;
+    --palette-dark-tint-lightness: 16%;
   }
   /* Fresh palettes: brighter hues; their tints are slightly warmer so selection still reads. */
   :root[data-palette="sky"] {
@@ -202,12 +241,17 @@
     --im-row-hover: var(--palette-hue) var(--surface-chroma) 12%;
     --destructive: 0 62% 65%;
     --destructive-foreground: 0 0% 10%;
+    --destructive-fill: 0 75% 58%;
     --success: 145 52% 64%;
     --success-foreground: 0 0% 10%;
-    --info: 217 90% 70%;
+    --success-fill: 145 55% 50%;
+    --info: 220 90% 72%;
     --info-foreground: 0 0% 10%;
+    --info-fill: 220 85% 60%;
     --warning: 38 80% 65%;
     --warning-foreground: 0 0% 10%;
+    --warning-fill: 38 92% 55%;
+    --warning-fill-foreground: 38 70% 12%;
     --chart-1: 217 80% 68%;
     --chart-2: 38 80% 62%;
     --chart-3: 160 55% 56%;
@@ -217,6 +261,9 @@
     --chart-7: 188 65% 58%;
     --chart-8: 220 10% 68%;
     --chart-other: 220 6% 50%;
+    --brand: 159.8 100% 74.9%;
+    --brand-foreground: 163.3 75% 9.4%;
+    --brand-dot: 162 74.1% 21.2%;
     color-scheme: dark;
   }
 }

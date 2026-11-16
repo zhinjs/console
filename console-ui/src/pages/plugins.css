@@ -93,12 +93,13 @@
     background: hsl(var(--muted-foreground) / 0.5);
   }
 
+  /* Running normally is the steady state: no dot. Only states that need a look get one. */
   .console-plugin-status-dot.is-enabled {
-    background: hsl(var(--success));
+    display: none;
   }
 
   .console-plugin-status-dot.is-warning {
-    background: hsl(var(--warning));
+    background: hsl(var(--warning-fill));
   }
 
   .console-plugin-status-dot.is-disabled {

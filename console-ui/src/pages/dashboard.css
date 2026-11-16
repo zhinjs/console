@@ -164,16 +164,21 @@
     position: relative;
     display: flex;
     width: 100%;
+    /* A few hours of data spread over the whole width would make slabs, not bars. */
+    max-width: 2.5rem;
+    margin-inline: auto;
     align-items: flex-end;
     overflow: hidden;
     border-radius: 4px 4px 0 0;
-    background: hsl(var(--primary) / 0.45);
+    /* Received / sent are two chart categories (palette-independent), never shades of the accent. */
+    background: hsl(var(--chart-1));
   }
 
   .console-volume-bar-reply {
     display: block;
     width: 100%;
-    background: hsl(var(--primary));
+    background: hsl(var(--chart-2));
+    box-shadow: 0 -1px 0 hsl(var(--card));
   }
 
   .console-volume-col:hover .console-volume-bar { filter: brightness(1.08); }
@@ -225,8 +230,8 @@
 
   .console-volume-legend > span { display: inline-flex; align-items: center; gap: 0.35rem; }
   .console-volume-legend i { width: 0.6rem; height: 0.6rem; border-radius: 3px; }
-  .console-volume-legend i.is-inbound { background: hsl(var(--primary) / 0.45); }
-  .console-volume-legend i.is-reply { background: hsl(var(--primary)); }
+  .console-volume-legend i.is-inbound { background: hsl(var(--chart-1)); }
+  .console-volume-legend i.is-reply { background: hsl(var(--chart-2)); }
   .console-volume-legend small { margin-left: auto; font-size: inherit; }
 
   /* 键值列表 */
@@ -278,7 +283,7 @@
     transition: width 240ms ease;
   }
 
-  .console-meter > span.is-warning { background: hsl(var(--warning)); }
+  .console-meter > span.is-warning { background: hsl(var(--warning-fill)); }
 
   /* 需要关注 */
   .console-attention-strip {

@@ -137,7 +137,9 @@ export default function AccessAuditPage() {
                   <TableCell className="hidden md:table-cell"><span title={entry.actor}>{actorLabel(entry.actor, usersById, i18n.t)}</span></TableCell>
                   <TableCell className="min-w-[8rem] font-mono text-xs break-all">{entry.action}</TableCell>
                   <TableCell className="hidden max-w-[16rem] truncate lg:table-cell" title={entry.target ?? undefined}>{entry.target ?? '—'}</TableCell>
-                  <TableCell><Badge variant={outcomeVariant(entry.outcome)} size="sm">{outcomeText(entry.outcome, i18n.t)}</Badge></TableCell>
+                  <TableCell>{(variant => variant
+                    ? <Badge variant={variant} size="sm">{outcomeText(entry.outcome, i18n.t)}</Badge>
+                    : <span className="text-muted-foreground">{outcomeText(entry.outcome, i18n.t)}</span>)(outcomeVariant(entry.outcome))}</TableCell>
                   <TableCell className="hidden font-mono text-xs text-muted-foreground lg:table-cell">{entry.ip ?? '—'}</TableCell>
                   <TableCell className="hidden md:table-cell">
                     {entry.detail === null ? '—' : (

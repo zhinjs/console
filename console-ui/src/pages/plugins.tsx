@@ -28,7 +28,8 @@ const HEALTH_LABELS: Record<PluginHealth, string> = {
   unreported: '实例未报告',
 }
 const HEALTH_TONES: Record<PluginHealth, 'enabled' | 'warning' | 'disabled'> = {
-  healthy: 'enabled', pending: 'warning', inactive: 'disabled', undeclared: 'warning', unreported: 'disabled',
+  // 已安装，待配置 is not a fault: a neutral badge, not a column of warning color (console#125).
+  healthy: 'enabled', pending: 'warning', inactive: 'disabled', undeclared: 'disabled', unreported: 'disabled',
 }
 const FILTERS: { key: HealthFilter; label: string }[] = [
   { key: 'all', label: '已安装' },

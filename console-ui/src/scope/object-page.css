@@ -93,7 +93,7 @@ a.console-scope-crumb:focus-visible { outline: var(--console-focus-width) solid 
 .console-scope-picker-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--console-text-body-sm); }
 .console-scope-picker-identity { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); font-weight: 400; }
 .console-scope-picker-dot { width: 0.5rem; height: 0.5rem; flex-shrink: 0; border-radius: 999px; }
-.console-scope-picker-dot.is-online { background: hsl(var(--success)); }
+.console-scope-picker-dot.is-online { background: hsl(var(--success-fill)); }
 .console-scope-picker-dot.is-offline { background: hsl(var(--muted-foreground) / 0.5); }
 .console-scope-picker-note { display: flex; align-items: center; gap: 0.375rem; border-top: 1px solid var(--console-border-subtle); padding-top: 0.5rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); }
 .console-scope-picker-note svg { width: 0.875rem; height: 0.875rem; flex-shrink: 0; }

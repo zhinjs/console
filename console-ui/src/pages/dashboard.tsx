@@ -8,6 +8,7 @@ import { cpuMeterWidth, cpuUsagePercent, readCpuSample, type CpuSample } from '.
 import {
   buildMessageFeed,
   hourlyMessageActivity,
+  visibleActivityRange,
   messageRecords,
   replyLatencySeconds,
   visibleReplies,
@@ -272,7 +273,7 @@ function MessageVolumeChart({ buckets, describe, summary }: {
 }) {
   const axisMax = niceAxisMax(Math.max(0, ...buckets.map((bucket) => bucket.inbound + bucket.outbound)))
   const ticks = [axisMax, axisMax / 2, 0]
-  const tickIndexes = [0, Math.floor(buckets.length / 4), Math.floor(buckets.length / 2), Math.floor((buckets.length * 3) / 4), buckets.length - 1]
+  const tickIndexes = [...new Set([0, Math.floor(buckets.length / 4), Math.floor(buckets.length / 2), Math.floor((buckets.length * 3) / 4), buckets.length - 1])]
   return (
     <div className="console-volume-chart" role="img" aria-label={summary}>
       <div className="console-volume-axis" aria-hidden="true">
@@ -429,7 +430,7 @@ export default function HomePage() {
   }), [i18n])
   const records = useMemo(() => messageRecords(messageEvents, previewLabels), [messageEvents, previewLabels])
   const activityNow = Math.max(lastUpdatedAt ?? 0, records[records.length - 1]?.timestamp ?? 0) || Date.now()
-  const activity = useMemo(() => hourlyMessageActivity(records, activityNow, 24), [records, activityNow])
+  const activity = useMemo(() => visibleActivityRange(hourlyMessageActivity(records, activityNow, 24)), [records, activityNow])
   const messageSummary = useMemo(() => summarizeMessages(records, activityNow - DAY_MS), [records, activityNow])
   const messageFeed = useMemo(() => buildMessageFeed(records, FEED_LIMIT), [records])
   const latestMessageAt = records[records.length - 1]?.timestamp ?? null
@@ -627,7 +628,9 @@ export default function HomePage() {
   const osMemoryRate = systemStatus?.osMemory
     ? percent(systemStatus.osMemory.totalMem - systemStatus.osMemory.freeMem, systemStatus.osMemory.totalMem)
     : null
-  const errorTone = (optional.errorLogs ?? 0) > 0 ? 'danger' : (optional.warningLogs ?? 0) > 0 ? 'warning' : undefined
+  // The card's number is the error count: 0 errors is the steady state and stays uncolored even when
+  // warnings exist (they are counted in the line below the number), console#125.
+  const errorTone = (optional.errorLogs ?? 0) > 0 ? 'danger' : undefined
   const formatStamp = (timestamp: number) => new Date(timestamp).toLocaleString(i18n.locale, { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
   const unrecorded = <span className="console-sample-missing">{i18n.t("未记录")}</span>
   const readingValue = (reading: Reading) => reading.kind === 'value' ? reading.value.toLocaleString(i18n.locale) : unrecorded

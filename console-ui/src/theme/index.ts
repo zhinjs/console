@@ -3,6 +3,8 @@ export type Theme = 'light' | 'dark'
 export const THEME_MODES = ['light', 'dark', 'system'] as const
 export type ThemeMode = typeof THEME_MODES[number]
 export const THEME_PALETTES = [
+  // The brand palette (default): Zhin green. The brand mark keeps its own colors in every palette.
+  { id: 'zhin', group: 'brand', label: 'Zhin 绿', swatch: '#76eec6', light: '#f2f5f4', dark: '#0b0e0d' },
   { id: 'sky', group: 'fresh', label: '晴空', swatch: '#2c9ff2', light: '#f2f4f5', dark: '#0b0d0e' },
   { id: 'peach', group: 'fresh', label: '蜜桃', swatch: '#f58266', light: '#f5f2f2', dark: '#0e0c0b' },
   { id: 'sunny', group: 'fresh', label: '暖阳', swatch: '#fbc64b', light: '#f5f4f2', dark: '#0e0d0b' },
@@ -13,8 +15,8 @@ export const THEME_PALETTES = [
   { id: 'graphite', group: 'calm', label: '石墨', swatch: '#3d3d3d', light: '#f3f3f3', dark: '#0d0d0d' },
 ] as const
 export type Palette = typeof THEME_PALETTES[number]['id']
-/** Default palette: neutral surfaces with a blue accent. */
-export const DEFAULT_PALETTE: Palette = 'ocean'
+/** Default palette: neutral surfaces with the Zhin green accent. A saved choice is kept as is. */
+export const DEFAULT_PALETTE: Palette = 'zhin'
 export interface ThemePreferences { mode: ThemeMode; palette: Palette }
 export const THEME_STORAGE_KEY = 'theme'
 export const PALETTE_STORAGE_KEY = 'zhin.console.palette'

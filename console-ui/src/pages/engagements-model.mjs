@@ -31,8 +31,53 @@ export function engagementParticipants(summary) {
   return listOf(summary?.participants).filter(item => typeof item === 'string' && item.trim())
 }
 
+/**
+ * A venue as text. The protocol says string, but the Host's journal summary carries a `VenueRef`
+ * object (`{ kind, id }`); templating that object is what printed `[object Object]` in the list.
+ */
+export function venueLabel(venue) {
+  if (typeof venue === 'string') return venue.trim() || undefined
+  if (!venue || typeof venue !== 'object') return undefined
+  if (typeof venue.key === 'string' && venue.key) return venue.key
+  if (venue.kind != null && venue.id != null) return `${String(venue.kind)}:${String(venue.id)}`
+  if (venue.id != null) return String(venue.id)
+  return undefined
+}
+
+const ENGAGEMENT_STATUS = { running: 'running', open: 'running', completed: 'completed', failed: 'failed', blocked: 'failed', escalated: 'failed', cancelled: 'cancelled' }
+const counter = value => typeof value === 'number' && Number.isFinite(value) ? value : undefined
+
+/**
+ * Reads an engagement summary in either shape the Host has sent: the protocol's
+ * (`venue: string`, `participants`, `hops` / `turns` / `tokensUsed`) or the journal's
+ * (`venue: { kind, id }`, `actors`, `status: open | blocked | escalated | …`, `reason`).
+ * Every displayed field ends up a string, a number or undefined.
+ */
+export function normalizeEngagementSummary(raw) {
+  const summary = raw && typeof raw === 'object' ? raw : {}
+  const status = ENGAGEMENT_STATUS[summary.status] ?? 'failed'
+  const people = engagementParticipants(summary)
+  const actors = listOf(summary.actors).filter(item => typeof item === 'string' && item.trim())
+  const reason = typeof summary.stopReason === 'string' && summary.stopReason ? summary.stopReason
+    : typeof summary.reason === 'string' && summary.reason ? summary.reason
+      : status === 'failed' && summary.status !== 'failed' && typeof summary.status === 'string' ? summary.status : undefined
+  return {
+    ...summary,
+    engagementId: String(summary.engagementId ?? ''),
+    status,
+    venue: venueLabel(summary.venue),
+    participants: people.length ? people : actors,
+    hops: counter(summary.hops),
+    turns: counter(summary.turns),
+    tokensUsed: counter(summary.tokensUsed),
+    wallClockMs: counter(summary.wallClockMs) ?? (counter(summary.endedAt) !== undefined && counter(summary.startedAt) !== undefined ? summary.endedAt - summary.startedAt : undefined),
+    stopReason: reason,
+  }
+}
+
 /** Actor refs are protocol values, so they are shown as written rather than translated. */
 export function actorLabel(actor) {
+  if (typeof actor === 'string' && actor) return actor
   if (!actor || typeof actor !== 'object') return 'unknown'
   if (actor.kind === 'agent') return `agent:${String(actor.name ?? '')}`
   if (actor.kind === 'external') return `external:${String(actor.peer ?? '')}`
@@ -44,7 +89,7 @@ export function actorLabel(actor) {
 export function collaborationEventSummary(event) {
   switch (event?.kind) {
     case 'engagement.started':
-      return `initiator=${actorLabel(event.initiator)}${event.venue ? ` venue=${String(event.venue)}` : ''}`
+      return `initiator=${actorLabel(event.initiator)}${venueLabel(event.venue) ? ` venue=${venueLabel(event.venue)}` : ''}`
     case 'mail.sent': {
       const envelope = event.envelope ?? {}
       return `${actorLabel(envelope.from)} -> ${actorLabel(envelope.to)} [${String(envelope.kind ?? 'mail')}]`
@@ -56,7 +101,7 @@ export function collaborationEventSummary(event) {
       return `${String(entry.key ?? '')} (v${String(entry.version ?? 1)}) by ${actorLabel(entry.updatedBy)}`
     }
     case 'floor.granted':
-      return `${String(event.venue ?? '')}: speaker=${actorLabel(event.speaker)}`
+      return `${venueLabel(event.venue) ?? ''}: speaker=${actorLabel(event.speaker)}`
     case 'budget.recorded':
       return `hops=${String(event.hops ?? 0)} turns=${String(event.turns ?? 0)} tokens=${String(event.tokensUsed ?? 0)}`
     case 'engagement.stopped':
