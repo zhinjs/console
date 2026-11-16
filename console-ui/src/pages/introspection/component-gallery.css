@@ -98,6 +98,12 @@
   box-shadow: 0 0 0 3px hsl(var(--destructive) / 0.16);
 }
 
+/* Neutral: an MCP server waiting to connect (idle) or not loaded yet — not a failure. */
+.console-runtime-status-dot.is-idle {
+  background-color: hsl(var(--muted-foreground));
+  box-shadow: 0 0 0 3px hsl(var(--muted-foreground) / 0.16);
+}
+
 @keyframes console-status-pulse {
   0%, 100% { box-shadow: 0 0 0 2px hsl(var(--success) / 0.24); }
   50% { box-shadow: 0 0 0 5px hsl(var(--success) / 0.08); }

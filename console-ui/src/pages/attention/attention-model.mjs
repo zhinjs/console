@@ -109,11 +109,12 @@ function fallbackItem(kind, severity, title, detail, path, label, state) {
 /**
  * What the Console can tell without `attention.list`, from the dashboard reads: `stats`
  * (`/api/stats`, null when unreadable), `hostError`, log counts (`errorLogs` / `warningLogs`, null
- * when unreadable, with `logReadError`) and MCP totals.
+ * when unreadable, with `logReadError`) and MCP totals. `failedMcp` (rows that report `status`) counts
+ * only failed connections: a server waiting to connect (`idle`) or not loaded yet is not a problem.
  */
 export function deriveFallbackAttention(input = {}, locale = 'zh-CN') {
   const t = (message, values) => translate(locale, message, values)
-  const { stats = null, hostError = null, errorLogs = null, warningLogs = null, logReadError = null, mcpServices = null, connectedMcp = null } = input
+  const { stats = null, hostError = null, errorLogs = null, warningLogs = null, logReadError = null, mcpServices = null, connectedMcp = null, failedMcp = null } = input
   if (!stats && hostError) {
     return [fallbackItem('host.unreachable', 'danger', t('Host 暂时不可达'), t('控制面仍可继续使用；恢复连接后会自动刷新运行状态。'), '/ops/instance', t('查看实例'), null)]
   }
@@ -126,7 +127,9 @@ export function deriveFallbackAttention(input = {}, locale = 'zh-CN') {
     items.push(fallbackItem('endpoints.offline', 'warning', t('{0} 个聊天账号离线', [offline]), t('检查凭据、网络和适配器日志。'), '/scope', t('去处理'), { offline }))
   }
   const disconnected = Math.max(0, (mcpServices ?? 0) - (connectedMcp ?? 0))
-  if (disconnected > 0) {
+  if (typeof failedMcp === 'number') {
+    if (failedMcp > 0) items.push(fallbackItem('mcp.disconnected', 'warning', t('{0} 个 MCP 服务连接失败', [failedMcp]), t('Agent 暂时无法调用这些服务提供的工具。'), '/introspection?tab=mcp', t('去处理'), { failed: failedMcp }))
+  } else if (disconnected > 0) {
     items.push(fallbackItem('mcp.disconnected', 'warning', t('{0} 个 MCP 服务未连接', [disconnected]), t('Agent 暂时无法调用这些服务提供的工具。'), '/introspection?tab=mcp', t('去处理'), { disconnected }))
   }
   if ((errorLogs ?? 0) > 0) {
