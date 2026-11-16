@@ -3,7 +3,7 @@
   .conversation-usage-popover { width: 22rem; max-width: calc(100vw - 1.5rem); max-height: var(--radix-popover-content-available-height); overflow: auto; }
   .conversation-usage-popover h3 { display: flex; align-items: baseline; justify-content: space-between; font-weight: 600; font-size: var(--console-text-body); }
   .conversation-usage-popover h3 > span { font-size: var(--console-text-label); color: hsl(var(--muted-foreground)); font-weight: 400; }
-  .conversation-usage-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem 1.25rem; padding: 1rem 0; font-variant-numeric: tabular-nums; }
+  .conversation-usage-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem 1.25rem; padding: 1rem 0; }
   .conversation-usage-metrics > dl { display: grid; gap: .625rem; align-content: start; }
   .conversation-usage-metrics > dl > div { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; }
   .conversation-usage-metrics dt { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
@@ -14,9 +14,9 @@
   .conversation-context-usage h4 { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .375rem; font-size: var(--console-text-label); color: hsl(var(--muted-foreground)); }
   .conversation-context-usage dl { margin-top: .75rem; display: grid; gap: .625rem; }
   .conversation-context-usage dl > div { display: grid; grid-template-columns: minmax(5rem, .8fr) minmax(0, 1fr); gap: .75rem; font-size: var(--console-text-label); }
-  .conversation-context-usage dd { display: flex; align-items: center; justify-content: flex-end; gap: .5rem; font-variant-numeric: tabular-nums; }
+  .conversation-context-usage dd { display: flex; align-items: center; justify-content: flex-end; gap: .5rem; }
   .conversation-context-bar { flex: 1; height: .25rem; border-radius: 2px; overflow: hidden; background: hsl(var(--muted)); }
-  .conversation-context-bar i { display: block; height: 100%; background: hsl(var(--primary) / .55); }
+  .conversation-context-bar i { display: block; height: 100%; background: hsl(var(--console-chart-quantity)); }
   .conversation-usage-trace-link { margin-top: .75rem; padding-inline: 0; font-size: var(--console-text-label); }
   .conversation-traces { min-width: 0; }
   .conversation-trace-toolbar { display: flex; align-items: center; justify-content: space-between; padding-bottom: .75rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
@@ -41,11 +41,11 @@
   .conversation-request-sections { padding: 0 .75rem; border-radius: var(--console-radius-md); background: var(--console-surface-inset); }
   .conversation-request-sections > [data-state]:last-child { border-bottom: 0; }
   .conversation-request-sections button { gap: .75rem; }
-  .conversation-request-sections button small { margin-left: auto; margin-top: 0; font-variant-numeric: tabular-nums; }
+  .conversation-request-sections button small { margin-left: auto; margin-top: 0; }
   .conversation-request-sections pre, .conversation-trace-tools pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 30rem; overflow: auto; font-size: var(--console-text-label); line-height: 1.7; font-family: var(--console-font-mono); }
   .conversation-request-message + .conversation-request-message, .conversation-request-tool + .conversation-request-tool { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--console-border-subtle); }
   .conversation-request-message h5, .conversation-request-tool h5 { margin-bottom: .5rem; font-weight: 600; font-size: var(--console-text-label); overflow-wrap: anywhere; }
-  .conversation-request-message h5 > span { font-variant-numeric: tabular-nums; margin-right: .625rem; color: hsl(var(--muted-foreground)); font-weight: 400; }
+  .conversation-request-message h5 > span { margin-right: .625rem; color: hsl(var(--muted-foreground)); font-weight: 400; }
   .conversation-trace-tools { margin-top: 1rem; }
   .conversation-trace-tools > h4, .conversation-trace-subagent > h4 { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; font-size: var(--console-text-label); font-weight: 550; }
   .conversation-trace-tools > h4 > svg { width: .875rem; height: .875rem; }

@@ -326,7 +326,7 @@ function CommandCatalog({ entries, selectedId, onSelect }: CollectionProps<'comm
                 <small>{text(entry.item.desc, i18n.t("没有提供命令说明"))}</small>
                 <span className="console-runtime-tags">
                   {parameters.length ? <Badge variant="outline">{parameters.length} {i18n.t(" 参数")}</Badge> : <Badge variant="secondary">{i18n.t("无参数")}</Badge>}
-                  {permissions.length ? <Badge variant="warning"><ShieldCheck />{permissions.length} {i18n.t(" 权限")}</Badge> : null}
+                  {permissions.length ? <Badge variant="outline"><ShieldCheck />{permissions.length} {i18n.t(" 权限")}</Badge> : null}
                 </span>
                 <span className="console-runtime-source"><span>{text(entry.item.plugin, 'runtime')}</span><ArrowRight /></span>
               </span>
@@ -439,7 +439,7 @@ function EndpointGrid({ entries, selectedId, onSelect }: CollectionProps<'endpoi
         return (
           <div key={entry.id} className={cn('console-runtime-endpoint-shell', selected && 'is-selected')}>
             <SelectableCard {...{ entry, entries, selectedId, onSelect }} className="console-runtime-health-card">
-              <span className={cn('console-runtime-health', online && 'is-online')}>{online ? <CheckCircle2 /> : <Unplug />}</span>
+              <span className={cn('console-runtime-health', online ? 'is-online' : 'is-offline')}>{online ? <CheckCircle2 /> : <Unplug />}</span>
               <span className="console-runtime-card-main">
                 <span className="flex items-center justify-between gap-2">
                   <small>{text(entry.item.adapter, 'adapter')}</small>
@@ -481,7 +481,7 @@ function BindingMap({ entries, selectedId, onSelect }: CollectionProps<'bindings
             <span className="console-runtime-node"><CircleDot /></span>
             <span className="console-runtime-card-main console-runtime-binding-provider"><small>{text(entry.item.provider, 'Provider')}</small><strong>{text(entry.item.model, i18n.t("默认模型"))}</strong></span>
             <span className="console-runtime-binding-meta">
-              <Badge variant={servers.length ? 'success' : 'secondary'}>{servers.length} MCP</Badge>
+              <Badge variant={servers.length ? 'outline' : 'secondary'}>{servers.length} MCP</Badge>
               {entry.item.hasAgentFile === true ? <Badge variant="outline"><FileCode2 />agent.md</Badge> : null}
             </span>
           </SelectableCard>
@@ -525,7 +525,7 @@ function PromptSectionCatalog({ entries, selectedId, onSelect }: CollectionProps
             <span className="console-runtime-card-main">
               <span className="console-runtime-prompt-heading">
                 <strong>{text(entry.item.title, text(entry.item.name, i18n.t("未命名片段")))}</strong>
-                <Badge variant={retention === 'required' ? 'warning' : retention === 'preferred' ? 'secondary' : 'outline'}>{retention}</Badge>
+                <Badge variant={retention === 'required' ? 'outline' : 'secondary'}>{retention}</Badge>
               </span>
               <small>{text(entry.item.owner, 'runtime')} · {text(entry.item.layer, 'context')} · {i18n.t("顺序")} {text(entry.item.order, '50')}</small>
               <span className="console-runtime-tags">
@@ -554,12 +554,12 @@ function McpGrid({ entries, selectedId, onSelect }: CollectionProps<'mcp'>) {
         const connected = entry.item.connected === true
         return (
           <SelectableCard key={entry.id} {...{ entry, entries, selectedId, onSelect }} className="console-runtime-mcp-card">
-            <span className={cn('console-runtime-health', connected && 'is-online')}>{connected ? <PlugZap /> : <Unplug />}</span>
+            <span className={cn('console-runtime-health', connected ? 'is-online' : 'is-offline')}>{connected ? <PlugZap /> : <Unplug />}</span>
             <span className="console-runtime-card-main">
               <strong>{text(entry.item.name, i18n.t("未命名 MCP"))}</strong>
               <small>{connected ? i18n.t("{0} 个可用工具", [text(entry.item.toolCount, '0')]) : text(entry.item.error, i18n.t("连接不可用"))}</small>
             </span>
-            <Badge variant={connected ? 'success' : 'destructive'}>{connected ? i18n.t("已连接") : i18n.t("未连接")}</Badge>
+            <Badge variant={connected ? 'outline' : 'warning'}>{connected ? i18n.t("已连接") : i18n.t("未连接")}</Badge>
           </SelectableCard>
         )
       })}
@@ -932,10 +932,10 @@ function CapabilityInspector(props: {
         <div className="console-inspector-section">
           <div className="console-inspector-section-title">
             <span>{i18n.t("权限")}</span>
-            <Badge variant="warning">{permissions.length}</Badge>
+            <Badge variant="outline">{permissions.length}</Badge>
           </div>
           <div className="console-runtime-tags">
-            {permissions.map((perm, idx) => <Badge key={`perm-${idx}`} variant="warning"><ShieldCheck />{perm}</Badge>)}
+            {permissions.map((perm, idx) => <Badge key={`perm-${idx}`} variant="outline"><ShieldCheck />{perm}</Badge>)}
           </div>
         </div>
       ) : null}
@@ -979,7 +979,7 @@ function CapabilityInspector(props: {
 }
 
 function formatValue(value: unknown, locale: 'zh-CN' | 'en' = 'zh-CN'): ReactNode {
-  if (typeof value === 'boolean') return <Badge variant={value ? 'success' : 'secondary'}>{value ? translate(locale, "是") : translate(locale, "否")}</Badge>
+  if (typeof value === 'boolean') return <Badge variant={value ? 'outline' : 'secondary'}>{value ? translate(locale, "是") : translate(locale, "否")}</Badge>
   if (Array.isArray(value)) {
     if (!value.length) return <span className="text-muted-foreground">—</span>
     return <span className="console-runtime-tags">{value.map((entry, index) => <Badge key={`${String(entry)}-${index}`} variant="outline">{typeof entry === 'object' ? JSON.stringify(entry) : String(entry)}</Badge>)}</span>

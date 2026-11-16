@@ -11,7 +11,7 @@
 .console-feature-filter:hover { color: hsl(var(--foreground)); }
 .console-feature-filter:focus-visible { outline: var(--console-focus-width) solid hsl(var(--ring)); outline-offset: 1px; }
 .console-feature-filter.is-active { border-color: hsl(var(--primary) / 0.4); background: hsl(var(--primary) / 0.1); color: hsl(var(--primary)); font-weight: 600; }
-.console-feature-filter-count { font-variant-numeric: tabular-nums; opacity: 0.8; }
+.console-feature-filter-count { opacity: 0.8; }
 .console-feature-search { position: relative; display: flex; width: min(100%, 16rem); align-items: center; }
 .console-feature-search svg { position: absolute; left: 0.625rem; width: 0.875rem; height: 0.875rem; color: hsl(var(--muted-foreground)); pointer-events: none; }
 .console-feature-search input { padding-left: 2rem; }

@@ -58,7 +58,7 @@ test('instance status is read defensively; labels, tones and actions follow the 
     assert.match(instanceStateLabel(state, zh), /[㐀-鿿]/u, state)
     assert.doesNotMatch(instanceStateLabel(state, en), /[㐀-鿿]/u, state)
   }
-  assert.equal(instanceStateTone('running'), 'success')
+  assert.equal(instanceStateTone('running'), 'outline')
   assert.equal(instanceStateTone('crashed'), 'destructive')
   assert.deepEqual(instanceActions('running'), { start: false, stop: true, restart: true })
   assert.deepEqual(instanceActions('stopped'), { start: true, stop: false, restart: false })

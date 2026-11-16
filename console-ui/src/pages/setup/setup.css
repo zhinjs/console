@@ -11,7 +11,7 @@
   .console-setup-steps { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
   .console-setup-steps li { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid hsl(var(--border)); border-radius: 999px; color: hsl(var(--muted-foreground)); font-size: 12px; }
   .console-setup-steps li[data-state='current'] { border-color: hsl(var(--primary)); color: hsl(var(--foreground)); font-weight: 500; }
-  .console-setup-steps li[data-state='done'] { color: hsl(var(--success, var(--foreground))); }
+  .console-setup-steps li[data-state='done'] { color: hsl(var(--foreground)); }
   .console-setup-step-mark svg { width: 14px; height: 14px; }
   .console-setup-body { display: grid; gap: 16px; }
   .console-setup-body h2 { margin: 0; font-size: 16px; font-weight: 600; }

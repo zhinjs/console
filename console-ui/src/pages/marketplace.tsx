@@ -450,8 +450,8 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                   <div className="flex flex-wrap justify-end gap-1 shrink-0">
                     {(() => {
                       const status = marketplacePluginStatus(plugin.name, installed, updates)
-                      if (status.kind === 'update') return <Badge variant="warning" size="sm" title={i18n.t("本地 {0}，latest {1}", [status.current, status.latest])}>{i18n.t("有更新")}</Badge>
-                      if (status.kind === 'installed') return <Badge variant="success" size="sm" title={status.version ? i18n.t("本地版本 {0}", [status.version]) : undefined}>{i18n.t("已安装")}</Badge>
+                      if (status.kind === 'update') return <Badge variant="default" size="sm" title={i18n.t("本地 {0}，latest {1}", [status.current, status.latest])}>{i18n.t("有更新")}</Badge>
+                      if (status.kind === 'installed') return <Badge variant="outline" size="sm" title={status.version ? i18n.t("本地版本 {0}", [status.version]) : undefined}>{i18n.t("已安装")}</Badge>
                       return null
                     })()}
                     {belongsToZhinScope(plugin.name) && (

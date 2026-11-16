@@ -12,15 +12,16 @@ const KINDS = new Set(['private', 'group', 'channel'])
 
 function statusOf(code, locale) {
   const t = text => translate(locale, text)
+  // Steady states (running, done, enabled, succeeded) use the neutral outline badge; console#125.
   const table = {
     scheduled: [t('已排期'), 'secondary'],
-    running: [t('运行中'), 'info'],
+    running: [t('运行中'), 'outline'],
     paused: [t('已暂停'), 'secondary'],
     failed: [t('失败'), 'destructive'],
     unknown: [t('结果不确定'), 'warning'],
-    succeeded: [t('已完成'), 'success'],
+    succeeded: [t('已完成'), 'outline'],
     cancelled: [t('已取消'), 'secondary'],
-    enabled: [t('已启用'), 'success'],
+    enabled: [t('已启用'), 'outline'],
     pending: [t('待审批'), 'warning'],
   }
   const [label, tone] = table[code] ?? [code, 'secondary']
@@ -31,7 +32,7 @@ function lastResultOf(status, at, locale) {
   const value = String(status ?? '').toLowerCase()
   if (!value) return null
   const t = text => translate(locale, text)
-  if (value === 'ok' || value === 'succeeded' || value === 'success') return { label: t('成功'), tone: 'success', at }
+  if (value === 'ok' || value === 'succeeded' || value === 'success') return { label: t('成功'), tone: 'outline', at }
   if (value === 'error' || value === 'failed') return { label: t('失败'), tone: 'destructive', at }
   if (value === 'skipped') return { label: t('已跳过'), tone: 'secondary', at }
   return { label: value, tone: 'secondary', at }

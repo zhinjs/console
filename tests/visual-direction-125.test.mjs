@@ -33,8 +33,10 @@ test('one brand mark (the favicon shape) and one product name replace the letter
 
 test('received / sent use chart colors, and short activity drops the leading empty hours', () => {
   const css = read('console-ui/src/pages/dashboard.css')
-  assert.match(css, /\.console-volume-legend i\.is-inbound \{ background: hsl\(var\(--chart-1\)\); \}/)
-  assert.match(css, /\.console-volume-legend i\.is-reply \{ background: hsl\(var\(--chart-2\)\); \}/)
+  assert.match(css, /\.console-volume-legend i\.is-inbound \{ background: hsl\(var\(--console-chart-inbound\)\); \}/)
+  assert.match(css, /\.console-volume-legend i\.is-reply \{ background: hsl\(var\(--console-chart-outbound\)\); \}/)
+  // Phase 2: sent moved off the amber chart-2 (it read as the warning color).
+  assert.match(read('console-ui/src/design-system.css'), /--console-chart-inbound: var\(--chart-1\);\s*--console-chart-outbound: var\(--chart-3\);/)
   const hours = Array.from({ length: 24 }, (_, index) => ({ start: index, inbound: 0, outbound: 0 }))
   assert.equal(visibleActivityRange(hours).length, 24, 'no data: the whole day')
   hours[23].inbound = 3
@@ -92,4 +94,18 @@ test('a journal-shaped engagement summary shows its venue, actors and status ins
   // The protocol shape passes through.
   const protocol = normalizeEngagementSummary({ engagementId: 'e', venue: 'room', status: 'completed', startedAt: 1, participants: ['a'], hops: 2, turns: 3, tokensUsed: 4, wallClockMs: 5 })
   assert.deepEqual([protocol.venue, protocol.status, protocol.hops, protocol.turns, protocol.tokensUsed, protocol.wallClockMs], ['room', 'completed', 2, 3, 4, 5])
+})
+
+test('the message-volume chart has a hover / focus readout and one keyboard stop that walks the hours', () => {
+  const dashboard = read('console-ui/src/pages/dashboard.tsx')
+  const chart = dashboard.slice(dashboard.indexOf('function MessageVolumeChart('), dashboard.indexOf('function MessageFeedRow('))
+  assert.match(chart, /role="group" aria-label=\{summary\}/)
+  assert.match(chart, /role="img"\s+aria-label=\{describe\(bucket\)\}\s+tabIndex=\{index === tabStop \? 0 : -1\}/, 'each hour is read by describe; one tab stop')
+  assert.match(chart, /event\.key === 'ArrowRight'/)
+  assert.match(chart, /event\.key === 'Home'/)
+  assert.match(chart, /onPointerMove=\{fromPointer\}/, 'the readout follows the pointer')
+  assert.match(chart, /className="console-volume-readout" aria-hidden="true"/)
+  assert.match(chart, /i18n\.t\("收到"\)\}<b>\{shown\.inbound\}<\/b>/)
+  assert.match(chart, /i18n\.t\("发出"\)\}<b>\{shown\.outbound\}<\/b>/)
+  assert.doesNotMatch(read('console-ui/src/pages/dashboard.css'), /data-tip/, 'the CSS-only tooltip is gone')
 })

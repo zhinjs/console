@@ -157,10 +157,9 @@
   color: hsl(var(--muted-foreground));
 }
 
+/* Connected is the steady state: plain ink, no accent ring (console#125). */
 .agent-playground-connection.is-online {
-  border-color: hsl(var(--playground-accent) / 0.22);
-  color: hsl(var(--playground-accent));
-  box-shadow: 0 0 0 3px hsl(var(--playground-accent) / 0.06);
+  color: hsl(var(--foreground));
 }
 
 .agent-playground-section-label {
@@ -175,9 +174,6 @@
   text-transform: none;
 }
 
-.agent-playground-section-label span:last-child {
-  font-variant-numeric: tabular-nums;
-}
 
 .agent-playground-session-list {
   min-height: 0;
@@ -1069,7 +1065,7 @@
 
 .agent-playground-inline-run-metrics > div:last-child { border-right: 0; }
 .agent-playground-inline-run-metrics dt { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
-.agent-playground-inline-run-metrics dd { overflow: hidden; margin: 0; font-size: var(--console-text-label); font-weight: 680; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+.agent-playground-inline-run-metrics dd { overflow: hidden; margin: 0; font-size: var(--console-text-label); font-weight: 680; text-overflow: ellipsis; white-space: nowrap; }
 .agent-playground-inline-run-metrics .has-problem dd { color: hsl(8 58% 48%); }
 
 .agent-playground-inline-run-steps {
@@ -1123,7 +1119,7 @@
 .agent-playground-inline-run-steps li > div { display: flex; min-width: 0; flex-direction: column; }
 .agent-playground-inline-run-steps strong { overflow: hidden; color: hsl(var(--foreground) / 0.82); font-size: var(--console-text-label); font-weight: 660; text-overflow: ellipsis; white-space: nowrap; }
 .agent-playground-inline-run-steps small { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); text-overflow: ellipsis; white-space: nowrap; }
-.agent-playground-inline-run-steps li > span { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-variant-numeric: tabular-nums; }
+.agent-playground-inline-run-steps li > span { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .agent-playground-inline-run-steps li.is-failed > span,
 .agent-playground-inline-run-steps li.is-denied > span { color: hsl(8 58% 48%); }
 
@@ -1313,7 +1309,6 @@
   background: hsl(var(--muted));
   color: hsl(var(--muted-foreground));
   font-size: var(--console-text-label);
-  font-variant-numeric: tabular-nums;
 }
 
 .agent-playground-inspector-view {
@@ -1370,7 +1365,7 @@
 .agent-playground-metrics > div:nth-child(odd) { border-right: 1px solid hsl(var(--border) / 0.62); }
 .agent-playground-metrics > div:nth-child(-n+2) { border-bottom: 1px solid hsl(var(--border) / 0.62); }
 .agent-playground-metrics svg { grid-row: span 2; width: 0.78rem; color: hsl(var(--playground-accent)); }
-.agent-playground-metrics strong { overflow: hidden; font-size: var(--console-text-body); font-variant-numeric: tabular-nums; text-overflow: ellipsis; }
+.agent-playground-metrics strong { overflow: hidden; font-size: var(--console-text-body); text-overflow: ellipsis; }
 .agent-playground-metrics span { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .agent-playground-metrics .has-problem svg,
 .agent-playground-metrics .has-problem strong { color: hsl(8 62% 52%); }
@@ -1404,7 +1399,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.agent-playground-context-list dd.is-online { color: hsl(var(--playground-accent)); }
+.agent-playground-context-list dd.is-online { color: hsl(var(--foreground)); }
 
 .agent-playground-trace-section {
   flex: 1;
@@ -1447,17 +1442,18 @@
   box-shadow: 0 0 0 1px hsl(var(--border));
 }
 
-.agent-playground-trace-item.is-success .agent-playground-trace-dot { background: hsl(var(--playground-accent)); }
-.agent-playground-trace-item.is-running .agent-playground-trace-dot { background: hsl(190 62% 46%); }
-.agent-playground-trace-item.is-thinking .agent-playground-trace-dot { background: hsl(221 70% 58%); }
-.agent-playground-trace-item.is-tool .agent-playground-trace-dot { background: hsl(275 50% 57%); }
-.agent-playground-trace-item.is-capability .agent-playground-trace-dot { background: hsl(38 84% 52%); }
-.agent-playground-trace-item.is-usage .agent-playground-trace-dot { background: hsl(184 52% 42%); }
-.agent-playground-trace-item.is-problem .agent-playground-trace-dot { background: hsl(8 62% 52%); }
+/* Trace kinds are chart categories (never the amber warning hue); a finished step is neutral, a problem is red. console#125. */
+.agent-playground-trace-item.is-success .agent-playground-trace-dot { background: hsl(var(--muted-foreground) / 0.6); }
+.agent-playground-trace-item.is-running .agent-playground-trace-dot { background: hsl(var(--chart-7)); }
+.agent-playground-trace-item.is-thinking .agent-playground-trace-dot { background: hsl(var(--chart-1)); }
+.agent-playground-trace-item.is-tool .agent-playground-trace-dot { background: hsl(var(--chart-5)); }
+.agent-playground-trace-item.is-capability .agent-playground-trace-dot { background: hsl(var(--chart-4)); }
+.agent-playground-trace-item.is-usage .agent-playground-trace-dot { background: hsl(var(--chart-3)); }
+.agent-playground-trace-item.is-problem .agent-playground-trace-dot { background: hsl(var(--destructive-fill)); }
 .agent-playground-trace-item > div { display: flex; min-width: 0; flex-direction: column; }
 .agent-playground-trace-item strong { overflow: hidden; font-size: var(--console-text-label); font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .agent-playground-trace-item small { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); text-overflow: ellipsis; white-space: nowrap; }
-.agent-playground-trace-item time { margin-top: 0.03rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-variant-numeric: tabular-nums; }
+.agent-playground-trace-item time { margin-top: 0.03rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 
 .agent-playground-trace-loading,
 .agent-playground-trace-empty,
@@ -1540,7 +1536,7 @@
 
 .agent-playground-task-list dl > div { display: flex; flex-direction: column; gap: 0.06rem; }
 .agent-playground-task-list dt { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
-.agent-playground-task-list dd { margin: 0; font-size: var(--console-text-label); font-variant-numeric: tabular-nums; }
+.agent-playground-task-list dd { margin: 0; font-size: var(--console-text-label); }
 
 .agent-playground-artifact-list article {
   overflow: hidden;

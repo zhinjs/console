@@ -406,9 +406,9 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
   }
 
   const statusBadge = plugin?.management
-    ? <Badge variant={plugin.management.status === 'enabled' ? 'success' : plugin.management.status === 'missing-config' || plugin.management.status === 'degraded' ? 'warning' : 'secondary'}>{managementLabel(plugin.management, i18n.locale)}</Badge>
-    : plugin ? <Badge variant={plugin.status === 'active' ? 'success' : 'secondary'}>{plugin.status === 'active' ? i18n.t("代内已加载") : i18n.t("未加载")}</Badge>
-      : <Badge variant="warning">{undeclaredPackage ? i18n.t("已安装，待配置") : i18n.t("实例未报告")}</Badge>
+    ? <Badge variant={plugin.management.status === 'enabled' ? 'outline' : plugin.management.status === 'missing-config' || plugin.management.status === 'degraded' ? 'warning' : 'secondary'}>{managementLabel(plugin.management, i18n.locale)}</Badge>
+    : plugin ? <Badge variant={plugin.status === 'active' ? 'outline' : 'secondary'}>{plugin.status === 'active' ? i18n.t("代内已加载") : i18n.t("未加载")}</Badge>
+      : <Badge variant={undeclaredPackage ? 'secondary' : 'warning'}>{undeclaredPackage ? i18n.t("已安装，待配置") : i18n.t("实例未报告")}</Badge>
 
   return (
     <PageShell className="console-plugin-detail-page">
@@ -434,7 +434,7 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
         <code className="console-code" title={packageName}>{packageName}</code>
         {instanceKey && instanceKey !== packageName ? <code className="console-code" title={instanceKey}>{instanceKey}</code> : null}
         {statusBadge}
-        {update ? <Badge variant="warning">{i18n.t("有更新 {0}", [update.latest])}</Badge> : null}
+        {update ? <Badge variant="default">{i18n.t("有更新 {0}", [update.latest])}</Badge> : null}
       </div>
 
       {detailView.staleError && !tab && (
@@ -611,7 +611,7 @@ function ScopeSummary({ summary }: { summary: PluginScopeSummary }) {
     <div className="space-y-3 text-sm">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-muted-foreground">{i18n.t("全局")}</span>
-        <Badge variant={summary.global.enabled ? 'success' : 'secondary'}>{summary.global.enabled ? i18n.t("开启") : i18n.t("已停用")}</Badge>
+        <Badge variant={summary.global.enabled ? 'outline' : 'secondary'}>{summary.global.enabled ? i18n.t("开启") : i18n.t("已停用")}</Badge>
         <Link className="text-xs underline" to={summary.global.href}>{i18n.t("全局配置")}</Link>
       </div>
       {summary.adapters.length ? (
@@ -622,7 +622,7 @@ function ScopeSummary({ summary }: { summary: PluginScopeSummary }) {
               <li key={adapter.alias}>
                 <Link to={adapter.href} className="console-plugin-scope-chip" title={i18n.t("打开 {0} 的功能页签", [adapter.alias])}>
                   <code>{adapter.alias}</code>
-                  <span className={adapter.enabled ? 'text-success' : 'text-muted-foreground'}>
+                  <span className={adapter.enabled ? 'text-foreground' : 'text-muted-foreground'}>
                     {adapter.lockedBy ? i18n.t("已锁定") : adapter.enabled === null ? '—' : adapter.enabled ? i18n.t("开") : i18n.t("关")}
                   </span>
                   {adapter.overridden ? <Badge variant="outline" size="sm">{i18n.t("有覆盖")}</Badge> : null}
@@ -654,7 +654,7 @@ function PluginDiagnostic({ value }: { value: unknown }) {
   const { status, errors, missingEnv, warnings } = pluginDiagnosticSummary(value)
   const title = status === 'valid' ? i18n.t("配置检查通过") : status === 'missing-env' ? i18n.t("需要补充环境变量") : status === 'invalid' ? i18n.t("配置检查未通过") : i18n.t("未提供配置检查结果")
   return <section aria-label={i18n.t("插件诊断结果")} className="space-y-3 rounded-md bg-muted/40 p-3 text-sm">
-    <Badge variant={status === 'valid' ? 'success' : status === 'unknown' ? 'secondary' : 'warning'}>{title}</Badge>
+    <Badge variant={status === 'valid' ? 'outline' : status === 'unknown' ? 'secondary' : 'warning'}>{title}</Badge>
     {errors.length > 0 && <div><p className="mb-1 font-medium">{i18n.t("配置错误")}</p><ul className="list-disc space-y-1 pl-5">{errors.map((error, index) => <li key={index} className="break-words">{error}</li>)}</ul></div>}
     {missingEnv.length > 0 && <div><p className="mb-1 font-medium">{i18n.t("缺少环境变量")}</p><div className="flex flex-wrap gap-1">{missingEnv.map(name => <code key={name} className="break-all rounded bg-muted px-1.5 py-0.5 text-xs">{name}</code>)}</div></div>}
     {warnings.length > 0 && <div><p className="mb-1 font-medium">{i18n.t("提示")}</p><ul className="list-disc space-y-1 pl-5">{warnings.map((warning, index) => <li key={index} className="break-words">{warning}</li>)}</ul></div>}

@@ -158,7 +158,7 @@ export function FeatureLevelPanel({ scope }: { scope: Scope }) {
 function StateBadge({ row }: { row: FeatureLevelRow }) {
   const i18n = useI18n()
   if (row.state === 'locked') return <Badge variant="secondary" size="sm"><Lock className="h-3 w-3" aria-hidden="true" />{i18n.t('已锁定')}</Badge>
-  if (row.state === 'enabled') return <Badge variant="success" size="sm">{i18n.t('启用')}</Badge>
+  if (row.state === 'enabled') return <Badge variant="outline" size="sm">{i18n.t('启用')}</Badge>
   if (row.state === 'disabled') return <Badge variant="outline" size="sm">{i18n.t('已关闭')}</Badge>
   return <Badge variant="outline" size="sm">{i18n.t('状态未知')}</Badge>
 }

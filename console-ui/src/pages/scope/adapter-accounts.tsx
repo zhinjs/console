@@ -36,7 +36,8 @@ export function ManagedAccountEditor() {
   return <AdapterAccountEditor />
 }
 
-const badgeVariant = (tone: BadgeTone) => tone === 'success' ? 'success' : tone === 'warning' ? 'warning' : tone === 'danger' ? 'destructive' : 'outline'
+// The client calls a running account 'success'; it is the steady state, so it gets the neutral outline (console#125).
+const badgeVariant = (tone: BadgeTone) => tone === 'success' ? 'outline' : tone === 'warning' ? 'warning' : tone === 'danger' ? 'destructive' : 'outline'
 
 /** State badge of a managed account that is not in the Host's connection list (stopped, closing). */
 export function ManagedAccountState({ row }: { row: HeadlessAccountRow }) {

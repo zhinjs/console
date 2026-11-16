@@ -52,7 +52,6 @@
   .console-plugin-catalog-count {
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-body);
-    font-variant-numeric: tabular-nums;
   }
 
   .console-plugin-catalog-search {
@@ -246,6 +245,5 @@
     padding: 0 0.45rem;
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-caption);
-    font-variant-numeric: tabular-nums;
   }
 }

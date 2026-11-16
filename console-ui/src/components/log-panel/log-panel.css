@@ -241,7 +241,7 @@
   .console-log-panel-row:hover { background: hsl(var(--muted) / 0.6); }
   .console-log-panel-row.is-selected { background: hsl(var(--primary-action)); }
   .console-log-panel-row:focus-visible { outline-offset: -2px; }
-  .console-log-panel-row time { color: hsl(var(--muted-foreground)); font-family: var(--console-font-mono); font-variant-numeric: tabular-nums; }
+  .console-log-panel-row time { color: hsl(var(--muted-foreground)); font-family: var(--console-font-mono); }
   .console-log-panel-row > svg { width: 0.875rem; height: 0.875rem; color: hsl(var(--muted-foreground)); }
   .console-log-panel-row.is-info > svg { color: hsl(var(--status-info, var(--info))); }
   .console-log-panel-row.is-warn > svg { color: hsl(var(--status-warning, var(--warning))); }
@@ -272,7 +272,6 @@
     border-top: 1px solid hsl(var(--border) / 0.58);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
-    font-variant-numeric: tabular-nums;
   }
 
   /* Top-bar toggle: highlighted while the panel is open. */

@@ -276,9 +276,12 @@
     box-shadow: 0 0 0 3px hsl(var(--warning-fill) / 0.18);
   }
 
-  .console-connection-dot.is-online {
-    background: hsl(var(--success-fill));
-    box-shadow: 0 0 0 3px hsl(var(--success-fill) / 0.18);
+  /* Connected (and the first-connect grace period) is the steady state: a quiet neutral dot that still carries the
+     tooltip; color appears only once the stream is lost (the pill in ConnectionIndicator). console#125. */
+  .console-connection-dot.is-online,
+  .console-connection-dot.is-offline {
+    background: hsl(var(--muted-foreground) / 0.45);
+    box-shadow: none;
   }
 
   .console-connection-dot { position: relative; cursor: default; }
@@ -532,7 +535,7 @@
   }
 
   .console-connection-state.is-online > span:first-child {
-    background: hsl(var(--success-fill));
+    background: hsl(var(--muted-foreground) / 0.45);
   }
 
   /* ---------- Content column ---------- */
@@ -889,14 +892,9 @@
     white-space: nowrap;
   }
 
+  /* Outcomes are categories, not health: 发言 reads in full foreground, 只观察 stays muted. console#125. */
   .console-outcome-chip.is-spoke {
-    background: hsl(var(--success) / 0.1);
-    color: hsl(var(--success));
-  }
-
-  .console-outcome-chip.is-watched {
-    background: hsl(var(--info) / 0.1);
-    color: hsl(var(--info));
+    color: hsl(var(--foreground));
   }
 
   .console-outcome-chip.is-skipped {

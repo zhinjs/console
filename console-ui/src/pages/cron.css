@@ -112,7 +112,6 @@
     gap: 0.5rem 1.25rem;
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
-    font-variant-numeric: tabular-nums;
   }
 
   .console-cron-memory-item > .console-cron-run-facts {

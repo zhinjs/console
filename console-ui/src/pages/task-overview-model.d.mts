@@ -1,5 +1,5 @@
 export type TaskOverviewType = 'admin' | 'schedule' | 'internal' | 'assistant' | 'approval'
-export type TaskOverviewTone = 'secondary' | 'info' | 'success' | 'warning' | 'destructive'
+export type TaskOverviewTone = 'outline' | 'secondary' | 'info' | 'success' | 'warning' | 'destructive'
 export interface TaskOverviewRow {
   key: string
   type: TaskOverviewType

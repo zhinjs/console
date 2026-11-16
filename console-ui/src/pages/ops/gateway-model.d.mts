@@ -57,7 +57,7 @@ export function gatewayErrorKind(error: unknown): GatewayErrorKind
 
 export function readInstanceStatus(value: unknown): GatewayInstanceStatus | null
 export function instanceStateLabel(state: string, t: Translate): string
-export function instanceStateTone(state: string): 'success' | 'destructive' | 'warning' | 'secondary'
+export function instanceStateTone(state: string): 'outline' | 'destructive' | 'warning' | 'secondary'
 export function instanceActions(state: GatewayInstanceState): { start: boolean; stop: boolean; restart: boolean }
 export function instanceLifecycleApplied(
   action: 'start' | 'stop' | 'restart',

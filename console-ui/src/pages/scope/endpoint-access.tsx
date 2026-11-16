@@ -107,7 +107,7 @@ export function EndpointAccessPanel({ scope, data }: { scope: Scope; data: Endpo
     <>
       <ObjectSection title={i18n.t('连接')} description={i18n.t('账号与平台之间的连接状态。测试连接只读取状态，不会发送消息。')} actions={refresh}>
         <ObjectFacts items={[
-          { label: i18n.t('连接'), value: <Badge variant={endpoint.connected ? 'success' : 'outline'} size="sm">{endpoint.connected ? i18n.t('已连接') : i18n.t('未连接')}</Badge> },
+          { label: i18n.t('连接'), value: <Badge variant={endpoint.connected ? 'outline' : 'warning'} size="sm">{endpoint.connected ? i18n.t('已连接') : i18n.t('未连接')}</Badge> },
           { label: i18n.t('运行状态'), value: i18n.t(endpointLifecycleLabel(endpoint)) },
           { label: i18n.t('平台'), value: i18n.t(platformLabel(endpoint.adapter)) },
           ...(transport ? [{ label: i18n.t('传输'), value: transport.labeled

@@ -79,7 +79,7 @@ function PersistentRunStatus({ state, job, now }: { state?: AssistantJob['state'
       <span>{i18n.t("下次执行：")}{next ?? (timestamp != null ? new Date(timestamp).toLocaleString(i18n.locale) : '—')}</span>
       {target?.valid && target.display ? <span>{i18n.t("发送到：")}{target.display}</span> : null}
       {target && !target.valid ? <span><Badge variant="warning">{i18n.t("⚠ 无效")}</Badge> {target.display ? `${target.display} · ` : ''}{scheduleTargetWarning(target, timestamp, i18n.locale)}</span> : null}
-      {lastStatus ? <Badge variant={failed ? 'destructive' : lastStatus === 'ok' ? 'success' : 'secondary'}>{failed ? i18n.t("上次执行失败") : lastStatus === 'ok' ? i18n.t("上次执行成功") : lastStatus === 'skipped' ? i18n.t("上次已跳过") : lastStatus}</Badge> : <span>{i18n.t("最近结果：")}{'—'}</span>}
+      {lastStatus ? <Badge variant={failed ? 'destructive' : lastStatus === 'ok' ? 'outline' : 'secondary'}>{failed ? i18n.t("上次执行失败") : lastStatus === 'ok' ? i18n.t("上次执行成功") : lastStatus === 'skipped' ? i18n.t("上次已跳过") : lastStatus}</Badge> : <span>{i18n.t("最近结果：")}{'—'}</span>}
       {state ? <Link className="font-medium text-foreground hover:underline" to={taskTabHref('assistant', { q: job.id })}>{i18n.t("执行详情 →")}</Link> : null}
     </div>
     {failed && state?.lastError ? <div className="console-job-error" role="note"><p>{explainJobError(state.lastError, i18n.locale) ?? state.lastError}</p>{explainJobError(state.lastError, i18n.locale) ? <code>{state.lastError}</code> : null}</div> : null}

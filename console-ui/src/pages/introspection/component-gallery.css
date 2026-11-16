@@ -87,26 +87,14 @@
   flex: none;
 }
 
+/* Connected is the steady state: a neutral dot; only a disconnected server or account gets a color. console#125. */
 .console-runtime-status-dot.is-online {
-  background-color: hsl(var(--success));
-  box-shadow: 0 0 0 3px hsl(var(--success) / 0.2);
-  animation: console-status-pulse var(--console-motion-loop) infinite ease-in-out;
+  background-color: hsl(var(--muted-foreground) / 0.55);
 }
 
 .console-runtime-status-dot.is-offline {
-  background-color: hsl(var(--destructive));
-  box-shadow: 0 0 0 3px hsl(var(--destructive) / 0.16);
-}
-
-@keyframes console-status-pulse {
-  0%, 100% { box-shadow: 0 0 0 2px hsl(var(--success) / 0.24); }
-  50% { box-shadow: 0 0 0 5px hsl(var(--success) / 0.08); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .console-runtime-status-dot.is-online {
-    animation: none;
-  }
+  background-color: hsl(var(--warning-fill));
+  box-shadow: 0 0 0 3px hsl(var(--warning-fill) / 0.18);
 }
 
 /* Command card shell with sibling copy button */
