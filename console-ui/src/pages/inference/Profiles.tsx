@@ -2,22 +2,10 @@ import { StatusState } from '../../components/StatusState'
 import { useI18n } from '../../i18n'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Plus, Pencil, Trash2, RefreshCw } from 'lucide-react'
-import { Button } from '../../components/ui/button'
-import { Input } from '../../components/ui/input'
-import { SelectField } from '../../components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '../../components/ui/dialog'
-import { ErrorAlert } from '../../components/error-alert'
+import { Button, Card, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, ErrorAlert, Input, SelectField, useConfirm } from '@zhin.js/console-ui'
 import { ModelCapabilities } from './ModelCapabilities'
 import { SupportLabel, SupportNotice, supportLabel } from './SupportInfo'
 import { inferenceError, profileSupport, profileUsages, serviceDriver, type ProfileUsage } from './model.mjs'
-import { Card } from '../../components/ui/card'
-import { useConfirm } from '../../components/confirm-dialog'
 import {
   driverKey,
   type Profile,

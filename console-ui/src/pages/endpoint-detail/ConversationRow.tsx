@@ -1,5 +1,5 @@
 import { useI18n } from '../../i18n'
-import { cn } from '@zhin.js/client'
+import { cn } from '@zhin.js/console-ui'
 import { formatConversationTime } from './date-utils'
 import { conversationAvatarStyle, conversationInitials } from './conversation-avatar'
 import type { ConversationEntry } from './types'

@@ -57,9 +57,8 @@ function renderDrawer({ open, memberCount = 0, onOpenChange = () => {}, slots = 
     'react/jsx-runtime': { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) },
     'lucide-react': new Proxy({}, { get: (_object, key) => key }),
     '../../i18n': { useI18n: () => ({ t: (message, values) => translate('zh-CN', message, values) }) },
-    '../../components/ui/button': { Button: 'button' },
-    '../../components/ui/sheet': { Sheet: 'sheet', SheetContent: 'sheet-content', SheetTrigger: 'sheet-trigger', SheetTitle, SheetDescription },
-  }
+    '@zhin.js/console-ui': { Button: 'button', Sheet: 'sheet', SheetContent: 'sheet-content', SheetTrigger: 'sheet-trigger', SheetTitle, SheetDescription },
+    }
   new Function('require', 'module', 'exports', drawerCompiled)(name => Object.hasOwn(mocks, name) ? mocks[name] : require(name), module, module.exports)
   return module.exports.GroupMembersDrawer({ open, memberCount, onOpenChange, side, children: s => { slots.push(s); return 'panel' } })
 }

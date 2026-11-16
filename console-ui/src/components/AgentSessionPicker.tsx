@@ -1,9 +1,7 @@
 import { useI18n } from '../i18n'
 import { Link } from 'react-router-dom'
 import { Bot, ChevronRight, GitBranch, History, Loader2, MessagesSquare } from 'lucide-react'
-import { cn } from '@zhin.js/client'
-import { Button } from './ui/button'
-import { Input } from './ui/input'
+import { Button, cn, Input } from '@zhin.js/console-ui'
 import { parseImSessionKey, isLikelySessionKey, SESSION_SCOPE_LABELS } from '../utils/agent-session'
 import { relativeSince, type RecentSession } from '../pages/agent-session-recent.mjs'
 

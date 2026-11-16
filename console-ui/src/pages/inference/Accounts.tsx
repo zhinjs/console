@@ -1,21 +1,9 @@
 import { useI18n } from '../../i18n'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Plus, Pencil, KeyRound, LogIn, Unplug, Trash2, Activity } from 'lucide-react'
-import { Button } from '../../components/ui/button'
-import { Input } from '../../components/ui/input'
-import { SelectField } from '../../components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '../../components/ui/dialog'
-import { ErrorAlert } from '../../components/error-alert'
+import { Button, Card, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, ErrorAlert, Input, SelectField, useConfirm } from '@zhin.js/console-ui'
 import { SupportLabel, SupportNotice, supportLabel } from './SupportInfo'
 import { driverLabel, serviceDriver } from './model.mjs'
-import { Card } from '../../components/ui/card'
-import { useConfirm } from '../../components/confirm-dialog'
 import {
   driverKey,
   canReferenceEnvironment,

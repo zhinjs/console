@@ -1,11 +1,7 @@
 import { useId, useMemo, useState, type ReactNode } from 'react'
 import { Plus, X } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/button'
-import { Checkbox } from '../../components/ui/checkbox'
-import { Input } from '../../components/ui/input'
-import { SelectField } from '../../components/ui/select'
+import { Badge, Button, Checkbox, Input, SelectField } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
 import { useEndpointList } from '../features/use-feature-data'
 import {

@@ -400,7 +400,8 @@ test('full config editor uses revision-checked source RPCs', () => {
 
 test('released Zhin rich-message renderer is the single Markdown implementation', () => {
   const source = sourceText(join(SOURCE_ROOT, 'pages', 'endpoint-detail', 'MessageBody.tsx'))
-  assert.match(source, /import \{ MarkdownContent, cn, pickMediaRawUrl, resolveMediaSrc \} from '@zhin\.js\/client'/)
+  assert.match(source, /import \{ MarkdownContent, pickMediaRawUrl, resolveMediaSrc \} from '@zhin\.js\/client'/)
+  assert.match(source, /import \{ cn \} from '@zhin\.js\/console-ui'/)
   assert.doesNotMatch(source, /function MarkdownContent\(/)
 })
 
@@ -412,12 +413,14 @@ test('package manifest targets the released Zhin contract generation', () => {
   assert.equal(manifest.dependencies['@zhin.js/contract'], '~1.1.27')
   assert.equal(manifest.dependencies['@zhin.js/ai'], '~1.7.0')
   assert.equal(manifest.dependencies['@zhin.js/console-protocol'], '~1.4.0')
+  // The component library (ADR 0063 P1a); 1.1 changes the look on purpose, so it is taken deliberately.
+  assert.equal(manifest.dependencies['@zhin.js/console-ui'], '~1.0.0')
   for (const [name, range] of Object.entries(manifest.dependencies)) {
     if (name.startsWith('@zhin.js/')) assert.match(range, /^~\d+\.\d+\.\d+$/, `${name} uses a tilde range`)
   }
   assert.equal(Object.keys(manifest.dependencies).some(name => name.startsWith('@zhin.js/client-')), false)
   const lock = sourceText(join(ROOT, 'pnpm-lock.yaml'))
-  for (const name of ['client', 'contract', 'console-protocol', 'ai', 'logger', 'plugin-runtime']) {
+  for (const name of ['client', 'contract', 'console-protocol', 'console-ui', 'ai', 'logger', 'plugin-runtime']) {
     const versions = new Set([...lock.matchAll(new RegExp(`^  '@zhin\\.js/${name}@([^'(]+)`, 'gm'))].map(match => match[1]))
     assert.equal(versions.size, 1, `@zhin.js/${name} resolves to ${[...versions].join(', ')}`)
   }

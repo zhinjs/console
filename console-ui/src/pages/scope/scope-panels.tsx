@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useInstanceRecovery } from '../../hooks/use-instance-recovery'
 import { useI18n } from '../../i18n'
-import { Card } from '../../components/ui/card'
+import { Card } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
 import { requestConsole } from '../../utils/console-rpc'
 import { ENDPOINT_RPC } from '../../contracts/zhin-console'

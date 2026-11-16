@@ -3,10 +3,8 @@ import {
   AlertTriangle, Bookmark, Check, CheckCircle2, ClipboardCopy, Copy, ExternalLink, Eye, EyeOff, Info, KeyRound, Loader2,
   QrCode, RefreshCw, ShieldCheck, Smartphone,
 } from 'lucide-react'
-import { cn } from '@zhin.js/client'
+import { Button, cn, Input } from '@zhin.js/console-ui'
 import { useI18n } from '../../i18n'
-import { Button } from '../../components/ui/button'
-import { Input } from '../../components/ui/input'
 import { copyText } from '../clipboard-copy.mjs'
 import { encodeQr, qrSvgPath } from './qr-code.mjs'
 import {

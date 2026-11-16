@@ -10,21 +10,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import {
   Search, Package, Download, ExternalLink, RefreshCw, Copy, Check, GitBranch, Settings, CheckCircle2, ToggleLeft,
 } from 'lucide-react'
-import { Card, CardContent } from '../components/ui/card'
-import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
-import { Input } from '../components/ui/input'
-import { SelectField } from '../components/ui/select'
-import { Alert, AlertDescription } from '../components/ui/alert'
-import { Skeleton } from '../components/ui/skeleton'
-import { Separator } from '../components/ui/separator'
-import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs'
-import {
-  Dialog, DialogContent, DialogHeader, DialogFooter,
-  DialogTitle, DialogDescription, DialogClose,
-} from '../components/ui/dialog'
-import { PageHeader } from '../components/PageHeader'
-import { PageShell } from '../components/PageShell'
+import { Alert, AlertDescription, Badge, Button, Card, CardContent, Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, PageHeader, PageShell, SelectField, Separator, Skeleton, Tabs, TabsList, TabsTrigger } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import { apiFetch } from '../utils/auth'
 import { Link, useSearchParams } from 'react-router-dom'

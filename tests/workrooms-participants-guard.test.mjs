@@ -29,12 +29,7 @@ async function renderWorkrooms({ engagements, detail }) {
       useVenues: () => ({ venues: [] }),
     },
     '../hooks/visible-polling.mjs': { startVisiblePolling: () => () => {} },
-    '../components/PageHeader': { PageHeader: 'header' }, '../components/PageShell': { PageShell: 'main' },
-    '../components/empty-state': { EmptyState: 'empty' }, '../components/ui/badge': { Badge: 'badge' },
-    '../components/ui/button': { Button: 'button' }, '../components/ui/card': { Card: 'card', CardContent: 'card-content' },
-    '../components/ui/skeleton': { Skeleton: 'skeleton' }, '../components/ui/list-item-button': { ListItemButton: 'button' },
-    '../components/StatusState': { StatusState: 'status' },
-    '../components/ui/sheet': { Sheet: 'sheet', SheetContent: 'sheet-content', SheetDescription: 'p', SheetHeader: 'div', SheetTitle: 'h2' },
+    '@zhin.js/console-ui': { cn: (...parts) => parts.filter(Boolean).join(' '), PageHeader: 'header', PageShell: 'main', EmptyState: 'empty', Badge: 'badge', Button: 'button', Card: 'card', CardContent: 'card-content', Skeleton: 'skeleton', ListItemButton: 'button', Sheet: 'sheet', SheetContent: 'sheet-content', SheetDescription: 'p', SheetHeader: 'div', SheetTitle: 'h2' }, '../components/StatusState': { StatusState: 'status' },
     '../hooks/useIsMobile': { useIsMobile: () => false },
     './engagements-model.mjs': model,
   }

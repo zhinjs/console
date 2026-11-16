@@ -17,7 +17,7 @@ function fixture() {
     '../i18n': { useI18n: () => ({ t: (message, values) => translate('en', message, values) }) },
     '../theme': { THEME_PALETTES },
     '../hooks/useTheme': { useTheme: () => ({ ...state, setMode: mode => { calls.push(['mode', mode]); state.mode = mode; if (mode !== 'system') state.theme = mode }, setPalette: palette => { calls.push(['palette', palette]); state.palette = palette }, resetTheme: () => { calls.push(['reset']); state.mode = 'system'; state.palette = 'ocean' } }) },
-    './ui/popover': Object.fromEntries(['Popover', 'PopoverTrigger', 'PopoverContent'].map(name => [name, name])),
+    '@zhin.js/console-ui': { ...(Object.fromEntries(['Popover', 'PopoverTrigger', 'PopoverContent'].map(name => [name, name]))) },
   }
   new Function('require', 'module', 'exports', code)(name => Object.hasOwn(mocks, name) ? mocks[name] : name.endsWith('.css') ? {} : require(name), module, module.exports)
   return { calls, state, render: () => module.exports.ThemeToggle() }

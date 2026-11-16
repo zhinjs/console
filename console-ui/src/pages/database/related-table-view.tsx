@@ -1,5 +1,5 @@
 import { useI18n } from '../../i18n'
-import { ErrorAlert } from '../../components/error-alert'
+import { Alert, AlertDescription, Button, ConfirmDialog, Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, ErrorAlert, Input, SelectField, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { readErrorSummary } from '../../utils/read-error.mjs'
 import { relatedUpdateReadback } from './related-update-result.mjs'
 import { relatedPrimaryKeys, relatedRowIdentity } from './related-row-identity.mjs'
@@ -16,22 +16,8 @@ import type { DbOrderBy } from './database-types'
 import { useState, useEffect, useCallback, useMemo, useRef, type ChangeEvent, type FormEvent } from 'react'
 import type { TableInfo, SelectResult } from '@zhin.js/client'
 import { Plus, Trash2, Pencil, RefreshCw, Loader2, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Save, ArrowUp, ArrowDown, ArrowUpDown, Search, X, Filter, Eye, EyeOff } from 'lucide-react'
-import { Button } from '../../components/ui/button'
-import { Input } from '../../components/ui/input'
-import { SelectField } from '../../components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
-import { Alert, AlertDescription } from '../../components/ui/alert'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from '../../components/ui/dialog'
 import { JsonField } from './json-field'
 import { useToast } from '../../components/toast'
-import { ConfirmDialog } from '../../components/confirm-dialog'
 
 type Row = Record<string, unknown>
 

@@ -16,26 +16,13 @@ import {
   Trash2,
   UsersRound,
 } from 'lucide-react'
-import { cn } from '@zhin.js/client'
+import { Badge, Button, Card, CardContent, Checkbox, cn, ConfirmDialog, EmptyState, ErrorAlert, Input, PageHeader, PageShell, SelectField, Skeleton, Textarea } from '@zhin.js/console-ui'
 import { getConsoleTransport } from '../utils/console-client'
 import { createWorkroomDraftSessions } from './workroom-draft-session.mjs'
 import { CONSOLE_RPC, ENDPOINT_RPC } from '../contracts/zhin-console'
 import { requestConsole } from '../utils/console-rpc'
 import { hasConsolePermission } from '../utils/console-access.mjs'
-import { PageHeader } from '../components/PageHeader'
-import { PageShell } from '../components/PageShell'
-import { ConfirmDialog } from '../components/confirm-dialog'
-import { EmptyState } from '../components/empty-state'
-import { ErrorAlert } from '../components/error-alert'
-import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
-import { Checkbox } from '../components/ui/checkbox'
-import { Card, CardContent } from '../components/ui/card'
-import { Input } from '../components/ui/input'
-import { SelectField } from '../components/ui/select'
-import { Skeleton } from '../components/ui/skeleton'
 import { StatusState } from '../components/StatusState'
-import { Textarea } from '../components/ui/textarea'
 import {
   catalogAvailability,
   createNewWorkroomDraft,

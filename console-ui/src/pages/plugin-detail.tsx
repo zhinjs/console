@@ -1,5 +1,5 @@
 import { useI18n } from '../i18n'
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import {
   Activity, Package, Settings, Terminal, Box as IconBox, Layers, Clock, Database, Brain, Wrench, Shield, Plug, Server, RefreshCw,
@@ -8,16 +8,9 @@ import {
 import { Link } from 'react-router-dom'
 import { useLogPanel } from '../components/log-panel/LogPanel'
 import { apiFetch } from '../utils/auth'
-import { Card, CardContent } from '../components/ui/card'
-import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
-import { Alert, AlertDescription } from '../components/ui/alert'
-import { Skeleton } from '../components/ui/skeleton'
-import { PageHeader } from '../components/PageHeader'
-import { PageShell } from '../components/PageShell'
+import { Alert, AlertDescription, Badge, Button, Card, CardContent, createPageChromeStore, PageChromeActions, PageChromeProvider, PageHeader, PageShell, Skeleton, useConfirm, usePageChromeState } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import { requestConsole } from '../utils/console-rpc'
-import { useConfirm } from '../components/confirm-dialog'
 import { validatePluginDetail, pluginDiagnosticSummary, pluginDetailView } from './plugin-detail-model.mjs'
 import { JsonViewer } from './introspection/JsonViewer'
 import { PluginManagementSummary } from './PluginManagementSummary'
@@ -134,6 +127,11 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
   const welcome = searchParams.get('useCase') === 'group-welcome'
   const routeIdentity = useRef(name)
   routeIdentity.current = name
+  // One chrome store per page tab: the plugin page hands its header actions and refresh control
+  // to this header through usePageChrome (ADR 0063 决策 2).
+  const tabHref = tab?.href
+  const chromeStore = useMemo(() => createPageChromeStore(), [tabHref])
+  const pageChrome = usePageChromeState(chromeStore)
   const lifecycleAbort = useRef<AbortController | null>(null)
   const detailSequence = useRef(0)
   const actionInFlight = useRef(false)
@@ -418,9 +416,13 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
         title={title}
         description={plugin?.description || i18n.t("插件本身的信息：版本与依赖、声明与配置、权限和能力。在哪些范围开启，请到对象树的「功能」页签。")}
         actions={<>
+          {tab ? <PageChromeActions store={chromeStore} /> : null}
           <Button variant="outline" size="sm" asChild><Link to={listUrl}><ArrowLeft />{i18n.t("返回插件")}</Link></Button>
-          <Button variant="outline" size="sm" disabled={loading} aria-busy={loading || undefined} onClick={refreshAll}>
-            <RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
+          {/* A page that brings its own refresh control refreshes the open tab; a second 刷新 would be ambiguous. */}
+          {tab && pageChrome?.refresh ? null : (
+            <Button variant="outline" size="sm" disabled={loading} aria-busy={loading || undefined} onClick={refreshAll}>
+              <RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
+          )}
           {plugin ? (
             <Button size="sm" asChild>
               <Link to={welcome ? welcomeConfigUrl(instanceKey) : featureGlobalHref(instanceKey)}><Settings />{i18n.t("功能配置")}</Link>
@@ -438,7 +440,7 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
       {detailView.staleError && !tab && (
         <StatusState compact error={detailError ?? detailView.staleError} description={i18n.t("刷新失败，以下是上次读取的内容。")} onRetry={() => void fetchPluginDetail(instanceKey)} />
       )}
-      <PluginPageTabs plugin={name ?? ''} names={[name, plugin?.instanceKey, plugin?.packageName]} active={tab?.href ?? PLUGIN_OVERVIEW_TAB} page={tab?.content} overview={<>
+      <PluginPageTabs plugin={name ?? ''} names={[name, plugin?.instanceKey, plugin?.packageName]} active={tab?.href ?? PLUGIN_OVERVIEW_TAB} page={tab ? <PageChromeProvider store={chromeStore}>{tab.content}</PageChromeProvider> : undefined} overview={<>
       {undeclaredPackage ? (
         <StatusState kind="needs-configuration" title={i18n.t("已安装，待配置")}
           description={i18n.t("这个包已经安装，但还没有声明为插件实例。填写配置后网关会写入声明并重启实例，失败会恢复原配置。")}

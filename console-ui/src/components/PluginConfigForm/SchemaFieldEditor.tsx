@@ -8,12 +8,7 @@ import type { SchemaField, SchemaEditorDrafts } from './types.js'
 import { objectFields, initialSchemaValue, matchingSchemaBranches, updateObjectField, updateListItem, numericDraft, isMillisecondField, secondsText, millisecondsFromSecondsText } from './schema-model.mjs'
 import { CodeEditor } from '../../pages/files/code-editor'
 import { numericFieldIssue } from './numeric-validation.mjs'
-import { Input } from '../ui/input'
-import { Textarea } from '../ui/textarea'
-import { Button } from '../ui/button'
-import { Switch } from '../ui/switch'
-import { Checkbox } from '../ui/checkbox'
-import { RadioGroup, RadioGroupItem } from '../ui/radio-group'
+import { Button, Checkbox, Input, RadioGroup, RadioGroupItem, Switch, Textarea } from '@zhin.js/console-ui'
 
 interface FieldEditorProps {
   name: string; field: SchemaField; value: unknown; onChange: (value: unknown) => void; allowEnvironmentReferences?: boolean

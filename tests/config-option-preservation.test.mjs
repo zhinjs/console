@@ -15,10 +15,7 @@ const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKi
 const mocks = {
   react: { useId: () => 'field-test' }, './schema-model.mjs': schemaModel, './numeric-validation.mjs': { numericFieldIssue },
   './ConversationScopeEditor': { ConversationScopeEditor: 'scope-editor' }, './conversation-scope-model.mjs': { isConversationScopeField: () => false },
-  '../ui/input': { Input: 'input' }, '../ui/textarea': { Textarea: 'textarea' }, '../ui/button': { Button: 'button' }, '../ui/switch': { Switch: 'switch' },
-  '../ui/select': { Select: 'select-root', SelectContent: 'select-content', SelectItem: 'option', SelectTrigger: 'select-trigger', SelectValue: 'select-value' },
-  '../ui/radio-group': { RadioGroup: 'radio-group', RadioGroupItem: 'radio' }, '../ui/checkbox': { Checkbox: 'checkbox' },
-  '../../pages/files/code-editor': { CodeEditor: 'code-editor' },
+  '@zhin.js/console-ui': { Input: 'input', Textarea: 'textarea', Button: 'button', Switch: 'switch', Select: 'select-root', SelectContent: 'select-content', SelectItem: 'option', SelectTrigger: 'select-trigger', SelectValue: 'select-value', RadioGroup: 'radio-group', RadioGroupItem: 'radio', Checkbox: 'checkbox' }, '../../pages/files/code-editor': { CodeEditor: 'code-editor' },
 }
 new Function('require', 'exports', 'module', code)(name => isLocaleImport(name) ? localeModule : mocks[name] ?? require(name), module.exports, module)
 const { SchemaFieldEditor } = module.exports

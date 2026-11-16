@@ -38,8 +38,7 @@ async function fixture({ actualPicker = false } = {}) {
     return module.exports
   }
   const { PersonalSessionModelPicker: Picker } = actualPicker ? await load('../console-ui/src/pages/PersonalSessionModelPicker.tsx', {
-    'lucide-react': { RefreshCw: 'icon' }, '../components/ui/button': { Button: 'button' },
-    '../components/ui/select': { SelectField: 'select' }, '../components/error-alert': { ErrorAlert: 'error' },
+    'lucide-react': { RefreshCw: 'icon' }, '@zhin.js/console-ui': { Button: 'button', SelectField: 'select', ErrorAlert: 'error' },
     '../utils/inbox-cache': { isInboxCacheScopeActive: captured => captured === scope },
     './inference/model.mjs': model, './personal-session-model.mjs': personal,
     '../utils/auth': { apiFetch: async (url, init) => {
@@ -50,8 +49,7 @@ async function fixture({ actualPicker = false } = {}) {
     } },
   }) : {}
   const page = await load('../console-ui/src/pages/PersonalSessionPanel.tsx', {
-    '../components/ui/select': { SelectField: 'select' }, '../components/error-alert': { ErrorAlert: 'error' },
-    './inference/useInferenceManagement': { useInferenceManagement: management },
+    '@zhin.js/console-ui': { SelectField: 'select', ErrorAlert: 'error' }, './inference/useInferenceManagement': { useInferenceManagement: management },
     './inference/model.mjs': { inferenceError: error => error.message },
     './PersonalSessionModelPicker': { PersonalSessionModelPicker: actualPicker ? Picker : props => ({ type: 'picker', props: { ...props, send: () => sent.push(props) } }) },
     './personal-session-model.mjs': personal,

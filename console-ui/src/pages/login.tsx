@@ -2,15 +2,11 @@ import { LanguageSelect } from '../components/LanguageSelect'
 import { useI18n } from '../i18n'
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { Trash2, ShieldCheck, Eye, EyeOff, KeyRound, UserRound } from 'lucide-react'
-import { Input } from '../components/ui/input'
-import { Button } from '../components/ui/button'
-import { Checkbox } from '../components/ui/checkbox'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
+import { Button, Checkbox, ConfirmDialog, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@zhin.js/console-ui'
 import {
   getSavedLogin, getStoredApiBase, listSavedLogins, normalizeApiBase, removeSavedLogin,
   touchSavedLogin, upsertSavedLogin, verifyAndStoreCredentials,
 } from '../utils/auth'
-import { ConfirmDialog } from '../components/confirm-dialog'
 import { signInWithPassword } from '../utils/console-auth-api'
 import { authErrorMessage } from '../utils/console-auth-model.mjs'
 import {

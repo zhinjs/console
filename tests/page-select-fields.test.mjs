@@ -8,13 +8,9 @@ import { SCENARIO_PROFILES } from '../console-ui/src/pages/scenario-lab/scenario
 import { EXPORT_WINDOWS, REPLAY_KINDS, REPLAY_OUTCOMES, kindLabel, outcomeLabel } from '../console-ui/src/pages/bot-replay-model.mjs'
 
 const require = createRequire(import.meta.url)
-const selectSource = await readFile(new URL('../console-ui/src/components/ui/select.tsx', import.meta.url), 'utf8')
-const selectModule = { exports: {} }
-const compiledSelect = ts.transpileModule(selectSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
-// Only the unrelated CSS class combiner is substituted; the shared dropdown,
-// Radix components, encoding and page callbacks all execute production code.
-new Function('require', 'exports', 'module', compiledSelect)(name => name === '@zhin.js/client' ? { cn: (...classes) => classes.filter(Boolean).join(' ') } : require(name), selectModule.exports, selectModule)
-const { SelectField, Select, SelectItem } = selectModule.exports
+// The shared dropdown (published @zhin.js/console-ui), Radix components, encoding and page callbacks
+// all execute production code.
+const { SelectField, Select, SelectItem } = await import('@zhin.js/console-ui')
 const pages = new Map()
 async function page(file) {
   if (!pages.has(file)) {

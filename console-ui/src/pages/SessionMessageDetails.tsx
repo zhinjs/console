@@ -4,7 +4,7 @@ import { useI18n } from '../i18n'
 import { apiFetch } from '../utils/auth'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { CONSOLE_REST } from '../contracts/zhin-console'
-import { ErrorAlert } from '../components/error-alert'
+import { ErrorAlert } from '@zhin.js/console-ui'
 
 /** Read the selected message only; opening details never changes the session branch. */
 export function SessionMessageDetails({ sessionKey, sessionId, messageId, connectionScope }: {

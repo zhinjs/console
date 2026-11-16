@@ -1,22 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
-import { createRequire } from 'node:module'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import ts from 'typescript'
 
-const require = createRequire(import.meta.url)
-const source = await readFile(new URL('../console-ui/src/components/ui/select.tsx', import.meta.url), 'utf8')
-const module = { exports: {} }
-const code = ts.transpileModule(source, {
-  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
-}).outputText
-new Function('require', 'exports', 'module', code)(
-  name => name === '@zhin.js/client' ? { cn: (...values) => values.filter(Boolean).join(' ') } : require(name),
-  module.exports, module,
-)
-const { SelectField, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } = module.exports
+// SelectField ships in @zhin.js/console-ui (ADR 0063 P1a); these checks hold the Console to the published build.
+const { SelectField, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } = await import('@zhin.js/console-ui')
 const options = [
   { value: '', label: '全部' },
   { value: '\0', label: 'NUL' },

@@ -16,6 +16,7 @@
     "@zhin.js/ai": "~1.7.0",
     "@zhin.js/client": "~1.2.1",
     "@zhin.js/console-protocol": "~1.4.0",
+    "@zhin.js/console-ui": "~1.0.0",
     "@zhin.js/contract": "~1.1.27",
     "zod": "^4.6.7"
   },

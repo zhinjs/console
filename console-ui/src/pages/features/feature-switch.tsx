@@ -1,8 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Loader2, Lock } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { Badge } from '../../components/ui/badge'
-import { Switch } from '../../components/ui/switch'
+import { Badge, Switch } from '@zhin.js/console-ui'
 import { adapterHref, endpointHref, featureGlobalHref } from '../../console-routes.mjs'
 import { featureSwitchState, type FeatureLock } from './feature-model.mjs'
 

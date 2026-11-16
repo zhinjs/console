@@ -70,7 +70,7 @@ function component(locale = 'zh-CN') {
   const module = { exports: {} }
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
   const mocks = { '../../i18n': { useI18n: () => ({ locale, t: (key, values) => translate(locale, key, values) }) },
-    '../ui/badge': { Badge: 'span' }, '../ui/button': { Button: 'button' }, './config-live-status.mjs': live }
+    '@zhin.js/console-ui': { Badge: 'span', Button: 'button' }, './config-live-status.mjs': live }
   new Function('require', 'exports', 'module', code)(name => Object.hasOwn(mocks, name) ? mocks[name] : require(name), module.exports, module)
   return module.exports.ConfigurationLiveStatus
 }

@@ -1,6 +1,6 @@
 import { Bot } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { Badge } from '../../components/ui/badge'
+import { Badge } from '@zhin.js/console-ui'
 import { AccountChatPanel } from './chat-panels'
 import { ObjectPageLayout, useScopeTab } from '../../scope/ObjectPageLayout'
 import { ChatRolesPanel } from '../../scope/ChatRolesPanel'

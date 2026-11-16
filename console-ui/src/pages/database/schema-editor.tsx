@@ -1,14 +1,8 @@
 import { useI18n } from '../../i18n'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Plus, Pencil, Trash2, RefreshCw, KeyRound, ListTree, Eye, X } from 'lucide-react'
-import { Button } from '../../components/ui/button'
-import { Input } from '../../components/ui/input'
-import { Badge } from '../../components/ui/badge'
-import { SelectField } from '../../components/ui/select'
-import { Checkbox } from '../../components/ui/checkbox'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
+import { Badge, Button, Checkbox, ConfirmDialog, Input, SelectField, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
-import { ConfirmDialog } from '../../components/confirm-dialog'
 import { useToast } from '../../components/toast'
 import {
   isUnsupportedRpcError, parseDefaultInput, SCHEMA_COLUMN_TYPES, schemaWarningText,

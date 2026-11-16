@@ -4,14 +4,12 @@ import { useI18n } from '../i18n'
 import { useMemo, useRef, useState, useEffect, useLayoutEffect, useSyncExternalStore } from "react"
 import { Outlet, Link, useLocation, matchPath } from "react-router-dom"
 import { Menu, X, ChevronRight, ChevronDown } from "lucide-react"
-import { cn, type ConsoleRouteRecord } from "@zhin.js/client"
+import { Button, cn, DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, ListItemButton, ScrollArea } from '@zhin.js/console-ui'
+import { type ConsoleRouteRecord } from "@zhin.js/client"
 import { useConsoleConnected } from "../hooks/use-console-connected"
 import { app } from "../utils/console-client"
 import { getSidebarLucideIcon } from "../components/sidebarMenuIcons"
 import { UserMenu } from "../components/UserMenu"
-import { Button } from "../components/ui/button"
-import { ScrollArea } from "../components/ui/scroll-area"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "../components/ui/dropdown-menu"
 import { signOut } from "../utils/console-auth-api"
 import { principalLabel } from "../utils/console-auth-model.mjs"
 import { useConsoleSession } from "../hooks/use-console-session"
@@ -29,7 +27,6 @@ import { buildNavigation, routeSectionId, sectionById } from "../navigation-sect
 import { useConsoleAccess } from "../hooks/use-console-access"
 
 import { useIsCompactNav } from '../hooks/useIsMobile'
-import { ListItemButton } from '../components/ui/list-item-button'
 const HOME_PATH = "/dashboard"
 
 function NavIcon({ icon }: { icon?: React.ReactNode | string }) {

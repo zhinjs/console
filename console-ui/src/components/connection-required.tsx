@@ -1,11 +1,7 @@
 import { useI18n } from '../i18n'
 import { LogIn, Unplug } from 'lucide-react'
 import { notifyAuthRequired } from '../utils/auth'
-import { Button } from './ui/button'
-import { Card, CardContent } from './ui/card'
-import { EmptyState } from './empty-state'
-import { PageHeader } from './PageHeader'
-import { PageShell } from './PageShell'
+import { Button, Card, CardContent, EmptyState, PageHeader, PageShell } from '@zhin.js/console-ui'
 
 interface ConnectionRequiredStateProps {
   /** 页面标题；传入时保留页头，让用户知道自己在哪个页面 */

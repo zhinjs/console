@@ -105,19 +105,16 @@ async function cardEnvironment({ locale = 'zh-CN', receiptStates = {}, flow, req
   const runtime = hookRuntime()
   const i18n = { locale, t: (message, values) => translate(locale, message, values) }
   const receipts = {}
-  const common = { react: runtime.hooks, 'lucide-react': lucide, '@zhin.js/client': { cn: (...names) => names.filter(Boolean).join(' ') }, '../../i18n': { useI18n: () => i18n } }
+  const common = { react: runtime.hooks, 'lucide-react': lucide, '@zhin.js/client': { cn: (...names) => names.filter(Boolean).join(' ') }, '@zhin.js/console-ui': { cn: (...names) => names.filter(Boolean).join(' ') }, '../../i18n': { useI18n: () => i18n } }
   const challengeModule = compile(await source('pages/scope/login-challenge.tsx'), {
-    ...common, '../../components/ui/button': { Button: 'button' }, '../../components/ui/input': { Input: 'input' },
-    '../clipboard-copy.mjs': { copyText: async () => true }, './qr-code.mjs': qrCode, './login-assist-helpers.mjs': helpers, './login-flow-model.mjs': flowModel,
+    ...common, '@zhin.js/console-ui': { ...(common)?.['@zhin.js/console-ui'], Button: 'button', Input: 'input' }, '../clipboard-copy.mjs': { copyText: async () => true }, './qr-code.mjs': qrCode, './login-assist-helpers.mjs': helpers, './login-flow-model.mjs': flowModel,
   })
   const flowState = { status: 'ready', flow, refreshing: false, error: null, readAt: NOW }
   const applied = []
   const appliedFresh = []
   const card = compile(await source('pages/scope/login-flow-card.tsx'), {
     ...common,
-    '../../components/ui/badge': { Badge: 'badge' }, '../../components/ui/button': { Button: 'button' }, '../../components/ui/card': { Card: 'card' },
-    '../../components/ui/skeleton': { Skeleton: 'skeleton' },
-    '../../components/StatusState': { StatusState: props => ({ type: 'status-state', props: { ...props, children: [props.title, props.description] } }) },
+    '@zhin.js/console-ui': { ...(common)?.['@zhin.js/console-ui'], Badge: 'badge', Button: 'button', Card: 'card', Skeleton: 'skeleton' }, '../../components/StatusState': { StatusState: props => ({ type: 'status-state', props: { ...props, children: [props.title, props.description] } }) },
     '../../components/ActionReceipt': {
       ActionReceipt: ({ controller }) => ({ type: 'receipt', props: { phase: controller.state.phase } }),
       useActionReceipt: options => {

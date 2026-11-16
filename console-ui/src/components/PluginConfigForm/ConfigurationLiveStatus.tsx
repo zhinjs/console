@@ -1,6 +1,5 @@
 import { useI18n } from '../../i18n'
-import { Badge } from '../ui/badge'
-import { Button } from '../ui/button'
+import { Badge, Button } from '@zhin.js/console-ui'
 import { configurationRuntimeStatus, configurationEffectLabel, configurationGroupLabel, configurationGroupTitle, configurationPath, configurationPathLabel } from './config-live-status.mjs'
 
 export function ConfigurationLiveStatus({ result, revision, onRefresh, onApply, disabled, applying, actionError }: {

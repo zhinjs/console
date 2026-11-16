@@ -2,11 +2,7 @@ import { createContext, useContext, type ReactNode } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import { AdapterAccountEditor, AdapterAccountsProvider, useAdapterAccounts, type AdapterAccountRow, type AdapterAccounts } from '@zhin.js/client'
 import { useI18n } from '../../i18n'
-import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/button'
-import { Switch } from '../../components/ui/switch'
-import { useConfirm } from '../../components/confirm-dialog'
+import { Alert, AlertDescription, AlertTitle, Badge, Button, Switch, useConfirm } from '@zhin.js/console-ui'
 
 /**
  * The headless account API of `@zhin.js/client` (`AdapterAccountsProvider` / `useAdapterAccounts` /

@@ -205,9 +205,7 @@ test('a configured-only account row offers 导入 or the no-permission state', (
     react: { ...React, useContext: () => contextValue },
     'lucide-react': { FileDown: 'i', FileUp: 'i', ShieldOff: 'i' },
     '@zhin.js/client': { resolvePluginId: async () => 'root/qq' },
-    '../../components/ui/alert': { Alert: 'aside', AlertDescription: 'div', AlertTitle: 'h4' },
-    '../../components/ui/badge': { Badge: 'span' }, '../../components/ui/button': { Button: 'button' },
-    '../../components/confirm-dialog': { useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }) },
+    '@zhin.js/console-ui': { Alert: 'aside', AlertDescription: 'div', AlertTitle: 'h4', Badge: 'span', Button: 'button', useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }) },
     '../../components/status-state-model.mjs': { statusFromError: () => ({ message: '' }) },
     '../../hooks/use-console-access': { useConsoleAccess: () => createConsoleAccess(permissions) },
     '../../utils/plugin-rpc': { pluginRpc: async () => { throw new Error('unexpected') } },
@@ -257,7 +255,7 @@ test('configuration apply status speaks in settings; hashes, generations and poi
 
   const markup = locale => {
     const { ConfigurationLiveStatus } = component('components/PluginConfigForm/ConfigurationLiveStatus.tsx', {
-      '../ui/badge': { Badge: 'span' }, '../ui/button': { Button: 'button' }, './config-live-status.mjs': live,
+      '@zhin.js/console-ui': { Badge: 'span', Button: 'button' }, './config-live-status.mjs': live,
     }, locale)
     const application = { operationId: 'config:1', sourceRevision: 'sha256-0123456789abcdef0123', saved: true, generation: 3, applicationRevision: 9,
       groups: [{ id: 'plugin-host:rss', paths: [['plugins', 'rss']], effect: 'restart-process', status: 'restart-pending', dependsOn: ['host-document'], reasonCode: 'needs-restart' }] }
@@ -326,10 +324,7 @@ test('「我的聊天身份」 without self.chat-identity is a forbidden state, 
   const render = permissions => {
     const { MyChatIdentitySection } = component('scope/ChatIdentityPanels.tsx', {
       'lucide-react': new Proxy({}, { get: () => 'i' }),
-      '../components/ui/badge': { Badge: 'span' }, '../components/ui/button': { Button: 'button' }, '../components/ui/card': { Card: 'div' },
-      '../components/ui/input': { Input: 'input' },
-      '../components/ui/dialog': { Dialog: 'dialog', DialogContent: 'div', DialogDescription: 'p', DialogFooter: 'footer', DialogHeader: 'header', DialogTitle: 'h2' },
-      '../components/StatusState': { StatusState: props => React.createElement('status-state', { kind: props.kind ?? 'error', permissions: props.permissions?.join(',') }) },
+      '@zhin.js/console-ui': { Badge: 'span', Button: 'button', Card: 'div', Input: 'input', Dialog: 'dialog', DialogContent: 'div', DialogDescription: 'p', DialogFooter: 'footer', DialogHeader: 'header', DialogTitle: 'h2' }, '../components/StatusState': { StatusState: props => React.createElement('status-state', { kind: props.kind ?? 'error', permissions: props.permissions?.join(',') }) },
       '../utils/console-rpc': { requestConsole: async input => { requests.push(input); return new Promise(() => {}) } },
       '../components/status-state-model.mjs': { statusFromError: () => ({ kind: 'error', message: '' }) },
       './ObjectPageLayout': { ObjectSection: ({ children }) => React.createElement('section', null, children) },

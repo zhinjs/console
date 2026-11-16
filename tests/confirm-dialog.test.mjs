@@ -3,9 +3,10 @@ import test from 'node:test'
 import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import ts from 'typescript'
-import { localeModule, isLocaleImport } from './locale-fixture.mjs'
+import { createConsoleUiI18n } from '@zhin.js/console-ui'
 
-const componentUrl = new URL('../console-ui/src/components/confirm-dialog.tsx', import.meta.url)
+// ConfirmDialog ships in @zhin.js/console-ui (ADR 0063 P1a): run the published build with zh-CN copy.
+const componentUrl = new URL('../node_modules/@zhin.js/console-ui/dist/components/confirm-dialog.js', import.meta.url)
 const source = await readFile(componentUrl, 'utf8')
 const requireFromComponent = createRequire(componentUrl)
 
@@ -54,15 +55,15 @@ const text = value => value == null || typeof value === 'boolean' ? ''
 function compile(r) {
   const mocks = {
     react: { ...r.hooks },
-    '@zhin.js/client': { cn: (...names) => names.filter(Boolean).join(' ') },
-    './ui/dialog': { Dialog: 'dialog', DialogContent: 'dialog-content', DialogHeader: 'header', DialogFooter: 'footer', DialogTitle: 'h2', DialogDescription: 'p', DialogClose: 'dialog-close' },
-    './ui/button': { Button: 'button' },
-    './ui/input': { Input: 'input' },
+    '../cn.js': { cn: (...names) => names.filter(Boolean).join(' ') },
+    '../i18n/index.js': { useConsoleUiI18n: () => createConsoleUiI18n('zh-CN') },
+    './ui/dialog.js': { Dialog: 'dialog', DialogContent: 'dialog-content', DialogHeader: 'header', DialogFooter: 'footer', DialogTitle: 'h2', DialogDescription: 'p', DialogClose: 'dialog-close' },
+    './ui/button.js': { Button: 'button' }, './ui/input.js': { Input: 'input' },
     'lucide-react': new Proxy({}, { get: () => 'i' }),
   }
   const module = { exports: {} }
   const code = ts.transpileModule(source, { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
-  new Function('require', 'exports', 'module', code)(name => isLocaleImport(name) ? localeModule : Object.hasOwn(mocks, name) ? mocks[name] : requireFromComponent(name), module.exports, module)
+  new Function('require', 'exports', 'module', code)(name => Object.hasOwn(mocks, name) ? mocks[name] : requireFromComponent(name), module.exports, module)
   return module.exports
 }
 

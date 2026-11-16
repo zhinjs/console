@@ -4,10 +4,9 @@ import {
   AlertCircle, CircleHelp, DatabaseZap, Hourglass, Inbox, Loader2, Lock, PackageX, PlugZap, RefreshCw, ServerOff, Settings2, ShieldOff, Sparkles, GitCompareArrows, Stethoscope,
   type LucideIcon,
 } from 'lucide-react'
-import { cn } from '@zhin.js/client'
+import { Button, cn } from '@zhin.js/console-ui'
 import './status-surfaces.css'
 import { useI18n } from '../i18n'
-import { Button } from './ui/button'
 import {
   LOCK_LEVEL_LABELS, SLOW_LOADING_COPY, SLOW_LOADING_MS, STATUS_COPY, loadingSeconds, statusFromError, statusTone, type StatusKind, type StatusReading,
 } from './status-state-model.mjs'

@@ -29,9 +29,7 @@ test('the shared disconnected state explains the problem and its button triggers
   const notified = []
   const { ConnectionRequiredState } = compile(await source('components/connection-required.tsx'), {
     '../utils/auth': { notifyAuthRequired: () => notified.push('auth-required') },
-    './ui/button': { Button: 'button' }, './ui/card': { Card: 'card', CardContent: 'card-content' },
-    './empty-state': { EmptyState: 'empty-state' }, './PageHeader': { PageHeader: 'page-header' }, './PageShell': { PageShell: 'page-shell' },
-  })
+    '@zhin.js/console-ui': { Button: 'button', Card: 'card', CardContent: 'card-content', EmptyState: 'empty-state', PageHeader: 'page-header', PageShell: 'page-shell' }, })
   const tree = ConnectionRequiredState({ title: '项目文件' })
   assert.equal(elements(tree).find(node => node.type === 'page-header').props.title, '项目文件')
   const empty = elements(tree).find(node => node.type === 'empty-state')
