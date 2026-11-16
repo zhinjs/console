@@ -24,7 +24,7 @@ export const attentionMessages = Object.freeze({
   "此 Host 不提供汇总接口，还不能汇总登录、插件、配置和审批事项；这里只列出 Console 能从运行状态推断的几项。Host 提供汇总接口后会显示完整列表。": "This Host does not provide the summary endpoint, so sign-in, plugin, configuration and approval items cannot be gathered yet; only the few items the Console can infer from the runtime state are listed. The full list appears once the Host provides the summary endpoint.",
   "以下来源这次没能读取，列表可能不完整：{0}": "These sources could not be read this time, so the list may be incomplete: {0}",
   "一切正常": "All clear",
-  "没有待处理的事项；另有 {0} 项被你推迟或忽略。": "Nothing to do; {0} more items are snoozed or ignored.",
+  "没有待处理的事项；另有 {0} 项被你推迟或忽略。": { one: "Nothing to do; {0} more item is snoozed or ignored.", other: "Nothing to do; {0} more items are snoozed or ignored." },
   "没有需要你处理的事项。": "Nothing needs your attention.",
   "没有推迟或忽略的事项": "Nothing snoozed or ignored",
   "在事项上点「稍后提醒」或「忽略」后，会出现在这里，可随时恢复。": "Items you snooze or ignore appear here, and you can restore them at any time.",

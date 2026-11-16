@@ -111,7 +111,7 @@ test('the empty state says 一切正常 with the last check time, in both langua
   const en = (await components('en', attention({ snoozed: [item()] }))).page()
   const emptyEn = nodes(en).find(node => node.props?.className === 'console-attention-empty')
   assert.match(text(emptyEn), /All clear/)
-  assert.match(text(emptyEn), /1 more items are snoozed or ignored/)
+  assert.match(text(emptyEn), /1 more item is snoozed or ignored/)
   assert.match(text(emptyEn), /Last checked/)
 })
 

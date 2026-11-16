@@ -17,12 +17,25 @@ export function saveLocale(storage, locale) {
   try { storage?.setItem(LOCALE_STORAGE_KEY, locale); return true } catch { return false }
 }
 
+const englishPlurals = new Intl.PluralRules('en')
+
+/**
+ * A count-bearing English entry is `{ one, other }`: the form follows the count in `{0}` (a number,
+ * or a string of digits). Anything that is not a plain count (formatted 「1,234」, text) takes `other`.
+ */
+function pluralForm(forms, count) {
+  const value = typeof count === 'number' ? count : typeof count === 'string' && /^-?\d+(?:\.\d+)?$/u.test(count.trim()) ? Number(count) : NaN
+  const category = Number.isFinite(value) ? englishPlurals.select(value) : 'other'
+  return typeof forms?.[category] === 'string' ? forms[category] : forms.other
+}
+
 /** Only explicitly authored UI copy is translated. Interpolated values are inserted verbatim. */
 export function translate(locale, message, values = [], context) {
   if (typeof message !== 'string') return message
   const contextualKey = context ? `${context}\u0004${message}` : message
   const key = Object.hasOwn(englishMessages, contextualKey) ? contextualKey : message
-  const template = locale === 'en' && Object.hasOwn(englishMessages, key) ? englishMessages[key] : message
+  const entry = locale === 'en' && Object.hasOwn(englishMessages, key) ? englishMessages[key] : message
+  const template = typeof entry === 'string' ? entry : pluralForm(entry, values[0])
   return template.replace(/\{(\d+)\}/gu, (placeholder, index) => Number(index) < values.length ? String(values[Number(index)]) : placeholder)
 }
 
