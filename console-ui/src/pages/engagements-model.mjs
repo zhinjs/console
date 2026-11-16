@@ -8,9 +8,27 @@ export function engagementTotals(engagements) {
   return engagements.reduce((sum, item) => ({
     running: sum.running + Number(item.status === 'running'),
     failed: sum.failed + Number(item.status === 'failed'),
-    turns: sum.turns + item.turns,
-    tokens: sum.tokens + item.tokensUsed,
+    turns: sum.turns + count(item.turns),
+    tokens: sum.tokens + count(item.tokensUsed),
   }), { running: 0, failed: 0, turns: 0, tokens: 0 })
+}
+
+/** A counter the Host may leave out: missing or not a number counts as 0 (never NaN on screen). */
+function count(value) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0
+}
+
+/**
+ * A list field the protocol marks required but an older or partial Host may omit (`participants`,
+ * `board`, `events`): anything that is not an array reads as empty instead of crashing the page.
+ */
+export function listOf(value) {
+  return Array.isArray(value) ? value : []
+}
+
+/** Participant refs of an engagement, as written; blanks and non-strings are dropped. */
+export function engagementParticipants(summary) {
+  return listOf(summary?.participants).filter(item => typeof item === 'string' && item.trim())
 }
 
 /** Actor refs are protocol values, so they are shown as written rather than translated. */
