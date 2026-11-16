@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useBlocker } from 'react-router-dom'
 import { useI18n } from '../i18n'
-import { useConfirm } from '../components/confirm-dialog'
+import { useConfirm } from '@zhin.js/console-ui'
 import { createBlockedNavigationHandler, installUnloadGuard, leavesCurrentPage } from './unsaved-changes-guard.mjs'
 
 /**

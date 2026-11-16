@@ -6,16 +6,8 @@ import { ArrowDown, ArrowUp, ArrowUpDown, Blocks, CheckCircle2, Clock, Package, 
 import { apiFetch } from '../utils/auth'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { CONSOLE_PATHS, featureGlobalHref } from '../console-routes.mjs'
-import { Badge } from '../components/ui/badge'
-import { Skeleton } from '../components/ui/skeleton'
-import { Button } from '../components/ui/button'
-import { Input } from '../components/ui/input'
-import { Card } from '../components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
-import { PageHeader } from '../components/PageHeader'
-import { PageShell } from '../components/PageShell'
+import { Badge, Button, Card, Input, PageHeader, PageShell, Skeleton, StatCard, StatGrid, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
-import { StatCard, StatGrid } from '../components/StatCard'
 import { useConsoleRead } from '../hooks/use-console-read'
 import {
   groupInventory, inventoryCounts, matchesHealthFilter, needsStateLabel, pluginInventory, pluginSource, pluginType, sortInventory, validatePluginList,

@@ -1,22 +1,12 @@
 import { useId, useMemo, useRef, useState } from 'react'
 import { KeyRound, MoreHorizontal, Pencil, Plus, RefreshCw, ShieldCheck, Trash2, UserCheck, UserX } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { PageShell } from '../../components/PageShell'
-import { PageHeader } from '../../components/PageHeader'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/button'
-import { Card } from '../../components/ui/card'
-import { Input } from '../../components/ui/input'
-import { Skeleton } from '../../components/ui/skeleton'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
+import { Badge, Button, Card, ConfirmDialog, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, Input, PageHeader, PageShell, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
 import { ActionReceipt, useActionReceipt } from '../../components/ActionReceipt'
 import { useSaveOutcome } from '../../components/ApplyFeedback'
 import { outcomeFromAccessWrite, recordReadBack } from '../../components/apply-outcome-model.mjs'
 import { receiptBlocksActions } from '../../components/action-receipt-model.mjs'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../../components/ui/dropdown-menu'
-import { ConfirmDialog } from '../../components/confirm-dialog'
 import {
   IAM_RPC, bindingInputs, bindingKeys, breaksLastOwner, userReadBackView, displayNameProblem, isGlobalOwner, passwordProblem, readRoles, readUsers, usernameProblem,
   type IamBinding, type IamRole, type IamUser,

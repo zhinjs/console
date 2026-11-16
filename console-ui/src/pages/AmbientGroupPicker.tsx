@@ -6,11 +6,7 @@ import { requestConsole } from '../utils/console-rpc'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { ENDPOINT_RPC } from '../contracts/zhin-console'
-import { ErrorAlert } from '../components/error-alert'
-import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
-import { Checkbox } from '../components/ui/checkbox'
-import { Input } from '../components/ui/input'
+import { Badge, Button, Checkbox, ErrorAlert, Input } from '@zhin.js/console-ui'
 import { describeReadFailure } from './ambient-engagement-model.mjs'
 import {
   addManualGroups,

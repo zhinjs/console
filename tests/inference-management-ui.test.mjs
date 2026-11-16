@@ -271,7 +271,7 @@ for (const lateResult of ['success', 'failure'])
       '../console-ui/src/pages/inference/PersonalSessions.tsx',
       {
         'react-router-dom': { Link: 'link' },
-        '../../components/ui/button': { Button: 'button' },
+        '@zhin.js/console-ui': { Button: 'button' },
         '../../utils/agent-session': { agentSessionsPath: () => '/session' },
         '../PersonalSessionModelPicker': { PersonalSessionModelPicker: 'picker' },
         '../personal-session-model.mjs': personal,
@@ -348,9 +348,7 @@ test('confirming a rebound Profile saves its complete new account identity; nati
     '../console-ui/src/pages/PersonalSessionModelPicker.tsx',
     {
       'lucide-react': { RefreshCw: 'icon' },
-      '../components/ui/button': { Button: 'button' },
-      '../components/ui/select': { SelectField: 'select' },
-      '../components/error-alert': { ErrorAlert: 'error' },
+      '@zhin.js/console-ui': { Button: 'button', SelectField: 'select', ErrorAlert: 'error' },
       '../utils/auth': {
         apiFetch: async (url, init) => {
           calls.push({ url, init })
@@ -596,10 +594,8 @@ test('the single graph editor preserves sibling decision modes and model IDs acr
   management.source = { view: management.view, connectionScope: 'scope', base: 'https://host.test' }
   const { Purposes } = await component(runtime, '../console-ui/src/pages/inference/Purposes.tsx', {
     'lucide-react': { ArrowDown: 'icon', ArrowUp: 'icon', MoreHorizontal: 'icon', Plus: 'icon', Trash2: 'icon' }, './model.mjs': model,
-    '../../components/ui/dropdown-menu': { DropdownMenu: 'dropdown-menu', DropdownMenuContent: 'dropdown-content', DropdownMenuItem: 'dropdown-item', DropdownMenuTrigger: 'dropdown-trigger' }, 
-    '../../components/ui/button': { Button: 'button' }, '../../components/ui/input': { Input: 'input' },
-    '../../components/ui/select': { SelectField: 'select' }, '../../components/ui/searchable-select': { SearchableSelectField: 'select' }, '../../components/ui/card': { Card: 'card' }, '../../components/confirm-dialog': { useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }) },
-  })
+    '@zhin.js/console-ui': { DropdownMenu: 'dropdown-menu', DropdownMenuContent: 'dropdown-content', DropdownMenuItem: 'dropdown-item', DropdownMenuTrigger: 'dropdown-trigger', Button: 'button', Input: 'input', SelectField: 'select', SearchableSelectField: 'select', Card: 'card', useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }) }, 
+    })
   runtime.mount(() => Purposes({ management })); await runtime.settle()
   const select = label => nodes(runtime.value).find(node => node.type === 'select' && node.props['aria-label'] === label)
   for (const label of ['技能选择', '工具选择', '记忆选择', 'Agent 选择', '工具审批建议', '旁听参与判断']) {
@@ -749,10 +745,8 @@ async function purposeFixture() {
   f.answer('/inference', purposeView(1)); await f.runtime.settle()
   const { Purposes } = await component(runtime, '../console-ui/src/pages/inference/Purposes.tsx', {
     'lucide-react': { ArrowDown: 'icon', ArrowUp: 'icon', MoreHorizontal: 'icon', Plus: 'icon', Trash2: 'icon' }, './model.mjs': model,
-    '../../components/ui/dropdown-menu': { DropdownMenu: 'dropdown-menu', DropdownMenuContent: 'dropdown-content', DropdownMenuItem: 'dropdown-item', DropdownMenuTrigger: 'dropdown-trigger' }, 
-    '../../components/ui/button': { Button: 'button' }, '../../components/ui/input': { Input: 'input' },
-    '../../components/ui/select': { SelectField: 'select' }, '../../components/ui/searchable-select': { SearchableSelectField: 'select' }, '../../components/ui/card': { Card: 'card' }, '../../components/confirm-dialog': { useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }) },
-  })
+    '@zhin.js/console-ui': { DropdownMenu: 'dropdown-menu', DropdownMenuContent: 'dropdown-content', DropdownMenuItem: 'dropdown-item', DropdownMenuTrigger: 'dropdown-trigger', Button: 'button', Input: 'input', SelectField: 'select', SearchableSelectField: 'select', Card: 'card', useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }) }, 
+    })
   runtime.mount(() => Purposes({ management: { ...f.runtime.value, savePlan: (plan, options) => {
     submissions.push({ plan, options }); return f.runtime.value.savePlan(plan, options)
   } } }))

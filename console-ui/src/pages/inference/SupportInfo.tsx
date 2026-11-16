@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Badge } from '../../components/ui/badge'
+import { Badge } from '@zhin.js/console-ui'
 import { useI18n } from '../../i18n'
 import type { SupportMetadata } from './model.mjs'
 

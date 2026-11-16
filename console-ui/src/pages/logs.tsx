@@ -1,7 +1,6 @@
 import { useI18n } from '../i18n'
 import { useSearchParams } from 'react-router-dom'
-import { PageHeader } from '../components/PageHeader'
-import { PageShell } from '../components/PageShell'
+import { PageHeader, PageShell } from '@zhin.js/console-ui'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { LogViewer } from './logs/LogViewer'
 

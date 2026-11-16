@@ -1,6 +1,6 @@
 import { Bell } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { cn } from '@zhin.js/client'
+import { cn } from '@zhin.js/console-ui'
 import { useI18n } from '../../i18n'
 import { ATTENTION_PATH, attentionInstanceNotice } from './attention-model.mjs'
 import { useAttention } from './use-attention'

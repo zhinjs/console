@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Link } from 'react-router-dom'
 import { Loader2, RefreshCw, Stethoscope, Unplug } from 'lucide-react'
-import { cn, useConsoleClient } from '@zhin.js/client'
+import { Button, cn, Popover, PopoverContent, PopoverTrigger } from '@zhin.js/console-ui'
+import { useConsoleClient } from '@zhin.js/client'
 import { useI18n } from '../i18n'
-import { Button } from './ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { CONSOLE_PATHS } from '../console-routes.mjs'
 import {
   EVENT_STREAM_REASON_COPY, connectionIndicatorView, getEventStreamFailure, subscribeEventStreamFailure,

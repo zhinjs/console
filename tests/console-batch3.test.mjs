@@ -101,11 +101,7 @@ async function purposesPage(v) {
     react: runtime.api, 'react/jsx-runtime': jsxRuntime, './model.mjs': model,
     '../../i18n': { useI18n: () => ({ locale: 'zh-CN', t: (m, values) => translate('zh-CN', m, values) }) },
     'lucide-react': new Proxy({}, { get: () => 'icon' }),
-    '../../components/ui/button': { Button: 'button' }, '../../components/ui/input': { Input: 'input' }, '../../components/ui/select': { SelectField: 'select' },
-    '../../components/ui/searchable-select': { SearchableSelectField: 'select' }, '../../components/ui/card': { Card: 'card' },
-    '../../components/confirm-dialog': { useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }) },
-    '../../components/ui/dropdown-menu': { DropdownMenu: 'menu', DropdownMenuContent: 'menu-content', DropdownMenuItem: 'menu-item', DropdownMenuTrigger: 'menu-trigger' },
-    './SupportInfo': { supportLabel: label => label },
+    '@zhin.js/console-ui': { Button: 'button', Input: 'input', SelectField: 'select', SearchableSelectField: 'select', Card: 'card', useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }), DropdownMenu: 'menu', DropdownMenuContent: 'menu-content', DropdownMenuItem: 'menu-item', DropdownMenuTrigger: 'menu-trigger' }, './SupportInfo': { supportLabel: label => label },
   }
   const module = { exports: {} }
   new Function('require', 'module', 'exports', code)(name => { assert.ok(name in deps, name); return deps[name] }, module, module.exports)
@@ -261,11 +257,7 @@ async function accountsPage(focusAccount) {
     react: runtime.api, 'react/jsx-runtime': jsxRuntime, './model.mjs': model,
     '../../i18n': { useI18n: () => ({ locale: 'zh-CN', t: (m, values) => translate('zh-CN', m, values) }) },
     'lucide-react': new Proxy({}, { get: () => 'icon' }),
-    '../../components/ui/button': { Button: 'button' }, '../../components/ui/input': { Input: 'input' }, '../../components/ui/select': { SelectField: 'select' },
-    '../../components/ui/dialog': { Dialog: () => null, DialogContent: 'c', DialogHeader: 'h', DialogTitle: 't', DialogDescription: 'd' },
-    '../../components/error-alert': { ErrorAlert: 'error' }, '../../components/ui/card': { Card: 'card' },
-    '../../components/confirm-dialog': { useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }) },
-    './SupportInfo': { SupportLabel: 'support-label', SupportNotice: 'support-notice', supportLabel: label => label }, './SchemaFields': { SchemaFields: 'schema' },
+    '@zhin.js/console-ui': { Button: 'button', Input: 'input', SelectField: 'select', Dialog: () => null, DialogContent: 'c', DialogHeader: 'h', DialogTitle: 't', DialogDescription: 'd', ErrorAlert: 'error', Card: 'card', useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }) }, './SupportInfo': { SupportLabel: 'support-label', SupportNotice: 'support-notice', supportLabel: label => label }, './SchemaFields': { SchemaFields: 'schema' },
   }
   const module = { exports: {} }
   new Function('require', 'module', 'exports', code)(name => { assert.ok(name in deps, name); return deps[name] }, module, module.exports)

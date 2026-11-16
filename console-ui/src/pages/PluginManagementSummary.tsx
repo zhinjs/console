@@ -1,7 +1,6 @@
 import { useI18n } from '../i18n'
 import { Link } from 'react-router-dom'
-import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
+import { Badge, Button } from '@zhin.js/console-ui'
 import { managementLabel, type PluginManagementState } from './plugin-management-model.mjs'
 import { featureGlobalHref } from '../console-routes.mjs'
 

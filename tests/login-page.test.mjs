@@ -63,11 +63,7 @@ function fixture({ verify = async () => ({ ok: true }), password = async () => (
   const mocks = {
     react: { ...r.hooks },
     '../components/LanguageSelect': { LanguageSelect: 'language-select' },
-    '../components/confirm-dialog': { ConfirmDialog: 'confirm-dialog' },
-    '../components/ui/input': { Input: 'input' },
-    '../components/ui/button': { Button: 'button' },
-    '../components/ui/checkbox': { Checkbox: 'checkbox' },
-    '../components/ui/select': { Select: 'select', SelectContent: 'select-content', SelectItem: 'option', SelectTrigger: 'select-trigger', SelectValue: 'select-value' },
+    '@zhin.js/console-ui': { ConfirmDialog: 'confirm-dialog', Input: 'input', Button: 'button', Checkbox: 'checkbox', Select: 'select', SelectContent: 'select-content', SelectItem: 'option', SelectTrigger: 'select-trigger', SelectValue: 'select-value' },
     '../utils/auth': auth,
     './login-model.mjs': loginModel,
     '../utils/console-auth-model.mjs': authModel,

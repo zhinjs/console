@@ -7,18 +7,9 @@ import {
   KeyRound, AlertCircle, Save, Loader2,
   RefreshCw, FileWarning, Eye, EyeOff, Pencil, Trash2, Plus, Check, X
 } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
-import { PageHeader } from '../components/PageHeader'
-import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
-import { Alert, AlertDescription } from '../components/ui/alert'
+import { Alert, AlertDescription, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, ConfirmDialog, Input, PageHeader, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger, Textarea } from '@zhin.js/console-ui'
 import { OpsLoadState } from './ops/load-state'
-import { ConfirmDialog } from '../components/confirm-dialog'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
-import { Skeleton } from '../components/ui/skeleton'
 import { StatusState } from '../components/StatusState'
-import { Textarea } from '../components/ui/textarea'
-import { Input } from '../components/ui/input'
 import { createFileDraftSessions, type FileDraft } from './files/draft-session.mjs'
 import {
   envEditorAccess, parseEnvRows, maskEnvValue, updateEnvRow, removeEnvRow, appendEnvRow,

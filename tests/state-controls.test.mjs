@@ -1,27 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
-import { createRequire } from 'node:module'
 import { createElement, createRef } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import ts from 'typescript'
 
-const require = createRequire(import.meta.url)
-async function load(name) {
-  const source = await readFile(new URL(`../console-ui/src/components/ui/${name}.tsx`, import.meta.url), 'utf8')
-  const module = { exports: {} }
-  const code = ts.transpileModule(source, {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
-  }).outputText
-  new Function('require', 'exports', 'module', code)(
-    name => name === '@zhin.js/client' ? { cn: (...values) => values.filter(Boolean).join(' ') } : require(name),
-    module.exports, module,
-  )
-  return module.exports
-}
-const [{ Checkbox }, { RadioGroup, RadioGroupItem }, { Switch }] = await Promise.all([
-  load('checkbox'), load('radio-group'), load('switch'),
-])
+// The controls ship in @zhin.js/console-ui (ADR 0063 P1a); these checks hold the Console to the published build.
+const { Checkbox, RadioGroup, RadioGroupItem, Switch } = await import('@zhin.js/console-ui')
 
 test('state wrappers forward controlled/default values, refs, accessibility and callbacks directly to Radix', () => {
   for (const Control of [Checkbox, Switch]) {

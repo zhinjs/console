@@ -3,12 +3,8 @@ import {
   AlertTriangle, CheckCircle2, Circle, CircleDot, FileText, Info, KeyRound, Link2, Loader2, LogIn, MessageSquareText, QrCode, RefreshCw,
   RotateCcw, ShieldCheck, Smartphone, X, XCircle, type LucideIcon,
 } from 'lucide-react'
-import { cn } from '@zhin.js/client'
+import { Badge, Button, Card, cn, Skeleton } from '@zhin.js/console-ui'
 import { useI18n } from '../../i18n'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/button'
-import { Card } from '../../components/ui/card'
-import { Skeleton } from '../../components/ui/skeleton'
 import { StatusState } from '../../components/StatusState'
 import { ActionReceipt, useActionReceipt } from '../../components/ActionReceipt'
 import { receiptBlocksActions } from '../../components/action-receipt-model.mjs'

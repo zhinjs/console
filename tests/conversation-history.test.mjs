@@ -23,7 +23,8 @@ const bodyModule = { exports: {} }
 new Function('require', 'exports', 'module', bodyCode)(name => {
   if (name === '../../i18n' || name === '../../i18n/locale.mjs') return localeModule
   if (name === './media-source.mjs') return { pickMessageMediaRaw }
-  if (name === '@zhin.js/client') return { ...sdkMedia, cn: (...values) => values.filter(Boolean).join(' '), MarkdownContent: 'markdown-content' }
+  if (name === '@zhin.js/client') return { ...sdkMedia, MarkdownContent: 'markdown-content' }
+  if (name === '@zhin.js/console-ui') return { cn: (...values) => values.filter(Boolean).join(' ') }
   return require(name)
 }, bodyModule.exports, bodyModule)
 const conversation = { endpoint: { adapter: 'root/icqq', id: 'canonical-account' }, kind: 'channel', id: 'room', parent: { kind: 'channel', id: 'guild' }, threadId: 'topic' }
@@ -58,8 +59,7 @@ function fixture({ realMessageBody = false, connectionId } = {}) {
   const calls = [], hooks = runtime(), module = { exports: {} }
   const mocks = {
     react: { ...require('react'), ...hooks.hooks }, '../i18n': localeModule,
-    '../components/ui/button': { Button: 'button' }, '../components/StatusState': { StatusState: 'status-state' }, '../components/error-alert': { ErrorAlert: 'error-alert' },
-    '../utils/auth': { apiFetch: (url, options) => new Promise((resolve, reject) => calls.push({ url, ...options, resolve, reject })) },
+    '@zhin.js/console-ui': { Button: 'button', ErrorAlert: 'error-alert' }, '../components/StatusState': { StatusState: 'status-state' }, '../utils/auth': { apiFetch: (url, options) => new Promise((resolve, reject) => calls.push({ url, ...options, resolve, reject })) },
     '../utils/inbox-cache': { getInboxCacheScope: () => authority.current(), isInboxCacheScopeActive: scope => authority.active(scope) },
     './endpoint-detail/message-diagnostics.mjs': { createDiagnosticRequestGate },
     './endpoint-detail/MessageBody': realMessageBody ? bodyModule.exports : { MessageBody: 'message-body' }, './conversation-history-model.mjs': model,

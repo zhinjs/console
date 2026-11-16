@@ -438,7 +438,7 @@ async function gatewayOwned(url, request, json, readBody) {
 // ---- Plugin pages (UI_PREVIEW_PLUGIN_PAGES=1): tabs of their plugin detail page (ADR 0063 决策 3) ----
 const pluginPagesMode = process.env.UI_PREVIEW_PLUGIN_PAGES === '1'
 const PREVIEW_PLUGIN_PAGES = [
-  { id: 'rss', owner: 'rss', route: '/rss', title: 'RSS 订阅', en: 'RSS feeds', icon: 'Rss', order: 20 },
+  { id: 'rss', owner: 'rss', route: '/rss', title: 'RSS 订阅', en: 'RSS feeds', icon: 'Rss', order: 20, chrome: true },
   { id: 'calendar', owner: 'calendar', route: '/calendar', title: '日历', en: 'Calendar', icon: 'Calendar', order: 21 },
   { id: 'lottery', owner: 'lottery', route: '/lottery', title: '彩票', en: 'Lottery', icon: 'Ticket', order: 22, keywords: { 'zh-CN': ['抽奖'], en: ['raffle'] } },
   { id: 'qrcode', owner: 'qrcode', route: '/qrcode', title: '二维码', en: 'QR codes', icon: 'QrCode', order: 23 },
@@ -451,7 +451,24 @@ function pluginPageModule(page) {
   const meta = JSON.stringify({ title: page.title, titleI18n: { en: page.en }, icon: page.icon, order: page.order })
   return page.adapter
     ? `export const meta = ${meta};\nexport default { kind: 'zhin.console.adapter-page', adapterKey: ${JSON.stringify(page.adapter)} };\n`
+    : page.chrome ? chromePluginPageModule(meta, page)
     : `export const meta = ${meta};\nexport default function PreviewPluginPage() { return ${JSON.stringify(`${page.title}（本地预览插件页）`)} }\n`
+}
+// A hand-written page that hands its header action and refresh control to the plugin header through
+// usePageChrome, reading @zhin.js/console-ui and React from the Console's shared modules like the
+// pagemanager host proxy does (ADR 0063 决策 2、D3).
+function chromePluginPageModule(meta, page) {
+  return `export const meta = ${meta};
+const shared = globalThis.__ZHIN_CONSOLE_SHARED_MODULES__;
+const React = shared.get('react'), ui = shared.get('@zhin.js/console-ui');
+export default function PreviewPluginPage() {
+  const [updatedAt, setUpdatedAt] = React.useState(() => Date.now());
+  const refresh = React.useMemo(() => ({ updatedAt, onRefresh: () => new Promise(resolve => setTimeout(() => { setUpdatedAt(Date.now()); resolve(); }, 300)) }), [updatedAt]);
+  const actions = React.useMemo(() => React.createElement(ui.Button, { variant: 'destructive-outline', size: 'sm' }, '移除订阅'), []);
+  const hosted = ui.usePageChrome({ actions, refresh });
+  return React.createElement('p', null, ${JSON.stringify(`${page.title}（本地预览插件页）`)} + (hosted ? '' : ' (no shell)'));
+}
+`
 }
 
 // ---- AI 与模型 (/api/agent/inference): three services, ~35 models, Agent-bound profiles ----

@@ -20,18 +20,8 @@ import {
   XCircle,
 } from 'lucide-react'
 import { selectedHistoryEntry } from './history-model.mjs'
-import { cn } from '@zhin.js/client'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/button'
-import { Checkbox } from '../../components/ui/checkbox'
-import { Input } from '../../components/ui/input'
-import { SelectField } from '../../components/ui/select'
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '../../components/ui/dropdown-menu'
+import { Badge, Button, Checkbox, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, EmptyState, ErrorAlert, Input, ListItemButton, SelectField, StatCard, StatGrid } from '@zhin.js/console-ui'
 import './disclosure.css'
-import { StatCard, StatGrid } from '../../components/StatCard'
-import { EmptyState } from '../../components/empty-state'
-import { ErrorAlert } from '../../components/error-alert'
-import { ListItemButton } from '../../components/ui/list-item-button'
 
 export interface LogEntry {
   id: string | number

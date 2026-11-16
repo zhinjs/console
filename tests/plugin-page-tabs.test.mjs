@@ -27,7 +27,7 @@ function render(props, { routes, locale = 'zh-CN', search = '' }) {
     '../i18n': { useI18n: () => ({ locale, t: (message, values) => translate(locale, message, values) }) },
     '../i18n/navigation': navigation,
     '../utils/console-client': { app: { subscribe() {}, getRoutes: () => routes } },
-    '../components/ui/tabs': { Tabs: 'Tabs', TabsList: 'TabsList', TabsTrigger: 'TabsTrigger', TabsContent: 'TabsContent' },
+    '@zhin.js/console-ui': { Tabs: 'Tabs', TabsList: 'TabsList', TabsTrigger: 'TabsTrigger', TabsContent: 'TabsContent' },
     '../plugin-pages.mjs': pluginPages,
   }
   const { PluginPageTabs } = compile(tabsSource, mocks)
@@ -82,7 +82,11 @@ test('a plugin without pages keeps its plain 概览 (no tab bar)', () => {
 
 test('the detail page mounts the tabs with the plugin header, and page tabs are registered with the plugin detail element', async () => {
   const detail = await source('pages/plugin-detail.tsx')
-  assert.match(detail, /<PluginPageTabs plugin=\{name \?\? ''\} names=\{\[name, plugin\?\.instanceKey, plugin\?\.packageName\]\} active=\{tab\?\.href \?\? PLUGIN_OVERVIEW_TAB\} page=\{tab\?\.content\}/)
+  assert.match(detail, /<PluginPageTabs plugin=\{name \?\? ''\} names=\{\[name, plugin\?\.instanceKey, plugin\?\.packageName\]\} active=\{tab\?\.href \?\? PLUGIN_OVERVIEW_TAB\} page=\{tab \? <PageChromeProvider store=\{chromeStore\}>\{tab\.content\}<\/PageChromeProvider> : undefined\}/)
+  // The open page tab hands its header actions and refresh control to the plugin header (usePageChrome).
+  assert.match(detail, /const chromeStore = useMemo\(\(\) => createPageChromeStore\(\), \[tabHref\]\)/)
+  assert.match(detail, /\{tab \? <PageChromeActions store=\{chromeStore\} \/> : null\}/)
+  assert.match(detail, /\{tab && pageChrome\?\.refresh \? null : \(/, 'a page with its own refresh control replaces the header 刷新')
   assert.match(detail, /const name = pluginName \?\? params\.name/)
   const entries = await source('bootstrap/loadConsoleEntries.ts')
   assert.match(entries, /React\.createElement\(PluginDetailPage as React\.ComponentType<PluginDetailPageProps>, \{ plugin: tab\.plugin, tab: \{ href: tab\.href, content: route\.element \} \}\)/)

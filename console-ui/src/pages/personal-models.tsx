@@ -1,6 +1,5 @@
 import { useI18n } from '../i18n'
-import { PageShell } from '../components/PageShell'
-import { PageHeader } from '../components/PageHeader'
+import { PageHeader, PageShell } from '@zhin.js/console-ui'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { InferenceWorkspace } from './inference/Workspace'
 

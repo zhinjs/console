@@ -1,6 +1,6 @@
 import { useI18n } from '../../i18n'
 import { Bell, ChevronDown, ChevronRight, UserPlus } from 'lucide-react'
-import { cn } from '@zhin.js/client'
+import { cn } from '@zhin.js/console-ui'
 import type { SidebarSelection } from './types'
 
 interface SystemInboxSectionProps {

@@ -1,7 +1,7 @@
 import { useI18n } from '../../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Button } from '../../components/ui/button'
+import { Button } from '@zhin.js/console-ui'
 import { agentSessionsPath } from '../../utils/agent-session'
 import { PersonalSessionModelPicker } from '../PersonalSessionModelPicker'
 import { readPersonalSessionRows, type PersonalSessionRow } from '../personal-session-model.mjs'

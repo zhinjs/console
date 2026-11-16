@@ -1,7 +1,5 @@
 import { useI18n } from '../../i18n'
-import { Input } from '../../components/ui/input'
-import { SelectField } from '../../components/ui/select'
-import { Checkbox } from '../../components/ui/checkbox'
+import { Checkbox, Input, SelectField } from '@zhin.js/console-ui'
 import type { Driver, Kind, ModelDefinition } from './model.mjs'
 
 interface ModelCapabilitiesProps {

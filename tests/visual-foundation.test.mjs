@@ -68,7 +68,7 @@ test('status semantics and chart category colors do not change with decorative p
   }
 })
 test('primary buttons and the composer use action fills, while links and destructive controls keep their roles', () => {
-  const button = readFileSync(new URL('console-ui/src/components/ui/button.tsx', root), 'utf8')
+  const button = readFileSync(new URL('node_modules/@zhin.js/console-ui/dist/components/ui/button.js', root), 'utf8')
   const composer = readFileSync(new URL('console-ui/src/im-workspace.css', root), 'utf8')
   assert.ok(button.includes('bg-[hsl(var(--primary-action))]'))
   assert.ok(button.includes('text-[hsl(var(--primary-action-foreground))]'))

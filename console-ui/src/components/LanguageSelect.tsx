@@ -1,7 +1,7 @@
 import { Languages } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { isLocale } from '../i18n/locale.mjs'
-import { SelectField } from './ui/select'
+import { SelectField } from '@zhin.js/console-ui'
 
 export function LanguageSelect() {
   const i18n = useI18n()

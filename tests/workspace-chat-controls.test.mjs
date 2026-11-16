@@ -22,8 +22,7 @@ test('attachment menu keeps all five actions, correct media types, and a named d
   const calls = []
   const { ComposerAttachmentMenu } = compile(attachmentSource, {
     'lucide-react': new Proxy({}, { get: (_target, key) => key }), '../../i18n': { useI18n: () => i18n },
-    '../../components/ui/button': { Button: 'button' }, '../../components/ui/dropdown-menu': ui,
-  })
+    '@zhin.js/console-ui': { Button: 'button', ...(ui) }, })
   const tree = ComposerAttachmentMenu({ disabled: true, onImage: () => calls.push('image-file'), onFile: () => calls.push('file'), onMedia: type => calls.push(type) })
   const trigger = nodes(tree).find(node => node.type === 'button')
   assert.equal(trigger.props['aria-label'], 'Add attachment'); assert.equal(trigger.props.disabled, true)

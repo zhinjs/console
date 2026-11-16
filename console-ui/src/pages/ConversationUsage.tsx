@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useI18n } from '../i18n'
-import { Button } from '../components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover'
+import { Button, Popover, PopoverContent, PopoverTrigger } from '@zhin.js/console-ui'
 import { contextLabels, formatTraceMetric, traceUsage, type ContextBudget, type TraceTurn } from './conversation-trace-model.mjs'
 
 export function UsageSummary({ turns }: { turns: Array<Pick<TraceTurn, 'usage_calls' | 'total_tokens'>> }) {

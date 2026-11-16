@@ -47,7 +47,7 @@ function renderRow({ toasts, onQuote = () => {}, onForward = () => {}, message: 
     '../../i18n/locale.mjs': { translate },
     '../../i18n': { useI18n: () => ({ locale: 'zh-CN', t }) },
     'lucide-react': new Proxy({}, { get: (_object, key) => key }),
-    '@zhin.js/client': { cn: (...values) => values.filter(Boolean).join(' ') },
+    '@zhin.js/client': { cn: (...values) => values.filter(Boolean).join(' ') }, '@zhin.js/console-ui': { cn: (...values) => values.filter(Boolean).join(' ') },
     './RenderingDiagnostics': { RenderingDiagnostics: 'rendering-diagnostics' },
     './MessageBody': { MessageBody: 'message-body', messageContentSummary: content => content.map(seg => seg.data?.text ?? '').join(' ') },
     './MessageDiagnostics': { MessageDiagnosticsAction: 'message-diagnostics-action' },

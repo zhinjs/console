@@ -1,8 +1,7 @@
 import type { ElementType, ReactNode } from 'react'
 import { Users } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { Button } from '../../components/ui/button'
-import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '../../components/ui/sheet'
+import { Button, Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '@zhin.js/console-ui'
 
 export interface MemberPanelSlots {
   /** Heading element: the panel title doubles as the drawer's accessible name. */

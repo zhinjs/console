@@ -3,19 +3,7 @@ import { useI18n } from '../../i18n'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { RefreshCw, Download, Upload } from 'lucide-react'
-import { Button } from '../../components/ui/button'
-import { SelectField } from '../../components/ui/select'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '../../components/ui/dialog'
-import { ErrorAlert } from '../../components/error-alert'
-import { Alert, AlertDescription } from '../../components/ui/alert'
-import { Textarea } from '../../components/ui/textarea'
+import { Alert, AlertDescription, Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, ErrorAlert, SelectField, Tabs, TabsContent, TabsList, TabsTrigger, Textarea } from '@zhin.js/console-ui'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import { useInferenceManagement, type InferenceSource, type InferenceManagement } from './useInferenceManagement'
 import { Profiles } from './Profiles'

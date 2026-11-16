@@ -2,25 +2,10 @@ import { useI18n } from '../i18n'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Activity, AlertTriangle, Coins, MessagesSquare, RefreshCw, Settings2, Workflow } from 'lucide-react'
-import {
-  cn,
-  useEngagementDetail,
-  useEngagements,
-  useVenues,
-  type ConsoleEngagementDetail,
-  type ConsoleEngagementSummary,
-} from '@zhin.js/client'
+import { Badge, Button, Card, CardContent, cn, EmptyState, ListItemButton, PageHeader, PageShell, Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, Skeleton } from '@zhin.js/console-ui'
+import { useEngagementDetail, useEngagements, useVenues, type ConsoleEngagementDetail, type ConsoleEngagementSummary } from '@zhin.js/client'
 import { startVisiblePolling } from '../hooks/visible-polling.mjs'
-import { PageHeader } from '../components/PageHeader'
-import { PageShell } from '../components/PageShell'
-import { EmptyState } from '../components/empty-state'
-import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
-import { Card, CardContent } from '../components/ui/card'
-import { Skeleton } from '../components/ui/skeleton'
-import { ListItemButton } from '../components/ui/list-item-button'
 import { StatusState } from '../components/StatusState'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../components/ui/sheet'
 import { useIsMobile } from '../hooks/useIsMobile'
 import {
   actorLabel,

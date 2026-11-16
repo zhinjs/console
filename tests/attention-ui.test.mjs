@@ -40,7 +40,7 @@ function environment(locale = 'zh-CN') {
   }
   const common = {
     react, 'lucide-react': icons, 'react-router-dom': { Link: 'Link' }, '@zhin.js/client': { cn: (...names) => names.filter(Boolean).join(' ') },
-    '../../i18n': { useI18n: () => ({ t, locale }) }, '../../components/ui/button': { Button: 'Button' }, './attention-model.mjs': model,
+    '../../i18n': { useI18n: () => ({ t, locale }) }, '@zhin.js/console-ui': { cn: (...names) => names.filter(Boolean).join(' '), Button: 'Button' }, './attention-model.mjs': model,
   }
   return { t, state, common }
 }
@@ -50,10 +50,8 @@ async function components(locale, attention) {
   const row = compile(await source('pages/attention/AttentionItemRow.tsx'), env.common)
   const page = compile(await source('pages/attention/index.tsx'), {
     ...env.common,
-    '../../components/PageHeader': { PageHeader: ({ title, description, actions }) => ({ type: 'header', props: { children: [title, description, actions] } }) },
-    '../../components/PageShell': { PageShell: ({ children }) => ({ type: 'main', props: { children } }) },
+    '@zhin.js/console-ui': { ...(env.common)?.['@zhin.js/console-ui'], PageHeader: ({ title, description, actions }) => ({ type: 'header', props: { children: [title, description, actions] } }), PageShell: ({ children }) => ({ type: 'main', props: { children } }), Skeleton: 'Skeleton' },
     '../../components/StatusState': { StatusState: props => ({ type: 'status-state', props: { ...props, children: [props.title, props.description] } }) },
-    '../../components/ui/skeleton': { Skeleton: 'Skeleton' },
     './AttentionItemRow': row,
     './use-attention': { useAttention: () => attention },
   })

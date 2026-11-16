@@ -20,9 +20,7 @@ import { MIN_RATIO_SAMPLE, observationCoverage, countReading, ratioReading, type
 import { CONVERSATION_KINDS, type ConversationKind } from './features/feature-model.mjs'
 import { conversationHref, CONSOLE_PATHS } from '../console-routes.mjs'
 import { instanceSectionHref } from './ops/instance-sections.mjs'
-import { PageHeader } from '../components/PageHeader'
-import { PageShell } from '../components/PageShell'
-import { InfoHint } from '../components/InfoHint'
+import { Alert, AlertDescription, Button, InfoHint, ListItemButton, MiniRingGauge, PageHeader, PageShell, Sheet, SheetBody, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, Skeleton, StatCard, StatGrid, useConfirm } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import './insights/insights.css'
 import type { LucideIcon } from 'lucide-react'
@@ -58,21 +56,6 @@ import { CONSOLE_REST } from '../contracts/zhin-console'
 import { pluginRpc } from '../utils/plugin-rpc'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { useToast } from '../components/toast'
-import { Button } from '../components/ui/button'
-import { Alert, AlertDescription } from '../components/ui/alert'
-import { Skeleton } from '../components/ui/skeleton'
-import { useConfirm } from '../components/confirm-dialog'
-import { ListItemButton } from '../components/ui/list-item-button'
-import { MiniRingGauge, StatCard, StatGrid } from '../components/StatCard'
-import {
-  Sheet,
-  SheetBody,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '../components/ui/sheet'
 import './dashboard.css'
 import { ATTENTION_PATH, DASHBOARD_ATTENTION_LIMIT } from './attention/attention-model.mjs'
 import { AttentionSeverityIcon } from './attention/AttentionItemRow'

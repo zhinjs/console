@@ -7,7 +7,7 @@ import { useConversationTraces } from './useConversationTraces'
 import './conversation-trace.css'
 import type { DiagnosticConversation } from './endpoint-detail/types'
 import './agent-sessions.css'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
+import { Alert, AlertDescription, Badge, Button, cn, Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, EmptyState, ErrorAlert, PageHeader, Skeleton, StatCard, StatGrid, Tabs, TabsContent, TabsList, TabsTrigger } from '@zhin.js/console-ui'
 import { SessionMessageDetails } from './SessionMessageDetails'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
@@ -17,28 +17,10 @@ import { CheckCircle, Loader2, MessageSquare, MessagesSquare, Repeat2, Users, Al
 import { apiFetch } from '../utils/auth'
 import { isLikelySessionKey, parseSessionKeyFromQuery, parseImSessionKey } from '../utils/agent-session'
 import { loadAgentSessionHistory, pushAgentSessionHistory } from '../utils/agent-session-history'
-import { PageHeader } from '../components/PageHeader'
-import { ErrorAlert } from '../components/error-alert'
-import { EmptyState } from '../components/empty-state'
-import { Alert, AlertDescription } from '../components/ui/alert'
-import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
-import { Skeleton } from '../components/ui/skeleton'
 import { AgentSessionPicker } from '../components/AgentSessionPicker'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
-  DialogDescription,
-  DialogClose,
-} from '../components/ui/dialog'
-import { cn } from '@zhin.js/client'
 import { CONSOLE_REST } from '../contracts/zhin-console'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { readRecentSessions, summarizeRecentSessions, type RecentSession, type RecentSessionSummary } from './agent-session-recent.mjs'
-import { StatCard, StatGrid } from '../components/StatCard'
 import { sessionConversationScope, sessionKeyInScope } from './scope/records-model.mjs'
 import { readScopeFilterParams } from './insights/scope-filter.mjs'
 import { scopeHref, scopeIdentity } from '../scope/scope-tree.mjs'

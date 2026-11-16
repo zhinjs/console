@@ -2,10 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Database, ShieldCheck, UserRoundPlus, Loader2, CheckCircle2, AlertCircle, LogOut } from 'lucide-react'
 import { useI18n } from '../../i18n'
 import { LanguageSelect } from '../../components/LanguageSelect'
-import { Button } from '../../components/ui/button'
-import { Input } from '../../components/ui/input'
-import { SelectField } from '../../components/ui/select'
-import { RadioGroup, RadioGroupItem } from '../../components/ui/radio-group'
+import { Button, Input, RadioGroup, RadioGroupItem, SelectField } from '@zhin.js/console-ui'
 import {
   createFirstOwner, getSetupDatabase, getSetupStatus, hostAnswers, saveSetupDatabase, testSetupDatabase,
 } from '../../utils/console-auth-api'

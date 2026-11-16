@@ -1,14 +1,8 @@
 import { useI18n } from '../../i18n'
 import { useEffect, useState } from 'react'
 import { ArrowDown, ArrowUp, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
-import { Button } from '../../components/ui/button'
-import { Input } from '../../components/ui/input'
-import { SelectField } from '../../components/ui/select'
-import { SearchableSelectField, type SearchableSelectOption } from '../../components/ui/searchable-select'
+import { Button, Card, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, Input, SearchableSelectField, type SearchableSelectOption, SelectField, useConfirm } from '@zhin.js/console-ui'
 import { supportLabel } from './SupportInfo'
-import { Card } from '../../components/ui/card'
-import { useConfirm } from '../../components/confirm-dialog'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu'
 import {
   purposePlan,
   profileSupport,

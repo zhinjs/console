@@ -3,7 +3,7 @@ import { Moon, Sun, Monitor, Palette, RotateCcw, Check } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { useTheme } from '../hooks/useTheme'
 import { THEME_PALETTES, type ThemeMode } from '../theme'
-import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from './ui/popover'
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@zhin.js/console-ui'
 import '../theme/appearance.css'
 
 /**

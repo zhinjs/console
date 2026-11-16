@@ -3434,4 +3434,10 @@ export const englishMessages = Object.freeze({
   "正在测试连通性…": "Testing connectivity…",
   "插件页签": "Plugin tabs",
   "{0} 插件的页面": "Page of the {0} plugin",
+  "更新于 {0}": "Updated {0}",
+  "尚未更新": "Not updated yet",
+  "刷新中…": "Refreshing…",
+  "自动刷新间隔": "Auto refresh interval",
+  "手动刷新": "Manual refresh",
+  "{0}s 自动": "{0}s auto",
 })

@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useI18n } from '../../i18n'
-import { Badge } from '../../components/ui/badge'
-import { Card, CardContent } from '../../components/ui/card'
+import { Badge, Card, CardContent } from '@zhin.js/console-ui'
 import { ActionReceipt } from '../../components/ActionReceipt'
 import { adapterHref } from '../../console-routes.mjs'
 import { useConsoleAccess } from '../../hooks/use-console-access'

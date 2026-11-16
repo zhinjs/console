@@ -19,7 +19,7 @@ import {
   Workflow,
   Wrench,
 } from 'lucide-react'
-import { cn } from '@zhin.js/client'
+import { Button, buttonVariants, cn, PageHeader, PageShell, Skeleton } from '@zhin.js/console-ui'
 import { CONSOLE_REST, ENDPOINT_RPC } from '../contracts/zhin-console'
 import { apiFetch } from '../utils/auth'
 import { requestConsole } from '../utils/console-rpc'
@@ -29,14 +29,10 @@ import {
   parseImSessionKey,
   SESSION_SCOPE_LABELS,
 } from '../utils/agent-session'
-import { PageHeader } from '../components/PageHeader'
-import { PageShell } from '../components/PageShell'
 import { StatusState } from '../components/StatusState'
 import { CONSOLE_PATHS } from '../console-routes.mjs'
 import { instanceSectionHref } from './ops/instance-sections.mjs'
 import './insights/insights.css'
-import { Button, buttonVariants } from '../components/ui/button'
-import { Skeleton } from '../components/ui/skeleton'
 import { bindingModel, fetchAllIntrospection, recentAgentSessions, type BindingModelSource, type IntrospectionEnvelope, type RecentAgentSession } from './agent-workbench-model.mjs'
 import { pluginRpc } from '../utils/plugin-rpc'
 

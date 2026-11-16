@@ -5,20 +5,8 @@ import { useMutation } from './use-mutation'
 import { useState, useEffect, useCallback } from 'react'
 import type { KvEntry } from '@zhin.js/client'
 import { Plus, Trash2, Pencil, RefreshCw, Loader2, AlertCircle, CheckCircle, Save, Key } from 'lucide-react'
-import { Button } from '../../components/ui/button'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
-import { Alert, AlertDescription } from '../../components/ui/alert'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from '../../components/ui/dialog'
-import { Input } from '../../components/ui/input'
+import { Alert, AlertDescription, Button, ConfirmDialog, Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { useToast } from '../../components/toast'
-import { ConfirmDialog } from '../../components/confirm-dialog'
 import type { ChangeEvent } from 'react'
 
 export function KvBucketView({

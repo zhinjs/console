@@ -10,6 +10,9 @@ export default {
     "./index.html",
     "./**/*.{js,ts,jsx,tsx}",
     path.join(siteRoot, "console-ui/src/**/*.{js,ts,jsx,tsx}"),
+    // Components moved to @zhin.js/console-ui (ADR 0063 P1a): its styles.css ships their utilities,
+    // but generating them here as well keeps their order against the Console's own classes unchanged.
+    path.join(siteRoot, "node_modules/@zhin.js/console-ui/dist/**/*.js"),
   ],
   theme: {
     extend: {

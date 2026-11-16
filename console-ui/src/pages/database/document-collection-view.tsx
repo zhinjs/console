@@ -7,20 +7,8 @@ import { documentFilterWhere } from './record-query.mjs'
 import { useState, useEffect, useCallback, useRef, type ChangeEvent, type FormEvent } from 'react'
 import type { SelectResult } from '@zhin.js/client'
 import { Plus, Trash2, Pencil, RefreshCw, Loader2, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Save, Search, X } from 'lucide-react'
-import { Card, CardContent } from '../../components/ui/card'
-import { Button } from '../../components/ui/button'
-import { Input } from '../../components/ui/input'
-import { Alert, AlertDescription } from '../../components/ui/alert'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from '../../components/ui/dialog'
+import { Alert, AlertDescription, Button, Card, CardContent, ConfirmDialog, Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input } from '@zhin.js/console-ui'
 import { useToast } from '../../components/toast'
-import { ConfirmDialog } from '../../components/confirm-dialog'
 
 export function DocumentCollectionView({
   tableName,

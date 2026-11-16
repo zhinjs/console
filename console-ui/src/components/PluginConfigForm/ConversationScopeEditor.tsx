@@ -1,7 +1,7 @@
 import { useI18n } from '../../i18n'
 import { useState } from 'react'
 import type { SchemaField } from './types.js'
-import { Button } from '../ui/button'
+import { Button } from '@zhin.js/console-ui'
 import { ConversationTargetEditor } from './ConversationTargetEditor'
 import { scopeAllowedKinds } from './conversation-scope-model.mjs'
 import { updateListItem } from './schema-model.mjs'

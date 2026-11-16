@@ -4,16 +4,10 @@ import { useI18n } from '../i18n'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ArrowRight, Check, Command, CornerDownLeft, Search } from 'lucide-react'
-import { cn, type ConsoleRouteRecord } from '@zhin.js/client'
+import { cn, Dialog, DialogContent, DialogDescription, DialogTitle, ListItemButton } from '@zhin.js/console-ui'
+import { type ConsoleRouteRecord } from '@zhin.js/client'
 import { getSidebarLucideIcon } from './sidebarMenuIcons'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from './ui/dialog'
 import { COMMAND_GROUP_ORDER, NAV_GROUPS } from '../navigation-taxonomy'
-import { ListItemButton } from '../components/ui/list-item-button'
 import { commandScore, isCommandRoute, pluginPageCommand, ROUTE_SEARCH_HINTS } from './command-center-model.mjs'
 import { pluginDirectory, subscribePluginDirectory } from '../plugin-pages.mjs'
 import { canSeeRoute, routeSectionId, sectionById } from '../navigation-sections.mjs'

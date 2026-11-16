@@ -1,12 +1,8 @@
 import { useI18n } from '../../i18n'
 import { useCallback, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { Play, History, Trash2, Loader2, Eye, EyeOff, ShieldAlert } from 'lucide-react'
-import { Button } from '../../components/ui/button'
-import { Textarea } from '../../components/ui/textarea'
-import { Badge } from '../../components/ui/badge'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
+import { Badge, Button, ConfirmDialog, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Textarea } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
-import { ConfirmDialog } from '../../components/confirm-dialog'
 import {
   affectedRows, cellText, clearSqlHistory, databaseRefusalCode, isPrivilegeRefusal, isSensitiveColumn, isUnsupportedRpcError, MASK,
   pushSqlHistory, readSqlHistory, sqlLooksReadOnly, type SqlHistoryEntry,

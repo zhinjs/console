@@ -1,6 +1,6 @@
 import { useId, useState } from 'react'
 import { useI18n } from '../i18n'
-import { cn } from '@zhin.js/client'
+import { cn } from '@zhin.js/console-ui'
 import {
   OTHER_COLOR,
   SEGMENT_LABELS,

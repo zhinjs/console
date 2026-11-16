@@ -6,10 +6,7 @@ import { isLocale } from '../i18n/locale.mjs'
 import { useTheme } from '../hooks/useTheme'
 import type { ThemeMode } from '../theme'
 import { ThemeToggle } from './ThemeToggle'
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem,
-  DropdownMenuSeparator, DropdownMenuTrigger,
-} from './ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@zhin.js/console-ui'
 
 /**
  * The top bar's account menu: 个人设置, 界面语言, 显示模式, the full appearance panel and 退出登录 in

@@ -1,9 +1,8 @@
 import { AlertCircle, AlertTriangle, ArrowUpRight, BellOff, Info, RotateCcw, Clock } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { cn } from '@zhin.js/client'
+import { Button, cn } from '@zhin.js/console-ui'
 import { useI18n } from '../../i18n'
-import { Button } from '../../components/ui/button'
 import { formatAttentionSince, type AttentionItem, type AttentionSeverity } from './attention-model.mjs'
 
 const SEVERITY_ICONS: Record<AttentionSeverity, LucideIcon> = { danger: AlertCircle, warning: AlertTriangle, info: Info }

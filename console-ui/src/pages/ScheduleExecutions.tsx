@@ -7,11 +7,7 @@ import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 
 const canCleanup = () => hasConsolePermission('ops.schedule.write')
-import { Button } from '../components/ui/button'
-import { Badge } from '../components/ui/badge'
-import { Alert, AlertDescription } from '../components/ui/alert'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '../components/ui/dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
+import { Alert, AlertDescription, Badge, Button, Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Tabs, TabsContent, TabsList, TabsTrigger } from '@zhin.js/console-ui'
 import { readTraceDetail, traceFailure, traceQuery, traceStatus, type TraceDetail } from './conversation-trace-model.mjs'
 import {
   readExecutionPage, readExecutionDetail, readExecutionCleanup, executionQuery, executionDetailQuery,

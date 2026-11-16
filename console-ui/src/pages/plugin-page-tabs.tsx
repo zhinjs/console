@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useI18n } from '../i18n'
 import { routeLabel } from '../i18n/navigation'
 import { app } from '../utils/console-client'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@zhin.js/console-ui'
 import { PLUGIN_OVERVIEW_TAB, pluginDetailPath, pluginTabsOf, type PluginTabMeta } from '../plugin-pages.mjs'
 
 const readRoutes = () => app.getRoutes()
