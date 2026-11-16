@@ -158,15 +158,20 @@ function OverviewTable({ rows, time }: { rows: TaskOverviewRow[]; time: (value: 
           </Card>
           <div className="console-task-overview-cards">
             {shown.map(row => (
-              <dl key={row.key} className="console-task-overview-card">
+              // The card is an <article>: its title comes first and the <dl> holds only term/value pairs
+              // (a heading inside <dl> is invalid and misreads in screen readers). The list keeps the
+              // card's two columns through subgrid, so no stylesheet changes.
+              <article key={row.key} className="console-task-overview-card">
                 <h3><Link to={taskTabHref(row.tab)}>{row.title}</Link></h3>
-                <dt>{i18n.t("类型")}</dt><dd>{row.typeLabel}</dd>
-                <dt>{i18n.t("状态")}</dt><dd><Badge variant={row.status.tone}>{row.status.label}</Badge></dd>
-                {row.type !== 'approval' ? <><dt>{i18n.t("下次运行")}</dt><dd>{time(row.nextRunAt)}</dd></> : null}
-                <dt>{i18n.t("最近结果")}</dt><dd><LastResult row={row} time={time} /></dd>
-                <dt>{i18n.t("目标")}</dt><dd><TargetCell row={row} /></dd>
-                {row.approval ? <><dt>{i18n.t("审批")}</dt><dd>{row.approval}</dd></> : null}
-              </dl>
+                <dl className="col-span-full grid grid-cols-subgrid gap-y-1">
+                  <dt>{i18n.t("类型")}</dt><dd>{row.typeLabel}</dd>
+                  <dt>{i18n.t("状态")}</dt><dd><Badge variant={row.status.tone}>{row.status.label}</Badge></dd>
+                  {row.type !== 'approval' ? <><dt>{i18n.t("下次运行")}</dt><dd>{time(row.nextRunAt)}</dd></> : null}
+                  <dt>{i18n.t("最近结果")}</dt><dd><LastResult row={row} time={time} /></dd>
+                  <dt>{i18n.t("目标")}</dt><dd><TargetCell row={row} /></dd>
+                  {row.approval ? <><dt>{i18n.t("审批")}</dt><dd>{row.approval}</dd></> : null}
+                </dl>
+              </article>
             ))}
           </div>
     </>
