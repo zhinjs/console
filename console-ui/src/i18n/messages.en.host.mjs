@@ -35,9 +35,9 @@ export const hostFieldMessages = Object.freeze({
   "通过 Console": "from the Console",
   "最后修改：{0}": "Last changed: {0}",
   // Feature matrix: the project's own row
-  "{0} 个命令": "{0} commands",
-  "{0} 个组件": "{0} components",
-  "{0} 个工具": "{0} tools",
+  "{0} 个命令": { one: "{0} command", other: "{0} commands" },
+  "{0} 个组件": { one: "{0} component", other: "{0} components" },
+  "{0} 个工具": { one: "{0} tool", other: "{0} tools" },
   "始终启用，在所有适配器上生效，不能在这里关闭。": "Always on, on every adapter; cannot be switched off here.",
   "本项目自带：{0}": "Built into this project: {0}",
   "本项目自带的功能": "Features built into this project",

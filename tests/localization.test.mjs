@@ -36,7 +36,10 @@ test('interpolation preserves user content, protocol values and braces without r
 
 test('English catalog preserves every numbered interpolation slot', () => {
   const slots=s=>[...s.matchAll(/\{(\d+)\}/g)].map(m=>m[1]).sort()
-  for (const [source, english] of Object.entries(englishMessages)) assert.deepEqual(slots(english), slots(source), source)
+  for (const [source, english] of Object.entries(englishMessages)) {
+    // A count-bearing entry is `{ one, other }`; both forms keep every slot.
+    for (const form of typeof english === 'string' ? [english] : [english.one, english.other]) assert.deepEqual(slots(form), slots(source), source)
+  }
 })
 
 const schema = {type:'string', key:'mode', title:'方式', description:'原说明', default:'off', required:true,

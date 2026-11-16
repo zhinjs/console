@@ -61,7 +61,7 @@ export const pluginsMessages = Object.freeze({
   "开": "On",
   "关": "Off",
   "会话覆盖": "Conversation overrides",
-  "{0} 个会话": "{0} conversations",
+  "{0} 个会话": { one: "{0} conversation", other: "{0} conversations" },
   "没有会话单独覆盖这个插件。": "No conversation overrides this plugin.",
   "账号层的开关在各账号的「功能」页签查看。": "Account-level switches are in each account's Features tab.",
   "这个包已经安装，但还没有声明为插件实例。填写配置后网关会写入声明并重启实例，失败会恢复原配置。": "This package is installed but not declared as a plugin instance yet. Once configured, the gateway writes the declaration and restarts the instance, restoring the old configuration on failure.",
@@ -124,7 +124,7 @@ export const pluginsMessages = Object.freeze({
   "全局已停用": "Disabled globally",
   "全局开启": "On globally",
   "{0}/{1} 个适配器开启": "on for {0}/{1} adapters",
-  "{0} 个会话有覆盖": "{0} conversations override it",
+  "{0} 个会话有覆盖": { one: "{0} conversation overrides it", other: "{0} conversations override it" },
   // Runtime capabilities
   "聊天里可以调用的命令：模式、参数、别名与权限规则。": "Commands available in chat: pattern, parameters, aliases and permission rules.",
   "消息进出时依次经过的处理环节与顺序。": "The steps messages pass through on the way in and out, in order.",
@@ -135,7 +135,7 @@ export const pluginsMessages = Object.freeze({
   "高级原始视图：当前运行代注册的命令、中间件、组件、工具、提示词与 MCP。哪个插件提供、对哪些范围开放，看下方摘要并链到插件和对象树。": "Advanced raw view: commands, middleware, components, tools, prompts and MCP registered in the current generation. Which plugin provides them and where they are open is summarised below, with links to the plugin and the object tree.",
   "共 {0} 条，已显示 {1} 条": "{0} in total, {1} shown",
   "能力由哪些插件提供": "Plugins providing these capabilities",
-  "这些能力由 {0} 个插件提供": "Provided by {0} plugins",
+  "这些能力由 {0} 个插件提供": { one: "Provided by {0} plugin", other: "Provided by {0} plugins" },
   "开关不在这里改：点插件看详情，点「功能」去对象树设置范围。": "Switches are not changed here: open a plugin for its details, or Features to set its scope in the object tree.",
   // Command permissions
   "命令目录读取失败": "The command catalog could not be read",
