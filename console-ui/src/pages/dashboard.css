@@ -282,13 +282,6 @@
 
   .console-meter > span.is-warning { background: hsl(var(--warning-fill)); }
 
-  /* 需要关注 */
-  .console-attention-strip {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-    gap: 0.75rem;
-  }
-
   /* 实时消息流 */
   .console-event-live-badge.is-offline {
     border-color: hsl(var(--warning) / 0.3);

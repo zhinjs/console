@@ -1,10 +1,13 @@
+import { useState } from 'react'
 import { AlertCircle, AlertTriangle, ArrowUpRight, BellOff, Info, RotateCcw, Clock } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button, cn } from '@zhin.js/console-ui'
 import { useI18n } from '../../i18n'
 import { formatAttentionSince, type AttentionItem, type AttentionSeverity } from './attention-model.mjs'
+import { AttentionMorePanel, AttentionMoreToggle, attentionMoreId } from './AttentionMore'
 
+/** Red and amber only for a real problem; 留意 (info) stays neutral, icon included (console#125). */
 const SEVERITY_ICONS: Record<AttentionSeverity, LucideIcon> = { danger: AlertCircle, warning: AlertTriangle, info: Info }
 
 export function AttentionSeverityIcon({ severity }: { severity: AttentionSeverity }) {
@@ -27,6 +30,9 @@ export function AttentionItemRow({ item, now, hidden, onSnooze, onIgnore, onRest
 }) {
   const i18n = useI18n()
   const since = formatAttentionSince(item.since, now, i18n.locale)
+  // The reason stays visible here (this is the page to read it); only the raw id waits behind 「详情」.
+  const [expanded, setExpanded] = useState(false)
+  const moreId = attentionMoreId('attention-row', item.id)
   return (
     <li className={cn('console-attention-row', `is-${item.severity}`, hidden && 'is-hidden')}>
       <AttentionSeverityIcon severity={item.severity} />
@@ -37,7 +43,9 @@ export function AttentionItemRow({ item, now, hidden, onSnooze, onIgnore, onRest
           {since && item.since ? <time dateTime={item.since} title={new Date(item.since).toLocaleString(i18n.locale)}>{i18n.t('{0}出现', [since])}</time> : null}
           {hidden === 'snoozed' ? <span>{i18n.t('已推迟 24 小时')}</span> : null}
           {hidden === 'ignored' ? <span>{i18n.t('已忽略，情况变化后会重新出现')}</span> : null}
+          <AttentionMoreToggle inline expanded={expanded} controls={moreId} onToggle={() => setExpanded(value => !value)} />
         </p>
+        <AttentionMorePanel id={moreId} item={item} detail={false} expanded={expanded} />
       </div>
       <div className="console-attention-row-actions">
         <Button asChild size="sm">

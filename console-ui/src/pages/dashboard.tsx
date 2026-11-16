@@ -59,7 +59,7 @@ import { hasConsolePermission } from '../utils/console-access.mjs'
 import { useToast } from '../components/toast'
 import './dashboard.css'
 import { ATTENTION_PATH, DASHBOARD_ATTENTION_LIMIT } from './attention/attention-model.mjs'
-import { AttentionSeverityIcon } from './attention/AttentionItemRow'
+import { AttentionSummaryList } from './attention/AttentionSummaryList'
 import { useAttention } from './attention/use-attention'
 import './attention/attention.css'
 
@@ -784,23 +784,7 @@ export default function HomePage() {
             </Button>
           </div>
           {attention.active.length > 0 ? (
-            <div className="console-attention-strip">
-              {attention.active.slice(0, DASHBOARD_ATTENTION_LIMIT).map((item) => (
-                <ListItemButton
-                  key={item.id}
-                  type="button"
-                  className={`console-attention-item is-${item.severity}`}
-                  onClick={() => navigate(item.action.path)}
-                >
-                  <AttentionSeverityIcon severity={item.severity} />
-                  <span className="min-w-0 flex-1 text-left">
-                    <span className="block text-sm font-semibold">{item.title}</span>
-                    {item.detail ? <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">{item.detail}</span> : null}
-                  </span>
-                  <ArrowUpRight />
-                </ListItemButton>
-              ))}
-            </div>
+            <AttentionSummaryList items={attention.active.slice(0, DASHBOARD_ATTENTION_LIMIT)} />
           ) : (
             <StatusState compact error={attention.state.error} onRetry={attention.refresh} />
           )}

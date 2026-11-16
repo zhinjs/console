@@ -1,14 +1,44 @@
 @layer components {
   .console-login { display: grid; place-items: center; min-height: 100dvh; padding: 32px 24px; background: radial-gradient(ellipse 60rem 30rem at 50% -10rem, hsl(var(--primary) / 0.08), transparent 70%), hsl(var(--background)); }
-  .console-login-layout { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,400px); gap: 64px; align-items: center; width: min(100%,900px); }
-  .console-login-intro { max-width: 42ch; }
-  .console-login-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 44px; font-size: 16px; font-weight: 600; }
+  .console-login-layout { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,400px); gap: 40px; align-items: center; width: min(100%,880px); }
+  .console-login-intro { min-width: 0; }
+  .console-login-intro > p { max-width: 42ch; }
+  .console-login-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; font-size: 16px; font-weight: 600; }
   /* The brand mark (components/BrandMark.tsx) keeps its own colors in every palette and theme. */
   .console-login-mark { display: block; width: 36px; height: 36px; flex-shrink: 0; }
   .console-login-intro h1 { margin: 0 0 16px; font-size: 32px; line-height: 1.25; letter-spacing: -.03em; font-weight: 600; }
   .console-login-intro p { margin: 0; color: hsl(var(--muted-foreground)); font-size: 14px; line-height: 1.8; }
   .console-login-notes { display: flex; align-items: center; gap: 8px; margin-top: 24px; color: hsl(var(--muted-foreground)); font-size: 12px; }
   .console-login-notes svg { width: 15px; height: 15px; flex: none; }
+
+  /*
+   * Product sketch (login-preview.tsx): the Console's own StatCard, chart colors and chat bubbles,
+   * scaled down. Static sample, aria-hidden and inert.
+   */
+  .console-login-preview { display: grid; gap: 12px; max-width: 400px; margin-top: 28px; padding: 14px; border-radius: var(--console-radius-xl);
+    background: hsl(var(--card)); box-shadow: var(--console-shadow-sm); pointer-events: none; user-select: none; }
+  .console-login-preview-stats { display: grid; grid-template-columns: 1fr 1fr; }
+  .console-login-preview-stats > .console-stat-card { gap: 2px; padding: 0 12px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+  .console-login-preview-stats > .console-stat-card:first-child { padding-left: 2px; }
+  .console-login-preview-stats > .console-stat-card + .console-stat-card { border-left: var(--console-hairline) solid var(--console-border-subtle); }
+  .console-login-preview .console-stat-label { font-size: 12px; }
+  .console-login-preview .console-stat-label svg { width: 13px; height: 13px; }
+  .console-login-preview .console-stat-value-row { min-height: 0; }
+  .console-login-preview .console-stat-value { font-size: 22px; font-variant-numeric: tabular-nums; }
+  .console-login-preview .console-stat-sub { font-size: 11px; }
+  .console-login-preview-swatch { display: block; width: 8px; height: 8px; border-radius: 999px; }
+  .console-login-preview-swatch.is-inbound { background: hsl(var(--console-chart-inbound)); }
+  .console-login-preview-swatch.is-outbound { background: hsl(var(--console-chart-outbound)); }
+  .console-login-preview-bars { display: flex; align-items: flex-end; gap: 5px; height: 56px; padding: 0 2px; border-bottom: var(--console-hairline) solid var(--console-border-subtle); }
+  .console-login-preview-bar { display: flex; flex: 1; flex-direction: column; justify-content: flex-start; overflow: hidden; border-radius: 3px 3px 0 0; background: hsl(var(--console-chart-inbound)); }
+  .console-login-preview-bar > .is-outbound { display: block; width: 100%; margin-top: auto; background: hsl(var(--console-chart-outbound)); box-shadow: 0 -1px 0 hsl(var(--card)); }
+  .console-login-preview-chat { display: grid; gap: 8px; font-size: 13px; }
+  .console-login-preview-chat .im-bubble { max-width: 80%; padding: 6px 10px; font-size: 13px; line-height: 1.5; }
+  .console-login-preview-message { display: flex; align-items: flex-start; gap: 8px; }
+  .console-login-preview-message.is-out { justify-content: flex-end; }
+  .console-login-preview-avatar { display: grid; place-items: center; width: 22px; height: 22px; flex: none; border-radius: 999px; background: var(--console-surface-inset); color: hsl(var(--muted-foreground)); }
+  .console-login-preview-avatar svg { width: 13px; height: 13px; }
+  .console-login-preview-avatar.is-bot { border-radius: 7px; background: none; }
   .console-login-panel { padding: 28px; border: var(--console-border-width) solid transparent; border-radius: var(--console-radius-2xl); background: hsl(var(--card));
     box-shadow: var(--console-shadow-sm);
   }
@@ -34,10 +64,38 @@
     .console-login { padding: 24px 16px; }
     .console-login-layout { grid-template-columns: minmax(0,1fr); gap: 28px; max-width: 460px; }
     .console-login-brand { margin-bottom: 24px; }
+    /* Phones: the form comes first; the sketch would only push it down. */
+    .console-login-preview { display: none; }
     .console-login-intro h1 { font-size: 26px; margin-bottom: 10px; }
     .console-login-notes { margin-top: 12px; }
     .console-login-panel { padding: 20px;
     box-shadow: var(--console-shadow-sm);
   }
   }
+}
+
+/*
+ * Solid brand button for 「登录 / 连接」. Unlayered on purpose: it has to beat the component
+ * library's `default` variant utilities (a light tint), which live in Tailwind's utilities layer.
+ * Light: #0A7551 with white text (5.7:1); dark: #7FFFD4 with the brand's near-black green (14:1).
+ * TODO(console#125): replace with <Button variant="primary"> once @zhin.js/console-ui publishes it (组件库 primary 发布后替换).
+ */
+.console-login-submit {
+  --console-login-primary: 159.8 84.3% 24.9%;
+  --console-login-primary-hover: 159.8 84.3% 20%;
+  --console-login-primary-foreground: 0 0% 100%;
+  border-color: hsl(var(--console-login-primary));
+  background-color: hsl(var(--console-login-primary));
+  color: hsl(var(--console-login-primary-foreground));
+  font-weight: 600;
+}
+.console-login-submit:hover:not(:disabled) {
+  border-color: hsl(var(--console-login-primary-hover));
+  background-color: hsl(var(--console-login-primary-hover));
+}
+.console-login-submit:focus-visible { outline: var(--console-focus-width) solid hsl(var(--console-login-primary)); outline-offset: 2px; }
+.dark .console-login-submit {
+  --console-login-primary: 159.8 100% 74.9%;
+  --console-login-primary-hover: 159.8 100% 82%;
+  --console-login-primary-foreground: var(--brand-foreground);
 }

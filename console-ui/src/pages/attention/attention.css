@@ -3,7 +3,8 @@
   .console-attention-icon { width: 1rem; height: 1rem; flex: none; }
   .console-attention-icon.is-danger { color: hsl(var(--destructive)); }
   .console-attention-icon.is-warning { color: hsl(var(--warning)); }
-  .console-attention-icon.is-info { color: hsl(var(--info)); }
+  /* 留意 (info) is not a problem: neutral, like any steady state. Only danger / warning take a signal color. */
+  .console-attention-icon.is-info { color: hsl(var(--muted-foreground)); }
 
   /* ---------- Page ---------- */
   .console-attention-toolbar {
@@ -136,9 +137,51 @@
   .console-attention-empty.is-instance-not-ready > svg { color: hsl(var(--muted-foreground)); }
   .console-attention-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 0.5rem; }
 
-  /* ---------- Dashboard section ---------- */
-  .console-attention-item.is-warning > svg:first-child { color: hsl(var(--warning)); }
-  .console-attention-item.is-info > svg:first-child { color: hsl(var(--info)); }
+  /* ---------- 「详情」: raw ids and long text, collapsed by default ---------- */
+  .console-attention-more-toggle { color: hsl(var(--muted-foreground)); }
+  .console-attention-more-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+    border-radius: var(--console-radius-sm);
+    color: hsl(var(--muted-foreground));
+    font: inherit;
+  }
+  .console-attention-more-link:hover { color: hsl(var(--foreground)); }
+  .console-attention-more-link:focus-visible { outline: var(--console-focus-width) solid hsl(var(--ring)); outline-offset: 1px; }
+  .console-attention-more-link > svg { width: 0.875rem; height: 0.875rem; }
+  .console-attention-more-chevron { transition: transform var(--console-motion-fast) var(--console-ease-out); }
+  .console-attention-more-chevron.is-open { transform: rotate(180deg); }
+  .console-attention-more[hidden] { display: none; }
+  .console-attention-more > :first-child { margin-top: 0.25rem; }
+
+  .console-attention-row-id {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.375rem;
+    margin-top: 0.25rem;
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-caption);
+  }
+
+  .console-attention-row-id > code { overflow-wrap: anywhere; }
+
+  /* ---------- Dashboard section: the same rows, flat inside the panel (no card in a card) ---------- */
+  .console-attention-list.is-summary {
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .console-attention-list.is-summary > .console-attention-row {
+    align-items: center;
+    padding: 0.625rem 0;
+  }
+
+  .console-attention-list.is-summary > .console-attention-row > .console-attention-icon { align-self: start; margin-top: 0.3rem; }
+  .console-attention-list.is-summary .console-attention-row-title { font-weight: 500; }
+  .console-attention-list.is-summary .console-attention-row-actions { flex-wrap: nowrap; align-self: start; }
 
   /* ---------- Top bar badge ---------- */
   .console-attention-badge {
@@ -182,6 +225,9 @@
     /* 去处理 takes the full row; 稍后提醒 / 忽略 (or 恢复) share the next one. */
     .console-attention-row-actions > :first-child { grid-column: 1 / -1; }
     .console-attention-row-actions > :last-child:nth-child(2) { grid-column: 1 / -1; }
+    /* Dashboard rows: 详情 and the action share one line under the sentence. */
+    .console-attention-list.is-summary .console-attention-row-actions > :first-child { grid-column: auto; }
+    .console-attention-list.is-summary .console-attention-row-actions > :last-child:nth-child(2) { grid-column: auto; }
     .console-attention-badge { width: 2.75rem; height: 2.75rem; }
   }
 }
