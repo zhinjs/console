@@ -13,7 +13,7 @@ import { KvBucketView } from './kv-bucket-view'
 import { SqlConsole } from './sql-console'
 import { SchemaEditor, CreateTableEditor } from './schema-editor'
 import { SplitHandle, useSplitWidth } from './resizable-split'
-import { databaseCapabilities, needsConsoleRole, sqlUnavailableReason } from './database-console-model.mjs'
+import { databaseCapabilities, databaseDescription, needsConsoleRole, sqlUnavailableReason } from './database-console-model.mjs'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
 import { useToast } from '../../components/toast'
 import { withoutDroppedTables, type DroppedTables } from './drop-table-model.mjs'
@@ -62,7 +62,7 @@ export default function DatabasePage() {
     <div className="space-y-4 sm:space-y-6">
       <PageHeader
         title={i18n.t("数据库")}
-        description={!info ? i18n.t("浏览和管理项目数据库中的数据；数据库由 Zhin 实例提供。") : readOnly ? i18n.t("浏览 {0} 中的数据（只读）。", [i18n.t(DB_TYPE_LABELS[dbType])]) : i18n.t("浏览和管理 {0} 中的数据；左栏选择对象，右侧查看与编辑。", [i18n.t(DB_TYPE_LABELS[dbType])])}
+        description={databaseDescription({ dialectLabel: info ? DIALECT_LABELS[info.dialect] || info.dialect : '', readOnly }, i18n.locale)}
         actions={
           <div className="flex items-center gap-2">
             {info && (

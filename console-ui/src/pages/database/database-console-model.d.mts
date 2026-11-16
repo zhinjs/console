@@ -62,3 +62,5 @@ export function cellText(value: unknown): string
 export const SCHEMA_COLUMN_TYPES: readonly ('text' | 'integer' | 'bigint' | 'float' | 'boolean' | 'date' | 'json')[]
 export function schemaWarningText(code: string, locale?: string): string
 export function parseDefaultInput(text: string, type: string): { none: true; value?: undefined; error?: undefined } | { value: unknown; none?: undefined; error?: undefined } | { error: true; none?: undefined; value?: undefined }
+/** Header line of the database page, naming the engine (「浏览和管理 SQLite 数据库中的数据…」). */
+export declare function databaseDescription(input?: { dialectLabel?: string; readOnly?: boolean }, locale?: string): string
