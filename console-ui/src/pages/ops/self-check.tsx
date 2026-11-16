@@ -12,7 +12,7 @@ import {
 import './self-check.css'
 
 const STATUS_ICONS = { pass: CheckCircle2, fail: XCircle, warn: AlertTriangle, skip: CircleSlash } as const
-const STATUS_BADGES = { pass: 'success', fail: 'destructive', warn: 'warning', skip: 'outline' } as const
+const STATUS_BADGES = { pass: 'outline', fail: 'destructive', warn: 'warning', skip: 'outline' } as const
 
 const NGINX_SNIPPET = `location /zhin/ {
   proxy_pass http://127.0.0.1:8086/;

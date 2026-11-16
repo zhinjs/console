@@ -63,7 +63,7 @@ export function Profiles({ management: m, onCreateAccount }: { management: Infer
                       label={profile.label ?? profile.model}
                       support={profileSupport(view, profile)}
                     />
-                    {chat ? <span className="inline-flex items-center rounded-full border border-[hsl(var(--success)/0.3)] bg-[hsl(var(--success)/0.1)] px-2 text-[length:var(--console-text-label)] font-medium leading-5 text-[hsl(var(--success))]">{i18n.t("当前聊天模型")}</span> : null}
+                    {chat ? <span className="inline-flex items-center rounded-full border border-[hsl(var(--primary-action-border))] bg-[hsl(var(--primary-action))] px-2 text-[length:var(--console-text-label)] font-medium leading-5 text-[hsl(var(--primary-action-foreground))]">{i18n.t("当前聊天模型")}</span> : null}
                   </p>
                   <p className="text-sm text-muted-foreground break-all">
                     {profile.model} · {account.label ?? account.id}
@@ -424,7 +424,7 @@ function ProfileList({ profiles, usagesOf, row }: {
     <div className="space-y-3">
       {used.length ? (
         <section aria-label={i18n.t("正在使用")} className="space-y-2">
-          <h4 className="text-sm font-medium">{i18n.t("正在使用")} <span className="text-muted-foreground tabular-nums">{used.length}</span></h4>
+          <h4 className="text-sm font-medium">{i18n.t("正在使用")} <span className="text-muted-foreground">{used.length}</span></h4>
           <div className="divide-y rounded-lg border">{used.map((entry) => row(entry.profile, entry.usages))}</div>
         </section>
       ) : (

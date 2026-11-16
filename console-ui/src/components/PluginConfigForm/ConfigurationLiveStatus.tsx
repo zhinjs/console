@@ -25,7 +25,7 @@ export function ConfigurationLiveStatus({ result, revision, onRefresh, onApply, 
       ? i18n.t('结果对应当前保存的配置文件。')
       : i18n.t('结果来自较早保存的配置文件，不代表当前文件。')}</p> : null}
     {counts.length ? <div className="flex flex-wrap gap-2">{counts.map(status => <Badge key={status}
-      variant={!current ? 'outline' : status === 'applied' ? 'success' : status === 'failed' ? 'destructive' : 'warning'}>
+      variant={!current ? 'outline' : status === 'applied' ? 'outline' : status === 'failed' ? 'destructive' : 'warning'}>
       {current ? configurationGroupLabel(status, i18n.locale) : i18n.t('旧版本：{0}', [configurationGroupLabel(status, i18n.locale)])} · {state.groups.filter(group => group.status === status).length}
     </Badge>)}</div> : null}
     {state.groups.length ? <ul className="divide-y text-sm">{state.groups.map(group => <li key={group.id} className="py-2 first:pt-0 last:pb-0 space-y-1">

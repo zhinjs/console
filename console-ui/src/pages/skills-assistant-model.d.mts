@@ -11,7 +11,7 @@ export interface SkillsStatus {
 export interface SkillsStatusView {
   totalCalls: number
   failedCalls: number
-  tasks: Array<{ task: string; label: string; mode: string; modeVariant: 'success' | 'info' | 'secondary'; calls: number; helped: number; noSuggestion: number; failed: number; averageTime: string }>
+  tasks: Array<{ task: string; label: string; mode: string; modeVariant: 'outline' | 'secondary'; calls: number; helped: number; noSuggestion: number; failed: number; averageTime: string }>
   recent: Array<{ at: number; label: string; outcome: TaskOutcome; text: string; duration: string }>
   hasActivity: boolean
   updatedAt: number | null

@@ -143,10 +143,10 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
     <section className="console-log-workbench" aria-label={i18n.t("日志诊断工作台")}>
       {state.stats && state.stats.total > 0 ? (
         <div className="console-severity-strip" aria-hidden="true">
-          <span style={{ width: `${(levelCount('info') / state.stats.total) * 100}%`, background: 'hsl(var(--primary) / 0.72)' }} />
-          <span style={{ width: `${(levelCount('warn') / state.stats.total) * 100}%`, background: 'hsl(var(--status-warning, var(--warning)) / 0.85)' }} />
-          <span style={{ width: `${(levelCount('error') / state.stats.total) * 100}%`, background: 'hsl(var(--destructive) / 0.88)' }} />
-          <span style={{ width: `${(levelCount('debug') / state.stats.total) * 100}%`, background: 'hsl(var(--muted-foreground) / 0.3)' }} />
+          <span style={{ width: `${(levelCount('info') / state.stats.total) * 100}%`, background: 'hsl(var(--muted-foreground) / 0.45)' }} />
+          <span style={{ width: `${(levelCount('warn') / state.stats.total) * 100}%`, background: 'hsl(var(--warning-fill))' }} />
+          <span style={{ width: `${(levelCount('error') / state.stats.total) * 100}%`, background: 'hsl(var(--destructive-fill))' }} />
+          <span style={{ width: `${(levelCount('debug') / state.stats.total) * 100}%`, background: 'hsl(var(--muted-foreground) / 0.2)' }} />
         </div>
       ) : null}
 

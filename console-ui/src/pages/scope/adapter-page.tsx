@@ -35,7 +35,7 @@ export function AdapterObjectPage({ scope }: { scope: Scope & { level: 'adapter'
       description={i18n.t('该适配器下的账号、连接与功能覆盖。')}
       icon={Cable}
       platform={platform !== scope.adapter ? i18n.t(platform) : undefined}
-      status={data.loaded ? <Badge variant={accounts.length && online === accounts.length ? 'success' : online ? 'warning' : 'outline'}>{i18n.t('{0} / {1} 在线', [online, accounts.length])}</Badge> : null}
+      status={data.loaded ? <Badge variant={online < accounts.length ? 'warning' : 'outline'}>{i18n.t('{0} / {1} 在线', [online, accounts.length])}</Badge> : null}
       actions={<Button variant="outline" size="sm" onClick={refresh} disabled={data.loading}><RefreshCw className={data.loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>}
       panels={{
         // One account state for the table rows (status, switch, 编辑 / 删除) and 「管理连接」 (add form,

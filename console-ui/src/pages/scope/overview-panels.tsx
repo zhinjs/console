@@ -27,7 +27,7 @@ function AccountStatusBadge({ endpoint, tasks }: { endpoint: ScopeEndpoint; task
   const i18n = useI18n()
   const status = accountStatus(endpoint, tasks)
   if (status === 'waiting') return <WaitingLoginBadge endpoint={endpoint} />
-  return <Badge variant={status === 'online' ? 'success' : 'outline'} size="sm" className="whitespace-nowrap">{status === 'online' ? i18n.t('在线') : i18n.t('离线')}</Badge>
+  return <Badge variant={status === 'online' ? 'outline' : 'warning'} size="sm" className="whitespace-nowrap">{status === 'online' ? i18n.t('在线') : i18n.t('离线')}</Badge>
 }
 
 /** Opens the adapter's 「管理连接」 disclosure under the account list and moves to it. */
@@ -259,7 +259,7 @@ export function GlobalOverview() {
                     </TableCell>
                     <TableCell>
                       <span className="inline-flex flex-wrap items-center gap-1.5">
-                        <Badge variant={item.accounts && item.online === item.accounts ? 'success' : item.online ? 'warning' : 'outline'} size="sm" className="whitespace-nowrap">{i18n.t('{0} / {1} 在线', [item.online, item.accounts])}</Badge>
+                        <Badge variant={item.online < item.accounts ? 'warning' : 'outline'} size="sm" className="whitespace-nowrap">{i18n.t('{0} / {1} 在线', [item.online, item.accounts])}</Badge>
                         {item.waitingLogin ? <WaitingLoginBadge /> : null}
                         {item.configuredOnly.length ? <span className="text-xs text-muted-foreground max-md:hidden">{i18n.t('另有 {0} 个未运行', [item.configuredOnly.length])}</span> : null}
                       </span>

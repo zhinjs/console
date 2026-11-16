@@ -74,7 +74,7 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
             const count = filterTaskOverview(rows, option.id).length
             return (
               <Button key={option.id} size="sm" variant={filter === option.id ? 'secondary' : 'ghost'} aria-pressed={filter === option.id} onClick={() => setFilter(option.id)}>
-                {i18n.t(option.label)} <span className="tabular-nums text-muted-foreground">{count}</span>
+                {i18n.t(option.label)} <span className="text-muted-foreground">{count}</span>
               </Button>
             )
           })}
@@ -110,7 +110,7 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
       {shownInternal.length ? (
         <details className="console-task-overview-internal">
           <summary>
-            {i18n.t("插件内部任务")} <span className="tabular-nums text-muted-foreground">{shownInternal.length}</span>
+            {i18n.t("插件内部任务")} <span className="text-muted-foreground">{shownInternal.length}</span>
             <span className="console-task-overview-sub">{i18n.t("插件自己的轮询、清理与刷盘，通常每隔几秒到几分钟运行一次；不需要你处理，出错时会列在上面。")}</span>
           </summary>
           <OverviewTable rows={shownInternal} time={time} />

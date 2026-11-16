@@ -81,6 +81,22 @@
     --console-ease-out: cubic-bezier(0.25, 1, 0.5, 1);
     --console-duration-page: 200ms;
     --console-duration-fast: 150ms;
+
+    /*
+     * Charts (console#125): data always takes --chart-* (palette-independent categories), never the accent or a
+     * status color. Gridlines are hairlines. Message volume: received = chart-1 (blue), sent = chart-3 (green) —
+     * chart-2 is amber and reads as the warning color (ΔE2000 < 20), so no Console chart uses it for a two-series view.
+     */
+    --console-chart-grid: hsl(var(--foreground) / 0.08);
+    --console-chart-baseline: hsl(var(--foreground) / 0.18);
+    --console-hairline: 1px;
+    --console-chart-inbound: var(--chart-1);
+    --console-chart-outbound: var(--chart-3);
+    --console-chart-quantity: var(--chart-1);
+  }
+
+  @media (min-resolution: 2dppx) {
+    :root { --console-hairline: 0.5px; }
   }
 
   .dark {
@@ -558,11 +574,12 @@
     align-items: center;
     gap: 0.5rem;
     margin-bottom: 0.75rem;
-    border: var(--console-border-width) solid hsl(var(--success) / 0.25);
+    /* Steady state (all services running) is neutral; only .is-warning carries a signal color. console#125. */
+    border: var(--console-border-width) solid var(--console-border-default);
     border-radius: 999px;
-    background: hsl(var(--success) / 0.08);
+    background: hsl(var(--card));
     padding: 0.25rem 0.75rem 0.25rem 0.625rem;
-    color: hsl(var(--success));
+    color: hsl(var(--foreground) / 0.82);
     font-size: var(--console-text-label);
     font-weight: 600;
   }
@@ -594,8 +611,7 @@
     height: 0.5rem;
     flex: none;
     border-radius: 50%;
-    background: hsl(var(--success-fill));
-    box-shadow: 0 0 0 0.2rem hsl(var(--success-fill) / 0.18);
+    background: hsl(var(--muted-foreground) / 0.55);
   }
 
   .console-status-dot.is-warning {
@@ -665,7 +681,6 @@
     letter-spacing: -0.03em;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-variant-numeric: tabular-nums;
   }
 
   .console-dashboard-metric small {
@@ -688,7 +703,7 @@
     display: block;
     height: 100%;
     border-radius: 999px;
-    background: hsl(var(--primary));
+    background: hsl(var(--console-chart-quantity));
     transition: width 240ms ease;
   }
 
@@ -911,9 +926,9 @@
     height: 1.65rem;
     padding: 0 0.6rem;
     border-radius: 999px;
-    border: 1px solid hsl(var(--success) / 0.25);
-    background: hsl(var(--success) / 0.08);
-    color: hsl(var(--success));
+    border: 1px solid var(--console-border-default);
+    background: transparent;
+    color: hsl(var(--muted-foreground));
     font-size: var(--console-text-caption);
     font-weight: 600;
   }
@@ -956,7 +971,6 @@
     font-family: var(--console-font-mono);
     font-size: var(--console-text-caption);
     color: hsl(var(--muted-foreground));
-    font-variant-numeric: tabular-nums;
   }
 
   .console-event-feed-level {
@@ -1040,7 +1054,6 @@
     font-family: var(--console-font-mono);
     font-size: 1.2rem;
     letter-spacing: -0.04em;
-    font-variant-numeric: tabular-nums;
   }
 
   .console-capability-icon {
@@ -1289,7 +1302,6 @@
 
   .console-agent-metrics strong {
     font-size: 1.15rem;
-    font-variant-numeric: tabular-nums;
   }
 
   .console-agent-metrics small {
@@ -1617,7 +1629,6 @@
   .console-log-sources > button strong {
     font-family: var(--font-mono, monospace);
     font-size: var(--console-text-label);
-    font-variant-numeric: tabular-nums;
   }
 
   .console-log-stream {
@@ -2056,6 +2067,11 @@
 
   .console-runtime-card-icon svg,
   .console-runtime-node svg,
+  .console-runtime-health.is-offline {
+    background: hsl(var(--warning-fill) / 0.14);
+    color: hsl(var(--warning));
+  }
+
   .console-runtime-health svg {
     width: 0.9rem;
     height: 0.9rem;
@@ -2221,7 +2237,6 @@
     width: fit-content;
   }
 
-  .console-runtime-health.is-online,
   .console-runtime-node.is-agent {
     background: hsl(var(--primary) / 0.12);
     color: hsl(var(--primary));
@@ -2585,7 +2600,7 @@
   .console-page-title { margin: 0; font-size: var(--console-text-title); font-weight: 600; line-height: var(--console-leading-title); letter-spacing: -0.02em; color: hsl(var(--foreground)); text-wrap: balance; }
   .console-page-description { max-width: 70ch; margin-top: 0.25rem; font-size: var(--console-text-body-sm); line-height: var(--console-leading-body); color: hsl(var(--muted-foreground)); text-wrap: pretty; }
   .console-page-header-actions { display: flex; flex-wrap: wrap; flex-shrink: 0; align-items: center; gap: 0.5rem; }
-  .console-control { border-radius: var(--console-control-radius); font-variant-numeric: tabular-nums; line-height: var(--console-leading-label); }
+  .console-control { border-radius: var(--console-control-radius); line-height: var(--console-leading-label); }
   .console-control:focus-visible { outline: var(--console-focus-width) solid hsl(var(--ring)); outline-offset: 2px; }
   .console-control[aria-invalid="true"] { border-color: hsl(var(--destructive)); }
   .console-control[aria-invalid="true"]:focus-visible { outline-color: hsl(var(--destructive)); }
@@ -2702,13 +2717,9 @@
     background: hsl(var(--muted-foreground) / 0.5);
   }
 
-  .console-endpoint-avatar.is-online {
-    background: hsl(var(--success) / 0.1);
-    color: hsl(var(--success));
-  }
-
-  .console-endpoint-avatar.is-online::after {
-    background: hsl(var(--success-fill));
+  /* Online is the steady state: the avatar stays neutral and only an offline account gets the warning dot. */
+  .console-endpoint-avatar:not(.is-online)::after {
+    background: hsl(var(--warning-fill));
   }
 
   .console-endpoint-facts {
@@ -2746,7 +2757,7 @@
   }
 
   .console-endpoint-facts dd.is-good {
-    color: hsl(var(--success));
+    color: hsl(var(--foreground));
   }
 
   .console-endpoint-footer {
@@ -2797,7 +2808,6 @@
   .console-table {
     width: 100%;
     border-collapse: collapse;
-    font-variant-numeric: tabular-nums;
     line-height: var(--console-leading-body);
     font-size: var(--console-text-body);
   }
@@ -3073,6 +3083,12 @@
     transform: rotate(-90deg);
   }
 
+  /* The ring shows a quantity (online share): a chart color, never the accent; the warning fill only when an account is
+     offline. CSS outranks the component's stroke attribute. console#125. */
+  .console-ring-gauge circle[stroke="hsl(var(--primary))"] { stroke: hsl(var(--console-chart-quantity)); }
+  .console-ring-gauge circle[stroke="hsl(var(--warning))"] { stroke: hsl(var(--warning-fill)); }
+  .console-ring-gauge circle[stroke="hsl(var(--success))"] { stroke: hsl(var(--console-chart-quantity)); }
+
   .console-ring-gauge-label {
     position: absolute;
     inset: 0;
@@ -3080,7 +3096,6 @@
     place-items: center;
     font-size: 0.66rem;
     font-weight: 700;
-    font-variant-numeric: tabular-nums;
     color: hsl(var(--foreground));
   }
 
@@ -3111,7 +3126,6 @@
     border: 1px solid var(--console-border-subtle);
     background: var(--console-surface-inset);
     font-size: var(--console-text-label);
-    font-variant-numeric: tabular-nums;
   }
 
   .console-model-bar-card {
@@ -3228,7 +3242,6 @@
     letter-spacing: -0.03em;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-variant-numeric: tabular-nums;
   }
 
   .console-stat-value small {

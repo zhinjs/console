@@ -82,7 +82,7 @@ export function ExecutionRecordContent({ record, scope }: { record: ExecutionRec
   const [traceAttempt, setTraceAttempt] = useState('')
   const time = (value: number) => new Date(value).toLocaleString(i18n.locale)
   return <>
-    <div className="schedule-execution-facts"><Badge variant={record.status === 'failed' ? 'destructive' : record.status === 'succeeded' ? 'success' : 'secondary'}>{executionStatus(record.status, i18n.locale)}</Badge><span>{time(record.queuedAt)}</span><span>{i18n.t('{0} 次尝试', [record.attemptCount])}</span></div>
+    <div className="schedule-execution-facts"><Badge variant={record.status === 'failed' ? 'destructive' : record.status === 'succeeded' ? 'outline' : 'secondary'}>{executionStatus(record.status, i18n.locale)}</Badge><span>{time(record.queuedAt)}</span><span>{i18n.t('{0} 次尝试', [record.attemptCount])}</span></div>
     {record.recordingIssue ? <Alert><AlertDescription>{i18n.t('部分执行记录未能持久保存，以下记录可能不完整。')}</AlertDescription></Alert> : null}
     {record.status === 'interrupted' ? <Alert><AlertDescription>{i18n.t('进程中断前未记录最终结果，不能据此判断操作是否完成。')}</AlertDescription></Alert> : null}
     <details className="text-sm"><summary className="cursor-pointer text-muted-foreground">{i18n.t('运行信息')}</summary><dl className="console-cron-metadata mt-3">

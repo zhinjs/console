@@ -24,8 +24,9 @@ import './login-flow.css'
 const KIND_ICONS: Record<LoginChallengeKind, LucideIcon> = {
   qrcode: QrCode, link_verify: Link2, slider: ShieldCheck, sms: MessageSquareText, device: Smartphone, auth: KeyRound, confirm: CheckCircle2, other: ShieldCheck,
 }
-const BADGE_VARIANT: Record<Tone, 'warning' | 'success' | 'destructive' | 'secondary' | 'info'> = {
-  warning: 'warning', success: 'success', destructive: 'destructive', muted: 'secondary', info: 'info',
+// A finished or passing step is the steady state (neutral outline); waiting and verifying are not alerts. console#125.
+const BADGE_VARIANT: Record<Tone, 'warning' | 'outline' | 'destructive' | 'secondary'> = {
+  warning: 'warning', success: 'outline', destructive: 'destructive', muted: 'secondary', info: 'secondary',
 }
 
 /** What `login.submit` sends; rides on the receipt plan so a remounted tab still knows what it checks. */

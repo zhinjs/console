@@ -478,7 +478,7 @@ export default function AgentSessionsPage() {
                                         msg {point.messageId}
                                       </span>
                                       {isActive && (
-                                        <Badge variant="success" className="ml-auto">
+                                        <Badge variant="default" className="ml-auto">
                                           {i18n.t('当前活跃')}
                                         </Badge>
                                       )}
