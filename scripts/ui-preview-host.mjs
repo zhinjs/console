@@ -21,6 +21,14 @@ const logs = [
 ]
 // Routine lines so the log list fills a panel in screenshots.
 for (let index = 0; index < 14; index++) logs.push({ id: -index - 1, timestamp: Date.now() - 70_000 - index * 15_000, level: index % 5 === 0 ? 'warn' : 'info', name: index % 2 ? 'icqq' : 'preview', plugin: 'preview', message: index % 2 ? `preview-community 心跳正常（第 ${index + 1} 次），延迟 ${20 + index} ms` : `定时任务 preview-digest 第 ${index + 1} 次检查完成，没有需要发送的摘要；下一次检查在 15 秒后` })
+// MCP rows in every status of #1250 batch 28 (idle = waiting to connect, a neutral state).
+const previewMcpRows = [
+  { name: 'filesystem', connected: false, toolCount: 0, transport: 'stdio', status: 'idle' },
+  { name: 'web-search', connected: false, toolCount: 0, transport: 'streamable-http', status: 'failed', lastError: { category: 'auth', message: 'HTTP 401', at: Date.now() - 25 * 60_000 } },
+  { name: 'calendar', connected: true, toolCount: 6, transport: 'sse', status: 'connected' },
+  { name: 'notes', connected: false, toolCount: 0, transport: 'stdio', status: 'not_loaded' },
+]
+const previewMcpCooldown = new Map()
 const engagement = {
   summary: { engagementId: 'preview-engagement-1', venue: 'preview-room', status: 'completed', startedAt: Date.now() - 300_000, endedAt: Date.now() - 296_000,
     eventCount: 5, hops: 2, turns: 3, tokensUsed: 1840, wallClockMs: 4200, participants: ['agent:planner', 'agent:reviewer'], stopReason: 'done' },
@@ -268,7 +276,7 @@ const attentionItems = en => [
     detail: en ? 'http.token, telegram.endpoints[0].token. Run zhin doctor --fix to move them to .env as ${…} references.' : 'http.token、telegram.endpoints[0].token。运行 zhin doctor --fix 把它们移到 .env 并改为 ${…} 引用。',
     action: { label: en ? 'Open configuration' : '打开配置文件', path: '/ops/config' } },
   { id: 'mcp.disconnected:51e2a7d9', revision: 'e1', kind: 'mcp.disconnected', severity: 'warning', source: 'mcp', since: attentionAt(25), subject: { mcpServer: 'web-search' },
-    title: en ? 'MCP server web-search is not connected' : 'MCP 服务 web-search 未连接', detail: en ? 'The Agent cannot use its tools for now.' : 'Agent 暂时无法调用它提供的工具。',
+    title: en ? 'MCP server web-search failed to connect' : 'MCP 服务 web-search 连接失败', detail: en ? 'Authentication failed: HTTP 401. The Agent cannot use its tools for now.' : '认证失败：HTTP 401。Agent 暂时无法调用它提供的工具。',
     action: { label: en ? 'Open MCP' : '查看 MCP', path: '/introspection?tab=mcp' } },
   { id: 'logs.errors:811c9dc5', revision: 'f1', kind: 'logs.errors', severity: 'info', source: 'logs', since: attentionAt(95),
     title: en ? 'Errors in the logs: 7' : '日志里有 7 条错误', detail: en ? 'Persistent log count; it restarts after logs are cleaned up.' : '持久日志统计；清理日志后重新计数。',
@@ -396,6 +404,7 @@ const server = createServer(async (request, response) => {
     response.setHeader('vary', 'Origin')
     response.setHeader('access-control-allow-headers', 'authorization, content-type')
     response.setHeader('access-control-allow-methods', 'GET, POST, OPTIONS')
+    response.setHeader('access-control-expose-headers', 'Retry-After')
   }
   if (request.method === 'OPTIONS') { response.writeHead(204); response.end(); return }
   const url = new URL(request.url ?? '/', `http://127.0.0.1:${port}`)
@@ -493,13 +502,29 @@ const server = createServer(async (request, response) => {
       summary: { outcome: command.permits.length ? 'unknown' : 'match', reason: command.permits.length ? '缺少角色依据' : '没有声明 permit 限制' }, unconstrained: [], assumptions: ['本地预览数据'] }))
     return
   }
+  // #1250 batch 28: one throw-away connection test per configured server (`agent.configure`).
+  if (url.pathname === '/api/introspection/mcp/test' && request.method === 'POST') {
+    let raw = ''
+    for await (const chunk of request) raw += chunk
+    const name = String(JSON.parse(raw || '{}').name ?? '')
+    const row = previewMcpRows.find(item => item.name === name)
+    if (!row) { json({ success: false, error: `未在 ai.mcpServers 中找到 MCP 服务 ${name}` }, 404); return }
+    const cooldown = (previewMcpCooldown.get(name) ?? 0) - Date.now()
+    if (cooldown > 0) { response.setHeader('retry-after', String(Math.ceil(cooldown / 1000))); json({ success: false, error: `MCP 服务 ${name} 刚测试过，请稍后再试` }, 429); return }
+    previewMcpCooldown.set(name, Date.now() + 5_000)
+    json(envelope(row.status === 'failed'
+      ? { ok: false, name, failure: { ...row.lastError, at: Date.now() }, durationMs: 214 }
+      : { ok: true, name, toolCount: row.status === 'connected' ? row.toolCount : 3, durationMs: 86 }))
+    return
+  }
   if (url.pathname.startsWith('/api/introspection/')) {
     const kind = url.pathname.split('/').pop()
     const rows = kind === 'commands' ? [
       { pattern: 'welcome [text]', desc: '查看或修改欢迎语', plugin: 'welcome', permissions: ['group(admin)'] },
       { pattern: 'welcome-test', desc: '发送一条测试欢迎语', plugin: 'welcome' },
       { pattern: 'rss add <url>', desc: '添加订阅', plugin: 'rss' },
-    ] : kind === 'middlewares' ? [{ name: 'repeater', phase: 'receive', order: 10, owner: 'root/repeater' }, { name: 'welcome-join', phase: 'notice', order: 20, owner: 'root/welcome' }] : []
+    ] : kind === 'middlewares' ? [{ name: 'repeater', phase: 'receive', order: 10, owner: 'root/repeater' }, { name: 'welcome-join', phase: 'notice', order: 20, owner: 'root/welcome' }]
+      : kind === 'mcp' ? previewMcpRows : []
     json(envelope({ items: rows, total: rows.length, page: 1, pageSize: 25, totalPages: 1 })); return
   }
   if (url.pathname === '/api/agent/sessions') { json(envelope({ sessions: [], total: 0, items: [] })); return }

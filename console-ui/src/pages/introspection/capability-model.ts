@@ -1,4 +1,5 @@
 import type { SupportedIntrospectionKind } from '../../contracts/zhin-console'
+import type { ConsoleMcpFailure, ConsoleMcpServerStatus } from '../../contracts/mcp'
 
 export type IntrospectionTab = SupportedIntrospectionKind
 
@@ -67,10 +68,14 @@ export interface PromptSectionRow extends RuntimeCapabilityRow {
   readonly contentChars?: number
 }
 
+/** `ConsoleMcpServerRow`（`contracts/mcp.ts`）；`status` / `lastError` 在旧实例上缺失，`error` 只有更旧的实例才有。 */
 export interface McpRow extends RuntimeCapabilityRow {
   readonly name?: string
   readonly connected?: boolean
   readonly toolCount?: number
+  readonly transport?: string
+  readonly status?: ConsoleMcpServerStatus
+  readonly lastError?: ConsoleMcpFailure
   readonly error?: string
 }
 
