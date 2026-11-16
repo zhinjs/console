@@ -277,7 +277,7 @@
     height: 100%;
     border-radius: inherit;
     background: hsl(var(--console-chart-quantity));
-    transition: width 240ms ease;
+    transition: width var(--console-motion-base) var(--console-ease-out);
   }
 
   .console-meter > span.is-warning { background: hsl(var(--warning-fill)); }

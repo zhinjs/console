@@ -99,6 +99,17 @@ export function pluginType(row) {
   return 'feature'
 }
 
+/**
+ * Icon kind of one row (console#125): adapter / AI / function plugin when the row says so, null when
+ * it cannot tell (a package row with no catalog type and no adapter / AI name) - then no icon is drawn.
+ * Unlike pluginType there is no 功能插件 fallback for unknown package rows.
+ */
+export function pluginIconType(row) {
+  const type = pluginType(row)
+  if (type !== 'feature') return type
+  return row.kind === 'plugin' ? 'feature' : null
+}
+
 /** Where the code comes from: 官方 (`@zhin.js/…`), npm (another package) or 本地 (no package: project plugin). */
 export function pluginSource(row) {
   if (!row.packageName) return 'local'

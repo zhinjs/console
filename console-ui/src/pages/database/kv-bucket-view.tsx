@@ -128,7 +128,7 @@ export function KvBucketView({
             {loading && !entries.length ? (
               <TableRow><TableCell colSpan={readOnly ? 2 : 3} className="py-8 text-center"><Loader2 className="w-4 h-4 animate-spin inline-block" /></TableCell></TableRow>
             ) : !entries.length ? (
-              <TableRow><TableCell colSpan={readOnly ? 2 : 3} className="py-8 text-center text-muted-foreground">{i18n.t("暂无数据")}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={readOnly ? 2 : 3} className="py-8 text-center text-muted-foreground">{i18n.t("这个存储桶还没有键值。")}</TableCell></TableRow>
             ) : entries.map((entry) => (
               <TableRow key={entry.key}>
                 <TableCell className="align-top">

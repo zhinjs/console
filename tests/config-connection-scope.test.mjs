@@ -20,6 +20,7 @@ import * as configEvidenceModel from '../console-ui/src/components/PluginConfigF
 import * as configLiveStatus from '../console-ui/src/components/PluginConfigForm/config-live-status.mjs'
 import * as unsavedChangesGuard from '../console-ui/src/utils/unsaved-changes-guard.mjs'
 import * as applyOutcomeModel from '../console-ui/src/components/apply-outcome-model.mjs'
+import { saveButtonMock } from './helpers/save-button-mock.mjs'
 
 const require = createRequire(import.meta.url)
 const files = await Promise.all(['hooks/useConfigSource.ts', 'components/PluginConfigForm/usePluginConfigDraft.ts', 'components/PluginConfigForm/index.tsx', 'pages/config.tsx', 'components/PluginConfigForm/SchemaFieldEditor.tsx']
@@ -99,7 +100,7 @@ function fixture(query = '') {
       url.query = value.toString(); url.writes.push({ query: url.query, replace: options?.replace === true }); runtime.invalidate()
     }] },
     'lucide-react': new Proxy({}, { get: () => 'i' }),
-    './AgentPresetsEditor': { AgentPresetsEditor: 'agent-presets-editor' },
+    './AgentPresetsEditor': { AgentPresetsEditor: 'agent-presets-editor' }, '../SaveButton': saveButtonMock,
     './inference/models-entry.mjs': modelsEntry,
     './SchemaFieldEditor': { SchemaFieldEditor: 'field-editor' }, '../StatusState': { StatusState: 'status-state' }, '../components/StatusState': { StatusState: 'status-state' }, '../components/toast': { useToast: () => ({ success: message => successes.push(message), error: message => errors.push(message) }) },
     '../utils/read-error.mjs': { readErrorSummary: value => value }, '../utils/console-access.mjs': { hasConsolePermission: () => true },

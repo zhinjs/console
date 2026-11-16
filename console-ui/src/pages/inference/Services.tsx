@@ -39,7 +39,7 @@ export function Services({ management: m }: { management: InferenceManagement })
       {!Object.keys(view.services).length ? (
         <Card className="p-8 text-center text-muted-foreground">{i18n.t("添加一个模型服务。")}</Card>
       ) : (
-        <div className="divide-y rounded-lg border">
+        <div className="console-card divide-y overflow-hidden">
           {Object.values(view.services).map((service) => (
             <div key={service.id} className="flex items-center justify-between gap-4 p-4">
               <div className="min-w-0">

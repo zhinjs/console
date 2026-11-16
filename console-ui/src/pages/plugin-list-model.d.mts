@@ -36,6 +36,7 @@ export type PluginType = 'adapter' | 'ai' | 'feature'
 export type PluginSource = 'official' | 'npm' | 'local'
 export type InventorySortKey = 'name' | 'type' | 'source' | 'version' | 'status'
 export type InventoryGroupBy = 'none' | 'type' | 'source'
+export function pluginIconType(row: InventoryRow): PluginType | null
 export function pluginType(row: InventoryRow): PluginType
 export function pluginSource(row: InventoryRow): PluginSource
 export function sortInventory(rows: readonly InventoryRow[], key?: InventorySortKey, direction?: 'asc' | 'desc'): InventoryRow[]

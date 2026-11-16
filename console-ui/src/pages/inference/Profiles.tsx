@@ -414,31 +414,32 @@ function ProfileList({ profiles, usagesOf, row }: {
 }) {
   const i18n = useI18n()
   const entries = profiles.map((profile) => ({ profile, usages: usagesOf(profile) }))
+  // One white panel; inside it only hairlines (console#125: page → panel, no cards inside cards).
   if (entries.some((entry) => entry.usages === null)) {
-    return <div className="divide-y rounded-lg border">{entries.map((entry) => row(entry.profile, entry.usages))}</div>
+    return <Card className="console-profile-list divide-y overflow-hidden">{entries.map((entry) => row(entry.profile, entry.usages))}</Card>
   }
   const rank = (usages: ProfileUsage[] | null) => usages?.some((usage) => usage.key === 'default:chat') ? 0 : usages?.some((usage) => usage.level === 'default') ? 1 : 2
   const used = entries.filter((entry) => entry.usages!.length).sort((a, b) => rank(a.usages) - rank(b.usages))
   const unused = entries.filter((entry) => !entry.usages!.length)
   return (
-    <div className="space-y-3">
+    <Card className="console-profile-list overflow-hidden">
       {used.length ? (
-        <section aria-label={i18n.t("正在使用")} className="space-y-2">
-          <h4 className="text-sm font-medium">{i18n.t("正在使用")} <span className="text-muted-foreground">{used.length}</span></h4>
-          <div className="divide-y rounded-lg border">{used.map((entry) => row(entry.profile, entry.usages))}</div>
+        <section aria-label={i18n.t("正在使用")}>
+          <h4 className="px-4 pb-2 pt-3 text-sm font-medium">{i18n.t("正在使用")} <span className="text-muted-foreground">{used.length}</span></h4>
+          <div className="divide-y border-t">{used.map((entry) => row(entry.profile, entry.usages))}</div>
         </section>
       ) : (
-        <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">{i18n.t("还没有用途引用任何模型；在「用途」页签选择聊天等用途使用的模型。")}</p>
+        <p className="p-4 text-sm text-muted-foreground">{i18n.t("还没有用途引用任何模型；在「用途」页签选择聊天等用途使用的模型。")}</p>
       )}
       {unused.length ? (
-        <details className="console-profile-unused rounded-lg border" open={!used.length}>
-          <summary className="cursor-pointer p-3 text-sm text-muted-foreground">
+        <details className="console-profile-unused border-t" open={!used.length}>
+          <summary className="cursor-pointer px-4 py-3 text-sm text-muted-foreground">
             {i18n.t("未被用途引用的模型（{0}）", [unused.length])}
           </summary>
           <div className="divide-y border-t">{unused.map((entry) => row(entry.profile, entry.usages))}</div>
         </details>
       ) : null}
-    </div>
+    </Card>
   )
 }
 

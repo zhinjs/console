@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
 import * as model from '../console-ui/src/pages/inference/model.mjs'
+import { saveButtonMock } from './helpers/save-button-mock.mjs'
 
 const source = await readFile(
   new URL('../console-ui/src/pages/inference/useInferenceManagement.ts', import.meta.url),
@@ -216,6 +217,7 @@ async function component(runtime, path, mocks) {
     },
     './SupportInfo': { SupportLabel: 'support-label', SupportNotice: 'support-notice', supportLabel: label => label },
     './inference/SupportInfo': { SupportLabel: 'support-label', SupportNotice: 'support-notice', supportLabel: label => label },
+    '../../components/SaveButton': saveButtonMock,
     ...mocks,
   }
   new Function('require', 'module', 'exports', code)(

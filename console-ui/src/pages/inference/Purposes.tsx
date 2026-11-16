@@ -26,6 +26,7 @@ import {
   type DecisionPolicy,
 } from './model.mjs'
 import type { InferenceManagement } from './useInferenceManagement'
+import { SaveButton, useSaveFeedback } from '../../components/SaveButton'
 
 const decisionTaskLabels = (t: ReturnType<typeof useI18n>['t']): Record<string, string> => ({
   skills: t('技能选择'),
@@ -51,6 +52,8 @@ export function Purposes({ management: m }: { management: InferenceManagement })
     [target, setTarget] = useState(''),
     [sceneOffset, setSceneOffset] = useState(0)
   const [probing, setProbing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const saveFeedback = useSaveFeedback()
   const { confirm, ConfirmDialog: confirmDialog } = useConfirm()
   const disabled = m.busy || !!m.pending || probing
   /**
@@ -202,23 +205,32 @@ export function Purposes({ management: m }: { management: InferenceManagement })
       onSubmit={async (event) => {
         event.preventDefault()
         const submitted = editor
+        saveFeedback.reset()
         if (!(await probeNewBindings())) return
-        await m.savePlan({ version: 1, purposes: purposePlan(draft, view.purposes!, { fallbacks }) }, {
-          source,
-          onCommitted: (next) => setEditor((current) => ({
-            source: next,
-            // Only this confirmed save can move the baseline. Keep edits made while it waited.
-            draft: current === submitted ? structuredClone(next.view.purposes!) : current.draft,
-          })),
-        })
+        setSaving(true)
+        try {
+          const saved = await m.savePlan({ version: 1, purposes: purposePlan(draft, view.purposes!, { fallbacks }) }, {
+            source,
+            onCommitted: (next) => setEditor((current) => ({
+              source: next,
+              // Only this confirmed save can move the baseline. Keep edits made while it waited.
+              draft: current === submitted ? structuredClone(next.view.purposes!) : current.draft,
+            })),
+          })
+          // The result is shown on the button (保存中… → ✓ 已保存), not in a toast.
+          if (saved && m.active()) saveFeedback.markSaved()
+        } finally {
+          setSaving(false)
+        }
       }}
     >
       {confirmDialog}
       <div className="flex items-center justify-between gap-3">
         <h3 className="font-semibold">{i18n.t("模型用途")}</h3>
-        <Button type="submit" disabled={disabled}>
-          {probing ? i18n.t("正在测试连通性…") : i18n.t("保存")}
-        </Button>
+        <SaveButton type="submit" disabled={disabled} saving={probing || saving} saved={saveFeedback.saved}
+          savingLabel={probing ? i18n.t("正在测试连通性…") : undefined}>
+          {i18n.t("保存")}
+        </SaveButton>
       </div>
       <p className="text-sm text-muted-foreground">
         {i18n.t("聊天模型的优先级：子 Agent 的绑定高于适配器、账号和会话场景的聊天覆盖，这些覆盖又高于默认聊天模型。")}

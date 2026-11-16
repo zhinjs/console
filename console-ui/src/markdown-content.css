@@ -73,7 +73,7 @@
   background: hsl(220 19% 10%);
   color: hsl(210 30% 92%);
   box-shadow: 0 14px 34px hsl(220 30% 4% / 0.18), inset 0 1px 0 hsl(0 0% 100% / 0.05);
-  font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--console-font-mono);
 }
 
 .zhin-code-toolbar {
@@ -107,7 +107,7 @@
   border-radius: 50%;
   background: currentColor;
   content: "";
-  animation: zhin-code-pulse 1.2s ease-in-out infinite;
+  animation: zhin-code-pulse var(--console-motion-loop) ease-in-out infinite;
 }
 
 .zhin-code-actions {
@@ -125,7 +125,7 @@
   font: inherit;
   font-size: var(--console-text-label);
   cursor: pointer;
-  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+  transition: background var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out), transform var(--console-motion-fast) var(--console-ease-out);
 }
 
 .zhin-code-actions button { padding: 0.32rem 0.48rem; }

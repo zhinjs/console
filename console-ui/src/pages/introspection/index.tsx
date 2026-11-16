@@ -6,7 +6,6 @@ import {
   Boxes,
   Link2,
   Network,
-  Package,
   RefreshCw,
   ScrollText,
   Search,
@@ -18,7 +17,7 @@ import {
 import { CONSOLE_REST, FEATURE_RPC } from '../../contracts/zhin-console'
 import { apiFetch, getApiBase } from '../../utils/auth'
 import { requestConsole } from '../../utils/console-rpc'
-import { Badge, Button, PageHeader, PageShell, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger } from '@zhin.js/console-ui'
+import { Button, PageHeader, PageShell, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
 import { CONSOLE_PATHS, featureGlobalHref } from '../../console-routes.mjs'
@@ -288,15 +287,14 @@ function ProviderSummary({ plugins, matrix }: { plugins: readonly string[]; matr
     <section className="rounded-[var(--console-radius-lg)] border bg-card p-4" aria-label={i18n.t("能力由哪些插件提供")}>
       <p className="console-section-title">{i18n.t("这些能力由 {0} 个插件提供", [plugins.length])}</p>
       <p className="mt-1 text-sm text-muted-foreground">{i18n.t("开关不在这里改：点插件看详情，点「功能」去对象树设置范围。")}</p>
-      <ul className="mt-3 flex flex-wrap gap-2">
+      <ul className="mt-2 divide-y divide-border">
         {plugins.map(plugin => {
           const summary = matrix ? pluginScopeSummary(matrix, plugin) : null
           return (
-            <li key={plugin} className="console-plugin-scope-chip">
-              <Package className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-              <Link to={`/plugins/${encodeURIComponent(plugin)}`} className="min-w-0 truncate font-mono underline-offset-2 hover:underline" title={plugin}>{plugin}</Link>
-              {matrix ? <Badge variant={summary?.global.enabled ? 'secondary' : 'outline'} size="sm" className="max-w-full whitespace-normal">{scopeSummaryLine(summary, i18n.t)}</Badge> : null}
-              <Link to={featureGlobalHref(plugin)} className="shrink-0 text-xs underline">{i18n.t("功能")}</Link>
+            <li key={plugin} className="console-provider-row">
+              <Link to={`/plugins/${encodeURIComponent(plugin)}`} className="console-code min-w-0 truncate underline-offset-2 hover:underline" title={plugin}>{plugin}</Link>
+              {matrix ? <span className="console-provider-row-summary">{scopeSummaryLine(summary, i18n.t)}</span> : null}
+              <Link to={featureGlobalHref(plugin)} className="ml-auto shrink-0 text-xs underline">{i18n.t("功能")}</Link>
             </li>
           )
         })}

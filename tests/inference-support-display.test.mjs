@@ -10,6 +10,7 @@ import { pageRuntime, nodes } from './helpers/inference-page-runtime.mjs'
 import { translate } from '../console-ui/src/i18n/locale.mjs'
 import * as model from '../console-ui/src/pages/inference/model.mjs'
 import * as personal from '../console-ui/src/pages/personal-session-model.mjs'
+import { saveButtonMock } from './helpers/save-button-mock.mjs'
 
 const experiment = '实验 · 不受官方支持 · 可能违反供应商条款 · 风险由使用者自行承担。'
 const authorization = '未经 OpenAI 对第三方客户端的明确授权。'
@@ -76,6 +77,7 @@ async function fixture() {
   }
   const support = await load('inference/SupportInfo.tsx')
   dependencies['./SupportInfo'] = support; dependencies['./inference/SupportInfo'] = support
+  dependencies['../../components/SaveButton'] = saveButtonMock
   const management = view => ({ view, source: { view, connectionScope: 'connection', base: 'https://host.test' }, busy: false, pending: null,
     error: '', active: () => true, revisionEpoch: 1, setError: assert.fail,
     request: async path => { calls.push(path); return path === '/targets' ? { adapters: [], endpoints: [], scenes: [], agents: [] } : { inputSchema: {} } },

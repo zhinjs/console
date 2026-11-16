@@ -17,7 +17,7 @@
     color: hsl(var(--foreground));
     box-shadow: 0 -1px 0 hsl(var(--border)), 0 -16px 40px -20px hsl(var(--console-shadow-color) / 0.28);
     outline: none;
-    animation: console-log-panel-in var(--console-duration-page) var(--console-ease-out) both;
+    animation: console-log-panel-in var(--console-motion-base) var(--console-ease-out) both;
   }
 
   .console-log-panel.is-resizing { user-select: none; }
@@ -49,7 +49,7 @@
     height: 0.25rem;
     border-radius: 999px;
     background: hsl(var(--muted-foreground) / 0.35);
-    transition: background-color var(--console-duration-fast) ease, width var(--console-duration-fast) ease;
+    transition: background-color var(--console-motion-fast) var(--console-ease-out), width var(--console-motion-fast) var(--console-ease-out);
   }
 
   .console-log-panel-resize:hover::after,
@@ -109,7 +109,7 @@
     background: hsl(var(--secondary));
     padding: 0.125rem 0.5rem;
     color: hsl(var(--secondary-foreground));
-    font-family: var(--console-font-mono, ui-monospace, monospace);
+    font-family: var(--console-font-mono);
   }
 
   .console-log-panel-actions .console-control { height: var(--log-panel-control, 1.75rem); min-height: 1.75rem; }
@@ -288,7 +288,7 @@
     inset: 0;
     z-index: 48;
     background: hsl(0 0% 0% / 0.4);
-    animation: console-log-scrim-in var(--console-duration-page) ease both;
+    animation: console-log-scrim-in var(--console-motion-base) var(--console-ease-out) both;
   }
 
   @keyframes console-log-scrim-in { from { opacity: 0; } to { opacity: 1; } }

@@ -15,6 +15,7 @@ import * as entry from '../console-ui/src/pages/inference/models-entry.mjs'
 import { mergePrincipalPayloads, principalsListPlan, readPrincipals, settlePrincipalLists } from '../console-ui/src/scope/chat-identity-model.mjs'
 import { createConsoleAccess, scopedAdapters } from '../console-ui/src/utils/console-access.mjs'
 import { canSeeRoute } from '../console-ui/src/navigation-sections.mjs'
+import { saveButtonMock } from './helpers/save-button-mock.mjs'
 
 const source = path => readFileSync(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')
 // Relative to the real clock: the page compares against Date.now(), so a fixed date turns the cooldown into an expired skip once that hour passes.
@@ -98,7 +99,7 @@ async function purposesPage(v) {
   const code = ts.transpileModule(await readFile(new URL('../console-ui/src/pages/inference/Purposes.tsx', import.meta.url), 'utf8'),
     { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
   const deps = {
-    react: runtime.api, 'react/jsx-runtime': jsxRuntime, './model.mjs': model,
+    react: runtime.api, 'react/jsx-runtime': jsxRuntime, './model.mjs': model, '../../components/SaveButton': saveButtonMock,
     '../../i18n': { useI18n: () => ({ locale: 'zh-CN', t: (m, values) => translate('zh-CN', m, values) }) },
     'lucide-react': new Proxy({}, { get: () => 'icon' }),
     '@zhin.js/console-ui': { Button: 'button', Input: 'input', SelectField: 'select', SearchableSelectField: 'select', Card: 'card', useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }), DropdownMenu: 'menu', DropdownMenuContent: 'menu-content', DropdownMenuItem: 'menu-item', DropdownMenuTrigger: 'menu-trigger' }, './SupportInfo': { supportLabel: label => label },
@@ -254,7 +255,7 @@ async function accountsPage(focusAccount) {
   const code = ts.transpileModule(await readFile(new URL('../console-ui/src/pages/inference/Accounts.tsx', import.meta.url), 'utf8'),
     { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
   const deps = {
-    react: runtime.api, 'react/jsx-runtime': jsxRuntime, './model.mjs': model,
+    react: runtime.api, 'react/jsx-runtime': jsxRuntime, './model.mjs': model, '../../components/SaveButton': saveButtonMock,
     '../../i18n': { useI18n: () => ({ locale: 'zh-CN', t: (m, values) => translate('zh-CN', m, values) }) },
     'lucide-react': new Proxy({}, { get: () => 'icon' }),
     '@zhin.js/console-ui': { Button: 'button', Input: 'input', SelectField: 'select', Dialog: () => null, DialogContent: 'c', DialogHeader: 'h', DialogTitle: 't', DialogDescription: 'd', ErrorAlert: 'error', Card: 'card', useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }) }, './SupportInfo': { SupportLabel: 'support-label', SupportNotice: 'support-notice', supportLabel: label => label }, './SchemaFields': { SchemaFields: 'schema' },

@@ -431,8 +431,8 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
         </>}
       />
       <div className="console-plugin-detail-identity">
-        <code title={packageName}>{packageName}</code>
-        {instanceKey && instanceKey !== packageName ? <code title={instanceKey}>{instanceKey}</code> : null}
+        <code className="console-code" title={packageName}>{packageName}</code>
+        {instanceKey && instanceKey !== packageName ? <code className="console-code" title={instanceKey}>{instanceKey}</code> : null}
         {statusBadge}
         {update ? <Badge variant="default">{i18n.t("有更新 {0}", [update.latest])}</Badge> : null}
       </div>
@@ -549,9 +549,9 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
                         {permissionGroups.filter(group => group.permissions.length).map(group => (
                           <li key={group.level} className="space-y-1">
                             <p className="text-sm font-medium">{i18n.t(LEVEL_LABELS[group.level])} <span className="text-xs font-normal text-muted-foreground">{i18n.t("由 {0} 统一授予", [group.catalogPermission])}</span></p>
-                            <ul className="flex flex-wrap gap-1">
+                            <ul className="console-code-list text-xs">
                               {group.permissions.map(item => (
-                                <li key={item.permission}><Badge variant="outline" size="sm" className="font-mono" title={item.description}>{item.permission}</Badge></li>
+                                <li key={item.permission}><code className="console-code" title={item.description}>{item.permission}</code></li>
                               ))}
                             </ul>
                           </li>
@@ -582,10 +582,10 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
                           {tab ? <Link className="ml-auto text-xs underline" to={`${CONSOLE_PATHS.introspection}?tab=${tab}&filter=${encodeURIComponent(instanceKey)}`}>{i18n.t("原始视图")}</Link> : null}
                         </div>
                         {feature.items.length ? (
-                          <ul className="max-h-48 space-y-1 overflow-y-auto pr-1">
+                          <ul className="max-h-48 divide-y divide-border overflow-y-auto pr-1">
                             {feature.items.map((item, index) => (
-                              <li key={index} className="rounded-md bg-muted/50 px-2 py-1.5">
-                                <code className="break-all text-xs font-semibold">{item.name}</code>
+                              <li key={index} className="py-1.5">
+                                <code className="console-code text-xs font-medium">{item.name}</code>
                                 {item.desc ? <p className="text-xs text-muted-foreground">{item.desc}</p> : null}
                               </li>
                             ))}

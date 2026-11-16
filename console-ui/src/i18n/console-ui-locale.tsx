@@ -17,7 +17,7 @@ export function ConsoleUiLocale({ children }: { children?: ReactNode }) {
     'confirm.failed': i18n.t('操作失败，请重试或取消。'),
     'confirm.notCompleted': i18n.t('操作未完成：{0}'),
     'confirm.typeToConfirm': i18n.t('请输入 {0} 以确认：'),
-    'empty.noData': i18n.t('暂无数据'),
+    'empty.noData': i18n.t('这里还没有内容。'),
     'error.retry': i18n.t('重试'),
     'error.technicalDetail': i18n.t('技术详情'),
     'select.searchPlaceholder': i18n.t('搜索…'),

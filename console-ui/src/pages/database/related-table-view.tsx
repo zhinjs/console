@@ -404,7 +404,7 @@ export function RelatedTableView({
             ) : readError && !hasCurrentPage ? (
               <TableRow><TableCell colSpan={columns.length + (readOnly ? 0 : 1)} className="py-8 text-center text-muted-foreground">{i18n.t("数据未加载")}</TableCell></TableRow>
             ) : !data?.rows?.length ? (
-              <TableRow><TableCell colSpan={columns.length + (readOnly ? 0 : 1)} className="py-8 text-center text-muted-foreground">{loadedFilter ? i18n.t("没有符合条件的记录") : i18n.t("暂无数据")}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={columns.length + (readOnly ? 0 : 1)} className="py-8 text-center text-muted-foreground">{loadedFilter ? i18n.t("没有符合条件的记录") : i18n.t("这张表还没有记录。")}</TableCell></TableRow>
             ) : sortedRows.map((row: any, i: number) => (
               <TableRow key={i}>
                 {columns.map((col: string) => {

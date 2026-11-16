@@ -9,6 +9,9 @@
 
 /* Tailwind's `text-xs` is the Console caption size (13px): secondary text never drops to 12px. */
 @theme {
+  /* Tailwind's font-sans / font-mono follow the Console stacks (self-hosted Inter / JetBrains Mono). */
+  --font-sans: var(--console-font-sans);
+  --font-mono: var(--console-font-mono);
   --text-xs: 0.8125rem;
   --text-xs--line-height: 1.25rem;
 }
@@ -128,7 +131,7 @@
   gap: 0.75rem;
   padding: 0.5rem 0.75rem;
   border-radius: calc(var(--radius) + 2px);
-  transition: background-color 180ms ease, color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+  transition: background-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out), transform var(--console-motion-fast) var(--console-ease-out), box-shadow var(--console-motion-fast) var(--console-ease-out);
   cursor: pointer;
   text-decoration: none;
   color: hsl(var(--muted-foreground));

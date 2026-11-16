@@ -27,17 +27,39 @@ interface ToastTimer { remaining: number; startedAt: number; pausedBy: Set<Pause
 const ToastContext = createContext<ToastContextValue | null>(null)
 const VARIANT_ICONS = { default: Info, success: CheckCircle, error: AlertCircle, warning: AlertTriangle, info: Info }
 
+/** Exit length of a toast: the Console's --console-motion-fast (0ms when the viewer reduces motion). */
+function exitDuration(): number {
+  if (typeof window === 'undefined' || typeof getComputedStyle !== 'function') return 0
+  const value = getComputedStyle(document.documentElement).getPropertyValue('--console-motion-fast').trim()
+  const parsed = Number.parseFloat(value)
+  if (!Number.isFinite(parsed)) return 0
+  return value.endsWith('ms') ? parsed : value.endsWith('s') ? parsed * 1000 : parsed
+}
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const i18n = useI18n()
   const [toasts, setToasts] = useState<Toast[]>([])
   const counterRef = useRef(0)
   const timers = useRef(new Map<string, ToastTimer>())
+  // Toasts playing their exit animation: still rendered, no longer interactive.
+  const [closing, setClosing] = useState<ReadonlySet<string>>(() => new Set())
+  const exits = useRef(new Map<string, ReturnType<typeof setTimeout>>())
+
+  const drop = useCallback((id: string) => {
+    exits.current.delete(id)
+    setToasts(previous => previous.filter(toast => toast.id !== id))
+    setClosing(previous => { if (!previous.has(id)) return previous; const next = new Set(previous); next.delete(id); return next })
+  }, [])
 
   const remove = useCallback((id: string) => {
     clearTimeout(timers.current.get(id)?.timeout)
     timers.current.delete(id)
-    setToasts(previous => previous.filter(toast => toast.id !== id))
-  }, [])
+    if (exits.current.has(id)) return
+    const duration = exitDuration()
+    if (duration <= 0) { drop(id); return }
+    setClosing(previous => new Set(previous).add(id))
+    exits.current.set(id, setTimeout(() => drop(id), duration))
+  }, [drop])
 
   const resume = useCallback((id: string, reason?: PauseReason) => {
     const timer = timers.current.get(id)
@@ -81,16 +103,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     const reset = () => {
       for (const timer of timers.current.values()) clearTimeout(timer.timeout)
       timers.current.clear()
+      for (const exit of exits.current.values()) clearTimeout(exit)
+      exits.current.clear()
+      setClosing(new Set())
       setToasts([])
     }
     window.addEventListener('zhin:auth-required', reset)
     window.addEventListener('zhin:api-base-changed', reset)
-    const ownedTimers = timers.current
+    const ownedTimers = timers.current, ownedExits = exits.current
     return () => {
       window.removeEventListener('zhin:auth-required', reset)
       window.removeEventListener('zhin:api-base-changed', reset)
       for (const timer of ownedTimers.values()) clearTimeout(timer.timeout)
       ownedTimers.clear()
+      for (const exit of ownedExits.values()) clearTimeout(exit)
+      ownedExits.clear()
     }
   }, [])
 
@@ -106,6 +133,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         const variant = notification.variant ?? 'default'
         const Icon = VARIANT_ICONS[variant]
         return <div key={notification.id} className={`console-toast console-toast-${variant}`}
+          data-state={closing.has(notification.id) ? 'closing' : 'open'}
           role={variant === 'error' ? 'alert' : 'status'} aria-atomic="true"
           onMouseEnter={() => pause(notification.id, 'pointer')} onMouseLeave={() => resume(notification.id, 'pointer')}
           onFocusCapture={() => pause(notification.id, 'focus')} onBlurCapture={event => {

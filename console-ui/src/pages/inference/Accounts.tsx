@@ -138,7 +138,7 @@ export function Accounts({ management: m, focusAccount }: { management: Inferenc
           {i18n.t("添加一个模型账号，开始配置模型。")}
         </Card>
       ) : (
-        <div className="divide-y rounded-lg border">
+        <div className="console-card divide-y overflow-hidden">
           {Object.values(view.accounts).map((account) => {
             const service = view.services[account.serviceId],
               status = view.statuses[account.id]

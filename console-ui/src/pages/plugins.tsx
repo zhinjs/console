@@ -2,7 +2,7 @@ import { startVisiblePolling } from '../hooks/visible-polling.mjs'
 import { useI18n } from '../i18n'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowDown, ArrowUp, ArrowUpDown, Blocks, CheckCircle2, Clock, Package, PauseCircle, RefreshCw, Search, Store, ToggleLeft } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, Blocks, CheckCircle2, Clock, Package, PauseCircle, Plug, Puzzle, RefreshCw, Sparkles, Search, Store, ToggleLeft } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { CONSOLE_PATHS, featureGlobalHref } from '../console-routes.mjs'
@@ -10,7 +10,7 @@ import { Badge, Button, Card, Input, PageHeader, PageShell, Skeleton, StatCard, 
 import { StatusState } from '../components/StatusState'
 import { useConsoleRead } from '../hooks/use-console-read'
 import {
-  groupInventory, inventoryCounts, matchesHealthFilter, needsStateLabel, pluginInventory, pluginSource, pluginType, sortInventory, validatePluginList,
+  groupInventory, inventoryCounts, matchesHealthFilter, needsStateLabel, pluginInventory, pluginIconType, pluginSource, pluginType, sortInventory, validatePluginList,
   type HealthFilter, type InventoryGroupBy, type InventoryPlugin, type InventoryRow, type InventorySortKey, type PluginHealth, type PluginSource, type PluginType,
 } from './plugin-list-model.mjs'
 import { managementLabel } from './plugin-management-model.mjs'
@@ -39,6 +39,8 @@ const FILTERS: { key: HealthFilter; label: string }[] = [
 ]
 
 const TYPE_LABELS: Record<PluginType, string> = { adapter: '适配器', ai: 'AI', feature: '功能插件' }
+// One icon per plugin type (console#125); a row whose type cannot be told gets none.
+const TYPE_ICONS: Record<PluginType, typeof Plug> = { adapter: Plug, ai: Sparkles, feature: Puzzle }
 const SOURCE_LABELS: Record<PluginSource, string> = { official: '官方', npm: 'npm', local: '本地' }
 const GROUPS: { key: InventoryGroupBy; label: string }[] = [
   { key: 'none', label: '不分组' },
@@ -265,13 +267,14 @@ function InventoryItem({ row, href }: { row: InventoryRow; href: string }) {
   const management = row.plugin?.management
   const tone = HEALTH_TONES[row.health]
   const type = i18n.t(TYPE_LABELS[pluginType(row)])
+  const iconType = pluginIconType(row), TypeIcon = iconType ? TYPE_ICONS[iconType] : null
   const source = i18n.t(SOURCE_LABELS[pluginSource(row)])
   return (
     <TableRow className="console-plugin-table-row">
       <TableCell className="console-plugin-table-name">
         <Link to={href} className="console-plugin-table-link">
           <span className="console-plugin-catalog-icon" aria-hidden="true">
-            <Package />
+            {TypeIcon ? <TypeIcon /> : null}
             <span className={`console-plugin-status-dot is-${tone}`} />
           </span>
           <span className="min-w-0">

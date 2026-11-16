@@ -921,9 +921,9 @@ function CapabilityInspector(props: {
             <span>{i18n.t("参数")} & {i18n.t("别名")}</span>
             <Badge variant="secondary">{parameters.length}</Badge>
           </div>
-          <div className="console-runtime-tags">
-            {parameters.map((param, idx) => <Badge key={`param-${idx}`} variant="outline" className="font-mono">{param}</Badge>)}
-            {aliases.map((alias, idx) => <Badge key={`alias-${idx}`} variant="secondary" className="font-mono">{alias}</Badge>)}
+          <div className="console-code-list text-sm">
+            {parameters.map((param, idx) => <code key={`param-${idx}`} className="console-code">{param}</code>)}
+            {aliases.map((alias, idx) => <code key={`alias-${idx}`} className="console-code text-muted-foreground">{alias}</code>)}
           </div>
         </div>
       ) : null}
