@@ -54,3 +54,18 @@ export function readMcpTestResponse(input: { status: number; body: unknown; retr
 export function mcpTestRequestError(message: string): McpTestOutcome
 export function mcpTestPresentation(outcome: McpTestOutcome, locale?: Locale): McpTestPresentation
 export function countFailedMcp(rows: unknown): number | null
+
+export interface McpSummary {
+  total: number
+  connected: number
+  statusAware: boolean
+  /** null when the rows carry no `status` (older Host). */
+  failed: number | null
+  idle: number
+  notLoaded: number
+  /** Servers that need attention: failed ones, or (older Host) total − connected. */
+  problems: number
+}
+export function summarizeMcp(rows: unknown, total?: number | null): McpSummary
+export function mcpDashboardDetail(summary: McpSummary, locale?: Locale): string
+export function mcpWorkbenchCopy(summary: McpSummary, locale?: Locale): { detail: string; headline: string | null; missing: string | null }

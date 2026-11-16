@@ -279,3 +279,50 @@ test('429 from the test shows how long to wait', async () => {
   const result = nodes(runtime.value).find(node => node.type === 'alert' && node.props.variant === 'warning')
   assert.match(text(result), /请 4 秒后再试/)
 })
+
+// ------------------------------------------------- dashboard / workbench summary
+
+test('the MCP summary counts only failed servers as problems; idle and not_loaded are neutral', () => {
+  const { summarizeMcp, mcpDashboardDetail, mcpWorkbenchCopy } = mcp
+  const waiting = summarizeMcp([
+    { name: 'a', connected: false, status: 'idle' },
+    { name: 'b', connected: false, status: 'idle' },
+    { name: 'c', connected: false, status: 'not_loaded' },
+    { name: 'd', connected: true, status: 'connected' },
+  ], 4)
+  assert.deepEqual(waiting, { total: 4, connected: 1, statusAware: true, failed: 0, idle: 2, notLoaded: 1, problems: 0 })
+  assert.equal(mcpDashboardDetail(waiting), '1 个已连接，2 个待连接，1 个未加载')
+  assert.equal(mcpDashboardDetail(waiting, 'en'), '1 connected, 2 waiting to connect, 1 not loaded')
+  assert.deepEqual(mcpWorkbenchCopy(waiting), { detail: '1 / 4 个服务已连接，2 个待连接，1 个未加载', headline: null, missing: null })
+
+  const failing = summarizeMcp([{ name: 'a', status: 'idle' }, { name: 'b', status: 'failed' }], 2)
+  assert.equal(failing.problems, 1)
+  assert.equal(mcpDashboardDetail(failing), '1 个连接失败，1 个待连接')
+  const copy = mcpWorkbenchCopy(failing)
+  assert.equal(copy.headline, '可以对话，但有 MCP 服务连接失败')
+  assert.equal(copy.missing, '1 个 MCP 服务连接失败，检查服务地址与凭据 →')
+
+  assert.equal(mcpDashboardDetail(summarizeMcp([{ status: 'connected', connected: true }], 1)), '1 个连接正常')
+})
+
+test('older Hosts without status keep the total − connected count and wording', () => {
+  const { summarizeMcp, mcpDashboardDetail, mcpWorkbenchCopy } = mcp
+  const legacy = summarizeMcp([{ name: 'a', connected: true }, { name: 'b', connected: false }], 5)
+  assert.deepEqual(legacy, { total: 5, connected: 1, statusAware: false, failed: null, idle: 0, notLoaded: 0, problems: 4 }, 'the server total counts rows beyond this page')
+  assert.equal(mcpDashboardDetail(legacy), '4 个未连接')
+  const copy = mcpWorkbenchCopy(legacy)
+  assert.equal(copy.headline, '可以对话，但有服务未连接')
+  assert.equal(copy.missing, '4 个 MCP 服务未连接，检查服务地址与凭据 →')
+  assert.equal(copy.detail, '1 / 5 个服务已连接')
+  assert.equal(mcpWorkbenchCopy(summarizeMcp([])).detail, '未配置 MCP 服务')
+})
+
+test('the dashboard reads MCP health through the shared summary, not total − connected', async () => {
+  const dashboard = await read('pages/dashboard.tsx')
+  assert.match(dashboard, /summarizeMcp\(/)
+  assert.match(dashboard, /mcpDashboardDetail\(/)
+  assert.doesNotMatch(dashboard, /mcpServices \?\? 0\) - \(optional\.connectedMcp/)
+  const workbench = await read('pages/agent-workbench.tsx')
+  assert.match(workbench, /summarizeMcp\(/)
+  assert.doesNotMatch(workbench, /mcpServices\.length - connectedMcp/)
+})

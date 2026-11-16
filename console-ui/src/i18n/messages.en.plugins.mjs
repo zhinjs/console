@@ -178,4 +178,10 @@ export const pluginsMessages = Object.freeze({
   "测试于 {0}": "Tested at {0}",
   "在配置中修改（ai.mcpServers）": "Edit in configuration (ai.mcpServers)",
   "传输方式": "Transport",
+  "{0} 个待连接": "{0} waiting to connect",
+  "{0} 个未加载": "{0} not loaded",
+  "{0} 个连接失败": "{0} failed to connect",
+  "{0} 个已连接": "{0} connected",
+  "可以对话，但有 MCP 服务连接失败": "Ready to chat, but some MCP servers failed to connect",
+  "{0} 个 MCP 服务连接失败，检查服务地址与凭据 →": "{0} MCP servers failed to connect — check their address and credentials →",
 })

@@ -38,6 +38,7 @@ import './insights/insights.css'
 import { Button, buttonVariants } from '../components/ui/button'
 import { Skeleton } from '../components/ui/skeleton'
 import { fetchAllIntrospection, type IntrospectionEnvelope } from './agent-workbench-model.mjs'
+import { mcpWorkbenchCopy, summarizeMcp } from './introspection/mcp-status-model.mjs'
 
 interface BindingItem {
   name: string
@@ -57,6 +58,7 @@ interface McpItem {
   name: string
   connected: boolean
   toolCount: number
+  status?: string
 }
 
 interface EndpointItem {
@@ -142,10 +144,13 @@ export default function AgentWorkbenchPage() {
     void loadWorkbench()
   }, [loadWorkbench])
 
-  const connectedMcp = mcpServices.filter((service) => service.connected).length
+  // 只有连接失败算问题；待连接（idle）/ 未加载是中性状态。旧 Host 没有 status 时沿用「总数 − 已连接」。
+  const mcpSummary = summarizeMcp(mcpServices)
+  const mcpCopy = mcpWorkbenchCopy(mcpSummary, i18n.locale)
+  const connectedMcp = mcpSummary.connected
   const onlineEndpoints = endpoints.filter((endpoint) => endpoint.connected).length
   const ready = agentStatus !== 'unavailable' && bindings.length > 0 && onlineEndpoints > 0
-  const disconnectedMcp = mcpServices.length - connectedMcp
+  const mcpProblems = mcpSummary.problems
   // 没装 Agent 是一种正常的部署（只用 IM），不是故障：不标红、不列「缺项」。
   const imOnly = !error && agentStatus === 'unavailable'
 
@@ -164,8 +169,8 @@ export default function AgentWorkbenchPage() {
     },
     {
       label: i18n.t("MCP 连接"),
-      detail: mcpServices.length ? i18n.t("{0} / {1} 个服务已连接", [connectedMcp, mcpServices.length]) : i18n.t("未配置 MCP 服务"),
-      ready: mcpServices.length === 0 || connectedMcp === mcpServices.length,
+      detail: mcpCopy.detail,
+      ready: mcpProblems === 0,
       path: '/introspection?tab=mcp',
     },
     {
@@ -206,7 +211,7 @@ export default function AgentWorkbenchPage() {
           <div className="min-w-0">
             <h2 className="flex items-center gap-2 text-base font-semibold">
               {!error && ready ? <CheckCircle2 /> : <CircleDashed />}
-              {error ? i18n.t("当前状态未确认") : imOnly ? i18n.t("只用 IM：没有安装 Agent") : ready ? disconnectedMcp > 0 ? i18n.t("可以对话，但有服务未连接") : i18n.t("AI 配置与聊天账号已齐备") : i18n.t("继续完成 Agent 配置")}
+              {error ? i18n.t("当前状态未确认") : imOnly ? i18n.t("只用 IM：没有安装 Agent") : ready ? mcpCopy.headline ?? i18n.t("AI 配置与聊天账号已齐备") : i18n.t("继续完成 Agent 配置")}
             </h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               {error ? i18n.t("本次读取未完成，下方可能保留上次数据。请先重试读取。")
@@ -216,9 +221,9 @@ export default function AgentWorkbenchPage() {
             </p>
             {imOnly ? (
               <p className="mt-2 text-sm"><Link className="underline underline-offset-2" to="/ops/config">{i18n.t("安装并装配可选 Agent 能力 →")}</Link></p>
-            ) : !error && (!ready || disconnectedMcp > 0) ? (
+            ) : !error && (!ready || mcpProblems > 0) ? (
               <ul className="console-agent-missing" aria-label={i18n.t("待完成配置")}>
-                {disconnectedMcp > 0 ? <li><Link to="/introspection?tab=mcp">{i18n.t("{0} 个 MCP 服务未连接，检查服务地址与凭据 →", [disconnectedMcp])}</Link></li> : null}
+                {mcpCopy.missing ? <li><Link to="/introspection?tab=mcp">{mcpCopy.missing}</Link></li> : null}
                 {ready ? null : bindings.length === 0 ? <li><Link to={CONSOLE_PATHS.ai}>{i18n.t("配置模型与 Agent 绑定 →")}</Link></li> : null}
                 {!ready && onlineEndpoints === 0 ? <li><Link to="/scope">{i18n.t("让一个聊天账号上线 →")}</Link></li> : null}
               </ul>

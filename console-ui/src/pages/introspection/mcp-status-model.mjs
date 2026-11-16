@@ -170,3 +170,65 @@ export function countFailedMcp(rows) {
   if (!list.some(row => MCP_SERVER_STATUSES.includes(row.status))) return null
   return list.filter(row => row.status === 'failed').length
 }
+
+/**
+ * 仪表盘与机器人状态页的 MCP 汇总。行报告 `status` 时只有 `failed` 算问题，`idle`（待连接）与
+ * `not_loaded`（未加载）单独计数；都没有 `status`（旧 Host）时沿用「总数 − 已连接」。
+ * `total` 是列表接口的总数（可能多于本页行数），缺省为行数。
+ */
+export function summarizeMcp(rows, total) {
+  const list = Array.isArray(rows) ? rows.filter(isRecord) : []
+  const count = typeof total === 'number' && Number.isFinite(total) && total >= 0 ? total : list.length
+  const states = list.map(row => mcpRowState(row).status)
+  const connected = states.filter(status => status === 'connected').length
+  const statusAware = list.some(row => MCP_SERVER_STATUSES.includes(row.status))
+  if (!statusAware) {
+    return { total: count, connected, statusAware, failed: null, idle: 0, notLoaded: 0, problems: Math.max(0, count - connected) }
+  }
+  const failed = states.filter(status => status === 'failed').length
+  return {
+    total: count, connected, statusAware, failed,
+    idle: states.filter(status => status === 'idle').length,
+    notLoaded: states.filter(status => status === 'not_loaded').length,
+    problems: failed,
+  }
+}
+
+const listSeparator = locale => locale === 'en' ? ', ' : '，'
+
+function neutralParts(summary, t) {
+  return [
+    summary.idle > 0 ? t('{0} 个待连接', [summary.idle]) : '',
+    summary.notLoaded > 0 ? t('{0} 个未加载', [summary.notLoaded]) : '',
+  ].filter(Boolean)
+}
+
+/** 仪表盘「MCP 服务」卡片的一行说明。 */
+export function mcpDashboardDetail(summary, locale = 'zh-CN') {
+  const t = (message, values) => translate(locale, message, values)
+  if (summary.problems > 0) {
+    return [summary.statusAware ? t('{0} 个连接失败', [summary.problems]) : t('{0} 个未连接', [summary.problems]), ...neutralParts(summary, t)].join(listSeparator(locale))
+  }
+  const neutral = neutralParts(summary, t)
+  if (neutral.length) return [t('{0} 个已连接', [summary.connected]), ...neutral].join(listSeparator(locale))
+  return t('{0} 个连接正常', [summary.connected])
+}
+
+/** 机器人状态页：就绪清单的说明、标题里的提醒、缺项列表里的一条（没有问题时为 null）。 */
+export function mcpWorkbenchCopy(summary, locale = 'zh-CN') {
+  const t = (message, values) => translate(locale, message, values)
+  const failed = summary.statusAware && summary.problems > 0 ? [t('{0} 个连接失败', [summary.problems])] : []
+  return {
+    detail: summary.total
+      ? [t('{0} / {1} 个服务已连接', [summary.connected, summary.total]), ...failed, ...neutralParts(summary, t)].join(listSeparator(locale))
+      : t('未配置 MCP 服务'),
+    headline: summary.problems > 0
+      ? summary.statusAware ? t('可以对话，但有 MCP 服务连接失败') : t('可以对话，但有服务未连接')
+      : null,
+    missing: summary.problems > 0
+      ? summary.statusAware
+        ? t('{0} 个 MCP 服务连接失败，检查服务地址与凭据 →', [summary.problems])
+        : t('{0} 个 MCP 服务未连接，检查服务地址与凭据 →', [summary.problems])
+      : null,
+  }
+}
