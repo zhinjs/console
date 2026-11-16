@@ -59,7 +59,7 @@
     padding: 0 0.5rem 0 0.625rem;
     backdrop-filter: saturate(1.6) blur(18px);
     -webkit-backdrop-filter: saturate(1.6) blur(18px);
-    transition: background-color 200ms ease, box-shadow 200ms ease;
+    transition: background-color var(--console-motion-base) var(--console-ease-out), box-shadow var(--console-motion-base) var(--console-ease-out);
   }
 
   /*
@@ -144,7 +144,7 @@
     font-weight: 550;
     white-space: nowrap;
     cursor: pointer;
-    transition: background-color var(--console-duration-fast) ease, color var(--console-duration-fast) ease, box-shadow var(--console-duration-fast) ease;
+    transition: background-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out), box-shadow var(--console-motion-fast) var(--console-ease-out);
   }
 
   .console-topnav-item:hover,
@@ -173,7 +173,7 @@
     height: 0.875rem;
     flex-shrink: 0;
     opacity: 0.6;
-    transition: transform var(--console-duration-fast) ease;
+    transition: transform var(--console-motion-fast) var(--console-ease-out);
   }
 
   .console-topnav-item[data-state="open"] .console-topnav-chevron {
@@ -237,7 +237,7 @@
     color: hsl(var(--muted-foreground));
   }
 
-  .console-topnav-menu-icon svg { width: 0.9375rem; height: 0.9375rem; }
+  .console-topnav-menu-icon svg { width: 1.125rem; height: 1.125rem; }
 
   .console-topnav-menu-item:hover .console-topnav-menu-icon,
   .console-topnav-menu-item:focus .console-topnav-menu-icon,
@@ -309,7 +309,7 @@
     opacity: 0;
     pointer-events: none;
     transform: translateY(-2px);
-    transition: opacity 120ms ease 250ms, transform 120ms ease 250ms;
+    transition: opacity var(--console-motion-fast) var(--console-ease-out) var(--console-motion-slow), transform var(--console-motion-fast) var(--console-ease-out) var(--console-motion-slow);
   }
   .console-topnav-actions [data-tooltip]:focus-visible::after {
     opacity: 1;
@@ -341,7 +341,7 @@
     font-size: var(--console-text-body-sm);
     font-weight: 500;
     cursor: pointer;
-    transition: background-color 140ms ease;
+    transition: background-color var(--console-motion-fast) var(--console-ease-out);
   }
   .console-user-menu-trigger:hover,
   .console-user-menu-trigger[data-state="open"] { background: hsl(var(--accent)); }
@@ -376,7 +376,7 @@
     -webkit-backdrop-filter: blur(4px);
     opacity: 0;
     pointer-events: none;
-    transition: opacity 200ms ease;
+    transition: opacity var(--console-motion-base) var(--console-ease-out);
   }
 
   .console-nav-scrim.is-open {
@@ -396,7 +396,7 @@
     color: hsl(var(--popover-foreground));
     box-shadow: var(--console-shadow-lg);
     transform: translateX(calc(-100% - 1rem));
-    transition: transform 240ms var(--console-ease-out);
+    transition: transform var(--console-motion-base) var(--console-ease-out);
   }
 
   .console-nav-drawer.is-open {
@@ -466,7 +466,7 @@
     color: hsl(var(--foreground));
     font-size: var(--console-text-body);
     font-weight: 500;
-    transition: background-color var(--console-duration-fast) ease;
+    transition: background-color var(--console-motion-fast) var(--console-ease-out);
   }
 
   .console-nav-item:hover {
@@ -492,9 +492,10 @@
     color: hsl(var(--muted-foreground));
   }
 
+  /* Navigation icons are 18px; icons inside controls stay 16px (console#125). */
   .console-nav-icon svg {
-    width: 1rem;
-    height: 1rem;
+    width: 1.125rem;
+    height: 1.125rem;
   }
 
   .console-nav-item.is-active .console-nav-icon {
@@ -583,7 +584,7 @@
   .console-breadcrumb-link {
     border-radius: var(--console-radius-sm);
     color: hsl(var(--muted-foreground));
-    transition: color var(--console-duration-fast) ease;
+    transition: color var(--console-motion-fast) var(--console-ease-out);
   }
 
   .console-breadcrumb-link:hover {
@@ -645,7 +646,7 @@
     flex-direction: column;
     gap: var(--console-space-section);
     min-width: 0;
-    animation: console-route-enter var(--console-duration-page) var(--console-ease-out) both;
+    animation: console-route-enter var(--console-motion-base) var(--console-ease-out) both;
   }
 
   .console-route-view:empty { display: none; }
@@ -673,7 +674,7 @@
     background: transparent;
     color: hsl(var(--muted-foreground));
     cursor: pointer;
-    transition: background-color 140ms ease, color 140ms ease;
+    transition: background-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out);
   }
 
   .console-icon-button:hover {
@@ -695,11 +696,11 @@
     border-radius: var(--console-radius-md);
     color: hsl(var(--muted-foreground));
     font-size: 0.8125rem;
-    transition: background-color 140ms ease, color 140ms ease;
+    transition: background-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out);
   }
 
   .console-language-select:hover,
-  .console-language-select:focus-within {
+  .console-language-select:has(:focus-visible) {
     background: hsl(var(--accent));
     color: hsl(var(--foreground));
   }
@@ -732,7 +733,7 @@
     inset: 0;
     transform: translateX(-100%);
     background: linear-gradient(90deg, transparent, hsl(var(--background) / 0.55), transparent);
-    animation: console-skeleton-shimmer 1.4s ease-in-out infinite;
+    animation: console-skeleton-shimmer var(--console-motion-loop) ease-in-out infinite;
   }
 
   @keyframes console-skeleton-shimmer {
@@ -771,7 +772,7 @@
     font-size: 0.8125rem;
     font-weight: 500;
     white-space: nowrap;
-    transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+    transition: background-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out), box-shadow var(--console-motion-fast) var(--console-ease-out);
   }
 
   .console-segmented label:hover > span {
@@ -800,7 +801,7 @@
     background: hsl(var(--card));
     padding: 0.75rem 0.875rem;
     font-size: 0.875rem;
-    transition: border-color 140ms ease, background-color 140ms ease;
+    transition: border-color var(--console-motion-fast) var(--console-ease-out), background-color var(--console-motion-fast) var(--console-ease-out);
   }
 
   .console-choice-card:hover {
@@ -844,7 +845,7 @@
     border-bottom: 1.5px solid currentColor;
     opacity: 0.7;
     transform: rotate(-45deg);
-    transition: transform 160ms ease;
+    transition: transform var(--console-motion-fast) var(--console-ease-out);
   }
 
   #console-main-content details[open] > summary::before {
@@ -862,7 +863,7 @@
     border-radius: var(--console-radius-md);
     background: hsl(var(--card));
     padding: 0.75rem 0.875rem;
-    transition: border-color 140ms ease;
+    transition: border-color var(--console-motion-fast) var(--console-ease-out);
     box-shadow: var(--console-shadow-sm);
   }
 

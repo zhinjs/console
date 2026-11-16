@@ -51,8 +51,8 @@ export function ConfigurationNeedsPanel({ needs, disabled, onDeclared, onBusyCha
               {need.missing.length ? (
                 <div>
                   <p className="text-muted-foreground">{i18n.t("缺少或需要修正的配置项：")}</p>
-                  <ul className="mt-1 flex flex-wrap gap-1" aria-label={i18n.t("缺少的配置项")}>
-                    {need.missing.map(path => <li key={path}><Badge size="sm" variant="secondary" className="font-mono">{path || need.instanceKey}</Badge></li>)}
+                  <ul className="console-code-list mt-1" aria-label={i18n.t("缺少的配置项")}>
+                    {need.missing.map(path => <li key={path}><code className="console-code">{path || need.instanceKey}</code></li>)}
                   </ul>
                 </div>
               ) : null}

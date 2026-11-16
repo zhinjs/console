@@ -117,7 +117,7 @@ export default function DatabasePage() {
                   ) : !visibleTables.length && (!loaded || error) ? (
                     <EmptyState compact title={error ? i18n.t("数据库对象尚未读取成功") : i18n.t("等待读取数据库对象")} />
                   ) : !visibleTables.length ? (
-                    <EmptyState compact title={i18n.t("暂无数据")} />
+                    <EmptyState compact title={i18n.t("这个数据库还没有表")} description={i18n.t("建表后会列在这里。")} />
                   ) : visibleTables.map((t: TableInfo) => (
                     <button
                       key={t.name}

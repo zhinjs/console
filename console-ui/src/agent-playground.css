@@ -124,13 +124,9 @@
   font-weight: 720;
 }
 
+/* The heading (「会话」) is the whole title: the English subtitle under it (「Conversations」) is dropped (console#125). */
 .agent-playground-brand small {
-  display: block;
-  margin-top: 0.08rem;
-  color: hsl(var(--muted-foreground));
-  font-size: var(--console-text-label);
-  letter-spacing: 0.04em;
-  text-transform: none;
+  display: none;
 }
 
 .agent-playground-mark,
@@ -205,7 +201,7 @@
   color: hsl(var(--foreground));
   text-align: left;
   cursor: pointer;
-  transition: background 160ms ease;
+  transition: background var(--console-motion-fast) var(--console-ease-out);
 }
 
 .agent-playground-session:hover {
@@ -226,16 +222,16 @@
   justify-content: center;
 }
 
+/* List rows carry a bare icon, no tile (console#125). */
 .agent-playground-session-icon {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.62rem;
-  background: hsl(var(--muted));
+  width: 1.25rem;
+  height: 1.25rem;
   color: hsl(var(--muted-foreground));
 }
 
+.agent-playground-session-icon svg { width: 1rem; height: 1rem; }
+
 .agent-playground-session.active .agent-playground-session-icon {
-  background: hsl(var(--playground-accent-soft));
   color: hsl(var(--playground-accent));
 }
 
@@ -347,7 +343,7 @@
 .agent-playground-endpoint strong {
   overflow: hidden;
   color: hsl(var(--foreground) / 0.82);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--console-font-mono);
   font-size: var(--console-text-label);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -498,7 +494,7 @@
 }
 
 .agent-playground-run-state.is-running svg {
-  animation: playground-run-breathe 1.5s ease-in-out infinite;
+  animation: playground-run-breathe var(--console-motion-loop) ease-in-out infinite;
 }
 
 .agent-playground-run-state.has-problem {
@@ -639,7 +635,7 @@
   border-radius: 999px;
   background: hsl(var(--muted));
   cursor: pointer;
-  transition: background 160ms ease, border-color 160ms ease;
+  transition: background var(--console-motion-fast) var(--console-ease-out), border-color var(--console-motion-fast) var(--console-ease-out);
 }
 
 .agent-playground-network-toggle i::after {
@@ -652,7 +648,7 @@
   background: hsl(var(--background));
   box-shadow: 0 1px 4px hsl(var(--im-shadow) / 0.22);
   content: "";
-  transition: transform 160ms ease;
+  transition: transform var(--console-motion-fast) var(--console-ease-out);
 }
 
 .agent-playground-network-toggle input:checked + i {
@@ -743,7 +739,7 @@
   line-height: 1.45;
   text-align: left;
   cursor: pointer;
-  transition: border-color 160ms ease, background-color 160ms ease;
+  transition: border-color var(--console-motion-fast) var(--console-ease-out), background-color var(--console-motion-fast) var(--console-ease-out);
 }
 
 .agent-playground-prompts button::after {
@@ -888,7 +884,7 @@
   font-size: var(--console-text-label);
   font-weight: 650;
   cursor: pointer;
-  transition: background 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
+  transition: background var(--console-motion-fast) var(--console-ease-out), border-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out), transform var(--console-motion-fast) var(--console-ease-out);
 }
 
 .agent-playground-approval-actions button:hover:not(:disabled) {
@@ -1035,7 +1031,7 @@
   font-size: var(--console-text-label);
   font-weight: 660;
   cursor: pointer;
-  transition: border-color 140ms ease, color 140ms ease, background 140ms ease, transform 140ms ease;
+  transition: border-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out), background var(--console-motion-fast) var(--console-ease-out), transform var(--console-motion-fast) var(--console-ease-out);
 }
 
 .agent-playground-inline-run-actions button:hover:not(:disabled),
@@ -1118,7 +1114,7 @@
 .agent-playground-inline-run-steps li.is-running i {
   background: hsl(190 62% 46%);
   box-shadow: 0 0 0 1px hsl(190 62% 46% / 0.34);
-  animation: playground-run-breathe 1.4s ease-in-out infinite;
+  animation: playground-run-breathe var(--console-motion-loop) ease-in-out infinite;
 }
 
 .agent-playground-inline-run-steps li.is-failed i,
@@ -1154,7 +1150,7 @@
   color: hsl(var(--muted-foreground));
 }
 
-.agent-playground-inline-run footer button:first-child svg { transition: transform 150ms ease; }
+.agent-playground-inline-run footer button:first-child svg { transition: transform var(--console-motion-fast) var(--console-ease-out); }
 .agent-playground-inline-run footer button:first-child[aria-expanded="true"] svg { transform: rotate(180deg); }
 
 .agent-playground-composer {
@@ -1403,7 +1399,7 @@
   margin: 0;
   overflow: hidden;
   color: hsl(var(--foreground) / 0.82);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--console-font-mono);
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1483,11 +1479,11 @@
   height: 0.35rem;
   border-radius: 50%;
   background: hsl(var(--playground-accent));
-  animation: playground-trace-pulse 900ms ease-in-out infinite alternate;
+  animation: playground-trace-pulse var(--console-motion-loop) ease-in-out infinite alternate;
 }
 
-.agent-playground-trace-loading i:nth-child(2) { animation-delay: 150ms; }
-.agent-playground-trace-loading i:nth-child(3) { animation-delay: 300ms; }
+.agent-playground-trace-loading i:nth-child(2) { animation-delay: var(--console-motion-fast); }
+.agent-playground-trace-loading i:nth-child(3) { animation-delay: calc(var(--console-motion-fast) * 2); }
 .agent-playground-trace-notice { padding: 0.75rem; border-color: hsl(38 84% 52% / 0.42); color: hsl(32 70% 38%); }
 
 .agent-playground-task-section,
@@ -1593,7 +1589,7 @@
 .agent-playground-artifact-list article.is-completed em { color: hsl(var(--playground-accent)); }
 .agent-playground-artifact-list article.is-failed em,
 .agent-playground-artifact-list article.is-denied em { color: hsl(8 58% 47%); }
-.agent-playground-artifact-list article > button > svg { color: hsl(var(--muted-foreground)); transition: transform 160ms ease; }
+.agent-playground-artifact-list article > button > svg { color: hsl(var(--muted-foreground)); transition: transform var(--console-motion-fast) var(--console-ease-out); }
 .agent-playground-artifact-list article.is-expanded > button > svg { transform: rotate(180deg); }
 
 .agent-playground-artifact-detail {
@@ -1698,7 +1694,7 @@
     width: min(22rem, 90vw);
     height: 100dvh;
     transform: translateX(105%);
-    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition: transform var(--console-motion-base) var(--console-ease-out);
     box-shadow: -16px 0 50px hsl(var(--im-shadow) / 0.2);
   }
 
@@ -1760,7 +1756,7 @@
     height: 100dvh;
     transform: translateX(-105%);
     visibility: hidden;
-    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition: transform var(--console-motion-base) var(--console-ease-out);
     box-shadow: 16px 0 50px hsl(var(--im-shadow) / 0.2);
   }
 

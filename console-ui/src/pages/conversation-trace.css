@@ -42,7 +42,7 @@
   .conversation-request-sections > [data-state]:last-child { border-bottom: 0; }
   .conversation-request-sections button { gap: .75rem; }
   .conversation-request-sections button small { margin-left: auto; margin-top: 0; font-variant-numeric: tabular-nums; }
-  .conversation-request-sections pre, .conversation-trace-tools pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 30rem; overflow: auto; font-size: var(--console-text-label); line-height: 1.7; font-family: var(--font-mono, monospace); }
+  .conversation-request-sections pre, .conversation-trace-tools pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 30rem; overflow: auto; font-size: var(--console-text-label); line-height: 1.7; font-family: var(--console-font-mono); }
   .conversation-request-message + .conversation-request-message, .conversation-request-tool + .conversation-request-tool { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--console-border-subtle); }
   .conversation-request-message h5, .conversation-request-tool h5 { margin-bottom: .5rem; font-weight: 600; font-size: var(--console-text-label); overflow-wrap: anywhere; }
   .conversation-request-message h5 > span { font-variant-numeric: tabular-nums; margin-right: .625rem; color: hsl(var(--muted-foreground)); font-weight: 400; }

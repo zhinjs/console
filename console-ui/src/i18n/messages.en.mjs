@@ -1040,7 +1040,6 @@ export const englishMessages = Object.freeze({
   "保存配置": "Save configuration",
   "切换主题": "Switch theme",
   "处理中...": "Processing…",
-  "暂无数据": "No data",
   "重试": "Retry",
   "关闭通知": "Dismiss notification",
   "跳到主要内容": "Skip to main content",
@@ -3442,4 +3441,10 @@ export const englishMessages = Object.freeze({
   "找不到这个页面": "Page not found",
   "Console 里没有这个地址对应的页面。链接可能已过期，或者提供它的插件没有安装。": "No Console page matches this address. The link may be outdated, or the plugin that provides it is not installed.",
   "打开 {0} 搜索": "Open {0} search",
+  "还没有内容": "Nothing here yet",
+  "有了新内容会显示在这里。": "New items will show up here.",
+  "这个数据库还没有表": "This database has no tables yet",
+  "建表后会列在这里。": "Tables appear here once they are created.",
+  "这个存储桶还没有键值。": "This bucket has no keys yet.",
+  "这张表还没有记录。": "This table has no records yet.",
 })

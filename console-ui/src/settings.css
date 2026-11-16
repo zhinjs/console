@@ -27,7 +27,7 @@
     color: hsl(var(--muted-foreground));
     text-align: left;
     font-size: var(--console-text-body);
-    transition: background-color 150ms ease, color 150ms ease;
+    transition: background-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out);
   }
   .console-settings-nav-item svg { width: 1.125rem; height: 1.125rem; flex-shrink: 0; }
   .console-settings-nav-item:hover { color: hsl(var(--foreground)); background: hsl(var(--muted)); }
@@ -44,7 +44,7 @@
   .console-settings-list { display: grid; overflow: hidden; border: var(--console-border-width) solid transparent; border-radius: var(--console-radius-lg); background: hsl(var(--card));
     box-shadow: var(--console-shadow-sm);
   }
-  .console-settings-entry { display: flex; align-items: center; gap: 1rem; min-width: 0; padding: 1.125rem; text-align: left; transition: background-color 150ms ease; }
+  .console-settings-entry { display: flex; align-items: center; gap: 1rem; min-width: 0; padding: 1.125rem; text-align: left; transition: background-color var(--console-motion-fast) var(--console-ease-out); }
   .console-settings-entry + .console-settings-entry { border-top: 1px solid var(--console-border-default); }
   .console-settings-entry:hover { background: hsl(var(--muted) / 0.6); }
   .console-settings-entry-icon { display: grid; place-items: center; flex-shrink: 0; width: 2.5rem; height: 2.5rem; border: 1px solid var(--console-border-default); border-radius: var(--console-radius-md); color: hsl(var(--muted-foreground)); }

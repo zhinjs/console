@@ -13,8 +13,11 @@ test('provider chips wrap on narrow screens so the 功能 link stays inside the 
   assert.match(chip, /max-width:\s*100%/)
 })
 
-test('the scope summary badge may wrap instead of forcing one nowrap line', () => {
+test('provider rows wrap on narrow screens; the summary is plain text and a long name truncates', () => {
+  const row = css.match(/\.console-provider-row\s*\{([^}]*)\}/)?.[1] ?? ''
+  assert.match(row, /flex-wrap:\s*wrap/)
+  assert.match(row, /min-width:\s*0/)
   const summary = page.slice(page.indexOf('function ProviderSummary'))
-  assert.match(summary, /<Badge [^>]*className="max-w-full whitespace-normal"[^>]*>\{scopeSummaryLine\(/, 'Badge defaults to whitespace-nowrap')
-  assert.match(summary, /className="min-w-0 truncate font-mono[^"]*" title=\{plugin\}/, 'a long plugin name truncates and keeps its title')
+  assert.match(summary, /<span className="console-provider-row-summary">\{scopeSummaryLine\(/, 'the summary is text, not a nowrap Badge')
+  assert.match(summary, /className="console-code min-w-0 truncate[^"]*" title=\{plugin\}/, 'a long plugin name truncates and keeps its title')
 })

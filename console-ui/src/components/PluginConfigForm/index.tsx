@@ -2,7 +2,7 @@ import { StatusState } from '../StatusState'
 import { useI18n } from '../../i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Settings, AlertCircle, Save, Loader2 } from 'lucide-react'
+import { Settings, AlertCircle, Save } from 'lucide-react'
 import type { PluginConfigFormProps, SchemaField, SchemaEditorDrafts } from './types.js'
 import { usePluginConfigDraft } from './usePluginConfigDraft'
 import { AgentPresetsEditor } from './AgentPresetsEditor'
@@ -17,6 +17,7 @@ import { ConfigurationLiveStatus } from './ConfigurationLiveStatus'
 import { ApplyFeedback, type ApplyOutcome, type ReadBackMismatch } from '../ApplyFeedback'
 import { outcomeFromConfigSave, readBackMismatch, schemaSecretAt } from '../apply-outcome-model.mjs'
 import { configurationSupportsApply } from './config-live-status.mjs'
+import { SaveButton, useSaveFeedback } from '../SaveButton'
 
 interface ConfigValidation { valid: boolean; schemaAvailable?: boolean; errors: Array<{ path: string; message: string }>; missingEnv: string[] }
 
@@ -58,6 +59,7 @@ function PluginConfigFormSession({ pluginName, onSuccess, onDirtyChange, sourceR
   // An unmounted category can still own an invalid JSON draft. Keep saving blocked until it is fixed or discarded.
   const hasInvalidFields = invalidFields.size > 0 || scoped && [...editorDrafts.current.json.values()].some(draft => draft.error)
   const [saving, setSaving] = useState(false)
+  const saveFeedback = useSaveFeedback()
   const [saveError, setSaveError] = useState<string | null>(null)
   // The last save's outcome next to 保存: 已生效 / 需要重启 / 未生效, or the read-back that differs.
   const [message, setMessage] = useState<{ outcome: ApplyOutcome; mismatch: ReadBackMismatch | null; unverified: boolean } | null>(null)
@@ -127,7 +129,7 @@ function PluginConfigFormSession({ pluginName, onSuccess, onDirtyChange, sourceR
     const name = pluginName
     const operationId = ++operation.current
     const currentOperation = () => isInboxCacheScopeActive(connectionScope) && currentName.current === name && operation.current === operationId
-    setSaving(true); setSaveError(null); setMessage(null)
+    setSaving(true); setSaveError(null); setMessage(null); saveFeedback.reset()
     try {
       const checked = await requestConsole<ConfigValidation>({ type: 'plugin:validate-config', pluginName: name, data: localConfig })
       if (!currentOperation()) return
@@ -143,11 +145,14 @@ function PluginConfigFormSession({ pluginName, onSuccess, onDirtyChange, sourceR
       const reread = await form.load()
       if (!currentOperation()) return
       const schema = reread ? form.schema : null
+      const mismatch = reread ? readBackMismatch(submitted, reread.config, { isSecret: path => schemaSecretAt(schema, path) }) : null
       setMessage({
         outcome: outcomeFromConfigSave(result, result.revision),
-        mismatch: reread ? readBackMismatch(submitted, reread.config, { isSecret: path => schemaSecretAt(schema, path) }) : null,
+        mismatch,
         unverified: !reread,
       })
+      // 已保存 on the button only when the Host reads back what was submitted.
+      if (reread && !mismatch) saveFeedback.markSaved()
     } catch (cause) { if (currentOperation()) setSaveError(cause instanceof Error ? cause.message : i18n.t("保存失败，草稿已保留")) }
     finally { if (currentOperation()) setSaving(false) }
   }
@@ -161,7 +166,7 @@ function PluginConfigFormSession({ pluginName, onSuccess, onDirtyChange, sourceR
   return <Card className="mt-0 p-4 pt-0 space-y-4">
     <div ref={actionbarRef} className="console-config-actionbar">
       <div className="flex min-w-0 items-center gap-2"><Settings className="h-4 w-4 shrink-0" /><h3 className="truncate font-semibold">{displayTitle ?? `${i18n.t("配置 · ")}${pluginName}`}</h3>{dirty ? <span className="console-dirty-pill" role="status">{i18n.t("有未保存的修改")}</span> : null}</div>
-      <Button size="sm" onClick={() => void handleSave()} disabled={saving || draftName !== pluginName || form.loading || !!form.error || hasInvalidFields}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{scoped && pluginName === 'ai' ? i18n.t("保存全部修改") : i18n.t("保存配置")}</Button>
+      <SaveButton size="sm" onClick={() => void handleSave()} saving={saving} saved={saveFeedback.saved} disabled={saving || draftName !== pluginName || form.loading || !!form.error || hasInvalidFields}><Save className="h-4 w-4" />{scoped && pluginName === 'ai' ? i18n.t("保存全部修改") : i18n.t("保存配置")}</SaveButton>
     </div>
     {(saveError || form.error) ? <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{saveError ?? form.error}{i18n.t("。草稿已保留。")}<Link className="ml-2 underline" to="/ops/files">{i18n.t("打开文件管理")}</Link>{form.errorOperation === 'read' ? <Button variant="outline" size="sm" onClick={() => void form.load()}>{i18n.t("重试读取")}</Button> : null}</AlertDescription></Alert> : null}
     {validation && (!validation.valid || validation.missingEnv.length > 0) ? <Alert variant={validation.valid && !validation.missingEnv.length ? 'default' : 'destructive'}><AlertDescription><p>{hostValidationSummary(validation, i18n.locale)}</p>{validation.errors.map(item => <p key={`${item.path}:${item.message}`}>{item.path}: {item.message}</p>)}{validation.missingEnv.length ? <p>{i18n.t("缺少环境变量：")}{validation.missingEnv.join('、')}。<Link className="underline" to="/ops/env">{i18n.t("配置环境变量")}</Link>{i18n.t("后重新校验。")}</p> : null}</AlertDescription></Alert> : null}

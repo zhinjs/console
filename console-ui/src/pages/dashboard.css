@@ -201,7 +201,7 @@
     opacity: 0;
     pointer-events: none;
     transform: translate(-50%, 2px);
-    transition: opacity 100ms ease, transform 100ms ease;
+    transition: opacity var(--console-motion-fast) var(--console-ease-out), transform var(--console-motion-fast) var(--console-ease-out);
   }
   .console-volume-col.is-start::after { left: 0; transform: translate(0, 2px); }
   .console-volume-col.is-end::after { left: auto; right: 0; transform: translate(0, 2px); }
@@ -280,7 +280,7 @@
     height: 100%;
     border-radius: inherit;
     background: hsl(var(--primary));
-    transition: width 240ms ease;
+    transition: width var(--console-motion-base) var(--console-ease-out);
   }
 
   .console-meter > span.is-warning { background: hsl(var(--warning-fill)); }

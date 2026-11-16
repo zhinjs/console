@@ -14,4 +14,20 @@
   .console-toast-close:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
   .console-toast-close svg { width: 15px; height: 15px; }
   @media (max-width: 767px) { .console-toast { padding: 14px; gap: 10px; } .console-toast-close { width: 32px; height: 32px; } }
+  .console-toast[data-state="closing"] { pointer-events: none; }
+  /* Enter: rise 8px into the bottom-right corner and fade in (base); exit: fade out (fast). */
+  @media (prefers-reduced-motion: no-preference) {
+    .console-toast { animation: console-toast-in var(--console-motion-base) var(--console-ease-out) both; }
+    .console-toast[data-state="closing"] { animation: console-toast-out var(--console-motion-fast) var(--console-ease-out) both; }
+  }
+}
+
+@keyframes console-toast-in {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes console-toast-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
 }

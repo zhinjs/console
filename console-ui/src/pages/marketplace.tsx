@@ -8,7 +8,7 @@ import {
 } from './marketplace-view-model.mjs'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import {
-  Search, Package, Download, ExternalLink, RefreshCw, Copy, Check, GitBranch, Settings, CheckCircle2, ToggleLeft,
+  Search, Package, Download, ExternalLink, RefreshCw, Copy, Check, Settings, CheckCircle2, ToggleLeft,
 } from 'lucide-react'
 import { Alert, AlertDescription, Badge, Button, Card, CardContent, Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, PageHeader, PageShell, SelectField, Separator, Skeleton, Tabs, TabsList, TabsTrigger } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
@@ -346,9 +346,9 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                     const status = marketplacePluginStatus(u.name, installed, updates)
                     return (
                       <li key={u.name} className="flex flex-wrap items-center gap-2">
-                        <Badge variant="secondary" className="max-w-full truncate font-mono" title={u.name}>
+                        <code className="console-code max-w-full truncate text-sm" title={u.name}>
                           {u.name}：{u.current} → latest {u.latest}
-                        </Badge>
+                        </code>
                         <Button variant="outline" size="sm" asChild>
                           <Link to={pluginManageUrl(u.name, status.instanceKey)} aria-label={i18n.t("前往 {0} 的插件详情更新", [u.name])}>
                             {i18n.t("去更新")}
@@ -608,10 +608,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                     {detail.versions?.length > 0 ? (
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                         {detail.versions.slice(-20).reverse().map(v => (
-                          <span key={v} className="inline-flex items-center gap-1 px-2 py-1 rounded border text-xs font-mono bg-muted/40 min-w-0 truncate" title={v}>
-                            <GitBranch className="w-3 h-3 text-muted-foreground shrink-0" />
-                            <span className="truncate">{v}</span>
-                          </span>
+                          <code key={v} className="console-code min-w-0 truncate py-1 text-xs" title={v}>{v}</code>
                         ))}
                       </div>
                     ) : <StatusState compact kind="empty" title={i18n.t("暂无版本信息")} description={i18n.t("注册表没有返回版本列表。")} />}

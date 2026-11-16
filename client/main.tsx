@@ -4,6 +4,7 @@ import { ConsoleUiLocale } from '@console/i18n/console-ui-locale'
 // Component styles first: the Console's own Tailwind build (style.css) comes after and wins within a layer.
 import "@zhin.js/console-ui/styles.css";
 import "./style.css";
+import "../console-ui/src/fonts.css";
 import * as React from "react";
 import * as ReactJsxDevRuntime from "react/jsx-dev-runtime";
 import * as ReactJsxRuntime from "react/jsx-runtime";

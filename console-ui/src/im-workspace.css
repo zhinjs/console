@@ -16,7 +16,7 @@
 .im-chat-title code { overflow: hidden; min-width: 0; font-family: var(--console-font-mono); text-overflow: ellipsis; }
 .im-chat-header-actions { display: flex; flex-shrink: 0; align-items: center; gap: 0.125rem; }
 .im-chat-back { display: none; flex-shrink: 0; }
-.im-header-icon-button { border-radius: 8px; color: hsl(var(--muted-foreground)); transition: background-color 120ms, color 120ms; }
+.im-header-icon-button { border-radius: 8px; color: hsl(var(--muted-foreground)); transition: background-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out); }
 .im-header-icon-button:hover:not(:disabled) { background: hsl(var(--accent)); color: hsl(var(--foreground)); }
 .im-sidebar-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-shrink: 0; min-height: 3.5rem; padding: 0.5rem 0.5rem 0.5rem 1rem; border-bottom: 1px solid hsl(var(--border)); }
 .im-sidebar-title { display: flex; align-items: center; gap: 0.5rem; margin: 0; font-size: var(--console-text-body); font-weight: 600; }
@@ -37,7 +37,7 @@
 .im-section-count-badge { display: inline-flex; justify-content: center; align-items: center; min-width: 22px; padding: 1px 5px; border-radius: 5px; font-size: var(--console-text-label); background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); font-variant-numeric: tabular-nums; }
 .im-section-panel { overflow: hidden; background: transparent; }
 .im-section-empty { padding: 16px 10px; text-align: center; color: hsl(var(--muted-foreground)); font-size: 12px; }
-.im-conversation-row { display: grid; grid-template-columns: 36px minmax(0,1fr); align-items: center; gap: 10px; width: 100%; min-height: 60px; padding: 8px; border: 0; border-radius: 8px; background: transparent; color: inherit; cursor: pointer; text-align: left; transition: background-color 120ms; }
+.im-conversation-row { display: grid; grid-template-columns: 36px minmax(0,1fr); align-items: center; gap: 10px; width: 100%; min-height: 60px; padding: 8px; border: 0; border-radius: 8px; background: transparent; color: inherit; cursor: pointer; text-align: left; transition: background-color var(--console-motion-fast) var(--console-ease-out); }
 .im-conversation-row:hover:not(.active), .im-system-row:hover:not(.active) { background: hsl(var(--im-row-hover)); }
 .im-conversation-row.active, .im-system-row.active { background: hsl(var(--im-row-active)); color: hsl(var(--im-row-active-fg)); }
 .im-conversation-row.active .im-conversation-preview, .im-conversation-row.active .im-conversation-time, .im-system-row.active .im-system-desc { color: hsl(var(--im-row-active-muted)); }
@@ -143,7 +143,7 @@
 .im-message-row .im-message-actions { order: 2; }
 .im-message-row--out .im-message-actions { order: 0; }
 .im-message-row--out { justify-content: flex-end; }
-.im-message-actions { display: inline-flex; align-items: center; gap: 4px; opacity: 0; transition: opacity 120ms; }
+.im-message-actions { display: inline-flex; align-items: center; gap: 4px; opacity: 0; transition: opacity var(--console-motion-fast) var(--console-ease-out); }
 .im-message-row:hover .im-message-actions, .im-message-row:focus-within .im-message-actions { opacity: 1; }
 .im-message-actions button { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 1px solid hsl(var(--border)); border-radius: 6px; background: hsl(var(--card)); color: hsl(var(--muted-foreground)); cursor: pointer; }
 .im-message-actions button:hover { background: hsl(var(--accent)); color: hsl(var(--foreground)); }
@@ -198,7 +198,7 @@
 .im-member-role-tabs { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
 .im-member-role-tabs button { min-width: 0; min-height: 32px; border: 1px solid hsl(var(--border)); border-radius: 6px; background: hsl(var(--card)); color: hsl(var(--muted-foreground)); font-size: 12px; cursor: pointer; }
 .im-member-role-tabs button.active { background: hsl(var(--accent)); color: hsl(var(--foreground)); }
-.im-member-card { border: var(--console-border-width) solid transparent; border-radius: 10px; background: hsl(var(--card)); box-shadow: var(--console-shadow-sm); transition: border-color 150ms ease, box-shadow 150ms ease; }
+.im-member-card { border: var(--console-border-width) solid transparent; border-radius: 10px; background: hsl(var(--card)); box-shadow: var(--console-shadow-sm); transition: border-color var(--console-motion-fast) var(--console-ease-out), box-shadow var(--console-motion-fast) var(--console-ease-out); }
 .im-member-card:hover { border-color: hsl(var(--primary) / .3); box-shadow: var(--console-shadow-sm); }
 .im-member-card--owner { border-color: hsl(var(--warning) / .3); }
 .im-member-card--admin { border-color: hsl(var(--info) / .3); }
