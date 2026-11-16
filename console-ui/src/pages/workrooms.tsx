@@ -25,8 +25,10 @@ import { useIsMobile } from '../hooks/useIsMobile'
 import {
   actorLabel,
   collaborationEventSummary,
+  engagementParticipants,
   engagementTotals,
   hasRunningEngagement,
+  listOf,
   venueChannelLabel,
 } from './engagements-model.mjs'
 
@@ -157,8 +159,8 @@ function WorkroomBoardPage() {
                   <p className="mt-1 text-xs text-muted-foreground">
                     {i18n.t("{0} 次跳转 · {1} 轮 · {2} Tokens", [item.hops, item.turns, i18n.number(item.tokensUsed)])}
                   </p>
-                  {item.participants.length ? (
-                    <p className="mt-1 truncate font-mono text-xs text-muted-foreground">{item.participants.join(', ')}</p>
+                  {engagementParticipants(item).length ? (
+                    <p className="mt-1 truncate font-mono text-xs text-muted-foreground">{engagementParticipants(item).join(', ')}</p>
                   ) : null}
                 </ListItemButton>
               ))}
@@ -218,10 +220,13 @@ function EngagementDetail({ detail, statusLabel }: {
   const i18n = useI18n()
   const [view, setView] = useState<DetailView>('timeline')
   const { summary } = detail
+  // The protocol marks these required, but a Host that leaves one out must not take the page down.
+  const board = listOf(detail.board)
+  const events = listOf(detail.events)
   const views: { key: DetailView; label: string }[] = [
     { key: 'timeline', label: i18n.t("协作链路") },
-    { key: 'board', label: i18n.t("共享黑板 · {0}", [detail.board.length]) },
-    { key: 'raw', label: i18n.t("原始事件 · {0}", [detail.events.length]) },
+    { key: 'board', label: i18n.t("共享黑板 · {0}", [board.length]) },
+    { key: 'raw', label: i18n.t("原始事件 · {0}", [events.length]) },
   ]
   return (
     <div className="space-y-4 p-4 sm:p-5">
@@ -231,7 +236,7 @@ function EngagementDetail({ detail, statusLabel }: {
           <p className="mt-1 break-all text-xs text-muted-foreground"><code>{summary.engagementId}</code></p>
           <p className="mt-1 text-sm text-muted-foreground">
             {summary.venue ? i18n.t("场所：{0}", [summary.venue]) : i18n.t("临时协作（未绑定场所）")}
-            {' · '}{i18n.t("参与方：{0}", [summary.participants.join(', ') || '—'])}
+            {' · '}{i18n.t("参与方：{0}", [engagementParticipants(summary).join(', ') || '—'])}
             {summary.stopReason ? <>{' · '}{i18n.t("终止原因：{0}", [summary.stopReason])}</> : null}
           </p>
         </div>
@@ -271,9 +276,9 @@ function EngagementDetail({ detail, statusLabel }: {
       </div>
 
       {view === 'timeline' ? (
-        detail.events.length ? (
+        events.length ? (
           <ol className="space-y-2 font-mono text-xs">
-            {detail.events.map((event, index) => (
+            {events.map((event, index) => (
               <li key={index} className="break-all rounded-lg border p-2.5">
                 <span className="font-semibold text-foreground">{String(event.kind ?? 'event')}</span>
                 <span className="ml-2 text-muted-foreground">{collaborationEventSummary(event)}</span>
@@ -284,9 +289,9 @@ function EngagementDetail({ detail, statusLabel }: {
       ) : null}
 
       {view === 'board' ? (
-        detail.board.length ? (
+        board.length ? (
           <ul className="space-y-2 text-sm">
-            {detail.board.map((entry) => (
+            {board.map((entry) => (
               <li key={entry.key} className="space-y-1 rounded-lg border p-3">
                 <div className="flex items-center justify-between gap-2">
                   <code className="text-xs font-semibold">{entry.key}</code>
@@ -302,7 +307,7 @@ function EngagementDetail({ detail, statusLabel }: {
       ) : null}
 
       {view === 'raw' ? (
-        <pre className="max-h-96 overflow-auto rounded-lg border bg-muted/25 p-3 font-mono text-xs">{JSON.stringify(detail.events, null, 2)}</pre>
+        <pre className="max-h-96 overflow-auto rounded-lg border bg-muted/25 p-3 font-mono text-xs">{JSON.stringify(events, null, 2)}</pre>
       ) : null}
     </div>
   )
