@@ -27,7 +27,7 @@
     font-size: var(--console-text-label);
   }
   .console-overview-status .console-health-pill { margin-bottom: 0; }
-  .console-overview-status a { color: hsl(var(--foreground)); font-weight: var(--console-weight-strong); text-underline-offset: 2px; }
+  .console-overview-status a { color: hsl(var(--foreground)); font-weight: var(--console-weight-medium); text-underline-offset: 2px; }
   .console-overview-status a:hover { text-decoration: underline; }
   /* 统计口径：两个 ⓘ 标签，说明点开才显示 */
   .console-basis-hints {

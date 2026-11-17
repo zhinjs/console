@@ -135,7 +135,7 @@
     padding: 0 var(--console-space-4);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-body);
-    font-weight: var(--console-weight-strong);
+    font-weight: var(--console-weight-medium);
     white-space: nowrap;
     cursor: pointer;
     transition: background-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out), box-shadow var(--console-motion-fast) var(--console-ease-out);
@@ -599,7 +599,7 @@
     overflow: hidden;
     min-width: 0;
     color: hsl(var(--foreground));
-    font-weight: var(--console-weight-strong);
+    font-weight: var(--console-weight-medium);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -889,7 +889,7 @@
     padding: var(--console-space-1) var(--console-space-2);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
-    font-weight: var(--console-weight-strong);
+    font-weight: var(--console-weight-medium);
     white-space: nowrap;
   }
 

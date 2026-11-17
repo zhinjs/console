@@ -32,7 +32,7 @@
     background: transparent;
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
-    font-weight: var(--console-weight-strong);
+    font-weight: var(--console-weight-medium);
     line-height: 1.4;
     cursor: pointer;
     transition: background-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out), box-shadow var(--console-motion-fast) var(--console-ease-out);

@@ -667,7 +667,7 @@
 
   .console-metric-head > span:first-child {
     font-size: var(--console-text-label);
-    font-weight: var(--console-weight-strong);
+    font-weight: var(--console-weight-medium);
     color: hsl(var(--muted-foreground));
   }
 
@@ -752,7 +752,7 @@
     background: var(--console-surface-inset);
     color: hsl(var(--foreground));
     font-size: var(--console-text-label);
-    font-weight: var(--console-weight-strong);
+    font-weight: var(--console-weight-medium);
     text-align: left;
     cursor: pointer;
     transition: border-color var(--console-motion-fast) var(--console-ease-out), background-color var(--console-motion-fast) var(--console-ease-out), box-shadow var(--console-motion-fast) var(--console-ease-out);

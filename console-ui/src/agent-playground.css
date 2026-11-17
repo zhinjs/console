@@ -1337,7 +1337,7 @@
 .agent-playground-inspector-title small {
   color: hsl(var(--muted-foreground));
   font-size: var(--console-text-label);
-  font-weight: var(--console-weight-strong);
+  font-weight: var(--console-weight-medium);
   letter-spacing: 0.05em;
   text-transform: none;
 }

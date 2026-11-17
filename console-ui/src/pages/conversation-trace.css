@@ -7,7 +7,7 @@
   .conversation-usage-metrics > dl { display: grid; gap: var(--console-space-3); align-content: start; }
   .conversation-usage-metrics > dl > div { display: flex; align-items: baseline; justify-content: space-between; gap: var(--console-space-2); }
   .conversation-usage-metrics dt { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
-  .conversation-usage-metrics dd { font-size: var(--console-text-body); font-weight: var(--console-weight-strong); }
+  .conversation-usage-metrics dd { font-size: var(--console-text-body); font-weight: var(--console-weight-medium); }
   .conversation-usage-metrics .conversation-usage-subset { padding-left: var(--console-space-3); border-left: var(--console-border-hairline) solid var(--console-border-subtle); }
   .conversation-usage-metrics .conversation-usage-subset dd { font-size: var(--console-text-label); font-weight: var(--console-weight-regular); }
   .conversation-context-usage { border-top: var(--console-border-hairline) solid var(--console-border-subtle); padding-top: var(--console-space-4); }
@@ -35,7 +35,7 @@
   .conversation-turn-context > summary { cursor: pointer; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); padding: var(--console-space-2) 0; }
   .conversation-turn-context .conversation-context-usage { max-width: 30rem; margin-top: var(--console-space-2); }
   .conversation-request-list > [data-state] > h3 > button { gap: var(--console-space-3); text-align: left; min-width: 0; }
-  .conversation-request-list strong { display: block; font-weight: var(--console-weight-strong); font-size: var(--console-text-body); }
+  .conversation-request-list strong { display: block; font-weight: var(--console-weight-medium); font-size: var(--console-text-body); }
   .conversation-request-list small { display: block; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-weight: var(--console-weight-regular); margin-top: var(--console-space-1); overflow-wrap: anywhere; }
   .conversation-request-list .conversation-request-status { margin-left: auto; flex-shrink: 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-weight: var(--console-weight-regular); }
   .conversation-request-sections { padding: 0 var(--console-space-3); border-radius: var(--console-radius-2); background: var(--console-surface-inset); }
@@ -47,7 +47,7 @@
   .conversation-request-message h5, .conversation-request-tool h5 { margin-bottom: var(--console-space-2); font-weight: var(--console-weight-strong); font-size: var(--console-text-label); overflow-wrap: anywhere; }
   .conversation-request-message h5 > span { margin-right: var(--console-space-3); color: hsl(var(--muted-foreground)); font-weight: var(--console-weight-regular); }
   .conversation-trace-tools { margin-top: var(--console-space-4); }
-  .conversation-trace-tools > h4, .conversation-trace-subagent > h4 { display: flex; align-items: center; gap: var(--console-space-2); margin-bottom: var(--console-space-2); font-size: var(--console-text-label); font-weight: var(--console-weight-strong); }
+  .conversation-trace-tools > h4, .conversation-trace-subagent > h4 { display: flex; align-items: center; gap: var(--console-space-2); margin-bottom: var(--console-space-2); font-size: var(--console-text-label); font-weight: var(--console-weight-medium); }
   .conversation-trace-tools > h4 > svg { width: .875rem; height: .875rem; }
   .conversation-trace-tools summary { display: flex; justify-content: space-between; gap: var(--console-space-3); padding: var(--console-space-3) 0; cursor: pointer; font-size: var(--console-text-label); }
   .conversation-trace-tools summary > span:last-child { color: hsl(var(--muted-foreground)); flex-shrink: 0; }

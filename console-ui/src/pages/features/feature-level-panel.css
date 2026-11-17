@@ -60,7 +60,7 @@
 .console-feature-view-switch { display: inline-flex; gap: var(--console-space-1); border-radius: var(--console-radius-2); background: hsl(var(--muted)); padding: var(--console-space-1); }
 .console-feature-view-switch button {
   display: inline-flex; min-height: calc(var(--console-control-height-compact) - 0.375rem); align-items: center; gap: var(--console-space-2); border-radius: var(--console-radius-1);
-  padding: 0 var(--console-space-3); color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-weight: var(--console-weight-strong);
+  padding: 0 var(--console-space-3); color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-weight: var(--console-weight-medium);
 }
 .console-feature-view-switch button[aria-pressed="true"] { background: hsl(var(--card)); color: hsl(var(--foreground)); box-shadow: var(--console-card-elevation); }
 .console-feature-view-switch button:focus-visible { outline: var(--console-border-focus) solid hsl(var(--ring)); outline-offset: 1px; }

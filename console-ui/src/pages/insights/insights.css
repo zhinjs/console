@@ -28,7 +28,7 @@
 }
 .console-basis-note strong { color: hsl(var(--foreground)); font-weight: var(--console-weight-strong); }
 .console-basis-note .is-partial { color: hsl(var(--warning)); }
-.console-sample-missing { color: hsl(var(--muted-foreground)); font-size: var(--console-text-body); font-weight: var(--console-weight-strong); }
+.console-sample-missing { color: hsl(var(--muted-foreground)); font-size: var(--console-text-body); font-weight: var(--console-weight-medium); }
 
 /* ---- 统一任务列表 ---- */
 .console-task-overview-table td { vertical-align: top; }
