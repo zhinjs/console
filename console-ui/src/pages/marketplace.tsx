@@ -10,7 +10,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import {
   Search, Package, Download, ExternalLink, RefreshCw, Copy, Check, Settings, CheckCircle2, ToggleLeft,
 } from 'lucide-react'
-import { Alert, AlertDescription, Badge, Button, Card, CardContent, Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, PageHeader, PageShell, SelectField, Separator, Skeleton, Tabs, TabsList, TabsTrigger } from '@zhin.js/console-ui'
+import { Alert, AlertDescription, Badge, Button, Card, CardContent, Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, InlineCode, Input, PageHeader, PageShell, SelectField, Separator, Skeleton, Tabs, TabsList, TabsTrigger } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import { apiFetch } from '../utils/auth'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -346,9 +346,9 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                     const status = marketplacePluginStatus(u.name, installed, updates)
                     return (
                       <li key={u.name} className="flex flex-wrap items-center gap-2">
-                        <code className="console-code max-w-full truncate text-sm" title={u.name}>
+                        <InlineCode className="max-w-full truncate text-sm" title={u.name}>
                           {u.name}：{u.current} → latest {u.latest}
-                        </code>
+                        </InlineCode>
                         <Button variant="outline" size="sm" asChild>
                           <Link to={pluginManageUrl(u.name, status.instanceKey)} aria-label={i18n.t("前往 {0} 的插件详情更新", [u.name])}>
                             {i18n.t("去更新")}
@@ -608,7 +608,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                     {detail.versions?.length > 0 ? (
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                         {detail.versions.slice(-20).reverse().map(v => (
-                          <code key={v} className="console-code min-w-0 truncate py-1 text-xs" title={v}>{v}</code>
+                          <InlineCode key={v} className="min-w-0 truncate py-1 text-xs" title={v}>{v}</InlineCode>
                         ))}
                       </div>
                     ) : <StatusState compact kind="empty" title={i18n.t("暂无版本信息")} description={i18n.t("注册表没有返回版本列表。")} />}

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { RefreshCw, Search, X } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { Badge, Button, Card, DateTimeField, Input, PageHeader, PageShell, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
+import { Badge, Button, Card, DateTimeField, InlineCode, Input, PageHeader, PageShell, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
 import {
   IAM_RPC, actorLabel, auditQuery, outcomeVariant, readAuditPage, type AuditFilter, type IamAuditEntry,
@@ -97,7 +97,7 @@ export default function AccessAuditPage() {
         <p className="mt-2 text-xs text-muted-foreground">{i18n.t("主体与动作按完整值匹配，例如 user:<ID>、api-token:<ID>、auth.login、iam.users.create。")}</p>
         {target ? (
           <div className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3 text-sm" role="status">
-            <span>{i18n.t("只显示目标为")} <code className="console-code">{target}</code> {i18n.t("的记录（在已读取的 {0} 条中筛选）。", [entries.length])}</span>
+            <span>{i18n.t("只显示目标为")} <InlineCode>{target}</InlineCode> {i18n.t("的记录（在已读取的 {0} 条中筛选）。", [entries.length])}</span>
             <Button type="button" variant="ghost" size="sm" onClick={clearTarget}><X />{i18n.t("显示全部目标")}</Button>
           </div>
         ) : null}
@@ -135,12 +135,12 @@ export default function AccessAuditPage() {
                     <span className="mt-0.5 block text-xs text-foreground md:hidden" title={entry.actor}>{actorLabel(entry.actor, usersById, i18n.t)}</span>
                   </TableCell>
                   <TableCell className="hidden md:table-cell"><span title={entry.actor}>{actorLabel(entry.actor, usersById, i18n.t)}</span></TableCell>
-                  <TableCell className="min-w-[8rem] text-xs"><code className="console-code">{entry.action}</code></TableCell>
-                  <TableCell className="hidden max-w-[16rem] truncate lg:table-cell" title={entry.target ?? undefined}>{entry.target ? <code className="console-code">{entry.target}</code> : '—'}</TableCell>
+                  <TableCell className="min-w-[8rem] text-xs"><InlineCode>{entry.action}</InlineCode></TableCell>
+                  <TableCell className="hidden max-w-[16rem] truncate lg:table-cell" title={entry.target ?? undefined}>{entry.target ? <InlineCode>{entry.target}</InlineCode> : '—'}</TableCell>
                   <TableCell>{(variant => variant
                     ? <Badge variant={variant} size="sm">{outcomeText(entry.outcome, i18n.t)}</Badge>
                     : <span className="text-muted-foreground">{outcomeText(entry.outcome, i18n.t)}</span>)(outcomeVariant(entry.outcome))}</TableCell>
-                  <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">{entry.ip ? <code className="console-code">{entry.ip}</code> : '—'}</TableCell>
+                  <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">{entry.ip ? <InlineCode>{entry.ip}</InlineCode> : '—'}</TableCell>
                   <TableCell className="hidden md:table-cell">
                     {entry.detail === null ? '—' : (
                       <details className="text-xs">

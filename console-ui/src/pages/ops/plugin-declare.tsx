@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { KeyRound, Settings2 } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { Alert, AlertDescription, AlertTitle, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Skeleton, Textarea } from '@zhin.js/console-ui'
+import { Alert, AlertDescription, AlertTitle, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, InlineCode, Input, Skeleton, Textarea } from '@zhin.js/console-ui'
 import { useToast } from '../../components/toast'
 import { SchemaFieldEditor } from '../../components/PluginConfigForm/SchemaFieldEditor'
 import type { SchemaEditorDrafts, SchemaField } from '../../components/PluginConfigForm/types.js'
@@ -52,7 +52,7 @@ export function ConfigurationNeedsPanel({ needs, disabled, onDeclared, onBusyCha
                 <div>
                   <p className="text-muted-foreground">{i18n.t("缺少或需要修正的配置项：")}</p>
                   <ul className="console-code-list mt-1" aria-label={i18n.t("缺少的配置项")}>
-                    {need.missing.map(path => <li key={path}><code className="console-code">{path || need.instanceKey}</code></li>)}
+                    {need.missing.map(path => <li key={path}><InlineCode>{path || need.instanceKey}</InlineCode></li>)}
                   </ul>
                 </div>
               ) : null}

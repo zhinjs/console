@@ -8,7 +8,7 @@ import {
 import { Link } from 'react-router-dom'
 import { useLogPanel } from '../components/log-panel/LogPanel'
 import { apiFetch } from '../utils/auth'
-import { Alert, AlertDescription, Badge, Button, Card, CardContent, createPageChromeStore, PageChromeActions, PageChromeProvider, PageHeader, PageShell, Skeleton, useConfirm, usePageChromeState } from '@zhin.js/console-ui'
+import { Alert, AlertDescription, Badge, Button, Card, CardContent, createPageChromeStore, InlineCode, PageChromeActions, PageChromeProvider, PageHeader, PageShell, Skeleton, useConfirm, usePageChromeState } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import { requestConsole } from '../utils/console-rpc'
 import { validatePluginDetail, pluginDiagnosticSummary, pluginDetailView } from './plugin-detail-model.mjs'
@@ -431,8 +431,8 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
         </>}
       />
       <div className="console-plugin-detail-identity">
-        <code className="console-code" title={packageName}>{packageName}</code>
-        {instanceKey && instanceKey !== packageName ? <code className="console-code" title={instanceKey}>{instanceKey}</code> : null}
+        <InlineCode title={packageName}>{packageName}</InlineCode>
+        {instanceKey && instanceKey !== packageName ? <InlineCode title={instanceKey}>{instanceKey}</InlineCode> : null}
         {statusBadge}
         {update ? <Badge variant="default">{i18n.t("有更新 {0}", [update.latest])}</Badge> : null}
       </div>
@@ -551,7 +551,7 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
                             <p className="text-sm font-medium">{i18n.t(LEVEL_LABELS[group.level])} <span className="text-xs font-normal text-muted-foreground">{i18n.t("由 {0} 统一授予", [group.catalogPermission])}</span></p>
                             <ul className="console-code-list text-xs">
                               {group.permissions.map(item => (
-                                <li key={item.permission}><code className="console-code" title={item.description}>{item.permission}</code></li>
+                                <li key={item.permission}><InlineCode title={item.description}>{item.permission}</InlineCode></li>
                               ))}
                             </ul>
                           </li>
@@ -585,7 +585,7 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
                           <ul className="max-h-48 divide-y divide-border overflow-y-auto pr-1">
                             {feature.items.map((item, index) => (
                               <li key={index} className="py-1.5">
-                                <code className="console-code text-xs font-medium">{item.name}</code>
+                                <InlineCode className="text-xs font-medium">{item.name}</InlineCode>
                                 {item.desc ? <p className="text-xs text-muted-foreground">{item.desc}</p> : null}
                               </li>
                             ))}

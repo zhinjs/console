@@ -31,7 +31,7 @@ import {
   Unplug,
   Wrench,
 } from 'lucide-react'
-import { Badge, Button, cn, Dialog, DialogContent, DialogTitle, Input, ListItemButton, SelectField, Sheet, SheetClose, SheetContent, SheetTitle } from '@zhin.js/console-ui'
+import { Badge, Button, cn, Dialog, DialogContent, DialogTitle, InlineCode, Input, ListItemButton, SelectField, Sheet, SheetClose, SheetContent, SheetTitle } from '@zhin.js/console-ui'
 import { ENDPOINT_RPC } from '../../contracts/zhin-console'
 import { requestConsole } from '../../utils/console-rpc'
 import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
@@ -927,8 +927,8 @@ function CapabilityInspector(props: {
             <Badge variant="secondary">{parameters.length}</Badge>
           </div>
           <div className="console-code-list text-sm">
-            {parameters.map((param, idx) => <code key={`param-${idx}`} className="console-code">{param}</code>)}
-            {aliases.map((alias, idx) => <code key={`alias-${idx}`} className="console-code text-muted-foreground">{alias}</code>)}
+            {parameters.map((param, idx) => <InlineCode key={`param-${idx}`}>{param}</InlineCode>)}
+            {aliases.map((alias, idx) => <InlineCode key={`alias-${idx}`} className="text-muted-foreground">{alias}</InlineCode>)}
           </div>
         </div>
       ) : null}
