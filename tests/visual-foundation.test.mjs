@@ -121,7 +121,7 @@ test('status, fill and chart tokens are the library roles; sent is still chart-3
     assert.equal(values.get(name), `var(--console-${role})`, name)
   }
   const design = readFileSync(new URL('console-ui/src/design-system.css', root), 'utf8')
-  assert.match(design, /--console-chart-inbound: var\(--console-chart-1\);/)
-  assert.match(design, /--console-chart-outbound: var\(--console-chart-3\);/)
+  assert.match(design, /--zc-chart-inbound: var\(--console-chart-1\);/)
+  assert.match(design, /--zc-chart-outbound: var\(--console-chart-3\);/)
   assert.equal(resolveToken(values, 'console-chart-3'), '164 72% 32%')
 })

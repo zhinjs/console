@@ -29,7 +29,7 @@ import './log-panel.css'
 export { openLogPanel, closeLogPanel, toggleLogPanel, type LogPanelFilter }
 
 /** Reserved space below the page while the docked panel is open (shell.css / toast.css read it). */
-const RESERVE_VAR = '--console-log-panel-reserve'
+const RESERVE_VAR = '--zc-log-panel-reserve'
 
 function browserStorage(): Storage | null {
   try { return typeof window === 'undefined' ? null : window.localStorage } catch { return null }

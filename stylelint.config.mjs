@@ -2,9 +2,11 @@
  * Style rules of the component library (ADR 0063 D20, `@zhin.js/console-ui/stylelint`).
  *
  * `console/motion-tokens` is an error: every transition and animation reads the motion tokens
- * (--console-motion-fast / -base / -slow, --console-ease-out; zhinjs/console#125). The other rules
- * are warnings while the Console's stylesheets move onto the library's scale and token names
- * (`pnpm lint:css:all` lists them); CI runs `pnpm lint:css`, which fails on errors only.
+ * (--console-motion-fast / -base / -slow, --console-ease-out; zhinjs/console#125).
+ * `console/no-unknown-tokens` is an error: `--console-*` names belong to @zhin.js/console-ui; the
+ * Console's own tokens use the `--zc-` prefix. The other rules are warnings while the Console's
+ * stylesheets move onto the library's scale and token names (`pnpm lint:css:all` lists them); CI
+ * runs `pnpm lint:css`, which fails on errors only.
  */
 import { createConsoleStylelintConfig } from '@zhin.js/console-ui/stylelint'
 
@@ -26,7 +28,6 @@ export default {
   rules: {
     ...config.rules,
     'console/scale-values': warn('console/scale-values'),
-    'console/no-unknown-tokens': warn('console/no-unknown-tokens'),
     'console/media-queries': warn('console/media-queries'),
   },
 }

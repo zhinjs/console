@@ -7,16 +7,17 @@ import config from '../stylelint.config.mjs'
 
 const root = new URL('../', import.meta.url)
 
-test('motion is an error, the other library rules warn while the Console moves onto the scale', async () => {
+test('motion and unknown tokens are errors, the other library rules warn while the Console moves onto the scale', async () => {
   const { results: [result] } = await stylelint.lint({
-    code: '.a { transition: color 150ms ease; padding: 1rem; } .b { animation: spin var(--console-motion-loop) var(--console-ease-out) infinite; }',
+    code: '.a { transition: color 150ms ease; padding: 1rem; } .b { animation: spin var(--console-motion-loop) var(--console-ease-out) infinite; } .c { color: var(--zc-own-token); }',
     codeFilename: 'console-ui/src/pages/sample.css', config,
   })
   const by = rule => result.warnings.filter(warning => warning.rule === rule).map(warning => warning.severity)
   assert.deepEqual(new Set(by('console/motion-tokens')), new Set(['error']))
   assert.ok(by('console/motion-tokens').length >= 1)
   assert.deepEqual(by('console/scale-values'), ['warning'])
-  assert.deepEqual(by('console/no-unknown-tokens'), ['warning'])
+  // `--console-*` is the library's namespace; the Console's own tokens are `--zc-*`.
+  assert.deepEqual(by('console/no-unknown-tokens'), ['error'])
 })
 
 test('the Console stylesheets pass with no errors (pnpm lint:css)', async () => {

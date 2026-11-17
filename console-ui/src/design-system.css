@@ -89,8 +89,8 @@
     --console-motion-fast: 0ms;
     --console-motion-base: 0ms;
     --console-motion-slow: 0ms;
-    --console-motion-loop: 0ms;
-    --console-motion-countdown: 0ms;
+    --zc-motion-loop: 0ms;
+    --zc-motion-countdown: 0ms;
     --console-duration-fast: var(--console-motion-fast);
     --console-duration-page: var(--console-motion-base);
 
@@ -99,12 +99,12 @@
      * status color. Gridlines are hairlines. Message volume: received = chart-1 (blue), sent = chart-3 (green) —
      * chart-2 is amber and reads as the warning color (ΔE2000 < 20), so no Console chart uses it for a two-series view.
      */
-    --console-chart-grid: hsl(var(--foreground) / 0.08);
-    --console-chart-baseline: hsl(var(--foreground) / 0.18);
-    --console-hairline: 1px;
-    --console-chart-inbound: var(--console-chart-1);
-    --console-chart-outbound: var(--console-chart-3);
-    --console-chart-quantity: var(--console-chart-1);
+    --zc-chart-grid: hsl(var(--foreground) / 0.08);
+    --zc-chart-baseline: hsl(var(--foreground) / 0.18);
+    --zc-hairline: 1px;
+    --zc-chart-inbound: var(--console-chart-1);
+    --zc-chart-outbound: var(--console-chart-3);
+    --zc-chart-quantity: var(--console-chart-1);
   }
 
   @media (prefers-reduced-motion: no-preference) {
@@ -112,13 +112,13 @@
       --console-motion-fast: 120ms;
       --console-motion-base: 200ms;
       --console-motion-slow: 280ms;
-      --console-motion-loop: 1.4s;
-      --console-motion-countdown: 1s;
+      --zc-motion-loop: 1.4s;
+      --zc-motion-countdown: 1s;
     }
   }
 
   @media (min-resolution: 2dppx) {
-    :root { --console-hairline: 0.5px; }
+    :root { --zc-hairline: 0.5px; }
   }
 
   .dark {
@@ -722,7 +722,7 @@
     display: block;
     height: 100%;
     border-radius: 999px;
-    background: hsl(var(--console-chart-quantity));
+    background: hsl(var(--zc-chart-quantity));
     transition: width var(--console-motion-base) var(--console-ease-out);
   }
 
@@ -3050,9 +3050,9 @@
 
   /* The ring shows a quantity (online share): a chart color, never the accent; the warning fill only when an account is
      offline. CSS outranks the component's stroke attribute. console#125. */
-  .console-ring-gauge circle[stroke="hsl(var(--primary))"] { stroke: hsl(var(--console-chart-quantity)); }
+  .console-ring-gauge circle[stroke="hsl(var(--primary))"] { stroke: hsl(var(--zc-chart-quantity)); }
   .console-ring-gauge circle[stroke="hsl(var(--warning))"] { stroke: hsl(var(--warning-fill)); }
-  .console-ring-gauge circle[stroke="hsl(var(--success))"] { stroke: hsl(var(--console-chart-quantity)); }
+  .console-ring-gauge circle[stroke="hsl(var(--success))"] { stroke: hsl(var(--zc-chart-quantity)); }
 
   .console-ring-gauge-label {
     position: absolute;

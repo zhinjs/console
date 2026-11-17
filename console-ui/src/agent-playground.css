@@ -6,7 +6,7 @@
   display: grid;
   grid-template-columns: minmax(13.5rem, 15.5rem) minmax(0, 1fr);
   width: 100%;
-  height: calc(100dvh - var(--console-header-h, 4.5rem) - var(--console-space-page-y, 2rem) - 1rem);
+  height: calc(100dvh - var(--zc-header-h, 4.5rem) - var(--console-space-page-y, 2rem) - 1rem);
   min-height: 36rem;
   overflow: hidden;
   border: 1px solid transparent;
@@ -485,7 +485,7 @@
 }
 
 .agent-playground-run-state.is-running svg {
-  animation: playground-run-breathe var(--console-motion-loop) var(--console-ease-out) infinite;
+  animation: playground-run-breathe var(--zc-motion-loop) var(--console-ease-out) infinite;
 }
 
 .agent-playground-run-state.has-problem {
@@ -1105,7 +1105,7 @@
 .agent-playground-inline-run-steps li.is-running i {
   background: hsl(190 62% 46%);
   box-shadow: 0 0 0 1px hsl(190 62% 46% / 0.34);
-  animation: playground-run-breathe var(--console-motion-loop) var(--console-ease-out) infinite;
+  animation: playground-run-breathe var(--zc-motion-loop) var(--console-ease-out) infinite;
 }
 
 .agent-playground-inline-run-steps li.is-failed i,
@@ -1470,7 +1470,7 @@
   height: 0.35rem;
   border-radius: 50%;
   background: hsl(var(--playground-accent));
-  animation: playground-trace-pulse var(--console-motion-loop) var(--console-ease-out) infinite alternate;
+  animation: playground-trace-pulse var(--zc-motion-loop) var(--console-ease-out) infinite alternate;
 }
 
 .agent-playground-trace-loading i:nth-child(2) { animation-delay: var(--console-motion-fast); }
@@ -1772,7 +1772,7 @@
 
 @media (max-width: 900px) {
   .agent-playground-shell {
-    height: calc(100dvh - var(--console-header-h, 4.5rem) - var(--console-space-page-y, 2rem) - 1rem);
+    height: calc(100dvh - var(--zc-header-h, 4.5rem) - var(--console-space-page-y, 2rem) - 1rem);
     min-height: 32rem;
     border-radius: 0.85rem;
   }
@@ -1783,7 +1783,7 @@
 
 @media (max-width: 640px) {
   .agent-playground-shell {
-    height: calc(100dvh - var(--console-header-h, 4.5rem) - var(--console-space-page-y, 2rem) - 1rem);
+    height: calc(100dvh - var(--zc-header-h, 4.5rem) - var(--console-space-page-y, 2rem) - 1rem);
     min-height: 29rem;
     border-right: 0;
     border-left: 0;

@@ -5,17 +5,17 @@
 @layer components {
   .console-app-shell {
     /* Bar geometry: 12px from the top edge, 60px tall. */
-    --console-header-h: 4.5rem;
-    --console-nav-capsule-h: 3.75rem;
-    --console-nav-item-h: 2.5rem;
-    --console-nav-logo: 2.25rem;
-    --console-nav-bg: hsl(var(--card) / 0.62);
-    --console-nav-bg-scrolled: hsl(var(--card) / 0.8);
-    --console-nav-border: hsl(var(--card) / 0.7);
-    --console-nav-shadow: 0 8px 32px -4px hsl(var(--console-shadow-color) / 0.06), 0 0 0 1px hsl(var(--console-shadow-color) / 0.045);
-    --console-nav-shadow-scrolled: 0 12px 36px -6px hsl(var(--console-shadow-color) / 0.11), 0 0 0 1px hsl(var(--console-shadow-color) / 0.055);
-    --console-nav-active-bg: hsl(var(--card));
-    --console-nav-active-shadow: 0 1px 3px hsl(var(--console-shadow-color) / 0.07), 0 0 0 1px hsl(var(--console-shadow-color) / 0.045);
+    --zc-header-h: 4.5rem;
+    --zc-nav-capsule-h: 3.75rem;
+    --zc-nav-item-h: 2.5rem;
+    --zc-nav-logo: 2.25rem;
+    --zc-nav-bg: hsl(var(--card) / 0.62);
+    --zc-nav-bg-scrolled: hsl(var(--card) / 0.8);
+    --zc-nav-border: hsl(var(--card) / 0.7);
+    --zc-nav-shadow: 0 8px 32px -4px hsl(var(--console-shadow-color) / 0.06), 0 0 0 1px hsl(var(--console-shadow-color) / 0.045);
+    --zc-nav-shadow-scrolled: 0 12px 36px -6px hsl(var(--console-shadow-color) / 0.11), 0 0 0 1px hsl(var(--console-shadow-color) / 0.055);
+    --zc-nav-active-bg: hsl(var(--card));
+    --zc-nav-active-shadow: 0 1px 3px hsl(var(--console-shadow-color) / 0.07), 0 0 0 1px hsl(var(--console-shadow-color) / 0.045);
     position: relative;
     min-height: 100dvh;
     background:
@@ -24,13 +24,13 @@
   }
 
   .dark .console-app-shell {
-    --console-nav-bg: hsl(var(--card) / 0.55);
-    --console-nav-bg-scrolled: hsl(var(--card) / 0.78);
-    --console-nav-border: hsl(0 0% 100% / 0.07);
-    --console-nav-shadow: 0 8px 32px -4px hsl(0 0% 0% / 0.45), 0 0 0 1px hsl(0 0% 100% / 0.06);
-    --console-nav-shadow-scrolled: 0 12px 36px -6px hsl(0 0% 0% / 0.6), 0 0 0 1px hsl(0 0% 100% / 0.08);
-    --console-nav-active-bg: hsl(0 0% 100% / 0.09);
-    --console-nav-active-shadow: 0 0 0 1px hsl(0 0% 100% / 0.07);
+    --zc-nav-bg: hsl(var(--card) / 0.55);
+    --zc-nav-bg-scrolled: hsl(var(--card) / 0.78);
+    --zc-nav-border: hsl(0 0% 100% / 0.07);
+    --zc-nav-shadow: 0 8px 32px -4px hsl(0 0% 0% / 0.45), 0 0 0 1px hsl(0 0% 100% / 0.06);
+    --zc-nav-shadow-scrolled: 0 12px 36px -6px hsl(0 0% 0% / 0.6), 0 0 0 1px hsl(0 0% 100% / 0.08);
+    --zc-nav-active-bg: hsl(0 0% 100% / 0.09);
+    --zc-nav-active-shadow: 0 0 0 1px hsl(0 0% 100% / 0.07);
   }
 
   /* ---------- Floating top bar ---------- */
@@ -49,13 +49,13 @@
     display: flex;
     width: 100%;
     max-width: var(--console-content-max);
-    height: var(--console-nav-capsule-h);
+    height: var(--zc-nav-capsule-h);
     align-items: center;
     gap: 0.5rem;
-    border: var(--console-border-width) solid var(--console-nav-border);
+    border: var(--console-border-width) solid var(--zc-nav-border);
     border-radius: 999px;
-    background: var(--console-nav-bg);
-    box-shadow: var(--console-nav-shadow);
+    background: var(--zc-nav-bg);
+    box-shadow: var(--zc-nav-shadow);
     padding: 0 0.5rem 0 0.625rem;
     backdrop-filter: saturate(1.6) blur(18px);
     -webkit-backdrop-filter: saturate(1.6) blur(18px);
@@ -68,8 +68,8 @@
    */
 
   .console-topnav.is-scrolled .console-topnav-capsule {
-    background: var(--console-nav-bg-scrolled);
-    box-shadow: var(--console-nav-shadow-scrolled);
+    background: var(--zc-nav-bg-scrolled);
+    box-shadow: var(--zc-nav-shadow-scrolled);
   }
 
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
@@ -95,8 +95,8 @@
 
   /* The mark follows the top bar's logo size; the name keeps the library's type. */
   .console-brand-link .console-brand-mark {
-    width: var(--console-nav-logo);
-    height: var(--console-nav-logo);
+    width: var(--zc-nav-logo);
+    height: var(--zc-nav-logo);
   }
 
   .console-brand-link .console-brand-name { white-space: nowrap; }
@@ -125,7 +125,7 @@
 
   .console-topnav-item {
     display: inline-flex;
-    height: var(--console-nav-item-h);
+    height: var(--zc-nav-item-h);
     max-width: 12rem;
     align-items: center;
     gap: 0.4375rem;
@@ -148,8 +148,8 @@
   }
 
   .console-topnav-item.is-active {
-    background: var(--console-nav-active-bg);
-    box-shadow: var(--console-nav-active-shadow);
+    background: var(--zc-nav-active-bg);
+    box-shadow: var(--zc-nav-active-shadow);
     color: hsl(var(--foreground));
   }
 
@@ -533,18 +533,18 @@
   }
 
   /* ---------- Content column ---------- */
-  /* The docked log panel sets --console-log-panel-reserve on <html>; the page keeps its last rows reachable above it. */
+  /* The docked log panel sets --zc-log-panel-reserve on <html>; the page keeps its last rows reachable above it. */
   .console-main-scroll {
     display: block;
     min-width: 0;
     overflow-x: clip;
-    padding-top: var(--console-header-h);
-    padding-bottom: var(--console-log-panel-reserve, 0px);
+    padding-top: var(--zc-header-h);
+    padding-bottom: var(--zc-log-panel-reserve, 0px);
   }
 
   html:has(.console-app-shell) {
-    scroll-padding-top: calc(var(--console-header-h, 4.5rem) + 0.75rem);
-    scroll-padding-bottom: var(--console-log-panel-reserve, 0px);
+    scroll-padding-top: calc(var(--zc-header-h, 4.5rem) + 0.75rem);
+    scroll-padding-bottom: var(--zc-log-panel-reserve, 0px);
   }
 
   /* Banners, breadcrumb and the page stack in one column. */
@@ -619,7 +619,7 @@
   }
 
   @media (max-width: 767px) {
-    .console-app-shell { --console-header-h: 4.25rem; --console-nav-capsule-h: 3.25rem; --console-nav-logo: 2rem; }
+    .console-app-shell { --zc-header-h: 4.25rem; --zc-nav-capsule-h: 3.25rem; --zc-nav-logo: 2rem; }
     .console-topnav { padding: 0.625rem 0.75rem 0; }
     .console-topnav .console-brand-name { display: none; }
     /* Phones: menu, logo and up to six actions must fit inside the capsule at 360px. */
@@ -737,7 +737,7 @@
     inset: 0;
     transform: translateX(-100%);
     background: linear-gradient(90deg, transparent, hsl(var(--background) / 0.55), transparent);
-    animation: console-skeleton-shimmer var(--console-motion-loop) var(--console-ease-out) infinite;
+    animation: console-skeleton-shimmer var(--zc-motion-loop) var(--console-ease-out) infinite;
   }
 
   @keyframes console-skeleton-shimmer {
@@ -908,7 +908,7 @@
   /* Config form actions stay reachable while scrolling long field lists. */
   .console-config-actionbar {
     position: sticky;
-    top: var(--console-header-h, 4.5rem);
+    top: var(--zc-header-h, 4.5rem);
     /* Above field-group headers (z 3–5) and the fields' own controls. */
     z-index: 20;
     display: flex;
@@ -991,7 +991,7 @@
   /* Group headers stay visible while a long object scrolls, just below the form action bar. */
   #console-main-content .console-field-group > summary {
     position: sticky;
-    top: calc(var(--console-header-h, 4.5rem) + var(--config-sticky-top, 3.5rem));
+    top: calc(var(--zc-header-h, 4.5rem) + var(--config-sticky-top, 3.5rem));
     z-index: 5;
     width: 100%;
     flex-wrap: wrap;
@@ -1008,12 +1008,12 @@
   }
 
   .console-field-group .console-field-group > summary {
-    top: calc(var(--console-header-h, 4.5rem) + var(--config-sticky-top, 3.5rem) + 2.5rem);
+    top: calc(var(--zc-header-h, 4.5rem) + var(--config-sticky-top, 3.5rem) + 2.5rem);
     z-index: 4;
   }
 
   .console-field-group .console-field-group .console-field-group > summary {
-    top: calc(var(--console-header-h, 4.5rem) + var(--config-sticky-top, 3.5rem) + 5rem);
+    top: calc(var(--zc-header-h, 4.5rem) + var(--config-sticky-top, 3.5rem) + 5rem);
     z-index: 3;
   }
 

@@ -53,7 +53,7 @@
 
 @media (min-width: 1440px) {
   .console-object-page.has-aside .console-object-body { display: grid; grid-template-columns: 18rem minmax(0, 1fr); align-items: start; gap: 1.5rem; }
-  .console-object-aside { position: sticky; top: calc(var(--console-header-h, 4.5rem) + 1rem); }
+  .console-object-aside { position: sticky; top: calc(var(--zc-header-h, 4.5rem) + 1rem); }
 }
 @media (max-width: 767px) {
   .console-object-page { gap: 0.75rem; }

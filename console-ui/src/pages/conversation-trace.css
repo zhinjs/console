@@ -16,7 +16,7 @@
   .conversation-context-usage dl > div { display: grid; grid-template-columns: minmax(5rem, .8fr) minmax(0, 1fr); gap: .75rem; font-size: var(--console-text-label); }
   .conversation-context-usage dd { display: flex; align-items: center; justify-content: flex-end; gap: .5rem; }
   .conversation-context-bar { flex: 1; height: .25rem; border-radius: 2px; overflow: hidden; background: hsl(var(--muted)); }
-  .conversation-context-bar i { display: block; height: 100%; background: hsl(var(--console-chart-quantity)); }
+  .conversation-context-bar i { display: block; height: 100%; background: hsl(var(--zc-chart-quantity)); }
   .conversation-usage-trace-link { margin-top: .75rem; padding-inline: 0; font-size: var(--console-text-label); }
   .conversation-traces { min-width: 0; }
   .conversation-trace-toolbar { display: flex; align-items: center; justify-content: space-between; padding-bottom: .75rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }

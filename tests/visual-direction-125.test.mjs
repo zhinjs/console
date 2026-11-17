@@ -36,10 +36,10 @@ test('one brand mark (the favicon shape) and one product name replace the letter
 
 test('received / sent use chart colors, and short activity drops the leading empty hours', () => {
   const css = read('console-ui/src/pages/dashboard.css')
-  assert.match(css, /\.console-volume-legend i\.is-inbound \{ background: hsl\(var\(--console-chart-inbound\)\); \}/)
-  assert.match(css, /\.console-volume-legend i\.is-reply \{ background: hsl\(var\(--console-chart-outbound\)\); \}/)
+  assert.match(css, /\.console-volume-legend i\.is-inbound \{ background: hsl\(var\(--zc-chart-inbound\)\); \}/)
+  assert.match(css, /\.console-volume-legend i\.is-reply \{ background: hsl\(var\(--zc-chart-outbound\)\); \}/)
   // Phase 2: sent moved off the amber chart-2 (it read as the warning color).
-  assert.match(read('console-ui/src/design-system.css'), /--console-chart-inbound: var\(--console-chart-1\);\s*--console-chart-outbound: var\(--console-chart-3\);/)
+  assert.match(read('console-ui/src/design-system.css'), /--zc-chart-inbound: var\(--console-chart-1\);\s*--zc-chart-outbound: var\(--console-chart-3\);/)
   const hours = Array.from({ length: 24 }, (_, index) => ({ start: index, inbound: 0, outbound: 0 }))
   assert.equal(visibleActivityRange(hours).length, 24, 'no data: the whole day')
   hours[23].inbound = 3

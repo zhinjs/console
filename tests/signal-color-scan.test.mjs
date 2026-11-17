@@ -106,7 +106,7 @@ test('charts take their data colors from --chart-*, never the accent', () => {
 
 test('chart gridlines are hairlines, not dashed borders', () => {
   const css = read('console-ui/src/pages/dashboard.css')
-  assert.match(css, /\.console-volume-gridline \{[^}]*border-top: var\(--console-hairline\) solid var\(--console-chart-grid\);/)
+  assert.match(css, /\.console-volume-gridline \{[^}]*border-top: var\(--zc-hairline\) solid var\(--zc-chart-grid\);/)
   const charts = read('console-ui/src/pages/token-usage-charts.tsx')
   assert.doesNotMatch(charts, /strokeDasharray=\{tick === 0/, 'token-usage gridlines are solid')
   assert.match(charts, /vectorEffect="non-scaling-stroke"/)
@@ -171,7 +171,7 @@ function deltaE2000([L1, a1, b1], [L2, a2, b2]) {
 test('received / sent stay apart from each other and from the warning color (ΔE2000 ≥ 20, light and dark)', () => {
   // The colors are the component library's roles (console-ui 1.1); resolve them as the browser does.
   const design = read('console-ui/src/design-system.css')
-  const inbound = /--console-chart-inbound: var\(--([\w-]+)\)/.exec(design)[1], outbound = /--console-chart-outbound: var\(--([\w-]+)\)/.exec(design)[1]
+  const inbound = /--zc-chart-inbound: var\(--([\w-]+)\)/.exec(design)[1], outbound = /--zc-chart-outbound: var\(--([\w-]+)\)/.exec(design)[1]
   for (const [theme, dark] of [['light', false], ['dark', true]]) {
     const values = tokenValues('zhin', dark)
     const value = name => toLab(hslToRgb(...resolveToken(values, name).split(/\s+/).map(parseFloat)))

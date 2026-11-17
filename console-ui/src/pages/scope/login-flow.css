@@ -116,7 +116,7 @@ li.is-done .console-login-check { border-color: hsl(var(--foreground) / 0.7); ba
 .console-login-ring { width: 1.75rem; height: 1.75rem; transform: rotate(-90deg); }
 .console-login-ring circle { fill: none; stroke-width: 3.5; }
 .console-login-ring-track { stroke: hsl(var(--border-strong)); }
-.console-login-ring-value { stroke: hsl(var(--primary)); stroke-linecap: round; transition: stroke-dashoffset var(--console-motion-countdown) linear; }
+.console-login-ring-value { stroke: hsl(var(--primary)); stroke-linecap: round; transition: stroke-dashoffset var(--zc-motion-countdown) linear; }
 .console-login-ring-value.is-low { stroke: hsl(var(--warning-fill)); }
 
 /* ---------- captcha helper ---------- */

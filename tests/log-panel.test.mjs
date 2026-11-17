@@ -261,10 +261,10 @@ test('docked panel: full-width region at the bottom, no backdrop, not modal; the
     assert.equal(separator.props['aria-valuemin'], model.LOG_PANEL_MIN_HEIGHT)
     const link = nodes(f.render()).find(node => node.type === 'a')
     assert.equal(link.props.to, '/logs?level=error&q=boom', '在日志页打开 carries the same filter')
-    assert.equal(f.env.styleProps.get('--console-log-panel-reserve'), `${storeModule.logPanelStore.get().height}px`, 'the page reserves the panel height')
+    assert.equal(f.env.styleProps.get('--zc-log-panel-reserve'), `${storeModule.logPanelStore.get().height}px`, 'the page reserves the panel height')
     storeModule.closeLogPanel()
     assert.equal(f.render(), null)
-    assert.equal(f.env.styleProps.has('--console-log-panel-reserve'), false)
+    assert.equal(f.env.styleProps.has('--zc-log-panel-reserve'), false)
   } finally { f.close() }
 })
 

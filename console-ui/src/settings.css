@@ -8,7 +8,7 @@
 
   .console-settings-nav {
     position: sticky;
-    top: calc(var(--console-header-h, 4.5rem) + 1rem);
+    top: calc(var(--zc-header-h, 4.5rem) + 1rem);
     display: grid;
     gap: 1.5rem;
     min-width: 0;

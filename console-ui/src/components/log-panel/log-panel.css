@@ -4,7 +4,7 @@
  */
 /* Unlayered on purpose: these rules size Button / Input / SelectField inside the panel and must win over their utility classes. */
   .console-log-panel {
-    --console-log-panel-x: var(--console-space-page-x);
+    --zc-log-panel-x: var(--console-space-page-x);
     position: fixed;
     right: 0;
     bottom: 0;
@@ -71,7 +71,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    padding: 0.25rem var(--console-log-panel-x);
+    padding: 0.25rem var(--zc-log-panel-x);
   }
 
   .console-log-panel-title {
@@ -127,7 +127,7 @@
     flex: 1;
     flex-direction: column;
     overflow: hidden;
-    padding: 0 var(--console-log-panel-x) 0.5rem;
+    padding: 0 var(--zc-log-panel-x) 0.5rem;
   }
 
   /* Range chip in the header: identity, open-object and clear; the text-matching caveat is its tooltip. */
@@ -294,7 +294,7 @@
   @keyframes console-log-scrim-in { from { opacity: 0; } to { opacity: 1; } }
 
   .console-log-panel.is-sheet {
-    --console-log-panel-x: 0.75rem;
+    --zc-log-panel-x: 0.75rem;
     top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
     z-index: 49;
     border-radius: var(--console-radius-2xl) var(--console-radius-2xl) 0 0;

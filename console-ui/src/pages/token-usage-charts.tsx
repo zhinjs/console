@@ -127,7 +127,7 @@ export function StackedBarChart({ series, keys, colors, bucket }: { series: Usag
               x2={W - PAD.right}
               y1={y(top * tick)}
               y2={y(top * tick)}
-              stroke={tick === 0 ? 'var(--console-chart-baseline)' : 'var(--console-chart-grid)'}
+              stroke={tick === 0 ? 'var(--zc-chart-baseline)' : 'var(--zc-chart-grid)'}
               strokeWidth={1}
               vectorEffect="non-scaling-stroke"
             />
@@ -281,7 +281,7 @@ export function CacheLineChart({
               x2={W - PAD.right}
               y1={y(tick)}
               y2={y(tick)}
-              stroke={tick === 0 ? 'var(--console-chart-baseline)' : 'var(--console-chart-grid)'}
+              stroke={tick === 0 ? 'var(--zc-chart-baseline)' : 'var(--zc-chart-grid)'}
               strokeWidth={1}
               vectorEffect="non-scaling-stroke"
             />
