@@ -97,7 +97,8 @@ test('every UI global switch checks plugin.manage and goes through the gateway t
   const matrix = source('pages/features/feature-matrix.tsx')
   assert.match(matrix, /canToggle=\{canToggleGlobal && /u, 'the 全局 column')
   assert.match(matrix, /hasConsolePermission\(FEATURE_TOGGLE_PERMISSION, access\)/u, 'the adapter columns')
-  assert.match(matrix, /level: 'adapter', key: adapter/u)
+  // The adapter cells write `feature.set-enabled` at `level: 'adapter'` through their own receipt (#64 `feature-matrix-adapter-receipt`).
+  assert.match(source('pages/features/adapter-switch-model.mjs'), /level: 'adapter', key: adapter/u)
   const level = source('pages/features/feature-level-panel.tsx')
   assert.match(level, /hasConsolePermission\('feature\.toggle', access, target\)/u, 'adapter / endpoint / conversation switches')
 
