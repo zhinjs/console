@@ -53,8 +53,8 @@ const text = value => value == null || typeof value === 'boolean' ? ''
   : text(value.props?.children)
 const flush = async () => { for (let i = 0; i < 10; i++) await Promise.resolve() }
 
-function fixture({ verify = async () => ({ ok: true }), password = async () => ({ ok: true, status: 200, data: { kind: 'user' } }), props: initialProps = {}, saved = [] } = {}) {
-  const r = runtime(), calls = { verify: [], password: [], saved: [], success: 0, consumed: 0 }
+function fixture({ verify = async () => ({ ok: true }), password = async () => ({ ok: true, status: 200, data: { kind: 'user' } }), me = async () => ({ ok: false, status: 0, code: 'unreachable', message: '' }), props: initialProps = {}, saved = [] } = {}) {
+  const r = runtime(), calls = { verify: [], password: [], saved: [], success: 0, consumed: 0, me: [] }
   const auth = {
     getSavedLogin: () => null, getStoredApiBase: () => null, listSavedLogins: () => saved.map(apiBase => ({ apiBase, token: 'saved-secret', savedAt: 1, lastUsedAt: 1 })), normalizeApiBase: value => value.trim().replace(/\/$/, ''),
     removeSavedLogin() {}, touchSavedLogin() {}, upsertSavedLogin: (...args) => calls.saved.push(args),
@@ -67,7 +67,7 @@ function fixture({ verify = async () => ({ ok: true }), password = async () => (
     '../utils/auth': auth,
     './login-model.mjs': loginModel,
     '../utils/console-auth-model.mjs': authModel,
-    '../utils/console-auth-api': { signInWithPassword: (...args) => { calls.password.push(args); return password(...args) } },
+    '../utils/console-auth-api': { signInWithPassword: (...args) => { calls.password.push(args); return password(...args) }, fetchMe: (...args) => { calls.me.push(args); return me(...args) } },
     './login.css': {},
     './login-preview': { LoginPreview: 'login-preview' },
     'lucide-react': new Proxy({}, { get: () => 'i' }),
@@ -320,4 +320,45 @@ test('a bootstrap token signs in but is never saved, even when remembering is ch
   await f.submit()
   assert.equal(f.calls.success, 1)
   assert.equal(f.calls.saved.length, 0)
+})
+
+// #64 `login-uninitialized-host`: opening a not-yet-initialized Host by link stayed on 「账号登录」 (where the
+// browser autofilled another Host's account), though only its initialization token can sign in.
+const modeButton = (f, label) => f.all().find(node => node.type === 'button' && text(node).includes(label))
+
+test('a linked Host without an owner opens 访问令牌 and says to use its initialization token', async () => {
+  const f = fixture({ me: async () => ({ ok: true, status: 200, data: { kind: 'anonymous', setupRequired: true, permissions: [], bindings: [] } }),
+    props: { initialMode: 'password', initialApiBase: '127.0.0.1:8069' } }).mount()
+  await flush(); f.r.render()
+  assert.deepEqual(f.calls.me, [['http://127.0.0.1:8069']], 'asked once, without a token, at the normalized address')
+  assert.equal(modeButton(f, '访问令牌').props['aria-pressed'], true)
+  assert.equal(modeButton(f, '账号登录').props['aria-pressed'], false)
+  assert.match(text(f.r.value), /这个实例还没有所有者，请用初始化令牌登录/)
+  assert.doesNotMatch(text(f.r.value), /API 令牌，或首次初始化时使用的初始化令牌/, 'the hint is said once')
+})
+
+test('an initialized or unreachable Host keeps the chosen sign-in; no link, no question', async () => {
+  for (const me of [async () => ({ ok: true, status: 200, data: { kind: 'anonymous', setupRequired: false } }), async () => ({ ok: false, status: 0, code: 'unreachable' }), async () => { throw new Error('offline') }]) {
+    const f = fixture({ me, props: { initialMode: 'password', initialApiBase: 'http://127.0.0.1:8069' } }).mount()
+    await flush(); f.r.render()
+    assert.equal(modeButton(f, '账号登录').props['aria-pressed'], true)
+    assert.doesNotMatch(text(f.r.value), /还没有所有者/)
+  }
+  const plain = fixture({ props: { initialMode: 'password' } }).mount()
+  await flush()
+  assert.deepEqual(plain.calls.me, [])
+  // A #token= link signs in with that token; it is not second-guessed.
+  const link = fixture({ props: { initialApiBase: 'http://127.0.0.1:8069', initialToken: 'abc' }, saved: ['http://127.0.0.1:8069'] }).mount()
+  await flush()
+  assert.deepEqual(link.calls.me, [])
+  assert.equal(loginModel.hostNeedsSetup({ ok: true, data: { setupRequired: true } }), true)
+  assert.equal(loginModel.hostNeedsSetup({ ok: true, data: {} }), false)
+  assert.equal(loginModel.hostNeedsSetup(null), false)
+})
+
+test('saved connections are offered on both sign-in tabs', () => {
+  for (const initialMode of ['password', 'token']) {
+    const f = fixture({ saved: ['http://127.0.0.1:8086'], props: { initialMode } }).mount()
+    assert.ok(f.labelFor('console-login-saved'), initialMode)
+  }
 })

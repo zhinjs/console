@@ -7,10 +7,10 @@ import {
   getSavedLogin, getStoredApiBase, listSavedLogins, normalizeApiBase, removeSavedLogin,
   touchSavedLogin, upsertSavedLogin, verifyAndStoreCredentials,
 } from '../utils/auth'
-import { signInWithPassword } from '../utils/console-auth-api'
+import { fetchMe, signInWithPassword } from '../utils/console-auth-api'
 import { authErrorMessage } from '../utils/console-auth-model.mjs'
 import {
-  initialLoginMode, linkNeedsConfirmation, lockoutMs, loginFailureField, normalizeHostAddress, passwordFailureField, saveLoginMode,
+  hostNeedsSetup, initialLoginMode, linkNeedsConfirmation, lockoutMs, loginFailureField, normalizeHostAddress, passwordFailureField, saveLoginMode,
   type HostAddressResult, type LoginField, type LoginMode,
 } from './login-model.mjs'
 import { LoginPreview } from './login-preview'
@@ -66,6 +66,8 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
   // A link to a Host that is not among the saved connections waits for the person to confirm it.
   const [pendingLink, setPendingLink] = useState<{ apiBase: string; token: string } | null>(null)
   const [loading, setLoading] = useState(false)
+  // The linked Host has no owner yet: its initialization token is the way in (#64 `login-uninitialized-host`).
+  const [needsSetup, setNeedsSetup] = useState(false)
   // A fresh object per failure, so focus moves again even when the same field fails twice.
   const [focusRequest, setFocusRequest] = useState<{ field: LoginField } | null>(null)
   const addressRef = useRef<HTMLInputElement | null>(null)
@@ -187,6 +189,20 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
   }, [selectedSavedBase])
 
   useEffect(() => { if (initialApiBase) setApiBaseValue(initialApiBase) }, [initialApiBase])
+  // Opened for a given Host (`?apiBaseUrl=` / `#apiBaseUrl=`): ask it, without credentials, whether it still
+  // needs its first owner; if so, open 访问令牌 and say which token to use. A Host that does not answer changes nothing.
+  useEffect(() => {
+    if (!initialApiBase || initialToken) return
+    const address = normalizeHostAddress(initialApiBase)
+    if (!address.ok) return
+    let current = true
+    void fetchMe(address.value).then(result => {
+      if (!current || !hostNeedsSetup(result)) return
+      setNeedsSetup(true)
+      setMode('token')
+    }, () => {})
+    return () => { current = false }
+  }, [initialApiBase])
   useEffect(() => {
     if (initialToken) return
     const saved = getSavedLogin(initialApiBase || getStoredApiBase() || apiBase)
@@ -240,7 +256,7 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
           if (mode === 'password') void handlePasswordLogin(apiBase)
           else void handleLogin(apiBase, token)
         }}>
-          {mode === 'token' && savedLogins.length > 0 && <div className="console-login-field">
+          {savedLogins.length > 0 && <div className="console-login-field">
             <label htmlFor="console-login-saved">{i18n.t('已保存的连接')}</label>
             <div className="console-login-saved">
               <Select value={selectedSavedBase || undefined} onValueChange={applySavedLogin} disabled={loading}>
@@ -296,7 +312,9 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
                 aria-label={i18n.t(showToken ? '隐藏令牌' : '显示令牌')} onClick={() => setShowToken(visible => !visible)}>{showToken ? <EyeOff /> : <Eye />}</Button>
             </div>
             {errors.token && <p id={TOKEN_ERROR_ID} className="console-login-error">{errors.token}</p>}
-            <small>{i18n.t('API 令牌，或首次初始化时使用的初始化令牌。')}</small>
+            {needsSetup
+              ? <small role="status">{i18n.t('这个实例还没有所有者，请用初始化令牌登录（.env 里的 HTTP_TOKEN，启动日志里也会提示）。')}</small>
+              : <small>{i18n.t('API 令牌，或首次初始化时使用的初始化令牌。')}</small>}
           </div>}
           {errors.form && <p id={SUMMARY_ID} ref={summaryRef} className="console-login-error" role="alert" tabIndex={-1}>{errors.form}</p>}
           <label className="console-login-remember"><Checkbox checked={remember} disabled={loading} onCheckedChange={value => setRemember(value === true)} /><span>{i18n.t('记住此连接')}</span></label>
