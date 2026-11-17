@@ -318,7 +318,10 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
           </div>}
           {errors.form && <p id={SUMMARY_ID} ref={summaryRef} className="console-login-error" role="alert" tabIndex={-1}>{errors.form}</p>}
           <label className="console-login-remember"><Checkbox checked={remember} disabled={loading} onCheckedChange={value => setRemember(value === true)} /><span>{i18n.t('记住此连接')}</span></label>
-          {!remember && <p className="console-login-session-note">{i18n.t(mode === 'password' ? '登录状态仅保留在本次浏览器会话。' : '访问令牌仅保留在本次浏览器会话。')}</p>}
+          {!remember && <p className="console-login-session-note">{mode === 'password'
+            // Without 记住此连接 the credential sits in sessionStorage: this tab only, not the whole browser session.
+            ? i18n.t('登录状态仅在当前标签页有效：在新标签页打开 Console 需要重新登录。')
+            : i18n.t('访问令牌仅在当前标签页有效：在新标签页打开 Console 需要重新输入。')}</p>}
           {/* The view's one primary action (ADR 0063 D25). */}
           <Button type="submit" variant="primary" disabled={loading || lockedUntil > 0}>{loading ? i18n.t('验证中...')
             : mode === 'password' ? i18n.t('登录')

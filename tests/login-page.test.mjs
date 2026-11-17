@@ -362,3 +362,16 @@ test('saved connections are offered on both sign-in tabs', () => {
     assert.ok(f.labelFor('console-login-saved'), initialMode)
   }
 })
+
+// #64 `login-per-tab-misleading`: without 记住此连接 the credential goes to sessionStorage (this tab only),
+// yet the note promised 「本次浏览器会话」; a Cmd-click into a new tab came back to the sign-in page.
+test('without 记住此连接 the note says the sign-in holds for this tab only', async () => {
+  const auth = await readFile(new URL('../console-ui/src/utils/auth.ts', import.meta.url), 'utf8')
+  assert.match(auth, /const storage = persistent \? localStorage : sessionStorage/, 'the behaviour the note describes')
+  for (const [initialMode, note] of [['password', '登录状态仅在当前标签页有效：在新标签页打开 Console 需要重新登录。'], ['token', '访问令牌仅在当前标签页有效：在新标签页打开 Console 需要重新输入。']]) {
+    const f = fixture({ props: { initialMode } }).mount()
+    const all = text(f.r.value)
+    assert.ok(all.includes(note), initialMode)
+    assert.doesNotMatch(all, /本次浏览器会话/, initialMode)
+  }
+})

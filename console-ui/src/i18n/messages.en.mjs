@@ -245,7 +245,7 @@ export const englishMessages = Object.freeze({
   "连接中": "Connecting",
   "重连中": "Reconnecting",
   "记住此连接": "Remember this connection",
-  "访问令牌仅保留在本次浏览器会话。": "Your access token is kept only for this browser session.",
+  "访问令牌仅在当前标签页有效：在新标签页打开 Console 需要重新输入。": "The access token is kept for this tab only: opening Console in a new tab asks for it again.",
   "连接你的机器人": "Connect to your bot",
   "连接运行 Zhin 的设备，管理会话、账号和任务。": "Connect to the device running Zhin to manage conversations, accounts, and tasks.",
   "连接设置": "Connection settings",
