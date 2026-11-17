@@ -179,7 +179,7 @@ export function DocumentCollectionView({
                     setAddDoc(false)
                     setJsonText(JSON.stringify(doc, null, 2))
                   }}><Pencil className="mr-1 h-3 w-3" />{i18n.t("编辑")}</Button>
-                  <Button size="icon" variant="ghost" disabled={busy} aria-label={i18n.t("删除记录")} className="text-destructive" onClick={() => handleDelete(doc)}><Trash2 /></Button>
+                  <Button size="icon" variant="destructive" disabled={busy} aria-label={i18n.t("删除记录")} onClick={() => handleDelete(doc)}><Trash2 /></Button>
                 </div>}
               </div>
             </CardContent>

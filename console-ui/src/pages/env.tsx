@@ -512,7 +512,7 @@ function MaskedEnvFileEditor({
       <div className="flex items-center gap-2">
         <Button size="sm" variant="secondary" disabled={editor.error === 'value-clear-unconfirmed'} onClick={() => applyEdit()}><Check className="w-4 h-4 mr-1" />{i18n.t("应用")}</Button>
         {editor.error === 'value-clear-unconfirmed' ? (
-          <Button size="sm" variant="destructive" onClick={() => applyEdit(true)}><Trash2 className="w-4 h-4 mr-1" />{i18n.t("确认清空")}</Button>
+          <Button size="sm" variant="destructive-solid" onClick={() => applyEdit(true)}><Trash2 className="w-4 h-4 mr-1" />{i18n.t("确认清空")}</Button>
         ) : null}
         <Button size="sm" variant="ghost" onClick={() => setEditor(null)}><X className="w-4 h-4 mr-1" />{i18n.t("取消")}</Button>
       </div>

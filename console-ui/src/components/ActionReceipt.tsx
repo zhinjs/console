@@ -204,7 +204,7 @@ export function ActionReceipt({ controller, className, lockHref, onRestarted }: 
       ) : null}
       <footer className="console-receipt-actions">
         {state.phase === 'prepared' ? <>
-          <Button key="confirm" size="sm" variant={plan?.danger ? 'destructive' : 'default'} onClick={confirm}>{plan?.confirmLabel ?? i18n.t('确认')}</Button>
+          <Button key="confirm" size="sm" variant={plan?.danger ? 'destructive' : 'soft'} onClick={confirm}>{plan?.confirmLabel ?? i18n.t('确认')}</Button>
           <Button key="cancel" size="sm" variant="outline" onClick={cancel}>{i18n.t('取消')}</Button>
         </> : null}
         {/* The second step puts 取消 first (it takes the focus) and 确认执行 where 取消 was, so a double
@@ -212,7 +212,7 @@ export function ActionReceipt({ controller, className, lockHref, onRestarted }: 
             CONFIRM_GUARD_MS after this step appeared. */}
         {state.phase === 'confirming' ? <>
           <Button key="cancel" size="sm" variant="outline" onClick={cancel} data-receipt-cancel>{i18n.t('取消')}</Button>
-          <Button key="execute" size="sm" variant="destructive" onClick={confirm} data-receipt-execute>{i18n.t('确认执行')}</Button>
+          <Button key="execute" size="sm" variant="destructive-solid" onClick={confirm} data-receipt-execute>{i18n.t('确认执行')}</Button>
         </> : null}
         {state.phase === 'unknown' ? (
           <Button size="sm" variant="outline" onClick={verify} disabled={!canVerify}><RefreshCw />{i18n.t('核对当前状态')}</Button>

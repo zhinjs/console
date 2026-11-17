@@ -167,7 +167,7 @@ function RestartControls({ state, relevant, refreshing }: { state: RestartState;
     return <div className="console-apply-actions" role="group" aria-label={i18n.t('确认重启')}>
       <span className="console-apply-basis">{i18n.t('重启会断开所有连接，进行中的对话可能被中止。')}</span>
       <Button size="sm" variant="outline" onClick={() => setConfirming(false)} autoFocus>{i18n.t('取消')}</Button>
-      <Button size="sm" variant="destructive" onClick={() => { setConfirming(false); void hostRestart.start() }}><RotateCw />{i18n.t('确认重启')}</Button>
+      <Button size="sm" variant="destructive-solid" onClick={() => { setConfirming(false); void hostRestart.start() }}><RotateCw />{i18n.t('确认重启')}</Button>
     </div>
   }
   return <div className="console-apply-actions">

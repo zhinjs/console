@@ -78,7 +78,7 @@ function ConnectionManagement({ adapter, refreshKey }: { adapter: string; refres
     <div className="console-adapter-console-toolbar">
       {docsUrl ? <Button asChild variant="outline" size="sm"><a href={docsUrl} target="_blank" rel="noreferrer"><BookOpen />{i18n.t('文档')}</a></Button> : null}
       {add ? (
-        <Button size="sm" variant={add.open ? 'outline' : 'default'} disabled={add.disabled} aria-expanded={add.open} aria-controls={add.controls} onClick={add.toggle}>
+        <Button size="sm" variant={add.open ? 'outline' : 'soft'} disabled={add.disabled} aria-expanded={add.open} aria-controls={add.controls} onClick={add.toggle}>
           {add.open ? <X /> : <Plus />}{add.open ? i18n.t('取消') : i18n.t('添加账号')}
         </Button>
       ) : null}

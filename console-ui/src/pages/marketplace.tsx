@@ -386,7 +386,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant={officialOnly ? 'default' : 'outline'} size="sm" aria-pressed={officialOnly} onClick={() => setOfficialOnly(!officialOnly)}>
+          <Button variant={officialOnly ? 'soft' : 'outline'} size="sm" aria-pressed={officialOnly} onClick={() => setOfficialOnly(!officialOnly)}>
             <Package />{i18n.t("仅 @zhin.js")}</Button>
           <SelectField
             value={sortKey}
@@ -569,7 +569,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                 {followUps.length > 0 && (
                   <nav className="flex flex-wrap gap-2" aria-label={i18n.t("安装后的下一步")}>
                     {followUps.map(link => (
-                      <Button key={link.kind} size="sm" variant={link.kind === 'configure' || link.kind === 'welcome' ? 'default' : 'outline'} asChild>
+                      <Button key={link.kind} size="sm" variant={link.kind === 'configure' || link.kind === 'welcome' ? 'soft' : 'outline'} asChild>
                         <Link to={link.to}>
                           {link.kind === 'configure' ? <Settings /> : link.kind === 'features' ? <ToggleLeft /> : null}
                           {i18n.t(FOLLOW_UP_LABELS[link.kind])}

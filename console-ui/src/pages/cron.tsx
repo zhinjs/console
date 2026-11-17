@@ -341,7 +341,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
                       <Button variant="ghost" size="icon" aria-label={job.enabled ? i18n.t("暂停") : i18n.t("恢复")} title={job.enabled ? i18n.t("暂停") : i18n.t("恢复")} disabled={togglePending !== null} onClick={() => handleToggle(job)}>
                         {job.enabled ? <Pause /> : <Play />}
                       </Button>
-                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" aria-label={i18n.t("删除")} title={i18n.t("删除")} disabled={togglePending !== null} onClick={() => setDeleteTarget(job)}><Trash2 /></Button>
+                      <Button variant="destructive" size="icon" aria-label={i18n.t("删除")} title={i18n.t("删除")} disabled={togglePending !== null} onClick={() => setDeleteTarget(job)}><Trash2 /></Button>
                     </div>}
                   </div>
                   <PersistentRunStatus state={jobStates.get(job.id)} job={job} now={now} />
@@ -473,7 +473,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
             <DialogClose asChild>
               <Button variant="outline" disabled={submitting}>{i18n.t("取消")}</Button>
             </DialogClose>
-            <Button variant="destructive" onClick={handleDelete} disabled={submitting}>
+            <Button variant="destructive-solid" onClick={handleDelete} disabled={submitting}>
               {submitting ? i18n.t("删除中...") : i18n.t("删除")}
             </Button>
           </DialogFooter>

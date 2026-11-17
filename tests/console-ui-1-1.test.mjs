@@ -41,3 +41,39 @@ test('primary: the one next step of each view, at most one per view (ADR 0063 D2
   assert.doesNotMatch(read('console-ui/src/pages/inference/Purposes.tsx'), /variant="primary"/)
 })
 
+test('the deprecated `default` button variant is not used; `soft` is its name', () => {
+  for (const path of sources.filter(path => path.endsWith('.tsx'))) {
+    const text = readFileSync(path, 'utf8')
+    for (const match of text.matchAll(/<Button\b[^>]*>/g)) {
+      assert.doesNotMatch(match[0], /variant=(?:"default"|\{[^}]*'default'[^}]*\})/, `${relative(root, path)}: ${match[0]}`)
+    }
+  }
+})
+
+test('destructive: solid red only on confirm buttons; entry points are the ghost / outline variants', () => {
+  // Confirm buttons outside ConfirmDialog (which picks destructive-solid itself in console-ui 1.1).
+  const solid = {
+    'console-ui/src/components/PluginConfigForm/ConversationScopeEditor.tsx': '确认恢复全部',
+    'console-ui/src/components/ActionReceipt.tsx': '确认执行',
+    'console-ui/src/components/ApplyFeedback.tsx': '确认重启',
+    'console-ui/src/pages/env.tsx': '确认清空',
+    'console-ui/src/pages/cron.tsx': '删除中...',
+    'console-ui/src/pages/ScheduleExecutions.tsx': '清理过期记录',
+    'console-ui/src/pages/access/users.tsx': '重置密码',
+  }
+  for (const [file, label] of Object.entries(solid)) {
+    const text = read(file)
+    assert.equal(text.match(/variant="destructive-solid"/g)?.length, 1, file)
+    assert.ok(text.includes(label), `${file}: ${label}`)
+  }
+  for (const path of sources.filter(path => path.endsWith('.tsx'))) {
+    const text = readFileSync(path, 'utf8'), file = relative(root, path)
+    for (const match of text.matchAll(/<Button\b[^>]*>/g)) {
+      // Hand-made red buttons give way to the library's destructive (ghost) / destructive-outline.
+      assert.doesNotMatch(match[0], /className="[^"]*\btext-destructive\b/, `${file}: ${match[0]}`)
+      if (!Object.hasOwn(solid, file)) assert.doesNotMatch(match[0], /destructive-solid/, `${file}: solid red outside a confirmation`)
+    }
+  }
+  assert.match(read('console-ui/src/pages/dashboard.tsx'), /<Button variant="destructive-outline" disabled=\{restarting\}/)
+  assert.doesNotMatch(read('console-ui/src/pages/dashboard.css'), /console-danger-outline/)
+})

@@ -735,7 +735,7 @@ export default function HomePage() {
           : i18n.t("现在需要处理什么、消息量和最近的消息。")}
         actions={<>
           {!readOnly ? (
-            <Button variant="outline" className="console-danger-outline" disabled={restarting} onClick={() => { void confirmRestart() }}>
+            <Button variant="destructive-outline" disabled={restarting} onClick={() => { void confirmRestart() }}>
               <Power />
               {i18n.t("重启")}
             </Button>

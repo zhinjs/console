@@ -456,7 +456,7 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
             <Button size="sm" variant="outline" disabled={actionBusy || !update || !entry}
               onClick={() => update && void packageAction.prepare('update', { name: packageName, version: update.latest, from: installedVersion })}>
               <ArrowUpCircle />{i18n.t("更新")}</Button>
-            <Button size="sm" variant="outline" className="text-destructive" disabled={actionBusy || !entry}
+            <Button size="sm" variant="destructive-outline" disabled={actionBusy || !entry}
               onClick={() => void packageAction.prepare('uninstall', { name: packageName })}>
               <Trash2 />{i18n.t("卸载")}</Button>
           </> : undefined}>

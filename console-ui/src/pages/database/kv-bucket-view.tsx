@@ -147,7 +147,7 @@ export function KvBucketView({
                     setKeyInput(entry.key)
                     setValueInput(typeof entry.value === 'object' ? JSON.stringify(entry.value, null, 2) : String(entry.value ?? ''))
                   }}><Pencil className="mr-1 h-3 w-3" />{i18n.t("编辑")}</Button>
-                  <Button size="icon" variant="ghost" disabled={busy} aria-label={i18n.t("删除记录")} className="text-destructive" onClick={() => handleDelete(entry.key)}><Trash2 /></Button>
+                  <Button size="icon" variant="destructive" disabled={busy} aria-label={i18n.t("删除记录")} onClick={() => handleDelete(entry.key)}><Trash2 /></Button>
                 </TableCell>}
               </TableRow>
             ))}

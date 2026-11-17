@@ -211,10 +211,10 @@ export default function DatabasePage() {
                     {!readOnly && (
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="destructive-outline"
                         size="sm"
                         data-action="drop-table"
-                        className="ml-auto order-last shrink-0 text-destructive"
+                        className="ml-auto order-last shrink-0"
                         aria-label={i18n.t("删除{0} {1}", [objectLabel, selectedTable])}
                         onClick={() => setDeleteTarget({ name: selectedTable, label: objectLabel })}
                       >

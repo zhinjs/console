@@ -97,7 +97,7 @@ export default function AccessRolesPage() {
                         : <Button variant="ghost" size="sm" onClick={() => setPending({ kind: 'edit', role, draft: { name: role.name, description: role.description, permissions: [...role.permissions] } })}><Pencil />{i18n.t("编辑")}</Button>}
                       {canManage ? <Button variant="ghost" size="sm" onClick={() => startCopy(role)} aria-label={i18n.t("复制 {0}", [role.name])}><Copy />{i18n.t("复制")}</Button> : null}
                       {canManage && !role.builtin
-                        ? <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setPending({ kind: 'delete', role })} aria-label={i18n.t("删除 {0}", [role.name])}><Trash2 />{i18n.t("删除")}</Button>
+                        ? <Button variant="destructive" size="sm" onClick={() => setPending({ kind: 'delete', role })} aria-label={i18n.t("删除 {0}", [role.name])}><Trash2 />{i18n.t("删除")}</Button>
                         : null}
                     </div>
                   </TableCell>

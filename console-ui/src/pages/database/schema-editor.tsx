@@ -200,7 +200,7 @@ export function SchemaEditor({ tableName, admin, canEdit, supported, reason, onC
           {apply.plan ? <SchemaPlanPreview plan={apply.plan} /> : null}
           <div className="flex flex-wrap gap-2">
             <Button type="submit" size="sm" variant="outline" disabled={apply.planning}><Eye className="w-3.5 h-3.5 mr-1" />{i18n.t('预览 DDL')}</Button>
-            <Button type="button" size="sm" variant={apply.plan?.destructive ? 'destructive' : 'default'} disabled={!apply.plan} onClick={apply.confirm} data-action="apply-schema">{i18n.t('应用…')}</Button>
+            <Button type="button" size="sm" variant={apply.plan?.destructive ? 'destructive' : 'soft'} disabled={!apply.plan} onClick={apply.confirm} data-action="apply-schema">{i18n.t('应用…')}</Button>
           </div>
         </form>
       ) : null}
@@ -224,7 +224,7 @@ export function SchemaEditor({ tableName, admin, canEdit, supported, reason, onC
                     {canEdit ? <TableCell numeric className="whitespace-nowrap">
                       <Button size="icon" variant="ghost" aria-label={i18n.t('重命名列 {0}', [column.name])} onClick={() => open({ kind: 'rename-column', column: column.name, to: column.name })}><Pencil /></Button>
                       <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" aria-label={i18n.t('修改列 {0}', [column.name])} onClick={() => open({ kind: 'alter-column', column: column.name, type: '', nullable: 'keep', defaultText: '', dropDefault: false })}>{i18n.t('修改')}</Button>
-                      <Button size="icon" variant="ghost" className="text-destructive" disabled={column.primary} aria-label={i18n.t('删除列 {0}', [column.name])} onClick={() => open({ kind: 'drop-column', column: column.name })}><Trash2 /></Button>
+                      <Button size="icon" variant="destructive" disabled={column.primary} aria-label={i18n.t('删除列 {0}', [column.name])} onClick={() => open({ kind: 'drop-column', column: column.name })}><Trash2 /></Button>
                     </TableCell> : null}
                   </TableRow>
                 ))}
@@ -249,7 +249,7 @@ export function SchemaEditor({ tableName, admin, canEdit, supported, reason, onC
                     <TableCell className="font-mono text-xs">{index.columns.join(', ')}</TableCell>
                     <TableCell className="text-xs">{index.unique ? i18n.t('是') : i18n.t('否')}</TableCell>
                     {canEdit ? <TableCell numeric>
-                      <Button size="icon" variant="ghost" className="text-destructive" disabled={index.primary} aria-label={i18n.t('删除索引 {0}', [index.name])} onClick={() => open({ kind: 'drop-index', name: index.name })}><Trash2 /></Button>
+                      <Button size="icon" variant="destructive" disabled={index.primary} aria-label={i18n.t('删除索引 {0}', [index.name])} onClick={() => open({ kind: 'drop-index', name: index.name })}><Trash2 /></Button>
                     </TableCell> : null}
                   </TableRow>
                 ))}
@@ -325,7 +325,7 @@ export function CreateTableEditor({ admin, supported, reason, onCreated, onCance
                 <TableCell><Checkbox aria-label={i18n.t('第 {0} 列自增', [index + 1])} disabled={!column.primary || (column.type !== 'integer' && column.type !== 'bigint')} checked={column.autoIncrement} onCheckedChange={checked => edit(index, { autoIncrement: checked === true })} /></TableCell>
                 <TableCell><Checkbox aria-label={i18n.t('第 {0} 列允许为空', [index + 1])} disabled={column.primary} checked={column.nullable} onCheckedChange={checked => edit(index, { nullable: checked === true })} /></TableCell>
                 <TableCell><Input className="h-8 font-mono text-xs" aria-label={i18n.t('第 {0} 列默认值', [index + 1])} value={column.defaultText} onChange={event => edit(index, { defaultText: event.target.value })} /></TableCell>
-                <TableCell numeric><Button type="button" size="icon" variant="ghost" className="text-destructive" disabled={columns.length < 2} aria-label={i18n.t('移除第 {0} 列', [index + 1])} onClick={() => { apply.reset(); setColumns(previous => previous.filter((_, i) => i !== index)) }}><Trash2 /></Button></TableCell>
+                <TableCell numeric><Button type="button" size="icon" variant="destructive" disabled={columns.length < 2} aria-label={i18n.t('移除第 {0} 列', [index + 1])} onClick={() => { apply.reset(); setColumns(previous => previous.filter((_, i) => i !== index)) }}><Trash2 /></Button></TableCell>
               </TableRow>
             ))}
           </TableBody>

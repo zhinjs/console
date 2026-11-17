@@ -431,7 +431,7 @@ export function RelatedTableView({
                 })}
                 {!readOnly && <TableCell numeric className="w-24 min-w-[5.5rem] space-x-1 whitespace-nowrap py-1.5">
                   <Button size="icon" variant="ghost" disabled={loading || busy || !!readError || !canIdentify} aria-label={i18n.t("编辑记录")} onClick={() => openEdit(row)}><Pencil /></Button>
-                  <Button size="icon" variant="ghost" disabled={loading || busy || !!readError || !canIdentify} aria-label={i18n.t("删除记录")} className="text-destructive" onClick={() => { void handleDelete(row) }}><Trash2 /></Button>
+                  <Button size="icon" variant="destructive" disabled={loading || busy || !!readError || !canIdentify} aria-label={i18n.t("删除记录")} onClick={() => { void handleDelete(row) }}><Trash2 /></Button>
                 </TableCell>}
               </TableRow>
             ))}

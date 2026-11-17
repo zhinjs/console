@@ -14,7 +14,7 @@ test('the adapter page has one 刷新: the header re-reads accounts and the embe
   // The toolbar uses the Console's own button variants, never the SDK's zk-btn.
   const toolbar = page.slice(page.indexOf('const toolbar ='), page.indexOf('return (', page.indexOf('const toolbar =')))
   assert.match(toolbar, /<Button asChild variant="outline" size="sm">/)
-  assert.match(toolbar, /<Button size="sm" variant=\{add\.open \? 'outline' : 'default'\}/)
+  assert.match(toolbar, /<Button size="sm" variant=\{add\.open \? 'outline' : 'soft'\}/)
   assert.doesNotMatch(toolbar, /zk-btn/)
 })
 
