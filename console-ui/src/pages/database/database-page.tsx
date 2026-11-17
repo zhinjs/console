@@ -212,7 +212,6 @@ export default function DatabasePage() {
                       <Button
                         type="button"
                         variant="destructive-outline"
-                        data-tone="destructive"
                         size="sm"
                         data-action="drop-table"
                         className="ml-auto order-last shrink-0"

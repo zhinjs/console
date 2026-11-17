@@ -414,7 +414,7 @@ test('package manifest targets the released Zhin contract generation', () => {
   assert.equal(manifest.dependencies['@zhin.js/ai'], '~1.7.0')
   assert.equal(manifest.dependencies['@zhin.js/console-protocol'], '~1.4.0')
   // The component library (ADR 0063 P1a); 1.1 (ADR 0063 color roles, primary / destructive-solid, EmptyState illustrations) is taken deliberately.
-  assert.equal(manifest.dependencies['@zhin.js/console-ui'], '~1.1.0')
+  assert.equal(manifest.dependencies['@zhin.js/console-ui'], '~1.1.1')
   for (const [name, range] of Object.entries(manifest.dependencies)) {
     if (name.startsWith('@zhin.js/')) assert.match(range, /^~\d+\.\d+\.\d+$/, `${name} uses a tilde range`)
   }
