@@ -2848,6 +2848,7 @@ export const englishMessages = Object.freeze({
   "请填写模型 ID。": "Enter a model ID.",
   "请选择模型协议。": "Select a model protocol.",
   "请选择模型用途。": "Select what the model is used for.",
+  "语言模型至少要选一种输入类型。": "A language model needs at least one input type.",
   "请在自己可管理的服务中声明模型。": "Declare the model in a service you can manage.",
   "请检查生成参数。": "Check the generation parameters.",
   "如：日常聊天": "e.g. Everyday chat",

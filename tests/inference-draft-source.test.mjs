@@ -144,6 +144,10 @@ test('a manual ID without a declared kind has an actionable save validation erro
   f.all().find(node => node.type === 'select').props.onValueChange('account'); await f.runtime.settle()
   f.button('输入模型 ID').props.onClick(); await f.runtime.settle()
   f.all().find(node => node.type === 'input' && node.props.placeholder === '填写服务的真实模型 ID').props.onChange({ target: { value: 'unknown-model' } }); await f.runtime.settle()
+  // The driver's only contract has one kind, which is now preselected (#64 `model-capability-no-defaults`); untick it.
+  const capabilities = f.all().find(node => node.type === 'capabilities')
+  assert.deepEqual(capabilities.props.value.kinds, ['language'])
+  capabilities.props.onChange({ ...capabilities.props.value, kinds: [] }); await f.runtime.settle()
   assert.equal(!!f.button('保存').props.disabled, false)
   await f.form().props.onSubmit({ preventDefault() {} }); await f.runtime.settle()
   assert.ok(f.all().some(node => node.type === 'error' && node.props.error.includes('用途')))
@@ -265,7 +269,8 @@ test('a new model ID does not borrow capabilities from a known catalog model', a
   const f = await fixture('Profiles')
   f.button('编辑 Original').props.onClick(); await f.runtime.settle()
   f.all().find(node => node.type === 'input' && node.props.placeholder === '填写服务的真实模型 ID').props.onChange({ target: { value: 'different-native' } }); await f.runtime.settle()
-  assert.deepEqual(f.all().find(node => node.type === 'capabilities').props.value.kinds, [])
+  // Only the driver contract's defaults (one protocol, its one kind, text input), nothing from `native`.
+  assert.deepEqual(f.all().find(node => node.type === 'capabilities').props.value, { id: 'different-native', protocol: 'chat', kinds: ['language'], input: ['text'] })
   f.runtime.unmount()
 })
 

@@ -1,6 +1,6 @@
 import { useI18n } from '../../i18n'
 import { Checkbox, Input, SelectField } from '@zhin.js/console-ui'
-import type { Driver, Kind, ModelDefinition } from './model.mjs'
+import { withModelKind, withModelProtocol, type Driver, type Kind, type ModelDefinition } from './model.mjs'
 
 interface ModelCapabilitiesProps {
   readonly driver: Driver
@@ -41,7 +41,7 @@ export function ModelCapabilities({ driver, value, onChange }: ModelCapabilities
         <span>{i18n.t("协议")}</span>
         <SelectField
           value={value.protocol}
-          onValueChange={(protocol) => onChange({ id: value.id, protocol, kinds: [] })}
+          onValueChange={(protocol) => onChange(withModelProtocol(value, protocol, driver))}
           options={[
             { value: '', label: i18n.t("选择协议") },
             ...driver.modelContracts.map((item) => ({
@@ -56,15 +56,7 @@ export function ModelCapabilities({ driver, value, onChange }: ModelCapabilities
           <label key={kind} className="flex items-center gap-2 text-sm">
             <Checkbox
               checked={value.kinds.includes(kind)}
-              onCheckedChange={(checked) =>
-                onChange({
-                  ...value,
-                  kinds:
-                    checked === true
-                      ? [...value.kinds, kind]
-                      : value.kinds.filter((item) => item !== kind),
-                })
-              }
+              onCheckedChange={(checked) => onChange(withModelKind(value, kind, checked === true))}
             />
             {kinds[kind]}
           </label>

@@ -5,7 +5,7 @@ import { Plus, Pencil, Trash2, RefreshCw } from 'lucide-react'
 import { Button, Card, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, ErrorAlert, Input, SelectField, useConfirm } from '@zhin.js/console-ui'
 import { ModelCapabilities } from './ModelCapabilities'
 import { SupportLabel, SupportNotice, supportLabel } from './SupportInfo'
-import { inferenceError, modelEntryView, profileSupport, profileUsages, serviceDriver, type ProfileUsage } from './model.mjs'
+import { inferenceError, languageInputMissing, modelEntryView, withModelProtocol, profileSupport, profileUsages, serviceDriver, type ProfileUsage } from './model.mjs'
 import {
   driverKey,
   type Profile,
@@ -213,11 +213,9 @@ function ProfileForm({
     if (commit) setCommittedModelId(id)
     setModelId(id)
     const existing = service?.models[id]
-    setModelDraft((previous) => existing ? null : previous ? { ...previous, id } : {
-      id,
-      protocol: driver?.modelContracts.length === 1 ? driver.modelContracts[0].protocol : '',
-      kinds: [],
-    })
+    setModelDraft((previous) => existing ? null : previous ? { ...previous, id }
+      : driver?.modelContracts.length === 1 ? withModelProtocol({ id, protocol: '', kinds: [] }, driver.modelContracts[0].protocol, driver)
+        : { id, protocol: '', kinds: [] })
     setFormError('')
   }
   function chooseAccount(id: string) {
@@ -246,6 +244,7 @@ function ProfileForm({
     if (!modelId.trim()) { setFormError(i18n.t("请填写模型 ID。")); return }
     if (!declaration?.protocol) { setFormError(i18n.t("请选择模型协议。")); return }
     if (!declaration.kinds.length) { setFormError(i18n.t("请选择模型用途。")); return }
+    if (modelDraft && languageInputMissing(modelDraft)) { setFormError(i18n.t("语言模型至少要选一种输入类型。")); return }
     if (modelDraft && !canEditDeclaration) { setFormError(i18n.t("请在自己可管理的服务中声明模型。")); return }
     if (!parametersValid) { setFormError(i18n.t("请检查生成参数。")); return }
     setFormError('')
