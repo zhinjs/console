@@ -3,7 +3,7 @@
  *
  * A page a plugin contributes is mounted at `/plugins/<plugin>/<page>`, a concrete path (never
  * `:param`, which the command palette cannot open), and shown as a tab next to the plugin's
- * 概览. Its old top-level path (`/rss`) becomes a redirect. An adapter's connection page is
+ * 概览 (its old top-level path `/rss` no longer redirects since ADR 0063 P4). An adapter's connection page is
  * already embedded in the adapter object page (`/scope/<adapter>`), so its old path redirects
  * there instead of becoming a second entry. Pure data and string helpers: route records are
  * built in `navigation-taxonomy.ts`, elements in `bootstrap/loadConsoleEntries.ts`.

@@ -66,12 +66,10 @@ test('plugin pages: the palette opens their tab (or adapter object page) and sea
   const { createConsoleAccess } = await import('../console-ui/src/utils/console-access.mjs')
   const tab = { kind: 'tab', plugin: 'lottery', page: 'index', href: '/plugins/lottery/index', legacyPath: '/lottery', keywords: ['抽奖'] }
   const route = { path: '/plugins/lottery/index', name: '彩票推荐', meta: { group: '插件', hideInMenu: true, titleI18n: { en: 'Lottery picks' }, pluginTab: tab } }
-  registerPluginPageRedirect('/lottery', '/plugins/lottery/index')
   registerPluginPageRedirect('/icqq', '/scope/icqq')
   try {
     assert.equal(isCommandRoute(route), true, 'a concrete tab path')
-    assert.equal(isCommandRoute({ path: '/lottery', meta: { hideInMenu: true, commandPalette: false } }), false)
-    assert.equal(isCommandRoute({ path: '/lottery' }), false, 'an old plugin path is excluded even without the opt-out')
+    assert.equal(isCommandRoute({ path: '/icqq' }), false, 'a registered redirect without a pluginTab is not listed')
     assert.equal(isCommandRoute({ path: '/icqq', meta: { pluginTab: { kind: 'adapter', plugin: 'adapter-icqq', page: 'index', href: '/scope/icqq', keywords: [] } } }), true, 'the adapter page keeps one entry')
   } finally { clearPluginPageRedirects() }
   assert.deepEqual(pluginPageCommand(route), { path: '/plugins/lottery/index', plugin: 'lottery', keywords: ['lottery', '彩票推荐', 'Lottery picks', '抽奖'] })

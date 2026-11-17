@@ -108,7 +108,7 @@ async function doLoadConsoleEntries(options?: LoadConsoleEntriesOptions, locale:
         if (requestedApi) requestedApi.addRoute(next as Parameters<typeof requestedApi.addRoute>[0])
         else session.addRoute(next)
       }
-      if (plan.sectionIgnored && plan.redirect) warnIgnoredSection(route.path, plan.sectionIgnored)
+      if (plan.sectionIgnored) warnIgnoredSection(route.path, plan.sectionIgnored)
       if (plan.page) {
         const tab = (plan.page.meta as { pluginTab?: PluginTabMeta } | undefined)?.pluginTab
         // A tab renders inside the plugin detail page: its header, the plugin's tabs, then the page.

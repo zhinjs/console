@@ -303,8 +303,8 @@ test('command palette search matches each builtin page by purpose keywords, not 
 })
 
 /**
- * Plugin pages as `loadConsoleEntries` registers them (ADR 0063 决策 3): the planned tab route plus the
- * hidden redirect at the old path, which `registerPluginPageRedirect` records. Lottery declares the
+ * Plugin pages as `loadConsoleEntries` registers them (ADR 0063 决策 3): the planned tab route, and for an
+ * adapter page the hidden redirect at its old path, which `registerPluginPageRedirect` records. Lottery declares the
  * alias 抽奖 for 彩票推荐 (`definePage({ keywords })`), RSS still declares a section.
  */
 function pluginPageRoutes() {
@@ -344,7 +344,7 @@ test('the command palette finds plugin pages by alias, plugin, package and descr
     const paths = paletteItemPaths(f.render())
     assert.ok(paths.includes('/plugins/lottery/index') && paths.includes('/plugins/rss/index'), 'plugin pages open at their tab')
     assert.ok(paths.includes('/scope/icqq'), 'the adapter page opens its adapter object page')
-    for (const path of ['/lottery', '/rss', '/icqq']) assert.ok(!paths.includes(path), `${path} redirects and is not listed again`)
+    for (const path of ['/lottery', '/rss', '/icqq']) assert.ok(!paths.includes(path), `${path} is not listed`)
     assert.equal(paths.length, new Set(paths).size, 'every destination appears once')
     const group = nodes(f.tree).find(node => node.type === 'section' && node.props['aria-label'] === '插件')
     assert.ok(nodes(group).some(node => node.key === '/plugins/lottery/index'), 'plugin pages are grouped under 插件')

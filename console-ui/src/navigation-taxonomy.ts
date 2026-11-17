@@ -61,7 +61,7 @@ export function markPluginRoute<T extends { path?: string; meta?: Record<string,
 
 type PluginRouteInput = { path?: string; name?: string; parent?: string | null; icon?: unknown; requiredPermissions?: string[]; requiredRoles?: string[]; meta?: Record<string, unknown> }
 
-/** Hidden route at a plugin page's old top-level path; its element is a redirect. */
+/** Hidden route at an adapter page's old top-level path; its element is a redirect. */
 export interface PluginRedirectRoute {
   path: string
   name: string
@@ -75,7 +75,7 @@ export interface PluginRedirectRoute {
 export interface PluginRoutePlan<T> {
   /** The route that renders the page: in its menu place (Sandbox, project pages) or as a plugin detail tab. */
   page?: T
-  /** The old top-level path, redirecting to `redirectTo`. */
+  /** An adapter page's old top-level path, redirecting to its adapter object page (`redirectTo`). */
   redirect?: PluginRedirectRoute
   redirectTo?: string
   /** A `metadata.section` the page still declares; ignored for plugin detail tabs (warn once). */
@@ -88,7 +88,9 @@ export interface PluginRoutePlan<T> {
  * - an adapter's connection page is not mounted again: its old path redirects to the adapter object
  *   page, which embeds the same management (`pages/scope/adapter-page.tsx`);
  * - every other page becomes `/plugins/<plugin>/<page>`, a tab of the plugin detail page, out of the
- *   menu, and its old path redirects there.
+ *   menu. Its old top-level path no longer redirects (removed in ADR 0063 P4).
+ * An adapter page's old path stays: that hidden route is the page's only registration (command
+ * palette entry, permissions), and it opens the adapter object page.
  * `meta.pluginTab` carries what the detail page and the command palette need. Never mutates the input.
  */
 export function planPluginRoute<T extends PluginRouteInput>(route: T, page?: PluginPageDescriptor | null, options: { adapterKey?: string } = {}): PluginRoutePlan<T> {
@@ -129,8 +131,6 @@ export function planPluginRoute<T extends PluginRouteInput>(route: T, page?: Plu
   const pluginTab: PluginTabMeta = { ...base, kind: 'tab', href: path, ...(hideInMenu === true ? { hidden: true } : {}) }
   return {
     page: { ...route, path, parent: CONSOLE_PATHS.plugins, meta: { ...meta, ...(order !== undefined ? { order } : {}), group: NAV_GROUPS.PLUGINS, hideInMenu: true, pluginPage: true, pluginTab } },
-    redirect: { path: route.path, name, parent: path, meta: { hideInMenu: true, commandPalette: false, pluginRedirect: true } },
-    redirectTo: path,
     ...(sectionIgnored ? { sectionIgnored } : {}),
   }
 }
