@@ -1,17 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useInstanceRecovery } from '../../hooks/use-instance-recovery'
 import { useI18n } from '../../i18n'
-import { useToast } from '../../components/toast'
 import { apiFetch } from '../../utils/auth'
 import { requestConsole } from '../../utils/console-rpc'
 import { ENDPOINT_RPC, FEATURE_RPC } from '../../contracts/zhin-console'
 import { validatePluginList } from '../plugin-list-model.mjs'
 import { readEndpointList } from '../endpoint-list-model.mjs'
 import {
-  appendConversationPage, classifyFeatureRpcError, conversationsRequest, featureLockError, globalFeatureRows, readConversationPage, mergeFeatureMatrix, readFeatureDetail, readFeatureList, readFeatureMatrix,
-  readFeatureWriteResult,
-  type ConversationPage, type ConversationQuery, type ConversationOverrideCounts, type FeatureDetail, type FeatureLevel, type FeatureLock, type FeatureList, type FeatureMatrixRow, type FeatureRootRow, type FeatureRpcBody,
-  type FeatureRpcFailure, type FeatureWriteResult,
+  appendConversationPage, classifyFeatureRpcError, conversationsRequest, globalFeatureRows, readConversationPage, mergeFeatureMatrix, readFeatureDetail, readFeatureList, readFeatureMatrix,
+  type ConversationPage, type ConversationQuery, type ConversationOverrideCounts, type FeatureDetail, type FeatureLevel, type FeatureList, type FeatureMatrixRow, type FeatureRootRow, type FeatureRpcBody,
+  type FeatureRpcFailure,
 } from './feature-model.mjs'
 
 export type MatrixSource = 'loading' | 'rpc' | FeatureRpcFailure
@@ -144,53 +142,6 @@ export function useFeatureList() {
 /** `feature.get` for one plugin at one level (`key`: alias, `<alias>/<endpointId>` or a conversation key). */
 export function useFeatureDetail(plugin: string, level: FeatureLevel, key?: string) {
   return useFeatureRead<FeatureDetail>({ type: FEATURE_RPC.GET, plugin, level, ...(key ? { key } : {}) }, readFeatureDetail)
-}
-
-/**
- * Sends one `feature.*` write and reports the outcome. A revision conflict reloads (`reload`) and
- * tells the user the page now shows the newer configuration; every outcome reloads. A write the
- * Host refuses because a higher level disabled the plugin (`locked`) is a lock notice, too.
- */
-export function useFeatureWriter() {
-  const i18n = useI18n()
-  const toast = useToast()
-  const [pending, setPending] = useState<string | null>(null)
-  const write = useCallback(async (body: FeatureRpcBody, reload: () => void, id = body.type): Promise<FeatureWriteResult | null> => {
-    setPending(id)
-    try {
-      const result = readFeatureWriteResult(await requestConsole<unknown>(body))
-      if (result.status === 'locked') {
-        toast.warning(lockMessage(result.lockedBy), i18n.t("功能已被上级禁用"))
-      } else if (result.status === 'conflict') {
-        toast.warning(i18n.t("配置已被其他地方修改，未保存。已重新读取最新配置，请确认后重试。"), i18n.t("配置已变化"))
-      } else if (result.status === 'invalid') {
-        toast.error([result.message, ...result.errors.map(item => `${item.path}: ${item.message}`)].filter(Boolean).join('\n') || i18n.t("覆盖配置校验失败，未保存"))
-      } else if (result.status === 'saved') {
-        toast.success(result.restartRequired ? i18n.t("已保存，Host 正在重启以应用全局开关。") : i18n.t("已保存，立即生效。"))
-      }
-      if (result.warnings.length) toast.warning(result.warnings.map(item => item.message).join('\n'), i18n.t("请注意"))
-      reload()
-      return result
-    } catch (error) {
-      const lock = featureLockError(error)
-      if (lock) {
-        toast.warning(lockMessage(lock.lockedBy), i18n.t("功能已被上级禁用"))
-        reload()
-        return { status: 'locked', ...(lock.lockedBy ? { lockedBy: lock.lockedBy } : {}), revision: '', message: '', restartRequired: false, warnings: [], errors: [] }
-      }
-      toast.error(error instanceof Error ? error.message : String(error), i18n.t("保存失败"))
-      return null
-    } finally {
-      setPending(null)
-    }
-  }, [i18n, toast])
-  function lockMessage(lockedBy?: FeatureLock): string {
-    return lockedBy === 'global' ? i18n.t("该功能已在全局禁用，这里不能启停。已重新读取。")
-      : lockedBy === 'adapter' ? i18n.t("该功能已在适配器禁用，这里不能启停。已重新读取。")
-        : lockedBy === 'endpoint' ? i18n.t("该功能已在账号禁用，这里不能启停。已重新读取。")
-          : i18n.t("该功能已被上级禁用，这里不能启停。已重新读取。")
-  }
-  return { write, pending }
 }
 
 export const CONVERSATION_PAGE_SIZE = 50

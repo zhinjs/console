@@ -27,6 +27,7 @@ import {
   type FeatureChange, type FeatureLevelRow, type FeatureRowFilter,
 } from './feature-scope-model.mjs'
 import { useFeatureList } from './use-feature-data'
+import { featureReceiptKey } from './adapter-switch-model.mjs'
 import './feature-level-panel.css'
 
 type I18n = ReturnType<typeof useI18n>
@@ -211,7 +212,7 @@ function FeatureRow({ scope, level, levelKey, feature, row, detail, reload, adop
   // Kept per scope + plugin outside the tab (action-receipt-store): leaving 功能 mid-write or with an
   // unknown outcome and coming back shows the same receipt, so the write cannot be sent twice.
   const receipt = useActionReceipt({
-    persistKey: `feature:${level}:${levelKey}:${feature.plugin}`,
+    persistKey: featureReceiptKey(level, levelKey, feature.plugin),
     submit: async plan => {
       const current = pendingOf(plan)
       if (!current) throw new Error('No change')
