@@ -21,7 +21,7 @@
   font-family: var(--console-font-mono); font-size: var(--console-text-label); white-space: pre-wrap; overflow-wrap: anywhere;
 }
 .console-admin-form { display: grid; gap: var(--console-space-3); max-width: 28rem; }
-@media (max-width: 767px) {
+@media (width < 48rem) {
   .console-admin-log { height: 16rem; }
   .console-admin-actions > * { flex: 1 1 auto; }
 }

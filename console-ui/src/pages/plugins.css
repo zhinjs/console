@@ -109,7 +109,7 @@
     height: 1rem;
   }
 
-  @media (max-width: 767px) {
+  @media (width < 48rem) {
     .console-plugin-catalog-search {
       width: 100%;
     }
@@ -137,7 +137,7 @@
     gap: var(--console-section-gap, 1.5rem);
     grid-template-columns: minmax(0, 1fr);
   }
-  @media (min-width: 1280px) {
+  @media (width >= 90rem) {
     .console-plugin-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   /* Tabs (ADR 0063): 概览 plus one per plugin page; the open panel stacks like the 概览 sections. */
@@ -214,7 +214,7 @@
     -webkit-line-clamp: 1;
   }
   .console-plugin-table-compact { display: block; margin-top: var(--console-space-1); color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
-  @media (min-width: 768px) { .console-plugin-table-compact { display: none; } }
+  @media (width >= 48rem) { .console-plugin-table-compact { display: none; } }
   .console-plugin-table-ok { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
   .console-plugin-table-state { white-space: nowrap; }
 

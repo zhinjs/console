@@ -379,7 +379,7 @@
     font-size: var(--console-text-label);
   }
 
-  @media (max-width: 767px) {
+  @media (width < 48rem) {
     a.console-message-more { display: inline-flex; min-height: var(--console-touch-target); align-items: center; }
   }
 
@@ -392,11 +392,11 @@
     -webkit-box-orient: vertical;
   }
 
-  @media (max-width: 1279px) {
+  @media (width < 90rem) {
     .console-overview-row { grid-template-columns: minmax(0, 1fr); }
   }
 
-  @media (max-width: 639px) {
+  @media (width < 40rem) {
     .console-overview-row { grid-template-columns: minmax(0, 1fr); }
     .console-message-row { grid-template-columns: minmax(0, 1fr); gap: var(--console-space-1); }
     .console-volume-legend small { margin-left: 0; flex-basis: 100%; }

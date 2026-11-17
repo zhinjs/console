@@ -23,7 +23,7 @@
 .console-status-state-subject { font-weight: var(--console-weight-regular); color: hsl(var(--muted-foreground)); }
 .console-status-state-causes { margin: var(--console-space-1) 0 0; padding-inline-start: var(--console-space-4); list-style: disc; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .console-status-state-causes li + li { margin-top: var(--console-space-1); }
-@media (max-width: 767px) { .console-status-state-actions > * { flex: 1 1 auto; } }
+@media (width < 48rem) { .console-status-state-actions > * { flex: 1 1 auto; } }
 
 /* ---- ActionReceipt ---- */
 .console-receipt {
@@ -60,7 +60,7 @@
 .console-instance-banner-title { font-weight: var(--console-weight-strong); font-size: var(--console-text-label); }
 .console-instance-banner-text { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .console-instance-banner-actions { display: flex; flex-wrap: wrap; gap: var(--console-space-2); }
-@media (max-width: 767px) { .console-instance-banner-actions { width: 100%; } .console-instance-banner-actions > * { flex: 1 1 auto; } }
+@media (width < 48rem) { .console-instance-banner-actions { width: 100%; } .console-instance-banner-actions > * { flex: 1 1 auto; } }
 
 /* ---- ApplyFeedback: the outcome of one save (已生效 / 下一条消息生效 / 需要重启 / 未生效) ---- */
 .console-apply {
@@ -92,7 +92,7 @@
 .console-apply-timeout { display: flex; flex-direction: column; gap: var(--console-space-2); margin-top: var(--console-space-1); }
 .console-apply-timeout ul { margin: 0; padding-inline-start: var(--console-space-4); list-style: disc; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .console-receipt .console-apply { margin-top: var(--console-space-1); }
-@media (max-width: 767px) {
+@media (width < 48rem) {
   .console-apply-actions > button, .console-apply-actions > a { flex: 1 1 auto; }
   .console-apply-compare { grid-template-columns: minmax(0, 1fr); }
 }

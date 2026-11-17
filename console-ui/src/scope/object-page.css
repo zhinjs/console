@@ -51,11 +51,11 @@
   border: var(--console-border-hairline, 1px) solid transparent; border-radius: var(--console-radius-4); background: hsl(var(--card)); box-shadow: var(--console-card-elevation);
 }
 
-@media (min-width: 1440px) {
+@media (width >= 90rem) {
   .console-object-page.has-aside .console-object-body { display: grid; grid-template-columns: 18rem minmax(0, 1fr); align-items: start; gap: var(--console-space-5); }
   .console-object-aside { position: sticky; top: calc(var(--zc-header-h, 4.5rem) + 1rem); }
 }
-@media (max-width: 767px) {
+@media (width < 48rem) {
   .console-object-page { gap: var(--console-space-3); }
   .console-object-avatar { width: 2.25rem; height: 2.25rem; }
   .console-object-actions { width: 100%; }
@@ -75,7 +75,7 @@ a.console-scope-crumb:focus-visible { outline: var(--console-border-focus) solid
 .console-scope-crumb-level { flex-shrink: 0; opacity: 0.75; font-weight: var(--console-weight-regular); }
 .console-scope-crumb-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .console-scope-crumb-separator { width: 0.75rem; height: 0.75rem; flex-shrink: 0; color: hsl(var(--muted-foreground)); }
-@media (max-width: 767px) { .console-scope-crumb { max-width: 9rem; } }
+@media (width < 48rem) { .console-scope-crumb { max-width: 9rem; } }
 
 /* ---- Scope picker ---- */
 .console-scope-picker-popover { width: min(24rem, calc(100vw - 2rem)); padding: var(--console-space-3); }
@@ -98,5 +98,5 @@ a.console-scope-crumb:focus-visible { outline: var(--console-border-focus) solid
 .console-scope-picker-dot.is-offline { background: hsl(var(--warning-fill)); }
 .console-scope-picker-note { display: flex; align-items: center; gap: var(--console-space-2); border-top: var(--console-border-hairline) solid var(--console-border-subtle); padding-top: var(--console-space-2); color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .console-scope-picker-note svg { width: 0.875rem; height: 0.875rem; flex-shrink: 0; }
-@media (max-width: 767px) { .console-scope-picker-item { min-height: 2.75rem; } }
+@media (width < 48rem) { .console-scope-picker-item { min-height: 2.75rem; } }
 

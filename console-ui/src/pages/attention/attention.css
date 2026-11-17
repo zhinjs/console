@@ -218,7 +218,7 @@
   .console-attention-badge-count.is-danger { background: hsl(var(--destructive)); color: hsl(var(--destructive-foreground)); }
 
   /* ---------- Phones: the list stacks, actions take the full width ---------- */
-  @media (max-width: 767px) {
+  @media (width < 48rem) {
     .console-attention-row { grid-template-columns: auto minmax(0, 1fr); }
     .console-attention-row-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; }
     .console-attention-row-actions > * { width: 100%; min-height: 44px; }

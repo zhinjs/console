@@ -56,7 +56,7 @@
     border-radius: var(--console-radius-full);
     background: var(--zc-nav-bg);
     box-shadow: var(--zc-nav-shadow);
-    padding: 0 var(--console-space-2) 0 var(--console-space-3);
+    padding: 0 var(--console-space-2);
     backdrop-filter: saturate(1.6) blur(18px);
     -webkit-backdrop-filter: saturate(1.6) blur(18px);
     transition: background-color var(--console-motion-base) var(--console-ease-out), box-shadow var(--console-motion-base) var(--console-ease-out);
@@ -107,19 +107,19 @@
     flex: 1 1 auto;
     align-items: center;
     justify-content: center;
-    gap: var(--console-space-1);
+    gap: 0;
   }
 
   .console-topnav-nav .console-nav-tier {
     display: flex;
     align-items: center;
-    gap: var(--console-space-1);
+    gap: 0;
   }
 
   .console-nav-tier-rule {
     width: 1px;
     height: 1.25rem;
-    margin: 0 var(--console-space-2);
+    margin: 0 var(--console-space-1);
     background: hsl(var(--border-strong));
   }
 
@@ -264,7 +264,7 @@
     width: 0.5rem;
     height: 0.5rem;
     flex-shrink: 0;
-    margin: 0 var(--console-space-2);
+    margin: 0 var(--console-space-1);
     border-radius: var(--console-radius-full);
     background: hsl(var(--warning-fill));
     outline: var(--console-border-focus) solid hsl(var(--warning-fill) / 0.18); outline-offset: 0;
@@ -318,7 +318,7 @@
   .console-topnav-actions [data-tooltip][aria-expanded="true"]::after,
   .console-topnav-actions [data-tooltip][data-state="open"]::after { display: none; }
   /* The full-width search box already reads its label. */
-  @media (min-width: 1400px) {
+  @media (width >= 90rem) {
     .console-topnav-actions .console-command-trigger[data-tooltip]::after { display: none; }
   }
 
@@ -345,7 +345,7 @@
   .console-user-menu-trigger > svg { width: 1rem; height: 1rem; flex-shrink: 0; }
   .console-user-menu-trigger > .console-user-menu-chevron { width: 0.875rem; height: 0.875rem; color: hsl(var(--muted-foreground)); }
   .console-user-menu-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  @media (max-width: 1279px) {
+  @media (width < 90rem) {
     .console-user-menu-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   }
   .console-user-menu-content { min-width: 15rem; }
@@ -606,19 +606,21 @@
 
   /* ---------- Narrow layouts ---------- */
   /* Wide but not widest: the section items need the room, the search keeps its icon and shortcut. */
-  @media (min-width: 1100px) and (max-width: 1399px) {
+  /* stylelint-disable-next-line console/media-queries -- 顶栏放下全部分区至少要 1100px，64rem（1024px）时会和搜索框重叠；与 hooks/useIsMobile.ts 的 COMPACT_NAV_QUERY 成对 */
+  @media (width >= 1100px) and (width < 90rem) {
     .console-topnav-actions .console-command-trigger { min-width: 0; }
     .console-topnav-actions .console-command-trigger > span { display: none; }
     .console-topnav .console-brand-name { display: none; }
-    .console-topnav-item { padding: 0 var(--console-space-3); }
+    .console-topnav-item { padding: 0 var(--console-space-2); }
   }
 
-  @media (max-width: 1099px) {
+  /* stylelint-disable-next-line console/media-queries -- 同上：1100px 以下导航收进抽屉 */
+  @media (width < 1100px) {
     .console-topnav-capsule { padding-left: var(--console-space-2); gap: var(--console-space-1); }
     .console-topnav-actions .console-command-trigger { width: auto; }
   }
 
-  @media (max-width: 767px) {
+  @media (width < 48rem) {
     .console-app-shell { --zc-header-h: 4.25rem; --zc-nav-capsule-h: 3.25rem; --zc-nav-logo: 2rem; }
     .console-topnav { padding: var(--console-space-3) var(--console-space-3) 0; }
     .console-topnav .console-brand-name { display: none; }
@@ -640,7 +642,7 @@
   }
 
   /* Too narrow for the language picker; Personal settings still switches the language. */
-  @media (max-width: 479px) {
+  @media (width < 40rem) {
     .console-topnav-actions .console-language-select { display: none; }
   }
 
@@ -717,7 +719,7 @@
     pointer-events: none;
   }
 
-  @media (max-width: 639px) {
+  @media (width < 40rem) {
     .console-language-select { height: 2.25rem; }
     .console-language-select > svg { left: 0.625rem; }
   }
@@ -943,7 +945,7 @@
   .console-config-group + .console-config-group { border-top: var(--console-border-hairline) solid var(--console-border-subtle); padding-top: var(--console-space-4); }
   .console-config-group-title { font-size: var(--console-text-section); font-weight: var(--console-weight-strong); }
   .console-config-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--console-space-4) var(--console-space-5); }
-  @media (min-width: 1024px) {
+  @media (width >= 64rem) {
     .console-config-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .console-config-cell.is-wide { grid-column: 1 / -1; }
   }

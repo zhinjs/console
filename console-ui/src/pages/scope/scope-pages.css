@@ -65,7 +65,7 @@ a.console-scope-task:focus-visible { outline: var(--console-border-focus) solid 
 .console-adapter-console .zk-page.zk-page--embedded { gap: var(--console-section-gap); }
 .console-adapter-console-toolbar { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--console-space-2); }
 
-@media (max-width: 767px) {
+@media (width < 48rem) {
   .console-scope-task { padding-inline: var(--console-space-3); }
   .console-login-card-qr { width: 8rem; height: 8rem; }
 }

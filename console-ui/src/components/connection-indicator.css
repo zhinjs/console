@@ -16,11 +16,11 @@
 .console-connection-popover-actions { display: flex; flex-wrap: wrap; gap: var(--console-space-2); margin-top: var(--console-space-3); }
 /* The bar is full on laptops (sections, search, logs, attention): the text shows only on wide screens;
    below that the pill is an icon button whose name and popover carry the state and reason. */
-@media (max-width: 1599px) {
+@media (width < 90rem) {
   .console-connection-pill-reason, .console-connection-pill-label { display: none; }
   .console-connection-pill { width: 1.75rem; justify-content: center; padding: 0; }
 }
-@media (max-width: 767px) {
+@media (width < 48rem) {
   .console-connection-pill { height: 2rem; margin: 0; }
 }
-@media (max-width: 767px) { .console-connection-pill { width: 2rem; } }
+@media (width < 48rem) { .console-connection-pill { width: 2rem; } }

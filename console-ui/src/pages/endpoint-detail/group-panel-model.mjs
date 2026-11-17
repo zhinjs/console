@@ -1,10 +1,10 @@
 /**
  * Narrow workspaces have no room for the fixed group-member column (`.im-right-panel` is only shown
- * at `min-width: 1440px` in im-workspace.css: below that the conversation list and the chat need the
+ * at `width >= 90rem` in im-workspace.css: below that the conversation list and the chat need the
  * width). This query is its exact complement, so at every width exactly one of the column or the
  * header drawer entry is available.
  */
-export const GROUP_PANEL_DRAWER_QUERY = 'not all and (min-width: 1440px)'
+export const GROUP_PANEL_DRAWER_QUERY = 'not all and (width >= 90rem)'
 
 /** The header entry exists only where the member column would exist but cannot be shown. */
 export function memberDrawerAvailable({ showRightPanel, narrow }) {

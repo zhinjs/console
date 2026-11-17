@@ -15,7 +15,7 @@
 .console-component-drawer[data-state=closed] { animation:none !important; }
 .console-component-drawer > button:last-child { min-width:var(--console-control-height-compact); min-height:var(--console-control-height-compact); display:flex; align-items:center; justify-content:center; }
 @keyframes console-drawer-enter { from { opacity:0; margin-right:calc(var(--console-space-5) * -1); } to { opacity:1; margin-right:0; } }
-@media(prefers-reduced-motion:reduce) { .console-component-drawer[data-state=open] { animation:none !important; } }
+@media (prefers-reduced-motion: reduce) { .console-component-drawer[data-state=open] { animation:none !important; } }
 
 .console-component-preview-error { flex-direction:column; align-items:flex-start; }
 

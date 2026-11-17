@@ -200,10 +200,10 @@ li.is-done .console-login-check { border-color: hsl(var(--foreground) / 0.7); ba
 .console-login-result.is-muted > svg { color: hsl(var(--warning)); }
 
 /* ---------- tablet / phone ---------- */
-@media (max-width: 1023px) {
+@media (width < 64rem) {
   .console-login-flow-body { grid-template-columns: minmax(0, 1fr); }
 }
-@media (max-width: 767px) {
+@media (width < 48rem) {
   .console-login-challenge-split { grid-template-columns: minmax(0, 1fr); }
   .console-login-flow { padding: var(--console-space-4); }
   .console-login-flow-tools { width: 100%; }

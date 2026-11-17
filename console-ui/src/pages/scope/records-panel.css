@@ -23,6 +23,6 @@
 .console-records-source-filter { display: flex; min-width: 0; align-items: baseline; gap: var(--console-space-1); margin: 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .console-records-source-filter code { overflow: hidden; min-width: 0; color: hsl(var(--foreground)); font-family: var(--console-font-mono); text-overflow: ellipsis; white-space: nowrap; }
 .console-records-source-open { align-self: flex-start; }
-@media (max-width: 767px) {
+@media (width < 48rem) {
   .console-records-session { padding: var(--console-space-3) var(--console-space-3); }
 }

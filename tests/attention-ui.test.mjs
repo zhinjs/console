@@ -308,7 +308,7 @@ test('the dashboard shows the top items from the shared model with 查看全部 
   assert.equal(layout.match(/<AttentionBadge \/>/g)?.length, 1, 'one element in the top bar')
   assert.match(layout, /<ConsoleCommandCenter routes=\{routes\} \/>\n\s+<LogPanelButton \/>\n\s+<AttentionBadge \/>/)
   const css = await source('pages/attention/attention.css')
-  assert.match(css, /@media \(max-width: 767px\)[\s\S]*\.console-attention-row-actions \{ grid-column: 1 \/ -1; display: grid; grid-template-columns: 1fr 1fr; \}[\s\S]*\.console-attention-row-actions > \* \{ width: 100%; min-height: 44px; \}/)
+  assert.match(css, /@media \(width < 48rem\)[\s\S]*\.console-attention-row-actions \{ grid-column: 1 \/ -1; display: grid; grid-template-columns: 1fr 1fr; \}[\s\S]*\.console-attention-row-actions > \* \{ width: 100%; min-height: 44px; \}/)
   assert.doesNotMatch(css, /#[0-9a-f]{3,6}\b|rgb\(/iu, 'design tokens only')
 })
 

@@ -1,5 +1,5 @@
 .console-log-layout.console-log-layout--disclosure { grid-template-columns: minmax(0, 1fr); }
-@media (min-width: 1200px) {
+@media (width >= 64rem) {
  .console-log-layout.console-log-layout--disclosure.has-sources { grid-template-columns: 220px minmax(0, 1fr); }
  .console-log-layout.console-log-layout--disclosure.has-inspector { grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); }
  .console-log-layout.console-log-layout--disclosure.has-sources.has-inspector { grid-template-columns: 220px minmax(0, 1fr) minmax(280px, 340px); }
@@ -32,14 +32,14 @@
 .console-log-page-summary { text-align: center; }
 .console-log-pagination button { height: var(--log-control); min-height: var(--log-control); font-size: inherit; }
 .console-log-pagination [role="combobox"] { min-width: 6rem; width: auto; }
-@media (max-width:1199px) {
+@media (width < 64rem) {
  .console-logs-page { --log-caption: var(--console-text-label, .8125rem); --log-control: var(--console-control-height-compact, 2.25rem); gap: var(--console-space-3); }
  .console-log-overview { grid-template-columns: repeat(4,minmax(0,1fr)); }
  .console-log-health { grid-column: 1 / -1; padding: var(--console-space-2) var(--console-space-3); border-top: var(--console-border-hairline) solid hsl(var(--border) / .5); }
  .console-log-signal, .console-log-signal:first-child { padding: var(--console-space-2) var(--console-space-3); border-bottom: 0; }
  .console-log-toolbar-actions { margin-left: auto; }
 }
-@media (max-width:639px) {
+@media (width < 40rem) {
  .console-logs-page { --log-caption: var(--console-text-label, .75rem); --log-control: var(--console-control-height-compact, 2.75rem); gap: var(--console-space-3); }
  .console-logs-page .console-page-title { font-size: var(--console-text-title); }
  .console-logs-page .console-page-description { display: none; }

@@ -17,6 +17,6 @@
   .console-onboarding-banner > svg { width: 16px; height: 16px; flex: none; }
   .console-onboarding-banner > span { flex: 1; min-width: 0; }
   /* Phones: text, action and close stay on one row instead of leaving the close button alone below. */
-  @media (max-width: 767px) { .console-onboarding-banner { flex-wrap: nowrap; gap: var(--console-space-2); padding: var(--console-space-2) var(--console-space-3); } }
-  @media (max-width: 767px) { .console-onboarding-steps { grid-template-columns: minmax(0, 1fr); } }
+  @media (width < 48rem) { .console-onboarding-banner { flex-wrap: nowrap; gap: var(--console-space-2); padding: var(--console-space-2) var(--console-space-3); } }
+  @media (width < 48rem) { .console-onboarding-steps { grid-template-columns: minmax(0, 1fr); } }
 }

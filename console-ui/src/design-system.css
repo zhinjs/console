@@ -117,6 +117,7 @@
     }
   }
 
+  /* stylelint-disable-next-line console/media-queries -- 高分屏上图表网格线用 0.5px（--zc-hairline）；分辨率不是断点也不在允许的用户偏好里 */
   @media (min-resolution: 2dppx) {
     :root { --zc-hairline: 0.5px; }
   }
@@ -133,7 +134,7 @@
     --console-shadow-panel: 0 0 0 1px hsl(0 0% 100% / 0.06);
   }
 
-  @media (max-width: 767px) {
+  @media (width < 48rem) {
     :root {
       --console-page-padding-inline: 1rem;
       --console-page-padding-block: 1.25rem;
@@ -146,20 +147,20 @@
     }
   }
 
-  @media (min-width: 768px) {
+  @media (width >= 48rem) {
     :root {
       --console-text-label: 0.8125rem; --console-text-code: 0.8125rem;
       --console-text-title: 1.375rem; --console-text-title-compact: 1.25rem;
     }
   }
-  @media (min-width: 768px) and (max-width: 1199px) {
+  @media (width >= 48rem) and (width < 64rem) {
     :root {
       --console-page-padding-inline: 1.25rem;
       --console-page-padding-block: 1.5rem;
     }
   }
 
-  @media (min-width: 1600px) {
+  @media (width >= 90rem) {
     :root {
       --console-page-padding-inline: 1.5rem;
       --console-page-padding-block: 2rem;
@@ -472,7 +473,7 @@
     height: 0.65rem;
   }
 
-  @media (max-width: 639px) {
+  @media (width < 40rem) {
     .console-command-trigger {
       width: 2.35rem;
       min-width: 2.35rem;
@@ -527,7 +528,7 @@
     max-width: var(--console-content-max);
   }
 
-  @media (max-width: 767px) {
+  @media (width < 48rem) {
 
     .console-page,
     .console-page-grid {
@@ -840,13 +841,13 @@
     transform: translateX(0.875rem);
   }
 
-  @media (max-width: 1023px) {
+  @media (width < 64rem) {
     .console-control-switches {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
-  @media (max-width: 639px) {
+  @media (width < 40rem) {
     .console-control-switches {
       grid-template-columns: minmax(0, 1fr);
     }
@@ -900,7 +901,7 @@
     gap: var(--console-space-3);
   }
 
-  @media (max-width: 1180px) {
+  @media (width < 64rem) {
     .console-capability-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -1239,7 +1240,7 @@
   .console-agent-state-explanation { margin-top: var(--console-space-3); font-size: var(--console-text-body); line-height: 1.6; color: hsl(var(--muted-foreground)); }
   .console-agent-state-explanation summary { width: fit-content; cursor: pointer; }
   .console-agent-state-explanation p { max-width: 65ch; margin-top: var(--console-space-2); }
-  @media (min-width: 900px) { .console-agent-summary-row { flex-direction: row; justify-content: space-between; gap: var(--console-space-5); } }
+  @media (width >= 64rem) { .console-agent-summary-row { flex-direction: row; justify-content: space-between; gap: var(--console-space-5); } }
 
   .console-agent-hero svg {
     width: 1rem;
@@ -2368,7 +2369,7 @@
     line-height: 1.55;
   }
 
-  @media (max-width: 1180px) {
+  @media (width < 64rem) {
 
     .console-log-layout {
       grid-template-columns: minmax(9rem, 0.5fr) minmax(0, 2fr);
@@ -2395,7 +2396,7 @@
     }
   }
 
-  @media (max-width: 880px) {
+  @media (width < 48rem) {
     .console-log-toolbar {
       align-items: flex-start;
       flex-wrap: wrap;
@@ -2447,7 +2448,7 @@
     }
   }
 
-  @media (max-width: 767px) {
+  @media (width < 48rem) {
 
     .console-log-toolbar > div:first-child,
     .console-log-toolbar [role='combobox'] {
@@ -2588,7 +2589,7 @@
     box-shadow: none;
   }
   .console-section-title { font-size: var(--console-text-section); line-height: var(--console-leading-section); font-weight: var(--console-weight-strong); letter-spacing: 0; }
-  @media (min-width: 640px) {
+  @media (width >= 40rem) {
     /* Actions wrap under the title once the title block would drop below ~24rem (Pad widths), instead of squeezing the description. */
     .console-page-header { flex-direction: row; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--console-space-4) var(--console-space-5); }
     .console-page-header > :first-child { flex: 1 1 24rem; }
@@ -2596,7 +2597,7 @@
 }
 
 @layer components {
-  @media (min-width: 641px) and (max-width: 1199px) {
+  @media (width >= 40rem) and (width < 64rem) {
     .console-agent-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 }
@@ -2977,7 +2978,7 @@
     animation: console-sheet-in-bottom var(--console-motion-slow) var(--console-ease-out);
   }
 
-  @media (max-width: 639px) {
+  @media (width < 40rem) {
     .console-sheet-content[data-side="right"] {
       width: 100vw;
       border-radius: 0;
@@ -3235,11 +3236,11 @@
     background: hsl(var(--primary) / 0.05);
   }
 
-  @media (max-width: 1023px) {
+  @media (width < 64rem) {
     .console-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--console-space-3); }
   }
 
-  @media (max-width: 639px) {
+  @media (width < 40rem) {
     .console-stat-value { font-size: var(--console-text-title); }
   }
 }

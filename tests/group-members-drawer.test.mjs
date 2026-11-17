@@ -19,10 +19,10 @@ test('the drawer query is the exact complement of the CSS breakpoint that shows 
     if (!rule.selectors.includes('.im-right-panel.im-right-visible')) return
     if (rule.parent?.type !== 'atrule' || rule.parent.name !== 'media') return
     let shown = false; rule.walkDecls('display', decl => { shown = decl.value === 'flex' })
-    if (shown) breakpoint = /min-width:\s*(\d+)px/u.exec(rule.parent.params)?.[1]
+    if (shown) breakpoint = /^\(width >= ([\d.]+rem)\)$/u.exec(rule.parent.params)?.[1]
   })
-  assert.equal(breakpoint, '1440', 'the member column is shown from 1440px (list + chat need the width below)')
-  assert.equal(GROUP_PANEL_DRAWER_QUERY, `not all and (min-width: ${breakpoint}px)`)
+  assert.equal(breakpoint, '90rem', 'the member column is shown from 90rem (list + chat need the width below)')
+  assert.equal(GROUP_PANEL_DRAWER_QUERY, `not all and (width >= ${breakpoint})`)
 })
 
 test('the narrow-screen entry exists only for a member-panel group on a narrow workspace', () => {

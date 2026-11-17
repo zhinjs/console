@@ -26,4 +26,4 @@
 .console-appearance-footer button svg { width: 13px; height: 13px; }
 .console-appearance-footer button:hover { color: hsl(var(--foreground)); background: hsl(var(--accent)); }
 .console-appearance-footer button:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
-@media (max-width: 767px) { .console-appearance-footer button { min-height: 44px; } }
+@media (width < 48rem) { .console-appearance-footer button { min-height: 44px; } }

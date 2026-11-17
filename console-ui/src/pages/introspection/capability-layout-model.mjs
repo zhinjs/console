@@ -1,9 +1,9 @@
 /**
- * Below 881px `.console-capability-workspace` collapses to one column (design-system.css
- * `@media (max-width: 880px)`), which pushes the inspector under the whole list. This query is that
+ * Below 48rem `.console-capability-workspace` collapses to one column (design-system.css
+ * `@media (width < 48rem)`), which pushes the inspector under the whole list. This query is that
  * same breakpoint, so on every width exactly one of the inline inspector or the detail sheet exists.
  */
-export const CAPABILITY_DETAIL_SHEET_QUERY = '(max-width: 880px)'
+export const CAPABILITY_DETAIL_SHEET_QUERY = '(width < 48rem)'
 
 /**
  * The introspection API paginates on the server (`paginateItems`) and only knows a text `filter`;

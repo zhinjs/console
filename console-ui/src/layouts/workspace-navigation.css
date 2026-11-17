@@ -11,7 +11,7 @@
     color: hsl(var(--primary));
   }
 
-  @media (max-width: 767px) {
+  @media (width < 48rem) {
     .console-drawer-nav .console-nav-item {
       min-height: 2.75rem;
     }

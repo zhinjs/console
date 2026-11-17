@@ -40,7 +40,7 @@
 .console-task-overview-internal[open] > summary { border-bottom: var(--console-border-hairline) solid var(--console-border-default, hsl(var(--border))); }
 .console-task-overview-internal > .console-task-overview-table { border: 0; border-radius: 0; box-shadow: none; }
 .console-task-overview-internal > .console-task-overview-cards { padding: var(--console-space-2); }
-@media (max-width: 767px) {
+@media (width < 48rem) {
   .console-task-overview-table { display: none; }
   .console-task-overview-cards { display: flex; flex-direction: column; gap: var(--console-space-2); }
   .console-scope-filter-actions { width: 100%; }
@@ -68,6 +68,6 @@
 .console-conversation-choice code { margin-inline-start: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-family: var(--console-font-mono); font-size: var(--console-text-label); }
 
 /* ---- 机器人状态：三项指标（Agent / 工具 / MCP），聊天账号在线情况在「能力链路」里 ---- */
-@media (min-width: 641px) {
+@media (width >= 40rem) {
   .console-agent-workbench .console-agent-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }

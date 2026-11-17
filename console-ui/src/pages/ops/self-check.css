@@ -29,4 +29,4 @@
 .console-self-check-snippet pre { margin-top: var(--console-space-2); overflow-x: auto; border-radius: var(--console-radius-2); background: hsl(var(--muted)); padding: var(--console-space-3); font-family: var(--console-font-mono); font-size: var(--console-text-label); }
 .console-self-check-more { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .console-self-check-more a { color: hsl(var(--primary)); text-decoration: underline; }
-@media (max-width: 767px) { .console-self-check-target { grid-template-columns: minmax(0, 1fr); } .console-self-check-item { padding: var(--console-space-3); } }
+@media (width < 48rem) { .console-self-check-target { grid-template-columns: minmax(0, 1fr); } .console-self-check-item { padding: var(--console-space-3); } }

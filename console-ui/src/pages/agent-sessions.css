@@ -229,7 +229,7 @@
     text-align: center;
   }
 
-  @container (max-width: 52rem) {
+  @container (width < 48rem) {
     .console-session-workspace {
       grid-template-columns: minmax(0, 1fr);
       gap: var(--console-space-5);
@@ -256,7 +256,7 @@
   display: none;
 }
 
-@container (max-width: 52rem) {
+@container (width < 48rem) {
   .console-conversations-page .console-session-directory-toggle {
     display: inline-flex;
   }

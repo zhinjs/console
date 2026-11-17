@@ -220,24 +220,24 @@
 .rich-text-editor .editor-image { display: block; max-width: min(200px,100%); border-radius: var(--console-radius-2); margin: var(--console-space-1) 0; }
 .rich-text-editor .editor-video, .rich-text-editor .editor-audio, .rich-text-editor .editor-at { display: inline-flex; align-items: center; gap: var(--console-space-1); padding: var(--console-space-1) var(--console-space-2); margin: var(--console-space-1); border: var(--console-border-hairline) solid hsl(var(--border)); border-radius: var(--console-radius-1); background: hsl(var(--muted)); color: hsl(var(--foreground)); font-size: var(--console-text-label); user-select: none; }
 .rich-text-editor .editor-at-symbol { font-weight: var(--console-weight-strong); }
-@media (min-width: 1440px) { .im-right-panel.im-right-visible { display: flex; } }
+@media (width >= 90rem) { .im-right-panel.im-right-visible { display: flex; } }
 /* Below 1440px the member column above is hidden; the conversation header opens the same panel as a Sheet. */
 .console-sheet-content.im-member-sheet { width: min(360px, 100vw); padding: 0; gap: 0; overflow: hidden; background: hsl(var(--im-list-bg)); }
 .im-member-sheet .im-right-header { padding-right: var(--console-space-8); }
 .im-member-sheet .im-member-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .console-sheet-content.im-member-sheet--bottom { width: 100%; max-height: 85dvh; border-radius: var(--console-radius-3) var(--console-radius-3) 0 0; }
-@media (min-width: 1400px) { .im-layout > .channel-sidebar, .im-sidebar.channel-sidebar { width: 300px; } }
+@media (width >= 90rem) { .im-layout > .channel-sidebar, .im-sidebar.channel-sidebar { width: 300px; } }
 /* Below 1024px (phones, and tablets beside the navigation) the list and the chat do not fit side by
    side: list → chat → details, one pane at a time (the URL decides which), back returns to the list. */
-@media (max-width: 1023px) {
+@media (width < 64rem) {
   .im-layout > .channel-sidebar { width: 100%; border-right: 0; }
   .im-layout.is-chat-pane > .channel-sidebar { display: none; }
   .im-layout.is-list-pane > .im-main-split { display: none; }
   .im-chat-back { display: inline-flex; }
 }
-@media (max-width: 1279px) { .im-header-label, .im-member-drawer-label { display: none; } }
+@media (width < 90rem) { .im-header-label, .im-member-drawer-label { display: none; } }
 /* Phones: the member panel opens as a bottom sheet; message actions appear for a tapped message. */
-@media (max-width: 767px) {
+@media (width < 48rem) {
   .im-chat-header { gap: var(--console-space-2); padding: var(--console-space-2) var(--console-space-2); }
   .im-chat-avatar { display: none; }
   .im-message-list { padding: var(--console-space-3); }

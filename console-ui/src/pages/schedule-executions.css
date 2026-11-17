@@ -23,5 +23,5 @@
   .schedule-execution-events li { display: flex; flex-wrap: wrap; gap: var(--console-space-2) var(--console-space-4); font-size: var(--console-text-body); }
   .schedule-execution-events time, .schedule-execution-events code { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
   .schedule-execution-trace { padding: var(--console-space-4); border-radius: var(--console-radius-2); border: var(--console-border-hairline) solid var(--console-border-subtle); background: hsl(var(--card)); box-shadow: var(--console-elevation-0); font-size: var(--console-text-body); }
-  @media (max-width: 40rem) { .schedule-execution-row { align-items: flex-start; flex-direction: column; gap: var(--console-space-2); } .schedule-execution-row-end { justify-content: flex-start; } }
+  @media (width < 40rem) { .schedule-execution-row { align-items: flex-start; flex-direction: column; gap: var(--console-space-2); } .schedule-execution-row-end { justify-content: flex-start; } }
 }

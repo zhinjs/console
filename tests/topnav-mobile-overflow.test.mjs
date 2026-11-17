@@ -7,10 +7,10 @@ const shell = read('console-ui/src/shell.css')
 const layout = read('console-ui/src/layouts/dashboard.tsx')
 const commandCenter = read('console-ui/src/components/ConsoleCommandCenter.tsx')
 
-/** The body of the first `@media (max-width: Npx)` block, brace-matched. */
-function mediaBlock(css, maxWidth) {
-  const start = css.indexOf(`@media (max-width: ${maxWidth}px)`)
-  assert.ok(start >= 0, `missing @media (max-width: ${maxWidth}px)`)
+/** The body of the first `@media <query>` block, brace-matched. */
+function mediaBlock(css, query) {
+  const start = css.indexOf(`@media ${query}`)
+  assert.ok(start >= 0, `missing @media ${query}`)
   let depth = 0
   for (let index = css.indexOf('{', start); index < css.length; index++) {
     if (css[index] === '{') depth++
@@ -25,7 +25,7 @@ const rule = (block, selector) => {
 }
 
 test('phone top bar shrinks its actions so 退出登录 stays inside the capsule at 360/390px', () => {
-  const phone = mediaBlock(shell, 767)
+  const phone = mediaBlock(shell, '(width < 48rem)')
   const actions = rule(phone, '.console-topnav-actions')
   assert.match(actions, /--console-control-height:\s*2\.5rem/, 'icon buttons, the attention badge and the account link use 2.5rem')
   assert.match(actions, /--console-control-height-compact:\s*2\.5rem/)
@@ -36,8 +36,8 @@ test('phone top bar shrinks its actions so 退出登录 stays inside the capsule
   assert.match(commandCenter, /className="console-command-trigger max-md:min-h-0"/)
 })
 
-test('the language picker leaves the top bar below 480px but stays reachable in the drawer', () => {
-  assert.match(rule(mediaBlock(shell, 479), '.console-topnav-actions .console-language-select'), /display:\s*none/)
+test('the language picker leaves the top bar below 40rem but stays reachable in the drawer', () => {
+  assert.match(rule(mediaBlock(shell, '(width < 40rem)'), '.console-topnav-actions .console-language-select'), /display:\s*none/)
   assert.doesNotMatch(shell, /@media \(max-width: 380px\)/, 'the old 380px breakpoint left 390px phones overflowing')
   const footer = layout.slice(layout.indexOf('console-nav-drawer-footer'), layout.indexOf('</aside>'))
   assert.match(footer, /<LanguageSelect \/>/)

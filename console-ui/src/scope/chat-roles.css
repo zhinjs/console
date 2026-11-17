@@ -71,7 +71,7 @@
 .console-chat-member-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--console-space-2); }
 .console-chat-member-actions .console-admin-note { display: inline-flex; align-items: center; gap: var(--console-space-1); }
 .console-chat-member-actions .console-admin-note > svg { width: 0.875rem; height: 0.875rem; }
-@media (max-width: 767px) {
+@media (width < 48rem) {
   .console-chat-member-body { grid-template-columns: minmax(0, 1fr); }
   .console-chat-member-seen { margin-left: 0; flex-basis: 100%; }
 }

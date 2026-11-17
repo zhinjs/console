@@ -52,7 +52,7 @@
   .conversation-trace-tools summary { display: flex; justify-content: space-between; gap: var(--console-space-3); padding: var(--console-space-3) 0; cursor: pointer; font-size: var(--console-text-label); }
   .conversation-trace-tools summary > span:last-child { color: hsl(var(--muted-foreground)); flex-shrink: 0; }
   .conversation-trace-subagent { margin-top: var(--console-space-5); border-left: var(--console-border-focus) solid var(--console-border-subtle); padding-left: var(--console-space-4); }
-  @container (max-width: 30rem) {
+  @container (width < 40rem) {
     .conversation-turn-detail { padding: 0 var(--console-space-1) var(--console-space-4); }
     .conversation-trace-heading { gap: var(--console-space-2); }
     .conversation-trace-overview { max-width: 7rem; }

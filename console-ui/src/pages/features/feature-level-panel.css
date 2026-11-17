@@ -69,12 +69,12 @@
 .console-feature-below { display: flex; flex-wrap: wrap; align-items: center; gap: var(--console-space-1) var(--console-space-2); font-size: var(--console-text-label); }
 .console-feature-below a { color: hsl(var(--foreground)); text-decoration: underline; text-underline-offset: 2px; }
 
-@media (max-width: 1100px) {
+@media (width < 64rem) {
   .console-feature-field { grid-template-columns: minmax(7rem, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto; }
   .console-feature-field > [role="cell"]:nth-child(5), .console-feature-field.is-head > :nth-child(5) { display: none; }
 }
 /* Pad and phone (the content column is under ~45rem there): rows stack, fields become label / value pairs. */
-@media (max-width: 1023px) {
+@media (width < 64rem) {
   .console-feature-search { width: 100%; }
   .console-feature-row-head { grid-template-columns: auto minmax(0, 1fr) auto; padding-inline: var(--console-space-1) var(--console-space-3); }
   .console-feature-row-meta { grid-column: 2 / -1; grid-row: 2; }
@@ -90,7 +90,7 @@
   .console-feature-field > [role="cell"][data-label]:not(.console-feature-field-name) { display: contents; }
   .console-feature-field-actions { grid-column: 1 / -1; justify-content: flex-start; }
 }
-@media (min-width: 768px) and (max-width: 1023px) { .console-feature-search { width: min(100%, 16rem); } }
+@media (width >= 48rem) and (width < 64rem) { .console-feature-search { width: min(100%, 16rem); } }
 .console-feature-lock { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: var(--console-space-1) var(--console-space-2); min-width: 0; }
 .console-feature-env-note { color: hsl(var(--warning)); font-size: var(--console-text-label); }
 .console-feature-env-note a { text-decoration: underline; text-underline-offset: 2px; }

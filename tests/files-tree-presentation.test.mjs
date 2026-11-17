@@ -78,6 +78,6 @@ test('Files reserves split view for desktop and scopes responsive touch controls
   }
   assert.match(css, /min-height: 44px/)
   assert.match(css, /min-width: 44px/)
-  assert.match(css, /min-width: 768px[\s\S]*min-height: 36px/)
-  assert.match(css, /min-width: 1024px[\s\S]*min-height: 32px/)
+  assert.match(css, /width >= 48rem[\s\S]*min-height: 36px/)
+  assert.match(css, /width >= 64rem[\s\S]*min-height: 32px/)
 })

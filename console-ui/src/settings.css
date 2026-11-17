@@ -63,7 +63,7 @@
   .console-settings-empty h3 { font-weight: var(--console-weight-strong); }
   .console-settings-empty p { max-width: 30rem; color: hsl(var(--muted-foreground)); line-height: 1.65; }
 
-  @media (max-width: 900px) {
+  @media (width < 64rem) {
     .console-settings-layout { grid-template-columns: minmax(0, 1fr); gap: var(--console-space-5); }
     .console-settings-nav { position: static; gap: var(--console-space-2); }
     .console-settings-nav-primary { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--console-space-1); }
@@ -71,7 +71,7 @@
     .console-settings-nav-item .console-dirty-pill { margin-left: 0; }
   }
 
-  @media (max-width: 600px) {
+  @media (width < 40rem) {
     .console-settings-category-heading { flex-direction: column; }
     .console-settings-category-heading input { max-width: none; }
     .console-settings-entry { padding: var(--console-space-4); gap: var(--console-space-3); }

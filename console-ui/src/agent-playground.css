@@ -1672,7 +1672,7 @@
   50% { opacity: 1; transform: scale(1); }
 }
 
-@media (max-width: 1440px) {
+@media (width < 90rem) {
   .agent-playground-shell,
   .agent-playground-shell.has-inspector {
     grid-template-columns: minmax(13.5rem, 15rem) minmax(0, 1fr);
@@ -1703,7 +1703,7 @@
 
 }
 
-@media (max-width: 1180px) {
+@media (width < 64rem) {
   .agent-playground-shell,
   .agent-playground-shell.has-inspector {
     position: relative;
@@ -1772,7 +1772,7 @@
   .agent-playground-network-toggle { justify-content: center; }
 }
 
-@media (max-width: 900px) {
+@media (width < 64rem) {
   .agent-playground-shell {
     height: calc(100dvh - var(--zc-header-h, 4.5rem) - var(--console-page-padding-block, 2rem) - 1rem);
     min-height: 32rem;
@@ -1783,7 +1783,7 @@
   .agent-playground-run-state { display: none; }
 }
 
-@media (max-width: 640px) {
+@media (width < 40rem) {
   .agent-playground-shell {
     height: calc(100dvh - var(--zc-header-h, 4.5rem) - var(--console-page-padding-block, 2rem) - 1rem);
     min-height: 29rem;

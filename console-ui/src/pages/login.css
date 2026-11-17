@@ -59,7 +59,7 @@
   .console-login-help { border-top: var(--console-border-hairline) solid hsl(var(--border)); padding-top: var(--console-space-4); color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
   .console-login-help summary { width: fit-content; cursor: pointer; }
   .console-login-help p { margin: var(--console-space-3) 0 0; line-height: 1.8; }
-  @media (max-width: 767px) {
+  @media (width < 48rem) {
     .console-login { padding: var(--console-space-5) var(--console-space-4); }
     .console-login-layout { grid-template-columns: minmax(0,1fr); gap: var(--console-space-6); max-width: 460px; }
     .console-login-brand { margin-bottom: var(--console-space-5); }
