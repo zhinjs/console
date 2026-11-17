@@ -187,6 +187,9 @@ export function resourceBindings(
 ): Record<'services' | 'accounts' | 'profiles', Record<string, string>>
 export function driverKey(driver: DriverRef): string
 export function serviceDriver(view: View, serviceId: string): Driver | undefined
+export interface ModelEntryInput { editing?: boolean; manualEntry?: boolean; choiceCount?: number; discovery?: boolean; discovered?: boolean }
+export interface ModelEntryView { input: boolean; canToggle: boolean; hint: 'none-returned' | 'discoverable' | 'manual-only' | null }
+export function modelEntryView(input?: ModelEntryInput): ModelEntryView
 export function profileSupport(view: View, profile: Profile): SupportMetadata | undefined
 export function profileSelection(view: View, profile: Profile, kind?: 'language'): ProfileSelection
 export function selectableLanguageProfiles(

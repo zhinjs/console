@@ -95,6 +95,21 @@ export function serviceDriver(view, serviceId) {
   const service = view.services[serviceId]
   return service && view.drivers.find(driver => driverKey(driver) === driverKey(service.driver))
 }
+/**
+ * How the「模型」field of the add / edit model dialog reads (#64 `model-add-empty-catalog`).
+ * With no catalog entries (nothing built in, nothing read from the service yet) a picker would only
+ * hold its placeholder, so the field is a text input with a hint instead, and there is nothing to
+ * switch back to. Editing keeps the text input it always had.
+ */
+export function modelEntryView({ editing = false, manualEntry = false, choiceCount = 0, discovery = false, discovered = false } = {}) {
+  if (editing) return { input: true, canToggle: true, hint: null }
+  if (choiceCount > 0) return { input: manualEntry, canToggle: true, hint: null }
+  return {
+    input: true,
+    canToggle: false,
+    hint: discovered ? 'none-returned' : discovery ? 'discoverable' : 'manual-only',
+  }
+}
 export function profileSupport(view, profile) {
   return serviceDriver(view, view.accounts[profile.accountId].serviceId)?.support
 }

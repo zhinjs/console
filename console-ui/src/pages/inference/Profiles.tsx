@@ -5,7 +5,7 @@ import { Plus, Pencil, Trash2, RefreshCw } from 'lucide-react'
 import { Button, Card, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, ErrorAlert, Input, SelectField, useConfirm } from '@zhin.js/console-ui'
 import { ModelCapabilities } from './ModelCapabilities'
 import { SupportLabel, SupportNotice, supportLabel } from './SupportInfo'
-import { inferenceError, profileSupport, profileUsages, serviceDriver, type ProfileUsage } from './model.mjs'
+import { inferenceError, modelEntryView, profileSupport, profileUsages, serviceDriver, type ProfileUsage } from './model.mjs'
 import {
   driverKey,
   type Profile,
@@ -148,6 +148,7 @@ function ProfileForm({
   const [manualEntry, setManualEntry] = useState(false)
   const [parametersValid, setParametersValid] = useState(true)
   const [observations, setObservations] = useState<Array<{ id: string; label?: string }>>([])
+  const [discovered, setDiscovered] = useState(false)
   const [schemaResult, setSchemaResult] = useState<ProfileSchemaResult | null>(null)
   const [formError, setFormError] = useState('')
   const account = view.accounts[accountId]
@@ -167,6 +168,7 @@ function ProfileForm({
     ).values(),
   ]
   const disabled = management.busy || !!management.pending
+  const entry = modelEntryView({ editing: !!profile, manualEntry, choiceCount: choices.length, discovery: driver?.discovery === true, discovered })
 
   // Only explicit selection, blur or Save commits an ID for local Driver validation.
   const schemaKey = JSON.stringify([accountId, declarationKey, driver?.contractVersion, view.revision, management.revisionEpoch])
@@ -224,6 +226,7 @@ function ProfileForm({
     setCommittedModelId('')
     setModelDraft(null)
     setObservations([])
+    setDiscovered(false)
   }
   async function discover() {
     if (!account) return
@@ -231,7 +234,10 @@ function ProfileForm({
       '/discover',
       { accountId }
     )
-    if (result) setObservations(result.observations)
+    if (result) {
+      setObservations(result.observations)
+      setDiscovered(true)
+    }
   }
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -306,7 +312,7 @@ function ProfileForm({
           <>
             <label className="block space-y-2 text-sm">
               <span>{i18n.t("模型")}</span>
-              {manualEntry || profile ? (
+              {entry.input ? (
                 <Input
                   value={modelId}
                   onChange={(event) => chooseModel(event.target.value, false)}
@@ -328,16 +334,20 @@ function ProfileForm({
                   ]}
                 />
               )}
+              {entry.hint === 'discoverable' ? <span className="block text-xs text-muted-foreground">{i18n.t("这个服务没有内置模型目录，可以从服务读取，或者手填模型 ID。")}</span>
+                : entry.hint === 'manual-only' ? <span className="block text-xs text-muted-foreground">{i18n.t("这个服务没有内置模型目录，请手填模型 ID。")}</span>
+                  : entry.hint === 'none-returned' ? <span className="block text-xs text-muted-foreground">{i18n.t("服务没有返回任何模型，请手填模型 ID。")}</span>
+                    : null}
             </label>
             <div className="flex flex-wrap gap-2">
-              <Button
+              {entry.canToggle ? <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setManualEntry((value) => !value)}
               >
                 {manualEntry ? i18n.t("从目录选择") : i18n.t("输入模型 ID")}
-              </Button>
+              </Button> : null}
               {driver?.discovery === true ? (
                 <Button type="button" variant="outline" size="sm" onClick={() => void discover()}>
                   <RefreshCw />
