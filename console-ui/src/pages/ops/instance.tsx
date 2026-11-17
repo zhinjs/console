@@ -157,7 +157,7 @@ function InstanceStatusSection({ status, canControl, locked }: {
         actions={canControl ? <>
           <Button size="sm" variant="outline" disabled={!data || !actions.start || locked || pending} onClick={() => prepare('start')}><Play />{i18n.t("启动")}</Button>
           <Button size="sm" variant="outline" disabled={!data || !actions.restart || locked || pending} onClick={() => prepare('restart')}><RotateCcw />{i18n.t("重启")}</Button>
-          <Button size="sm" variant="destructive-outline" data-tone="destructive" disabled={!data || !actions.stop || locked || pending} onClick={() => prepare('stop')}><Square />{i18n.t("停止")}</Button>
+          <Button size="sm" variant="destructive-outline" disabled={!data || !actions.stop || locked || pending} onClick={() => prepare('stop')}><Square />{i18n.t("停止")}</Button>
         </> : null}>
         <ActionReceipt controller={receipt} />
         <Card className="console-admin-card">
