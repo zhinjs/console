@@ -1,5 +1,5 @@
 import { ChevronDown } from 'lucide-react'
-import { Button, cn } from '@zhin.js/console-ui'
+import { Button, cn, InlineCode } from '@zhin.js/console-ui'
 import { useI18n } from '../../i18n'
 import type { AttentionItem } from './attention-model.mjs'
 
@@ -39,7 +39,7 @@ export function AttentionMorePanel({ id, item, detail, expanded }: { id: string;
   return (
     <div id={id} className="console-attention-more" hidden={!expanded}>
       {detail && item.detail ? <p className="console-attention-row-detail">{item.detail}</p> : null}
-      <p className="console-attention-row-id">{i18n.t('编号')}<code className="console-code">{item.id}</code></p>
+      <p className="console-attention-row-id">{i18n.t('编号')}<InlineCode>{item.id}</InlineCode></p>
     </div>
   )
 }

@@ -735,7 +735,7 @@ export default function HomePage() {
           : i18n.t("现在需要处理什么、消息量和最近的消息。")}
         actions={<>
           {!readOnly ? (
-            <Button variant="outline" className="console-danger-outline" disabled={restarting} onClick={() => { void confirmRestart() }}>
+            <Button variant="destructive-outline" disabled={restarting} onClick={() => { void confirmRestart() }}>
               <Power />
               {i18n.t("重启")}
             </Button>
@@ -745,7 +745,7 @@ export default function HomePage() {
             {hostAvailable ? i18n.t("刷新") : i18n.t("重新连接")}
           </Button>
           {hostAvailable ? (
-            <Button onClick={() => navigate('/scope')}>
+            <Button variant="primary" onClick={() => navigate('/scope')}>
               <Bot className="h-4 w-4" />
               {i18n.t("进入会话")}
             </Button>
@@ -854,7 +854,7 @@ export default function HomePage() {
               : null}
           </div>
           {coverage.kind === 'none' && messagesLoaded ? (
-            <StatusState kind="empty" compact title={i18n.t("缓冲里还没有消息")} description={i18n.t("机器人收到或发出消息后会出现在这里；实例重启会清空缓冲。")} />
+            <StatusState kind="empty" compact illustration="messages" title={i18n.t("缓冲里还没有消息")} description={i18n.t("机器人收到或发出消息后会出现在这里；实例重启会清空缓冲。")} />
           ) : (
             <MessageVolumeChart
               buckets={activity}
@@ -949,7 +949,7 @@ export default function HomePage() {
             </div>
           </>
         ) : (
-          <StatusState kind="empty" compact title={i18n.t("还没有消息")} description={i18n.t("机器人收到或发出消息后，最近的消息会按会话出现在这里。")} />
+          <StatusState kind="empty" compact illustration="messages" title={i18n.t("还没有消息")} description={i18n.t("机器人收到或发出消息后，最近的消息会按会话出现在这里。")} />
         )}
       </section>
 

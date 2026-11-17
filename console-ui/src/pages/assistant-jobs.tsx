@@ -44,7 +44,7 @@ export default function AssistantJobsPage() {
       </div>
       {!jobs.length ? (data.jobs.length
         ? <StatusState kind="empty" title={i18n.t("没有匹配的任务")} description={i18n.t("换一个关键词或状态，或清除筛选。")} actions={<Button variant="outline" size="sm" onClick={() => {setQuery('');setStatus('all')}}>{i18n.t("清除筛选")}</Button>} />
-        : <StatusState kind="empty" title={i18n.t("暂无任务")} description={i18n.t("机器人在聊天里答应定时去做的事（提醒、定时汇总）会出现在这里。")}
+        : <StatusState kind="empty" illustration="tasks" title={i18n.t("暂无任务")} description={i18n.t("机器人在聊天里答应定时去做的事（提醒、定时汇总）会出现在这里。")}
           actions={<Button asChild variant="outline" size="sm"><Link to="/scope">{i18n.t("打开账号与会话")}</Link></Button>} />) : <div className="space-y-3">{jobs.map(job => <Card key={job.id}><CardContent className="space-y-3 p-4">
         <div className="flex flex-wrap items-center gap-2"><h2 className="min-w-0 break-words text-sm font-medium">{job.label || job.id}</h2><Badge variant={job.enabled ? 'outline' : 'secondary'}>{job.enabled ? i18n.t("已启用") : i18n.t("已暂停")}</Badge>{job.state.lastStatus && <Badge variant={job.state.lastStatus === 'error' ? 'destructive' : job.state.lastStatus === 'ok' ? 'outline' : 'secondary'}>{job.state.lastStatus === 'error' ? i18n.t("执行失败") : job.state.lastStatus === 'ok' ? i18n.t("执行成功") : job.state.lastStatus === 'skipped' ? i18n.t("已跳过") : job.state.lastStatus}</Badge>}</div>
         {job.state.lastError && <div className="console-job-error" role="note"><p>{explainJobError(job.state.lastError, i18n.locale) ?? job.state.lastError}</p>{explainJobError(job.state.lastError, i18n.locale) ? <code>{job.state.lastError}</code> : null}{/endpoint/i.test(job.state.lastError) ? <Link to="/scope">{i18n.t("查看聊天账号 →")}</Link> : null}</div>}

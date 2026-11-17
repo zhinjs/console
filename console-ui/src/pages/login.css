@@ -3,9 +3,8 @@
   .console-login-layout { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,400px); gap: 40px; align-items: center; width: min(100%,880px); }
   .console-login-intro { min-width: 0; }
   .console-login-intro > p { max-width: 42ch; }
-  .console-login-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; font-size: 16px; font-weight: 600; }
-  /* The brand mark (components/BrandMark.tsx) keeps its own colors in every palette and theme. */
-  .console-login-mark { display: block; width: 36px; height: 36px; flex-shrink: 0; }
+  /* The component library's BrandMark (fixed brand colors in every palette and theme) with the product name. */
+  .console-login-brand { display: flex; margin-bottom: 32px; }
   .console-login-intro h1 { margin: 0 0 16px; font-size: 32px; line-height: 1.25; letter-spacing: -.03em; font-weight: 600; }
   .console-login-intro p { margin: 0; color: hsl(var(--muted-foreground)); font-size: 14px; line-height: 1.8; }
   .console-login-notes { display: flex; align-items: center; gap: 8px; margin-top: 24px; color: hsl(var(--muted-foreground)); font-size: 12px; }
@@ -74,28 +73,3 @@
   }
 }
 
-/*
- * Solid brand button for 「登录 / 连接」. Unlayered on purpose: it has to beat the component
- * library's `default` variant utilities (a light tint), which live in Tailwind's utilities layer.
- * Light: #0A7551 with white text (5.7:1); dark: #7FFFD4 with the brand's near-black green (14:1).
- * TODO(console#125): replace with <Button variant="primary"> once @zhin.js/console-ui publishes it (组件库 primary 发布后替换).
- */
-.console-login-submit {
-  --console-login-primary: 159.8 84.3% 24.9%;
-  --console-login-primary-hover: 159.8 84.3% 20%;
-  --console-login-primary-foreground: 0 0% 100%;
-  border-color: hsl(var(--console-login-primary));
-  background-color: hsl(var(--console-login-primary));
-  color: hsl(var(--console-login-primary-foreground));
-  font-weight: 600;
-}
-.console-login-submit:hover:not(:disabled) {
-  border-color: hsl(var(--console-login-primary-hover));
-  background-color: hsl(var(--console-login-primary-hover));
-}
-.console-login-submit:focus-visible { outline: var(--console-focus-width) solid hsl(var(--console-login-primary)); outline-offset: 2px; }
-.dark .console-login-submit {
-  --console-login-primary: 159.8 100% 74.9%;
-  --console-login-primary-hover: 159.8 100% 82%;
-  --console-login-primary-foreground: var(--brand-foreground);
-}

@@ -49,16 +49,6 @@
     gap: 0.5rem;
   }
 
-  .console-danger-outline {
-    border-color: hsl(var(--destructive) / 0.45);
-    color: hsl(var(--destructive));
-  }
-
-  .console-danger-outline:hover {
-    background: hsl(var(--destructive) / 0.08);
-    color: hsl(var(--destructive));
-  }
-
   /* 第二行：消息量 / 进程与资源 */
   .console-overview-row {
     display: grid;

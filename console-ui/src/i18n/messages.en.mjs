@@ -1248,7 +1248,6 @@ export const englishMessages = Object.freeze({
   "当前实例尚未启用持久化 AI 调度，暂不能创建、暂停或删除任务。已有插件注册的任务仍可在下方查看。 如需定时 AI 任务，请在运行实例中安装并配置 Agent 及持久化调度引擎，再刷新本页。": "Persistent AI scheduling is not enabled on this instance, so tasks cannot be created, paused or deleted here. Plugin-registered tasks remain visible below. To use scheduled AI tasks, install and configure Agent and the persistent scheduler, then refresh.",
   "暂无持久化定时任务": "No persistent scheduled tasks",
   "当前身份只能查看实例中已存在的任务": "This identity can only view tasks already present on the instance",
-  "点击「新建任务」添加一个定时 AI 任务": "Click New task to add a scheduled AI task",
   "启用持久化 AI 调度后可在这里管理任务": "Enable persistent AI scheduling to manage tasks here",
   "暂停": "Pause",
   "恢复": "Resume",
@@ -3457,4 +3456,5 @@ export const englishMessages = Object.freeze({
   "今晚的值班表发一下？": "Can you post tonight's on-call rota?",
   "已发到群里：今晚 20:00 起是小周，明早 8:00 交给阿杰。": "Posted to the group: Zhou from 8 pm tonight, handing over to Jie at 8 am.",
   "编号": "ID",
+  "新建一个定时 AI 任务，它会按计划自动运行。": "Create a scheduled AI task; it runs on its schedule.",
 })

@@ -438,7 +438,7 @@ export function EndpointOverview({ scope, endpointInfo, unlisted = false, onOpen
         ) : conversations.status === 'error' ? <StatusState compact error={conversations.error} onRetry={conversations.refresh} />
           : conversations.status === 'loading' && !conversations.page ? <Skeleton className="h-24" />
             : !highlights.overridden.length && !highlights.recent.length ? (
-              <StatusState kind="empty" compact title={i18n.t('还没有会话摘要')}
+              <StatusState kind="empty" compact illustration="messages" title={i18n.t('还没有会话摘要')}
                 description={conversations.page?.recentAvailable ? i18n.t('机器人在会话里收到消息后，最近的会话会出现在这里。') : i18n.t('在会话里改过功能设置后，它会出现在这里。')} />
             ) : (
               <div className="console-scope-split">

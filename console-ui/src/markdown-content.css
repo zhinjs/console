@@ -107,7 +107,7 @@
   border-radius: 50%;
   background: currentColor;
   content: "";
-  animation: zhin-code-pulse var(--console-motion-loop) ease-in-out infinite;
+  animation: zhin-code-pulse var(--console-motion-loop) var(--console-ease-out) infinite;
 }
 
 .zhin-code-actions {

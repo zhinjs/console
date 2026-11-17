@@ -209,7 +209,7 @@ function TokensSection() {
           {when(token.expiresAt)}{tokenState(token) === 'expired' && <Badge variant="outline" className="ml-2">{i18n.t('已过期')}</Badge>}
         </>}</TableCell>
         <TableCell className="text-right">
-          <Button size="sm" variant="ghost" className="text-destructive" aria-label={i18n.t('吊销 {0}', [token.name])} disabled={receiptBlocksActions(receipt.state)} onClick={() => prepareRevoke(token)}><Trash2 />{i18n.t('吊销')}</Button>
+          <Button size="sm" variant="destructive" aria-label={i18n.t('吊销 {0}', [token.name])} disabled={receiptBlocksActions(receipt.state)} onClick={() => prepareRevoke(token)}><Trash2 />{i18n.t('吊销')}</Button>
         </TableCell>
       </TableRow>)}</TableBody>
     </Table></Card> : null}

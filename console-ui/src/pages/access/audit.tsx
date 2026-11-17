@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { RefreshCw, Search, X } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { Badge, Button, Card, Input, PageHeader, PageShell, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
+import { Badge, Button, Card, DateTimeField, InlineCode, Input, PageHeader, PageShell, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
 import {
   IAM_RPC, actorLabel, auditQuery, outcomeVariant, readAuditPage, type AuditFilter, type IamAuditEntry,
@@ -84,20 +84,20 @@ export default function AccessAuditPage() {
             <datalist id={`${id}-actions`}>{actions.map(action => <option key={action} value={action} />)}</datalist>
           </FormField>
           <FormField htmlFor={`${id}-since`} label={i18n.t("开始时间")}>
-            <Input id={`${id}-since`} type="datetime-local" value={draft.since} onChange={event => setDraft(previous => ({ ...previous, since: event.target.value }))} />
+            <DateTimeField id={`${id}-since`} value={draft.since} max={draft.until || undefined} onValueChange={since => setDraft(previous => ({ ...previous, since }))} />
           </FormField>
           <FormField htmlFor={`${id}-until`} label={i18n.t("结束时间")}>
-            <Input id={`${id}-until`} type="datetime-local" value={draft.until} onChange={event => setDraft(previous => ({ ...previous, until: event.target.value }))} />
+            <DateTimeField id={`${id}-until`} value={draft.until} min={draft.since || undefined} onValueChange={until => setDraft(previous => ({ ...previous, until }))} />
           </FormField>
           <div className="flex items-end gap-2">
-            <Button type="submit" size="sm"><Search />{i18n.t("筛选")}</Button>
+            <Button type="submit" size="sm" variant="primary"><Search />{i18n.t("筛选")}</Button>
             {hasFilter ? <Button type="button" variant="ghost" size="sm" onClick={() => { setDraft(EMPTY_FILTER); setFilter(EMPTY_FILTER) }}><X />{i18n.t("清除")}</Button> : null}
           </div>
         </form>
         <p className="mt-2 text-xs text-muted-foreground">{i18n.t("主体与动作按完整值匹配，例如 user:<ID>、api-token:<ID>、auth.login、iam.users.create。")}</p>
         {target ? (
           <div className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3 text-sm" role="status">
-            <span>{i18n.t("只显示目标为")} <code className="console-code">{target}</code> {i18n.t("的记录（在已读取的 {0} 条中筛选）。", [entries.length])}</span>
+            <span>{i18n.t("只显示目标为")} <InlineCode>{target}</InlineCode> {i18n.t("的记录（在已读取的 {0} 条中筛选）。", [entries.length])}</span>
             <Button type="button" variant="ghost" size="sm" onClick={clearTarget}><X />{i18n.t("显示全部目标")}</Button>
           </div>
         ) : null}
@@ -107,7 +107,7 @@ export default function AccessAuditPage() {
         {loading && !loaded ? (
           <StatusState kind="loading" className="m-4" placeholder={<div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>} />
         ) : !shown.length ? (
-          error && !loaded ? null : <StatusState kind="empty" title={hasFilter || target ? i18n.t("没有符合条件的记录") : i18n.t("还没有审计记录")}
+          error && !loaded ? null : <StatusState kind="empty" illustration="logs" title={hasFilter || target ? i18n.t("没有符合条件的记录") : i18n.t("还没有审计记录")}
             description={target && entries.length ? i18n.t("已读取的记录里没有这个目标，可以加载更早的记录继续查找。")
               : hasFilter ? i18n.t("主体与动作按完整值匹配。换一个条件，或清除筛选。") : i18n.t("登录、访问控制变更和写操作发生后会记录在这里。")}
             actions={hasFilter || target ? <>
@@ -135,12 +135,12 @@ export default function AccessAuditPage() {
                     <span className="mt-0.5 block text-xs text-foreground md:hidden" title={entry.actor}>{actorLabel(entry.actor, usersById, i18n.t)}</span>
                   </TableCell>
                   <TableCell className="hidden md:table-cell"><span title={entry.actor}>{actorLabel(entry.actor, usersById, i18n.t)}</span></TableCell>
-                  <TableCell className="min-w-[8rem] text-xs"><code className="console-code">{entry.action}</code></TableCell>
-                  <TableCell className="hidden max-w-[16rem] truncate lg:table-cell" title={entry.target ?? undefined}>{entry.target ? <code className="console-code">{entry.target}</code> : '—'}</TableCell>
+                  <TableCell className="min-w-[8rem] text-xs"><InlineCode>{entry.action}</InlineCode></TableCell>
+                  <TableCell className="hidden max-w-[16rem] truncate lg:table-cell" title={entry.target ?? undefined}>{entry.target ? <InlineCode>{entry.target}</InlineCode> : '—'}</TableCell>
                   <TableCell>{(variant => variant
                     ? <Badge variant={variant} size="sm">{outcomeText(entry.outcome, i18n.t)}</Badge>
                     : <span className="text-muted-foreground">{outcomeText(entry.outcome, i18n.t)}</span>)(outcomeVariant(entry.outcome))}</TableCell>
-                  <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">{entry.ip ? <code className="console-code">{entry.ip}</code> : '—'}</TableCell>
+                  <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">{entry.ip ? <InlineCode>{entry.ip}</InlineCode> : '—'}</TableCell>
                   <TableCell className="hidden md:table-cell">
                     {entry.detail === null ? '—' : (
                       <details className="text-xs">

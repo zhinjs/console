@@ -2,7 +2,7 @@ import { useI18n } from '../../i18n'
 import { useState, useMemo, useRef, type CSSProperties } from 'react'
 import { useDatabaseConsole, databaseAdmin } from './use-database-console'
 import type { DatabaseType, TableInfo } from '@zhin.js/client'
-import { Database as DatabaseIcon, Table2, Trash2, RefreshCw, Key, ArrowLeft, TerminalSquare, Plus } from 'lucide-react'
+import { Table2, Trash2, RefreshCw, Key, ArrowLeft, TerminalSquare, Plus } from 'lucide-react'
 import { Badge, Button, Card, CardContent, ConfirmDialog, EmptyState, PageHeader, ScrollArea, Skeleton, Tabs, TabsList, TabsTrigger } from '@zhin.js/console-ui'
 import { OpsLoadState } from '../ops/load-state'
 import { StatusState } from '../../components/StatusState'
@@ -117,7 +117,7 @@ export default function DatabasePage() {
                   ) : !visibleTables.length && (!loaded || error) ? (
                     <EmptyState compact title={error ? i18n.t("数据库对象尚未读取成功") : i18n.t("等待读取数据库对象")} />
                   ) : !visibleTables.length ? (
-                    <EmptyState compact title={i18n.t("这个数据库还没有表")} description={i18n.t("建表后会列在这里。")} />
+                    <EmptyState compact illustration="table" title={i18n.t("这个数据库还没有表")} description={i18n.t("建表后会列在这里。")} />
                   ) : visibleTables.map((t: TableInfo) => (
                     <button
                       key={t.name}
@@ -211,10 +211,11 @@ export default function DatabasePage() {
                     {!readOnly && (
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="destructive-outline"
+                        data-tone="destructive"
                         size="sm"
                         data-action="drop-table"
-                        className="ml-auto order-last shrink-0 text-destructive"
+                        className="ml-auto order-last shrink-0"
                         aria-label={i18n.t("删除{0} {1}", [objectLabel, selectedTable])}
                         onClick={() => setDeleteTarget({ name: selectedTable, label: objectLabel })}
                       >
@@ -269,13 +270,9 @@ export default function DatabasePage() {
                   </div>
                 </>
               ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground p-4">
-                  <div className="text-center">
-                    <DatabaseIcon className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p className="text-sm">
-                      {error || !loaded ? i18n.t("数据库对象尚未读取成功，请先重试或使用有权限的身份连接。") : i18n.t("在左侧选择一个{0}{1}", [objectLabel, readOnly ? i18n.t("查看数据") : i18n.t("开始管理")])}
-                    </p>
-                  </div>
+                <div className="flex items-center justify-center h-full p-4">
+                  <EmptyState illustration="table"
+                    description={error || !loaded ? i18n.t("数据库对象尚未读取成功，请先重试或使用有权限的身份连接。") : i18n.t("在左侧选择一个{0}{1}", [objectLabel, readOnly ? i18n.t("查看数据") : i18n.t("开始管理")])} />
                 </div>
               )}
             </div>

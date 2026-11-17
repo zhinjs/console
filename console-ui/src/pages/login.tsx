@@ -1,9 +1,8 @@
 import { LanguageSelect } from '../components/LanguageSelect'
-import { BrandMark, PRODUCT_NAME } from '../components/BrandMark'
 import { useI18n } from '../i18n'
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { Trash2, ShieldCheck, Eye, EyeOff, KeyRound, UserRound } from 'lucide-react'
-import { Button, Checkbox, ConfirmDialog, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@zhin.js/console-ui'
+import { BrandMark, Button, Checkbox, ConfirmDialog, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@zhin.js/console-ui'
 import {
   getSavedLogin, getStoredApiBase, listSavedLogins, normalizeApiBase, removeSavedLogin,
   touchSavedLogin, upsertSavedLogin, verifyAndStoreCredentials,
@@ -222,7 +221,7 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
   return <div className="console-login">
     <div className="console-login-layout">
       <section className="console-login-intro">
-        <div className="console-login-brand"><BrandMark size={36} className="console-login-mark" /><span>{PRODUCT_NAME}</span></div>
+        <BrandMark size={36} withText className="console-login-brand" />
         <h1>{i18n.t('连接你的机器人')}</h1>
         <p>{i18n.t('连接运行 Zhin 的设备，管理会话、账号和任务。')}</p>
         <div className="console-login-notes"><ShieldCheck aria-hidden="true" /><span>{i18n.t('账号与令牌由管理网关验证：机器人实例停止时也能登录，查看实例日志并重新启动。')}</span></div>
@@ -302,8 +301,8 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
           {errors.form && <p id={SUMMARY_ID} ref={summaryRef} className="console-login-error" role="alert" tabIndex={-1}>{errors.form}</p>}
           <label className="console-login-remember"><Checkbox checked={remember} disabled={loading} onCheckedChange={value => setRemember(value === true)} /><span>{i18n.t('记住此连接')}</span></label>
           {!remember && <p className="console-login-session-note">{i18n.t(mode === 'password' ? '登录状态仅保留在本次浏览器会话。' : '访问令牌仅保留在本次浏览器会话。')}</p>}
-          {/* console-login-submit: local solid brand button; switch to variant="primary" once the component library publishes it. */}
-          <Button type="submit" className="console-login-submit" disabled={loading || lockedUntil > 0}>{loading ? i18n.t('验证中...')
+          {/* The view's one primary action (ADR 0063 D25). */}
+          <Button type="submit" variant="primary" disabled={loading || lockedUntil > 0}>{loading ? i18n.t('验证中...')
             : mode === 'password' ? i18n.t('登录')
             : selectedSavedBase && token ? i18n.t('快速连接') : i18n.t('连接')}</Button>
           <details className="console-login-help"><summary>{i18n.t('无法连接？')}</summary><p>{i18n.t('填写 Bot 启动日志中的 Host 地址。使用本地地址时，请确保 Host 的 corsOrigins 允许当前 Console 来源。')}</p></details>

@@ -102,9 +102,9 @@
     --console-chart-grid: hsl(var(--foreground) / 0.08);
     --console-chart-baseline: hsl(var(--foreground) / 0.18);
     --console-hairline: 1px;
-    --console-chart-inbound: var(--chart-1);
-    --console-chart-outbound: var(--chart-3);
-    --console-chart-quantity: var(--chart-1);
+    --console-chart-inbound: var(--console-chart-1);
+    --console-chart-outbound: var(--console-chart-3);
+    --console-chart-quantity: var(--console-chart-1);
   }
 
   @media (prefers-reduced-motion: no-preference) {
@@ -1860,30 +1860,10 @@
     white-space: pre-wrap;
   }
 
-  .console-log-empty {
-    display: flex;
+  /* An empty log stream: the library's EmptyState (logs illustration), centered in the stream's height. */
+  .console-log-stream-body > .console-empty {
     min-height: 18rem;
-    flex-direction: column;
-    align-items: center;
     justify-content: center;
-    color: hsl(var(--muted-foreground));
-    text-align: center;
-  }
-
-  .console-log-empty svg {
-    width: 1.4rem;
-    height: 1.4rem;
-    margin-bottom: 0.65rem;
-  }
-
-  .console-log-empty strong {
-    color: hsl(var(--foreground));
-    font-size: var(--console-text-body);
-  }
-
-  .console-log-empty p {
-    margin-top: 0.25rem;
-    font-size: var(--console-text-label);
   }
 
   .console-capability-explorer {
@@ -2635,19 +2615,21 @@
   svg.lucide { stroke-width: 1.75; }
   .console-text-code { font-family: var(--console-font-mono); font-size: var(--console-text-code); line-height: var(--console-leading-code); }
   /*
-   * Short identifiers inline (package, RPC and permission names, IDs, user names): monospace text,
-   * no box, no border (console#125). Lists of them sit side by side with a gap, not as chips.
+   * Short identifiers inline (package, RPC and permission names, IDs, user names) are the component
+   * library's InlineCode / `.console-code` (ADR 0063 D31: monospace, no border, a very light fill).
+   * Lists of them sit side by side with a gap, not as chips.
    */
-  .console-code {
-    font-family: var(--console-font-mono);
-    font-size: 0.92em;
-    font-variant-ligatures: none;
-    color: inherit;
-    background: none;
-    border: 0;
-    padding: 0;
-    overflow-wrap: anywhere;
-  }
+  /*
+   * Workaround for @zhin.js/console-ui 1.1.0: the library's cn() (tailwind-merge) reads the size
+   * classes text-label / text-body as text colors, so a Button with size="sm" loses its variant's
+   * text color (white on destructive-solid, green on soft, red on destructive). The surviving
+   * variant classes restore it; `data-tone="destructive"` marks Console-owned destructive-outline
+   * buttons, whose only marker is the dropped color. Remove once the library is fixed.
+   */
+  .console-control.bg-destructive { color: hsl(var(--destructive-foreground)); }
+  .console-control.bg-brand { color: hsl(var(--console-brand-foreground)); }
+  .console-control.bg-primary-action { color: hsl(var(--primary-action-foreground)); }
+  .console-control.hover\:bg-destructive\/8, .console-control[data-tone="destructive"] { color: hsl(var(--destructive)); }
   .console-code-list { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; min-width: 0; }
   .console-menu-item { min-height: var(--console-control-height-sm); }
 }

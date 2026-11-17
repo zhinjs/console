@@ -45,15 +45,20 @@ test('Inter and JetBrains Mono are self-hosted (Latin subset, swap) and the stac
   }
 })
 
-test('short identifiers use .console-code: monospace, no box, no border', () => {
-  const rule = /\.console-code \{([^}]*)\}/.exec(read('console-ui/src/design-system.css'))[1]
+test('short identifiers use the library InlineCode (console-ui 1.1): one .console-code, no local copy', () => {
+  // The Console no longer redefines .console-code over the component library's rule.
+  assert.doesNotMatch(read('console-ui/src/design-system.css'), /\.console-code \{/)
+  const library = readFileSync(new URL('../node_modules/@zhin.js/console-ui/dist/styles.css', import.meta.url), 'utf8')
+  const rule = /\.console-code \{([^}]*)\}/.exec(library)[1]
   assert.match(rule, /font-family: var\(--console-font-mono\);/)
-  assert.match(rule, /background: none;/)
-  assert.match(rule, /border: 0;/)
+  assert.doesNotMatch(rule, /border:/)
   const detail = read('console-ui/src/pages/plugin-detail.tsx')
   assert.doesNotMatch(detail, /<Badge [^>]*className="font-mono"/, 'permission names are not boxed badges')
-  assert.match(detail, /<code className="console-code" title=\{item\.description\}>\{item\.permission\}<\/code>/)
-  assert.match(read('console-ui/src/pages/access/audit.tsx'), /<code className="console-code">\{entry\.action\}<\/code>/)
+  assert.match(detail, /<InlineCode title=\{item\.description\}>\{item\.permission\}<\/InlineCode>/)
+  assert.match(read('console-ui/src/pages/access/audit.tsx'), /<InlineCode>\{entry\.action\}<\/InlineCode>/)
+  for (const file of ['plugin-detail.tsx', 'access/audit.tsx', 'marketplace.tsx', 'ops/plugin-declare.tsx', 'introspection/CapabilityExplorer.tsx', 'attention/AttentionMore.tsx']) {
+    assert.doesNotMatch(read(`console-ui/src/pages/${file}`), /<code className="console-code/, file)
+  }
   assert.doesNotMatch(read('console-ui/src/pages/introspection/CapabilityExplorer.tsx'), /<Badge [^>]*className="font-mono"/)
   assert.doesNotMatch(read('console-ui/src/pages/plugins.css'), /\.console-plugin-detail-identity > code \{[^}]*background/)
 })
@@ -132,7 +137,8 @@ test('icons: one stroke, 18px in navigation, no tiles in lists or ⌘K, and the 
   assert.doesNotMatch(command, /background/)
   assert.doesNotMatch(/\.console-plugin-catalog-icon \{([^}]*)\}/.exec(read('console-ui/src/pages/plugins.css'))[1], /background/)
   assert.doesNotMatch(/\.agent-playground-session-icon \{([^}]*)\}/.exec(read('console-ui/src/agent-playground.css'))[1], /background/)
-  assert.match(read('console-ui/src/agent-playground.css'), /\.agent-playground-brand small \{\s*display: none;/, 'no English 「Conversations」 under 会话')
+  // @zhin.js/adapter-sandbox 1.2.0 no longer renders 「Conversations」, so the Console no longer hides it.
+  assert.doesNotMatch(read('console-ui/src/agent-playground.css'), /\.agent-playground-brand small/)
   assert.equal(pluginIconType({ kind: 'plugin', name: 'adapter-qq', packageName: '@zhin.js/adapter-qq' }), 'adapter')
   assert.equal(pluginIconType({ kind: 'package', name: 'x', packageName: 'x', catalog: 'ai' }), 'ai')
   assert.equal(pluginIconType({ kind: 'plugin', name: 'welcome', packageName: '@zhin.js/plugin-welcome' }), 'feature')

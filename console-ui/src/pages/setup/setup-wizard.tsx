@@ -2,8 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Database, ShieldCheck, UserRoundPlus, Loader2, CheckCircle2, AlertCircle, LogOut } from 'lucide-react'
 import { useI18n } from '../../i18n'
 import { LanguageSelect } from '../../components/LanguageSelect'
-import { BrandMark, PRODUCT_NAME } from '../../components/BrandMark'
-import { Button, Input, RadioGroup, RadioGroupItem, SelectField } from '@zhin.js/console-ui'
+import { BrandMark, Button, Input, RadioGroup, RadioGroupItem, SelectField } from '@zhin.js/console-ui'
 import {
   createFirstOwner, getSetupDatabase, getSetupStatus, hostAnswers, saveSetupDatabase, testSetupDatabase,
 } from '../../utils/console-auth-api'
@@ -177,7 +176,7 @@ export default function SetupWizard({ onComplete, onCancel }: SetupWizardProps) 
   return <div className="console-login console-setup">
     <div className="console-setup-layout">
       <header className="console-setup-head">
-        <div className="console-login-brand"><BrandMark size={36} className="console-login-mark" /><span>{PRODUCT_NAME}</span></div>
+        <BrandMark size={36} withText className="console-login-brand" />
         <div className="console-setup-head-actions">
           <LanguageSelect />
           {onCancel

@@ -6,7 +6,7 @@ import { ScopeFilterBar, useScopeFilter } from './insights/ScopeFilterBar'
 import { usageSessionPattern } from './insights/scope-filter.mjs'
 import { ArrowDown, ArrowDownToLine, ArrowUp, ArrowUpFromLine, Cpu, Layers, RefreshCw, X, Zap } from 'lucide-react'
 import { pluginRpc } from '../utils/plugin-rpc'
-import { Alert, AlertDescription, AlertTitle, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, ErrorAlert, Input, ListItemButton, PageHeader, PageShell, SelectField, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
+import { Alert, AlertDescription, AlertTitle, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, DateTimeField, ErrorAlert, Input, ListItemButton, PageHeader, PageShell, SelectField, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { CacheLineChart, ModelBars, ModelLegend, SegmentDonut, StackedBarChart } from './token-usage-charts'
 import {
   USAGE_BUCKETS,
@@ -175,8 +175,8 @@ export default function TokenUsagePage() {
         <CardContent className="flex flex-wrap items-end gap-3 pt-6">
           <SelectField aria-label={i18n.t("时间范围")} className="w-auto" value={range} onValueChange={setRange} options={USAGE_RANGES.map(item => ({ value: item.value, label: i18n.t(item.label) }))} />
           {range === 'custom' ? <>
-            <Input type="datetime-local" className="w-52" aria-label={i18n.t("开始时间")} value={customSince} onChange={event => setCustomSince(event.target.value)} />
-            <Input type="datetime-local" className="w-52" aria-label={i18n.t("结束时间")} value={customUntil} onChange={event => setCustomUntil(event.target.value)} />
+            <DateTimeField className="w-52" aria-label={i18n.t("开始时间")} value={customSince} onValueChange={setCustomSince} max={customUntil || undefined} />
+            <DateTimeField className="w-52" aria-label={i18n.t("结束时间")} value={customUntil} onValueChange={setCustomUntil} min={customSince || undefined} />
           </> : null}
           <SelectField aria-label={i18n.t("统计粒度")} className="w-auto" value={bucket} onValueChange={setBucket} options={USAGE_BUCKETS.map(item => ({ value: item.value, label: i18n.t(item.label) }))} />
           <form className="flex items-center gap-2" onSubmit={event => { event.preventDefault(); applySession(sessionDraft) }}>

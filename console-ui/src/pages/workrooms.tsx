@@ -176,7 +176,7 @@ function WorkroomBoardPage() {
               </div>} />
             ) : (
               <div className="flex min-h-[34rem] items-center justify-center p-6">
-                <EmptyState title={i18n.t("选择一条协作记录")} description={i18n.t("右侧将展示协作链路、预算消耗与共享黑板。")} />
+                <EmptyState illustration="record" title={i18n.t("选择一条协作记录")} description={i18n.t("右侧将展示协作链路、预算消耗与共享黑板。")} />
               </div>
             )}
           </section>}

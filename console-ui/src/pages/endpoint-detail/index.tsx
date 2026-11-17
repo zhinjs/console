@@ -604,8 +604,9 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
               {!readOnly && roleKind !== 'owner' && <div className="im-member-actions">
                 <Button
                   size="sm"
-                  variant="outline"
-                  className="im-member-danger text-destructive hover:text-destructive"
+                  variant="destructive-outline"
+                  data-tone="destructive"
+                  className="im-member-danger"
                   onClick={() =>
                     void handleGroupAction(ENDPOINT_RPC.GROUP_KICK, uid, item.name)
                   }
@@ -738,9 +739,9 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
                   ) : null}
                   {!readOnly && selection.channelType === 'private' && (
                     <Button
-                      variant="ghost"
+                      variant="destructive"
                       size="icon"
-                      className="im-header-icon-button h-8 w-8 text-destructive hover:text-destructive"
+                      className="im-header-icon-button is-destructive h-8 w-8"
                       title={i18n.t("删除好友")}
                       aria-label={i18n.t("删除好友")}
                       onClick={() => void handleDeleteFriend()}

@@ -157,7 +157,7 @@ function InstanceStatusSection({ status, canControl, locked }: {
         actions={canControl ? <>
           <Button size="sm" variant="outline" disabled={!data || !actions.start || locked || pending} onClick={() => prepare('start')}><Play />{i18n.t("启动")}</Button>
           <Button size="sm" variant="outline" disabled={!data || !actions.restart || locked || pending} onClick={() => prepare('restart')}><RotateCcw />{i18n.t("重启")}</Button>
-          <Button size="sm" variant="outline" className="text-destructive" disabled={!data || !actions.stop || locked || pending} onClick={() => prepare('stop')}><Square />{i18n.t("停止")}</Button>
+          <Button size="sm" variant="destructive-outline" data-tone="destructive" disabled={!data || !actions.stop || locked || pending} onClick={() => prepare('stop')}><Square />{i18n.t("停止")}</Button>
         </> : null}>
         <ActionReceipt controller={receipt} />
         <Card className="console-admin-card">
@@ -411,7 +411,7 @@ function DependencyPanel({ canManage, onActiveChange, onFinished }: { canManage:
                     {canManage ? (
                       <TableCell className="whitespace-nowrap text-right">
                         <Button variant="ghost" size="sm" disabled={busy} onClick={() => void prepare('update', [item.name])} aria-label={i18n.t("更新 {0}", [item.name])}><Upload />{i18n.t("更新")}</Button>
-                        <Button variant="ghost" size="sm" className="text-destructive" disabled={busy} onClick={() => void prepare('uninstall', [item.name])} aria-label={i18n.t("卸载 {0}", [item.name])}><Trash2 />{i18n.t("卸载")}</Button>
+                        <Button variant="destructive" size="sm" disabled={busy} onClick={() => void prepare('uninstall', [item.name])} aria-label={i18n.t("卸载 {0}", [item.name])}><Trash2 />{i18n.t("卸载")}</Button>
                       </TableCell>
                     ) : null}
                   </TableRow>

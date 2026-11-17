@@ -1,7 +1,7 @@
 // console#125 (visual direction, phase without the new @zhin.js/console-ui API).
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { DEFAULT_PALETTE, THEME_PALETTES } from '../console-ui/src/theme/index.ts'
 import { visibleActivityRange } from '../console-ui/src/pages/dashboard-activity-model.mjs'
 import { normalizeEngagementSummary, collaborationEventSummary, venueLabel, engagementTotals } from '../console-ui/src/pages/engagements-model.mjs'
@@ -17,13 +17,16 @@ test('Zhin green is a palette of its own and the default; saved palettes keep wo
 })
 
 test('one brand mark (the favicon shape) and one product name replace the lettered Z badges', () => {
-  const favicon = read('client/favicon.svg'), mark = read('console-ui/src/components/BrandMark.tsx')
+  // The mark comes from the component library (console-ui 1.1); the local copy is gone.
+  const favicon = read('client/favicon.svg'), mark = read('node_modules/@zhin.js/console-ui/dist/components/BrandMark.js')
   const path = /<path d="([^"]+)"/.exec(favicon)[1]
-  assert.ok(mark.includes(`d="${path}"`), 'BrandMark draws the favicon Z')
+  assert.ok(mark.includes(`d: "${path}"`), 'BrandMark draws the favicon Z')
   assert.match(favicon, /fill="#76EEC6"/)
+  assert.equal(existsSync(new URL('../console-ui/src/components/BrandMark.tsx', import.meta.url)), false)
   for (const file of ['console-ui/src/layouts/dashboard.tsx', 'console-ui/src/pages/login.tsx', 'console-ui/src/pages/setup/setup-wizard.tsx']) {
     const source = read(file)
-    assert.match(source, /<BrandMark /, file)
+    assert.match(source, /<BrandMark [^>]*withText/, file)
+    assert.match(source, /import \{[^}]*\bBrandMark\b[^}]*\} from '@zhin\.js\/console-ui'/, file)
     assert.doesNotMatch(source, />Z<\//, `${file} no longer spells the mark`)
     assert.doesNotMatch(source, /Zhin\.js"|>Zhin\.js</, `${file} uses the product name`)
   }
@@ -36,7 +39,7 @@ test('received / sent use chart colors, and short activity drops the leading emp
   assert.match(css, /\.console-volume-legend i\.is-inbound \{ background: hsl\(var\(--console-chart-inbound\)\); \}/)
   assert.match(css, /\.console-volume-legend i\.is-reply \{ background: hsl\(var\(--console-chart-outbound\)\); \}/)
   // Phase 2: sent moved off the amber chart-2 (it read as the warning color).
-  assert.match(read('console-ui/src/design-system.css'), /--console-chart-inbound: var\(--chart-1\);\s*--console-chart-outbound: var\(--chart-3\);/)
+  assert.match(read('console-ui/src/design-system.css'), /--console-chart-inbound: var\(--console-chart-1\);\s*--console-chart-outbound: var\(--console-chart-3\);/)
   const hours = Array.from({ length: 24 }, (_, index) => ({ start: index, inbound: 0, outbound: 0 }))
   assert.equal(visibleActivityRange(hours).length, 24, 'no data: the whole day')
   hours[23].inbound = 3

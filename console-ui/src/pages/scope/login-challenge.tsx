@@ -241,7 +241,7 @@ function AnswerForm({ step, busy, onSubmit, waitUntil, inputRef }: {
           const blocked = busy || Boolean(waiting) || cooldown > 0 || (action.requiresInput && check.state !== 'ok')
           return (
             <Button key={action.id} size="sm" disabled={blocked}
-              variant={action.variant === 'primary' ? 'default' : action.variant === 'danger' ? 'destructive' : 'outline'}
+              variant={action.variant === 'primary' ? 'soft' : action.variant === 'danger' ? 'destructive' : 'outline'}
               className="console-login-action" onClick={() => run(action)} data-action-id={action.id}>
               {cooldown > 0 ? i18n.t('{0}（{1} 秒后可用）', [i18n.t(action.label), String(Math.ceil(cooldown / 1000))]) : i18n.t(action.label)}
             </Button>
@@ -522,7 +522,7 @@ function CopyBlock({ block, onProgress, tag }: { block: LoginCopyBlock & { reado
             <ExternalLink />{i18n.t('复制并打开验证页')}
           </Button>
         ) : null}
-        <Button size="sm" variant={block.openLink ? 'outline' : 'default'} onClick={() => void copy()} data-copy>
+        <Button size="sm" variant={block.openLink ? 'outline' : 'soft'} onClick={() => void copy()} data-copy>
           {copied ? <Check /> : <Copy />}{copied ? i18n.t('已复制') : block.openLink ? i18n.t('仅复制') : i18n.t('复制')}
         </Button>
         {bookmarklet ? <BookmarkletLink href={bookmarklet} /> : null}

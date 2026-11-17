@@ -8,7 +8,6 @@ import {
   ArrowRight,
   Circle,
   Copy,
-  FileText,
   Filter,
   Info,
   Layers,
@@ -201,7 +200,7 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
             {state.loading && !state.logsKnown ? <StatusState kind="loading" compact title={i18n.t("正在读取日志历史…")} /> : state.error ? (
               <ErrorAlert error={state.error} onRetry={actions.retry} />
             ) : state.logs.length === 0 ? (
-              <div className="console-log-empty"><FileText /><strong>{i18n.t("当前筛选没有日志")}</strong><p>{i18n.t("日志到达后会自动出现在此处。")}</p></div>
+              <EmptyState illustration="logs" title={i18n.t("当前筛选没有日志")} description={i18n.t("日志到达后会自动出现在此处。")} />
             ) : (
               logEntries.map(({ log, id }) => {
                 const meta = getLevelMeta(log.level)
@@ -239,7 +238,7 @@ export function LogInspector({ log, offPage, onFilterSource, onClose }: { log: L
   const i18n = useI18n()
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle')
   if (!log) {
-    return <aside className="console-log-inspector is-empty" aria-label={i18n.t("事件 Inspector")}><EmptyState compact title={i18n.t("选择一条事件")} description={i18n.t("完整时间、来源与诊断动作会显示在这里。")} /></aside>
+    return <aside className="console-log-inspector is-empty" aria-label={i18n.t("事件 Inspector")}><EmptyState compact illustration="record" title={i18n.t("选择一条事件")} description={i18n.t("完整时间、来源与诊断动作会显示在这里。")} /></aside>
   }
   const meta = getLevelMeta(log.level)
   const Icon = meta.icon

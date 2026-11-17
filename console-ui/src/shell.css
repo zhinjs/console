@@ -76,7 +76,8 @@
     .console-topnav-capsule { background: hsl(var(--card)); }
   }
 
-  .console-brand {
+  /* The link around the component library's BrandMark (mark + 「Zhin Console」). */
+  .console-brand-link {
     display: inline-flex;
     flex-shrink: 0;
     align-items: center;
@@ -87,25 +88,18 @@
     color: hsl(var(--foreground));
   }
 
-  .console-brand:focus-visible {
+  .console-brand-link:focus-visible {
     outline: var(--console-focus-width) solid hsl(var(--ring));
     outline-offset: 2px;
   }
 
-  /* The brand mark (components/BrandMark.tsx): fixed brand colors, never the palette's. */
-  .console-brand-mark {
-    display: block;
+  /* The mark follows the top bar's logo size; the name keeps the library's type. */
+  .console-brand-link .console-brand-mark {
     width: var(--console-nav-logo);
     height: var(--console-nav-logo);
-    flex-shrink: 0;
   }
 
-  .console-brand-text {
-    font-size: 0.9375rem;
-    font-weight: 650;
-    letter-spacing: -0.015em;
-    white-space: nowrap;
-  }
+  .console-brand-link .console-brand-name { white-space: nowrap; }
 
   .console-topnav-nav {
     display: flex;
@@ -563,6 +557,13 @@
 
   .console-main > .console-breadcrumb { margin-bottom: -0.25rem; }
 
+  /*
+   * The Console's main area already pads the page, so the component library's PageShell (which pads
+   * itself since console-ui 1.1, ADR 0063 P1b) does not add a second inset: as `inset={false}` for
+   * every page, built-in or plugin, rendered in the shell.
+   */
+  .console-main .console-page-frame { padding: 0; }
+
   /* ---------- Breadcrumb (non-object pages) ---------- */
   .console-breadcrumb {
     display: flex;
@@ -608,7 +609,7 @@
   @media (min-width: 1100px) and (max-width: 1399px) {
     .console-topnav-actions .console-command-trigger { min-width: 0; }
     .console-topnav-actions .console-command-trigger > span { display: none; }
-    .console-topnav .console-brand-text { display: none; }
+    .console-topnav .console-brand-name { display: none; }
     .console-topnav-item { padding: 0 0.625rem; }
   }
 
@@ -620,10 +621,10 @@
   @media (max-width: 767px) {
     .console-app-shell { --console-header-h: 4.25rem; --console-nav-capsule-h: 3.25rem; --console-nav-logo: 2rem; }
     .console-topnav { padding: 0.625rem 0.75rem 0; }
-    .console-topnav .console-brand-text { display: none; }
+    .console-topnav .console-brand-name { display: none; }
     /* Phones: menu, logo and up to six actions must fit inside the capsule at 360px. */
     .console-topnav-capsule { gap: 0.125rem; }
-    .console-topnav .console-brand { padding-right: 0; }
+    .console-topnav .console-brand-link { padding-right: 0; }
     .console-topnav-actions {
       --console-control-height: 2.5rem;
       --console-control-height-sm: 2.5rem;
@@ -736,7 +737,7 @@
     inset: 0;
     transform: translateX(-100%);
     background: linear-gradient(90deg, transparent, hsl(var(--background) / 0.55), transparent);
-    animation: console-skeleton-shimmer var(--console-motion-loop) ease-in-out infinite;
+    animation: console-skeleton-shimmer var(--console-motion-loop) var(--console-ease-out) infinite;
   }
 
   @keyframes console-skeleton-shimmer {
