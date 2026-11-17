@@ -61,6 +61,7 @@ const SUCCESS_ALLOWED = {
   'console-ui/src/pages/database/document-collection-view.tsx': [3, '添加 / 更新记录后的一次性提示'],
   'console-ui/src/pages/database/kv-bucket-view.tsx': [3, '添加 / 更新键值后的一次性提示'],
   'console-ui/src/pages/database/related-table-view.tsx': [4, '添加 / 更新行后的一次性提示'],
+  'console-ui/src/pages/database/write-check.tsx': [1, '「核对」确认结果未知的写入已经生效后的一次性提示'],
   'console-ui/src/pages/files/file-editor.tsx': [3, '保存文件后的一次性提示'],
   'console-ui/src/pages/scope/configured-account-actions.tsx': [4, '导入 / 回写账号配置后的一次性提示'],
   'console-ui/src/pages/scope/adapter-accounts.tsx': [1, '保存账号后的一次性提示'],

@@ -7,6 +7,8 @@ import { databaseSaveError } from './save-error.mjs'
 import { relatedRowIssues } from './related-row-validation.mjs'
 import { parseRelatedRow } from './related-row-draft.mjs'
 import { useMutation } from './use-mutation'
+import { writeCheckPlan } from './write-check-model.mjs'
+import { useWriteCheck, WriteCheckNotice } from './write-check'
 import { filterableColumns, filterColumnKind, sortCurrentPageRows } from './record-query.mjs'
 import {
   cellText, columnFilterOperators, columnFiltersWhere, isSensitiveColumn, MASK, nextSort, operatorLabel, operatorNeedsValue,
@@ -72,6 +74,9 @@ export function RelatedTableView({
   const { success, error: toastError } = useToast()
   const pageSize = 50
   const orderBy = serverSort ? sort : null
+  const checkSelect = useCallback((where: Row) => select(tableName, 1, 2, where), [select, tableName])
+  // A write with an unknown outcome (#64): 保存 / 删除 stay blocked until 「核对」 settles it.
+  const write = useWriteCheck(checkSelect, tableInfo?.columns as Record<string, { type?: string }> | undefined)
 
   const load = useCallback(async () => {
     const seq = ++requestSeq.current
@@ -170,12 +175,21 @@ export function RelatedTableView({
 
   const closeEditor = () => { setEditRow(null); setAddRow(false); setFormData({}) }
 
+  /** Reports a failed write: an unknown outcome is held for 「核对」, anything else is shown as an error. */
+  const writeFailed = (err: unknown, plan: Parameters<typeof write.markUnknown>[0]) => {
+    const failure = databaseSaveError(err, i18n.locale)
+    if (failure.type === 'unknown') { setMsg(null); write.markUnknown(plan, failure.details); return }
+    setMsg({ type: 'error', text: failure.text, details: failure.details })
+  }
+
   const handleSave = async (isNew: boolean) => {
-    if (readOnly || gate.pending || invalidDraft || readError) return
+    if (readOnly || gate.pending || invalidDraft || readError || write.held) return
     await run(async () => {
     setMsg(null)
+    write.clearResult()
+    let row: Row | undefined
     try {
-      const row = parseRelatedRow(columns, formData, tableInfo?.columns, isNew ? undefined : editRow)
+      row = parseRelatedRow(columns, formData, tableInfo?.columns, isNew ? undefined : editRow)
       if (isNew) {
         await insert(tableName, row)
         setSavedAwaitingRefresh(true)
@@ -188,20 +202,28 @@ export function RelatedTableView({
       const where = relatedRowIdentity(primaryKeys, editRow, i18n.locale)
       setPendingUpdate({ row, where, count: await countMatching(where) })
     } catch (err) {
-      setMsg(databaseSaveError(err, i18n.locale))
+      writeFailed(err, writeCheckPlan('insert', { row }))
     }
     })
   }
 
+  /** 「核对」: settles a held write from a db:select, then reloads (applied) or frees 保存 (not applied). */
+  const checkWrite = async () => {
+    const result = await write.check()
+    if (!result) return
+    if (result.verdict === 'applied' && result.kind !== 'delete') closeEditor()
+    if (result.verdict === 'applied') await load()
+  }
+
   const confirmUpdate = async () => {
-    if (!pendingUpdate) return
+    if (!pendingUpdate || write.held) return
     const { row, where } = pendingUpdate
     const index = (data?.rows ?? []).indexOf(editRow)
+    const merged = { ...editRow, ...row }
+    const after = (() => { try { return relatedRowIdentity(primaryKeys, merged, i18n.locale) } catch { return where } })()
     try {
       const result = await update(tableName, row, where)
       let current: Row[] | null = null
-      const merged = { ...editRow, ...row }
-      const after = (() => { try { return relatedRowIdentity(primaryKeys, merged, i18n.locale) } catch { return where } })()
       if (result?.affected === 0) {
         current = (await select(tableName, 1, 2, after)).rows as Row[]
         const outcome = relatedUpdateReadback(current, row, tableInfo?.columns)
@@ -223,26 +245,30 @@ export function RelatedTableView({
       setMsg({ type: 'success', text: i18n.t("更新成功") })
     } catch (err) {
       setPendingUpdate(null)
-      setMsg(databaseSaveError(err, i18n.locale))
+      writeFailed(err, writeCheckPlan('update', { row, where: after }))
     }
   }
 
   const handleDelete = async (row: Row) => {
-    if (gate.pending || readOnly || readError) return
+    if (gate.pending || readOnly || readError || write.held) return
     let count: number | null = null
     try { count = await countMatching(relatedRowIdentity(primaryKeys, row, i18n.locale)) } catch { count = null }
     setDeleteTarget({ row, count })
   }
 
   const confirmDelete = async () => {
-    if (!deleteTarget || gate.pending || readOnly || readError) return
+    if (!deleteTarget || gate.pending || readOnly || readError || write.held) return
     await run(async () => {
+    let where: Row | undefined
     try {
-      await remove(tableName, relatedRowIdentity(primaryKeys, deleteTarget.row, i18n.locale))
+      where = relatedRowIdentity(primaryKeys, deleteTarget.row, i18n.locale)
+      await remove(tableName, where)
       success(i18n.t("删除成功"))
       await load()
     } catch (err) {
-      toastError((err as Error).message)
+      const failure = databaseSaveError(err, i18n.locale)
+      if (failure.type === 'unknown' && where) write.markUnknown(writeCheckPlan('delete', { where }), failure.details)
+      else toastError(failure.text)
     } finally {
       setDeleteTarget(null)
     }
@@ -302,6 +328,7 @@ export function RelatedTableView({
         </Alert>
       )}
 
+      {(write.held || write.result) && editRow === null && !addRow ? <WriteCheckNotice controller={write} className="shrink-0" onCheck={() => { void checkWrite() }} /> : null}
       {readError ? <div className="space-y-2 shrink-0">
         <ErrorAlert error={savedAwaitingRefresh ? i18n.t("记录已保存，但列表刷新失败。请重试读取列表。") : readErrorSummary(readError, i18n.t("表数据"), i18n.locale)} onRetry={() => { void load() }} />
         {hasCurrentPage ? <p className="text-xs text-muted-foreground">{i18n.t("当前显示上次加载的数据。")}</p> : null}
@@ -311,7 +338,7 @@ export function RelatedTableView({
       <div className="flex flex-wrap items-center gap-2 shrink-0">
         <Button size="sm" variant="outline" onClick={load} disabled={loading || busy}>
           <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新")}</Button>
-        {!readOnly && <Button size="sm" disabled={loading || busy || !!readError} onClick={openAdd}><Plus className="w-3.5 h-3.5 mr-1" />{i18n.t("添加")}</Button>}
+        {!readOnly && <Button size="sm" disabled={loading || busy || !!readError || write.held} onClick={openAdd}><Plus className="w-3.5 h-3.5 mr-1" />{i18n.t("添加")}</Button>}
         <span className="text-xs text-muted-foreground sm:ml-auto basis-full sm:basis-auto">
           {loading && !hasCurrentPage ? i18n.t("正在加载第 {0} 页…", [page]) : data ? i18n.t("共 {0} 条 · 第 {1}/{2} 页{3}", [data.total, page, totalPages || 1, `${loadedFilter ? i18n.t(" · 已筛选") : ''}${!serverSort && sortCol ? i18n.t(" · 本页排序") : ''}${serverSort && sort ? i18n.t(' · 按 {0} {1}', [sort.column, sort.direction === 'asc' ? i18n.t('升序') : i18n.t('降序')]) : ''}`]) : loading ? i18n.t("加载中…") : i18n.t("未加载")}
         </span>
@@ -430,8 +457,8 @@ export function RelatedTableView({
                   )
                 })}
                 {!readOnly && <TableCell numeric className="w-24 min-w-[5.5rem] space-x-1 whitespace-nowrap py-1.5">
-                  <Button size="icon" variant="ghost" disabled={loading || busy || !!readError || !canIdentify} aria-label={i18n.t("编辑记录")} onClick={() => openEdit(row)}><Pencil /></Button>
-                  <Button size="icon" variant="destructive" disabled={loading || busy || !!readError || !canIdentify} aria-label={i18n.t("删除记录")} onClick={() => { void handleDelete(row) }}><Trash2 /></Button>
+                  <Button size="icon" variant="ghost" disabled={loading || busy || !!readError || !canIdentify || write.held} aria-label={i18n.t("编辑记录")} onClick={() => openEdit(row)}><Pencil /></Button>
+                  <Button size="icon" variant="destructive" disabled={loading || busy || !!readError || !canIdentify || write.held} aria-label={i18n.t("删除记录")} onClick={() => { void handleDelete(row) }}><Trash2 /></Button>
                 </TableCell>}
               </TableRow>
             ))}
@@ -447,7 +474,7 @@ export function RelatedTableView({
         </div>
       )}
 
-      {!readOnly && <Dialog open={editRow !== null || addRow} onOpenChange={(open) => { if (!open && !gate.pending) { closeEditor(); setMsg(null) } }}>
+      {!readOnly && <Dialog open={editRow !== null || addRow} onOpenChange={(open) => { if (!open && !gate.pending && !write.locked) { closeEditor(); setMsg(null); write.dismiss() } }}>
         <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{addRow ? i18n.t("添加记录") : i18n.t("编辑记录")}</DialogTitle>
@@ -458,16 +485,17 @@ export function RelatedTableView({
                 key={col}
                 label={col}
                 error={fieldIssues[col]}
-                disabled={busy}
+                disabled={busy || write.held}
                 value={formData[col] ?? ''}
                 onChange={(v: string) => { setFormData((prev: Record<string, string>) => ({ ...prev, [col]: v })); setMsg(null) }}
               />
             ))}
           </div>
+          {write.held || write.result ? <WriteCheckNotice controller={write} onCheck={() => { void checkWrite() }} /> : null}
           {msg?.type === 'error' && <div role="alert" className="space-y-2 text-sm text-destructive"><p>{msg.text}</p>{msg.details ? <details className="text-xs"><summary className="cursor-pointer">{i18n.t("技术详情")}</summary><p className="mt-2 whitespace-pre-wrap break-words">{msg.details}</p></details> : null}</div>}
           <DialogFooter>
-            <DialogClose asChild><Button variant="outline" size="sm" disabled={busy}>{i18n.t("取消")}</Button></DialogClose>
-            <Button size="sm" disabled={busy || invalidDraft} onClick={() => handleSave(addRow)}><Save className="w-3.5 h-3.5 mr-1" />{i18n.t("保存")}</Button>
+            <DialogClose asChild><Button variant="outline" size="sm" disabled={busy || write.locked}>{i18n.t("取消")}</Button></DialogClose>
+            <Button size="sm" disabled={busy || invalidDraft || write.held} onClick={() => handleSave(addRow)}><Save className="w-3.5 h-3.5 mr-1" />{i18n.t("保存")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>}
