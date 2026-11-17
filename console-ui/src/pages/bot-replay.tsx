@@ -1,11 +1,13 @@
 import { useI18n } from '../i18n'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Download, RefreshCw } from 'lucide-react'
 import { pluginRpc } from '../utils/plugin-rpc'
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, ErrorAlert, Input, PageHeader, PageShell, SelectField, Skeleton } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import { ScopeFilterBar, useScopeFilter } from './insights/ScopeFilterBar'
+import { useAmbientGroupCatalog } from './AmbientGroupPicker'
+import { groupNamesFromCatalog } from './ambient-group-picker-model.mjs'
 import { replayScopeApproximate, replayScopeFilter } from './insights/scope-filter.mjs'
 import {
   EXPORT_WINDOWS,
@@ -72,6 +74,9 @@ export default function BotReplayPage() {
   const [windowChoice, setWindowChoice] = useState(EXPORT_WINDOWS[1]!.value)
   const [exporting, setExporting] = useState(false)
   const [exportNote, setExportNote] = useState<string | null>(null)
+  // Group names from the connected accounts' group lists; a failed read just leaves the raw ids.
+  const groupCatalog = useAmbientGroupCatalog().catalog
+  const groupNames = useMemo(() => groupCatalog ? groupNamesFromCatalog(groupCatalog) : new Map<string, string>(), [groupCatalog])
 
   const load = useCallback(async (nextFilter: Record<string, string>, before?: number) => {
     const data = validateReplayList(await pluginRpc<unknown>('root', REPLAY_LIST_METHOD, {
@@ -213,10 +218,10 @@ export default function BotReplayPage() {
               {error ? <p className="text-xs text-destructive">{error}</p> : null}
               {list.rows.length ? <ul className="divide-y rounded-md border text-sm">
                 {foldReplayRows(list.rows).map(({ row, folded }) => {
-                  const view = describeReplayRow(row, i18n.locale)
+                  const view = describeReplayRow(row, i18n.locale, groupNames)
                   return <li key={view.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
                     <span className="text-xs text-muted-foreground">{formatTime(view.at, i18n.locale)}</span>
-                    <span className="break-all text-xs">{view.where}</span>
+                    <span className="break-all text-xs" title={view.where === view.whereCode ? undefined : view.whereCode}>{view.where}</span>
                     <span className="font-medium">{view.kind}</span>
                     <Badge variant={outcomeVariant(view.outcomeCode)}>{view.outcome}</Badge>
                     <span className="text-muted-foreground" title={view.code}>{view.reason}</span>

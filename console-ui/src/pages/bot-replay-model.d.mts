@@ -43,7 +43,10 @@ export interface ReplayRowView {
   id: string
   at: number
   turnId: string
+  /** The group's name when known, otherwise the same as `whereCode`. */
   where: string
+  /** `<platform> · <scene id>` as the Host wrote it. */
+  whereCode: string
   kind: string
   outcome: string
   outcomeCode: string
@@ -59,7 +62,8 @@ export function validateReplayExportPage(data: unknown, locale?: Locale): Replay
 export function kindLabel(kind: string, locale?: Locale): string
 export function outcomeLabel(outcome: string, locale?: Locale): string
 export function reasonLabel(code: string, locale?: Locale): string
-export function describeReplayRow(row: ReplayRow, locale?: Locale): ReplayRowView
+export function replayGroupKey(row: Pick<ReplayRow, 'platform' | 'scene_id'>): string | null
+export function describeReplayRow(row: ReplayRow, locale?: Locale, groupNames?: ReadonlyMap<string, string>): ReplayRowView
 export function buildReplayFilter(filter: ReplayFilterInput): Record<string, string>
 export const EXPORT_WINDOWS: ReadonlyArray<{ readonly value: string; readonly label: string; readonly ms: number }>
 export function exportWindow(value: string, now?: number): ReplayWindow
