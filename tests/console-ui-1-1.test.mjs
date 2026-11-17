@@ -148,3 +148,19 @@ test('forms: secondary purpose fields are ghost controls; no native date inputs 
   assert.match(read('console-ui/src/pages/access/audit.tsx'), /<DateTimeField id=\{`\$\{id\}-until`\}/)
   assert.equal(read('console-ui/src/pages/token-usage.tsx').match(/<DateTimeField /g)?.length, 2)
 })
+
+test('visual regressions found in the 1.1 screenshots stay fixed', () => {
+  // PageShell pads itself since 1.1; inside the Console's padded main it must not add a second inset.
+  assert.match(read('console-ui/src/shell.css'), /\.console-main \.console-page-frame \{ padding: 0; \}/)
+  // The library's cn() drops a variant's text color next to size classes (text-label / text-body):
+  // solid red, brand, soft and destructive buttons get it back from their surviving classes.
+  const css = read('console-ui/src/design-system.css')
+  for (const rule of [/\.console-control\.bg-destructive \{ color: hsl\(var\(--destructive-foreground\)\); \}/, /\.console-control\.bg-brand \{ color: hsl\(var\(--console-brand-foreground\)\); \}/,
+    /\.console-control\.bg-primary-action \{ color: hsl\(var\(--primary-action-foreground\)\); \}/, /\.console-control\.hover\\:bg-destructive\\\/8, \.console-control\[data-tone="destructive"\] \{ color: hsl\(var\(--destructive\)\); \}/]) assert.match(css, rule)
+  for (const path of sources.filter(path => path.endsWith('.tsx'))) {
+    const text = readFileSync(path, 'utf8')
+    for (const match of text.matchAll(/<Button\b[^>]*variant="destructive-outline"[^>]*>/g)) {
+      if (/size="sm"/.test(match[0])) assert.match(match[0], /data-tone="destructive"/, relative(root, path))
+    }
+  }
+})

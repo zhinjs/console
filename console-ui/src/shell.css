@@ -557,6 +557,13 @@
 
   .console-main > .console-breadcrumb { margin-bottom: -0.25rem; }
 
+  /*
+   * The Console's main area already pads the page, so the component library's PageShell (which pads
+   * itself since console-ui 1.1, ADR 0063 P1b) does not add a second inset: as `inset={false}` for
+   * every page, built-in or plugin, rendered in the shell.
+   */
+  .console-main .console-page-frame { padding: 0; }
+
   /* ---------- Breadcrumb (non-object pages) ---------- */
   .console-breadcrumb {
     display: flex;

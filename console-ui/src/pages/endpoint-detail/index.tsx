@@ -605,6 +605,7 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
                 <Button
                   size="sm"
                   variant="destructive-outline"
+                  data-tone="destructive"
                   className="im-member-danger"
                   onClick={() =>
                     void handleGroupAction(ENDPOINT_RPC.GROUP_KICK, uid, item.name)

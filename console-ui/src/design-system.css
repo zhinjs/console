@@ -2619,6 +2619,17 @@
    * library's InlineCode / `.console-code` (ADR 0063 D31: monospace, no border, a very light fill).
    * Lists of them sit side by side with a gap, not as chips.
    */
+  /*
+   * Workaround for @zhin.js/console-ui 1.1.0: the library's cn() (tailwind-merge) reads the size
+   * classes text-label / text-body as text colors, so a Button with size="sm" loses its variant's
+   * text color (white on destructive-solid, green on soft, red on destructive). The surviving
+   * variant classes restore it; `data-tone="destructive"` marks Console-owned destructive-outline
+   * buttons, whose only marker is the dropped color. Remove once the library is fixed.
+   */
+  .console-control.bg-destructive { color: hsl(var(--destructive-foreground)); }
+  .console-control.bg-brand { color: hsl(var(--console-brand-foreground)); }
+  .console-control.bg-primary-action { color: hsl(var(--primary-action-foreground)); }
+  .console-control.hover\:bg-destructive\/8, .console-control[data-tone="destructive"] { color: hsl(var(--destructive)); }
   .console-code-list { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; min-width: 0; }
   .console-menu-item { min-height: var(--console-control-height-sm); }
 }
