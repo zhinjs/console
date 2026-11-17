@@ -247,7 +247,7 @@ export function CacheLineChart({
             <strong className="font-semibold text-foreground">
               {formatBucketLabel(activePoint.point.bucketStart, bucket, i18n.locale)}
             </strong>
-            <span className="rounded-full bg-[hsl(var(--chart-3)/0.14)] px-2 py-0.5 font-semibold text-[hsl(var(--chart-3))]">
+            <span className="rounded-full bg-[hsl(var(--chart-3)/0.14)] px-2 py-0.5 font-semibold text-foreground">
               {formatPercent(activePoint.point.value, i18n.locale)}
             </span>
           </div>

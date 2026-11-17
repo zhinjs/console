@@ -33,6 +33,9 @@
 .console-feature-lock-link:hover { color: hsl(var(--foreground)); }
 .console-feature-lock-link svg { width: 0.75rem; height: 0.75rem; }
 .console-feature-row-switch { display: flex; justify-content: flex-end; }
+/* Hit area around a feature switch (feature-switch.tsx SwitchHitArea). The switch keeps its drawn size; on phones the
+   label around it is at least 44×44px, and the row grid's column gap keeps it ≥ 8px from the feature name link. */
+.console-feature-switch-hit { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; }
 .console-feature-row-receipt { margin: 0 var(--console-space-4) var(--console-space-3) var(--console-space-7); }
 .console-feature-row-body { display: flex; flex-direction: column; gap: var(--console-space-3); padding: 0 var(--console-space-4) var(--console-space-4) var(--console-space-7); }
 .console-feature-note { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
@@ -74,6 +77,10 @@
   .console-feature-field > [role="cell"]:nth-child(5), .console-feature-field.is-head > :nth-child(5) { display: none; }
 }
 /* Pad and phone (the content column is under ~45rem there): rows stack, fields become label / value pairs. */
+@media (width < 48rem) {
+  .console-feature-switch-hit { min-width: var(--console-touch-target); min-height: var(--console-touch-target); cursor: pointer; }
+  .console-feature-switch-hit:has(:disabled) { cursor: not-allowed; }
+}
 @media (width < 64rem) {
   .console-feature-search { width: 100%; }
   .console-feature-row-head { grid-template-columns: auto minmax(0, 1fr) auto; padding-inline: var(--console-space-1) var(--console-space-3); }

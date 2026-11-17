@@ -87,7 +87,8 @@ test('work-oriented navigation preserves ordinary-user names and legacy plugin g
   assert.match(source, /path: P\.agentReplay,[\s\S]*?parent: P\.agentWorkbench,[\s\S]*?requiredPermissions: \[REPLAY_PERMISSION\]/)
   assert.match(sourceText(join(SOURCE_ROOT, 'pages', 'agent-workbench.tsx')), /to="\/agent\/replay"/)
   for (const key of ['opsConfig', 'opsEnv', 'opsFiles', 'opsDatabase', 'opsInstance', 'opsTerminal']) assert.equal(routeGroup(key).group, 'OPS', key)
-  for (const key of ['features', 'ai', 'introspection', 'scenarioLab', 'aiWorkrooms']) assert.equal(routeGroup(key).group, 'FEATURES', key)
+  for (const key of ['features', 'ai', 'introspection', 'aiWorkrooms']) assert.equal(routeGroup(key).group, 'FEATURES', key)
+  assert.deepEqual(routeGroup('scenarioLab'), { name: '消息场景试验台', group: 'OPS', hidden: false })
   assert.doesNotMatch(source, /'对话分支'|'Agent 概览'|judge|decision|TypeSafe|shadow/)
   const entries = sourceText(join(SOURCE_ROOT, 'bootstrap', 'loadConsoleEntries.ts'))
   // Placement (ADR 0063 决策 3) reads what `/entries` declared for the page's path.

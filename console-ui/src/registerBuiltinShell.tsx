@@ -125,7 +125,6 @@ export function registerBuiltinConsolePages() {
   })
   app.addRoute({ path: P.introspection, name: '运行时能力', parent: null, icon: 'Blocks', element: <IntrospectionPage />, meta: { group: NAV_GROUPS.FEATURES, order: 6 } })
   app.addRoute({ path: P.permissions, name: '命令权限说明', parent: P.introspection, icon: 'Shield', element: <CommandPermissionsPage />, meta: { group: NAV_GROUPS.FEATURES, order: 6, hideInMenu: true } })
-  app.addRoute({ path: P.scenarioLab, name: '消息场景试验台', parent: null, icon: 'FlaskConical', element: <ScenarioLabPage />, meta: { group: NAV_GROUPS.FEATURES, order: 7, fullWidth: true } })
   app.addRoute({ path: P.groupWelcome, name: '群欢迎配置流程', parent: P.features, element: <WelcomeUseCasePage />, meta: { hideInMenu: true, group: NAV_GROUPS.FEATURES } })
 
   // 插件 — 装了什么？
@@ -143,6 +142,9 @@ export function registerBuiltinConsolePages() {
   app.addRoute({ path: P.opsTerminal, name: '终端', parent: null, icon: 'Terminal', element: <OpsTerminalPage />, meta: { group: NAV_GROUPS.OPS, order: 5, fullWidth: true } })
   // Reached from 仍在加载… and the connection indicator; every signed-in principal may run it.
   app.addRoute({ path: P.opsSelfCheck, name: '连接自检', parent: null, icon: 'Stethoscope', element: <SelfCheckPage />, meta: { group: NAV_GROUPS.OPS, order: 6 } })
+  // A developer tool (preview a plugin's messages, export a regression), not a bot feature: 运维, after 连接自检.
+  // Same address and permission (feature.view) as when it sat in 功能 (#64 scenario-lab-placement).
+  app.addRoute({ path: P.scenarioLab, name: '消息场景试验台', parent: null, icon: 'FlaskConical', element: <ScenarioLabPage />, meta: { group: NAV_GROUPS.OPS, order: 7, fullWidth: true } })
 
   // 访问控制 — 谁能做什么？（ADR 0049）
   app.addRoute({ path: P.accessUsers, name: '用户', parent: null, icon: 'Users', element: <AccessUsersPage />, meta: { group: NAV_GROUPS.ACCESS, order: 0 } })

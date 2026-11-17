@@ -89,9 +89,9 @@ test('builtin route regrouping preserves deep links, hidden detail ownership and
   '/scope':'WORK','/scope/:adapter':'WORK','/scope/:adapter/:endpoint':'WORK','/scope/:adapter/:endpoint/:conversation':'WORK','/agent/sessions':'WORK','/chat-members':'WORK',
   '/features':'FEATURES','/features/global/:plugin':'FEATURES','/features/ai':'FEATURES','/features/ai/skills':'FEATURES','/features/ai/ambient':'FEATURES',
   '/features/ai/workrooms':'FEATURES','/features/ai/workrooms/catalog':'FEATURES','/introspection':'FEATURES','/permissions':'FEATURES',
-  '/scenario-lab':'FEATURES','/use-cases/group-welcome':'FEATURES',
+  '/use-cases/group-welcome':'FEATURES',
   '/plugins':'PLUGINS','/plugins/:name':'PLUGINS','/marketplace':'PLUGINS',
-  '/ops/database':'OPS','/ops/config':'OPS','/ops/env':'OPS','/ops/schedules':'OPS','/ops/files':'OPS','/ops/instance':'OPS','/ops/terminal':'OPS','/ops/self-check':'OPS',
+  '/ops/database':'OPS','/ops/config':'OPS','/ops/env':'OPS','/ops/schedules':'OPS','/ops/files':'OPS','/ops/instance':'OPS','/ops/terminal':'OPS','/ops/self-check':'OPS','/scenario-lab':'OPS',
   '/onboarding':'OVERVIEW','/account':'OVERVIEW',
   '/access/users':'ACCESS','/access/roles':'ACCESS','/access/tokens':'ACCESS','/access/audit':'ACCESS',
  }
@@ -207,4 +207,30 @@ test('an adapter page is not mounted twice: its old path redirects to the adapte
   assert.equal(plan.redirect.meta.pluginTab.href,'/scope/icqq')
  }
  assert.deepEqual(planPluginRoute({path:'/icqq',name:'ICQQ'},describePluginPage(entry)).redirect.meta.pluginTab.keywords,['QQ 个人号'])
+})
+
+// #64 `scenario-lab-placement`: 消息场景试验台 is a developer tool, not a bot feature. It moved from 功能 to 运维 at the
+// same address; the menu, the breadcrumb section and the ⌘K group all read the route's section.
+test('消息场景试验台 sits in 运维 (after 连接自检), no longer in 功能, at the same address', async () => {
+ const {buildNavigation, routeSectionId, sectionById} = await import(sectionsUrl)
+ const {resolveNavigationLocation} = await import(new URL('navigation-location.mjs',root).href)
+ const routes = (await registeredBuiltinRoutes()).filter(route=>!Object.hasOwn(LEGACY_ROUTE_REDIRECTS,route.path))
+ const lab = routes.find(route=>route.path==='/scenario-lab')
+ assert.equal(CONSOLE_PATHS.scenarioLab,'/scenario-lab','the address is unchanged, so no redirect is needed')
+ assert.equal(routeSectionId(lab),'ops')
+ const sections = buildNavigation(routes).flatMap(tier=>tier.sections)
+ const paths = id => sections.find(section=>section.id===id).routes.map(route=>route.path)
+ assert.ok(paths('ops').includes('/scenario-lab'))
+ assert.ok(!paths('features').includes('/scenario-lab'))
+ assert.deepEqual(paths('ops').slice(-2),['/ops/self-check','/scenario-lab'],'last in 运维, after 连接自检')
+ // Breadcrumb (layouts/dashboard.tsx) and ⌘K (ConsoleCommandCenter.tsx) label: sectionById(routeSectionId(route)).label.
+ const location = resolveNavigationLocation(routes,'/scenario-lab',(pattern,pathname)=>pattern===pathname)
+ assert.equal(location.current.path,'/scenario-lab')
+ assert.equal(location.group,NAV_GROUPS.OPS)
+ assert.equal(sectionById(routeSectionId(location.current)).label,'运维')
+ // Its own permission (feature.view) still decides who sees it, as in 功能.
+ const access = names => ({unrestricted:false,permissions:new Set(names),scoped:[]})
+ const opsFor = names => buildNavigation(routes,access(names)).flatMap(tier=>tier.sections).find(section=>section.id==='ops')?.routes.map(route=>route.path) ?? []
+ assert.ok(opsFor(['feature.view']).includes('/scenario-lab'),'feature.view still reaches it, now under 运维')
+ assert.ok(!opsFor(['ops.database.read']).includes('/scenario-lab'),'an ops permission alone does not')
 })

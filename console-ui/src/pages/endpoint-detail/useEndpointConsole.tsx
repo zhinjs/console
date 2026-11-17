@@ -77,7 +77,6 @@ export function useEndpointConsole(target?: EndpointWorkspaceTarget) {
   const connected = useConsoleConnected()
   const [info, setInfo] = useState<EndpointInfo | null>(null)
   const [loadErr, setLoadErr] = useState<unknown>(null)
-  const [actionError, setActionError] = useState<string | null>(null)
 
   // --- Endpoint info ---
   const infoSequence = useRef(0)
@@ -160,8 +159,12 @@ export function useEndpointConsole(target?: EndpointWorkspaceTarget) {
   }, [cacheScope])
 
   // --- Load requests from server ---
-  const loadRequestsFromServer = useCallback(async () => {
-    if (!adapter || !endpointId) return
+  /**
+   * Re-reads the pending requests. Resolves with the rows it showed (null when the answer belongs to a
+   * page that is gone); `strict` rethrows a failed read, for 「刷新待处理列表」 after an unknown outcome.
+   */
+  const loadRequestsFromServer = useCallback(async (options?: { strict?: boolean }): Promise<ReqItem[] | null> => {
+    if (!adapter || !endpointId) return null
     setRequestsLoading(true)
     setRequestsError(null)
     try {
@@ -169,12 +172,15 @@ export function useEndpointConsole(target?: EndpointWorkspaceTarget) {
         type: SIDE_EVENT_RPC.REQUEST_LIST,
         ...endpointAddress(adapter, endpointId),
       })
-      if (!isInboxCacheScopeActive(cacheScope)) return
+      if (!isInboxCacheScopeActive(cacheScope)) return null
       const rows = readPendingRequests(response, i18n.locale)
       setRequestsAvailable(response.source === 'endpoint' || response.inboxEnabled === true)
       setRequests(new Map(rows.map(row => [pendingRequestKey(row), row])))
+      return rows
     } catch (caught) {
       if (isInboxCacheScopeActive(cacheScope)) setRequestsError(caught instanceof Error ? caught.message : String(caught))
+      if (options?.strict) throw caught
+      return null
     } finally {
       if (isInboxCacheScopeActive(cacheScope)) setRequestsLoading(false)
     }
@@ -271,8 +277,9 @@ export function useEndpointConsole(target?: EndpointWorkspaceTarget) {
     [adapter, endpointId, inboxNoticesOffset, cacheScope, i18n],
   )
 
-  const loadNoticesFromServer = useCallback(async () => {
-    if (!adapter || !endpointId) return
+  /** Re-reads the unread notices; resolves with them (null when stale). `strict` rethrows a failed read. */
+  const loadNoticesFromServer = useCallback(async (options?: { strict?: boolean }): Promise<NoticeItem[] | null> => {
+    if (!adapter || !endpointId) return null
     const seq = ++unreadNoticesSeqRef.current
     const requestedEndpoint = `${adapter}\u0000${endpointId}`
     setNoticesLoading(true)
@@ -292,20 +299,24 @@ export function useEndpointConsole(target?: EndpointWorkspaceTarget) {
         seq !== unreadNoticesSeqRef.current
         || requestedEndpoint !== endpointIdentityRef.current
         || !isInboxCacheScopeActive(cacheScope)
-      ) return
+      ) return null
       setNoticesAvailable(res.inboxEnabled)
-      if (!res.inboxEnabled) return
-      setNotices(new Map((res.notices ?? []).map((notice) => [notice.id, {
+      if (!res.inboxEnabled) return null
+      const rows: NoticeItem[] = (res.notices ?? []).map((notice) => ({
         id: notice.id,
         noticeType: notice.noticeType,
         channel: notice.channel,
         payload: notice.payload,
         timestamp: notice.timestamp,
-      }])))
+      }))
+      setNotices(new Map(rows.map(row => [row.id, row])))
+      return rows
     } catch (caught) {
       if (seq === unreadNoticesSeqRef.current && requestedEndpoint === endpointIdentityRef.current && isInboxCacheScopeActive(cacheScope)) {
         setNoticesError(caught instanceof Error ? caught.message : String(caught))
       }
+      if (options?.strict) throw caught
+      return null
     } finally {
       if (seq === unreadNoticesSeqRef.current && isInboxCacheScopeActive(cacheScope)) setNoticesLoading(false)
     }
@@ -498,62 +509,27 @@ export function useEndpointConsole(target?: EndpointWorkspaceTarget) {
   const noticeList = useMemo(() => [...notices.values()].sort((a, b) => b.timestamp - a.timestamp), [notices])
 
   // --- Request/notice actions ---
-  const approve = useCallback(
-    async (platformRequestId: string, approveIt: boolean) => {
-      setActionError(null)
-      try {
-        await requestConsole({
-          type: approveIt ? SIDE_EVENT_RPC.REQUEST_APPROVE : SIDE_EVENT_RPC.REQUEST_REJECT,
-          ...requestApproval(adapter, endpointId, platformRequestId),
-        })
-        const row = requestList.find((r) => r.platformRequestId === platformRequestId)
-        if (row) {
-          setRequests((prev) => {
-            const m = new Map(prev)
-            m.delete(pendingRequestKey(row))
-            return m
-          })
-        }
-      } catch (e) {
-        setActionError((e as Error).message)
-      }
-    },
-    [adapter, endpointId, requestList],
-  )
+  // The writes themselves go through a receipt per item (side-event-actions.tsx, #64
+  // side-event-approve-guard); a settled one only drops the item from the local lists.
+  const forgetRequest = useCallback((match: { platformRequestId?: string; id?: number }) => {
+    setRequests((prev) => {
+      const m = new Map(prev)
+      for (const [key, request] of m) if ((match.platformRequestId && request.platformRequestId === match.platformRequestId) || (match.id !== undefined && request.id === match.id)) m.delete(key)
+      return m
+    })
+  }, [])
 
-  const dismissRequest = useCallback(
-    async (id: number) => {
-      setActionError(null)
-      try {
-        await requestConsole({ type: SIDE_EVENT_RPC.REQUEST_CONSUMED, ...consumedRows(id) })
-        setRequests((prev) => {
-          const m = new Map(prev)
-          for (const [key, request] of m) if (request.id === id) m.delete(key)
-          return m
-        })
-      } catch (e) {
-        setActionError((e as Error).message)
-      }
-    },
-    [],
-  )
+  // 「刷新待处理列表」 / 「刷新通知列表」 after an unknown outcome: a failed read keeps it unknown.
+  const reloadPendingRequests = useCallback(() => loadRequestsFromServer({ strict: true }), [loadRequestsFromServer])
+  const reloadUnreadNotices = useCallback(() => loadNoticesFromServer({ strict: true }), [loadNoticesFromServer])
 
-  const dismissNotice = useCallback(
-    async (id: number) => {
-      setActionError(null)
-      try {
-        await requestConsole({ type: SIDE_EVENT_RPC.NOTICE_CONSUMED, ...consumedRows(id) })
-        setNotices((prev) => {
-          const m = new Map(prev)
-          m.delete(id)
-          return m
-        })
-      } catch (e) {
-        setActionError((e as Error).message)
-      }
-    },
-    [],
-  )
+  const forgetNotice = useCallback((id: number) => {
+    setNotices((prev) => {
+      const m = new Map(prev)
+      m.delete(id)
+      return m
+    })
+  }, [])
 
   const refreshNotices = useCallback(async () => {
     if (!adapter || !endpointId) return
@@ -575,7 +551,6 @@ export function useEndpointConsole(target?: EndpointWorkspaceTarget) {
     info,
     loadErr,
     reloadInfo: loadInfo,
-    actionError,
     // message sending
     msgContent: msgHistory.msgContent,
     setMsgContent: msgHistory.setMsgContent,
@@ -644,10 +619,11 @@ export function useEndpointConsole(target?: EndpointWorkspaceTarget) {
     inboxNoticesEnabled,
     loadInboxNotices,
     loadRequestsFromServer,
+    reloadPendingRequests,
+    reloadUnreadNotices,
     refreshNotices,
-    approve,
-    dismissRequest,
-    dismissNotice,
+    forgetRequest,
+    forgetNotice,
     showRightPanel,
   }
 }
