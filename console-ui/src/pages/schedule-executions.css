@@ -1,27 +1,27 @@
 @layer components {
-  .schedule-executions { border-top: 1px solid var(--console-border-subtle); padding-top: 1rem; min-width: 0; }
-  .schedule-executions-heading, .schedule-executions-heading > div, .schedule-execution-attempt-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem; }
-  .schedule-executions h3, .schedule-execution-result h4, .schedule-execution-attempt h4 { font-weight: 600; }
-  .schedule-executions-empty { padding: 1.25rem; border-radius: var(--console-radius-md); border: 1px dashed var(--console-border-subtle); background: var(--console-surface-inset); color: hsl(var(--muted-foreground)); font-size: var(--console-text-body); text-align: center; }
-  .schedule-executions-list { display: grid; gap: .45rem; margin: .65rem 0 1rem; }
-  .schedule-execution-row { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 1rem; padding: .875rem 1rem; border-radius: var(--console-radius-md); border: 1px solid var(--console-border-subtle); background: hsl(var(--card)); box-shadow: var(--console-shadow-xs); text-align: left; font-size: var(--console-text-body); transition: border-color var(--console-motion-fast) var(--console-ease-out), box-shadow var(--console-motion-fast) var(--console-ease-out), transform var(--console-motion-fast) var(--console-ease-out); }
-  .schedule-execution-row:hover { border-color: hsl(var(--primary) / 0.35); box-shadow: var(--console-shadow-sm); transform: translateY(-1px); }
+  .schedule-executions { border-top: var(--console-border-hairline) solid var(--console-border-subtle); padding-top: var(--console-space-4); min-width: 0; }
+  .schedule-executions-heading, .schedule-executions-heading > div, .schedule-execution-attempt-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--console-space-2); }
+  .schedule-executions h3, .schedule-execution-result h4, .schedule-execution-attempt h4 { font-weight: var(--console-weight-strong); }
+  .schedule-executions-empty { padding: var(--console-space-5); border-radius: var(--console-radius-2); border: var(--console-border-hairline) dashed var(--console-border-subtle); background: var(--console-surface-inset); color: hsl(var(--muted-foreground)); font-size: var(--console-text-body); text-align: center; }
+  .schedule-executions-list { display: grid; gap: var(--console-space-2); margin: var(--console-space-3) 0 var(--console-space-4); }
+  .schedule-execution-row { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: var(--console-space-4); padding: var(--console-space-4) var(--console-space-4); border-radius: var(--console-radius-2); border: var(--console-border-hairline) solid var(--console-border-subtle); background: hsl(var(--card)); box-shadow: var(--console-elevation-0); text-align: left; font-size: var(--console-text-body); transition: border-color var(--console-motion-fast) var(--console-ease-out), box-shadow var(--console-motion-fast) var(--console-ease-out), transform var(--console-motion-fast) var(--console-ease-out); }
+  .schedule-execution-row:hover { border-color: hsl(var(--primary) / 0.35); box-shadow: var(--console-card-elevation); transform: translateY(-1px); }
   .schedule-execution-row:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
-  .schedule-execution-row > span:first-child { display: grid; gap: .375rem; min-width: 0; }
+  .schedule-execution-row > span:first-child { display: grid; gap: var(--console-space-2); min-width: 0; }
   .schedule-execution-row strong, .schedule-execution-row time { overflow-wrap: anywhere; }
-  .schedule-execution-row-end { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .5rem; font-size: var(--console-text-label); }
+  .schedule-execution-row-end { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--console-space-2); font-size: var(--console-text-label); }
   .schedule-execution-row-end > svg, .schedule-execution-queued > svg { width: 1rem; height: 1rem; flex-shrink: 0; }
-  .schedule-execution-facts { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
-  .schedule-execution-dialog { width: min(40rem, 94vw); gap: 1rem; }
-  .schedule-execution-result, .schedule-execution-trace { display: grid; gap: 1rem; padding-top: .75rem; }
-  .schedule-execution-result pre { padding: .875rem 1rem; border-radius: var(--console-radius-md); border: 1px solid var(--console-border-subtle); background: var(--console-surface-inset); white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.7; }
-  .schedule-execution-attempts { display: grid; gap: 1.25rem; padding-top: 1rem; }
-  .schedule-execution-queued { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: .6rem .85rem; border-radius: var(--console-radius-md); background: var(--console-surface-inset); border: 1px solid var(--console-border-subtle); }
+  .schedule-execution-facts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--console-space-2) var(--console-space-4); color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
+  .schedule-execution-dialog { width: min(40rem, 94vw); gap: var(--console-space-4); }
+  .schedule-execution-result, .schedule-execution-trace { display: grid; gap: var(--console-space-4); padding-top: var(--console-space-3); }
+  .schedule-execution-result pre { padding: var(--console-space-4) var(--console-space-4); border-radius: var(--console-radius-2); border: var(--console-border-hairline) solid var(--console-border-subtle); background: var(--console-surface-inset); white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.7; }
+  .schedule-execution-attempts { display: grid; gap: var(--console-space-5); padding-top: var(--console-space-4); }
+  .schedule-execution-queued { display: flex; flex-wrap: wrap; align-items: center; gap: var(--console-space-2); padding: var(--console-space-2) var(--console-space-3); border-radius: var(--console-radius-2); background: var(--console-surface-inset); border: var(--console-border-hairline) solid var(--console-border-subtle); }
   .schedule-execution-queued time, .schedule-execution-attempt-heading > span { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
-  .schedule-execution-attempt { display: grid; gap: .75rem; padding: 1rem; border-radius: var(--console-radius-md); border: 1px solid var(--console-border-subtle); background: var(--console-surface-inset); overflow-wrap: anywhere; }
-  .schedule-execution-events { display: grid; gap: .5rem; border-left: 2px solid hsl(var(--primary) / 0.35); padding-left: 1rem; }
-  .schedule-execution-events li { display: flex; flex-wrap: wrap; gap: .375rem 1rem; font-size: var(--console-text-body); }
+  .schedule-execution-attempt { display: grid; gap: var(--console-space-3); padding: var(--console-space-4); border-radius: var(--console-radius-2); border: var(--console-border-hairline) solid var(--console-border-subtle); background: var(--console-surface-inset); overflow-wrap: anywhere; }
+  .schedule-execution-events { display: grid; gap: var(--console-space-2); border-left: var(--console-border-focus) solid hsl(var(--primary) / 0.35); padding-left: var(--console-space-4); }
+  .schedule-execution-events li { display: flex; flex-wrap: wrap; gap: var(--console-space-2) var(--console-space-4); font-size: var(--console-text-body); }
   .schedule-execution-events time, .schedule-execution-events code { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
-  .schedule-execution-trace { padding: 1rem; border-radius: var(--console-radius-md); border: 1px solid var(--console-border-subtle); background: hsl(var(--card)); box-shadow: var(--console-shadow-xs); font-size: var(--console-text-body); }
-  @media (max-width: 40rem) { .schedule-execution-row { align-items: flex-start; flex-direction: column; gap: .5rem; } .schedule-execution-row-end { justify-content: flex-start; } }
+  .schedule-execution-trace { padding: var(--console-space-4); border-radius: var(--console-radius-2); border: var(--console-border-hairline) solid var(--console-border-subtle); background: hsl(var(--card)); box-shadow: var(--console-elevation-0); font-size: var(--console-text-body); }
+  @media (width < 40rem) { .schedule-execution-row { align-items: flex-start; flex-direction: column; gap: var(--console-space-2); } .schedule-execution-row-end { justify-content: flex-start; } }
 }

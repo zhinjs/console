@@ -101,7 +101,7 @@
     --warning-fill: var(--console-signal-warning-fill);
     /* The library has no foreground for its signal fills yet; text on the amber fill is this deep amber. */
     --warning-fill-foreground: 38 70% 12%;
-    --radius: var(--console-radius-md);
+    --radius: var(--console-radius-2);
     --status-info: var(--info);
     --status-success: var(--success);
     --status-warning: var(--warning);

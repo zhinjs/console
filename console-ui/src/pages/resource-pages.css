@@ -5,14 +5,14 @@
 
   .console-resource-list {
     overflow: hidden;
-    border-block: 1px solid var(--console-border-default);
+    border-block: var(--console-border-hairline) solid var(--console-border-default);
     background: hsl(var(--card));
   }
 
   .console-resource-list.console-endpoint-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
-    gap: 1rem;
+    gap: var(--console-space-4);
     overflow: visible;
     border: 0;
     background: transparent;
@@ -23,7 +23,7 @@
   }
 
   .console-resource-list:not(.console-endpoint-list) > :not(:last-child) {
-    border-bottom: 1px solid var(--console-border-subtle);
+    border-bottom: var(--console-border-hairline) solid var(--console-border-subtle);
   }
 
   .console-resource-list:not(.console-endpoint-list) .console-schedule-row {
@@ -44,7 +44,7 @@
   .console-endpoint-main-link {
     display: flex;
     flex-direction: column;
-    gap: 0.875rem;
+    gap: var(--console-space-4);
     min-width: 0;
     color: inherit;
     text-decoration: none;
@@ -55,24 +55,24 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: flex-end;
-    gap: 0.5rem;
+    gap: var(--console-space-2);
     margin-top: auto;
-    padding-top: 0.75rem;
-    border-top: 1px solid var(--console-border-subtle);
+    padding-top: var(--console-space-3);
+    border-top: var(--console-border-hairline) solid var(--console-border-subtle);
   }
 
   .console-endpoint-action-link {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: var(--console-space-1);
     height: 1.75rem;
-    padding: 0 0.625rem;
-    border-radius: var(--console-radius-sm);
-    border: 1px solid var(--console-border-default);
+    padding: 0 var(--console-space-3);
+    border-radius: var(--console-radius-1);
+    border: var(--console-border-hairline) solid var(--console-border-default);
     background: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-size: var(--console-text-caption);
-    font-weight: 500;
+    font-size: var(--console-text-label);
+    font-weight: var(--console-weight-medium);
     text-decoration: none;
     transition: background-color var(--console-motion-fast) var(--console-ease-out), border-color var(--console-motion-fast) var(--console-ease-out);
   }
@@ -94,11 +94,11 @@
   .console-endpoint-test-pill {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
-    padding: 0.15rem 0.5rem;
-    border-radius: 999px;
-    font-size: var(--console-text-caption);
-    font-weight: 500;
+    gap: var(--console-space-1);
+    padding: var(--console-space-1) var(--console-space-2);
+    border-radius: var(--console-radius-full);
+    font-size: var(--console-text-label);
+    font-weight: var(--console-weight-medium);
   }
 
   .console-endpoint-test-pill.is-error {
@@ -109,20 +109,20 @@
   .console-platform-brand-badge {
     display: inline-flex;
     align-items: center;
-    padding: 0.1rem 0.45rem;
-    border-radius: var(--console-radius-sm);
-    border: 1px solid var(--console-border-subtle);
+    padding: 0 var(--console-space-2);
+    border-radius: var(--console-radius-1);
+    border: var(--console-border-hairline) solid var(--console-border-subtle);
     background: hsl(var(--muted) / 0.65);
     color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-caption);
-    font-weight: 500;
+    font-size: var(--console-text-label);
+    font-weight: var(--console-weight-medium);
     line-height: 1.3;
   }
 
   .console-endpoints-summary-strip {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: var(--console-space-3);
   }
 
   .console-endpoints-toolbar {
@@ -130,32 +130,32 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 0.625rem 1rem;
-    padding: 0.625rem 0.75rem;
-    border: var(--console-border-width) solid transparent;
-    border-radius: var(--console-radius-md);
+    gap: var(--console-space-3) var(--console-space-4);
+    padding: var(--console-space-3) var(--console-space-3);
+    border: var(--console-border-hairline) solid transparent;
+    border-radius: var(--console-radius-2);
     background: hsl(var(--card));
-    box-shadow: var(--console-shadow-sm);
+    box-shadow: var(--console-card-elevation);
   }
 
   .console-endpoints-filter-group {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.375rem;
+    gap: var(--console-space-2);
   }
 
   .console-endpoint-filter-pill {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.25rem 0.625rem;
-    border-radius: 999px;
-    border: 1px solid transparent;
+    gap: var(--console-space-1);
+    padding: var(--console-space-1) var(--console-space-3);
+    border-radius: var(--console-radius-full);
+    border: var(--console-border-hairline) solid transparent;
     background: hsl(var(--muted) / 0.45);
     color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-caption);
-    font-weight: 500;
+    font-size: var(--console-text-label);
+    font-weight: var(--console-weight-medium);
     cursor: pointer;
     transition: all var(--console-motion-fast) var(--console-ease-out);
   }
@@ -172,7 +172,7 @@
   }
 
   .console-endpoint-filter-count {
-    font-size: var(--console-text-caption);
+    font-size: var(--console-text-label);
     opacity: 0.75;
   }
 
@@ -182,19 +182,19 @@
     min-width: 12rem;
     flex: 1 1 12rem;
     max-width: 18rem;
-    padding-inline: 0.5rem;
-    border: 1px solid var(--console-border-subtle);
-    border-radius: var(--console-radius-sm);
+    padding-inline: var(--console-space-2);
+    border: var(--console-border-hairline) solid var(--console-border-subtle);
+    border-radius: var(--console-radius-1);
     background: hsl(var(--background));
   }
 
   .console-login-workbench {
     display: flex;
     flex-direction: column;
-    gap: 0.875rem;
-    padding: 1rem;
-    border: 1px solid hsl(var(--warning) / 0.4);
-    border-radius: var(--console-radius-md);
+    gap: var(--console-space-4);
+    padding: var(--console-space-4);
+    border: var(--console-border-hairline) solid hsl(var(--warning) / 0.4);
+    border-radius: var(--console-radius-2);
     background: hsl(var(--warning) / 0.06);
   }
 
@@ -203,17 +203,17 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem 1rem;
+    gap: var(--console-space-2) var(--console-space-4);
   }
 
   .console-login-feedback {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
-    padding: 0.5rem 0.75rem;
-    border-radius: var(--console-radius-sm);
-    font-size: var(--console-text-caption);
+    gap: var(--console-space-3);
+    padding: var(--console-space-2) var(--console-space-3);
+    border-radius: var(--console-radius-1);
+    font-size: var(--console-text-label);
   }
 
   .console-login-feedback.is-error {
@@ -223,40 +223,40 @@
 
   .console-login-task-grid {
     display: grid;
-    gap: 0.75rem;
+    gap: var(--console-space-3);
     grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
   }
 
   .console-login-task-card {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    padding: 0.875rem;
-    border: var(--console-border-width) solid transparent;
-    border-radius: var(--console-radius-sm);
+    gap: var(--console-space-3);
+    padding: var(--console-space-4);
+    border: var(--console-border-hairline) solid transparent;
+    border-radius: var(--console-radius-1);
     background: hsl(var(--card));
-    box-shadow: var(--console-shadow-sm);
+    box-shadow: var(--console-card-elevation);
   }
 
   .console-login-task-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: var(--console-space-2);
   }
 
   .console-login-task-body {
     display: flex;
     flex-wrap: wrap;
     align-items: flex-start;
-    gap: 0.875rem;
+    gap: var(--console-space-4);
   }
 
   .console-login-qr-wrap {
     flex: none;
-    padding: 0.5rem;
-    border-radius: var(--console-radius-sm);
-    border: 1px solid var(--console-border-subtle);
+    padding: var(--console-space-2);
+    border-radius: var(--console-radius-1);
+    border: var(--console-border-hairline) solid var(--console-border-subtle);
     background: hsl(0 0% 100%);
   }
 
@@ -271,16 +271,16 @@
     display: flex;
     flex: 1 1 12rem;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: var(--console-space-2);
     min-width: 0;
   }
 
   .console-login-link {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    font-size: var(--console-text-caption);
-    font-weight: 500;
+    gap: var(--console-space-1);
+    font-size: var(--console-text-label);
+    font-weight: var(--console-weight-medium);
     color: hsl(var(--primary));
     text-decoration: underline;
   }
@@ -288,39 +288,39 @@
   .console-login-extracted-hint {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: var(--console-radius-sm);
+    gap: var(--console-space-1);
+    padding: var(--console-space-1) var(--console-space-2);
+    border-radius: var(--console-radius-1);
     background: hsl(var(--info) / 0.12);
     color: hsl(var(--info));
-    font-size: var(--console-text-caption);
+    font-size: var(--console-text-label);
   }
 
   .console-onboarding-launcher {
     display: flex;
     flex-direction: column;
-    gap: 0.875rem;
-    padding: 1rem;
-    border: var(--console-border-width) solid transparent;
-    border-radius: var(--console-radius-md);
+    gap: var(--console-space-4);
+    padding: var(--console-space-4);
+    border: var(--console-border-hairline) solid transparent;
+    border-radius: var(--console-radius-2);
     background: hsl(var(--card));
-    box-shadow: var(--console-shadow-sm);
+    box-shadow: var(--console-card-elevation);
   }
 
   .console-onboarding-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
+    gap: var(--console-space-3);
   }
 
   .console-onboarding-card {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding: 0.875rem;
-    border: 1px solid var(--console-border-subtle);
-    border-radius: var(--console-radius-sm);
+    padding: var(--console-space-4);
+    border: var(--console-border-hairline) solid var(--console-border-subtle);
+    border-radius: var(--console-radius-1);
     background: hsl(var(--background));
     color: inherit;
     text-decoration: none;
@@ -337,10 +337,10 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.45rem;
+    gap: var(--console-space-2);
     min-height: 12.5rem;
-    border: 1.5px dashed hsl(var(--border));
-    border-radius: var(--console-radius-lg);
+    border: var(--console-border-focus) dashed hsl(var(--border));
+    border-radius: var(--console-radius-3);
     background: hsl(var(--card) / 0.45);
     cursor: pointer;
     transition: border-color var(--console-motion-fast) var(--console-ease-out), background-color var(--console-motion-fast) var(--console-ease-out), transform var(--console-motion-fast) var(--console-ease-out);
@@ -357,16 +357,16 @@
     width: 2.5rem;
     height: 2.5rem;
     place-items: center;
-    border-radius: var(--console-radius-md);
+    border-radius: var(--console-radius-2);
     background: hsl(var(--primary) / 0.1);
     color: hsl(var(--primary));
-    font-size: 1.35rem;
-    font-weight: 500;
+    font-size: var(--console-text-title);
+    font-weight: var(--console-weight-medium);
     line-height: 1;
   }
 
   .console-resource-section-heading h3 {
-    font-size: 1rem;
+    font-size: var(--console-text-section);
   }
 
   .console-resource-section-heading > svg {
@@ -377,42 +377,42 @@
 
   .console-task-use-cases,
   .console-task-setup {
-    border: var(--console-border-width) solid var(--console-border-default);
-    border-radius: var(--console-radius-lg);
+    border: var(--console-border-hairline) solid var(--console-border-default);
+    border-radius: var(--console-radius-3);
     background: hsl(var(--card));
-    box-shadow: var(--console-shadow-sm);
+    box-shadow: var(--console-card-elevation);
   }
 
   .console-task-use-cases .console-disclosure-card {
-    border-radius: var(--console-radius-md);
-    border: 1px solid var(--console-border-subtle);
+    border-radius: var(--console-radius-2);
+    border: var(--console-border-hairline) solid var(--console-border-subtle);
     background: var(--console-surface-inset);
     box-shadow: none;
   }
 
   .console-task-list > h2 {
-    padding-bottom: 0.875rem;
-    border-bottom: 1px solid var(--console-border-default);
+    padding-bottom: var(--console-space-4);
+    border-bottom: var(--console-border-hairline) solid var(--console-border-default);
   }
 
   .console-task-row {
-    border: var(--console-border-width) solid transparent;
-    border-radius: var(--console-radius-lg);
+    border: var(--console-border-hairline) solid transparent;
+    border-radius: var(--console-radius-3);
     background: hsl(var(--card));
-    box-shadow: var(--console-shadow-sm);
+    box-shadow: var(--console-card-elevation);
     transition: border-color var(--console-motion-fast) var(--console-ease-out), box-shadow var(--console-motion-fast) var(--console-ease-out);
   }
 
   .console-task-row:hover {
     border-color: hsl(var(--primary) / 0.32);
-    box-shadow: var(--console-shadow-sm);
+    box-shadow: var(--console-card-elevation);
   }
 
   .console-task-row-content {
-    padding: 1rem 1.15rem;
+    padding: var(--console-space-4) var(--console-space-4);
   }
 
   .console-task-form {
-    box-shadow: var(--console-shadow-sm);
+    box-shadow: var(--console-card-elevation);
   }
 }

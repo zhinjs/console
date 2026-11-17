@@ -25,7 +25,7 @@ test('the detail sheet query is the breakpoint where the workspace collapses and
     if (rule.parent?.type !== 'atrule' || rule.parent.name !== 'media') return
     rule.walkDecls('grid-template-columns', decl => { if (decl.value === '1fr') collapsed = rule.parent.params })
   })
-  assert.equal(collapsed, '(max-width: 880px)', 'the single-column workspace starts at 880px')
+  assert.equal(collapsed, '(width < 48rem)', 'the single-column workspace starts below 48rem')
   assert.equal(CAPABILITY_DETAIL_SHEET_QUERY, collapsed)
 })
 

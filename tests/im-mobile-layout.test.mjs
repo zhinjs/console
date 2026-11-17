@@ -28,8 +28,9 @@ function computed(css, width, path) {
     for (let parent = rule.parent; parent; parent = parent.parent) {
       if (parent.type !== 'atrule' || parent.name !== 'media') continue
       if (/print/u.test(parent.params)) return
-      const min = /min-width:\s*(\d+)px/u.exec(parent.params), max = /max-width:\s*(\d+)px/u.exec(parent.params)
-      if (min && width < Number(min[1]) || max && width > Number(max[1])) return
+      // Range syntax with the Console breakpoints: `(width >= 64rem)`, `(width < 48rem)`.
+      const min = /width >= ([\d.]+)rem/u.exec(parent.params), below = /width < ([\d.]+)rem/u.exec(parent.params)
+      if (min && width < Number(min[1]) * 16 || below && width >= Number(below[1]) * 16) return
     }
     for (const selector of rule.selectors) {
       if (!matches(selector, path)) continue

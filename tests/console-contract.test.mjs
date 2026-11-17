@@ -215,8 +215,8 @@ test('the shared shell adapts across PC, Pad and Phone widths', () => {
   // Content and the top bar share one 1440px column.
   assert.match(design, /--console-content-max: 90rem/)
   assert.match(design, /\.console-content-frame \{\s*max-width: var\(--console-content-max\)/)
-  assert.match(design, /min-width: 768px.*max-width: 1199px/s)
-  assert.match(design, /min-width: 1600px/)
+  assert.match(design, /@media \(width >= 48rem\) and \(width < 64rem\)/)
+  assert.match(design, /@media \(width >= 90rem\)/)
   assert.match(grids, /2xl:grid-cols-4/)
 })
 

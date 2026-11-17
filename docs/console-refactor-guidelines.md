@@ -21,7 +21,7 @@
 
 ## 2. 外壳、布局栅格与断点
 
-外壳（`layouts/dashboard.tsx` + `shell.css`）：灰色画布上方悬浮一条胶囊导航栏（距顶 12px、高 60px，半透明白底 + 背景模糊，页面滚动后底色加深），内容是居中的单列，最宽 1440px（`--console-content-max`），左右留 `--console-space-page-x`。整页随窗口滚动，导航栏固定；吸顶元素与锚点跳转都要让出导航栏高度（`--console-header-h`，`html` 上设了 `scroll-padding-top`）。
+外壳（`layouts/dashboard.tsx` + `shell.css`）：灰色画布上方悬浮一条胶囊导航栏（距顶 12px、高 60px，半透明白底 + 背景模糊，页面滚动后底色加深），内容是居中的单列，最宽 1440px（`--console-content-max`），左右留 `--console-space-page-x`。整页随窗口滚动，导航栏固定；吸顶元素与锚点跳转都要让出导航栏高度（`--zc-header-h`，`html` 上设了 `scroll-padding-top`）。
 
 导航栏从左到右：品牌 → 六个区（日常、管理两组，中间一条竖线）→ 快速跳转（Ctrl/⌘ K）、底部日志面板（Ctrl `）、实时连接状态点、语言、外观、个人设置、退出。
 
@@ -31,7 +31,7 @@
   - 入口：顶栏图标按钮（`aria-expanded` / `aria-controls`）、快捷键 Ctrl `（两个平台都用 Ctrl：⌘` 是 macOS 切换窗口；不与 Ctrl/⌘ K 冲突，快速跳转的动作与页脚写明了它）、快速跳转的「打开日志面板」，以及页面里的 `openLogPanel({ q, adapter, endpoint, level })`（`useLogPanel()` 同时给出 `available`）。页面里「去日志页看看」的链接，只要留在当前页更好（正在扫码登录、填写配置、只存在内存里的确认记录），就改成打开面板并带上筛选；没有面板时保留原来的 `/logs?q=` 链接。
   - 内容是与 `/logs` 相同的 `LogViewer`（`pages/logs/LogViewer.tsx`）：筛选由外部控制（`params` + `onParamsChange`）。`/logs` 传地址栏的参数，面板传自己的状态（`log-panel-store.mjs`），**绝不改当前页面的地址**；面板标题栏的「在日志页打开」带着同一组筛选去 `/logs`。上次的筛选与高度记在 localStorage（读写都 try/catch，读不到用默认值）。
   - 面板用紧凑排版（`pages/logs/LogPanelWorkbench.tsx`，`/logs` 页仍是 `LogWorkbench`）：范围只在标题栏显示为一个标签（标识 + 「打开对象页」图标 + 清除），按文本匹配的说明放在标签的提示里，不再显示范围条；一行工具栏（搜索、级别、跟随最新、刷新 / 来源 / 更多三个图标按钮，每页条数与日志维护在「更多」里）；每条日志一行约 28px（等宽时间 · 级别图标 · 来源 · 截断的消息，完整消息在提示里，点击或回车在旁边打开事件详情）；没有「历史事件」区块标题，条数与翻页在一行约 32px 的页脚。默认 360px 高时 1440 宽下至少显示 8 行。
-  - 宽屏：停靠在底部、占满内容宽度，**非模态**——没有遮罩，页面不 `inert`，没有焦点陷阱；页面底部让出面板高度（`--console-log-panel-reserve`，toast 也随之上移），最后几行照样能滚到。上边缘拖动条 `role="separator"` 可拖、可用 ↑ / ↓（Shift 加大步长）/ Home / End 调整，180px 到视口 80%。打开时焦点移进面板，关闭时回到打开它的控件（用户已把焦点移到页面别处时不抢）；Esc 只在焦点位于面板内、且没有内层弹层先消费时关闭。
+  - 宽屏：停靠在底部、占满内容宽度，**非模态**——没有遮罩，页面不 `inert`，没有焦点陷阱；页面底部让出面板高度（`--zc-log-panel-reserve`，toast 也随之上移），最后几行照样能滚到。上边缘拖动条 `role="separator"` 可拖、可用 ↑ / ↓（Shift 加大步长）/ Home / End 调整，180px 到视口 80%。打开时焦点移进面板，关闭时回到打开它的控件（用户已把焦点移到页面别处时不抢）；Esc 只在焦点位于面板内、且没有内层弹层先消费时关闭。
   - 手机（<768px）：模态底部抽屉，遮罩 + 页面与导航栏 `inert`，没有拖动条。`prefers-reduced-motion` 下不做滑入动画。
   - 只对能看 `/logs` 的身份出现（`ROUTE_PERMISSIONS['/logs']`，即 `status.view`）：按钮、快捷键、快速跳转动作与页面里的「查看日志」一起隐藏。只在打开时挂载 `LogViewer`，关闭即停止轮询；在 `/logs` 页上面板不显示（按钮禁用），两个查看器不会同时轮询同一个接口，离开 `/logs` 后面板回来。标签页隐藏时轮询跳过请求。
 - `fullWidth` 路由（日志、数据库、终端、对象树的账号与会话层等）内容不受 1440px 限制，导航栏跟着放宽，两侧边缘对齐。
@@ -54,7 +54,7 @@
 
 - **基础**（`design-system.css`，不分亮暗）：圆角 6 / 10 / 14 / 18 / 22px（`--console-radius-sm|md|lg|xl|2xl`）；控件高度三档 32 / 36 / 40px（`--console-control-height-sm|…|-lg`，手机统一 44px）；字体 Inter / MiSans，代码 JetBrains Mono（只用本机已有字体，不请求远程字体）；页面边距、区块间距；内容宽 1440px；动效时长与曲线。
 - **语义**（`theme-tokens.css`，分亮暗）：画布 `background`（浅灰）、卡片 `card`（白）、卡片内分组 `secondary` / `muted`（更浅的灰，不描边）、文字 `foreground` / `muted-foreground`、强调 `primary`、柔和主操作 `primary-action`（色相的浅色填充）+ `primary-action-foreground`（色相文字）+ `primary-action-border`、状态色与图表色。阴影 `--console-shadow-*`：一圈发丝描边加一层短而柔的投影。
-- **组件**（写在组件旁边）：导航栏 `--console-header-h`、`--console-nav-*`（`shell.css`）等。
+- **组件**（写在组件旁边）：导航栏 `--zc-header-h`、`--zc-nav-*`（`shell.css`）等。Console 自己定义的令牌一律用 `--zc-` 前缀；`--console-` 留给 `@zhin.js/console-ui`，stylelint 的 `console/no-unknown-tokens` 会拒绝组件库没有定义的 `--console-*` 名字。
 
 - 卡片 `Card` / `console-card`：白底、无边框、`--console-shadow-sm`，圆角 18px；卡片里的分组块用浅灰填充，不再描边、不再加阴影。可点击卡片悬停时阴影加深、上移 1px。
 - 按钮：主按钮是浅色强调填充 + 强调色描边与文字（不是实心色块）；次要按钮 `outline` 白底细边；`ghost` 只在悬停时出现浅灰底；危险操作仍用实心 `destructive`。

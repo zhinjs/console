@@ -6,7 +6,7 @@
 .console-ansi-warning { color: hsl(var(--warning)); }
 .console-ansi-info { color: hsl(var(--info)); }
 .console-ansi-accent { color: hsl(var(--chart-5)); }
-.console-ansi-bold { font-weight: 600; }
+.console-ansi-bold { font-weight: var(--console-weight-strong); }
 .console-ansi-dim { opacity: 0.7; }
 .console-ansi-italic { font-style: italic; }
 .console-ansi-underline { text-decoration: underline; text-underline-offset: 2px; }
