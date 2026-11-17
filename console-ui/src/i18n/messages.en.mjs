@@ -2938,6 +2938,7 @@ export const englishMessages = Object.freeze({
   "已保存；浏览器暂未清除操作编号，可再次查询保存结果。": "Saved. The browser has not cleared the operation ID yet; you can check the save result again.",
   "尚未查到保存回执；结果仍未确认，请稍后再次查询。": "No save receipt found yet. The result is still unconfirmed; check again later.",
   "可用": "Ready",
+  "可用 · 还没有模型": "Ready · no models yet",
   "待完成准备": "Setup pending",
   "未授权": "Not authorized",
   "已断开": "Disconnected",

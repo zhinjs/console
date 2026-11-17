@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Plus, Pencil, KeyRound, LogIn, Unplug, Trash2, Activity } from 'lucide-react'
 import { Button, Card, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, ErrorAlert, Input, SelectField, useConfirm } from '@zhin.js/console-ui'
 import { SupportLabel, SupportNotice, supportLabel } from './SupportInfo'
-import { driverLabel, serviceDriver } from './model.mjs'
+import { accountHasModels, driverLabel, serviceDriver } from './model.mjs'
 import {
   driverKey,
   canReferenceEnvironment,
@@ -21,7 +21,7 @@ import { SchemaFields } from './SchemaFields'
 import type { InferenceManagement, InferenceSource } from './useInferenceManagement'
 
 type Translate = ReturnType<typeof useI18n>['t']
-function accountStatusLabel(status: AccountStatus | undefined, t: Translate): string {
+function accountStatusLabel(status: AccountStatus | undefined, t: Translate, hasModels = true): string {
   // An env:// Host account gets its credential record on first use (#1250 ai-account-status-stale).
   if (status?.environment === 'present') return t('环境变量就绪（待首次使用）')
   if (status?.environment === 'missing') return t('环境变量未设置')
@@ -32,7 +32,8 @@ function accountStatusLabel(status: AccountStatus | undefined, t: Translate): st
     return t('认证响应异常')
   }
   switch (status?.status) {
-    case 'ready': return t('可用')
+    // Usable, but nothing to pick in 用途 until a model is added under it.
+    case 'ready': return hasModels ? t('可用') : t('可用 · 还没有模型')
     case 'authenticated': return t('待完成准备')
     case 'not-authorized': return t('未授权')
     case 'disconnected': return t('已断开')
@@ -46,7 +47,7 @@ function accountStatusLabel(status: AccountStatus | undefined, t: Translate): st
 function accountRowId(id: string): string {
   return `inference-account-${encodeURIComponent(id)}`
 }
-export function Accounts({ management: m, focusAccount }: { management: InferenceManagement; focusAccount?: string }) {
+export function Accounts({ management: m, focusAccount, onAddModel }: { management: InferenceManagement; focusAccount?: string; onAddModel?: (accountId: string) => void }) {
   const i18n = useI18n()
   const focused = focusAccount && Object.hasOwn(m.view!.accounts, focusAccount) ? focusAccount : undefined
   useEffect(() => {
@@ -141,7 +142,8 @@ export function Accounts({ management: m, focusAccount }: { management: Inferenc
         <div className="console-card divide-y overflow-hidden">
           {Object.values(view.accounts).map((account) => {
             const service = view.services[account.serviceId],
-              status = view.statuses[account.id]
+              status = view.statuses[account.id],
+              hasModels = accountHasModels(view, account.id)
             return (
               <div
                 key={account.id}
@@ -158,7 +160,7 @@ export function Accounts({ management: m, focusAccount }: { management: Inferenc
                   </p>
                   <p className="text-sm text-muted-foreground break-all">
                     {service.label ?? service.driver.id} ·{' '}
-                    {accountStatusLabel(status, i18n.t)}
+                    {accountStatusLabel(status, i18n.t, hasModels)}
                   </p>
                   {tests[account.id] ? (
                     <p
@@ -172,6 +174,12 @@ export function Accounts({ management: m, focusAccount }: { management: Inferenc
                   ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  {!hasModels && onAddModel ? (
+                    <Button variant="outline" size="sm" onClick={() => onAddModel(account.id)} disabled={disabled}>
+                      <Plus />
+                      {i18n.t("添加模型")}
+                    </Button>
+                  ) : null}
                   <Button
                     variant="ghost"
                     size="sm"

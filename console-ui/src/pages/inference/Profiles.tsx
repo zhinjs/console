@@ -16,11 +16,22 @@ import {
 import { SchemaFields } from './SchemaFields'
 import type { InferenceManagement, InferenceSource } from './useInferenceManagement'
 
-export function Profiles({ management: m, onCreateAccount }: { management: InferenceManagement; onCreateAccount: () => void }) {
+export function Profiles({ management: m, onCreateAccount, addModelFor, onAddModelOpened }: {
+  management: InferenceManagement
+  onCreateAccount: () => void
+  /** An account whose 「添加模型」 was pressed on 账号: open the add dialog with it selected. */
+  addModelFor?: string | null
+  onAddModelOpened?: () => void
+}) {
   const i18n = useI18n()
   const view = m.view!,
-    [editing, setEditing] = useState<{ profile: Profile | null; source: InferenceSource } | null>(null),
+    [editing, setEditing] = useState<{ profile: Profile | null; source: InferenceSource; accountId?: string } | null>(null),
     { confirm, ConfirmDialog: dialog } = useConfirm()
+  useEffect(() => {
+    if (!addModelFor || !m.source) return
+    if (Object.hasOwn(view.accounts, addModelFor)) setEditing({ profile: null, source: m.source, accountId: addModelFor })
+    onAddModelOpened?.()
+  }, [addModelFor]) // eslint-disable-line react-hooks/exhaustive-deps
   async function remove(profile: Profile) {
     if (
       await confirm({
@@ -110,6 +121,7 @@ export function Profiles({ management: m, onCreateAccount }: { management: Infer
             <ProfileForm
               key={editing.profile?.id ?? 'new'}
               profile={editing.profile}
+              defaultAccountId={editing.accountId}
               source={editing.source}
               management={m}
               onSaved={() => setEditing(null)}
@@ -127,18 +139,21 @@ type ProfileSchemaResult =
 
 function ProfileForm({
   profile,
+  defaultAccountId,
   source,
   management,
   onSaved,
 }: {
   profile: Profile | null
+  /** A new model: the account to start with. */
+  defaultAccountId?: string
   source: InferenceSource
   management: InferenceManagement
   onSaved: () => void
 }) {
   const i18n = useI18n()
   const view = source.view
-  const [accountId, setAccountId] = useState(profile?.accountId ?? '')
+  const [accountId, setAccountId] = useState(profile?.accountId ?? defaultAccountId ?? '')
   const [label, setLabel] = useState(profile?.label ?? '')
   const [modelId, setModelId] = useState(profile?.model ?? '')
   const [committedModelId, setCommittedModelId] = useState(profile?.model ?? '')

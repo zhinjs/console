@@ -133,6 +133,13 @@ export function withModelProtocol(value, protocol, driver) {
 export function languageInputMissing(value) {
   return Boolean(value?.kinds?.includes('language')) && Array.isArray(value.input) && value.input.length === 0
 }
+/**
+ * Accounts with no model under them (#64 `account-ready-without-models`): such an account cannot be
+ * picked in 用途, so its card says so next to 「可用」 and offers 「添加模型」.
+ */
+export function accountHasModels(view, accountId) {
+  return Object.values(view?.profiles ?? {}).some(profile => profile?.accountId === accountId)
+}
 export function profileSupport(view, profile) {
   return serviceDriver(view, view.accounts[profile.accountId].serviceId)?.support
 }
