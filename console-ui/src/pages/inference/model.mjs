@@ -110,6 +110,29 @@ export function modelEntryView({ editing = false, manualEntry = false, choiceCou
     hint: discovered ? 'none-returned' : discovery ? 'discoverable' : 'manual-only',
   }
 }
+/**
+ * Defaults for the model capability form (#64 `model-capability-no-defaults`). A language model takes
+ * text unless said otherwise, so ticking 「语言模型」 with no input declared ticks 「文字」 too; a
+ * protocol whose contract offers a single kind selects that kind. Everything stays editable.
+ */
+export function withModelKind(value, kind, checked) {
+  if (!checked) return { ...value, kinds: value.kinds.filter(item => item !== kind) }
+  const next = { ...value, kinds: value.kinds.includes(kind) ? value.kinds : [...value.kinds, kind] }
+  if (kind === 'language' && !(value.input?.length)) next.input = ['text']
+  return next
+}
+export function withModelProtocol(value, protocol, driver) {
+  const contract = driver?.modelContracts?.find(item => item.protocol === protocol)
+  const base = { id: value.id, protocol, kinds: [] }
+  return contract?.kinds?.length === 1 ? withModelKind(base, contract.kinds[0], true) : base
+}
+/**
+ * A language model whose inputs were all unticked. A declaration that never listed `input` (catalog
+ * entries from a service) is left alone, as the Host accepts it.
+ */
+export function languageInputMissing(value) {
+  return Boolean(value?.kinds?.includes('language')) && Array.isArray(value.input) && value.input.length === 0
+}
 export function profileSupport(view, profile) {
   return serviceDriver(view, view.accounts[profile.accountId].serviceId)?.support
 }
