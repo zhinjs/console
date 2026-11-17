@@ -40,25 +40,29 @@ const sameRequest = (row, payload) => (payload.platformRequestId && row.platform
  * submit: sends the action once. verify: re-reads the pending list (`reload` resolves with the rows, or
  * null when it could not tell) — the request is gone → applied; still listed → not applied.
  */
-export function requestActionHandlers({ send, reload, rpc }) {
+export function requestActionHandlers({ send, reload, rpc, t = text => text }) {
   return {
     submit: plan => send(requestActionBody(plan.payload, rpc)),
     verify: async plan => {
       const rows = await reload()
       if (!Array.isArray(rows)) return { applied: undefined }
-      return { applied: !rows.some(row => sameRequest(row, plan.payload)) }
+      return rows.some(row => sameRequest(row, plan.payload))
+        ? { applied: false, message: t('刷新后这条请求仍在待处理列表里，这次操作没有生效。可以放弃后重新操作。') }
+        : { applied: true, message: t('刷新后这条请求已不在待处理列表里。') }
     },
   }
 }
 
 /** 标记已处理 of an unread notice: submit once; verify re-reads the unread list. */
-export function noticeActionHandlers({ send, reload, rpc }) {
+export function noticeActionHandlers({ send, reload, rpc, t = text => text }) {
   return {
     submit: plan => send({ type: rpc.NOTICE_CONSUMED, rowIds: [plan.payload.id] }),
     verify: async plan => {
       const rows = await reload()
       if (!Array.isArray(rows)) return { applied: undefined }
-      return { applied: !rows.some(row => row.id === plan.payload.id) }
+      return rows.some(row => row.id === plan.payload.id)
+        ? { applied: false, message: t('刷新后这条通知仍是未读，这次操作没有生效。可以放弃后重新操作。') }
+        : { applied: true, message: t('刷新后这条通知已不在未读列表里。') }
     },
   }
 }

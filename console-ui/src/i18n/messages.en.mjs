@@ -3468,4 +3468,8 @@ export const englishMessages = Object.freeze({
   "刷新待处理列表": "Refresh pending list",
   "把这条通知标记为已读": "Mark this notice as read",
   "刷新通知列表": "Refresh notice list",
+  "刷新后这条请求仍在待处理列表里，这次操作没有生效。可以放弃后重新操作。": "After refreshing, this request is still pending; the action did not take effect. You can discard this and act again.",
+  "刷新后这条请求已不在待处理列表里。": "After refreshing, this request is no longer pending.",
+  "刷新后这条通知仍是未读，这次操作没有生效。可以放弃后重新操作。": "After refreshing, this notice is still unread; the action did not take effect. You can discard this and act again.",
+  "刷新后这条通知已不在未读列表里。": "After refreshing, this notice is no longer unread.",
 })

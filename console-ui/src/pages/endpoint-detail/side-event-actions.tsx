@@ -32,7 +32,7 @@ export function PendingRequestActions({ adapter, endpointKey, request, reload, o
   onDone: (payload: RequestActionPayload) => void
 }) {
   const i18n = useI18n()
-  const handlers = useMemo(() => requestActionHandlers({ send: body => requestConsole(body), reload, rpc: SIDE_EVENT_RPC }), [reload])
+  const handlers = useMemo(() => requestActionHandlers({ send: body => requestConsole(body), reload, rpc: SIDE_EVENT_RPC, t: text => i18n.t(text) }), [reload, i18n])
   const receipt = useActionReceipt({
     persistKey: requestReceiptKey(adapter, endpointKey, request),
     submit: handlers.submit,
@@ -71,7 +71,7 @@ export function NoticeReadAction({ adapter, endpointKey, id, reload, onDone }: {
   onDone: (id: number) => void
 }) {
   const i18n = useI18n()
-  const handlers = useMemo(() => noticeActionHandlers({ send: body => requestConsole(body), reload, rpc: SIDE_EVENT_RPC }), [reload])
+  const handlers = useMemo(() => noticeActionHandlers({ send: body => requestConsole(body), reload, rpc: SIDE_EVENT_RPC, t: text => i18n.t(text) }), [reload, i18n])
   const receipt = useActionReceipt({
     persistKey: noticeReceiptKey(adapter, endpointKey, id),
     submit: handlers.submit,
