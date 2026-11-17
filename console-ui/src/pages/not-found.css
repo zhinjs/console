@@ -10,16 +10,16 @@
     text-align: center;
   }
   .console-not-found h1 { margin: 0; font-size: var(--console-text-title); font-weight: 650; line-height: var(--console-leading-title); }
-  .console-not-found p { margin: 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); }
+  .console-not-found p { margin: 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
   .console-not-found-address {
     max-width: 100%;
     overflow-wrap: anywhere;
-    border-radius: var(--console-radius-sm);
+    border-radius: var(--console-radius-1);
     background: hsl(var(--secondary));
     padding: 0.25rem 0.5rem;
     color: hsl(var(--foreground));
     font-family: var(--console-font-mono);
-    font-size: var(--console-text-code);
+    font-size: var(--console-text-label);
   }
   .console-not-found-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 0.75rem; }
 }

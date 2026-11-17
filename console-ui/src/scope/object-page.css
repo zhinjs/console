@@ -10,14 +10,14 @@
 .console-object-heading { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.75rem 1rem; min-width: 0; }
 .console-object-avatar {
   display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem;
-  border-radius: var(--console-radius-lg); background: hsl(var(--primary-action)); color: hsl(var(--primary)); box-shadow: inset 0 0 0 1px hsl(var(--primary-action-border) / 0.6);
+  border-radius: var(--console-radius-3); background: hsl(var(--primary-action)); color: hsl(var(--primary)); box-shadow: inset 0 0 0 1px hsl(var(--primary-action-border) / 0.6);
 }
 .console-object-avatar svg { width: 1.375rem; height: 1.375rem; }
 .console-object-titles { display: flex; min-width: 0; flex: 1 1 24rem; flex-direction: column; gap: 0.25rem; }
 .console-object-title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; min-width: 0; }
 .console-object-title-row .console-page-title { overflow-wrap: anywhere; }
 .console-object-titles .console-page-description { margin-top: 0; }
-.console-object-identity { display: inline-flex; max-width: 100%; align-items: center; gap: 0.25rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); }
+.console-object-identity { display: inline-flex; max-width: 100%; align-items: center; gap: 0.25rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .console-object-identity code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--console-font-mono); }
 .console-object-identity-copy { width: 1.75rem; height: 1.75rem; }
 .console-object-identity-copy svg { width: 0.875rem; height: 0.875rem; }
@@ -33,22 +33,22 @@
 .console-object-tab-lock { width: 0.75rem; height: 0.75rem; opacity: 0.7; }
 .console-object-tab-badge {
   min-width: 1.25rem; border-radius: 999px; background: hsl(var(--muted-foreground) / 0.15); padding: 0 0.375rem;
-  font-size: var(--console-text-caption); line-height: 1.25rem;
+  font-size: var(--console-text-label); line-height: 1.25rem;
 }
-.console-object-panel { margin-top: 1rem; display: flex; flex-direction: column; gap: var(--console-space-section); }
+.console-object-panel { margin-top: 1rem; display: flex; flex-direction: column; gap: var(--console-section-gap); }
 .console-object-panel.is-flush { gap: 0; }
 .console-object-section { display: flex; flex-direction: column; gap: 0.75rem; min-width: 0; }
 .console-object-section-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.5rem 1rem; }
-.console-object-section-description { margin-top: 0.25rem; max-width: 65ch; color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); }
+.console-object-section-description { margin-top: 0.25rem; max-width: 65ch; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .console-object-section-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .console-object-facts { display: grid; gap: 0.75rem 1.5rem; grid-template-columns: repeat(auto-fill, minmax(min(9rem, 100%), 1fr)); }
-.console-object-facts dt { color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); }
+.console-object-facts dt { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .console-object-facts dd { margin: 0.125rem 0 0; overflow-wrap: anywhere; font-weight: 550; }
 
 /* The account / conversation chat workspace keeps a fixed working height inside the tab. */
 .console-object-chat {
   height: clamp(28rem, calc(100dvh - 17rem), 64rem); min-height: 0; overflow: hidden;
-  border: var(--console-border-width, 1px) solid transparent; border-radius: var(--console-radius-xl); background: hsl(var(--card)); box-shadow: var(--console-shadow-sm);
+  border: var(--console-border-hairline, 1px) solid transparent; border-radius: var(--console-radius-4); background: hsl(var(--card)); box-shadow: var(--console-card-elevation);
 }
 
 @media (min-width: 1440px) {
@@ -62,15 +62,15 @@
   .console-object-actions > * { flex: 1 1 auto; }
   .console-object-panel { margin-top: 0.75rem; }
   .console-object-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .console-object-chat { height: calc(100dvh - 13rem); min-height: 24rem; border-radius: var(--console-radius-md); }
+  .console-object-chat { height: calc(100dvh - 13rem); min-height: 24rem; border-radius: var(--console-radius-2); }
 }
 
 /* ---- Breadcrumb ---- */
-.console-scope-breadcrumb ol { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; margin: 0; padding: 0; list-style: none; font-size: var(--console-text-caption); }
+.console-scope-breadcrumb ol { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem; margin: 0; padding: 0; list-style: none; font-size: var(--console-text-label); }
 .console-scope-breadcrumb li { display: inline-flex; min-width: 0; align-items: center; gap: 0.25rem; }
-.console-scope-crumb { display: inline-flex; max-width: 16rem; align-items: baseline; gap: 0.25rem; border-radius: var(--console-radius-sm); padding: 0.125rem 0.25rem; color: hsl(var(--muted-foreground)); text-decoration: none; }
+.console-scope-crumb { display: inline-flex; max-width: 16rem; align-items: baseline; gap: 0.25rem; border-radius: var(--console-radius-1); padding: 0.125rem 0.25rem; color: hsl(var(--muted-foreground)); text-decoration: none; }
 a.console-scope-crumb:hover { background: var(--console-surface-hover); color: hsl(var(--foreground)); }
-a.console-scope-crumb:focus-visible { outline: var(--console-focus-width) solid hsl(var(--ring)); outline-offset: 1px; }
+a.console-scope-crumb:focus-visible { outline: var(--console-border-focus) solid hsl(var(--ring)); outline-offset: 1px; }
 .console-scope-crumb.is-current { color: hsl(var(--foreground)); font-weight: 600; }
 .console-scope-crumb-level { flex-shrink: 0; opacity: 0.75; font-weight: 400; }
 .console-scope-crumb-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -83,20 +83,20 @@ a.console-scope-crumb:focus-visible { outline: var(--console-focus-width) solid 
 .console-scope-picker { display: flex; flex-direction: column; gap: 0.5rem; }
 .console-scope-picker-list { display: flex; max-height: min(26rem, 60dvh); flex-direction: column; gap: 0.125rem; overflow-y: auto; }
 .console-scope-picker-item {
-  display: flex; min-height: 2.5rem; align-items: center; gap: 0.5rem; border-radius: var(--console-radius-md); padding-block: 0.375rem; padding-inline-end: 0.5rem;
+  display: flex; min-height: 2.5rem; align-items: center; gap: 0.5rem; border-radius: var(--console-radius-2); padding-block: 0.375rem; padding-inline-end: 0.5rem;
   color: hsl(var(--foreground)); text-decoration: none;
 }
 .console-scope-picker-item:hover { background: var(--console-surface-hover); }
-.console-scope-picker-item:focus-visible { outline: var(--console-focus-width) solid hsl(var(--ring)); outline-offset: -2px; }
+.console-scope-picker-item:focus-visible { outline: var(--console-border-focus) solid hsl(var(--ring)); outline-offset: -2px; }
 .console-scope-picker-item.is-current { background: hsl(var(--primary-action)); color: hsl(var(--primary)); font-weight: 600; }
 .console-scope-picker-icon { width: 1rem; height: 1rem; flex-shrink: 0; opacity: 0.8; }
-.console-scope-picker-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--console-text-body-sm); }
-.console-scope-picker-identity { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); font-weight: 400; }
+.console-scope-picker-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--console-text-label); }
+.console-scope-picker-identity { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-weight: 400; }
 .console-scope-picker-dot { width: 0.5rem; height: 0.5rem; flex-shrink: 0; border-radius: 999px; }
 /* Online is the steady state (neutral); an offline account is the one that needs a look. console#125. */
 .console-scope-picker-dot.is-online { background: hsl(var(--muted-foreground) / 0.4); }
 .console-scope-picker-dot.is-offline { background: hsl(var(--warning-fill)); }
-.console-scope-picker-note { display: flex; align-items: center; gap: 0.375rem; border-top: 1px solid var(--console-border-subtle); padding-top: 0.5rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); }
+.console-scope-picker-note { display: flex; align-items: center; gap: 0.375rem; border-top: 1px solid var(--console-border-subtle); padding-top: 0.5rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .console-scope-picker-note svg { width: 0.875rem; height: 0.875rem; flex-shrink: 0; }
 @media (max-width: 767px) { .console-scope-picker-item { min-height: 2.75rem; } }
 

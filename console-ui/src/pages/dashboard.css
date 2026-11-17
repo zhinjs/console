@@ -24,7 +24,7 @@
     align-items: center;
     gap: 0.375rem 0.75rem;
     color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-caption);
+    font-size: var(--console-text-label);
   }
   .console-overview-status .console-health-pill { margin-bottom: 0; }
   .console-overview-status a { color: hsl(var(--foreground)); font-weight: 550; text-underline-offset: 2px; }
@@ -37,7 +37,7 @@
     gap: 0.25rem 0.5rem;
     margin-top: -0.25rem;
     color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-caption);
+    font-size: var(--console-text-label);
   }
   .console-message-link { color: inherit; text-underline-offset: 2px; }
   .console-message-link:hover { color: hsl(var(--foreground)); text-decoration: underline; }
@@ -76,7 +76,7 @@
   .console-card-sub {
     margin-top: 0.2rem;
     color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-body-sm);
+    font-size: var(--console-text-label);
   }
 
   .console-card-heading-icon {
@@ -113,7 +113,7 @@
     margin-top: -0.45rem;
     margin-bottom: -0.45rem;
     color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-caption);
+    font-size: var(--console-text-label);
     line-height: 0.9rem;
     text-align: right;
   }
@@ -149,7 +149,7 @@
   }
 
   .console-volume-col.is-active { background: hsl(var(--foreground) / 0.045); }
-  .console-volume-col:focus-visible { outline: var(--console-focus-width) solid hsl(var(--ring)); outline-offset: 1px; }
+  .console-volume-col:focus-visible { outline: var(--console-border-focus) solid hsl(var(--ring)); outline-offset: 1px; }
 
   .console-volume-bar {
     position: relative;
@@ -181,14 +181,14 @@
     display: grid;
     gap: 0.15rem;
     min-width: 8.5rem;
-    border-radius: var(--console-radius-sm);
+    border-radius: var(--console-radius-1);
     background: hsl(var(--popover));
     padding: 0.4rem 0.6rem;
     color: hsl(var(--popover-foreground));
-    font-size: var(--console-text-caption);
+    font-size: var(--console-text-label);
     line-height: 1.35;
     white-space: nowrap;
-    box-shadow: var(--console-shadow-md);
+    box-shadow: var(--console-elevation-2);
     pointer-events: none;
     transform: translate(-50%, calc(-100% - 0.625rem));
   }
@@ -204,7 +204,7 @@
     justify-content: space-between;
     margin-top: 0.4rem;
     color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-caption);
+    font-size: var(--console-text-label);
   }
 
   .console-volume-legend {
@@ -232,19 +232,19 @@
     align-items: center;
     gap: 0.25rem 0.75rem;
     padding: 0.55rem 0;
-    border-top: var(--console-border-width) solid var(--console-border-subtle);
+    border-top: var(--console-border-hairline) solid var(--console-border-subtle);
   }
 
   .console-kv-list > div:first-child { border-top: 0; padding-top: 0.15rem; }
 
   .console-kv-list dt {
     color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-body-sm);
+    font-size: var(--console-text-label);
   }
 
   .console-kv-list dd {
     overflow: hidden;
-    font-size: var(--console-text-body-sm);
+    font-size: var(--console-text-label);
     font-weight: 600;
     text-align: right;
     text-overflow: ellipsis;
@@ -289,7 +289,7 @@
     gap: 0.5rem;
     margin-bottom: 0.6rem;
     color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-body-sm);
+    font-size: var(--console-text-label);
   }
 
   .console-message-feed { display: flex; flex-direction: column; }
@@ -299,7 +299,7 @@
     grid-template-columns: 4.75rem minmax(0, 1fr);
     gap: 0.75rem;
     padding: 0.85rem 0;
-    border-top: var(--console-border-width) solid var(--console-border-subtle);
+    border-top: var(--console-border-hairline) solid var(--console-border-subtle);
   }
 
   .console-message-row:first-child { border-top: 0; padding-top: 0.25rem; }
@@ -308,7 +308,7 @@
     padding-top: 0.1rem;
     color: hsl(var(--muted-foreground));
     font-family: var(--console-font-mono);
-    font-size: var(--console-text-code);
+    font-size: var(--console-text-label);
   }
 
   .console-message-body {
@@ -335,7 +335,7 @@
     border-radius: 0.375rem;
     background: hsl(var(--muted));
     color: hsl(var(--foreground) / 0.85);
-    font-size: var(--console-text-caption);
+    font-size: var(--console-text-label);
     font-weight: 600;
     white-space: nowrap;
   }
@@ -366,9 +366,9 @@
     margin: 0;
     padding: 0.5rem 0.75rem;
     border-left: 3px solid hsl(var(--primary));
-    border-radius: 0 var(--console-radius-sm) var(--console-radius-sm) 0;
+    border-radius: 0 var(--console-radius-1) var(--console-radius-1) 0;
     background: hsl(var(--muted) / 0.8);
-    font-size: var(--console-text-body-sm);
+    font-size: var(--console-text-label);
     line-height: 1.55;
   }
 
@@ -376,7 +376,7 @@
   .console-message-more {
     margin: 0;
     color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-caption);
+    font-size: var(--console-text-label);
   }
 
   @media (max-width: 767px) {

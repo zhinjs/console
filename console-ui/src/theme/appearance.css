@@ -11,7 +11,7 @@
 .console-appearance-palettes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
 .console-mode-choice, .console-palette-choice { position: relative; min-width: 0; cursor: pointer; }
 .console-mode-choice > input, .console-palette-choice > input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-.console-mode-choice > span, .console-palette-choice > span { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border: 1px solid hsl(var(--border)); border-radius: var(--console-radius-sm); background: hsl(var(--card)); font-size: 12px; }
+.console-mode-choice > span, .console-palette-choice > span { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border: 1px solid hsl(var(--border)); border-radius: var(--console-radius-1); background: hsl(var(--card)); font-size: 12px; }
 .console-palette-choice > span { justify-content: flex-start; padding: 0 10px; font-size: 13px; }
 .console-mode-choice svg { width: 15px; height: 15px; }
 .console-mode-choice > input:checked + span, .console-palette-choice > input:checked + span { border-color: hsl(var(--primary)); background: hsl(var(--accent)); color: hsl(var(--accent-foreground)); }
@@ -22,7 +22,7 @@
 .console-palette-choice > input:checked + span .console-palette-check { opacity: 1; }
 .console-appearance-footer { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid hsl(var(--border)); }
 .console-appearance-footer p { margin: 0; color: hsl(var(--muted-foreground)); font-size: 12px; }
-.console-appearance-footer button { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; min-height: 32px; padding: 4px 6px; border: 0; border-radius: var(--console-radius-sm); background: transparent; color: hsl(var(--muted-foreground)); font-size: 12px; cursor: pointer; }
+.console-appearance-footer button { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; min-height: 32px; padding: 4px 6px; border: 0; border-radius: var(--console-radius-1); background: transparent; color: hsl(var(--muted-foreground)); font-size: 12px; cursor: pointer; }
 .console-appearance-footer button svg { width: 13px; height: 13px; }
 .console-appearance-footer button:hover { color: hsl(var(--foreground)); background: hsl(var(--accent)); }
 .console-appearance-footer button:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }

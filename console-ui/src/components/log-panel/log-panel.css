@@ -4,7 +4,7 @@
  */
 /* Unlayered on purpose: these rules size Button / Input / SelectField inside the panel and must win over their utility classes. */
   .console-log-panel {
-    --zc-log-panel-x: var(--console-space-page-x);
+    --zc-log-panel-x: var(--console-page-padding-inline);
     position: fixed;
     right: 0;
     bottom: 0;
@@ -105,7 +105,7 @@
   }
 
   .console-log-panel-title code {
-    border-radius: var(--console-radius-sm);
+    border-radius: var(--console-radius-1);
     background: hsl(var(--secondary));
     padding: 0.125rem 0.5rem;
     color: hsl(var(--secondary-foreground));
@@ -257,7 +257,7 @@
     gap: 0.5rem;
     padding: 0.75rem;
     color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-body-sm);
+    font-size: var(--console-text-label);
   }
 
   .console-log-panel-note > svg { width: 1rem; height: 1rem; }
@@ -297,9 +297,9 @@
     --zc-log-panel-x: 0.75rem;
     top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
     z-index: 49;
-    border-radius: var(--console-radius-2xl) var(--console-radius-2xl) 0 0;
+    border-radius: var(--console-radius-4) var(--console-radius-4) 0 0;
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    box-shadow: var(--console-shadow-lg);
+    box-shadow: var(--console-elevation-3);
     animation-name: console-log-sheet-in;
   }
 

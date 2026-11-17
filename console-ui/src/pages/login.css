@@ -14,8 +14,8 @@
    * Product sketch (login-preview.tsx): the Console's own StatCard, chart colors and chat bubbles,
    * scaled down. Static sample, aria-hidden and inert.
    */
-  .console-login-preview { display: grid; gap: 12px; max-width: 400px; margin-top: 28px; padding: 14px; border-radius: var(--console-radius-xl);
-    background: hsl(var(--card)); box-shadow: var(--console-shadow-sm); pointer-events: none; user-select: none; }
+  .console-login-preview { display: grid; gap: 12px; max-width: 400px; margin-top: 28px; padding: 14px; border-radius: var(--console-radius-4);
+    background: hsl(var(--card)); box-shadow: var(--console-card-elevation); pointer-events: none; user-select: none; }
   .console-login-preview-stats { display: grid; grid-template-columns: 1fr 1fr; }
   .console-login-preview-stats > .console-stat-card { gap: 2px; padding: 0 12px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
   .console-login-preview-stats > .console-stat-card:first-child { padding-left: 2px; }
@@ -38,12 +38,12 @@
   .console-login-preview-avatar { display: grid; place-items: center; width: 22px; height: 22px; flex: none; border-radius: 999px; background: var(--console-surface-inset); color: hsl(var(--muted-foreground)); }
   .console-login-preview-avatar svg { width: 13px; height: 13px; }
   .console-login-preview-avatar.is-bot { border-radius: 7px; background: none; }
-  .console-login-panel { padding: 28px; border: var(--console-border-width) solid transparent; border-radius: var(--console-radius-2xl); background: hsl(var(--card));
-    box-shadow: var(--console-shadow-sm);
+  .console-login-panel { padding: 28px; border: var(--console-border-hairline) solid transparent; border-radius: var(--console-radius-4); background: hsl(var(--card));
+    box-shadow: var(--console-card-elevation);
   }
   .console-login-panel-head { display: flex; justify-content: flex-end; margin-bottom: 24px; }
   .console-login-form { display: grid; gap: 20px; }
-  .console-login-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 20px; padding: 4px; border-radius: var(--console-radius-lg); background: hsl(var(--foreground) / 0.055); }
+  .console-login-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 20px; padding: 4px; border-radius: var(--console-radius-3); background: hsl(var(--foreground) / 0.055); }
   .console-login-modes > button { justify-content: center; gap: 6px; }
   .console-login-modes svg { width: 15px; height: 15px; }
   .console-login-field { display: grid; gap: 7px; min-width: 0; font-size: 13px; font-weight: 500; }
@@ -68,7 +68,7 @@
     .console-login-intro h1 { font-size: 26px; margin-bottom: 10px; }
     .console-login-notes { margin-top: 12px; }
     .console-login-panel { padding: 20px;
-    box-shadow: var(--console-shadow-sm);
+    box-shadow: var(--console-card-elevation);
   }
   }
 }

@@ -41,7 +41,7 @@
   width: 100%;
   min-width: 22rem;
   border-collapse: collapse;
-  font-size: var(--console-text-caption);
+  font-size: var(--console-text-label);
 }
 
 .zhin-markdown-table th,
@@ -134,7 +134,7 @@
 .zhin-code-actions button:active,
 .zhin-code-expand:active { transform: translateY(1px); }
 .zhin-code-actions button:focus-visible,
-.zhin-code-expand:focus-visible { outline: var(--console-focus-width) solid hsl(151 48% 63%); outline-offset: 1px; }
+.zhin-code-expand:focus-visible { outline: var(--console-border-focus) solid hsl(151 48% 63%); outline-offset: 1px; }
 
 .zhin-code-pre {
   max-width: 100%;
@@ -142,7 +142,7 @@
   overflow: auto;
   padding: 0.6rem 0 0.72rem;
   font: inherit;
-  font-size: var(--console-text-caption);
+  font-size: var(--console-text-label);
   line-height: 1.65;
   tab-size: 2;
 }

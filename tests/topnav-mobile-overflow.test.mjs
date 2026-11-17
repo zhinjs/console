@@ -28,7 +28,7 @@ test('phone top bar shrinks its actions so 退出登录 stays inside the capsule
   const phone = mediaBlock(shell, 767)
   const actions = rule(phone, '.console-topnav-actions')
   assert.match(actions, /--console-control-height:\s*2\.5rem/, 'icon buttons, the attention badge and the account link use 2.5rem')
-  assert.match(actions, /--console-control-height-sm:\s*2\.5rem/)
+  assert.match(actions, /--console-control-height-compact:\s*2\.5rem/)
   assert.match(actions, /min-width:\s*0/, 'the action row may not force the capsule wider than the screen')
   assert.match(rule(phone, '.console-topnav-actions .console-command-trigger'), /width:\s*2\.5rem;\s*height:\s*2\.5rem/)
   assert.match(rule(phone, '.console-topnav-capsule'), /gap:\s*0\.125rem/)

@@ -6,13 +6,13 @@
   display: grid;
   grid-template-columns: minmax(13.5rem, 15.5rem) minmax(0, 1fr);
   width: 100%;
-  height: calc(100dvh - var(--zc-header-h, 4.5rem) - var(--console-space-page-y, 2rem) - 1rem);
+  height: calc(100dvh - var(--zc-header-h, 4.5rem) - var(--console-page-padding-block, 2rem) - 1rem);
   min-height: 36rem;
   overflow: hidden;
   border: 1px solid transparent;
-  border-radius: var(--console-radius-xl);
+  border-radius: var(--console-radius-4);
   background: hsl(var(--card));
-  box-shadow: var(--console-shadow-sm);
+  box-shadow: var(--console-card-elevation);
   box-shadow: none;
   isolation: isolate;
 }
@@ -35,7 +35,7 @@
   gap: 0.375rem;
   margin-bottom: 1rem;
   border: 0;
-  border-radius: var(--console-radius-sm);
+  border-radius: var(--console-radius-1);
   background: transparent;
   padding: 0.375rem 0.5rem;
   color: hsl(var(--muted-foreground));
@@ -63,7 +63,7 @@
   min-width: 0;
   padding: 0.875rem;
   border: 1px solid hsl(var(--border));
-  border-radius: var(--console-radius-md);
+  border-radius: var(--console-radius-2);
   background: hsl(var(--background));
 }
 
@@ -76,7 +76,7 @@
 .agent-playground-history-navigation p[role=alert] { color: hsl(var(--destructive)); overflow-wrap: anywhere; }
 .agent-playground-recovery > button,
 .agent-playground-recovery > p > button,
-.agent-playground-history-navigation button { padding: 0.375rem 0.625rem; border-radius: var(--console-radius-sm); color: hsl(var(--primary)); cursor: pointer; }
+.agent-playground-history-navigation button { padding: 0.375rem 0.625rem; border-radius: var(--console-radius-1); color: hsl(var(--primary)); cursor: pointer; }
 .agent-playground-history-navigation { padding: 0.5rem 1rem; font-size: var(--console-text-label); }
 .agent-playground-history-notice { padding: 0.5rem 1rem; color: hsl(var(--muted-foreground)); text-align: center; font-size: var(--console-text-label); }
 .agent-playground-main:has(> .agent-playground-recovery:not([hidden])) .agent-playground-empty { display: none; }
@@ -137,7 +137,7 @@
   width: 2rem;
   height: 2rem;
   border: 1px solid hsl(var(--playground-accent) / 0.17);
-  border-radius: var(--console-radius-md);
+  border-radius: var(--console-radius-2);
 }
 
 .agent-playground-connection {
@@ -382,7 +382,7 @@
   width: 2.35rem;
   height: 2.35rem;
   border: 1px solid hsl(var(--playground-accent) / 0.18);
-  border-radius: var(--console-radius-md);
+  border-radius: var(--console-radius-2);
   background: hsl(var(--playground-accent-soft));
   color: hsl(var(--playground-accent));
 }
@@ -696,7 +696,7 @@
   height: 3.6rem;
   margin-bottom: 1.1rem;
   border: 1px solid hsl(var(--playground-accent) / 0.18);
-  border-radius: var(--console-radius-lg);
+  border-radius: var(--console-radius-3);
   box-shadow: none;
 }
 
@@ -776,7 +776,7 @@
 
 .agent-playground-message.is-agent .agent-playground-message-avatar {
   border-color: hsl(var(--playground-accent) / 0.18);
-  border-radius: var(--console-radius-md);
+  border-radius: var(--console-radius-2);
   background: hsl(var(--playground-accent-soft));
   color: hsl(var(--playground-accent));
 }
@@ -812,14 +812,14 @@
   overflow: hidden;
   padding: 0.78rem 0.88rem;
   border: 1px solid hsl(var(--border) / 0.78);
-  border-radius: var(--console-radius-lg);
+  border-radius: var(--console-radius-3);
   background: hsl(var(--background) / 0.94);
   box-shadow: none;
 }
 
 .agent-playground-message.is-user .agent-playground-message-content {
   border-color: hsl(var(--playground-accent) / 0.2);
-  border-radius: var(--console-radius-lg);
+  border-radius: var(--console-radius-3);
   background: hsl(var(--playground-accent-soft));
   box-shadow: none;
 }
@@ -924,7 +924,7 @@
   overflow: hidden;
   margin-left: 2.58rem;
   border: 1px solid hsl(var(--playground-line) / 0.82);
-  border-radius: var(--console-radius-lg);
+  border-radius: var(--console-radius-3);
   background: hsl(var(--background) / 0.86);
   box-shadow: none;
 }
@@ -1160,7 +1160,7 @@
 .agent-playground-composer .sandbox-markdown-preview {
   min-height: 3rem !important;
   border-color: hsl(var(--border) / 0.86) !important;
-  border-radius: var(--console-radius-lg) !important;
+  border-radius: var(--console-radius-3) !important;
   background-color: hsl(var(--muted) / 0.24);
 }
 
@@ -1201,7 +1201,7 @@
 }
 
 .agent-playground-composer .sandbox-composer-tabs button:focus-visible {
-  outline: var(--console-focus-width) solid hsl(var(--ring));
+  outline: var(--console-border-focus) solid hsl(var(--ring));
   outline-offset: 1px;
 }
 
@@ -1772,7 +1772,7 @@
 
 @media (max-width: 900px) {
   .agent-playground-shell {
-    height: calc(100dvh - var(--zc-header-h, 4.5rem) - var(--console-space-page-y, 2rem) - 1rem);
+    height: calc(100dvh - var(--zc-header-h, 4.5rem) - var(--console-page-padding-block, 2rem) - 1rem);
     min-height: 32rem;
     border-radius: 0.85rem;
   }
@@ -1783,7 +1783,7 @@
 
 @media (max-width: 640px) {
   .agent-playground-shell {
-    height: calc(100dvh - var(--zc-header-h, 4.5rem) - var(--console-space-page-y, 2rem) - 1rem);
+    height: calc(100dvh - var(--zc-header-h, 4.5rem) - var(--console-page-padding-block, 2rem) - 1rem);
     min-height: 29rem;
     border-right: 0;
     border-left: 0;
@@ -1866,18 +1866,18 @@
  * plugins/adapters/sandbox/pages/index/SandboxChat.tsx.)
  */
 .console-route-view .zhin-sandbox.agent-playground-shell {
-  border-radius: var(--console-radius-xl);
-  box-shadow: var(--console-shadow-sm);
+  border-radius: var(--console-radius-4);
+  box-shadow: var(--console-card-elevation);
   font-size: var(--console-text-body);
 }
 .console-route-view .zhin-sandbox .sandbox-hints {
   flex-wrap: nowrap;
   overflow-x: auto;
   white-space: nowrap;
-  font-size: var(--console-text-caption);
+  font-size: var(--console-text-label);
   color: hsl(var(--muted-foreground));
   scrollbar-width: none;
 }
 .console-route-view .zhin-sandbox .sandbox-hints::-webkit-scrollbar { display: none; }
-.console-route-view .zhin-sandbox .sandbox-hint-key { font-size: var(--console-text-caption); }
+.console-route-view .zhin-sandbox .sandbox-hint-key { font-size: var(--console-text-label); }
 .console-route-view .zhin-sandbox .agent-playground-run-actions { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }

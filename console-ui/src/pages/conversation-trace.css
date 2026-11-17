@@ -22,7 +22,7 @@
   .conversation-trace-toolbar { display: flex; align-items: center; justify-content: space-between; padding-bottom: .75rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
   .conversation-trace-empty { padding: 1.25rem 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
   .conversation-trace-turn { border-bottom: 1px solid var(--console-border-subtle); }
-  .conversation-trace-heading { width: 100%; min-height: 4.25rem; height: auto; display: flex; justify-content: flex-start; gap: .75rem; padding: .875rem .5rem; border-radius: var(--console-radius-md); text-align: left; white-space: normal; }
+  .conversation-trace-heading { width: 100%; min-height: 4.25rem; height: auto; display: flex; justify-content: flex-start; gap: .75rem; padding: .875rem .5rem; border-radius: var(--console-radius-2); text-align: left; white-space: normal; }
   .conversation-trace-heading > svg { width: .8rem; height: .8rem; flex: none; color: hsl(var(--muted-foreground)); }
   .conversation-trace-turn.is-open > .conversation-trace-heading > svg { transform: rotate(90deg); }
   .conversation-trace-heading > span { min-width: 0; }
@@ -38,7 +38,7 @@
   .conversation-request-list strong { display: block; font-weight: 550; font-size: var(--console-text-body); }
   .conversation-request-list small { display: block; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-weight: 400; margin-top: .25rem; overflow-wrap: anywhere; }
   .conversation-request-list .conversation-request-status { margin-left: auto; flex-shrink: 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-weight: 400; }
-  .conversation-request-sections { padding: 0 .75rem; border-radius: var(--console-radius-md); background: var(--console-surface-inset); }
+  .conversation-request-sections { padding: 0 .75rem; border-radius: var(--console-radius-2); background: var(--console-surface-inset); }
   .conversation-request-sections > [data-state]:last-child { border-bottom: 0; }
   .conversation-request-sections button { gap: .75rem; }
   .conversation-request-sections button small { margin-left: auto; margin-top: 0; }

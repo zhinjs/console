@@ -20,14 +20,14 @@
     align-items: center;
     gap: 0.2rem;
     padding: 0.2rem;
-    border: var(--console-border-width) solid var(--console-border-default);
-    border-radius: var(--console-radius-md);
+    border: var(--console-border-hairline) solid var(--console-border-default);
+    border-radius: var(--console-radius-2);
     background: var(--console-surface-inset);
   }
 
   .console-plugin-filter-pill {
     border: 0;
-    border-radius: calc(var(--console-radius-md) - 3px);
+    border-radius: calc(var(--console-radius-2) - 3px);
     padding: 0.28rem 0.75rem;
     background: transparent;
     color: hsl(var(--muted-foreground));
@@ -46,7 +46,7 @@
     background: hsl(var(--card));
     color: hsl(var(--foreground));
     font-weight: 650;
-    box-shadow: var(--console-shadow-xs);
+    box-shadow: var(--console-elevation-0);
   }
 
   .console-plugin-catalog-count {
@@ -130,11 +130,11 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-caption);
+    font-size: var(--console-text-label);
   }
   .console-plugin-detail-grid {
     display: grid;
-    gap: var(--console-space-section, 1.5rem);
+    gap: var(--console-section-gap, 1.5rem);
     grid-template-columns: minmax(0, 1fr);
   }
   @media (min-width: 1280px) {
@@ -146,7 +146,7 @@
     margin-top: 1rem;
     display: flex;
     flex-direction: column;
-    gap: var(--console-space-section, 1.5rem);
+    gap: var(--console-section-gap, 1.5rem);
     min-width: 0;
   }
   /* Wraps on narrow screens so the scope summary and the 功能 link stay inside the chip. */
@@ -157,10 +157,10 @@
     gap: 0.25rem 0.5rem;
     min-width: 0;
     max-width: 100%;
-    border: var(--console-border-width, 1px) solid var(--console-border-default, hsl(var(--border)));
-    border-radius: var(--console-radius-md, 0.5rem);
+    border: var(--console-border-hairline, 1px) solid var(--console-border-default, hsl(var(--border)));
+    border-radius: var(--console-radius-2, 0.5rem);
     padding: 0.25rem 0.625rem;
-    font-size: var(--console-text-body-sm);
+    font-size: var(--console-text-label);
     color: hsl(var(--foreground));
   }
   .console-plugin-scope-chip:hover { background: hsl(var(--muted)); }
@@ -174,9 +174,9 @@
     min-width: 0;
     max-width: 100%;
     padding: 0.5rem 0;
-    font-size: var(--console-text-body-sm);
+    font-size: var(--console-text-label);
   }
-  .console-provider-row-summary { min-width: 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); }
+  .console-provider-row-summary { min-width: 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
   .console-plugin-scope-chip > code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .console-marketplace-categories { max-width: 100%; overflow-x: auto; flex-wrap: nowrap; }
 }
@@ -200,7 +200,7 @@
   .console-plugin-table-version {
     color: hsl(var(--muted-foreground));
     font-family: var(--console-font-mono);
-    font-size: var(--console-text-code);
+    font-size: var(--console-text-label);
     white-space: nowrap;
   }
   .console-plugin-table-package { display: block; overflow-wrap: anywhere; white-space: normal; }
@@ -209,13 +209,13 @@
     max-width: 40rem;
     overflow: hidden;
     color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-body-sm);
+    font-size: var(--console-text-label);
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;
   }
-  .console-plugin-table-compact { display: block; margin-top: 0.125rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-caption); }
+  .console-plugin-table-compact { display: block; margin-top: 0.125rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
   @media (min-width: 768px) { .console-plugin-table-compact { display: none; } }
-  .console-plugin-table-ok { color: hsl(var(--muted-foreground)); font-size: var(--console-text-body-sm); }
+  .console-plugin-table-ok { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
   .console-plugin-table-state { white-space: nowrap; }
 
   .console-plugin-sort {
@@ -244,6 +244,6 @@
     background: hsl(var(--card));
     padding: 0 0.45rem;
     color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-caption);
+    font-size: var(--console-text-label);
   }
 }

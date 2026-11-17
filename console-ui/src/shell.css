@@ -40,7 +40,7 @@
     z-index: 40;
     display: flex;
     justify-content: center;
-    padding: 0.75rem var(--console-space-page-x) 0;
+    padding: 0.75rem var(--console-page-padding-inline) 0;
     pointer-events: none;
   }
 
@@ -52,7 +52,7 @@
     height: var(--zc-nav-capsule-h);
     align-items: center;
     gap: 0.5rem;
-    border: var(--console-border-width) solid var(--zc-nav-border);
+    border: var(--console-border-hairline) solid var(--zc-nav-border);
     border-radius: 999px;
     background: var(--zc-nav-bg);
     box-shadow: var(--zc-nav-shadow);
@@ -89,7 +89,7 @@
   }
 
   .console-brand-link:focus-visible {
-    outline: var(--console-focus-width) solid hsl(var(--ring));
+    outline: var(--console-border-focus) solid hsl(var(--ring));
     outline-offset: 2px;
   }
 
@@ -129,7 +129,7 @@
     max-width: 12rem;
     align-items: center;
     gap: 0.4375rem;
-    border: var(--console-border-width) solid transparent;
+    border: var(--console-border-hairline) solid transparent;
     border-radius: 999px;
     background: transparent;
     padding: 0 0.875rem;
@@ -158,7 +158,7 @@
   }
 
   .console-topnav-item:focus-visible {
-    outline: var(--console-focus-width) solid hsl(var(--ring));
+    outline: var(--console-border-focus) solid hsl(var(--ring));
     outline-offset: 2px;
   }
 
@@ -191,7 +191,7 @@
   }
 
   .console-topnav-menu.is-grouped .console-topnav-menu-group + .console-topnav-menu-group {
-    border-left: var(--console-border-width) solid hsl(var(--border));
+    border-left: var(--console-border-hairline) solid hsl(var(--border));
     padding-left: 0.375rem;
   }
 
@@ -207,7 +207,7 @@
   .console-nav-subgroup-label {
     padding: 0.125rem 0.625rem 0.125rem 1rem;
     color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-caption);
+    font-size: var(--console-text-label);
   }
 
   .console-topnav-menu-item {
@@ -215,7 +215,7 @@
     min-height: 2.5rem;
     align-items: center;
     gap: 0.625rem;
-    border-radius: var(--console-radius-md) !important;
+    border-radius: var(--console-radius-2) !important;
     padding: 0.375rem 0.5rem !important;
     color: hsl(var(--foreground));
   }
@@ -226,7 +226,7 @@
     height: 1.75rem;
     flex-shrink: 0;
     place-items: center;
-    border-radius: var(--console-radius-sm);
+    border-radius: var(--console-radius-1);
     background: hsl(var(--secondary));
     color: hsl(var(--muted-foreground));
   }
@@ -293,16 +293,16 @@
     z-index: 60;
     width: max-content;
     max-width: 16rem;
-    border-radius: var(--console-radius-sm);
+    border-radius: var(--console-radius-1);
     background: hsl(var(--foreground));
     padding: 0.375rem 0.625rem;
     color: hsl(var(--background));
-    font-size: var(--console-text-caption);
+    font-size: var(--console-text-label);
     font-weight: 500;
     line-height: 1.4;
     white-space: normal;
     text-align: left;
-    box-shadow: var(--console-shadow-md);
+    box-shadow: var(--console-elevation-2);
     opacity: 0;
     pointer-events: none;
     transform: translateY(-2px);
@@ -326,7 +326,7 @@
   .console-user-menu { display: inline-flex; flex-shrink: 0; }
   .console-user-menu-trigger {
     display: inline-flex;
-    height: var(--console-control-height-sm);
+    height: var(--console-control-height-compact);
     max-width: 12rem;
     align-items: center;
     gap: 0.375rem;
@@ -335,7 +335,7 @@
     background: transparent;
     padding: 0 0.625rem;
     color: hsl(var(--foreground));
-    font-size: var(--console-text-body-sm);
+    font-size: var(--console-text-label);
     font-weight: 500;
     cursor: pointer;
     transition: background-color var(--console-motion-fast) var(--console-ease-out);
@@ -353,7 +353,7 @@
   .console-user-menu-heading > span,
   .console-user-menu-section {
     color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-caption);
+    font-size: var(--console-text-label);
     font-weight: 500;
   }
   .console-user-menu-heading > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
@@ -388,10 +388,10 @@
     display: flex;
     width: min(19rem, calc(100vw - 1.5rem));
     flex-direction: column;
-    border-radius: var(--console-radius-2xl);
+    border-radius: var(--console-radius-4);
     background: hsl(var(--popover));
     color: hsl(var(--popover-foreground));
-    box-shadow: var(--console-shadow-lg);
+    box-shadow: var(--console-elevation-3);
     transform: translateX(calc(-100% - 1rem));
     transition: transform var(--console-motion-base) var(--console-ease-out);
   }
@@ -424,7 +424,7 @@
   }
 
   .console-drawer-nav .console-nav-tier + .console-nav-tier {
-    border-top: var(--console-border-width) solid hsl(var(--border));
+    border-top: var(--console-border-hairline) solid hsl(var(--border));
     padding-top: 1rem;
   }
 
@@ -458,7 +458,7 @@
     min-height: 2.75rem;
     align-items: center;
     gap: 0.625rem;
-    border-radius: var(--console-radius-md);
+    border-radius: var(--console-radius-2);
     padding: 0 0.625rem;
     color: hsl(var(--foreground));
     font-size: var(--console-text-body);
@@ -477,7 +477,7 @@
   }
 
   .console-nav-item:focus-visible {
-    outline: var(--console-focus-width) solid hsl(var(--ring));
+    outline: var(--console-border-focus) solid hsl(var(--ring));
     outline-offset: 2px;
   }
 
@@ -505,7 +505,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    border-top: var(--console-border-width) solid hsl(var(--border));
+    border-top: var(--console-border-hairline) solid hsl(var(--border));
     padding: 0.75rem 1rem;
   }
 
@@ -571,7 +571,7 @@
     align-items: center;
     gap: 0.25rem;
     color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-body-sm);
+    font-size: var(--console-text-label);
   }
 
   .console-breadcrumb-group {
@@ -586,7 +586,7 @@
   }
 
   .console-breadcrumb-link {
-    border-radius: var(--console-radius-sm);
+    border-radius: var(--console-radius-1);
     color: hsl(var(--muted-foreground));
     transition: color var(--console-motion-fast) var(--console-ease-out);
   }
@@ -627,7 +627,7 @@
     .console-topnav .console-brand-link { padding-right: 0; }
     .console-topnav-actions {
       --console-control-height: 2.5rem;
-      --console-control-height-sm: 2.5rem;
+      --console-control-height-compact: 2.5rem;
       min-width: 0;
       gap: 0.125rem;
     }
@@ -648,7 +648,7 @@
   .console-route-view {
     display: flex;
     flex-direction: column;
-    gap: var(--console-space-section);
+    gap: var(--console-section-gap);
     min-width: 0;
     animation: console-route-enter var(--console-motion-base) var(--console-ease-out) both;
   }
@@ -674,7 +674,7 @@
     flex-shrink: 0;
     place-items: center;
     border: 0;
-    border-radius: var(--console-radius-md);
+    border-radius: var(--console-radius-2);
     background: transparent;
     color: hsl(var(--muted-foreground));
     cursor: pointer;
@@ -697,7 +697,7 @@
     height: 2rem;
     flex-shrink: 0;
     align-items: center;
-    border-radius: var(--console-radius-md);
+    border-radius: var(--console-radius-2);
     color: hsl(var(--muted-foreground));
     font-size: 0.8125rem;
     transition: background-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out);
@@ -751,7 +751,7 @@
     display: inline-flex;
     flex-shrink: 0;
     gap: 2px;
-    border-radius: var(--console-radius-md);
+    border-radius: var(--console-radius-2);
     background: hsl(var(--muted));
     padding: 3px;
   }
@@ -770,7 +770,7 @@
 
   .console-segmented label > span {
     display: block;
-    border-radius: calc(var(--console-radius-md) - 2px);
+    border-radius: calc(var(--console-radius-2) - 2px);
     padding: 0.3125rem 0.75rem;
     color: hsl(var(--muted-foreground));
     font-size: 0.8125rem;
@@ -787,11 +787,11 @@
     background: hsl(var(--card));
     color: hsl(var(--foreground));
     font-weight: 600;
-    box-shadow: var(--console-shadow-xs);
+    box-shadow: var(--console-elevation-0);
   }
 
   .console-segmented label:has([role="radio"]:focus-visible) > span {
-    outline: var(--console-focus-width) solid hsl(var(--ring));
+    outline: var(--console-border-focus) solid hsl(var(--ring));
     outline-offset: 1px;
   }
 
@@ -800,8 +800,8 @@
     cursor: pointer;
     align-items: flex-start;
     gap: 0.625rem;
-    border: var(--console-border-width) solid var(--console-border-default);
-    border-radius: var(--console-radius-md);
+    border: var(--console-border-hairline) solid var(--console-border-default);
+    border-radius: var(--console-radius-2);
     background: hsl(var(--card));
     padding: 0.75rem 0.875rem;
     font-size: 0.875rem;
@@ -833,7 +833,7 @@
     gap: 0.4rem;
     cursor: pointer;
     list-style: none;
-    border-radius: var(--console-radius-sm);
+    border-radius: var(--console-radius-1);
   }
 
   #console-main-content summary::-webkit-details-marker {
@@ -863,12 +863,12 @@
 
 @layer components {
   .console-disclosure-card {
-    border: var(--console-border-width) solid transparent;
-    border-radius: var(--console-radius-md);
+    border: var(--console-border-hairline) solid transparent;
+    border-radius: var(--console-radius-2);
     background: hsl(var(--card));
     padding: 0.75rem 0.875rem;
     transition: border-color var(--console-motion-fast) var(--console-ease-out);
-    box-shadow: var(--console-shadow-sm);
+    box-shadow: var(--console-card-elevation);
   }
 
   .console-disclosure-card:hover {
@@ -917,8 +917,8 @@
     justify-content: space-between;
     gap: 0.5rem 1rem;
     margin: 0 -1rem;
-    border-bottom: var(--console-border-width) solid var(--console-border-default);
-    border-radius: var(--console-radius-lg) var(--console-radius-lg) 0 0;
+    border-bottom: var(--console-border-hairline) solid var(--console-border-default);
+    border-radius: var(--console-radius-3) var(--console-radius-3) 0 0;
     /* Opaque: fields scrolling underneath must not show through the bar. */
     background: hsl(var(--card));
     padding: 0.75rem 1rem;
@@ -940,8 +940,8 @@
 
   /* Config form body: groups, a two-column grid of scalar fields, number inputs with units. */
   .console-config-group { display: grid; gap: 0.75rem; }
-  .console-config-group + .console-config-group { border-top: var(--console-border-width) solid var(--console-border-subtle); padding-top: 1rem; }
-  .console-config-group-title { font-size: var(--console-text-section-sm); font-weight: 600; }
+  .console-config-group + .console-config-group { border-top: var(--console-border-hairline) solid var(--console-border-subtle); padding-top: 1rem; }
+  .console-config-group-title { font-size: var(--console-text-section); font-weight: 600; }
   .console-config-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem 1.5rem; }
   @media (min-width: 1024px) {
     .console-config-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -955,7 +955,7 @@
     position: absolute;
     right: 0.75rem;
     color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-body-sm);
+    font-size: var(--console-text-label);
     pointer-events: none;
   }
 
@@ -983,8 +983,8 @@
 
 @layer components {
   .console-field-group {
-    border: var(--console-border-width) solid var(--console-border-default);
-    border-radius: var(--console-radius-md);
+    border: var(--console-border-hairline) solid var(--console-border-default);
+    border-radius: var(--console-radius-2);
     background: hsl(var(--card));
   }
 
@@ -996,15 +996,15 @@
     width: 100%;
     flex-wrap: wrap;
     gap: 0.25rem 0.5rem;
-    border-radius: var(--console-radius-md);
+    border-radius: var(--console-radius-2);
     background: hsl(var(--card) / 0.95);
     padding: 0.625rem 0.75rem;
     backdrop-filter: blur(8px);
   }
 
   .console-field-group[open] > summary {
-    border-bottom: var(--console-border-width) solid var(--console-border-subtle);
-    border-radius: var(--console-radius-md) var(--console-radius-md) 0 0;
+    border-bottom: var(--console-border-hairline) solid var(--console-border-subtle);
+    border-radius: var(--console-radius-2) var(--console-radius-2) 0 0;
   }
 
   .console-field-group .console-field-group > summary {

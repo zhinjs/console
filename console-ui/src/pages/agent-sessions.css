@@ -17,7 +17,7 @@
   }
 
   .console-session-directory {
-    border-right: var(--console-border-width) solid var(--console-border-subtle);
+    border-right: var(--console-border-hairline) solid var(--console-border-subtle);
     padding-right: 1rem;
   }
 
@@ -34,7 +34,7 @@
   }
 
   .console-session-directory .console-panel-heading h2 {
-    font-size: var(--console-text-section-sm);
+    font-size: var(--console-text-section);
   }
 
   .console-session-directory .console-session-candidate {
@@ -73,7 +73,7 @@
 
   .console-session-readonly {
     color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-caption);
+    font-size: var(--console-text-label);
   }
 
   .console-session-scope-filter {
@@ -83,10 +83,10 @@
     justify-content: space-between;
     gap: 0.25rem 0.5rem;
     margin-bottom: 0.5rem;
-    border-radius: var(--console-radius-md);
+    border-radius: var(--console-radius-2);
     background: hsl(var(--info) / 0.08);
     padding: 0.25rem 0.25rem 0.25rem 0.75rem;
-    font-size: var(--console-text-body-sm);
+    font-size: var(--console-text-label);
   }
 
   .console-session-heading h2 {
@@ -108,7 +108,7 @@
   }
 
   .console-session-branches {
-    border-top: var(--console-border-width) solid var(--console-border-subtle);
+    border-top: var(--console-border-hairline) solid var(--console-border-subtle);
     padding-top: 1rem;
   }
 
@@ -173,7 +173,7 @@
     max-width: 65ch;
     min-width: 0;
     padding: 0.875rem 1rem;
-    border-radius: var(--console-radius-lg);
+    border-radius: var(--console-radius-3);
     background: var(--console-surface-inset);
     color: hsl(var(--foreground));
     font-size: var(--console-text-body);
@@ -199,7 +199,7 @@
     max-width: 100%;
     max-height: 24rem;
     object-fit: contain;
-    border-radius: var(--console-radius-md);
+    border-radius: var(--console-radius-2);
   }
 
   .conversation-message-body .im-media-card {
@@ -237,7 +237,7 @@
 
     .console-session-directory {
       border-right: 0;
-      border-bottom: var(--console-border-width) solid var(--console-border-subtle);
+      border-bottom: var(--console-border-hairline) solid var(--console-border-subtle);
       padding: 0 0 1rem;
     }
 

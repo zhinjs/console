@@ -2,7 +2,7 @@
 @layer components {
   /* Radix menu items inside the top bar menus keep a visible keyboard focus. */
   .console-topnav-menu [role="menuitem"]:focus-visible {
-    outline: var(--console-focus-width) solid hsl(var(--ring));
+    outline: var(--console-border-focus) solid hsl(var(--ring));
     outline-offset: -2px;
   }
 
