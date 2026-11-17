@@ -126,4 +126,4 @@ a.console-scope-task:focus-visible { outline: var(--console-border-focus) solid 
 }
 .console-account-switch:has(button:disabled) { cursor: not-allowed; }
 .console-account-notice { margin-bottom: var(--console-space-3); }
-.console-adapter-console .zk-account-editor-host { margin-bottom: var(--console-section-gap); }
+.console-adapter-console :is([data-adapter-account-editor], .zk-account-editor-host) { margin-bottom: var(--console-section-gap); }

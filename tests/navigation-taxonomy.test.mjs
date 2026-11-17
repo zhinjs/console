@@ -149,7 +149,7 @@ test('pages without an owning plugin are marked for the 插件页面 group of �
  assert.deepEqual(onlyPlugins.groups.map(group => group.id),['plugin'])
 })
 
-test('a plugin page becomes a concrete /plugins/<plugin>/<page> tab out of the menu, and its old path redirects there', () => {
+test('a plugin page becomes a concrete /plugins/<plugin>/<page> tab out of the menu; its old path no longer redirects (ADR 0063 P4)', () => {
  const element = {}
  const rss = {path:'/rss',name:'RSS 订阅',element,requiredPermissions:['rss.read'],meta:{group:NAV_GROUPS.FEATURES,order:20,section:'ops',fullWidth:true,titleI18n:{en:'RSS feeds'}}}
  const entry = {id:'index',name:'index',owner:'root/rss',route:'/rss',meta:{section:'ops',description:'订阅列表',keywords:{'zh-CN':['订阅'],en:['feeds']}}}
@@ -168,8 +168,8 @@ test('a plugin page becomes a concrete /plugins/<plugin>/<page> tab out of the m
  assert.deepEqual(plan.page.requiredPermissions,['rss.read'])
  assert.deepEqual(plan.page.meta.pluginTab,{kind:'tab',plugin:'rss',page:'index',legacyPath:'/rss',href:'/plugins/rss/index',keywords:['订阅','feeds'],description:'订阅列表'})
  assert.equal(plan.sectionIgnored,'ops','the deprecated section is reported for a warning')
- assert.deepEqual(plan.redirect,{path:'/rss',name:'RSS 订阅',parent:'/plugins/rss/index',meta:{hideInMenu:true,commandPalette:false,pluginRedirect:true}})
- assert.equal(plan.redirectTo,'/plugins/rss/index')
+ assert.equal(plan.redirect,undefined,'no redirect at the old path')
+ assert.equal(plan.redirectTo,undefined)
  assert.deepEqual(rss.meta,{group:NAV_GROUPS.FEATURES,order:20,section:'ops',fullWidth:true,titleI18n:{en:'RSS feeds'}},'input is not mutated')
  // pages/<name> lives at /<plugin>/p-<name> on the Host.
  const history = planPluginRoute({path:'/rss/p-history',name:'历史'},describePluginPage({id:'history',owner:'root/rss',route:'/rss/p-history'}))
