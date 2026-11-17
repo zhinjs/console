@@ -101,16 +101,16 @@ test('each status has a text value and a fill value sharing one hue across theme
   assert.ok(ratio(light['warning-fill-foreground'], light['warning-fill']) >= 4.5)
 })
 
-test('the library accent roles follow the palette; under Zhin green they equal the library values (console-ui 1.1)', () => {
+test('the library accent roles stay Zhin green in every palette (ADR 0063 D23); under Zhin green they equal --primary', () => {
   const light = tokensFor('zhin', false), dark = tokensFor('zhin', true)
   // #0A7551 vs the library's brand-text hsl(160 84% 25%): the same color within rounding.
-  assert.ok(Math.abs(light['console-brand-text'].h - 160) <= 0.5 && light['console-brand-text'].s === 84 && light['console-brand-text'].l === 25)
-  assert.deepEqual(dark['console-brand-text'], { h: 159.8, s: 100, l: 74.9 })
+  assert.ok(Math.abs(light.primary.h - 160) <= 0.5 && light.primary.s === 84 && light.primary.l === 25)
+  assert.deepEqual(dark.primary, { h: 159.8, s: 100, l: 74.9 })
   for (const palette of THEME_PALETTES) for (const theme of [false, true]) {
-    const tokens = tokensFor(palette.id, theme)
-    assert.deepEqual(tokens.ring, tokens.primary, `${palette.id}: focus ring is the palette accent`)
-    assert.deepEqual(tokens['console-brand-text'], tokens.primary)
-    assert.deepEqual(tokens['console-brand-tint'], tokens['primary-action'])
+    const tokens = tokensFor(palette.id, theme), zhin = theme ? dark : light
+    assert.deepEqual(tokens['console-brand-text'], zhin['console-brand-text'], `${palette.id}: brand-text is palette-independent`)
+    assert.deepEqual(tokens['console-brand-tint'], zhin['console-brand-tint'], `${palette.id}: brand-tint is palette-independent`)
+    assert.deepEqual(tokens.ring, tokens['console-brand-text'], `${palette.id}: focus ring is the brand accent`)
   }
 })
 test('status, fill and chart tokens are the library roles; sent is still chart-3 (console-ui 1.1)', () => {
