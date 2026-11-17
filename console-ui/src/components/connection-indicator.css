@@ -1,7 +1,7 @@
 /* Top bar live-connection indicator (ConnectionIndicator). Tokens only. */
 .console-connection-pill {
   display: inline-flex; align-items: center; gap: 0.3125rem; flex-shrink: 0; height: 1.75rem; max-width: 18rem;
-  margin: 0 0.25rem; padding: 0 0.625rem; border: 1px solid hsl(var(--warning) / 0.5); border-radius: 999px;
+  margin: 0 0.25rem; padding: 0 0.625rem; border: var(--console-border-hairline) solid hsl(var(--warning) / 0.5); border-radius: var(--console-radius-full);
   background: hsl(var(--warning) / 0.1); color: hsl(var(--foreground)); font-size: var(--console-text-label); font-weight: var(--console-weight-medium);
   white-space: nowrap; cursor: pointer;
 }

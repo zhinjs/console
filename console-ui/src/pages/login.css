@@ -25,19 +25,19 @@
   .console-login-preview .console-stat-value-row { min-height: 0; }
   .console-login-preview .console-stat-value { font-size: var(--console-text-title); font-variant-numeric: tabular-nums; }
   .console-login-preview .console-stat-sub { font-size: var(--console-text-label); }
-  .console-login-preview-swatch { display: block; width: 8px; height: 8px; border-radius: 999px; }
+  .console-login-preview-swatch { display: block; width: 8px; height: 8px; border-radius: var(--console-radius-full); }
   .console-login-preview-swatch.is-inbound { background: hsl(var(--zc-chart-inbound)); }
   .console-login-preview-swatch.is-outbound { background: hsl(var(--zc-chart-outbound)); }
   .console-login-preview-bars { display: flex; align-items: flex-end; gap: 5px; height: 56px; padding: 0 2px; border-bottom: var(--zc-hairline) solid var(--console-border-subtle); }
-  .console-login-preview-bar { display: flex; flex: 1; flex-direction: column; justify-content: flex-start; overflow: hidden; border-radius: 3px 3px 0 0; background: hsl(var(--zc-chart-inbound)); }
-  .console-login-preview-bar > .is-outbound { display: block; width: 100%; margin-top: auto; background: hsl(var(--zc-chart-outbound)); box-shadow: 0 -1px 0 hsl(var(--card)); }
+  .console-login-preview-bar { display: flex; flex: 1; flex-direction: column; justify-content: flex-start; overflow: hidden; border-radius: var(--console-radius-1) var(--console-radius-1) 0 0; background: hsl(var(--zc-chart-inbound)); }
+  .console-login-preview-bar > .is-outbound { display: block; width: 100%; margin-top: auto; background: hsl(var(--zc-chart-outbound)); border-top: var(--console-border-hairline) solid hsl(var(--card)); }
   .console-login-preview-chat { display: grid; gap: 8px; font-size: var(--console-text-label); }
   .console-login-preview-chat .im-bubble { max-width: 80%; padding: 6px 10px; font-size: var(--console-text-label); line-height: 1.5; }
   .console-login-preview-message { display: flex; align-items: flex-start; gap: 8px; }
   .console-login-preview-message.is-out { justify-content: flex-end; }
-  .console-login-preview-avatar { display: grid; place-items: center; width: 22px; height: 22px; flex: none; border-radius: 999px; background: var(--console-surface-inset); color: hsl(var(--muted-foreground)); }
+  .console-login-preview-avatar { display: grid; place-items: center; width: 22px; height: 22px; flex: none; border-radius: var(--console-radius-full); background: var(--console-surface-inset); color: hsl(var(--muted-foreground)); }
   .console-login-preview-avatar svg { width: 13px; height: 13px; }
-  .console-login-preview-avatar.is-bot { border-radius: 7px; background: none; }
+  .console-login-preview-avatar.is-bot { border-radius: var(--console-radius-1); background: none; }
   .console-login-panel { padding: 28px; border: var(--console-border-hairline) solid transparent; border-radius: var(--console-radius-4); background: hsl(var(--card));
     box-shadow: var(--console-card-elevation);
   }
@@ -55,8 +55,8 @@
   .console-login-remember { display: flex; align-items: flex-start; gap: 8px; font-size: var(--console-text-label); line-height: 1.5; color: hsl(var(--muted-foreground)); cursor: pointer; }
   .console-login-remember > button { flex: none; margin-top: 2px; }
   .console-login-session-note { margin: -10px 0 0 24px; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); line-height: 1.6; }
-  .console-login-error { padding: 12px; border-radius: 8px; background: hsl(var(--destructive) / .07); color: hsl(var(--destructive)); font-size: var(--console-text-label); line-height: 1.7; overflow-wrap: anywhere; }
-  .console-login-help { border-top: 1px solid hsl(var(--border)); padding-top: 16px; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
+  .console-login-error { padding: 12px; border-radius: var(--console-radius-2); background: hsl(var(--destructive) / .07); color: hsl(var(--destructive)); font-size: var(--console-text-label); line-height: 1.7; overflow-wrap: anywhere; }
+  .console-login-help { border-top: var(--console-border-hairline) solid hsl(var(--border)); padding-top: 16px; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
   .console-login-help summary { width: fit-content; cursor: pointer; }
   .console-login-help p { margin: 12px 0 0; line-height: 1.8; }
   @media (max-width: 767px) {

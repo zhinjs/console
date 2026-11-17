@@ -11,7 +11,7 @@
 .console-admin-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .console-admin-note { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .console-admin-log {
-  height: 20rem; overflow: auto; border: 1px solid var(--console-border-default, hsl(var(--border))); border-radius: var(--console-radius-2);
+  height: 20rem; overflow: auto; border: var(--console-border-hairline) solid var(--console-border-default, hsl(var(--border))); border-radius: var(--console-radius-2);
   background: hsl(var(--muted) / 0.4); padding: 0.75rem; font-family: var(--console-font-mono); font-size: var(--console-text-label); line-height: 1.6;
 }
 .console-admin-log .is-stderr { color: hsl(var(--destructive)); }

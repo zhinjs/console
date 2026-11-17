@@ -28,14 +28,14 @@
 .console-log-autoscroll { font-size: var(--log-caption); min-height: var(--log-control); }
 .console-log-stream > header { min-height: 0; padding: .625rem .875rem; }
 .console-log-stream > header h2 { font-size: var(--console-text-section); line-height: 1.4; }
-.console-log-pagination { display: grid; grid-template-columns: auto minmax(0,1fr) auto auto; align-items: center; gap: .625rem; padding: .625rem .875rem; border-top: 1px solid hsl(var(--border) / .6); font-size: var(--log-caption); line-height: 1.4; background: hsl(var(--card)); }
+.console-log-pagination { display: grid; grid-template-columns: auto minmax(0,1fr) auto auto; align-items: center; gap: .625rem; padding: .625rem .875rem; border-top: var(--console-border-hairline) solid hsl(var(--border) / .6); font-size: var(--log-caption); line-height: 1.4; background: hsl(var(--card)); }
 .console-log-page-summary { text-align: center; }
 .console-log-pagination button { height: var(--log-control); min-height: var(--log-control); font-size: inherit; }
 .console-log-pagination [role="combobox"] { min-width: 6rem; width: auto; }
 @media (max-width:1199px) {
  .console-logs-page { --log-caption: var(--console-text-label, .8125rem); --log-control: var(--console-control-height-compact, 2.25rem); gap: .75rem; }
  .console-log-overview { grid-template-columns: repeat(4,minmax(0,1fr)); }
- .console-log-health { grid-column: 1 / -1; padding: .375rem .75rem; border-top: 1px solid hsl(var(--border) / .5); }
+ .console-log-health { grid-column: 1 / -1; padding: .375rem .75rem; border-top: var(--console-border-hairline) solid hsl(var(--border) / .5); }
  .console-log-signal, .console-log-signal:first-child { padding: .5rem .75rem; border-bottom: 0; }
  .console-log-toolbar-actions { margin-left: auto; }
 }
@@ -44,7 +44,7 @@
  .console-logs-page .console-page-title { font-size: var(--console-text-title); }
  .console-logs-page .console-page-description { display: none; }
  .console-log-overview { grid-template-columns: repeat(4,minmax(0,1fr)); }
- .console-log-signal, .console-log-signal:first-child { gap: .25rem; padding: .5rem .375rem; min-height: 2.75rem; border-right: 1px solid hsl(var(--border) / .5); }
+ .console-log-signal, .console-log-signal:first-child { gap: .25rem; padding: .5rem .375rem; min-height: 2.75rem; border-right: var(--console-border-hairline) solid hsl(var(--border) / .5); }
  .console-log-signal strong { font-size: var(--console-text-body); }
  .console-log-signal > svg { width: .75rem; height: .75rem; }
  .console-log-toolbar { padding: .5rem; }

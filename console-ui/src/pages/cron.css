@@ -122,7 +122,7 @@
     display: grid;
     gap: 1.25rem;
     margin-top: 1rem;
-    border-top: 1px solid var(--console-border-subtle);
+    border-top: var(--console-border-hairline) solid var(--console-border-subtle);
     padding-top: 1rem;
   }
 

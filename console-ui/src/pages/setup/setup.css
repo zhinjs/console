@@ -9,14 +9,14 @@
   .console-setup-lead { display: flex; gap: 8px; margin: -8px 0 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); line-height: 1.7; }
   .console-setup-lead svg { width: 16px; height: 16px; flex: none; margin-top: 3px; }
   .console-setup-steps { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
-  .console-setup-steps li { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid hsl(var(--border)); border-radius: 999px; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
+  .console-setup-steps li { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: var(--console-border-hairline) solid hsl(var(--border)); border-radius: var(--console-radius-full); color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
   .console-setup-steps li[data-state='current'] { border-color: hsl(var(--primary)); color: hsl(var(--foreground)); font-weight: var(--console-weight-medium); }
   .console-setup-steps li[data-state='done'] { color: hsl(var(--foreground)); }
   .console-setup-step-mark svg { width: 14px; height: 14px; }
   .console-setup-body { display: grid; gap: 16px; }
   .console-setup-body h2 { margin: 0; font-size: var(--console-text-section); font-weight: var(--console-weight-strong); }
   .console-setup-note { margin: 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); line-height: 1.7; }
-  .console-setup-fields { display: grid; gap: 14px; margin: 0; padding: 16px; border: 1px solid hsl(var(--border)); border-radius: 10px; }
+  .console-setup-fields { display: grid; gap: 14px; margin: 0; padding: 16px; border: var(--console-border-hairline) solid hsl(var(--border)); border-radius: var(--console-radius-2); }
   .console-setup-fields legend { padding: 0 4px; font-size: var(--console-text-label); font-weight: var(--console-weight-strong); }
   .console-setup-status { display: flex; align-items: center; gap: 8px; margin: 0; font-size: var(--console-text-label); color: hsl(var(--muted-foreground)); }
   .console-setup-status svg { width: 16px; height: 16px; }

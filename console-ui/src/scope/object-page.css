@@ -10,7 +10,7 @@
 .console-object-heading { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.75rem 1rem; min-width: 0; }
 .console-object-avatar {
   display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem;
-  border-radius: var(--console-radius-3); background: hsl(var(--primary-action)); color: hsl(var(--primary)); box-shadow: inset 0 0 0 1px hsl(var(--primary-action-border) / 0.6);
+  border-radius: var(--console-radius-3); background: hsl(var(--primary-action)); color: hsl(var(--primary)); outline: var(--console-border-hairline) solid hsl(var(--primary-action-border) / 0.6); outline-offset: calc(var(--console-border-hairline) * -1);
 }
 .console-object-avatar svg { width: 1.375rem; height: 1.375rem; }
 .console-object-titles { display: flex; min-width: 0; flex: 1 1 24rem; flex-direction: column; gap: 0.25rem; }
@@ -32,7 +32,7 @@
 .console-object-tab { gap: 0.375rem; }
 .console-object-tab-lock { width: 0.75rem; height: 0.75rem; opacity: 0.7; }
 .console-object-tab-badge {
-  min-width: 1.25rem; border-radius: 999px; background: hsl(var(--muted-foreground) / 0.15); padding: 0 0.375rem;
+  min-width: 1.25rem; border-radius: var(--console-radius-full); background: hsl(var(--muted-foreground) / 0.15); padding: 0 0.375rem;
   font-size: var(--console-text-label); line-height: 1.25rem;
 }
 .console-object-panel { margin-top: 1rem; display: flex; flex-direction: column; gap: var(--console-section-gap); }
@@ -92,11 +92,11 @@ a.console-scope-crumb:focus-visible { outline: var(--console-border-focus) solid
 .console-scope-picker-icon { width: 1rem; height: 1rem; flex-shrink: 0; opacity: 0.8; }
 .console-scope-picker-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--console-text-label); }
 .console-scope-picker-identity { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-weight: var(--console-weight-regular); }
-.console-scope-picker-dot { width: 0.5rem; height: 0.5rem; flex-shrink: 0; border-radius: 999px; }
+.console-scope-picker-dot { width: 0.5rem; height: 0.5rem; flex-shrink: 0; border-radius: var(--console-radius-full); }
 /* Online is the steady state (neutral); an offline account is the one that needs a look. console#125. */
 .console-scope-picker-dot.is-online { background: hsl(var(--muted-foreground) / 0.4); }
 .console-scope-picker-dot.is-offline { background: hsl(var(--warning-fill)); }
-.console-scope-picker-note { display: flex; align-items: center; gap: 0.375rem; border-top: 1px solid var(--console-border-subtle); padding-top: 0.5rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
+.console-scope-picker-note { display: flex; align-items: center; gap: 0.375rem; border-top: var(--console-border-hairline) solid var(--console-border-subtle); padding-top: 0.5rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .console-scope-picker-note svg { width: 0.875rem; height: 0.875rem; flex-shrink: 0; }
 @media (max-width: 767px) { .console-scope-picker-item { min-height: 2.75rem; } }
 

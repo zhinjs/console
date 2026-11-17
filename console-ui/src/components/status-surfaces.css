@@ -2,7 +2,7 @@
 
 /* ---- StatusState ---- */
 .console-status-state {
-  display: flex; align-items: flex-start; gap: 0.75rem; border: 1px dashed var(--console-border-default); border-radius: var(--console-radius-3);
+  display: flex; align-items: flex-start; gap: 0.75rem; border: var(--console-border-hairline) dashed var(--console-border-default); border-radius: var(--console-radius-3);
   background: hsl(var(--muted) / 0.35); padding: 1.25rem; color: hsl(var(--foreground));
 }
 .console-status-state--warning { border-style: solid; border-color: hsl(var(--warning) / 0.45); background: hsl(var(--warning) / 0.08); }
@@ -53,7 +53,7 @@
 
 /* ---- Instance unavailable banner (shell) ---- */
 .console-instance-banner {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; border-bottom: 1px solid hsl(var(--warning) / 0.45);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; border-bottom: var(--console-border-hairline) solid hsl(var(--warning) / 0.45);
   background: hsl(var(--warning) / 0.1); padding: 0.625rem var(--console-page-padding-inline, 1rem); color: hsl(var(--foreground));
 }
 .console-instance-banner-icon { width: 1.125rem; height: 1.125rem; flex-shrink: 0; color: hsl(var(--warning)); }
@@ -64,7 +64,7 @@
 
 /* ---- ApplyFeedback: the outcome of one save (已生效 / 下一条消息生效 / 需要重启 / 未生效) ---- */
 .console-apply {
-  display: flex; align-items: flex-start; gap: 0.625rem; border: 1px solid var(--console-border-default); border-radius: var(--console-radius-2);
+  display: flex; align-items: flex-start; gap: 0.625rem; border: var(--console-border-hairline) solid var(--console-border-default); border-radius: var(--console-radius-2);
   background: hsl(var(--muted) / 0.35); padding: 0.75rem; color: hsl(var(--foreground)); min-width: 0;
 }
 .console-apply--success { border-color: hsl(var(--success) / 0.45); background: hsl(var(--success) / 0.07); }

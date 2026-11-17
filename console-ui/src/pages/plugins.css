@@ -27,7 +27,7 @@
 
   .console-plugin-filter-pill {
     border: 0;
-    border-radius: calc(var(--console-radius-2) - 3px);
+    border-radius: var(--console-radius-1);
     padding: 0.28rem 0.75rem;
     background: transparent;
     color: hsl(var(--muted-foreground));
@@ -86,8 +86,8 @@
     bottom: -0.15rem;
     width: 0.6rem;
     height: 0.6rem;
-    border: 2px solid hsl(var(--card));
-    border-radius: 999px;
+    border: var(--console-border-focus) solid hsl(var(--card));
+    border-radius: var(--console-radius-full);
     background: hsl(var(--muted-foreground) / 0.5);
   }
 
@@ -240,7 +240,7 @@
   }
   .console-plugin-group-count {
     margin-left: 0.5rem;
-    border-radius: 999px;
+    border-radius: var(--console-radius-full);
     background: hsl(var(--card));
     padding: 0 0.45rem;
     color: hsl(var(--muted-foreground));

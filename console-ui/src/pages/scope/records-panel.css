@@ -1,7 +1,7 @@
 /* 记录 tab: the scope's sessions and the narrowed record pages. Tokens only. */
 .console-records-sessions { margin: 0; padding: 0; list-style: none; }
 .console-records-session { display: flex; min-width: 0; align-items: center; gap: 0.75rem; padding: 0.625rem 1rem; }
-.console-records-session + .console-records-session { border-top: 1px solid var(--console-border-subtle); }
+.console-records-session + .console-records-session { border-top: var(--console-border-hairline) solid var(--console-border-subtle); }
 .console-records-session-main { flex: 1 1 auto; min-width: 0; }
 .console-records-session-name { display: block; overflow: hidden; color: hsl(var(--foreground)); font-weight: var(--console-weight-strong); text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
 .console-records-session-name:hover { text-decoration: underline; text-underline-offset: 3px; }
@@ -10,7 +10,7 @@
 .console-records-session-meta code { font-family: var(--console-font-mono); }
 .console-records-session-action { flex-shrink: 0; }
 .console-records-session-note { flex-shrink: 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
-.console-records-more { margin: 0; padding: 0.625rem 1rem; border-top: 1px solid var(--console-border-subtle); color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
+.console-records-more { margin: 0; padding: 0.625rem 1rem; border-top: var(--console-border-hairline) solid var(--console-border-subtle); color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .console-records-sources { display: grid; gap: 0.75rem; margin: 0; padding: 0; list-style: none; grid-template-columns: repeat(auto-fill, minmax(min(18rem, 100%), 1fr)); }
 .console-records-sources > li { display: flex; min-width: 0; }
 .console-records-source { display: flex; width: 100%; min-width: 0; flex-direction: column; gap: 0.5rem; padding: 1rem; }

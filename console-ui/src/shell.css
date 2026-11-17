@@ -53,7 +53,7 @@
     align-items: center;
     gap: 0.5rem;
     border: var(--console-border-hairline) solid var(--zc-nav-border);
-    border-radius: 999px;
+    border-radius: var(--console-radius-full);
     background: var(--zc-nav-bg);
     box-shadow: var(--zc-nav-shadow);
     padding: 0 0.5rem 0 0.625rem;
@@ -83,7 +83,7 @@
     align-items: center;
     gap: 0.625rem;
     min-width: 0;
-    border-radius: 999px;
+    border-radius: var(--console-radius-full);
     padding-right: 0.5rem;
     color: hsl(var(--foreground));
   }
@@ -130,7 +130,7 @@
     align-items: center;
     gap: 0.4375rem;
     border: var(--console-border-hairline) solid transparent;
-    border-radius: 999px;
+    border-radius: var(--console-radius-full);
     background: transparent;
     padding: 0 0.875rem;
     color: hsl(var(--muted-foreground));
@@ -257,7 +257,7 @@
   .console-topnav-actions .console-topnav-account,
   .console-topnav-actions > button,
   .console-topnav-actions > .console-language-select {
-    border-radius: 999px;
+    border-radius: var(--console-radius-full);
   }
 
   .console-connection-dot {
@@ -265,9 +265,9 @@
     height: 0.5rem;
     flex-shrink: 0;
     margin: 0 0.375rem;
-    border-radius: 50%;
+    border-radius: var(--console-radius-full);
     background: hsl(var(--warning-fill));
-    box-shadow: 0 0 0 3px hsl(var(--warning-fill) / 0.18);
+    outline: var(--console-border-focus) solid hsl(var(--warning-fill) / 0.18); outline-offset: 0;
   }
 
   /* Connected (and the first-connect grace period) is the steady state: a quiet neutral dot that still carries the
@@ -331,7 +331,7 @@
     align-items: center;
     gap: 0.375rem;
     border: 0;
-    border-radius: 999px;
+    border-radius: var(--console-radius-full);
     background: transparent;
     padding: 0 0.625rem;
     color: hsl(var(--foreground));
@@ -524,7 +524,7 @@
     width: 0.5rem;
     height: 0.5rem;
     flex-shrink: 0;
-    border-radius: 50%;
+    border-radius: var(--console-radius-full);
     background: hsl(var(--warning-fill));
   }
 
@@ -632,7 +632,7 @@
       gap: 0.125rem;
     }
     .console-topnav-actions > .console-command-trigger { margin-right: 0; }
-    .console-topnav-actions .console-command-trigger { width: 2.5rem; height: 2.5rem; justify-content: center; padding: 0; border-radius: 999px; }
+    .console-topnav-actions .console-command-trigger { width: 2.5rem; height: 2.5rem; justify-content: center; padding: 0; border-radius: var(--console-radius-full); }
     .console-topnav-actions .console-command-trigger > span,
     .console-topnav-actions .console-command-trigger > kbd { display: none; }
     .console-connection-dot { display: none; }
@@ -770,7 +770,7 @@
 
   .console-segmented label > span {
     display: block;
-    border-radius: calc(var(--console-radius-2) - 2px);
+    border-radius: var(--console-radius-2);
     padding: 0.3125rem 0.75rem;
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
@@ -815,7 +815,7 @@
   .console-choice-card:has([role="radio"][data-state="checked"]) {
     border-color: hsl(var(--primary) / 0.5);
     background: hsl(var(--primary) / 0.05);
-    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.25);
+    outline: var(--console-border-hairline) solid hsl(var(--primary) / 0.25); outline-offset: 0;
   }
 
   .console-choice-card [role="radio"] {
@@ -845,8 +845,8 @@
     width: 0.375rem;
     height: 0.375rem;
     flex-shrink: 0;
-    border-right: 1.5px solid currentColor;
-    border-bottom: 1.5px solid currentColor;
+    border-right: var(--console-border-focus) solid currentColor;
+    border-bottom: var(--console-border-focus) solid currentColor;
     opacity: 0.7;
     transform: rotate(-45deg);
     transition: transform var(--console-motion-fast) var(--console-ease-out);
@@ -884,7 +884,7 @@
   .console-outcome-chip {
     display: inline-flex;
     align-items: center;
-    border-radius: 999px;
+    border-radius: var(--console-radius-full);
     background: var(--console-surface-muted);
     padding: 0.125rem 0.5rem;
     color: hsl(var(--muted-foreground));
@@ -922,7 +922,7 @@
     /* Opaque: fields scrolling underneath must not show through the bar. */
     background: hsl(var(--card));
     padding: 0.75rem 1rem;
-    box-shadow: 0 6px 12px -10px hsl(var(--console-shadow-color) / 0.25);
+    box-shadow: var(--console-elevation-1);
   }
 
   /*
@@ -964,7 +964,7 @@
     flex-shrink: 0;
     align-items: center;
     gap: 0.375rem;
-    border-radius: 999px;
+    border-radius: var(--console-radius-full);
     background: hsl(var(--warning) / 0.1);
     padding: 0.125rem 0.5rem;
     color: hsl(var(--warning));
@@ -976,7 +976,7 @@
     content: "";
     width: 0.375rem;
     height: 0.375rem;
-    border-radius: 50%;
+    border-radius: var(--console-radius-full);
     background: currentColor;
   }
 }
