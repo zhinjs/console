@@ -11,7 +11,7 @@ export const authMessages = Object.freeze({
   "显示密码": "Show password",
   "API 令牌，或首次初始化时使用的初始化令牌。": "An API token, or the setup token used the first time.",
   "这个实例还没有所有者，请用初始化令牌登录（.env 里的 HTTP_TOKEN，启动日志里也会提示）。": "This instance has no owner yet. Sign in with its setup token (HTTP_TOKEN in .env; the startup log mentions it too).",
-  "登录状态仅保留在本次浏览器会话。": "You stay signed in for this browser session only.",
+  "登录状态仅在当前标签页有效：在新标签页打开 Console 需要重新登录。": "You stay signed in for this tab only: opening Console in a new tab asks you to sign in again.",
   "此 Host 不支持账号登录（版本较旧），请改用访问令牌连接。": "This Host does not support account sign-in (it is older). Connect with an access token instead.",
   "此 Host 版本较旧，不支持这项操作。": "This Host is too old for this action.",
   "此 Host 尚未初始化：请改用访问令牌，填写初始化令牌（启动日志中的链接，或 .env 里的 HTTP_TOKEN）来创建第一个所有者。": "This Host is not set up yet. Use Access token with the setup token (the link in the startup log, or HTTP_TOKEN in .env) to create the first owner.",
