@@ -63,9 +63,9 @@ Console 没有单独的演示构建：公开演示是一台真实 Host，访客�
 |------|------|------|
 | 概览 | 首页 `/dashboard`、运行日志 `/logs`、机器人状态 `/agent/workbench`、Token 用量 `/agent/usage` | 决策回放 `/agent/replay` |
 | 会话 | 试聊一下（`/sandbox`，sandbox 插件页）、账号与会话 `/scope`（全局对象页）、聊天记录 `/agent/sessions` | 对象树：适配器 `/scope/:adapter`、账号 `/scope/:adapter/:endpoint`、会话 `/scope/:adapter/:endpoint/:conversation`（`<kind>:<id>`） |
-| 功能 | 功能矩阵 `/features`、AI 与模型 `/features/ai`、技能助手 `/features/ai/skills`、群聊插话 `/features/ai/ambient`、Workroom `/features/ai/workrooms`、运行时能力、消息场景试验台，以及没有声明分区的插件页 | 全局配置 `/features/global/:plugin`、Workroom 配置、命令权限说明、群欢迎配置流程 |
+| 功能 | 功能矩阵 `/features`、AI 与模型 `/features/ai`、技能助手 `/features/ai/skills`、群聊插话 `/features/ai/ambient`、Workroom `/features/ai/workrooms`、运行时能力，以及没有声明分区的插件页 | 全局配置 `/features/global/:plugin`、Workroom 配置、命令权限说明、群欢迎配置流程 |
 | 插件 | 插件管理 `/plugins`、插件市场 `/marketplace` | 插件详情 `/plugins/:name`（不含配置，配置在全局配置页） |
-| 运维 | 数据库 `/ops/database`、配置文件 `/ops/config`、环境变量 `/ops/env`、定时任务 `/ops/schedules`、项目文件 `/ops/files`、实例 `/ops/instance`、终端 `/ops/terminal` | — |
+| 运维 | 数据库 `/ops/database`、配置文件 `/ops/config`、环境变量 `/ops/env`、定时任务 `/ops/schedules`、项目文件 `/ops/files`、实例 `/ops/instance`、终端 `/ops/terminal`、连接自检 `/ops/self-check`、消息场景试验台 `/scenario-lab` | — |
 | 访问控制 | 用户 `/access/users`、角色 `/access/roles`、API 令牌 `/access/tokens`、审计日志 `/access/audit` | — |
 
 - 某个区里没有当前身份能看的页面时，整个区不显示。Host 还没有报告权限时（RBAC 之前的所有 Host）按不受限处理，由 Host 自己拒绝越权请求。
