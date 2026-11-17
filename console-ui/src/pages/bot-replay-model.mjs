@@ -142,13 +142,29 @@ export function reasonLabel(code, locale = 'zh-CN') {
   return Object.hasOwn(REASON_LABELS, code) ? translate(locale, REASON_LABELS[code]) : code
 }
 
-/** 一行 → 页面显示：一句话原因 + 原始机器码（排障时对得上日志）。 */
-export function describeReplayRow(row, locale = 'zh-CN') {
+/**
+ * The key the group lists use for a row's conversation (`<adapter>:<group id>`, as in the ambient
+ * group picker), or null when the row is not in a group.
+ */
+export function replayGroupKey(row) {
+  const match = typeof row?.scene_id === 'string' ? /^group:(.+)$/u.exec(row.scene_id) : null
+  return match && row.platform ? `${row.platform}:${match[1]}` : null
+}
+
+/**
+ * 一行 → 页面显示：一句话原因 + 原始机器码（排障时对得上日志）。
+ * `groupNames`（`<adapter>:<group id>` → 群名）有这个群时，`where` 写群名，原始会话 id 留在 `whereCode`。
+ */
+export function describeReplayRow(row, locale = 'zh-CN', groupNames) {
+  const whereCode = `${row.platform} · ${row.scene_id}`
+  const key = replayGroupKey(row)
+  const name = key && groupNames instanceof Map ? groupNames.get(key) : undefined
   return {
     id: row.id,
     at: row.ts,
     turnId: row.turn_id,
-    where: `${row.platform} · ${row.scene_id}`,
+    where: typeof name === 'string' && name.trim() ? `${row.platform} · ${name.trim()}` : whereCode,
+    whereCode,
     kind: kindLabel(row.kind, locale),
     outcome: outcomeLabel(row.outcome, locale),
     outcomeCode: row.outcome,
