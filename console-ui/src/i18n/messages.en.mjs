@@ -1559,7 +1559,6 @@ export const englishMessages = Object.freeze({
   "移除附件": "Remove attachment",
   "待处理": "Pending",
   "历史": "History",
-  "操作失败：": "Operation failed: ",
   "正在读取待处理请求…": "Reading pending requests…",
   "请求读取失败：": "Could not read requests: ",
   "此账号未提供请求管理，且未启用请求收件箱": "This account provides no request management and the request inbox is not enabled",
@@ -3463,4 +3462,10 @@ export const englishMessages = Object.freeze({
   "请求已发出，但没有收到可信的答复，可能已经写入。请先核对，不要直接重试。": "The request was sent but no reliable answer came back, so it may have been written. Check first; do not simply retry.",
   "正在核对…": "Checking…",
   "核对": "Check",
+  "同意 {0} 的请求": "Accept the request from {0}",
+  "拒绝 {0} 的请求": "Decline the request from {0}",
+  "把 {0} 的请求标记为已处理": "Mark the request from {0} as handled",
+  "刷新待处理列表": "Refresh pending list",
+  "把这条通知标记为已读": "Mark this notice as read",
+  "刷新通知列表": "Refresh notice list",
 })
