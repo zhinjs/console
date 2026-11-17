@@ -27,6 +27,7 @@ import {
   type FeatureChange, type FeatureLevelRow, type FeatureRowFilter,
 } from './feature-scope-model.mjs'
 import { useFeatureList } from './use-feature-data'
+import { SwitchHitArea } from './feature-switch'
 import { featureReceiptKey } from './adapter-switch-model.mjs'
 import './feature-level-panel.css'
 
@@ -341,9 +342,11 @@ function FeatureRow({ scope, level, levelKey, feature, row, detail, reload, adop
           </> : null}
         </div>
         <div className="console-feature-row-switch">
-          <Switch aria-label={i18n.t('{0} · 启用', [row.displayName])} checked={switchState.checked} disabled={switchState.disabled}
-            aria-disabled={switchState.disabled || switchState.busy || undefined} className={switchState.busy ? 'cursor-wait opacity-60' : undefined}
-            title={!canToggle ? i18n.t('当前身份不能启停功能') : undefined} onCheckedChange={checked => { if (!switchState.disabled && !switchState.busy) toggle(checked === true) }} />
+          <SwitchHitArea>
+            <Switch aria-label={i18n.t('{0} · 启用', [row.displayName])} checked={switchState.checked} disabled={switchState.disabled}
+              aria-disabled={switchState.disabled || switchState.busy || undefined} className={switchState.busy ? 'cursor-wait opacity-60' : undefined}
+              title={!canToggle ? i18n.t('当前身份不能启停功能') : undefined} onCheckedChange={checked => { if (!switchState.disabled && !switchState.busy) toggle(checked === true) }} />
+          </SwitchHitArea>
         </div>
       </div>
       {detail.status === 'failed' ? <div className="console-feature-row-body"><StatusState compact error={detail.error} onRetry={reload} /></div> : null}
