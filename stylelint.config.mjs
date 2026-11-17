@@ -5,9 +5,10 @@
  * (--console-motion-fast / -base / -slow, --console-ease-out; zhinjs/console#125).
  * `console/no-unknown-tokens` is an error: `--console-*` names belong to @zhin.js/console-ui; the
  * Console's own tokens use the `--zc-` prefix. `console/no-deprecated-tokens` is an error: the
- * Console reads the successors of the P1b aliases. The other rules are warnings while the Console's
- * stylesheets move onto the library's scale (`pnpm lint:css:all` lists them); CI runs
- * `pnpm lint:css`, which fails on errors only.
+ * Console reads the successors of the P1b aliases. `console/scale-values` is an error: font sizes,
+ * weights, spacing, radii, border widths and shadows read the scale (a value the scale cannot
+ * express carries a `stylelint-disable-next-line` comment with its reason). `console/media-queries`
+ * still warns (`pnpm lint:css:all` lists it); CI runs `pnpm lint:css`, which fails on errors only.
  *
  * `semanticOnly: false`: the Console's own stylesheets may read the base scale (--console-space-3,
  * --console-radius-2, --console-border-hairline, --console-elevation-2, …) as well as the semantic
@@ -39,7 +40,6 @@ export default {
   ...config,
   rules: {
     ...config.rules,
-    'console/scale-values': warn('console/scale-values'),
     'console/media-queries': warn('console/media-queries'),
   },
 }

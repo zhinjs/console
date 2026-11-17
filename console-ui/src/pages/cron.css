@@ -4,7 +4,7 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
+    gap: var(--console-space-3);
   }
 
   .console-cron-search {
@@ -26,13 +26,13 @@
 
   .console-cron-item,
   .console-cron-memory-item {
-    padding: 1rem;
+    padding: var(--console-space-4);
   }
 
   .console-cron-item-heading {
     display: flex;
     align-items: flex-start;
-    gap: 0.75rem;
+    gap: var(--console-space-3);
   }
 
   .console-cron-toggle {
@@ -50,7 +50,7 @@
   .console-cron-title-row {
     display: flex;
     align-items: flex-start;
-    gap: 0.625rem;
+    gap: var(--console-space-3);
   }
 
   .console-cron-title {
@@ -70,7 +70,7 @@
     width: 1rem;
     height: 1rem;
     flex: none;
-    margin-top: 0.25rem;
+    margin-top: var(--console-space-1);
     color: hsl(var(--muted-foreground));
   }
 
@@ -79,7 +79,7 @@
     overflow: hidden;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
-    margin-top: 0.3rem;
+    margin-top: var(--console-space-1);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-body);
     line-height: 1.6;
@@ -88,7 +88,7 @@
 
   .console-cron-schedule {
     display: block;
-    margin-top: 0.5rem;
+    margin-top: var(--console-space-2);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
   }
@@ -96,39 +96,39 @@
   .console-cron-actions {
     display: flex;
     flex: none;
-    gap: 0.125rem;
+    gap: var(--console-space-1);
   }
 
   .console-cron-run-status {
     display: grid;
-    gap: 0.625rem;
-    margin-top: 0.75rem;
+    gap: var(--console-space-3);
+    margin-top: var(--console-space-3);
   }
 
   .console-cron-run-facts {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem 1.25rem;
+    gap: var(--console-space-2) var(--console-space-5);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
   }
 
   .console-cron-memory-item > .console-cron-run-facts {
-    margin-top: 0.625rem;
+    margin-top: var(--console-space-3);
   }
 
   .console-cron-details {
     display: grid;
-    gap: 1.25rem;
-    margin-top: 1rem;
+    gap: var(--console-space-5);
+    margin-top: var(--console-space-4);
     border-top: var(--console-border-hairline) solid var(--console-border-subtle);
-    padding-top: 1rem;
+    padding-top: var(--console-space-4);
   }
 
   .console-cron-detail-label,
   .console-cron-metadata dt {
-    margin-bottom: 0.375rem;
+    margin-bottom: var(--console-space-2);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
   }
@@ -136,7 +136,7 @@
   .console-cron-metadata {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
-    gap: 1rem 1.5rem;
+    gap: var(--console-space-4) var(--console-space-5);
     font-size: var(--console-text-body);
   }
 
@@ -150,7 +150,7 @@
   }
 
   .console-cron-memory-details {
-    margin-top: 0.75rem;
+    margin-top: var(--console-space-3);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
   }
@@ -161,12 +161,12 @@
   }
 
   .console-cron-memory-details .console-cron-metadata {
-    margin-top: 0.875rem;
+    margin-top: var(--console-space-4);
     color: hsl(var(--foreground));
   }
 
   .console-cron-filter-empty {
-    padding: 1.5rem 0;
+    padding: var(--console-space-5) 0;
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-body);
   }
@@ -189,8 +189,8 @@
 }
 
 /* Plugin housekeeping schedules, folded under the plugin schedules (zhinjs/zhin#1250). */
-.console-cron-internal { margin-top: 0.75rem; border: var(--console-border-hairline) solid hsl(var(--border)); border-radius: var(--console-radius-2); background: hsl(var(--card)); }
-.console-cron-internal > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.75rem 1rem; font-weight: var(--console-weight-strong); }
+.console-cron-internal { margin-top: var(--console-space-3); border: var(--console-border-hairline) solid hsl(var(--border)); border-radius: var(--console-radius-2); background: hsl(var(--card)); }
+.console-cron-internal > summary { display: flex; flex-wrap: wrap; align-items: center; gap: var(--console-space-2); cursor: pointer; padding: var(--console-space-3) var(--console-space-4); font-weight: var(--console-weight-strong); }
 .console-cron-internal-hint { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-weight: var(--console-weight-regular); }
 .console-cron-internal[open] > summary { border-bottom: var(--console-border-hairline) solid hsl(var(--border)); }
-.console-cron-internal > .console-resource-list { padding: 0.75rem; }
+.console-cron-internal > .console-resource-list { padding: var(--console-space-3); }

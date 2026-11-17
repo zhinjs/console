@@ -12,20 +12,20 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem 0.75rem;
+    gap: var(--console-space-2) var(--console-space-3);
   }
 
-  .console-attention-filters { display: flex; flex-wrap: wrap; gap: 0.375rem; }
+  .console-attention-filters { display: flex; flex-wrap: wrap; gap: var(--console-space-2); }
 
   .console-attention-filter {
     display: inline-flex;
     min-height: var(--console-control-height-compact);
     align-items: center;
-    gap: 0.375rem;
+    gap: var(--console-space-2);
     border: var(--console-border-hairline) solid var(--console-border-default);
     border-radius: var(--console-radius-full);
     background: hsl(var(--card));
-    padding: 0 0.75rem;
+    padding: 0 var(--console-space-3);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
   }
@@ -44,17 +44,17 @@
   .console-attention-note {
     border-radius: var(--console-radius-2);
     background: var(--console-surface-inset);
-    padding: 0.625rem 0.875rem;
+    padding: var(--console-space-3) var(--console-space-4);
   }
 
   .console-attention-note.is-warning { background: hsl(var(--warning) / 0.1); color: hsl(var(--foreground)); }
 
-  .console-attention-group { display: flex; flex-direction: column; gap: 0.75rem; }
+  .console-attention-group { display: flex; flex-direction: column; gap: var(--console-space-3); }
 
   .console-attention-group-title {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--console-space-2);
     font-size: var(--console-text-section);
     font-weight: var(--console-weight-strong);
   }
@@ -62,7 +62,7 @@
   .console-attention-group-count {
     border-radius: var(--console-radius-full);
     background: hsl(var(--foreground) / 0.06);
-    padding: 0 0.5rem;
+    padding: 0 var(--console-space-2);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
   }
@@ -80,12 +80,12 @@
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: start;
-    gap: 0.75rem;
-    padding: 1rem;
+    gap: var(--console-space-3);
+    padding: var(--console-space-4);
   }
 
   .console-attention-row + .console-attention-row { border-top: var(--console-border-hairline) solid var(--console-border-subtle); }
-  .console-attention-row > .console-attention-icon { margin-top: 0.15rem; }
+  .console-attention-row > .console-attention-icon { margin-top: var(--console-space-1); }
   .console-attention-row.is-hidden .console-attention-row-title { color: hsl(var(--muted-foreground)); }
   .console-attention-row-body { min-width: 0; }
 
@@ -95,7 +95,7 @@
   }
 
   .console-attention-row-detail {
-    margin-top: 0.25rem;
+    margin-top: var(--console-space-1);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
     overflow-wrap: anywhere;
@@ -104,8 +104,8 @@
   .console-attention-row-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.25rem 0.75rem;
-    margin-top: 0.375rem;
+    gap: var(--console-space-1) var(--console-space-3);
+    margin-top: var(--console-space-2);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
   }
@@ -116,18 +116,18 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-end;
-    gap: 0.5rem;
+    gap: var(--console-space-2);
   }
 
   .console-attention-empty {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.375rem;
+    gap: var(--console-space-2);
     border-radius: var(--console-radius-4);
     background: hsl(var(--card));
     box-shadow: var(--console-card-elevation);
-    padding: 2.5rem 1rem;
+    padding: var(--console-space-7) var(--console-space-4);
     text-align: center;
   }
 
@@ -135,14 +135,14 @@
   .console-attention-empty-title { font-size: var(--console-text-section); font-weight: var(--console-weight-strong); }
   .console-attention-empty-detail { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
   .console-attention-empty.is-instance-not-ready > svg { color: hsl(var(--muted-foreground)); }
-  .console-attention-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 0.5rem; }
+  .console-attention-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--console-space-2); margin-top: var(--console-space-2); }
 
   /* ---------- 「详情」: raw ids and long text, collapsed by default ---------- */
   .console-attention-more-toggle { color: hsl(var(--muted-foreground)); }
   .console-attention-more-link {
     display: inline-flex;
     align-items: center;
-    gap: 0.125rem;
+    gap: var(--console-space-1);
     border-radius: var(--console-radius-1);
     color: hsl(var(--muted-foreground));
     font: inherit;
@@ -153,14 +153,14 @@
   .console-attention-more-chevron { transition: transform var(--console-motion-fast) var(--console-ease-out); }
   .console-attention-more-chevron.is-open { transform: rotate(180deg); }
   .console-attention-more[hidden] { display: none; }
-  .console-attention-more > :first-child { margin-top: 0.25rem; }
+  .console-attention-more > :first-child { margin-top: var(--console-space-1); }
 
   .console-attention-row-id {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
-    gap: 0.375rem;
-    margin-top: 0.25rem;
+    gap: var(--console-space-2);
+    margin-top: var(--console-space-1);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
   }
@@ -176,10 +176,10 @@
 
   .console-attention-list.is-summary > .console-attention-row {
     align-items: center;
-    padding: 0.625rem 0;
+    padding: var(--console-space-3) 0;
   }
 
-  .console-attention-list.is-summary > .console-attention-row > .console-attention-icon { align-self: start; margin-top: 0.3rem; }
+  .console-attention-list.is-summary > .console-attention-row > .console-attention-icon { align-self: start; margin-top: var(--console-space-1); }
   .console-attention-list.is-summary .console-attention-row-title { font-weight: var(--console-weight-medium); }
   .console-attention-list.is-summary .console-attention-row-actions { flex-wrap: nowrap; align-self: start; }
 
@@ -207,7 +207,7 @@
     height: 1.125rem;
     border-radius: var(--console-radius-full);
     background: hsl(var(--warning-fill));
-    padding: 0 0.25rem;
+    padding: 0 var(--console-space-1);
     color: hsl(var(--warning-fill-foreground));
     font-size: var(--console-text-label);
     font-weight: var(--console-weight-strong);

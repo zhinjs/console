@@ -187,10 +187,10 @@
     height: 2.25rem;
     min-width: 14rem;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--console-space-2);
     border: var(--console-border-hairline) solid transparent;
     border-radius: var(--console-radius-full);
-    padding: 0 0.375rem 0 0.875rem;
+    padding: 0 var(--console-space-2) 0 var(--console-space-4);
     background: hsl(var(--foreground) / 0.05);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
@@ -235,7 +235,7 @@
     border: var(--console-border-hairline) solid hsl(var(--border) / 0.72);
     border-bottom-color: hsl(var(--border));
     border-radius: var(--console-radius-1);
-    padding: 0 0.35rem;
+    padding: 0 var(--console-space-1);
     background: hsl(var(--background) / 0.86);
     color: hsl(var(--muted-foreground));
     font-family: var(--console-font-mono);
@@ -258,10 +258,10 @@
     display: flex;
     min-height: 4.3rem;
     align-items: center;
-    gap: 0.85rem;
+    gap: var(--console-space-3);
     border-bottom: var(--console-border-hairline) solid hsl(var(--border) / 0.62);
     /* Room on the right for the dialog's close button, so it does not sit on the ⌘ hint. */
-    padding: 0 3.25rem 0 1.15rem;
+    padding: 0 var(--console-space-7) 0 var(--console-space-4);
   }
 
   .console-command-search > svg {
@@ -293,7 +293,7 @@
   .console-command-count {
     min-width: 1.75rem;
     border-radius: var(--console-radius-1);
-    padding: 0.25rem 0.42rem;
+    padding: var(--console-space-1) var(--console-space-2);
     background: hsl(var(--primary) / 0.1);
     color: hsl(var(--primary));
     font-family: var(--console-font-mono);
@@ -306,19 +306,19 @@
     max-height: min(31rem, 64dvh);
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: 0.65rem;
+    padding: var(--console-space-3);
     scrollbar-width: thin;
   }
 
   .console-command-group + .console-command-group {
-    margin-top: 0.5rem;
+    margin-top: var(--console-space-2);
   }
 
   .console-command-group-label {
     position: sticky;
     top: -0.65rem;
     z-index: 1;
-    padding: 0.75rem 0.65rem 0.42rem;
+    padding: var(--console-space-3) var(--console-space-3) var(--console-space-2);
     background: linear-gradient(hsl(var(--background) / 0.98) 72%, transparent);
     color: hsl(var(--muted-foreground) / 0.78);
     font-size: var(--console-text-label);
@@ -331,10 +331,10 @@
     width: 100%;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: 0.78rem;
+    gap: var(--console-space-3);
     border: var(--console-border-hairline) solid transparent;
     border-radius: var(--console-radius-2);
-    padding: 0.68rem 0.7rem;
+    padding: var(--console-space-3) var(--console-space-3);
     color: hsl(var(--foreground));
     transition: background-color var(--console-motion-fast) var(--console-ease-out), border-color var(--console-motion-fast) var(--console-ease-out), transform var(--console-motion-fast) var(--console-ease-out);
   }
@@ -382,10 +382,10 @@
 
   .console-command-title small {
     display: inline-flex;
-    margin-left: 0.45rem;
+    margin-left: var(--console-space-2);
     border: var(--console-border-hairline) solid hsl(var(--primary) / 0.18);
     border-radius: var(--console-radius-1);
-    padding: 0.08rem 0.3rem;
+    padding: 0 var(--console-space-1);
     background: hsl(var(--primary) / 0.08);
     color: hsl(var(--primary));
     font-family: var(--console-font-mono);
@@ -396,7 +396,7 @@
   }
 
   .console-command-description {
-    margin-top: 0.16rem;
+    margin-top: var(--console-space-1);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
   }
@@ -404,7 +404,7 @@
   .console-command-current {
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: var(--console-space-1);
     color: hsl(var(--primary));
     font-size: var(--console-text-label);
     font-weight: var(--console-weight-strong);
@@ -421,7 +421,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.45rem;
+    gap: var(--console-space-2);
     color: hsl(var(--muted-foreground));
     text-align: center;
   }
@@ -429,7 +429,7 @@
   .console-command-empty > svg {
     width: 2rem;
     height: 2rem;
-    margin-bottom: 0.35rem;
+    margin-bottom: var(--console-space-1);
     color: hsl(var(--primary) / 0.55);
   }
 
@@ -446,9 +446,9 @@
     display: flex;
     min-height: 2.8rem;
     align-items: center;
-    gap: 1rem;
+    gap: var(--console-space-4);
     border-top: var(--console-border-hairline) solid hsl(var(--border) / 0.62);
-    padding: 0 1rem;
+    padding: 0 var(--console-space-4);
     background: hsl(var(--muted) / 0.32);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
@@ -457,13 +457,13 @@
   .console-command-footer > span {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: var(--console-space-1);
   }
 
   .console-command-footer kbd {
     min-width: 1.22rem;
     height: 1.15rem;
-    padding-inline: 0.22rem;
+    padding-inline: var(--console-space-1);
     font-size: var(--console-text-label);
   }
 
@@ -494,23 +494,23 @@
 
     .console-command-search {
       min-height: 3.8rem;
-      padding-inline: 0.9rem 3rem;
+      padding-inline: var(--console-space-4) var(--console-space-7);
     }
 
     .console-command-results {
       max-height: calc(100dvh - 8.7rem);
-      padding: 0.45rem;
+      padding: var(--console-space-2);
     }
 
     .console-command-item {
-      gap: 0.65rem;
-      padding-inline: 0.55rem;
+      gap: var(--console-space-3);
+      padding-inline: var(--console-space-2);
     }
 
     .console-command-footer {
       justify-content: space-between;
-      gap: 0.35rem;
-      padding-inline: 0.65rem;
+      gap: var(--console-space-1);
+      padding-inline: var(--console-space-3);
     }
   }
 }
@@ -570,7 +570,7 @@
     border-radius: var(--console-radius-2);
     background: hsl(var(--foreground));
     color: hsl(var(--background));
-    padding: 0.625rem 0.875rem;
+    padding: var(--console-space-3) var(--console-space-4);
     font-size: var(--console-text-body);
     font-weight: var(--console-weight-strong);
     transition: transform var(--console-motion-fast) var(--console-ease-out);
@@ -591,13 +591,13 @@
   .console-health-pill {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
+    gap: var(--console-space-2);
+    margin-bottom: var(--console-space-3);
     /* Steady state (all services running) is neutral; only .is-warning carries a signal color. console#125. */
     border: var(--console-border-hairline) solid var(--console-border-default);
     border-radius: var(--console-radius-full);
     background: hsl(var(--card));
-    padding: 0.25rem 0.75rem 0.25rem 0.625rem;
+    padding: var(--console-space-1) var(--console-space-3) var(--console-space-1) var(--console-space-3);
     color: hsl(var(--foreground) / 0.82);
     font-size: var(--console-text-label);
     font-weight: var(--console-weight-strong);
@@ -619,7 +619,7 @@
 
   .console-dashboard-lede {
     max-width: 42rem;
-    margin-top: 0.375rem;
+    margin-top: var(--console-space-2);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-body);
     line-height: 1.6;
@@ -643,11 +643,11 @@
     display: flex;
     min-width: 0;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: var(--console-space-2);
     border: var(--console-border-hairline) solid transparent;
     border-radius: var(--console-radius-3);
     background: hsl(var(--card));
-    padding: 1rem 1.15rem;
+    padding: var(--console-space-4) var(--console-space-4);
     box-shadow: var(--console-card-elevation);
     transition: border-color var(--console-motion-fast) var(--console-ease-out), box-shadow var(--console-motion-fast) var(--console-ease-out), transform var(--console-motion-fast) var(--console-ease-out);
   }
@@ -662,7 +662,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: var(--console-space-2);
   }
 
   .console-metric-head > span:first-child {
@@ -733,22 +733,22 @@
   .console-control-bar {
     display: flex;
     flex-direction: column;
-    gap: 0.875rem;
+    gap: var(--console-space-4);
   }
 
   .console-control-switches {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.5rem;
+    gap: var(--console-space-2);
   }
 
   .console-control-switch {
     display: flex;
     align-items: center;
-    gap: 0.45rem;
+    gap: var(--console-space-2);
     border: var(--console-border-hairline) solid var(--console-border-default);
     border-radius: var(--console-radius-2);
-    padding: 0.5rem 0.6rem;
+    padding: var(--console-space-2) var(--console-space-2);
     background: var(--console-surface-inset);
     color: hsl(var(--foreground));
     font-size: var(--console-text-label);
@@ -865,19 +865,19 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 1.2rem;
+    gap: var(--console-space-4);
+    margin-bottom: var(--console-space-4);
   }
 
   .console-panel-heading h2 {
-    margin-top: 0.25rem;
+    margin-top: var(--console-space-1);
     font-size: var(--console-text-section);
     font-weight: var(--console-weight-strong);
     letter-spacing: -0.025em;
   }
 
   .console-panel-heading p {
-    margin-top: 0.3rem;
+    margin-top: var(--console-space-1);
     max-width: 36rem;
     font-size: var(--console-text-body);
     line-height: 1.6;
@@ -897,7 +897,7 @@
   .console-capability-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.65rem;
+    gap: var(--console-space-3);
   }
 
   @media (max-width: 1180px) {
@@ -909,14 +909,14 @@
   .console-runtime-kv-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.55rem;
+    gap: var(--console-space-2);
   }
 
   .console-runtime-kv-item {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
-    padding: 0.65rem 0.8rem;
+    gap: var(--console-space-1);
+    padding: var(--console-space-3) var(--console-space-3);
     border-radius: var(--console-radius-2);
     border: var(--console-border-hairline) solid var(--console-border-subtle);
     background: var(--console-surface-inset);
@@ -941,9 +941,9 @@
   .console-event-live-badge {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: var(--console-space-2);
     height: 1.65rem;
-    padding: 0 0.6rem;
+    padding: 0 var(--console-space-2);
     border-radius: var(--console-radius-full);
     border: var(--console-border-hairline) solid var(--console-border-default);
     background: transparent;
@@ -962,16 +962,16 @@
   .console-event-feed {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: var(--console-space-1);
   }
 
   .console-event-feed-row {
     display: grid;
     grid-template-columns: 4.5rem 3.5rem minmax(5rem, 8rem) minmax(0, 1fr);
     align-items: center;
-    gap: 0.65rem;
+    gap: var(--console-space-3);
     width: 100%;
-    padding: 0.55rem 0.75rem;
+    padding: var(--console-space-2) var(--console-space-3);
     border-radius: var(--console-radius-2);
     border: var(--console-border-hairline) solid var(--console-border-subtle);
     background: var(--console-surface-inset);
@@ -998,7 +998,7 @@
     justify-content: center;
     height: 1.25rem;
     border-radius: var(--console-radius-full);
-    padding: 0 0.45rem;
+    padding: 0 var(--console-space-2);
     font-family: var(--console-font-mono);
     font-size: var(--console-text-label);
     font-weight: var(--console-weight-strong);
@@ -1036,8 +1036,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    padding: 1.5rem;
+    gap: var(--console-space-2);
+    padding: var(--console-space-5);
     border-radius: var(--console-radius-2);
     background: var(--console-surface-inset);
     color: hsl(var(--muted-foreground));
@@ -1047,9 +1047,9 @@
   .console-capability-item {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--console-space-3);
     min-width: 0;
-    padding: 0.8rem;
+    padding: var(--console-space-3);
     border: var(--console-border-hairline) solid transparent;
     border-radius: var(--console-radius-2);
     background: hsl(var(--muted) / 0.42);
@@ -1094,7 +1094,7 @@
   }
 
   .console-agent-session-picker {
-    padding: 1.25rem 0;
+    padding: var(--console-space-5) 0;
     border-block: var(--console-border-hairline) solid var(--console-border-default);
     background: hsl(var(--card));
   }
@@ -1109,8 +1109,8 @@
     display: flex;
     min-width: 0;
     align-items: center;
-    gap: 0.875rem;
-    padding: 1rem;
+    gap: var(--console-space-4);
+    padding: var(--console-space-4);
     border-bottom: var(--console-border-hairline) solid var(--console-border-subtle);
     border-radius: var(--console-radius-1);
     background: transparent;
@@ -1156,8 +1156,8 @@
     display: flex;
     min-height: 7rem;
     align-items: center;
-    gap: 0.9rem;
-    padding: 1rem;
+    gap: var(--console-space-4);
+    padding: var(--console-space-4);
     border: var(--console-border-hairline) solid hsl(var(--border));
     border-radius: var(--console-radius-3);
     background: hsl(var(--muted) / 0.22);
@@ -1170,7 +1170,7 @@
     height: 2.6rem;
     flex: none;
     place-items: center;
-    padding: 0.7rem;
+    padding: var(--console-space-3);
     border-radius: var(--console-radius-2);
     background: hsl(var(--primary) / 0.09);
     color: hsl(var(--primary));
@@ -1189,7 +1189,7 @@
 
   .console-session-picker-empty p,
   .console-agent-empty p {
-    margin-top: 0.2rem;
+    margin-top: var(--console-space-1);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-body);
     line-height: 1.5;
@@ -1203,8 +1203,8 @@
   }
 
   .console-session-advanced {
-    margin-top: 0.8rem;
-    padding-top: 0.8rem;
+    margin-top: var(--console-space-3);
+    padding-top: var(--console-space-3);
     border-top: var(--console-border-hairline) solid hsl(var(--border) / 0.52);
   }
 
@@ -1233,13 +1233,13 @@
     box-shadow: var(--console-card-elevation);
   }
 
-  .console-agent-summary-row { display: flex; flex-direction: column; align-items: flex-start; gap: 1rem; }
-  .console-agent-missing { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-top: 0.75rem; font-size: var(--console-text-body); line-height: 1.5; }
+  .console-agent-summary-row { display: flex; flex-direction: column; align-items: flex-start; gap: var(--console-space-4); }
+  .console-agent-missing { display: flex; flex-wrap: wrap; gap: var(--console-space-2) var(--console-space-4); margin-top: var(--console-space-3); font-size: var(--console-text-body); line-height: 1.5; }
   .console-agent-missing a { color: hsl(var(--foreground)); text-decoration: underline; text-underline-offset: 3px; }
-  .console-agent-state-explanation { margin-top: 0.75rem; font-size: var(--console-text-body); line-height: 1.6; color: hsl(var(--muted-foreground)); }
+  .console-agent-state-explanation { margin-top: var(--console-space-3); font-size: var(--console-text-body); line-height: 1.6; color: hsl(var(--muted-foreground)); }
   .console-agent-state-explanation summary { width: fit-content; cursor: pointer; }
-  .console-agent-state-explanation p { max-width: 65ch; margin-top: 0.5rem; }
-  @media (min-width: 900px) { .console-agent-summary-row { flex-direction: row; justify-content: space-between; gap: 1.5rem; } }
+  .console-agent-state-explanation p { max-width: 65ch; margin-top: var(--console-space-2); }
+  @media (min-width: 900px) { .console-agent-summary-row { flex-direction: row; justify-content: space-between; gap: var(--console-space-5); } }
 
   .console-agent-hero svg {
     width: 1rem;
@@ -1251,16 +1251,16 @@
     z-index: 1;
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.55rem;
-    margin-top: 1.5rem;
+    gap: var(--console-space-2);
+    margin-top: var(--console-space-5);
   }
 
   .console-agent-metrics > div {
     display: grid;
     grid-template-columns: auto 1fr auto;
     align-items: center;
-    gap: 0.55rem;
-    padding: 0.75rem;
+    gap: var(--console-space-2);
+    padding: var(--console-space-3);
     border: var(--console-border-hairline) solid hsl(var(--border) / 0.5);
     border-radius: var(--console-radius-2);
     background: hsl(var(--muted) / 0.35);
@@ -1290,14 +1290,14 @@
   .console-agent-binding-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
-    gap: 0.5rem;
+    gap: var(--console-space-2);
   }
 
   .console-agent-binding-card {
     display: flex;
     align-items: flex-start;
-    gap: 0.8rem;
-    padding: 0.75rem;
+    gap: var(--console-space-3);
+    padding: var(--console-space-3);
     border: var(--console-border-hairline) solid transparent;
     border-radius: var(--console-radius-2);
     background: hsl(var(--card));
@@ -1315,7 +1315,7 @@
   }
 
   .console-agent-binding-card p {
-    margin-top: 0.15rem;
+    margin-top: var(--console-space-1);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
   }
@@ -1323,8 +1323,8 @@
   .console-agent-binding-card > div span {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
-    padding: 0.25rem 0.45rem;
+    gap: var(--console-space-1);
+    padding: var(--console-space-1) var(--console-space-2);
     border-radius: var(--console-radius-full);
     background: hsl(var(--secondary));
     color: hsl(var(--muted-foreground));
@@ -1388,14 +1388,14 @@
 
   .console-readiness-list {
     display: grid;
-    gap: 0.35rem;
+    gap: var(--console-space-1);
   }
 
   .console-readiness-row {
     display: flex;
     align-items: center;
-    gap: 0.65rem;
-    padding: 0.7rem 0.4rem;
+    gap: var(--console-space-3);
+    padding: var(--console-space-3) var(--console-space-2);
     border-bottom: var(--console-border-hairline) solid hsl(var(--border) / 0.42);
     color: hsl(var(--foreground));
   }
@@ -1427,7 +1427,7 @@
   }
 
   .console-readiness-row small {
-    margin-top: 0.18rem;
+    margin-top: var(--console-space-1);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
   }
@@ -1435,15 +1435,15 @@
   .console-agent-session-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.55rem;
+    gap: var(--console-space-2);
   }
 
   .console-agent-session-card {
     display: flex;
     min-width: 0;
     align-items: center;
-    gap: 0.65rem;
-    padding: 0.8rem;
+    gap: var(--console-space-3);
+    padding: var(--console-space-3);
     border: var(--console-border-hairline) solid hsl(var(--border) / 0.56);
     border-radius: var(--console-radius-2);
     background: hsl(var(--muted) / 0.24);
@@ -1460,16 +1460,16 @@
   .console-agent-shortcuts {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.55rem;
+    gap: var(--console-space-2);
   }
 
   .console-agent-shortcuts > a {
     display: flex;
     min-width: 0;
     align-items: center;
-    gap: 0.65rem;
+    gap: var(--console-space-3);
     min-height: 4.6rem;
-    padding: 0.8rem;
+    padding: var(--console-space-3);
     border: var(--console-border-hairline) solid hsl(var(--border) / 0.58);
     border-radius: var(--console-radius-3);
     background: hsl(var(--card));
@@ -1504,7 +1504,7 @@
   }
 
   .console-agent-shortcuts small {
-    margin-top: 0.18rem;
+    margin-top: var(--console-space-1);
     overflow: hidden;
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
@@ -1523,15 +1523,15 @@
   .console-log-toolbar {
     display: flex;
     align-items: center;
-    gap: 0.55rem;
-    padding: 0.72rem;
+    gap: var(--console-space-2);
+    padding: var(--console-space-3);
     border-bottom: var(--console-border-hairline) solid hsl(var(--border) / 0.58);
   }
 
   .console-log-autoscroll {
     display: flex;
     align-items: center;
-    gap: 0.42rem;
+    gap: var(--console-space-2);
     flex: none;
     color: hsl(var(--muted-foreground));
     cursor: pointer;
@@ -1541,7 +1541,7 @@
   .console-log-toolbar-actions {
     display: flex;
     align-items: center;
-    gap: 0.15rem;
+    gap: var(--console-space-1);
     margin-left: auto;
   }
 
@@ -1553,7 +1553,7 @@
 
   .console-log-sources {
     min-width: 0;
-    padding: 0.75rem 0.55rem;
+    padding: var(--console-space-3) var(--console-space-2);
     border-right: var(--console-border-hairline) solid hsl(var(--border) / 0.56);
     background: hsl(var(--muted) / 0.1);
   }
@@ -1562,8 +1562,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
-    padding: 0.35rem 0.45rem 0.7rem;
+    gap: var(--console-space-2);
+    padding: var(--console-space-1) var(--console-space-2) var(--console-space-3);
   }
 
   .console-log-sources > header small {
@@ -1576,8 +1576,8 @@
     display: flex;
     width: 100%;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.52rem 0.48rem;
+    gap: var(--console-space-2);
+    padding: var(--console-space-2) var(--console-space-2);
     border-radius: var(--console-radius-2);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
@@ -1619,13 +1619,13 @@
     min-height: 4.2rem;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
-    padding: 0.72rem 0.85rem;
+    gap: var(--console-space-4);
+    padding: var(--console-space-3) var(--console-space-3);
     border-bottom: var(--console-border-hairline) solid hsl(var(--border) / 0.52);
   }
 
   .console-log-stream h2 {
-    margin-top: 0.15rem;
+    margin-top: var(--console-space-1);
     font-size: var(--console-text-body);
     font-weight: var(--console-weight-strong);
     letter-spacing: -0.015em;
@@ -1635,7 +1635,7 @@
     max-height: 42rem;
     flex: 1;
     overflow-y: auto;
-    padding: 0.45rem;
+    padding: var(--console-space-2);
     background:
       linear-gradient(hsl(var(--border) / 0.1) 1px, transparent 1px) 0 0 / 100% 2rem,
       hsl(var(--background) / 0.35);
@@ -1646,8 +1646,8 @@
     width: 100%;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: start;
-    gap: 0.65rem;
-    padding: 0.65rem 0.55rem;
+    gap: var(--console-space-3);
+    padding: var(--console-space-3) var(--console-space-2);
     border-bottom: var(--console-border-hairline) solid hsl(var(--border) / 0.38);
     color: hsl(var(--foreground));
     text-align: left;
@@ -1692,13 +1692,13 @@
     display: flex;
     min-width: 0;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: var(--console-space-1);
   }
 
   .console-log-event-body > span {
     display: flex;
     align-items: center;
-    gap: 0.45rem;
+    gap: var(--console-space-2);
     color: hsl(var(--muted-foreground));
     font-family: var(--console-font-mono);
     font-size: var(--console-text-label);
@@ -1725,7 +1725,7 @@
   .console-log-event-arrow {
     width: 0.7rem;
     height: 0.7rem;
-    margin-top: 0.45rem;
+    margin-top: var(--console-space-2);
     color: hsl(var(--muted-foreground));
     opacity: 0;
     transition: opacity var(--console-motion-fast) var(--console-ease-out), transform var(--console-motion-fast) var(--console-ease-out);
@@ -1739,7 +1739,7 @@
 
   .console-log-inspector {
     min-width: 0;
-    padding: 1rem;
+    padding: var(--console-space-4);
     border-left: var(--console-border-hairline) solid hsl(var(--border) / 0.65);
     background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--muted) / 0.18) 100%);
     box-shadow: var(--console-elevation-0);
@@ -1752,7 +1752,7 @@
   }
 
   .console-log-inspector > header {
-    padding-bottom: 0.8rem;
+    padding-bottom: var(--console-space-3);
     border-bottom: var(--console-border-hairline) solid hsl(var(--border) / 0.52);
   }
 
@@ -1760,8 +1760,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
-    margin-top: 0.55rem;
+    gap: var(--console-space-2);
+    margin-top: var(--console-space-2);
   }
 
   .console-log-inspector time {
@@ -1771,7 +1771,7 @@
   }
 
   .console-log-inspector h3 {
-    margin-top: 0.65rem;
+    margin-top: var(--console-space-3);
     overflow-wrap: anywhere;
     font-family: var(--console-font-mono);
     font-size: var(--console-text-label);
@@ -1782,7 +1782,7 @@
   .console-log-inspector-level {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
+    gap: var(--console-space-1);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
     font-weight: var(--console-weight-strong);
@@ -1802,14 +1802,14 @@
   }
 
   .console-log-inspector dl {
-    margin-top: 0.65rem;
+    margin-top: var(--console-space-3);
   }
 
   .console-log-inspector dl > div {
     display: grid;
     grid-template-columns: 4.5rem minmax(0, 1fr);
-    gap: 0.55rem;
-    padding: 0.5rem 0;
+    gap: var(--console-space-2);
+    padding: var(--console-space-2) 0;
     border-bottom: var(--console-border-hairline) solid hsl(var(--border) / 0.4);
   }
 
@@ -1827,16 +1827,16 @@
   .console-log-inspector-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.35rem;
-    margin-top: 0.8rem;
+    gap: var(--console-space-1);
+    margin-top: var(--console-space-3);
   }
 
   .console-log-inspector details {
-    margin-top: 0.9rem;
+    margin-top: var(--console-space-4);
   }
 
   .console-log-copy-error {
-    margin-top: 0.55rem;
+    margin-top: var(--console-space-2);
     color: hsl(var(--destructive));
     font-size: var(--console-text-label);
     line-height: 1.45;
@@ -1850,9 +1850,9 @@
 
   .console-log-inspector pre {
     max-height: 12rem;
-    margin-top: 0.5rem;
+    margin-top: var(--console-space-2);
     overflow: auto;
-    padding: 0.65rem;
+    padding: var(--console-space-3);
     border-radius: var(--console-radius-2);
     background: hsl(var(--background) / 0.72);
     font-family: var(--console-font-mono);
@@ -1874,8 +1874,8 @@
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: 0.9rem;
-    padding: 1.15rem 1rem;
+    gap: var(--console-space-4);
+    padding: var(--console-space-4) var(--console-space-4);
     border-bottom: var(--console-border-hairline) solid hsl(var(--border) / 0.58);
     background: hsl(var(--muted) / 0.12);
   }
@@ -1902,14 +1902,14 @@
   }
 
   .console-capability-intro h2 {
-    margin-top: 0.18rem;
+    margin-top: var(--console-space-1);
     font-size: var(--console-text-section);
     font-weight: var(--console-weight-strong);
     letter-spacing: -0.025em;
   }
 
   .console-capability-intro p {
-    margin-top: 0.2rem;
+    margin-top: var(--console-space-1);
     max-width: 48rem;
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
@@ -1920,7 +1920,7 @@
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    padding-left: 1rem;
+    padding-left: var(--console-space-4);
     border-left: var(--console-border-hairline) solid hsl(var(--border) / 0.65);
   }
 
@@ -1931,7 +1931,7 @@
   }
 
   .console-capability-count span {
-    margin-top: 0.25rem;
+    margin-top: var(--console-space-1);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
   }
@@ -1944,7 +1944,7 @@
 
   .console-capability-collection {
     min-width: 0;
-    padding: 0.75rem;
+    padding: var(--console-space-3);
   }
 
   .console-runtime-card {
@@ -1952,8 +1952,8 @@
     width: 100%;
     min-width: 0;
     align-items: center;
-    gap: 0.72rem;
-    padding: 0.78rem;
+    gap: var(--console-space-3);
+    padding: var(--console-space-3);
     border: var(--console-border-hairline) solid hsl(var(--border) / 0.55);
     border-radius: var(--console-radius-2);
     background: hsl(var(--background) / 0.65);
@@ -1987,7 +1987,7 @@
     min-width: 0;
     flex: 1;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: var(--console-space-1);
   }
 
   .console-runtime-card-main strong,
@@ -2039,7 +2039,7 @@
     min-width: 0;
     max-width: 100%;
     align-items: center;
-    gap: 0.25rem;
+    gap: var(--console-space-1);
     color: hsl(var(--muted-foreground));
     font-family: var(--console-font-mono);
     font-size: var(--console-text-label);
@@ -2060,8 +2060,8 @@
   .console-runtime-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.25rem;
-    margin-top: 0.15rem;
+    gap: var(--console-space-1);
+    margin-top: var(--console-space-1);
   }
 
   .console-runtime-tags svg {
@@ -2074,24 +2074,24 @@
   .console-runtime-prompt-list {
     display: flex;
     flex-direction: column;
-    gap: 0.42rem;
+    gap: var(--console-space-2);
   }
 
   .console-runtime-card-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.55rem;
+    gap: var(--console-space-2);
   }
 
   .console-runtime-pipeline {
     display: flex;
     flex-direction: column;
-    gap: 0.8rem;
+    gap: var(--console-space-3);
   }
 
   .console-runtime-phase {
     position: relative;
-    padding-left: 1.15rem;
+    padding-left: var(--console-space-4);
   }
 
   .console-runtime-phase::before {
@@ -2108,7 +2108,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 0.4rem;
+    margin-bottom: var(--console-space-2);
     color: hsl(var(--primary));
     font-family: var(--console-font-mono);
     font-size: var(--console-text-label);
@@ -2139,11 +2139,11 @@
   .console-runtime-phase > div {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: var(--console-space-1);
   }
 
   .console-runtime-stage {
-    padding-block: 0.62rem;
+    padding-block: var(--console-space-2);
   }
 
   .console-runtime-sequence {
@@ -2157,8 +2157,8 @@
     display: flex;
     min-width: 0;
     flex-direction: column;
-    gap: 0.7rem;
-    padding: 0.75rem;
+    gap: var(--console-space-3);
+    padding: var(--console-space-3);
     border: var(--console-border-hairline) solid hsl(var(--border) / 0.58);
     border-radius: var(--console-radius-3);
     background: hsl(var(--background) / 0.68);
@@ -2215,7 +2215,7 @@
     display: flex;
     min-width: 0;
     align-items: center;
-    gap: 0.45rem;
+    gap: var(--console-space-2);
   }
 
   .console-runtime-prompt-heading strong {
@@ -2242,7 +2242,7 @@
 
   .console-runtime-prompt-budget small,
   .console-runtime-prompt-budget span {
-    margin-top: 0.15rem;
+    margin-top: var(--console-space-1);
   }
 
   .console-runtime-binding {
@@ -2262,7 +2262,7 @@
   .console-runtime-binding-meta {
     display: flex;
     justify-content: flex-end;
-    gap: 0.3rem;
+    gap: var(--console-space-1);
   }
 
   .console-runtime-binding-meta svg {
@@ -2272,7 +2272,7 @@
 
   .console-capability-inspector {
     min-width: 0;
-    padding: 1.05rem;
+    padding: var(--console-space-4);
     border-left: var(--console-border-hairline) solid hsl(var(--border) / 0.68);
     background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--muted) / 0.2) 100%);
     box-shadow: var(--console-elevation-0);
@@ -2280,12 +2280,12 @@
   }
 
   .console-capability-inspector > header {
-    padding-bottom: 0.85rem;
+    padding-bottom: var(--console-space-3);
     border-bottom: var(--console-border-hairline) solid hsl(var(--border) / 0.58);
   }
 
   .console-capability-inspector h3 {
-    margin-top: 0.3rem;
+    margin-top: var(--console-space-1);
     overflow-wrap: anywhere;
     font-size: var(--console-text-body);
     font-weight: var(--console-weight-strong);
@@ -2293,7 +2293,7 @@
   }
 
   .console-capability-inspector header p {
-    margin-top: 0.35rem;
+    margin-top: var(--console-space-1);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
     line-height: 1.5;
@@ -2302,19 +2302,19 @@
   .console-capability-inspector-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.4rem;
-    margin-top: 0.75rem;
+    gap: var(--console-space-2);
+    margin-top: var(--console-space-3);
   }
 
   .console-capability-properties {
-    margin-top: 0.8rem;
+    margin-top: var(--console-space-3);
   }
 
   .console-capability-properties > div {
     display: grid;
     grid-template-columns: minmax(5rem, 0.38fr) minmax(0, 1fr);
-    gap: 0.65rem;
-    padding: 0.55rem 0;
+    gap: var(--console-space-3);
+    padding: var(--console-space-2) 0;
     border-bottom: var(--console-border-hairline) solid hsl(var(--border) / 0.45);
   }
 
@@ -2344,8 +2344,8 @@
     min-height: 17rem;
     align-items: center;
     justify-content: center;
-    gap: 0.8rem;
-    padding: 2rem;
+    gap: var(--console-space-3);
+    padding: var(--console-space-6);
     color: hsl(var(--muted-foreground));
     text-align: left;
   }
@@ -2362,7 +2362,7 @@
   }
 
   .console-runtime-empty p {
-    margin-top: 0.25rem;
+    margin-top: var(--console-space-1);
     max-width: 29rem;
     font-size: var(--console-text-label);
     line-height: 1.55;
@@ -2383,7 +2383,7 @@
     .console-log-inspector dl {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 0.75rem;
+      gap: var(--console-space-3);
     }
 
     .console-capability-workspace {
@@ -2413,7 +2413,7 @@
 
     .console-log-sources {
       display: flex;
-      gap: 0.25rem;
+      gap: var(--console-space-1);
       overflow-x: auto;
       border-right: 0;
       border-bottom: var(--console-border-hairline) solid hsl(var(--border) / 0.56);
@@ -2474,7 +2474,7 @@
       flex-direction: row;
       align-items: baseline;
       justify-content: space-between;
-      padding-top: 0.65rem;
+      padding-top: var(--console-space-3);
       padding-left: 0;
       border-top: var(--console-border-hairline) solid hsl(var(--border) / 0.55);
       border-left: 0;
@@ -2492,8 +2492,8 @@
     .console-runtime-prompt-budget {
       width: 100%;
       align-items: flex-start;
-      padding-top: 0.55rem;
-      padding-left: 2.72rem;
+      padding-top: var(--console-space-2);
+      padding-left: var(--console-space-7);
       border-top: var(--console-border-hairline) solid hsl(var(--border) / 0.45);
     }
 
@@ -2521,7 +2521,7 @@
 
     .console-capability-properties > div {
       grid-template-columns: 1fr;
-      gap: 0.2rem;
+      gap: var(--console-space-1);
     }
 
     .console-capability-grid,
@@ -2553,10 +2553,10 @@
 
 @layer components {
   /* Page header: a 22px title with one line of muted description; actions align to the title's baseline row. */
-  .console-page-header { display: flex; flex-direction: column; gap: 0.875rem; padding-bottom: 0.25rem; }
+  .console-page-header { display: flex; flex-direction: column; gap: var(--console-space-4); padding-bottom: var(--console-space-1); }
   .console-page-title { margin: 0; font-size: var(--console-text-title); font-weight: var(--console-weight-strong); line-height: var(--console-leading-title); letter-spacing: -0.02em; color: hsl(var(--foreground)); text-wrap: balance; }
-  .console-page-description { max-width: 70ch; margin-top: 0.25rem; font-size: var(--console-text-label); line-height: var(--console-leading-body); color: hsl(var(--muted-foreground)); text-wrap: pretty; }
-  .console-page-header-actions { display: flex; flex-wrap: wrap; flex-shrink: 0; align-items: center; gap: 0.5rem; }
+  .console-page-description { max-width: 70ch; margin-top: var(--console-space-1); font-size: var(--console-text-label); line-height: var(--console-leading-body); color: hsl(var(--muted-foreground)); text-wrap: pretty; }
+  .console-page-header-actions { display: flex; flex-wrap: wrap; flex-shrink: 0; align-items: center; gap: var(--console-space-2); }
   .console-control { border-radius: var(--console-control-radius); line-height: var(--console-leading-label); }
   .console-control:focus-visible { outline: var(--console-border-focus) solid hsl(var(--ring)); outline-offset: 2px; }
   .console-control[aria-invalid="true"] { border-color: hsl(var(--destructive)); }
@@ -2590,7 +2590,7 @@
   .console-section-title { font-size: var(--console-text-section); line-height: var(--console-leading-section); font-weight: var(--console-weight-strong); letter-spacing: 0; }
   @media (min-width: 640px) {
     /* Actions wrap under the title once the title block would drop below ~24rem (Pad widths), instead of squeezing the description. */
-    .console-page-header { flex-direction: row; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.875rem 1.5rem; }
+    .console-page-header { flex-direction: row; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--console-space-4) var(--console-space-5); }
     .console-page-header > :first-child { flex: 1 1 24rem; }
   }
 }
@@ -2619,7 +2619,7 @@
    * library's InlineCode / `.console-code` (ADR 0063 D31: monospace, no border, a very light fill).
    * Lists of them sit side by side with a gap, not as chips.
    */
-  .console-code-list { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; min-width: 0; }
+  .console-code-list { display: flex; flex-wrap: wrap; gap: var(--console-space-1) var(--console-space-4); min-width: 0; }
   .console-menu-item { min-height: var(--console-control-height-compact); }
 }
 
@@ -2631,11 +2631,11 @@
   .console-endpoint-card {
     display: flex;
     flex-direction: column;
-    gap: 0.875rem;
+    gap: var(--console-space-4);
     border: var(--console-border-hairline) solid transparent;
     border-radius: var(--console-radius-3);
     background: hsl(var(--card));
-    padding: 1rem;
+    padding: var(--console-space-4);
     color: hsl(var(--card-foreground));
     text-decoration: none;
     box-shadow: var(--console-card-elevation);
@@ -2690,7 +2690,7 @@
   .console-endpoint-facts {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.5rem;
+    gap: var(--console-space-2);
     margin: 0;
   }
 
@@ -2698,13 +2698,13 @@
     min-width: 0;
     border-radius: var(--console-radius-2);
     background: var(--console-surface-muted);
-    padding: 0.5rem 0.625rem;
+    padding: var(--console-space-2) var(--console-space-3);
   }
 
   .console-endpoint-facts dt {
     display: flex;
     align-items: center;
-    gap: 0.375rem;
+    gap: var(--console-space-2);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
   }
@@ -2715,7 +2715,7 @@
   }
 
   .console-endpoint-facts dd {
-    margin: 0.25rem 0 0;
+    margin: var(--console-space-1) 0 0;
     font-size: var(--console-text-body);
     font-weight: var(--console-weight-strong);
     color: hsl(var(--muted-foreground));
@@ -2729,9 +2729,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: var(--console-space-2);
     border-top: var(--console-border-hairline) solid var(--console-border-subtle);
-    padding-top: 0.75rem;
+    padding-top: var(--console-space-3);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
   }
@@ -2739,7 +2739,7 @@
   .console-endpoint-pending {
     border-radius: var(--console-radius-full);
     background: hsl(var(--warning) / 0.1);
-    padding: 0.125rem 0.5rem;
+    padding: var(--console-space-1) var(--console-space-2);
     color: hsl(var(--warning));
     font-weight: var(--console-weight-strong);
   }
@@ -2747,7 +2747,7 @@
   .console-endpoint-open {
     display: inline-flex;
     align-items: center;
-    gap: 0.125rem;
+    gap: var(--console-space-1);
     color: hsl(var(--foreground));
     font-weight: var(--console-weight-medium);
     transition: color var(--console-motion-fast) var(--console-ease-out);
@@ -2780,7 +2780,7 @@
   .console-table th {
     border-bottom: var(--console-border-hairline) solid var(--console-border-default);
     background: var(--console-surface-inset);
-    padding: 0.625rem 1rem;
+    padding: var(--console-space-3) var(--console-space-4);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
     font-weight: var(--console-weight-medium);
@@ -2790,7 +2790,7 @@
 
   .console-table td {
     border-bottom: var(--console-border-hairline) solid var(--console-border-subtle);
-    padding: 0.875rem 1rem;
+    padding: var(--console-space-4) var(--console-space-4);
     vertical-align: middle;
   }
 
@@ -2808,7 +2808,7 @@
 
   .console-table-sub {
     display: block;
-    margin-top: 0.125rem;
+    margin-top: var(--console-space-1);
     color: hsl(var(--muted-foreground));
     font-family: var(--console-font-mono);
     font-size: var(--console-text-label);
@@ -2819,11 +2819,11 @@
   .console-job-error {
     display: flex;
     flex-direction: column;
-    gap: 0.375rem;
+    gap: var(--console-space-2);
     border: var(--console-border-hairline) solid hsl(var(--destructive) / 0.25);
     border-radius: var(--console-radius-2);
     background: hsl(var(--destructive) / 0.05);
-    padding: 0.625rem 0.75rem;
+    padding: var(--console-space-3) var(--console-space-3);
     color: hsl(var(--destructive));
     font-size: var(--console-text-body);
     line-height: 1.5;
@@ -2941,11 +2941,11 @@
     z-index: 50;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: var(--console-space-4);
     background: hsl(var(--popover));
     color: hsl(var(--popover-foreground));
     box-shadow: var(--console-elevation-3);
-    padding: 1.35rem;
+    padding: var(--console-space-5);
     overflow-y: auto;
     overscroll-behavior: contain;
   }
@@ -2981,16 +2981,16 @@
     .console-sheet-content[data-side="right"] {
       width: 100vw;
       border-radius: 0;
-      padding: 1.1rem;
+      padding: var(--console-space-4);
     }
   }
 
   .console-sheet-header {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
-    padding-right: 2.25rem;
-    padding-bottom: 0.875rem;
+    gap: var(--console-space-1);
+    padding-right: var(--console-space-6);
+    padding-bottom: var(--console-space-4);
     border-bottom: var(--console-border-hairline) solid var(--console-border-subtle);
   }
 
@@ -2999,7 +2999,7 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: var(--console-space-4);
   }
 
   .console-sheet-footer {
@@ -3008,8 +3008,8 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: flex-end;
-    gap: 0.5rem;
-    padding-top: 0.875rem;
+    gap: var(--console-space-2);
+    padding-top: var(--console-space-4);
     border-top: var(--console-border-hairline) solid var(--console-border-subtle);
   }
 
@@ -3084,9 +3084,9 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem 1rem;
+    gap: var(--console-space-2) var(--console-space-4);
     min-height: 2.25rem;
-    padding: 0.45rem 0.75rem;
+    padding: var(--console-space-2) var(--console-space-3);
     border-radius: var(--console-radius-2);
     border: var(--console-border-hairline) solid var(--console-border-subtle);
     background: var(--console-surface-inset);
@@ -3096,8 +3096,8 @@
   .console-model-bar-card {
     display: flex;
     flex-direction: column;
-    gap: 0.55rem;
-    padding: 0.85rem 1rem;
+    gap: var(--console-space-2);
+    padding: var(--console-space-3) var(--console-space-4);
     border-radius: var(--console-radius-2);
     border: var(--console-border-hairline) solid var(--console-border-subtle);
     background: var(--console-surface-inset);
@@ -3113,8 +3113,8 @@
   .console-donut-legend-card {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
-    padding: 0.6rem 0.8rem;
+    gap: var(--console-space-1);
+    padding: var(--console-space-2) var(--console-space-3);
     border-radius: var(--console-radius-2);
     border: var(--console-border-hairline) solid var(--console-border-subtle);
     background: var(--console-surface-inset);
@@ -3144,18 +3144,18 @@
   .console-stat-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 1rem;
+    gap: var(--console-space-4);
   }
 
   .console-stat-card {
     display: flex;
     min-width: 0;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: var(--console-space-2);
     border: var(--console-border-hairline) solid transparent;
     border-radius: var(--console-radius-3);
     background: hsl(var(--card));
-    padding: 1.05rem 1.2rem 1rem;
+    padding: var(--console-space-4) var(--console-space-4) var(--console-space-4);
     box-shadow: var(--console-card-elevation);
   }
 
@@ -3185,13 +3185,13 @@
     min-height: 2.65rem;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
+    gap: var(--console-space-3);
   }
 
   .console-stat-label {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: var(--console-space-2);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
     font-weight: var(--console-weight-medium);
@@ -3210,7 +3210,7 @@
   }
 
   .console-stat-value small {
-    margin-left: 0.15rem;
+    margin-left: var(--console-space-1);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-section);
     font-weight: var(--console-weight-medium);
@@ -3236,7 +3236,7 @@
   }
 
   @media (max-width: 1023px) {
-    .console-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+    .console-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--console-space-3); }
   }
 
   @media (max-width: 639px) {
@@ -3249,11 +3249,11 @@
   .console-info-hint {
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: var(--console-space-1);
     border: 0;
     border-radius: var(--console-radius-full);
     background: hsl(var(--muted));
-    padding: 0.125rem 0.5rem;
+    padding: var(--console-space-1) var(--console-space-2);
     color: hsl(var(--foreground));
     font-size: var(--console-text-label);
     font-weight: var(--console-weight-medium);
@@ -3264,6 +3264,6 @@
   .console-info-hint.is-warning { background: hsl(var(--warning) / 0.12); color: hsl(var(--warning)); }
   .console-info-hint.is-warning > svg { color: currentColor; }
   .console-info-hint-panel { width: min(22rem, calc(100vw - 2rem)); font-size: var(--console-text-label); line-height: var(--console-leading-body); }
-  .console-info-hint-panel > p + p { margin-top: 0.375rem; color: hsl(var(--muted-foreground)); }
+  .console-info-hint-panel > p + p { margin-top: var(--console-space-2); color: hsl(var(--muted-foreground)); }
   .console-info-hint-panel > p.is-partial { color: hsl(var(--warning)); }
 }

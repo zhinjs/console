@@ -3,10 +3,10 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--console-space-3);
     margin: 0 auto;
     max-width: 36rem;
-    padding: 4.5rem 1rem 3rem;
+    padding: var(--console-space-8) var(--console-space-4) var(--console-space-7);
     text-align: center;
   }
   .console-not-found h1 { margin: 0; font-size: var(--console-text-title); font-weight: var(--console-weight-strong); line-height: var(--console-leading-title); }
@@ -16,10 +16,10 @@
     overflow-wrap: anywhere;
     border-radius: var(--console-radius-1);
     background: hsl(var(--secondary));
-    padding: 0.25rem 0.5rem;
+    padding: var(--console-space-1) var(--console-space-2);
     color: hsl(var(--foreground));
     font-family: var(--console-font-mono);
     font-size: var(--console-text-label);
   }
-  .console-not-found-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 0.75rem; }
+  .console-not-found-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--console-space-2); margin-top: var(--console-space-3); }
 }

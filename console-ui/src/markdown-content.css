@@ -9,7 +9,7 @@
 
 .zhin-markdown-rule {
   width: 100%;
-  margin: 0.25rem 0;
+  margin: var(--console-space-1) 0;
   border: 0;
   border-top: var(--console-border-hairline) solid hsl(var(--im-line) / 0.72);
 }
@@ -17,7 +17,7 @@
 .zhin-markdown-task {
   display: flex;
   align-items: baseline;
-  gap: 0.45rem;
+  gap: var(--console-space-2);
   list-style: none;
 }
 
@@ -46,7 +46,7 @@
 
 .zhin-markdown-table th,
 .zhin-markdown-table td {
-  padding: 0.42rem 0.58rem;
+  padding: var(--console-space-2) var(--console-space-2);
   border-right: var(--console-border-hairline) solid hsl(var(--im-line) / 0.56);
   border-bottom: var(--console-border-hairline) solid hsl(var(--im-line) / 0.56);
   text-align: left;
@@ -67,7 +67,7 @@
   width: min(100%, 58rem);
   min-width: min(28rem, 76vw);
   overflow: hidden;
-  margin: 0.15rem 0;
+  margin: var(--console-space-1) 0;
   border: var(--console-border-hairline) solid hsl(218 18% 28%);
   border-radius: var(--console-radius-3);
   background: hsl(220 19% 10%);
@@ -80,8 +80,8 @@
   display: flex;
   min-height: 2.25rem;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.3rem 0.42rem 0.3rem 0.72rem;
+  gap: var(--console-space-2);
+  padding: var(--console-space-1) var(--console-space-2) var(--console-space-1) var(--console-space-3);
   border-bottom: var(--console-border-hairline) solid hsl(218 16% 24%);
   background: hsl(220 18% 13%);
 }
@@ -103,7 +103,7 @@
   display: inline-block;
   width: 0.38rem;
   height: 0.38rem;
-  margin-right: 0.32rem;
+  margin-right: var(--console-space-1);
   border-radius: var(--console-radius-full);
   background: currentColor;
   content: "";
@@ -112,7 +112,7 @@
 
 .zhin-code-actions {
   display: flex;
-  gap: 0.18rem;
+  gap: var(--console-space-1);
   margin-left: auto;
 }
 
@@ -128,7 +128,7 @@
   transition: background var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out), transform var(--console-motion-fast) var(--console-ease-out);
 }
 
-.zhin-code-actions button { padding: 0.32rem 0.48rem; }
+.zhin-code-actions button { padding: var(--console-space-1) var(--console-space-2); }
 .zhin-code-actions button:hover,
 .zhin-code-expand:hover { background: hsl(215 18% 21%); color: white; }
 .zhin-code-actions button:active,
@@ -140,7 +140,7 @@
   max-width: 100%;
   margin: 0;
   overflow: auto;
-  padding: 0.6rem 0 0.72rem;
+  padding: var(--console-space-2) 0 var(--console-space-3);
   font: inherit;
   font-size: var(--console-text-label);
   line-height: 1.65;
@@ -159,7 +159,7 @@
 .zhin-code-line-number {
   display: table-cell;
   width: 2.65rem;
-  padding: 0 0.72rem 0 0.55rem;
+  padding: 0 var(--console-space-3) 0 var(--console-space-2);
   color: hsl(214 12% 43%);
   text-align: right;
   user-select: none;
@@ -168,7 +168,7 @@
 .zhin-code-line-content {
   display: table-cell;
   min-width: 100%;
-  padding-right: 1rem;
+  padding-right: var(--console-space-4);
   white-space: pre;
 }
 
@@ -180,7 +180,7 @@
 
 .zhin-code-expand {
   width: 100%;
-  padding: 0.45rem;
+  padding: var(--console-space-2);
   border-top: var(--console-border-hairline) solid hsl(218 16% 22%);
   border-radius: 0;
   background: hsl(220 18% 12%);
@@ -193,7 +193,7 @@
 
 @media (max-width: 640px) {
   .zhin-code-block { min-width: min(22rem, 78vw); }
-  .zhin-code-line-number { width: 2.2rem; padding-right: 0.5rem; }
+  .zhin-code-line-number { width: 2.2rem; padding-right: var(--console-space-2); }
 }
 
 @media (prefers-reduced-motion: reduce) {

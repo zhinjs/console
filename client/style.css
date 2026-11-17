@@ -128,8 +128,8 @@
 .menu-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0.75rem;
+  gap: var(--console-space-3);
+  padding: var(--console-space-2) var(--console-space-3);
   border-radius: var(--console-radius-3);
   transition: background-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out), transform var(--console-motion-fast) var(--console-ease-out), box-shadow var(--console-motion-fast) var(--console-ease-out);
   cursor: pointer;

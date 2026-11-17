@@ -31,7 +31,7 @@ test('phone top bar shrinks its actions so 退出登录 stays inside the capsule
   assert.match(actions, /--console-control-height-compact:\s*2\.5rem/)
   assert.match(actions, /min-width:\s*0/, 'the action row may not force the capsule wider than the screen')
   assert.match(rule(phone, '.console-topnav-actions .console-command-trigger'), /width:\s*2\.5rem;\s*height:\s*2\.5rem/)
-  assert.match(rule(phone, '.console-topnav-capsule'), /gap:\s*0\.125rem/)
+  assert.match(rule(phone, '.console-topnav-capsule'), /gap:\s*var\(--console-space-1\)/)
   // The trigger's shared 44px min-height utility would otherwise keep it at 2.75rem.
   assert.match(commandCenter, /className="console-command-trigger max-md:min-h-0"/)
 })

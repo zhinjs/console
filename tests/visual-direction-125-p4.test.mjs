@@ -148,7 +148,7 @@ test('the login page shows the sketch under the title, hides it on phones and na
   const intro = page.slice(page.indexOf('<section className="console-login-intro">'), page.indexOf('<section className="console-login-panel"'))
   assert.match(intro, /<LoginPreview \/>/)
   const css = read('pages/login.css')
-  assert.match(css, /\.console-login-layout \{[^}]*gap: 40px;/)
+  assert.match(css, /\.console-login-layout \{[^}]*gap: var\(--console-space-7\);/)
   const phone = css.slice(css.indexOf('@media (max-width: 767px)'))
   assert.match(phone, /\.console-login-preview \{ display: none; \}/)
   assert.match(css, /\.console-login-preview-swatch\.is-inbound \{ background: hsl\(var\(--zc-chart-inbound\)\); \}/)
