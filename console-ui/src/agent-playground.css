@@ -485,7 +485,7 @@
 }
 
 .agent-playground-run-state.is-running svg {
-  animation: playground-run-breathe var(--console-motion-loop) ease-in-out infinite;
+  animation: playground-run-breathe var(--console-motion-loop) var(--console-ease-out) infinite;
 }
 
 .agent-playground-run-state.has-problem {
@@ -1105,7 +1105,7 @@
 .agent-playground-inline-run-steps li.is-running i {
   background: hsl(190 62% 46%);
   box-shadow: 0 0 0 1px hsl(190 62% 46% / 0.34);
-  animation: playground-run-breathe var(--console-motion-loop) ease-in-out infinite;
+  animation: playground-run-breathe var(--console-motion-loop) var(--console-ease-out) infinite;
 }
 
 .agent-playground-inline-run-steps li.is-failed i,
@@ -1470,7 +1470,7 @@
   height: 0.35rem;
   border-radius: 50%;
   background: hsl(var(--playground-accent));
-  animation: playground-trace-pulse var(--console-motion-loop) ease-in-out infinite alternate;
+  animation: playground-trace-pulse var(--console-motion-loop) var(--console-ease-out) infinite alternate;
 }
 
 .agent-playground-trace-loading i:nth-child(2) { animation-delay: var(--console-motion-fast); }

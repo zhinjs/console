@@ -41,6 +41,7 @@ jobs:
 
       # A push to main publishes the site, so a failing check must stop the deployment.
       - run: pnpm typecheck
+      - run: pnpm lint:css
 
       - run: pnpm test
 

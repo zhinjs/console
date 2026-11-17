@@ -730,7 +730,7 @@
     inset: 0;
     transform: translateX(-100%);
     background: linear-gradient(90deg, transparent, hsl(var(--background) / 0.55), transparent);
-    animation: console-skeleton-shimmer var(--console-motion-loop) ease-in-out infinite;
+    animation: console-skeleton-shimmer var(--console-motion-loop) var(--console-ease-out) infinite;
   }
 
   @keyframes console-skeleton-shimmer {
