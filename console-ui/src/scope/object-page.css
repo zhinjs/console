@@ -68,11 +68,13 @@
 /* ---- Breadcrumb ---- */
 .console-scope-breadcrumb ol { display: flex; flex-wrap: wrap; align-items: center; gap: var(--console-space-1); margin: 0; padding: 0; list-style: none; font-size: var(--console-text-label); }
 .console-scope-breadcrumb li { display: inline-flex; min-width: 0; align-items: center; gap: var(--console-space-1); }
-.console-scope-crumb { display: inline-flex; max-width: 16rem; align-items: baseline; gap: var(--console-space-1); border-radius: var(--console-radius-1); padding: var(--console-space-1) var(--console-space-1); color: hsl(var(--muted-foreground)); text-decoration: none; }
+.console-scope-crumb { display: inline-flex; max-width: 16rem; align-items: baseline; gap: var(--console-space-1); border-radius: var(--console-radius-1); padding: var(--console-space-1) var(--console-space-1); color: hsl(var(--muted-foreground)); font-weight: var(--console-weight-medium); text-decoration: none; }
 a.console-scope-crumb:hover { background: var(--console-surface-hover); color: hsl(var(--foreground)); }
 a.console-scope-crumb:focus-visible { outline: var(--console-border-focus) solid hsl(var(--ring)); outline-offset: 1px; }
 .console-scope-crumb.is-current { color: hsl(var(--foreground)); font-weight: var(--console-weight-strong); }
-.console-scope-crumb-level { flex-shrink: 0; opacity: 0.75; font-weight: var(--console-weight-regular); }
+/* The level word (适配器 / 账号) is set apart from the name by weight only: an opacity on muted-foreground fell
+   below 4.5:1 in the light theme (#64 light-contrast-crumb-readout). */
+.console-scope-crumb-level { flex-shrink: 0; font-weight: var(--console-weight-regular); }
 .console-scope-crumb-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .console-scope-crumb-separator { width: 0.75rem; height: 0.75rem; flex-shrink: 0; color: hsl(var(--muted-foreground)); }
 @media (width < 48rem) { .console-scope-crumb { max-width: 9rem; } }
