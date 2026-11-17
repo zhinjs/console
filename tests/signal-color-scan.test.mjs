@@ -5,6 +5,7 @@ import assert from 'node:assert/strict'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { resolveToken, tokenValues } from './helpers/token-cascade.mjs'
 import { instanceStateTone } from '../console-ui/src/pages/ops/gateway-model.mjs'
 import { taskOverviewRows } from '../console-ui/src/pages/task-overview-model.mjs'
 
@@ -168,22 +169,16 @@ function deltaE2000([L1, a1, b1], [L2, a2, b2]) {
 }
 
 test('received / sent stay apart from each other and from the warning color (ΔE2000 ≥ 20, light and dark)', () => {
-  const tokens = read('console-ui/src/theme-tokens.css')
-  const block = start => { const at = tokens.indexOf(start); return tokens.slice(at, tokens.indexOf('\n  }', at)) }
-  const value = (text, name) => {
-    const match = new RegExp(`${name}: (\\d+(?:\\.\\d+)?) (\\d+(?:\\.\\d+)?)% (\\d+(?:\\.\\d+)?)%;`).exec(text)
-    assert.ok(match, name)
-    return toLab(hslToRgb(...match.slice(1).map(Number)))
-  }
+  // The colors are the component library's roles (console-ui 1.1); resolve them as the browser does.
   const design = read('console-ui/src/design-system.css')
-  const inbound = /--console-chart-inbound: var\((--chart-\d)\)/.exec(design)[1], outbound = /--console-chart-outbound: var\((--chart-\d)\)/.exec(design)[1]
-  const light = block(':root {'), dark = block('.dark {')
-  assert.ok(light.includes('--chart-1:') && dark.includes('--chart-1:'), 'both themes define the chart colors')
-  for (const [theme, text] of [['light', light], ['dark', dark]]) {
-    const [a, b] = [value(text, inbound), value(text, outbound)]
+  const inbound = /--console-chart-inbound: var\(--([\w-]+)\)/.exec(design)[1], outbound = /--console-chart-outbound: var\(--([\w-]+)\)/.exec(design)[1]
+  for (const [theme, dark] of [['light', false], ['dark', true]]) {
+    const values = tokenValues('zhin', dark)
+    const value = name => toLab(hslToRgb(...resolveToken(values, name).split(/\s+/).map(parseFloat)))
+    const [a, b] = [value(inbound), value(outbound)]
     assert.ok(deltaE2000(a, b) >= 20, `${theme}: received / sent ΔE ${deltaE2000(a, b).toFixed(1)}`)
-    for (const warning of ['--warning', '--warning-fill']) for (const [series, color] of [['received', a], ['sent', b]]) {
-      const d = deltaE2000(color, value(text, warning))
+    for (const warning of ['warning', 'warning-fill']) for (const [series, color] of [['received', a], ['sent', b]]) {
+      const d = deltaE2000(color, value(warning))
       assert.ok(d >= 20, `${theme}: ${series} vs ${warning} ΔE ${d.toFixed(1)}`)
     }
   }

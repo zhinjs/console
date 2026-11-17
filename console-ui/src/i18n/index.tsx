@@ -31,7 +31,7 @@ export function LocaleProvider({ children, initialLocale }: { children: ReactNod
   const value = useMemo(() => ({ ...createPresentation(locale), setLocale }), [locale, setLocale])
   useEffect(() => {
     document.documentElement.lang = locale
-    // The product name is not translated (components/BrandMark.tsx PRODUCT_NAME, client/index.html).
+    // The product name is not translated (CONSOLE_PRODUCT_NAME of @zhin.js/console-ui, client/index.html).
     document.title = 'Zhin Console'
     document.querySelector('meta[name=description]')?.setAttribute('content', translate(locale, '管理 Zhin Bot 的渠道、能力、Agent、自动化与运行状态。'))
   }, [locale])

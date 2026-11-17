@@ -1,6 +1,5 @@
 import { MessageSquare, Reply, UserRound } from 'lucide-react'
-import { StatCard } from '@zhin.js/console-ui'
-import { BrandMark } from '../components/BrandMark'
+import { BrandMark, StatCard } from '@zhin.js/console-ui'
 import { useI18n } from '../i18n'
 
 /**

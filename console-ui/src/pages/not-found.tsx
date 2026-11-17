@@ -20,7 +20,7 @@ export default function NotFoundPage({ homePath }: { homePath: string }) {
       <p>{i18n.t('Console 里没有这个地址对应的页面。链接可能已过期，或者提供它的插件没有安装。')}</p>
       <code className="console-not-found-address">{address}</code>
       <div className="console-not-found-actions">
-        <Button asChild><Link to={homePath}><Home />{i18n.t('返回首页')}</Link></Button>
+        <Button variant="primary" asChild><Link to={homePath}><Home />{i18n.t('返回首页')}</Link></Button>
         <Button type="button" variant="outline" onClick={() => openCommandCenter()}><Search />{i18n.t('打开 {0} 搜索', [commandCenterShortcut().replace('⌘ K', '⌘K')])}</Button>
       </div>
     </section>

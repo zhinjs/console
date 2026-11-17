@@ -132,7 +132,8 @@ test('icons: one stroke, 18px in navigation, no tiles in lists or ⌘K, and the 
   assert.doesNotMatch(command, /background/)
   assert.doesNotMatch(/\.console-plugin-catalog-icon \{([^}]*)\}/.exec(read('console-ui/src/pages/plugins.css'))[1], /background/)
   assert.doesNotMatch(/\.agent-playground-session-icon \{([^}]*)\}/.exec(read('console-ui/src/agent-playground.css'))[1], /background/)
-  assert.match(read('console-ui/src/agent-playground.css'), /\.agent-playground-brand small \{\s*display: none;/, 'no English 「Conversations」 under 会话')
+  // @zhin.js/adapter-sandbox 1.2.0 no longer renders 「Conversations」, so the Console no longer hides it.
+  assert.doesNotMatch(read('console-ui/src/agent-playground.css'), /\.agent-playground-brand small/)
   assert.equal(pluginIconType({ kind: 'plugin', name: 'adapter-qq', packageName: '@zhin.js/adapter-qq' }), 'adapter')
   assert.equal(pluginIconType({ kind: 'package', name: 'x', packageName: 'x', catalog: 'ai' }), 'ai')
   assert.equal(pluginIconType({ kind: 'plugin', name: 'welcome', packageName: '@zhin.js/plugin-welcome' }), 'feature')

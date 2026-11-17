@@ -745,7 +745,7 @@ export default function HomePage() {
             {hostAvailable ? i18n.t("刷新") : i18n.t("重新连接")}
           </Button>
           {hostAvailable ? (
-            <Button onClick={() => navigate('/scope')}>
+            <Button variant="primary" onClick={() => navigate('/scope')}>
               <Bot className="h-4 w-4" />
               {i18n.t("进入会话")}
             </Button>

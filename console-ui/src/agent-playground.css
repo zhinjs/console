@@ -124,11 +124,6 @@
   font-weight: 720;
 }
 
-/* The heading (「会话」) is the whole title: the English subtitle under it (「Conversations」) is dropped (console#125). */
-.agent-playground-brand small {
-  display: none;
-}
-
 .agent-playground-mark,
 .agent-playground-empty-mark {
   display: inline-flex;

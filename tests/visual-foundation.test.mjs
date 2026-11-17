@@ -1,22 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import postcss from 'postcss'
+import { hslTokens, resolveToken, tokenValues } from './helpers/token-cascade.mjs'
 import { THEME_PALETTES } from '../console-ui/src/theme/index.ts'
 const root = new URL('../', import.meta.url)
-const css = postcss.parse(readFileSync(new URL('console-ui/src/theme-tokens.css', root), 'utf8'))
-function tokensFor(palette, dark) {
-  const values = new Map()
-  css.walkRules(rule => {
-    if (!rule.selectors.some(selector => selector === ':root' || selector === `:root[data-palette="${palette}"]` || dark && selector === '.dark')) return
-    rule.walkDecls(declaration => { if (declaration.prop.startsWith('--')) values.set(declaration.prop.slice(2), declaration.value) })
-  })
-  const resolve = (value, depth = 0) => {
-    assert.ok(depth < 32, 'color variables must not cycle')
-    return value.replace(/var\(--([\w-]+)\)/g, (_match, name) => { assert.ok(values.has(name), `missing ${name}`); return resolve(values.get(name), depth + 1) })
-  }
-  return new Proxy({}, { get(_target, name) { assert.ok(values.has(name), `missing ${name}`); const [h, s, l] = resolve(values.get(name)).split(/\s+/).map(parseFloat); assert.ok([h, s, l].every(Number.isFinite), `invalid HSL ${name}`); return { h, s, l } } })
-}
+const tokensFor = (palette, dark) => hslTokens(palette, dark)
 const linear = value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4
 const luminance = ({ h, s, l }) => {
   const chroma = (1 - Math.abs(2 * l / 100 - 1)) * s / 100, hue = h / 60, x = chroma * (1 - Math.abs(hue % 2 - 1)), m = l / 100 - chroma / 2
@@ -97,8 +85,9 @@ test('Zhin green is the default palette: light text is the brand hue darkened to
 test('the brand mark colors are #76EEC6 / #7FFFD4 with a near-black Z, in every palette (console#125)', () => {
   for (const palette of THEME_PALETTES) for (const dark of [false, true]) {
     const tokens = tokensFor(palette.id, dark)
-    assert.deepEqual(tokens.brand, dark ? { h: 159.8, s: 100, l: 74.9 } : { h: 160, s: 77.9, l: 69.8 })
-    assert.ok(ratio(tokens['brand-foreground'], tokens.brand) >= 7, `${palette.id}: the Z reads on the mark`)
+    // The component library's brand role (console-ui 1.1), never redefined by a palette.
+    assert.deepEqual(tokens['console-brand'], dark ? { h: 159.8, s: 100, l: 74.9 } : { h: 160, s: 78, l: 69.8 })
+    assert.ok(ratio(tokens['console-brand-foreground'], tokens['console-brand']) >= 7, `${palette.id}: the Z reads on the mark`)
   }
 })
 test('each status has a text value and a fill value sharing one hue across themes; warning fill is amber (console#125)', () => {
@@ -110,4 +99,29 @@ test('each status has a text value and a fill value sharing one hue across theme
   }
   assert.ok(light['warning-fill'].l >= 45 && light['warning-fill'].s >= 85, 'a bright amber, not brown')
   assert.ok(ratio(light['warning-fill-foreground'], light['warning-fill']) >= 4.5)
+})
+
+test('the library accent roles follow the palette; under Zhin green they equal the library values (console-ui 1.1)', () => {
+  const light = tokensFor('zhin', false), dark = tokensFor('zhin', true)
+  // #0A7551 vs the library's brand-text hsl(160 84% 25%): the same color within rounding.
+  assert.ok(Math.abs(light['console-brand-text'].h - 160) <= 0.5 && light['console-brand-text'].s === 84 && light['console-brand-text'].l === 25)
+  assert.deepEqual(dark['console-brand-text'], { h: 159.8, s: 100, l: 74.9 })
+  for (const palette of THEME_PALETTES) for (const theme of [false, true]) {
+    const tokens = tokensFor(palette.id, theme)
+    assert.deepEqual(tokens.ring, tokens.primary, `${palette.id}: focus ring is the palette accent`)
+    assert.deepEqual(tokens['console-brand-text'], tokens.primary)
+    assert.deepEqual(tokens['console-brand-tint'], tokens['primary-action'])
+  }
+})
+test('status, fill and chart tokens are the library roles; sent is still chart-3 (console-ui 1.1)', () => {
+  const values = tokenValues('zhin', false)
+  for (const [name, role] of [['destructive', 'signal-danger-text'], ['destructive-fill', 'signal-danger-fill'], ['success', 'signal-success-text'], ['success-fill', 'signal-success-fill'],
+    ['info', 'signal-info-text'], ['info-fill', 'signal-info-fill'], ['warning', 'signal-warning-text'], ['warning-fill', 'signal-warning-fill'],
+    ...[1, 2, 3, 4, 5, 6, 7, 8].map(n => [`chart-${n}`, `console-chart-${n}`.slice(8)]), ['chart-other', 'chart-other']]) {
+    assert.equal(values.get(name), `var(--console-${role})`, name)
+  }
+  const design = readFileSync(new URL('console-ui/src/design-system.css', root), 'utf8')
+  assert.match(design, /--console-chart-inbound: var\(--console-chart-1\);/)
+  assert.match(design, /--console-chart-outbound: var\(--console-chart-3\);/)
+  assert.equal(resolveToken(values, 'console-chart-3'), '164 72% 32%')
 })

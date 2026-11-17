@@ -124,8 +124,7 @@ function loginPreview() {
   const t = (message, values) => translate('en', message, values)
   return compile('pages/login-preview.tsx', {
     'lucide-react': icons,
-    '@zhin.js/console-ui': { StatCard: props => ({ type: 'stat-card', props: { ...props, children: [props.label, props.value, props.sub] } }) },
-    '../components/BrandMark': { BrandMark: 'brand-mark' },
+    '@zhin.js/console-ui': { BrandMark: 'brand-mark', StatCard: props => ({ type: 'stat-card', props: { ...props, children: [props.label, props.value, props.sub] } }) },
     '../i18n': { useI18n: () => ({ t, locale: 'en' }) },
   })
 }
@@ -166,25 +165,14 @@ const luminance = rgb => { const [r, g, b] = rgb.map(c => (c <= 0.03928 ? c / 12
 const contrast = (a, b) => { const [x, y] = [luminance(a), luminance(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05) }
 const hex = rgb => '#' + rgb.map(c => Math.round(c * 255).toString(16).padStart(2, '0')).join('').toUpperCase()
 
-test('the sign-in button is solid brand: #0A7551 / white in light, #7FFFD4 / dark green in dark, both ≥ 4.5:1', () => {
-  assert.match(read('pages/login.tsx'), /<Button type="submit" className="console-login-submit"/)
+test('the sign-in button is the component library primary (console-ui 1.1); the local brand button is gone', () => {
+  assert.match(read('pages/login.tsx'), /<Button type="submit" variant="primary" /)
   const css = read('pages/login.css')
-  assert.match(css, /组件库 primary 发布后替换/)
-  const rule = selector => { const at = css.indexOf(`${selector} {`); assert.ok(at >= 0, selector); return css.slice(at, css.indexOf('}', at)) }
-  const triple = (body, name) => /(\d+(?:\.\d+)?) (\d+(?:\.\d+)?)% (\d+(?:\.\d+)?)%/.exec(new RegExp(`${name}: ([^;]+);`).exec(body)[1]).slice(1).map(Number)
-  const light = rule('\n.console-login-submit'), dark = rule('.dark .console-login-submit')
-  const lightBg = hslToRgb(...triple(light, '--console-login-primary')), lightFg = hslToRgb(...triple(light, '--console-login-primary-foreground'))
-  assert.equal(hex(lightBg), '#0A7551')
-  assert.ok(contrast(lightBg, lightFg) >= 4.5, `light ${contrast(lightBg, lightFg).toFixed(2)}`)
-  const darkBg = hslToRgb(...triple(dark, '--console-login-primary'))
+  assert.doesNotMatch(css, /console-login-submit|--console-login-primary/)
+  // primary: the solid brand (#76EEC6 / #7FFFD4) with the brand's near-black green; both well above 4.5:1.
+  const tokens = readFileSync(new URL('../node_modules/@zhin.js/console-ui/dist/tokens.css', import.meta.url), 'utf8')
+  const triples = name => [...tokens.matchAll(new RegExp(`${name}: (\\d+(?:\\.\\d+)?) (\\d+(?:\\.\\d+)?)% (\\d+(?:\\.\\d+)?)%;`, 'g'))].map(match => hslToRgb(...match.slice(1).map(Number)))
+  const [lightBg, darkBg] = triples('--console-brand'), [lightFg, darkFg] = triples('--console-brand-foreground')
   assert.equal(hex(darkBg), '#7FFFD4')
-  assert.match(dark, /--console-login-primary-foreground: var\(--brand-foreground\);/)
-  const tokens = read('theme-tokens.css')
-  const brandFg = hslToRgb(.../--brand-foreground: (\d+(?:\.\d+)?) (\d+(?:\.\d+)?)% (\d+(?:\.\d+)?)%;/.exec(tokens).slice(1).map(Number))
-  assert.ok(contrast(darkBg, brandFg) >= 4.5, `dark ${contrast(darkBg, brandFg).toFixed(2)}`)
-  // Hover keeps the contrast too.
-  for (const [body, fg] of [[light, lightFg], [dark, brandFg]]) {
-    const hover = hslToRgb(...triple(body, '--console-login-primary-hover'))
-    assert.ok(contrast(hover, fg) >= 4.5, `hover ${contrast(hover, fg).toFixed(2)}`)
-  }
+  for (const [bg, fg] of [[lightBg, lightFg], [darkBg, darkFg]]) assert.ok(contrast(bg, fg) >= 4.5, `${hex(bg)} / ${hex(fg)}: ${contrast(bg, fg).toFixed(2)}`)
 })

@@ -102,9 +102,9 @@
     --console-chart-grid: hsl(var(--foreground) / 0.08);
     --console-chart-baseline: hsl(var(--foreground) / 0.18);
     --console-hairline: 1px;
-    --console-chart-inbound: var(--chart-1);
-    --console-chart-outbound: var(--chart-3);
-    --console-chart-quantity: var(--chart-1);
+    --console-chart-inbound: var(--console-chart-1);
+    --console-chart-outbound: var(--console-chart-3);
+    --console-chart-quantity: var(--console-chart-1);
   }
 
   @media (prefers-reduced-motion: no-preference) {

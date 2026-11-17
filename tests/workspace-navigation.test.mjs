@@ -70,9 +70,8 @@ function fixture({ routes, path = '/sandbox', mobile = false, locale = 'zh-CN', 
     '../i18n': { useI18n: () => i18n }, '../i18n/locale.mjs': { translate }, '../i18n/navigation': navigation,
     '../navigation-taxonomy': taxonomy, '../navigation-location.mjs': { resolveNavigationLocation },
     '../components/sidebarMenuIcons': { getSidebarLucideIcon: () => 'icon' }, './sidebarMenuIcons': { getSidebarLucideIcon: () => 'icon' },
-    '../components/BrandMark': { BrandMark: 'brand-mark', PRODUCT_NAME: 'Zhin Console' },
     '../components/LanguageSelect': { LanguageSelect: 'language-select' }, '../components/ThemeToggle': { ThemeToggle: 'theme-toggle' }, '../components/UserMenu': { UserMenu: 'user-menu' },
-    '@zhin.js/console-ui': { cn: (...values) => values.filter(Boolean).join(' '), ListItemButton: 'button', Button: 'button', buttonVariants: () => '', ScrollArea: 'scroll-area', ...(ui(['Tooltip', 'TooltipTrigger', 'TooltipContent'])), ...(ui(['DropdownMenu', 'DropdownMenuTrigger', 'DropdownMenuContent', 'DropdownMenuGroup', 'DropdownMenuItem', 'DropdownMenuLabel'])), ...(ui(['Dialog', 'DialogContent', 'DialogDescription', 'DialogTitle'])) }, './command-center-model.mjs': commandCenterModel,
+    '@zhin.js/console-ui': { cn: (...values) => values.filter(Boolean).join(' '), BrandMark: 'brand-mark', CONSOLE_PRODUCT_NAME: 'Zhin Console', ListItemButton: 'button', Button: 'button', buttonVariants: () => '', ScrollArea: 'scroll-area', ...(ui(['Tooltip', 'TooltipTrigger', 'TooltipContent'])), ...(ui(['DropdownMenu', 'DropdownMenuTrigger', 'DropdownMenuContent', 'DropdownMenuGroup', 'DropdownMenuItem', 'DropdownMenuLabel'])), ...(ui(['Dialog', 'DialogContent', 'DialogDescription', 'DialogTitle'])) }, './command-center-model.mjs': commandCenterModel,
     '../utils/auth': { notifyAuthRequired() {}, apiFetch: async () => ({ ok: false, json: async () => null }) },
     '../contracts/zhin-console': { CONSOLE_REST: { INTROSPECTION: '/api/introspection' } }, '../components/ConsoleCommandCenter': { ConsoleCommandCenter: 'command-center' },
     '../navigation-sections.mjs': sections, '../hooks/use-console-access': { useConsoleAccess: () => access },
@@ -131,7 +130,7 @@ test('six sections in two tiers (日常 / 管理); plugin pages without a sectio
     assert.deepEqual(sectionIds(tree), ['overview', 'sessions', 'features', 'plugins', 'ops'])
     assert.deepEqual(navLinks(tree), ['/dashboard', '/logs', '/sandbox', '/scope', '/features', '/calendar', '/unclassified', '/plugins', '/ops/config', '/ops/schedules', '/backup'])
     assert.equal(nav(tree, '设置菜单'), undefined, 'settings no longer live in a footer menu')
-    assert.equal(nodes(tree).find(node => node.props?.className === 'console-brand').props.to, '/')
+    assert.equal(nodes(tree).find(node => node.props?.className === 'console-brand-link').props.to, '/')
   } finally { f.close() }
   const drawer = fixture({ routes, mobile: true })
   try {

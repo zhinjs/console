@@ -90,7 +90,7 @@ export default function AccessAuditPage() {
             <Input id={`${id}-until`} type="datetime-local" value={draft.until} onChange={event => setDraft(previous => ({ ...previous, until: event.target.value }))} />
           </FormField>
           <div className="flex items-end gap-2">
-            <Button type="submit" size="sm"><Search />{i18n.t("筛选")}</Button>
+            <Button type="submit" size="sm" variant="primary"><Search />{i18n.t("筛选")}</Button>
             {hasFilter ? <Button type="button" variant="ghost" size="sm" onClick={() => { setDraft(EMPTY_FILTER); setFilter(EMPTY_FILTER) }}><X />{i18n.t("清除")}</Button> : null}
           </div>
         </form>

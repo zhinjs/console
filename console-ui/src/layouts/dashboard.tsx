@@ -1,11 +1,10 @@
 import { routeLabel } from '../i18n/navigation'
 import { LanguageSelect } from '../components/LanguageSelect'
-import { BrandMark, PRODUCT_NAME } from '../components/BrandMark'
 import { useI18n } from '../i18n'
 import { useMemo, useRef, useState, useEffect, useLayoutEffect, useSyncExternalStore } from "react"
 import { Outlet, Link, useLocation, matchPath } from "react-router-dom"
 import { Menu, X, ChevronRight, ChevronDown } from "lucide-react"
-import { Button, cn, DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, ListItemButton, ScrollArea } from '@zhin.js/console-ui'
+import { BrandMark, Button, cn, CONSOLE_PRODUCT_NAME, DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, ListItemButton, ScrollArea } from '@zhin.js/console-ui'
 import { type ConsoleRouteRecord } from "@zhin.js/client"
 import { useConsoleConnected } from "../hooks/use-console-connected"
 import { app } from "../utils/console-client"
@@ -257,9 +256,8 @@ export default function DashboardLayout() {
               <Menu className="h-5 w-5" />
             </Button>
           ) : null}
-          <Link to="/" className="console-brand" aria-label={PRODUCT_NAME}>
-            <BrandMark className="console-brand-mark" />
-            <span className="console-brand-text">{PRODUCT_NAME}</span>
+          <Link to="/" className="console-brand-link" aria-label={CONSOLE_PRODUCT_NAME}>
+            <BrandMark withText />
           </Link>
 
           {compact ? null : barNavigation}
@@ -293,9 +291,8 @@ export default function DashboardLayout() {
           aria-label={i18n.t("主导航")}
         >
           <div className="console-nav-drawer-header">
-            <Link to="/" className="console-brand" aria-label={PRODUCT_NAME} onClick={() => setDrawerOpen(false)}>
-              <BrandMark className="console-brand-mark" />
-              <span className="console-brand-text">{PRODUCT_NAME}</span>
+            <Link to="/" className="console-brand-link" aria-label={CONSOLE_PRODUCT_NAME} onClick={() => setDrawerOpen(false)}>
+              <BrandMark withText />
             </Link>
             <Button variant="ghost" size="icon" className="shrink-0" onClick={() => setDrawerOpen(false)} aria-label={i18n.t("关闭菜单")}>
               <X className="h-4 w-4" />
