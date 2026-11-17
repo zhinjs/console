@@ -245,7 +245,7 @@ test('deep links: ?account= opens 账号 on that account, ?tab=purposes opens �
   assert.equal(entry.inferenceTabParams(new URLSearchParams('account=x'), 'profiles').toString(), '')
   assert.equal(entry.inferenceTabParams(new URLSearchParams('account=x'), 'accounts').toString(), 'account=x&tab=accounts')
   const workspace = source('pages/inference/Workspace.tsx')
-  assert.match(workspace, /<Accounts management=\{m\} focusAccount=\{tab === 'accounts' \? focusAccount : undefined\} \/>/u)
+  assert.match(workspace, /<Accounts management=\{m\} focusAccount=\{tab === 'accounts' \? focusAccount : undefined\}[ />]/u)
 })
 
 async function accountsPage(focusAccount) {

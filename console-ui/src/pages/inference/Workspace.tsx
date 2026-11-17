@@ -166,6 +166,8 @@ function InferencePages({ management: m, connectionScope }: { management: Infere
   const focusAccount = inferenceFocusAccount(searchParams.get('account'))
   const tab = resolveInferenceTab(searchParams.get('tab'), m.view?.hostAdministrator, focusAccount)
   const setTab = (next: string) => setSearchParams(current => inferenceTabParams(current, next), { replace: true })
+  // 「添加模型」 on an account card: switch to 模型 and open its add dialog with that account.
+  const [addModelFor, setAddModelFor] = useState<string | null>(null)
   if (!m.view) return null
   return (
         <Tabs value={tab} onValueChange={setTab}>
@@ -180,11 +182,11 @@ function InferencePages({ management: m, connectionScope }: { management: Infere
             )}
           </TabsList>
           <TabsContent value="profiles">
-            <Profiles management={m} onCreateAccount={() => setTab('accounts')} />
+            <Profiles management={m} onCreateAccount={() => setTab('accounts')} addModelFor={addModelFor} onAddModelOpened={() => setAddModelFor(null)} />
           </TabsContent>
           <TabsContent value="services"><Services management={m} /></TabsContent>
           <TabsContent value="accounts">
-            <Accounts management={m} focusAccount={tab === 'accounts' ? focusAccount : undefined} />
+            <Accounts management={m} focusAccount={tab === 'accounts' ? focusAccount : undefined} onAddModel={accountId => { setAddModelFor(accountId); setTab('profiles') }} />
           </TabsContent>
           {m.view.hostAdministrator ? (
             <TabsContent value="purposes">
