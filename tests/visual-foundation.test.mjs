@@ -70,10 +70,13 @@ test('status semantics and chart category colors do not change with decorative p
 test('primary buttons and the composer use action fills, while links and destructive controls keep their roles', () => {
   const button = readFileSync(new URL('node_modules/@zhin.js/console-ui/dist/components/ui/button.js', root), 'utf8')
   const composer = readFileSync(new URL('console-ui/src/im-workspace.css', root), 'utf8')
-  assert.ok(button.includes('bg-[hsl(var(--primary-action))]'))
-  assert.ok(button.includes('text-[hsl(var(--primary-action-foreground))]'))
-  assert.ok(button.includes('link: "text-primary'))
-  assert.ok(button.includes('destructive: "bg-destructive'))
+  // console-ui 1.1: `soft` (the former `default`) is the palette tint, `primary` the solid brand fill,
+  // `destructive` a ghost, and only `destructive-solid` is filled red.
+  assert.match(button, /const SOFT = "[^"]*bg-primary-action text-primary-action-foreground/)
+  assert.match(button, /primary: "[^"]*bg-brand text-brand-foreground/)
+  assert.ok(button.includes('link: "text-brand-text'))
+  assert.ok(button.includes('destructive: "text-destructive'))
+  assert.ok(button.includes('"destructive-solid": "bg-destructive'))
   assert.match(composer, /\.im-insert-button, \.im-send-button \{ background: hsl\(var\(--primary-action\)\); color: hsl\(var\(--primary-action-foreground\)\)/)
 })
 test('the Console entry stylesheet shares the design-system palette without remote font requests', () => {

@@ -34,8 +34,8 @@ importers:
         specifier: ~1.4.0
         version: 1.4.0
       '@zhin.js/console-ui':
-        specifier: ~1.0.0
-        version: 1.0.0(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+        specifier: ~1.1.0
+        version: 1.1.0(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@zhin.js/contract':
         specifier: ~1.1.27
         version: 1.1.27(react@19.2.6)
@@ -1286,12 +1286,22 @@ packages:
     resolution: {integrity: sha512-0kqWsvan4uJG6WafSQ5DRNo6/glL86mYfDkzdlfeL5q2dpe5OMj7wFGx3wdRILldu00dtQ9jzqZyqjIUUagWog==}
     engines: {node: '>=22.19.0'}
 
-  '@zhin.js/console-ui@1.0.0':
-    resolution: {integrity: sha512-vXNXBmdJgAOVt0iq1oXARfFu9/J6CQ3y8OVCWwPOoQyFib7VzETIYOUX8OHO+bjPb+ykFVvHGo8ASTp2cmZUAg==}
+  '@zhin.js/console-ui@1.1.0':
+    resolution: {integrity: sha512-iFEUovc0KXpOtSNiEh5wgmfin3e9Lu6/XpFQcIM3n5koLwGx+4CF33xqOZ2Zr1srMEZYMSIqGlwkpNsCwFMg0w==}
     engines: {node: '>=22.19.0'}
     peerDependencies:
+      '@playwright/test': '>=1.50'
+      esbuild: '>=0.25'
       react: '>=18'
       react-dom: '>=18'
+      stylelint: '>=16'
+    peerDependenciesMeta:
+      '@playwright/test':
+        optional: true
+      esbuild:
+        optional: true
+      stylelint:
+        optional: true
 
   '@zhin.js/contract@1.1.27':
     resolution: {integrity: sha512-vQpNTdqmbk9r+6ehuIiLVj+B0mmf+aHqkm/nxkgSr6ikIKDcUbY9pyBdos5+HWjL4eagcRiceOEJdje2OZDzjQ==}
@@ -4151,7 +4161,7 @@ snapshots:
 
   '@zhin.js/console-protocol@1.4.0': {}
 
-  '@zhin.js/console-ui@1.0.0(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+  '@zhin.js/console-ui@1.1.0(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
     dependencies:
       class-variance-authority: 0.7.1
       clsx: 2.1.1
