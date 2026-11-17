@@ -20,3 +20,4 @@ export function initialLoginMode(input?: { initialToken?: string | null; savedCo
 export function saveLoginMode(storage: Pick<Storage, 'setItem'> | null | undefined, mode: LoginMode): void
 export function passwordFailureField(result: { code?: string } | null | undefined): LoginField
 export function lockoutMs(result: { code?: string; retryAfterSec?: number | null } | null | undefined, now?: number): number
+export function hostNeedsSetup(result: { ok: boolean; data?: { setupRequired?: boolean } | null } | null | undefined): boolean

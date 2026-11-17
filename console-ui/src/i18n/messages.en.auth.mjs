@@ -10,6 +10,7 @@ export const authMessages = Object.freeze({
   "隐藏密码": "Hide password",
   "显示密码": "Show password",
   "API 令牌，或首次初始化时使用的初始化令牌。": "An API token, or the setup token used the first time.",
+  "这个实例还没有所有者，请用初始化令牌登录（.env 里的 HTTP_TOKEN，启动日志里也会提示）。": "This instance has no owner yet. Sign in with its setup token (HTTP_TOKEN in .env; the startup log mentions it too).",
   "登录状态仅保留在本次浏览器会话。": "You stay signed in for this browser session only.",
   "此 Host 不支持账号登录（版本较旧），请改用访问令牌连接。": "This Host does not support account sign-in (it is older). Connect with an access token instead.",
   "此 Host 版本较旧，不支持这项操作。": "This Host is too old for this action.",
