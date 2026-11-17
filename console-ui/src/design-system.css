@@ -1860,30 +1860,10 @@
     white-space: pre-wrap;
   }
 
-  .console-log-empty {
-    display: flex;
+  /* An empty log stream: the library's EmptyState (logs illustration), centered in the stream's height. */
+  .console-log-stream-body > .console-empty {
     min-height: 18rem;
-    flex-direction: column;
-    align-items: center;
     justify-content: center;
-    color: hsl(var(--muted-foreground));
-    text-align: center;
-  }
-
-  .console-log-empty svg {
-    width: 1.4rem;
-    height: 1.4rem;
-    margin-bottom: 0.65rem;
-  }
-
-  .console-log-empty strong {
-    color: hsl(var(--foreground));
-    font-size: var(--console-text-body);
-  }
-
-  .console-log-empty p {
-    margin-top: 0.25rem;
-    font-size: var(--console-text-label);
   }
 
   .console-capability-explorer {

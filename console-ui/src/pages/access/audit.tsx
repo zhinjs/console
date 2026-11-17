@@ -107,7 +107,7 @@ export default function AccessAuditPage() {
         {loading && !loaded ? (
           <StatusState kind="loading" className="m-4" placeholder={<div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-9" />)}</div>} />
         ) : !shown.length ? (
-          error && !loaded ? null : <StatusState kind="empty" title={hasFilter || target ? i18n.t("没有符合条件的记录") : i18n.t("还没有审计记录")}
+          error && !loaded ? null : <StatusState kind="empty" illustration="logs" title={hasFilter || target ? i18n.t("没有符合条件的记录") : i18n.t("还没有审计记录")}
             description={target && entries.length ? i18n.t("已读取的记录里没有这个目标，可以加载更早的记录继续查找。")
               : hasFilter ? i18n.t("主体与动作按完整值匹配。换一个条件，或清除筛选。") : i18n.t("登录、访问控制变更和写操作发生后会记录在这里。")}
             actions={hasFilter || target ? <>

@@ -315,9 +315,9 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
           <Badge variant="secondary">{visiblePersistentCrons.length}</Badge>
         </div>
         {persistentCrons.length === 0 ? (
-          <StatusState kind="empty" title={i18n.t("暂无持久化定时任务")}
-            description={readOnly ? i18n.t("当前身份只能查看实例中已存在的任务") : persistentAvailable ? i18n.t("点击「新建任务」添加一个定时 AI 任务") : i18n.t("启用持久化 AI 调度后可在这里管理任务")}
-            actions={!readOnly && persistentAvailable ? <Button size="sm" onClick={() => setAddDialogOpen(true)}><Plus className="w-4 h-4 mr-1" />{i18n.t(" 新建任务")}</Button> : undefined} />
+          <StatusState kind="empty" illustration="tasks" title={i18n.t("暂无持久化定时任务")}
+            description={readOnly ? i18n.t("当前身份只能查看实例中已存在的任务") : persistentAvailable ? i18n.t("新建一个定时 AI 任务，它会按计划自动运行。") : i18n.t("启用持久化 AI 调度后可在这里管理任务")}
+            action={!readOnly && persistentAvailable ? { label: i18n.t("新建定时任务"), icon: Plus, onSelect: () => setAddDialogOpen(true) } : undefined} />
         ) : visiblePersistentCrons.length === 0 ? <StatusState kind="empty" compact title={i18n.t("没有匹配的任务")} description={i18n.t("换一个关键词或状态，或清除筛选。")}
           actions={<Button size="sm" variant="outline" onClick={() => { setSearch(''); setStatusFilter('all') }}>{i18n.t("清除筛选")}</Button>} /> : (
           <div className="console-resource-list console-schedule-list">

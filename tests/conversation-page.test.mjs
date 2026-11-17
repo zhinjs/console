@@ -216,10 +216,12 @@ test('personal sessions open on the trace tab and explain, without an error, tha
   assert.ok(notice, 'the conversation tab carries a neutral notice')
   assert.match(notice.props.description, /个人会话不保存聊天记录/)
   assert.match(notice.props.description, /轨迹/)
-  const toTrace = elements(panel).find(node => node.type === 'button' && text(node) === '查看轨迹')
+  // 查看轨迹 is the EmptyState's one action (console-ui 1.1).
+  const toTrace = notice.props.action
+  assert.equal(toTrace.label, '查看轨迹')
   find(f, 'tabs').props.onValueChange('conversation'); f.render()
   assert.equal(find(f, 'tabs').props.value, 'conversation')
-  toTrace.props.onClick(); f.render()
+  toTrace.onSelect(); f.render()
   assert.equal(find(f, 'tabs').props.value, 'trace')
   f.close()
 })

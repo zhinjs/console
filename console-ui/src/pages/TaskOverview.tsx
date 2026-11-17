@@ -94,7 +94,7 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
         <StatusState kind="error" title={i18n.t("任务暂时读不到")} description={i18n.t("管理员任务、定时提醒和助手任务都没有读到；连接恢复后刷新。")} onRetry={() => void load()} />
       ) : !shown.length && shownInternal.length ? null : !shown.length ? (
         filter === 'all' ? (
-          <StatusState kind="empty" title={i18n.t("还没有任务")}
+          <StatusState kind="empty" illustration="tasks" title={i18n.t("还没有任务")}
             description={i18n.t("管理员任务在「管理员任务」页签创建；定时提醒由插件或 AI 助手创建。")}
             actions={<Button asChild size="sm" variant="outline"><Link to={taskTabHref('admin')}>{i18n.t("创建管理员任务")}</Link></Button>} />
         ) : (

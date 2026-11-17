@@ -387,16 +387,13 @@ export default function AgentSessionsPage() {
                 </TabsList>
                 <TabsContent value="conversation" forceMount className="data-[state=inactive]:hidden">
                   {personal ? (
-                    <div className="flex flex-col items-center pb-6">
-                      <EmptyState
-                        compact
-                        icon={MessagesSquare}
-                        title={i18n.t('个人会话没有聊天记录')}
-                        description={i18n.t('个人会话不保存聊天记录，每一轮的处理过程请在「轨迹」页签查看。')}
-                        className="pb-3"
-                      />
-                      <Button variant="outline" size="sm" onClick={() => setView('trace')}>{i18n.t('查看轨迹')}</Button>
-                    </div>
+                    <EmptyState
+                      compact
+                      illustration="messages"
+                      title={i18n.t('个人会话没有聊天记录')}
+                      description={i18n.t('个人会话不保存聊天记录，每一轮的处理过程请在「轨迹」页签查看。')}
+                      action={{ label: i18n.t('查看轨迹'), onSelect: () => setView('trace') }}
+                    />
                   ) : <ConversationHistory
                     key={`${scope}:${selectedKey}`}
                     sessionKey={selectedKey}
@@ -456,7 +453,7 @@ export default function AgentSessionsPage() {
                         </details>
 
                         {tree.points.length === 0 ? (
-                          <EmptyState compact title={i18n.t('暂无可继续的消息')} />
+                          <EmptyState compact illustration="messages" title={i18n.t('暂无可继续的消息')} />
                         ) : (
                           <div className="divide-y">
                             {tree.points.map((point) => {
@@ -527,7 +524,7 @@ export default function AgentSessionsPage() {
           ) : sessionKeyFromUrl ? (
             <ErrorAlert error={i18n.t('会话标识不完整，请检查平台、账号、类型与会话。')} />
           ) : (
-            <EmptyState compact title={i18n.t('选择一个对话')} />
+            <EmptyState compact illustration="messages" title={i18n.t('选择一个对话')} />
           )}
         </section>
       </div>

@@ -854,7 +854,7 @@ export default function HomePage() {
               : null}
           </div>
           {coverage.kind === 'none' && messagesLoaded ? (
-            <StatusState kind="empty" compact title={i18n.t("缓冲里还没有消息")} description={i18n.t("机器人收到或发出消息后会出现在这里；实例重启会清空缓冲。")} />
+            <StatusState kind="empty" compact illustration="messages" title={i18n.t("缓冲里还没有消息")} description={i18n.t("机器人收到或发出消息后会出现在这里；实例重启会清空缓冲。")} />
           ) : (
             <MessageVolumeChart
               buckets={activity}
@@ -949,7 +949,7 @@ export default function HomePage() {
             </div>
           </>
         ) : (
-          <StatusState kind="empty" compact title={i18n.t("还没有消息")} description={i18n.t("机器人收到或发出消息后，最近的消息会按会话出现在这里。")} />
+          <StatusState kind="empty" compact illustration="messages" title={i18n.t("还没有消息")} description={i18n.t("机器人收到或发出消息后，最近的消息会按会话出现在这里。")} />
         )}
       </section>
 

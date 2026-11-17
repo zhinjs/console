@@ -98,7 +98,7 @@ export function ScopeRecordsPanel({ scope }: { scope: Scope }) {
           ) : sessions.status === 'error' ? (
             <StatusState compact error={sessions.error} permissions={['status.view']} />
           ) : sessions.rows.length === 0 ? (
-            <StatusState compact kind="empty" title={i18n.t('还没有聊天记录')}
+            <StatusState compact kind="empty" illustration="messages" title={i18n.t('还没有聊天记录')}
               description={i18n.t('机器人在这个范围里处理过消息后，会话会出现在这里。')}
               actions={level === 'endpoint' || level === 'conversation'
                 ? <Button asChild size="sm" variant="outline"><Link to={scopeHref(scope, 'chat')}>{i18n.t('打开聊天')}</Link></Button>
