@@ -134,3 +134,17 @@ test('empty states with a clear scene carry the library illustration and their n
   for (const [file, patterns] of Object.entries(scenes)) for (const pattern of patterns) assert.match(read(file), pattern, file)
   assert.doesNotMatch(read('console-ui/src/design-system.css'), /\.console-log-empty/)
 })
+
+test('forms: secondary purpose fields are ghost controls; no native date inputs remain (ADR 0063 D29)', () => {
+  const purposes = read('console-ui/src/pages/inference/Purposes.tsx')
+  assert.match(purposes, /variant=\{key !== 'chat' && !draft\.defaults\[key\] \? 'ghost' : 'default'\}/)
+  assert.match(purposes, /variant=\{policy\?\.mode && policy\.mode !== 'off' \? 'default' : 'ghost'\}/)
+  assert.match(purposes, /variant=\{policy\?\.profile \? 'default' : 'ghost'\}/)
+  assert.equal(purposes.match(/variant="ghost"\s+(?:className="min-w-0 flex-1"\s+)?aria-label=\{i18n\.t\("(?:\{0\}备用模型 \{1\}|添加\{0\}备用模型)"/g)?.length, 2, 'both fallback selects are ghost')
+  for (const path of sources.filter(path => path.endsWith('.tsx'))) {
+    assert.doesNotMatch(readFileSync(path, 'utf8'), /type="(?:date|datetime-local|time|month|week)"/, relative(root, path))
+  }
+  assert.match(read('console-ui/src/pages/access/audit.tsx'), /<DateTimeField id=\{`\$\{id\}-since`\}/)
+  assert.match(read('console-ui/src/pages/access/audit.tsx'), /<DateTimeField id=\{`\$\{id\}-until`\}/)
+  assert.equal(read('console-ui/src/pages/token-usage.tsx').match(/<DateTimeField /g)?.length, 2)
+})

@@ -252,6 +252,8 @@ export function Purposes({ management: m }: { management: InferenceManagement })
                 <span>{label}</span>
                 <SearchableSelectField
                   aria-label={label}
+                  // Purposes other than 聊天 follow it until set: secondary fields stay borderless (ADR 0063 D29).
+                  variant={key !== 'chat' && !draft.defaults[key] ? 'ghost' : 'default'}
                   value={draft.defaults[key] ?? ''}
                   onValueChange={(value) => defaultValue(key, value)}
                   options={choices(
@@ -299,6 +301,8 @@ export function Purposes({ management: m }: { management: InferenceManagement })
               <span className="text-sm self-center">{label}</span>
               <SelectField
                 aria-label={i18n.t("{0}模式", [label])}
+                // An unset decision slot (off, no model) is secondary: borderless until hovered or focused.
+                variant={policy?.mode && policy.mode !== 'off' ? 'default' : 'ghost'}
                 value={policy?.mode ?? 'off'}
                 onValueChange={(mode) =>
                   change({ ...policy, mode: mode as DecisionPolicy['mode'] })
@@ -311,6 +315,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
               />
               <SearchableSelectField
                 aria-label={i18n.t("{0}模型", [label])}
+                variant={policy?.profile ? 'default' : 'ghost'}
                 value={policy?.profile ?? ''}
                 onValueChange={(profile) =>
                   change({ ...policy, mode: policy?.mode ?? 'off', profile: profile || undefined })
@@ -377,6 +382,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
               <span className="self-center">{label}</span>
               <SearchableSelectField
                 aria-label={label}
+                variant={draft.agents?.[name] ? 'default' : 'ghost'}
                 value={draft.agents?.[name] ?? ''}
                 onValueChange={(value) => agentValue(name, value)}
                 options={choices('language', i18n.t("跟随聊天"))}
@@ -512,6 +518,7 @@ function Perception({
         <span>{i18n.t("识图")}</span>
         <SearchableSelectField
           aria-label={i18n.t("识图")}
+          variant={value?.profile ? 'default' : 'ghost'}
           value={value?.profile ?? ''}
           onValueChange={(profile) => {
             if (!profile) return onChange(undefined)
@@ -573,6 +580,7 @@ function FallbackChain({
         <div key={`${index}:${id}`} className="space-y-1">
           <div className="flex items-center gap-2">
             <SearchableSelectField
+              variant="ghost"
               className="min-w-0 flex-1"
               aria-label={i18n.t("{0}备用模型 {1}", [label, index + 1])}
               value={id}
@@ -604,6 +612,7 @@ function FallbackChain({
         </div>
       ))}
       <SearchableSelectField
+        variant="ghost"
         aria-label={i18n.t("添加{0}备用模型", [label])}
         value=""
         onValueChange={(id) => {

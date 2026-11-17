@@ -367,11 +367,22 @@ export function outcomeVariant(outcome) {
 
 export const AUDIT_PAGE_SIZE = 50
 
-/** `datetime-local` input → epoch ms, or undefined when blank / invalid. */
+/**
+ * A `DateTimeField` value (`YYYY-MM-DDTHH:mm`, the viewer's local time; a bare `YYYY-MM-DD` is
+ * 00:00) → epoch ms, or undefined when blank / invalid. `iam.audit.list` compares `since` / `until`
+ * with its UTC timestamps as epoch ms, so the local wall-clock time is converted here, in the
+ * viewer's time zone, and never sent as text.
+ */
 export function localDateTimeToMs(value) {
-  if (typeof value !== 'string' || !value.trim()) return undefined
-  const ms = new Date(value).getTime()
-  return Number.isFinite(ms) ? ms : undefined
+  if (typeof value !== 'string') return undefined
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?$/.exec(value.trim())
+  if (!match) return undefined
+  const [year, month, day, hour = 0, minute = 0] = match.slice(1).map(part => part === undefined ? undefined : Number(part))
+  // Reject impossible values (2026-02-30, 24:00) instead of letting Date roll them over.
+  const daysInMonth = new Date(year, month, 0).getDate()
+  if (month < 1 || month > 12 || day < 1 || day > daysInMonth || hour > 23 || minute > 59) return undefined
+  const date = new Date(year, month - 1, day, hour, minute)
+  return date.getTime()
 }
 
 /** `iam.audit.list` payload. `actor` / `action` match exactly on the Host. */

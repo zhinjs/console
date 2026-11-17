@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { RefreshCw, Search, X } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { Badge, Button, Card, Input, PageHeader, PageShell, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
+import { Badge, Button, Card, DateTimeField, Input, PageHeader, PageShell, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
 import {
   IAM_RPC, actorLabel, auditQuery, outcomeVariant, readAuditPage, type AuditFilter, type IamAuditEntry,
@@ -84,10 +84,10 @@ export default function AccessAuditPage() {
             <datalist id={`${id}-actions`}>{actions.map(action => <option key={action} value={action} />)}</datalist>
           </FormField>
           <FormField htmlFor={`${id}-since`} label={i18n.t("开始时间")}>
-            <Input id={`${id}-since`} type="datetime-local" value={draft.since} onChange={event => setDraft(previous => ({ ...previous, since: event.target.value }))} />
+            <DateTimeField id={`${id}-since`} value={draft.since} max={draft.until || undefined} onValueChange={since => setDraft(previous => ({ ...previous, since }))} />
           </FormField>
           <FormField htmlFor={`${id}-until`} label={i18n.t("结束时间")}>
-            <Input id={`${id}-until`} type="datetime-local" value={draft.until} onChange={event => setDraft(previous => ({ ...previous, until: event.target.value }))} />
+            <DateTimeField id={`${id}-until`} value={draft.until} min={draft.since || undefined} onValueChange={until => setDraft(previous => ({ ...previous, until }))} />
           </FormField>
           <div className="flex items-end gap-2">
             <Button type="submit" size="sm" variant="primary"><Search />{i18n.t("筛选")}</Button>
