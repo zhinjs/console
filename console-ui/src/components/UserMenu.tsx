@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronDown, LogOut, Monitor, Moon, Palette, Sun, UserRound } from 'lucide-react'
 import { useI18n } from '../i18n'
@@ -18,6 +18,8 @@ export function UserMenu({ accountLabel, accountHref, onSignOut }: { accountLabe
   const { locale, setLocale } = i18n
   const { theme, mode, setMode } = useTheme()
   const [appearanceOpen, setAppearanceOpen] = useState(false)
+  // Set by the 「外观与配色…」 item; the panel opens once the menu has fully closed (onCloseAutoFocus).
+  const openAppearanceAfterClose = useRef(false)
   const label = i18n.t('用户菜单：{0}', [accountLabel])
   const modes = [
     { id: 'light' as const, label: i18n.t('亮色'), icon: Sun },
@@ -34,7 +36,20 @@ export function UserMenu({ accountLabel, accountHref, onSignOut }: { accountLabe
             <ChevronDown className="console-user-menu-chevron" aria-hidden="true" />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="console-user-menu-content">
+        <DropdownMenuContent
+          align="end"
+          className="console-user-menu-content"
+          onCloseAutoFocus={event => {
+            if (!openAppearanceAfterClose.current) return
+            // Opening the panel from onSelect (even after a timeout) races the menu's own dismissal:
+            // a slow mouse press still has the pointer down when the panel mounts, and its
+            // pointerup / focus restore counts as an outside interaction that closes the panel at once.
+            // Waiting for the menu to finish closing, and keeping focus off the trigger, avoids both.
+            openAppearanceAfterClose.current = false
+            event.preventDefault()
+            setAppearanceOpen(true)
+          }}
+        >
           <DropdownMenuLabel className="console-user-menu-heading">
             <span>{i18n.t('当前身份')}</span>
             <strong>{accountLabel}</strong>
@@ -53,8 +68,8 @@ export function UserMenu({ accountLabel, accountHref, onSignOut }: { accountLabe
           <DropdownMenuRadioGroup value={mode} onValueChange={value => setMode(value as ThemeMode)}>
             {modes.map(item => <DropdownMenuRadioItem key={item.id} value={item.id}><item.icon aria-hidden="true" />{item.label}</DropdownMenuRadioItem>)}
           </DropdownMenuRadioGroup>
-          {/* The menu closes first and returns focus to its button; then the panel opens next to it. */}
-          <DropdownMenuItem onSelect={() => { window.setTimeout(() => setAppearanceOpen(true), 0) }}>
+          {/* The menu closes first; onCloseAutoFocus above then opens the panel next to the same button. */}
+          <DropdownMenuItem onSelect={() => { openAppearanceAfterClose.current = true }}>
             <Palette aria-hidden="true" />{i18n.t('外观与配色…')}
             <span className="console-user-menu-hint" aria-hidden="true">{theme === 'dark' ? <Moon /> : <Sun />}</span>
           </DropdownMenuItem>

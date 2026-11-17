@@ -116,14 +116,10 @@
     --chart-8: var(--console-chart-8);
     --chart-other: var(--console-chart-other);
     /*
-     * The library's accent roles follow the selected palette: links, focus rings and selected states
-     * of its components (--console-brand-text) are the palette's --primary and its tint
-     * (--console-brand-tint) the palette's --primary-action. Under Zhin green they equal the library's
-     * own values (light #0A7551 = hsl(160 84% 25%), dark #7FFFD4). The brand fill itself
-     * (--console-brand, the BrandMark and `primary` buttons) stays palette-independent.
+     * The library's accent roles (--console-brand-text, --console-brand-tint: links, focus rings, selected
+     * states) are not overridden: ADR 0063 D23 keeps them palette-independent Zhin green in every palette,
+     * like the brand fill. Under the Zhin green palette they equal --primary (light #0A7551, dark #7FFFD4).
      */
-    --console-brand-text: var(--primary);
-    --console-brand-tint: var(--primary-action);
     color-scheme: light;
   }
   /*
@@ -264,8 +260,6 @@
     --chart-7: var(--console-chart-7);
     --chart-8: var(--console-chart-8);
     --chart-other: var(--console-chart-other);
-    --console-brand-text: var(--primary);
-    --console-brand-tint: var(--primary-action);
     color-scheme: dark;
   }
 }
