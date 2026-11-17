@@ -101,16 +101,15 @@ test('a page that still declares metadata.section is warned about once', () => {
   resetIgnoredSectionWarnings()
 })
 
-test('old plugin page paths redirect to their tab, keeping the query; builtin redirects stay authoritative', () => {
+test('old adapter page paths redirect to the adapter object page, keeping the query; builtin redirects stay authoritative', () => {
   clearPluginPageRedirects()
   try {
-    assert.equal(resolveLegacyRedirect('/rss'), null)
-    registerPluginPageRedirect('/rss', '/plugins/rss/index')
+    assert.equal(resolveLegacyRedirect('/icqq'), null)
     registerPluginPageRedirect('/icqq', '/scope/icqq')
-    assert.equal(isPluginPageRedirect('/rss'), true)
-    assert.equal(resolveLegacyRedirect('/rss', '?feed=1'), '/plugins/rss/index?feed=1')
-    assert.equal(resolveLegacyRedirect('/rss/'), '/plugins/rss/index')
-    assert.equal(resolveLegacyRedirect('/icqq'), '/scope/icqq')
+    assert.equal(isPluginPageRedirect('/icqq'), true)
+    assert.equal(resolveLegacyRedirect('/icqq', '?tab=chat'), '/scope/icqq?tab=chat')
+    assert.equal(resolveLegacyRedirect('/icqq/'), '/scope/icqq')
+    assert.equal(resolveLegacyRedirect('/rss'), null, 'other plugin pages lost their old-path redirect in ADR 0063 P4')
     // A plugin cannot take over a builtin legacy path, a relative path or its own target.
     registerPluginPageRedirect('/config', '/plugins/config/index')
     assert.equal(isPluginPageRedirect('/config'), false)
@@ -119,5 +118,5 @@ test('old plugin page paths redirect to their tab, keeping the query; builtin re
     registerPluginPageRedirect('/same', '/same')
     assert.equal(isPluginPageRedirect('rss') || isPluginPageRedirect('/same'), false)
   } finally { clearPluginPageRedirects() }
-  assert.equal(resolveLegacyRedirect('/rss'), null, 'signing out forgets them')
+  assert.equal(resolveLegacyRedirect('/icqq'), null, 'signing out forgets them')
 })

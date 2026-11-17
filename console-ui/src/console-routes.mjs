@@ -116,11 +116,10 @@ export const LEGACY_ROUTE_REDIRECTS = Object.freeze({
 })
 
 /**
- * Old top-level paths of plugin pages -> their new place (ADR 0063 决策 3): a tab of the plugin detail
- * page (`/rss` -> `/plugins/rss/index`) or an adapter's object page (`/icqq` -> `/scope/icqq`). They
- * depend on which plugins the Host runs, so they are registered from `/entries` instead of being listed
- * in LEGACY_ROUTE_REDIRECTS; like those, they redirect keeping the query string and stay out of the
- * command palette. Kept until the `zk-` removal minor (ADR 0063 D6).
+ * Old top-level paths of adapter pages -> the adapter's object page (`/icqq` -> `/scope/icqq`, ADR 0063
+ * 决策 3). They depend on which adapters the Host runs, so they are registered from `/entries` instead
+ * of being listed in LEGACY_ROUTE_REDIRECTS; like those, they redirect keeping the query string. The
+ * old paths of other plugin pages (`/rss` -> `/plugins/rss/index`) redirected here too until ADR 0063 P4.
  */
 const PLUGIN_PAGE_REDIRECTS = new Map()
 

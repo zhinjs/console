@@ -61,8 +61,8 @@ export function isCommandRoute(route) {
   if (typeof path !== 'string' || !path.startsWith('/')) return false
   if (/[:*]/u.test(path)) return false
   if (COMMAND_EXCLUDED_PATHS.includes(path)) return false
-  // A plugin page's old path redirects to its tab, which is listed instead. An adapter page's old
-  // path is the one entry for that page (`meta.pluginTab`), opening the adapter object page.
+  // An adapter page's old path is the one entry for that page (`meta.pluginTab`), opening the adapter
+  // object page; any other registered plugin redirect is not listed.
   if (isPluginPageRedirect(path) && !route.meta?.pluginTab) return false
   return route.meta?.commandPalette !== false
 }
