@@ -43,7 +43,7 @@
 .console-object-section-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .console-object-facts { display: grid; gap: 0.75rem 1.5rem; grid-template-columns: repeat(auto-fill, minmax(min(9rem, 100%), 1fr)); }
 .console-object-facts dt { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
-.console-object-facts dd { margin: 0.125rem 0 0; overflow-wrap: anywhere; font-weight: 550; }
+.console-object-facts dd { margin: 0.125rem 0 0; overflow-wrap: anywhere; font-weight: var(--console-weight-strong); }
 
 /* The account / conversation chat workspace keeps a fixed working height inside the tab. */
 .console-object-chat {
@@ -71,8 +71,8 @@
 .console-scope-crumb { display: inline-flex; max-width: 16rem; align-items: baseline; gap: 0.25rem; border-radius: var(--console-radius-1); padding: 0.125rem 0.25rem; color: hsl(var(--muted-foreground)); text-decoration: none; }
 a.console-scope-crumb:hover { background: var(--console-surface-hover); color: hsl(var(--foreground)); }
 a.console-scope-crumb:focus-visible { outline: var(--console-border-focus) solid hsl(var(--ring)); outline-offset: 1px; }
-.console-scope-crumb.is-current { color: hsl(var(--foreground)); font-weight: 600; }
-.console-scope-crumb-level { flex-shrink: 0; opacity: 0.75; font-weight: 400; }
+.console-scope-crumb.is-current { color: hsl(var(--foreground)); font-weight: var(--console-weight-strong); }
+.console-scope-crumb-level { flex-shrink: 0; opacity: 0.75; font-weight: var(--console-weight-regular); }
 .console-scope-crumb-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .console-scope-crumb-separator { width: 0.75rem; height: 0.75rem; flex-shrink: 0; color: hsl(var(--muted-foreground)); }
 @media (max-width: 767px) { .console-scope-crumb { max-width: 9rem; } }
@@ -88,10 +88,10 @@ a.console-scope-crumb:focus-visible { outline: var(--console-border-focus) solid
 }
 .console-scope-picker-item:hover { background: var(--console-surface-hover); }
 .console-scope-picker-item:focus-visible { outline: var(--console-border-focus) solid hsl(var(--ring)); outline-offset: -2px; }
-.console-scope-picker-item.is-current { background: hsl(var(--primary-action)); color: hsl(var(--primary)); font-weight: 600; }
+.console-scope-picker-item.is-current { background: hsl(var(--primary-action)); color: hsl(var(--primary)); font-weight: var(--console-weight-strong); }
 .console-scope-picker-icon { width: 1rem; height: 1rem; flex-shrink: 0; opacity: 0.8; }
 .console-scope-picker-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--console-text-label); }
-.console-scope-picker-identity { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-weight: 400; }
+.console-scope-picker-identity { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-weight: var(--console-weight-regular); }
 .console-scope-picker-dot { width: 0.5rem; height: 0.5rem; flex-shrink: 0; border-radius: 999px; }
 /* Online is the steady state (neutral); an offline account is the one that needs a look. console#125. */
 .console-scope-picker-dot.is-online { background: hsl(var(--muted-foreground) / 0.4); }

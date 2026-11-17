@@ -91,7 +91,7 @@
   .console-log-panel-title h2 {
     flex: none;
     font-size: var(--console-text-body);
-    font-weight: 600;
+    font-weight: var(--console-weight-strong);
   }
 
   .console-log-panel-title code,

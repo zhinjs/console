@@ -67,7 +67,7 @@
   background: hsl(var(--background));
 }
 
-.agent-playground-recovery h3 { margin-bottom: 0.75rem; font-weight: 600; }
+.agent-playground-recovery h3 { margin-bottom: 0.75rem; font-weight: var(--console-weight-strong); }
 .agent-playground-recovery summary { display: flex; flex-wrap: wrap; gap: 0.375rem 1rem; align-items: baseline; cursor: pointer; }
 .agent-playground-recovery time { margin-left: auto; font-size: var(--console-text-label); color: hsl(var(--muted-foreground)); }
 .agent-playground-recovery details[open] summary { margin-bottom: 0.875rem; }
@@ -120,8 +120,8 @@
 }
 
 .agent-playground-brand h2 {
-  font-size: 0.9rem;
-  font-weight: 720;
+  font-size: var(--console-text-body);
+  font-weight: var(--console-weight-strong);
 }
 
 .agent-playground-mark,
@@ -164,7 +164,7 @@
   padding: 1rem 0.85rem 0.45rem;
   color: hsl(var(--muted-foreground));
   font-size: var(--console-text-label);
-  font-weight: 680;
+  font-weight: var(--console-weight-strong);
   letter-spacing: 0.055em;
   text-transform: none;
 }
@@ -243,7 +243,7 @@
   background: hsl(var(--playground-accent) / 0.045);
   color: hsl(var(--playground-accent));
   font-size: var(--console-text-label);
-  font-weight: 650;
+  font-weight: var(--console-weight-strong);
   cursor: pointer;
 }
 
@@ -399,8 +399,8 @@
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
-  font-size: 0.95rem;
-  font-weight: 730;
+  font-size: var(--console-text-section);
+  font-weight: var(--console-weight-strong);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -412,7 +412,7 @@
   border-radius: 999px;
   color: hsl(var(--muted-foreground));
   font-size: var(--console-text-label);
-  font-weight: 650;
+  font-weight: var(--console-weight-strong);
 }
 
 .agent-playground-run-identity code {
@@ -575,7 +575,7 @@
   gap: 0.3rem;
   color: hsl(var(--muted-foreground));
   font-size: var(--console-text-label);
-  font-weight: 650;
+  font-weight: var(--console-weight-strong);
 }
 
 .agent-playground-run-settings input[type="text"],
@@ -701,8 +701,9 @@
 }
 
 .agent-playground-empty h2 {
-  font-size: clamp(1.25rem, 2.2vw, 1.7rem);
-  font-weight: 690;
+  /* stylelint-disable-next-line console/scale-values -- 空状态大标题随视口在 title 与 display 之间连续缩放（2.2vw），尺度里没有对应写法 */
+  font-size: clamp(var(--console-text-title), 2.2vw, var(--console-text-display));
+  font-weight: var(--console-weight-strong);
 }
 
 .agent-playground-empty p {
@@ -805,7 +806,7 @@
 
 .agent-playground-message-meta strong {
   color: hsl(var(--foreground) / 0.82);
-  font-weight: 680;
+  font-weight: var(--console-weight-strong);
 }
 
 .agent-playground-message-content {
@@ -846,7 +847,7 @@
   border-radius: 999px;
   color: hsl(34 70% 40%);
   font-size: var(--console-text-label);
-  font-weight: 720;
+  font-weight: var(--console-weight-strong);
   letter-spacing: 0.055em;
   text-transform: none;
 }
@@ -873,7 +874,7 @@
   background: hsl(var(--background) / 0.78);
   color: hsl(var(--foreground) / 0.8);
   font-size: var(--console-text-label);
-  font-weight: 650;
+  font-weight: var(--console-weight-strong);
   cursor: pointer;
   transition: background var(--console-motion-fast) var(--console-ease-out), border-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out), transform var(--console-motion-fast) var(--console-ease-out);
 }
@@ -976,7 +977,7 @@
   margin-bottom: 0.15rem;
   color: hsl(var(--muted-foreground) / 0.76);
   font-size: var(--console-text-label);
-  font-weight: 750;
+  font-weight: var(--console-weight-strong);
   letter-spacing: 0.11em;
   text-transform: none;
 }
@@ -985,7 +986,7 @@
   margin: 0;
   color: hsl(var(--foreground) / 0.91);
   font-size: var(--console-text-body);
-  font-weight: 710;
+  font-weight: var(--console-weight-strong);
   letter-spacing: -0.012em;
 }
 
@@ -1020,7 +1021,7 @@
   background: hsl(var(--background) / 0.72);
   color: hsl(var(--foreground) / 0.73);
   font-size: var(--console-text-label);
-  font-weight: 660;
+  font-weight: var(--console-weight-strong);
   cursor: pointer;
   transition: border-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out), background var(--console-motion-fast) var(--console-ease-out), transform var(--console-motion-fast) var(--console-ease-out);
 }
@@ -1060,7 +1061,7 @@
 
 .agent-playground-inline-run-metrics > div:last-child { border-right: 0; }
 .agent-playground-inline-run-metrics dt { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
-.agent-playground-inline-run-metrics dd { overflow: hidden; margin: 0; font-size: var(--console-text-label); font-weight: 680; text-overflow: ellipsis; white-space: nowrap; }
+.agent-playground-inline-run-metrics dd { overflow: hidden; margin: 0; font-size: var(--console-text-label); font-weight: var(--console-weight-strong); text-overflow: ellipsis; white-space: nowrap; }
 .agent-playground-inline-run-metrics .has-problem dd { color: hsl(8 58% 48%); }
 
 .agent-playground-inline-run-steps {
@@ -1112,7 +1113,7 @@
 .agent-playground-inline-run-steps li.is-denied i { background: hsl(8 62% 52%); box-shadow: 0 0 0 1px hsl(8 62% 52% / 0.3); }
 .agent-playground-inline-run-steps li.is-cancelled i { background: hsl(38 76% 48%); box-shadow: 0 0 0 1px hsl(38 76% 48% / 0.3); }
 .agent-playground-inline-run-steps li > div { display: flex; min-width: 0; flex-direction: column; }
-.agent-playground-inline-run-steps strong { overflow: hidden; color: hsl(var(--foreground) / 0.82); font-size: var(--console-text-label); font-weight: 660; text-overflow: ellipsis; white-space: nowrap; }
+.agent-playground-inline-run-steps strong { overflow: hidden; color: hsl(var(--foreground) / 0.82); font-size: var(--console-text-label); font-weight: var(--console-weight-strong); text-overflow: ellipsis; white-space: nowrap; }
 .agent-playground-inline-run-steps small { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); text-overflow: ellipsis; white-space: nowrap; }
 .agent-playground-inline-run-steps li > span { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .agent-playground-inline-run-steps li.is-failed > span,
@@ -1244,15 +1245,15 @@
 .agent-playground-inspector-head > div:first-child > span {
   color: hsl(var(--playground-accent));
   font-size: var(--console-text-label);
-  font-weight: 720;
+  font-weight: var(--console-weight-strong);
   letter-spacing: 0.08em;
   text-transform: none;
 }
 
 .agent-playground-inspector-head h2 {
   margin-top: 0.08rem;
-  font-size: 0.88rem;
-  font-weight: 710;
+  font-size: var(--console-text-body);
+  font-weight: var(--console-weight-strong);
 }
 
 .agent-playground-inspector-head button {
@@ -1287,7 +1288,7 @@
   background: transparent;
   color: hsl(var(--muted-foreground));
   font-size: var(--console-text-label);
-  font-weight: 650;
+  font-weight: var(--console-weight-strong);
   cursor: pointer;
 }
 
@@ -1329,13 +1330,13 @@
   margin-bottom: 0.62rem;
   color: hsl(var(--foreground) / 0.82);
   font-size: var(--console-text-label);
-  font-weight: 680;
+  font-weight: var(--console-weight-strong);
 }
 
 .agent-playground-inspector-title small {
   color: hsl(var(--muted-foreground));
   font-size: var(--console-text-label);
-  font-weight: 550;
+  font-weight: var(--console-weight-strong);
   letter-spacing: 0.05em;
   text-transform: none;
 }
@@ -1446,7 +1447,7 @@
 .agent-playground-trace-item.is-usage .agent-playground-trace-dot { background: hsl(var(--chart-3)); }
 .agent-playground-trace-item.is-problem .agent-playground-trace-dot { background: hsl(var(--destructive-fill)); }
 .agent-playground-trace-item > div { display: flex; min-width: 0; flex-direction: column; }
-.agent-playground-trace-item strong { overflow: hidden; font-size: var(--console-text-label); font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.agent-playground-trace-item strong { overflow: hidden; font-size: var(--console-text-label); font-weight: var(--console-weight-strong); text-overflow: ellipsis; white-space: nowrap; }
 .agent-playground-trace-item small { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); text-overflow: ellipsis; white-space: nowrap; }
 .agent-playground-trace-item time { margin-top: 0.03rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 
@@ -1517,7 +1518,7 @@
 .agent-playground-task-list article.is-failed > i { background: hsl(8 62% 52%); }
 .agent-playground-task-list article.is-cancelled > i { background: hsl(38 76% 48%); }
 .agent-playground-task-list article > div { display: flex; min-width: 0; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
-.agent-playground-task-list strong { font-size: var(--console-text-label); font-weight: 680; }
+.agent-playground-task-list strong { font-size: var(--console-text-label); font-weight: var(--console-weight-strong); }
 .agent-playground-task-list code { overflow: hidden; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); text-overflow: ellipsis; }
 
 .agent-playground-task-list dl {
@@ -1574,7 +1575,7 @@
 .agent-playground-artifact-list article > button > span:nth-child(2) { display: flex; min-width: 0; flex-direction: column; }
 .agent-playground-artifact-list strong,
 .agent-playground-artifact-list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.agent-playground-artifact-list strong { font-size: var(--console-text-label); font-weight: 660; }
+.agent-playground-artifact-list strong { font-size: var(--console-text-label); font-weight: var(--console-weight-strong); }
 .agent-playground-artifact-list small { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .agent-playground-artifact-list em { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-style: normal; text-transform: none; }
 .agent-playground-artifact-list article.is-completed em { color: hsl(var(--playground-accent)); }
@@ -1647,7 +1648,7 @@
   text-decoration: none;
 }
 
-.agent-playground-studio-link > span { display: flex; align-items: center; gap: 0.4rem; font-size: var(--console-text-label); font-weight: 680; }
+.agent-playground-studio-link > span { display: flex; align-items: center; gap: 0.4rem; font-size: var(--console-text-label); font-weight: var(--console-weight-strong); }
 .agent-playground-studio-link code { overflow: hidden; opacity: 0.7; font-size: var(--console-text-label); text-overflow: ellipsis; white-space: nowrap; }
 .agent-playground-studio-link:hover { border-color: hsl(var(--playground-accent) / 0.42); }
 

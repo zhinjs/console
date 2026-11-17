@@ -92,7 +92,7 @@
   .console-session-heading h2 {
     overflow-wrap: anywhere;
     font-size: var(--console-text-section);
-    font-weight: 600;
+    font-weight: var(--console-weight-strong);
     line-height: var(--console-leading-section);
   }
 
@@ -165,7 +165,7 @@
 
   .conversation-message-meta > span:first-child {
     color: hsl(var(--foreground));
-    font-weight: 550;
+    font-weight: var(--console-weight-strong);
     overflow-wrap: anywhere;
   }
 

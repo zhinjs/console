@@ -135,8 +135,8 @@
   cursor: pointer;
   text-decoration: none;
   color: hsl(var(--muted-foreground));
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: var(--console-text-body);
+  font-weight: var(--console-weight-medium);
 }
 
 .menu-item:hover:not(.active) {

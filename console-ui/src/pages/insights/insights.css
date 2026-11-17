@@ -12,7 +12,7 @@
 .console-scope-filter-icon { width: 1rem; height: 1rem; flex-shrink: 0; margin-top: 0.2rem; color: hsl(var(--info)); }
 .console-scope-filter-text { display: flex; min-width: 0; flex: 1 1 14rem; flex-direction: column; gap: 0.125rem; }
 .console-scope-filter-text > p:first-child { display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem; min-width: 0; font-size: var(--console-text-label); }
-.console-scope-filter-label { font-weight: 600; }
+.console-scope-filter-label { font-weight: var(--console-weight-strong); }
 .console-scope-filter-level {
   border-radius: 999px; background: hsl(var(--muted)); padding: 0 0.5rem; color: hsl(var(--muted-foreground));
   font-size: var(--console-text-label); line-height: 1.25rem;
@@ -26,9 +26,9 @@
   display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem;
   color: hsl(var(--muted-foreground)); font-size: var(--console-text-label);
 }
-.console-basis-note strong { color: hsl(var(--foreground)); font-weight: 600; }
+.console-basis-note strong { color: hsl(var(--foreground)); font-weight: var(--console-weight-strong); }
 .console-basis-note .is-partial { color: hsl(var(--warning)); }
-.console-sample-missing { color: hsl(var(--muted-foreground)); font-size: var(--console-text-body); font-weight: 550; }
+.console-sample-missing { color: hsl(var(--muted-foreground)); font-size: var(--console-text-body); font-weight: var(--console-weight-strong); }
 
 /* ---- 统一任务列表 ---- */
 .console-task-overview-table td { vertical-align: top; }
@@ -36,7 +36,7 @@
 .console-task-overview-cards { display: none; }
 /* Plugin housekeeping, folded under the main list (zhinjs/zhin#1250). */
 .console-task-overview-internal { border: var(--console-border-hairline) solid var(--console-border-default, hsl(var(--border))); border-radius: var(--console-radius-2); background: hsl(var(--card)); }
-.console-task-overview-internal > summary { cursor: pointer; padding: 0.75rem 1rem; font-size: var(--console-text-body); font-weight: 600; }
+.console-task-overview-internal > summary { cursor: pointer; padding: 0.75rem 1rem; font-size: var(--console-text-body); font-weight: var(--console-weight-strong); }
 .console-task-overview-internal[open] > summary { border-bottom: var(--console-border-hairline) solid var(--console-border-default, hsl(var(--border))); }
 .console-task-overview-internal > .console-task-overview-table { border: 0; border-radius: 0; box-shadow: none; }
 .console-task-overview-internal > .console-task-overview-cards { padding: 0.5rem; }
@@ -52,7 +52,7 @@
   background: hsl(var(--card)); padding: 0.75rem; font-size: var(--console-text-label);
     box-shadow: var(--console-card-elevation);
   }
-.console-task-overview-card h3 { grid-column: 1 / -1; font-weight: 600; overflow-wrap: anywhere; }
+.console-task-overview-card h3 { grid-column: 1 / -1; font-weight: var(--console-weight-strong); overflow-wrap: anywhere; }
 .console-task-overview-card dt { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .console-task-overview-card dd { min-width: 0; overflow-wrap: anywhere; }
 

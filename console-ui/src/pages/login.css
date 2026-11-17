@@ -5,9 +5,9 @@
   .console-login-intro > p { max-width: 42ch; }
   /* The component library's BrandMark (fixed brand colors in every palette and theme) with the product name. */
   .console-login-brand { display: flex; margin-bottom: 32px; }
-  .console-login-intro h1 { margin: 0 0 16px; font-size: 32px; line-height: 1.25; letter-spacing: -.03em; font-weight: 600; }
-  .console-login-intro p { margin: 0; color: hsl(var(--muted-foreground)); font-size: 14px; line-height: 1.8; }
-  .console-login-notes { display: flex; align-items: center; gap: 8px; margin-top: 24px; color: hsl(var(--muted-foreground)); font-size: 12px; }
+  .console-login-intro h1 { margin: 0 0 16px; font-size: var(--console-text-display); line-height: 1.25; letter-spacing: -.03em; font-weight: var(--console-weight-strong); }
+  .console-login-intro p { margin: 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-body); line-height: 1.8; }
+  .console-login-notes { display: flex; align-items: center; gap: 8px; margin-top: 24px; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
   .console-login-notes svg { width: 15px; height: 15px; flex: none; }
 
   /*
@@ -20,19 +20,19 @@
   .console-login-preview-stats > .console-stat-card { gap: 2px; padding: 0 12px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
   .console-login-preview-stats > .console-stat-card:first-child { padding-left: 2px; }
   .console-login-preview-stats > .console-stat-card + .console-stat-card { border-left: var(--zc-hairline) solid var(--console-border-subtle); }
-  .console-login-preview .console-stat-label { font-size: 12px; }
+  .console-login-preview .console-stat-label { font-size: var(--console-text-label); }
   .console-login-preview .console-stat-label svg { width: 13px; height: 13px; }
   .console-login-preview .console-stat-value-row { min-height: 0; }
-  .console-login-preview .console-stat-value { font-size: 22px; font-variant-numeric: tabular-nums; }
-  .console-login-preview .console-stat-sub { font-size: 11px; }
+  .console-login-preview .console-stat-value { font-size: var(--console-text-title); font-variant-numeric: tabular-nums; }
+  .console-login-preview .console-stat-sub { font-size: var(--console-text-label); }
   .console-login-preview-swatch { display: block; width: 8px; height: 8px; border-radius: 999px; }
   .console-login-preview-swatch.is-inbound { background: hsl(var(--zc-chart-inbound)); }
   .console-login-preview-swatch.is-outbound { background: hsl(var(--zc-chart-outbound)); }
   .console-login-preview-bars { display: flex; align-items: flex-end; gap: 5px; height: 56px; padding: 0 2px; border-bottom: var(--zc-hairline) solid var(--console-border-subtle); }
   .console-login-preview-bar { display: flex; flex: 1; flex-direction: column; justify-content: flex-start; overflow: hidden; border-radius: 3px 3px 0 0; background: hsl(var(--zc-chart-inbound)); }
   .console-login-preview-bar > .is-outbound { display: block; width: 100%; margin-top: auto; background: hsl(var(--zc-chart-outbound)); box-shadow: 0 -1px 0 hsl(var(--card)); }
-  .console-login-preview-chat { display: grid; gap: 8px; font-size: 13px; }
-  .console-login-preview-chat .im-bubble { max-width: 80%; padding: 6px 10px; font-size: 13px; line-height: 1.5; }
+  .console-login-preview-chat { display: grid; gap: 8px; font-size: var(--console-text-label); }
+  .console-login-preview-chat .im-bubble { max-width: 80%; padding: 6px 10px; font-size: var(--console-text-label); line-height: 1.5; }
   .console-login-preview-message { display: flex; align-items: flex-start; gap: 8px; }
   .console-login-preview-message.is-out { justify-content: flex-end; }
   .console-login-preview-avatar { display: grid; place-items: center; width: 22px; height: 22px; flex: none; border-radius: 999px; background: var(--console-surface-inset); color: hsl(var(--muted-foreground)); }
@@ -46,17 +46,17 @@
   .console-login-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 20px; padding: 4px; border-radius: var(--console-radius-3); background: hsl(var(--foreground) / 0.055); }
   .console-login-modes > button { justify-content: center; gap: 6px; }
   .console-login-modes svg { width: 15px; height: 15px; }
-  .console-login-field { display: grid; gap: 7px; min-width: 0; font-size: 13px; font-weight: 500; }
-  .console-login-field small { color: hsl(var(--muted-foreground)); font-size: 12px; font-weight: 400; line-height: 1.6; }
-  .console-login-field input { font-size: 14px; }
+  .console-login-field { display: grid; gap: 7px; min-width: 0; font-size: var(--console-text-label); font-weight: var(--console-weight-medium); }
+  .console-login-field small { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-weight: var(--console-weight-regular); line-height: 1.6; }
+  .console-login-field input { font-size: var(--console-text-body); }
   .console-login-saved { display: flex; gap: 8px; min-width: 0; }
   .console-login-saved > button:first-child { flex: 1; min-width: 0; }
   .console-login-token { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 6px; }
-  .console-login-remember { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 1.5; color: hsl(var(--muted-foreground)); cursor: pointer; }
+  .console-login-remember { display: flex; align-items: flex-start; gap: 8px; font-size: var(--console-text-label); line-height: 1.5; color: hsl(var(--muted-foreground)); cursor: pointer; }
   .console-login-remember > button { flex: none; margin-top: 2px; }
-  .console-login-session-note { margin: -10px 0 0 24px; color: hsl(var(--muted-foreground)); font-size: 12px; line-height: 1.6; }
-  .console-login-error { padding: 12px; border-radius: 8px; background: hsl(var(--destructive) / .07); color: hsl(var(--destructive)); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
-  .console-login-help { border-top: 1px solid hsl(var(--border)); padding-top: 16px; color: hsl(var(--muted-foreground)); font-size: 12px; }
+  .console-login-session-note { margin: -10px 0 0 24px; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); line-height: 1.6; }
+  .console-login-error { padding: 12px; border-radius: 8px; background: hsl(var(--destructive) / .07); color: hsl(var(--destructive)); font-size: var(--console-text-label); line-height: 1.7; overflow-wrap: anywhere; }
+  .console-login-help { border-top: 1px solid hsl(var(--border)); padding-top: 16px; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
   .console-login-help summary { width: fit-content; cursor: pointer; }
   .console-login-help p { margin: 12px 0 0; line-height: 1.8; }
   @media (max-width: 767px) {
@@ -65,7 +65,7 @@
     .console-login-brand { margin-bottom: 24px; }
     /* Phones: the form comes first; the sketch would only push it down. */
     .console-login-preview { display: none; }
-    .console-login-intro h1 { font-size: 26px; margin-bottom: 10px; }
+    .console-login-intro h1 { font-size: var(--console-text-display); margin-bottom: 10px; }
     .console-login-notes { margin-top: 12px; }
     .console-login-panel { padding: 20px;
     box-shadow: var(--console-card-elevation);

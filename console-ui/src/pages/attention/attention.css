@@ -32,7 +32,7 @@
 
   .console-attention-filter:hover { color: hsl(var(--foreground)); }
   .console-attention-filter:focus-visible { outline: var(--console-border-focus) solid hsl(var(--ring)); outline-offset: 1px; }
-  .console-attention-filter.is-active { border-color: hsl(var(--primary) / 0.4); background: hsl(var(--primary) / 0.1); color: hsl(var(--primary)); font-weight: 600; }
+  .console-attention-filter.is-active { border-color: hsl(var(--primary) / 0.4); background: hsl(var(--primary) / 0.1); color: hsl(var(--primary)); font-weight: var(--console-weight-strong); }
   .console-attention-filter-count { opacity: 0.8; }
 
   .console-attention-checked,
@@ -56,7 +56,7 @@
     align-items: center;
     gap: 0.5rem;
     font-size: var(--console-text-section);
-    font-weight: 600;
+    font-weight: var(--console-weight-strong);
   }
 
   .console-attention-group-count {
@@ -90,7 +90,7 @@
   .console-attention-row-body { min-width: 0; }
 
   .console-attention-row-title {
-    font-weight: 600;
+    font-weight: var(--console-weight-strong);
     overflow-wrap: anywhere;
   }
 
@@ -132,7 +132,7 @@
   }
 
   .console-attention-empty > svg { width: 2rem; height: 2rem; color: hsl(var(--muted-foreground)); }
-  .console-attention-empty-title { font-size: var(--console-text-section); font-weight: 600; }
+  .console-attention-empty-title { font-size: var(--console-text-section); font-weight: var(--console-weight-strong); }
   .console-attention-empty-detail { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
   .console-attention-empty.is-instance-not-ready > svg { color: hsl(var(--muted-foreground)); }
   .console-attention-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 0.5rem; }
@@ -180,7 +180,7 @@
   }
 
   .console-attention-list.is-summary > .console-attention-row > .console-attention-icon { align-self: start; margin-top: 0.3rem; }
-  .console-attention-list.is-summary .console-attention-row-title { font-weight: 500; }
+  .console-attention-list.is-summary .console-attention-row-title { font-weight: var(--console-weight-medium); }
   .console-attention-list.is-summary .console-attention-row-actions { flex-wrap: nowrap; align-self: start; }
 
   /* ---------- Top bar badge ---------- */
@@ -210,7 +210,7 @@
     padding: 0 0.25rem;
     color: hsl(var(--warning-fill-foreground));
     font-size: var(--console-text-label);
-    font-weight: 600;
+    font-weight: var(--console-weight-strong);
     line-height: 1.125rem;
     text-align: center;
   }

@@ -22,6 +22,9 @@ const config = createConsoleStylelintConfig({
   // The global shell may use @media; pages and components use container queries.
   shellFiles: ['console-ui/src/shell\\.css$', 'console-ui/src/layouts/'],
   semanticOnly: false,
+  // Verbatim copy of highlight.js's GitHub Dark theme (tests/files-code-highlight.test.mjs checks it
+  // declaration by declaration), so it keeps the upstream values.
+  ignoreFiles: ['console-ui/src/pages/files/github-dark-scoped.css'],
   deprecatedTokens: 'error',
   motionTokens: 'error',
 })

@@ -1,7 +1,7 @@
 @layer components {
   .schedule-executions { border-top: 1px solid var(--console-border-subtle); padding-top: 1rem; min-width: 0; }
   .schedule-executions-heading, .schedule-executions-heading > div, .schedule-execution-attempt-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem; }
-  .schedule-executions h3, .schedule-execution-result h4, .schedule-execution-attempt h4 { font-weight: 600; }
+  .schedule-executions h3, .schedule-execution-result h4, .schedule-execution-attempt h4 { font-weight: var(--console-weight-strong); }
   .schedule-executions-empty { padding: 1.25rem; border-radius: var(--console-radius-2); border: 1px dashed var(--console-border-subtle); background: var(--console-surface-inset); color: hsl(var(--muted-foreground)); font-size: var(--console-text-body); text-align: center; }
   .schedule-executions-list { display: grid; gap: .45rem; margin: .65rem 0 1rem; }
   .schedule-execution-row { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 1rem; padding: .875rem 1rem; border-radius: var(--console-radius-2); border: 1px solid var(--console-border-subtle); background: hsl(var(--card)); box-shadow: var(--console-elevation-0); text-align: left; font-size: var(--console-text-body); transition: border-color var(--console-motion-fast) var(--console-ease-out), box-shadow var(--console-motion-fast) var(--console-ease-out), transform var(--console-motion-fast) var(--console-ease-out); }

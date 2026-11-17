@@ -2,7 +2,7 @@
 .console-self-check-summary { display: flex; flex-direction: column; gap: 0.5rem; }
 .console-self-check-target { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.25rem 0.75rem; font-size: var(--console-text-label); color: hsl(var(--muted-foreground)); }
 .console-self-check-target code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--console-font-mono); color: hsl(var(--foreground)); }
-.console-self-check-verdict { font-weight: 600; }
+.console-self-check-verdict { font-weight: var(--console-weight-strong); }
 [data-summary="fail"] .console-self-check-verdict { color: hsl(var(--destructive)); }
 [data-summary="warn"] .console-self-check-verdict { color: hsl(var(--warning)); }
 .console-self-check-time { font-size: var(--console-text-label); color: hsl(var(--muted-foreground)); }
@@ -19,12 +19,12 @@
 [data-status="warn"] > .console-self-check-icon { color: hsl(var(--warning)); }
 .console-self-check-body { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 0.25rem; }
 .console-self-check-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; }
-.console-self-check-title { font-size: var(--console-text-body); font-weight: 600; }
+.console-self-check-title { font-size: var(--console-text-body); font-weight: var(--console-weight-strong); }
 .console-self-check-explain, .console-self-check-detail { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); overflow-wrap: anywhere; }
 .console-self-check-detail { color: hsl(var(--foreground)); }
 .console-self-check-fix { border-radius: var(--console-radius-2); background: hsl(var(--muted) / 0.6); padding: 0.5rem 0.625rem; font-size: var(--console-text-label); overflow-wrap: anywhere; }
 .console-self-check-snippet { border-radius: var(--console-radius-3); background: hsl(var(--card)); box-shadow: var(--console-card-elevation); padding: 0.75rem 1rem; font-size: var(--console-text-label); }
-.console-self-check-snippet summary { cursor: pointer; font-weight: 600; }
+.console-self-check-snippet summary { cursor: pointer; font-weight: var(--console-weight-strong); }
 .console-self-check-snippet p { margin-top: 0.5rem; color: hsl(var(--muted-foreground)); }
 .console-self-check-snippet pre { margin-top: 0.5rem; overflow-x: auto; border-radius: var(--console-radius-2); background: hsl(var(--muted)); padding: 0.75rem; font-family: var(--console-font-mono); font-size: var(--console-text-label); }
 .console-self-check-more { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }

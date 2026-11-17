@@ -32,7 +32,7 @@
     background: transparent;
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
-    font-weight: 550;
+    font-weight: var(--console-weight-strong);
     line-height: 1.4;
     cursor: pointer;
     transition: background-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out), box-shadow var(--console-motion-fast) var(--console-ease-out);
@@ -45,7 +45,7 @@
   .console-plugin-filter-pill.is-active {
     background: hsl(var(--card));
     color: hsl(var(--foreground));
-    font-weight: 650;
+    font-weight: var(--console-weight-strong);
     box-shadow: var(--console-elevation-0);
   }
 
@@ -195,7 +195,7 @@
   }
   .console-plugin-table-link:hover strong { color: hsl(var(--primary)); text-decoration: underline; text-underline-offset: 3px; }
   .console-plugin-table-link > .console-plugin-catalog-icon { width: 1.25rem; height: 1.25rem; margin-top: 0.125rem; }
-  .console-plugin-table-link strong { display: block; overflow-wrap: anywhere; font-size: var(--console-text-body); font-weight: 600; }
+  .console-plugin-table-link strong { display: block; overflow-wrap: anywhere; font-size: var(--console-text-body); font-weight: var(--console-weight-strong); }
   .console-plugin-table-package,
   .console-plugin-table-version {
     color: hsl(var(--muted-foreground));
@@ -236,7 +236,7 @@
   .console-plugin-group-row > th {
     background: hsl(var(--secondary));
     color: hsl(var(--foreground));
-    font-weight: 600;
+    font-weight: var(--console-weight-strong);
   }
   .console-plugin-group-count {
     margin-left: 0.5rem;

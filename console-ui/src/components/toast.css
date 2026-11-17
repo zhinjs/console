@@ -8,7 +8,7 @@
   .console-toast-warning .console-toast-icon { background: hsl(var(--warning) / 0.12); color: hsl(var(--warning)); }
   .console-toast-info .console-toast-icon { background: hsl(var(--info) / 0.12); color: hsl(var(--info)); }
   .console-toast-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; line-height: 1.6; font-size: var(--console-text-body); }
-  .console-toast-copy strong { display: block; font-weight: 600; margin-bottom: 3px; }
+  .console-toast-copy strong { display: block; font-weight: var(--console-weight-strong); margin-bottom: 3px; }
   .console-toast-copy p { margin: 0; }
   .console-toast-close { display: grid; place-items: center; flex: none; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: hsl(var(--muted-foreground)); cursor: pointer; }
   .console-toast-close:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }

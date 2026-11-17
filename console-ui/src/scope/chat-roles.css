@@ -3,7 +3,7 @@
 .console-chat-role-count { display: inline-flex; align-items: center; gap: 0.5rem; font-size: var(--console-text-label); }
 .console-chat-role-card-title {
   display: flex; align-items: center; gap: 0.5rem; border-bottom: var(--console-border-hairline, 1px) solid var(--console-border-subtle); padding: 0.625rem 1rem;
-  color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-weight: 600;
+  color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-weight: var(--console-weight-strong);
 }
 .console-chat-role-card-title span {
   min-width: 1.25rem; border-radius: 999px; background: hsl(var(--muted-foreground) / 0.15); padding: 0 0.375rem; text-align: center;
@@ -29,7 +29,7 @@
 .console-chat-picker-option:last-child { border-bottom: 0; }
 .console-chat-picker-option:hover { background: hsl(var(--foreground) / 0.04); }
 .console-chat-picker-option.is-selected { background: hsl(var(--primary-action) / 0.16); box-shadow: inset 3px 0 0 hsl(var(--primary-action-border)); }
-.console-chat-picker-name { grid-area: name; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--console-text-label); font-weight: 600; }
+.console-chat-picker-name { grid-area: name; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--console-text-label); font-weight: var(--console-weight-strong); }
 .console-chat-picker-option code { grid-area: id; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-family: var(--console-font-mono); font-size: var(--console-text-label); }
 .console-chat-picker-option em { grid-area: tag; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-style: normal; }
 .console-chat-picker-list > .console-admin-note { padding: 0.75rem; }
@@ -58,7 +58,7 @@
 .console-chat-bind strong { display: inline-flex; align-items: center; gap: 0.375rem; font-size: var(--console-text-label); }
 .console-chat-bind strong > svg { width: 1rem; height: 1rem; }
 .console-chat-bind-code { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
-.console-chat-bind-instruction { border-radius: var(--radius); background: hsl(var(--foreground) / 0.06); padding: 0.375rem 0.75rem; font-family: var(--console-font-mono); font-size: 1rem; font-weight: 600; letter-spacing: 0.04em; }
+.console-chat-bind-instruction { border-radius: var(--radius); background: hsl(var(--foreground) / 0.06); padding: 0.375rem 0.75rem; font-family: var(--console-font-mono); font-size: var(--console-text-section); font-weight: var(--console-weight-strong); letter-spacing: 0.04em; }
 .console-chat-bind-countdown { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .console-chat-me-notice { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .console-chat-members-search { margin-bottom: 0.75rem; max-width: 28rem; }
@@ -66,7 +66,7 @@
 .console-chat-member { display: grid; gap: 0.75rem; padding: 1rem; }
 .console-chat-member-seen { margin-left: auto; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .console-chat-member-body { display: grid; gap: 0.75rem; grid-template-columns: minmax(0, 2fr) minmax(0, 1.5fr) minmax(0, 1fr); }
-.console-chat-member-label { display: block; margin-bottom: 0.25rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-weight: 600; }
+.console-chat-member-label { display: block; margin-bottom: 0.25rem; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-weight: var(--console-weight-strong); }
 .console-chat-member-identity { display: inline-flex; max-width: 100%; align-items: center; }
 .console-chat-member-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
 .console-chat-member-actions .console-admin-note { display: inline-flex; align-items: center; gap: 0.25rem; }

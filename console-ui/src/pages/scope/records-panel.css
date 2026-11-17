@@ -3,7 +3,7 @@
 .console-records-session { display: flex; min-width: 0; align-items: center; gap: 0.75rem; padding: 0.625rem 1rem; }
 .console-records-session + .console-records-session { border-top: 1px solid var(--console-border-subtle); }
 .console-records-session-main { flex: 1 1 auto; min-width: 0; }
-.console-records-session-name { display: block; overflow: hidden; color: hsl(var(--foreground)); font-weight: 600; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
+.console-records-session-name { display: block; overflow: hidden; color: hsl(var(--foreground)); font-weight: var(--console-weight-strong); text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
 .console-records-session-name:hover { text-decoration: underline; text-underline-offset: 3px; }
 .console-records-session-name:focus-visible { outline: var(--console-border-focus) solid hsl(var(--ring)); outline-offset: 2px; border-radius: var(--console-radius-1); }
 .console-records-session-meta { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; margin: 0.125rem 0 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
@@ -15,7 +15,7 @@
 .console-records-sources > li { display: flex; min-width: 0; }
 .console-records-source { display: flex; width: 100%; min-width: 0; flex-direction: column; gap: 0.5rem; padding: 1rem; }
 .console-records-source-head { display: flex; min-width: 0; align-items: center; gap: 0.5rem; }
-.console-records-source-head h3 { flex: 1 1 auto; min-width: 0; margin: 0; font-size: var(--console-text-body); font-weight: 600; }
+.console-records-source-head h3 { flex: 1 1 auto; min-width: 0; margin: 0; font-size: var(--console-text-body); font-weight: var(--console-weight-strong); }
 .console-records-source-icon { display: inline-flex; width: 2rem; height: 2rem; flex-shrink: 0; align-items: center; justify-content: center; border-radius: var(--console-radius-2); background: hsl(var(--primary) / 0.1); color: hsl(var(--primary)); }
 .console-records-source-icon svg { width: 1rem; height: 1rem; }
 .console-records-source-description { margin: 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); line-height: 1.55; }

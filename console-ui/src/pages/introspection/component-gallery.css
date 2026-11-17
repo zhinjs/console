@@ -41,7 +41,7 @@
   background: hsl(var(--background) / 0.85);
   color: hsl(var(--muted-foreground));
   font-size: var(--console-text-label);
-  font-weight: 500;
+  font-weight: var(--console-weight-medium);
   cursor: pointer;
   transition: border-color var(--console-motion-fast) var(--console-ease-out), background-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out);
 }
@@ -56,7 +56,7 @@
   border-color: hsl(var(--primary) / 0.55);
   background: hsl(var(--primary) / 0.12);
   color: hsl(var(--primary));
-  font-weight: 600;
+  font-weight: var(--console-weight-strong);
 }
 
 .console-capability-owner-count {
@@ -228,7 +228,7 @@
 
 .console-inspector-meta-card strong {
   font-size: var(--console-text-label);
-  font-weight: 600;
+  font-weight: var(--console-weight-strong);
   overflow-wrap: anywhere;
 }
 
@@ -248,7 +248,7 @@
   margin-bottom: 0.45rem;
   color: hsl(var(--muted-foreground));
   font-size: var(--console-text-label);
-  font-weight: 600;
+  font-weight: var(--console-weight-strong);
 }
 
 .console-command-runner {

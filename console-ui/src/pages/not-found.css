@@ -9,7 +9,7 @@
     padding: 4.5rem 1rem 3rem;
     text-align: center;
   }
-  .console-not-found h1 { margin: 0; font-size: var(--console-text-title); font-weight: 650; line-height: var(--console-leading-title); }
+  .console-not-found h1 { margin: 0; font-size: var(--console-text-title); font-weight: var(--console-weight-strong); line-height: var(--console-leading-title); }
   .console-not-found p { margin: 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
   .console-not-found-address {
     max-width: 100%;

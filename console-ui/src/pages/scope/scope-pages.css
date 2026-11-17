@@ -2,11 +2,11 @@
  * 概览 / 接入 tabs of the object pages (overview-panels.tsx, endpoint-access.tsx, login-tasks.tsx).
  * Tokens only (theme-tokens.css); breakpoints 768 / 1440.
  */
-.console-scope-row-link { display: inline-flex; max-width: 100%; align-items: center; gap: 0.5rem; color: hsl(var(--foreground)); font-weight: 600; text-decoration: none; }
+.console-scope-row-link { display: inline-flex; max-width: 100%; align-items: center; gap: 0.5rem; color: hsl(var(--foreground)); font-weight: var(--console-weight-strong); text-decoration: none; }
 .console-scope-row-link:hover { text-decoration: underline; }
 .console-scope-row-link svg { width: 1rem; height: 1rem; flex-shrink: 0; color: hsl(var(--muted-foreground)); }
 .console-scope-row-link code { font-family: var(--console-font-mono); }
-.console-scope-row-sub { display: block; margin-top: 0.125rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-weight: 400; }
+.console-scope-row-sub { display: block; margin-top: 0.125rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-weight: var(--console-weight-regular); }
 .console-scope-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 0.75rem; }
 
 .console-scope-task-list { margin: 0; padding: 0; list-style: none; }
@@ -17,7 +17,7 @@ a.console-scope-task:focus-visible { outline: var(--console-border-focus) solid 
 .console-scope-task > svg:last-child { width: 1rem; height: 1rem; flex-shrink: 0; color: hsl(var(--muted-foreground)); }
 .console-scope-card-title {
   border-bottom: var(--console-border-hairline, 1px) solid var(--console-border-subtle); padding: 0.625rem 1rem; color: hsl(var(--muted-foreground));
-  font-size: var(--console-text-label); font-weight: 600;
+  font-size: var(--console-text-label); font-weight: var(--console-weight-strong);
 }
 .console-scope-split { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(min(26rem, 100%), 1fr)); }
 
@@ -97,7 +97,7 @@ a.console-scope-task:focus-visible { outline: var(--console-border-focus) solid 
 }
 .console-connection-manager > summary::-webkit-details-marker { display: none; }
 .console-connection-manager > summary > svg { width: 1rem; height: 1rem; flex-shrink: 0; color: hsl(var(--muted-foreground)); }
-.console-connection-manager-title { font-weight: 600; }
+.console-connection-manager-title { font-weight: var(--console-weight-strong); }
 .console-connection-manager-hint { min-width: 0; flex: 1; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .console-connection-manager[open] > summary { border-bottom: var(--console-border-hairline) solid var(--console-border-subtle); }
 .console-connection-manager > .console-adapter-console { padding: 1rem; }
