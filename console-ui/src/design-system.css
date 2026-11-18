@@ -68,9 +68,9 @@
 
     /* Shadows: a hairline ring plus a short, soft drop. Cards carry no border of their own. */
     --console-shadow-color: 222 30% 12%;
-    --console-shadow-ring: 0 0 0 1px hsl(var(--console-shadow-color) / 0.045);
+    --zc-shadow-ring: 0 0 0 1px hsl(var(--console-shadow-color) / 0.045);
     --console-shadow-xs: 0 1px 2px hsl(var(--console-shadow-color) / 0.05);
-    --console-shadow-sm: 0 1px 2px hsl(var(--console-shadow-color) / 0.06), var(--console-shadow-ring);
+    --console-shadow-sm: 0 1px 2px hsl(var(--console-shadow-color) / 0.06), var(--zc-shadow-ring);
     --console-shadow-md: 0 6px 16px -4px hsl(var(--console-shadow-color) / 0.1), 0 0 0 1px hsl(var(--console-shadow-color) / 0.05);
     --console-shadow-lg: 0 24px 48px -12px hsl(var(--console-shadow-color) / 0.18), 0 0 0 1px hsl(var(--console-shadow-color) / 0.06);
     --console-shadow-xl: var(--console-elevation-3);
@@ -126,9 +126,9 @@
     --console-surface-hover: hsl(0 0% 100% / 0.05);
     --console-surface-active: hsl(0 0% 100% / 0.09);
     --console-shadow-color: 0 0% 0%;
-    --console-shadow-ring: 0 0 0 1px hsl(0 0% 100% / 0.05);
+    --zc-shadow-ring: 0 0 0 1px hsl(0 0% 100% / 0.05);
     --console-shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.4);
-    --console-shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.4), var(--console-shadow-ring);
+    --console-shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.4), var(--zc-shadow-ring);
     --console-shadow-md: 0 6px 16px -4px hsl(0 0% 0% / 0.5), 0 0 0 1px hsl(0 0% 100% / 0.06);
     --console-shadow-lg: 0 24px 48px -12px hsl(0 0% 0% / 0.7), 0 0 0 1px hsl(0 0% 100% / 0.08);
     --console-shadow-panel: 0 0 0 1px hsl(0 0% 100% / 0.06);

@@ -372,26 +372,16 @@ function dayKey(at, timeZone) {
 
 /**
  * 「机器人状态」的插话判断用量（#1250 第 47 批）：最近 7 天每天的判断次数、失败、切到备用、token。
- * Days without calls inside the window are filled with zeros (see below). Null for an instance that
- * does not report `judgeDaily` (nothing is shown then).
+ * Null for an instance that does not report `judgeDaily` (nothing is shown then). Each row has
+ * `known`: false means the instance may hold no record of that day (「无数据」), so it is not a 0.
  */
 export function ambientJudgeDaily(status, locale = 'zh-CN', now = Date.now()) {
   if (!Array.isArray(status?.judgeDaily)) return null
   const byDay = new Map(status.judgeDaily.map(day => [day.day, day]))
   const timeZone = typeof status.judgeTimeZone === 'string' && status.judgeTimeZone ? status.judgeTimeZone : undefined
-  // Review N2: the window ends on the later of today in the instance's zone (browser clock) and the
-  // latest day the instance reported, so today is never left out and a browser clock running behind
-  // the instance does not cut its newest day off. Every day of that window is inside what the instance
-  // keeps (today and the 6 days before it), so a day without a row really had no calls (0).
-  // A zone this browser does not know: only the days the instance reported, nothing filled in.
-  const reported = [...byDay.keys()].filter(key => DAY_KEY.test(key)).sort()
-  let today
-  try { today = dayKey(now, timeZone) } catch { today = undefined }
-  const last = reported.at(-1)
-  const end = today === undefined ? undefined : last && last > today ? last : today
-  const keys = end ? lastSevenDays(end) : reported
+  const window = judgeDailyWindow(status, [...byDay.keys()].filter(key => DAY_KEY.test(key)).sort(), timeZone, now)
   const empty = { calls: 0, failed: 0, fallbacks: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, unreportedCalls: 0 }
-  const rows = keys.map(key => ({ day: key, ...empty, ...(byDay.get(key) ?? {}) }))
+  const rows = window.keys.map(key => byDay.has(key) ? { day: key, known: true, ...empty, ...byDay.get(key) } : { day: key, known: window.known(key), ...empty })
   const total = rows.reduce((sum, row) => ({
     calls: sum.calls + row.calls, failed: sum.failed + row.failed, fallbacks: sum.fallbacks + row.fallbacks,
     inputTokens: sum.inputTokens + row.inputTokens, outputTokens: sum.outputTokens + row.outputTokens, unreportedCalls: sum.unreportedCalls + row.unreportedCalls,
@@ -404,12 +394,45 @@ export function ambientJudgeDaily(status, locale = 'zh-CN', now = Date.now()) {
   }
 }
 
+/**
+ * The seven days shown and which empty days are a real 0 (console#152 re-review, low 1 and 2).
+ *
+ * - `judgeToday` (zhin batch 48): today on the instance clock in `judgeTimeZone`. The instance keeps
+ *   `judgeToday` and the 6 days before it, which is exactly the window, so the browser clock is not
+ *   read at all and every day without a row really had no calls.
+ * - An older instance (no `judgeToday`): the window still follows today in the instance zone on the
+ *   browser clock, but it is clamped to what the instance reported. It ends no earlier than the latest
+ *   reported day (a browser behind the instance does not cut that day off; the start is then no earlier
+ *   than 6 days before it) and no later than 6 days after the earliest reported day (a browser far
+ *   ahead does not push the instance's real last days out; this is never more than 6 days after the
+ *   latest one). Inside it, only days between the earliest and latest reported day are known: a later
+ *   day may be the instance's today or not reached yet, and an earlier one may already be pruned (the
+ *   instance's today is only known to be on or after the latest reported day), so both read 「无数据」.
+ *   A zone this browser does not know: only the reported days.
+ */
+function judgeDailyWindow(status, reported, timeZone, now) {
+  if (typeof status.judgeToday === 'string' && DAY_KEY.test(status.judgeToday)) return { keys: lastSevenDays(status.judgeToday), known: () => true }
+  const first = reported[0]
+  const last = reported.at(-1)
+  let today
+  try { today = dayKey(now, timeZone) } catch { return { keys: reported, known: () => true } }
+  if (!last) return { keys: lastSevenDays(today), known: () => true }
+  const latestEnd = [last, shiftDay(first, 6)].sort().at(-1)
+  const end = today < last ? last : today > latestEnd ? latestEnd : today
+  return { keys: lastSevenDays(end), known: key => key >= first && key <= last }
+}
+
 const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/u
 
-/** `YYYY-MM-DD` and the six calendar days before it, oldest first (date arithmetic in UTC, no zone). */
+/** `YYYY-MM-DD` moved by `days` calendar days (date arithmetic in UTC, no zone). */
+function shiftDay(day, days) {
+  const [year, month, date] = day.split('-').map(Number)
+  return new Date(Date.UTC(year, month - 1, date + days)).toISOString().slice(0, 10)
+}
+
+/** `YYYY-MM-DD` and the six calendar days before it, oldest first. */
 function lastSevenDays(last) {
-  const [year, month, date] = last.split('-').map(Number)
-  return Array.from({ length: 7 }, (_, index) => new Date(Date.UTC(year, month - 1, date - 6 + index)).toISOString().slice(0, 10))
+  return Array.from({ length: 7 }, (_, index) => shiftDay(last, index - 6))
 }
 
 function dayLabel(day, locale) {

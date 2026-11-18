@@ -71,9 +71,8 @@ function ConnectionManagement({ adapter, refreshKey }: { adapter: string; refres
     if (!editing) return
     const details = document.querySelector<HTMLDetailsElement>('details.console-connection-manager')
     if (details) details.open = true
-    // `[data-adapter-account-editor]` from @zhin.js/client 1.3; the `zk-account-editor-host` class (removed in
-    // ADR 0063 P4) only for the @zhin.js/client 1.2 this Console still builds with.
-    const editor = details?.querySelector<HTMLElement>('[data-adapter-account-editor], .zk-account-editor-host')
+    // The SDK marks its account editor with `data-adapter-account-editor` (@zhin.js/client ≥ 1.3).
+    const editor = details?.querySelector<HTMLElement>('[data-adapter-account-editor]')
     editor?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     editor?.querySelector<HTMLElement>('input:not([disabled])')?.focus({ preventScroll: true })
   }, [editing])

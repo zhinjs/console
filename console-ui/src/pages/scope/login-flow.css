@@ -142,7 +142,7 @@ li.is-done .console-login-check { border-color: hsl(var(--foreground) / 0.7); ba
 .console-login-block-tools { display: flex; gap: var(--console-space-1); }
 .console-login-copy-box { position: relative; }
 .console-login-code {
-  overflow: auto; max-height: 14rem; margin: 0; padding: var(--console-space-3) var(--console-space-3); border-radius: var(--console-radius-2); background: hsl(var(--card)); box-shadow: var(--console-shadow-ring);
+  overflow: auto; max-height: 14rem; margin: 0; padding: var(--console-space-3) var(--console-space-3); border-radius: var(--console-radius-2); background: hsl(var(--card)); box-shadow: var(--zc-shadow-ring);
   font-family: var(--console-font-mono); font-size: var(--console-text-label); line-height: 1.55; white-space: pre-wrap; word-break: break-all;
 }
 .console-login-code.is-hidden { color: hsl(var(--muted-foreground)); font-family: inherit; font-size: var(--console-text-label); white-space: normal; }
@@ -164,7 +164,7 @@ li.is-done .console-login-check { border-color: hsl(var(--foreground) / 0.7); ba
 .console-login-link-main { display: flex; min-width: 0; flex: 1 1 12rem; flex-direction: column; gap: var(--console-space-2); }
 .console-login-link-main code { font-family: var(--console-font-mono); font-size: var(--console-text-label); }
 .console-login-link-qr { display: flex; flex-direction: column; align-items: center; gap: var(--console-space-2); margin: 0; }
-.console-login-link-qr svg { width: 8.5rem; height: 8.5rem; border-radius: var(--console-radius-2); box-shadow: var(--console-shadow-ring); }
+.console-login-link-qr svg { width: 8.5rem; height: 8.5rem; border-radius: var(--console-radius-2); box-shadow: var(--zc-shadow-ring); }
 .console-login-link-qr figcaption { color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .console-login-qr-light { fill: hsl(0 0% 100%); }
 .console-login-qr-dark { fill: hsl(222 30% 10%); }
