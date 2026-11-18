@@ -100,6 +100,15 @@ export function hasConsolePermission(name, access = current, target = GLOBAL_TAR
   return (access.scoped ?? []).some(binding => binding.permissions.has(name) && bindingCovers(binding, target))
 }
 
+/**
+ * Adapters on which `name` is held only through adapter-scoped bindings (sorted, unique). Empty
+ * for an unrestricted session or a global grant: those are not limited to a list of adapters.
+ */
+export function scopedAdapters(name, access = current) {
+  if (!access || access.unrestricted || hasConsolePermission(name, access)) return []
+  return [...new Set((access.scoped ?? []).filter(binding => binding.kind === 'adapter' && binding.permissions.has(name)).map(binding => binding.key))].sort()
+}
+
 export function hasAnyConsolePermission(names, access = current, target = GLOBAL_TARGET) {
   return names.length === 0 || names.some(name => hasConsolePermission(name, access, target))
 }

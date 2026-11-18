@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
-import { cn } from '@zhin.js/client'
+import { cn } from '@zhin.js/console-ui'
 import { useI18n } from '../i18n'
 import { CONVERSATION_KIND_LABELS, SCOPE_LEVEL_LABELS, scopeCrumbs, type ScopeRef } from './scope-tree.mjs'
 

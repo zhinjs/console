@@ -10,22 +10,24 @@ import * as usageModel from '../console-ui/src/pages/token-usage-model.mjs'
 
 const require = createRequire(import.meta.url)
 
-test('cards, task rows, modals and sheets are lifted by shadow tokens (a hairline ring plus a soft drop), not borders', async () => {
+test('cards and task rows read the card elevation token (the successor of --console-shadow-sm), not borders', async () => {
   const design = await readFile(new URL('../console-ui/src/design-system.css', import.meta.url), 'utf8')
   const resources = await readFile(new URL('../console-ui/src/pages/resource-pages.css', import.meta.url), 'utf8')
   assert.match(design, /--console-shadow-xl:/)
-  assert.match(design, /\.console-card\s*\{[\s\S]*?box-shadow:\s*var\(--console-shadow-sm\)/)
+  assert.match(design, /\.console-card\s*\{[\s\S]*?box-shadow:\s*var\(--console-card-elevation\)/)
   assert.match(design, /\.console-sheet-content\[data-side="right"\]/)
   assert.match(design, /--console-shadow-ring:/)
   assert.match(design, /\.console-card\s*\{[\s\S]*?border:[^;]*transparent/)
   assert.match(design, /\.console-dialog-overlay[\s\S]*?backdrop-filter:\s*blur\(4px\)/)
-  assert.match(resources, /\.console-task-row\s*\{[\s\S]*?box-shadow:\s*var\(--console-shadow-sm\)/)
+  assert.match(resources, /\.console-task-row\s*\{[\s\S]*?box-shadow:\s*var\(--console-card-elevation\)/)
 })
 
 test('Sheet primitive and DialogContent drawer variant expose accessible slide-over structure', async () => {
-  const dialogSource = await readFile(new URL('../console-ui/src/components/ui/dialog.tsx', import.meta.url), 'utf8')
-  const sheetSource = await readFile(new URL('../console-ui/src/components/ui/sheet.tsx', import.meta.url), 'utf8')
-  assert.match(dialogSource, /variant\?:\s*"modal"\s*\|\s*"drawer"/)
+  // The primitives ship in @zhin.js/console-ui (ADR 0063 P1a): check the published build.
+  const ui = new URL('../node_modules/@zhin.js/console-ui/dist/components/ui/', import.meta.url)
+  const dialogSource = await readFile(new URL('dialog.js', ui), 'utf8')
+  const sheetSource = await readFile(new URL('sheet.js', ui), 'utf8')
+  assert.match(await readFile(new URL('dialog.d.ts', ui), 'utf8'), /variant\?:\s*"modal"\s*\|\s*"drawer"/)
   assert.match(dialogSource, /console-sheet-content/)
   assert.match(dialogSource, /console-dialog-close/)
   assert.match(sheetSource, /export\s*\{[\s\S]*Sheet,[\s\S]*SheetContent,[\s\S]*SheetHeader,[\s\S]*SheetBody,[\s\S]*SheetFooter/)
@@ -38,7 +40,7 @@ test('upgraded Token Usage charts render rounded top stacks, area gradient fills
   }).outputText
   const mod = { exports: {} }
   const mocks = {
-    '@zhin.js/client': { cn: (...values) => values.filter(Boolean).join(' ') },
+    '@zhin.js/client': { cn: (...values) => values.filter(Boolean).join(' ') }, '@zhin.js/console-ui': { cn: (...values) => values.filter(Boolean).join(' ') },
     './token-usage-model.mjs': usageModel,
   }
   new Function('require', 'module', 'exports', compiled)(

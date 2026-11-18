@@ -4,10 +4,9 @@ import {
   AlertCircle, CircleHelp, DatabaseZap, Hourglass, Inbox, Loader2, Lock, PackageX, PlugZap, RefreshCw, ServerOff, Settings2, ShieldOff, Sparkles, GitCompareArrows, Stethoscope,
   type LucideIcon,
 } from 'lucide-react'
-import { cn } from '@zhin.js/client'
+import { Button, cn, EmptyState, type EmptyIllustrationName, type EmptyStateAction } from '@zhin.js/console-ui'
 import './status-surfaces.css'
 import { useI18n } from '../i18n'
-import { Button } from './ui/button'
 import {
   LOCK_LEVEL_LABELS, SLOW_LOADING_COPY, SLOW_LOADING_MS, STATUS_COPY, loadingSeconds, statusFromError, statusTone, type StatusKind, type StatusReading,
 } from './status-state-model.mjs'
@@ -49,6 +48,13 @@ export interface StatusStateProps {
   readonly onVerify?: () => void
   /** Extra actions (links) after the standard ones. */
   readonly actions?: ReactNode
+  /**
+   * `empty`: the line-art illustration of the component library's EmptyState (ADR 0063 D28) for a
+   * clear scene — messages, tasks, logs, a table, a record. Without it the empty state shows an icon.
+   */
+  readonly illustration?: EmptyIllustrationName
+  /** `empty`: the one next step, as the library's EmptyState action (soft, or `primary` on request); `actions` still works. */
+  readonly action?: EmptyStateAction
   /** Inline (inside a card or table) instead of a full panel. */
   readonly compact?: boolean
   readonly className?: string
@@ -121,12 +127,24 @@ function LoadingState({ title, description, onRetry, actions, compact, className
 }
 
 function SettledState({
-  kind, error, title, description, permissions, lockedBy, lockHref, onRetry, onVerify, actions, compact, className,
+  kind, error, title, description, permissions, lockedBy, lockHref, onRetry, onVerify, actions, compact, className, illustration, action,
 }: StatusStateProps) {
   const i18n = useI18n()
   const reading: StatusReading | null = error !== undefined && error !== null ? statusFromError(error) : null
   const resolved: StatusKind = kind ?? reading?.kind ?? 'empty'
   const copy = STATUS_COPY[resolved]
+  // 无数据 is the component library's EmptyState (illustration or icon, one sentence, at most one
+  // action); only the wrapper keeps the status role and kind. A title alone stands without the
+  // generic 「有了新内容会显示在这里。」.
+  if (resolved === 'empty') {
+    return (
+      <div role="status" data-status-kind="empty" className={cn('console-status-state-empty', className)}>
+        <EmptyState illustration={illustration} icon={illustration ? undefined : ICONS.empty} compact={compact}
+          title={title ?? i18n.t(copy.title)} description={description ?? (title ? undefined : i18n.t(copy.description))}
+          action={action ?? actions} />
+      </div>
+    )
+  }
   const Icon = ICONS[resolved]
   const tone = statusTone(resolved)
   const lock = lockedBy ?? reading?.lockedBy
@@ -156,7 +174,7 @@ function SettledState({
         {resolved === 'needs-configuration' && reading?.missingEnv?.length ? (
           <p className="console-status-state-description">{i18n.t('缺少环境变量：')} <code>{reading.missingEnv.join(', ')}</code></p>
         ) : null}
-        {detail && resolved !== 'empty' ? (
+        {detail ? (
           <details className="console-status-state-detail">
             <summary>{i18n.t('技术详情')}</summary>
             <pre>{reading?.serverCode ? `${reading.serverCode}: ` : ''}{detail}</pre>

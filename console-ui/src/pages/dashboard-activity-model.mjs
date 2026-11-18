@@ -83,6 +83,8 @@ export function toMessageRecord(event, labels = DEFAULT_PREVIEW_LABELS) {
   const endpoint = String(data.endpointKey ?? '')
   const kind = String(conversation?.kind ?? data.channelType ?? '')
   const channelId = String(conversation?.id ?? data.channelId ?? '')
+  const conversationName = [conversation?.name, data.channelName, data.conversationName, data.groupName]
+    .find(value => typeof value === 'string' && value.trim())?.trim() ?? ''
   return {
     id: `${event.runtimeId ?? ''}:${event.eventId ?? `${timestamp}:${data.messageId ?? ''}`}`,
     eventId: Number.isFinite(event.eventId) ? event.eventId : 0,
@@ -92,6 +94,7 @@ export function toMessageRecord(event, labels = DEFAULT_PREVIEW_LABELS) {
     endpoint,
     kind,
     channelId,
+    conversationName,
     conversationKey: `${adapter}\u0000${endpoint}\u0000${kind}\u0000${channelId}`,
     sender: direction === 'inbound' ? readSender(data.sender) : null,
     text: messagePreview(data.content, labels),
@@ -126,6 +129,17 @@ export function hourlyMessageActivity(records, now, hours = 24) {
     if (bucket) bucket[record.direction] += 1
   }
   return buckets
+}
+
+/**
+ * The part of the hourly series worth drawing: when messages cover only the last few hours, the
+ * leading empty hours are dropped so the bars are not lost in a mostly empty grid. At least
+ * `minHours` remain (ending at the current hour); a series with no messages is returned as is.
+ */
+export function visibleActivityRange(buckets, minHours = 6) {
+  const first = buckets.findIndex(bucket => bucket.inbound + bucket.outbound > 0)
+  if (first <= 0) return buckets
+  return buckets.slice(Math.min(first, Math.max(0, buckets.length - minHours)))
 }
 
 /** Totals over records newer than `since`. */
@@ -185,6 +199,19 @@ export function buildMessageFeed(records, limit = 20) {
   return items
     .sort((a, b) => b.timestamp - a.timestamp || b.eventId - a.eventId)
     .slice(0, limit)
+}
+
+/** Replies shown under one message on the home page; the rest are counted, not listed. */
+export const FEED_REPLY_LIMIT = 2
+
+/**
+ * The replies to show under a feed item, oldest first, and how many more there are. A burst of
+ * replies to one message would otherwise push the rest of the feed off the card.
+ */
+export function visibleReplies(replies, limit = FEED_REPLY_LIMIT) {
+  const ordered = [...(replies ?? [])].sort((a, b) => a.timestamp - b.timestamp)
+  const max = Math.max(0, Math.floor(limit))
+  return { shown: ordered.slice(0, max), hidden: Math.max(0, ordered.length - max) }
 }
 
 /** Seconds between an inbound message and its first reply, when known. */

@@ -24,6 +24,7 @@ export interface FeatureMatrix {
   readonly endpoints: Readonly<Record<string, readonly string[]>>
   readonly rows: ReadonlyArray<{ plugin: string; displayName?: string; global: FeatureCell; adapters: Readonly<Record<string, FeatureCell>>; conversationOverrides?: ConversationOverrideCounts }>
   readonly conversationOverrides?: ConversationOverrideCounts
+  readonly root?: FeatureRootRow
 }
 export interface MergedFeatureMatrix {
   readonly revision: string
@@ -31,7 +32,15 @@ export interface MergedFeatureMatrix {
   readonly endpoints: Readonly<Record<string, readonly string[]>>
   readonly rows: FeatureMatrixRow[]
   readonly conversationOverrides?: ConversationOverrideCounts
+  /** The project's own root plugin (#1250 `kind: 'root'`): always on, not switchable; absent from older Hosts. */
+  readonly root?: FeatureRootRow
 }
+export interface FeatureRootRow {
+  readonly displayName: string
+  readonly displayNameI18n?: Readonly<Partial<Record<'zh-CN' | 'en', string>>>
+  readonly capabilities: { readonly commands: readonly string[]; readonly components: readonly string[]; readonly tools: readonly string[] }
+}
+export function rootFeatureName(root: FeatureRootRow | undefined, locale?: 'zh-CN' | 'en'): string
 export interface AdapterSummary { readonly adapter: string; readonly accounts: number; readonly online: number; readonly pending: number }
 export interface FeatureSummary {
   readonly plugin: string
@@ -59,7 +68,21 @@ export interface FeatureDetail {
   readonly conversationFields?: readonly string[]
   /** False when conversation overrides are kept in memory only (lost on restart). */
   readonly persistent?: boolean
+  /** Stored levels: when the stored override was last written. */
+  readonly updatedAt?: number
+  /** Who last wrote the stored override and through what (#1250); absent from older Hosts. */
+  readonly operator?: FeatureOverrideOperator
+  /** Conversation level: the conversation's display name when the instance knows it. */
+  readonly conversationName?: string
 }
+export interface FeatureOverrideOperator {
+  readonly source: 'chat' | 'console' | 'cli'
+  readonly adapter?: string
+  readonly userId?: string
+  readonly principalId?: string
+  readonly displayName?: string
+}
+export function readOverrideOperator(value: unknown): FeatureOverrideOperator | undefined
 export interface FeatureFieldRow {
   readonly name: string
   readonly editable: boolean
@@ -90,6 +113,7 @@ export interface ConversationOverrideSummary {
   readonly fields: readonly string[]
   readonly updatedAt?: number
   readonly updatedBy?: string
+  readonly operator?: FeatureOverrideOperator
 }
 export interface ConversationItem extends ConversationRef {
   readonly key: string

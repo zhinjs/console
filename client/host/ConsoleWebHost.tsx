@@ -5,6 +5,7 @@ import { loadConsoleEntries } from "../bootstrap/loadConsoleEntries";
 import { ConsoleView } from "../console-app/ConsoleView";
 import { useConsoleRouteElements } from "../console-app/ConsoleRoutes";
 import { app } from "@console/utils/console-client";
+import NotFoundPage from "@console/pages/not-found";
 import { resolveConsoleEntry } from "@console/bootstrap/default-entry.mjs";
 import { CONSOLE_SHELL_PATH, CONSOLE_UI_LEGACY_PREFIX, normalizeShellBase } from "../paths";
 
@@ -30,16 +31,6 @@ function ShellLoading() {
         <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-muted-foreground border-t-foreground" />
         <p className="mt-3 text-sm text-muted-foreground">{i18n.t("加载中…")}</p>
       </div>
-    </div>
-  );
-}
-
-function DashboardHome() {
-  const i18n = useI18n()
-  return (
-    <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-      <h1 className="text-2xl font-semibold mb-2 text-foreground">Zhin Console</h1>
-      <p className="text-sm">{i18n.t("从顶部导航选择一个页面，或安装注册控制台路由的插件。")}</p>
     </div>
   );
 }
@@ -73,7 +64,7 @@ export function ConsoleWebHost() {
       <Route path={shellRoutePath} element={<ConsoleView />}>
         <Route index element={<Navigate to={defaultHomePath} replace />} />
         {registeredRoutes}
-        <Route path="*" element={<DashboardHome />} />
+        <Route path="*" element={<NotFoundPage homePath={defaultHomePath} />} />
       </Route>
       <Route path="*" element={<Navigate to={defaultHomePath} replace />} />
     </Routes>

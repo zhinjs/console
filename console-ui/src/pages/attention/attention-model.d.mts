@@ -1,16 +1,19 @@
+import type { ConsoleAttentionKind, ConsoleAttentionSeverity, ConsoleAttentionSubject } from '@zhin.js/console-protocol'
 import type { Locale } from '../../i18n/locale.mjs'
 
-export type AttentionSeverity = 'danger' | 'warning' | 'info'
+export type AttentionSeverity = ConsoleAttentionSeverity
+/** A kind the protocol defines, or one from a newer Host (kept, shown with the Host's own text). */
+export type AttentionKind = ConsoleAttentionKind | (string & {})
 
 export interface AttentionItem {
   readonly id: string
   /** State fingerprint: 「忽略」 lasts until it changes. */
   readonly revision: string
-  readonly kind: string
+  readonly kind: AttentionKind
   readonly severity: AttentionSeverity
   readonly title: string
   readonly detail: string
-  readonly subject?: Readonly<Record<string, unknown>>
+  readonly subject?: Readonly<ConsoleAttentionSubject & Record<string, unknown>>
   /** ISO time, or null when the source has none (Console-derived items). */
   readonly since: string | null
   readonly action: { readonly label: string; readonly path: string }
@@ -60,6 +63,7 @@ export interface AttentionPrefs {
 export const ATTENTION_RPC: 'attention.list'
 export const ATTENTION_PATH: '/attention'
 export const ATTENTION_SEVERITIES: readonly AttentionSeverity[]
+export const ATTENTION_KINDS: readonly ConsoleAttentionKind[]
 export const ATTENTION_SNOOZE_MS: number
 export const ATTENTION_REFRESH_MS: number
 export const ATTENTION_NOT_READY_REFRESH_MS: number
@@ -89,7 +93,11 @@ export function loadAttention(options: {
   readonly readInstanceHealth?: () => Promise<unknown>
   readonly locale?: Locale
   readonly now?: () => number
+  /** This Host is already known to lack `attention.list`: read the fallback without asking it again. */
+  readonly hostListUnsupported?: boolean
 }): Promise<AttentionLoad>
+export interface AttentionSupportMemo { readonly apiBase: string; readonly unsupported: boolean }
+export function nextAttentionSupport(memo: AttentionSupportMemo | null, update: { apiBase: string; data?: AttentionLoad | null; reset?: boolean }): AttentionSupportMemo
 
 export function emptyAttentionPrefs(): AttentionPrefs
 export function attentionStorageKey(apiBase: string | null | undefined, userId?: string | null): string

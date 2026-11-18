@@ -20,7 +20,7 @@ async function page(file, exports, dependencies) {
   new Function('require', 'module', 'exports', code)(name => {
     if (name in dependencies) return dependencies[name]
     if (name === 'react/jsx-runtime') return { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) }
-    if (name === 'lucide-react' || name.startsWith('../components/')) return inert
+    if (name === 'lucide-react' || name === '@zhin.js/console-ui' || name.startsWith('../components/')) return inert
     throw new Error(`Unexpected page dependency ${name}`)
   }, module, module.exports)
   return module.exports

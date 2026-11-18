@@ -36,7 +36,7 @@ export const SCOPE_TAB_LABELS = Object.freeze({
   chat: '聊天',
   access: '接入',
   features: '功能',
-  roles: '角色',
+  roles: '聊天角色',
   records: '记录',
 })
 

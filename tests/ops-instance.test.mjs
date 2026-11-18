@@ -20,7 +20,7 @@ test('the gateway model names the gateway RPCs of ADR 0054 §4–§5', () => {
   assert.deepEqual(Object.values(GATEWAY_RPC).sort(), [
     'gateway.instance.logs', 'gateway.instance.restart', 'gateway.instance.start', 'gateway.instance.status', 'gateway.instance.stop',
     'gateway.packages.install', 'gateway.packages.list', 'gateway.packages.plan', 'gateway.packages.uninstall', 'gateway.packages.update',
-    'gateway.plugins.declare',
+    'gateway.plugins.declare', 'gateway.plugins.disable', 'gateway.plugins.enable',
   ])
   assert.match(read('contracts/gateway.ts'), /from '@zhin\.js\/console-protocol'/u, 'constants come from the protocol package')
   for (const name of Object.values(GATEWAY_RPC)) assert.ok(Object.values(PROTOCOL_GATEWAY_RPC).includes(name), name)
@@ -58,7 +58,7 @@ test('instance status is read defensively; labels, tones and actions follow the 
     assert.match(instanceStateLabel(state, zh), /[㐀-鿿]/u, state)
     assert.doesNotMatch(instanceStateLabel(state, en), /[㐀-鿿]/u, state)
   }
-  assert.equal(instanceStateTone('running'), 'success')
+  assert.equal(instanceStateTone('running'), 'outline')
   assert.equal(instanceStateTone('crashed'), 'destructive')
   assert.deepEqual(instanceActions('running'), { start: false, stop: true, restart: true })
   assert.deepEqual(instanceActions('stopped'), { start: true, stop: false, restart: false })

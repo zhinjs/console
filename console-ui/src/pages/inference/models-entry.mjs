@@ -13,16 +13,29 @@ export function inferenceTabs(hostAdministrator) {
   return hostAdministrator ? ADMINISTRATOR_TABS : PERSONAL_TABS
 }
 
-/** Missing, unknown or unavailable (e.g. purposes for a personal owner) tabs fall back to the default. */
-export function resolveInferenceTab(value, hostAdministrator) {
-  return typeof value === 'string' && inferenceTabs(hostAdministrator).includes(value) ? value : DEFAULT_INFERENCE_TAB
+/**
+ * Missing, unknown or unavailable (e.g. purposes for a personal owner) tabs fall back to the default;
+ * a link naming an account (`?account=<id>`, e.g. from an attention item) without a usable tab opens 账号.
+ */
+export function resolveInferenceTab(value, hostAdministrator, account) {
+  if (typeof value === 'string' && inferenceTabs(hostAdministrator).includes(value)) return value
+  return inferenceFocusAccount(account) ? 'accounts' : DEFAULT_INFERENCE_TAB
 }
 
-/** The URL for a tab; the default tab keeps the plain path and unrelated parameters survive. */
+/** The account a `?account=` link points at, or undefined. */
+export function inferenceFocusAccount(value) {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined
+}
+
+/**
+ * The URL for a tab; the default tab keeps the plain path and unrelated parameters survive. Leaving
+ * 账号 drops `account`, which only points into that tab.
+ */
 export function inferenceTabParams(current, tab) {
   const next = new URLSearchParams(current)
   if (!tab || tab === DEFAULT_INFERENCE_TAB) next.delete('tab')
   else next.set('tab', tab)
+  if (tab !== 'accounts') next.delete('account')
   return next
 }
 

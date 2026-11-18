@@ -35,13 +35,13 @@ export function displayNameForConversation(
 }
 
 export interface FriendsEntry {
-  user_id: number
+  user_id: string
   nickname: string
   remark: string
 }
 
 export interface GroupsEntry {
-  group_id: number
+  group_id: string
   name: string
 }
 
@@ -79,7 +79,7 @@ export function mergeInboxSessions(
       if (friendIds.has(item.id)) continue
       friendIds.add(item.id)
       outFriends.push({
-        user_id: Number(item.id) || 0,
+        user_id: String(item.id),
         nickname: item.name,
         remark: '',
       })
@@ -88,7 +88,7 @@ export function mergeInboxSessions(
       if (groupIds.has(item.id)) continue
       groupIds.add(item.id)
       outGroups.push({
-        group_id: Number(item.id) || 0,
+        group_id: String(item.id),
         name: item.name,
       })
       mergedCount++
@@ -105,16 +105,23 @@ export function mergeInboxSessions(
   return { friends: outFriends, groups: outGroups, channels: outChannels, mergedCount }
 }
 
+/** Platform ids stay strings (sandbox-user, QQ openids); 0 and blanks mean「no id」. */
+function idText(value: unknown): string {
+  if (typeof value === 'number') return Number.isFinite(value) && value !== 0 ? String(value) : ''
+  if (typeof value === 'string') { const id = value.trim(); return id === '0' ? '' : id }
+  return ''
+}
+
 export function normalizeFriendRecord(raw: Record<string, unknown>): FriendsEntry {
-  const user_id = Number(raw.user_id ?? raw.userId ?? raw.id ?? 0)
+  const user_id = idText(raw.user_id ?? raw.userId ?? raw.id)
   const nickname =
-    pickLabel(raw.nickname, raw.name, raw.user_name, raw.userName) ?? String(user_id || '')
+    pickLabel(raw.nickname, raw.name, raw.user_name, raw.userName) ?? user_id
   const remark = pickLabel(raw.remark, raw.card) ?? ''
   return { user_id, nickname, remark }
 }
 
 export function normalizeGroupRecord(raw: Record<string, unknown>): GroupsEntry {
-  const group_id = Number(raw.group_id ?? raw.groupId ?? raw.id ?? 0)
+  const group_id = idText(raw.group_id ?? raw.groupId ?? raw.id)
   const name =
     pickLabel(
       raw.group_name,
@@ -124,7 +131,7 @@ export function normalizeGroupRecord(raw: Record<string, unknown>): GroupsEntry 
       raw.title,
       raw.remark,
       raw.card,
-    ) ?? String(group_id || '')
+    ) ?? group_id
   return { group_id, name }
 }
 

@@ -1,18 +1,8 @@
 import { useId, useMemo, useState } from 'react'
 import { Copy, Eye, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { PageShell } from '../../components/PageShell'
-import { PageHeader } from '../../components/PageHeader'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/button'
-import { Card } from '../../components/ui/card'
-import { Input } from '../../components/ui/input'
-import { Textarea } from '../../components/ui/textarea'
-import { Skeleton } from '../../components/ui/skeleton'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
+import { Badge, Button, Card, ConfirmDialog, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, PageHeader, PageShell, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Textarea } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
-import { ConfirmDialog } from '../../components/confirm-dialog'
 import { useSaveOutcome } from '../../components/ApplyFeedback'
 import { outcomeFromAccessWrite, recordReadBack } from '../../components/apply-outcome-model.mjs'
 import {
@@ -59,8 +49,8 @@ export default function AccessRolesPage() {
   return (
     <PageShell>
       <PageHeader
-        title={i18n.t("角色")}
-        description={i18n.t("角色是一组权限。内置角色只读，可以复制后修改；自定义角色删除时，绑定到它的用户会失去这些权限。")}
+        title={i18n.t("Console 角色")}
+        description={i18n.t("Console 角色是一组 Console 权限，决定谁能在 Console 里看和改什么。内置角色只读，可以复制后修改；自定义角色删除时，绑定到它的用户会失去这些权限。机器人在聊天里的权限是「聊天角色」，在账号与会话里设置。")}
         actions={<>
           <Button variant="outline" size="sm" onClick={state.refresh} disabled={state.loading}><RefreshCw className={state.loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
           {canManage ? <Button size="sm" onClick={() => setPending({ kind: 'edit', role: null, draft: { name: '', description: '', permissions: [] } })}><Plus />{i18n.t("新建角色")}</Button> : null}
@@ -105,9 +95,9 @@ export default function AccessRolesPage() {
                       {role.builtin || !canManage
                         ? <Button variant="ghost" size="sm" onClick={() => setPending({ kind: 'view', role })}><Eye />{i18n.t("查看")}</Button>
                         : <Button variant="ghost" size="sm" onClick={() => setPending({ kind: 'edit', role, draft: { name: role.name, description: role.description, permissions: [...role.permissions] } })}><Pencil />{i18n.t("编辑")}</Button>}
-                      {canManage ? <Button variant="ghost" size="sm" onClick={() => startCopy(role)} aria-label={i18n.t("复制 {0}", [role.name])}><Copy /><span className="hidden sm:inline">{i18n.t("复制")}</span></Button> : null}
+                      {canManage ? <Button variant="ghost" size="sm" onClick={() => startCopy(role)} aria-label={i18n.t("复制 {0}", [role.name])}><Copy />{i18n.t("复制")}</Button> : null}
                       {canManage && !role.builtin
-                        ? <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setPending({ kind: 'delete', role })} aria-label={i18n.t("删除 {0}", [role.name])}><Trash2 /><span className="hidden sm:inline">{i18n.t("删除")}</span></Button>
+                        ? <Button variant="destructive" size="sm" onClick={() => setPending({ kind: 'delete', role })} aria-label={i18n.t("删除 {0}", [role.name])}><Trash2 />{i18n.t("删除")}</Button>
                         : null}
                     </div>
                   </TableCell>

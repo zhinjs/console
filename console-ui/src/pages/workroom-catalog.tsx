@@ -16,26 +16,13 @@ import {
   Trash2,
   UsersRound,
 } from 'lucide-react'
-import { cn } from '@zhin.js/client'
+import { Badge, Button, Card, CardContent, Checkbox, cn, ConfirmDialog, EmptyState, ErrorAlert, Input, PageHeader, PageShell, SelectField, Skeleton, Textarea } from '@zhin.js/console-ui'
 import { getConsoleTransport } from '../utils/console-client'
 import { createWorkroomDraftSessions } from './workroom-draft-session.mjs'
 import { CONSOLE_RPC, ENDPOINT_RPC } from '../contracts/zhin-console'
 import { requestConsole } from '../utils/console-rpc'
 import { hasConsolePermission } from '../utils/console-access.mjs'
-import { PageHeader } from '../components/PageHeader'
-import { PageShell } from '../components/PageShell'
-import { ConfirmDialog } from '../components/confirm-dialog'
-import { EmptyState } from '../components/empty-state'
-import { ErrorAlert } from '../components/error-alert'
-import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
-import { Checkbox } from '../components/ui/checkbox'
-import { Card, CardContent } from '../components/ui/card'
-import { Input } from '../components/ui/input'
-import { SelectField } from '../components/ui/select'
-import { Skeleton } from '../components/ui/skeleton'
 import { StatusState } from '../components/StatusState'
-import { Textarea } from '../components/ui/textarea'
 import {
   catalogAvailability,
   createNewWorkroomDraft,
@@ -342,7 +329,7 @@ export default function WorkroomCatalogPage() {
     .map((binding) => `${binding.adapter}:${binding.endpoint}`))).size
 
   return (
-    <PageShell className="max-w-[1680px]">
+    <PageShell>
       <PageHeader
         title={i18n.t("Workroom 配置")}
         description={i18n.t("配置协作空间、成员和消息渠道。")}
@@ -355,7 +342,7 @@ export default function WorkroomCatalogPage() {
         }
       />
 
-      {readOnly ? <div className="rounded-lg border border-warning/25 bg-warning/[0.06] px-4 py-3 text-sm text-warning">{i18n.t("当前身份只读展示目录；发布需要 Agent 配置权限。")}</div> : null}
+      {readOnly ? <div className="rounded-lg border border-[color:var(--console-border-default)] bg-[color:var(--console-surface-muted)] px-4 py-3 text-sm text-muted-foreground">{i18n.t("当前身份只读展示目录；发布需要 Agent 配置权限。")}</div> : null}
       {error || publishUnconfirmed ? <ErrorAlert error={publishUnconfirmed ? i18n.t("未能确认发布结果。本地草稿已保留，请刷新并核对最新配置。") : error ?? ''} onRetry={catalogError || publishUnconfirmed ? () => load(false, true) : undefined} /> : null}
       {error && publishUnconfirmed ? <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">{i18n.t("错误详情")}</summary><pre className="mt-2 whitespace-pre-wrap break-words">{error}</pre></details> : null}
       {!loading && !catalog ? <EmptyState title={i18n.t("Workroom 目录未就绪")} description={i18n.t("尚未取得目录，暂不能新建、编辑或发布。请先在 Host 安装并配置可选 Workroom Catalog 服务及 Agent，再刷新；无需重建本地草稿。")} /> : null}

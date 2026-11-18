@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { RefreshCw, ServerOff } from 'lucide-react'
 import './status-surfaces.css'
 import { useI18n } from '../i18n'
-import { Button } from './ui/button'
+import { Button } from '@zhin.js/console-ui'
 import { requestConsole } from '../utils/console-rpc'
 import { onHostGatewayReply } from '../utils/auth'
 import {

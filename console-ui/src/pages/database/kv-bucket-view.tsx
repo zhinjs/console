@@ -5,20 +5,8 @@ import { useMutation } from './use-mutation'
 import { useState, useEffect, useCallback } from 'react'
 import type { KvEntry } from '@zhin.js/client'
 import { Plus, Trash2, Pencil, RefreshCw, Loader2, AlertCircle, CheckCircle, Save, Key } from 'lucide-react'
-import { Button } from '../../components/ui/button'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
-import { Alert, AlertDescription } from '../../components/ui/alert'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from '../../components/ui/dialog'
-import { Input } from '../../components/ui/input'
+import { Alert, AlertDescription, Button, ConfirmDialog, Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { useToast } from '../../components/toast'
-import { ConfirmDialog } from '../../components/confirm-dialog'
 import type { ChangeEvent } from 'react'
 
 export function KvBucketView({
@@ -140,7 +128,7 @@ export function KvBucketView({
             {loading && !entries.length ? (
               <TableRow><TableCell colSpan={readOnly ? 2 : 3} className="py-8 text-center"><Loader2 className="w-4 h-4 animate-spin inline-block" /></TableCell></TableRow>
             ) : !entries.length ? (
-              <TableRow><TableCell colSpan={readOnly ? 2 : 3} className="py-8 text-center text-muted-foreground">{i18n.t("暂无数据")}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={readOnly ? 2 : 3} className="py-8 text-center text-muted-foreground">{i18n.t("这个存储桶还没有键值。")}</TableCell></TableRow>
             ) : entries.map((entry) => (
               <TableRow key={entry.key}>
                 <TableCell className="align-top">
@@ -159,7 +147,7 @@ export function KvBucketView({
                     setKeyInput(entry.key)
                     setValueInput(typeof entry.value === 'object' ? JSON.stringify(entry.value, null, 2) : String(entry.value ?? ''))
                   }}><Pencil className="mr-1 h-3 w-3" />{i18n.t("编辑")}</Button>
-                  <Button size="icon" variant="ghost" disabled={busy} aria-label={i18n.t("删除记录")} className="text-destructive" onClick={() => handleDelete(entry.key)}><Trash2 /></Button>
+                  <Button size="icon" variant="destructive" disabled={busy} aria-label={i18n.t("删除记录")} onClick={() => handleDelete(entry.key)}><Trash2 /></Button>
                 </TableCell>}
               </TableRow>
             ))}

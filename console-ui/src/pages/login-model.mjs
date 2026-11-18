@@ -144,3 +144,12 @@ export function lockoutMs(result, now = Date.now()) {
   const seconds = typeof result.retryAfterSec === 'number' && result.retryAfterSec > 0 ? result.retryAfterSec : 0
   return seconds > 0 ? Math.min(seconds, 15 * 60) * 1000 : 0
 }
+
+/**
+ * Whether an anonymous `/auth/me` read says the Host has no owner yet (#64 `login-uninitialized-host`):
+ * such a Host is signed into with its initialization token (.env `HTTP_TOKEN`), so the page opens on
+ * 「访问令牌」 instead of 「账号登录」 (where the browser would autofill another Host's account).
+ */
+export function hostNeedsSetup(result) {
+  return Boolean(result?.ok && result.data && result.data.setupRequired === true)
+}

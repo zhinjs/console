@@ -10,10 +10,7 @@ import { BEHAVIOR_CHOICES } from '../console-ui/src/pages/ambient-engagement-mod
 
 const require = createRequire(import.meta.url)
 const compilerOptions = { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX }
-const module = { exports: {} }
-const shared = await readFile(new URL('../console-ui/src/components/ui/radio-group.tsx', import.meta.url), 'utf8')
-new Function('require', 'exports', 'module', ts.transpileModule(shared, { compilerOptions }).outputText)(name => name === '@zhin.js/client' ? { cn: (...classes) => classes.filter(Boolean).join(' ') } : require(name), module.exports, module)
-const { RadioGroup, RadioGroupItem } = module.exports
+const { RadioGroup, RadioGroupItem } = await import('@zhin.js/console-ui')
 
 async function page(file) {
   const source = await readFile(new URL(`../console-ui/src/pages/${file}.tsx`, import.meta.url), 'utf8')
@@ -37,7 +34,7 @@ function group(ast, name, bindings) {
 test('ambient radio groups retain their values and group identity and change only the original drafts', async () => {
   const ast = await page('ambient-engagement')
   let behavior = 'watch', groupScope = 'some'
-  const behaviorGroup = group(ast, 'ambient-behavior', { BEHAVIOR_CHOICES, behavior, setBehavior: value => { behavior = value } })
+  const behaviorGroup = group(ast, 'ambient-behavior', { BEHAVIOR_CHOICES, behavior, setBehavior: value => { behavior = value }, choiceSelectable: () => true })
   const actual = RadioGroup.render(behaviorGroup.props, null)
   assert.equal(actual.props.name, 'ambient-behavior'); assert.equal(actual.props.value, 'watch')
   assert.equal(actual.props['aria-label'], '机器人要不要自己接话？')

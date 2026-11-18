@@ -1,9 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { ArrowUpRight, Filter, PanelBottom, SquareArrowOutUpRight, X } from 'lucide-react'
-import { cn } from '@zhin.js/client'
+import { Button, cn } from '@zhin.js/console-ui'
 import { useI18n } from '../../i18n'
-import { Button } from '../ui/button'
 import { LogViewer } from '../../pages/logs/LogViewer'
 import { clearScopeFilter, readScopeFilter, scopeObjectHref } from '../../pages/insights/scope-filter.mjs'
 import { useIsMobile } from '../../hooks/useIsMobile'
@@ -30,7 +29,7 @@ import './log-panel.css'
 export { openLogPanel, closeLogPanel, toggleLogPanel, type LogPanelFilter }
 
 /** Reserved space below the page while the docked panel is open (shell.css / toast.css read it). */
-const RESERVE_VAR = '--console-log-panel-reserve'
+const RESERVE_VAR = '--zc-log-panel-reserve'
 
 function browserStorage(): Storage | null {
   try { return typeof window === 'undefined' ? null : window.localStorage } catch { return null }
@@ -91,7 +90,7 @@ export function LogPanelButton() {
     <button
       type="button"
       className={cn('console-icon-button console-log-panel-trigger', expanded && 'is-active')}
-      title={onLogsPage ? label : `${label}（${LOG_PANEL_SHORTCUT_LABEL}）`}
+      data-tooltip={onLogsPage ? label : `${label}（${LOG_PANEL_SHORTCUT_LABEL}）`}
       aria-label={label}
       aria-expanded={expanded}
       aria-controls={LOG_PANEL_ID}

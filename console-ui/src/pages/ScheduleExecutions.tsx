@@ -7,11 +7,7 @@ import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 
 const canCleanup = () => hasConsolePermission('ops.schedule.write')
-import { Button } from '../components/ui/button'
-import { Badge } from '../components/ui/badge'
-import { Alert, AlertDescription } from '../components/ui/alert'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '../components/ui/dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
+import { Alert, AlertDescription, Badge, Button, Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Tabs, TabsContent, TabsList, TabsTrigger } from '@zhin.js/console-ui'
 import { readTraceDetail, traceFailure, traceQuery, traceStatus, type TraceDetail } from './conversation-trace-model.mjs'
 import {
   readExecutionPage, readExecutionDetail, readExecutionCleanup, executionQuery, executionDetailQuery,
@@ -86,7 +82,7 @@ export function ExecutionRecordContent({ record, scope }: { record: ExecutionRec
   const [traceAttempt, setTraceAttempt] = useState('')
   const time = (value: number) => new Date(value).toLocaleString(i18n.locale)
   return <>
-    <div className="schedule-execution-facts"><Badge variant={record.status === 'failed' ? 'destructive' : record.status === 'succeeded' ? 'success' : 'secondary'}>{executionStatus(record.status, i18n.locale)}</Badge><span>{time(record.queuedAt)}</span><span>{i18n.t('{0} 次尝试', [record.attemptCount])}</span></div>
+    <div className="schedule-execution-facts"><Badge variant={record.status === 'failed' ? 'destructive' : record.status === 'succeeded' ? 'outline' : 'secondary'}>{executionStatus(record.status, i18n.locale)}</Badge><span>{time(record.queuedAt)}</span><span>{i18n.t('{0} 次尝试', [record.attemptCount])}</span></div>
     {record.recordingIssue ? <Alert><AlertDescription>{i18n.t('部分执行记录未能持久保存，以下记录可能不完整。')}</AlertDescription></Alert> : null}
     {record.status === 'interrupted' ? <Alert><AlertDescription>{i18n.t('进程中断前未记录最终结果，不能据此判断操作是否完成。')}</AlertDescription></Alert> : null}
     <details className="text-sm"><summary className="cursor-pointer text-muted-foreground">{i18n.t('运行信息')}</summary><dl className="console-cron-metadata mt-3">
@@ -188,6 +184,6 @@ export function ScheduleExecutions({ jobId, label, connectionScope }: { jobId?: 
     </button></li>)}</ul> : null}
     {page?.nextCursor ? <Button variant="outline" size="sm" disabled={loading} onClick={() => { void load(page.nextCursor ?? undefined) }}>{i18n.t(loading ? '读取中…' : '加载更早记录')}</Button> : null}
     <Dialog open={Boolean(selected)} onOpenChange={open => { if (!open) setSelected(null) }}><DialogContent variant="drawer" className="schedule-execution-dialog"><DialogHeader className="border-b border-[color:var(--console-border-subtle)] pb-3"><DialogTitle>{selected?.label || label || i18n.t('定时任务')} · {i18n.t('执行记录')}</DialogTitle><DialogDescription className="sr-only">{i18n.t('查看单次运行的结果与各次尝试过程。')}</DialogDescription></DialogHeader>{selected ? <ExecutionDetail key={selected.runId} jobId={selected.jobId} runId={selected.runId} scope={connectionScope} /> : null}</DialogContent></Dialog>
-    <Dialog open={cleanupOpen} onOpenChange={setCleanupOpen}><DialogContent><DialogHeader><DialogTitle>{i18n.t('清理过期记录')}</DialogTitle><DialogDescription>{i18n.t('清理当前 Host 所有任务中超过一个自然月的非活动执行记录，正在运行的任务不受影响。')}</DialogDescription></DialogHeader>{cleanupResult ? <p role="alert">{cleanupResult}</p> : null}<DialogFooter><DialogClose asChild><Button variant="outline">{i18n.t(cleaning ? '关闭' : '取消')}</Button></DialogClose><Button variant="destructive" disabled={cleaning} onClick={() => { void cleanup() }}>{i18n.t(cleaning ? '清理中…' : '清理过期记录')}</Button></DialogFooter></DialogContent></Dialog>
+    <Dialog open={cleanupOpen} onOpenChange={setCleanupOpen}><DialogContent><DialogHeader><DialogTitle>{i18n.t('清理过期记录')}</DialogTitle><DialogDescription>{i18n.t('清理当前 Host 所有任务中超过一个自然月的非活动执行记录，正在运行的任务不受影响。')}</DialogDescription></DialogHeader>{cleanupResult ? <p role="alert">{cleanupResult}</p> : null}<DialogFooter><DialogClose asChild><Button variant="outline">{i18n.t(cleaning ? '关闭' : '取消')}</Button></DialogClose><Button variant="destructive-solid" disabled={cleaning} onClick={() => { void cleanup() }}>{i18n.t(cleaning ? '清理中…' : '清理过期记录')}</Button></DialogFooter></DialogContent></Dialog>
   </section>
 }

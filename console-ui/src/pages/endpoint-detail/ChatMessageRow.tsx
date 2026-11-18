@@ -1,7 +1,7 @@
 import { translate } from '../../i18n/locale.mjs'
 import { useI18n } from '../../i18n'
 import { AlertTriangle, Check, CircleHelp, Copy, Forward, Loader2, Quote, Undo2, X } from 'lucide-react'
-import { cn } from '@zhin.js/client'
+import { cn } from '@zhin.js/console-ui'
 import type { ChatRow } from './types'
 import { RenderingDiagnostics } from './RenderingDiagnostics'
 import { MessageBody, messageContentSummary } from './MessageBody'

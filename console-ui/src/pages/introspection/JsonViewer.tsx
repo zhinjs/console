@@ -1,6 +1,6 @@
 import { useI18n } from '../../i18n'
 import { useState } from 'react'
-import { Button } from '../../components/ui/button'
+import { Button } from '@zhin.js/console-ui'
 import { highlightCode } from '../files/highlight-code.mjs'
 import '../files/code-highlight.css'
 import './json-viewer.css'

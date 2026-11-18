@@ -32,14 +32,7 @@ import {
   SquareArrowOutUpRight,
 } from 'lucide-react'
 import { agentSessionsPath, buildSessionKey } from '../../utils/agent-session'
-import { cn } from '@zhin.js/client'
-import { useConfirm } from '../../components/confirm-dialog'
-import { Button } from '../../components/ui/button'
-import { Input } from '../../components/ui/input'
-import { Textarea } from '../../components/ui/textarea'
-import { Badge } from '../../components/ui/badge'
-import { Alert, AlertDescription } from '../../components/ui/alert'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs'
+import { Alert, AlertDescription, Badge, Button, cn, Input, Tabs, TabsContent, TabsList, TabsTrigger, Textarea, useConfirm } from '@zhin.js/console-ui'
 import { ConversationSidebar } from './ConversationSidebar'
 import { GroupMembersDrawer } from './GroupMembersDrawer'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
@@ -65,6 +58,7 @@ import { textReferenceSendOptions } from './message-reference-model.mjs'
 import { ChatScrollArea } from './ChatScrollArea'
 import { MessageDiagnosticsAction, MessageDiagnosticsProvider } from './MessageDiagnostics'
 import { canShowReadEmpty } from './endpoint-request.mjs'
+import { NoticeReadAction, PendingRequestActions } from './side-event-actions'
 import { useEndpointConsole, type EndpointWorkspaceTarget } from './useEndpointConsole'
 import {
   hasRenderableComposerSegments,
@@ -183,7 +177,7 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
     endpointId,
     info,
     loadErr,
-    actionError,
+    reloadInfo,
     msgContent,
     setMsgContent,
     sending,
@@ -240,9 +234,10 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
     restoreLocal,
     hasTextDrafts,
     draftStoreKey,
-    approve,
-    dismissRequest,
-    dismissNotice,
+    forgetRequest,
+    forgetNotice,
+    reloadPendingRequests,
+    reloadUnreadNotices,
     loadMembers,
     groupAction,
     loadLists,
@@ -610,8 +605,8 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
               {!readOnly && roleKind !== 'owner' && <div className="im-member-actions">
                 <Button
                   size="sm"
-                  variant="outline"
-                  className="im-member-danger text-destructive hover:text-destructive"
+                  variant="destructive-outline"
+                  className="im-member-danger"
                   onClick={() =>
                     void handleGroupAction(ENDPOINT_RPC.GROUP_KICK, uid, item.name)
                   }
@@ -654,6 +649,7 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
       {mode === 'account' ? (
         <ConversationSidebar
           loadErr={loadErr}
+          onRetryInfo={() => void reloadInfo()}
           listLoading={listLoading}
           listNotice={listNotice}
           listSearch={listSearch}
@@ -743,9 +739,9 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
                   ) : null}
                   {!readOnly && selection.channelType === 'private' && (
                     <Button
-                      variant="ghost"
+                      variant="destructive"
                       size="icon"
-                      className="im-header-icon-button h-8 w-8 text-destructive hover:text-destructive"
+                      className="im-header-icon-button is-destructive h-8 w-8"
                       title={i18n.t("删除好友")}
                       aria-label={i18n.t("删除好友")}
                       onClick={() => void handleDeleteFriend()}
@@ -996,7 +992,6 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
                   <TabsTrigger value="history">{i18n.t("历史")}</TabsTrigger>
                 </TabsList>
                 <TabsContent value="pending" className="im-system-content flex-1 overflow-y-auto p-4 space-y-3 mt-0">
-                  {actionError ? <Alert variant="destructive"><AlertDescription>{i18n.t("操作失败：")}{actionError}</AlertDescription></Alert> : null}
                   {requestsLoading ? <StatusState kind="loading" compact title={i18n.t("正在读取待处理请求…")} /> : null}
                   {requestsError ? <Alert variant="destructive"><AlertDescription>{i18n.t("请求读取失败：")}{requestsError}</AlertDescription></Alert> : null}
                   {requestList.length === 0 && canShowReadEmpty(requestsLoading, requestsError) && (
@@ -1015,18 +1010,7 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
                         </span>
                       </div>
                       {r.comment && <p className="text-sm">{r.comment}</p>}
-                      {!readOnly && <div className="flex flex-wrap gap-2">
-                        {r.canAct === true && (
-                          <>
-                            <Button size="sm" onClick={() => void approve(r.platformRequestId, true)}>
-                              {i18n.t("同意")}</Button>
-                            <Button size="sm" variant="outline" onClick={() => void approve(r.platformRequestId, false)}>
-                              {i18n.t("拒绝")}</Button>
-                          </>
-                        )}
-                        <Button size="sm" variant="ghost" disabled={r.id === undefined} onClick={() => { if (r.id !== undefined) void dismissRequest(r.id) }}>
-                          {i18n.t("标记已处理")}</Button>
-                      </div>}
+                      {!readOnly && <PendingRequestActions adapter={adapter} endpointKey={endpointId} request={r} reload={reloadPendingRequests} onDone={forgetRequest} />}
                     </div>
                   ))}
                 </TabsContent>
@@ -1105,7 +1089,6 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
                   <TabsTrigger value="history">{i18n.t("历史")}</TabsTrigger>
                 </TabsList>
                 <TabsContent value="unread" className="im-system-content flex-1 overflow-y-auto p-4 space-y-3 mt-0">
-                  {actionError ? <Alert variant="destructive"><AlertDescription>{i18n.t("操作失败：")}{actionError}</AlertDescription></Alert> : null}
                   {noticesLoading ? <StatusState kind="loading" compact title={i18n.t("正在读取通知…")} /> : null}
                   {noticesError ? <Alert variant="destructive"><AlertDescription>{i18n.t("通知读取失败：")}{noticesError}</AlertDescription></Alert> : null}
                   {noticeList.length === 0 && canShowReadEmpty(noticesLoading, noticesError) && (
@@ -1128,10 +1111,7 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
                           {new Date(n.timestamp).toLocaleString(i18n.locale)}
                         </p>
                       </div>
-                      {!readOnly && (
-                        <Button size="sm" variant="outline" onClick={() => void dismissNotice(n.id)}>
-                          {i18n.t("已读")}</Button>
-                      )}
+                      {!readOnly && <NoticeReadAction adapter={adapter} endpointKey={endpointId} id={n.id} reload={reloadUnreadNotices} onDone={forgetNotice} />}
                     </div>
                   ))}
                 </TabsContent>

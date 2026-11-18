@@ -2,23 +2,16 @@
  * Login Assist v2 (zhinjs/zhin ADR 0058) in the Console: one login flow per account, a timeline of
  * steps, and the open challenge rendered purely from its descriptor.
  *
- * The published `@zhin.js/console-protocol` (~1.2) predates these wire types, so this module reads
- * the Host's replies defensively (`readLoginFlow`) and mirrors the protocol shapes in
+ * RPC and event names come from `@zhin.js/console-protocol`. Replies are read defensively
+ * (`readLoginFlow`: unknown values dropped, older Hosts tolerated) into the normalized shapes of
  * `login-flow-model.d.mts`. Everything here is pure: the card (`login-flow-card.tsx`) and the hook
  * (`use-login-flow.ts`) hold the state. Authored copy is Chinese and shown through `i18n.t`.
  */
+import { CONSOLE_LOGIN_UNSUPPORTED, LOGIN_RPC, SIDE_EVENT_PUSH } from '@zhin.js/console-protocol'
 import { parseLoginTicket, isValidCaptchaHelperUrl } from './login-assist-helpers.mjs'
 
-export const LOGIN_FLOW_EVENT = 'endpoint.login.flow'
-export const LOGIN_RPC = Object.freeze({
-  LIST: 'login.list',
-  SUBMIT: 'login.submit',
-  CANCEL: 'login.cancel',
-  FLOW_LIST: 'login.flow.list',
-  FLOW_GET: 'login.flow.get',
-  RELOGIN: 'login.relogin',
-  REFRESH: 'login.refresh',
-})
+export const LOGIN_FLOW_EVENT = SIDE_EVENT_PUSH.LOGIN_FLOW
+export { LOGIN_RPC }
 /** Fallback re-read while the page is visible (events normally arrive first). */
 export const LOGIN_FLOW_POLL_MS = 30_000
 /** Bursts of flow events (verifying → outcome → next challenge) become one live read. */
@@ -26,7 +19,7 @@ export const LOGIN_FLOW_DEBOUNCE_MS = 350
 /** The Host waits up to 15 s for a login result (`wait: true`); the request may take longer. */
 export const LOGIN_SUBMIT_TIMEOUT_MS = 25_000
 /** Host error code of `login.relogin` / `login.refresh` when the Adapter offers no such action. */
-export const LOGIN_UNSUPPORTED_CODE = 'unsupported'
+export const LOGIN_UNSUPPORTED_CODE = CONSOLE_LOGIN_UNSUPPORTED
 
 const CHALLENGE_KINDS = ['qrcode', 'link_verify', 'slider', 'sms', 'device', 'auth', 'confirm', 'other']
 const FLOW_STATES = ['active', 'online', 'failed', 'cancelled', 'expired']

@@ -76,7 +76,7 @@ let sentCount = 0
 const CHAT_NOW = Date.now()
 // Message events in the bounded Console journal (首页消息量与最近消息).
 const now = Date.now()
-const conversation = (kind, id) => ({ endpoint: { adapter: 'icqq', id: 'preview-community' }, kind, id })
+const conversation = (kind, id) => ({ endpoint: { adapter: 'icqq', id: 'preview-community' }, kind, id, ...(kind === 'group' ? { name: '发布协调群' } : {}) })
 const messageEvent = (eventId, minutesAgo, direction, kind, id, text, sender) => ({ runtimeId: 'ui-preview', eventId, type: 'message.receive', timestamp: now - minutesAgo * 60_000,
   data: { direction, timestamp: now - minutesAgo * 60_000, endpointKey: 'preview-community', adapter: 'icqq', conversation: conversation(kind, id), channelType: kind, channelId: id,
     content: [{ type: 'text', data: { text } }], ...(sender ? { sender } : {}) } })
@@ -92,8 +92,12 @@ const messageEvents = [
 // plugin.root.* fixtures (决策回放、Token 用量、群聊插话、技能助手、工具审批).
 const decisionRow = (minutesAgo, extra) => ({ id: `d-${minutesAgo}`, ts: now - minutesAgo * 60_000, turn_id: `turn-${minutesAgo}`, instance_id: 'preview-community', platform: 'icqq',
   scene_id: 'group:20001', user_id: '10001', kind: 'speak_gate', outcome: 'allow', reason_code: 'addressed', reason_detail: null, payload: {}, actor: 'policy', actor_id: null, ...extra })
-const decisions = [decisionRow(11, {}), decisionRow(42, { outcome: 'deny', reason_code: 'cannot_speak_muted' }), decisionRow(180, { scene_id: 'private:10001' })]
 const HOUR = 3_600_000
+const decisions = [decisionRow(11, {}), decisionRow(42, { outcome: 'deny', reason_code: 'cannot_speak_muted' }),
+  decisionRow(55, { kind: 'ambient_decision', outcome: 'skip', reason_code: 'ambient_not_engaged', reason_detail: 'shadow', actor: 'agent', payload: {
+    decision: 'shadow', confidence: 0.82, judge: 'Night Router/gemini-3.8-flash', judgeKind: 'language', judgeProfile: 'night:gemini-3.8-flash', judgeModel: 'gemini-3.8-flash',
+    judgeFallbackFrom: 'DeepSeek/deepseek-v4-flash', judgeMs: 710, judgeUsage: { inputTokens: 412, outputTokens: 19 }, compare: 'quiet', compareJudge: 'OpenAI/gpt-5.5-mini' } }),
+  decisionRow(180, { scene_id: 'private:10001' })]
 const usageStats = (session) => {
   const sessions = [
     { sessionKey: 'icqq:preview-community:group:20001', turns: 6, calls: 9, inputTokens: 18_400, outputTokens: 2_100, cacheReadTokens: 9_800 },
@@ -108,16 +112,67 @@ const usageStats = (session) => {
     series: Array.from({ length: 7 }, (_, index) => ({ bucketStart: start + index * 24 * HOUR, calls: index > 3 ? 4 : 0, inputTokens: index > 3 ? Math.round(sum('inputTokens') / 3) : 0, outputTokens: index > 3 ? 900 : 0, cacheReadTokens: index > 3 ? Math.round(sum('cacheReadTokens') / 3) : 0, byModel: index > 3 ? { 'preview/chat-small': Math.round(sum('inputTokens') / 3) } : {} })),
     segments: { history: 12_000, fixed: 6_000, user: 4_600 }, filesRead: 1, malformedLines: 0 }
 }
+// ADR 0066 / #1250 batch 47: the merged interjection judge (UI_PREVIEW_AMBIENT=legacy answers like an older instance).
+const legacyAmbient = process.env.UI_PREVIEW_AMBIENT === 'legacy'
+// UI_PREVIEW_AMBIENT=unknown: the judge route answers 503 and the status RPC fails (a busy instance):
+// the Console must neither assume an older instance nor write the judge mode.
+const unknownAmbient = process.env.UI_PREVIEW_AMBIENT === 'unknown'
+const DAY = 24 * HOUR
+const judgeDay = (daysAgo, calls, extra = {}) => ({ day: new Date(now - daysAgo * DAY).toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }), calls, failed: 0, fallbacks: 0,
+  byKind: { language: Math.round(calls / 3), decision: calls - Math.round(calls / 3) }, averageMs: 640, inputTokens: calls * 410, outputTokens: calls * 18, cacheReadTokens: calls * 120, cacheWriteTokens: 0, unreportedCalls: 0, ...extra })
 const ambientStatus = { enabled: true, mode: 'shadow', groups: 1, judges: ['preview/chat-small'], last24h: { spoke: 0, watched: 3, stayed_quiet: 5, skipped: 1 }, decisionShadow: { agreed: 3, disagreed: 0 },
-  recent: [{ at: now - 42 * 60_000, group: 'icqq:20001', outcome: 'watched', confidence: 0.7, judge: 'decision' }, { at: now - 90 * 60_000, group: 'icqq:20001', outcome: 'stayed_quiet' }], updatedAt: now - 42 * 60_000 }
+  recent: [{ at: now - 42 * 60_000, group: 'icqq:20001', outcome: 'watched', confidence: 0.7, judge: 'decision' }, { at: now - 90 * 60_000, group: 'icqq:20001', outcome: 'stayed_quiet' }], updatedAt: now - 42 * 60_000,
+  ...(legacyAmbient ? {} : {
+    judges: ['DeepSeek/deepseek-v4-flash', 'Night Router/gemini-3.8-flash'],
+    judgeChain: [
+      { profile: 'deepseek:deepseek-v4-flash', label: 'DeepSeek/deepseek-v4-flash', kind: 'decision', role: 'primary', skippedUntil: now + 40 * 60_000, skipReason: 'quota_exhausted' },
+      { profile: 'night:gemini-3.8-flash', label: 'Night Router/gemini-3.8-flash', kind: 'language', role: 'fallback' },
+      { profile: 'openai:gpt-5.5-mini', label: 'OpenAI/gpt-5.5-mini', kind: 'language', role: 'compare' },
+    ],
+    minConfidence: 0.75,
+    compare: { windowMs: DAY, agreed: 17, primaryOnly: 2, comparedOnly: 1, failed: 1, comparedProfiles: ['openai:gpt-5.5-mini'],
+      byMember: [{ member: 0, profile: 'deepseek:deepseek-v4-flash', agreed: 12, primaryOnly: 2, comparedOnly: 0, failed: 1 }, { member: 1, profile: 'night:gemini-3.8-flash', agreed: 5, primaryOnly: 0, comparedOnly: 1, failed: 0 }] },
+    judgeTimeZone: 'Asia/Shanghai',
+    judgeDaily: [judgeDay(6, 12), judgeDay(4, 31, { failed: 2, fallbacks: 3 }), judgeDay(3, 18), judgeDay(1, 26, { fallbacks: 1, unreportedCalls: 2 }), judgeDay(0, 9, { failed: 1, fallbacks: 4 })],
+  }) }
+// `GET /agent/inference/ambient-judge`: migrated, not yet noticed (the Console banner shows once).
+let ambientJudgeNoticedAt
+const ambientJudgePolicy = { profile: 'deepseek:deepseek-v4-flash', fallbacks: ['night:gemini-3.8-flash'], compare: 'openai:gpt-5.5-mini', minConfidence: 0.75, mode: 'shadow', timeoutMs: 3000 }
+const ambientJudge = () => ({ policy: ambientJudgePolicy, source: 'stored',
+  chain: [{ profile: 'deepseek:deepseek-v4-flash', kind: 'decision' }, { profile: 'night:gemini-3.8-flash', kind: 'language' }],
+  migration: { id: 'adr-0066-ambient-judge', status: 'migrated', at: now - 3 * HOUR, graphRevision: 2, after: ambientJudgePolicy,
+    rows: [
+      { field: 'profile', value: 'deepseek:deepseek-v4-flash', from: 'purposes.decisions.ambient.profile' },
+      { field: 'fallbacks', value: ['night:gemini-3.8-flash'], from: 'purposes.ambient (language) + purposes.ambient.fallbacks' },
+      { field: 'minConfidence', value: 0.75, from: 'max(ai.trigger.ambient.minConfidence, purposes.decisions.ambient.minConfidence)' },
+      { field: 'mode', value: 'shadow', from: 'ai.trigger.ambient.mode' },
+    ],
+    notes: [{ code: 'language-judge-became-fallback', value: 'night:gemini-3.8-flash' }, { code: 'threshold-max', value: 0.75 }],
+    ...(ambientJudgeNoticedAt ? { noticedAt: ambientJudgeNoticedAt } : {}) } })
 const configSource = 'ai:\n  trigger:\n    ambient:\n      mode: shadow\n      conversations:\n        - icqq:30002\n      maxPerHour: 4\n'
+// rss: a plugin form with grouped fields, millisecond fields (shown in seconds) and a list.
+const rssConfigSource = 'rss:\n  interval: 30\n  fetchTimeoutMs: 15000\n  retryDelayMs: 2500\n  maxItems: 10\n  proxy: ${RSS_PROXY}\n'
+const rssSchema = { type: 'object', object: {
+  interval: { type: 'integer', title: '检查间隔（分钟）', description: '多久检查一次订阅源。', default: 30, min: 1, 'x-group': '抓取' },
+  fetchTimeoutMs: { type: 'integer', title: '请求超时', description: '单个订阅源的请求超时。', default: 15000, min: 1000, 'x-group': '抓取' },
+  retryDelayMs: { type: 'integer', title: '重试间隔', default: 2000, min: 0, 'x-group': '抓取' },
+  proxy: { type: 'string', title: '代理地址', description: '访问订阅源使用的 HTTP 代理。', 'x-group': '抓取' },
+  maxItems: { type: 'integer', title: '每次最多推送', default: 10, min: 1, max: 50, 'x-group': '推送' },
+  template: { type: 'string', title: '推送模板', component: 'textarea', description: '可用 {title}、{link}。', 'x-group': '推送' },
+  mention: { type: 'boolean', title: '推送时 @全体成员', default: false, 'x-group': '推送' },
+  feeds: { type: 'list', title: '订阅源', inner: { type: 'object', object: { url: { type: 'string', title: '地址', required: true }, name: { type: 'string', title: '名称' } } } },
+} }
 const target = { endpoint: { adapter: 'icqq', id: 'preview-community' }, kind: 'group', id: '20001' }
 const taskProviders = { generation: 1, providers: [{ owner: 'root/reminder', packageName: '@zhin.js/plugin-reminder', title: '群提醒', description: '按时间在会话里发一条提醒。', schema: { type: 'object', properties: { text: { type: 'string', title: '提醒内容' }, at: { type: 'string', title: '时间' } }, required: ['text'] },
   effects: ['到点后在目标会话发送一条消息'], revision: 'r1', receipts: [], tasks: [
     { id: 'task-1', ownership: 'administrator', title: '周会提醒', target, state: 'scheduled', createdAt: now - 86_400_000, nextRunAt: now + 5 * HOUR, timezone: 'Asia/Shanghai', parameters: { text: '10 点周会' }, actions: ['pause', 'cancel', 'update'] },
     { id: 'task-2', ownership: 'administrator', title: '发布检查', target: { ...target, kind: 'private', id: '10001' }, state: 'failed', createdAt: now - 2 * 86_400_000, lastRunAt: now - 3 * HOUR, detail: '目标会话不可达', parameters: { text: '检查发布' }, actions: ['cancel'] },
   ] }] }
-const scheduleList = { memory: [{ type: 'memory', id: 'heartbeat', description: '心跳检测', expression: '0 */5 * * * *', running: true, nextExecution: now + 4 * 60_000, plugin: 'heartbeat' }],
+const scheduleList = { memory: [{ type: 'memory', id: 'heartbeat', kind: 'user-task', description: '心跳检测', expression: '0 */5 * * * *', running: true, nextExecution: now + 4 * 60_000, plugin: 'heartbeat' },
+    // A plugin's own housekeeping (zhinjs/zhin#1250): kind, localized title, last run.
+    { type: 'memory', id: 'rss/poll_feeds', kind: 'plugin-internal', title: '轮询 RSS 订阅', titleI18n: { en: 'Poll RSS feeds' }, displayName: '轮询 RSS 订阅', description: 'Poll RSS subscriptions', expression: '*/20 * * * * *', running: true, nextExecution: now + 12_000, plugin: 'root/rss', lastExecutedAt: now - 8_000, lastStatus: 'succeeded' },
+    { type: 'memory', id: 'blackjack/cleanup', kind: 'plugin-internal', title: '清理超时的 21 点牌局', displayName: '清理超时的 21 点牌局', description: 'Abort stale blackjack sessions', expression: '*/10 * * * * *', running: true, nextExecution: now + 6_000, plugin: 'root/blackjack', lastExecutedAt: now - 4_000, lastStatus: 'succeeded' },
+    { type: 'memory', id: 'bilibili/poll', kind: 'plugin-internal', title: 'B 站动态轮询', displayName: 'B 站动态轮询', expression: '*/30 * * * * *', running: true, nextExecution: now + 20_000, plugin: 'root/bilibili', lastExecutedAt: now - 10_000, lastStatus: 'failed', lastError: 'HTTP 412 风控' }],
   persistent: [{ type: 'persistent', id: 'job-daily', cronExpression: '0 0 9 * * *', prompt: '总结昨天的群聊要点', label: '每日群聊摘要', enabled: true, nextExecution: now + 14 * HOUR, lastStatus: 'ok', lastExecutedAt: now - 10 * HOUR }],
   capabilities: { persistent: true } }
 const assistantJobs = { eventsActive: true, jobs: [{ id: 'job-daily', label: '每日群聊摘要', enabled: true, state: { lastStatus: 'ok', nextRunAtMs: now + 14 * HOUR } }, { id: 'job-watch', label: '错误巡检', enabled: true, state: { lastStatus: 'error', lastError: 'timeout', nextRunAtMs: now + HOUR } }] }
@@ -145,11 +200,28 @@ const conversations = [
   { key: 'icqq/preview-community/group:a%2Fb', name: '带斜杠的群 a/b', hasOverrides: true, overrides: [{ plugin: 'repeater', enabled: false, fields: [] }] },
 ]
 const chatRoles = [
-  { level: 'global', key: '', adapter: 'icqq', userId: '10000', role: 'owner', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 30 * 86_400_000 },
+  { level: 'global', key: '', adapter: 'icqq', userId: '10000', role: 'owner', source: 'grant', grantedBy: 'console:user:u-owner', grantedByName: '部署者小王', grantedAt: Date.now() - 30 * 86_400_000 },
   { level: 'adapter', key: 'icqq', adapter: 'icqq', userId: '10002', role: 'admin', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 86_400_000 },
   { level: 'adapter', key: 'icqq', adapter: 'icqq', userId: '10006', role: 'owner', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 2 * 86_400_000 },
   { level: 'endpoint', key: 'icqq/preview-community', adapter: 'icqq', userId: '10003', role: 'trusted', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 7_200_000 },
   { level: 'conversation', key: 'icqq/preview-community/group:20001', adapter: 'icqq', userId: '10004', role: 'admin', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 3_600_000 },
+]
+// People behind chat identities (ADR 0060 §7): chat-principals.list, chat-identities.recent|me|bind-code.create.
+const chatPeople = [
+  { id: 'cp_wangowner7k2m4q3x5z6a7b8c9d', displayName: '小王（部署者）', createdAt: Date.now() - 30 * 86_400_000,
+    identities: [{ adapter: 'icqq', userId: '10000', linkMethod: 'code', lastSeenAt: Date.now() - 3 * MINUTE, lastDisplayName: '群主小王' },
+      { adapter: 'telegram', userId: '5551234', linkMethod: 'manual', lastSeenAt: Date.now() - 26 * 60 * MINUTE, lastDisplayName: 'wang' }],
+    roles: [chatRoles[0]], consoleLink: { consoleUserId: 'u-owner', consoleDisplayName: '部署者小王', linkedVia: 'code', linkedAt: Date.now() - 29 * 86_400_000 }, unverified: true },
+  { id: 'cp_demo2colleague3x5z6a7b8c9d', identities: [{ adapter: 'icqq', userId: '10002', linkMethod: 'implicit', lastSeenAt: Date.now() - 4 * MINUTE, lastDisplayName: '测试同学' }],
+    roles: [chatRoles[1]] },
+  { id: 'cp_trusted4helper5z6a7b8c9d2e', displayName: '运维值班', identities: [{ adapter: 'icqq', userId: '10003', linkMethod: 'implicit', lastSeenAt: Date.now() - 50 * MINUTE }],
+    roles: [chatRoles[3]] },
+]
+const recentSpeakers = [
+  { adapter: 'icqq', userId: '10001', lastSeenAt: Date.now() - 2 * MINUTE, lastDisplayName: '演示同事', principalId: 'implicit:icqq:10001' },
+  { adapter: 'icqq', userId: '10002', lastSeenAt: Date.now() - 4 * MINUTE, lastDisplayName: '测试同学', principalId: 'cp_demo2colleague3x5z6a7b8c9d' },
+  { adapter: 'icqq', userId: '10005', lastSeenAt: Date.now() - 14 * MINUTE, lastDisplayName: '新同学', principalId: 'implicit:icqq:10005' },
+  { adapter: 'telegram', userId: '777', lastSeenAt: Date.now() - 26 * 60 * MINUTE, lastDisplayName: 'support-user', principalId: 'implicit:telegram:777' },
 ]
 const chain = key => {
   const parts = key ? key.split('/') : []
@@ -284,7 +356,15 @@ const attentionItems = en => [
 ]
 const adapterStatus = { adapterKey: 'icqq', displayName: 'ICQQ', page: '/icqq', docsUrl: 'https://example.invalid/docs/icqq', canAdd: true, canRemove: true, configStore: true,
   fields: [{ key: 'uin', type: 'string', required: true, env: false, secret: false, label: 'QQ 号' }, { key: 'password', type: 'string', required: false, env: true, secret: true, label: '密码' }],
-  running: [{ id: 'preview-community', mode: 'qrcode' }], configured: [{ id: 'preview-community', values: { uin: '10000' } }, { id: 'preview-archive', values: { uin: '10009' } }], actions: [] }
+  running: [{ id: 'preview-community', mode: 'qrcode' }], configured: [{ id: 'preview-community', instanceId: 'preview-i1', values: { uin: '10000' } }, { id: 'preview-archive', instanceId: 'preview-i2', values: { uin: '10009' } }], actions: [],
+  // Managed account directory (headless rows, zhinjs/zhin#1250): one running account, one stopped.
+  // UI_PREVIEW_ADAPTER=migration: the accounts still come from the configuration file (首次迁移).
+  runtime: { adapterId: 'adapter:icqq', generation: 1, revision: process.env.UI_PREVIEW_ADAPTER === 'migration' ? null : 3, needsMigration: process.env.UI_PREVIEW_ADAPTER === 'migration',
+    canManage: true, canMigrate: process.env.UI_PREVIEW_ADAPTER === 'migration', canUpdate: true, canReplace: true, mutableFields: ['password'], identityFields: ['id', 'uin'],
+    endpoints: [
+      { instanceId: 'preview-i1', canonicalId: 'adapter:icqq~preview-i1', endpointId: 'preview-community', revision: 2, desiredEnabled: true, epoch: 1, started: true, admitted: true },
+      { instanceId: 'preview-i2', canonicalId: 'adapter:icqq~preview-i2', endpointId: 'preview-archive', revision: 1, desiredEnabled: false, epoch: 1, started: false, admitted: false },
+    ] } }
 
 // ---- Gateway-owned fixtures (ADR 0049 / 0054): sign-in, access control, instance, terminal. ----
 // UI_PREVIEW_INSTANCE=offline: the instance is down; gateway routes keep answering, every
@@ -336,7 +416,12 @@ const instanceLogs = () => ({ lines: [
   { seq: 1, time: Date.now() - 60_000, stream: 'stdout', line: '[gateway] 实例已启动 (pid 4242)' },
   { seq: 2, time: Date.now() - 50_000, stream: 'stdout', line: '[icqq] preview-community 已上线' },
   { seq: 3, time: Date.now() - 30_000, stream: 'stderr', line: '[telegram] preview-support 连接失败：缺少 TELEGRAM_TOKEN' },
-  ...(instanceOffline ? [{ seq: 4, time: Date.now() - 90_000, stream: 'stderr', line: "Error: Cannot find module 'icqq'" }] : []),
+  // The logger's own colours and clock time, as a real instance prints them (zhinjs/zhin#1250).
+  { seq: 4, time: Date.now() - 20_000, stream: 'stdout', line: '\u001b[90m[13:33:58.147]\u001b[39m \u001b[34m[INFO]\u001b[39m \u001b[90m[root/rss]\u001b[39m 轮询 3 个订阅源，\u001b[1m2\u001b[22m 条新内容' },
+  { seq: 5, time: Date.now() - 15_000, stream: 'stdout', line: '\u001b[90m[13:34:02.611]\u001b[39m \u001b[33m[WARN]\u001b[39m \u001b[90m[icqq]\u001b[39m preview-community 心跳延迟 \u001b[33m1.8s\u001b[39m' },
+  { seq: 6, time: Date.now() - 10_000, stream: 'stderr', line: '\u001b[90m[13:34:05.002]\u001b[39m \u001b[31m[ERROR]\u001b[39m \u001b[90m[root/code-runner]\u001b[39m API 请求失败: \u001b[31m404 Not Found\u001b[39m' },
+  { seq: 7, time: Date.now() - 5_000, stream: 'stdout', line: '[90m[13:34:09.420][39m[32m[INFO][39m[90m[gateway][39m 已写入 .zhin/gateway.sock（转义字节被管道去掉的形式）' },
+  ...(instanceOffline ? [{ seq: 8, time: Date.now() - 90_000, stream: 'stderr', line: "Error: Cannot find module 'icqq'" }] : []),
 ] })
 const meReport = () => setupMode
   ? { kind: 'bootstrap', open: false, permissions: [], bindings: [], setupRequired: true }
@@ -348,7 +433,8 @@ const meReport = () => setupMode
     permissions: ALL_PERMISSIONS.filter(item => item !== 'iam.manage' && item !== 'ops.env.write'),
     bindings: [{ role: 'adapter-admin', scope: { kind: 'adapter', key: 'icqq' }, permissions: ['iam.manage', 'feature.view', 'feature.configure', 'feature.toggle'] }], setupRequired: false,
     onboarding: { version: 1, steps: { database: 'done', owner: 'done', ai: 'skipped', adapters: 'done' } } }
-  : { kind: 'user', user: { id: 'u-owner', username: 'owner', displayName: '演示所有者' }, permissions: ALL_PERMISSIONS,
+  // The owner also holds the plugin permissions of the root plugin's status pages (群聊插话 / 决策回放).
+  : { kind: 'user', user: { id: 'u-owner', username: 'owner', displayName: '演示所有者' }, permissions: [...ALL_PERMISSIONS, 'ambient:read', 'decisions:read'],
     bindings: [{ role: 'owner', scope: { kind: 'global' }, permissions: ALL_PERMISSIONS }], setupRequired: false,
     onboarding: { version: 1, steps: { database: 'done', owner: 'done', ai: 'skipped', adapters: 'pending' } } }
 /** Answers gateway-owned requests; returns false for everything the gateway forwards to the instance. */
@@ -397,6 +483,80 @@ async function gatewayOwned(url, request, json, readBody) {
   return false
 }
 
+// ---- Plugin pages (UI_PREVIEW_PLUGIN_PAGES=1): tabs of their plugin detail page (ADR 0063 决策 3) ----
+const pluginPagesMode = process.env.UI_PREVIEW_PLUGIN_PAGES === '1'
+const PREVIEW_PLUGIN_PAGES = [
+  { id: 'rss', owner: 'rss', route: '/rss', title: 'RSS 订阅', en: 'RSS feeds', icon: 'Rss', order: 20, chrome: true },
+  { id: 'calendar', owner: 'calendar', route: '/calendar', title: '日历', en: 'Calendar', icon: 'Calendar', order: 21 },
+  { id: 'lottery', owner: 'lottery', route: '/lottery', title: '彩票', en: 'Lottery', icon: 'Ticket', order: 22, keywords: { 'zh-CN': ['抽奖'], en: ['raffle'] } },
+  { id: 'qrcode', owner: 'qrcode', route: '/qrcode', title: '二维码', en: 'QR codes', icon: 'QrCode', order: 23 },
+  { id: 'short-url', owner: 'short-url', route: '/short-url', title: '短链', en: 'Short links', icon: 'Link', order: 24 },
+  // Adapter pages: the same connection management 会话 → 账号与会话 embeds.
+  { id: 'adapter-icqq', owner: 'adapter-icqq', route: '/icqq', title: 'ICQQ', en: 'ICQQ', icon: 'MessageCircle', order: 64, adapter: 'icqq' },
+  { id: 'adapter-github', owner: 'adapter-github', route: '/github', title: 'GitHub', en: 'GitHub', icon: 'Github', order: 63, adapter: 'github' },
+]
+function pluginPageModule(page) {
+  const meta = JSON.stringify({ title: page.title, titleI18n: { en: page.en }, icon: page.icon, order: page.order })
+  return page.adapter
+    ? `export const meta = ${meta};\nexport default { kind: 'zhin.console.adapter-page', adapterKey: ${JSON.stringify(page.adapter)} };\n`
+    : page.chrome ? chromePluginPageModule(meta, page)
+    : `export const meta = ${meta};\nexport default function PreviewPluginPage() { return ${JSON.stringify(`${page.title}（本地预览插件页）`)} }\n`
+}
+// A hand-written page that hands its header action and refresh control to the plugin header through
+// usePageChrome, reading @zhin.js/console-ui and React from the Console's shared modules like the
+// pagemanager host proxy does (ADR 0063 决策 2、D3).
+function chromePluginPageModule(meta, page) {
+  return `export const meta = ${meta};
+const shared = globalThis.__ZHIN_CONSOLE_SHARED_MODULES__;
+const React = shared.get('react'), ui = shared.get('@zhin.js/console-ui');
+export default function PreviewPluginPage() {
+  const [updatedAt, setUpdatedAt] = React.useState(() => Date.now());
+  const refresh = React.useMemo(() => ({ updatedAt, onRefresh: () => new Promise(resolve => setTimeout(() => { setUpdatedAt(Date.now()); resolve(); }, 300)) }), [updatedAt]);
+  const actions = React.useMemo(() => React.createElement(ui.Button, { variant: 'destructive-outline', size: 'sm' }, '移除订阅'), []);
+  const hosted = ui.usePageChrome({ actions, refresh });
+  return React.createElement('p', null, ${JSON.stringify(`${page.title}（本地预览插件页）`)} + (hosted ? '' : ' (no shell)'));
+}
+`
+}
+
+// ---- AI 与模型 (/api/agent/inference): three services, ~35 models, Agent-bound profiles ----
+const INFERENCE_OWNER = 'host-owner:v1:ui-preview'
+const INFERENCE_ROOT = '/ui-preview/inference'
+const inferenceResource = (id, extra) => ({ id, rootId: INFERENCE_ROOT, ownerId: INFERENCE_OWNER, revision: 1, ...extra })
+const INFERENCE_SERVICES = [
+  ['night', 'Night Router', ['gemini-3.8-flash', 'gemini-3.8-pro', 'gemini-3.5-flash-lite', 'claude-sonnet-5', 'claude-haiku-5', 'gpt-5.5', 'gpt-5.5-mini', 'llama-5-70b', 'qwen-4-max', 'qwen-4-plus', 'kimi-k3', 'glm-5', 'mistral-large-3', 'grok-5']],
+  ['deepseek', 'DeepSeek', ['deepseek-v4', 'deepseek-v4-flash', 'deepseek-r3', 'deepseek-coder-3', 'deepseek-v4-lite', 'deepseek-vl-3']],
+  ['openai', 'OpenAI', ['gpt-5.5', 'gpt-5.5-mini', 'gpt-5.5-nano', 'o5', 'o5-mini', 'gpt-image-2', 'gpt-5.5-realtime', 'gpt-5-chat', 'o4-mini', 'gpt-4.2']],
+]
+function inferenceView() {
+  const services = {}, accounts = {}, profiles = {}, statuses = {}
+  for (const [id, label, models] of INFERENCE_SERVICES) {
+    services[id] = inferenceResource(id, { label, driver: { id: 'openai-compatible', owner: 'root', contractVersion: '1' }, options: {},
+      models: Object.fromEntries(models.map(model => [model, { id: model, protocol: 'chat', kinds: model.includes('image') ? ['image'] : ['language', 'decision'] }])) })
+    accounts[`${id}-main`] = inferenceResource(`${id}-main`, { serviceId: id, label: `${label} 主账号`, incarnation: 'i1', authentication: { method: 'api-key' } })
+    statuses[`${id}-main`] = { status: 'ready', revision: 1 }
+    for (const model of models) profiles[`${id}:${model}`] = inferenceResource(`${id}:${model}`, { accountId: `${id}-main`, model, parameters: {} })
+  }
+  profiles['agent:planner'] = inferenceResource('agent:planner', { accountId: 'deepseek-main', model: 'deepseek-v4-flash', label: '子 Agent · 小编 planner · DeepSeek Flash', parameters: {} })
+  profiles['agent:main'] = inferenceResource('agent:main', { accountId: 'night-main', model: 'gemini-3.8-flash', label: '主 Agent · Night Router · gemini-3.8-flash', parameters: {} })
+  return {
+    rootId: INFERENCE_ROOT, revision: 1, ownerId: INFERENCE_OWNER, hostAdministrator: true, services, accounts, profiles, statuses, deployment: [],
+    drivers: [{ id: 'openai-compatible', owner: 'root', contractVersion: '1', label: 'OpenAI 兼容', authentication: ['api-key'], modelContracts: [{ protocol: 'chat', kinds: ['language', 'decision', 'image'] }] }],
+    purposes: { defaults: { chat: 'night:gemini-3.8-flash', summary: 'deepseek:deepseek-v4-flash', image: 'openai:gpt-image-2', ...(legacyAmbient ? { ambient: 'night:gemini-3.8-flash' } : {}) },
+      ...(legacyAmbient ? {} : { ambient: ambientJudgePolicy }),
+      decisions: { skills: { mode: 'active', profile: 'deepseek:deepseek-v4-flash' }, tools: { mode: 'off', profile: 'deepseek:deepseek-v4' },
+        ...(legacyAmbient ? { ambient: { mode: 'active', profile: 'deepseek:deepseek-v4-flash' } } : {}) },
+      agents: { main: 'agent:main', planner: 'agent:planner' } },
+    modelAvailability: { notice: '本轮由备用模型回答', unavailable: [{ accountId: 'deepseek-main', model: 'deepseek-v4-flash', reason: 'quota_exhausted', since: now - 20 * 60_000, until: now + 40 * 60_000 }], recentFallbacks: [] },
+    ...(legacyAmbient ? {} : { purposeEffects: {
+      ambient: { status: 'effective', chain: [{ profile: 'deepseek:deepseek-v4-flash', kind: 'decision' }, { profile: 'night:gemini-3.8-flash', kind: 'language' }], compare: { profile: 'openai:gpt-5.5-mini', kind: 'language' } },
+      'decisions.skills': { status: 'effective' }, 'decisions.tools': { status: 'ignored', reason: 'mode-off' },
+    } }),
+  }
+}
+const inferenceTargets = { agentsAvailable: true, agents: [{ name: 'main', nickname: '主 Agent' }, { name: 'planner', nickname: '小编 planner' }],
+  adaptersAvailable: true, adapters: [{ capabilityId: 'adapter:icqq', platform: 'icqq' }], endpoints: [], scenesAvailable: false, scenes: [], sceneHasMore: false }
+
 const server = createServer(async (request, response) => {
   const origin = request.headers.origin
   if (origin && origins.has(origin)) {
@@ -414,6 +574,13 @@ const server = createServer(async (request, response) => {
   }
   // Stand-in captcha helper page (its own origin when opened as http://localhost:<port>).
   if (url.pathname === '/login-assist/tcaptcha.html') { response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }); response.end(captchaHelperPage()); return }
+  // Plugin page modules (UI_PREVIEW_PLUGIN_PAGES=1): imported without the Console token, like a Host's assets.
+  if (url.pathname.startsWith('/preview-pages/')) {
+    const page = PREVIEW_PLUGIN_PAGES.find(item => `/preview-pages/${item.id}.js` === url.pathname)
+    if (!page) { json({ success: false, error: 'Not found' }, 404); return }
+    response.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-store' })
+    response.end(pluginPageModule(page)); return
+  }
   // `/auth/me` is public on the gateway: an unknown credential reads as `anonymous`.
   if (url.pathname === '/api/auth/me' && request.headers.authorization !== 'Bearer ui-preview') {
     json(envelope({ kind: 'anonymous', permissions: [], bindings: [], setupRequired: setupMode })); return
@@ -447,7 +614,20 @@ const server = createServer(async (request, response) => {
     attachLoginEvents(response, request)
     request.on('close', () => clearInterval(heartbeat)); return
   }
-  if (url.pathname === '/entries') { json([]); return }
+  if (url.pathname === '/entries') {
+    json(pluginPagesMode ? { entries: PREVIEW_PLUGIN_PAGES.map(page => ({ id: page.id, owner: page.owner, route: page.route, resolvedModule: `/preview-pages/${page.id}.js`, ...(page.keywords ? { meta: { keywords: page.keywords } } : {}), ...(page.adapter ? { blueprint: { kind: 'zhin.console.adapter-page', adapterKey: page.adapter } } : {}) })) } : []); return
+  }
+  if (url.pathname.startsWith('/api/agent/inference')) {
+    const sub = url.pathname.slice('/api/agent/inference'.length)
+    if (sub === '/owners') { json(envelope([{ id: INFERENCE_OWNER, label: 'Host', kind: 'host' }])); return }
+    if (sub === '/targets') { json(envelope(inferenceTargets)); return }
+    if (sub === '') { json(envelope(inferenceView())); return }
+    if (sub.startsWith('/ambient-judge') && unknownAmbient) { json({ success: false, code: 'unavailable', error: 'The instance did not answer in time' }, 503); return }
+    if (sub === '/ambient-judge' && !legacyAmbient) { json(envelope(ambientJudge())); return }
+    if (sub === '/ambient-judge/migration/noticed' && request.method === 'POST' && !legacyAmbient) { ambientJudgeNoticedAt ??= Date.now(); json(envelope({ noticedAt: ambientJudgeNoticedAt })); return }
+    if (sub.startsWith('/ambient-judge')) { json({ success: false, code: 'not-found' }, 404); return }
+    json({ success: false, code: 'invalid_input', error: '本地预览不执行此操作。' }, 400); return
+  }
   if (url.pathname === '/api/system/status') {
     json(envelope({ uptime: 3812, platform: 'darwin', nodeVersion: 'v24.19.0', memory: { rss: 64_000_000, heapTotal: 32_000_000, heapUsed: 24_000_000, external: 0 }, cpu: { user: 0, system: 0 }, scope: 'full' })); return
   }
@@ -541,9 +721,10 @@ const server = createServer(async (request, response) => {
       if (attentionMode === 'legacy') { json({ success: false, error: 'Unknown RPC type: attention.list' }, 400); return }
       json(envelope({ items: attentionMode === 'empty' ? [] : attentionItems(body.data?.locale === 'en'), generatedAt: new Date().toISOString() })); return
     }
+    if (type === 'plugin.root.ambient' && unknownAmbient) { json({ success: false, error: 'RPC plugin.root.ambient timed out' }, 503); return }
     if (type.startsWith('plugin.root.') && Object.hasOwn(pluginRoot, type.slice('plugin.root.'.length))) { json(envelope(pluginRoot[type.slice('plugin.root.'.length)](body.data ?? {}))); return }
     if (type === 'schedule:list') { json(envelope(scheduleList)); return }
-    if (type === 'config:get-source') { json(envelope({ source: configSource, revision: 'preview-1' })); return }
+    if (type === 'config:get-source') { json(envelope({ source: configSource + rssConfigSource, revision: 'preview-1', configKeys: ['ai', 'rss'], configPaths: { ai: ['ai'], rss: ['rss'] } })); return }
     if (type === 'login.list') { json(envelope({ tasks: loginTasks })); return }
     if (type === 'plugin.adapter-icqq.status') { json(envelope(adapterStatus)); return }
     if (type === 'feature.list') { json(envelope({ revision: 'preview-1', features })); return }
@@ -568,6 +749,23 @@ const server = createServer(async (request, response) => {
       const view = entry => scopedAccess && entry.level === 'global' ? { level: entry.level, key: entry.key, role: entry.role, source: entry.source, redacted: true } : entry
       json(envelope({ roles: chatRoles.filter(entry => keys.includes(entry.key)).map(view) })); return
     }
+    if (type === 'chat-principals.list') {
+      const adapter = typeof body.key === 'string' && body.key ? body.key.split('/')[0] : null
+      json(envelope({ principals: chatPeople.map(person => ({ ...person, identities: person.identities.filter(identity => !adapter || identity.adapter === adapter) }))
+        .filter(person => person.identities.length) })); return
+    }
+    if (type === 'chat-identities.recent') {
+      const adapter = typeof body.key === 'string' && body.key ? body.key.split('/')[0] : null
+      json(envelope({ identities: recentSpeakers.filter(identity => !adapter || identity.adapter === adapter) })); return
+    }
+    if (type === 'chat-identities.me') {
+      // UI_PREVIEW_CHAT_ME=unlinked: a user without a link, no global owner yet (offers 设为全局 owner after binding).
+      if (process.env.UI_PREVIEW_CHAT_ME === 'unlinked') { json(envelope({})); return }
+      // UI_PREVIEW_CHAT_ME=suggest: the caller's person holds no role yet and there is no global owner (设为全局 owner).
+      if (process.env.UI_PREVIEW_CHAT_ME === 'suggest') { json(envelope({ principal: { ...chatPeople[0], roles: [] }, suggestGlobalOwner: true })); return }
+      json(envelope({ principal: chatPeople[0] })); return
+    }
+    if (type === 'chat-identities.bind-code.create') { json(envelope({ code: 'K7QH2M9X', expiresAt: Date.now() + 10 * MINUTE })); return }
     if (type === 'chat-roles.grant' || type === 'chat-roles.revoke') {
       if (scopedAccess && body.role === 'owner') { json({ success: false, error: '授予或撤销 owner 需要全局 iam.manage 权限', type }, 403); return }
       if (memoryDatabase) { json({ success: false, code: 'chat-roles-unpersisted', error: '聊天角色需要关系型项目数据库（sqlite / mysql / pg）', type }, 503); return }
@@ -596,6 +794,7 @@ const server = createServer(async (request, response) => {
       json({ success: false, code: 'invalid_input', error: '配置未通过插件 Schema 校验，未声明：$.endpoints required；缺少环境变量 QQ_SECRET', errors: [{ path: '$.endpoints', message: 'required' }], missingEnv: ['QQ_SECRET'] }, 400)
       return
     }
+    if (type === 'schema:get' && body.pluginName === 'rss') { json(envelope(rssSchema)); return }
     if (type === 'schema:get') { json(envelope({ type: 'object', object: { endpoints: { type: 'list', title: '机器人账号', required: true, inner: { type: 'object', object: { id: { type: 'string', title: 'AppID', required: true } } } } } })); return }
     if (type === 'agent.engagements.list') { json(envelope({ engagements: [engagement.summary] })); return }
     if (type === 'agent.engagements.get') {

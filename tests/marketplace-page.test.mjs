@@ -50,15 +50,7 @@ function fixture({ search = async () => json({ success: true, data: [], total: 0
       usePackageAction: () => ({ receipt: { state: { phase: 'idle' } }, planning: false, busy: false, needs: [], operation: null, reset() {},
         prepare: async (operation, subject) => { prepared.push({ operation, subject }) }, ...action }),
     },
-    './plugins.css': {}, '../components/PageHeader': { PageHeader: 'page-header' }, '../components/PageShell': { PageShell: 'main' },
-    '../components/StatusState': { StatusState: 'status-state' },
-    '../components/ui/card': { Card: 'card', CardContent: 'card-content' }, '../components/ui/badge': { Badge: 'badge' },
-    '../components/ui/button': { Button: 'button' }, '../components/ui/input': { Input: 'input' },
-    '../components/ui/select': { SelectField: 'select-field' }, '../components/ui/alert': { Alert: 'alert', AlertDescription: 'alert-description' },
-    '../components/ui/skeleton': { Skeleton: 'skeleton' }, '../components/ui/separator': { Separator: 'hr' },
-    '../components/ui/tabs': { Tabs: 'tabs', TabsList: 'tabs-list', TabsTrigger: 'tabs-trigger' },
-    '../components/ui/dialog': { Dialog: 'dialog', DialogContent: 'dialog-content', DialogHeader: 'dialog-header', DialogFooter: 'dialog-footer',
-      DialogTitle: 'dialog-title', DialogDescription: 'dialog-description', DialogClose: 'dialog-close' },
+    './plugins.css': {}, '@zhin.js/console-ui': { PageHeader: 'page-header', PageShell: 'main', Card: 'card', CardContent: 'card-content', Badge: 'badge', Button: 'button', Input: 'input', SelectField: 'select-field', Alert: 'alert', AlertDescription: 'alert-description', Skeleton: 'skeleton', Separator: 'hr', Tabs: 'tabs', TabsList: 'tabs-list', TabsTrigger: 'tabs-trigger', Dialog: 'dialog', DialogContent: 'dialog-content', DialogHeader: 'dialog-header', DialogFooter: 'dialog-footer', DialogTitle: 'dialog-title', DialogDescription: 'dialog-description', DialogClose: 'dialog-close' }, '../components/StatusState': { StatusState: 'status-state' },
     '../utils/auth': { apiFetch: async path => {
       calls.push(path)
       if (path.startsWith('/pub/marketplace/search')) return search(path)

@@ -1,6 +1,10 @@
 import { LocaleProvider } from '@console/i18n'
 import { useI18n } from '../console-ui/src/i18n'
+import { ConsoleUiLocale } from '@console/i18n/console-ui-locale'
+// Component styles first: the Console's own Tailwind build (style.css) comes after and wins within a layer.
+import "@zhin.js/console-ui/styles.css";
 import "./style.css";
+import "../console-ui/src/fonts.css";
 import * as React from "react";
 import * as ReactJsxDevRuntime from "react/jsx-dev-runtime";
 import * as ReactJsxRuntime from "react/jsx-runtime";
@@ -20,7 +24,8 @@ import { ConsoleWebHost } from "./host/ConsoleWebHost";
 import { registerBuiltinConsolePages } from "@console/registerBuiltinShell";
 import { initializeTheme } from "@console/theme";
 import LoginPage from "@console/pages/login";
-import { TooltipProvider } from "@console/components/ui/tooltip";
+import * as ConsoleUi from "@zhin.js/console-ui";
+import { TooltipProvider } from "@zhin.js/console-ui";
 import { ConsoleSessionGate } from "@console/components/console-session-gate";
 import { ToastProvider, useToast } from "@console/components/toast";
 import { runQueryPrefillMiddleware, takeLoginLink, type InitialSession } from "./middleware/queryPrefill";
@@ -44,6 +49,9 @@ sharedModules.set("react-dom", ReactDOM);
 sharedModules.set("react-dom/client", ReactDOMClient);
 sharedModules.set("react-router", ReactRouterDOM);
 sharedModules.set("react-router-dom", ReactRouterDOM);
+// Plugin pages import @zhin.js/console-ui through the host proxy and get this very instance (ADR 0063 D3);
+// the registered version lets the proxy check the plugin's peer range.
+ConsoleUi.registerConsoleUiSharedModule(ConsoleUi, sharedModules);
 (globalThis as Record<string, unknown>)[CONSOLE_SHARED_MODULES_KEY] = sharedModules;
 
 registerBuiltinConsolePages();
@@ -121,11 +129,13 @@ const router = createBrowserRouter([{ path: "*", element: <App /> }], {
 ReactDOMClient.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <LocaleProvider>
-    <TooltipProvider>
-      <ToastProvider>
-        <RouterProvider router={router} />
-      </ToastProvider>
-    </TooltipProvider>
-  </LocaleProvider>
+      <ConsoleUiLocale>
+        <TooltipProvider>
+          <ToastProvider>
+            <RouterProvider router={router} />
+          </ToastProvider>
+        </TooltipProvider>
+      </ConsoleUiLocale>
+    </LocaleProvider>
   </React.StrictMode>,
 );

@@ -1,28 +1,28 @@
 @layer components {
   .console-setup { align-items: start; }
-  .console-setup-layout { display: grid; gap: 20px; width: min(100%, 640px); }
-  .console-setup-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .console-setup-layout { display: grid; gap: var(--console-space-5); width: min(100%, 640px); }
+  .console-setup-head { display: flex; align-items: center; justify-content: space-between; gap: var(--console-space-3); }
   .console-setup-head .console-login-brand { margin-bottom: 0; }
-  .console-setup-head-actions { display: flex; align-items: center; gap: 8px; }
-  .console-setup-panel { display: grid; gap: 20px; }
-  .console-setup-title { margin: 0; font-size: 24px; line-height: 1.3; font-weight: 600; letter-spacing: -.02em; }
-  .console-setup-lead { display: flex; gap: 8px; margin: -8px 0 0; color: hsl(var(--muted-foreground)); font-size: 13px; line-height: 1.7; }
-  .console-setup-lead svg { width: 16px; height: 16px; flex: none; margin-top: 3px; }
-  .console-setup-steps { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
-  .console-setup-steps li { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid hsl(var(--border)); border-radius: 999px; color: hsl(var(--muted-foreground)); font-size: 12px; }
-  .console-setup-steps li[data-state='current'] { border-color: hsl(var(--primary)); color: hsl(var(--foreground)); font-weight: 500; }
-  .console-setup-steps li[data-state='done'] { color: hsl(var(--success, var(--foreground))); }
+  .console-setup-head-actions { display: flex; align-items: center; gap: var(--console-space-2); }
+  .console-setup-panel { display: grid; gap: var(--console-space-5); }
+  .console-setup-title { margin: 0; font-size: var(--console-text-title); line-height: 1.3; font-weight: var(--console-weight-strong); letter-spacing: -.02em; }
+  .console-setup-lead { display: flex; gap: var(--console-space-2); margin: calc(var(--console-space-2) * -1) 0 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); line-height: 1.7; }
+  .console-setup-lead svg { width: 16px; height: 16px; flex: none; margin-top: var(--console-space-1); }
+  .console-setup-steps { display: flex; flex-wrap: wrap; gap: var(--console-space-2); margin: 0; padding: 0; list-style: none; }
+  .console-setup-steps li { display: flex; align-items: center; gap: var(--console-space-2); padding: var(--console-space-2) var(--console-space-3); border: var(--console-border-hairline) solid hsl(var(--border)); border-radius: var(--console-radius-full); color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
+  .console-setup-steps li[data-state='current'] { border-color: hsl(var(--primary)); color: hsl(var(--foreground)); font-weight: var(--console-weight-medium); }
+  .console-setup-steps li[data-state='done'] { color: hsl(var(--foreground)); }
   .console-setup-step-mark svg { width: 14px; height: 14px; }
-  .console-setup-body { display: grid; gap: 16px; }
-  .console-setup-body h2 { margin: 0; font-size: 16px; font-weight: 600; }
-  .console-setup-note { margin: 0; color: hsl(var(--muted-foreground)); font-size: 12px; line-height: 1.7; }
-  .console-setup-fields { display: grid; gap: 14px; margin: 0; padding: 16px; border: 1px solid hsl(var(--border)); border-radius: 10px; }
-  .console-setup-fields legend { padding: 0 4px; font-size: 13px; font-weight: 600; }
-  .console-setup-status { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; color: hsl(var(--muted-foreground)); }
+  .console-setup-body { display: grid; gap: var(--console-space-4); }
+  .console-setup-body h2 { margin: 0; font-size: var(--console-text-section); font-weight: var(--console-weight-strong); }
+  .console-setup-note { margin: 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); line-height: 1.7; }
+  .console-setup-fields { display: grid; gap: var(--console-space-4); margin: 0; padding: var(--console-space-4); border: var(--console-border-hairline) solid hsl(var(--border)); border-radius: var(--console-radius-2); }
+  .console-setup-fields legend { padding: 0 var(--console-space-1); font-size: var(--console-text-label); font-weight: var(--console-weight-strong); }
+  .console-setup-status { display: flex; align-items: center; gap: var(--console-space-2); margin: 0; font-size: var(--console-text-label); color: hsl(var(--muted-foreground)); }
   .console-setup-status svg { width: 16px; height: 16px; }
-  .console-setup-ok { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; color: hsl(var(--success, var(--foreground))); }
+  .console-setup-ok { display: flex; align-items: center; gap: var(--console-space-2); margin: 0; font-size: var(--console-text-label); color: hsl(var(--success, var(--foreground))); }
   .console-setup-ok svg, .console-setup-fields .console-login-error svg { width: 15px; height: 15px; flex: none; }
-  .console-setup-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
-  .console-setup-restart, .console-setup-blocked { display: grid; gap: 12px; font-size: 13px; }
+  .console-setup-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--console-space-2); }
+  .console-setup-restart, .console-setup-blocked { display: grid; gap: var(--console-space-3); font-size: var(--console-text-label); }
   .console-choice-card[data-disabled] { opacity: .7; }
 }

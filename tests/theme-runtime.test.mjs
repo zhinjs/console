@@ -27,10 +27,10 @@ test('first load follows system without freezing its resolved mode into storage'
   const f = fixture({ dark: true })
   try {
     assert.equal(initializeTheme(), 'dark')
-    assert.deepEqual(getThemePreferences(), { mode: 'system', palette: 'ocean' })
+    assert.deepEqual(getThemePreferences(), { mode: 'system', palette: 'zhin' })
     assert.deepEqual(f.writes, [])
     f.system(false); assert.deepEqual([...f.classes], ['light'])
-    assert.equal(getThemeSnapshot(), 'system:ocean:light')
+    assert.equal(getThemeSnapshot(), 'system:zhin:light')
   } finally { f.close() }
 })
 
@@ -58,7 +58,7 @@ test('mode and palette are independent, explicit mode ignores OS changes, and Sy
 test('invalid and blocked storage defaults safely; blocked writes preserve session-only choices', () => {
   for (const options of [{ mode: 'invalid', palette: 'url(attack)' }, { blocked: true, dark: true }]) {
     const f = fixture(options)
-    try { initializeTheme(); assert.deepEqual(getThemePreferences(), { mode: 'system', palette: 'ocean' }); setThemePreferences({ mode: 'dark', palette: 'forest' }); assert.equal(getThemeSnapshot(), 'dark:forest:dark') } finally { f.close() }
+    try { initializeTheme(); assert.deepEqual(getThemePreferences(), { mode: 'system', palette: 'zhin' }); setThemePreferences({ mode: 'dark', palette: 'forest' }); assert.equal(getThemeSnapshot(), 'dark:forest:dark') } finally { f.close() }
   }
   const f = fixture()
   try { initializeTheme(); assert.throws(() => setThemePreferences({ mode: 'auto' }), /Invalid/); assert.throws(() => setThemePreferences({ palette: 'unknown' }), /Invalid/) } finally { f.close() }
@@ -71,7 +71,7 @@ test('browser tabs synchronize preferences, cleared storage resets defaults, unr
     f.saved.set(THEME_STORAGE_KEY, 'dark'); f.saved.set(PALETTE_STORAGE_KEY, 'graphite'); f.storageEvent(PALETTE_STORAGE_KEY)
     assert.equal(getThemeSnapshot(), 'dark:graphite:dark'); assert.equal(updates, 1); assert.equal(f.writes.length, 0)
     f.storageEvent('zhin_api_token'); assert.equal(updates, 1)
-    f.saved.clear(); f.storageEvent(null); assert.equal(getThemeSnapshot(), 'system:ocean:light')
+    f.saved.clear(); f.storageEvent(null); assert.equal(getThemeSnapshot(), 'system:zhin:light')
     stop(); setThemePreferences({ palette: 'plum' }); assert.equal(updates, 2)
   } finally { f.close() }
 })

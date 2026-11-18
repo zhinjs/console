@@ -1,14 +1,8 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { EyeOff, Plus, RefreshCw, ShieldCheck, Trash2, UserRound } from 'lucide-react'
+import { ChevronDown, EyeOff, Plus, RefreshCw, ShieldCheck, Trash2, UserRound } from 'lucide-react'
 import { useI18n } from '../i18n'
-import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
-import { Card } from '../components/ui/card'
-import { Input } from '../components/ui/input'
-import { SelectField } from '../components/ui/select'
-import { Skeleton } from '../components/ui/skeleton'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
+import { Badge, Button, Card, Input, SelectField, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import { ActionReceipt, useActionReceipt } from '../components/ActionReceipt'
 import { receiptBlocksActions, type ReceiptPlan } from '../components/action-receipt-model.mjs'
@@ -18,6 +12,9 @@ import { useConsoleAccess } from '../hooks/use-console-access'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { statusFromError, type StatusReading } from '../components/status-state-model.mjs'
 import { ObjectSection } from './ObjectPageLayout'
+import { GrantIdentityPicker } from './ChatIdentityPanels'
+import { adapterAliases, grantorLabel } from './chat-identity-model.mjs'
+import { readEndpointList } from '../pages/endpoint-list-model.mjs'
 import {
   CHAT_ROLE_COPY, CHAT_ROLE_LABELS, CHAT_ROLES,
   chatRoleApplied, chatRoleGrantRequest, chatRoleReadBack, chatRoleNeedsGlobalManage, chatRoleRefusal, chatRoleRevokeRequest, chatRoleRows, chatRolesListRequest,
@@ -90,7 +87,7 @@ function RoleTable({ rows, label, busy, globalManage, onRevoke, inheritedFrom }:
                   <code title={`${row.adapter} / ${row.userId}`}>{row.adapter} / {row.userId}</code>
                   {row.grantedBy || row.grantedAt ? (
                     <span className="console-chat-role-sub">
-                      {[row.grantedBy ? i18n.t('由 {0} 授予', [row.grantedBy]) : '', row.grantedAt ? new Date(row.grantedAt).toLocaleDateString(i18n.locale) : ''].filter(Boolean).join(' · ')}
+                      {[grantorLabel(row) ? i18n.t('由 {0} 授予', [grantorLabel(row)!]) : '', row.grantedAt ? new Date(row.grantedAt).toLocaleDateString(i18n.locale) : ''].filter(Boolean).join(' · ')}
                     </span>
                   ) : null}
                 </span>
@@ -141,10 +138,16 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
   // Owner grants need a global iam.manage whatever the scope (ADR 0056 §3); a scoped binding is not enough.
   const globalManage = hasConsolePermission('iam.manage', access)
   const offered = grantableChatRoles(globalManage)
-  const [userId, setUserId] = useState('')
+  const [typedUserId, setUserId] = useState('')
   const [platform, setPlatform] = useState('')
   const [role, setRole] = useState<ChatRole>('admin')
   const [formError, setFormError] = useState<string | null>(null)
+  // ADR 0060 §7: pick from recent speakers / known people; typing an id stays available as 高级.
+  const [manual, setManual] = useState(false)
+  const [picked, setPicked] = useState<{ adapter: string; userId: string; label: string } | null>(null)
+  const aliases = useAdapterAliases(scope.level === 'global')
+  const [pickerSupported, setPickerSupported] = useState(true)
+  const pickerMissing = useCallback(() => { setPickerSupported(false); setManual(true) }, [])
   // The action rides on the plan, and the receipt outlives the tab (action-receipt-store): an
   // unknown grant / revoke stays 结果未知 after switching tabs and back, never resent.
   const receipt = useActionReceipt({
@@ -177,6 +180,7 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
     },
     onSettled: () => {
       setUserId('')
+      setPicked(null)
       roles.refresh()
     },
   })
@@ -192,7 +196,8 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
   const grantRole: ChatRole = offered.includes(role) ? role : 'admin'
   const prepareGrant = () => {
     const role = grantRole
-    const adapter = alias ?? platform.trim()
+    const adapter = alias ?? (manual || !picked ? (platform.trim() || aliases[0] || '') : picked.adapter)
+    const userId = manual || !picked ? typedUserId : picked.userId
     try {
       chatRoleGrantRequest(scope, { adapter, userId, role })
     } catch (error) {
@@ -270,22 +275,35 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
         <ActionReceipt controller={receipt} />
       </ObjectSection>
       <ObjectSection className="console-chat-role-grant" title={i18n.t('授予角色')} description={alias ? i18n.t('身份属于适配器 {0}。', [alias]) : i18n.t('全局角色可为每个平台登记一个身份。')}>
-        <Card className="grid gap-3 p-4 sm:grid-cols-2 sm:items-end xl:grid-cols-[minmax(0,10rem)_minmax(0,1fr)_minmax(0,10rem)_auto]">
-          <label className="grid gap-1 text-sm">
-            <span className="text-muted-foreground">{i18n.t('适配器')}</span>
-            <Input value={alias ?? platform} onChange={event => setPlatform(event.target.value)} disabled={Boolean(alias)} placeholder="qq"
-              title={alias ? i18n.t('这一层的身份只能属于它自己的适配器。') : undefined} />
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span className="text-muted-foreground">{i18n.t('平台用户 ID')}</span>
-            <Input value={userId} onChange={event => setUserId(event.target.value)} placeholder="10001" />
-          </label>
-          <div className="grid gap-1 text-sm">
-            <span className="text-muted-foreground">{i18n.t('角色')}</span>
-            <SelectField aria-label={i18n.t('角色')} value={grantRole} onValueChange={value => setRole(value as ChatRole)}
-              options={offered.map(value => ({ value, label: i18n.t(CHAT_ROLE_LABELS[value]) }))} />
+        <Card className="grid gap-3 p-4">
+          {!manual ? (
+            <GrantIdentityPicker scope={scope} alias={alias} value={picked} onUnsupported={pickerMissing}
+              onPick={candidate => { setPicked({ adapter: candidate.adapter, userId: candidate.userId, label: candidate.label }); setFormError(null) }} />
+          ) : null}
+          <div className="grid gap-3 sm:grid-cols-2 sm:items-end xl:grid-cols-[minmax(0,10rem)_minmax(0,1fr)_minmax(0,10rem)_auto]">
+            <div className="grid gap-1 text-sm">
+              <span className="text-muted-foreground">{i18n.t('适配器')}</span>
+              {alias ? <Input value={alias} disabled title={i18n.t('这一层的身份只能属于它自己的适配器。')} />
+                : !aliases.length ? <Input value={platform} onChange={event => setPlatform(event.target.value)} placeholder="qq" aria-label={i18n.t('适配器')} />
+                : <SelectField aria-label={i18n.t('适配器')} value={(!manual && picked?.adapter) || platform || aliases[0]!}
+                    onValueChange={value => { setPlatform(value); if (picked && picked.adapter !== value) setPicked(null) }}
+                    options={aliases.map(value => ({ value, label: value }))} />}
+            </div>
+            <div className="grid gap-1 text-sm">
+              <span className="text-muted-foreground">{manual ? i18n.t('平台用户 ID') : i18n.t('选中的人')}</span>
+              {manual ? <Input value={typedUserId} onChange={event => setUserId(event.target.value)} placeholder="10001" aria-label={i18n.t('平台用户 ID')} />
+                : <span className="console-chat-picked">{picked ? <>{picked.label} <code>{picked.adapter} / {picked.userId}</code></> : <span className="text-muted-foreground">{i18n.t('在上方列表中选择')}</span>}</span>}
+            </div>
+            <div className="grid gap-1 text-sm">
+              <span className="text-muted-foreground">{i18n.t('角色')}</span>
+              <SelectField aria-label={i18n.t('角色')} value={grantRole} onValueChange={value => setRole(value as ChatRole)}
+                options={offered.map(value => ({ value, label: i18n.t(CHAT_ROLE_LABELS[value]) }))} />
+            </div>
+            <Button onClick={prepareGrant} disabled={busy || (manual ? !typedUserId.trim() || (!alias && !platform.trim() && !aliases.length) : !picked)}><Plus />{i18n.t('授予')}</Button>
           </div>
-          <Button onClick={prepareGrant} disabled={busy || !userId.trim() || (!alias && !platform.trim())}><Plus />{i18n.t('授予')}</Button>
+          {pickerSupported ? <button type="button" className="console-chat-advanced" aria-expanded={manual} onClick={() => { setManual(value => !value); setFormError(null) }}>
+            <ChevronDown aria-hidden="true" />{manual ? i18n.t('从最近发言人中选择') : i18n.t('高级：手动填写平台用户 ID')}
+          </button> : null}
         </Card>
         {!globalManage ? <p className="text-xs text-muted-foreground">{i18n.t('授予或撤销所有者需要全局 iam.manage 权限；当前身份可以授予管理员和受信任。')}</p> : null}
         {formError ? <p role="alert" className="text-sm text-destructive">{i18n.t('无法授予：{0}', [formError])}</p> : null}
@@ -293,4 +311,18 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
       </ObjectSection>
     </>
   )
+}
+
+/** Adapter instance aliases from `endpoint.list` (the global grant form's adapter choices); empty when unreadable. */
+function useAdapterAliases(enabled: boolean): string[] {
+  const [aliases, setAliases] = useState<string[]>([])
+  useEffect(() => {
+    if (!enabled) return
+    let alive = true
+    requestConsole<unknown>({ type: 'endpoint.list' }).then(payload => {
+      if (alive) setAliases(adapterAliases(readEndpointList(payload)))
+    }, () => { if (alive) setAliases([]) })
+    return () => { alive = false }
+  }, [enabled])
+  return aliases
 }

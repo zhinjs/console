@@ -19,6 +19,8 @@ interface Prepared {
   prepared: ObjectValue
   fingerprint: string
   baseRevision: number
+  /** Deprecated forms the Host accepted and converted (ADR 0066 `purposes.decisions.ambient`). */
+  warnings?: Array<{ path?: string; code?: string; message?: string }>
 }
 interface RequestIdentity {
   readonly epoch: number
@@ -36,6 +38,8 @@ interface SaveOptions {
   readonly source?: InferenceSource
   /** Called only for a read whose revision matches this submission's committed receipt. */
   readonly onCommitted?: (source: InferenceSource) => void
+  /** Called once the change committed, with the Host's review warnings (empty when none). */
+  readonly onWarnings?: (warnings: NonNullable<Prepared['warnings']>) => void
 }
 interface PlanSaveOptions extends SaveOptions {
   readonly bindings?: ReturnType<typeof resourceBindings>
@@ -231,6 +235,7 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
         throw new InferenceRequestError(
           result.code ?? (result.status === 'conflict' ? 'conflict' : 'unavailable')
         )
+      options.onWarnings?.(Array.isArray(prepared.warnings) ? prepared.warnings : [])
       const committed = await load(identity.ownerId)
       if (committed && result.receipt?.graphRevision === committed.view.revision)
         options.onCommitted?.(committed)
@@ -276,7 +281,11 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
       }
     }
   }
-  async function action<T>(path: string, body: unknown): Promise<T | undefined> {
+  async function action<T>(
+    path: string,
+    body: unknown,
+    describe: (failure: unknown, locale: 'zh-CN' | 'en') => string = inferenceError
+  ): Promise<T | undefined> {
     if (!active() || busyOperation.current !== null || pendingId.current) return undefined
     const identity = renderedIdentity
     busyOperation.current = identity.epoch
@@ -288,7 +297,7 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
       await load(identity.ownerId)
       return result
     } catch (failure) {
-      if (current(identity)) setError(inferenceError(failure, copy.current.locale))
+      if (current(identity)) setError(describe(failure, copy.current.locale))
       return undefined
     } finally {
       if (current(identity) && busyOperation.current === identity.epoch) {

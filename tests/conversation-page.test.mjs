@@ -44,16 +44,11 @@ function fixture(initialKey = 'icqq:bot:group:room') {
     '../utils/useInboxCacheScope':{useInboxCacheScope:()=>scope},
     '../utils/inbox-cache':{isInboxCacheScopeActive:expected=>expected===scope},
     '../utils/auth':{apiFetch:(url,init={})=>new Promise(resolve=>calls.push({url,init,resolve}))},
-    '../components/PageHeader':{PageHeader:'page-header'}, '../components/error-alert':{ErrorAlert:'error-alert'},
-    '../components/empty-state':{EmptyState:'empty-state'}, '../components/ui/alert':{Alert:'alert',AlertDescription:'alert-description'},
-    '../components/ui/badge':{Badge:'badge'}, '../components/ui/button':{Button:'button'}, '../components/ui/skeleton':{Skeleton:'skeleton'},
-    '../components/ui/tabs':{Tabs:'tabs',TabsList:'tabs-list',TabsTrigger:'tabs-trigger',TabsContent:'tabs-content'},
-    '../components/ui/dialog':ui, '../components/AgentSessionPicker':{AgentSessionPicker:'session-picker'},
+    '@zhin.js/console-ui': { cn:(...parts)=>parts.filter(Boolean).join(' '), PageHeader:'page-header', ErrorAlert:'error-alert', EmptyState:'empty-state', Alert:'alert', AlertDescription:'alert-description', Badge:'badge', Button:'button', Skeleton:'skeleton', Tabs:'tabs', TabsList:'tabs-list', TabsTrigger:'tabs-trigger', TabsContent:'tabs-content', ...(ui), StatCard:'stat-card', StatGrid:'stat-grid' }, '../components/AgentSessionPicker':{AgentSessionPicker:'session-picker'},
     './SessionMessageDetails':{SessionMessageDetails:'message-details'}, './ConversationHistory':{ConversationHistory:'conversation-history'},
     './ConversationTrace':{ConversationTrace:'conversation-trace'}, './useConversationTraces':{useConversationTraces:(...args)=>{ traceReads.push(args); return {turns:[],loading:false,error:null,refresh(){}} }},
     '@zhin.js/client':{cn:(...parts)=>parts.filter(Boolean).join(' ')}, '../contracts/zhin-console':{CONSOLE_REST:{AGENT_SESSIONS:'/api/agent/sessions'}},
-    '../utils/console-access.mjs':{hasConsolePermission:()=>true}, './agent-session-recent.mjs':{readRecentSessions,summarizeRecentSessions}, '../components/StatCard':{StatCard:'stat-card',StatGrid:'stat-grid'},
-  })
+    '../utils/console-access.mjs':{hasConsolePermission:()=>true}, './agent-session-recent.mjs':{readRecentSessions,summarizeRecentSessions}, })
   const f = {calls,traceReads,render(){cursor=0;tree=module.default(); const run=effects;effects=[];run.forEach(fn=>fn());return tree},get tree(){return tree},setScope(value){scope=value},navigate(key){params=new URLSearchParams({sessionKey:key})},close(){slots.forEach(slot=>slot?.cleanup?.())}}
   f.render();return f
 }
@@ -221,10 +216,12 @@ test('personal sessions open on the trace tab and explain, without an error, tha
   assert.ok(notice, 'the conversation tab carries a neutral notice')
   assert.match(notice.props.description, /个人会话不保存聊天记录/)
   assert.match(notice.props.description, /轨迹/)
-  const toTrace = elements(panel).find(node => node.type === 'button' && text(node) === '查看轨迹')
+  // 查看轨迹 is the EmptyState's one action (console-ui 1.1).
+  const toTrace = notice.props.action
+  assert.equal(toTrace.label, '查看轨迹')
   find(f, 'tabs').props.onValueChange('conversation'); f.render()
   assert.equal(find(f, 'tabs').props.value, 'conversation')
-  toTrace.props.onClick(); f.render()
+  toTrace.onSelect(); f.render()
   assert.equal(find(f, 'tabs').props.value, 'trace')
   f.close()
 })

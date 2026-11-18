@@ -1,7 +1,7 @@
 import { useI18n } from '../../i18n'
 import { useState } from 'react'
 import type { SchemaField } from './types.js'
-import { Button } from '../ui/button'
+import { Button } from '@zhin.js/console-ui'
 import { ConversationTargetEditor } from './ConversationTargetEditor'
 import { scopeAllowedKinds } from './conversation-scope-model.mjs'
 import { updateListItem } from './schema-model.mjs'
@@ -27,6 +27,6 @@ export function ConversationScopeEditor({field, value, onChange}: {field: Schema
       </div>
     </>}
     {typeof field.max === 'number' ? <p className="text-xs text-muted-foreground">{i18n.t("此字段最多 ")}{field.max} {i18n.t(" 个会话；已有草稿不会被自动截断。")}</p> : null}
-    {restoreAll && restoreAll.value === value && restoreAll.field === field && value !== undefined ? <div role="alert" className="space-y-2 rounded-md border border-destructive/50 p-3 text-sm"><p>{i18n.t("恢复后将删除此范围限制，覆盖全部符合插件条件的会话，包括以后新接入的符合条件会话。确定扩大范围吗？")}</p><div className="flex flex-wrap gap-2"><Button type="button" variant="destructive" size="sm" onClick={() => { setRestoreAll(null); onChange(undefined) }}>{i18n.t("确认恢复全部")}</Button><Button type="button" variant="outline" size="sm" onClick={() => setRestoreAll(null)}>{i18n.t("保留当前范围")}</Button></div></div> : null}
+    {restoreAll && restoreAll.value === value && restoreAll.field === field && value !== undefined ? <div role="alert" className="space-y-2 rounded-md border border-destructive/50 p-3 text-sm"><p>{i18n.t("恢复后将删除此范围限制，覆盖全部符合插件条件的会话，包括以后新接入的符合条件会话。确定扩大范围吗？")}</p><div className="flex flex-wrap gap-2"><Button type="button" variant="destructive-solid" size="sm" onClick={() => { setRestoreAll(null); onChange(undefined) }}>{i18n.t("确认恢复全部")}</Button><Button type="button" variant="outline" size="sm" onClick={() => setRestoreAll(null)}>{i18n.t("保留当前范围")}</Button></div></div> : null}
   </div>
 }

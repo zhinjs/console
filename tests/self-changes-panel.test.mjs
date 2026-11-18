@@ -73,10 +73,7 @@ function fixture({ readOnly = false } = {}) {
   const mocks = {
     react: runtime.react,
     'lucide-react': { RefreshCw: 'icon' },
-    '../components/ui/button': { Button: 'button' }, '../components/StatusState': { StatusState: 'status-state' },
-    '../components/ui/card': { Card: 'article', CardHeader: 'header', CardTitle: 'h2', CardContent: 'section' },
-    '../components/ui/alert': { Alert: 'aside', AlertDescription: 'p' },
-    '../components/confirm-dialog': { ConfirmDialog: 'confirm-dialog' },
+    '@zhin.js/console-ui': { Button: 'button', Card: 'article', CardHeader: 'header', CardTitle: 'h2', CardContent: 'section', Alert: 'aside', AlertDescription: 'p', ConfirmDialog: 'confirm-dialog' }, '../components/StatusState': { StatusState: 'status-state' },
     '../utils/auth': { captureApiRequestContext: () => ({ apiBase: connection.host, token: connection.credential }) },
     '../utils/plugin-rpc': { pluginRpc: request },
     '../utils/console-access.mjs': { hasConsolePermission: () => !readOnly },

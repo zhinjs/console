@@ -84,7 +84,7 @@ async function loadHook() {
   const mocks = {
     react, './unsaved-changes-guard.mjs': guardModel,
     'react-router-dom': { useBlocker: fn => { router.shouldBlock = fn; return router.blocker } },
-    '../components/confirm-dialog': { useConfirm: () => ({ confirm: opts => new Promise(resolve => asked.push({ opts, resolve })), ConfirmDialog: 'dialog' }) },
+    '@zhin.js/console-ui': { useConfirm: () => ({ confirm: opts => new Promise(resolve => asked.push({ opts, resolve })), ConfirmDialog: 'dialog' }) },
   }
   const module = { exports: {} }
   new Function('require', 'exports', 'module', code)(name => isLocaleImport(name) ? localeModule : Object.hasOwn(mocks, name) ? mocks[name] : require(name), module.exports, module)

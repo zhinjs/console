@@ -36,6 +36,7 @@ export function accountStatus(endpoint: OverviewEndpoint, tasks?: readonly Overv
 export function filterAccounts<E extends OverviewEndpoint>(endpoints: readonly E[] | undefined, options?: { filter?: AccountFilter; query?: string; tasks?: readonly OverviewLoginTask[] }): E[]
 export function accountCounts(endpoints?: readonly OverviewEndpoint[], tasks?: readonly OverviewLoginTask[]): Record<AccountFilter, number>
 export function endpointAccessState<E extends OverviewEndpoint>(list: { loaded?: boolean; error?: unknown; endpoints?: readonly E[] }, adapter: string, endpoint: string): EndpointAccessState<E>
+export function endpointInfoWanted(state: { readonly kind: string } | null | undefined): boolean
 export function conversationHighlights(items?: readonly ConversationItem[], limit?: number): { overridden: ConversationItem[]; recent: ConversationItem[]; total: number }
 export const ONBOARDING_PLATFORMS: readonly OnboardingPlatform[]
 export function onboardingTarget(platform: OnboardingPlatform, registeredPaths: ReadonlySet<string>): { to: string; install: boolean }

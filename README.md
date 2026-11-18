@@ -63,9 +63,9 @@ Console 没有单独的演示构建：公开演示是一台真实 Host，访客�
 |------|------|------|
 | 概览 | 首页 `/dashboard`、运行日志 `/logs`、机器人状态 `/agent/workbench`、Token 用量 `/agent/usage` | 决策回放 `/agent/replay` |
 | 会话 | 试聊一下（`/sandbox`，sandbox 插件页）、账号与会话 `/scope`（全局对象页）、聊天记录 `/agent/sessions` | 对象树：适配器 `/scope/:adapter`、账号 `/scope/:adapter/:endpoint`、会话 `/scope/:adapter/:endpoint/:conversation`（`<kind>:<id>`） |
-| 功能 | 功能矩阵 `/features`、AI 与模型 `/features/ai`、技能助手 `/features/ai/skills`、群聊插话 `/features/ai/ambient`、Workroom `/features/ai/workrooms`、运行时能力、消息场景试验台，以及没有声明分区的插件页 | 全局配置 `/features/global/:plugin`、Workroom 配置、命令权限说明、群欢迎配置流程 |
+| 功能 | 功能矩阵 `/features`、AI 与模型 `/features/ai`、技能助手 `/features/ai/skills`、群聊插话 `/features/ai/ambient`、Workroom `/features/ai/workrooms`、运行时能力，以及没有声明分区的插件页 | 全局配置 `/features/global/:plugin`、Workroom 配置、命令权限说明、群欢迎配置流程 |
 | 插件 | 插件管理 `/plugins`、插件市场 `/marketplace` | 插件详情 `/plugins/:name`（不含配置，配置在全局配置页） |
-| 运维 | 数据库 `/ops/database`、配置文件 `/ops/config`、环境变量 `/ops/env`、定时任务 `/ops/schedules`、项目文件 `/ops/files`、实例 `/ops/instance`、终端 `/ops/terminal` | — |
+| 运维 | 数据库 `/ops/database`、配置文件 `/ops/config`、环境变量 `/ops/env`、定时任务 `/ops/schedules`、项目文件 `/ops/files`、实例 `/ops/instance`、终端 `/ops/terminal`、连接自检 `/ops/self-check`、消息场景试验台 `/scenario-lab` | — |
 | 访问控制 | 用户 `/access/users`、角色 `/access/roles`、API 令牌 `/access/tokens`、审计日志 `/access/audit` | — |
 
 - 某个区里没有当前身份能看的页面时，整个区不显示。Host 还没有报告权限时（RBAC 之前的所有 Host）按不受限处理，由 Host 自己拒绝越权请求。
@@ -74,7 +74,7 @@ Console 没有单独的演示构建：公开演示是一台真实 Host，访客�
 - 底部日志面板（`components/log-panel/`）：在任何页面打开实时运行日志而不离开当前页——顶栏按钮、快捷键 Ctrl `、快速跳转里的「打开日志面板」，或页面调用 `openLogPanel({ q, adapter, endpoint, level })`（账号「接入」的登录卡片「查看日志」、插件详情「相关日志」、定时任务「调度日志」、入群欢迎「查看相关日志」）。面板渲染与 `/logs` 相同的 `LogViewer`，筛选放在面板自己的状态里（不改地址栏，上次的筛选与高度记在本机），「在日志页打开」带着同一组筛选去 `/logs`。宽屏停靠在底部、占满内容宽度、可拖动或用键盘调高度，非模态（页面照常可用，页面底部让出面板高度）；手机上是模态底部抽屉。只对能看 `/logs`（`status.view`）的身份出现；只在打开时轮询，在 `/logs` 页上不显示。
 - 实例不可用（网关 503 `instance_unavailable` / 504 `instance_timeout` / 502 `instance_error`）时 shell 顶部显示横幅：Retry-After 倒计时、自动重试、去「实例」页；访问控制、实例、终端等网关页不受影响。
 - 旧路由保留为隐藏重定向（`LEGACY_ROUTE_REDIRECTS`）：`/endpoints` → `/scope`、`/endpoints/:a/:e` → 账号「聊天」（带 `channelType` + `channelId` 时到该会话的「聊天」）、`/features/adapters[/:a]` → `/scope[/:a]`、`/features/adapters/:a/endpoints/:e` → 账号「功能」（`?tab=conversations` → 账号概览）、`…/conversations/:c` → 会话「功能」；`/config` → `/ops/config`（`/config?plugin=x` → `/features/global/x`）、`/env` `/files` `/database` → `/ops/*`、`/tasks` `/cron` `/assistant/jobs` → `/ops/schedules`、`/agent/models` `/agent/skills` `/agent/ambient` `/agent/workrooms*` → `/features/ai/*`。
-- 插件页面按 `/entries` 里声明的 `section`（区 id 如 `ops`，或区名如 `运维`）落区，未声明的进「功能」。`常用`、`机器人`、`高级` 等旧分组名仍可用，不是区名的分组显示在「功能」里。
+- 插件页面是插件详情的页签（zhinjs/zhin ADR 0063 决策 3，修订 ADR 0052 的落区规则）：挂在 `/plugins/<插件名>/<页面名>`（`pages/index` 的页面名是 `index`），外壳标题区就是插件详情的标题区，页面自己的标题是页签名，顶栏菜单里没有插件页面。旧的顶层路径（如 `/rss`）的重定向在 ADR 0063 P4 删除。适配器页面不再单独挂载：旧路径重定向到适配器对象页 `/scope/<适配器>`（`registerPluginPageRedirect`，与 `LEGACY_ROUTE_REDIRECTS` 一样保留查询串），那里的「管理连接」嵌着同一个页面；这条隐藏路由也是适配器页面在快速跳转里的唯一入口，所以保留。页面在 `/entries` 里仍声明 `section` 时忽略并在控制台告警一次。快速跳转按插件名、包名、页面标题（各语言）、插件说明和页面的 `keywords`（`string[]` 或 `{ [locale]: string[] }`）搜索插件页面，分组为「插件」；包名与插件说明在 `/entries` 不带时取自 `/api/plugins`。纯逻辑在 `console-ui/src/plugin-pages.mjs` 与 `navigation-taxonomy.ts` 的 `planPluginRoute`。
 
 「群聊插话」（`/features/ai/ambient`）：状态来自 `pluginRpc('root', 'ambient')`（Host 方法 `plugin.root.ambient`，需要令牌持有 `ambient:read`）。行为和范围设置用 `config:patch` + `expectedRevision` 只写 `ai.trigger.ambient`，文件保存与运行生效分别显示。旁听模型与旁听决策模型在统一模型用途页配置。
 
@@ -84,11 +84,13 @@ Console 没有单独的演示构建：公开演示是一台真实 Host，访客�
 
 「运维 → 实例」（zhinjs/zhin ADR 0054 §4–§5，`pages/ops/instance.tsx`）：`gateway.instance.status` / `logs`（`status.view`，每 3 秒 / 2 秒轮询可见页）、`start` / `stop` / `restart`（`ops.restart`，先确认）；依赖面板 `gateway.packages.list`（`feature.view`），安装 / 卸载 / 更新（`plugin.manage`）先调 `gateway.packages.plan` 再确认，执行时订阅事件流 `gateway.packages.progress` 显示阶段、包管理器输出与回滚结果。安装结果带 `needsConfiguration` 时（插件 Schema 有无默认值的必填字段，ADR 0053 §2 第 4 步），每个插件显示「需要配置」卡片（缺少的配置项与环境变量），按钮打开按 Schema 生成的配置表单（`pages/ops/plugin-declare.tsx`，预填 Schema 默认值；Host 无字段定义时改为 JSON），提交调用 `gateway.plugins.declare { package, instanceKey, config }`（阶段含 `configure`，失败回滚配置；400 `invalid_input` 的字段错误就地显示并保留草稿）。引导第 4 步与插件市场安装后同样进入此表单。网关 RPC 名称与权限从 `@zhin.js/console-protocol` 导入（`contracts/gateway.ts` 重新导出，并定义回复载荷类型）；Host 不认识这些 RPC 时显示「需要新版网关」。
 
+「运维 → 环境变量」（zhinjs/zhin#1250，`pages/env.tsx`）：`env:get` 在新版 Host 上只返回打码值（`format: 'masked'`，每个变量 `{ key, masked, hasValue, isReference? }`，不含长度），页面默认显示打码值；本页自己打码的值（新填写的待保存值、旧版 Host 的密钥行、保存后读回不一致的提示）与 Host 的 `maskConsoleEnvValue` 规则一致：按 dotenv 读到的值计算（去掉引号、行内注释与首尾空白），不足 16 个字符只显示固定宽度的 `●●●●●●●●`，16 个字符及以上显示首尾各 2 个字符，掩码宽度固定、不暴露长度；每行「显示」调用 `env:reveal { filename, key }`（需要 `ops.env.read` + `ops.env.write`，Host 记入审计），取回的原文只留在当前页面组件里，隐藏、保存、切换文件或离开页面即清除；保存只提交改动的变量（`env:save { filename, changes }`），打码占位在本地和 Host 都会被拒绝。未保存的改动（可能含密钥，包括显示后再编辑的值）在切换文件时保留，离开页面前先确认，离开后从内存中丢弃；编辑未显示过的已有值时留空不会直接应用，需点「确认清空」。旧 Host 没有「测试连接」路由时（推理视图不带 `environmentReferences`），AI 账号页不显示该按钮。旧版 Host（`env:get` 返回 `{ content }`）按旧方式编辑，并提示「当前 Host 版本会显示原文」。
+
 「运维 → 终端」（ADR 0051，`pages/ops/terminal.tsx`，需要 `ops.terminal`）：`GET /api/console/terminal/targets` 选目标 → `POST /api/console/terminal/tickets` 取一次性票据 → `WS /api/console/terminal?ticket=`；xterm.js + fit 插件，多标签各一个会话，断开后显示原因（空闲超时、被吊销、终端关闭、错误）与「重新连接」。票据不写日志、不留存。`insecureHostKey: true` 的 SSH 目标显示「未校验主机密钥」警示，打开前需再次确认。
 
 「访问控制」（zhinjs/zhin ADR 0049）：四个页面都走 `iam.*` RPC（`pages/access/`），需要 `iam.view`；新建、改角色、禁用、删除、重置密码、角色增删改、吊销令牌需要 `iam.manage`，没有时页面只读。删除、禁用、吊销先确认，删除用户/角色要输入名称。Host 拒绝移除最后一个所有者（`code: last_owner`）时显示专门的提示。权限目录与 `IAM_RPC` 从 `@zhin.js/console-protocol` 导入（`pages/access/access-model.mjs` 只按区域排列清单顺序）；插件声明的权限（`iam.roles.list` 回复里的 `pluginPermissions`）按插件分组显示，Host 没有报告时只显示内置目录。
 
-插件约定页没有声明分区时，按路由在 `PLUGIN_PAGE_PLACEMENT` 里归区（目前只有 `/sandbox` → 会话），其余进「功能」。
+唯一留在顶栏的插件页面是 Sandbox：`PLUGIN_PAGE_PLACEMENT` 把 `/sandbox` 放在「会话」（ADR 0063 D12）。项目自己的页面（owner 为 `root`，路径 `/p-<名>`）没有插件详情可挂，仍按声明的分区落区、未声明的进「功能」的「插件页面」组。
 
 ## 目录
 
@@ -104,7 +106,9 @@ Console 没有单独的演示构建：公开演示是一台真实 Host，访客�
 
 ### SDK 版本
 
-只使用一代 SDK：`@zhin.js/client` 1.1.x、`@zhin.js/contract` 1.1.x、`@zhin.js/ai` 1.1.x、`@zhin.js/console-protocol` 1.2.x，与 zhin 仓库 `packages/console/*` 当前发布线一致（npm 的 `latest`）。`package.json` 用 `~` 范围，因为 npm 上还有不属于这条线的 `@zhin.js/client` 2.x 和 `@zhin.js/ai` 1.5.x，`^` 会把它们装进来并在 lockfile 里产生第二份 contract / console-protocol / ai。`tests/console-contract.test.mjs` 检查这些范围，以及 lockfile 里每个包只有一个版本。
+只使用一代 SDK（zhin 1.4 发布线）：`@zhin.js/client` 1.2.x、`@zhin.js/contract` 1.1.x、`@zhin.js/ai` 1.7.x、`@zhin.js/console-protocol` 1.4.x，与 zhin 仓库 `packages/console/*` 当前发布线一致（npm 的 `latest`）。`package.json` 对每个 `@zhin.js/*` 依赖都用 `~` 范围：npm 上还有不属于这条线的 `@zhin.js/client` 2.x，`^` 会把它装进来，并在 lockfile 里产生第二份 contract / console-protocol / ai；新的 minor 也要先在 Console 里核对后再升级。`tests/console-contract.test.mjs` 检查这些范围，以及 lockfile 里每个包只有一个版本。
+
+Console 需要的协议常量、类型与打码规则都直接从已发布的包导入，不再保留本地替身：打码与占位判断（`maskConsoleEnvValue` / `isConsoleEnvMaskPlaceholder`）、聊天成员 RPC 与类型（`CHAT_PRINCIPALS_RPC`、`ConsoleChatPrincipal` 等）、「需要你处理」的 RPC 与类型（`ATTENTION_RPC`、`ConsoleAttentionKind`）、Login Assist 的 RPC 与枚举、全局插件开关的权限判断，以及 `@zhin.js/client` 的 headless 账号 API（`AdapterAccountsProvider` / `useAdapterAccounts` / `AdapterAccountRow`）。AI 与模型页的推理视图类型（`environmentReferences`、`lastCall`、拒绝原因等）定义在 Host 端的 `@zhin.js/agent`，`@zhin.js/console-protocol` 1.4.0 没有导出，所以仍在 `console-ui/src/pages/inference/model.d.mts` 里声明。对旧 Host 的检测与降级保持不变：缺少某个 RPC 或字段时，相应入口隐藏或退回旧界面。
 
 - 路由/工具注册表（`createConsoleApp()`）和当前 Host 会话的 `ConsoleClient` 由 `console-ui/src/utils/console-client.ts` 持有；`client/main.tsx` 用 `ConsoleClientProvider` 把它交给 SDK 的 hooks（`useConsoleTransport`、`useEnvFiles`、`useEngagements` 等）。
 - React 之外的代码用 `getConsoleTransport()`。登出、401 或更换 Host 时 `resetConsoleRuntime()` 丢弃旧 transport，路由注册表保留。

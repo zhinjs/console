@@ -3,19 +3,7 @@ import { useI18n } from '../../i18n'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { RefreshCw, Download, Upload } from 'lucide-react'
-import { Button } from '../../components/ui/button'
-import { SelectField } from '../../components/ui/select'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '../../components/ui/dialog'
-import { ErrorAlert } from '../../components/error-alert'
-import { Alert, AlertDescription } from '../../components/ui/alert'
-import { Textarea } from '../../components/ui/textarea'
+import { Alert, AlertDescription, AlertTitle, Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, ErrorAlert, SelectField, Tabs, TabsContent, TabsList, TabsTrigger, Textarea } from '@zhin.js/console-ui'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import { useInferenceManagement, type InferenceSource, type InferenceManagement } from './useInferenceManagement'
 import { Profiles } from './Profiles'
@@ -23,13 +11,16 @@ import { Services } from './Services'
 import { Accounts } from './Accounts'
 import { Purposes } from './Purposes'
 import { PersonalSessions } from './PersonalSessions'
-import { inferenceTabParams, resolveInferenceTab } from './models-entry.mjs'
+import { inferenceFocusAccount, inferenceTabParams, resolveInferenceTab } from './models-entry.mjs'
+import { planWarningText, type PlanWarning } from './ambient-judge-model.mjs'
 
 export function InferenceWorkspace({ connectionScope }: { connectionScope?: string }) {
   const i18n = useI18n()
   const m = useInferenceManagement(connectionScope),
     [importing, setImporting] = useState<InferenceSource | null>(null),
-    [source, setSource] = useState('')
+    [source, setSource] = useState(''),
+    // Deprecated forms the last import used, converted by the Host (ADR 0066): shown until dismissed.
+    [importWarnings, setImportWarnings] = useState<PlanWarning[]>([])
   async function exportPlan() {
     const result = await m.request('/export')
     if (!m.active()) return
@@ -105,6 +96,17 @@ export function InferenceWorkspace({ connectionScope }: { connectionScope?: stri
           </AlertDescription>
         </Alert>
       ) : null}
+      {importWarnings.length ? (
+        <Alert variant="warning" role="status">
+          <AlertTitle>{i18n.t("已导入，有旧写法被换算")}</AlertTitle>
+          <AlertDescription className="space-y-2">
+            <ul className="list-disc space-y-1 pl-5" role="list">
+              {importWarnings.map((warning, index) => <li key={index}>{planWarningText(warning, i18n.locale)}</li>)}
+            </ul>
+            <Button type="button" size="sm" variant="outline" onClick={() => setImportWarnings([])}>{i18n.t("知道了")}</Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
       {!connectionScope ? (
         <p role="status" className="text-muted-foreground">
           {i18n.t("请先连接并登录 Host。")}
@@ -139,6 +141,7 @@ export function InferenceWorkspace({ connectionScope }: { connectionScope?: stri
                 if (importing && await m.savePlan(parsed.plan ?? parsed, {
                   source: importing,
                   bindings: parsed.bindings ?? {},
+                  onWarnings: setImportWarnings,
                 })) {
                   setImporting(null)
                   setSource('')
@@ -167,15 +170,19 @@ export function InferenceWorkspace({ connectionScope }: { connectionScope?: stri
 
 
 /**
- * The tab lives in the URL (`?tab=`), so refresh and shared links reopen it; switching tabs
+ * The tab lives in the URL (`?tab=`), so refresh and shared links reopen it; `?account=<id>` opens
+ * 账号 with that account highlighted (attention items link there). Switching tabs
  * replaces the history entry. A tab the current owner does not have (e.g. purposes for a
  * personal owner) or an unknown value shows the default tab. Editing state remains owned by each page.
  */
 function InferencePages({ management: m, connectionScope }: { management: InferenceManagement; connectionScope?: string }) {
   const i18n = useI18n()
   const [searchParams, setSearchParams] = useSearchParams()
-  const tab = resolveInferenceTab(searchParams.get('tab'), m.view?.hostAdministrator)
+  const focusAccount = inferenceFocusAccount(searchParams.get('account'))
+  const tab = resolveInferenceTab(searchParams.get('tab'), m.view?.hostAdministrator, focusAccount)
   const setTab = (next: string) => setSearchParams(current => inferenceTabParams(current, next), { replace: true })
+  // 「添加模型」 on an account card: switch to 模型 and open its add dialog with that account.
+  const [addModelFor, setAddModelFor] = useState<string | null>(null)
   if (!m.view) return null
   return (
         <Tabs value={tab} onValueChange={setTab}>
@@ -190,11 +197,11 @@ function InferencePages({ management: m, connectionScope }: { management: Infere
             )}
           </TabsList>
           <TabsContent value="profiles">
-            <Profiles management={m} onCreateAccount={() => setTab('accounts')} />
+            <Profiles management={m} onCreateAccount={() => setTab('accounts')} addModelFor={addModelFor} onAddModelOpened={() => setAddModelFor(null)} />
           </TabsContent>
           <TabsContent value="services"><Services management={m} /></TabsContent>
           <TabsContent value="accounts">
-            <Accounts management={m} />
+            <Accounts management={m} focusAccount={tab === 'accounts' ? focusAccount : undefined} onAddModel={accountId => { setAddModelFor(accountId); setTab('profiles') }} />
           </TabsContent>
           {m.view.hostAdministrator ? (
             <TabsContent value="purposes">

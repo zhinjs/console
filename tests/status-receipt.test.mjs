@@ -284,9 +284,11 @@ test('a receipt with a persist key outlives its tab: in flight and unknown outco
   assert.ok(sharedReceipts.get(key))
 
   const hook = readFileSync(new URL('../console-ui/src/components/ActionReceipt.tsx', import.meta.url), 'utf8')
+  assert.match(readFileSync(new URL('../console-ui/src/pages/features/adapter-switch-model.mjs', import.meta.url), 'utf8'), /return `feature:\$\{level\}:\$\{levelKey\}:\$\{plugin\}`/)
   assert.match(hook, /const store = persistKey \? sharedReceipts : local\.current/)
   for (const [path, pattern] of [
-    ['console-ui/src/pages/features/feature-level-panel.tsx', /persistKey: `feature:\$\{level\}:\$\{levelKey\}:\$\{feature\.plugin\}`/],
+    // One key per level, plugin and scope, shared with the feature matrix's adapter cells (featureReceiptKey).
+    ['console-ui/src/pages/features/feature-level-panel.tsx', /persistKey: featureReceiptKey\(level, levelKey, feature\.plugin\)/],
     // The global plugin switch (list, matrix and feature page share one receipt).
     ['console-ui/src/pages/features/use-global-plugin-switch.ts', /GLOBAL_SWITCH_RECEIPT_KEY = 'feature:global'[\s\S]*persistKey: GLOBAL_SWITCH_RECEIPT_KEY/],
     ['console-ui/src/scope/ChatRolesPanel.tsx', /persistKey: `chat-roles:\$\{key \?\? ''\}`/],

@@ -1,0 +1,11 @@
+/* SaveButton (console#125): the check of 已保存 draws in; nothing moves when motion is reduced. */
+@media (prefers-reduced-motion: no-preference) {
+  .console-save-button[data-save-phase="saved"] .console-save-check {
+    animation: console-save-check var(--console-motion-base) var(--console-ease-out) both;
+  }
+}
+
+@keyframes console-save-check {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: none; }
+}

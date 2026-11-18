@@ -4,9 +4,7 @@ import { RefreshCw } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { supportLabel, SupportNotice } from './inference/SupportInfo'
-import { Button } from '../components/ui/button'
-import { SelectField } from '../components/ui/select'
-import { ErrorAlert } from '../components/error-alert'
+import { Button, ErrorAlert, SelectField } from '@zhin.js/console-ui'
 import {
   inferenceRequest,
   inferenceError,

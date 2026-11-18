@@ -1,6 +1,6 @@
 import { Info } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { Alert, AlertDescription } from '../../components/ui/alert'
+import { Alert, AlertDescription } from '@zhin.js/console-ui'
 
 /** Why the per-level feature area is unavailable on this Host / for this identity. */
 export function FeatureOverridesNotice({ status, level }: { status: 'unsupported' | 'forbidden'; level: 'adapter' | 'endpoint' | 'conversation' }) {

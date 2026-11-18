@@ -5,15 +5,10 @@ import { Eraser, Plus, Trash2, Undo2 } from 'lucide-react'
 import { ConversationScopeEditor } from './ConversationScopeEditor'
 import { isConversationScopeField } from './conversation-scope-model.mjs'
 import type { SchemaField, SchemaEditorDrafts } from './types.js'
-import { objectFields, initialSchemaValue, matchingSchemaBranches, updateObjectField, updateListItem, numericDraft } from './schema-model.mjs'
+import { objectFields, initialSchemaValue, matchingSchemaBranches, updateObjectField, updateListItem, numericDraft, isMillisecondField, secondsText, millisecondsFromSecondsText } from './schema-model.mjs'
 import { CodeEditor } from '../../pages/files/code-editor'
 import { numericFieldIssue } from './numeric-validation.mjs'
-import { Input } from '../ui/input'
-import { Textarea } from '../ui/textarea'
-import { Button } from '../ui/button'
-import { Switch } from '../ui/switch'
-import { Checkbox } from '../ui/checkbox'
-import { RadioGroup, RadioGroupItem } from '../ui/radio-group'
+import { Button, Checkbox, Input, RadioGroup, RadioGroupItem, Switch, Textarea } from '@zhin.js/console-ui'
 
 interface FieldEditorProps {
   name: string; field: SchemaField; value: unknown; onChange: (value: unknown) => void; allowEnvironmentReferences?: boolean
@@ -138,9 +133,29 @@ function renderFieldShell({ id, title, required, requiredLabel, actions, collaps
     <summary><span className="text-sm font-medium">{heading}</span>{meta ? <span className="console-field-group-meta">{meta}</span> : null}{controls}</summary>
     <div className="console-field-group-body space-y-2">{children}</div>
   </details>
-  return <div className="space-y-2 rounded-md border p-3">
+  return <div className="console-field space-y-2">
     <div className="console-field-head">{id ? <label htmlFor={id} className="text-sm font-medium">{heading}</label> : <span className="text-sm font-medium">{heading}</span>}{controls}</div>
     {children}
+  </div>
+}
+
+/**
+ * A millisecond field (`…Ms`) is typed in seconds and saved in milliseconds. The text the user
+ * types is kept locally so `1.` or `0.` stay editable; the draft receives whole milliseconds.
+ */
+function SecondsInput({ id, value, onChange, invalid, placeholder }: { id: string; value: unknown; onChange: (value: unknown) => void; invalid: boolean; placeholder?: string }) {
+  const i18n = useI18n()
+  const [text, setText] = useState(() => secondsText(value))
+  // Follow outside changes (撤销, 清空, reload) without overwriting a draft that already means this value.
+  useEffect(() => { setText(previous => sameValue(millisecondsFromSecondsText(previous), value) ? previous : secondsText(value)) }, [value])
+  const hintId = `${id}-unit`
+  return <div className="console-number-field">
+    <div className="console-number-input">
+      <Input id={id} type="text" inputMode="decimal" aria-invalid={invalid} aria-describedby={hintId} value={text} placeholder={placeholder}
+        onChange={event => { setText(event.target.value); onChange(millisecondsFromSecondsText(event.target.value)) }} />
+      <span className="console-number-unit" aria-hidden="true">{i18n.t("秒")}</span>
+    </div>
+    <p id={hintId} className="text-xs text-muted-foreground">{typeof value === 'number' ? i18n.t("以秒填写，保存为 {0} 毫秒", [value]) : i18n.t("以秒填写，保存为毫秒")}</p>
   </div>
 }
 
@@ -172,7 +187,12 @@ export function SchemaFieldEditor({ name, field: sourceField, value: rawValue, o
   const id = useId()
   const conversationScope = isConversationScopeField(field)
   const numeric = field.type === 'number' || field.type === 'integer'
-  const numericIssue = numeric && !(allowEnvironmentReferences && typeof value === 'string' && value.includes('${')) ? numericFieldIssue({ ...field, integer: field.integer || field.type === 'integer' }, value, i18n.locale) : null
+  const environmentReference = allowEnvironmentReferences && typeof value === 'string' && value.includes('${')
+  // `…Ms` fields are typed in seconds: their bounds and value are checked in seconds too.
+  const milliseconds = numeric && isMillisecondField(field.key ?? name, field)
+  const numericIssue = numeric && !environmentReference ? milliseconds
+    ? numericFieldIssue({ ...field, integer: false, min: typeof field.min === 'number' ? field.min / 1000 : undefined, max: typeof field.max === 'number' ? field.max / 1000 : undefined }, typeof value === 'number' ? value / 1000 : value, i18n.locale)
+    : numericFieldIssue({ ...field, integer: field.integer || field.type === 'integer' }, value, i18n.locale) : null
   if (field.hidden) return null
   // The first value seen for a path is what 撤销 restores; the form clears this baseline whenever it reloads the saved config.
   if (drafts?.originals && !drafts.originals.has(path)) drafts.originals.set(path, rawValue === undefined ? undefined : structuredClone(rawValue))
@@ -194,12 +214,12 @@ export function SchemaFieldEditor({ name, field: sourceField, value: rawValue, o
   const valueActions: ReactNode[] = []
   if (!inheritActions && editable) {
     const original = drafts?.originals?.get(path)
-    if (drafts?.originals?.has(path) && !sameValue(rawValue, original)) valueActions.push(<Button key="revert" type="button" variant="ghost" size="sm" title={i18n.t("撤销修改，恢复原值或默认值")} onClick={event => { keepGroupState(event); clearEditorDraftSubtree(path, drafts, onValidityChange); onChange(original === undefined ? undefined : structuredClone(original)) }}><Undo2 /><span className="sr-only sm:not-sr-only">{i18n.t("撤销")}</span></Button>)
-    if (clearable && rawValue !== undefined) valueActions.push(<Button key="clear" type="button" variant="ghost" size="sm" title={hasDefault ? i18n.t("清空（使用声明默认值）") : i18n.t("清空（保存时省略此项）")} onClick={event => { keepGroupState(event); clearEditorDraftSubtree(path, drafts, onValidityChange); onChange(undefined) }}><Eraser /><span className="sr-only sm:not-sr-only">{useDeclaredDefaults && hasDefault ? i18n.t("恢复默认") : i18n.t("清空")}</span></Button>)
+    if (drafts?.originals?.has(path) && !sameValue(rawValue, original)) valueActions.push(<Button key="revert" type="button" variant="ghost" size="sm" title={i18n.t("撤销修改，恢复原值或默认值")} onClick={event => { keepGroupState(event); clearEditorDraftSubtree(path, drafts, onValidityChange); onChange(original === undefined ? undefined : structuredClone(original)) }}><Undo2 />{i18n.t("撤销")}</Button>)
+    if (clearable && rawValue !== undefined) valueActions.push(<Button key="clear" type="button" variant="ghost" size="sm" title={hasDefault ? i18n.t("清空（使用声明默认值）") : i18n.t("清空（保存时省略此项）")} onClick={event => { keepGroupState(event); clearEditorDraftSubtree(path, drafts, onValidityChange); onChange(undefined) }}><Eraser />{useDeclaredDefaults && hasDefault ? i18n.t("恢复默认") : i18n.t("清空")}</Button>)
   }
   if (field.type === 'union' && !conversationScope && !constUnion) return <UnionValueEditor {...nested} label={title} actions={[...valueActions, ...actionList(actions)]} />
   const contentActions: ReactNode[] = []
-  if (canAppend) contentActions.push(<Button key="add" type="button" variant="outline" size="sm" title={i18n.t("添加列表项")} onClick={event => { keepGroupState(event); event?.currentTarget?.closest('details')?.setAttribute('open', ''); onChange(appendedListItem(field, value)) }}><Plus /><span className="sr-only sm:not-sr-only">{i18n.t("添加列表项")}</span></Button>)
+  if (canAppend) contentActions.push(<Button key="add" type="button" variant="outline" size="sm" title={i18n.t("添加列表项")} onClick={event => { keepGroupState(event); event?.currentTarget?.closest('details')?.setAttribute('open', ''); onChange(appendedListItem(field, value)) }}><Plus />{i18n.t("添加列表项")}</Button>)
   const passed = actionList(actions)
   // Title row holds only buttons; a union branch reuses the union's value controls instead of its own.
   const headerActions = [...contentActions, ...(inheritActions ? [] : valueActions), ...passed]
@@ -211,7 +231,7 @@ export function SchemaFieldEditor({ name, field: sourceField, value: rawValue, o
     {field.description ? <p className="text-xs text-muted-foreground">{field.description}</p> : null}
     {hasDefault ? <p className="text-xs text-muted-foreground">{useDeclaredDefaults
       ? rawValue === undefined ? i18n.t("使用默认值") : i18n.t("已自定义")
-      : secret ? i18n.t("已声明默认值") : i18n.t("声明默认值：{0}", [JSON.stringify(field.default)])}</p> : null}
+      : secret ? i18n.t("已声明默认值") : milliseconds && typeof field.default === 'number' ? i18n.t("声明默认值：{0} 秒", [secondsText(field.default)]) : i18n.t("声明默认值：{0}", [JSON.stringify(field.default)])}</p> : null}
     {secret && !textInput ? <p className="text-xs text-muted-foreground">{allowEnvironmentReferences ? <>{i18n.t("建议填写环境变量引用，如 ")}{'${API_KEY}'}{i18n.t("；不要将密钥写入配置。")}</> : i18n.t("请按任务提供方要求填写；此处不解析环境变量引用。")}</p> : null}
     {conversationScope ? <ConversationScopeEditor field={field} value={value} onChange={onChange} /> : field.type === 'constraint' ? <p className="text-xs text-muted-foreground">{i18n.t("此约束不提供额外输入；提交后由 Host 校验，不在此处推断通过。")}</p> : field.type === 'intersect' ? <div className="space-y-3"><p className="text-xs text-muted-foreground">{i18n.t("所有约束共同适用；各组编辑同一份值，Host 最终校验。")}</p>{(field.list ?? []).map((branch, index) => <SchemaFieldEditor {...nested} key={index} path={`${path}/intersect:${index}`} field={inheritedField(field, branch)} name={branch.title ?? i18n.t("{0} 约束 {1}", [name, index + 1])} />)}</div> : options?.length ? <RadioGroup id={id} aria-label={title} className={choiceGroupClass} value={preservedOption ? 'preserved' : value === undefined ? '' : String(optionIndex)} onValueChange={index => {
       if (!/^(0|[1-9]\d*)$/.test(index)) return
@@ -222,7 +242,7 @@ export function SchemaFieldEditor({ name, field: sourceField, value: rawValue, o
       : field.type === 'object' || field.type === 'dict' ? <ObjectValueEditor {...nested} /> : field.type === 'list' || field.type === 'tuple' ? <SequenceValueEditor {...nested} /> : field.type === 'boolean' ? <>{value !== undefined && typeof value !== 'boolean' ? <><p className="text-xs text-muted-foreground">{i18n.t("已保存非布尔原值；不操作时保留。可在下方编辑，或明确使用开关替换。")}</p><JsonValueEditor {...nested} /></> : null}<div><Switch id={id} aria-label={title} checked={value === true} onCheckedChange={onChange} /></div></>
       : field.type === 'const' ? <div className="space-y-2"><p id={id} className="text-sm">{secret ? i18n.t("固定值未展示；当前原值保持不变。") : <>{i18n.t("当前：")}{JSON.stringify(value) ?? i18n.t("未设置")}{i18n.t("；固定值：")}{JSON.stringify(Object.hasOwn(field, 'value') ? field.value : field.default)}</>}</p>{!sameValue(value, Object.hasOwn(field, 'value') ? field.value : field.default) && <Button type="button" variant="outline" size="sm" onClick={() => onChange(structuredClone(Object.hasOwn(field, 'value') ? field.value : field.default))}>{i18n.t("使用固定值")}</Button>}</div>
       : field.type === 'null' ? <div className="space-y-2"><p>{i18n.t("当前：")}{secret && value !== null && value !== undefined ? i18n.t("敏感原值未展示") : JSON.stringify(value) ?? i18n.t("未设置")}</p>{value !== null && <Button type="button" variant="outline" size="sm" onClick={() => onChange(null)}>{i18n.t("设为 null")}</Button>}</div>
-      : field.type === 'number' || field.type === 'integer' ? value !== undefined && typeof value !== 'number' && typeof value !== 'string' ? <JsonValueEditor {...nested} /> : <Input id={id} type={field.secret ? 'password' : 'text'} aria-invalid={!!numericIssue} inputMode="decimal" value={value === undefined ? '' : String(value)} onChange={event => onChange(numericDraft(event.target.value))} placeholder={allowEnvironmentReferences ? i18n.t("数字或 ${ENV_NAME}") : i18n.t("填写数字")} />
+      : field.type === 'number' || field.type === 'integer' ? value !== undefined && typeof value !== 'number' && typeof value !== 'string' ? <JsonValueEditor {...nested} /> : milliseconds && !field.secret ? <SecondsInput id={id} value={value} onChange={onChange} invalid={!!numericIssue} placeholder={allowEnvironmentReferences ? i18n.t("秒数或 ${ENV_NAME}") : i18n.t("填写秒数")} /> : <div className="console-number-field"><Input id={id} type={field.secret ? 'password' : 'text'} aria-invalid={!!numericIssue} inputMode="decimal" value={value === undefined ? '' : String(value)} onChange={event => onChange(numericDraft(event.target.value))} placeholder={allowEnvironmentReferences ? i18n.t("数字或 ${ENV_NAME}") : i18n.t("填写数字")} /></div>
       : field.component === 'textarea' ? value !== undefined && typeof value !== 'string' ? <JsonValueEditor {...nested} /> : secret ? <SecretTextEditor {...nested} id={id} placeholder={textPlaceholder} /> : <Textarea id={id} placeholder={textPlaceholder} value={value === undefined ? '' : String(value)} onChange={event => onChange(event.target.value)} />
       : field.type === 'string' ? value !== undefined && typeof value !== 'string' ? <JsonValueEditor {...nested} /> : <Input id={id} type={field.secret || field.component === 'password' ? 'password' : 'text'} autoComplete="off" placeholder={textPlaceholder} value={value === undefined ? '' : String(value)} onChange={event => onChange(event.target.value)} /> : <JsonValueEditor {...nested} />}
     {preservedOption ? <p className="break-all text-xs text-muted-foreground"><span className="font-medium">{preservedLabel}</span>{' · '}{environmentOption ? i18n.t("当前为环境变量引用，展开值未读取。") : <>{i18n.t("当前保存值不在选项中")}{secret ? '。' : `：${JSON.stringify(value)?.slice(0, 200)}${(JSON.stringify(value)?.length ?? 0) > 200 ? '…' : ''}。`}</>}{i18n.t("未选择替换时会原样保留；可明确选择新值，或打开完整源码编辑。保存仍需 Host 校验。")}</p> : null}

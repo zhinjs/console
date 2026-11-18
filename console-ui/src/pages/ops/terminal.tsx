@@ -4,16 +4,8 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { useI18n } from '../../i18n'
-import { PageShell } from '../../components/PageShell'
-import { PageHeader } from '../../components/PageHeader'
-import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/button'
-import { Card } from '../../components/ui/card'
-import { SelectField } from '../../components/ui/select'
-import { Skeleton } from '../../components/ui/skeleton'
+import { Alert, AlertDescription, AlertTitle, Badge, Button, Card, ConfirmDialog, PageHeader, PageShell, SelectField, Skeleton } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
-import { ConfirmDialog } from '../../components/confirm-dialog'
 import { useToast } from '../../components/toast'
 import { apiFetch, getApiBase } from '../../utils/auth'
 import { copyText } from '../clipboard-copy.mjs'
@@ -302,7 +294,7 @@ function TerminalPane({ target, active }: { target: TerminalTarget; active: bool
     <div className="space-y-2 p-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm">
-          <Badge size="sm" variant={status.phase === 'ready' ? 'success' : status.phase === 'connecting' ? 'warning' : 'secondary'}>
+          <Badge size="sm" variant={status.phase === 'ready' ? 'outline' : status.phase === 'connecting' ? 'secondary' : 'warning'}>
             {status.phase === 'ready' ? i18n.t("已连接") : status.phase === 'connecting' ? i18n.t("连接中") : i18n.t("已断开")}
           </Badge>
           <span className="text-muted-foreground">{target.kind === 'local' ? i18n.t("本机 Shell") : i18n.t("SSH：{0}", [target.label])}</span>

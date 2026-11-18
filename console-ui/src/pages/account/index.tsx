@@ -2,16 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, RefreshCw, Trash2, UserCog } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { PageShell } from '../../components/PageShell'
-import { PageHeader } from '../../components/PageHeader'
-import { Button } from '../../components/ui/button'
-import { Input } from '../../components/ui/input'
-import { SelectField } from '../../components/ui/select'
-import { Badge } from '../../components/ui/badge'
-import { Card } from '../../components/ui/card'
-import { Skeleton } from '../../components/ui/skeleton'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog'
+import { Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, PageHeader, PageShell, SelectField, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
 import { ActionReceipt, useActionReceipt } from '../../components/ActionReceipt'
 import { receiptBlocksActions } from '../../components/action-receipt-model.mjs'
@@ -32,6 +23,7 @@ import { CONSOLE_PATHS as P } from '../../console-routes.mjs'
 import { builtinRoleLabel, scopeLabel } from '../access/access-model.mjs'
 import { IssuedTokenDialog } from '../access/tokens'
 import type { ConsoleApiTokenView, ConsoleMe } from '../../contracts/console-auth'
+import { MyChatIdentitySection } from '../../scope/ChatIdentityPanels'
 import '../admin-pages.css'
 
 /** Personal settings (ADR 0049 §5): who I am, change my password, my API tokens (`/auth/tokens`). */
@@ -55,6 +47,8 @@ export default function AccountPage() {
     {me && signedInUser ? <>
       <IdentitySection me={me} />
       {me.kind === 'user' ? <PasswordSection /> : null}
+      {/* ADR 0060: 「把聊天身份绑定到我」; hidden on a Host without chat-identities.* */}
+      <MyChatIdentitySection />
       <TokensSection />
     </> : null}
   </PageShell>
@@ -215,7 +209,7 @@ function TokensSection() {
           {when(token.expiresAt)}{tokenState(token) === 'expired' && <Badge variant="outline" className="ml-2">{i18n.t('已过期')}</Badge>}
         </>}</TableCell>
         <TableCell className="text-right">
-          <Button size="sm" variant="ghost" className="text-destructive" aria-label={i18n.t('吊销 {0}', [token.name])} disabled={receiptBlocksActions(receipt.state)} onClick={() => prepareRevoke(token)}><Trash2 /><span className="hidden sm:inline">{i18n.t('吊销')}</span></Button>
+          <Button size="sm" variant="destructive" aria-label={i18n.t('吊销 {0}', [token.name])} disabled={receiptBlocksActions(receipt.state)} onClick={() => prepareRevoke(token)}><Trash2 />{i18n.t('吊销')}</Button>
         </TableCell>
       </TableRow>)}</TableBody>
     </Table></Card> : null}

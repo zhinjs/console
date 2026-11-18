@@ -1,23 +1,18 @@
 import { useI18n } from '../i18n'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Download, RefreshCw } from 'lucide-react'
 import { pluginRpc } from '../utils/plugin-rpc'
-import { PageHeader } from '../components/PageHeader'
-import { PageShell } from '../components/PageShell'
-import { ErrorAlert } from '../components/error-alert'
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, ErrorAlert, Input, PageHeader, PageShell, SelectField, Skeleton } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import { ScopeFilterBar, useScopeFilter } from './insights/ScopeFilterBar'
+import { useAmbientGroupCatalog } from './AmbientGroupPicker'
+import { groupNamesFromCatalog } from './ambient-group-picker-model.mjs'
 import { replayScopeApproximate, replayScopeFilter } from './insights/scope-filter.mjs'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
-import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
-import { Input } from '../components/ui/input'
-import { SelectField } from '../components/ui/select'
-import { Skeleton } from '../components/ui/skeleton'
 import {
   EXPORT_WINDOWS,
   REPLAY_EXPORT_METHOD,
+  ambientJudgeFacts,
   REPLAY_KINDS,
   REPLAY_LIST_METHOD,
   REPLAY_OUTCOMES,
@@ -27,6 +22,7 @@ import {
   buildReplayFilter,
   collectReplayExport,
   describeReplayRow,
+  foldReplayRows,
   exportFileName,
   exportWindow,
   isPermissionDenied,
@@ -43,10 +39,11 @@ function formatTime(timestamp: number, locale: 'zh-CN' | 'en'): string {
   return new Date(timestamp).toLocaleString(locale)
 }
 
-function outcomeVariant(code: string): 'success' | 'info' | 'secondary' | 'destructive' {
-  if (code === 'allow') return 'success'
-  if (code === 'deny' || code === 'error') return 'destructive'
-  if (code === 'defer') return 'info'
+/** Replying is the normal outcome (neutral); a refusal is a warning, an error the loudest (console#125). */
+function outcomeVariant(code: string): 'outline' | 'secondary' | 'warning' | 'destructive' {
+  if (code === 'allow') return 'outline'
+  if (code === 'error') return 'destructive'
+  if (code === 'deny') return 'warning'
   return 'secondary'
 }
 
@@ -78,6 +75,9 @@ export default function BotReplayPage() {
   const [windowChoice, setWindowChoice] = useState(EXPORT_WINDOWS[1]!.value)
   const [exporting, setExporting] = useState(false)
   const [exportNote, setExportNote] = useState<string | null>(null)
+  // Group names from the connected accounts' group lists; a failed read just leaves the raw ids.
+  const groupCatalog = useAmbientGroupCatalog().catalog
+  const groupNames = useMemo(() => groupCatalog ? groupNamesFromCatalog(groupCatalog) : new Map<string, string>(), [groupCatalog])
 
   const load = useCallback(async (nextFilter: Record<string, string>, before?: number) => {
     const data = validateReplayList(await pluginRpc<unknown>('root', REPLAY_LIST_METHOD, {
@@ -189,7 +189,7 @@ export default function BotReplayPage() {
         <CardContent>
           {turnError ? <ErrorAlert error={turnError} /> : null}
           {turn ? <ol className="space-y-2 border-l pl-4 text-sm">
-            {turn.events.map(row => {
+            {foldReplayRows(turn.events).map(({ row, folded }) => {
               const view = describeReplayRow(row, i18n.locale)
               return <li key={view.id}>
                 <div className="flex flex-wrap items-center gap-2">
@@ -197,8 +197,11 @@ export default function BotReplayPage() {
                   <span className="font-medium">{view.kind}</span>
                   <Badge variant={outcomeVariant(view.outcomeCode)}>{view.outcome}</Badge>
                   <span>{view.reason}</span>
+                  <FoldedRows rows={folded} />
                 </div>
                 <div className="font-mono text-xs text-muted-foreground">{view.code}{view.detail ? ` · ${view.detail}` : ''}</div>
+                <JudgeFacts row={row} />
+                {folded.map(child => <div key={child.id} className="font-mono text-xs text-muted-foreground">{describeReplayRow(child, i18n.locale).code}</div>)}
               </li>
             })}
           </ol> : null}
@@ -216,14 +219,16 @@ export default function BotReplayPage() {
             <CardContent className="space-y-3">
               {error ? <p className="text-xs text-destructive">{error}</p> : null}
               {list.rows.length ? <ul className="divide-y rounded-md border text-sm">
-                {list.rows.map(row => {
-                  const view = describeReplayRow(row, i18n.locale)
+                {foldReplayRows(list.rows).map(({ row, folded }) => {
+                  const view = describeReplayRow(row, i18n.locale, groupNames)
                   return <li key={view.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
                     <span className="text-xs text-muted-foreground">{formatTime(view.at, i18n.locale)}</span>
-                    <span className="break-all text-xs">{view.where}</span>
+                    <span className="break-all text-xs" title={view.where === view.whereCode ? undefined : view.whereCode}>{view.where}</span>
                     <span className="font-medium">{view.kind}</span>
                     <Badge variant={outcomeVariant(view.outcomeCode)}>{view.outcome}</Badge>
                     <span className="text-muted-foreground" title={view.code}>{view.reason}</span>
+                    <FoldedRows rows={folded} />
+                    <JudgeFacts row={row} inline />
                     <span className="flex-1" />
                     <Button variant="ghost" size="sm" onClick={() => void openTurn(view.turnId)}>{i18n.t("看这个回合")}</Button>
                   </li>
@@ -235,4 +240,21 @@ export default function BotReplayPage() {
           </Card> : null}
     </>}
   </PageShell>
+}
+
+/** The judge of an `ambient_decision` row (ADR 0066): model, fallback, tokens, error, compared verdict. */
+function JudgeFacts({ row, inline = false }: { row: ReplayRow; inline?: boolean }) {
+  const i18n = useI18n()
+  const facts = ambientJudgeFacts(row, i18n.locale)
+  if (!facts.length) return null
+  return <span className={inline ? 'basis-full text-xs text-muted-foreground' : 'block text-xs text-muted-foreground'} data-judge-facts="">{facts.join(' · ')}</span>
+}
+
+/** Rows folded into their parent decision (#1250 `payload.parent`): what followed, e.g. 「没有调用模型」. */
+function FoldedRows({ rows }: { rows: readonly ReplayRow[] }) {
+  const i18n = useI18n()
+  if (!rows.length) return null
+  return <span className="text-xs text-muted-foreground" title={rows.map(row => describeReplayRow(row, i18n.locale).code).join('\n')}>
+    {i18n.t('随后：{0}', [rows.map(row => describeReplayRow(row, i18n.locale).kind).join(i18n.t('、'))])}
+  </span>
 }

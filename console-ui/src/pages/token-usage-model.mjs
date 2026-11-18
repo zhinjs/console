@@ -123,8 +123,69 @@ export function cacheLinePoints(series) {
   }))
 }
 
+/** Series / colour key of a model row; a row already merged under a display label (provider '') is keyed by that label. */
 export function modelKey(provider, model) {
-  return `${provider}/${model}`
+  return provider ? `${provider}/${model}` : model
+}
+
+const label = value => (typeof value === 'string' && value.trim() ? value.trim() : '')
+
+/**
+ * Display name of a byModel row from the optional fields a newer Host adds (zhinjs/zhin#1250
+ * `usage-model-labels`): `label` (「服务名 · 模型」), else `serviceLabel` + (`modelLabel` or `model`).
+ * Empty when the Host sends neither: the row keeps its raw `provider/model` key.
+ */
+export function usageModelLabel(row) {
+  const own = label(row?.label)
+  if (own) return own
+  const service = label(row?.serviceLabel)
+  return service ? `${service} · ${label(row?.modelLabel) || row.model}` : ''
+}
+
+const TOKEN_SUM_KEYS = ['calls', 'inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens']
+
+/**
+ * Merges byModel rows that share a display name (the same model reached as `services:<id>` and
+ * `accounts:<id>` is one row) and re-keys `series[].byModel` to match. Rows without a display name
+ * stay as they are. Returns `stats` itself when no row has one (older Hosts).
+ */
+export function mergeUsageModels(stats) {
+  if (!stats || !stats.byModel.some(row => usageModelLabel(row))) return stats
+  const rename = new Map()
+  const merged = new Map()
+  for (const row of stats.byModel) {
+    const display = usageModelLabel(row)
+    const key = display || modelKey(row.provider, row.model)
+    rename.set(modelKey(row.provider, row.model), key)
+    const into = merged.get(key)
+    if (!into) {
+      merged.set(key, display ? { ...row, provider: '', model: display, rawKeys: [modelKey(row.provider, row.model)] } : { ...row })
+      continue
+    }
+    for (const field of TOKEN_SUM_KEYS) {
+      if (typeof row[field] === 'number' || typeof into[field] === 'number') into[field] = (into[field] ?? 0) + (row[field] ?? 0)
+    }
+    into.rawKeys = [...(into.rawKeys ?? []), modelKey(row.provider, row.model)]
+    // A per-row cache share cannot be summed; recompute from the merged counts.
+    delete into.cacheShare
+  }
+  const series = stats.series.map(point => {
+    const byModel = {}
+    for (const [key, value] of Object.entries(point.byModel)) {
+      const target = rename.get(key) ?? key
+      byModel[target] = (byModel[target] ?? 0) + value
+    }
+    return { ...point, byModel }
+  })
+  return { ...stats, byModel: [...merged.values()].sort((a, b) => b.inputTokens - a.inputTokens), series }
+}
+
+/**
+ * The name a session row shows: the Host's optional `label` / `displayName` / `name` (zhinjs/zhin#1250),
+ * else the scene id from the session key, else the key itself.
+ */
+export function usageSessionLabel(row) {
+  return label(row?.label) || label(row?.displayName) || label(row?.name) || splitSessionKey(row).sceneId || row.sessionKey
 }
 
 // 分类色来自 theme-tokens.css 的 --chart-1..8，随亮 / 暗主题切换。
@@ -341,4 +402,33 @@ export function formatBucketLabel(ms, bucket, locale = 'zh-CN') {
   return bucket === 'hour'
     ? new Intl.DateTimeFormat(locale, { month: 'numeric', day: 'numeric', hour: 'numeric', hour12: false }).format(date)
     : new Intl.DateTimeFormat(locale, { month: 'numeric', day: 'numeric' }).format(date)
+}
+
+/**
+ * Prompt-cache notes of the usage page (zhinjs/zhin#1250 `usage-cache-unsupported-hint`), from the
+ * Host's `promptCacheHints`: one line per service that likely does not support or pass through
+ * prompt caching (a long run of calls without a cache read while adjacent requests shared their
+ * prefix), and `missed` when no request of the range read the cache although none is suspect.
+ * Null on a Host without `promptCacheHints` (the page then shows what it showed before).
+ */
+export function promptCacheNotices(stats, locale = 'zh-CN') {
+  if (!isPlainObject(stats) || !Array.isArray(stats.promptCacheHints)) return null
+  const hints = []
+  for (const hint of stats.promptCacheHints) {
+    if (!isPlainObject(hint) || typeof hint.provider !== 'string' || !hint.provider) continue
+    if (!isCount(hint.zeroCacheCalls) || !isCount(hint.sessions)) continue
+    const ratio = typeof hint.samePrefixRatio === 'number' && Number.isFinite(hint.samePrefixRatio) ? hint.samePrefixRatio : null
+    const name = typeof hint.label === 'string' && hint.label ? hint.label : hint.provider
+    hints.push({
+      key: hint.provider,
+      name,
+      text: ratio === null
+        ? translate(locale, '{0}：最近连续 {1} 次请求（{2} 个会话）没有命中提示缓存，该服务可能不支持或没有透传提示缓存。', [name, hint.zeroCacheCalls, hint.sessions])
+        : translate(locale, '{0}：最近连续 {1} 次请求（{2} 个会话）没有命中提示缓存，而相邻请求有 {3} 的前缀相同——该服务可能不支持或没有透传提示缓存。',
+          [name, hint.zeroCacheCalls, hint.sessions, formatPercent(ratio, locale)]),
+    })
+  }
+  const totals = stats.totals
+  const missed = !hints.length && isPlainObject(totals) && totals.calls > 0 && totals.inputTokens > 0 && totals.cacheReadTokens === 0
+  return { hints, missed }
 }

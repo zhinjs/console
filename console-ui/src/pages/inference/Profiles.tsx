@@ -1,23 +1,11 @@
 import { StatusState } from '../../components/StatusState'
 import { useI18n } from '../../i18n'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Plus, Pencil, Trash2, RefreshCw } from 'lucide-react'
-import { Button } from '../../components/ui/button'
-import { Input } from '../../components/ui/input'
-import { SelectField } from '../../components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '../../components/ui/dialog'
-import { ErrorAlert } from '../../components/error-alert'
+import { Button, Card, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, ErrorAlert, Input, SelectField, useConfirm } from '@zhin.js/console-ui'
 import { ModelCapabilities } from './ModelCapabilities'
 import { SupportLabel, SupportNotice, supportLabel } from './SupportInfo'
-import { inferenceError, profileSupport, profileUsages, serviceDriver, type ProfileUsage } from './model.mjs'
-import { Card } from '../../components/ui/card'
-import { useConfirm } from '../../components/confirm-dialog'
+import { ignoredReasonText, inferenceError, languageInputMissing, modelEntryView, withModelProtocol, profileSupport, profileUsages, serviceDriver, type ProfileUsage } from './model.mjs'
 import {
   driverKey,
   type Profile,
@@ -28,11 +16,22 @@ import {
 import { SchemaFields } from './SchemaFields'
 import type { InferenceManagement, InferenceSource } from './useInferenceManagement'
 
-export function Profiles({ management: m, onCreateAccount }: { management: InferenceManagement; onCreateAccount: () => void }) {
+export function Profiles({ management: m, onCreateAccount, addModelFor, onAddModelOpened }: {
+  management: InferenceManagement
+  onCreateAccount: () => void
+  /** An account whose 「添加模型」 was pressed on 账号: open the add dialog with it selected. */
+  addModelFor?: string | null
+  onAddModelOpened?: () => void
+}) {
   const i18n = useI18n()
   const view = m.view!,
-    [editing, setEditing] = useState<{ profile: Profile | null; source: InferenceSource } | null>(null),
+    [editing, setEditing] = useState<{ profile: Profile | null; source: InferenceSource; accountId?: string } | null>(null),
     { confirm, ConfirmDialog: dialog } = useConfirm()
+  useEffect(() => {
+    if (!addModelFor || !m.source) return
+    if (Object.hasOwn(view.accounts, addModelFor)) setEditing({ profile: null, source: m.source, accountId: addModelFor })
+    onAddModelOpened?.()
+  }, [addModelFor]) // eslint-disable-line react-hooks/exhaustive-deps
   async function remove(profile: Profile) {
     if (
       await confirm({
@@ -61,22 +60,26 @@ export function Profiles({ management: m, onCreateAccount }: { management: Infer
           {i18n.t("先添加账号，再选择模型。")}
         </Card>
       ) : (
-        <div className="divide-y rounded-lg border">
-          {Object.values(view.profiles).map((profile) => {
+        <ProfileList
+          profiles={Object.values(view.profiles)}
+          usagesOf={(profile) => profileUsages(view.purposes, profile.id, i18n.locale, view.purposeEffects)}
+          row={(profile, usages) => {
             const account = view.accounts[profile.accountId]
+            const chat = usages?.some((usage) => usage.key === 'default:chat')
             return (
               <div key={profile.id} className="flex items-center justify-between gap-4 p-4">
                 <div className="min-w-0">
-                  <p className="font-medium">
+                  <p className="flex flex-wrap items-center gap-2 font-medium">
                     <SupportLabel
                       label={profile.label ?? profile.model}
                       support={profileSupport(view, profile)}
                     />
+                    {chat ? <span className="inline-flex items-center rounded-full border border-[hsl(var(--primary-action-border))] bg-[hsl(var(--primary-action))] px-2 text-[length:var(--console-text-label)] font-medium leading-5 text-[hsl(var(--primary-action-foreground))]">{i18n.t("当前聊天模型")}</span> : null}
                   </p>
                   <p className="text-sm text-muted-foreground break-all">
                     {profile.model} · {account.label ?? account.id}
                   </p>
-                  <ProfileUsageLine usages={profileUsages(view.purposes, profile.id, i18n.locale)} />
+                  {usages?.length ? <ProfileUsageLine usages={usages} /> : null}
                 </div>
                 <div className="flex gap-1">
                   <Button
@@ -100,8 +103,8 @@ export function Profiles({ management: m, onCreateAccount }: { management: Infer
                 </div>
               </div>
             )
-          })}
-        </div>
+          }}
+        />
       )}
       <Dialog
         open={editing !== null}
@@ -118,6 +121,7 @@ export function Profiles({ management: m, onCreateAccount }: { management: Infer
             <ProfileForm
               key={editing.profile?.id ?? 'new'}
               profile={editing.profile}
+              defaultAccountId={editing.accountId}
               source={editing.source}
               management={m}
               onSaved={() => setEditing(null)}
@@ -135,18 +139,21 @@ type ProfileSchemaResult =
 
 function ProfileForm({
   profile,
+  defaultAccountId,
   source,
   management,
   onSaved,
 }: {
   profile: Profile | null
+  /** A new model: the account to start with. */
+  defaultAccountId?: string
   source: InferenceSource
   management: InferenceManagement
   onSaved: () => void
 }) {
   const i18n = useI18n()
   const view = source.view
-  const [accountId, setAccountId] = useState(profile?.accountId ?? '')
+  const [accountId, setAccountId] = useState(profile?.accountId ?? defaultAccountId ?? '')
   const [label, setLabel] = useState(profile?.label ?? '')
   const [modelId, setModelId] = useState(profile?.model ?? '')
   const [committedModelId, setCommittedModelId] = useState(profile?.model ?? '')
@@ -156,6 +163,7 @@ function ProfileForm({
   const [manualEntry, setManualEntry] = useState(false)
   const [parametersValid, setParametersValid] = useState(true)
   const [observations, setObservations] = useState<Array<{ id: string; label?: string }>>([])
+  const [discovered, setDiscovered] = useState(false)
   const [schemaResult, setSchemaResult] = useState<ProfileSchemaResult | null>(null)
   const [formError, setFormError] = useState('')
   const account = view.accounts[accountId]
@@ -175,6 +183,7 @@ function ProfileForm({
     ).values(),
   ]
   const disabled = management.busy || !!management.pending
+  const entry = modelEntryView({ editing: !!profile, manualEntry, choiceCount: choices.length, discovery: driver?.discovery === true, discovered })
 
   // Only explicit selection, blur or Save commits an ID for local Driver validation.
   const schemaKey = JSON.stringify([accountId, declarationKey, driver?.contractVersion, view.revision, management.revisionEpoch])
@@ -219,11 +228,9 @@ function ProfileForm({
     if (commit) setCommittedModelId(id)
     setModelId(id)
     const existing = service?.models[id]
-    setModelDraft((previous) => existing ? null : previous ? { ...previous, id } : {
-      id,
-      protocol: driver?.modelContracts.length === 1 ? driver.modelContracts[0].protocol : '',
-      kinds: [],
-    })
+    setModelDraft((previous) => existing ? null : previous ? { ...previous, id }
+      : driver?.modelContracts.length === 1 ? withModelProtocol({ id, protocol: '', kinds: [] }, driver.modelContracts[0].protocol, driver)
+        : { id, protocol: '', kinds: [] })
     setFormError('')
   }
   function chooseAccount(id: string) {
@@ -232,6 +239,7 @@ function ProfileForm({
     setCommittedModelId('')
     setModelDraft(null)
     setObservations([])
+    setDiscovered(false)
   }
   async function discover() {
     if (!account) return
@@ -239,7 +247,10 @@ function ProfileForm({
       '/discover',
       { accountId }
     )
-    if (result) setObservations(result.observations)
+    if (result) {
+      setObservations(result.observations)
+      setDiscovered(true)
+    }
   }
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -248,6 +259,7 @@ function ProfileForm({
     if (!modelId.trim()) { setFormError(i18n.t("请填写模型 ID。")); return }
     if (!declaration?.protocol) { setFormError(i18n.t("请选择模型协议。")); return }
     if (!declaration.kinds.length) { setFormError(i18n.t("请选择模型用途。")); return }
+    if (modelDraft && languageInputMissing(modelDraft)) { setFormError(i18n.t("语言模型至少要选一种输入类型。")); return }
     if (modelDraft && !canEditDeclaration) { setFormError(i18n.t("请在自己可管理的服务中声明模型。")); return }
     if (!parametersValid) { setFormError(i18n.t("请检查生成参数。")); return }
     setFormError('')
@@ -314,7 +326,7 @@ function ProfileForm({
           <>
             <label className="block space-y-2 text-sm">
               <span>{i18n.t("模型")}</span>
-              {manualEntry || profile ? (
+              {entry.input ? (
                 <Input
                   value={modelId}
                   onChange={(event) => chooseModel(event.target.value, false)}
@@ -336,16 +348,20 @@ function ProfileForm({
                   ]}
                 />
               )}
+              {entry.hint === 'discoverable' ? <span className="block text-xs text-muted-foreground">{i18n.t("这个服务没有内置模型目录，可以从服务读取，或者手填模型 ID。")}</span>
+                : entry.hint === 'manual-only' ? <span className="block text-xs text-muted-foreground">{i18n.t("这个服务没有内置模型目录，请手填模型 ID。")}</span>
+                  : entry.hint === 'none-returned' ? <span className="block text-xs text-muted-foreground">{i18n.t("服务没有返回任何模型，请手填模型 ID。")}</span>
+                    : null}
             </label>
             <div className="flex flex-wrap gap-2">
-              <Button
+              {entry.canToggle ? <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setManualEntry((value) => !value)}
               >
                 {manualEntry ? i18n.t("从目录选择") : i18n.t("输入模型 ID")}
-              </Button>
+              </Button> : null}
               {driver?.discovery === true ? (
                 <Button type="button" variant="outline" size="sm" onClick={() => void discover()}>
                   <RefreshCw />
@@ -409,16 +425,68 @@ function ProfileForm({
   )
 }
 
+/**
+ * The model list (zhinjs/zhin#1250 `ai-purposes-select`): models a purpose references come first under
+ * 「正在使用」 (the default chat model on top); the rest fold into one 「未被用途引用」 disclosure instead of
+ * repeating 「还没有用途引用它」 on every row. Without purposes (a personal identity cannot read them)
+ * the list stays flat: unknown is not unused.
+ */
+function ProfileList({ profiles, usagesOf, row }: {
+  profiles: Profile[]
+  usagesOf: (profile: Profile) => ProfileUsage[] | null
+  row: (profile: Profile, usages: ProfileUsage[] | null) => ReactNode
+}) {
+  const i18n = useI18n()
+  const entries = profiles.map((profile) => ({ profile, usages: usagesOf(profile) }))
+  // One white panel; inside it only hairlines (console#125: page → panel, no cards inside cards).
+  if (entries.some((entry) => entry.usages === null)) {
+    return <Card className="console-profile-list divide-y overflow-hidden">{entries.map((entry) => row(entry.profile, entry.usages))}</Card>
+  }
+  const rank = (usages: ProfileUsage[] | null) => usages?.some((usage) => usage.key === 'default:chat') ? 0 : usages?.some((usage) => usage.level === 'default') ? 1 : 2
+  // A Profile whose only references do not take effect (purposeEffects) is not 「在用」.
+  const live = (usages: ProfileUsage[] | null) => usages!.some((usage) => !usage.ignored)
+  const used = entries.filter((entry) => live(entry.usages)).sort((a, b) => rank(a.usages) - rank(b.usages))
+  const unused = entries.filter((entry) => !live(entry.usages))
+  return (
+    <Card className="console-profile-list overflow-hidden">
+      {used.length ? (
+        <section aria-label={i18n.t("正在使用")}>
+          <h4 className="px-4 pb-2 pt-3 text-sm font-medium">{i18n.t("正在使用")} <span className="text-muted-foreground">{used.length}</span></h4>
+          <div className="divide-y border-t">{used.map((entry) => row(entry.profile, entry.usages))}</div>
+        </section>
+      ) : (
+        <p className="p-4 text-sm text-muted-foreground">{i18n.t("还没有用途引用任何模型；在「用途」页签选择聊天等用途使用的模型。")}</p>
+      )}
+      {unused.length ? (
+        <details className="console-profile-unused border-t" open={!used.length}>
+          <summary className="cursor-pointer px-4 py-3 text-sm text-muted-foreground">
+            {i18n.t("未被用途引用的模型（{0}）", [unused.length])}
+          </summary>
+          <div className="divide-y border-t">{unused.map((entry) => row(entry.profile, entry.usages))}</div>
+        </details>
+      ) : null}
+    </Card>
+  )
+}
+
 /** 「谁在用」：用途配置里引用这个模型的地方；个人身份看不到用途时不显示。 */
 function ProfileUsageLine({ usages }: { usages: ProfileUsage[] | null }) {
   const i18n = useI18n()
   if (usages === null) return null
-  const shown = usages.slice(0, 4)
+  const effective = usages.filter((usage) => !usage.ignored)
+  // References that do not take effect (ADR 0066 D7) are listed after, dimmed, with the reason.
+  const ignored = usages.filter((usage) => usage.ignored)
+  const shown = effective.slice(0, 4)
   return (
     <p className="mt-1 text-xs text-muted-foreground">
       <span className="font-medium text-foreground">{i18n.t("谁在用：")}</span>
-      {usages.length ? shown.map(usage => usage.label).join(' · ') : i18n.t("还没有用途引用它")}
-      {usages.length > shown.length ? i18n.t(" 等 {0} 处", [usages.length]) : ''}
+      {effective.length ? shown.map(usage => usage.label).join(' · ') : i18n.t("还没有用途引用它")}
+      {effective.length > shown.length ? i18n.t(" 等 {0} 处", [effective.length]) : ''}
+      {ignored.length ? (
+        <span className="ml-1 italic" data-usage-ignored="">
+          {ignored.map((usage) => i18n.t("{0}（未生效：{1}）", [usage.label, ignoredReasonText(usage.reason, i18n.locale)])).join(' · ')}
+        </span>
+      ) : null}
       <span className="ml-1">{i18n.t("（在「用途」页签修改）")}</span>
     </p>
   )

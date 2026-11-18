@@ -1,13 +1,9 @@
 import { useEffect, useState } from 'react'
 import { CheckCircle2, Loader2, RefreshCw, ServerOff } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { cn } from '@zhin.js/client'
+import { Button, cn, PageHeader, PageShell, Skeleton } from '@zhin.js/console-ui'
 import { useI18n } from '../../i18n'
-import { PageHeader } from '../../components/PageHeader'
-import { PageShell } from '../../components/PageShell'
 import { StatusState } from '../../components/StatusState'
-import { Button } from '../../components/ui/button'
-import { Skeleton } from '../../components/ui/skeleton'
 import { attentionInstanceNotice, attentionSeverityLabel, groupAttention } from './attention-model.mjs'
 import { AttentionItemRow, AttentionSeverityIcon } from './AttentionItemRow'
 import { useAttention } from './use-attention'
@@ -121,7 +117,7 @@ export default function AttentionPage() {
         <StatusState compact error={state.error} onRetry={attention.refresh} description={i18n.t('刷新失败，下面是上次读取的结果。')} />
       ) : null}
       {data.mode === 'fallback' ? (
-        <p className="console-attention-note">{i18n.t('当前 Host 版本较旧，还不能汇总登录、插件、配置和审批事项；这里只列出 Console 能从运行状态推断的几项。升级 Host 后会显示完整列表。')}</p>
+        <p className="console-attention-note">{i18n.t('此 Host 不提供汇总接口，还不能汇总登录、插件、配置和审批事项；这里只列出 Console 能从运行状态推断的几项。Host 提供汇总接口后会显示完整列表。')}</p>
       ) : null}
       {data.unavailable.length ? (
         <p className="console-attention-note is-warning">

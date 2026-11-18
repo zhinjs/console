@@ -2,7 +2,8 @@ import { translate } from '../i18n/locale.mjs'
 import { useI18n } from '../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { parse as parseConfigSource } from 'yaml'
-import { RefreshCw } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ArrowUpRight, RefreshCw } from 'lucide-react'
 import { ApplyFeedback, type ApplyOutcome, type ReadBackMismatch } from '../components/ApplyFeedback'
 import { requestConsole } from '../utils/console-rpc'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
@@ -12,23 +13,24 @@ import { ENDPOINT_RPC } from '../contracts/zhin-console'
 import { normalizeGroupRecord } from './endpoint-detail/conversation-labels'
 import { pluginRpc } from '../utils/plugin-rpc'
 import { useConsoleRead } from '../hooks/use-console-read'
-import { PageHeader } from '../components/PageHeader'
-import { PageShell } from '../components/PageShell'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
-import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
-import { Input } from '../components/ui/input'
-import { Skeleton } from '../components/ui/skeleton'
-import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group'
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, PageHeader, PageShell, RadioGroup, RadioGroupItem, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { AmbientGroupPicker } from './AmbientGroupPicker'
 import { StatusState } from '../components/StatusState'
 import { ScopeFilterBar, useScopeFilter } from './insights/ScopeFilterBar'
 import { ambientGroupKey } from './insights/scope-filter.mjs'
 import { ConfigurationLiveStatus } from '../components/PluginConfigForm/ConfigurationLiveStatus'
 import { configurationReceiptForRead, type ConfigurationApplicationStatus } from '../components/PluginConfigForm/config-live-status.mjs'
+import { apiFetch } from '../utils/auth'
+import { CONSOLE_PATHS } from '../console-routes.mjs'
+import { InferenceRequestError, inferenceError, inferenceRequest, type AmbientJudgePolicy } from './inference/model.mjs'
+import { ambientAgreement, ambientJudgeChainRows, isMissingRoute, planWarningText, readAmbientJudgeMode, readAmbientJudgeView, writeAmbientJudgeMode } from './inference/ambient-judge-model.mjs'
+import { useConsoleAccess } from '../hooks/use-console-access'
+import { hasConsolePermission } from '../utils/console-access.mjs'
 import {
   BEHAVIOR_CHOICES,
+  ambientJudgeState,
+  ambientModePlan,
+  hasMergedJudge,
   ambientGroupLabel,
   buildAmbientPatches,
   describeAmbientStatus,
@@ -43,13 +45,21 @@ import {
   validateAmbientSettings,
   validateAmbientStatus,
   type AmbientBehavior,
+  type AmbientJudgeState,
   type AmbientSettings,
+  type AmbientStatus,
   type AmbientStatusView,
 } from './ambient-engagement-model.mjs'
 
 type ConfigSource = ConfigurationApplicationStatus & { source: string; revision: string }
-type StatusRead = { denied: true } | { denied: false; view: AmbientStatusView }
-type SettingsRead = { settings: AmbientSettings; revision: string; application?: ConfigurationApplicationStatus; readEpoch?: number }
+type StatusRead = { denied: true } | { denied: false; view: AmbientStatusView; status: AmbientStatus }
+/**
+ * The interjection judge as the settings form needs it (ADR 0066): `merged` (with the policy when the
+ * caller may read it), `legacy` (an older instance: the form writes `ai.trigger.ambient.mode` as
+ * before) or `unknown` (nothing about the mode is shown as known or written).
+ */
+type JudgeSettings = AmbientJudgeState & { policy?: AmbientJudgePolicy }
+type SettingsRead = { settings: AmbientSettings; revision: string; application?: ConfigurationApplicationStatus; readEpoch?: number; judge?: JudgeSettings }
 type PatchResult = ConfigurationApplicationStatus & {
   status?: string
   revision?: string
@@ -60,18 +70,30 @@ async function readAmbientStatus(locale: 'zh-CN' | 'en' = 'zh-CN'): Promise<Stat
   try {
     const data = await pluginRpc<unknown>('root', 'ambient')
     const status = validateAmbientStatus(data, locale)
-    return { denied: false, view: describeAmbientStatus(status, locale) }
+    return { denied: false, view: describeAmbientStatus(status, locale), status }
   } catch (error) {
     if (isPermissionDenied(error)) return { denied: true }
     throw error
   }
 }
 
+/**
+ * Which mode the interjection judge runs in and whether this caller can change it, decided only on
+ * evidence (`ambientJudgeState`): a failed read is never taken for an older instance. Never throws.
+ */
+async function readJudgeSettings(): Promise<JudgeSettings> {
+  const [judgeRead, status] = await Promise.all([
+    inferenceRequest<unknown>(apiFetch, { path: '/ambient-judge' }).then(data => ({ judge: readAmbientJudgeView(data), error: null as unknown }), (error: unknown) => ({ judge: null, error })),
+    pluginRpc<unknown>('root', 'ambient').then(data => validateAmbientStatus(data)).catch(() => null),
+  ])
+  return ambientJudgeState({ judge: judgeRead.judge, judgeMissing: isMissingRoute(judgeRead.error), status })
+}
+
 async function readAmbientSettingsFromHost(): Promise<SettingsRead> {
-  const configSource = await requestConsole<ConfigSource>({ type: 'config:get-source' })
+  const [configSource, judge] = await Promise.all([requestConsole<ConfigSource>({ type: 'config:get-source' }), readJudgeSettings()])
   const configDocument: unknown = parseConfigSource(configSource.source)
-  const settings = readAmbientSettings(configDocument)
-  return { settings, revision: configSource.revision, application: { application: configSource.application, applicationError: configSource.applicationError } }
+  const settings = readAmbientSettings(configDocument, judge.state === 'merged' ? { judgeMode: judge.mode } : {})
+  return { settings, revision: configSource.revision, application: { application: configSource.application, applicationError: configSource.applicationError }, judge }
 }
 
 function formatTime(timestamp: number, locale: 'zh-CN' | 'en' = 'zh-CN'): string {
@@ -139,7 +161,7 @@ function AmbientStatusSection({ read, onRetry }: { read: StatusReadState; onRetr
   return <Card>
     <CardHeader>
       <CardTitle className="flex flex-wrap items-center gap-2 text-base">
-        {i18n.t("现在：")}<Badge variant={view.behavior === i18n.t('主动参与') ? 'success' : view.behavior === i18n.t('只观察') ? 'info' : 'secondary'}>{view.behavior}</Badge>
+        {i18n.t("现在：")}<Badge variant={view.behavior === i18n.t('主动参与') ? 'outline' : 'secondary'}>{view.behavior}</Badge>
         <span className="text-sm font-normal text-muted-foreground">{i18n.t("范围：")}{view.groupScope}</span>
       </CardTitle>
       <CardDescription>{i18n.t("缓冲内观察：最近 24 小时、实例这次启动以来的记录，重启后重新计数。")}</CardDescription>
@@ -152,11 +174,43 @@ function AmbientStatusSection({ read, onRetry }: { read: StatusReadState; onRetr
           <div className="text-xs text-muted-foreground">{count.label}</div>
         </div>)}
       </div>
+      <AmbientJudgeStatus status={read.data.status} />
       {view.hasActivity
         ? <AmbientRecentActivity recent={view.recent} />
         : <StatusState kind="empty" compact title={i18n.t("最近 24 小时还没有记录。")} description={i18n.t("打开插话并有群消息进来后，这里会记录机器人每次接话或不接话。")} />}
     </CardContent>
   </Card>
+}
+
+/**
+ * 插话判断（ADR 0066 D7 第 4 项）：实际的判断器链（主项 / 备用 / 对照，是否在跳过期）、门槛和
+ * 与对照模型的一致率。旧实例不报告链时只说明需要升级。
+ */
+function AmbientJudgeStatus({ status }: { status: AmbientStatus }) {
+  const i18n = useI18n()
+  if (!hasMergedJudge(status)) {
+    return <p className="text-xs text-muted-foreground" role="note">{i18n.t("这个实例版本较旧，看不到由哪个模型判断。升级 Zhin 后，这里会显示插话判断的模型、备用和对照。")}</p>
+  }
+  const access = useConsoleAccess()
+  const rows = ambientJudgeChainRows(status, i18n.locale)
+  const agreement = ambientAgreement(status, i18n.locale)
+  const purposesHref = `${CONSOLE_PATHS.ai}?tab=purposes`
+  return <div className="space-y-2 rounded-md bg-muted/40 p-3 text-sm" data-ambient-judge-status="">
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <h3 className="font-medium">{i18n.t("插话判断")}</h3>
+      {hasConsolePermission('agent.view', access) ? <Button variant="ghost" size="sm" asChild><Link to={purposesHref}>{i18n.t("在用途页修改")}<ArrowUpRight /></Link></Button> : null}
+    </div>
+    {rows.length ? <ul className="space-y-1" role="list">
+      {rows.map(row => <li key={row.key} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <Badge variant={row.roleCode === 'compare' ? 'secondary' : 'outline'}>{row.role}</Badge>
+        <span className="font-medium">{row.label}</span>
+        <span className="text-xs text-muted-foreground">{row.kind}</span>
+        {row.skipped ? <span className="text-xs text-warning">{row.skipped}</span> : null}
+      </li>)}
+    </ul> : <p className="text-xs text-muted-foreground">{i18n.t("Agent 尚未加载或未配置判断模型。")}</p>}
+    {typeof status.minConfidence === 'number' ? <p className="text-xs text-muted-foreground">{i18n.t("门槛 {0}：判断选「插话」且把握不低于它才开口。", [status.minConfidence])}</p> : null}
+    {agreement ? <div className="text-xs text-muted-foreground"><p className="font-medium text-foreground">{agreement.text}</p><p>{agreement.detail}</p></div> : null}
+  </div>
 }
 
 /** Best-effort group names from connected accounts of the platforms that appear in the records. */
@@ -181,7 +235,7 @@ function useAmbientGroupNames(groups: string[]): { names: Map<string, string> | 
         for (const raw of list?.groups ?? []) {
           if (!raw || typeof raw !== 'object') continue
           const group = normalizeGroupRecord(raw as Record<string, unknown>)
-          if (group.group_id > 0 && group.name) next.set(`${list!.adapter}:${group.group_id}`, group.name)
+          if (group.group_id && group.name) next.set(`${list!.adapter}:${group.group_id}`, group.name)
         }
       }
       if (active) setNames(next)
@@ -217,7 +271,7 @@ function AmbientRecentActivity({ recent }: { recent: AmbientStatusView['recent']
       <summary className="text-xs font-medium text-muted-foreground">{i18n.t("逐条记录（{0}）", [recent.length])}</summary>
       <ul className="mt-2 divide-y rounded-md border text-sm">
         {recent.map((entry) => <li key={`${entry.at}-${entry.group}-${entry.outcome}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
-          <span className="text-xs text-muted-foreground tabular-nums">{formatTime(entry.at, i18n.locale)}</span>
+          <span className="text-xs text-muted-foreground">{formatTime(entry.at, i18n.locale)}</span>
           <span className="break-all">{ambientGroupLabel(entry.group, names).name}</span>
           <span className="text-muted-foreground">{entry.text}</span>
         </li>)}
@@ -270,6 +324,8 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
   const [receipt, setReceipt] = useState<{ value: PatchResult; observedReadEpoch: number } | null>(null)
   const currentReceipt = configurationReceiptForRead(initial, receipt)
   const [serverProblems, setServerProblems] = useState<string[]>([])
+  const [judgeWarnings, setJudgeWarnings] = useState<string[]>([])
+  const [judgeNote, setJudgeNote] = useState<string | null>(null)
 
   useEffect(() => {
     setServerProblems([])
@@ -281,7 +337,22 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
     groups,
     maxPerHour: Number(maxPerHourText),
   }
-  const problems = validateAmbientSettings(draft, i18n.locale)
+  const judge: JudgeSettings = initial.judge ?? { state: 'legacy' }
+  // ADR 0066: 「只观察 / 主动参与」 is the judge's mode (`purposes.ambient.mode`). It is written only when
+  // the judge was read; an instance whose state is not certain gets nothing written about the mode.
+  const modePlan = ambientModePlan(draft, initial.settings, judge)
+  const modeName = (mode: 'active' | 'shadow') => mode === 'shadow' ? i18n.t("只观察") : i18n.t("主动参与")
+  const blockedText = modePlan.blocked === 'unknown'
+    ? i18n.t("无法确认实例版本或读取插话判断，暂不能修改只观察。")
+    : modePlan.blocked === 'unknown-expand'
+      ? i18n.t("读到实际模式之前，不能扩大插话范围（新增群、改成所有群或调高次数）。可以关闭插话，或缩小范围。")
+    : modePlan.blocked === 'no-policy-shadow'
+      ? i18n.t("没有读到插话判断的设置，暂不能切到「只观察」：只保存群列表的话，机器人会照常插话。只有 Host 管理员可以修改。")
+      : modePlan.blocked === 'no-policy'
+        ? i18n.t("没有读到插话判断的设置，暂不能修改「只观察 / 主动参与」。只有 Host 管理员可以修改。")
+        : null
+  const problems = [...validateAmbientSettings(draft, i18n.locale), ...(blockedText ? [blockedText] : [])]
+  const choiceSelectable = (value: AmbientBehavior) => value === 'off' || ambientModePlan({ ...draft, behavior: value }, initial.settings, judge).blocked === null
   const showsGroupOptions = behavior !== 'off'
   const focusIncluded = focusGroup ? behavior !== 'off' && (groupScope === 'all' || groups.includes(focusGroup)) : false
   const includeFocusGroup = () => {
@@ -292,14 +363,55 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
   }
 
   const save = async () => {
-    if (!isInboxCacheScopeActive(scope)) return
+    // A blocked mode (or any problem) is never saved, even if the button were bypassed.
+    if (!isInboxCacheScopeActive(scope) || problems.length > 0) return
     setSaving(true)
     setFeedback(null)
+    setJudgeNote(null)
+    // After anything but a clean save the page reads the Host again, so what it shows is what runs.
+    const reloadAfterFailure = async () => { await onReload().catch(() => null) }
+    let modeApplied = false
     try {
+      // The judge's mode first: if it is refused, stale or unconfirmed nothing else is written.
+      if (modePlan.judgeMode) {
+        let written: Awaited<ReturnType<typeof writeAmbientJudgeMode>>
+        try {
+          written = await writeAmbientJudgeMode(apiFetch, modePlan.judgeMode, { expected: judge.policy })
+        } catch (error) {
+          if (!isInboxCacheScopeActive(scope)) return
+          await reloadAfterFailure()
+          setFeedback({ kind: 'failed', text: i18n.t("「只观察」没有改成：{0}。这次没有保存任何设置。", [inferenceError(error, i18n.locale)]) })
+          return
+        }
+        if (!isInboxCacheScopeActive(scope)) return
+        if (written.status !== 'committed') {
+          await reloadAfterFailure()
+          const code = written.code ?? (written.status === 'conflict' ? 'conflict' : 'unavailable')
+          setFeedback({ kind: 'failed', text: written.status === 'stale'
+            ? i18n.t("插话判断刚在别处被修改过，这次没有保存任何设置。已重新读取，请确认后再保存。")
+            : written.status === 'commit-unknown'
+              ? i18n.t("「只观察」的修改尚未确认是否生效，群设置没有保存。已重新读取，请核对当前模式后再保存。")
+              : i18n.t("「只观察」没有改成：{0}。这次没有保存任何设置。", [inferenceError(new InferenceRequestError(code), i18n.locale)]) })
+          return
+        }
+        setJudgeWarnings(written.warnings.map(warning => planWarningText(warning, i18n.locale)))
+        // Read the mode back: a commit that did not change what runs is not reported as saved.
+        const actual = await readAmbientJudgeMode(apiFetch)
+        if (!isInboxCacheScopeActive(scope)) return
+        if (actual !== modePlan.judgeMode) {
+          await reloadAfterFailure()
+          setFeedback({ kind: 'failed', text: actual
+            ? i18n.t("「只观察」已提交，但读回的模式是「{0}」，与要保存的不一致。群设置没有保存，已重新读取。", [modeName(actual)])
+            : i18n.t("「只观察」已提交，但没能读回确认，尚未确认是否生效。群设置没有保存，已重新读取。") })
+          return
+        }
+        modeApplied = true
+        setJudgeNote(i18n.t("「{0}」已生效（已读回确认）。", [modeName(modePlan.judgeMode)]))
+      }
       const result = await requestConsole<PatchResult>({
         type: 'config:patch',
         expectedRevision: initial.revision,
-        patches: buildAmbientPatches(draft),
+        patches: buildAmbientPatches(draft, { mergedJudge: !modePlan.writeYmlMode }),
       })
       if (!isInboxCacheScopeActive(scope)) return
       const saveFeedback = describeSaveResult(result, i18n.locale)
@@ -308,18 +420,21 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
         const messages = (result.errors ?? []).map((error) => error.message)
         setServerProblems(messages)
       }
-      // Every saved or conflicting write re-reads; a saved one is then compared with what was submitted.
-      const reread = saveFeedback.kind === 'saved' || saveFeedback.kind === 'conflict' ? await onReload().catch(() => null) : null
+      // Every write re-reads; a saved one is then compared with what was submitted.
+      const reread = await onReload().catch(() => null)
       if (!isInboxCacheScopeActive(scope)) return
-      setFeedback(saveFeedback.kind === 'saved' ? { kind: 'saved', ...ambientSaveOutcome(result, draft, reread) } : { kind: 'failed', text: saveFeedback.text })
+      setFeedback(saveFeedback.kind === 'saved' ? { kind: 'saved', ...ambientSaveOutcome(result, draft, reread, { mergedJudge: !modePlan.writeYmlMode }) }
+        : { kind: 'failed', text: modeApplied ? i18n.t("「只观察」已生效，但群设置没有保存：{0}", [saveFeedback.text]) : saveFeedback.text })
     } catch (error) {
       if (!isInboxCacheScopeActive(scope)) return
-      const message = error instanceof Error ? error.message : String(error)
-      setFeedback({ kind: 'failed', text: i18n.t("保存失败：{0}", [message]) })
+      await reloadAfterFailure()
+      const message = error instanceof InferenceRequestError ? inferenceError(error, i18n.locale) : error instanceof Error ? error.message : String(error)
+      setFeedback({ kind: 'failed', text: modeApplied ? i18n.t("「只观察」已生效，但群设置没有保存：{0}", [message]) : i18n.t("保存失败：{0}", [message]) })
     } finally {
       if (isInboxCacheScopeActive(scope)) setSaving(false)
     }
   }
+
 
   return <Card>
     <CardHeader>
@@ -338,12 +453,21 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">{i18n.t("机器人要不要自己接话？")}</legend>
         <RadioGroup aria-label={i18n.t("机器人要不要自己接话？")} name="ambient-behavior" value={behavior} onValueChange={value => setBehavior(value as AmbientBehavior)}>
-          {BEHAVIOR_CHOICES.map((choice) => <label key={choice.value} className="console-choice-card">
-            <RadioGroupItem value={choice.value} className="mt-1" />
+          {BEHAVIOR_CHOICES.map((choice) => {
+            // Review N3: a locked choice is locked as a whole card, not only its dot.
+            const locked = !choiceSelectable(choice.value)
+            return <label key={choice.value} className="console-choice-card" aria-disabled={locked || undefined} data-disabled={locked ? '' : undefined}>
+            <RadioGroupItem value={choice.value} className="mt-1" disabled={locked} />
             <span><span className="font-medium">{i18n.t(choice.label, undefined, "state")}</span><span className="block text-xs text-muted-foreground">{i18n.t(choice.hint)}</span></span>
-          </label>)}
+          </label>
+          })}
         </RadioGroup>
         {behavior === 'off' && initial.settings.groups.length > 0 && <p className="text-xs text-muted-foreground">{i18n.t("关闭后会清空下面的群列表，以后重新打开时要再填一次。")}</p>}
+        {judge.state === 'merged' && behavior !== 'off' ? <p className="text-xs text-muted-foreground">{i18n.t("「只观察」保存在插话判断里（AI 与模型 → 用途），对所有开启的群生效。")}</p> : null}
+        {judge.state === 'unknown' ? <div className="flex flex-wrap items-center gap-2 text-xs text-warning" role="status" data-ambient-mode-unknown="">
+          <span>{i18n.t("无法确认实例版本或读取插话判断，暂不能修改只观察，也不能扩大插话范围。上面显示的是配置文件里的值，不一定是实际生效的模式。没有读取群聊插话状态的权限时，旧版本实例也会这样显示。")}</span>
+          <Button type="button" size="sm" variant="outline" onClick={() => { void onReload().catch(() => {}) }}>{i18n.t("重新读取")}</Button>
+        </div> : null}
       </fieldset>
 
       {showsGroupOptions && <fieldset className="space-y-2">
@@ -375,6 +499,8 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
             onRestarted={async () => ambientRestartOutcome(await onReload().catch(() => null))} />
           : <ApplyFeedback failure={{ reason: feedback.text }} /> : null}
       </div>
+      {judgeNote ? <p className="text-xs text-muted-foreground" role="status">{judgeNote}</p> : null}
+      {judgeWarnings.length ? <ul className="list-disc space-y-1 pl-5 text-xs text-warning" role="status">{judgeWarnings.map(warning => <li key={warning}>{warning}</li>)}</ul> : null}
       <ConfigurationLiveStatus result={currentReceipt ?? initial.application} revision={currentReceipt?.revision ?? initial.revision} />
     </CardContent>
   </Card>

@@ -6,21 +6,19 @@ import { requestConsole } from '../utils/console-rpc'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { ENDPOINT_RPC } from '../contracts/zhin-console'
-import { ErrorAlert } from '../components/error-alert'
-import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
-import { Checkbox } from '../components/ui/checkbox'
-import { Input } from '../components/ui/input'
+import { Badge, Button, Checkbox, ErrorAlert, Input } from '@zhin.js/console-ui'
 import { describeReadFailure } from './ambient-engagement-model.mjs'
 import {
   addManualGroups,
   buildGroupCatalog,
   groupNamesFromCatalog,
   groupPickerView,
+  groupOutsideReason,
   groupsOutsideCatalog,
   readGroupEndpoints,
   toggleGroupSelection,
   type GroupCatalog,
+  type GroupOutsideReason,
   type GroupListResult,
 } from './ambient-group-picker-model.mjs'
 
@@ -46,13 +44,14 @@ export function useAmbientGroupCatalog(): AmbientGroupCatalogRead {
     const current = () => request === sequence.current && isInboxCacheScopeActive(scope)
     setState({ loading: true, error: null, catalog: null })
     try {
-      const endpoints = readGroupEndpoints(await requestConsole({ type: ENDPOINT_RPC.LIST }), i18n.locale).filter((endpoint) => endpoint.connected)
+      const all = readGroupEndpoints(await requestConsole({ type: ENDPOINT_RPC.LIST }), i18n.locale)
+      const endpoints = all.filter((endpoint) => endpoint.connected)
       const results = await Promise.all(endpoints.map((endpoint): Promise<GroupListResult> =>
         requestConsole<{ groups?: unknown }>({ type: ENDPOINT_RPC.GROUPS, adapter: endpoint.adapter, endpointKey: endpoint.name }).then(
           (result) => ({ adapter: endpoint.adapter, endpoint: endpoint.name, groups: result?.groups ?? [] }),
           (error: unknown) => ({ adapter: endpoint.adapter, endpoint: endpoint.name, error: errorText(error) }),
         )))
-      if (current()) setState({ loading: false, error: null, catalog: buildGroupCatalog(results) })
+      if (current()) setState({ loading: false, error: null, catalog: buildGroupCatalog(results, all) })
     } catch (error) {
       if (current()) setState({ loading: false, error: errorText(error), catalog: null })
     }
@@ -62,6 +61,17 @@ export function useAmbientGroupCatalog(): AmbientGroupCatalogRead {
     return () => { sequence.current += 1 }
   }, [load])
   return { ...state, retry: () => { void load() } }
+}
+
+/** Why a selected group is not in the group lists (shown under it, next to 「不在群列表中」). */
+function outsideReasonText(reason: GroupOutsideReason, t: (message: string) => string): string {
+  switch (reason) {
+    case 'no-account': return t('没有这个平台的账号。')
+    case 'offline': return t('这个平台的账号都不在线，读不到群列表。')
+    case 'unread': return t('这个平台的群列表没读到，见下方原因。')
+    case 'no-list': return t('这个平台没有列出任何群（如 QQ 官方机器人拿不到群列表），无法核对。')
+    default: return t('在线账号的群列表里没有这个群，机器人可能已退群。')
+  }
 }
 
 export function AmbientGroupPicker({ groups, onChange }: { groups: string[]; onChange: (groups: string[]) => void }) {
@@ -96,10 +106,12 @@ export function AmbientGroupPickerView({ groups, onChange, read }: { groups: str
         : <ul aria-label={i18n.t("已选的群")} className="divide-y rounded-md border text-sm">
           {groups.map((group) => {
             const name = names.get(group)
+            const reason = outside.has(group) && read.catalog ? groupOutsideReason(group, read.catalog) : null
             return <li key={group} className="flex items-center gap-2 px-3 py-1.5">
               <span className="min-w-0 flex-1">
                 <span className="block break-all font-medium">{name ?? group}</span>
                 {name ? <span className="console-table-sub break-all">{group}</span> : null}
+                {reason ? <span className="console-table-sub">{outsideReasonText(reason, i18n.t)}</span> : null}
               </span>
               {outside.has(group) && read.catalog ? <Badge variant="secondary">{i18n.t("不在群列表中")}</Badge> : null}
               <Button type="button" variant="ghost" size="icon" aria-label={i18n.t("移除 {0}", [name ?? group])} onClick={() => onChange(groups.filter((item) => item !== group))}><X /></Button>

@@ -29,18 +29,18 @@ test('the shared disconnected state explains the problem and its button triggers
   const notified = []
   const { ConnectionRequiredState } = compile(await source('components/connection-required.tsx'), {
     '../utils/auth': { notifyAuthRequired: () => notified.push('auth-required') },
-    './ui/button': { Button: 'button' }, './ui/card': { Card: 'card', CardContent: 'card-content' },
-    './empty-state': { EmptyState: 'empty-state' }, './PageHeader': { PageHeader: 'page-header' }, './PageShell': { PageShell: 'page-shell' },
-  })
+    '@zhin.js/console-ui': { Card: 'card', CardContent: 'card-content', EmptyState: 'empty-state', PageHeader: 'page-header', PageShell: 'page-shell' }, })
   const tree = ConnectionRequiredState({ title: '项目文件' })
   assert.equal(elements(tree).find(node => node.type === 'page-header').props.title, '项目文件')
   const empty = elements(tree).find(node => node.type === 'empty-state')
   assert.equal(empty.props.title, '未连接到 Host')
   assert.match(empty.props.description, /重新登录/)
-  const button = elements(tree).find(node => node.type === 'button')
-  assert.equal(text(button), '重新登录')
+  // The one next step is the EmptyState action (console-ui 1.1), the view's primary.
+  const action = empty.props.action
+  assert.equal(action.label, '重新登录')
+  assert.equal(action.variant, 'primary')
   assert.deepEqual(notified, [])
-  button.props.onClick()
+  action.onSelect()
   assert.deepEqual(notified, ['auth-required'])
   assert.equal(elements(ConnectionRequiredState({})).find(node => node.type === 'page-header'), undefined)
   assert.equal(translate('en', '重新登录'), 'Sign in again')

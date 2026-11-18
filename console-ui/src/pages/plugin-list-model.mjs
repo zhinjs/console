@@ -61,6 +61,7 @@ export function pluginInventory(plugins, packageList) {
     rows.push({
       key: `package:${item.name}`, kind: 'package', name: item.name, instanceKey: item.name, packageName: item.name, description: '',
       version: item.installedVersion, health: Array.isArray(plugins) ? 'undeclared' : 'unreported', plugin: null,
+      ...(item.catalog ? { catalog: item.catalog } : {}),
     })
   }
   return rows
@@ -83,4 +84,80 @@ export function matchesHealthFilter(row, filter) {
   if (filter === 'inactive') return row.health === 'inactive'
   if (filter === 'pending') return row.health === 'pending' || row.health === 'undeclared'
   return true
+}
+
+/**
+ * Type of one row for the 插件 table: 适配器 (a chat platform), AI, or 功能插件. Read from the
+ * gateway catalog when the row came from it, else from the package or plugin name.
+ */
+export function pluginType(row) {
+  if (row.catalog === 'adapter') return 'adapter'
+  if (row.catalog === 'ai') return 'ai'
+  const name = `${row.packageName || ''} ${row.name || ''}`.toLowerCase()
+  if (/(^|[\s/])(@zhin\.js\/)?adapter-|(^|\s)adapter($|\s)/u.test(name)) return 'adapter'
+  if (/(^|[\s/])(@zhin\.js\/)?(ai|agent)($|[\s-])/u.test(name)) return 'ai'
+  return 'feature'
+}
+
+/**
+ * Icon kind of one row (console#125): adapter / AI / function plugin when the row says so, null when
+ * it cannot tell (a package row with no catalog type and no adapter / AI name) - then no icon is drawn.
+ * Unlike pluginType there is no 功能插件 fallback for unknown package rows.
+ */
+export function pluginIconType(row) {
+  const type = pluginType(row)
+  if (type !== 'feature') return type
+  return row.kind === 'plugin' ? 'feature' : null
+}
+
+/** Where the code comes from: 官方 (`@zhin.js/…`), npm (another package) or 本地 (no package: project plugin). */
+export function pluginSource(row) {
+  if (!row.packageName) return 'local'
+  return row.packageName.startsWith('@zhin.js/') ? 'official' : 'npm'
+}
+
+const TYPE_ORDER = ['adapter', 'ai', 'feature']
+const SOURCE_ORDER = ['official', 'npm', 'local']
+// Problems first when sorting by state.
+const HEALTH_ORDER = ['pending', 'undeclared', 'inactive', 'unreported', 'healthy']
+
+function compareVersions(a, b) {
+  const parts = value => String(value ?? '').split(/[.+-]/u).map(part => (/^\d+$/u.test(part) ? Number(part) : part))
+  const left = parts(a), right = parts(b)
+  for (let index = 0; index < Math.max(left.length, right.length); index++) {
+    const x = left[index], y = right[index]
+    if (x === y) continue
+    if (x === undefined) return -1
+    if (y === undefined) return 1
+    if (typeof x === 'number' && typeof y === 'number') return x - y
+    return String(x).localeCompare(String(y))
+  }
+  return 0
+}
+
+/** Rows sorted by `name` / `type` / `source` / `version` / `status`; ties keep name order. */
+export function sortInventory(rows, key = 'name', direction = 'asc') {
+  const byName = (a, b) => a.name.localeCompare(b.name)
+  const compare = {
+    name: byName,
+    type: (a, b) => TYPE_ORDER.indexOf(pluginType(a)) - TYPE_ORDER.indexOf(pluginType(b)),
+    source: (a, b) => SOURCE_ORDER.indexOf(pluginSource(a)) - SOURCE_ORDER.indexOf(pluginSource(b)),
+    version: (a, b) => compareVersions(a.version, b.version),
+    status: (a, b) => HEALTH_ORDER.indexOf(a.health) - HEALTH_ORDER.indexOf(b.health),
+  }[key] ?? byName
+  const sign = direction === 'desc' ? -1 : 1
+  return [...rows].sort((a, b) => sign * compare(a, b) || byName(a, b))
+}
+
+/** Rows grouped by `type` or `source` in a fixed group order; `none` is one unnamed group. */
+export function groupInventory(rows, by = 'none') {
+  if (by !== 'type' && by !== 'source') return [{ key: 'all', rows }]
+  const order = by === 'type' ? TYPE_ORDER : SOURCE_ORDER
+  const of = by === 'type' ? pluginType : pluginSource
+  return order.map(key => ({ key, rows: rows.filter(row => of(row) === key) })).filter(group => group.rows.length)
+}
+
+/** Only a plugin that needs attention carries a state label in the table; a healthy one shows none. */
+export function needsStateLabel(row) {
+  return row.health !== 'healthy'
 }

@@ -87,10 +87,12 @@ test('work-oriented navigation preserves ordinary-user names and legacy plugin g
   assert.match(source, /path: P\.agentReplay,[\s\S]*?parent: P\.agentWorkbench,[\s\S]*?requiredPermissions: \[REPLAY_PERMISSION\]/)
   assert.match(sourceText(join(SOURCE_ROOT, 'pages', 'agent-workbench.tsx')), /to="\/agent\/replay"/)
   for (const key of ['opsConfig', 'opsEnv', 'opsFiles', 'opsDatabase', 'opsInstance', 'opsTerminal']) assert.equal(routeGroup(key).group, 'OPS', key)
-  for (const key of ['features', 'ai', 'introspection', 'scenarioLab', 'aiWorkrooms']) assert.equal(routeGroup(key).group, 'FEATURES', key)
+  for (const key of ['features', 'ai', 'introspection', 'aiWorkrooms']) assert.equal(routeGroup(key).group, 'FEATURES', key)
+  assert.deepEqual(routeGroup('scenarioLab'), { name: '消息场景试验台', group: 'OPS', hidden: false })
   assert.doesNotMatch(source, /'对话分支'|'Agent 概览'|judge|decision|TypeSafe|shadow/)
   const entries = sourceText(join(SOURCE_ROOT, 'bootstrap', 'loadConsoleEntries.ts'))
-  assert.match(entries, /placePluginRoute\(route, declaredSections\.get\(route\.path\)\)/)
+  // Placement (ADR 0063 决策 3) reads what `/entries` declared for the page's path.
+  assert.match(entries, /planPluginRoute\(route, pageDescriptors\.get\(route\.path\), \{ adapterKey \}\)/)
   const layout = sourceText(join(SOURCE_ROOT, 'layouts', 'dashboard.tsx'))
   assert.match(layout, /buildNavigation\(routes, access\)/)
 })
@@ -214,8 +216,8 @@ test('the shared shell adapts across PC, Pad and Phone widths', () => {
   // Content and the top bar share one 1440px column.
   assert.match(design, /--console-content-max: 90rem/)
   assert.match(design, /\.console-content-frame \{\s*max-width: var\(--console-content-max\)/)
-  assert.match(design, /min-width: 768px.*max-width: 1199px/s)
-  assert.match(design, /min-width: 1600px/)
+  assert.match(design, /@media \(width >= 48rem\) and \(width < 64rem\)/)
+  assert.match(design, /@media \(width >= 90rem\)/)
   assert.match(grids, /2xl:grid-cols-4/)
 })
 
@@ -399,20 +401,27 @@ test('full config editor uses revision-checked source RPCs', () => {
 
 test('released Zhin rich-message renderer is the single Markdown implementation', () => {
   const source = sourceText(join(SOURCE_ROOT, 'pages', 'endpoint-detail', 'MessageBody.tsx'))
-  assert.match(source, /import \{ MarkdownContent, cn, pickMediaRawUrl, resolveMediaSrc \} from '@zhin\.js\/client'/)
+  assert.match(source, /import \{ MarkdownContent, pickMediaRawUrl, resolveMediaSrc \} from '@zhin\.js\/client'/)
+  assert.match(source, /import \{ cn \} from '@zhin\.js\/console-ui'/)
   assert.doesNotMatch(source, /function MarkdownContent\(/)
 })
 
 test('package manifest targets the released Zhin contract generation', () => {
   const manifest = JSON.parse(sourceText(join(ROOT, 'package.json')))
-  // One SDK generation: the tilde ranges keep npm from resolving the unrelated 1.5.x / 2.x lines.
-  assert.equal(manifest.dependencies['@zhin.js/client'], '~1.1.32')
-  assert.equal(manifest.dependencies['@zhin.js/contract'], '~1.1.23')
-  assert.equal(manifest.dependencies['@zhin.js/ai'], '~1.1.55')
-  assert.equal(manifest.dependencies['@zhin.js/console-protocol'], '~1.2.0')
+  // One SDK generation (zhin 1.4): the tilde ranges keep npm from resolving the unrelated client 2.x line
+  // or a later minor that has not been checked against this Console.
+  assert.equal(manifest.dependencies['@zhin.js/client'], '~1.2.1')
+  assert.equal(manifest.dependencies['@zhin.js/contract'], '~1.1.27')
+  assert.equal(manifest.dependencies['@zhin.js/ai'], '~1.7.0')
+  assert.equal(manifest.dependencies['@zhin.js/console-protocol'], '~1.4.0')
+  // The component library (ADR 0063 P1a); 1.1 (ADR 0063 color roles, primary / destructive-solid, EmptyState illustrations) is taken deliberately.
+  assert.equal(manifest.dependencies['@zhin.js/console-ui'], '~1.1.1')
+  for (const [name, range] of Object.entries(manifest.dependencies)) {
+    if (name.startsWith('@zhin.js/')) assert.match(range, /^~\d+\.\d+\.\d+$/, `${name} uses a tilde range`)
+  }
   assert.equal(Object.keys(manifest.dependencies).some(name => name.startsWith('@zhin.js/client-')), false)
   const lock = sourceText(join(ROOT, 'pnpm-lock.yaml'))
-  for (const name of ['client', 'contract', 'console-protocol', 'ai']) {
+  for (const name of ['client', 'contract', 'console-protocol', 'console-ui', 'ai', 'logger', 'plugin-runtime']) {
     const versions = new Set([...lock.matchAll(new RegExp(`^  '@zhin\\.js/${name}@([^'(]+)`, 'gm'))].map(match => match[1]))
     assert.equal(versions.size, 1, `@zhin.js/${name} resolves to ${[...versions].join(', ')}`)
   }

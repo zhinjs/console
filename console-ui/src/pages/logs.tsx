@@ -1,7 +1,6 @@
 import { useI18n } from '../i18n'
 import { useSearchParams } from 'react-router-dom'
-import { PageHeader } from '../components/PageHeader'
-import { PageShell } from '../components/PageShell'
+import { PageHeader, PageShell } from '@zhin.js/console-ui'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { LogViewer } from './logs/LogViewer'
 
@@ -15,7 +14,7 @@ export default function LogsPage() {
   const readOnly = !hasConsolePermission('ops.config.write')
   const [searchParams, setSearchParams] = useSearchParams()
   return (
-    <PageShell className="console-logs-page max-w-[1800px]">
+    <PageShell className="console-logs-page">
       <PageHeader
         title={i18n.t("运行日志")}
         description={readOnly ? i18n.t("实时查看与筛选系统运行日志（只读）。") : i18n.t("查看历史与实时日志，定位运行异常。")}

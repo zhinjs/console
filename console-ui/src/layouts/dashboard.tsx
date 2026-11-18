@@ -3,15 +3,13 @@ import { LanguageSelect } from '../components/LanguageSelect'
 import { useI18n } from '../i18n'
 import { useMemo, useRef, useState, useEffect, useLayoutEffect, useSyncExternalStore } from "react"
 import { Outlet, Link, useLocation, matchPath } from "react-router-dom"
-import { Menu, LogOut, X, ChevronRight, ChevronDown, UserRound } from "lucide-react"
-import { cn, type ConsoleRouteRecord } from "@zhin.js/client"
+import { Menu, X, ChevronRight, ChevronDown } from "lucide-react"
+import { BrandMark, Button, cn, CONSOLE_PRODUCT_NAME, DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, ListItemButton, ScrollArea } from '@zhin.js/console-ui'
+import { type ConsoleRouteRecord } from "@zhin.js/client"
 import { useConsoleConnected } from "../hooks/use-console-connected"
 import { app } from "../utils/console-client"
 import { getSidebarLucideIcon } from "../components/sidebarMenuIcons"
-import { ThemeToggle } from "../components/ThemeToggle"
-import { Button } from "../components/ui/button"
-import { ScrollArea } from "../components/ui/scroll-area"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu"
+import { UserMenu } from "../components/UserMenu"
 import { signOut } from "../utils/console-auth-api"
 import { principalLabel } from "../utils/console-auth-model.mjs"
 import { useConsoleSession } from "../hooks/use-console-session"
@@ -29,7 +27,6 @@ import { buildNavigation, routeSectionId, sectionById } from "../navigation-sect
 import { useConsoleAccess } from "../hooks/use-console-access"
 
 import { useIsCompactNav } from '../hooks/useIsMobile'
-import { ListItemButton } from '../components/ui/list-item-button'
 const HOME_PATH = "/dashboard"
 
 function NavIcon({ icon }: { icon?: React.ReactNode | string }) {
@@ -60,6 +57,14 @@ function useRouteMetaFlag(
  * Wide screens show the six sections in the bar (a section with one page is a link, a section with
  * several pages opens a menu); narrower screens move the same navigation into a drawer.
  */
+/** Whether the latest user input was a pointer (mouse, touch, pen) rather than a key. */
+let pointerInput = false
+if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+  window.addEventListener("pointerdown", () => { pointerInput = true }, { capture: true, passive: true })
+  window.addEventListener("keydown", () => { pointerInput = false }, { capture: true, passive: true })
+}
+function lastInputWasPointer(): boolean { return pointerInput }
+
 export default function DashboardLayout() {
   const i18n = useI18n()
   const location = useLocation()
@@ -166,18 +171,27 @@ export default function DashboardLayout() {
                     <ChevronDown aria-hidden="true" className="console-topnav-chevron" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" sideOffset={10} className="console-topnav-menu">
-                  {section.routes.map((route, index) => {
-                    const isActive = route.path === activePath
-                    return (
-                      <DropdownMenuItem key={route.path || `menu-item-${section.id}-${index}`} asChild>
-                        <Link to={route.path} aria-current={isActive ? "page" : undefined} className={cn("console-topnav-menu-item", isActive && "is-active")}>
-                          <span className="console-topnav-menu-icon"><NavIcon icon={route.icon} /></span>
-                          <span className="min-w-0 truncate">{routeLabel(route, i18n.locale)}</span>
-                        </Link>
-                      </DropdownMenuItem>
-                    )
-                  })}
+                <DropdownMenuContent align="start" sideOffset={10} className={cn("console-topnav-menu", section.groups.length > 1 && "is-grouped")}
+                  // A menu closed with the mouse does not hand focus back to its trigger: browsers may then
+                  // draw the keyboard focus ring on it. Keyboard users (Escape, Enter) still get focus back.
+                  onCloseAutoFocus={(event) => { if (lastInputWasPointer()) event.preventDefault() }}>
+                  {section.groups.map((group) => (
+                    // 功能 splits into 核心 and 插件页面 (two columns); other sections are one unlabeled group.
+                    <DropdownMenuGroup key={group.id} className="console-topnav-menu-group" data-group={group.id}>
+                      {section.groups.length > 1 ? <DropdownMenuLabel className="console-topnav-menu-label">{i18n.t(group.label)}</DropdownMenuLabel> : null}
+                      {group.routes.map((route, index) => {
+                        const isActive = route.path === activePath
+                        return (
+                          <DropdownMenuItem key={route.path || `menu-item-${section.id}-${index}`} asChild>
+                            <Link to={route.path} aria-current={isActive ? "page" : undefined} className={cn("console-topnav-menu-item", isActive && "is-active")}>
+                              <span className="console-topnav-menu-icon"><NavIcon icon={route.icon} /></span>
+                              <span className="min-w-0 truncate">{routeLabel(route, i18n.locale)}</span>
+                            </Link>
+                          </DropdownMenuItem>
+                        )
+                      })}
+                    </DropdownMenuGroup>
+                  ))}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -198,21 +212,24 @@ export default function DashboardLayout() {
           return (
             <div key={section.id} className="console-nav-group" data-section={section.id}>
               {showGroupLabel ? <div className="console-nav-group-label">{i18n.t(section.label)}</div> : null}
-              {section.routes.map((route, index) => {
-                const isActive = route.path === activePath
-                return (
-                  <Link
-                    key={route.path || `menu-item-${section.id}-${index}`}
-                    to={route.path}
-                    aria-current={isActive ? "page" : undefined}
-                    onClick={() => setDrawerOpen(false)}
-                    className={cn("console-nav-item", isActive && "is-active")}
-                  >
-                    <span className="console-nav-icon"><NavIcon icon={route.icon} /></span>
-                    <span className="truncate">{routeLabel(route, i18n.locale)}</span>
-                  </Link>
-                )
-              })}
+              {section.groups.map((group) => <div key={group.id} className="console-nav-subgroup" data-group={group.id}>
+                {section.groups.length > 1 ? <div className="console-nav-subgroup-label">{i18n.t(group.label)}</div> : null}
+                {group.routes.map((route, index) => {
+                  const isActive = route.path === activePath
+                  return (
+                    <Link
+                      key={route.path || `menu-item-${section.id}-${index}`}
+                      to={route.path}
+                      aria-current={isActive ? "page" : undefined}
+                      onClick={() => setDrawerOpen(false)}
+                      className={cn("console-nav-item", isActive && "is-active")}
+                    >
+                      <span className="console-nav-icon"><NavIcon icon={route.icon} /></span>
+                      <span className="truncate">{routeLabel(route, i18n.locale)}</span>
+                    </Link>
+                  )
+                })}
+              </div>)}
             </div>
           )
         })}
@@ -239,9 +256,8 @@ export default function DashboardLayout() {
               <Menu className="h-5 w-5" />
             </Button>
           ) : null}
-          <Link to="/" className="console-brand" aria-label="Zhin.js">
-            <span className="console-brand-mark" aria-hidden="true"><span>Z</span></span>
-            <span className="console-brand-text">Zhin.js</span>
+          <Link to="/" className="console-brand-link" aria-label={CONSOLE_PRODUCT_NAME}>
+            <BrandMark withText />
           </Link>
 
           {compact ? null : barNavigation}
@@ -251,27 +267,7 @@ export default function DashboardLayout() {
             <LogPanelButton />
             <AttentionBadge />
             <ConnectionIndicator />
-            <LanguageSelect />
-            <ThemeToggle />
-            {me?.user ? (
-              <Button asChild variant="ghost" size="sm" className="console-topnav-account">
-                <Link to={CONSOLE_PATHS.account} title={i18n.t("个人设置")} aria-label={i18n.t("个人设置：{0}", [accountLabel])}>
-                  <UserRound className="h-4 w-4" />
-                  <span className="hidden xl:inline max-w-[8rem] truncate">{accountLabel}</span>
-                </Link>
-              </Button>
-            ) : null}
-            <Button
-              variant="ghost"
-              size="icon"
-              title={i18n.t("退出登录")}
-              aria-label={i18n.t("退出登录")}
-              onClick={() => {
-                void signOut(me)
-              }}
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
+            <UserMenu accountLabel={accountLabel} accountHref={me?.user ? CONSOLE_PATHS.account : undefined} onSignOut={() => { void signOut(me) }} />
           </div>
         </div>
       </header>
@@ -295,9 +291,8 @@ export default function DashboardLayout() {
           aria-label={i18n.t("主导航")}
         >
           <div className="console-nav-drawer-header">
-            <Link to="/" className="console-brand" aria-label="Zhin.js" onClick={() => setDrawerOpen(false)}>
-              <span className="console-brand-mark" aria-hidden="true"><span>Z</span></span>
-              <span className="console-brand-text">Zhin.js</span>
+            <Link to="/" className="console-brand-link" aria-label={CONSOLE_PRODUCT_NAME} onClick={() => setDrawerOpen(false)}>
+              <BrandMark withText />
             </Link>
             <Button variant="ghost" size="icon" className="shrink-0" onClick={() => setDrawerOpen(false)} aria-label={i18n.t("关闭菜单")}>
               <X className="h-4 w-4" />
@@ -328,8 +323,9 @@ export default function DashboardLayout() {
         >
           <InstanceUnavailableBanner />
           <OnboardingBanner />
-          {/* Object pages below 全局 render their own scope breadcrumb; one breadcrumb per page. */}
-          {onHome || objectPageOwnsBreadcrumb(location.pathname) ? null : <nav aria-label={i18n.t("当前位置")} className="console-breadcrumb">
+          {/* Object pages below 全局 render their own scope breadcrumb; one breadcrumb per page. An address no
+              page matches gets none: the not-found page names the address itself (console#125). */}
+          {onHome || !navigation.current || objectPageOwnsBreadcrumb(location.pathname) ? null : <nav aria-label={i18n.t("当前位置")} className="console-breadcrumb">
             {groupLabel !== currentLabel && groupLabel !== parentLabel ? <><span className="console-breadcrumb-group">{groupLabel}</span><ChevronRight aria-hidden="true" className="console-breadcrumb-sep" /></> : null}
             {navigation.parent && parentLabel !== currentLabel ? <><Link className="console-breadcrumb-link" to={navigation.parent.path}>{parentLabel}</Link><ChevronRight aria-hidden="true" className="console-breadcrumb-sep" /></> : null}
             <span aria-current="page" className="console-breadcrumb-current">{currentLabel}</span>

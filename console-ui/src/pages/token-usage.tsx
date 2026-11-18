@@ -6,19 +6,11 @@ import { ScopeFilterBar, useScopeFilter } from './insights/ScopeFilterBar'
 import { usageSessionPattern } from './insights/scope-filter.mjs'
 import { ArrowDown, ArrowDownToLine, ArrowUp, ArrowUpFromLine, Cpu, Layers, RefreshCw, X, Zap } from 'lucide-react'
 import { pluginRpc } from '../utils/plugin-rpc'
-import { PageHeader } from '../components/PageHeader'
-import { PageShell } from '../components/PageShell'
-import { ErrorAlert } from '../components/error-alert'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
-import { Button } from '../components/ui/button'
-import { ListItemButton } from '../components/ui/list-item-button'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
-import { Input } from '../components/ui/input'
-import { SelectField } from '../components/ui/select'
-import { Skeleton } from '../components/ui/skeleton'
+import { Alert, AlertDescription, AlertTitle, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, DateTimeField, ErrorAlert, Input, ListItemButton, PageHeader, PageShell, SelectField, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { CacheLineChart, ModelBars, ModelLegend, SegmentDonut, StackedBarChart } from './token-usage-charts'
 import {
   USAGE_BUCKETS,
+  promptCacheNotices,
   USAGE_METHOD,
   USAGE_RANGES,
   buildColorMap,
@@ -30,11 +22,13 @@ import {
   formatTokens,
   hasCacheWrite,
   isPermissionDenied,
+  mergeUsageModels,
   parseLocalDateTime,
   sortSessions,
   splitSessionKey,
   toLocalDateTime,
   topModelKeys,
+  usageSessionLabel,
   validateUsageStats,
   type UsageFilter,
   type UsageSessionRow,
@@ -62,7 +56,7 @@ function Metric({
         <span>{label}</span>
         <span className="console-metric-icon" aria-hidden="true"><Icon /></span>
       </div>
-      <strong className="text-2xl font-semibold tabular-nums">{value}</strong>
+      <strong className="text-2xl font-semibold">{value}</strong>
       {progress !== undefined ? (
         <div className="console-metric-progress" aria-hidden="true">
           <span style={{ width: `${Math.max(0, Math.min(100, progress * 100))}%` }} />
@@ -71,6 +65,12 @@ function Metric({
       {hint ? <span className="text-xs text-muted-foreground">{hint}</span> : null}
     </div>
   )
+}
+
+/** Charts are drawn in the browser's time zone; the instance's is named only when it differs. */
+function timeZoneNote(hostZone: string | undefined, t: ReturnType<typeof useI18n>['t']): string {
+  const local = Intl.DateTimeFormat().resolvedOptions().timeZone
+  return hostZone && hostZone !== local ? t("按本机时区 {0} 显示（实例时区 {1}）", [local, hostZone]) : t("按本机时区 {0} 显示", [local])
 }
 
 /** 「机器人 → Token 用量」：读 plugin.root.usage-stats（只读），按时间 / 模型 / 会话看 token 花在哪。 */
@@ -118,7 +118,8 @@ export default function TokenUsagePage() {
     pluginRpc<unknown>('root', USAGE_METHOD, built.input as unknown as Record<string, unknown>)
       .then(data => {
         if (cancelled) return
-        setStats(validateUsageStats(data, i18n.locale))
+        // One row per 「服务名 · 模型」 when the Host labels its models (#1250); raw keys otherwise.
+        setStats(mergeUsageModels(validateUsageStats(data, i18n.locale)))
         setError(null)
         setDenied(false)
         setUnavailable(null)
@@ -138,8 +139,8 @@ export default function TokenUsagePage() {
     const modelKeys = collectModelKeys(stats)
     const colors = buildColorMap(modelKeys)
     const shown = topModelKeys(stats.byModel)
-    return { colors, shown, hasOther: modelKeys.length > shown.length, showWrite: hasCacheWrite(stats), showEndpoint: stats.bySession.some(row => splitSessionKey(row).endpoint !== ''), quantiles: cacheQuantiles(stats.totals) }
-  }, [stats])
+    return { colors, shown, hasOther: modelKeys.length > shown.length, showWrite: hasCacheWrite(stats), showEndpoint: stats.bySession.some(row => splitSessionKey(row).endpoint !== ''), quantiles: cacheQuantiles(stats.totals), cache: promptCacheNotices(stats, i18n.locale) }
+  }, [stats, i18n.locale])
 
   const sessions = useMemo(() => stats ? sortSessions(stats.bySession, sortKey, sortDir) : [], [stats, sortKey, sortDir])
 
@@ -174,8 +175,8 @@ export default function TokenUsagePage() {
         <CardContent className="flex flex-wrap items-end gap-3 pt-6">
           <SelectField aria-label={i18n.t("时间范围")} className="w-auto" value={range} onValueChange={setRange} options={USAGE_RANGES.map(item => ({ value: item.value, label: i18n.t(item.label) }))} />
           {range === 'custom' ? <>
-            <Input type="datetime-local" className="w-52" aria-label={i18n.t("开始时间")} value={customSince} onChange={event => setCustomSince(event.target.value)} />
-            <Input type="datetime-local" className="w-52" aria-label={i18n.t("结束时间")} value={customUntil} onChange={event => setCustomUntil(event.target.value)} />
+            <DateTimeField className="w-52" aria-label={i18n.t("开始时间")} value={customSince} onValueChange={setCustomSince} max={customUntil || undefined} />
+            <DateTimeField className="w-52" aria-label={i18n.t("结束时间")} value={customUntil} onValueChange={setCustomUntil} min={customSince || undefined} />
           </> : null}
           <SelectField aria-label={i18n.t("统计粒度")} className="w-auto" value={bucket} onValueChange={setBucket} options={USAGE_BUCKETS.map(item => ({ value: item.value, label: i18n.t(item.label) }))} />
           <form className="flex items-center gap-2" onSubmit={event => { event.preventDefault(); applySession(sessionDraft) }}>
@@ -193,7 +194,7 @@ export default function TokenUsagePage() {
           : stats && view ? <>
             {error ? <ErrorAlert error={error} onRetry={() => setRefreshTick(tick => tick + 1)} /> : null}
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-5" aria-busy={loading}>
-              <Metric label={i18n.t("总输入 tokens")} value={formatTokens(stats.totals.inputTokens, i18n.locale)} icon={ArrowDownToLine} />
+              <Metric label={i18n.t("总输入 tokens")} value={formatTokens(stats.totals.inputTokens, i18n.locale)} icon={ArrowDownToLine} hint={i18n.t("每次模型调用的实际输入之和，工具循环里的多次调用都计入")} />
               <Metric label={i18n.t("输出 tokens")} value={formatTokens(stats.totals.outputTokens, i18n.locale)} icon={ArrowUpFromLine} />
               <Metric
                 label={i18n.t("缓存命中率")}
@@ -209,6 +210,17 @@ export default function TokenUsagePage() {
               <Metric label={i18n.t("回合数")} value={formatTokens(stats.totals.turns, i18n.locale)} icon={Layers} />
             </div>
 
+            {view.cache?.hints.length ? (
+              <Alert variant="warning" role="status">
+                <Zap aria-hidden="true" />
+                <AlertTitle>{i18n.t("可能不支持提示缓存")}</AlertTitle>
+                <AlertDescription>
+                  <ul className="space-y-1">{view.cache.hints.map(hint => <li key={hint.key} className="break-words">{hint.text}</li>)}</ul>
+                </AlertDescription>
+              </Alert>
+            ) : view.cache?.missed ? (
+              <p className="console-basis-note" role="status"><strong>{i18n.t("缓存未命中")}</strong><span>{i18n.t("这段时间的请求都没有命中提示缓存。系统提示或工具定义每次都在变化时，缓存无法复用。")}</span></p>
+            ) : null}
             <p className="console-basis-note"><strong>{i18n.t("持久统计")}</strong><span>{i18n.t("来自回合追踪文件，覆盖 {0} 至 {1}", [new Date(stats.range.since).toLocaleString(i18n.locale), new Date(stats.range.until).toLocaleString(i18n.locale)])}</span></p>
             {empty ? <StatusState kind="empty" title={i18n.t("这段时间没有模型调用记录。")} description={i18n.t("换一个时间范围或清除会话筛选试试。")}
               actions={<>
@@ -218,7 +230,7 @@ export default function TokenUsagePage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">{i18n.t("输入 tokens 随时间变化")}</CardTitle>
-                  <CardDescription>{i18n.t("按 provider/model 堆叠；鼠标停在柱子上看具体数值。")}{stats.range.timeZone ? ` · ${stats.range.timeZone}` : ''}</CardDescription>
+                  <CardDescription>{i18n.t("按模型堆叠；鼠标停在柱子上看具体数值。")} · {timeZoneNote(stats.range.timeZone, i18n.t)}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3 text-foreground">
                   <ModelLegend keys={view.shown} colors={view.colors} hasOther={view.hasOther} />
@@ -240,7 +252,7 @@ export default function TokenUsagePage() {
                   <CardContent className="text-foreground"><ModelBars rows={stats.byModel} colors={view.colors} showWrite={view.showWrite} /></CardContent>
                 </Card>
                 <Card>
-                  <CardHeader><CardTitle className="text-base">{i18n.t("输入构成")}</CardTitle><CardDescription>{i18n.t("历史对话、固定提示词、用户输入各占多少。")}</CardDescription></CardHeader>
+                  <CardHeader><CardTitle className="text-base">{i18n.t("输入构成")}</CardTitle><CardDescription>{i18n.t("历史对话、固定提示词、用户输入各占多少。按每个回合的上下文预算估算（每回合一次），所以合计小于上方「总输入」。")}</CardDescription></CardHeader>
                   <CardContent className="text-foreground"><SegmentDonut segments={stats.segments} /></CardContent>
                 </Card>
               </div>
@@ -254,7 +266,7 @@ export default function TokenUsagePage() {
                           <TableHead>{i18n.t("平台")}</TableHead>
                           {view.showEndpoint ? <TableHead>{i18n.t("账号")}</TableHead> : null}
                           <TableHead>{i18n.t("类型")}</TableHead>
-                          <TableHead>{i18n.t("会话 ID")}</TableHead>
+                          <TableHead>{i18n.t("会话")}</TableHead>
                           {header('turns', i18n.t("回合"))}
                           {header('calls', i18n.t("调用"))}
                           {header('inputTokens', i18n.t("输入"))}
@@ -271,7 +283,7 @@ export default function TokenUsagePage() {
                             <TableCell>{parts.platform || '—'}</TableCell>
                             {view.showEndpoint ? <TableCell>{parts.endpoint || '—'}</TableCell> : null}
                             <TableCell>{parts.scope === 'group' || parts.scope === 'private' || parts.scope === 'channel' ? <ConversationKindBadge kind={parts.scope} /> : parts.scope || '—'}</TableCell>
-                            <TableCell className="break-all font-mono text-xs"><ListItemButton className="underline-offset-2 hover:underline" onClick={event => { event.stopPropagation(); pickSession(row) }}>{parts.sceneId || row.sessionKey}</ListItemButton></TableCell>
+                            <TableCell className="break-all text-xs"><ListItemButton className="underline-offset-2 hover:underline" onClick={event => { event.stopPropagation(); pickSession(row) }}>{usageSessionLabel(row)}</ListItemButton>{usageSessionLabel(row) !== (parts.sceneId || row.sessionKey) ? <span className="block font-mono text-muted-foreground">{parts.sceneId || row.sessionKey}</span> : null}</TableCell>
                             <TableCell numeric>{formatTokens(row.turns, i18n.locale)}</TableCell>
                             <TableCell numeric>{formatTokens(row.calls, i18n.locale)}</TableCell>
                             <TableCell numeric>{formatTokens(row.inputTokens, i18n.locale)}</TableCell>

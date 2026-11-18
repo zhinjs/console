@@ -4,13 +4,11 @@ import { useEffect, useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../../utils/inbox-cache'
-import { Input } from '../../components/ui/input'
-import { SelectField } from '../../components/ui/select'
+import { Button, Input, SelectField } from '@zhin.js/console-ui'
 import { RenderingDiagnostics } from '../endpoint-detail/RenderingDiagnostics'
 import { requestConsole } from '../../utils/console-rpc'
 import { createPreviewRequestGate, buildPreviewTarget, readPreviewEndpoints, readPreviewResponse, type PreviewEndpoint, type PreviewTarget } from './target-preview.mjs'
 import type { RenderingDiagnostic } from '../endpoint-detail/rendering-diagnostics.mjs'
-import { Button } from '../../components/ui/button'
 import { highlightCode } from '../files/highlight-code.mjs'
 import { CONSOLE_REST, ENDPOINT_RPC } from '../../contracts/zhin-console'
 import { apiFetch } from '../../utils/auth'
@@ -129,9 +127,9 @@ export function GalleryPreview({ item, readOnly }: { item: CapabilityItem; readO
   }
   const targetName = target && (endpoints.find(value => value.endpoint.id === target.endpoint.id && value.endpoint.adapter === target.endpoint.adapter)?.name ?? target.endpoint.adapter)
   return <div ref={container} className="console-component-live-preview" aria-label={i18n.t("{0} 预览", [name])}>
-    <div className="flex flex-wrap items-center justify-between gap-2 px-3 pt-2 text-[11px] text-muted-foreground">
+    <div className="flex flex-wrap items-center justify-between gap-2 px-3 pt-2 text-xs text-muted-foreground">
       <div>
-        {target ? i18n.t("目标预览：{0} / {1} · {2} {3}{4}{5}", [target.endpoint.adapter, targetName, { private: i18n.t("私聊"), group: i18n.t("群聊"), channel: i18n.t("频道") }[target.kind], target.id, target.parent ? ` · 父级 ${target.parent.id}` : '', target.threadId ? ` · 线程 ${target.threadId}` : '']) : i18n.t("作者 HTML / 消息预览")}
+        {target ? i18n.t("目标预览：{0} / {1} · {2} {3}{4}{5}", [target.endpoint.adapter, targetName, { private: i18n.t("私聊"), group: i18n.t("群聊"), channel: i18n.t("频道") }[target.kind], target.id, target.parent ? i18n.t(" · 父级 {0}", [target.parent.id]) : '', target.threadId ? i18n.t(" · 线程 {0}", [target.threadId]) : '']) : i18n.t("作者 HTML / 消息预览")}
         {generation !== undefined && <span> {i18n.t(" · 代次 ")}{generation}</span>}
       </div>
       {!readOnly && (
@@ -140,7 +138,7 @@ export function GalleryPreview({ item, readOnly }: { item: CapabilityItem; readO
             aria-label={i18n.t("预览画布宽度")}
             value={canvasWidth}
             onChange={e => setCanvasWidth(e.target.value as 'auto' | '380px' | '480px' | '540px')}
-            className="h-6 rounded border border-border bg-background px-1.5 text-[11px] text-foreground"
+            className="h-6 rounded border border-border bg-background px-1.5 text-xs text-foreground"
           >
             <option value="auto">{i18n.t("自适应宽")}</option>
             <option value="380px">380px</option>
@@ -151,7 +149,7 @@ export function GalleryPreview({ item, readOnly }: { item: CapabilityItem; readO
             aria-label={i18n.t("预览画布背景")}
             value={canvasBg}
             onChange={e => setCanvasBg(e.target.value as 'default' | 'dark' | 'grid')}
-            className="h-6 rounded border border-border bg-background px-1.5 text-[11px] text-foreground"
+            className="h-6 rounded border border-border bg-background px-1.5 text-xs text-foreground"
           >
             <option value="default">{i18n.t("默认底色")}</option>
             <option value="dark">{i18n.t("深色底")}</option>
@@ -160,7 +158,7 @@ export function GalleryPreview({ item, readOnly }: { item: CapabilityItem; readO
           <button
             type="button"
             onClick={() => setShowOutline(v => !v)}
-            className={`h-6 rounded border px-1.5 text-[11px] transition-colors ${showOutline ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border bg-background text-muted-foreground hover:text-foreground'}`}
+            className={`h-6 rounded border px-1.5 text-xs transition-colors ${showOutline ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border bg-background text-muted-foreground hover:text-foreground'}`}
           >
             {i18n.t("📐 辅助线")}
           </button>
@@ -179,7 +177,7 @@ export function GalleryPreview({ item, readOnly }: { item: CapabilityItem; readO
         value={customPropsDraft}
         onChange={event => setCustomPropsDraft(event.target.value)}
         rows={4}
-        className="mt-1 w-full rounded-md border border-border bg-muted/40 p-2 font-mono text-[11px] leading-relaxed text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+        className="mt-1 w-full rounded-md border border-border bg-muted/40 p-2 font-mono text-xs leading-relaxed text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
       />
       {propsError && <div role="alert" className="mt-1 text-destructive">{propsError}</div>}
       <div className="mt-2 flex flex-wrap gap-2">

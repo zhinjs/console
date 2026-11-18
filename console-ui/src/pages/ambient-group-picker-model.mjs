@@ -47,11 +47,13 @@ export function readGroupRecord(raw) {
 
 /**
  * results: 每个在线账号一项，`groups` 是 endpoint.groups 的原始返回，读取失败时为 `error`。
- * 返回分组目录和逐账号的失败原因；同一账号内按群号去重。
+ * endpoints: endpoint.list 的全部账号（含离线的），用来说明某个群为什么不在列表里。
+ * 返回分组目录、逐账号的失败原因和账号在线情况；同一账号内按群号去重。
  */
-export function buildGroupCatalog(results) {
+export function buildGroupCatalog(results, endpoints = []) {
   const sections = []
   const failures = []
+  const accounts = (Array.isArray(endpoints) ? endpoints : []).map((item) => ({ adapter: item.adapter, endpoint: item.name, connected: item.connected === true }))
   for (const result of results) {
     if (result.error !== undefined) {
       failures.push({ adapter: result.adapter, endpoint: result.endpoint, error: String(result.error) })
@@ -69,7 +71,7 @@ export function buildGroupCatalog(results) {
     }
     sections.push({ key: `${result.adapter}/${result.endpoint}`, adapter: result.adapter, endpoint: result.endpoint, groups })
   }
-  return { sections, failures }
+  return { sections, failures, accounts }
 }
 
 /** 按群名、群号、「平台:群号」或账号/平台名搜索；不区分大小写，没有匹配的分组不显示。 */
@@ -91,6 +93,31 @@ export function filterGroupCatalog(catalog, query) {
 export function groupsOutsideCatalog(selected, catalog) {
   const known = new Set(catalog.sections.flatMap((section) => section.groups.map((group) => group.value)))
   return selected.filter((value) => !known.has(value))
+}
+
+/**
+ * 白名单里的群为什么不在读到的群列表里（#64 `ambient-picker-stale-and-sandbox`），按能确定的程度排：
+ * - `no-account`：没有这个平台的账号；
+ * - `offline`：这个平台的账号都不在线，读不到群列表；
+ * - `unread`：在线账号的群列表都没读到；
+ * - `no-list`：在线账号读到了，但这个平台一个群都没列出（如 QQ 官方机器人拿不到群列表），无法核对；
+ * - `not-member`：在线账号的群列表里没有这个群，机器人可能已退群。
+ * 格式不是「平台:群号」时返回 null。
+ */
+export function groupOutsideReason(value, catalog) {
+  const match = typeof value === 'string' ? /^([^:\s]+):(.+)$/.exec(value) : null
+  if (!match || !catalog) return null
+  const adapter = match[1]
+  const accounts = (catalog.accounts ?? []).filter((account) => account.adapter === adapter)
+  const sections = catalog.sections.filter((section) => section.adapter === adapter)
+  const failures = catalog.failures.filter((failure) => failure.adapter === adapter)
+  if (sections.length === 0 && failures.length === 0) {
+    if (accounts.length === 0) return 'no-account'
+    return 'offline'
+  }
+  if (sections.length === 0) return 'unread'
+  if (sections.every((section) => section.groups.length === 0)) return 'no-list'
+  return 'not-member'
 }
 
 /** 「平台:群号」→ 群名；同一个群出现在多个账号下时取第一个有名字的。 */

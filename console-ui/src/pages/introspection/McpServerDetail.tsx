@@ -6,8 +6,7 @@ import { CONSOLE_REST } from '../../contracts/zhin-console'
 import { apiFetch } from '../../utils/auth'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
 import { useConsoleAccess } from '../../hooks/use-console-access'
-import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert'
-import { Button } from '../../components/ui/button'
+import { Alert, AlertDescription, AlertTitle, Button } from '@zhin.js/console-ui'
 import {
   MCP_CONFIG_HREF,
   isStdioMcp,

@@ -27,3 +27,5 @@ export function configurationReceiptForRead<T>(read: { readEpoch?: number }, rec
 export function configurationEffectLabel(effect: unknown, locale?: 'zh-CN' | 'en'): string
 export function configurationGroupLabel(status: unknown, locale?: 'zh-CN' | 'en'): string
 export function configurationPath(path: readonly string[]): string
+export function configurationPathLabel(path: readonly string[], locale?: 'zh-CN' | 'en'): string
+export function configurationGroupTitle(id: string, locale?: 'zh-CN' | 'en'): string

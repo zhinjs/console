@@ -1,5 +1,5 @@
 import { useI18n } from '../i18n'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import {
   Activity, Package, Settings, Terminal, Box as IconBox, Layers, Clock, Database, Brain, Wrench, Shield, Plug, Server, RefreshCw,
@@ -8,16 +8,9 @@ import {
 import { Link } from 'react-router-dom'
 import { useLogPanel } from '../components/log-panel/LogPanel'
 import { apiFetch } from '../utils/auth'
-import { Card, CardContent } from '../components/ui/card'
-import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
-import { Alert, AlertDescription } from '../components/ui/alert'
-import { Skeleton } from '../components/ui/skeleton'
-import { PageHeader } from '../components/PageHeader'
-import { PageShell } from '../components/PageShell'
+import { Alert, AlertDescription, Badge, Button, Card, CardContent, createPageChromeStore, InlineCode, PageChromeActions, PageChromeProvider, PageHeader, PageShell, Skeleton, useConfirm, usePageChromeState } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import { requestConsole } from '../utils/console-rpc'
-import { useConfirm } from '../components/confirm-dialog'
 import { validatePluginDetail, pluginDiagnosticSummary, pluginDetailView } from './plugin-detail-model.mjs'
 import { JsonViewer } from './introspection/JsonViewer'
 import { PluginManagementSummary } from './PluginManagementSummary'
@@ -37,6 +30,8 @@ import { defaultInstanceKey, installedPackage, sourceLabel, type PackageListEntr
 import { pluginPermissionGroups, pluginScopeSummary, type PluginScopeSummary } from './plugin-scope-model.mjs'
 import { classifyUpdateCheck } from './marketplace-view-model.mjs'
 import { validateManagementState, managementLabel, canApplyPlugin, canVerifyPlugin, captureVerificationPlan, verifyApprovedPlugin, verificationSummary, verificationCheckDisplay, verificationResultDisplay, applyRequest, waitForManagementState, verificationIsCurrent, type PluginManagementState, type VerificationPlan, type VerificationResult } from './plugin-management-model.mjs'
+import { PluginPageTabs } from './plugin-page-tabs'
+import { PLUGIN_OVERVIEW_TAB } from '../plugin-pages.mjs'
 import './plugins.css'
 
 /** Feature 序列化格式（与后端 FeatureJSON 一致） */
@@ -108,16 +103,35 @@ function useOptionalRead<T>(enabled: boolean, load: () => Promise<T>, deps: read
   return [state, run]
 }
 
-export default function PluginDetailPage() {
+export interface PluginDetailPageProps {
+  /** Set by a page tab's route, which has no `:name` parameter. */
+  plugin?: string
+  /** The open page tab: its path and the plugin page's own element. */
+  tab?: { href: string; content: ReactNode }
+}
+
+/**
+ * `/plugins/:name` — one plugin: its 概览 (version, scopes, declaration, permissions, capabilities) and
+ * a tab per page it contributes. A page tab is its own route (`/plugins/<plugin>/<page>`, registered
+ * from `/entries`), which renders this page with `plugin` and `tab`: the header stays the plugin's
+ * (name, description, status) and the page's own title is the tab name (ADR 0063 决策 3).
+ */
+export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDetailPageProps = {}) {
   const i18n = useI18n()
   const logPanel = useLogPanel()
-  const { name } = useParams<{ name: string }>()
+  const params = useParams<{ name: string }>()
+  const name = pluginName ?? params.name
   const [searchParams] = useSearchParams()
   const query = searchParams.get('q')
   const listUrl = query ? `/plugins?q=${encodeURIComponent(query)}` : '/plugins'
   const welcome = searchParams.get('useCase') === 'group-welcome'
   const routeIdentity = useRef(name)
   routeIdentity.current = name
+  // One chrome store per page tab: the plugin page hands its header actions and refresh control
+  // to this header through usePageChrome (ADR 0063 决策 2).
+  const tabHref = tab?.href
+  const chromeStore = useMemo(() => createPageChromeStore(), [tabHref])
+  const pageChrome = usePageChromeState(chromeStore)
   const lifecycleAbort = useRef<AbortController | null>(null)
   const detailSequence = useRef(0)
   const actionInFlight = useRef(false)
@@ -361,7 +375,8 @@ export default function PluginDetailPage() {
   const actionBusy = packageAction.busy || actionLoading || declaring
   const title = plugin?.name ?? name ?? ''
 
-  if (detailView.view === 'skeleton' && packages.status === 'loading') {
+  // A page tab renders even when the instance cannot describe the plugin: the page reads its own data.
+  if (!tab && detailView.view === 'skeleton' && packages.status === 'loading') {
     return (
       <PageShell>
         <StatusState kind="loading" placeholder={<div className="space-y-3">
@@ -375,7 +390,7 @@ export default function PluginDetailPage() {
 
   // The instance cannot describe the plugin, but the gateway may still know the package: keep the
   // package section (and its uninstall / update) usable instead of a dead end.
-  if ((detailView.view === 'error' || !plugin) && !entry) {
+  if (!tab && (detailView.view === 'error' || !plugin) && !entry) {
     return (
       <PageShell>
         <PageHeader title={title} actions={<Button variant="outline" size="sm" asChild><Link to={listUrl}><ArrowLeft />{i18n.t("返回插件")}</Link></Button>} />
@@ -391,9 +406,9 @@ export default function PluginDetailPage() {
   }
 
   const statusBadge = plugin?.management
-    ? <Badge variant={plugin.management.status === 'enabled' ? 'success' : plugin.management.status === 'missing-config' || plugin.management.status === 'degraded' ? 'warning' : 'secondary'}>{managementLabel(plugin.management, i18n.locale)}</Badge>
-    : plugin ? <Badge variant={plugin.status === 'active' ? 'success' : 'secondary'}>{plugin.status === 'active' ? i18n.t("代内已加载") : i18n.t("未加载")}</Badge>
-      : <Badge variant="warning">{undeclaredPackage ? i18n.t("已安装，待配置") : i18n.t("实例未报告")}</Badge>
+    ? <Badge variant={plugin.management.status === 'enabled' ? 'outline' : plugin.management.status === 'missing-config' || plugin.management.status === 'degraded' ? 'warning' : 'secondary'}>{managementLabel(plugin.management, i18n.locale)}</Badge>
+    : plugin ? <Badge variant={plugin.status === 'active' ? 'outline' : 'secondary'}>{plugin.status === 'active' ? i18n.t("代内已加载") : i18n.t("未加载")}</Badge>
+      : <Badge variant={undeclaredPackage ? 'secondary' : 'warning'}>{undeclaredPackage ? i18n.t("已安装，待配置") : i18n.t("实例未报告")}</Badge>
 
   return (
     <PageShell className="console-plugin-detail-page">
@@ -401,9 +416,13 @@ export default function PluginDetailPage() {
         title={title}
         description={plugin?.description || i18n.t("插件本身的信息：版本与依赖、声明与配置、权限和能力。在哪些范围开启，请到对象树的「功能」页签。")}
         actions={<>
+          {tab ? <PageChromeActions store={chromeStore} /> : null}
           <Button variant="outline" size="sm" asChild><Link to={listUrl}><ArrowLeft />{i18n.t("返回插件")}</Link></Button>
-          <Button variant="outline" size="sm" disabled={loading} aria-busy={loading || undefined} onClick={refreshAll}>
-            <RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
+          {/* A page that brings its own refresh control refreshes the open tab; a second 刷新 would be ambiguous. */}
+          {tab && pageChrome?.refresh ? null : (
+            <Button variant="outline" size="sm" disabled={loading} aria-busy={loading || undefined} onClick={refreshAll}>
+              <RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
+          )}
           {plugin ? (
             <Button size="sm" asChild>
               <Link to={welcome ? welcomeConfigUrl(instanceKey) : featureGlobalHref(instanceKey)}><Settings />{i18n.t("功能配置")}</Link>
@@ -412,15 +431,16 @@ export default function PluginDetailPage() {
         </>}
       />
       <div className="console-plugin-detail-identity">
-        <code title={packageName}>{packageName}</code>
-        {instanceKey && instanceKey !== packageName ? <code title={instanceKey}>{instanceKey}</code> : null}
+        <InlineCode title={packageName}>{packageName}</InlineCode>
+        {instanceKey && instanceKey !== packageName ? <InlineCode title={instanceKey}>{instanceKey}</InlineCode> : null}
         {statusBadge}
-        {update ? <Badge variant="warning">{i18n.t("有更新 {0}", [update.latest])}</Badge> : null}
+        {update ? <Badge variant="default">{i18n.t("有更新 {0}", [update.latest])}</Badge> : null}
       </div>
 
-      {detailView.staleError && (
+      {detailView.staleError && !tab && (
         <StatusState compact error={detailError ?? detailView.staleError} description={i18n.t("刷新失败，以下是上次读取的内容。")} onRetry={() => void fetchPluginDetail(instanceKey)} />
       )}
+      <PluginPageTabs plugin={name ?? ''} names={[name, plugin?.instanceKey, plugin?.packageName]} active={tab?.href ?? PLUGIN_OVERVIEW_TAB} page={tab ? <PageChromeProvider store={chromeStore}>{tab.content}</PageChromeProvider> : undefined} overview={<>
       {undeclaredPackage ? (
         <StatusState kind="needs-configuration" title={i18n.t("已安装，待配置")}
           description={i18n.t("这个包已经安装，但还没有声明为插件实例。填写配置后网关会写入声明并重启实例，失败会恢复原配置。")}
@@ -436,7 +456,7 @@ export default function PluginDetailPage() {
             <Button size="sm" variant="outline" disabled={actionBusy || !update || !entry}
               onClick={() => update && void packageAction.prepare('update', { name: packageName, version: update.latest, from: installedVersion })}>
               <ArrowUpCircle />{i18n.t("更新")}</Button>
-            <Button size="sm" variant="outline" className="text-destructive" disabled={actionBusy || !entry}
+            <Button size="sm" variant="destructive-outline" disabled={actionBusy || !entry}
               onClick={() => void packageAction.prepare('uninstall', { name: packageName })}>
               <Trash2 />{i18n.t("卸载")}</Button>
           </> : undefined}>
@@ -529,9 +549,9 @@ export default function PluginDetailPage() {
                         {permissionGroups.filter(group => group.permissions.length).map(group => (
                           <li key={group.level} className="space-y-1">
                             <p className="text-sm font-medium">{i18n.t(LEVEL_LABELS[group.level])} <span className="text-xs font-normal text-muted-foreground">{i18n.t("由 {0} 统一授予", [group.catalogPermission])}</span></p>
-                            <ul className="flex flex-wrap gap-1">
+                            <ul className="console-code-list text-xs">
                               {group.permissions.map(item => (
-                                <li key={item.permission}><Badge variant="outline" size="sm" className="font-mono" title={item.description}>{item.permission}</Badge></li>
+                                <li key={item.permission}><InlineCode title={item.description}>{item.permission}</InlineCode></li>
                               ))}
                             </ul>
                           </li>
@@ -562,10 +582,10 @@ export default function PluginDetailPage() {
                           {tab ? <Link className="ml-auto text-xs underline" to={`${CONSOLE_PATHS.introspection}?tab=${tab}&filter=${encodeURIComponent(instanceKey)}`}>{i18n.t("原始视图")}</Link> : null}
                         </div>
                         {feature.items.length ? (
-                          <ul className="max-h-48 space-y-1 overflow-y-auto pr-1">
+                          <ul className="max-h-48 divide-y divide-border overflow-y-auto pr-1">
                             {feature.items.map((item, index) => (
-                              <li key={index} className="rounded-md bg-muted/50 px-2 py-1.5">
-                                <code className="break-all text-xs font-semibold">{item.name}</code>
+                              <li key={index} className="py-1.5">
+                                <InlineCode className="text-xs font-medium">{item.name}</InlineCode>
                                 {item.desc ? <p className="text-xs text-muted-foreground">{item.desc}</p> : null}
                               </li>
                             ))}
@@ -578,6 +598,7 @@ export default function PluginDetailPage() {
               </div>
             )}
       </ObjectSection>
+      </>} />
       {ConfirmDialogHost}
     </PageShell>
   )
@@ -590,7 +611,7 @@ function ScopeSummary({ summary }: { summary: PluginScopeSummary }) {
     <div className="space-y-3 text-sm">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-muted-foreground">{i18n.t("全局")}</span>
-        <Badge variant={summary.global.enabled ? 'success' : 'secondary'}>{summary.global.enabled ? i18n.t("开启") : i18n.t("已停用")}</Badge>
+        <Badge variant={summary.global.enabled ? 'outline' : 'secondary'}>{summary.global.enabled ? i18n.t("开启") : i18n.t("已停用")}</Badge>
         <Link className="text-xs underline" to={summary.global.href}>{i18n.t("全局配置")}</Link>
       </div>
       {summary.adapters.length ? (
@@ -601,7 +622,7 @@ function ScopeSummary({ summary }: { summary: PluginScopeSummary }) {
               <li key={adapter.alias}>
                 <Link to={adapter.href} className="console-plugin-scope-chip" title={i18n.t("打开 {0} 的功能页签", [adapter.alias])}>
                   <code>{adapter.alias}</code>
-                  <span className={adapter.enabled ? 'text-success' : 'text-muted-foreground'}>
+                  <span className={adapter.enabled ? 'text-foreground' : 'text-muted-foreground'}>
                     {adapter.lockedBy ? i18n.t("已锁定") : adapter.enabled === null ? '—' : adapter.enabled ? i18n.t("开") : i18n.t("关")}
                   </span>
                   {adapter.overridden ? <Badge variant="outline" size="sm">{i18n.t("有覆盖")}</Badge> : null}
@@ -633,7 +654,7 @@ function PluginDiagnostic({ value }: { value: unknown }) {
   const { status, errors, missingEnv, warnings } = pluginDiagnosticSummary(value)
   const title = status === 'valid' ? i18n.t("配置检查通过") : status === 'missing-env' ? i18n.t("需要补充环境变量") : status === 'invalid' ? i18n.t("配置检查未通过") : i18n.t("未提供配置检查结果")
   return <section aria-label={i18n.t("插件诊断结果")} className="space-y-3 rounded-md bg-muted/40 p-3 text-sm">
-    <Badge variant={status === 'valid' ? 'success' : status === 'unknown' ? 'secondary' : 'warning'}>{title}</Badge>
+    <Badge variant={status === 'valid' ? 'outline' : status === 'unknown' ? 'secondary' : 'warning'}>{title}</Badge>
     {errors.length > 0 && <div><p className="mb-1 font-medium">{i18n.t("配置错误")}</p><ul className="list-disc space-y-1 pl-5">{errors.map((error, index) => <li key={index} className="break-words">{error}</li>)}</ul></div>}
     {missingEnv.length > 0 && <div><p className="mb-1 font-medium">{i18n.t("缺少环境变量")}</p><div className="flex flex-wrap gap-1">{missingEnv.map(name => <code key={name} className="break-all rounded bg-muted px-1.5 py-0.5 text-xs">{name}</code>)}</div></div>}
     {warnings.length > 0 && <div><p className="mb-1 font-medium">{i18n.t("提示")}</p><ul className="list-disc space-y-1 pl-5">{warnings.map((warning, index) => <li key={index} className="break-words">{warning}</li>)}</ul></div>}

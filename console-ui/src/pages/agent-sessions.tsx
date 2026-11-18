@@ -7,7 +7,7 @@ import { useConversationTraces } from './useConversationTraces'
 import './conversation-trace.css'
 import type { DiagnosticConversation } from './endpoint-detail/types'
 import './agent-sessions.css'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
+import { Alert, AlertDescription, Badge, Button, cn, Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, EmptyState, ErrorAlert, PageHeader, Skeleton, StatCard, StatGrid, Tabs, TabsContent, TabsList, TabsTrigger } from '@zhin.js/console-ui'
 import { SessionMessageDetails } from './SessionMessageDetails'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
@@ -17,28 +17,10 @@ import { CheckCircle, Loader2, MessageSquare, MessagesSquare, Repeat2, Users, Al
 import { apiFetch } from '../utils/auth'
 import { isLikelySessionKey, parseSessionKeyFromQuery, parseImSessionKey } from '../utils/agent-session'
 import { loadAgentSessionHistory, pushAgentSessionHistory } from '../utils/agent-session-history'
-import { PageHeader } from '../components/PageHeader'
-import { ErrorAlert } from '../components/error-alert'
-import { EmptyState } from '../components/empty-state'
-import { Alert, AlertDescription } from '../components/ui/alert'
-import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
-import { Skeleton } from '../components/ui/skeleton'
 import { AgentSessionPicker } from '../components/AgentSessionPicker'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
-  DialogDescription,
-  DialogClose,
-} from '../components/ui/dialog'
-import { cn } from '@zhin.js/client'
 import { CONSOLE_REST } from '../contracts/zhin-console'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { readRecentSessions, summarizeRecentSessions, type RecentSession, type RecentSessionSummary } from './agent-session-recent.mjs'
-import { StatCard, StatGrid } from '../components/StatCard'
 import { sessionConversationScope, sessionKeyInScope } from './scope/records-model.mjs'
 import { readScopeFilterParams } from './insights/scope-filter.mjs'
 import { scopeHref, scopeIdentity } from '../scope/scope-tree.mjs'
@@ -405,16 +387,13 @@ export default function AgentSessionsPage() {
                 </TabsList>
                 <TabsContent value="conversation" forceMount className="data-[state=inactive]:hidden">
                   {personal ? (
-                    <div className="flex flex-col items-center pb-6">
-                      <EmptyState
-                        compact
-                        icon={MessagesSquare}
-                        title={i18n.t('个人会话没有聊天记录')}
-                        description={i18n.t('个人会话不保存聊天记录，每一轮的处理过程请在「轨迹」页签查看。')}
-                        className="pb-3"
-                      />
-                      <Button variant="outline" size="sm" onClick={() => setView('trace')}>{i18n.t('查看轨迹')}</Button>
-                    </div>
+                    <EmptyState
+                      compact
+                      illustration="messages"
+                      title={i18n.t('个人会话没有聊天记录')}
+                      description={i18n.t('个人会话不保存聊天记录，每一轮的处理过程请在「轨迹」页签查看。')}
+                      action={{ label: i18n.t('查看轨迹'), onSelect: () => setView('trace') }}
+                    />
                   ) : <ConversationHistory
                     key={`${scope}:${selectedKey}`}
                     sessionKey={selectedKey}
@@ -474,7 +453,7 @@ export default function AgentSessionsPage() {
                         </details>
 
                         {tree.points.length === 0 ? (
-                          <EmptyState compact title={i18n.t('暂无可继续的消息')} />
+                          <EmptyState compact illustration="messages" title={i18n.t('暂无可继续的消息')} />
                         ) : (
                           <div className="divide-y">
                             {tree.points.map((point) => {
@@ -496,7 +475,7 @@ export default function AgentSessionsPage() {
                                         msg {point.messageId}
                                       </span>
                                       {isActive && (
-                                        <Badge variant="success" className="ml-auto">
+                                        <Badge variant="default" className="ml-auto">
                                           {i18n.t('当前活跃')}
                                         </Badge>
                                       )}
@@ -545,7 +524,7 @@ export default function AgentSessionsPage() {
           ) : sessionKeyFromUrl ? (
             <ErrorAlert error={i18n.t('会话标识不完整，请检查平台、账号、类型与会话。')} />
           ) : (
-            <EmptyState compact title={i18n.t('选择一个对话')} />
+            <EmptyState compact illustration="messages" title={i18n.t('选择一个对话')} />
           )}
         </section>
       </div>

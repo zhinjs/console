@@ -2,9 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Bot, CalendarClock, ClipboardList, History } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { useSearchParams } from 'react-router-dom'
-import { PageHeader } from '../components/PageHeader'
-import { Alert, AlertDescription } from '../components/ui/alert'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
+import { Alert, AlertDescription, PageHeader, PageShell, StatCard, StatGrid, Tabs, TabsContent, TabsList, TabsTrigger } from '@zhin.js/console-ui'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import TaskCenterPage from './task-center'
@@ -13,9 +11,7 @@ import AssistantJobsPage from './assistant-jobs'
 import { ScheduleExecutions } from './ScheduleExecutions'
 import { TaskOverview } from './TaskOverview'
 import { StatusState } from '../components/StatusState'
-import { PageShell } from '../components/PageShell'
 import { resolveTaskTab, TASK_HUB_TABS, type TaskTabId } from './task-hub-model.mjs'
-import { StatCard, StatGrid } from '../components/StatCard'
 import { apiFetch } from '../utils/auth'
 import { requestConsole } from '../utils/console-rpc'
 import { CONSOLE_REST, CONSOLE_RPC } from '../contracts/zhin-console'
@@ -60,8 +56,8 @@ function useTaskHubSummary(scope: string | null | undefined, refreshKey: string)
     const settle = <T,>(promise: Promise<T>) => promise.catch(() => null)
     void Promise.all([
       settle(readJson(`${CONSOLE_REST.TASK_PROVIDERS}?locale=${i18n.locale}`).then(body => summarizeAdminTasks(readTaskProviders(body, i18n.locale)))),
-      settle(requestConsole<ScheduleListLike>({ type: CONSOLE_RPC.SCHEDULE_LIST }).then(summarizeSchedules)),
-      settle(readJson('/api/assistant/jobs').then(body => summarizeAssistantJobs(validateAssistantJobs(body, i18n.locale)))),
+      settle(requestConsole<ScheduleListLike>({ type: CONSOLE_RPC.SCHEDULE_LIST, locale: i18n.locale }).then(summarizeSchedules)),
+      settle(readJson('/api/assistant/jobs').then(body => summarizeAssistantJobs(validateAssistantJobs(body, i18n.locale), i18n.locale))),
       settle(readJson(executionQuery()).then(body => summarizeExecutions(readExecutionPage(body, undefined, i18n.locale)))),
     ]).then(([admin, schedule, assistant, history]) => {
       if (!controller.signal.aborted && isInboxCacheScopeActive(scope)) setSummary({ admin, schedule, assistant, history })
@@ -103,14 +99,17 @@ function OverviewPanel({ summary, open }: { summary: TaskHubSummary; open: (tab:
         icon={CalendarClock}
         label={i18n.t("定时提醒")}
         value={summary.schedule?.total ?? unknown}
-        sub={summary.schedule ? i18n.t("{0} 个已暂停", [summary.schedule.paused]) : i18n.t("未启用或暂时无法读取")}
+        sub={summary.schedule
+          ? summary.schedule.internal ? i18n.t("{0} 个已暂停 · 另有 {1} 个插件内部任务", [summary.schedule.paused, summary.schedule.internal]) : i18n.t("{0} 个已暂停", [summary.schedule.paused])
+          : i18n.t("未启用或暂时无法读取")}
         onOpen={() => open('schedule')}
       />
       <StatCard
         icon={Bot}
         label={i18n.t("助手任务")}
-        value={summary.assistant?.total ?? unknown}
-        sub={summary.assistant
+        value={summary.assistant?.disabled ? unknown : summary.assistant?.total ?? unknown}
+        sub={summary.assistant?.disabled ? i18n.t("未启用：{0}", [summary.assistant.disabled])
+          : summary.assistant
           ? summary.assistant.failing > 0 ? i18n.t("{0} 个最近运行出错", [summary.assistant.failing]) : i18n.t("{0} 个已启用", [summary.assistant.enabled])
           : i18n.t("未启用或暂时无法读取")}
         tone={summary.assistant && summary.assistant.failing > 0 ? 'danger' : undefined}

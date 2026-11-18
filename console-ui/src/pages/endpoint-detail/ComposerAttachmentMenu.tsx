@@ -1,7 +1,6 @@
 import { Image, Link2, Music, Paperclip, Video } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { Button } from '../../components/ui/button'
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '../../components/ui/dropdown-menu'
+import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@zhin.js/console-ui'
 
 export function ComposerAttachmentMenu({ disabled = false, onImage, onFile, onMedia }: {
   disabled?: boolean; onImage(): void; onFile(): void; onMedia(type: 'image' | 'video' | 'audio'): void

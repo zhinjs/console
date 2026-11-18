@@ -10,9 +10,11 @@ const compile = (source, fileName) => ts.transpileModule(source, {
 }).outputText
 const sectionsUrl = new URL('navigation-sections.mjs',root).href
 const routesUrl = new URL('console-routes.mjs',root).href
+const pluginPagesUrl = new URL('plugin-pages.mjs',root).href
 // The taxonomy imports the sections module relatively; a data: URL needs it absolute.
-const taxonomy = await import(moduleUrl(compile(await readFile(new URL('navigation-taxonomy.ts',root),'utf8'),'navigation-taxonomy.ts').replace("'./navigation-sections.mjs'",JSON.stringify(sectionsUrl))))
-const {NAV_GROUPS,NAV_GROUP_ORDER,placePluginRoute} = taxonomy
+const taxonomy = await import(moduleUrl(compile(await readFile(new URL('navigation-taxonomy.ts',root),'utf8'),'navigation-taxonomy.ts').replace("'./navigation-sections.mjs'",JSON.stringify(sectionsUrl)).replace("'./console-routes.mjs'",JSON.stringify(routesUrl)).replace("'./plugin-pages.mjs'",JSON.stringify(pluginPagesUrl))))
+const {NAV_GROUPS,NAV_GROUP_ORDER,placePluginRoute,markPluginRoute,planPluginRoute} = taxonomy
+const {describePluginPage} = await import(pluginPagesUrl)
 const {CONSOLE_PATHS,LEGACY_ROUTE_REDIRECTS} = await import(routesUrl)
 const {routeSectionId} = await import(sectionsUrl)
 
@@ -84,12 +86,12 @@ test('builtin route regrouping preserves deep links, hidden detail ownership and
  const byPath = new Map(routes.map(route=>[route.path,route]))
  const expected = {
   '/dashboard':'OVERVIEW','/attention':'OVERVIEW','/logs':'OVERVIEW','/agent/workbench':'OVERVIEW','/agent/replay':'OVERVIEW','/agent/usage':'OVERVIEW',
-  '/scope':'WORK','/scope/:adapter':'WORK','/scope/:adapter/:endpoint':'WORK','/scope/:adapter/:endpoint/:conversation':'WORK','/agent/sessions':'WORK',
+  '/scope':'WORK','/scope/:adapter':'WORK','/scope/:adapter/:endpoint':'WORK','/scope/:adapter/:endpoint/:conversation':'WORK','/agent/sessions':'WORK','/chat-members':'WORK',
   '/features':'FEATURES','/features/global/:plugin':'FEATURES','/features/ai':'FEATURES','/features/ai/skills':'FEATURES','/features/ai/ambient':'FEATURES',
   '/features/ai/workrooms':'FEATURES','/features/ai/workrooms/catalog':'FEATURES','/introspection':'FEATURES','/permissions':'FEATURES',
-  '/scenario-lab':'FEATURES','/use-cases/group-welcome':'FEATURES',
+  '/use-cases/group-welcome':'FEATURES',
   '/plugins':'PLUGINS','/plugins/:name':'PLUGINS','/marketplace':'PLUGINS',
-  '/ops/database':'OPS','/ops/config':'OPS','/ops/env':'OPS','/ops/schedules':'OPS','/ops/files':'OPS','/ops/instance':'OPS','/ops/terminal':'OPS','/ops/self-check':'OPS',
+  '/ops/database':'OPS','/ops/config':'OPS','/ops/env':'OPS','/ops/schedules':'OPS','/ops/files':'OPS','/ops/instance':'OPS','/ops/terminal':'OPS','/ops/self-check':'OPS','/scenario-lab':'OPS',
   '/onboarding':'OVERVIEW','/account':'OVERVIEW',
   '/access/users':'ACCESS','/access/roles':'ACCESS','/access/tokens':'ACCESS','/access/audit':'ACCESS',
  }
@@ -121,4 +123,114 @@ test('every old route is registered as a hidden redirect to its new place', asyn
   assert.ok(routes.some(item=>item.path===rule.to && !Object.hasOwn(LEGACY_ROUTE_REDIRECTS,item.path)),`${path} -> ${rule.to} is a registered page`)
  }
  for (const path of ['/config','/env','/files','/database','/tasks','/cron','/assistant/jobs','/agent/models','/agent/skills','/agent/ambient','/agent/workrooms','/agent/workrooms/catalog','/endpoints','/endpoints/:adapter/:endpointId','/features/adapters','/features/adapters/:adapter','/features/adapters/:adapter/endpoints/:endpoint','/features/adapters/:adapter/endpoints/:endpoint/conversations/:conversation']) assert.ok(Object.hasOwn(LEGACY_ROUTE_REDIRECTS,path),path)
+})
+
+// ADR 0063 决策 3 revises the 0052 rule: only pages without an owning plugin (the project's own) still
+// reach the 功能 menu, under 插件页面; plugin pages and adapter pages are covered below.
+test('pages without an owning plugin are marked for the 插件页面 group of 功能', async () => {
+ const {buildNavigation} = await import(sectionsUrl)
+ const backup = {path:'/p-backup',name:'备份',meta:{group:NAV_GROUPS.FEATURES,order:23}}
+ const marked = markPluginRoute(backup)
+ assert.equal(marked.meta.pluginPage,true)
+ assert.equal(marked.meta.hideInMenu,undefined)
+ assert.deepEqual(backup.meta,{group:NAV_GROUPS.FEATURES,order:23},'input is not mutated')
+ const core = [
+  {path:CONSOLE_PATHS.features,meta:{group:NAV_GROUPS.FEATURES,order:0}},
+  {path:CONSOLE_PATHS.ai,meta:{group:NAV_GROUPS.FEATURES,order:2}},
+ ]
+ const notes = markPluginRoute({path:'/p-notes',meta:{group:NAV_GROUPS.FEATURES,order:1}})
+ const features = buildNavigation([...core,notes,marked]).flatMap(tier => tier.sections).find(section => section.id === 'features')
+ assert.deepEqual(features.groups.map(group => [group.id,group.label,group.routes.map(route => route.path)]),[
+  ['core','核心',[CONSOLE_PATHS.features,CONSOLE_PATHS.ai]],
+  ['plugin','插件页面',['/p-notes','/p-backup']],
+ ])
+ assert.deepEqual(features.routes.map(route => route.path),[CONSOLE_PATHS.features,CONSOLE_PATHS.ai,'/p-notes','/p-backup'],'core pages come first even when a page orders itself earlier')
+ const onlyPlugins = buildNavigation([notes]).flatMap(tier => tier.sections)[0]
+ assert.deepEqual(onlyPlugins.groups.map(group => group.id),['plugin'])
+})
+
+test('a plugin page becomes a concrete /plugins/<plugin>/<page> tab out of the menu; its old path no longer redirects (ADR 0063 P4)', () => {
+ const element = {}
+ const rss = {path:'/rss',name:'RSS 订阅',element,requiredPermissions:['rss.read'],meta:{group:NAV_GROUPS.FEATURES,order:20,section:'ops',fullWidth:true,titleI18n:{en:'RSS feeds'}}}
+ const entry = {id:'index',name:'index',owner:'root/rss',route:'/rss',meta:{section:'ops',description:'订阅列表',keywords:{'zh-CN':['订阅'],en:['feeds']}}}
+ const plan = planPluginRoute(rss,describePluginPage(entry))
+ assert.equal(plan.page.path,'/plugins/rss/index')
+ assert.ok(!/[:*]/.test(plan.page.path),'a concrete path the command palette can open')
+ assert.equal(plan.page.element,element,'the page keeps its own element')
+ assert.equal(plan.page.parent,CONSOLE_PATHS.plugins)
+ assert.equal(plan.page.meta.hideInMenu,true)
+ assert.equal(plan.page.meta.group,NAV_GROUPS.PLUGINS)
+ assert.equal(routeSectionId(plan.page),'plugins')
+ assert.equal(plan.page.meta.section,undefined,'a declared section no longer places the page')
+ assert.equal(plan.page.meta.fullWidth,undefined,'the tab sits in the plugin detail column')
+ assert.equal(plan.page.meta.order,20)
+ assert.deepEqual(plan.page.meta.titleI18n,{en:'RSS feeds'})
+ assert.deepEqual(plan.page.requiredPermissions,['rss.read'])
+ assert.deepEqual(plan.page.meta.pluginTab,{kind:'tab',plugin:'rss',page:'index',legacyPath:'/rss',href:'/plugins/rss/index',keywords:['订阅','feeds'],description:'订阅列表'})
+ assert.equal(plan.sectionIgnored,'ops','the deprecated section is reported for a warning')
+ assert.equal(plan.redirect,undefined,'no redirect at the old path')
+ assert.equal(plan.redirectTo,undefined)
+ assert.deepEqual(rss.meta,{group:NAV_GROUPS.FEATURES,order:20,section:'ops',fullWidth:true,titleI18n:{en:'RSS feeds'}},'input is not mutated')
+ // pages/<name> lives at /<plugin>/p-<name> on the Host.
+ const history = planPluginRoute({path:'/rss/p-history',name:'历史'},describePluginPage({id:'history',owner:'root/rss',route:'/rss/p-history'}))
+ assert.equal(history.page.path,'/plugins/rss/history')
+ assert.equal(history.sectionIgnored,undefined)
+ // Without an entry (a hand-registered route) the path still names the plugin.
+ assert.equal(planPluginRoute({path:'/calendar',name:'日历'}).page.path,'/plugins/calendar/index')
+ // A page hidden from navigation keeps its route but gets no tab.
+ assert.equal(planPluginRoute({path:'/rss/p-raw',name:'Raw',meta:{hideInMenu:true}}).page.meta.pluginTab.hidden,true)
+})
+
+test('the Sandbox keeps its 会话 entry and project pages keep their menu place; neither redirects', () => {
+ const sandbox = planPluginRoute({path:'/sandbox',name:'会话',meta:{fullWidth:true}},describePluginPage({id:'index',owner:'root/sandbox',route:'/sandbox'}))
+ assert.equal(sandbox.page.path,'/sandbox')
+ assert.equal(sandbox.page.meta.group,NAV_GROUPS.WORK)
+ assert.equal(sandbox.page.meta.fullWidth,true)
+ assert.equal(sandbox.redirect,undefined)
+ const project = planPluginRoute({path:'/p-backup',name:'备份'},describePluginPage({id:'backup',owner:'root',route:'/p-backup'}))
+ assert.equal(project.page.path,'/p-backup')
+ assert.equal(project.page.meta.group,NAV_GROUPS.FEATURES)
+ assert.equal(project.redirect,undefined)
+})
+
+test('an adapter page is not mounted twice: its old path redirects to the adapter object page', () => {
+ const entry = {id:'index',owner:'root/adapter-icqq',route:'/icqq',blueprint:{kind:'zhin.console.adapter-page',adapterKey:'icqq'},meta:{keywords:['QQ 个人号']}}
+ for (const plan of [planPluginRoute({path:'/icqq',name:'ICQQ',icon:'MessageCircle'},describePluginPage(entry)),planPluginRoute({path:'/icqq',name:'ICQQ',icon:'MessageCircle'},null,{adapterKey:'icqq'})]) {
+  assert.equal(plan.page,undefined,'no second copy of the connection management')
+  assert.equal(plan.redirectTo,'/scope/icqq')
+  assert.equal(plan.redirect.path,'/icqq','old links, onboarding cards and the palette still reach it')
+  assert.equal(plan.redirect.parent,CONSOLE_PATHS.scope)
+  assert.equal(plan.redirect.meta.hideInMenu,true)
+  assert.equal(plan.redirect.meta.adapterPage,true)
+  assert.equal(routeSectionId(plan.redirect),'sessions')
+  assert.equal(plan.redirect.meta.pluginTab.kind,'adapter')
+  assert.equal(plan.redirect.meta.pluginTab.href,'/scope/icqq')
+ }
+ assert.deepEqual(planPluginRoute({path:'/icqq',name:'ICQQ'},describePluginPage(entry)).redirect.meta.pluginTab.keywords,['QQ 个人号'])
+})
+
+// #64 `scenario-lab-placement`: 消息场景试验台 is a developer tool, not a bot feature. It moved from 功能 to 运维 at the
+// same address; the menu, the breadcrumb section and the ⌘K group all read the route's section.
+test('消息场景试验台 sits in 运维 (after 连接自检), no longer in 功能, at the same address', async () => {
+ const {buildNavigation, routeSectionId, sectionById} = await import(sectionsUrl)
+ const {resolveNavigationLocation} = await import(new URL('navigation-location.mjs',root).href)
+ const routes = (await registeredBuiltinRoutes()).filter(route=>!Object.hasOwn(LEGACY_ROUTE_REDIRECTS,route.path))
+ const lab = routes.find(route=>route.path==='/scenario-lab')
+ assert.equal(CONSOLE_PATHS.scenarioLab,'/scenario-lab','the address is unchanged, so no redirect is needed')
+ assert.equal(routeSectionId(lab),'ops')
+ const sections = buildNavigation(routes).flatMap(tier=>tier.sections)
+ const paths = id => sections.find(section=>section.id===id).routes.map(route=>route.path)
+ assert.ok(paths('ops').includes('/scenario-lab'))
+ assert.ok(!paths('features').includes('/scenario-lab'))
+ assert.deepEqual(paths('ops').slice(-2),['/ops/self-check','/scenario-lab'],'last in 运维, after 连接自检')
+ // Breadcrumb (layouts/dashboard.tsx) and ⌘K (ConsoleCommandCenter.tsx) label: sectionById(routeSectionId(route)).label.
+ const location = resolveNavigationLocation(routes,'/scenario-lab',(pattern,pathname)=>pattern===pathname)
+ assert.equal(location.current.path,'/scenario-lab')
+ assert.equal(location.group,NAV_GROUPS.OPS)
+ assert.equal(sectionById(routeSectionId(location.current)).label,'运维')
+ // Its own permission (feature.view) still decides who sees it, as in 功能.
+ const access = names => ({unrestricted:false,permissions:new Set(names),scoped:[]})
+ const opsFor = names => buildNavigation(routes,access(names)).flatMap(tier=>tier.sections).find(section=>section.id==='ops')?.routes.map(route=>route.path) ?? []
+ assert.ok(opsFor(['feature.view']).includes('/scenario-lab'),'feature.view still reaches it, now under 运维')
+ assert.ok(!opsFor(['ops.database.read']).includes('/scenario-lab'),'an ops permission alone does not')
 })

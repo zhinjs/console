@@ -1,7 +1,6 @@
 import { useI18n } from '../i18n'
 import { useEffect, useRef, useState } from 'react'
-import { SelectField } from '../components/ui/select'
-import { ErrorAlert } from '../components/error-alert'
+import { ErrorAlert, SelectField } from '@zhin.js/console-ui'
 import { useInferenceManagement, type InferenceManagement } from './inference/useInferenceManagement'
 import { inferenceError } from './inference/model.mjs'
 import { PersonalSessionModelPicker } from './PersonalSessionModelPicker'

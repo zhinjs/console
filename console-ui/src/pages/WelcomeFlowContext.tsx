@@ -6,8 +6,7 @@ import { getInboxCacheScope, isInboxCacheScopeActive } from '../utils/inbox-cach
 import { createDiagnosticRequestGate } from './endpoint-detail/message-diagnostics.mjs'
 import { apiFetch } from '../utils/auth'
 import { CONSOLE_REST } from '../contracts/zhin-console'
-import { Card, CardContent } from '../components/ui/card'
-import { Button } from '../components/ui/button'
+import { Button, Card, CardContent } from '@zhin.js/console-ui'
 import { readWelcomeInstances, readWelcomeUseCase, welcomeDetailUrl, welcomeReturnUrl } from './welcome-use-case-model.mjs'
 
 /** Contextual navigation only; the original form and detail page retain all mutation ownership. */

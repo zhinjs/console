@@ -7,11 +7,7 @@ import { defaultI18n } from './locale-fixture.mjs'
 import { welcomeTargetKey } from '../console-ui/src/pages/welcome-use-case-model.mjs'
 
 const require = createRequire(import.meta.url)
-const component = { exports: {} }
-const checkboxSource = await readFile(new URL('../console-ui/src/components/ui/checkbox.tsx', import.meta.url), 'utf8')
-const compiled = ts.transpileModule(checkboxSource, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
-new Function('require', 'exports', 'module', compiled)(name => name === '@zhin.js/client' ? { cn: (...classes) => classes.filter(Boolean).join(' ') } : require(name), component.exports, component)
-const { Checkbox } = component.exports
+const { Checkbox } = await import('@zhin.js/console-ui')
 const pages = new Map()
 async function checkbox(file, state, bindings) {
   if (!pages.has(file)) {

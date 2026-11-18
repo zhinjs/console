@@ -21,7 +21,7 @@
 
 ## 2. 外壳、布局栅格与断点
 
-外壳（`layouts/dashboard.tsx` + `shell.css`）：灰色画布上方悬浮一条胶囊导航栏（距顶 12px、高 60px，半透明白底 + 背景模糊，页面滚动后底色加深），内容是居中的单列，最宽 1440px（`--console-content-max`），左右留 `--console-space-page-x`。整页随窗口滚动，导航栏固定；吸顶元素与锚点跳转都要让出导航栏高度（`--console-header-h`，`html` 上设了 `scroll-padding-top`）。
+外壳（`layouts/dashboard.tsx` + `shell.css`）：灰色画布上方悬浮一条胶囊导航栏（距顶 12px、高 60px，半透明白底 + 背景模糊，页面滚动后底色加深），内容是居中的单列，最宽 1440px（`--console-content-max`），左右留 `--console-space-page-x`。整页随窗口滚动，导航栏固定；吸顶元素与锚点跳转都要让出导航栏高度（`--zc-header-h`，`html` 上设了 `scroll-padding-top`）。
 
 导航栏从左到右：品牌 → 六个区（日常、管理两组，中间一条竖线）→ 快速跳转（Ctrl/⌘ K）、底部日志面板（Ctrl `）、实时连接状态点、语言、外观、个人设置、退出。
 
@@ -31,7 +31,7 @@
   - 入口：顶栏图标按钮（`aria-expanded` / `aria-controls`）、快捷键 Ctrl `（两个平台都用 Ctrl：⌘` 是 macOS 切换窗口；不与 Ctrl/⌘ K 冲突，快速跳转的动作与页脚写明了它）、快速跳转的「打开日志面板」，以及页面里的 `openLogPanel({ q, adapter, endpoint, level })`（`useLogPanel()` 同时给出 `available`）。页面里「去日志页看看」的链接，只要留在当前页更好（正在扫码登录、填写配置、只存在内存里的确认记录），就改成打开面板并带上筛选；没有面板时保留原来的 `/logs?q=` 链接。
   - 内容是与 `/logs` 相同的 `LogViewer`（`pages/logs/LogViewer.tsx`）：筛选由外部控制（`params` + `onParamsChange`）。`/logs` 传地址栏的参数，面板传自己的状态（`log-panel-store.mjs`），**绝不改当前页面的地址**；面板标题栏的「在日志页打开」带着同一组筛选去 `/logs`。上次的筛选与高度记在 localStorage（读写都 try/catch，读不到用默认值）。
   - 面板用紧凑排版（`pages/logs/LogPanelWorkbench.tsx`，`/logs` 页仍是 `LogWorkbench`）：范围只在标题栏显示为一个标签（标识 + 「打开对象页」图标 + 清除），按文本匹配的说明放在标签的提示里，不再显示范围条；一行工具栏（搜索、级别、跟随最新、刷新 / 来源 / 更多三个图标按钮，每页条数与日志维护在「更多」里）；每条日志一行约 28px（等宽时间 · 级别图标 · 来源 · 截断的消息，完整消息在提示里，点击或回车在旁边打开事件详情）；没有「历史事件」区块标题，条数与翻页在一行约 32px 的页脚。默认 360px 高时 1440 宽下至少显示 8 行。
-  - 宽屏：停靠在底部、占满内容宽度，**非模态**——没有遮罩，页面不 `inert`，没有焦点陷阱；页面底部让出面板高度（`--console-log-panel-reserve`，toast 也随之上移），最后几行照样能滚到。上边缘拖动条 `role="separator"` 可拖、可用 ↑ / ↓（Shift 加大步长）/ Home / End 调整，180px 到视口 80%。打开时焦点移进面板，关闭时回到打开它的控件（用户已把焦点移到页面别处时不抢）；Esc 只在焦点位于面板内、且没有内层弹层先消费时关闭。
+  - 宽屏：停靠在底部、占满内容宽度，**非模态**——没有遮罩，页面不 `inert`，没有焦点陷阱；页面底部让出面板高度（`--zc-log-panel-reserve`，toast 也随之上移），最后几行照样能滚到。上边缘拖动条 `role="separator"` 可拖、可用 ↑ / ↓（Shift 加大步长）/ Home / End 调整，180px 到视口 80%。打开时焦点移进面板，关闭时回到打开它的控件（用户已把焦点移到页面别处时不抢）；Esc 只在焦点位于面板内、且没有内层弹层先消费时关闭。
   - 手机（<768px）：模态底部抽屉，遮罩 + 页面与导航栏 `inert`，没有拖动条。`prefers-reduced-motion` 下不做滑入动画。
   - 只对能看 `/logs` 的身份出现（`ROUTE_PERMISSIONS['/logs']`，即 `status.view`）：按钮、快捷键、快速跳转动作与页面里的「查看日志」一起隐藏。只在打开时挂载 `LogViewer`，关闭即停止轮询；在 `/logs` 页上面板不显示（按钮禁用），两个查看器不会同时轮询同一个接口，离开 `/logs` 后面板回来。标签页隐藏时轮询跳过请求。
 - `fullWidth` 路由（日志、数据库、终端、对象树的账号与会话层等）内容不受 1440px 限制，导航栏跟着放宽，两侧边缘对齐。
@@ -54,7 +54,7 @@
 
 - **基础**（`design-system.css`，不分亮暗）：圆角 6 / 10 / 14 / 18 / 22px（`--console-radius-sm|md|lg|xl|2xl`）；控件高度三档 32 / 36 / 40px（`--console-control-height-sm|…|-lg`，手机统一 44px）；字体 Inter / MiSans，代码 JetBrains Mono（只用本机已有字体，不请求远程字体）；页面边距、区块间距；内容宽 1440px；动效时长与曲线。
 - **语义**（`theme-tokens.css`，分亮暗）：画布 `background`（浅灰）、卡片 `card`（白）、卡片内分组 `secondary` / `muted`（更浅的灰，不描边）、文字 `foreground` / `muted-foreground`、强调 `primary`、柔和主操作 `primary-action`（色相的浅色填充）+ `primary-action-foreground`（色相文字）+ `primary-action-border`、状态色与图表色。阴影 `--console-shadow-*`：一圈发丝描边加一层短而柔的投影。
-- **组件**（写在组件旁边）：导航栏 `--console-header-h`、`--console-nav-*`（`shell.css`）等。
+- **组件**（写在组件旁边）：导航栏 `--zc-header-h`、`--zc-nav-*`（`shell.css`）等。Console 自己定义的令牌一律用 `--zc-` 前缀；`--console-` 留给 `@zhin.js/console-ui`，stylelint 的 `console/no-unknown-tokens` 会拒绝组件库没有定义的 `--console-*` 名字。
 
 - 卡片 `Card` / `console-card`：白底、无边框、`--console-shadow-sm`，圆角 18px；卡片里的分组块用浅灰填充，不再描边、不再加阴影。可点击卡片悬停时阴影加深、上移 1px。
 - 按钮：主按钮是浅色强调填充 + 强调色描边与文字（不是实心色块）；次要按钮 `outline` 白底细边；`ghost` 只在悬停时出现浅灰底；危险操作仍用实心 `destructive`。
@@ -116,6 +116,7 @@
 - **网关事务**（插件全局启停 `feature.set-enabled` `level: 'global'` / `plugin:set-enabled`，需要 `plugin.manage`；停止实例 → 写入 `disable_plugins` → 启动，失败回滚）：经 `use-global-plugin-switch.ts` 用 `apiFetch` 发送，不受 SDK 10 秒超时限制。500 `transaction_failed` = 未执行（已自动回滚），500 `rollback_failed` = 失败、回滚未完成（链到「实例」页），`gateway-required`（`--standalone`）= 说明用 `zhin start` 或 `zhin enable / zhin disable`；`statusFromError` 读成 `kind: 'error'` + `transaction`，`failedPhase` 与 `logTail` 放在「技术详情」里。
 - 回执就地显示在发起操作的控件附近，直到用户关闭；toast 只用于不需要追踪结果的轻提示。
 - 删除、撤销、全局停用等不可逆或影响面大的操作必须 `danger: true`；删除类再要求输入名称的，沿用现有 `confirm-dialog`。
+- **读不准就不写**（console#152，群聊插话的「只观察」）：页面只有在拿到证据时才判断实例版本——旧实例要同时满足「`/agent/inference/ambient-judge` 不存在」和「`plugin.root.ambient` 读到了且没有 `judgeChain`」。其他情况一律按「未知」处理：模式选项整张卡片禁用，不写模式，只允许关闭或缩小插话范围（删群、所有群改成指定群、调低次数），并给出「重新读取」。这是有意的保守取舍：没有 `ambient:read` 的身份读不到插话状态，在旧实例上也会落到「未知」，因此不能切换「只观察 / 主动参与」，需要有该权限的账号来改。
 
 ## 9. 空态与错误态：StatusState
 
@@ -171,4 +172,4 @@
 | `LogPanel` / `LogPanelButton` / `useLogPanel` / `openLogPanel` | `components/log-panel/` | 底部日志面板（shell）；`LogViewer`（`pages/logs/`）是它与 `/logs` 共用的查看器 |
 | `useAttention` / `attention-model.mjs` / `AttentionBadge` | `pages/attention/` | 「需要你处理」：`attention.list` 的共享读取（30 秒、聚焦与推送事件防抖刷新；旧 Host 回退到 Console 推断），本浏览器内的「稍后提醒」/「忽略」，首页区块、`/attention` 页与顶栏角标共用 |
 | `LoginFlowSection` / `LoginFlowCard` / `ChallengePanel` / `useLoginFlow` / `login-flow-model.mjs` | `pages/scope/` | 账号「接入」页签的登录卡片（zhinjs/zhin ADR 0058）：步骤时间线、按描述符渲染的挑战（引导清单自动勾选、复制并打开、书签小程序、链接二维码、托管滑块辅助页弹窗）、`login.submit { wait: true }` 回执；旧 Host（`login.flow.list` 未知或 403）退回 `LoginTaskCard`。`login-assist-helpers.mjs` 与 core 的 `parseLoginTicket` / 验证码辅助页函数逐字节一致，`qr-code.mjs` 是零依赖的二维码编码器 |
-| `scripts/ui-preview-host.mjs` | 本地 | 合成数据的只读 Host，用于截图（`UI_PREVIEW_ORIGIN` 可加允许的来源；`UI_PREVIEW_ATTENTION=empty` / `legacy` 模拟没有待办 / 旧 Host；`UI_PREVIEW_LOGIN=flows` 打开登录流程演示账号（`scripts/ui-preview-login.mjs`：扫码、滑块 + 辅助页、设备锁 + 短信、身份验证、失败、频率限制、结果待确认），否则 `login.flow.*` 按旧 Host 回答；`UI_PREVIEW_ACCESS=viewer` 只读身份） |
+| `scripts/ui-preview-host.mjs` | 本地 | 合成数据的只读 Host，用于截图（`UI_PREVIEW_ORIGIN` 可加允许的来源；`UI_PREVIEW_ATTENTION=empty` / `legacy` 模拟没有待办 / 旧 Host；`UI_PREVIEW_LOGIN=flows` 打开登录流程演示账号（`scripts/ui-preview-login.mjs`：扫码、滑块 + 辅助页、设备锁 + 短信、身份验证、失败、频率限制、结果待确认），否则 `login.flow.*` 按旧 Host 回答；`UI_PREVIEW_ACCESS=viewer` 只读身份；`UI_PREVIEW_AMBIENT=legacy` 按 ADR 0066 之前的实例回答插话判断，`UI_PREVIEW_AMBIENT=unknown` 让插话判断与插话状态都读取失败） |

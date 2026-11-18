@@ -142,13 +142,29 @@ export function reasonLabel(code, locale = 'zh-CN') {
   return Object.hasOwn(REASON_LABELS, code) ? translate(locale, REASON_LABELS[code]) : code
 }
 
-/** 一行 → 页面显示：一句话原因 + 原始机器码（排障时对得上日志）。 */
-export function describeReplayRow(row, locale = 'zh-CN') {
+/**
+ * The key the group lists use for a row's conversation (`<adapter>:<group id>`, as in the ambient
+ * group picker), or null when the row is not in a group.
+ */
+export function replayGroupKey(row) {
+  const match = typeof row?.scene_id === 'string' ? /^group:(.+)$/u.exec(row.scene_id) : null
+  return match && row.platform ? `${row.platform}:${match[1]}` : null
+}
+
+/**
+ * 一行 → 页面显示：一句话原因 + 原始机器码（排障时对得上日志）。
+ * `groupNames`（`<adapter>:<group id>` → 群名）有这个群时，`where` 写群名，原始会话 id 留在 `whereCode`。
+ */
+export function describeReplayRow(row, locale = 'zh-CN', groupNames) {
+  const whereCode = `${row.platform} · ${row.scene_id}`
+  const key = replayGroupKey(row)
+  const name = key && groupNames instanceof Map ? groupNames.get(key) : undefined
   return {
     id: row.id,
     at: row.ts,
     turnId: row.turn_id,
-    where: `${row.platform} · ${row.scene_id}`,
+    where: typeof name === 'string' && name.trim() ? `${row.platform} · ${name.trim()}` : whereCode,
+    whereCode,
     kind: kindLabel(row.kind, locale),
     outcome: outcomeLabel(row.outcome, locale),
     outcomeCode: row.outcome,
@@ -218,4 +234,94 @@ export function exportFileName(window) {
 
 export function isPermissionDenied(error) {
   return Boolean(error) && (error.status === 401 || error.status === 403)
+}
+
+/** Payload key of a row written only as the consequence of another row in the same turn (#1250). */
+export const REPLAY_PARENT_KEY = 'parent'
+
+/**
+ * One entry per decision (zhinjs/zhin#1250 `replay-two-rows-per-ambient`): a gate that stops a turn
+ * (`ambient_decision` / `control_gate` / `speak_gate`) also writes a `model_skip` whose
+ * `payload.parent` names the gate's kind. Such a row folds into the row of that kind in the same
+ * turn when it is in `rows`; otherwise (older Hosts without `parent`, a parent on another page or
+ * filtered out) it stays its own entry. Order follows `rows`.
+ */
+export function foldReplayRows(rows) {
+  const list = Array.isArray(rows) ? rows : []
+  const parentOf = row => {
+    const parent = row?.kind === 'model_skip' && isPlainObject(row.payload) ? row.payload[REPLAY_PARENT_KEY] : undefined
+    return typeof parent === 'string' && parent && parent !== 'model_skip' ? parent : null
+  }
+  const owners = new Map()
+  for (const row of list) {
+    if (parentOf(row)) continue
+    const key = `${row.turn_id}\u0000${row.kind}`
+    if (!owners.has(key)) owners.set(key, { row, folded: [] })
+  }
+  const entries = []
+  for (const row of list) {
+    const parent = parentOf(row)
+    const owner = parent ? owners.get(`${row.turn_id}\u0000${parent}`) : owners.get(`${row.turn_id}\u0000${row.kind}`)
+    if (parent && owner) { owner.folded.push(row); continue }
+    entries.push(owner && owner.row === row ? owner : { row, folded: [] })
+  }
+  return entries
+}
+
+const judgeErrorLabels = t => ({
+  quota_exhausted: t('额度用完'),
+  billing: t('余额不足'),
+  auth: t('密钥被拒'),
+  timeout: t('超时'),
+  no_response: t('无响应'),
+  network: t('网络错误'),
+  server: t('服务异常'),
+  provider_error: t('服务异常'),
+  rate_limit: t('限流'),
+  safety_block: t('内容被拦截'),
+  invalid_response: t('回答无效'),
+  length: t('回答无效'),
+  empty_response: t('回答无效'),
+  non_json_response: t('回答无效'),
+  malformed_tool_call: t('回答无效'),
+  context_overflow: t('上下文超长'),
+  bad_request: t('请求被拒绝'),
+  aborted: t('被取消'),
+  all_unavailable: t('所有模型都在跳过期'),
+  unknown: t('未知原因'),
+})
+
+/**
+ * The judge facts of an `ambient_decision` row (#1250, ADR 0066 D2 / D3): who judged (language or
+ * decision model), which fallback took over, tokens, the error class and the compared model's
+ * verdict. Short lines, `[]` for any other row or an older Host without these keys. Never a reason.
+ */
+export function ambientJudgeFacts(row, locale = 'zh-CN') {
+  if (row?.kind !== 'ambient_decision' || !isPlainObject(row.payload)) return []
+  const t = (message, values) => translate(locale, message, values)
+  const payload = row.payload
+  const text = value => (typeof value === 'string' && value.trim() ? value.trim() : '')
+  const kind = value => value === 'decision' ? t('决策模型') : value === 'language' ? t('语言模型') : ''
+  const errors = judgeErrorLabels(t)
+  const error = value => text(value) ? (Object.hasOwn(errors, value) ? errors[value] : value) : ''
+  const facts = []
+  const judge = text(payload.judge) || text(payload.judgeProfile) || text(payload.judgeModel)
+  if (judge) facts.push(kind(payload.judgeKind) ? t('判断：{0}（{1}）', [judge, kind(payload.judgeKind)]) : t('判断：{0}', [judge]))
+  const from = text(payload.judgeFallbackFrom) || text(payload.judgeFallbackFromProfile) || text(payload.judgeFallbackFromModel)
+  if (from) facts.push(t('备用接手，原来是 {0}', [from]))
+  const usage = isPlainObject(payload.judgeUsage) ? payload.judgeUsage : null
+  if (usage) {
+    const tokens = (Number(usage.inputTokens) || 0) + (Number(usage.outputTokens) || 0)
+    facts.push(t('用量 {0} token', [tokens]))
+  }
+  if (error(payload.judgeError)) facts.push(t('失败：{0}', [error(payload.judgeError)]))
+  if (Array.isArray(payload.judgeAttempts) && payload.judgeAttempts.length) {
+    facts.push(t('尝试过：{0}', [payload.judgeAttempts.filter(isPlainObject)
+      .map(attempt => `${text(attempt.profile) || text(attempt.model)}${error(attempt.error) ? ` (${error(attempt.error)})` : ''}`).join(', ')]))
+  }
+  const compared = text(payload.compareJudge) || text(payload.compareJudgeProfile) || text(payload.compareJudgeModel)
+  if (payload.compare === 'engage') facts.push(compared ? t('对照 {0}：会插话', [compared]) : t('对照：会插话'))
+  else if (payload.compare === 'quiet') facts.push(compared ? t('对照 {0}：不插话', [compared]) : t('对照：不插话'))
+  else if (payload.compare === 'failed') facts.push(compared ? t('对照 {0}：失败（{1}）', [compared, error(payload.compareJudgeError) || t('原因未报告')]) : t('对照：失败'))
+  return facts
 }

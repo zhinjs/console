@@ -2,8 +2,7 @@ import { StatusState } from '../../components/StatusState'
 import { useI18n } from '../../i18n'
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { RefreshCw, Stethoscope } from 'lucide-react'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog'
-import { Button } from '../../components/ui/button'
+import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@zhin.js/console-ui'
 import { apiFetch } from '../../utils/auth'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
 import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
@@ -93,7 +92,7 @@ export function MessageDiagnosticsAction({ message, endpoint, selection }: { mes
             {record.command && <div className="break-all">{i18n.t("命中指令：")}{record.command}</div>}
             <p className="text-xs text-muted-foreground">{new Date(record.startedAt).toLocaleString(i18n.locale)} {i18n.t(" · 入站处理结束不等于业务、Agent 或平台投递已完成。")}</p>
             {record.truncated && <p className="text-xs text-warning">{i18n.t("步骤或投递超过保留上限，记录不完整，请结合日志排查。")}</p>}
-            <ol className="space-y-1" aria-label={i18n.t("实际处理步骤")}>{record.steps.map((step, index) => <li key={index} className="flex flex-wrap gap-x-2"><span className="text-muted-foreground tabular-nums">{index + 1}.</span><span>{diagnosticLabel(step.stage, i18n.locale)}</span><span>{diagnosticLabel(step.status, i18n.locale)}</span><span className="text-xs text-muted-foreground">+{Math.max(0, step.at - record.startedAt)} ms</span></li>)}</ol>
+            <ol className="space-y-1" aria-label={i18n.t("实际处理步骤")}>{record.steps.map((step, index) => <li key={index} className="flex flex-wrap gap-x-2"><span className="text-muted-foreground">{index + 1}.</span><span>{diagnosticLabel(step.stage, i18n.locale)}</span><span>{diagnosticLabel(step.status, i18n.locale)}</span><span className="text-xs text-muted-foreground">+{Math.max(0, step.at - record.startedAt)} ms</span></li>)}</ol>
             <div className="space-y-2" aria-label={i18n.t("实际投递记录")}>{record.deliveries.map((delivery, index) => <div key={index} className="rounded-md bg-muted/50 p-2 text-xs space-y-1">
               <div className="font-medium">{i18n.t("投递 ")}{index + 1}：{delivery.deliveryUnknown ? i18n.t("结果不确定") : diagnosticLabel(delivery.status, i18n.locale)}</div>
               <div>{i18n.t("实际目标：")}<ConversationLabel conversation={delivery.conversation} /></div>

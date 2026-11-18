@@ -2,21 +2,16 @@ import { startVisiblePolling } from '../hooks/visible-polling.mjs'
 import { useI18n } from '../i18n'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Blocks, CheckCircle2, ChevronRight, Clock, Package, PauseCircle, RefreshCw, Search, Store, ToggleLeft } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, Blocks, CheckCircle2, Clock, Package, PauseCircle, Plug, Puzzle, RefreshCw, Sparkles, Search, Store, ToggleLeft } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { CONSOLE_PATHS, featureGlobalHref } from '../console-routes.mjs'
-import { Badge } from '../components/ui/badge'
-import { Skeleton } from '../components/ui/skeleton'
-import { Button } from '../components/ui/button'
-import { Input } from '../components/ui/input'
-import { PageHeader } from '../components/PageHeader'
-import { PageShell } from '../components/PageShell'
+import { Badge, Button, Card, Input, PageHeader, PageShell, Skeleton, StatCard, StatGrid, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
-import { StatCard, StatGrid } from '../components/StatCard'
 import { useConsoleRead } from '../hooks/use-console-read'
 import {
-  inventoryCounts, matchesHealthFilter, pluginInventory, validatePluginList, type HealthFilter, type InventoryPlugin, type InventoryRow, type PluginHealth,
+  groupInventory, inventoryCounts, matchesHealthFilter, needsStateLabel, pluginInventory, pluginIconType, pluginSource, pluginType, sortInventory, validatePluginList,
+  type HealthFilter, type InventoryGroupBy, type InventoryPlugin, type InventoryRow, type InventorySortKey, type PluginHealth, type PluginSource, type PluginType,
 } from './plugin-list-model.mjs'
 import { managementLabel } from './plugin-management-model.mjs'
 import { GATEWAY_RPC, readPackageList } from './ops/gateway-model.mjs'
@@ -33,7 +28,8 @@ const HEALTH_LABELS: Record<PluginHealth, string> = {
   unreported: '实例未报告',
 }
 const HEALTH_TONES: Record<PluginHealth, 'enabled' | 'warning' | 'disabled'> = {
-  healthy: 'enabled', pending: 'warning', inactive: 'disabled', undeclared: 'warning', unreported: 'disabled',
+  // 已安装，待配置 is not a fault: a neutral badge, not a column of warning color (console#125).
+  healthy: 'enabled', pending: 'warning', inactive: 'disabled', undeclared: 'disabled', unreported: 'disabled',
 }
 const FILTERS: { key: HealthFilter; label: string }[] = [
   { key: 'all', label: '已安装' },
@@ -41,6 +37,17 @@ const FILTERS: { key: HealthFilter; label: string }[] = [
   { key: 'pending', label: '需要处理' },
   { key: 'inactive', label: '未加载' },
 ]
+
+const TYPE_LABELS: Record<PluginType, string> = { adapter: '适配器', ai: 'AI', feature: '功能插件' }
+// One icon per plugin type (console#125); a row whose type cannot be told gets none.
+const TYPE_ICONS: Record<PluginType, typeof Plug> = { adapter: Plug, ai: Sparkles, feature: Puzzle }
+const SOURCE_LABELS: Record<PluginSource, string> = { official: '官方', npm: 'npm', local: '本地' }
+const GROUPS: { key: InventoryGroupBy; label: string }[] = [
+  { key: 'none', label: '不分组' },
+  { key: 'type', label: '按类型' },
+  { key: 'source', label: '按来源' },
+]
+const SORT_KEYS: readonly InventorySortKey[] = ['name', 'type', 'source', 'version', 'status']
 
 type PackagesState = { status: 'loading' | 'skipped' } | { status: 'ready'; value: ReturnType<typeof readPackageList> } | { status: 'failed'; error: unknown }
 
@@ -91,6 +98,21 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
   const search = searchParams.get('q') ?? ''
   const rawStatus = searchParams.get('status')
   const statusFilter: HealthFilter = rawStatus === 'healthy' || rawStatus === 'pending' || rawStatus === 'inactive' ? rawStatus : 'all'
+  const rawSort = searchParams.get('sort')
+  const sortKey: InventorySortKey = SORT_KEYS.includes(rawSort as InventorySortKey) ? rawSort as InventorySortKey : 'name'
+  const sortDirection = searchParams.get('dir') === 'desc' ? 'desc' : 'asc'
+  const rawGroup = searchParams.get('group')
+  const groupBy: InventoryGroupBy = rawGroup === 'type' || rawGroup === 'source' ? rawGroup : 'none'
+  const updateParams = (change: (next: URLSearchParams) => void) => {
+    const next = new URLSearchParams(searchParams)
+    change(next)
+    setSearchParams(next, { replace: true })
+  }
+  const setSort = (key: InventorySortKey) => updateParams(next => {
+    const direction = key === sortKey && sortDirection === 'asc' ? 'desc' : 'asc'
+    if (key === 'name' && direction === 'asc') { next.delete('sort'); next.delete('dir') } else { next.set('sort', key); next.set('dir', direction) }
+  })
+  const setGroupBy = (value: InventoryGroupBy) => updateParams(next => { if (value === 'none') next.delete('group'); else next.set('group', value) })
   const setSearch = (value: string) => {
     const next = new URLSearchParams(searchParams)
     if (value) next.set('q', value)
@@ -119,7 +141,8 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
   const instanceDown = Boolean(error) && !loaded
   const rows = pluginInventory(loaded ? plugins : null, packages.status === 'ready' ? packages.value : null)
   const term = search.trim().toLowerCase()
-  const filtered = rows.filter(row => (!term || row.name.toLowerCase().includes(term) || row.packageName.toLowerCase().includes(term)) && matchesHealthFilter(row, statusFilter))
+  const filtered = sortInventory(rows.filter(row => (!term || row.name.toLowerCase().includes(term) || row.packageName.toLowerCase().includes(term)) && matchesHealthFilter(row, statusFilter)), sortKey, sortDirection)
+  const groups = groupInventory(filtered, groupBy)
   const counts = inventoryCounts(rows)
   const waiting = (loading && !loaded) && packages.status === 'loading'
 
@@ -168,6 +191,15 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
                 </button>
               ))}
             </div>
+            <div className="console-plugin-catalog-filters" role="group" aria-label={i18n.t("分组方式")}>
+              {GROUPS.map(option => (
+                <button key={option.key} type="button" aria-pressed={groupBy === option.key}
+                  className={groupBy === option.key ? 'console-plugin-filter-pill is-active' : 'console-plugin-filter-pill'}
+                  onClick={() => setGroupBy(option.key)}>
+                  {i18n.t(option.label)}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="console-plugin-catalog-search">
             <Search aria-hidden="true" />
@@ -177,9 +209,33 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
         </div>
 
         {filtered.length ? (
-          <ul className="console-plugin-catalog-list">
-            {filtered.map(row => <InventoryItem key={row.key} row={row} href={detailUrl(row.kind === 'plugin' ? row.instanceKey : row.packageName)} />)}
-          </ul>
+          <Card className="overflow-hidden p-0">
+            <Table className="console-plugin-table" aria-label={i18n.t("已安装的插件")}>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <SortableHead label={i18n.t("名称")} column="name" sortKey={sortKey} direction={sortDirection} onSort={setSort} />
+                  <SortableHead label={i18n.t("类型")} column="type" sortKey={sortKey} direction={sortDirection} onSort={setSort} className="max-md:hidden" />
+                  <SortableHead label={i18n.t("来源")} column="source" sortKey={sortKey} direction={sortDirection} onSort={setSort} className="max-lg:hidden" />
+                  <SortableHead label={i18n.t("版本")} column="version" sortKey={sortKey} direction={sortDirection} onSort={setSort} className="max-md:hidden" />
+                  <SortableHead label={i18n.t("状态")} column="status" sortKey={sortKey} direction={sortDirection} onSort={setSort} />
+                  <TableHead className="text-right">{i18n.t("操作")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              {groups.map(group => (
+                <TableBody key={group.key}>
+                  {groupBy !== 'none' ? (
+                    <TableRow className="console-plugin-group-row hover:bg-transparent">
+                      <TableHead scope="colgroup" colSpan={6}>
+                        {i18n.t(groupBy === 'type' ? TYPE_LABELS[group.key as PluginType] : SOURCE_LABELS[group.key as PluginSource])}
+                        <span className="console-plugin-group-count">{group.rows.length}</span>
+                      </TableHead>
+                    </TableRow>
+                  ) : null}
+                  {group.rows.map(row => <InventoryItem key={row.key} row={row} href={detailUrl(row.kind === 'plugin' ? row.instanceKey : row.packageName)} />)}
+                </TableBody>
+              ))}
+            </Table>
+          </Card>
         ) : rows.length ? (
           <StatusState kind="empty" title={i18n.t("没有匹配的插件")} description={i18n.t("试试其他名称，或清除筛选。")}
             actions={<Button variant="outline" size="sm" onClick={clearFilters}>{i18n.t("清除筛选")}</Button>} />
@@ -192,41 +248,62 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
   )
 }
 
+function SortableHead({ label, column, sortKey, direction, onSort, className }: {
+  label: string; column: InventorySortKey; sortKey: InventorySortKey; direction: 'asc' | 'desc'; onSort: (key: InventorySortKey) => void; className?: string
+}) {
+  const active = sortKey === column
+  const Icon = !active ? ArrowUpDown : direction === 'asc' ? ArrowUp : ArrowDown
+  return (
+    <TableHead className={className} aria-sort={active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}>
+      <button type="button" className={active ? 'console-plugin-sort is-active' : 'console-plugin-sort'} onClick={() => onSort(column)}>
+        {label}<Icon aria-hidden="true" />
+      </button>
+    </TableHead>
+  )
+}
+
 function InventoryItem({ row, href }: { row: InventoryRow; href: string }) {
   const i18n = useI18n()
   const management = row.plugin?.management
   const tone = HEALTH_TONES[row.health]
+  const type = i18n.t(TYPE_LABELS[pluginType(row)])
+  const iconType = pluginIconType(row), TypeIcon = iconType ? TYPE_ICONS[iconType] : null
+  const source = i18n.t(SOURCE_LABELS[pluginSource(row)])
   return (
-    <li className="console-plugin-catalog-item">
-      <Link className="console-plugin-catalog-row" to={href}>
-        <span className="console-plugin-catalog-icon" aria-hidden="true">
-          <Package />
-          <span className={`console-plugin-status-dot is-${tone}`} />
-        </span>
-        <span className="console-plugin-catalog-identity">
-          <strong>{row.name}</strong>
-          {row.packageName || row.version ? (
-            <code className="console-plugin-catalog-package" title={`${row.packageName}${row.version ? `@${row.version}` : ''}`}>
-              {row.packageName && row.packageName !== row.name ? row.packageName : null}{row.version ? <> v{row.version}</> : null}
-            </code>
-          ) : null}
-          {row.description ? <span>{row.description}</span> : null}
-        </span>
-        <span className="console-plugin-catalog-state">
-          <Badge variant={tone === 'enabled' ? 'success' : tone === 'warning' ? 'warning' : 'secondary'}>
+    <TableRow className="console-plugin-table-row">
+      <TableCell className="console-plugin-table-name">
+        <Link to={href} className="console-plugin-table-link">
+          <span className="console-plugin-catalog-icon" aria-hidden="true">
+            {TypeIcon ? <TypeIcon /> : null}
+            <span className={`console-plugin-status-dot is-${tone}`} />
+          </span>
+          <span className="min-w-0">
+            <strong>{row.name}</strong>
+            {row.packageName && row.packageName !== row.name ? <code className="console-plugin-table-package">{row.packageName}</code> : null}
+            {row.description ? <span className="console-plugin-table-description" title={row.description}>{row.description}</span> : null}
+            {/* Narrow screens drop the 类型 / 版本 columns; the same facts move under the name. */}
+            <span className="console-plugin-table-compact md:hidden">{type}{row.version ? <> · <code>v{row.version}</code></> : null}</span>
+          </span>
+        </Link>
+      </TableCell>
+      <TableCell className="max-md:hidden whitespace-nowrap">{type}</TableCell>
+      <TableCell className="max-lg:hidden whitespace-nowrap">{source}</TableCell>
+      <TableCell className="max-md:hidden whitespace-nowrap"><code className="console-plugin-table-version">{row.version ? `v${row.version}` : '—'}</code></TableCell>
+      <TableCell className="console-plugin-table-state">
+        {needsStateLabel(row) ? (
+          <Badge variant={tone === 'warning' ? 'warning' : 'secondary'}>
             {management ? managementLabel(management, i18n.locale) : i18n.t(HEALTH_LABELS[row.health])}
           </Badge>
-          {row.plugin?.managementError ? <small className="text-destructive">{i18n.t("状态读取失败：{0}", [row.plugin.managementError])}</small> : null}
-        </span>
-        <ChevronRight className="console-plugin-catalog-arrow" aria-hidden="true" />
-      </Link>
-      {row.kind === 'plugin' ? (
-        <div className="console-plugin-catalog-actions">
+        ) : <span className="console-plugin-table-ok">{i18n.t("正常")}</span>}
+        {row.plugin?.managementError ? <small className="block text-destructive">{i18n.t("状态读取失败：{0}", [row.plugin.managementError])}</small> : null}
+      </TableCell>
+      <TableCell className="text-right">
+        {row.kind === 'plugin' ? (
           <Button variant="ghost" size="sm" asChild>
             <Link to={featureGlobalHref(row.instanceKey)} aria-label={i18n.t("{0} 的功能配置", [row.name])}><ToggleLeft />{i18n.t("功能")}</Link>
           </Button>
-        </div>
-      ) : null}
-    </li>
+        ) : null}
+      </TableCell>
+    </TableRow>
   )
 }

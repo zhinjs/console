@@ -2,11 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertTriangle, CheckCircle2, CircleSlash, Loader2, RefreshCw, XCircle } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { PageShell } from '../../components/PageShell'
-import { PageHeader } from '../../components/PageHeader'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/button'
-import { Card } from '../../components/ui/card'
+import { Badge, Button, Card, PageHeader, PageShell } from '@zhin.js/console-ui'
 import { getApiBase, getToken } from '../../utils/auth'
 import { CONSOLE_PATHS } from '../../console-routes.mjs'
 import {
@@ -16,7 +12,7 @@ import {
 import './self-check.css'
 
 const STATUS_ICONS = { pass: CheckCircle2, fail: XCircle, warn: AlertTriangle, skip: CircleSlash } as const
-const STATUS_BADGES = { pass: 'success', fail: 'destructive', warn: 'warning', skip: 'outline' } as const
+const STATUS_BADGES = { pass: 'outline', fail: 'destructive', warn: 'warning', skip: 'outline' } as const
 
 const NGINX_SNIPPET = `location /zhin/ {
   proxy_pass http://127.0.0.1:8086/;

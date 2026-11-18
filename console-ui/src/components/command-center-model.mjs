@@ -1,4 +1,4 @@
-import { LEGACY_ROUTE_REDIRECTS } from '../console-routes.mjs'
+import { LEGACY_ROUTE_REDIRECTS, isPluginPageRedirect } from '../console-routes.mjs'
 
 /**
  * Purpose text and search keywords for builtin Console pages.
@@ -23,6 +23,7 @@ export const ROUTE_SEARCH_HINTS = Object.freeze({
   '/features/ai/workrooms': { description: '按 Project 查看 Workroom Run、Task 与 Assignment', keywords: ['协作', '协作空间', '多 Agent', '项目', 'workroom', 'project', 'run', 'assignment'] },
   '/features/ai/workrooms/catalog': { description: '配置协作空间、Bot Endpoint 与成员 Agent 映射', keywords: ['协作配置', '映射', '成员', 'workroom', 'catalog', 'mapping'] },
   '/agent/sessions': { description: '看看机器人和大家聊过什么，并从某段继续聊', keywords: ['聊天记录', '历史', '会话记录', '记录', '分支', '继续聊', 'history', 'sessions', 'transcript'] },
+  '/chat-members': { description: '聊天里的人、他们的平台身份与角色；把聊天身份绑定到我', keywords: ['聊天成员', '成员', '人', '身份', '绑定', '绑定码', '归并', 'members', 'identity', 'bind', 'principal'] },
   '/scope': { description: '按全局、适配器、账号、会话查看接入、聊天、功能与角色', keywords: ['账号', '机器人账号', '平台', '适配器', '会话', '群', '登录', '扫码', '好友申请', '角色', '范围', 'endpoint', 'account', 'adapter', 'scope', 'conversation', 'qq'] },
   '/introspection': { description: '检查命令、中间件、组件、Endpoint、Agent、工具与 MCP', keywords: ['命令', '指令', '中间件', '组件', '工具', '能力', '自检', 'command', 'middleware', 'component', 'tool', 'mcp', 'capability'] },
   '/permissions': { description: '查看命令权限规则为什么匹配，可做假设检查', keywords: ['权限', '命令权限', '谁能用', '规则', '授权', '为什么不能用', 'permission', 'rbac', 'access'] },
@@ -60,7 +61,34 @@ export function isCommandRoute(route) {
   if (typeof path !== 'string' || !path.startsWith('/')) return false
   if (/[:*]/u.test(path)) return false
   if (COMMAND_EXCLUDED_PATHS.includes(path)) return false
+  // An adapter page's old path is the one entry for that page (`meta.pluginTab`), opening the adapter
+  // object page; any other registered plugin redirect is not listed.
+  if (isPluginPageRedirect(path) && !route.meta?.pluginTab) return false
   return route.meta?.commandPalette !== false
+}
+
+const words = (...values) => values.flat().filter(value => typeof value === 'string' && value.trim())
+
+/**
+ * Palette fields of a plugin page (ADR 0063 决策 3): it opens `href` (its plugin detail tab, or the
+ * adapter object page) and is found by plugin name, package name, page title (every language),
+ * plugin description, page description and the page's `keywords`. `directory` adds the package name
+ * and description `/api/plugins` reports when `/entries` does not carry them. Null for other routes.
+ */
+export function pluginPageCommand(route, directory = {}) {
+  const tab = route?.meta?.pluginTab
+  if (!tab || typeof tab.plugin !== 'string' || typeof tab.href !== 'string') return null
+  const known = Object.hasOwn(directory ?? {}, tab.plugin) ? directory[tab.plugin] : {}
+  const packageName = tab.packageName ?? known.packageName
+  const pluginDescription = tab.pluginDescription ?? known.description
+  const titles = route.meta?.titleI18n && typeof route.meta.titleI18n === 'object' ? Object.values(route.meta.titleI18n) : []
+  return {
+    path: tab.href,
+    plugin: tab.plugin,
+    ...(packageName ? { packageName } : {}),
+    ...(pluginDescription ?? tab.description ? { description: pluginDescription ?? tab.description } : {}),
+    keywords: [...new Set(words(tab.plugin, known.name ?? [], packageName ?? [], route.name ?? [], titles, pluginDescription ?? [], tab.description ?? [], tab.keywords ?? []))],
+  }
 }
 
 /** Relevance of a palette entry for the query; 0 hides it. Every query term must match somewhere. */
@@ -86,4 +114,66 @@ export function commandScore(target, rawQuery) {
     if (path.includes(term)) return score + 20
     return score
   }, 0)
+}
+
+/**
+ * Every installed plugin as a search-only entry opening its detail page, so plugins without a page
+ * of their own (weather, sign-in…) are found too. `directory` is the `/api/plugins` index, which
+ * lists each plugin under both its instance key and its name: the first key is the one linked.
+ * `t` renders the fallback description; plugins named in `covered` (those with their own page in the
+ * palette) are left out.
+ */
+export function pluginSearchTargets(directory = {}, t = message => message, covered = []) {
+  const seen = new Set()
+  // A plugin with a page of its own is already listed by that page (its detail tab), once.
+  const skip = new Set((Array.isArray(covered) ? covered : []).filter(value => typeof value === 'string'))
+  const out = []
+  for (const [key, info] of Object.entries(directory ?? {})) {
+    if (!key || !info || typeof info !== 'object' || seen.has(info)) continue
+    seen.add(info)
+    const name = typeof info.name === 'string' && info.name.trim() ? info.name.trim() : key
+    if (skip.has(key) || skip.has(name)) continue
+    out.push({
+      path: `/plugins/${encodeURIComponent(key)}`,
+      title: name,
+      description: info.description || t('插件 {0}', [info.packageName || key]),
+      keywords: [...new Set(words(key, name, info.packageName ?? [], info.description ?? []))],
+      kind: 'page',
+      searchOnly: true,
+    })
+  }
+  return out
+}
+
+/** The command name a pattern starts with (`welcome [text]` → `welcome`). */
+export function commandName(pattern) {
+  return typeof pattern === 'string' ? pattern.trim().split(/[\s<[(]/u)[0] ?? '' : ''
+}
+
+/**
+ * Chat commands from the introspection catalog (`/api/introspection/commands`) as search-only
+ * entries; each opens the 运行时能力 commands tab filtered to that command. Items without a
+ * pattern are skipped.
+ */
+export function commandSearchTargets(items = [], t = message => message) {
+  const out = []
+  const seen = new Set()
+  for (const item of Array.isArray(items) ? items : []) {
+    const pattern = typeof item?.pattern === 'string' ? item.pattern.trim() : ''
+    const name = commandName(pattern)
+    if (!pattern || !name || seen.has(pattern)) continue
+    seen.add(pattern)
+    const desc = typeof item.desc === 'string' ? item.desc.trim() : typeof item.description === 'string' ? item.description.trim() : ''
+    const plugin = typeof item.plugin === 'string' ? item.plugin.trim() : typeof item.owner === 'string' ? item.owner.trim() : ''
+    const aliases = Array.isArray(item.aliases) ? item.aliases.filter(alias => typeof alias === 'string') : []
+    out.push({
+      path: `/introspection?tab=commands&filter=${encodeURIComponent(name)}`,
+      title: pattern,
+      description: [desc || t('聊天命令'), plugin ? t('插件 {0}', [plugin]) : ''].filter(Boolean).join(' · '),
+      keywords: [...new Set(words(name, aliases, desc, plugin))],
+      kind: 'page',
+      searchOnly: true,
+    })
+  }
+  return out
 }

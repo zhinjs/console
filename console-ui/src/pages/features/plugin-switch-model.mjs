@@ -5,18 +5,16 @@
  * with `plugin.manage`. This covers `plugin:set-enabled` and `feature.set-enabled` at `level:
  * 'global'`; the adapter / endpoint / conversation levels stay on `feature.toggle`.
  *
- * Upstream these are `FEATURE_GLOBAL_SWITCH_PERMISSION` / `isGlobalFeatureSwitch` of
- * `@zhin.js/console-protocol` (zhin "run the Console's global plugin switch as a gateway
- * transaction"); the published 1.2.0 does not export them yet, so they are mirrored here. Switch
- * to the protocol exports once the Console depends on a release that has them.
+ * The permission and the request test are `FEATURE_GLOBAL_SWITCH_PERMISSION` / `isGlobalFeatureSwitch`
+ * of `@zhin.js/console-protocol`, re-exported here under the Console's names.
  *
  * Pure: the pages and the tests share it.
  */
-import { FEATURE_RPC } from '@zhin.js/console-protocol'
+import { FEATURE_GLOBAL_SWITCH_PERMISSION, isGlobalFeatureSwitch } from '@zhin.js/console-protocol'
 import { phaseLabel } from '../ops/gateway-model.mjs'
 
-/** Permission of the global plugin switch (upstream `FEATURE_GLOBAL_SWITCH_PERMISSION`). */
-export const GLOBAL_PLUGIN_SWITCH_PERMISSION = 'plugin.manage'
+/** Permission of the global plugin switch (`FEATURE_GLOBAL_SWITCH_PERMISSION`). */
+export const GLOBAL_PLUGIN_SWITCH_PERMISSION = FEATURE_GLOBAL_SWITCH_PERMISSION
 
 /** Permission of a feature switch below the global level. */
 export const FEATURE_TOGGLE_PERMISSION = 'feature.toggle'
@@ -28,18 +26,11 @@ export function featureSwitchPermission(level) {
 
 const identity = value => value
 
-const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value)
-
 /**
  * Whether a Console RPC message is the global plugin switch (`feature.set-enabled` at `global`),
- * reading the payload like the Host does: `data` when it is an object, else the message itself
- * (upstream `isGlobalFeatureSwitch`).
+ * reading the payload like the Host does: `data` when it is an object, else the message itself.
  */
-export function isGlobalFeatureSwitch(message) {
-  if (!isRecord(message) || message.type !== FEATURE_RPC.SET_ENABLED) return false
-  const input = isRecord(message.data) ? message.data : message
-  return input.level === 'global'
-}
+export { isGlobalFeatureSwitch }
 
 /**
  * Body of the switch request on `POST {base}/console/request`: the same flat message the SDK
