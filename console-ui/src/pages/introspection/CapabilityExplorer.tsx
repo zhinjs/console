@@ -40,6 +40,8 @@ import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { CAPABILITY_DETAIL_SHEET_QUERY, capabilityCountSummary, capabilityOwner } from './capability-layout-model.mjs'
 import { capabilityEmptyState } from './empty-state.mjs'
 import { readPreviewEndpoints, type PreviewEndpoint } from './target-preview.mjs'
+import { mcpRowState } from './mcp-status-model.mjs'
+import { McpServerDetail } from './McpServerDetail'
 import type { CapabilityItem, CapabilityRowMap, IntrospectionTab } from './capability-model'
 import './component-gallery.css'
 import { conversationHref, endpointHref } from '../../console-routes.mjs'
@@ -554,15 +556,18 @@ function McpGrid({ entries, selectedId, onSelect }: CollectionProps<'mcp'>) {
   return (
     <div className="console-runtime-card-grid" aria-label={i18n.t("MCP 服务")}>
       {entries.map((entry) => {
-        const connected = entry.item.connected === true
+        // `idle`（待连接）/ `not_loaded`（未加载）是中性状态；只有 `failed` 标红。
+        const state = mcpRowState(entry.item, i18n.locale)
+        const connected = state.status === 'connected'
         return (
           <SelectableCard key={entry.id} {...{ entry, entries, selectedId, onSelect }} className="console-runtime-mcp-card">
-            <span className={cn('console-runtime-health', connected ? 'is-online' : 'is-offline')}>{connected ? <PlugZap /> : <Unplug />}</span>
+            {/* The icon follows the same state as the badge (console#125): online, neutral, warning, destructive. */}
+            <span className={cn('console-runtime-health', state.dot)} data-mcp-status={state.status}>{connected ? <PlugZap /> : <Unplug />}</span>
             <span className="console-runtime-card-main">
               <strong>{text(entry.item.name, i18n.t("未命名 MCP"))}</strong>
-              <small>{connected ? i18n.t("{0} 个可用工具", [text(entry.item.toolCount, '0')]) : text(entry.item.error, i18n.t("连接不可用"))}</small>
+              <small>{state.detail}</small>
             </span>
-            <Badge variant={connected ? 'outline' : 'warning'}>{connected ? i18n.t("已连接") : i18n.t("未连接")}</Badge>
+            <Badge variant={state.tone}>{state.label}</Badge>
           </SelectableCard>
         )
       })}
@@ -582,9 +587,12 @@ function propertyLabels(t: (message: string) => string): Record<string, string> 
     qualifiedName: t('完整名称'), title: t('标题'), layer: t('层级'),
     retention: t('保留策略'), maxChars: t('字符上限'), profiles: t('适用配置'),
     platforms: t('适用平台'), generation: t('运行代'), contentChars: t('内容字符数'),
-    connected: t('已连接'), toolCount: t('工具数'), error: t('错误'),
+    connected: t('已连接'), toolCount: t('工具数'), error: t('错误'), transport: t('传输方式'),
   }
 }
+
+/** MCP 详情里已由「连接状态」一节展示的字段。 */
+const MCP_STATUS_KEYS = new Set(['connected', 'status', 'lastError', 'error'])
 
 const STRUCTURED_KEYS = new Set([
   'previewProps',
@@ -839,7 +847,8 @@ function CapabilityInspector(props: {
   const scopes = [...list(item.profiles), ...list(item.platforms), ...list(item.scopes)]
   const toolsAndServers = [...list(item.mcpServers), ...list(item.tools)]
   const endpointOnline = item.online === true || item.connected === true
-  const extraDetails = Object.entries(item).filter(([key, value]) => !STRUCTURED_KEYS.has(key) && value != null && value !== '')
+  const mcpState = kind === 'mcp' ? mcpRowState(item, i18n.locale) : null
+  const extraDetails = Object.entries(item).filter(([key, value]) => !STRUCTURED_KEYS.has(key) && !(mcpState && MCP_STATUS_KEYS.has(key)) && value != null && value !== '')
 
   async function copyCommandText() {
     if (!item) return
@@ -859,7 +868,12 @@ function CapabilityInspector(props: {
       <header>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="console-eyebrow">{kind === 'components' ? i18n.t("组件详情") : i18n.t("能力详情")}</span>
-          {kind === 'endpoints' || kind === 'mcp' ? (
+          {mcpState ? (
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium">
+              <span className={cn('console-runtime-status-dot', mcpState.dot)} aria-hidden="true" />
+              <span>{mcpState.label}</span>
+            </span>
+          ) : kind === 'endpoints' ? (
             <span className="inline-flex items-center gap-1.5 text-xs font-medium">
               <span className={cn('console-runtime-status-dot', endpointOnline ? 'is-online' : 'is-offline')} aria-hidden="true" />
               <span>{endpointOnline ? i18n.t("已连接") : i18n.t("未连接")}</span>
@@ -964,6 +978,8 @@ function CapabilityInspector(props: {
           ))}
         </dl>
       ) : null}
+
+      {kind === 'mcp' ? <McpServerDetail item={item} /> : null}
 
       {kind === 'commands' && !readOnly ? <CommandRunnerPanel item={item} /> : null}
 

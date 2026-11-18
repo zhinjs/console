@@ -5,6 +5,7 @@ import ts from 'typescript'
 import { localeModule } from './locale-fixture.mjs'
 import { pageRuntime, nodes } from './helpers/inference-page-runtime.mjs'
 import * as entry from '../console-ui/src/pages/inference/models-entry.mjs'
+import * as ambientJudgeModel from '../console-ui/src/pages/inference/ambient-judge-model.mjs'
 import { buildSettingsCatalog, resolveSettingsSelection } from '../console-ui/src/pages/settings-model.mjs'
 import { ROUTE_SEARCH_HINTS } from '../console-ui/src/components/command-center-model.mjs'
 
@@ -64,7 +65,7 @@ async function workspace({ query = '', hostAdministrator = true } = {}) {
     'lucide-react': new Proxy({}, { get: () => 'icon' }),
     '../../i18n': localeModule,
     '@zhin.js/console-ui': { Button: 'button', SelectField: 'select', Tabs: 'tabs', TabsList: 'tabs-list', TabsTrigger: 'tab', TabsContent: 'tab-content', Dialog: () => null, DialogContent: 'content', DialogHeader: 'header', DialogTitle: 'title', DialogDescription: 'description', ErrorAlert: 'error', Alert: 'alert', AlertDescription: 'alert-description', Textarea: 'textarea' }, '../../components/StatusState': { StatusState: 'status-state' }, yaml: { parse: JSON.parse, stringify: JSON.stringify },
-    './useInferenceManagement': { useInferenceManagement: management }, './models-entry.mjs': entry,
+    './useInferenceManagement': { useInferenceManagement: management }, './models-entry.mjs': entry, './ambient-judge-model.mjs': ambientJudgeModel,
     './Services': { Services: 'services' }, './Profiles': { Profiles: 'profiles' }, './Accounts': { Accounts: 'accounts' }, './Purposes': { Purposes: 'purposes' }, './PersonalSessions': { PersonalSessions: 'sessions' },
   }
   const source = await readFile(new URL('../console-ui/src/pages/inference/Workspace.tsx', import.meta.url), 'utf8')

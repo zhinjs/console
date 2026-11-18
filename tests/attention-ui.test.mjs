@@ -6,6 +6,7 @@ import ts from 'typescript'
 import { translate } from '../console-ui/src/i18n/locale.mjs'
 import * as model from '../console-ui/src/pages/attention/attention-model.mjs'
 import * as visiblePolling from '../console-ui/src/hooks/visible-polling.mjs'
+import * as mcpStatus from '../console-ui/src/pages/introspection/mcp-status-model.mjs'
 
 const require = createRequire(import.meta.url)
 const source = path => readFile(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')
@@ -200,6 +201,7 @@ test('one shared read: refresh every 30 s while visible, on focus and on push ev
         onConsoleEventRecoveryGap: fn => { gap = fn; return () => { gap = null } },
       }) },
       '../../utils/console-access.mjs': { hasConsolePermission: () => true },
+      '../introspection/mcp-status-model.mjs': mcpStatus,
       '../../utils/console-rpc': { requestConsole: async request => { requests.push(request); return { items: [], generatedAt: new Date().toISOString() } } },
       '../../utils/instance-availability.mjs': { onInstanceRecovered: fn => { recovered = fn; return () => { recovered = null } } },
       '../../utils/read-error.mjs': { readErrorSummary: () => '' },
@@ -265,6 +267,7 @@ test('while the instance starts the shared read asks /pub/health and reads again
       '../../utils/auth': { apiFetch: async () => { throw new Error('unused') }, getApiBase: () => 'http://host', probeHealth: async () => health },
       '../../utils/console-client': { getConsoleTransport: () => ({ onConsoleEvent: () => () => {}, onConsoleEventRecoveryGap: () => () => {} }) },
       '../../utils/console-access.mjs': { hasConsolePermission: () => true },
+      '../introspection/mcp-status-model.mjs': mcpStatus,
       '../../utils/console-rpc': { requestConsole: async request => {
         requests.push(request)
         throw Object.assign(new Error('instance unavailable'), { details: { serverCode: 'instance_unavailable', httpStatus: 503 } })
@@ -343,6 +346,7 @@ test('a Host without attention.list is asked once per session, not on every 30 s
       '../../utils/read-error.mjs': { readErrorSummary: () => '' },
       '../dashboard-health': { summarizeOptional: () => ({}) },
       '../logs/read-state.mjs': { logPayloadAvailability: () => ({ available: true }) },
+      '../introspection/mcp-status-model.mjs': mcpStatus,
       './attention-model.mjs': model,
     })
     const off = store.subscribeAttention(() => {})

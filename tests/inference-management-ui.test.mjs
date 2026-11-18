@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import ts from 'typescript'
 import * as model from '../console-ui/src/pages/inference/model.mjs'
+import * as ambientJudgeModel from '../console-ui/src/pages/inference/ambient-judge-model.mjs'
 import { saveButtonMock } from './helpers/save-button-mock.mjs'
 
 const source = await readFile(
@@ -218,6 +219,10 @@ async function component(runtime, path, mocks) {
     './SupportInfo': { SupportLabel: 'support-label', SupportNotice: 'support-notice', supportLabel: label => label },
     './inference/SupportInfo': { SupportLabel: 'support-label', SupportNotice: 'support-notice', supportLabel: label => label },
     '../../components/SaveButton': saveButtonMock,
+    // ADR 0066: Purposes reads the interjection status for the agreement line; no status here.
+    '../../utils/plugin-rpc': { pluginRpc: async () => { throw new Error('ambient status unavailable') } },
+    './ambient-judge-model.mjs': ambientJudgeModel,
+    '../../hooks/use-console-access': { useConsoleAccess: () => ({}) }, '../../utils/console-access.mjs': { hasConsolePermission: () => true },
     ...mocks,
   }
   new Function('require', 'module', 'exports', code)(
@@ -610,7 +615,8 @@ test('the single graph editor preserves sibling decision modes and model IDs acr
   assert.equal(select('技能选择模式').props.value, 'shadow')
   assert.equal(select('技能选择模型').props.value, 'decision-two')
   assert.equal(select('工具选择模式').props.value, 'active')
-  assert.deepEqual(plans, []); assert.deepEqual(requests, ['/targets'])
+  // The judge route is read too (an older Host answers it with nothing usable: the page stays legacy).
+  assert.deepEqual(plans, []); assert.deepEqual(requests.filter(path => path !== '/ambient-judge'), ['/targets'])
   await runtime.value.props.onSubmit({ preventDefault() {} })
   assert.deepEqual(plans[0].purposes.decisions, {
     skills: { ...original.decisions.skills, mode: 'shadow', profile: 'decision-two' },

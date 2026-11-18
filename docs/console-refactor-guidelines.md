@@ -116,6 +116,7 @@
 - **网关事务**（插件全局启停 `feature.set-enabled` `level: 'global'` / `plugin:set-enabled`，需要 `plugin.manage`；停止实例 → 写入 `disable_plugins` → 启动，失败回滚）：经 `use-global-plugin-switch.ts` 用 `apiFetch` 发送，不受 SDK 10 秒超时限制。500 `transaction_failed` = 未执行（已自动回滚），500 `rollback_failed` = 失败、回滚未完成（链到「实例」页），`gateway-required`（`--standalone`）= 说明用 `zhin start` 或 `zhin enable / zhin disable`；`statusFromError` 读成 `kind: 'error'` + `transaction`，`failedPhase` 与 `logTail` 放在「技术详情」里。
 - 回执就地显示在发起操作的控件附近，直到用户关闭；toast 只用于不需要追踪结果的轻提示。
 - 删除、撤销、全局停用等不可逆或影响面大的操作必须 `danger: true`；删除类再要求输入名称的，沿用现有 `confirm-dialog`。
+- **读不准就不写**（console#152，群聊插话的「只观察」）：页面只有在拿到证据时才判断实例版本——旧实例要同时满足「`/agent/inference/ambient-judge` 不存在」和「`plugin.root.ambient` 读到了且没有 `judgeChain`」。其他情况一律按「未知」处理：模式选项整张卡片禁用，不写模式，只允许关闭或缩小插话范围（删群、所有群改成指定群、调低次数），并给出「重新读取」。这是有意的保守取舍：没有 `ambient:read` 的身份读不到插话状态，在旧实例上也会落到「未知」，因此不能切换「只观察 / 主动参与」，需要有该权限的账号来改。
 
 ## 9. 空态与错误态：StatusState
 
@@ -171,4 +172,4 @@
 | `LogPanel` / `LogPanelButton` / `useLogPanel` / `openLogPanel` | `components/log-panel/` | 底部日志面板（shell）；`LogViewer`（`pages/logs/`）是它与 `/logs` 共用的查看器 |
 | `useAttention` / `attention-model.mjs` / `AttentionBadge` | `pages/attention/` | 「需要你处理」：`attention.list` 的共享读取（30 秒、聚焦与推送事件防抖刷新；旧 Host 回退到 Console 推断），本浏览器内的「稍后提醒」/「忽略」，首页区块、`/attention` 页与顶栏角标共用 |
 | `LoginFlowSection` / `LoginFlowCard` / `ChallengePanel` / `useLoginFlow` / `login-flow-model.mjs` | `pages/scope/` | 账号「接入」页签的登录卡片（zhinjs/zhin ADR 0058）：步骤时间线、按描述符渲染的挑战（引导清单自动勾选、复制并打开、书签小程序、链接二维码、托管滑块辅助页弹窗）、`login.submit { wait: true }` 回执；旧 Host（`login.flow.list` 未知或 403）退回 `LoginTaskCard`。`login-assist-helpers.mjs` 与 core 的 `parseLoginTicket` / 验证码辅助页函数逐字节一致，`qr-code.mjs` 是零依赖的二维码编码器 |
-| `scripts/ui-preview-host.mjs` | 本地 | 合成数据的只读 Host，用于截图（`UI_PREVIEW_ORIGIN` 可加允许的来源；`UI_PREVIEW_ATTENTION=empty` / `legacy` 模拟没有待办 / 旧 Host；`UI_PREVIEW_LOGIN=flows` 打开登录流程演示账号（`scripts/ui-preview-login.mjs`：扫码、滑块 + 辅助页、设备锁 + 短信、身份验证、失败、频率限制、结果待确认），否则 `login.flow.*` 按旧 Host 回答；`UI_PREVIEW_ACCESS=viewer` 只读身份） |
+| `scripts/ui-preview-host.mjs` | 本地 | 合成数据的只读 Host，用于截图（`UI_PREVIEW_ORIGIN` 可加允许的来源；`UI_PREVIEW_ATTENTION=empty` / `legacy` 模拟没有待办 / 旧 Host；`UI_PREVIEW_LOGIN=flows` 打开登录流程演示账号（`scripts/ui-preview-login.mjs`：扫码、滑块 + 辅助页、设备锁 + 短信、身份验证、失败、频率限制、结果待确认），否则 `login.flow.*` 按旧 Host 回答；`UI_PREVIEW_ACCESS=viewer` 只读身份；`UI_PREVIEW_AMBIENT=legacy` 按 ADR 0066 之前的实例回答插话判断，`UI_PREVIEW_AMBIENT=unknown` 让插话判断与插话状态都读取失败） |

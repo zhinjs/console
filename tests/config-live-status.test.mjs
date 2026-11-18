@@ -108,6 +108,10 @@ for (const page of ['ambient-engagement']) test(`${page} rejects old-connection 
     setSaving() {}, setFeedback() { feedback++ }, setReceipt() { receipts++ }, setServerProblems() {},
     initial: { revision: 'r1', settings: {} }, draft: {}, modes: {},
     buildAmbientPatches: () => [], describeSaveResult: ambientSaved,
+    // ADR 0066: no judge mode change in this save (an older instance or the same mode).
+    problems: [], modePlan: { writeYmlMode: true, judgeMode: null, blocked: null }, judge: { state: 'legacy' }, modeName: String,
+    writeAmbientJudgeMode: async () => assert.fail('no judge write'), readAmbientJudgeMode: async () => assert.fail('no judge read'), setJudgeWarnings() {}, setJudgeNote() {},
+    InferenceRequestError: Error, inferenceError: String, planWarningText: String, apiFetch: async () => assert.fail('no fetch'),
     onReload: async () => { reloads++; return null }, i18n: { locale: 'zh-CN', t: value => value } }
   const executable = ts.transpileModule(`function build(context){const {${Object.keys(context).join(',')}}=context; return async()=>{${body}}}`,
     { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText

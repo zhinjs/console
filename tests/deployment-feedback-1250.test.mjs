@@ -98,7 +98,8 @@ test('purpose pickers: profiles grouped by service, Agent-only profiles in their
   assert.equal(profileChoiceGroup({ ...view, purposes: { defaults: { chat: 'p3' }, agents: { helper: 'p3' } } }, view.profiles.p3, 'en').label, 'OpenAI compatible', 'a profile chat also uses stays under its service')
   assert.equal(profileChoiceGroup(view, view.profiles.p2, 'en').label, 'Agent bindings')
   const purposes = src('pages/inference/Purposes.tsx')
-  assert.equal((purposes.match(/<SearchableSelectField/g) ?? []).length, 8, 'every model picker is searchable; mode / level selects stay plain')
+  // ADR 0066 adds the interjection judge's model and compared-model pickers.
+  assert.equal((purposes.match(/<SearchableSelectField/g) ?? []).length, 10, 'every model picker is searchable; mode / level selects stay plain')
   const profiles = src('pages/inference/Profiles.tsx')
   assert.match(profiles, /i18n\.t\("正在使用"\)/)
   assert.match(profiles, /未被用途引用的模型（\{0\}）/)

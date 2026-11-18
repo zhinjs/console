@@ -8,6 +8,8 @@ import * as ambientModel from '../console-ui/src/pages/ambient-engagement-model.
 import * as pickerModel from '../console-ui/src/pages/ambient-group-picker-model.mjs'
 import * as liveStatus from '../console-ui/src/components/PluginConfigForm/config-live-status.mjs'
 import * as readError from '../console-ui/src/utils/read-error.mjs'
+import * as inferenceModel from '../console-ui/src/pages/inference/model.mjs'
+import * as ambientJudgeModel from '../console-ui/src/pages/inference/ambient-judge-model.mjs'
 
 const require = createRequire(import.meta.url)
 const compilerOptions = { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX }
@@ -53,6 +55,14 @@ const ui = {
   './ambient-group-picker-model.mjs': pickerModel,
   './AmbientGroupPicker': { AmbientGroupPicker: 'ambient-group-picker' },
   yaml: { parse: () => ({}) },
+  // ADR 0066: the page reads the interjection judge through the model management API.
+  'react-router-dom': { Link: 'a' },
+  '../utils/auth': { apiFetch: async () => { throw new Error('unexpected request') } },
+  '../console-routes.mjs': { CONSOLE_PATHS: { ai: '/features/ai' } },
+  './inference/model.mjs': inferenceModel,
+  './inference/ambient-judge-model.mjs': ambientJudgeModel,
+  '../hooks/use-console-access': { useConsoleAccess: () => ({}) },
+  '../utils/console-access.mjs': { hasConsolePermission: () => true },
 }
 
 const elements = node => node && typeof node === 'object' ? [node, ...[node.props?.children].flat(Infinity).flatMap(elements)] : []

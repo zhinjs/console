@@ -12,6 +12,7 @@ import { replayScopeApproximate, replayScopeFilter } from './insights/scope-filt
 import {
   EXPORT_WINDOWS,
   REPLAY_EXPORT_METHOD,
+  ambientJudgeFacts,
   REPLAY_KINDS,
   REPLAY_LIST_METHOD,
   REPLAY_OUTCOMES,
@@ -199,6 +200,7 @@ export default function BotReplayPage() {
                   <FoldedRows rows={folded} />
                 </div>
                 <div className="font-mono text-xs text-muted-foreground">{view.code}{view.detail ? ` · ${view.detail}` : ''}</div>
+                <JudgeFacts row={row} />
                 {folded.map(child => <div key={child.id} className="font-mono text-xs text-muted-foreground">{describeReplayRow(child, i18n.locale).code}</div>)}
               </li>
             })}
@@ -226,6 +228,7 @@ export default function BotReplayPage() {
                     <Badge variant={outcomeVariant(view.outcomeCode)}>{view.outcome}</Badge>
                     <span className="text-muted-foreground" title={view.code}>{view.reason}</span>
                     <FoldedRows rows={folded} />
+                    <JudgeFacts row={row} inline />
                     <span className="flex-1" />
                     <Button variant="ghost" size="sm" onClick={() => void openTurn(view.turnId)}>{i18n.t("看这个回合")}</Button>
                   </li>
@@ -237,6 +240,14 @@ export default function BotReplayPage() {
           </Card> : null}
     </>}
   </PageShell>
+}
+
+/** The judge of an `ambient_decision` row (ADR 0066): model, fallback, tokens, error, compared verdict. */
+function JudgeFacts({ row, inline = false }: { row: ReplayRow; inline?: boolean }) {
+  const i18n = useI18n()
+  const facts = ambientJudgeFacts(row, i18n.locale)
+  if (!facts.length) return null
+  return <span className={inline ? 'basis-full text-xs text-muted-foreground' : 'block text-xs text-muted-foreground'} data-judge-facts="">{facts.join(' · ')}</span>
 }
 
 /** Rows folded into their parent decision (#1250 `payload.parent`): what followed, e.g. 「没有调用模型」. */

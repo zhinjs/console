@@ -2032,6 +2032,13 @@
     color: hsl(var(--warning));
   }
 
+  /* A failed MCP connection (`status: 'failed'`): an error, not just offline. Waiting / not loaded
+     (`is-idle`) and connected (`is-online`) keep the neutral default. */
+  .console-runtime-health.is-failed {
+    background: hsl(var(--destructive) / 0.12);
+    color: hsl(var(--destructive));
+  }
+
   .console-runtime-health svg {
     width: 0.9rem;
     height: 0.9rem;

@@ -134,7 +134,13 @@ test('the page reads status through pluginRpc(root, ambient) and writes with con
   assert.match(page, /type: 'config:patch'/)
   assert.match(page, /expectedRevision: initial\.revision/)
   assert.doesNotMatch(page, /config:set/)
-  assert.doesNotMatch(page, /判官|决策模型|judge/)
+  // ADR 0066 D7 #4: the judge chain is shown in its own card; the plain counts and records stay free of
+  // judges, models and confidence.
+  const body = name => { const start = page.indexOf(`function ${name}(`); return page.slice(start, page.indexOf('\n}\n', start)) }
+  for (const name of ['AmbientStatusSection', 'AmbientRecentActivity'])
+    assert.doesNotMatch(body(name).replace('<AmbientJudgeStatus status={read.data.status} />', ''), /判官|决策模型|judge|confidence/i, name)
+  assert.match(body('AmbientJudgeStatus'), /ambientJudgeChainRows\(status, i18n\.locale\)/)
+  assert.doesNotMatch(page, /判官/)
   const rpc = readFileSync(new URL('../console-ui/src/utils/plugin-rpc.ts', import.meta.url), 'utf8')
   assert.match(rpc, /type: `plugin\.\$\{pluginId\}\.\$\{method\}`/)
   assert.match(rpc, /'\/api\/console\/request'/)

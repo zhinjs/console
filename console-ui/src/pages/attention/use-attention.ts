@@ -10,6 +10,7 @@ import { apiFetch, getApiBase, probeHealth } from '../../utils/auth'
 import { getConsoleTransport } from '../../utils/console-client'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
 import { requestConsole } from '../../utils/console-rpc'
+import { countFailedMcp } from '../introspection/mcp-status-model.mjs'
 import { onInstanceRecovered } from '../../utils/instance-availability.mjs'
 import { readErrorSummary } from '../../utils/read-error.mjs'
 import { summarizeOptional } from '../dashboard-health'
@@ -110,6 +111,7 @@ async function loadFallbackInput(currentLocale: Locale): Promise<AttentionFallba
     logReadError,
     mcpServices: typeof mcpData?.total === 'number' ? mcpData.total : null,
     connectedMcp: rows.filter(row => row.connected === true).length,
+    failedMcp: countFailedMcp(rows),
   }
 }
 

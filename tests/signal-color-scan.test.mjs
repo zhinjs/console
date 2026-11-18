@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { resolveToken, tokenValues } from './helpers/token-cascade.mjs'
 import { instanceStateTone } from '../console-ui/src/pages/ops/gateway-model.mjs'
 import { taskOverviewRows } from '../console-ui/src/pages/task-overview-model.mjs'
+import { mcpRowState } from '../console-ui/src/pages/introspection/mcp-status-model.mjs'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 const walk = dir => readdirSync(dir).flatMap(name => {
@@ -65,6 +66,7 @@ const SUCCESS_ALLOWED = {
   'console-ui/src/pages/files/file-editor.tsx': [3, '保存文件后的一次性提示'],
   'console-ui/src/pages/scope/configured-account-actions.tsx': [4, '导入 / 回写账号配置后的一次性提示'],
   'console-ui/src/pages/scope/adapter-accounts.tsx': [1, '保存账号后的一次性提示'],
+  'console-ui/src/pages/introspection/mcp-status-model.mjs': [1, '「测试连接」成功后的一次性结果'],
 }
 
 test('the success color never marks a steady state: every remaining use is listed with its reason', () => {
@@ -136,9 +138,13 @@ test('one badge per kind of state across pages: steady = outline, offline = warn
     ['console-ui/src/pages/scope/overview-panels.tsx', /variant=\{status === 'online' \? 'outline' : 'warning'\}/],
     ['console-ui/src/pages/scope/endpoint-page.tsx', /variant=\{connected \? 'outline' : 'warning'\}/],
     ['console-ui/src/pages/scope/endpoint-access.tsx', /variant=\{endpoint\.connected \? 'outline' : 'warning'\}/],
-    ['console-ui/src/pages/introspection/CapabilityExplorer.tsx', /variant=\{connected \? 'outline' : 'warning'\}/],
+    // MCP rows take the tone from mcpRowState (checked below): connected outline, offline warning, failed destructive.
+    ['console-ui/src/pages/introspection/CapabilityExplorer.tsx', /variant=\{state\.tone\}/],
   ]
   for (const [file, pattern] of online) assert.match(read(file), pattern, file)
+  assert.deepEqual(['connected', 'old-offline', 'failed', 'idle'].map(kind => mcpRowState(
+    kind === 'connected' ? { status: 'connected' } : kind === 'old-offline' ? { connected: false } : { status: kind }).tone),
+  ['outline', 'warning', 'destructive', 'secondary'])
 })
 
 // ---- ΔE2000 between the message-volume series and the warning color, from the Console's own tokens ----

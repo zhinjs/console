@@ -36,6 +36,8 @@ export const CONSOLE_REST = {
   LOGS_CLEANUP: '/api/logs/cleanup',
   INTROSPECTION: '/api/introspection',
   COMPONENT_PREVIEW: '/api/introspection/components/render',
+  /** `POST`, body `{ name }`：对一个已配置的 MCP 服务做一次性连接测试（`agent.configure`）。 */
+  MCP_TEST: '/api/introspection/mcp/test',
   MESSAGE_DIAGNOSTICS: '/api/messages/diagnostics',
   COMMAND_PERMISSIONS: '/api/commands/permissions',
   COMMAND_PERMISSION_EXPLAIN: '/api/commands/permissions/explain',

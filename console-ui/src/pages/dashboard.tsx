@@ -61,6 +61,7 @@ import './dashboard.css'
 import { ATTENTION_PATH, DASHBOARD_ATTENTION_LIMIT } from './attention/attention-model.mjs'
 import { AttentionSummaryList } from './attention/AttentionSummaryList'
 import { useAttention } from './attention/use-attention'
+import { mcpDashboardDetail, summarizeMcp, type McpSummary } from './introspection/mcp-status-model.mjs'
 import './attention/attention.css'
 
 interface Stats {
@@ -91,8 +92,8 @@ interface OptionalOverview {
   agentStatus: 'unknown' | 'unavailable' | 'available'
   tools: number | null
   agents: number | null
-  mcpServices: number | null
-  connectedMcp: number | null
+  /** null when the MCP list is unreadable or not wired. */
+  mcp: McpSummary | null
 }
 
 interface IntrospectionEnvelope {
@@ -133,8 +134,7 @@ const EMPTY_OPTIONAL: OptionalOverview = {
   agentStatus: 'unknown',
   tools: null,
   agents: null,
-  mcpServices: null,
-  connectedMcp: null,
+  mcp: null,
 }
 
 const DASHBOARD_REQUEST_TIMEOUT_MS = 8_000
@@ -179,14 +179,11 @@ function readTotal(value: unknown): number | null {
   return typeof total === 'number' ? total : null
 }
 
-function readMcpSummary(value: unknown): { total: number | null; connected: number | null } {
-  if (!value || typeof value !== 'object') return { total: null, connected: null }
+function readMcpSummary(value: unknown): McpSummary | null {
+  if (!value || typeof value !== 'object') return null
   const envelope = value as IntrospectionEnvelope
-  const rows = Array.isArray(envelope.items) ? envelope.items : []
-  return {
-    total: typeof envelope.total === 'number' ? envelope.total : null,
-    connected: rows.length ? rows.filter((row) => row.connected === true).length : 0,
-  }
+  if (typeof envelope.total !== 'number') return null
+  return summarizeMcp(Array.isArray(envelope.items) ? envelope.items : [], envelope.total)
 }
 
 function parseRecentLogEvents(raw: unknown): RecentLogEvent[] {
@@ -540,15 +537,13 @@ export default function HomePage() {
       setRecentEvents(parseRecentLogEvents(recentLogsRaw))
 
       const optionalSummary = summarizeOptional(logs.data, agents)
-      const mcpSummary = readMcpSummary(mcp)
       setOptional({
         ...optionalSummary,
         logReadError: logs.error,
         logSince: readOldestLog(logs.data),
         tools: readTotal(tools),
         agents: readTotal(agents),
-        mcpServices: mcpSummary.total,
-        connectedMcp: mcpSummary.connected,
+        mcp: readMcpSummary(mcp),
       })
       setLastUpdatedAt(Date.now())
     } catch (caught) {
@@ -582,8 +577,9 @@ export default function HomePage() {
     (stats?.endpoints.total ?? 0) - (stats?.endpoints.online ?? 0),
   )
   const hostAvailable = stats !== null && systemStatus !== null
-  const disconnectedMcp = Math.max(0, (optional.mcpServices ?? 0) - (optional.connectedMcp ?? 0))
-  const healthy = hostAvailable && offlineEndpoints === 0 && disconnectedMcp === 0 && optional.errorLogs === 0
+  // 只有连接失败算问题；待连接 / 未加载不影响「健康」。旧 Host 没有 status 时沿用「总数 − 已连接」。
+  const mcpProblems = optional.mcp?.problems ?? 0
+  const healthy = hostAvailable && offlineEndpoints === 0 && mcpProblems === 0 && optional.errorLogs === 0
 
   const endpointRate = stats && stats.endpoints.total > 0
     ? Math.min(100, Math.max(0, Math.round((stats.endpoints.online / stats.endpoints.total) * 100)))
@@ -613,10 +609,10 @@ export default function HomePage() {
     },
     {
       label: i18n.t("MCP 服务"),
-      value: optional.mcpServices,
-      detail: optional.mcpServices === null
+      value: optional.mcp?.total ?? null,
+      detail: optional.mcp === null
         ? i18n.t("未启用或尚未接线")
-        : disconnectedMcp > 0 ? i18n.t("{0} 个未连接", [disconnectedMcp]) : i18n.t("{0} 个连接正常", [optional.connectedMcp ?? 0]),
+        : mcpDashboardDetail(optional.mcp, i18n.locale),
       icon: Server,
       path: '/introspection?tab=mcp',
     },
@@ -627,7 +623,7 @@ export default function HomePage() {
       icon: Package,
       path: '/plugins',
     },
-  ], [optional, stats, i18n, disconnectedMcp])
+  ], [optional, stats, i18n])
 
   const handleToggleControl = async (key: ControlSwitchKey) => {
     if (!controlState?.available || readOnly || controlUpdating) return
