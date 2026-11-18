@@ -215,6 +215,8 @@ test('validateAmbientStatus accepts older and newer instances and rejects malfor
     { judgeToday: '2026-11-18T00:00' },
     { judgeToday: '' },
     { judgeToday: 20261118 },
+    // Review of console#156: the pattern alone let impossible days through; both fields must name a real day.
+    ...['2026-02-30', '2026-13-45', '0099-01-01'].flatMap(bad => [{ judgeToday: bad }, { judgeDaily: [{ ...newer.judgeDaily[0], day: bad }] }]),
     { decisionShadow: { agreed: 1 } },
   ]) assert.throws(() => ambient.validateAmbientStatus(status(bad)), /格式不正确/u, JSON.stringify(bad))
 })
@@ -316,6 +318,77 @@ test('judge usage of an older instance (no judgeToday): the browser clock is cla
   // A zone this browser does not know: only the reported days, nothing filled in or guessed.
   assert.deepEqual(judge.ambientJudgeDaily(status({ judgeTimeZone: 'Not/AZone', judgeDaily: [day('2026-03-01', { calls: 1 }), day('2026-02-27', { calls: 2 })] })).rows.map(row => [row.day, row.calls, row.known]),
     [['2026-02-27', 2, true], ['2026-03-01', 1, true]])
+})
+
+test('judge usage across daylight saving changes (America/New_York): one row per calendar day, today cut on the local date', () => {
+  const day = judgeUsageDay
+  const ny = (extra, now) => judge.ambientJudgeDaily(status({ judgeTimeZone: 'America/New_York', ...extra }), 'zh-CN', now)
+  // 2026-03-08: clocks go forward at 02:00 (EST -5 → EDT -4).
+  const spring = ['2026-03-02', '2026-03-03', '2026-03-04', '2026-03-05', '2026-03-06', '2026-03-07', '2026-03-08']
+  assert.deepEqual(ny({ judgeToday: '2026-03-08', judgeDaily: [day('2026-03-08', { calls: 2 })] }, Date.UTC(2026, 2, 8, 12)).rows.map(row => row.day), spring)
+  // Without judgeToday: 04:30 UTC is still 03-07 23:30 EST, 05:30 UTC is 03-08 00:30 EST, and 03:30 UTC on 03-09 is 03-08 23:30 EDT.
+  assert.equal(ny({ judgeDaily: [] }, Date.UTC(2026, 2, 8, 4, 30)).rows.at(-1).day, '2026-03-07')
+  assert.equal(ny({ judgeDaily: [] }, Date.UTC(2026, 2, 8, 5, 30)).rows.at(-1).day, '2026-03-08')
+  assert.deepEqual(ny({ judgeDaily: [day('2026-03-02', { calls: 1 }), day('2026-03-08', { calls: 2 })] }, Date.UTC(2026, 2, 9, 3, 30)).rows.map(row => [row.day, row.known]),
+    spring.map(key => [key, true]))
+  // 2026-11-02 is the first day after clocks went back (11-01 02:00, EDT -4 → EST -5).
+  const autumn = ['2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31', '2026-11-01', '2026-11-02']
+  assert.deepEqual(ny({ judgeToday: '2026-11-02', judgeDaily: [day('2026-11-01', { calls: 3 })] }, Date.UTC(2026, 10, 2, 12)).rows.map(row => row.day), autumn)
+  // Without judgeToday: 04:30 UTC on 11-02 is 11-01 23:30 EST, 05:30 UTC is 11-02 00:30 EST.
+  assert.equal(ny({ judgeDaily: [] }, Date.UTC(2026, 10, 2, 4, 30)).rows.at(-1).day, '2026-11-01')
+  assert.equal(ny({ judgeDaily: [] }, Date.UTC(2026, 10, 2, 5, 30)).rows.at(-1).day, '2026-11-02')
+  assert.deepEqual(usageRows(ny({ judgeDaily: [day('2026-10-31', { calls: 1 }), day('2026-11-02', { calls: 2 })] }, Date.UTC(2026, 10, 2, 12))),
+    [['2026-10-27', '无数据'], ['2026-10-28', '无数据'], ['2026-10-29', '无数据'], ['2026-10-30', '无数据'], ['2026-10-31', 1], ['2026-11-01', 0], ['2026-11-02', 2]])
+})
+
+async function judgeUsagePanel(data, locale = 'zh-CN') {
+  const runtime = pageRuntime()
+  const code = ts.transpileModule(await readFile(new URL('../console-ui/src/pages/ambient-judge-usage.tsx', import.meta.url), 'utf8'),
+    { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
+  const deps = {
+    react: runtime.api, 'react/jsx-runtime': jsxRuntime, 'react-router-dom': { Link: 'a' }, 'lucide-react': new Proxy({}, { get: () => 'icon' }),
+    '@zhin.js/console-ui': { Button: 'button', Table: 'table', TableBody: 'tbody', TableCell: 'td', TableHead: 'th', TableHeader: 'thead', TableRow: 'tr' },
+    '../i18n': { useI18n: () => ({ locale, t: (m, values) => translate(locale, m, values) }) },
+    '../hooks/use-console-access': { useConsoleAccess: () => ({}) },
+    '../utils/console-access.mjs': { hasConsolePermission: () => true },
+    '../utils/plugin-rpc': { pluginRpc: async () => data },
+    '../console-routes.mjs': { CONSOLE_PATHS: { aiAmbient: '/ai/ambient' } },
+    './ambient-engagement-model.mjs': ambient,
+    // The browser clock is pinned to NOW so the older-instance window is the same on every run.
+    './inference/ambient-judge-model.mjs': { ambientJudgeDaily: (value, l) => judge.ambientJudgeDaily(value, l, NOW) },
+  }
+  const module = { exports: {} }
+  new Function('require', 'module', 'exports', code)(name => { assert.ok(name in deps, name); return deps[name] }, module, module.exports)
+  runtime.mount(() => ({ type: module.exports.AmbientJudgeUsage, props: {} }))
+  await runtime.settle()
+  const text = node => Array.isArray(node) ? node.map(text).join('') : node && typeof node === 'object' ? text(node.props?.children) : typeof node === 'string' || typeof node === 'number' ? String(node) : ''
+  const all = nodes(runtime.value)
+  runtime.unmount()
+  return { text: text(runtime.value), unknownRows: all.filter(node => node.props?.['data-judge-day-unknown'] !== undefined), note: all.find(node => node.props?.['data-judge-unknown-note'] !== undefined) }
+}
+
+test('the usage panel shows 「无数据」 rows and their note only for unknown days of a table that is shown (zh-CN and en)', async () => {
+  const day = judgeUsageDay
+  const older = status({ judgeTimeZone: 'Asia/Shanghai', judgeDaily: [day('2026-11-14', { calls: 5 }), day('2026-11-16', { calls: 2 })] })
+  const zh = await judgeUsagePanel(older)
+  assert.equal(zh.unknownRows.length, 4, '11-12, 11-13, 11-17, 11-18')
+  assert.match(zh.text, /无数据/u)
+  assert.ok(zh.note, 'the note explains the unknown days')
+  assert.match(zh.text, /实例版本较旧，没有报告实例当天的日期，这几天可能已被清理或还没到，不代表没有判断。/u)
+  const en = await judgeUsagePanel(older, 'en')
+  assert.equal(en.unknownRows.length, 4)
+  assert.ok(en.unknownRows.every(row => /^No data$/u.test(row.props.children.map(cell => typeof cell?.props?.children === 'string' ? cell.props.children : '').filter(Boolean).at(-1))))
+  assert.match(en.text, /does not report its current date/u)
+  assert.doesNotMatch(en.text, CJK, 'nothing Chinese in the English panel')
+  // With judgeToday every day is known: no 「无数据」 and no note.
+  const current = await judgeUsagePanel(status({ judgeTimeZone: 'Asia/Shanghai', judgeToday: '2026-11-18', judgeDaily: older.judgeDaily }), 'en')
+  assert.deepEqual([current.unknownRows.length, current.note], [0, undefined])
+  assert.doesNotMatch(current.text, /No data|current date/u)
+  // An older instance whose records all have 0 calls: no table, so no note either.
+  const quiet = await judgeUsagePanel(status({ judgeTimeZone: 'Asia/Shanghai', judgeDaily: [day('2026-11-15'), day('2026-11-16')] }))
+  assert.match(quiet.text, /最近 7 天还没有插话判断。/u)
+  assert.deepEqual([quiet.unknownRows.length, quiet.note], [0, undefined])
+  assert.doesNotMatch(quiet.text, /实例版本较旧/u)
 })
 
 // ------------------------------------------------------------- the interjection page settings

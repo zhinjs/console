@@ -117,6 +117,8 @@ const legacyAmbient = process.env.UI_PREVIEW_AMBIENT === 'legacy'
 // UI_PREVIEW_AMBIENT=unknown: the judge route answers 503 and the status RPC fails (a busy instance):
 // the Console must neither assume an older instance nor write the judge mode.
 const unknownAmbient = process.env.UI_PREVIEW_AMBIENT === 'unknown'
+// UI_PREVIEW_JUDGE_TODAY=0: judge usage of an instance from before zhin batch 48 (judgeDaily without judgeToday).
+const legacyJudgeToday = process.env.UI_PREVIEW_JUDGE_TODAY === '0'
 const DAY = 24 * HOUR
 const judgeDay = (daysAgo, calls, extra = {}) => ({ day: new Date(now - daysAgo * DAY).toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }), calls, failed: 0, fallbacks: 0,
   byKind: { language: Math.round(calls / 3), decision: calls - Math.round(calls / 3) }, averageMs: 640, inputTokens: calls * 410, outputTokens: calls * 18, cacheReadTokens: calls * 120, cacheWriteTokens: 0, unreportedCalls: 0, ...extra })
@@ -134,8 +136,14 @@ const ambientStatus = { enabled: true, mode: 'shadow', groups: 1, judges: ['prev
       byMember: [{ member: 0, profile: 'deepseek:deepseek-v4-flash', agreed: 12, primaryOnly: 2, comparedOnly: 0, failed: 1 }, { member: 1, profile: 'night:gemini-3.8-flash', agreed: 5, primaryOnly: 0, comparedOnly: 1, failed: 0 }] },
     judgeTimeZone: 'Asia/Shanghai',
     // zhin batch 48: today on the instance clock; the usage window is this day and the 6 before it.
-    judgeToday: new Date(now).toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }),
-    judgeDaily: [judgeDay(6, 12), judgeDay(4, 31, { failed: 2, fallbacks: 3 }), judgeDay(3, 18), judgeDay(1, 26, { fallbacks: 1, unreportedCalls: 2 }), judgeDay(0, 9, { failed: 1, fallbacks: 4 })],
+    // UI_PREVIEW_JUDGE_TODAY=0: an instance from before batch 48 (no judgeToday) whose latest report is
+    // 2 days old, so the usage table shows 「无数据」 for the days after it.
+    ...(legacyJudgeToday ? {
+      judgeDaily: [judgeDay(6, 12), judgeDay(4, 31, { failed: 2, fallbacks: 3 }), judgeDay(3, 18), judgeDay(2, 26, { fallbacks: 1, unreportedCalls: 2 })],
+    } : {
+      judgeToday: new Date(now).toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }),
+      judgeDaily: [judgeDay(6, 12), judgeDay(4, 31, { failed: 2, fallbacks: 3 }), judgeDay(3, 18), judgeDay(1, 26, { fallbacks: 1, unreportedCalls: 2 }), judgeDay(0, 9, { failed: 1, fallbacks: 4 })],
+    }),
   }) }
 // `GET /agent/inference/ambient-judge`: migrated, not yet noticed (the Console banner shows once).
 let ambientJudgeNoticedAt
