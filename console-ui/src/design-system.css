@@ -517,6 +517,8 @@
 }
 
 @layer components {
+  /* Inactive tabs (@zhin.js/console-ui Tabs, also used by plugin pages) need ≥4.5:1 on the tab list fill. */
+  .console-tabs-trigger[data-state="inactive"]:not(:hover, :disabled) { color: hsl(var(--zc-tab-inactive)); }
   .console-main {
     padding: var(--console-page-padding-block) var(--console-page-padding-inline);
     max-width: 100%;
