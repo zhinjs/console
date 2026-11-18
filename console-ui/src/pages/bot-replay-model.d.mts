@@ -78,3 +78,5 @@ export function isPermissionDenied(error: unknown): boolean
 export const REPLAY_PARENT_KEY: 'parent'
 export interface ReplayEntry { row: ReplayRow; folded: ReplayRow[] }
 export function foldReplayRows(rows: readonly ReplayRow[]): ReplayEntry[]
+/** Judge facts of an `ambient_decision` row (#1250, ADR 0066): judge, fallback, tokens, error, compared verdict. */
+export function ambientJudgeFacts(row: unknown, locale?: 'zh-CN' | 'en'): string[]

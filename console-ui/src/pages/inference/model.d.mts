@@ -105,6 +105,35 @@ export interface View {
   }>
   purposes?: Purposes
   modelAvailability?: ModelAvailabilityView
+  /**
+   * Host administrators only (#1270, ADR 0066 D7): whether each purpose key takes effect, keyed
+   * `agents.<key>`, `ambient` (the interjection judge chain) and `decisions.<task>`. Older Hosts omit it.
+   */
+  purposeEffects?: Record<string, PurposeEffect>
+}
+export type PurposeIgnoredReason = 'binding-name' | 'ambiguous' | 'no-target' | 'ambient-not-configured' | 'no-conversations' | 'mode-off'
+export interface PurposeEffectMember { profile: string; kind?: 'language' | 'decision' }
+export interface PurposeEffect {
+  status: 'effective' | 'ignored'
+  reason?: PurposeIgnoredReason | string
+  /** `ambient` only: the judge chain actually used, in order. */
+  chain?: PurposeEffectMember[]
+  /** `ambient` only: the chain is the deployment chat model's. */
+  inheritedFrom?: 'chat'
+  /** `ambient` only: the compared model. */
+  compare?: PurposeEffectMember
+  target?: 'binding' | 'sub-agent'
+  agents?: string[]
+  ignoredAgents?: string[]
+}
+/** `purposes.ambient` (ADR 0066 D1): the interjection judge. */
+export interface AmbientJudgePolicy {
+  profile?: string
+  fallbacks?: string[]
+  compare?: string
+  minConfidence?: number
+  mode?: 'active' | 'shadow'
+  timeoutMs?: number
 }
 export interface ScopeModels {
   chat?: string
@@ -141,6 +170,8 @@ export interface DecisionPolicy {
   maxSelections?: number
 }
 export interface Purposes {
+  /** ADR 0066: the merged interjection judge; older Hosts store `defaults.ambient` + `decisions.ambient` instead. */
+  ambient?: AmbientJudgePolicy
   defaults: ScopeModels & { summary?: string; summaryFallbacks?: string[]; image?: string; ambient?: string; ambientFallbacks?: string[] }
   decisions?: Record<string, DecisionPolicy>
   agents?: Record<string, string>
@@ -163,12 +194,15 @@ export interface ProfileSelection {
   kind: 'language'
 }
 export class InferenceRequestError extends Error {
-  constructor(code: string, status?: number, mutationOutcome?: 'not-committed', reason?: string)
+  constructor(code: string, status?: number, mutationOutcome?: 'not-committed', reason?: string, path?: string)
   code: string
   status: number
   mutationOutcome?: 'not-committed'
   reason?: string
+  /** The configuration path the Host named (`details.path`). */
+  path?: string
 }
+export function configPathLabel(path: string, locale?: 'zh-CN' | 'en'): string
 export function canReferenceEnvironment(view: View): boolean
 export function supportsConnectionTest(view: Pick<View, 'environmentReferences'> | null | undefined): boolean
 export function connectionTestError(error: unknown, locale?: 'zh-CN' | 'en'): string
@@ -203,7 +237,11 @@ export function selectableLanguageProfiles(
   locale?: 'zh-CN' | 'en'
 ): Array<{ id: string; label: string; selection: ProfileSelection; support?: SupportMetadata }>
 export function schemaField(schema?: Record<string, unknown>): SchemaField
-export function purposePlan(draft: Purposes, original?: Purposes, options?: { fallbacks?: boolean }): unknown
+export function purposePlan(draft: Purposes, original?: Purposes, options?: {
+  fallbacks?: boolean
+  /** ADR 0066 Hosts: the `purposes.ambient` entry (undefined: unchanged, not written). */
+  ambientJudge?: { entry: AmbientJudgePolicy | null | undefined }
+}): unknown
 export function cleanFallbacks(primary: string, chain: readonly string[] | undefined): string[]
 export function languageReference(profile: string, chain?: readonly string[]): { profile: string; fallbacks?: string[] }
 export function supportsPurposeFallbacks(view: Pick<View, 'modelAvailability'> | null | undefined): boolean
@@ -256,9 +294,17 @@ export function storePendingMutation(
 ): void
 export function driverLabel(driver: Driver, drivers: readonly Driver[]): string
 
-export type ProfileUsageLevel = 'default' | 'decision' | 'agent' | 'adapter' | 'endpoint' | 'scene'
-export interface ProfileUsage { key: string; level: ProfileUsageLevel; label: string }
-export function profileUsages(purposes: Purposes | null | undefined, profileId: string, locale?: 'zh-CN' | 'en'): ProfileUsage[] | null
+export type ProfileUsageLevel = 'default' | 'ambient' | 'decision' | 'agent' | 'adapter' | 'endpoint' | 'scene'
+export interface ProfileUsage {
+  key: string
+  level: ProfileUsageLevel
+  label: string
+  /** The reference exists but does not take effect (`purposeEffects`). */
+  ignored?: boolean
+  reason?: string
+}
+export function profileUsages(purposes: Purposes | null | undefined, profileId: string, locale?: 'zh-CN' | 'en', effects?: Record<string, PurposeEffect>): ProfileUsage[] | null
+export function ignoredReasonText(reason: string | undefined, locale?: 'zh-CN' | 'en'): string
 export function profileChoiceGroup(view: View, profile: Profile, locale?: 'zh-CN' | 'en'): { key: string; label: string; agent: boolean }
 export interface PurposeProfileChoice {
   value: string

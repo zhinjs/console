@@ -6,6 +6,7 @@ import ts from 'typescript'
 import { localeModule, isLocaleImport } from './locale-fixture.mjs'
 import * as engagementsModel from '../console-ui/src/pages/engagements-model.mjs'
 import * as workbenchModel from '../console-ui/src/pages/agent-workbench-model.mjs'
+import * as mcpStatus from '../console-ui/src/pages/introspection/mcp-status-model.mjs'
 import * as instanceSections from '../console-ui/src/pages/ops/instance-sections.mjs'
 
 const { introspectionTotal, fetchAllIntrospection } = workbenchModel
@@ -110,11 +111,12 @@ test('Workroom collaboration list that is genuinely empty shows the empty guidan
 
 const workbenchSource = await read('pages/agent-workbench.tsx')
 const dashboardHealth = compile(await read('pages/dashboard-health.ts'), {})
-function workbenchFixture(sizes) {
+function workbenchFixture(sizes, { mcpRows } = {}) {
   const runtime = hookRuntime(), requests = []
   const rows = Object.fromEntries(Object.entries(sizes).map(([kind, size]) => [kind, Array.from({ length: size }, (_, i) => (
     kind === 'bindings' ? { name: `agent-${i}`, provider: 'p', model: 'm', mcpServers: [], hasAgentFile: false }
       : kind === 'mcp' ? { name: `mcp-${i}`, connected: true, toolCount: 1 } : { name: `tool-${i}`, description: '' }))]))
+  if (mcpRows) rows.mcp = mcpRows
   const apiFetch = async url => {
     requests.push(url)
     const parsed = new URL(url, 'https://host'), kind = parsed.pathname.split('/').pop()
@@ -137,6 +139,8 @@ function workbenchFixture(sizes) {
     '@zhin.js/console-ui': { cn: (...classes) => classes.filter(Boolean).join(' '), PageHeader: 'page-header', PageShell: 'page-shell', Button: 'button', buttonVariants: () => '', Skeleton: 'skeleton' }, './insights/insights.css': {},
     '../components/StatusState': { StatusState: 'status-state' }, '../console-routes.mjs': { CONSOLE_PATHS: { opsInstance: '/ops/instance', ai: '/features/ai' } }, './ops/instance-sections.mjs': instanceSections,
     './agent-workbench-model.mjs': workbenchModel,
+    './introspection/mcp-status-model.mjs': mcpStatus,
+    './ambient-judge-usage': { AmbientJudgeUsage: 'ambient-judge-usage' },
   })
   const view = runtime.mount(() => module.default())
   view.render()
@@ -190,4 +194,46 @@ test('introspection model pages until total, trusts consistent totals and stops 
   // Host clamps an out-of-range page back to the last page: never duplicate rows.
   const clamped = await fetchAllIntrospection(async page => ({ items: ['a'], page: 1, total: 3 }), { pageSize: 1 })
   assert.deepEqual(clamped, { note: undefined, items: ['a'], total: 3, truncated: true })
+})
+
+// #1250 batch 28: only a failed MCP connection is a problem; waiting to connect (idle) is neutral.
+test('Agent workbench: servers waiting to connect are shown as such and never sent to check credentials', async () => {
+  const f = workbenchFixture({ tools: 1, bindings: 1 }, { mcpRows: [
+    { name: 'fs', connected: false, toolCount: 0, status: 'idle' },
+    { name: 'notes', connected: false, toolCount: 0, status: 'not_loaded' },
+    { name: 'cal', connected: true, toolCount: 2, status: 'connected' },
+  ] })
+  await f.settle()
+  const all = text(f.tree)
+  assert.match(all, /1 \/ 3 个服务已连接，1 个待连接，1 个未加载/)
+  assert.match(all, /AI 配置与聊天账号已齐备/)
+  assert.doesNotMatch(all, /检查服务地址与凭据/)
+  assert.doesNotMatch(all, /未连接/)
+  f.close()
+})
+
+test('Agent workbench: a failed MCP connection is listed as a problem, waiting ones are not counted', async () => {
+  const f = workbenchFixture({ tools: 1, bindings: 1 }, { mcpRows: [
+    { name: 'fs', connected: false, toolCount: 0, status: 'idle' },
+    { name: 'web', connected: false, toolCount: 0, status: 'failed', lastError: { category: 'auth', message: '401', at: 1 } },
+  ] })
+  await f.settle()
+  const all = text(f.tree)
+  assert.match(all, /可以对话，但有 MCP 服务连接失败/)
+  assert.match(all, /1 个 MCP 服务连接失败，检查服务地址与凭据/)
+  assert.match(all, /0 \/ 2 个服务已连接，1 个连接失败，1 个待连接/)
+  f.close()
+})
+
+test('Agent workbench: rows of an older Host without status keep the total − connected wording', async () => {
+  const f = workbenchFixture({ tools: 1, bindings: 1 }, { mcpRows: [
+    { name: 'a', connected: false, toolCount: 0 },
+    { name: 'b', connected: true, toolCount: 1 },
+  ] })
+  await f.settle()
+  const all = text(f.tree)
+  assert.match(all, /可以对话，但有服务未连接/)
+  assert.match(all, /1 个 MCP 服务未连接，检查服务地址与凭据/)
+  assert.match(all, /1 \/ 2 个服务已连接/)
+  f.close()
 })

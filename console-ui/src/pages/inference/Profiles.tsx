@@ -5,7 +5,7 @@ import { Plus, Pencil, Trash2, RefreshCw } from 'lucide-react'
 import { Button, Card, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, ErrorAlert, Input, SelectField, useConfirm } from '@zhin.js/console-ui'
 import { ModelCapabilities } from './ModelCapabilities'
 import { SupportLabel, SupportNotice, supportLabel } from './SupportInfo'
-import { inferenceError, languageInputMissing, modelEntryView, withModelProtocol, profileSupport, profileUsages, serviceDriver, type ProfileUsage } from './model.mjs'
+import { ignoredReasonText, inferenceError, languageInputMissing, modelEntryView, withModelProtocol, profileSupport, profileUsages, serviceDriver, type ProfileUsage } from './model.mjs'
 import {
   driverKey,
   type Profile,
@@ -62,7 +62,7 @@ export function Profiles({ management: m, onCreateAccount, addModelFor, onAddMod
       ) : (
         <ProfileList
           profiles={Object.values(view.profiles)}
-          usagesOf={(profile) => profileUsages(view.purposes, profile.id, i18n.locale)}
+          usagesOf={(profile) => profileUsages(view.purposes, profile.id, i18n.locale, view.purposeEffects)}
           row={(profile, usages) => {
             const account = view.accounts[profile.accountId]
             const chat = usages?.some((usage) => usage.key === 'default:chat')
@@ -443,8 +443,10 @@ function ProfileList({ profiles, usagesOf, row }: {
     return <Card className="console-profile-list divide-y overflow-hidden">{entries.map((entry) => row(entry.profile, entry.usages))}</Card>
   }
   const rank = (usages: ProfileUsage[] | null) => usages?.some((usage) => usage.key === 'default:chat') ? 0 : usages?.some((usage) => usage.level === 'default') ? 1 : 2
-  const used = entries.filter((entry) => entry.usages!.length).sort((a, b) => rank(a.usages) - rank(b.usages))
-  const unused = entries.filter((entry) => !entry.usages!.length)
+  // A Profile whose only references do not take effect (purposeEffects) is not 「在用」.
+  const live = (usages: ProfileUsage[] | null) => usages!.some((usage) => !usage.ignored)
+  const used = entries.filter((entry) => live(entry.usages)).sort((a, b) => rank(a.usages) - rank(b.usages))
+  const unused = entries.filter((entry) => !live(entry.usages))
   return (
     <Card className="console-profile-list overflow-hidden">
       {used.length ? (
@@ -471,12 +473,20 @@ function ProfileList({ profiles, usagesOf, row }: {
 function ProfileUsageLine({ usages }: { usages: ProfileUsage[] | null }) {
   const i18n = useI18n()
   if (usages === null) return null
-  const shown = usages.slice(0, 4)
+  const effective = usages.filter((usage) => !usage.ignored)
+  // References that do not take effect (ADR 0066 D7) are listed after, dimmed, with the reason.
+  const ignored = usages.filter((usage) => usage.ignored)
+  const shown = effective.slice(0, 4)
   return (
     <p className="mt-1 text-xs text-muted-foreground">
       <span className="font-medium text-foreground">{i18n.t("谁在用：")}</span>
-      {usages.length ? shown.map(usage => usage.label).join(' · ') : i18n.t("还没有用途引用它")}
-      {usages.length > shown.length ? i18n.t(" 等 {0} 处", [usages.length]) : ''}
+      {effective.length ? shown.map(usage => usage.label).join(' · ') : i18n.t("还没有用途引用它")}
+      {effective.length > shown.length ? i18n.t(" 等 {0} 处", [effective.length]) : ''}
+      {ignored.length ? (
+        <span className="ml-1 italic" data-usage-ignored="">
+          {ignored.map((usage) => i18n.t("{0}（未生效：{1}）", [usage.label, ignoredReasonText(usage.reason, i18n.locale)])).join(' · ')}
+        </span>
+      ) : null}
       <span className="ml-1">{i18n.t("（在「用途」页签修改）")}</span>
     </p>
   )

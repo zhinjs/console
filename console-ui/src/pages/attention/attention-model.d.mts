@@ -49,6 +49,8 @@ export interface AttentionFallbackInput {
   readonly logReadError?: string | null
   readonly mcpServices?: number | null
   readonly connectedMcp?: number | null
+  /** Rows that report `status` (#1250): servers whose last connect failed; null on older instances. */
+  readonly failedMcp?: number | null
 }
 
 export interface AttentionPrefs {

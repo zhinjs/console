@@ -6,6 +6,7 @@ import { basename, join } from 'node:path'
 import ts from 'typescript'
 import { pageRuntime, nodes } from './helpers/inference-page-runtime.mjs'
 import * as model from '../console-ui/src/pages/inference/model.mjs'
+import * as ambientJudgeModel from '../console-ui/src/pages/inference/ambient-judge-model.mjs'
 import * as modelsEntry from '../console-ui/src/pages/inference/models-entry.mjs'
 
 const source = revision => ({ connectionScope: 'connection', base: 'https://host.test', view: {
@@ -30,7 +31,7 @@ async function fixture(page, options = {}) {
     'react/jsx-runtime': { jsx: (type, props, key) => ({ type, props, key }), jsxs: (type, props, key) => ({ type, props, key }) },
     'lucide-react': { Plus: 'icon', Pencil: 'icon', Trash2: 'icon', RefreshCw: 'icon', KeyRound: 'icon', LogIn: 'icon', Unplug: 'icon', Download: 'icon', Upload: 'icon' },
     '../../i18n': localeModule,
-    '@zhin.js/console-ui': { Button: 'button', Input: 'input', SelectField: 'select', SearchableSelectField: 'select', Card: 'card', Dialog, DialogContent: 'content', DialogHeader: 'header', DialogTitle: 'title', DialogDescription: 'description', ErrorAlert: 'error', useConfirm: () => ({ ConfirmDialog: null, confirm: () => new Promise(resolve => confirms.push(resolve)) }), Tabs: 'tabs', TabsList: 'tabs-list', TabsTrigger: 'tab', TabsContent: 'tab-content', Alert: 'alert', AlertDescription: 'alert-description', Textarea: 'textarea' }, '../../components/StatusState': { StatusState: 'status-state' }, './SupportInfo': { SupportLabel: 'support-label', SupportNotice: 'support-notice', supportLabel: label => label },
+    '@zhin.js/console-ui': { Button: 'button', Input: 'input', SelectField: 'select', SearchableSelectField: 'select', Card: 'card', Dialog, DialogContent: 'content', DialogHeader: 'header', DialogTitle: 'title', DialogDescription: 'description', ErrorAlert: 'error', useConfirm: () => ({ ConfirmDialog: null, confirm: () => new Promise(resolve => confirms.push(resolve)) }), Tabs: 'tabs', TabsList: 'tabs-list', TabsTrigger: 'tab', TabsContent: 'tab-content', Alert: 'alert', AlertDescription: 'alert-description', AlertTitle: 'alert-title', Textarea: 'textarea' }, '../../components/StatusState': { StatusState: 'status-state' }, './SupportInfo': { SupportLabel: 'support-label', SupportNotice: 'support-notice', supportLabel: label => label },
     './ModelCapabilities': { ModelCapabilities: 'capabilities' }, './SchemaFields': { SchemaFields: 'schema' }, './model.mjs': model,
     './useInferenceManagement': { useInferenceManagement: management },
     './Services': { Services: 'services' }, './Profiles': { Profiles: 'profiles' }, './Accounts': { Accounts: 'accounts' }, './Purposes': { Purposes: 'purposes' }, './PersonalSessions': { PersonalSessions: 'sessions' },
@@ -40,6 +41,7 @@ async function fixture(page, options = {}) {
       query = (typeof next === 'function' ? next(new URLSearchParams(query)) : new URLSearchParams(next)).toString(); runtime.render()
     }] },
     './models-entry.mjs': modelsEntry,
+    '../../utils/plugin-rpc': { pluginRpc: async () => { throw new Error('ambient status unavailable') } }, './ambient-judge-model.mjs': ambientJudgeModel,
   }
   const filename = `${page}.tsx`
   const path = process.env.CONSOLE_FIXTURE_SOURCE_ROOT

@@ -12,6 +12,7 @@ import * as targetPreview from '../console-ui/src/pages/introspection/target-pre
 import * as layoutModel from '../console-ui/src/pages/introspection/capability-layout-model.mjs'
 import * as consoleRoutes from '../console-ui/src/console-routes.mjs'
 import * as featureModel from '../console-ui/src/pages/features/feature-model.mjs'
+import * as mcpStatus from '../console-ui/src/pages/introspection/mcp-status-model.mjs'
 
 const require = createRequire(import.meta.url)
 const read = path => readFile(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')
@@ -108,6 +109,8 @@ function loadExplorer(runtime, media) {
     './empty-state.mjs': emptyState,
     './target-preview.mjs': targetPreview,
     './capability-layout-model.mjs': layoutModel,
+    './mcp-status-model.mjs': mcpStatus,
+    './McpServerDetail': { McpServerDetail: 'mcp-server-detail' },
     './component-gallery.css': {},
   }
   const module = { exports: {} }
@@ -206,6 +209,44 @@ test('the header shows the server total and plugin-filtered counts are labelled 
   const [exact] = findAll(single.value, byClass('console-capability-count'))
   assert.equal(textOf(children(exact)[0]), '10')
   assert.equal(textOf(children(exact)[1]), '项')
+})
+
+test('MCP rows: waiting to connect is neutral, only a failed connection is red, and the inspector adds the MCP detail', () => {
+  // The inspector is expanded in a runtime of its own; hooks go to whichever runtime is rendering.
+  const runtime = createRuntime()
+  let active = runtime
+  const api = Object.fromEntries(Object.keys(runtime.api).map(name => [name, (...args) => active.api[name](...args)]))
+  const CapabilityExplorer = loadExplorer({ api }, { narrow: false })
+  const items = [
+    { name: 'idle-server', connected: false, toolCount: 0, status: 'idle', transport: 'stdio' },
+    { name: 'broken', connected: false, toolCount: 0, status: 'failed', lastError: { category: 'auth', message: 'HTTP 401', at: 1 } },
+    { name: 'live', connected: true, toolCount: 3, status: 'connected' },
+  ]
+  runtime.mount(() => CapabilityExplorer({ kind: 'mcp', items, readOnly: false, total: 3 }))
+  const [grid] = findAll(runtime.value, byName('McpGrid'))
+  const cards = findAll(grid.type(grid.props), byName('SelectableCard'))
+  const badgeOf = card => findAll(card, node => node.type === 'badge')[0]
+  assert.deepEqual(cards.map(card => [badgeOf(card).props.variant, textOf(badgeOf(card))]), [
+    ['secondary', '待连接'],
+    ['destructive', '连接失败'],
+    ['outline', '已连接'],
+  ])
+  assert.match(textOf(cards[1]), /认证失败：HTTP 401/)
+
+  const inspect = () => {
+    const [inspector] = findAll(runtime.value, byName('CapabilityInspector'))
+    const inner = createRuntime()
+    active = inner
+    try { return inner.mount(() => inspector.type(inspector.props)) } finally { active = runtime }
+  }
+  const idle = inspect()
+  assert.equal(findAll(idle, byClass('console-runtime-status-dot'))[0].props.className, 'console-runtime-status-dot is-idle', 'the idle dot is not the red offline dot')
+  const [detail] = findAll(idle, node => node.type === 'mcp-server-detail')
+  assert.equal(detail?.props.item.name, 'idle-server')
+  const properties = findAll(idle, byClass('console-capability-properties'))
+  assert.doesNotMatch(properties.map(textOf).join(''), /status|lastError/, 'status fields are not repeated as raw properties')
+  findAll(grid.type(grid.props), byName('SelectableCard'))[1].props.onSelect(cards[1].props.entry.id); runtime.render()
+  assert.equal(findAll(inspect(), byClass('console-runtime-status-dot'))[0].props.className, 'console-runtime-status-dot is-failed', 'a failed connection is an error, not just offline')
 })
 
 test('commands whose Host sends only a source path are grouped by package, with the path in a tooltip', () => {
