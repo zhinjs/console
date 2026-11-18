@@ -190,6 +190,14 @@ export function oauthCallbackProblem(value, redirectUri) {
   if (!pasted.searchParams.get('code') && !pasted.searchParams.get('error')) return 'no-code'
   return null
 }
+/**
+ * The authentication method a new account form uses (#64 `account-auth-single-option`): the one chosen,
+ * or, when the service type offers exactly one, that one, so 「保存」 does not wait on a pick with no choice.
+ */
+export function effectiveAuthMethod(chosen, methods) {
+  if (typeof chosen === 'string' && chosen) return chosen
+  return Array.isArray(methods) && methods.length === 1 ? methods[0] : ''
+}
 export function profileSupport(view, profile) {
   return serviceDriver(view, view.accounts[profile.accountId].serviceId)?.support
 }

@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Plus, Pencil, KeyRound, LogIn, Unplug, Trash2, Activity } from 'lucide-react'
 import { Button, Card, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, ErrorAlert, Input, SelectField, useConfirm } from '@zhin.js/console-ui'
 import { SupportLabel, SupportNotice, supportLabel } from './SupportInfo'
-import { accountHasModels, driverLabel, oauthCallbackProblem, serviceDriver } from './model.mjs'
+import { accountHasModels, driverLabel, effectiveAuthMethod, oauthCallbackProblem, serviceDriver } from './model.mjs'
 import {
   driverKey,
   canReferenceEnvironment,
@@ -555,6 +555,8 @@ function AccountForm({
   const canEditService = !service || service.ownerId === view.ownerId
   const methods =
     driver?.authentication.filter((value) => view.hostAdministrator || value !== 'oauth') ?? []
+  // A new account whose service type offers one method starts with it (an existing account keeps its own).
+  const authMethod = updating ? method : effectiveAuthMethod(method, methods)
   const disabled = m.busy || !!m.pending
 
   async function submit(event: FormEvent) {
@@ -564,7 +566,7 @@ function AccountForm({
     const targetAccount = updating ? account!.id : `account-${crypto.randomUUID()}`
     const authentication = updating
       ? account!.authentication
-      : { method, ...(method === 'api-key' && authSource ? { source: authSource } : {}) }
+      : { method: authMethod, ...(authMethod === 'api-key' && authSource ? { source: authSource } : {}) }
     const updateService = !service || (updating && canEditService)
     const saved = await m.savePlan({
       version: 1,
@@ -616,6 +618,9 @@ function AccountForm({
               })),
             ]}
           />
+          {!updating && !serviceId ? (
+            <span className="block text-xs text-muted-foreground">{i18n.t("在这里新增服务，和「服务」页签的「添加服务」是一样的：建好后其他账号也能选用。")}</span>
+          ) : null}
         </label>
         {!service ? (
           <label className="block space-y-2 text-sm">
@@ -667,7 +672,7 @@ function AccountForm({
             <span>{i18n.t("认证方式")}</span>
             <SelectField
               disabled={updating}
-              value={method}
+              value={authMethod}
               onValueChange={setMethod}
               options={[
                 { value: '', label: i18n.t("选择认证方式") },
@@ -680,7 +685,7 @@ function AccountForm({
             />
           </label>
         ) : null}
-        {method === 'api-key' && (canReferenceEnvironment(view) || (updating && authSource)) ? (
+        {authMethod === 'api-key' && (canReferenceEnvironment(view) || (updating && authSource)) ? (
           <label className="block space-y-2 text-sm">
             <span>{i18n.t("环境变量引用（可选）")}</span>
             <Input
@@ -696,12 +701,12 @@ function AccountForm({
               </span>
             ) : null}
           </label>
-        ) : method === 'api-key' && !updating ? (
+        ) : authMethod === 'api-key' && !updating ? (
           <p className="text-sm text-muted-foreground">
             {i18n.t("Console 用户的账号不能引用 Host 环境变量，请直接填写密钥，或由 Host 管理员在本机用命令添加（zhin ai account add）")}
           </p>
         ) : null}
-        <Button type="submit" disabled={!optionsValid || !method || !driver}>
+        <Button type="submit" disabled={!optionsValid || !authMethod || !driver}>
           {i18n.t("保存")}
         </Button>
       </fieldset>

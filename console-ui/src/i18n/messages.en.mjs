@@ -2831,6 +2831,7 @@ export const englishMessages = Object.freeze({
   "此服务设置也会应用于使用它的其他账号。": "These service settings also apply to other accounts that use this service.",
   "认证方式": "Authentication",
   "选择认证方式": "Select an authentication method",
+  "在这里新增服务，和「服务」页签的「添加服务」是一样的：建好后其他账号也能选用。": "Adding a service here is the same as “Add service” on the Services tab: other accounts can use it too.",
   "无需认证": "No authentication",
   "订阅登录": "Subscription sign-in",
   "环境变量引用（可选）": "Environment variable reference (optional)",
