@@ -187,6 +187,7 @@ export function resourceBindings(
 ): Record<'services' | 'accounts' | 'profiles', Record<string, string>>
 export function driverKey(driver: DriverRef): string
 export function serviceDriver(view: View, serviceId: string): Driver | undefined
+export function oauthCallbackProblem(value: string, redirectUri?: string | null): 'empty' | 'not-url' | 'other-address' | 'no-code' | null
 export function accountHasModels(view: Pick<View, 'profiles'> | null | undefined, accountId: string): boolean
 export function withModelKind(value: ModelDefinition, kind: Kind, checked: boolean): ModelDefinition
 export function withModelProtocol(value: ModelDefinition, protocol: string, driver: Driver | undefined): ModelDefinition
