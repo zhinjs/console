@@ -98,7 +98,8 @@ function judgeDayValid(day) {
 
 /**
  * `judges`, `decisionShadow` (older instances), and ADR 0066 / batch 47's `judgeChain`,
- * `minConfidence`, `compare`, `judgeDaily`, `judgeTimeZone`: each may be absent, never malformed.
+ * `minConfidence`, `compare`, `judgeDaily`, `judgeTimeZone`, and batch 48's `judgeToday`: each may be
+ * absent, never malformed.
  */
 function optionalAmbientFieldsValid(data) {
   if (data.judges !== undefined && !(Array.isArray(data.judges) && data.judges.every(isText))) return false
@@ -113,6 +114,8 @@ function optionalAmbientFieldsValid(data) {
   }
   if (data.judgeDaily !== undefined && !(Array.isArray(data.judgeDaily) && data.judgeDaily.every(judgeDayValid))) return false
   if (data.judgeTimeZone !== undefined && !isText(data.judgeTimeZone)) return false
+  // zhin batch 48: today on the instance clock in `judgeTimeZone`, the end of the usage window.
+  if (data.judgeToday !== undefined && !(isText(data.judgeToday) && DAY_PATTERN.test(data.judgeToday))) return false
   return true
 }
 

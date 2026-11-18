@@ -194,7 +194,7 @@ test('validateAmbientStatus accepts older and newer instances and rejects malfor
   assert.doesNotThrow(() => ambient.validateAmbientStatus(minimal), 'a later instance may drop the deprecated fields')
   const newer = status({
     judgeChain: [{ profile: 'ts', label: 'svc/ts', kind: 'decision', role: 'primary', skippedUntil: NOW + 60_000, skipReason: 'quota_exhausted' }, { profile: 'chat', label: 'svc/chat', role: 'compare' }],
-    minConfidence: 0.7, compare, judgeTimeZone: 'Asia/Shanghai',
+    minConfidence: 0.7, compare, judgeTimeZone: 'Asia/Shanghai', judgeToday: '2026-11-18',
     judgeDaily: [{ day: '2026-11-17', calls: 4, failed: 1, fallbacks: 1, byKind: { language: 1, decision: 3 }, averageMs: 800, inputTokens: 100, outputTokens: 20, cacheReadTokens: 0, cacheWriteTokens: 0, unreportedCalls: 1 }],
   })
   assert.equal(ambient.validateAmbientStatus(newer), newer)
@@ -209,6 +209,12 @@ test('validateAmbientStatus accepts older and newer instances and rejects malfor
     { judgeDaily: [{ day: '17/11', calls: 1 }] },
     { judgeDaily: [{ ...newer.judgeDaily[0], byKind: null }] },
     { judgeTimeZone: 8 },
+    // zhin batch 48: judgeToday may be absent, but when present it must be YYYY-MM-DD.
+    { judgeToday: '2026/11/18' },
+    { judgeToday: '18-11-2026' },
+    { judgeToday: '2026-11-18T00:00' },
+    { judgeToday: '' },
+    { judgeToday: 20261118 },
     { decisionShadow: { agreed: 1 } },
   ]) assert.throws(() => ambient.validateAmbientStatus(status(bad)), /格式不正确/u, JSON.stringify(bad))
 })
@@ -238,40 +244,78 @@ test('the chain card shows primary, fallbacks, the compared model and active ski
   assert.deepEqual(judge.ambientJudgeChainRows(status()), [], 'an older instance has no chain')
 })
 
-test('「机器人状态」 judge usage: seven days ending today (or the instance’s newer day), unreported calls noted, nothing for older instances', () => {
-  const day = (date, extra = {}) => ({ day: date, calls: 0, failed: 0, fallbacks: 0, byKind: { language: 0, decision: 0 }, averageMs: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, unreportedCalls: 0, ...extra })
-  const usage = judge.ambientJudgeDaily(status({ judgeTimeZone: 'Asia/Shanghai', judgeDaily: [
+const judgeUsageDay = (date, extra = {}) => ({ day: date, calls: 0, failed: 0, fallbacks: 0, byKind: { language: 0, decision: 0 }, averageMs: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, unreportedCalls: 0, ...extra })
+const usageRows = usage => usage.rows.map(row => [row.day, row.known ? row.calls : '无数据'])
+
+test('「机器人状态」 judge usage: seven days, unreported calls noted, nothing for older instances', () => {
+  const day = judgeUsageDay
+  const usage = judge.ambientJudgeDaily(status({ judgeTimeZone: 'Asia/Shanghai', judgeToday: '2026-11-18', judgeDaily: [
     day('2026-11-14', { calls: 5, failed: 1, fallbacks: 2, inputTokens: 300, outputTokens: 40 }),
     day('2026-11-18', { calls: 2, inputTokens: 50, outputTokens: 5, unreportedCalls: 1 }),
   ] }), 'zh-CN', NOW)
   assert.deepEqual(usage.rows.map(row => row.day), ['2026-11-12', '2026-11-13', '2026-11-14', '2026-11-15', '2026-11-16', '2026-11-17', '2026-11-18'])
   assert.deepEqual(usage.rows.map(row => row.calls), [0, 0, 5, 0, 0, 0, 2], 'days without calls read 0')
+  assert.ok(usage.rows.every(row => row.known), 'with judgeToday every day of the window is what the instance keeps')
   assert.equal(usage.rows[2].tokens, 340)
   assert.deepEqual(usage.total, { calls: 7, failed: 1, fallbacks: 2, inputTokens: 350, outputTokens: 45, unreportedCalls: 1 })
   assert.equal(usage.unreported, true)
   assert.equal(usage.timeZone, 'Asia/Shanghai')
   assert.equal(judge.ambientJudgeDaily(status({ judgeTimeZone: 'Asia/Shanghai', judgeDaily: [] }), 'zh-CN', NOW).unreported, false)
   assert.equal(judge.ambientJudgeDaily(status()), null, 'an instance without judgeDaily shows nothing')
-  // Review N2 (replaces the M4 assertion of the previous round, which expected the wrong window): the
-  // window ends on the later of today in the instance zone and the latest reported day. Basing it on
-  // the latest reported day alone left today out and showed days the instance had already pruned as 0.
-  const quietToday = judge.ambientJudgeDaily(status({ judgeTimeZone: 'Asia/Shanghai', judgeDaily: [day('2026-11-14', { calls: 4 })] }), 'zh-CN', NOW)
-  assert.deepEqual([quietToday.rows[0].day, quietToday.rows.at(-1).day], ['2026-11-12', '2026-11-18'], 'today (no calls yet) is the last row')
-  assert.deepEqual(quietToday.rows.map(row => row.calls), [0, 0, 4, 0, 0, 0, 0])
-  // Days before 11-12 are outside what the instance keeps; they are not shown as 0.
-  assert.ok(quietToday.rows.every(row => row.day >= '2026-11-12'))
-  // An instance whose clock is ahead of the browser (its newest day is tomorrow here): that day ends the window.
-  const ahead = judge.ambientJudgeDaily(status({ judgeTimeZone: 'Asia/Shanghai', judgeDaily: [day('2026-11-19', { calls: 3 })] }), 'zh-CN', NOW)
-  assert.deepEqual([ahead.rows[0].day, ahead.rows.at(-1).day], ['2026-11-13', '2026-11-19'])
-  // A browser clock days ahead: the window follows today; the old reported day has left what is kept.
-  const browserAhead = judge.ambientJudgeDaily(status({ judgeTimeZone: 'Asia/Shanghai', judgeDaily: [day('2026-11-18', { calls: 3 })] }), 'zh-CN', Date.UTC(2026, 10, 25, 4))
-  assert.deepEqual([browserAhead.rows[0].day, browserAhead.rows.at(-1).day], ['2026-11-19', '2026-11-25'])
-  // Today is cut in the instance zone: 11-18 23:30 UTC is already 11-19 in Shanghai.
-  assert.equal(judge.ambientJudgeDaily(status({ judgeTimeZone: 'Asia/Shanghai', judgeDaily: [] }), 'zh-CN', Date.UTC(2026, 10, 18, 23, 30)).rows.at(-1).day, '2026-11-19')
-  // A zone this browser does not know: only the reported days, nothing filled in or guessed.
-  assert.deepEqual(judge.ambientJudgeDaily(status({ judgeTimeZone: 'Not/AZone', judgeDaily: [day('2026-03-01', { calls: 1 }), day('2026-02-27', { calls: 2 })] })).rows.map(row => [row.day, row.calls]),
-    [['2026-02-27', 2], ['2026-03-01', 1]])
   assert.doesNotMatch(usage.rows.map(row => judge.ambientJudgeDaily(status({ judgeTimeZone: 'UTC', judgeDaily: [] }), 'en', NOW).rows[0].label).join(''), CJK)
+})
+
+test('judge usage with judgeToday (zhin batch 48): the window is judgeToday and the 6 days before it, whatever the browser clock says', () => {
+  const day = judgeUsageDay
+  const kept = [day('2026-11-12', { calls: 1 }), day('2026-11-15', { calls: 2 }), day('2026-11-18', { calls: 3 })]
+  // A browser clock 7 days ahead of the instance: the window does not move, the instance's last days stay.
+  const browserFast = judge.ambientJudgeDaily(status({ judgeTimeZone: 'Asia/Shanghai', judgeToday: '2026-11-18', judgeDaily: kept }), 'zh-CN', NOW + 7 * 86_400_000)
+  assert.deepEqual(usageRows(browserFast), [['2026-11-12', 1], ['2026-11-13', 0], ['2026-11-14', 0], ['2026-11-15', 2], ['2026-11-16', 0], ['2026-11-17', 0], ['2026-11-18', 3]])
+  // A browser clock 10 minutes behind, across midnight: 23:55 on 11-18 in Shanghai here, already 00:05
+  // on 11-19 on the instance, which has pruned 11-12. The window is 11-13..11-19: the pruned day is not
+  // shown (as 0 or otherwise) and the instance's today is the last row.
+  const browserSlow = judge.ambientJudgeDaily(status({ judgeTimeZone: 'Asia/Shanghai', judgeToday: '2026-11-19', judgeDaily: kept.slice(1) }), 'zh-CN', Date.UTC(2026, 10, 18, 15, 55))
+  assert.deepEqual(usageRows(browserSlow), [['2026-11-13', 0], ['2026-11-14', 0], ['2026-11-15', 2], ['2026-11-16', 0], ['2026-11-17', 0], ['2026-11-18', 3], ['2026-11-19', 0]])
+  // Not even a zone this browser does not know matters: judgeToday is already a date in the instance zone.
+  assert.deepEqual(judge.ambientJudgeDaily(status({ judgeTimeZone: 'Not/AZone', judgeToday: '2026-03-01', judgeDaily: [day('2026-03-01', { calls: 1 })] })).rows.map(row => row.day),
+    ['2026-02-23', '2026-02-24', '2026-02-25', '2026-02-26', '2026-02-27', '2026-02-28', '2026-03-01'])
+})
+
+test('judge usage of an older instance (no judgeToday): the browser clock is clamped to the reported days, unknown days read 「无数据」', () => {
+  const day = judgeUsageDay
+  const old = (judgeDaily, now) => judge.ambientJudgeDaily(status({ judgeTimeZone: 'Asia/Shanghai', judgeDaily }), 'zh-CN', now)
+  // Clocks agree. Days between the earliest and latest reported day are 0; before the earliest the
+  // instance may already have pruned, after the latest it may not have reached: 「无数据」, not 0.
+  assert.deepEqual(usageRows(old([day('2026-11-14', { calls: 5 }), day('2026-11-16', { calls: 2 })], NOW)),
+    [['2026-11-12', '无数据'], ['2026-11-13', '无数据'], ['2026-11-14', 5], ['2026-11-15', 0], ['2026-11-16', 2], ['2026-11-17', '无数据'], ['2026-11-18', '无数据']])
+  // Re-review low 1, browser 10 minutes behind across midnight (11-18 23:55 here, 11-19 on the instance,
+  // which pruned 11-12): 11-12 is no longer shown as 0. The instance's today cannot be known here, so the
+  // days after its latest report read 「无数据」 rather than 0.
+  const slow = Date.UTC(2026, 10, 18, 15, 55)
+  assert.deepEqual(usageRows(old([day('2026-11-14', { calls: 4 })], slow)),
+    [['2026-11-12', '无数据'], ['2026-11-13', '无数据'], ['2026-11-14', 4], ['2026-11-15', '无数据'], ['2026-11-16', '无数据'], ['2026-11-17', '无数据'], ['2026-11-18', '无数据']])
+  // Once the instance reports its today (11-19), the window ends there, so that day is in the table.
+  assert.deepEqual(usageRows(old([day('2026-11-14', { calls: 4 }), day('2026-11-19', { calls: 1 })], slow)),
+    [['2026-11-13', '无数据'], ['2026-11-14', 4], ['2026-11-15', 0], ['2026-11-16', 0], ['2026-11-17', 0], ['2026-11-18', 0], ['2026-11-19', 1]])
+  // Re-review low 2, browser 7 days ahead (11-25): the window ends no later than 6 days after the earliest
+  // reported day, so the instance's real last days stay in the table.
+  const fast = Date.UTC(2026, 10, 25, 4)
+  assert.deepEqual(usageRows(old([day('2026-11-13', { calls: 2 }), day('2026-11-18', { calls: 3 })], fast)),
+    [['2026-11-13', 2], ['2026-11-14', 0], ['2026-11-15', 0], ['2026-11-16', 0], ['2026-11-17', 0], ['2026-11-18', 3], ['2026-11-19', '无数据']])
+  // This round rewrites `browserAhead` (console#152 re-review): it used to expect the window to follow the
+  // browser to 11-19..11-25, which dropped the instance's only reported day 11-18 and filled the rest with
+  // 0s. Now the window starts no earlier than 6 days before the latest reported day and ends no later than
+  // 6 days after it: 11-18 stays, the later days read 「无数据」.
+  const browserAhead = old([day('2026-11-18', { calls: 3 })], fast)
+  assert.deepEqual(usageRows(browserAhead), [['2026-11-18', 3], ['2026-11-19', '无数据'], ['2026-11-20', '无数据'], ['2026-11-21', '无数据'], ['2026-11-22', '无数据'], ['2026-11-23', '无数据'], ['2026-11-24', '无数据']])
+  // An instance clock ahead of the browser (its newest day is tomorrow here): that day ends the window.
+  const ahead = old([day('2026-11-19', { calls: 3 })], NOW)
+  assert.deepEqual([ahead.rows[0].day, ahead.rows.at(-1).day], ['2026-11-13', '2026-11-19'])
+  // Today is cut in the instance zone: 11-18 23:30 UTC is already 11-19 in Shanghai.
+  assert.equal(old([], Date.UTC(2026, 10, 18, 23, 30)).rows.at(-1).day, '2026-11-19')
+  // A zone this browser does not know: only the reported days, nothing filled in or guessed.
+  assert.deepEqual(judge.ambientJudgeDaily(status({ judgeTimeZone: 'Not/AZone', judgeDaily: [day('2026-03-01', { calls: 1 }), day('2026-02-27', { calls: 2 })] })).rows.map(row => [row.day, row.calls, row.known]),
+    [['2026-02-27', 2, true], ['2026-03-01', 1, true]])
 })
 
 // ------------------------------------------------------------- the interjection page settings

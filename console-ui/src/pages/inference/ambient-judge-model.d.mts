@@ -83,6 +83,8 @@ export function ambientJudgeChainRows(status: unknown, locale?: Locale, now?: nu
 export interface AmbientJudgeDailyRow {
   day: string
   label: string
+  /** False: the instance may hold no record of this day (shown as 「无数据」, not 0). */
+  known: boolean
   calls: number
   failed: number
   fallbacks: number

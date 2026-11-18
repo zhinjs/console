@@ -59,7 +59,7 @@ export function AmbientJudgeUsage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {daily.rows.map((row) => (
+              {daily.rows.map((row) => row.known ? (
                 <TableRow key={row.day}>
                   <TableCell><span title={row.day}>{row.label}</span></TableCell>
                   <TableCell className="text-right">{number(row.calls)}</TableCell>
@@ -72,6 +72,11 @@ export function AmbientJudgeUsage() {
                     {row.unreportedCalls > 0 ? <span className="block text-xs text-muted-foreground">{i18n.t("{0} 次未回报", [row.unreportedCalls])}</span> : null}
                   </TableCell>
                 </TableRow>
+              ) : (
+                <TableRow key={row.day} data-judge-day-unknown="">
+                  <TableCell><span title={row.day}>{row.label}</span></TableCell>
+                  <TableCell colSpan={4} className="text-right text-muted-foreground">{i18n.t("无数据")}</TableCell>
+                </TableRow>
               ))}
             </TableBody>
           </Table>
@@ -79,6 +84,9 @@ export function AmbientJudgeUsage() {
       )}
       {daily.total.calls > 0 ? (
         <p className="mt-2 text-xs text-muted-foreground" role="note">{i18n.t("按判断模型的调用计数：开启对照时，每次判断计 2 次。")}</p>
+      ) : null}
+      {daily.rows.some(row => !row.known) ? (
+        <p className="mt-1 text-xs text-muted-foreground" role="note">{i18n.t("「无数据」：实例版本较旧，没有报告它的日期，这几天可能已被清理或还没到，不代表没有判断。")}</p>
       ) : null}
       {daily.unreported ? (
         <p className="mt-1 text-xs text-muted-foreground" role="note">{i18n.t("部分调用未回报用量，token 合计偏少。")}</p>

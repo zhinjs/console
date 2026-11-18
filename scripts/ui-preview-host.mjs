@@ -133,6 +133,8 @@ const ambientStatus = { enabled: true, mode: 'shadow', groups: 1, judges: ['prev
     compare: { windowMs: DAY, agreed: 17, primaryOnly: 2, comparedOnly: 1, failed: 1, comparedProfiles: ['openai:gpt-5.5-mini'],
       byMember: [{ member: 0, profile: 'deepseek:deepseek-v4-flash', agreed: 12, primaryOnly: 2, comparedOnly: 0, failed: 1 }, { member: 1, profile: 'night:gemini-3.8-flash', agreed: 5, primaryOnly: 0, comparedOnly: 1, failed: 0 }] },
     judgeTimeZone: 'Asia/Shanghai',
+    // zhin batch 48: today on the instance clock; the usage window is this day and the 6 before it.
+    judgeToday: new Date(now).toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }),
     judgeDaily: [judgeDay(6, 12), judgeDay(4, 31, { failed: 2, fallbacks: 3 }), judgeDay(3, 18), judgeDay(1, 26, { fallbacks: 1, unreportedCalls: 2 }), judgeDay(0, 9, { failed: 1, fallbacks: 4 })],
   }) }
 // `GET /agent/inference/ambient-judge`: migrated, not yet noticed (the Console banner shows once).
