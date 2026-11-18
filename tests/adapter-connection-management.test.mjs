@@ -26,11 +26,12 @@ test('the published SDK embedded mode replaces the old header-hiding CSS', async
   assert.doesNotMatch(css, /data-sdk-embedded|\.zk-page-header/)
   const sdk = await readFile(new URL('../node_modules/@zhin.js/client/dist/adapter-console/AdapterConsolePage.js', import.meta.url), 'utf8')
   assert.match(sdk, /ADAPTER_CONSOLE_PAGE_CAPABILITIES = Object\.freeze\(\{ embedded: true, toolbar: true, refreshKey: true[ ,}]/)
-  assert.match(sdk, /!embedded && _jsx\(PageHeader/, 'embedded mode draws no SDK page header')
+  // client 1.4 draws its header through RendererPage, which leaves the page chrome to the host when embedded.
+  assert.match(sdk, /_jsxs?\(RendererPage, \{[^]*?embedded: embedded,/, 'embedded mode hands the page header to the host')
 })
 
 test('headless accounts come from the installed client, typed by the SDK; only viewers who manage connections get the provider', async () => {
-  // The pinned client (~1.2.1) ships the whole headless API and the page honours `hostAccounts`.
+  // The pinned client (~1.4.0) ships the whole headless API and the page honours `hostAccounts`.
   const client = await import('@zhin.js/client')
   assert.equal(client.AdapterConsolePage.capabilities?.hostAccounts, true)
   assert.equal(client.ADAPTER_CONSOLE_PAGE_CAPABILITIES.hostAccounts, true)

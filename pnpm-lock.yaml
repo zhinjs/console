@@ -28,17 +28,17 @@ importers:
         specifier: ~1.7.0
         version: 1.7.0(ai@7.0.173(zod@4.6.7))(zod@4.6.7)
       '@zhin.js/client':
-        specifier: ~1.2.1
-        version: 1.2.1(react@19.2.6)
-      '@zhin.js/console-protocol':
         specifier: ~1.4.0
-        version: 1.4.0
+        version: 1.4.0(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(stylelint@17.16.0(typescript@6.0.3))
+      '@zhin.js/console-protocol':
+        specifier: ~1.6.1
+        version: 1.6.1
       '@zhin.js/console-ui':
-        specifier: ~1.1.1
-        version: 1.1.1(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(stylelint@17.16.0(typescript@6.0.3))
+        specifier: ~1.2.0
+        version: 1.2.0(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(stylelint@17.16.0(typescript@6.0.3))
       '@zhin.js/contract':
-        specifier: ~1.1.27
-        version: 1.1.27(react@19.2.6)
+        specifier: ~1.1.30
+        version: 1.1.30(react@19.2.6)
       zod:
         specifier: ^4.6.7
         version: 4.6.7
@@ -1350,18 +1350,18 @@ packages:
       '@ai-sdk/openai-compatible':
         optional: true
 
-  '@zhin.js/client@1.2.1':
-    resolution: {integrity: sha512-Cd75GvAPOOc2kNc/hgPkKO3KlUIFLf1h+2y/V2+dZJQOvZ6wI1nLnaUmvnWheisNsqrxW4TrhGW86Om0gnoL0g==}
+  '@zhin.js/client@1.4.0':
+    resolution: {integrity: sha512-J7VrZaMaHOCaMvVEltZ/fVVbiv9AdsVqE42ECug7jUdnA9bgfp4OkngODshwfYjVRluDScHCk279H3jyT/wcng==}
     engines: {node: '>=22.19.0'}
     peerDependencies:
       react: '>=18'
 
-  '@zhin.js/console-protocol@1.4.0':
-    resolution: {integrity: sha512-0kqWsvan4uJG6WafSQ5DRNo6/glL86mYfDkzdlfeL5q2dpe5OMj7wFGx3wdRILldu00dtQ9jzqZyqjIUUagWog==}
+  '@zhin.js/console-protocol@1.6.1':
+    resolution: {integrity: sha512-hcHcgSf/jrKDwYyEeIGqjtGh+Uc3RVRBiAdE13o32ImOqu60hmTjYt/qKoR6hj43vRwuy3sgog+rpKjCmWZ+JQ==}
     engines: {node: '>=22.19.0'}
 
-  '@zhin.js/console-ui@1.1.1':
-    resolution: {integrity: sha512-nt7guZv8UhBp8hD3PVaW+Wo9ZE8AsY47ag2Q8m4eS6jPKgp2eoOJSJOgMYMY5P6MDeMkdvXXS7TtuVGCjXuDkw==}
+  '@zhin.js/console-ui@1.2.0':
+    resolution: {integrity: sha512-NhnB76XPv51C+ww/PSBBy7oY1n++6rUz96ztFok4q6jNNEcc9uYp8AhxBXgoOrGEjE3ejH5b/MO6TRqEUwxV3A==}
     engines: {node: '>=22.19.0'}
     peerDependencies:
       '@playwright/test': '>=1.50'
@@ -1377,8 +1377,8 @@ packages:
       stylelint:
         optional: true
 
-  '@zhin.js/contract@1.1.27':
-    resolution: {integrity: sha512-vQpNTdqmbk9r+6ehuIiLVj+B0mmf+aHqkm/nxkgSr6ikIKDcUbY9pyBdos5+HWjL4eagcRiceOEJdje2OZDzjQ==}
+  '@zhin.js/contract@1.1.30':
+    resolution: {integrity: sha512-EZukwdZ5fss8I9sDm7fGEfs6YveIOroG1cGXu4DS57rWx6yb2A3J+sBoLnVlVMFNqqJesiXzSPL61MobmbWWag==}
     engines: {node: '>=22.19.0'}
     peerDependencies:
       react: '>=18'
@@ -4480,17 +4480,23 @@ snapshots:
       undici: 8.12.4
       zod: 4.6.7
 
-  '@zhin.js/client@1.2.1(react@19.2.6)':
+  '@zhin.js/client@1.4.0(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(stylelint@17.16.0(typescript@6.0.3))':
     dependencies:
-      '@zhin.js/console-protocol': 1.4.0
-      '@zhin.js/contract': 1.1.27(react@19.2.6)
-      clsx: 2.1.1
+      '@zhin.js/console-protocol': 1.6.1
+      '@zhin.js/console-ui': 1.2.0(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(stylelint@17.16.0(typescript@6.0.3))
+      '@zhin.js/contract': 1.1.30(react@19.2.6)
       react: 19.2.6
-      tailwind-merge: 3.6.0
+    transitivePeerDependencies:
+      - '@playwright/test'
+      - '@types/react'
+      - '@types/react-dom'
+      - esbuild
+      - react-dom
+      - stylelint
 
-  '@zhin.js/console-protocol@1.4.0': {}
+  '@zhin.js/console-protocol@1.6.1': {}
 
-  '@zhin.js/console-ui@1.1.1(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(stylelint@17.16.0(typescript@6.0.3))':
+  '@zhin.js/console-ui@1.2.0(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(stylelint@17.16.0(typescript@6.0.3))':
     dependencies:
       class-variance-authority: 0.7.1
       clsx: 2.1.1
@@ -4505,9 +4511,9 @@ snapshots:
       - '@types/react'
       - '@types/react-dom'
 
-  '@zhin.js/contract@1.1.27(react@19.2.6)':
+  '@zhin.js/contract@1.1.30(react@19.2.6)':
     dependencies:
-      '@zhin.js/console-protocol': 1.4.0
+      '@zhin.js/console-protocol': 1.6.1
     optionalDependencies:
       react: 19.2.6
 

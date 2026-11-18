@@ -16,7 +16,7 @@ test('cards and task rows read the card elevation token (the successor of --cons
   assert.match(design, /--console-shadow-xl:/)
   assert.match(design, /\.console-card\s*\{[\s\S]*?box-shadow:\s*var\(--console-card-elevation\)/)
   assert.match(design, /\.console-sheet-content\[data-side="right"\]/)
-  assert.match(design, /--console-shadow-ring:/)
+  assert.match(design, /--zc-shadow-ring:/)
   assert.match(design, /\.console-card\s*\{[\s\S]*?border:[^;]*transparent/)
   assert.match(design, /\.console-dialog-overlay[\s\S]*?backdrop-filter:\s*blur\(4px\)/)
   assert.match(resources, /\.console-task-row\s*\{[\s\S]*?box-shadow:\s*var\(--console-card-elevation\)/)
