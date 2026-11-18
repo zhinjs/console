@@ -272,18 +272,40 @@ export function ambientJudgeState({ judge = null, judgeMissing = false, status =
  * - `merged` with the policy read: `judgeMode` when the mode changes (written to `purposes.ambient`).
  * - `merged` without the policy: only a behaviour whose mode is already known to be in effect;
  *   anything else is `blocked` (`no-policy-shadow` when the target is 只观察, else `no-policy`).
- * - `unknown`: nothing about the mode; turning interjection on or switching the mode is `blocked`.
+ * - `unknown`: nothing about the mode; turning interjection on or switching the mode is `blocked`
+ *   (`unknown`), and so is widening where or how often it may speak (`unknown-expand`, review N1):
+ *   the mode shown may be the yml value while another mode runs, so a new group could get replies
+ *   the person believes are only observed. Narrowing (removing groups, 所有群 → 只在这些群, fewer
+ *   per hour) stays allowed.
  * 关闭 only clears the groups and is never blocked.
+ *
+ * `initial` is the settings read from the Host (a bare behaviour is accepted for older callers).
  */
-export function ambientModePlan(settings, initialBehavior, judge = { state: 'legacy' }) {
+export function ambientModePlan(settings, initial, judge = { state: 'legacy' }) {
+  const before = typeof initial === 'string' ? { behavior: initial } : initial ?? {}
   const none = { writeYmlMode: false, judgeMode: null, blocked: null }
   if (judge.state === 'legacy') return { ...none, writeYmlMode: true }
   if (settings.behavior === 'off') return none
   const wanted = settings.behavior === 'watch' ? 'shadow' : 'active'
-  if (judge.state !== 'merged') return initialBehavior === settings.behavior ? none : { ...none, blocked: 'unknown' }
+  if (judge.state !== 'merged') {
+    if (before.behavior !== settings.behavior) return { ...none, blocked: 'unknown' }
+    return ambientScopeWidened(settings, before) ? { ...none, blocked: 'unknown-expand' } : none
+  }
   if (judge.policy) return { ...none, judgeMode: wanted === judge.mode ? null : wanted }
   if (judge.mode !== undefined && wanted === judge.mode) return none
   return { ...none, blocked: wanted === 'shadow' ? 'no-policy-shadow' : 'no-policy' }
+}
+
+/**
+ * Whether a draft lets interjection reach more than what was read: 所有群 where it was a list, a group
+ * that was not in the list, or a higher hourly cap. Without the read groups (an older caller) any
+ * change of scope counts as widening.
+ */
+export function ambientScopeWidened(settings, initial) {
+  if (!initial || !Array.isArray(initial.groups) || !initial.groupScope) return true
+  if (settings.groupScope === 'all') return initial.groupScope !== 'all'
+  if (initial.groupScope !== 'all' && settings.groups.some(group => !initial.groups.includes(group))) return true
+  return typeof initial.maxPerHour === 'number' && settings.maxPerHour > initial.maxPerHour
 }
 
 /** The keys a save writes (`ai.trigger.ambient.*` → value), for comparing a read-back with the draft. */

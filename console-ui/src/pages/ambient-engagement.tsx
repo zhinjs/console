@@ -340,17 +340,19 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
   const judge: JudgeSettings = initial.judge ?? { state: 'legacy' }
   // ADR 0066: 「只观察 / 主动参与」 is the judge's mode (`purposes.ambient.mode`). It is written only when
   // the judge was read; an instance whose state is not certain gets nothing written about the mode.
-  const modePlan = ambientModePlan(draft, initial.settings.behavior, judge)
+  const modePlan = ambientModePlan(draft, initial.settings, judge)
   const modeName = (mode: 'active' | 'shadow') => mode === 'shadow' ? i18n.t("只观察") : i18n.t("主动参与")
   const blockedText = modePlan.blocked === 'unknown'
     ? i18n.t("无法确认实例版本或读取插话判断，暂不能修改只观察。")
+    : modePlan.blocked === 'unknown-expand'
+      ? i18n.t("读到实际模式之前，不能扩大插话范围（新增群、改成所有群或调高次数）。可以关闭插话，或缩小范围。")
     : modePlan.blocked === 'no-policy-shadow'
       ? i18n.t("没有读到插话判断的设置，暂不能切到「只观察」：只保存群列表的话，机器人会照常插话。只有 Host 管理员可以修改。")
       : modePlan.blocked === 'no-policy'
         ? i18n.t("没有读到插话判断的设置，暂不能修改「只观察 / 主动参与」。只有 Host 管理员可以修改。")
         : null
   const problems = [...validateAmbientSettings(draft, i18n.locale), ...(blockedText ? [blockedText] : [])]
-  const choiceSelectable = (value: AmbientBehavior) => value === 'off' || ambientModePlan({ ...draft, behavior: value }, initial.settings.behavior, judge).blocked === null
+  const choiceSelectable = (value: AmbientBehavior) => value === 'off' || ambientModePlan({ ...draft, behavior: value }, initial.settings, judge).blocked === null
   const showsGroupOptions = behavior !== 'off'
   const focusIncluded = focusGroup ? behavior !== 'off' && (groupScope === 'all' || groups.includes(focusGroup)) : false
   const includeFocusGroup = () => {
@@ -451,15 +453,19 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">{i18n.t("机器人要不要自己接话？")}</legend>
         <RadioGroup aria-label={i18n.t("机器人要不要自己接话？")} name="ambient-behavior" value={behavior} onValueChange={value => setBehavior(value as AmbientBehavior)}>
-          {BEHAVIOR_CHOICES.map((choice) => <label key={choice.value} className="console-choice-card">
-            <RadioGroupItem value={choice.value} className="mt-1" disabled={!choiceSelectable(choice.value)} />
+          {BEHAVIOR_CHOICES.map((choice) => {
+            // Review N3: a locked choice is locked as a whole card, not only its dot.
+            const locked = !choiceSelectable(choice.value)
+            return <label key={choice.value} className="console-choice-card" aria-disabled={locked || undefined} data-disabled={locked ? '' : undefined}>
+            <RadioGroupItem value={choice.value} className="mt-1" disabled={locked} />
             <span><span className="font-medium">{i18n.t(choice.label, undefined, "state")}</span><span className="block text-xs text-muted-foreground">{i18n.t(choice.hint)}</span></span>
-          </label>)}
+          </label>
+          })}
         </RadioGroup>
         {behavior === 'off' && initial.settings.groups.length > 0 && <p className="text-xs text-muted-foreground">{i18n.t("关闭后会清空下面的群列表，以后重新打开时要再填一次。")}</p>}
         {judge.state === 'merged' && behavior !== 'off' ? <p className="text-xs text-muted-foreground">{i18n.t("「只观察」保存在插话判断里（AI 与模型 → 用途），对所有开启的群生效。")}</p> : null}
         {judge.state === 'unknown' ? <div className="flex flex-wrap items-center gap-2 text-xs text-warning" role="status" data-ambient-mode-unknown="">
-          <span>{i18n.t("无法确认实例版本或读取插话判断，暂不能修改只观察。上面显示的是配置文件里的值，不一定是实际生效的模式。")}</span>
+          <span>{i18n.t("无法确认实例版本或读取插话判断，暂不能修改只观察，也不能扩大插话范围。上面显示的是配置文件里的值，不一定是实际生效的模式。没有读取群聊插话状态的权限时，旧版本实例也会这样显示。")}</span>
           <Button type="button" size="sm" variant="outline" onClick={() => { void onReload().catch(() => {}) }}>{i18n.t("重新读取")}</Button>
         </div> : null}
       </fieldset>

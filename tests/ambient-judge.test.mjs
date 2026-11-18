@@ -238,7 +238,7 @@ test('the chain card shows primary, fallbacks, the compared model and active ski
   assert.deepEqual(judge.ambientJudgeChainRows(status()), [], 'an older instance has no chain')
 })
 
-test('「机器人状态」 judge usage: seven days up to the instance’s latest day, unreported calls noted, nothing for older instances', () => {
+test('「机器人状态」 judge usage: seven days ending today (or the instance’s newer day), unreported calls noted, nothing for older instances', () => {
   const day = (date, extra = {}) => ({ day: date, calls: 0, failed: 0, fallbacks: 0, byKind: { language: 0, decision: 0 }, averageMs: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, unreportedCalls: 0, ...extra })
   const usage = judge.ambientJudgeDaily(status({ judgeTimeZone: 'Asia/Shanghai', judgeDaily: [
     day('2026-11-14', { calls: 5, failed: 1, fallbacks: 2, inputTokens: 300, outputTokens: 40 }),
@@ -252,13 +252,25 @@ test('「机器人状态」 judge usage: seven days up to the instance’s lates
   assert.equal(usage.timeZone, 'Asia/Shanghai')
   assert.equal(judge.ambientJudgeDaily(status({ judgeTimeZone: 'Asia/Shanghai', judgeDaily: [] }), 'zh-CN', NOW).unreported, false)
   assert.equal(judge.ambientJudgeDaily(status()), null, 'an instance without judgeDaily shows nothing')
-  // Review M4: the base is the latest day the instance reported, never the browser clock.
-  const ahead = judge.ambientJudgeDaily(status({ judgeTimeZone: 'Pacific/Kiritimati', judgeDaily: [day('2026-11-19', { calls: 3 })] }), 'zh-CN', NOW)
-  assert.equal(ahead.rows.at(-1).day, '2026-11-19')
-  const browserAhead = judge.ambientJudgeDaily(status({ judgeTimeZone: 'Asia/Shanghai', judgeDaily: [day('2026-11-18', { calls: 3 })] }), 'zh-CN', Date.UTC(2026, 10, 25))
-  assert.deepEqual([browserAhead.rows[0].day, browserAhead.rows.at(-1).day], ['2026-11-12', '2026-11-18'], 'a browser clock days ahead does not move the window')
-  assert.deepEqual(judge.ambientJudgeDaily(status({ judgeTimeZone: 'Not/AZone', judgeDaily: [day('2026-03-01', { calls: 1 })] })).rows.map(row => row.day),
-    ['2026-02-23', '2026-02-24', '2026-02-25', '2026-02-26', '2026-02-27', '2026-02-28', '2026-03-01'], 'calendar arithmetic, any zone')
+  // Review N2 (replaces the M4 assertion of the previous round, which expected the wrong window): the
+  // window ends on the later of today in the instance zone and the latest reported day. Basing it on
+  // the latest reported day alone left today out and showed days the instance had already pruned as 0.
+  const quietToday = judge.ambientJudgeDaily(status({ judgeTimeZone: 'Asia/Shanghai', judgeDaily: [day('2026-11-14', { calls: 4 })] }), 'zh-CN', NOW)
+  assert.deepEqual([quietToday.rows[0].day, quietToday.rows.at(-1).day], ['2026-11-12', '2026-11-18'], 'today (no calls yet) is the last row')
+  assert.deepEqual(quietToday.rows.map(row => row.calls), [0, 0, 4, 0, 0, 0, 0])
+  // Days before 11-12 are outside what the instance keeps; they are not shown as 0.
+  assert.ok(quietToday.rows.every(row => row.day >= '2026-11-12'))
+  // An instance whose clock is ahead of the browser (its newest day is tomorrow here): that day ends the window.
+  const ahead = judge.ambientJudgeDaily(status({ judgeTimeZone: 'Asia/Shanghai', judgeDaily: [day('2026-11-19', { calls: 3 })] }), 'zh-CN', NOW)
+  assert.deepEqual([ahead.rows[0].day, ahead.rows.at(-1).day], ['2026-11-13', '2026-11-19'])
+  // A browser clock days ahead: the window follows today; the old reported day has left what is kept.
+  const browserAhead = judge.ambientJudgeDaily(status({ judgeTimeZone: 'Asia/Shanghai', judgeDaily: [day('2026-11-18', { calls: 3 })] }), 'zh-CN', Date.UTC(2026, 10, 25, 4))
+  assert.deepEqual([browserAhead.rows[0].day, browserAhead.rows.at(-1).day], ['2026-11-19', '2026-11-25'])
+  // Today is cut in the instance zone: 11-18 23:30 UTC is already 11-19 in Shanghai.
+  assert.equal(judge.ambientJudgeDaily(status({ judgeTimeZone: 'Asia/Shanghai', judgeDaily: [] }), 'zh-CN', Date.UTC(2026, 10, 18, 23, 30)).rows.at(-1).day, '2026-11-19')
+  // A zone this browser does not know: only the reported days, nothing filled in or guessed.
+  assert.deepEqual(judge.ambientJudgeDaily(status({ judgeTimeZone: 'Not/AZone', judgeDaily: [day('2026-03-01', { calls: 1 }), day('2026-02-27', { calls: 2 })] })).rows.map(row => [row.day, row.calls]),
+    [['2026-02-27', 2], ['2026-03-01', 1]])
   assert.doesNotMatch(usage.rows.map(row => judge.ambientJudgeDaily(status({ judgeTimeZone: 'UTC', judgeDaily: [] }), 'en', NOW).rows[0].label).join(''), CJK)
 })
 
@@ -284,7 +296,7 @@ test('review H1: an older instance needs proof; a failed read is unknown and the
   assert.equal(ambient.ambientJudgeState({ judgeMissing: missing, status: null }).state, 'unknown', 'a missing route alone is not proof')
   assert.equal(ambient.ambientJudgeState({ judgeMissing: false, status: status() }).state, 'unknown', 'a failed judge read is not a missing route')
 
-  const plan = (behavior, initial, judgeState) => ambient.ambientModePlan({ behavior, groupScope: 'all', groups: [], maxPerHour: 3 }, initial, judgeState)
+  const plan = (behavior, initial, judgeState) => ambient.ambientModePlan({ behavior, groupScope: 'all', groups: [], maxPerHour: 3 }, { behavior: initial, groupScope: 'all', groups: [], maxPerHour: 3 }, judgeState)
   const unknown = { state: 'unknown' }
   assert.deepEqual(plan('watch', 'off', unknown), { writeYmlMode: false, judgeMode: null, blocked: 'unknown' }, 'unknown: turning on is blocked')
   assert.deepEqual(plan('join', 'watch', unknown), { writeYmlMode: false, judgeMode: null, blocked: 'unknown' }, 'unknown: switching is blocked')
@@ -301,6 +313,24 @@ test('review H1: an older instance needs proof; a failed read is unknown and the
   assert.deepEqual(plan('watch', 'join', withPolicy), { writeYmlMode: false, judgeMode: 'shadow', blocked: null })
   assert.deepEqual(plan('join', 'join', withPolicy), { writeYmlMode: false, judgeMode: null, blocked: null })
   assert.deepEqual(plan('watch', 'join', { state: 'legacy' }), { writeYmlMode: true, judgeMode: null, blocked: null })
+})
+
+test('review N1: while the mode is unknown the interjection scope can only shrink', () => {
+  const unknown = { state: 'unknown' }
+  const read = { behavior: 'watch', groupScope: 'some', groups: ['qq:1', 'qq:2'], maxPerHour: 3 }
+  const blocked = draft => ambient.ambientModePlan({ ...read, ...draft }, read, unknown).blocked
+  assert.equal(blocked({ groups: ['qq:1', 'qq:2', 'qq:3'] }), 'unknown-expand', 'a new group')
+  assert.equal(blocked({ groupScope: 'all' }), 'unknown-expand', '所有群')
+  assert.equal(blocked({ maxPerHour: 5 }), 'unknown-expand', 'a higher hourly cap')
+  assert.equal(blocked({ groups: ['qq:1', 'qq:4'] }), 'unknown-expand', 'a swapped group is still a new one')
+  assert.equal(blocked({ groups: ['qq:2'] }), null, 'removing a group')
+  assert.equal(blocked({ maxPerHour: 1 }), null, 'a lower cap')
+  assert.equal(blocked({ behavior: 'off' }), null, '关闭')
+  const all = { ...read, groupScope: 'all', groups: [] }
+  assert.equal(ambient.ambientModePlan({ ...all, groupScope: 'some', groups: ['qq:9'] }, all, unknown).blocked, null, '所有群 → 只在这些群 narrows')
+  // A known mode (merged with the policy, or legacy) is not limited this way.
+  assert.equal(ambient.ambientModePlan({ ...read, groupScope: 'all' }, read, { state: 'merged', policy: {}, mode: 'shadow' }).blocked, null)
+  assert.equal(ambient.ambientModePlan({ ...read, groupScope: 'all' }, read, { state: 'legacy' }).blocked, null)
 })
 
 function hostFetch({ judgePolicies, applyStatus = 'committed' }) {
@@ -522,6 +552,19 @@ test('H3: a judge changed in another tab since this page read it is not overwrit
     await page.submit()
     assert.deepEqual(page.plans, [], 'nothing saved')
     assert.match(page.errors.join('\n'), /插话判断刚在别处被修改过，这次没有保存/u)
+  } finally { page.runtime.unmount() }
+})
+
+test('N4: a stored judge stays editable when its route fails, with a line that the details are missing and a retry', async () => {
+  const page = await purposesPage(view({ purposes: { defaults: { chat: 'chat' }, ambient: { profile: 'ts', mode: 'active' }, decisions: {} } }), { judgeRead: new model.InferenceRequestError('unavailable', 503) })
+  try {
+    assert.ok(page.select('插话判断模型'), 'the stored policy is still editable')
+    assert.match(page.text(), /插话判断详情没有读到（迁移信息和跳过状态暂不显示）/u)
+    const retry = page.all().find(node => node.type === 'button' && [node.props.children].flat().includes('重新读取'))
+    assert.ok(retry)
+    const before = page.requests.filter(([path]) => path === '/ambient-judge').length
+    retry.props.onClick(); await flush(page)
+    assert.equal(page.requests.filter(([path]) => path === '/ambient-judge').length, before + 1)
   } finally { page.runtime.unmount() }
 })
 

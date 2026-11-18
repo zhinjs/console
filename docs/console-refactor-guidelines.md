@@ -116,6 +116,7 @@
 - **网关事务**（插件全局启停 `feature.set-enabled` `level: 'global'` / `plugin:set-enabled`，需要 `plugin.manage`；停止实例 → 写入 `disable_plugins` → 启动，失败回滚）：经 `use-global-plugin-switch.ts` 用 `apiFetch` 发送，不受 SDK 10 秒超时限制。500 `transaction_failed` = 未执行（已自动回滚），500 `rollback_failed` = 失败、回滚未完成（链到「实例」页），`gateway-required`（`--standalone`）= 说明用 `zhin start` 或 `zhin enable / zhin disable`；`statusFromError` 读成 `kind: 'error'` + `transaction`，`failedPhase` 与 `logTail` 放在「技术详情」里。
 - 回执就地显示在发起操作的控件附近，直到用户关闭；toast 只用于不需要追踪结果的轻提示。
 - 删除、撤销、全局停用等不可逆或影响面大的操作必须 `danger: true`；删除类再要求输入名称的，沿用现有 `confirm-dialog`。
+- **读不准就不写**（console#152，群聊插话的「只观察」）：页面只有在拿到证据时才判断实例版本——旧实例要同时满足「`/agent/inference/ambient-judge` 不存在」和「`plugin.root.ambient` 读到了且没有 `judgeChain`」。其他情况一律按「未知」处理：模式选项整张卡片禁用，不写模式，只允许关闭或缩小插话范围（删群、所有群改成指定群、调低次数），并给出「重新读取」。这是有意的保守取舍：没有 `ambient:read` 的身份读不到插话状态，在旧实例上也会落到「未知」，因此不能切换「只观察 / 主动参与」，需要有该权限的账号来改。
 
 ## 9. 空态与错误态：StatusState
 

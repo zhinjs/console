@@ -823,6 +823,19 @@
   .console-choice-card [role="radio"] {
     margin-top: var(--console-space-1);
   }
+
+  /* A choice that cannot be picked right now (e.g. the interjection mode while the instance state is
+     unknown): the whole card reads as unavailable, not only its dot. Text keeps muted-foreground. */
+  .console-choice-card[aria-disabled="true"] {
+    cursor: not-allowed;
+    border-style: dashed;
+    background: hsl(var(--muted) / 0.4);
+    color: hsl(var(--muted-foreground));
+  }
+
+  .console-choice-card[aria-disabled="true"]:hover {
+    border-color: var(--console-border-default);
+  }
 }
 
 /* Native disclosures read as part of the design system; component-level summary styles still win. */

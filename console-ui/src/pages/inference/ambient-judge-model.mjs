@@ -372,21 +372,24 @@ function dayKey(at, timeZone) {
 
 /**
  * 「机器人状态」的插话判断用量（#1250 第 47 批）：最近 7 天每天的判断次数、失败、切到备用、token。
- * Days without calls are filled with zeros in the instance's time zone. Null for an instance that
+ * Days without calls inside the window are filled with zeros (see below). Null for an instance that
  * does not report `judgeDaily` (nothing is shown then).
  */
 export function ambientJudgeDaily(status, locale = 'zh-CN', now = Date.now()) {
   if (!Array.isArray(status?.judgeDaily)) return null
   const byDay = new Map(status.judgeDaily.map(day => [day.day, day]))
   const timeZone = typeof status.judgeTimeZone === 'string' && status.judgeTimeZone ? status.judgeTimeZone : undefined
-  // The latest day the instance reported is the base (its clock and zone, not the browser's); with no
-  // day reported yet, today in the instance's zone.
+  // Review N2: the window ends on the later of today in the instance's zone (browser clock) and the
+  // latest day the instance reported, so today is never left out and a browser clock running behind
+  // the instance does not cut its newest day off. Every day of that window is inside what the instance
+  // keeps (today and the 6 days before it), so a day without a row really had no calls (0).
+  // A zone this browser does not know: only the days the instance reported, nothing filled in.
   const reported = [...byDay.keys()].filter(key => DAY_KEY.test(key)).sort()
-  let last = reported.at(-1)
-  if (!last) {
-    try { last = dayKey(now, timeZone) } catch { last = undefined }
-  }
-  const keys = last ? lastSevenDays(last) : reported
+  let today
+  try { today = dayKey(now, timeZone) } catch { today = undefined }
+  const last = reported.at(-1)
+  const end = today === undefined ? undefined : last && last > today ? last : today
+  const keys = end ? lastSevenDays(end) : reported
   const empty = { calls: 0, failed: 0, fallbacks: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, unreportedCalls: 0 }
   const rows = keys.map(key => ({ day: key, ...empty, ...(byDay.get(key) ?? {}) }))
   const total = rows.reduce((sum, row) => ({

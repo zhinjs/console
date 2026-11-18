@@ -103,7 +103,10 @@ async function ambientPage({ config, judge, ambient, apply = 'committed' }) {
   // The button starts the save without returning it: wait for the scripted Host to answer.
   const flush = async () => { for (let i = 0; i < 10; i++) { await new Promise(resolve => setTimeout(resolve, 5)); await runtime.settle() } runtime.render() }
   const save = async () => { saveButton().props.onClick(); await flush() }
-  return { runtime, calls, all, radio, choose, saveButton, save, initial: () => initial, feedback: () => feedback, text: () => text(runtime.value) }
+  const scope = value => { all().filter(node => node.type === 'radiogroup').find(node => node.props.name === 'ambient-group-scope').props.onValueChange(value); runtime.render() }
+  const setGroups = groups => { all().find(node => node.type === 'ambient-group-picker').props.onChange(groups); runtime.render() }
+  const card = value => all().find(node => node.type === 'label' && node.props.className === 'console-choice-card' && nodes(node).some(child => child.type === 'radiogroupitem' && child.props.value === value))
+  return { runtime, calls, all, radio, choose, scope, setGroups, card, saveButton, save, initial: () => initial, feedback: () => feedback, text: () => text(runtime.value) }
 }
 
 test('H1 situation A: both reads fail but config:get-source works → unknown, mode locked, nothing about it written', async () => {
@@ -124,6 +127,50 @@ test('H1 situation A: both reads fail but config:get-source works → unknown, m
     assert.deepEqual(page.calls.patches[0].map(patch => patch.path.at(-1)), ['conversations', 'maxPerHour'], 'no ai.trigger.ambient.mode')
     assert.ok(!page.calls.inference.includes('/plan'), 'no judge write')
   } finally { page.runtime.unmount() }
+})
+
+test('N1: while the mode is unknown, adding a group or 所有群 is blocked; removing a group or 关闭 is saved', async () => {
+  const config = configYaml(['qq:1', 'qq:2'], 'shadow')
+  const unknown = () => ambientPage({ config, judge: new TypeError('fetch failed'), ambient: new Error('RPC timed out') })
+  let page = await unknown()
+  try {
+    assert.equal(page.initial().settings.behavior, 'watch', 'the yml says 只观察; what runs is not known')
+    page.setGroups(['qq:1', 'qq:2', 'qq:3'])
+    assert.match(page.text(), /读到实际模式之前，不能扩大插话范围/u)
+    assert.equal(page.saveButton().props.disabled, true)
+    await page.save()
+    assert.deepEqual(page.calls.patches, [], 'a new group is not saved')
+    page.setGroups(['qq:1', 'qq:2'])
+    page.scope('all')
+    assert.equal(page.saveButton().props.disabled, true)
+    await page.save()
+    assert.deepEqual(page.calls.patches, [], '所有群 is not saved')
+  } finally { page.runtime.unmount() }
+  page = await unknown()
+  try {
+    page.setGroups(['qq:2'])
+    await page.save()
+    assert.deepEqual(page.calls.patches.at(-1).find(patch => patch.path.at(-1) === 'conversations').value, ['qq:2'], 'removing a group is saved')
+    assert.ok(page.calls.patches.at(-1).every(patch => patch.path.at(-1) !== 'mode'))
+  } finally { page.runtime.unmount() }
+  page = await unknown()
+  try {
+    page.choose('off')
+    await page.save()
+    assert.deepEqual(page.calls.patches.at(-1), [{ op: 'set', path: ['ai', 'trigger', 'ambient', 'conversations'], value: [] }], '关闭 is saved')
+  } finally { page.runtime.unmount() }
+})
+
+test('N3: a locked choice is disabled as a whole card (aria-disabled), styled as unavailable', async () => {
+  const page = await ambientPage({ config: configYaml(['qq:1'], 'active'), judge: new TypeError('fetch failed'), ambient: new Error('RPC timed out') })
+  try {
+    assert.equal(page.card('watch').props['aria-disabled'], true)
+    assert.equal(page.card('watch').props['data-disabled'], '')
+    assert.equal(page.card('join').props['aria-disabled'], undefined, 'the current choice stays available')
+    assert.equal(page.card('off').props['aria-disabled'], undefined)
+  } finally { page.runtime.unmount() }
+  const css = await readFile(new URL('../console-ui/src/shell.css', import.meta.url), 'utf8')
+  assert.match(css, /\.console-choice-card\[aria-disabled="true"\] \{\s*cursor: not-allowed;/)
 })
 
 test('H1 situation B: /ambient-judge 503 and enabled=false → 关闭 → 只观察 is blocked, not saved as groups only', async () => {

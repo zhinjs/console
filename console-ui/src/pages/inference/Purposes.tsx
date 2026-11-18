@@ -420,6 +420,14 @@ export function Purposes({ management: m }: { management: InferenceManagement })
             </>}
         </Card>
       ) : null}
+      {merged && judgeBase && !judgeRead?.judge && judgeRead?.error ? (
+        // Review N4: the stored policy can still be edited, but the details only the judge route has
+        // (migration record, which members are being skipped) are missing.
+        <div className="flex flex-wrap items-center gap-2 text-xs text-warning" role="status" data-ambient-judge-details-missing="">
+          <span>{i18n.t("插话判断详情没有读到（迁移信息和跳过状态暂不显示）：{0}", [inferenceError(judgeRead.error, i18n.locale)])}</span>
+          <Button type="button" size="sm" variant="outline" onClick={() => { setJudgeRead(null); void readJudge() }}>{i18n.t("重新读取")}</Button>
+        </div>
+      ) : null}
       {merged && judgeBase ? (
         <AmbientJudgeSection
           view={view}

@@ -120,7 +120,9 @@ export const ambientJudgeMessages = Object.freeze({
   "原因未报告": "reason not reported",
   // 审查 H1–M2：无法确认实例状态时不写模式
   "无法确认实例版本或读取插话判断，暂不能修改只观察。": "Cannot confirm the instance version or read the interjection judge, so “Observe only” cannot be changed for now.",
-  "无法确认实例版本或读取插话判断，暂不能修改只观察。上面显示的是配置文件里的值，不一定是实际生效的模式。": "Cannot confirm the instance version or read the interjection judge, so “Observe only” cannot be changed for now. The choice above comes from the configuration file and may not be the mode in effect.",
+  "无法确认实例版本或读取插话判断，暂不能修改只观察，也不能扩大插话范围。上面显示的是配置文件里的值，不一定是实际生效的模式。没有读取群聊插话状态的权限时，旧版本实例也会这样显示。": "Cannot confirm the instance version or read the interjection judge, so “Observe only” cannot be changed and interjection cannot reach more groups for now. The choice above comes from the configuration file and may not be the mode in effect. Without permission to read the interjection status, an older instance also shows this.",
+  "读到实际模式之前，不能扩大插话范围（新增群、改成所有群或调高次数）。可以关闭插话，或缩小范围。": "Until the mode in effect can be read, interjection cannot reach more (new groups, all groups or a higher hourly limit). You can turn it off or narrow it.",
+  "插话判断详情没有读到（迁移信息和跳过状态暂不显示）：{0}": "The interjection judge details could not be read (migration notes and skip status are not shown for now): {0}",
   "没有读到插话判断的设置，暂不能切到「只观察」：只保存群列表的话，机器人会照常插话。只有 Host 管理员可以修改。": "The interjection judge settings could not be read, so “Observe only” cannot be turned on: saving only the groups would let the bot chime in as usual. Only a Host administrator can change it.",
   "没有读到插话判断的设置，暂不能修改「只观察 / 主动参与」。只有 Host 管理员可以修改。": "The interjection judge settings could not be read, so “Observe only” / “Join in” cannot be changed. Only a Host administrator can change it.",
   "「只观察」没有改成：{0}。这次没有保存任何设置。": "“Observe only” was not changed: {0}. Nothing was saved.",

@@ -80,10 +80,11 @@ export interface AmbientJudgeState {
   mode?: 'active' | 'shadow'
 }
 export function ambientJudgeState(input?: { judge?: { policy: import('./inference/model.mjs').AmbientJudgePolicy; source: 'stored' | 'legacy' | 'default' } | null; judgeMissing?: boolean; status?: AmbientStatus | null }): AmbientJudgeState
-export function ambientModePlan(settings: AmbientSettings, initialBehavior: AmbientBehavior, judge?: AmbientJudgeState): {
+export function ambientScopeWidened(settings: AmbientSettings, initial: Partial<AmbientSettings> | null | undefined): boolean
+export function ambientModePlan(settings: AmbientSettings, initial: AmbientSettings | AmbientBehavior, judge?: AmbientJudgeState): {
   writeYmlMode: boolean
   judgeMode: 'active' | 'shadow' | null
-  blocked: null | 'unknown' | 'no-policy-shadow' | 'no-policy'
+  blocked: null | 'unknown' | 'unknown-expand' | 'no-policy-shadow' | 'no-policy'
 }
 export function parseGroupList(text: string): string[]
 export function validateAmbientSettings(settings: AmbientSettings, locale?: 'zh-CN' | 'en'): string[]
