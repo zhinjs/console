@@ -105,8 +105,7 @@ export function ambientJudgePolicyFromDraft(draft) {
     ...(fallbacks.length ? { fallbacks: [...fallbacks] } : {}),
     ...(draft.compare ? { compare: draft.compare } : {}),
     ...(minConfidence !== undefined ? { minConfidence } : {}),
-    // Always explicit: while the retired yml `mode` still applies (not migrated), a policy without
-    // `mode` would take it from there (ADR 0066 M1).
+    // The draft always holds a mode; whether it is written is decided by ambientJudgePlanEntry.
     mode: draft.mode === 'shadow' ? 'shadow' : 'active',
     ...(timeoutMs !== undefined ? { timeoutMs } : {}),
   }
@@ -171,15 +170,27 @@ export function ambientJudgeHints(draft, view, chatChain = [], locale = 'zh-CN')
 
 const stable = value => JSON.stringify(Object.fromEntries(Object.entries(value ?? {}).sort(([a], [b]) => a.localeCompare(b))))
 
+/** Whether two policies are the same (key order and an omitted empty chain do not matter). */
+export function sameAmbientJudgePolicy(a, b) {
+  return stable(a) === stable(b)
+}
+
 /**
  * The `purposes.ambient` entry of a plan: undefined when the draft equals what was read (nothing is
  * written), otherwise the whole policy (the object form replaces the item, D1.3).
+ *
+ * `mode` is written only when the person changed 「只观察」, or when the stored policy already holds
+ * it (`source: 'stored'`). Otherwise it is left out, so a Host that has not migrated yet fills it from
+ * the yml key it still honours (`triggerDefaults`) instead of a guess written by the Console.
  */
-export function ambientJudgePlanEntry(draft, original) {
+export function ambientJudgePlanEntry(draft, original, { source = 'stored' } = {}) {
   const next = ambientJudgePolicyFromDraft(draft)
   const before = ambientJudgePolicyFromDraft(ambientJudgeDraft(original))
   if (stable(next) === stable(before)) return undefined
-  return next
+  const modeChanged = next.mode !== before.mode
+  const keepMode = modeChanged || (source === 'stored' && isRecord(original) && original.mode !== undefined)
+  const { mode, ...rest } = next
+  return keepMode ? { ...rest, mode } : rest
 }
 
 /**
@@ -368,15 +379,14 @@ export function ambientJudgeDaily(status, locale = 'zh-CN', now = Date.now()) {
   if (!Array.isArray(status?.judgeDaily)) return null
   const byDay = new Map(status.judgeDaily.map(day => [day.day, day]))
   const timeZone = typeof status.judgeTimeZone === 'string' && status.judgeTimeZone ? status.judgeTimeZone : undefined
-  let keys
-  try {
-    const set = new Set()
-    // Step back by 12 hours so a 23- or 25-hour day never skips or repeats a date.
-    for (let at = now; set.size < 7; at -= 12 * 3_600_000) set.add(dayKey(at, timeZone))
-    keys = [...set].reverse()
-  } catch {
-    keys = [...byDay.keys()].sort()
+  // The latest day the instance reported is the base (its clock and zone, not the browser's); with no
+  // day reported yet, today in the instance's zone.
+  const reported = [...byDay.keys()].filter(key => DAY_KEY.test(key)).sort()
+  let last = reported.at(-1)
+  if (!last) {
+    try { last = dayKey(now, timeZone) } catch { last = undefined }
   }
+  const keys = last ? lastSevenDays(last) : reported
   const empty = { calls: 0, failed: 0, fallbacks: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, unreportedCalls: 0 }
   const rows = keys.map(key => ({ day: key, ...empty, ...(byDay.get(key) ?? {}) }))
   const total = rows.reduce((sum, row) => ({
@@ -391,6 +401,14 @@ export function ambientJudgeDaily(status, locale = 'zh-CN', now = Date.now()) {
   }
 }
 
+const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/u
+
+/** `YYYY-MM-DD` and the six calendar days before it, oldest first (date arithmetic in UTC, no zone). */
+function lastSevenDays(last) {
+  const [year, month, date] = last.split('-').map(Number)
+  return Array.from({ length: 7 }, (_, index) => new Date(Date.UTC(year, month - 1, date - 6 + index)).toISOString().slice(0, 10))
+}
+
 function dayLabel(day, locale) {
   const [year, month, date] = day.split('-').map(Number)
   if (!year || !month || !date) return day
@@ -400,15 +418,22 @@ function dayLabel(day, locale) {
 // ------------------------------------------------------------- writing purposes.ambient from another page
 
 /**
- * Writes one `purposes.ambient` (the whole item, D1.3) through the same prepare / apply the 用途 page
- * uses: the Host owner, its view (for the Profile bindings), `/plan`, `/apply`. Used by the 群聊插话
- * page for 「只观察」. `{ status: 'committed' | 'conflict' | 'not-committed' | 'commit-unknown', code?, warnings }`.
+ * Changes only 「只观察」 (`purposes.ambient.mode`) from another page (the 群聊插话 page), through the
+ * same prepare / apply the 用途 page uses (Host owner → view for the Profile bindings → `/plan` →
+ * `/apply`). The judge is read again right before writing and the new mode is applied to that
+ * latest policy; when it differs from `expected` (what the page showed) nothing is written and
+ * `status: 'stale'` asks the person to reload instead of silently overwriting someone else's change.
+ * `{ status: 'committed' | 'conflict' | 'not-committed' | 'commit-unknown' | 'stale', code?, warnings, policy? }`.
  */
-export async function writeAmbientJudgePolicy(fetch, policy, { mutationId = globalThis.crypto?.randomUUID?.() } = {}) {
+export async function writeAmbientJudgeMode(fetch, mode, { expected, mutationId = globalThis.crypto?.randomUUID?.() } = {}) {
+  const latest = readAmbientJudgeView(await inferenceRequest(fetch, { path: '/ambient-judge' }))
+  if (!latest) throw new InferenceRequestError('unavailable')
+  if (expected !== undefined && !sameAmbientJudgePolicy(latest.policy, expected)) return { status: 'stale', warnings: [], policy: latest.policy }
   const owners = await inferenceRequest(fetch, { path: '/owners' })
   const owner = Array.isArray(owners) ? owners.find(entry => entry?.kind === 'host') : undefined
   if (!owner) throw new InferenceRequestError('forbidden', 403)
   const view = await inferenceRequest(fetch, { ownerId: owner.id })
+  const policy = { ...latest.policy, ...(Array.isArray(latest.policy.fallbacks) ? { fallbacks: [...latest.policy.fallbacks] } : {}), mode }
   const prepared = await inferenceRequest(fetch, {
     ownerId: owner.id, path: '/plan',
     body: { plan: { version: 1, purposes: { ambient: policy } }, bindings: resourceBindings(view) },
@@ -417,6 +442,16 @@ export async function writeAmbientJudgePolicy(fetch, policy, { mutationId = glob
   if (!mutationId) throw new InferenceRequestError('receipt-storage-unavailable')
   const result = await applyInferenceChange(fetch, { ownerId: owner.id, prepared: prepared.prepared, mutationId })
   return { ...result, warnings: Array.isArray(prepared.warnings) ? prepared.warnings : [] }
+}
+
+/** The judge mode in effect, read back after a write (`undefined` when it cannot be read). */
+export async function readAmbientJudgeMode(fetch) {
+  try {
+    const judge = readAmbientJudgeView(await inferenceRequest(fetch, { path: '/ambient-judge' }))
+    return judge ? (judge.policy.mode === 'shadow' ? 'shadow' : 'active') : undefined
+  } catch {
+    return undefined
+  }
 }
 
 /**

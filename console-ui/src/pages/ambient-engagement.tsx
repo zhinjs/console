@@ -23,10 +23,13 @@ import { configurationReceiptForRead, type ConfigurationApplicationStatus } from
 import { apiFetch } from '../utils/auth'
 import { CONSOLE_PATHS } from '../console-routes.mjs'
 import { InferenceRequestError, inferenceError, inferenceRequest, type AmbientJudgePolicy } from './inference/model.mjs'
-import { ambientAgreement, ambientJudgeChainRows, planWarningText, readAmbientJudgeView, writeAmbientJudgePolicy } from './inference/ambient-judge-model.mjs'
+import { ambientAgreement, ambientJudgeChainRows, isMissingRoute, planWarningText, readAmbientJudgeMode, readAmbientJudgeView, writeAmbientJudgeMode } from './inference/ambient-judge-model.mjs'
+import { useConsoleAccess } from '../hooks/use-console-access'
+import { hasConsolePermission } from '../utils/console-access.mjs'
 import {
   BEHAVIOR_CHOICES,
-  ambientJudgeModeChange,
+  ambientJudgeState,
+  ambientModePlan,
   hasMergedJudge,
   ambientGroupLabel,
   buildAmbientPatches,
@@ -42,6 +45,7 @@ import {
   validateAmbientSettings,
   validateAmbientStatus,
   type AmbientBehavior,
+  type AmbientJudgeState,
   type AmbientSettings,
   type AmbientStatus,
   type AmbientStatusView,
@@ -50,11 +54,11 @@ import {
 type ConfigSource = ConfigurationApplicationStatus & { source: string; revision: string }
 type StatusRead = { denied: true } | { denied: false; view: AmbientStatusView; status: AmbientStatus }
 /**
- * The interjection judge as the settings form needs it (ADR 0066): whether the instance has it
- * (`merged`), the policy read from the Host (Host administrators only) and the mode in effect.
- * Older instances: `merged: false`, the form writes `ai.trigger.ambient.mode` as before.
+ * The interjection judge as the settings form needs it (ADR 0066): `merged` (with the policy when the
+ * caller may read it), `legacy` (an older instance: the form writes `ai.trigger.ambient.mode` as
+ * before) or `unknown` (nothing about the mode is shown as known or written).
  */
-type JudgeSettings = { merged: boolean; policy?: AmbientJudgePolicy; mode?: 'active' | 'shadow' }
+type JudgeSettings = AmbientJudgeState & { policy?: AmbientJudgePolicy }
 type SettingsRead = { settings: AmbientSettings; revision: string; application?: ConfigurationApplicationStatus; readEpoch?: number; judge?: JudgeSettings }
 type PatchResult = ConfigurationApplicationStatus & {
   status?: string
@@ -74,24 +78,21 @@ async function readAmbientStatus(locale: 'zh-CN' | 'en' = 'zh-CN'): Promise<Stat
 }
 
 /**
- * Which mode the interjection judge runs in and whether this caller can change it: the judge route
- * (Host administrators), else the status (`judgeChain` marks an ADR 0066 instance). Never throws:
- * an unreadable judge leaves the form on the configuration file alone.
+ * Which mode the interjection judge runs in and whether this caller can change it, decided only on
+ * evidence (`ambientJudgeState`): a failed read is never taken for an older instance. Never throws.
  */
 async function readJudgeSettings(): Promise<JudgeSettings> {
-  const [judge, status] = await Promise.all([
-    inferenceRequest<unknown>(apiFetch, { path: '/ambient-judge' }).then(readAmbientJudgeView).catch(() => null),
+  const [judgeRead, status] = await Promise.all([
+    inferenceRequest<unknown>(apiFetch, { path: '/ambient-judge' }).then(data => ({ judge: readAmbientJudgeView(data), error: null as unknown }), (error: unknown) => ({ judge: null, error })),
     pluginRpc<unknown>('root', 'ambient').then(data => validateAmbientStatus(data)).catch(() => null),
   ])
-  if (judge) return { merged: true, policy: judge.policy, mode: judge.policy.mode === 'shadow' ? 'shadow' : 'active' }
-  if (status && hasMergedJudge(status)) return { merged: true, ...(status.enabled ? { mode: status.mode === 'shadow' ? 'shadow' as const : 'active' as const } : {}) }
-  return { merged: false }
+  return ambientJudgeState({ judge: judgeRead.judge, judgeMissing: isMissingRoute(judgeRead.error), status })
 }
 
 async function readAmbientSettingsFromHost(): Promise<SettingsRead> {
   const [configSource, judge] = await Promise.all([requestConsole<ConfigSource>({ type: 'config:get-source' }), readJudgeSettings()])
   const configDocument: unknown = parseConfigSource(configSource.source)
-  const settings = readAmbientSettings(configDocument, judge.merged ? { judgeMode: judge.mode } : {})
+  const settings = readAmbientSettings(configDocument, judge.state === 'merged' ? { judgeMode: judge.mode } : {})
   return { settings, revision: configSource.revision, application: { application: configSource.application, applicationError: configSource.applicationError }, judge }
 }
 
@@ -190,13 +191,14 @@ function AmbientJudgeStatus({ status }: { status: AmbientStatus }) {
   if (!hasMergedJudge(status)) {
     return <p className="text-xs text-muted-foreground" role="note">{i18n.t("这个实例版本较旧，看不到由哪个模型判断。升级 Zhin 后，这里会显示插话判断的模型、备用和对照。")}</p>
   }
+  const access = useConsoleAccess()
   const rows = ambientJudgeChainRows(status, i18n.locale)
   const agreement = ambientAgreement(status, i18n.locale)
   const purposesHref = `${CONSOLE_PATHS.ai}?tab=purposes`
   return <div className="space-y-2 rounded-md bg-muted/40 p-3 text-sm" data-ambient-judge-status="">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <h3 className="font-medium">{i18n.t("插话判断")}</h3>
-      <Button variant="ghost" size="sm" asChild><Link to={purposesHref}>{i18n.t("在用途页修改")}<ArrowUpRight /></Link></Button>
+      {hasConsolePermission('agent.view', access) ? <Button variant="ghost" size="sm" asChild><Link to={purposesHref}>{i18n.t("在用途页修改")}<ArrowUpRight /></Link></Button> : null}
     </div>
     {rows.length ? <ul className="space-y-1" role="list">
       {rows.map(row => <li key={row.key} className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -205,7 +207,7 @@ function AmbientJudgeStatus({ status }: { status: AmbientStatus }) {
         <span className="text-xs text-muted-foreground">{row.kind}</span>
         {row.skipped ? <span className="text-xs text-warning">{row.skipped}</span> : null}
       </li>)}
-    </ul> : <p className="text-xs text-muted-foreground">{i18n.t("还没有可用的判断模型：先在「AI 与模型 → 用途」里设置聊天模型或插话判断模型。")}</p>}
+    </ul> : <p className="text-xs text-muted-foreground">{i18n.t("Agent 尚未加载或未配置判断模型。")}</p>}
     {typeof status.minConfidence === 'number' ? <p className="text-xs text-muted-foreground">{i18n.t("门槛 {0}：判断选「插话」且把握不低于它才开口。", [status.minConfidence])}</p> : null}
     {agreement ? <div className="text-xs text-muted-foreground"><p className="font-medium text-foreground">{agreement.text}</p><p>{agreement.detail}</p></div> : null}
   </div>
@@ -323,6 +325,7 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
   const currentReceipt = configurationReceiptForRead(initial, receipt)
   const [serverProblems, setServerProblems] = useState<string[]>([])
   const [judgeWarnings, setJudgeWarnings] = useState<string[]>([])
+  const [judgeNote, setJudgeNote] = useState<string | null>(null)
 
   useEffect(() => {
     setServerProblems([])
@@ -334,17 +337,20 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
     groups,
     maxPerHour: Number(maxPerHourText),
   }
-  const judge = initial.judge ?? { merged: false }
-  // ADR 0066: 「只观察 / 主动参与」 is the judge's mode (`purposes.ambient.mode`), written through the
-  // model management API; it can be changed only when the judge was read (Host administrators).
-  const modeChange = judge.merged && judge.policy ? ambientJudgeModeChange(draft, judge.policy, judge.mode) : null
-  const mergedJudge = judge.merged
-  const wantedMode = behavior === 'watch' ? 'shadow' : 'active'
-  const modeLocked = judge.merged && !judge.policy && behavior !== 'off' && judge.mode !== undefined && wantedMode !== judge.mode
-  const problems = [
-    ...validateAmbientSettings(draft, i18n.locale),
-    ...(modeLocked ? [i18n.t("「只观察 / 主动参与」是插话判断的模式，只有 Host 管理员可以修改。当前是「{0}」。", [judge.mode === 'shadow' ? i18n.t("只观察") : i18n.t("主动参与")])] : []),
-  ]
+  const judge: JudgeSettings = initial.judge ?? { state: 'legacy' }
+  // ADR 0066: 「只观察 / 主动参与」 is the judge's mode (`purposes.ambient.mode`). It is written only when
+  // the judge was read; an instance whose state is not certain gets nothing written about the mode.
+  const modePlan = ambientModePlan(draft, initial.settings.behavior, judge)
+  const modeName = (mode: 'active' | 'shadow') => mode === 'shadow' ? i18n.t("只观察") : i18n.t("主动参与")
+  const blockedText = modePlan.blocked === 'unknown'
+    ? i18n.t("无法确认实例版本或读取插话判断，暂不能修改只观察。")
+    : modePlan.blocked === 'no-policy-shadow'
+      ? i18n.t("没有读到插话判断的设置，暂不能切到「只观察」：只保存群列表的话，机器人会照常插话。只有 Host 管理员可以修改。")
+      : modePlan.blocked === 'no-policy'
+        ? i18n.t("没有读到插话判断的设置，暂不能修改「只观察 / 主动参与」。只有 Host 管理员可以修改。")
+        : null
+  const problems = [...validateAmbientSettings(draft, i18n.locale), ...(blockedText ? [blockedText] : [])]
+  const choiceSelectable = (value: AmbientBehavior) => value === 'off' || ambientModePlan({ ...draft, behavior: value }, initial.settings.behavior, judge).blocked === null
   const showsGroupOptions = behavior !== 'off'
   const focusIncluded = focusGroup ? behavior !== 'off' && (groupScope === 'all' || groups.includes(focusGroup)) : false
   const includeFocusGroup = () => {
@@ -355,25 +361,55 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
   }
 
   const save = async () => {
-    if (!isInboxCacheScopeActive(scope)) return
+    // A blocked mode (or any problem) is never saved, even if the button were bypassed.
+    if (!isInboxCacheScopeActive(scope) || problems.length > 0) return
     setSaving(true)
     setFeedback(null)
+    setJudgeNote(null)
+    // After anything but a clean save the page reads the Host again, so what it shows is what runs.
+    const reloadAfterFailure = async () => { await onReload().catch(() => null) }
+    let modeApplied = false
     try {
-      // The judge's mode first: if it is refused nothing is written, and the reason is shown.
-      if (modeChange) {
-        const written = await writeAmbientJudgePolicy(apiFetch, modeChange)
+      // The judge's mode first: if it is refused, stale or unconfirmed nothing else is written.
+      if (modePlan.judgeMode) {
+        let written: Awaited<ReturnType<typeof writeAmbientJudgeMode>>
+        try {
+          written = await writeAmbientJudgeMode(apiFetch, modePlan.judgeMode, { expected: judge.policy })
+        } catch (error) {
+          if (!isInboxCacheScopeActive(scope)) return
+          await reloadAfterFailure()
+          setFeedback({ kind: 'failed', text: i18n.t("「只观察」没有改成：{0}。这次没有保存任何设置。", [inferenceError(error, i18n.locale)]) })
+          return
+        }
         if (!isInboxCacheScopeActive(scope)) return
         if (written.status !== 'committed') {
-          const code = written.code ?? (written.status === 'commit-unknown' ? 'outcome-unknown' : written.status === 'conflict' ? 'conflict' : 'unavailable')
-          setFeedback({ kind: 'failed', text: i18n.t("「只观察」没有改成：{0}", [inferenceError(new InferenceRequestError(code), i18n.locale)]) })
+          await reloadAfterFailure()
+          const code = written.code ?? (written.status === 'conflict' ? 'conflict' : 'unavailable')
+          setFeedback({ kind: 'failed', text: written.status === 'stale'
+            ? i18n.t("插话判断刚在别处被修改过，这次没有保存任何设置。已重新读取，请确认后再保存。")
+            : written.status === 'commit-unknown'
+              ? i18n.t("「只观察」的修改尚未确认是否生效，群设置没有保存。已重新读取，请核对当前模式后再保存。")
+              : i18n.t("「只观察」没有改成：{0}。这次没有保存任何设置。", [inferenceError(new InferenceRequestError(code), i18n.locale)]) })
           return
         }
         setJudgeWarnings(written.warnings.map(warning => planWarningText(warning, i18n.locale)))
+        // Read the mode back: a commit that did not change what runs is not reported as saved.
+        const actual = await readAmbientJudgeMode(apiFetch)
+        if (!isInboxCacheScopeActive(scope)) return
+        if (actual !== modePlan.judgeMode) {
+          await reloadAfterFailure()
+          setFeedback({ kind: 'failed', text: actual
+            ? i18n.t("「只观察」已提交，但读回的模式是「{0}」，与要保存的不一致。群设置没有保存，已重新读取。", [modeName(actual)])
+            : i18n.t("「只观察」已提交，但没能读回确认，尚未确认是否生效。群设置没有保存，已重新读取。") })
+          return
+        }
+        modeApplied = true
+        setJudgeNote(i18n.t("「{0}」已生效（已读回确认）。", [modeName(modePlan.judgeMode)]))
       }
       const result = await requestConsole<PatchResult>({
         type: 'config:patch',
         expectedRevision: initial.revision,
-        patches: buildAmbientPatches(draft, { mergedJudge }),
+        patches: buildAmbientPatches(draft, { mergedJudge: !modePlan.writeYmlMode }),
       })
       if (!isInboxCacheScopeActive(scope)) return
       const saveFeedback = describeSaveResult(result, i18n.locale)
@@ -382,18 +418,21 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
         const messages = (result.errors ?? []).map((error) => error.message)
         setServerProblems(messages)
       }
-      // Every saved or conflicting write re-reads; a saved one is then compared with what was submitted.
-      const reread = saveFeedback.kind === 'saved' || saveFeedback.kind === 'conflict' ? await onReload().catch(() => null) : null
+      // Every write re-reads; a saved one is then compared with what was submitted.
+      const reread = await onReload().catch(() => null)
       if (!isInboxCacheScopeActive(scope)) return
-      setFeedback(saveFeedback.kind === 'saved' ? { kind: 'saved', ...ambientSaveOutcome(result, draft, reread, { mergedJudge }) } : { kind: 'failed', text: saveFeedback.text })
+      setFeedback(saveFeedback.kind === 'saved' ? { kind: 'saved', ...ambientSaveOutcome(result, draft, reread, { mergedJudge: !modePlan.writeYmlMode }) }
+        : { kind: 'failed', text: modeApplied ? i18n.t("「只观察」已生效，但群设置没有保存：{0}", [saveFeedback.text]) : saveFeedback.text })
     } catch (error) {
       if (!isInboxCacheScopeActive(scope)) return
+      await reloadAfterFailure()
       const message = error instanceof InferenceRequestError ? inferenceError(error, i18n.locale) : error instanceof Error ? error.message : String(error)
-      setFeedback({ kind: 'failed', text: i18n.t("保存失败：{0}", [message]) })
+      setFeedback({ kind: 'failed', text: modeApplied ? i18n.t("「只观察」已生效，但群设置没有保存：{0}", [message]) : i18n.t("保存失败：{0}", [message]) })
     } finally {
       if (isInboxCacheScopeActive(scope)) setSaving(false)
     }
   }
+
 
   return <Card>
     <CardHeader>
@@ -413,12 +452,16 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
         <legend className="text-sm font-medium">{i18n.t("机器人要不要自己接话？")}</legend>
         <RadioGroup aria-label={i18n.t("机器人要不要自己接话？")} name="ambient-behavior" value={behavior} onValueChange={value => setBehavior(value as AmbientBehavior)}>
           {BEHAVIOR_CHOICES.map((choice) => <label key={choice.value} className="console-choice-card">
-            <RadioGroupItem value={choice.value} className="mt-1" />
+            <RadioGroupItem value={choice.value} className="mt-1" disabled={!choiceSelectable(choice.value)} />
             <span><span className="font-medium">{i18n.t(choice.label, undefined, "state")}</span><span className="block text-xs text-muted-foreground">{i18n.t(choice.hint)}</span></span>
           </label>)}
         </RadioGroup>
         {behavior === 'off' && initial.settings.groups.length > 0 && <p className="text-xs text-muted-foreground">{i18n.t("关闭后会清空下面的群列表，以后重新打开时要再填一次。")}</p>}
-        {judge.merged && behavior !== 'off' ? <p className="text-xs text-muted-foreground">{i18n.t("「只观察」保存在插话判断里（AI 与模型 → 用途），对所有开启的群生效。")}</p> : null}
+        {judge.state === 'merged' && behavior !== 'off' ? <p className="text-xs text-muted-foreground">{i18n.t("「只观察」保存在插话判断里（AI 与模型 → 用途），对所有开启的群生效。")}</p> : null}
+        {judge.state === 'unknown' ? <div className="flex flex-wrap items-center gap-2 text-xs text-warning" role="status" data-ambient-mode-unknown="">
+          <span>{i18n.t("无法确认实例版本或读取插话判断，暂不能修改只观察。上面显示的是配置文件里的值，不一定是实际生效的模式。")}</span>
+          <Button type="button" size="sm" variant="outline" onClick={() => { void onReload().catch(() => {}) }}>{i18n.t("重新读取")}</Button>
+        </div> : null}
       </fieldset>
 
       {showsGroupOptions && <fieldset className="space-y-2">
@@ -450,6 +493,7 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
             onRestarted={async () => ambientRestartOutcome(await onReload().catch(() => null))} />
           : <ApplyFeedback failure={{ reason: feedback.text }} /> : null}
       </div>
+      {judgeNote ? <p className="text-xs text-muted-foreground" role="status">{judgeNote}</p> : null}
       {judgeWarnings.length ? <ul className="list-disc space-y-1 pl-5 text-xs text-warning" role="status">{judgeWarnings.map(warning => <li key={warning}>{warning}</li>)}</ul> : null}
       <ConfigurationLiveStatus result={currentReceipt ?? initial.application} revision={currentReceipt?.revision ?? initial.revision} />
     </CardContent>

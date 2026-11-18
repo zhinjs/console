@@ -561,7 +561,8 @@ function McpGrid({ entries, selectedId, onSelect }: CollectionProps<'mcp'>) {
         const connected = state.status === 'connected'
         return (
           <SelectableCard key={entry.id} {...{ entry, entries, selectedId, onSelect }} className="console-runtime-mcp-card">
-            <span className={cn('console-runtime-health', connected ? 'is-online' : 'is-offline')}>{connected ? <PlugZap /> : <Unplug />}</span>
+            {/* The icon follows the same state as the badge (console#125): online, neutral, warning, destructive. */}
+            <span className={cn('console-runtime-health', state.dot)} data-mcp-status={state.status}>{connected ? <PlugZap /> : <Unplug />}</span>
             <span className="console-runtime-card-main">
               <strong>{text(entry.item.name, i18n.t("未命名 MCP"))}</strong>
               <small>{state.detail}</small>

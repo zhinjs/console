@@ -73,7 +73,18 @@ export function validateAmbientStatus(data: unknown, locale?: 'zh-CN' | 'en'): A
 export function describeAmbientStatus(status: AmbientStatus, locale?: 'zh-CN' | 'en'): AmbientStatusView
 export function readAmbientSettings(configDocument: unknown, options?: { judgeMode?: 'active' | 'shadow' }): AmbientSettings
 export function hasMergedJudge(status: AmbientStatus | null | undefined): boolean
-export function ambientJudgeModeChange(settings: AmbientSettings, policy: import('./inference/model.mjs').AmbientJudgePolicy | null | undefined, currentMode: 'active' | 'shadow' | undefined): import('./inference/model.mjs').AmbientJudgePolicy | null
+export interface AmbientJudgeState {
+  state: 'merged' | 'legacy' | 'unknown'
+  policy?: import('./inference/model.mjs').AmbientJudgePolicy
+  source?: 'stored' | 'legacy' | 'default'
+  mode?: 'active' | 'shadow'
+}
+export function ambientJudgeState(input?: { judge?: { policy: import('./inference/model.mjs').AmbientJudgePolicy; source: 'stored' | 'legacy' | 'default' } | null; judgeMissing?: boolean; status?: AmbientStatus | null }): AmbientJudgeState
+export function ambientModePlan(settings: AmbientSettings, initialBehavior: AmbientBehavior, judge?: AmbientJudgeState): {
+  writeYmlMode: boolean
+  judgeMode: 'active' | 'shadow' | null
+  blocked: null | 'unknown' | 'no-policy-shadow' | 'no-policy'
+}
 export function parseGroupList(text: string): string[]
 export function validateAmbientSettings(settings: AmbientSettings, locale?: 'zh-CN' | 'en'): string[]
 export function buildAmbientPatches(settings: AmbientSettings, options?: { mergedJudge?: boolean }): AmbientPatch[]

@@ -114,6 +114,9 @@ const usageStats = (session) => {
 }
 // ADR 0066 / #1250 batch 47: the merged interjection judge (UI_PREVIEW_AMBIENT=legacy answers like an older instance).
 const legacyAmbient = process.env.UI_PREVIEW_AMBIENT === 'legacy'
+// UI_PREVIEW_AMBIENT=unknown: the judge route answers 503 and the status RPC fails (a busy instance):
+// the Console must neither assume an older instance nor write the judge mode.
+const unknownAmbient = process.env.UI_PREVIEW_AMBIENT === 'unknown'
 const DAY = 24 * HOUR
 const judgeDay = (daysAgo, calls, extra = {}) => ({ day: new Date(now - daysAgo * DAY).toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }), calls, failed: 0, fallbacks: 0,
   byKind: { language: Math.round(calls / 3), decision: calls - Math.round(calls / 3) }, averageMs: 640, inputTokens: calls * 410, outputTokens: calls * 18, cacheReadTokens: calls * 120, cacheWriteTokens: 0, unreportedCalls: 0, ...extra })
@@ -619,6 +622,7 @@ const server = createServer(async (request, response) => {
     if (sub === '/owners') { json(envelope([{ id: INFERENCE_OWNER, label: 'Host', kind: 'host' }])); return }
     if (sub === '/targets') { json(envelope(inferenceTargets)); return }
     if (sub === '') { json(envelope(inferenceView())); return }
+    if (sub.startsWith('/ambient-judge') && unknownAmbient) { json({ success: false, code: 'unavailable', error: 'The instance did not answer in time' }, 503); return }
     if (sub === '/ambient-judge' && !legacyAmbient) { json(envelope(ambientJudge())); return }
     if (sub === '/ambient-judge/migration/noticed' && request.method === 'POST' && !legacyAmbient) { ambientJudgeNoticedAt ??= Date.now(); json(envelope({ noticedAt: ambientJudgeNoticedAt })); return }
     if (sub.startsWith('/ambient-judge')) { json({ success: false, code: 'not-found' }, 404); return }
@@ -717,6 +721,7 @@ const server = createServer(async (request, response) => {
       if (attentionMode === 'legacy') { json({ success: false, error: 'Unknown RPC type: attention.list' }, 400); return }
       json(envelope({ items: attentionMode === 'empty' ? [] : attentionItems(body.data?.locale === 'en'), generatedAt: new Date().toISOString() })); return
     }
+    if (type === 'plugin.root.ambient' && unknownAmbient) { json({ success: false, error: 'RPC plugin.root.ambient timed out' }, 503); return }
     if (type.startsWith('plugin.root.') && Object.hasOwn(pluginRoot, type.slice('plugin.root.'.length))) { json(envelope(pluginRoot[type.slice('plugin.root.'.length)](body.data ?? {}))); return }
     if (type === 'schedule:list') { json(envelope(scheduleList)); return }
     if (type === 'config:get-source') { json(envelope({ source: configSource + rssConfigSource, revision: 'preview-1', configKeys: ['ai', 'rss'], configPaths: { ai: ['ai'], rss: ['rss'] } })); return }

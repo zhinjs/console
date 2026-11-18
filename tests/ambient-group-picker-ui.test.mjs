@@ -61,6 +61,8 @@ const ui = {
   '../console-routes.mjs': { CONSOLE_PATHS: { ai: '/features/ai' } },
   './inference/model.mjs': inferenceModel,
   './inference/ambient-judge-model.mjs': ambientJudgeModel,
+  '../hooks/use-console-access': { useConsoleAccess: () => ({}) },
+  '../utils/console-access.mjs': { hasConsolePermission: () => true },
 }
 
 const elements = node => node && typeof node === 'object' ? [node, ...[node.props?.children].flat(Infinity).flatMap(elements)] : []

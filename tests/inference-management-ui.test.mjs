@@ -222,6 +222,7 @@ async function component(runtime, path, mocks) {
     // ADR 0066: Purposes reads the interjection status for the agreement line; no status here.
     '../../utils/plugin-rpc': { pluginRpc: async () => { throw new Error('ambient status unavailable') } },
     './ambient-judge-model.mjs': ambientJudgeModel,
+    '../../hooks/use-console-access': { useConsoleAccess: () => ({}) }, '../../utils/console-access.mjs': { hasConsolePermission: () => true },
     ...mocks,
   }
   new Function('require', 'module', 'exports', code)(

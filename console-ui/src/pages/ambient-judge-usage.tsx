@@ -52,7 +52,7 @@ export function AmbientJudgeUsage() {
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead>{i18n.t("日期")}</TableHead>
-                <TableHead className="text-right">{i18n.t("判断次数")}</TableHead>
+                <TableHead className="text-right">{i18n.t("判断模型调用次数")}</TableHead>
                 <TableHead className="text-right">{i18n.t("失败")}</TableHead>
                 <TableHead className="text-right">{i18n.t("切到备用")}</TableHead>
                 <TableHead className="text-right">{i18n.t("token 用量")}</TableHead>
@@ -69,7 +69,7 @@ export function AmbientJudgeUsage() {
                     <span title={i18n.t("输入 {0} · 输出 {1} · 缓存读取 {2} · 缓存写入 {3}", [number(row.inputTokens), number(row.outputTokens), number(row.cacheReadTokens), number(row.cacheWriteTokens)])}>
                       {number(row.tokens)}
                     </span>
-                    {row.unreportedCalls > 0 ? <span className="console-table-sub">{i18n.t("{0} 次未回报", [row.unreportedCalls])}</span> : null}
+                    {row.unreportedCalls > 0 ? <span className="block text-xs text-muted-foreground">{i18n.t("{0} 次未回报", [row.unreportedCalls])}</span> : null}
                   </TableCell>
                 </TableRow>
               ))}
@@ -77,8 +77,11 @@ export function AmbientJudgeUsage() {
           </Table>
         </div>
       )}
+      {daily.total.calls > 0 ? (
+        <p className="mt-2 text-xs text-muted-foreground" role="note">{i18n.t("按判断模型的调用计数：开启对照时，每次判断计 2 次。")}</p>
+      ) : null}
       {daily.unreported ? (
-        <p className="mt-2 text-xs text-muted-foreground" role="note">{i18n.t("部分调用未回报用量，token 合计偏少。")}</p>
+        <p className="mt-1 text-xs text-muted-foreground" role="note">{i18n.t("部分调用未回报用量，token 合计偏少。")}</p>
       ) : null}
     </section>
   )

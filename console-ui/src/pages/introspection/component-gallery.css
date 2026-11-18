@@ -103,10 +103,11 @@
   outline: var(--console-border-focus) solid hsl(var(--destructive) / 0.18); outline-offset: 0;
 }
 
-/* Neutral: an MCP server waiting to connect (idle) or not loaded yet — not a failure. */
+/* Neutral: an MCP server waiting to connect (idle) or not loaded yet — not a failure. The ring is
+   full muted-foreground so it keeps 3:1 against the card in both themes (WCAG 1.4.11). */
 .console-runtime-status-dot.is-idle {
   background-color: transparent;
-  outline: var(--console-border-focus) solid hsl(var(--muted-foreground) / 0.55); outline-offset: 0;
+  outline: var(--console-border-focus) solid hsl(var(--muted-foreground)); outline-offset: 0;
 }
 
 /* Command card shell with sibling copy button */

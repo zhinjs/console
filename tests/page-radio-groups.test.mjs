@@ -34,7 +34,7 @@ function group(ast, name, bindings) {
 test('ambient radio groups retain their values and group identity and change only the original drafts', async () => {
   const ast = await page('ambient-engagement')
   let behavior = 'watch', groupScope = 'some'
-  const behaviorGroup = group(ast, 'ambient-behavior', { BEHAVIOR_CHOICES, behavior, setBehavior: value => { behavior = value } })
+  const behaviorGroup = group(ast, 'ambient-behavior', { BEHAVIOR_CHOICES, behavior, setBehavior: value => { behavior = value }, choiceSelectable: () => true })
   const actual = RadioGroup.render(behaviorGroup.props, null)
   assert.equal(actual.props.name, 'ambient-behavior'); assert.equal(actual.props.value, 'watch')
   assert.equal(actual.props['aria-label'], '机器人要不要自己接话？')

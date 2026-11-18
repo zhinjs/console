@@ -65,6 +65,7 @@ async function fixture() {
     'lucide-react': { Plus: 'icon', Pencil: 'icon', Trash2: 'icon', RefreshCw: 'icon', KeyRound: 'icon', LogIn: 'icon', Unplug: 'icon', ArrowDown: 'icon', ArrowUp: 'icon', MoreHorizontal: 'icon' },
     './model.mjs': model, './inference/model.mjs': model, './personal-session-model.mjs': personal,
     '../../utils/plugin-rpc': { pluginRpc: async () => { throw new Error('ambient status unavailable') } }, './ambient-judge-model.mjs': ambientJudgeModel,
+    '../../hooks/use-console-access': { useConsoleAccess: () => ({}) }, '../../utils/console-access.mjs': { hasConsolePermission: () => true },
   }
   async function load(filename, extra = {}) {
     const path = process.env.CONSOLE_FIXTURE_SOURCE_ROOT && basename(filename) !== 'SupportInfo.tsx'

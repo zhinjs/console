@@ -54,15 +54,23 @@ test('the judge route is read only in its documented shape; an instance without 
 
 // ------------------------------------------------------------- editing purposes.ambient
 
-test('the draft writes the six keys only, always with an explicit mode, and nothing when unchanged', () => {
+test('the draft writes the six keys only, mode only when changed (or stored), and nothing when unchanged', () => {
   const policy = { profile: 'ts', fallbacks: ['flash'], compare: 'chat', minConfidence: 0.8, mode: 'shadow', timeoutMs: 2500 }
   const draft = judge.ambientJudgeDraft(policy)
   assert.deepEqual(draft, { profile: 'ts', fallbacks: ['flash'], compare: 'chat', minConfidence: '0.8', mode: 'shadow', timeoutMs: '2500' })
   assert.deepEqual(judge.ambientJudgePolicyFromDraft(draft), policy)
   assert.equal(judge.ambientJudgePlanEntry(draft, policy), undefined, 'an unchanged judge is not written')
   assert.equal(judge.ambientJudgePlanEntry(judge.ambientJudgeDraft({}), {}), undefined)
-  // While the retired yml mode still applies, a policy without `mode` would take it: always explicit.
-  assert.deepEqual(judge.ambientJudgePlanEntry({ ...judge.ambientJudgeDraft({}), minConfidence: '0.6' }, {}), { minConfidence: 0.6, mode: 'active' })
+  // Review H2: only the threshold changed on a Host that has not migrated: `mode` is left to the yml key
+  // the Host still honours (triggerDefaults), not written as a guess.
+  for (const source of ['legacy', 'default'])
+    assert.deepEqual(judge.ambientJudgePlanEntry({ ...judge.ambientJudgeDraft({ mode: 'shadow' }), minConfidence: '0.6' }, { mode: 'shadow' }, { source }), { minConfidence: 0.6 }, source)
+  assert.deepEqual(judge.ambientJudgePlanEntry({ ...judge.ambientJudgeDraft({}), minConfidence: '0.6' }, {}, { source: 'default' }), { minConfidence: 0.6 })
+  // A stored mode stays; a changed 只观察 is written.
+  assert.deepEqual(judge.ambientJudgePlanEntry({ ...judge.ambientJudgeDraft({ mode: 'active' }), minConfidence: '0.6' }, { mode: 'active' }, { source: 'stored' }), { minConfidence: 0.6, mode: 'active' })
+  assert.deepEqual(judge.ambientJudgePlanEntry({ ...judge.ambientJudgeDraft({}), mode: 'shadow' }, {}, { source: 'default' }), { mode: 'shadow' })
+  assert.equal(judge.sameAmbientJudgePolicy({ mode: 'shadow', profile: 'ts' }, { profile: 'ts', mode: 'shadow' }), true)
+  assert.equal(judge.sameAmbientJudgePolicy({ profile: 'ts' }, { profile: 'ts', mode: 'shadow' }), false)
   const inherit = judge.ambientJudgePolicyFromDraft({ ...draft, profile: '' })
   assert.equal(inherit.fallbacks, undefined, 'no chain without a primary (it follows chat)')
   assert.deepEqual(Object.keys(inherit).every(key => judge.AMBIENT_JUDGE_KEYS.includes(key)), true)
@@ -230,7 +238,7 @@ test('the chain card shows primary, fallbacks, the compared model and active ski
   assert.deepEqual(judge.ambientJudgeChainRows(status()), [], 'an older instance has no chain')
 })
 
-test('「机器人状态」 judge usage: seven days in the instance zone, unreported calls noted, nothing for older instances', () => {
+test('「机器人状态」 judge usage: seven days up to the instance’s latest day, unreported calls noted, nothing for older instances', () => {
   const day = (date, extra = {}) => ({ day: date, calls: 0, failed: 0, fallbacks: 0, byKind: { language: 0, decision: 0 }, averageMs: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, unreportedCalls: 0, ...extra })
   const usage = judge.ambientJudgeDaily(status({ judgeTimeZone: 'Asia/Shanghai', judgeDaily: [
     day('2026-11-14', { calls: 5, failed: 1, fallbacks: 2, inputTokens: 300, outputTokens: 40 }),
@@ -244,7 +252,13 @@ test('「机器人状态」 judge usage: seven days in the instance zone, unrepo
   assert.equal(usage.timeZone, 'Asia/Shanghai')
   assert.equal(judge.ambientJudgeDaily(status({ judgeTimeZone: 'Asia/Shanghai', judgeDaily: [] }), 'zh-CN', NOW).unreported, false)
   assert.equal(judge.ambientJudgeDaily(status()), null, 'an instance without judgeDaily shows nothing')
-  assert.equal(judge.ambientJudgeDaily(status({ judgeTimeZone: 'Not/AZone', judgeDaily: [day('2026-11-18', { calls: 1 })] })).rows.length, 1, 'a zone the browser does not know keeps the reported days')
+  // Review M4: the base is the latest day the instance reported, never the browser clock.
+  const ahead = judge.ambientJudgeDaily(status({ judgeTimeZone: 'Pacific/Kiritimati', judgeDaily: [day('2026-11-19', { calls: 3 })] }), 'zh-CN', NOW)
+  assert.equal(ahead.rows.at(-1).day, '2026-11-19')
+  const browserAhead = judge.ambientJudgeDaily(status({ judgeTimeZone: 'Asia/Shanghai', judgeDaily: [day('2026-11-18', { calls: 3 })] }), 'zh-CN', Date.UTC(2026, 10, 25))
+  assert.deepEqual([browserAhead.rows[0].day, browserAhead.rows.at(-1).day], ['2026-11-12', '2026-11-18'], 'a browser clock days ahead does not move the window')
+  assert.deepEqual(judge.ambientJudgeDaily(status({ judgeTimeZone: 'Not/AZone', judgeDaily: [day('2026-03-01', { calls: 1 })] })).rows.map(row => row.day),
+    ['2026-02-23', '2026-02-24', '2026-02-25', '2026-02-26', '2026-02-27', '2026-02-28', '2026-03-01'], 'calendar arithmetic, any zone')
   assert.doesNotMatch(usage.rows.map(row => judge.ambientJudgeDaily(status({ judgeTimeZone: 'UTC', judgeDaily: [] }), 'en', NOW).rows[0].label).join(''), CJK)
 })
 
@@ -257,31 +271,77 @@ test('an ADR 0066 instance reads 只观察 from purposes.ambient.mode and never 
   const settings = { behavior: 'watch', groupScope: 'some', groups: ['qq:1'], maxPerHour: 4 }
   assert.deepEqual(ambient.buildAmbientPatches(settings, { mergedJudge: true }).map(patch => patch.path.at(-1)), ['conversations', 'maxPerHour'])
   assert.deepEqual(ambient.buildAmbientPatches(settings).map(patch => patch.path.at(-1)), ['conversations', 'mode', 'maxPerHour'], 'older instances keep the old key')
-  const policy = { profile: 'ts', fallbacks: ['flash'], minConfidence: 0.8, mode: 'active' }
-  assert.deepEqual(ambient.ambientJudgeModeChange(settings, policy, 'active'), { ...policy, mode: 'shadow' }, 'the whole policy is written with the new mode')
-  assert.equal(ambient.ambientJudgeModeChange(settings, policy, 'shadow'), null, 'same mode: nothing to write')
-  assert.equal(ambient.ambientJudgeModeChange({ ...settings, behavior: 'off' }, policy, 'active'), null, '关闭 only clears the groups')
 })
 
-test('writing the judge mode goes through owners → view → /plan → /apply with the view bindings', async () => {
+test('review H1: an older instance needs proof; a failed read is unknown and the mode is neither written nor assumed', () => {
+  const newer = status({ judgeChain: [{ profile: 'ts', label: 'svc/ts', role: 'primary' }] })
+  const missing = true
+  assert.equal(ambient.ambientJudgeState({ judge: judgeView(), status: null }).state, 'merged')
+  assert.equal(ambient.ambientJudgeState({ judgeMissing: missing, status: newer }).state, 'merged')
+  assert.equal(ambient.ambientJudgeState({ judgeMissing: missing, status: status() }).state, 'legacy', 'route missing and a status without judgeChain')
+  // Situation A: both reads failed (config:get-source still worked): unknown, not legacy.
+  assert.equal(ambient.ambientJudgeState({ judgeMissing: false, status: null }).state, 'unknown')
+  assert.equal(ambient.ambientJudgeState({ judgeMissing: missing, status: null }).state, 'unknown', 'a missing route alone is not proof')
+  assert.equal(ambient.ambientJudgeState({ judgeMissing: false, status: status() }).state, 'unknown', 'a failed judge read is not a missing route')
+
+  const plan = (behavior, initial, judgeState) => ambient.ambientModePlan({ behavior, groupScope: 'all', groups: [], maxPerHour: 3 }, initial, judgeState)
+  const unknown = { state: 'unknown' }
+  assert.deepEqual(plan('watch', 'off', unknown), { writeYmlMode: false, judgeMode: null, blocked: 'unknown' }, 'unknown: turning on is blocked')
+  assert.deepEqual(plan('join', 'watch', unknown), { writeYmlMode: false, judgeMode: null, blocked: 'unknown' }, 'unknown: switching is blocked')
+  assert.deepEqual(plan('watch', 'watch', unknown), { writeYmlMode: false, judgeMode: null, blocked: null }, 'unknown: groups only, no mode written')
+  assert.deepEqual(plan('off', 'watch', unknown).blocked, null, '关闭 is always allowed')
+  // Situation B: merged, the judge route answered 503 and the status says enabled=false (mode unknown).
+  const mergedNoPolicy = ambient.ambientJudgeState({ judgeMissing: false, status: { ...newer, enabled: false, mode: 'off' } })
+  assert.deepEqual(mergedNoPolicy, { state: 'merged' })
+  assert.equal(plan('watch', 'off', mergedNoPolicy).blocked, 'no-policy-shadow', 'off → 只观察 cannot be saved as a groups-only write')
+  assert.equal(plan('join', 'off', mergedNoPolicy).blocked, 'no-policy')
+  assert.equal(plan('watch', 'watch', { state: 'merged', mode: 'shadow' }).blocked, null, 'a known mode that stays is fine')
+  assert.equal(plan('watch', 'join', { state: 'merged', mode: 'active' }).blocked, 'no-policy-shadow')
+  const withPolicy = { state: 'merged', policy: { profile: 'ts', mode: 'active' }, mode: 'active' }
+  assert.deepEqual(plan('watch', 'join', withPolicy), { writeYmlMode: false, judgeMode: 'shadow', blocked: null })
+  assert.deepEqual(plan('join', 'join', withPolicy), { writeYmlMode: false, judgeMode: null, blocked: null })
+  assert.deepEqual(plan('watch', 'join', { state: 'legacy' }), { writeYmlMode: true, judgeMode: null, blocked: null })
+})
+
+function hostFetch({ judgePolicies, applyStatus = 'committed' }) {
   const calls = []
   const answer = data => ({ ok: true, status: 200, json: async () => ({ success: true, data }) })
+  let reads = 0
   const fetch = async (url, init = {}) => {
     const path = new URL(url, 'https://host').pathname.replace('/api/agent/inference', '') || '/'
     calls.push([path, init.body ? JSON.parse(init.body) : undefined])
+    if (path === '/ambient-judge') return answer(judgeView(judgePolicies[Math.min(reads++, judgePolicies.length - 1)]))
     if (path === '/owners') return answer([{ id: 'personal', kind: 'personal' }, { id: 'host', kind: 'host' }])
     if (path === '/') return answer(view())
     if (path === '/plan') return answer({ prepared: { sealed: true }, fingerprint: 'f', baseRevision: 3, warnings: [{ code: 'deprecated-decisions-ambient', path: 'purposes.decisions.ambient', message: 'x' }] })
-    if (path === '/apply') return answer({ status: 'committed', receipt: { graphRevision: 4 } })
+    if (path === '/apply') return answer({ status: applyStatus, receipt: { graphRevision: 4 } })
     throw new Error(path)
   }
-  const result = await judge.writeAmbientJudgePolicy(fetch, { profile: 'ts', mode: 'shadow' }, { mutationId: 'm-1' })
+  return { fetch, calls }
+}
+
+test('writing the judge mode reads the latest policy, changes only mode, and goes through /plan → /apply', async () => {
+  const shown = { profile: 'ts', fallbacks: ['flash'], minConfidence: 0.8, mode: 'active' }
+  const { fetch, calls } = hostFetch({ judgePolicies: [shown] })
+  const result = await judge.writeAmbientJudgeMode(fetch, 'shadow', { expected: shown, mutationId: 'm-1' })
   assert.equal(result.status, 'committed')
   assert.equal(result.warnings.length, 1)
-  assert.deepEqual(calls.map(([path]) => path), ['/owners', '/', '/plan', '/apply'])
-  assert.deepEqual(calls[2][1].plan, { version: 1, purposes: { ambient: { profile: 'ts', mode: 'shadow' } } })
-  assert.deepEqual(calls[2][1].bindings.profiles.ts, 'ts')
-  assert.deepEqual(calls[3][1], { prepared: { sealed: true }, mutationId: 'm-1' })
+  assert.deepEqual(calls.map(([path]) => path), ['/ambient-judge', '/owners', '/', '/plan', '/apply'])
+  assert.deepEqual(calls[3][1].plan, { version: 1, purposes: { ambient: { ...shown, mode: 'shadow' } } })
+  assert.deepEqual(calls[3][1].bindings.profiles.ts, 'ts')
+  assert.deepEqual(calls[4][1], { prepared: { sealed: true }, mutationId: 'm-1' })
+  assert.equal(await judge.readAmbientJudgeMode(hostFetch({ judgePolicies: [{ mode: 'shadow' }] }).fetch), 'shadow')
+  assert.equal(await judge.readAmbientJudgeMode(async () => { throw new Error('offline') }), undefined)
+})
+
+test('review H3: two tabs — a policy changed in the other tab since this page read it is not overwritten', async () => {
+  const shownHere = { profile: 'ts', minConfidence: 0.7, mode: 'active' }
+  const savedInOtherTab = { profile: 'ts', compare: 'chat', minConfidence: 0.9, mode: 'active' }
+  const { fetch, calls } = hostFetch({ judgePolicies: [savedInOtherTab] })
+  const result = await judge.writeAmbientJudgeMode(fetch, 'shadow', { expected: shownHere, mutationId: 'm-2' })
+  assert.equal(result.status, 'stale')
+  assert.deepEqual(result.policy, savedInOtherTab)
+  assert.deepEqual(calls.map(([path]) => path), ['/ambient-judge'], 'nothing is planned or applied')
 })
 
 // ------------------------------------------------------------- decision replay
@@ -299,9 +359,10 @@ test('ambient_decision rows show the judge, fallback, tokens, error class and th
 
 // ------------------------------------------------------------- the purposes page
 
-async function purposesPage(v, { judgeRead = judgeView(), request: answer } = {}) {
-  const runtime = pageRuntime(), plans = [], requests = []
-  const management = { view: v, source: { view: v }, busy: false, pending: null, active: () => true, setError: message => assert.fail(message),
+async function purposesPage(v, { judgeRead = judgeView(), request: answer, permissions = null, storage = new Map() } = {}) {
+  const runtime = pageRuntime(), plans = [], requests = [], errors = []
+  globalThis.sessionStorage = { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) }
+  const management = { view: v, source: { view: v }, busy: false, pending: null, active: () => true, setError: message => errors.push(message),
     request: async (path, body, method) => {
       requests.push([path, method])
       if (answer) return answer(path, body, method)
@@ -313,7 +374,9 @@ async function purposesPage(v, { judgeRead = judgeView(), request: answer } = {}
     { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
   const deps = {
     react: runtime.api, 'react/jsx-runtime': jsxRuntime, './model.mjs': model, './ambient-judge-model.mjs': judge, '../../components/SaveButton': saveButtonMock,
-    '../../utils/plugin-rpc': { pluginRpc: async () => status({ compare }) },
+    '../../utils/plugin-rpc': { pluginRpc: async () => { statusReads.count++; return status({ compare }) } },
+    '../../hooks/use-console-access': { useConsoleAccess: () => ({}) },
+    '../../utils/console-access.mjs': { hasConsolePermission: name => permissions === null || permissions.includes(name) },
     '../../i18n': { useI18n: () => ({ locale: 'zh-CN', t: (m, values) => translate('zh-CN', m, values) }) },
     'lucide-react': new Proxy({}, { get: () => 'icon' }),
     '@zhin.js/console-ui': { Alert: 'alert', AlertTitle: 'alert-title', AlertDescription: 'alert-description', Button: 'button', Input: 'input', InlineCode: 'code', Switch: 'switch',
@@ -328,8 +391,9 @@ async function purposesPage(v, { judgeRead = judgeView(), request: answer } = {}
   const all = () => nodes(runtime.value)
   const select = label => all().find(node => node.type === 'select' && node.props['aria-label'] === label)
   const text = node => Array.isArray(node) ? node.map(text).join('') : node && typeof node === 'object' ? text(node.props?.children) : typeof node === 'string' || typeof node === 'number' ? String(node) : ''
-  return { runtime, plans, requests, all, select, text: () => text(runtime.value), submit: () => runtime.value.props.onSubmit({ preventDefault() {} }) }
+  return { runtime, plans, requests, errors, storage, all, select, text: () => text(runtime.value), submit: () => runtime.value.props.onSubmit({ preventDefault() {} }) }
 }
+const statusReads = { count: 0 }
 
 test('the purposes page shows one 插话判断 (mixed models, chain, compared model) and five decision purposes', async () => {
   const page = await purposesPage(view({ purposes: { defaults: { chat: 'chat' }, ambient: { profile: 'ts', fallbacks: ['flash'], minConfidence: 0.7, mode: 'active' }, decisions: {} } }))
@@ -401,3 +465,109 @@ test('an older instance keeps 旁听 and 旁听参与判断, says to upgrade, an
     assert.deepEqual(page.plans[0].purposes.decisions.ambient, { mode: 'active', profile: 'ts' })
   } finally { page.runtime.unmount() }
 })
+
+// ------------------------------------------------------------- review of console#152 on the purposes page
+
+const mergedView = (purposes = { defaults: { chat: 'chat' }, decisions: {} }) =>
+  view({ purposes, effects: { ambient: { status: 'effective', chain: [{ profile: 'chat', kind: 'language' }], inheritedFrom: 'chat' } } })
+const flush = async page => { for (let i = 0; i < 6; i++) { await new Promise(resolve => setTimeout(resolve, 2)); await page.runtime.settle() } page.runtime.render() }
+
+test('H2: a failed judge read disables the section, shows the error and writes nothing about the judge', async () => {
+  const page = await purposesPage(mergedView(), { judgeRead: new model.InferenceRequestError('unavailable', 503) })
+  try {
+    assert.equal(page.select('插话判断模型'), undefined, 'no editor without a base read from the Host')
+    assert.match(page.text(), /插话判断没有读到：.+读到之前不能修改，保存其他用途时也不会改动它/u)
+    assert.ok(page.all().some(node => node.type === 'button' && [node.props.children].flat().includes('重新读取')))
+    await page.submit()
+    assert.equal(Object.hasOwn(page.plans[0].purposes, 'ambient'), false)
+  } finally { page.runtime.unmount() }
+})
+
+test('H2: while the judge is still being read nothing can be edited, and a save does not write an empty policy', async () => {
+  let resolve
+  const pending = new Promise(done => { resolve = done })
+  const page = await purposesPage(mergedView(), { request: path => path === '/ambient-judge' ? pending : { adapters: [], endpoints: [], scenes: [], agents: [] } })
+  try {
+    assert.match(page.text(), /正在读取插话判断…/u)
+    assert.equal(page.select('插话判断模型'), undefined)
+    // The save re-reads the judge afterwards; that read is still pending here.
+    const saving = page.submit()
+    await flush(page)
+    assert.equal(Object.hasOwn(page.plans[0].purposes, 'ambient'), false, 'no empty policy as a base')
+    resolve(judgeView({ minConfidence: 0.8, mode: 'shadow' }, { source: 'legacy', chain: [] }))
+    await saving
+    await flush(page)
+    assert.equal(page.all().find(node => node.type === 'input' && node.props['aria-label'] === '门槛（0 到 1）').props.value, '0.8')
+  } finally { page.runtime.unmount() }
+})
+
+test('H2: changing only the threshold on a Host that has not migrated leaves mode to the Host', async () => {
+  const page = await purposesPage(mergedView(), { judgeRead: judgeView({ minConfidence: 0.7, mode: 'shadow' }, { source: 'legacy', chain: [] }) })
+  try {
+    page.all().find(node => node.type === 'input' && node.props['aria-label'] === '门槛（0 到 1）').props.onChange({ target: { value: '0.85' } }); page.runtime.render()
+    await page.submit()
+    assert.deepEqual(page.plans[0].purposes.ambient, { minConfidence: 0.85 }, 'mode is not written: the Host fills it from the yml key it still honours')
+  } finally { page.runtime.unmount() }
+})
+
+test('H3: a judge changed in another tab since this page read it is not overwritten', async () => {
+  let reads = 0
+  const page = await purposesPage(view({ purposes: { defaults: { chat: 'chat' }, ambient: { profile: 'ts', mode: 'active' }, decisions: {} } }), {
+    request: path => path === '/ambient-judge'
+      ? judgeView(reads++ === 0 ? { profile: 'ts', mode: 'active' } : { profile: 'ts', compare: 'chat', mode: 'active' })
+      : { adapters: [], endpoints: [], scenes: [], agents: [] },
+  })
+  try {
+    page.all().find(node => node.type === 'switch').props.onCheckedChange(true); page.runtime.render()
+    await page.submit()
+    assert.deepEqual(page.plans, [], 'nothing saved')
+    assert.match(page.errors.join('\n'), /插话判断刚在别处被修改过，这次没有保存/u)
+  } finally { page.runtime.unmount() }
+})
+
+const migrated = { id: 'adr-0066-ambient-judge', status: 'migrated', at: NOW, rows: [], notes: [] }
+
+test('M2: without agent.configure the banner is hidden in this browser, no POST, and it stays hidden', async () => {
+  const storage = new Map()
+  const purposes = { defaults: { chat: 'chat' }, ambient: { profile: 'ts' }, decisions: {} }
+  const options = { judgeRead: judgeView({ profile: 'ts' }, { migration: migrated }), permissions: ['agent.view', 'ambient:read'], storage }
+  const page = await purposesPage(view({ purposes }), options)
+  try {
+    const buttons = page.all().filter(node => node.type === 'button').map(node => text(node))
+    assert.ok(!buttons.includes('知道了'), 'no confirm button without agent.configure')
+    page.all().find(node => node.type === 'button' && text(node) === '在这个浏览器里隐藏').props.onClick(); page.runtime.render()
+    assert.doesNotMatch(page.text(), /插话判断已从旧配置迁移/u)
+    assert.ok(!page.requests.some(([path]) => path === '/ambient-judge/migration/noticed'))
+    assert.equal([...storage.values()][0], 'hidden')
+  } finally { page.runtime.unmount() }
+  const again = await purposesPage(view({ purposes }), options)
+  try { assert.doesNotMatch(again.text(), /插话判断已从旧配置迁移/u, 'hidden after a reload too') } finally { again.runtime.unmount() }
+})
+
+test('M2: a 403 from …/migration/noticed hides the banner locally and is not a page error', async () => {
+  const page = await purposesPage(view({ purposes: { defaults: { chat: 'chat' }, ambient: { profile: 'ts' }, decisions: {} } }), {
+    request: path => {
+      if (path === '/ambient-judge') return judgeView({ profile: 'ts' }, { migration: migrated })
+      if (path === '/ambient-judge/migration/noticed') throw new model.InferenceRequestError('forbidden', 403)
+      return { adapters: [], endpoints: [], scenes: [], agents: [] }
+    },
+  })
+  try {
+    await page.all().find(node => node.type === 'button' && text(node) === '知道了').props.onClick(); await flush(page)
+    assert.deepEqual(page.errors, [])
+    assert.doesNotMatch(page.text(), /插话判断已从旧配置迁移/u)
+  } finally { page.runtime.unmount() }
+})
+
+test('M5: without ambient:read the agreement is not read at all', async () => {
+  const before = statusReads.count
+  const page = await purposesPage(view({ purposes: { defaults: { chat: 'chat' }, ambient: { profile: 'ts' }, decisions: {} } }), { permissions: ['agent.view', 'agent.configure'] })
+  try {
+    assert.equal(statusReads.count, before)
+    assert.doesNotMatch(page.text(), /与对照模型一致/u)
+  } finally { page.runtime.unmount() }
+})
+
+function text(node) {
+  return Array.isArray(node) ? node.map(text).join('') : node && typeof node === 'object' ? text(node.props?.children) : typeof node === 'string' || typeof node === 'number' ? String(node) : ''
+}

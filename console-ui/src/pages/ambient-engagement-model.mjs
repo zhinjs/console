@@ -252,16 +252,38 @@ export function buildAmbientPatches(settings, { mergedJudge = false } = {}) {
 }
 
 /**
- * ADR 0066: the `purposes.ambient` to write when the draft changes 「只观察 / 主动参与」, or null when
- * the mode stays (or the behaviour is 关闭, which only clears the groups). The whole policy is
- * written (the object form replaces the item), so it starts from the policy read from the Host.
+ * Whether the instance has the merged judge, decided only on evidence (ADR 0066 review H1):
+ * `legacy` needs both a missing judge route and a status that was read and has no `judgeChain`;
+ * `merged` needs the judge or a status with `judgeChain`; anything else (a timeout, a 503, a status
+ * that could not be read) is `unknown`, and then the mode is neither shown as known nor written.
+ * `judge` is the checked judge view or null, `judgeMissing` whether its route is missing, `status`
+ * the checked status or null.
  */
-export function ambientJudgeModeChange(settings, policy, currentMode) {
-  if (settings.behavior === 'off') return null
-  const mode = settings.behavior === 'watch' ? 'shadow' : 'active'
-  if (mode === (currentMode === 'shadow' ? 'shadow' : 'active')) return null
-  const base = isPlainObject(policy) ? policy : {}
-  return { ...base, ...(Array.isArray(base.fallbacks) ? { fallbacks: [...base.fallbacks] } : {}), mode }
+export function ambientJudgeState({ judge = null, judgeMissing = false, status = null } = {}) {
+  if (judge) return { state: 'merged', policy: judge.policy, source: judge.source, mode: judge.policy.mode === 'shadow' ? 'shadow' : 'active' }
+  if (status && hasMergedJudge(status)) return { state: 'merged', ...(status.enabled ? { mode: status.mode === 'shadow' ? 'shadow' : 'active' } : {}) }
+  if (judgeMissing && status && !hasMergedJudge(status)) return { state: 'legacy' }
+  return { state: 'unknown' }
+}
+
+/**
+ * What a save of the interjection settings may write about 「只观察 / 主动参与」:
+ * - `legacy`: the old `ai.trigger.ambient.mode` (`writeYmlMode`).
+ * - `merged` with the policy read: `judgeMode` when the mode changes (written to `purposes.ambient`).
+ * - `merged` without the policy: only a behaviour whose mode is already known to be in effect;
+ *   anything else is `blocked` (`no-policy-shadow` when the target is 只观察, else `no-policy`).
+ * - `unknown`: nothing about the mode; turning interjection on or switching the mode is `blocked`.
+ * 关闭 only clears the groups and is never blocked.
+ */
+export function ambientModePlan(settings, initialBehavior, judge = { state: 'legacy' }) {
+  const none = { writeYmlMode: false, judgeMode: null, blocked: null }
+  if (judge.state === 'legacy') return { ...none, writeYmlMode: true }
+  if (settings.behavior === 'off') return none
+  const wanted = settings.behavior === 'watch' ? 'shadow' : 'active'
+  if (judge.state !== 'merged') return initialBehavior === settings.behavior ? none : { ...none, blocked: 'unknown' }
+  if (judge.policy) return { ...none, judgeMode: wanted === judge.mode ? null : wanted }
+  if (judge.mode !== undefined && wanted === judge.mode) return none
+  return { ...none, blocked: wanted === 'shadow' ? 'no-policy-shadow' : 'no-policy' }
 }
 
 /** The keys a save writes (`ai.trigger.ambient.*` → value), for comparing a read-back with the draft. */

@@ -54,7 +54,8 @@ export function ambientJudgePolicyFromDraft(draft: AmbientJudgeDraft): AmbientJu
 export function ambientJudgeFieldLabel(field: string, locale?: Locale): string
 export function validateAmbientJudgeDraft(draft: AmbientJudgeDraft, view: View, locale?: Locale): AmbientJudgeProblem[]
 export function ambientJudgeHints(draft: AmbientJudgeDraft, view: View, chatChain?: readonly string[], locale?: Locale): string[]
-export function ambientJudgePlanEntry(draft: AmbientJudgeDraft, original: AmbientJudgePolicy | undefined | null): AmbientJudgePolicy | undefined
+export function sameAmbientJudgePolicy(a: AmbientJudgePolicy | undefined | null, b: AmbientJudgePolicy | undefined | null): boolean
+export function ambientJudgePlanEntry(draft: AmbientJudgeDraft, original: AmbientJudgePolicy | undefined | null, options?: { source?: AmbientJudgeView['source'] }): AmbientJudgePolicy | undefined
 export function ambientJudgeChoices(view: View, locale?: Locale): AmbientJudgeChoice[]
 export function ambientJudgeKindLabel(kind: string | undefined, locale?: Locale): string
 export function profileName(view: View | null | undefined, id: string): string
@@ -100,9 +101,11 @@ export interface AmbientJudgeDaily {
 }
 export function ambientJudgeDaily(status: unknown, locale?: Locale, now?: number): AmbientJudgeDaily | null
 export interface PlanWarning { path?: string; code?: string; message?: string }
-export function writeAmbientJudgePolicy(fetch: typeof globalThis.fetch, policy: AmbientJudgePolicy, options?: { mutationId?: string }): Promise<{
-  status: 'committed' | 'conflict' | 'not-committed' | 'commit-unknown'
+export function writeAmbientJudgeMode(fetch: typeof globalThis.fetch, mode: 'active' | 'shadow', options?: { expected?: AmbientJudgePolicy; mutationId?: string }): Promise<{
+  status: 'committed' | 'conflict' | 'not-committed' | 'commit-unknown' | 'stale'
   code?: string
   warnings: PlanWarning[]
+  policy?: AmbientJudgePolicy
 }>
+export function readAmbientJudgeMode(fetch: typeof globalThis.fetch): Promise<'active' | 'shadow' | undefined>
 export function planWarningText(warning: unknown, locale?: Locale): string

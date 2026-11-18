@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import { ArrowDown, ArrowUp, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle, Button, Card, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, InlineCode, Input, SearchableSelectField, type SearchableSelectOption, SelectField, Switch, useConfirm } from '@zhin.js/console-ui'
 import { pluginRpc } from '../../utils/plugin-rpc'
+import { useConsoleAccess } from '../../hooks/use-console-access'
+import { hasConsolePermission } from '../../utils/console-access.mjs'
 import {
   AMBIENT_JUDGE_REVERT_COMMAND,
   DECISION_TASKS,
@@ -22,6 +24,7 @@ import {
   planWarningText,
   profileName,
   readAmbientJudgeView,
+  sameAmbientJudgePolicy,
   validateAmbientJudgeDraft,
   type AmbientAgreement,
   type AmbientJudgeDraft,
@@ -94,10 +97,16 @@ export function Purposes({ management: m }: { management: InferenceManagement })
   const [judgeProblems, setJudgeProblems] = useState<AmbientJudgeProblem[]>([])
   const support = ambientJudgeSupport({ view, judge: judgeRead?.judge, judgeError: judgeRead?.error })
   const merged = support === 'merged'
-  const judgeOriginal = judgeRead?.judge?.policy ?? view.purposes?.ambient ?? {}
+  // What the editor starts from (ADR 0066 review H2): the judge read from its route, or a stored
+  // `purposes.ambient` in the view. Never an empty policy: until one of them is there the section is
+  // disabled (still reading) or shows the read error, and nothing about the judge is written.
+  const judgeBase: { policy: NonNullable<PurposeState['ambient']>; source: AmbientJudgeView['source'] } | null = judgeRead?.judge
+    ? { policy: judgeRead.judge.policy, source: judgeRead.judge.source }
+    : view.purposes?.ambient !== undefined ? { policy: view.purposes.ambient, source: 'stored' } : null
+  const judgeOriginal = judgeBase?.policy ?? {}
   const judgeDraftValue = judgeEditor?.draft ?? ambientJudgeDraft(judgeOriginal)
   async function readJudge() {
-    if (!view.hostAdministrator) return setJudgeRead({ judge: null, error: null })
+    if (!view.hostAdministrator) return setJudgeRead({ judge: null, error: new InferenceRequestError('forbidden', 403) })
     try {
       const judge = readAmbientJudgeView(await m.request<unknown>('/ambient-judge'))
       if (m.active()) setJudgeRead({ judge, error: null })
@@ -112,7 +121,8 @@ export function Purposes({ management: m }: { management: InferenceManagement })
   }, [view.rootId])
   // The draft follows what was read until it is edited.
   useEffect(() => {
-    setJudgeEditor((current) => current?.touched ? current : { draft: ambientJudgeDraft(judgeOriginal), touched: false })
+    if (!judgeBase) return
+    setJudgeEditor((current) => current?.touched ? current : { draft: ambientJudgeDraft(judgeBase.policy), touched: false })
   }, [judgeRead])
   const saveFeedback = useSaveFeedback()
   const { confirm, ConfirmDialog: confirmDialog } = useConfirm()
@@ -269,14 +279,32 @@ export function Purposes({ management: m }: { management: InferenceManagement })
         const submittedJudge = judgeEditor
         saveFeedback.reset()
         setWarnings([])
-        // ADR 0066: the judge is checked like the Host checks it, before anything is sent.
-        const problems = merged ? validateAmbientJudgeDraft(judgeDraftValue, view, i18n.locale) : []
+        // ADR 0066: the judge is checked like the Host checks it, before anything is sent. Without a
+        // base read from the Host nothing about it is written.
+        const entry = merged && judgeBase ? ambientJudgePlanEntry(judgeDraftValue, judgeBase.policy, { source: judgeBase.source }) : undefined
+        const problems = entry !== undefined ? validateAmbientJudgeDraft(judgeDraftValue, view, i18n.locale) : []
         setJudgeProblems(problems)
         if (problems.length) return
+        if (entry !== undefined && judgeBase) {
+          // Review H3: read the judge again; a policy changed elsewhere since this page read it is not
+          // overwritten silently.
+          let latest: AmbientJudgeView | null = null
+          try {
+            latest = readAmbientJudgeView(await m.request<unknown>('/ambient-judge'))
+          } catch (error) {
+            if (m.active()) m.setError(i18n.t("插话判断没有保存：{0}", [inferenceError(error, i18n.locale)]))
+            return
+          }
+          if (!m.active()) return
+          if (!latest || !sameAmbientJudgePolicy(latest.policy, judgeBase.policy)) {
+            m.setError(i18n.t("插话判断刚在别处被修改过，这次没有保存。请重新读取，确认后再修改。"))
+            return
+          }
+        }
         if (!(await probeNewBindings())) return
         setSaving(true)
         try {
-          const ambientJudge = merged ? { entry: ambientJudgePlanEntry(judgeDraftValue, judgeOriginal) } : undefined
+          const ambientJudge = merged ? { entry } : undefined
           const saved = await m.savePlan({ version: 1, purposes: purposePlan(draft, view.purposes!, { fallbacks, ambientJudge }) }, {
             source,
             onWarnings: (list) => setWarnings(list),
@@ -379,7 +407,20 @@ export function Purposes({ management: m }: { management: InferenceManagement })
           }
         />
       </Card>
-      {merged ? (
+      {merged && !judgeBase ? (
+        <Card className="p-4 space-y-2" data-ambient-judge-unavailable="">
+          <h4 className="font-medium">{i18n.t("插话判断")}</h4>
+          {judgeRead === null
+            ? <p className="text-sm text-muted-foreground" role="status">{i18n.t("正在读取插话判断…")}</p>
+            : <>
+              <p className="text-sm text-destructive" role="alert">
+                {i18n.t("插话判断没有读到：{0}。读到之前不能修改，保存其他用途时也不会改动它。", [inferenceError(judgeRead.error ?? new InferenceRequestError('unavailable'), i18n.locale)])}
+              </p>
+              <Button type="button" size="sm" variant="outline" onClick={() => { setJudgeRead(null); void readJudge() }}>{i18n.t("重新读取")}</Button>
+            </>}
+        </Card>
+      ) : null}
+      {merged && judgeBase ? (
         <AmbientJudgeSection
           view={view}
           judge={judgeRead?.judge ?? null}
@@ -394,9 +435,13 @@ export function Purposes({ management: m }: { management: InferenceManagement })
             try {
               await noticeAmbientJudgeMigration(m.request)
             } catch (error) {
+              // Review M2: a refusal is not a page error; the banner is then hidden in this browser.
+              if (error instanceof InferenceRequestError && (error.status === 403 || error.code === 'forbidden')) return false
               m.setError(inferenceError(error, i18n.locale))
+              return true
             }
             await readJudge()
+            return true
           }}
         />
       ) : null}
@@ -660,7 +705,7 @@ function AvailabilityNote({ view, profileId }: { view: View; profileId?: string 
   const i18n = useI18n()
   const entry = profileId ? profileAvailability(view, profileId) : undefined
   if (!entry) return null
-  return <p className="text-xs text-destructive" role="status">{describeUnavailability(entry, i18n.locale)}</p>
+  return <p className="text-xs text-warning" role="status">{describeUnavailability(entry, i18n.locale)}</p>
 }
 
 /**
@@ -779,20 +824,35 @@ function AmbientJudgeSection({
   problems: AmbientJudgeProblem[]
   fallbacks: boolean
   onChange: (update: (draft: AmbientJudgeDraft) => AmbientJudgeDraft) => void
-  onNoticed: () => Promise<void>
+  /** `false`: the Host refused (no permission); the banner is then hidden in this browser only. */
+  onNoticed: () => Promise<boolean>
 }) {
   const i18n = useI18n()
+  const access = useConsoleAccess()
+  const canNotice = hasConsolePermission('agent.configure', access)
+  const canReadStatus = hasConsolePermission('ambient:read', access)
   const [agreement, setAgreement] = useState<AmbientAgreement | null>(null)
   const [noticing, setNoticing] = useState(false)
+  const noticeKey = judge?.migration ? `zhin.console.ambient-judge-notice:${view.rootId}:${judge.migration.at}` : ''
+  const [hiddenNow, setHiddenLocally] = useState(false)
+  // Read on every render: the migration record (and so the key) may arrive after the first one.
+  let hiddenStored = false
+  try { hiddenStored = Boolean(noticeKey) && sessionStorage.getItem(noticeKey) === 'hidden' } catch { hiddenStored = false }
+  const hiddenLocally = hiddenNow || hiddenStored
+  const hideLocally = () => {
+    try { if (noticeKey) sessionStorage.setItem(noticeKey, 'hidden') } catch { /* storage blocked: hidden for this render only */ }
+    setHiddenLocally(true)
+  }
   useEffect(() => {
     let alive = true
-    // Agreement lives in the interjection status (ambient:read); without that permission it is not shown.
+    // Agreement lives in the interjection status (ambient:read); without that permission it is not read.
+    if (!canReadStatus) { setAgreement(null); return }
     void pluginRpc<unknown>('root', 'ambient').then(
       (status) => { if (alive) setAgreement(ambientAgreement(status, i18n.locale, (id) => profileName(view, id))) },
       () => { if (alive) setAgreement(null) },
     )
     return () => { alive = false }
-  }, [view.rootId, i18n.locale])
+  }, [view.rootId, i18n.locale, canReadStatus])
   const options: SearchableSelectOption[] = ambientJudgeChoices(view, i18n.locale).map((choice) => ({
     value: choice.value,
     label: supportLabel(choice.profile.label ?? choice.profile.model, profileSupport(view, choice.profile)),
@@ -803,7 +863,7 @@ function AmbientJudgeSection({
   const chain = draft.profile ? [draft.profile, ...draft.fallbacks] : []
   const inheritedChain = !draft.profile ? [view.purposes?.defaults.chat, ...(view.purposes?.defaults.chatFallbacks ?? [])].filter((id): id is string => Boolean(id)) : []
   const hints = ambientJudgeHints(draft, view, inheritedChain, i18n.locale)
-  const notice = ambientMigrationNotice(judge, view, i18n.locale)
+  const notice = hiddenLocally ? null : ambientMigrationNotice(judge, view, i18n.locale)
   const failure = ambientMigrationFailure(judge, i18n.locale)
   const problemsOf = (field: AmbientJudgeProblem['field']) => problems.filter((problem) => problem.field === field)
   const problemList = (field: AmbientJudgeProblem['field']) => problemsOf(field).map((problem) => (
@@ -811,7 +871,7 @@ function AmbientJudgeSection({
   ))
   const notice_ = async () => {
     setNoticing(true)
-    try { await onNoticed() } finally { setNoticing(false) }
+    try { if (!(await onNoticed())) hideLocally() } finally { setNoticing(false) }
   }
   return (
     <Card className="p-4 space-y-4" data-ambient-judge="">
@@ -842,7 +902,9 @@ function AmbientJudgeSection({
               {i18n.t("（只在迁移后没改过插话判断时可用；降级到旧版本前必须先回退）。")}
             </p>
             <div className="flex flex-wrap items-center gap-2">
-              <Button type="button" size="sm" variant="outline" disabled={noticing} onClick={() => void notice_()}>{i18n.t("知道了")}</Button>
+              {canNotice
+                ? <Button type="button" size="sm" variant="outline" disabled={noticing} onClick={() => void notice_()}>{i18n.t("知道了")}</Button>
+                : <Button type="button" size="sm" variant="outline" onClick={hideLocally}>{i18n.t("在这个浏览器里隐藏")}</Button>}
               <Button type="button" size="sm" variant="ghost" asChild>
                 <a href={ambientJudgeDocUrl(i18n.locale)} target="_blank" rel="noreferrer">{i18n.t("查看迁移说明")}</a>
               </Button>

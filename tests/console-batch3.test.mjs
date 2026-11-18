@@ -102,6 +102,7 @@ async function purposesPage(v) {
   const deps = {
     react: runtime.api, 'react/jsx-runtime': jsxRuntime, './model.mjs': model, '../../components/SaveButton': saveButtonMock,
     '../../utils/plugin-rpc': { pluginRpc: async () => { throw new Error('ambient status unavailable') } }, './ambient-judge-model.mjs': ambientJudgeModel,
+    '../../hooks/use-console-access': { useConsoleAccess: () => ({}) }, '../../utils/console-access.mjs': { hasConsolePermission: () => true },
     '../../i18n': { useI18n: () => ({ locale: 'zh-CN', t: (m, values) => translate('zh-CN', m, values) }) },
     'lucide-react': new Proxy({}, { get: () => 'icon' }),
     '@zhin.js/console-ui': { Button: 'button', Input: 'input', SelectField: 'select', SearchableSelectField: 'select', Card: 'card', useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }), DropdownMenu: 'menu', DropdownMenuContent: 'menu-content', DropdownMenuItem: 'menu-item', DropdownMenuTrigger: 'menu-trigger' }, './SupportInfo': { supportLabel: label => label },
