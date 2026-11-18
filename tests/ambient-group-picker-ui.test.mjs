@@ -168,3 +168,33 @@ test('the "only these groups" whitelist uses the group picker instead of a free-
   assert.deepEqual(picker.props.groups, ['qq:1001', 'qq:999'])
   assert.equal(typeof picker.props.onChange, 'function')
 })
+
+// #64 `ambient-picker-stale-and-sandbox`: 「不在群列表中」 alone did not say whether the bot left the group,
+// the account is offline, or the platform (e.g. the official QQ bot) cannot list groups at all.
+test('a whitelisted group missing from the lists says why', async () => {
+  const endpoints = [
+    { adapter: 'icqq', name: 'main', connected: true }, { adapter: 'qq', name: 'official', connected: true },
+    { adapter: 'kook', name: 'k', connected: false }, { adapter: 'tg', name: 't', connected: true },
+  ]
+  const read = pickerModel.buildGroupCatalog([
+    { adapter: 'icqq', endpoint: 'main', groups: [{ group_id: 1001, name: '开发群' }] },
+    { adapter: 'qq', endpoint: 'official', groups: [] },
+    { adapter: 'tg', endpoint: 't', error: 'HTTP 500' },
+  ], endpoints)
+  const cases = {
+    'icqq:1054950616': ['not-member', '在线账号的群列表里没有这个群，机器人可能已退群。'],
+    'qq:A577AE66': ['no-list', '这个平台没有列出任何群（如 QQ 官方机器人拿不到群列表），无法核对。'],
+    'kook:42': ['offline', '这个平台的账号都不在线，读不到群列表。'],
+    'tg:-100': ['unread', '这个平台的群列表没读到，见下方原因。'],
+    'discord:7': ['no-account', '没有这个平台的账号。'],
+  }
+  for (const [value, [reason]] of Object.entries(cases)) assert.equal(pickerModel.groupOutsideReason(value, read), reason, value)
+  assert.equal(pickerModel.groupOutsideReason('nonsense', read), null)
+  const { tree } = await pickerView({ loading: false, error: null, catalog: read, retry() {} }, ['icqq:1001', ...Object.keys(cases)])
+  const rows = ofType(elements(tree).find(node => node.props?.['aria-label'] === '已选的群'), 'li')
+  assert.ok(!text(rows[0]).includes('不在群列表中'), 'a listed group has no reason')
+  Object.values(cases).forEach(([, line], index) => {
+    assert.ok(text(rows[index + 1]).includes('不在群列表中'))
+    assert.ok(text(rows[index + 1]).includes(line), line)
+  })
+})

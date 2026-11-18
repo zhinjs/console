@@ -2,7 +2,9 @@ export interface GroupEndpoint { adapter: string; name: string; connected: boole
 export interface GroupOption { value: string; id: string; name: string }
 export interface GroupSection { key: string; adapter: string; endpoint: string; groups: GroupOption[] }
 export interface GroupFailure { adapter: string; endpoint: string; error: string }
-export interface GroupCatalog { sections: GroupSection[]; failures: GroupFailure[] }
+export interface GroupAccount { adapter: string; endpoint: string; connected: boolean }
+export interface GroupCatalog { sections: GroupSection[]; failures: GroupFailure[]; accounts?: GroupAccount[] }
+export type GroupOutsideReason = 'no-account' | 'offline' | 'unread' | 'no-list' | 'not-member'
 export type GroupListResult = { adapter: string; endpoint: string; groups: unknown } | { adapter: string; endpoint: string; error: string }
 export type GroupPickerView =
   | { kind: 'loading' }
@@ -12,7 +14,8 @@ export type GroupPickerView =
   | { kind: 'ready'; sections: GroupSection[] }
 export function readGroupEndpoints(payload: unknown, locale?: 'zh-CN' | 'en'): GroupEndpoint[]
 export function readGroupRecord(raw: unknown): { id: string; name: string } | null
-export function buildGroupCatalog(results: readonly GroupListResult[]): GroupCatalog
+export function buildGroupCatalog(results: readonly GroupListResult[], endpoints?: readonly GroupEndpoint[]): GroupCatalog
+export function groupOutsideReason(value: string, catalog: GroupCatalog | null | undefined): GroupOutsideReason | null
 export function filterGroupCatalog(catalog: GroupCatalog, query: string): GroupSection[]
 export function groupsOutsideCatalog(selected: readonly string[], catalog: GroupCatalog): string[]
 export function groupNamesFromCatalog(catalog: GroupCatalog): Map<string, string>
