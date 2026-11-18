@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Plus, Pencil, KeyRound, LogIn, Unplug, Trash2, Activity } from 'lucide-react'
 import { Button, Card, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, ErrorAlert, Input, SelectField, useConfirm } from '@zhin.js/console-ui'
 import { SupportLabel, SupportNotice, supportLabel } from './SupportInfo'
-import { accountHasModels, driverLabel, serviceDriver } from './model.mjs'
+import { accountHasModels, driverLabel, oauthCallbackProblem, serviceDriver } from './model.mjs'
 import {
   driverKey,
   canReferenceEnvironment,
@@ -67,8 +67,15 @@ export function Accounts({ management: m, focusAccount, onAddModel }: { manageme
     challenge: { loginId: string; authorizationUrl: string; redirectUri: string }
   } | null>(null)
   const [callback, setCallback] = useState(''),
+    [callbackChecked, setCallbackChecked] = useState(false),
     [clientSecret, setClientSecret] = useState('')
   const { confirm, ConfirmDialog: dialog } = useConfirm()
+  const callbackProblem = login && callbackChecked ? oauthCallbackProblem(callback, login.challenge.redirectUri) : null
+  const callbackError = callbackProblem === 'empty' ? i18n.t("请粘贴授权后浏览器地址栏里的完整网址。")
+    : callbackProblem === 'not-url' ? i18n.t("这不是一个完整的网址：请从浏览器地址栏复制，以 http:// 或 https:// 开头。")
+      : callbackProblem === 'other-address' ? i18n.t("这不是本次登录的回调地址：网址应以 {0} 开头。", [login?.challenge.redirectUri ?? ''])
+        : callbackProblem === 'no-code' ? i18n.t("网址里没有授权码（code=…）：请在授权完成、浏览器跳转之后再复制地址栏。")
+          : null
   const disabled = m.busy || !!m.pending
   async function disconnect(account: Account) {
     if (
@@ -429,13 +436,14 @@ export function Accounts({ management: m, focusAccount, onAddModel }: { manageme
           if (!open) {
             setLogin(null)
             setCallback('')
+            setCallbackChecked(false)
           }
         }}
       >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{i18n.t("登录 {0}", [login?.account.label ?? ''])}</DialogTitle>
-            <DialogDescription>{i18n.t("在浏览器中授权后，粘贴最终回调地址。")}</DialogDescription>
+            <DialogDescription>{i18n.t("在浏览器中授权后，浏览器会跳到下面的回调地址，并显示「无法访问此网站」之类的错误页：这是正常的。复制那一页地址栏里的完整网址，粘贴到这里。")}</DialogDescription>
           </DialogHeader>
           {m.error ? <ErrorAlert error={m.error} /> : null}
           {login ? (
@@ -446,8 +454,11 @@ export function Accounts({ management: m, focusAccount, onAddModel }: { manageme
               className="space-y-4"
               onSubmit={async (event) => {
                 event.preventDefault()
+                // A malformed paste is caught here, before the one-time login is spent on it.
+                if (oauthCallbackProblem(callback, login.challenge.redirectUri)) { setCallbackChecked(true); return }
                 const callbackUrl = callback
                 setCallback('')
+                setCallbackChecked(false)
                 if (
                   await m.action('/login/complete', {
                     accountId: login.account.id,
@@ -473,9 +484,14 @@ export function Accounts({ management: m, focusAccount, onAddModel }: { manageme
                   value={callback}
                   type="url"
                   autoComplete="off"
-                  onChange={(event) => setCallback(event.target.value)}
+                  placeholder={`${login.challenge.redirectUri}?code=…`}
+                  aria-invalid={callbackError ? true : undefined}
+                  onChange={(event) => { setCallback(event.target.value); setCallbackChecked(false) }}
+                  onBlur={() => { if (callback.trim()) setCallbackChecked(true) }}
                   required
                 />
+                {callbackError ? <span role="alert" className="block text-xs text-destructive">{callbackError}</span>
+                  : <span className="block text-xs text-muted-foreground">{i18n.t("网址里带着一次性的授权码：提交后可以关掉那个标签页。")}</span>}
               </label>
               <div className="flex gap-2">
                 <Button type="submit" disabled={disabled}>

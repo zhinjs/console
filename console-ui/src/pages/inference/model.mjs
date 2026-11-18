@@ -140,6 +140,26 @@ export function languageInputMissing(value) {
 export function accountHasModels(view, accountId) {
   return Object.values(view?.profiles ?? {}).some(profile => profile?.accountId === accountId)
 }
+/**
+ * What is wrong with a pasted OAuth callback address (#64 `oauth-callback-dead-page`), or null when it
+ * can be submitted. After authorizing, the browser lands on the callback address (e.g.
+ * `http://localhost:1455/auth/callback?code=…`), which nothing on this machine answers, so it shows a
+ * 「无法访问」 page; the address bar still holds the code. `redirectUri` is the challenge's address.
+ */
+export function oauthCallbackProblem(value, redirectUri) {
+  const text = typeof value === 'string' ? value.trim() : ''
+  if (!text) return 'empty'
+  let pasted
+  try { pasted = new URL(text) } catch { return 'not-url' }
+  // `localhost:1455/…` parses with `localhost:` as its scheme: only a web address counts.
+  if (pasted.protocol !== 'http:' && pasted.protocol !== 'https:') return 'not-url'
+  let expected = null
+  try { expected = redirectUri ? new URL(redirectUri) : null } catch { expected = null }
+  if (expected && (pasted.origin !== expected.origin || pasted.pathname.replace(/\/$/, '') !== expected.pathname.replace(/\/$/, ''))) return 'other-address'
+  // The provider may answer with `error=` instead of a code; the Host reports that one itself.
+  if (!pasted.searchParams.get('code') && !pasted.searchParams.get('error')) return 'no-code'
+  return null
+}
 export function profileSupport(view, profile) {
   return serviceDriver(view, view.accounts[profile.accountId].serviceId)?.support
 }
