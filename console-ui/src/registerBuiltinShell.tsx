@@ -7,16 +7,12 @@ import ScopeObjectRoute from './pages/scope'
 import LogsPage from './pages/logs'
 import ConfigPage from './pages/config'
 import EnvManagePage from './pages/env'
-import FileManagePage from './pages/files'
-import DatabasePage from './pages/database/database-page'
 import MarketplacePage from './pages/marketplace'
 import TaskHubPage from './pages/task-hub'
 import WelcomeUseCasePage from './pages/welcome-use-case'
-import IntrospectionPage from './pages/introspection'
 import ScenarioLabPage from './pages/scenario-lab'
 import CommandPermissionsPage from './pages/command-permissions'
 import AgentWorkbenchPage from './pages/agent-workbench'
-import PersonalModelsPage from './pages/personal-models'
 import AgentSessionsPage from './pages/agent-sessions'
 import BotReplayPage from './pages/bot-replay'
 import { REPLAY_PERMISSION } from './pages/bot-replay-model.mjs'
@@ -33,7 +29,6 @@ import OnboardingPage from './pages/onboarding'
 import AccountPage from './pages/account'
 import OpsInstancePage from './pages/ops/instance'
 import SelfCheckPage from './pages/ops/self-check'
-import OpsTerminalPage from './pages/ops/terminal'
 import AccessUsersPage from './pages/access/users'
 import AccessRolesPage from './pages/access/roles'
 import AccessTokensPage from './pages/access/tokens'
@@ -42,6 +37,15 @@ import ChatMembersPage from './pages/chat-members'
 import { LegacyRedirect } from './components/legacy-redirect'
 import { CONSOLE_PATHS as P, LEGACY_ROUTE_REDIRECTS } from './console-routes.mjs'
 import { NAV_GROUPS } from './navigation-taxonomy'
+import { lazyPage } from './lazy-page'
+
+// Loaded when first opened (#64 `route-code-splitting`): large pages reached from deep in the menu —
+// 终端 (xterm), 项目文件 (highlight.js), 数据库, 运行时能力, AI 与模型. 首页 and sign-in stay in the first screen.
+const FileManagePage = lazyPage(() => import('./pages/files'))
+const DatabasePage = lazyPage(() => import('./pages/database/database-page'))
+const IntrospectionPage = lazyPage(() => import('./pages/introspection'))
+const PersonalModelsPage = lazyPage(() => import('./pages/personal-models'))
+const OpsTerminalPage = lazyPage(() => import('./pages/ops/terminal'))
 
 let builtinPagesRegistered = false
 
