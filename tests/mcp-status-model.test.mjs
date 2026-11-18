@@ -27,7 +27,7 @@ test('idle and not_loaded are neutral states; only failed is red', () => {
     assert.notEqual(state.dot, 'is-offline')
   }
   const connected = mcpRowState({ name: 'fs', connected: true, toolCount: 4, status: 'connected' })
-  assert.deepEqual([connected.label, connected.tone, connected.dot, connected.detail], ['已连接', 'success', 'is-online', '4 个可用工具'])
+  assert.deepEqual([connected.label, connected.tone, connected.dot, connected.detail], ['已连接', 'outline', 'is-online', '4 个可用工具'], 'connected is the steady state: neutral outline (console#125)')
   assert.equal(mcpRowState(idle, 'en').label, 'Waiting to connect')
 })
 
@@ -37,7 +37,7 @@ test('failed rows show the failure category, the exit code and the redacted reas
     lastError: { category: 'process_exit', message: 'spawn exited before handshake', exitCode: 127, at: 1_700_000_000_000 },
   })
   assert.equal(failed.tone, 'destructive')
-  assert.equal(failed.dot, 'is-offline')
+  assert.equal(failed.dot, 'is-failed')
   assert.equal(failed.label, '连接失败')
   assert.equal(failed.detail, '进程已退出（退出码 127）：spawn exited before handshake')
   assert.deepEqual(failed.failure, { category: 'process_exit', message: 'spawn exited before handshake', exitCode: 127, at: 1_700_000_000_000 })
@@ -50,7 +50,7 @@ test('failed rows show the failure category, the exit code and the redacted reas
 test('rows of older instances (no status) keep the connected boolean', () => {
   assert.equal(mcpRowState({ name: 'a', connected: true, toolCount: 2 }).status, 'connected')
   const old = mcpRowState({ name: 'b', connected: false, toolCount: 0, error: 'ECONNREFUSED' })
-  assert.deepEqual([old.status, old.label, old.detail], ['disconnected', '未连接', 'ECONNREFUSED'])
+  assert.deepEqual([old.status, old.label, old.detail, old.tone], ['disconnected', '未连接', 'ECONNREFUSED', 'warning'], 'offline is a warning, not an error (console#125)')
   assert.equal(mcpRowState({ name: 'c', connected: false }).detail, '连接不可用')
   assert.equal(mcpRowState({ status: 'bogus', connected: true }).status, 'connected', 'an unknown status falls back to the boolean')
 })
@@ -217,8 +217,7 @@ function mountDetail(item, { permissions = ['agent.configure', 'ops.config.read'
     },
     '../../utils/console-access.mjs': { hasConsolePermission: name => permissions.includes(name) },
     '../../hooks/use-console-access': { useConsoleAccess: () => ({}) },
-    '../../components/ui/alert': { Alert: 'alert', AlertTitle: 'alert-title', AlertDescription: 'alert-description' },
-    '../../components/ui/button': { Button: 'button' },
+    '@zhin.js/console-ui': { Alert: 'alert', AlertTitle: 'alert-title', AlertDescription: 'alert-description', Button: 'button' },
     './mcp-status-model.mjs': mcp,
   }
   const module = { exports: {} }

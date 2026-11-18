@@ -21,6 +21,8 @@ export const GATEWAY_RPC = Object.freeze({
   INSTANCE_RESTART: GATEWAY_INSTANCE_RPC.RESTART,
   INSTANCE_LOGS: GATEWAY_INSTANCE_RPC.LOGS,
   PLUGINS_DECLARE: GATEWAY_PLUGINS_RPC.DECLARE,
+  PLUGINS_ENABLE: GATEWAY_PLUGINS_RPC.ENABLE,
+  PLUGINS_DISABLE: GATEWAY_PLUGINS_RPC.DISABLE,
 })
 
 export { GATEWAY_PACKAGES_PROGRESS } from '@zhin.js/console-protocol'
@@ -159,11 +161,14 @@ export function instanceStateLabel(state, t) {
   }
 }
 
-/** Badge variant for a state. */
+/**
+ * Badge variant for a state. Running is the steady state (neutral outline, console#125); a crash is an error, waiting
+ * to restart after one needs a look; starting / stopping are expected transitions.
+ */
 export function instanceStateTone(state) {
-  if (state === 'running') return 'success'
+  if (state === 'running') return 'outline'
   if (state === 'crashed') return 'destructive'
-  if (state === 'backoff' || state === 'starting' || state === 'stopping') return 'warning'
+  if (state === 'backoff') return 'warning'
   return 'secondary'
 }
 

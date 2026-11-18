@@ -19,7 +19,7 @@ import {
   Workflow,
   Wrench,
 } from 'lucide-react'
-import { cn } from '@zhin.js/client'
+import { Button, buttonVariants, cn, PageHeader, PageShell, Skeleton } from '@zhin.js/console-ui'
 import { CONSOLE_REST, ENDPOINT_RPC } from '../contracts/zhin-console'
 import { apiFetch } from '../utils/auth'
 import { requestConsole } from '../utils/console-rpc'
@@ -29,24 +29,23 @@ import {
   parseImSessionKey,
   SESSION_SCOPE_LABELS,
 } from '../utils/agent-session'
-import { PageHeader } from '../components/PageHeader'
-import { PageShell } from '../components/PageShell'
 import { StatusState } from '../components/StatusState'
 import { CONSOLE_PATHS } from '../console-routes.mjs'
 import { instanceSectionHref } from './ops/instance-sections.mjs'
 import './insights/insights.css'
-import { Button, buttonVariants } from '../components/ui/button'
-import { Skeleton } from '../components/ui/skeleton'
-import { fetchAllIntrospection, type IntrospectionEnvelope } from './agent-workbench-model.mjs'
+import { bindingModel, fetchAllIntrospection, recentAgentSessions, type BindingModelSource, type IntrospectionEnvelope, type RecentAgentSession } from './agent-workbench-model.mjs'
 import { mcpWorkbenchCopy, summarizeMcp } from './introspection/mcp-status-model.mjs'
+import { pluginRpc } from '../utils/plugin-rpc'
 
-interface BindingItem {
+interface BindingItem extends BindingModelSource {
   name: string
   provider: string
   model: string
   mcpServers: string[]
   hasAgentFile: boolean
 }
+
+const RECENT_TRACE_DAYS = 7
 
 interface ToolItem {
   name: string
@@ -81,15 +80,16 @@ function fetchIntrospection<T>(kind: string, locale: 'zh-CN' | 'en' = 'zh-CN') {
   return fetchAllIntrospection<T>((page, pageSize) => fetchIntrospectionPage<T>(kind, page, pageSize, locale))
 }
 
-function SessionCard({ sessionKey }: { sessionKey: string }) {
+function SessionCard({ session }: { session: RecentAgentSession }) {
   const i18n = useI18n()
+  const sessionKey = session.key
   const parsed = parseImSessionKey(sessionKey)
   return (
     <Link to={agentSessionsPath(sessionKey)} className="console-agent-session-card" title={sessionKey}>
       <span className="console-agent-session-icon"><GitBranch /></span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-semibold">
-          {parsed?.sceneId ?? i18n.t("自定义会话")}
+          {session.label || parsed?.sceneId || i18n.t("自定义会话")}
         </span>
         <span className="mt-1 block truncate console-text-label text-muted-foreground">
           {parsed
@@ -114,6 +114,8 @@ export default function AgentWorkbenchPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [history] = useState(() => loadAgentSessionHistory())
+  // Sessions the turn traces saw (usage-stats); null until read or when the Host / permission has none.
+  const [traceSessions, setTraceSessions] = useState<Array<{ sessionKey: string; turns?: number; lastAt?: number; label?: string }> | null>(null)
 
   const loadWorkbench = useCallback(async (background = false) => {
     if (background) setRefreshing(true)
@@ -143,6 +145,17 @@ export default function AgentWorkbenchPage() {
   useEffect(() => {
     void loadWorkbench()
   }, [loadWorkbench])
+
+  // 「最近的 Agent 对话」 also lists what actually ran (turn traces), not only what this browser opened (#1250).
+  useEffect(() => {
+    let alive = true
+    const until = Date.now()
+    pluginRpc<{ bySession?: Array<{ sessionKey: string; turns?: number; lastAt?: number; label?: string }> }>('root', 'usage-stats', { since: until - RECENT_TRACE_DAYS * 86_400_000, until, bucket: 'day' })
+      .then(data => { if (alive) setTraceSessions(Array.isArray(data?.bySession) ? data.bySession : []) })
+      .catch(() => { if (alive) setTraceSessions(null) })
+    return () => { alive = false }
+  }, [])
+  const recent = recentAgentSessions(history, traceSessions)
 
   // 只有连接失败算问题；待连接（idle）/ 未加载是中性状态。旧 Host 没有 status 时沿用「总数 − 已连接」。
   const mcpSummary = summarizeMcp(mcpServices)
@@ -275,7 +288,13 @@ export default function AgentWorkbenchPage() {
                       <h3>{binding.name}</h3>
                       {binding.hasAgentFile ? <span className="console-agent-file-mark">agent.md</span> : null}
                     </div>
-                    <p>{binding.provider || i18n.t("默认 Provider")} · {binding.model || i18n.t("默认模型")}</p>
+                    {(() => {
+                      const line = bindingModel(binding)
+                      return <p title={line.source === 'effective' ? i18n.t("按「AI 与模型 → 用途」实际生效的绑定") : undefined}>
+                        {line.provider || i18n.t("默认 Provider")} · {line.model || i18n.t("默认模型")}
+                        {line.source === 'default' ? <span className="text-muted-foreground"> {i18n.t("（跟随「AI 与模型 → 用途」）")}</span> : null}
+                      </p>
+                    })()}
                     <div className="mt-2 flex flex-wrap gap-1.5 empty:hidden">
                       {(binding.mcpServers ?? []).map((server) => (
                         <span key={server}><PlugZap />{server}</span>
@@ -328,14 +347,14 @@ export default function AgentWorkbenchPage() {
           <Button variant="ghost" size="sm" asChild><Link to="/scope">{i18n.t("全部会话")}<ArrowUpRight /></Link></Button>
         </div>
 
-        {history.length ? (
+        {recent.length ? (
           <div className="console-agent-session-grid">
-            {history.slice(0, 6).map((key) => <SessionCard key={key} sessionKey={key} />)}
+            {recent.map((session) => <SessionCard key={session.key} session={session} />)}
           </div>
         ) : (
           <div className="console-agent-empty is-compact">
             <MessagesSquare />
-            <div><h3>{i18n.t("最近还没有打开过 Agent 对话")}</h3><p>{i18n.t("在账号与会话里选择一个对话，点击分支图标即可开始。")}</p></div>
+            <div><h3>{i18n.t("最近 7 天还没有 Agent 对话")}</h3><p>{i18n.t("在账号与会话里选择一个对话，点击分支图标即可开始。")}</p></div>
             <Button size="sm" asChild><Link to="/scope">{i18n.t("选择会话")}</Link></Button>
           </div>
         )}

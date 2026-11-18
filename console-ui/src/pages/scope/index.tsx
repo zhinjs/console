@@ -1,6 +1,6 @@
 import { useLocation } from 'react-router-dom'
 import { useI18n } from '../../i18n'
-import { PageShell } from '../../components/PageShell'
+import { PageShell } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
 import { parseScopePath, scopeKey, type Scope } from '../../scope/scope-tree.mjs'
 import { GlobalObjectPage } from './global-page'

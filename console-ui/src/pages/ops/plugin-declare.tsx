@@ -1,14 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { KeyRound, Settings2 } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog'
-import { Input } from '../../components/ui/input'
-import { Skeleton } from '../../components/ui/skeleton'
-import { Textarea } from '../../components/ui/textarea'
+import { Alert, AlertDescription, AlertTitle, Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, InlineCode, Input, Skeleton, Textarea } from '@zhin.js/console-ui'
 import { useToast } from '../../components/toast'
 import { SchemaFieldEditor } from '../../components/PluginConfigForm/SchemaFieldEditor'
 import type { SchemaEditorDrafts, SchemaField } from '../../components/PluginConfigForm/types.js'
@@ -58,8 +51,8 @@ export function ConfigurationNeedsPanel({ needs, disabled, onDeclared, onBusyCha
               {need.missing.length ? (
                 <div>
                   <p className="text-muted-foreground">{i18n.t("缺少或需要修正的配置项：")}</p>
-                  <ul className="mt-1 flex flex-wrap gap-1" aria-label={i18n.t("缺少的配置项")}>
-                    {need.missing.map(path => <li key={path}><Badge size="sm" variant="secondary" className="font-mono">{path || need.instanceKey}</Badge></li>)}
+                  <ul className="console-code-list mt-1" aria-label={i18n.t("缺少的配置项")}>
+                    {need.missing.map(path => <li key={path}><InlineCode>{path || need.instanceKey}</InlineCode></li>)}
                   </ul>
                 </div>
               ) : null}

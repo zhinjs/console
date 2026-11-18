@@ -1,20 +1,17 @@
 import { routeLabel } from '../i18n/navigation'
 import { translate } from '../i18n/locale.mjs'
 import { useI18n } from '../i18n'
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ArrowRight, Check, Command, CornerDownLeft, Search } from 'lucide-react'
-import { cn, type ConsoleRouteRecord } from '@zhin.js/client'
+import { cn, Dialog, DialogContent, DialogDescription, DialogTitle, ListItemButton } from '@zhin.js/console-ui'
+import { type ConsoleRouteRecord } from '@zhin.js/client'
 import { getSidebarLucideIcon } from './sidebarMenuIcons'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from './ui/dialog'
 import { COMMAND_GROUP_ORDER, NAV_GROUPS } from '../navigation-taxonomy'
-import { ListItemButton } from '../components/ui/list-item-button'
-import { commandScore, isCommandRoute, ROUTE_SEARCH_HINTS } from './command-center-model.mjs'
+import { commandScore, commandSearchTargets, isCommandRoute, pluginPageCommand, pluginSearchTargets, ROUTE_SEARCH_HINTS } from './command-center-model.mjs'
+import { CONSOLE_REST } from '../contracts/zhin-console'
+import { apiFetch } from '../utils/auth'
+import { pluginDirectory, readPluginDirectory, subscribePluginDirectory } from '../plugin-pages.mjs'
 import { canSeeRoute, routeSectionId, sectionById } from '../navigation-sections.mjs'
 import { useConsoleAccess } from '../hooks/use-console-access'
 import { openLogPanel } from './log-panel/log-panel-store.mjs'
@@ -32,6 +29,8 @@ interface CommandTarget {
   keywords?: readonly string[]
   icon?: React.ReactNode | string
   kind?: 'page' | 'action'
+  /** Listed only for a query (every plugin, every command): the idle palette stays short. */
+  searchOnly?: boolean
   /** Runs in place instead of navigating (`path` is then only the entry's id). */
   run?: () => void
   /** Keyboard shortcut shown next to the entry. */
@@ -133,7 +132,7 @@ function groupedTargets(
 ): CommandGroup[] {
   const ranked = targets
     .map((target) => ({ target, score: commandScore(target, query) }))
-    .filter((entry) => entry.score > 0)
+    .filter((entry) => entry.score > 0 && (!entry.target.searchOnly || query.trim()))
     .sort((left, right) => right.score - left.score || left.target.title.localeCompare(right.target.title))
     .map((entry) => entry.target)
 
@@ -164,6 +163,18 @@ function groupedTargets(
   return groups
 }
 
+const OPEN_COMMAND_CENTER_EVENT = 'zhin:open-command-center'
+
+/** Opens the ⌘K command center from anywhere (e.g. the not-found page); a no-op until the top bar mounts. */
+export function openCommandCenter(): void {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(OPEN_COMMAND_CENTER_EVENT))
+}
+
+/** The platform's command center shortcut, as shown on keys: ⌘ K on Apple devices, Ctrl K elsewhere. */
+export function commandCenterShortcut(): string {
+  return typeof navigator !== 'undefined' && /Mac|iPhone|iPad/u.test(navigator.platform) ? '⌘ K' : 'Ctrl K'
+}
+
 export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRouteRecord[] }) {
   const i18n = useI18n()
   const navigate = useNavigate()
@@ -176,6 +187,32 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
   const [recentPaths, setRecentPaths] = useState<string[]>(() => readRecentPaths())
   const [shortcut, setShortcut] = useState('Ctrl K')
   const access = useConsoleAccess()
+  const plugins = useSyncExternalStore(subscribePluginDirectory, pluginDirectory, pluginDirectory)
+  // Chat commands from the introspection catalog, read when the palette opens (only for identities
+  // that can open 运行时能力). A failed read just leaves commands out of the results.
+  // Installed plugins (/api/plugins) the same way, for identities that can open a plugin's page.
+  const commandsVisible = routes.some(route => route.path === '/introspection' && canSeeRoute(route, access))
+  const pluginsVisible = routes.some(route => route.path === '/plugins/:name' && canSeeRoute(route, access))
+  const [commands, setCommands] = useState<unknown[]>([])
+  const [installed, setInstalled] = useState<ReturnType<typeof readPluginDirectory>>({})
+  useEffect(() => {
+    if (!open) return
+    const controller = new AbortController()
+    const read = (path: string) => apiFetch(path, { signal: controller.signal })
+      .then(response => response.ok ? response.json() : null)
+      .catch(() => null)
+    if (commandsVisible) {
+      void read(`${CONSOLE_REST.INTROSPECTION}/commands?page=1&pageSize=100`).then((body: { success?: boolean; data?: { items?: unknown[] } } | null) => {
+        if (!controller.signal.aborted && body?.success === true && Array.isArray(body.data?.items)) setCommands(body.data.items)
+      })
+    }
+    if (pluginsVisible) {
+      void read('/api/plugins').then((body: unknown) => {
+        if (!controller.signal.aborted && body) setInstalled(readPluginDirectory(body))
+      })
+    }
+    return () => controller.abort()
+  }, [open, commandsVisible, pluginsVisible])
 
   const targets = useMemo<CommandTarget[]>(() => {
     const actions = [
@@ -191,8 +228,21 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
       })),
       ...routes
         .filter((route) => isCommandRoute(route) && canSeeRoute(route, access) && !actions.some(action => action.path === route.path))
-        .map((route) => {
+        .map((route): CommandTarget => {
           const title = routeLabel(route, i18n.locale)
+          // Plugin pages (ADR 0063 决策 3): grouped under 插件, found by plugin, package, title and aliases.
+          const plugin = pluginPageCommand(route, plugins)
+          if (plugin) {
+            return {
+              path: plugin.path,
+              title,
+              group: NAV_GROUPS.PLUGINS,
+              description: plugin.description ? `${plugin.plugin} · ${plugin.description}` : i18n.t("{0} 插件的页面", [plugin.plugin]),
+              keywords: plugin.keywords,
+              icon: route.icon,
+              kind: 'page',
+            }
+          }
           const hint = ROUTE_SEARCH_HINTS[route.path]
           return {
             path: route.path,
@@ -202,11 +252,16 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
             // Match the authored Chinese name and description too, so either language finds a page.
             keywords: [...(hint?.keywords ?? []), route.name, hint?.description ?? ''].filter(Boolean),
             icon: route.icon,
-            kind: 'page' as const,
+            kind: 'page',
           }
-        }),
+        })
+        .filter((target, index, all) => all.findIndex(other => other.path === target.path) === index),
+      ...(pluginsVisible
+        ? pluginSearchTargets(Object.keys(installed).length ? installed : plugins, (message, values) => i18n.t(message, values), routes.flatMap(route => pluginPageCommand(route, plugins)?.plugin ?? [])).map(target => ({ ...target, group: NAV_GROUPS.PLUGINS, icon: 'Puzzle' }))
+        : []),
+      ...commandSearchTargets(commands, (message, values) => i18n.t(message, values)).map(target => ({ ...target, group: i18n.t("命令"), icon: 'Terminal' })),
     ]
-  }, [routes, i18n, access])
+  }, [routes, i18n, access, plugins, commands, installed, pluginsVisible])
   const groups = useMemo(
     () => groupedTargets(targets, query, recentPaths, i18n.locale),
     [query, recentPaths, targets, i18n],
@@ -214,15 +269,20 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
   const visibleTargets = useMemo(() => groups.flatMap((group) => group.items), [groups])
 
   useEffect(() => {
-    setShortcut(/Mac|iPhone|iPad/u.test(navigator.platform) ? '⌘ K' : 'Ctrl K')
+    setShortcut(commandCenterShortcut())
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase() === 'k') {
         event.preventDefault()
         setOpen((value) => !value)
       }
     }
+    const onOpenRequest = () => setOpen(true)
     window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+    window.addEventListener(OPEN_COMMAND_CENTER_EVENT, onOpenRequest)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener(OPEN_COMMAND_CENTER_EVENT, onOpenRequest)
+    }
   }, [])
 
   useEffect(() => {
@@ -267,7 +327,7 @@ export function ConsoleCommandCenter({ routes }: { routes: readonly ConsoleRoute
   let runningIndex = 0
   return (
     <>
-      <ListItemButton type="button" className="console-command-trigger max-md:min-h-0" onClick={() => setOpen(true)} aria-label={i18n.t("打开 Console 快速跳转")}>
+      <ListItemButton type="button" className="console-command-trigger max-md:min-h-0" onClick={() => setOpen(true)} aria-label={i18n.t("打开 Console 快速跳转")} data-tooltip={`${i18n.t("打开 Console 快速跳转")}（${shortcut}）`}>
         <Search aria-hidden="true" />
         <span className="hidden lg:inline">{i18n.t("搜索页面或执行动作")}</span>
         <span className="lg:hidden">{i18n.t("搜索与动作")}</span>

@@ -5,17 +5,17 @@
 @layer components {
   .console-app-shell {
     /* Bar geometry: 12px from the top edge, 60px tall. */
-    --console-header-h: 4.5rem;
-    --console-nav-capsule-h: 3.75rem;
-    --console-nav-item-h: 2.5rem;
-    --console-nav-logo: 2.25rem;
-    --console-nav-bg: hsl(var(--card) / 0.62);
-    --console-nav-bg-scrolled: hsl(var(--card) / 0.8);
-    --console-nav-border: hsl(var(--card) / 0.7);
-    --console-nav-shadow: 0 8px 32px -4px hsl(var(--console-shadow-color) / 0.06), 0 0 0 1px hsl(var(--console-shadow-color) / 0.045);
-    --console-nav-shadow-scrolled: 0 12px 36px -6px hsl(var(--console-shadow-color) / 0.11), 0 0 0 1px hsl(var(--console-shadow-color) / 0.055);
-    --console-nav-active-bg: hsl(var(--card));
-    --console-nav-active-shadow: 0 1px 3px hsl(var(--console-shadow-color) / 0.07), 0 0 0 1px hsl(var(--console-shadow-color) / 0.045);
+    --zc-header-h: 4.5rem;
+    --zc-nav-capsule-h: 3.75rem;
+    --zc-nav-item-h: 2.5rem;
+    --zc-nav-logo: 2.25rem;
+    --zc-nav-bg: hsl(var(--card) / 0.62);
+    --zc-nav-bg-scrolled: hsl(var(--card) / 0.8);
+    --zc-nav-border: hsl(var(--card) / 0.7);
+    --zc-nav-shadow: 0 8px 32px -4px hsl(var(--console-shadow-color) / 0.06), 0 0 0 1px hsl(var(--console-shadow-color) / 0.045);
+    --zc-nav-shadow-scrolled: 0 12px 36px -6px hsl(var(--console-shadow-color) / 0.11), 0 0 0 1px hsl(var(--console-shadow-color) / 0.055);
+    --zc-nav-active-bg: hsl(var(--card));
+    --zc-nav-active-shadow: 0 1px 3px hsl(var(--console-shadow-color) / 0.07), 0 0 0 1px hsl(var(--console-shadow-color) / 0.045);
     position: relative;
     min-height: 100dvh;
     background:
@@ -24,13 +24,13 @@
   }
 
   .dark .console-app-shell {
-    --console-nav-bg: hsl(var(--card) / 0.55);
-    --console-nav-bg-scrolled: hsl(var(--card) / 0.78);
-    --console-nav-border: hsl(0 0% 100% / 0.07);
-    --console-nav-shadow: 0 8px 32px -4px hsl(0 0% 0% / 0.45), 0 0 0 1px hsl(0 0% 100% / 0.06);
-    --console-nav-shadow-scrolled: 0 12px 36px -6px hsl(0 0% 0% / 0.6), 0 0 0 1px hsl(0 0% 100% / 0.08);
-    --console-nav-active-bg: hsl(0 0% 100% / 0.09);
-    --console-nav-active-shadow: 0 0 0 1px hsl(0 0% 100% / 0.07);
+    --zc-nav-bg: hsl(var(--card) / 0.55);
+    --zc-nav-bg-scrolled: hsl(var(--card) / 0.78);
+    --zc-nav-border: hsl(0 0% 100% / 0.07);
+    --zc-nav-shadow: 0 8px 32px -4px hsl(0 0% 0% / 0.45), 0 0 0 1px hsl(0 0% 100% / 0.06);
+    --zc-nav-shadow-scrolled: 0 12px 36px -6px hsl(0 0% 0% / 0.6), 0 0 0 1px hsl(0 0% 100% / 0.08);
+    --zc-nav-active-bg: hsl(0 0% 100% / 0.09);
+    --zc-nav-active-shadow: 0 0 0 1px hsl(0 0% 100% / 0.07);
   }
 
   /* ---------- Floating top bar ---------- */
@@ -40,7 +40,7 @@
     z-index: 40;
     display: flex;
     justify-content: center;
-    padding: 0.75rem var(--console-space-page-x) 0;
+    padding: var(--console-space-3) var(--console-page-padding-inline) 0;
     pointer-events: none;
   }
 
@@ -49,72 +49,57 @@
     display: flex;
     width: 100%;
     max-width: var(--console-content-max);
-    height: var(--console-nav-capsule-h);
+    height: var(--zc-nav-capsule-h);
     align-items: center;
-    gap: 0.5rem;
-    border: var(--console-border-width) solid var(--console-nav-border);
-    border-radius: 999px;
-    background: var(--console-nav-bg);
-    box-shadow: var(--console-nav-shadow);
-    padding: 0 0.5rem 0 0.625rem;
+    gap: var(--console-space-2);
+    border: var(--console-border-hairline) solid var(--zc-nav-border);
+    border-radius: var(--console-radius-full);
+    background: var(--zc-nav-bg);
+    box-shadow: var(--zc-nav-shadow);
+    padding: 0 var(--console-space-2);
     backdrop-filter: saturate(1.6) blur(18px);
     -webkit-backdrop-filter: saturate(1.6) blur(18px);
-    transition: background-color 200ms ease, box-shadow 200ms ease;
+    transition: background-color var(--console-motion-base) var(--console-ease-out), box-shadow var(--console-motion-base) var(--console-ease-out);
   }
 
-  /* Wide pages (fullWidth routes) let the bar follow the content edges. */
-  .console-app-shell[data-wide] .console-topnav-capsule { max-width: none; }
+  /*
+   * Wide pages (fullWidth routes: database, Workroom, logs…) widen only the content area; the bar keeps
+   * its width and position so moving between pages does not shift the navigation (console#125).
+   */
 
   .console-topnav.is-scrolled .console-topnav-capsule {
-    background: var(--console-nav-bg-scrolled);
-    box-shadow: var(--console-nav-shadow-scrolled);
+    background: var(--zc-nav-bg-scrolled);
+    box-shadow: var(--zc-nav-shadow-scrolled);
   }
 
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     .console-topnav-capsule { background: hsl(var(--card)); }
   }
 
-  .console-brand {
+  /* The link around the component library's BrandMark (mark + 「Zhin Console」). */
+  .console-brand-link {
     display: inline-flex;
     flex-shrink: 0;
     align-items: center;
-    gap: 0.625rem;
+    gap: var(--console-space-3);
     min-width: 0;
-    border-radius: 999px;
-    padding-right: 0.5rem;
+    border-radius: var(--console-radius-full);
+    padding-right: var(--console-space-2);
     color: hsl(var(--foreground));
   }
 
-  .console-brand:focus-visible {
-    outline: var(--console-focus-width) solid hsl(var(--ring));
+  .console-brand-link:focus-visible {
+    outline: var(--console-border-focus) solid hsl(var(--ring));
     outline-offset: 2px;
   }
 
-  .console-brand-mark {
-    display: inline-grid;
-    width: var(--console-nav-logo);
-    height: var(--console-nav-logo);
-    flex-shrink: 0;
-    place-items: center;
-    border-radius: 999px;
-    background: linear-gradient(145deg, hsl(var(--primary)), hsl(var(--primary) / 0.72));
-    color: hsl(var(--primary-foreground));
-    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.25), 0 2px 6px -2px hsl(var(--primary) / 0.5);
+  /* The mark follows the top bar's logo size; the name keeps the library's type. */
+  .console-brand-link .console-brand-mark {
+    width: var(--zc-nav-logo);
+    height: var(--zc-nav-logo);
   }
 
-  .console-brand-mark span {
-    font-size: 1rem;
-    font-weight: 750;
-    letter-spacing: -0.04em;
-    line-height: 1;
-  }
-
-  .console-brand-text {
-    font-size: 0.9375rem;
-    font-weight: 650;
-    letter-spacing: -0.015em;
-    white-space: nowrap;
-  }
+  .console-brand-link .console-brand-name { white-space: nowrap; }
 
   .console-topnav-nav {
     display: flex;
@@ -122,38 +107,38 @@
     flex: 1 1 auto;
     align-items: center;
     justify-content: center;
-    gap: 0.125rem;
+    gap: 0;
   }
 
   .console-topnav-nav .console-nav-tier {
     display: flex;
     align-items: center;
-    gap: 0.125rem;
+    gap: 0;
   }
 
   .console-nav-tier-rule {
     width: 1px;
     height: 1.25rem;
-    margin: 0 0.375rem;
+    margin: 0 var(--console-space-1);
     background: hsl(var(--border-strong));
   }
 
   .console-topnav-item {
     display: inline-flex;
-    height: var(--console-nav-item-h);
+    height: var(--zc-nav-item-h);
     max-width: 12rem;
     align-items: center;
-    gap: 0.4375rem;
-    border: var(--console-border-width) solid transparent;
-    border-radius: 999px;
+    gap: var(--console-space-2);
+    border: var(--console-border-hairline) solid transparent;
+    border-radius: var(--console-radius-full);
     background: transparent;
-    padding: 0 0.875rem;
+    padding: 0 var(--console-space-4);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-body);
-    font-weight: 550;
+    font-weight: var(--console-weight-medium);
     white-space: nowrap;
     cursor: pointer;
-    transition: background-color var(--console-duration-fast) ease, color var(--console-duration-fast) ease, box-shadow var(--console-duration-fast) ease;
+    transition: background-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out), box-shadow var(--console-motion-fast) var(--console-ease-out);
   }
 
   .console-topnav-item:hover,
@@ -163,8 +148,8 @@
   }
 
   .console-topnav-item.is-active {
-    background: var(--console-nav-active-bg);
-    box-shadow: var(--console-nav-active-shadow);
+    background: var(--zc-nav-active-bg);
+    box-shadow: var(--zc-nav-active-shadow);
     color: hsl(var(--foreground));
   }
 
@@ -173,7 +158,7 @@
   }
 
   .console-topnav-item:focus-visible {
-    outline: var(--console-focus-width) solid hsl(var(--ring));
+    outline: var(--console-border-focus) solid hsl(var(--ring));
     outline-offset: 2px;
   }
 
@@ -182,7 +167,7 @@
     height: 0.875rem;
     flex-shrink: 0;
     opacity: 0.6;
-    transition: transform var(--console-duration-fast) ease;
+    transition: transform var(--console-motion-fast) var(--console-ease-out);
   }
 
   .console-topnav-item[data-state="open"] .console-topnav-chevron {
@@ -194,16 +179,44 @@
     max-height: min(70dvh, var(--radix-dropdown-menu-content-available-height));
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: 0.375rem;
+    padding: var(--console-space-2);
+  }
+
+  /* 功能: 核心 and 插件页面 side by side (zhinjs/zhin#1250). */
+  .console-topnav-menu.is-grouped {
+    display: grid;
+    width: min(34rem, calc(100vw - 1.5rem));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 var(--console-space-2);
+  }
+
+  .console-topnav-menu.is-grouped .console-topnav-menu-group + .console-topnav-menu-group {
+    border-left: var(--console-border-hairline) solid hsl(var(--border));
+    padding-left: var(--console-space-2);
+  }
+
+  .console-topnav-menu-label {
+    padding: var(--console-space-2) var(--console-space-2) var(--console-space-1) !important;
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-label) !important;
+    font-weight: var(--console-weight-medium) !important;
+  }
+
+  .console-nav-subgroup { display: flex; flex-direction: column; gap: var(--console-space-1); }
+  .console-nav-subgroup + .console-nav-subgroup { margin-top: var(--console-space-2); }
+  .console-nav-subgroup-label {
+    padding: var(--console-space-1) var(--console-space-3) var(--console-space-1) var(--console-space-4);
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-label);
   }
 
   .console-topnav-menu-item {
     display: flex !important;
     min-height: 2.5rem;
     align-items: center;
-    gap: 0.625rem;
-    border-radius: var(--console-radius-md) !important;
-    padding: 0.375rem 0.5rem !important;
+    gap: var(--console-space-3);
+    border-radius: var(--console-radius-2) !important;
+    padding: var(--console-space-2) var(--console-space-2) !important;
     color: hsl(var(--foreground));
   }
 
@@ -213,12 +226,12 @@
     height: 1.75rem;
     flex-shrink: 0;
     place-items: center;
-    border-radius: var(--console-radius-sm);
+    border-radius: var(--console-radius-1);
     background: hsl(var(--secondary));
     color: hsl(var(--muted-foreground));
   }
 
-  .console-topnav-menu-icon svg { width: 0.9375rem; height: 0.9375rem; }
+  .console-topnav-menu-icon svg { width: 1.125rem; height: 1.125rem; }
 
   .console-topnav-menu-item:hover .console-topnav-menu-icon,
   .console-topnav-menu-item:focus .console-topnav-menu-icon,
@@ -228,39 +241,126 @@
   }
 
   .console-topnav-menu-item.is-active {
-    font-weight: 600;
+    font-weight: var(--console-weight-strong);
   }
 
   .console-topnav-actions {
     display: flex;
     flex-shrink: 0;
     align-items: center;
-    gap: 0.25rem;
+    gap: var(--console-space-1);
     margin-left: auto;
   }
 
-  .console-topnav-actions > .console-command-trigger { margin-right: 0.25rem; }
+  .console-topnav-actions > .console-command-trigger { margin-right: var(--console-space-1); }
 
   .console-topnav-actions .console-topnav-account,
   .console-topnav-actions > button,
   .console-topnav-actions > .console-language-select {
-    border-radius: 999px;
+    border-radius: var(--console-radius-full);
   }
 
   .console-connection-dot {
     width: 0.5rem;
     height: 0.5rem;
     flex-shrink: 0;
-    margin: 0 0.375rem;
-    border-radius: 50%;
-    background: hsl(var(--warning));
-    box-shadow: 0 0 0 3px hsl(var(--warning) / 0.18);
+    margin: 0 var(--console-space-1);
+    border-radius: var(--console-radius-full);
+    background: hsl(var(--warning-fill));
+    outline: var(--console-border-focus) solid hsl(var(--warning-fill) / 0.18); outline-offset: 0;
   }
 
-  .console-connection-dot.is-online {
-    background: hsl(var(--success));
-    box-shadow: 0 0 0 3px hsl(var(--success) / 0.18);
+  /* Connected (and the first-connect grace period) is the steady state: a quiet neutral dot that still carries the
+     tooltip; color appears only once the stream is lost (the pill in ConnectionIndicator). console#125. */
+  .console-connection-dot.is-online,
+  .console-connection-dot.is-offline {
+    background: hsl(var(--muted-foreground) / 0.45);
+    box-shadow: none;
   }
+
+  .console-connection-dot { position: relative; cursor: default; }
+
+  /*
+   * Top-bar tooltips: every icon-only control names itself on hover and keyboard focus at once
+   * (no native-title delay). Text comes from data-tooltip, already localized.
+   */
+  .console-topnav-actions [data-tooltip] { position: relative; }
+  .console-topnav-actions [data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    z-index: 60;
+    width: max-content;
+    max-width: 16rem;
+    border-radius: var(--console-radius-1);
+    background: hsl(var(--foreground));
+    padding: var(--console-space-2) var(--console-space-3);
+    color: hsl(var(--background));
+    font-size: var(--console-text-label);
+    font-weight: var(--console-weight-medium);
+    line-height: 1.4;
+    white-space: normal;
+    text-align: left;
+    box-shadow: var(--console-elevation-2);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-2px);
+    transition: opacity var(--console-motion-fast) var(--console-ease-out) var(--console-motion-slow), transform var(--console-motion-fast) var(--console-ease-out) var(--console-motion-slow);
+  }
+  .console-topnav-actions [data-tooltip]:focus-visible::after {
+    opacity: 1;
+    transform: none;
+  }
+  @media (hover: hover) {
+    .console-topnav-actions [data-tooltip]:hover::after { opacity: 1; transform: none; }
+  }
+  .console-topnav-actions [data-tooltip][aria-expanded="true"]::after,
+  .console-topnav-actions [data-tooltip][data-state="open"]::after { display: none; }
+  /* The full-width search box already reads its label. */
+  @media (width >= 90rem) {
+    .console-topnav-actions .console-command-trigger[data-tooltip]::after { display: none; }
+  }
+
+  /* ---------- Account menu (identity, language, appearance, sign out) ---------- */
+  .console-user-menu { display: inline-flex; flex-shrink: 0; }
+  .console-user-menu-trigger {
+    display: inline-flex;
+    height: var(--console-control-height-compact);
+    max-width: 12rem;
+    align-items: center;
+    gap: var(--console-space-2);
+    border: 0;
+    border-radius: var(--console-radius-full);
+    background: transparent;
+    padding: 0 var(--console-space-3);
+    color: hsl(var(--foreground));
+    font-size: var(--console-text-label);
+    font-weight: var(--console-weight-medium);
+    cursor: pointer;
+    transition: background-color var(--console-motion-fast) var(--console-ease-out);
+  }
+  .console-user-menu-trigger:hover,
+  .console-user-menu-trigger[data-state="open"] { background: hsl(var(--accent)); }
+  .console-user-menu-trigger > svg { width: 1rem; height: 1rem; flex-shrink: 0; }
+  .console-user-menu-trigger > .console-user-menu-chevron { width: 0.875rem; height: 0.875rem; color: hsl(var(--muted-foreground)); }
+  .console-user-menu-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  @media (width < 90rem) {
+    .console-user-menu-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  }
+  .console-user-menu-content { min-width: 15rem; }
+  .console-user-menu-heading { display: grid; gap: var(--console-space-1); }
+  .console-user-menu-heading > span,
+  .console-user-menu-section {
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-label);
+    font-weight: var(--console-weight-medium);
+  }
+  .console-user-menu-heading > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--console-weight-strong); }
+  .console-user-menu-section { padding-bottom: var(--console-space-1); }
+  .console-user-menu-hint { margin-left: auto; display: inline-flex; color: hsl(var(--muted-foreground)); }
+  .console-user-menu-hint > svg { width: 0.875rem; height: 0.875rem; }
+  .console-user-menu-signout { color: hsl(var(--destructive)); }
 
   /* ---------- Drawer navigation (narrow screens) ---------- */
   .console-nav-scrim {
@@ -273,7 +373,7 @@
     -webkit-backdrop-filter: blur(4px);
     opacity: 0;
     pointer-events: none;
-    transition: opacity 200ms ease;
+    transition: opacity var(--console-motion-base) var(--console-ease-out);
   }
 
   .console-nav-scrim.is-open {
@@ -288,12 +388,12 @@
     display: flex;
     width: min(19rem, calc(100vw - 1.5rem));
     flex-direction: column;
-    border-radius: var(--console-radius-2xl);
+    border-radius: var(--console-radius-4);
     background: hsl(var(--popover));
     color: hsl(var(--popover-foreground));
-    box-shadow: var(--console-shadow-lg);
+    box-shadow: var(--console-elevation-3);
     transform: translateX(calc(-100% - 1rem));
-    transition: transform 240ms var(--console-ease-out);
+    transition: transform var(--console-motion-base) var(--console-ease-out);
   }
 
   .console-nav-drawer.is-open {
@@ -306,40 +406,40 @@
     flex-shrink: 0;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
-    padding: 0 0.75rem 0 1rem;
+    gap: var(--console-space-2);
+    padding: 0 var(--console-space-3) 0 var(--console-space-4);
   }
 
   .console-drawer-nav {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    padding: 0.25rem 0.75rem 1rem;
+    gap: var(--console-space-4);
+    padding: var(--console-space-1) var(--console-space-3) var(--console-space-4);
   }
 
   .console-drawer-nav .console-nav-tier {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: var(--console-space-3);
   }
 
   .console-drawer-nav .console-nav-tier + .console-nav-tier {
-    border-top: var(--console-border-width) solid hsl(var(--border));
-    padding-top: 1rem;
+    border-top: var(--console-border-hairline) solid hsl(var(--border));
+    padding-top: var(--console-space-4);
   }
 
   .console-nav-tier-label {
-    padding: 0 0.625rem;
+    padding: 0 var(--console-space-3);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
-    font-weight: 600;
+    font-weight: var(--console-weight-strong);
     letter-spacing: 0.04em;
   }
 
   .console-nav-group {
     display: flex;
     flex-direction: column;
-    gap: 0.125rem;
+    gap: var(--console-space-1);
   }
 
   .console-topnav-nav .console-nav-group {
@@ -347,23 +447,23 @@
   }
 
   .console-nav-group-label {
-    padding: 0.25rem 0.625rem;
+    padding: var(--console-space-1) var(--console-space-3);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
-    font-weight: 500;
+    font-weight: var(--console-weight-medium);
   }
 
   .console-nav-item {
     display: flex;
     min-height: 2.75rem;
     align-items: center;
-    gap: 0.625rem;
-    border-radius: var(--console-radius-md);
-    padding: 0 0.625rem;
+    gap: var(--console-space-3);
+    border-radius: var(--console-radius-2);
+    padding: 0 var(--console-space-3);
     color: hsl(var(--foreground));
     font-size: var(--console-text-body);
-    font-weight: 500;
-    transition: background-color var(--console-duration-fast) ease;
+    font-weight: var(--console-weight-medium);
+    transition: background-color var(--console-motion-fast) var(--console-ease-out);
   }
 
   .console-nav-item:hover {
@@ -373,11 +473,11 @@
   .console-nav-item.is-active {
     background: hsl(var(--primary-action));
     color: hsl(var(--primary));
-    font-weight: 600;
+    font-weight: var(--console-weight-strong);
   }
 
   .console-nav-item:focus-visible {
-    outline: var(--console-focus-width) solid hsl(var(--ring));
+    outline: var(--console-border-focus) solid hsl(var(--ring));
     outline-offset: 2px;
   }
 
@@ -389,9 +489,10 @@
     color: hsl(var(--muted-foreground));
   }
 
+  /* Navigation icons are 18px; icons inside controls stay 16px (console#125). */
   .console-nav-icon svg {
-    width: 1rem;
-    height: 1rem;
+    width: 1.125rem;
+    height: 1.125rem;
   }
 
   .console-nav-item.is-active .console-nav-icon {
@@ -403,19 +504,19 @@
     flex-shrink: 0;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem;
-    border-top: var(--console-border-width) solid hsl(var(--border));
-    padding: 0.75rem 1rem;
+    gap: var(--console-space-2);
+    border-top: var(--console-border-hairline) solid hsl(var(--border));
+    padding: var(--console-space-3) var(--console-space-4);
   }
 
   .console-connection-state {
     display: inline-flex;
     min-width: 0;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--console-space-2);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
-    font-weight: 500;
+    font-weight: var(--console-weight-medium);
     white-space: nowrap;
   }
 
@@ -423,47 +524,54 @@
     width: 0.5rem;
     height: 0.5rem;
     flex-shrink: 0;
-    border-radius: 50%;
-    background: hsl(var(--warning));
+    border-radius: var(--console-radius-full);
+    background: hsl(var(--warning-fill));
   }
 
   .console-connection-state.is-online > span:first-child {
-    background: hsl(var(--success));
+    background: hsl(var(--muted-foreground) / 0.45);
   }
 
   /* ---------- Content column ---------- */
-  /* The docked log panel sets --console-log-panel-reserve on <html>; the page keeps its last rows reachable above it. */
+  /* The docked log panel sets --zc-log-panel-reserve on <html>; the page keeps its last rows reachable above it. */
   .console-main-scroll {
     display: block;
     min-width: 0;
     overflow-x: clip;
-    padding-top: var(--console-header-h);
-    padding-bottom: var(--console-log-panel-reserve, 0px);
+    padding-top: var(--zc-header-h);
+    padding-bottom: var(--zc-log-panel-reserve, 0px);
   }
 
   html:has(.console-app-shell) {
-    scroll-padding-top: calc(var(--console-header-h, 4.5rem) + 0.75rem);
-    scroll-padding-bottom: var(--console-log-panel-reserve, 0px);
+    scroll-padding-top: calc(var(--zc-header-h, 4.5rem) + 0.75rem);
+    scroll-padding-bottom: var(--zc-log-panel-reserve, 0px);
   }
 
   /* Banners, breadcrumb and the page stack in one column. */
   .console-main {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    padding-bottom: 4rem;
+    gap: var(--console-space-4);
+    padding-bottom: var(--console-space-8);
   }
 
-  .console-main > .console-breadcrumb { margin-bottom: -0.25rem; }
+  .console-main > .console-breadcrumb { margin-bottom: calc(var(--console-space-1) * -1); }
+
+  /*
+   * The Console's main area already pads the page, so the component library's PageShell (which pads
+   * itself since console-ui 1.1, ADR 0063 P1b) does not add a second inset: as `inset={false}` for
+   * every page, built-in or plugin, rendered in the shell.
+   */
+  .console-main .console-page-frame { padding: 0; }
 
   /* ---------- Breadcrumb (non-object pages) ---------- */
   .console-breadcrumb {
     display: flex;
     min-width: 0;
     align-items: center;
-    gap: 0.25rem;
+    gap: var(--console-space-1);
     color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-body-sm);
+    font-size: var(--console-text-label);
   }
 
   .console-breadcrumb-group {
@@ -478,9 +586,9 @@
   }
 
   .console-breadcrumb-link {
-    border-radius: var(--console-radius-sm);
+    border-radius: var(--console-radius-1);
     color: hsl(var(--muted-foreground));
-    transition: color var(--console-duration-fast) ease;
+    transition: color var(--console-motion-fast) var(--console-ease-out);
   }
 
   .console-breadcrumb-link:hover {
@@ -491,40 +599,42 @@
     overflow: hidden;
     min-width: 0;
     color: hsl(var(--foreground));
-    font-weight: 550;
+    font-weight: var(--console-weight-medium);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   /* ---------- Narrow layouts ---------- */
   /* Wide but not widest: the section items need the room, the search keeps its icon and shortcut. */
-  @media (min-width: 1100px) and (max-width: 1399px) {
+  /* stylelint-disable-next-line console/media-queries -- 顶栏放下全部分区至少要 1100px，64rem（1024px）时会和搜索框重叠；与 hooks/useIsMobile.ts 的 COMPACT_NAV_QUERY 成对 */
+  @media (width >= 1100px) and (width < 90rem) {
     .console-topnav-actions .console-command-trigger { min-width: 0; }
     .console-topnav-actions .console-command-trigger > span { display: none; }
-    .console-topnav .console-brand-text { display: none; }
-    .console-topnav-item { padding: 0 0.625rem; }
+    .console-topnav .console-brand-name { display: none; }
+    .console-topnav-item { padding: 0 var(--console-space-2); }
   }
 
-  @media (max-width: 1099px) {
-    .console-topnav-capsule { padding-left: 0.375rem; gap: 0.25rem; }
+  /* stylelint-disable-next-line console/media-queries -- 同上：1100px 以下导航收进抽屉 */
+  @media (width < 1100px) {
+    .console-topnav-capsule { padding-left: var(--console-space-2); gap: var(--console-space-1); }
     .console-topnav-actions .console-command-trigger { width: auto; }
   }
 
-  @media (max-width: 767px) {
-    .console-app-shell { --console-header-h: 4.25rem; --console-nav-capsule-h: 3.25rem; --console-nav-logo: 2rem; }
-    .console-topnav { padding: 0.625rem 0.75rem 0; }
-    .console-topnav .console-brand-text { display: none; }
+  @media (width < 48rem) {
+    .console-app-shell { --zc-header-h: 4.25rem; --zc-nav-capsule-h: 3.25rem; --zc-nav-logo: 2rem; }
+    .console-topnav { padding: var(--console-space-3) var(--console-space-3) 0; }
+    .console-topnav .console-brand-name { display: none; }
     /* Phones: menu, logo and up to six actions must fit inside the capsule at 360px. */
-    .console-topnav-capsule { gap: 0.125rem; }
-    .console-topnav .console-brand { padding-right: 0; }
+    .console-topnav-capsule { gap: var(--console-space-1); }
+    .console-topnav .console-brand-link { padding-right: 0; }
     .console-topnav-actions {
       --console-control-height: 2.5rem;
-      --console-control-height-sm: 2.5rem;
+      --console-control-height-compact: 2.5rem;
       min-width: 0;
-      gap: 0.125rem;
+      gap: var(--console-space-1);
     }
     .console-topnav-actions > .console-command-trigger { margin-right: 0; }
-    .console-topnav-actions .console-command-trigger { width: 2.5rem; height: 2.5rem; justify-content: center; padding: 0; border-radius: 999px; }
+    .console-topnav-actions .console-command-trigger { width: 2.5rem; height: 2.5rem; justify-content: center; padding: 0; border-radius: var(--console-radius-full); }
     .console-topnav-actions .console-command-trigger > span,
     .console-topnav-actions .console-command-trigger > kbd { display: none; }
     .console-connection-dot { display: none; }
@@ -532,7 +642,7 @@
   }
 
   /* Too narrow for the language picker; Personal settings still switches the language. */
-  @media (max-width: 479px) {
+  @media (width < 40rem) {
     .console-topnav-actions .console-language-select { display: none; }
   }
 
@@ -540,9 +650,9 @@
   .console-route-view {
     display: flex;
     flex-direction: column;
-    gap: var(--console-space-section);
+    gap: var(--console-section-gap);
     min-width: 0;
-    animation: console-route-enter var(--console-duration-page) var(--console-ease-out) both;
+    animation: console-route-enter var(--console-motion-base) var(--console-ease-out) both;
   }
 
   .console-route-view:empty { display: none; }
@@ -566,11 +676,11 @@
     flex-shrink: 0;
     place-items: center;
     border: 0;
-    border-radius: var(--console-radius-md);
+    border-radius: var(--console-radius-2);
     background: transparent;
     color: hsl(var(--muted-foreground));
     cursor: pointer;
-    transition: background-color 140ms ease, color 140ms ease;
+    transition: background-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out);
   }
 
   .console-icon-button:hover {
@@ -589,14 +699,14 @@
     height: 2rem;
     flex-shrink: 0;
     align-items: center;
-    border-radius: var(--console-radius-md);
+    border-radius: var(--console-radius-2);
     color: hsl(var(--muted-foreground));
-    font-size: 0.8125rem;
-    transition: background-color 140ms ease, color 140ms ease;
+    font-size: var(--console-text-label);
+    transition: background-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out);
   }
 
   .console-language-select:hover,
-  .console-language-select:focus-within {
+  .console-language-select:has(:focus-visible) {
     background: hsl(var(--accent));
     color: hsl(var(--foreground));
   }
@@ -609,7 +719,7 @@
     pointer-events: none;
   }
 
-  @media (max-width: 639px) {
+  @media (width < 40rem) {
     .console-language-select { height: 2.25rem; }
     .console-language-select > svg { left: 0.625rem; }
   }
@@ -629,7 +739,7 @@
     inset: 0;
     transform: translateX(-100%);
     background: linear-gradient(90deg, transparent, hsl(var(--background) / 0.55), transparent);
-    animation: console-skeleton-shimmer 1.4s ease-in-out infinite;
+    animation: console-skeleton-shimmer var(--zc-motion-loop) var(--console-ease-out) infinite;
   }
 
   @keyframes console-skeleton-shimmer {
@@ -642,10 +752,10 @@
   .console-segmented {
     display: inline-flex;
     flex-shrink: 0;
-    gap: 2px;
-    border-radius: var(--console-radius-md);
+    gap: var(--console-space-1);
+    border-radius: var(--console-radius-2);
     background: hsl(var(--muted));
-    padding: 3px;
+    padding: var(--console-space-1);
   }
 
   .console-segmented > label {
@@ -662,13 +772,13 @@
 
   .console-segmented label > span {
     display: block;
-    border-radius: calc(var(--console-radius-md) - 2px);
-    padding: 0.3125rem 0.75rem;
+    border-radius: var(--console-radius-2);
+    padding: var(--console-space-1) var(--console-space-3);
     color: hsl(var(--muted-foreground));
-    font-size: 0.8125rem;
-    font-weight: 500;
+    font-size: var(--console-text-label);
+    font-weight: var(--console-weight-medium);
     white-space: nowrap;
-    transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+    transition: background-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out), box-shadow var(--console-motion-fast) var(--console-ease-out);
   }
 
   .console-segmented label:hover > span {
@@ -678,12 +788,12 @@
   .console-segmented label:has([role="radio"][data-state="checked"]) > span {
     background: hsl(var(--card));
     color: hsl(var(--foreground));
-    font-weight: 600;
-    box-shadow: var(--console-shadow-xs);
+    font-weight: var(--console-weight-strong);
+    box-shadow: var(--console-elevation-0);
   }
 
   .console-segmented label:has([role="radio"]:focus-visible) > span {
-    outline: var(--console-focus-width) solid hsl(var(--ring));
+    outline: var(--console-border-focus) solid hsl(var(--ring));
     outline-offset: 1px;
   }
 
@@ -691,13 +801,13 @@
     display: flex;
     cursor: pointer;
     align-items: flex-start;
-    gap: 0.625rem;
-    border: var(--console-border-width) solid var(--console-border-default);
-    border-radius: var(--console-radius-md);
+    gap: var(--console-space-3);
+    border: var(--console-border-hairline) solid var(--console-border-default);
+    border-radius: var(--console-radius-2);
     background: hsl(var(--card));
-    padding: 0.75rem 0.875rem;
-    font-size: 0.875rem;
-    transition: border-color 140ms ease, background-color 140ms ease;
+    padding: var(--console-space-3) var(--console-space-4);
+    font-size: var(--console-text-body);
+    transition: border-color var(--console-motion-fast) var(--console-ease-out), background-color var(--console-motion-fast) var(--console-ease-out);
   }
 
   .console-choice-card:hover {
@@ -707,11 +817,11 @@
   .console-choice-card:has([role="radio"][data-state="checked"]) {
     border-color: hsl(var(--primary) / 0.5);
     background: hsl(var(--primary) / 0.05);
-    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.25);
+    outline: var(--console-border-hairline) solid hsl(var(--primary) / 0.25); outline-offset: 0;
   }
 
   .console-choice-card [role="radio"] {
-    margin-top: 0.2rem;
+    margin-top: var(--console-space-1);
   }
 }
 
@@ -722,10 +832,10 @@
     width: fit-content;
     max-width: 100%;
     align-items: center;
-    gap: 0.4rem;
+    gap: var(--console-space-2);
     cursor: pointer;
     list-style: none;
-    border-radius: var(--console-radius-sm);
+    border-radius: var(--console-radius-1);
   }
 
   #console-main-content summary::-webkit-details-marker {
@@ -737,11 +847,11 @@
     width: 0.375rem;
     height: 0.375rem;
     flex-shrink: 0;
-    border-right: 1.5px solid currentColor;
-    border-bottom: 1.5px solid currentColor;
+    border-right: var(--console-border-focus) solid currentColor;
+    border-bottom: var(--console-border-focus) solid currentColor;
     opacity: 0.7;
     transform: rotate(-45deg);
-    transition: transform 160ms ease;
+    transition: transform var(--console-motion-fast) var(--console-ease-out);
   }
 
   #console-main-content details[open] > summary::before {
@@ -755,12 +865,12 @@
 
 @layer components {
   .console-disclosure-card {
-    border: var(--console-border-width) solid transparent;
-    border-radius: var(--console-radius-md);
+    border: var(--console-border-hairline) solid transparent;
+    border-radius: var(--console-radius-2);
     background: hsl(var(--card));
-    padding: 0.75rem 0.875rem;
-    transition: border-color 140ms ease;
-    box-shadow: var(--console-shadow-sm);
+    padding: var(--console-space-3) var(--console-space-4);
+    transition: border-color var(--console-motion-fast) var(--console-ease-out);
+    box-shadow: var(--console-card-elevation);
   }
 
   .console-disclosure-card:hover {
@@ -776,23 +886,18 @@
   .console-outcome-chip {
     display: inline-flex;
     align-items: center;
-    border-radius: 999px;
+    border-radius: var(--console-radius-full);
     background: var(--console-surface-muted);
-    padding: 0.125rem 0.5rem;
+    padding: var(--console-space-1) var(--console-space-2);
     color: hsl(var(--muted-foreground));
     font-size: var(--console-text-label);
-    font-weight: 550;
+    font-weight: var(--console-weight-medium);
     white-space: nowrap;
   }
 
+  /* Outcomes are categories, not health: 发言 reads in full foreground, 只观察 stays muted. console#125. */
   .console-outcome-chip.is-spoke {
-    background: hsl(var(--success) / 0.1);
-    color: hsl(var(--success));
-  }
-
-  .console-outcome-chip.is-watched {
-    background: hsl(var(--info) / 0.1);
-    color: hsl(var(--info));
+    color: hsl(var(--foreground));
   }
 
   .console-outcome-chip.is-skipped {
@@ -805,76 +910,112 @@
   /* Config form actions stay reachable while scrolling long field lists. */
   .console-config-actionbar {
     position: sticky;
-    top: calc(var(--console-header-h, 4.5rem) + 0.5rem);
-    z-index: 10;
+    top: var(--zc-header-h, 4.5rem);
+    /* Above field-group headers (z 3–5) and the fields' own controls. */
+    z-index: 20;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem 1rem;
-    margin: 0 -1rem;
-    border-bottom: var(--console-border-width) solid var(--console-border-default);
-    border-radius: var(--console-radius-lg) var(--console-radius-lg) 0 0;
-    background: hsl(var(--card) / 0.92);
-    padding: 0.75rem 1rem;
-    backdrop-filter: blur(10px);
+    gap: var(--console-space-2) var(--console-space-4);
+    margin: 0 calc(var(--console-space-4) * -1);
+    border-bottom: var(--console-border-hairline) solid var(--console-border-default);
+    border-radius: var(--console-radius-3) var(--console-radius-3) 0 0;
+    /* Opaque: fields scrolling underneath must not show through the bar. */
+    background: hsl(var(--card));
+    padding: var(--console-space-3) var(--console-space-4);
+    box-shadow: var(--console-elevation-1);
+  }
+
+  /*
+   * The strip between the floating nav capsule and the bar is canvas: paint it, so content scrolled
+   * under the bar does not peek out above it.
+   */
+  .console-config-actionbar::before {
+    content: "";
+    position: absolute;
+    inset: auto 0 100% 0;
+    height: 0.75rem;
+    background: hsl(var(--background));
+    pointer-events: none;
+  }
+
+  /* Config form body: groups, a two-column grid of scalar fields, number inputs with units. */
+  .console-config-group { display: grid; gap: var(--console-space-3); }
+  .console-config-group + .console-config-group { border-top: var(--console-border-hairline) solid var(--console-border-subtle); padding-top: var(--console-space-4); }
+  .console-config-group-title { font-size: var(--console-text-section); font-weight: var(--console-weight-strong); }
+  .console-config-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--console-space-4) var(--console-space-5); }
+  @media (width >= 64rem) {
+    .console-config-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .console-config-cell.is-wide { grid-column: 1 / -1; }
+  }
+  .console-config-cell { min-width: 0; }
+  .console-number-field { display: grid; max-width: 16rem; gap: var(--console-space-1); }
+  .console-number-input { position: relative; display: flex; align-items: center; }
+  .console-number-input > input { padding-right: var(--console-space-7); }
+  .console-number-unit {
+    position: absolute;
+    right: 0.75rem;
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-label);
+    pointer-events: none;
   }
 
   .console-dirty-pill {
     display: inline-flex;
     flex-shrink: 0;
     align-items: center;
-    gap: 0.375rem;
-    border-radius: 999px;
+    gap: var(--console-space-2);
+    border-radius: var(--console-radius-full);
     background: hsl(var(--warning) / 0.1);
-    padding: 0.125rem 0.5rem;
+    padding: var(--console-space-1) var(--console-space-2);
     color: hsl(var(--warning));
     font-size: var(--console-text-label);
-    font-weight: 600;
+    font-weight: var(--console-weight-strong);
   }
 
   .console-dirty-pill::before {
     content: "";
     width: 0.375rem;
     height: 0.375rem;
-    border-radius: 50%;
+    border-radius: var(--console-radius-full);
     background: currentColor;
   }
 }
 
 @layer components {
   .console-field-group {
-    border: var(--console-border-width) solid var(--console-border-default);
-    border-radius: var(--console-radius-md);
+    border: var(--console-border-hairline) solid var(--console-border-default);
+    border-radius: var(--console-radius-2);
     background: hsl(var(--card));
   }
 
   /* Group headers stay visible while a long object scrolls, just below the form action bar. */
   #console-main-content .console-field-group > summary {
     position: sticky;
-    top: calc(var(--console-header-h, 4.5rem) + var(--config-sticky-top, 3.5rem));
+    top: calc(var(--zc-header-h, 4.5rem) + var(--config-sticky-top, 3.5rem));
     z-index: 5;
     width: 100%;
     flex-wrap: wrap;
-    gap: 0.25rem 0.5rem;
-    border-radius: var(--console-radius-md);
+    gap: var(--console-space-1) var(--console-space-2);
+    border-radius: var(--console-radius-2);
     background: hsl(var(--card) / 0.95);
-    padding: 0.625rem 0.75rem;
+    padding: var(--console-space-3) var(--console-space-3);
     backdrop-filter: blur(8px);
   }
 
   .console-field-group[open] > summary {
-    border-bottom: var(--console-border-width) solid var(--console-border-subtle);
-    border-radius: var(--console-radius-md) var(--console-radius-md) 0 0;
+    border-bottom: var(--console-border-hairline) solid var(--console-border-subtle);
+    border-radius: var(--console-radius-2) var(--console-radius-2) 0 0;
   }
 
   .console-field-group .console-field-group > summary {
-    top: calc(var(--config-sticky-top, 3.5rem) + 2.5rem);
+    top: calc(var(--zc-header-h, 4.5rem) + var(--config-sticky-top, 3.5rem) + 2.5rem);
     z-index: 4;
   }
 
   .console-field-group .console-field-group .console-field-group > summary {
-    top: calc(var(--config-sticky-top, 3.5rem) + 5rem);
+    top: calc(var(--zc-header-h, 4.5rem) + var(--config-sticky-top, 3.5rem) + 5rem);
     z-index: 3;
   }
 
@@ -884,7 +1025,7 @@
   }
 
   .console-field-group-body {
-    padding: 0.75rem;
+    padding: var(--console-space-3);
   }
 
 }
@@ -896,7 +1037,7 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 0.25rem 0.5rem;
+    gap: var(--console-space-1) var(--console-space-2);
   }
 
   .console-field-actions {
@@ -905,7 +1046,7 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: flex-end;
-    gap: 0.25rem;
+    gap: var(--console-space-1);
     cursor: default;
   }
 }

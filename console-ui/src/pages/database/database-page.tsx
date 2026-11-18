@@ -2,17 +2,9 @@ import { useI18n } from '../../i18n'
 import { useState, useMemo, useRef, type CSSProperties } from 'react'
 import { useDatabaseConsole, databaseAdmin } from './use-database-console'
 import type { DatabaseType, TableInfo } from '@zhin.js/client'
-import { Database as DatabaseIcon, Table2, Trash2, RefreshCw, Key, ArrowLeft, TerminalSquare, Plus } from 'lucide-react'
-import { Card, CardContent } from '../../components/ui/card'
-import { Button } from '../../components/ui/button'
+import { Table2, Trash2, RefreshCw, Key, ArrowLeft, TerminalSquare, Plus } from 'lucide-react'
+import { Badge, Button, Card, CardContent, ConfirmDialog, EmptyState, PageHeader, ScrollArea, Skeleton, Tabs, TabsList, TabsTrigger } from '@zhin.js/console-ui'
 import { OpsLoadState } from '../ops/load-state'
-import { EmptyState } from '../../components/empty-state'
-import { Badge } from '../../components/ui/badge'
-import { Skeleton } from '../../components/ui/skeleton'
-import { ScrollArea } from '../../components/ui/scroll-area'
-import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs'
-import { PageHeader } from '../../components/PageHeader'
-import { ConfirmDialog } from '../../components/confirm-dialog'
 import { StatusState } from '../../components/StatusState'
 import { DB_TYPE_LABELS, DIALECT_LABELS } from './constants'
 import { RelatedTableView } from './related-table-view'
@@ -21,7 +13,7 @@ import { KvBucketView } from './kv-bucket-view'
 import { SqlConsole } from './sql-console'
 import { SchemaEditor, CreateTableEditor } from './schema-editor'
 import { SplitHandle, useSplitWidth } from './resizable-split'
-import { databaseCapabilities, needsConsoleRole, sqlUnavailableReason } from './database-console-model.mjs'
+import { databaseCapabilities, databaseDescription, needsConsoleRole, sqlUnavailableReason } from './database-console-model.mjs'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
 import { useToast } from '../../components/toast'
 import { withoutDroppedTables, type DroppedTables } from './drop-table-model.mjs'
@@ -70,7 +62,7 @@ export default function DatabasePage() {
     <div className="space-y-4 sm:space-y-6">
       <PageHeader
         title={i18n.t("数据库")}
-        description={!info ? i18n.t("浏览和管理项目数据库中的数据；数据库由 Zhin 实例提供。") : readOnly ? i18n.t("浏览 {0} 中的数据（只读）。", [i18n.t(DB_TYPE_LABELS[dbType])]) : i18n.t("浏览和管理 {0} 中的数据；左栏选择对象，右侧查看与编辑。", [i18n.t(DB_TYPE_LABELS[dbType])])}
+        description={databaseDescription({ dialectLabel: info ? DIALECT_LABELS[info.dialect] || info.dialect : '', readOnly }, i18n.locale)}
         actions={
           <div className="flex items-center gap-2">
             {info && (
@@ -125,7 +117,7 @@ export default function DatabasePage() {
                   ) : !visibleTables.length && (!loaded || error) ? (
                     <EmptyState compact title={error ? i18n.t("数据库对象尚未读取成功") : i18n.t("等待读取数据库对象")} />
                   ) : !visibleTables.length ? (
-                    <EmptyState compact title={i18n.t("暂无数据")} />
+                    <EmptyState compact illustration="table" title={i18n.t("这个数据库还没有表")} description={i18n.t("建表后会列在这里。")} />
                   ) : visibleTables.map((t: TableInfo) => (
                     <button
                       key={t.name}
@@ -219,15 +211,15 @@ export default function DatabasePage() {
                     {!readOnly && (
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="destructive-outline"
                         size="sm"
                         data-action="drop-table"
-                        className="ml-auto order-last shrink-0 text-destructive"
+                        className="ml-auto order-last shrink-0"
                         aria-label={i18n.t("删除{0} {1}", [objectLabel, selectedTable])}
                         onClick={() => setDeleteTarget({ name: selectedTable, label: objectLabel })}
                       >
-                        <Trash2 className="w-3.5 h-3.5 sm:mr-1" />
-                        <span className="hidden sm:inline">{i18n.t("删除{0}", [objectLabel])}</span>
+                        <Trash2 />
+                        {i18n.t("删除{0}", [objectLabel])}
                       </Button>
                     )}
                   </div>
@@ -277,13 +269,9 @@ export default function DatabasePage() {
                   </div>
                 </>
               ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground p-4">
-                  <div className="text-center">
-                    <DatabaseIcon className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p className="text-sm">
-                      {error || !loaded ? i18n.t("数据库对象尚未读取成功，请先重试或使用有权限的身份连接。") : i18n.t("在左侧选择一个{0}{1}", [objectLabel, readOnly ? i18n.t("查看数据") : i18n.t("开始管理")])}
-                    </p>
-                  </div>
+                <div className="flex items-center justify-center h-full p-4">
+                  <EmptyState illustration="table"
+                    description={error || !loaded ? i18n.t("数据库对象尚未读取成功，请先重试或使用有权限的身份连接。") : i18n.t("在左侧选择一个{0}{1}", [objectLabel, readOnly ? i18n.t("查看数据") : i18n.t("开始管理")])} />
                 </div>
               )}
             </div>

@@ -6,7 +6,6 @@ import {
   Boxes,
   Link2,
   Network,
-  Package,
   RefreshCw,
   ScrollText,
   Search,
@@ -18,13 +17,8 @@ import {
 import { CONSOLE_REST, FEATURE_RPC } from '../../contracts/zhin-console'
 import { apiFetch, getApiBase } from '../../utils/auth'
 import { requestConsole } from '../../utils/console-rpc'
-import { PageHeader } from '../../components/PageHeader'
-import { PageShell } from '../../components/PageShell'
+import { Button, PageHeader, PageShell, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/button'
-import { Skeleton } from '../../components/ui/skeleton'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
 import { CONSOLE_PATHS, featureGlobalHref } from '../../console-routes.mjs'
 import { readFeatureMatrix, type FeatureMatrix } from '../features/feature-model.mjs'
@@ -35,18 +29,29 @@ import type { CapabilityItem, IntrospectionTab } from './capability-model'
 
 export type { IntrospectionTab } from './capability-model'
 
-const TAB_CONFIG: Record<
-  IntrospectionTab,
-  { label: string; pageSize: number; icon: typeof Terminal; description: string }
-> = {
-  commands: { label: '命令', pageSize: 25, icon: Terminal, description: '聊天里可以调用的命令：模式、参数、别名与权限规则。' },
-  middlewares: { label: '中间件', pageSize: 30, icon: Network, description: '消息进出时依次经过的处理环节与顺序。' },
-  components: { label: '组件', pageSize: 30, icon: Boxes, description: '插件提供的消息组件，可在这里预览输出。' },
-  endpoints: { label: '聊天账号', pageSize: 30, icon: Bot, description: '当前运行代登记的聊天账号端点。' },
-  bindings: { label: 'Agent 绑定', pageSize: 30, icon: Link2, description: 'Agent 绑定仅表示配置关系，不代表已启用。' },
-  tools: { label: '工具', pageSize: 15, icon: Wrench, description: 'Agent 可以调用的工具及其来源。' },
-  'prompt-sections': { label: '提示词片段', pageSize: 20, icon: ScrollText, description: '拼进系统提示词的片段：层级、顺序与保留策略。' },
-  mcp: { label: 'MCP 服务', pageSize: 30, icon: Server, description: '请结合连接状态判断服务是否可用。' },
+const TAB_CONFIG: Record<IntrospectionTab, { pageSize: number; icon: typeof Terminal }> = {
+  commands: { pageSize: 25, icon: Terminal },
+  middlewares: { pageSize: 30, icon: Network },
+  components: { pageSize: 30, icon: Boxes },
+  endpoints: { pageSize: 30, icon: Bot },
+  bindings: { pageSize: 30, icon: Link2 },
+  tools: { pageSize: 15, icon: Wrench },
+  'prompt-sections': { pageSize: 20, icon: ScrollText },
+  mcp: { pageSize: 30, icon: Server },
+}
+
+/** Tab names and descriptions, translated through `t` so every string reaches the i18n catalog. */
+function tabCopy(t: (message: string) => string): Record<IntrospectionTab, { label: string; description: string }> {
+  return {
+    commands: { label: t('命令'), description: t('聊天里可以调用的命令：模式、参数、别名与权限规则。') },
+    middlewares: { label: t('中间件'), description: t('消息进出时依次经过的处理环节与顺序。') },
+    components: { label: t('组件'), description: t('插件提供的消息组件，可在这里预览输出。') },
+    endpoints: { label: t('聊天账号'), description: t('当前运行代登记的聊天账号端点。') },
+    bindings: { label: t('Agent 绑定'), description: t('Agent 绑定仅表示配置关系，不代表已启用。') },
+    tools: { label: t('工具'), description: t('Agent 可以调用的工具及其来源。') },
+    'prompt-sections': { label: t('提示词片段'), description: t('拼进系统提示词的片段：层级、顺序与保留策略。') },
+    mcp: { label: t('MCP 服务'), description: t('请结合连接状态判断服务是否可用。') },
+  }
 }
 
 const VALID_TABS = new Set<string>(Object.keys(TAB_CONFIG))
@@ -69,6 +74,7 @@ function parseTab(value: string | null): IntrospectionTab {
 
 export default function IntrospectionPage() {
   const i18n = useI18n()
+  const copy = tabCopy((message) => i18n.t(message))
   const readOnly = !hasConsolePermission('feature.configure')
   const [searchParams, setSearchParams] = useSearchParams()
   const tabFromUrl = parseTab(searchParams.get('tab'))
@@ -193,7 +199,7 @@ export default function IntrospectionPage() {
   const hasMore = Boolean(data && data.page < data.totalPages)
 
   return (
-    <PageShell className="max-w-[1600px]">
+    <PageShell>
       <PageHeader
         title={i18n.t("运行时能力")}
         description={i18n.t("高级原始视图：当前运行代注册的命令、中间件、组件、工具、提示词与 MCP。哪个插件提供、对哪些范围开放，看下方摘要并链到插件和对象树。")}
@@ -208,13 +214,13 @@ export default function IntrospectionPage() {
         <TabsList className="h-auto w-full justify-start overflow-x-auto p-1" aria-label={i18n.t("运行时能力分类")}>
           {(Object.keys(TAB_CONFIG) as IntrospectionTab[]).map((key) => {
             const Icon = TAB_CONFIG[key].icon
-            return <TabsTrigger key={key} value={key} className="shrink-0 gap-1.5"><Icon className="h-4 w-4" />{i18n.t(TAB_CONFIG[key].label)}</TabsTrigger>
+            return <TabsTrigger key={key} value={key} className="shrink-0 gap-1.5"><Icon className="h-4 w-4" />{copy[key].label}</TabsTrigger>
           })}
         </TabsList>
 
         {(Object.keys(TAB_CONFIG) as IntrospectionTab[]).map((key) => (
           <TabsContent key={key} value={key} className="mt-4 space-y-4">
-            <p className="text-sm text-muted-foreground">{i18n.t(TAB_CONFIG[key].description)}</p>
+            <p className="text-sm text-muted-foreground">{copy[key].description}</p>
             {key === tab && providers.length ? <ProviderSummary plugins={providers} matrix={matrix} /> : null}
             <section className="console-dashboard-panel overflow-hidden">
               <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -226,7 +232,7 @@ export default function IntrospectionPage() {
                     onChange={(event) => setQuery(event.target.value)}
                     onKeyDown={(event) => { if (event.key === 'Enter') applyFilter(query) }}
                     placeholder={i18n.t("筛选名称、来源或描述…")}
-                    aria-label={i18n.t("筛选{0}", [i18n.t(TAB_CONFIG[key].label)])}
+                    aria-label={i18n.t("筛选{0}", [copy[key].label])}
                     className="h-9 w-full rounded-md border bg-background pl-9 pr-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </div>
@@ -281,15 +287,14 @@ function ProviderSummary({ plugins, matrix }: { plugins: readonly string[]; matr
     <section className="rounded-[var(--console-radius-lg)] border bg-card p-4" aria-label={i18n.t("能力由哪些插件提供")}>
       <p className="console-section-title">{i18n.t("这些能力由 {0} 个插件提供", [plugins.length])}</p>
       <p className="mt-1 text-sm text-muted-foreground">{i18n.t("开关不在这里改：点插件看详情，点「功能」去对象树设置范围。")}</p>
-      <ul className="mt-3 flex flex-wrap gap-2">
+      <ul className="mt-2 divide-y divide-border">
         {plugins.map(plugin => {
           const summary = matrix ? pluginScopeSummary(matrix, plugin) : null
           return (
-            <li key={plugin} className="console-plugin-scope-chip">
-              <Package className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-              <Link to={`/plugins/${encodeURIComponent(plugin)}`} className="min-w-0 truncate font-mono underline-offset-2 hover:underline" title={plugin}>{plugin}</Link>
-              {matrix ? <Badge variant={summary?.global.enabled ? 'secondary' : 'outline'} size="sm" className="max-w-full whitespace-normal">{scopeSummaryLine(summary, i18n.t)}</Badge> : null}
-              <Link to={featureGlobalHref(plugin)} className="shrink-0 text-xs underline">{i18n.t("功能")}</Link>
+            <li key={plugin} className="console-provider-row">
+              <Link to={`/plugins/${encodeURIComponent(plugin)}`} className="console-code min-w-0 truncate underline-offset-2 hover:underline" title={plugin}>{plugin}</Link>
+              {matrix ? <span className="console-provider-row-summary">{scopeSummaryLine(summary, i18n.t)}</span> : null}
+              <Link to={featureGlobalHref(plugin)} className="ml-auto shrink-0 text-xs underline">{i18n.t("功能")}</Link>
             </li>
           )
         })}

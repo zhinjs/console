@@ -10,6 +10,7 @@ import { pageRuntime, nodes } from './helpers/inference-page-runtime.mjs'
 import { translate } from '../console-ui/src/i18n/locale.mjs'
 import * as model from '../console-ui/src/pages/inference/model.mjs'
 import * as personal from '../console-ui/src/pages/personal-session-model.mjs'
+import { saveButtonMock } from './helpers/save-button-mock.mjs'
 
 const experiment = '实验 · 不受官方支持 · 可能违反供应商条款 · 风险由使用者自行承担。'
 const authorization = '未经 OpenAI 对第三方客户端的明确授权。'
@@ -58,17 +59,9 @@ async function fixture() {
     react: runtime.api, 'react/jsx-runtime': jsxRuntime,
     '../../i18n': { useI18n: () => ({ locale, t: (message, values, context) => translate(locale, message, values, context) }) },
     '../i18n': { useI18n: () => ({ locale, t: (message, values, context) => translate(locale, message, values, context) }) },
-    '../../components/ui/badge': { Badge: props => createElement('span', { 'data-experimental-badge': true }, props.children) },
-    '../../components/ui/button': { Button: 'button' }, '../../components/StatusState': { StatusState: 'status-state' }, '../components/ui/button': { Button: 'button' },
-    '../../components/ui/input': { Input: 'input' },
-    '../../components/ui/select': { SelectField: 'select' }, '../components/ui/select': { SelectField: 'select' },
-    '../../components/ui/card': { Card: 'card' },
-    '../../components/error-alert': { ErrorAlert: 'error' }, '../components/error-alert': { ErrorAlert: 'error' },
-    '../../components/ui/dialog': { Dialog: props => props.open ? createElement('dialog', props) : null,
-      DialogContent: 'content', DialogHeader: 'header', DialogTitle: 'title', DialogDescription: 'description' },
-    '../../components/confirm-dialog': { useConfirm: () => ({ confirm: () => false, ConfirmDialog: null }) },
-    './SchemaFields': { SchemaFields: 'schema' }, './ModelCapabilities': { ModelCapabilities: 'capabilities' },
-    'lucide-react': { Plus: 'icon', Pencil: 'icon', Trash2: 'icon', RefreshCw: 'icon', KeyRound: 'icon', LogIn: 'icon', Unplug: 'icon' },
+    '@zhin.js/console-ui': { Badge: props => createElement('span', { 'data-experimental-badge': true }, props.children), Button: 'button', Button: 'button', Input: 'input', SelectField: 'select', SearchableSelectField: 'select', SelectField: 'select', Card: 'card', ErrorAlert: 'error', ErrorAlert: 'error', Dialog: props => props.open ? createElement('dialog', props) : null, DialogContent: 'content', DialogHeader: 'header', DialogTitle: 'title', DialogDescription: 'description', useConfirm: () => ({ confirm: () => false, ConfirmDialog: null }), DropdownMenu: 'dropdown-menu', DropdownMenuContent: 'dropdown-content', DropdownMenuItem: 'dropdown-item', DropdownMenuTrigger: 'dropdown-trigger' },
+    '../../components/StatusState': { StatusState: 'status-state' }, './SchemaFields': { SchemaFields: 'schema' }, './ModelCapabilities': { ModelCapabilities: 'capabilities' },
+    'lucide-react': { Plus: 'icon', Pencil: 'icon', Trash2: 'icon', RefreshCw: 'icon', KeyRound: 'icon', LogIn: 'icon', Unplug: 'icon', ArrowDown: 'icon', ArrowUp: 'icon', MoreHorizontal: 'icon' },
     './model.mjs': model, './inference/model.mjs': model, './personal-session-model.mjs': personal,
   }
   async function load(filename, extra = {}) {
@@ -84,6 +77,7 @@ async function fixture() {
   }
   const support = await load('inference/SupportInfo.tsx')
   dependencies['./SupportInfo'] = support; dependencies['./inference/SupportInfo'] = support
+  dependencies['../../components/SaveButton'] = saveButtonMock
   const management = view => ({ view, source: { view, connectionScope: 'connection', base: 'https://host.test' }, busy: false, pending: null,
     error: '', active: () => true, revisionEpoch: 1, setError: assert.fail,
     request: async path => { calls.push(path); return path === '/targets' ? { adapters: [], endpoints: [], scenes: [], agents: [] } : { inputSchema: {} } },

@@ -333,3 +333,18 @@ export function parseDefaultInput(text, type) {
   }
   return { value: raw }
 }
+
+// ---- Page header ----
+
+/**
+ * The header line names the database by its engine (「SQLite 数据库」), not by the storage model
+ * (「关系型」, which read as 「浏览和管理 关系型 中的数据」). The Host does not send a database or file
+ * name, so the engine is the most specific thing the Console can show.
+ */
+export function databaseDescription({ dialectLabel, readOnly = false } = {}, locale = 'zh-CN') {
+  const name = typeof dialectLabel === 'string' ? dialectLabel.trim() : ''
+  if (!name) return translate(locale, '浏览和管理项目数据库中的数据；数据库由 Zhin 实例提供。')
+  return readOnly
+    ? translate(locale, '浏览 {0} 数据库中的数据（只读）。', [name])
+    : translate(locale, '浏览和管理 {0} 数据库中的数据；左栏选择对象，右侧查看与编辑。', [name])
+}

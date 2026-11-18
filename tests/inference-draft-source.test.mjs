@@ -30,18 +30,10 @@ async function fixture(page, options = {}) {
     'react/jsx-runtime': { jsx: (type, props, key) => ({ type, props, key }), jsxs: (type, props, key) => ({ type, props, key }) },
     'lucide-react': { Plus: 'icon', Pencil: 'icon', Trash2: 'icon', RefreshCw: 'icon', KeyRound: 'icon', LogIn: 'icon', Unplug: 'icon', Download: 'icon', Upload: 'icon' },
     '../../i18n': localeModule,
-    '../../components/ui/button': { Button: 'button' }, '../../components/StatusState': { StatusState: 'status-state' }, '../../components/ui/input': { Input: 'input' },
-    '../../components/ui/select': { SelectField: 'select' }, '../../components/ui/card': { Card: 'card' },
-    '../../components/ui/dialog': { Dialog, DialogContent: 'content', DialogHeader: 'header', DialogTitle: 'title', DialogDescription: 'description' },
-    '../../components/error-alert': { ErrorAlert: 'error' },
-    '../../components/confirm-dialog': { useConfirm: () => ({ ConfirmDialog: null, confirm: () => new Promise(resolve => confirms.push(resolve)) }) },
-    './SupportInfo': { SupportLabel: 'support-label', SupportNotice: 'support-notice', supportLabel: label => label },
+    '@zhin.js/console-ui': { Button: 'button', Input: 'input', SelectField: 'select', SearchableSelectField: 'select', Card: 'card', Dialog, DialogContent: 'content', DialogHeader: 'header', DialogTitle: 'title', DialogDescription: 'description', ErrorAlert: 'error', useConfirm: () => ({ ConfirmDialog: null, confirm: () => new Promise(resolve => confirms.push(resolve)) }), Tabs: 'tabs', TabsList: 'tabs-list', TabsTrigger: 'tab', TabsContent: 'tab-content', Alert: 'alert', AlertDescription: 'alert-description', Textarea: 'textarea' }, '../../components/StatusState': { StatusState: 'status-state' }, './SupportInfo': { SupportLabel: 'support-label', SupportNotice: 'support-notice', supportLabel: label => label },
     './ModelCapabilities': { ModelCapabilities: 'capabilities' }, './SchemaFields': { SchemaFields: 'schema' }, './model.mjs': model,
     './useInferenceManagement': { useInferenceManagement: management },
     './Services': { Services: 'services' }, './Profiles': { Profiles: 'profiles' }, './Accounts': { Accounts: 'accounts' }, './Purposes': { Purposes: 'purposes' }, './PersonalSessions': { PersonalSessions: 'sessions' },
-    '../../components/ui/tabs': { Tabs: 'tabs', TabsList: 'tabs-list', TabsTrigger: 'tab', TabsContent: 'tab-content' },
-    '../../components/ui/alert': { Alert: 'alert', AlertDescription: 'alert-description' },
-    '../../components/ui/textarea': { Textarea: 'textarea' },
     yaml: { parse: text => JSON.parse(text), stringify: JSON.stringify },
     // The Workspace tab lives in the address bar; a write re-renders like a router navigation.
     'react-router-dom': { useSearchParams: () => [new URLSearchParams(query), next => {
@@ -152,6 +144,10 @@ test('a manual ID without a declared kind has an actionable save validation erro
   f.all().find(node => node.type === 'select').props.onValueChange('account'); await f.runtime.settle()
   f.button('输入模型 ID').props.onClick(); await f.runtime.settle()
   f.all().find(node => node.type === 'input' && node.props.placeholder === '填写服务的真实模型 ID').props.onChange({ target: { value: 'unknown-model' } }); await f.runtime.settle()
+  // The driver's only contract has one kind, which is now preselected (#64 `model-capability-no-defaults`); untick it.
+  const capabilities = f.all().find(node => node.type === 'capabilities')
+  assert.deepEqual(capabilities.props.value.kinds, ['language'])
+  capabilities.props.onChange({ ...capabilities.props.value, kinds: [] }); await f.runtime.settle()
   assert.equal(!!f.button('保存').props.disabled, false)
   await f.form().props.onSubmit({ preventDefault() {} }); await f.runtime.settle()
   assert.ok(f.all().some(node => node.type === 'error' && node.props.error.includes('用途')))
@@ -273,7 +269,8 @@ test('a new model ID does not borrow capabilities from a known catalog model', a
   const f = await fixture('Profiles')
   f.button('编辑 Original').props.onClick(); await f.runtime.settle()
   f.all().find(node => node.type === 'input' && node.props.placeholder === '填写服务的真实模型 ID').props.onChange({ target: { value: 'different-native' } }); await f.runtime.settle()
-  assert.deepEqual(f.all().find(node => node.type === 'capabilities').props.value.kinds, [])
+  // Only the driver contract's defaults (one protocol, its one kind, text input), nothing from `native`.
+  assert.deepEqual(f.all().find(node => node.type === 'capabilities').props.value, { id: 'different-native', protocol: 'chat', kinds: ['language'], input: ['text'] })
   f.runtime.unmount()
 })
 

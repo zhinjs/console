@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { ArrowDown, Loader2 } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { Button } from '../../components/ui/button'
+import { Button } from '@zhin.js/console-ui'
 import {
   isNearBottom,
   planChatScroll,

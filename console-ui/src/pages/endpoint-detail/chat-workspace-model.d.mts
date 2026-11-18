@@ -23,3 +23,5 @@ export declare const DELIVERY_STATES: readonly DeliveryState[]
 export declare const DELIVERY_COPY: Readonly<Record<DeliveryState, { label: string; title: string }>>
 export declare function deliveryAfterSend(response: unknown): 'sent' | 'accepted'
 export declare function deliveryAfterError(error: unknown): 'unknown' | 'failed'
+/** What a failed send says under the bubble, in the reader's language. */
+export declare function deliveryFailureText(error: unknown, locale?: string): string

@@ -15,7 +15,8 @@ import {
   Quote,
   Video,
 } from 'lucide-react'
-import { MarkdownContent, cn, pickMediaRawUrl, resolveMediaSrc } from '@zhin.js/client'
+import { cn } from '@zhin.js/console-ui'
+import { MarkdownContent, pickMediaRawUrl, resolveMediaSrc } from '@zhin.js/client'
 import type { ReceivedMessage } from './types'
 import { pickMessageMediaRaw } from './media-source.mjs'
 

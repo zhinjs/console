@@ -1,0 +1,12 @@
+/* Terminal colours (AnsiText): theme tokens only, so light and dark follow the palette. */
+.console-ansi-default { color: hsl(var(--foreground)); }
+.console-ansi-muted { color: hsl(var(--muted-foreground)); }
+.console-ansi-danger { color: hsl(var(--destructive)); }
+.console-ansi-success { color: hsl(var(--success)); }
+.console-ansi-warning { color: hsl(var(--warning)); }
+.console-ansi-info { color: hsl(var(--info)); }
+.console-ansi-accent { color: hsl(var(--chart-5)); }
+.console-ansi-bold { font-weight: var(--console-weight-strong); }
+.console-ansi-dim { opacity: 0.7; }
+.console-ansi-italic { font-style: italic; }
+.console-ansi-underline { text-decoration: underline; text-underline-offset: 2px; }

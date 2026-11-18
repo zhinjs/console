@@ -2,15 +2,13 @@ import { StatusState } from '../StatusState'
 import { useI18n } from '../../i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Settings, AlertCircle, Save, Loader2 } from 'lucide-react'
+import { Settings, AlertCircle, Save } from 'lucide-react'
 import type { PluginConfigFormProps, SchemaField, SchemaEditorDrafts } from './types.js'
 import { usePluginConfigDraft } from './usePluginConfigDraft'
 import { AgentPresetsEditor } from './AgentPresetsEditor'
 import { SchemaFieldEditor } from './SchemaFieldEditor'
-import { objectFields, declaredDefaults, initialSchemaValue, updateObjectField, hostValidationSummary } from './schema-model.mjs'
-import { Card } from '../ui/card'
-import { Button } from '../ui/button'
-import { Alert, AlertDescription } from '../ui/alert'
+import { objectFields, declaredDefaults, initialSchemaValue, updateObjectField, hostValidationSummary, configFieldLayout, isWideConfigField } from './schema-model.mjs'
+import { Alert, AlertDescription, Button, Card } from '@zhin.js/console-ui'
 import { createConfigDraftGuard } from './draft-guard.mjs'
 import { requestConsole } from '../../utils/console-rpc'
 import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
@@ -19,6 +17,7 @@ import { ConfigurationLiveStatus } from './ConfigurationLiveStatus'
 import { ApplyFeedback, type ApplyOutcome, type ReadBackMismatch } from '../ApplyFeedback'
 import { outcomeFromConfigSave, readBackMismatch, schemaSecretAt } from '../apply-outcome-model.mjs'
 import { configurationSupportsApply } from './config-live-status.mjs'
+import { SaveButton, useSaveFeedback } from '../SaveButton'
 
 interface ConfigValidation { valid: boolean; schemaAvailable?: boolean; errors: Array<{ path: string; message: string }>; missingEnv: string[] }
 
@@ -60,6 +59,7 @@ function PluginConfigFormSession({ pluginName, onSuccess, onDirtyChange, sourceR
   // An unmounted category can still own an invalid JSON draft. Keep saving blocked until it is fixed or discarded.
   const hasInvalidFields = invalidFields.size > 0 || scoped && [...editorDrafts.current.json.values()].some(draft => draft.error)
   const [saving, setSaving] = useState(false)
+  const saveFeedback = useSaveFeedback()
   const [saveError, setSaveError] = useState<string | null>(null)
   // The last save's outcome next to 保存: 已生效 / 需要重启 / 未生效, or the read-back that differs.
   const [message, setMessage] = useState<{ outcome: ApplyOutcome; mismatch: ReadBackMismatch | null; unverified: boolean } | null>(null)
@@ -129,7 +129,7 @@ function PluginConfigFormSession({ pluginName, onSuccess, onDirtyChange, sourceR
     const name = pluginName
     const operationId = ++operation.current
     const currentOperation = () => isInboxCacheScopeActive(connectionScope) && currentName.current === name && operation.current === operationId
-    setSaving(true); setSaveError(null); setMessage(null)
+    setSaving(true); setSaveError(null); setMessage(null); saveFeedback.reset()
     try {
       const checked = await requestConsole<ConfigValidation>({ type: 'plugin:validate-config', pluginName: name, data: localConfig })
       if (!currentOperation()) return
@@ -145,11 +145,14 @@ function PluginConfigFormSession({ pluginName, onSuccess, onDirtyChange, sourceR
       const reread = await form.load()
       if (!currentOperation()) return
       const schema = reread ? form.schema : null
+      const mismatch = reread ? readBackMismatch(submitted, reread.config, { isSecret: path => schemaSecretAt(schema, path) }) : null
       setMessage({
         outcome: outcomeFromConfigSave(result, result.revision),
-        mismatch: reread ? readBackMismatch(submitted, reread.config, { isSecret: path => schemaSecretAt(schema, path) }) : null,
+        mismatch,
         unverified: !reread,
       })
+      // 已保存 on the button only when the Host reads back what was submitted.
+      if (reread && !mismatch) saveFeedback.markSaved()
     } catch (cause) { if (currentOperation()) setSaveError(cause instanceof Error ? cause.message : i18n.t("保存失败，草稿已保留")) }
     finally { if (currentOperation()) setSaving(false) }
   }
@@ -163,7 +166,7 @@ function PluginConfigFormSession({ pluginName, onSuccess, onDirtyChange, sourceR
   return <Card className="mt-0 p-4 pt-0 space-y-4">
     <div ref={actionbarRef} className="console-config-actionbar">
       <div className="flex min-w-0 items-center gap-2"><Settings className="h-4 w-4 shrink-0" /><h3 className="truncate font-semibold">{displayTitle ?? `${i18n.t("配置 · ")}${pluginName}`}</h3>{dirty ? <span className="console-dirty-pill" role="status">{i18n.t("有未保存的修改")}</span> : null}</div>
-      <Button size="sm" onClick={() => void handleSave()} disabled={saving || draftName !== pluginName || form.loading || !!form.error || hasInvalidFields}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{scoped && pluginName === 'ai' ? i18n.t("保存全部修改") : i18n.t("保存配置")}</Button>
+      <SaveButton size="sm" onClick={() => void handleSave()} saving={saving} saved={saveFeedback.saved} disabled={saving || draftName !== pluginName || form.loading || !!form.error || hasInvalidFields}><Save className="h-4 w-4" />{scoped && pluginName === 'ai' ? i18n.t("保存全部修改") : i18n.t("保存配置")}</SaveButton>
     </div>
     {(saveError || form.error) ? <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{saveError ?? form.error}{i18n.t("。草稿已保留。")}<Link className="ml-2 underline" to="/ops/files">{i18n.t("打开文件管理")}</Link>{form.errorOperation === 'read' ? <Button variant="outline" size="sm" onClick={() => void form.load()}>{i18n.t("重试读取")}</Button> : null}</AlertDescription></Alert> : null}
     {validation && (!validation.valid || validation.missingEnv.length > 0) ? <Alert variant={validation.valid && !validation.missingEnv.length ? 'default' : 'destructive'}><AlertDescription><p>{hostValidationSummary(validation, i18n.locale)}</p>{validation.errors.map(item => <p key={`${item.path}:${item.message}`}>{item.path}: {item.message}</p>)}{validation.missingEnv.length ? <p>{i18n.t("缺少环境变量：")}{validation.missingEnv.join('、')}。<Link className="underline" to="/ops/env">{i18n.t("配置环境变量")}</Link>{i18n.t("后重新校验。")}</p> : null}</AlertDescription></Alert> : null}
@@ -177,7 +180,11 @@ function PluginConfigFormSession({ pluginName, onSuccess, onDirtyChange, sourceR
       onApply={supportsApply ? () => void form.applyConfiguration() : undefined}
       disabled={form.loading || saving || form.applyBlocked} applying={form.applyLoading} actionError={form.applyError} />
     {hasInvalidFields && <p role="alert" className="text-sm text-destructive">{i18n.t("有字段 JSON 草稿格式错误，修正后才能保存。")}</p>}
-    <fieldset key={draftVersion} disabled={saving || form.loading} className="space-y-3">{filtersRootFields && (!rootObject || !categoryFields.length) ? <div role="alert"><p>{i18n.t("此分类暂时无法编辑。")}</p><Link className="text-sm underline" to="/ops/files">{i18n.t("打开文件管理")}</Link></div> : rootObject ? <>{categoryFields.map(([name, field]) => pluginName === 'ai' && name === 'agents' ? <AgentPresetsEditor key={name} value={objectConfig[name]} field={field} ai={objectConfig} onChange={value => change(name, value)} drafts={editorDrafts.current} onValidityChange={fieldValidity} /> : <SchemaFieldEditor key={name} path={`$/${JSON.stringify(name)}`} drafts={editorDrafts.current} onValidityChange={fieldValidity} name={name} useDeclaredDefaults={scoped} field={form.schema?.secret ? { ...field, secret: true } : field} value={objectConfig[name]} onChange={value => change(name, value)} />)}{(!Object.keys(fields).length && !Object.keys(objectConfig).length && !form.schema.additional) ? <p>{i18n.t("此项无需配置。")}</p> : null}{!filtersRootFields && (form.schema.additional || Object.keys(objectConfig).some(key => !Object.hasOwn(fields, key))) ? <SchemaFieldEditor name={i18n.t("其他字段")} path="$/additional" drafts={editorDrafts.current} onValidityChange={fieldValidity} reservedKeys={Object.keys(fields)} field={{ type: 'object', object: {}, additional: form.schema.additional, secret: form.schema.secret }} value={Object.fromEntries(Object.entries(objectConfig).filter(([key]) => !Object.hasOwn(fields, key)))} onChange={value => {
+    <fieldset key={draftVersion} disabled={saving || form.loading} className="space-y-3">{filtersRootFields && (!rootObject || !categoryFields.length) ? <div role="alert"><p>{i18n.t("此分类暂时无法编辑。")}</p><Link className="text-sm underline" to="/ops/files">{i18n.t("打开文件管理")}</Link></div> : rootObject ? <>{configFieldLayout(categoryFields).map(group => <section key={group.title ?? ''} className="console-config-group" aria-label={group.title ?? undefined}>
+      {group.title ? <h4 className="console-config-group-title">{group.title}</h4> : null}
+      {/* Scalars share a row on wide screens; objects, lists and JSON values take the full width. */}
+      <div className="console-config-grid">{group.fields.map(([name, field]) => <div key={name} className={isWideConfigField(field) || (pluginName === 'ai' && name === 'agents') ? 'console-config-cell is-wide' : 'console-config-cell'}>{pluginName === 'ai' && name === 'agents' ? <AgentPresetsEditor value={objectConfig[name]} field={field} ai={objectConfig} onChange={value => change(name, value)} drafts={editorDrafts.current} onValidityChange={fieldValidity} /> : <SchemaFieldEditor path={`$/${JSON.stringify(name)}`} drafts={editorDrafts.current} onValidityChange={fieldValidity} name={name} useDeclaredDefaults={scoped} field={form.schema?.secret ? { ...field, secret: true } : field} value={objectConfig[name]} onChange={value => change(name, value)} />}</div>)}</div>
+    </section>)}{(!Object.keys(fields).length && !Object.keys(objectConfig).length && !form.schema.additional) ? <p>{i18n.t("此项无需配置。")}</p> : null}{!filtersRootFields && (form.schema.additional || Object.keys(objectConfig).some(key => !Object.hasOwn(fields, key))) ? <SchemaFieldEditor name={i18n.t("其他字段")} path="$/additional" drafts={editorDrafts.current} onValidityChange={fieldValidity} reservedKeys={Object.keys(fields)} field={{ type: 'object', object: {}, additional: form.schema.additional, secret: form.schema.secret }} value={Object.fromEntries(Object.entries(objectConfig).filter(([key]) => !Object.hasOwn(fields, key)))} onChange={value => {
       const next = Object.fromEntries(Object.entries(objectConfig).filter(([key]) => Object.hasOwn(fields, key)))
       if (value && typeof value === 'object' && !Array.isArray(value)) for (const [key, child] of Object.entries(value)) if (!Object.hasOwn(fields, key)) Object.defineProperty(next, key, { value: child, enumerable: true, configurable: true, writable: true })
       changeValue(next)

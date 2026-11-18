@@ -26,7 +26,7 @@ test('the detail sheet query is the breakpoint where the workspace collapses and
     if (rule.parent?.type !== 'atrule' || rule.parent.name !== 'media') return
     rule.walkDecls('grid-template-columns', decl => { if (decl.value === '1fr') collapsed = rule.parent.params })
   })
-  assert.equal(collapsed, '(max-width: 880px)', 'the single-column workspace starts at 880px')
+  assert.equal(collapsed, '(width < 48rem)', 'the single-column workspace starts below 48rem')
   assert.equal(CAPABILITY_DETAIL_SHEET_QUERY, collapsed)
 })
 
@@ -104,13 +104,7 @@ function loadExplorer(runtime, media) {
     '../features/feature-model.mjs': featureModel,
     '../../utils/useInboxCacheScope': { useInboxCacheScope: () => 'scope' },
     '../../utils/inbox-cache': { isInboxCacheScopeActive: () => true },
-    '../../components/ui/badge': { Badge: 'badge' },
-    '../../components/ui/button': { Button: 'button' },
-    '../../components/ui/dialog': { Dialog: 'dialog', DialogContent: 'dialog-content', DialogTitle: 'dialog-title' },
-    '../../components/ui/input': { Input: 'input' },
-    '../../components/ui/select': { SelectField: 'select-field' },
-    '../../components/ui/sheet': { Sheet: 'sheet', SheetContent: 'sheet-content', SheetTitle: 'sheet-title', SheetDescription: 'sheet-description', SheetClose: 'sheet-close' },
-    '../../components/ui/list-item-button': { ListItemButton: 'list-item-button' },
+    '@zhin.js/console-ui': { cn: (...names) => names.filter(Boolean).join(' '), Badge: 'badge', Button: 'button', Dialog: 'dialog', DialogContent: 'dialog-content', DialogTitle: 'dialog-title', Input: 'input', SelectField: 'select-field', Sheet: 'sheet', SheetContent: 'sheet-content', SheetTitle: 'sheet-title', SheetDescription: 'sheet-description', SheetClose: 'sheet-close', ListItemButton: 'list-item-button' },
     '../../hooks/useMediaQuery': { useMediaQuery: query => { assert.equal(query, CAPABILITY_DETAIL_SHEET_QUERY); return media.narrow } },
     './empty-state.mjs': emptyState,
     './target-preview.mjs': targetPreview,
@@ -235,7 +229,7 @@ test('MCP rows: waiting to connect is neutral, only a failed connection is red, 
   assert.deepEqual(cards.map(card => [badgeOf(card).props.variant, textOf(badgeOf(card))]), [
     ['secondary', '待连接'],
     ['destructive', '连接失败'],
-    ['success', '已连接'],
+    ['outline', '已连接'],
   ])
   assert.match(textOf(cards[1]), /认证失败：HTTP 401/)
 
@@ -252,5 +246,30 @@ test('MCP rows: waiting to connect is neutral, only a failed connection is red, 
   const properties = findAll(idle, byClass('console-capability-properties'))
   assert.doesNotMatch(properties.map(textOf).join(''), /status|lastError/, 'status fields are not repeated as raw properties')
   findAll(grid.type(grid.props), byName('SelectableCard'))[1].props.onSelect(cards[1].props.entry.id); runtime.render()
-  assert.equal(findAll(inspect(), byClass('console-runtime-status-dot'))[0].props.className, 'console-runtime-status-dot is-offline')
+  assert.equal(findAll(inspect(), byClass('console-runtime-status-dot'))[0].props.className, 'console-runtime-status-dot is-failed', 'a failed connection is an error, not just offline')
+})
+
+test('commands whose Host sends only a source path are grouped by package, with the path in a tooltip', () => {
+  const pnpm = file => `./node_modules/.pnpm/@zhin.js+plugin-60s@1.1.20_@zhin.js+command@1.2.2_zhin.js@1.2.0/node_modules/@zhin.js/plugin-60s/commands/${file}/index.js`
+  const items = [
+    { pattern: 'bing', source: pnpm('bing') },
+    { pattern: 'weibo', source: pnpm('weibo') },
+    { pattern: 'zhihu', source: pnpm('zhihu') },
+    { pattern: 'roll', plugin: 'dice' },
+  ]
+  const { runtime } = mountExplorer({ total: 4, items })
+  const pills = findAll(runtime.value, byClass('console-capability-owner-pill')).slice(1)
+  assert.deepEqual(pills.map(textOf), ['@zhin.js/plugin-60s3', 'dice1'], 'three files of one package are one group, not three')
+  assert.match(pills[0].props.title, /^由源文件路径推断：\.\/node_modules\/\.pnpm\//)
+  assert.equal(pills[1].props.title, undefined, 'a plugin the Host names needs no tooltip')
+})
+
+test('each command card names the same provider as its plugin pill', async () => {
+  // The shallow runtime above does not expand CommandCatalog, so the card is checked in the source.
+  const source = await readFile(new URL('../console-ui/src/pages/introspection/CapabilityExplorer.tsx', import.meta.url), 'utf8')
+  const start = source.indexOf('function CommandCatalog(')
+  const card = source.slice(start, source.indexOf('\n}\n', start))
+  assert.match(card, /const provider = capabilityOwner\(entry\.item as Record<string, unknown>\)/)
+  assert.match(card, /\{provider\.name \|\| 'runtime'\}/)
+  assert.doesNotMatch(card, /text\(entry\.item\.plugin, 'runtime'\)/)
 })

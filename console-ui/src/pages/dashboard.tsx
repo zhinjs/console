@@ -8,19 +8,20 @@ import { cpuMeterWidth, cpuUsagePercent, readCpuSample, type CpuSample } from '.
 import {
   buildMessageFeed,
   hourlyMessageActivity,
+  visibleActivityRange,
   messageRecords,
   replyLatencySeconds,
+  visibleReplies,
   summarizeMessages,
   type HourlyActivityBucket,
   type MessageFeedItem,
 } from './dashboard-activity-model.mjs'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { MIN_RATIO_SAMPLE, observationCoverage, countReading, ratioReading, type Reading } from './dashboard-basis-model.mjs'
 import { CONVERSATION_KINDS, type ConversationKind } from './features/feature-model.mjs'
 import { conversationHref, CONSOLE_PATHS } from '../console-routes.mjs'
 import { instanceSectionHref } from './ops/instance-sections.mjs'
-import { PageHeader } from '../components/PageHeader'
-import { PageShell } from '../components/PageShell'
+import { Alert, AlertDescription, Button, InfoHint, ListItemButton, MiniRingGauge, PageHeader, PageShell, Sheet, SheetBody, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, Skeleton, StatCard, StatGrid, useConfirm } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import './insights/insights.css'
 import type { LucideIcon } from 'lucide-react'
@@ -56,24 +57,9 @@ import { CONSOLE_REST } from '../contracts/zhin-console'
 import { pluginRpc } from '../utils/plugin-rpc'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { useToast } from '../components/toast'
-import { Button } from '../components/ui/button'
-import { Alert, AlertDescription } from '../components/ui/alert'
-import { Skeleton } from '../components/ui/skeleton'
-import { useConfirm } from '../components/confirm-dialog'
-import { ListItemButton } from '../components/ui/list-item-button'
-import { MiniRingGauge, StatCard, StatGrid } from '../components/StatCard'
-import {
-  Sheet,
-  SheetBody,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '../components/ui/sheet'
 import './dashboard.css'
 import { ATTENTION_PATH, DASHBOARD_ATTENTION_LIMIT } from './attention/attention-model.mjs'
-import { AttentionSeverityIcon } from './attention/AttentionItemRow'
+import { AttentionSummaryList } from './attention/AttentionSummaryList'
 import { useAttention } from './attention/use-attention'
 import { mcpDashboardDetail, summarizeMcp, type McpSummary } from './introspection/mcp-status-model.mjs'
 import './attention/attention.css'
@@ -155,7 +141,8 @@ const DASHBOARD_REQUEST_TIMEOUT_MS = 8_000
 const DAY_MS = 24 * 60 * 60 * 1000
 const MESSAGE_EVENT_LIMIT = 1000
 const MESSAGE_HISTORY_LIMIT = 500
-const FEED_LIMIT = 12
+// 首页只看最近几条；完整记录在「查看明细」。
+const FEED_LIMIT = 8
 
 async function fetchOptionalData(path: string, signal: AbortSignal): Promise<unknown | null> {
   try {
@@ -268,36 +255,111 @@ function percent(part: number, total: number): number | null {
   return Math.min(100, Math.max(0, Math.round((part / total) * 100)))
 }
 
+/** A round, even axis maximum (1, 2, 4, 5 × 10ⁿ, at least 2) at or above the busiest hour, so the scale reads cleanly. */
+function niceAxisMax(peak: number): number {
+  if (peak <= 2) return 2
+  const magnitude = 10 ** Math.floor(Math.log10(peak))
+  for (const step of [1, 2, 4, 5, 10]) if (step * magnitude >= peak) return step * magnitude
+  return 10 * magnitude
+}
+
+/**
+ * Hourly received / sent bars. One tab stop: arrow keys, Home and End move between hours; each hour is announced
+ * with `describe`. Hover or focus shows a small readout with the two counts (console#125).
+ */
 function MessageVolumeChart({ buckets, describe, summary }: {
   buckets: HourlyActivityBucket[]
   describe: (bucket: HourlyActivityBucket) => string
   summary: string
 }) {
-  const peak = Math.max(1, ...buckets.map((bucket) => bucket.inbound + bucket.outbound))
-  const tickIndexes = [0, Math.floor(buckets.length / 2), buckets.length - 1]
+  const i18n = useI18n()
+  const axisMax = niceAxisMax(Math.max(0, ...buckets.map((bucket) => bucket.inbound + bucket.outbound)))
+  const ticks = [axisMax, axisMax / 2, 0]
+  const tickIndexes = [...new Set([0, Math.floor(buckets.length / 4), Math.floor(buckets.length / 2), Math.floor((buckets.length * 3) / 4), buckets.length - 1])]
+  const lastWithData = buckets.reduce((found, bucket, index) => (bucket.inbound + bucket.outbound > 0 ? index : found), buckets.length - 1)
+  const [active, setActive] = useState<number | null>(null)
+  const [stop, setStop] = useState(lastWithData)
+  const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null)
+  const barsRef = useRef<HTMLDivElement>(null)
+  const columns = useRef<Array<HTMLDivElement | null>>([])
+  const tabStop = Math.min(stop, buckets.length - 1)
+  const shown = active !== null ? buckets[active] : undefined
+
+  const fromPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const box = barsRef.current?.getBoundingClientRect()
+    if (!box || !box.width || !buckets.length) return
+    const x = Math.min(Math.max(event.clientX - box.left, 0), box.width - 1)
+    setActive(Math.floor((x / box.width) * buckets.length))
+    setPointer({ x, y: Math.max(event.clientY - box.top, 0) })
+  }
+  const moveTo = (index: number) => {
+    const next = Math.max(0, Math.min(buckets.length - 1, index))
+    setStop(next)
+    columns.current[next]?.focus()
+  }
+  const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>, index: number) => {
+    const target = event.key === 'ArrowRight' || event.key === 'ArrowUp' ? index + 1
+      : event.key === 'ArrowLeft' || event.key === 'ArrowDown' ? index - 1
+        : event.key === 'Home' ? 0
+          : event.key === 'End' ? buckets.length - 1
+            : null
+    if (target === null) return
+    event.preventDefault()
+    moveTo(target)
+  }
+  // The readout follows the pointer; with the keyboard it sits above the focused hour.
+  let readoutLeft = 0, readoutTop = 0
+  if (shown && pointer) { readoutLeft = pointer.x; readoutTop = pointer.y }
+  else if (shown && active !== null) {
+    const column = columns.current[active]
+    if (column) { readoutLeft = column.offsetLeft + column.offsetWidth / 2; readoutTop = column.offsetHeight * 0.35 }
+  }
+
   return (
-    <div className="console-volume-chart" role="img" aria-label={summary}>
+    <div className="console-volume-chart" role="group" aria-label={summary}>
       <div className="console-volume-axis" aria-hidden="true">
-        <span>{peak}</span>
-        <span>{peak % 2 === 0 ? peak / 2 : ''}</span>
-        <span>0</span>
+        {ticks.map((tick) => <span key={tick}>{Number.isInteger(tick) ? tick : ''}</span>)}
       </div>
-      <div className="console-volume-plot" aria-hidden="true">
-        <div className="console-volume-bars">
-          {buckets.map((bucket) => {
+      <div className="console-volume-plot">
+        <div
+          ref={barsRef}
+          className="console-volume-bars"
+          onPointerMove={fromPointer}
+          onPointerLeave={() => { setPointer(null); if (!barsRef.current?.contains(document.activeElement)) setActive(null) }}
+        >
+          <span className="console-volume-gridline is-top" aria-hidden="true" />
+          <span className="console-volume-gridline is-mid" aria-hidden="true" />
+          {buckets.map((bucket, index) => {
             const total = bucket.inbound + bucket.outbound
             return (
-              <div key={bucket.start} className="console-volume-col" title={describe(bucket)}>
+              <div
+                key={bucket.start}
+                ref={(node) => { columns.current[index] = node }}
+                className={`console-volume-col${total > 0 ? '' : ' is-empty'}${active === index ? ' is-active' : ''}`}
+                role="img"
+                aria-label={describe(bucket)}
+                tabIndex={index === tabStop ? 0 : -1}
+                onFocus={() => { setStop(index); setActive(index); setPointer(null) }}
+                onBlur={() => setActive((current) => (current === index ? null : current))}
+                onKeyDown={(event) => onKeyDown(event, index)}
+              >
                 {total > 0 ? (
-                  <span className="console-volume-bar" style={{ height: `${Math.max(4, (total / peak) * 100)}%` }}>
+                  <span className="console-volume-bar" style={{ height: `${Math.max(3, (total / axisMax) * 100)}%` }}>
                     {bucket.outbound > 0 ? <span className="console-volume-bar-reply" style={{ height: `${(bucket.outbound / total) * 100}%` }} /> : null}
                   </span>
                 ) : null}
               </div>
             )
           })}
+          {shown ? (
+            <div className="console-volume-readout" aria-hidden="true" style={{ left: `clamp(4.75rem, ${readoutLeft}px, calc(100% - 4.75rem))`, top: readoutTop }}>
+              <strong>{formatHour(shown.start)}–{formatHour(shown.start + 3_600_000)}</strong>
+              <span><i className="is-inbound" />{i18n.t("收到")}<b>{shown.inbound}</b></span>
+              <span><i className="is-reply" />{i18n.t("发出")}<b>{shown.outbound}</b></span>
+            </div>
+          ) : null}
         </div>
-        <div className="console-volume-ticks">
+        <div className="console-volume-ticks" aria-hidden="true">
           {tickIndexes.map((index) => <span key={index}>{buckets[index] ? formatHour(buckets[index].start) : ''}</span>)}
         </div>
       </div>
@@ -311,45 +373,49 @@ function MessageFeedRow({ item, kindLabel, t }: {
   t: (message: string, values?: unknown[]) => string
 }) {
   const latency = replyLatencySeconds(item)
-  const sender = item.sender
-    ? item.sender.name && item.sender.id && item.sender.name !== item.sender.id
-      ? `${item.sender.name}（${item.sender.id}）`
-      : item.sender.name || item.sender.id
-    : null
+  // Names first; IDs stay one hover away.
+  const sender = item.sender ? item.sender.name || item.sender.id : null
+  const senderTitle = item.sender?.id ? t("用户 ID：{0}", [item.sender.id]) : undefined
+  const conversationLabel = item.conversationName || item.channelId
+  const conversationTitle = t("会话 ID：{0}", [item.channelId])
   // 能定位到会话对象时，会话标识直接链到它的「记录」页签。
   const conversation = item.adapter && item.endpoint && CONVERSATION_KINDS.includes(item.kind as never) && item.channelId
     ? conversationHref(item.adapter, item.endpoint, item.kind as ConversationKind, item.channelId, 'records')
     : null
+  // How a reply was paired is a detail: it sits in the tag's tooltip, not under every message.
+  // A burst of replies stays a couple of lines; the rest are one link away.
+  const replies = visibleReplies(item.replies)
+  const pairing = latency !== null ? t("可能相关 · 按同一会话的时间先后推测，相隔 {0} 秒", [latency.toFixed(1)]) : t("可能相关 · 按同一会话的时间先后推测")
   return (
     <li className="console-message-row">
       <time className="console-message-time" dateTime={new Date(item.timestamp).toISOString()}>{formatClock(item.timestamp)}</time>
       <div className="console-message-body">
         <div className="console-message-meta">
           {item.adapter ? <span className="console-tag">{item.adapter}</span> : null}
-          <span className="console-tag is-accent">{kindLabel}</span>
+          <span className="console-tag">{kindLabel}</span>
           {item.channelId
             ? conversation
-              ? <Link to={conversation} className="console-message-channel console-message-link" title={t("打开这个会话的记录")}>{item.channelId}</Link>
-              : <span className="console-message-channel">{item.channelId}</span>
+              ? <Link to={conversation} className="console-message-channel console-message-link" title={`${conversationTitle} · ${t("打开这个会话的记录")}`}>{conversationLabel}</Link>
+              : <span className="console-message-channel" title={conversationTitle}>{conversationLabel}</span>
             : null}
-          {sender ? <span className="console-message-sender">{sender}</span> : null}
+          {sender ? <span className="console-message-sender" title={senderTitle}>{sender}</span> : null}
           {item.direction === 'outbound'
-            ? <span className="console-tag is-info">{t("机器人发出")}</span>
+            ? <span className="console-tag is-outbound">{t("机器人发出")}</span>
             : item.replies.length > 0
-              ? <span className="console-tag">{t("有可能相关的回复")}</span>
+              ? <span className="console-tag" title={pairing}>{t("有可能相关的回复")}</span>
               : <span className="console-tag">{t("之后两分钟内未发出消息")}</span>}
         </div>
         {item.direction === 'inbound'
           ? <p className="console-message-text">{item.text || '—'}</p>
           : <blockquote className="console-message-reply"><span>{item.text || '—'}</span></blockquote>}
-        {item.replies.map((reply) => (
+        {replies.shown.map((reply) => (
           <blockquote key={reply.id} className="console-message-reply"><span>{reply.text || '—'}</span></blockquote>
         ))}
-        {item.replies.length > 0 ? (
-          <span className="console-message-pairing">
-            {latency !== null ? t("可能相关 · 按同一会话的时间先后推测，相隔 {0} 秒", [latency.toFixed(1)]) : t("可能相关 · 按同一会话的时间先后推测")}
-          </span>
-        ) : null}
+        {replies.hidden > 0
+          ? conversation
+            ? <Link to={conversation} className="console-message-more console-message-link">{t("另有 {0} 条回复，打开会话记录查看", [replies.hidden])}</Link>
+            : <p className="console-message-more">{t("另有 {0} 条回复", [replies.hidden])}</p>
+          : null}
       </div>
     </li>
   )
@@ -425,7 +491,7 @@ export default function HomePage() {
   }), [i18n])
   const records = useMemo(() => messageRecords(messageEvents, previewLabels), [messageEvents, previewLabels])
   const activityNow = Math.max(lastUpdatedAt ?? 0, records[records.length - 1]?.timestamp ?? 0) || Date.now()
-  const activity = useMemo(() => hourlyMessageActivity(records, activityNow, 24), [records, activityNow])
+  const activity = useMemo(() => visibleActivityRange(hourlyMessageActivity(records, activityNow, 24)), [records, activityNow])
   const messageSummary = useMemo(() => summarizeMessages(records, activityNow - DAY_MS), [records, activityNow])
   const messageFeed = useMemo(() => buildMessageFeed(records, FEED_LIMIT), [records])
   const latestMessageAt = records[records.length - 1]?.timestamp ?? null
@@ -622,7 +688,9 @@ export default function HomePage() {
   const osMemoryRate = systemStatus?.osMemory
     ? percent(systemStatus.osMemory.totalMem - systemStatus.osMemory.freeMem, systemStatus.osMemory.totalMem)
     : null
-  const errorTone = (optional.errorLogs ?? 0) > 0 ? 'danger' : (optional.warningLogs ?? 0) > 0 ? 'warning' : undefined
+  // The card's number is the error count: 0 errors is the steady state and stays uncolored even when
+  // warnings exist (they are counted in the line below the number), console#125.
+  const errorTone = (optional.errorLogs ?? 0) > 0 ? 'danger' : undefined
   const formatStamp = (timestamp: number) => new Date(timestamp).toLocaleString(i18n.locale, { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
   const unrecorded = <span className="console-sample-missing">{i18n.t("未记录")}</span>
   const readingValue = (reading: Reading) => reading.kind === 'value' ? reading.value.toLocaleString(i18n.locale) : unrecorded
@@ -663,7 +731,7 @@ export default function HomePage() {
           : i18n.t("现在需要处理什么、消息量和最近的消息。")}
         actions={<>
           {!readOnly ? (
-            <Button variant="outline" className="console-danger-outline" disabled={restarting} onClick={() => { void confirmRestart() }}>
+            <Button variant="destructive-outline" disabled={restarting} onClick={() => { void confirmRestart() }}>
               <Power />
               {i18n.t("重启")}
             </Button>
@@ -673,7 +741,7 @@ export default function HomePage() {
             {hostAvailable ? i18n.t("刷新") : i18n.t("重新连接")}
           </Button>
           {hostAvailable ? (
-            <Button onClick={() => navigate('/scope')}>
+            <Button variant="primary" onClick={() => navigate('/scope')}>
               <Bot className="h-4 w-4" />
               {i18n.t("进入会话")}
             </Button>
@@ -712,23 +780,7 @@ export default function HomePage() {
             </Button>
           </div>
           {attention.active.length > 0 ? (
-            <div className="console-attention-strip">
-              {attention.active.slice(0, DASHBOARD_ATTENTION_LIMIT).map((item) => (
-                <ListItemButton
-                  key={item.id}
-                  type="button"
-                  className={`console-attention-item is-${item.severity}`}
-                  onClick={() => navigate(item.action.path)}
-                >
-                  <AttentionSeverityIcon severity={item.severity} />
-                  <span className="min-w-0 flex-1 text-left">
-                    <span className="block text-sm font-semibold">{item.title}</span>
-                    {item.detail ? <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">{item.detail}</span> : null}
-                  </span>
-                  <ArrowUpRight />
-                </ListItemButton>
-              ))}
-            </div>
+            <AttentionSummaryList items={attention.active.slice(0, DASHBOARD_ATTENTION_LIMIT)} />
           ) : (
             <StatusState compact error={attention.state.error} onRetry={attention.refresh} />
           )}
@@ -773,15 +825,21 @@ export default function HomePage() {
           sub={endpointRate !== null ? i18n.t("当前状态 · 在线率 {0}%", [endpointRate]) : stats ? i18n.t("还没有聊天账号") : i18n.t("等待 Host 状态")}
           tone={offlineEndpoints > 0 ? 'warning' : undefined}
           aside={endpointRate !== null
-            ? <MiniRingGauge percent={endpointRate} tone={endpointRate === 100 ? 'success' : endpointRate >= 60 ? 'primary' : 'warning'} />
+            ? <MiniRingGauge percent={endpointRate} tone={offlineEndpoints > 0 ? 'warning' : 'primary'} />
             : null}
           onOpen={() => navigate('/scope')}
         />
       </StatGrid>
-      <p className="console-basis-note">
-        <span><strong>{i18n.t("缓冲内观察")}</strong>{i18n.t("：消息数来自 Host 的事件缓冲，重启后清空；")}<span className={coverage.kind === 'partial' ? 'is-partial' : undefined}>{coverageText}</span></span>
-        <span><strong>{i18n.t("持久统计")}</strong>{i18n.t("：错误与警告来自日志库，清理日志后重新计数。")}</span>
-      </p>
+      <div className="console-basis-hints">
+        <span>{i18n.t("统计口径")}</span>
+        <InfoHint label={i18n.t("缓冲内观察")} tone={coverage.kind === 'partial' ? 'warning' : undefined}>
+          <p>{i18n.t("收到与发出的消息数来自 Host 的事件缓冲，实例重启后清空。")}</p>
+          <p className={coverage.kind === 'partial' ? 'is-partial' : undefined}>{coverageText}</p>
+        </InfoHint>
+        <InfoHint label={i18n.t("持久统计")}>
+          <p>{i18n.t("错误与警告来自日志库，清理日志后重新计数。")}</p>
+        </InfoHint>
+      </div>
 
       <div className="console-overview-row">
         <section className="console-dashboard-panel console-volume-panel" aria-labelledby="volume-title">
@@ -792,7 +850,7 @@ export default function HomePage() {
               : null}
           </div>
           {coverage.kind === 'none' && messagesLoaded ? (
-            <StatusState kind="empty" compact title={i18n.t("缓冲里还没有消息")} description={i18n.t("机器人收到或发出消息后会出现在这里；实例重启会清空缓冲。")} />
+            <StatusState kind="empty" compact illustration="messages" title={i18n.t("缓冲里还没有消息")} description={i18n.t("机器人收到或发出消息后会出现在这里；实例重启会清空缓冲。")} />
           ) : (
             <MessageVolumeChart
               buckets={activity}
@@ -865,8 +923,8 @@ export default function HomePage() {
           <>
             <div className="console-event-feed-hint">
               <span>{i18n.t("缓冲里还没有消息，先显示最近的运行日志。")}</span>
-              <span className="flex items-center gap-1.5 text-xs tabular-nums">
-                <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">INFO {eventCounts.info}</span>
+              <span className="flex items-center gap-1.5 text-xs">
+                <span className="rounded-full bg-[hsl(var(--foreground)/0.06)] px-2 py-0.5 font-medium text-muted-foreground">INFO {eventCounts.info}</span>
                 {eventCounts.warn > 0 ? (
                   <span className="rounded-full bg-[hsl(var(--warning)/0.12)] px-2 py-0.5 font-medium text-[hsl(var(--warning))]">WARN {eventCounts.warn}</span>
                 ) : null}
@@ -887,7 +945,7 @@ export default function HomePage() {
             </div>
           </>
         ) : (
-          <StatusState kind="empty" compact title={i18n.t("还没有消息")} description={i18n.t("机器人收到或发出消息后，最近的消息会按会话出现在这里。")} />
+          <StatusState kind="empty" compact illustration="messages" title={i18n.t("还没有消息")} description={i18n.t("机器人收到或发出消息后，最近的消息会按会话出现在这里。")} />
         )}
       </section>
 

@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
-  CONSOLE_PERMISSION_LIST, IAM_RPC, PERMISSION_AREAS, actorLabel, addBinding, areaLabel, auditQuery, bindingInputs, breaksLastOwner,
+  CONSOLE_PERMISSION_LIST, IAM_RPC, PERMISSION_AREAS, actorLabel, addBinding, areaLabel, auditQuery, bindingInputs, localDateTimeToMs, breaksLastOwner,
   copyRoleName, groupCheckState, isGlobalOwner, passwordProblem, permissionGroups, permissionLabel, permissionPlugin, readAuditPage,
   readPluginPermissionCatalog, readRoles, readTokens, readUsers, removeBinding, roleNameProblem, scopeLabel, scopeProblem, togglePermissions,
   tokenExpired, usernameProblem,
@@ -146,6 +146,28 @@ test('audit filters send exact matches, a time range and the pagination cursor',
   assert.equal(query.until, undefined)
   assert.equal(query.before, 123)
   assert.equal(auditQuery({ since: 'not a date' }).since, undefined)
+})
+
+test('audit time range: DateTimeField local times become UTC epoch ms in the viewer\'s time zone', () => {
+  const zone = process.env.TZ
+  try {
+    for (const [tz, utcHour] of [['Asia/Shanghai', -8], ['America/New_York', 5], ['UTC', 0]]) {
+      process.env.TZ = tz
+      // 2026-11-17 is after the US DST change: New York is UTC−5.
+      assert.equal(localDateTimeToMs('2026-11-17T08:30'), Date.UTC(2026, 10, 17, 8 + utcHour, 30), tz)
+      assert.equal(auditQuery({ since: '2026-11-17T08:30', until: '2026-11-17T09:00' }).until, Date.UTC(2026, 10, 17, 9 + utcHour, 0), tz)
+      // A bare date (DateField) is local midnight.
+      assert.equal(localDateTimeToMs('2026-11-17'), Date.UTC(2026, 10, 17, utcHour, 0), tz)
+    }
+    process.env.TZ = 'Asia/Shanghai'
+    assert.equal(new Date(localDateTimeToMs('2026-11-17T00:00')).toISOString(), '2026-11-16T16:00:00.000Z')
+  } finally {
+    if (zone === undefined) delete process.env.TZ
+    else process.env.TZ = zone
+  }
+  for (const invalid of ['', ' ', '2026-02-30T10:00', '2026-11-17T24:00', '2026-11-17T10:60', '2026-13-01T00:00', '17/11/2026', null, 0]) {
+    assert.equal(localDateTimeToMs(invalid), undefined, String(invalid))
+  }
 })
 
 test('form checks match the Host rules', () => {

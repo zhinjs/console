@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertTriangle, CheckCircle2, CircleHelp, Clock, GitCompareArrows, Loader2, MessageSquare, RotateCw, Stethoscope, XCircle } from 'lucide-react'
-import { cn } from '@zhin.js/client'
+import { Button, cn } from '@zhin.js/console-ui'
 import './status-surfaces.css'
 import { useI18n } from '../i18n'
-import { Button } from './ui/button'
 import { useConsoleAccess } from '../hooks/use-console-access'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { hostRestart, useHostRestartProgress } from '../hooks/use-host-restart'
@@ -168,7 +167,7 @@ function RestartControls({ state, relevant, refreshing }: { state: RestartState;
     return <div className="console-apply-actions" role="group" aria-label={i18n.t('确认重启')}>
       <span className="console-apply-basis">{i18n.t('重启会断开所有连接，进行中的对话可能被中止。')}</span>
       <Button size="sm" variant="outline" onClick={() => setConfirming(false)} autoFocus>{i18n.t('取消')}</Button>
-      <Button size="sm" variant="destructive" onClick={() => { setConfirming(false); void hostRestart.start() }}><RotateCw />{i18n.t('确认重启')}</Button>
+      <Button size="sm" variant="destructive-solid" onClick={() => { setConfirming(false); void hostRestart.start() }}><RotateCw />{i18n.t('确认重启')}</Button>
     </div>
   }
   return <div className="console-apply-actions">

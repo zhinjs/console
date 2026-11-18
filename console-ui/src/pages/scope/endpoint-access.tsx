@@ -2,17 +2,14 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CheckCircle2, Cable, RefreshCw, Settings2, SlidersHorizontal, XCircle, Zap } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/button'
-import { Card } from '../../components/ui/card'
-import { Skeleton } from '../../components/ui/skeleton'
+import { Badge, Button, Card, Skeleton } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
 import { adapterHref, endpointHref } from '../../console-routes.mjs'
 import { ENDPOINT_RPC } from '../../contracts/zhin-console'
 import { useConsoleAccess } from '../../hooks/use-console-access'
 import { hasConsolePermission, scopePermissionTarget } from '../../utils/console-access.mjs'
 import { requestConsole } from '../../utils/console-rpc'
-import { endpointLifecycleLabel } from '../endpoint-presentation.mjs'
+import { endpointLifecycleLabel, endpointTransportText } from '../endpoint-presentation.mjs'
 import { endpointTestError, endpointTestPresentation, readEndpointTestResult, type EndpointTestResult } from '../endpoint-test-result-model.mjs'
 import { ObjectSection } from '../../scope/ObjectPageLayout'
 import type { Scope } from '../../scope/scope-tree.mjs'
@@ -105,14 +102,17 @@ export function EndpointAccessPanel({ scope, data }: { scope: Scope; data: Endpo
   }
   const endpoint = state.endpoint
   const pending = (endpoint.pendingRequestCount ?? 0) + (endpoint.pendingNoticeCount ?? 0)
+  const transport = endpointTransportText(endpoint, i18n.locale)
   return (
     <>
       <ObjectSection title={i18n.t('连接')} description={i18n.t('账号与平台之间的连接状态。测试连接只读取状态，不会发送消息。')} actions={refresh}>
         <ObjectFacts items={[
-          { label: i18n.t('连接'), value: <Badge variant={endpoint.connected ? 'success' : 'outline'} size="sm">{endpoint.connected ? i18n.t('已连接') : i18n.t('未连接')}</Badge> },
+          { label: i18n.t('连接'), value: <Badge variant={endpoint.connected ? 'outline' : 'warning'} size="sm">{endpoint.connected ? i18n.t('已连接') : i18n.t('未连接')}</Badge> },
           { label: i18n.t('运行状态'), value: i18n.t(endpointLifecycleLabel(endpoint)) },
           { label: i18n.t('平台'), value: i18n.t(platformLabel(endpoint.adapter)) },
-          ...(endpoint.transportState ? [{ label: i18n.t('传输'), value: <code className="text-sm">{endpoint.transportState}</code> }] : []),
+          ...(transport ? [{ label: i18n.t('传输'), value: transport.labeled
+            ? <span title={transport.raw ?? undefined}>{transport.text}</span>
+            : <code className="text-sm">{transport.text}</code> }] : []),
           { label: i18n.t('待处理事件'), value: pending },
         ]} />
         <ConnectionTest endpoint={endpoint} />

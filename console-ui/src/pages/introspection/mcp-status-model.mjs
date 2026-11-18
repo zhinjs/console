@@ -14,14 +14,15 @@ export const MCP_FAILURE_CATEGORIES = Object.freeze(['auth', 'network', 'timeout
 /** 配置入口：「配置文件 › AI › 外部服务」，即 `ai.mcpServers` 所在的分组。 */
 export const MCP_CONFIG_HREF = '/ops/config?section=ai%3Aservices'
 
-const FAILURE_LABELS = Object.freeze({
-  auth: '认证失败',
-  network: '网络不可达',
-  timeout: '连接超时',
-  config: '配置有误',
-  process_exit: '进程已退出',
-  sdk_missing: '缺少 MCP SDK',
-  unknown: '未知原因',
+/** Failure category labels, translated through `t` (pages/introspection is fully localized). */
+const failureLabels = t => ({
+  auth: t('认证失败'),
+  network: t('网络不可达'),
+  timeout: t('连接超时'),
+  config: t('配置有误'),
+  process_exit: t('进程已退出'),
+  sdk_missing: t('缺少 MCP SDK'),
+  unknown: t('未知原因'),
 })
 
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -40,13 +41,15 @@ export function readMcpFailure(value) {
 /** 失败的一行说明：分类（+ 退出码）+ 原因。 */
 export function mcpFailureText(failure, locale = 'zh-CN') {
   if (!failure) return translate(locale, '连接失败，原因未报告')
-  const category = translate(locale, FAILURE_LABELS[failure.category] ?? FAILURE_LABELS.unknown)
+  const labels = failureLabels(message => translate(locale, message))
+  const category = labels[failure.category] ?? labels.unknown
   const head = typeof failure.exitCode === 'number' ? translate(locale, '{0}（退出码 {1}）', [category, failure.exitCode]) : category
   return failure.message ? translate(locale, '{0}：{1}', [head, failure.message]) : head
 }
 
 export function mcpFailureCategoryLabel(category, locale = 'zh-CN') {
-  return translate(locale, FAILURE_LABELS[category] ?? FAILURE_LABELS.unknown)
+  const labels = failureLabels(message => translate(locale, message))
+  return labels[category] ?? labels.unknown
 }
 
 /**
@@ -54,6 +57,7 @@ export function mcpFailureCategoryLabel(category, locale = 'zh-CN') {
  * 此时分不清待连接与失败，沿用原来的「未连接」。
  *
  * `tone` 对应 Badge 变体；`dot` 对应 `console-runtime-status-dot` 的修饰类。
+ * 信号色按 console#125：已连接是中性 outline，未连接 warning，失败 destructive，待连接 secondary。
  */
 export function mcpRowState(row, locale = 'zh-CN') {
   const t = (message, values) => translate(locale, message, values)
@@ -61,11 +65,11 @@ export function mcpRowState(row, locale = 'zh-CN') {
   const toolCount = typeof data.toolCount === 'number' && Number.isFinite(data.toolCount) ? data.toolCount : 0
   const status = MCP_SERVER_STATUSES.includes(data.status) ? data.status : null
   if (status === 'connected' || (status === null && data.connected === true)) {
-    return { status: 'connected', tone: 'success', dot: 'is-online', label: t('已连接'), detail: t('{0} 个可用工具', [toolCount]), failure: null }
+    return { status: 'connected', tone: 'outline', dot: 'is-online', label: t('已连接'), detail: t('{0} 个可用工具', [toolCount]), failure: null }
   }
   if (status === 'failed') {
     const failure = readMcpFailure(data.lastError)
-    return { status, tone: 'destructive', dot: 'is-offline', label: t('连接失败'), detail: mcpFailureText(failure, locale), failure }
+    return { status, tone: 'destructive', dot: 'is-failed', label: t('连接失败'), detail: mcpFailureText(failure, locale), failure }
   }
   if (status === 'idle') {
     return { status, tone: 'secondary', dot: 'is-idle', label: t('待连接'), detail: t('Agent 已加载，尚未建立连接'), failure: null }
@@ -75,7 +79,7 @@ export function mcpRowState(row, locale = 'zh-CN') {
   }
   // Older instance: no status, only `connected` (and possibly a plain `error`).
   const error = typeof data.error === 'string' && data.error.trim() ? data.error.trim() : ''
-  return { status: 'disconnected', tone: 'destructive', dot: 'is-offline', label: t('未连接'), detail: error || t('连接不可用'), failure: null }
+  return { status: 'disconnected', tone: 'warning', dot: 'is-offline', label: t('未连接'), detail: error || t('连接不可用'), failure: null }
 }
 
 /** stdio 服务的测试会另起一个进程。 */

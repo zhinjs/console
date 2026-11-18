@@ -236,7 +236,7 @@ export const STATUS_COPY = Object.freeze({
   forbidden: Object.freeze({ title: '无权限', description: '当前身份没有查看或修改这里的权限。选择范围不会授予权限。' }),
   'not-installed': Object.freeze({ title: '未安装', description: '所需的插件或适配器尚未安装。' }),
   unsupported: Object.freeze({ title: '需要新版 Host', description: '当前 Host 还不支持这项功能。升级 Host 后再试。' }),
-  empty: Object.freeze({ title: '暂无数据', description: '这里还没有内容。' }),
+  empty: Object.freeze({ title: '还没有内容', description: '有了新内容会显示在这里。' }),
   locked: Object.freeze({ title: '已锁定', description: '上级已禁用此功能，这一层不能修改。' }),
   conflict: Object.freeze({ title: '内容已被修改', description: '读取之后别人改过这里。请重新读取最新内容，再决定是否修改。' }),
   'instance-unavailable': Object.freeze({ title: '实例不可用', description: 'Zhin 实例暂时没有响应。管理网关仍可用，可以去「实例」页查看。' }),

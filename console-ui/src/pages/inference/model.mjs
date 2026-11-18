@@ -1,12 +1,23 @@
 import { translate } from '../../i18n/locale.mjs'
 const base = '/api/agent/inference'
 export class InferenceRequestError extends Error {
-  constructor(code, status = 503, mutationOutcome) {
+  constructor(code, status = 503, mutationOutcome, reason) {
     super(code)
     this.code = code
     this.status = status
     this.mutationOutcome = mutationOutcome
+    if (reason) this.reason = reason
   }
+}
+/** Closed-set Host refusal reasons (#1250); the Host never sends values or provider text. */
+const REFUSAL_TEXT = {
+  'environment-console-user': (locale) => translate(locale, 'Console 用户的账号不能引用 Host 环境变量，请直接填写密钥，或由 Host 管理员在本机用命令添加（zhin ai account add）'),
+  'environment-name': (locale) => translate(locale, '只能引用以 _API_KEY 结尾的环境变量（例如 OPENAI_API_KEY）'),
+  'environment-service-address': (locale) => translate(locale, '引用 Host 环境变量的账号只能使用内置服务的官方地址或已存在的服务，不能在这次导入中新建或改成自定义地址'),
+  'environment-local-only': (locale) => translate(locale, '该操作只能由 Host 管理员在本机用 zhin 命令完成'),
+  'environment-missing': (locale) => translate(locale, '新的环境变量在 Host 上未设置或为空'),
+  'environment-mismatch': (locale) => translate(locale, '新变量的值与当前凭据的指纹不一致；确认是同一账号的新密钥后加 --reauthorize 重试'),
+  'environment-account': (locale) => translate(locale, '只有引用环境变量（env://）的 Host API Key 账号可以修改引用名，且原变量名必须一致'),
 }
 export function inferencePath(path = '', ownerId) {
   const url = new URL(base + path, 'https://console.invalid')
@@ -36,12 +47,14 @@ export async function inferenceRequest(fetch, { path = '', ownerId, body, method
       response.status,
       result.mutationOutcome === 'not-committed' || result.requestOutcome === 'not-dispatched'
         ? 'not-committed'
-        : undefined
+        : undefined,
+      typeof result.reason === 'string' && Object.hasOwn(REFUSAL_TEXT, result.reason) ? result.reason : undefined
     )
   return result.data
 }
 export function inferenceError(error, locale = 'zh-CN') {
   const code = error instanceof InferenceRequestError ? error.code : 'unavailable'
+  if (error instanceof InferenceRequestError && error.reason) return REFUSAL_TEXT[error.reason](locale)
   if (code === 'forbidden') return translate(locale, '当前身份无权执行此操作。')
   if (code === 'plan-conflict') return translate(locale, '连接或模型身份发生变化，请新增账号或模型并明确重新绑定。')
   if (['conflict', 'stale-reference', 'revision-conflict'].includes(code))
@@ -81,6 +94,51 @@ export function driverKey(driver) {
 export function serviceDriver(view, serviceId) {
   const service = view.services[serviceId]
   return service && view.drivers.find(driver => driverKey(driver) === driverKey(service.driver))
+}
+/**
+ * How the「模型」field of the add / edit model dialog reads (#64 `model-add-empty-catalog`).
+ * With no catalog entries (nothing built in, nothing read from the service yet) a picker would only
+ * hold its placeholder, so the field is a text input with a hint instead, and there is nothing to
+ * switch back to. Editing keeps the text input it always had.
+ */
+export function modelEntryView({ editing = false, manualEntry = false, choiceCount = 0, discovery = false, discovered = false } = {}) {
+  if (editing) return { input: true, canToggle: true, hint: null }
+  if (choiceCount > 0) return { input: manualEntry, canToggle: true, hint: null }
+  return {
+    input: true,
+    canToggle: false,
+    hint: discovered ? 'none-returned' : discovery ? 'discoverable' : 'manual-only',
+  }
+}
+/**
+ * Defaults for the model capability form (#64 `model-capability-no-defaults`). A language model takes
+ * text unless said otherwise, so ticking 「语言模型」 with no input declared ticks 「文字」 too; a
+ * protocol whose contract offers a single kind selects that kind. Everything stays editable.
+ */
+export function withModelKind(value, kind, checked) {
+  if (!checked) return { ...value, kinds: value.kinds.filter(item => item !== kind) }
+  const next = { ...value, kinds: value.kinds.includes(kind) ? value.kinds : [...value.kinds, kind] }
+  if (kind === 'language' && !(value.input?.length)) next.input = ['text']
+  return next
+}
+export function withModelProtocol(value, protocol, driver) {
+  const contract = driver?.modelContracts?.find(item => item.protocol === protocol)
+  const base = { id: value.id, protocol, kinds: [] }
+  return contract?.kinds?.length === 1 ? withModelKind(base, contract.kinds[0], true) : base
+}
+/**
+ * A language model whose inputs were all unticked. A declaration that never listed `input` (catalog
+ * entries from a service) is left alone, as the Host accepts it.
+ */
+export function languageInputMissing(value) {
+  return Boolean(value?.kinds?.includes('language')) && Array.isArray(value.input) && value.input.length === 0
+}
+/**
+ * Accounts with no model under them (#64 `account-ready-without-models`): such an account cannot be
+ * picked in 用途, so its card says so next to 「可用」 and offers 「添加模型」.
+ */
+export function accountHasModels(view, accountId) {
+  return Object.values(view?.profiles ?? {}).some(profile => profile?.accountId === accountId)
 }
 export function profileSupport(view, profile) {
   return serviceDriver(view, view.accounts[profile.accountId].serviceId)?.support
@@ -183,28 +241,131 @@ export function schemaField(schema = {}) {
 }
 
 /** Translate the graph projection into the existing explicit plan contract, including deliberate clears. */
-export function purposePlan(draft, original = draft) {
-  const ref = (id) => (id ? { profile: id } : null)
-  const selection = (value) => ({ chat: ref(value?.chat), perception: value?.perception ?? null })
+/**
+ * The plan body of the purposes page. A language purpose is written as `{ profile, fallbacks? }`
+ * (#1250 chat-purpose-no-fallback): writing a purpose replaces its whole chain on the Host, so the
+ * chain the page holds (`<key>Fallbacks`, `agentFallbacks`, the Host's graph shape) goes back with
+ * it. `fallbacks: false` (a Host without fallback chains) never writes `fallbacks`.
+ */
+export function purposePlan(draft, original = draft, { fallbacks = true } = {}) {
+  const ref = (id, chain) => (id ? languageReference(id, fallbacks ? chain : undefined) : null)
+  const selection = (value) => ({ chat: ref(value?.chat, value?.chatFallbacks), perception: value?.perception ?? null })
   const map = (current, before, convert) =>
     Object.fromEntries(
       [...new Set([...Object.keys(before ?? {}), ...Object.keys(current ?? {})])].map((key) => [
         key,
-        Object.hasOwn(current ?? {}, key) ? convert(current[key]) : null,
+        Object.hasOwn(current ?? {}, key) ? convert(current[key], key) : null,
       ])
     )
+  const defaults = draft.defaults
   return {
-    chat: ref(draft.defaults.chat),
-    summary: ref(draft.defaults.summary),
-    ambient: ref(draft.defaults.ambient),
-    image: ref(draft.defaults.image),
-    perception: draft.defaults.perception ?? null,
+    chat: ref(defaults.chat, defaults.chatFallbacks),
+    summary: ref(defaults.summary, defaults.summaryFallbacks),
+    ambient: ref(defaults.ambient, defaults.ambientFallbacks),
+    image: defaults.image ? { profile: defaults.image } : null,
+    perception: defaults.perception ?? null,
     decisions: map(draft.decisions, original.decisions, (value) => value),
-    agents: map(draft.agents, original.agents, ref),
+    agents: map(draft.agents, original.agents, (id, key) => ref(id, draft.agentFallbacks?.[key])),
     adapters: map(draft.adapters, original.adapters, selection),
     endpoints: map(draft.endpoints, original.endpoints, selection),
-    scenes: map(draft.scenes, original.scenes, (value) => ({ chat: ref(value.chat) })),
+    scenes: map(draft.scenes, original.scenes, (value) => ({ chat: ref(value.chat, value.chatFallbacks) })),
   }
+}
+
+/** The ordered chain without blanks, repeats or the primary itself (the Host rejects those). */
+export function cleanFallbacks(primary, chain) {
+  const seen = new Set([primary])
+  const result = []
+  for (const id of Array.isArray(chain) ? chain : []) {
+    if (typeof id !== 'string' || !id || seen.has(id)) continue
+    seen.add(id)
+    result.push(id)
+  }
+  return result
+}
+
+/** `{ profile, fallbacks? }`; an empty chain is left out (the Host refuses `fallbacks: []`). */
+export function languageReference(profile, chain) {
+  const fallbacks = cleanFallbacks(profile, chain)
+  return { profile, ...(fallbacks.length ? { fallbacks } : {}) }
+}
+
+/**
+ * Whether the Host keeps fallback chains for every language purpose (#1250). Those Hosts send
+ * `modelAvailability` with the purposes (same change); older ones send neither, and the page then
+ * shows no fallback editor except the vision one it always had.
+ */
+export function supportsPurposeFallbacks(view) {
+  return Boolean(view?.modelAvailability) && typeof view.modelAvailability === 'object'
+}
+
+/** Moves one chain entry up (`-1`) or down (`1`); out-of-range moves return the chain unchanged. */
+export function moveFallback(chain, index, delta) {
+  const list = [...(chain ?? [])]
+  const target = index + delta
+  if (index < 0 || index >= list.length || target < 0 || target >= list.length) return list
+  ;[list[index], list[target]] = [list[target], list[index]]
+  return list
+}
+
+const FALLBACK_REASON_TEXT = {
+  quota_exhausted: (locale) => translate(locale, '额度用完'),
+  billing: (locale) => translate(locale, '余额不足'),
+  auth: (locale) => translate(locale, '密钥被拒'),
+  timeout: (locale) => translate(locale, '连续超时'),
+  context_overflow: (locale) => translate(locale, '上下文超长'),
+}
+function fallbackReason(reason, locale) {
+  return FALLBACK_REASON_TEXT[reason]?.(locale) ?? translate(locale, '暂时不可用')
+}
+
+/** The active skip (`modelAvailability.unavailable`) of a Profile's account + model, if any. */
+export function profileAvailability(view, profileId, now = Date.now()) {
+  const profile = view?.profiles?.[profileId]
+  const list = view?.modelAvailability?.unavailable
+  if (!profile || !Array.isArray(list)) return undefined
+  return list.find((entry) => entry && entry.accountId === profile.accountId && entry.model === profile.model
+    && typeof entry.until === 'number' && entry.until > now)
+}
+
+/** 「暂时跳过：额度用完，<time> 恢复」 for one skip. */
+export function describeUnavailability(entry, locale = 'zh-CN') {
+  if (!entry) return ''
+  return translate(locale, '暂时跳过：{0}，{1} 恢复', [fallbackReason(entry.reason, locale), clock(entry.until, locale)])
+}
+
+const PURPOSE_NAMES = {
+  chat: (locale) => translate(locale, '聊天'),
+  summary: (locale) => translate(locale, '摘要'),
+  ambient: (locale) => translate(locale, '旁听'),
+  perception: (locale) => translate(locale, '识图'),
+}
+function purposeName(purpose, locale) {
+  if (Object.hasOwn(PURPOSE_NAMES, purpose)) return PURPOSE_NAMES[purpose](locale)
+  const agent = /^agent:(.+)$/u.exec(String(purpose ?? ''))
+  return agent ? translate(locale, 'Agent {0}', [agent[1]]) : String(purpose ?? '')
+}
+
+/**
+ * The Host's recent switches to a fallback (newest first), as display rows
+ * `{ key, purpose, from, to, reason, at, selection }`; names come from the view when it still has them.
+ */
+export function recentFallbackRows(view, locale = 'zh-CN') {
+  const events = view?.modelAvailability?.recentFallbacks
+  if (!Array.isArray(events)) return []
+  const name = (endpoint) => {
+    const profile = view.profiles?.[endpoint?.profileId]
+    return profile?.label ?? profile?.model ?? endpoint?.model ?? endpoint?.profileId ?? ''
+  }
+  return events.filter((event) => event && event.from && event.to).map((event, index) => ({
+    key: `${event.at}:${index}`,
+    purpose: purposeName(event.purpose, locale),
+    from: name(event.from),
+    to: name(event.to),
+    reason: fallbackReason(event.reason, locale),
+    at: clock(event.at, locale),
+    selection: event.phase === 'selection',
+  }))
 }
 
 /** Submit a freshly allocated ID exactly once. Existing IDs are recovered by receipt query,
@@ -266,7 +427,7 @@ const decisionLabels = t => ({
 
 function scopeUses(models, profileId) {
   const uses = []
-  if (models?.chat === profileId) uses.push('chat')
+  if (models?.chat === profileId || models?.chatFallbacks?.includes(profileId)) uses.push('chat')
   if (models?.perception?.profile === profileId || models?.perception?.fallbacks?.includes(profileId)) uses.push('perception')
   return uses
 }
@@ -283,6 +444,8 @@ export function profileUsages(purposes, profileId, locale = 'zh-CN') {
   const defaultLabels = { chat: t('默认聊天'), summary: t('默认摘要'), ambient: t('默认旁听'), image: t('默认图片生成') }
   for (const key of ['chat', 'summary', 'ambient', 'image']) {
     if (defaults[key] === profileId) rows.push({ key: `default:${key}`, level: 'default', label: defaultLabels[key] })
+    else if (defaults[`${key}Fallbacks`]?.includes(profileId))
+      rows.push({ key: `default:${key}-fallback`, level: 'default', label: t('{0}（备选）', [defaultLabels[key]]) })
   }
   if (defaults.perception?.profile === profileId) rows.push({ key: 'default:perception', level: 'default', label: t('默认识图') })
   else if (defaults.perception?.fallbacks?.includes(profileId)) rows.push({ key: 'default:perception-fallback', level: 'default', label: t('默认识图（备选）') })
@@ -294,6 +457,8 @@ export function profileUsages(purposes, profileId, locale = 'zh-CN') {
   }
   for (const [agent, profile] of Object.entries(purposes.agents ?? {})) {
     if (profile === profileId) rows.push({ key: `agent:${agent}`, level: 'agent', label: t('Agent {0}', [agent]) })
+    else if (purposes.agentFallbacks?.[agent]?.includes(profileId))
+      rows.push({ key: `agent:${agent}:fallback`, level: 'agent', label: t('{0}（备选）', [t('Agent {0}', [agent])]) })
   }
   const scoped = (level, record, label) => {
     for (const [key, models] of Object.entries(record ?? {})) {
@@ -305,7 +470,153 @@ export function profileUsages(purposes, profileId, locale = 'zh-CN') {
   scoped('adapter', purposes.adapters, (key, use) => t('适配器 {0} 的{1}', [key, use]))
   scoped('endpoint', purposes.endpoints, (key, use) => t('账号 {0} 的{1}', [key, use]))
   for (const [key, models] of Object.entries(purposes.scenes ?? {})) {
-    if (models?.chat === profileId) rows.push({ key: `scene:${key}`, level: 'scene', label: t('会话 {0} 的聊天', [key]) })
+    if (models?.chat === profileId || models?.chatFallbacks?.includes(profileId)) rows.push({ key: `scene:${key}`, level: 'scene', label: t('会话 {0} 的聊天', [key]) })
   }
   return rows
+}
+
+/** A profile label written for an Agent binding, e.g. 「子 Agent · 小编 planner · DeepSeek Flash」. */
+const AGENT_LABEL = /^(?:主|子)?\s*Agent\s*[·:：|/-]|^sub-?agent\b/iu
+
+/**
+ * Which group a profile is listed under in the purpose pickers (zhinjs/zhin#1250 `ai-purposes-select`):
+ * a profile only Agents use (by its purposes or by an Agent-binding label) goes to 「Agent 绑定」,
+ * every other one under its service. `{ key, label, agent }`.
+ */
+export function profileChoiceGroup(view, profile, locale = 'zh-CN') {
+  const usages = profileUsages(view?.purposes, profile.id, locale)
+  const agentOnly = usages !== null && usages.length > 0 && usages.every(usage => usage.level === 'agent')
+  if (agentOnly || AGENT_LABEL.test(profile.label ?? '')) return { key: 'agent', label: translate(locale, 'Agent 绑定'), agent: true }
+  const account = view?.accounts?.[profile.accountId]
+  const service = account ? view?.services?.[account.serviceId] : undefined
+  const driver = service ? serviceDriver(view, service.id) : undefined
+  const label = service?.label || (driver ? driverLabel(driver, view.drivers ?? []) : '') || service?.id || account?.label || profile.accountId
+  return { key: `service:${service?.id ?? profile.accountId}`, label, agent: false }
+}
+
+/**
+ * The profiles a purpose picker offers for `kind`, as searchable grouped options: `{ value, label, group,
+ * description, keywords, profile, support }`, services first and the 「Agent 绑定」 group last; the
+ * order inside a group is the view's own order.
+ */
+export function purposeProfileChoices(view, kind, locale = 'zh-CN') {
+  const rows = []
+  for (const profile of Object.values(view?.profiles ?? {})) {
+    const account = view.accounts?.[profile.accountId]
+    const service = account ? view.services?.[account.serviceId] : undefined
+    if (!service?.models?.[profile.model]?.kinds?.includes(kind)) continue
+    const group = profileChoiceGroup(view, profile, locale)
+    const name = profile.label ?? profile.model
+    rows.push({
+      value: profile.id,
+      group: group.label,
+      agent: group.agent,
+      description: [profile.model !== name ? profile.model : '', account?.label ?? ''].filter(Boolean).join(' · '),
+      keywords: [name, profile.model, account?.label ?? '', service?.label ?? '', group.label].join(' '),
+      profile,
+    })
+  }
+  return [...rows.filter(row => !row.agent), ...rows.filter(row => row.agent)]
+}
+
+/**
+ * Whether this Console caller may type a Host environment reference (`env://NAME`, `${NAME}`).
+ * Hosts before #1250 send no `environmentReferences`: keep their Host-administrator rule.
+ */
+export function canReferenceEnvironment(view) {
+  if (view.environmentReferences !== undefined)
+    return view.environmentReferences === 'console-owner' || view.environmentReferences === 'local-cli'
+  return view.hostAdministrator
+}
+/**
+ * Whether the Host has 测试连接 (`POST /account/test`, zhinjs/zhin#1250). Those Hosts always send
+ * `environmentReferences` in the view (`'none'` included); older ones have neither.
+ */
+export function supportsConnectionTest(view) {
+  return typeof view?.environmentReferences === 'string'
+}
+/** The message for a failed 测试连接: a missing route means an older Host, not a missing Agent. */
+export function connectionTestError(error, locale = 'zh-CN') {
+  if (error instanceof InferenceRequestError && error.code === 'not-installed')
+    return translate(locale, 'Host 版本较旧，暂不支持测试连接')
+  return inferenceError(error, locale)
+}
+/** The `env://NAME` variable of an account, if it reads one. */
+export function accountEnvironmentVariable(account) {
+  return /^env:\/\/([A-Za-z_][A-Za-z0-9_]*)$/u.exec(account?.authentication?.source ?? '')?.[1]
+}
+const CALL_OUTCOME_TEXT = {
+  ok: (locale) => translate(locale, '成功'),
+  auth: (locale) => translate(locale, '鉴权失败'),
+  'rate-limit': (locale) => translate(locale, '限流'),
+  server: (locale) => translate(locale, '服务异常'),
+  rejected: (locale) => translate(locale, '请求被拒绝'),
+  timeout: (locale) => translate(locale, '超时'),
+  network: (locale) => translate(locale, '网络错误'),
+}
+const PROBE_KIND_TEXT = {
+  auth: (locale) => translate(locale, '鉴权失败'),
+  rate_limit: (locale) => translate(locale, '限流'),
+  quota_exhausted: (locale) => translate(locale, '额度用完'),
+  billing: (locale) => translate(locale, '余额不足'),
+  server: (locale) => translate(locale, '服务异常'),
+  timeout: (locale) => translate(locale, '超时'),
+  no_response: (locale) => translate(locale, '无响应'),
+  network: (locale) => translate(locale, '网络错误'),
+  bad_request: (locale) => translate(locale, '请求被拒绝（可能不支持工具调用）'),
+  credential: (locale) => translate(locale, '凭据不可用'),
+  'profile-not-found': (locale) => translate(locale, '模型配置不存在'),
+  unavailable: (locale) => translate(locale, '模型配置不可用'),
+}
+function clock(at, locale) {
+  try {
+    return new Date(at).toLocaleString(locale === 'en' ? 'en-US' : 'zh-CN', { hour12: false })
+  } catch {
+    return ''
+  }
+}
+/** "最近调用：鉴权失败（HTTP 401）· time" — outcome class, status and time only. */
+export function describeLastCall(lastCall, locale = 'zh-CN') {
+  if (!lastCall) return ''
+  const outcome = CALL_OUTCOME_TEXT[lastCall.outcome]?.(locale) ?? translate(locale, '失败')
+  const status = lastCall.status && lastCall.outcome !== 'ok' ? ` (HTTP ${lastCall.status})` : ''
+  return `${translate(locale, '最近调用：')}${outcome}${status} · ${clock(lastCall.at, locale)}`
+}
+/** One line for a connectivity probe result. */
+export function describeProbe(result, locale = 'zh-CN') {
+  if (result.status === 'ok') return translate(locale, '连接正常（{0} ms）', [String(result.durationMs)])
+  const kind = PROBE_KIND_TEXT[result.kind]?.(locale) ?? translate(locale, '失败')
+  const status = result.httpStatus ? ` HTTP ${result.httpStatus}` : ''
+  return translate(locale, '连接失败：{0}', [`${kind}${status}`])
+}
+/** Language Profiles a purposes draft binds that its baseline did not (probed before saving). */
+export function newlyBoundLanguageProfiles(draft, original) {
+  const collect = (purposes) => {
+    const ids = new Set()
+    const add = (id) => {
+      if (typeof id === 'string' && id) ids.add(id)
+    }
+    const chain = (ids) => {
+      for (const id of Array.isArray(ids) ? ids : []) add(id)
+    }
+    const scope = (value) => {
+      add(value?.chat)
+      chain(value?.chatFallbacks)
+      add(value?.perception?.profile)
+      chain(value?.perception?.fallbacks)
+    }
+    scope(purposes?.defaults)
+    add(purposes?.defaults?.summary)
+    chain(purposes?.defaults?.summaryFallbacks)
+    add(purposes?.defaults?.ambient)
+    chain(purposes?.defaults?.ambientFallbacks)
+    for (const value of Object.values(purposes?.adapters ?? {})) scope(value)
+    for (const value of Object.values(purposes?.endpoints ?? {})) scope(value)
+    for (const value of Object.values(purposes?.scenes ?? {})) { add(value?.chat); chain(value?.chatFallbacks) }
+    for (const id of Object.values(purposes?.agents ?? {})) add(id)
+    for (const ids of Object.values(purposes?.agentFallbacks ?? {})) chain(ids)
+    return ids
+  }
+  const before = collect(original)
+  return [...collect(draft)].filter((id) => !before.has(id))
 }

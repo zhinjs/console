@@ -2,11 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { RefreshCw } from 'lucide-react'
 import { useI18n } from '../i18n'
-import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
-import { Card } from '../components/ui/card'
-import { Skeleton } from '../components/ui/skeleton'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
+import { Badge, Button, Card, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import { apiFetch } from '../utils/auth'
 import { requestConsole } from '../utils/console-rpc'
@@ -16,9 +12,10 @@ import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { CONSOLE_REST, CONSOLE_RPC } from '../contracts/zhin-console'
 import { readTaskProviders } from './task-center-model.mjs'
 import { validateAssistantJobs } from './assistant-jobs-model.mjs'
+import { featureDisabledState } from '../utils/feature-disabled.mjs'
 import { readToolApprovals } from './tool-approvals-model.mjs'
 import { taskTabHref } from './task-hub-model.mjs'
-import { filterTaskOverview, TASK_OVERVIEW_FILTERS, taskOverviewRows, type TaskOverviewFilter, type TaskOverviewRow, type TaskOverviewSources } from './task-overview-model.mjs'
+import { filterTaskOverview, splitInternalTasks, TASK_OVERVIEW_FILTERS, taskOverviewRows, type TaskOverviewFilter, type TaskOverviewRow, type TaskOverviewSources } from './task-overview-model.mjs'
 import './insights/insights.css'
 
 const READ_TIMEOUT_MS = 8_000
@@ -47,7 +44,7 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
     const settle = <T,>(promise: Promise<T>) => promise.catch(() => null)
     const [admin, schedules, assistant, approvals] = await Promise.all([
       settle(readJson(`${CONSOLE_REST.TASK_PROVIDERS}?locale=${i18n.locale}`).then(body => readTaskProviders(body, i18n.locale))),
-      settle(requestConsole<NonNullable<TaskOverviewSources['schedules']>>({ type: CONSOLE_RPC.SCHEDULE_LIST })),
+      settle(requestConsole<NonNullable<TaskOverviewSources['schedules']>>({ type: CONSOLE_RPC.SCHEDULE_LIST, locale: i18n.locale })),
       settle(readJson('/api/assistant/jobs').then(body => validateAssistantJobs(body, i18n.locale))),
       approvalsReadable ? settle(pluginRpc('root', 'tool-approvals', undefined, { signal }).then(readToolApprovals)) : Promise.resolve(undefined),
     ])
@@ -59,10 +56,15 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
   useEffect(() => { void load() }, [load])
 
   if (loading && !sources) return <StatusState kind="loading" title={i18n.t("正在读取任务")} placeholder={<div className="space-y-2"><Skeleton className="h-10" /><Skeleton className="h-40" /></div>} />
-  const { rows, unavailable } = taskOverviewRows(sources ?? {}, i18n.locale)
+  const { rows: allRows, unavailable } = taskOverviewRows(sources ?? {}, i18n.locale)
+  // Plugin housekeeping (RSS polling, cleanup…) runs every few seconds; it is listed folded below (#1250).
+  const { main: rows, internal } = splitInternalTasks(allRows)
+  const shownInternal = filterTaskOverview(internal, filter)
   const shown = filterTaskOverview(rows, filter)
   const time = (value: number | null | undefined) => value ? new Date(value).toLocaleString(i18n.locale) : '—'
   const allFailed = unavailable.length >= 3 && rows.length === 0
+  // The assistant is off (200 `status: 'disabled'`, #1250): a state with a reason, not a read failure.
+  const assistantOff = featureDisabledState(sources?.assistant, i18n.locale)
 
   return (
     <div className="space-y-3">
@@ -72,7 +74,7 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
             const count = filterTaskOverview(rows, option.id).length
             return (
               <Button key={option.id} size="sm" variant={filter === option.id ? 'secondary' : 'ghost'} aria-pressed={filter === option.id} onClick={() => setFilter(option.id)}>
-                {i18n.t(option.label)} <span className="tabular-nums text-muted-foreground">{count}</span>
+                {i18n.t(option.label)} <span className="text-muted-foreground">{count}</span>
               </Button>
             )
           })}
@@ -85,11 +87,14 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
           {i18n.t("未能读取：{0}。这些来源的任务没有列出，不代表没有任务。", [unavailable.map(id => i18n.t(SOURCE_LABELS[id] ?? id)).join(' · ')])}
         </p>
       ) : null}
+      {assistantOff ? (
+        <p className="text-xs text-muted-foreground" role="status">{i18n.t("助手任务未启用：{0}", [assistantOff.description])}</p>
+      ) : null}
       {allFailed ? (
         <StatusState kind="error" title={i18n.t("任务暂时读不到")} description={i18n.t("管理员任务、定时提醒和助手任务都没有读到；连接恢复后刷新。")} onRetry={() => void load()} />
-      ) : !shown.length ? (
+      ) : !shown.length && shownInternal.length ? null : !shown.length ? (
         filter === 'all' ? (
-          <StatusState kind="empty" title={i18n.t("还没有任务")}
+          <StatusState kind="empty" illustration="tasks" title={i18n.t("还没有任务")}
             description={i18n.t("管理员任务在「管理员任务」页签创建；定时提醒由插件或 AI 助手创建。")}
             actions={<Button asChild size="sm" variant="outline"><Link to={taskTabHref('admin')}>{i18n.t("创建管理员任务")}</Link></Button>} />
         ) : (
@@ -100,7 +105,26 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
             actions={<Button size="sm" variant="outline" onClick={() => setFilter('all')}>{i18n.t("查看全部任务")}</Button>} />
         )
       ) : (
-        <>
+        <OverviewTable rows={shown} time={time} />
+      )}
+      {shownInternal.length ? (
+        <details className="console-task-overview-internal">
+          <summary>
+            {i18n.t("插件内部任务")} <span className="text-muted-foreground">{shownInternal.length}</span>
+            <span className="console-task-overview-sub">{i18n.t("插件自己的轮询、清理与刷盘，通常每隔几秒到几分钟运行一次；不需要你处理，出错时会列在上面。")}</span>
+          </summary>
+          <OverviewTable rows={shownInternal} time={time} />
+        </details>
+      ) : null}
+    </div>
+  )
+}
+
+function OverviewTable({ rows, time }: { rows: TaskOverviewRow[]; time: (value: number | null | undefined) => string }) {
+  const i18n = useI18n()
+  const shown = rows
+  return (
+    <>
           <Card className="console-task-overview-table overflow-hidden">
             <Table>
               <TableHeader>
@@ -134,30 +158,38 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
           </Card>
           <div className="console-task-overview-cards">
             {shown.map(row => (
-              <dl key={row.key} className="console-task-overview-card">
+              // The card is an <article>: its title comes first and the <dl> holds only term/value pairs
+              // (a heading inside <dl> is invalid and misreads in screen readers). The list keeps the
+              // card's two columns through subgrid, so no stylesheet changes.
+              <article key={row.key} className="console-task-overview-card">
                 <h3><Link to={taskTabHref(row.tab)}>{row.title}</Link></h3>
-                <dt>{i18n.t("类型")}</dt><dd>{row.typeLabel}</dd>
-                <dt>{i18n.t("状态")}</dt><dd><Badge variant={row.status.tone}>{row.status.label}</Badge></dd>
-                {row.type !== 'approval' ? <><dt>{i18n.t("下次运行")}</dt><dd>{time(row.nextRunAt)}</dd></> : null}
-                <dt>{i18n.t("最近结果")}</dt><dd><LastResult row={row} time={time} /></dd>
-                <dt>{i18n.t("目标")}</dt><dd><TargetCell row={row} /></dd>
-                {row.approval ? <><dt>{i18n.t("审批")}</dt><dd>{row.approval}</dd></> : null}
-              </dl>
+                <dl className="col-span-full grid grid-cols-subgrid gap-y-1">
+                  <dt>{i18n.t("类型")}</dt><dd>{row.typeLabel}</dd>
+                  <dt>{i18n.t("状态")}</dt><dd><Badge variant={row.status.tone}>{row.status.label}</Badge></dd>
+                  {row.type !== 'approval' ? <><dt>{i18n.t("下次运行")}</dt><dd>{time(row.nextRunAt)}</dd></> : null}
+                  <dt>{i18n.t("最近结果")}</dt><dd><LastResult row={row} time={time} /></dd>
+                  <dt>{i18n.t("目标")}</dt><dd><TargetCell row={row} /></dd>
+                  {row.approval ? <><dt>{i18n.t("审批")}</dt><dd>{row.approval}</dd></> : null}
+                </dl>
+              </article>
             ))}
           </div>
-        </>
-      )}
-    </div>
+    </>
   )
 }
 
 function LastResult({ row, time }: { row: TaskOverviewRow; time: (value: number | null | undefined) => string }) {
   if (!row.lastResult) return <span className="text-muted-foreground">—</span>
-  return <span><Badge variant={row.lastResult.tone}>{row.lastResult.label}</Badge>{row.lastResult.at ? <span className="console-task-overview-sub">{time(row.lastResult.at)}</span> : null}</span>
+  return <span title={row.lastResult.error}><Badge variant={row.lastResult.tone}>{row.lastResult.label}</Badge>{row.lastResult.at ? <span className="console-task-overview-sub">{time(row.lastResult.at)}</span> : null}</span>
 }
 
 function TargetCell({ row }: { row: TaskOverviewRow }) {
-  if (!row.target) return <span className="text-muted-foreground">—</span>
+  const i18n = useI18n()
+  // Unresolved delivery target (#1250): 「⚠ 无效」, the reason and the next run whose results will not arrive.
+  const issue = row.targetIssue
+    ? <span className="console-task-overview-sub" role="note"><Badge variant="warning" size="sm">{i18n.t('⚠ 无效')}</Badge> {row.targetIssue}</span>
+    : null
+  if (!row.target) return issue ?? <span className="text-muted-foreground">—</span>
   const code = <code className="break-all text-xs" title={row.target}>{row.target}</code>
-  return row.targetHref ? <Link className="underline-offset-2 hover:underline" to={row.targetHref}>{code}</Link> : code
+  return <>{row.targetHref ? <Link className="underline-offset-2 hover:underline" to={row.targetHref}>{code}</Link> : code}{issue}</>
 }

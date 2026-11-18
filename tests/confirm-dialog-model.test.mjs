@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { canSubmitConfirm, confirmErrorMessage, confirmTextMatches } from '../console-ui/src/components/confirm-dialog-model.mjs'
+import { canSubmitConfirm, confirmErrorMessage, confirmTextMatches } from '@zhin.js/console-ui'
 import { dropThenRefresh, withoutDroppedTables } from '../console-ui/src/pages/database/drop-table-model.mjs'
 
 test('confirmErrorMessage reads Error, string and message-like rejections; blank or unknown fall back', () => {

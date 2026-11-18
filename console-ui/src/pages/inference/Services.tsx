@@ -1,13 +1,7 @@
 import { useI18n } from '../../i18n'
 import { useState, type FormEvent } from 'react'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
-import { Button } from '../../components/ui/button'
-import { Input } from '../../components/ui/input'
-import { SelectField } from '../../components/ui/select'
-import { Card } from '../../components/ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog'
-import { ErrorAlert } from '../../components/error-alert'
-import { useConfirm } from '../../components/confirm-dialog'
+import { Button, Card, Dialog, DialogContent, DialogHeader, DialogTitle, ErrorAlert, Input, SelectField, useConfirm } from '@zhin.js/console-ui'
 import { SchemaFields } from './SchemaFields'
 import { SupportLabel, SupportNotice, supportLabel } from './SupportInfo'
 import { driverKey, serviceDriver, type Service, type ObjectValue } from './model.mjs'
@@ -45,7 +39,7 @@ export function Services({ management: m }: { management: InferenceManagement })
       {!Object.keys(view.services).length ? (
         <Card className="p-8 text-center text-muted-foreground">{i18n.t("添加一个模型服务。")}</Card>
       ) : (
-        <div className="divide-y rounded-lg border">
+        <div className="console-card divide-y overflow-hidden">
           {Object.values(view.services).map((service) => (
             <div key={service.id} className="flex items-center justify-between gap-4 p-4">
               <div className="min-w-0">

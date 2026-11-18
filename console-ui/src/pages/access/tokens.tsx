@@ -3,16 +3,7 @@ import { Copy, KeyRound, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { CONSOLE_PATHS } from '../../console-routes.mjs'
 import { useI18n } from '../../i18n'
-import { PageShell } from '../../components/PageShell'
-import { PageHeader } from '../../components/PageHeader'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/button'
-import { Card } from '../../components/ui/card'
-import { Input } from '../../components/ui/input'
-import { Skeleton } from '../../components/ui/skeleton'
-import { SelectField } from '../../components/ui/select'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
+import { Badge, Button, Card, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, PageHeader, PageShell, SelectField, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
 import { ActionReceipt, useActionReceipt } from '../../components/ActionReceipt'
 import { useSaveOutcome } from '../../components/ApplyFeedback'
@@ -139,8 +130,8 @@ export default function AccessTokensPage() {
                     </TableCell>
                     {canManage ? (
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" className="text-destructive" disabled={busy} onClick={() => prepareRevoke(token)}
-                          aria-label={i18n.t("吊销 {0}", [token.name])}><Trash2 /><span className="hidden sm:inline">{i18n.t("吊销")}</span></Button>
+                        <Button variant="destructive" size="sm" disabled={busy} onClick={() => prepareRevoke(token)}
+                          aria-label={i18n.t("吊销 {0}", [token.name])}><Trash2 />{i18n.t("吊销")}</Button>
                       </TableCell>
                     ) : null}
                   </TableRow>

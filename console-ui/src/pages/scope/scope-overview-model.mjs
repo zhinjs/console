@@ -101,6 +101,15 @@ export function endpointAccessState({ loaded = false, error = null, endpoints = 
 }
 
 /**
+ * Whether the account page should ask `endpoint.info`: once `endpoint.list` shows the Host runs the
+ * account, or when that list could not be read. Never for an account the list does not contain
+ * (`unlisted`), which could only answer 「endpoint not found」; while the list loads, wait for it.
+ */
+export function endpointInfoWanted(state) {
+  return state?.kind === 'listed' || state?.kind === 'failed'
+}
+
+/**
  * The few conversations an account's 概览 shows (the full list lives in its 聊天 tab): those with
  * overrides first, then the most recently active ones without, each capped at `limit`.
  */

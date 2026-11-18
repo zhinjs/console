@@ -9,13 +9,8 @@ import { parse as parseYaml } from 'yaml'
 import {
   Settings, AlertCircle, ChevronRight, ArrowLeft, SlidersHorizontal, Bot, Blocks
 } from 'lucide-react'
-import { Card } from '../components/ui/card'
-import { Button } from '../components/ui/button'
-import { Alert, AlertDescription } from '../components/ui/alert'
-import { Input } from '../components/ui/input'
-import { Skeleton } from '../components/ui/skeleton'
+import { Alert, AlertDescription, Button, Card, Input, ListItemButton, PageHeader, Skeleton } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
-import { PageHeader } from '../components/PageHeader'
 import { readErrorSummary } from '../utils/read-error.mjs'
 import {
   buildSettingsCatalog, filterSettingsCatalog, resolveSettingsSelection, settingsLocationFromParams, settingsLocationParams,
@@ -25,7 +20,6 @@ import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { legacySettingsModelsRedirect } from './inference/models-entry.mjs'
 import { WelcomeFlowContext } from './WelcomeFlowContext'
-import { ListItemButton } from '../components/ui/list-item-button'
 import { useUnsavedChangesGuard } from '../utils/useUnsavedChangesGuard'
 import { setOwnerDirty } from '../utils/unsaved-changes-guard.mjs'
 

@@ -1,7 +1,7 @@
 import { useI18n } from '../../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Button } from '../../components/ui/button'
+import { Button } from '@zhin.js/console-ui'
 import { agentSessionsPath } from '../../utils/agent-session'
 import { PersonalSessionModelPicker } from '../PersonalSessionModelPicker'
 import { readPersonalSessionRows, type PersonalSessionRow } from '../personal-session-model.mjs'
@@ -55,7 +55,7 @@ export function PersonalSessions({
   return (
     <div className="space-y-4">
       <h3 className="font-semibold">{i18n.t("个人会话", undefined, 'plural')}</h3>
-      <div className="divide-y rounded-lg border">
+      <div className="console-card divide-y overflow-hidden">
         {rows.map((row) => (
           <div key={row.sessionKey} className="flex items-center justify-between gap-3 p-4">
             <div className="min-w-0 text-sm break-all">

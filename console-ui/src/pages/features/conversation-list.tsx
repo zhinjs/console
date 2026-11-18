@@ -2,18 +2,12 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { RefreshCw, Search } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/button'
-import { Card } from '../../components/ui/card'
-import { Checkbox } from '../../components/ui/checkbox'
-import { Input } from '../../components/ui/input'
-import { Skeleton } from '../../components/ui/skeleton'
+import { Badge, Button, Card, Checkbox, ErrorAlert, Input, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
-import { ErrorAlert } from '../../components/error-alert'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
 import { conversationHref, endpointHref } from '../../console-routes.mjs'
 import { conversationOverrideCounts, filterConversations, type ConversationItem, type ConversationKind, type ConversationOverrideCounts } from './feature-model.mjs'
 import { type ConversationListState } from './use-feature-data'
+import { overrideProvenance } from './feature-scope-model.mjs'
 
 export function ConversationKindBadge({ kind }: { kind: ConversationKind }) {
   const i18n = useI18n()
@@ -43,7 +37,11 @@ function OverrideSummary({ item }: { item: ConversationItem }) {
     const disabled = item.overrides?.filter(entry => entry.disabled).length ?? 0
     return item.overrideCount
       ? (
-        <span className="inline-flex flex-wrap items-center gap-1" title={item.overrides?.map(entry => entry.plugin).join(', ')}>
+        <span className="inline-flex flex-wrap items-center gap-1" title={item.overrides?.map(entry => {
+          // Who changed it and through what, when the Host says (#1250 `operator`).
+          const by = overrideProvenance({ operator: entry.operator, updatedAt: entry.updatedAt, conversationName: item.name }, i18n.locale)
+          return by ? `${entry.plugin} · ${by}` : entry.plugin
+        }).join(item.overrides?.some(entry => entry.operator) ? '\n' : ', ')}>
           <Badge variant="info" size="sm">{i18n.t("{0} 个功能有覆盖", [item.overrideCount])}</Badge>
           {disabled ? <Badge variant="outline" size="sm">{i18n.t("{0} 个已关闭", [disabled])}</Badge> : null}
         </span>

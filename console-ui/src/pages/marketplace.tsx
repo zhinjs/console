@@ -8,23 +8,9 @@ import {
 } from './marketplace-view-model.mjs'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import {
-  Search, Package, Download, ExternalLink, RefreshCw, Copy, Check, GitBranch, Settings, CheckCircle2, ToggleLeft,
+  Search, Package, Download, ExternalLink, RefreshCw, Copy, Check, Settings, CheckCircle2, ToggleLeft,
 } from 'lucide-react'
-import { Card, CardContent } from '../components/ui/card'
-import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
-import { Input } from '../components/ui/input'
-import { SelectField } from '../components/ui/select'
-import { Alert, AlertDescription } from '../components/ui/alert'
-import { Skeleton } from '../components/ui/skeleton'
-import { Separator } from '../components/ui/separator'
-import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs'
-import {
-  Dialog, DialogContent, DialogHeader, DialogFooter,
-  DialogTitle, DialogDescription, DialogClose,
-} from '../components/ui/dialog'
-import { PageHeader } from '../components/PageHeader'
-import { PageShell } from '../components/PageShell'
+import { Alert, AlertDescription, Badge, Button, Card, CardContent, Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, InlineCode, Input, PageHeader, PageShell, SelectField, Separator, Skeleton, Tabs, TabsList, TabsTrigger } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import { apiFetch } from '../utils/auth'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -360,9 +346,9 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                     const status = marketplacePluginStatus(u.name, installed, updates)
                     return (
                       <li key={u.name} className="flex flex-wrap items-center gap-2">
-                        <Badge variant="secondary" className="max-w-full truncate font-mono" title={u.name}>
+                        <InlineCode className="max-w-full truncate text-sm" title={u.name}>
                           {u.name}：{u.current} → latest {u.latest}
-                        </Badge>
+                        </InlineCode>
                         <Button variant="outline" size="sm" asChild>
                           <Link to={pluginManageUrl(u.name, status.instanceKey)} aria-label={i18n.t("前往 {0} 的插件详情更新", [u.name])}>
                             {i18n.t("去更新")}
@@ -400,7 +386,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant={officialOnly ? 'default' : 'outline'} size="sm" aria-pressed={officialOnly} onClick={() => setOfficialOnly(!officialOnly)}>
+          <Button variant={officialOnly ? 'soft' : 'outline'} size="sm" aria-pressed={officialOnly} onClick={() => setOfficialOnly(!officialOnly)}>
             <Package />{i18n.t("仅 @zhin.js")}</Button>
           <SelectField
             value={sortKey}
@@ -464,8 +450,8 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                   <div className="flex flex-wrap justify-end gap-1 shrink-0">
                     {(() => {
                       const status = marketplacePluginStatus(plugin.name, installed, updates)
-                      if (status.kind === 'update') return <Badge variant="warning" size="sm" title={i18n.t("本地 {0}，latest {1}", [status.current, status.latest])}>{i18n.t("有更新")}</Badge>
-                      if (status.kind === 'installed') return <Badge variant="success" size="sm" title={status.version ? i18n.t("本地版本 {0}", [status.version]) : undefined}>{i18n.t("已安装")}</Badge>
+                      if (status.kind === 'update') return <Badge variant="default" size="sm" title={i18n.t("本地 {0}，latest {1}", [status.current, status.latest])}>{i18n.t("有更新")}</Badge>
+                      if (status.kind === 'installed') return <Badge variant="outline" size="sm" title={status.version ? i18n.t("本地版本 {0}", [status.version]) : undefined}>{i18n.t("已安装")}</Badge>
                       return null
                     })()}
                     {belongsToZhinScope(plugin.name) && (
@@ -583,7 +569,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                 {followUps.length > 0 && (
                   <nav className="flex flex-wrap gap-2" aria-label={i18n.t("安装后的下一步")}>
                     {followUps.map(link => (
-                      <Button key={link.kind} size="sm" variant={link.kind === 'configure' || link.kind === 'welcome' ? 'default' : 'outline'} asChild>
+                      <Button key={link.kind} size="sm" variant={link.kind === 'configure' || link.kind === 'welcome' ? 'soft' : 'outline'} asChild>
                         <Link to={link.to}>
                           {link.kind === 'configure' ? <Settings /> : link.kind === 'features' ? <ToggleLeft /> : null}
                           {i18n.t(FOLLOW_UP_LABELS[link.kind])}
@@ -622,10 +608,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                     {detail.versions?.length > 0 ? (
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                         {detail.versions.slice(-20).reverse().map(v => (
-                          <span key={v} className="inline-flex items-center gap-1 px-2 py-1 rounded border text-xs font-mono bg-muted/40 min-w-0 truncate" title={v}>
-                            <GitBranch className="w-3 h-3 text-muted-foreground shrink-0" />
-                            <span className="truncate">{v}</span>
-                          </span>
+                          <InlineCode key={v} className="min-w-0 truncate py-1 text-xs" title={v}>{v}</InlineCode>
                         ))}
                       </div>
                     ) : <StatusState compact kind="empty" title={i18n.t("暂无版本信息")} description={i18n.t("注册表没有返回版本列表。")} />}

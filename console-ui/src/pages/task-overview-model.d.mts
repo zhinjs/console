@@ -1,5 +1,5 @@
-export type TaskOverviewType = 'admin' | 'schedule' | 'assistant' | 'approval'
-export type TaskOverviewTone = 'secondary' | 'info' | 'success' | 'warning' | 'destructive'
+export type TaskOverviewType = 'admin' | 'schedule' | 'internal' | 'assistant' | 'approval'
+export type TaskOverviewTone = 'outline' | 'secondary' | 'info' | 'success' | 'warning' | 'destructive'
 export interface TaskOverviewRow {
   key: string
   type: TaskOverviewType
@@ -9,9 +9,11 @@ export interface TaskOverviewRow {
   status: { code: string; label: string; tone: TaskOverviewTone }
   nextRunAt: number | null
   expiresAt?: number | null
-  lastResult: { label: string; tone: TaskOverviewTone; at: number | null } | null
+  lastResult: { label: string; tone: TaskOverviewTone; at: number | null; error?: string } | null
   target: string | null
   targetHref: string | null
+  /** Unresolved delivery target (#1250): reason and the next run that will not arrive. */
+  targetIssue?: string | null
   approval: string | null
   tab: 'admin' | 'schedule' | 'assistant'
 }
@@ -26,3 +28,4 @@ export type TaskOverviewFilter = 'all' | 'attention' | 'paused'
 export const TASK_OVERVIEW_FILTERS: ReadonlyArray<{ readonly id: TaskOverviewFilter; readonly label: string }>
 export function needsAttention(row: TaskOverviewRow): boolean
 export function filterTaskOverview(rows: TaskOverviewRow[], filter: string): TaskOverviewRow[]
+export function splitInternalTasks(rows: TaskOverviewRow[]): { main: TaskOverviewRow[]; internal: TaskOverviewRow[] }

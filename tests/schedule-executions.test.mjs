@@ -60,10 +60,7 @@ function fixture({ component = 'ScheduleExecutions', props = { jobId: run.jobId 
   const mocks = {
     react: hooks, 'lucide-react': new Proxy({}, { get: () => 'icon' }), '../utils/auth': { apiFetch: (path, init) => new Promise((resolve, reject) => requests.push({ path, init, resolve, reject })) },
     '../utils/inbox-cache': { isInboxCacheScopeActive: value => authority.active(value) }, '../utils/console-access.mjs': { hasConsolePermission: () => !readOnly },
-    '../components/ui/button': { Button: 'button' }, '../components/StatusState': { StatusState: 'status-state' }, '../components/ui/badge': { Badge: 'badge' }, '../components/ui/alert': { Alert: 'alert', AlertDescription: 'p' },
-    '../components/ui/dialog': Object.fromEntries(['Dialog', 'DialogContent', 'DialogHeader', 'DialogTitle', 'DialogDescription', 'DialogFooter', 'DialogClose'].map(name => [name, name])),
-    '../components/ui/tabs': Object.fromEntries(['Tabs', 'TabsContent', 'TabsList', 'TabsTrigger'].map(name => [name, name])),
-    './conversation-trace-model.mjs': trace, './schedule-executions-model.mjs': model, './schedule-executions.css': {},
+    '@zhin.js/console-ui': { Button: 'button', Badge: 'badge', Alert: 'alert', AlertDescription: 'p', ...(Object.fromEntries(['Dialog', 'DialogContent', 'DialogHeader', 'DialogTitle', 'DialogDescription', 'DialogFooter', 'DialogClose'].map(name => [name, name]))), ...(Object.fromEntries(['Tabs', 'TabsContent', 'TabsList', 'TabsTrigger'].map(name => [name, name]))) }, '../components/StatusState': { StatusState: 'status-state' }, './conversation-trace-model.mjs': trace, './schedule-executions-model.mjs': model, './schedule-executions.css': {},
   }
   const module = { exports: {} }
   const code = ts.transpileModule(source + '\nexport { ExecutionDetail, AttemptTrace };', { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText

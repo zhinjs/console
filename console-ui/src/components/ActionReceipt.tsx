@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertTriangle, CheckCircle2, CircleHelp, GitCompareArrows, Loader2, RefreshCw, RotateCcw, ServerOff, X, XCircle } from 'lucide-react'
-import { cn } from '@zhin.js/client'
+import { Button, cn } from '@zhin.js/console-ui'
 import './status-surfaces.css'
 import { useI18n } from '../i18n'
-import { Button } from './ui/button'
 import { StatusState } from './StatusState'
 import { ApplyFeedback } from './ApplyFeedback'
 import type { ApplyOutcome } from './apply-outcome-model.mjs'
@@ -104,9 +103,11 @@ export function useActionReceipt({ submit, verify, onSettled, persistKey }: UseA
  * next to the control that started the action (inline), not as a toast: the outcome stays visible
  * until dismissed.
  */
-export function ActionReceipt({ controller, className, lockHref, onRestarted }: {
+export function ActionReceipt({ controller, className, lockHref, onRestarted, verifyLabel }: {
   controller: ActionReceiptController
   className?: string
+  /** Label of the read-only check after an unknown outcome (default 核对当前状态), e.g. 刷新待处理列表. */
+  verifyLabel?: string
   /** Where a `locked` refusal can be lifted (the locking level's page). */
   lockHref?: string
   /** A `需要重启` outcome restarted from the receipt: re-read what the write changed. */
@@ -205,7 +206,7 @@ export function ActionReceipt({ controller, className, lockHref, onRestarted }: 
       ) : null}
       <footer className="console-receipt-actions">
         {state.phase === 'prepared' ? <>
-          <Button key="confirm" size="sm" variant={plan?.danger ? 'destructive' : 'default'} onClick={confirm}>{plan?.confirmLabel ?? i18n.t('确认')}</Button>
+          <Button key="confirm" size="sm" variant={plan?.danger ? 'destructive' : 'soft'} onClick={confirm}>{plan?.confirmLabel ?? i18n.t('确认')}</Button>
           <Button key="cancel" size="sm" variant="outline" onClick={cancel}>{i18n.t('取消')}</Button>
         </> : null}
         {/* The second step puts 取消 first (it takes the focus) and 确认执行 where 取消 was, so a double
@@ -213,10 +214,10 @@ export function ActionReceipt({ controller, className, lockHref, onRestarted }: 
             CONFIRM_GUARD_MS after this step appeared. */}
         {state.phase === 'confirming' ? <>
           <Button key="cancel" size="sm" variant="outline" onClick={cancel} data-receipt-cancel>{i18n.t('取消')}</Button>
-          <Button key="execute" size="sm" variant="destructive" onClick={confirm} data-receipt-execute>{i18n.t('确认执行')}</Button>
+          <Button key="execute" size="sm" variant="destructive-solid" onClick={confirm} data-receipt-execute>{i18n.t('确认执行')}</Button>
         </> : null}
         {state.phase === 'unknown' ? (
-          <Button size="sm" variant="outline" onClick={verify} disabled={!canVerify}><RefreshCw />{i18n.t('核对当前状态')}</Button>
+          <Button size="sm" variant="outline" onClick={verify} disabled={!canVerify}><RefreshCw />{verifyLabel ?? i18n.t('核对当前状态')}</Button>
         ) : null}
         {state.phase === 'failed' && state.verified ? (
           <Button size="sm" variant="outline" onClick={reset}><RotateCcw />{i18n.t('放弃并重新开始')}</Button>

@@ -1,15 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronDown, ChevronRight, Eraser, Lock, Pencil, RefreshCw, Save, Search, X } from 'lucide-react'
-import { cn } from '@zhin.js/client'
+import { Alert, AlertDescription, Badge, Button, Card, cn, Input, Skeleton, Switch } from '@zhin.js/console-ui'
 import { useI18n } from '../../i18n'
-import { Alert, AlertDescription } from '../../components/ui/alert'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/button'
-import { Card } from '../../components/ui/card'
-import { Input } from '../../components/ui/input'
-import { Skeleton } from '../../components/ui/skeleton'
-import { Switch } from '../../components/ui/switch'
 import { StatusState } from '../../components/StatusState'
 import { ActionReceipt, useActionReceipt } from '../../components/ActionReceipt'
 import { outcomeFromFeatureWrite } from '../../components/apply-outcome-model.mjs'
@@ -30,10 +23,12 @@ import {
 } from './feature-model.mjs'
 import {
   FEATURE_ROW_FILTERS, featureChangeApplied, featureFieldView, featureLevelRow, featureLockHref,
-  featureReadBackMismatch, featureReceiptOutcome, featureRowCounts, featureValueText, featureWriteSharesRevision, filterFeatureRows, parentFeatureTarget,
+  featureReadBackMismatch, featureReceiptOutcome, featureRowCounts, featureValueText, featureWriteSharesRevision, filterFeatureRows, overrideProvenance, parentFeatureTarget,
   type FeatureChange, type FeatureLevelRow, type FeatureRowFilter,
 } from './feature-scope-model.mjs'
 import { useFeatureList } from './use-feature-data'
+import { SwitchHitArea } from './feature-switch'
+import { featureReceiptKey } from './adapter-switch-model.mjs'
 import './feature-level-panel.css'
 
 type I18n = ReturnType<typeof useI18n>
@@ -165,7 +160,7 @@ export function FeatureLevelPanel({ scope }: { scope: Scope }) {
 function StateBadge({ row }: { row: FeatureLevelRow }) {
   const i18n = useI18n()
   if (row.state === 'locked') return <Badge variant="secondary" size="sm"><Lock className="h-3 w-3" aria-hidden="true" />{i18n.t('已锁定')}</Badge>
-  if (row.state === 'enabled') return <Badge variant="success" size="sm">{i18n.t('启用')}</Badge>
+  if (row.state === 'enabled') return <Badge variant="outline" size="sm">{i18n.t('启用')}</Badge>
   if (row.state === 'disabled') return <Badge variant="outline" size="sm">{i18n.t('已关闭')}</Badge>
   return <Badge variant="outline" size="sm">{i18n.t('状态未知')}</Badge>
 }
@@ -218,7 +213,7 @@ function FeatureRow({ scope, level, levelKey, feature, row, detail, reload, adop
   // Kept per scope + plugin outside the tab (action-receipt-store): leaving 功能 mid-write or with an
   // unknown outcome and coming back shows the same receipt, so the write cannot be sent twice.
   const receipt = useActionReceipt({
-    persistKey: `feature:${level}:${levelKey}:${feature.plugin}`,
+    persistKey: featureReceiptKey(level, levelKey, feature.plugin),
     submit: async plan => {
       const current = pendingOf(plan)
       if (!current) throw new Error('No change')
@@ -324,6 +319,8 @@ function FeatureRow({ scope, level, levelKey, feature, row, detail, reload, adop
   const switchState = { checked: row.state === 'enabled', disabled: !value || row.state === 'locked' || !canToggle, busy }
   const sourceLabel = row.stateSource ? i18n.t(SCOPE_LEVEL_LABELS[row.stateSource]) : null
   const expandable = Boolean(value)
+  // Who changed this level and through what (chat self-service, Console, CLI), when the Host says (#1250).
+  const provenance = value && row.overriddenHere ? overrideProvenance(value, i18n.locale) : null
   return (
     <div role="listitem" className={cn('console-feature-row', open && 'is-open')}>
       <div className="console-feature-row-head">
@@ -340,20 +337,23 @@ function FeatureRow({ scope, level, levelKey, feature, row, detail, reload, adop
             <StateBadge row={row} />
             {row.lockedBy ? <LockLink row={row} scope={scope} />
               : sourceLabel ? <span className="console-feature-source">{row.stateSource === level ? i18n.t('本层设置') : i18n.t('继承自{0}', [sourceLabel])}</span> : null}
-            {row.overriddenHere ? <Badge variant="info" size="sm">{row.fieldOverrides ? i18n.t('本层覆盖 {0} 项', [row.fieldOverrides + (row.switchOverridden ? 1 : 0)]) : i18n.t('本层覆盖开关')}</Badge> : null}
+            {row.overriddenHere ? <Badge variant="info" size="sm" title={provenance ?? undefined}>{row.fieldOverrides ? i18n.t('本层覆盖 {0} 项', [row.fieldOverrides + (row.switchOverridden ? 1 : 0)]) : i18n.t('本层覆盖开关')}</Badge> : null}
             {!row.configurable ? <Badge variant="outline" size="sm">{i18n.t('仅开关')}</Badge> : null}
           </> : null}
         </div>
         <div className="console-feature-row-switch">
-          <Switch aria-label={i18n.t('{0} · 启用', [row.displayName])} checked={switchState.checked} disabled={switchState.disabled}
-            aria-disabled={switchState.disabled || switchState.busy || undefined} className={switchState.busy ? 'cursor-wait opacity-60' : undefined}
-            title={!canToggle ? i18n.t('当前身份不能启停功能') : undefined} onCheckedChange={checked => { if (!switchState.disabled && !switchState.busy) toggle(checked === true) }} />
+          <SwitchHitArea>
+            <Switch aria-label={i18n.t('{0} · 启用', [row.displayName])} checked={switchState.checked} disabled={switchState.disabled}
+              aria-disabled={switchState.disabled || switchState.busy || undefined} className={switchState.busy ? 'cursor-wait opacity-60' : undefined}
+              title={!canToggle ? i18n.t('当前身份不能启停功能') : undefined} onCheckedChange={checked => { if (!switchState.disabled && !switchState.busy) toggle(checked === true) }} />
+          </SwitchHitArea>
         </div>
       </div>
       {detail.status === 'failed' ? <div className="console-feature-row-body"><StatusState compact error={detail.error} onRetry={reload} /></div> : null}
       <ActionReceipt controller={receipt} className="console-feature-row-receipt" lockHref={featureLockHref(receipt.state.status?.lockedBy ?? row.lockedBy ?? 'global', scope)} onRestarted={reload} />
       {open && value ? (
         <div className="console-feature-row-body">
+          {provenance ? <p className="text-xs text-muted-foreground" role="note">{provenance}</p> : null}
           <FeatureFields scope={scope} feature={feature} level={level} detail={value} row={row} editing={editing} setEditing={setEditing}
             canConfigure={canConfigure} busy={busy} onSave={saveField} onRemove={removeField} canReferenceEnv={canReferenceEnv} envRefused={envRefused} />
           {row.overriddenHere && canConfigure ? (

@@ -10,19 +10,22 @@ import { describeCron, relativeUntil } from '../console-ui/src/pages/cron-schedu
 import { validateAssistantJobs, explainJobError } from '../console-ui/src/pages/assistant-jobs-model.mjs'
 import * as applyOutcome from '../console-ui/src/components/apply-outcome-model.mjs'
 import { taskTabHref } from '../console-ui/src/pages/task-hub-model.mjs'
+import * as scheduleMemory from '../console-ui/src/pages/schedule-memory-model.mjs'
+import * as scheduleTarget from '../console-ui/src/pages/schedule-target-model.mjs'
+import * as featureDisabled from '../console-ui/src/utils/feature-disabled.mjs'
 import { createInboxCacheAuthority } from '../console-ui/src/utils/inbox-cache-scope.mjs'
 
 const require = createRequire(import.meta.url)
 const compilerOptions = { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX }
 const source = await readFile(new URL('../console-ui/src/pages/cron.tsx', import.meta.url), 'utf8')
-const selectSource = await readFile(new URL('../console-ui/src/components/ui/select.tsx', import.meta.url), 'utf8')
 function compile(source, mocks, extras = {}) {
   const module = { exports: {} }
   const code = ts.transpileModule(source, { compilerOptions }).outputText
   new Function('require', 'exports', 'module', ...Object.keys(extras), code)(name => isLocaleImport(name) ? localeModule : Object.hasOwn(mocks, name) ? mocks[name] : require(name), module.exports, module, ...Object.values(extras))
   return module.exports
 }
-const select = compile(selectSource, { '@zhin.js/client': { cn: (...classes) => classes.filter(Boolean).join(' ') } })
+// The real dropdown from the published @zhin.js/console-ui; the page's other components stay mocked.
+const select = Object.fromEntries(Object.entries(await import('@zhin.js/console-ui')).filter(([name]) => name.startsWith('Select')))
 const persistent = [
   { type: 'persistent', id: 'task:daily', label: '早间摘要', prompt: '整理今天的重要消息', cronExpression: '0 0 9 * * *', enabled: true, createdAt: 12345, nextExecution: Date.now() + 3600000, lastStatus: 'error' },
   { type: 'persistent', id: 'task:paused', prompt: '检查家里温度', cronExpression: '0 */10 * * * *', enabled: false },
@@ -42,19 +45,13 @@ function fixture({ readOnly = false, available = true, jobs = [], deferJobs = fa
   }
   const module = compile(source + '\nexport { PersistentRunStatus, CronPageSession };', {
     react: hooks, 'react-router-dom': { Link: 'a' }, 'lucide-react': new Proxy({}, { get: () => 'i' }),
-    '../components/ui/button': { Button: 'button' }, '../components/StatusState': { StatusState: 'status-state' },
+    '@zhin.js/console-ui': { Button: 'button', Card: 'article', CardContent: 'section', Badge: 'span', Alert: 'aside', AlertDescription: 'p', Skeleton: 'div', Input: 'input', Textarea: 'textarea', Separator: 'hr', ...(select), Dialog: 'dialog', DialogContent: 'section', DialogHeader: 'header', DialogFooter: 'footer', DialogTitle: 'h2', DialogDescription: 'p', DialogClose: 'close', PageHeader: 'page-header', Tabs: 'tabs', TabsList: 'tab-list', TabsTrigger: 'tab-trigger', TabsContent: 'tab-panel' }, '../components/StatusState': { StatusState: 'status-state' },
     '../components/ApplyFeedback': { useSaveOutcome: () => ({ value: null, clear() {}, element: null, report: async (subject, outcome, check) => { saves.push({ subject, outcome, check }) } }) },
-    '../components/apply-outcome-model.mjs': applyOutcome, '../components/ui/card': { Card: 'article', CardContent: 'section' },
-    '../components/ui/badge': { Badge: 'span' }, '../components/ui/alert': { Alert: 'aside', AlertDescription: 'p' },
-    '../components/ui/skeleton': { Skeleton: 'div' }, '../components/ui/input': { Input: 'input' }, '../components/ui/textarea': { Textarea: 'textarea' }, '../components/ui/separator': { Separator: 'hr' }, '../components/ui/select': select,
-    '../components/ui/dialog': { Dialog: 'dialog', DialogContent: 'section', DialogHeader: 'header', DialogFooter: 'footer', DialogTitle: 'h2', DialogDescription: 'p', DialogClose: 'close' },
-    '../components/toast': { useToast: () => ({ error: message => errors.push(message) }) }, '../components/PageHeader': { PageHeader: 'page-header' },
-    '../contracts/zhin-console': { CONSOLE_RPC: { SCHEDULE_LIST: 'schedule:list', CRON_VALIDATE: 'cron:validate', CRON_ADD: 'cron:add', CRON_REMOVE: 'cron:remove', CRON_PAUSE: 'cron:pause', CRON_RESUME: 'cron:resume' } },
+    '../components/apply-outcome-model.mjs': applyOutcome, '../components/toast': { useToast: () => ({ error: message => errors.push(message) }) }, '../contracts/zhin-console': { CONSOLE_RPC: { SCHEDULE_LIST: 'schedule:list', CRON_VALIDATE: 'cron:validate', CRON_ADD: 'cron:add', CRON_REMOVE: 'cron:remove', CRON_PAUSE: 'cron:pause', CRON_RESUME: 'cron:resume' } },
     '../utils/console-rpc': { requestConsole: input => new Promise((resolve, reject) => calls.push({ input, resolve, reject, answered: false, scope: authority.current() })) },
     '../utils/useInboxCacheScope': { useInboxCacheScope: () => authority.current() }, '../utils/inbox-cache': { isInboxCacheScopeActive: scope => authority.active(scope) },
     '../utils/console-access.mjs': { hasConsolePermission: () => !readOnly }, './cron-schedule.mjs': { describeCron, relativeUntil },
-    './assistant-jobs-model.mjs': { validateAssistantJobs, explainJobError }, './task-hub-model.mjs': { taskTabHref },
-    '../components/ui/tabs': { Tabs: 'tabs', TabsList: 'tab-list', TabsTrigger: 'tab-trigger', TabsContent: 'tab-panel' },
+    './assistant-jobs-model.mjs': { validateAssistantJobs, explainJobError }, './task-hub-model.mjs': { taskTabHref }, './schedule-memory-model.mjs': scheduleMemory, './schedule-target-model.mjs': scheduleTarget, '../utils/feature-disabled.mjs': featureDisabled,
     './ScheduleExecutions': { ScheduleExecutions: 'schedule-executions' },
     '../components/log-panel/LogPanel': { useLogPanel: () => ({ available: false, open() {} }) },
     '../utils/auth': { apiFetch: (url, options) => new Promise((resolve, reject) => { httpCalls.push({ url, options, resolve, reject, scope: authority.current() }); if (!deferJobs) resolve({ ok: true, json: async () => ({ success: true, data: { jobs, eventsActive: false } }) }) }) }, './cron.css': {},

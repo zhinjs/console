@@ -1,12 +1,16 @@
-import { useId } from 'react'
+import { useId, type ReactNode } from 'react'
 import { Moon, Sun, Monitor, Palette, RotateCcw, Check } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { useTheme } from '../hooks/useTheme'
 import { THEME_PALETTES, type ThemeMode } from '../theme'
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@zhin.js/console-ui'
 import '../theme/appearance.css'
 
-export function ThemeToggle() {
+/**
+ * The appearance panel. Without props it brings its own trigger button; the top bar's user menu
+ * instead opens it (`open` / `onOpenChange`) anchored to the menu button (`anchor`).
+ */
+export function ThemeToggle({ open, onOpenChange, anchor }: { open?: boolean; onOpenChange?: (open: boolean) => void; anchor?: ReactNode } = {}) {
   const i18n = useI18n()
   const { theme, mode, palette, setMode, setPalette, resetTheme } = useTheme()
   const id = useId()
@@ -15,8 +19,8 @@ export function ThemeToggle() {
     { id: 'dark' as const, label: i18n.t('暗色'), icon: Moon },
     { id: 'system' as const, label: i18n.t('跟随系统'), icon: Monitor },
   ]
-  return <Popover>
-    <PopoverTrigger asChild><button type="button" className="console-icon-button console-theme-trigger" title={i18n.t('外观与主题')} aria-label={i18n.t('切换主题')}>{theme === 'dark' ? <Moon /> : <Sun />}<span className="console-theme-trigger-dot" aria-hidden="true" /></button></PopoverTrigger>
+  return <Popover {...(anchor ? { open, onOpenChange } : {})}>
+    {anchor ? <PopoverAnchor asChild>{anchor}</PopoverAnchor> : <PopoverTrigger asChild><button type="button" className="console-icon-button console-theme-trigger" title={i18n.t('外观与主题')} aria-label={i18n.t('切换主题')}>{theme === 'dark' ? <Moon /> : <Sun />}<span className="console-theme-trigger-dot" aria-hidden="true" /></button></PopoverTrigger>}
     <PopoverContent align="end" className="console-appearance-panel" aria-labelledby={`${id}-title`}>
       <div className="console-appearance-heading"><Palette className="h-4 w-4" aria-hidden="true" /><h2 id={`${id}-title`}>{i18n.t('外观与主题')}</h2></div>
       <fieldset className="console-appearance-section"><legend>{i18n.t('显示模式')}</legend><div className="console-appearance-modes">
@@ -26,7 +30,7 @@ export function ThemeToggle() {
         </label>)}
       </div></fieldset>
       <fieldset className="console-appearance-section"><legend>{i18n.t('配色方案')}</legend>
-        {[{ id: 'fresh', title: i18n.t('鲜活配色') }, { id: 'calm', title: i18n.t('沉静配色') }].map(group => <div key={group.id} className="console-palette-group">
+        {[{ id: 'brand', title: i18n.t('品牌配色') }, { id: 'fresh', title: i18n.t('鲜活配色') }, { id: 'calm', title: i18n.t('沉静配色') }].map(group => <div key={group.id} className="console-palette-group">
           <h3>{group.title}</h3><div className="console-appearance-palettes">
             {THEME_PALETTES.filter(item => item.group === group.id).map(item => <label key={item.id} className="console-palette-choice">
               <input type="radio" name={`${id}-palette`} value={item.id} checked={palette === item.id} onChange={() => setPalette(item.id)} />

@@ -5,20 +5,23 @@
  */
 import { translate } from '../i18n/locale.mjs'
 import { conversationHref } from '../console-routes.mjs'
+import { isPluginInternalSchedule, memoryScheduleLastRun, memoryScheduleTitle } from './schedule-memory-model.mjs'
+import { scheduleTargetView, scheduleTargetWarning } from './schedule-target-model.mjs'
 
 const KINDS = new Set(['private', 'group', 'channel'])
 
 function statusOf(code, locale) {
   const t = text => translate(locale, text)
+  // Steady states (running, done, enabled, succeeded) use the neutral outline badge; console#125.
   const table = {
     scheduled: [t('已排期'), 'secondary'],
-    running: [t('运行中'), 'info'],
+    running: [t('运行中'), 'outline'],
     paused: [t('已暂停'), 'secondary'],
     failed: [t('失败'), 'destructive'],
     unknown: [t('结果不确定'), 'warning'],
-    succeeded: [t('已完成'), 'success'],
+    succeeded: [t('已完成'), 'outline'],
     cancelled: [t('已取消'), 'secondary'],
-    enabled: [t('已启用'), 'success'],
+    enabled: [t('已启用'), 'outline'],
     pending: [t('待审批'), 'warning'],
   }
   const [label, tone] = table[code] ?? [code, 'secondary']
@@ -29,7 +32,7 @@ function lastResultOf(status, at, locale) {
   const value = String(status ?? '').toLowerCase()
   if (!value) return null
   const t = text => translate(locale, text)
-  if (value === 'ok' || value === 'succeeded' || value === 'success') return { label: t('成功'), tone: 'success', at }
+  if (value === 'ok' || value === 'succeeded' || value === 'success') return { label: t('成功'), tone: 'outline', at }
   if (value === 'error' || value === 'failed') return { label: t('失败'), tone: 'destructive', at }
   if (value === 'skipped') return { label: t('已跳过'), tone: 'secondary', at }
   return { label: value, tone: 'secondary', at }
@@ -45,6 +48,21 @@ function adminTarget(target) {
 }
 
 const finite = value => (Number.isFinite(value) ? value : null)
+
+/**
+ * Target columns of an assistant-run job: the Host's resolved `target` (#1250) when it sends one —
+ * its account and conversation, or 「无效」 with the reason and the next run that will not arrive —
+ * else the previous 「AI 助手」.
+ */
+function assistantTarget(target, nextRunAt, locale) {
+  const view = scheduleTargetView(target, locale)
+  if (!view) return { target: translate(locale, 'AI 助手'), targetHref: null }
+  return {
+    target: view.display ?? (view.valid ? translate(locale, 'AI 助手') : null),
+    targetHref: null,
+    targetIssue: view.valid ? null : scheduleTargetWarning(view, nextRunAt, locale),
+  }
+}
 
 /**
  * `sources`：`{ admin: TaskProviders | null, schedules: { memory, persistent } | null,
@@ -82,15 +100,18 @@ export function taskOverviewRows(sources, locale = 'zh-CN') {
   const persistentIds = new Set()
   if (schedules && typeof schedules === 'object') {
     for (const item of Array.isArray(schedules.memory) ? schedules.memory : []) {
+      // A plugin's own housekeeping (polling, cleanup) is its own type, listed folded (#1250).
+      const internal = isPluginInternalSchedule(item)
+      const last = memoryScheduleLastRun(item)
       rows.push({
         key: `memory:${item.id ?? item.expression}:${item.plugin ?? ''}`,
-        type: 'schedule',
-        typeLabel: t('定时提醒'),
-        title: item.description || item.id || item.expression,
+        type: internal ? 'internal' : 'schedule',
+        typeLabel: internal ? t('插件内部任务') : t('定时提醒'),
+        title: memoryScheduleTitle(item, locale),
         detail: item.expression,
         status: statusOf(item.running === false ? 'paused' : 'running', locale),
         nextRunAt: finite(item.nextExecution),
-        lastResult: null,
+        lastResult: last ? { ...(lastResultOf(last.status, last.at, locale) ?? { label: t('已执行'), tone: 'secondary' }), at: last.at, ...(last.error ? { error: last.error } : {}) } : null,
         target: item.plugin ? t('插件 {0}', [item.plugin]) : null,
         targetHref: null,
         approval: null,
@@ -108,8 +129,7 @@ export function taskOverviewRows(sources, locale = 'zh-CN') {
         status: statusOf(item.enabled === false ? 'paused' : 'enabled', locale),
         nextRunAt: finite(item.nextExecution),
         lastResult: lastResultOf(item.lastStatus, finite(item.lastExecutedAt), locale),
-        target: t('AI 助手'),
-        targetHref: null,
+        ...assistantTarget(item.target, finite(item.nextExecution), locale),
         approval: null,
         tab: 'schedule',
       })
@@ -130,8 +150,7 @@ export function taskOverviewRows(sources, locale = 'zh-CN') {
         status: statusOf(job.enabled ? 'enabled' : 'paused', locale),
         nextRunAt: finite(job.state?.nextRunAtMs),
         lastResult: failing ? lastResultOf('error', null, locale) : lastResultOf(job.state?.lastStatus, null, locale),
-        target: t('AI 助手'),
-        targetHref: null,
+        ...assistantTarget(job.target, finite(job.state?.nextRunAtMs), locale),
         approval: null,
         tab: 'assistant',
       })
@@ -158,7 +177,7 @@ export function taskOverviewRows(sources, locale = 'zh-CN') {
     }
   } else if (approvals !== undefined) unavailable.push('approvals')
 
-  const urgency = row => row.type === 'approval' ? 0 : row.status.tone === 'destructive' || row.lastResult?.tone === 'destructive' ? 1 : row.status.tone === 'warning' ? 2 : 3
+  const urgency = row => row.type === 'approval' ? 0 : row.status.tone === 'destructive' || row.lastResult?.tone === 'destructive' ? 1 : row.status.tone === 'warning' || row.targetIssue ? 2 : 3
   rows.sort((a, b) => urgency(a) - urgency(b)
     || (a.nextRunAt ?? Number.MAX_SAFE_INTEGER) - (b.nextRunAt ?? Number.MAX_SAFE_INTEGER)
     || a.title.localeCompare(b.title))
@@ -179,6 +198,16 @@ export function needsAttention(row) {
   return row.type === 'approval'
     || row.status.tone === 'destructive' || row.status.tone === 'warning'
     || row.lastResult?.tone === 'destructive'
+    || Boolean(row.targetIssue)
+}
+
+/**
+ * Splits a plugin's internal housekeeping off the main list (shown folded under it). An internal task
+ * whose last run failed stays in the main list, where problems are read.
+ */
+export function splitInternalTasks(rows) {
+  const folded = row => row.type === 'internal' && !needsAttention(row)
+  return { main: rows.filter(row => !folded(row)), internal: rows.filter(folded) }
 }
 
 export function filterTaskOverview(rows, filter) {

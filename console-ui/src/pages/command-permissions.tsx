@@ -2,14 +2,7 @@ import { useI18n } from '../i18n'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Blocks, RefreshCw } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
-import { Button } from '../components/ui/button'
-import { Checkbox } from '../components/ui/checkbox'
-import { Input } from '../components/ui/input'
-import { SelectField } from '../components/ui/select'
-import { Alert, AlertDescription } from '../components/ui/alert'
-import { PageHeader } from '../components/PageHeader'
-import { PageShell } from '../components/PageShell'
+import { Alert, AlertDescription, Button, Card, CardContent, CardHeader, CardTitle, Checkbox, Input, PageHeader, PageShell, SelectField } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import { ConversationTargetEditor, ConversationTargetSummary } from '../components/PluginConfigForm/ConversationTargetEditor'
 import { apiFetch } from '../utils/auth'
@@ -121,7 +114,7 @@ export default function CommandPermissionsPage() {
   }, [current])
   const catalogState = permissionCatalogState({ denied, active, loading, error: catalogError, catalog: current })
 
-  return <PageShell className="max-w-6xl">
+  return <PageShell>
     <PageHeader title={i18n.t("命令权限说明")}
       description={i18n.t("查看规则为什么匹配。这里只做说明与假设检查，不执行命令，也不向平台查询或验证权限。")}
       actions={<Button asChild variant="outline" size="sm"><Link to="/introspection?tab=commands"><Blocks />{i18n.t("返回命令目录")}</Link></Button>} />

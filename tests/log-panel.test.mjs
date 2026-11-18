@@ -162,7 +162,7 @@ function renderViewer(params, onParamsChange, variant) {
   const mod = compile(viewerSource, {
     react: { ...runtime.hooks, useEffect() {}, useLayoutEffect() {} },
     '../../i18n': { useI18n: () => i18n }, '../../utils/auth': { apiFetch: async () => { throw new Error('no network in tests') } },
-    '../../components/toast': { useToast: () => ({ success() {}, error() {} }) }, '../../components/confirm-dialog': { ConfirmDialog: 'confirm-dialog' },
+    '../../components/toast': { useToast: () => ({ success() {}, error() {} }) }, '@zhin.js/console-ui': { ConfirmDialog: 'confirm-dialog' },
     '../../contracts/zhin-console': { CONSOLE_REST: { LOGS: '/api/logs', LOGS_STATS: '/api/logs/stats', LOGS_CLEANUP: '/api/logs/cleanup' } },
     '../../utils/read-error.mjs': readError, './read-state.mjs': readState, '../../utils/console-access.mjs': { hasConsolePermission: () => true },
     './LogWorkbench': { LogWorkbench: 'log-workbench' }, './LogPanelWorkbench': { LogPanelWorkbench: 'log-panel-workbench' },
@@ -204,8 +204,7 @@ test('/logs keeps URL-backed filters: deep links like /logs?q=… render and cha
   const page = compile(await source('pages/logs.tsx'), {
     react: runtime.hooks, '../i18n': { useI18n: () => i18n },
     'react-router-dom': { useSearchParams: () => [urlParams, (next, options) => writes.push([next.toString(), options])] },
-    '../components/PageHeader': { PageHeader: 'page-header' }, '../components/PageShell': { PageShell: 'page-shell' },
-    '../utils/console-access.mjs': { hasConsolePermission: () => false }, './logs/LogViewer': { LogViewer: 'log-viewer' },
+    '@zhin.js/console-ui': { PageHeader: 'page-header', PageShell: 'page-shell' }, '../utils/console-access.mjs': { hasConsolePermission: () => false }, './logs/LogViewer': { LogViewer: 'log-viewer' },
   })
   const tree = runtime.render(() => page.default())
   const viewer = nodes(tree).find(node => node.type === 'log-viewer')
@@ -225,7 +224,7 @@ function panelFixture({ pathname = '/scope/qq/bot-1', mobile = false, access = U
     react: runtime.hooks,
     'react-router-dom': { Link: 'a', useLocation: () => ({ pathname, search: '' }) },
     'lucide-react': lucide, '@zhin.js/client': { cn: (...values) => values.filter(Boolean).join(' ') },
-    '../../i18n': { useI18n: () => i18n }, '../ui/button': { Button: 'button' }, '../../pages/logs/LogViewer': { LogViewer: 'log-viewer' },
+    '../../i18n': { useI18n: () => i18n }, '@zhin.js/console-ui': { cn: (...values) => values.filter(Boolean).join(' '), Button: 'button' }, '../../pages/logs/LogViewer': { LogViewer: 'log-viewer' },
     '../../hooks/useIsMobile': { useIsMobile: () => mobile }, '../../hooks/use-console-access': { useConsoleAccess: () => access },
     '../../utils/console-client': { app: { subscribe() { return () => {} }, getRoutes: () => routes } },
     './log-panel-store.mjs': storeModule, './log-panel-model.mjs': model, '../../pages/insights/scope-filter.mjs': scopeFilter,
@@ -262,10 +261,10 @@ test('docked panel: full-width region at the bottom, no backdrop, not modal; the
     assert.equal(separator.props['aria-valuemin'], model.LOG_PANEL_MIN_HEIGHT)
     const link = nodes(f.render()).find(node => node.type === 'a')
     assert.equal(link.props.to, '/logs?level=error&q=boom', '在日志页打开 carries the same filter')
-    assert.equal(f.env.styleProps.get('--console-log-panel-reserve'), `${storeModule.logPanelStore.get().height}px`, 'the page reserves the panel height')
+    assert.equal(f.env.styleProps.get('--zc-log-panel-reserve'), `${storeModule.logPanelStore.get().height}px`, 'the page reserves the panel height')
     storeModule.closeLogPanel()
     assert.equal(f.render(), null)
-    assert.equal(f.env.styleProps.has('--console-log-panel-reserve'), false)
+    assert.equal(f.env.styleProps.has('--zc-log-panel-reserve'), false)
   } finally { f.close() }
 })
 
@@ -300,7 +299,7 @@ test('top-bar button: icon with tooltip, aria-expanded / aria-controls follow th
     let button = f.button()
     assert.equal(button.props['aria-expanded'], false)
     assert.equal(button.props['aria-controls'], model.LOG_PANEL_ID)
-    assert.match(button.props.title, /打开日志面板（Ctrl `）/)
+    assert.match(button.props['data-tooltip'], /打开日志面板（Ctrl `）/)
     button.props.onClick()
     button = f.button()
     assert.equal(button.props['aria-expanded'], true)
@@ -385,8 +384,7 @@ test('login task cards open the panel filtered to their adapter and account, wit
   const mod = compile(await source('pages/scope/login-tasks.tsx'), {
     react: { ...runtime.hooks, useEffect() {} },
     '../../hooks/use-instance-recovery': { useInstanceRecovery() {} }, 'lucide-react': lucide, '../../i18n': { useI18n: () => i18n },
-    '../../components/ui/badge': { Badge: 'span' }, '../../components/ui/button': { Button: 'button' }, '../../components/ui/input': { Input: 'input' },
-    '../../components/ActionReceipt': { ActionReceipt: 'receipt', useActionReceipt: () => ({ state: { phase: 'idle' }, prepare() {} }) },
+    '@zhin.js/console-ui': { Badge: 'span', Button: 'button', Input: 'input' }, '../../components/ActionReceipt': { ActionReceipt: 'receipt', useActionReceipt: () => ({ state: { phase: 'idle' }, prepare() {} }) },
     '../../components/action-receipt-model.mjs': { receiptBlocksActions: () => false }, '../../contracts/zhin-console': { ENDPOINT_RPC: {} },
     '../../hooks/visible-polling.mjs': { startVisiblePolling: () => () => {} }, '../../hooks/use-console-access': { useConsoleAccess: () => UNRESTRICTED_ACCESS },
     '../../utils/console-access.mjs': { hasConsolePermission: () => true }, '../../utils/console-rpc': { requestConsole: async () => ({}) },
@@ -422,10 +420,7 @@ test('panel workbench: one toolbar row, single-line rows, no section header, cou
   const runtime = hookRuntime()
   const mod = compile(await source('pages/logs/LogPanelWorkbench.tsx'), {
     react: runtime.hooks, 'lucide-react': lucide, '@zhin.js/client': { cn: (...values) => values.filter(Boolean).join(' ') }, '../../i18n': { useI18n: () => i18n },
-    '../../components/ui/button': { Button: 'button' }, '../../components/ui/checkbox': { Checkbox: 'checkbox' }, '../../components/ui/input': { Input: 'input' },
-    '../../components/ui/select': { SelectField: 'select-field' }, '../../components/error-alert': { ErrorAlert: 'error-alert' }, '../../components/ui/list-item-button': { ListItemButton: 'button' },
-    '../../components/ui/dropdown-menu': Object.fromEntries(['DropdownMenu', 'DropdownMenuTrigger', 'DropdownMenuContent', 'DropdownMenuItem', 'DropdownMenuLabel', 'DropdownMenuSeparator', 'DropdownMenuCheckboxItem'].map(name => [name, name])),
-    './history-model.mjs': historyModel,
+    '@zhin.js/console-ui': { cn: (...values) => values.filter(Boolean).join(' '), Button: 'button', Checkbox: 'checkbox', Input: 'input', SelectField: 'select-field', ErrorAlert: 'error-alert', ListItemButton: 'button', ...(Object.fromEntries(['DropdownMenu', 'DropdownMenuTrigger', 'DropdownMenuContent', 'DropdownMenuItem', 'DropdownMenuLabel', 'DropdownMenuSeparator', 'DropdownMenuCheckboxItem'].map(name => [name, name]))) }, './history-model.mjs': historyModel,
     './LogWorkbench': { getLevelMeta: level => ({ label: level, icon: 'LevelIcon', className: `is-${level}` }), formatLogTime: () => '12:00:00', LogInspector: 'log-inspector' },
   })
   const logs = Array.from({ length: 3 }, (_, index) => ({ id: index + 1, level: index ? 'info' : 'error', source: 'icqq', message: `message ${index} `.repeat(30), timestamp: '2026-11-13T00:00:00Z' }))

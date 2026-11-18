@@ -59,7 +59,7 @@ export const statusMessages = Object.freeze({
   "正在读取…": "Loading…",
   "正在从 Host 读取数据。": "Reading data from the Host.",
   "仍在加载…": "Still loading…",
-  "已经等了 {0} 秒还没有答复。常见原因：": "No answer after {0} seconds. Common causes:",
+  "已经等了 {0} 秒还没有答复。常见原因：": { one: "No answer after {0} second. Common causes:", other: "No answer after {0} seconds. Common causes:" },
   "网关没有响应：Host 进程没有在运行，或 API 地址填错了。": "The gateway does not answer: the Host process is not running, or the API address is wrong.",
   "WebSocket / 实时事件流被拦截：反向代理或防火墙没有放行长连接与 Upgrade 请求。": "WebSocket / the live event stream is blocked: a reverse proxy or firewall does not allow long-lived connections and Upgrade requests.",
   "反向代理的路径前缀与 API 地址不一致，请求被转给了别的服务。": "The reverse proxy's path prefix does not match the API address, so requests reach another service.",

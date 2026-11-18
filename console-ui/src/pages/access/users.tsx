@@ -1,22 +1,12 @@
 import { useId, useMemo, useRef, useState } from 'react'
 import { KeyRound, MoreHorizontal, Pencil, Plus, RefreshCw, ShieldCheck, Trash2, UserCheck, UserX } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { PageShell } from '../../components/PageShell'
-import { PageHeader } from '../../components/PageHeader'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/button'
-import { Card } from '../../components/ui/card'
-import { Input } from '../../components/ui/input'
-import { Skeleton } from '../../components/ui/skeleton'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table'
+import { Badge, Button, Card, ConfirmDialog, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, Input, PageHeader, PageShell, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
 import { ActionReceipt, useActionReceipt } from '../../components/ActionReceipt'
 import { useSaveOutcome } from '../../components/ApplyFeedback'
 import { outcomeFromAccessWrite, recordReadBack } from '../../components/apply-outcome-model.mjs'
 import { receiptBlocksActions } from '../../components/action-receipt-model.mjs'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../../components/ui/dropdown-menu'
-import { ConfirmDialog } from '../../components/confirm-dialog'
 import {
   IAM_RPC, bindingInputs, bindingKeys, breaksLastOwner, userReadBackView, displayNameProblem, isGlobalOwner, passwordProblem, readRoles, readUsers, usernameProblem,
   type IamBinding, type IamRole, type IamUser,
@@ -137,7 +127,7 @@ export default function AccessUsersPage() {
                     <TableCell>
                       {user.disabled
                         ? <Badge variant="outline" className="whitespace-nowrap">{i18n.t("已禁用")}</Badge>
-                        : <Badge variant="success" className="whitespace-nowrap">{i18n.t("启用")}</Badge>}
+                        : <Badge variant="outline" className="whitespace-nowrap">{i18n.t("启用")}</Badge>}
                     </TableCell>
                     <TableCell className="hidden whitespace-nowrap text-muted-foreground lg:table-cell">
                       {user.passwordChangedAt ? i18n.date(user.passwordChangedAt, { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
@@ -405,7 +395,7 @@ function ResetPasswordDialog({ user, onClose, onDone }: { user: IamUser; onClose
           {error ? <p role="alert" className="text-sm text-destructive break-words">{error}</p> : null}
           <DialogFooter>
             <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={saving}>{i18n.t("取消")}</Button>
-            <Button type="submit" size="sm" variant="destructive" disabled={saving}>{saving ? i18n.t("处理中...") : i18n.t("重置密码")}</Button>
+            <Button type="submit" size="sm" variant="destructive-solid" disabled={saving}>{saving ? i18n.t("处理中...") : i18n.t("重置密码")}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

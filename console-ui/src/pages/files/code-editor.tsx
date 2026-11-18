@@ -83,7 +83,7 @@ export function CodeEditor({
         style={{
           ...editorFontStyle,
           color: 'transparent',
-          caretColor: 'var(--console-code-foreground)',
+          caretColor: 'var(--zc-code-foreground)',
           WebkitTextFillColor: 'transparent',
         }}
         spellCheck={false}

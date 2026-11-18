@@ -1,6 +1,6 @@
 import { Bell } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { cn } from '@zhin.js/client'
+import { cn } from '@zhin.js/console-ui'
 import { useI18n } from '../../i18n'
 import { ATTENTION_PATH, attentionInstanceNotice } from './attention-model.mjs'
 import { useAttention } from './use-attention'
@@ -20,7 +20,7 @@ export function AttentionBadge() {
     ? i18n.t('需要你处理：{0}', [attentionInstanceNotice(state.data?.instance, i18n.locale).title])
     : badgeCount > 0 ? i18n.t('需要你处理：{0} 项', [badgeCount]) : i18n.t('需要你处理：没有待办')
   return (
-    <Link to={ATTENTION_PATH} className="console-attention-badge" title={label} aria-label={label}>
+    <Link to={ATTENTION_PATH} className="console-attention-badge" data-tooltip={label} aria-label={label}>
       <Bell className="h-4 w-4" aria-hidden="true" />
       {badgeCount > 0 ? (
         <span className={cn('console-attention-badge-count', danger && 'is-danger')} aria-hidden="true">

@@ -2,10 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Activity, ArrowUpRight, BrainCircuit, FileText, MessageSquare, MessagesSquare, type LucideIcon } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/button'
-import { Card } from '../../components/ui/card'
-import { Skeleton } from '../../components/ui/skeleton'
+import { Badge, Button, Card, Skeleton } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
 import { apiFetch } from '../../utils/auth'
 import { agentSessionsPath, parseImSessionKey, SESSION_SCOPE_LABELS } from '../../utils/agent-session'
@@ -24,7 +21,7 @@ const RECENT_SESSIONS_PATH = '/api/agent/trace-archive/sessions'
 const SESSION_LIMIT = 8
 
 const SOURCE_ICONS: Record<RecordSourceId, LucideIcon> = { sessions: MessagesSquare, replay: BrainCircuit, logs: FileText, audit: Activity }
-const ASSOCIATION_VARIANT: Record<RecordAssociation, 'success' | 'warning' | 'outline' | 'secondary'> = { exact: 'success', partial: 'warning', text: 'outline', all: 'secondary' }
+const ASSOCIATION_VARIANT: Record<RecordAssociation, 'warning' | 'outline' | 'secondary'> = { exact: 'outline', partial: 'warning', text: 'outline', all: 'secondary' }
 
 type SessionsState = { status: 'loading' } | { status: 'error'; error: unknown } | { status: 'ready'; rows: RecentSession[]; total: number }
 
@@ -101,7 +98,7 @@ export function ScopeRecordsPanel({ scope }: { scope: Scope }) {
           ) : sessions.status === 'error' ? (
             <StatusState compact error={sessions.error} permissions={['status.view']} />
           ) : sessions.rows.length === 0 ? (
-            <StatusState compact kind="empty" title={i18n.t('还没有聊天记录')}
+            <StatusState compact kind="empty" illustration="messages" title={i18n.t('还没有聊天记录')}
               description={i18n.t('机器人在这个范围里处理过消息后，会话会出现在这里。')}
               actions={level === 'endpoint' || level === 'conversation'
                 ? <Button asChild size="sm" variant="outline"><Link to={scopeHref(scope, 'chat')}>{i18n.t('打开聊天')}</Link></Button>

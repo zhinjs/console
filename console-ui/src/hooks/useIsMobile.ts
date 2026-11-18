@@ -1,8 +1,11 @@
 import { useSyncExternalStore } from 'react'
 
-const MOBILE_QUERY = '(max-width: 767px)'
-/** Below this width the top bar cannot hold every section, so navigation moves into a drawer. */
-const COMPACT_NAV_QUERY = '(max-width: 1099px)'
+const MOBILE_QUERY = '(width < 48rem)'
+/**
+ * Below this width the top bar cannot hold every section, so navigation moves into a drawer. Not a
+ * Console breakpoint: the sections need 1100px (shell.css pairs its `@media (width < 1100px)`).
+ */
+const COMPACT_NAV_QUERY = '(width < 1100px)'
 
 function useMediaQuery(query: string): boolean {
   return useSyncExternalStore(

@@ -3,24 +3,15 @@ import { RecordValueDisclosure } from './RecordValueDisclosure'
 import { valuePreview, fullValueText } from './record-value-preview.mjs'
 import { documentTarget, parseDocument } from './mutation-model.mjs'
 import { useMutation } from './use-mutation'
+import { databaseSaveError } from './save-error.mjs'
+import { writeCheckPlan, type WriteCheckPlan } from './write-check-model.mjs'
+import { useWriteCheck, WriteCheckNotice } from './write-check'
 import { documentFilterWhere } from './record-query.mjs'
 import { useState, useEffect, useCallback, useRef, type ChangeEvent, type FormEvent } from 'react'
 import type { SelectResult } from '@zhin.js/client'
 import { Plus, Trash2, Pencil, RefreshCw, Loader2, AlertCircle, CheckCircle, ChevronLeft, ChevronRight, Save, Search, X } from 'lucide-react'
-import { Card, CardContent } from '../../components/ui/card'
-import { Button } from '../../components/ui/button'
-import { Input } from '../../components/ui/input'
-import { Alert, AlertDescription } from '../../components/ui/alert'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from '../../components/ui/dialog'
+import { Alert, AlertDescription, Button, Card, CardContent, ConfirmDialog, Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input } from '@zhin.js/console-ui'
 import { useToast } from '../../components/toast'
-import { ConfirmDialog } from '../../components/confirm-dialog'
 
 export function DocumentCollectionView({
   tableName,
@@ -42,7 +33,7 @@ export function DocumentCollectionView({
   const [data, setData] = useState<SelectResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [page, setPage] = useState(1)
-  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string; details?: string } | null>(null)
   const [editDoc, setEditDoc] = useState<any>(null)
   const [addDoc, setAddDoc] = useState(false)
   const [jsonText, setJsonText] = useState('')
@@ -55,6 +46,11 @@ export function DocumentCollectionView({
   const requestSeq = useRef(0)
   const { success, error: toastError } = useToast()
   const pageSize = 20
+  const checkSelect = useCallback((where: Record<string, unknown>) => select(tableName, 1, 2, where), [select, tableName])
+  // A write with an unknown outcome (#64): 保存 / 删除 stay blocked until 「核对」 settles it.
+  const write = useWriteCheck(checkSelect)
+  const editorOpen = editDoc !== null || addDoc
+  const closeEditor = () => { setEditDoc(null); setAddDoc(false); setJsonText('') }
 
   const load = useCallback(async () => {
     const seq = ++requestSeq.current
@@ -92,44 +88,61 @@ export function DocumentCollectionView({
   useEffect(() => { load() }, [load])
 
   const handleSave = async (isNew: boolean) => {
-    if (readOnly || gate.pending) return
+    if (readOnly || gate.pending || write.held) return
     await run(async () => {
+    write.clearResult()
+    let plan: WriteCheckPlan | undefined
     try {
       const doc = parseDocument(jsonText, i18n.locale)
       if (isNew) {
+        plan = writeCheckPlan('insert', { row: doc })
         await insert(tableName, doc)
       } else {
         const { _id, ...rest } = doc
         const target = documentTarget(editDoc, i18n.locale)
         if (doc._id !== editDoc._id) throw new Error(i18n.t("编辑不能修改 _id。"))
+        plan = writeCheckPlan('update', { row: rest, where: target })
         await update(tableName, rest, target)
       }
       setMsg({ type: 'success', text: isNew ? i18n.t("添加成功") : i18n.t("更新成功") })
-      setEditDoc(null)
-      setAddDoc(false)
-      setJsonText('')
+      closeEditor()
       setTimeout(() => setMsg(null), 2000)
       await load()
     } catch (err) {
-      setMsg({ type: 'error', text: (err as Error).message })
+      // Only a write that was sent can have an unknown outcome; a JSON or _id problem is a local error.
+      const failure = plan ? databaseSaveError(err, i18n.locale) : null
+      if (failure?.type === 'unknown' && plan) { setMsg(null); write.markUnknown(plan, failure.details) }
+      else setMsg({ type: 'error', text: failure ? failure.text : (err as Error).message, ...(failure ? { details: failure.details } : {}) })
     }
     })
   }
 
+  /** 「核对」: settles a held write from a db:select, then reloads (applied) or frees 保存 (not applied). */
+  const checkWrite = async () => {
+    const result = await write.check()
+    if (!result) return
+    if (result.verdict === 'applied' && result.kind !== 'delete') closeEditor()
+    if (result.verdict === 'applied') await load()
+  }
+
   const handleDelete = async (doc: any) => {
-    if (gate.pending || readOnly) return
+    if (gate.pending || readOnly || write.held) return
     setDeleteTarget(doc)
   }
 
   const confirmDelete = async () => {
-    if (!deleteTarget || gate.pending || readOnly) return
+    if (!deleteTarget || gate.pending || readOnly || write.held) return
     await run(async () => {
+    let where: Record<string, unknown> | undefined
     try {
-      await remove(tableName, documentTarget(deleteTarget, i18n.locale))
+      where = documentTarget(deleteTarget, i18n.locale)
+      await remove(tableName, where)
       success(i18n.t("删除成功"))
       await load()
     } catch (err) {
-      toastError((err as Error).message)
+      const failure = where ? databaseSaveError(err, i18n.locale) : null
+      if (failure?.type === 'unknown' && where) write.markUnknown(writeCheckPlan('delete', { where }), failure.details)
+      else toastError(failure ? failure.text : (err as Error).message)
     } finally {
       setDeleteTarget(null)
     }
@@ -146,11 +159,12 @@ export function DocumentCollectionView({
           <AlertDescription>{msg.text}</AlertDescription>
         </Alert>
       )}
+      {(write.held || write.result) && !editorOpen ? <WriteCheckNotice controller={write} className="shrink-0" onCheck={() => { void checkWrite() }} /> : null}
 
       <div className="flex flex-wrap items-center gap-2 shrink-0">
         <Button size="sm" variant="outline" onClick={load} disabled={loading || busy}>
           <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新")}</Button>
-        {!readOnly && <Button size="sm" disabled={busy} onClick={() => { setAddDoc(true); setJsonText('{\n  \n}') }}>
+        {!readOnly && <Button size="sm" disabled={busy || write.held} onClick={() => { setAddDoc(true); setJsonText('{\n  \n}') }}>
           <Plus className="w-3.5 h-3.5 mr-1" />{i18n.t("添加文档")}</Button>}
         <span className="text-xs text-muted-foreground sm:ml-auto basis-full sm:basis-auto">{i18n.t("共 ")}{data?.total ?? 0} {i18n.t(" 条 · 第 ")}{page}/{totalPages || 1} {i18n.t(" 页")}{loadedFilter ? i18n.t(" · 已筛选") : ''}</span>
       </div>
@@ -186,12 +200,12 @@ export function DocumentCollectionView({
                   <RecordValueDisclosure value={doc} summary={valuePreview(doc, 140, ['_id'], i18n.locale)} label={i18n.t("查看完整 JSON")} />
                 </div>
                 {!readOnly && <div className="flex items-start gap-1 shrink-0">
-                  <Button size="sm" variant="outline" disabled={busy} aria-label={i18n.t("编辑记录")} onClick={() => {
+                  <Button size="sm" variant="outline" disabled={busy || write.held} aria-label={i18n.t("编辑记录")} onClick={() => {
                     setEditDoc(doc)
                     setAddDoc(false)
                     setJsonText(JSON.stringify(doc, null, 2))
                   }}><Pencil className="mr-1 h-3 w-3" />{i18n.t("编辑")}</Button>
-                  <Button size="icon" variant="ghost" disabled={busy} aria-label={i18n.t("删除记录")} className="text-destructive" onClick={() => handleDelete(doc)}><Trash2 /></Button>
+                  <Button size="icon" variant="destructive" disabled={busy || write.held} aria-label={i18n.t("删除记录")} onClick={() => handleDelete(doc)}><Trash2 /></Button>
                 </div>}
               </div>
             </CardContent>
@@ -207,20 +221,21 @@ export function DocumentCollectionView({
         </div>
       )}
 
-      {!readOnly && <Dialog open={editDoc !== null || addDoc} onOpenChange={(open) => { if (!open && !gate.pending) { setEditDoc(null); setAddDoc(false) } }}>
+      {!readOnly && <Dialog open={editDoc !== null || addDoc} onOpenChange={(open) => { if (!open && !gate.pending && !write.locked) { setEditDoc(null); setAddDoc(false); write.dismiss() } }}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>{addDoc ? i18n.t("添加文档") : i18n.t("编辑文档")}</DialogTitle></DialogHeader>
           <textarea
-            disabled={busy}
+            disabled={busy || write.held}
             value={jsonText}
             onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setJsonText(e.target.value)}
             className="w-full h-60 font-mono text-xs p-3 border rounded-md resize-none bg-background"
             spellCheck={false}
           />
-          {msg?.type === 'error' && <p role="alert" className="text-sm text-destructive">{msg.text}</p>}
+          {write.held || write.result ? <WriteCheckNotice controller={write} onCheck={() => { void checkWrite() }} /> : null}
+          {msg?.type === 'error' && <div role="alert" className="space-y-2 text-sm text-destructive"><p>{msg.text}</p>{msg.details ? <details className="text-xs"><summary className="cursor-pointer">{i18n.t("技术详情")}</summary><p className="mt-2 whitespace-pre-wrap break-words">{msg.details}</p></details> : null}</div>}
           <DialogFooter>
-            <DialogClose asChild><Button variant="outline" size="sm" disabled={busy}>{i18n.t("取消")}</Button></DialogClose>
-            <Button size="sm" disabled={busy} onClick={() => handleSave(addDoc)}><Save className="w-3.5 h-3.5 mr-1" />{i18n.t("保存")}</Button>
+            <DialogClose asChild><Button variant="outline" size="sm" disabled={busy || write.locked}>{i18n.t("取消")}</Button></DialogClose>
+            <Button size="sm" disabled={busy || write.held} onClick={() => handleSave(addDoc)}><Save className="w-3.5 h-3.5 mr-1" />{i18n.t("保存")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>}

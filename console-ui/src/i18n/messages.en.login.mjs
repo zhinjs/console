@@ -104,7 +104,7 @@ export const loginMessages = Object.freeze({
   "{0}（{1} 个字符）": "{0} ({1} characters)",
   "粘贴 ticket、验证返回的 JSON 或带 ticket 的链接": "Paste the ticket, the verification JSON or a link with a ticket",
   "格式不正确": "Invalid format",
-  "长度应为 {0} 位": "Must be {0} characters",
+  "长度应为 {0} 位": { one: "Must be {0} character", other: "Must be {0} characters" },
   "还差 {0} 位": "{0} more to go",
   "已识别 ticket：{0}": "Ticket recognized: {0}",
   "含 randstr": "with randstr",
@@ -141,7 +141,7 @@ export const loginMessages = Object.freeze({
   "点这里打开验证页": "Open the verification page here",
   // Blocks
   "内容已清除：这一步已结束，或需要重新读取。": "Content cleared: this step has ended, or needs to be read again.",
-  "已隐藏敏感内容（{0} 个字符）。点「显示」查看。": "Sensitive content hidden ({0} characters). Choose Show to see it.",
+  "已隐藏敏感内容（{0} 个字符）。点「显示」查看。": { one: "Sensitive content hidden ({0} character). Choose Show to see it.", other: "Sensitive content hidden ({0} characters). Choose Show to see it." },
   "敏感": "Sensitive",
   "隐藏": "Hide",
   "复制并打开验证页": "Copy and open the verification page",

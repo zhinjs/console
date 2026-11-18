@@ -3,29 +3,20 @@ import { useI18n } from '../i18n'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Activity, Clock, Plus, Trash2, AlertCircle, Pause, Play, RefreshCw, Timer, Cpu, ChevronDown, ChevronUp, Copy, Check, Search } from 'lucide-react'
-import { Button } from '../components/ui/button'
-import { Card, CardContent } from '../components/ui/card'
-import { Badge } from '../components/ui/badge'
-import { Alert, AlertDescription } from '../components/ui/alert'
-import { Skeleton } from '../components/ui/skeleton'
+import { Alert, AlertDescription, Badge, Button, Card, CardContent, Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, SelectField, Separator, Skeleton, Textarea } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import { useSaveOutcome } from '../components/ApplyFeedback'
 import { outcomeFromScheduleWrite, recordReadBack } from '../components/apply-outcome-model.mjs'
-import { Input } from '../components/ui/input'
-import { Textarea } from '../components/ui/textarea'
-import { Separator } from '../components/ui/separator'
-import { SelectField } from '../components/ui/select'
-import {
-  Dialog, DialogContent, DialogHeader, DialogFooter,
-  DialogTitle, DialogDescription, DialogClose,
-} from '../components/ui/dialog'
 import { useToast } from '../components/toast'
 import { CONSOLE_RPC } from '../contracts/zhin-console'
 import { requestConsole } from '../utils/console-rpc'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { describeCron, relativeUntil } from './cron-schedule.mjs'
 import { taskTabHref } from './task-hub-model.mjs'
+import { isPluginInternalSchedule, memoryScheduleLastRun, memoryScheduleTitle, type MemoryScheduleLike } from './schedule-memory-model.mjs'
 import { validateAssistantJobs, explainJobError, type AssistantJob } from './assistant-jobs-model.mjs'
+import { scheduleTargetView, scheduleTargetWarning } from './schedule-target-model.mjs'
+import { featureDisabledState } from '../utils/feature-disabled.mjs'
 import { apiFetch } from '../utils/auth'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
@@ -51,7 +42,7 @@ function cronValidationMessage(error?: string, locale: 'zh-CN' | 'en' = 'zh-CN')
   return error
 }
 
-interface MemoryCron {
+interface MemoryCron extends MemoryScheduleLike {
   type: 'memory'
   id?: string
   description?: string
@@ -72,6 +63,8 @@ interface PersistentCron {
   nextExecution?: number
   lastStatus?: string
   lastExecutedAt?: number
+  /** Resolved delivery target (#1250); absent from older Hosts. */
+  target?: unknown
 }
 
 function PersistentRunStatus({ state, job, now }: { state?: AssistantJob['state']; job: PersistentCron; now: number }) {
@@ -80,10 +73,13 @@ function PersistentRunStatus({ state, job, now }: { state?: AssistantJob['state'
   const failed = lastStatus === 'error'
   const timestamp = state?.nextRunAtMs ?? job.nextExecution
   const next = relativeUntil(timestamp, now, i18n.locale)
+  const target = scheduleTargetView(job.target, i18n.locale)
   return <div className="console-cron-run-status">
     <div className="console-cron-run-facts">
       <span>{i18n.t("下次执行：")}{next ?? (timestamp != null ? new Date(timestamp).toLocaleString(i18n.locale) : '—')}</span>
-      {lastStatus ? <Badge variant={failed ? 'destructive' : lastStatus === 'ok' ? 'success' : 'secondary'}>{failed ? i18n.t("上次执行失败") : lastStatus === 'ok' ? i18n.t("上次执行成功") : lastStatus === 'skipped' ? i18n.t("上次已跳过") : lastStatus}</Badge> : <span>{i18n.t("最近结果：")}{'—'}</span>}
+      {target?.valid && target.display ? <span>{i18n.t("发送到：")}{target.display}</span> : null}
+      {target && !target.valid ? <span><Badge variant="warning">{i18n.t("⚠ 无效")}</Badge> {target.display ? `${target.display} · ` : ''}{scheduleTargetWarning(target, timestamp, i18n.locale)}</span> : null}
+      {lastStatus ? <Badge variant={failed ? 'destructive' : lastStatus === 'ok' ? 'outline' : 'secondary'}>{failed ? i18n.t("上次执行失败") : lastStatus === 'ok' ? i18n.t("上次执行成功") : lastStatus === 'skipped' ? i18n.t("上次已跳过") : lastStatus}</Badge> : <span>{i18n.t("最近结果：")}{'—'}</span>}
       {state ? <Link className="font-medium text-foreground hover:underline" to={taskTabHref('assistant', { q: job.id })}>{i18n.t("执行详情 →")}</Link> : null}
     </div>
     {failed && state?.lastError ? <div className="console-job-error" role="note"><p>{explainJobError(state.lastError, i18n.locale) ?? state.lastError}</p>{explainJobError(state.lastError, i18n.locale) ? <code>{state.lastError}</code> : null}</div> : null}
@@ -121,6 +117,8 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
   }, [])
   const [persistentAvailable, setPersistentAvailable] = useState(false)
   const [jobStates, setJobStates] = useState<Map<string, AssistantJob['state']>>(() => new Map())
+  // The Host reports the assistant as off (200 `status: 'disabled'`, #1250): show 「未启用」 and why.
+  const [assistantOff, setAssistantOff] = useState<string | null>(null)
   const [cronValidation, setCronValidation] = useState<{ expression: string; valid: boolean; error?: string } | null>(null)
   const [togglePending, setTogglePending] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -132,7 +130,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
   // Writes go to the schedule engine, which registers or disposes the timer as part of the write
   // (已生效); a fresh list confirms what was stored.
   const saved = useSaveOutcome()
-  const readPersistent = async () => (await requestConsole<{ persistent?: PersistentCron[] }>({ type: CONSOLE_RPC.SCHEDULE_LIST })).persistent ?? []
+  const readPersistent = async () => (await requestConsole<{ persistent?: PersistentCron[] }>({ type: CONSOLE_RPC.SCHEDULE_LIST, locale: i18n.locale })).persistent ?? []
 
   const fetchCrons = useCallback(async () => {
     if (!isInboxCacheScopeActive(connectionScope)) return
@@ -147,7 +145,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
         persistent?: PersistentCron[]
         capabilities?: { persistent?: boolean }
       }
-      const data = await requestConsole<ScheduleListResponse>({ type: CONSOLE_RPC.SCHEDULE_LIST })
+      const data = await requestConsole<ScheduleListResponse>({ type: CONSOLE_RPC.SCHEDULE_LIST, locale: i18n.locale })
       if (!current()) return
       setPersistentAvailable(data.capabilities?.persistent === true)
       setMemoryCrons(data.memory ?? [])
@@ -156,9 +154,13 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
       setError(null)
       // Run status lives in the assistant job API; without the assistant the list simply shows no status.
       void apiFetch('/api/assistant/jobs', { signal: controller.signal, cache: 'no-store' })
-        .then(async (res) => (res.ok ? validateAssistantJobs(await res.json(), i18n.locale).jobs : []))
-        .catch(() => [] as AssistantJob[])
-        .then((jobs) => { if (current()) setJobStates(new Map(jobs.map((job) => [job.id, job.state]))) })
+        .then(async (res) => (res.ok ? validateAssistantJobs(await res.json(), i18n.locale) : null))
+        .catch(() => null)
+        .then((data) => {
+          if (!current()) return
+          setJobStates(new Map((data?.jobs ?? []).map((job) => [job.id, job.state])))
+          setAssistantOff(featureDisabledState(data, i18n.locale)?.description ?? null)
+        })
     } catch (err) {
       if (current()) setError((err as Error).message)
     } finally {
@@ -260,7 +262,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
     && (statusFilter === 'all' || statusFilter === 'enabled' && job.enabled
       || statusFilter === 'paused' && !job.enabled || statusFilter === 'error' && (jobStates.get(job.id)?.lastStatus ?? job.lastStatus) === 'error'))
   const visibleMemoryCrons = memoryCrons.filter(cron =>
-    (!query || [cron.description, cron.plugin, cron.id, cron.expression].some(value => value?.toLocaleLowerCase().includes(query)))
+    (!query || [memoryScheduleTitle(cron, i18n.locale), cron.description, cron.plugin, cron.id, cron.expression].some(value => value?.toLocaleLowerCase().includes(query)))
     && (statusFilter === 'all' || statusFilter === 'enabled' && cron.running || statusFilter === 'paused' && !cron.running))
 
   if (!isInboxCacheScopeActive(connectionScope)) return null
@@ -285,7 +287,9 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
             <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>
             <Button variant="outline" size="sm" onClick={() => { setError(null); setLoading(true); void fetchCrons() }}><RefreshCw />{i18n.t("重试")}</Button>
           </div> : <>
-      {!readOnly && !persistentAvailable && <Alert>
+      {assistantOff ? <Alert role="status">
+        <AlertDescription><strong>{i18n.t("定时 AI 任务未启用")}</strong> {assistantOff}</AlertDescription>
+      </Alert> : !readOnly && !persistentAvailable && <Alert>
         <AlertDescription>
           {i18n.t("当前实例尚未启用持久化 AI 调度，暂不能创建、暂停或删除任务。已有插件注册的任务仍可在下方查看。 如需定时 AI 任务，请在运行实例中安装并配置 Agent 及持久化调度引擎，再刷新本页。")}</AlertDescription>
       </Alert>}
@@ -311,9 +315,9 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
           <Badge variant="secondary">{visiblePersistentCrons.length}</Badge>
         </div>
         {persistentCrons.length === 0 ? (
-          <StatusState kind="empty" title={i18n.t("暂无持久化定时任务")}
-            description={readOnly ? i18n.t("当前身份只能查看实例中已存在的任务") : persistentAvailable ? i18n.t("点击「新建任务」添加一个定时 AI 任务") : i18n.t("启用持久化 AI 调度后可在这里管理任务")}
-            actions={!readOnly && persistentAvailable ? <Button size="sm" onClick={() => setAddDialogOpen(true)}><Plus className="w-4 h-4 mr-1" />{i18n.t(" 新建任务")}</Button> : undefined} />
+          <StatusState kind="empty" illustration="tasks" title={i18n.t("暂无持久化定时任务")}
+            description={readOnly ? i18n.t("当前身份只能查看实例中已存在的任务") : persistentAvailable ? i18n.t("新建一个定时 AI 任务，它会按计划自动运行。") : i18n.t("启用持久化 AI 调度后可在这里管理任务")}
+            action={!readOnly && persistentAvailable ? { label: i18n.t("新建定时任务"), icon: Plus, onSelect: () => setAddDialogOpen(true) } : undefined} />
         ) : visiblePersistentCrons.length === 0 ? <StatusState kind="empty" compact title={i18n.t("没有匹配的任务")} description={i18n.t("换一个关键词或状态，或清除筛选。")}
           actions={<Button size="sm" variant="outline" onClick={() => { setSearch(''); setStatusFilter('all') }}>{i18n.t("清除筛选")}</Button>} /> : (
           <div className="console-resource-list console-schedule-list">
@@ -337,7 +341,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
                       <Button variant="ghost" size="icon" aria-label={job.enabled ? i18n.t("暂停") : i18n.t("恢复")} title={job.enabled ? i18n.t("暂停") : i18n.t("恢复")} disabled={togglePending !== null} onClick={() => handleToggle(job)}>
                         {job.enabled ? <Pause /> : <Play />}
                       </Button>
-                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" aria-label={i18n.t("删除")} title={i18n.t("删除")} disabled={togglePending !== null} onClick={() => setDeleteTarget(job)}><Trash2 /></Button>
+                      <Button variant="destructive" size="icon" aria-label={i18n.t("删除")} title={i18n.t("删除")} disabled={togglePending !== null} onClick={() => setDeleteTarget(job)}><Trash2 /></Button>
                     </div>}
                   </div>
                   <PersistentRunStatus state={jobStates.get(job.id)} job={job} now={now} />
@@ -378,25 +382,25 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
         </div>
         {memoryCrons.length === 0 ? <Card><CardContent className="py-6 text-center text-muted-foreground text-sm">{i18n.t("暂无插件注册的内存定时任务")}</CardContent></Card>
           : visibleMemoryCrons.length === 0 ? <p className="console-cron-filter-empty">{i18n.t("没有匹配的任务")}</p> : (
-          <div className="console-resource-list console-schedule-list">
-            {[...visibleMemoryCrons].sort((x, y) => (x.plugin ?? '').localeCompare(y.plugin ?? '') || (x.nextExecution ?? 0) - (y.nextExecution ?? 0)).map((cron, idx) => {
-              const schedule = describeCron(cron.expression, i18n.locale)
-              const until = relativeUntil(cron.nextExecution, now, i18n.locale)
-              return <article key={cron.id ?? `${cron.plugin}-${cron.expression}-${idx}`} className="console-cron-memory-item">
-                <div className="console-cron-title-row">
-                  <h3 className="console-cron-title">{cron.description || cron.plugin?.replace(/^root\//, '') || i18n.t("插件定时任务")}</h3>
-                  <Badge variant={cron.running ? 'secondary' : 'outline'}>{cron.running ? i18n.t("运行中") : i18n.t("已停止")}</Badge>
+          <>
+            {visibleMemoryCrons.some(cron => !isPluginInternalSchedule(cron)) ? (
+              <div className="console-resource-list console-schedule-list">
+                {sortMemoryCrons(visibleMemoryCrons.filter(cron => !isPluginInternalSchedule(cron))).map((cron, idx) => renderMemoryCron(cron, now, i18n, cron.id ?? `${cron.plugin}-${cron.expression}-${idx}`))}
+              </div>
+            ) : null}
+            {visibleMemoryCrons.some(isPluginInternalSchedule) ? (
+              // A plugin's own polling / cleanup runs every few seconds; folded by default (zhinjs/zhin#1250).
+              <details className="console-cron-internal">
+                <summary>
+                  {i18n.t("插件内部任务")} <Badge variant="outline">{visibleMemoryCrons.filter(isPluginInternalSchedule).length}</Badge>
+                  <span className="console-cron-internal-hint">{i18n.t("插件自己的轮询、清理与刷盘，不需要配置。")}</span>
+                </summary>
+                <div className="console-resource-list console-schedule-list">
+                  {sortMemoryCrons(visibleMemoryCrons.filter(isPluginInternalSchedule)).map((cron, idx) => renderMemoryCron(cron, now, i18n, cron.id ?? `${cron.plugin}-${cron.expression}-${idx}`))}
                 </div>
-                {cron.description && cron.plugin && <p className="console-cron-schedule">{cron.plugin.replace(/^root\//, '')}</p>}
-                <div className="console-cron-run-facts"><span>{schedule ?? i18n.t("自定义执行时间")}</span><span>{i18n.t("下次执行：")}{cron.nextExecution ? until ?? new Date(cron.nextExecution).toLocaleString(i18n.locale) : '—'}</span></div>
-                <details className="console-cron-memory-details"><summary>{i18n.t("任务详情")}</summary><dl className="console-cron-metadata">
-                  <div><dt>{i18n.t("Cron 表达式")}</dt><dd><code>{cron.expression}</code></dd></div>
-                  {cron.plugin && <div><dt>{i18n.t("插件", undefined, "field")}</dt><dd><code>{cron.plugin}</code></dd></div>}
-                  {cron.id && <div><dt>{i18n.t("任务 ID")}</dt><dd><code>{cron.id}</code></dd></div>}
-                </dl></details>
-              </article>
-            })}
-          </div>
+              </details>
+            ) : null}
+          </>
         )}
       </section>
 
@@ -469,7 +473,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
             <DialogClose asChild>
               <Button variant="outline" disabled={submitting}>{i18n.t("取消")}</Button>
             </DialogClose>
-            <Button variant="destructive" onClick={handleDelete} disabled={submitting}>
+            <Button variant="destructive-solid" onClick={handleDelete} disabled={submitting}>
               {submitting ? i18n.t("删除中...") : i18n.t("删除")}
             </Button>
           </DialogFooter>
@@ -477,4 +481,37 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
       </Dialog>}
     </div>
   )
+}
+
+function sortMemoryCrons(crons: MemoryCron[]): MemoryCron[] {
+  return [...crons].sort((x, y) => (x.plugin ?? '').localeCompare(y.plugin ?? '') || (x.nextExecution ?? 0) - (y.nextExecution ?? 0))
+}
+
+/** One plugin-registered schedule: readable title, cadence, next and (when the Host reports it) last run. */
+function renderMemoryCron(cron: MemoryCron, now: number, i18n: ReturnType<typeof useI18n>, key: string) {
+  const schedule = describeCron(cron.expression, i18n.locale)
+  const until = relativeUntil(cron.nextExecution, now, i18n.locale)
+  const title = memoryScheduleTitle(cron, i18n.locale) || i18n.t("插件定时任务")
+  const plugin = cron.plugin?.replace(/^root\//, '')
+  const last = memoryScheduleLastRun(cron)
+  const failed = last ? /^(error|failed|failure)$/i.test(last.status) : false
+  const lastLabel = !last ? null : failed ? i18n.t("失败") : /^(ok|success|succeeded)$/i.test(last.status) ? i18n.t("成功") : /^skipped$/i.test(last.status) ? i18n.t("已跳过") : last.status || i18n.t("已执行")
+  return <article key={key} className="console-cron-memory-item">
+    <div className="console-cron-title-row">
+      <h3 className="console-cron-title">{title}</h3>
+      <Badge variant={cron.running ? 'secondary' : 'outline'}>{cron.running ? i18n.t("运行中") : i18n.t("已停止")}</Badge>
+    </div>
+    {plugin && title !== plugin && <p className="console-cron-schedule">{plugin}</p>}
+    <div className="console-cron-run-facts">
+      <span>{schedule ?? i18n.t("自定义执行时间")}</span>
+      <span>{i18n.t("下次执行：")}{cron.nextExecution ? until ?? new Date(cron.nextExecution).toLocaleString(i18n.locale) : '—'}</span>
+      {last ? <span title={last.error ?? undefined}>{i18n.t("最近一次：")}<Badge variant={failed ? 'destructive' : 'secondary'} size="sm">{lastLabel}</Badge>{last.at ? ` ${new Date(last.at).toLocaleString(i18n.locale)}` : ''}</span> : null}
+    </div>
+    <details className="console-cron-memory-details"><summary>{i18n.t("任务详情")}</summary><dl className="console-cron-metadata">
+      <div><dt>{i18n.t("Cron 表达式")}</dt><dd><code>{cron.expression}</code></dd></div>
+      {cron.plugin && <div><dt>{i18n.t("插件", undefined, "field")}</dt><dd><code>{cron.plugin}</code></dd></div>}
+      {cron.id && <div><dt>{i18n.t("任务 ID")}</dt><dd><code>{cron.id}</code></dd></div>}
+      {last?.error && <div><dt>{i18n.t("错误")}</dt><dd>{last.error}</dd></div>}
+    </dl></details>
+  </article>
 }

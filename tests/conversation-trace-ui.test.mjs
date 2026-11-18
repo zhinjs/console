@@ -49,9 +49,7 @@ function fixture(kind='list') {
     '../utils/inbox-cache':{getInboxCacheScope:()=>authority.current(),isInboxCacheScopeActive:scope=>authority.active(scope)},
     './endpoint-detail/message-diagnostics.mjs':{createDiagnosticRequestGate,diagnosticConversationKey},
     './conversation-trace-model.mjs':model,
-    '../components/ui/button':{Button:'button'}, '../components/StatusState':{StatusState:'status-state'}, '../components/error-alert':{ErrorAlert:'error-alert'},
-    '../components/ui/accordion':Object.fromEntries(['Accordion','AccordionContent','AccordionItem','AccordionTrigger'].map(key=>[key,key])),
-    './ConversationUsage':{UsageSummary:'usage-summary',ContextUsage:'context-usage'},
+    '@zhin.js/console-ui': { Button:'button', ErrorAlert:'error-alert', ...(Object.fromEntries(['Accordion','AccordionContent','AccordionItem','AccordionTrigger'].map(key=>[key,key]))) }, '../components/StatusState':{StatusState:'status-state'}, './ConversationUsage':{UsageSummary:'usage-summary',ContextUsage:'context-usage'},
   }
   const module=compile(kind==='list'?'useConversationTraces':'ConversationTrace',mocks)
   hooks.mount(()=>kind==='list'?module.useConversationTraces(props.sessionKey,props.connectionScope,props.conversation):kind==='request'?module.RequestDetails(props):module.TurnDetails(props))
@@ -119,9 +117,8 @@ test('prompt sections render complete escaped text and ordered message roles, wi
   const simple=({children})=>require('react').createElement('section',null,children)
   const module=compile('ConversationTrace',{
     '../utils/auth':{},'../utils/inbox-cache':{},'./conversation-trace-model.mjs':model,
-    '../components/ui/button':{Button:simple},'../components/StatusState':{StatusState:simple},'../components/error-alert':{ErrorAlert:simple},'./ConversationUsage':{UsageSummary:simple,ContextUsage:simple},
-    '../components/ui/accordion':Object.fromEntries(['Accordion','AccordionContent','AccordionItem','AccordionTrigger'].map(key=>[key,simple])),
-  })
+    '@zhin.js/console-ui': { Button:simple, ErrorAlert:simple, ...(Object.fromEntries(['Accordion','AccordionContent','AccordionItem','AccordionTrigger'].map(key=>[key,simple]))) },'../components/StatusState':{StatusState:simple},'./ConversationUsage':{UsageSummary:simple,ContextUsage:simple},
+    })
   const long='  <script>danger()</script>\n'+'complete '.repeat(2000)+'END\n'
   const html=renderToStaticMarkup(require('react').createElement(module.RequestBody,{request:{...detail.requests[0],body:{system:long,tools:[{name:'tool',input_schema:{type:'object'}}],messages:[{role:'user',content:'first'},{role:'assistant',content:'second'},{role:'tool',content:[{type:'image',omitted:'media'}]}]}}}))
   assert.ok(html.includes('END\n'));assert.ok(html.includes('&lt;script&gt;'));assert.ok(!html.includes('<script>'))
@@ -132,9 +129,8 @@ test('usage summary distinguishes total, cached and non-cached input without inv
   const simple = ({ children }) => children
   const { UsageSummary } = compile('ConversationUsage', {
     './conversation-trace-model.mjs': model,
-    '../components/ui/button': { Button: simple }, '../components/StatusState': { StatusState: simple },
-    '../components/ui/popover': { Popover: simple, PopoverContent: simple, PopoverTrigger: simple },
-  })
+    '@zhin.js/console-ui': { Button: simple, Popover: simple, PopoverContent: simple, PopoverTrigger: simple }, '../components/StatusState': { StatusState: simple },
+    })
   const render = calls => renderToStaticMarkup(require('react').createElement(UsageSummary, { turns: [{ usage_calls: calls }] }))
   const html = render([{ prompt_tokens: 13184, cache_read_tokens: 11083, completion_tokens: 54 }])
   assert.match(html, /总输入<\/dt><dd>13,184/)

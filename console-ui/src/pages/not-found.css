@@ -1,0 +1,25 @@
+@layer components {
+  .console-not-found {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--console-space-3);
+    margin: 0 auto;
+    max-width: 36rem;
+    padding: var(--console-space-8) var(--console-space-4) var(--console-space-7);
+    text-align: center;
+  }
+  .console-not-found h1 { margin: 0; font-size: var(--console-text-title); font-weight: var(--console-weight-strong); line-height: var(--console-leading-title); }
+  .console-not-found p { margin: 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
+  .console-not-found-address {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    border-radius: var(--console-radius-1);
+    background: hsl(var(--secondary));
+    padding: var(--console-space-1) var(--console-space-2);
+    color: hsl(var(--foreground));
+    font-family: var(--console-font-mono);
+    font-size: var(--console-text-label);
+  }
+  .console-not-found-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--console-space-2); margin-top: var(--console-space-3); }
+}

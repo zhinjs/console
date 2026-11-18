@@ -12,7 +12,7 @@ export const CONSOLE_PATHS: Readonly<{
   opsDatabase: '/ops/database'; opsConfig: '/ops/config'; opsEnv: '/ops/env'; opsSchedules: '/ops/schedules'; opsFiles: '/ops/files'
   opsInstance: '/ops/instance'; opsTerminal: '/ops/terminal'; opsSelfCheck: '/ops/self-check'
   onboarding: '/onboarding'; account: '/account'
-  accessUsers: '/access/users'; accessRoles: '/access/roles'; accessTokens: '/access/tokens'; accessAudit: '/access/audit'
+  accessUsers: '/access/users'; accessRoles: '/access/roles'; accessTokens: '/access/tokens'; accessAudit: '/access/audit'; chatMembers: '/chat-members'
 }>
 export function featureGlobalHref(plugin: string, params?: URLSearchParams | Record<string, string>): string
 export function adapterHref(adapter: string, tab?: ScopeTab | null): string
@@ -21,3 +21,6 @@ export function conversationHref(adapter: string, endpoint: string, kind: Conver
 export function matchLegacyPattern(pattern: string, pathname: string): Record<string, string> | null
 export const LEGACY_ROUTE_REDIRECTS: Readonly<Record<string, Readonly<{ to: string; tab?: string }>>>
 export function resolveLegacyRedirect(pathname: string, search?: string): string | null
+export function registerPluginPageRedirect(from: string, to: string): void
+export function isPluginPageRedirect(path: string): boolean
+export function clearPluginPageRedirects(): void

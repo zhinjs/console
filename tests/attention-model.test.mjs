@@ -265,3 +265,30 @@ test('refresh cadence and limits', () => {
   assert.equal(model.ATTENTION_PATH, '/attention')
   assert.ok(model.DASHBOARD_ATTENTION_LIMIT > 0)
 })
+
+test('a remembered unsupported Host skips attention.list; the memo follows the connected Host', async () => {
+  const fallback = await model.loadAttention({
+    request: async () => { throw new Error('must not be asked again') },
+    loadFallback: async () => ({ stats: { endpoints: { total: 1, online: 1 } }, errorLogs: 0, warningLogs: 0 }),
+    hostListUnsupported: true, now: () => NOW,
+  })
+  assert.equal(fallback.mode, 'fallback')
+  let memo = model.nextAttentionSupport(null, { apiBase: 'a' })
+  assert.deepEqual(memo, { apiBase: 'a', unsupported: false })
+  memo = model.nextAttentionSupport(memo, { apiBase: 'a', data: { mode: 'fallback' } })
+  assert.equal(memo.unsupported, true)
+  assert.equal(model.nextAttentionSupport(memo, { apiBase: 'a', data: { mode: 'instance-not-ready' } }).unsupported, true, 'a starting instance does not forget it')
+  assert.equal(model.nextAttentionSupport(memo, { apiBase: 'a' }).unsupported, true)
+  assert.equal(model.nextAttentionSupport(memo, { apiBase: 'b' }).unsupported, false, 'another Host is asked again')
+  assert.equal(model.nextAttentionSupport(memo, { apiBase: 'a', reset: true }).unsupported, false)
+  assert.equal(model.nextAttentionSupport(memo, { apiBase: 'a', data: { mode: 'host' } }).unsupported, false)
+})
+
+test('the RPC, severities and kinds are the published protocol ones; every protocol kind is kept', async () => {
+  const protocol = await import('@zhin.js/console-protocol')
+  assert.equal(model.ATTENTION_RPC, protocol.ATTENTION_RPC.LIST)
+  assert.equal(model.ATTENTION_SEVERITIES, protocol.CONSOLE_ATTENTION_SEVERITIES)
+  assert.equal(model.ATTENTION_KINDS, protocol.CONSOLE_ATTENTION_KINDS)
+  const list = model.normalizeAttentionList({ items: protocol.CONSOLE_ATTENTION_KINDS.map((kind, index) => item({ id: `${kind}:${index}`, kind })) })
+  assert.deepEqual(list.items.map(entry => entry.kind).sort(), [...protocol.CONSOLE_ATTENTION_KINDS].sort())
+})

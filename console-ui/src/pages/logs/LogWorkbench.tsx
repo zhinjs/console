@@ -8,7 +8,6 @@ import {
   ArrowRight,
   Circle,
   Copy,
-  FileText,
   Filter,
   Info,
   Layers,
@@ -20,18 +19,8 @@ import {
   XCircle,
 } from 'lucide-react'
 import { selectedHistoryEntry } from './history-model.mjs'
-import { cn } from '@zhin.js/client'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/button'
-import { Checkbox } from '../../components/ui/checkbox'
-import { Input } from '../../components/ui/input'
-import { SelectField } from '../../components/ui/select'
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '../../components/ui/dropdown-menu'
+import { Badge, Button, Checkbox, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, EmptyState, ErrorAlert, Input, ListItemButton, SelectField, StatCard, StatGrid } from '@zhin.js/console-ui'
 import './disclosure.css'
-import { StatCard, StatGrid } from '../../components/StatCard'
-import { EmptyState } from '../../components/empty-state'
-import { ErrorAlert } from '../../components/error-alert'
-import { ListItemButton } from '../../components/ui/list-item-button'
 
 export interface LogEntry {
   id: string | number
@@ -153,10 +142,10 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
     <section className="console-log-workbench" aria-label={i18n.t("日志诊断工作台")}>
       {state.stats && state.stats.total > 0 ? (
         <div className="console-severity-strip" aria-hidden="true">
-          <span style={{ width: `${(levelCount('info') / state.stats.total) * 100}%`, background: 'hsl(var(--primary) / 0.72)' }} />
-          <span style={{ width: `${(levelCount('warn') / state.stats.total) * 100}%`, background: 'hsl(var(--status-warning, var(--warning)) / 0.85)' }} />
-          <span style={{ width: `${(levelCount('error') / state.stats.total) * 100}%`, background: 'hsl(var(--destructive) / 0.88)' }} />
-          <span style={{ width: `${(levelCount('debug') / state.stats.total) * 100}%`, background: 'hsl(var(--muted-foreground) / 0.3)' }} />
+          <span style={{ width: `${(levelCount('info') / state.stats.total) * 100}%`, background: 'hsl(var(--muted-foreground) / 0.45)' }} />
+          <span style={{ width: `${(levelCount('warn') / state.stats.total) * 100}%`, background: 'hsl(var(--warning-fill))' }} />
+          <span style={{ width: `${(levelCount('error') / state.stats.total) * 100}%`, background: 'hsl(var(--destructive-fill))' }} />
+          <span style={{ width: `${(levelCount('debug') / state.stats.total) * 100}%`, background: 'hsl(var(--muted-foreground) / 0.2)' }} />
         </div>
       ) : null}
 
@@ -211,7 +200,7 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
             {state.loading && !state.logsKnown ? <StatusState kind="loading" compact title={i18n.t("正在读取日志历史…")} /> : state.error ? (
               <ErrorAlert error={state.error} onRetry={actions.retry} />
             ) : state.logs.length === 0 ? (
-              <div className="console-log-empty"><FileText /><strong>{i18n.t("当前筛选没有日志")}</strong><p>{i18n.t("日志到达后会自动出现在此处。")}</p></div>
+              <EmptyState illustration="logs" title={i18n.t("当前筛选没有日志")} description={i18n.t("日志到达后会自动出现在此处。")} />
             ) : (
               logEntries.map(({ log, id }) => {
                 const meta = getLevelMeta(log.level)
@@ -249,7 +238,7 @@ export function LogInspector({ log, offPage, onFilterSource, onClose }: { log: L
   const i18n = useI18n()
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>('idle')
   if (!log) {
-    return <aside className="console-log-inspector is-empty" aria-label={i18n.t("事件 Inspector")}><EmptyState compact title={i18n.t("选择一条事件")} description={i18n.t("完整时间、来源与诊断动作会显示在这里。")} /></aside>
+    return <aside className="console-log-inspector is-empty" aria-label={i18n.t("事件 Inspector")}><EmptyState compact illustration="record" title={i18n.t("选择一条事件")} description={i18n.t("完整时间、来源与诊断动作会显示在这里。")} /></aside>
   }
   const meta = getLevelMeta(log.level)
   const Icon = meta.icon

@@ -142,13 +142,29 @@ export function reasonLabel(code, locale = 'zh-CN') {
   return Object.hasOwn(REASON_LABELS, code) ? translate(locale, REASON_LABELS[code]) : code
 }
 
-/** 一行 → 页面显示：一句话原因 + 原始机器码（排障时对得上日志）。 */
-export function describeReplayRow(row, locale = 'zh-CN') {
+/**
+ * The key the group lists use for a row's conversation (`<adapter>:<group id>`, as in the ambient
+ * group picker), or null when the row is not in a group.
+ */
+export function replayGroupKey(row) {
+  const match = typeof row?.scene_id === 'string' ? /^group:(.+)$/u.exec(row.scene_id) : null
+  return match && row.platform ? `${row.platform}:${match[1]}` : null
+}
+
+/**
+ * 一行 → 页面显示：一句话原因 + 原始机器码（排障时对得上日志）。
+ * `groupNames`（`<adapter>:<group id>` → 群名）有这个群时，`where` 写群名，原始会话 id 留在 `whereCode`。
+ */
+export function describeReplayRow(row, locale = 'zh-CN', groupNames) {
+  const whereCode = `${row.platform} · ${row.scene_id}`
+  const key = replayGroupKey(row)
+  const name = key && groupNames instanceof Map ? groupNames.get(key) : undefined
   return {
     id: row.id,
     at: row.ts,
     turnId: row.turn_id,
-    where: `${row.platform} · ${row.scene_id}`,
+    where: typeof name === 'string' && name.trim() ? `${row.platform} · ${name.trim()}` : whereCode,
+    whereCode,
     kind: kindLabel(row.kind, locale),
     outcome: outcomeLabel(row.outcome, locale),
     outcomeCode: row.outcome,
@@ -218,4 +234,36 @@ export function exportFileName(window) {
 
 export function isPermissionDenied(error) {
   return Boolean(error) && (error.status === 401 || error.status === 403)
+}
+
+/** Payload key of a row written only as the consequence of another row in the same turn (#1250). */
+export const REPLAY_PARENT_KEY = 'parent'
+
+/**
+ * One entry per decision (zhinjs/zhin#1250 `replay-two-rows-per-ambient`): a gate that stops a turn
+ * (`ambient_decision` / `control_gate` / `speak_gate`) also writes a `model_skip` whose
+ * `payload.parent` names the gate's kind. Such a row folds into the row of that kind in the same
+ * turn when it is in `rows`; otherwise (older Hosts without `parent`, a parent on another page or
+ * filtered out) it stays its own entry. Order follows `rows`.
+ */
+export function foldReplayRows(rows) {
+  const list = Array.isArray(rows) ? rows : []
+  const parentOf = row => {
+    const parent = row?.kind === 'model_skip' && isPlainObject(row.payload) ? row.payload[REPLAY_PARENT_KEY] : undefined
+    return typeof parent === 'string' && parent && parent !== 'model_skip' ? parent : null
+  }
+  const owners = new Map()
+  for (const row of list) {
+    if (parentOf(row)) continue
+    const key = `${row.turn_id}\u0000${row.kind}`
+    if (!owners.has(key)) owners.set(key, { row, folded: [] })
+  }
+  const entries = []
+  for (const row of list) {
+    const parent = parentOf(row)
+    const owner = parent ? owners.get(`${row.turn_id}\u0000${parent}`) : owners.get(`${row.turn_id}\u0000${row.kind}`)
+    if (parent && owner) { owner.folded.push(row); continue }
+    entries.push(owner && owner.row === row ? owner : { row, folded: [] })
+  }
+  return entries
 }

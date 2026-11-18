@@ -31,25 +31,18 @@ import {
   Unplug,
   Wrench,
 } from 'lucide-react'
-import { cn } from '@zhin.js/client'
+import { Badge, Button, cn, Dialog, DialogContent, DialogTitle, InlineCode, Input, ListItemButton, SelectField, Sheet, SheetClose, SheetContent, SheetTitle } from '@zhin.js/console-ui'
 import { ENDPOINT_RPC } from '../../contracts/zhin-console'
 import { requestConsole } from '../../utils/console-rpc'
 import { useInboxCacheScope } from '../../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../../utils/inbox-cache'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/button'
-import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog'
-import { Input } from '../../components/ui/input'
-import { SelectField } from '../../components/ui/select'
-import { Sheet, SheetClose, SheetContent, SheetTitle } from '../../components/ui/sheet'
 import { useMediaQuery } from '../../hooks/useMediaQuery'
-import { CAPABILITY_DETAIL_SHEET_QUERY, capabilityCountSummary } from './capability-layout-model.mjs'
+import { CAPABILITY_DETAIL_SHEET_QUERY, capabilityCountSummary, capabilityOwner } from './capability-layout-model.mjs'
 import { capabilityEmptyState } from './empty-state.mjs'
 import { readPreviewEndpoints, type PreviewEndpoint } from './target-preview.mjs'
 import { mcpRowState } from './mcp-status-model.mjs'
 import { McpServerDetail } from './McpServerDetail'
 import type { CapabilityItem, CapabilityRowMap, IntrospectionTab } from './capability-model'
-import { ListItemButton } from '../../components/ui/list-item-button'
 import './component-gallery.css'
 import { conversationHref, endpointHref } from '../../console-routes.mjs'
 import { CONVERSATION_KINDS, type ConversationKind } from '../features/feature-model.mjs'
@@ -63,60 +56,29 @@ interface CapabilityExplorerProps<K extends IntrospectionTab> {
   onClearFilter?(): void
 }
 
-const KIND_META: Record<IntrospectionTab, {
-  eyebrow: string
-  title: string
-  description: string
-  icon: typeof Terminal
-}> = {
-  commands: {
-    eyebrow: 'Command catalog',
-    title: '命令目录',
-    description: '按用户入口理解命令路由、参数契约与权限边界。',
-    icon: Terminal,
-  },
-  middlewares: {
-    eyebrow: 'Runtime pipeline',
-    title: '执行管线',
-    description: '按照 Phase 与 Order 查看请求穿过 Runtime 的真实顺序。',
-    icon: GitBranch,
-  },
-  components: {
-    eyebrow: '组件',
-    title: '组件画廊',
-    description: '查看组件并预览效果。',
-    icon: Boxes,
-  },
-  endpoints: {
-    eyebrow: 'Adapter runtime',
-    title: 'Endpoint 状态',
-    description: '从适配器视角检查当前连接与运行状态。',
-    icon: Bot,
-  },
-  bindings: {
-    eyebrow: 'Agent topology',
-    title: 'Agent 关系',
-    description: '理解 Agent、模型 Provider、MCP Server 与 Agent File 的组合。',
-    icon: Network,
-  },
-  tools: {
-    eyebrow: 'Tool registry',
-    title: '工具目录',
-    description: '检查 Agent 可发现的工具、职责说明与注册来源。',
-    icon: Wrench,
-  },
-  'prompt-sections': {
-    eyebrow: 'Prompt governance',
-    title: '提示词片段',
-    description: '查看提示词片段的来源与适用范围。',
-    icon: ScrollText,
-  },
-  mcp: {
-    eyebrow: 'MCP connections',
-    title: 'MCP 服务',
-    description: '观察外部能力服务的连接健康度与工具供给。',
-    icon: Server,
-  },
+const KIND_ICONS: Record<IntrospectionTab, typeof Terminal> = {
+  commands: Terminal,
+  middlewares: GitBranch,
+  components: Boxes,
+  endpoints: Bot,
+  bindings: Network,
+  tools: Wrench,
+  'prompt-sections': ScrollText,
+  mcp: Server,
+}
+
+/** Header copy for each tab, translated through `t` so every string reaches the i18n catalog. */
+function kindCopy(t: (message: string) => string): Record<IntrospectionTab, { eyebrow: string; title: string; description: string }> {
+  return {
+    commands: { eyebrow: t('命令路由'), title: t('命令目录'), description: t('按用户入口理解命令路由、参数契约与权限边界。') },
+    middlewares: { eyebrow: t('运行时管线'), title: t('执行管线'), description: t('按照 Phase 与 Order 查看请求穿过 Runtime 的真实顺序。') },
+    components: { eyebrow: t('组件'), title: t('组件画廊'), description: t('查看组件并预览效果。') },
+    endpoints: { eyebrow: t('适配器运行时'), title: t('Endpoint 状态'), description: t('从适配器视角检查当前连接与运行状态。') },
+    bindings: { eyebrow: t('Agent 拓扑'), title: t('Agent 关系'), description: t('理解 Agent、模型 Provider、MCP Server 与 Agent File 的组合。') },
+    tools: { eyebrow: t('工具注册表'), title: t('工具目录'), description: t('检查 Agent 可发现的工具、职责说明与注册来源。') },
+    'prompt-sections': { eyebrow: t('提示词治理'), title: t('提示词片段'), description: t('查看提示词片段的来源与适用范围。') },
+    mcp: { eyebrow: t('MCP 连接'), title: t('MCP 服务'), description: t('观察外部能力服务的连接健康度与工具供给。') },
+  }
 }
 
 function text(value: unknown, fallback = '—'): string {
@@ -130,11 +92,9 @@ function list(value: unknown): string[] {
   return value.map((entry) => typeof entry === 'string' ? entry : JSON.stringify(entry))
 }
 
+/** Plugin pill / inspector name: a source path is shown as its package (the path goes to a tooltip). */
 function itemOwner(item: CapabilityItem): string {
-  for (const candidate of [item.owner, item.plugin, item.source, item.adapter, item.provider]) {
-    if (typeof candidate === 'string' && candidate.trim()) return candidate.trim()
-  }
-  return ''
+  return capabilityOwner(item as Record<string, unknown>).name
 }
 
 function extractCommandTrigger(item: CapabilityItem, stripParams = false): string {
@@ -166,13 +126,14 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
   const indexedItems = useMemo(() => items.map((item, index) => ({ kind, item, id: identity(item, index) })), [items, kind])
 
   const ownerGroups = useMemo(() => {
-    const counts = new Map<string, number>()
+    const counts = new Map<string, { count: number; path?: string }>()
     for (const { item } of indexedItems) {
-      const owner = itemOwner(item)
+      const { name: owner, path } = capabilityOwner(item as Record<string, unknown>)
       if (!owner) continue
-      counts.set(owner, (counts.get(owner) ?? 0) + 1)
+      const entry = counts.get(owner)
+      counts.set(owner, { count: (entry?.count ?? 0) + 1, path: entry?.path ?? path })
     }
-    return [...counts.entries()].map(([owner, count]) => ({ owner, count }))
+    return [...counts.entries()].map(([owner, { count, path }]) => ({ owner, count, path }))
   }, [indexedItems])
 
   const visibleItems = useMemo(() => {
@@ -182,9 +143,8 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
 
   const counts = capabilityCountSummary({ pageCount: indexedItems.length, visibleCount: visibleItems.length, total, ownerFilter })
   const selected = visibleItems.find(({ id }) => id === selectedId)?.item ?? visibleItems[0]?.item ?? null
-  const authoredMeta = KIND_META[kind]
-  const meta = { ...authoredMeta, title: i18n.t(authoredMeta.title), description: i18n.t(authoredMeta.description), eyebrow: i18n.t(authoredMeta.eyebrow) }
-  const Icon = meta.icon
+  const meta = kindCopy((message) => i18n.t(message))[kind]
+  const Icon: typeof Terminal = KIND_ICONS[kind]
 
   useEffect(() => {
     setOwnerFilter('')
@@ -252,7 +212,7 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
             <span>{i18n.t("全部")}</span>
             <span className="console-capability-owner-count">{indexedItems.length}</span>
           </button>
-          {ownerGroups.map(({ owner, count }) => {
+          {ownerGroups.map(({ owner, count, path }) => {
             const active = ownerFilter === owner
             return (
               <button
@@ -260,6 +220,7 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
                 type="button"
                 className={cn('console-capability-owner-pill', active && 'is-active')}
                 aria-pressed={active}
+                title={path ? i18n.t("由源文件路径推断：{0}", [path]) : undefined}
                 onClick={() => setOwnerFilter(active ? '' : owner)}
               >
                 <span>{owner}</span>
@@ -367,9 +328,12 @@ function CommandCatalog({ entries, selectedId, onSelect }: CollectionProps<'comm
                 <small>{text(entry.item.desc, i18n.t("没有提供命令说明"))}</small>
                 <span className="console-runtime-tags">
                   {parameters.length ? <Badge variant="outline">{parameters.length} {i18n.t(" 参数")}</Badge> : <Badge variant="secondary">{i18n.t("无参数")}</Badge>}
-                  {permissions.length ? <Badge variant="warning"><ShieldCheck />{permissions.length} {i18n.t(" 权限")}</Badge> : null}
+                  {permissions.length ? <Badge variant="outline"><ShieldCheck />{permissions.length} {i18n.t(" 权限")}</Badge> : null}
                 </span>
-                <span className="console-runtime-source"><span>{text(entry.item.plugin, 'runtime')}</span><ArrowRight /></span>
+                {(() => {
+                  const provider = capabilityOwner(entry.item as Record<string, unknown>)
+                  return <span className="console-runtime-source"><span title={provider.path ? i18n.t("由源文件路径推断：{0}", [provider.path]) : undefined}>{provider.name || 'runtime'}</span><ArrowRight /></span>
+                })()}
               </span>
             </SelectableCard>
             <button
@@ -480,7 +444,7 @@ function EndpointGrid({ entries, selectedId, onSelect }: CollectionProps<'endpoi
         return (
           <div key={entry.id} className={cn('console-runtime-endpoint-shell', selected && 'is-selected')}>
             <SelectableCard {...{ entry, entries, selectedId, onSelect }} className="console-runtime-health-card">
-              <span className={cn('console-runtime-health', online && 'is-online')}>{online ? <CheckCircle2 /> : <Unplug />}</span>
+              <span className={cn('console-runtime-health', online ? 'is-online' : 'is-offline')}>{online ? <CheckCircle2 /> : <Unplug />}</span>
               <span className="console-runtime-card-main">
                 <span className="flex items-center justify-between gap-2">
                   <small>{text(entry.item.adapter, 'adapter')}</small>
@@ -522,7 +486,7 @@ function BindingMap({ entries, selectedId, onSelect }: CollectionProps<'bindings
             <span className="console-runtime-node"><CircleDot /></span>
             <span className="console-runtime-card-main console-runtime-binding-provider"><small>{text(entry.item.provider, 'Provider')}</small><strong>{text(entry.item.model, i18n.t("默认模型"))}</strong></span>
             <span className="console-runtime-binding-meta">
-              <Badge variant={servers.length ? 'success' : 'secondary'}>{servers.length} MCP</Badge>
+              <Badge variant={servers.length ? 'outline' : 'secondary'}>{servers.length} MCP</Badge>
               {entry.item.hasAgentFile === true ? <Badge variant="outline"><FileCode2 />agent.md</Badge> : null}
             </span>
           </SelectableCard>
@@ -566,7 +530,7 @@ function PromptSectionCatalog({ entries, selectedId, onSelect }: CollectionProps
             <span className="console-runtime-card-main">
               <span className="console-runtime-prompt-heading">
                 <strong>{text(entry.item.title, text(entry.item.name, i18n.t("未命名片段")))}</strong>
-                <Badge variant={retention === 'required' ? 'warning' : retention === 'preferred' ? 'secondary' : 'outline'}>{retention}</Badge>
+                <Badge variant={retention === 'required' ? 'outline' : 'secondary'}>{retention}</Badge>
               </span>
               <small>{text(entry.item.owner, 'runtime')} · {text(entry.item.layer, 'context')} · {i18n.t("顺序")} {text(entry.item.order, '50')}</small>
               <span className="console-runtime-tags">
@@ -597,7 +561,7 @@ function McpGrid({ entries, selectedId, onSelect }: CollectionProps<'mcp'>) {
         const connected = state.status === 'connected'
         return (
           <SelectableCard key={entry.id} {...{ entry, entries, selectedId, onSelect }} className="console-runtime-mcp-card">
-            <span className={cn('console-runtime-health', connected && 'is-online')}>{connected ? <PlugZap /> : <Unplug />}</span>
+            <span className={cn('console-runtime-health', connected ? 'is-online' : 'is-offline')}>{connected ? <PlugZap /> : <Unplug />}</span>
             <span className="console-runtime-card-main">
               <strong>{text(entry.item.name, i18n.t("未命名 MCP"))}</strong>
               <small>{state.detail}</small>
@@ -610,17 +574,20 @@ function McpGrid({ entries, selectedId, onSelect }: CollectionProps<'mcp'>) {
   )
 }
 
-const PROPERTY_LABELS: Record<string, string> = {
-  name: '名称', pattern: '命令', desc: '说明', description: '说明',
-  owner: '所属插件', plugin: '所属插件', source: '来源文件',
-  parameters: '参数', aliases: '别名', permissions: '权限',
-  phase: '阶段', target: '目标', order: '顺序', adapter: '适配器',
-  online: '在线', status: '状态', provider: '模型提供方', model: '模型',
-  mcpServers: 'MCP 服务', hasAgentFile: 'Agent 文件',
-  qualifiedName: '完整名称', title: '标题', layer: '层级',
-  retention: '保留策略', maxChars: '字符上限', profiles: '适用配置',
-  platforms: '适用平台', generation: '运行代', contentChars: '内容字符数',
-  connected: '已连接', toolCount: '工具数', error: '错误', transport: '传输方式',
+/** Labels for the extra detail fields, translated through `t`. */
+function propertyLabels(t: (message: string) => string): Record<string, string> {
+  return {
+    name: t('名称'), pattern: t('命令'), desc: t('说明'), description: t('说明'),
+    owner: t('所属插件'), plugin: t('所属插件'), source: t('来源文件'),
+    parameters: t('参数'), aliases: t('别名'), permissions: t('权限'),
+    phase: t('阶段'), target: t('目标'), order: t('顺序'), adapter: t('适配器'),
+    online: t('在线'), status: t('状态'), provider: t('模型提供方'), model: t('模型'),
+    mcpServers: t('MCP 服务'), hasAgentFile: t('Agent 文件'),
+    qualifiedName: t('完整名称'), title: t('标题'), layer: t('层级'),
+    retention: t('保留策略'), maxChars: t('字符上限'), profiles: t('适用配置'),
+    platforms: t('适用平台'), generation: t('运行代'), contentChars: t('内容字符数'),
+    connected: t('已连接'), toolCount: t('工具数'), error: t('错误'), transport: t('传输方式'),
+  }
 }
 
 /** MCP 详情里已由「连接状态」一节展示的字段。 */
@@ -855,6 +822,7 @@ function CapabilityInspector(props: {
   readOnly: boolean
 }) {
   const i18n = useI18n()
+  const labels = propertyLabels((message) => i18n.t(message))
   const { item, kind, readOnly } = props
   const [copied, setCopied] = useState(false)
 
@@ -864,7 +832,9 @@ function CapabilityInspector(props: {
 
   if (!item) return null
 
-  const owner = itemOwner(item)
+  const ownerInfo = capabilityOwner(item as Record<string, unknown>)
+  const owner = ownerInfo.name
+  const ownerTitle = ownerInfo.path ? i18n.t("由源文件路径推断：{0}", [ownerInfo.path]) : undefined
   const description = typeof item.desc === 'string' && item.desc.trim()
     ? item.desc.trim()
     : typeof item.description === 'string' && item.description.trim()
@@ -908,7 +878,7 @@ function CapabilityInspector(props: {
               <span>{endpointOnline ? i18n.t("已连接") : i18n.t("未连接")}</span>
             </span>
           ) : owner ? (
-            <Badge variant="outline">{owner}</Badge>
+            <Badge variant="outline" title={ownerTitle}>{owner}</Badge>
           ) : null}
         </div>
         <h3 className={cn(kind === 'commands' && 'font-mono')}>{itemTitle(kind, item, i18n.locale)}</h3>
@@ -940,7 +910,7 @@ function CapabilityInspector(props: {
         {owner ? (
           <div className="console-inspector-meta-card">
             <span>{i18n.t("所属插件")}</span>
-            <strong>{owner}</strong>
+            <strong title={ownerTitle}>{owner}</strong>
           </div>
         ) : null}
         {item.phase != null || item.order != null ? (
@@ -969,9 +939,9 @@ function CapabilityInspector(props: {
             <span>{i18n.t("参数")} & {i18n.t("别名")}</span>
             <Badge variant="secondary">{parameters.length}</Badge>
           </div>
-          <div className="console-runtime-tags">
-            {parameters.map((param, idx) => <Badge key={`param-${idx}`} variant="outline" className="font-mono">{param}</Badge>)}
-            {aliases.map((alias, idx) => <Badge key={`alias-${idx}`} variant="secondary" className="font-mono">{alias}</Badge>)}
+          <div className="console-code-list text-sm">
+            {parameters.map((param, idx) => <InlineCode key={`param-${idx}`}>{param}</InlineCode>)}
+            {aliases.map((alias, idx) => <InlineCode key={`alias-${idx}`} className="text-muted-foreground">{alias}</InlineCode>)}
           </div>
         </div>
       ) : null}
@@ -980,10 +950,10 @@ function CapabilityInspector(props: {
         <div className="console-inspector-section">
           <div className="console-inspector-section-title">
             <span>{i18n.t("权限")}</span>
-            <Badge variant="warning">{permissions.length}</Badge>
+            <Badge variant="outline">{permissions.length}</Badge>
           </div>
           <div className="console-runtime-tags">
-            {permissions.map((perm, idx) => <Badge key={`perm-${idx}`} variant="warning"><ShieldCheck />{perm}</Badge>)}
+            {permissions.map((perm, idx) => <Badge key={`perm-${idx}`} variant="outline"><ShieldCheck />{perm}</Badge>)}
           </div>
         </div>
       ) : null}
@@ -1003,7 +973,7 @@ function CapabilityInspector(props: {
       {extraDetails.length > 0 ? (
         <dl className="console-capability-properties">
           {extraDetails.slice(0, 8).map(([key, value]) => (
-            <div key={key}><dt>{PROPERTY_LABELS[key] ? i18n.t(PROPERTY_LABELS[key]) : key}</dt><dd>{formatValue(value, i18n.locale)}</dd></div>
+            <div key={key}><dt>{labels[key] ?? key}</dt><dd>{formatValue(value, i18n.locale)}</dd></div>
           ))}
         </dl>
       ) : null}
@@ -1029,7 +999,7 @@ function CapabilityInspector(props: {
 }
 
 function formatValue(value: unknown, locale: 'zh-CN' | 'en' = 'zh-CN'): ReactNode {
-  if (typeof value === 'boolean') return <Badge variant={value ? 'success' : 'secondary'}>{value ? translate(locale, "是") : translate(locale, "否")}</Badge>
+  if (typeof value === 'boolean') return <Badge variant={value ? 'outline' : 'secondary'}>{value ? translate(locale, "是") : translate(locale, "否")}</Badge>
   if (Array.isArray(value)) {
     if (!value.length) return <span className="text-muted-foreground">—</span>
     return <span className="console-runtime-tags">{value.map((entry, index) => <Badge key={`${String(entry)}-${index}`} variant="outline">{typeof entry === 'object' ? JSON.stringify(entry) : String(entry)}</Badge>)}</span>

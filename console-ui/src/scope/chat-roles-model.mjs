@@ -43,6 +43,8 @@ function readEntry(item) {
   return Object.freeze({
     level, key, adapter, userId, role, source,
     ...(typeof item.grantedBy === 'string' && item.grantedBy ? { grantedBy: item.grantedBy } : {}),
+    // ADR 0060 Q12: the linked person's name of a Console grantor (absent on older Hosts / unlinked users).
+    ...(typeof item.grantedByName === 'string' && item.grantedByName ? { grantedByName: item.grantedByName } : {}),
     ...(Number.isFinite(item.grantedAt) ? { grantedAt: item.grantedAt } : {}),
     ...(typeof item.detail === 'string' && item.detail ? { detail: item.detail } : {}),
   })

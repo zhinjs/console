@@ -12,15 +12,7 @@ import { ENDPOINT_RPC } from '../contracts/zhin-console'
 import { normalizeGroupRecord } from './endpoint-detail/conversation-labels'
 import { pluginRpc } from '../utils/plugin-rpc'
 import { useConsoleRead } from '../hooks/use-console-read'
-import { PageHeader } from '../components/PageHeader'
-import { PageShell } from '../components/PageShell'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
-import { Badge } from '../components/ui/badge'
-import { Button } from '../components/ui/button'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
-import { Input } from '../components/ui/input'
-import { Skeleton } from '../components/ui/skeleton'
-import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group'
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, PageHeader, PageShell, RadioGroup, RadioGroupItem, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { AmbientGroupPicker } from './AmbientGroupPicker'
 import { StatusState } from '../components/StatusState'
 import { ScopeFilterBar, useScopeFilter } from './insights/ScopeFilterBar'
@@ -139,7 +131,7 @@ function AmbientStatusSection({ read, onRetry }: { read: StatusReadState; onRetr
   return <Card>
     <CardHeader>
       <CardTitle className="flex flex-wrap items-center gap-2 text-base">
-        {i18n.t("现在：")}<Badge variant={view.behavior === i18n.t('主动参与') ? 'success' : view.behavior === i18n.t('只观察') ? 'info' : 'secondary'}>{view.behavior}</Badge>
+        {i18n.t("现在：")}<Badge variant={view.behavior === i18n.t('主动参与') ? 'outline' : 'secondary'}>{view.behavior}</Badge>
         <span className="text-sm font-normal text-muted-foreground">{i18n.t("范围：")}{view.groupScope}</span>
       </CardTitle>
       <CardDescription>{i18n.t("缓冲内观察：最近 24 小时、实例这次启动以来的记录，重启后重新计数。")}</CardDescription>
@@ -181,7 +173,7 @@ function useAmbientGroupNames(groups: string[]): { names: Map<string, string> | 
         for (const raw of list?.groups ?? []) {
           if (!raw || typeof raw !== 'object') continue
           const group = normalizeGroupRecord(raw as Record<string, unknown>)
-          if (group.group_id > 0 && group.name) next.set(`${list!.adapter}:${group.group_id}`, group.name)
+          if (group.group_id && group.name) next.set(`${list!.adapter}:${group.group_id}`, group.name)
         }
       }
       if (active) setNames(next)
@@ -217,7 +209,7 @@ function AmbientRecentActivity({ recent }: { recent: AmbientStatusView['recent']
       <summary className="text-xs font-medium text-muted-foreground">{i18n.t("逐条记录（{0}）", [recent.length])}</summary>
       <ul className="mt-2 divide-y rounded-md border text-sm">
         {recent.map((entry) => <li key={`${entry.at}-${entry.group}-${entry.outcome}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
-          <span className="text-xs text-muted-foreground tabular-nums">{formatTime(entry.at, i18n.locale)}</span>
+          <span className="text-xs text-muted-foreground">{formatTime(entry.at, i18n.locale)}</span>
           <span className="break-all">{ambientGroupLabel(entry.group, names).name}</span>
           <span className="text-muted-foreground">{entry.text}</span>
         </li>)}

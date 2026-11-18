@@ -2,21 +2,18 @@ import { LanguageSelect } from '../components/LanguageSelect'
 import { useI18n } from '../i18n'
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { Trash2, ShieldCheck, Eye, EyeOff, KeyRound, UserRound } from 'lucide-react'
-import { Input } from '../components/ui/input'
-import { Button } from '../components/ui/button'
-import { Checkbox } from '../components/ui/checkbox'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
+import { BrandMark, Button, Checkbox, ConfirmDialog, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@zhin.js/console-ui'
 import {
   getSavedLogin, getStoredApiBase, listSavedLogins, normalizeApiBase, removeSavedLogin,
   touchSavedLogin, upsertSavedLogin, verifyAndStoreCredentials,
 } from '../utils/auth'
-import { ConfirmDialog } from '../components/confirm-dialog'
-import { signInWithPassword } from '../utils/console-auth-api'
+import { fetchMe, signInWithPassword } from '../utils/console-auth-api'
 import { authErrorMessage } from '../utils/console-auth-model.mjs'
 import {
-  initialLoginMode, linkNeedsConfirmation, lockoutMs, loginFailureField, normalizeHostAddress, passwordFailureField, saveLoginMode,
+  hostNeedsSetup, initialLoginMode, linkNeedsConfirmation, lockoutMs, loginFailureField, normalizeHostAddress, passwordFailureField, saveLoginMode,
   type HostAddressResult, type LoginField, type LoginMode,
 } from './login-model.mjs'
+import { LoginPreview } from './login-preview'
 import './login.css'
 
 interface LoginPageProps {
@@ -69,6 +66,8 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
   // A link to a Host that is not among the saved connections waits for the person to confirm it.
   const [pendingLink, setPendingLink] = useState<{ apiBase: string; token: string } | null>(null)
   const [loading, setLoading] = useState(false)
+  // The linked Host has no owner yet: its initialization token is the way in (#64 `login-uninitialized-host`).
+  const [needsSetup, setNeedsSetup] = useState(false)
   // A fresh object per failure, so focus moves again even when the same field fails twice.
   const [focusRequest, setFocusRequest] = useState<{ field: LoginField } | null>(null)
   const addressRef = useRef<HTMLInputElement | null>(null)
@@ -190,6 +189,20 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
   }, [selectedSavedBase])
 
   useEffect(() => { if (initialApiBase) setApiBaseValue(initialApiBase) }, [initialApiBase])
+  // Opened for a given Host (`?apiBaseUrl=` / `#apiBaseUrl=`): ask it, without credentials, whether it still
+  // needs its first owner; if so, open 访问令牌 and say which token to use. A Host that does not answer changes nothing.
+  useEffect(() => {
+    if (!initialApiBase || initialToken) return
+    const address = normalizeHostAddress(initialApiBase)
+    if (!address.ok) return
+    let current = true
+    void fetchMe(address.value).then(result => {
+      if (!current || !hostNeedsSetup(result)) return
+      setNeedsSetup(true)
+      setMode('token')
+    }, () => {})
+    return () => { current = false }
+  }, [initialApiBase])
   useEffect(() => {
     if (initialToken) return
     const saved = getSavedLogin(initialApiBase || getStoredApiBase() || apiBase)
@@ -224,10 +237,11 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
   return <div className="console-login">
     <div className="console-login-layout">
       <section className="console-login-intro">
-        <div className="console-login-brand"><span className="console-login-mark" aria-hidden="true">Z</span><span>Zhin Console</span></div>
+        <BrandMark size={36} withText className="console-login-brand" />
         <h1>{i18n.t('连接你的机器人')}</h1>
         <p>{i18n.t('连接运行 Zhin 的设备，管理会话、账号和任务。')}</p>
         <div className="console-login-notes"><ShieldCheck aria-hidden="true" /><span>{i18n.t('账号与令牌由管理网关验证：机器人实例停止时也能登录，查看实例日志并重新启动。')}</span></div>
+        <LoginPreview />
       </section>
       <section className="console-login-panel" aria-label={i18n.t('连接设置')}>
         <div className="console-login-panel-head"><LanguageSelect /></div>
@@ -242,7 +256,7 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
           if (mode === 'password') void handlePasswordLogin(apiBase)
           else void handleLogin(apiBase, token)
         }}>
-          {mode === 'token' && savedLogins.length > 0 && <div className="console-login-field">
+          {savedLogins.length > 0 && <div className="console-login-field">
             <label htmlFor="console-login-saved">{i18n.t('已保存的连接')}</label>
             <div className="console-login-saved">
               <Select value={selectedSavedBase || undefined} onValueChange={applySavedLogin} disabled={loading}>
@@ -298,12 +312,18 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
                 aria-label={i18n.t(showToken ? '隐藏令牌' : '显示令牌')} onClick={() => setShowToken(visible => !visible)}>{showToken ? <EyeOff /> : <Eye />}</Button>
             </div>
             {errors.token && <p id={TOKEN_ERROR_ID} className="console-login-error">{errors.token}</p>}
-            <small>{i18n.t('API 令牌，或首次初始化时使用的初始化令牌。')}</small>
+            {needsSetup
+              ? <small role="status">{i18n.t('这个实例还没有所有者，请用初始化令牌登录（.env 里的 HTTP_TOKEN，启动日志里也会提示）。')}</small>
+              : <small>{i18n.t('API 令牌，或首次初始化时使用的初始化令牌。')}</small>}
           </div>}
           {errors.form && <p id={SUMMARY_ID} ref={summaryRef} className="console-login-error" role="alert" tabIndex={-1}>{errors.form}</p>}
           <label className="console-login-remember"><Checkbox checked={remember} disabled={loading} onCheckedChange={value => setRemember(value === true)} /><span>{i18n.t('记住此连接')}</span></label>
-          {!remember && <p className="console-login-session-note">{i18n.t(mode === 'password' ? '登录状态仅保留在本次浏览器会话。' : '访问令牌仅保留在本次浏览器会话。')}</p>}
-          <Button type="submit" disabled={loading || lockedUntil > 0}>{loading ? i18n.t('验证中...')
+          {!remember && <p className="console-login-session-note">{mode === 'password'
+            // Without 记住此连接 the credential sits in sessionStorage: this tab only, not the whole browser session.
+            ? i18n.t('登录状态仅在当前标签页有效：在新标签页打开 Console 需要重新登录。')
+            : i18n.t('访问令牌仅在当前标签页有效：在新标签页打开 Console 需要重新输入。')}</p>}
+          {/* The view's one primary action (ADR 0063 D25). */}
+          <Button type="submit" variant="primary" disabled={loading || lockedUntil > 0}>{loading ? i18n.t('验证中...')
             : mode === 'password' ? i18n.t('登录')
             : selectedSavedBase && token ? i18n.t('快速连接') : i18n.t('连接')}</Button>
           <details className="console-login-help"><summary>{i18n.t('无法连接？')}</summary><p>{i18n.t('填写 Bot 启动日志中的 Host 地址。使用本地地址时，请确保 Host 的 corsOrigins 允许当前 Console 来源。')}</p></details>
