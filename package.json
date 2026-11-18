@@ -16,10 +16,10 @@
   },
   "dependencies": {
     "@zhin.js/ai": "~1.7.0",
-    "@zhin.js/client": "~1.2.1",
-    "@zhin.js/console-protocol": "~1.4.0",
-    "@zhin.js/console-ui": "~1.1.1",
-    "@zhin.js/contract": "~1.1.27",
+    "@zhin.js/client": "~1.4.0",
+    "@zhin.js/console-protocol": "~1.6.1",
+    "@zhin.js/console-ui": "~1.2.0",
+    "@zhin.js/contract": "~1.1.30",
     "zod": "^4.6.7"
   },
   "devDependencies": {
