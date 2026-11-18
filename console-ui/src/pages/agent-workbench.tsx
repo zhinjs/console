@@ -36,6 +36,7 @@ import './insights/insights.css'
 import { bindingModel, fetchAllIntrospection, recentAgentSessions, type BindingModelSource, type IntrospectionEnvelope, type RecentAgentSession } from './agent-workbench-model.mjs'
 import { mcpWorkbenchCopy, summarizeMcp } from './introspection/mcp-status-model.mjs'
 import { pluginRpc } from '../utils/plugin-rpc'
+import { AmbientJudgeUsage } from './ambient-judge-usage'
 
 interface BindingItem extends BindingModelSource {
   name: string
@@ -359,6 +360,8 @@ export default function AgentWorkbenchPage() {
           </div>
         )}
       </section>
+
+      <AmbientJudgeUsage />
 
       <section className="console-agent-shortcuts" aria-label={i18n.t("Agent 快捷入口")}>
         <Link to="/introspection?tab=tools"><Wrench /><span><strong>{i18n.t("工具目录")}</strong><small>{i18n.t("查看输入与来源")}</small></span><ArrowUpRight /></Link>

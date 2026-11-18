@@ -267,3 +267,61 @@ export function foldReplayRows(rows) {
   }
   return entries
 }
+
+const judgeErrorLabels = t => ({
+  quota_exhausted: t('额度用完'),
+  billing: t('余额不足'),
+  auth: t('密钥被拒'),
+  timeout: t('超时'),
+  no_response: t('无响应'),
+  network: t('网络错误'),
+  server: t('服务异常'),
+  provider_error: t('服务异常'),
+  rate_limit: t('限流'),
+  safety_block: t('内容被拦截'),
+  invalid_response: t('回答无效'),
+  length: t('回答无效'),
+  empty_response: t('回答无效'),
+  non_json_response: t('回答无效'),
+  malformed_tool_call: t('回答无效'),
+  context_overflow: t('上下文超长'),
+  bad_request: t('请求被拒绝'),
+  aborted: t('被取消'),
+  all_unavailable: t('所有模型都在跳过期'),
+  unknown: t('未知原因'),
+})
+
+/**
+ * The judge facts of an `ambient_decision` row (#1250, ADR 0066 D2 / D3): who judged (language or
+ * decision model), which fallback took over, tokens, the error class and the compared model's
+ * verdict. Short lines, `[]` for any other row or an older Host without these keys. Never a reason.
+ */
+export function ambientJudgeFacts(row, locale = 'zh-CN') {
+  if (row?.kind !== 'ambient_decision' || !isPlainObject(row.payload)) return []
+  const t = (message, values) => translate(locale, message, values)
+  const payload = row.payload
+  const text = value => (typeof value === 'string' && value.trim() ? value.trim() : '')
+  const kind = value => value === 'decision' ? t('决策模型') : value === 'language' ? t('语言模型') : ''
+  const errors = judgeErrorLabels(t)
+  const error = value => text(value) ? (Object.hasOwn(errors, value) ? errors[value] : value) : ''
+  const facts = []
+  const judge = text(payload.judge) || text(payload.judgeProfile) || text(payload.judgeModel)
+  if (judge) facts.push(kind(payload.judgeKind) ? t('判断：{0}（{1}）', [judge, kind(payload.judgeKind)]) : t('判断：{0}', [judge]))
+  const from = text(payload.judgeFallbackFrom) || text(payload.judgeFallbackFromProfile) || text(payload.judgeFallbackFromModel)
+  if (from) facts.push(t('备用接手，原来是 {0}', [from]))
+  const usage = isPlainObject(payload.judgeUsage) ? payload.judgeUsage : null
+  if (usage) {
+    const tokens = (Number(usage.inputTokens) || 0) + (Number(usage.outputTokens) || 0)
+    facts.push(t('用量 {0} token', [tokens]))
+  }
+  if (error(payload.judgeError)) facts.push(t('失败：{0}', [error(payload.judgeError)]))
+  if (Array.isArray(payload.judgeAttempts) && payload.judgeAttempts.length) {
+    facts.push(t('尝试过：{0}', [payload.judgeAttempts.filter(isPlainObject)
+      .map(attempt => `${text(attempt.profile) || text(attempt.model)}${error(attempt.error) ? ` (${error(attempt.error)})` : ''}`).join(', ')]))
+  }
+  const compared = text(payload.compareJudge) || text(payload.compareJudgeProfile) || text(payload.compareJudgeModel)
+  if (payload.compare === 'engage') facts.push(compared ? t('对照 {0}：会插话', [compared]) : t('对照：会插话'))
+  else if (payload.compare === 'quiet') facts.push(compared ? t('对照 {0}：不插话', [compared]) : t('对照：不插话'))
+  else if (payload.compare === 'failed') facts.push(compared ? t('对照 {0}：失败（{1}）', [compared, error(payload.compareJudgeError) || t('原因未报告')]) : t('对照：失败'))
+  return facts
+}

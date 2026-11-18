@@ -140,6 +140,7 @@ function workbenchFixture(sizes, { mcpRows } = {}) {
     '../components/StatusState': { StatusState: 'status-state' }, '../console-routes.mjs': { CONSOLE_PATHS: { opsInstance: '/ops/instance', ai: '/features/ai' } }, './ops/instance-sections.mjs': instanceSections,
     './agent-workbench-model.mjs': workbenchModel,
     './introspection/mcp-status-model.mjs': mcpStatus,
+    './ambient-judge-usage': { AmbientJudgeUsage: 'ambient-judge-usage' },
   })
   const view = runtime.mount(() => module.default())
   view.render()

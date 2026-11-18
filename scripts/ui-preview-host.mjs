@@ -92,8 +92,12 @@ const messageEvents = [
 // plugin.root.* fixtures (决策回放、Token 用量、群聊插话、技能助手、工具审批).
 const decisionRow = (minutesAgo, extra) => ({ id: `d-${minutesAgo}`, ts: now - minutesAgo * 60_000, turn_id: `turn-${minutesAgo}`, instance_id: 'preview-community', platform: 'icqq',
   scene_id: 'group:20001', user_id: '10001', kind: 'speak_gate', outcome: 'allow', reason_code: 'addressed', reason_detail: null, payload: {}, actor: 'policy', actor_id: null, ...extra })
-const decisions = [decisionRow(11, {}), decisionRow(42, { outcome: 'deny', reason_code: 'cannot_speak_muted' }), decisionRow(180, { scene_id: 'private:10001' })]
 const HOUR = 3_600_000
+const decisions = [decisionRow(11, {}), decisionRow(42, { outcome: 'deny', reason_code: 'cannot_speak_muted' }),
+  decisionRow(55, { kind: 'ambient_decision', outcome: 'skip', reason_code: 'ambient_not_engaged', reason_detail: 'shadow', actor: 'agent', payload: {
+    decision: 'shadow', confidence: 0.82, judge: 'Night Router/gemini-3.8-flash', judgeKind: 'language', judgeProfile: 'night:gemini-3.8-flash', judgeModel: 'gemini-3.8-flash',
+    judgeFallbackFrom: 'DeepSeek/deepseek-v4-flash', judgeMs: 710, judgeUsage: { inputTokens: 412, outputTokens: 19 }, compare: 'quiet', compareJudge: 'OpenAI/gpt-5.5-mini' } }),
+  decisionRow(180, { scene_id: 'private:10001' })]
 const usageStats = (session) => {
   const sessions = [
     { sessionKey: 'icqq:preview-community:group:20001', turns: 6, calls: 9, inputTokens: 18_400, outputTokens: 2_100, cacheReadTokens: 9_800 },
@@ -108,8 +112,40 @@ const usageStats = (session) => {
     series: Array.from({ length: 7 }, (_, index) => ({ bucketStart: start + index * 24 * HOUR, calls: index > 3 ? 4 : 0, inputTokens: index > 3 ? Math.round(sum('inputTokens') / 3) : 0, outputTokens: index > 3 ? 900 : 0, cacheReadTokens: index > 3 ? Math.round(sum('cacheReadTokens') / 3) : 0, byModel: index > 3 ? { 'preview/chat-small': Math.round(sum('inputTokens') / 3) } : {} })),
     segments: { history: 12_000, fixed: 6_000, user: 4_600 }, filesRead: 1, malformedLines: 0 }
 }
+// ADR 0066 / #1250 batch 47: the merged interjection judge (UI_PREVIEW_AMBIENT=legacy answers like an older instance).
+const legacyAmbient = process.env.UI_PREVIEW_AMBIENT === 'legacy'
+const DAY = 24 * HOUR
+const judgeDay = (daysAgo, calls, extra = {}) => ({ day: new Date(now - daysAgo * DAY).toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }), calls, failed: 0, fallbacks: 0,
+  byKind: { language: Math.round(calls / 3), decision: calls - Math.round(calls / 3) }, averageMs: 640, inputTokens: calls * 410, outputTokens: calls * 18, cacheReadTokens: calls * 120, cacheWriteTokens: 0, unreportedCalls: 0, ...extra })
 const ambientStatus = { enabled: true, mode: 'shadow', groups: 1, judges: ['preview/chat-small'], last24h: { spoke: 0, watched: 3, stayed_quiet: 5, skipped: 1 }, decisionShadow: { agreed: 3, disagreed: 0 },
-  recent: [{ at: now - 42 * 60_000, group: 'icqq:20001', outcome: 'watched', confidence: 0.7, judge: 'decision' }, { at: now - 90 * 60_000, group: 'icqq:20001', outcome: 'stayed_quiet' }], updatedAt: now - 42 * 60_000 }
+  recent: [{ at: now - 42 * 60_000, group: 'icqq:20001', outcome: 'watched', confidence: 0.7, judge: 'decision' }, { at: now - 90 * 60_000, group: 'icqq:20001', outcome: 'stayed_quiet' }], updatedAt: now - 42 * 60_000,
+  ...(legacyAmbient ? {} : {
+    judges: ['DeepSeek/deepseek-v4-flash', 'Night Router/gemini-3.8-flash'],
+    judgeChain: [
+      { profile: 'deepseek:deepseek-v4-flash', label: 'DeepSeek/deepseek-v4-flash', kind: 'decision', role: 'primary', skippedUntil: now + 40 * 60_000, skipReason: 'quota_exhausted' },
+      { profile: 'night:gemini-3.8-flash', label: 'Night Router/gemini-3.8-flash', kind: 'language', role: 'fallback' },
+      { profile: 'openai:gpt-5.5-mini', label: 'OpenAI/gpt-5.5-mini', kind: 'language', role: 'compare' },
+    ],
+    minConfidence: 0.75,
+    compare: { windowMs: DAY, agreed: 17, primaryOnly: 2, comparedOnly: 1, failed: 1, comparedProfiles: ['openai:gpt-5.5-mini'],
+      byMember: [{ member: 0, profile: 'deepseek:deepseek-v4-flash', agreed: 12, primaryOnly: 2, comparedOnly: 0, failed: 1 }, { member: 1, profile: 'night:gemini-3.8-flash', agreed: 5, primaryOnly: 0, comparedOnly: 1, failed: 0 }] },
+    judgeTimeZone: 'Asia/Shanghai',
+    judgeDaily: [judgeDay(6, 12), judgeDay(4, 31, { failed: 2, fallbacks: 3 }), judgeDay(3, 18), judgeDay(1, 26, { fallbacks: 1, unreportedCalls: 2 }), judgeDay(0, 9, { failed: 1, fallbacks: 4 })],
+  }) }
+// `GET /agent/inference/ambient-judge`: migrated, not yet noticed (the Console banner shows once).
+let ambientJudgeNoticedAt
+const ambientJudgePolicy = { profile: 'deepseek:deepseek-v4-flash', fallbacks: ['night:gemini-3.8-flash'], compare: 'openai:gpt-5.5-mini', minConfidence: 0.75, mode: 'shadow', timeoutMs: 3000 }
+const ambientJudge = () => ({ policy: ambientJudgePolicy, source: 'stored',
+  chain: [{ profile: 'deepseek:deepseek-v4-flash', kind: 'decision' }, { profile: 'night:gemini-3.8-flash', kind: 'language' }],
+  migration: { id: 'adr-0066-ambient-judge', status: 'migrated', at: now - 3 * HOUR, graphRevision: 2, after: ambientJudgePolicy,
+    rows: [
+      { field: 'profile', value: 'deepseek:deepseek-v4-flash', from: 'purposes.decisions.ambient.profile' },
+      { field: 'fallbacks', value: ['night:gemini-3.8-flash'], from: 'purposes.ambient (language) + purposes.ambient.fallbacks' },
+      { field: 'minConfidence', value: 0.75, from: 'max(ai.trigger.ambient.minConfidence, purposes.decisions.ambient.minConfidence)' },
+      { field: 'mode', value: 'shadow', from: 'ai.trigger.ambient.mode' },
+    ],
+    notes: [{ code: 'language-judge-became-fallback', value: 'night:gemini-3.8-flash' }, { code: 'threshold-max', value: 0.75 }],
+    ...(ambientJudgeNoticedAt ? { noticedAt: ambientJudgeNoticedAt } : {}) } })
 const configSource = 'ai:\n  trigger:\n    ambient:\n      mode: shadow\n      conversations:\n        - icqq:30002\n      maxPerHour: 4\n'
 // rss: a plugin form with grouped fields, millisecond fields (shown in seconds) and a list.
 const rssConfigSource = 'rss:\n  interval: 30\n  fetchTimeoutMs: 15000\n  retryDelayMs: 2500\n  maxItems: 10\n  proxy: ${RSS_PROXY}\n'
@@ -394,7 +430,8 @@ const meReport = () => setupMode
     permissions: ALL_PERMISSIONS.filter(item => item !== 'iam.manage' && item !== 'ops.env.write'),
     bindings: [{ role: 'adapter-admin', scope: { kind: 'adapter', key: 'icqq' }, permissions: ['iam.manage', 'feature.view', 'feature.configure', 'feature.toggle'] }], setupRequired: false,
     onboarding: { version: 1, steps: { database: 'done', owner: 'done', ai: 'skipped', adapters: 'done' } } }
-  : { kind: 'user', user: { id: 'u-owner', username: 'owner', displayName: '演示所有者' }, permissions: ALL_PERMISSIONS,
+  // The owner also holds the plugin permissions of the root plugin's status pages (群聊插话 / 决策回放).
+  : { kind: 'user', user: { id: 'u-owner', username: 'owner', displayName: '演示所有者' }, permissions: [...ALL_PERMISSIONS, 'ambient:read', 'decisions:read'],
     bindings: [{ role: 'owner', scope: { kind: 'global' }, permissions: ALL_PERMISSIONS }], setupRequired: false,
     onboarding: { version: 1, steps: { database: 'done', owner: 'done', ai: 'skipped', adapters: 'pending' } } }
 /** Answers gateway-owned requests; returns false for everything the gateway forwards to the instance. */
@@ -502,8 +539,16 @@ function inferenceView() {
   return {
     rootId: INFERENCE_ROOT, revision: 1, ownerId: INFERENCE_OWNER, hostAdministrator: true, services, accounts, profiles, statuses, deployment: [],
     drivers: [{ id: 'openai-compatible', owner: 'root', contractVersion: '1', label: 'OpenAI 兼容', authentication: ['api-key'], modelContracts: [{ protocol: 'chat', kinds: ['language', 'decision', 'image'] }] }],
-    purposes: { defaults: { chat: 'night:gemini-3.8-flash', summary: 'deepseek:deepseek-v4-flash', image: 'openai:gpt-image-2' },
-      decisions: { skills: { mode: 'active', profile: 'deepseek:deepseek-v4-flash' } }, agents: { main: 'agent:main', planner: 'agent:planner' } },
+    purposes: { defaults: { chat: 'night:gemini-3.8-flash', summary: 'deepseek:deepseek-v4-flash', image: 'openai:gpt-image-2', ...(legacyAmbient ? { ambient: 'night:gemini-3.8-flash' } : {}) },
+      ...(legacyAmbient ? {} : { ambient: ambientJudgePolicy }),
+      decisions: { skills: { mode: 'active', profile: 'deepseek:deepseek-v4-flash' }, tools: { mode: 'off', profile: 'deepseek:deepseek-v4' },
+        ...(legacyAmbient ? { ambient: { mode: 'active', profile: 'deepseek:deepseek-v4-flash' } } : {}) },
+      agents: { main: 'agent:main', planner: 'agent:planner' } },
+    modelAvailability: { notice: '本轮由备用模型回答', unavailable: [{ accountId: 'deepseek-main', model: 'deepseek-v4-flash', reason: 'quota_exhausted', since: now - 20 * 60_000, until: now + 40 * 60_000 }], recentFallbacks: [] },
+    ...(legacyAmbient ? {} : { purposeEffects: {
+      ambient: { status: 'effective', chain: [{ profile: 'deepseek:deepseek-v4-flash', kind: 'decision' }, { profile: 'night:gemini-3.8-flash', kind: 'language' }], compare: { profile: 'openai:gpt-5.5-mini', kind: 'language' } },
+      'decisions.skills': { status: 'effective' }, 'decisions.tools': { status: 'ignored', reason: 'mode-off' },
+    } }),
   }
 }
 const inferenceTargets = { agentsAvailable: true, agents: [{ name: 'main', nickname: '主 Agent' }, { name: 'planner', nickname: '小编 planner' }],
@@ -574,6 +619,9 @@ const server = createServer(async (request, response) => {
     if (sub === '/owners') { json(envelope([{ id: INFERENCE_OWNER, label: 'Host', kind: 'host' }])); return }
     if (sub === '/targets') { json(envelope(inferenceTargets)); return }
     if (sub === '') { json(envelope(inferenceView())); return }
+    if (sub === '/ambient-judge' && !legacyAmbient) { json(envelope(ambientJudge())); return }
+    if (sub === '/ambient-judge/migration/noticed' && request.method === 'POST' && !legacyAmbient) { ambientJudgeNoticedAt ??= Date.now(); json(envelope({ noticedAt: ambientJudgeNoticedAt })); return }
+    if (sub.startsWith('/ambient-judge')) { json({ success: false, code: 'not-found' }, 404); return }
     json({ success: false, code: 'invalid_input', error: '本地预览不执行此操作。' }, 400); return
   }
   if (url.pathname === '/api/system/status') {

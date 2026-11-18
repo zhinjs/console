@@ -1,13 +1,19 @@
 import { translate } from '../../i18n/locale.mjs'
 const base = '/api/agent/inference'
 export class InferenceRequestError extends Error {
-  constructor(code, status = 503, mutationOutcome, reason) {
+  constructor(code, status = 503, mutationOutcome, reason, path) {
     super(code)
     this.code = code
     this.status = status
     this.mutationOutcome = mutationOutcome
     if (reason) this.reason = reason
+    if (path) this.path = path
   }
+}
+/** The configuration path a refusal names (`details.path`, #1250), e.g. `purposes.ambient.fallbacks[1]`. */
+function refusalPath(result) {
+  const path = result?.details?.path ?? result?.path
+  return typeof path === 'string' && /^[A-Za-z0-9_.[\]:@/-]{1,200}$/u.test(path) ? path : undefined
 }
 /** Closed-set Host refusal reasons (#1250); the Host never sends values or provider text. */
 const REFUSAL_TEXT = {
@@ -48,7 +54,8 @@ export async function inferenceRequest(fetch, { path = '', ownerId, body, method
       result.mutationOutcome === 'not-committed' || result.requestOutcome === 'not-dispatched'
         ? 'not-committed'
         : undefined,
-      typeof result.reason === 'string' && Object.hasOwn(REFUSAL_TEXT, result.reason) ? result.reason : undefined
+      typeof result.reason === 'string' && Object.hasOwn(REFUSAL_TEXT, result.reason) ? result.reason : undefined,
+      refusalPath(result)
     )
   return result.data
 }
@@ -59,6 +66,12 @@ export function inferenceError(error, locale = 'zh-CN') {
   if (code === 'plan-conflict') return translate(locale, '连接或模型身份发生变化，请新增账号或模型并明确重新绑定。')
   if (['conflict', 'stale-reference', 'revision-conflict'].includes(code))
     return translate(locale, '配置已变化，请重新读取；已有草稿需重新打开编辑后再保存。')
+  if (['invalid-plan', 'invalid-graph'].includes(code) && error.path) {
+    const where = configPathLabel(error.path, locale)
+    return code === 'invalid-graph'
+      ? translate(locale, '{0} 引用的模型配置不存在或类型不对（删除模型配置前请先从这里移除）。', [where])
+      : translate(locale, '{0} 无效，请检查后再保存。', [where])
+  }
   if (['invalid-input', 'invalid-plan', 'invalid-graph'].includes(code))
     return translate(locale, '请检查必填项、参数和模型能力。')
   if (code === 'identity-change') return translate(locale, '凭据属于不同或无法核实的账号，请新增账号并重新绑定模型。')
@@ -78,6 +91,23 @@ export function inferenceError(error, locale = 'zh-CN') {
   if (code === 'not-installed') return translate(locale, '这个 Host 没有模型接口：没有安装 Agent，或 Host 版本较旧。只用 IM 时可以忽略；需要 AI 回复时先在插件市场安装 Agent。')
   if (code === 'outcome-unknown') return translate(locale, '操作结果尚未确认，请查询结果后再操作。')
   return translate(locale, '操作未完成，请稍后重新读取。')
+}
+const AMBIENT_FIELD_LABELS = t => ({
+  profile: t('插话判断模型'), fallbacks: t('备用链'), compare: t('对照模型'),
+  minConfidence: t('门槛'), mode: t('只观察'), timeoutMs: t('决策模型超时'),
+})
+/**
+ * A configuration path as people read it: `purposes.ambient.fallbacks[1]` → 「插话判断 · 备用链 第 2 项（purposes.ambient.fallbacks[1]）」;
+ * other paths are shown as the Host sent them.
+ */
+export function configPathLabel(path, locale = 'zh-CN') {
+  const t = (message, values) => translate(locale, message, values)
+  const match = /^purposes\.ambient(?:\.([A-Za-z]+)(?:\[(\d+)\])?)?$/u.exec(path)
+  if (!match) return t('配置 {0}', [path])
+  const labels = AMBIENT_FIELD_LABELS(t)
+  const field = match[1] && Object.hasOwn(labels, match[1]) ? labels[match[1]] : match[1]
+  const item = match[2] !== undefined ? t('{0} 第 {1} 项', [field, Number(match[2]) + 1]) : field
+  return t('{0}（{1}）', [item ? t('插话判断 · {0}', [item]) : t('插话判断'), path])
 }
 export function resourceBindings(view) {
   return Object.fromEntries(
@@ -247,7 +277,7 @@ export function schemaField(schema = {}) {
  * chain the page holds (`<key>Fallbacks`, `agentFallbacks`, the Host's graph shape) goes back with
  * it. `fallbacks: false` (a Host without fallback chains) never writes `fallbacks`.
  */
-export function purposePlan(draft, original = draft, { fallbacks = true } = {}) {
+export function purposePlan(draft, original = draft, { fallbacks = true, ambientJudge } = {}) {
   const ref = (id, chain) => (id ? languageReference(id, fallbacks ? chain : undefined) : null)
   const selection = (value) => ({ chat: ref(value?.chat, value?.chatFallbacks), perception: value?.perception ?? null })
   const map = (current, before, convert) =>
@@ -258,13 +288,19 @@ export function purposePlan(draft, original = draft, { fallbacks = true } = {}) 
       ])
     )
   const defaults = draft.defaults
+  // ADR 0066: with the merged interjection judge, `purposes.ambient` is the policy object (written
+  // only when it changed) and `decisions.ambient` is no longer a decision purpose.
+  const merged = ambientJudge !== undefined
+  const withoutAmbient = (value) => (merged && value ? Object.fromEntries(Object.entries(value).filter(([task]) => task !== 'ambient')) : value)
   return {
     chat: ref(defaults.chat, defaults.chatFallbacks),
     summary: ref(defaults.summary, defaults.summaryFallbacks),
-    ambient: ref(defaults.ambient, defaults.ambientFallbacks),
+    ...(merged
+      ? ambientJudge.entry === undefined ? {} : { ambient: ambientJudge.entry }
+      : { ambient: ref(defaults.ambient, defaults.ambientFallbacks) }),
     image: defaults.image ? { profile: defaults.image } : null,
     perception: defaults.perception ?? null,
-    decisions: map(draft.decisions, original.decisions, (value) => value),
+    decisions: map(withoutAmbient(draft.decisions), withoutAmbient(original.decisions), (value) => value),
     agents: map(draft.agents, original.agents, (id, key) => ref(id, draft.agentFallbacks?.[key])),
     adapters: map(draft.adapters, original.adapters, selection),
     endpoints: map(draft.endpoints, original.endpoints, selection),
@@ -337,7 +373,7 @@ export function describeUnavailability(entry, locale = 'zh-CN') {
 const PURPOSE_NAMES = {
   chat: (locale) => translate(locale, '聊天'),
   summary: (locale) => translate(locale, '摘要'),
-  ambient: (locale) => translate(locale, '旁听'),
+  ambient: (locale) => translate(locale, '插话判断'),
   perception: (locale) => translate(locale, '识图'),
 }
 function purposeName(purpose, locale) {
@@ -412,8 +448,9 @@ export function driverLabel(driver, drivers) {
 }
 
 /**
- * 「谁在用」：一个模型（Profile）被哪些用途引用。只读现有的用途配置（`view.purposes`），
- * 不推测运行时实际调用。纯函数。
+ * 「谁在用」：一个模型（Profile）被哪些用途引用。读用途配置（`view.purposes`），Host 管理员还读
+ * `purposeEffects`（ADR 0066 D7）：插话判断按实际的判断器链列出（含跟随聊天时的聊天模型），
+ * 没有生效的引用标 `ignored` 并带原因（插话未开启、决策已关闭），由页面灰显。纯函数。
  */
 
 const decisionLabels = t => ({
@@ -425,6 +462,21 @@ const decisionLabels = t => ({
   ambient: t('旁听参与判断'),
 })
 
+const IGNORED_REASONS = t => ({
+  'ambient-not-configured': t('插话未开启'),
+  'no-conversations': t('没有群开启插话'),
+  'mode-off': t('决策已关闭'),
+  'binding-name': t('同名的 Agent 绑定优先'),
+  ambiguous: t('有多个同名子 Agent'),
+  'no-target': t('没有这个名字的 Agent'),
+})
+
+/** Why a usage does not take effect, in words. */
+export function ignoredReasonText(reason, locale = 'zh-CN') {
+  const reasons = IGNORED_REASONS(message => translate(locale, message))
+  return Object.hasOwn(reasons, reason) ? reasons[reason] : translate(locale, '未生效')
+}
+
 function scopeUses(models, profileId) {
   const uses = []
   if (models?.chat === profileId || models?.chatFallbacks?.includes(profileId)) uses.push('chat')
@@ -432,28 +484,61 @@ function scopeUses(models, profileId) {
   return uses
 }
 
+const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value)
+
 /**
- * `[{ key, label, level }]`，`level` 为 `default` / `decision` / `agent` / `adapter` / `endpoint` / `scene`。
- * 没有用途配置（个人身份看不到用途）时返回 null，表示「不知道」而不是「没人用」。
+ * The interjection judge rows of one Profile (ADR 0066): 插话判断 / 插话判断（第 N 个备用）/
+ * 插话判断（对照）, 「跟随聊天」 when the chain is the chat model's. From `purposeEffects.ambient`
+ * when the Host sends it (the chain really used), else from the stored `purposes.ambient`.
  */
-export function profileUsages(purposes, profileId, locale = 'zh-CN') {
+function ambientUsages(purposes, effects, profileId, t) {
+  const effect = isRecord(effects?.ambient) ? effects.ambient : null
+  const policy = isRecord(purposes?.ambient) ? purposes.ambient : null
+  const chain = effect && Array.isArray(effect.chain) ? effect.chain.map(member => member?.profile)
+    : policy?.profile ? [policy.profile, ...(Array.isArray(policy.fallbacks) ? policy.fallbacks : [])] : []
+  const compare = effect ? effect.compare?.profile : policy?.compare
+  const inherited = effect?.inheritedFrom === 'chat'
+  const ignored = effect?.status === 'ignored' ? { ignored: true, reason: effect.reason ?? '' } : {}
+  const rows = []
+  chain.forEach((id, index) => {
+    if (id !== profileId) return
+    const label = index === 0
+      ? inherited ? t('插话判断（跟随聊天）') : t('插话判断')
+      : inherited ? t('插话判断（跟随聊天，第 {0} 个备用）', [index]) : t('插话判断（第 {0} 个备用）', [index])
+    rows.push({ key: `ambient:${index}`, level: 'ambient', label, ...ignored })
+  })
+  if (compare === profileId) rows.push({ key: 'ambient:compare', level: 'ambient', label: t('插话判断（对照）'), ...ignored })
+  return rows
+}
+
+/**
+ * `[{ key, label, level, ignored?, reason? }]`，`level` 为 `default` / `ambient` / `decision` / `agent` /
+ * `adapter` / `endpoint` / `scene`。没有用途配置（个人身份看不到用途）时返回 null，表示「不知道」而不是「没人用」。
+ * `effects` 是管理视图的 `purposeEffects`；旧实例没有它（也没有 `purposes.ambient`）时按原来的两项列出。
+ */
+export function profileUsages(purposes, profileId, locale = 'zh-CN', effects) {
   if (!purposes || typeof purposes !== 'object') return null
   const t = (text, values) => translate(locale, text, values)
   const rows = []
   const defaults = purposes.defaults ?? {}
+  // ADR 0066: the merged judge replaces 默认旁听 and the decision 旁听参与判断.
+  const merged = isRecord(purposes.ambient) || isRecord(effects?.ambient)
   const defaultLabels = { chat: t('默认聊天'), summary: t('默认摘要'), ambient: t('默认旁听'), image: t('默认图片生成') }
-  for (const key of ['chat', 'summary', 'ambient', 'image']) {
+  for (const key of ['chat', 'summary', ...(merged ? [] : ['ambient']), 'image']) {
     if (defaults[key] === profileId) rows.push({ key: `default:${key}`, level: 'default', label: defaultLabels[key] })
     else if (defaults[`${key}Fallbacks`]?.includes(profileId))
       rows.push({ key: `default:${key}-fallback`, level: 'default', label: t('{0}（备选）', [defaultLabels[key]]) })
   }
   if (defaults.perception?.profile === profileId) rows.push({ key: 'default:perception', level: 'default', label: t('默认识图') })
   else if (defaults.perception?.fallbacks?.includes(profileId)) rows.push({ key: 'default:perception-fallback', level: 'default', label: t('默认识图（备选）') })
+  if (merged) rows.push(...ambientUsages(purposes, effects, profileId, t))
   const decisions = decisionLabels(t)
   for (const [task, policy] of Object.entries(purposes.decisions ?? {})) {
-    if (policy?.profile !== profileId) continue
+    if (policy?.profile !== profileId || (merged && task === 'ambient')) continue
     const name = Object.hasOwn(decisions, task) ? decisions[task] : task
-    rows.push({ key: `decision:${task}`, level: 'decision', label: t('决策：{0}', [name]) })
+    const effect = isRecord(effects?.[`decisions.${task}`]) ? effects[`decisions.${task}`] : null
+    rows.push({ key: `decision:${task}`, level: 'decision', label: t('决策：{0}', [name]),
+      ...(effect?.status === 'ignored' ? { ignored: true, reason: effect.reason ?? '' } : {}) })
   }
   for (const [agent, profile] of Object.entries(purposes.agents ?? {})) {
     if (profile === profileId) rows.push({ key: `agent:${agent}`, level: 'agent', label: t('Agent {0}', [agent]) })

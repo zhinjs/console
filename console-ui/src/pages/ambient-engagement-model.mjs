@@ -69,7 +69,56 @@ export function validateAmbientStatus(data, locale = 'zh-CN') {
   }
   const updatedAtValid = data.updatedAt === null || isTimestamp(data.updatedAt)
   if (!updatedAtValid) throw new Error(translate(locale, "群聊插话状态格式不正确。"))
+  // Fields of newer instances (ADR 0066, #1250 batch 47): optional, but checked when present.
+  if (!optionalAmbientFieldsValid(data)) throw new Error(translate(locale, "群聊插话状态格式不正确。"))
   return data
+}
+
+const JUDGE_KINDS = ['language', 'decision']
+const JUDGE_ROLES = ['primary', 'fallback', 'compare']
+const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/
+const isText = value => typeof value === 'string'
+
+function compareCountsValid(value) {
+  return isPlainObject(value) && ['agreed', 'primaryOnly', 'comparedOnly', 'failed'].every(key => isCount(value[key]))
+}
+
+function judgeMemberValid(member) {
+  return isPlainObject(member) && isText(member.profile) && isText(member.label) && JUDGE_ROLES.includes(member.role)
+    && (member.kind === undefined || JUDGE_KINDS.includes(member.kind))
+    && (member.skippedUntil === undefined || isTimestamp(member.skippedUntil))
+    && (member.skipReason === undefined || isText(member.skipReason))
+}
+
+function judgeDayValid(day) {
+  return isPlainObject(day) && isText(day.day) && DAY_PATTERN.test(day.day)
+    && ['calls', 'failed', 'fallbacks', 'averageMs', 'inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens', 'unreportedCalls'].every(key => isCount(day[key]))
+    && isPlainObject(day.byKind) && isCount(day.byKind.language) && isCount(day.byKind.decision)
+}
+
+/**
+ * `judges`, `decisionShadow` (older instances), and ADR 0066 / batch 47's `judgeChain`,
+ * `minConfidence`, `compare`, `judgeDaily`, `judgeTimeZone`: each may be absent, never malformed.
+ */
+function optionalAmbientFieldsValid(data) {
+  if (data.judges !== undefined && !(Array.isArray(data.judges) && data.judges.every(isText))) return false
+  if (data.decisionShadow !== undefined && !(isPlainObject(data.decisionShadow) && isCount(data.decisionShadow.agreed) && isCount(data.decisionShadow.disagreed))) return false
+  if (data.judgeChain !== undefined && !(Array.isArray(data.judgeChain) && data.judgeChain.every(judgeMemberValid))) return false
+  if (data.minConfidence !== undefined && !(typeof data.minConfidence === 'number' && data.minConfidence >= 0 && data.minConfidence <= 1)) return false
+  if (data.compare !== undefined) {
+    const compare = data.compare
+    if (!compareCountsValid(compare) || !isCount(compare.windowMs)) return false
+    if (!Array.isArray(compare.byMember) || !compare.byMember.every(row => compareCountsValid(row) && Number.isInteger(row.member) && row.member >= 0 && (row.profile === undefined || isText(row.profile)))) return false
+    if (!Array.isArray(compare.comparedProfiles) || !compare.comparedProfiles.every(isText)) return false
+  }
+  if (data.judgeDaily !== undefined && !(Array.isArray(data.judgeDaily) && data.judgeDaily.every(judgeDayValid))) return false
+  if (data.judgeTimeZone !== undefined && !isText(data.judgeTimeZone)) return false
+  return true
+}
+
+/** Whether the instance has the merged interjection judge (ADR 0066): it reports the chain as data. */
+export function hasMergedJudge(status) {
+  return Array.isArray(status?.judgeChain)
 }
 
 function describeCurrentBehavior(status, locale = 'zh-CN') {
@@ -129,15 +178,19 @@ function readConversationList(ambient) {
   return ambient.conversations.filter((conversation) => typeof conversation === 'string' && conversation.trim() !== '')
 }
 
-/** 从已解析的配置文件里读出页面表单的初始值。 */
-export function readAmbientSettings(configDocument) {
+/**
+ * 从已解析的配置文件里读出页面表单的初始值。`judgeMode`（ADR 0066 的实例）是插话判断的模式
+ * `purposes.ambient.mode`：有它时「只观察 / 主动参与」读它，不再读已废弃的 `ai.trigger.ambient.mode`。
+ */
+export function readAmbientSettings(configDocument, { judgeMode } = {}) {
   const ambient = readStoredAmbient(configDocument)
   const conversations = readConversationList(ambient)
   const coversEveryGroup = conversations.includes('*')
   const specificGroups = conversations.filter((conversation) => conversation !== '*')
   let behavior = 'join'
+  const mode = judgeMode === 'shadow' || judgeMode === 'active' ? judgeMode : ambient.mode
   if (conversations.length === 0) behavior = 'off'
-  else if (ambient.mode === 'shadow') behavior = 'watch'
+  else if (mode === 'shadow') behavior = 'watch'
   const storedMaxPerHour = ambient.maxPerHour
   const maxPerHour = isCount(storedMaxPerHour) ? storedMaxPerHour : DEFAULT_MAX_PER_HOUR
   return {
@@ -182,8 +235,10 @@ function ambientPath(key) {
 /**
  * 生成 config:patch 的操作，只写 ai.trigger.ambient 下的几个键，其余调优项原样保留。
  * 「关闭」就是不给任何群开放：清空群列表。
+ * `mergedJudge`（ADR 0066 的实例）：「只观察」是插话判断的 `purposes.ambient.mode`，由
+ * {@link ambientJudgeModeChange} 另外写入，这里不再写已废弃的 `ai.trigger.ambient.mode`。
  */
-export function buildAmbientPatches(settings) {
+export function buildAmbientPatches(settings, { mergedJudge = false } = {}) {
   if (settings.behavior === 'off') {
     return [{ op: 'set', path: ambientPath('conversations'), value: [] }]
   }
@@ -191,24 +246,37 @@ export function buildAmbientPatches(settings) {
   const mode = settings.behavior === 'watch' ? 'shadow' : 'active'
   return [
     { op: 'set', path: ambientPath('conversations'), value: conversations },
-    { op: 'set', path: ambientPath('mode'), value: mode },
+    ...(mergedJudge ? [] : [{ op: 'set', path: ambientPath('mode'), value: mode }]),
     { op: 'set', path: ambientPath('maxPerHour'), value: settings.maxPerHour },
   ]
 }
 
+/**
+ * ADR 0066: the `purposes.ambient` to write when the draft changes 「只观察 / 主动参与」, or null when
+ * the mode stays (or the behaviour is 关闭, which only clears the groups). The whole policy is
+ * written (the object form replaces the item), so it starts from the policy read from the Host.
+ */
+export function ambientJudgeModeChange(settings, policy, currentMode) {
+  if (settings.behavior === 'off') return null
+  const mode = settings.behavior === 'watch' ? 'shadow' : 'active'
+  if (mode === (currentMode === 'shadow' ? 'shadow' : 'active')) return null
+  const base = isPlainObject(policy) ? policy : {}
+  return { ...base, ...(Array.isArray(base.fallbacks) ? { fallbacks: [...base.fallbacks] } : {}), mode }
+}
+
 /** The keys a save writes (`ai.trigger.ambient.*` → value), for comparing a read-back with the draft. */
-export function ambientWrittenValues(settings) {
-  return Object.fromEntries(buildAmbientPatches(settings).map(patch => [patch.path.join('.'), patch.value]))
+export function ambientWrittenValues(settings, options) {
+  return Object.fromEntries(buildAmbientPatches(settings, options).map(patch => [patch.path.join('.'), patch.value]))
 }
 
 /**
  * What a saved `config:patch` did: the outcome the Host reported (apply-outcome-model) and whether
  * the settings read back after the save are the ones submitted. `reread` null = the read failed.
  */
-export function ambientSaveOutcome(result, submitted, reread) {
+export function ambientSaveOutcome(result, submitted, reread, options) {
   return {
     outcome: outcomeFromConfigSave(result, result?.revision),
-    mismatch: reread ? readBackMismatch(ambientWrittenValues(submitted), ambientWrittenValues(reread.settings)) : null,
+    mismatch: reread ? readBackMismatch(ambientWrittenValues(submitted, options), ambientWrittenValues(reread.settings, options)) : null,
     unverified: !reread,
   }
 }

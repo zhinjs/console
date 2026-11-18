@@ -2,7 +2,8 @@ import { translate } from '../i18n/locale.mjs'
 import { useI18n } from '../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { parse as parseConfigSource } from 'yaml'
-import { RefreshCw } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ArrowUpRight, RefreshCw } from 'lucide-react'
 import { ApplyFeedback, type ApplyOutcome, type ReadBackMismatch } from '../components/ApplyFeedback'
 import { requestConsole } from '../utils/console-rpc'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
@@ -19,8 +20,14 @@ import { ScopeFilterBar, useScopeFilter } from './insights/ScopeFilterBar'
 import { ambientGroupKey } from './insights/scope-filter.mjs'
 import { ConfigurationLiveStatus } from '../components/PluginConfigForm/ConfigurationLiveStatus'
 import { configurationReceiptForRead, type ConfigurationApplicationStatus } from '../components/PluginConfigForm/config-live-status.mjs'
+import { apiFetch } from '../utils/auth'
+import { CONSOLE_PATHS } from '../console-routes.mjs'
+import { InferenceRequestError, inferenceError, inferenceRequest, type AmbientJudgePolicy } from './inference/model.mjs'
+import { ambientAgreement, ambientJudgeChainRows, planWarningText, readAmbientJudgeView, writeAmbientJudgePolicy } from './inference/ambient-judge-model.mjs'
 import {
   BEHAVIOR_CHOICES,
+  ambientJudgeModeChange,
+  hasMergedJudge,
   ambientGroupLabel,
   buildAmbientPatches,
   describeAmbientStatus,
@@ -36,12 +43,19 @@ import {
   validateAmbientStatus,
   type AmbientBehavior,
   type AmbientSettings,
+  type AmbientStatus,
   type AmbientStatusView,
 } from './ambient-engagement-model.mjs'
 
 type ConfigSource = ConfigurationApplicationStatus & { source: string; revision: string }
-type StatusRead = { denied: true } | { denied: false; view: AmbientStatusView }
-type SettingsRead = { settings: AmbientSettings; revision: string; application?: ConfigurationApplicationStatus; readEpoch?: number }
+type StatusRead = { denied: true } | { denied: false; view: AmbientStatusView; status: AmbientStatus }
+/**
+ * The interjection judge as the settings form needs it (ADR 0066): whether the instance has it
+ * (`merged`), the policy read from the Host (Host administrators only) and the mode in effect.
+ * Older instances: `merged: false`, the form writes `ai.trigger.ambient.mode` as before.
+ */
+type JudgeSettings = { merged: boolean; policy?: AmbientJudgePolicy; mode?: 'active' | 'shadow' }
+type SettingsRead = { settings: AmbientSettings; revision: string; application?: ConfigurationApplicationStatus; readEpoch?: number; judge?: JudgeSettings }
 type PatchResult = ConfigurationApplicationStatus & {
   status?: string
   revision?: string
@@ -52,18 +66,33 @@ async function readAmbientStatus(locale: 'zh-CN' | 'en' = 'zh-CN'): Promise<Stat
   try {
     const data = await pluginRpc<unknown>('root', 'ambient')
     const status = validateAmbientStatus(data, locale)
-    return { denied: false, view: describeAmbientStatus(status, locale) }
+    return { denied: false, view: describeAmbientStatus(status, locale), status }
   } catch (error) {
     if (isPermissionDenied(error)) return { denied: true }
     throw error
   }
 }
 
+/**
+ * Which mode the interjection judge runs in and whether this caller can change it: the judge route
+ * (Host administrators), else the status (`judgeChain` marks an ADR 0066 instance). Never throws:
+ * an unreadable judge leaves the form on the configuration file alone.
+ */
+async function readJudgeSettings(): Promise<JudgeSettings> {
+  const [judge, status] = await Promise.all([
+    inferenceRequest<unknown>(apiFetch, { path: '/ambient-judge' }).then(readAmbientJudgeView).catch(() => null),
+    pluginRpc<unknown>('root', 'ambient').then(data => validateAmbientStatus(data)).catch(() => null),
+  ])
+  if (judge) return { merged: true, policy: judge.policy, mode: judge.policy.mode === 'shadow' ? 'shadow' : 'active' }
+  if (status && hasMergedJudge(status)) return { merged: true, ...(status.enabled ? { mode: status.mode === 'shadow' ? 'shadow' as const : 'active' as const } : {}) }
+  return { merged: false }
+}
+
 async function readAmbientSettingsFromHost(): Promise<SettingsRead> {
-  const configSource = await requestConsole<ConfigSource>({ type: 'config:get-source' })
+  const [configSource, judge] = await Promise.all([requestConsole<ConfigSource>({ type: 'config:get-source' }), readJudgeSettings()])
   const configDocument: unknown = parseConfigSource(configSource.source)
-  const settings = readAmbientSettings(configDocument)
-  return { settings, revision: configSource.revision, application: { application: configSource.application, applicationError: configSource.applicationError } }
+  const settings = readAmbientSettings(configDocument, judge.merged ? { judgeMode: judge.mode } : {})
+  return { settings, revision: configSource.revision, application: { application: configSource.application, applicationError: configSource.applicationError }, judge }
 }
 
 function formatTime(timestamp: number, locale: 'zh-CN' | 'en' = 'zh-CN'): string {
@@ -144,11 +173,42 @@ function AmbientStatusSection({ read, onRetry }: { read: StatusReadState; onRetr
           <div className="text-xs text-muted-foreground">{count.label}</div>
         </div>)}
       </div>
+      <AmbientJudgeStatus status={read.data.status} />
       {view.hasActivity
         ? <AmbientRecentActivity recent={view.recent} />
         : <StatusState kind="empty" compact title={i18n.t("最近 24 小时还没有记录。")} description={i18n.t("打开插话并有群消息进来后，这里会记录机器人每次接话或不接话。")} />}
     </CardContent>
   </Card>
+}
+
+/**
+ * 插话判断（ADR 0066 D7 第 4 项）：实际的判断器链（主项 / 备用 / 对照，是否在跳过期）、门槛和
+ * 与对照模型的一致率。旧实例不报告链时只说明需要升级。
+ */
+function AmbientJudgeStatus({ status }: { status: AmbientStatus }) {
+  const i18n = useI18n()
+  if (!hasMergedJudge(status)) {
+    return <p className="text-xs text-muted-foreground" role="note">{i18n.t("这个实例版本较旧，看不到由哪个模型判断。升级 Zhin 后，这里会显示插话判断的模型、备用和对照。")}</p>
+  }
+  const rows = ambientJudgeChainRows(status, i18n.locale)
+  const agreement = ambientAgreement(status, i18n.locale)
+  const purposesHref = `${CONSOLE_PATHS.ai}?tab=purposes`
+  return <div className="space-y-2 rounded-md bg-muted/40 p-3 text-sm" data-ambient-judge-status="">
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <h3 className="font-medium">{i18n.t("插话判断")}</h3>
+      <Button variant="ghost" size="sm" asChild><Link to={purposesHref}>{i18n.t("在用途页修改")}<ArrowUpRight /></Link></Button>
+    </div>
+    {rows.length ? <ul className="space-y-1" role="list">
+      {rows.map(row => <li key={row.key} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <Badge variant={row.roleCode === 'compare' ? 'secondary' : 'outline'}>{row.role}</Badge>
+        <span className="font-medium">{row.label}</span>
+        <span className="text-xs text-muted-foreground">{row.kind}</span>
+        {row.skipped ? <span className="text-xs text-warning">{row.skipped}</span> : null}
+      </li>)}
+    </ul> : <p className="text-xs text-muted-foreground">{i18n.t("还没有可用的判断模型：先在「AI 与模型 → 用途」里设置聊天模型或插话判断模型。")}</p>}
+    {typeof status.minConfidence === 'number' ? <p className="text-xs text-muted-foreground">{i18n.t("门槛 {0}：判断选「插话」且把握不低于它才开口。", [status.minConfidence])}</p> : null}
+    {agreement ? <div className="text-xs text-muted-foreground"><p className="font-medium text-foreground">{agreement.text}</p><p>{agreement.detail}</p></div> : null}
+  </div>
 }
 
 /** Best-effort group names from connected accounts of the platforms that appear in the records. */
@@ -262,6 +322,7 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
   const [receipt, setReceipt] = useState<{ value: PatchResult; observedReadEpoch: number } | null>(null)
   const currentReceipt = configurationReceiptForRead(initial, receipt)
   const [serverProblems, setServerProblems] = useState<string[]>([])
+  const [judgeWarnings, setJudgeWarnings] = useState<string[]>([])
 
   useEffect(() => {
     setServerProblems([])
@@ -273,7 +334,17 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
     groups,
     maxPerHour: Number(maxPerHourText),
   }
-  const problems = validateAmbientSettings(draft, i18n.locale)
+  const judge = initial.judge ?? { merged: false }
+  // ADR 0066: 「只观察 / 主动参与」 is the judge's mode (`purposes.ambient.mode`), written through the
+  // model management API; it can be changed only when the judge was read (Host administrators).
+  const modeChange = judge.merged && judge.policy ? ambientJudgeModeChange(draft, judge.policy, judge.mode) : null
+  const mergedJudge = judge.merged
+  const wantedMode = behavior === 'watch' ? 'shadow' : 'active'
+  const modeLocked = judge.merged && !judge.policy && behavior !== 'off' && judge.mode !== undefined && wantedMode !== judge.mode
+  const problems = [
+    ...validateAmbientSettings(draft, i18n.locale),
+    ...(modeLocked ? [i18n.t("「只观察 / 主动参与」是插话判断的模式，只有 Host 管理员可以修改。当前是「{0}」。", [judge.mode === 'shadow' ? i18n.t("只观察") : i18n.t("主动参与")])] : []),
+  ]
   const showsGroupOptions = behavior !== 'off'
   const focusIncluded = focusGroup ? behavior !== 'off' && (groupScope === 'all' || groups.includes(focusGroup)) : false
   const includeFocusGroup = () => {
@@ -288,10 +359,21 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
     setSaving(true)
     setFeedback(null)
     try {
+      // The judge's mode first: if it is refused nothing is written, and the reason is shown.
+      if (modeChange) {
+        const written = await writeAmbientJudgePolicy(apiFetch, modeChange)
+        if (!isInboxCacheScopeActive(scope)) return
+        if (written.status !== 'committed') {
+          const code = written.code ?? (written.status === 'commit-unknown' ? 'outcome-unknown' : written.status === 'conflict' ? 'conflict' : 'unavailable')
+          setFeedback({ kind: 'failed', text: i18n.t("「只观察」没有改成：{0}", [inferenceError(new InferenceRequestError(code), i18n.locale)]) })
+          return
+        }
+        setJudgeWarnings(written.warnings.map(warning => planWarningText(warning, i18n.locale)))
+      }
       const result = await requestConsole<PatchResult>({
         type: 'config:patch',
         expectedRevision: initial.revision,
-        patches: buildAmbientPatches(draft),
+        patches: buildAmbientPatches(draft, { mergedJudge }),
       })
       if (!isInboxCacheScopeActive(scope)) return
       const saveFeedback = describeSaveResult(result, i18n.locale)
@@ -303,10 +385,10 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
       // Every saved or conflicting write re-reads; a saved one is then compared with what was submitted.
       const reread = saveFeedback.kind === 'saved' || saveFeedback.kind === 'conflict' ? await onReload().catch(() => null) : null
       if (!isInboxCacheScopeActive(scope)) return
-      setFeedback(saveFeedback.kind === 'saved' ? { kind: 'saved', ...ambientSaveOutcome(result, draft, reread) } : { kind: 'failed', text: saveFeedback.text })
+      setFeedback(saveFeedback.kind === 'saved' ? { kind: 'saved', ...ambientSaveOutcome(result, draft, reread, { mergedJudge }) } : { kind: 'failed', text: saveFeedback.text })
     } catch (error) {
       if (!isInboxCacheScopeActive(scope)) return
-      const message = error instanceof Error ? error.message : String(error)
+      const message = error instanceof InferenceRequestError ? inferenceError(error, i18n.locale) : error instanceof Error ? error.message : String(error)
       setFeedback({ kind: 'failed', text: i18n.t("保存失败：{0}", [message]) })
     } finally {
       if (isInboxCacheScopeActive(scope)) setSaving(false)
@@ -336,6 +418,7 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
           </label>)}
         </RadioGroup>
         {behavior === 'off' && initial.settings.groups.length > 0 && <p className="text-xs text-muted-foreground">{i18n.t("关闭后会清空下面的群列表，以后重新打开时要再填一次。")}</p>}
+        {judge.merged && behavior !== 'off' ? <p className="text-xs text-muted-foreground">{i18n.t("「只观察」保存在插话判断里（AI 与模型 → 用途），对所有开启的群生效。")}</p> : null}
       </fieldset>
 
       {showsGroupOptions && <fieldset className="space-y-2">
@@ -367,6 +450,7 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
             onRestarted={async () => ambientRestartOutcome(await onReload().catch(() => null))} />
           : <ApplyFeedback failure={{ reason: feedback.text }} /> : null}
       </div>
+      {judgeWarnings.length ? <ul className="list-disc space-y-1 pl-5 text-xs text-warning" role="status">{judgeWarnings.map(warning => <li key={warning}>{warning}</li>)}</ul> : null}
       <ConfigurationLiveStatus result={currentReceipt ?? initial.application} revision={currentReceipt?.revision ?? initial.revision} />
     </CardContent>
   </Card>

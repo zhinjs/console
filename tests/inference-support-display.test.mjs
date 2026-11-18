@@ -9,6 +9,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { pageRuntime, nodes } from './helpers/inference-page-runtime.mjs'
 import { translate } from '../console-ui/src/i18n/locale.mjs'
 import * as model from '../console-ui/src/pages/inference/model.mjs'
+import * as ambientJudgeModel from '../console-ui/src/pages/inference/ambient-judge-model.mjs'
 import * as personal from '../console-ui/src/pages/personal-session-model.mjs'
 import { saveButtonMock } from './helpers/save-button-mock.mjs'
 
@@ -63,6 +64,7 @@ async function fixture() {
     '../../components/StatusState': { StatusState: 'status-state' }, './SchemaFields': { SchemaFields: 'schema' }, './ModelCapabilities': { ModelCapabilities: 'capabilities' },
     'lucide-react': { Plus: 'icon', Pencil: 'icon', Trash2: 'icon', RefreshCw: 'icon', KeyRound: 'icon', LogIn: 'icon', Unplug: 'icon', ArrowDown: 'icon', ArrowUp: 'icon', MoreHorizontal: 'icon' },
     './model.mjs': model, './inference/model.mjs': model, './personal-session-model.mjs': personal,
+    '../../utils/plugin-rpc': { pluginRpc: async () => { throw new Error('ambient status unavailable') } }, './ambient-judge-model.mjs': ambientJudgeModel,
   }
   async function load(filename, extra = {}) {
     const path = process.env.CONSOLE_FIXTURE_SOURCE_ROOT && basename(filename) !== 'SupportInfo.tsx'
@@ -154,7 +156,8 @@ test('all purpose candidates show the same short mark without notices or metadat
   await f.runtime.value.props.onSubmit({ preventDefault() {} })
   assert.equal(saved[0].purposes.decisions.skills.profile, 'experimental')
   assert.equal(JSON.stringify(saved).includes('support'), false)
-  assert.deepEqual(f.calls, ['/targets'])
+  // ADR 0066: the interjection judge route is read as well; nothing else is requested.
+  assert.deepEqual(f.calls.filter(path => path !== '/ambient-judge'), ['/targets'])
   f.runtime.unmount()
 })
 

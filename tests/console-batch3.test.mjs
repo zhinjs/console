@@ -11,6 +11,7 @@ import { pageRuntime, nodes } from './helpers/inference-page-runtime.mjs'
 import { translate } from '../console-ui/src/i18n/locale.mjs'
 import { englishMessages } from '../console-ui/src/i18n/messages.en.mjs'
 import * as model from '../console-ui/src/pages/inference/model.mjs'
+import * as ambientJudgeModel from '../console-ui/src/pages/inference/ambient-judge-model.mjs'
 import * as entry from '../console-ui/src/pages/inference/models-entry.mjs'
 import { mergePrincipalPayloads, principalsListPlan, readPrincipals, settlePrincipalLists } from '../console-ui/src/scope/chat-identity-model.mjs'
 import { createConsoleAccess, scopedAdapters } from '../console-ui/src/utils/console-access.mjs'
@@ -100,6 +101,7 @@ async function purposesPage(v) {
     { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
   const deps = {
     react: runtime.api, 'react/jsx-runtime': jsxRuntime, './model.mjs': model, '../../components/SaveButton': saveButtonMock,
+    '../../utils/plugin-rpc': { pluginRpc: async () => { throw new Error('ambient status unavailable') } }, './ambient-judge-model.mjs': ambientJudgeModel,
     '../../i18n': { useI18n: () => ({ locale: 'zh-CN', t: (m, values) => translate('zh-CN', m, values) }) },
     'lucide-react': new Proxy({}, { get: () => 'icon' }),
     '@zhin.js/console-ui': { Button: 'button', Input: 'input', SelectField: 'select', SearchableSelectField: 'select', Card: 'card', useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }), DropdownMenu: 'menu', DropdownMenuContent: 'menu-content', DropdownMenuItem: 'menu-item', DropdownMenuTrigger: 'menu-trigger' }, './SupportInfo': { supportLabel: label => label },
