@@ -12,6 +12,7 @@ import * as applyOutcome from '../console-ui/src/components/apply-outcome-model.
 import { taskTabHref } from '../console-ui/src/pages/task-hub-model.mjs'
 import * as scheduleMemory from '../console-ui/src/pages/schedule-memory-model.mjs'
 import * as scheduleTarget from '../console-ui/src/pages/schedule-target-model.mjs'
+import * as scheduleAgent from '../console-ui/src/pages/schedule-agent-model.mjs'
 import * as featureDisabled from '../console-ui/src/utils/feature-disabled.mjs'
 import { createInboxCacheAuthority } from '../console-ui/src/utils/inbox-cache-scope.mjs'
 
@@ -47,11 +48,11 @@ function fixture({ readOnly = false, available = true, jobs = [], deferJobs = fa
     react: hooks, 'react-router-dom': { Link: 'a' }, 'lucide-react': new Proxy({}, { get: () => 'i' }),
     '@zhin.js/console-ui': { Button: 'button', Card: 'article', CardContent: 'section', Badge: 'span', Alert: 'aside', AlertDescription: 'p', Skeleton: 'div', Input: 'input', Textarea: 'textarea', Separator: 'hr', ...(select), Dialog: 'dialog', DialogContent: 'section', DialogHeader: 'header', DialogFooter: 'footer', DialogTitle: 'h2', DialogDescription: 'p', DialogClose: 'close', PageHeader: 'page-header', Tabs: 'tabs', TabsList: 'tab-list', TabsTrigger: 'tab-trigger', TabsContent: 'tab-panel' }, '../components/StatusState': { StatusState: 'status-state' },
     '../components/ApplyFeedback': { useSaveOutcome: () => ({ value: null, clear() {}, element: null, report: async (subject, outcome, check) => { saves.push({ subject, outcome, check }) } }) },
-    '../components/apply-outcome-model.mjs': applyOutcome, '../components/toast': { useToast: () => ({ error: message => errors.push(message) }) }, '../contracts/zhin-console': { CONSOLE_RPC: { SCHEDULE_LIST: 'schedule:list', CRON_VALIDATE: 'cron:validate', CRON_ADD: 'cron:add', CRON_REMOVE: 'cron:remove', CRON_PAUSE: 'cron:pause', CRON_RESUME: 'cron:resume' } },
+    '../components/apply-outcome-model.mjs': applyOutcome, '../components/toast': { useToast: () => ({ error: message => errors.push(message) }) }, '../contracts/zhin-console': { CONSOLE_RPC: { SCHEDULE_LIST: 'schedule:list', CRON_VALIDATE: 'cron:validate', CRON_ADD: 'cron:add', CRON_REMOVE: 'cron:remove', CRON_PAUSE: 'cron:pause', CRON_RESUME: 'cron:resume', CRON_SET_AGENT: 'cron:set-agent' } },
     '../utils/console-rpc': { requestConsole: input => new Promise((resolve, reject) => calls.push({ input, resolve, reject, answered: false, scope: authority.current() })) },
     '../utils/useInboxCacheScope': { useInboxCacheScope: () => authority.current() }, '../utils/inbox-cache': { isInboxCacheScopeActive: scope => authority.active(scope) },
     '../utils/console-access.mjs': { hasConsolePermission: () => !readOnly }, './cron-schedule.mjs': { describeCron, relativeUntil },
-    './assistant-jobs-model.mjs': { validateAssistantJobs, explainJobError }, './task-hub-model.mjs': { taskTabHref }, './schedule-memory-model.mjs': scheduleMemory, './schedule-target-model.mjs': scheduleTarget, '../utils/feature-disabled.mjs': featureDisabled,
+    './assistant-jobs-model.mjs': { validateAssistantJobs, explainJobError }, './task-hub-model.mjs': { taskTabHref }, './schedule-memory-model.mjs': scheduleMemory, './schedule-target-model.mjs': scheduleTarget, './schedule-agent-model.mjs': scheduleAgent, '../utils/feature-disabled.mjs': featureDisabled,
     './ScheduleExecutions': { ScheduleExecutions: 'schedule-executions' },
     '../components/log-panel/LogPanel': { useLogPanel: () => ({ available: false, open() {} }) },
     '../utils/auth': { apiFetch: (url, options) => new Promise((resolve, reject) => { httpCalls.push({ url, options, resolve, reject, scope: authority.current() }); if (!deferJobs) resolve({ ok: true, json: async () => ({ success: true, data: { jobs, eventsActive: false } }) }) }) }, './cron.css': {},
@@ -281,4 +282,137 @@ test('new schedule facts immediately replace the previous assistant snapshot whi
   assertCurrentSchedule()
   f.httpCalls.at(-1).reject(new Error('current enrichment unavailable')); await f.settle()
   assertCurrentSchedule(); f.close()
+})
+
+// #1250 b52 `schedule-agent-no-creation-path`: which Agent runs a persistent task.
+const agentRows = [
+  { ...persistent[0], agent: 'researcher' },
+  { ...persistent[1], agent: 'gone', agentMissing: true },
+  { type: 'persistent', id: 'profile:morning', label: 'Profile 早报', prompt: '早报', cronExpression: '0 0 8 * * *', enabled: true, source: 'profile' },
+  { type: 'persistent', id: 'assistant-profile-heartbeat', label: 'Profile heartbeat', prompt: '巡检', cronExpression: '', enabled: true, source: 'profile' },
+  { type: 'persistent', id: 'task:plain', label: '普通任务', prompt: '普通', cronExpression: '0 0 10 * * *', enabled: true },
+]
+async function agentFixture({ agents = ['zhin', 'researcher', 'writer'], rows = agentRows, readOnly = false } = {}) {
+  const f = fixture({ autoLoad: false, readOnly })
+  f.answer('schedule:list', { persistent: rows, memory, capabilities: { persistent: true }, ...(agents ? { agents } : {}) }); await f.settle()
+  return f
+}
+const expand = (f, id) => { elements(row(f.tree, id)).find(node => node.type === 'button' && node.props['aria-controls']).props.onClick(); f.render() }
+const runStatus = (f, id) => { const node = elements(row(f.tree, id)).find(node => node.type === f.module.PersistentRunStatus); return { node, html: renderToStaticMarkup(React.createElement(f.module.PersistentRunStatus, node.props)) } }
+const agentDialog = f => elements(f.tree).find(node => node.type === 'dialog' && node.props.open && text(node).includes('选择由哪个 Agent 执行任务'))
+const chooseIn = (scope, label, value, f) => { const field = elements(scope).find(node => node.props?.['aria-labelledby'] && node.props.options && text(elements(scope).find(item => item.props?.id === node.props['aria-labelledby'])) === label); select.SelectField.render(field.props, null).props.onValueChange(JSON.stringify(value)); f.render(); return field }
+const refused = (code, message) => Object.assign(new Error(message), { details: { dataCode: code } })
+
+test('task rows say which Agent runs them; a deleted Agent is flagged with a way to change it', async () => {
+  const f = await agentFixture()
+  assert.match(runStatus(f, 'task:daily').html, /Agent：researcher/)
+  assert.match(runStatus(f, 'task:plain').html, /Agent：zhin（默认）/)
+  const missing = runStatus(f, 'task:paused')
+  assert.match(missing.html, /⚠ Agent 不存在/); assert.match(missing.html, /「gone」已从配置中删除，任务运行会失败。/)
+  assert.equal(typeof missing.node.props.onChangeAgent, 'function', 'the warning leads to 修改 Agent')
+  missing.node.props.onChangeAgent(); f.render()
+  assert.ok(agentDialog(f)); assert.ok(text(agentDialog(f)).includes('当前的 Agent「gone」已从配置中删除'))
+  const field = elements(agentDialog(f)).find(node => node.props?.options && node.props['aria-labelledby'] === 'cron-set-agent-label')
+  assert.deepEqual(field.props.options.map(option => [option.value, option.label, !!option.disabled]),
+    [['', 'zhin（默认）', false], ['researcher', 'researcher', false], ['writer', 'writer', false], ['gone', 'gone（不存在）', true]])
+  assert.equal(button(agentDialog(f), '保存').props.disabled, true, 'saving the missing Agent again is not offered')
+  expand(f, 'task:daily')
+  assert.ok(text(row(f.tree, 'task:daily')).includes('执行的 Agent'))
+  f.close()
+})
+
+test('Profile routines and heartbeat tasks explain why their Agent cannot be changed here', async () => {
+  const f = await agentFixture()
+  for (const [id, reason] of [['profile:morning', 'assistant.profile.yml'], ['assistant-profile-heartbeat', '心跳任务固定由默认 Agent 执行']]) {
+    expand(f, id)
+    const change = button(row(f.tree, id), '修改 Agent')
+    assert.equal(change.props.disabled, true)
+    const note = elements(row(f.tree, id)).find(node => node.props?.id === change.props['aria-describedby'])
+    assert.ok(text(note).includes(reason), id)
+    assert.equal(runStatus(f, id).node.props.onChangeAgent, undefined)
+  }
+  expand(f, 'task:plain'); assert.equal(button(row(f.tree, 'task:plain'), '修改 Agent').props.disabled, false)
+  f.close()
+})
+
+test('修改 Agent calls cron:set-agent with the chosen Agent, and 恢复默认 clears it with null', async () => {
+  const f = await agentFixture()
+  expand(f, 'task:plain'); button(row(f.tree, 'task:plain'), '修改 Agent').props.onClick(); f.render()
+  assert.equal(button(agentDialog(f), '恢复默认'), undefined, 'a task on the default Agent has nothing to restore')
+  chooseIn(agentDialog(f), '执行的 Agent', 'writer', f)
+  button(agentDialog(f), '保存').props.onClick(); f.render()
+  assert.deepEqual(f.calls.at(-1).input, { type: 'cron:set-agent', id: 'task:plain', agent: 'writer' })
+  f.answer('cron:set-agent', { success: true }); await f.settle()
+  assert.equal(agentDialog(f), undefined)
+  assert.equal(f.saves.at(-1).subject, '定时任务 普通任务 改由 Agent writer 执行')
+  f.answer('schedule:list', { persistent: agentRows, memory, capabilities: { persistent: true }, agents: ['zhin', 'researcher', 'writer'] }); await f.settle()
+  const check = f.saves.at(-1).check(); await f.settle()
+  f.answer('schedule:list', { persistent: agentRows.map(job => job.id === 'task:plain' ? { ...job, agent: 'writer' } : job), memory, capabilities: { persistent: true }, agents: ['zhin', 'researcher', 'writer'] })
+  assert.equal(await check, null, 'the re-read shows the new Agent')
+  expand(f, 'task:daily'); button(row(f.tree, 'task:daily'), '修改 Agent').props.onClick(); f.render()
+  button(agentDialog(f), '恢复默认').props.onClick(); f.render()
+  assert.deepEqual(f.calls.at(-1).input, { type: 'cron:set-agent', id: 'task:daily', agent: null })
+  f.answer('cron:set-agent', { success: true }); await f.settle()
+  assert.equal(f.saves.at(-1).subject, '定时任务 早间摘要 已恢复由默认 Agent 执行')
+  f.close()
+})
+
+test('refused Agent changes are explained in the dialog by their code', async () => {
+  const cases = [
+    [refused('schedule_target_forbidden', '没有向该账号投递的权限：需要 icqq / bot-1 上的 endpoint.operate'), '没有向投递账号发送消息的权限：需要 icqq / bot-1 上的 endpoint.operate。'],
+    [refused('schedule_agent_profile', '请在 Profile 文件中该 routine 的 agent 字段修改'), 'assistant.profile.yml'],
+    [refused('schedule_agent_heartbeat', '心跳任务不能指定 Agent: x'), '心跳任务固定由默认 Agent 执行'],
+    [new Error('Agent 不存在：writer。可用的 Agent：zhin、researcher'), 'Agent「writer」不存在，可用的 Agent：zhin、researcher。'],
+    [new Error('其它错误'), '其它错误'],
+  ]
+  for (const [error, expected] of cases) {
+    const f = await agentFixture()
+    expand(f, 'task:plain'); button(row(f.tree, 'task:plain'), '修改 Agent').props.onClick(); f.render()
+    chooseIn(agentDialog(f), '执行的 Agent', 'writer', f)
+    button(agentDialog(f), '保存').props.onClick(); f.render()
+    const call = f.calls.at(-1); call.answered = true; call.reject(error); await f.settle()
+    const alert = elements(agentDialog(f)).find(node => node.props?.role === 'alert')
+    assert.ok(text(alert).includes(expected), `${expected} in ${text(alert)}`)
+    assert.deepEqual(f.errors, [])
+    f.close()
+  }
+})
+
+test('the creation form offers the Host Agents, sends the choice, and shows a delivery refusal in place', async () => {
+  const f = await agentFixture()
+  button(f.tree, '新建任务').props.onClick(); f.render()
+  const dialog = () => elements(f.tree).find(node => node.type === 'dialog' && node.props.open && text(node).includes('新建定时任务'))
+  const field = elements(dialog()).find(node => node.props?.['aria-labelledby'] === 'cron-new-agent-label')
+  assert.equal(field.props.value, ''); assert.equal(field.props.options[0].label, 'zhin（默认）')
+  assert.equal(field.props.options.some(option => option.value === 'zhin'), false, 'the default is offered once')
+  elements(dialog()).find(node => node.type === 'input' && node.props.placeholder.includes('秒 分 时 日 月 周')).props.onChange({ target: { value: '0 0 9 * * *' } }); f.render()
+  elements(dialog()).find(node => node.type === 'textarea').props.onChange({ target: { value: '写周报' } }); f.render()
+  chooseIn(dialog(), '执行的 Agent', 'researcher', f)
+  f.timers.at(-1)(); f.answer('cron:validate', { valid: true }); await f.settle()
+  button(dialog(), '创建').props.onClick(); f.render()
+  assert.deepEqual(f.calls.at(-1).input, { type: 'cron:add', cronExpression: '0 0 9 * * *', prompt: '写周报', label: '', agent: 'researcher' })
+  const call = f.calls.at(-1); call.answered = true
+  call.reject(refused('schedule_target_forbidden', '没有向该账号投递的权限：需要 icqq / bot-1 上的 endpoint.operate')); await f.settle()
+  assert.ok(dialog(), 'the draft stays open')
+  assert.ok(text(elements(dialog()).find(node => node.props?.role === 'alert')).includes('需要 icqq / bot-1 上的 endpoint.operate'))
+  assert.deepEqual(f.errors, [])
+  f.close()
+})
+
+test('an older engine without agents hides the Agent field and the change action', async () => {
+  const f = await agentFixture({ agents: null, rows: [persistent[0], { ...persistent[1], agent: 'researcher' }] })
+  assert.doesNotMatch(runStatus(f, 'task:daily').html, /Agent：/)
+  assert.match(runStatus(f, 'task:paused').html, /Agent：researcher/, 'a named Agent is still shown')
+  expand(f, 'task:paused'); assert.equal(button(row(f.tree, 'task:paused'), '修改 Agent'), undefined)
+  button(f.tree, '新建任务').props.onClick(); f.render()
+  assert.equal(elements(f.tree).some(node => node.props?.['aria-labelledby'] === 'cron-new-agent-label'), false)
+  f.close()
+})
+
+test('read-only identities see the Agent but cannot change it', async () => {
+  const f = await agentFixture({ readOnly: true })
+  assert.match(runStatus(f, 'task:daily').html, /Agent：researcher/)
+  assert.equal(runStatus(f, 'task:paused').node.props.onChangeAgent, undefined)
+  expand(f, 'task:plain'); assert.equal(button(row(f.tree, 'task:plain'), '修改 Agent'), undefined)
+  f.close()
 })

@@ -149,6 +149,21 @@
     white-space: normal;
   }
 
+  .console-cron-agent {
+    display: grid;
+    justify-items: start;
+    gap: var(--console-space-2);
+  }
+
+  .console-cron-agent-note {
+    color: hsl(var(--muted-foreground));
+    font-size: var(--console-text-label);
+  }
+
+  .console-cron-agent-missing {
+    color: hsl(var(--foreground));
+  }
+
   .console-cron-memory-details {
     margin-top: var(--console-space-3);
     color: hsl(var(--muted-foreground));

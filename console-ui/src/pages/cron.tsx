@@ -2,7 +2,7 @@ import { translate } from '../i18n/locale.mjs'
 import { useI18n } from '../i18n'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { Activity, Clock, Plus, Trash2, AlertCircle, Pause, Play, RefreshCw, Timer, Cpu, ChevronDown, ChevronUp, Copy, Check, Search } from 'lucide-react'
+import { Activity, Clock, Plus, Trash2, AlertCircle, Pause, Play, RefreshCw, Timer, Cpu, ChevronDown, ChevronUp, Copy, Check, Search, Bot } from 'lucide-react'
 import { Alert, AlertDescription, Badge, Button, Card, CardContent, Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, SelectField, Separator, Skeleton, Textarea } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import { useSaveOutcome } from '../components/ApplyFeedback'
@@ -16,6 +16,7 @@ import { taskTabHref } from './task-hub-model.mjs'
 import { isPluginInternalSchedule, memoryScheduleLastRun, memoryScheduleTitle, type MemoryScheduleLike } from './schedule-memory-model.mjs'
 import { validateAssistantJobs, explainJobError, type AssistantJob } from './assistant-jobs-model.mjs'
 import { scheduleTargetView, scheduleTargetWarning } from './schedule-target-model.mjs'
+import { scheduleAgentEditBlock, scheduleAgentErrorMessage, scheduleAgentOptions, scheduleAgentParam, scheduleAgentValue, scheduleAgentView } from './schedule-agent-model.mjs'
 import { featureDisabledState } from '../utils/feature-disabled.mjs'
 import { apiFetch } from '../utils/auth'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
@@ -65,10 +66,23 @@ interface PersistentCron {
   lastExecutedAt?: number
   /** Resolved delivery target (#1250); absent from older Hosts. */
   target?: unknown
+  /** Agent the job runs on (#1250 b52); absent = the default Agent `zhin`. */
+  agent?: string
+  /** The named Agent is no longer configured: runs fail until it is changed. */
+  agentMissing?: boolean
+  /** `profile` = an Assistant Profile routine (its Agent is changed in the Profile file). */
+  source?: string
+  kind?: string
 }
 
-function PersistentRunStatus({ state, job, now }: { state?: AssistantJob['state']; job: PersistentCron; now: number }) {
+/** A refused schedule write in the UI language when the Console knows the refusal, else the Host's text. */
+function scheduleWriteError(err: unknown, locale: 'zh-CN' | 'en'): string {
+  return scheduleAgentErrorMessage(err, locale) ?? (err as Error)?.message ?? String(err)
+}
+
+function PersistentRunStatus({ state, job, now, showAgent = false, onChangeAgent }: { state?: AssistantJob['state']; job: PersistentCron; now: number; showAgent?: boolean; onChangeAgent?: () => void }) {
   const i18n = useI18n()
+  const agent = scheduleAgentView(job, i18n.locale)
   const lastStatus = state?.lastStatus ?? job.lastStatus
   const failed = lastStatus === 'error'
   const timestamp = state?.nextRunAtMs ?? job.nextExecution
@@ -79,6 +93,8 @@ function PersistentRunStatus({ state, job, now }: { state?: AssistantJob['state'
       <span>{i18n.t("下次执行：")}{next ?? (timestamp != null ? new Date(timestamp).toLocaleString(i18n.locale) : '—')}</span>
       {target?.valid && target.display ? <span>{i18n.t("发送到：")}{target.display}</span> : null}
       {target && !target.valid ? <span><Badge variant="warning">{i18n.t("⚠ 无效")}</Badge> {target.display ? `${target.display} · ` : ''}{scheduleTargetWarning(target, timestamp, i18n.locale)}</span> : null}
+      {showAgent && !agent.missing ? <span>{i18n.t("Agent：")}{agent.label}</span> : null}
+      {agent.missing ? <span className="console-cron-agent-missing"><Badge variant="warning">{i18n.t("⚠ Agent 不存在")}</Badge> {i18n.t("「{0}」已从配置中删除，任务运行会失败。", [agent.name])}{onChangeAgent ? <> <Button variant="link" size="sm" className="h-auto p-0" onClick={onChangeAgent}>{i18n.t("修改 Agent")}</Button></> : null}</span> : null}
       {lastStatus ? <Badge variant={failed ? 'destructive' : lastStatus === 'ok' ? 'outline' : 'secondary'}>{failed ? i18n.t("上次执行失败") : lastStatus === 'ok' ? i18n.t("上次执行成功") : lastStatus === 'skipped' ? i18n.t("上次已跳过") : lastStatus}</Badge> : <span>{i18n.t("最近结果：")}{'—'}</span>}
       {state ? <Link className="font-medium text-foreground hover:underline" to={taskTabHref('assistant', { q: job.id })}>{i18n.t("执行详情 →")}</Link> : null}
     </div>
@@ -108,7 +124,13 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<PersistentCron | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [newCron, setNewCron] = useState({ cronExpression: '', prompt: '', label: '' })
+  const [newCron, setNewCron] = useState({ cronExpression: '', prompt: '', label: '', agent: '' })
+  // `agents` on `schedule:list` (#1250 b52); null = an older engine that only runs the default Agent.
+  const [agents, setAgents] = useState<string[] | null>(null)
+  const [agentTarget, setAgentTarget] = useState<PersistentCron | null>(null)
+  const [agentDraft, setAgentDraft] = useState('')
+  const [agentError, setAgentError] = useState<string | null>(null)
+  const [addError, setAddError] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
@@ -144,12 +166,14 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
         memory?: MemoryCron[]
         persistent?: PersistentCron[]
         capabilities?: { persistent?: boolean }
+        agents?: string[]
       }
       const data = await requestConsole<ScheduleListResponse>({ type: CONSOLE_RPC.SCHEDULE_LIST, locale: i18n.locale })
       if (!current()) return
       setPersistentAvailable(data.capabilities?.persistent === true)
       setMemoryCrons(data.memory ?? [])
       setPersistentCrons(data.persistent ?? [])
+      setAgents(Array.isArray(data.agents) ? data.agents : null)
       setJobStates(new Map())
       setError(null)
       // Run status lives in the assistant job API; without the assistant the list simply shows no status.
@@ -192,25 +216,60 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
   const handleAdd = async () => {
     if (!isInboxCacheScopeActive(connectionScope) || !persistentAvailable || readOnly || submitting || !validCron || !newCron.prompt.trim()) return
     setSubmitting(true)
+    setAddError(null)
+    // Without `agents` the engine only runs the default Agent: send no `agent` at all.
+    const agent = agents ? scheduleAgentParam(newCron.agent) : null
     try {
       const reply = await requestConsole<{ job?: { id?: unknown } }>({
         type: CONSOLE_RPC.CRON_ADD,
         cronExpression: newCron.cronExpression.trim(),
         prompt: newCron.prompt.trim(),
         label: newCron.label,
+        ...(agent ? { agent } : {}),
       })
       if (!isInboxCacheScopeActive(connectionScope)) return
       setAddDialogOpen(false)
       const submitted = { cronExpression: newCron.cronExpression.trim(), prompt: newCron.prompt.trim() }
-      setNewCron({ cronExpression: '', prompt: '', label: '' })
+      setNewCron({ cronExpression: '', prompt: '', label: '', agent: '' })
       const id = typeof reply?.job?.id === 'string' ? reply.job.id : null
       void saved.report(i18n.t('已新建定时任务'), outcomeFromScheduleWrite(), async () => {
         const job = (await readPersistent()).find(item => id ? item.id === id : item.prompt === submitted.prompt && item.cronExpression === submitted.cronExpression)
-        return recordReadBack(job ? { cronExpression: job.cronExpression, prompt: job.prompt, enabled: job.enabled } : null, { ...submitted, enabled: true })
+        return recordReadBack(job ? { cronExpression: job.cronExpression, prompt: job.prompt, enabled: job.enabled, agent: job.agent ?? null } : null, { ...submitted, enabled: true, agent })
       })
       await fetchCrons()
     } catch (err) {
-      if (isInboxCacheScopeActive(connectionScope)) toastError((err as Error).message)
+      // Shown in the dialog, which stays open with the draft, so the person can pick another Agent.
+      if (isInboxCacheScopeActive(connectionScope)) setAddError(scheduleWriteError(err, i18n.locale))
+    } finally {
+      if (isInboxCacheScopeActive(connectionScope)) setSubmitting(false)
+    }
+  }
+
+  const openAgentDialog = (job: PersistentCron) => {
+    setAgentTarget(job)
+    setAgentDraft(scheduleAgentValue(job))
+    setAgentError(null)
+  }
+
+  /** `cron:set-agent`; `value` `''` = back to the default Agent (`agent: null`). */
+  const handleSetAgent = async (value: string) => {
+    const job = agentTarget
+    if (!isInboxCacheScopeActive(connectionScope) || !job || !agents || !persistentAvailable || readOnly || submitting || scheduleAgentEditBlock(job)) return
+    const agent = scheduleAgentParam(value)
+    setSubmitting(true)
+    setAgentError(null)
+    try {
+      await requestConsole({ type: CONSOLE_RPC.CRON_SET_AGENT, id: job.id, agent })
+      if (!isInboxCacheScopeActive(connectionScope)) return
+      setAgentTarget(null)
+      const name = job.label || job.id
+      void saved.report(agent ? i18n.t('定时任务 {0} 改由 Agent {1} 执行', [name, agent]) : i18n.t('定时任务 {0} 已恢复由默认 Agent 执行', [name]), outcomeFromScheduleWrite(), async () => {
+        const found = (await readPersistent()).find(item => item.id === job.id)
+        return recordReadBack(found ? { agent: found.agent ?? null } : null, { agent })
+      })
+      await fetchCrons()
+    } catch (err) {
+      if (isInboxCacheScopeActive(connectionScope)) setAgentError(scheduleWriteError(err, i18n.locale))
     } finally {
       if (isInboxCacheScopeActive(connectionScope)) setSubmitting(false)
     }
@@ -325,6 +384,12 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
               const isExpanded = expandedId === job.id
               const detailsId = `cron-details-${encodeURIComponent(job.id)}`
               const label = job.label && job.label !== job.id ? job.label : null
+              const canWrite = !readOnly && persistentAvailable
+              const agentBlock = scheduleAgentEditBlock(job, i18n.locale)
+              // The action needs the Host's Agent list (an older engine only runs the default).
+              const agentEditable = canWrite && agents !== null && !agentBlock
+              const agentView = scheduleAgentView(job, i18n.locale)
+              const agentNoteId = `cron-agent-note-${encodeURIComponent(job.id)}`
               return <Card key={job.id} className="console-schedule-row">
                 <CardContent className="console-cron-item">
                   <div className="console-cron-item-heading">
@@ -344,7 +409,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
                       <Button variant="destructive" size="icon" aria-label={i18n.t("删除")} title={i18n.t("删除")} disabled={togglePending !== null} onClick={() => setDeleteTarget(job)}><Trash2 /></Button>
                     </div>}
                   </div>
-                  <PersistentRunStatus state={jobStates.get(job.id)} job={job} now={now} />
+                  <PersistentRunStatus state={jobStates.get(job.id)} job={job} now={now} showAgent={agents !== null || !agentView.isDefault} onChangeAgent={agentEditable ? () => openAgentDialog(job) : undefined} />
                   <div id={detailsId} hidden={!isExpanded}>
                     {isExpanded && <div className="console-cron-details">
                       <div><p className="console-cron-detail-label">{i18n.t("任务内容")}</p><pre className="whitespace-pre-wrap [overflow-wrap:anywhere] text-sm">{job.prompt}</pre></div>
@@ -359,6 +424,14 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
                             setTimeout(() => { if (isInboxCacheScopeActive(connectionScope)) setCopiedId(null) }, 1500)
                           } catch { if (isInboxCacheScopeActive(connectionScope)) toastError(i18n.t("复制失败，请手动选择任务 ID 复制。")) }
                         }}>{copiedId === job.id ? <Check /> : <Copy />}</Button></dd></div>
+                        {(agents !== null || !agentView.isDefault) && <div><dt>{i18n.t("执行的 Agent")}</dt><dd className="console-cron-agent">
+                          <span className="flex flex-wrap items-center gap-2">
+                            <span>{agentView.label}</span>
+                            {agentView.missing ? <Badge variant="warning">{i18n.t("⚠ Agent 不存在")}</Badge> : null}
+                          </span>
+                          {canWrite && agents !== null ? <Button variant="outline" size="sm" disabled={!agentEditable || togglePending !== null} aria-describedby={agentBlock ? agentNoteId : undefined} onClick={() => openAgentDialog(job)}><Bot />{i18n.t("修改 Agent")}</Button> : null}
+                          {agentBlock && canWrite && agents !== null ? <p id={agentNoteId} className="console-cron-agent-note">{agentBlock.reason}</p> : null}
+                        </dd></div>}
                         <div><dt>{i18n.t("创建时间")}</dt><dd>{job.createdAt ? new Date(job.createdAt).toLocaleString(i18n.locale) : '—'}</dd></div>
                         {job.lastExecutedAt != null && <div><dt>{i18n.t("最近执行")}</dt><dd>{new Date(job.lastExecutedAt).toLocaleString(i18n.locale)}</dd></div>}
                       </dl>
@@ -408,7 +481,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
       </div>
 
       {/* Add Dialog */}
-      {!readOnly && persistentAvailable && <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+      {!readOnly && persistentAvailable && <Dialog open={addDialogOpen} onOpenChange={(open) => { setAddDialogOpen(open); if (!open) setAddError(null) }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{i18n.t("新建定时任务")}</DialogTitle>
@@ -437,6 +510,13 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
             {newCron.cronExpression.trim() && <p role="status" className={cronValidation?.valid ? 'text-xs text-muted-foreground' : 'text-xs text-destructive'}>
               {cronValidation ? cronValidation.valid ? i18n.t("表达式校验通过") : i18n.t("表达式无效：{0}", [cronValidationMessage(cronValidation.error, i18n.locale)]) : i18n.t("正在校验表达式…")}
             </p>}
+            {agents !== null && <div>
+              <label id="cron-new-agent-label" className="text-sm font-medium mb-1.5 block">{i18n.t("执行的 Agent")}</label>
+              <SelectField aria-labelledby="cron-new-agent-label" className="w-full" value={newCron.agent}
+                onValueChange={(agent) => { setAddError(null); setNewCron((p) => ({ ...p, agent })) }}
+                options={scheduleAgentOptions(agents, i18n.locale) ?? []} />
+              <p className="text-xs text-muted-foreground mt-1">{i18n.t("到点时由这个 Agent 执行任务；不选则由默认的 zhin 执行。")}</p>
+            </div>}
             <div>
               <label className="text-sm font-medium mb-1.5 block">Prompt</label>
               <Textarea
@@ -446,6 +526,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
                 onChange={(e) => setNewCron((p) => ({ ...p, prompt: e.target.value }))}
               />
             </div>
+            {addError && <Alert variant="destructive" role="alert"><AlertCircle className="h-4 w-4" /><AlertDescription>{addError}</AlertDescription></Alert>}
           </div>
           <DialogFooter>
             <DialogClose asChild>
@@ -456,6 +537,36 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
               disabled={submitting || !validCron || !newCron.prompt.trim()}
             >
               {submitting ? i18n.t("创建中...") : i18n.t("创建")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>}
+
+      {/* Change Agent Dialog (#1250 b52) */}
+      {!readOnly && persistentAvailable && agents !== null && <Dialog open={!!agentTarget} onOpenChange={(open) => { if (!open) { setAgentTarget(null); setAgentError(null) } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{i18n.t("修改 Agent")}</DialogTitle>
+            <DialogDescription>
+              {i18n.t("选择由哪个 Agent 执行任务「{0}」。从下一次运行起生效，任务仍发送到原来的会话。", [agentTarget?.label || agentTarget?.id || ''])}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <label id="cron-set-agent-label" className="text-sm font-medium mb-1.5 block">{i18n.t("执行的 Agent")}</label>
+              <SelectField aria-labelledby="cron-set-agent-label" className="w-full" value={agentDraft}
+                onValueChange={(value) => { setAgentError(null); setAgentDraft(value) }}
+                options={scheduleAgentOptions(agents, i18n.locale, agentTarget?.agent) ?? []} />
+            </div>
+            {agentTarget?.agentMissing ? <p className="text-xs text-muted-foreground">{i18n.t("当前的 Agent「{0}」已从配置中删除。选一个仍在配置中的 Agent，或恢复默认。", [agentTarget.agent ?? ''])}</p> : null}
+            {agentError && <Alert variant="destructive" role="alert"><AlertCircle className="h-4 w-4" /><AlertDescription>{agentError}</AlertDescription></Alert>}
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" disabled={submitting}>{i18n.t("取消")}</Button>
+            </DialogClose>
+            {agentTarget && scheduleAgentValue(agentTarget) !== '' && <Button variant="outline" disabled={submitting} onClick={() => { setAgentDraft(''); void handleSetAgent('') }}>{i18n.t("恢复默认")}</Button>}
+            <Button onClick={() => handleSetAgent(agentDraft)} disabled={submitting || !agentTarget || agentDraft === scheduleAgentValue(agentTarget)}>
+              {submitting ? i18n.t("保存中...") : i18n.t("保存")}
             </Button>
           </DialogFooter>
         </DialogContent>

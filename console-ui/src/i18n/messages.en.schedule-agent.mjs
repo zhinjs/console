@@ -1,0 +1,22 @@
+/** 定时任务指定执行的 Agent（zhinjs/zhin#1250 第 52 批 `schedule-agent-no-creation-path`）. */
+export const scheduleAgentMessages = Object.freeze({
+  "{0}（默认）": "{0} (default)",
+  "{0}（不存在）": "{0} (missing)",
+  "Agent：": "Agent: ",
+  "执行的 Agent": "Agent",
+  "修改 Agent": "Change Agent",
+  "⚠ Agent 不存在": "⚠ Agent missing",
+  "「{0}」已从配置中删除，任务运行会失败。": "“{0}” was removed from the configuration; runs of this task will fail.",
+  "到点时由这个 Agent 执行任务；不选则由默认的 zhin 执行。": "This Agent runs the task when it fires. Leave it unset to use the default, zhin.",
+  "选择由哪个 Agent 执行任务「{0}」。从下一次运行起生效，任务仍发送到原来的会话。": "Choose which Agent runs “{0}”. It takes effect from the next run; results still go to the same conversation.",
+  "当前的 Agent「{0}」已从配置中删除。选一个仍在配置中的 Agent，或恢复默认。": "The current Agent “{0}” was removed from the configuration. Pick a configured Agent, or restore the default.",
+  "定时任务 {0} 改由 Agent {1} 执行": "Scheduled task {0} now runs on Agent {1}",
+  "定时任务 {0} 已恢复由默认 Agent 执行": "Scheduled task {0} runs on the default Agent again",
+  "心跳任务固定由默认 Agent 执行，不能指定 Agent。": "Heartbeat tasks always run on the default Agent; they cannot name an Agent.",
+  "这是 Profile 例程，每次启动按 Profile 重新声明。请在 Profile 文件 assistant.profile.yml 中该例程的 agent 字段修改。": "This is a Profile routine, declared again from the Profile on every start. Change the routine's agent field in the Profile file assistant.profile.yml.",
+  "没有向投递账号发送消息的权限：需要 {0} 上的 endpoint.operate。请让管理员授权该账号，或改用你能操作的账号。": "You cannot send from the delivery account: this needs endpoint.operate on {0}. Ask an administrator to grant it, or deliver from an account you can operate.",
+  "没有向投递账号发送消息的权限：需要该账号上的 endpoint.operate。请让管理员授权该账号，或改用你能操作的账号。": "You cannot send from the delivery account: this needs endpoint.operate on that account. Ask an administrator to grant it, or deliver from an account you can operate.",
+  "运行中的 Agent 包不支持修改任务的 Agent，请升级 zhin.js 后再试。": "The running Agent package cannot change a task's Agent. Upgrade zhin.js and try again.",
+  "Agent「{0}」不存在，可用的 Agent：{1}。请刷新后重新选择。": "Agent “{0}” does not exist. Available Agents: {1}. Refresh and choose again.",
+  "所选 Agent 不存在。请刷新后重新选择。": "The selected Agent does not exist. Refresh and choose again.",
+})

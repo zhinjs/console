@@ -13,6 +13,7 @@ import { feedbackMessages } from './messages.en.feedback.mjs'
 import { hostFieldMessages } from './messages.en.host.mjs'
 import { batch3Messages } from './messages.en.batch3.mjs'
 import { ambientJudgeMessages } from './messages.en.ambient-judge.mjs'
+import { scheduleAgentMessages } from './messages.en.schedule-agent.mjs'
 
 /** Authored Console UI copy. Interpolated content is never translated. */
 export const englishMessages = Object.freeze({
@@ -30,6 +31,7 @@ export const englishMessages = Object.freeze({
   ...feedbackMessages,
   ...hostFieldMessages,
   ...ambientJudgeMessages,
+  ...scheduleAgentMessages,
   ...batch3Messages,
   "鲜活配色": "Fresh palettes",
   "沉静配色": "Calm palettes",
