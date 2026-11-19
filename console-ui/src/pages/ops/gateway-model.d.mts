@@ -22,6 +22,7 @@ export declare const GATEWAY_RPC: Readonly<{
   PLUGINS_DECLARE: 'gateway.plugins.declare'
   PLUGINS_ENABLE: 'gateway.plugins.enable'
   PLUGINS_DISABLE: 'gateway.plugins.disable'
+  VERSION_CHECK: 'gateway.version.check'
 }>
 export declare const GATEWAY_PACKAGES_PROGRESS: 'gateway.packages.progress'
 export declare const INSTANCE_STATES: readonly GatewayInstanceState[]
