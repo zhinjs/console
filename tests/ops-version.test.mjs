@@ -46,7 +46,7 @@ test('readVersionReport is defensive', () => {
     packages: [{ name: 'zhin.js', range: '^1', installed: '1.0.0', latest: '<script>', updateAvailable: 'yes', needsMigrate: true }, { range: '^1' }, null],
   })
   assert.deepEqual(report, {
-    gateway: null, checkedAt: 0, registryReachable: true,
+    gateway: null, checkedAt: 0, registryReachable: true, truncated: false, incomplete: false,
     packages: [{ name: 'zhin.js', range: '^1', installed: '1.0.0', latest: null, wanted: null, latestInRange: false, updateAvailable: false, needsMigrate: true }],
   })
   assert.equal(readVersionReport({ packages: [], registryReachable: false }).registryReachable, false)
@@ -77,6 +77,26 @@ test('an unreachable registry reads as unknown, never as newer', () => {
   assert.deepEqual(versionNotice(offline), { kind: 'none', count: 0 })
   assert.equal(versionStateLabel('unknown', zh), '无法检查')
   assert.equal(versionStateLabel('unknown', en), 'Cannot check')
+})
+
+test('an incomplete check marks unchecked packages as pending, not unknown', () => {
+  const unchecked = name => ({ ...REPORT.packages.find(item => item.name === name), latest: null, wanted: null, updateAvailable: false, needsMigrate: false, latestInRange: false })
+  const partial = readVersionReport({
+    ...REPORT, incomplete: true, truncated: true,
+    packages: [REPORT.packages[1], unchecked('@zhin.js/adapter-sandbox')],
+  })
+  assert.equal(partial.incomplete, true)
+  assert.equal(partial.truncated, true)
+  assert.deepEqual(versionRows(partial, zh).map(item => [item.label, item.state]), [['Zhin', 'migrate'], ['adapter-sandbox', 'pending']])
+  assert.deepEqual(versionNotice(partial), { kind: 'migrate', count: 1 })
+  const offline = readVersionReport({ ...REPORT, incomplete: true, registryReachable: false, packages: [unchecked('zhin.js')] })
+  assert.equal(versionRows(offline, zh)[0].state, 'unknown', 'an unreachable registry stays 无法检查')
+  assert.equal(readVersionReport({ ...REPORT, incomplete: 'yes' }).incomplete, false)
+  assert.equal(versionStateLabel('pending', zh), '未查完')
+  assert.equal(versionStateLabel('pending', en), 'Not checked yet')
+  const panel = read('pages/ops/version-panel.tsx')
+  assert.match(panel, /report\.incomplete/u)
+  assert.match(panel, /report\?\.truncated/u)
 })
 
 test('notice counts packages with a newer release', () => {
@@ -114,7 +134,8 @@ test('the Console never upgrades the framework: only the command, no migrate RPC
 test('version strings have English', () => {
   for (const message of [
     '需要迁移', '可更新', '已是最新', '无法检查', '范围内可更新到 {0}', '检查于 {0}', '前往项目依赖', 'Zhin 版本', '{0} 个包有新版本',
-    '无法检查新版本：网关连不上 npm registry（离线或超时）。下面只显示当前版本。', '有新的大版本或需要调整版本范围', 'zhin migrate 文档',
+    '无法检查新版本：网关连不上 npm registry（离线或超时）。下面只显示当前版本。', '有新的大版本或需要调整版本范围', 'zhin migrate 文档', '未查完',
+    '部分包没在时限内查完，标为「未查完」；稍后点「刷新」再查。', '插件较多，只列出了部分插件；Zhin、网关和 Console 始终在列。',
   ]) {
     assert.doesNotMatch(en(message, ['1']), /[㐀-鿿]/u, message)
   }

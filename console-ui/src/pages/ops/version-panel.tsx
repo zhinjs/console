@@ -49,6 +49,12 @@ export function VersionSection({ canUpdate }: { canUpdate: boolean }) {
         {report && !report.registryReachable ? (
           <p className="console-admin-note" role="status">{i18n.t("无法检查新版本：网关连不上 npm registry（离线或超时）。下面只显示当前版本。")}</p>
         ) : null}
+        {report && report.registryReachable && report.incomplete ? (
+          <p className="console-admin-note" role="status">{i18n.t("部分包没在时限内查完，标为「未查完」；稍后点「刷新」再查。")}</p>
+        ) : null}
+        {report?.truncated ? (
+          <p className="console-admin-note">{i18n.t("插件较多，只列出了部分插件；Zhin、网关和 Console 始终在列。")}</p>
+        ) : null}
         {migrate ? <MigrateHint /> : null}
         {report && rows.length ? (
           <Card className="overflow-hidden p-0">
