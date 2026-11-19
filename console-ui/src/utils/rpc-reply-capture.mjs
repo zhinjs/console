@@ -61,7 +61,7 @@ const isRecord = value => value !== null && typeof value === 'object' && !Array.
 
 /**
  * The SDK error with `details` from the recorded reply: `httpStatus`, `serverCode`,
- * `requestOutcome`, `lockedBy`, `retryAfter`, `missingEnv`, `errors`, `needsConfiguration`, `transaction`, `dataCode`, `sqlState`, and
+ * `requestOutcome`, `lockedBy`, `retryAfter`, `missingEnv`, `errors`, `needsConfiguration`, `transaction`, `dataCode`, `dataAgent`, `dataAvailable`, `sqlState`, and
  * `transport` when a reply arrived but was not JSON (`refused` for a 4xx, else `invalid-response`).
  * Returns the same error object (with `details` set).
  */
@@ -83,6 +83,10 @@ export async function enrichRpcError(error, capture) {
       if (isRecord(body.transaction)) details.transaction = body.transaction
       // A database port refusal (`read_only`, `protected_table`, `confirm_required`, …).
       if (isRecord(body.data) && typeof body.data.code === 'string') details.dataCode = body.data.code
+      // A refused schedule Agent (`schedule_agent_not_found`, zhinjs/zhin#1250 b55): the name sent and
+      // the Agents the engine runs, so the form can offer them again.
+      if (isRecord(body.data) && typeof body.data.agent === 'string') details.dataAgent = body.data.agent
+      if (isRecord(body.data) && Array.isArray(body.data.available)) details.dataAvailable = body.data.available.filter(name => typeof name === 'string')
       // The server's SQLSTATE of a failed Console SQL statement (e.g. `42501` from the restricted account, ADR 0059).
       if (isRecord(body.data) && typeof body.data.sqlState === 'string') details.sqlState = body.data.sqlState
     }

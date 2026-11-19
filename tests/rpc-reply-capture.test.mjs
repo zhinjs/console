@@ -126,3 +126,11 @@ test('a failed Console SQL statement keeps the server SQLSTATE (restricted accou
   assert.equal(error.details.sqlState, '42501')
   assert.equal(error.details.dataCode, undefined)
 })
+
+test('a refused schedule Agent keeps data.agent and data.available (zhinjs/zhin#1250 b55)', async () => {
+  const t = transport(() => json(400, { success: false, error: 'Agent 不存在：w。可用的 Agent：zhin、a', data: { code: 'schedule_agent_not_found', agent: 'w', available: ['zhin', 'a', 3] } }))
+  const error = await failure(t, { type: 'cron:add', cronExpression: '0 0 9 * * *', prompt: 'x', agent: 'w' })
+  assert.equal(error.details.dataCode, 'schedule_agent_not_found')
+  assert.equal(error.details.dataAgent, 'w')
+  assert.deepEqual(error.details.dataAvailable, ['zhin', 'a'])
+})

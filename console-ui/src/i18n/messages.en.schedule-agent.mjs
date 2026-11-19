@@ -16,6 +16,12 @@ export const scheduleAgentMessages = Object.freeze({
   "这是 Profile 例程，每次启动按 Profile 重新声明。请在 Profile 文件（默认 assistant.profile.yml）中该例程的 agent 字段修改。": "This is a Profile routine, declared again from the Profile on every start. Change the routine's agent field in the Profile file (assistant.profile.yml by default).",
   "没有向投递账号发送消息的权限：需要 {0} 上的 endpoint.operate。请让管理员授予该账号的这项权限。": "You cannot send from the delivery account: this needs endpoint.operate on {0}. Ask an administrator to grant it on that account.",
   "运行中的 Agent 包不支持修改任务的 Agent，请升级 zhin.js 后再试。": "The running Agent package cannot change a task's Agent. Upgrade zhin.js and try again.",
-  "Agent「{0}」不存在，可用的 Agent：{1}。请刷新后重新选择。": "Agent “{0}” does not exist. Available Agents: {1}. Refresh and choose again.",
   "所选 Agent 不存在。请刷新后重新选择。": "The selected Agent does not exist. Refresh and choose again.",
+  "Agent「{0}」不存在。请刷新后重新选择。": "Agent “{0}” does not exist. Refresh and choose again.",
+  "Agent「{0}」不存在。当前没有其他可用的 Agent，可选择默认 Agent，或先在配置中添加 Agent。": "Agent “{0}” does not exist. No other Agents are available: choose the default Agent, or add an Agent to the configuration first.",
+  "投递目标需要指明账号（scene.platform 与 scene.endpointKey），无法确认你的投递权限。": "The delivery target must name an account (scene.platform and scene.endpointKey); your permission to deliver there cannot be checked.",
+  "所选 Agent「{0}」不存在，请改选可用的 Agent 或默认 Agent。": "The selected Agent “{0}” does not exist. Choose an available Agent or the default.",
+  "Agent「{0}」不存在。可用的 Agent：{1}，请从中改选。": "Agent “{0}” does not exist. Available Agents: {1}. Choose one of them instead.",
+  "你没有权限向这个任务的投递目标（{0}）发消息，无法恢复。请让管理员授予你该账号的 endpoint.operate 权限。": "You cannot resume this task: you do not have permission to send messages to its delivery target ({0}). Ask an administrator to grant you endpoint.operate on that account.",
+  "你没有权限向这个任务的投递目标发消息，无法恢复。请让管理员授予你投递账号的 endpoint.operate 权限。": "You cannot resume this task: you do not have permission to send messages to its delivery target. Ask an administrator to grant you endpoint.operate on the delivery account.",
 })
