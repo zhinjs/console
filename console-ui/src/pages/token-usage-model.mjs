@@ -261,6 +261,16 @@ export function mergeUsageModels(stats, locale = 'zh-CN') {
   return { ...stats, byModel: [...merged.values()].sort((a, b) => b.inputTokens - a.inputTokens), series, modelServices }
 }
 
+/**
+ * The Profile name a model row shows next to its model, or '' (no subtitle): the Host leaves
+ * `profileName` out when calls of the row ran on different or unknown Profiles, and an opaque id is
+ * never a name.
+ */
+export function usageProfileName(row) {
+  const name = label(row?.profileName)
+  return name && !hasOpaqueId(name) && !isOpaqueProviderId(name) && name !== label(row?.modelName) ? name : ''
+}
+
 /** Raw ids behind a (merged) model row, for the hover / detail view: merge keys, then recorded provider ids. */
 export function usageModelIds(row) {
   return usageModelIdGroups(row).flatMap(group => group.ids)
@@ -296,6 +306,25 @@ function scopeWord(scope, locale) {
   return SCOPE_NAMES[scope] ? translate(locale, SCOPE_NAMES[scope]) : scope
 }
 
+/**
+ * Platform of a session row: the Host's `platform` (zhin 第 58 批 sends it for hashed keys too, from
+ * the recorded origin), else the first part of a `platform:endpoint:scope:sceneId` key.
+ */
+function sessionPlatform(row) {
+  return label(splitSessionKey(row).platform)
+}
+
+/** 「#前 8 位」 of a hashed key, '' for other keys. */
+function hashedTag(row) {
+  const hashed = HASHED_KEY.exec(String(row?.sessionKey ?? ''))
+  return hashed ? `#${hashed[2].slice(0, 8)}` : ''
+}
+
+/** 「平台 · 名称」, or just the name without a platform. */
+function withPlatform(platform, body) {
+  return platform ? `${platform} · ${body}` : body
+}
+
 /** 「平台 · 类型 名称」 from `scopeKind` / `sceneLabel` (zhin 第 58 批), in the UI language. */
 function sessionLabelFromParts(row, locale) {
   const kind = label(row?.scopeKind)
@@ -304,18 +333,19 @@ function sessionLabelFromParts(row, locale) {
   if (ORIGIN_NAMES[kind]) return scene ? `${ORIGIN_NAMES[kind]} · ${scene}` : ORIGIN_NAMES[kind]
   if (kind === 'schedule') return translate(locale, '定时任务 {0}', [scene]).trim()
   if (kind === 'internal') return translate(locale, '内部任务 {0}', [scene]).trim()
-  const parts = splitSessionKey(row)
-  const name = scene || middleEllipsis(parts.sceneId)
-  const body = `${scopeWord(kind, locale)} ${name}`.trim()
-  return parts.platform ? `${parts.platform} · ${body}` : body
+  // A hashed key carries no scene id: its short hash tells it apart instead of the raw key.
+  const name = scene || hashedTag(row) || middleEllipsis(splitSessionKey(row).sceneId)
+  return withPlatform(sessionPlatform(row), `${scopeWord(kind, locale)} ${name}`.trim())
 }
 
 /**
  * The name a session row shows: 「平台 · 类型 名称」 from `scopeKind` / `sceneLabel` in the UI language
  * when the Host sends them (zhin 第 58 批), else the Host's `displayName` (`label` / `name` from older
  * shapes; its Chinese type word is translated), else 「平台 · 类型 sceneId」 from a
- * `platform:endpoint:scope:sceneId` key, else 「私聊会话 #前 8 位」 for a hashed key
- * (`personal-session:v1:<sha>`), 「定时任务 …」 for `schedule:…`, else the key shortened in the middle.
+ * `platform:endpoint:scope:sceneId` key, else 「平台 · 私聊会话 #前 8 位」 for a hashed key
+ * (`personal-session:v1:<sha>`; the platform from `bySession[].platform`, left out when the Host has
+ * none), 「定时任务 …」 for `schedule:…`, else the key shortened in the middle. The platform always
+ * comes from `bySession[].platform` first, the key only when the Host sends none.
  * The full key belongs in a tooltip / detail, never in the main view.
  */
 export function usageSessionLabel(row, locale = 'zh-CN') {
@@ -328,7 +358,7 @@ export function usageSessionLabel(row, locale = 'zh-CN') {
   }
   const key = String(row?.sessionKey ?? '')
   const hashed = HASHED_KEY.exec(key)
-  if (hashed) return `${translate(locale, HASHED_NAMES[hashed[1]] ?? '会话')} #${hashed[2].slice(0, 8)}`
+  if (hashed) return withPlatform(sessionPlatform(row), `${translate(locale, HASHED_NAMES[hashed[1]] ?? '会话')} #${hashed[2].slice(0, 8)}`)
   if (key.startsWith('schedule:') && key.length > 9) return translate(locale, '定时任务 {0}', [middleEllipsis(key.slice(9))])
   const parts = splitSessionKey(row)
   if (parts.platform && parts.scope) return `${parts.platform} · ${scopeWord(parts.scope, locale)} ${middleEllipsis(parts.sceneId)}`.trim()
@@ -377,6 +407,18 @@ export function usageSessionNames(rows, locale = 'zh-CN') {
   }
   for (const row of rows ?? []) result.set(row.sessionKey, { name: names.get(row.sessionKey), qualifier: qualifiers.get(row.sessionKey) ?? '' })
   return result
+}
+
+/**
+ * The account of a session row: the Host's `accountLabel`, else the recorded endpoint (the Host leaves
+ * the label out when the account's name is just its endpoint id or several platforms share it), else
+ * ''. An opaque id is never shown as the name.
+ */
+export function usageAccountLabel(row) {
+  const own = label(row?.accountLabel)
+  if (own && !hasOpaqueId(own) && !isOpaqueProviderId(own)) return own
+  const endpoint = label(splitSessionKey(row ?? {}).endpoint)
+  return endpoint && !isOpaqueProviderId(endpoint) ? endpoint : ''
 }
 
 // 分类色来自 theme-tokens.css 的 --chart-1..8，随亮 / 暗主题切换。
@@ -637,19 +679,26 @@ function isTokenRow(row) {
   return isPlainObject(row) && TOKEN_KEYS.every(key => isCount(row[key]))
 }
 
-/** The window right before `input`, as long as it: what the Console asks for when the Host sends no `previous`. */
-export function previousUsageInput(input) {
+/**
+ * The window right before `input`, as long as it: what the Console asks for when the Host sends no
+ * usable `previous`. It keeps the main request's `session` and `timeZone` — the request's own zone,
+ * else the one the Host answered the main request in (`stats.range.timeZone`) — so both windows are
+ * cut the same way.
+ */
+export function previousUsageInput(input, stats) {
   if (!input || !isCount(input.since) || !isCount(input.until) || input.since >= input.until) return null
   const length = input.until - input.since
   const since = Math.max(0, input.since - length)
   if (since >= input.since) return null
-  return { since, until: input.since, bucket: input.bucket, ...(input.session ? { session: input.session } : {}) }
+  const timeZone = label(input.timeZone) || label(stats?.range?.timeZone)
+  return { since, until: input.since, bucket: input.bucket, ...(input.session ? { session: input.session } : {}), ...(timeZone ? { timeZone } : {}) }
 }
 
 /**
  * Totals of the previous window the Host computed (`compare: 'previous'`, zhin 第 58 批), or null:
- * absent (older Host), malformed, or cut short (`truncated`: the window is shorter than the current
- * one, so a change against it would mislead; the Console then asks for the full window itself).
+ * absent (older Host), malformed, or cut short (`truncated: true` — rare: the Host returns the full
+ * previous window of any range up to 31 days, 「近 30 天」 included; a change against a shorter window
+ * would mislead).
  */
 export function hostPreviousTotals(stats) {
   const previous = stats?.previous
@@ -657,6 +706,18 @@ export function hostPreviousTotals(stats) {
   const totals = previous.totals
   if (!isTokenRow(totals) || !isCount(totals.turns)) return null
   return totals
+}
+
+/**
+ * Where the summary's 「较上一周期」 comes from: `{ totals }` — the Host's `previous` (no further
+ * request); `{ request }` — the RPC input of the previous window, only when the Host cut its window
+ * short or sent none (an older Host); `{}` — no previous window exists (the range starts at the epoch).
+ */
+export function previousUsagePlan(stats, input) {
+  const totals = hostPreviousTotals(stats)
+  if (totals) return { totals }
+  const request = previousUsageInput(input, stats)
+  return request ? { request } : {}
 }
 
 /**
@@ -711,20 +772,18 @@ export function usagePurposeLabel(row, locale = 'zh-CN') {
 
 /**
  * What this Host sends beyond the base shape (zhin 第 58 批), each checked on its own:
- * `agents` / `purposes` (well-formed rows of `byAgent` / `byPurpose`), `agentSeries` (a per-bucket
- * `series[].byAgent` for the 「按 Agent」 trend), `others` (`sessionsTotal` / `othersTotals`).
+ * `agents` / `purposes` (well-formed rows of `byAgent` / `byPurpose`), `others` (`sessionsTotal` /
+ * `othersTotals`). The Host sends no per-bucket Agent split, so the trend has no 「按 Agent」.
  * Malformed optional fields are left out instead of failing the page.
  */
 export function usageCapabilities(stats) {
   const rows = (list, key) => Array.isArray(list) ? list.filter(row => isTokenRow(row) && typeof row[key] === 'string' && row[key]) : []
   const agents = rows(stats?.byAgent, 'agent')
   const purposes = rows(stats?.byPurpose, 'purpose')
-  const series = Array.isArray(stats?.series) ? stats.series : []
-  const agentSeries = agents.length > 0 && series.length > 0 && series.every(point => isPlainObject(point.byAgent) && Object.values(point.byAgent).every(isCount))
   const others = isPlainObject(stats?.othersTotals) && isTokenRow(stats.othersTotals) && isCount(stats.othersTotals.sessions) && isCount(stats?.sessionsTotal)
     ? { sessions: stats.othersTotals.sessions, total: stats.sessionsTotal, totals: stats.othersTotals }
     : null
-  return { schemaVersion: isCount(stats?.schemaVersion) ? stats.schemaVersion : 1, agents, purposes, agentSeries, others }
+  return { schemaVersion: isCount(stats?.schemaVersion) ? stats.schemaVersion : 1, agents, purposes, others }
 }
 
 /**
@@ -754,8 +813,8 @@ export function usageServiceGroups(byModel, locale = 'zh-CN') {
 }
 
 /**
- * The trend re-keyed by dimension: `model` (the merged series), `service` (summed through
- * `modelServices`), `agent` (`series[].byAgent`, when the Host sends it). Keys are display names.
+ * The trend re-keyed by dimension: `model` (the merged series) or `service` (summed through
+ * `modelServices`). Keys are display names.
  */
 export function usageTrendSeries(stats, dimension, locale = 'zh-CN') {
   const series = Array.isArray(stats?.series) ? stats.series : []
@@ -766,16 +825,6 @@ export function usageTrendSeries(stats, dimension, locale = 'zh-CN') {
       for (const [key, value] of Object.entries(point.byModel)) {
         const service = services[key] ?? translate(locale, '未知服务')
         byModel[service] = (byModel[service] ?? 0) + value
-      }
-      return { ...point, byModel }
-    })
-  }
-  if (dimension === 'agent') {
-    return series.map(point => {
-      const byModel = {}
-      for (const [agent, value] of Object.entries(isPlainObject(point.byAgent) ? point.byAgent : {})) {
-        const name = usageAgentLabel({ agent }, locale)
-        byModel[name] = (byModel[name] ?? 0) + value
       }
       return { ...point, byModel }
     })

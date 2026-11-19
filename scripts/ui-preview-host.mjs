@@ -104,9 +104,14 @@ const decisions = [decisionRow(11, {}), decisionRow(42, { outcome: 'deny', reaso
 // Profile) has only the model as its displayName; the Console shows it as 「未知服务 · 模型」.
 // zhin batch 58 (`schemaVersion: 2`) adds driverLabel / profileName, byAgent / byPurpose, `previous`
 // (with `compare: 'previous'`), sessionsTotal / othersTotals and bySession scopeKind / sceneLabel /
-// shortKey / accountLabel. UI_PREVIEW_USAGE=legacy answers like an instance before batch 58: none of
-// those fields, `compare` ignored (the Console then asks for the previous window itself).
+// shortKey / accountLabel, and `platform` of hashed keys (from the recorded origin). `previous` is the
+// full window right before (`truncated: false`: the Host cuts nothing up to 31 days, 「近 30 天」 included);
+// profileName / accountLabel are left out where the Host cannot name them. UI_PREVIEW_USAGE=legacy
+// answers like an instance before batch 58: none of those fields, `compare` ignored (the Console then
+// asks for the previous window itself). UI_PREVIEW_USAGE=truncated sends a `previous` cut short
+// (`truncated: true`), which the Console replaces with its own request.
 const legacyUsage = process.env.UI_PREVIEW_USAGE === 'legacy'
+const truncatedPrevious = process.env.UI_PREVIEW_USAGE === 'truncated'
 const USAGE_SERVICES = {
   night: 'services:5e6ea66f-9b1d-4c3e-8a77-2f1d0c4b535a',
   deepseek: 'services:0c8f2a51-63d4-4b8e-9f10-7a2e64c1d9b0',
@@ -127,12 +132,16 @@ const usageSessionRows = [
     v2: { scopeKind: 'group', sceneLabel: '产品试验群', accountLabel: '客服号' } },
   { sessionKey: 'icqq:preview-community:private:10001', platform: 'icqq', endpoint: 'preview-community', scope: 'private', sceneId: '10001', displayName: 'icqq · 私聊 演示用户', turns: 2, calls: 3, inputTokens: 4_200, outputTokens: 600, cacheReadTokens: 1_100,
     v2: { scopeKind: 'private', sceneLabel: '演示用户', accountLabel: '社区号' } },
-  // No recorded origin: a hashed personal-session key and a group without a name.
-  { sessionKey: 'personal-session:v1:ab12cd34ef56a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2', turns: 3, calls: 5, inputTokens: 7_300, outputTokens: 900, cacheReadTokens: 2_600, v2: {} },
+  // Hashed keys carry no address: batch 58 sends their platform (and endpoint) from the recorded origin.
+  { sessionKey: 'personal-session:v1:ab12cd34ef56a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2', turns: 3, calls: 5, inputTokens: 7_300, outputTokens: 900, cacheReadTokens: 2_600,
+    v2: { platform: 'icqq', endpoint: 'preview-community', accountLabel: '社区号' } },
+  { sessionKey: 'scene-task:v1:9f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0', turns: 1, calls: 2, inputTokens: 1_200, outputTokens: 150, cacheReadTokens: 400,
+    v2: { platform: 'icqq', endpoint: 'preview-support', scopeKind: 'group' } },
   // Two HTTP API sessions: one name, two keys.
   { sessionKey: 'http:api:session:7f3a9c21-55d0-4e8b-a1c2-90b7d6e5f4a3', displayName: 'HTTP', turns: 2, calls: 2, inputTokens: 3_100, outputTokens: 400, cacheReadTokens: 900, v2: { scopeKind: 'http' } },
   { sessionKey: 'http:api:session:c41e0b8d-2f6a-4c97-b3d5-18e9a0f7c6b2', displayName: 'HTTP', turns: 1, calls: 1, inputTokens: 1_900, outputTokens: 200, cacheReadTokens: 0, v2: { scopeKind: 'http' } },
-  { sessionKey: 'icqq:preview-community:group:30002', platform: 'icqq', endpoint: 'preview-community', scope: 'group', sceneId: '30002', turns: 1, calls: 2, inputTokens: 2_100, outputTokens: 300, cacheReadTokens: 0, v2: { accountLabel: '社区号' } },
+  // A group without a name, on an account whose name is just its endpoint id (no accountLabel).
+  { sessionKey: 'icqq:8596238:group:30002', platform: 'icqq', endpoint: '8596238', scope: 'group', sceneId: '30002', turns: 1, calls: 2, inputTokens: 2_100, outputTokens: 300, cacheReadTokens: 0, v2: {} },
 ]
 const shortUsageKey = key => { const hashed = /^([a-z-]+):v\d+:([0-9a-f]{16,})$/u.exec(key); return hashed ? `${hashed[1]}:${hashed[2].slice(0, 8)}` : key }
 const usageStats = (body = {}) => {
@@ -156,7 +165,7 @@ const usageStats = (body = {}) => {
   const active = index => index >= days - 3
   const daily = index => active(index) ? Math.round(sum('inputTokens') / 3) : 0
   const totals = { turns: sum('turns'), calls: sum('calls'), inputTokens: sum('inputTokens'), outputTokens: sum('outputTokens'), cacheReadTokens: sum('cacheReadTokens'), cacheShare: sum('inputTokens') ? sum('cacheReadTokens') / sum('inputTokens') : 0 }
-  const stats = { range: { since, until, bucket: 'day', timeZone: 'Asia/Shanghai' },
+  const stats = { range: { since, until, bucket: 'day', timeZone: typeof body.timeZone === 'string' && body.timeZone ? body.timeZone : 'Asia/Shanghai' },
     totals,
     byModel,
     bySession: sessions,
@@ -185,9 +194,9 @@ const usageStats = (body = {}) => {
     ] : [],
   })
   if (body.compare === 'previous') {
-    const length = until - since
+    const length = truncatedPrevious ? Math.round((until - since) / 2) : until - since
     const previous = usageStats({ since: since - length, until: since, session })
-    stats.previous = { since: since - length, until: since, truncated: false, totals: previous.totals }
+    stats.previous = { since: since - length, until: since, truncated: truncatedPrevious, totals: previous.totals }
   }
   return stats
 }

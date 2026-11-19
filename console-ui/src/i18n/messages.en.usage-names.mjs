@@ -17,7 +17,6 @@ export const usageNameMessages = Object.freeze({
   "输入 {0} · 输出 {1}": "Input {0} · output {1}",
   "模型调用": "Model calls",
   "按服务": "By service",
-  "按 Agent": "By Agent",
   "用量趋势": "Usage trend",
   "输入 tokens，悬停柱子看各项数值。": "Input tokens; hover a bar for the numbers.",
   "趋势维度": "Trend dimension",

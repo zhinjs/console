@@ -10,9 +10,9 @@ import * as usageModel from '../console-ui/src/pages/token-usage-model.mjs'
 // 与第 57 批审查遗留（同名会话短键、ID 计数、ⓘ 可访问名、不透明 series 键、渲染级「原始 ID 只在 ⓘ / Sheet」）。
 
 const {
-  formatDelta, hostPreviousTotals, isNotableDelta, mergeUsageModels, previousUsageInput, topSeriesKeys, usageAgentLabel, usageCapabilities, usageDelta,
-  usageModelIdGroups, usageModelLabel, usagePurposeLabel, usageServiceGroups, usageSessionLabel, usageSessionNames, usageSessionShortKey, usageTrendSeries,
-  validateUsageStats,
+  formatDelta, hostPreviousTotals, isNotableDelta, mergeUsageModels, previousUsageInput, previousUsagePlan, topSeriesKeys, usageAccountLabel, usageAgentLabel,
+  usageCapabilities, usageDelta, usageModelIdGroups, usageModelLabel, usageProfileName, usagePurposeLabel, usageServiceGroups, usageSessionLabel, usageSessionNames,
+  usageSessionShortKey, usageTrendSeries, validateUsageStats,
 } = usageModel
 
 const require = createRequire(import.meta.url)
@@ -60,7 +60,10 @@ function v2Stats() {
   stats.schemaVersion = 2
   stats.byModel[0] = { ...stats.byModel[0], driverLabel: 'OpenAI 兼容', profileId: 'profiles:1f0e', profileName: '夜间主力' }
   stats.bySession = [
-    ...stats.bySession.map((row, index) => index < 2 ? { ...row, scopeKind: 'group', sceneLabel: '产品试验群', shortKey: row.sessionKey, accountLabel: index ? '客服号' : '社区号' } : { ...row, shortKey: usageSessionShortKey(row) }),
+    ...stats.bySession.map((row, index) => index < 2 ? { ...row, scopeKind: 'group', sceneLabel: '产品试验群', shortKey: row.sessionKey, accountLabel: index ? '客服号' : '社区号' }
+      // Batch 58 sends the platform of a hashed key from the recorded origin.
+      : row.sessionKey === HASHED ? { ...row, platform: 'icqq', endpoint: 'bot-a', shortKey: usageSessionShortKey(row) }
+      : { ...row, shortKey: usageSessionShortKey(row) }),
     { sessionKey: 'http:api:session:7f3a9c21-55d0', displayName: 'HTTP', scopeKind: 'http', shortKey: 'http:api:session:7f3a9c21-55d0', turns: 1, ...tokens(1, 100) },
     { sessionKey: 'http:api:session:c41e0b8d-2f6a', displayName: 'HTTP', scopeKind: 'http', shortKey: 'http:api:session:c41e0b8d-2f6a', turns: 1, ...tokens(1, 100) },
   ]
@@ -157,6 +160,25 @@ test('previous window: the Host value unless missing or cut short; otherwise the
   assert.deepEqual(previousUsageInput({ since: 1000, until: 1600, bucket: 'hour', session: 'icqq:*' }), { since: 400, until: 1000, bucket: 'hour', session: 'icqq:*' })
   assert.equal(previousUsageInput({ since: 0, until: 10, bucket: 'day' }), null)
 
+  // The second request uses the main request's time zone: its own, else the one the Host answered in.
+  const input = { since: 1000, until: 1600, bucket: 'hour' }
+  assert.equal(previousUsageInput(input, legacyStats()).timeZone, 'Asia/Shanghai')
+  assert.equal(previousUsageInput({ ...input, timeZone: 'Europe/Berlin' }, legacyStats()).timeZone, 'Europe/Berlin')
+  assert.equal('timeZone' in previousUsageInput(input, { range: {} }), false, 'no zone is invented')
+
+  // An untruncated `previous` (any range up to 31 days, 「近 30 天」 included) needs no second request.
+  const full = previousUsagePlan(v2Stats(), input)
+  assert.deepEqual([full.totals.inputTokens, full.request], [5000, undefined])
+  // Cut short, or absent (older Host): the Console asks for the full window, in the same zone.
+  const cut = v2Stats()
+  cut.previous = { ...cut.previous, since: -86_400_000, truncated: true }
+  for (const stats of [cut, legacyStats()]) {
+    const plan = previousUsagePlan(stats, input)
+    assert.equal(plan.totals, undefined)
+    assert.deepEqual(plan.request, { since: 400, until: 1000, bucket: 'hour', timeZone: 'Asia/Shanghai' })
+  }
+  assert.deepEqual(previousUsagePlan(legacyStats(), { since: 0, until: 10, bucket: 'day' }), {}, 'nothing before the epoch')
+
   assert.deepEqual(usageDelta(112, 100), { kind: 'change', ratio: 0.12 })
   assert.deepEqual(usageDelta(5, 0), { kind: 'new' })
   assert.deepEqual(usageDelta(0, 0), { kind: 'same' })
@@ -171,9 +193,10 @@ test('previous window: the Host value unless missing or cut short; otherwise the
 
 test('optional dimensions are read only when present and well formed', () => {
   const old = usageCapabilities(legacyStats())
-  assert.deepEqual([old.schemaVersion, old.agents.length, old.purposes.length, old.agentSeries, old.others], [1, 0, 0, false, null])
+  assert.deepEqual([old.schemaVersion, old.agents.length, old.purposes.length, old.others], [1, 0, 0, null])
   const next = usageCapabilities(v2Stats())
-  assert.deepEqual([next.schemaVersion, next.agents.length, next.purposes.length, next.agentSeries, next.others.sessions], [2, 2, 2, false, 3])
+  assert.deepEqual([next.schemaVersion, next.agents.length, next.purposes.length, next.others.sessions], [2, 2, 2, 3])
+  assert.deepEqual(Object.keys(next).sort(), ['agents', 'others', 'purposes', 'schemaVersion'], 'no per-bucket Agent trend: the Host does not send one')
   const broken = usageCapabilities({ ...v2Stats(), byAgent: [{ agent: 'x', calls: 'many' }, ...v2Stats().byAgent], byPurpose: 'chat' })
   assert.equal(broken.agents.length, 2, 'a malformed row is left out')
   assert.equal(broken.purposes.length, 0)
@@ -181,11 +204,20 @@ test('optional dimensions are read only when present and well formed', () => {
   assert.equal(usageAgentLabel({ agent: 'researcher' }, 'en'), 'researcher')
   assert.equal(usagePurposeLabel({ purpose: 'ambient-judge', label: '插话判断' }, 'en'), translate('en', '插话判断'))
   assert.equal(usagePurposeLabel({ purpose: 'custom-x', label: '自定义' }, 'en'), 'custom-x', 'an unknown purpose is not shown with a Chinese Host label in English')
+})
 
-  const withSeries = v2Stats()
-  withSeries.series = withSeries.series.map(point => ({ ...point, byAgent: { '@main': 4000, researcher: 1000 } }))
-  assert.equal(usageCapabilities(withSeries).agentSeries, true)
-  assert.deepEqual(usageTrendSeries(withSeries, 'agent')[0].byModel, { 主助手: 4000, researcher: 1000 })
+test('session names: the platform comes from bySession[].platform first, hashed keys keep it', () => {
+  const v2 = v2Stats()
+  assert.equal(usageSessionNames(v2.bySession).get(HASHED).name, 'icqq · 私聊会话 #ab12cd34')
+  assert.equal(usageSessionLabel({ sessionKey: HASHED }), '私聊会话 #ab12cd34', 'an older Host sends no platform for a hashed key')
+  assert.equal(usageSessionLabel({ sessionKey: HASHED, platform: 'sandbox' }, 'en'), `sandbox · ${translate('en', '私聊会话')} #ab12cd34`)
+  const scene = `scene-task:v1:${'9f8e7d6c'.padEnd(64, '0')}`
+  // A hashed key with a scope but no name: its short hash, never the raw key.
+  assert.equal(usageSessionLabel({ sessionKey: scene, platform: 'icqq', scopeKind: 'group' }), 'icqq · 群 #9f8e7d6c')
+  assert.equal(usageSessionLabel({ sessionKey: scene, platform: 'icqq', scopeKind: 'private', sceneLabel: '小明' }), 'icqq · 私聊 小明')
+  // The Host's platform wins over the first part of the key.
+  assert.equal(usageSessionLabel({ sessionKey: 'icqq:bot:group:1', platform: 'onebot', scopeKind: 'group', sceneLabel: '群名' }), 'onebot · 群 群名')
+  assert.equal(usageSessionLabel({ sessionKey: 'icqq:bot:group:1', scopeKind: 'group', sceneLabel: '群名' }), 'icqq · 群 群名', 'the key only without a platform')
 })
 
 test('services group their models; the trend sums by service', () => {
@@ -248,7 +280,8 @@ for (const [shape, stats] of [['legacy', legacyStats], ['v2', v2Stats]]) for (co
       // Same-named groups are told apart by a visible short key, at every width.
       assert.match(mainView(html), /icqq:bot-a:group:1/)
       assert.match(mainView(html), /icqq:bot-b:group:1/)
-      assert.match(mainView(html), /私聊会话 #ab12cd34/)
+      // A hashed key keeps the platform the batch-58 Host sends (none from an older Host).
+      assert.match(mainView(html), shape === 'v2' ? /icqq · 私聊会话 #ab12cd34/ : />私聊会话 #ab12cd34/)
     }
     if (view === 'models' && !narrow) {
       assert.match(html, /<info-hint><span><span class="sr-only">Night Router · gpt-6-luna 的 ID<\/span>/, 'the ⓘ is named after its model')
@@ -257,6 +290,7 @@ for (const [shape, stats] of [['legacy', legacyStats], ['v2', v2Stats]]) for (co
     assert.equal(/<tabs/.test(html), !narrow, 'tabs on wide containers')
     assert.equal(/<select-field aria-label="明细维度"/.test(html), narrow, 'a select on narrow containers')
     assert.equal(/>Agent</.test(html), shape === 'v2', 'the Agent tab only with byAgent')
+    assert.doesNotMatch(html, /按 Agent/, 'the trend has no Agent dimension')
     assert.equal(/较上一周期/.test(html), shape === 'v2', 'the change shows with the Host previous window')
     assert.match(html, /<details open="">/, 'the cache section is open while a cache alert is up')
   })
@@ -285,6 +319,34 @@ test('render without cache alerts keeps the cache section folded', () => {
   assert.match(renderReport(stats), /<details>/)
 })
 
+test('missing accountLabel / profileName fall back without showing raw ids', () => {
+  assert.equal(usageAccountLabel({ sessionKey: 'icqq:bot-a:group:1', endpoint: 'bot-a', accountLabel: '社区号' }), '社区号')
+  assert.equal(usageAccountLabel({ sessionKey: 'icqq:8596238:group:1', endpoint: '8596238' }), '8596238', 'the endpoint when the Host leaves the label out')
+  assert.equal(usageAccountLabel({ sessionKey: 'icqq:bot-b:group:1' }), 'bot-b', 'the endpoint part of the key')
+  assert.equal(usageAccountLabel({ sessionKey: HASHED }), '', 'nothing to show')
+  assert.equal(usageAccountLabel({ sessionKey: HASHED, accountLabel: NIGHT_ACCOUNT, endpoint: NIGHT_ACCOUNT }), '', 'an opaque id is never the name')
+  assert.equal(usageProfileName({ model: 'm', modelName: 'm', profileName: '夜间主力' }), '夜间主力')
+  assert.equal(usageProfileName({ model: 'm', modelName: 'm' }), '', 'no subtitle when the Host cannot attribute the calls')
+  assert.equal(usageProfileName({ model: 'm', modelName: 'm', profileName: 'm' }), '', 'a subtitle repeating the model adds nothing')
+  assert.equal(usageProfileName({ model: 'm', profileName: REMOVED }), '')
+
+  // Rendered: the model row and Sheet show no profile line, the session Sheet falls back to the endpoint.
+  const stats = v2Stats()
+  delete stats.byModel[0].profileName
+  delete stats.byModel[0].profileId
+  stats.bySession[0] = { ...stats.bySession[0], accountLabel: undefined }
+  const model = renderReport(stats, { selection: { kind: 'model', key: 'Night Router · gpt-6-luna' } })
+  assert.doesNotMatch(model, /模型配置|夜间主力/)
+  assert.doesNotMatch(mainView(model), RAW)
+  const session = renderReport(stats, { view: 'sessions', selection: { kind: 'session', key: 'icqq:bot-a:group:1' } })
+  assert.match(session.match(/<sheet-root>[\s\S]*<\/sheet-root>/)[0], /<dt>账号<\/dt><dd>bot-a<\/dd>/)
+  const hashed = renderReport(stats, { view: 'sessions', selection: { kind: 'session', key: HASHED } })
+  const sheet = hashed.match(/<sheet-root>[\s\S]*<\/sheet-root>/)[0]
+  assert.match(sheet, /<dt>平台<\/dt><dd>icqq<\/dd>/)
+  assert.match(sheet, /<dt>账号<\/dt><dd>bot-a<\/dd>/)
+  assert.doesNotMatch(mainView(hashed), RAW)
+})
+
 // ── The preview Host fixture answers both shapes, and both render ───────────────────────────────
 
 const { spawn } = await import('node:child_process')
@@ -305,6 +367,14 @@ test('preview Host: the batch-58 shape and the legacy shape both render without 
   assert.equal(v2.schemaVersion, 2)
   assert.ok(v2.byAgent.length && v2.byPurpose.length && v2.previous.totals.inputTokens < v2.totals.inputTokens)
   assert.ok(v2.bySession.every(row => typeof row.shortKey === 'string'))
+  assert.equal(v2.previous.truncated, false, 'the full previous window')
+  assert.deepEqual(previousUsagePlan(v2, input).request, undefined, 'no second request')
+  const hashed = v2.bySession.filter(row => /^[a-z-]+:v\d+:/.test(row.sessionKey))
+  assert.ok(hashed.length >= 2 && hashed.every(row => row.platform === 'icqq'), 'hashed sessions carry their platform')
+  const v2Names = usageSessionNames(v2.bySession)
+  for (const row of hashed) assert.match(v2Names.get(row.sessionKey).name, /^icqq · /)
+  assert.ok(v2.bySession.some(row => row.endpoint && !row.accountLabel), 'an account without a name')
+  assert.ok(v2.byModel.some(row => !row.profileName), 'a model without a Profile name')
   const legacy = await previewUsage({ UI_PREVIEW_USAGE: 'legacy' }, input)
   for (const field of ['schemaVersion', 'byAgent', 'byPurpose', 'previous', 'sessionsTotal', 'othersTotals']) assert.equal(field in legacy, false, field)
   assert.ok(legacy.bySession.every(row => !('shortKey' in row) && !('scopeKind' in row)))
@@ -313,7 +383,14 @@ test('preview Host: the batch-58 shape and the legacy shape both render without 
     assert.doesNotMatch(mainView(html), RAW)
     assert.match(html, /Night Router/)
   }
-  // The legacy shape falls back to a second request for the previous window.
-  const previous = await previewUsage({ UI_PREVIEW_USAGE: 'legacy' }, previousUsageInput(input))
+  // The legacy shape falls back to a second request for the previous window, in the main request's zone.
+  const request = previousUsagePlan(legacy, input).request
+  assert.equal(request.timeZone, legacy.range.timeZone)
+  const previous = await previewUsage({ UI_PREVIEW_USAGE: 'legacy' }, request)
   assert.ok(previous.totals.inputTokens < legacy.totals.inputTokens)
+  // A `previous` cut short is replaced by the Console's own request, with the zone of the main request.
+  const zoned = { ...input, timeZone: 'Europe/Berlin' }
+  const truncated = await previewUsage({ UI_PREVIEW_USAGE: 'truncated' }, zoned)
+  assert.equal(truncated.previous.truncated, true)
+  assert.deepEqual(previousUsagePlan(truncated, zoned).request, { since: input.since - 7 * 86_400_000, until: input.since, bucket: 'day', timeZone: 'Europe/Berlin' })
 })

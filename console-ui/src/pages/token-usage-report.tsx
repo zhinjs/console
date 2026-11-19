@@ -25,10 +25,12 @@ import {
   splitSessionKey,
   topSeriesKeys,
   totalTokens,
+  usageAccountLabel,
   usageAgentLabel,
   usageCapabilities,
   usageDelta,
   usageModelIdGroups,
+  usageProfileName,
   usagePurposeLabel,
   usageServiceGroups,
   usageSessionNames,
@@ -44,7 +46,7 @@ import {
 
 /**
  * 「Token 用量」 report (zhinjs/zhin#1250 第 59 批): summary with the change against the previous
- * window, alerts only when something is off, the trend by service / model (/ Agent), the breakdown
+ * window, alerts only when something is off, the trend by service / model, the breakdown
  * by service → model, session (and Agent / purpose when the Host sends them), the cache section
  * folded away unless a cache alert is up, and a detail Sheet per row. Raw ids (`services:<uuid>`,
  * hashed session keys) appear only in an ⓘ panel, a tooltip or the Sheet — never as a name.
@@ -52,7 +54,7 @@ import {
 
 type Translate = ReturnType<typeof useI18n>['t']
 export type UsageView = 'models' | 'sessions' | 'agents' | 'purposes'
-export type TrendDimension = 'service' | 'model' | 'agent'
+export type TrendDimension = 'service' | 'model'
 type SortKey = 'turns' | 'calls' | 'inputTokens' | 'outputTokens' | 'cacheReadTokens' | 'cache'
 type Counts = { calls: number; inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens?: number; cacheShare?: number; turns?: number }
 export type UsageSelection =
@@ -179,18 +181,16 @@ function UsageSummary({ stats, previous }: { stats: UsageStats; previous: UsageT
   )
 }
 
-function UsageTrend({ stats, narrow, agentSeries }: { stats: UsageStats; narrow: boolean; agentSeries: boolean }) {
+function UsageTrend({ stats, narrow }: { stats: UsageStats; narrow: boolean }) {
   const i18n = useI18n()
   const [dimension, setDimension] = useState<TrendDimension>('service')
-  const active: TrendDimension = dimension === 'agent' && !agentSeries ? 'service' : dimension
-  const series = useMemo(() => usageTrendSeries(stats, active, i18n.locale), [stats, active, i18n.locale])
+  const series = useMemo(() => usageTrendSeries(stats, dimension, i18n.locale), [stats, dimension, i18n.locale])
   const keys = useMemo(() => seriesKeys(series), [series])
   const colors = useMemo(() => buildColorMap(keys), [keys])
   const shown = useMemo(() => topSeriesKeys(series), [series])
   const options: Array<{ value: TrendDimension; label: string }> = [
     { value: 'service', label: i18n.t("按服务") },
     { value: 'model', label: i18n.t("按模型") },
-    ...(agentSeries ? [{ value: 'agent' as const, label: i18n.t("按 Agent") }] : []),
   ]
   return (
     <Card>
@@ -199,7 +199,7 @@ function UsageTrend({ stats, narrow, agentSeries }: { stats: UsageStats; narrow:
           <CardTitle className="text-base">{i18n.t("用量趋势")}</CardTitle>
           <CardDescription>{i18n.t("输入 tokens，悬停柱子看各项数值。")}</CardDescription>
         </div>
-        <DimensionSwitch value={active} onChange={setDimension} options={options} label={i18n.t("趋势维度")} narrow={narrow} />
+        <DimensionSwitch value={dimension} onChange={setDimension} options={options} label={i18n.t("趋势维度")} narrow={narrow} />
       </CardHeader>
       <CardContent className="space-y-3 text-foreground">
         <ModelLegend keys={shown} colors={colors} hasOther={keys.length > shown.length} />
@@ -301,7 +301,7 @@ function ModelTable({ groups, total, narrow, open }: { groups: UsageServiceGroup
               <TableRow key={`m:${row.model}`} className="cursor-pointer text-muted-foreground hover:bg-muted/50" onClick={() => open({ kind: 'model', key: row.model })}>
                 <TableCell className="min-w-0 pl-12">
                   <span className="flex min-w-0 items-center gap-2">
-                    <NameButton onOpen={() => open({ kind: 'model', key: row.model })}><UsageName name={row.modelName ?? row.model} secondary={row.profileName && row.profileName !== row.modelName ? row.profileName : undefined} /></NameButton>
+                    <NameButton onOpen={() => open({ kind: 'model', key: row.model })}><UsageName name={row.modelName ?? row.model} secondary={usageProfileName(row) || undefined} /></NameButton>
                     <UsageIdHint row={row} name={row.model} />
                   </span>
                 </TableCell>
@@ -463,7 +463,7 @@ function UsageDetailSheet({ stats, groups, selection, narrow, onClose, onPickSes
         { key: 'service', label: t("服务"), value: model.serviceName ?? '—' },
         { key: 'model', label: t("模型"), value: model.modelName ?? model.model },
         ...(model.driverLabel ? [{ key: 'driver', label: t("驱动"), value: model.driverLabel }] : []),
-        ...(model.profileName ? [{ key: 'profile', label: t("模型配置"), value: model.profileName }] : []),
+        ...(usageProfileName(model) ? [{ key: 'profile', label: t("模型配置"), value: usageProfileName(model) }] : []),
         ...(model.claimsWithoutToolCall ? [{ key: 'claims', label: t("声称查过但没调用工具"), value: formatTokens(model.claimsWithoutToolCall, locale) }] : []),
       ]
       idGroups = usageModelIdGroups(model)
@@ -474,10 +474,11 @@ function UsageDetailSheet({ stats, groups, selection, narrow, onClose, onPickSes
       const name = usageSessionNames(stats.bySession, locale).get(session.sessionKey)!
       const parts = splitSessionKey(session)
       const kind = session.scopeKind ?? parts.scope
+      const account = usageAccountLabel(session)
       title = name.qualifier ? `${name.name} ${name.qualifier}` : name.name; kindLabel = t("会话"); row = session
       extra = [
         ...(parts.platform ? [{ key: 'platform', label: t("平台"), value: parts.platform }] : []),
-        ...(session.accountLabel || parts.endpoint ? [{ key: 'account', label: t("账号"), value: session.accountLabel || parts.endpoint }] : []),
+        ...(account ? [{ key: 'account', label: t("账号"), value: account }] : []),
         ...(kind === 'group' || kind === 'private' || kind === 'channel' ? [{ key: 'kind', label: t("类型"), value: <ConversationKindBadge kind={kind} /> }] : []),
       ]
       idGroups = [{ kind: 'session', ids: [session.sessionKey] }]
@@ -619,14 +620,13 @@ export function UsageReport({ stats, previous, view, onViewChange, onPickSession
   const narrow = useContainerAtLeast(root, 40) === false
   const [selection, setSelection] = useState<UsageSelection | null>(initialSelection)
   const groups = useMemo(() => usageServiceGroups(stats.byModel, i18n.locale), [stats.byModel, i18n.locale])
-  const caps = useMemo(() => usageCapabilities(stats), [stats])
   const cacheAlert = Boolean(promptCacheNotices(stats, i18n.locale)?.hints.length)
   return (
     <div ref={root} className="console-content-stack is-gap-section">
       <UsageSummary stats={stats} previous={previous} />
       {empty ?? <>
         <UsageAlerts stats={stats} />
-        <UsageTrend stats={stats} narrow={narrow} agentSeries={caps.agentSeries} />
+        <UsageTrend stats={stats} narrow={narrow} />
         <UsageDetails stats={stats} groups={groups} narrow={narrow} view={view} onViewChange={onViewChange} open={setSelection} />
         <UsageCacheSection stats={stats} groups={groups} alert={cacheAlert} />
         <UsageDetailSheet stats={stats} groups={groups} selection={selection} narrow={narrow} onClose={() => setSelection(null)} onPickSession={onPickSession} />

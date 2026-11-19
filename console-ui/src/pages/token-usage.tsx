@@ -16,11 +16,10 @@ import {
   USAGE_METHOD,
   USAGE_RANGES,
   buildUsageInput,
-  hostPreviousTotals,
   isPermissionDenied,
   mergeUsageModels,
   parseLocalDateTime,
-  previousUsageInput,
+  previousUsagePlan,
   toLocalDateTime,
   usageSessionNames,
   validateUsageStats,
@@ -34,8 +33,9 @@ const VIEWS: readonly UsageView[] = ['models', 'sessions', 'agents', 'purposes']
 type SessionOption = { value: string; label: string; description?: string }
 
 /**
- * 「机器人 → Token 用量」：读 plugin.root.usage-stats（只读）。汇总带「较上一周期」：Host 带回 `previous`
- * （`compare: 'previous'`，zhin 第 58 批）时用它，否则 Console 再请求一次紧挨在前、等长的窗口。
+ * 「机器人 → Token 用量」：读 plugin.root.usage-stats（只读）。汇总带「较上一周期」：Host 带回完整的 `previous`
+ * （`compare: 'previous'`，zhin 第 58 批，31 天以内都不截短）时直接用它；只有它被截短或旧 Host 没给时，
+ * Console 才再请求一次紧挨在前、等长的窗口（与主请求同一时区）。
  * 范围（range）和明细维度（view）写进 URL，便于分享。
  */
 export default function TokenUsagePage() {
@@ -107,11 +107,10 @@ export default function TokenUsagePage() {
         setError(null)
         setDenied(false)
         setUnavailable(null)
-        const fromHost = hostPreviousTotals(next)
-        setPrevious(fromHost)
-        const window = fromHost ? null : previousUsageInput(input)
-        if (window) {
-          pluginRpc<unknown>('root', USAGE_METHOD, window as unknown as Record<string, unknown>)
+        const plan = previousUsagePlan(next, input)
+        setPrevious(plan.totals ?? null)
+        if (plan.request) {
+          pluginRpc<unknown>('root', USAGE_METHOD, plan.request as unknown as Record<string, unknown>)
             .then(old => { if (!cancelled) setPrevious(validateUsageStats(old, i18n.locale).totals) })
             // Without the previous window the summary just shows no change.
             .catch(() => { if (!cancelled) setPrevious(null) })
