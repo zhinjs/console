@@ -8,6 +8,7 @@ import { pluginRpc } from '../utils/plugin-rpc'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
+import { sessionLabel } from '../utils/session-label.mjs'
 import { isKnownApprovalRejection, readToolApprovalCard, readToolApprovals, type ToolApprovalCard, type ToolApprovals } from './tool-approvals-model.mjs'
 
 type Review = { card: ToolApprovalCard; decision: 'approve' | 'deny' }
@@ -140,7 +141,7 @@ export function HostToolApprovalSession({ scope }: { scope?: string }) {
         : catalog?.pending.length === 0 ? <p className="text-sm text-muted-foreground">{i18n.t('当前没有待审批的工具请求')}</p> : null}
       {current && catalog?.pending.map(card => <article key={card.id} className="space-y-3 rounded-lg border p-4">
         <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-medium break-all">{card.toolName}</h3><time className="text-xs text-muted-foreground">{i18n.t('有效期至 {0}', [new Date(card.expiresAt).toLocaleString(i18n.locale)])}</time></div>
-        <p className="text-xs text-muted-foreground break-all">{i18n.t('发起会话：')}{card.sessionKey}{card.requesterId && <> · {i18n.t('发起人：')}{card.requesterId}</>}</p>
+        <p className="text-xs text-muted-foreground break-all">{i18n.t('发起会话：')}<span title={card.sessionKey}>{sessionLabel(card, i18n.locale)}</span>{card.requesterId && <> · {i18n.t('发起人：')}{card.requesterId}</>}</p>
         <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-md bg-muted/40 p-3 text-xs">{JSON.stringify(card.args, null, 2)}</pre>
         <div className="flex gap-2"><Button size="sm" disabled={disabled} onClick={() => prepare(card, 'approve')}>{i18n.t('批准一次')}</Button><Button size="sm" variant="outline" disabled={disabled} onClick={() => prepare(card, 'deny')}>{i18n.t('拒绝')}</Button></div>
       </article>)}
@@ -152,7 +153,7 @@ export function HostToolApprovalSession({ scope }: { scope?: string }) {
         description={review?.card.toolName} confirmLabel={i18n.t(review?.decision === 'approve' ? '批准一次' : '拒绝')}
         variant={review?.decision === 'deny' ? 'destructive' : 'default'} onConfirm={decide}>
         {review && current && <div className="max-h-[50vh] overflow-auto space-y-2 text-xs">
-          <p className="break-all">{review.card.id}</p><p className="break-all">{review.card.sessionKey}</p>
+          <p className="break-all">{review.card.id}</p><p className="break-all" title={review.card.sessionKey}>{i18n.t('发起会话：')}{sessionLabel(review.card, i18n.locale)}</p>
           <pre className="whitespace-pre-wrap break-all">{JSON.stringify(review.card.args, null, 2)}</pre>
         </div>}
       </ConfirmDialog>

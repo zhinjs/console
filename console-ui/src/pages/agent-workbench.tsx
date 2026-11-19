@@ -29,6 +29,8 @@ import {
   parseImSessionKey,
   SESSION_SCOPE_LABELS,
 } from '../utils/agent-session'
+import { sessionLabel } from '../utils/session-label.mjs'
+import { relativeSince } from './agent-session-recent.mjs'
 import { StatusState } from '../components/StatusState'
 import { CONSOLE_PATHS } from '../console-routes.mjs'
 import { instanceSectionHref } from './ops/instance-sections.mjs'
@@ -85,17 +87,23 @@ function SessionCard({ session }: { session: RecentAgentSession }) {
   const i18n = useI18n()
   const sessionKey = session.key
   const parsed = parseImSessionKey(sessionKey)
+  // The shared name (「平台 · 类型 名称」, 「私聊会话 #前 8 位」, 「定时任务 …」); the full key only in the tooltip.
+  const name = sessionLabel({ sessionKey, displayName: session.label, platform: session.platform, scopeKind: session.scopeKind, sceneLabel: session.sceneLabel }, i18n.locale)
+  const activity = [
+    session.turns !== null ? i18n.t('{0} 轮', [session.turns]) : '',
+    session.lastAt !== null ? relativeSince(session.lastAt, Date.now(), i18n.locale) : '',
+  ].filter(Boolean).join(' · ')
   return (
     <Link to={agentSessionsPath(sessionKey)} className="console-agent-session-card" title={sessionKey}>
       <span className="console-agent-session-icon"><GitBranch /></span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-semibold">
-          {session.label || parsed?.sceneId || i18n.t("自定义会话")}
+          {parsed && !session.label && !session.scopeKind ? parsed.sceneId : name}
         </span>
         <span className="mt-1 block truncate console-text-label text-muted-foreground">
           {parsed
             ? `${parsed.platform} · ${parsed.endpointId} · ${i18n.t(SESSION_SCOPE_LABELS[parsed.scope])}`
-            : sessionKey}
+            : activity || (session.source === 'local' ? i18n.t('在本浏览器打开过') : '\u00a0')}
         </span>
       </span>
       <ArrowUpRight />
@@ -116,7 +124,7 @@ export default function AgentWorkbenchPage() {
   const [error, setError] = useState<string | null>(null)
   const [history] = useState(() => loadAgentSessionHistory())
   // Sessions the turn traces saw (usage-stats); null until read or when the Host / permission has none.
-  const [traceSessions, setTraceSessions] = useState<Array<{ sessionKey: string; turns?: number; lastAt?: number; label?: string }> | null>(null)
+  const [traceSessions, setTraceSessions] = useState<Array<{ sessionKey: string; turns?: number; lastAt?: number; label?: string; displayName?: string; platform?: string; scopeKind?: string; sceneLabel?: string }> | null>(null)
 
   const loadWorkbench = useCallback(async (background = false) => {
     if (background) setRefreshing(true)
@@ -151,7 +159,7 @@ export default function AgentWorkbenchPage() {
   useEffect(() => {
     let alive = true
     const until = Date.now()
-    pluginRpc<{ bySession?: Array<{ sessionKey: string; turns?: number; lastAt?: number; label?: string }> }>('root', 'usage-stats', { since: until - RECENT_TRACE_DAYS * 86_400_000, until, bucket: 'day' })
+    pluginRpc<{ bySession?: Array<{ sessionKey: string; turns?: number; lastAt?: number; label?: string; displayName?: string; platform?: string; scopeKind?: string; sceneLabel?: string }> }>('root', 'usage-stats', { since: until - RECENT_TRACE_DAYS * 86_400_000, until, bucket: 'day' })
       .then(data => { if (alive) setTraceSessions(Array.isArray(data?.bySession) ? data.bySession : []) })
       .catch(() => { if (alive) setTraceSessions(null) })
     return () => { alive = false }

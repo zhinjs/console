@@ -122,6 +122,11 @@ export function isPermissionDenied(error: unknown): boolean
 export function formatBucketLabel(ms: number, bucket: UsageBucket, locale?: Locale): string
 export function usageModelIdGroups(row: UsageModelRow | null | undefined): Array<{ kind: 'keys' | 'services'; ids: string[] }>
 export function usageSessionShortKey(row: Pick<UsageSessionRow, 'sessionKey'> & Partial<UsageSessionRow>): string
+export function usageScheduleNamesAllowed(session: { readonly me: unknown; readonly legacy: boolean } | null | undefined, access?: import('../utils/console-access.mjs').ConsoleAccess): boolean
+export function usageHasScheduleSessions(stats: Pick<UsageStats, 'bySession'> | null | undefined): boolean
+export function usageWithScheduleNames<T extends Pick<UsageStats, 'bySession'> | null>(stats: T, names: ReadonlyMap<string, string> | null | undefined): T
+export function usageSessionOptions(rows: Array<Pick<UsageSessionRow, 'sessionKey'> & Partial<UsageSessionRow>>, locale?: Locale): Array<{ value: string; label: string; description?: string }>
+export function scheduleNamesFromList(data: unknown): Map<string, string>
 export function usageSessionNames(rows: Array<Pick<UsageSessionRow, 'sessionKey'> & Partial<UsageSessionRow>>, locale?: Locale): Map<string, { name: string; qualifier: string }>
 export function totalTokens(row: Partial<UsageTokens> | null | undefined): number
 export function previousUsageInput(input: UsageInput, stats?: Pick<UsageStats, 'range'> | null): UsageInput | null

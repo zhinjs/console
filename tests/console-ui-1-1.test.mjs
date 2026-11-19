@@ -127,7 +127,7 @@ test('empty states with a clear scene carry the library illustration and their n
     'console-ui/src/pages/assistant-jobs.tsx': [/<StatusState kind="empty" illustration="tasks" title=\{i18n\.t\("暂无任务"\)\}/],
     'console-ui/src/pages/dashboard.tsx': [/illustration="messages" title=\{i18n\.t\("缓冲里还没有消息"\)\}/, /illustration="messages" title=\{i18n\.t\("还没有消息"\)\}/],
     'console-ui/src/pages/scope/records-panel.tsx': [/illustration="messages" title=\{i18n\.t\('还没有聊天记录'\)\}/],
-    'console-ui/src/pages/agent-sessions.tsx': [/illustration="messages"\s+title=\{i18n\.t\('个人会话没有聊天记录'\)\}/, /action=\{\{ label: i18n\.t\('查看轨迹'\)/],
+    'console-ui/src/pages/agent-sessions.tsx': [/illustration="messages"\s+title=\{i18n\.t\('这里不显示个人会话的对话'\)\}/, /action=\{\{ label: i18n\.t\('查看轨迹'\)/],
     'console-ui/src/pages/not-found.tsx': [/<EmptyIllustration name="not-found"/],
     'console-ui/src/components/connection-required.tsx': [/action=\{\{ label: i18n\.t\("重新登录"\), icon: LogIn, variant: 'primary'/],
   }
