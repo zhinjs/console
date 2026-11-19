@@ -3,11 +3,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Download, RefreshCw } from 'lucide-react'
 import { pluginRpc } from '../utils/plugin-rpc'
+import { requestConsole } from '../utils/console-rpc'
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, ErrorAlert, Input, PageHeader, PageShell, SelectField, Skeleton } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import { ScopeFilterBar, useScopeFilter } from './insights/ScopeFilterBar'
 import { useAmbientGroupCatalog } from './AmbientGroupPicker'
 import { groupNamesFromCatalog } from './ambient-group-picker-model.mjs'
+import { conversationsRequest, readConversationPage } from './features/feature-model.mjs'
 import { replayScopeApproximate, replayScopeFilter } from './insights/scope-filter.mjs'
 import {
   EXPORT_WINDOWS,
@@ -19,6 +21,7 @@ import {
   REPLAY_PAGE_SIZE,
   REPLAY_PERMISSION,
   REPLAY_TURN_METHOD,
+  SANDBOX_ADAPTER,
   buildReplayFilter,
   collectReplayExport,
   describeReplayRow,
@@ -28,6 +31,8 @@ import {
   isPermissionDenied,
   kindLabel,
   outcomeLabel,
+  replayHasSandboxRows,
+  sandboxConversationNames,
   validateReplayList,
   validateReplayTurn,
   type ReplayFilterInput,
@@ -78,6 +83,17 @@ export default function BotReplayPage() {
   // Group names from the connected accounts' group lists; a failed read just leaves the raw ids.
   const groupCatalog = useAmbientGroupCatalog().catalog
   const groupNames = useMemo(() => groupCatalog ? groupNamesFromCatalog(groupCatalog) : new Map<string, string>(), [groupCatalog])
+  // Sandbox conversation names (its ids are generated): one read, only once Sandbox rows are listed.
+  const [sandboxNames, setSandboxNames] = useState<Map<string, string>>(() => new Map())
+  const sandboxNamesRead = useRef(false)
+  const hasSandboxRows = useMemo(() => replayHasSandboxRows(list?.rows), [list])
+  useEffect(() => {
+    if (!hasSandboxRows || sandboxNamesRead.current) return
+    sandboxNamesRead.current = true
+    requestConsole<unknown>(conversationsRequest({ adapter: SANDBOX_ADAPTER, limit: 200 }))
+      .then(payload => setSandboxNames(sandboxConversationNames(readConversationPage(payload).items)))
+      .catch(() => { /* names are optional: the short ids stay */ })
+  }, [hasSandboxRows])
 
   const load = useCallback(async (nextFilter: Record<string, string>, before?: number) => {
     const data = validateReplayList(await pluginRpc<unknown>('root', REPLAY_LIST_METHOD, {
@@ -220,7 +236,7 @@ export default function BotReplayPage() {
               {error ? <p className="text-xs text-destructive">{error}</p> : null}
               {list.rows.length ? <ul className="divide-y rounded-md border text-sm">
                 {foldReplayRows(list.rows).map(({ row, folded }) => {
-                  const view = describeReplayRow(row, i18n.locale, groupNames)
+                  const view = describeReplayRow(row, i18n.locale, groupNames, sandboxNames)
                   return <li key={view.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
                     <span className="text-xs text-muted-foreground">{formatTime(view.at, i18n.locale)}</span>
                     <span className="break-all text-xs" title={view.where === view.whereCode ? undefined : view.whereCode}>{view.where}</span>

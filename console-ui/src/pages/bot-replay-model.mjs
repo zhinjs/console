@@ -152,18 +152,68 @@ export function replayGroupKey(row) {
 }
 
 /**
+ * Adapter alias of the Sandbox: its conversation ids are generated (`private-<UUID>`), so its rows
+ * read the names the Console gave those conversations instead (`feature.conversations`, zhin #1250).
+ */
+export const SANDBOX_ADAPTER = 'sandbox'
+const SCENE = /^(private|group|channel):(.+)$/u
+const SCENE_KIND_LABELS = Object.freeze({ private: '私聊', group: '群聊', channel: '频道' })
+
+/** Whether the rows hold a Sandbox conversation (only then are Sandbox conversation names read). */
+export function replayHasSandboxRows(rows) {
+  return Array.isArray(rows) && rows.some(row => row?.platform === SANDBOX_ADAPTER && SCENE.test(String(row.scene_id ?? '')))
+}
+
+/**
+ * Sandbox conversation names from `feature.conversations` items (`{ adapter, kind, id, name? }`):
+ * `<kind>:<id>` → name. Decision rows do not name the account, so a conversation two accounts
+ * name differently is left out.
+ */
+export function sandboxConversationNames(items) {
+  const names = new Map()
+  const ambiguous = new Set()
+  for (const item of Array.isArray(items) ? items : []) {
+    if (item?.adapter !== SANDBOX_ADAPTER || typeof item.name !== 'string' || !item.name.trim()) continue
+    const key = `${item.kind}:${item.id}`
+    const name = item.name.trim()
+    if (names.has(key) && names.get(key) !== name) ambiguous.add(key)
+    names.set(key, name)
+  }
+  for (const key of ambiguous) names.delete(key)
+  return names
+}
+
+/** 「#前 8 位」 of a generated Sandbox id (`private-<UUID>` / a bare UUID), otherwise the id itself. */
+function shortSandboxId(id) {
+  const generated = /^(?:(?:private|group|channel)-)?([0-9a-f]{8})-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/iu.exec(id)
+  return generated ? `#${generated[1]}` : id
+}
+
+/** 「sandbox · 私聊 名称」, or 「sandbox · 私聊 #前 8 位」 without a name; null for other rows. */
+function sandboxWhere(row, locale, sandboxNames) {
+  if (row.platform !== SANDBOX_ADAPTER) return null
+  const scene = SCENE.exec(row.scene_id)
+  if (!scene) return null
+  const [, kind, id] = scene
+  const name = sandboxNames instanceof Map ? sandboxNames.get(`${kind}:${id}`) : undefined
+  return `${row.platform} · ${translate(locale, SCENE_KIND_LABELS[kind])} ${typeof name === 'string' && name.trim() ? name.trim() : shortSandboxId(id)}`
+}
+
+/**
  * 一行 → 页面显示：一句话原因 + 原始机器码（排障时对得上日志）。
  * `groupNames`（`<adapter>:<group id>` → 群名）有这个群时，`where` 写群名，原始会话 id 留在 `whereCode`。
+ * Sandbox 会话按 `sandboxNames`（`<kind>:<id>` → 会话名）写「sandbox · 私聊 名称」，没有名字时写 id 前 8 位。
  */
-export function describeReplayRow(row, locale = 'zh-CN', groupNames) {
+export function describeReplayRow(row, locale = 'zh-CN', groupNames, sandboxNames) {
   const whereCode = `${row.platform} · ${row.scene_id}`
   const key = replayGroupKey(row)
   const name = key && groupNames instanceof Map ? groupNames.get(key) : undefined
+  const sandbox = sandboxWhere(row, locale, sandboxNames)
   return {
     id: row.id,
     at: row.ts,
     turnId: row.turn_id,
-    where: typeof name === 'string' && name.trim() ? `${row.platform} · ${name.trim()}` : whereCode,
+    where: sandbox ?? (typeof name === 'string' && name.trim() ? `${row.platform} · ${name.trim()}` : whereCode),
     whereCode,
     kind: kindLabel(row.kind, locale),
     outcome: outcomeLabel(row.outcome, locale),

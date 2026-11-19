@@ -43,7 +43,7 @@ export interface ReplayRowView {
   id: string
   at: number
   turnId: string
-  /** The group's name when known, otherwise the same as `whereCode`. */
+  /** The group's name when known (a Sandbox conversation: 「sandbox · 私聊 名称」 or its short id), otherwise the same as `whereCode`. */
   where: string
   /** `<platform> · <scene id>` as the Host wrote it. */
   whereCode: string
@@ -63,7 +63,10 @@ export function kindLabel(kind: string, locale?: Locale): string
 export function outcomeLabel(outcome: string, locale?: Locale): string
 export function reasonLabel(code: string, locale?: Locale): string
 export function replayGroupKey(row: Pick<ReplayRow, 'platform' | 'scene_id'>): string | null
-export function describeReplayRow(row: ReplayRow, locale?: Locale, groupNames?: ReadonlyMap<string, string>): ReplayRowView
+export function describeReplayRow(row: ReplayRow, locale?: Locale, groupNames?: ReadonlyMap<string, string>, sandboxNames?: ReadonlyMap<string, string>): ReplayRowView
+export const SANDBOX_ADAPTER: 'sandbox'
+export function replayHasSandboxRows(rows: readonly Pick<ReplayRow, 'platform' | 'scene_id'>[] | null | undefined): boolean
+export function sandboxConversationNames(items: readonly { adapter: string; kind: string; id: string; name?: string }[] | null | undefined): Map<string, string>
 export function buildReplayFilter(filter: ReplayFilterInput): Record<string, string>
 export const EXPORT_WINDOWS: ReadonlyArray<{ readonly value: string; readonly label: string; readonly ms: number }>
 export function exportWindow(value: string, now?: number): ReplayWindow
