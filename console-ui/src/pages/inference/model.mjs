@@ -1,14 +1,50 @@
 import { translate } from '../../i18n/locale.mjs'
+import { getConsoleAccess, hasConsolePermission } from '../../utils/console-access.mjs'
 const base = '/api/agent/inference'
 export class InferenceRequestError extends Error {
-  constructor(code, status = 503, mutationOutcome, reason, path) {
+  constructor(code, status = 503, mutationOutcome, reason, path, details) {
     super(code)
     this.code = code
     this.status = status
     this.mutationOutcome = mutationOutcome
     if (reason) this.reason = reason
     if (path) this.path = path
+    if (details) this.details = details
   }
+}
+/** Short enum-like codes only (`onboard-operation`, `UNSUPPORTED_CLIENT`, `invalid_grant`); never free text or a URL. */
+const DIAGNOSTIC_CODE = /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/u
+/**
+ * The diagnostics of an expected failure (`details`, zhinjs/zhin#1270): failed step, upstream reason
+ * code and HTTP status, driver code. Anything that is not a short code is dropped.
+ */
+function failureDetails(result) {
+  const raw = result?.details
+  if (!raw || typeof raw !== 'object') return undefined
+  const details = {}
+  for (const key of ['step', 'reason', 'preparationCode'])
+    if (typeof raw[key] === 'string' && DIAGNOSTIC_CODE.test(raw[key])) details[key] = raw[key]
+  if (Number.isInteger(raw.upstreamStatus) && raw.upstreamStatus >= 100 && raw.upstreamStatus <= 599) details.upstreamStatus = raw.upstreamStatus
+  return Object.keys(details).length ? details : undefined
+}
+const PREPARATION_STEPS = {
+  identity: (locale) => translate(locale, '读取账号身份'),
+  'load-code-assist': (locale) => translate(locale, '读取项目'),
+  'onboard-user': (locale) => translate(locale, '开通项目'),
+  'onboard-operation': (locale) => translate(locale, '等待开通完成'),
+}
+/** 「（原因 UNSUPPORTED_CLIENT · 步骤：等待开通完成（onboard-operation） · 上游 HTTP 400）」, or '' without diagnostics. */
+function detailsSuffix(details, locale) {
+  if (!details) return ''
+  const t = (message, values) => translate(locale, message, values)
+  const parts = []
+  if (details.reason) parts.push(t('原因 {0}', [details.reason]))
+  if (details.step)
+    parts.push(Object.hasOwn(PREPARATION_STEPS, details.step)
+      ? t('步骤：{0}（{1}）', [PREPARATION_STEPS[details.step](locale), details.step])
+      : t('步骤 {0}', [details.step]))
+  if (details.upstreamStatus) parts.push(t('上游 HTTP {0}', [details.upstreamStatus]))
+  return parts.length ? t('（{0}）', [parts.join(' · ')]) : ''
 }
 /** The configuration path a refusal names (`details.path`, #1250), e.g. `purposes.ambient.fallbacks[1]`. */
 function refusalPath(result) {
@@ -55,13 +91,33 @@ export async function inferenceRequest(fetch, { path = '', ownerId, body, method
         ? 'not-committed'
         : undefined,
       typeof result.reason === 'string' && Object.hasOwn(REFUSAL_TEXT, result.reason) ? result.reason : undefined,
-      refusalPath(result)
+      refusalPath(result),
+      failureDetails(result)
     )
   return result.data
 }
+/**
+ * `GET /agent/inference/*` needs only `agent.view`; every other method needs this permission
+ * (`CONSOLE_HTTP_PERMISSIONS`). Built-in operator and viewer roles do not hold it.
+ */
+export const INFERENCE_CONFIGURE_PERMISSION = 'agent.configure'
+/** Whether `access` may change models, accounts, services and purposes (an unreported session may). */
+export function inferenceCanConfigure(access = getConsoleAccess()) {
+  return hasConsolePermission(INFERENCE_CONFIGURE_PERMISSION, access)
+}
 export function inferenceError(error, locale = 'zh-CN') {
+  const message = inferenceErrorText(error, locale)
+  return error instanceof InferenceRequestError && !error.reason ? message + detailsSuffix(error.details, locale) : message
+}
+function inferenceErrorText(error, locale) {
   const code = error instanceof InferenceRequestError ? error.code : 'unavailable'
   if (error instanceof InferenceRequestError && error.reason) return REFUSAL_TEXT[error.reason](locale)
+  // A failed account preparation (424 since zhinjs/zhin#1260); the driver code may also come as `details.preparationCode`.
+  const preparation = [code, error?.details?.preparationCode].find(value => value === 'project-unavailable' || value === 'identity-unavailable')
+  if (preparation === 'project-unavailable')
+    return translate(locale, '完成准备失败：服务没有为这个账号开通项目。请确认这个账号已在对应服务中使用过，然后重试「完成准备」。')
+  if (preparation === 'identity-unavailable')
+    return translate(locale, '完成准备失败：无法读取账号身份。请重新登录这个账号后再试。')
   if (code === 'forbidden') return translate(locale, '当前身份无权执行此操作。')
   if (code === 'plan-conflict') return translate(locale, '连接或模型身份发生变化，请新增账号或模型并明确重新绑定。')
   if (['conflict', 'stale-reference', 'revision-conflict'].includes(code))
@@ -91,6 +147,20 @@ export function inferenceError(error, locale = 'zh-CN') {
   if (code === 'not-installed') return translate(locale, '这个 Host 没有模型接口：没有安装 Agent，或 Host 版本较旧。只用 IM 时可以忽略；需要 AI 回复时先在插件市场安装 Agent。')
   if (code === 'outcome-unknown') return translate(locale, '操作结果尚未确认，请查询结果后再操作。')
   return translate(locale, '操作未完成，请稍后重新读取。')
+}
+/**
+ * What 「认证响应异常」 means for an account (#64 `inference-error-details-ignored`): the kind of
+ * reply, the upstream HTTP status and OAuth error code when the Host recorded them, and what to do.
+ * `null` for outcomes whose label already says it all (temporary, unknown).
+ */
+export function accountFailureDetails(failure, locale = 'zh-CN') {
+  if (!failure || (failure.kind !== 'response-error' && failure.kind !== 'invalid-response')) return null
+  const t = (message, values) => translate(locale, message, values)
+  const lines = [failure.kind === 'response-error' ? t('认证服务返回了错误。') : t('认证服务的回复无法识别。')]
+  if (Number.isInteger(failure.status) && failure.status >= 100 && failure.status <= 599) lines.push(t('认证服务返回 HTTP {0}', [failure.status]))
+  if (typeof failure.oauthError === 'string' && DIAGNOSTIC_CODE.test(failure.oauthError)) lines.push(t('错误码 {0}', [failure.oauthError]))
+  lines.push(t('可以重新「登录」这个账号；已经登录过的，先试「完成准备」。'))
+  return lines
 }
 const AMBIENT_FIELD_LABELS = t => ({
   profile: t('插话判断模型'), fallbacks: t('备用链'), compare: t('对照模型'),

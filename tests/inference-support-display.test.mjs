@@ -1,4 +1,5 @@
 import test from 'node:test'
+import { UNRESTRICTED_ACCESS } from '../console-ui/src/utils/console-access.mjs'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
@@ -65,7 +66,7 @@ async function fixture() {
     'lucide-react': { Plus: 'icon', Pencil: 'icon', Trash2: 'icon', RefreshCw: 'icon', KeyRound: 'icon', LogIn: 'icon', Unplug: 'icon', ArrowDown: 'icon', ArrowUp: 'icon', MoreHorizontal: 'icon' },
     './model.mjs': model, './inference/model.mjs': model, './personal-session-model.mjs': personal,
     '../../utils/plugin-rpc': { pluginRpc: async () => { throw new Error('ambient status unavailable') } }, './ambient-judge-model.mjs': ambientJudgeModel,
-    '../../hooks/use-console-access': { useConsoleAccess: () => ({}) }, '../../utils/console-access.mjs': { hasConsolePermission: () => true },
+    '../../hooks/use-console-access': { useConsoleAccess: () => UNRESTRICTED_ACCESS }, '../../utils/console-access.mjs': { hasConsolePermission: () => true },
   }
   async function load(filename, extra = {}) {
     const path = process.env.CONSOLE_FIXTURE_SOURCE_ROOT && basename(filename) !== 'SupportInfo.tsx'
@@ -81,7 +82,7 @@ async function fixture() {
   const support = await load('inference/SupportInfo.tsx')
   dependencies['./SupportInfo'] = support; dependencies['./inference/SupportInfo'] = support
   dependencies['../../components/SaveButton'] = saveButtonMock
-  const management = view => ({ view, source: { view, connectionScope: 'connection', base: 'https://host.test' }, busy: false, pending: null,
+  const management = view => ({ view, source: { view, connectionScope: 'connection', base: 'https://host.test' }, busy: false, pending: null, canConfigure: true,
     error: '', active: () => true, revisionEpoch: 1, setError: assert.fail,
     request: async path => { calls.push(path); return path === '/targets' ? { adapters: [], endpoints: [], scenes: [], agents: [] } : { inputSchema: {} } },
     action: async path => { calls.push(path); return { loginId: 'synthetic-login', authorizationUrl: 'https://fixture.test/login', redirectUri: 'https://fixture.test/callback' } },
@@ -168,7 +169,7 @@ for (const member of [false, true])
     const address = { rootId: '/host', platform: 'qq', endpoint: 'bot', subjectId: 'alice', conversation: { endpoint: { adapter: 'qq', id: 'adapter' }, kind: 'private', id: 'alice' } }
     const sessionKey = `personal-session:v1:${'a'.repeat(64)}`
     const { PersonalSessionModelPicker } = await f.load('PersonalSessionModelPicker.tsx', {
-      '../utils/inbox-cache': { isInboxCacheScopeActive: () => true },
+      '../utils/inbox-cache': { isInboxCacheScopeActive: () => true }, '../hooks/use-console-access': { useConsoleAccess: () => UNRESTRICTED_ACCESS },
       '../utils/auth': { apiFetch: async (url, init) => { calls.push({ url, init }); return Response.json({ success: true, data: {
         identity: { key: sessionKey, address }, revision: 1,
         selection: init?.method === 'PUT' ? JSON.parse(init.body).selection : { kind: 'inherit' },
@@ -230,7 +231,7 @@ for (const principal of ['operator', 'member'])
       const calls = [], sessionKey = `personal-session:v1:${'b'.repeat(64)}`
       const address = { rootId: view.rootId, platform: 'qq', endpoint: 'synthetic', subjectId: 'member', conversation: { endpoint: { adapter: 'qq', id: 'adapter' }, kind: 'private', id: 'member' } }
       const { PersonalSessionModelPicker } = await f.load('PersonalSessionModelPicker.tsx', {
-        '../utils/inbox-cache': { isInboxCacheScopeActive: () => true },
+        '../utils/inbox-cache': { isInboxCacheScopeActive: () => true }, '../hooks/use-console-access': { useConsoleAccess: () => UNRESTRICTED_ACCESS },
         '../utils/auth': { apiFetch: async (url, init) => { calls.push({ url, init }); return Response.json({ success: true, data: { identity: { key: sessionKey, address }, revision: 1, selection: { kind: 'inherit' } } }) } },
       })
       f.runtime.mount(() => createElement(PersonalSessionModelPicker, { sessionKey, address, models: view, ownerId: view.ownerId, connectionScope: 'connection' })); await f.runtime.settle()

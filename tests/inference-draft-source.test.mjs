@@ -20,7 +20,7 @@ const source = revision => ({ connectionScope: 'connection', base: 'https://host
 async function fixture(page, options = {}) {
   const runtime = pageRuntime(), saved = [], credentials = [], confirms = [], requests = [], navigation = []
   let current = source(1), query = ''
-  const management = () => ({ source: current, view: current.view, owners: [], ownerId: 'host', busy: false, pending: null, error: '', revisionEpoch: current.view.revision,
+  const management = () => ({ source: current, view: current.view, owners: [], ownerId: 'host', busy: false, pending: null, canConfigure: true, error: '', revisionEpoch: current.view.revision,
     request: async (...args) => { requests.push(args); return options.request ? options.request(...args) : { inputSchema: {} } }, active: () => true, setError: assert.fail,
     savePlan: async (plan, options) => { saved.push({ plan, options }); return false },
     save: async (path, body, origin) => { credentials.push({ path, body, source: origin?.source }); return false },

@@ -100,7 +100,8 @@ export default function DatabasePage() {
                     data-action="create-table" onClick={() => openTool('create')}><Plus className="w-3.5 h-3.5" /></Button>
                 ) : null}
               </div>
-              {showTools ? (
+              {/* Every SQL statement, read-only queries included, needs `ops.database.schema` (`db:query` / `db:execute`). */}
+              {showTools && canSchema ? (
                 <button type="button" data-tool="sql" aria-current={tool === 'sql' ? 'true' : undefined}
                   className={`flex items-center gap-2 px-3 py-1.5 text-sm text-left border-b hover:bg-accent transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${tool === 'sql' ? 'bg-accent text-accent-foreground font-medium' : ''}`}
                   onClick={() => openTool('sql')}>
@@ -158,7 +159,7 @@ export default function DatabasePage() {
                   </div>
                   <div className="flex-1 min-h-0 min-w-0 p-3 sm:p-4 overflow-hidden">
                     {tool === 'sql' ? (
-                      <SqlConsole admin={databaseAdmin} canWrite={canSchema} supported={capabilities.sql} reason={capabilities.sql ? undefined : (sqlUnavailableReason(capabilities) || unsupportedReason)} needsRole={needsConsoleRole(capabilities)}
+                      <SqlConsole admin={databaseAdmin} supported={capabilities.sql} reason={capabilities.sql ? undefined : (sqlUnavailableReason(capabilities) || unsupportedReason)} needsRole={needsConsoleRole(capabilities)}
                         dialect={info?.dialect ?? ''} dialectLabel={DIALECT_LABELS[info?.dialect ?? ''] || info?.dialect || ''} />
                     ) : (
                       <CreateTableEditor admin={databaseAdmin} supported={capabilities.schema} reason={capabilities.schema ? undefined : unsupportedReason}

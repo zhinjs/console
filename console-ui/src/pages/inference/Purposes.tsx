@@ -126,7 +126,9 @@ export function Purposes({ management: m }: { management: InferenceManagement })
   }, [judgeRead])
   const saveFeedback = useSaveFeedback()
   const { confirm, ConfirmDialog: confirmDialog } = useConfirm()
-  const disabled = m.busy || !!m.pending || probing
+  // Changing purposes needs `agent.configure`: without it the editors are disabled fieldsets and 保存 is off.
+  const readOnly = !m.canConfigure
+  const disabled = readOnly || m.busy || !!m.pending || probing
   /**
    * #1250: before saving, send one minimal tool-carrying request to every newly bound model, so a
    * relay that hangs or rejects tools does not silently break chat. Failures ask for confirmation.
@@ -353,6 +355,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
       </p>
       <Card className="p-4 space-y-4">
         <h4 className="font-medium">{i18n.t("默认模型")}</h4>
+        <fieldset disabled={readOnly} className="min-w-0 space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {(
             [
@@ -407,6 +410,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
             }))
           }
         />
+        </fieldset>
       </Card>
       {merged && !judgeBase ? (
         <Card className="p-4 space-y-2" data-ambient-judge-unavailable="">
@@ -436,6 +440,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
           draft={judgeDraftValue}
           problems={judgeProblems}
           fallbacks={fallbacks}
+          readOnly={readOnly}
           onChange={(update) => {
             setJudgeProblems([])
             setJudgeEditor((current) => ({ draft: update(current?.draft ?? judgeDraftValue), touched: true }))
@@ -472,7 +477,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
                 decisions: { ...previous.decisions, [task]: value },
               }))
           return (
-            <div key={task} className="grid grid-cols-1 gap-3 border-b pb-4 last:border-0 sm:grid-cols-3">
+            <fieldset key={task} disabled={readOnly} className="grid min-w-0 grid-cols-1 gap-3 border-b pb-4 last:border-0 sm:grid-cols-3">
               <span className="text-sm self-center">{label}</span>
               <SelectField
                 aria-label={i18n.t("{0}模式", [label])}
@@ -539,7 +544,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
                   </div>
                 </details>
               ) : null}
-            </div>
+            </fieldset>
           )
         })}
       </Card>
@@ -553,7 +558,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
         ].map((name) => {
           const label = targets?.agents.find((agent) => agent.name === name)?.nickname ?? name
           return (
-            <div key={name} className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm">
+            <fieldset key={name} disabled={readOnly} className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 text-sm">
               <span className="self-center">{label}</span>
               <SearchableSelectField
                 aria-label={label}
@@ -574,7 +579,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
                   />
                 </div>
               ) : null}
-            </div>
+            </fieldset>
           )
         })}
       </Card>
@@ -613,7 +618,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
           </Button>
         </div>
         {Object.entries(draft[level] ?? {}).map(([key, value]) => (
-          <div key={key} className="min-w-0 space-y-3 rounded-md border p-3">
+          <fieldset key={key} disabled={readOnly} className="min-w-0 space-y-3 rounded-md border p-3">
             <div className="flex justify-between items-center gap-2">
               <span className="text-sm break-all">
                 {candidates.find((item) => item.value === key)?.label ?? i18n.t("已配置目标（当前未列出）")}
@@ -658,7 +663,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
                 onChange={(perception) => changeScope(key, { ...value, perception })}
               />
             ) : null}
-          </div>
+          </fieldset>
         ))}
         {level === 'scenes' && targets?.sceneHasMore ? (
           <Button type="button" variant="outline" onClick={() => void loadScenes()}>
@@ -832,6 +837,7 @@ function AmbientJudgeSection({
   draft,
   problems,
   fallbacks,
+  readOnly = false,
   onChange,
   onNoticed,
 }: {
@@ -840,6 +846,8 @@ function AmbientJudgeSection({
   draft: AmbientJudgeDraft
   problems: AmbientJudgeProblem[]
   fallbacks: boolean
+  /** Without `agent.configure`: the policy is shown, its editors disabled. */
+  readOnly?: boolean
   onChange: (update: (draft: AmbientJudgeDraft) => AmbientJudgeDraft) => void
   /** `false`: the Host refused (no permission); the banner is then hidden in this browser only. */
   onNoticed: () => Promise<boolean>
@@ -930,6 +938,7 @@ function AmbientJudgeSection({
         </Alert>
       ) : null}
       {failure ? <p className="text-xs text-warning" role="status">{failure}</p> : null}
+      <fieldset disabled={readOnly} className="min-w-0 space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="min-w-0 space-y-2 text-sm">
           <label className="block space-y-2">
@@ -1022,6 +1031,7 @@ function AmbientJudgeSection({
           <span className="block text-xs text-muted-foreground">{i18n.t("照常判断并记录，但不在群里开口。")}</span>
         </div>
       </div>
+      </fieldset>
       {hints.map((hint) => <p key={hint} className="text-xs text-warning" role="note">{hint}</p>)}
     </Card>
   )

@@ -3,11 +3,13 @@ import { useEffect, useRef, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
+import { useConsoleAccess } from '../hooks/use-console-access'
 import { supportLabel, SupportNotice } from './inference/SupportInfo'
 import { Button, ErrorAlert, SelectField } from '@zhin.js/console-ui'
 import {
   inferenceRequest,
   inferenceError,
+  inferenceCanConfigure,
   selectableLanguageProfiles,
   type View,
 } from './inference/model.mjs'
@@ -33,6 +35,8 @@ export function PersonalSessionModelPicker({
   connectionScope?: string
 }) {
   const i18n = useI18n()
+  // Saving is a `PUT /agent/inference/session` (`agent.configure`); reading the choice is not.
+  const canConfigure = inferenceCanConfigure(useConsoleAccess())
   const [state, setState] = useState<PersonalSessionState | null>(null),
     [selected, setSelected] = useState(''),
     [busy, setBusy] = useState(false),
@@ -86,7 +90,7 @@ export function PersonalSessionModelPicker({
     : { kind: 'inherit' }
   const unchanged = samePersonalSessionSelection(state?.selection, selection)
   async function save() {
-    if (!state || !active() || busy) return
+    if (!canConfigure || !state || !active() || busy) return
     if (selected && !chosen) return
     setBusy(true)
     setError('')
@@ -134,12 +138,12 @@ export function PersonalSessionModelPicker({
               setSaved(false)
             }}
             options={options}
-            disabled={!state || busy}
+            disabled={!canConfigure || !state || busy}
           />
         </label>
         <Button
           onClick={() => void save()}
-          disabled={!state || busy || unchanged || (!!selected && !chosen)}
+          disabled={!canConfigure || !state || busy || unchanged || (!!selected && !chosen)}
         >
           {i18n.t("保存")}
         </Button>

@@ -11,6 +11,7 @@ import {
   type ConversationPage, type ConversationQuery, type ConversationOverrideCounts, type FeatureDetail, type FeatureLevel, type FeatureList, type FeatureMatrixRow, type FeatureRootRow, type FeatureRpcBody,
   type FeatureRpcFailure,
 } from './feature-model.mjs'
+import { globalFeatureReadRequest } from './global-config-model.mjs'
 
 export type MatrixSource = 'loading' | 'rpc' | FeatureRpcFailure
 
@@ -142,6 +143,11 @@ export function useFeatureList() {
 /** `feature.get` for one plugin at one level (`key`: alias, `<alias>/<endpointId>` or a conversation key). */
 export function useFeatureDetail(plugin: string, level: FeatureLevel, key?: string) {
   return useFeatureRead<FeatureDetail>({ type: FEATURE_RPC.GET, plugin, level, ...(key ? { key } : {}) }, readFeatureDetail)
+}
+
+/** `feature.get { level: 'global' }`: the read-only global configuration of `/features/global/:plugin`. */
+export function useGlobalFeatureDetail(plugin: string) {
+  return useFeatureRead<FeatureDetail>(globalFeatureReadRequest(plugin), readFeatureDetail)
 }
 
 export const CONVERSATION_PAGE_SIZE = 50

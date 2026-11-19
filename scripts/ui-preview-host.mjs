@@ -350,7 +350,7 @@ const gatewayPackages = { packageManager: 'pnpm@9.0.2', packages: [
   { name: '@zhin.js/adapter-qq', range: '^2.0.0', dependencyType: 'dependencies', installedVersion: '2.0.1', catalog: 'adapter' },
   { name: 'zhin.js', range: '^1.1.0', dependencyType: 'dependencies', installedVersion: '1.1.9' },
 ] }
-// gateway.version.check (zhinjs/console#64): UI_PREVIEW_VERSIONS=offline (registry unreachable) | unsupported (older Host).
+// gateway.version.check (zhinjs/console#64): UI_PREVIEW_VERSIONS=offline (registry unreachable) | incomplete (deadline hit, list truncated) | unsupported (older Host).
 const versionMode = process.env.UI_PREVIEW_VERSIONS ?? 'newer'
 const versionRow = (name, range, installed, latest, wanted, flags) => ({
   name, range, installed, latest: versionMode === 'offline' ? null : latest, wanted: versionMode === 'offline' ? null : wanted,
@@ -360,6 +360,7 @@ const versionReport = () => ({
   gateway: '1.6.1',
   checkedAt: Date.now() - 42 * 60_000,
   registryReachable: versionMode !== 'offline',
+  ...(versionMode === 'incomplete' ? { incomplete: true, truncated: true } : {}),
   packages: [
     versionRow('zhin.js', '^1.1.0', '1.1.9', '2.0.0', '1.7.2', { updateAvailable: true, needsMigrate: true }),
     versionRow('@zhin.js/gateway', null, '1.6.1', '1.7.0', null, { needsMigrate: true }),
@@ -367,7 +368,9 @@ const versionReport = () => ({
     versionRow('@zhin.js/adapter-qq', '^2.0.0', '2.0.1', '2.1.0', '2.1.0', { latestInRange: true, updateAvailable: true }),
     versionRow('@zhin.js/plugin-repeater', '^1.1.0', '1.1.4', '1.2.0', '1.2.0', { latestInRange: true, updateAvailable: true }),
     versionRow('@zhin.js/plugin-welcome', '^1.4.0', '1.4.0', '1.4.0', '1.4.0', { latestInRange: true }),
-  ],
+  ].map(item => versionMode === 'incomplete' && /plugin-(repeater|welcome)$/u.test(item.name)
+    ? { ...item, latest: null, wanted: null, latestInRange: false, updateAvailable: false, needsMigrate: false }
+    : item),
 })
 const marketUpdates = [{ name: '@zhin.js/plugin-repeater', current: '1.1.4', latest: '1.2.0' }]
 const marketPlugins = [
@@ -545,11 +548,13 @@ const instanceLogs = () => ({ lines: [
   { seq: 7, time: Date.now() - 5_000, stream: 'stdout', line: '[90m[13:34:09.420][39m[32m[INFO][39m[90m[gateway][39m 已写入 .zhin/gateway.sock（转义字节被管道去掉的形式）' },
   ...(instanceOffline ? [{ seq: 8, time: Date.now() - 90_000, stream: 'stderr', line: "Error: Cannot find module 'icqq'" }] : []),
 ] })
+// The built-in viewer role: views and reads, but not the raw configuration or environment variables.
+const viewerPermissions = ALL_PERMISSIONS.filter(item => /\.(view|read)$/u.test(item) && item !== 'ops.config.read' && item !== 'ops.env.read')
 const meReport = () => setupMode
   ? { kind: 'bootstrap', open: false, permissions: [], bindings: [], setupRequired: true }
   : viewerAccess ? { kind: 'user', user: { id: 'u-viewer', username: 'viewer', displayName: '只读同事' },
-    permissions: ALL_PERMISSIONS.filter(item => /\.(view|read)$/u.test(item)),
-    bindings: [{ role: 'viewer', scope: { kind: 'global' }, permissions: ALL_PERMISSIONS.filter(item => /\.(view|read)$/u.test(item)) }], setupRequired: false,
+    permissions: viewerPermissions,
+    bindings: [{ role: 'viewer', scope: { kind: 'global' }, permissions: viewerPermissions }], setupRequired: false,
     onboarding: { version: 1, steps: { database: 'done', owner: 'done', ai: 'skipped', adapters: 'done' } } }
   : scopedAccess ? { kind: 'user', user: { id: 'u-alice', username: 'alice', displayName: '适配器管理员' },
     permissions: ALL_PERMISSIONS.filter(item => item !== 'iam.manage' && item !== 'ops.env.write'),
@@ -860,6 +865,7 @@ const server = createServer(async (request, response) => {
       delete job.agentMissing
       json(envelope({ job, success: true })); return
     }
+    if (type === 'config:get-source' && viewerAccess) { json({ success: false, error: '没有 ops.config.read 权限', type }, 403); return }
     if (type === 'config:get-source') { json(envelope({ source: configSource + rssConfigSource, revision: 'preview-1', configKeys: ['ai', 'rss'], configPaths: { ai: ['ai'], rss: ['rss'] } })); return }
     if (type === 'login.list') { json(envelope({ tasks: loginTasks })); return }
     if (type === 'plugin.adapter-icqq.status') { json(envelope(adapterStatus)); return }
