@@ -48,6 +48,9 @@ import {
 import { setLastReadAt } from './conversation-read-state'
 import { chatRequestKey } from './chat-workspace-model.mjs'
 
+/** What one read of the conversation lists found; `aborted` when the read itself threw. */
+interface ListOutcome { total: number; errors: string[]; causes: unknown[]; historyOnly?: boolean; aborted?: true }
+
 interface ChannelEntry {
   id: string
   name: string
@@ -89,7 +92,9 @@ export function useChannelManager(params: {
   const [groups, setGroups] = useState<GroupsEntry[]>([])
   const [channelList, setChannelList] = useState<ChannelsEntry[]>([])
   const [listLoading, setListLoading] = useState(false)
-  const [listNotice, setListNotice] = useState<ConversationListNotice | null>(null)
+  // What the last list read found; the notice is worded from it and the account's connection state, so a
+  // change of `connected` rewords the notice without reading every list again (#64 `chat-list-double-load`).
+  const [listOutcome, setListOutcome] = useState<ListOutcome | null>(null)
   /** Lists this adapter says it does not have (e.g. sandbox channels): their sections are hidden, not reported. */
   const [unsupportedLists, setUnsupportedLists] = useState<ReadonlySet<ConversationSectionId>>(() => new Set())
   const [metaIndex, setMetaIndex] = useState<ConversationMetaIndex>(new Map())
@@ -115,7 +120,7 @@ export function useChannelManager(params: {
   useEffect(() => {
     if (previousCacheScope.current !== cacheScope) setSelection(null)
     previousCacheScope.current = cacheScope
-    setListNotice(null)
+    setListOutcome(null)
     setFriends([]); setGroups([]); setChannelList([]); setMetaIndex(new Map()); setNameIndex(new Map())
   }, [cacheScope])
 
@@ -237,7 +242,7 @@ export function useChannelManager(params: {
   const loadLists = useCallback(async () => {
     if (!adapter || !endpointId) return
     setListLoading(true)
-    setListNotice(null)
+    setListOutcome(null)
     const errors: string[] = []
     const causes: unknown[] = []
     const unsupported = new Set<ConversationSectionId>()
@@ -309,14 +314,21 @@ export function useChannelManager(params: {
 
       if (!isInboxCacheScopeActive(cacheScope)) return
       const total = nextFriends.length + nextGroups.length + nextChannels.length
-      setListNotice(conversationListNotice({ total, errors, causes, connected: info?.connected, historyOnly: usedInboxFallback }, i18n.locale))
+      setListOutcome({ total, errors, causes, historyOnly: usedInboxFallback })
     } catch (e) {
       if (!isInboxCacheScopeActive(cacheScope)) return
-      setListNotice(conversationListNotice({ total: 0, errors: [(e as Error).message], causes: [e] }, i18n.locale))
+      setListOutcome({ total: 0, errors: [(e as Error).message], causes: [e], aborted: true })
     } finally {
       if (isInboxCacheScopeActive(cacheScope)) setListLoading(false)
     }
-  }, [adapter, endpointId, loadChannelsFromInbox, info?.connected, refreshMetadata, cacheScope, i18n])
+  }, [adapter, endpointId, loadChannelsFromInbox, refreshMetadata, cacheScope, i18n])
+
+  const connected = info?.connected
+  const listNotice = useMemo((): ConversationListNotice | null => listOutcome
+    ? conversationListNotice(listOutcome.aborted
+      ? { total: listOutcome.total, errors: listOutcome.errors, causes: listOutcome.causes }
+      : { total: listOutcome.total, errors: listOutcome.errors, causes: listOutcome.causes, connected, historyOnly: listOutcome.historyOnly }, i18n.locale)
+    : null, [listOutcome, connected, i18n.locale])
 
   useEffect(() => {
     void loadLists()

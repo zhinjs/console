@@ -367,6 +367,48 @@ export function operationLabel(operation, t) {
   return String(operation)
 }
 
+// ---- dependency table selection (batch update / uninstall) ----
+
+/** Drops names no longer listed; returns the same set when nothing changed. */
+export function pruneSelection(selected, names) {
+  const listed = new Set(names)
+  let changed = false
+  const next = new Set()
+  for (const name of selected) {
+    if (listed.has(name)) next.add(name)
+    else changed = true
+  }
+  return changed ? next : selected
+}
+
+/** Adds or removes one name. */
+export function toggleSelection(selected, name, on) {
+  if (on === selected.has(name)) return selected
+  const next = new Set(selected)
+  if (on) next.add(name)
+  else next.delete(name)
+  return next
+}
+
+/** Selects every listed name, or clears the selection. */
+export function toggleAllSelection(names, on) {
+  return on ? new Set(names) : new Set()
+}
+
+/** The header checkbox: `true` when every listed name is selected, `'indeterminate'` for some. */
+export function selectionHeaderState(selected, names) {
+  if (!names.length) return false
+  let count = 0
+  for (const name of names) if (selected.has(name)) count += 1
+  if (count === 0) return false
+  return count === names.length ? true : 'indeterminate'
+}
+
+/** Why the selection cannot be sent in one transaction (gateway MAX_PACKAGES), or null. */
+export function selectionLimitProblem(count, t) {
+  return count > MAX_PACKAGE_SPECS ? t('一次最多选择 {0} 个包，请减少选择。', [MAX_PACKAGE_SPECS]) : null
+}
+
 export const EMPTY_PROGRESS = Object.freeze({ id: null, operation: null, packages: [], phases: [], output: '', result: null })
 
 /**
@@ -535,4 +577,127 @@ export function parseDeclarationJson(text, t) {
   } catch {
     return { config: null, problem: t('不是有效的 JSON。') }
   }
+}
+
+// ---- gateway.version.check (zhinjs/console#64 version-update) ----
+
+/**
+ * The gateway's read-only version check (`status.view`). Kept apart from {@link GATEWAY_RPC}: the
+ * constant is new in `@zhin.js/console-protocol` 1.7 (`GATEWAY_VERSION_RPC.CHECK`), and older Hosts
+ * do not know it — the pages then show nothing ({@link versionCheckUnsupported}).
+ */
+export const GATEWAY_VERSION_CHECK_RPC = 'gateway.version.check'
+
+/**
+ * What the Console offers for an upgrade outside the declared range (ADR 0062: the Console never
+ * changes framework ranges; `zhin migrate` does). Same text as `GATEWAY_VERSION_MIGRATE_COMMAND`.
+ */
+export const VERSION_MIGRATE_COMMAND = 'npx zhin migrate --dry-run'
+
+/** `zhin migrate` in the CLI reference, in the interface language. */
+export function migrateDocsHref(locale) {
+  return locale === 'en' ? 'https://zhin.js.org/en/cli/#migrate' : 'https://zhin.js.org/cli/#migrate'
+}
+
+const VERSION_TEXT = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u
+const versionOrNull = value => (typeof value === 'string' && VERSION_TEXT.test(value) ? value : null)
+
+/** A `gateway.version.check` reply, defensively; null when it is not a report. */
+export function readVersionReport(value) {
+  if (!isRecord(value) || !Array.isArray(value.packages)) return null
+  const packages = value.packages.filter(item => isRecord(item) && typeof item.name === 'string' && item.name).map(item => ({
+    name: item.name,
+    range: typeof item.range === 'string' ? item.range : null,
+    installed: versionOrNull(item.installed),
+    latest: versionOrNull(item.latest),
+    wanted: versionOrNull(item.wanted),
+    latestInRange: item.latestInRange === true,
+    updateAvailable: item.updateAvailable === true,
+    needsMigrate: item.needsMigrate === true,
+  }))
+  return {
+    gateway: versionOrNull(value.gateway),
+    packages,
+    checkedAt: numberOr(value.checkedAt, 0),
+    registryReachable: value.registryReachable !== false,
+  }
+}
+
+/**
+ * A Host without the version check: an older gateway forwards or refuses the unknown type
+ * (`unsupported`: "Unknown RPC type" / `unmapped`), a newer one answers `unknown_rpc` (404).
+ * Neither is a failure worth showing.
+ */
+export function versionCheckUnsupported(error) {
+  if (!(error instanceof GatewayRequestError)) return false
+  return error.code === 'unsupported' || error.code === 'unknown_rpc' || error.code === 'unmapped' || error.status === 404
+}
+
+const versionRank = name => (name === 'zhin.js' ? 0 : name === '@zhin.js/gateway' ? 1 : name.startsWith('@zhin.js/console-') ? 2 : 3)
+
+/** Display name of a checked package: Zhin / 网关 / Console … / the package name. */
+export function versionPackageLabel(name, t) {
+  if (name === 'zhin.js') return 'Zhin'
+  if (name === '@zhin.js/gateway') return t('网关')
+  if (name.startsWith('@zhin.js/console-')) return `Console ${name.slice('@zhin.js/console-'.length)}`
+  return name.replace(/^@zhin\.js\//u, '')
+}
+
+/**
+ * Rows of the 版本 card. `state`: `migrate` (latest is outside the declared range — only
+ * `zhin migrate`), `update` (a newer release within the range — the dependency 更新 reaches it),
+ * `current`, or `unknown` (the registry could not be checked). A row can be both: `update` carries
+ * {@link wanted} even when the state is `migrate`.
+ */
+export function versionRows(report, t) {
+  if (!report) return []
+  return [...report.packages]
+    .sort((a, b) => versionRank(a.name) - versionRank(b.name) || a.name.localeCompare(b.name))
+    .map(item => {
+      const state = item.latest === null ? 'unknown' : item.needsMigrate ? 'migrate' : item.updateAvailable ? 'update' : 'current'
+      return {
+        name: item.name,
+        label: versionPackageLabel(item.name, t),
+        range: item.range,
+        installed: item.installed,
+        latest: item.latest,
+        wanted: item.updateAvailable ? item.wanted : null,
+        state,
+        /** The dependency 更新 applies (a direct dependency with a newer in-range release). */
+        update: item.updateAvailable && item.range !== null,
+        /** Listed under 项目依赖 (not the global / CLI gateway). */
+        dependency: item.range !== null,
+      }
+    })
+}
+
+export function versionStateLabel(state, t) {
+  switch (state) {
+    case 'migrate': return t('需要迁移')
+    case 'update': return t('可更新')
+    case 'current': return t('已是最新')
+    default: return t('无法检查')
+  }
+}
+
+export function versionStateTone(state) {
+  if (state === 'migrate') return 'warning'
+  if (state === 'update') return 'secondary'
+  return 'outline'
+}
+
+/**
+ * The light global hint (首页「进程与资源」): `none` when nothing is newer or nothing is known (an
+ * unreachable registry or an older Host is not alarming), else how many packages have a newer release.
+ */
+export function versionNotice(report) {
+  if (!report) return { kind: 'none', count: 0 }
+  const newer = report.packages.filter(item => item.latest !== null && (item.needsMigrate || item.updateAvailable))
+  if (!newer.length) return { kind: 'none', count: 0 }
+  return { kind: newer.some(item => item.needsMigrate) ? 'migrate' : 'update', count: newer.length }
+}
+
+/** Version of a checked package that the report knows (`zhin.js` → installed). */
+export function reportedVersion(report, name) {
+  return report?.packages.find(item => item.name === name)?.installed ?? (name === '@zhin.js/gateway' ? report?.gateway ?? null : null)
 }

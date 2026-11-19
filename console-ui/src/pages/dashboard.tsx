@@ -21,6 +21,7 @@ import { MIN_RATIO_SAMPLE, observationCoverage, countReading, ratioReading, type
 import { CONVERSATION_KINDS, type ConversationKind } from './features/feature-model.mjs'
 import { conversationHref, CONSOLE_PATHS } from '../console-routes.mjs'
 import { instanceSectionHref } from './ops/instance-sections.mjs'
+import { VersionHintRow } from './ops/version-panel'
 import { Alert, AlertDescription, Button, InfoHint, ListItemButton, MiniRingGauge, PageHeader, PageShell, Sheet, SheetBody, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, Skeleton, StatCard, StatGrid, useConfirm } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import './insights/insights.css'
@@ -888,6 +889,7 @@ export default function HomePage() {
               {cpuRate !== null ? <span className="console-meter" aria-hidden="true"><span style={{ width: `${cpuMeterWidth(cpuRate)}%` }} className={cpuRate >= 85 ? 'is-warning' : ''} /></span> : null}
             </div>
             <div><dt>{i18n.t("运行环境")}</dt><dd>{systemStatus ? `Node ${systemStatus.nodeVersion} · ${systemStatus.platform}` : '—'}</dd></div>
+            <VersionHintRow enabled={hasConsolePermission('status.view')} />
           </dl>
         </section>
       </div>

@@ -221,6 +221,7 @@ export function resourceBindings(
 ): Record<'services' | 'accounts' | 'profiles', Record<string, string>>
 export function driverKey(driver: DriverRef): string
 export function serviceDriver(view: View, serviceId: string): Driver | undefined
+export function draftForModelId(id: string, input: { previous?: ModelDefinition | null; replaced?: ModelDefinition | null; defaults: (id: string) => ModelDefinition }): { draft: ModelDefinition; inherited: string | null }
 export function effectiveAuthMethod(chosen: string, methods: readonly string[]): string
 export function oauthCallbackProblem(value: string, redirectUri?: string | null): 'empty' | 'not-url' | 'other-address' | 'no-code' | null
 export function accountHasModels(view: Pick<View, 'profiles'> | null | undefined, accountId: string): boolean
