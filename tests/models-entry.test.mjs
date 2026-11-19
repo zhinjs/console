@@ -53,7 +53,7 @@ test('settings no longer embeds a second model workspace, so model management ha
 async function workspace({ query = '', hostAdministrator = true } = {}) {
   const runtime = pageRuntime(), url = { query, writes: [] }
   const view = { rootId: '/host', ownerId: 'host', revision: 1, hostAdministrator, deployment: [], profiles: {}, accounts: {}, services: {}, statuses: {}, drivers: [] }
-  const management = () => ({ source: { view }, view, owners: [], ownerId: 'host', busy: false, pending: null, error: '',
+  const management = () => ({ source: { view }, view, owners: [], ownerId: 'host', busy: false, pending: null, canConfigure: true, error: '',
     request: async () => ({}), active: () => true, setError: assert.fail, savePlan: async () => false, save: async () => false, load() {} })
   const dependencies = {
     react: runtime.api,

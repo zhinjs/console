@@ -27,8 +27,10 @@ export function Profiles({ management: m, onCreateAccount, addModelFor, onAddMod
   const view = m.view!,
     [editing, setEditing] = useState<{ profile: Profile | null; source: InferenceSource; accountId?: string } | null>(null),
     { confirm, ConfirmDialog: dialog } = useConfirm()
+  // Writes need `agent.configure`; without it every action here stays visible but disabled.
+  const locked = !m.canConfigure || m.busy || !!m.pending
   useEffect(() => {
-    if (!addModelFor || !m.source) return
+    if (!addModelFor || !m.source || !m.canConfigure) return
     if (Object.hasOwn(view.accounts, addModelFor)) setEditing({ profile: null, source: m.source, accountId: addModelFor })
     onAddModelOpened?.()
   }, [addModelFor]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -48,7 +50,7 @@ export function Profiles({ management: m, onCreateAccount, addModelFor, onAddMod
       <div className="flex items-center justify-between gap-3">
         <h3 className="font-semibold">{i18n.t("模型", undefined, 'plural')}</h3>
         <Button
-          disabled={m.busy || !!m.pending}
+          disabled={locked}
           onClick={() => Object.keys(view.accounts).length ? setEditing({ profile: null, source: m.source! }) : onCreateAccount()}
         >
           <Plus />
@@ -86,7 +88,7 @@ export function Profiles({ management: m, onCreateAccount, addModelFor, onAddMod
                     variant="ghost"
                     size="icon"
                     aria-label={i18n.t("编辑 {0}", [profile.label ?? profile.model])}
-                    disabled={m.busy || !!m.pending}
+                    disabled={locked}
                     onClick={() => setEditing({ profile, source: m.source! })}
                   >
                     <Pencil />
@@ -95,7 +97,7 @@ export function Profiles({ management: m, onCreateAccount, addModelFor, onAddMod
                     variant="ghost"
                     size="icon"
                     aria-label={i18n.t("删除 {0}", [profile.label ?? profile.model])}
-                    disabled={m.busy || !!m.pending}
+                    disabled={locked}
                     onClick={() => void remove(profile)}
                   >
                     <Trash2 />
@@ -184,7 +186,7 @@ function ProfileForm({
       ].map((value) => [value.id, value])
     ).values(),
   ]
-  const disabled = management.busy || !!management.pending
+  const disabled = !management.canConfigure || management.busy || !!management.pending
   const entry = modelEntryView({ editing: !!profile, manualEntry, choiceCount: choices.length, discovery: driver?.discovery === true, discovered })
 
   // Only explicit selection, blur or Save commits an ID for local Driver validation.

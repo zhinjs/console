@@ -509,7 +509,7 @@ test('ambient_decision rows show the judge, fallback, tokens, error class and th
 async function purposesPage(v, { judgeRead = judgeView(), request: answer, permissions = null, storage = new Map() } = {}) {
   const runtime = pageRuntime(), plans = [], requests = [], errors = []
   globalThis.sessionStorage = { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) }
-  const management = { view: v, source: { view: v }, busy: false, pending: null, active: () => true, setError: message => errors.push(message),
+  const management = { view: v, source: { view: v }, busy: false, pending: null, canConfigure: true, active: () => true, setError: message => errors.push(message),
     request: async (path, body, method) => {
       requests.push([path, method])
       if (answer) return answer(path, body, method)
