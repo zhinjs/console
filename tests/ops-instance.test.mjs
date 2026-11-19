@@ -200,3 +200,33 @@ test('an unknown restart is 已生效 only when the run changed; a still-running
   assert.match(page, /const payload: LifecyclePlan = \{ action: next, before: data \}/, 'the plan keeps the status it was prepared from')
   assert.match(page, /return \{ applied: instanceLifecycleApplied\(action, before, next\) \}/)
 })
+
+test('dependency selection: prune, toggle, select all, header state and the gateway limit', async () => {
+  const { pruneSelection, toggleSelection, toggleAllSelection, selectionHeaderState, selectionLimitProblem } = await import('../console-ui/src/pages/ops/gateway-model.mjs')
+  const names = ['a', 'b', 'c']
+  const some = new Set(['a', 'gone'])
+  const pruned = pruneSelection(some, names)
+  assert.deepEqual([...pruned], ['a'])
+  assert.equal(pruneSelection(pruned, names), pruned, 'unchanged selection keeps its identity')
+  const withB = toggleSelection(pruned, 'b', true)
+  assert.deepEqual([...withB].sort(), ['a', 'b'])
+  assert.equal(toggleSelection(withB, 'b', true), withB)
+  assert.deepEqual([...toggleSelection(withB, 'a', false)], ['b'])
+  assert.equal(selectionHeaderState(new Set(), names), false)
+  assert.equal(selectionHeaderState(withB, names), 'indeterminate')
+  assert.equal(selectionHeaderState(toggleAllSelection(names, true), names), true)
+  assert.equal(toggleAllSelection(names, false).size, 0)
+  assert.equal(selectionHeaderState(new Set(['x']), []), false)
+  assert.equal(selectionLimitProblem(MAX_PACKAGE_SPECS, zh), null)
+  assert.match(selectionLimitProblem(MAX_PACKAGE_SPECS + 1, zh), /最多选择 32 个包/u)
+  assert.doesNotMatch(selectionLimitProblem(MAX_PACKAGE_SPECS + 1, en), /[㐀-鿿]/u)
+})
+
+test('the dependency table offers batch update and uninstall through the same plan and receipt', () => {
+  const source = read('pages/ops/instance.tsx')
+  assert.match(source, /prepare\('update', selectedNames\)/u)
+  assert.match(source, /prepare\('uninstall', selectedNames\)/u)
+  assert.match(source, /danger: operation === 'uninstall'/u)
+  assert.match(source, /disabled=\{busy \|\| Boolean\(selectionProblem\)\}/u)
+  assert.equal(en('{0} {1} 个包', ['Uninstall', 3]), 'Uninstall 3 packages')
+})

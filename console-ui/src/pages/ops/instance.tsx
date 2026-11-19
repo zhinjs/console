@@ -16,7 +16,8 @@ import type {
 } from '../../contracts/gateway'
 import {
   GATEWAY_RPC, failureReasonLabel, formatDuration, instanceActions, instanceLifecycleApplied, instanceStateLabel, instanceStateTone, mergeLogLines,
-  operationLabel, parsePackageSpecs, readInstanceStatus, readLogLines, readPackageList, readPackagePlan, transactionSummary, uptimeMs,
+  operationLabel, parsePackageSpecs, pruneSelection, readInstanceStatus, readLogLines, readPackageList, readPackagePlan, selectionHeaderState,
+  selectionLimitProblem, toggleAllSelection, toggleSelection, transactionSummary, uptimeMs,
 } from './gateway-model.mjs'
 import { GatewayLoadError, TransactionProgress } from './ops-components'
 import { ConfigurationNeedsPanel } from './plugin-declare'
@@ -278,6 +279,13 @@ function DependencyPanel({ canManage, onActiveChange, onFinished }: { canManage:
   const [declaring, setDeclaring] = useState(false)
   const parsed = parsePackageSpecs(specText, i18n.t)
   const unsupported = list.errorKind === 'unsupported'
+  const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set())
+  const listedNames = useMemo(() => list.data.packages.map(item => item.name), [list.data.packages])
+  // A refreshed list drops names that are gone; the selection never names a package the table does not show.
+  useEffect(() => { setSelected(previous => pruneSelection(previous, listedNames)) }, [listedNames])
+  const selectedNames = listedNames.filter(name => selected.has(name))
+  const selectionProblem = selectionLimitProblem(selectedNames.length, i18n.t)
+  const headerState = selectionHeaderState(selected, listedNames)
 
   useEffect(() => { onActiveChange(running || declaring) }, [running, declaring, onActiveChange])
 
@@ -290,6 +298,7 @@ function DependencyPanel({ canManage, onActiveChange, onFinished }: { canManage:
       if (current.operation === 'install' && current.enable !== undefined) data.enable = current.enable
       if (current.operation === 'install') setNeeds([])
       const { result, error } = await transaction.run(transactionType(current.operation), data)
+      setSelected(new Set())
       list.refresh()
       onFinished()
       if (error) throw error
@@ -323,11 +332,20 @@ function DependencyPanel({ canManage, onActiveChange, onFinished }: { canManage:
       const plan = readPackagePlan(await gatewayRequest(GATEWAY_RPC.PACKAGES_PLAN, { operation, packages }, i18n.t))
       pending.current = { operation, packages, plan, ...extra }
       const names = plan?.packages.length ? plan.packages.map(item => `${item.spec} · ${item.source}`) : packages === 'all' ? [i18n.t('全部依赖')] : [...packages]
+      const label = operationLabel(operation, i18n.t)
+      const restart = plan?.restartsInstance
+        ? i18n.t("执行期间实例会停止，完成后自动启动；失败会回滚到当前依赖。")
+        : i18n.t("实例当前未运行，执行后保持原状态；失败会回滚到当前依赖。")
+      const batch = packages !== 'all' && packages.length > 1
       receipt.prepare({
-        title: packages === 'all' ? i18n.t("更新全部依赖") : i18n.t("{0} {1}", [operationLabel(operation, i18n.t), packages.join(', ')]),
-        summary: plan?.restartsInstance
-          ? i18n.t("执行期间实例会停止，完成后自动启动；失败会回滚到当前依赖。")
-          : i18n.t("实例当前未运行，执行后保持原状态；失败会回滚到当前依赖。"),
+        // Several packages are counted in the title and listed one by one under changes.
+        title: packages === 'all' ? i18n.t("更新全部依赖")
+          : batch ? i18n.t("{0} {1} 个包", [label, packages.length]) : i18n.t("{0} {1}", [label, packages.join(', ')]),
+        summary: [
+          operation === 'uninstall' ? i18n.t("将从配置与依赖中移除所选包。") : '',
+          batch ? i18n.t("所有包在同一个事务里执行，任何一个失败都会全部回滚。") : '',
+          restart,
+        ].filter(Boolean).join(' '),
         changes: names,
         danger: operation === 'uninstall',
         confirmLabel: operationLabel(operation, i18n.t),
@@ -360,6 +378,19 @@ function DependencyPanel({ canManage, onActiveChange, onFinished }: { canManage:
         {planError ? <StatusState compact error={planError} permissions={['plugin.manage']} onRetry={() => setPlanError(null)} /> : null}
         <ActionReceipt controller={receipt} />
         {running || progress.id || runError ? <TransactionProgress progress={progress} running={running} error={runError} /> : null}
+        {canManage && !unsupported && selectedNames.length ? (
+          <Card className="console-admin-card" role="region" aria-label={i18n.t("批量操作")}>
+            <div className="flex flex-col gap-2 text-left sm:flex-row sm:flex-wrap sm:items-center">
+            <span className="text-sm font-medium" aria-live="polite">{i18n.t("已选 {0} 个", [selectedNames.length])}</span>
+            <div className="flex flex-wrap gap-2 sm:ml-auto">
+              <Button size="sm" variant="outline" disabled={busy || Boolean(selectionProblem)} onClick={() => void prepare('update', selectedNames)}><Upload />{i18n.t("更新所选")}</Button>
+              <Button size="sm" variant="destructive-outline" disabled={busy || Boolean(selectionProblem)} onClick={() => void prepare('uninstall', selectedNames)}><Trash2 />{i18n.t("卸载所选")}</Button>
+              <Button size="sm" variant="ghost" disabled={busy} onClick={() => setSelected(new Set())}>{i18n.t("清除选择")}</Button>
+            </div>
+            {selectionProblem ? <p className="text-xs text-destructive sm:basis-full" role="alert">{selectionProblem}</p> : null}
+            </div>
+          </Card>
+        ) : null}
         {needs.length ? (
           <ConfigurationNeedsPanel needs={needs} disabled={running} onBusyChange={setDeclaring}
             onDeclared={need => { setNeeds(previous => previous.filter(item => item.instanceKey !== need.instanceKey)); list.refresh(); onFinished(); toast.success(i18n.t('已声明 {0}', [need.instanceKey])) }} />
@@ -394,6 +425,12 @@ function DependencyPanel({ canManage, onActiveChange, onFinished }: { canManage:
             <Table aria-label={i18n.t("项目依赖")}>
               <TableHeader>
                 <TableRow>
+                  {canManage ? (
+                    <TableHead className="w-10">
+                      <Checkbox checked={headerState} disabled={busy} aria-label={i18n.t("全选依赖")}
+                        onCheckedChange={value => setSelected(toggleAllSelection(listedNames, value === true))} />
+                    </TableHead>
+                  ) : null}
                   <TableHead>{i18n.t("包")}</TableHead>
                   <TableHead className="hidden md:table-cell">{i18n.t("声明的版本")}</TableHead>
                   <TableHead>{i18n.t("已安装")}</TableHead>
@@ -403,7 +440,13 @@ function DependencyPanel({ canManage, onActiveChange, onFinished }: { canManage:
               </TableHeader>
               <TableBody>
                 {list.data.packages.map(item => (
-                  <TableRow key={item.name}>
+                  <TableRow key={item.name} data-state={selected.has(item.name) ? 'selected' : undefined}>
+                    {canManage ? (
+                      <TableCell className="w-10">
+                        <Checkbox checked={selected.has(item.name)} disabled={busy} aria-label={i18n.t("选择 {0}", [item.name])}
+                          onCheckedChange={value => setSelected(previous => toggleSelection(previous, item.name, value === true))} />
+                      </TableCell>
+                    ) : null}
                     <TableCell className="min-w-0"><code className="break-all font-mono text-sm">{item.name}</code>{item.catalog ? <Badge className="ml-2" size="sm" variant="secondary">{item.catalog}</Badge> : null}</TableCell>
                     <TableCell className="hidden font-mono text-xs md:table-cell">{item.range || '—'}</TableCell>
                     <TableCell className="font-mono text-xs">{item.installedVersion ?? <Badge size="sm" variant="warning">{i18n.t("未安装")}</Badge>}</TableCell>
