@@ -5,7 +5,7 @@ import { Plus, Pencil, Trash2, RefreshCw } from 'lucide-react'
 import { Button, Card, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, ErrorAlert, Input, SelectField, useConfirm } from '@zhin.js/console-ui'
 import { ModelCapabilities } from './ModelCapabilities'
 import { SupportLabel, SupportNotice, supportLabel } from './SupportInfo'
-import { ignoredReasonText, inferenceError, languageInputMissing, modelEntryView, withModelProtocol, profileSupport, profileUsages, serviceDriver, type ProfileUsage } from './model.mjs'
+import { draftForModelId, ignoredReasonText, inferenceError, languageInputMissing, modelEntryView, withModelProtocol, profileSupport, profileUsages, serviceDriver, type ProfileUsage } from './model.mjs'
 import {
   driverKey,
   type Profile,
@@ -160,6 +160,8 @@ function ProfileForm({
   const [validating, setValidating] = useState(false)
   const [parameters, setParameters] = useState<ObjectValue>(profile?.parameters ?? {})
   const [modelDraft, setModelDraft] = useState<ModelDefinition | null>(null)
+  // The catalog model whose declaration a new model ID started from (asked to confirm next to the form).
+  const [inheritedFrom, setInheritedFrom] = useState<string | null>(null)
   const [manualEntry, setManualEntry] = useState(false)
   const [parametersValid, setParametersValid] = useState(true)
   const [observations, setObservations] = useState<Array<{ id: string; label?: string }>>([])
@@ -228,9 +230,16 @@ function ProfileForm({
     if (commit) setCommittedModelId(id)
     setModelId(id)
     const existing = service?.models[id]
-    setModelDraft((previous) => existing ? null : previous ? { ...previous, id }
-      : driver?.modelContracts.length === 1 ? withModelProtocol({ id, protocol: '', kinds: [] }, driver.modelContracts[0].protocol, driver)
-        : { id, protocol: '', kinds: [] })
+    const defaults = (next: string): ModelDefinition => driver?.modelContracts.length === 1
+      ? withModelProtocol({ id: next, protocol: '', kinds: [] }, driver.modelContracts[0].protocol, driver)
+      : { id: next, protocol: '', kinds: [] }
+    if (existing) { setModelDraft(null); setInheritedFrom(null) }
+    else if (!modelDraft) {
+      // A new ID replacing a catalog model keeps that model's declaration instead of starting over.
+      const { draft, inherited } = draftForModelId(id, { replaced: service?.models[modelId] ?? null, defaults })
+      setModelDraft(draft)
+      setInheritedFrom(inherited)
+    } else setModelDraft((previous) => draftForModelId(id, { previous, defaults }).draft)
     setFormError('')
   }
   function chooseAccount(id: string) {
@@ -238,6 +247,7 @@ function ProfileForm({
     setModelId('')
     setCommittedModelId('')
     setModelDraft(null)
+    setInheritedFrom(null)
     setObservations([])
     setDiscovered(false)
   }
@@ -380,6 +390,9 @@ function ProfileForm({
           >
             {i18n.t("调整模型能力")}
           </Button>
+        ) : null}
+        {modelDraft && driver && canEditDeclaration && inheritedFrom ? (
+          <p className="text-xs text-muted-foreground" role="status">{i18n.t("已沿用原模型 {0} 的能力声明，请确认是否适用于新的模型 ID。", [inheritedFrom])}</p>
         ) : null}
         {modelDraft && driver && canEditDeclaration ? (
           <ModelCapabilities driver={driver} value={modelDraft} onChange={value => { setModelDraft(value); setFormError('') }} />

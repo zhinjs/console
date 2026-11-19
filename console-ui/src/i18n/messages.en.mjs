@@ -2868,6 +2868,7 @@ export const englishMessages = Object.freeze({
   "这个服务没有内置模型目录，请手填模型 ID。": "This service has no built-in model catalog. Enter a model ID.",
   "服务没有返回任何模型，请手填模型 ID。": "The service returned no models. Enter a model ID.",
   "调整模型能力": "Adjust model capabilities",
+  "已沿用原模型 {0} 的能力声明，请确认是否适用于新的模型 ID。": "Kept the capability declaration of the previous model {0}; check that it fits the new model ID.",
   "此服务的模型目录由部署管理员维护；可新增自己的服务声明模型。": "This service’s model catalog is maintained by the deployment administrator. Add your own service to declare models.",
   "正在读取生成参数…": "Loading generation parameters…",
   "重新读取参数": "Reload parameters",
