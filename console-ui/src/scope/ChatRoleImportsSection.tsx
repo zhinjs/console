@@ -10,12 +10,15 @@ import { outcomeFromChatRoleWrite } from '../components/apply-outcome-model.mjs'
 import { statusFromError, type StatusReading } from '../components/status-state-model.mjs'
 import { requestConsole } from '../utils/console-rpc'
 import { useConsoleAccess } from '../hooks/use-console-access'
-import { useIamUsers } from '../pages/access/use-iam'
+import { iamRequest } from '../pages/access/use-iam'
+import { IAM_RPC, readUsers, type IamUser } from '../pages/access/access-model.mjs'
+import { hasConsolePermission } from '../utils/console-access.mjs'
+import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { ObjectSection } from './ObjectPageLayout'
 import { CHAT_ROLE_COPY, chatRoleRefusal } from './chat-roles-model.mjs'
 import {
   CHAT_ROLE_IMPORT_COPY, CHAT_ROLE_IMPORTS_ANCHOR, CHAT_ROLE_IMPORTS_PERMISSION,
-  canResolveChatRoleImports, chatRoleImportEffect, chatRoleImportGranted, chatRoleImportOutcomeCopy, chatRoleImportResolveRequest,
+  canResolveChatRoleImports, chatRoleImportAlreadyHandled, chatRoleImportDanger, chatRoleImportEffect, chatRoleImportSkipped, chatRoleImportGranted, chatRoleImportOutcomeCopy, chatRoleImportResolveRequest,
   chatRoleImportResolved, chatRoleImportSummary, chatRoleImportsListRequest, chatRoleImportsUnsupported,
   readChatRoleImportResolve, readChatRoleImports,
   type ChatRoleImportDecision, type ChatRoleImportRow,
@@ -69,6 +72,13 @@ function useScrollToAnchor(ready: boolean) {
  * goes through an ActionReceipt: an unknown outcome is only re-read (刷新核对), never resent.
  */
 export function ChatRoleImportsSection({ onChanged }: { onChanged?: () => void }) {
+  // One session per connection: another Host never sees this list or its receipt (an unknown
+  // outcome on Host A must not be 「核对」ed against Host B's list).
+  const scope = useInboxCacheScope()
+  return <ChatRoleImportsSession key={scope ?? 'disconnected'} scope={scope} onChanged={onChanged} />
+}
+
+function ChatRoleImportsSession({ scope, onChanged }: { scope?: string; onChanged?: () => void }) {
   const i18n = useI18n()
   const access = useConsoleAccess()
   const allowed = canResolveChatRoleImports(access)
@@ -84,27 +94,55 @@ export function ChatRoleImportsSection({ onChanged }: { onChanged?: () => void }
     )
   }
   if (imports.status === 'unsupported') return null
-  return <ChatRoleImportsList imports={imports} onChanged={onChanged} />
+  return <ChatRoleImportsList scope={scope} imports={imports} onChanged={onChanged} />
 }
 
-function ChatRoleImportsList({ imports, onChanged }: { imports: ReturnType<typeof useChatRoleImports>; onChanged?: () => void }) {
+/**
+ * Names of the Console users behind personal links (`iam.users.list`, which needs `iam.view`):
+ * read only when permissions are reported, `iam.view` is held and there is a personal row.
+ */
+function useConsoleUserNames(needed: boolean): IamUser[] {
   const i18n = useI18n()
-  const users = useIamUsers().data
+  const access = useConsoleAccess()
+  const enabled = needed && !access.unrestricted && hasConsolePermission('iam.view', access)
+  const [users, setUsers] = useState<IamUser[]>([])
+  useEffect(() => {
+    if (!enabled) return
+    let alive = true
+    iamRequest<unknown>(IAM_RPC.USERS_LIST, {}, i18n.t).then(reply => { if (alive) setUsers(readUsers(reply)) }, () => { if (alive) setUsers([]) })
+    return () => { alive = false }
+  }, [enabled, i18n.t])
+  return enabled ? users : []
+}
+
+function ChatRoleImportsList({ scope, imports, onChanged }: { scope?: string; imports: ReturnType<typeof useChatRoleImports>; onChanged?: () => void }) {
+  const i18n = useI18n()
+  const users = useConsoleUserNames(imports.rows.some(row => row.kind === 'personal'))
   const receipt = useActionReceipt({
-    persistKey: 'chat-roles:imports',
+    persistKey: `chat-roles:imports:${scope ?? 'disconnected'}`,
     submit: async plan => {
       const target = pendingImport(plan)
       if (!target) throw new Error('No action')
+      let payload: unknown
       try {
-        const reply = readChatRoleImportResolve(await requestConsole<unknown>(chatRoleImportResolveRequest(target.decision, target.id)))
-        const message = i18n.t(CHAT_ROLE_IMPORT_COPY[chatRoleImportOutcomeCopy(reply, target.kind)])
-        return { status: reply.status === 'unchanged' ? 'unchanged' : 'succeeded', message, ...(chatRoleImportGranted(reply, target.kind) ? { apply: outcomeFromChatRoleWrite() } : {}) }
+        payload = await requestConsole<unknown>(chatRoleImportResolveRequest(target.decision, target.id))
       } catch (error) {
+        // 404: already handled elsewhere — say so and re-list, nothing was refused.
+        if (chatRoleImportAlreadyHandled(error)) return { status: 'unchanged', message: i18n.t(CHAT_ROLE_IMPORT_COPY.unchanged) }
         // A certain refusal (403 without a global iam.manage, 503 unpersisted …) shows its reason; anything else stays 结果未知.
         const refusal = chatRoleRefusal(statusFromError(error))
         if (!refusal) throw error
         return { status: 'failed', message: refusal.code === 'unpersisted' ? i18n.t(CHAT_ROLE_COPY.unpersisted) : refusal.message }
       }
+      let reply: ReturnType<typeof readChatRoleImportResolve>
+      // A reply the Console cannot read is not success: 结果未知, settled by 刷新核对.
+      try { reply = readChatRoleImportResolve(payload) } catch { return { status: 'unknown', message: i18n.t('Host 的答复无法识别，不确定这一条是否已处理。请刷新核对。') } }
+      const message = i18n.t(CHAT_ROLE_IMPORT_COPY[chatRoleImportOutcomeCopy(reply, target.kind)])
+      // skipped: the Host removed it from the list without importing it — partial, not 已完成.
+      if (chatRoleImportSkipped(reply)) {
+        return { status: 'partial', message, items: [{ label: i18n.t('移出待确认列表'), ok: true }, { label: i18n.t('导入'), ok: false }] }
+      }
+      return { status: reply.status === 'unchanged' ? 'unchanged' : 'succeeded', message, ...(chatRoleImportGranted(reply, target.kind) ? { apply: outcomeFromChatRoleWrite() } : {}) }
     },
     verify: async plan => {
       const target = pendingImport(plan)
@@ -126,7 +164,7 @@ function ChatRoleImportsList({ imports, onChanged }: { imports: ReturnType<typeo
       title: decision === 'import' ? i18n.t('导入：{0}', [summary]) : i18n.t('忽略：{0}', [summary]),
       summary: decision === 'import' ? chatRoleImportEffect(row, i18n.t) : i18n.t('这一条不会导入，也不会授予任何角色或关联。'),
       confirmLabel: decision === 'import' ? i18n.t('导入') : i18n.t('忽略'),
-      danger: decision === 'import' && row.kind === 'role' && row.role === 'owner',
+      danger: chatRoleImportDanger(row, decision),
     })
   }
   return (
@@ -154,8 +192,9 @@ function ChatRoleImportsList({ imports, onChanged }: { imports: ReturnType<typeo
                   {row.kind === 'personal' ? <Link2 aria-hidden="true" /> : <FileInput aria-hidden="true" />}
                   <div className="console-chat-import-body">
                     <p className="console-chat-import-summary">
-                      <Badge variant={row.kind === 'personal' ? 'info' : row.role === 'owner' ? 'warning' : 'outline'} size="sm">{row.kind === 'personal' ? i18n.t('身份关联') : i18n.t('角色')}</Badge>
-                      <span className="min-w-0">{summary}</span>
+                      <Badge variant={row.kind === 'personal' ? 'info' : row.kind === 'role' && row.role === 'owner' ? 'warning' : 'outline'} size="sm">{row.kind === 'personal' ? i18n.t('身份关联') : i18n.t('角色')}</Badge>
+                      {/* The raw key of an entry the Console cannot read, on hover. */}
+                      <span className="min-w-0" title={row.kind === 'unrecognized' ? row.rawKey : undefined}>{summary}</span>
                     </p>
                     <p className="console-chat-role-sub">{chatRoleImportEffect(row, i18n.t)}</p>
                     {row.source || row.seenAt ? (
@@ -167,7 +206,8 @@ function ChatRoleImportsList({ imports, onChanged }: { imports: ReturnType<typeo
                     ) : null}
                   </div>
                   <div className="console-chat-import-actions">
-                    <Button size="sm" variant="soft" disabled={busy} onClick={() => prepare(row, 'import')} aria-label={i18n.t('导入 {0}', [summary])}><Check />{i18n.t('导入')}</Button>
+                    {row.kind === 'unrecognized' ? null
+                      : <Button size="sm" variant="soft" disabled={busy} onClick={() => prepare(row, 'import')} aria-label={i18n.t('导入 {0}', [summary])}><Check />{i18n.t('导入')}</Button>}
                     <Button size="sm" variant="ghost" disabled={busy} onClick={() => prepare(row, 'ignore')} aria-label={i18n.t('忽略 {0}', [summary])}><X />{i18n.t('忽略')}</Button>
                   </div>
                 </li>

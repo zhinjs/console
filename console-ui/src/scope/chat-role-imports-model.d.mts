@@ -35,10 +35,19 @@ export interface ChatRoleImportPersonalRow {
   readonly source: string
   readonly seenAt?: number
 }
-export type ChatRoleImportRow = ChatRoleImportRoleRow | ChatRoleImportPersonalRow
+/** A role candidate the Console cannot read (level, role or scope key): ignorable by id only. */
+export interface ChatRoleImportUnrecognizedRow {
+  readonly kind: 'unrecognized'
+  readonly id: string
+  /** What the Host sent (level, key, identity, role), for a tooltip. */
+  readonly rawKey: string
+  readonly source?: string
+  readonly seenAt?: number
+}
+export type ChatRoleImportRow = ChatRoleImportRoleRow | ChatRoleImportPersonalRow | ChatRoleImportUnrecognizedRow
 
 export function readChatRoleImports(payload: unknown): { rows: ChatRoleImportRow[]; hasGlobalOwner: boolean }
-export function chatRoleImportIdentity(row: Pick<ChatRoleImportRow, 'adapter' | 'userId'> & { endpoint?: string }): string
+export function chatRoleImportIdentity(row: ChatRoleImportRow): string
 export function consoleUserLabel(consoleUserId: string, users?: readonly { id: string; username?: string; displayName?: string }[]): string
 export function chatRoleImportSummary(row: ChatRoleImportRow, t: Translate, users?: readonly { id: string; username?: string; displayName?: string }[]): string
 export function chatRoleImportEffect(row: ChatRoleImportRow, t: Translate): string
@@ -46,7 +55,7 @@ export function chatRoleImportEffect(row: ChatRoleImportRow, t: Translate): stri
 export type ChatRoleImportResult = 'written' | 'upgraded' | 'kept' | 'memory' | 'skipped'
 export type ChatRoleImportSkipReason = 'simulated' | 'unknown-adapter' | 'owned-elsewhere'
 export interface ChatRoleImportResolveReply {
-  readonly status: 'imported' | 'ignored' | 'acknowledged' | 'unchanged'
+  readonly status: 'imported' | 'ignored' | 'unchanged'
   readonly result?: ChatRoleImportResult
   readonly reason?: ChatRoleImportSkipReason
 }
@@ -55,6 +64,9 @@ export function readChatRoleImportResolve(payload: unknown): ChatRoleImportResol
 export type ChatRoleImportOutcomeKey = 'written' | 'linked' | 'upgraded' | 'kept' | 'memory' | 'skipped' | ChatRoleImportSkipReason | 'ignored' | 'unchanged'
 export const CHAT_ROLE_IMPORT_COPY: Readonly<Record<ChatRoleImportOutcomeKey, string>>
 export function chatRoleImportOutcomeCopy(reply: ChatRoleImportResolveReply, kind: ChatRoleImportRow['kind']): ChatRoleImportOutcomeKey
+export function chatRoleImportAlreadyHandled(error: unknown): boolean
+export function chatRoleImportSkipped(reply: ChatRoleImportResolveReply): boolean
+export function chatRoleImportDanger(row: ChatRoleImportRow, decision: ChatRoleImportDecision): boolean
 export function chatRoleImportGranted(reply: ChatRoleImportResolveReply, kind: ChatRoleImportRow['kind']): boolean
 export function chatRoleImportResolved(rows: readonly ChatRoleImportRow[], id: string): boolean
 export function chatRoleImportsUnsupported(error: unknown): boolean

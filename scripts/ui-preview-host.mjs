@@ -328,11 +328,15 @@ const chatRoles = [
 // UI_PREVIEW_IMPORTS=legacy: an older Host without the RPCs; =unknown: resolve never answers in time (结果未知).
 const importsMode = process.env.UI_PREVIEW_IMPORTS ?? 'items'
 const chatRoleImports = {
-  personalPending: [{ id: 'personal:u-alice:icqq:10007', consoleUserId: 'u-alice', adapter: 'icqq', userId: '10007', seenAt: Date.now() - 2 * 3_600_000 }],
+  personalPending: [{ id: '0a1b2c3d4e5f60718293a4b5', consoleUserId: 'u-alice', adapter: 'icqq', userId: '10007', seenAt: Date.now() - 2 * 3_600_000 }],
   pending: [
-    { id: 'icqq.endpoints[0].master:icqq:10008:endpoint:icqq/preview-community', source: 'icqq.endpoints[0].master', level: 'endpoint', key: 'icqq/preview-community',
+    { id: '1b2c3d4e5f60718293a4b5c6', source: 'icqq.endpoints[0].master', level: 'endpoint', key: 'icqq/preview-community',
       adapter: 'icqq', userId: '10008', role: 'owner', seenAt: Date.now() - 3_600_000 },
-    { id: 'ai.trigger.trusted:icqq:10000:global:', source: 'ai.trigger.trusted', level: 'global', key: '', adapter: 'icqq', userId: '10000', role: 'trusted', seenAt: Date.now() - 3_600_000 },
+    { id: '2c3d4e5f60718293a4b5c6d7', source: 'ai.trigger.trusted', level: 'global', key: '', adapter: 'icqq', userId: '10000', role: 'trusted', seenAt: Date.now() - 3_600_000 },
+    // An adapter that is not loaded: importing it answers skipped / unknown-adapter (and still leaves the list).
+    { id: '3d4e5f60718293a4b5c6d7e8', source: 'discord.endpoints[0].master', level: 'adapter', key: 'discord', adapter: 'discord', userId: '55501', role: 'owner', seenAt: Date.now() - 3_600_000 },
+    // A scope key this Console cannot read: shown as 无法识别的条目, ignorable by id.
+    { id: '4e5f60718293a4b5c6d7e8f9', source: 'legacy.masters', level: 'endpoint', key: 'icqq', adapter: 'icqq', userId: '10010', role: 'trusted', seenAt: Date.now() - 3_600_000 },
   ],
 }
 // People behind chat identities (ADR 0060 §7): chat-principals.list, chat-identities.recent|me|bind-code.create.
@@ -502,7 +506,7 @@ const attentionItems = en => [
     title: en ? 'MCP server web-search failed to connect' : 'MCP 服务 web-search 连接失败', detail: en ? 'Authentication failed: HTTP 401. The Agent cannot use its tools for now.' : '认证失败：HTTP 401。Agent 暂时无法调用它提供的工具。',
     action: { label: en ? 'Open MCP' : '查看 MCP', path: '/introspection?tab=mcp' } },
   { id: 'chat-roles.import-pending', revision: 'g1', kind: 'chat-roles.import-pending', severity: 'warning', source: 'chat-roles', since: attentionAt(60),
-    title: en ? '3 people lists or identity links in the configuration wait for confirmation' : '配置中有 3 条人员名单或身份链接等待确认',
+    title: en ? '5 people lists or identity links in the configuration wait for confirmation' : '配置中有 5 条人员名单或身份链接等待确认',
     detail: en ? 'Nothing is granted until you "Import" or "Ignore" each one.' : '逐条「导入」或「忽略」前不会授予任何角色或关联。',
     links: [{ consoleUserId: 'u-alice', identities: [{ adapter: 'icqq', userIdTail: '0007' }] }],
     action: { label: en ? 'Review imports' : '去处理', path: '/scope?tab=roles' } },
@@ -958,11 +962,13 @@ const server = createServer(async (request, response) => {
       if (importsMode === 'unknown') { await new Promise(resolve => setTimeout(resolve, 300)); json({ success: false, code: 'instance_timeout', error: 'The instance did not answer in time' }, 504); return }
       const personal = chatRoleImports.personalPending.find(row => row.id === body.id)
       const role = chatRoleImports.pending.find(row => row.id === body.id)
-      if (!personal && !role) { json(envelope({ status: 'unchanged' })); return }
+      if (!/^[0-9a-f]{24}$/u.test(String(body.id ?? ''))) { json({ success: false, error: 'id 必须是导入候选的 id', type }, 400); return }
+      if (!personal && !role) { json({ success: false, error: '没有这个待确认的导入候选（可能已被处理）', type }, 404); return }
       chatRoleImports.personalPending = chatRoleImports.personalPending.filter(row => row.id !== body.id)
       chatRoleImports.pending = chatRoleImports.pending.filter(row => row.id !== body.id)
       if (body.decision === 'ignore') { json(envelope({ status: 'ignored' })); return }
       // The global owner icqq/10000 already holds a higher role than trusted: kept.
+      if (role?.adapter === 'discord') { json(envelope({ status: 'imported', result: 'skipped', reason: 'unknown-adapter' })); return }
       json(envelope({ status: 'imported', result: role?.userId === '10000' ? 'kept' : 'written' })); return
     }
     if (type === 'chat-roles.grant' || type === 'chat-roles.revoke') {
