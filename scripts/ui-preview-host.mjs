@@ -109,7 +109,7 @@ const decisions = [decisionRow(11, {}), decisionRow(42, { outcome: 'deny', reaso
 // profileName / accountLabel are left out where the Host cannot name them. UI_PREVIEW_USAGE=legacy
 // answers like an instance before batch 58: none of those fields, `compare` ignored (the Console then
 // asks for the previous window itself). UI_PREVIEW_USAGE=truncated sends a `previous` cut short
-// (`truncated: true`), which the Console replaces with its own request.
+// (`truncated: true`, as only near the epoch), which the Console shows without a change (no second request).
 const legacyUsage = process.env.UI_PREVIEW_USAGE === 'legacy'
 const truncatedPrevious = process.env.UI_PREVIEW_USAGE === 'truncated'
 const USAGE_SERVICES = {
@@ -127,7 +127,7 @@ const usageModels = [
 const usageSessionRows = [
   { sessionKey: 'icqq:preview-community:group:20001', platform: 'icqq', endpoint: 'preview-community', scope: 'group', sceneId: '20001', displayName: 'icqq · 群 产品试验群', turns: 6, calls: 9, inputTokens: 18_400, outputTokens: 2_100, cacheReadTokens: 9_800,
     v2: { scopeKind: 'group', sceneLabel: '产品试验群', accountLabel: '社区号' } },
-  // The same group name on another account: told apart by the short key.
+  // The same group name on another account: told apart by the account name.
   { sessionKey: 'icqq:preview-support:group:20001', platform: 'icqq', endpoint: 'preview-support', scope: 'group', sceneId: '20001', displayName: 'icqq · 群 产品试验群', turns: 2, calls: 3, inputTokens: 5_600, outputTokens: 700, cacheReadTokens: 2_900,
     v2: { scopeKind: 'group', sceneLabel: '产品试验群', accountLabel: '客服号' } },
   { sessionKey: 'icqq:preview-community:private:10001', platform: 'icqq', endpoint: 'preview-community', scope: 'private', sceneId: '10001', displayName: 'icqq · 私聊 演示用户', turns: 2, calls: 3, inputTokens: 4_200, outputTokens: 600, cacheReadTokens: 1_100,

@@ -1,6 +1,6 @@
 import { useI18n } from '../i18n'
 import { ConversationKindBadge } from './features/conversation-list'
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Copy, Cpu, Layers, Sigma, Zap } from 'lucide-react'
 import { copyText } from './clipboard-copy.mjs'
 import {
@@ -67,12 +67,12 @@ export type UsageSelection =
 /** Main name (one line, full name on hover) and, for same-named rows, a greyed qualifier visible at every width. */
 export function UsageName({ name, qualifier, secondary, className }: { name: string; qualifier?: string; secondary?: string; className?: string }) {
   return (
-    <span className={cn('flex min-w-0 flex-wrap items-baseline gap-1.5', className)}>
+    <span className={cn('flex min-w-0 flex-wrap items-baseline gap-2', className)}>
       <Tooltip>
         <TooltipTrigger asChild><span className="min-w-0 max-w-full truncate font-medium text-foreground">{name}</span></TooltipTrigger>
         <TooltipContent className="max-w-xs break-words text-xs">{name}</TooltipContent>
       </Tooltip>
-      {qualifier ? <span className="min-w-0 max-w-full truncate font-mono text-xs font-normal text-muted-foreground">{qualifier}</span> : null}
+      {qualifier ? <span className="min-w-0 max-w-full truncate text-xs font-normal text-muted-foreground">{qualifier}</span> : null}
       {secondary ? <span className="min-w-0 shrink truncate text-xs font-normal text-muted-foreground">{secondary}</span> : null}
     </span>
   )
@@ -93,11 +93,24 @@ export function DeltaText({ current, previous, points = false }: { current: numb
   )
 }
 
+/** How long 「已复制」 stays before the button reads 「复制 ID」 again. */
+export const COPIED_RESET_MS = 2000
+
 /** Raw ids of a row, grouped so every count matches what is listed; copy puts all of them on the clipboard. */
 function UsageIdList({ groups }: { groups: Array<{ kind: string; ids: string[] }> }) {
   const i18n = useI18n()
   const [copied, setCopied] = useState(false)
   const all = groups.flatMap(group => group.ids)
+  const idsKey = all.join('\n')
+  // 「已复制」 belongs to the ids it copied: another row's ids start at 「复制 ID」 again.
+  const [copiedFor, setCopiedFor] = useState(idsKey)
+  if (copiedFor !== idsKey) { setCopiedFor(idsKey); setCopied(false) }
+  // …and it reverts after a moment, so a later copy shows its own confirmation.
+  useEffect(() => {
+    if (!copied) return
+    const timer = setTimeout(() => setCopied(false), COPIED_RESET_MS)
+    return () => clearTimeout(timer)
+  }, [copied])
   if (!all.length) return null
   const heading: Record<string, string> = { keys: "统计键（{0}）", services: "服务 / 账号 ID（{0}）", session: "会话键", agent: "Agent 键", purpose: "用途键" }
   return (
@@ -151,7 +164,7 @@ export function UsageBasisHint({ stats }: { stats: UsageStats }) {
   const i18n = useI18n()
   return (
     <InfoHint label={i18n.t("统计口径")} className="text-xs text-muted-foreground">
-      <ul className="max-w-sm space-y-1.5 text-xs">
+      <ul className="max-w-sm space-y-2 text-xs">
         <li>{i18n.t("来自回合追踪文件，覆盖 {0} 至 {1}", [new Date(stats.range.since).toLocaleString(i18n.locale), new Date(stats.range.until).toLocaleString(i18n.locale)])}</li>
         <li>{timeZoneNote(stats.range.timeZone, i18n.t)}</li>
         <li>{i18n.t("总 tokens = 输入 + 输出。输入是每次模型调用的实际输入之和，工具循环里的多次调用都计入。")}</li>
@@ -231,23 +244,27 @@ function UsageAlerts({ stats }: { stats: UsageStats }) {
 
 const numbers = (row: Counts, t: Translate, locale: ReturnType<typeof useI18n>["locale"]) => `${t("输入 {0}", [formatTokens(row.inputTokens, locale)])} · ${t("缓存命中 {0}", [formatPercent(cacheRatio(row), locale)])}`
 
-/** One row of a narrow list: name line, key numbers line, share bar; the rest is in the Sheet. */
+/**
+ * One row of a narrow list: name line, key numbers line (the share included, so the button's text
+ * says it), share bar; the rest is in the Sheet.
+ */
 function CompactRow({ name, qualifier, row, share, onOpen }: { name: string; qualifier?: string; row: Counts; share: number; onOpen: () => void }) {
   const i18n = useI18n()
+  const owner = qualifier ? `${name} ${qualifier}` : name
   return (
     <li>
-      <ListItemButton className="block w-full min-w-0 space-y-1.5 rounded-lg border border-[color:var(--console-border-subtle)] px-3 py-2.5 text-left hover:bg-muted/50" onClick={onOpen}>
+      <ListItemButton className="block w-full min-w-0 space-y-1 rounded-lg border border-[color:var(--console-border-subtle)] px-3 py-3 text-left hover:bg-muted/50" onClick={onOpen}>
         <UsageName name={name} qualifier={qualifier} />
-        <span className="block text-xs text-muted-foreground">{numbers(row, i18n.t, i18n.locale)}</span>
-        <ProgressMeter value={Math.round(share * 100)} label={i18n.t("占比")} />
+        <span className="block text-xs text-muted-foreground">{`${numbers(row, i18n.t, i18n.locale)} · ${i18n.t("占比 {0}", [formatPercent(share, i18n.locale)])}`}</span>
+        <ProgressMeter value={Math.round(share * 100)} label={i18n.t("{0} 占比", [owner])} />
       </ListItemButton>
     </li>
   )
 }
 
-function ShareCell({ share }: { share: number }) {
+function ShareCell({ share, name }: { share: number; name: string }) {
   const i18n = useI18n()
-  return <TableCell priority="secondary" className="w-32"><ProgressMeter value={Math.round(share * 100)} showValue label={i18n.t("占比")} /></TableCell>
+  return <TableCell priority="secondary" className="w-32"><ProgressMeter value={Math.round(share * 100)} showValue label={i18n.t("{0} 占比", [name])} /></TableCell>
 }
 
 function NameButton({ onOpen, children }: { onOpen: () => void; children: ReactNode }) {
@@ -295,7 +312,7 @@ function ModelTable({ groups, total, narrow, open }: { groups: UsageServiceGroup
               <TableCell numeric>{formatTokens(group.inputTokens, i18n.locale)}</TableCell>
               <TableCell numeric>{formatTokens(group.outputTokens, i18n.locale)}</TableCell>
               <TableCell numeric>{formatPercent(cacheRatio(group), i18n.locale)}</TableCell>
-              <ShareCell share={group.share} />
+              <ShareCell share={group.share} name={group.name} />
             </TableRow>,
             ...(isOpen ? group.models.map(row => (
               <TableRow key={`m:${row.model}`} className="cursor-pointer text-muted-foreground hover:bg-muted/50" onClick={() => open({ kind: 'model', key: row.model })}>
@@ -309,7 +326,7 @@ function ModelTable({ groups, total, narrow, open }: { groups: UsageServiceGroup
                 <TableCell numeric>{formatTokens(row.inputTokens, i18n.locale)}</TableCell>
                 <TableCell numeric>{formatTokens(row.outputTokens, i18n.locale)}</TableCell>
                 <TableCell numeric>{formatPercent(cacheRatio(row), i18n.locale)}</TableCell>
-                <ShareCell share={share(row)} />
+                <ShareCell share={share(row)} name={row.model} />
               </TableRow>
             )) : []),
           ]
@@ -330,9 +347,11 @@ function SessionTable({ stats, narrow, open }: { stats: UsageStats; narrow: bool
     if (key === sortKey) setSortDir(sortDir === 'desc' ? 'asc' : 'desc')
     else { setSortKey(key); setSortDir('desc') }
   }
-  const header = (key: SortKey, label: string, priority?: 'secondary') => <TableHead numeric priority={priority}>
-    <Button type="button" variant="ghost" size="sm" className="-mr-3" onClick={() => toggleSort(key)} aria-label={i18n.t("按{0}排序", [label])}>
-      {label}{sortKey === key ? (sortDir === 'desc' ? <ArrowDown /> : <ArrowUp />) : null}
+  // The column's sort state is on the header (`aria-sort`); the button keeps its visible text as its name.
+  const header = (key: SortKey, label: string, priority?: 'secondary') => <TableHead numeric priority={priority}
+    aria-sort={sortKey === key ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}>
+    <Button type="button" variant="ghost" size="sm" className="-mr-3" onClick={() => toggleSort(key)}>
+      {label}{sortKey === key ? (sortDir === 'desc' ? <ArrowDown aria-hidden="true" /> : <ArrowUp aria-hidden="true" />) : null}
     </Button>
   </TableHead>
   return <>
@@ -424,7 +443,7 @@ function DimensionTable({ rows, total, narrow, nameOf, open }: { rows: Array<Cou
             <TableCell numeric>{formatTokens(row.inputTokens, i18n.locale)}</TableCell>
             <TableCell numeric priority="secondary">{formatTokens(row.outputTokens, i18n.locale)}</TableCell>
             <TableCell numeric>{formatPercent(cacheRatio(row), i18n.locale)}</TableCell>
-            <ShareCell share={share(row)} />
+            <ShareCell share={share(row)} name={nameOf(row.key)} />
           </TableRow>
         ))}
       </TableBody>
@@ -450,7 +469,7 @@ function UsageDetailSheet({ stats, groups, selection, narrow, onClose, onPickSes
     if (group) {
       title = group.name; kindLabel = t("服务"); row = group
       extra = [
-        { key: 'models', label: t("模型"), value: group.models.map(model => model.modelName ?? model.model).join('、') },
+        { key: 'models', label: t("模型"), value: new Intl.ListFormat(locale, { type: 'conjunction', style: 'narrow' }).format(group.models.map(model => model.modelName ?? model.model)) },
         ...(group.driverLabel ? [{ key: 'driver', label: t("驱动"), value: group.driverLabel }] : []),
       ]
       idGroups = [{ kind: 'services', ids: group.providerIds }].filter(item => item.ids.length)
@@ -509,7 +528,7 @@ function UsageDetailSheet({ stats, groups, selection, narrow, onClose, onPickSes
           <SheetTitle className="break-words">{title}</SheetTitle>
           <SheetDescription>{kindLabel}</SheetDescription>
         </SheetHeader>
-        <SheetBody className="space-y-5">
+        <SheetBody className="space-y-6">
           <KeyValueList items={items} columns={2} />
           {idGroups.length ? <div className="space-y-2 border-t border-[color:var(--console-border-subtle)] pt-4"><p className="text-sm font-medium">{t("原始 ID")}</p><UsageIdList groups={idGroups} /></div> : null}
         </SheetBody>
@@ -543,7 +562,8 @@ function UsageDetails({ stats, groups, narrow, view, onViewChange, open }: {
         <DimensionSwitch value={active} onChange={onViewChange} options={options} label={i18n.t("明细维度")} narrow={narrow} />
       </CardHeader>
       <CardContent>
-        {active === 'models' ? <ModelTable groups={groups} total={total} narrow={narrow} open={open} />
+        {/* Another range starts with the first service open again. */}
+        {active === 'models' ? <ModelTable key={`${stats.range.since}:${stats.range.until}`} groups={groups} total={total} narrow={narrow} open={open} />
           : active === 'sessions' ? <SessionTable stats={stats} narrow={narrow} open={open} />
             : active === 'agents' ? <DimensionTable rows={caps.agents.map((row: UsageAgentRow) => ({ ...row, key: row.agent }))} total={total} narrow={narrow} nameOf={key => usageAgentLabel({ agent: key }, i18n.locale)} open={key => open({ kind: 'agent', key })} />
               : <DimensionTable rows={caps.purposes.map((row: UsagePurposeRow) => ({ ...row, key: row.purpose }))} total={total} narrow={narrow} nameOf={key => usagePurposeLabel({ purpose: key }, i18n.locale)} open={key => open({ kind: 'purpose', key })} />}
@@ -619,6 +639,10 @@ export function UsageReport({ stats, previous, view, onViewChange, onPickSession
   // Below 40rem of the report's own width (ADR 0063 D18): selects instead of tabs, one compact card per row.
   const narrow = useContainerAtLeast(root, 40) === false
   const [selection, setSelection] = useState<UsageSelection | null>(initialSelection)
+  // A row of the previous range has no place in another range: close its Sheet.
+  const rangeKey = `${stats.range.since}:${stats.range.until}`
+  const [selectionRange, setSelectionRange] = useState(rangeKey)
+  if (selectionRange !== rangeKey) { setSelectionRange(rangeKey); setSelection(null) }
   const groups = useMemo(() => usageServiceGroups(stats.byModel, i18n.locale), [stats.byModel, i18n.locale])
   const cacheAlert = Boolean(promptCacheNotices(stats, i18n.locale)?.hints.length)
   return (

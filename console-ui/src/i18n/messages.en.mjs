@@ -2547,7 +2547,6 @@ export const englishMessages = Object.freeze({
 "会话 ID": "Conversation ID",
 "回合": "Turns",
 "调用": "Calls",
-"按{0}排序": "Sort by {0}",
 "有 {0} 行用量记录无法解析，已忽略。": { one: "{0} usage line could not be parsed and was ignored.", other: "{0} usage lines could not be parsed and were ignored." },
 "图例": "Legend",
 "其他": "Other",

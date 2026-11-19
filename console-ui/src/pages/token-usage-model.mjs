@@ -224,7 +224,8 @@ export function mergeUsageModels(stats, locale = 'zh-CN') {
     const base = usageModelLabel(row, modelLabels, locale)
     const driver = label(row.driverLabel)
     const split = (drivers.get(base)?.size ?? 0) > 1 && driver
-    const service = split ? `${usageProviderLabel(row, locale)}（${driver}）` : usageProviderLabel(row, locale)
+    // 「服务（驱动）」 in Chinese, 「Service (Driver)」 in English.
+    const service = split ? translate(locale, '{0}（{1}）', [usageProviderLabel(row, locale), driver]) : usageProviderLabel(row, locale)
     const modelName = label(row.modelLabel) || label(row.model)
     const display = split ? `${service} · ${modelName}` : base
     rename.set(raw, display)
@@ -293,9 +294,15 @@ const HASHED_KEY = /^([a-z][a-z-]*):v\d+:([0-9a-f]{16,})$/u
 const HASHED_NAMES = Object.freeze({ 'personal-session': '私聊会话', 'scene-task': '场景任务' })
 /** Origins that are not an IM conversation (`bySession[].scopeKind`, zhin 第 58 批). */
 const ORIGIN_NAMES = Object.freeze({ http: 'HTTP', a2a: 'A2A', mcp: 'MCP' })
-/** 「平台 · 群 名称」 as an older Host writes `displayName`: the type word is Chinese whatever the UI language. */
-const CHINESE_SCOPE_LABEL = /^(.+?) · (群|私聊|频道) (.+)$/u
+/**
+ * 「平台 · 群 名称」 as an older Host writes `displayName` (the name may be missing: 「平台 · 群」): the
+ * type word is Chinese whatever the UI language.
+ */
+const CHINESE_SCOPE_LABEL = /^(.+?) · (群|私聊|频道)(?: (.+))?$/u
 const CHINESE_SCOPE_KINDS = Object.freeze({ 群: 'group', 私聊: 'private', 频道: 'channel' })
+/** 「定时任务 名称」/「内部任务 名称」/「内部 名称」 of an older Host, the name optional. */
+const CHINESE_TASK_LABEL = /^(定时任务|内部任务|内部)(?: (.+))?$/u
+const CHINESE_TASK_MESSAGES = Object.freeze({ 定时任务: '定时任务 {0}', 内部任务: '内部任务 {0}', 内部: '内部任务 {0}' })
 
 /** Long keys keep their head and tail: `abcdefghij…uvwxyz`. */
 function middleEllipsis(text, max = 32) {
@@ -354,7 +361,10 @@ export function usageSessionLabel(row, locale = 'zh-CN') {
   const own = label(row?.displayName) || label(row?.label) || label(row?.name)
   if (own) {
     const chinese = CHINESE_SCOPE_LABEL.exec(own)
-    return chinese ? `${chinese[1]} · ${scopeWord(CHINESE_SCOPE_KINDS[chinese[2]], locale)} ${chinese[3]}` : own
+    if (chinese) return `${chinese[1]} · ${`${scopeWord(CHINESE_SCOPE_KINDS[chinese[2]], locale)} ${chinese[3] ?? ''}`.trim()}`
+    const task = CHINESE_TASK_LABEL.exec(own)
+    if (task) return translate(locale, CHINESE_TASK_MESSAGES[task[1]], [task[2] ?? '']).trim()
+    return own
   }
   const key = String(row?.sessionKey ?? '')
   const hashed = HASHED_KEY.exec(key)
@@ -366,7 +376,7 @@ export function usageSessionLabel(row, locale = 'zh-CN') {
 }
 
 /**
- * Short key that tells same-named sessions apart: the Host's `shortKey` (zhin 第 58 批), else the
+ * Short key of a session row for its tooltip / detail (never a name qualifier): the Host's `shortKey` (zhin 第 58 批), else the
  * first 8 hex digits of a hashed key, else the key shortened in the middle.
  */
 export function usageSessionShortKey(row) {
@@ -377,34 +387,42 @@ export function usageSessionShortKey(row) {
   return hashed ? `${hashed[1]}:${hashed[2].slice(0, 8)}` : middleEllipsis(key, 24)
 }
 
+/** The account's display name (`accountLabel`) when it is a real name: never an opaque id or the raw endpoint. */
+function readableAccountName(row) {
+  const own = label(row?.accountLabel)
+  if (!own || hasOpaqueId(own) || isOpaqueProviderId(own)) return ''
+  const parts = splitSessionKey(row ?? {})
+  return own === label(parts.endpoint) || own === label(row?.shortKey) || own === label(row?.sessionKey) ? '' : own
+}
+
 /**
- * Names of a list of session rows: `name` per row, and `qualifier` (the short key, shown greyed out
- * after the name — on phones too, not only in a tooltip) for every row whose name another row of the
- * list shares (several HTTP sessions, groups with one name on different accounts).
+ * Names of a list of session rows: `name` per row, and `qualifier` (shown greyed out after the name —
+ * on phones too, not only in a tooltip) for every row whose name another row of the list shares
+ * (several HTTP sessions, groups with one name on different accounts). The qualifier is readable:
+ * the account's display name (`accountLabel`) when it tells the row apart, else its position among
+ * the rows of that name (「#1」/「#2」, in list order — the Host sends them by usage). Raw keys,
+ * short keys and endpoints never become a qualifier: they belong in the tooltip and the Sheet.
  */
 export function usageSessionNames(rows, locale = 'zh-CN') {
   const names = new Map()
-  const count = new Map()
+  const byName = new Map()
   for (const row of rows ?? []) {
     const name = usageSessionLabel(row, locale)
     names.set(row.sessionKey, name)
-    count.set(name, (count.get(name) ?? 0) + 1)
+    byName.set(name, [...(byName.get(name) ?? []), row])
+  }
+  const qualifiers = new Map()
+  for (const group of byName.values()) {
+    if (group.length < 2) continue
+    const accounts = group.map(readableAccountName)
+    const uses = new Map()
+    for (const account of accounts) if (account) uses.set(account, (uses.get(account) ?? 0) + 1)
+    group.forEach((row, index) => {
+      const account = accounts[index]
+      qualifiers.set(row.sessionKey, account && uses.get(account) === 1 ? account : translate(locale, '#{0}', [index + 1]))
+    })
   }
   const result = new Map()
-  const qualifiers = new Map()
-  for (const row of rows ?? []) {
-    const name = names.get(row.sessionKey)
-    if (count.get(name) > 1) qualifiers.set(row.sessionKey, usageSessionShortKey(row))
-  }
-  // Shortened keys can still collide (`icqq:preview…group:20001` on two accounts): then the part
-  // that differs — the account of a `platform:endpoint:scope:sceneId` key — or the whole short key.
-  const seen = new Map()
-  for (const value of qualifiers.values()) seen.set(value, (seen.get(value) ?? 0) + 1)
-  for (const row of rows ?? []) {
-    if (!qualifiers.has(row.sessionKey) || seen.get(qualifiers.get(row.sessionKey)) < 2) continue
-    const endpoint = splitSessionKey(row).endpoint
-    qualifiers.set(row.sessionKey, endpoint ? middleEllipsis(endpoint, 24) : label(row.shortKey) || String(row.sessionKey))
-  }
   for (const row of rows ?? []) result.set(row.sessionKey, { name: names.get(row.sessionKey), qualifier: qualifiers.get(row.sessionKey) ?? '' })
   return result
 }
@@ -688,8 +706,9 @@ function isTokenRow(row) {
 export function previousUsageInput(input, stats) {
   if (!input || !isCount(input.since) || !isCount(input.until) || input.since >= input.until) return null
   const length = input.until - input.since
-  const since = Math.max(0, input.since - length)
-  if (since >= input.since) return null
+  const since = input.since - length
+  // A window cut short by the epoch would compare unlike lengths: no previous window then.
+  if (since < 0) return null
   const timeZone = label(input.timeZone) || label(stats?.range?.timeZone)
   return { since, until: input.since, bucket: input.bucket, ...(input.session ? { session: input.session } : {}), ...(timeZone ? { timeZone } : {}) }
 }
@@ -710,12 +729,14 @@ export function hostPreviousTotals(stats) {
 
 /**
  * Where the summary's 「较上一周期」 comes from: `{ totals }` — the Host's `previous` (no further
- * request); `{ request }` — the RPC input of the previous window, only when the Host cut its window
- * short or sent none (an older Host); `{}` — no previous window exists (the range starts at the epoch).
+ * request); `{ request }` — the RPC input of the previous window, only when the Host sent none (an
+ * older Host); `{}` — no change to show: the Host cut its window short (`truncated: true`, only near
+ * the epoch — asking again would return the same short window), or no full previous window exists.
  */
 export function previousUsagePlan(stats, input) {
   const totals = hostPreviousTotals(stats)
   if (totals) return { totals }
+  if (isPlainObject(stats?.previous) && stats.previous.truncated === true) return {}
   const request = previousUsageInput(input, stats)
   return request ? { request } : {}
 }

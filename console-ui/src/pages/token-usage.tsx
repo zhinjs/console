@@ -34,8 +34,9 @@ type SessionOption = { value: string; label: string; description?: string }
 
 /**
  * 「机器人 → Token 用量」：读 plugin.root.usage-stats（只读）。汇总带「较上一周期」：Host 带回完整的 `previous`
- * （`compare: 'previous'`，zhin 第 58 批，31 天以内都不截短）时直接用它；只有它被截短或旧 Host 没给时，
- * Console 才再请求一次紧挨在前、等长的窗口（与主请求同一时区）。
+ * （`compare: 'previous'`，zhin 第 58 批，31 天以内都不截短）时直接用它；Host 截短了它（只在接近 epoch 时）
+ * 就不显示环比（再请求只会拿到同样的短窗口）；只有旧 Host 没给时，Console 才再请求一次紧挨在前、等长的窗口
+ * （与主请求同一时区）。
  * 范围（range）和明细维度（view）写进 URL，便于分享。
  */
 export default function TokenUsagePage() {

@@ -66,4 +66,7 @@ export const usageNameMessages = Object.freeze({
   "授权判断": "Authorization check",
   "准备": "Preparation",
   "全部会话": "All sessions",
+  "#{0}": "#{0}",
+  "{0} 占比": "{0} share",
+  "占比 {0}": "Share {0}",
 })
