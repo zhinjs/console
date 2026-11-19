@@ -4,9 +4,10 @@ import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react'
 import { StatusState } from '../components/StatusState'
 import { ScopeFilterBar, useScopeFilter } from './insights/ScopeFilterBar'
 import { usageSessionPattern } from './insights/scope-filter.mjs'
-import { ArrowDown, ArrowDownToLine, ArrowUp, ArrowUpFromLine, Cpu, Layers, RefreshCw, X, Zap } from 'lucide-react'
+import { ArrowDown, ArrowDownToLine, ArrowUp, ArrowUpFromLine, Copy, Cpu, Layers, RefreshCw, X, Zap } from 'lucide-react'
+import { copyText } from './clipboard-copy.mjs'
 import { pluginRpc } from '../utils/plugin-rpc'
-import { Alert, AlertDescription, AlertTitle, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, DateTimeField, ErrorAlert, Input, ListItemButton, PageHeader, PageShell, SelectField, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
+import { Alert, AlertDescription, AlertTitle, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, DateTimeField, ErrorAlert, InfoHint, InlineCode, Input, ListItemButton, PageHeader, PageShell, SelectField, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tooltip, TooltipContent, TooltipTrigger } from '@zhin.js/console-ui'
 import { CacheLineChart, ModelBars, ModelLegend, SegmentDonut, StackedBarChart } from './token-usage-charts'
 import {
   USAGE_BUCKETS,
@@ -28,6 +29,7 @@ import {
   splitSessionKey,
   toLocalDateTime,
   topModelKeys,
+  usageModelIds,
   usageSessionLabel,
   validateUsageStats,
   type UsageFilter,
@@ -64,6 +66,27 @@ function Metric({
       ) : null}
       {hint ? <span className="text-xs text-muted-foreground">{hint}</span> : null}
     </div>
+  )
+}
+
+/**
+ * The raw ids behind a model row (`services:<uuid>/model`, merged `accounts:` ids): never in the main
+ * view, only in this ⓘ panel, with a copy button.
+ */
+function UsageIdHint({ ids, merged }: { ids: string[]; merged: number }) {
+  const i18n = useI18n()
+  const [copied, setCopied] = useState(false)
+  if (!ids.length) return null
+  return (
+    <InfoHint label={i18n.t("ID")} className="shrink-0 text-xs font-normal text-muted-foreground">
+      <div className="space-y-2 text-xs">
+        <p className="text-muted-foreground">{merged > 1 ? i18n.t("合并自 {0} 个 ID", [merged]) : i18n.t("原始 ID")}</p>
+        <ul className="space-y-1">{ids.map(id => <li key={id}><InlineCode className="break-all">{id}</InlineCode></li>)}</ul>
+        <Button type="button" size="sm" variant="outline" onClick={() => { void copyText(ids.join('\n'), navigator.clipboard, document).then(ok => setCopied(ok)) }}>
+          <Copy />{copied ? i18n.t("已复制") : i18n.t("复制 ID")}
+        </Button>
+      </div>
+    </InfoHint>
   )
 }
 
@@ -118,8 +141,8 @@ export default function TokenUsagePage() {
     pluginRpc<unknown>('root', USAGE_METHOD, built.input as unknown as Record<string, unknown>)
       .then(data => {
         if (cancelled) return
-        // One row per 「服务名 · 模型」 when the Host labels its models (#1250); raw keys otherwise.
-        setStats(mergeUsageModels(validateUsageStats(data, i18n.locale)))
+        // One row per 「服务名 · 模型」 (displayName / modelLabels); opaque ids never become a name.
+        setStats(mergeUsageModels(validateUsageStats(data, i18n.locale), i18n.locale))
         setError(null)
         setDenied(false)
         setUnavailable(null)
@@ -152,7 +175,7 @@ export default function TokenUsagePage() {
   const applySession = (value: string) => { setSessionDraft(value); setSession(value.trim()) }
 
   const empty = stats && stats.totals.calls === 0
-  const header = (key: SortKey, label: string) => <TableHead numeric>
+  const header = (key: SortKey, label: string, priority?: 'secondary') => <TableHead numeric priority={priority}>
     <Button type="button" variant="ghost" size="sm" className="-mr-3" onClick={() => toggleSort(key)} aria-label={i18n.t("按{0}排序", [label])}>
       {label}{sortKey === key ? (sortDir === 'desc' ? <ArrowDown /> : <ArrowUp />) : null}
     </Button>
@@ -249,7 +272,7 @@ export default function TokenUsagePage() {
               <div className="grid gap-3 lg:grid-cols-2">
                 <Card>
                   <CardHeader><CardTitle className="text-base">{i18n.t("按模型")}</CardTitle><CardDescription>{i18n.t("输入 / 输出 / 缓存读取，按输入从多到少。")}</CardDescription></CardHeader>
-                  <CardContent className="text-foreground"><ModelBars rows={stats.byModel} colors={view.colors} showWrite={view.showWrite} /></CardContent>
+                  <CardContent className="text-foreground"><ModelBars rows={stats.byModel} colors={view.colors} showWrite={view.showWrite} idHint={row => <UsageIdHint ids={usageModelIds(row)} merged={row.providerIds?.length ?? 0} />} /></CardContent>
                 </Card>
                 <Card>
                   <CardHeader><CardTitle className="text-base">{i18n.t("输入构成")}</CardTitle><CardDescription>{i18n.t("历史对话、固定提示词、用户输入各占多少。按每个回合的上下文预算估算（每回合一次），所以合计小于上方「总输入」。")}</CardDescription></CardHeader>
@@ -259,42 +282,53 @@ export default function TokenUsagePage() {
 
               <Card>
                 <CardHeader><CardTitle className="text-base">{i18n.t("用量最高的会话")}</CardTitle><CardDescription>{i18n.t("最多 50 个；点一行只看这个会话。")}</CardDescription></CardHeader>
-                <CardContent className="overflow-x-auto">
-                  <Table className="min-w-[720px]">
-                      <TableHeader>
-                        <TableRow className="hover:bg-transparent">
-                          <TableHead>{i18n.t("平台")}</TableHead>
-                          {view.showEndpoint ? <TableHead>{i18n.t("账号")}</TableHead> : null}
-                          <TableHead>{i18n.t("类型")}</TableHead>
-                          <TableHead>{i18n.t("会话")}</TableHead>
-                          {header('turns', i18n.t("回合"))}
-                          {header('calls', i18n.t("调用"))}
-                          {header('inputTokens', i18n.t("输入"))}
-                          {header('outputTokens', i18n.t("输出"))}
-                          {header('cacheReadTokens', i18n.t("缓存读取"))}
-                          {header('cache', i18n.t("缓存命中率"))}
-                          {view.showWrite ? <TableHead numeric>{i18n.t("缓存写入")}</TableHead> : null}
+                {/* No minimum width: below 40rem the console-ui Table turns rows into cards and keeps only the
+                    primary columns (name, input, cache hit), so nothing sits off screen at 375px (ADR 0063 D18-6). */}
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead>{i18n.t("会话")}</TableHead>
+                        <TableHead priority="secondary">{i18n.t("平台")}</TableHead>
+                        {view.showEndpoint ? <TableHead priority="secondary">{i18n.t("账号")}</TableHead> : null}
+                        <TableHead priority="secondary">{i18n.t("类型")}</TableHead>
+                        {header('turns', i18n.t("回合"), 'secondary')}
+                        {header('calls', i18n.t("调用"), 'secondary')}
+                        {header('inputTokens', i18n.t("输入"))}
+                        {header('outputTokens', i18n.t("输出"), 'secondary')}
+                        {header('cacheReadTokens', i18n.t("缓存读取"), 'secondary')}
+                        {header('cache', i18n.t("缓存命中率"))}
+                        {view.showWrite ? <TableHead numeric priority="secondary">{i18n.t("缓存写入")}</TableHead> : null}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sessions.map(row => {
+                        const parts = splitSessionKey(row)
+                        const name = usageSessionLabel(row, i18n.locale)
+                        return <TableRow key={row.sessionKey} className="cursor-pointer hover:bg-muted/50" onClick={() => pickSession(row)}>
+                          <TableCell className="min-w-0 text-sm">
+                            {/* The session key (hashed keys included) only shows on hover. */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <ListItemButton className="min-w-0 max-w-full truncate text-left font-medium underline-offset-2 hover:underline" onClick={event => { event.stopPropagation(); pickSession(row) }}>{name}</ListItemButton>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs break-all font-mono text-xs">{row.sessionKey}</TooltipContent>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell priority="secondary">{parts.platform || '—'}</TableCell>
+                          {view.showEndpoint ? <TableCell priority="secondary">{parts.endpoint || '—'}</TableCell> : null}
+                          <TableCell priority="secondary">{parts.scope === 'group' || parts.scope === 'private' || parts.scope === 'channel' ? <ConversationKindBadge kind={parts.scope} /> : parts.scope || '—'}</TableCell>
+                          <TableCell numeric priority="secondary">{formatTokens(row.turns, i18n.locale)}</TableCell>
+                          <TableCell numeric priority="secondary">{formatTokens(row.calls, i18n.locale)}</TableCell>
+                          <TableCell numeric>{formatTokens(row.inputTokens, i18n.locale)}</TableCell>
+                          <TableCell numeric priority="secondary">{formatTokens(row.outputTokens, i18n.locale)}</TableCell>
+                          <TableCell numeric priority="secondary">{formatTokens(row.cacheReadTokens, i18n.locale)}</TableCell>
+                          <TableCell numeric>{formatPercent(cacheRatio(row), i18n.locale)}</TableCell>
+                          {view.showWrite ? <TableCell numeric priority="secondary">{row.cacheWriteTokens ? formatTokens(row.cacheWriteTokens, i18n.locale) : '—'}</TableCell> : null}
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sessions.map(row => {
-                          const parts = splitSessionKey(row)
-                          return <TableRow key={row.sessionKey} className="cursor-pointer hover:bg-muted/50" title={row.sessionKey} onClick={() => pickSession(row)}>
-                            <TableCell>{parts.platform || '—'}</TableCell>
-                            {view.showEndpoint ? <TableCell>{parts.endpoint || '—'}</TableCell> : null}
-                            <TableCell>{parts.scope === 'group' || parts.scope === 'private' || parts.scope === 'channel' ? <ConversationKindBadge kind={parts.scope} /> : parts.scope || '—'}</TableCell>
-                            <TableCell className="break-all text-xs"><ListItemButton className="underline-offset-2 hover:underline" onClick={event => { event.stopPropagation(); pickSession(row) }}>{usageSessionLabel(row)}</ListItemButton>{usageSessionLabel(row) !== (parts.sceneId || row.sessionKey) ? <span className="block font-mono text-muted-foreground">{parts.sceneId || row.sessionKey}</span> : null}</TableCell>
-                            <TableCell numeric>{formatTokens(row.turns, i18n.locale)}</TableCell>
-                            <TableCell numeric>{formatTokens(row.calls, i18n.locale)}</TableCell>
-                            <TableCell numeric>{formatTokens(row.inputTokens, i18n.locale)}</TableCell>
-                            <TableCell numeric>{formatTokens(row.outputTokens, i18n.locale)}</TableCell>
-                            <TableCell numeric>{formatTokens(row.cacheReadTokens, i18n.locale)}</TableCell>
-                            <TableCell numeric>{formatPercent(cacheRatio(row), i18n.locale)}</TableCell>
-                            {view.showWrite ? <TableCell numeric>{row.cacheWriteTokens ? formatTokens(row.cacheWriteTokens, i18n.locale) : '—'}</TableCell> : null}
-                          </TableRow>
-                        })}
-                      </TableBody>
-                    </Table>
+                      })}
+                    </TableBody>
+                  </Table>
                 </CardContent>
               </Card>
             </>}

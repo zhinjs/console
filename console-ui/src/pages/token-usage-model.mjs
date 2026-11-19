@@ -130,49 +130,96 @@ export function modelKey(provider, model) {
 
 const label = value => (typeof value === 'string' && value.trim() ? value.trim() : '')
 
+/** `services:` / `accounts:` / `profiles:` ids are opaque (a UUID behind them): never a name to show. */
+const OPAQUE_ID = /(?:^|[\s(（·])(?:services|accounts|profiles):/u
+export function isOpaqueProviderId(provider) {
+  return typeof provider === 'string' && /^(?:services|accounts|profiles):/u.test(provider)
+}
+function hasOpaqueId(text) {
+  return OPAQUE_ID.test(text)
+}
+
 /**
- * Display name of a byModel row from the optional fields a newer Host adds (zhinjs/zhin#1250
- * `usage-model-labels`): `label` (「服务名 · 模型」), else `serviceLabel` + (`modelLabel` or `model`).
- * Empty when the Host sends neither: the row keeps its raw `provider/model` key.
+ * Service name of a byModel row / prompt-cache hint: the Host's `providerLabel` (or `label` on a
+ * hint), else the provider id when it is a readable driver name (`deepseek`), else 「未知服务」.
  */
-export function usageModelLabel(row) {
-  const own = label(row?.label)
-  if (own) return own
-  const service = label(row?.serviceLabel)
-  return service ? `${service} · ${label(row?.modelLabel) || row.model}` : ''
+export function usageProviderLabel(row, locale = 'zh-CN') {
+  const own = label(row?.providerLabel) || label(row?.serviceLabel)
+  if (own && !hasOpaqueId(own)) return own
+  const provider = label(row?.provider)
+  return provider && provider !== 'unknown' && !isOpaqueProviderId(provider) ? provider : translate(locale, '未知服务')
+}
+
+/**
+ * Display name of a byModel row, from what the Host sends (zhinjs/zhin `plugin.root.usage-stats`):
+ * `displayName` (「服务名 · 模型」), else `modelLabels["<provider>/<model>"]`, else `providerLabel` +
+ * model; older field names `label` / `serviceLabel` + `modelLabel` are still read. A name that is only
+ * the model (the Host could not resolve the service) or carries an opaque `services:<uuid>` id becomes
+ * 「未知服务 · 模型」: the raw id is never the main name.
+ */
+export function usageModelLabel(row, modelLabels, locale = 'zh-CN') {
+  if (!row) return ''
+  const model = label(row.modelLabel) || label(row.model)
+  const labels = isPlainObject(modelLabels) ? modelLabels : null
+  const candidates = [
+    label(row.displayName),
+    labels ? label(labels[modelKey(row.provider, row.model)]) : '',
+    label(row.label),
+  ]
+  for (const name of candidates) {
+    if (!name || hasOpaqueId(name)) continue
+    // Just the model: the Host had no service name for an opaque or unknown provider.
+    if (name === label(row.model) && !label(row.providerLabel)) break
+    return name
+  }
+  return `${usageProviderLabel(row, locale)} · ${model}`
+}
+
+/** A raw series key (`<provider>/<model>`) the byModel rows do not explain: named without its opaque id. */
+function seriesKeyLabel(key, modelLabels, locale) {
+  const mapped = isPlainObject(modelLabels) ? label(modelLabels[key]) : ''
+  if (mapped && !hasOpaqueId(mapped)) return mapped
+  const slash = key.indexOf('/')
+  if (slash <= 0) return key
+  return usageModelLabel({ provider: key.slice(0, slash), model: key.slice(slash + 1) }, modelLabels, locale)
 }
 
 const TOKEN_SUM_KEYS = ['calls', 'inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens']
 
 /**
- * Merges byModel rows that share a display name (the same model reached as `services:<id>` and
- * `accounts:<id>` is one row) and re-keys `series[].byModel` to match. Rows without a display name
- * stay as they are. Returns `stats` itself when no row has one (older Hosts).
+ * One row per display name (`usageModelLabel`): the same model reached as `services:<id>` and
+ * `accounts:<id>`, or two ids of a service with one name, become one row; `series[].byModel` is
+ * re-keyed to match. Merged rows keep their raw keys (`rawKeys`) and recorded provider ids
+ * (`providerIds`) for the detail view; the main view only shows `model` (the display name).
  */
-export function mergeUsageModels(stats) {
-  if (!stats || !stats.byModel.some(row => usageModelLabel(row))) return stats
+export function mergeUsageModels(stats, locale = 'zh-CN') {
+  if (!stats || !Array.isArray(stats.byModel)) return stats
+  const modelLabels = stats.modelLabels
   const rename = new Map()
   const merged = new Map()
   for (const row of stats.byModel) {
-    const display = usageModelLabel(row)
-    const key = display || modelKey(row.provider, row.model)
-    rename.set(modelKey(row.provider, row.model), key)
-    const into = merged.get(key)
+    const raw = modelKey(row.provider, row.model)
+    const display = usageModelLabel(row, modelLabels, locale)
+    rename.set(raw, display)
+    const ids = Array.isArray(row.providerIds) && row.providerIds.length ? row.providerIds.filter(id => typeof id === 'string') : [row.provider].filter(Boolean)
+    const into = merged.get(display)
     if (!into) {
-      merged.set(key, display ? { ...row, provider: '', model: display, rawKeys: [modelKey(row.provider, row.model)] } : { ...row })
+      merged.set(display, { ...row, provider: '', model: display, displayName: display, rawKeys: [raw], providerIds: [...new Set(ids)] })
       continue
     }
     for (const field of TOKEN_SUM_KEYS) {
       if (typeof row[field] === 'number' || typeof into[field] === 'number') into[field] = (into[field] ?? 0) + (row[field] ?? 0)
     }
-    into.rawKeys = [...(into.rawKeys ?? []), modelKey(row.provider, row.model)]
+    if (typeof row.claimsWithoutToolCall === 'number') into.claimsWithoutToolCall = (into.claimsWithoutToolCall ?? 0) + row.claimsWithoutToolCall
+    into.rawKeys = [...into.rawKeys, raw]
+    into.providerIds = [...new Set([...into.providerIds, ...ids])]
     // A per-row cache share cannot be summed; recompute from the merged counts.
     delete into.cacheShare
   }
   const series = stats.series.map(point => {
     const byModel = {}
     for (const [key, value] of Object.entries(point.byModel)) {
-      const target = rename.get(key) ?? key
+      const target = rename.get(key) ?? seriesKeyLabel(key, modelLabels, locale)
       byModel[target] = (byModel[target] ?? 0) + value
     }
     return { ...point, byModel }
@@ -180,12 +227,41 @@ export function mergeUsageModels(stats) {
   return { ...stats, byModel: [...merged.values()].sort((a, b) => b.inputTokens - a.inputTokens), series }
 }
 
+/** Raw ids behind a (merged) model row, for the hover / detail view: merge keys, then recorded provider ids. */
+export function usageModelIds(row) {
+  const keys = Array.isArray(row?.rawKeys) && row.rawKeys.length ? row.rawKeys : row ? [modelKey(row.provider, row.model)] : []
+  const ids = Array.isArray(row?.providerIds) ? row.providerIds : []
+  return [...new Set([...keys, ...ids].filter(id => typeof id === 'string' && id))]
+}
+
+const SCOPE_NAMES = Object.freeze({ group: '群', private: '私聊', direct: '私聊', channel: '频道', guild: '频道' })
+const HASHED_KEY = /^([a-z][a-z-]*):v\d+:([0-9a-f]{16,})$/u
+const HASHED_NAMES = Object.freeze({ 'personal-session': '私聊会话', 'scene-task': '场景任务' })
+
+/** Long keys keep their head and tail: `abcdefghij…uvwxyz`. */
+function middleEllipsis(text, max = 32) {
+  return text.length <= max ? text : `${text.slice(0, Math.ceil((max - 1) / 2))}…${text.slice(-Math.floor((max - 1) / 2))}`
+}
+
 /**
- * The name a session row shows: the Host's optional `label` / `displayName` / `name` (zhinjs/zhin#1250),
- * else the scene id from the session key, else the key itself.
+ * The name a session row shows: the Host's `displayName` (`label` / `name` from older shapes), else
+ * 「平台 · 类型 sceneId」 from a `platform:endpoint:scope:sceneId` key, else 「私聊会话 #前 8 位」 for a
+ * hashed key (`personal-session:v1:<sha>`), 「定时任务 …」 for `schedule:…`, else the key shortened in
+ * the middle. The full key belongs in a tooltip / detail, never in the main view.
  */
-export function usageSessionLabel(row) {
-  return label(row?.label) || label(row?.displayName) || label(row?.name) || splitSessionKey(row).sceneId || row.sessionKey
+export function usageSessionLabel(row, locale = 'zh-CN') {
+  const own = label(row?.displayName) || label(row?.label) || label(row?.name)
+  if (own) return own
+  const key = String(row?.sessionKey ?? '')
+  const hashed = HASHED_KEY.exec(key)
+  if (hashed) return `${translate(locale, HASHED_NAMES[hashed[1]] ?? '会话')} #${hashed[2].slice(0, 8)}`
+  if (key.startsWith('schedule:') && key.length > 9) return translate(locale, '定时任务 {0}', [middleEllipsis(key.slice(9))])
+  const parts = splitSessionKey(row)
+  if (parts.platform && parts.scope) {
+    const scope = SCOPE_NAMES[parts.scope] ? translate(locale, SCOPE_NAMES[parts.scope]) : parts.scope
+    return `${parts.platform} · ${scope} ${middleEllipsis(parts.sceneId)}`.trim()
+  }
+  return middleEllipsis(key)
 }
 
 // 分类色来自 theme-tokens.css 的 --chart-1..8，随亮 / 暗主题切换。
@@ -418,7 +494,7 @@ export function promptCacheNotices(stats, locale = 'zh-CN') {
     if (!isPlainObject(hint) || typeof hint.provider !== 'string' || !hint.provider) continue
     if (!isCount(hint.zeroCacheCalls) || !isCount(hint.sessions)) continue
     const ratio = typeof hint.samePrefixRatio === 'number' && Number.isFinite(hint.samePrefixRatio) ? hint.samePrefixRatio : null
-    const name = typeof hint.label === 'string' && hint.label ? hint.label : hint.provider
+    const name = usageProviderLabel({ providerLabel: hint.label, provider: hint.provider }, locale)
     hints.push({
       key: hint.provider,
       name,

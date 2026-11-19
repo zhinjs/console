@@ -1,6 +1,7 @@
 import { useId, useState } from 'react'
 import { useI18n } from '../i18n'
 import { cn } from '@zhin.js/console-ui'
+import type { ReactNode } from 'react'
 import {
   OTHER_COLOR,
   SEGMENT_LABELS,
@@ -53,7 +54,7 @@ export function ModelLegend({ keys, colors, hasOther }: { keys: string[]; colors
           className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--console-border-subtle)] bg-[color:var(--console-surface-inset)] px-2.5 py-1 text-foreground/90"
         >
           <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorFor(colors, key) }} />
-          <span className="break-all font-medium">{key}</span>
+          <span className="max-w-[16rem] truncate font-medium" title={key}>{key}</span>
         </li>
       ))}
       {hasOther ? (
@@ -372,7 +373,7 @@ export function CacheLineChart({
 }
 
 /** 按 provider/model 的对比卡片与多轨进度条：输入 / 输出 / 缓存读取，右侧显示命中率与调用次数。 */
-export function ModelBars({ rows, colors, showWrite }: { rows: UsageModelRow[]; colors: Map<string, string>; showWrite: boolean }) {
+export function ModelBars({ rows, colors, showWrite, idHint }: { rows: UsageModelRow[]; colors: Map<string, string>; showWrite: boolean; idHint?: (row: UsageModelRow) => ReactNode }) {
   const i18n = useI18n()
   const max = Math.max(1, ...rows.flatMap(row => [row.inputTokens, row.outputTokens, row.cacheReadTokens]))
   const kinds = [
@@ -392,7 +393,8 @@ export function ModelBars({ rows, colors, showWrite }: { rows: UsageModelRow[]; 
             <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
               <span className="flex min-w-0 items-center gap-2">
                 <span className="inline-block h-3 w-3 shrink-0 rounded-full shadow-xs" style={{ background: color }} />
-                <span className="break-all font-semibold text-foreground">{key}</span>
+                <span className="min-w-0 truncate font-semibold text-foreground" title={key}>{key}</span>
+                {idHint?.(row)}
               </span>
               <span className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                 <span className="rounded-full bg-[hsl(var(--foreground)/0.06)] px-2 py-0.5 font-medium text-foreground">
