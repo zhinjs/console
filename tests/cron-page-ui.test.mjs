@@ -423,10 +423,65 @@ test('a refused creation Agent names the available ones, narrows the dropdown to
     { value: 'writer', label: 'writer（不存在）', disabled: true },
   ])
   assert.equal(button(dialog(), '创建').props.disabled, true, 'the refused Agent cannot be sent again')
+  assert.equal(button(dialog(), '创建').props['aria-describedby'], 'cron-new-agent-missing')
+  assert.ok(text(elements(dialog()).find(node => node.props?.id === 'cron-new-agent-missing')).includes('所选 Agent「writer」不存在'))
   chooseIn(dialog(), '执行的 Agent', 'researcher', f)
+  assert.equal(elements(dialog()).find(node => node.props?.id === 'cron-new-agent-missing'), undefined)
+  assert.equal(button(dialog(), '创建').props['aria-describedby'], undefined)
   assert.equal(elements(dialog()).find(node => node.props?.role === 'alert'), undefined)
   assert.equal(button(dialog(), '创建').props.disabled, false)
   assert.deepEqual(f.errors, [])
+  f.close()
+})
+
+test('closing the creation dialog drops a refused Agent from the draft; reopening starts on the default (#1250 b61)', async () => {
+  const f = await agentFixture()
+  const dialog = () => elements(f.tree).find(node => node.type === 'dialog' && text(node).includes('新建定时任务'))
+  const field = () => elements(dialog()).find(node => node.props?.['aria-labelledby'] === 'cron-new-agent-label')
+  button(f.tree, '新建任务').props.onClick(); f.render()
+  elements(dialog()).find(node => node.type === 'input' && node.props.placeholder.includes('秒 分 时 日 月 周')).props.onChange({ target: { value: '0 0 9 * * *' } }); f.render()
+  elements(dialog()).find(node => node.type === 'textarea').props.onChange({ target: { value: '写周报' } }); f.render()
+  chooseIn(dialog(), '执行的 Agent', 'writer', f)
+  f.timers.at(-1)(); f.answer('cron:validate', { valid: true }); await f.settle()
+  button(dialog(), '创建').props.onClick(); f.render()
+  const call = f.calls.at(-1); call.answered = true
+  call.reject(agentNotFound('writer', ['zhin', 'researcher'])); await f.settle()
+  assert.equal(field().props.value, 'writer')
+  dialog().props.onOpenChange(false); f.render()
+  assert.equal(dialog().props.open, false)
+  button(f.tree, '新建任务').props.onClick(); f.render()
+  assert.equal(dialog().props.open, true)
+  assert.equal(field().props.value, '', 'back to the default Agent')
+  assert.deepEqual(field().props.options.map(option => option.value), ['', 'researcher'], 'the refused Agent is no longer offered')
+  assert.equal(elements(dialog()).find(node => node.props?.role === 'alert'), undefined)
+  assert.equal(elements(dialog()).find(node => node.props?.id === 'cron-new-agent-missing'), undefined)
+  assert.equal(button(dialog(), '创建').props['aria-describedby'], undefined)
+  assert.equal(elements(dialog()).find(node => node.type === 'textarea').props.value, '写周报', 'the rest of the draft is kept')
+  // An Agent the Host runs survives closing.
+  chooseIn(dialog(), '执行的 Agent', 'researcher', f)
+  dialog().props.onOpenChange(false); f.render()
+  button(f.tree, '新建任务').props.onClick(); f.render()
+  assert.equal(field().props.value, 'researcher')
+  f.close()
+})
+
+test('a later list refresh replaces the Agents narrowed by a refusal (#1250 b61)', async () => {
+  const f = await agentFixture()
+  expand(f, 'task:plain'); button(row(f.tree, 'task:plain'), '修改 Agent').props.onClick(); f.render()
+  chooseIn(agentDialog(f), '执行的 Agent', 'writer', f)
+  button(agentDialog(f), '保存').props.onClick(); f.render()
+  const call = f.calls.at(-1); call.answered = true
+  call.reject(agentNotFound('writer', ['zhin'])); await f.settle()
+  const field = () => elements(agentDialog(f)).find(node => node.props?.['aria-labelledby'] === 'cron-set-agent-label')
+  assert.equal(button(agentDialog(f), '保存').props['aria-describedby'], 'cron-set-agent-missing')
+  assert.ok(text(elements(agentDialog(f)).find(node => node.props?.id === 'cron-set-agent-missing')).includes('所选 Agent「writer」不存在'))
+  button(f.tree, '刷新').props.onClick(); f.render()
+  f.answer('schedule:list', { persistent: agentRows, memory, capabilities: { persistent: true }, agents: ['zhin', 'researcher', 'writer'] }); await f.settle()
+  assert.deepEqual(field().props.options, [
+    { value: '', label: 'zhin（默认）' }, { value: 'researcher', label: 'researcher' }, { value: 'writer', label: 'writer' },
+  ])
+  assert.equal(button(agentDialog(f), '保存').props.disabled, false)
+  assert.equal(button(agentDialog(f), '保存').props['aria-describedby'], undefined)
   f.close()
 })
 
@@ -450,7 +505,8 @@ test('a refused Agent change offers the available Agents; with none it points to
   button(agentDialog(g), '保存').props.onClick(); g.render()
   call = g.calls.at(-1); call.answered = true
   call.reject(agentNotFound('writer', [])); await g.settle()
-  assert.ok(text(elements(agentDialog(g)).find(node => node.props?.role === 'alert')).includes('Agent「writer」不存在，当前没有可用的 Agent。请先在配置中添加 Agent，再回来选择。'))
+  // Defensive: the Host lists the default Agent among the available ones, so an empty list rarely arrives.
+  assert.ok(text(elements(agentDialog(g)).find(node => node.props?.role === 'alert')).includes('Agent「writer」不存在。当前没有其他可用的 Agent，可选择默认 Agent，或先在配置中添加 Agent。'))
   g.close()
 })
 
@@ -471,6 +527,16 @@ test('resuming a task whose delivery target the caller may not send to explains 
     assert.doesNotMatch(f.errors[0], /schedule_target_forbidden/)
     f.close()
   }
+})
+
+test('pausing an enabled task that fails shows the Host message, not the resume explanation (#1250 b61)', async () => {
+  const f = fixture(); await f.settle()
+  elements(row(f.tree, 'task:daily')).find(node => node.type === 'button' && node.props.title === '暂停').props.onClick(); f.render()
+  const call = f.calls.at(-1); assert.equal(call.input.type, 'cron:pause'); call.answered = true
+  call.reject(refused('schedule_target_forbidden', '没有向该账号投递的权限：需要 icqq / bot-1 上的 endpoint.operate')); await f.settle()
+  assert.deepEqual(f.errors, ['没有向该账号投递的权限：需要 icqq / bot-1 上的 endpoint.operate'])
+  assert.doesNotMatch(f.errors[0], /无法恢复/)
+  f.close()
 })
 
 test('an older engine without agents hides the Agent field and the change action', async () => {

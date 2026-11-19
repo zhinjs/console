@@ -109,6 +109,16 @@ const errorText = error => isRecord(error) && typeof error.message === 'string' 
 const AGENT_NOT_FOUND = /Agent 不存在：(.+?)。可用的 Agent：(.*)$/u
 
 /**
+ * The delivery account a `schedule_target_forbidden` message names (`需要 <adapter> / <endpoint> 上的
+ * endpoint.operate`), or null. An older Host spelled a target without an account as
+ * `undefined / undefined` (zhinjs/zhin#1250 b61): that names no account.
+ */
+function forbiddenAccount(message) {
+  const account = /需要 (.+?) 上的 endpoint\.operate/u.exec(message)?.[1]
+  return account && !/\bundefined\b/u.test(account) ? account : null
+}
+
+/**
  * `{ agent, available }` of a `schedule_agent_not_found` refusal (zhinjs/zhin#1250 b55: `data.agent`,
  * `data.available`, kept as `details.dataAgent` / `details.dataAvailable`), or read from the Host's
  * message `Agent 不存在：<name>。可用的 Agent：a、b` when the reply was not captured (older Hosts sent
@@ -120,9 +130,10 @@ export function scheduleAgentNotFound(error) {
   if (code !== 'schedule_agent_not_found' && !parsed) return null
   const details = isRecord(error) && isRecord(error.details) ? error.details : {}
   const agent = typeof details.dataAgent === 'string' && details.dataAgent.trim() ? details.dataAgent.trim() : parsed?.[1] ?? null
-  const available = Array.isArray(details.dataAvailable)
-    ? scheduleAgentNames(details.dataAvailable)
-    : parsed ? scheduleAgentNames(parsed[2].split('、')) : null
+  // `data.available` with no usable name (empty, or not strings) falls back to the Host's message.
+  const fromData = Array.isArray(details.dataAvailable) ? scheduleAgentNames(details.dataAvailable) : null
+  const available = fromData?.length ? fromData
+    : parsed ? scheduleAgentNames(parsed[2].split('、')) : fromData
   return { agent, available }
 }
 
@@ -135,12 +146,13 @@ export function scheduleAgentErrorMessage(error, locale = 'zh-CN') {
   const code = scheduleRpcErrorCode(error)
   const message = errorText(error)
   if (code === 'schedule_target_forbidden') {
-    const account = /需要 (.+?) 上的 endpoint\.operate/u.exec(message)?.[1]
+    const account = forbiddenAccount(message)
+    if (account) return translate(locale, '没有向投递账号发送消息的权限：需要 {0} 上的 endpoint.operate。请让管理员授予该账号的这项权限。', [account])
+    // An older Host's `undefined / undefined`: the target names no account.
+    if (/需要 .+? 上的 endpoint\.operate/u.test(message)) return translate(locale, '投递目标需要指明账号（scene.platform 与 scene.endpointKey），无法确认你的投递权限。')
     // Without an account name the Host refused for another reason (e.g. the target names no account):
     // its own message says which, so show it as is.
-    return account
-      ? translate(locale, '没有向投递账号发送消息的权限：需要 {0} 上的 endpoint.operate。请让管理员授予该账号的这项权限。', [account])
-      : null
+    return null
   }
   if (code === 'schedule_agent_profile') return translate(locale, '这是 Profile 例程，每次启动按 Profile 重新声明。请在 Profile 文件（默认 assistant.profile.yml）中该例程的 agent 字段修改。')
   if (code === 'schedule_agent_heartbeat') return translate(locale, '心跳任务固定由默认 Agent 执行，不能指定 Agent。')
@@ -149,7 +161,8 @@ export function scheduleAgentErrorMessage(error, locale = 'zh-CN') {
   if (missing) {
     if (!missing.agent) return translate(locale, '所选 Agent 不存在。请刷新后重新选择。')
     if (missing.available === null) return translate(locale, 'Agent「{0}」不存在。请刷新后重新选择。', [missing.agent])
-    if (!missing.available.length) return translate(locale, 'Agent「{0}」不存在，当前没有可用的 Agent。请先在配置中添加 Agent，再回来选择。', [missing.agent])
+    // Defensive: the Host lists the default Agent among the available ones, so this rarely shows.
+    if (!missing.available.length) return translate(locale, 'Agent「{0}」不存在。当前没有其他可用的 Agent，可选择默认 Agent，或先在配置中添加 Agent。', [missing.agent])
     return translate(locale, 'Agent「{0}」不存在。可用的 Agent：{1}，请从中改选。', [missing.agent, missing.available.join(locale === 'en' ? ', ' : '、')])
   }
   return null
@@ -165,7 +178,7 @@ export function scheduleResumeErrorMessage(error, locale = 'zh-CN') {
   const code = scheduleRpcErrorCode(error)
   const message = errorText(error)
   if (code !== 'schedule_target_forbidden' && !/^没有向该账号投递的权限/u.test(message)) return null
-  const account = /需要 (.+?) 上的 endpoint\.operate/u.exec(message)?.[1]
+  const account = forbiddenAccount(message)
   return account
     ? translate(locale, '你没有权限向这个任务的投递目标（{0}）发消息，无法恢复。请让管理员授予你该账号的 endpoint.operate 权限。', [account])
     : translate(locale, '你没有权限向这个任务的投递目标发消息，无法恢复。请让管理员授予你投递账号的 endpoint.operate 权限。')

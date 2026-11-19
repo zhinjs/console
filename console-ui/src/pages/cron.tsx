@@ -333,6 +333,10 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
   }
 
   const query = search.trim().toLocaleLowerCase()
+  // A chosen Agent the Host does not run (refused, #1250 b61): its submit stays disabled and a note says why.
+  const newAgentMissing = scheduleAgentMissing(agents, newCron.agent)
+  // The job's own removed Agent is explained by the 「已从配置中删除」 note instead.
+  const draftAgentRefused = Boolean(agentTarget) && scheduleAgentMissing(agents, agentDraft) && agentDraft !== scheduleAgentValue(agentTarget)
   const visiblePersistentCrons = persistentCrons.filter(job =>
     (!query || [job.label, job.prompt, job.id, job.cronExpression].some(value => value?.toLocaleLowerCase().includes(query)))
     && (statusFilter === 'all' || statusFilter === 'enabled' && job.enabled
@@ -498,7 +502,13 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
       </div>
 
       {/* Add Dialog */}
-      {!readOnly && persistentAvailable && <Dialog open={addDialogOpen} onOpenChange={(open) => { setAddDialogOpen(open); if (!open) setAddError(null) }}>
+      {!readOnly && persistentAvailable && <Dialog open={addDialogOpen} onOpenChange={(open) => {
+        setAddDialogOpen(open)
+        if (open) return
+        setAddError(null)
+        // A refused Agent kept in the draft would greet the next opening disabled: back to the default.
+        if (scheduleAgentMissing(agents, newCron.agent)) setNewCron((p) => ({ ...p, agent: '' }))
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{i18n.t("新建定时任务")}</DialogTitle>
@@ -533,6 +543,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
                 onValueChange={(agent) => { setAddError(null); setNewCron((p) => ({ ...p, agent })) }}
                 options={scheduleAgentOptions(agents, i18n.locale, newCron.agent) ?? []} />
               <p className="text-xs text-muted-foreground mt-1">{i18n.t("到点时由这个 Agent 执行任务；不选则由默认的 zhin 执行。")}</p>
+              {newAgentMissing ? <p id="cron-new-agent-missing" className="text-xs text-destructive mt-1">{i18n.t("所选 Agent「{0}」不存在，请改选可用的 Agent 或默认 Agent。", [newCron.agent])}</p> : null}
             </div>}
             <div>
               <label className="text-sm font-medium mb-1.5 block">Prompt</label>
@@ -551,7 +562,8 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
             </DialogClose>
             <Button
               onClick={handleAdd}
-              disabled={submitting || !validCron || !newCron.prompt.trim() || scheduleAgentMissing(agents, newCron.agent)}
+              disabled={submitting || !validCron || !newCron.prompt.trim() || newAgentMissing}
+              aria-describedby={newAgentMissing ? 'cron-new-agent-missing' : undefined}
             >
               {submitting ? i18n.t("创建中...") : i18n.t("创建")}
             </Button>
@@ -574,6 +586,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
                 onValueChange={(value) => { setAgentError(null); setAgentDraft(value) }}
                 options={scheduleAgentOptions(agents, i18n.locale, [agentTarget?.agent, agentDraft]) ?? []} />
             </div>
+            {draftAgentRefused ? <p id="cron-set-agent-missing" className="text-xs text-destructive">{i18n.t("所选 Agent「{0}」不存在，请改选可用的 Agent 或默认 Agent。", [agentDraft])}</p> : null}
             {agentTarget?.agentMissing ? <p className="text-xs text-muted-foreground">{i18n.t("当前的 Agent「{0}」已从配置中删除。选一个仍在配置中的 Agent，或恢复默认。", [agentTarget.agent ?? ''])}</p> : null}
             {agentError && <Alert variant="destructive" role="alert"><AlertCircle className="h-4 w-4" /><AlertDescription>{agentError}</AlertDescription></Alert>}
           </div>
@@ -582,7 +595,8 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
               <Button variant="outline" disabled={submitting}>{i18n.t("取消")}</Button>
             </DialogClose>
             {agentTarget && scheduleAgentValue(agentTarget) !== '' && <Button variant="outline" disabled={submitting} onClick={() => { setAgentDraft(''); void handleSetAgent('') }}>{i18n.t("恢复默认")}</Button>}
-            <Button onClick={() => handleSetAgent(agentDraft)} disabled={submitting || !agentTarget || agentDraft === scheduleAgentValue(agentTarget) || scheduleAgentMissing(agents, agentDraft)}>
+            <Button onClick={() => handleSetAgent(agentDraft)} disabled={submitting || !agentTarget || agentDraft === scheduleAgentValue(agentTarget) || scheduleAgentMissing(agents, agentDraft)}
+              aria-describedby={draftAgentRefused ? 'cron-set-agent-missing' : undefined}>
               {submitting ? i18n.t("保存中...") : i18n.t("保存")}
             </Button>
           </DialogFooter>
