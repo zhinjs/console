@@ -9,7 +9,7 @@ import { groupSelectOptions, navigableValues, optionMatches } from '@zhin.js/con
 import { profileChoiceGroup, purposeProfileChoices } from '../console-ui/src/pages/inference/model.mjs'
 import { isPluginInternalSchedule, memoryScheduleLastRun, memoryScheduleTitle } from '../console-ui/src/pages/schedule-memory-model.mjs'
 import { splitInternalTasks, taskOverviewRows } from '../console-ui/src/pages/task-overview-model.mjs'
-import { mergeUsageModels, modelKey, usageModelLabel, usageSessionLabel } from '../console-ui/src/pages/token-usage-model.mjs'
+import { collectModelKeys, mergeUsageModels, modelKey, usageModelIds, usageModelLabel, usageProviderLabel, usageSessionLabel } from '../console-ui/src/pages/token-usage-model.mjs'
 import { bindingModel, recentAgentSessions } from '../console-ui/src/pages/agent-workbench-model.mjs'
 import { englishMessages } from '../console-ui/src/i18n/messages.en.mjs'
 import { SCOPE_TAB_LABELS } from '../console-ui/src/scope/scope-tree.mjs'
@@ -149,29 +149,65 @@ test('schedules: plugin housekeeping is its own folded type with a readable titl
   }
 })
 
-test('usage: rows the Host labels merge per 「服务名 · 模型」, series follow; unlabeled Hosts are unchanged', () => {
+test('usage: names come from the Host shape (displayName / providerLabel / providerIds / modelLabels); opaque ids never show', () => {
+  // The shape zhin's buildUsageStats returns (packages/host/gateway/src/usage/aggregate.ts).
   const tokens = (calls, inputTokens) => ({ calls, inputTokens, outputTokens: calls, cacheReadTokens: 0 })
+  const night = 'services:7dfb2c4e-0000-4000-8000-000000000001'
+  const stray = 'accounts:91aa0000-0000-4000-8000-000000000002'
   const stats = {
-    range: { since: 0, until: 1, bucket: 'day' }, totals: { turns: 1, ...tokens(9, 100), cacheShare: 0 }, segments: { history: 0, fixed: 0, user: 0 }, bySession: [],
+    range: { since: 0, until: 1, bucket: 'day' }, totals: { turns: 1, ...tokens(10, 110), cacheShare: 0 }, segments: { history: 0, fixed: 0, user: 0 }, bySession: [],
     byModel: [
-      { provider: 'services:7dfb', model: 'ag/gemini-3.8-flash', label: 'Night Router · gemini-3.8-flash', ...tokens(5, 60), cacheShare: 0.5 },
-      { provider: 'accounts:91aa', model: 'ag/gemini-3.8-flash', serviceLabel: 'Night Router', modelLabel: 'gemini-3.8-flash', ...tokens(4, 0) },
-      { provider: 'deepseek', model: 'chat', ...tokens(1, 40) },
+      { provider: night, model: 'ag/gemini-3.8-flash', displayName: 'Night Router · ag/gemini-3.8-flash', providerLabel: 'Night Router', providerIds: [stray, night], claimsWithoutToolCall: 0, ...tokens(5, 60), cacheShare: 0.5 },
+      // A second service id with the same name: one row.
+      { provider: 'services:aa11', model: 'ag/gemini-3.8-flash', displayName: 'Night Router · ag/gemini-3.8-flash', providerLabel: 'Night Router', providerIds: ['services:aa11'], claimsWithoutToolCall: 0, ...tokens(4, 0) },
+      { provider: 'deepseek', model: 'chat', displayName: 'deepseek · chat', providerIds: ['deepseek'], claimsWithoutToolCall: 0, ...tokens(1, 40) },
+      // Unresolved opaque id: the Host names it by the model alone.
+      { provider: 'profiles:ffee0000-0000-4000-8000-000000000003', model: 'gpt-6-luna', displayName: 'gpt-6-luna', providerIds: ['profiles:ffee0000-0000-4000-8000-000000000003'], claimsWithoutToolCall: 0, ...tokens(0, 10) },
     ],
-    series: [{ bucketStart: 0, ...tokens(9, 100), byModel: { 'services:7dfb/ag/gemini-3.8-flash': 60, 'accounts:91aa/ag/gemini-3.8-flash': 0, 'deepseek/chat': 40 } }],
+    modelLabels: {},
+    series: [{ bucketStart: 0, ...tokens(10, 110), byModel: { [`${night}/ag/gemini-3.8-flash`]: 60, 'services:aa11/ag/gemini-3.8-flash': 0, 'deepseek/chat': 40, 'profiles:ffee0000-0000-4000-8000-000000000003/gpt-6-luna': 10, 'services:dead/old-model': 3 } }],
   }
-  assert.equal(usageModelLabel(stats.byModel[1]), 'Night Router · gemini-3.8-flash')
+  stats.modelLabels = Object.fromEntries(stats.byModel.map(row => [`${row.provider}/${row.model}`, row.displayName]))
+  assert.equal(usageModelLabel(stats.byModel[0]), 'Night Router · ag/gemini-3.8-flash')
+  assert.equal(usageModelLabel(stats.byModel[3]), '未知服务 · gpt-6-luna')
+  assert.equal(usageModelLabel(stats.byModel[3], null, 'en'), 'Unknown service · gpt-6-luna')
+  // No displayName: modelLabels, then providerLabel + model.
+  assert.equal(usageModelLabel({ provider: night, model: 'x' }, { [`${night}/x`]: 'Night Router · x' }), 'Night Router · x')
+  assert.equal(usageModelLabel({ provider: night, model: 'x', providerLabel: 'Night Router' }), 'Night Router · x')
+  assert.equal(usageModelLabel({ provider: night, model: 'x' }), '未知服务 · x')
+  assert.equal(usageModelLabel({ provider: night, model: 'x', displayName: `${night} · x` }), '未知服务 · x', 'a name carrying an opaque id is not used')
+  assert.equal(usageProviderLabel({ provider: night }), '未知服务')
+  assert.equal(usageProviderLabel({ provider: night, providerLabel: 'Night Router' }), 'Night Router')
+  assert.equal(usageProviderLabel({ provider: 'deepseek' }), 'deepseek')
+
   const merged = mergeUsageModels(stats)
   assert.deepEqual(merged.byModel.map(row => [modelKey(row.provider, row.model), row.calls, row.inputTokens]), [
-    ['Night Router · gemini-3.8-flash', 9, 60], ['deepseek/chat', 1, 40],
+    ['Night Router · ag/gemini-3.8-flash', 9, 60], ['deepseek · chat', 1, 40], ['未知服务 · gpt-6-luna', 0, 10],
   ])
   assert.equal(merged.byModel[0].cacheShare, undefined, 'a merged row recomputes its cache share')
-  assert.deepEqual(merged.series[0].byModel, { 'Night Router · gemini-3.8-flash': 60, 'deepseek/chat': 40 })
-  const plain = { ...stats, byModel: [stats.byModel[2]] }
-  assert.equal(mergeUsageModels(plain), plain)
+  assert.deepEqual(usageModelIds(merged.byModel[0]), [`${night}/ag/gemini-3.8-flash`, 'services:aa11/ag/gemini-3.8-flash', stray, night, 'services:aa11'])
+  assert.deepEqual(merged.series[0].byModel, { 'Night Router · ag/gemini-3.8-flash': 60, 'deepseek · chat': 40, '未知服务 · gpt-6-luna': 10, '未知服务 · old-model': 3 })
+  // Nothing the main view shows (legend keys, bar names) carries an opaque id.
+  for (const name of [...collectModelKeys(merged), ...merged.byModel.map(row => row.model)]) assert.doesNotMatch(name, /(services|accounts|profiles):/)
+
+  // Sessions: displayName, else 「平台 · 类型 sceneId」, else a short hashed key.
+  assert.equal(usageSessionLabel({ sessionKey: 'icqq:bot:group:123', displayName: 'icqq · 群 产品试验群' }), 'icqq · 群 产品试验群')
   assert.equal(usageSessionLabel({ sessionKey: 'personal-session:v1:8ceb', label: '小明的私聊' }), '小明的私聊')
-  assert.equal(usageSessionLabel({ sessionKey: 'icqq:bot:group:123' }), '123')
-  const page = src('pages/token-usage.tsx')
+  assert.equal(usageSessionLabel({ sessionKey: 'icqq:bot:group:123' }), 'icqq · 群 123')
+  assert.equal(usageSessionLabel({ sessionKey: 'icqq:bot:private:42' }, 'en'), 'icqq · Private chat 42')
+  const sha = 'ab12cd34'.padEnd(64, 'e')
+  assert.equal(usageSessionLabel({ sessionKey: `personal-session:v1:${sha}` }), '私聊会话 #ab12cd34')
+  assert.equal(usageSessionLabel({ sessionKey: `personal-session:v1:${sha}` }, 'en'), 'Private session #ab12cd34')
+  assert.equal(usageSessionLabel({ sessionKey: `scene-task:v1:${sha}` }), '场景任务 #ab12cd34')
+  assert.equal(usageSessionLabel({ sessionKey: 'schedule:assistant-profile-weatherReport' }), '定时任务 assistant-profile-weatherReport')
+
+  const page = src('pages/token-usage.tsx') + src('pages/token-usage-report.tsx')
+  assert.match(page, /mergeUsageModels\(validateUsageStats\(data, i18n\.locale\), i18n\.locale\)/)
+  assert.match(page, /usageSessionNames\(stats\.bySession, i18n\.locale\)/)
+  assert.doesNotMatch(page, /min-w-\[720px\]/, 'the session table has no minimum width (375px, ADR 0063 D18-6)')
+  assert.match(page, /<TooltipContent[^>]*>\{row\.sessionKey\}<\/TooltipContent>/, 'the raw session key is only in the tooltip')
+  assert.match(page, /\{header\('inputTokens', i18n\.t\("输入"\)\)\}/, 'input stays a primary column')
+  assert.match(page, /\{header\('cache', i18n\.t\("缓存命中率"\)\)\}/, 'cache hit stays a primary column')
   assert.match(page, /每次模型调用的实际输入之和/)
   assert.match(page, /按每个回合的上下文预算估算/)
   assert.match(page, /按本机时区 \{0\} 显示/)

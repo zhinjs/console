@@ -33,8 +33,8 @@ export interface AmbientJudgeDay {
 }
 /**
  * `plugin.root.ambient`. Fields marked optional are absent on older instances: `judgeChain`,
- * `minConfidence`, `compare` (ADR 0066) and `judgeDaily` / `judgeTimeZone` (batch 47); newer ones may
- * drop the deprecated `decisionShadow` after its window.
+ * `minConfidence`, `compare` (ADR 0066), `judgeDaily` / `judgeTimeZone` (batch 47) and `judgeToday`
+ * (batch 48); newer ones may drop the deprecated `decisionShadow` after its window.
  */
 export interface AmbientStatus {
   enabled: boolean
@@ -51,6 +51,8 @@ export interface AmbientStatus {
   updatedAt: number | null
   judgeDaily?: AmbientJudgeDay[]
   judgeTimeZone?: string
+  /** Today on the instance clock in `judgeTimeZone` (`YYYY-MM-DD`); kept: this day and the 6 before it. */
+  judgeToday?: string
 }
 export interface AmbientStatusView {
   behavior: string

@@ -98,25 +98,115 @@ const decisions = [decisionRow(11, {}), decisionRow(42, { outcome: 'deny', reaso
     decision: 'shadow', confidence: 0.82, judge: 'Night Router/gemini-3.8-flash', judgeKind: 'language', judgeProfile: 'night:gemini-3.8-flash', judgeModel: 'gemini-3.8-flash',
     judgeFallbackFrom: 'DeepSeek/deepseek-v4-flash', judgeMs: 710, judgeUsage: { inputTokens: 412, outputTokens: 19 }, compare: 'quiet', compareJudge: 'OpenAI/gpt-5.5-mini' } }),
   decisionRow(180, { scene_id: 'private:10001' })]
-const usageStats = (session) => {
-  const sessions = [
-    { sessionKey: 'icqq:preview-community:group:20001', turns: 6, calls: 9, inputTokens: 18_400, outputTokens: 2_100, cacheReadTokens: 9_800 },
-    { sessionKey: 'icqq:preview-community:private:10001', turns: 2, calls: 3, inputTokens: 4_200, outputTokens: 600, cacheReadTokens: 1_100 },
-  ].filter(row => !session || (session.endsWith('*') ? row.sessionKey.startsWith(session.slice(0, -1)) : row.sessionKey.includes(session)))
+// The shape zhin's buildUsageStats returns (gateway/usage/aggregate.ts): byModel rows keyed by the
+// resolved service id (`services:<uuid>`), named by `displayName` / `providerLabel`, with the recorded
+// ids in `providerIds`, and `modelLabels` for the series keys. One unresolved opaque id (a removed
+// Profile) has only the model as its displayName; the Console shows it as 「未知服务 · 模型」.
+// zhin batch 58 (`schemaVersion: 2`) adds driverLabel / profileName, byAgent / byPurpose, `previous`
+// (with `compare: 'previous'`), sessionsTotal / othersTotals and bySession scopeKind / sceneLabel /
+// shortKey / accountLabel, and `platform` of hashed keys (from the recorded origin). `previous` is the
+// full window right before (`truncated: false`: the Host cuts nothing up to 31 days, 「近 30 天」 included);
+// profileName / accountLabel are left out where the Host cannot name them. UI_PREVIEW_USAGE=legacy
+// answers like an instance before batch 58: none of those fields, `compare` ignored (the Console then
+// asks for the previous window itself). UI_PREVIEW_USAGE=truncated sends a `previous` cut short
+// (`truncated: true`, as only near the epoch), which the Console shows without a change (no second request).
+const legacyUsage = process.env.UI_PREVIEW_USAGE === 'legacy'
+const truncatedPrevious = process.env.UI_PREVIEW_USAGE === 'truncated'
+const USAGE_SERVICES = {
+  night: 'services:5e6ea66f-9b1d-4c3e-8a77-2f1d0c4b535a',
+  deepseek: 'services:0c8f2a51-63d4-4b8e-9f10-7a2e64c1d9b0',
+  removed: 'profiles:9d41e7c2-58ab-4f6e-b2c0-1e3f5a7d8c90',
+}
+const usageModels = [
+  { provider: USAGE_SERVICES.night, model: 'gpt-6-luna', displayName: 'Night Router · gpt-6-luna', providerLabel: 'Night Router', providerIds: ['accounts:3b7e1f20-9c4d-4a8b-bc15-6d2e0f9a1c47', USAGE_SERVICES.night], share: 0.5,
+    v2: { driverLabel: 'OpenAI 兼容', profileId: 'profiles:1f0e2d3c-4b5a-4968-8776-655443322110', profileName: '夜间主力' } },
+  { provider: USAGE_SERVICES.night, model: 'gpt-6-luna-mini', displayName: 'Night Router · gpt-6-luna-mini', providerLabel: 'Night Router', providerIds: [USAGE_SERVICES.night], share: 0.12, v2: { driverLabel: 'OpenAI 兼容' } },
+  { provider: USAGE_SERVICES.deepseek, model: 'deepseek-v4-flash', displayName: 'DeepSeek · deepseek-v4-flash', providerLabel: 'DeepSeek', providerIds: [USAGE_SERVICES.deepseek], share: 0.3, v2: { driverLabel: 'DeepSeek' } },
+  { provider: USAGE_SERVICES.removed, model: 'gemini-3.8-flash', displayName: 'gemini-3.8-flash', providerIds: [USAGE_SERVICES.removed], share: 0.08, v2: {} },
+]
+const usageSessionRows = [
+  { sessionKey: 'icqq:preview-community:group:20001', platform: 'icqq', endpoint: 'preview-community', scope: 'group', sceneId: '20001', displayName: 'icqq · 群 产品试验群', turns: 6, calls: 9, inputTokens: 18_400, outputTokens: 2_100, cacheReadTokens: 9_800,
+    v2: { scopeKind: 'group', sceneLabel: '产品试验群', accountLabel: '社区号' } },
+  // The same group name on another account: told apart by the account name.
+  { sessionKey: 'icqq:preview-support:group:20001', platform: 'icqq', endpoint: 'preview-support', scope: 'group', sceneId: '20001', displayName: 'icqq · 群 产品试验群', turns: 2, calls: 3, inputTokens: 5_600, outputTokens: 700, cacheReadTokens: 2_900,
+    v2: { scopeKind: 'group', sceneLabel: '产品试验群', accountLabel: '客服号' } },
+  { sessionKey: 'icqq:preview-community:private:10001', platform: 'icqq', endpoint: 'preview-community', scope: 'private', sceneId: '10001', displayName: 'icqq · 私聊 演示用户', turns: 2, calls: 3, inputTokens: 4_200, outputTokens: 600, cacheReadTokens: 1_100,
+    v2: { scopeKind: 'private', sceneLabel: '演示用户', accountLabel: '社区号' } },
+  // Hashed keys carry no address: batch 58 sends their platform (and endpoint) from the recorded origin.
+  { sessionKey: 'personal-session:v1:ab12cd34ef56a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2', turns: 3, calls: 5, inputTokens: 7_300, outputTokens: 900, cacheReadTokens: 2_600,
+    v2: { platform: 'icqq', endpoint: 'preview-community', accountLabel: '社区号' } },
+  { sessionKey: 'scene-task:v1:9f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0', turns: 1, calls: 2, inputTokens: 1_200, outputTokens: 150, cacheReadTokens: 400,
+    v2: { platform: 'icqq', endpoint: 'preview-support', scopeKind: 'group' } },
+  // Two HTTP API sessions: one name, two keys.
+  { sessionKey: 'http:api:session:7f3a9c21-55d0-4e8b-a1c2-90b7d6e5f4a3', displayName: 'HTTP', turns: 2, calls: 2, inputTokens: 3_100, outputTokens: 400, cacheReadTokens: 900, v2: { scopeKind: 'http' } },
+  { sessionKey: 'http:api:session:c41e0b8d-2f6a-4c97-b3d5-18e9a0f7c6b2', displayName: 'HTTP', turns: 1, calls: 1, inputTokens: 1_900, outputTokens: 200, cacheReadTokens: 0, v2: { scopeKind: 'http' } },
+  // A group without a name, on an account whose name is just its endpoint id (no accountLabel).
+  { sessionKey: 'icqq:8596238:group:30002', platform: 'icqq', endpoint: '8596238', scope: 'group', sceneId: '30002', turns: 1, calls: 2, inputTokens: 2_100, outputTokens: 300, cacheReadTokens: 0, v2: {} },
+]
+const shortUsageKey = key => { const hashed = /^([a-z-]+):v\d+:([0-9a-f]{16,})$/u.exec(key); return hashed ? `${hashed[1]}:${hashed[2].slice(0, 8)}` : key }
+const usageStats = (body = {}) => {
+  const session = body.session
+  // The previous window (since / until before the last 7 days) used a bit less, DeepSeek more.
+  const previousWindow = typeof body.until === 'number' && body.until < now - 30 * 60_000
+  const scale = previousWindow ? 0.78 : 1
+  const sessions = usageSessionRows
+    .filter(row => !session || (session.endsWith('*') ? row.sessionKey.startsWith(session.slice(0, -1)) : row.sessionKey.includes(session)))
+    .map(({ v2, ...row }) => ({ ...row, ...(['turns', 'calls', 'inputTokens', 'outputTokens', 'cacheReadTokens'].reduce((acc, key) => ({ ...acc, [key]: Math.round(row[key] * scale) }), {})),
+      ...(legacyUsage ? {} : { ...v2, shortKey: shortUsageKey(row.sessionKey), cacheWriteTokens: 0, cacheShare: row.inputTokens ? row.cacheReadTokens / row.inputTokens : 0 }) }))
   const sum = key => sessions.reduce((total, row) => total + row[key], 0)
-  const start = Math.floor((now - 7 * 24 * HOUR) / (24 * HOUR)) * 24 * HOUR
-  return { range: { since: now - 7 * 24 * HOUR, until: now, bucket: 'day', timeZone: 'Asia/Shanghai' },
-    totals: { turns: sum('turns'), calls: sum('calls'), inputTokens: sum('inputTokens'), outputTokens: sum('outputTokens'), cacheReadTokens: sum('cacheReadTokens'), cacheShare: sum('inputTokens') ? sum('cacheReadTokens') / sum('inputTokens') : 0 },
-    byModel: sum('calls') ? [{ provider: 'preview', model: 'chat-small', calls: sum('calls'), inputTokens: sum('inputTokens'), outputTokens: sum('outputTokens'), cacheReadTokens: sum('cacheReadTokens') }] : [],
+  const since = typeof body.since === 'number' ? body.since : now - 7 * 24 * HOUR
+  const until = typeof body.until === 'number' ? body.until : now
+  const start = Math.floor(since / (24 * HOUR)) * 24 * HOUR
+  const days = Math.max(1, Math.round((until - since) / (24 * HOUR)))
+  const part = (value, share) => Math.round(value * share)
+  const byModel = sum('calls') ? usageModels.map(({ share, v2, ...row }) => ({ ...row, calls: Math.max(1, part(sum('calls'), share)), inputTokens: part(sum('inputTokens'), share), outputTokens: part(sum('outputTokens'), share),
+    cacheReadTokens: row.provider === USAGE_SERVICES.deepseek ? 0 : part(sum('cacheReadTokens'), share * 1.4), claimsWithoutToolCall: row.provider === USAGE_SERVICES.deepseek ? 2 : 0, ...(legacyUsage ? {} : v2) })) : []
+  const key = row => `${row.provider}/${row.model}`
+  const active = index => index >= days - 3
+  const daily = index => active(index) ? Math.round(sum('inputTokens') / 3) : 0
+  const totals = { turns: sum('turns'), calls: sum('calls'), inputTokens: sum('inputTokens'), outputTokens: sum('outputTokens'), cacheReadTokens: sum('cacheReadTokens'), cacheShare: sum('inputTokens') ? sum('cacheReadTokens') / sum('inputTokens') : 0 }
+  const stats = { range: { since, until, bucket: 'day', timeZone: typeof body.timeZone === 'string' && body.timeZone ? body.timeZone : 'Asia/Shanghai' },
+    totals,
+    byModel,
     bySession: sessions,
-    series: Array.from({ length: 7 }, (_, index) => ({ bucketStart: start + index * 24 * HOUR, calls: index > 3 ? 4 : 0, inputTokens: index > 3 ? Math.round(sum('inputTokens') / 3) : 0, outputTokens: index > 3 ? 900 : 0, cacheReadTokens: index > 3 ? Math.round(sum('cacheReadTokens') / 3) : 0, byModel: index > 3 ? { 'preview/chat-small': Math.round(sum('inputTokens') / 3) } : {} })),
+    series: Array.from({ length: days }, (_, index) => ({ bucketStart: start + index * 24 * HOUR, calls: active(index) ? 4 : 0, inputTokens: daily(index), outputTokens: active(index) ? 900 : 0, cacheReadTokens: active(index) ? Math.round(sum('cacheReadTokens') / 3) : 0,
+      byModel: active(index) ? Object.fromEntries(usageModels.map(row => [key(row), Math.round(daily(index) * (index === days - 1 && row.provider === USAGE_SERVICES.deepseek ? row.share * 1.6 : row.share))])) : {} })),
+    modelLabels: Object.fromEntries(byModel.map(row => [key(row), row.displayName])),
+    promptCacheHints: sum('calls') ? [{ provider: USAGE_SERVICES.deepseek, label: 'DeepSeek', providerIds: [USAGE_SERVICES.deepseek], zeroCacheCalls: 12, sessions: 3, reportedZeroCalls: 12, comparedPairs: 10, samePrefixPairs: 9, samePrefixRatio: 0.9 }] : [],
     segments: { history: 12_000, fixed: 6_000, user: 4_600 }, filesRead: 1, malformedLines: 0 }
+  if (legacyUsage) return stats
+  const tokens = share => ({ calls: Math.round(totals.calls * share), inputTokens: Math.round(totals.inputTokens * share), outputTokens: Math.round(totals.outputTokens * share), cacheReadTokens: Math.round(totals.cacheReadTokens * share), cacheWriteTokens: 0, cacheShare: totals.cacheShare })
+  Object.assign(stats, {
+    schemaVersion: 2,
+    totals: { ...totals, cacheWriteTokens: 0, cacheShareByCall: { p50: 0.41, p90: 0.83 }, inputBasis: 'reported-all-calls', claimsWithoutToolCall: 2, unexecutedToolNotices: 0 },
+    sessionsTotal: sessions.length + (sessions.length ? 3 : 0),
+    othersTotals: sessions.length ? { sessions: 3, turns: 3, calls: 3, inputTokens: 1_400, outputTokens: 210, cacheReadTokens: 300, cacheWriteTokens: 0, cacheShare: 0.21 } : { sessions: 0, turns: 0, calls: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, cacheShare: 0 },
+    byAgent: sum('calls') ? [
+      { agent: '@main', label: '主助手', kind: 'main', turns: Math.round(totals.turns * 0.7), ...tokens(0.64) },
+      { agent: 'researcher', label: 'researcher', kind: 'agent', turns: Math.round(totals.turns * 0.2), ...tokens(0.3) },
+      { agent: '@unrecorded', label: '未记录', kind: 'unrecorded', turns: Math.round(totals.turns * 0.1), ...tokens(0.06) },
+    ] : [],
+    byPurpose: sum('calls') ? [
+      { purpose: 'chat', label: '对话', turns: Math.round(totals.turns * 0.6), ...tokens(0.58) },
+      { purpose: 'agent', label: '子 Agent', turns: Math.round(totals.turns * 0.2), ...tokens(0.3) },
+      { purpose: 'ambient-judge', label: '插话判断', turns: Math.round(totals.turns * 0.15), ...tokens(0.08) },
+      { purpose: 'summary', label: '摘要', turns: 1, ...tokens(0.04) },
+    ] : [],
+  })
+  if (body.compare === 'previous') {
+    const length = truncatedPrevious ? Math.round((until - since) / 2) : until - since
+    const previous = usageStats({ since: since - length, until: since, session })
+    stats.previous = { since: since - length, until: since, truncated: truncatedPrevious, totals: previous.totals }
+  }
+  return stats
 }
 // ADR 0066 / #1250 batch 47: the merged interjection judge (UI_PREVIEW_AMBIENT=legacy answers like an older instance).
 const legacyAmbient = process.env.UI_PREVIEW_AMBIENT === 'legacy'
 // UI_PREVIEW_AMBIENT=unknown: the judge route answers 503 and the status RPC fails (a busy instance):
 // the Console must neither assume an older instance nor write the judge mode.
 const unknownAmbient = process.env.UI_PREVIEW_AMBIENT === 'unknown'
+// UI_PREVIEW_JUDGE_TODAY=0: judge usage of an instance from before zhin batch 48 (judgeDaily without judgeToday).
+const legacyJudgeToday = process.env.UI_PREVIEW_JUDGE_TODAY === '0'
 const DAY = 24 * HOUR
 const judgeDay = (daysAgo, calls, extra = {}) => ({ day: new Date(now - daysAgo * DAY).toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }), calls, failed: 0, fallbacks: 0,
   byKind: { language: Math.round(calls / 3), decision: calls - Math.round(calls / 3) }, averageMs: 640, inputTokens: calls * 410, outputTokens: calls * 18, cacheReadTokens: calls * 120, cacheWriteTokens: 0, unreportedCalls: 0, ...extra })
@@ -133,7 +223,15 @@ const ambientStatus = { enabled: true, mode: 'shadow', groups: 1, judges: ['prev
     compare: { windowMs: DAY, agreed: 17, primaryOnly: 2, comparedOnly: 1, failed: 1, comparedProfiles: ['openai:gpt-5.5-mini'],
       byMember: [{ member: 0, profile: 'deepseek:deepseek-v4-flash', agreed: 12, primaryOnly: 2, comparedOnly: 0, failed: 1 }, { member: 1, profile: 'night:gemini-3.8-flash', agreed: 5, primaryOnly: 0, comparedOnly: 1, failed: 0 }] },
     judgeTimeZone: 'Asia/Shanghai',
-    judgeDaily: [judgeDay(6, 12), judgeDay(4, 31, { failed: 2, fallbacks: 3 }), judgeDay(3, 18), judgeDay(1, 26, { fallbacks: 1, unreportedCalls: 2 }), judgeDay(0, 9, { failed: 1, fallbacks: 4 })],
+    // zhin batch 48: today on the instance clock; the usage window is this day and the 6 before it.
+    // UI_PREVIEW_JUDGE_TODAY=0: an instance from before batch 48 (no judgeToday) whose latest report is
+    // 2 days old, so the usage table shows 「无数据」 for the days after it.
+    ...(legacyJudgeToday ? {
+      judgeDaily: [judgeDay(6, 12), judgeDay(4, 31, { failed: 2, fallbacks: 3 }), judgeDay(3, 18), judgeDay(2, 26, { fallbacks: 1, unreportedCalls: 2 })],
+    } : {
+      judgeToday: new Date(now).toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }),
+      judgeDaily: [judgeDay(6, 12), judgeDay(4, 31, { failed: 2, fallbacks: 3 }), judgeDay(3, 18), judgeDay(1, 26, { fallbacks: 1, unreportedCalls: 2 }), judgeDay(0, 9, { failed: 1, fallbacks: 4 })],
+    }),
   }) }
 // `GET /agent/inference/ambient-judge`: migrated, not yet noticed (the Console banner shows once).
 let ambientJudgeNoticedAt
@@ -173,13 +271,18 @@ const scheduleList = { memory: [{ type: 'memory', id: 'heartbeat', kind: 'user-t
     { type: 'memory', id: 'rss/poll_feeds', kind: 'plugin-internal', title: '轮询 RSS 订阅', titleI18n: { en: 'Poll RSS feeds' }, displayName: '轮询 RSS 订阅', description: 'Poll RSS subscriptions', expression: '*/20 * * * * *', running: true, nextExecution: now + 12_000, plugin: 'root/rss', lastExecutedAt: now - 8_000, lastStatus: 'succeeded' },
     { type: 'memory', id: 'blackjack/cleanup', kind: 'plugin-internal', title: '清理超时的 21 点牌局', displayName: '清理超时的 21 点牌局', description: 'Abort stale blackjack sessions', expression: '*/10 * * * * *', running: true, nextExecution: now + 6_000, plugin: 'root/blackjack', lastExecutedAt: now - 4_000, lastStatus: 'succeeded' },
     { type: 'memory', id: 'bilibili/poll', kind: 'plugin-internal', title: 'B 站动态轮询', displayName: 'B 站动态轮询', expression: '*/30 * * * * *', running: true, nextExecution: now + 20_000, plugin: 'root/bilibili', lastExecutedAt: now - 10_000, lastStatus: 'failed', lastError: 'HTTP 412 风控' }],
-  persistent: [{ type: 'persistent', id: 'job-daily', cronExpression: '0 0 9 * * *', prompt: '总结昨天的群聊要点', label: '每日群聊摘要', enabled: true, nextExecution: now + 14 * HOUR, lastStatus: 'ok', lastExecutedAt: now - 10 * HOUR }],
+  persistent: [{ type: 'persistent', id: 'job-daily', cronExpression: '0 0 9 * * *', prompt: '总结昨天的群聊要点', label: '每日群聊摘要', enabled: true, nextExecution: now + 14 * HOUR, lastStatus: 'ok', lastExecutedAt: now - 10 * HOUR },
+    // #1250 b52: a job on another Agent, one whose Agent was removed from `ai.agents`, and a Profile routine.
+    { type: 'persistent', id: 'job-research', cronExpression: '0 30 8 * * 1', prompt: '整理本周值得读的论文', label: '每周论文速递', enabled: true, agent: 'researcher', nextExecution: now + 40 * HOUR },
+    { type: 'persistent', id: 'job-legacy', cronExpression: '0 0 18 * * *', prompt: '写今日日报', label: '日报', enabled: true, agent: 'old-writer', agentMissing: true, nextExecution: now + 6 * HOUR, lastStatus: 'error' },
+    { type: 'persistent', id: 'profile-morning', cronExpression: '0 0 7 * * *', prompt: '早安问候', label: 'Profile 早安', enabled: true, source: 'profile', nextExecution: now + 20 * HOUR }],
+  agents: ['zhin', 'researcher', 'writer'],
   capabilities: { persistent: true } }
 const assistantJobs = { eventsActive: true, jobs: [{ id: 'job-daily', label: '每日群聊摘要', enabled: true, state: { lastStatus: 'ok', nextRunAtMs: now + 14 * HOUR } }, { id: 'job-watch', label: '错误巡检', enabled: true, state: { lastStatus: 'error', lastError: 'timeout', nextRunAtMs: now + HOUR } }] }
 const toolApprovals = { available: true, pending: [{ id: 'approval-1', toolName: 'shell.exec', sessionKey: 'icqq:preview-community:group:20001', requesterId: '10001', createdAt: now - 5 * 60_000, expiresAt: now + 25 * 60_000, status: 'pending', args: { command: 'ls' } }] }
 const pluginRoot = {
   decisions: body => ({ persistent: true, items: decisions.filter(row => (!body.platform || row.platform === body.platform) && (!body.sceneId || row.scene_id === body.sceneId)), nextBefore: null }),
-  'usage-stats': body => usageStats(body.session),
+  'usage-stats': body => usageStats(body),
   ambient: () => ambientStatus,
   skills: () => ({ enabled: true, tasks: [], totals: { calls: 0 }, recent: [], updatedAt: null }),
   'tool-approvals': () => toolApprovals,
@@ -750,6 +853,16 @@ const server = createServer(async (request, response) => {
     if (type === 'plugin.root.ambient' && unknownAmbient) { json({ success: false, error: 'RPC plugin.root.ambient timed out' }, 503); return }
     if (type.startsWith('plugin.root.') && Object.hasOwn(pluginRoot, type.slice('plugin.root.'.length))) { json(envelope(pluginRoot[type.slice('plugin.root.'.length)](body.data ?? {}))); return }
     if (type === 'schedule:list') { json(envelope(scheduleList)); return }
+    if (type === 'cron:set-agent') {
+      const input = body.data && typeof body.data === 'object' ? { ...body, ...body.data } : body
+      const job = scheduleList.persistent.find(item => item.id === input.id)
+      if (!job) { json({ success: false, error: `任务不存在: ${input.id}` }, 400); return }
+      if (job.source === 'profile') { json({ success: false, error: '请在 Profile 文件中该 routine 的 agent 字段修改', data: { code: 'schedule_agent_profile' } }, 400); return }
+      if (input.agent != null && !scheduleList.agents.includes(input.agent)) { json({ success: false, error: `Agent 不存在：${input.agent}。可用的 Agent：${scheduleList.agents.join('、')}` }, 400); return }
+      if (input.agent && input.agent !== 'zhin') job.agent = input.agent; else delete job.agent
+      delete job.agentMissing
+      json(envelope({ job, success: true })); return
+    }
     if (type === 'config:get-source') { json(envelope({ source: configSource + rssConfigSource, revision: 'preview-1', configKeys: ['ai', 'rss'], configPaths: { ai: ['ai'], rss: ['rss'] } })); return }
     if (type === 'login.list') { json(envelope({ tasks: loginTasks })); return }
     if (type === 'plugin.adapter-icqq.status') { json(envelope(adapterStatus)); return }

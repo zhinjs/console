@@ -78,6 +78,13 @@ const JUDGE_KINDS = ['language', 'decision']
 const JUDGE_ROLES = ['primary', 'fallback', 'compare']
 const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 const isText = value => typeof value === 'string'
+/** `YYYY-MM-DD` naming a real calendar day (not 2026-02-30, not a two-digit year that Date.UTC maps to 19xx). */
+function isRealDay(value) {
+  if (!isText(value) || !DAY_PATTERN.test(value)) return false
+  const [year, month, date] = value.split('-').map(Number)
+  const parsed = new Date(Date.UTC(year, month - 1, date))
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
+}
 
 function compareCountsValid(value) {
   return isPlainObject(value) && ['agreed', 'primaryOnly', 'comparedOnly', 'failed'].every(key => isCount(value[key]))
@@ -91,14 +98,15 @@ function judgeMemberValid(member) {
 }
 
 function judgeDayValid(day) {
-  return isPlainObject(day) && isText(day.day) && DAY_PATTERN.test(day.day)
+  return isPlainObject(day) && isRealDay(day.day)
     && ['calls', 'failed', 'fallbacks', 'averageMs', 'inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens', 'unreportedCalls'].every(key => isCount(day[key]))
     && isPlainObject(day.byKind) && isCount(day.byKind.language) && isCount(day.byKind.decision)
 }
 
 /**
  * `judges`, `decisionShadow` (older instances), and ADR 0066 / batch 47's `judgeChain`,
- * `minConfidence`, `compare`, `judgeDaily`, `judgeTimeZone`: each may be absent, never malformed.
+ * `minConfidence`, `compare`, `judgeDaily`, `judgeTimeZone`, and batch 48's `judgeToday`: each may be
+ * absent, never malformed.
  */
 function optionalAmbientFieldsValid(data) {
   if (data.judges !== undefined && !(Array.isArray(data.judges) && data.judges.every(isText))) return false
@@ -113,6 +121,8 @@ function optionalAmbientFieldsValid(data) {
   }
   if (data.judgeDaily !== undefined && !(Array.isArray(data.judgeDaily) && data.judgeDaily.every(judgeDayValid))) return false
   if (data.judgeTimeZone !== undefined && !isText(data.judgeTimeZone)) return false
+  // zhin batch 48: today on the instance clock in `judgeTimeZone`, the end of the usage window.
+  if (data.judgeToday !== undefined && !isRealDay(data.judgeToday)) return false
   return true
 }
 

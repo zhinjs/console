@@ -148,6 +148,15 @@ Console 需要的协议常量、类型与打码规则都直接从已发布的包
 
 操作回执丢失时保留原 requestId 并冻结写入，只读刷新后按持久 mutation receipt 核对 taskId。该确认只证明任务变更，不证明平台投递。找不到确认不代表未执行，也不会自动重发。会话存储只保存操作身份、Host 地址和不含凭据的连接 scope，不保存任务正文或目标参数；换登录或重载后需要管理员明确选择用当前身份核对原操作。没有 `ops.schedule.write` 的身份不能执行任务写操作。
 
+## 定时 AI 任务的 Agent
+
+「运维 → 定时任务」的 AI 定时任务可以指定由哪个 Agent 执行（zhinjs/zhin#1250 第 52 批，`@zhin.js/console-protocol` 1.7）。
+
+- 新建任务的表单有「执行的 Agent」下拉框，选项来自 `schedule:list` 返回的 `agents`，默认「zhin（默认）」（不发送 `agent`）。旧引擎不返回 `agents`，只能用默认 Agent，下拉框与「修改 Agent」都不显示。
+- 每个任务显示执行的 Agent；`agentMissing: true`（Agent 已从 `ai.agents` 删除，运行会失败）时显示「⚠ Agent 不存在」，并提供「修改 Agent」入口。
+- 任务详情的「修改 Agent」调用 `cron:set-agent { id, agent }`，「恢复默认」发送 `agent: null`。Profile 例程（`source: profile`）要在 Profile 文件 `assistant.profile.yml` 中该例程的 `agent` 字段修改，心跳任务固定由默认 Agent 执行，这两类任务的按钮禁用并写明原因。
+- 拒绝按 `data.code` 给出提示：`schedule_target_forbidden`（缺少投递账号上的 `endpoint.operate`，`cron:add` 同样适用）、`schedule_agent_profile`、`schedule_agent_heartbeat`、Agent 不存在（`schedule_agent_not_found`，列出可用的 Agent）。提示显示在对话框里，草稿保留。
+
 ## 消息处理诊断
 
 在会话顶部选择“最近诊断”，或打开一条入站消息旁的诊断操作，可以查看实际处理阶段、指令状态、回复目标与投递结果。查询使用完整 Endpoint、会话、父容器、话题及平台消息 ID，不按正文猜测，也不会重放消息。
@@ -162,4 +171,4 @@ Console 需要的协议常量、类型与打码规则都直接从已发布的包
 
 Choose Simplified Chinese or English on the sign-in screen or dashboard. This preference is local to the Console, independent of the Bot language and timezone. Configuration values, user content, and unsaved drafts are preserved. See [interface language and Schema metadata](docs/localization.md).
 
-「Token 用量」（`/agent/usage`）：读 `pluginRpc('root', 'usage-stats')`（Host 方法 `plugin.root.usage-stats`，只读，依赖 zhin 的 `feat/console-usage-stats`）。按时间范围（今天 / 近 7 天 / 近 30 天 / 自定义）、粒度（自动 / 小时 / 天）和会话筛选；展示总输入 / 输出、缓存命中率（含单次调用 P50 / P90）、按时间堆叠的输入、命中率折线、按模型的输入 / 输出 / 缓存读取、输入构成和用量最高的会话。图表是仓库内的零依赖 SVG（`token-usage-charts.tsx`），缓存写入和分位数等新字段缺失时自动隐藏。无权限（401/403）时显示无权限提示。
+「Token 用量」（`/agent/usage`）：读 `pluginRpc('root', 'usage-stats')`（Host 方法 `plugin.root.usage-stats`，只读）。时间范围（今天 / 近 7 天 / 近 30 天 / 自定义）、粒度（自动 / 小时 / 天）和「会话 / 群」（可搜索的下拉，选项来自本次结果；「更多 → 按会话键筛选…」仍可输入 `*` 通配）在页面顶部，范围与明细维度写进 URL（`?range=` / `?view=`）。页面从上到下：① 汇总四张卡（总 tokens = 输入 + 输出、模型调用、缓存命中率含单次调用 P50 / P90、回合），每张带「较上一周期 ↑12%」——请求带 `compare: 'previous'`，Host 返回未截断的 `previous.totals`（zhin 第 58 批）时直接用，否则 Console 再请求一次紧挨在前、等长的窗口；涨幅只有翻倍（缓存命中率跌 20 个百分点）才用警告色。② 只在异常时出现的提醒（某服务可能不支持提示缓存、这段时间完全没有命中缓存）。③ 用量趋势：输入 tokens 堆叠柱，可按服务 / 模型切换，Host 给出 `series[].byAgent` 时多一个「按 Agent」；图例最多 6 项 + 「其他」。④ 明细页签：「服务与模型」（默认；宽屏是「服务 → 模型」两级表，服务行可展开，窄屏平铺成「服务 · 模型」）、「会话」，Host 返回 `byAgent` / `byPurpose` 时再加「Agent」「用途」；点一行打开详情 Sheet（全部数值、驱动 / 模型配置 / 账号、原始 ID 与「复制 ID」、会话的「只看这个会话」）；Host 返回 `othersTotals` 时表尾显示「其余 N 个会话合计」。⑤「缓存与上下文」折叠区（命中率折线、各服务缓存命中、输入构成），有缓存告警时自动展开。数据来源、时区、总输入与输入构成的口径差异和无法解析的行数收在「统计口径 ⓘ」里。服务 / 模型名按 `byModel[].displayName` → `modelLabels[<provider>/<model>]` → `providerLabel` + 模型读取，同名行合并为一行（`driverLabel` 不同的同名服务分开并在名称后注明驱动）；`services:` / `accounts:` / `profiles:` 这类不透明 ID（名称里夹带的也算）不作为名称，无法解析时显示「未知服务 · 模型」，原始 ID 只在模型名旁的「ID ⓘ」（可访问名「{模型名} 的 ID」，计数与列出的 ID 一致）、悬停提示和详情 Sheet 里出现。会话名优先用 `scopeKind` + `sceneLabel` 按界面语言拼（英文界面不出现中文类型词），否则用 `displayName` →「平台 · 类型 sceneId」→「私聊会话 #前 8 位」；重名会话（多个 HTTP、不同账号的同名群）在名称后用灰色短键区分（`shortKey`，旧 Host 由 Console 从会话键截取），手机上同样可见。报告宽度小于 40rem 时维度切换改为下拉、汇总卡两列、明细一行一张紧凑卡，其余数值进底部 Sheet，不横向滚动。所有第 58 批字段（`schemaVersion`、`driverLabel` / `profileName`、`byAgent`、`byPurpose`、`previous`、`accountLabel`、`sessionsTotal` / `othersTotals`、`scopeKind` / `sceneLabel` / `shortKey`）都是可选读取，旧 Host 照常显示。无权限（401/403）时显示无权限提示。

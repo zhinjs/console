@@ -5,18 +5,15 @@ import {
   OTHER_COLOR,
   SEGMENT_LABELS,
   cacheLinePoints,
-  cacheRatio,
   colorFor,
   donutSlices,
   formatBucketLabel,
   formatPercent,
   formatTokens,
-  modelKey,
   niceMax,
   segmentValues,
   stackSeries,
   type UsageBucket,
-  type UsageModelRow,
   type UsagePoint,
   type UsageStats,
 } from './token-usage-model.mjs'
@@ -53,7 +50,7 @@ export function ModelLegend({ keys, colors, hasOther }: { keys: string[]; colors
           className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--console-border-subtle)] bg-[color:var(--console-surface-inset)] px-2.5 py-1 text-foreground/90"
         >
           <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorFor(colors, key) }} />
-          <span className="break-all font-medium">{key}</span>
+          <span className="max-w-[16rem] truncate font-medium" title={key}>{key}</span>
         </li>
       ))}
       {hasOther ? (
@@ -66,7 +63,7 @@ export function ModelLegend({ keys, colors, hasOther }: { keys: string[]; colors
   )
 }
 
-/** 输入 tokens 随时间的堆叠柱（按 provider/model），带顶部圆角与悬停联动读数条。 */
+/** 输入 tokens 随时间的堆叠柱（按服务 / 模型 / Agent 的可读名），带顶部圆角与悬停联动读数条。 */
 export function StackedBarChart({ series, keys, colors, bucket }: { series: UsagePoint[]; keys: string[]; colors: Map<string, string>; bucket: UsageBucket }) {
   const i18n = useI18n()
   const [hovered, setHovered] = useState<number | null>(null)
@@ -368,67 +365,6 @@ export function CacheLineChart({
         })}
       </svg>
     </div>
-  )
-}
-
-/** 按 provider/model 的对比卡片与多轨进度条：输入 / 输出 / 缓存读取，右侧显示命中率与调用次数。 */
-export function ModelBars({ rows, colors, showWrite }: { rows: UsageModelRow[]; colors: Map<string, string>; showWrite: boolean }) {
-  const i18n = useI18n()
-  const max = Math.max(1, ...rows.flatMap(row => [row.inputTokens, row.outputTokens, row.cacheReadTokens]))
-  const kinds = [
-    ['inputTokens', "输入", 1],
-    ['outputTokens', "输出", 0.68],
-    ['cacheReadTokens', "缓存读取", 0.42],
-  ] as const
-
-  return (
-    <ul className="space-y-3">
-      {rows.map(row => {
-        const key = modelKey(row.provider, row.model)
-        const color = colorFor(colors, key)
-        const hitRate = cacheRatio(row)
-        return (
-          <li key={key} className="console-model-bar-card">
-            <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-              <span className="flex min-w-0 items-center gap-2">
-                <span className="inline-block h-3 w-3 shrink-0 rounded-full shadow-xs" style={{ background: color }} />
-                <span className="break-all font-semibold text-foreground">{key}</span>
-              </span>
-              <span className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="rounded-full bg-[hsl(var(--foreground)/0.06)] px-2 py-0.5 font-medium text-foreground">
-                  {i18n.t("缓存命中率")} {formatPercent(hitRate, i18n.locale)}
-                </span>
-                {showWrite && row.cacheWriteTokens ? (
-                  <span className="rounded-full border border-[color:var(--console-border-subtle)] bg-card px-2 py-0.5">
-                    {i18n.t("缓存写入")} {formatTokens(row.cacheWriteTokens, i18n.locale)}
-                  </span>
-                ) : null}
-                <span className="rounded-full border border-[color:var(--console-border-subtle)] bg-card px-2 py-0.5">
-                  {i18n.t("{0} 次调用", [row.calls])}
-                </span>
-              </span>
-            </div>
-
-            <div className="space-y-1.5">
-              {kinds.map(([field, label, opacity]) => (
-                <div key={field} className="flex items-center gap-2.5 text-xs">
-                  <span className="w-16 shrink-0 text-muted-foreground">{i18n.t(label)}</span>
-                  <span className="h-2 flex-1 overflow-hidden rounded-full bg-muted/80" aria-hidden="true">
-                    <span
-                      className="block h-full rounded-full transition-[width] duration-300"
-                      style={{ width: `${Math.max(row[field] > 0 ? 1.5 : 0, (row[field] / max) * 100)}%`, background: color, opacity }}
-                    />
-                  </span>
-                  <span className="w-14 shrink-0 text-right font-medium text-foreground">
-                    {formatTokens(row[field], i18n.locale)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </li>
-        )
-      })}
-    </ul>
   )
 }
 

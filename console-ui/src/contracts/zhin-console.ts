@@ -23,6 +23,7 @@ export const CONSOLE_RPC = {
   CRON_REMOVE: 'cron:remove',
   CRON_PAUSE: 'cron:pause',
   CRON_RESUME: 'cron:resume',
+  CRON_SET_AGENT: 'cron:set-agent',
 } as const
 
 /** Layered feature configuration (ADR 0050 §8 / ADR 0055). Older Hosts answer "Unknown RPC type". */

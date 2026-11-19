@@ -103,7 +103,9 @@ test('the usage page explains a service that never reads the prompt cache, and a
   assert.match(en.hints[0].text, /may not support or pass through prompt caching/)
   assert.deepEqual(promptCacheNotices(usage({ promptCacheHints: [] })), { hints: [], missed: true }, 'no hint, but nothing read the cache')
   assert.equal(promptCacheNotices(usage({ promptCacheHints: [], totals: { ...usage().totals, cacheReadTokens: 10 } })).missed, false)
-  assert.match(source('pages/token-usage.tsx'), /promptCacheNotices\(stats, i18n\.locale\)/)
+  const opaque = promptCacheNotices(usage({ promptCacheHints: [{ ...hint, provider: 'services:5e6ea66f-0000-4000-8000-000000000001', label: undefined }] }), 'zh-CN')
+  assert.match(opaque.hints[0].text, /^未知服务：/, 'an unnamed service is not shown by its opaque id')
+  assert.match(source('pages/token-usage-report.tsx'), /promptCacheNotices\(stats, i18n\.locale\)/)
 })
 
 // ── 3. replay-two-rows-per-ambient ────────────────────────────────────────────────────────────

@@ -92,6 +92,8 @@ export const ambientJudgeMessages = Object.freeze({
   "最近 7 天，按实例时区 {0} 的日期统计；实例重启后当天重新计数。": "Last 7 days, by date in the instance time zone {0}. A restart starts the current day’s count again.",
   "最近 7 天；实例重启后当天重新计数。": "Last 7 days. A restart starts the current day’s count again.",
   "最近 7 天还没有插话判断。": "No interjection judgments in the last 7 days.",
+  "无数据": "No data",
+  "实例版本较旧，没有报告实例当天的日期，这几天可能已被清理或还没到，不代表没有判断。": "This older instance does not report its current date, so these days may already be cleared or not reached yet. It does not mean there were no judgments.",
   "日期": "Date",
   "判断模型调用次数": "Judge calls",
   "按判断模型的调用计数：开启对照时，每次判断计 2 次。": "Counted per judge model call: with a compared model, each judgment counts twice.",
