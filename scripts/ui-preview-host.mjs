@@ -98,7 +98,7 @@ const decisionRow = (minutesAgo, extra) => ({ id: `d-${minutesAgo}`, ts: now - m
   scene_id: 'group:20001', user_id: '10001', kind: 'speak_gate', outcome: 'allow', reason_code: 'addressed', reason_detail: null, payload: {}, actor: 'policy', actor_id: null, ...extra })
 const HOUR = 3_600_000
 const decisions = [decisionRow(11, {}),
-  // Sandbox conversations have generated ids; one is named in feature.conversations, one is not.
+  // Generated conversation ids (Sandbox): one is named in feature.conversations, one only shows its short id.
   decisionRow(20, { platform: 'sandbox', instance_id: 'default', scene_id: 'private:private-3f2a9c1e-5b7d-4e2f-9a1b-0c8d7e6f5a4b' }),
   decisionRow(25, { platform: 'sandbox', instance_id: 'default', scene_id: 'private:private-7c41b0d2-8e3f-4a6b-9c1d-2e5f8a7b6c4d' }),
   decisionRow(42, { outcome: 'deny', reason_code: 'cannot_speak_muted' }),

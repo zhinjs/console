@@ -21,7 +21,6 @@ import {
   REPLAY_PAGE_SIZE,
   REPLAY_PERMISSION,
   REPLAY_TURN_METHOD,
-  SANDBOX_ADAPTER,
   buildReplayFilter,
   collectReplayExport,
   describeReplayRow,
@@ -31,8 +30,8 @@ import {
   isPermissionDenied,
   kindLabel,
   outcomeLabel,
-  replayHasSandboxRows,
-  sandboxConversationNames,
+  conversationNamesByPlatform,
+  replayUnnamedPlatforms,
   validateReplayList,
   validateReplayTurn,
   type ReplayFilterInput,
@@ -81,19 +80,26 @@ export default function BotReplayPage() {
   const [exporting, setExporting] = useState(false)
   const [exportNote, setExportNote] = useState<string | null>(null)
   // Group names from the connected accounts' group lists; a failed read just leaves the raw ids.
-  const groupCatalog = useAmbientGroupCatalog().catalog
+  const groupRead = useAmbientGroupCatalog()
+  const groupCatalog = groupRead.catalog
   const groupNames = useMemo(() => groupCatalog ? groupNamesFromCatalog(groupCatalog) : new Map<string, string>(), [groupCatalog])
-  // Sandbox conversation names (its ids are generated): one read, only once Sandbox rows are listed.
-  const [sandboxNames, setSandboxNames] = useState<Map<string, string>>(() => new Map())
-  const sandboxNamesRead = useRef(false)
-  const hasSandboxRows = useMemo(() => replayHasSandboxRows(list?.rows), [list])
+  // Names of the conversations the group lists did not name: one `feature.conversations` read per
+  // platform of such rows, after the group lists are read. A failed read leaves the ids.
+  const [conversationNames, setConversationNames] = useState<Map<string, Map<string, string>>>(() => new Map())
+  const namesRead = useRef(new Set<string>())
+  const unnamedPlatforms = useMemo(() => groupRead.loading ? [] : replayUnnamedPlatforms(list?.rows, groupNames), [groupRead.loading, list, groupNames])
   useEffect(() => {
-    if (!hasSandboxRows || sandboxNamesRead.current) return
-    sandboxNamesRead.current = true
-    requestConsole<unknown>(conversationsRequest({ adapter: SANDBOX_ADAPTER, limit: 200 }))
-      .then(payload => setSandboxNames(sandboxConversationNames(readConversationPage(payload).items)))
-      .catch(() => { /* names are optional: the short ids stay */ })
-  }, [hasSandboxRows])
+    for (const platform of unnamedPlatforms) {
+      if (namesRead.current.has(platform)) continue
+      namesRead.current.add(platform)
+      requestConsole<unknown>(conversationsRequest({ adapter: platform, limit: 200 }))
+        .then(payload => {
+          const names = conversationNamesByPlatform(readConversationPage(payload).items).get(platform)
+          if (names?.size) setConversationNames(previous => new Map(previous).set(platform, names))
+        })
+        .catch(() => { /* names are optional: the ids stay */ })
+    }
+  }, [unnamedPlatforms])
 
   const load = useCallback(async (nextFilter: Record<string, string>, before?: number) => {
     const data = validateReplayList(await pluginRpc<unknown>('root', REPLAY_LIST_METHOD, {
@@ -236,7 +242,7 @@ export default function BotReplayPage() {
               {error ? <p className="text-xs text-destructive">{error}</p> : null}
               {list.rows.length ? <ul className="divide-y rounded-md border text-sm">
                 {foldReplayRows(list.rows).map(({ row, folded }) => {
-                  const view = describeReplayRow(row, i18n.locale, groupNames, sandboxNames)
+                  const view = describeReplayRow(row, i18n.locale, groupNames, conversationNames)
                   return <li key={view.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
                     <span className="text-xs text-muted-foreground">{formatTime(view.at, i18n.locale)}</span>
                     <span className="break-all text-xs" title={view.where === view.whereCode ? undefined : view.whereCode}>{view.where}</span>

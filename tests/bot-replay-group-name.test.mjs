@@ -84,49 +84,60 @@ test('without group lists (no permission, read failed) the raw ids stay', async 
 })
 
 // #64 `replay-sandbox-raw-id`: Sandbox rows showed `sandbox · private:private-<UUID>`, not the conversation's name.
+// Names come from each platform's `feature.conversations`; no platform is special-cased.
 const UUID = '3f2a9c1e-5b7d-4e2f-9a1b-0c8d7e6f5a4b'
-const sandboxRow = (id, scene, extra = {}) => row(id, { platform: 'sandbox', scene_id: scene, ...extra })
+const on = (platform, id, scene, extra = {}) => row(id, { platform, scene_id: scene, ...extra })
 
-test('a Sandbox row reads its conversation name, else a short id; the raw id stays in the tooltip text', () => {
-  const names = model.sandboxConversationNames([
+test('rows the group lists did not name read conversation names per platform, else a short generated id', () => {
+  const names = model.conversationNamesByPlatform([
     { adapter: 'sandbox', endpoint: 'default', kind: 'private', id: `private-${UUID}`, name: '调试小号' },
     { adapter: 'sandbox', endpoint: 'default', kind: 'group', id: 'group-1', name: '测试群' },
     { adapter: 'sandbox', endpoint: 'a', kind: 'private', id: 'twice', name: '甲' },
     { adapter: 'sandbox', endpoint: 'b', kind: 'private', id: 'twice', name: '乙' },
-    { adapter: 'icqq', endpoint: 'bot', kind: 'private', id: '10001', name: '演示用户' },
+    { adapter: 'icqq', endpoint: 'bot', kind: 'private', id: 'twice', name: '演示用户' },
     { adapter: 'sandbox', endpoint: 'default', kind: 'private', id: 'nameless' },
   ])
-  assert.deepEqual([...names], [[`private:private-${UUID}`, '调试小号'], ['group:group-1', '测试群']], 'other adapters, nameless and ambiguous entries are left out')
-  const where = (r, locale = 'zh-CN', map = names) => (({ where, whereCode }) => ({ where, whereCode }))(model.describeReplayRow(r, locale, new Map(), map))
-  assert.deepEqual(where(sandboxRow('a', `private:private-${UUID}`)), { where: 'sandbox · 私聊 调试小号', whereCode: `sandbox · private:private-${UUID}` })
-  assert.equal(where(sandboxRow('a', 'group:group-1')).where, 'sandbox · 群聊 测试群')
-  assert.equal(where(sandboxRow('a', `private:private-${UUID}`), 'en').where, 'sandbox · Private chat 调试小号')
-  // No name (not listed, no permission, read failed): the first 8 digits of the generated id.
-  assert.equal(where(sandboxRow('a', `private:private-${UUID}`), 'zh-CN', null).where, 'sandbox · 私聊 #3f2a9c1e')
-  assert.equal(where(sandboxRow('a', `group:${UUID}`), 'zh-CN', new Map()).where, 'sandbox · 群聊 #3f2a9c1e')
-  assert.equal(where(sandboxRow('a', 'private:sandbox-user'), 'zh-CN', new Map()).where, 'sandbox · 私聊 sandbox-user', 'a short readable id is kept')
-  assert.equal(where(sandboxRow('a', 'room:1')).where, 'sandbox · room:1', 'an unknown scene stays raw')
-  assert.equal(model.replayHasSandboxRows([row('a'), sandboxRow('b', 'private:x')]), true)
-  assert.equal(model.replayHasSandboxRows([row('a')]), false)
-  assert.equal(model.replayHasSandboxRows(undefined), false)
+  assert.deepEqual([...names.keys()].sort(), ['icqq', 'sandbox'])
+  assert.deepEqual([...names.get('sandbox')], [[`private:private-${UUID}`, '调试小号'], ['group:group-1', '测试群']], 'nameless and ambiguous entries are left out')
+  assert.equal(names.get('icqq').get('private:twice'), '演示用户', 'ambiguity is per platform')
+  const where = (r, locale = 'zh-CN', map = names, groups = new Map()) => (({ where, whereCode }) => ({ where, whereCode }))(model.describeReplayRow(r, locale, groups, map))
+  assert.deepEqual(where(on('sandbox', 'a', `private:private-${UUID}`)), { where: 'sandbox · 私聊 调试小号', whereCode: `sandbox · private:private-${UUID}` })
+  assert.equal(where(on('sandbox', 'a', 'group:group-1')).where, 'sandbox · 群聊 测试群')
+  assert.equal(where(on('icqq', 'a', 'private:twice')).where, 'icqq · 私聊 演示用户')
+  assert.equal(where(on('sandbox', 'a', `private:private-${UUID}`), 'en').where, 'sandbox · Private chat 调试小号')
+  assert.equal(where(on('icqq', 'a', 'group:860669870'), 'zh-CN', names, new Map([['icqq:860669870', '摸鱼群']])).where, 'icqq · 摸鱼群', 'the group list wins')
+  // No name: generated ids (any platform) shorten to their first 8 digits; short ids stay raw.
+  assert.equal(where(on('sandbox', 'a', `private:private-${UUID}`), 'zh-CN', null).where, 'sandbox · 私聊 #3f2a9c1e')
+  assert.equal(where(on('lark', 'a', `group:${UUID}`), 'zh-CN', new Map()).where, 'lark · 群聊 #3f2a9c1e')
+  assert.equal(where(on('wecom', 'a', `private:${'ab12cd34'.padEnd(32, 'f')}`), 'zh-CN', new Map()).where, 'wecom · 私聊 #ab12cd34', 'a long hex id')
+  assert.equal(where(on('sandbox', 'a', 'private:sandbox-user'), 'zh-CN', new Map()).where, 'sandbox · private:sandbox-user')
+  assert.equal(where(on('icqq', 'a', 'private:10001'), 'zh-CN', new Map()).where, 'icqq · private:10001')
+  assert.equal(where(on('sandbox', 'a', 'room:1')).where, 'sandbox · room:1', 'an unknown scene stays raw')
+  assert.equal(model.shortGeneratedId('1234567890'), null)
+
+  const groups = new Map([['icqq:860669870', '摸鱼群']])
+  assert.deepEqual(model.replayUnnamedPlatforms([row('a'), on('sandbox', 'b', 'private:x'), on('lark', 'c', 'group:1'), on('sandbox', 'd', 'group:2')], groups), ['lark', 'sandbox'])
+  assert.deepEqual(model.replayUnnamedPlatforms([row('a')], groups), [], 'every row named by the group lists')
+  assert.deepEqual(model.replayUnnamedPlatforms(undefined), [])
 })
 
-test('the replay list reads Sandbox names once, only when Sandbox rows are listed', async () => {
+test('the replay list reads names once per unnamed platform; a failed read keeps the ids', async () => {
   const calls = []
   const consoleRpc = async (body) => {
     calls.push(body)
+    if (body.adapter === 'lark') throw new Error('forbidden')
     return { conversations: [{ key: `sandbox/default/private:private-${UUID}`, name: '调试小号', hasOverrides: false, overrides: [] }], recentAvailable: true }
   }
-  const cells = await renderReplay(null, { items: [row('a'), sandboxRow('b', `private:private-${UUID}`), sandboxRow('c', 'private:private-00000000-0000-4000-8000-000000000000')], consoleRpc })
-  assert.deepEqual(calls, [{ type: 'feature.conversations', adapter: 'sandbox', limit: 200 }])
-  assert.deepEqual(cells.map(cell => cell.props.children), ['icqq · group:860669870', 'sandbox · 私聊 调试小号', 'sandbox · 私聊 #00000000'])
+  const catalog = pickerModel.buildGroupCatalog([{ adapter: 'icqq', endpoint: 'bot', groups: [{ group_id: '860669870', group_name: '摸鱼群' }] }])
+  const cells = await renderReplay(catalog, { consoleRpc, items: [row('a'), on('sandbox', 'b', `private:private-${UUID}`),
+    on('sandbox', 'c', 'private:private-00000000-0000-4000-8000-000000000000'), on('lark', 'd', `group:${UUID}`)] })
+  assert.deepEqual(calls.map(body => body.adapter).sort(), ['lark', 'sandbox'])
+  for (const body of calls) assert.deepEqual(body, { type: 'feature.conversations', adapter: body.adapter, limit: 200 })
+  assert.deepEqual(cells.map(cell => cell.props.children), ['icqq · 摸鱼群', 'sandbox · 私聊 调试小号', 'sandbox · 私聊 #00000000', 'lark · 群聊 #3f2a9c1e'])
   assert.equal(cells[1].props.title, `sandbox · private:private-${UUID}`)
-  assert.equal(cells[2].props.title, 'sandbox · private:private-00000000-0000-4000-8000-000000000000')
+  assert.equal(cells[3].props.title, `lark · group:${UUID}`)
 
   const none = []
-  await renderReplay(null, { consoleRpc: async (body) => { none.push(body); return { conversations: [] } } })
-  assert.deepEqual(none, [], 'no Sandbox rows, no read')
-
-  const failed = await renderReplay(null, { items: [sandboxRow('b', `private:private-${UUID}`)], consoleRpc: async () => { throw new Error('forbidden') } })
-  assert.deepEqual(failed.map(cell => cell.props.children), ['sandbox · 私聊 #3f2a9c1e'], 'a failed read keeps the short id')
+  await renderReplay(catalog, { items: [row('a')], consoleRpc: async (body) => { none.push(body); return { conversations: [] } } })
+  assert.deepEqual(none, [], 'every row named by the group lists: no read')
 })

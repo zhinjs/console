@@ -151,69 +151,87 @@ export function replayGroupKey(row) {
   return match && row.platform ? `${row.platform}:${match[1]}` : null
 }
 
-/**
- * Adapter alias of the Sandbox: its conversation ids are generated (`private-<UUID>`), so its rows
- * read the names the Console gave those conversations instead (`feature.conversations`, zhin #1250).
- */
-export const SANDBOX_ADAPTER = 'sandbox'
 const SCENE = /^(private|group|channel):(.+)$/u
 const SCENE_KIND_LABELS = Object.freeze({ private: '私聊', group: '群聊', channel: '频道' })
+/** Generated conversation ids: a UUID (optionally `<word>-<UUID>`, e.g. `private-<UUID>`) or a long hex string. */
+const GENERATED_ID = /^(?:[a-z]+-)?([0-9a-f]{8})(?:-?[0-9a-f]{4}){3}-?[0-9a-f]{12}$|^(?:[a-z]+-)?([0-9a-f]{8})[0-9a-f]{16,}$/iu
 
-/** Whether the rows hold a Sandbox conversation (only then are Sandbox conversation names read). */
-export function replayHasSandboxRows(rows) {
-  return Array.isArray(rows) && rows.some(row => row?.platform === SANDBOX_ADAPTER && SCENE.test(String(row.scene_id ?? '')))
+function groupName(row, groupNames) {
+  const key = replayGroupKey(row)
+  const name = key && groupNames instanceof Map ? groupNames.get(key) : undefined
+  return typeof name === 'string' && name.trim() ? name.trim() : ''
 }
 
 /**
- * Sandbox conversation names from `feature.conversations` items (`{ adapter, kind, id, name? }`):
- * `<kind>:<id>` → name. Decision rows do not name the account, so a conversation two accounts
- * name differently is left out.
+ * Platforms of the rows the group lists did not name (private chats, groups not in a list,
+ * channels): their conversation names are read once per platform (`feature.conversations`).
  */
-export function sandboxConversationNames(items) {
-  const names = new Map()
+export function replayUnnamedPlatforms(rows, groupNames) {
+  const platforms = new Set()
+  for (const row of Array.isArray(rows) ? rows : []) {
+    if (typeof row?.platform !== 'string' || !row.platform || !SCENE.test(String(row.scene_id ?? ''))) continue
+    if (!groupName(row, groupNames)) platforms.add(row.platform)
+  }
+  return [...platforms].sort()
+}
+
+/**
+ * Conversation names from `feature.conversations` items (`{ adapter, kind, id, name? }`):
+ * platform → `<kind>:<id>` → name. Decision rows do not name the account, so a conversation two
+ * accounts of one platform name differently is left out.
+ */
+export function conversationNamesByPlatform(items) {
+  const byPlatform = new Map()
   const ambiguous = new Set()
   for (const item of Array.isArray(items) ? items : []) {
-    if (item?.adapter !== SANDBOX_ADAPTER || typeof item.name !== 'string' || !item.name.trim()) continue
+    if (typeof item?.adapter !== 'string' || !item.adapter || typeof item.name !== 'string' || !item.name.trim()) continue
+    const names = byPlatform.get(item.adapter) ?? new Map()
     const key = `${item.kind}:${item.id}`
     const name = item.name.trim()
-    if (names.has(key) && names.get(key) !== name) ambiguous.add(key)
+    if (names.has(key) && names.get(key) !== name) ambiguous.add(`${item.adapter}\0${key}`)
     names.set(key, name)
+    byPlatform.set(item.adapter, names)
   }
-  for (const key of ambiguous) names.delete(key)
-  return names
+  for (const entry of ambiguous) {
+    const [platform, key] = entry.split('\0')
+    byPlatform.get(platform)?.delete(key)
+  }
+  return byPlatform
 }
 
-/** 「#前 8 位」 of a generated Sandbox id (`private-<UUID>` / a bare UUID), otherwise the id itself. */
-function shortSandboxId(id) {
-  const generated = /^(?:(?:private|group|channel)-)?([0-9a-f]{8})-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/iu.exec(id)
-  return generated ? `#${generated[1]}` : id
+/** 「#前 8 位」 of a generated id (UUID-like / long hex), or null for an id that is short enough to show. */
+export function shortGeneratedId(id) {
+  const generated = GENERATED_ID.exec(String(id ?? ''))
+  return generated ? `#${generated[1] ?? generated[2]}` : null
 }
 
-/** 「sandbox · 私聊 名称」, or 「sandbox · 私聊 #前 8 位」 without a name; null for other rows. */
-function sandboxWhere(row, locale, sandboxNames) {
-  if (row.platform !== SANDBOX_ADAPTER) return null
-  const scene = SCENE.exec(row.scene_id)
+/**
+ * 「平台 · 私聊 名称」 from the platform's conversation names, else 「平台 · 私聊 #前 8 位」 for a generated
+ * id; null when neither applies (the raw id is shown).
+ */
+function conversationWhere(row, locale, conversationNames) {
+  const scene = SCENE.exec(String(row.scene_id ?? ''))
   if (!scene) return null
   const [, kind, id] = scene
-  const name = sandboxNames instanceof Map ? sandboxNames.get(`${kind}:${id}`) : undefined
-  return `${row.platform} · ${translate(locale, SCENE_KIND_LABELS[kind])} ${typeof name === 'string' && name.trim() ? name.trim() : shortSandboxId(id)}`
+  const names = conversationNames instanceof Map ? conversationNames.get(row.platform) : undefined
+  const name = names instanceof Map ? names.get(`${kind}:${id}`) : undefined
+  const label = typeof name === 'string' && name.trim() ? name.trim() : shortGeneratedId(id)
+  return label ? `${row.platform} · ${translate(locale, SCENE_KIND_LABELS[kind])} ${label}` : null
 }
 
 /**
  * 一行 → 页面显示：一句话原因 + 原始机器码（排障时对得上日志）。
- * `groupNames`（`<adapter>:<group id>` → 群名）有这个群时，`where` 写群名，原始会话 id 留在 `whereCode`。
- * Sandbox 会话按 `sandboxNames`（`<kind>:<id>` → 会话名）写「sandbox · 私聊 名称」，没有名字时写 id 前 8 位。
+ * `groupNames`（`<adapter>:<group id>` → 群名）有这个群时，`where` 写群名，原始会话 id 留在 `whereCode`；
+ * 否则按 `conversationNames`（平台 → `<kind>:<id>` → 会话名）写「平台 · 私聊 名称」，没有名字的生成 id 写前 8 位。
  */
-export function describeReplayRow(row, locale = 'zh-CN', groupNames, sandboxNames) {
+export function describeReplayRow(row, locale = 'zh-CN', groupNames, conversationNames) {
   const whereCode = `${row.platform} · ${row.scene_id}`
-  const key = replayGroupKey(row)
-  const name = key && groupNames instanceof Map ? groupNames.get(key) : undefined
-  const sandbox = sandboxWhere(row, locale, sandboxNames)
+  const name = groupName(row, groupNames)
   return {
     id: row.id,
     at: row.ts,
     turnId: row.turn_id,
-    where: sandbox ?? (typeof name === 'string' && name.trim() ? `${row.platform} · ${name.trim()}` : whereCode),
+    where: name ? `${row.platform} · ${name}` : conversationWhere(row, locale, conversationNames) ?? whereCode,
     whereCode,
     kind: kindLabel(row.kind, locale),
     outcome: outcomeLabel(row.outcome, locale),
