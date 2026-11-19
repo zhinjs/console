@@ -25,9 +25,6 @@ export const feedbackMessages = Object.freeze({
   // Token usage
   "按本机时区 {0} 显示（实例时区 {1}）": "Shown in this device's time zone {0} (instance: {1})",
   "按本机时区 {0} 显示": "Shown in this device's time zone {0}",
-  "每次模型调用的实际输入之和，工具循环里的多次调用都计入": "Actual input of every model call added up, including each call of a tool loop",
-  "按模型堆叠；鼠标停在柱子上看具体数值。": "Stacked by model; hover a bar for the numbers.",
-  "历史对话、固定提示词、用户输入各占多少。按每个回合的上下文预算估算（每回合一次），所以合计小于上方「总输入」。": "How much is history, fixed prompt and user input. Estimated from each turn's context budget (once per turn), so the sum is below the total input above.",
   // Agent workbench
   "按「AI 与模型 → 用途」实际生效的绑定": "The binding in force under AI & models → Purposes",
   "（跟随「AI 与模型 → 用途」）": "(follows AI & models → Purposes)",

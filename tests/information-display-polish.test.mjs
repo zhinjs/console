@@ -33,7 +33,7 @@ test('Sheet primitive and DialogContent drawer variant expose accessible slide-o
   assert.match(sheetSource, /export\s*\{[\s\S]*Sheet,[\s\S]*SheetContent,[\s\S]*SheetHeader,[\s\S]*SheetBody,[\s\S]*SheetFooter/)
 })
 
-test('upgraded Token Usage charts render rounded top stacks, area gradient fills, model cards and interactive donut readouts', async () => {
+test('upgraded Token Usage charts render rounded top stacks, area gradient fills and interactive donut readouts', async () => {
   const source = await readFile(new URL('../console-ui/src/pages/token-usage-charts.tsx', import.meta.url), 'utf8')
   const compiled = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
@@ -67,15 +67,6 @@ test('upgraded Token Usage charts render rounded top stacks, area gradient fills
   assert.match(lineHtml, /<linearGradient/)
   assert.match(lineHtml, /P50/)
   assert.match(lineHtml, /P90/)
-
-  const modelHtml = renderToStaticMarkup(
-    React.createElement(mod.exports.ModelBars, {
-      rows: [{ provider: 'openai', model: 'gpt-4o', calls: 5, inputTokens: 2000, outputTokens: 400, cacheReadTokens: 1200 }],
-      colors,
-      showWrite: false,
-    }),
-  )
-  assert.match(modelHtml, /console-model-bar-card/)
 
   const donutHtml = renderToStaticMarkup(
     React.createElement(mod.exports.SegmentDonut, { segments: { history: 600, fixed: 300, user: 100 } }),
