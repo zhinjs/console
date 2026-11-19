@@ -3,11 +3,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Download, RefreshCw } from 'lucide-react'
 import { pluginRpc } from '../utils/plugin-rpc'
+import { requestConsole } from '../utils/console-rpc'
+import { useInboxCacheScope } from '../utils/useInboxCacheScope'
+import { hasConsolePermission } from '../utils/console-access.mjs'
+import { useConsoleAccess } from '../hooks/use-console-access'
+import { useConsoleSession } from '../hooks/use-console-session'
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, ErrorAlert, Input, PageHeader, PageShell, SelectField, Skeleton } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import { ScopeFilterBar, useScopeFilter } from './insights/ScopeFilterBar'
 import { useAmbientGroupCatalog } from './AmbientGroupPicker'
 import { groupNamesFromCatalog } from './ambient-group-picker-model.mjs'
+import { conversationsRequest, readConversationPage } from './features/feature-model.mjs'
 import { replayScopeApproximate, replayScopeFilter } from './insights/scope-filter.mjs'
 import {
   EXPORT_WINDOWS,
@@ -28,6 +34,8 @@ import {
   isPermissionDenied,
   kindLabel,
   outcomeLabel,
+  conversationNamesByPlatform,
+  replayUnnamedPlatforms,
   validateReplayList,
   validateReplayTurn,
   type ReplayFilterInput,
@@ -76,8 +84,39 @@ export default function BotReplayPage() {
   const [exporting, setExporting] = useState(false)
   const [exportNote, setExportNote] = useState<string | null>(null)
   // Group names from the connected accounts' group lists; a failed read just leaves the raw ids.
-  const groupCatalog = useAmbientGroupCatalog().catalog
+  const groupRead = useAmbientGroupCatalog()
+  const groupCatalog = groupRead.catalog
   const groupNames = useMemo(() => groupCatalog ? groupNamesFromCatalog(groupCatalog) : new Map<string, string>(), [groupCatalog])
+  // Names of the conversations the group lists did not name: one `feature.conversations` read per
+  // platform of such rows, after the group lists are read. It needs `feature.view` (the page itself
+  // only `decisions:read`), so it waits for the signed-in access. A failed read leaves the ids.
+  // Names and reads belong to one connection: another instance / sign-in starts over.
+  const cacheScope = useInboxCacheScope()
+  const session = useConsoleSession()
+  const access = useConsoleAccess()
+  const namesAllowed = (session.me !== null || session.legacy) && hasConsolePermission('feature.view', access)
+  const [namesState, setNamesState] = useState<{ scope: string | undefined; names: Map<string, Map<string, string>> }>(() => ({ scope: cacheScope, names: new Map() }))
+  const conversationNames = useMemo(() => namesState.scope === cacheScope ? namesState.names : new Map<string, Map<string, string>>(), [namesState, cacheScope])
+  const namesRead = useRef<{ scope: string | undefined; platforms: Set<string> }>({ scope: cacheScope, platforms: new Set() })
+  const unnamedPlatforms = useMemo(() => groupRead.loading ? [] : replayUnnamedPlatforms(list?.rows, groupNames), [groupRead.loading, list, groupNames])
+  useEffect(() => {
+    if (namesRead.current.scope !== cacheScope) {
+      namesRead.current = { scope: cacheScope, platforms: new Set() }
+      setNamesState({ scope: cacheScope, names: new Map() })
+    }
+    if (!namesAllowed) return
+    const read = namesRead.current
+    for (const platform of unnamedPlatforms) {
+      if (read.platforms.has(platform)) continue
+      read.platforms.add(platform)
+      requestConsole<unknown>(conversationsRequest({ adapter: platform, limit: 200 }))
+        .then(payload => {
+          const names = conversationNamesByPlatform(readConversationPage(payload).items).get(platform)
+          if (names?.size) setNamesState(previous => previous.scope === read.scope ? { scope: read.scope, names: new Map(previous.names).set(platform, names) } : previous)
+        })
+        .catch(() => { /* names are optional: the ids stay */ })
+    }
+  }, [unnamedPlatforms, namesAllowed, cacheScope])
 
   const load = useCallback(async (nextFilter: Record<string, string>, before?: number) => {
     const data = validateReplayList(await pluginRpc<unknown>('root', REPLAY_LIST_METHOD, {
@@ -220,7 +259,7 @@ export default function BotReplayPage() {
               {error ? <p className="text-xs text-destructive">{error}</p> : null}
               {list.rows.length ? <ul className="divide-y rounded-md border text-sm">
                 {foldReplayRows(list.rows).map(({ row, folded }) => {
-                  const view = describeReplayRow(row, i18n.locale, groupNames)
+                  const view = describeReplayRow(row, i18n.locale, groupNames, conversationNames)
                   return <li key={view.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
                     <span className="text-xs text-muted-foreground">{formatTime(view.at, i18n.locale)}</span>
                     <span className="break-all text-xs" title={view.where === view.whereCode ? undefined : view.whereCode}>{view.where}</span>

@@ -70,11 +70,13 @@ const traceSessions = [
   { session_key: 'icqq:preview-community:group:20001', turns: 18, last_started_at: Date.now() - 12 * MINUTE, last_status: 'completed' },
   { session_key: 'icqq:preview-community:private:10001', turns: 4, last_started_at: Date.now() - 29 * MINUTE, last_status: 'failed' },
   { session_key: 'telegram:preview-support:private:777', turns: 2, last_started_at: Date.now() - 26 * 60 * MINUTE, last_status: 'completed' },
-  // zhin 1.9 hashes conversation keys and names scheduled runs `schedule:<id>`; the archive sends only the key.
+  // zhin 1.9 hashes conversation keys and names scheduled runs `schedule:<id>`; the archive sends only the key, so
+  // (until zhinjs/zhin#1250 b63 adds `origin`) these cannot be placed on an account. UI_PREVIEW_SESSIONS=hashed keeps
+  // only the hashed ones (the owner's report).
   { session_key: 'personal-session:v1:ab12cd34ef56a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2', turns: 3, last_started_at: Date.now() - 40 * MINUTE, last_status: 'completed' },
   { session_key: 'scene-task:v1:9f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0', turns: 1, last_started_at: Date.now() - 3 * 60 * MINUTE, last_status: 'completed' },
   { session_key: 'schedule:job-daily', turns: 1, last_started_at: Date.now() - 10 * 60 * MINUTE, last_status: 'completed' },
-]
+].filter(row => process.env.UI_PREVIEW_SESSIONS !== 'hashed' || /:v1:/.test(row.session_key))
 let sentCount = 0
 // One clock for every chat fixture, so repeated reads (list, previews, history) agree on timestamps.
 const CHAT_NOW = Date.now()
@@ -97,7 +99,11 @@ const messageEvents = [
 const decisionRow = (minutesAgo, extra) => ({ id: `d-${minutesAgo}`, ts: now - minutesAgo * 60_000, turn_id: `turn-${minutesAgo}`, instance_id: 'preview-community', platform: 'icqq',
   scene_id: 'group:20001', user_id: '10001', kind: 'speak_gate', outcome: 'allow', reason_code: 'addressed', reason_detail: null, payload: {}, actor: 'policy', actor_id: null, ...extra })
 const HOUR = 3_600_000
-const decisions = [decisionRow(11, {}), decisionRow(42, { outcome: 'deny', reason_code: 'cannot_speak_muted' }),
+const decisions = [decisionRow(11, {}),
+  // Generated conversation ids (Sandbox): one is named in feature.conversations, one only shows its short id.
+  decisionRow(20, { platform: 'sandbox', instance_id: 'default', scene_id: 'private:private-3f2a9c1e-5b7d-4e2f-9a1b-0c8d7e6f5a4b' }),
+  decisionRow(25, { platform: 'sandbox', instance_id: 'default', scene_id: 'private:private-7c41b0d2-8e3f-4a6b-9c1d-2e5f8a7b6c4d' }),
+  decisionRow(42, { outcome: 'deny', reason_code: 'cannot_speak_muted' }),
   decisionRow(55, { kind: 'ambient_decision', outcome: 'skip', reason_code: 'ambient_not_engaged', reason_detail: 'shadow', actor: 'agent', payload: {
     decision: 'shadow', confidence: 0.82, judge: 'Night Router/gemini-3.8-flash', judgeKind: 'language', judgeProfile: 'night:gemini-3.8-flash', judgeModel: 'gemini-3.8-flash',
     judgeFallbackFrom: 'DeepSeek/deepseek-v4-flash', judgeMs: 710, judgeUsage: { inputTokens: 412, outputTokens: 19 }, compare: 'quiet', compareJudge: 'OpenAI/gpt-5.5-mini' } }),
@@ -309,6 +315,7 @@ const conversations = [
   { key: 'icqq/preview-community/group:20001', name: '产品试验群', hasOverrides: true, overrides: [{ plugin: 'welcome', fields: ['text'], updatedAt: Date.now() - 3_600_000 }], lastActiveAt: Date.now() - 60_000 },
   { key: 'icqq/preview-community/private:10001', name: '演示用户', hasOverrides: false, overrides: [], lastActiveAt: Date.now() - 120_000 },
   { key: 'icqq/preview-community/group:a%2Fb', name: '带斜杠的群 a/b', hasOverrides: true, overrides: [{ plugin: 'repeater', enabled: false, fields: [] }] },
+  { key: 'sandbox/default/private:private-3f2a9c1e-5b7d-4e2f-9a1b-0c8d7e6f5a4b', name: '调试小号', hasOverrides: false, overrides: [], lastActiveAt: Date.now() - 20 * 60_000 },
 ]
 const chatRoles = [
   { level: 'global', key: '', adapter: 'icqq', userId: '10000', role: 'owner', source: 'grant', grantedBy: 'console:user:u-owner', grantedByName: '部署者小王', grantedAt: Date.now() - 30 * 86_400_000 },
