@@ -39,4 +39,5 @@ export const attentionMessages = Object.freeze({
   "实例就绪后会自动读取需要处理的事项，无需手动刷新。": "What needs attention is read automatically once the instance is ready; no need to refresh.",
   "登录、离线账号、插件与配置问题、待审批：需要你动手的事项": "Sign-ins, offline accounts, plugin and configuration problems, approvals: what needs you",
   "{0} 个 MCP 服务连接失败": "{0} MCP servers failed to connect",
+  "涉及的人": "People involved",
 })

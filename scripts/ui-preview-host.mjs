@@ -324,6 +324,17 @@ const chatRoles = [
   { level: 'endpoint', key: 'icqq/preview-community', adapter: 'icqq', userId: '10003', role: 'trusted', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 7_200_000 },
   { level: 'conversation', key: 'icqq/preview-community/group:20001', adapter: 'icqq', userId: '10004', role: 'admin', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 3_600_000 },
 ]
+// Configuration imports waiting for 「导入」/「忽略」 (chat-roles.imports.list|resolve, ADR 0060 §4.2).
+// UI_PREVIEW_IMPORTS=legacy: an older Host without the RPCs; =unknown: resolve never answers in time (结果未知).
+const importsMode = process.env.UI_PREVIEW_IMPORTS ?? 'items'
+const chatRoleImports = {
+  personalPending: [{ id: 'personal:u-alice:icqq:10007', consoleUserId: 'u-alice', adapter: 'icqq', userId: '10007', seenAt: Date.now() - 2 * 3_600_000 }],
+  pending: [
+    { id: 'icqq.endpoints[0].master:icqq:10008:endpoint:icqq/preview-community', source: 'icqq.endpoints[0].master', level: 'endpoint', key: 'icqq/preview-community',
+      adapter: 'icqq', userId: '10008', role: 'owner', seenAt: Date.now() - 3_600_000 },
+    { id: 'ai.trigger.trusted:icqq:10000:global:', source: 'ai.trigger.trusted', level: 'global', key: '', adapter: 'icqq', userId: '10000', role: 'trusted', seenAt: Date.now() - 3_600_000 },
+  ],
+}
 // People behind chat identities (ADR 0060 §7): chat-principals.list, chat-identities.recent|me|bind-code.create.
 const chatPeople = [
   { id: 'cp_wangowner7k2m4q3x5z6a7b8c9d', displayName: '小王（部署者）', createdAt: Date.now() - 30 * 86_400_000,
@@ -490,6 +501,11 @@ const attentionItems = en => [
   { id: 'mcp.disconnected:51e2a7d9', revision: 'e1', kind: 'mcp.disconnected', severity: 'warning', source: 'mcp', since: attentionAt(25), subject: { mcpServer: 'web-search' },
     title: en ? 'MCP server web-search failed to connect' : 'MCP 服务 web-search 连接失败', detail: en ? 'Authentication failed: HTTP 401. The Agent cannot use its tools for now.' : '认证失败：HTTP 401。Agent 暂时无法调用它提供的工具。',
     action: { label: en ? 'Open MCP' : '查看 MCP', path: '/introspection?tab=mcp' } },
+  { id: 'chat-roles.import-pending', revision: 'g1', kind: 'chat-roles.import-pending', severity: 'warning', source: 'chat-roles', since: attentionAt(60),
+    title: en ? '3 people lists or identity links in the configuration wait for confirmation' : '配置中有 3 条人员名单或身份链接等待确认',
+    detail: en ? 'Nothing is granted until you "Import" or "Ignore" each one.' : '逐条「导入」或「忽略」前不会授予任何角色或关联。',
+    links: [{ consoleUserId: 'u-alice', identities: [{ adapter: 'icqq', userIdTail: '0007' }] }],
+    action: { label: en ? 'Review imports' : '去处理', path: '/scope?tab=roles' } },
   { id: 'logs.errors:811c9dc5', revision: 'f1', kind: 'logs.errors', severity: 'info', source: 'logs', since: attentionAt(95),
     title: en ? 'Errors in the logs: 7' : '日志里有 7 条错误', detail: en ? 'Persistent log count; it restarts after logs are cleaned up.' : '持久日志统计；清理日志后重新计数。',
     action: { label: en ? 'Open error logs' : '打开错误日志', path: '/logs?level=error' } },
@@ -933,6 +949,22 @@ const server = createServer(async (request, response) => {
       json(envelope({ principal: chatPeople[0] })); return
     }
     if (type === 'chat-identities.bind-code.create') { json(envelope({ code: 'K7QH2M9X', expiresAt: Date.now() + 10 * MINUTE })); return }
+    if (type === 'chat-roles.imports.list' || type === 'chat-roles.imports.resolve') {
+      if (importsMode === 'legacy') { json({ success: false, error: `Unknown RPC type: ${type}` }, 400); return }
+      if (scopedAccess || viewerAccess) { json({ success: false, error: '处理配置导入需要全局 iam.manage 权限', type }, 403); return }
+      if (type === 'chat-roles.imports.list') {
+        json(envelope({ imported: [], importedAt: Date.now() - 86_400_000, pending: chatRoleImports.pending, personalPending: chatRoleImports.personalPending, hasGlobalOwner: true })); return
+      }
+      if (importsMode === 'unknown') { await new Promise(resolve => setTimeout(resolve, 300)); json({ success: false, code: 'instance_timeout', error: 'The instance did not answer in time' }, 504); return }
+      const personal = chatRoleImports.personalPending.find(row => row.id === body.id)
+      const role = chatRoleImports.pending.find(row => row.id === body.id)
+      if (!personal && !role) { json(envelope({ status: 'unchanged' })); return }
+      chatRoleImports.personalPending = chatRoleImports.personalPending.filter(row => row.id !== body.id)
+      chatRoleImports.pending = chatRoleImports.pending.filter(row => row.id !== body.id)
+      if (body.decision === 'ignore') { json(envelope({ status: 'ignored' })); return }
+      // The global owner icqq/10000 already holds a higher role than trusted: kept.
+      json(envelope({ status: 'imported', result: role?.userId === '10000' ? 'kept' : 'written' })); return
+    }
     if (type === 'chat-roles.grant' || type === 'chat-roles.revoke') {
       if (scopedAccess && body.role === 'owner') { json({ success: false, error: '授予或撤销 owner 需要全局 iam.manage 权限', type }, 403); return }
       if (memoryDatabase) { json({ success: false, code: 'chat-roles-unpersisted', error: '聊天角色需要关系型项目数据库（sqlite / mysql / pg）', type }, 503); return }

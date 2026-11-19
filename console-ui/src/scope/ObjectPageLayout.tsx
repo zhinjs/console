@@ -142,12 +142,13 @@ export function ObjectPageLayout({
 }
 
 /** A titled block inside a tab (表单分组 / 列表区块), see the guidelines. */
-export function ObjectSection({ title, description, actions, children, className }: {
-  title: string; description?: string; actions?: ReactNode; children: ReactNode; className?: string
+export function ObjectSection({ id: anchor, title, description, actions, children, className }: {
+  /** DOM id of the section (a deep-link anchor such as `#chat-role-imports`). */
+  id?: string; title: string; description?: string; actions?: ReactNode; children: ReactNode; className?: string
 }) {
   const id = useId()
   return (
-    <section aria-labelledby={id} className={cn('console-object-section', className)}>
+    <section id={anchor} aria-labelledby={id} className={cn('console-object-section', className)}>
       <div className="console-object-section-head">
         <div className="min-w-0">
           <h2 id={id} className="console-section-title">{title}</h2>

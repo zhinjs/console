@@ -18,6 +18,13 @@ export interface AttentionItem {
   readonly since: string | null
   readonly action: { readonly label: string; readonly path: string }
   readonly source: string
+  /** `chat-roles.import-pending` / `chat-roles.imported`: the people the item is about (masked ids). */
+  readonly links?: readonly AttentionPersonLink[]
+}
+
+export interface AttentionPersonLink {
+  readonly consoleUserId: string
+  readonly identities: readonly { readonly adapter: string; readonly endpoint?: string; readonly userIdTail: string }[]
 }
 
 export interface AttentionList {
@@ -73,6 +80,8 @@ export const ATTENTION_STORAGE_PREFIX: string
 export const ATTENTION_PREFS_LIMIT: number
 
 export function normalizeAttentionItem(raw: unknown): AttentionItem | null
+export function attentionActionPath(kind: string, path: string): string
+export function attentionLinkLines(item: Pick<AttentionItem, 'links'> | null | undefined, locale?: Locale): string[]
 export function compareAttention(a: AttentionItem, b: AttentionItem): number
 export function sortAttention(items?: readonly AttentionItem[]): AttentionItem[]
 export function normalizeAttentionList(raw: unknown): AttentionList
