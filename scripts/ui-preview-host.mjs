@@ -548,11 +548,13 @@ const instanceLogs = () => ({ lines: [
   { seq: 7, time: Date.now() - 5_000, stream: 'stdout', line: '[90m[13:34:09.420][39m[32m[INFO][39m[90m[gateway][39m 已写入 .zhin/gateway.sock（转义字节被管道去掉的形式）' },
   ...(instanceOffline ? [{ seq: 8, time: Date.now() - 90_000, stream: 'stderr', line: "Error: Cannot find module 'icqq'" }] : []),
 ] })
+// The built-in viewer role: views and reads, but not the raw configuration or environment variables.
+const viewerPermissions = ALL_PERMISSIONS.filter(item => /\.(view|read)$/u.test(item) && item !== 'ops.config.read' && item !== 'ops.env.read')
 const meReport = () => setupMode
   ? { kind: 'bootstrap', open: false, permissions: [], bindings: [], setupRequired: true }
   : viewerAccess ? { kind: 'user', user: { id: 'u-viewer', username: 'viewer', displayName: '只读同事' },
-    permissions: ALL_PERMISSIONS.filter(item => /\.(view|read)$/u.test(item)),
-    bindings: [{ role: 'viewer', scope: { kind: 'global' }, permissions: ALL_PERMISSIONS.filter(item => /\.(view|read)$/u.test(item)) }], setupRequired: false,
+    permissions: viewerPermissions,
+    bindings: [{ role: 'viewer', scope: { kind: 'global' }, permissions: viewerPermissions }], setupRequired: false,
     onboarding: { version: 1, steps: { database: 'done', owner: 'done', ai: 'skipped', adapters: 'done' } } }
   : scopedAccess ? { kind: 'user', user: { id: 'u-alice', username: 'alice', displayName: '适配器管理员' },
     permissions: ALL_PERMISSIONS.filter(item => item !== 'iam.manage' && item !== 'ops.env.write'),
@@ -863,6 +865,7 @@ const server = createServer(async (request, response) => {
       delete job.agentMissing
       json(envelope({ job, success: true })); return
     }
+    if (type === 'config:get-source' && viewerAccess) { json({ success: false, error: '没有 ops.config.read 权限', type }, 403); return }
     if (type === 'config:get-source') { json(envelope({ source: configSource + rssConfigSource, revision: 'preview-1', configKeys: ['ai', 'rss'], configPaths: { ai: ['ai'], rss: ['rss'] } })); return }
     if (type === 'login.list') { json(envelope({ tasks: loginTasks })); return }
     if (type === 'plugin.adapter-icqq.status') { json(envelope(adapterStatus)); return }
