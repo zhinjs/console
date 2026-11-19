@@ -620,6 +620,10 @@ export function readVersionReport(value) {
     packages,
     checkedAt: numberOr(value.checkedAt, 0),
     registryReachable: value.registryReachable !== false,
+    /** Installed plugins were left out (more than the gateway reports); the core packages stay. */
+    truncated: value.truncated === true,
+    /** The check hit its deadline before every package was looked up (the registry did answer). */
+    incomplete: value.incomplete === true,
   }
 }
 
@@ -646,7 +650,9 @@ export function versionPackageLabel(name, t) {
 /**
  * Rows of the 版本 card. `state`: `migrate` (latest is outside the declared range — only
  * `zhin migrate`), `update` (a newer release within the range — the dependency 更新 reaches it),
- * `current`, or `unknown` (the registry could not be checked). A row can be both: `update` carries
+ * `current`, `pending` (the registry answered but this package was not looked up before the
+ * gateway's deadline — a refresh may fill it in), or `unknown` (the registry could not be checked).
+ * A row can be both: `update` carries
  * {@link wanted} even when the state is `migrate`.
  */
 export function versionRows(report, t) {
@@ -654,7 +660,9 @@ export function versionRows(report, t) {
   return [...report.packages]
     .sort((a, b) => versionRank(a.name) - versionRank(b.name) || a.name.localeCompare(b.name))
     .map(item => {
-      const state = item.latest === null ? 'unknown' : item.needsMigrate ? 'migrate' : item.updateAvailable ? 'update' : 'current'
+      const state = item.latest === null
+        ? (report.incomplete && report.registryReachable ? 'pending' : 'unknown')
+        : item.needsMigrate ? 'migrate' : item.updateAvailable ? 'update' : 'current'
       return {
         name: item.name,
         label: versionPackageLabel(item.name, t),
@@ -676,6 +684,7 @@ export function versionStateLabel(state, t) {
     case 'migrate': return t('需要迁移')
     case 'update': return t('可更新')
     case 'current': return t('已是最新')
+    case 'pending': return t('未查完')
     default: return t('无法检查')
   }
 }

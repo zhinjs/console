@@ -247,7 +247,7 @@ const gatewayPackages = { packageManager: 'pnpm@9.0.2', packages: [
   { name: '@zhin.js/adapter-qq', range: '^2.0.0', dependencyType: 'dependencies', installedVersion: '2.0.1', catalog: 'adapter' },
   { name: 'zhin.js', range: '^1.1.0', dependencyType: 'dependencies', installedVersion: '1.1.9' },
 ] }
-// gateway.version.check (zhinjs/console#64): UI_PREVIEW_VERSIONS=offline (registry unreachable) | unsupported (older Host).
+// gateway.version.check (zhinjs/console#64): UI_PREVIEW_VERSIONS=offline (registry unreachable) | incomplete (deadline hit, list truncated) | unsupported (older Host).
 const versionMode = process.env.UI_PREVIEW_VERSIONS ?? 'newer'
 const versionRow = (name, range, installed, latest, wanted, flags) => ({
   name, range, installed, latest: versionMode === 'offline' ? null : latest, wanted: versionMode === 'offline' ? null : wanted,
@@ -257,6 +257,7 @@ const versionReport = () => ({
   gateway: '1.6.1',
   checkedAt: Date.now() - 42 * 60_000,
   registryReachable: versionMode !== 'offline',
+  ...(versionMode === 'incomplete' ? { incomplete: true, truncated: true } : {}),
   packages: [
     versionRow('zhin.js', '^1.1.0', '1.1.9', '2.0.0', '1.7.2', { updateAvailable: true, needsMigrate: true }),
     versionRow('@zhin.js/gateway', null, '1.6.1', '1.7.0', null, { needsMigrate: true }),
@@ -264,7 +265,9 @@ const versionReport = () => ({
     versionRow('@zhin.js/adapter-qq', '^2.0.0', '2.0.1', '2.1.0', '2.1.0', { latestInRange: true, updateAvailable: true }),
     versionRow('@zhin.js/plugin-repeater', '^1.1.0', '1.1.4', '1.2.0', '1.2.0', { latestInRange: true, updateAvailable: true }),
     versionRow('@zhin.js/plugin-welcome', '^1.4.0', '1.4.0', '1.4.0', '1.4.0', { latestInRange: true }),
-  ],
+  ].map(item => versionMode === 'incomplete' && /plugin-(repeater|welcome)$/u.test(item.name)
+    ? { ...item, latest: null, wanted: null, latestInRange: false, updateAvailable: false, needsMigrate: false }
+    : item),
 })
 const marketUpdates = [{ name: '@zhin.js/plugin-repeater', current: '1.1.4', latest: '1.2.0' }]
 const marketPlugins = [

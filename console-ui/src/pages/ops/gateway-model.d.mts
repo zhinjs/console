@@ -132,11 +132,13 @@ export interface GatewayVersionReportView {
   readonly packages: readonly GatewayVersionPackageView[]
   readonly checkedAt: number
   readonly registryReachable: boolean
+  readonly truncated: boolean
+  readonly incomplete: boolean
 }
 export function readVersionReport(value: unknown): GatewayVersionReportView | null
 export function versionCheckUnsupported(error: unknown): boolean
 export function versionPackageLabel(name: string, t: Translate): string
-export type VersionRowState = 'migrate' | 'update' | 'current' | 'unknown'
+export type VersionRowState = 'migrate' | 'update' | 'current' | 'pending' | 'unknown'
 export interface VersionRow {
   readonly name: string
   readonly label: string
