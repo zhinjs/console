@@ -21,6 +21,7 @@ import {
 } from './gateway-model.mjs'
 import { GatewayLoadError, TransactionProgress } from './ops-components'
 import { ConfigurationNeedsPanel } from './plugin-declare'
+import { VersionSection } from './version-panel'
 import { gatewayRequest, useGatewayRead, useGatewayTransaction } from './use-gateway'
 import '../admin-pages.css'
 
@@ -65,6 +66,7 @@ export default function OpsInstancePage() {
       {unsupported ? <GatewayLoadError error={status.error ?? ''} kind="unsupported" onRetry={status.refresh} /> : (
         <>
           {canRead ? <InstanceStatusSection status={status} canControl={canControl} locked={transactionActive} /> : null}
+          {canRead ? <VersionSection canUpdate={canListPackages && canManagePackages} /> : null}
           {canRead ? <InstanceLogsSection /> : null}
           {canListPackages ? <DependencyPanel canManage={canManagePackages} onActiveChange={setTransactionActive} onFinished={status.refresh} /> : null}
           {!canRead && !canListPackages ? <StatusState kind="forbidden" permissions={['status.view']} /> : null}

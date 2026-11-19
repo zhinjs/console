@@ -247,6 +247,25 @@ const gatewayPackages = { packageManager: 'pnpm@9.0.2', packages: [
   { name: '@zhin.js/adapter-qq', range: '^2.0.0', dependencyType: 'dependencies', installedVersion: '2.0.1', catalog: 'adapter' },
   { name: 'zhin.js', range: '^1.1.0', dependencyType: 'dependencies', installedVersion: '1.1.9' },
 ] }
+// gateway.version.check (zhinjs/console#64): UI_PREVIEW_VERSIONS=offline (registry unreachable) | unsupported (older Host).
+const versionMode = process.env.UI_PREVIEW_VERSIONS ?? 'newer'
+const versionRow = (name, range, installed, latest, wanted, flags) => ({
+  name, range, installed, latest: versionMode === 'offline' ? null : latest, wanted: versionMode === 'offline' ? null : wanted,
+  latestInRange: false, updateAvailable: false, needsMigrate: false, ...(versionMode === 'offline' ? {} : flags),
+})
+const versionReport = () => ({
+  gateway: '1.6.1',
+  checkedAt: Date.now() - 42 * 60_000,
+  registryReachable: versionMode !== 'offline',
+  packages: [
+    versionRow('zhin.js', '^1.1.0', '1.1.9', '2.0.0', '1.7.2', { updateAvailable: true, needsMigrate: true }),
+    versionRow('@zhin.js/gateway', null, '1.6.1', '1.7.0', null, { needsMigrate: true }),
+    versionRow('@zhin.js/console-client', '^1.4.0', '1.4.2', '1.4.2', '1.4.2', { latestInRange: true }),
+    versionRow('@zhin.js/adapter-qq', '^2.0.0', '2.0.1', '2.1.0', '2.1.0', { latestInRange: true, updateAvailable: true }),
+    versionRow('@zhin.js/plugin-repeater', '^1.1.0', '1.1.4', '1.2.0', '1.2.0', { latestInRange: true, updateAvailable: true }),
+    versionRow('@zhin.js/plugin-welcome', '^1.4.0', '1.4.0', '1.4.0', '1.4.0', { latestInRange: true }),
+  ],
+})
 const marketUpdates = [{ name: '@zhin.js/plugin-repeater', current: '1.1.4', latest: '1.2.0' }]
 const marketPlugins = [
   ['@zhin.js/plugin-welcome', '群欢迎', '新成员入群时发送欢迎语，可按会话覆盖。', 'feature', 3200],
@@ -467,6 +486,10 @@ async function gatewayOwned(url, request, json, readBody) {
     if (type === 'iam.audit.list') { json(envelope({ entries: audit, next: null })); return true }
     if (type === 'gateway.instance.status') { json(envelope(instanceStatus())); return true }
     if (type === 'gateway.instance.logs') { json(envelope(instanceLogs())); return true }
+    if (type === 'gateway.version.check') {
+      if (versionMode === 'unsupported') { json({ ok: false, error: { code: 'unknown_rpc', message: 'RPC "gateway.version.check" 不存在', status: 404 } }, 404); return true }
+      json(envelope(versionReport())); return true
+    }
     if (type === 'gateway.packages.list' && !instanceOffline) { json(envelope(gatewayPackages)); return true }
     if (type === 'gateway.packages.list') {
       json(envelope({ packageManager: 'pnpm', packages: [
