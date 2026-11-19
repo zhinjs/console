@@ -27,6 +27,7 @@ test('dropdown value and RPC param map the default to empty / null', () => {
 test('view labels the default and flags a missing Agent only when one is named', () => {
   assert.deepEqual(scheduleAgentView({}), { name: 'zhin', isDefault: true, missing: false, label: 'zhin（默认）' })
   assert.deepEqual(scheduleAgentView({ agentMissing: true }), { name: 'zhin', isDefault: true, missing: false, label: 'zhin（默认）' })
+  assert.deepEqual(scheduleAgentView({ agent: 'zhin' }), { name: 'zhin', isDefault: true, missing: false, label: 'zhin（默认）' })
   assert.deepEqual(scheduleAgentView({ agent: 'gone', agentMissing: true }, 'en'), { name: 'gone', isDefault: false, missing: true, label: 'gone' })
 })
 
@@ -44,8 +45,9 @@ test('refusals are reworded by data.code, in both languages', () => {
   assert.equal(scheduleRpcErrorCode(refused('schedule_target_forbidden', '')), 'schedule_target_forbidden')
   assert.equal(scheduleRpcErrorCode(new Error('x')), null)
   assert.equal(scheduleAgentErrorMessage(refused('schedule_target_forbidden', '没有向该账号投递的权限：需要 qq / bot 上的 endpoint.operate'), 'en'),
-    'You cannot send from the delivery account: this needs endpoint.operate on qq / bot. Ask an administrator to grant it, or deliver from an account you can operate.')
-  assert.match(scheduleAgentErrorMessage(refused('schedule_target_forbidden', '投递目标需要指明账号')), /需要该账号上的 endpoint\.operate/)
+    'You cannot send from the delivery account: this needs endpoint.operate on qq / bot. Ask an administrator to grant it on that account.')
+  // No account named: the Host refused for another reason, and its own message is shown as is.
+  assert.equal(scheduleAgentErrorMessage(refused('schedule_target_forbidden', '投递目标需要指明账号')), null)
   assert.match(scheduleAgentErrorMessage(refused('schedule_agent_profile', 'x'), 'en'), /Profile routine/)
   assert.match(scheduleAgentErrorMessage(refused('schedule_agent_heartbeat', 'x'), 'en'), /Heartbeat tasks/)
   assert.match(scheduleAgentErrorMessage(refused('unsupported', 'x')), /升级 zhin\.js/)

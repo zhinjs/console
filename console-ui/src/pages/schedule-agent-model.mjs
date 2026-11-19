@@ -59,7 +59,8 @@ export function scheduleAgentParam(value) {
 /** `{ name, isDefault, missing, label }` of the Agent a job runs on. */
 export function scheduleAgentView(job, locale = 'zh-CN') {
   const agent = isRecord(job) && typeof job.agent === 'string' ? job.agent.trim() : ''
-  const isDefault = !agent
+  // An explicit `zhin` is the default Agent, as `scheduleAgentValue` / `scheduleAgentParam` treat it.
+  const isDefault = !agent || agent === DEFAULT_SCHEDULE_AGENT
   const name = agent || DEFAULT_SCHEDULE_AGENT
   const missing = !isDefault && isRecord(job) && job.agentMissing === true
   return { name, isDefault, missing, label: isDefault ? translate(locale, '{0}（默认）', [DEFAULT_SCHEDULE_AGENT]) : name }
@@ -80,7 +81,7 @@ export function isHeartbeatSchedule(job) {
 export function scheduleAgentEditBlock(job, locale = 'zh-CN') {
   if (isHeartbeatSchedule(job)) return { code: 'heartbeat', reason: translate(locale, '心跳任务固定由默认 Agent 执行，不能指定 Agent。') }
   if (isRecord(job) && job.source === 'profile') {
-    return { code: 'profile', reason: translate(locale, '这是 Profile 例程，每次启动按 Profile 重新声明。请在 Profile 文件 assistant.profile.yml 中该例程的 agent 字段修改。') }
+    return { code: 'profile', reason: translate(locale, '这是 Profile 例程，每次启动按 Profile 重新声明。请在 Profile 文件（默认 assistant.profile.yml）中该例程的 agent 字段修改。') }
   }
   return null
 }
@@ -105,11 +106,13 @@ export function scheduleAgentErrorMessage(error, locale = 'zh-CN') {
   const message = errorText(error)
   if (code === 'schedule_target_forbidden') {
     const account = /需要 (.+?) 上的 endpoint\.operate/u.exec(message)?.[1]
+    // Without an account name the Host refused for another reason (e.g. the target names no account):
+    // its own message says which, so show it as is.
     return account
-      ? translate(locale, '没有向投递账号发送消息的权限：需要 {0} 上的 endpoint.operate。请让管理员授权该账号，或改用你能操作的账号。', [account])
-      : translate(locale, '没有向投递账号发送消息的权限：需要该账号上的 endpoint.operate。请让管理员授权该账号，或改用你能操作的账号。')
+      ? translate(locale, '没有向投递账号发送消息的权限：需要 {0} 上的 endpoint.operate。请让管理员授予该账号的这项权限。', [account])
+      : null
   }
-  if (code === 'schedule_agent_profile') return translate(locale, '这是 Profile 例程，每次启动按 Profile 重新声明。请在 Profile 文件 assistant.profile.yml 中该例程的 agent 字段修改。')
+  if (code === 'schedule_agent_profile') return translate(locale, '这是 Profile 例程，每次启动按 Profile 重新声明。请在 Profile 文件（默认 assistant.profile.yml）中该例程的 agent 字段修改。')
   if (code === 'schedule_agent_heartbeat') return translate(locale, '心跳任务固定由默认 Agent 执行，不能指定 Agent。')
   if (code === 'unsupported') return translate(locale, '运行中的 Agent 包不支持修改任务的 Agent，请升级 zhin.js 后再试。')
   // `schedule_agent_not_found`: `Agent 不存在：<name>。可用的 Agent：a、b` (cron:add sends no code for it).
