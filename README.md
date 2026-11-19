@@ -148,6 +148,15 @@ Console 需要的协议常量、类型与打码规则都直接从已发布的包
 
 操作回执丢失时保留原 requestId 并冻结写入，只读刷新后按持久 mutation receipt 核对 taskId。该确认只证明任务变更，不证明平台投递。找不到确认不代表未执行，也不会自动重发。会话存储只保存操作身份、Host 地址和不含凭据的连接 scope，不保存任务正文或目标参数；换登录或重载后需要管理员明确选择用当前身份核对原操作。没有 `ops.schedule.write` 的身份不能执行任务写操作。
 
+## 定时 AI 任务的 Agent
+
+「运维 → 定时任务」的 AI 定时任务可以指定由哪个 Agent 执行（zhinjs/zhin#1250 第 52 批，`@zhin.js/console-protocol` 1.7）。
+
+- 新建任务的表单有「执行的 Agent」下拉框，选项来自 `schedule:list` 返回的 `agents`，默认「zhin（默认）」（不发送 `agent`）。旧引擎不返回 `agents`，只能用默认 Agent，下拉框与「修改 Agent」都不显示。
+- 每个任务显示执行的 Agent；`agentMissing: true`（Agent 已从 `ai.agents` 删除，运行会失败）时显示「⚠ Agent 不存在」，并提供「修改 Agent」入口。
+- 任务详情的「修改 Agent」调用 `cron:set-agent { id, agent }`，「恢复默认」发送 `agent: null`。Profile 例程（`source: profile`）要在 Profile 文件 `assistant.profile.yml` 中该例程的 `agent` 字段修改，心跳任务固定由默认 Agent 执行，这两类任务的按钮禁用并写明原因。
+- 拒绝按 `data.code` 给出提示：`schedule_target_forbidden`（缺少投递账号上的 `endpoint.operate`，`cron:add` 同样适用）、`schedule_agent_profile`、`schedule_agent_heartbeat`、Agent 不存在（`schedule_agent_not_found`，列出可用的 Agent）。提示显示在对话框里，草稿保留。
+
 ## 消息处理诊断
 
 在会话顶部选择“最近诊断”，或打开一条入站消息旁的诊断操作，可以查看实际处理阶段、指令状态、回复目标与投递结果。查询使用完整 Endpoint、会话、父容器、话题及平台消息 ID，不按正文猜测，也不会重放消息。

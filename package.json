@@ -8,7 +8,7 @@
     "build": "farm build",
     "build:demo": "farm build",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/*.test.mjs",
+    "test": "node --import ./tests/helpers/english-catalog.mjs --test tests/*.test.mjs",
     "lint:css": "stylelint \"console-ui/src/**/*.css\" \"client/**/*.css\" --quiet",
     "lint:css:all": "stylelint \"console-ui/src/**/*.css\" \"client/**/*.css\"",
     "preview": "serve -s dist -l tcp://127.0.0.1:5173",
@@ -16,10 +16,10 @@
   },
   "dependencies": {
     "@zhin.js/ai": "~1.7.0",
-    "@zhin.js/client": "~1.4.0",
-    "@zhin.js/console-protocol": "~1.6.1",
+    "@zhin.js/client": "~1.4.1",
+    "@zhin.js/console-protocol": "~1.7.0",
     "@zhin.js/console-ui": "~1.2.0",
-    "@zhin.js/contract": "~1.1.30",
+    "@zhin.js/contract": "~1.1.31",
     "zod": "^4.6.7"
   },
   "devDependencies": {

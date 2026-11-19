@@ -1,4 +1,28 @@
-import { englishMessages } from './messages.en.mjs'
+/**
+ * The English catalog (~446KB) is loaded only when English is used (#64 `english-catalog-lazy`): the
+ * default Chinese interface never downloads it. Until it is installed, `translate` keeps the source text.
+ */
+let englishMessages = null
+let englishLoading = null
+
+/** Whether English copy is available now. */
+export function englishCatalogReady() { return englishMessages !== null }
+
+/** Installs a catalog directly (tests and pre-bundled hosts); `loadEnglishCatalog` does this on demand. */
+export function installEnglishCatalog(messages) {
+  if (!messages || typeof messages !== 'object') throw new TypeError('English catalog must be an object')
+  englishMessages = messages
+}
+
+/** Loads the English catalog once; resolves when `translate('en', …)` returns English. */
+export function loadEnglishCatalog() {
+  if (englishMessages) return Promise.resolve()
+  englishLoading ??= import('./messages.en.mjs').then(
+    (module) => { installEnglishCatalog(module.englishMessages) },
+    (error) => { englishLoading = null; throw error },
+  )
+  return englishLoading
+}
 
 export const LOCALE_STORAGE_KEY = 'zhin.console.locale'
 export const DEFAULT_LOCALE = 'zh-CN'
@@ -32,9 +56,10 @@ function pluralForm(forms, count) {
 /** Only explicitly authored UI copy is translated. Interpolated values are inserted verbatim. */
 export function translate(locale, message, values = [], context) {
   if (typeof message !== 'string') return message
+  const catalog = locale === 'en' ? englishMessages : null
   const contextualKey = context ? `${context}\u0004${message}` : message
-  const key = Object.hasOwn(englishMessages, contextualKey) ? contextualKey : message
-  const entry = locale === 'en' && Object.hasOwn(englishMessages, key) ? englishMessages[key] : message
+  const key = catalog && Object.hasOwn(catalog, contextualKey) ? contextualKey : message
+  const entry = catalog && Object.hasOwn(catalog, key) ? catalog[key] : message
   const template = typeof entry === 'string' ? entry : pluralForm(entry, values[0])
   return template.replace(/\{(\d+)\}/gu, (placeholder, index) => Number(index) < values.length ? String(values[Number(index)]) : placeholder)
 }

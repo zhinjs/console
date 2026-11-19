@@ -6,3 +6,6 @@ export function readLocale(storage?: Pick<Storage, 'getItem'>): Locale
 export function saveLocale(storage: Pick<Storage, 'setItem'> | undefined, locale: Locale): boolean
 export function translate(locale: Locale, message: string, values?: readonly unknown[], context?: string): string
 export function localizeSchemaField<T>(field: T, locale: Locale): T
+export function englishCatalogReady(): boolean
+export function installEnglishCatalog(messages: Readonly<Record<string, string | { one?: string; other: string }>>): void
+export function loadEnglishCatalog(): Promise<void>

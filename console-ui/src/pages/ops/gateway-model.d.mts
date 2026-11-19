@@ -107,3 +107,49 @@ export function fieldErrorsAt(errors: DeclarationErrors | null | undefined, path
 export function declarationDraft(schema: SchemaField | null | undefined): Record<string, unknown>
 export function declarationConfig(value: unknown, t: Translate): { config: Record<string, unknown> | null; problem: string | null }
 export function parseDeclarationJson(text: string, t: Translate): { config: Record<string, unknown> | null; problem: string | null }
+
+export function pruneSelection(selected: ReadonlySet<string>, names: readonly string[]): ReadonlySet<string>
+export function toggleSelection(selected: ReadonlySet<string>, name: string, on: boolean): ReadonlySet<string>
+export function toggleAllSelection(names: readonly string[], on: boolean): ReadonlySet<string>
+export function selectionHeaderState(selected: ReadonlySet<string>, names: readonly string[]): boolean | 'indeterminate'
+export function selectionLimitProblem(count: number, t: Translate): string | null
+
+export declare const GATEWAY_VERSION_CHECK_RPC: 'gateway.version.check'
+export declare const VERSION_MIGRATE_COMMAND: 'npx zhin migrate --dry-run'
+export function migrateDocsHref(locale: string): string
+export interface GatewayVersionPackageView {
+  readonly name: string
+  readonly range: string | null
+  readonly installed: string | null
+  readonly latest: string | null
+  readonly wanted: string | null
+  readonly latestInRange: boolean
+  readonly updateAvailable: boolean
+  readonly needsMigrate: boolean
+}
+export interface GatewayVersionReportView {
+  readonly gateway: string | null
+  readonly packages: readonly GatewayVersionPackageView[]
+  readonly checkedAt: number
+  readonly registryReachable: boolean
+}
+export function readVersionReport(value: unknown): GatewayVersionReportView | null
+export function versionCheckUnsupported(error: unknown): boolean
+export function versionPackageLabel(name: string, t: Translate): string
+export type VersionRowState = 'migrate' | 'update' | 'current' | 'unknown'
+export interface VersionRow {
+  readonly name: string
+  readonly label: string
+  readonly range: string | null
+  readonly installed: string | null
+  readonly latest: string | null
+  readonly wanted: string | null
+  readonly state: VersionRowState
+  readonly update: boolean
+  readonly dependency: boolean
+}
+export function versionRows(report: GatewayVersionReportView | null | undefined, t: Translate): VersionRow[]
+export function versionStateLabel(state: VersionRowState, t: Translate): string
+export function versionStateTone(state: VersionRowState): 'warning' | 'secondary' | 'outline'
+export function versionNotice(report: GatewayVersionReportView | null | undefined): { kind: 'none' | 'update' | 'migrate'; count: number }
+export function reportedVersion(report: GatewayVersionReportView | null | undefined, name: string): string | null

@@ -191,6 +191,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
       keywords: choice.keywords,
     })),
   ]
+  const decisionChoiceCount = purposeProfileChoices(view, 'decision', i18n.locale).length
   // #1250: every language purpose may carry an ordered fallback chain; older Hosts keep only vision's.
   const fallbacks = supportsPurposeFallbacks(view)
   function defaultValue(key: 'chat' | 'summary' | 'ambient' | 'image', value: string) {
@@ -454,7 +455,15 @@ export function Purposes({ management: m }: { management: InferenceManagement })
         />
       ) : null}
       <Card className="p-4 space-y-4">
-        <h4 className="font-medium">{i18n.t("决策")}</h4>
+        <div className="space-y-1">
+          <h4 className="font-medium">{i18n.t("决策")}</h4>
+          {/* #64 decision-slot-kinds-unexplained: why ordinary chat models are missing here, and what the modes do — said once. */}
+          <p className="text-sm text-muted-foreground">
+            {i18n.t("这几项交给判断模型（决策模型，如 TypeSafe）来做，所以下拉里只有判断模型，普通对话模型选不进来。")}
+            {decisionChoiceCount === 0 ? ` ${i18n.t("还没有判断模型：在「模型」页签添加模型时勾选「决策模型」。")}` : ''}
+          </p>
+          <p className="text-sm text-muted-foreground">{i18n.t("关闭：不用判断模型。仅评估：判断模型给出建议并记录，不影响机器人怎么做。启用：按判断模型的结果执行。")}</p>
+        </div>
         {Object.entries(decisionTaskLabels(i18n.t, merged)).map(([task, label]) => {
           const policy = draft.decisions?.[task],
             change = (value: DecisionPolicy) =>

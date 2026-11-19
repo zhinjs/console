@@ -73,8 +73,10 @@ async function registeredBuiltinRoutes() {
  const imports = source.statements.filter(ts.isImportDeclaration)
  const defaults = imports.flatMap(statement=>[...(statement.importClause?.name ? [statement.importClause.name.text] : []),...(statement.importClause?.namedBindings && ts.isNamedImports(statement.importClause.namedBindings) ? statement.importClause.namedBindings.elements.map(item=>item.name.text).filter(name=>name==='LegacyRedirect') : [])])
  const declarations = defaults.map(name=>`const ${name}=${JSON.stringify(name)};`).join('\n')
+ // Pages loaded on first visit (`lazyPage`, #64 `route-code-splitting`) keep their name as the identifier too.
+ const lazyLoader = `const lazyPage=load=>{const name=String(load).match(/pages\\/([\\w/-]+)/)?.[1];return 'lazy:'+name};`
  const body = source.statements.filter(statement=>!ts.isImportDeclaration(statement)).map(statement=>ts.createPrinter().printNode(ts.EmitHint.Unspecified,statement,source)).join('\n')
- let code = compile(`${declarations}\nconst NAV_GROUPS=${JSON.stringify(NAV_GROUPS)};\nconst P=${JSON.stringify(CONSOLE_PATHS)},LEGACY_ROUTE_REDIRECTS=${JSON.stringify(LEGACY_ROUTE_REDIRECTS)};\nconst REPLAY_PERMISSION='replay',AMBIENT_STATUS_PERMISSION='ambient',SKILLS_STATUS_PERMISSION='skills';\nexport const routes=[]; const app={addRoute:route=>routes.push(route)};\n${body}`,'registerBuiltinShell.tsx')
+ let code = compile(`${declarations}\n${lazyLoader}\nconst NAV_GROUPS=${JSON.stringify(NAV_GROUPS)};\nconst P=${JSON.stringify(CONSOLE_PATHS)},LEGACY_ROUTE_REDIRECTS=${JSON.stringify(LEGACY_ROUTE_REDIRECTS)};\nconst REPLAY_PERMISSION='replay',AMBIENT_STATUS_PERMISSION='ambient',SKILLS_STATUS_PERMISSION='skills';\nexport const routes=[]; const app={addRoute:route=>routes.push(route)};\n${body}`,'registerBuiltinShell.tsx')
  code = code.replace('"react/jsx-runtime"',JSON.stringify(import.meta.resolve('react/jsx-runtime')))
  const registration = await import(moduleUrl(code))
  registration.registerBuiltinConsolePages()

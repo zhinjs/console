@@ -183,7 +183,12 @@ const scheduleList = { memory: [{ type: 'memory', id: 'heartbeat', kind: 'user-t
     { type: 'memory', id: 'rss/poll_feeds', kind: 'plugin-internal', title: '轮询 RSS 订阅', titleI18n: { en: 'Poll RSS feeds' }, displayName: '轮询 RSS 订阅', description: 'Poll RSS subscriptions', expression: '*/20 * * * * *', running: true, nextExecution: now + 12_000, plugin: 'root/rss', lastExecutedAt: now - 8_000, lastStatus: 'succeeded' },
     { type: 'memory', id: 'blackjack/cleanup', kind: 'plugin-internal', title: '清理超时的 21 点牌局', displayName: '清理超时的 21 点牌局', description: 'Abort stale blackjack sessions', expression: '*/10 * * * * *', running: true, nextExecution: now + 6_000, plugin: 'root/blackjack', lastExecutedAt: now - 4_000, lastStatus: 'succeeded' },
     { type: 'memory', id: 'bilibili/poll', kind: 'plugin-internal', title: 'B 站动态轮询', displayName: 'B 站动态轮询', expression: '*/30 * * * * *', running: true, nextExecution: now + 20_000, plugin: 'root/bilibili', lastExecutedAt: now - 10_000, lastStatus: 'failed', lastError: 'HTTP 412 风控' }],
-  persistent: [{ type: 'persistent', id: 'job-daily', cronExpression: '0 0 9 * * *', prompt: '总结昨天的群聊要点', label: '每日群聊摘要', enabled: true, nextExecution: now + 14 * HOUR, lastStatus: 'ok', lastExecutedAt: now - 10 * HOUR }],
+  persistent: [{ type: 'persistent', id: 'job-daily', cronExpression: '0 0 9 * * *', prompt: '总结昨天的群聊要点', label: '每日群聊摘要', enabled: true, nextExecution: now + 14 * HOUR, lastStatus: 'ok', lastExecutedAt: now - 10 * HOUR },
+    // #1250 b52: a job on another Agent, one whose Agent was removed from `ai.agents`, and a Profile routine.
+    { type: 'persistent', id: 'job-research', cronExpression: '0 30 8 * * 1', prompt: '整理本周值得读的论文', label: '每周论文速递', enabled: true, agent: 'researcher', nextExecution: now + 40 * HOUR },
+    { type: 'persistent', id: 'job-legacy', cronExpression: '0 0 18 * * *', prompt: '写今日日报', label: '日报', enabled: true, agent: 'old-writer', agentMissing: true, nextExecution: now + 6 * HOUR, lastStatus: 'error' },
+    { type: 'persistent', id: 'profile-morning', cronExpression: '0 0 7 * * *', prompt: '早安问候', label: 'Profile 早安', enabled: true, source: 'profile', nextExecution: now + 20 * HOUR }],
+  agents: ['zhin', 'researcher', 'writer'],
   capabilities: { persistent: true } }
 const assistantJobs = { eventsActive: true, jobs: [{ id: 'job-daily', label: '每日群聊摘要', enabled: true, state: { lastStatus: 'ok', nextRunAtMs: now + 14 * HOUR } }, { id: 'job-watch', label: '错误巡检', enabled: true, state: { lastStatus: 'error', lastError: 'timeout', nextRunAtMs: now + HOUR } }] }
 const toolApprovals = { available: true, pending: [{ id: 'approval-1', toolName: 'shell.exec', sessionKey: 'icqq:preview-community:group:20001', requesterId: '10001', createdAt: now - 5 * 60_000, expiresAt: now + 25 * 60_000, status: 'pending', args: { command: 'ls' } }] }
@@ -257,6 +262,25 @@ const gatewayPackages = { packageManager: 'pnpm@9.0.2', packages: [
   { name: '@zhin.js/adapter-qq', range: '^2.0.0', dependencyType: 'dependencies', installedVersion: '2.0.1', catalog: 'adapter' },
   { name: 'zhin.js', range: '^1.1.0', dependencyType: 'dependencies', installedVersion: '1.1.9' },
 ] }
+// gateway.version.check (zhinjs/console#64): UI_PREVIEW_VERSIONS=offline (registry unreachable) | unsupported (older Host).
+const versionMode = process.env.UI_PREVIEW_VERSIONS ?? 'newer'
+const versionRow = (name, range, installed, latest, wanted, flags) => ({
+  name, range, installed, latest: versionMode === 'offline' ? null : latest, wanted: versionMode === 'offline' ? null : wanted,
+  latestInRange: false, updateAvailable: false, needsMigrate: false, ...(versionMode === 'offline' ? {} : flags),
+})
+const versionReport = () => ({
+  gateway: '1.6.1',
+  checkedAt: Date.now() - 42 * 60_000,
+  registryReachable: versionMode !== 'offline',
+  packages: [
+    versionRow('zhin.js', '^1.1.0', '1.1.9', '2.0.0', '1.7.2', { updateAvailable: true, needsMigrate: true }),
+    versionRow('@zhin.js/gateway', null, '1.6.1', '1.7.0', null, { needsMigrate: true }),
+    versionRow('@zhin.js/console-client', '^1.4.0', '1.4.2', '1.4.2', '1.4.2', { latestInRange: true }),
+    versionRow('@zhin.js/adapter-qq', '^2.0.0', '2.0.1', '2.1.0', '2.1.0', { latestInRange: true, updateAvailable: true }),
+    versionRow('@zhin.js/plugin-repeater', '^1.1.0', '1.1.4', '1.2.0', '1.2.0', { latestInRange: true, updateAvailable: true }),
+    versionRow('@zhin.js/plugin-welcome', '^1.4.0', '1.4.0', '1.4.0', '1.4.0', { latestInRange: true }),
+  ],
+})
 const marketUpdates = [{ name: '@zhin.js/plugin-repeater', current: '1.1.4', latest: '1.2.0' }]
 const marketPlugins = [
   ['@zhin.js/plugin-welcome', '群欢迎', '新成员入群时发送欢迎语，可按会话覆盖。', 'feature', 3200],
@@ -477,6 +501,10 @@ async function gatewayOwned(url, request, json, readBody) {
     if (type === 'iam.audit.list') { json(envelope({ entries: audit, next: null })); return true }
     if (type === 'gateway.instance.status') { json(envelope(instanceStatus())); return true }
     if (type === 'gateway.instance.logs') { json(envelope(instanceLogs())); return true }
+    if (type === 'gateway.version.check') {
+      if (versionMode === 'unsupported') { json({ ok: false, error: { code: 'unknown_rpc', message: 'RPC "gateway.version.check" 不存在', status: 404 } }, 404); return true }
+      json(envelope(versionReport())); return true
+    }
     if (type === 'gateway.packages.list' && !instanceOffline) { json(envelope(gatewayPackages)); return true }
     if (type === 'gateway.packages.list') {
       json(envelope({ packageManager: 'pnpm', packages: [
@@ -734,6 +762,16 @@ const server = createServer(async (request, response) => {
     if (type === 'plugin.root.ambient' && unknownAmbient) { json({ success: false, error: 'RPC plugin.root.ambient timed out' }, 503); return }
     if (type.startsWith('plugin.root.') && Object.hasOwn(pluginRoot, type.slice('plugin.root.'.length))) { json(envelope(pluginRoot[type.slice('plugin.root.'.length)](body.data ?? {}))); return }
     if (type === 'schedule:list') { json(envelope(scheduleList)); return }
+    if (type === 'cron:set-agent') {
+      const input = body.data && typeof body.data === 'object' ? { ...body, ...body.data } : body
+      const job = scheduleList.persistent.find(item => item.id === input.id)
+      if (!job) { json({ success: false, error: `任务不存在: ${input.id}` }, 400); return }
+      if (job.source === 'profile') { json({ success: false, error: '请在 Profile 文件中该 routine 的 agent 字段修改', data: { code: 'schedule_agent_profile' } }, 400); return }
+      if (input.agent != null && !scheduleList.agents.includes(input.agent)) { json({ success: false, error: `Agent 不存在：${input.agent}。可用的 Agent：${scheduleList.agents.join('、')}` }, 400); return }
+      if (input.agent && input.agent !== 'zhin') job.agent = input.agent; else delete job.agent
+      delete job.agentMissing
+      json(envelope({ job, success: true })); return
+    }
     if (type === 'config:get-source') { json(envelope({ source: configSource + rssConfigSource, revision: 'preview-1', configKeys: ['ai', 'rss'], configPaths: { ai: ['ai'], rss: ['rss'] } })); return }
     if (type === 'login.list') { json(envelope({ tasks: loginTasks })); return }
     if (type === 'plugin.adapter-icqq.status') { json(envelope(adapterStatus)); return }
