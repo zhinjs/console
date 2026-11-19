@@ -848,6 +848,16 @@ const server = createServer(async (request, response) => {
   }
   if (url.pathname === '/api/agent/sessions') { json(envelope({ sessions: [], total: 0, items: [] })); return }
   if (url.pathname === '/api/agent/trace-archive/sessions') { json(envelope(traceSessions)); return }
+  // Key-only sessions (hashed keys, `schedule:<id>`) read their turns by key alone.
+  if (url.pathname === '/api/agent/trace-archive/turns' && !url.searchParams.has('conversation')) {
+    const key = url.searchParams.get('sessionKey') ?? ''
+    const session = traceSessions.find(row => row.session_key === key)
+    json(envelope(session ? Array.from({ length: Math.min(session.turns, 3) }, (_, index) => ({
+      turn_id: `preview-${index + 1}`, session_key: key, started_at: session.last_started_at - index * 7 * MINUTE, duration_ms: 2400 + index * 300,
+      model_calls: 1, tool_calls: 0, termination: { status: 'completed' }, usage_calls: [{ prompt_tokens: 1800, completion_tokens: 160, total_tokens: 1960 }],
+    })) : []))
+    return
+  }
   if (url.pathname === '/console/api/pages') { json({ pages: [{ route: '/icqq', localName: 'index', owner: 'adapter-icqq', source: 'plugins/adapters/icqq/pages/index/index.tsx' }] }); return }
   if (url.pathname === '/api/console/request' && request.method === 'POST') {
     const body = request.previewBody ?? await readBody()

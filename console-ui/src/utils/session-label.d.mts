@@ -18,6 +18,8 @@ export interface SessionLabelSource {
 export function middleEllipsis(text: string, max?: number): string
 export function splitSessionKey(row: Pick<SessionLabelSource, 'sessionKey' | 'platform' | 'endpoint' | 'scope' | 'sceneId'>): { sessionKey: string; platform: string; endpoint: string; scope: string; sceneId: string }
 export function scheduleIdOfKey(sessionKey: unknown): string
+export function isHashedSessionKey(sessionKey: unknown): boolean
+export function isKeyOnlySessionKey(sessionKey: unknown): boolean
 export function sessionKind(row: Partial<SessionLabelSource> | null | undefined): string
 export function sessionLabel(row: SessionLabelSource, locale?: Locale): string
 export function sessionShortKey(row: Partial<SessionLabelSource> | null | undefined): string

@@ -19,7 +19,7 @@ function compile(source, mocks = {}) {
   return module.exports
 }
 const source = await readFile(new URL('../console-ui/src/pages/agent-sessions.tsx', import.meta.url), 'utf8')
-const sessions = compile(await readFile(new URL('../console-ui/src/utils/agent-session.ts', import.meta.url), 'utf8'), { '../pages/personal-session-model.mjs': personalModels })
+const sessions = compile(await readFile(new URL('../console-ui/src/utils/agent-session.ts', import.meta.url), 'utf8'), { '../pages/personal-session-model.mjs': personalModels, './session-label.mjs': sessionLabels })
 const elements = node => node && typeof node === 'object' ? [node, ...[node.props?.children].flat(Infinity).flatMap(elements)] : []
 // Radix Dialog does not mount its content while closed.
 const text = node => typeof node === 'string' ? node : node && typeof node === 'object' ? node.type === 'Dialog' && !node.props.open ? '' : [node.props?.children].flat(Infinity).map(text).join('') : ''
@@ -238,5 +238,37 @@ test('a tab chosen for a group conversation does not carry the conversation tab 
   assert.equal(find(f, 'tabs').props.value, 'trace')
   f.navigate('icqq:bot:group:room'); f.render()
   assert.equal(find(f, 'tabs').props.value, 'conversation')
+  f.close()
+})
+
+test('scene-task and schedule sessions are listed, selectable by URL, open on the trace tab, and say truthfully why the conversation is not shown', async () => {
+  const scene = `scene-task:v1:${'9f8e7d6c'.repeat(8)}`
+  const f = fixture()
+  f.calls.find(call => call.url.endsWith('/trace-archive/sessions')).resolve({ ok: true, json: async () => ({ success: true, data: [
+    { session_key: scene, turns: 2, last_started_at: 2, last_status: 'completed' },
+    { session_key: 'schedule:job-daily', turns: 1, last_started_at: 1, last_status: 'completed' },
+  ] }) })
+  await settle(); f.render()
+  assert.deepEqual(find(f, 'session-picker').props.recent.map(row => row.sessionKey), [scene, 'schedule:job-daily'])
+  const cards = elements(f.tree).filter(node => node.type === 'stat-card')
+  assert.equal(cards.find(card => card.props.label === '群聊与频道').props.value, 1)
+  assert.match(cards.find(card => card.props.label === '群聊与频道').props.sub, /其他 1 个/)
+  for (const [key, title, copy] of [
+    [scene, '这里还不显示这个会话的对话', /还不能把这个会话对应到原来的聊天.*平台查看.*轨迹/],
+    ['schedule:job-daily', '这里不显示定时任务的对话', /定时任务按计划运行.*轨迹/],
+  ]) {
+    find(f, 'session-picker').props.onLoad(key); f.render(); f.render()
+    assert.equal(find(f, 'tabs').props.value, 'trace', key)
+    assert.ok(find(f, 'conversation-trace'))
+    assert.ok(f.traceReads.some(args => args[0] === key), 'turns are read by the key')
+    assert.equal(find(f, 'conversation-history'), undefined, 'no conversation read for a key without an address')
+    const panel = elements(f.tree).find(node => node.type === 'tabs-content' && node.props.value === 'conversation')
+    const notice = elements(panel).find(node => node.type === 'empty-state')
+    assert.equal(notice.props.title, title)
+    assert.match(notice.props.description, copy)
+    assert.equal(notice.props.action.label, '查看轨迹')
+    assert.equal(elements(panel).find(node => node.type === 'error-alert'), undefined)
+    assert.equal(find(f, 'personal-session-panel'), undefined)
+  }
   f.close()
 })

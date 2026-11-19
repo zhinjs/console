@@ -90,3 +90,14 @@ test('pages use the shared label: no 「自定义会话」 fallback, full keys o
   assert.doesNotMatch(page, /个人会话没有聊天记录|个人会话不保存聊天记录/)
   assert.match(page, /sessionSummary\.others/)
 })
+
+test('key-only sessions: hashed keys of every kind and schedule:<id>; traces open by key', async () => {
+  const { isHashedSessionKey, isKeyOnlySessionKey } = await import('../console-ui/src/utils/session-label.mjs')
+  for (const key of [PERSONAL, SCENE, `other:v2:${'c'.repeat(16)}`]) assert.equal(isHashedSessionKey(key), true, key)
+  for (const key of [`personal-session:v1:${'a'.repeat(32)}`, 'scene-task:v1:abc', 'icqq:bot:group:1', 'schedule:x']) assert.equal(isHashedSessionKey(key), false, key)
+  assert.equal(isKeyOnlySessionKey('schedule:x'), true)
+  assert.equal(isKeyOnlySessionKey('icqq:bot:group:1'), false)
+  assert.match(read('pages/ConversationTrace.tsx'), /conversation \|\| isKeyOnlySessionKey\(turn\.session_key\)/)
+  assert.match(read('pages/useConversationTraces.ts'), /!conversationKey && !isKeyOnlySessionKey\(sessionKey\)/)
+  assert.deepEqual(withScheduleName({ sessionKey: 'schedule:x', scopeKind: 'internal' }, new Map([['x', 'n']])), { sessionKey: 'schedule:x', scopeKind: 'internal', sceneLabel: 'n' }, 'a Host kind is kept')
+})

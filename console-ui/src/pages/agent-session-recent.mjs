@@ -1,15 +1,16 @@
-import { isPersonalSessionKey } from './personal-session-model.mjs'
 import { translate } from '../i18n/locale.mjs'
-import { scheduleIdOfKey, sessionKind } from '../utils/session-label.mjs'
+import { isKeyOnlySessionKey, sessionKind } from '../utils/session-label.mjs'
 const SCOPES = new Set(['private', 'group', 'channel'])
+/**
+ * Every Agent session the picker can open — and so every one the summary counts, so the two agree:
+ * legacy `platform:endpoint:scope:sceneId` keys, hashed keys (`personal-session:v1:`,
+ * `scene-task:v1:` …) and `schedule:<id>`.
+ */
 const validKey = key => {
-  if (isPersonalSessionKey(key)) return true
+  if (isKeyOnlySessionKey(key)) return true
   const parts = key.trim().split(':')
   return parts.length >= 4 && !!parts[0].trim() && !!parts[1].trim() && SCOPES.has(parts[2]) && !!parts.slice(3).join(':').trim()
 }
-/** Every Agent session key the summary counts: the picker's keys, other hashed keys (`scene-task:v1:<sha>`) and `schedule:<id>`. */
-const HASHED_KEY = /^[a-z][a-z-]*:v\d+:[0-9a-f]{16,}$/u
-const countedKey = key => validKey(key) || HASHED_KEY.test(key) || !!scheduleIdOfKey(key)
 const text = value => (typeof value === 'string' && value.trim() ? value.trim() : '')
 /** What a newer Host may send next to the key (snake_case like the archive, or camelCase); only present fields are kept. */
 function describedFields(row) {
@@ -42,7 +43,7 @@ const DAY_MS = 24 * 60 * 60 * 1000
 const FAILED_STATUSES = new Set(['failed', 'error'])
 
 /**
- * Totals over every archived session (not just the picker's recent slice).
+ * Totals over every archived session the picker can list (not just its recent slice).
  * The kinds come from what the rows carry (`scope_kind` / `scopeKind`), else the key's shape
  * (`sessionKind`: `scene-task:` ⇒ group, `personal-session:` ⇒ private): `groups` (group chats and
  * channels), `privates`, and `others` for scheduled tasks, HTTP / A2A sessions and unknown kinds —
@@ -53,8 +54,7 @@ export function summarizeRecentSessions(body, now = Date.now()) {
   if (body?.success !== true || !Array.isArray(body.data)) return null
   const latest = new Map()
   for (const row of body.data) {
-    // A key of another shape counts when the Host says what it is (`scope_kind`, e.g. an HTTP session).
-    if (!row || typeof row.session_key !== 'string' || !(countedKey(row.session_key) || describedFields(row).scopeKind)) continue
+    if (!row || typeof row.session_key !== 'string' || !validKey(row.session_key)) continue
     if (!Number.isFinite(row.last_started_at) || !Number.isInteger(row.turns) || row.turns < 0) continue
     const previous = latest.get(row.session_key)
     if (!previous || row.last_started_at > previous.last_started_at) latest.set(row.session_key, row)

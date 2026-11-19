@@ -5,6 +5,7 @@ import { createRequire } from 'node:module'
 import ts from 'typescript'
 import { translate } from '../console-ui/src/i18n/locale.mjs'
 import * as usageModel from '../console-ui/src/pages/token-usage-model.mjs'
+import { createConsoleAccess } from '../console-ui/src/utils/console-access.mjs'
 
 // zhinjs/zhin#1250 第 59 批：Token 用量页重排（汇总环比、服务 → 模型、Agent / 用途、详情 Sheet）
 // 与第 57 批审查遗留（同名会话短键、ID 计数、ⓘ 可访问名、不透明 series 键、渲染级「原始 ID 只在 ⓘ / Sheet」）。
@@ -590,9 +591,11 @@ test('compact rows and share cells name the share after their row', () => {
 })
 
 const pageSource = await readFile(new URL('../console-ui/src/pages/token-usage.tsx', import.meta.url), 'utf8')
-function pageFixture(rpc, { scheduleList = null, scheduleReadable = true } = {}) {
+function pageFixture(rpc, { scheduleList = null, scheduleReadable = true, signedIn = true } = {}) {
   const runtime = hookHarness()
   const consoleCalls = []
+  let connectionScope = 'scope-a', session = { me: signedIn ? { user: { id: 'u' } } : null, legacy: false }
+  const access = createConsoleAccess({ permissions: scheduleReadable ? ['ops.schedule.read'] : ['control.read'] })
   const i18n = { locale: 'zh-CN', t: (message, values) => translate('zh-CN', message, values) }
   let params = new URLSearchParams()
   const calls = []
@@ -609,13 +612,18 @@ function pageFixture(rpc, { scheduleList = null, scheduleReadable = true } = {})
     './token-usage-report': { UsageBasisHint: 'usage-basis-hint', UsageReport: 'usage-report' },
     './token-usage-model.mjs': usageModel,
     '../utils/console-rpc': { requestConsole: async input => { consoleCalls.push(input); if (!scheduleList) throw new Error('unsupported'); return scheduleList } },
-    '../utils/console-access.mjs': { hasConsolePermission: () => scheduleReadable },
+    '../hooks/use-console-access': { useConsoleAccess: () => access },
+    '../hooks/use-console-session': { useConsoleSession: () => session },
+    '../utils/useInboxCacheScope': { useInboxCacheScope: () => connectionScope },
+    '../utils/inbox-cache': { isInboxCacheScopeActive: scope => scope === connectionScope },
     '../contracts/zhin-console': { CONSOLE_RPC: { SCHEDULE_LIST: 'schedule:list' } },
   }).default
   let tree
   const render = () => (tree = runtime.render(page, {}))
   return {
     calls, consoleCalls, render,
+    setScope(value) { connectionScope = value; runtime.invalidate() },
+    signIn() { session = { me: { user: { id: 'u' } }, legacy: false }; runtime.invalidate() },
     async flush() { render(); await settle(); return render() },
     report: () => nodes(tree).find(node => node.type === 'usage-report')?.props ?? null,
     status: () => nodes(tree).find(node => node.type === 'status-state')?.props ?? null,
@@ -719,6 +727,20 @@ test('page: scheduled-task rows show the task name from one schedule:list read, 
   await failing.flush(); await failing.flush()
   assert.equal(failing.consoleCalls.length, 1)
   assert.ok(failing.report().stats, 'a failed list read leaves the report as it was')
+
+  // Before /auth/me every permission reads as granted: wait for the principal.
+  const early = pageFixture(async () => withSchedule(), { scheduleList, signedIn: false })
+  await early.flush(); await early.flush()
+  assert.equal(early.consoleCalls.length, 0, 'no schedule:list before access is loaded')
+  early.signIn(); await early.flush(); await early.flush()
+  assert.equal(early.consoleCalls.length, 1)
+
+  // Another connection reads its own list; the old names are not shown there.
+  f.setScope('scope-b'); f.render()
+  assert.equal(usageSessionLabel(f.report().stats.bySession.find(row => row.sessionKey === 'schedule:sched_mwio9qd6_x1')), '定时任务 sched_mwio9qd6_x1')
+  await f.flush(); await f.flush()
+  assert.equal(f.consoleCalls.length, 2, 'read again for the new connection')
+  assert.equal(usageSessionLabel(f.report().stats.bySession.find(row => row.sessionKey === 'schedule:sched_mwio9qd6_x1')), '定时任务 每日群聊摘要')
 })
 
 test('usage: schedule names map onto schedule:<id> rows only; a real Host name wins', () => {
@@ -736,4 +758,9 @@ test('usage: schedule names map onto schedule:<id> rows only; a real Host name w
   // The Host's own label equal to the id is no name: the list's name replaces it.
   assert.equal(usageSessionLabel(usageWithScheduleNames({ bySession: [{ sessionKey: 'schedule:a', scopeKind: 'schedule', sceneLabel: 'a' }] }, names).bySession[0]), '定时任务 早报')
   assert.deepEqual(usageSessionOptions(named.bySession.slice(0, 1)), [{ value: 'schedule:a', label: '定时任务 早报' }])
+  // A kind the Host sent is kept.
+  assert.equal(usageWithScheduleNames({ bySession: [{ sessionKey: 'schedule:a', scopeKind: 'internal' }] }, names).bySession[0].scopeKind, 'internal')
+  assert.equal(usageModel.usageScheduleNamesAllowed({ me: null, legacy: false }), false, 'not before access is loaded')
+  assert.equal(usageModel.usageScheduleNamesAllowed({ me: null, legacy: true }), true)
+  assert.equal(usageModel.usageScheduleNamesAllowed({ me: {}, legacy: false }, createConsoleAccess({ permissions: [] })), false)
 })

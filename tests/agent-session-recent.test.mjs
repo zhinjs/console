@@ -58,7 +58,7 @@ test('session kinds come from the rows, else the key shape; unknown kinds are co
   const now = 1_000_000_000
   const sha = c => c.repeat(64)
   const row = (key, extra = {}) => ({ session_key: key, turns: 1, last_started_at: now, last_status: 'completed', ...extra })
-  const summary = summarizeRecentSessions({ success: true, data: [
+  const body = { success: true, data: [
     row(`scene-task:v1:${sha('a')}`),
     row(`scene-task:v1:${sha('b')}`, { scope_kind: 'channel' }),
     row(`personal-session:v1:${sha('c')}`),
@@ -67,8 +67,13 @@ test('session kinds come from the rows, else the key shape; unknown kinds are co
     row('http:api:session:x', { scope_kind: 'http' }),
     row(`unknown-kind:v1:${sha('e')}`),
     row('broken'),
-  ] }, now)
-  assert.deepEqual(summary, { sessions: 7, turns: 7, active: 7, groups: 3, privates: 1, others: 3, failed: 0 })
+  ] }
+  const summary = summarizeRecentSessions(body, now)
+  assert.deepEqual(summary, { sessions: 6, turns: 6, active: 6, groups: 3, privates: 1, others: 2, failed: 0 })
+  // Counts and list agree: every counted session is listed (and so can be opened).
+  assert.equal(readRecentSessions(body, Number.POSITIVE_INFINITY).length, summary.sessions)
+  assert.deepEqual(readRecentSessions(body, Number.POSITIVE_INFINITY).map(row => row.sessionKey).sort(),
+    [`scene-task:v1:${sha('a')}`, `scene-task:v1:${sha('b')}`, `personal-session:v1:${sha('c')}`, `personal-session:v1:${sha('d')}`, 'schedule:sched_1', `unknown-kind:v1:${sha('e')}`].sort())
 })
 
 test('recent sessions keep the names a newer Host sends next to the key', () => {

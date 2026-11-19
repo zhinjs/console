@@ -7,7 +7,10 @@ import { usageSessionPattern } from './insights/scope-filter.mjs'
 import { RefreshCw } from 'lucide-react'
 import { pluginRpc } from '../utils/plugin-rpc'
 import { requestConsole } from '../utils/console-rpc'
-import { hasConsolePermission } from '../utils/console-access.mjs'
+import { useConsoleAccess } from '../hooks/use-console-access'
+import { useConsoleSession } from '../hooks/use-console-session'
+import { useInboxCacheScope } from '../utils/useInboxCacheScope'
+import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import { CONSOLE_RPC } from '../contracts/zhin-console'
 import {
   Button, DateTimeField, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, ErrorAlert, Input, PageHeader, PageShell,
@@ -25,6 +28,7 @@ import {
   previousUsagePlan,
   toLocalDateTime,
   scheduleNamesFromList,
+  usageScheduleNamesAllowed,
   usageHasScheduleSessions,
   usageSessionOptions,
   usageWithScheduleNames,
@@ -78,8 +82,13 @@ export default function TokenUsagePage() {
   // Sessions of the last unfiltered result: the 「会话 / 群」 choices stay while one of them is picked.
   const [sessionRows, setSessionRows] = useState<UsageStats['bySession']>([])
   // Names of scheduled tasks (`schedule:list`, id → name), read once and only when a `schedule:<id>` row shows up.
-  const [scheduleNames, setScheduleNames] = useState<Map<string, string> | null>(null)
-  const scheduleNamesRead = useRef(false)
+  // Keyed on the connection: another Host / credential reads its own list.
+  const connectionScope = useInboxCacheScope()
+  const consoleSession = useConsoleSession()
+  const access = useConsoleAccess()
+  const [scheduleRead, setScheduleRead] = useState<{ scope: string | undefined; names: Map<string, string> } | null>(null)
+  const scheduleNamesRead = useRef<{ scope: string | undefined } | null>(null)
+  const scheduleNames = scheduleRead && scheduleRead.scope === connectionScope ? scheduleRead.names : null
   const stats = useMemo(() => usageWithScheduleNames(hostStats, scheduleNames), [hostStats, scheduleNames])
   const sessionOptions: SessionOption[] = useMemo(() => {
     const rows = usageWithScheduleNames({ bySession: sessionRows }, scheduleNames).bySession
@@ -136,15 +145,16 @@ export default function TokenUsagePage() {
   }, [built, i18n.locale])
 
   const wantsScheduleNames = (usageHasScheduleSessions(hostStats) || usageHasScheduleSessions({ bySession: sessionRows }))
-    && hasConsolePermission('ops.schedule.read')
+    && usageScheduleNamesAllowed(consoleSession, access) && isInboxCacheScopeActive(connectionScope)
   useEffect(() => {
-    if (!wantsScheduleNames || scheduleNamesRead.current) return
-    scheduleNamesRead.current = true
-    // Without the list (an older Host, no permission) the rows keep showing the task id.
+    if (!wantsScheduleNames || scheduleNamesRead.current?.scope === connectionScope) return
+    const scope = connectionScope
+    scheduleNamesRead.current = { scope }
+    // Without the list (an older Host, a failed read) the rows keep showing the task id.
     requestConsole<unknown>({ type: CONSOLE_RPC.SCHEDULE_LIST, locale: i18n.locale })
-      .then(data => setScheduleNames(scheduleNamesFromList(data)))
+      .then(data => { if (isInboxCacheScopeActive(scope)) setScheduleRead({ scope, names: scheduleNamesFromList(data) }) })
       .catch(() => undefined)
-  }, [wantsScheduleNames]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [wantsScheduleNames, connectionScope]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const applySession = (value: string) => setSession(value.trim())
   const sessionChoices = useMemo(() => {

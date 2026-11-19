@@ -61,6 +61,24 @@ export function scheduleIdOfKey(sessionKey) {
 }
 
 /**
+ * A hashed Agent session key (`<kind>:v<n>:<hex>`, zhin 1.9): `personal-session:v1:` with its full
+ * 64-digit hash, any other kind (`scene-task:v1:` …) with at least 16 hex digits.
+ */
+export function isHashedSessionKey(sessionKey) {
+  const hashed = HASHED_KEY.exec(String(sessionKey ?? ''))
+  if (!hashed) return false
+  return hashed[1] !== 'personal-session' || /^[0-9a-f]{64}$/u.test(hashed[2])
+}
+
+/**
+ * A session the key alone identifies — hashed keys and `schedule:<id>` — with no conversation
+ * address in it: its turns are read by key (「轨迹」), its conversation is not linked here yet.
+ */
+export function isKeyOnlySessionKey(sessionKey) {
+  return isHashedSessionKey(sessionKey) || !!scheduleIdOfKey(sessionKey)
+}
+
+/**
  * Kind of a session: the Host's `scopeKind` (`direct` → `private`, `guild` → `channel`), else the
  * Host's `scope` / the scope of a `platform:endpoint:scope:sceneId` key, else what a hashed key
  * names (`scene-task` → `group`, `personal-session` → `private`), `schedule` for `schedule:` keys,
@@ -174,7 +192,7 @@ export function scheduleNamesFromList(data) {
 /**
  * A session row with the name of its scheduled task: for a `schedule:<id>` row whose task name is
  * known, `scopeKind: 'schedule'` and `sceneLabel: <name>` (unless the Host already sent a real
- * name); every other row unchanged.
+ * name); a `scopeKind` the Host sent is kept. Every other row unchanged.
  */
 export function withScheduleName(row, names) {
   const id = scheduleIdOfKey(row?.sessionKey)
@@ -182,5 +200,6 @@ export function withScheduleName(row, names) {
   if (!name) return row
   const scene = label(row.sceneLabel)
   if (scene && scene !== id) return row
-  return { ...row, scopeKind: 'schedule', sceneLabel: name }
+  // A kind the Host sent stays; only a row without one becomes a scheduled task.
+  return { ...row, scopeKind: label(row.scopeKind) || 'schedule', sceneLabel: name }
 }

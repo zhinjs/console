@@ -1,4 +1,5 @@
 import { translate } from '../i18n/locale.mjs'
+import { hasConsolePermission } from '../utils/console-access.mjs'
 import { scheduleIdOfKey, scheduleNamesFromList, sessionLabel, sessionShortKey, splitSessionKey, withScheduleName } from '../utils/session-label.mjs'
 
 export { scheduleNamesFromList, splitSessionKey }
@@ -298,6 +299,14 @@ export function usageModelIdGroups(row) {
  */
 export const usageSessionLabel = sessionLabel
 export const usageSessionShortKey = sessionShortKey
+
+/**
+ * Whether the task names may be read: only once the signed-in principal is known (`/auth/me`, or a
+ * pre-RBAC Host) — before that every permission reads as granted — and it holds `ops.schedule.read`.
+ */
+export function usageScheduleNamesAllowed(session, access) {
+  return Boolean(session && (session.me || session.legacy)) && hasConsolePermission('ops.schedule.read', access)
+}
 
 /** Whether any session row is a scheduled task (`schedule:<id>`): only then is `schedule:list` worth reading. */
 export function usageHasScheduleSessions(stats) {
