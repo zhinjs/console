@@ -362,7 +362,7 @@ test('refused Agent changes are explained in the dialog by their code', async ()
     [refused('schedule_target_forbidden', '没有向该账号投递的权限：需要 icqq / bot-1 上的 endpoint.operate'), '没有向投递账号发送消息的权限：需要 icqq / bot-1 上的 endpoint.operate。'],
     [refused('schedule_agent_profile', '请在 Profile 文件中该 routine 的 agent 字段修改'), 'assistant.profile.yml'],
     [refused('schedule_agent_heartbeat', '心跳任务不能指定 Agent: x'), '心跳任务固定由默认 Agent 执行'],
-    [new Error('Agent 不存在：writer。可用的 Agent：zhin、researcher'), 'Agent「writer」不存在，可用的 Agent：zhin、researcher。'],
+    [new Error('Agent 不存在：writer。可用的 Agent：zhin、researcher'), 'Agent「writer」不存在。可用的 Agent：zhin、researcher，请从中改选。'],
     [new Error('其它错误'), '其它错误'],
   ]
   for (const [error, expected] of cases) {
@@ -397,6 +397,80 @@ test('the creation form offers the Host Agents, sends the choice, and shows a de
   assert.ok(text(elements(dialog()).find(node => node.props?.role === 'alert')).includes('需要 icqq / bot-1 上的 endpoint.operate'))
   assert.deepEqual(f.errors, [])
   f.close()
+})
+
+// #1250 b61: `schedule_agent_not_found` carries `data.available` (b55); the forms offer exactly those.
+const agentNotFound = (agent, available) => Object.assign(new Error(`Agent 不存在：${agent}。可用的 Agent：${available.join('、')}`),
+  { details: { dataCode: 'schedule_agent_not_found', dataAgent: agent, dataAvailable: available } })
+
+test('a refused creation Agent names the available ones, narrows the dropdown to them and keeps the refused choice unselectable', async () => {
+  const f = await agentFixture()
+  button(f.tree, '新建任务').props.onClick(); f.render()
+  const dialog = () => elements(f.tree).find(node => node.type === 'dialog' && node.props.open && text(node).includes('新建定时任务'))
+  const field = () => elements(dialog()).find(node => node.props?.['aria-labelledby'] === 'cron-new-agent-label')
+  elements(dialog()).find(node => node.type === 'input' && node.props.placeholder.includes('秒 分 时 日 月 周')).props.onChange({ target: { value: '0 0 9 * * *' } }); f.render()
+  elements(dialog()).find(node => node.type === 'textarea').props.onChange({ target: { value: '写周报' } }); f.render()
+  chooseIn(dialog(), '执行的 Agent', 'writer', f)
+  f.timers.at(-1)(); f.answer('cron:validate', { valid: true }); await f.settle()
+  button(dialog(), '创建').props.onClick(); f.render()
+  const call = f.calls.at(-1); call.answered = true
+  call.reject(agentNotFound('writer', ['zhin', 'researcher'])); await f.settle()
+  const alert = elements(dialog()).find(node => node.props?.role === 'alert')
+  assert.ok(text(alert).includes('Agent「writer」不存在。可用的 Agent：zhin、researcher，请从中改选。'), text(alert))
+  assert.doesNotMatch(text(alert), /schedule_agent_not_found/)
+  assert.deepEqual(field().props.options, [
+    { value: '', label: 'zhin（默认）' }, { value: 'researcher', label: 'researcher' },
+    { value: 'writer', label: 'writer（不存在）', disabled: true },
+  ])
+  assert.equal(button(dialog(), '创建').props.disabled, true, 'the refused Agent cannot be sent again')
+  chooseIn(dialog(), '执行的 Agent', 'researcher', f)
+  assert.equal(elements(dialog()).find(node => node.props?.role === 'alert'), undefined)
+  assert.equal(button(dialog(), '创建').props.disabled, false)
+  assert.deepEqual(f.errors, [])
+  f.close()
+})
+
+test('a refused Agent change offers the available Agents; with none it points to the configuration', async () => {
+  const f = await agentFixture()
+  expand(f, 'task:plain'); button(row(f.tree, 'task:plain'), '修改 Agent').props.onClick(); f.render()
+  chooseIn(agentDialog(f), '执行的 Agent', 'writer', f)
+  button(agentDialog(f), '保存').props.onClick(); f.render()
+  let call = f.calls.at(-1); call.answered = true
+  call.reject(agentNotFound('writer', ['zhin'])); await f.settle()
+  const field = () => elements(agentDialog(f)).find(node => node.props?.['aria-labelledby'] === 'cron-set-agent-label')
+  assert.deepEqual(field().props.options.map(option => option.value), ['', 'writer'])
+  assert.equal(field().props.options[1].disabled, true)
+  assert.equal(button(agentDialog(f), '保存').props.disabled, true)
+  assert.ok(text(elements(agentDialog(f)).find(node => node.props?.role === 'alert')).includes('可用的 Agent：zhin，请从中改选。'))
+  f.close()
+
+  const g = await agentFixture()
+  expand(g, 'task:plain'); button(row(g.tree, 'task:plain'), '修改 Agent').props.onClick(); g.render()
+  chooseIn(agentDialog(g), '执行的 Agent', 'writer', g)
+  button(agentDialog(g), '保存').props.onClick(); g.render()
+  call = g.calls.at(-1); call.answered = true
+  call.reject(agentNotFound('writer', [])); await g.settle()
+  assert.ok(text(elements(agentDialog(g)).find(node => node.props?.role === 'alert')).includes('Agent「writer」不存在，当前没有可用的 Agent。请先在配置中添加 Agent，再回来选择。'))
+  g.close()
+})
+
+test('resuming a task whose delivery target the caller may not send to explains why, without the raw code', async () => {
+  const cases = [
+    [refused('schedule_target_forbidden', '没有向该账号投递的权限：需要 icqq / bot-1 上的 endpoint.operate'), '你没有权限向这个任务的投递目标（icqq / bot-1）发消息，无法恢复。请让管理员授予你该账号的 endpoint.operate 权限。'],
+    [refused('schedule_target_forbidden', '投递目标需要指明账号（scene.platform 与 scene.endpointKey）'), '你没有权限向这个任务的投递目标发消息，无法恢复。请让管理员授予你投递账号的 endpoint.operate 权限。'],
+    // The HTTP route's 403 (`code` on the body, kept as `serverCode`).
+    [Object.assign(new Error('没有向该账号投递的权限：需要 qq / b 上的 endpoint.operate'), { details: { serverCode: 'schedule_target_forbidden', httpStatus: 403 } }), '你没有权限向这个任务的投递目标（qq / b）发消息，无法恢复。'],
+    [new Error('任务不存在: task:paused'), '任务不存在: task:paused'],
+  ]
+  for (const [error, expected] of cases) {
+    const f = fixture(); await f.settle()
+    elements(row(f.tree, 'task:paused')).find(node => node.type === 'button' && node.props.title === '恢复').props.onClick(); f.render()
+    const call = f.calls.at(-1); assert.equal(call.input.type, 'cron:resume'); call.answered = true
+    call.reject(error); await f.settle()
+    assert.equal(f.errors.length, 1); assert.ok(f.errors[0].includes(expected), `${expected} in ${f.errors[0]}`)
+    assert.doesNotMatch(f.errors[0], /schedule_target_forbidden/)
+    f.close()
+  }
 })
 
 test('an older engine without agents hides the Agent field and the change action', async () => {

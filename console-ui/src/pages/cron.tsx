@@ -16,7 +16,7 @@ import { taskTabHref } from './task-hub-model.mjs'
 import { isPluginInternalSchedule, memoryScheduleLastRun, memoryScheduleTitle, type MemoryScheduleLike } from './schedule-memory-model.mjs'
 import { validateAssistantJobs, explainJobError, type AssistantJob } from './assistant-jobs-model.mjs'
 import { scheduleTargetView, scheduleTargetWarning } from './schedule-target-model.mjs'
-import { scheduleAgentEditBlock, scheduleAgentErrorMessage, scheduleAgentOptions, scheduleAgentParam, scheduleAgentValue, scheduleAgentView } from './schedule-agent-model.mjs'
+import { scheduleAgentEditBlock, scheduleAgentErrorMessage, scheduleAgentMissing, scheduleAgentNotFound, scheduleAgentOptions, scheduleAgentParam, scheduleAgentValue, scheduleAgentView, scheduleResumeErrorMessage } from './schedule-agent-model.mjs'
 import { featureDisabledState } from '../utils/feature-disabled.mjs'
 import { apiFetch } from '../utils/auth'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
@@ -214,7 +214,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
   const validCron = cronValidation?.valid === true && cronValidation.expression === newCron.cronExpression.trim()
 
   const handleAdd = async () => {
-    if (!isInboxCacheScopeActive(connectionScope) || !persistentAvailable || readOnly || submitting || !validCron || !newCron.prompt.trim()) return
+    if (!isInboxCacheScopeActive(connectionScope) || !persistentAvailable || readOnly || submitting || !validCron || !newCron.prompt.trim() || scheduleAgentMissing(agents, newCron.agent)) return
     setSubmitting(true)
     setAddError(null)
     // Without `agents` the engine only runs the default Agent: send no `agent` at all.
@@ -239,10 +239,22 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
       await fetchCrons()
     } catch (err) {
       // Shown in the dialog, which stays open with the draft, so the person can pick another Agent.
-      if (isInboxCacheScopeActive(connectionScope)) setAddError(scheduleWriteError(err, i18n.locale))
+      if (isInboxCacheScopeActive(connectionScope)) {
+        offerAvailableAgents(err)
+        setAddError(scheduleWriteError(err, i18n.locale))
+      }
     } finally {
       if (isInboxCacheScopeActive(connectionScope)) setSubmitting(false)
     }
+  }
+
+  /**
+   * `schedule_agent_not_found` (#1250 b55) names the Agents the engine runs: the dropdowns offer
+   * exactly those from now on, and the refused choice stays visible as 「不存在」 until another is picked.
+   */
+  const offerAvailableAgents = (err: unknown) => {
+    const available = scheduleAgentNotFound(err)?.available
+    if (available && agents !== null) setAgents(available)
   }
 
   const openAgentDialog = (job: PersistentCron) => {
@@ -269,7 +281,10 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
       })
       await fetchCrons()
     } catch (err) {
-      if (isInboxCacheScopeActive(connectionScope)) setAgentError(scheduleWriteError(err, i18n.locale))
+      if (isInboxCacheScopeActive(connectionScope)) {
+        offerAvailableAgents(err)
+        setAgentError(scheduleWriteError(err, i18n.locale))
+      }
     } finally {
       if (isInboxCacheScopeActive(connectionScope)) setSubmitting(false)
     }
@@ -309,7 +324,9 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
       })
       await fetchCrons()
     } catch (err) {
-      if (isInboxCacheScopeActive(connectionScope)) toastError((err as Error).message)
+      // A resume the delivery target refuses (`schedule_target_forbidden`, #1250 b55) says why.
+      const reason = job.enabled ? null : scheduleResumeErrorMessage(err, i18n.locale)
+      if (isInboxCacheScopeActive(connectionScope)) toastError(reason ?? (err as Error).message)
     } finally {
       if (isInboxCacheScopeActive(connectionScope)) setTogglePending(null)
     }
@@ -514,7 +531,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
               <label id="cron-new-agent-label" className="text-sm font-medium mb-1.5 block">{i18n.t("执行的 Agent")}</label>
               <SelectField aria-labelledby="cron-new-agent-label" className="w-full" value={newCron.agent}
                 onValueChange={(agent) => { setAddError(null); setNewCron((p) => ({ ...p, agent })) }}
-                options={scheduleAgentOptions(agents, i18n.locale) ?? []} />
+                options={scheduleAgentOptions(agents, i18n.locale, newCron.agent) ?? []} />
               <p className="text-xs text-muted-foreground mt-1">{i18n.t("到点时由这个 Agent 执行任务；不选则由默认的 zhin 执行。")}</p>
             </div>}
             <div>
@@ -534,7 +551,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
             </DialogClose>
             <Button
               onClick={handleAdd}
-              disabled={submitting || !validCron || !newCron.prompt.trim()}
+              disabled={submitting || !validCron || !newCron.prompt.trim() || scheduleAgentMissing(agents, newCron.agent)}
             >
               {submitting ? i18n.t("创建中...") : i18n.t("创建")}
             </Button>
@@ -555,7 +572,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
               <label id="cron-set-agent-label" className="text-sm font-medium mb-1.5 block">{i18n.t("执行的 Agent")}</label>
               <SelectField aria-labelledby="cron-set-agent-label" className="w-full" value={agentDraft}
                 onValueChange={(value) => { setAgentError(null); setAgentDraft(value) }}
-                options={scheduleAgentOptions(agents, i18n.locale, agentTarget?.agent) ?? []} />
+                options={scheduleAgentOptions(agents, i18n.locale, [agentTarget?.agent, agentDraft]) ?? []} />
             </div>
             {agentTarget?.agentMissing ? <p className="text-xs text-muted-foreground">{i18n.t("当前的 Agent「{0}」已从配置中删除。选一个仍在配置中的 Agent，或恢复默认。", [agentTarget.agent ?? ''])}</p> : null}
             {agentError && <Alert variant="destructive" role="alert"><AlertCircle className="h-4 w-4" /><AlertDescription>{agentError}</AlertDescription></Alert>}
@@ -565,7 +582,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
               <Button variant="outline" disabled={submitting}>{i18n.t("取消")}</Button>
             </DialogClose>
             {agentTarget && scheduleAgentValue(agentTarget) !== '' && <Button variant="outline" disabled={submitting} onClick={() => { setAgentDraft(''); void handleSetAgent('') }}>{i18n.t("恢复默认")}</Button>}
-            <Button onClick={() => handleSetAgent(agentDraft)} disabled={submitting || !agentTarget || agentDraft === scheduleAgentValue(agentTarget)}>
+            <Button onClick={() => handleSetAgent(agentDraft)} disabled={submitting || !agentTarget || agentDraft === scheduleAgentValue(agentTarget) || scheduleAgentMissing(agents, agentDraft)}>
               {submitting ? i18n.t("保存中...") : i18n.t("保存")}
             </Button>
           </DialogFooter>

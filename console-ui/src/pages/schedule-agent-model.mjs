@@ -37,11 +37,21 @@ export function scheduleAgentOptions(agents, locale = 'zh-CN', current) {
   if (!names) return null
   const options = [{ value: '', label: translate(locale, '{0}（默认）', [DEFAULT_SCHEDULE_AGENT]) }]
   for (const name of names) if (name !== DEFAULT_SCHEDULE_AGENT) options.push({ value: name, label: name })
-  const selected = typeof current === 'string' ? current.trim() : ''
-  if (selected && selected !== DEFAULT_SCHEDULE_AGENT && !names.includes(selected)) {
-    options.push({ value: selected, label: translate(locale, '{0}（不存在）', [selected]), disabled: true })
+  // `current` may list several values to keep visible (the job's Agent and a refused choice).
+  for (const value of Array.isArray(current) ? current : [current]) {
+    const selected = typeof value === 'string' ? value.trim() : ''
+    if (selected && selected !== DEFAULT_SCHEDULE_AGENT && !names.includes(selected) && !options.some(option => option.value === selected)) {
+      options.push({ value: selected, label: translate(locale, '{0}（不存在）', [selected]), disabled: true })
+    }
   }
   return options
+}
+
+/** Whether a dropdown value names an Agent the Host does not run (`''` / the default always exists). */
+export function scheduleAgentMissing(agents, value) {
+  const names = scheduleAgentNames(agents)
+  const agent = scheduleAgentParam(value)
+  return Boolean(names && agent && !names.includes(agent))
 }
 
 /** The dropdown value for a job: its Agent, or `''` for the default. */
@@ -96,6 +106,26 @@ export function scheduleRpcErrorCode(error) {
 
 const errorText = error => isRecord(error) && typeof error.message === 'string' ? error.message : typeof error === 'string' ? error : ''
 
+const AGENT_NOT_FOUND = /Agent 不存在：(.+?)。可用的 Agent：(.*)$/u
+
+/**
+ * `{ agent, available }` of a `schedule_agent_not_found` refusal (zhinjs/zhin#1250 b55: `data.agent`,
+ * `data.available`, kept as `details.dataAgent` / `details.dataAvailable`), or read from the Host's
+ * message `Agent 不存在：<name>。可用的 Agent：a、b` when the reply was not captured (older Hosts sent
+ * no code for it). `agent` / `available` are null when the refusal did not say. Null for other errors.
+ */
+export function scheduleAgentNotFound(error) {
+  const code = scheduleRpcErrorCode(error)
+  const parsed = AGENT_NOT_FOUND.exec(errorText(error))
+  if (code !== 'schedule_agent_not_found' && !parsed) return null
+  const details = isRecord(error) && isRecord(error.details) ? error.details : {}
+  const agent = typeof details.dataAgent === 'string' && details.dataAgent.trim() ? details.dataAgent.trim() : parsed?.[1] ?? null
+  const available = Array.isArray(details.dataAvailable)
+    ? scheduleAgentNames(details.dataAvailable)
+    : parsed ? scheduleAgentNames(parsed[2].split('、')) : null
+  return { agent, available }
+}
+
 /**
  * Readable text for a refused `cron:add` / `cron:set-agent`, or null to show the Host's own message.
  * The Host words its errors in Chinese; the Console rewords the known refusals in the UI language and
@@ -115,12 +145,28 @@ export function scheduleAgentErrorMessage(error, locale = 'zh-CN') {
   if (code === 'schedule_agent_profile') return translate(locale, '这是 Profile 例程，每次启动按 Profile 重新声明。请在 Profile 文件（默认 assistant.profile.yml）中该例程的 agent 字段修改。')
   if (code === 'schedule_agent_heartbeat') return translate(locale, '心跳任务固定由默认 Agent 执行，不能指定 Agent。')
   if (code === 'unsupported') return translate(locale, '运行中的 Agent 包不支持修改任务的 Agent，请升级 zhin.js 后再试。')
-  // `schedule_agent_not_found`: `Agent 不存在：<name>。可用的 Agent：a、b` (cron:add sends no code for it).
-  const missing = /Agent 不存在：(.+?)。可用的 Agent：(.+)$/u.exec(message)
-  if (code === 'schedule_agent_not_found' || missing) {
-    return missing
-      ? translate(locale, 'Agent「{0}」不存在，可用的 Agent：{1}。请刷新后重新选择。', [missing[1], missing[2].split('、').join(locale === 'en' ? ', ' : '、')])
-      : translate(locale, '所选 Agent 不存在。请刷新后重新选择。')
+  const missing = scheduleAgentNotFound(error)
+  if (missing) {
+    if (!missing.agent) return translate(locale, '所选 Agent 不存在。请刷新后重新选择。')
+    if (missing.available === null) return translate(locale, 'Agent「{0}」不存在。请刷新后重新选择。', [missing.agent])
+    if (!missing.available.length) return translate(locale, 'Agent「{0}」不存在，当前没有可用的 Agent。请先在配置中添加 Agent，再回来选择。', [missing.agent])
+    return translate(locale, 'Agent「{0}」不存在。可用的 Agent：{1}，请从中改选。', [missing.agent, missing.available.join(locale === 'en' ? ', ' : '、')])
   }
   return null
+}
+
+/**
+ * Readable text for a refused `cron:resume` (zhinjs/zhin#1250 b55), or null to show the Host's own
+ * message. `schedule_target_forbidden`: the job delivers to an account the caller may not send from
+ * (`endpoint.operate`), so resuming it would send on their behalf; the account is named when the
+ * Host said which. The Host's message is matched too, for a reply whose code was not captured.
+ */
+export function scheduleResumeErrorMessage(error, locale = 'zh-CN') {
+  const code = scheduleRpcErrorCode(error)
+  const message = errorText(error)
+  if (code !== 'schedule_target_forbidden' && !/^没有向该账号投递的权限/u.test(message)) return null
+  const account = /需要 (.+?) 上的 endpoint\.operate/u.exec(message)?.[1]
+  return account
+    ? translate(locale, '你没有权限向这个任务的投递目标（{0}）发消息，无法恢复。请让管理员授予你该账号的 endpoint.operate 权限。', [account])
+    : translate(locale, '你没有权限向这个任务的投递目标发消息，无法恢复。请让管理员授予你投递账号的 endpoint.operate 权限。')
 }
