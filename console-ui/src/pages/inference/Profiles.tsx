@@ -5,7 +5,7 @@ import { Plus, Pencil, Trash2, RefreshCw } from 'lucide-react'
 import { Button, Card, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, ErrorAlert, Input, SelectField, useConfirm } from '@zhin.js/console-ui'
 import { ModelCapabilities } from './ModelCapabilities'
 import { SupportLabel, SupportNotice, supportLabel } from './SupportInfo'
-import { draftForModelId, ignoredReasonText, inferenceError, languageInputMissing, modelEntryView, withModelProtocol, profileSupport, profileUsages, serviceDriver, type ProfileUsage } from './model.mjs'
+import { chatModelBadge, draftForModelId, ignoredReasonText, inferenceError, languageInputMissing, modelEntryView, withModelProtocol, profileSupport, profileUsages, serviceDriver, type ProfileUsage } from './model.mjs'
 import {
   driverKey,
   type Profile,
@@ -67,7 +67,8 @@ export function Profiles({ management: m, onCreateAccount, addModelFor, onAddMod
           usagesOf={(profile) => profileUsages(view.purposes, profile.id, i18n.locale, view.purposeEffects)}
           row={(profile, usages) => {
             const account = view.accounts[profile.accountId]
-            const chat = usages?.some((usage) => usage.key === 'default:chat')
+            // 「当前聊天模型」 only when no adapter, account or conversation chats through another model.
+            const chat = chatModelBadge(view.purposes, profile.id, i18n.locale)
             return (
               <div key={profile.id} className="flex items-center justify-between gap-4 p-4">
                 <div className="min-w-0">
@@ -76,7 +77,7 @@ export function Profiles({ management: m, onCreateAccount, addModelFor, onAddMod
                       label={profile.label ?? profile.model}
                       support={profileSupport(view, profile)}
                     />
-                    {chat ? <span className="inline-flex items-center rounded-full border border-[hsl(var(--primary-action-border))] bg-[hsl(var(--primary-action))] px-2 text-[length:var(--console-text-label)] font-medium leading-5 text-[hsl(var(--primary-action-foreground))]">{i18n.t("当前聊天模型")}</span> : null}
+                    {chat ? <span className="inline-flex items-center rounded-full border border-[hsl(var(--primary-action-border))] bg-[hsl(var(--primary-action))] px-2 text-[length:var(--console-text-label)] font-medium leading-5 text-[hsl(var(--primary-action-foreground))]" title={chat.title ?? undefined}>{chat.label}</span> : null}
                   </p>
                   <p className="text-sm text-muted-foreground break-all">
                     {profile.model} · {account.label ?? account.id}

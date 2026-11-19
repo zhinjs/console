@@ -327,3 +327,5 @@ export interface PurposeProfileChoice {
   profile: Profile
 }
 export function purposeProfileChoices(view: View, kind: Kind, locale?: 'zh-CN' | 'en'): PurposeProfileChoice[]
+/** The default chat model's badge: 「当前聊天模型」, or 「默认聊天模型 · N 处改用其他模型」 with the overrides. */
+export function chatModelBadge(purposes: Purposes | undefined | null, profileId: string, locale?: 'zh-CN' | 'en'): { label: string; title: string | null; overrides: string[] } | null
