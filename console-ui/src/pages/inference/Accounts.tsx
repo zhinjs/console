@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Plus, Pencil, KeyRound, LogIn, Unplug, Trash2, Activity } from 'lucide-react'
 import { Button, Card, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, ErrorAlert, Input, SelectField, useConfirm } from '@zhin.js/console-ui'
 import { SupportLabel, SupportNotice, supportLabel } from './SupportInfo'
-import { accountHasModels, driverLabel, effectiveAuthMethod, oauthCallbackProblem, serviceDriver } from './model.mjs'
+import { accountFailureDetails, accountHasModels, driverLabel, effectiveAuthMethod, oauthCallbackProblem, serviceDriver } from './model.mjs'
 import {
   driverKey,
   canReferenceEnvironment,
@@ -150,7 +150,8 @@ export function Accounts({ management: m, focusAccount, onAddModel }: { manageme
           {Object.values(view.accounts).map((account) => {
             const service = view.services[account.serviceId],
               status = view.statuses[account.id],
-              hasModels = accountHasModels(view, account.id)
+              hasModels = accountHasModels(view, account.id),
+              failureDetails = accountFailureDetails(status?.status === 'uncertain' ? status.failure : undefined, i18n.locale)
             return (
               <div
                 key={account.id}
@@ -169,6 +170,12 @@ export function Accounts({ management: m, focusAccount, onAddModel }: { manageme
                     {service.label ?? service.driver.id} ·{' '}
                     {accountStatusLabel(status, i18n.t, hasModels)}
                   </p>
+                  {failureDetails ? (
+                    <details className="text-sm text-muted-foreground">
+                      <summary className="cursor-pointer py-3 sm:py-1">{i18n.t("查看详情")}</summary>
+                      {failureDetails.map(line => <p key={line} className="break-all">{line}</p>)}
+                    </details>
+                  ) : null}
                   {tests[account.id] ? (
                     <p
                       className={`text-sm ${tests[account.id]!.status === 'ok' ? 'text-muted-foreground' : 'text-destructive'}`}
