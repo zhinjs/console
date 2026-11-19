@@ -1,4 +1,6 @@
 import test from 'node:test'
+import { UNRESTRICTED_ACCESS, createConsoleAccess } from '../console-ui/src/utils/console-access.mjs'
+import { CONSOLE_BUILTIN_ROLES } from '@zhin.js/console-protocol'
 import { localeModule } from './locale-fixture.mjs'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -86,7 +88,7 @@ function hooks() {
     },
   }
 }
-function fixture(storage = new Map(), { preferredOwnerId } = {}) {
+function fixture(storage = new Map(), { preferredOwnerId, access = UNRESTRICTED_ACCESS } = {}) {
   const runtime = hooks(),
     calls = []
   let connection = { scope: 'scope-a', base: 'https://host-a.test/base' }
@@ -104,6 +106,7 @@ function fixture(storage = new Map(), { preferredOwnerId } = {}) {
     '../../i18n': localeModule,
     '../../utils/auth': { apiFetch: fetch, getApiBase: () => connection.base },
     '../../utils/inbox-cache': { isInboxCacheScopeActive: (scope) => scope === connection.scope },
+    '../../hooks/use-console-access': { useConsoleAccess: () => access },
     './model.mjs': model,
   }
   const output = ts.transpileModule(source, {
@@ -222,7 +225,7 @@ async function component(runtime, path, mocks) {
     // ADR 0066: Purposes reads the interjection status for the agreement line; no status here.
     '../../utils/plugin-rpc': { pluginRpc: async () => { throw new Error('ambient status unavailable') } },
     './ambient-judge-model.mjs': ambientJudgeModel,
-    '../../hooks/use-console-access': { useConsoleAccess: () => ({}) }, '../../utils/console-access.mjs': { hasConsolePermission: () => true },
+    '../../hooks/use-console-access': { useConsoleAccess: () => UNRESTRICTED_ACCESS }, '../../utils/console-access.mjs': { hasConsolePermission: () => true },
     ...mocks,
   }
   new Function('require', 'module', 'exports', code)(
@@ -366,6 +369,7 @@ test('confirming a rebound Profile saves its complete new account identity; nati
         },
       },
       '../utils/inbox-cache': { isInboxCacheScopeActive: () => true },
+      '../hooks/use-console-access': { useConsoleAccess: () => UNRESTRICTED_ACCESS },
       './inference/model.mjs': model,
       './personal-session-model.mjs': personal,
     }
@@ -508,6 +512,26 @@ test('unknown apply persists only its ID, survives refresh, and recovery only qu
   refreshed.runtime.unmount()
 })
 
+test('a viewer reads the graph but the hook exposes canConfigure=false and sends no write', async () => {
+  for (const role of ['viewer', 'operator']) {
+    const f = fixture(new Map(), { access: createConsoleAccess({ permissions: CONSOLE_BUILTIN_ROLES[role].permissions }) })
+    await ready(f)
+    assert.equal(f.runtime.value.view.rootId, '/a', `${role} still reads`)
+    assert.equal(f.runtime.value.canConfigure, false)
+    const before = f.calls.length
+    assert.equal(await f.runtime.value.savePlan({ version: 1 }), false)
+    assert.equal(await f.runtime.value.action('/disconnect', { accountId: 'a' }), undefined)
+    await f.runtime.settle()
+    assert.equal(f.calls.length, before, `${role}: no plan, apply or action request`)
+    assert.equal(f.runtime.value.busy, false)
+    f.runtime.unmount()
+  }
+  const owner = fixture()
+  await ready(owner)
+  assert.equal(owner.runtime.value.canConfigure, true)
+  owner.runtime.unmount()
+})
+
 test('browser receipt-storage failure prevents a new untrackable apply without blocking configuration reads', async () => {
   const f = fixture()
   await ready(f)
@@ -593,7 +617,7 @@ test('the single graph editor preserves sibling decision modes and model IDs acr
       accounts: { account: { serviceId: 'service' } },
       services: { service: { models: { decision: { kinds: ['decision'] }, chat: { kinds: ['language'] } } } },
     },
-    active: () => true, busy: false, pending: null,
+    active: () => true, busy: false, pending: null, canConfigure: true,
     request: async path => { requests.push(path); return { adapters: [], endpoints: [], scenes: [], agents: [] } },
     savePlan: async plan => { plans.push(plan); return true },
     setError: error => assert.fail(error),

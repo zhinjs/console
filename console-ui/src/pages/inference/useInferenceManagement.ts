@@ -2,7 +2,9 @@ import { useI18n } from '../../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { apiFetch, getApiBase } from '../../utils/auth'
 import { isInboxCacheScopeActive } from '../../utils/inbox-cache'
+import { useConsoleAccess } from '../../hooks/use-console-access'
 import {
+  inferenceCanConfigure,
   inferenceRequest,
   applyInferenceChange,
   inferenceError,
@@ -66,6 +68,9 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
   const owner = useRef('')
   const busyOperation = useRef<number | null>(null)
   const pendingId = useRef<string | null>(null)
+  // Reading needs `agent.view`; every write to `/agent/inference` needs `agent.configure` (protocol
+  // `CONSOLE_HTTP_PERMISSIONS`). Write controls read this; the Host still enforces it.
+  const canConfigure = inferenceCanConfigure(useConsoleAccess())
 
   const connectionActive = () => alive.current && isInboxCacheScopeActive(connectionScope)
   const current = (identity: RequestIdentity) =>
@@ -199,7 +204,7 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
 
   async function save(path: string, body: unknown, options: SaveOptions = {}): Promise<boolean> {
     const origin = options.source ?? source
-    if (!active() || busyOperation.current !== null || pendingId.current) return false
+    if (!canConfigure || !active() || busyOperation.current !== null || pendingId.current) return false
     if (!origin || origin.connectionScope !== connectionScope || origin.base !== getApiBase()
       || origin.view.ownerId !== renderedIdentity.ownerId || origin.view.rootId !== view?.rootId) {
       setError(inferenceError(new InferenceRequestError('stale-operation'), copy.current.locale))
@@ -286,7 +291,7 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
     body: unknown,
     describe: (failure: unknown, locale: 'zh-CN' | 'en') => string = inferenceError
   ): Promise<T | undefined> {
-    if (!active() || busyOperation.current !== null || pendingId.current) return undefined
+    if (!canConfigure || !active() || busyOperation.current !== null || pendingId.current) return undefined
     const identity = renderedIdentity
     busyOperation.current = identity.epoch
     setBusy(true)
@@ -330,6 +335,8 @@ export function useInferenceManagement(connectionScope?: string, initialOwnerId?
       if (active()) setError(message)
     },
     pending,
+    /** Whether this identity may change the inference graph (`agent.configure`); reads stay available. */
+    canConfigure,
     revisionEpoch: renderedIdentity.epoch,
     load: () => load(),
     save,

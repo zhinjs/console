@@ -53,7 +53,7 @@ export function InferenceWorkspace({ connectionScope }: { connectionScope?: stri
             variant="ghost"
             size="sm"
             onClick={() => setImporting(m.source)}
-            disabled={!m.view || m.busy || !!m.pending}
+            disabled={!m.canConfigure || !m.view || m.busy || !!m.pending}
           >
             <Upload />
             {i18n.t("导入")}
@@ -80,6 +80,11 @@ export function InferenceWorkspace({ connectionScope }: { connectionScope?: stri
           </Button>
         </div>
       </div>
+      {m.view && !m.canConfigure ? (
+        <Alert role="note" data-inference-read-only="">
+          <AlertDescription>{i18n.t("当前身份只能查看，修改模型配置需要 agent.configure 权限。")}</AlertDescription>
+        </Alert>
+      ) : null}
       {m.error ? <ErrorAlert error={m.error} /> : null}
       {m.pending ? (
         <Alert>
@@ -158,7 +163,7 @@ export function InferenceWorkspace({ connectionScope }: { connectionScope?: stri
               onChange={(event) => setSource(event.target.value)}
               required
             />
-            <Button type="submit" disabled={m.busy || !!m.pending}>
+            <Button type="submit" disabled={!m.canConfigure || m.busy || !!m.pending}>
               {i18n.t("保存")}
             </Button>
           </form>

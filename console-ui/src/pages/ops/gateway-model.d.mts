@@ -22,6 +22,7 @@ export declare const GATEWAY_RPC: Readonly<{
   PLUGINS_DECLARE: 'gateway.plugins.declare'
   PLUGINS_ENABLE: 'gateway.plugins.enable'
   PLUGINS_DISABLE: 'gateway.plugins.disable'
+  VERSION_CHECK: 'gateway.version.check'
 }>
 export declare const GATEWAY_PACKAGES_PROGRESS: 'gateway.packages.progress'
 export declare const INSTANCE_STATES: readonly GatewayInstanceState[]
@@ -132,11 +133,13 @@ export interface GatewayVersionReportView {
   readonly packages: readonly GatewayVersionPackageView[]
   readonly checkedAt: number
   readonly registryReachable: boolean
+  readonly truncated: boolean
+  readonly incomplete: boolean
 }
 export function readVersionReport(value: unknown): GatewayVersionReportView | null
 export function versionCheckUnsupported(error: unknown): boolean
 export function versionPackageLabel(name: string, t: Translate): string
-export type VersionRowState = 'migrate' | 'update' | 'current' | 'unknown'
+export type VersionRowState = 'migrate' | 'update' | 'current' | 'pending' | 'unknown'
 export interface VersionRow {
   readonly name: string
   readonly label: string

@@ -94,7 +94,7 @@ test('modelAvailability: skipped models and recent switches, with a fixed clock'
 
 async function purposesPage(v) {
   const runtime = pageRuntime(), plans = []
-  const management = { view: v, source: { view: v }, busy: false, pending: null, active: () => true, setError: assert.fail,
+  const management = { view: v, source: { view: v }, busy: false, pending: null, canConfigure: true, active: () => true, setError: assert.fail,
     request: async path => path === '/probe' ? { status: 'ok', durationMs: 1 } : { adapters: [{ platform: 'qq' }], endpoints: [], scenes: [], agents: [{ name: 'planner' }] },
     savePlan: async plan => { plans.push(plan); return true } }
   const code = ts.transpileModule(await readFile(new URL('../console-ui/src/pages/inference/Purposes.tsx', import.meta.url), 'utf8'),
@@ -254,7 +254,7 @@ test('deep links: ?account= opens 账号 on that account, ?tab=purposes opens �
 async function accountsPage(focusAccount) {
   const runtime = pageRuntime()
   const v = { ...view(), accounts: { 'accounts:a': { id: 'accounts:a', serviceId: 'svc', label: 'A', authentication: { method: 'api-key' } }, 'accounts:b': { id: 'accounts:b', serviceId: 'svc', label: 'B', authentication: { method: 'api-key' } } } }
-  const management = { view: v, source: { view: v }, busy: false, pending: null, active: () => true, setError: assert.fail, request: async () => ({}) }
+  const management = { view: v, source: { view: v }, busy: false, pending: null, canConfigure: true, active: () => true, setError: assert.fail, request: async () => ({}) }
   const code = ts.transpileModule(await readFile(new URL('../console-ui/src/pages/inference/Accounts.tsx', import.meta.url), 'utf8'),
     { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
   const deps = {
