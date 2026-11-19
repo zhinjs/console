@@ -6,8 +6,11 @@ export function readErrorSummary(error, resource, locale = 'zh-CN') {
  const kind = statusFromError(text).kind
  if (kind === 'instance-unavailable') return translate(locale, "{0}由 Zhin 实例提供，实例现在没有响应。到「运维 → 实例」查看状态与日志，恢复后重试。", [resource])
  if (kind === 'database-busy') return translate(locale, "数据库正忙，暂时读不到{0}。请稍后重试。", [resource])
- const denied = /\bforbidden\b|\b403\b|scope does not allow|无权|权限不足|权限不允许/i.test(text)
- return denied ? translate(locale, "当前身份无权读取{0}。请使用具备相应权限的身份连接 Host。", [resource]) : translate(locale, "{0}读取失败。请检查错误详情后重试。", [resource])
+ return isReadDenied(text) ? translate(locale, "当前身份无权读取{0}。请使用具备相应权限的身份连接 Host。", [resource]) : translate(locale, "{0}读取失败。请检查错误详情后重试。", [resource])
+}
+/** Whether a read failed because the identity lacks the permission (HTTP 403 and the Host's denial texts). */
+export function isReadDenied(error) {
+ return /\bforbidden\b|\b403\b|scope does not allow|无权|权限不足|权限不允许/i.test(String(error ?? ''))
 }
 export function shouldShowMissingEnv({ loaded, exists, dirty, readFailed }) {
  return loaded && exists === false && !dirty && !readFailed

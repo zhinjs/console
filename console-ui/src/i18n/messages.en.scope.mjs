@@ -149,4 +149,8 @@ export const scopeMessages = Object.freeze({
   "全局开关需要 plugin.manage 权限：它由管理网关停止并重启实例。适配器上的开关仍可启停。": "The global switch needs the plugin.manage permission: the management gateway stops and restarts the instance for it. Adapter switches can still be toggled.",
   "适配器上的开关需要 feature.toggle 权限；全局开关可以启停。": "Adapter switches need the feature.toggle permission; the global switch can be toggled.",
   "需要 plugin.manage 权限才能在全局启停插件": "Turning a plugin on or off globally needs the plugin.manage permission",
+  // 全局配置 (/features/global/:plugin) without ops.config.read
+  "当前身份只能查看全局配置的生效值，敏感值已隐藏。修改全局配置需要 ops.config.write 权限。": "This identity can only view the effective global configuration; sensitive values are hidden. Changing the global configuration needs the ops.config.write permission.",
+  "当前身份无权查看全局配置：需要 feature.view 或 ops.config.read 权限。": "This identity may not view the global configuration: it needs the feature.view or ops.config.read permission.",
+  "当前 Host 不支持只读查看全局配置。查看和修改原始配置需要 ops.config.read 权限。": "This Host does not offer a read-only view of the global configuration. Viewing and changing the raw configuration needs the ops.config.read permission.",
 })
