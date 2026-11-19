@@ -21,12 +21,11 @@ type Outcome =
 
 /**
  * Raw SQL console. Reads (`db:query`) run in a read-only transaction on the Host; anything else is a
- * write (`db:execute`, `ops.database.schema`) that is dry-run first to show the affected rows.
+ * write (`db:execute`) that is dry-run first to show the affected rows. Both need `ops.database.schema`,
+ * so the page only offers the console to identities that hold it (#64 `sql-console-permission`).
  */
-export function SqlConsole({ admin, canWrite, supported, reason, needsRole, dialect, dialectLabel }: {
+export function SqlConsole({ admin, supported, reason, needsRole, dialect, dialectLabel }: {
   admin: DatabaseAdmin
-  /** The principal holds `ops.database.schema`. */
-  canWrite: boolean
   /** The Host reports `capabilities.sql`. */
   supported: boolean
   reason?: string
@@ -58,7 +57,7 @@ export function SqlConsole({ admin, canWrite, supported, reason, needsRole, dial
     setRevealed(new Set())
     const started = performance.now()
     try {
-      if (sqlLooksReadOnly(text) || !canWrite) {
+      if (sqlLooksReadOnly(text)) {
         const result = await admin.query(text)
         setOutcome({ kind: 'rows', result, sql: text })
         remember(text, true)
@@ -74,7 +73,7 @@ export function SqlConsole({ admin, canWrite, supported, reason, needsRole, dial
     } finally {
       setRunning(false)
     }
-  }, [sql, running, canWrite, admin, remember])
+  }, [sql, running, admin, remember])
 
   const applyWrite = async () => {
     if (!pendingWrite) return
@@ -114,7 +113,7 @@ export function SqlConsole({ admin, canWrite, supported, reason, needsRole, dial
       <div className="flex flex-wrap items-center gap-2 shrink-0">
         <Badge variant="secondary" size="sm">{dialectLabel || dialect}</Badge>
         <span className="text-xs text-muted-foreground">
-          {canWrite ? i18n.t('只读语句直接执行；写语句会先预估影响行数并要求确认。') : i18n.t('只能执行单条只读语句（SELECT / WITH / EXPLAIN 等），最多返回 1000 行。')}
+          {i18n.t('只读语句直接执行；写语句会先预估影响行数并要求确认。')}
         </span>
         <Button type="button" size="sm" variant="ghost" className="ml-auto" aria-expanded={showHistory} onClick={() => setShowHistory(open => !open)}>
           <History className="w-3.5 h-3.5 mr-1" />{i18n.t('历史')}{history.length ? ` (${history.length})` : ''}</Button>
@@ -165,7 +164,7 @@ export function SqlConsole({ admin, canWrite, supported, reason, needsRole, dial
                 <StatusState compact kind={refusal || privilege ? 'error' : undefined} error={outcome.error}
                   title={refusal === 'read_only' ? i18n.t('这条语句会修改数据') : refusal === 'protected_table' ? i18n.t('受保护的表') : refusal === 'multi_statement' ? i18n.t('一次只能执行一条语句') : privilege ? i18n.t('受限账号没有这项权限') : i18n.t('执行失败')}
                   description={refusal === 'read_only'
-                    ? (canWrite ? i18n.t('Host 判断这是写语句，请检查语句类型。') : i18n.t('写 SQL 需要 ops.database.schema 权限；当前身份只能执行只读语句。'))
+                    ? i18n.t('Host 判断这是写语句，请检查语句类型。')
                     : refusal === 'protected_table' ? i18n.t('网关账号与审计表不能从实例访问；迁移记录与系统表不能修改。')
                       : privilege ? (dialect === 'pg'
                         ? i18n.t('PostgreSQL 上 SQL 控制台用受限账号执行，不能建表、改表或删表（CREATE / ALTER / DROP）。请改用「新建表」或表的「结构」编辑器；读写行不受影响。')
