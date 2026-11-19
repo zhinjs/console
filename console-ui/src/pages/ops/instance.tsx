@@ -379,7 +379,8 @@ function DependencyPanel({ canManage, onActiveChange, onFinished }: { canManage:
         <ActionReceipt controller={receipt} />
         {running || progress.id || runError ? <TransactionProgress progress={progress} running={running} error={runError} /> : null}
         {canManage && !unsupported && selectedNames.length ? (
-          <Card className="console-admin-card flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center" role="region" aria-label={i18n.t("批量操作")}>
+          <Card className="console-admin-card" role="region" aria-label={i18n.t("批量操作")}>
+            <div className="flex flex-col gap-2 text-left sm:flex-row sm:flex-wrap sm:items-center">
             <span className="text-sm font-medium" aria-live="polite">{i18n.t("已选 {0} 个", [selectedNames.length])}</span>
             <div className="flex flex-wrap gap-2 sm:ml-auto">
               <Button size="sm" variant="outline" disabled={busy || Boolean(selectionProblem)} onClick={() => void prepare('update', selectedNames)}><Upload />{i18n.t("更新所选")}</Button>
@@ -387,6 +388,7 @@ function DependencyPanel({ canManage, onActiveChange, onFinished }: { canManage:
               <Button size="sm" variant="ghost" disabled={busy} onClick={() => setSelected(new Set())}>{i18n.t("清除选择")}</Button>
             </div>
             {selectionProblem ? <p className="text-xs text-destructive sm:basis-full" role="alert">{selectionProblem}</p> : null}
+            </div>
           </Card>
         ) : null}
         {needs.length ? (
