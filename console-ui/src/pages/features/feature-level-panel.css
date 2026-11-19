@@ -101,3 +101,8 @@
 .console-feature-lock { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: var(--console-space-1) var(--console-space-2); min-width: 0; }
 .console-feature-env-note { color: hsl(var(--warning)); font-size: var(--console-text-label); }
 .console-feature-env-note a { text-decoration: underline; text-underline-offset: 2px; }
+
+/* Read-only global configuration (global-config-readonly.tsx): 字段 · 有效值 · 来源; stacks like the field table below 64rem. */
+@media (width >= 64rem) {
+  .console-feature-fields.is-global .console-feature-field { grid-template-columns: minmax(8rem, 1fr) minmax(0, 2fr) 6rem; }
+}
