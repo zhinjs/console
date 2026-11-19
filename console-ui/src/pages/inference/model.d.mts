@@ -194,14 +194,23 @@ export interface ProfileSelection {
   kind: 'language'
 }
 export class InferenceRequestError extends Error {
-  constructor(code: string, status?: number, mutationOutcome?: 'not-committed', reason?: string, path?: string)
+  constructor(code: string, status?: number, mutationOutcome?: 'not-committed', reason?: string, path?: string, details?: InferenceFailureDetails)
   code: string
   status: number
   mutationOutcome?: 'not-committed'
   reason?: string
   /** The configuration path the Host named (`details.path`). */
   path?: string
+  /** Diagnostics of an expected failure (`details`, zhinjs/zhin#1270), short codes only. */
+  details?: InferenceFailureDetails
 }
+export interface InferenceFailureDetails {
+  step?: string
+  reason?: string
+  upstreamStatus?: number
+  preparationCode?: string
+}
+export function accountFailureDetails(failure: AccountStatus['failure'], locale?: 'zh-CN' | 'en'): string[] | null
 export function configPathLabel(path: string, locale?: 'zh-CN' | 'en'): string
 export function canReferenceEnvironment(view: View): boolean
 export function supportsConnectionTest(view: Pick<View, 'environmentReferences'> | null | undefined): boolean
