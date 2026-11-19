@@ -267,12 +267,21 @@ test('a late schema response cannot replace the newer manual model draft', async
   f.runtime.unmount()
 })
 
-test('a new model ID does not borrow capabilities from a known catalog model', async () => {
+test('renaming a model keeps the replaced catalog declaration and asks to confirm it (#64 model-edit-id-resets-capabilities)', async () => {
   const f = await fixture('Profiles')
   f.button('编辑 Original').props.onClick(); await f.runtime.settle()
-  f.all().find(node => node.type === 'input' && node.props.placeholder === '填写服务的真实模型 ID').props.onChange({ target: { value: 'different-native' } }); await f.runtime.settle()
-  // Only the driver contract's defaults (one protocol, its one kind, text input), nothing from `native`.
-  assert.deepEqual(f.all().find(node => node.type === 'capabilities').props.value, { id: 'different-native', protocol: 'chat', kinds: ['language'], input: ['text'] })
+  const input = () => f.all().find(node => node.type === 'input' && node.props.placeholder === '填写服务的真实模型 ID')
+  input().props.onChange({ target: { value: 'native-2' } }); await f.runtime.settle()
+  // `native`'s declaration with the new ID — not the driver defaults it used to reset to.
+  assert.deepEqual(f.all().find(node => node.type === 'capabilities').props.value, { id: 'native-2', protocol: 'chat', kinds: ['language'] })
+  const note = () => f.all().find(node => node.props?.role === 'status' && [node.props.children].flat(Infinity).join('').includes('已沿用原模型'))
+  assert.match([note().props.children].flat(Infinity).join(''), /已沿用原模型 native 的能力声明/)
+  // Typing on keeps the draft (and its edits); going back to a catalog ID drops both draft and note.
+  input().props.onChange({ target: { value: 'native-23' } }); await f.runtime.settle()
+  assert.equal(f.all().find(node => node.type === 'capabilities').props.value.id, 'native-23')
+  input().props.onChange({ target: { value: 'native' } }); await f.runtime.settle()
+  assert.equal(f.all().find(node => node.type === 'capabilities'), undefined)
+  assert.equal(note(), undefined)
   f.runtime.unmount()
 })
 

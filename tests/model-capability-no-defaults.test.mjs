@@ -49,5 +49,5 @@ test('the capability form uses the defaults', () => {
   assert.match(form, /onChange\(withModelKind\(value, kind, checked === true\)\)/)
   assert.doesNotMatch(form, /onChange\(\{ id: value\.id, protocol, kinds: \[\] \}\)/)
   // A new model on a driver with one contract starts with that protocol and, when it has one kind, that kind.
-  assert.match(read('Profiles.tsx'), /driver\?\.modelContracts\.length === 1 \? withModelProtocol\(\{ id, protocol: '', kinds: \[\] \}, driver\.modelContracts\[0\]\.protocol, driver\)/)
+  assert.match(read('Profiles.tsx'), /driver\?\.modelContracts\.length === 1\s+\? withModelProtocol\(\{ id: next, protocol: '', kinds: \[\] \}, driver\.modelContracts\[0\]\.protocol, driver\)/)
 })

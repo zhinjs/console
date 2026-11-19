@@ -198,6 +198,17 @@ export function effectiveAuthMethod(chosen, methods) {
   if (typeof chosen === 'string' && chosen) return chosen
   return Array.isArray(methods) && methods.length === 1 ? methods[0] : ''
 }
+/**
+ * The declaration a model ID that is not in the catalog starts from (#64 `model-edit-id-resets-capabilities`):
+ * the draft being edited, else the catalog declaration of the ID it replaces (so renaming a model keeps
+ * its protocol, kinds and inputs), else the driver's defaults. `inherited` names the catalog model whose
+ * declaration was carried over, so the form can ask to confirm it.
+ */
+export function draftForModelId(id, { previous = null, replaced = null, defaults }) {
+  if (previous) return { draft: { ...previous, id }, inherited: null }
+  if (replaced && replaced.id !== id) return { draft: { ...structuredClone(replaced), id }, inherited: replaced.id }
+  return { draft: defaults(id), inherited: null }
+}
 export function profileSupport(view, profile) {
   return serviceDriver(view, view.accounts[profile.accountId].serviceId)?.support
 }
