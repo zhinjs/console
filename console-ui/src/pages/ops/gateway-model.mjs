@@ -367,6 +367,48 @@ export function operationLabel(operation, t) {
   return String(operation)
 }
 
+// ---- dependency table selection (batch update / uninstall) ----
+
+/** Drops names no longer listed; returns the same set when nothing changed. */
+export function pruneSelection(selected, names) {
+  const listed = new Set(names)
+  let changed = false
+  const next = new Set()
+  for (const name of selected) {
+    if (listed.has(name)) next.add(name)
+    else changed = true
+  }
+  return changed ? next : selected
+}
+
+/** Adds or removes one name. */
+export function toggleSelection(selected, name, on) {
+  if (on === selected.has(name)) return selected
+  const next = new Set(selected)
+  if (on) next.add(name)
+  else next.delete(name)
+  return next
+}
+
+/** Selects every listed name, or clears the selection. */
+export function toggleAllSelection(names, on) {
+  return on ? new Set(names) : new Set()
+}
+
+/** The header checkbox: `true` when every listed name is selected, `'indeterminate'` for some. */
+export function selectionHeaderState(selected, names) {
+  if (!names.length) return false
+  let count = 0
+  for (const name of names) if (selected.has(name)) count += 1
+  if (count === 0) return false
+  return count === names.length ? true : 'indeterminate'
+}
+
+/** Why the selection cannot be sent in one transaction (gateway MAX_PACKAGES), or null. */
+export function selectionLimitProblem(count, t) {
+  return count > MAX_PACKAGE_SPECS ? t('一次最多选择 {0} 个包，请减少选择。', [MAX_PACKAGE_SPECS]) : null
+}
+
 export const EMPTY_PROGRESS = Object.freeze({ id: null, operation: null, packages: [], phases: [], output: '', result: null })
 
 /**

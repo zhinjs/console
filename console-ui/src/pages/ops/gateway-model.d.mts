@@ -107,3 +107,9 @@ export function fieldErrorsAt(errors: DeclarationErrors | null | undefined, path
 export function declarationDraft(schema: SchemaField | null | undefined): Record<string, unknown>
 export function declarationConfig(value: unknown, t: Translate): { config: Record<string, unknown> | null; problem: string | null }
 export function parseDeclarationJson(text: string, t: Translate): { config: Record<string, unknown> | null; problem: string | null }
+
+export function pruneSelection(selected: ReadonlySet<string>, names: readonly string[]): ReadonlySet<string>
+export function toggleSelection(selected: ReadonlySet<string>, name: string, on: boolean): ReadonlySet<string>
+export function toggleAllSelection(names: readonly string[], on: boolean): ReadonlySet<string>
+export function selectionHeaderState(selected: ReadonlySet<string>, names: readonly string[]): boolean | 'indeterminate'
+export function selectionLimitProblem(count: number, t: Translate): string | null
