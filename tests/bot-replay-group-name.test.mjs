@@ -9,6 +9,7 @@ import * as model from '../console-ui/src/pages/bot-replay-model.mjs'
 import * as pickerModel from '../console-ui/src/pages/ambient-group-picker-model.mjs'
 import * as scopeModel from '../console-ui/src/pages/insights/scope-filter.mjs'
 import * as featureModel from '../console-ui/src/pages/features/feature-model.mjs'
+import * as accessModel from '../console-ui/src/utils/console-access.mjs'
 
 // #64 `bot-replay-merge-turn`: the replay list showed `icqq · group:860669870` and never the group's name.
 const row = (id, extra = {}) => ({
@@ -39,7 +40,11 @@ function memo(runtime, make, deps) {
   return ref.current.value
 }
 
-async function renderReplay(catalog, { items = [row('a'), row('b', { scene_id: 'group:42' })], consoleRpc = async () => { throw new Error('unexpected console request') } } = {}) {
+const cellsOf = value => nodes(value).filter(node => node.props?.className === 'break-all text-xs')
+
+/** `env`: the connection scope and the signed-in access (`me: null` = not loaded yet), read on every render. */
+async function renderReplay(catalog, { items = [row('a'), row('b', { scene_id: 'group:42' })], consoleRpc = async () => { throw new Error('unexpected console request') },
+  env = { scope: 'conn-1', me: { kind: 'user' }, permissions: null }, handle = {} } = {}) {
   const runtime = pageRuntime()
   const code = ts.transpileModule(await readFile(new URL('../console-ui/src/pages/bot-replay.tsx', import.meta.url), 'utf8'),
     { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
@@ -53,6 +58,10 @@ async function renderReplay(catalog, { items = [row('a'), row('b', { scene_id: '
     '../utils/plugin-rpc': { pluginRpc: async () => list },
     '../utils/console-rpc': { requestConsole: consoleRpc },
     './features/feature-model.mjs': featureModel,
+    '../utils/useInboxCacheScope': { useInboxCacheScope: () => env.scope },
+    '../utils/console-access.mjs': accessModel,
+    '../hooks/use-console-access': { useConsoleAccess: () => accessModel.createConsoleAccess(env.permissions ? { permissions: env.permissions } : null) },
+    '../hooks/use-console-session': { useConsoleSession: () => ({ me: env.me, legacy: false }) },
     '@zhin.js/console-ui': new Proxy({}, { get: (_, name) => String(name) }),
     '../components/StatusState': { StatusState: 'status' },
     './insights/ScopeFilterBar': { ScopeFilterBar: 'scope-bar', useScopeFilter: () => ({ scope: {}, identity: '' }) },
@@ -65,7 +74,8 @@ async function renderReplay(catalog, { items = [row('a'), row('b', { scene_id: '
   new Function('require', 'module', 'exports', code)(name => { assert.ok(name in deps, name); return deps[name] }, module, module.exports)
   runtime.mount(() => ({ type: module.exports.default, props: {} }))
   await runtime.settle()
-  return nodes(runtime.value).filter(node => node.props?.className === 'break-all text-xs')
+  handle.runtime = runtime
+  return cellsOf(runtime.value)
 }
 
 test('the replay list shows the group name with the id in the tooltip', async () => {
@@ -140,4 +150,44 @@ test('the replay list reads names once per unnamed platform; a failed read keeps
   const none = []
   await renderReplay(catalog, { items: [row('a')], consoleRpc: async (body) => { none.push(body); return { conversations: [] } } })
   assert.deepEqual(none, [], 'every row named by the group lists: no read')
+})
+
+test('conversation names need feature.view once access is loaded; the page itself needs only decisions:read', async () => {
+  const items = [on('sandbox', 'b', `private:private-${UUID}`)]
+  const answer = { conversations: [{ key: `sandbox/default/private:private-${UUID}`, name: '调试小号', hasOverrides: false, overrides: [] }] }
+  const calls = []
+  const consoleRpc = async (body) => { calls.push(body); return answer }
+  const env = { scope: 'conn-1', me: null, permissions: ['decisions:read', 'feature.view'] }
+  const handle = {}
+  const before = await renderReplay(null, { items, consoleRpc, env, handle })
+  assert.deepEqual(calls, [], 'access not loaded yet (it reads as unrestricted then): no read')
+  assert.equal(before[0].props.children, 'sandbox · 私聊 #3f2a9c1e')
+  env.me = { kind: 'user' }
+  handle.runtime.render(); await handle.runtime.settle()
+  assert.equal(calls.length, 1, 'read once access arrives')
+  assert.equal(cellsOf(handle.runtime.value)[0].props.children, 'sandbox · 私聊 调试小号')
+
+  const denied = []
+  const cells = await renderReplay(null, { items, consoleRpc: async (body) => { denied.push(body); return answer },
+    env: { scope: 'conn-1', me: { kind: 'user' }, permissions: ['decisions:read'] } })
+  assert.deepEqual(denied, [], 'without feature.view there is no read')
+  assert.equal(cells[0].props.children, 'sandbox · 私聊 #3f2a9c1e')
+})
+
+test('another connection drops the names and reads them again', async () => {
+  const items = [on('sandbox', 'b', `private:private-${UUID}`)]
+  const calls = []
+  const named = { conversations: [{ key: `sandbox/default/private:private-${UUID}`, name: '调试小号', hasOverrides: false, overrides: [] }] }
+  let answer = named
+  const env = { scope: 'conn-1', me: { kind: 'user' }, permissions: null }
+  const handle = {}
+  const cells = await renderReplay(null, { items, env, handle, consoleRpc: async (body) => { calls.push(body); return answer } })
+  assert.equal(cells[0].props.children, 'sandbox · 私聊 调试小号')
+  answer = { conversations: [] }
+  env.scope = 'conn-2'
+  handle.runtime.render()
+  assert.equal(cellsOf(handle.runtime.value)[0].props.children, 'sandbox · 私聊 #3f2a9c1e', 'the old names are not shown for the new connection')
+  await handle.runtime.settle()
+  assert.equal(calls.length, 2, 'the new connection reads its own names')
+  assert.equal(cellsOf(handle.runtime.value)[0].props.children, 'sandbox · 私聊 #3f2a9c1e')
 })
