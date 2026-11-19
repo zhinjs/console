@@ -669,6 +669,29 @@ export function profileUsages(purposes, profileId, locale = 'zh-CN', effects) {
   return rows
 }
 
+/**
+ * The badge of the default chat model (#64 `current-chat-badge-default-only`): 「当前聊天模型」 only when
+ * no adapter, account or conversation chats through another model; otherwise 「默认聊天模型 · N 处改用其他模型」
+ * with the overrides in `title`. `null` for any other model, or without purposes.
+ */
+export function chatModelBadge(purposes, profileId, locale = 'zh-CN') {
+  if (!isRecord(purposes) || purposes.defaults?.chat !== profileId) return null
+  const t = (text, values) => translate(locale, text, values)
+  const overrides = []
+  const scopes = [['adapters', key => t('适配器 {0}', [key])], ['endpoints', key => t('账号 {0}', [key])], ['scenes', key => t('会话 {0}', [key])]]
+  for (const [field, label] of scopes) {
+    for (const [key, models] of Object.entries(isRecord(purposes[field]) ? purposes[field] : {})) {
+      if (typeof models?.chat === 'string' && models.chat && models.chat !== profileId) overrides.push(label(key))
+    }
+  }
+  if (!overrides.length) return { label: t('当前聊天模型'), title: null, overrides }
+  return {
+    label: t('默认聊天模型 · {0} 处改用其他模型', [overrides.length]),
+    title: t('这些地方的聊天改用了其他模型：{0}', [overrides.join(t('、'))]),
+    overrides,
+  }
+}
+
 /** A profile label written for an Agent binding, e.g. 「子 Agent · 小编 planner · DeepSeek Flash」. */
 const AGENT_LABEL = /^(?:主|子)?\s*Agent\s*[·:：|/-]|^sub-?agent\b/iu
 

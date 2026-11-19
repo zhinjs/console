@@ -13,6 +13,9 @@ export const feedbackMessages = Object.freeze({
   "没有匹配的选项": "No matching options",
   // AI & models
   "当前聊天模型": "Current chat model",
+  "默认聊天模型 · {0} 处改用其他模型": "Default chat model · {0} elsewhere use another",
+  "这些地方的聊天改用了其他模型：{0}": "These chat through another model: {0}",
+  "会话 {0}": "Conversation {0}",
   "正在使用": "In use",
   "还没有用途引用任何模型；在「用途」页签选择聊天等用途使用的模型。": "No purpose uses a model yet; choose the models for chat and other purposes on the Purposes tab.",
   "未被用途引用的模型（{0}）": "Models no purpose uses ({0})",
