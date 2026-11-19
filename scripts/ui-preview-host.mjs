@@ -98,18 +98,43 @@ const decisions = [decisionRow(11, {}), decisionRow(42, { outcome: 'deny', reaso
     decision: 'shadow', confidence: 0.82, judge: 'Night Router/gemini-3.8-flash', judgeKind: 'language', judgeProfile: 'night:gemini-3.8-flash', judgeModel: 'gemini-3.8-flash',
     judgeFallbackFrom: 'DeepSeek/deepseek-v4-flash', judgeMs: 710, judgeUsage: { inputTokens: 412, outputTokens: 19 }, compare: 'quiet', compareJudge: 'OpenAI/gpt-5.5-mini' } }),
   decisionRow(180, { scene_id: 'private:10001' })]
+// The shape zhin's buildUsageStats returns (gateway/usage/aggregate.ts): byModel rows keyed by the
+// resolved service id (`services:<uuid>`), named by `displayName` / `providerLabel`, with the recorded
+// ids in `providerIds`, and `modelLabels` for the series keys. One unresolved opaque id (a removed
+// Profile) has only the model as its displayName; the Console shows it as 「未知服务 · 模型」.
+const USAGE_SERVICES = {
+  night: 'services:5e6ea66f-9b1d-4c3e-8a77-2f1d0c4b535a',
+  deepseek: 'services:0c8f2a51-63d4-4b8e-9f10-7a2e64c1d9b0',
+  removed: 'profiles:9d41e7c2-58ab-4f6e-b2c0-1e3f5a7d8c90',
+}
+const usageModels = [
+  { provider: USAGE_SERVICES.night, model: 'gpt-6-luna', displayName: 'Night Router · gpt-6-luna', providerLabel: 'Night Router', providerIds: ['accounts:3b7e1f20-9c4d-4a8b-bc15-6d2e0f9a1c47', USAGE_SERVICES.night], share: 0.62 },
+  { provider: USAGE_SERVICES.deepseek, model: 'deepseek-v4-flash', displayName: 'DeepSeek · deepseek-v4-flash', providerLabel: 'DeepSeek', providerIds: [USAGE_SERVICES.deepseek], share: 0.3 },
+  { provider: USAGE_SERVICES.removed, model: 'gemini-3.8-flash', displayName: 'gemini-3.8-flash', providerIds: [USAGE_SERVICES.removed], share: 0.08 },
+]
 const usageStats = (session) => {
   const sessions = [
-    { sessionKey: 'icqq:preview-community:group:20001', turns: 6, calls: 9, inputTokens: 18_400, outputTokens: 2_100, cacheReadTokens: 9_800 },
-    { sessionKey: 'icqq:preview-community:private:10001', turns: 2, calls: 3, inputTokens: 4_200, outputTokens: 600, cacheReadTokens: 1_100 },
+    { sessionKey: 'icqq:preview-community:group:20001', platform: 'icqq', scope: 'group', sceneId: '20001', displayName: 'icqq · 群 产品试验群', turns: 6, calls: 9, inputTokens: 18_400, outputTokens: 2_100, cacheReadTokens: 9_800 },
+    { sessionKey: 'icqq:preview-community:private:10001', platform: 'icqq', scope: 'private', sceneId: '10001', displayName: 'icqq · 私聊 演示用户', turns: 2, calls: 3, inputTokens: 4_200, outputTokens: 600, cacheReadTokens: 1_100 },
+    // No recorded origin: a hashed personal-session key and a group without a name.
+    { sessionKey: 'personal-session:v1:ab12cd34ef56a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2', turns: 3, calls: 5, inputTokens: 7_300, outputTokens: 900, cacheReadTokens: 2_600 },
+    { sessionKey: 'icqq:preview-community:group:30002', platform: 'icqq', scope: 'group', sceneId: '30002', turns: 1, calls: 2, inputTokens: 2_100, outputTokens: 300, cacheReadTokens: 0 },
   ].filter(row => !session || (session.endsWith('*') ? row.sessionKey.startsWith(session.slice(0, -1)) : row.sessionKey.includes(session)))
   const sum = key => sessions.reduce((total, row) => total + row[key], 0)
   const start = Math.floor((now - 7 * 24 * HOUR) / (24 * HOUR)) * 24 * HOUR
+  const part = (value, share) => Math.round(value * share)
+  const byModel = sum('calls') ? usageModels.map(({ share, ...row }) => ({ ...row, calls: Math.max(1, part(sum('calls'), share)), inputTokens: part(sum('inputTokens'), share), outputTokens: part(sum('outputTokens'), share),
+    cacheReadTokens: row.provider === USAGE_SERVICES.deepseek ? 0 : part(sum('cacheReadTokens'), share * 1.4), claimsWithoutToolCall: 0 })) : []
+  const key = row => `${row.provider}/${row.model}`
+  const daily = index => index > 3 ? Math.round(sum('inputTokens') / 3) : 0
   return { range: { since: now - 7 * 24 * HOUR, until: now, bucket: 'day', timeZone: 'Asia/Shanghai' },
     totals: { turns: sum('turns'), calls: sum('calls'), inputTokens: sum('inputTokens'), outputTokens: sum('outputTokens'), cacheReadTokens: sum('cacheReadTokens'), cacheShare: sum('inputTokens') ? sum('cacheReadTokens') / sum('inputTokens') : 0 },
-    byModel: sum('calls') ? [{ provider: 'preview', model: 'chat-small', calls: sum('calls'), inputTokens: sum('inputTokens'), outputTokens: sum('outputTokens'), cacheReadTokens: sum('cacheReadTokens') }] : [],
+    byModel,
     bySession: sessions,
-    series: Array.from({ length: 7 }, (_, index) => ({ bucketStart: start + index * 24 * HOUR, calls: index > 3 ? 4 : 0, inputTokens: index > 3 ? Math.round(sum('inputTokens') / 3) : 0, outputTokens: index > 3 ? 900 : 0, cacheReadTokens: index > 3 ? Math.round(sum('cacheReadTokens') / 3) : 0, byModel: index > 3 ? { 'preview/chat-small': Math.round(sum('inputTokens') / 3) } : {} })),
+    series: Array.from({ length: 7 }, (_, index) => ({ bucketStart: start + index * 24 * HOUR, calls: index > 3 ? 4 : 0, inputTokens: daily(index), outputTokens: index > 3 ? 900 : 0, cacheReadTokens: index > 3 ? Math.round(sum('cacheReadTokens') / 3) : 0,
+      byModel: index > 3 ? Object.fromEntries(usageModels.map(row => [key(row), Math.round(daily(index) * (index === 6 && row.provider === USAGE_SERVICES.deepseek ? row.share * 1.6 : row.share))])) : {} })),
+    modelLabels: Object.fromEntries(byModel.map(row => [key(row), row.displayName])),
+    promptCacheHints: sum('calls') ? [{ provider: USAGE_SERVICES.deepseek, label: 'DeepSeek', providerIds: [USAGE_SERVICES.deepseek], zeroCacheCalls: 12, sessions: 3, reportedZeroCalls: 12, comparedPairs: 10, samePrefixPairs: 9, samePrefixRatio: 0.9 }] : [],
     segments: { history: 12_000, fixed: 6_000, user: 4_600 }, filesRead: 1, malformedLines: 0 }
 }
 // ADR 0066 / #1250 batch 47: the merged interjection judge (UI_PREVIEW_AMBIENT=legacy answers like an older instance).
