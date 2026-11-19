@@ -6,7 +6,9 @@
 
 import { declaredDefaults, initialSchemaValue } from '../../components/PluginConfigForm/schema-model.mjs'
 
-import { GATEWAY_INSTANCE_RPC, GATEWAY_PACKAGES_RPC, GATEWAY_PLUGINS_RPC } from '@zhin.js/console-protocol'
+import {
+  GATEWAY_INSTANCE_RPC, GATEWAY_PACKAGES_RPC, GATEWAY_PLUGINS_RPC, GATEWAY_VERSION_MIGRATE_COMMAND, GATEWAY_VERSION_RPC,
+} from '@zhin.js/console-protocol'
 
 /** Gateway RPC names (`@zhin.js/console-protocol`) under the flat keys the ops pages use. */
 export const GATEWAY_RPC = Object.freeze({
@@ -23,6 +25,7 @@ export const GATEWAY_RPC = Object.freeze({
   PLUGINS_DECLARE: GATEWAY_PLUGINS_RPC.DECLARE,
   PLUGINS_ENABLE: GATEWAY_PLUGINS_RPC.ENABLE,
   PLUGINS_DISABLE: GATEWAY_PLUGINS_RPC.DISABLE,
+  VERSION_CHECK: GATEWAY_VERSION_RPC.CHECK,
 })
 
 export { GATEWAY_PACKAGES_PROGRESS } from '@zhin.js/console-protocol'
@@ -582,17 +585,17 @@ export function parseDeclarationJson(text, t) {
 // ---- gateway.version.check (zhinjs/console#64 version-update) ----
 
 /**
- * The gateway's read-only version check (`status.view`). Kept apart from {@link GATEWAY_RPC}: the
- * constant is new in `@zhin.js/console-protocol` 1.7 (`GATEWAY_VERSION_RPC.CHECK`), and older Hosts
- * do not know it — the pages then show nothing ({@link versionCheckUnsupported}).
+ * The gateway's read-only version check (`status.view`, `GATEWAY_VERSION_RPC.CHECK` since
+ * `@zhin.js/console-protocol` 1.8). Gateways before 1.7 do not know it — the pages then show
+ * nothing ({@link versionCheckUnsupported}).
  */
-export const GATEWAY_VERSION_CHECK_RPC = 'gateway.version.check'
+export const GATEWAY_VERSION_CHECK_RPC = GATEWAY_RPC.VERSION_CHECK
 
 /**
  * What the Console offers for an upgrade outside the declared range (ADR 0062: the Console never
- * changes framework ranges; `zhin migrate` does). Same text as `GATEWAY_VERSION_MIGRATE_COMMAND`.
+ * changes framework ranges; `zhin migrate` does).
  */
-export const VERSION_MIGRATE_COMMAND = 'npx zhin migrate --dry-run'
+export const VERSION_MIGRATE_COMMAND = GATEWAY_VERSION_MIGRATE_COMMAND
 
 /** `zhin migrate` in the CLI reference, in the interface language. */
 export function migrateDocsHref(locale) {

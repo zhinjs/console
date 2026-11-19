@@ -28,9 +28,9 @@ const REPORT = {
   ],
 }
 
-test('the version check is its own RPC, outside the published protocol map', () => {
+test('the version check is the published protocol RPC', () => {
   assert.equal(GATEWAY_VERSION_CHECK_RPC, 'gateway.version.check')
-  assert.ok(!Object.values(GATEWAY_RPC).includes(GATEWAY_VERSION_CHECK_RPC))
+  assert.equal(GATEWAY_RPC.VERSION_CHECK, GATEWAY_VERSION_CHECK_RPC)
   assert.equal(VERSION_MIGRATE_COMMAND, 'npx zhin migrate --dry-run')
   assert.equal(migrateDocsHref('en'), 'https://zhin.js.org/en/cli/#migrate')
   assert.equal(migrateDocsHref('zh-CN'), 'https://zhin.js.org/cli/#migrate')
