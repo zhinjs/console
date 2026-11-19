@@ -1,4 +1,8 @@
 import { translate } from '../i18n/locale.mjs'
+import { hasConsolePermission } from '../utils/console-access.mjs'
+import { scheduleIdOfKey, scheduleNamesFromList, sessionLabel, sessionShortKey, splitSessionKey, withScheduleName } from '../utils/session-label.mjs'
+
+export { scheduleNamesFromList, splitSessionKey }
 /**
  * 「机器人 → Token 用量」的纯逻辑：校验 Host 的 plugin.root.usage-stats 返回，
  * 把筛选翻成 RPC 参数，做数字格式化、按模型稳定配色、会话 key 拆分和排序。
@@ -289,102 +293,48 @@ export function usageModelIdGroups(row) {
   return [{ kind: 'keys', ids: keys }, { kind: 'services', ids: services }].filter(group => group.ids.length)
 }
 
-const SCOPE_NAMES = Object.freeze({ group: '群', private: '私聊', direct: '私聊', channel: '频道', guild: '频道' })
-const HASHED_KEY = /^([a-z][a-z-]*):v\d+:([0-9a-f]{16,})$/u
-const HASHED_NAMES = Object.freeze({ 'personal-session': '私聊会话', 'scene-task': '场景任务' })
-/** Origins that are not an IM conversation (`bySession[].scopeKind`, zhin 第 58 批). */
-const ORIGIN_NAMES = Object.freeze({ http: 'HTTP', a2a: 'A2A', mcp: 'MCP' })
 /**
- * 「平台 · 群 名称」 as an older Host writes `displayName` (the name may be missing: 「平台 · 群」): the
- * type word is Chinese whatever the UI language.
+ * Session names live in `utils/session-label.mjs` (shared with 聊天记录 / 机器人状态 / 工具审批);
+ * the Token 用量 names keep their own exports.
  */
-const CHINESE_SCOPE_LABEL = /^(.+?) · (群|私聊|频道)(?: (.+))?$/u
-const CHINESE_SCOPE_KINDS = Object.freeze({ 群: 'group', 私聊: 'private', 频道: 'channel' })
-/** 「定时任务 名称」/「内部任务 名称」/「内部 名称」 of an older Host, the name optional. */
-const CHINESE_TASK_LABEL = /^(定时任务|内部任务|内部)(?: (.+))?$/u
-const CHINESE_TASK_MESSAGES = Object.freeze({ 定时任务: '定时任务 {0}', 内部任务: '内部任务 {0}', 内部: '内部任务 {0}' })
+export const usageSessionLabel = sessionLabel
+export const usageSessionShortKey = sessionShortKey
 
-/** Long keys keep their head and tail: `abcdefghij…uvwxyz`. */
-function middleEllipsis(text, max = 32) {
-  return text.length <= max ? text : `${text.slice(0, Math.ceil((max - 1) / 2))}…${text.slice(-Math.floor((max - 1) / 2))}`
+/**
+ * Whether the task names may be read: only once the signed-in principal is known (`/auth/me`, or a
+ * pre-RBAC Host) — before that every permission reads as granted — and it holds `ops.schedule.read`.
+ */
+export function usageScheduleNamesAllowed(session, access) {
+  return Boolean(session && (session.me || session.legacy)) && hasConsolePermission('ops.schedule.read', access)
 }
 
-function scopeWord(scope, locale) {
-  return SCOPE_NAMES[scope] ? translate(locale, SCOPE_NAMES[scope]) : scope
+/** Whether any session row is a scheduled task (`schedule:<id>`): only then is `schedule:list` worth reading. */
+export function usageHasScheduleSessions(stats) {
+  return (stats?.bySession ?? []).some(row => !!scheduleIdOfKey(row?.sessionKey))
 }
 
 /**
- * Platform of a session row: the Host's `platform` (zhin 第 58 批 sends it for hashed keys too, from
- * the recorded origin), else the first part of a `platform:endpoint:scope:sceneId` key.
+ * The stats with the names of their scheduled tasks (`schedule:list`, id → name): 「定时任务 每日群聊摘要」
+ * instead of 「定时任务 sched_…」. The same object when no name is known.
  */
-function sessionPlatform(row) {
-  return label(splitSessionKey(row).platform)
+export function usageWithScheduleNames(stats, names) {
+  if (!stats || !names?.size) return stats
+  let changed = false
+  const bySession = stats.bySession.map(row => {
+    const next = withScheduleName(row, names)
+    if (next !== row) changed = true
+    return next
+  })
+  return changed ? { ...stats, bySession } : stats
 }
 
-/** 「#前 8 位」 of a hashed key, '' for other keys. */
-function hashedTag(row) {
-  const hashed = HASHED_KEY.exec(String(row?.sessionKey ?? ''))
-  return hashed ? `#${hashed[2].slice(0, 8)}` : ''
-}
-
-/** 「平台 · 名称」, or just the name without a platform. */
-function withPlatform(platform, body) {
-  return platform ? `${platform} · ${body}` : body
-}
-
-/** 「平台 · 类型 名称」 from `scopeKind` / `sceneLabel` (zhin 第 58 批), in the UI language. */
-function sessionLabelFromParts(row, locale) {
-  const kind = label(row?.scopeKind)
-  if (!kind) return ''
-  const scene = label(row.sceneLabel)
-  if (ORIGIN_NAMES[kind]) return scene ? `${ORIGIN_NAMES[kind]} · ${scene}` : ORIGIN_NAMES[kind]
-  if (kind === 'schedule') return translate(locale, '定时任务 {0}', [scene]).trim()
-  if (kind === 'internal') return translate(locale, '内部任务 {0}', [scene]).trim()
-  // A hashed key carries no scene id: its short hash tells it apart instead of the raw key.
-  const name = scene || hashedTag(row) || middleEllipsis(splitSessionKey(row).sceneId)
-  return withPlatform(sessionPlatform(row), `${scopeWord(kind, locale)} ${name}`.trim())
-}
-
-/**
- * The name a session row shows: 「平台 · 类型 名称」 from `scopeKind` / `sceneLabel` in the UI language
- * when the Host sends them (zhin 第 58 批), else the Host's `displayName` (`label` / `name` from older
- * shapes; its Chinese type word is translated), else 「平台 · 类型 sceneId」 from a
- * `platform:endpoint:scope:sceneId` key, else 「平台 · 私聊会话 #前 8 位」 for a hashed key
- * (`personal-session:v1:<sha>`; the platform from `bySession[].platform`, left out when the Host has
- * none), 「定时任务 …」 for `schedule:…`, else the key shortened in the middle. The platform always
- * comes from `bySession[].platform` first, the key only when the Host sends none.
- * The full key belongs in a tooltip / detail, never in the main view.
- */
-export function usageSessionLabel(row, locale = 'zh-CN') {
-  const fromParts = sessionLabelFromParts(row, locale)
-  if (fromParts) return fromParts
-  const own = label(row?.displayName) || label(row?.label) || label(row?.name)
-  if (own) {
-    const chinese = CHINESE_SCOPE_LABEL.exec(own)
-    if (chinese) return `${chinese[1]} · ${`${scopeWord(CHINESE_SCOPE_KINDS[chinese[2]], locale)} ${chinese[3] ?? ''}`.trim()}`
-    const task = CHINESE_TASK_LABEL.exec(own)
-    if (task) return translate(locale, CHINESE_TASK_MESSAGES[task[1]], [task[2] ?? '']).trim()
-    return own
-  }
-  const key = String(row?.sessionKey ?? '')
-  const hashed = HASHED_KEY.exec(key)
-  if (hashed) return withPlatform(sessionPlatform(row), `${translate(locale, HASHED_NAMES[hashed[1]] ?? '会话')} #${hashed[2].slice(0, 8)}`)
-  if (key.startsWith('schedule:') && key.length > 9) return translate(locale, '定时任务 {0}', [middleEllipsis(key.slice(9))])
-  const parts = splitSessionKey(row)
-  if (parts.platform && parts.scope) return `${parts.platform} · ${scopeWord(parts.scope, locale)} ${middleEllipsis(parts.sceneId)}`.trim()
-  return middleEllipsis(key)
-}
-
-/**
- * Short key of a session row for its tooltip / detail (never a name qualifier): the Host's `shortKey` (zhin 第 58 批), else the
- * first 8 hex digits of a hashed key, else the key shortened in the middle.
- */
-export function usageSessionShortKey(row) {
-  const own = label(row?.shortKey)
-  const key = String(row?.sessionKey ?? '')
-  if (own) return middleEllipsis(own, 24)
-  const hashed = HASHED_KEY.exec(key)
-  return hashed ? `${hashed[1]}:${hashed[2].slice(0, 8)}` : middleEllipsis(key, 24)
+/** 「会话 / 群」 choices for session rows: their names, and a qualifier when two rows share one. */
+export function usageSessionOptions(rows, locale = 'zh-CN') {
+  const names = usageSessionNames(rows, locale)
+  return (rows ?? []).map(row => {
+    const name = names.get(row.sessionKey)
+    return { value: row.sessionKey, label: name.name, ...(name.qualifier ? { description: name.qualifier } : {}) }
+  })
 }
 
 /** The account's display name (`accountLabel`) when it is a real name: never an opaque id or the raw endpoint. */
@@ -550,25 +500,6 @@ export const SEGMENT_LABELS = Object.freeze({ history: '历史', fixed: '固定'
 
 export function segmentValues(segments) {
   return SEGMENT_KEYS.map(key => ({ key, value: segments[key] ?? 0 }))
-}
-
-/**
- * 拆 sessionKey：真实格式是 `platform:endpoint:scope:sceneId`（sceneId 里允许再有冒号）。
- * 优先用 Host 给的 platform / endpoint / scope / sceneId；缺失时按上面拆，
- * 少于 4 段（如 `schedule:assistant-profile-weatherReport`）不猜，整条 key 当作会话 ID 显示。
- */
-export function splitSessionKey(row) {
-  const parts = String(row.sessionKey).split(':')
-  const fallback = parts.length >= 4
-    ? { platform: parts[0], endpoint: parts[1], scope: parts[2], sceneId: parts.slice(3).join(':') }
-    : { platform: '', endpoint: '', scope: '', sceneId: row.sessionKey }
-  return {
-    sessionKey: row.sessionKey,
-    platform: row.platform || fallback.platform,
-    endpoint: row.endpoint || fallback.endpoint,
-    scope: row.scope || fallback.scope,
-    sceneId: row.sceneId || fallback.sceneId,
-  }
 }
 
 function sortValue(row, key) {

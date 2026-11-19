@@ -9,6 +9,7 @@ import { readRecentSessions, summarizeRecentSessions } from '../console-ui/src/p
 import * as recordsModel from '../console-ui/src/pages/scope/records-model.mjs'
 import * as scopeTree from '../console-ui/src/scope/scope-tree.mjs'
 import * as scopeFilter from '../console-ui/src/pages/insights/scope-filter.mjs'
+import * as sessionLabels from '../console-ui/src/utils/session-label.mjs'
 
 const require = createRequire(import.meta.url)
 const options = { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX }
@@ -18,7 +19,7 @@ function compile(source, mocks = {}) {
   return module.exports
 }
 const source = await readFile(new URL('../console-ui/src/pages/agent-sessions.tsx', import.meta.url), 'utf8')
-const sessions = compile(await readFile(new URL('../console-ui/src/utils/agent-session.ts', import.meta.url), 'utf8'), { '../pages/personal-session-model.mjs': personalModels })
+const sessions = compile(await readFile(new URL('../console-ui/src/utils/agent-session.ts', import.meta.url), 'utf8'), { '../pages/personal-session-model.mjs': personalModels, './session-label.mjs': sessionLabels })
 const elements = node => node && typeof node === 'object' ? [node, ...[node.props?.children].flat(Infinity).flatMap(elements)] : []
 // Radix Dialog does not mount its content while closed.
 const text = node => typeof node === 'string' ? node : node && typeof node === 'object' ? node.type === 'Dialog' && !node.props.open ? '' : [node.props?.children].flat(Infinity).map(text).join('') : ''
@@ -39,7 +40,7 @@ function fixture(initialKey = 'icqq:bot:group:room') {
     './PersonalSessionPanel': { PersonalSessionPanel: 'personal-session-panel' },
     'react-router-dom': { Link: 'a', useSearchParams: () => [params, next=>{params=typeof next==='function'?next(params):next}] },
     './scope/records-model.mjs': recordsModel, '../scope/scope-tree.mjs': scopeTree, './insights/scope-filter.mjs': scopeFilter,
-    '../utils/agent-session': sessions,
+    '../utils/agent-session': sessions, '../utils/session-label.mjs': sessionLabels,
     '../utils/agent-session-history': {loadAgentSessionHistory:()=>[],pushAgentSessionHistory:key=>[key]},
     '../utils/useInboxCacheScope':{useInboxCacheScope:()=>scope},
     '../utils/inbox-cache':{isInboxCacheScopeActive:expected=>expected===scope},
@@ -204,7 +205,7 @@ test('already-authorized recent personal sessions stay visible without querying 
 })
 
 
-test('personal sessions open on the trace tab and explain, without an error, that chat history is not kept', () => {
+test('personal sessions open on the trace tab and explain, without an error, that the conversation is not shown here (it is not lost)', () => {
   const key = `personal-session:v1:${'e'.repeat(64)}`
   const f = fixture(key); f.render()
   assert.equal(find(f, 'tabs').props.value, 'trace')
@@ -214,7 +215,11 @@ test('personal sessions open on the trace tab and explain, without an error, tha
   assert.ok(!text(f.tree).includes('聊天记录暂不可用'))
   const notice = elements(panel).find(node => node.type === 'empty-state')
   assert.ok(notice, 'the conversation tab carries a neutral notice')
-  assert.match(notice.props.description, /个人会话不保存聊天记录/)
+  assert.equal(notice.props.title, '这里不显示个人会话的对话')
+  assert.match(notice.props.description, /为保护隐私/)
+  assert.match(notice.props.description, /仍在原来的聊天里/)
+  assert.match(notice.props.description, /平台或沙盒/)
+  assert.doesNotMatch(`${notice.props.title}${notice.props.description}`, /没有聊天记录|不保存聊天记录/, 'the chat is kept: never claim it is not')
   assert.match(notice.props.description, /轨迹/)
   // 查看轨迹 is the EmptyState's one action (console-ui 1.1).
   const toTrace = notice.props.action
@@ -233,5 +238,37 @@ test('a tab chosen for a group conversation does not carry the conversation tab 
   assert.equal(find(f, 'tabs').props.value, 'trace')
   f.navigate('icqq:bot:group:room'); f.render()
   assert.equal(find(f, 'tabs').props.value, 'conversation')
+  f.close()
+})
+
+test('scene-task and schedule sessions are listed, selectable by URL, open on the trace tab, and say truthfully why the conversation is not shown', async () => {
+  const scene = `scene-task:v1:${'9f8e7d6c'.repeat(8)}`
+  const f = fixture()
+  f.calls.find(call => call.url.endsWith('/trace-archive/sessions')).resolve({ ok: true, json: async () => ({ success: true, data: [
+    { session_key: scene, turns: 2, last_started_at: 2, last_status: 'completed' },
+    { session_key: 'schedule:job-daily', turns: 1, last_started_at: 1, last_status: 'completed' },
+  ] }) })
+  await settle(); f.render()
+  assert.deepEqual(find(f, 'session-picker').props.recent.map(row => row.sessionKey), [scene, 'schedule:job-daily'])
+  const cards = elements(f.tree).filter(node => node.type === 'stat-card')
+  assert.equal(cards.find(card => card.props.label === '群聊与频道').props.value, 1)
+  assert.match(cards.find(card => card.props.label === '群聊与频道').props.sub, /其他 1 个/)
+  for (const [key, title, copy] of [
+    [scene, '这里还不显示这个会话的对话', /还不能把这个会话对应到原来的聊天.*平台查看.*轨迹/],
+    ['schedule:job-daily', '这里不显示定时任务的对话', /定时任务按计划运行.*轨迹/],
+  ]) {
+    find(f, 'session-picker').props.onLoad(key); f.render(); f.render()
+    assert.equal(find(f, 'tabs').props.value, 'trace', key)
+    assert.ok(find(f, 'conversation-trace'))
+    assert.ok(f.traceReads.some(args => args[0] === key), 'turns are read by the key')
+    assert.equal(find(f, 'conversation-history'), undefined, 'no conversation read for a key without an address')
+    const panel = elements(f.tree).find(node => node.type === 'tabs-content' && node.props.value === 'conversation')
+    const notice = elements(panel).find(node => node.type === 'empty-state')
+    assert.equal(notice.props.title, title)
+    assert.match(notice.props.description, copy)
+    assert.equal(notice.props.action.label, '查看轨迹')
+    assert.equal(elements(panel).find(node => node.type === 'error-alert'), undefined)
+    assert.equal(find(f, 'personal-session-panel'), undefined)
+  }
   f.close()
 })

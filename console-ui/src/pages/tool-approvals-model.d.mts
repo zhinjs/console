@@ -11,6 +11,11 @@ export interface ToolApprovalCard {
   readonly decidedAt: number | null
   readonly decidedBy: string | null
   readonly channel: 'console' | 'im_dm' | 'im_approver_group' | null
+  /** Not in console-protocol 1.8; read when a newer Host sends them, for the session's name. */
+  readonly platform?: string
+  readonly scopeKind?: string
+  readonly sceneLabel?: string
+  readonly displayName?: string
 }
 export interface ToolApprovals { readonly available: boolean; readonly pending: readonly ToolApprovalCard[] }
 export function readToolApprovalCard(value: unknown): ToolApprovalCard

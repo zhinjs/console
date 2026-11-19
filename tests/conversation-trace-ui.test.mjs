@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import ts from 'typescript'
 import { localeModule, isLocaleImport } from './locale-fixture.mjs'
 import * as personalModels from '../console-ui/src/pages/personal-session-model.mjs'
+import * as sessionLabels from '../console-ui/src/utils/session-label.mjs'
 import * as model from '../console-ui/src/pages/conversation-trace-model.mjs'
 import { createDiagnosticRequestGate, diagnosticConversationKey } from '../console-ui/src/pages/endpoint-detail/message-diagnostics.mjs'
 import { createInboxCacheAuthority } from '../console-ui/src/utils/inbox-cache-scope.mjs'
@@ -15,7 +16,7 @@ const sources = Object.fromEntries(await Promise.all(['ConversationTrace', 'Conv
 const compile = (name, mocks) => {
   const module = { exports: {} }
   const code = ts.transpileModule(sources[name], { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
-  new Function('require','exports','module',code)(key => isLocaleImport(key) ? localeModule : key === './personal-session-model.mjs' ? personalModels : mocks[key] ?? require(key), module.exports, module)
+  new Function('require','exports','module',code)(key => isLocaleImport(key) ? localeModule : key === './personal-session-model.mjs' ? personalModels : key === '../utils/session-label.mjs' ? sessionLabels : mocks[key] ?? require(key), module.exports, module)
   return module.exports
 }
 const conversation = { endpoint: { adapter: 'root/icqq', id: 'canonical-bot' }, kind: 'group', id: 'group-a' }
@@ -176,4 +177,22 @@ test('personal exact-session turn details keep the original full read path witho
   await f.hooks.settle()
   assert.ok(elements(f.hooks.value).some(node => typeof node.type === 'function' && node.type.name === 'TurnRequests'))
   f.hooks.unmount()
+})
+
+test('scene-task and schedule keys read their turns by key, and their turn details open, without a physical conversation', async () => {
+  for (const key of [`scene-task:v1:${'9f8e7d6c'.repeat(8)}`, 'schedule:sched_1']) {
+    const f = fixture()
+    f.props.sessionKey = key; f.props.conversation = undefined; f.hooks.render()
+    const query = new URL(f.calls.at(-1).url, 'https://fixture')
+    assert.equal(query.searchParams.get('sessionKey'), key)
+    assert.equal(query.searchParams.has('conversation'), false)
+    f.answer(f.calls.length - 1, wrap([{ ...turn, session_key: key, origin: undefined }]))
+    await f.hooks.settle()
+    assert.equal(f.hooks.value.turns[0].session_key, key)
+    f.hooks.unmount()
+    const t = fixture('turn')
+    t.props.turn = { ...turn, session_key: key }; t.props.conversation = undefined; t.hooks.render()
+    assert.equal(new URL(t.calls.at(-1).url, 'https://fixture').searchParams.get('sessionKey'), key)
+    t.hooks.unmount()
+  }
 })

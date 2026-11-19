@@ -1,4 +1,5 @@
 import { isPersonalSessionKey } from '../pages/personal-session-model.mjs'
+import { isKeyOnlySessionKey } from './session-label.mjs'
 
 /** 聊天记录（Agent 会话）sessionKey 与深链（与 @zhin.js/ai resolveIMSessionId 一致） */
 
@@ -44,9 +45,12 @@ export function parseSessionKeyFromQuery(raw: string | null): string {
   return raw.trim()
 }
 
-/** Accept a complete personal hash or a legacy IM key; hashes never imply a conversation address. */
+/**
+ * Accept a legacy IM key, or a key-only session: a complete hashed key (`personal-session:v1:`,
+ * `scene-task:v1:` …) or `schedule:<id>`. Hashes never imply a conversation address.
+ */
 export function isLikelySessionKey(key: string): boolean {
-  return isPersonalSessionKey(key) || parseImSessionKey(key) !== null
+  return isPersonalSessionKey(key) || isKeyOnlySessionKey(key) || parseImSessionKey(key) !== null
 }
 
 /** 将内部 sessionKey 拆成 Console 可展示的会话上下文。 */
