@@ -22,7 +22,7 @@ const view = { rootId: '/host', ownerId: 'host', revision: 1, hostAdministrator:
 async function mount(page, props) {
   const runtime = pageRuntime()
   const source = { connectionScope: 'c', base: 'https://host.test', view }
-  const management = { source, view, owners: [], ownerId: 'host', busy: false, pending: null, error: '', revisionEpoch: 1, request: async () => ({}), active: () => true, setError: () => {}, savePlan: async () => false, save: async () => false, action: async () => null }
+  const management = { source, view, owners: [], ownerId: 'host', busy: false, pending: null, canConfigure: true, error: '', revisionEpoch: 1, request: async () => ({}), active: () => true, setError: () => {}, savePlan: async () => false, save: async () => false, action: async () => null }
   const deps = {
     react: runtime.api,
     'react/jsx-runtime': { jsx: (type, p, key) => ({ type, props: p, key }), jsxs: (type, p, key) => ({ type, props: p, key }) },

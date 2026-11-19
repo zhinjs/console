@@ -224,6 +224,8 @@ export function inferenceRequest<T = unknown>(
   fetch: typeof globalThis.fetch,
   input: { path?: string; ownerId?: string; body?: unknown; method?: string; signal?: AbortSignal }
 ): Promise<T>
+export const INFERENCE_CONFIGURE_PERMISSION: 'agent.configure'
+export function inferenceCanConfigure(access?: import('../../utils/console-access.mjs').ConsoleAccess): boolean
 export function inferenceError(error: unknown, locale?: 'zh-CN' | 'en'): string
 export function resourceBindings(
   view: View

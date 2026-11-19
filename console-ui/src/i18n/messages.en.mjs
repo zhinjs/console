@@ -2908,6 +2908,7 @@ export const englishMessages = Object.freeze({
   "导出": "Export",
   "重新读取模型配置": "Reload model configuration",
   "上次保存结果待确认。": "The result of the last save is unconfirmed.",
+  "当前身份只能查看，修改模型配置需要 agent.configure 权限。": "This identity can only view. Changing the model configuration needs the agent.configure permission.",
   "查询保存结果": "Check save result",
   "请先连接并登录 Host。": "Connect and sign in to the Host first.",
   "正在读取模型…": "Loading models…",

@@ -15,6 +15,8 @@ export function Services({ management: m }: { management: InferenceManagement })
     null
   )
   const { confirm, ConfirmDialog: dialog } = useConfirm()
+  // Writes need `agent.configure`; without it every action here stays visible but disabled.
+  const locked = !m.canConfigure || m.busy || !!m.pending
   async function remove(service: Service) {
     const source = m.source!
     if (
@@ -31,7 +33,7 @@ export function Services({ management: m }: { management: InferenceManagement })
       {dialog}
       <div className="flex items-center justify-between gap-3">
         <h3 className="font-semibold">{i18n.t("服务")}</h3>
-        <Button disabled={m.busy || !!m.pending} onClick={() => setEditing({ source: m.source! })}>
+        <Button disabled={locked} onClick={() => setEditing({ source: m.source! })}>
           <Plus />
           {i18n.t("添加服务")}
         </Button>
@@ -59,7 +61,7 @@ export function Services({ management: m }: { management: InferenceManagement })
                     variant="ghost"
                     size="icon"
                     aria-label={i18n.t("编辑服务 {0}", [service.label ?? service.id])}
-                    disabled={m.busy || !!m.pending}
+                    disabled={locked}
                     onClick={() => setEditing({ service, source: m.source! })}
                   >
                     <Pencil />
@@ -68,7 +70,7 @@ export function Services({ management: m }: { management: InferenceManagement })
                     variant="ghost"
                     size="icon"
                     aria-label={i18n.t("删除服务 {0}", [service.label ?? service.id])}
-                    disabled={m.busy || !!m.pending}
+                    disabled={locked}
                     onClick={() => void remove(service)}
                   >
                     <Trash2 />
@@ -157,7 +159,7 @@ function ServiceForm({
   }
   return (
     <form onSubmit={(event) => void submit(event)}>
-      <fieldset disabled={m.busy || !!m.pending} className="space-y-4">
+      <fieldset disabled={!m.canConfigure || m.busy || !!m.pending} className="space-y-4">
         {error ? <ErrorAlert error={error} /> : null}
         {m.error ? <ErrorAlert error={m.error} /> : null}
         {driver ? <SupportNotice support={driver.support} /> : null}

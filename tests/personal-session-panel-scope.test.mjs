@@ -1,4 +1,5 @@
 import test from 'node:test'
+import { UNRESTRICTED_ACCESS } from '../console-ui/src/utils/console-access.mjs'
 import { localeModule } from './locale-fixture.mjs'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -40,6 +41,7 @@ async function fixture({ actualPicker = false } = {}) {
   const { PersonalSessionModelPicker: Picker } = actualPicker ? await load('../console-ui/src/pages/PersonalSessionModelPicker.tsx', {
     'lucide-react': { RefreshCw: 'icon' }, '@zhin.js/console-ui': { Button: 'button', SelectField: 'select', ErrorAlert: 'error' },
     '../utils/inbox-cache': { isInboxCacheScopeActive: captured => captured === scope },
+    '../hooks/use-console-access': { useConsoleAccess: () => UNRESTRICTED_ACCESS },
     './inference/model.mjs': model, './personal-session-model.mjs': personal,
     '../utils/auth': { apiFetch: async (url, init) => {
       transport.push({ url, init })

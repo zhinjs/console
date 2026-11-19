@@ -76,7 +76,8 @@ export function Accounts({ management: m, focusAccount, onAddModel }: { manageme
       : callbackProblem === 'other-address' ? i18n.t("这不是本次登录的回调地址：网址应以 {0} 开头。", [login?.challenge.redirectUri ?? ''])
         : callbackProblem === 'no-code' ? i18n.t("网址里没有授权码（code=…）：请在授权完成、浏览器跳转之后再复制地址栏。")
           : null
-  const disabled = m.busy || !!m.pending
+  // Writes (including tests, logins and disconnects) need `agent.configure`; without it they stay visible but disabled.
+  const disabled = !m.canConfigure || m.busy || !!m.pending
   async function disconnect(account: Account) {
     if (
       await confirm({
@@ -564,7 +565,7 @@ function AccountForm({
     driver?.authentication.filter((value) => view.hostAdministrator || value !== 'oauth') ?? []
   // A new account whose service type offers one method starts with it (an existing account keeps its own).
   const authMethod = updating ? method : effectiveAuthMethod(method, methods)
-  const disabled = m.busy || !!m.pending
+  const disabled = !m.canConfigure || m.busy || !!m.pending
 
   async function submit(event: FormEvent) {
     event.preventDefault()

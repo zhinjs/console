@@ -1,4 +1,5 @@
 import { translate } from '../../i18n/locale.mjs'
+import { getConsoleAccess, hasConsolePermission } from '../../utils/console-access.mjs'
 const base = '/api/agent/inference'
 export class InferenceRequestError extends Error {
   constructor(code, status = 503, mutationOutcome, reason, path, details) {
@@ -94,6 +95,15 @@ export async function inferenceRequest(fetch, { path = '', ownerId, body, method
       failureDetails(result)
     )
   return result.data
+}
+/**
+ * `GET /agent/inference/*` needs only `agent.view`; every other method needs this permission
+ * (`CONSOLE_HTTP_PERMISSIONS`). Built-in operator and viewer roles do not hold it.
+ */
+export const INFERENCE_CONFIGURE_PERMISSION = 'agent.configure'
+/** Whether `access` may change models, accounts, services and purposes (an unreported session may). */
+export function inferenceCanConfigure(access = getConsoleAccess()) {
+  return hasConsolePermission(INFERENCE_CONFIGURE_PERMISSION, access)
 }
 export function inferenceError(error, locale = 'zh-CN') {
   const message = inferenceErrorText(error, locale)
