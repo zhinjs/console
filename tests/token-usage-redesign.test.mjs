@@ -590,8 +590,9 @@ test('compact rows and share cells name the share after their row', () => {
 })
 
 const pageSource = await readFile(new URL('../console-ui/src/pages/token-usage.tsx', import.meta.url), 'utf8')
-function pageFixture(rpc) {
+function pageFixture(rpc, { scheduleList = null, scheduleReadable = true } = {}) {
   const runtime = hookHarness()
+  const consoleCalls = []
   const i18n = { locale: 'zh-CN', t: (message, values) => translate('zh-CN', message, values) }
   let params = new URLSearchParams()
   const calls = []
@@ -607,11 +608,14 @@ function pageFixture(rpc) {
     '@zhin.js/console-ui': new Proxy({}, { get: (_, name) => tag(String(name)) }),
     './token-usage-report': { UsageBasisHint: 'usage-basis-hint', UsageReport: 'usage-report' },
     './token-usage-model.mjs': usageModel,
+    '../utils/console-rpc': { requestConsole: async input => { consoleCalls.push(input); if (!scheduleList) throw new Error('unsupported'); return scheduleList } },
+    '../utils/console-access.mjs': { hasConsolePermission: () => scheduleReadable },
+    '../contracts/zhin-console': { CONSOLE_RPC: { SCHEDULE_LIST: 'schedule:list' } },
   }).default
   let tree
   const render = () => (tree = runtime.render(page, {}))
   return {
-    calls, render,
+    calls, consoleCalls, render,
     async flush() { render(); await settle(); return render() },
     report: () => nodes(tree).find(node => node.type === 'usage-report')?.props ?? null,
     status: () => nodes(tree).find(node => node.type === 'status-state')?.props ?? null,
@@ -684,4 +688,52 @@ test('page: 503 is an empty state, 403 the forbidden state', async () => {
   assert.equal(forbidden.status().kind, 'forbidden')
   assert.deepEqual(forbidden.status().permissions, ['control:read'])
   assert.equal(forbidden.calls.length, 1, 'no previous-window request after a failure')
+})
+
+test('page: scheduled-task rows show the task name from one schedule:list read, only when such rows exist', async () => {
+  const withSchedule = () => {
+    const stats = v2Stats()
+    stats.bySession = [...stats.bySession, { sessionKey: 'schedule:sched_mwio9qd6_x1', turns: 1, ...tokens(1, 100) }, { sessionKey: 'schedule:sched_unknown', turns: 1, ...tokens(1, 100) }]
+    return stats
+  }
+  const scheduleList = { persistent: [{ id: 'sched_mwio9qd6_x1', label: '每日群聊摘要' }, { id: 'sched_unnamed', label: 'sched_unnamed' }] }
+  const f = pageFixture(async () => withSchedule(), { scheduleList })
+  await f.flush(); await f.flush()
+  assert.deepEqual(f.consoleCalls.map(call => call.type), ['schedule:list'])
+  const rows = f.report().stats.bySession
+  assert.equal(usageSessionLabel(rows.find(row => row.sessionKey === 'schedule:sched_mwio9qd6_x1')), '定时任务 每日群聊摘要')
+  assert.equal(usageSessionLabel(rows.find(row => row.sessionKey === 'schedule:sched_unknown')), '定时任务 sched_unknown', 'an unknown task keeps its id')
+  f.setRange('30d'); await f.flush(); await f.flush()
+  assert.equal(f.consoleCalls.length, 1, 'the list is read once')
+
+  const none = pageFixture(async () => v2Stats(), { scheduleList })
+  await none.flush(); await none.flush()
+  assert.equal(none.consoleCalls.length, 0, 'no schedule:list without a schedule row')
+
+  const denied = pageFixture(async () => withSchedule(), { scheduleList, scheduleReadable: false })
+  await denied.flush(); await denied.flush()
+  assert.equal(denied.consoleCalls.length, 0, 'no schedule:list without ops.schedule.read')
+  assert.equal(usageSessionLabel(denied.report().stats.bySession.find(row => row.sessionKey === 'schedule:sched_mwio9qd6_x1')), '定时任务 sched_mwio9qd6_x1')
+
+  const failing = pageFixture(async () => withSchedule())
+  await failing.flush(); await failing.flush()
+  assert.equal(failing.consoleCalls.length, 1)
+  assert.ok(failing.report().stats, 'a failed list read leaves the report as it was')
+})
+
+test('usage: schedule names map onto schedule:<id> rows only; a real Host name wins', () => {
+  const { usageWithScheduleNames, scheduleNamesFromList, usageHasScheduleSessions, usageSessionOptions } = usageModel
+  const names = scheduleNamesFromList({ persistent: [{ id: 'a', label: '早报' }, { id: 'b', label: 'b' }, { id: 'c' }, null, { label: 'x' }], memory: [{ id: 'heartbeat', description: '心跳检测' }] })
+  assert.deepEqual([...names], [['a', '早报']])
+  assert.deepEqual([...scheduleNamesFromList(null)], [])
+  const stats = { bySession: [{ sessionKey: 'schedule:a' }, { sessionKey: 'schedule:b' }, { sessionKey: 'icqq:x:group:a' }, { sessionKey: 'schedule:a2', scopeKind: 'schedule', sceneLabel: '已有名称' }] }
+  assert.equal(usageHasScheduleSessions(stats), true)
+  assert.equal(usageHasScheduleSessions({ bySession: [{ sessionKey: 'icqq:x:group:a' }] }), false)
+  assert.equal(usageWithScheduleNames(stats, new Map()), stats, 'unchanged without names')
+  const named = usageWithScheduleNames(stats, new Map([['a', '早报'], ['a2', '别的'], ['icqq:x:group:a', 'no']]))
+  assert.deepEqual(named.bySession.map(row => usageSessionLabel(row)), ['定时任务 早报', '定时任务 b', 'icqq · 群 a', '定时任务 已有名称'])
+  assert.equal(usageSessionLabel(named.bySession[0], 'en'), 'Scheduled task 早报')
+  // The Host's own label equal to the id is no name: the list's name replaces it.
+  assert.equal(usageSessionLabel(usageWithScheduleNames({ bySession: [{ sessionKey: 'schedule:a', scopeKind: 'schedule', sceneLabel: 'a' }] }, names).bySession[0]), '定时任务 早报')
+  assert.deepEqual(usageSessionOptions(named.bySession.slice(0, 1)), [{ value: 'schedule:a', label: '定时任务 早报' }])
 })

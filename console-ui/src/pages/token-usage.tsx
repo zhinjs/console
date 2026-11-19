@@ -6,6 +6,9 @@ import { ScopeFilterBar, useScopeFilter } from './insights/ScopeFilterBar'
 import { usageSessionPattern } from './insights/scope-filter.mjs'
 import { RefreshCw } from 'lucide-react'
 import { pluginRpc } from '../utils/plugin-rpc'
+import { requestConsole } from '../utils/console-rpc'
+import { hasConsolePermission } from '../utils/console-access.mjs'
+import { CONSOLE_RPC } from '../contracts/zhin-console'
 import {
   Button, DateTimeField, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, ErrorAlert, Input, PageHeader, PageShell,
   SearchableSelectField, SelectField, Skeleton,
@@ -21,7 +24,10 @@ import {
   parseLocalDateTime,
   previousUsagePlan,
   toLocalDateTime,
-  usageSessionNames,
+  scheduleNamesFromList,
+  usageHasScheduleSessions,
+  usageSessionOptions,
+  usageWithScheduleNames,
   validateUsageStats,
   type UsageFilter,
   type UsageStats,
@@ -67,10 +73,18 @@ export default function TokenUsagePage() {
   const [keyDialog, setKeyDialog] = useState(false)
   const [keyDraft, setKeyDraft] = useState('')
   const [refreshTick, setRefreshTick] = useState(0)
-  const [stats, setStats] = useState<UsageStats | null>(null)
+  const [hostStats, setStats] = useState<UsageStats | null>(null)
   const [previous, setPrevious] = useState<UsageTotals | null>(null)
   // Sessions of the last unfiltered result: the 「会话 / 群」 choices stay while one of them is picked.
-  const [sessionOptions, setSessionOptions] = useState<SessionOption[]>([])
+  const [sessionRows, setSessionRows] = useState<UsageStats['bySession']>([])
+  // Names of scheduled tasks (`schedule:list`, id → name), read once and only when a `schedule:<id>` row shows up.
+  const [scheduleNames, setScheduleNames] = useState<Map<string, string> | null>(null)
+  const scheduleNamesRead = useRef(false)
+  const stats = useMemo(() => usageWithScheduleNames(hostStats, scheduleNames), [hostStats, scheduleNames])
+  const sessionOptions: SessionOption[] = useMemo(() => {
+    const rows = usageWithScheduleNames({ bySession: sessionRows }, scheduleNames).bySession
+    return usageSessionOptions(rows, i18n.locale)
+  }, [sessionRows, scheduleNames, i18n.locale])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [denied, setDenied] = useState(false)
@@ -98,13 +112,7 @@ export default function TokenUsagePage() {
         // One row per 「服务名 · 模型」 (displayName / modelLabels); opaque ids never become a name.
         const next = mergeUsageModels(validateUsageStats(data, i18n.locale), i18n.locale)
         setStats(next)
-        if (!input.session) {
-          const names = usageSessionNames(next.bySession, i18n.locale)
-          setSessionOptions(next.bySession.map(row => {
-            const name = names.get(row.sessionKey)!
-            return { value: row.sessionKey, label: name.name, ...(name.qualifier ? { description: name.qualifier } : {}) }
-          }))
-        }
+        if (!input.session) setSessionRows(next.bySession)
         setError(null)
         setDenied(false)
         setUnavailable(null)
@@ -126,6 +134,17 @@ export default function TokenUsagePage() {
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [built, i18n.locale])
+
+  const wantsScheduleNames = (usageHasScheduleSessions(hostStats) || usageHasScheduleSessions({ bySession: sessionRows }))
+    && hasConsolePermission('ops.schedule.read')
+  useEffect(() => {
+    if (!wantsScheduleNames || scheduleNamesRead.current) return
+    scheduleNamesRead.current = true
+    // Without the list (an older Host, no permission) the rows keep showing the task id.
+    requestConsole<unknown>({ type: CONSOLE_RPC.SCHEDULE_LIST, locale: i18n.locale })
+      .then(data => setScheduleNames(scheduleNamesFromList(data)))
+      .catch(() => undefined)
+  }, [wantsScheduleNames]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const applySession = (value: string) => setSession(value.trim())
   const sessionChoices = useMemo(() => {

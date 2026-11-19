@@ -12,9 +12,9 @@ export interface BindingModelSource {
   effective?: { provider?: string; serviceLabel?: string; model?: string; modelLabel?: string; profileLabel?: string } | null
 }
 export function bindingModel(binding: BindingModelSource | null | undefined): { provider: string; model: string; source: 'effective' | 'configured' | 'default' }
-export interface RecentAgentSession { key: string; label: string; turns: number | null; lastAt: number | null; source: 'local' | 'trace' }
+export interface RecentAgentSession { key: string; label: string; turns: number | null; lastAt: number | null; source: 'local' | 'trace'; platform?: string; scopeKind?: string; sceneLabel?: string }
 export function recentAgentSessions(
   localKeys: readonly string[],
-  traceSessions: ReadonlyArray<{ sessionKey: string; turns?: number; lastAt?: number; label?: string; displayName?: string; name?: string }> | null | undefined,
+  traceSessions: ReadonlyArray<{ sessionKey: string; turns?: number; lastAt?: number; label?: string; displayName?: string; name?: string; platform?: string; scopeKind?: string; sceneLabel?: string }> | null | undefined,
   limit?: number,
 ): RecentAgentSession[]

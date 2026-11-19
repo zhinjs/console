@@ -9,6 +9,7 @@ import { readRecentSessions, summarizeRecentSessions } from '../console-ui/src/p
 import * as recordsModel from '../console-ui/src/pages/scope/records-model.mjs'
 import * as scopeTree from '../console-ui/src/scope/scope-tree.mjs'
 import * as scopeFilter from '../console-ui/src/pages/insights/scope-filter.mjs'
+import * as sessionLabels from '../console-ui/src/utils/session-label.mjs'
 
 const require = createRequire(import.meta.url)
 const options = { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX }
@@ -39,7 +40,7 @@ function fixture(initialKey = 'icqq:bot:group:room') {
     './PersonalSessionPanel': { PersonalSessionPanel: 'personal-session-panel' },
     'react-router-dom': { Link: 'a', useSearchParams: () => [params, next=>{params=typeof next==='function'?next(params):next}] },
     './scope/records-model.mjs': recordsModel, '../scope/scope-tree.mjs': scopeTree, './insights/scope-filter.mjs': scopeFilter,
-    '../utils/agent-session': sessions,
+    '../utils/agent-session': sessions, '../utils/session-label.mjs': sessionLabels,
     '../utils/agent-session-history': {loadAgentSessionHistory:()=>[],pushAgentSessionHistory:key=>[key]},
     '../utils/useInboxCacheScope':{useInboxCacheScope:()=>scope},
     '../utils/inbox-cache':{isInboxCacheScopeActive:expected=>expected===scope},
@@ -204,7 +205,7 @@ test('already-authorized recent personal sessions stay visible without querying 
 })
 
 
-test('personal sessions open on the trace tab and explain, without an error, that chat history is not kept', () => {
+test('personal sessions open on the trace tab and explain, without an error, that the conversation is not shown here (it is not lost)', () => {
   const key = `personal-session:v1:${'e'.repeat(64)}`
   const f = fixture(key); f.render()
   assert.equal(find(f, 'tabs').props.value, 'trace')
@@ -214,7 +215,11 @@ test('personal sessions open on the trace tab and explain, without an error, tha
   assert.ok(!text(f.tree).includes('聊天记录暂不可用'))
   const notice = elements(panel).find(node => node.type === 'empty-state')
   assert.ok(notice, 'the conversation tab carries a neutral notice')
-  assert.match(notice.props.description, /个人会话不保存聊天记录/)
+  assert.equal(notice.props.title, '这里不显示个人会话的对话')
+  assert.match(notice.props.description, /为保护隐私/)
+  assert.match(notice.props.description, /仍在原来的聊天里/)
+  assert.match(notice.props.description, /平台或沙盒/)
+  assert.doesNotMatch(`${notice.props.title}${notice.props.description}`, /没有聊天记录|不保存聊天记录/, 'the chat is kept: never claim it is not')
   assert.match(notice.props.description, /轨迹/)
   // 查看轨迹 is the EmptyState's one action (console-ui 1.1).
   const toTrace = notice.props.action

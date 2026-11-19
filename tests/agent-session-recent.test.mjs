@@ -47,8 +47,32 @@ test('session summary counts every archived session, not only the recent picker 
     ...Array.from({ length: 14 }, (_, i) => row(`sandbox:bot:private:p${i}`, 1, 72)),
   ]
   assert.deepEqual(summarizeRecentSessions({ success: true, data: rows }, now),
-    { sessions: 17, turns: 10 + 3 + 5 + 14, active: 2, groups: 2, privates: 15, failed: 1 })
+    { sessions: 17, turns: 10 + 3 + 5 + 14, active: 2, groups: 2, privates: 15, others: 0, failed: 1 })
   assert.equal(summarizeRecentSessions({ success: false }, now), null)
   assert.equal(summarizeRecentSessions(null, now), null)
-  assert.deepEqual(summarizeRecentSessions({ success: true, data: [] }, now), { sessions: 0, turns: 0, active: 0, groups: 0, privates: 0, failed: 0 })
+  assert.deepEqual(summarizeRecentSessions({ success: true, data: [] }, now), { sessions: 0, turns: 0, active: 0, groups: 0, privates: 0, others: 0, failed: 0 })
+})
+
+test('session kinds come from the rows, else the key shape; unknown kinds are counted as others, never as 0 groups', async () => {
+  const { summarizeRecentSessions } = await import('../console-ui/src/pages/agent-session-recent.mjs')
+  const now = 1_000_000_000
+  const sha = c => c.repeat(64)
+  const row = (key, extra = {}) => ({ session_key: key, turns: 1, last_started_at: now, last_status: 'completed', ...extra })
+  const summary = summarizeRecentSessions({ success: true, data: [
+    row(`scene-task:v1:${sha('a')}`),
+    row(`scene-task:v1:${sha('b')}`, { scope_kind: 'channel' }),
+    row(`personal-session:v1:${sha('c')}`),
+    row(`personal-session:v1:${sha('d')}`, { scopeKind: 'group' }),
+    row('schedule:sched_1'),
+    row('http:api:session:x', { scope_kind: 'http' }),
+    row(`unknown-kind:v1:${sha('e')}`),
+    row('broken'),
+  ] }, now)
+  assert.deepEqual(summary, { sessions: 7, turns: 7, active: 7, groups: 3, privates: 1, others: 3, failed: 0 })
+})
+
+test('recent sessions keep the names a newer Host sends next to the key', () => {
+  const key = `personal-session:v1:${'a'.repeat(64)}`
+  const [row] = readRecentSessions({ success: true, data: [{ session_key: key, turns: 1, last_started_at: 1, platform: 'sandbox', scope_kind: 'private', scene_label: '小明', display_name: ' ' }] })
+  assert.deepEqual(row, { sessionKey: key, turns: 1, lastAt: 1, lastStatus: '', platform: 'sandbox', scopeKind: 'private', sceneLabel: '小明' })
 })

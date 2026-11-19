@@ -16,6 +16,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { CheckCircle, Loader2, MessageSquare, MessagesSquare, Repeat2, Users, AlertTriangle, X } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import { isLikelySessionKey, parseSessionKeyFromQuery, parseImSessionKey } from '../utils/agent-session'
+import { sessionLabel } from '../utils/session-label.mjs'
 import { loadAgentSessionHistory, pushAgentSessionHistory } from '../utils/agent-session-history'
 import { AgentSessionPicker } from '../components/AgentSessionPicker'
 import { CONSOLE_REST } from '../contracts/zhin-console'
@@ -59,7 +60,7 @@ export default function AgentSessionsPage() {
   const [resolvedConversation, setResolvedConversation] = useState<{ identity: string; conversation?: DiagnosticConversation; error?: string; retry?: () => void } | null>(null)
   const resolved = resolvedConversation?.identity === JSON.stringify([scope, selectedKey]) ? resolvedConversation : null
   const personal = isPersonalSessionKey(selectedKey)
-  // 个人会话不保存聊天记录，默认打开「轨迹」；切换页签的选择只在同类会话之间沿用。
+  // 个人会话的对话不在这里显示（隐私；Host 还没给出会话对应的聊天），默认打开「轨迹」；切换页签的选择只在同类会话之间沿用。
   const [viewChoice, setViewChoice] = useState<{ personal: boolean; view: string } | null>(null)
   const view = viewChoice?.personal === personal ? viewChoice.view : personal ? 'trace' : 'conversation'
   const setView = (next: string) => setViewChoice({ personal, view: next })
@@ -296,7 +297,11 @@ export default function AgentSessionsPage() {
             icon={Users}
             label={i18n.t('群聊与频道')}
             value={sessionSummary?.groups ?? '—'}
-            sub={sessionSummary ? i18n.t('私聊 {0} 个', [sessionSummary.privates]) : i18n.t('按会话类型统计')}
+            sub={sessionSummary
+              ? sessionSummary.others > 0
+                ? `${i18n.t('私聊 {0} 个', [sessionSummary.privates])} · ${i18n.t('其他 {0} 个', [sessionSummary.others])}`
+                : i18n.t('私聊 {0} 个', [sessionSummary.privates])
+              : i18n.t('按会话类型统计')}
           />
           <StatCard
             icon={AlertTriangle}
@@ -360,8 +365,9 @@ export default function AgentSessionsPage() {
             <>
               <header className="console-session-heading">
                 <div className="min-w-0">
-                  <h2>{personal ? i18n.t('个人会话') : selected?.sceneId}</h2>
-                  {selected ? <p>{selected.platform} · {selected.endpointId}</p> : null}
+                  {/* The full key only in the tooltip: a hashed key names no conversation. */}
+                  <h2 title={selectedKey}>{selected ? selected.sceneId : sessionLabel({ ...recentCurrent?.rows.find(row => row.sessionKey === selectedKey), sessionKey: selectedKey }, i18n.locale)}</h2>
+                  {selected ? <p>{selected.platform} · {selected.endpointId}</p> : personal ? <p>{i18n.t('个人会话')}</p> : null}
                 </div>
                 {/* A conversation session can be continued in its chat; anything else is history only. */}
                 {continueScope ? (
@@ -390,8 +396,8 @@ export default function AgentSessionsPage() {
                     <EmptyState
                       compact
                       illustration="messages"
-                      title={i18n.t('个人会话没有聊天记录')}
-                      description={i18n.t('个人会话不保存聊天记录，每一轮的处理过程请在「轨迹」页签查看。')}
+                      title={i18n.t('这里不显示个人会话的对话')}
+                      description={i18n.t('为保护隐私，个人会话的对话内容不在这里显示，Console 也还不能把它对应到原来的聊天。对话本身仍在原来的聊天里：请到它所在的平台或沙盒查看；每一轮的处理过程可在「轨迹」页签查看。')}
                       action={{ label: i18n.t('查看轨迹'), onSelect: () => setView('trace') }}
                     />
                   ) : <ConversationHistory

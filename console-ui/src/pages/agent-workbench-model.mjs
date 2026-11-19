@@ -54,23 +54,40 @@ export function bindingModel(binding) {
 /**
  * Recent Agent conversations: the ones opened in this browser first, then the sessions the Host's
  * turn traces saw (`usage-stats` → `bySession`, newest `lastAt` first when the Host reports it, else
- * most turns), without duplicates. `[{ key, label, turns, lastAt, source: 'local' | 'trace' }]`.
+ * most turns), without duplicates. A browser-opened key the traces also saw gets their details.
+ * `[{ key, label, turns, lastAt, source: 'local' | 'trace', platform?, scopeKind?, sceneLabel? }]` —
+ * `label` is the Host's own name (`displayName` / `label` / `name`); the shown name is
+ * `sessionLabel` over the whole entry.
  */
 export function recentAgentSessions(localKeys, traceSessions, limit = 6) {
   const out = []
   const seen = new Set()
+  const rows = (Array.isArray(traceSessions) ? traceSessions : []).filter(row => row && typeof row.sessionKey === 'string' && row.sessionKey)
+  const lastAt = row => (typeof row.lastAt === 'number' && Number.isFinite(row.lastAt) ? row.lastAt : null)
+  const described = row => {
+    if (!row) return {}
+    const fields = { platform: text(row.platform), scopeKind: text(row.scopeKind), sceneLabel: text(row.sceneLabel) }
+    return Object.fromEntries(Object.entries(fields).filter(([, value]) => value))
+  }
+  const entry = (key, row, source) => ({
+    key,
+    label: row ? text(row.label) || text(row.displayName) || text(row.name) : '',
+    turns: row && typeof row.turns === 'number' ? row.turns : null,
+    lastAt: row ? lastAt(row) : null,
+    source,
+    ...described(row),
+  })
+  const byKey = new Map(rows.map(row => [row.sessionKey, row]))
   for (const key of Array.isArray(localKeys) ? localKeys : []) {
     if (typeof key !== 'string' || !key || seen.has(key)) continue
     seen.add(key)
-    out.push({ key, label: '', turns: null, lastAt: null, source: 'local' })
+    out.push(entry(key, byKey.get(key), 'local'))
   }
-  const rows = (Array.isArray(traceSessions) ? traceSessions : []).filter(row => row && typeof row.sessionKey === 'string' && row.sessionKey)
-  const lastAt = row => (typeof row.lastAt === 'number' && Number.isFinite(row.lastAt) ? row.lastAt : null)
   const ordered = [...rows].sort((a, b) => (lastAt(b) ?? -1) - (lastAt(a) ?? -1) || (b.turns ?? 0) - (a.turns ?? 0))
   for (const row of ordered) {
     if (seen.has(row.sessionKey)) continue
     seen.add(row.sessionKey)
-    out.push({ key: row.sessionKey, label: text(row.label) || text(row.displayName) || text(row.name), turns: typeof row.turns === 'number' ? row.turns : null, lastAt: lastAt(row), source: 'trace' })
+    out.push(entry(row.sessionKey, row, 'trace'))
   }
   return out.slice(0, limit)
 }

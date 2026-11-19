@@ -70,6 +70,10 @@ const traceSessions = [
   { session_key: 'icqq:preview-community:group:20001', turns: 18, last_started_at: Date.now() - 12 * MINUTE, last_status: 'completed' },
   { session_key: 'icqq:preview-community:private:10001', turns: 4, last_started_at: Date.now() - 29 * MINUTE, last_status: 'failed' },
   { session_key: 'telegram:preview-support:private:777', turns: 2, last_started_at: Date.now() - 26 * 60 * MINUTE, last_status: 'completed' },
+  // zhin 1.9 hashes conversation keys and names scheduled runs `schedule:<id>`; the archive sends only the key.
+  { session_key: 'personal-session:v1:ab12cd34ef56a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2', turns: 3, last_started_at: Date.now() - 40 * MINUTE, last_status: 'completed' },
+  { session_key: 'scene-task:v1:9f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0', turns: 1, last_started_at: Date.now() - 3 * 60 * MINUTE, last_status: 'completed' },
+  { session_key: 'schedule:job-daily', turns: 1, last_started_at: Date.now() - 10 * 60 * MINUTE, last_status: 'completed' },
 ]
 let sentCount = 0
 // One clock for every chat fixture, so repeated reads (list, previews, history) agree on timestamps.
@@ -140,6 +144,9 @@ const usageSessionRows = [
   // Two HTTP API sessions: one name, two keys.
   { sessionKey: 'http:api:session:7f3a9c21-55d0-4e8b-a1c2-90b7d6e5f4a3', displayName: 'HTTP', turns: 2, calls: 2, inputTokens: 3_100, outputTokens: 400, cacheReadTokens: 900, v2: { scopeKind: 'http' } },
   { sessionKey: 'http:api:session:c41e0b8d-2f6a-4c97-b3d5-18e9a0f7c6b2', displayName: 'HTTP', turns: 1, calls: 1, inputTokens: 1_900, outputTokens: 200, cacheReadTokens: 0, v2: { scopeKind: 'http' } },
+  // Scheduled runs: one task the 定时任务 list names, one it does not know.
+  { sessionKey: 'schedule:job-daily', turns: 1, calls: 2, inputTokens: 2_400, outputTokens: 500, cacheReadTokens: 0, v2: {} },
+  { sessionKey: 'schedule:sched_mwio9qd6_k2p8x', turns: 1, calls: 1, inputTokens: 900, outputTokens: 120, cacheReadTokens: 0, v2: {} },
   // A group without a name, on an account whose name is just its endpoint id (no accountLabel).
   { sessionKey: 'icqq:8596238:group:30002', platform: 'icqq', endpoint: '8596238', scope: 'group', sceneId: '30002', turns: 1, calls: 2, inputTokens: 2_100, outputTokens: 300, cacheReadTokens: 0, v2: {} },
 ]
@@ -279,7 +286,8 @@ const scheduleList = { memory: [{ type: 'memory', id: 'heartbeat', kind: 'user-t
   agents: ['zhin', 'researcher', 'writer'],
   capabilities: { persistent: true } }
 const assistantJobs = { eventsActive: true, jobs: [{ id: 'job-daily', label: '每日群聊摘要', enabled: true, state: { lastStatus: 'ok', nextRunAtMs: now + 14 * HOUR } }, { id: 'job-watch', label: '错误巡检', enabled: true, state: { lastStatus: 'error', lastError: 'timeout', nextRunAtMs: now + HOUR } }] }
-const toolApprovals = { available: true, pending: [{ id: 'approval-1', toolName: 'shell.exec', sessionKey: 'icqq:preview-community:group:20001', requesterId: '10001', createdAt: now - 5 * 60_000, expiresAt: now + 25 * 60_000, status: 'pending', args: { command: 'ls' } }] }
+const toolApprovals = { available: true, pending: [{ id: 'approval-1', toolName: 'shell.exec', sessionKey: 'icqq:preview-community:group:20001', requesterId: '10001', createdAt: now - 5 * 60_000, expiresAt: now + 25 * 60_000, status: 'pending', args: { command: 'ls' } },
+  { id: 'approval-2', toolName: 'file.write', sessionKey: 'personal-session:v1:ab12cd34ef56a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2', requesterId: null, createdAt: now - 2 * 60_000, expiresAt: now + 28 * 60_000, status: 'pending', args: { path: 'notes.md' } }] }
 const pluginRoot = {
   decisions: body => ({ persistent: true, items: decisions.filter(row => (!body.platform || row.platform === body.platform) && (!body.sceneId || row.scene_id === body.sceneId)), nextBefore: null }),
   'usage-stats': body => usageStats(body),
