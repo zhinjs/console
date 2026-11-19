@@ -102,40 +102,103 @@ const decisions = [decisionRow(11, {}), decisionRow(42, { outcome: 'deny', reaso
 // resolved service id (`services:<uuid>`), named by `displayName` / `providerLabel`, with the recorded
 // ids in `providerIds`, and `modelLabels` for the series keys. One unresolved opaque id (a removed
 // Profile) has only the model as its displayName; the Console shows it as 「未知服务 · 模型」.
+// zhin batch 58 (`schemaVersion: 2`) adds driverLabel / profileName, byAgent / byPurpose, `previous`
+// (with `compare: 'previous'`), sessionsTotal / othersTotals and bySession scopeKind / sceneLabel /
+// shortKey / accountLabel, and `platform` of hashed keys (from the recorded origin). `previous` is the
+// full window right before (`truncated: false`: the Host cuts nothing up to 31 days, 「近 30 天」 included);
+// profileName / accountLabel are left out where the Host cannot name them. UI_PREVIEW_USAGE=legacy
+// answers like an instance before batch 58: none of those fields, `compare` ignored (the Console then
+// asks for the previous window itself). UI_PREVIEW_USAGE=truncated sends a `previous` cut short
+// (`truncated: true`, as only near the epoch), which the Console shows without a change (no second request).
+const legacyUsage = process.env.UI_PREVIEW_USAGE === 'legacy'
+const truncatedPrevious = process.env.UI_PREVIEW_USAGE === 'truncated'
 const USAGE_SERVICES = {
   night: 'services:5e6ea66f-9b1d-4c3e-8a77-2f1d0c4b535a',
   deepseek: 'services:0c8f2a51-63d4-4b8e-9f10-7a2e64c1d9b0',
   removed: 'profiles:9d41e7c2-58ab-4f6e-b2c0-1e3f5a7d8c90',
 }
 const usageModels = [
-  { provider: USAGE_SERVICES.night, model: 'gpt-6-luna', displayName: 'Night Router · gpt-6-luna', providerLabel: 'Night Router', providerIds: ['accounts:3b7e1f20-9c4d-4a8b-bc15-6d2e0f9a1c47', USAGE_SERVICES.night], share: 0.62 },
-  { provider: USAGE_SERVICES.deepseek, model: 'deepseek-v4-flash', displayName: 'DeepSeek · deepseek-v4-flash', providerLabel: 'DeepSeek', providerIds: [USAGE_SERVICES.deepseek], share: 0.3 },
-  { provider: USAGE_SERVICES.removed, model: 'gemini-3.8-flash', displayName: 'gemini-3.8-flash', providerIds: [USAGE_SERVICES.removed], share: 0.08 },
+  { provider: USAGE_SERVICES.night, model: 'gpt-6-luna', displayName: 'Night Router · gpt-6-luna', providerLabel: 'Night Router', providerIds: ['accounts:3b7e1f20-9c4d-4a8b-bc15-6d2e0f9a1c47', USAGE_SERVICES.night], share: 0.5,
+    v2: { driverLabel: 'OpenAI 兼容', profileId: 'profiles:1f0e2d3c-4b5a-4968-8776-655443322110', profileName: '夜间主力' } },
+  { provider: USAGE_SERVICES.night, model: 'gpt-6-luna-mini', displayName: 'Night Router · gpt-6-luna-mini', providerLabel: 'Night Router', providerIds: [USAGE_SERVICES.night], share: 0.12, v2: { driverLabel: 'OpenAI 兼容' } },
+  { provider: USAGE_SERVICES.deepseek, model: 'deepseek-v4-flash', displayName: 'DeepSeek · deepseek-v4-flash', providerLabel: 'DeepSeek', providerIds: [USAGE_SERVICES.deepseek], share: 0.3, v2: { driverLabel: 'DeepSeek' } },
+  { provider: USAGE_SERVICES.removed, model: 'gemini-3.8-flash', displayName: 'gemini-3.8-flash', providerIds: [USAGE_SERVICES.removed], share: 0.08, v2: {} },
 ]
-const usageStats = (session) => {
-  const sessions = [
-    { sessionKey: 'icqq:preview-community:group:20001', platform: 'icqq', scope: 'group', sceneId: '20001', displayName: 'icqq · 群 产品试验群', turns: 6, calls: 9, inputTokens: 18_400, outputTokens: 2_100, cacheReadTokens: 9_800 },
-    { sessionKey: 'icqq:preview-community:private:10001', platform: 'icqq', scope: 'private', sceneId: '10001', displayName: 'icqq · 私聊 演示用户', turns: 2, calls: 3, inputTokens: 4_200, outputTokens: 600, cacheReadTokens: 1_100 },
-    // No recorded origin: a hashed personal-session key and a group without a name.
-    { sessionKey: 'personal-session:v1:ab12cd34ef56a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2', turns: 3, calls: 5, inputTokens: 7_300, outputTokens: 900, cacheReadTokens: 2_600 },
-    { sessionKey: 'icqq:preview-community:group:30002', platform: 'icqq', scope: 'group', sceneId: '30002', turns: 1, calls: 2, inputTokens: 2_100, outputTokens: 300, cacheReadTokens: 0 },
-  ].filter(row => !session || (session.endsWith('*') ? row.sessionKey.startsWith(session.slice(0, -1)) : row.sessionKey.includes(session)))
+const usageSessionRows = [
+  { sessionKey: 'icqq:preview-community:group:20001', platform: 'icqq', endpoint: 'preview-community', scope: 'group', sceneId: '20001', displayName: 'icqq · 群 产品试验群', turns: 6, calls: 9, inputTokens: 18_400, outputTokens: 2_100, cacheReadTokens: 9_800,
+    v2: { scopeKind: 'group', sceneLabel: '产品试验群', accountLabel: '社区号' } },
+  // The same group name on another account: told apart by the account name.
+  { sessionKey: 'icqq:preview-support:group:20001', platform: 'icqq', endpoint: 'preview-support', scope: 'group', sceneId: '20001', displayName: 'icqq · 群 产品试验群', turns: 2, calls: 3, inputTokens: 5_600, outputTokens: 700, cacheReadTokens: 2_900,
+    v2: { scopeKind: 'group', sceneLabel: '产品试验群', accountLabel: '客服号' } },
+  { sessionKey: 'icqq:preview-community:private:10001', platform: 'icqq', endpoint: 'preview-community', scope: 'private', sceneId: '10001', displayName: 'icqq · 私聊 演示用户', turns: 2, calls: 3, inputTokens: 4_200, outputTokens: 600, cacheReadTokens: 1_100,
+    v2: { scopeKind: 'private', sceneLabel: '演示用户', accountLabel: '社区号' } },
+  // Hashed keys carry no address: batch 58 sends their platform (and endpoint) from the recorded origin.
+  { sessionKey: 'personal-session:v1:ab12cd34ef56a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2', turns: 3, calls: 5, inputTokens: 7_300, outputTokens: 900, cacheReadTokens: 2_600,
+    v2: { platform: 'icqq', endpoint: 'preview-community', accountLabel: '社区号' } },
+  { sessionKey: 'scene-task:v1:9f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0', turns: 1, calls: 2, inputTokens: 1_200, outputTokens: 150, cacheReadTokens: 400,
+    v2: { platform: 'icqq', endpoint: 'preview-support', scopeKind: 'group' } },
+  // Two HTTP API sessions: one name, two keys.
+  { sessionKey: 'http:api:session:7f3a9c21-55d0-4e8b-a1c2-90b7d6e5f4a3', displayName: 'HTTP', turns: 2, calls: 2, inputTokens: 3_100, outputTokens: 400, cacheReadTokens: 900, v2: { scopeKind: 'http' } },
+  { sessionKey: 'http:api:session:c41e0b8d-2f6a-4c97-b3d5-18e9a0f7c6b2', displayName: 'HTTP', turns: 1, calls: 1, inputTokens: 1_900, outputTokens: 200, cacheReadTokens: 0, v2: { scopeKind: 'http' } },
+  // A group without a name, on an account whose name is just its endpoint id (no accountLabel).
+  { sessionKey: 'icqq:8596238:group:30002', platform: 'icqq', endpoint: '8596238', scope: 'group', sceneId: '30002', turns: 1, calls: 2, inputTokens: 2_100, outputTokens: 300, cacheReadTokens: 0, v2: {} },
+]
+const shortUsageKey = key => { const hashed = /^([a-z-]+):v\d+:([0-9a-f]{16,})$/u.exec(key); return hashed ? `${hashed[1]}:${hashed[2].slice(0, 8)}` : key }
+const usageStats = (body = {}) => {
+  const session = body.session
+  // The previous window (since / until before the last 7 days) used a bit less, DeepSeek more.
+  const previousWindow = typeof body.until === 'number' && body.until < now - 30 * 60_000
+  const scale = previousWindow ? 0.78 : 1
+  const sessions = usageSessionRows
+    .filter(row => !session || (session.endsWith('*') ? row.sessionKey.startsWith(session.slice(0, -1)) : row.sessionKey.includes(session)))
+    .map(({ v2, ...row }) => ({ ...row, ...(['turns', 'calls', 'inputTokens', 'outputTokens', 'cacheReadTokens'].reduce((acc, key) => ({ ...acc, [key]: Math.round(row[key] * scale) }), {})),
+      ...(legacyUsage ? {} : { ...v2, shortKey: shortUsageKey(row.sessionKey), cacheWriteTokens: 0, cacheShare: row.inputTokens ? row.cacheReadTokens / row.inputTokens : 0 }) }))
   const sum = key => sessions.reduce((total, row) => total + row[key], 0)
-  const start = Math.floor((now - 7 * 24 * HOUR) / (24 * HOUR)) * 24 * HOUR
+  const since = typeof body.since === 'number' ? body.since : now - 7 * 24 * HOUR
+  const until = typeof body.until === 'number' ? body.until : now
+  const start = Math.floor(since / (24 * HOUR)) * 24 * HOUR
+  const days = Math.max(1, Math.round((until - since) / (24 * HOUR)))
   const part = (value, share) => Math.round(value * share)
-  const byModel = sum('calls') ? usageModels.map(({ share, ...row }) => ({ ...row, calls: Math.max(1, part(sum('calls'), share)), inputTokens: part(sum('inputTokens'), share), outputTokens: part(sum('outputTokens'), share),
-    cacheReadTokens: row.provider === USAGE_SERVICES.deepseek ? 0 : part(sum('cacheReadTokens'), share * 1.4), claimsWithoutToolCall: 0 })) : []
+  const byModel = sum('calls') ? usageModels.map(({ share, v2, ...row }) => ({ ...row, calls: Math.max(1, part(sum('calls'), share)), inputTokens: part(sum('inputTokens'), share), outputTokens: part(sum('outputTokens'), share),
+    cacheReadTokens: row.provider === USAGE_SERVICES.deepseek ? 0 : part(sum('cacheReadTokens'), share * 1.4), claimsWithoutToolCall: row.provider === USAGE_SERVICES.deepseek ? 2 : 0, ...(legacyUsage ? {} : v2) })) : []
   const key = row => `${row.provider}/${row.model}`
-  const daily = index => index > 3 ? Math.round(sum('inputTokens') / 3) : 0
-  return { range: { since: now - 7 * 24 * HOUR, until: now, bucket: 'day', timeZone: 'Asia/Shanghai' },
-    totals: { turns: sum('turns'), calls: sum('calls'), inputTokens: sum('inputTokens'), outputTokens: sum('outputTokens'), cacheReadTokens: sum('cacheReadTokens'), cacheShare: sum('inputTokens') ? sum('cacheReadTokens') / sum('inputTokens') : 0 },
+  const active = index => index >= days - 3
+  const daily = index => active(index) ? Math.round(sum('inputTokens') / 3) : 0
+  const totals = { turns: sum('turns'), calls: sum('calls'), inputTokens: sum('inputTokens'), outputTokens: sum('outputTokens'), cacheReadTokens: sum('cacheReadTokens'), cacheShare: sum('inputTokens') ? sum('cacheReadTokens') / sum('inputTokens') : 0 }
+  const stats = { range: { since, until, bucket: 'day', timeZone: typeof body.timeZone === 'string' && body.timeZone ? body.timeZone : 'Asia/Shanghai' },
+    totals,
     byModel,
     bySession: sessions,
-    series: Array.from({ length: 7 }, (_, index) => ({ bucketStart: start + index * 24 * HOUR, calls: index > 3 ? 4 : 0, inputTokens: daily(index), outputTokens: index > 3 ? 900 : 0, cacheReadTokens: index > 3 ? Math.round(sum('cacheReadTokens') / 3) : 0,
-      byModel: index > 3 ? Object.fromEntries(usageModels.map(row => [key(row), Math.round(daily(index) * (index === 6 && row.provider === USAGE_SERVICES.deepseek ? row.share * 1.6 : row.share))])) : {} })),
+    series: Array.from({ length: days }, (_, index) => ({ bucketStart: start + index * 24 * HOUR, calls: active(index) ? 4 : 0, inputTokens: daily(index), outputTokens: active(index) ? 900 : 0, cacheReadTokens: active(index) ? Math.round(sum('cacheReadTokens') / 3) : 0,
+      byModel: active(index) ? Object.fromEntries(usageModels.map(row => [key(row), Math.round(daily(index) * (index === days - 1 && row.provider === USAGE_SERVICES.deepseek ? row.share * 1.6 : row.share))])) : {} })),
     modelLabels: Object.fromEntries(byModel.map(row => [key(row), row.displayName])),
     promptCacheHints: sum('calls') ? [{ provider: USAGE_SERVICES.deepseek, label: 'DeepSeek', providerIds: [USAGE_SERVICES.deepseek], zeroCacheCalls: 12, sessions: 3, reportedZeroCalls: 12, comparedPairs: 10, samePrefixPairs: 9, samePrefixRatio: 0.9 }] : [],
     segments: { history: 12_000, fixed: 6_000, user: 4_600 }, filesRead: 1, malformedLines: 0 }
+  if (legacyUsage) return stats
+  const tokens = share => ({ calls: Math.round(totals.calls * share), inputTokens: Math.round(totals.inputTokens * share), outputTokens: Math.round(totals.outputTokens * share), cacheReadTokens: Math.round(totals.cacheReadTokens * share), cacheWriteTokens: 0, cacheShare: totals.cacheShare })
+  Object.assign(stats, {
+    schemaVersion: 2,
+    totals: { ...totals, cacheWriteTokens: 0, cacheShareByCall: { p50: 0.41, p90: 0.83 }, inputBasis: 'reported-all-calls', claimsWithoutToolCall: 2, unexecutedToolNotices: 0 },
+    sessionsTotal: sessions.length + (sessions.length ? 3 : 0),
+    othersTotals: sessions.length ? { sessions: 3, turns: 3, calls: 3, inputTokens: 1_400, outputTokens: 210, cacheReadTokens: 300, cacheWriteTokens: 0, cacheShare: 0.21 } : { sessions: 0, turns: 0, calls: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, cacheShare: 0 },
+    byAgent: sum('calls') ? [
+      { agent: '@main', label: '主助手', kind: 'main', turns: Math.round(totals.turns * 0.7), ...tokens(0.64) },
+      { agent: 'researcher', label: 'researcher', kind: 'agent', turns: Math.round(totals.turns * 0.2), ...tokens(0.3) },
+      { agent: '@unrecorded', label: '未记录', kind: 'unrecorded', turns: Math.round(totals.turns * 0.1), ...tokens(0.06) },
+    ] : [],
+    byPurpose: sum('calls') ? [
+      { purpose: 'chat', label: '对话', turns: Math.round(totals.turns * 0.6), ...tokens(0.58) },
+      { purpose: 'agent', label: '子 Agent', turns: Math.round(totals.turns * 0.2), ...tokens(0.3) },
+      { purpose: 'ambient-judge', label: '插话判断', turns: Math.round(totals.turns * 0.15), ...tokens(0.08) },
+      { purpose: 'summary', label: '摘要', turns: 1, ...tokens(0.04) },
+    ] : [],
+  })
+  if (body.compare === 'previous') {
+    const length = truncatedPrevious ? Math.round((until - since) / 2) : until - since
+    const previous = usageStats({ since: since - length, until: since, session })
+    stats.previous = { since: since - length, until: since, truncated: truncatedPrevious, totals: previous.totals }
+  }
+  return stats
 }
 // ADR 0066 / #1250 batch 47: the merged interjection judge (UI_PREVIEW_AMBIENT=legacy answers like an older instance).
 const legacyAmbient = process.env.UI_PREVIEW_AMBIENT === 'legacy'
@@ -219,7 +282,7 @@ const assistantJobs = { eventsActive: true, jobs: [{ id: 'job-daily', label: '�
 const toolApprovals = { available: true, pending: [{ id: 'approval-1', toolName: 'shell.exec', sessionKey: 'icqq:preview-community:group:20001', requesterId: '10001', createdAt: now - 5 * 60_000, expiresAt: now + 25 * 60_000, status: 'pending', args: { command: 'ls' } }] }
 const pluginRoot = {
   decisions: body => ({ persistent: true, items: decisions.filter(row => (!body.platform || row.platform === body.platform) && (!body.sceneId || row.scene_id === body.sceneId)), nextBefore: null }),
-  'usage-stats': body => usageStats(body.session),
+  'usage-stats': body => usageStats(body),
   ambient: () => ambientStatus,
   skills: () => ({ enabled: true, tasks: [], totals: { calls: 0 }, recent: [], updatedAt: null }),
   'tool-approvals': () => toolApprovals,

@@ -25,14 +25,33 @@ export interface UsageModelRow extends UsageTokens {
   label?: string
   serviceLabel?: string
   modelLabel?: string
+  /** Display name of the service's Driver (zhin 第 58 批). */
+  driverLabel?: string
+  profileId?: string
+  /** Readable name of the one model Profile the row ran on (zhin 第 58 批); absent when calls cannot all be attributed to one. */
+  profileName?: string
   /** Set by `mergeUsageModels`: the `<provider>/<model>` keys merged into this row. */
   rawKeys?: string[]
+  /** Set by `mergeUsageModels`: the service and model parts of the display name. */
+  serviceName?: string
+  modelName?: string
 }
-export interface UsageSessionRow extends UsageTokens { sessionKey: string; platform?: string; endpoint?: string; scope?: string; sceneId?: string; turns: number; label?: string; displayName?: string; name?: string }
+export interface UsageSessionRow extends UsageTokens {
+  sessionKey: string; platform?: string; endpoint?: string; scope?: string; sceneId?: string; turns: number; label?: string; displayName?: string; name?: string
+  /**
+   * zhin 第 58 批: structured name parts, the short key and the account's name. `platform` comes for
+   * hashed keys too (from the recorded origin); `accountLabel` is left out when it would only repeat
+   * the endpoint or is ambiguous across platforms.
+   */
+  scopeKind?: string; sceneLabel?: string; shortKey?: string; accountLabel?: string
+}
+export interface UsageAgentRow extends UsageTokens { agent: string; label?: string; kind?: string; turns?: number }
+export interface UsagePurposeRow extends UsageTokens { purpose: string; label?: string; turns?: number }
+export type UsageTotals = UsageTokens & { turns: number; cacheShare: number; cacheShareByCall?: { p50: number; p90: number }; claimsWithoutToolCall?: number }
 export interface UsagePoint extends UsageTokens { bucketStart: number; byModel: Record<string, number> }
 export interface UsageStats {
   range: { since: number; until: number; bucket: UsageBucket; timeZone?: string }
-  totals: UsageTokens & { turns: number; cacheShare: number; cacheShareByCall?: { p50: number; p90: number } }
+  totals: UsageTotals
   byModel: UsageModelRow[]
   bySession: UsageSessionRow[]
   series: UsagePoint[]
@@ -43,6 +62,16 @@ export interface UsageStats {
   malformedLines?: number
   /** Services that likely do not support or pass through prompt caching (#1250); absent from older Hosts. */
   promptCacheHints?: unknown[]
+  /** zhin 第 58 批 (`schemaVersion: 2`); all optional here. */
+  schemaVersion?: number
+  byAgent?: UsageAgentRow[]
+  byPurpose?: UsagePurposeRow[]
+  /** Up to 31 days like the current window; `truncated` only when the Host really cut it short. */
+  previous?: { since: number; until: number; truncated?: boolean; totals: UsageTotals }
+  sessionsTotal?: number
+  othersTotals?: UsageTokens & { sessions: number; turns: number }
+  /** Set by `mergeUsageModels`: series key → service name. */
+  modelServices?: Record<string, string>
 }
 export interface PromptCacheNotice { key: string; name: string; text: string }
 export function promptCacheNotices(stats: unknown, locale?: Locale): { hints: PromptCacheNotice[]; missed: boolean } | null
@@ -53,7 +82,7 @@ export interface UsageFilter {
   bucket?: string
   session?: string
 }
-export interface UsageInput { since: number; until: number; bucket: UsageBucket; session?: string }
+export interface UsageInput { since: number; until: number; bucket: UsageBucket; session?: string; timeZone?: string }
 export interface StackBar { bucketStart: number; total: number; parts: Array<{ key: string; value: number }> }
 export interface DonutSlice { key: string; value: number; share: number; start: number; end: number }
 
@@ -70,6 +99,8 @@ export function usageProviderLabel(row: { provider?: string; providerLabel?: str
 export function usageModelLabel(row: UsageModelRow, modelLabels?: Record<string, string> | null, locale?: Locale): string
 export function mergeUsageModels(stats: UsageStats, locale?: Locale): UsageStats
 export function usageModelIds(row: UsageModelRow | null | undefined): string[]
+export function usageProfileName(row: UsageModelRow | null | undefined): string
+export function usageAccountLabel(row: (Pick<UsageSessionRow, 'sessionKey'> & Partial<UsageSessionRow>) | null | undefined): string
 export function usageSessionLabel(row: Pick<UsageSessionRow, 'sessionKey'> & Partial<UsageSessionRow>, locale?: Locale): string
 export function buildColorMap(keys: Iterable<string>): Map<string, string>
 export function colorFor(map: Map<string, string>, key: string): string
@@ -89,3 +120,30 @@ export function toLocalDateTime(ms: number): string
 export function buildUsageInput(filter: UsageFilter, now?: number): { input: UsageInput; error?: undefined } | { error: 'range'; input?: undefined }
 export function isPermissionDenied(error: unknown): boolean
 export function formatBucketLabel(ms: number, bucket: UsageBucket, locale?: Locale): string
+export function usageModelIdGroups(row: UsageModelRow | null | undefined): Array<{ kind: 'keys' | 'services'; ids: string[] }>
+export function usageSessionShortKey(row: Pick<UsageSessionRow, 'sessionKey'> & Partial<UsageSessionRow>): string
+export function usageSessionNames(rows: Array<Pick<UsageSessionRow, 'sessionKey'> & Partial<UsageSessionRow>>, locale?: Locale): Map<string, { name: string; qualifier: string }>
+export function totalTokens(row: Partial<UsageTokens> | null | undefined): number
+export function previousUsageInput(input: UsageInput, stats?: Pick<UsageStats, 'range'> | null): UsageInput | null
+export function previousUsagePlan(stats: UsageStats, input: UsageInput): { totals: UsageTotals; request?: undefined } | { request: UsageInput; totals?: undefined } | { totals?: undefined; request?: undefined }
+export function hostPreviousTotals(stats: unknown): UsageTotals | null
+export type UsageDelta = { kind: 'change'; ratio: number } | { kind: 'new' } | { kind: 'same' }
+export function usageDelta(current: number, previous: number | undefined, options?: { points?: boolean }): UsageDelta | null
+export function isNotableDelta(delta: UsageDelta | null, options?: { points?: boolean }): boolean
+export function formatDelta(delta: UsageDelta | null, locale?: Locale, options?: { points?: boolean }): string
+export function usageAgentLabel(row: Partial<UsageAgentRow> | null | undefined, locale?: Locale): string
+export function usagePurposeLabel(row: Partial<UsagePurposeRow> | null | undefined, locale?: Locale): string
+export interface UsageCapabilities {
+  schemaVersion: number
+  agents: UsageAgentRow[]
+  purposes: UsagePurposeRow[]
+  others: { sessions: number; total: number; totals: UsageTokens & { sessions: number; turns: number } } | null
+}
+export function usageCapabilities(stats: unknown): UsageCapabilities
+export interface UsageServiceGroup extends UsageTokens {
+  key: string; name: string; models: UsageModelRow[]; cacheWriteTokens: number; claimsWithoutToolCall: number; share: number; driverLabel: string; providerIds: string[]
+}
+export function usageServiceGroups(byModel: UsageModelRow[], locale?: Locale): UsageServiceGroup[]
+export function usageTrendSeries(stats: UsageStats, dimension: 'model' | 'service', locale?: Locale): UsagePoint[]
+export function topSeriesKeys(series: UsagePoint[], limit?: number): string[]
+export function seriesKeys(series: UsagePoint[]): string[]

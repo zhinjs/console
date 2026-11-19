@@ -201,9 +201,9 @@ test('usage: names come from the Host shape (displayName / providerLabel / provi
   assert.equal(usageSessionLabel({ sessionKey: `scene-task:v1:${sha}` }), '场景任务 #ab12cd34')
   assert.equal(usageSessionLabel({ sessionKey: 'schedule:assistant-profile-weatherReport' }), '定时任务 assistant-profile-weatherReport')
 
-  const page = src('pages/token-usage.tsx')
+  const page = src('pages/token-usage.tsx') + src('pages/token-usage-report.tsx')
   assert.match(page, /mergeUsageModels\(validateUsageStats\(data, i18n\.locale\), i18n\.locale\)/)
-  assert.match(page, /usageSessionLabel\(row, i18n\.locale\)/)
+  assert.match(page, /usageSessionNames\(stats\.bySession, i18n\.locale\)/)
   assert.doesNotMatch(page, /min-w-\[720px\]/, 'the session table has no minimum width (375px, ADR 0063 D18-6)')
   assert.match(page, /<TooltipContent[^>]*>\{row\.sessionKey\}<\/TooltipContent>/, 'the raw session key is only in the tooltip')
   assert.match(page, /\{header\('inputTokens', i18n\.t\("输入"\)\)\}/, 'input stays a primary column')
