@@ -48,6 +48,7 @@ import {
   describeUnavailability,
   recentFallbackRows,
   purposeElementId,
+  purposesDirty,
   type PurposeFocus,
   type ProbeResult,
   type View,
@@ -59,6 +60,7 @@ import {
 } from './model.mjs'
 import type { InferenceManagement } from './useInferenceManagement'
 import { SaveButton, useSaveFeedback } from '../../components/SaveButton'
+import { useUnsavedChangesGuard } from '../../utils/useUnsavedChangesGuard'
 
 /** Decision purposes; an ADR 0066 instance has five (旁听参与判断 became part of 插话判断). */
 const decisionTaskLabels = (t: ReturnType<typeof useI18n>['t'], merged = false): Record<string, string> => {
@@ -75,7 +77,7 @@ const decisionTaskLabels = (t: ReturnType<typeof useI18n>['t'], merged = false):
 
 /** `GET /ambient-judge` of the held view: the judge in effect, or why it could not be read. */
 type JudgeRead = { judge: AmbientJudgeView | null; error: unknown }
-export function Purposes({ management: m, focus }: { management: InferenceManagement; focus?: PurposeFocus }) {
+export function Purposes({ management: m, focus, onDirtyChange }: { management: InferenceManagement; focus?: PurposeFocus; onDirtyChange?: (dirty: boolean) => void }) {
   const i18n = useI18n()
   const [editor, setEditor] = useState(() => ({
     source: m.source!,
@@ -211,6 +213,14 @@ export function Purposes({ management: m, focus }: { management: InferenceManage
   const decisionChoiceCount = purposeProfileChoices(view, 'decision', i18n.locale).length
   // #1250: every language purpose may carry an ordered fallback chain; older Hosts keep only vision's.
   const fallbacks = supportsPurposeFallbacks(view)
+  // #64 purposes-no-unsaved-guard: whether 保存 would write anything (the judge counts once edited).
+  const judgeDirty = merged && judgeBase && judgeEditor?.touched
+    ? ambientJudgePlanEntry(judgeDraftValue, judgeBase.policy, { source: judgeBase.source }) !== undefined : false
+  const dirty = purposesDirty(draft, view.purposes!, { fallbacks }) || judgeDirty
+  // Leaving the page or reloading asks first; switching tabs is asked by Workspace (it unmounts this draft).
+  const leaveConfirmation = useUnsavedChangesGuard(dirty)
+  useEffect(() => { onDirtyChange?.(dirty) }, [dirty])
+  useEffect(() => () => onDirtyChange?.(false), [])
   function defaultValue(key: 'chat' | 'summary' | 'ambient' | 'image', value: string) {
     setDraft((previous) => {
       const defaults: PurposeState['defaults'] = { ...previous.defaults, [key]: value || undefined }
@@ -347,6 +357,7 @@ export function Purposes({ management: m, focus }: { management: InferenceManage
       }}
     >
       {confirmDialog}
+      {leaveConfirmation}
       {warnings.length ? (
         <Alert variant="warning" role="status">
           <AlertTitle>{i18n.t("已保存，有旧写法被换算")}</AlertTitle>
@@ -359,10 +370,13 @@ export function Purposes({ management: m, focus }: { management: InferenceManage
       ) : null}
       <div className="flex items-center justify-between gap-3">
         <h3 className="font-semibold">{i18n.t("模型用途")}</h3>
-        <SaveButton type="submit" disabled={disabled} saving={probing || saving} saved={saveFeedback.saved}
-          savingLabel={probing ? i18n.t("正在测试连通性…") : undefined}>
-          {i18n.t("保存")}
-        </SaveButton>
+        <div className="flex items-center gap-3">
+          {dirty ? <span className="text-sm text-muted-foreground" role="status">{i18n.t("有未保存的修改")}</span> : null}
+          <SaveButton type="submit" disabled={disabled || !dirty} saving={probing || saving} saved={saveFeedback.saved}
+            savingLabel={probing ? i18n.t("正在测试连通性…") : undefined}>
+            {i18n.t("保存")}
+          </SaveButton>
+        </div>
       </div>
       <p className="text-sm text-muted-foreground">
         {i18n.t("聊天模型的优先级：子 Agent 的绑定高于适配器、账号和会话场景的聊天覆盖，这些覆盖又高于默认聊天模型。")}

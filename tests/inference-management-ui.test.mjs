@@ -226,6 +226,7 @@ async function component(runtime, path, mocks) {
     '../../utils/plugin-rpc': { pluginRpc: async () => { throw new Error('ambient status unavailable') } },
     './ambient-judge-model.mjs': ambientJudgeModel,
     '../../hooks/use-console-access': { useConsoleAccess: () => UNRESTRICTED_ACCESS }, '../../utils/console-access.mjs': { hasConsolePermission: () => true },
+    '../../utils/useUnsavedChangesGuard': { useUnsavedChangesGuard: () => null },
     ...mocks,
   }
   new Function('require', 'module', 'exports', code)(

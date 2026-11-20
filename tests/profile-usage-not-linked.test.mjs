@@ -57,7 +57,7 @@ test('the pages wire it up: usages are buttons, 用途 opens the right level and
   assert.match(profiles, /onClick=\{\(\) => onOpen\?\.\(focus\)\}/)
   const workspace = read('Workspace.tsx')
   assert.match(workspace, /inferenceFocusPurpose\(searchParams\.get\('purpose'\)\)/)
-  assert.match(workspace, /<Purposes management=\{m\} focus=\{tab === 'purposes' \? focusPurpose : undefined\} \/>/)
+  assert.match(workspace, /<Purposes management=\{m\} focus=\{tab === 'purposes' \? focusPurpose : undefined\}/)
   assert.match(workspace, /onOpenPurpose=\{m\.view\.hostAdministrator \? /)
   const purposes = read('Purposes.tsx')
   for (const section of ['defaults', 'ambient', 'decisions', 'agents', 'scopes'])
