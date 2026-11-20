@@ -1317,6 +1317,7 @@ export const englishMessages = Object.freeze({
   "{0} 个字段 · 已设置 {1}": { one: "{0} field · {1} set", other: "{0} fields · {1} set" },
   "已设置 {0}": "{0} set",
   "有未保存的修改": "Unsaved changes",
+  "备用 {0}": "Fallback {0}",
   "切换页签后，「用途」里尚未保存的修改将会丢失。": "Switching tabs discards the unsaved changes on Purposes.",
   "上次执行失败": "Last run failed",
   "上次执行成功": "Last run succeeded",
