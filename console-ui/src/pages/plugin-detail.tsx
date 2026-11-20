@@ -20,14 +20,15 @@ import { WelcomeFlowContext } from './WelcomeFlowContext'
 import { welcomeConfigUrl } from './welcome-use-case-model.mjs'
 import { ObjectSection } from '../scope/ObjectPageLayout'
 import { FEATURE_RPC } from '../contracts/zhin-console'
-import { readFeatureMatrix, type FeatureMatrix } from './features/feature-model.mjs'
+import { readFeatureList, readFeatureMatrix, type FeatureList, type FeatureMatrix } from './features/feature-model.mjs'
 import { IAM_RPC, readPluginPermissionCatalog, type PluginPermission } from './access/access-model.mjs'
 import { GATEWAY_RPC, readPackageList, relativeConfigPath } from './ops/gateway-model.mjs'
 import { DeclarePluginDialog } from './ops/plugin-declare'
 import { gatewayRequest } from './ops/use-gateway'
 import { PackageActionPanel, usePackageAction } from './PackageAction'
 import { defaultInstanceKey, installedPackage, sourceLabel, type PackageListEntry } from './plugin-package-model.mjs'
-import { pluginPermissionGroups, pluginScopeSummary, type PluginScopeSummary } from './plugin-scope-model.mjs'
+import { pluginPermissionGroups, pluginScopeSummary, pluginSettableLevels, type PluginScopeSummary, type PluginSettableLevels } from './plugin-scope-model.mjs'
+import { SCOPE_LEVEL_LABELS } from '../scope/scope-tree.mjs'
 import { classifyUpdateCheck } from './marketplace-view-model.mjs'
 import { validateManagementState, managementLabel, canApplyPlugin, canVerifyPlugin, captureVerificationPlan, verifyApprovedPlugin, verificationSummary, verificationCheckDisplay, verificationResultDisplay, applyRequest, waitForManagementState, verificationIsCurrent, type PluginManagementState, type VerificationPlan, type VerificationResult } from './plugin-management-model.mjs'
 import { PluginPageTabs } from './plugin-page-tabs'
@@ -167,6 +168,9 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
   const instanceKey = plugin?.instanceKey ?? name ?? ''
   const [matrix, refreshMatrix] = useOptionalRead<FeatureMatrix>(hasConsolePermission('feature.view') && Boolean(instanceKey),
     async () => readFeatureMatrix(await requestConsole<unknown>({ type: FEATURE_RPC.MATRIX })), [instanceKey])
+  // The levels the plugin declares (#64 plugin-scope-summary-ignores-levels): 「在哪开了」 says when it is global-only.
+  const [featureList] = useOptionalRead<FeatureList>(hasConsolePermission('feature.view') && Boolean(instanceKey),
+    async () => readFeatureList(await requestConsole<unknown>({ type: FEATURE_RPC.LIST })), [instanceKey])
   const [permissions] = useOptionalRead<PluginPermission[]>(hasConsolePermission('iam.view'),
     async () => readPluginPermissionCatalog(await gatewayRequest(IAM_RPC.ROLES_LIST, {}, i18n.t)), [i18n])
 
@@ -365,6 +369,7 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
   const installedVersion = entry?.installedVersion ?? plugin?.version ?? null
   const update = latest.status === 'ready' ? latest.value : null
   const scopeSummary = matrix.status === 'ready' ? pluginScopeSummary(matrix.value, instanceKey) : null
+  const settableLevels = featureList.status === 'ready' ? pluginSettableLevels(featureList.value, instanceKey) : null
   const permissionGroups = permissions.status === 'ready' ? pluginPermissionGroups(permissions.value, [instanceKey, packageName.split('/').pop()?.replace(/^(adapter|plugin|service)-/u, '')]) : []
   // Installed (the gateway lists it) but no instance plugin uses it: waiting for its first configuration.
   const undeclaredPackage = !plugin && Boolean(entry) && (detailError as { status?: number } | null)?.status === 404
@@ -486,7 +491,7 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
               <StatusState compact kind="forbidden" permissions={['feature.view']} />
             ) : matrix.status === 'failed' ? (
               <StatusState compact error={matrix.error} onRetry={refreshMatrix} />
-            ) : scopeSummary ? <ScopeSummary summary={scopeSummary} /> : (
+            ) : scopeSummary ? <ScopeSummary summary={scopeSummary} levels={settableLevels} /> : (
               <StatusState compact kind="empty" title={i18n.t("没有开关记录")} description={i18n.t("功能矩阵里没有这个插件实例：它可能还没有声明，或不参与分层开关。")} />
             )}
           </CardContent></Card>
@@ -605,7 +610,7 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
 }
 
 /** 「在哪开了」: the global switch, adapters and conversation override counts, each linking to its object page. */
-function ScopeSummary({ summary }: { summary: PluginScopeSummary }) {
+function ScopeSummary({ summary, levels }: { summary: PluginScopeSummary; levels: PluginSettableLevels | null }) {
   const i18n = useI18n()
   return (
     <div className="space-y-3 text-sm">
@@ -614,6 +619,12 @@ function ScopeSummary({ summary }: { summary: PluginScopeSummary }) {
         <Badge variant={summary.global.enabled ? 'outline' : 'secondary'}>{summary.global.enabled ? i18n.t("开启") : i18n.t("已停用")}</Badge>
         <Link className="text-xs underline" to={summary.global.href}>{i18n.t("全局配置")}</Link>
       </div>
+      {levels ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-muted-foreground">{i18n.t("可设置层级")}</span>
+          {levels.levels.map(level => <Badge key={level} variant="secondary" size="sm">{i18n.t(SCOPE_LEVEL_LABELS[level])}</Badge>)}
+        </div>
+      ) : null}
       {summary.adapters.length ? (
         <div className="space-y-1">
           <p className="text-muted-foreground">{i18n.t("适配器")}</p>
@@ -642,9 +653,11 @@ function ScopeSummary({ summary }: { summary: PluginScopeSummary }) {
               </li>
             ))}
           </ul>
+        ) : levels && !levels.conversation ? (
+          <p className="text-xs text-muted-foreground">{i18n.t("这个插件没有声明会话层级，不能按群或会话单独开关或配置；要按群开关，需要插件为它的配置声明会话层级。")}</p>
         ) : <p className="text-xs text-muted-foreground">{i18n.t("没有会话单独覆盖这个插件。")}</p>}
       </div>
-      <p className="text-xs text-muted-foreground">{i18n.t("账号层的开关在各账号的「功能」页签查看。")}</p>
+      {levels?.endpoint === false ? null : <p className="text-xs text-muted-foreground">{i18n.t("账号层的开关在各账号的「功能」页签查看。")}</p>}
     </div>
   )
 }

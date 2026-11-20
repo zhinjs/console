@@ -32,3 +32,9 @@ export function pluginPermissionGroups(catalog: readonly { permission: string; p
   names: string | readonly (string | null | undefined)[]): PluginPermissionGroup[]
 export function capabilityPlugin(row: unknown): string | null
 export function capabilityPlugins(rows: readonly unknown[] | null | undefined): string[]
+export interface PluginSettableLevels {
+  readonly levels: readonly ('global' | 'adapter' | 'endpoint' | 'conversation')[]
+  readonly endpoint: boolean
+  readonly conversation: boolean
+}
+export function pluginSettableLevels(featureList: { readonly features?: readonly { plugin: string; levels: readonly string[]; hasSchema: boolean; adapter: boolean }[] } | null | undefined, plugin: string): PluginSettableLevels | null
