@@ -67,6 +67,15 @@ export function pluginInventory(plugins, packageList) {
   return rows
 }
 
+/**
+ * Whether the plugins page is still on its first read (#64 `plugins-loading-looks-final`): until the
+ * instance's plugin list arrives or fails, the gateway's packages alone would read as 「all unreported,
+ * none running」. A failed read shows those packages (instance down); a failed refresh keeps the last list.
+ */
+export function pluginsFirstReadPending({ loaded, error }) {
+  return !loaded && !error
+}
+
 export function inventoryCounts(rows) {
   const counts = { all: rows.length, healthy: 0, pending: 0, inactive: 0 }
   for (const row of rows) {
