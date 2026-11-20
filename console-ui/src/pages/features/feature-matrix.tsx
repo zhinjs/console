@@ -173,6 +173,19 @@ export default function FeatureMatrixPage({ embedded = false, heading }: {
           <StatusState kind="empty" className="m-3" title={i18n.t("还没有功能")} description={i18n.t("安装插件后，它们的功能会出现在这里。")}
             actions={<Button asChild size="sm" variant="outline"><Link to="/marketplace">{i18n.t("去插件市场")}</Link></Button>} />
         ) : (
+          // #64 feature-matrix-mobile-headers: under 40rem the shared Table turns rows into cards and hides
+          // its header (with the adapter and override links); the same container query shows them here instead.
+          <div className="console-cq">
+          {adapterColumns.length ? (
+            <nav data-adapter-links="" aria-label={i18n.t("适配器的功能设置")} className="hidden @max-[40rem]/console:flex flex-col gap-2 border-b px-4 py-3">
+              {adapterColumns.map(adapter => (
+                <div key={adapter} className="flex flex-col">
+                  <Link to={adapterHref(adapter, 'features')} className="inline-flex min-h-11 items-center text-sm font-medium hover:underline">{i18n.t("打开 {0} 的功能设置", [adapter])}</Link>
+                  <ConversationOverrideLinks counts={conversationOverrides} adapter={adapter} linkClassName="inline-flex min-h-11 items-center" />
+                </div>
+              ))}
+            </nav>
+          ) : null}
           <Table aria-label={i18n.t("功能矩阵")}>
             <TableHeader>
               <TableRow>
@@ -205,7 +218,7 @@ export default function FeatureMatrixPage({ embedded = false, heading }: {
                   {adapterColumns.map(adapter => {
                     const cell = row.adapters[adapter]
                     return (
-                      <TableCell key={adapter}>
+                      <TableCell key={adapter} label={adapter}>
                         {cell ? <AdapterSwitchCell row={row} adapter={adapter} cell={cell} canToggle={canToggle} revision={revision} reload={refresh} />
                           : <CellBadge cell={cell} />}
                       </TableCell>
@@ -215,6 +228,7 @@ export default function FeatureMatrixPage({ embedded = false, heading }: {
               ))}
             </TableBody>
           </Table>
+          </div>
         )}
       </Card>
     </>,
