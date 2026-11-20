@@ -3141,6 +3141,8 @@ export const englishMessages = Object.freeze({
   "运维": "Operations",
   "访问控制": "Access control",
   "功能矩阵": "Feature matrix",
+  "适配器的功能设置": "Feature settings by adapter",
+  "打开 {0} 的功能设置": "Open feature settings for {0}",
   "全局配置": "Global settings",
   "适配器详情": "Adapter",
   "AI 与模型": "AI & models",
