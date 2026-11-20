@@ -788,6 +788,8 @@ function FallbackChain({
       {list.map((id, index) => (
         <div key={`${index}:${id}`} className="space-y-1">
           <div className="flex items-center gap-2">
+            {/* #64 fallback-select-no-visible-label: say on screen that this is a fallback, not a second primary. */}
+            <span className="shrink-0 text-xs text-muted-foreground" aria-hidden="true">{i18n.t("备用 {0}", [index + 1])}</span>
             <SearchableSelectField
               variant="ghost"
               className="min-w-0 flex-1"
