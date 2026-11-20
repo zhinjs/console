@@ -337,3 +337,5 @@ export interface PurposeFocus {
 /** The `?purpose=` value for a 「谁在用」 usage key. */
 export function usagePurposeFocus(key: string): string | undefined
 export function purposeElementId(focus: PurposeFocus | undefined): string
+/** Whether the 用途 draft would save anything compared with what was read. */
+export function purposesDirty(draft: Purposes, original: Purposes, options?: { fallbacks?: boolean }): boolean

@@ -386,6 +386,20 @@ export function schemaField(schema = {}) {
  * chain the page holds (`<key>Fallbacks`, `agentFallbacks`, the Host's graph shape) goes back with
  * it. `fallbacks: false` (a Host without fallback chains) never writes `fallbacks`.
  */
+const canonical = value => Array.isArray(value) ? value.map(canonical)
+  : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])]))
+  : value
+
+/**
+ * Whether the 用途 draft would save anything (#64 `purposes-no-unsaved-guard`): the plan built from it
+ * differs from the plan of what was read. Compared as saved, so key order and empty containers do not count.
+ */
+export function purposesDirty(draft, original, { fallbacks = true } = {}) {
+  if (!draft || !original) return false
+  const plan = value => JSON.stringify(canonical(purposePlan(value, original, { fallbacks })))
+  return plan(draft) !== plan(original)
+}
+
 export function purposePlan(draft, original = draft, { fallbacks = true, ambientJudge } = {}) {
   const ref = (id, chain) => (id ? languageReference(id, fallbacks ? chain : undefined) : null)
   const selection = (value) => ({ chat: ref(value?.chat, value?.chatFallbacks), perception: value?.perception ?? null })
