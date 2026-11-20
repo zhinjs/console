@@ -692,6 +692,26 @@ export function chatModelBadge(purposes, profileId, locale = 'zh-CN') {
   }
 }
 
+/**
+ * Where a 「谁在用」 usage is set on the 用途 tab (#64 `profile-usage-not-linked`), as the `?purpose=`
+ * value: `defaults` / `ambient` / `decisions` / `agents`, or `<level>:<key>` for an adapter, account or
+ * conversation override. Undefined for a key this Console does not know.
+ */
+export function usagePurposeFocus(key) {
+  if (typeof key !== 'string') return undefined
+  const scoped = /^(adapter|endpoint):(.+):(?:chat|perception)$/u.exec(key)
+  if (scoped) return `${scoped[1]}s:${scoped[2]}`
+  if (key.startsWith('scene:') && key.length > 'scene:'.length) return `scenes:${key.slice('scene:'.length)}`
+  const section = { default: 'defaults', ambient: 'ambient', decision: 'decisions', agent: 'agents' }[key.split(':')[0]]
+  return section
+}
+
+/** DOM id of a section (or an override row) on the 用途 tab, so a `?purpose=` link can bring it into view. */
+export function purposeElementId(focus) {
+  if (focus?.section === 'scopes' && focus.level && focus.key) return `inference-purpose-${focus.level}-${encodeURIComponent(focus.key)}`
+  return `inference-purpose-${focus?.section ?? ''}`
+}
+
 /** A profile label written for an Agent binding, e.g. 「子 Agent · 小编 planner · DeepSeek Flash」. */
 const AGENT_LABEL = /^(?:主|子)?\s*Agent\s*[·:：|/-]|^sub-?agent\b/iu
 

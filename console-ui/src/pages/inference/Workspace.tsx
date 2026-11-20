@@ -11,7 +11,7 @@ import { Services } from './Services'
 import { Accounts } from './Accounts'
 import { Purposes } from './Purposes'
 import { PersonalSessions } from './PersonalSessions'
-import { inferenceFocusAccount, inferenceTabParams, resolveInferenceTab } from './models-entry.mjs'
+import { inferenceFocusAccount, inferenceFocusPurpose, inferencePurposeParams, inferenceTabParams, resolveInferenceTab } from './models-entry.mjs'
 import { planWarningText, type PlanWarning } from './ambient-judge-model.mjs'
 
 export function InferenceWorkspace({ connectionScope }: { connectionScope?: string }) {
@@ -184,6 +184,8 @@ function InferencePages({ management: m, connectionScope }: { management: Infere
   const i18n = useI18n()
   const [searchParams, setSearchParams] = useSearchParams()
   const focusAccount = inferenceFocusAccount(searchParams.get('account'))
+  // `?purpose=` opens 用途 at a section or override row (the 「谁在用」 links on 模型).
+  const focusPurpose = inferenceFocusPurpose(searchParams.get('purpose'))
   const tab = resolveInferenceTab(searchParams.get('tab'), m.view?.hostAdministrator, focusAccount)
   const setTab = (next: string) => setSearchParams(current => inferenceTabParams(current, next), { replace: true })
   // 「添加模型」 on an account card: switch to 模型 and open its add dialog with that account.
@@ -202,7 +204,8 @@ function InferencePages({ management: m, connectionScope }: { management: Infere
             )}
           </TabsList>
           <TabsContent value="profiles">
-            <Profiles management={m} onCreateAccount={() => setTab('accounts')} addModelFor={addModelFor} onAddModelOpened={() => setAddModelFor(null)} />
+            <Profiles management={m} onCreateAccount={() => setTab('accounts')} addModelFor={addModelFor} onAddModelOpened={() => setAddModelFor(null)}
+              onOpenPurpose={m.view.hostAdministrator ? (focus) => setSearchParams(current => inferencePurposeParams(current, focus), { replace: true }) : undefined} />
           </TabsContent>
           <TabsContent value="services"><Services management={m} /></TabsContent>
           <TabsContent value="accounts">
@@ -210,7 +213,7 @@ function InferencePages({ management: m, connectionScope }: { management: Infere
           </TabsContent>
           {m.view.hostAdministrator ? (
             <TabsContent value="purposes">
-              <Purposes management={m} />
+              <Purposes management={m} focus={tab === 'purposes' ? focusPurpose : undefined} />
             </TabsContent>
           ) : (
             <TabsContent value="sessions">
