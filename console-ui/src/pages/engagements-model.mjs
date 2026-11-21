@@ -4,18 +4,23 @@ export function hasRunningEngagement(engagements) {
   return engagements.some(item => item.status === 'running')
 }
 
+/**
+ * Sums of the list. A turn or token total no collaboration reports is `null` (shown as 「—」), not 0:
+ * the Host's summaries have no turn count yet, and 0 would claim nothing was used.
+ */
 export function engagementTotals(engagements) {
-  return engagements.reduce((sum, item) => ({
+  const totals = engagements.reduce((sum, item) => ({
     running: sum.running + Number(item.status === 'running'),
     failed: sum.failed + Number(item.status === 'failed'),
-    turns: sum.turns + count(item.turns),
-    tokens: sum.tokens + count(item.tokensUsed),
-  }), { running: 0, failed: 0, turns: 0, tokens: 0 })
+    turns: add(sum.turns, item.turns),
+    tokens: add(sum.tokens, item.tokensUsed),
+  }), { running: 0, failed: 0, turns: null, tokens: null })
+  return engagements.length ? totals : { ...totals, turns: 0, tokens: 0 }
 }
 
-/** A counter the Host may leave out: missing or not a number counts as 0 (never NaN on screen). */
-function count(value) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0
+function add(total, value) {
+  if (!(typeof value === 'number' && Number.isFinite(value))) return total
+  return (total ?? 0) + value
 }
 
 /**
@@ -50,7 +55,8 @@ const counter = value => typeof value === 'number' && Number.isFinite(value) ? v
 /**
  * Reads an engagement summary in either shape the Host has sent: the protocol's
  * (`venue: string`, `participants`, `hops` / `turns` / `tokensUsed`) or the journal's
- * (`venue: { kind, id }`, `actors`, `status: open | blocked | escalated | …`, `reason`).
+ * (`venue: { kind, id }`, `actors`, `status: open | blocked | escalated | …`, `reason`, `hops` as the
+ * list of hops, tokens in `consumed.tokens`).
  * Every displayed field ends up a string, a number or undefined.
  */
 export function normalizeEngagementSummary(raw) {
@@ -61,15 +67,16 @@ export function normalizeEngagementSummary(raw) {
   const reason = typeof summary.stopReason === 'string' && summary.stopReason ? summary.stopReason
     : typeof summary.reason === 'string' && summary.reason ? summary.reason
       : status === 'failed' && summary.status !== 'failed' && typeof summary.status === 'string' ? summary.status : undefined
+  const consumed = summary.consumed && typeof summary.consumed === 'object' ? summary.consumed : {}
   return {
     ...summary,
     engagementId: String(summary.engagementId ?? ''),
     status,
     venue: venueLabel(summary.venue),
     participants: people.length ? people : actors,
-    hops: counter(summary.hops),
-    turns: counter(summary.turns),
-    tokensUsed: counter(summary.tokensUsed),
+    hops: counter(summary.hops) ?? (Array.isArray(summary.hops) ? summary.hops.length : undefined),
+    turns: counter(summary.turns) ?? counter(consumed.turns),
+    tokensUsed: counter(summary.tokensUsed) ?? counter(consumed.tokens),
     wallClockMs: counter(summary.wallClockMs) ?? (counter(summary.endedAt) !== undefined && counter(summary.startedAt) !== undefined ? summary.endedAt - summary.startedAt : undefined),
     stopReason: reason,
   }

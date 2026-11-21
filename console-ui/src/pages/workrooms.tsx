@@ -106,8 +106,8 @@ function WorkroomBoardPage() {
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label={i18n.t("Workroom 摘要")}>
           <Metric icon={Workflow} label={i18n.t("协作")} value={i18n.number(engagements.length)} detail={i18n.t("{0} 个仍在进行", [totals.running])} />
           <Metric icon={AlertTriangle} label={i18n.t("失败")} value={i18n.number(totals.failed)} detail={i18n.t("打开记录查看终止原因")} tone={totals.failed ? 'danger' : undefined} />
-          <Metric icon={MessagesSquare} label={i18n.t("轮次")} value={i18n.number(totals.turns)} detail={i18n.t("所有协作的 Agent 轮次")} />
-          <Metric icon={Coins} label="Tokens" value={i18n.number(totals.tokens)} detail={i18n.t("所有协作的 Token 消耗")} />
+          <Metric icon={MessagesSquare} label={i18n.t("轮次")} value={totals.turns === null ? '—' : i18n.number(totals.turns)} detail={i18n.t("所有协作的 Agent 轮次")} />
+          <Metric icon={Coins} label="Tokens" value={totals.tokens === null ? '—' : i18n.number(totals.tokens)} detail={i18n.t("所有协作的 Token 消耗")} />
         </section>
       ) : null}
 
