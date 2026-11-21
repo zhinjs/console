@@ -1,4 +1,5 @@
 import { translate } from '../../i18n/locale.mjs'
+import { parseRetryAfterSeconds } from '../../utils/retry-after.mjs'
 
 /**
  * MCP 服务行的状态与「测试连接」结果（zhinjs/zhin #1250 第 28 批，契约见 `contracts/mcp.ts`）。
@@ -87,15 +88,10 @@ export function isStdioMcp(row) {
   return isRecord(row) && typeof row.transport === 'string' && row.transport.trim().toLowerCase() === 'stdio'
 }
 
-/** `Retry-After`（秒或 HTTP 日期）→ 秒数；读不到时 null。 */
+/** `Retry-After`（秒或 HTTP 日期，严格解析，见 `utils/retry-after.mjs`）→ 秒数；读不到或格式不对时 null。 */
 export function retryAfterSecondsFrom(header, now = Date.now()) {
-  const raw = typeof header === 'string' ? header.trim() : ''
-  if (/^\d+$/.test(raw)) return Math.max(1, Number(raw))
-  if (raw) {
-    const at = Date.parse(raw)
-    if (Number.isFinite(at)) return Math.max(1, Math.ceil((at - now) / 1000))
-  }
-  return null
+  const seconds = parseRetryAfterSeconds(header, now)
+  return seconds === undefined ? null : Math.max(1, seconds)
 }
 
 /** 200 的 `data`：一份 `ConsoleMcpConnectTestResult`；格式不对时 null。 */
@@ -132,6 +128,20 @@ export function mcpTestRequestError(message) {
   return { kind: 'error', reason: 'network', status: 0, retryAfterSec: null, message: typeof message === 'string' ? message : '' }
 }
 
+const CJK = /[\u3400-\u9fff]/u
+
+/**
+ * The Host's own explanation, when the reader can read it: the Host writes expected failures in
+ * Chinese (`ConsoleApiErrorBody.error`), so an English Console shows its own translated advice
+ * instead of a Chinese sentence (console#124). Text without Chinese (a network error, an English
+ * Host message) is kept in every language.
+ */
+export function hostTextFor(message, locale = 'zh-CN') {
+  const text = typeof message === 'string' ? message.trim() : ''
+  if (!text) return ''
+  return locale === 'zh-CN' || !CJK.test(text) ? text : ''
+}
+
 /** 测试结果的展示：`tone` 对应 Alert 变体，`role` 用于读屏播报。 */
 export function mcpTestPresentation(outcome, locale = 'zh-CN') {
   const t = (message, values) => translate(locale, message, values)
@@ -144,7 +154,7 @@ export function mcpTestPresentation(outcome, locale = 'zh-CN') {
     return { tone: 'destructive', role: 'alert', label: t('测试连接失败'), detail: [mcpFailureText(result.failure, locale), duration].filter(Boolean).join(' · ') }
   }
   const reason = outcome?.reason ?? 'error'
-  const server = outcome?.message ?? ''
+  const server = hostTextFor(outcome?.message, locale)
   switch (reason) {
     case 'not_found':
       return { tone: 'warning', role: 'alert', label: t('配置里没有这个服务'), detail: t('ai.mcpServers 中找不到它；可能刚被删除或改名，刷新列表后再试。') }

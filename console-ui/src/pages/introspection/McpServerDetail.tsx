@@ -4,7 +4,8 @@ import { Info, Loader2, PlugZap, Settings } from 'lucide-react'
 import { useI18n } from '../../i18n'
 import { CONSOLE_REST } from '../../contracts/zhin-console'
 import { apiFetch } from '../../utils/auth'
-import { hasConsolePermission } from '../../utils/console-access.mjs'
+import { hasAnyConsolePermission, hasConsolePermission } from '../../utils/console-access.mjs'
+import { ROUTE_PERMISSIONS } from '../../navigation-sections.mjs'
 import { useConsoleAccess } from '../../hooks/use-console-access'
 import { Alert, AlertDescription, AlertTitle, Button } from '@zhin.js/console-ui'
 import {
@@ -37,7 +38,8 @@ export function McpServerDetail({ item }: { item: CapabilityItem }) {
   const name = typeof item.name === 'string' ? item.name.trim() : ''
   const state = mcpRowState(item, i18n.locale)
   const canTest = Boolean(name) && hasConsolePermission(MCP_TEST_PERMISSION, access)
-  const canConfigure = hasConsolePermission('ops.config.read', access)
+  // The entry links to 配置文件; show it to whoever may open that page (any of its permissions, console#124).
+  const canConfigure = hasAnyConsolePermission(ROUTE_PERMISSIONS['/ops/config'], access)
   const stdio = isStdioMcp(item)
   const [testing, setTesting] = useState(false)
   const [test, setTest] = useState<TestState | null>(null)

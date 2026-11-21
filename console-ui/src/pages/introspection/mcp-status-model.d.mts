@@ -48,6 +48,7 @@ export function mcpFailureText(failure: McpFailureView | null, locale?: Locale):
 export function mcpFailureCategoryLabel(category: string, locale?: Locale): string
 export function mcpRowState(row: unknown, locale?: Locale): McpRowState
 export function isStdioMcp(row: unknown): boolean
+export function hostTextFor(message: unknown, locale?: Locale): string
 export function retryAfterSecondsFrom(header: string | null | undefined, now?: number): number | null
 export function readMcpTestResult(data: unknown): McpTestResultView | null
 export function readMcpTestResponse(input: { status: number; body: unknown; retryAfter?: string | null; now?: number }): McpTestOutcome

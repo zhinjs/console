@@ -1,3 +1,4 @@
+import { parseRetryAfterSeconds } from './retry-after.mjs'
 /**
  * What the published SDK's `ConsoleTransport.sendRequest` (@zhin.js/client ~1.1.32) throws away.
  *
@@ -90,8 +91,8 @@ export async function enrichRpcError(error, capture) {
       // The server's SQLSTATE of a failed Console SQL statement (e.g. `42501` from the restricted account, ADR 0059).
       if (isRecord(body.data) && typeof body.data.sqlState === 'string') details.sqlState = body.data.sqlState
     }
-    const seconds = Number(String(capture.retryAfter ?? '').trim())
-    if (capture.retryAfter && Number.isFinite(seconds) && seconds > 0) details.retryAfter = seconds
+    const seconds = parseRetryAfterSeconds(capture.retryAfter)
+    if (seconds && seconds > 0) details.retryAfter = seconds
     // The reply arrived but could not be read (a proxy's HTML page, a body cut off by the timeout):
     // a 4xx was refused before anything ran; anything else may have run.
     // (Without a reply `statusFromError` reads the SDK's `originalError` itself.)
