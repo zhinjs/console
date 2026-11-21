@@ -25,3 +25,5 @@ export function conversationHistoryQuery(sessionKey: string, beforeSequence?: nu
 export function readConversationHistory(body: unknown, expectedConversation?: DiagnosticConversation, beforeSequence?: number, locale?: 'zh-CN' | 'en'): ConversationHistoryPage
 export function prependConversationHistory(current: ConversationHistoryPage | null, earlier: ConversationHistoryPage): ConversationHistoryPage
 export function conversationHistoryFailure(status: number, body: unknown, locale?: 'zh-CN' | 'en'): ConversationHistoryFailure
+/** Message segments with `zhin.raw-content/1` envelopes replaced by the segments they wrap. */
+export function expandRawContentSegments<T extends { type: string; data?: Record<string, unknown> }>(segments: readonly T[]): T[]
