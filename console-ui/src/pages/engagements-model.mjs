@@ -92,7 +92,47 @@ export function actorLabel(actor) {
   return JSON.stringify(actor)
 }
 
-/** One-line protocol summary of a collaboration event; unknown kinds fall back to their JSON. */
+/**
+ * An event's kind as written: protocol events carry `kind`, the Host journal's events carry `type`
+ * (`mail_denied`, `budget_exceeded`, …).
+ */
+export function engagementEventKind(event) {
+  const kind = event?.kind ?? event?.type
+  return typeof kind === 'string' && kind ? kind : 'event'
+}
+
+const ACCOUNT_NUMBER = /^\d{5,}$/
+const maskNumber = digits => `${digits.slice(0, 2)}***${digits.slice(-2)}`
+
+/**
+ * Masks platform account numbers (QQ numbers, group numbers: 5+ digits) where they appear as an id: a
+ * whole value, or a segment of a ref such as `qq:group:987654321`. Counts (`tokens=18400`) stay.
+ */
+export function maskPlatformIds(text) {
+  const value = String(text ?? '')
+  if (ACCOUNT_NUMBER.test(value)) return maskNumber(value)
+  return value.replace(/([:/])(\d{5,})(?!\d)/g, (_, separator, digits) => `${separator}${maskNumber(digits)}`)
+}
+
+const TIMESTAMP_KEY = /^(at|ts|time|timestamp)$|At$/
+
+/**
+ * An event the Console has no summary for, as `key=value` of its top-level scalars. Nested objects
+ * (sender records, payloads) and timestamps are left to the raw view; a value that is an account
+ * number on its own is masked.
+ */
+function readableFields(event) {
+  return Object.entries(event ?? {})
+    .filter(([key, value]) => key !== 'kind' && key !== 'type' && !TIMESTAMP_KEY.test(key)
+      && (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') && value !== '')
+    .map(([key, value]) => `${key}=${typeof value === 'string' ? maskPlatformIds(value) : String(value)}`)
+    .join(' ')
+}
+
+/**
+ * One-line summary of a collaboration event for the readable timeline. Kinds the Console does not know
+ * show their scalar fields; the full JSON is only in 「原始事件」.
+ */
 export function collaborationEventSummary(event) {
   switch (event?.kind) {
     case 'engagement.started':
@@ -114,7 +154,7 @@ export function collaborationEventSummary(event) {
     case 'engagement.stopped':
       return `status=${String(event.status ?? '')}${event.reason ? ` reason=${String(event.reason)}` : ''}`
     default:
-      return JSON.stringify(event)
+      return readableFields(event)
   }
 }
 

@@ -11,7 +11,9 @@ import {
   actorLabel,
   collaborationEventSummary,
   engagementParticipants,
+  engagementEventKind,
   engagementTotals,
+  maskPlatformIds,
   hasRunningEngagement,
   listOf,
   normalizeEngagementSummary,
@@ -272,8 +274,8 @@ function EngagementDetail({ detail, statusLabel }: {
           <ol className="space-y-2 font-mono text-xs">
             {events.map((event, index) => (
               <li key={index} className="break-all rounded-lg border p-2.5">
-                <span className="font-semibold text-foreground">{String(event.kind ?? 'event')}</span>
-                <span className="ml-2 text-muted-foreground">{collaborationEventSummary(event)}</span>
+                <span className="font-semibold text-foreground">{engagementEventKind(event)}</span>
+                <span className="ml-2 text-muted-foreground">{maskPlatformIds(collaborationEventSummary(event))}</span>
               </li>
             ))}
           </ol>
