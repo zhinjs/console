@@ -74,3 +74,5 @@ export function validateWorkroomMembers(draft: { enabled?: boolean; members: { a
 export function workroomDefinitionsMatch(actual: unknown, expected: unknown): boolean
 
 export function validateWorkroomSpaceOwnership(drafts: readonly { enabled?: boolean; sponsors?: string[]; conversation?: {adapter:string; endpoint:string; kind:string; id:string}; sponsorConversation?: {adapter:string; endpoint:string; kind:string; id:string}; members: readonly MessageRouteMember[] }[], locale?: 'zh-CN' | 'en'): { conversation?: string; sponsorConversation?: string; members: MessageRouteIssue[] }[];
+/** How a failed catalog read is shown; `notReady` when the Host has no Workroom Catalog. */
+export function catalogReadFailure(error: unknown): { kind: string; notReady: boolean } | null

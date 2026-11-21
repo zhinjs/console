@@ -967,7 +967,6 @@ export const englishMessages = Object.freeze({
   "发布目录": "Publish directory",
   "当前身份只读展示目录；发布需要 Agent 配置权限。": "This identity sees the directory read-only. Publishing needs Agent configuration permission.",
   "未能确认发布结果。本地草稿已保留，请刷新并核对最新配置。": "Publication outcome could not be confirmed. Your local draft was kept; refresh and verify the latest configuration.",
-  "Workroom 目录未就绪": "Workroom directory is not ready",
   "尚未取得目录，暂不能新建、编辑或发布。请先在 Host 安装并配置可选 Workroom Catalog 服务及 Agent，再刷新；无需重建本地草稿。": "The directory has not been loaded, so creation, editing and publication are unavailable. Install and configure the optional Workroom Catalog service and Agent on the Host, then refresh. Your local draft does not need to be recreated.",
   "刷新失败，以下是上次成功加载的目录；本地修改仍保留，恢复目录连接前暂停编辑和发布。": "Refresh failed. Showing the last successfully loaded directory. Local edits are preserved; editing and publication are paused until the directory connection recovers.",
   "放弃未发布修改": "Discard unpublished changes",
