@@ -1,4 +1,5 @@
 import { translate } from '../i18n/locale.mjs'
+import { statusFromError } from '../components/status-state-model.mjs'
 /** @typedef {{ adapter: string, endpoint: string }} MessageRoute */
 /** @typedef {{ agent: string, messageRoute?: MessageRoute }} MessageRouteMember */
 /** @typedef {{ adapter: string, name: string }} EndpointOption */
@@ -203,4 +204,15 @@ export function validateWorkroomSpaceOwnership(drafts, locale = 'zh-CN') {
     if(audiences.includes('[]') || new Set(audiences).size!==1) owner.refs.forEach(ref=>report(ref,translate(locale, "共享负责人空间的项目必须配置相同且非空的负责人集合。")));
   }
   return issues;
+}
+
+/**
+ * A failed `workrooms:get` (#64 `workroom-catalog-error-state`): its StatusState kind, and whether it means
+ * the Host has no Workroom Catalog (`unsupported` / `not-installed`), the only case where the page says to
+ * install and configure it. A refusal is 无权限 (`agent.view`), anything else a plain error. Null without one.
+ */
+export function catalogReadFailure(error) {
+  if (error === null || error === undefined) return null
+  const { kind } = statusFromError(error)
+  return { kind, notReady: kind === 'unsupported' || kind === 'not-installed' }
 }
