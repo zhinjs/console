@@ -7,6 +7,8 @@ export interface ConfigDriftEntry {
   readonly kind: ConfigDriftKind
   readonly instanceId?: string
   readonly fields: readonly { readonly path: string; readonly sensitive: boolean }[]
+  /** `snapshot_only` only: the account was added in the Console and never written to the file (zhinjs/zhin#1250 第 88 批). */
+  readonly origin?: 'console'
 }
 export interface ConfigDrift {
   readonly authority: 'snapshot' | 'config'
@@ -24,6 +26,7 @@ export function adapterConfigPermission(pluginId: string, method: string, payloa
 export function importRequest(drift: ConfigDrift, id: string, start?: boolean): Record<string, unknown>
 export function writebackRequest(drift: ConfigDrift, ids: readonly string[]): Record<string, unknown>
 export function driftEntryActions(drift: ConfigDrift | null | undefined, entry: ConfigDriftEntry | null | undefined, pluginId: string | null | undefined, access?: ConsoleAccess): { import?: ConfigActionPermission; writeback?: ConfigActionPermission }
-export function driftKindLabel(kind: string, locale?: 'zh-CN' | 'en'): string
+export function isDriftDivergence(entry: Pick<ConfigDriftEntry, 'kind' | 'origin'> | null | undefined): boolean
+export function driftKindLabel(kind: string, locale?: 'zh-CN' | 'en', origin?: 'console'): string
 export function driftRows(drift: ConfigDrift | null | undefined): ConfigDriftEntry[]
 export function writebackResultText(result: unknown, locale?: 'zh-CN' | 'en'): string

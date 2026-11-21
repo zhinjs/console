@@ -4,6 +4,8 @@ import { useI18n } from '../../i18n'
 import { Badge, Button, Checkbox, Input, SelectField } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
 import { useEndpointList } from '../features/use-feature-data'
+import { useConsoleAccess } from '../../hooks/use-console-access'
+import { hasConsolePermission } from '../../utils/console-access.mjs'
 import {
   addBinding, areaLabel, builtinRoleLabel, groupCheckState, levelLabel, permissionLabel, removeBinding, scopeLabel, scopeProblem,
   togglePermissions, type BindingScope, type IamBinding, type IamRole, type PermissionGroup, type ScopeKind,
@@ -33,8 +35,15 @@ export function IamLoadError({ error, kind, failure, onRetry, permissions = ['ia
   return <StatusState error={failure ?? error} permissions={permissions} onRetry={onRetry} />
 }
 
-export function ReadOnlyNotice() {
+/**
+ * 「只能查看」 for an identity that can read access control but not change it. Not shown when the
+ * read itself was refused (`errorKind: 'forbidden'`): the 无权限 panel says why, and 「只能查看」 next
+ * to it would contradict it.
+ */
+export function ReadOnlyNotice({ errorKind = null }: { errorKind?: IamErrorKind | null }) {
   const i18n = useI18n()
+  const access = useConsoleAccess()
+  if (errorKind === 'forbidden' || !hasConsolePermission('iam.view', access)) return null
   return <p className="text-sm text-muted-foreground" role="note">{i18n.t("当前身份只能查看访问控制；修改需要 iam.manage 权限。")}</p>
 }
 

@@ -1,7 +1,8 @@
 import { isPersonalSessionKey } from '../pages/personal-session-model.mjs'
-import { isKeyOnlySessionKey } from './session-label.mjs'
+import { formatConversationSessionKey } from '@zhin.js/console-protocol'
+import { isKeyOnlySessionKey, parseImConversationKey } from './session-label.mjs'
 
-/** 聊天记录（Agent 会话）sessionKey 与深链（与 @zhin.js/ai resolveIMSessionId 一致） */
+/** 聊天记录（Agent 会话）sessionKey 与深链；格式与解析来自 @zhin.js/console-protocol 的 session-key（与 resolveIMSceneSessionId 一致） */
 
 export type ImSessionScope = 'private' | 'group' | 'channel'
 
@@ -28,7 +29,7 @@ export function buildSessionKey(
   scope: ImSessionScope,
   sceneId: string,
 ): string {
-  return `${platform}:${endpointId}:${scope}:${sceneId}`
+  return formatConversationSessionKey({ adapter: platform, endpointKey: endpointId, kind: scope, id: sceneId })
 }
 
 export function agentSessionsPath(sessionKey: string): string {
@@ -53,16 +54,11 @@ export function isLikelySessionKey(key: string): boolean {
   return isPersonalSessionKey(key) || isKeyOnlySessionKey(key) || parseImSessionKey(key) !== null
 }
 
-/** 将内部 sessionKey 拆成 Console 可展示的会话上下文。 */
+/**
+ * 将内部 sessionKey 拆成 Console 可展示的会话上下文（`parseImConversationKey`：协议的解析，
+ * 另外要求账号非空——协议接受的 `qq::private:1` 在这里仍是 null）。
+ */
 export function parseImSessionKey(key: string): ParsedImSessionKey | null {
-  const parts = key.trim().split(':')
-  if (parts.length < 4 || !parts[0].trim() || !parts[1].trim() || !parts.slice(3).join(':').trim()) return null
-  const scope = parts[2]
-  if (scope !== 'private' && scope !== 'group' && scope !== 'channel') return null
-  return {
-    platform: parts[0],
-    endpointId: parts[1],
-    scope,
-    sceneId: parts.slice(3).join(':'),
-  }
+  const parsed = parseImConversationKey(key)
+  return parsed ? { platform: parsed.platform, endpointId: parsed.endpoint, scope: parsed.kind, sceneId: parsed.id } : null
 }

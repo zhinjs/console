@@ -5,6 +5,7 @@
  */
 
 import { declaredDefaults, initialSchemaValue } from '../../components/PluginConfigForm/schema-model.mjs'
+import { parseRetryAfterSeconds } from '../../utils/retry-after.mjs'
 
 import {
   GATEWAY_INSTANCE_RPC, GATEWAY_PACKAGES_RPC, GATEWAY_PLUGINS_RPC, GATEWAY_VERSION_MIGRATE_COMMAND, GATEWAY_VERSION_RPC,
@@ -90,7 +91,8 @@ export function readGatewayReply(status, json, t, retryAfterHeader) {
   }
   if (effective === 401) throw new GatewayRequestError(t('登录已失效，请重新登录。'), { status: effective, code: code || 'unauthorized', hostMessage })
   if (effective === 403 && !hostMessage) throw new GatewayRequestError(t('当前身份没有执行此操作的权限。'), { status: effective, code: 'forbidden', hostMessage })
-  const retryAfter = /^\d+$/u.test(String(retryAfterHeader ?? '').trim()) ? Number(String(retryAfterHeader).trim()) : undefined
+  const retryAfterSeconds = parseRetryAfterSeconds(retryAfterHeader)
+  const retryAfter = retryAfterSeconds && retryAfterSeconds > 0 ? retryAfterSeconds : undefined
   const requestOutcome = typeof body.requestOutcome === 'string' ? body.requestOutcome : undefined
   if (code === 'database_busy') {
     throw new GatewayRequestError(retryAfter ? t('网关的数据库正忙，请在 {0} 秒后重试。', [retryAfter]) : t('网关的数据库正忙，请稍后重试。'), { status: effective, code, hostMessage, retryAfter })

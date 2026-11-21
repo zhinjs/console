@@ -1,16 +1,11 @@
 import { translate } from '../i18n/locale.mjs'
-import { isKeyOnlySessionKey, sessionKind } from '../utils/session-label.mjs'
-const SCOPES = new Set(['private', 'group', 'channel'])
+import { isKeyOnlySessionKey, parseImConversationKey, sessionKind } from '../utils/session-label.mjs'
 /**
  * Every Agent session the picker can open — and so every one the summary counts, so the two agree:
  * legacy `platform:endpoint:scope:sceneId` keys, hashed keys (`personal-session:v1:`,
  * `scene-task:v1:` …) and `schedule:<id>`.
  */
-const validKey = key => {
-  if (isKeyOnlySessionKey(key)) return true
-  const parts = key.trim().split(':')
-  return parts.length >= 4 && !!parts[0].trim() && !!parts[1].trim() && SCOPES.has(parts[2]) && !!parts.slice(3).join(':').trim()
-}
+const validKey = key => isKeyOnlySessionKey(key) || parseImConversationKey(key) !== null
 const text = value => (typeof value === 'string' && value.trim() ? value.trim() : '')
 /** What a newer Host may send next to the key (snake_case like the archive, or camelCase); only present fields are kept. */
 function describedFields(row) {

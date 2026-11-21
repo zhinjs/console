@@ -1,7 +1,7 @@
 import { useI18n } from '../i18n'
 import { useCallback, useEffect, useRef, useState, useReducer } from 'react'
 import { getConsoleTransport } from '../utils/console-client'
-import { configErrorReducer } from './config-error-state.mjs'
+import { configErrorReducer, isReadDenied } from './config-error-state.mjs'
 import { requestConsole } from '../utils/console-rpc'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { getInboxCacheScope, isInboxCacheScopeActive } from '../utils/inbox-cache'
@@ -40,7 +40,7 @@ export function useConfigSource({ autoLoad = true }: { autoLoad?: boolean } = {}
   const [connected, setConnected] = useState(manager.isConnected())
   const [config, setConfig] = useState<ConfigSource | null>(null)
   const [loading, setLoading] = useState(false)
-  const [{ readError, saveError }, errorAction] = useReducer(configErrorReducer, { readError: null, saveError: null })
+  const [{ readError, saveError, readDenied }, errorAction] = useReducer(configErrorReducer, { readError: null, saveError: null })
   const attempted = useRef(false)
   const operations = useRef(createDiagnosticRequestGate(getInboxCacheScope))
   // Reads must not supersede the outcome of an already dispatched application.
@@ -94,7 +94,8 @@ export function useConfigSource({ autoLoad = true }: { autoLoad?: boolean } = {}
       return bound
     } catch (cause) {
       if (!request.current() || !isInboxCacheScopeActive(scope)) throw new Error(messages.current.t("配置读取已过期，请在当前 Host 重新读取"))
-      setReadErrorScope(scope); errorAction({ type: 'read-failed', error: cause instanceof Error ? cause.message : messages.current.t("读取失败") })
+      setReadErrorScope(scope)
+      errorAction({ type: 'read-failed', error: cause instanceof Error ? cause.message : messages.current.t("读取失败"), denied: isReadDenied(cause) })
       throw cause
     } finally {
       if (request.current() && isInboxCacheScopeActive(scope)) setLoading(false)
@@ -205,6 +206,8 @@ export function useConfigSource({ autoLoad = true }: { autoLoad?: boolean } = {}
     loading: active && (feedbackScope === scope && loading || applyFeedback?.scope === scope && applyFeedback?.loading === true),
     error: currentSaveError ?? currentReadError,
     errorOperation: currentSaveError ? 'save' as const : currentReadError ? 'read' as const : null,
+    /** The last read was refused for lack of permission (403 `forbidden`, e.g. no `ops.config.read`). */
+    readDenied: currentReadError !== null && readDenied === true,
     clearSaveError: () => errorAction({ type: 'discard-save' }),
     load,
     save,

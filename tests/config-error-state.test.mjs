@@ -20,3 +20,13 @@ test('retry failure remains visible and successful retry clears save error',()=>
  state=reduce(state,{type:'save-succeeded'})
  assert.equal(state.saveError,null)
 })
+test('a read refused for lack of permission is remembered until the next read starts',()=>{
+ let state={readError:null,saveError:null}
+ state=reduce(state,{type:'read-failed',error:'缺少权限 ops.config.read',denied:true})
+ assert.deepEqual(state,{readError:'缺少权限 ops.config.read',saveError:null,readDenied:true})
+ state=reduce(state,{type:'read-start'})
+ assert.deepEqual(state,{readError:null,saveError:null})
+ state=reduce(state,{type:'read-failed',error:'denied',denied:true})
+ state=reduce(state,{type:'read-failed',error:'network unavailable'})
+ assert.deepEqual(state,{readError:'network unavailable',saveError:null})
+})

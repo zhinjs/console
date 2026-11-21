@@ -12,6 +12,7 @@
  * insights/scope-filter.mjs); 审计日志 takes its audit `target`.
  * - `all`     全局: everything, no filter
  */
+import { formatConversationSessionKey, parseConversationSessionKey } from '@zhin.js/console-protocol'
 import { scopeLevel } from '../../scope/scope-tree.mjs'
 import { scopeFilterHref } from '../insights/scope-filter.mjs'
 
@@ -65,9 +66,9 @@ const ASSOCIATION = Object.freeze({
 /** Authored badge per association (displayed through i18n). */
 export const ASSOCIATION_LABELS = Object.freeze({ exact: '精确', partial: '范围更宽', text: '文本匹配', all: '全部' })
 
-/** Session key of an IM conversation (`@zhin.js/ai` resolveIMSessionId): `<platform>:<endpoint>:<kind>:<id>`. */
+/** Session key of an IM conversation (`formatConversationSessionKey` of the protocol): `<platform>:<endpoint>:<kind>:<id>`. */
 export function conversationSessionKey(scope) {
-  return `${scope.adapter}:${scope.endpoint}:${scope.kind}:${scope.id}`
+  return formatConversationSessionKey({ adapter: scope.adapter, endpointKey: scope.endpoint, kind: scope.kind, id: scope.id })
 }
 
 /** Audit `target` written by the gateway for RPCs addressed to an adapter or an account (`rpcAuditTarget`). */
@@ -118,11 +119,11 @@ export function sessionKeyInScope(sessionKey, scope) {
   if (typeof sessionKey !== 'string') return false
   const level = scopeLevel(scope)
   if (level === 'global') return true
-  const parts = sessionKey.split(':')
-  if (parts.length < 4) return false
-  if (parts[0] !== scope.adapter) return false
+  const parsed = parseConversationSessionKey(sessionKey)
+  if (!parsed) return false
+  if (parsed.adapter !== scope.adapter) return false
   if (level === 'adapter') return true
-  if (parts[1] !== scope.endpoint) return false
+  if (parsed.endpointKey !== scope.endpoint) return false
   if (level === 'endpoint') return true
   return sessionKey === conversationSessionKey(scope)
 }
@@ -133,12 +134,10 @@ export function sessionKeyInScope(sessionKey, scope) {
  */
 export function sessionConversationScope(sessionKey) {
   if (typeof sessionKey !== 'string') return null
-  const parts = sessionKey.split(':')
-  if (parts.length < 4) return null
-  const [adapter, endpoint, kind] = parts
-  const id = parts.slice(3).join(':')
-  if (!adapter || !endpoint || !id || !['private', 'group', 'channel'].includes(kind)) return null
-  return { level: 'conversation', adapter, endpoint, kind, id }
+  const parsed = parseConversationSessionKey(sessionKey)
+  // The protocol accepts an empty account (`qq::private:1`); there is no conversation page without one.
+  if (!parsed || !parsed.endpointKey || !['private', 'group', 'channel'].includes(parsed.kind)) return null
+  return { level: 'conversation', adapter: parsed.adapter, endpoint: parsed.endpointKey, kind: parsed.kind, id: parsed.id }
 }
 
 /** Audit entries whose target names the scope (`?target=`). */
