@@ -17,3 +17,14 @@ test('empty identity segments and unknown scopes are rejected without narrowing 
   }
   for (const scope of ['private', 'group', 'channel']) assert.equal(isLikelySessionKey(`terminal:fixture:${scope}:room:thread`), true)
 })
+
+test('hashed keys of every kind and schedule:<id> are session keys; their deep link selects them', () => {
+  const keys = [`personal-session:v1:${'a'.repeat(64)}`, `scene-task:v1:${'9f8e7d6c'.repeat(8)}`, `other-kind:v2:${'b'.repeat(16)}`, 'schedule:sched_mwio9qd6_k2p8x']
+  for (const key of keys) {
+    assert.equal(isLikelySessionKey(key), true, key)
+    assert.equal(parseImSessionKey(key), null, key)
+    const url = new URL(agentSessionsPath(key), 'http://localhost')
+    assert.equal(parseSessionKeyFromQuery(url.searchParams.get('sessionKey')), key)
+  }
+  for (const key of ['personal-session:v1:incomplete', `personal-session:v1:${'a'.repeat(32)}`, `scene-task:v1:${'a'.repeat(8)}`, 'schedule:', 'scene-task:v1:XYZ']) assert.equal(isLikelySessionKey(key), false, key)
+})

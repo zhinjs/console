@@ -8,6 +8,8 @@ import * as engagementsModel from '../console-ui/src/pages/engagements-model.mjs
 import * as workbenchModel from '../console-ui/src/pages/agent-workbench-model.mjs'
 import * as mcpStatus from '../console-ui/src/pages/introspection/mcp-status-model.mjs'
 import * as instanceSections from '../console-ui/src/pages/ops/instance-sections.mjs'
+import * as sessionLabels from '../console-ui/src/utils/session-label.mjs'
+import * as recentSessions from '../console-ui/src/pages/agent-session-recent.mjs'
 
 const { introspectionTotal, fetchAllIntrospection } = workbenchModel
 const require = createRequire(import.meta.url)
@@ -138,7 +140,7 @@ function workbenchFixture(sizes, { mcpRows } = {}) {
     '../utils/agent-session': { agentSessionsPath: key => `/agent/sessions/${key}`, parseImSessionKey: () => null, SESSION_SCOPE_LABELS: {} },
     '@zhin.js/console-ui': { cn: (...classes) => classes.filter(Boolean).join(' '), PageHeader: 'page-header', PageShell: 'page-shell', Button: 'button', buttonVariants: () => '', Skeleton: 'skeleton' }, './insights/insights.css': {},
     '../components/StatusState': { StatusState: 'status-state' }, '../console-routes.mjs': { CONSOLE_PATHS: { opsInstance: '/ops/instance', ai: '/features/ai' } }, './ops/instance-sections.mjs': instanceSections,
-    './agent-workbench-model.mjs': workbenchModel,
+    './agent-workbench-model.mjs': workbenchModel, '../utils/session-label.mjs': sessionLabels, './agent-session-recent.mjs': recentSessions,
     './introspection/mcp-status-model.mjs': mcpStatus,
     './ambient-judge-usage': { AmbientJudgeUsage: 'ambient-judge-usage' },
   })

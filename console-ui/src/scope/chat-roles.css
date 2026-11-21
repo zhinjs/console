@@ -75,3 +75,24 @@
   .console-chat-member-body { grid-template-columns: minmax(0, 1fr); }
   .console-chat-member-seen { margin-left: 0; flex-basis: 100%; }
 }
+
+/* 待确认的导入 (ChatRoleImportsSection.tsx, ADR 0060 §4.2). Tokens only. */
+.console-chat-imports { scroll-margin-top: var(--console-space-6); }
+.console-chat-import-note { display: flex; align-items: flex-start; gap: var(--console-space-2); color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
+.console-chat-import-note > svg { width: 1rem; height: 1rem; flex-shrink: 0; margin-top: var(--console-space-1); }
+.console-chat-import-list { display: grid; }
+.console-chat-import-row {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: flex-start; gap: var(--console-space-3);
+  border-bottom: var(--console-border-hairline, 1px) solid var(--console-border-subtle); padding: var(--console-space-3) var(--console-space-4);
+}
+.console-chat-import-row:last-child { border-bottom: 0; }
+.console-chat-import-row > svg { width: 1rem; height: 1rem; margin-top: var(--console-space-1); color: hsl(var(--muted-foreground)); }
+.console-chat-import-body { display: grid; min-width: 0; gap: var(--console-space-1); }
+.console-chat-import-summary { display: flex; flex-wrap: wrap; align-items: center; gap: var(--console-space-2); overflow-wrap: anywhere; font-size: var(--console-text-body); font-weight: var(--console-weight-strong); }
+.console-chat-import-body code { font-family: var(--console-font-mono); overflow-wrap: anywhere; }
+.console-chat-import-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--console-space-2); }
+
+@media (width < 40rem) {
+  .console-chat-import-row { grid-template-columns: auto minmax(0, 1fr); }
+  .console-chat-import-actions { grid-column: 2; justify-content: flex-start; }
+}

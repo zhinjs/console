@@ -16,6 +16,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { CheckCircle, Loader2, MessageSquare, MessagesSquare, Repeat2, Users, AlertTriangle, X } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import { isLikelySessionKey, parseSessionKeyFromQuery, parseImSessionKey } from '../utils/agent-session'
+import { isKeyOnlySessionKey, scheduleIdOfKey, sessionLabel } from '../utils/session-label.mjs'
 import { loadAgentSessionHistory, pushAgentSessionHistory } from '../utils/agent-session-history'
 import { AgentSessionPicker } from '../components/AgentSessionPicker'
 import { CONSOLE_REST } from '../contracts/zhin-console'
@@ -59,10 +60,13 @@ export default function AgentSessionsPage() {
   const [resolvedConversation, setResolvedConversation] = useState<{ identity: string; conversation?: DiagnosticConversation; error?: string; retry?: () => void } | null>(null)
   const resolved = resolvedConversation?.identity === JSON.stringify([scope, selectedKey]) ? resolvedConversation : null
   const personal = isPersonalSessionKey(selectedKey)
-  // 个人会话不保存聊天记录，默认打开「轨迹」；切换页签的选择只在同类会话之间沿用。
-  const [viewChoice, setViewChoice] = useState<{ personal: boolean; view: string } | null>(null)
-  const view = viewChoice?.personal === personal ? viewChoice.view : personal ? 'trace' : 'conversation'
-  const setView = (next: string) => setViewChoice({ personal, view: next })
+  // Hashed keys (个人会话、群聊 scene-task) and `schedule:<id>` carry no conversation address: their
+  // turns are read by key, their conversation is not shown here (隐私；Host 还没给出会话对应的聊天).
+  // They open on 「轨迹」; a tab choice only carries over between sessions of the same sort.
+  const keyOnly = isKeyOnlySessionKey(selectedKey)
+  const [viewChoice, setViewChoice] = useState<{ keyOnly: boolean; view: string } | null>(null)
+  const view = viewChoice?.keyOnly === keyOnly ? viewChoice.view : keyOnly ? 'trace' : 'conversation'
+  const setView = (next: string) => setViewChoice({ keyOnly, view: next })
   const traces = useConversationTraces(readOnly ? '' : selectedKey, scope, resolved?.conversation)
   const [traceSelection, setTraceSelection] = useState<{ identity: string; turnId: string } | null>(null)
   const selected = parseImSessionKey(selectedKey)
@@ -296,7 +300,11 @@ export default function AgentSessionsPage() {
             icon={Users}
             label={i18n.t('群聊与频道')}
             value={sessionSummary?.groups ?? '—'}
-            sub={sessionSummary ? i18n.t('私聊 {0} 个', [sessionSummary.privates]) : i18n.t('按会话类型统计')}
+            sub={sessionSummary
+              ? sessionSummary.others > 0
+                ? `${i18n.t('私聊 {0} 个', [sessionSummary.privates])} · ${i18n.t('其他 {0} 个', [sessionSummary.others])}`
+                : i18n.t('私聊 {0} 个', [sessionSummary.privates])
+              : i18n.t('按会话类型统计')}
           />
           <StatCard
             icon={AlertTriangle}
@@ -360,8 +368,9 @@ export default function AgentSessionsPage() {
             <>
               <header className="console-session-heading">
                 <div className="min-w-0">
-                  <h2>{personal ? i18n.t('个人会话') : selected?.sceneId}</h2>
-                  {selected ? <p>{selected.platform} · {selected.endpointId}</p> : null}
+                  {/* The full key only in the tooltip: a hashed key names no conversation. */}
+                  <h2 title={selectedKey}>{selected ? selected.sceneId : sessionLabel({ ...recentCurrent?.rows.find(row => row.sessionKey === selectedKey), sessionKey: selectedKey }, i18n.locale)}</h2>
+                  {selected ? <p>{selected.platform} · {selected.endpointId}</p> : personal ? <p>{i18n.t('个人会话')}</p> : null}
                 </div>
                 {/* A conversation session can be continued in its chat; anything else is history only. */}
                 {continueScope ? (
@@ -386,12 +395,22 @@ export default function AgentSessionsPage() {
                   <TabsTrigger value="branches">{i18n.t('会话分支')}</TabsTrigger>
                 </TabsList>
                 <TabsContent value="conversation" forceMount className="data-[state=inactive]:hidden">
-                  {personal ? (
+                  {keyOnly && !personal ? (
                     <EmptyState
                       compact
                       illustration="messages"
-                      title={i18n.t('个人会话没有聊天记录')}
-                      description={i18n.t('个人会话不保存聊天记录，每一轮的处理过程请在「轨迹」页签查看。')}
+                      title={scheduleIdOfKey(selectedKey) ? i18n.t('这里不显示定时任务的对话') : i18n.t('这里还不显示这个会话的对话')}
+                      description={scheduleIdOfKey(selectedKey)
+                        ? i18n.t('定时任务按计划运行，Console 这里不显示它的对话内容；每一轮的处理过程可在「轨迹」页签查看，任务本身在「定时任务」页。')
+                        : i18n.t('Console 还不能把这个会话对应到原来的聊天，所以这里暂不显示对话内容。对话本身仍在原来的聊天里，请到它所在的平台查看；每一轮的处理过程可在「轨迹」页签查看。')}
+                      action={{ label: i18n.t('查看轨迹'), onSelect: () => setView('trace') }}
+                    />
+                  ) : personal ? (
+                    <EmptyState
+                      compact
+                      illustration="messages"
+                      title={i18n.t('这里不显示个人会话的对话')}
+                      description={i18n.t('为保护隐私，个人会话的对话内容不在这里显示，Console 也还不能把它对应到原来的聊天。对话本身仍在原来的聊天里：请到它所在的平台或沙盒查看；每一轮的处理过程可在「轨迹」页签查看。')}
                       action={{ label: i18n.t('查看轨迹'), onSelect: () => setView('trace') }}
                     />
                   ) : <ConversationHistory
@@ -405,8 +424,8 @@ export default function AgentSessionsPage() {
                   />}
                 </TabsContent>
                 <TabsContent value="trace">
-                  <ConversationTrace turns={traces.turns} revision={traces.revision} loading={personal ? traces.loading : !resolved?.conversation && !resolved?.error || traces.loading} error={personal ? traces.error : resolved?.error ?? traces.error}
-                    refresh={() => { if (personal) void traces.refresh(); else if (resolved?.conversation) void traces.refresh(); else if (resolved?.retry) { setResolvedConversation({ identity }); resolved.retry() } }}
+                  <ConversationTrace turns={traces.turns} revision={traces.revision} loading={keyOnly ? traces.loading : !resolved?.conversation && !resolved?.error || traces.loading} error={keyOnly ? traces.error : resolved?.error ?? traces.error}
+                    refresh={() => { if (keyOnly) void traces.refresh(); else if (resolved?.conversation) void traces.refresh(); else if (resolved?.retry) { setResolvedConversation({ identity }); resolved.retry() } }}
                     selectedTurn={traceSelection?.identity === identity ? traceSelection.turnId : ''}
                     onSelectTurn={(turnId) => setTraceSelection({ identity, turnId })} connectionScope={scope} conversation={resolved?.conversation} />
                 </TabsContent>

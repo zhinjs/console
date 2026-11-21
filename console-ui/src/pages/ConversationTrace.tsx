@@ -6,7 +6,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, Button, E
 import { apiFetch } from '../utils/auth'
 import { isInboxCacheScopeActive } from '../utils/inbox-cache'
 import type { DiagnosticConversation } from './endpoint-detail/types'
-import { isPersonalSessionKey } from './personal-session-model.mjs'
+import { isKeyOnlySessionKey } from '../utils/session-label.mjs'
 import { ContextUsage, UsageSummary } from './ConversationUsage'
 import {
   formatTraceMetric, promptContent, readTraceDetail, readTraceRequest, traceBodyStatus, traceFailure,
@@ -112,7 +112,7 @@ export function ConversationTrace({ turns, loading, error, refresh, selectedTurn
           <ChevronRight /><span><strong>{time.format(turn.started_at)}</strong><small>{models.join(' · ') || i18n.t('模型未记录')}</small></span>
           <span className="conversation-trace-overview"><span>{traceStatus(turn.termination.status, i18n.locale)}</span><small>{formatTraceMetric(traceUsage([turn]).totalTokens, i18n.locale)} tok{turn.duration_ms === undefined ? '' : ` · ${(turn.duration_ms / 1000).toFixed(1)}s`}</small></span>
         </Button>
-        {selected && (conversation || isPersonalSessionKey(turn.session_key)) ? <div id={`trace-${turn.turn_id}`}><TurnDetails key={`${connectionScope}:${turn.turn_id}:${revision}`} turn={turn} connectionScope={connectionScope} conversation={conversation} /></div> : null}
+        {selected && (conversation || isKeyOnlySessionKey(turn.session_key)) ? <div id={`trace-${turn.turn_id}`}><TurnDetails key={`${connectionScope}:${turn.turn_id}:${revision}`} turn={turn} connectionScope={connectionScope} conversation={conversation} /></div> : null}
       </article>
     })}
   </section>

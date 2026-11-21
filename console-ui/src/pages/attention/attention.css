@@ -167,6 +167,14 @@
 
   .console-attention-row-id > code { overflow-wrap: anywhere; }
 
+  .console-attention-links {
+    display: grid;
+    gap: var(--console-space-1);
+    margin-top: var(--console-space-1);
+    font-size: var(--console-text-label);
+    overflow-wrap: anywhere;
+  }
+
   /* ---------- Dashboard section: the same rows, flat inside the panel (no card in a card) ---------- */
   .console-attention-list.is-summary {
     border-radius: 0;
