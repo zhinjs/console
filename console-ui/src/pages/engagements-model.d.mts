@@ -1,7 +1,8 @@
 import type { ConsoleEngagementSummary, ConsoleVenueDefinition } from '@zhin.js/client'
 
 export function hasRunningEngagement(engagements: readonly Pick<ConsoleEngagementSummary, 'status'>[] | readonly { status: string }[]): boolean
-export function engagementTotals(engagements: readonly { status: string; turns?: number; tokensUsed?: number }[]): { running: number; failed: number; turns: number; tokens: number }
+/** Turn / token totals are `null` when no collaboration in a non-empty list reports them. */
+export function engagementTotals(engagements: readonly { status: string; turns?: number; tokensUsed?: number }[]): { running: number; failed: number; turns: number | null; tokens: number | null }
 export function actorLabel(actor: unknown): string
 export function collaborationEventSummary(event: Readonly<Record<string, unknown>>): string
 export function venueChannelLabel(venue: ConsoleVenueDefinition): string
