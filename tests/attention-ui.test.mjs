@@ -41,7 +41,7 @@ function environment(locale = 'zh-CN') {
   }
   const common = {
     react, 'lucide-react': icons, 'react-router-dom': { Link: 'Link' }, '@zhin.js/client': { cn: (...names) => names.filter(Boolean).join(' ') },
-    '../../i18n': { useI18n: () => ({ t, locale }) }, '@zhin.js/console-ui': { cn: (...names) => names.filter(Boolean).join(' '), Button: 'Button' }, './attention-model.mjs': model,
+    '../../i18n': { useI18n: () => ({ t, locale }) }, '@zhin.js/console-ui': { cn: (...names) => names.filter(Boolean).join(' '), Button: 'Button' }, './attention-model.mjs': model, '../../console-routes.mjs': { CONSOLE_PATHS: { sandbox: '/sandbox' } },
   }
   return { t, state, common }
 }

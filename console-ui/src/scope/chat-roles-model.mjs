@@ -162,6 +162,9 @@ export const CHAT_ROLE_COPY = Object.freeze({
   unpersisted: '当前数据库不支持持久化角色，未保存',
   ownerNeedsGlobal: '授予或撤销所有者需要全局 iam.manage 权限',
   redacted: '上级授予（身份不显示）',
+  simulatedIdentity: '这是 Sandbox 里的模拟发送者，不会发言，角色授予不会生效。',
+  simulatedSender: '模拟发送者，不会发言',
+  simulatedSendersOmitted: '模拟发送者不出现在这里；在 Sandbox 打开「以我的聊天身份发言」后，你的 Sandbox 身份会出现',
 })
 
 /**
@@ -170,10 +173,16 @@ export const CHAT_ROLE_COPY = Object.freeze({
  * - 503 `chat-roles-unpersisted`: the project database cannot store grants, nothing was saved.
  * - 403 / 400 with the Host's own sentence (owner needs global iam.manage, cannot grant above or
  *   equal to your own role, wrong adapter …): that sentence is the answer.
+ * - 400 `simulated-identity` (zhinjs/zhin#1250 第 87 批): the id is a simulated sender on a Sandbox
+ *   adapter that never speaks; the Host's sentence says what to do instead and is shown as sent.
  */
 export function chatRoleRefusal(classified) {
   if (!classified || typeof classified !== 'object') return null
   if (classified.serverCode === 'chat-roles-unpersisted') return { code: 'unpersisted' }
+  if (classified.serverCode === 'simulated-identity') {
+    const message = typeof classified.message === 'string' ? classified.message.trim() : ''
+    return message ? { code: 'simulated-identity', message } : { code: 'simulated-identity' }
+  }
   if (classified.serverCode) return null
   if ((classified.kind === 'forbidden' || classified.kind === 'error') && typeof classified.message === 'string' && classified.message.trim()
     && !/^(?:REST request failed|HTTP \d+)$/u.test(classified.message.trim())) {

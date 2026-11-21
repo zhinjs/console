@@ -16,14 +16,15 @@ import { useConsoleSession } from "../hooks/use-console-session"
 import { OnboardingBanner } from "../components/onboarding-banner"
 import { InstanceUnavailableBanner } from "../components/InstanceUnavailableBanner"
 import { ConnectionIndicator } from "../components/ConnectionIndicator"
-import { CONSOLE_PATHS } from "../console-routes.mjs"
+import { CONSOLE_PATHS, LEGACY_ROUTE_REDIRECTS, isPluginPageRedirect } from "../console-routes.mjs"
 import { objectPageOwnsBreadcrumb } from "../scope/scope-tree.mjs"
 import { ConsoleCommandCenter } from "../components/ConsoleCommandCenter"
 import { LogPanel, LogPanelButton, useLogPanelLayout } from "../components/log-panel/LogPanel"
 import { AttentionBadge } from "../pages/attention/AttentionBadge"
 import "./workspace-navigation.css"
 import { resolveNavigationLocation } from "../navigation-location.mjs"
-import { buildNavigation, routeSectionId, sectionById } from "../navigation-sections.mjs"
+import { buildNavigation, deniedRoutePermissions, routeSectionId, sectionById } from "../navigation-sections.mjs"
+import { StatusState } from "../components/StatusState"
 import { useConsoleAccess } from "../hooks/use-console-access"
 
 import { useIsCompactNav } from '../hooks/useIsMobile'
@@ -92,6 +93,10 @@ export default function DashboardLayout() {
   )
 
   const currentLabel = navigation.current ? routeLabel(navigation.current, i18n.locale) : i18n.t("首页")
+  // A page reached by its address (a link, a bookmark, a redirect) that the menu hides for this
+  // principal: the standard 无权限 panel instead of the page and its refused reads. Redirects pass.
+  const deniedPermissions = navigation.current && !Object.hasOwn(LEGACY_ROUTE_REDIRECTS, navigation.current.path) && !isPluginPageRedirect(navigation.current.path)
+    ? deniedRoutePermissions(navigation.current, access) : null
   const onHome = navigation.current?.path === HOME_PATH
   const navOwner = navigation.current ?? navigation.parent ?? navigation.visible
   const groupLabel = i18n.t(navOwner ? sectionById(routeSectionId(navOwner))?.label ?? navigation.group : navigation.group)
@@ -331,7 +336,7 @@ export default function DashboardLayout() {
             <span aria-current="page" className="console-breadcrumb-current">{currentLabel}</span>
           </nav>}
           <div key={location.pathname} className="console-route-view">
-            <Outlet />
+            {deniedPermissions ? <StatusState kind="forbidden" permissions={deniedPermissions} /> : <Outlet />}
           </div>
         </div>
       </main>

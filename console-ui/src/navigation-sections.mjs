@@ -129,6 +129,22 @@ export function canSeeRoute(route, access = UNRESTRICTED_ACCESS) {
   return allowed && required.every(name => hasConsolePermission(name, access))
 }
 
+/**
+ * Why the principal may not open a page, or null when it may (the same rule as {@link canSeeRoute}):
+ * the page's any-of set when none of it is held, else the `requiredPermissions` that are missing.
+ * The shell shows these on the 无权限 panel instead of the page, so a page reached by its address
+ * never starts reads that can only be refused.
+ */
+export function deniedRoutePermissions(route, access = UNRESTRICTED_ACCESS) {
+  if (canSeeRoute(route, access)) return null
+  const anyOf = routePermissions(route)
+  const adapterScoped = ADAPTER_SCOPED_ROUTE_PERMISSIONS[route?.path] ?? []
+  const reachable = hasAnyConsolePermission(anyOf, access) || adapterScoped.some(name => scopedAdapters(name, access).length > 0)
+  if (!reachable) return [...anyOf]
+  const required = Array.isArray(route?.requiredPermissions) ? route.requiredPermissions : []
+  return required.filter(name => !hasConsolePermission(name, access))
+}
+
 const order = route => route?.meta?.order ?? 999
 
 /**

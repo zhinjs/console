@@ -7,7 +7,7 @@ import { statusFromError } from '../../components/status-state-model.mjs'
 import { useConsoleAccess } from '../../hooks/use-console-access'
 import { pluginRpc } from '../../utils/plugin-rpc'
 import {
-  ADAPTER_CONFIG_RPC, adapterConfigPermission, driftEntryActions, driftKindLabel, driftRows, importRequest, readConfigDrift, writebackRequest, writebackResultText,
+  ADAPTER_CONFIG_RPC, adapterConfigPermission, driftEntryActions, driftKindLabel, driftRows, isDriftDivergence, importRequest, readConfigDrift, writebackRequest, writebackResultText,
   type ConfigActionPermission, type ConfigDrift, type ConfigDriftEntry,
 } from './config-drift-model.mjs'
 
@@ -156,18 +156,22 @@ export function ConfigDriftSection() {
   const rows = driftRows(context?.drift)
   const unverified = context?.drift?.unverified ?? []
   if (!context?.drift || (!rows.length && !unverified.length)) return null
+  // Accounts added in the Console are not drift (#1250 第 88 批): alone they get a neutral note, still with 「写回配置文件」.
+  const consoleAddedOnly = !unverified.length && rows.every(entry => !isDriftDivergence(entry))
   return (
-    <Alert variant="warning" className="console-account-notice">
-      <AlertTitle>{i18n.t('账号与配置文件不一致')}</AlertTitle>
+    <Alert variant={consoleAddedOnly ? 'default' : 'warning'} className="console-account-notice">
+      <AlertTitle>{consoleAddedOnly ? i18n.t('Console 新增的账号还没写进配置文件') : i18n.t('账号与配置文件不一致')}</AlertTitle>
       <AlertDescription className="space-y-2">
-        <p>{i18n.t('Console 管理的账号以已保存的为准，zhin.config.yml 里的改动不会自动生效。逐个选择以哪一份为准。')}</p>
+        <p>{consoleAddedOnly
+          ? i18n.t('这些账号是在 Console 里新增的，按已保存的账号照常运行；需要让 zhin.config.yml 也记下它们时，写回配置文件。')
+          : i18n.t('Console 管理的账号以已保存的为准，zhin.config.yml 里的改动不会自动生效。逐个选择以哪一份为准。')}</p>
         {rows.length ? <ul className="space-y-2">
           {rows.map(entry => {
             const actions = driftEntryActions(context.drift, entry, context.pluginId, access)
             return (
               <li key={entry.id} className="flex flex-wrap items-center gap-2">
                 <code className="break-all">{entry.id}</code>
-                <Badge variant="warning" size="sm">{driftKindLabel(entry.kind, i18n.locale)}</Badge>
+                <Badge variant={isDriftDivergence(entry) ? 'warning' : 'secondary'} size="sm">{driftKindLabel(entry.kind, i18n.locale, entry.origin)}</Badge>
                 {entry.fields.length ? <span className="min-w-0 break-all text-xs" title={entry.fields.map(field => field.path).join(', ')}>
                   {i18n.t('不同的字段：{0}', [entry.fields.map(field => field.sensitive ? i18n.t('{0}（密钥）', [field.path]) : field.path).join(i18n.t('、'))])}
                 </span> : null}

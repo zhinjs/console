@@ -7,6 +7,7 @@ import ts from 'typescript'
 import { createInboxCacheAuthority } from '../console-ui/src/utils/inbox-cache-scope.mjs'
 import { createDiagnosticRequestGate } from '../console-ui/src/pages/endpoint-detail/message-diagnostics.mjs'
 import { configErrorReducer } from '../console-ui/src/hooks/config-error-state.mjs'
+import * as statusStateModel from '../console-ui/src/components/status-state-model.mjs'
 import * as sourceModel from '../console-ui/src/components/PluginConfigForm/source-model.mjs'
 import * as schemaModel from '../console-ui/src/components/PluginConfigForm/schema-model.mjs'
 import { createConfigDraftGuard } from '../console-ui/src/components/PluginConfigForm/draft-guard.mjs'
@@ -80,6 +81,7 @@ function fixture(query = '') {
     react: { ...runtime.hooks, useId: () => 'test-field', createElement: require('react').createElement },
     '../utils/console-client': { getConsoleTransport: () => ({ isConnected: () => true, onConnectionChange: () => () => {} }) },
     './config-error-state.mjs': { configErrorReducer },
+    '../components/status-state-model.mjs': statusStateModel,
     '../utils/console-rpc': { requestConsole }, '../../utils/console-rpc': { requestConsole },
     '../utils/useInboxCacheScope': { useInboxCacheScope: () => authority.current() }, '../../utils/useInboxCacheScope': { useInboxCacheScope: () => authority.current() },
     '../utils/inbox-cache': { getInboxCacheScope: () => authority.current(), isInboxCacheScopeActive: scope => authority.active(scope) },
@@ -1409,6 +1411,21 @@ test('settings page has no file editor or refresh path, and actual read-error re
   assert.equal(button(f.runtime.value, '模型'), undefined, 'model management is reached through /agent/models')
   assert.equal(pageForm(f, 'ai').length, 0)
   assert.equal(f.calls.some(call => call.input.type === 'config:replace-source'), false)
+  f.runtime.unmount()
+})
+
+test('a read refused for lack of ops.config.read shows the 无权限 panel, never 重试读取', async () => {
+  const f = fixture(), root = f.page.EditableConfigPage()
+  f.runtime.mount(() => f.page.EditableConfigSession(root.props))
+  // An operator (no ops.config.*) reaching 运维 → 配置文件 by its address: 403 `forbidden` from the Host.
+  const refused = Object.assign(new Error('缺少权限 ops.config.read'), { details: { httpStatus: 403, serverCode: 'forbidden' } })
+  f.answer('config:get-source', refused, root.props.connectionScope, true); await f.runtime.settle()
+  const panel = elements(f.runtime.value).find(item => item.type === 'status-state')
+  assert.equal(panel?.props.kind, 'forbidden')
+  assert.deepEqual(panel.props.permissions, ['ops.config.read'])
+  assert.equal(panel.props.onRetry, undefined, 'no retry: reading again cannot succeed')
+  assert.equal(button(f.runtime.value, '重试读取'), undefined)
+  assert.equal(label(f.runtime.value).includes('配置读取失败'), false)
   f.runtime.unmount()
 })
 

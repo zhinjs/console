@@ -93,7 +93,7 @@ export default function AccessUsersPage() {
           {canManage ? <Button size="sm" onClick={() => setPending({ kind: 'create' })} disabled={!roles.loaded}><Plus />{i18n.t("新建用户")}</Button> : null}
         </>}
       />
-      {!canManage ? <ReadOnlyNotice /> : null}
+      {!canManage ? <ReadOnlyNotice errorKind={users.errorKind} /> : null}
       <ActionReceipt controller={receipt} />
       {saved.element}
       {users.error && !users.loaded ? <IamLoadError error={users.error} kind={users.errorKind} failure={users.failure} onRetry={users.refresh} /> : (

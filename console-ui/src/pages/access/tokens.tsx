@@ -81,7 +81,7 @@ export default function AccessTokensPage() {
           {canManage ? <Button size="sm" onClick={() => setIssuing(true)} disabled={!users.loaded}><Plus />{i18n.t("为用户签发")}</Button> : null}
         </>}
       />
-      {!canManage ? <ReadOnlyNotice /> : null}
+      {!canManage ? <ReadOnlyNotice errorKind={tokens.errorKind} /> : null}
       <ActionReceipt controller={receipt} />
       {saved.element}
       {tokens.error && !tokens.loaded ? <IamLoadError error={tokens.error} kind={tokens.errorKind} failure={tokens.failure} onRetry={tokens.refresh} /> : (

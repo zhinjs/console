@@ -218,7 +218,7 @@ test('every write is gated by iam.manage and destructive ones are confirmed', ()
   for (const page of ['users', 'roles', 'tokens']) {
     const source = read(`pages/access/${page}.tsx`)
     assert.match(source, /useCanManageIam\(\)/, page)
-    assert.match(source, /<ReadOnlyNotice \/>/, page)
+    assert.match(source, /<ReadOnlyNotice errorKind=\{\w+\.errorKind\} \/>/, page)
     assert.match(source, /<ConfirmDialog|danger: true/, `${page} confirms destructive actions`)
   }
   const users = read('pages/access/users.tsx')
