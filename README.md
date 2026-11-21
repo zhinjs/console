@@ -106,7 +106,7 @@ Console 没有单独的演示构建：公开演示是一台真实 Host，访客�
 
 ### SDK 版本
 
-只使用一代 SDK（zhin 1.4 发布线）：`@zhin.js/client` 1.2.x、`@zhin.js/contract` 1.1.x、`@zhin.js/ai` 1.7.x、`@zhin.js/console-protocol` 1.4.x，与 zhin 仓库 `packages/console/*` 当前发布线一致（npm 的 `latest`）。`package.json` 对每个 `@zhin.js/*` 依赖都用 `~` 范围：npm 上还有不属于这条线的 `@zhin.js/client` 2.x，`^` 会把它装进来，并在 lockfile 里产生第二份 contract / console-protocol / ai；新的 minor 也要先在 Console 里核对后再升级。`tests/console-contract.test.mjs` 检查这些范围，以及 lockfile 里每个包只有一个版本。
+只使用一代 SDK（zhin 1.10 发布线）：`@zhin.js/client` 1.5.x、`@zhin.js/contract` 1.1.x、`@zhin.js/ai` 1.9.x、`@zhin.js/console-protocol` 1.9.x、`@zhin.js/console-ui` 1.2.x，与 zhin 仓库 `packages/console/*` 当前发布线一致（npm 的 `latest`）。`package.json` 对每个 `@zhin.js/*` 依赖都用 `~` 范围：npm 上还有不属于这条线的 `@zhin.js/client` 2.x，`^` 会把它装进来，并在 lockfile 里产生第二份 contract / console-protocol / ai；新的 minor 也要先在 Console 里核对后再升级。`tests/console-contract.test.mjs` 检查这些范围，以及 lockfile 里每个包只有一个版本。
 
 Console 需要的协议常量、类型与打码规则都直接从已发布的包导入，不再保留本地替身：打码与占位判断（`maskConsoleEnvValue` / `isConsoleEnvMaskPlaceholder`）、聊天成员 RPC 与类型（`CHAT_PRINCIPALS_RPC`、`ConsoleChatPrincipal` 等）、「需要你处理」的 RPC 与类型（`ATTENTION_RPC`、`ConsoleAttentionKind`）、Login Assist 的 RPC 与枚举、全局插件开关的权限判断，以及 `@zhin.js/client` 的 headless 账号 API（`AdapterAccountsProvider` / `useAdapterAccounts` / `AdapterAccountRow`）。AI 与模型页的推理视图类型（`environmentReferences`、`lastCall`、拒绝原因等）定义在 Host 端的 `@zhin.js/agent`，`@zhin.js/console-protocol` 1.4.0 没有导出，所以仍在 `console-ui/src/pages/inference/model.d.mts` 里声明。对旧 Host 的检测与降级保持不变：缺少某个 RPC 或字段时，相应入口隐藏或退回旧界面。
 
