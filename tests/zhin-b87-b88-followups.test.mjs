@@ -305,11 +305,11 @@ test('/sandbox and /agent/sessions keep the 无权限 panel: their Host routes t
   const sandbox = { path: '/sandbox', meta: { group: '会话' } }
   const sessions = { path: '/agent/sessions', meta: { group: '会话' } }
   assert.deepEqual(deniedRoutePermissions(sandbox, qqScoped), ['endpoint.view', 'endpoint.operate'])
-  assert.deepEqual(deniedRoutePermissions(sessions, qqScoped), ['endpoint.view'])
+  assert.deepEqual(deniedRoutePermissions(sessions, qqScoped), ['agent.view'])
   // A global viewer that lacks what the page needs still sees the panel; one that holds it does not.
   const statusOnly = createConsoleAccess({ permissions: ['status.view', 'self.chat-identity'] })
   assert.deepEqual(deniedRoutePermissions(sandbox, statusOnly), ['endpoint.view', 'endpoint.operate'])
-  assert.deepEqual(deniedRoutePermissions(sessions, statusOnly), ['endpoint.view'])
+  assert.deepEqual(deniedRoutePermissions(sessions, statusOnly), ['agent.view'])
   assert.deepEqual(deniedRoutePermissions({ path: '/ops/config', meta: { group: '运维' } }, statusOnly), ['ops.config.read', 'ops.config.write'])
   const viewer = createConsoleAccess({ permissions: protocol.CONSOLE_BUILTIN_ROLES.viewer.permissions })
   assert.equal(deniedRoutePermissions(sandbox, viewer), null)

@@ -63,7 +63,7 @@ export const ROUTE_PERMISSIONS = Object.freeze({
   '/scope/:adapter': ['endpoint.view', 'feature.view', 'endpoint.manage'],
   '/scope/:adapter/:endpoint': ['endpoint.view', 'feature.view', 'endpoint.manage'],
   '/scope/:adapter/:endpoint/:conversation': ['endpoint.view', 'feature.view'],
-  '/agent/sessions': ['endpoint.view'],
+  '/agent/sessions': ['agent.view'],
   '/features': ['feature.view'],
   '/features/global/:plugin': ['feature.view'],
   '/features/ai': ['agent.view'],
