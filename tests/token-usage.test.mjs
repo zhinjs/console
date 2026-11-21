@@ -182,3 +182,15 @@ test('the page is registered under 概览 and reads plugin.root.usage-stats', as
   const page = await readFile(new URL('../console-ui/src/pages/token-usage.tsx', import.meta.url), 'utf8')
   assert.match(page, /pluginRpc<unknown>\('root', USAGE_METHOD/)
 })
+
+test('splitSessionKey reads keys with the protocol parser and does not guess malformed ones', async () => {
+  const { parseConversationSessionKey } = await import('@zhin.js/console-protocol')
+  // Empty account: the protocol parses it (#1250 b80), so the row keeps platform / scope / id.
+  assert.deepEqual(splitSessionKey({ sessionKey: 'qq::private:1' }), { sessionKey: 'qq::private:1', platform: 'qq', endpoint: '', scope: 'private', sceneId: '1' })
+  // Behaviour difference: a key with an empty platform, kind or id never parses in the protocol, so
+  // the whole key is shown as the session id (it used to be split into empty fields).
+  for (const key of [':ep:group:1', 'qq:ep::1', 'qq:ep:group:']) {
+    assert.equal(parseConversationSessionKey(key), undefined, key)
+    assert.deepEqual(splitSessionKey({ sessionKey: key }), { sessionKey: key, platform: '', endpoint: '', scope: '', sceneId: key }, key)
+  }
+})

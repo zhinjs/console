@@ -137,18 +137,15 @@ test('Host attention items for MCP are rendered with the title and detail the Ho
 
 // ------------------------------------------------------------- contract
 
-test('the local contract mirror matches the REST path and the published protocol once it ships', async () => {
+test('the MCP contract is the published protocol, re-exported', async () => {
   const contract = await read('contracts/mcp.ts')
-  assert.match(contract, /export const CONSOLE_MCP_TEST_PATH = '\/introspection\/mcp\/test'/)
-  for (const status of ['connected', 'failed', 'idle', 'not_loaded']) assert.match(contract, new RegExp(`'${status}'`))
-  for (const category of mcp.MCP_FAILURE_CATEGORIES) assert.match(contract, new RegExp(`'${category}'`))
+  assert.match(contract, /from '@zhin\.js\/console-protocol'/)
+  assert.doesNotMatch(contract, /export const CONSOLE_MCP_TEST_PATH =/, 'no local copy of the path')
+  const protocol = await import('@zhin.js/console-protocol')
+  assert.equal(protocol.CONSOLE_MCP_TEST_PATH, '/introspection/mcp/test')
   assert.deepEqual([...mcp.MCP_SERVER_STATUSES], ['connected', 'failed', 'idle', 'not_loaded'])
   const rest = await read('contracts/zhin-console.ts')
-  assert.match(rest, /MCP_TEST: '\/api\/introspection\/mcp\/test'/)
-  const protocol = await import('@zhin.js/console-protocol')
-  if ('CONSOLE_MCP_TEST_PATH' in protocol) {
-    assert.equal(protocol.CONSOLE_MCP_TEST_PATH, '/introspection/mcp/test', 'switch contracts/mcp.ts to re-export the protocol')
-  }
+  assert.match(rest, /MCP_TEST: `\/api\$\{CONSOLE_MCP_TEST_PATH\}`/)
   assert.equal(MCP_CONFIG_HREF, '/ops/config?section=ai%3Aservices')
 })
 

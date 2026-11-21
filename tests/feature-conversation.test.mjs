@@ -205,3 +205,18 @@ test('per-endpoint conversation override counts are optional on the matrix and i
   assert.equal(old.conversationOverrides, undefined)
   assert.deepEqual(conversationOverrideCounts(undefined, 'qq'), [])
 })
+
+test('conversation keys are the protocol helpers under the Console field names', async () => {
+  const protocol = await import('@zhin.js/console-protocol')
+  const ref = { adapter: 'qq', endpoint: '10001', kind: 'group', id: 'a/b%c:d' }
+  assert.equal(conversationKey(ref), protocol.formatFeatureConversationKey({ adapter: 'qq', endpointId: '10001', kind: 'group', id: 'a/b%c:d' }))
+  assert.deepEqual(parseConversationKey(conversationKey(ref)), ref)
+  assert.equal(escapeConversationId, protocol.escapeFeatureConversationId)
+  assert.equal(unescapeConversationId, protocol.unescapeFeatureConversationId)
+  // The protocol answers undefined for a key that does not parse; the Console keeps null.
+  assert.equal(protocol.parseFeatureConversationKey('qq/10001'), undefined)
+  assert.equal(parseConversationKey('qq/10001'), null)
+  // Invalid references throw a TypeError (the protocol's), including missing fields that would otherwise read as "undefined".
+  assert.throws(() => conversationKey({ adapter: 'qq', endpoint: 'e', kind: 'room', id: '1' }), TypeError)
+  assert.throws(() => conversationKey({ endpoint: 'e', kind: 'group', id: '1' }), TypeError)
+})
