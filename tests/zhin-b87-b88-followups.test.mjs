@@ -18,8 +18,9 @@ import {
 } from '../console-ui/src/scope/chat-identity-model.mjs'
 import { normalizeAttentionItem } from '../console-ui/src/pages/attention/attention-model.mjs'
 import { driftKindLabel, driftRows, isDriftDivergence, readConfigDrift } from '../console-ui/src/pages/scope/config-drift-model.mjs'
-import { deniedRoutePermissions } from '../console-ui/src/navigation-sections.mjs'
+import { buildNavigation, canSeeRoute, deniedRoutePermissions } from '../console-ui/src/navigation-sections.mjs'
 import { createConsoleAccess } from '../console-ui/src/utils/console-access.mjs'
+import { scopeTabAllowed } from '../console-ui/src/scope/scope-tree.mjs'
 
 const source = path => readFileSync(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')
 const cjk = /[㐀-鿿]/u
@@ -115,6 +116,22 @@ test('the grant picker disables simulated senders and explains the omitted ones 
   assert.doesNotMatch(older, /disabled/)
 })
 
+test('a disabled simulated option tells a screen reader why (aria-label, and a note under the list)', () => {
+  const recent = readRecentIdentities({ identities: [{ adapter: 'sandbox', userId: 'console-u1' }, { adapter: 'sandbox', userId: 'sandbox-user', simulatedSender: true }] })
+  const html = renderPicker({ recent })
+  const options = html.match(/<button[^>]*role="option"[^>]*>.*?<\/button>/gu)
+  assert.doesNotMatch(options[0], /aria-label=|aria-describedby=/, 'an option that can be picked reads its content')
+  assert.match(options[1], /aria-label="[^"]*sandbox \/ sandbox-user[^"]*：模拟发送者，不会发言，不能授予角色"/)
+  const described = /aria-describedby="([^"]+)"/.exec(options[1])?.[1]
+  assert.ok(described)
+  assert.match(html, new RegExp(`<p id="${described.replace(/[^\w-]/g, ch => `\\${ch}`)}" class="console-admin-note" role="note">标为「模拟发送者，不会发言」的选项不能选`))
+  const english = renderPicker({ recent }, 'en')
+  assert.match(english, /aria-label="[^"]*sandbox \/ sandbox-user[^"]*: Simulated sender, never speaks; roles cannot be granted to it"/)
+  assert.match(english, /Options marked &quot;Simulated sender, never speaks&quot; cannot be picked/)
+  // No simulated option: no note.
+  assert.doesNotMatch(renderPicker({ recent: readRecentIdentities({ identities: [{ adapter: 'qq', userId: '1' }] }) }), /不能选/)
+})
+
 // ── (b) 聊天成员 ──────────────────────────────────────────────────────────────────────────────
 
 test('a member whose identities are simulated senders reads 「模拟发送者，不会发言」 and cannot be promoted', () => {
@@ -131,6 +148,11 @@ test('a member whose identities are simulated senders reads 「模拟发送者�
   const panels = source('scope/ChatIdentityPanels.tsx')
   assert.match(panels, /identity\.simulatedSender \? <em>\{i18n\.t\(CHAT_ROLE_COPY\.simulatedSender\)\}<\/em>/, 'the identity chip says so too')
   assert.match(panels, /disabled=\{busy \|\| !speaks\}/, '「设为全局 owner」 is disabled without an identity that speaks')
+  // The disabled button says what is missing: no identity that speaks (none at all, or only simulated senders).
+  assert.match(panels, /title=\{speaks \? undefined : i18n\.t\(CHAT_ROLE_COPY\.noSpeakingIdentity\)\}/)
+  assert.doesNotMatch(panels, /title=\{speaks \? undefined : i18n\.t\(CHAT_ROLE_COPY\.simulatedSender\)\}/)
+  assert.equal(CHAT_ROLE_COPY.noSpeakingIdentity, '还没有会发言的聊天身份')
+  assert.equal(translate('en', CHAT_ROLE_COPY.noSpeakingIdentity), 'No chat identity that speaks yet')
   assert.equal(translate('en', CHAT_ROLE_COPY.simulatedSender), 'Simulated sender, never speaks')
 })
 
@@ -237,6 +259,71 @@ test('a page the principal cannot open is replaced by the 无权限 panel naming
   assert.match(layout, /\{deniedPermissions \? <StatusState kind="forbidden" permissions=\{deniedPermissions\} \/> : <Outlet \/>\}/)
 })
 
+// The object tree is read at whatever scope a binding has (ADR 0049 §3): an adapter-scoped user opens it.
+const SCOPE_ROUTES = [
+  { path: '/scope', meta: { group: '会话' } },
+  { path: '/scope/:adapter', meta: { group: '会话', hideInMenu: true } },
+  { path: '/scope/:adapter/:endpoint', meta: { group: '会话', hideInMenu: true } },
+  { path: '/scope/:adapter/:endpoint/:conversation', meta: { group: '会话', hideInMenu: true } },
+]
+const qqScoped = createConsoleAccess({
+  permissions: ['self.chat-identity'],
+  bindings: [{ role: 'qq-ops', scope: { kind: 'adapter', key: 'qq' }, permissions: ['endpoint.view', 'endpoint.operate', 'iam.manage'] }],
+})
+
+test('an adapter-scoped user opens the object tree; the shell does not put 无权限 in front of it', () => {
+  const qq = { level: 'adapter', adapter: 'qq' }
+  assert.equal(scopeTabAllowed('chat', qq, qqScoped), true)
+  assert.equal(scopeTabAllowed('roles', { level: 'endpoint', adapter: 'qq', endpoint: 'bot1' }, qqScoped), true)
+  for (const route of SCOPE_ROUTES) assert.equal(deniedRoutePermissions(route, qqScoped), null, route.path)
+  assert.equal(canSeeRoute(SCOPE_ROUTES[0], qqScoped), true, 'its entry is in the menu')
+  const menu = buildNavigation(SCOPE_ROUTES, qqScoped).flatMap(tier => tier.sections.flatMap(section => section.routes.map(route => route.path)))
+  assert.deepEqual(menu, ['/scope'])
+  // Its tabs still say what is missing: the 功能 tab needs feature.view, held nowhere.
+  assert.equal(scopeTabAllowed('features', qq, qqScoped), false)
+  // A binding on another adapter does not open qq's tabs, but the tree itself still opens.
+  const other = createConsoleAccess({ permissions: [], bindings: [{ scope: { kind: 'adapter', key: 'kook' }, permissions: ['endpoint.view'] }] })
+  assert.equal(scopeTabAllowed('chat', qq, other), false)
+  assert.equal(deniedRoutePermissions(SCOPE_ROUTES[1], other), null)
+  // Without any binding the pages and their tabs explain it themselves (ObjectPageLayout's per-tab 无权限).
+  const nothing = createConsoleAccess({ permissions: ['self.chat-identity'] })
+  for (const route of SCOPE_ROUTES) assert.equal(deniedRoutePermissions(route, nothing), null, route.path)
+  assert.equal(canSeeRoute(SCOPE_ROUTES[0], nothing), false, 'but the menu does not offer it')
+  assert.equal(scopeTabAllowed('overview', {}, nothing), false)
+  const layout = source('scope/ObjectPageLayout.tsx')
+  assert.match(layout, /scopeTabAllowed\(id, scope, access\)\s*\? panels\[id\][^:]*: <StatusState kind="forbidden" permissions=\{SCOPE_TAB_PERMISSIONS\[id\]\} \/>/u)
+})
+
+test('/sandbox and /agent/sessions keep the 无权限 panel: their Host routes take global bindings only', () => {
+  // `authorizeConsoleWebSocket('/sandbox')` and `authorizeConsoleHttp('/agent/sessions', '/agent/trace-archive')`
+  // check the grant without a target (global); a scoped endpoint.operate / endpoint.view cannot use them.
+  assert.equal(protocol.CONSOLE_WS_PERMISSIONS['/sandbox'], 'endpoint.operate')
+  assert.equal(protocol.resolveConsoleHttpPermission('GET', '/agent/sessions/x/tree')?.permission, 'agent.view')
+  assert.equal(protocol.resolveConsoleHttpPermission('GET', '/agent/trace-archive/sessions')?.permission, 'agent.view')
+  const grants = [{ scope: { kind: 'adapter', key: 'qq' }, permissions: ['endpoint.view', 'endpoint.operate', 'iam.manage'] }]
+  assert.equal(protocol.grantsAllow(grants, 'endpoint.operate'), false, 'the socket check (no target) refuses a scoped binding')
+  const sandbox = { path: '/sandbox', meta: { group: '会话' } }
+  const sessions = { path: '/agent/sessions', meta: { group: '会话' } }
+  assert.deepEqual(deniedRoutePermissions(sandbox, qqScoped), ['endpoint.view', 'endpoint.operate'])
+  assert.deepEqual(deniedRoutePermissions(sessions, qqScoped), ['endpoint.view'])
+  // A global viewer that lacks what the page needs still sees the panel; one that holds it does not.
+  const statusOnly = createConsoleAccess({ permissions: ['status.view', 'self.chat-identity'] })
+  assert.deepEqual(deniedRoutePermissions(sandbox, statusOnly), ['endpoint.view', 'endpoint.operate'])
+  assert.deepEqual(deniedRoutePermissions(sessions, statusOnly), ['endpoint.view'])
+  assert.deepEqual(deniedRoutePermissions({ path: '/ops/config', meta: { group: '运维' } }, statusOnly), ['ops.config.read', 'ops.config.write'])
+  const viewer = createConsoleAccess({ permissions: protocol.CONSOLE_BUILTIN_ROLES.viewer.permissions })
+  assert.equal(deniedRoutePermissions(sandbox, viewer), null)
+  assert.equal(deniedRoutePermissions(sessions, viewer), null)
+  assert.deepEqual(deniedRoutePermissions({ path: '/ops/config', meta: { group: '运维' } }, viewer), ['ops.config.read', 'ops.config.write'], 'viewer has no raw config')
+  assert.deepEqual(deniedRoutePermissions({ path: '/ops/terminal', meta: { group: '运维' } }, viewer), ['ops.terminal'])
+})
+
+test('「Method not allowed」 is not a permission refusal; 「not allowed to」 still is', () => {
+  assert.notEqual(statusFromError(new Error('Method not allowed')).kind, 'forbidden')
+  assert.notEqual(statusFromError(new Error('HTTP 405 Method Not Allowed')).kind, 'forbidden')
+  assert.equal(statusFromError(new Error('You are not allowed to read this configuration')).kind, 'forbidden')
+})
+
 test('访问控制 never says 「只能查看」 next to a 无权限 panel', () => {
   const render = (permissions, errorKind) => {
     const { ReadOnlyNotice } = component('pages/access/access-components.tsx', {
@@ -256,6 +343,7 @@ test('访问控制 never says 「只能查看」 next to a 无权限 panel', () 
 test('every new string has an English translation', () => {
   for (const key of [
     CHAT_ROLE_COPY.simulatedIdentity, CHAT_ROLE_COPY.simulatedSender, CHAT_ROLE_COPY.simulatedSendersOmitted, '打开 Sandbox', 'Console 新增',
+    CHAT_ROLE_COPY.noSpeakingIdentity, CHAT_ROLE_COPY.simulatedCannotGrant, CHAT_ROLE_COPY.simulatedOptionsNote,
     'Console 新增的账号还没写进配置文件', '这些账号是在 Console 里新增的，按已保存的账号照常运行；需要让 zhin.config.yml 也记下它们时，写回配置文件。',
   ]) {
     assert.ok(Object.hasOwn(englishMessages, key), key)

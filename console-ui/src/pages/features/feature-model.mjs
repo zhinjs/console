@@ -13,7 +13,7 @@ import { translate } from '../../i18n/locale.mjs'
 export function classifyFeatureRpcError(error) {
   const message = error instanceof Error ? error.message : String(error ?? '')
   if (/unknown rpc type|unknown request type|not supported|unsupported rpc/i.test(message)) return 'unsupported'
-  if (/\bHTTP 40[13]\b|forbidden|permission denied|not allowed|scope does not allow/i.test(message)) return 'forbidden'
+  if (/\bHTTP 40[13]\b|forbidden|permission denied|\bnot allowed to\b|scope does not allow/i.test(message)) return 'forbidden'
   // The Host's `feature.*` denial reads `没有 <permission> 权限`.
   if (/没有\s*\S+\s*权限/.test(message)) return 'forbidden'
   return 'error'

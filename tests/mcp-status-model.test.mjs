@@ -150,6 +150,26 @@ test('the MCP contract is the published protocol, re-exported', async () => {
   assert.equal(MCP_CONFIG_HREF, '/ops/config?section=ai%3Aservices')
 })
 
+test('the local category and status lists equal the protocol types (compile time and run time)', async () => {
+  // The protocol exports only the types: read its declaration and compare the union members.
+  const declaration = await readFile(new URL('./status.d.ts', import.meta.resolve('@zhin.js/console-protocol')), 'utf8')
+  const union = name => {
+    const body = new RegExp(`export type ${name} = ([^;]+);`, 'u').exec(declaration)?.[1]
+    assert.ok(body, `${name} is declared by the protocol`)
+    return [...body.matchAll(/'([^']+)'/gu)].map(match => match[1]).sort()
+  }
+  assert.deepEqual([...mcp.MCP_FAILURE_CATEGORIES].sort(), union('ConsoleMcpFailureCategory'))
+  assert.deepEqual([...mcp.MCP_SERVER_STATUSES].sort(), union('ConsoleMcpServerStatus'))
+  // The .d.mts tuples (what `contracts/mcp.ts` checks against the protocol under tsc) are the runtime values.
+  const typings = await read('pages/introspection/mcp-status-model.d.mts')
+  const tuple = name => [...(new RegExp(`export const ${name}: readonly \\[([^\\]]*)\\]`, 'u').exec(typings)?.[1] ?? '').matchAll(/'([^']+)'/gu)].map(match => match[1])
+  assert.deepEqual(tuple('MCP_FAILURE_CATEGORIES'), [...mcp.MCP_FAILURE_CATEGORIES])
+  assert.deepEqual(tuple('MCP_SERVER_STATUSES'), [...mcp.MCP_SERVER_STATUSES])
+  const contract = await read('contracts/mcp.ts')
+  assert.match(contract, /failureCategories: Same<\(typeof MCP_FAILURE_CATEGORIES\)\[number\], ProtocolFailureCategory>/)
+  assert.match(contract, /serverStatuses: Same<\(typeof MCP_SERVER_STATUSES\)\[number\], ProtocolServerStatus>/)
+})
+
 // ------------------------------------------------------------- detail panel
 
 const detailSource = await read('pages/introspection/McpServerDetail.tsx')
@@ -287,6 +307,44 @@ test('an English Console does not show the Host\'s Chinese error text (console#1
   for (const presentation of [forbidden, failed].map(outcome => mcp.mcpTestPresentation(outcome, 'en'))) {
     assert.doesNotMatch(`${presentation.label} ${presentation.detail}`, /[\u3400-\u9fff]/u)
   }
+})
+
+test('an English Console keeps the code, the permission and the Host text of a refusal', () => {
+  const outcome = readMcpTestResponse({ status: 403, body: { success: false, code: 'forbidden', error: '缺少权限 agent.configure' } })
+  assert.equal(outcome.code, 'forbidden')
+  const en = mcpTestPresentation(outcome, 'en')
+  assert.equal(en.detail, 'This instance is read-only (such as a demo), or you lack this permission.')
+  assert.equal(en.code, 'forbidden')
+  assert.equal(en.permission, 'agent.configure')
+  assert.deepEqual(en.notes, ['Requires permission: agent.configure', 'Error code: forbidden'])
+  assert.equal(en.hostMessage, '缺少权限 agent.configure', 'the original text stays, out of the main line')
+  for (const line of [en.label, en.detail, ...en.notes]) assert.doesNotMatch(line, /[\u3400-\u9fff]/u)
+  // Chinese Console: the Host sentence is the detail; the permission is in it, so no extra line.
+  const zh = mcpTestPresentation(outcome, 'zh-CN')
+  assert.equal(zh.detail, '缺少权限 agent.configure')
+  assert.deepEqual(zh.notes, ['错误代码：forbidden'])
+  assert.equal(zh.hostMessage, null)
+  // A permission named only by the code, and codes that name none.
+  assert.equal(mcp.permissionFromRefusal('', 'forbidden:agent.configure'), 'agent.configure')
+  assert.equal(mcp.permissionFromRefusal('Forbidden', 'forbidden'), null)
+  assert.equal(mcp.permissionFromRefusal('see ai.mcpServers'), null, 'only Console permission names')
+  // Not forbidden: no permission line, the code still shown; an older Host without code adds nothing.
+  const failed = mcpTestPresentation(readMcpTestResponse({ status: 500, body: { success: false, code: 'internal_error', error: '内部错误' } }), 'en')
+  assert.equal(failed.permission, null)
+  assert.deepEqual(failed.notes, ['Error code: internal_error'])
+  assert.equal(failed.hostMessage, '内部错误')
+  const old = mcpTestPresentation(readMcpTestResponse({ status: 403, body: { success: false, error: 'Forbidden' } }), 'en')
+  assert.equal(old.detail, 'Forbidden')
+  assert.deepEqual(old.notes, [])
+  assert.equal(old.hostMessage, null)
+})
+
+test('the detail panel shows the notes and keeps the Host text under 详情', async () => {
+  const { runtime, testButton } = mountDetail({ name: 'fs', status: 'idle' }, { reply: async () => ({ status: 403, body: { success: false, code: 'forbidden', error: '缺少权限 agent.configure' } }) })
+  testButton().props.onClick(); await flush(); runtime.render()
+  const result = nodes(runtime.value).find(node => node.type === 'alert' && node.props.variant === 'warning')
+  assert.match(text(result), /错误代码：forbidden/)
+  assert.equal(nodes(result).some(node => node.type === 'details'), false, 'zh-CN: the Host text is already the detail')
 })
 
 test('429 from the test shows how long to wait', async () => {

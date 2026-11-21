@@ -1,3 +1,17 @@
+import { serverCodeOf } from '../components/status-state-model.mjs'
+
+/**
+ * Whether a failed `config:get-source` was refused for lack of permission: HTTP 403 or the Host's
+ * `forbidden` / `permission_denied` code, nothing else. A 401 (signed out, expired session) is
+ * not a missing `ops.config.read`: it stays a read failure, and the session handling signs in again.
+ */
+export function isReadDenied(cause) {
+ const details = cause !== null && typeof cause === 'object' && cause.details !== null && typeof cause.details === 'object' ? cause.details : {}
+ if (Number(details.httpStatus) === 403) return true
+ const code = serverCodeOf(cause)
+ return code === 'forbidden' || code === 'permission_denied'
+}
+
 /** `readDenied` is present only while the last read was refused for lack of permission. */
 function withoutDenied(state) {
  const { readDenied: _denied, ...rest } = state

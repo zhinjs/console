@@ -103,7 +103,14 @@ export function McpServerDetail({ item }: { item: CapabilityItem }) {
             <Alert variant={presentation.tone} role={presentation.role} aria-live="polite">
               <AlertTitle>{presentation.label}</AlertTitle>
               <AlertDescription>
-                <p>{presentation.detail}</p>
+                <p title={presentation.hostMessage ?? undefined}>{presentation.detail}</p>
+                {presentation.notes?.map(note => <p key={note} className="text-xs text-muted-foreground">{note}</p>)}
+                {presentation.hostMessage ? (
+                  <details className="text-xs text-muted-foreground">
+                    <summary>{i18n.t('详情')}</summary>
+                    <p lang="zh-CN">{presentation.hostMessage}</p>
+                  </details>
+                ) : null}
                 <p className="text-xs text-muted-foreground">{i18n.t('测试于 {0}', [new Date(test.at).toLocaleTimeString(i18n.locale)])}</p>
               </AlertDescription>
             </Alert>

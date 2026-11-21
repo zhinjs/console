@@ -12,3 +12,17 @@ export {
   type ConsoleMcpServerRow,
   type ConsoleMcpServerStatus,
 } from '@zhin.js/console-protocol'
+
+import type { ConsoleMcpFailureCategory as ProtocolFailureCategory, ConsoleMcpServerStatus as ProtocolServerStatus } from '@zhin.js/console-protocol'
+import type { MCP_FAILURE_CATEGORIES, MCP_SERVER_STATUSES } from '../pages/introspection/mcp-status-model.mjs'
+
+/**
+ * Compile-time check that the model's runtime lists (declared as literal tuples in
+ * `mcp-status-model.d.mts`) name exactly the protocol's categories and statuses; the test checks
+ * the `.mjs` values against those tuples and against the protocol's declaration.
+ */
+type Same<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false
+export const MCP_CONTRACT_MATCHES: {
+  readonly failureCategories: Same<(typeof MCP_FAILURE_CATEGORIES)[number], ProtocolFailureCategory>
+  readonly serverStatuses: Same<(typeof MCP_SERVER_STATUSES)[number], ProtocolServerStatus>
+} = { failureCategories: true, serverStatuses: true }

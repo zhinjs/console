@@ -157,7 +157,7 @@ export function MyChatIdentitySection({ highlight = false }: { highlight?: boole
                   <Crown aria-hidden="true" />
                   <span>{i18n.t('还没有聊天主人（全局 owner）。你持有全局 iam.manage，可以把这个人设为全局 owner。')}</span>
                   <Button size="sm" onClick={() => setConfirmOwner(true)} disabled={busy || !speaks}
-                    title={speaks ? undefined : i18n.t(CHAT_ROLE_COPY.simulatedSender)}>{i18n.t('设为全局 owner')}</Button>
+                    title={speaks ? undefined : i18n.t(CHAT_ROLE_COPY.noSpeakingIdentity)}>{i18n.t('设为全局 owner')}</Button>
                 </div>
               ) : null}
               <div className="console-chat-bind">
@@ -254,6 +254,8 @@ export function GrantIdentityPicker({ scope, alias, value, onPick, onUnsupported
   useEffect(() => { if (source.status === 'unsupported') onUnsupported?.() }, [source.status, onUnsupported])
   if (source.status === 'unsupported') return null
   const candidates = grantCandidates({ recent: source.recent, principals: source.principals, alias, query }).slice(0, 30)
+  const anySimulated = candidates.some(candidate => candidate.simulatedSender === true)
+  const simulatedNoteId = `${listId}-simulated`
   return (
     <div className="console-chat-picker">
       <label className="console-chat-picker-search">
@@ -266,8 +268,12 @@ export function GrantIdentityPicker({ scope, alias, value, onPick, onUnsupported
             const selected = value?.adapter === candidate.adapter && value.userId === candidate.userId
             // A simulated sender never speaks; the Host refuses a grant to it (400 `simulated-identity`).
             const simulated = candidate.simulatedSender === true
+            // A disabled option is skipped by Tab and its greyed look says nothing to a screen reader:
+            // its accessible name carries the reason, and the note under the list explains it.
             return (
               <button key={candidate.key} type="button" role="option" aria-selected={selected} aria-disabled={simulated || undefined} disabled={simulated}
+                aria-label={simulated ? i18n.t('{0}：{1}', [`${candidate.label} (${candidate.adapter} / ${candidate.userId})`, i18n.t(CHAT_ROLE_COPY.simulatedCannotGrant)]) : undefined}
+                aria-describedby={simulated ? simulatedNoteId : undefined}
                 className={selected ? 'console-chat-picker-option is-selected' : 'console-chat-picker-option'} onClick={() => { if (!simulated) onPick(candidate) }}>
                 <span className="console-chat-picker-name">{candidate.label}</span>
                 <code>{candidate.adapter} / {candidate.userId}</code>
@@ -276,6 +282,9 @@ export function GrantIdentityPicker({ scope, alias, value, onPick, onUnsupported
             )
           }) : <p className="console-admin-note">{query ? i18n.t('没有匹配的人。') : i18n.t('这一层最近没有人发言，可展开「高级」手动填写。')}</p>}
       </div>
+      {source.status === 'ready' && anySimulated ? (
+        <p id={simulatedNoteId} className="console-admin-note" role="note">{i18n.t(CHAT_ROLE_COPY.simulatedOptionsNote)}</p>
+      ) : null}
       {source.status === 'ready' && source.simulatedOmitted.length ? (
         <p className="console-admin-note" role="note">{i18n.t(CHAT_ROLE_COPY.simulatedSendersOmitted)}</p>
       ) : null}

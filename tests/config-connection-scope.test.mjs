@@ -6,7 +6,7 @@ import { createRequire } from 'node:module'
 import ts from 'typescript'
 import { createInboxCacheAuthority } from '../console-ui/src/utils/inbox-cache-scope.mjs'
 import { createDiagnosticRequestGate } from '../console-ui/src/pages/endpoint-detail/message-diagnostics.mjs'
-import { configErrorReducer } from '../console-ui/src/hooks/config-error-state.mjs'
+import * as configErrorState from '../console-ui/src/hooks/config-error-state.mjs'
 import * as statusStateModel from '../console-ui/src/components/status-state-model.mjs'
 import * as sourceModel from '../console-ui/src/components/PluginConfigForm/source-model.mjs'
 import * as schemaModel from '../console-ui/src/components/PluginConfigForm/schema-model.mjs'
@@ -80,7 +80,7 @@ function fixture(query = '') {
   const mocks = {
     react: { ...runtime.hooks, useId: () => 'test-field', createElement: require('react').createElement },
     '../utils/console-client': { getConsoleTransport: () => ({ isConnected: () => true, onConnectionChange: () => () => {} }) },
-    './config-error-state.mjs': { configErrorReducer },
+    './config-error-state.mjs': configErrorState,
     '../components/status-state-model.mjs': statusStateModel,
     '../utils/console-rpc': { requestConsole }, '../../utils/console-rpc': { requestConsole },
     '../utils/useInboxCacheScope': { useInboxCacheScope: () => authority.current() }, '../../utils/useInboxCacheScope': { useInboxCacheScope: () => authority.current() },
@@ -1427,6 +1427,30 @@ test('a read refused for lack of ops.config.read shows the 无权限 panel, neve
   assert.equal(button(f.runtime.value, '重试读取'), undefined)
   assert.equal(label(f.runtime.value).includes('配置读取失败'), false)
   f.runtime.unmount()
+})
+
+test('a 401 while reading is a read failure (sign in again), not a missing ops.config.read', async () => {
+  const f = fixture(), root = f.page.EditableConfigPage()
+  f.runtime.mount(() => f.page.EditableConfigSession(root.props))
+  const expired = Object.assign(new Error('Invalid or missing token'), { details: { httpStatus: 401, serverCode: 'unauthorized' } })
+  f.answer('config:get-source', expired, root.props.connectionScope, true); await f.runtime.settle()
+  assert.equal(elements(f.runtime.value).some(item => item.type === 'status-state' && item.props.kind === 'forbidden'), false)
+  assert.ok(label(f.runtime.value).includes('Invalid or missing token'))
+  assert.ok(button(f.runtime.value, '重试读取'))
+  f.runtime.unmount()
+})
+
+test('isReadDenied accepts only 403 and the forbidden / permission_denied codes', () => {
+  const { isReadDenied } = configErrorState
+  const err = (message, details) => Object.assign(new Error(message), details ? { details } : {})
+  assert.equal(isReadDenied(err('缺少权限 ops.config.read', { httpStatus: 403 })), true)
+  assert.equal(isReadDenied(err('缺少权限 ops.config.read', { serverCode: 'forbidden' })), true)
+  assert.equal(isReadDenied(Object.assign(new Error('x'), { code: 'permission_denied' })), true)
+  assert.equal(isReadDenied(err('Invalid or missing token', { httpStatus: 401, serverCode: 'unauthorized' })), false)
+  assert.equal(isReadDenied(err('HTTP 401 Forbidden')), false, 'message text alone never makes a 无权限 panel')
+  assert.equal(isReadDenied(err('Method not allowed', { httpStatus: 405 })), false)
+  assert.equal(isReadDenied(new Error('network unavailable')), false)
+  assert.equal(isReadDenied(null), false)
 })
 
 test('a loaded form offers read retry only for an actual read failure and keeps its edited draft and CAS baseline', async () => {

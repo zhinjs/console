@@ -1,8 +1,7 @@
 import { useI18n } from '../i18n'
 import { useCallback, useEffect, useRef, useState, useReducer } from 'react'
 import { getConsoleTransport } from '../utils/console-client'
-import { configErrorReducer } from './config-error-state.mjs'
-import { statusFromError } from '../components/status-state-model.mjs'
+import { configErrorReducer, isReadDenied } from './config-error-state.mjs'
 import { requestConsole } from '../utils/console-rpc'
 import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { getInboxCacheScope, isInboxCacheScopeActive } from '../utils/inbox-cache'
@@ -96,7 +95,7 @@ export function useConfigSource({ autoLoad = true }: { autoLoad?: boolean } = {}
     } catch (cause) {
       if (!request.current() || !isInboxCacheScopeActive(scope)) throw new Error(messages.current.t("配置读取已过期，请在当前 Host 重新读取"))
       setReadErrorScope(scope)
-      errorAction({ type: 'read-failed', error: cause instanceof Error ? cause.message : messages.current.t("读取失败"), denied: statusFromError(cause).kind === 'forbidden' })
+      errorAction({ type: 'read-failed', error: cause instanceof Error ? cause.message : messages.current.t("读取失败"), denied: isReadDenied(cause) })
       throw cause
     } finally {
       if (request.current() && isInboxCacheScopeActive(scope)) setLoading(false)

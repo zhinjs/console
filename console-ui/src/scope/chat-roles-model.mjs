@@ -164,6 +164,11 @@ export const CHAT_ROLE_COPY = Object.freeze({
   redacted: '上级授予（身份不显示）',
   simulatedIdentity: '这是 Sandbox 里的模拟发送者，不会发言，角色授予不会生效。',
   simulatedSender: '模拟发送者，不会发言',
+  // 「设为全局 owner」 disabled: the person has no identity at all, or only simulated senders.
+  noSpeakingIdentity: '还没有会发言的聊天身份',
+  // Read by screen readers on a disabled grant option, and the note under the list.
+  simulatedCannotGrant: '模拟发送者，不会发言，不能授予角色',
+  simulatedOptionsNote: '标为「模拟发送者，不会发言」的选项不能选：Sandbox 里手填的发送者从不解析角色，授予不会生效。',
   simulatedSendersOmitted: '模拟发送者不出现在这里；在 Sandbox 打开「以我的聊天身份发言」后，你的 Sandbox 身份会出现',
 })
 

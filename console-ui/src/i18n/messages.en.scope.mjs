@@ -190,6 +190,9 @@ export const scopeMessages = Object.freeze({
   "移出待确认列表": "Removed from the pending list",
   // zhinjs/zhin#1250 第 87 / 88 批: simulated senders, the Sandbox-only no-owner item, Console-added accounts.
   "模拟发送者，不会发言": "Simulated sender, never speaks",
+  "还没有会发言的聊天身份": "No chat identity that speaks yet",
+  "模拟发送者，不会发言，不能授予角色": "Simulated sender, never speaks; roles cannot be granted to it",
+  "标为「模拟发送者，不会发言」的选项不能选：Sandbox 里手填的发送者从不解析角色，授予不会生效。": "Options marked \"Simulated sender, never speaks\" cannot be picked: senders typed in the Sandbox never resolve roles, so a grant would have no effect.",
   "这是 Sandbox 里的模拟发送者，不会发言，角色授予不会生效。": "This is a simulated sender in the Sandbox: it never speaks, so a role granted to it would have no effect.",
   "模拟发送者不出现在这里；在 Sandbox 打开「以我的聊天身份发言」后，你的 Sandbox 身份会出现": "Simulated senders are not listed here; once you turn on \"Speak as my chat identity\" in the Sandbox, your Sandbox identity appears",
   "打开 Sandbox": "Open Sandbox",
