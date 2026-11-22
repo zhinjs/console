@@ -70,6 +70,11 @@ export function HostSelfChangeSession({ scope }: { scope?: string }) {
   const [busy, setBusy] = useState(false)
   const [review, setReview] = useState<Review | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // A failed catalog read (kept whole, so StatusState can tell forbidden / unreachable and put the Host's text in 技术详情).
+  const [readFailure, setReadFailure] = useState<unknown>(null)
+  // Read inside `refresh` without making the locale one of its deps (that would restart the session).
+  const localeRef = useRef(i18n.locale)
+  localeRef.current = i18n.locale
   const [uncertain, setUncertain] = useState(false)
   const denied = !hasConsolePermission('agent.configure')
   const current = isInboxCacheScopeActive(scope)
@@ -88,16 +93,17 @@ export function HostSelfChangeSession({ scope }: { scope?: string }) {
           signal: active.controller.signal,
           context: active.context,
         })
-        const next = readSelfChanges(response)
+        const next = readSelfChanges(response, localeRef.current)
         if (!owns(active)) return
         setCatalog(next)
         setError(null)
+        setReadFailure(null)
         active.uncertain = false
         setUncertain(false)
       } catch (caught) {
         if (owns(active)) {
           setCatalog(null)
-          setError(caught instanceof Error ? caught.message : String(caught))
+          setReadFailure(caught)
         }
       } finally {
         active.read = undefined
@@ -137,7 +143,7 @@ export function HostSelfChangeSession({ scope }: { scope?: string }) {
         signal: active.controller.signal,
         context: active.context,
       })
-      const next = readSelfChangeDetail(response)
+      const next = readSelfChangeDetail(response, i18n.locale)
       if (!owns(active)) return
       if (next.change.id !== change.id) throw new Error(i18n.t('变更详情与所选变更不一致'))
       setDetail(next)
@@ -180,7 +186,7 @@ export function HostSelfChangeSession({ scope }: { scope?: string }) {
       const response = confirmed.decision === 'handled'
         ? await pluginRpc('root', 'mark-self-change-handled', { id: confirmed.change.id }, { context: active.context })
         : await pluginRpc('root', 'resolve-self-change', { id: confirmed.change.id, decision: confirmed.decision }, { context: active.context })
-      const settled = readSelfChangeCard(response)
+      const settled = readSelfChangeCard(response, i18n.locale)
       if (!owns(active)) return
       if (settled.id !== confirmed.change.id || !matchesDecision(settled, confirmed.decision)) {
         throw new Error(i18n.t('审批回执与本次请求不一致'))
@@ -251,6 +257,7 @@ export function HostSelfChangeSession({ scope }: { scope?: string }) {
       {denied ? <p className="text-sm text-muted-foreground">{i18n.t('只读')}</p>
         : !current ? <p className="text-sm text-muted-foreground">{i18n.t('连接 Host 后读取自我变更')}</p>
         : loading && !catalog ? <StatusState kind="loading" compact title={i18n.t('正在读取自我变更…')} />
+        : readFailure && !catalog ? <StatusState error={readFailure} compact permissions={['agent.configure']} onRetry={() => void refresh()} />
         : catalog?.available === false ? <p className="text-sm text-muted-foreground">{i18n.t('当前 Agent 未启用自我变更')}</p>
         : catalog?.pending.length === 0 ? <p className="text-sm text-muted-foreground">{i18n.t('当前没有待审批的自我变更')}</p> : null}
       {current && catalog?.available && <p className="text-xs text-muted-foreground">{i18n.t('暂存区占用：{0}', [formatBytes(catalog.usageBytes)])}</p>}

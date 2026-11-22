@@ -187,7 +187,10 @@ test('permission and unavailable reads stay errors/unavailable states rather tha
   const denied = fixture()
   denied.answer('tool-approvals', Object.assign(new Error('read permission denied'), { code: 'forbidden' }), true)
   await denied.runtime.settle()
-  assert.match(text(denied.runtime.value), /read permission denied/); assert.doesNotMatch(text(denied.runtime.value), /当前没有待审批/)
+  // The failure goes to StatusState whole (it reads the code and keeps the Host's text in 技术详情).
+  const failure = elements(denied.runtime.value).find(node => node.type === 'status-state' && node.props.error)
+  assert.equal(failure?.props.error.message, 'read permission denied'); assert.equal(failure.props.error.code, 'forbidden')
+  assert.doesNotMatch(text(denied.runtime.value), /当前没有待审批/)
   denied.runtime.unmount()
   const unavailable = fixture(); await loaded(unavailable, { available: false, pending: [], recent: [] })
   assert.match(text(unavailable.runtime.value), /未提供工具审批队列/)

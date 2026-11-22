@@ -47,7 +47,7 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
       settle(readJson(`${CONSOLE_REST.TASK_PROVIDERS}?locale=${i18n.locale}`).then(body => readTaskProviders(body, i18n.locale))),
       settle(requestConsole<NonNullable<TaskOverviewSources['schedules']>>({ type: CONSOLE_RPC.SCHEDULE_LIST, locale: i18n.locale })),
       settle(readJson('/api/assistant/jobs').then(body => validateAssistantJobs(body, i18n.locale))),
-      approvalsReadable ? settle(pluginRpc('root', 'tool-approvals', undefined, { signal }).then(readToolApprovals)) : Promise.resolve(undefined),
+      approvalsReadable ? settle(pluginRpc('root', 'tool-approvals', undefined, { signal }).then(body => readToolApprovals(body, i18n.locale))) : Promise.resolve(undefined),
     ])
     if (!isInboxCacheScopeActive(connectionScope)) return
     setSources({ admin, schedules, assistant, ...(approvals === undefined ? {} : { approvals }) } as TaskOverviewSources)
