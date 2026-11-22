@@ -62,9 +62,9 @@ export interface SelfChangeDetail {
   readonly usageBytes: number
 }
 export interface SelfChangeFileSummary { readonly path: string; readonly kind: string; readonly added: number; readonly removed: number }
-export function readSelfChangeCard(value: unknown): SelfChangeCard
-export function readSelfChanges(value: unknown): SelfChanges
-export function readSelfChangeDetail(value: unknown): SelfChangeDetail
+export function readSelfChangeCard(value: unknown, locale?: string): SelfChangeCard
+export function readSelfChanges(value: unknown, locale?: string): SelfChanges
+export function readSelfChangeDetail(value: unknown, locale?: string): SelfChangeDetail
 export function selfChangeSummary(change: SelfChangeCard): string
 export function selfChangeFiles(change: SelfChangeCard): readonly SelfChangeFileSummary[]
 export function skippedCheckNames(trial: unknown): readonly string[]
