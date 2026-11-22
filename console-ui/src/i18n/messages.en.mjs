@@ -329,6 +329,7 @@ export const englishMessages = Object.freeze({
   "收起诊断轨迹": "Hide diagnostic trace",
   "查看诊断轨迹": "View diagnostic trace",
   "任务已取消": "Task cancelled",
+  "执行超时": "Run timed out",
   "已达到尝试次数上限": "Attempt limit reached",
   "操作已提交，避免重复执行": "Operation submitted; avoiding duplicate execution",
   "操作结果未知，不能自动重放": "Operation outcome unknown; automatic replay blocked",
