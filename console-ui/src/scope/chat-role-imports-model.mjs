@@ -47,6 +47,19 @@ const text = value => typeof value === 'string' ? value.trim() : ''
 const isRecord = value => !!value && typeof value === 'object' && !Array.isArray(value)
 const time = value => typeof value === 'number' && Number.isFinite(value) ? value : null
 const IMPORT_ROLES = Object.freeze(['owner', 'trusted'])
+
+/**
+ * Which bot account a candidate belongs to (#64 `import-card-missing-endpoint`): the same person under
+ * two accounts otherwise reads the same on two cards. An `endpoint` the reply carries wins (protocol
+ * 1.9 has none on candidates yet); else an account-level scope names it; else a `<adapter>.endpoints[N]`
+ * configuration path gives its place in the configuration (1-based).
+ */
+function candidateAccount(raw, adapter, scopeEndpoint) {
+  const endpoint = scopeEndpoint || text(raw.endpoint)
+  if (endpoint) return { endpoint }
+  const match = /^([^.[\]]+)\.endpoints\[(\d+)\]/u.exec(text(raw.source))
+  return match && match[1] === adapter ? { configAccount: Number(match[2]) + 1 } : {}
+}
 const IMPORT_LEVELS = Object.freeze(['global', 'adapter', 'endpoint'])
 
 /**
@@ -73,7 +86,7 @@ function readRoleCandidate(raw) {
   }
   return Object.freeze({
     kind: 'role', id, adapter, userId, level, key, role,
-    ...(scope.endpoint ? { endpoint: scope.endpoint } : {}),
+    ...candidateAccount(raw, adapter, scope.endpoint),
     ...common,
   })
 }
@@ -87,6 +100,7 @@ function readPersonalCandidate(raw) {
   if (!id || !consoleUserId || !adapter || !userId) return null
   return Object.freeze({
     kind: 'personal', id, consoleUserId, adapter, userId,
+    ...(text(raw.endpoint) ? { endpoint: text(raw.endpoint) } : {}),
     // ADR 0060 §4.1: personal link candidates are `ai.personalPrincipals` entries.
     source: 'ai.personalPrincipals',
     ...(time(raw.seenAt) !== null ? { seenAt: raw.seenAt } : {}),
@@ -106,10 +120,12 @@ export function readChatRoleImports(payload) {
   return { rows, hasGlobalOwner: data.hasGlobalOwner === true }
 }
 
-/** `平台 · 账号 · 身份` of a candidate (the account only when the candidate names one). */
-export function chatRoleImportIdentity(row) {
+/** `平台 · 账号 <endpoint> · 身份` of a candidate (the account part only when it is known). */
+export function chatRoleImportIdentity(row, t) {
   if (row.kind === 'unrecognized') return ''
-  return [row.adapter, row.endpoint, row.userId].filter(Boolean).join(' · ')
+  const account = row.endpoint ? t('账号 {0}', [row.endpoint])
+    : row.configAccount ? t('配置第 {0} 个账号', [row.configAccount]) : ''
+  return [row.adapter, account, row.userId].filter(Boolean).join(' · ')
 }
 
 /** The Console user of a personal link: their name from `iam.users.list`, else `#<id prefix>`. */
@@ -132,8 +148,8 @@ function scopeLabel(row, t) {
  */
 export function chatRoleImportSummary(row, t, users = []) {
   if (row.kind === 'unrecognized') return t('无法识别的条目')
-  if (row.kind === 'personal') return t('Console 用户 {0} → {1}', [consoleUserLabel(row.consoleUserId, users), chatRoleImportIdentity(row)])
-  return t('{0} → {1}（{2}）', [chatRoleImportIdentity(row), t(CHAT_ROLE_LABELS[row.role]), scopeLabel(row, t)])
+  if (row.kind === 'personal') return t('Console 用户 {0} → {1}', [consoleUserLabel(row.consoleUserId, users), chatRoleImportIdentity(row, t)])
+  return t('{0} → {1}（{2}）', [chatRoleImportIdentity(row, t), t(CHAT_ROLE_LABELS[row.role]), scopeLabel(row, t)])
 }
 
 /** The consequence of 「导入」, stated plainly. */

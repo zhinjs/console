@@ -18,6 +18,8 @@ export interface ChatRoleImportRoleRow {
   readonly id: string
   readonly adapter: string
   readonly endpoint?: string
+  /** 1-based place of the account in `<adapter>.endpoints`, when only the configuration path names it. */
+  readonly configAccount?: number
   readonly userId: string
   readonly level: 'global' | 'adapter' | 'endpoint'
   readonly key: string
@@ -30,7 +32,9 @@ export interface ChatRoleImportPersonalRow {
   readonly id: string
   readonly consoleUserId: string
   readonly adapter: string
-  readonly endpoint?: undefined
+  /** The bot account, when the Host names it (protocol 1.9 does not yet). */
+  readonly endpoint?: string
+  readonly configAccount?: undefined
   readonly userId: string
   readonly source: string
   readonly seenAt?: number
@@ -47,7 +51,8 @@ export interface ChatRoleImportUnrecognizedRow {
 export type ChatRoleImportRow = ChatRoleImportRoleRow | ChatRoleImportPersonalRow | ChatRoleImportUnrecognizedRow
 
 export function readChatRoleImports(payload: unknown): { rows: ChatRoleImportRow[]; hasGlobalOwner: boolean }
-export function chatRoleImportIdentity(row: ChatRoleImportRow): string
+/** `平台 · 账号 <endpoint> · 身份`; the account part only when known. */
+export function chatRoleImportIdentity(row: ChatRoleImportRow, t: Translate): string
 export function consoleUserLabel(consoleUserId: string, users?: readonly { id: string; username?: string; displayName?: string }[]): string
 export function chatRoleImportSummary(row: ChatRoleImportRow, t: Translate, users?: readonly { id: string; username?: string; displayName?: string }[]): string
 export function chatRoleImportEffect(row: ChatRoleImportRow, t: Translate): string
