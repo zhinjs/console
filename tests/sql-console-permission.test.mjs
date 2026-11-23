@@ -67,7 +67,7 @@ function page(granted) {
     loadInfo: async () => {}, loadTables: async () => {}, dropTable: async () => ({}),
   }
   const mocks = {
-    react: { ...r.hooks },
+    react: { ...r.hooks, useId: () => ':r0:' },
     './use-database-console': { useDatabaseConsole: () => database, databaseAdmin: {} },
     './sql-console': { SqlConsole: 'sql-console' },
     './schema-editor': { SchemaEditor: 'schema-editor', CreateTableEditor: 'create-table' },

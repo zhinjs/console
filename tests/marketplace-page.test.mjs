@@ -9,6 +9,7 @@ import * as viewModel from '../console-ui/src/pages/marketplace-view-model.mjs'
 import * as welcomeModel from '../console-ui/src/pages/welcome-use-case-model.mjs'
 import * as clipboard from '../console-ui/src/pages/clipboard-copy.mjs'
 import * as gatewayModel from '../console-ui/src/pages/ops/gateway-model.mjs'
+import * as tabPanelLink from '../console-ui/src/utils/tab-panel-link.mjs'
 
 const require = createRequire(import.meta.url)
 const source = await readFile(new URL('../console-ui/src/pages/marketplace.tsx', import.meta.url), 'utf8')
@@ -38,7 +39,7 @@ function fixture({ search = async () => json({ success: true, data: [], total: 0
   }
   const toast = variant => (description, title) => { toasts.push({ variant, title, description }) }
   const mocks = {
-    react: { ...require('react'), ...hooks, useEffect: fn => effects.push(fn), useCallback: fn => fn, useMemo: fn => fn() },
+    react: { ...require('react'), ...hooks, useEffect: fn => effects.push(fn), useCallback: fn => fn, useMemo: fn => fn(), useId: () => ':r0:' },
     '../i18n': localeModule, '../i18n/locale.mjs': { translate },
     './clipboard-copy.mjs': clipboard,
     '../components/toast': { useToast: () => ({ success: toast('success'), error: toast('error'), warning: toast('warning'), info: toast('info'), toast: () => {} }) },
@@ -64,6 +65,7 @@ function fixture({ search = async () => json({ success: true, data: [], total: 0
     '../utils/useInboxCacheScope': { useInboxCacheScope: () => 'scope-a' },
     '../utils/inbox-cache': { isInboxCacheScopeActive: scope => scope === 'scope-a' },
     '../contracts/zhin-console': { CONSOLE_REST: { TASK_USE_CASES: '/api/task-use-cases' } },
+    '../utils/tab-panel-link.mjs': tabPanelLink,
   }
   const module = { exports: {} }
   new Function('require', 'exports', 'module', code)(name => mocks[name] ?? require(name), module.exports, module)

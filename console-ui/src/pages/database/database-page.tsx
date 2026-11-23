@@ -1,5 +1,6 @@
 import { useI18n } from '../../i18n'
-import { useState, useMemo, useRef, type CSSProperties } from 'react'
+import { useId, useState, useMemo, useRef, type CSSProperties } from 'react'
+import { tabPanelProps, tabTriggerProps } from '../../utils/tab-panel-link.mjs'
 import { useDatabaseConsole, databaseAdmin } from './use-database-console'
 import type { DatabaseType, TableInfo } from '@zhin.js/client'
 import { Table2, Trash2, RefreshCw, Key, ArrowLeft, TerminalSquare, Plus } from 'lucide-react'
@@ -36,6 +37,8 @@ export default function DatabasePage() {
   const [selectedTable, setSelectedTable] = useState<string | null>(null)
   const [tool, setTool] = useState<'sql' | 'create' | null>(null)
   const [mode, setMode] = useState<DetailMode>('data')
+  // 数据 / 结构 switch the region below the header (it sits outside the Tabs, see tabPanelProps).
+  const modeTabsId = useId()
   const [dataVersion, setDataVersion] = useState(0)
   const [deleteTarget, setDeleteTarget] = useState<{ name: string; label: string } | null>(null)
   // Tables already dropped while the list could not be refreshed: never offer them again from the stale snapshot.
@@ -192,8 +195,8 @@ export default function DatabasePage() {
                     {showTools ? (
                       <Tabs value={mode} onValueChange={value => setMode(value as DetailMode)} className="shrink-0">
                         <TabsList className="h-8">
-                          <TabsTrigger value="data" className="text-xs px-2.5" data-tab="data">{i18n.t('数据')}</TabsTrigger>
-                          <TabsTrigger value="structure" className="text-xs px-2.5" data-tab="structure">{i18n.t('结构')}</TabsTrigger>
+                          <TabsTrigger value="data" className="text-xs px-2.5" data-tab="data" {...tabTriggerProps(modeTabsId, 'data')}>{i18n.t('数据')}</TabsTrigger>
+                          <TabsTrigger value="structure" className="text-xs px-2.5" data-tab="structure" {...tabTriggerProps(modeTabsId, 'structure')}>{i18n.t('结构')}</TabsTrigger>
                         </TabsList>
                       </Tabs>
                     ) : null}
@@ -225,7 +228,7 @@ export default function DatabasePage() {
                     )}
                   </div>
 
-                  <div className="flex-1 min-h-0 min-w-0 p-3 sm:p-4 overflow-hidden">
+                  <div className="flex-1 min-h-0 min-w-0 p-3 sm:p-4 overflow-hidden" {...(showTools ? tabPanelProps(modeTabsId, mode) : {})}>
                     {showTools && mode === 'structure' ? (
                       dbType === 'related' ? (
                         <SchemaEditor key={selectedTable} tableName={selectedTable} admin={databaseAdmin} canEdit={canSchema}

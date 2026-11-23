@@ -6,7 +6,8 @@ import {
   marketplaceListView, isCardActivationKey, classifyUpdateCheck, updateCheckFeedback, readInstalledPackages, installedFromPackageList,
   marketplacePluginStatus, pluginManageUrl, pluginConfigUrl, installFollowUps, type UpdateCheckOutcome, type InstalledPackages,
 } from './marketplace-view-model.mjs'
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useId, useState, useCallback, useRef } from 'react'
+import { tabPanelProps, tabTriggerProps } from '../utils/tab-panel-link.mjs'
 import {
   Search, Package, Download, ExternalLink, RefreshCw, Copy, Check, Settings, CheckCircle2, ToggleLeft,
 } from 'lucide-react'
@@ -143,6 +144,8 @@ function MarketplaceSession({ scope }: { scope?: string }) {
   const [detailLoading, setDetailLoading] = useState(false)
   const [detail, setDetail] = useState<PluginDetail | null>(null)
   const [detailTab, setDetailTab] = useState<DetailTab>('readme')
+  // The README / 版本 / 依赖 tabs switch the block below them (it sits outside the Tabs, see tabPanelProps).
+  const detailTabsId = useId()
   const [copied, setCopied] = useState(false)
   const [declaredKey, setDeclaredKey] = useState<string | null>(null)
 
@@ -586,6 +589,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                         <TabsTrigger
                           key={key}
                           value={key}
+                          {...tabTriggerProps(detailTabsId, key)}
                           className="rounded-none border-b-2 border-transparent px-3 py-2 data-[state=active]:border-primary data-[state=active]:bg-transparent max-md:min-h-11"
                         >
                           {label}
@@ -595,38 +599,40 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                   </TabsList>
                 </Tabs>
 
-                {detailTab === 'readme' && (
-                  detail.readme ? (
-                    <pre className="whitespace-pre-wrap text-xs text-muted-foreground leading-relaxed bg-muted rounded-md p-3 overflow-x-auto max-h-64 overflow-y-auto">
-                      {detail.readme}
-                    </pre>
-                  ) : <StatusState compact kind="empty" title={i18n.t("暂无 README")} description={i18n.t("包没有发布 README，可在 npm 或源码页查看说明。")} />
-                )}
+                <div {...tabPanelProps(detailTabsId, detailTab)}>
+                  {detailTab === 'readme' && (
+                    detail.readme ? (
+                      <pre className="whitespace-pre-wrap text-xs text-muted-foreground leading-relaxed bg-muted rounded-md p-3 overflow-x-auto max-h-64 overflow-y-auto">
+                        {detail.readme}
+                      </pre>
+                    ) : <StatusState compact kind="empty" title={i18n.t("暂无 README")} description={i18n.t("包没有发布 README，可在 npm 或源码页查看说明。")} />
+                  )}
 
-                {detailTab === 'versions' && (
-                  <div>
-                    {detail.versions?.length > 0 ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                        {detail.versions.slice(-20).reverse().map(v => (
-                          <InlineCode key={v} className="min-w-0 truncate py-1 text-xs" title={v}>{v}</InlineCode>
-                        ))}
-                      </div>
-                    ) : <StatusState compact kind="empty" title={i18n.t("暂无版本信息")} description={i18n.t("注册表没有返回版本列表。")} />}
-                    {detail.versions?.length > 20 && (
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {i18n.t("最近 20 个版本（共 ")}{detail.versions.length} {i18n.t(" 个）")}</p>
-                    )}
-                  </div>
-                )}
+                  {detailTab === 'versions' && (
+                    <div>
+                      {detail.versions?.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                          {detail.versions.slice(-20).reverse().map(v => (
+                            <InlineCode key={v} className="min-w-0 truncate py-1 text-xs" title={v}>{v}</InlineCode>
+                          ))}
+                        </div>
+                      ) : <StatusState compact kind="empty" title={i18n.t("暂无版本信息")} description={i18n.t("注册表没有返回版本列表。")} />}
+                      {detail.versions?.length > 20 && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {i18n.t("最近 20 个版本（共 ")}{detail.versions.length} {i18n.t(" 个）")}</p>
+                      )}
+                    </div>
+                  )}
 
-                {detailTab === 'deps' && (
-                  <div className="space-y-3">
-                    {detail.peerDependencies && Object.keys(detail.peerDependencies).length > 0 ? (
-                      <DependencyList title="Peer Dependencies" entries={detail.peerDependencies} />
-                    ) : <StatusState compact kind="empty" title={i18n.t("无 peer dependencies")} description={i18n.t("这个包不要求宿主额外安装其他包。")} />}
-                    {detail.engines && Object.keys(detail.engines).length > 0 && <DependencyList title="Engines" entries={detail.engines} />}
-                  </div>
-                )}
+                  {detailTab === 'deps' && (
+                    <div className="space-y-3">
+                      {detail.peerDependencies && Object.keys(detail.peerDependencies).length > 0 ? (
+                        <DependencyList title="Peer Dependencies" entries={detail.peerDependencies} />
+                      ) : <StatusState compact kind="empty" title={i18n.t("无 peer dependencies")} description={i18n.t("这个包不要求宿主额外安装其他包。")} />}
+                      {detail.engines && Object.keys(detail.engines).length > 0 && <DependencyList title="Engines" entries={detail.engines} />}
+                    </div>
+                  )}
+                </div>
 
                 <div>
                   <h4 className="console-section-title mb-2">{i18n.t("安装命令")}</h4>
