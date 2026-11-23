@@ -70,7 +70,13 @@ const traceSessions = [
   { session_key: 'icqq:preview-community:group:20001', turns: 18, last_started_at: Date.now() - 12 * MINUTE, last_status: 'completed' },
   { session_key: 'icqq:preview-community:private:10001', turns: 4, last_started_at: Date.now() - 29 * MINUTE, last_status: 'failed' },
   { session_key: 'telegram:preview-support:private:777', turns: 2, last_started_at: Date.now() - 26 * 60 * MINUTE, last_status: 'completed' },
-]
+  // zhin 1.9 hashes conversation keys and names scheduled runs `schedule:<id>`; the archive sends only the key, so
+  // (until zhinjs/zhin#1250 b63 adds `origin`) these cannot be placed on an account. UI_PREVIEW_SESSIONS=hashed keeps
+  // only the hashed ones (the owner's report).
+  { session_key: 'personal-session:v1:ab12cd34ef56a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2', turns: 3, last_started_at: Date.now() - 40 * MINUTE, last_status: 'completed' },
+  { session_key: 'scene-task:v1:9f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a0', turns: 1, last_started_at: Date.now() - 3 * 60 * MINUTE, last_status: 'completed' },
+  { session_key: 'schedule:job-daily', turns: 1, last_started_at: Date.now() - 10 * 60 * MINUTE, last_status: 'completed' },
+].filter(row => process.env.UI_PREVIEW_SESSIONS !== 'hashed' || /:v1:/.test(row.session_key))
 let sentCount = 0
 // One clock for every chat fixture, so repeated reads (list, previews, history) agree on timestamps.
 const CHAT_NOW = Date.now()
@@ -93,7 +99,11 @@ const messageEvents = [
 const decisionRow = (minutesAgo, extra) => ({ id: `d-${minutesAgo}`, ts: now - minutesAgo * 60_000, turn_id: `turn-${minutesAgo}`, instance_id: 'preview-community', platform: 'icqq',
   scene_id: 'group:20001', user_id: '10001', kind: 'speak_gate', outcome: 'allow', reason_code: 'addressed', reason_detail: null, payload: {}, actor: 'policy', actor_id: null, ...extra })
 const HOUR = 3_600_000
-const decisions = [decisionRow(11, {}), decisionRow(42, { outcome: 'deny', reason_code: 'cannot_speak_muted' }),
+const decisions = [decisionRow(11, {}),
+  // Generated conversation ids (Sandbox): one is named in feature.conversations, one only shows its short id.
+  decisionRow(20, { platform: 'sandbox', instance_id: 'default', scene_id: 'private:private-3f2a9c1e-5b7d-4e2f-9a1b-0c8d7e6f5a4b' }),
+  decisionRow(25, { platform: 'sandbox', instance_id: 'default', scene_id: 'private:private-7c41b0d2-8e3f-4a6b-9c1d-2e5f8a7b6c4d' }),
+  decisionRow(42, { outcome: 'deny', reason_code: 'cannot_speak_muted' }),
   decisionRow(55, { kind: 'ambient_decision', outcome: 'skip', reason_code: 'ambient_not_engaged', reason_detail: 'shadow', actor: 'agent', payload: {
     decision: 'shadow', confidence: 0.82, judge: 'Night Router/gemini-3.8-flash', judgeKind: 'language', judgeProfile: 'night:gemini-3.8-flash', judgeModel: 'gemini-3.8-flash',
     judgeFallbackFrom: 'DeepSeek/deepseek-v4-flash', judgeMs: 710, judgeUsage: { inputTokens: 412, outputTokens: 19 }, compare: 'quiet', compareJudge: 'OpenAI/gpt-5.5-mini' } }),
@@ -140,6 +150,9 @@ const usageSessionRows = [
   // Two HTTP API sessions: one name, two keys.
   { sessionKey: 'http:api:session:7f3a9c21-55d0-4e8b-a1c2-90b7d6e5f4a3', displayName: 'HTTP', turns: 2, calls: 2, inputTokens: 3_100, outputTokens: 400, cacheReadTokens: 900, v2: { scopeKind: 'http' } },
   { sessionKey: 'http:api:session:c41e0b8d-2f6a-4c97-b3d5-18e9a0f7c6b2', displayName: 'HTTP', turns: 1, calls: 1, inputTokens: 1_900, outputTokens: 200, cacheReadTokens: 0, v2: { scopeKind: 'http' } },
+  // Scheduled runs: one task the 定时任务 list names, one it does not know.
+  { sessionKey: 'schedule:job-daily', turns: 1, calls: 2, inputTokens: 2_400, outputTokens: 500, cacheReadTokens: 0, v2: {} },
+  { sessionKey: 'schedule:sched_mwio9qd6_k2p8x', turns: 1, calls: 1, inputTokens: 900, outputTokens: 120, cacheReadTokens: 0, v2: {} },
   // A group without a name, on an account whose name is just its endpoint id (no accountLabel).
   { sessionKey: 'icqq:8596238:group:30002', platform: 'icqq', endpoint: '8596238', scope: 'group', sceneId: '30002', turns: 1, calls: 2, inputTokens: 2_100, outputTokens: 300, cacheReadTokens: 0, v2: {} },
 ]
@@ -279,7 +292,8 @@ const scheduleList = { memory: [{ type: 'memory', id: 'heartbeat', kind: 'user-t
   agents: ['zhin', 'researcher', 'writer'],
   capabilities: { persistent: true } }
 const assistantJobs = { eventsActive: true, jobs: [{ id: 'job-daily', label: '每日群聊摘要', enabled: true, state: { lastStatus: 'ok', nextRunAtMs: now + 14 * HOUR } }, { id: 'job-watch', label: '错误巡检', enabled: true, state: { lastStatus: 'error', lastError: 'timeout', nextRunAtMs: now + HOUR } }] }
-const toolApprovals = { available: true, pending: [{ id: 'approval-1', toolName: 'shell.exec', sessionKey: 'icqq:preview-community:group:20001', requesterId: '10001', createdAt: now - 5 * 60_000, expiresAt: now + 25 * 60_000, status: 'pending', args: { command: 'ls' } }] }
+const toolApprovals = { available: true, pending: [{ id: 'approval-1', toolName: 'shell.exec', sessionKey: 'icqq:preview-community:group:20001', requesterId: '10001', createdAt: now - 5 * 60_000, expiresAt: now + 25 * 60_000, status: 'pending', args: { command: 'ls' } },
+  { id: 'approval-2', toolName: 'file.write', sessionKey: 'personal-session:v1:ab12cd34ef56a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2', requesterId: null, createdAt: now - 2 * 60_000, expiresAt: now + 28 * 60_000, status: 'pending', args: { path: 'notes.md' } }] }
 const pluginRoot = {
   decisions: body => ({ persistent: true, items: decisions.filter(row => (!body.platform || row.platform === body.platform) && (!body.sceneId || row.scene_id === body.sceneId)), nextBefore: null }),
   'usage-stats': body => usageStats(body),
@@ -301,6 +315,7 @@ const conversations = [
   { key: 'icqq/preview-community/group:20001', name: '产品试验群', hasOverrides: true, overrides: [{ plugin: 'welcome', fields: ['text'], updatedAt: Date.now() - 3_600_000 }], lastActiveAt: Date.now() - 60_000 },
   { key: 'icqq/preview-community/private:10001', name: '演示用户', hasOverrides: false, overrides: [], lastActiveAt: Date.now() - 120_000 },
   { key: 'icqq/preview-community/group:a%2Fb', name: '带斜杠的群 a/b', hasOverrides: true, overrides: [{ plugin: 'repeater', enabled: false, fields: [] }] },
+  { key: 'sandbox/default/private:private-3f2a9c1e-5b7d-4e2f-9a1b-0c8d7e6f5a4b', name: '调试小号', hasOverrides: false, overrides: [], lastActiveAt: Date.now() - 20 * 60_000 },
 ]
 const chatRoles = [
   { level: 'global', key: '', adapter: 'icqq', userId: '10000', role: 'owner', source: 'grant', grantedBy: 'console:user:u-owner', grantedByName: '部署者小王', grantedAt: Date.now() - 30 * 86_400_000 },
@@ -309,6 +324,21 @@ const chatRoles = [
   { level: 'endpoint', key: 'icqq/preview-community', adapter: 'icqq', userId: '10003', role: 'trusted', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 7_200_000 },
   { level: 'conversation', key: 'icqq/preview-community/group:20001', adapter: 'icqq', userId: '10004', role: 'admin', source: 'grant', grantedBy: 'console:owner', grantedAt: Date.now() - 3_600_000 },
 ]
+// Configuration imports waiting for 「导入」/「忽略」 (chat-roles.imports.list|resolve, ADR 0060 §4.2).
+// UI_PREVIEW_IMPORTS=legacy: an older Host without the RPCs; =unknown: resolve never answers in time (结果未知).
+const importsMode = process.env.UI_PREVIEW_IMPORTS ?? 'items'
+const chatRoleImports = {
+  personalPending: [{ id: '0a1b2c3d4e5f60718293a4b5', consoleUserId: 'u-alice', adapter: 'icqq', userId: '10007', seenAt: Date.now() - 2 * 3_600_000 }],
+  pending: [
+    { id: '1b2c3d4e5f60718293a4b5c6', source: 'icqq.endpoints[0].master', level: 'endpoint', key: 'icqq/preview-community',
+      adapter: 'icqq', userId: '10008', role: 'owner', seenAt: Date.now() - 3_600_000 },
+    { id: '2c3d4e5f60718293a4b5c6d7', source: 'ai.trigger.trusted', level: 'global', key: '', adapter: 'icqq', userId: '10000', role: 'trusted', seenAt: Date.now() - 3_600_000 },
+    // An adapter that is not loaded: importing it answers skipped / unknown-adapter (and still leaves the list).
+    { id: '3d4e5f60718293a4b5c6d7e8', source: 'discord.endpoints[0].master', level: 'adapter', key: 'discord', adapter: 'discord', userId: '55501', role: 'owner', seenAt: Date.now() - 3_600_000 },
+    // A scope key this Console cannot read: shown as 无法识别的条目, ignorable by id.
+    { id: '4e5f60718293a4b5c6d7e8f9', source: 'legacy.masters', level: 'endpoint', key: 'icqq', adapter: 'icqq', userId: '10010', role: 'trusted', seenAt: Date.now() - 3_600_000 },
+  ],
+}
 // People behind chat identities (ADR 0060 §7): chat-principals.list, chat-identities.recent|me|bind-code.create.
 const chatPeople = [
   { id: 'cp_wangowner7k2m4q3x5z6a7b8c9d', displayName: '小王（部署者）', createdAt: Date.now() - 30 * 86_400_000,
@@ -475,6 +505,11 @@ const attentionItems = en => [
   { id: 'mcp.disconnected:51e2a7d9', revision: 'e1', kind: 'mcp.disconnected', severity: 'warning', source: 'mcp', since: attentionAt(25), subject: { mcpServer: 'web-search' },
     title: en ? 'MCP server web-search failed to connect' : 'MCP 服务 web-search 连接失败', detail: en ? 'Authentication failed: HTTP 401. The Agent cannot use its tools for now.' : '认证失败：HTTP 401。Agent 暂时无法调用它提供的工具。',
     action: { label: en ? 'Open MCP' : '查看 MCP', path: '/introspection?tab=mcp' } },
+  { id: 'chat-roles.import-pending', revision: 'g1', kind: 'chat-roles.import-pending', severity: 'warning', source: 'chat-roles', since: attentionAt(60),
+    title: en ? '5 people lists or identity links in the configuration wait for confirmation' : '配置中有 5 条人员名单或身份链接等待确认',
+    detail: en ? 'Nothing is granted until you "Import" or "Ignore" each one.' : '逐条「导入」或「忽略」前不会授予任何角色或关联。',
+    links: [{ consoleUserId: 'u-alice', identities: [{ adapter: 'icqq', userIdTail: '0007' }] }],
+    action: { label: en ? 'Review imports' : '去处理', path: '/scope?tab=roles' } },
   { id: 'logs.errors:811c9dc5', revision: 'f1', kind: 'logs.errors', severity: 'info', source: 'logs', since: attentionAt(95),
     title: en ? 'Errors in the logs: 7' : '日志里有 7 条错误', detail: en ? 'Persistent log count; it restarts after logs are cleaned up.' : '持久日志统计；清理日志后重新计数。',
     action: { label: en ? 'Open error logs' : '打开错误日志', path: '/logs?level=error' } },
@@ -840,6 +875,16 @@ const server = createServer(async (request, response) => {
   }
   if (url.pathname === '/api/agent/sessions') { json(envelope({ sessions: [], total: 0, items: [] })); return }
   if (url.pathname === '/api/agent/trace-archive/sessions') { json(envelope(traceSessions)); return }
+  // Key-only sessions (hashed keys, `schedule:<id>`) read their turns by key alone.
+  if (url.pathname === '/api/agent/trace-archive/turns' && !url.searchParams.has('conversation')) {
+    const key = url.searchParams.get('sessionKey') ?? ''
+    const session = traceSessions.find(row => row.session_key === key)
+    json(envelope(session ? Array.from({ length: Math.min(session.turns, 3) }, (_, index) => ({
+      turn_id: `preview-${index + 1}`, session_key: key, started_at: session.last_started_at - index * 7 * MINUTE, duration_ms: 2400 + index * 300,
+      model_calls: 1, tool_calls: 0, termination: { status: 'completed' }, usage_calls: [{ prompt_tokens: 1800, completion_tokens: 160, total_tokens: 1960 }],
+    })) : []))
+    return
+  }
   if (url.pathname === '/console/api/pages') { json({ pages: [{ route: '/icqq', localName: 'index', owner: 'adapter-icqq', source: 'plugins/adapters/icqq/pages/index/index.tsx' }] }); return }
   if (url.pathname === '/api/console/request' && request.method === 'POST') {
     const body = request.previewBody ?? await readBody()
@@ -908,6 +953,24 @@ const server = createServer(async (request, response) => {
       json(envelope({ principal: chatPeople[0] })); return
     }
     if (type === 'chat-identities.bind-code.create') { json(envelope({ code: 'K7QH2M9X', expiresAt: Date.now() + 10 * MINUTE })); return }
+    if (type === 'chat-roles.imports.list' || type === 'chat-roles.imports.resolve') {
+      if (importsMode === 'legacy') { json({ success: false, error: `Unknown RPC type: ${type}` }, 400); return }
+      if (scopedAccess || viewerAccess) { json({ success: false, error: '处理配置导入需要全局 iam.manage 权限', type }, 403); return }
+      if (type === 'chat-roles.imports.list') {
+        json(envelope({ imported: [], importedAt: Date.now() - 86_400_000, pending: chatRoleImports.pending, personalPending: chatRoleImports.personalPending, hasGlobalOwner: true })); return
+      }
+      if (importsMode === 'unknown') { await new Promise(resolve => setTimeout(resolve, 300)); json({ success: false, code: 'instance_timeout', error: 'The instance did not answer in time' }, 504); return }
+      const personal = chatRoleImports.personalPending.find(row => row.id === body.id)
+      const role = chatRoleImports.pending.find(row => row.id === body.id)
+      if (!/^[0-9a-f]{24}$/u.test(String(body.id ?? ''))) { json({ success: false, error: 'id 必须是导入候选的 id', type }, 400); return }
+      if (!personal && !role) { json({ success: false, error: '没有这个待确认的导入候选（可能已被处理）', type }, 404); return }
+      chatRoleImports.personalPending = chatRoleImports.personalPending.filter(row => row.id !== body.id)
+      chatRoleImports.pending = chatRoleImports.pending.filter(row => row.id !== body.id)
+      if (body.decision === 'ignore') { json(envelope({ status: 'ignored' })); return }
+      // The global owner icqq/10000 already holds a higher role than trusted: kept.
+      if (role?.adapter === 'discord') { json(envelope({ status: 'imported', result: 'skipped', reason: 'unknown-adapter' })); return }
+      json(envelope({ status: 'imported', result: role?.userId === '10000' ? 'kept' : 'written' })); return
+    }
     if (type === 'chat-roles.grant' || type === 'chat-roles.revoke') {
       if (scopedAccess && body.role === 'owner') { json({ success: false, error: '授予或撤销 owner 需要全局 iam.manage 权限', type }, 403); return }
       if (memoryDatabase) { json({ success: false, code: 'chat-roles-unpersisted', error: '聊天角色需要关系型项目数据库（sqlite / mysql / pg）', type }, 503); return }

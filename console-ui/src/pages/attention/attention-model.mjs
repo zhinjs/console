@@ -16,6 +16,7 @@ import { isUnsupportedRpcError } from '../../utils/console-auth-model.mjs'
 import { CONSOLE_PATHS } from '../../console-routes.mjs'
 import { statusFromError } from '../../components/status-state-model.mjs'
 import { instanceStateLabel } from '../ops/gateway-model.mjs'
+import { CHAT_ROLE_IMPORTS_ANCHOR } from '../../scope/chat-role-imports-model.mjs'
 
 export const ATTENTION_RPC = ATTENTION_RPC_NAMES.LIST
 export const ATTENTION_PATH = CONSOLE_PATHS.attention
@@ -53,6 +54,7 @@ export function normalizeAttentionItem(raw) {
   // Deep links stay inside the Console: a path, never another origin.
   if (!id || !kind || !severity || !title || !path.startsWith('/') || path.startsWith('//')) return null
   const since = parseTime(raw.since)
+  const links = readAttentionLinks(raw.links)
   return Object.freeze({
     id,
     revision: text(raw.revision) || id,
@@ -62,9 +64,45 @@ export function normalizeAttentionItem(raw) {
     detail: text(raw.detail),
     ...(isRecord(raw.subject) ? { subject: Object.freeze({ ...raw.subject }) } : {}),
     since: since === null ? null : new Date(since).toISOString(),
-    action: Object.freeze({ label: text(action.label), path }),
+    action: Object.freeze({ label: text(action.label), path: attentionActionPath(kind, path) }),
     source: text(raw.source),
+    ...(links.length ? { links } : {}),
   })
+}
+
+/**
+ * Where 「去处理」 lands. `chat-roles.import-pending` points at the global 角色 tab; the Console sends
+ * it straight to the 待确认的导入 section there (`#chat-role-imports`). Other paths stay as given.
+ */
+export function attentionActionPath(kind, path) {
+  if (kind !== 'chat-roles.import-pending' || path.includes('#')) return path
+  const [pathname, query = ''] = path.split('?')
+  if (pathname !== '/scope' || new URLSearchParams(query).get('tab') !== 'roles') return path
+  return `${path}#${CHAT_ROLE_IMPORTS_ANCHOR}`
+}
+
+/** `links` of `chat-roles.import-pending` / `chat-roles.imported`: Console users and masked identities. */
+function readAttentionLinks(raw) {
+  if (!Array.isArray(raw)) return []
+  return raw.filter(isRecord).map(link => {
+    const consoleUserId = text(link.consoleUserId)
+    const identities = (Array.isArray(link.identities) ? link.identities : []).filter(isRecord)
+      .map(identity => ({ adapter: text(identity.adapter), endpoint: text(identity.endpoint), userIdTail: text(identity.userIdTail) }))
+      .filter(identity => identity.adapter && identity.userIdTail)
+      .map(identity => Object.freeze({ adapter: identity.adapter, ...(identity.endpoint ? { endpoint: identity.endpoint } : {}), userIdTail: identity.userIdTail }))
+    return consoleUserId && identities.length ? Object.freeze({ consoleUserId, identities: Object.freeze(identities) }) : null
+  }).filter(Boolean)
+}
+
+/**
+ * The 「详情」 lines of an item's `links`: `Console 用户 #<id> → 平台 · 账号 · …尾号` per person (the
+ * home page never shows full platform ids, so only the tail the Host sends).
+ */
+export function attentionLinkLines(item, locale = 'zh-CN') {
+  return (item?.links ?? []).map(link => translate(locale, 'Console 用户 {0} → {1}', [
+    `#${link.consoleUserId.slice(0, 8)}`,
+    link.identities.map(identity => [identity.adapter, identity.endpoint, `…${identity.userIdTail}`].filter(Boolean).join(' · ')).join(translate(locale, '、')),
+  ]))
 }
 
 /** Danger, warning, info; within one severity the oldest first, then by id. */

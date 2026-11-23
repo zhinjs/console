@@ -198,7 +198,7 @@ test('usage: names come from the Host shape (displayName / providerLabel / provi
   const sha = 'ab12cd34'.padEnd(64, 'e')
   assert.equal(usageSessionLabel({ sessionKey: `personal-session:v1:${sha}` }), '私聊会话 #ab12cd34')
   assert.equal(usageSessionLabel({ sessionKey: `personal-session:v1:${sha}` }, 'en'), 'Private session #ab12cd34')
-  assert.equal(usageSessionLabel({ sessionKey: `scene-task:v1:${sha}` }), '场景任务 #ab12cd34')
+  assert.equal(usageSessionLabel({ sessionKey: `scene-task:v1:${sha}` }), '群聊 #ab12cd34', 'scene-task keys are group chats')
   assert.equal(usageSessionLabel({ sessionKey: 'schedule:assistant-profile-weatherReport' }), '定时任务 assistant-profile-weatherReport')
 
   const page = src('pages/token-usage.tsx') + src('pages/token-usage-report.tsx')

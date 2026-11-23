@@ -6,6 +6,7 @@ import ts from 'typescript'
 import { localeModule, isLocaleImport } from './locale-fixture.mjs'
 import { createInboxCacheAuthority } from '../console-ui/src/utils/inbox-cache-scope.mjs'
 import * as model from '../console-ui/src/pages/tool-approvals-model.mjs'
+import * as sessionLabels from '../console-ui/src/utils/session-label.mjs'
 
 const source = await readFile(new URL('../console-ui/src/pages/HostToolApprovalsPanel.tsx', import.meta.url), 'utf8')
 const require = createRequire(import.meta.url)
@@ -51,6 +52,7 @@ function fixture({ readOnly = false } = {}) {
     '../utils/useInboxCacheScope': { useInboxCacheScope: () => authority.current() },
     '../utils/inbox-cache': { isInboxCacheScopeActive: value => authority.active(value) },
     './tool-approvals-model.mjs': model,
+    '../utils/session-label.mjs': sessionLabels,
   }
   const module = { exports: {} }
   new Function('require', 'exports', 'module', code)(name => isLocaleImport(name) ? localeModule : Object.hasOwn(mocks, name) ? mocks[name] : require(name), module.exports, module)
@@ -88,7 +90,7 @@ test('reads pending cards, shows actual arguments and triggering session, and wa
   const f = fixture()
   assert.equal(f.calls.length, 1); await loaded(f)
   assert.match(text(f.runtime.value), /Host 工具审批/)
-  assert.match(text(f.runtime.value), /synthetic command/); assert.match(text(f.runtime.value), /发起会话：sandbox:bot:group:room/)
+  assert.match(text(f.runtime.value), /synthetic command/); assert.match(text(f.runtime.value), /发起会话：sandbox · 群 room/)
   assert.doesNotMatch(text(f.runtime.value), /recent-tool|投递账号/)
   f.button('批准一次').props.onClick(); f.runtime.render()
   assert.equal(f.dialog().props.open, true)
@@ -203,4 +205,17 @@ test('an identity without agent.configure mounts a read-only panel without appro
   assert.match(text(f.runtime.value), /只读/)
   assert.equal(f.dialog().props.open, false)
   f.runtime.unmount()
+})
+
+test('a hashed triggering session shows its readable name; the hash stays in the tooltip only', async () => {
+  const key = `personal-session:v1:${'ab12cd34'.repeat(8)}`
+  const f = fixture()
+  await loaded(f, catalog([{ ...card, sessionKey: key, platform: 'sandbox' }]))
+  const shown = text(f.runtime.value)
+  assert.match(shown, /发起会话：sandbox · 私聊会话 #ab12cd34/)
+  assert.ok(!shown.includes(key), 'the full hash is not in the visible text')
+  assert.ok(elements(f.runtime.value).some(node => node.props?.title === key), 'the full key is in a tooltip')
+  f.button('批准一次').props.onClick(); f.runtime.render()
+  assert.match(text(f.dialog()), /发起会话：sandbox · 私聊会话 #ab12cd34/)
+  assert.ok(!text(f.dialog()).includes(key))
 })

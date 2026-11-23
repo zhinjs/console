@@ -13,6 +13,7 @@ import { hasConsolePermission } from '../utils/console-access.mjs'
 import { statusFromError, type StatusReading } from '../components/status-state-model.mjs'
 import { ObjectSection } from './ObjectPageLayout'
 import { GrantIdentityPicker } from './ChatIdentityPanels'
+import { ChatRoleImportsSection } from './ChatRoleImportsSection'
 import { adapterAliases, grantorLabel } from './chat-identity-model.mjs'
 import { readEndpointList } from '../pages/endpoint-list-model.mjs'
 import {
@@ -232,6 +233,8 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
   }
   return (
     <>
+      {/* ADR 0060 §4.2: configuration imports are global only (they may carry owner). */}
+      {scope.level === 'global' ? <ChatRoleImportsSection onChanged={roles.refresh} /> : null}
       <ObjectSection
         title={i18n.t('聊天角色')}
         description={i18n.t('所有者 ⊃ 管理员 ⊃ 受信任。在某一层授予的角色对其下所有范围有效。zhin 角色只来自授予；平台群主/管理员是平台身份，单独影响平台相关能力。')}
