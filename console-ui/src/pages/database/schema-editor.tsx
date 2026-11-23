@@ -8,6 +8,8 @@ import {
   isUnsupportedRpcError, parseDefaultInput, SCHEMA_COLUMN_TYPES, schemaWarningText,
 } from './database-console-model.mjs'
 import type { DatabaseAdmin } from './use-database-console'
+import { alterCheckResult, createCheckResult, ddlFailure, type DdlCheckResult } from './ddl-outcome-model.mjs'
+import { DdlCheckNotice, DdlErrorDetails, useDdlCheck } from './ddl-outcome'
 import type { DbColumnSpec, DbColumnType, DbSchemaChange, DbSchemaPlan, DbTableSchema } from './database-types'
 
 type Draft =
@@ -66,31 +68,50 @@ export function SchemaPlanPreview({ plan }: { plan: DbSchemaPlan }) {
  * The plan → confirm → apply step of a schema change. Destructive changes ask for the object's
  * name; every applied statement is audited by the Host.
  */
-export function useSchemaApply(admin: DatabaseAdmin, onApplied: (plan: DbSchemaPlan) => void) {
+export function useSchemaApply(admin: DatabaseAdmin, onApplied: (plan: DbSchemaPlan) => void, verify: (plan: DbSchemaPlan) => Promise<DdlCheckResult>) {
   const i18n = useI18n()
   const toast = useToast()
   const [plan, setPlan] = useState<DbSchemaPlan | null>(null)
   const [planning, setPlanning] = useState(false)
   const [planError, setPlanError] = useState<unknown>(null)
   const [confirming, setConfirming] = useState(false)
+  // The Host's message of a failed apply, under 「技术详情」 in the still-open confirmation.
+  const [applyDetails, setApplyDetails] = useState<string | null>(null)
+  // An apply whose outcome is unknown (#64): 应用 stays blocked until 「核对」.
+  const check = useDdlCheck(verify)
   const preview = async (change: DbSchemaChange) => {
     setPlanning(true)
     setPlanError(null)
     try { setPlan(await admin.preview(change)) } catch (error) { setPlan(null); setPlanError(error) } finally { setPlanning(false) }
   }
-  const reset = () => { setPlan(null); setPlanError(null); setConfirming(false) }
+  const reset = () => { setPlan(null); setPlanError(null); setConfirming(false); setApplyDetails(null); check.clearResult() }
   const dialog = (
     <ConfirmDialog
       open={confirming && !!plan}
-      onOpenChange={open => { if (!open) setConfirming(false) }}
+      onOpenChange={open => { if (!open) { setConfirming(false); setApplyDetails(null) } }}
       title={i18n.t('应用结构修改')}
       description={plan?.destructive ? i18n.t('这项修改无法撤销。请输入 “{0}” 确认。', [plan.confirm ?? '']) : i18n.t('确认在数据库上执行以下语句？')}
       variant={plan?.destructive ? 'destructive' : 'default'}
       confirmLabel={i18n.t('应用')}
       {...(plan?.destructive && plan.confirm ? { confirmText: plan.confirm } : {})}
       onConfirm={async () => {
-        if (!plan) return
-        const applied = await admin.apply(plan.change, plan.destructive ? plan.confirm : undefined)
+        if (!plan || check.held) return
+        setApplyDetails(null)
+        let applied: DbSchemaPlan
+        try {
+          applied = await admin.apply(plan.change, plan.destructive ? plan.confirm : undefined)
+        } catch (error) {
+          const failure = ddlFailure(error, 'schema', i18n.locale)
+          if (failure.unknown) {
+            // Never offer the same statement again here: close, hold, and let 「核对」 decide.
+            check.hold({ subject: plan, text: failure.text, details: failure.details })
+            setConfirming(false)
+            setPlan(null)
+            return
+          }
+          setApplyDetails(failure.details)
+          throw new Error(failure.text)
+        }
         setConfirming(false)
         setPlan(null)
         toast.success(i18n.t('结构已修改'))
@@ -99,9 +120,11 @@ export function useSchemaApply(admin: DatabaseAdmin, onApplied: (plan: DbSchemaP
     >
       {plan ? <SchemaPlanPreview plan={plan} /> : null}
       <p className="text-xs text-muted-foreground">{i18n.t('语句文本会写入审计日志。')}</p>
+      <DdlErrorDetails details={applyDetails} />
     </ConfirmDialog>
   )
-  return { plan, planning, planError, preview, reset, confirm: () => setConfirming(true), dialog }
+  const notice = <DdlCheckNotice controller={check} />
+  return { plan, planning, planError, preview, reset, held: Boolean(check.held), confirm: () => { if (!check.held) setConfirming(true) }, dialog, notice }
 }
 
 export function SchemaEditor({ tableName, admin, canEdit, supported, reason, onChanged }: {
@@ -126,7 +149,12 @@ export function SchemaEditor({ tableName, admin, canEdit, supported, reason, onC
     setError(null)
     try { setSchema(await admin.describe(tableName)) } catch (err) { setError(err) } finally { setLoading(false) }
   }, [admin, tableName])
-  const apply = useSchemaApply(admin, () => { setDraft(null); void load(); onChanged() })
+  const apply = useSchemaApply(admin, () => { setDraft(null); void load(); onChanged() }, async () => {
+    // A change to an existing table: read the structure again and let the person compare.
+    setSchema(await admin.describe(tableName))
+    onChanged()
+    return alterCheckResult(i18n.locale)
+  })
   useEffect(() => { if (supported) void load() }, [supported, load])
 
   if (!supported || (error && isUnsupportedRpcError(error))) {
@@ -149,6 +177,7 @@ export function SchemaEditor({ tableName, admin, canEdit, supported, reason, onC
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-auto" data-schema-editor>
+      {apply.notice}
       <div className="flex flex-wrap items-center gap-2 shrink-0">
         <Button size="sm" variant="outline" onClick={() => { void load() }} disabled={loading}><RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t('刷新')}</Button>
         {canEdit ? <>
@@ -200,7 +229,7 @@ export function SchemaEditor({ tableName, admin, canEdit, supported, reason, onC
           {apply.plan ? <SchemaPlanPreview plan={apply.plan} /> : null}
           <div className="flex flex-wrap gap-2">
             <Button type="submit" size="sm" variant="outline" disabled={apply.planning}><Eye className="w-3.5 h-3.5 mr-1" />{i18n.t('预览 DDL')}</Button>
-            <Button type="button" size="sm" variant={apply.plan?.destructive ? 'destructive' : 'soft'} disabled={!apply.plan} onClick={apply.confirm} data-action="apply-schema">{i18n.t('应用…')}</Button>
+            <Button type="button" size="sm" variant={apply.plan?.destructive ? 'destructive' : 'soft'} disabled={!apply.plan || apply.held} onClick={apply.confirm} data-action="apply-schema">{i18n.t('应用…')}</Button>
           </div>
         </form>
       ) : null}
@@ -266,11 +295,13 @@ export function SchemaEditor({ tableName, admin, canEdit, supported, reason, onC
 interface CreateColumnDraft { name: string; type: DbColumnType; nullable: boolean; primary: boolean; autoIncrement: boolean; defaultText: string }
 
 /** New table: name, columns, DDL preview, apply. */
-export function CreateTableEditor({ admin, supported, reason, onCreated, onCancel }: {
+export function CreateTableEditor({ admin, supported, reason, onCreated, onCancel, listTables }: {
   admin: DatabaseAdmin
   supported: boolean
   reason?: string
   onCreated: (table: string) => void
+  /** A fresh table list, for 「核对」 after a create whose outcome is unknown. */
+  listTables: () => Promise<readonly { readonly name: string }[]>
   onCancel: () => void
 }) {
   const i18n = useI18n()
@@ -280,7 +311,11 @@ export function CreateTableEditor({ admin, supported, reason, onCreated, onCance
     { name: 'name', type: 'text', nullable: true, primary: false, autoIncrement: false, defaultText: '' },
   ])
   const [draftError, setDraftError] = useState<string | null>(null)
-  const apply = useSchemaApply(admin, plan => onCreated(plan.change.table))
+  const apply = useSchemaApply(admin, plan => onCreated(plan.change.table), async plan => {
+    const result = createCheckResult(await listTables(), plan.change.table, i18n.locale)
+    if (result.applied) onCreated(plan.change.table)
+    return result
+  })
   if (!supported) {
     return <StatusState kind="unsupported" title={i18n.t('表结构编辑不可用')}
       description={reason || i18n.t('当前 Host 或数据库不支持查看和修改表结构（需要 SQLite、MySQL 或 PostgreSQL，并升级 Host）。')} />
@@ -334,11 +369,12 @@ export function CreateTableEditor({ admin, supported, reason, onCreated, onCance
       <div className="flex flex-wrap gap-2 shrink-0">
         <Button type="button" size="sm" variant="outline" onClick={() => { apply.reset(); setColumns(previous => [...previous, { name: '', type: 'text', nullable: true, primary: false, autoIncrement: false, defaultText: '' }]) }}><Plus className="w-3.5 h-3.5 mr-1" />{i18n.t('添加列')}</Button>
         <Button type="submit" size="sm" variant="outline" disabled={apply.planning}><Eye className="w-3.5 h-3.5 mr-1" />{i18n.t('预览 DDL')}</Button>
-        <Button type="button" size="sm" disabled={!apply.plan} onClick={apply.confirm} data-action="apply-schema">{i18n.t('创建…')}</Button>
+        <Button type="button" size="sm" disabled={!apply.plan || apply.held} onClick={apply.confirm} data-action="apply-schema">{i18n.t('创建…')}</Button>
       </div>
       {draftError ? <p role="alert" className="text-xs text-destructive shrink-0">{draftError}</p> : null}
       {apply.planError ? <StatusState compact error={apply.planError} title={i18n.t('无法生成修改')} /> : null}
       {apply.plan ? <div className="shrink-0"><SchemaPlanPreview plan={apply.plan} /></div> : null}
+      {apply.notice}
       {apply.dialog}
     </form>
   )
