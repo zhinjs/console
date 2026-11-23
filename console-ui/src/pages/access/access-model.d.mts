@@ -87,6 +87,9 @@ export function levelLabel(level: string, t: Translate): string
 export function permissionPlugin(permission: string): string
 export function readPluginPermissionCatalog(payload: unknown): PluginPermission[]
 export function permissionGroups(pluginCatalog?: readonly PluginPermission[], extra?: readonly string[]): PermissionGroup[]
+export interface GrantedPermissionView { readonly groups: PermissionGroup[]; readonly total: number; readonly catalogSize: number; readonly unlisted: string[] }
+/** Only the groups and permissions a role holds; `total` counts distinct permissions like the roles list. */
+export function grantedPermissionView(groups: readonly PermissionGroup[], selected: readonly string[]): GrantedPermissionView
 export function togglePermissions(selected: readonly string[], permissions: readonly string[], checked: boolean): string[]
 export function groupCheckState(selected: readonly string[], permissions: readonly string[]): boolean | 'indeterminate'
 export function readScope(value: unknown): BindingScope | null

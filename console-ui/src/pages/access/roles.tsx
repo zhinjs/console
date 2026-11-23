@@ -9,7 +9,7 @@ import {
   IAM_RPC, builtinRoleLabel, copyRoleName, permissionGroups, readPluginPermissionCatalog, readRoles, roleNameProblem, roleReadBackView,
   type IamRole, type PluginPermission,
 } from './access-model.mjs'
-import { FormField, IamLoadError, PermissionChecklist, ReadOnlyNotice } from './access-components'
+import { FormField, IamLoadError, PermissionChecklist, ReadOnlyNotice, RolePermissionView } from './access-components'
 import { iamRequest, useCanManageIam, useIamRead } from './use-iam'
 import '../admin-pages.css'
 
@@ -115,7 +115,7 @@ export default function AccessRolesPage() {
               <DialogTitle>{builtinRoleLabel(pending.role.name, i18n.t) ?? pending.role.name}</DialogTitle>
               <DialogDescription>{pending.role.builtin ? i18n.t("内置角色不可修改，可以复制后再改。") : pending.role.description}</DialogDescription>
             </DialogHeader>
-            <PermissionChecklist groups={groups} selected={pending.role.permissions} disabled />
+            <RolePermissionView groups={groups} selected={pending.role.permissions} />
           </DialogContent>
         </Dialog>
       ) : null}
