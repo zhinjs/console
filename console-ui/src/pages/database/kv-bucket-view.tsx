@@ -56,9 +56,11 @@ export function KvBucketView({
   // A write whose outcome is unknown (#64): every write in this bucket stays blocked until 「核对」
   // reads the bucket again; a replay could overwrite, or be refused as 「键已存在」 for a write that landed.
   const check = useDdlCheck<KvWritePlan>(async plan => {
-    const result = kvCheckResult((await kvEntries(tableName)).entries, plan, i18n.locale)
+    const fresh = (await kvEntries(tableName)).entries
+    const result = kvCheckResult(fresh, plan, i18n.locale)
+    // The list shown is the one just read: no second read that could fail after the verdict.
+    setEntries(fresh)
     if (result.applied && plan.action === 'set') { setEditEntry(null); setAddEntry(false); setKeyInput(''); setValueInput('') }
-    await load()
     return result
   })
   const locked = busy || Boolean(check.held)
@@ -68,9 +70,19 @@ export function KvBucketView({
     await run(async () => {
     const key = keyInput.trim()
     let val: any
+    let existing: KvEntry[] = []
+    if (isNew && key) {
+      try {
+        existing = (await kvEntries(tableName)).entries
+      } catch (err) {
+        // The read that guards a new key failed: nothing was written, so retrying is safe.
+        setMsg({ type: 'error', text: i18n.t("没能确认这个 Key 是否已存在，没有写入任何内容。请稍后重试。"), details: err instanceof Error ? err.message : String(err) })
+        return
+      }
+    }
     try {
       if (!key) throw new Error(i18n.t("Key 不能为空。"))
-      if (isNew) assertNewKey(key, (await kvEntries(tableName)).entries, i18n.locale)
+      if (isNew) assertNewKey(key, existing, i18n.locale)
       try { val = JSON.parse(valueInput) } catch { val = valueInput }
     } catch (err) {
       // Checks before anything is written: their own message says what to fix.
@@ -186,7 +198,8 @@ export function KvBucketView({
         </Table>
       </div>
 
-      {!readOnly && <Dialog open={editEntry !== null || addEntry} onOpenChange={(open) => { if (!open && !gate.pending) { setEditEntry(null); setAddEntry(false) } }}>
+      {/* While a save is held the editor stays open: if 「核对」 finds it did not land, the input is still there. */}
+      {!readOnly && <Dialog open={editEntry !== null || addEntry} onOpenChange={(open) => { if (!open && !gate.pending && !check.held) { setEditEntry(null); setAddEntry(false) } }}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{addEntry ? i18n.t("添加键值") : i18n.t("编辑键值")}</DialogTitle></DialogHeader>
           <div className="space-y-3 py-2">
@@ -209,7 +222,7 @@ export function KvBucketView({
           {msg?.type === 'error' && <div role="alert" className="space-y-2 text-sm text-destructive"><p>{msg.text}</p>{msg.details ? <details className="text-xs"><summary className="cursor-pointer">{i18n.t("技术详情")}</summary><p className="mt-2 whitespace-pre-wrap break-words">{msg.details}</p></details> : null}</div>}
           <DdlCheckNotice controller={check} />
           <DialogFooter>
-            <DialogClose asChild><Button variant="outline" size="sm" disabled={busy}>{i18n.t("取消")}</Button></DialogClose>
+            <DialogClose asChild><Button variant="outline" size="sm" disabled={locked}>{i18n.t("取消")}</Button></DialogClose>
             <Button size="sm" disabled={locked || !keyInput.trim() || (addEntry && entries.some(entry => entry.key === keyInput.trim()))} onClick={() => handleSave(addEntry)}><Save className="w-3.5 h-3.5 mr-1" />{i18n.t("保存")}</Button>
           </DialogFooter>
         </DialogContent>

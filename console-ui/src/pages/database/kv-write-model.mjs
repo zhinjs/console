@@ -28,7 +28,13 @@ export function kvWriteFailure(error, action, locale = 'zh-CN') {
   return { unknown: false, text, details }
 }
 
-const same = (left, right) => JSON.stringify(left) === JSON.stringify(right)
+/** Same JSON value whatever the key order (a Host may store objects with their keys re-ordered). */
+function canonical(value) {
+  if (Array.isArray(value)) return value.map(canonical)
+  if (value && typeof value === 'object') return Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])]))
+  return value
+}
+const same = (left, right) => JSON.stringify(canonical(left)) === JSON.stringify(canonical(right))
 
 /**
  * 「核对」 for a KV write with an unknown outcome, from the bucket's fresh entries: a save took effect
@@ -43,7 +49,8 @@ export function kvCheckResult(entries, plan, locale = 'zh-CN') {
       ? { applied: false, text: translate(locale, '核对结果：键「{0}」仍然存在，删除没有执行，可以重新删除。', [plan.key]) }
       : { applied: true, text: translate(locale, '核对结果：键「{0}」已不存在，删除已经生效。', [plan.key]) }
   }
-  return entry && same(entry.value, plan.value)
+  if (!entry) return { applied: false, text: translate(locale, '核对结果：键「{0}」不存在，保存没有生效，可以重新保存。', [plan.key]) }
+  return same(entry.value, plan.value)
     ? { applied: true, text: translate(locale, '核对结果：键「{0}」已是要保存的值，保存已经生效。', [plan.key]) }
-    : { applied: false, text: translate(locale, '核对结果：键「{0}」不是要保存的值，保存没有生效，可以重新保存。', [plan.key]) }
+    : { applied: false, text: translate(locale, '核对结果：键「{0}」存在，但值与要保存的不同，保存没有生效。请对照当前值后再决定是否重新保存。', [plan.key]) }
 }

@@ -31,8 +31,14 @@ test('failures are told apart in the UI language; the Host text is kept for 技�
 test('「核对」 decides from the bucket: the saved value is there, or the deleted key is gone', () => {
   const entries = [{ key: 'greeting', value: { text: 'hi' } }]
   assert.equal(kvCheckResult(entries, { action: 'set', key: 'greeting', value: { text: 'hi' } }).applied, true)
-  assert.equal(kvCheckResult(entries, { action: 'set', key: 'greeting', value: { text: 'hello' } }).applied, false)
-  assert.equal(kvCheckResult([], { action: 'set', key: 'greeting', value: 1 }).applied, false)
+  const different = kvCheckResult(entries, { action: 'set', key: 'greeting', value: { text: 'hello' } })
+  assert.equal(different.applied, false)
+  assert.match(different.text, /存在，但值与要保存的不同/, 'a different value is not reported as a missing key')
+  const missing = kvCheckResult([], { action: 'set', key: 'greeting', value: 1 })
+  assert.equal(missing.applied, false)
+  assert.match(missing.text, /不存在，保存没有生效/)
+  // A Host that stores objects with their keys re-ordered still counts as the saved value.
+  assert.equal(kvCheckResult([{ key: 'cfg', value: { a: 2, b: { d: 1, c: [1, { y: 1, x: 2 }] } } }], { action: 'set', key: 'cfg', value: { b: { c: [1, { x: 2, y: 1 }], d: 1 }, a: 2 } }).applied, true)
   assert.equal(kvCheckResult(entries, { action: 'delete', key: 'greeting' }).applied, false)
   assert.equal(kvCheckResult([], { action: 'delete', key: 'greeting' }).applied, true)
   assert.throws(() => kvCheckResult(undefined, { action: 'delete', key: 'greeting' }), 'an unreadable bucket keeps the hold')
@@ -74,13 +80,15 @@ function fixture({ kvSet, kvDelete, entries = [{ key: 'greeting', value: 'hi' }]
     './use-mutation': { useMutation: () => ({ busy: false, gate: { pending: false }, run: fn => fn() }) },
     '../../components/toast': { useToast: () => ({ success: message => toasts.push(message), error: message => toasts.push(message) }) },
   })
-  const props = { tableName: 'cache', kvGet: async () => ({}), kvSet, kvDelete, kvEntries: async () => ({ entries: current }), readOnly: false }
+  let readFailure = null
+  const props = { tableName: 'cache', kvGet: async () => ({}), kvSet, kvDelete, readOnly: false,
+    kvEntries: async () => { if (readFailure) { const failure = readFailure; readFailure = null; throw failure } return { entries: current } } }
   const render = () => { let count = 0; do { assert.ok(++count < 30); dirty = false; cursor = 0; value = view.KvBucketView(props) } while (dirty); return value }
   render()
   const all = () => elements(value)
   const ready = (async () => { await settle(); render() })()
   return {
-    ready, render, toasts, setEntries: next => { current = next },
+    ready, render, toasts, setEntries: next => { current = next }, failNextRead: error => { readFailure = error },
     all,
     notices: () => all().filter(node => node.type === 'ddl-check-notice'),
     save: () => all().find(node => node.type === 'button' && text(node).includes('保存')),
@@ -109,6 +117,10 @@ test('a save with an unknown outcome locks every write and offers only 「核对
   assert.doesNotMatch(text(f.all().find(node => node.props?.role === 'alert') ?? ''), /did not answer/, 'no raw English as the message')
   // Fired anyway (a stale click): nothing is sent.
   await f.save().props.onClick(); assert.equal(sets.length, 1)
+  // The editor cannot be closed while held, so a 「not applied」 check still finds the typed value.
+  f.all().find(node => node.type === 'dialog').props.onOpenChange(false); f.render()
+  assert.equal(f.all().find(node => node.type === 'dialog').props.open, true)
+  assert.equal(f.all().find(node => node.type === 'button' && text(node).includes('取消')).props.disabled, true)
 
   // The first try had landed: the check says so and closes the editor, instead of 「键已存在」 on a retry.
   f.setEntries([{ key: 'greeting', value: 'hi' }, { key: 'token', value: 'abc' }])
@@ -117,6 +129,21 @@ test('a save with an unknown outcome locks every write and offers only 「核对
   assert.match(f.notices()[0].props.controller.result.text, /已是要保存的值，保存已经生效/)
   assert.equal(f.all().find(node => node.type === 'dialog').props.open, false, 'the editor is closed')
   assert.equal(f.deleteButton().props.disabled, false)
+})
+
+test('a failed read before adding a key says nothing was written, in the UI language', async () => {
+  const sets = []
+  const f = fixture({ kvSet: async (table, key, value) => { sets.push(key) }, kvDelete: async () => {} })
+  await f.ready
+  f.add().props.onClick(); f.render()
+  f.input().props.onChange({ target: { value: 'token' } }); f.textarea().props.onChange({ target: { value: '1' } }); f.render()
+  // kvEntries rejects for this one read.
+  f.failNextRead(Object.assign(new Error('The instance did not answer in time'), { code: 'instance_timeout', status: 504 }))
+  await f.save().props.onClick(); await settle(); f.render()
+  assert.deepEqual(sets, [], 'nothing was written')
+  const alert = f.all().find(node => node.props?.role === 'alert' && text(node).includes('没能确认'))
+  assert.ok(alert, 'a translated reason')
+  assert.match(text(alert), /技术详情The instance did not answer in time/)
 })
 
 test('a delete with an unknown outcome is held for 「核对」; a plain failure says why, the Host text in 技术详情', async () => {
