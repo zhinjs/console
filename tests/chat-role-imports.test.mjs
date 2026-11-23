@@ -71,12 +71,12 @@ test('the list keeps personal links first, drops duplicates and id-less rows, ke
 test('each row says what it would do in plain words', () => {
   const [personal, owner, trusted] = readChatRoleImports(LIST).rows
   const users = [{ id: 'u-alice-0123456789', username: 'alice', displayName: '值班同事 Alice' }]
-  assert.equal(chatRoleImportIdentity(owner), 'icqq · preview-community · 10008')
+  assert.equal(chatRoleImportIdentity(owner, zh), 'icqq · 账号 preview-community · 10008')
   assert.equal(chatRoleImportSummary(personal, zh, users), 'Console 用户 值班同事 Alice → icqq · 10007')
   assert.equal(chatRoleImportSummary(personal, zh), 'Console 用户 #u-alice- → icqq · 10007')
-  assert.equal(chatRoleImportSummary(owner, zh), 'icqq · preview-community · 10008 → 所有者（账号 icqq/preview-community）')
+  assert.equal(chatRoleImportSummary(owner, zh), 'icqq · 账号 preview-community · 10008 → 所有者（账号 icqq/preview-community）')
   assert.equal(chatRoleImportSummary(trusted, zh), 'icqq · 10009 → 受信任（全局）')
-  assert.equal(chatRoleImportSummary(owner, en), 'icqq · preview-community · 10008 → Owner (Account icqq/preview-community)')
+  assert.equal(chatRoleImportSummary(owner, en), 'icqq · Account preview-community · 10008 → Owner (Account icqq/preview-community)')
   assert.equal(chatRoleImportSummary(personal, en, users), 'Console user 值班同事 Alice → icqq · 10007')
   assert.match(chatRoleImportEffect(personal, zh), /Sandbox 里可以以此人身份发言.*不授予任何角色/u)
   assert.match(chatRoleImportEffect(personal, en), /speak as this person in the Sandbox/u)

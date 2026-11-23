@@ -108,6 +108,7 @@ export const englishMessages = Object.freeze({
   "读取": "Read",
   "适配器 {0}": "Adapter {0}",
   "账号 {0}": "Account {0}",
+  "来自配置第 {0} 个账号": "From account no. {0} in the configuration",
   "请填写适配器别名": "Enter an adapter alias",
   "请填写账号（别名/账号 ID）": "Enter an account (alias/account ID)",
   "作用域不能有首尾空格，且不超过 256 个字符": "A scope cannot start or end with spaces and is at most 256 characters",
