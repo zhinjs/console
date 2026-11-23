@@ -41,6 +41,8 @@ function readIdentity(item) {
     ...(time(item.lastSeenAt) ? { lastSeenAt: item.lastSeenAt } : {}),
     ...(text(item.lastDisplayName) ? { lastDisplayName: item.lastDisplayName } : {}),
     ...(text(item.principalId) ? { principalId: item.principalId } : {}),
+    // zhinjs/zhin#1250 第 87 批 (ADR 0060 §5.4): an id on a simulation adapter nobody speaks as. Optional: older Hosts omit it.
+    ...(item.simulatedSender === true ? { simulatedSender: true } : {}),
   })
 }
 
@@ -82,6 +84,21 @@ export function readPrincipals(payload) {
 export function readRecentIdentities(payload) {
   const rows = isRecord(payload) && Array.isArray(payload.identities) ? payload.identities : []
   return rows.map(readIdentity).filter(Boolean)
+}
+
+/**
+ * `simulatedSendersOmitted` of a `chat-identities.recent` reply (zhinjs/zhin#1250 第 87 批): aliases
+ * of simulation adapters whose typed-in senders are never recorded, so they never appear in the
+ * list. Empty for older Hosts.
+ */
+export function readSimulatedSendersOmitted(payload) {
+  const list = isRecord(payload) && Array.isArray(payload.simulatedSendersOmitted) ? payload.simulatedSendersOmitted : []
+  return [...new Set(list.filter(alias => typeof alias === 'string' && alias))]
+}
+
+/** Whether every identity of the person is a simulated sender (it never speaks, so it has no 「最近发言」). */
+export function isSimulatedOnly(principal) {
+  return principal.identities.length > 0 && principal.identities.every(identity => identity.simulatedSender === true)
 }
 
 /** `chat-identities.me` reply. */
@@ -170,7 +187,8 @@ export function grantCandidates({ recent = [], principals = [], alias = null, qu
     rows.set(key, Object.freeze({ key, adapter: identity.adapter, userId: identity.userId, source,
       label: identity.lastDisplayName ?? (person ? principalName(person) : identity.userId),
       ...(person ? { personName: principalName(person), principalId: person.id } : identity.principalId ? { principalId: identity.principalId } : {}),
-      ...(identity.lastSeenAt ? { lastSeenAt: identity.lastSeenAt } : {}) }))
+      ...(identity.lastSeenAt ? { lastSeenAt: identity.lastSeenAt } : {}),
+      ...(identity.simulatedSender ? { simulatedSender: true } : {}) }))
   }
   for (const identity of recent) add(identity, 'recent')
   for (const person of principals) for (const identity of person.identities) add(identity, 'person', person)
@@ -269,8 +287,9 @@ export const renameRequest = (principalId, displayName) => ({ type: CHAT_PRINCIP
  * Host requires a global iam.manage and audits it as `chat-roles.grant`.
  */
 export function promoteGlobalOwnerRequest(principal) {
-  const identity = principal?.identities?.[0]
-  if (!identity) throw new Error('The person has no identity')
+  // A simulated sender never speaks: the Host refuses a grant to it (400 `simulated-identity`).
+  const identity = principal?.identities?.find(item => !item.simulatedSender)
+  if (!identity) throw new Error('The person has no identity that speaks')
   return { type: CHAT_ROLES_RPC.GRANT, level: 'global', adapter: identity.adapter, userId: identity.userId, role: 'owner' }
 }
 

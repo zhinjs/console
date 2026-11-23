@@ -6,6 +6,7 @@ import ts from 'typescript'
 import * as locale from '../console-ui/src/i18n/locale.mjs'
 import * as mcp from '../console-ui/src/pages/introspection/mcp-status-model.mjs'
 import { deriveFallbackAttention } from '../console-ui/src/pages/attention/attention-model.mjs'
+import { ROUTE_PERMISSIONS } from '../console-ui/src/navigation-sections.mjs'
 
 const require = createRequire(import.meta.url)
 const read = path => readFile(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')
@@ -137,19 +138,36 @@ test('Host attention items for MCP are rendered with the title and detail the Ho
 
 // ------------------------------------------------------------- contract
 
-test('the local contract mirror matches the REST path and the published protocol once it ships', async () => {
+test('the MCP contract is the published protocol, re-exported', async () => {
   const contract = await read('contracts/mcp.ts')
-  assert.match(contract, /export const CONSOLE_MCP_TEST_PATH = '\/introspection\/mcp\/test'/)
-  for (const status of ['connected', 'failed', 'idle', 'not_loaded']) assert.match(contract, new RegExp(`'${status}'`))
-  for (const category of mcp.MCP_FAILURE_CATEGORIES) assert.match(contract, new RegExp(`'${category}'`))
+  assert.match(contract, /from '@zhin\.js\/console-protocol'/)
+  assert.doesNotMatch(contract, /export const CONSOLE_MCP_TEST_PATH =/, 'no local copy of the path')
+  const protocol = await import('@zhin.js/console-protocol')
+  assert.equal(protocol.CONSOLE_MCP_TEST_PATH, '/introspection/mcp/test')
   assert.deepEqual([...mcp.MCP_SERVER_STATUSES], ['connected', 'failed', 'idle', 'not_loaded'])
   const rest = await read('contracts/zhin-console.ts')
-  assert.match(rest, /MCP_TEST: '\/api\/introspection\/mcp\/test'/)
-  const protocol = await import('@zhin.js/console-protocol')
-  if ('CONSOLE_MCP_TEST_PATH' in protocol) {
-    assert.equal(protocol.CONSOLE_MCP_TEST_PATH, '/introspection/mcp/test', 'switch contracts/mcp.ts to re-export the protocol')
-  }
+  assert.match(rest, /MCP_TEST: `\/api\$\{CONSOLE_MCP_TEST_PATH\}`/)
   assert.equal(MCP_CONFIG_HREF, '/ops/config?section=ai%3Aservices')
+})
+
+test('the local category and status lists equal the protocol types (compile time and run time)', async () => {
+  // The protocol exports only the types: read its declaration and compare the union members.
+  const declaration = await readFile(new URL('./status.d.ts', import.meta.resolve('@zhin.js/console-protocol')), 'utf8')
+  const union = name => {
+    const body = new RegExp(`export type ${name} = ([^;]+);`, 'u').exec(declaration)?.[1]
+    assert.ok(body, `${name} is declared by the protocol`)
+    return [...body.matchAll(/'([^']+)'/gu)].map(match => match[1]).sort()
+  }
+  assert.deepEqual([...mcp.MCP_FAILURE_CATEGORIES].sort(), union('ConsoleMcpFailureCategory'))
+  assert.deepEqual([...mcp.MCP_SERVER_STATUSES].sort(), union('ConsoleMcpServerStatus'))
+  // The .d.mts tuples (what `contracts/mcp.ts` checks against the protocol under tsc) are the runtime values.
+  const typings = await read('pages/introspection/mcp-status-model.d.mts')
+  const tuple = name => [...(new RegExp(`export const ${name}: readonly \\[([^\\]]*)\\]`, 'u').exec(typings)?.[1] ?? '').matchAll(/'([^']+)'/gu)].map(match => match[1])
+  assert.deepEqual(tuple('MCP_FAILURE_CATEGORIES'), [...mcp.MCP_FAILURE_CATEGORIES])
+  assert.deepEqual(tuple('MCP_SERVER_STATUSES'), [...mcp.MCP_SERVER_STATUSES])
+  const contract = await read('contracts/mcp.ts')
+  assert.match(contract, /failureCategories: Same<\(typeof MCP_FAILURE_CATEGORIES\)\[number\], ProtocolFailureCategory>/)
+  assert.match(contract, /serverStatuses: Same<\(typeof MCP_SERVER_STATUSES\)\[number\], ProtocolServerStatus>/)
 })
 
 // ------------------------------------------------------------- detail panel
@@ -215,7 +233,8 @@ function mountDetail(item, { permissions = ['agent.configure', 'ops.config.read'
         return { status, ok: status < 300, json: async () => body, headers: { get: name => name === 'retry-after' ? retryAfter : null } }
       },
     },
-    '../../utils/console-access.mjs': { hasConsolePermission: name => permissions.includes(name) },
+    '../../utils/console-access.mjs': { hasConsolePermission: name => permissions.includes(name), hasAnyConsolePermission: names => names.some(name => permissions.includes(name)) },
+    '../../navigation-sections.mjs': { ROUTE_PERMISSIONS },
     '../../hooks/use-console-access': { useConsoleAccess: () => ({}) },
     '@zhin.js/console-ui': { Alert: 'alert', AlertTitle: 'alert-title', AlertDescription: 'alert-description', Button: 'button' },
     './mcp-status-model.mjs': mcp,
@@ -241,7 +260,11 @@ test('the test button needs agent.configure; the configuration link points at ai
   assert.equal(link.props.to, '/ops/config?section=ai%3Aservices')
   assert.match(text(link), /ai\.mcpServers/)
   const none = mountDetail(item, { permissions: [] })
-  assert.equal(nodes(none.runtime.value).find(node => node.type === 'a'), undefined, 'no configuration link without ops.config.read')
+  assert.equal(nodes(none.runtime.value).find(node => node.type === 'a'), undefined, 'no configuration link without a configuration permission')
+  // console#124: the entry follows the 配置文件 page's own any-of permissions, so a write-only identity sees it too.
+  assert.deepEqual(ROUTE_PERMISSIONS['/ops/config'], ['ops.config.read', 'ops.config.write'])
+  const writer = mountDetail(item, { permissions: ['ops.config.write'] })
+  assert.equal(nodes(writer.runtime.value).find(node => node.type === 'a')?.props.to, '/ops/config?section=ai%3Aservices')
 
   const operator = mountDetail(item)
   assert.ok(operator.testButton(), 'agent.configure shows the button')
@@ -272,11 +295,71 @@ test('a test posts { name } and shows its result apart from the row status', asy
   assert.equal(testButton().props.disabled, false)
 })
 
+test('an English Console does not show the Host\'s Chinese error text (console#124)', () => {
+  const forbidden = { kind: 'error', reason: 'forbidden', status: 403, retryAfterSec: null, message: '缺少权限 agent.configure' }
+  assert.equal(mcp.mcpTestPresentation(forbidden, 'zh-CN').detail, '缺少权限 agent.configure')
+  assert.equal(mcp.mcpTestPresentation(forbidden, 'en').detail, 'This instance is read-only (such as a demo), or you lack this permission.')
+  const failed = { kind: 'error', reason: 'error', status: 500, retryAfterSec: null, message: '内部错误' }
+  assert.equal(mcp.mcpTestPresentation(failed, 'en').detail, 'The Host answered HTTP 500.')
+  const network = { kind: 'error', reason: 'network', status: 0, retryAfterSec: null, message: 'Failed to fetch' }
+  assert.equal(mcp.mcpTestPresentation(network, 'en').detail, 'Failed to fetch', 'text without Chinese is kept')
+  assert.equal(mcp.hostTextFor('  ', 'en'), '')
+  for (const presentation of [forbidden, failed].map(outcome => mcp.mcpTestPresentation(outcome, 'en'))) {
+    assert.doesNotMatch(`${presentation.label} ${presentation.detail}`, /[\u3400-\u9fff]/u)
+  }
+})
+
+test('an English Console keeps the code, the permission and the Host text of a refusal', () => {
+  const outcome = readMcpTestResponse({ status: 403, body: { success: false, code: 'forbidden', error: '缺少权限 agent.configure' } })
+  assert.equal(outcome.code, 'forbidden')
+  const en = mcpTestPresentation(outcome, 'en')
+  assert.equal(en.detail, 'This instance is read-only (such as a demo), or you lack this permission.')
+  assert.equal(en.code, 'forbidden')
+  assert.equal(en.permission, 'agent.configure')
+  assert.deepEqual(en.notes, ['Requires permission: agent.configure', 'Error code: forbidden'])
+  assert.equal(en.hostMessage, '缺少权限 agent.configure', 'the original text stays, out of the main line')
+  for (const line of [en.label, en.detail, ...en.notes]) assert.doesNotMatch(line, /[\u3400-\u9fff]/u)
+  // Chinese Console: the Host sentence is the detail; the permission is in it, so no extra line.
+  const zh = mcpTestPresentation(outcome, 'zh-CN')
+  assert.equal(zh.detail, '缺少权限 agent.configure')
+  assert.deepEqual(zh.notes, ['错误代码：forbidden'])
+  assert.equal(zh.hostMessage, null)
+  // A permission named only by the code, and codes that name none.
+  assert.equal(mcp.permissionFromRefusal('', 'forbidden:agent.configure'), 'agent.configure')
+  assert.equal(mcp.permissionFromRefusal('Forbidden', 'forbidden'), null)
+  assert.equal(mcp.permissionFromRefusal('see ai.mcpServers'), null, 'only Console permission names')
+  // Not forbidden: no permission line, the code still shown; an older Host without code adds nothing.
+  const failed = mcpTestPresentation(readMcpTestResponse({ status: 500, body: { success: false, code: 'internal_error', error: '内部错误' } }), 'en')
+  assert.equal(failed.permission, null)
+  assert.deepEqual(failed.notes, ['Error code: internal_error'])
+  assert.equal(failed.hostMessage, '内部错误')
+  const old = mcpTestPresentation(readMcpTestResponse({ status: 403, body: { success: false, error: 'Forbidden' } }), 'en')
+  assert.equal(old.detail, 'Forbidden')
+  assert.deepEqual(old.notes, [])
+  assert.equal(old.hostMessage, null)
+})
+
+test('the detail panel shows the notes and keeps the Host text under 详情', async () => {
+  const { runtime, testButton } = mountDetail({ name: 'fs', status: 'idle' }, { reply: async () => ({ status: 403, body: { success: false, code: 'forbidden', error: '缺少权限 agent.configure' } }) })
+  testButton().props.onClick(); await flush(); runtime.render()
+  const result = nodes(runtime.value).find(node => node.type === 'alert' && node.props.variant === 'warning')
+  assert.match(text(result), /错误代码：forbidden/)
+  assert.equal(nodes(result).some(node => node.type === 'details'), false, 'zh-CN: the Host text is already the detail')
+})
+
 test('429 from the test shows how long to wait', async () => {
   const { runtime, testButton } = mountDetail({ name: 'fs', status: 'idle' }, { reply: async () => ({ status: 429, body: { success: false, error: 'busy' }, retryAfter: '4' }) })
   testButton().props.onClick(); await flush(); runtime.render()
   const result = nodes(runtime.value).find(node => node.type === 'alert' && node.props.variant === 'warning')
   assert.match(text(result), /请 4 秒后再试/)
+})
+
+test('a malformed Retry-After is not shown as a wait', async () => {
+  const { runtime, testButton } = mountDetail({ name: 'fs', status: 'idle' }, { reply: async () => ({ status: 429, body: { success: false, error: 'busy' }, retryAfter: '1e3' }) })
+  testButton().props.onClick(); await flush(); runtime.render()
+  const result = nodes(runtime.value).find(node => node.type === 'alert' && node.props.variant === 'warning')
+  assert.match(text(result), /请稍后再试。/)
+  assert.doesNotMatch(text(result), /1000|1e3/)
 })
 
 // ------------------------------------------------- dashboard / workbench summary

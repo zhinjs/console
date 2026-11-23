@@ -1,3 +1,4 @@
+import { parseConversationSessionKey } from '@zhin.js/console-protocol'
 import { translate } from '../i18n/locale.mjs'
 
 /**
@@ -36,14 +37,16 @@ export function middleEllipsis(text, max = 32) {
 }
 
 /**
- * 拆 sessionKey：真实格式是 `platform:endpoint:scope:sceneId`（sceneId 里允许再有冒号）。
+ * 拆 sessionKey：真实格式是 `platform:endpoint:scope:sceneId`（sceneId 里允许再有冒号），由
+ * `@zhin.js/console-protocol` 的 `parseConversationSessionKey` 解析。
  * 优先用 Host 给的 platform / endpoint / scope / sceneId；缺失时按上面拆，
- * 少于 4 段（如 `schedule:assistant-profile-weatherReport`）不猜，整条 key 当作会话 ID 显示。
+ * 拆不出来（少于 4 段，如 `schedule:assistant-profile-weatherReport`；或平台、类型、会话 ID 为空）不猜，
+ * 整条 key 当作会话 ID 显示。
  */
 export function splitSessionKey(row) {
-  const parts = String(row.sessionKey).split(':')
-  const fallback = parts.length >= 4
-    ? { platform: parts[0], endpoint: parts[1], scope: parts[2], sceneId: parts.slice(3).join(':') }
+  const parsed = parseConversationSessionKey(String(row.sessionKey))
+  const fallback = parsed
+    ? { platform: parsed.adapter, endpoint: parsed.endpointKey, scope: parsed.kind, sceneId: parsed.id }
     : { platform: '', endpoint: '', scope: '', sceneId: row.sessionKey }
   return {
     sessionKey: row.sessionKey,
@@ -52,6 +55,22 @@ export function splitSessionKey(row) {
     scope: row.scope || fallback.scope,
     sceneId: row.sceneId || fallback.sceneId,
   }
+}
+
+const IM_CONVERSATION_KINDS = new Set(['private', 'group', 'channel'])
+
+/**
+ * The conversation an IM session key names, as the Console reads it: the protocol's
+ * `parseConversationSessionKey` (on the trimmed key), narrowed to what a Console link needs — a
+ * non-blank platform, account and conversation id, and a `private` / `group` / `channel` kind.
+ * The protocol also accepts an empty account (`qq::private:1`, written for a scene without one,
+ * #1250 b80); such a key has no account page to open, so the Console still treats it as no
+ * conversation. Null when the key is not one.
+ */
+export function parseImConversationKey(key) {
+  const parsed = parseConversationSessionKey(String(key ?? '').trim())
+  if (!parsed || !parsed.adapter.trim() || !parsed.endpointKey.trim() || !parsed.id.trim() || !IM_CONVERSATION_KINDS.has(parsed.kind)) return null
+  return { platform: parsed.adapter, endpoint: parsed.endpointKey, kind: parsed.kind, id: parsed.id }
 }
 
 /** The id of a `schedule:<id>` key, '' for other keys. */
@@ -88,7 +107,8 @@ export function sessionKind(row) {
   const own = label(row?.scopeKind)
   if (own) return KIND_ALIASES[own] ?? own
   const key = String(row?.sessionKey ?? '')
-  const scope = label(row?.scope) || (key.split(':').length >= 4 && label(key.split(':').slice(3).join(':')) ? key.split(':')[2] : '')
+  const parsed = parseConversationSessionKey(key)
+  const scope = label(row?.scope) || (parsed && label(parsed.id) ? parsed.kind : '')
   if (IM_SCOPES.has(scope)) return KIND_ALIASES[scope] ?? scope
   const hashed = HASHED_KEY.exec(key)
   if (hashed && HASHED_KINDS[hashed[1]]) return HASHED_KINDS[hashed[1]]

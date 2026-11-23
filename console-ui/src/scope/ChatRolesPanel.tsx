@@ -170,6 +170,8 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
         // A certain refusal shows its reason in the receipt (未执行); anything else stays 结果未知.
         const refusal = chatRoleRefusal(statusFromError(error))
         if (!refusal) throw error
+        // 400 `simulated-identity` (zhinjs/zhin#1250 第 87 批): the Host's own sentence, as sent — never 已完成.
+        if (refusal.code === 'simulated-identity') return { status: 'failed', message: refusal.message ?? i18n.t(CHAT_ROLE_COPY.simulatedIdentity) }
         return { status: 'failed', message: refusal.code === 'unpersisted' ? i18n.t(CHAT_ROLE_COPY.unpersisted) : refusal.message }
       }
     },

@@ -1,4 +1,4 @@
-import { hasAnyConsolePermission, hasConsolePermission, scopedAdapters, UNRESTRICTED_ACCESS } from './utils/console-access.mjs'
+import { ANY_TARGET, hasAnyConsolePermission, hasConsolePermission, scopedAdapters, UNRESTRICTED_ACCESS } from './utils/console-access.mjs'
 
 /**
  * The six Console sections (ADR 0052). `icon` names a lucide icon (components/sidebarMenuIcons.ts). The first four are day-to-day work, the last two
@@ -63,7 +63,7 @@ export const ROUTE_PERMISSIONS = Object.freeze({
   '/scope/:adapter': ['endpoint.view', 'feature.view', 'endpoint.manage'],
   '/scope/:adapter/:endpoint': ['endpoint.view', 'feature.view', 'endpoint.manage'],
   '/scope/:adapter/:endpoint/:conversation': ['endpoint.view', 'feature.view'],
-  '/agent/sessions': ['endpoint.view'],
+  '/agent/sessions': ['agent.view'],
   '/features': ['feature.view'],
   '/features/global/:plugin': ['feature.view'],
   '/features/ai': ['agent.view'],
@@ -120,13 +120,44 @@ export function routePermissions(route) {
   return ROUTE_PERMISSIONS[route?.path] ?? sectionById(routeSectionId(route))?.permissions ?? []
 }
 
+/**
+ * The object tree (`/scope*`) is read at whatever scope the principal holds (ADR 0049 §3): its
+ * 概览 lists through `endpoint.list` (`ANY_TARGET`), its tabs check their own object
+ * (`scopeTabAllowed`), and a tab the principal cannot use explains the missing permission itself.
+ * So an adapter- or account-scoped binding makes the entry visible, and the shell never puts its
+ * 无权限 panel in front of these pages.
+ *
+ * Not `/sandbox` or `/agent/sessions`: the Host checks their socket / HTTP routes (`/sandbox`,
+ * `/api/agent/sessions`, `/api/agent/trace-archive`) with global bindings only
+ * (`authorizeConsoleWebSocket` / `authorizeConsoleHttp`), so a scoped binding cannot use them.
+ */
+const SCOPE_TREE_ROUTES = new Set(['/scope', '/scope/:adapter', '/scope/:adapter/:endpoint', '/scope/:adapter/:endpoint/:conversation'])
+
+function routeReachable(route, access) {
+  const anyOf = routePermissions(route)
+  if (SCOPE_TREE_ROUTES.has(route?.path)) return hasAnyConsolePermission(anyOf, access, ANY_TARGET)
+  const adapterScoped = ADAPTER_SCOPED_ROUTE_PERMISSIONS[route?.path] ?? []
+  return hasAnyConsolePermission(anyOf, access) || adapterScoped.some(name => scopedAdapters(name, access).length > 0)
+}
+
 export function canSeeRoute(route, access = UNRESTRICTED_ACCESS) {
   if (access.unrestricted) return true
   const required = Array.isArray(route?.requiredPermissions) ? route.requiredPermissions : []
-  const adapterScoped = ADAPTER_SCOPED_ROUTE_PERMISSIONS[route?.path] ?? []
-  const allowed = hasAnyConsolePermission(routePermissions(route), access)
-    || adapterScoped.some(name => scopedAdapters(name, access).length > 0)
-  return allowed && required.every(name => hasConsolePermission(name, access))
+  return routeReachable(route, access) && required.every(name => hasConsolePermission(name, access))
+}
+
+/**
+ * Why the principal may not open a page, or null when it may (the same rule as {@link canSeeRoute}):
+ * the page's any-of set when none of it is held, else the `requiredPermissions` that are missing.
+ * The shell shows these on the 无权限 panel instead of the page, so a page reached by its address
+ * never starts reads that can only be refused. The object tree is exempt: its pages and tabs say
+ * what is missing themselves ({@link SCOPE_TREE_ROUTES}).
+ */
+export function deniedRoutePermissions(route, access = UNRESTRICTED_ACCESS) {
+  if (SCOPE_TREE_ROUTES.has(route?.path) || canSeeRoute(route, access)) return null
+  if (!routeReachable(route, access)) return [...routePermissions(route)]
+  const required = Array.isArray(route?.requiredPermissions) ? route.requiredPermissions : []
+  return required.filter(name => !hasConsolePermission(name, access))
 }
 
 const order = route => route?.meta?.order ?? 999

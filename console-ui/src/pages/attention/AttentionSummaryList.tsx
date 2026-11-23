@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight, FlaskConical } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { CONSOLE_PATHS } from '../../console-routes.mjs'
 import { Button, cn } from '@zhin.js/console-ui'
 import { useI18n } from '../../i18n'
 import type { AttentionItem } from './attention-model.mjs'
@@ -34,6 +35,11 @@ export function AttentionSummaryList({ items }: { items: readonly AttentionItem[
             </div>
             <div className="console-attention-row-actions">
               <AttentionMoreToggle expanded={expanded} controls={moreId} onToggle={() => toggle(item.id)} />
+              {item.simulationOnly ? (
+                <Button asChild variant="outline" size="sm">
+                  <Link to={CONSOLE_PATHS.sandbox}><FlaskConical />{i18n.t('打开 Sandbox')}</Link>
+                </Button>
+              ) : null}
               <Button asChild variant="outline" size="sm">
                 <Link to={item.action.path}>{item.action.label || i18n.t('去处理')}<ArrowUpRight /></Link>
               </Button>

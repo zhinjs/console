@@ -223,7 +223,7 @@ export default function SetupWizard({ onComplete, onCancel }: SetupWizardProps) 
 
         {phase === 'ready' && step === 'database' && choices && <div className="console-setup-body">
           <h2>{i18n.t('选择数据库')}</h2>
-          <p className="console-setup-note">{i18n.t('账号、角色与审计日志存放在这里。可以先保持当前数据库，以后在「运维 → 配置文件」里修改。每一步都会保存在 Host 上，中途关闭页面后用同一个初始化链接回来会从这里继续。')}</p>
+          <p className="console-setup-note">{i18n.t('插件数据、聊天记录等存放在这里；Console 账号由网关单独保存。可以先保持当前数据库，以后在「运维 → 配置文件」里修改。每一步都会保存在 Host 上，中途关闭页面后用同一个初始化链接回来会从这里继续。')}</p>
           <RadioGroup aria-label={i18n.t('选择数据库')} name="setup-database" value={choice} onValueChange={selectDriver}>
             <label className="console-choice-card">
               <RadioGroupItem value={KEEP_DATABASE} className="mt-1" />

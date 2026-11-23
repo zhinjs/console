@@ -68,7 +68,7 @@ Console 没有单独的演示构建：公开演示是一台真实 Host，访客�
 | 运维 | 数据库 `/ops/database`、配置文件 `/ops/config`、环境变量 `/ops/env`、定时任务 `/ops/schedules`、项目文件 `/ops/files`、实例 `/ops/instance`、终端 `/ops/terminal`、连接自检 `/ops/self-check`、消息场景试验台 `/scenario-lab` | — |
 | 访问控制 | 用户 `/access/users`、角色 `/access/roles`、API 令牌 `/access/tokens`、审计日志 `/access/audit` | — |
 
-- 某个区里没有当前身份能看的页面时，整个区不显示。Host 还没有报告权限时（RBAC 之前的所有 Host）按不受限处理，由 Host 自己拒绝越权请求。
+- 某个区里没有当前身份能看的页面时，整个区不显示。Host 还没有报告权限时（RBAC 之前的所有 Host）按不受限处理，由 Host 自己拒绝越权请求。菜单里隐藏的页面经地址、书签或其他页面的链接打开时，shell 显示统一的「无权限 · 需要以下任一权限」面板（`deniedRoutePermissions`），不加载页面、也不提供重试；旧路由的隐藏重定向照常跳转。
 - 功能矩阵目前只有「全局」一列（来自插件启用状态）；Host 提供 `feature.matrix` 后自动出现每个适配器的列（`pages/features/use-feature-data.ts` 的 `useFeatureMatrix`）。账号配置页用 `feature.get` 探测 Host 是否支持分层配置，旧 Host 返回 “Unknown RPC type” 时提示需要更新。
 - 对象树（`console-ui/src/scope/`）：每个对象一页，页签由层级决定——全局 / 适配器：概览 · 功能 · 角色 · 记录；账号另有聊天（账号工作区）与接入（登录、测试连接）；会话另有聊天。`?tab=` 记住页签。「功能」页签每个插件一行（有效状态、来源层级、本层覆盖、锁定层级链接），展开逐字段显示继承值 / 本层覆盖 / 有效值 / 来源，写操作走操作回执；全局「功能」是功能总览，`?view=matrix` 切到矩阵（`/features` 仍是矩阵的独立入口）。账号「接入」只讲这个账号：连接与测试、登录验证、配置入口；Host 当前没有运行的账号会说明原因，不显示空列表。角色页签读写 `chat-roles.list|grant|revoke`（ADR 0056，需要 `iam.manage`）。zhin 角色只来自授予；平台群主/管理员是平台身份，不映射为 zhin 角色，单独影响平台相关能力。对象页（全局以下）只显示自己的范围面包屑，页面顶部的通用面包屑让位。设计与排版规范见 `docs/console-refactor-guidelines.md`。
 - 底部日志面板（`components/log-panel/`）：在任何页面打开实时运行日志而不离开当前页——顶栏按钮、快捷键 Ctrl `、快速跳转里的「打开日志面板」，或页面调用 `openLogPanel({ q, adapter, endpoint, level })`（账号「接入」的登录卡片「查看日志」、插件详情「相关日志」、定时任务「调度日志」、入群欢迎「查看相关日志」）。面板渲染与 `/logs` 相同的 `LogViewer`，筛选放在面板自己的状态里（不改地址栏，上次的筛选与高度记在本机），「在日志页打开」带着同一组筛选去 `/logs`。宽屏停靠在底部、占满内容宽度、可拖动或用键盘调高度，非模态（页面照常可用，页面底部让出面板高度）；手机上是模态底部抽屉。只对能看 `/logs`（`status.view`）的身份出现；只在打开时轮询，在 `/logs` 页上不显示。
@@ -106,7 +106,7 @@ Console 没有单独的演示构建：公开演示是一台真实 Host，访客�
 
 ### SDK 版本
 
-只使用一代 SDK（zhin 1.4 发布线）：`@zhin.js/client` 1.2.x、`@zhin.js/contract` 1.1.x、`@zhin.js/ai` 1.7.x、`@zhin.js/console-protocol` 1.4.x，与 zhin 仓库 `packages/console/*` 当前发布线一致（npm 的 `latest`）。`package.json` 对每个 `@zhin.js/*` 依赖都用 `~` 范围：npm 上还有不属于这条线的 `@zhin.js/client` 2.x，`^` 会把它装进来，并在 lockfile 里产生第二份 contract / console-protocol / ai；新的 minor 也要先在 Console 里核对后再升级。`tests/console-contract.test.mjs` 检查这些范围，以及 lockfile 里每个包只有一个版本。
+只使用一代 SDK（zhin 1.10 发布线）：`@zhin.js/client` 1.5.x、`@zhin.js/contract` 1.1.x、`@zhin.js/ai` 1.9.x、`@zhin.js/console-protocol` 1.9.x、`@zhin.js/console-ui` 1.2.x，与 zhin 仓库 `packages/console/*` 当前发布线一致（npm 的 `latest`）。`package.json` 对每个 `@zhin.js/*` 依赖都用 `~` 范围：npm 上还有不属于这条线的 `@zhin.js/client` 2.x，`^` 会把它装进来，并在 lockfile 里产生第二份 contract / console-protocol / ai；新的 minor 也要先在 Console 里核对后再升级。`tests/console-contract.test.mjs` 检查这些范围，以及 lockfile 里每个包只有一个版本。
 
 Console 需要的协议常量、类型与打码规则都直接从已发布的包导入，不再保留本地替身：打码与占位判断（`maskConsoleEnvValue` / `isConsoleEnvMaskPlaceholder`）、聊天成员 RPC 与类型（`CHAT_PRINCIPALS_RPC`、`ConsoleChatPrincipal` 等）、「需要你处理」的 RPC 与类型（`ATTENTION_RPC`、`ConsoleAttentionKind`）、Login Assist 的 RPC 与枚举、全局插件开关的权限判断，以及 `@zhin.js/client` 的 headless 账号 API（`AdapterAccountsProvider` / `useAdapterAccounts` / `AdapterAccountRow`）。AI 与模型页的推理视图类型（`environmentReferences`、`lastCall`、拒绝原因等）定义在 Host 端的 `@zhin.js/agent`，`@zhin.js/console-protocol` 1.4.0 没有导出，所以仍在 `console-ui/src/pages/inference/model.d.mts` 里声明。对旧 Host 的检测与降级保持不变：缺少某个 RPC 或字段时，相应入口隐藏或退回旧界面。
 

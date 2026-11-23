@@ -10,7 +10,7 @@ export function readErrorSummary(error, resource, locale = 'zh-CN') {
 }
 /** Whether a read failed because the identity lacks the permission (HTTP 403 and the Host's denial texts). */
 export function isReadDenied(error) {
- return /\bforbidden\b|\b403\b|scope does not allow|无权|权限不足|权限不允许/i.test(String(error ?? ''))
+ return /\bforbidden\b|\b403\b|scope does not allow|无权|权限不足|权限不允许|缺少\s*权限|missing permission/i.test(String(error ?? ''))
 }
 export function shouldShowMissingEnv({ loaded, exists, dirty, readFailed }) {
  return loaded && exists === false && !dirty && !readFailed

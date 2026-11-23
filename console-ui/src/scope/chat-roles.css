@@ -27,7 +27,9 @@
   border: 0; border-bottom: var(--console-border-hairline, 1px) solid var(--console-border-subtle); background: transparent; padding: var(--console-space-2) var(--console-space-3); text-align: left; color: inherit;
 }
 .console-chat-picker-option:last-child { border-bottom: 0; }
-.console-chat-picker-option:hover { background: hsl(var(--foreground) / 0.04); }
+.console-chat-picker-option:hover:not(:disabled) { background: hsl(var(--foreground) / 0.04); }
+/* A simulated sender (zhinjs/zhin#1250 第 87 批) cannot be picked: muted text, no hover. */
+.console-chat-picker-option:disabled { cursor: not-allowed; color: hsl(var(--muted-foreground)); }
 .console-chat-picker-option.is-selected { background: hsl(var(--primary-action) / 0.16); background-image: linear-gradient(90deg, hsl(var(--primary-action-border)) var(--console-border-focus), transparent 0); }
 .console-chat-picker-name { grid-area: name; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--console-text-label); font-weight: var(--console-weight-strong); }
 .console-chat-picker-option code { grid-area: id; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-family: var(--console-font-mono); font-size: var(--console-text-label); }

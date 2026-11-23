@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import vm from 'node:vm'
 import ts from 'typescript'
+import * as retryAfter from '../console-ui/src/utils/retry-after.mjs'
 
 const source = await readFile(new URL('../console-ui/src/utils/auth.ts', import.meta.url), 'utf8')
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
@@ -14,7 +15,7 @@ function storage() {
 function harness() {
   const exports = {}, requests = [], events = [], localStorage = storage(), sessionStorage = storage()
   const window = { location: { origin: 'https://console.example', href: 'https://console.example/login' }, dispatchEvent: event => events.push(event.type) }
-  vm.runInNewContext(compiled, { require: name => { assert.ok(isLocaleImport(name)); return localeModule }, exports, Headers, URL, AbortSignal, localStorage, sessionStorage, window,
+  vm.runInNewContext(compiled, { require: name => { if (name === './retry-after.mjs') return retryAfter; assert.ok(isLocaleImport(name)); return localeModule }, exports, Headers, URL, AbortSignal, localStorage, sessionStorage, window,
     CustomEvent: class { constructor(type) { this.type = type } },
     fetch: (url, init) => new Promise(resolve => requests.push({ url, init, resolve })) })
   exports.setApiBase('https://host-a.example'); exports.setToken('test-credential-a')

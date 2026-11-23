@@ -1,7 +1,8 @@
 import type { ConsoleMcpFailureCategory, ConsoleMcpServerStatus } from '../../contracts/mcp'
 
-export const MCP_SERVER_STATUSES: readonly ConsoleMcpServerStatus[]
-export const MCP_FAILURE_CATEGORIES: readonly ConsoleMcpFailureCategory[]
+/** Literal tuples: `contracts/mcp.ts` checks them against the protocol types at compile time. */
+export const MCP_SERVER_STATUSES: readonly ['connected', 'failed', 'idle', 'not_loaded']
+export const MCP_FAILURE_CATEGORIES: readonly ['auth', 'network', 'timeout', 'config', 'process_exit', 'sdk_missing', 'unknown']
 export const MCP_CONFIG_HREF: string
 
 export interface McpFailureView {
@@ -32,6 +33,8 @@ export type McpTestOutcome =
     status: number
     retryAfterSec: number | null
     message: string
+    /** `ConsoleApiErrorBody.code`, when the Host sent one. */
+    code?: string | null
   }
 
 export interface McpTestPresentation {
@@ -39,6 +42,14 @@ export interface McpTestPresentation {
   role: 'status' | 'alert'
   label: string
   detail: string
+  /** Error outcomes only: the envelope code, kept in every language. */
+  code?: string | null
+  /** Forbidden only: the Console permission the Host named (from its text or code). */
+  permission?: string | null
+  /** Translated lines the detail leaves out (the permission, the code). */
+  notes?: string[]
+  /** The Host's own text when the detail replaced it (an English Console and a Chinese sentence). */
+  hostMessage?: string | null
 }
 
 type Locale = 'zh-CN' | 'en'
@@ -48,6 +59,8 @@ export function mcpFailureText(failure: McpFailureView | null, locale?: Locale):
 export function mcpFailureCategoryLabel(category: string, locale?: Locale): string
 export function mcpRowState(row: unknown, locale?: Locale): McpRowState
 export function isStdioMcp(row: unknown): boolean
+export function hostTextFor(message: unknown, locale?: Locale): string
+export function permissionFromRefusal(...texts: unknown[]): string | null
 export function retryAfterSecondsFrom(header: string | null | undefined, now?: number): number | null
 export function readMcpTestResult(data: unknown): McpTestResultView | null
 export function readMcpTestResponse(input: { status: number; body: unknown; retryAfter?: string | null; now?: number }): McpTestOutcome

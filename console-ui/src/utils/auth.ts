@@ -1,4 +1,5 @@
 import { translate } from '../i18n/locale.mjs'
+import { parseRetryAfterSeconds } from './retry-after.mjs'
 const TOKEN_KEY = 'zhin_api_token'
 const API_BASE_KEY = 'zhin_api_base'
 const SAVED_LOGINS_KEY = 'zhin_saved_logins'
@@ -347,7 +348,8 @@ async function readPrincipal(base: string, token: string): Promise<PrincipalRead
   if ((res.status === 404 || res.status === 405) && !envelope) return { kind: 'legacy' }
   if (res.ok) return { kind: 'legacy' }
   const header = typeof res.headers?.get === 'function' ? res.headers.get('retry-after') : null
-  const retryAfterSec = header && /^\d+$/u.test(header.trim()) ? Math.max(1, Number(header.trim())) : undefined
+  const seconds = parseRetryAfterSeconds(header)
+  const retryAfterSec = seconds === undefined ? undefined : Math.max(1, seconds)
   return { kind: 'failed', status: res.status, ...(typeof body?.code === 'string' ? { code: body.code } : {}), ...(retryAfterSec ? { retryAfterSec } : {}) }
 }
 

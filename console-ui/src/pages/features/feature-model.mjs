@@ -3,13 +3,17 @@
  * `feature.*` RPC (ADR 0050 §8) treated as optional: older Hosts do not have it.
  */
 
+import {
+  CONSOLE_FEATURE_CONVERSATION_KINDS, FEATURE_CONVERSATION_ID_MAX_LENGTH, escapeFeatureConversationId, formatFeatureConversationKey,
+  parseFeatureConversationKey, unescapeFeatureConversationId,
+} from '@zhin.js/console-protocol'
 import { translate } from '../../i18n/locale.mjs'
 
 /** How a failed `feature.*` call should be read. */
 export function classifyFeatureRpcError(error) {
   const message = error instanceof Error ? error.message : String(error ?? '')
   if (/unknown rpc type|unknown request type|not supported|unsupported rpc/i.test(message)) return 'unsupported'
-  if (/\bHTTP 40[13]\b|forbidden|permission denied|not allowed|scope does not allow/i.test(message)) return 'forbidden'
+  if (/\bHTTP 40[13]\b|forbidden|permission denied|\bnot allowed to\b|scope does not allow/i.test(message)) return 'forbidden'
   // The Host's `feature.*` denial reads `没有 <permission> 权限`.
   if (/没有\s*\S+\s*权限/.test(message)) return 'forbidden'
   return 'error'
@@ -432,52 +436,31 @@ export function featureSwitchState({ enabled, lockedBy }, canToggle, pending = f
   return { checked: !locked && enabled === true, disabled: locked || canToggle !== true || pending === true, locked }
 }
 
-export const CONVERSATION_KINDS = Object.freeze(['group', 'private', 'channel'])
-
-// Mirrors `@zhin.js/console-protocol` feature.ts (ADR 0055 §1 / §6).
-const CONVERSATION_ALIAS = /^[a-z0-9][a-z0-9-]*$/u
-const CONVERSATION_ENDPOINT_ID = /^[^/~\0]{1,128}$/u
-// eslint-disable-next-line no-control-regex
-const CONVERSATION_CONTROL = /[\u0000-\u001f\u007f]/u
-export const CONVERSATION_ID_MAX_LENGTH = 256
+// The conversation resolution key grammar (ADR 0055 §1 / §6) is `@zhin.js/console-protocol`'s:
+// these wrappers only keep the Console's field name (`endpoint`, the protocol says `endpointId`)
+// and its `null` for "not a conversation key".
+export const CONVERSATION_KINDS = CONSOLE_FEATURE_CONVERSATION_KINDS
+export const CONVERSATION_ID_MAX_LENGTH = FEATURE_CONVERSATION_ID_MAX_LENGTH
 
 /** `%` -> `%25`, `/` -> `%2F`; nothing else changes. */
-export function escapeConversationId(id) {
-  return id.replaceAll('%', '%25').replaceAll('/', '%2F')
-}
+export const escapeConversationId = escapeFeatureConversationId
 
 /** Inverse of {@link escapeConversationId}; undefined for any other `%` sequence. */
-export function unescapeConversationId(escaped) {
-  if (/%(?!25|2[fF])/u.test(escaped) || escaped.includes('/')) return undefined
-  return escaped.replace(/%2[fF]|%25/gu, match => match === '%25' ? '%' : '/')
-}
+export const unescapeConversationId = unescapeFeatureConversationId
 
-/** Resolution key `<alias>/<endpointId>/<kind>:<escaped id>`; throws on an invalid reference. */
+/** Resolution key `<alias>/<endpointId>/<kind>:<escaped id>`; throws a `TypeError` on an invalid reference. */
 export function conversationKey({ adapter, endpoint, kind, id }) {
-  if (typeof adapter !== 'string' || !CONVERSATION_ALIAS.test(adapter)) throw new Error('Conversation key adapter must be an instance alias')
-  if (typeof endpoint !== 'string' || !CONVERSATION_ENDPOINT_ID.test(endpoint)) throw new Error('Conversation key endpoint id is invalid')
-  if (!CONVERSATION_KINDS.includes(kind)) throw new Error('Conversation kind must be group, private or channel')
-  if (typeof id !== 'string' || !id || id.length > CONVERSATION_ID_MAX_LENGTH || CONVERSATION_CONTROL.test(id)) throw new Error('Conversation id is invalid')
-  return `${adapter}/${endpoint}/${kind}:${escapeConversationId(id)}`
+  // The protocol tests its patterns against the value as given; a missing field must not read as the text "undefined".
+  if (typeof adapter !== 'string' || typeof endpoint !== 'string' || typeof kind !== 'string' || typeof id !== 'string') {
+    throw new TypeError('A conversation key needs a string adapter, endpoint, kind and id')
+  }
+  return formatFeatureConversationKey({ adapter, endpointId: endpoint, kind, id })
 }
 
 /** Parses a conversation key (canonical form only); null when it is not one. */
 export function parseConversationKey(key) {
-  if (typeof key !== 'string') return null
-  const first = key.indexOf('/')
-  const second = first < 0 ? -1 : key.indexOf('/', first + 1)
-  if (first <= 0 || second < 0) return null
-  const rest = key.slice(second + 1)
-  const colon = rest.indexOf(':')
-  if (colon <= 0) return null
-  const id = unescapeConversationId(rest.slice(colon + 1))
-  if (id === undefined) return null
-  const ref = { adapter: key.slice(0, first), endpoint: key.slice(first + 1, second), kind: rest.slice(0, colon), id }
-  try {
-    return conversationKey(ref) === key ? ref : null
-  } catch {
-    return null
-  }
+  const ref = parseFeatureConversationKey(key)
+  return ref ? { adapter: ref.adapter, endpoint: ref.endpointId, kind: ref.kind, id: ref.id } : null
 }
 
 /** URL segment of a conversation inside an endpoint (`<kind>:<id>`, before URI encoding). */
