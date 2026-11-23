@@ -22,14 +22,27 @@ test('the tabs and the region they switch reference each other', () => {
   assert.notEqual(tabTriggerProps(':r1:', 'model').id, tab.id, 'each tab has its own id')
 })
 
-test('every file with a TabsTrigger gives its tabs a panel: TabsContent, or the panel-link props', () => {
-  const offences = sourceFilesUnder(root.pathname)
-    .filter(file => file.endsWith('.tsx') && !file.includes('/components/ui/'))
-    .map(file => ({ file: file.slice(root.pathname.length), text: readFileSync(file, 'utf8') }))
-    .filter(({ text }) => text.includes('<TabsTrigger'))
-    .filter(({ text }) => !text.includes('<TabsContent') && !(text.includes('tabTriggerProps(') && text.includes('tabPanelProps(')))
-    .map(({ file }) => file)
+/** Each `<Tabs …>…</Tabs>` block of a source file (Tabs blocks are not nested in this codebase). */
+function tabsBlocks(text) {
+  return [...text.matchAll(/<Tabs[\s>][\s\S]*?<\/Tabs>/g)].map(match => match[0])
+}
+
+test('every Tabs block gives its tabs a panel: a TabsContent inside it, or tabs linked to a rendered panel', () => {
+  const offences = []
+  for (const file of sourceFilesUnder(root.pathname).filter(file => file.endsWith('.tsx') && !file.includes('/components/ui/'))) {
+    const text = readFileSync(file, 'utf8')
+    for (const block of tabsBlocks(text).filter(block => block.includes('<TabsTrigger'))) {
+      if (block.includes('<TabsContent')) continue
+      // Switcher-only tabs: every trigger must spread tabTriggerProps, and the file must spread
+      // tabPanelProps onto an element (a JSX spread, not a mention in a comment).
+      const triggers = block.match(/<TabsTrigger\b[\s\S]*?>/g) ?? []
+      const linked = triggers.every(trigger => trigger.includes('{...tabTriggerProps('))
+      if (!linked || !/\{\.\.\.[^\n]*tabPanelProps\(/.test(text)) offences.push(file.slice(root.pathname.length))
+    }
+  }
   assert.deepEqual(offences, [])
+  // The guard itself catches a switcher-only block.
+  assert.equal(tabsBlocks('<Tabs value="a"><TabsList><TabsTrigger value="a">A</TabsTrigger></TabsList></Tabs>').length, 1)
 })
 
 test('the three places link their tabs to the region they switch', () => {
@@ -37,8 +50,8 @@ test('the three places link their tabs to the region they switch', () => {
   const dimension = usage.slice(usage.indexOf('function DimensionSwitch'), usage.indexOf('function timeZoneNote'))
   assert.match(dimension, /<TabsTrigger key=\{option\.value\} value=\{option\.value\} \{\.\.\.tabTriggerProps\(panelId, option\.value\)\}>/)
   // The trend card and the details card each name their content region after the active tab.
-  assert.match(usage, /<CardContent className="space-y-3 text-foreground" \{\.\.\.\(narrow \? \{\} : tabPanelProps\(panelId, dimension\)\)\}>/)
-  assert.match(usage, /<CardContent \{\.\.\.\(narrow \? \{\} : tabPanelProps\(panelId, active\)\)\}>/)
+  assert.match(usage, /<CardContent className="space-y-3 text-foreground" \{\.\.\.\(narrow \|\| options\.length < 2 \? \{\} : tabPanelProps\(panelId, dimension\)\)\}>/)
+  assert.match(usage, /<CardContent \{\.\.\.\(narrow \|\| options\.length < 2 \? \{\} : tabPanelProps\(panelId, active\)\)\}>/)
   const market = read('pages/marketplace.tsx')
   assert.match(market, /\{\.\.\.tabTriggerProps\(detailTabsId, key\)\}/)
   assert.match(market, /\{\.\.\.tabPanelProps\(detailTabsId, detailTab\)\}/)

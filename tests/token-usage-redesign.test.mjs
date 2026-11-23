@@ -320,6 +320,23 @@ function renderReport(stats, { narrow = false, locale = 'zh-CN', selection = nul
   const merged = mergeUsageModels(validateUsageStats(stats, locale), locale)
   return renderToStaticMarkup(h(report.UsageReport, { stats: merged, previous: hostPreviousTotals(merged), view, onViewChange() {}, onPickSession() {}, initialSelection: selection }))
 }
+// #64 `tabs-without-panels`: in the rendered report every tab's aria-controls names an element that exists,
+// that element is a tabpanel, and it is labelled by a tab that exists; narrow (a select) has no tabpanel.
+test('rendered dimension tabs point at a real tabpanel labelled by the active tab', () => {
+  for (const view of ['models', 'sessions']) {
+    const html = renderReport(v2Stats(), { view })
+    const ids = new Set([...html.matchAll(/ id="([^"]+)"/g)].map(match => match[1]))
+    const controls = [...html.matchAll(/aria-controls="([^"]+)"/g)].map(match => match[1])
+    assert.ok(controls.length >= 4, 'both cards render their tabs')
+    for (const target of controls) assert.ok(ids.has(target), `aria-controls ${target} exists`)
+    const panels = [...html.matchAll(/<[^>]*role="tabpanel"[^>]*>/g)].map(match => match[0])
+    assert.equal(panels.length, 2)
+    for (const panel of panels) assert.ok(ids.has(panel.match(/aria-labelledby="([^"]+)"/)[1]), 'labelled by an existing tab')
+  }
+  const narrow = renderReport(v2Stats(), { narrow: true })
+  assert.doesNotMatch(narrow, /role="tabpanel"|aria-controls=/)
+})
+
 const RAW = /(?:services|accounts|profiles):[0-9a-f]|personal-session:v1:|http:api:session:/
 /** The markup with every place a raw id may appear (ⓘ panel, tooltip, Sheet) cut out. */
 const mainView = html => html.replace(/<info-hint>[\s\S]*?<\/info-hint>/g, '').replace(/<tooltip-content[^>]*>[\s\S]*?<\/tooltip-content>/g, '').replace(/<sheet-root>[\s\S]*<\/sheet-root>/g, '')

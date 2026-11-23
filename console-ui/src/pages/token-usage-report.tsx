@@ -144,8 +144,10 @@ export function UsageIdHint({ row, name }: { row: UsageModelRow; name: string })
   )
 }
 
-/** Tabs where there is room, a select in a narrow container (ADR 0063 D18). */
-/** On wide screens the tabs switch the card's content region (`panelId`, see tabPanelProps); narrow ones get a select. */
+/**
+ * Tabs where there is room, a select in a narrow container (ADR 0063 D18). The tabs switch the card's
+ * content region (`panelId`, see tabPanelProps); with fewer than two options nothing is rendered.
+ */
 function DimensionSwitch<T extends string>({ value, onChange, options, label, narrow, panelId }: { value: T; onChange: (value: T) => void; options: Array<{ value: T; label: string }>; label: string; narrow: boolean; panelId: string }) {
   if (options.length < 2) return null
   if (narrow) return <SelectField aria-label={label} className="w-auto min-w-40" value={value} onValueChange={next => onChange(next as T)} options={options} />
@@ -217,7 +219,7 @@ function UsageTrend({ stats, narrow }: { stats: UsageStats; narrow: boolean }) {
         </div>
         <DimensionSwitch value={dimension} onChange={setDimension} options={options} label={i18n.t("趋势维度")} narrow={narrow} panelId={panelId} />
       </CardHeader>
-      <CardContent className="space-y-3 text-foreground" {...(narrow ? {} : tabPanelProps(panelId, dimension))}>
+      <CardContent className="space-y-3 text-foreground" {...(narrow || options.length < 2 ? {} : tabPanelProps(panelId, dimension))}>
         <ModelLegend keys={shown} colors={colors} hasOther={keys.length > shown.length} />
         <StackedBarChart series={series} keys={shown} colors={colors} bucket={stats.range.bucket} />
       </CardContent>
@@ -565,7 +567,7 @@ function UsageDetails({ stats, groups, narrow, view, onViewChange, open }: {
         </div>
         <DimensionSwitch value={active} onChange={onViewChange} options={options} label={i18n.t("明细维度")} narrow={narrow} panelId={panelId} />
       </CardHeader>
-      <CardContent {...(narrow ? {} : tabPanelProps(panelId, active))}>
+      <CardContent {...(narrow || options.length < 2 ? {} : tabPanelProps(panelId, active))}>
         {/* Another range starts with the first service open again. */}
         {active === 'models' ? <ModelTable key={`${stats.range.since}:${stats.range.until}`} groups={groups} total={total} narrow={narrow} open={open} />
           : active === 'sessions' ? <SessionTable stats={stats} narrow={narrow} open={open} />
