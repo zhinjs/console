@@ -13,6 +13,8 @@ import { DocumentCollectionView } from './document-collection-view'
 import { KvBucketView } from './kv-bucket-view'
 import { SqlConsole } from './sql-console'
 import { SchemaEditor, CreateTableEditor } from './schema-editor'
+import { ddlFailure, dropCheckResult } from './ddl-outcome-model.mjs'
+import { DdlCheckNotice, DdlErrorDetails, useDdlCheck } from './ddl-outcome'
 import { SplitHandle, useSplitWidth } from './resizable-split'
 import { databaseCapabilities, databaseDescription, needsConsoleRole, sqlUnavailableReason } from './database-console-model.mjs'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
@@ -41,6 +43,14 @@ export default function DatabasePage() {
   const modeTabsId = useId()
   const [dataVersion, setDataVersion] = useState(0)
   const [deleteTarget, setDeleteTarget] = useState<{ name: string; label: string } | null>(null)
+  // The Host's message of a failed drop, under 「技术详情」 in the still-open confirmation.
+  const [dropDetails, setDropDetails] = useState<string | null>(null)
+  // A drop whose outcome is unknown (#64): no drop is offered again until 「核对」 reads the table list.
+  const dropCheck = useDdlCheck<{ name: string; label: string }>(async ({ name }) => {
+    const result = dropCheckResult(await loadTables(), name, i18n.locale)
+    if (result.applied) setSelectedTable(current => current === name ? null : current)
+    return result
+  })
   // Tables already dropped while the list could not be refreshed: never offer them again from the stale snapshot.
   const [dropped, setDropped] = useState<DroppedTables<TableInfo> | null>(null)
   const split = useSplitWidth()
@@ -82,6 +92,8 @@ export default function DatabasePage() {
       {error && (
         <OpsLoadState error={error} resource={i18n.t("数据库信息")} permissions={['ops.database.read']} onRetry={refreshAll} />
       )}
+
+      <DdlCheckNotice controller={dropCheck} />
 
       {/* A failed first read shows only its state: an empty explorer would read as "no tables". */}
       {error && !loaded && !tables.length ? null : <Card className="overflow-hidden border-border/80 shadow-sm">
@@ -167,7 +179,7 @@ export default function DatabasePage() {
                     ) : (
                       <CreateTableEditor admin={databaseAdmin} supported={capabilities.schema} reason={capabilities.schema ? undefined : unsupportedReason}
                         onCancel={closeDetail}
-                        onCreated={name => { void loadTables().catch(() => {}); openTable(name); setMode('structure') }} />
+                        onCreated={name => { void loadTables().catch(() => {}); openTable(name); setMode('structure') }} listTables={loadTables} />
                     )}
                   </div>
                 </>
@@ -218,6 +230,7 @@ export default function DatabasePage() {
                         variant="destructive-outline"
                         size="sm"
                         data-action="drop-table"
+                        disabled={Boolean(dropCheck.held)}
                         className="ml-auto order-last shrink-0"
                         aria-label={i18n.t("删除{0} {1}", [objectLabel, selectedTable])}
                         onClick={() => setDeleteTarget({ name: selectedTable, label: objectLabel })}
@@ -285,17 +298,32 @@ export default function DatabasePage() {
     </div>
     {!readOnly && <ConfirmDialog
       open={!!deleteTarget}
-      onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+      onOpenChange={(open) => { if (!open) { setDeleteTarget(null); setDropDetails(null) } }}
       title={i18n.t("删除{0}", [deleteTarget?.label || ''])}
       description={i18n.t("确定要删除{0} \"{1}\" 吗？此操作不可撤销！", [deleteTarget?.label || '', deleteTarget?.name])}
       variant="destructive"
       confirmLabel={i18n.t("删除")}
       confirmText={deleteTarget?.name}
       onConfirm={async () => {
-        if (!deleteTarget) return
+        if (!deleteTarget || dropCheck.held) return
         const { name, label } = deleteTarget
-        // A failed drop rejects here and ConfirmDialog shows the error; only the drop decides that.
-        const { refreshError } = await dropTable(name)
+        setDropDetails(null)
+        let refreshError: unknown
+        try {
+          ({ refreshError } = await dropTable(name))
+        } catch (failed) {
+          const failure = ddlFailure(failed, 'drop', i18n.locale)
+          if (failure.unknown) {
+            // The drop may have run: close without offering it again; 「核对」 reads the table list.
+            dropCheck.hold({ subject: { name, label }, text: failure.text, details: failure.details })
+            setDeleteTarget(null)
+            return
+          }
+          // A failed drop rejects here so ConfirmDialog shows why (in the UI language) and keeps the table.
+          setDropDetails(failure.details)
+          throw new Error(failure.text)
+        }
+        dropCheck.clearResult()
         if (selectedTable === name) setSelectedTable(null)
         setDeleteTarget(null)
         if (refreshError) {
@@ -305,7 +333,9 @@ export default function DatabasePage() {
           toast.success(i18n.t("已删除{0} \"{1}\"", [label, name]))
         }
       }}
-    />}
+    >
+      <DdlErrorDetails details={dropDetails} />
+    </ConfirmDialog>}
     </>
   )
 }

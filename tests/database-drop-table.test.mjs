@@ -9,6 +9,7 @@ const pageUrl = new URL('../console-ui/src/pages/database/database-page.tsx', im
 const hookUrl = new URL('../console-ui/src/pages/database/use-database-console.ts', import.meta.url)
 const pageSource = await readFile(pageUrl, 'utf8')
 const hookSource = await readFile(hookUrl, 'utf8')
+const ddlSource = await readFile(new URL('../console-ui/src/pages/database/ddl-outcome.tsx', import.meta.url), 'utf8')
 const requireFromPage = createRequire(pageUrl)
 
 function runtime() {
@@ -51,21 +52,25 @@ function compile(source, mocks) {
   return module.exports
 }
 
-function fixture({ dropTable }) {
+function fixture({ dropTable, loadTables = async () => [] }) {
   const r = runtime(), toasts = []
   const console = {
     info: { type: 'related', dialect: 'sqlite' },
     tables: [{ name: 'users', columns: { id: { type: 'integer', primary: true } } }, { name: 'logs', columns: {} }],
     loaded: true, loading: false, error: null,
-    loadInfo: async () => {}, loadTables: async () => {}, dropTable,
+    loadInfo: async () => {}, loadTables, dropTable,
   }
+  const ui = { Tabs: 'tabs', TabsList: 'tabs-list', TabsTrigger: 'tab', ConfirmDialog: 'confirm-dialog', Card: 'article', CardContent: 'section', Button: 'button', Badge: 'span', Skeleton: 'div', ScrollArea: 'div', ErrorAlert: 'aside', EmptyState: 'empty', PageHeader: 'page-header', Alert: 'alert', AlertTitle: 'alert-title', AlertDescription: 'alert-description' }
+  // The real 「结果未知」 hook and notice, on the same hook runtime as the page.
+  const ddl = compile(ddlSource, { react: { ...r.hooks }, '@zhin.js/console-ui': ui, 'lucide-react': new Proxy({}, { get: () => 'i' }) })
   const mocks = {
     react: { ...r.hooks, useId: () => ':r0:' },
     './use-database-console': { useDatabaseConsole: () => console, databaseAdmin: {} },
     './sql-console': { SqlConsole: 'sql-console' },
     './schema-editor': { SchemaEditor: 'schema-editor', CreateTableEditor: 'create-table' },
     './resizable-split': { SplitHandle: 'split-handle', useSplitWidth: () => ({ width: 240, setWidth() {}, commit() {} }) },
-    '@zhin.js/console-ui': { Tabs: 'tabs', TabsList: 'tabs-list', TabsTrigger: 'tab', ConfirmDialog: 'confirm-dialog', Card: 'article', CardContent: 'section', Button: 'button', Badge: 'span', Skeleton: 'div', ScrollArea: 'div', ErrorAlert: 'aside', EmptyState: 'empty', PageHeader: 'page-header' },
+    '@zhin.js/console-ui': ui,
+    './ddl-outcome': { useDdlCheck: ddl.useDdlCheck, DdlCheckNotice: 'ddl-check-notice', DdlErrorDetails: 'ddl-error-details' },
     '../../components/StatusState': { StatusState: 'status-state' },
     '../../utils/read-error.mjs': { readErrorSummary: value => String(value) },
     '../../utils/console-access.mjs': { hasConsolePermission: () => true },
@@ -85,6 +90,9 @@ function fixture({ dropTable }) {
     tableButton: name => all().find(node => node.type === 'button' && node.props['data-table'] === name),
     deleteButton: () => all().find(node => node.type === 'button' && node.props['data-action'] === 'drop-table'),
     dialog: () => all().find(node => node.type === 'confirm-dialog'),
+    all,
+    // The notice as it renders for the page's current check state.
+    notice: () => ddl.DdlCheckNotice({ controller: all().find(node => node.type === 'ddl-check-notice').props.controller }),
     hasRoleButtonDiv: () => all().some(node => node.type === 'div' && node.props.role === 'button'),
   }
 }
@@ -127,15 +135,60 @@ test('a successful drop followed by a failed list refresh still closes the dialo
   assert.match(f.toasts[0][1], /刷新/)
 })
 
-test('a failed drop rejects so the dialog can show the error and keep the table', async () => {
-  const f = fixture({ dropTable: async () => { throw new Error('外键约束') } })
+test('a failed drop rejects so the dialog can show why and keep the table; the Host text goes to 技术详情', async () => {
+  const f = fixture({ dropTable: async () => { throw new Error('FOREIGN KEY constraint failed') } })
   f.tableButton('users').props.onClick(); f.r.render()
   f.deleteButton().props.onClick(); f.r.render()
-  await assert.rejects(f.dialog().props.onConfirm(), /外键约束/)
+  await assert.rejects(f.dialog().props.onConfirm(), /表没有删除/)
   f.r.render()
   assert.equal(f.dialog().props.open, true)
   assert.ok(f.tableButton('users'))
+  assert.equal(f.all().find(node => node.type === 'ddl-error-details').props.details, 'FOREIGN KEY constraint failed')
   assert.deepEqual(f.toasts, [])
+})
+
+// #64 `database-ddl-unknown-outcome`: a drop that timed out with requestOutcome 'unknown' showed the
+// English message in the dialog and left 「删除」 clickable; a second click sent db:drop-table again.
+const unknownDrop = () => Object.assign(new Error('The instance did not answer in time'), { code: 'instance_timeout', status: 504, requestOutcome: 'unknown' })
+
+test('a drop with an unknown outcome closes the dialog, blocks dropping and offers only 「核对」', async () => {
+  const dropped = []
+  let fresh = [{ name: 'users' }, { name: 'logs' }]
+  const f = fixture({ dropTable: async name => { dropped.push(name); throw unknownDrop() }, loadTables: async () => fresh })
+  f.tableButton('users').props.onClick(); f.r.render()
+  f.deleteButton().props.onClick(); f.r.render()
+  await f.dialog().props.onConfirm()
+  f.r.render()
+  assert.deepEqual(dropped, ['users'])
+  assert.equal(f.dialog().props.open, false, 'not left open with a live 「删除」')
+  assert.equal(f.deleteButton().props.disabled, true, 'no second drop while the outcome is unknown')
+  const notice = f.notice()
+  assert.ok(notice && 'data-ddl-unknown' in notice.props, 'the page says the outcome is unknown')
+  assert.match(text(notice), /可能已经删除/)
+  assert.match(text(notice), /技术详情The instance did not answer in time/, 'the Host text only under 技术详情')
+  // Even when the dialog is reopened (the disabled button bypassed) and confirmed, nothing is sent.
+  f.deleteButton().props.onClick(); f.r.render()
+  assert.equal(f.dialog().props.open, true)
+  await f.dialog().props.onConfirm(); f.r.render()
+  assert.deepEqual(dropped, ['users'], 'the held guard in onConfirm stops a second db:drop-table')
+  f.dialog().props.onOpenChange(false); f.r.render()
+
+  // 「核对」: the table is still there, so the drop did not run; dropping is offered again.
+  const checkButton = () => elements(f.notice()).find(node => node.type === 'button' && node.props['data-action'] === 'ddl-check')
+  checkButton().props.onClick(); await new Promise(resolve => setImmediate(resolve)); f.r.render()
+  assert.ok('data-ddl-check-result' in f.notice().props)
+  assert.match(text(f.notice()), /仍在表列表中，删除没有执行/)
+  assert.equal(f.deleteButton().props.disabled, false)
+
+  // Another unknown drop, and this time the table is gone: the check says the drop took effect.
+  f.deleteButton().props.onClick(); f.r.render()
+  await f.dialog().props.onConfirm(); f.r.render()
+  fresh = [{ name: 'logs' }]
+  checkButton().props.onClick()
+  await new Promise(resolve => setImmediate(resolve)); f.r.render()
+  assert.match(text(f.notice()), /已不在表列表中，删除已经生效/)
+  assert.equal(f.deleteButton(), undefined, 'the dropped table is deselected')
+  assert.deepEqual(dropped, ['users', 'users'])
 })
 
 test('a clean drop reports success once', async () => {

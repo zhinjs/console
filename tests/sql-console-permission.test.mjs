@@ -71,6 +71,7 @@ function page(granted) {
     './use-database-console': { useDatabaseConsole: () => database, databaseAdmin: {} },
     './sql-console': { SqlConsole: 'sql-console' },
     './schema-editor': { SchemaEditor: 'schema-editor', CreateTableEditor: 'create-table' },
+    './ddl-outcome': { useDdlCheck: () => ({ held: null, checking: false, checkError: null, result: null, hold() {}, check: async () => {}, clearResult() {} }), DdlCheckNotice: 'ddl-check-notice', DdlErrorDetails: 'ddl-error-details' },
     './resizable-split': { SplitHandle: 'split-handle', useSplitWidth: () => ({ width: 240, setWidth() {}, commit() {} }) },
     '@zhin.js/console-ui': { Tabs: 'tabs', TabsList: 'tabs-list', TabsTrigger: 'tab', ConfirmDialog: 'confirm-dialog', Card: 'article', CardContent: 'section', Button: 'button', Badge: 'span', Skeleton: 'div', ScrollArea: 'div', ErrorAlert: 'aside', EmptyState: 'empty', PageHeader: 'page-header' },
     '../../components/StatusState': { StatusState: 'status-state' },
