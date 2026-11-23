@@ -3,7 +3,7 @@ import { useI18n } from '../../i18n'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { RefreshCw, Download, Upload } from 'lucide-react'
-import { Alert, AlertDescription, AlertTitle, Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, ErrorAlert, SelectField, Tabs, TabsContent, TabsList, TabsTrigger, Textarea } from '@zhin.js/console-ui'
+import { Alert, AlertDescription, AlertTitle, Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, ErrorAlert, SelectField, Tabs, TabsContent, TabsList, TabsTrigger, Textarea, useConfirm } from '@zhin.js/console-ui'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import { useInferenceManagement, type InferenceSource, type InferenceManagement } from './useInferenceManagement'
 import { Profiles } from './Profiles'
@@ -11,7 +11,7 @@ import { Services } from './Services'
 import { Accounts } from './Accounts'
 import { Purposes } from './Purposes'
 import { PersonalSessions } from './PersonalSessions'
-import { inferenceFocusAccount, inferenceTabParams, resolveInferenceTab } from './models-entry.mjs'
+import { inferenceFocusAccount, inferenceFocusPurpose, inferencePurposeParams, inferenceTabParams, resolveInferenceTab } from './models-entry.mjs'
 import { planWarningText, type PlanWarning } from './ambient-judge-model.mjs'
 
 export function InferenceWorkspace({ connectionScope }: { connectionScope?: string }) {
@@ -184,13 +184,27 @@ function InferencePages({ management: m, connectionScope }: { management: Infere
   const i18n = useI18n()
   const [searchParams, setSearchParams] = useSearchParams()
   const focusAccount = inferenceFocusAccount(searchParams.get('account'))
+  // `?purpose=` opens 用途 at a section or override row (the 「谁在用」 links on 模型).
+  const focusPurpose = inferenceFocusPurpose(searchParams.get('purpose'))
   const tab = resolveInferenceTab(searchParams.get('tab'), m.view?.hostAdministrator, focusAccount)
-  const setTab = (next: string) => setSearchParams(current => inferenceTabParams(current, next), { replace: true })
+  // #64 purposes-no-unsaved-guard: switching tabs unmounts 用途 and its draft, so unsaved changes there are asked about first.
+  const [purposesDirty, setPurposesDirty] = useState(false)
+  const { confirm, ConfirmDialog: leaveTabDialog } = useConfirm()
+  const setTab = async (next: string) => {
+    if (tab === 'purposes' && next !== 'purposes' && purposesDirty && !(await confirm({
+      title: i18n.t("放弃未保存的修改？"),
+      description: i18n.t("切换页签后，「用途」里尚未保存的修改将会丢失。"),
+      confirmLabel: i18n.t("放弃修改并离开"),
+      variant: 'destructive',
+    }))) return
+    setSearchParams(current => inferenceTabParams(current, next), { replace: true })
+  }
   // 「添加模型」 on an account card: switch to 模型 and open its add dialog with that account.
   const [addModelFor, setAddModelFor] = useState<string | null>(null)
   if (!m.view) return null
   return (
         <Tabs value={tab} onValueChange={setTab}>
+          {leaveTabDialog}
           <TabsList>
             <TabsTrigger value="profiles">{i18n.t("模型", undefined, 'plural')}</TabsTrigger>
             <TabsTrigger value="accounts">{i18n.t("账号", undefined, 'plural')}</TabsTrigger>
@@ -202,7 +216,8 @@ function InferencePages({ management: m, connectionScope }: { management: Infere
             )}
           </TabsList>
           <TabsContent value="profiles">
-            <Profiles management={m} onCreateAccount={() => setTab('accounts')} addModelFor={addModelFor} onAddModelOpened={() => setAddModelFor(null)} />
+            <Profiles management={m} onCreateAccount={() => setTab('accounts')} addModelFor={addModelFor} onAddModelOpened={() => setAddModelFor(null)}
+              onOpenPurpose={m.view.hostAdministrator ? (focus) => setSearchParams(current => inferencePurposeParams(current, focus), { replace: true }) : undefined} />
           </TabsContent>
           <TabsContent value="services"><Services management={m} /></TabsContent>
           <TabsContent value="accounts">
@@ -210,7 +225,7 @@ function InferencePages({ management: m, connectionScope }: { management: Infere
           </TabsContent>
           {m.view.hostAdministrator ? (
             <TabsContent value="purposes">
-              <Purposes management={m} />
+              <Purposes management={m} focus={tab === 'purposes' ? focusPurpose : undefined} onDirtyChange={setPurposesDirty} />
             </TabsContent>
           ) : (
             <TabsContent value="sessions">

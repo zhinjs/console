@@ -18,6 +18,6 @@ export interface ToolApprovalCard {
   readonly displayName?: string
 }
 export interface ToolApprovals { readonly available: boolean; readonly pending: readonly ToolApprovalCard[] }
-export function readToolApprovalCard(value: unknown): ToolApprovalCard
-export function readToolApprovals(value: unknown): ToolApprovals
+export function readToolApprovalCard(value: unknown, locale?: string): ToolApprovalCard
+export function readToolApprovals(value: unknown, locale?: string): ToolApprovals
 export function isKnownApprovalRejection(error: unknown): boolean

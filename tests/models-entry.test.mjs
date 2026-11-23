@@ -64,7 +64,7 @@ async function workspace({ query = '', hostAdministrator = true } = {}) {
     }] },
     'lucide-react': new Proxy({}, { get: () => 'icon' }),
     '../../i18n': localeModule,
-    '@zhin.js/console-ui': { Button: 'button', SelectField: 'select', Tabs: 'tabs', TabsList: 'tabs-list', TabsTrigger: 'tab', TabsContent: 'tab-content', Dialog: () => null, DialogContent: 'content', DialogHeader: 'header', DialogTitle: 'title', DialogDescription: 'description', ErrorAlert: 'error', Alert: 'alert', AlertDescription: 'alert-description', Textarea: 'textarea' }, '../../components/StatusState': { StatusState: 'status-state' }, yaml: { parse: JSON.parse, stringify: JSON.stringify },
+    '@zhin.js/console-ui': { Button: 'button', SelectField: 'select', Tabs: 'tabs', TabsList: 'tabs-list', TabsTrigger: 'tab', TabsContent: 'tab-content', Dialog: () => null, DialogContent: 'content', DialogHeader: 'header', DialogTitle: 'title', DialogDescription: 'description', ErrorAlert: 'error', Alert: 'alert', AlertDescription: 'alert-description', Textarea: 'textarea', useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }) }, '../../components/StatusState': { StatusState: 'status-state' }, yaml: { parse: JSON.parse, stringify: JSON.stringify },
     './useInferenceManagement': { useInferenceManagement: management }, './models-entry.mjs': entry, './ambient-judge-model.mjs': ambientJudgeModel,
     './Services': { Services: 'services' }, './Profiles': { Profiles: 'profiles' }, './Accounts': { Accounts: 'accounts' }, './Purposes': { Purposes: 'purposes' }, './PersonalSessions': { PersonalSessions: 'sessions' },
   }

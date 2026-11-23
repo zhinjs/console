@@ -8,3 +8,5 @@ export function inferenceTabParams(current: URLSearchParams, tab: string | undef
 export function modelsHref(tab?: string): string
 export const LEGACY_SETTINGS_MODEL_SECTIONS: readonly string[]
 export function legacySettingsModelsRedirect(params: URLSearchParams): string | null
+export function inferenceFocusPurpose(value: string | null | undefined): import('./model.mjs').PurposeFocus | undefined
+export function inferencePurposeParams(current: URLSearchParams, focus: string): URLSearchParams

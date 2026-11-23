@@ -1,11 +1,11 @@
 import { StatusState } from '../../components/StatusState'
 import { useI18n } from '../../i18n'
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { Fragment, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Plus, Pencil, Trash2, RefreshCw } from 'lucide-react'
 import { Button, Card, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, ErrorAlert, Input, SelectField, useConfirm } from '@zhin.js/console-ui'
 import { ModelCapabilities } from './ModelCapabilities'
 import { SupportLabel, SupportNotice, supportLabel } from './SupportInfo'
-import { draftForModelId, ignoredReasonText, inferenceError, languageInputMissing, modelEntryView, withModelProtocol, profileSupport, profileUsages, serviceDriver, type ProfileUsage } from './model.mjs'
+import { chatModelBadge, draftForModelId, usagePurposeFocus, ignoredReasonText, inferenceError, languageInputMissing, modelEntryView, withModelProtocol, profileSupport, profileUsages, serviceDriver, type ProfileUsage } from './model.mjs'
 import {
   driverKey,
   type Profile,
@@ -16,12 +16,14 @@ import {
 import { SchemaFields } from './SchemaFields'
 import type { InferenceManagement, InferenceSource } from './useInferenceManagement'
 
-export function Profiles({ management: m, onCreateAccount, addModelFor, onAddModelOpened }: {
+export function Profiles({ management: m, onCreateAccount, addModelFor, onAddModelOpened, onOpenPurpose }: {
   management: InferenceManagement
   onCreateAccount: () => void
   /** An account whose 「添加模型」 was pressed on 账号: open the add dialog with it selected. */
   addModelFor?: string | null
   onAddModelOpened?: () => void
+  /** Open 用途 at a usage (a `?purpose=` value); absent when this owner has no 用途 tab. */
+  onOpenPurpose?: (focus: string) => void
 }) {
   const i18n = useI18n()
   const view = m.view!,
@@ -67,7 +69,8 @@ export function Profiles({ management: m, onCreateAccount, addModelFor, onAddMod
           usagesOf={(profile) => profileUsages(view.purposes, profile.id, i18n.locale, view.purposeEffects)}
           row={(profile, usages) => {
             const account = view.accounts[profile.accountId]
-            const chat = usages?.some((usage) => usage.key === 'default:chat')
+            // 「当前聊天模型」 only when no adapter, account or conversation chats through another model.
+            const chat = chatModelBadge(view.purposes, profile.id, i18n.locale)
             return (
               <div key={profile.id} className="flex items-center justify-between gap-4 p-4">
                 <div className="min-w-0">
@@ -76,12 +79,12 @@ export function Profiles({ management: m, onCreateAccount, addModelFor, onAddMod
                       label={profile.label ?? profile.model}
                       support={profileSupport(view, profile)}
                     />
-                    {chat ? <span className="inline-flex items-center rounded-full border border-[hsl(var(--primary-action-border))] bg-[hsl(var(--primary-action))] px-2 text-[length:var(--console-text-label)] font-medium leading-5 text-[hsl(var(--primary-action-foreground))]">{i18n.t("当前聊天模型")}</span> : null}
+                    {chat ? <span className="inline-flex items-center rounded-full border border-[hsl(var(--primary-action-border))] bg-[hsl(var(--primary-action))] px-2 text-[length:var(--console-text-label)] font-medium leading-5 text-[hsl(var(--primary-action-foreground))]" title={chat.title ?? undefined}>{chat.label}</span> : null}
                   </p>
                   <p className="text-sm text-muted-foreground break-all">
                     {profile.model} · {account.label ?? account.id}
                   </p>
-                  {usages?.length ? <ProfileUsageLine usages={usages} /> : null}
+                  {usages?.length ? <ProfileUsageLine usages={usages} onOpen={onOpenPurpose} /> : null}
                 </div>
                 <div className="flex gap-1">
                   <Button
@@ -485,7 +488,7 @@ function ProfileList({ profiles, usagesOf, row }: {
 }
 
 /** 「谁在用」：用途配置里引用这个模型的地方；个人身份看不到用途时不显示。 */
-function ProfileUsageLine({ usages }: { usages: ProfileUsage[] | null }) {
+function ProfileUsageLine({ usages, onOpen }: { usages: ProfileUsage[] | null; onOpen?: (focus: string) => void }) {
   const i18n = useI18n()
   if (usages === null) return null
   const effective = usages.filter((usage) => !usage.ignored)
@@ -495,14 +498,25 @@ function ProfileUsageLine({ usages }: { usages: ProfileUsage[] | null }) {
   return (
     <p className="mt-1 text-xs text-muted-foreground">
       <span className="font-medium text-foreground">{i18n.t("谁在用：")}</span>
-      {effective.length ? shown.map(usage => usage.label).join(' · ') : i18n.t("还没有用途引用它")}
+      {effective.length ? shown.map((usage, index) => {
+        // #64 profile-usage-not-linked: each usage opens 用途 at the row where it is set.
+        const focus = onOpen ? usagePurposeFocus(usage.key) : undefined
+        return (
+          <Fragment key={usage.key}>
+            {index ? ' · ' : null}
+            {focus ? (
+              <button type="button" className="underline-offset-2 hover:text-foreground hover:underline" onClick={() => onOpen?.(focus)}>{usage.label}</button>
+            ) : usage.label}
+          </Fragment>
+        )
+      }) : i18n.t("还没有用途引用它")}
       {effective.length > shown.length ? i18n.t(" 等 {0} 处", [effective.length]) : ''}
       {ignored.length ? (
         <span className="ml-1 italic" data-usage-ignored="">
           {ignored.map((usage) => i18n.t("{0}（未生效：{1}）", [usage.label, ignoredReasonText(usage.reason, i18n.locale)])).join(' · ')}
         </span>
       ) : null}
-      <span className="ml-1">{i18n.t("（在「用途」页签修改）")}</span>
+      <span className="ml-1">{onOpen ? i18n.t("（点名称到「用途」页签修改）") : i18n.t("（在「用途」页签修改）")}</span>
     </p>
   )
 }

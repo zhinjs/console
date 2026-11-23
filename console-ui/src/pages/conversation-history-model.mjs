@@ -1,5 +1,6 @@
 import { translate } from '../i18n/locale.mjs'
 import { diagnosticConversationKey, validDiagnosticConversation } from './endpoint-detail/message-diagnostics.mjs'
+import { unwrapComponentOutput } from './introspection/component-output.mjs'
 
 const record = value => !!value && typeof value === 'object' && !Array.isArray(value)
 const text = value => typeof value === 'string' && value.length > 0
@@ -63,4 +64,38 @@ export function conversationHistoryFailure(status, body, locale = 'zh-CN') {
   if (status === 400) return { kind: 'other', message: translate(locale, '会话标识或分页参数无效。') }
   if (status === 403) return { kind: 'other', message: translate(locale, '当前身份无权读取聊天记录。') }
   return { kind: 'other', message: typeof body?.error === 'string' ? body.error : translate(locale, '聊天记录读取失败（HTTP {0}）。', [status]) }
+}
+
+const RAW_CONTENT = 'zhin.raw-content/1'
+const isSegment = value => record(value) && text(value.type) && record(value.data)
+const isEnvelope = value => record(value) && value.$content === RAW_CONTENT && Object.hasOwn(value, 'payload')
+
+/** The segments a raw-content envelope wraps, or null when it wraps something else. */
+function wrappedSegments(value) {
+  const unwrapped = unwrapComponentOutput(value)
+  const items = Array.isArray(unwrapped) ? unwrapped : [unwrapped]
+  if (!items.length) return null
+  const segments = items.map(item => typeof item === 'string' ? { type: 'text', data: { text: item } } : isSegment(item) ? item : null)
+  return segments.every(Boolean) ? segments : null
+}
+
+/**
+ * Message segments as the history view should show them (#64 `history-raw-content-json`): a reply
+ * stored as a `zhin.raw-content/1` envelope — as a text segment holding its JSON, or as a segment whose
+ * data is the envelope — becomes the segments it wraps (an image stays an image instead of screens of
+ * base64). Anything that is not such an envelope, or wraps something else, is kept as it was.
+ */
+export function expandRawContentSegments(segments) {
+  if (!Array.isArray(segments)) return []
+  return segments.flatMap(segment => {
+    let envelope = null
+    if (record(segment) && isEnvelope(segment.data)) envelope = segment.data
+    else if (record(segment) && segment.type === 'text' && typeof segment.data?.text === 'string') {
+      const value = segment.data.text.trim()
+      if (value.startsWith('{') && value.includes(RAW_CONTENT)) {
+        try { const parsed = JSON.parse(value); if (isEnvelope(parsed)) envelope = parsed } catch { /* plain text */ }
+      }
+    }
+    return (envelope && wrappedSegments(envelope)) || [segment]
+  })
 }

@@ -386,6 +386,20 @@ export function schemaField(schema = {}) {
  * chain the page holds (`<key>Fallbacks`, `agentFallbacks`, the Host's graph shape) goes back with
  * it. `fallbacks: false` (a Host without fallback chains) never writes `fallbacks`.
  */
+const canonical = value => Array.isArray(value) ? value.map(canonical)
+  : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])]))
+  : value
+
+/**
+ * Whether the 用途 draft would save anything (#64 `purposes-no-unsaved-guard`): the plan built from it
+ * differs from the plan of what was read. Compared as saved, so key order and empty containers do not count.
+ */
+export function purposesDirty(draft, original, { fallbacks = true } = {}) {
+  if (!draft || !original) return false
+  const plan = value => JSON.stringify(canonical(purposePlan(value, original, { fallbacks })))
+  return plan(draft) !== plan(original)
+}
+
 export function purposePlan(draft, original = draft, { fallbacks = true, ambientJudge } = {}) {
   const ref = (id, chain) => (id ? languageReference(id, fallbacks ? chain : undefined) : null)
   const selection = (value) => ({ chat: ref(value?.chat, value?.chatFallbacks), perception: value?.perception ?? null })
@@ -667,6 +681,49 @@ export function profileUsages(purposes, profileId, locale = 'zh-CN', effects) {
     if (models?.chat === profileId || models?.chatFallbacks?.includes(profileId)) rows.push({ key: `scene:${key}`, level: 'scene', label: t('会话 {0} 的聊天', [key]) })
   }
   return rows
+}
+
+/**
+ * The badge of the default chat model (#64 `current-chat-badge-default-only`): 「当前聊天模型」 only when
+ * no adapter, account or conversation chats through another model; otherwise 「默认聊天模型 · N 处改用其他模型」
+ * with the overrides in `title`. `null` for any other model, or without purposes.
+ */
+export function chatModelBadge(purposes, profileId, locale = 'zh-CN') {
+  if (!isRecord(purposes) || purposes.defaults?.chat !== profileId) return null
+  const t = (text, values) => translate(locale, text, values)
+  const overrides = []
+  const scopes = [['adapters', key => t('适配器 {0}', [key])], ['endpoints', key => t('账号 {0}', [key])], ['scenes', key => t('会话 {0}', [key])]]
+  for (const [field, label] of scopes) {
+    for (const [key, models] of Object.entries(isRecord(purposes[field]) ? purposes[field] : {})) {
+      if (typeof models?.chat === 'string' && models.chat && models.chat !== profileId) overrides.push(label(key))
+    }
+  }
+  if (!overrides.length) return { label: t('当前聊天模型'), title: null, overrides }
+  return {
+    label: t('默认聊天模型 · {0} 处改用其他模型', [overrides.length]),
+    title: t('这些地方的聊天改用了其他模型：{0}', [overrides.join(t('、'))]),
+    overrides,
+  }
+}
+
+/**
+ * Where a 「谁在用」 usage is set on the 用途 tab (#64 `profile-usage-not-linked`), as the `?purpose=`
+ * value: `defaults` / `ambient` / `decisions` / `agents`, or `<level>:<key>` for an adapter, account or
+ * conversation override. Undefined for a key this Console does not know.
+ */
+export function usagePurposeFocus(key) {
+  if (typeof key !== 'string') return undefined
+  const scoped = /^(adapter|endpoint):(.+):(?:chat|perception)$/u.exec(key)
+  if (scoped) return `${scoped[1]}s:${scoped[2]}`
+  if (key.startsWith('scene:') && key.length > 'scene:'.length) return `scenes:${key.slice('scene:'.length)}`
+  const section = { default: 'defaults', ambient: 'ambient', decision: 'decisions', agent: 'agents' }[key.split(':')[0]]
+  return section
+}
+
+/** DOM id of a section (or an override row) on the 用途 tab, so a `?purpose=` link can bring it into view. */
+export function purposeElementId(focus) {
+  if (focus?.section === 'scopes' && focus.level && focus.key) return `inference-purpose-${focus.level}-${encodeURIComponent(focus.key)}`
+  return `inference-purpose-${focus?.section ?? ''}`
 }
 
 /** A profile label written for an Agent binding, e.g. 「子 Agent · 小编 planner · DeepSeek Flash」. */

@@ -108,7 +108,7 @@ test('the hook exposes canConfigure from agent.configure and refuses writes itse
 test('purposes and the personal session picker disable their editors and saves without agent.configure', async () => {
   const purposes = await source('inference/Purposes.tsx')
   assert.match(purposes, /const readOnly = !m\.canConfigure\n {2}const disabled = readOnly \|\|/)
-  assert.match(purposes, /<SaveButton type="submit" disabled=\{disabled\}/)
+  assert.match(purposes, /<SaveButton type="submit" disabled=\{disabled(?: \|\| !dirty)?\}/)
   // 默认模型, 插话判断, each decision, each Agent and each scene override.
   assert.ok((purposes.match(/<fieldset (?:key=\{\w+\} )?disabled=\{readOnly\}/g) ?? []).length >= 5)
   assert.match(purposes, /readOnly=\{readOnly\}/)

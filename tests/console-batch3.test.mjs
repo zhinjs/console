@@ -102,6 +102,7 @@ async function purposesPage(v) {
   const deps = {
     react: runtime.api, 'react/jsx-runtime': jsxRuntime, './model.mjs': model, '../../components/SaveButton': saveButtonMock,
     '../../utils/plugin-rpc': { pluginRpc: async () => { throw new Error('ambient status unavailable') } }, './ambient-judge-model.mjs': ambientJudgeModel,
+    '../../utils/useUnsavedChangesGuard': { useUnsavedChangesGuard: () => null },
     '../../hooks/use-console-access': { useConsoleAccess: () => ({}) }, '../../utils/console-access.mjs': { hasConsolePermission: () => true },
     '../../i18n': { useI18n: () => ({ locale: 'zh-CN', t: (m, values) => translate('zh-CN', m, values) }) },
     'lucide-react': new Proxy({}, { get: () => 'icon' }),

@@ -327,3 +327,15 @@ export interface PurposeProfileChoice {
   profile: Profile
 }
 export function purposeProfileChoices(view: View, kind: Kind, locale?: 'zh-CN' | 'en'): PurposeProfileChoice[]
+/** The default chat model's badge: 「当前聊天模型」, or 「默认聊天模型 · N 处改用其他模型」 with the overrides. */
+export function chatModelBadge(purposes: Purposes | undefined | null, profileId: string, locale?: 'zh-CN' | 'en'): { label: string; title: string | null; overrides: string[] } | null
+export interface PurposeFocus {
+  section: 'defaults' | 'ambient' | 'decisions' | 'agents' | 'scopes'
+  level?: 'adapters' | 'endpoints' | 'scenes'
+  key?: string
+}
+/** The `?purpose=` value for a 「谁在用」 usage key. */
+export function usagePurposeFocus(key: string): string | undefined
+export function purposeElementId(focus: PurposeFocus | undefined): string
+/** Whether the 用途 draft would save anything compared with what was read. */
+export function purposesDirty(draft: Purposes, original: Purposes, options?: { fallbacks?: boolean }): boolean
