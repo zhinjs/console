@@ -56,7 +56,7 @@ export default function AccessRolesPage() {
           {canManage ? <Button size="sm" onClick={() => setPending({ kind: 'edit', role: null, draft: { name: '', description: '', permissions: [] } })}><Plus />{i18n.t("新建角色")}</Button> : null}
         </>}
       />
-      {!canManage ? <ReadOnlyNotice /> : null}
+      {!canManage ? <ReadOnlyNotice errorKind={state.errorKind} /> : null}
       {saved.element}
       {state.error ? <IamLoadError error={state.error} kind={state.errorKind} failure={state.failure} onRetry={state.refresh} /> : null}
       <Card className="overflow-hidden p-0">

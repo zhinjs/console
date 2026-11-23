@@ -39,7 +39,11 @@ export function readConfigDrift(data) {
     const fields = Array.isArray(entry.fields)
       ? entry.fields.filter(field => isRecord(field) && text(field.path)).map(field => ({ path: field.path.trim(), sensitive: field.sensitive === true }))
       : []
-    entries.push({ id: entry.id.trim(), kind: entry.kind, ...(text(entry.instanceId) ? { instanceId: entry.instanceId.trim() } : {}), fields })
+    entries.push({
+      id: entry.id.trim(), kind: entry.kind, ...(text(entry.instanceId) ? { instanceId: entry.instanceId.trim() } : {}), fields,
+      // zhinjs/zhin#1250 第 88 批: an account added in the Console that the file never had. Optional: older Hosts omit it.
+      ...(entry.kind === 'snapshot_only' && entry.origin === 'console' ? { origin: 'console' } : {}),
+    })
   }
   const unverified = Array.isArray(data.unverified)
     ? data.unverified.filter(item => isRecord(item) && text(item.id) && Array.isArray(item.paths))
@@ -116,9 +120,18 @@ export function driftEntryActions(drift, entry, pluginId, access) {
   return actions
 }
 
-export function driftKindLabel(kind, locale = 'zh-CN') {
+/**
+ * Whether an entry is a real divergence between the file and the saved accounts: everything but an
+ * account added in the Console (`snapshot_only` + `origin: 'console'`), which runs as intended and can
+ * still be written back. Mirrors `isEndpointConfigDivergence` of `@zhin.js/adapter` (#1250 第 88 批).
+ */
+export function isDriftDivergence(entry) {
+  return !(entry?.kind === 'snapshot_only' && entry.origin === 'console')
+}
+
+export function driftKindLabel(kind, locale = 'zh-CN', origin) {
   return translate(locale, kind === 'config_only' ? '只在配置文件中'
-    : kind === 'snapshot_only' ? '配置文件中没有'
+    : kind === 'snapshot_only' ? origin === 'console' ? 'Console 新增' : '配置文件中没有'
       : kind === 'changed' ? '与配置文件不一致' : '状态未知')
 }
 

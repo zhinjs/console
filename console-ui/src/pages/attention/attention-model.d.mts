@@ -20,6 +20,8 @@ export interface AttentionItem {
   readonly source: string
   /** `chat-roles.import-pending` / `chat-roles.imported`: the people the item is about (masked ids). */
   readonly links?: readonly AttentionPersonLink[]
+  /** `chat-roles.no-owner` with `state.simulationOnly` (only simulation adapters are loaded): offer 「打开 Sandbox」. */
+  readonly simulationOnly?: true
 }
 
 export interface AttentionPersonLink {

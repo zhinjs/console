@@ -1,3 +1,4 @@
+import { parseRetryAfterSeconds } from '../../utils/retry-after.mjs'
 /**
  * `iam.*` replies keep their Host error code (`last_owner`, `forbidden`, …), which the shared
  * transport drops, so the access pages read the RPC envelope themselves.
@@ -45,7 +46,8 @@ export function readIamReply(status, json, t, retryAfterHeader) {
   }
   if (status === 401) throw new IamRequestError(t('登录已失效，请重新登录。'), { status, code: code || 'unauthorized', hostMessage })
   if (status === 403 && !code) throw new IamRequestError(t('当前身份没有执行此操作的权限。'), { status, code: 'forbidden', hostMessage })
-  const retryAfter = /^\d+$/u.test(String(retryAfterHeader ?? '').trim()) ? Number(String(retryAfterHeader).trim()) : undefined
+  const retryAfterSeconds = parseRetryAfterSeconds(retryAfterHeader)
+  const retryAfter = retryAfterSeconds && retryAfterSeconds > 0 ? retryAfterSeconds : undefined
   if (code === 'database_busy') {
     throw new IamRequestError(retryAfter ? t('网关的数据库正忙，请在 {0} 秒后重试。', [retryAfter]) : t('网关的数据库正忙，请稍后重试。'), { status, code, hostMessage, retryAfter })
   }

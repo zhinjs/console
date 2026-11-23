@@ -1,4 +1,6 @@
+import { isConsolePermission } from '@zhin.js/console-protocol'
 import { translate } from '../../i18n/locale.mjs'
+import { parseRetryAfterSeconds } from '../../utils/retry-after.mjs'
 
 /**
  * MCP 服务行的状态与「测试连接」结果（zhinjs/zhin #1250 第 28 批，契约见 `contracts/mcp.ts`）。
@@ -87,15 +89,10 @@ export function isStdioMcp(row) {
   return isRecord(row) && typeof row.transport === 'string' && row.transport.trim().toLowerCase() === 'stdio'
 }
 
-/** `Retry-After`（秒或 HTTP 日期）→ 秒数；读不到时 null。 */
+/** `Retry-After`（秒或 HTTP 日期，严格解析，见 `utils/retry-after.mjs`）→ 秒数；读不到或格式不对时 null。 */
 export function retryAfterSecondsFrom(header, now = Date.now()) {
-  const raw = typeof header === 'string' ? header.trim() : ''
-  if (/^\d+$/.test(raw)) return Math.max(1, Number(raw))
-  if (raw) {
-    const at = Date.parse(raw)
-    if (Number.isFinite(at)) return Math.max(1, Math.ceil((at - now) / 1000))
-  }
-  return null
+  const seconds = parseRetryAfterSeconds(header, now)
+  return seconds === undefined ? null : Math.max(1, seconds)
 }
 
 /** 200 的 `data`：一份 `ConsoleMcpConnectTestResult`；格式不对时 null。 */
@@ -124,12 +121,52 @@ export function readMcpTestResponse({ status, body, retryAfter, now } = {}) {
   }
   const reason = ERROR_KINDS[status] ?? 'error'
   const message = typeof envelope.error === 'string' && envelope.error.trim() ? envelope.error.trim() : ''
-  return { kind: 'error', reason, status: typeof status === 'number' ? status : 0, retryAfterSec: reason === 'rate_limited' ? retryAfterSecondsFrom(retryAfter, now) : null, message }
+  const code = typeof envelope.code === 'string' && envelope.code.trim() ? envelope.code.trim() : null
+  return { kind: 'error', reason, status: typeof status === 'number' ? status : 0, retryAfterSec: reason === 'rate_limited' ? retryAfterSecondsFrom(retryAfter, now) : null, message, code }
 }
 
 /** 请求本身没发出去或没有回复（网络错误、超时）。 */
 export function mcpTestRequestError(message) {
-  return { kind: 'error', reason: 'network', status: 0, retryAfterSec: null, message: typeof message === 'string' ? message : '' }
+  return { kind: 'error', reason: 'network', status: 0, retryAfterSec: null, message: typeof message === 'string' ? message : '', code: null }
+}
+
+const CJK = /[\u3400-\u9fff]/u
+
+/**
+ * The Host's own explanation, when the reader can read it: the Host writes expected failures in
+ * Chinese (`ConsoleApiErrorBody.error`), so an English Console shows its own translated advice
+ * instead of a Chinese sentence (console#124). Text without Chinese (a network error, an English
+ * Host message) is kept in every language. The dropped text is not lost: {@link mcpTestPresentation}
+ * keeps it as `hostMessage` (shown under 详情) and keeps the envelope `code` and permission name.
+ */
+export function hostTextFor(message, locale = 'zh-CN') {
+  const text = typeof message === 'string' ? message.trim() : ''
+  if (!text) return ''
+  return locale === 'zh-CN' || !CJK.test(text) ? text : ''
+}
+
+const PERMISSION_TOKEN = /[a-z][a-z0-9-]*(?:\.[a-z0-9-]+)+/giu
+
+/** The Console permission a refusal names (`缺少权限 agent.configure`, or a code that names one); null when none. */
+export function permissionFromRefusal(...texts) {
+  for (const text of texts) {
+    if (typeof text !== 'string') continue
+    for (const token of text.match(PERMISSION_TOKEN) ?? []) {
+      if (isConsolePermission(token)) return token
+    }
+  }
+  return null
+}
+
+/** What the detail leaves out: the permission (forbidden), the envelope code, the Host text it replaced. */
+function errorFacts(outcome, reason, detail, t) {
+  const message = typeof outcome?.message === 'string' ? outcome.message.trim() : ''
+  const code = typeof outcome?.code === 'string' && outcome.code.trim() ? outcome.code.trim() : null
+  const permission = reason === 'forbidden' ? permissionFromRefusal(message, code) : null
+  const notes = []
+  if (permission && !detail.includes(permission)) notes.push(t('需要权限：{0}', [permission]))
+  if (code) notes.push(t('{0}：{1}', [t('错误代码'), code]))
+  return { code, permission, notes, hostMessage: message && !detail.includes(message) ? message : null }
 }
 
 /** 测试结果的展示：`tone` 对应 Alert 变体，`role` 用于读屏播报。 */
@@ -144,7 +181,11 @@ export function mcpTestPresentation(outcome, locale = 'zh-CN') {
     return { tone: 'destructive', role: 'alert', label: t('测试连接失败'), detail: [mcpFailureText(result.failure, locale), duration].filter(Boolean).join(' · ') }
   }
   const reason = outcome?.reason ?? 'error'
-  const server = outcome?.message ?? ''
+  const presentation = mcpErrorPresentation(reason, hostTextFor(outcome?.message, locale), outcome, t)
+  return { ...presentation, ...errorFacts(outcome, reason, presentation.detail, t) }
+}
+
+function mcpErrorPresentation(reason, server, outcome, t) {
   switch (reason) {
     case 'not_found':
       return { tone: 'warning', role: 'alert', label: t('配置里没有这个服务'), detail: t('ai.mcpServers 中找不到它；可能刚被删除或改名，刷新列表后再试。') }

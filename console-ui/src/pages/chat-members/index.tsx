@@ -10,9 +10,9 @@ import { useConsoleAccess } from '../../hooks/use-console-access'
 import { hasConsolePermission, scopedAdapters } from '../../utils/console-access.mjs'
 import { ObjectSection } from '../../scope/ObjectPageLayout'
 import { IdentityChip, MyChatIdentitySection } from '../../scope/ChatIdentityPanels'
-import { CHAT_ROLE_LABELS } from '../../scope/chat-roles-model.mjs'
+import { CHAT_ROLE_COPY, CHAT_ROLE_LABELS } from '../../scope/chat-roles-model.mjs'
 import {
-  filterPrincipals, isMissingIdentityRpc, lastSeen, mergeRequest, principalActions, principalName, principalsListPlan, readPrincipals, settlePrincipalLists,
+  filterPrincipals, isMissingIdentityRpc, isSimulatedOnly, lastSeen, mergeRequest, principalActions, principalName, principalsListPlan, readPrincipals, settlePrincipalLists,
   renameRequest, splitRequest, type ChatIdentityView, type ChatPrincipalView,
 } from '../../scope/chat-identity-model.mjs'
 import '../admin-pages.css'
@@ -115,7 +115,8 @@ function MemberCard({ principal, manage, globalManage, onEdit }: {
         <strong>{principalName(principal)}</strong>
         <code className="console-chat-person-id" title={i18n.t('在聊天中可用 #{0} 引用这个人', [principal.id.slice(0, 9)])}>{principal.stored ? principal.id : i18n.t('单身份')}</code>
         {principal.unverified ? <Badge variant="warning" size="sm" title={i18n.t('有身份是运营者归并的，未经本人证明')}>{i18n.t('未验证')}</Badge> : null}
-        <span className="console-chat-member-seen">{seen ? i18n.t('最近发言 {0}', [new Date(seen).toLocaleString(i18n.locale)]) : i18n.t('90 天内没有发言')}</span>
+        <span className="console-chat-member-seen">{seen ? i18n.t('最近发言 {0}', [new Date(seen).toLocaleString(i18n.locale)])
+          : isSimulatedOnly(principal) ? i18n.t(CHAT_ROLE_COPY.simulatedSender) : i18n.t('90 天内没有发言')}</span>
       </div>
       <div className="console-chat-member-body">
         <div>

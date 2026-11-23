@@ -1,3 +1,4 @@
+import { parseRetryAfterSeconds } from './retry-after.mjs'
 // Pure sign-in / setup / onboarding logic (zhinjs/zhin ADR 0049 §5/§7, ADR 0053). No DOM, no fetch.
 
 /**
@@ -22,12 +23,8 @@ const isRecord = value => value !== null && typeof value === 'object' && !Array.
 
 /** Seconds from a `Retry-After` header (seconds or HTTP date) or a body hint; `null` when unknown. */
 export function retryAfterSeconds(header, body, now = Date.now()) {
-  const raw = typeof header === 'string' ? header.trim() : ''
-  if (/^\d+$/.test(raw)) return Math.max(1, Number(raw))
-  if (raw) {
-    const at = Date.parse(raw)
-    if (Number.isFinite(at)) return Math.max(1, Math.ceil((at - now) / 1000))
-  }
+  const seconds = parseRetryAfterSeconds(header, now)
+  if (seconds !== undefined) return Math.max(1, seconds)
   if (isRecord(body)) {
     if (typeof body.retryAfterMs === 'number' && body.retryAfterMs > 0) return Math.max(1, Math.ceil(body.retryAfterMs / 1000))
     if (typeof body.retryAfter === 'number' && body.retryAfter > 0) return Math.max(1, Math.ceil(body.retryAfter))

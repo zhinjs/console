@@ -207,7 +207,7 @@ export function statusFromError(error) {
   if (needs.length || serverCode === 'needs_configuration' || serverCode === 'configuration_required') {
     return { ...base, kind: 'needs-configuration', ...(needs.length ? { needsConfiguration: needs } : {}), ...(missingEnv.length ? { missingEnv } : {}) }
   }
-  if (serverCode === 'forbidden' || serverCode === 'permission_denied' || httpStatus === 401 || httpStatus === 403 || /\bHTTP 40[13]\b|\bforbidden\b|permission denied|not allowed|scope does not allow|没有\s*\S+\s*权限|无权|权限不足/iu.test(message)) {
+  if (serverCode === 'forbidden' || serverCode === 'permission_denied' || httpStatus === 401 || httpStatus === 403 || /\bHTTP 40[13]\b|\bforbidden\b|permission denied|\bnot allowed to\b|scope does not allow|没有\s*\S+\s*权限|缺少\s*权限|missing permission|无权|权限不足/iu.test(message)) {
     return { ...base, kind: 'forbidden' }
   }
   if (serverCode === 'not_installed' || serverCode === 'plugin_not_found' || /plugin (?:is )?not installed|未安装/iu.test(message)) {

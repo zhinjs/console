@@ -23,6 +23,9 @@ import { WelcomeFlowContext } from './WelcomeFlowContext'
 import { useUnsavedChangesGuard } from '../utils/useUnsavedChangesGuard'
 import { setOwnerDirty } from '../utils/unsaved-changes-guard.mjs'
 
+/** `config:get-source` needs `ops.config.read` (`CONSOLE_RPC_PERMISSIONS`). */
+const CONFIG_READ_PERMISSIONS = ['ops.config.read']
+
 function EditableConfigPage() {
   const i18n = useI18n()
   const scope = useInboxCacheScope()
@@ -34,7 +37,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
   const i18n = useI18n()
   const [searchParams, setSearchParams] = useSearchParams()
   const pluginFromUrl = searchParams.get('plugin')?.trim() ?? ''
-  const { source, format, configKeys: pluginKeys, loading, loaded, error, load, snapshot, applyConfiguration, applyLoading, applyError, applyBlocked } = useConfigSource()
+  const { source, format, configKeys: pluginKeys, loading, loaded, error, readDenied, load, snapshot, applyConfiguration, applyLoading, applyError, applyBlocked } = useConfigSource()
   const [visitedEntries, setVisitedEntries] = useState<Map<string, SettingsEntry>>(() => new Map())
   const contentRef = useRef<HTMLDivElement>(null)
   // The search box owns its text (router updates run as transitions, which would fight a
@@ -107,6 +110,16 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
         <StatusState kind="loading" onRetry={() => void load().catch(() => {})} placeholder={<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24" />)}
         </div>} />
+      </div>
+    )
+  }
+
+  // 无权限 is the standard panel (Console 重构规范 §空态与错误态): which permission is missing, no 重试读取.
+  if (readDenied && !loaded) {
+    return (
+      <div className="space-y-4">
+        <PageHeader title={i18n.t("配置文件")} />
+        <StatusState kind="forbidden" permissions={CONFIG_READ_PERMISSIONS} />
       </div>
     )
   }

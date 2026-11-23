@@ -13,6 +13,8 @@ export type ChatIdentityLinkMethod = ConsoleChatIdentityLinkMethod
 /** A validated `ConsoleChatIdentity` (`chat-identities.recent` rows also carry `principalId`). */
 export interface ChatIdentityView extends ConsoleChatIdentity {
   readonly principalId?: string
+  /** zhinjs/zhin#1250 第 87 批: an id on a simulation adapter that never speaks (absent from older Hosts and protocol 1.9.0). */
+  readonly simulatedSender?: true
 }
 
 /** A validated `ConsoleChatRoleEntry` (`source` is implied: zhin chat roles come only from grants). */
@@ -44,12 +46,16 @@ export interface ChatGrantCandidate {
   readonly personName?: string
   readonly principalId?: string
   readonly lastSeenAt?: number
+  /** The identity never speaks; roles cannot be granted to it. */
+  readonly simulatedSender?: true
 }
 
 export declare function isMissingIdentityRpc(error: unknown): boolean
 export declare function readPrincipal(item: unknown): ChatPrincipalView | null
 export declare function readPrincipals(payload: unknown): ChatPrincipalView[]
 export declare function readRecentIdentities(payload: unknown): ChatIdentityView[]
+export declare function readSimulatedSendersOmitted(payload: unknown): string[]
+export declare function isSimulatedOnly(principal: ChatPrincipalView): boolean
 export declare function readIdentityMe(payload: unknown): ChatIdentityMe
 export declare function readBindCode(payload: unknown): ConsoleChatBindCodeResult
 export declare function bindInstruction(code: string, locale?: 'zh-CN' | 'en'): string
