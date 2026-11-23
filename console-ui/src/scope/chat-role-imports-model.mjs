@@ -50,9 +50,10 @@ const IMPORT_ROLES = Object.freeze(['owner', 'trusted'])
 
 /**
  * Which bot account a candidate belongs to (#64 `import-card-missing-endpoint`): the same person under
- * two accounts otherwise reads the same on two cards. An `endpoint` the reply carries wins (protocol
- * 1.9 has none on candidates yet); else an account-level scope names it; else a `<adapter>.endpoints[N]`
- * configuration path gives its place in the configuration (1-based).
+ * two accounts otherwise reads the same on two cards. An account-level scope names it first (that is
+ * what the grant targets); else an `endpoint` the reply carries (protocol 1.9 has none on candidates
+ * yet); else a `<adapter>.endpoints[N]` configuration path gives where in the configuration the entry
+ * came from (1-based) — provenance only: the grant's reach is still its scope (e.g. the whole adapter).
  */
 function candidateAccount(raw, adapter, scopeEndpoint) {
   const endpoint = scopeEndpoint || text(raw.endpoint)
@@ -124,7 +125,7 @@ export function readChatRoleImports(payload) {
 export function chatRoleImportIdentity(row, t) {
   if (row.kind === 'unrecognized') return ''
   const account = row.endpoint ? t('账号 {0}', [row.endpoint])
-    : row.configAccount ? t('配置第 {0} 个账号', [row.configAccount]) : ''
+    : row.configAccount ? t('来自配置第 {0} 个账号', [row.configAccount]) : ''
   return [row.adapter, account, row.userId].filter(Boolean).join(' · ')
 }
 

@@ -20,9 +20,11 @@ test('two candidates for the same person on two accounts no longer read the same
   })
   const [first, second] = rows.map(row => chatRoleImportSummary(row, zh))
   assert.notEqual(first, second)
-  // Without an account id in the reply, the configuration path still tells them apart.
-  assert.equal(chatRoleImportIdentity(rows[0], zh), 'qq · 配置第 1 个账号 · 10001')
-  assert.equal(chatRoleImportIdentity(rows[1], zh), 'qq · 配置第 2 个账号 · 10001')
+  // Without an account id in the reply, the configuration path still tells them apart — worded as where
+  // the entry came from, since an adapter-level grant still covers the whole adapter.
+  assert.equal(chatRoleImportIdentity(rows[0], zh), 'qq · 来自配置第 1 个账号 · 10001')
+  assert.equal(chatRoleImportIdentity(rows[1], zh), 'qq · 来自配置第 2 个账号 · 10001')
+  assert.match(chatRoleImportSummary(rows[0], zh), /（适配器 qq）$/, 'the scope still says what the grant covers')
   assert.doesNotMatch(chatRoleImportIdentity(rows[1], en), CJK)
 })
 
