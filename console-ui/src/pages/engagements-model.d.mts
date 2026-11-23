@@ -1,8 +1,13 @@
 import type { ConsoleEngagementSummary, ConsoleVenueDefinition } from '@zhin.js/client'
 
 export function hasRunningEngagement(engagements: readonly Pick<ConsoleEngagementSummary, 'status'>[] | readonly { status: string }[]): boolean
-export function engagementTotals(engagements: readonly { status: string; turns?: number; tokensUsed?: number }[]): { running: number; failed: number; turns: number; tokens: number }
+/** Turn / token totals are `null` when no collaboration in a non-empty list reports them. */
+export function engagementTotals(engagements: readonly { status: string; turns?: number; tokensUsed?: number }[]): { running: number; failed: number; turns: number | null; tokens: number | null }
 export function actorLabel(actor: unknown): string
+/** `kind` (protocol) or `type` (Host journal); `event` when neither. */
+export function engagementEventKind(event: Readonly<Record<string, unknown>> | null | undefined): string
+/** Masks 5+ digit account numbers used as ids (whole value or a `:` / `/` segment). */
+export function maskPlatformIds(text: unknown): string
 export function collaborationEventSummary(event: Readonly<Record<string, unknown>>): string
 export function venueChannelLabel(venue: ConsoleVenueDefinition): string
 /** A list field the Host may omit: anything that is not an array reads as empty. */

@@ -14,7 +14,7 @@ test('totals count running and failed engagements and add up their budgets', () 
   assert.equal(hasRunningEngagement([detail.summary, running]), true)
 })
 
-test('each Host event kind gets a one-line summary and unknown kinds keep their payload', () => {
+test('each Host event kind gets a one-line summary and unknown kinds show their scalar fields (the JSON stays in 原始事件)', () => {
   assert.deepEqual(detail.events.map(collaborationEventSummary), [
     'initiator=human:u-1 venue=war-room',
     'agent:planner -> agent:reviewer [request]',
@@ -23,7 +23,7 @@ test('each Host event kind gets a one-line summary and unknown kinds keep their 
     'hops=2 turns=3 tokens=1840',
     'status=completed reason=done',
   ])
-  assert.equal(collaborationEventSummary({ kind: 'future.kind', n: 1 }), '{"kind":"future.kind","n":1}')
+  assert.equal(collaborationEventSummary({ kind: 'future.kind', n: 1 }), 'n=1')
   assert.equal(actorLabel(null), 'unknown')
   assert.equal(actorLabel({ kind: 'robot', id: 7 }), '{"kind":"robot","id":7}')
 })

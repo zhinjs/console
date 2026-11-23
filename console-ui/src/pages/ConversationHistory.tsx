@@ -10,7 +10,7 @@ import { ConversationUsage } from './ConversationUsage'
 import { turnsForMessage, type TraceTurn } from './conversation-trace-model.mjs'
 import type { DiagnosticConversation } from './endpoint-detail/types'
 import {
-  conversationHistoryQuery, conversationHistoryFailure, readConversationHistory, prependConversationHistory,
+  conversationHistoryQuery, conversationHistoryFailure, expandRawContentSegments, readConversationHistory, prependConversationHistory,
   type ConversationHistoryFailure, type ConversationHistoryPage,
 } from './conversation-history-model.mjs'
 
@@ -116,7 +116,7 @@ export function ConversationHistory({ sessionKey, connectionScope, connectionId,
                 {recalled.has(message.ref.id) ? <span className="conversation-message-recalled">{i18n.t('已撤回')}</span> : null}
               </header>
               <div className="conversation-message-body">{message.contentStatus === 'unavailable'
-                ? <p>{i18n.t('消息正文未保存')}</p> : <MessageBody content={message.segments} />}</div>
+                ? <p>{i18n.t('消息正文未保存')}</p> : <MessageBody content={expandRawContentSegments(message.segments)} />}</div>
               {message.actor ? <ConversationUsage turns={turnsForMessage(turns, message.ref)} onOpenTrace={onOpenTrace} /> : null}
             </article> : null}
         </Fragment>

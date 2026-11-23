@@ -530,6 +530,7 @@ async function purposesPage(v, { judgeRead = judgeView(), request: answer, permi
       SelectField: 'select', SearchableSelectField: 'select', Card: 'card', useConfirm: () => ({ confirm: async () => true, ConfirmDialog: null }),
       DropdownMenu: 'menu', DropdownMenuContent: 'menu-content', DropdownMenuItem: 'menu-item', DropdownMenuTrigger: 'menu-trigger' },
     './SupportInfo': { supportLabel: label => label },
+    '../../utils/useUnsavedChangesGuard': { useUnsavedChangesGuard: () => null },
   }
   const module = { exports: {} }
   new Function('require', 'module', 'exports', code)(name => { assert.ok(name in deps, name); return deps[name] }, module, module.exports)

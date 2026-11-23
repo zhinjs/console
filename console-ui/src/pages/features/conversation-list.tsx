@@ -16,14 +16,14 @@ export function ConversationKindBadge({ kind }: { kind: ConversationKind }) {
 }
 
 /** "N 个会话有覆盖" per endpoint of one alias, when the Host reports counts (ADR 0055). */
-export function ConversationOverrideLinks({ counts, adapter }: { counts: ConversationOverrideCounts | undefined; adapter: string }) {
+export function ConversationOverrideLinks({ counts, adapter, linkClassName }: { counts: ConversationOverrideCounts | undefined; adapter: string; linkClassName?: string }) {
   const i18n = useI18n()
   const entries = conversationOverrideCounts(counts, adapter)
   if (!entries.length) return null
   return (
     <span className="flex flex-col gap-0.5 font-normal">
       {entries.map(({ endpoint, count }) => (
-        <Link key={endpoint} to={endpointHref(adapter, endpoint)} className="text-xs text-muted-foreground hover:underline">
+        <Link key={endpoint} to={endpointHref(adapter, endpoint)} className={['text-xs text-muted-foreground hover:underline', linkClassName].filter(Boolean).join(' ')}>
           {i18n.t("{0}：{1} 个会话有覆盖", [endpoint, count])}
         </Link>
       ))}

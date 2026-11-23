@@ -39,18 +39,22 @@ export function summarizeSchedules(list) {
  * 助手任务：总数、启用数，以及最近一次运行出错的任务数。Host 说明助手未启用时（#1250 `status: 'disabled'`）
  * 带上 `disabled`（本地化的原因），卡片显示「未启用」而不是 0 个任务。
  */
-export function summarizeAssistantJobs(data, locale = 'zh-CN') {
+export function summarizeAssistantJobs(data, locale = 'zh-CN', reminderIds = []) {
   if (!data || !Array.isArray(data.jobs)) return null
   const disabled = featureDisabledState(data, locale)
   if (disabled) return { total: 0, enabled: 0, failing: 0, disabled: disabled.description }
+  // A persistent reminder is also an assistant job (same id): it is counted on the reminder card only
+  // (#64 schedule-tabs-overlap), as 全部任务 lists it once.
+  const reminders = new Set(reminderIds)
+  const own = data.jobs.filter(job => !reminders.has(job?.id))
   let enabled = 0
   let failing = 0
-  for (const job of data.jobs) {
+  for (const job of own) {
     if (job?.enabled) enabled += 1
     const status = String(job?.state?.lastStatus ?? '').toLowerCase()
     if (job?.state?.lastError || status === 'error' || status === 'failed') failing += 1
   }
-  return { total: data.jobs.length, enabled, failing }
+  return { total: own.length, enabled, failing, reminders: data.jobs.length - own.length }
 }
 
 const FAILED_RUN_STATUSES = new Set(['failed', 'interrupted', 'unsettled'])

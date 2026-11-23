@@ -47,6 +47,9 @@ import {
   profileAvailability,
   describeUnavailability,
   recentFallbackRows,
+  purposeElementId,
+  purposesDirty,
+  type PurposeFocus,
   type ProbeResult,
   type View,
   type Purposes as PurposeState,
@@ -57,6 +60,7 @@ import {
 } from './model.mjs'
 import type { InferenceManagement } from './useInferenceManagement'
 import { SaveButton, useSaveFeedback } from '../../components/SaveButton'
+import { useUnsavedChangesGuard } from '../../utils/useUnsavedChangesGuard'
 
 /** Decision purposes; an ADR 0066 instance has five (旁听参与判断 became part of 插话判断). */
 const decisionTaskLabels = (t: ReturnType<typeof useI18n>['t'], merged = false): Record<string, string> => {
@@ -73,7 +77,7 @@ const decisionTaskLabels = (t: ReturnType<typeof useI18n>['t'], merged = false):
 
 /** `GET /ambient-judge` of the held view: the judge in effect, or why it could not be read. */
 type JudgeRead = { judge: AmbientJudgeView | null; error: unknown }
-export function Purposes({ management: m }: { management: InferenceManagement }) {
+export function Purposes({ management: m, focus, onDirtyChange }: { management: InferenceManagement; focus?: PurposeFocus; onDirtyChange?: (dirty: boolean) => void }) {
   const i18n = useI18n()
   const [editor, setEditor] = useState(() => ({
     source: m.source!,
@@ -119,6 +123,19 @@ export function Purposes({ management: m }: { management: InferenceManagement })
   useEffect(() => {
     void readJudge()
   }, [view.rootId])
+  // #64 profile-usage-not-linked: a `?purpose=` link (「谁在用」 on 模型) opens the override level it names…
+  useEffect(() => {
+    if (focus?.level) setLevel(focus.level)
+    if (focus?.level === 'scenes' && !targets?.scenesAvailable) void loadScenes()
+  }, [focus?.level, focus?.key])
+  // …and brings the row (or else its section) into view, again once the judge and the targets above it
+  // have loaded and moved it down (each flips once, so a later scroll by the user is left alone).
+  useEffect(() => {
+    if (!focus) return
+    const document = globalThis.document
+    const element = document?.getElementById(purposeElementId(focus)) ?? document?.getElementById(purposeElementId({ section: focus.section }))
+    element?.scrollIntoView?.({ block: 'start' })
+  }, [focus?.section, focus?.level, focus?.key, level, judgeRead !== null, targets !== null])
   // The draft follows what was read until it is edited.
   useEffect(() => {
     if (!judgeBase) return
@@ -196,6 +213,14 @@ export function Purposes({ management: m }: { management: InferenceManagement })
   const decisionChoiceCount = purposeProfileChoices(view, 'decision', i18n.locale).length
   // #1250: every language purpose may carry an ordered fallback chain; older Hosts keep only vision's.
   const fallbacks = supportsPurposeFallbacks(view)
+  // #64 purposes-no-unsaved-guard: whether 保存 would write anything (the judge counts once edited).
+  const judgeDirty = merged && judgeBase && judgeEditor?.touched
+    ? ambientJudgePlanEntry(judgeDraftValue, judgeBase.policy, { source: judgeBase.source }) !== undefined : false
+  const dirty = purposesDirty(draft, view.purposes!, { fallbacks }) || judgeDirty
+  // Leaving the page or reloading asks first; switching tabs is asked by Workspace (it unmounts this draft).
+  const leaveConfirmation = useUnsavedChangesGuard(dirty)
+  useEffect(() => { onDirtyChange?.(dirty) }, [dirty])
+  useEffect(() => () => onDirtyChange?.(false), [])
   function defaultValue(key: 'chat' | 'summary' | 'ambient' | 'image', value: string) {
     setDraft((previous) => {
       const defaults: PurposeState['defaults'] = { ...previous.defaults, [key]: value || undefined }
@@ -332,6 +357,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
       }}
     >
       {confirmDialog}
+      {leaveConfirmation}
       {warnings.length ? (
         <Alert variant="warning" role="status">
           <AlertTitle>{i18n.t("已保存，有旧写法被换算")}</AlertTitle>
@@ -344,16 +370,19 @@ export function Purposes({ management: m }: { management: InferenceManagement })
       ) : null}
       <div className="flex items-center justify-between gap-3">
         <h3 className="font-semibold">{i18n.t("模型用途")}</h3>
-        <SaveButton type="submit" disabled={disabled} saving={probing || saving} saved={saveFeedback.saved}
-          savingLabel={probing ? i18n.t("正在测试连通性…") : undefined}>
-          {i18n.t("保存")}
-        </SaveButton>
+        <div className="flex items-center gap-3">
+          {dirty ? <span className="text-sm text-muted-foreground" role="status">{i18n.t("有未保存的修改")}</span> : null}
+          <SaveButton type="submit" disabled={disabled || !dirty} saving={probing || saving} saved={saveFeedback.saved}
+            savingLabel={probing ? i18n.t("正在测试连通性…") : undefined}>
+            {i18n.t("保存")}
+          </SaveButton>
+        </div>
       </div>
       <p className="text-sm text-muted-foreground">
         {i18n.t("聊天模型的优先级：子 Agent 的绑定高于适配器、账号和会话场景的聊天覆盖，这些覆盖又高于默认聊天模型。")}
         {fallbacks ? ' ' + i18n.t("主模型额度用完、余额不足或密钥被拒时，按顺序换用这一层配置的备用模型。") : null}
       </p>
-      <Card className="p-4 space-y-4">
+      <Card className="p-4 space-y-4" id={purposeElementId({ section: 'defaults' })}>
         <h4 className="font-medium">{i18n.t("默认模型")}</h4>
         <fieldset disabled={readOnly} className="min-w-0 space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -413,7 +442,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
         </fieldset>
       </Card>
       {merged && !judgeBase ? (
-        <Card className="p-4 space-y-2" data-ambient-judge-unavailable="">
+        <Card className="p-4 space-y-2" data-ambient-judge-unavailable="" id={purposeElementId({ section: 'ambient' })}>
           <h4 className="font-medium">{i18n.t("插话判断")}</h4>
           {judgeRead === null
             ? <p className="text-sm text-muted-foreground" role="status">{i18n.t("正在读取插话判断…")}</p>
@@ -459,7 +488,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
           }}
         />
       ) : null}
-      <Card className="p-4 space-y-4">
+      <Card className="p-4 space-y-4" id={purposeElementId({ section: 'decisions' })}>
         <div className="space-y-1">
           <h4 className="font-medium">{i18n.t("决策")}</h4>
           {/* #64 decision-slot-kinds-unexplained: why ordinary chat models are missing here, and what the modes do — said once. */}
@@ -548,7 +577,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
           )
         })}
       </Card>
-      <Card className="p-4 space-y-4">
+      <Card className="p-4 space-y-4" id={purposeElementId({ section: 'agents' })}>
         <h4 className="font-medium">Agent</h4>
         {[
           ...new Set([
@@ -583,7 +612,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
           )
         })}
       </Card>
-      <Card className="p-4 space-y-4">
+      <Card className="p-4 space-y-4" id={purposeElementId({ section: 'scopes' })}>
         <h4 className="font-medium">{i18n.t("按场景选择")}</h4>
         <div className="flex flex-wrap gap-2">
           <SelectField
@@ -618,7 +647,7 @@ export function Purposes({ management: m }: { management: InferenceManagement })
           </Button>
         </div>
         {Object.entries(draft[level] ?? {}).map(([key, value]) => (
-          <fieldset key={key} disabled={readOnly} className="min-w-0 space-y-3 rounded-md border p-3">
+          <fieldset key={key} disabled={readOnly} id={purposeElementId({ section: 'scopes', level, key })} className="min-w-0 space-y-3 rounded-md border p-3">
             <div className="flex justify-between items-center gap-2">
               <span className="text-sm break-all">
                 {candidates.find((item) => item.value === key)?.label ?? i18n.t("已配置目标（当前未列出）")}
@@ -759,6 +788,8 @@ function FallbackChain({
       {list.map((id, index) => (
         <div key={`${index}:${id}`} className="space-y-1">
           <div className="flex items-center gap-2">
+            {/* #64 fallback-select-no-visible-label: say on screen that this is a fallback, not a second primary. */}
+            <span className="shrink-0 text-xs text-muted-foreground" aria-hidden="true">{i18n.t("备用 {0}", [index + 1])}</span>
             <SearchableSelectField
               variant="ghost"
               className="min-w-0 flex-1"
@@ -899,7 +930,7 @@ function AmbientJudgeSection({
     try { if (!(await onNoticed())) hideLocally() } finally { setNoticing(false) }
   }
   return (
-    <Card className="p-4 space-y-4" data-ambient-judge="">
+    <Card className="p-4 space-y-4" data-ambient-judge="" id={purposeElementId({ section: 'ambient' })}>
       <div className="space-y-1">
         <h4 className="font-medium">{i18n.t("插话判断")}</h4>
         <p className="text-sm text-muted-foreground">

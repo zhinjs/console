@@ -56,10 +56,15 @@ function useTaskHubSummary(scope: string | null | undefined, refreshKey: string)
     const settle = <T,>(promise: Promise<T>) => promise.catch(() => null)
     void Promise.all([
       settle(readJson(`${CONSOLE_REST.TASK_PROVIDERS}?locale=${i18n.locale}`).then(body => summarizeAdminTasks(readTaskProviders(body, i18n.locale)))),
-      settle(requestConsole<ScheduleListLike>({ type: CONSOLE_RPC.SCHEDULE_LIST, locale: i18n.locale }).then(summarizeSchedules)),
-      settle(readJson('/api/assistant/jobs').then(body => summarizeAssistantJobs(validateAssistantJobs(body, i18n.locale), i18n.locale))),
+      settle(requestConsole<ScheduleListLike>({ type: CONSOLE_RPC.SCHEDULE_LIST, locale: i18n.locale })),
+      settle(readJson('/api/assistant/jobs')),
       settle(readJson(executionQuery()).then(body => summarizeExecutions(readExecutionPage(body, undefined, i18n.locale)))),
-    ]).then(([admin, schedule, assistant, history]) => {
+    ]).then(([admin, scheduleList, assistantBody, history]) => {
+      // A persistent reminder is also an assistant job: count it once, on the reminder card (#64 schedule-tabs-overlap).
+      const reminderIds = (Array.isArray(scheduleList?.persistent) ? scheduleList.persistent : []).flatMap(item => typeof item?.id === 'string' ? [item.id] : [])
+      let assistant: TaskHubSummary['assistant'] = null
+      try { assistant = assistantBody ? summarizeAssistantJobs(validateAssistantJobs(assistantBody, i18n.locale), i18n.locale, reminderIds) : null } catch { assistant = null }
+      const schedule = summarizeSchedules(scheduleList)
       if (!controller.signal.aborted && isInboxCacheScopeActive(scope)) setSummary({ admin, schedule, assistant, history })
     })
     return () => controller.abort()
@@ -110,7 +115,9 @@ function OverviewPanel({ summary, open }: { summary: TaskHubSummary; open: (tab:
         value={summary.assistant?.disabled ? unknown : summary.assistant?.total ?? unknown}
         sub={summary.assistant?.disabled ? i18n.t("未启用：{0}", [summary.assistant.disabled])
           : summary.assistant
-          ? summary.assistant.failing > 0 ? i18n.t("{0} 个最近运行出错", [summary.assistant.failing]) : i18n.t("{0} 个已启用", [summary.assistant.enabled])
+          ? summary.assistant.failing > 0 ? i18n.t("{0} 个最近运行出错", [summary.assistant.failing])
+            : summary.assistant.reminders ? i18n.t("另有 {0} 个来自定时提醒，已算在「定时提醒」里", [summary.assistant.reminders])
+            : i18n.t("{0} 个已启用", [summary.assistant.enabled])
           : i18n.t("未启用或暂时无法读取")}
         tone={summary.assistant && summary.assistant.failing > 0 ? 'danger' : undefined}
         onOpen={() => open('assistant')}

@@ -36,6 +36,30 @@ export function inferenceTabParams(current, tab) {
   if (!tab || tab === DEFAULT_INFERENCE_TAB) next.delete('tab')
   else next.set('tab', tab)
   if (tab !== 'accounts') next.delete('account')
+  if (tab !== 'purposes') next.delete('purpose')
+  return next
+}
+
+const PURPOSE_SECTIONS = ['defaults', 'ambient', 'decisions', 'agents']
+const PURPOSE_LEVELS = ['adapters', 'endpoints', 'scenes']
+
+/**
+ * What a `?purpose=` link points at on 用途 (#64 `profile-usage-not-linked`): a section, or an
+ * adapter / account / conversation override (`adapters:sandbox`, `scenes:qq:group:9`). Undefined otherwise.
+ */
+export function inferenceFocusPurpose(value) {
+  if (typeof value !== 'string') return undefined
+  if (PURPOSE_SECTIONS.includes(value)) return { section: value }
+  const colon = value.indexOf(':')
+  const level = colon > 0 ? value.slice(0, colon) : ''
+  const key = colon > 0 ? value.slice(colon + 1) : ''
+  return PURPOSE_LEVELS.includes(level) && key ? { section: 'scopes', level, key } : undefined
+}
+
+/** The URL parameters that open 用途 at `focus` (a `?purpose=` value). */
+export function inferencePurposeParams(current, focus) {
+  const next = inferenceTabParams(current, 'purposes')
+  next.set('purpose', focus)
   return next
 }
 
