@@ -2,6 +2,8 @@ import { useI18n } from '../../i18n'
 import { RecordValueDisclosure } from './RecordValueDisclosure'
 import { assertNewKey } from './mutation-model.mjs'
 import { useMutation } from './use-mutation'
+import { kvCheckResult, kvWriteFailure, type KvWritePlan } from './kv-write-model.mjs'
+import { DdlCheckNotice, useDdlCheck } from './ddl-outcome'
 import { useState, useEffect, useCallback } from 'react'
 import type { KvEntry } from '@zhin.js/client'
 import { Plus, Trash2, Pencil, RefreshCw, Loader2, AlertCircle, CheckCircle, Save, Key } from 'lucide-react'
@@ -28,13 +30,13 @@ export function KvBucketView({
   const { busy, gate, run } = useMutation()
   const [entries, setEntries] = useState<KvEntry[]>([])
   const [loading, setLoading] = useState(false)
-  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string; details?: string } | null>(null)
   const [editEntry, setEditEntry] = useState<KvEntry | null>(null)
   const [addEntry, setAddEntry] = useState(false)
   const [keyInput, setKeyInput] = useState('')
   const [valueInput, setValueInput] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
-  const { success, error: toastError } = useToast()
+  const { success } = useToast()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -51,16 +53,40 @@ export function KvBucketView({
 
   useEffect(() => { load() }, [load])
 
+  // A write whose outcome is unknown (#64): every write in this bucket stays blocked until 「核对」
+  // reads the bucket again; a replay could overwrite, or be refused as 「键已存在」 for a write that landed.
+  const check = useDdlCheck<KvWritePlan>(async plan => {
+    const result = kvCheckResult((await kvEntries(tableName)).entries, plan, i18n.locale)
+    if (result.applied && plan.action === 'set') { setEditEntry(null); setAddEntry(false); setKeyInput(''); setValueInput('') }
+    await load()
+    return result
+  })
+  const locked = busy || Boolean(check.held)
+
   const handleSave = async (isNew: boolean) => {
-    if (readOnly || gate.pending) return
+    if (readOnly || gate.pending || check.held) return
     await run(async () => {
+    const key = keyInput.trim()
+    let val: any
     try {
-      const key = keyInput.trim()
       if (!key) throw new Error(i18n.t("Key 不能为空。"))
       if (isNew) assertNewKey(key, (await kvEntries(tableName)).entries, i18n.locale)
-      let val: any
       try { val = JSON.parse(valueInput) } catch { val = valueInput }
+    } catch (err) {
+      // Checks before anything is written: their own message says what to fix.
+      setMsg({ type: 'error', text: (err as Error).message })
+      return
+    }
+    try {
       await kvSet(tableName, key, val)
+    } catch (err) {
+      const failure = kvWriteFailure(err, 'set', i18n.locale)
+      if (failure.unknown) { setMsg(null); check.hold({ subject: { action: 'set', key, value: val }, text: failure.text, details: failure.details }); return }
+      setMsg({ type: 'error', text: failure.text, details: failure.details })
+      return
+    }
+    check.clearResult()
+    try {
       setMsg({ type: 'success', text: isNew ? i18n.t("添加成功") : i18n.t("更新成功") })
       setEditEntry(null)
       setAddEntry(false)
@@ -75,19 +101,23 @@ export function KvBucketView({
   }
 
   const handleDelete = async (key: string) => {
-    if (gate.pending || readOnly) return
+    if (gate.pending || readOnly || check.held) return
     setDeleteTarget(key)
   }
 
   const confirmDelete = async () => {
-    if (!deleteTarget || gate.pending || readOnly) return
+    if (!deleteTarget || gate.pending || readOnly || check.held) return
+    const key = deleteTarget
     await run(async () => {
     try {
-      await kvDelete(tableName, deleteTarget)
+      await kvDelete(tableName, key)
+      check.clearResult()
       success(i18n.t("删除成功"))
       await load()
     } catch (err) {
-      toastError((err as Error).message)
+      const failure = kvWriteFailure(err, 'delete', i18n.locale)
+      if (failure.unknown) check.hold({ subject: { action: 'delete', key }, text: failure.text, details: failure.details })
+      else setMsg({ type: 'error', text: failure.text, details: failure.details })
     } finally {
       setDeleteTarget(null)
     }
@@ -99,14 +129,15 @@ export function KvBucketView({
       {msg && (
         <Alert variant={msg.type === 'error' ? 'destructive' : 'success'} className="py-2 shrink-0">
           {msg.type === 'error' ? <AlertCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
-          <AlertDescription>{msg.text}</AlertDescription>
+          <AlertDescription>{msg.text}{msg.details ? <details className="mt-2 text-xs"><summary className="cursor-pointer">{i18n.t("技术详情")}</summary><p className="mt-2 whitespace-pre-wrap break-words">{msg.details}</p></details> : null}</AlertDescription>
         </Alert>
       )}
+      {editEntry === null && !addEntry ? <DdlCheckNotice controller={check} className="shrink-0" /> : null}
 
       <div className="flex flex-wrap items-center gap-2 shrink-0">
         <Button size="sm" variant="outline" onClick={load} disabled={loading || busy}>
           <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新")}</Button>
-        {!readOnly && <Button size="sm" disabled={busy} onClick={() => { setAddEntry(true); setKeyInput(''); setValueInput('') }}>
+        {!readOnly && <Button size="sm" disabled={locked} onClick={() => { setAddEntry(true); setKeyInput(''); setValueInput('') }}>
           <Plus className="w-3.5 h-3.5 mr-1" />{i18n.t("添加键值")}</Button>}
         <span className="text-xs text-muted-foreground sm:ml-auto basis-full sm:basis-auto">{i18n.t("共 ")}{entries.length} {i18n.t(" 个键")}</span>
       </div>
@@ -141,13 +172,13 @@ export function KvBucketView({
                   <RecordValueDisclosure value={entry.value} />
                 </TableCell>
                 {!readOnly && <TableCell numeric className="space-x-1 whitespace-nowrap align-top">
-                  <Button size="sm" variant="outline" disabled={busy} aria-label={i18n.t("编辑记录")} onClick={() => {
+                  <Button size="sm" variant="outline" disabled={locked} aria-label={i18n.t("编辑记录")} onClick={() => {
                     setEditEntry(entry)
                     setAddEntry(false)
                     setKeyInput(entry.key)
                     setValueInput(typeof entry.value === 'object' ? JSON.stringify(entry.value, null, 2) : String(entry.value ?? ''))
                   }}><Pencil className="mr-1 h-3 w-3" />{i18n.t("编辑")}</Button>
-                  <Button size="icon" variant="destructive" disabled={busy} aria-label={i18n.t("删除记录")} onClick={() => handleDelete(entry.key)}><Trash2 /></Button>
+                  <Button size="icon" variant="destructive" disabled={locked} aria-label={i18n.t("删除记录")} onClick={() => handleDelete(entry.key)}><Trash2 /></Button>
                 </TableCell>}
               </TableRow>
             ))}
@@ -175,10 +206,11 @@ export function KvBucketView({
             </div>
           </div>
           {addEntry && entries.some(entry => entry.key === keyInput.trim()) && <p role="alert" className="text-xs text-destructive">{i18n.t("该 Key 已存在，请取消并编辑已有键值。")}</p>}
-          {msg?.type === 'error' && <p role="alert" className="text-sm text-destructive">{msg.text}</p>}
+          {msg?.type === 'error' && <div role="alert" className="space-y-2 text-sm text-destructive"><p>{msg.text}</p>{msg.details ? <details className="text-xs"><summary className="cursor-pointer">{i18n.t("技术详情")}</summary><p className="mt-2 whitespace-pre-wrap break-words">{msg.details}</p></details> : null}</div>}
+          <DdlCheckNotice controller={check} />
           <DialogFooter>
             <DialogClose asChild><Button variant="outline" size="sm" disabled={busy}>{i18n.t("取消")}</Button></DialogClose>
-            <Button size="sm" disabled={busy || !keyInput.trim() || (addEntry && entries.some(entry => entry.key === keyInput.trim()))} onClick={() => handleSave(addEntry)}><Save className="w-3.5 h-3.5 mr-1" />{i18n.t("保存")}</Button>
+            <Button size="sm" disabled={locked || !keyInput.trim() || (addEntry && entries.some(entry => entry.key === keyInput.trim()))} onClick={() => handleSave(addEntry)}><Save className="w-3.5 h-3.5 mr-1" />{i18n.t("保存")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>}
