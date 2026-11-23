@@ -6,10 +6,10 @@ import { StatusState } from '../../components/StatusState'
 import { useSaveOutcome } from '../../components/ApplyFeedback'
 import { outcomeFromAccessWrite, recordReadBack } from '../../components/apply-outcome-model.mjs'
 import {
-  IAM_RPC, builtinRoleLabel, copyRoleName, permissionGroups, readPluginPermissionCatalog, readRoles, roleNameProblem, roleReadBackView,
+  IAM_RPC, builtinRoleLabel, copyRoleName, rolePermissionCount, permissionGroups, readPluginPermissionCatalog, readRoles, roleNameProblem, roleReadBackView,
   type IamRole, type PluginPermission,
 } from './access-model.mjs'
-import { FormField, IamLoadError, PermissionChecklist, ReadOnlyNotice } from './access-components'
+import { FormField, IamLoadError, PermissionChecklist, ReadOnlyNotice, RolePermissionView } from './access-components'
 import { iamRequest, useCanManageIam, useIamRead } from './use-iam'
 import '../admin-pages.css'
 
@@ -89,7 +89,7 @@ export default function AccessRolesPage() {
                     <code className="console-access-id" title={role.name}>{role.name}</code>
                   </TableCell>
                   <TableCell className="hidden max-w-md text-muted-foreground md:table-cell">{role.description || '—'}</TableCell>
-                  <TableCell numeric>{role.permissions.length}</TableCell>
+                  <TableCell numeric>{rolePermissionCount(role.permissions)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex flex-wrap justify-end gap-1">
                       {role.builtin || !canManage
@@ -115,7 +115,7 @@ export default function AccessRolesPage() {
               <DialogTitle>{builtinRoleLabel(pending.role.name, i18n.t) ?? pending.role.name}</DialogTitle>
               <DialogDescription>{pending.role.builtin ? i18n.t("内置角色不可修改，可以复制后再改。") : pending.role.description}</DialogDescription>
             </DialogHeader>
-            <PermissionChecklist groups={groups} selected={pending.role.permissions} disabled />
+            <RolePermissionView groups={groups} selected={pending.role.permissions} />
           </DialogContent>
         </Dialog>
       ) : null}

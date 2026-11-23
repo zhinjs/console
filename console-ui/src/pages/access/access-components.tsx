@@ -7,7 +7,7 @@ import { useEndpointList } from '../features/use-feature-data'
 import { useConsoleAccess } from '../../hooks/use-console-access'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
 import {
-  addBinding, areaLabel, builtinRoleLabel, groupCheckState, levelLabel, permissionLabel, removeBinding, scopeLabel, scopeProblem,
+  addBinding, areaLabel, builtinRoleLabel, grantedPermissionView, groupCheckState, levelLabel, permissionLabel, removeBinding, scopeLabel, scopeProblem,
   togglePermissions, type BindingScope, type IamBinding, type IamRole, type PermissionGroup, type ScopeKind,
 } from './access-model.mjs'
 import type { IamErrorKind } from './iam-request.mjs'
@@ -164,9 +164,10 @@ export function PermissionChecklist({ groups, selected, onChange, disabled }: {
         return (
           <fieldset key={`${group.kind}:${group.id}`} className="space-y-1.5">
             <legend className="flex items-center gap-2 text-sm font-medium">
-              <Checkbox id={groupId} checked={state} disabled={readOnly} aria-label={i18n.t("全选 {0}", [title])}
-                onCheckedChange={checked => onChange?.(togglePermissions(selected, names, checked === true))} />
-              <label htmlFor={groupId}>{title}</label>
+              {/* Only in the editor (it has onChange): in the read-only view a ticked group box reads as one more permission. */}
+              {onChange ? <Checkbox id={groupId} checked={state} disabled={readOnly} aria-label={i18n.t("全选 {0}", [title])}
+                onCheckedChange={checked => onChange(togglePermissions(selected, names, checked === true))} /> : null}
+              {onChange ? <label htmlFor={groupId}>{title}</label> : <span>{title}</span>}
             </legend>
             <ul className="grid gap-1 pl-6 sm:grid-cols-2">
               {group.permissions.map(item => {
@@ -189,6 +190,61 @@ export function PermissionChecklist({ groups, selected, onChange, disabled }: {
           </fieldset>
         )
       })}
+    </div>
+  )
+}
+
+/**
+ * A role's permissions for reading (「查看」): only what it holds, by group, counted like the roles list,
+ * with a switch to the whole catalog (the read-only checklist) for comparison.
+ */
+export function RolePermissionView({ groups, selected }: { groups: readonly PermissionGroup[]; selected: readonly string[] }) {
+  const i18n = useI18n()
+  const [showAll, setShowAll] = useState(false)
+  const granted = useMemo(() => grantedPermissionView(groups, selected), [groups, selected])
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground">
+          {granted.plugin ? i18n.t("已授予 {0} 项权限，其中插件权限 {1} 项", [granted.total, granted.plugin]) : i18n.t("已授予 {0} 项权限", [granted.total])}
+        </p>
+        <Button type="button" variant="ghost" size="sm" className="max-md:min-h-11" onClick={() => setShowAll(value => !value)}>
+          {showAll ? i18n.t("只看已授予") : i18n.t("显示全部 {0} 项权限", [granted.catalogSize])}
+        </Button>
+      </div>
+      {showAll ? <PermissionChecklist groups={groups} selected={selected} disabled /> : granted.total === 0 ? (
+        <p className="text-sm text-muted-foreground">{i18n.t("这个角色没有任何权限")}</p>
+      ) : (
+        <div className="space-y-4">
+          {granted.groups.map(group => {
+            const title = group.kind === 'area' ? areaLabel(group.id, i18n.t) : i18n.t("插件 {0}", [group.id])
+            return (
+              <section key={`${group.kind}:${group.id}`} className="space-y-1.5">
+                <h3 className="text-sm font-medium">{title}</h3>
+                <ul className="grid gap-1 pl-6 sm:grid-cols-2">
+                  {group.permissions.map(item => (
+                    <li key={item.permission} className="min-w-0 text-sm">
+                      <span className="block">{group.kind === 'area' ? permissionLabel(item.permission, i18n.t) : (item.description || item.permission)}</span>
+                      <span className="block font-mono text-xs text-muted-foreground">
+                        {item.permission}{item.level ? ` · ${levelLabel(item.level, i18n.t)}` : ''}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )
+          })}
+        </div>
+      )}
+      {/* A granted permission no group lists: shown in both modes, so 「显示全部」 never hides one. */}
+      {granted.unlisted.length ? (
+        <section className="space-y-1.5">
+          <h3 className="text-sm font-medium">{i18n.t("其他权限")}</h3>
+          <ul className="grid gap-1 pl-6 sm:grid-cols-2">
+            {granted.unlisted.map(permission => <li key={permission} className="min-w-0 break-all font-mono text-xs">{permission}</li>)}
+          </ul>
+        </section>
+      ) : null}
     </div>
   )
 }
