@@ -2913,6 +2913,7 @@ export const englishMessages = Object.freeze({
   "账号终端": "Chat accounts",
   "会话场景": "Conversation scenes",
   "选择目标": "Select a target",
+  "选择层级": "Select a level",
   "已配置目标（当前未列出）": "Configured target (not currently listed)",
   "移除覆盖": "Remove override",
   "继承上层聊天模型": "Inherit chat model from parent",
