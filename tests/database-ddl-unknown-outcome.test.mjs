@@ -36,6 +36,9 @@ test('「核对」 reads the outcome from the fresh table list (drop, create) or
   assert.equal(createCheckResult([{ name: 'users' }], 'users').applied, true)
   assert.equal(createCheckResult([], 'users').applied, false)
   assert.equal(alterCheckResult().applied, null)
+  // A list that cannot decide (a Host answering without one) fails the check, so the hold stays.
+  assert.throws(() => dropCheckResult({}, 'users'))
+  assert.throws(() => createCheckResult(undefined, 'users'))
   for (const result of [dropCheckResult([], 'x', 'en'), createCheckResult([], 'x', 'en'), alterCheckResult('en')]) assert.doesNotMatch(result.text, CJK)
 })
 
@@ -54,6 +57,7 @@ function hookRuntime() {
   const hooks = {
     useState(initial) { const i = cursor++; if (!(i in slots)) slots[i] = typeof initial === 'function' ? initial() : initial; return [slots[i], next => { slots[i] = typeof next === 'function' ? next(slots[i]) : next }] },
     useCallback: fn => { cursor++; return fn }, useEffect() { cursor++ }, useMemo: fn => { cursor++; return fn() },
+    useRef(initial) { const i = cursor++; return slots[i] ?? (slots[i] = { current: initial }) },
   }
   return { hooks, run: fn => { cursor = 0; return fn() } }
 }
@@ -113,7 +117,7 @@ test('a plain failure keeps the confirmation open with the reason, the Host text
   let apply = render()
   await apply.preview(plan.change); apply = render()
   apply.confirm(); apply = render()
-  await assert.rejects(apply.dialog.props.onConfirm(), /结构修改没有完成/)
+  await assert.rejects(apply.dialog.props.onConfirm(), /结构没有修改/)
   apply = render()
   assert.equal(apply.held, false)
   const details = [apply.dialog.props.children].flat(Infinity).find(node => node?.props && 'details' in node.props)

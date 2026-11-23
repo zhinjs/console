@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { AlertCircle, CheckCircle, Loader2, SearchCheck } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle, Button } from '@zhin.js/console-ui'
 import { useI18n } from '../../i18n'
@@ -17,9 +17,12 @@ export function useDdlCheck<T>(verify: (subject: T) => Promise<DdlCheckResult>) 
   const [checking, setChecking] = useState(false)
   const [checkError, setCheckError] = useState<string | null>(null)
   const [result, setResult] = useState<DdlCheckResult | null>(null)
+  // A second click before the first check settles must not read twice (state updates lag a render).
+  const running = useRef(false)
   const hold = (next: HeldDdl<T>) => { setResult(null); setCheckError(null); setHeld(next) }
   const check = async () => {
-    if (!held || checking) return
+    if (!held || running.current) return
+    running.current = true
     setChecking(true)
     setCheckError(null)
     try {
@@ -28,6 +31,7 @@ export function useDdlCheck<T>(verify: (subject: T) => Promise<DdlCheckResult>) 
     } catch {
       setCheckError(i18n.t('核对没有完成，请稍后再试。'))
     } finally {
+      running.current = false
       setChecking(false)
     }
   }

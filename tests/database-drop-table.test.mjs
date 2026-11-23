@@ -139,7 +139,7 @@ test('a failed drop rejects so the dialog can show why and keep the table; the H
   const f = fixture({ dropTable: async () => { throw new Error('FOREIGN KEY constraint failed') } })
   f.tableButton('users').props.onClick(); f.r.render()
   f.deleteButton().props.onClick(); f.r.render()
-  await assert.rejects(f.dialog().props.onConfirm(), /删除没有完成/)
+  await assert.rejects(f.dialog().props.onConfirm(), /表没有删除/)
   f.r.render()
   assert.equal(f.dialog().props.open, true)
   assert.ok(f.tableButton('users'))
@@ -166,9 +166,12 @@ test('a drop with an unknown outcome closes the dialog, blocks dropping and offe
   assert.ok(notice && 'data-ddl-unknown' in notice.props, 'the page says the outcome is unknown')
   assert.match(text(notice), /可能已经删除/)
   assert.match(text(notice), /技术详情The instance did not answer in time/, 'the Host text only under 技术详情')
-  // Even a confirm fired again (a stale dialog) sends nothing.
-  await f.dialog().props.onConfirm()
-  assert.deepEqual(dropped, ['users'])
+  // Even when the dialog is reopened (the disabled button bypassed) and confirmed, nothing is sent.
+  f.deleteButton().props.onClick(); f.r.render()
+  assert.equal(f.dialog().props.open, true)
+  await f.dialog().props.onConfirm(); f.r.render()
+  assert.deepEqual(dropped, ['users'], 'the held guard in onConfirm stops a second db:drop-table')
+  f.dialog().props.onOpenChange(false); f.r.render()
 
   // 「核对」: the table is still there, so the drop did not run; dropping is offered again.
   const checkButton = () => elements(f.notice()).find(node => node.type === 'button' && node.props['data-action'] === 'ddl-check')

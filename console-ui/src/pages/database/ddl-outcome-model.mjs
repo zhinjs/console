@@ -21,13 +21,19 @@ export function ddlFailure(error, action, locale = 'zh-CN') {
     : status.kind === 'database-busy' ? translate(locale, '数据库正忙，请稍后重试。')
       : status.kind === 'instance-unavailable' ? translate(locale, '实例暂时不可用，请求没有发出，可以稍后重试。')
         : status.kind === 'unsupported' ? translate(locale, '当前 Host 不支持这项数据库操作。')
-          : drop ? translate(locale, '删除没有完成。请检查技术详情后重试。') : translate(locale, '结构修改没有完成。请检查技术详情后重试。')
+          : drop ? translate(locale, '表没有删除，请检查技术详情后重试。') : translate(locale, '结构没有修改，请检查技术详情后重试。')
   return { unknown: false, text, details }
+}
+
+/** A table list that cannot decide anything (not a list): 「核对」 fails and the hold stays. */
+function tableList(tables) {
+  if (!Array.isArray(tables)) throw new TypeError('The table list is not readable')
+  return tables
 }
 
 /** 「核对」 for a drop with an unknown outcome: the fresh table list decides. */
 export function dropCheckResult(tables, name, locale = 'zh-CN') {
-  const present = Array.isArray(tables) && tables.some(table => table?.name === name)
+  const present = tableList(tables).some(table => table?.name === name)
   return present
     ? { applied: false, text: translate(locale, '核对结果：「{0}」仍在表列表中，删除没有执行，可以重新删除。', [name]) }
     : { applied: true, text: translate(locale, '核对结果：「{0}」已不在表列表中，删除已经生效。', [name]) }
@@ -35,7 +41,7 @@ export function dropCheckResult(tables, name, locale = 'zh-CN') {
 
 /** 「核对」 for a new table with an unknown outcome: whether the fresh table list has it. */
 export function createCheckResult(tables, name, locale = 'zh-CN') {
-  const present = Array.isArray(tables) && tables.some(table => table?.name === name)
+  const present = tableList(tables).some(table => table?.name === name)
   return present
     ? { applied: true, text: translate(locale, '核对结果：表「{0}」已存在，新建已经生效。', [name]) }
     : { applied: false, text: translate(locale, '核对结果：表「{0}」不存在，新建没有执行，可以重新创建。', [name]) }

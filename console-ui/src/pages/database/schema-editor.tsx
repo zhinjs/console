@@ -150,8 +150,10 @@ export function SchemaEditor({ tableName, admin, canEdit, supported, reason, onC
     try { setSchema(await admin.describe(tableName)) } catch (err) { setError(err) } finally { setLoading(false) }
   }, [admin, tableName])
   const apply = useSchemaApply(admin, () => { setDraft(null); void load(); onChanged() }, async () => {
-    // A change to an existing table: read the structure again and let the person compare.
+    // A change to an existing table: read the structure again and let the person compare. The draft is
+    // closed, so applying the same change again takes a deliberate new edit, not two clicks.
     setSchema(await admin.describe(tableName))
+    setDraft(null)
     onChanged()
     return alterCheckResult(i18n.locale)
   })
@@ -311,9 +313,11 @@ export function CreateTableEditor({ admin, supported, reason, onCreated, onCance
     { name: 'name', type: 'text', nullable: true, primary: false, autoIncrement: false, defaultText: '' },
   ])
   const [draftError, setDraftError] = useState<string | null>(null)
+  const toast = useToast()
   const apply = useSchemaApply(admin, plan => onCreated(plan.change.table), async plan => {
     const result = createCheckResult(await listTables(), plan.change.table, i18n.locale)
-    if (result.applied) onCreated(plan.change.table)
+    // Created: the page opens the new table (and unmounts this editor), so the result goes to a toast.
+    if (result.applied) { toast.success(result.text); onCreated(plan.change.table) }
     return result
   })
   if (!supported) {
