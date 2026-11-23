@@ -1,6 +1,7 @@
 import { useI18n } from '../i18n'
 import { ConversationKindBadge } from './features/conversation-list'
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
+import { tabPanelProps, tabTriggerProps } from '../utils/tab-panel-link.mjs'
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Copy, Cpu, Layers, Sigma, Zap } from 'lucide-react'
 import { copyText } from './clipboard-copy.mjs'
 import {
@@ -143,13 +144,16 @@ export function UsageIdHint({ row, name }: { row: UsageModelRow; name: string })
   )
 }
 
-/** Tabs where there is room, a select in a narrow container (ADR 0063 D18). */
-function DimensionSwitch<T extends string>({ value, onChange, options, label, narrow }: { value: T; onChange: (value: T) => void; options: Array<{ value: T; label: string }>; label: string; narrow: boolean }) {
+/**
+ * Tabs where there is room, a select in a narrow container (ADR 0063 D18). The tabs switch the card's
+ * content region (`panelId`, see tabPanelProps); with fewer than two options nothing is rendered.
+ */
+function DimensionSwitch<T extends string>({ value, onChange, options, label, narrow, panelId }: { value: T; onChange: (value: T) => void; options: Array<{ value: T; label: string }>; label: string; narrow: boolean; panelId: string }) {
   if (options.length < 2) return null
   if (narrow) return <SelectField aria-label={label} className="w-auto min-w-40" value={value} onValueChange={next => onChange(next as T)} options={options} />
   return (
     <Tabs value={value} onValueChange={next => onChange(next as T)}>
-      <TabsList aria-label={label}>{options.map(option => <TabsTrigger key={option.value} value={option.value}>{option.label}</TabsTrigger>)}</TabsList>
+      <TabsList aria-label={label}>{options.map(option => <TabsTrigger key={option.value} value={option.value} {...tabTriggerProps(panelId, option.value)}>{option.label}</TabsTrigger>)}</TabsList>
     </Tabs>
   )
 }
@@ -197,6 +201,7 @@ function UsageSummary({ stats, previous }: { stats: UsageStats; previous: UsageT
 function UsageTrend({ stats, narrow }: { stats: UsageStats; narrow: boolean }) {
   const i18n = useI18n()
   const [dimension, setDimension] = useState<TrendDimension>('service')
+  const panelId = useId()
   const series = useMemo(() => usageTrendSeries(stats, dimension, i18n.locale), [stats, dimension, i18n.locale])
   const keys = useMemo(() => seriesKeys(series), [series])
   const colors = useMemo(() => buildColorMap(keys), [keys])
@@ -212,9 +217,9 @@ function UsageTrend({ stats, narrow }: { stats: UsageStats; narrow: boolean }) {
           <CardTitle className="text-base">{i18n.t("用量趋势")}</CardTitle>
           <CardDescription>{i18n.t("输入 tokens，悬停柱子看各项数值。")}</CardDescription>
         </div>
-        <DimensionSwitch value={dimension} onChange={setDimension} options={options} label={i18n.t("趋势维度")} narrow={narrow} />
+        <DimensionSwitch value={dimension} onChange={setDimension} options={options} label={i18n.t("趋势维度")} narrow={narrow} panelId={panelId} />
       </CardHeader>
-      <CardContent className="space-y-3 text-foreground">
+      <CardContent className="space-y-3 text-foreground" {...(narrow || options.length < 2 ? {} : tabPanelProps(panelId, dimension))}>
         <ModelLegend keys={shown} colors={colors} hasOther={keys.length > shown.length} />
         <StackedBarChart series={series} keys={shown} colors={colors} bucket={stats.range.bucket} />
       </CardContent>
@@ -543,6 +548,7 @@ function UsageDetails({ stats, groups, narrow, view, onViewChange, open }: {
 }) {
   const i18n = useI18n()
   const caps = usageCapabilities(stats)
+  const panelId = useId()
   const options: Array<{ value: UsageView; label: string }> = [
     { value: 'models', label: i18n.t("服务与模型") },
     { value: 'sessions', label: i18n.t("会话") },
@@ -559,9 +565,9 @@ function UsageDetails({ stats, groups, narrow, view, onViewChange, open }: {
           <CardTitle className="text-base">{i18n.t("明细")}</CardTitle>
           <CardDescription>{i18n.t("按输入从多到少；点一行看全部数值。")}</CardDescription>
         </div>
-        <DimensionSwitch value={active} onChange={onViewChange} options={options} label={i18n.t("明细维度")} narrow={narrow} />
+        <DimensionSwitch value={active} onChange={onViewChange} options={options} label={i18n.t("明细维度")} narrow={narrow} panelId={panelId} />
       </CardHeader>
-      <CardContent>
+      <CardContent {...(narrow || options.length < 2 ? {} : tabPanelProps(panelId, active))}>
         {/* Another range starts with the first service open again. */}
         {active === 'models' ? <ModelTable key={`${stats.range.since}:${stats.range.until}`} groups={groups} total={total} narrow={narrow} open={open} />
           : active === 'sessions' ? <SessionTable stats={stats} narrow={narrow} open={open} />

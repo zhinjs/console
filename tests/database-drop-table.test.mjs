@@ -60,7 +60,7 @@ function fixture({ dropTable }) {
     loadInfo: async () => {}, loadTables: async () => {}, dropTable,
   }
   const mocks = {
-    react: { ...r.hooks },
+    react: { ...r.hooks, useId: () => ':r0:' },
     './use-database-console': { useDatabaseConsole: () => console, databaseAdmin: {} },
     './sql-console': { SqlConsole: 'sql-console' },
     './schema-editor': { SchemaEditor: 'schema-editor', CreateTableEditor: 'create-table' },
