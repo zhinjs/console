@@ -10,7 +10,7 @@ import { Badge, Button, Card, Input, PageHeader, PageShell, Skeleton, StatCard, 
 import { StatusState } from '../components/StatusState'
 import { useConsoleRead } from '../hooks/use-console-read'
 import {
-  groupInventory, inventoryCounts, matchesHealthFilter, needsStateLabel, pluginInventory, pluginIconType, pluginSource, pluginType, sortInventory, validatePluginList,
+  groupInventory, inventoryCounts, matchesHealthFilter, needsStateLabel, pluginInventory, pluginsFirstReadPending, pluginIconType, pluginSource, pluginType, sortInventory, validatePluginList,
   type HealthFilter, type InventoryGroupBy, type InventoryPlugin, type InventoryRow, type InventorySortKey, type PluginHealth, type PluginSource, type PluginType,
 } from './plugin-list-model.mjs'
 import { managementLabel } from './plugin-management-model.mjs'
@@ -144,7 +144,8 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
   const filtered = sortInventory(rows.filter(row => (!term || row.name.toLowerCase().includes(term) || row.packageName.toLowerCase().includes(term)) && matchesHealthFilter(row, statusFilter)), sortKey, sortDirection)
   const groups = groupInventory(filtered, groupBy)
   const counts = inventoryCounts(rows)
-  const waiting = (loading && !loaded) && packages.status === 'loading'
+  // Not until the instance list is in: the gateway's packages alone read as 「none running」 (#64 plugins-loading-looks-final).
+  const waiting = pluginsFirstReadPending({ loaded, error })
 
   return (
     <PageShell className="console-plugins-page">

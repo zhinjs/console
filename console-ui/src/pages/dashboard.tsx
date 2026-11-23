@@ -5,6 +5,7 @@ import { readErrorSummary } from '../utils/read-error.mjs'
 import { logPayloadAvailability } from './logs/read-state.mjs'
 import { summarizeOptional } from './dashboard-health'
 import { cpuMeterWidth, cpuUsagePercent, readCpuSample, type CpuSample } from './dashboard-cpu-model.mjs'
+import { controlSwitchConfirm } from './dashboard-control-model.mjs'
 import {
   buildMessageFeed,
   hourlyMessageActivity,
@@ -629,6 +630,9 @@ export default function HomePage() {
   const handleToggleControl = async (key: ControlSwitchKey) => {
     if (!controlState?.available || readOnly || controlUpdating) return
     const currentValue = Boolean(controlState.instance?.[key])
+    // Turning a switch on silences the bot everywhere: say so first, like 「重启」 (#64 control-switches-no-confirm).
+    const ask = controlSwitchConfirm(key, !currentValue, i18n.locale)
+    if (ask && !(await confirm(ask))) return
     setControlUpdating(key)
     try {
       const updated = await pluginRpc<ControlState>('root', 'control-set', {

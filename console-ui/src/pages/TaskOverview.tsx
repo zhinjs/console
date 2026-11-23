@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { RefreshCw } from 'lucide-react'
 import { useI18n } from '../i18n'
@@ -17,6 +17,7 @@ import { readToolApprovals } from './tool-approvals-model.mjs'
 import { taskTabHref } from './task-hub-model.mjs'
 import { filterTaskOverview, splitInternalTasks, TASK_OVERVIEW_FILTERS, taskOverviewRows, type TaskOverviewFilter, type TaskOverviewRow, type TaskOverviewSources } from './task-overview-model.mjs'
 import './insights/insights.css'
+import { relativeUntil } from './cron-schedule.mjs'
 
 const READ_TIMEOUT_MS = 8_000
 const SOURCE_LABELS: Record<string, string> = { admin: '管理员任务', schedule: '定时提醒', assistant: '助手任务', approvals: '工具审批' }
@@ -46,7 +47,7 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
       settle(readJson(`${CONSOLE_REST.TASK_PROVIDERS}?locale=${i18n.locale}`).then(body => readTaskProviders(body, i18n.locale))),
       settle(requestConsole<NonNullable<TaskOverviewSources['schedules']>>({ type: CONSOLE_RPC.SCHEDULE_LIST, locale: i18n.locale })),
       settle(readJson('/api/assistant/jobs').then(body => validateAssistantJobs(body, i18n.locale))),
-      approvalsReadable ? settle(pluginRpc('root', 'tool-approvals', undefined, { signal }).then(readToolApprovals)) : Promise.resolve(undefined),
+      approvalsReadable ? settle(pluginRpc('root', 'tool-approvals', undefined, { signal }).then(body => readToolApprovals(body, i18n.locale))) : Promise.resolve(undefined),
     ])
     if (!isInboxCacheScopeActive(connectionScope)) return
     setSources({ admin, schedules, assistant, ...(approvals === undefined ? {} : { approvals }) } as TaskOverviewSources)
@@ -61,7 +62,8 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
   const { main: rows, internal } = splitInternalTasks(allRows)
   const shownInternal = filterTaskOverview(internal, filter)
   const shown = filterTaskOverview(rows, filter)
-  const time = (value: number | null | undefined) => value ? new Date(value).toLocaleString(i18n.locale) : '—'
+  // The next run reads as on 定时提醒 (「24 小时后」), the exact time on hover (#64 schedule-tabs-overlap).
+  const time = (value: number | null | undefined) => value ? <span title={new Date(value).toLocaleString(i18n.locale)}>{relativeUntil(value, Date.now(), i18n.locale) ?? new Date(value).toLocaleString(i18n.locale)}</span> : '—'
   const allFailed = unavailable.length >= 3 && rows.length === 0
   // The assistant is off (200 `status: 'disabled'`, #1250): a state with a reason, not a read failure.
   const assistantOff = featureDisabledState(sources?.assistant, i18n.locale)
@@ -120,7 +122,7 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
   )
 }
 
-function OverviewTable({ rows, time }: { rows: TaskOverviewRow[]; time: (value: number | null | undefined) => string }) {
+function OverviewTable({ rows, time }: { rows: TaskOverviewRow[]; time: (value: number | null | undefined) => ReactNode }) {
   const i18n = useI18n()
   const shown = rows
   return (
@@ -178,7 +180,7 @@ function OverviewTable({ rows, time }: { rows: TaskOverviewRow[]; time: (value: 
   )
 }
 
-function LastResult({ row, time }: { row: TaskOverviewRow; time: (value: number | null | undefined) => string }) {
+function LastResult({ row, time }: { row: TaskOverviewRow; time: (value: number | null | undefined) => ReactNode }) {
   if (!row.lastResult) return <span className="text-muted-foreground">—</span>
   return <span title={row.lastResult.error}><Badge variant={row.lastResult.tone}>{row.lastResult.label}</Badge>{row.lastResult.at ? <span className="console-task-overview-sub">{time(row.lastResult.at)}</span> : null}</span>
 }

@@ -25,6 +25,7 @@ import { hasConsolePermission } from '../utils/console-access.mjs'
 import { StatusState } from '../components/StatusState'
 import {
   catalogAvailability,
+  catalogReadFailure,
   createNewWorkroomDraft,
   endpointRouteKey,
   parseEndpointRouteKey,
@@ -152,6 +153,8 @@ export default function WorkroomCatalogPage() {
   const [publishUnconfirmed, setPublishUnconfirmed] = useState(Boolean(restoredDraft.current?.publishUnconfirmed))
   const [error, setError] = useState<string | null>(null)
   const [catalogError, setCatalogError] = useState<string | null>(null)
+  // The failed read itself, classified by StatusState (#64 workroom-catalog-error-state).
+  const [catalogFailure, setCatalogFailure] = useState<unknown>(null)
   const [reloadOpen, setReloadOpen] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const requestRef = useRef(0)
@@ -172,6 +175,7 @@ export default function WorkroomCatalogPage() {
     setLoading(true)
     setError(null)
     setCatalogError(null)
+    setCatalogFailure(null)
     setNotice(null)
     setEndpointInventoryState('loading')
     const endpointRequest = requestConsole<{ endpoints: EndpointOption[] }>({ type: ENDPOINT_RPC.LIST }).then(
@@ -201,6 +205,7 @@ export default function WorkroomCatalogPage() {
         const message = caught instanceof Error ? caught.message : String(caught)
         setError(message)
         setCatalogError(message)
+        setCatalogFailure(caught)
       }
     } finally {
       if (requestId === requestRef.current) setLoading(false)
@@ -231,6 +236,7 @@ export default function WorkroomCatalogPage() {
     else draftSessions.clear(connection)
   }, [connection, catalog, drafts, dirty, readOnly, publishUnconfirmed])
 
+  const failure = catalogReadFailure(catalogFailure)
   const availability = catalogAvailability({ hasCatalog: Boolean(catalog), loading, saving, error: catalogError, dirty, readOnly }, i18n.locale)
 
   const change = useCallback((updater: (current: WorkroomDraft[]) => WorkroomDraft[]) => {
@@ -343,9 +349,13 @@ export default function WorkroomCatalogPage() {
       />
 
       {readOnly ? <div className="rounded-lg border border-[color:var(--console-border-default)] bg-[color:var(--console-surface-muted)] px-4 py-3 text-sm text-muted-foreground">{i18n.t("当前身份只读展示目录；发布需要 Agent 配置权限。")}</div> : null}
-      {error || publishUnconfirmed ? <ErrorAlert error={publishUnconfirmed ? i18n.t("未能确认发布结果。本地草稿已保留，请刷新并核对最新配置。") : error ?? ''} onRetry={catalogError || publishUnconfirmed ? () => load(false, true) : undefined} /> : null}
+      {(error && !catalogFailure) || publishUnconfirmed ? <ErrorAlert error={publishUnconfirmed ? i18n.t("未能确认发布结果。本地草稿已保留，请刷新并核对最新配置。") : error ?? ''} onRetry={catalogError || publishUnconfirmed ? () => load(false, true) : undefined} /> : null}
       {error && publishUnconfirmed ? <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">{i18n.t("错误详情")}</summary><pre className="mt-2 whitespace-pre-wrap break-words">{error}</pre></details> : null}
-      {!loading && !catalog ? <EmptyState title={i18n.t("Workroom 目录未就绪")} description={i18n.t("尚未取得目录，暂不能新建、编辑或发布。请先在 Host 安装并配置可选 Workroom Catalog 服务及 Agent，再刷新；无需重建本地草稿。")} /> : null}
+      {catalogFailure ? (
+        <StatusState error={catalogFailure} compact={Boolean(catalog)} permissions={['agent.view']}
+          description={failure?.notReady ? i18n.t("尚未取得目录，暂不能新建、编辑或发布。请先在 Host 安装并配置可选 Workroom Catalog 服务及 Agent，再刷新；无需重建本地草稿。") : undefined}
+          onRetry={() => void load(false, true)} />
+      ) : null}
       {catalog && catalogError ? <div className="rounded-lg border bg-muted/25 px-4 py-3 text-sm text-muted-foreground">{i18n.t("刷新失败，以下是上次成功加载的目录；本地修改仍保留，恢复目录连接前暂停编辑和发布。")}</div> : null}
       {dirty ? <Button variant="outline" size="sm" disabled={loading || saving} onClick={() => setReloadOpen(true)}>{i18n.t("放弃未发布修改")}</Button> : null}
       {endpointError ? <div className="rounded-lg border border-warning/25 bg-warning/[0.06] px-4 py-3 text-sm text-warning">{i18n.t("Endpoint 列表暂不可用；Catalog 仍可查看和编辑，已有消息出口会保持原值。发布时 Runtime 仍会执行最终校验。")}</div> : null}

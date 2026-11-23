@@ -45,7 +45,7 @@ test('assistant jobs report enabled and failing jobs from their last run', () =>
     { id: 'a', enabled: true, state: { lastStatus: 'ok' } },
     { id: 'b', enabled: true, state: { lastStatus: 'error' } },
     { id: 'c', enabled: false, state: { lastError: 'timeout' } },
-  ] }), { total: 3, enabled: 2, failing: 2 })
+  ] }), { total: 3, enabled: 2, failing: 2, reminders: 0 })
 })
 
 test('executions only describe the first page and say when more exist', () => {

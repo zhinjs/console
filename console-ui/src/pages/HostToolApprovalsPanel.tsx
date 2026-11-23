@@ -36,6 +36,11 @@ export function HostToolApprovalSession({ scope }: { scope?: string }) {
   const [busy, setBusy] = useState(false)
   const [review, setReview] = useState<Review | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // A failed catalog read (kept whole, so StatusState can tell forbidden / unreachable and put the Host's text in 技术详情).
+  const [readFailure, setReadFailure] = useState<unknown>(null)
+  // Read inside `refresh` without making the locale one of its deps (that would restart the session).
+  const localeRef = useRef(i18n.locale)
+  localeRef.current = i18n.locale
   const [uncertain, setUncertain] = useState(false)
   const denied = !hasConsolePermission('agent.configure'), current = isInboxCacheScopeActive(scope)
   const owns = (candidate: Owner) => owner.current === candidate && candidate.active && isInboxCacheScopeActive(scope)
@@ -51,14 +56,15 @@ export function HostToolApprovalSession({ scope }: { scope?: string }) {
       try {
         const next = readToolApprovals(await pluginRpc('root', 'tool-approvals', undefined, {
           signal: active.controller.signal, context: active.context,
-        }))
+        }), localeRef.current)
         if (!owns(active)) return
         setCatalog(next)
         setError(null)
+        setReadFailure(null)
         active.uncertain = false
         setUncertain(false)
       } catch (caught) {
-        if (owns(active)) { setCatalog(null); setError(caught instanceof Error ? caught.message : String(caught)) }
+        if (owns(active)) { setCatalog(null); setReadFailure(caught) }
       } finally {
         active.read = undefined
         if (owns(active)) setLoading(false)
@@ -100,7 +106,7 @@ export function HostToolApprovalSession({ scope }: { scope?: string }) {
       // Do not abort or replay a submitted decision: losing its response does not undo the settlement.
       const settled = readToolApprovalCard(await pluginRpc('root', 'resolve-tool-approval', {
         id: confirmed.card.id, decision: confirmed.decision,
-      }, { context: active.context }))
+      }, { context: active.context }), i18n.locale)
       if (!owns(active)) return
       if (settled.id !== confirmed.card.id || settled.status !== (confirmed.decision === 'approve' ? 'approved' : 'denied')) {
         throw new Error(i18n.t('审批回执与本次请求不一致'))
@@ -137,6 +143,7 @@ export function HostToolApprovalSession({ scope }: { scope?: string }) {
       {denied ? <p className="text-sm text-muted-foreground">{i18n.t('只读')}</p>
         : !current ? <p className="text-sm text-muted-foreground">{i18n.t('连接 Host 后读取工具审批')}</p>
         : loading && !catalog ? <StatusState kind="loading" compact title={i18n.t('正在读取工具审批…')} />
+        : readFailure && !catalog ? <StatusState error={readFailure} compact permissions={['agent.configure']} onRetry={() => void refresh()} />
         : catalog?.available === false ? <p className="text-sm text-muted-foreground">{i18n.t('当前 Agent 未提供工具审批队列')}</p>
         : catalog?.pending.length === 0 ? <p className="text-sm text-muted-foreground">{i18n.t('当前没有待审批的工具请求')}</p> : null}
       {current && catalog?.pending.map(card => <article key={card.id} className="space-y-3 rounded-lg border p-4">

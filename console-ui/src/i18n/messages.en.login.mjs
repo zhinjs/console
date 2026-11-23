@@ -128,6 +128,7 @@ export const loginMessages = Object.freeze({
   "已收到验证结果，等当前操作结束后自动提交。": "Result received; it is submitted as soon as the current action finishes.",
   "这一步已结束，请按当前步骤继续。": "This step has ended. Continue with the current step.",
   "这一步已被新的验证替换。": "This step was replaced by a newer check.",
+  "这次验证已超时，请按当前步骤重新验证。": "This check timed out. Verify again with the current step.",
   "在验证页完成滑块": "Finish the slider on the verification page",
   "打开 {0} 上的验证页，拖动滑块后结果会自动交回这里并提交，不需要开发者工具。": "Opens the verification page on {0}. After you drag the slider, the result comes back here and is submitted. No developer tools needed.",
   "开始验证": "Start verification",

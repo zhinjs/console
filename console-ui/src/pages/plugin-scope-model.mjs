@@ -16,6 +16,20 @@ export function matrixRowOf(matrix, plugin) {
 }
 
 /**
+ * The levels a plugin can be set at, from `feature.list` (#64 `plugin-scope-summary-ignores-levels`):
+ * its declared `levels`, and whether it can be switched or configured per account (`endpoint`) and per
+ * conversation. Same rule as the account and conversation 功能 pages (`featuresAtLevel`): a declared
+ * level, or no configuration schema (only the on/off switch, which every level has). Adapter plugins
+ * are not features of lower levels. Null when the list does not have the plugin.
+ */
+export function pluginSettableLevels(featureList, plugin) {
+  const feature = (featureList?.features ?? []).find(item => item.plugin === plugin)
+  if (!feature) return null
+  const at = level => !feature.adapter && (feature.levels.includes(level) || !feature.hasSchema)
+  return { levels: [...feature.levels], endpoint: at('endpoint'), conversation: at('conversation') }
+}
+
+/**
  * Where a plugin is switched on: the global switch, each adapter (enabled / own override / locked),
  * conversation override counts per account, and the links into the object tree.
  * Returns null when the matrix has no row for the plugin (unknown, not "off everywhere").

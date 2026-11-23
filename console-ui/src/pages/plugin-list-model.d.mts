@@ -42,3 +42,5 @@ export function pluginSource(row: InventoryRow): PluginSource
 export function sortInventory(rows: readonly InventoryRow[], key?: InventorySortKey, direction?: 'asc' | 'desc'): InventoryRow[]
 export function groupInventory(rows: readonly InventoryRow[], by?: InventoryGroupBy): { key: string; rows: InventoryRow[] }[]
 export function needsStateLabel(row: InventoryRow): boolean
+/** Whether the plugins page is still waiting for the instance's first plugin list. */
+export function pluginsFirstReadPending(state: { loaded: boolean; error: unknown }): boolean
