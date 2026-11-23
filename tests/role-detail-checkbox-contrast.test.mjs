@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { grantedPermissionView, permissionGroups } from '../console-ui/src/pages/access/access-model.mjs'
+import { grantedPermissionView, permissionGroups, rolePermissionCount } from '../console-ui/src/pages/access/access-model.mjs'
 
 // #64 `role-detail-checkbox-contrast` (the part that is not styling): 「查看」 on a built-in role listed all
 // 90 permissions as disabled checkboxes, so finding what the role actually has meant scanning every row,
@@ -18,6 +18,9 @@ test('the read-only view lists only the granted permissions, by group, with the 
   const selected = ['status.view', 'endpoint.view', 'endpoint.operate', 'plugin.music.play', 'status.view']
   const view = grantedPermissionView(groups, selected)
   assert.equal(view.total, 4, 'duplicates count once')
+  // The roles list counts the same way, so a Host reply with a repeated permission cannot make them differ.
+  assert.equal(rolePermissionCount(selected), view.total)
+  assert.equal(view.plugin, 1, 'how many of them are plugin permissions')
   assert.deepEqual(view.groups.map(group => [group.kind, group.id, group.permissions.map(item => item.permission)]), [
     ['area', 'status', ['status.view']],
     ['area', 'endpoint', ['endpoint.view', 'endpoint.operate']],
@@ -46,6 +49,13 @@ test('the dialog uses the granted view with a 「显示全部」 switch; group �
   assert.match(view, /i18n\.t\("已授予 \{0\} 项权限", \[granted\.total\]\)/)
   assert.match(view, /i18n\.t\("显示全部 \{0\} 项权限", \[granted\.catalogSize\]\)/)
   assert.match(view, /<PermissionChecklist groups=\{groups\} selected=\{selected\} disabled \/>/)
+  assert.match(view, /i18n\.t\("已授予 \{0\} 项权限，其中插件权限 \{1\} 项", \[granted\.total, granted\.plugin\]\)/)
+  // The switch's label says what it does; no aria-pressed that would contradict it. 44px on touch widths.
+  assert.doesNotMatch(view, /aria-pressed/)
+  assert.match(view, /className="max-md:min-h-11"/)
+  // Unlisted permissions sit outside the showAll branch, so 「显示全部」 never hides them.
+  assert.ok(view.indexOf('granted.unlisted.length') > view.lastIndexOf('      )}\n'), 'unlisted rendered in both modes')
+  assert.match(roles, /<TableCell numeric>\{rolePermissionCount\(role\.permissions\)\}<\/TableCell>/)
   // In PermissionChecklist the group box exists only when there is something to change.
   const checklist = components.slice(components.indexOf('export function PermissionChecklist('), components.indexOf('export function RolePermissionView('))
   assert.match(checklist, /\{onChange \? <Checkbox id=\{groupId\}/)

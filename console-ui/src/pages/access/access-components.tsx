@@ -155,7 +155,7 @@ export function PermissionChecklist({ groups, selected, onChange, disabled }: {
         return (
           <fieldset key={`${group.kind}:${group.id}`} className="space-y-1.5">
             <legend className="flex items-center gap-2 text-sm font-medium">
-              {/* Only when editing: read-only, a ticked group box reads as one more permission. */}
+              {/* Only in the editor (it has onChange): in the read-only view a ticked group box reads as one more permission. */}
               {onChange ? <Checkbox id={groupId} checked={state} disabled={readOnly} aria-label={i18n.t("全选 {0}", [title])}
                 onCheckedChange={checked => onChange(togglePermissions(selected, names, checked === true))} /> : null}
               {onChange ? <label htmlFor={groupId}>{title}</label> : <span>{title}</span>}
@@ -196,8 +196,10 @@ export function RolePermissionView({ groups, selected }: { groups: readonly Perm
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">{i18n.t("已授予 {0} 项权限", [granted.total])}</p>
-        <Button type="button" variant="ghost" size="sm" className="max-sm:min-h-11" aria-pressed={showAll} onClick={() => setShowAll(value => !value)}>
+        <p className="text-sm text-muted-foreground">
+          {granted.plugin ? i18n.t("已授予 {0} 项权限，其中插件权限 {1} 项", [granted.total, granted.plugin]) : i18n.t("已授予 {0} 项权限", [granted.total])}
+        </p>
+        <Button type="button" variant="ghost" size="sm" className="max-md:min-h-11" onClick={() => setShowAll(value => !value)}>
           {showAll ? i18n.t("只看已授予") : i18n.t("显示全部 {0} 项权限", [granted.catalogSize])}
         </Button>
       </div>
@@ -223,16 +225,17 @@ export function RolePermissionView({ groups, selected }: { groups: readonly Perm
               </section>
             )
           })}
-          {granted.unlisted.length ? (
-            <section className="space-y-1.5">
-              <h3 className="text-sm font-medium">{i18n.t("其他权限")}</h3>
-              <ul className="grid gap-1 pl-6 sm:grid-cols-2">
-                {granted.unlisted.map(permission => <li key={permission} className="min-w-0 break-all font-mono text-xs">{permission}</li>)}
-              </ul>
-            </section>
-          ) : null}
         </div>
       )}
+      {/* A granted permission no group lists: shown in both modes, so 「显示全部」 never hides one. */}
+      {granted.unlisted.length ? (
+        <section className="space-y-1.5">
+          <h3 className="text-sm font-medium">{i18n.t("其他权限")}</h3>
+          <ul className="grid gap-1 pl-6 sm:grid-cols-2">
+            {granted.unlisted.map(permission => <li key={permission} className="min-w-0 break-all font-mono text-xs">{permission}</li>)}
+          </ul>
+        </section>
+      ) : null}
     </div>
   )
 }

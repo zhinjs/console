@@ -168,8 +168,8 @@ export function permissionGroups(pluginCatalog = [], extra = []) {
 
 /**
  * What a role holds, for reading rather than editing: only the groups and permissions it has (in catalog
- * order), the count of distinct permissions (the same number the roles list shows), the size of the whole
- * catalog, and any granted permission no group lists, so nothing it holds is hidden.
+ * order), the count of distinct permissions (`rolePermissionCount`, as the roles list shows), how many of
+ * them are plugin permissions, the size of the whole catalog, and any granted permission no group lists, so nothing it holds is hidden.
  */
 export function grantedPermissionView(groups, selected) {
   const held = new Set(selected)
@@ -177,7 +177,13 @@ export function grantedPermissionView(groups, selected) {
     .map(group => ({ ...group, permissions: group.permissions.filter(item => held.has(item.permission)) }))
     .filter(group => group.permissions.length > 0)
   const listed = new Set(groups.flatMap(group => group.permissions.map(item => item.permission)))
-  return { groups: shown, total: held.size, catalogSize: listed.size, unlisted: [...held].filter(permission => !listed.has(permission)).sort() }
+  const plugin = shown.filter(group => group.kind === 'plugin').reduce((sum, group) => sum + group.permissions.length, 0)
+  return { groups: shown, total: held.size, plugin, catalogSize: listed.size, unlisted: [...held].filter(permission => !listed.has(permission)).sort() }
+}
+
+/** How many distinct permissions a role holds: the roles list and the 「查看」 dialog both count this way. */
+export function rolePermissionCount(permissions) {
+  return new Set(permissions).size
 }
 
 /** Toggles one permission or a whole group; the result is sorted and deduplicated. */
