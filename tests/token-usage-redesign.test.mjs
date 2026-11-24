@@ -266,7 +266,7 @@ test('session names: the platform comes from bySession[].platform first, hashed 
   assert.equal(usageSessionLabel({ sessionKey: HASHED, platform: 'sandbox' }, 'en'), `sandbox · ${translate('en', '私聊会话')} #ab12cd34`)
   const scene = `scene-task:v1:${'9f8e7d6c'.padEnd(64, '0')}`
   // A hashed key with a scope but no name: its short hash, never the raw key.
-  assert.equal(usageSessionLabel({ sessionKey: scene, platform: 'icqq', scopeKind: 'group' }), 'icqq · 群 #9f8e7d6c')
+  assert.equal(usageSessionLabel({ sessionKey: scene, platform: 'icqq', scopeKind: 'group' }), 'icqq · 群 #9f8e7d6c · 群聊')
   assert.equal(usageSessionLabel({ sessionKey: scene, platform: 'icqq', scopeKind: 'private', sceneLabel: '小明' }), 'icqq · 私聊 小明')
   // The Host's platform wins over the first part of the key.
   assert.equal(usageSessionLabel({ sessionKey: 'icqq:bot:group:1', platform: 'onebot', scopeKind: 'group', sceneLabel: '群名' }), 'onebot · 群 群名')

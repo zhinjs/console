@@ -4,7 +4,7 @@ import { Bot, ChevronRight, GitBranch, History, Loader2, MessagesSquare } from '
 import { Button, cn, Input } from '@zhin.js/console-ui'
 import { parseImSessionKey, isLikelySessionKey, SESSION_SCOPE_LABELS } from '../utils/agent-session'
 import { relativeSince, type RecentSession } from '../pages/agent-session-recent.mjs'
-import { sessionLabel } from '../utils/session-label.mjs'
+import { sessionLabelParts } from '../utils/session-label.mjs'
 
 interface AgentSessionPickerProps {
   value: string
@@ -23,11 +23,14 @@ function SessionIdentity({ sessionKey, activity }: { sessionKey: string; activit
   const meta = activity ? <>{i18n.t("{0} 轮", [activity.turns])} · {relativeSince(activity.lastAt, Date.now(), i18n.locale)}</> : null
   if (!parsed) {
     // Hashed keys (`personal-session:v1:<sha>`) name no conversation: the shared label from what the
-    // Host sent (else 「私聊会话 #前 8 位」); the full key stays in the candidate's tooltip.
+    // Host sent (else 「私聊会话 #前 8 位」); the full key stays in the candidate's tooltip. A group's
+    // shared and personal sessions share the name, so 「群聊 / 个人会话」 leads the second line, where
+    // the narrow list does not cut it off.
+    const { name, kind } = sessionLabelParts({ ...activity, sessionKey }, i18n.locale)
     return (
       <span className="min-w-0 flex-1 text-left">
-        <span className="block truncate text-sm font-semibold">{sessionLabel({ ...activity, sessionKey }, i18n.locale)}</span>
-        {meta ? <span className="mt-1 block truncate text-xs text-muted-foreground">{meta}</span> : null}
+        <span className="block truncate text-sm font-semibold">{name}</span>
+        {kind || meta ? <span className="mt-1 block truncate text-xs text-muted-foreground">{kind}{kind && meta ? ' · ' : null}{meta}</span> : null}
       </span>
     )
   }

@@ -28,11 +28,11 @@ test('shared label: hashed keys with only the key known get a kind and a short h
 test('shared label: platform, kind and scene name from the Host win over the key shape', () => {
   assert.equal(sessionLabel({ sessionKey: PERSONAL, platform: 'sandbox' }), 'sandbox · 私聊会话 #ab12cd34')
   assert.equal(sessionLabel({ sessionKey: SCENE, platform: 'icqq' }), 'icqq · 群聊 #9f8e7d6c')
-  assert.equal(sessionLabel({ sessionKey: SCENE, platform: 'icqq', scopeKind: 'group' }), 'icqq · 群 #9f8e7d6c')
-  assert.equal(sessionLabel({ sessionKey: SCENE, platform: 'icqq', scopeKind: 'group', sceneLabel: '产品试验群' }), 'icqq · 群 产品试验群')
+  assert.equal(sessionLabel({ sessionKey: SCENE, platform: 'icqq', scopeKind: 'group' }), 'icqq · 群 #9f8e7d6c · 群聊')
+  assert.equal(sessionLabel({ sessionKey: SCENE, platform: 'icqq', scopeKind: 'group', sceneLabel: '产品试验群' }), 'icqq · 群 产品试验群 · 群聊')
   assert.equal(sessionLabel({ sessionKey: PERSONAL, platform: 'sandbox', scopeKind: 'private', sceneLabel: '小明' }, 'en'), `sandbox · ${translate('en', '私聊')} 小明`)
   assert.equal(sessionLabel({ sessionKey: PERSONAL, displayName: '小明的私聊' }), '小明的私聊')
-  assert.equal(sessionLabel({ sessionKey: SCENE, displayName: 'icqq · 群 产品试验群' }, 'en'), `icqq · ${translate('en', '群')} 产品试验群`)
+  assert.equal(sessionLabel({ sessionKey: SCENE, displayName: 'icqq · 群 产品试验群' }, 'en'), `icqq · ${translate('en', '群')} 产品试验群 · ${translate('en', '群聊')}`)
   assert.equal(sessionLabel({ sessionKey: 'icqq:bot:group:123' }), 'icqq · 群 123')
   assert.equal(sessionLabel({ sessionKey: 'http:api:session:1', scopeKind: 'http' }), 'HTTP')
 })
@@ -80,7 +80,7 @@ test('pages use the shared label: no 「自定义会话」 fallback, full keys o
   for (const file of ['components/AgentSessionPicker.tsx', 'pages/agent-workbench.tsx', 'pages/HostToolApprovalsPanel.tsx', 'pages/agent-sessions.tsx']) {
     const source = read(file)
     assert.doesNotMatch(source, /自定义会话/, file)
-    assert.match(source, /sessionLabel\(/, file)
+    assert.match(source, /sessionLabel(?:Parts)?\(/, file)
   }
   const approvals = read('pages/HostToolApprovalsPanel.tsx')
   assert.doesNotMatch(approvals, />\{(?:review\.)?card\.sessionKey\}/, "the key is no visible text")
