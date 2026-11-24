@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Bot, CalendarClock, ClipboardList, History } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { useSearchParams } from 'react-router-dom'
@@ -13,18 +13,15 @@ import { TaskOverview } from './TaskOverview'
 import { StatusState } from '../components/StatusState'
 import { resolveTaskTab, TASK_HUB_TABS, type TaskTabId } from './task-hub-model.mjs'
 import { apiFetch } from '../utils/auth'
-import { requestConsole } from '../utils/console-rpc'
-import { CONSOLE_REST, CONSOLE_RPC } from '../contracts/zhin-console'
-import { readTaskProviders } from './task-center-model.mjs'
-import { validateAssistantJobs } from './assistant-jobs-model.mjs'
 import { executionQuery, readExecutionPage } from './schedule-executions-model.mjs'
 import {
   summarizeAdminTasks,
   summarizeAssistantJobs,
   summarizeExecutions,
+  summarizeOverviewSources,
   summarizeSchedules,
-  type ScheduleListLike,
 } from './task-hub-summary-model.mjs'
+import type { TaskOverviewSources } from './task-overview-model.mjs'
 
 const SUMMARY_TIMEOUT_MS = 8_000
 
@@ -35,41 +32,27 @@ interface TaskHubSummary {
   history: ReturnType<typeof summarizeExecutions>
 }
 
-const EMPTY_SUMMARY: TaskHubSummary = { admin: null, schedule: null, assistant: null, history: null }
-
 /**
- * 指标卡的汇总读取：四个来源互不依赖，任一失败只让对应卡片显示「—」。
- * 切换标签时重新读取，让卡片反映刚在标签页里做的修改。
+ * 近期执行 for its card: the one source the 全部任务 table does not read. The other cards come from
+ * what the table read (`summarizeOverviewSources`), so 总览 reads each source once (#64
+ * `task-hub-overview-double-read`). Re-read whenever 总览 is opened again (`refreshKey`), so the card
+ * reflects what was just done in another tab; a failed read leaves the card at 「—」.
  */
-function useTaskHubSummary(scope: string | null | undefined, refreshKey: string): TaskHubSummary {
+function useRecentExecutions(scope: string | null | undefined, refreshKey: string): TaskHubSummary['history'] {
   const i18n = useI18n()
-  const [summary, setSummary] = useState<TaskHubSummary>(EMPTY_SUMMARY)
+  const [history, setHistory] = useState<TaskHubSummary['history']>(null)
   useEffect(() => {
     if (!scope || !isInboxCacheScopeActive(scope)) return
     const controller = new AbortController()
     const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(SUMMARY_TIMEOUT_MS)])
-    const readJson = async (path: string) => {
-      const response = await apiFetch(path, { signal, cache: 'no-store' })
-      if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      return response.json() as Promise<unknown>
-    }
-    const settle = <T,>(promise: Promise<T>) => promise.catch(() => null)
-    void Promise.all([
-      settle(readJson(`${CONSOLE_REST.TASK_PROVIDERS}?locale=${i18n.locale}`).then(body => summarizeAdminTasks(readTaskProviders(body, i18n.locale)))),
-      settle(requestConsole<ScheduleListLike>({ type: CONSOLE_RPC.SCHEDULE_LIST, locale: i18n.locale })),
-      settle(readJson('/api/assistant/jobs')),
-      settle(readJson(executionQuery()).then(body => summarizeExecutions(readExecutionPage(body, undefined, i18n.locale)))),
-    ]).then(([admin, scheduleList, assistantBody, history]) => {
-      // A persistent reminder is also an assistant job: count it once, on the reminder card (#64 schedule-tabs-overlap).
-      const reminderIds = (Array.isArray(scheduleList?.persistent) ? scheduleList.persistent : []).flatMap(item => typeof item?.id === 'string' ? [item.id] : [])
-      let assistant: TaskHubSummary['assistant'] = null
-      try { assistant = assistantBody ? summarizeAssistantJobs(validateAssistantJobs(assistantBody, i18n.locale), i18n.locale, reminderIds) : null } catch { assistant = null }
-      const schedule = summarizeSchedules(scheduleList)
-      if (!controller.signal.aborted && isInboxCacheScopeActive(scope)) setSummary({ admin, schedule, assistant, history })
-    })
+    void apiFetch(executionQuery(), { signal, cache: 'no-store' })
+      .then(response => { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json() as Promise<unknown> })
+      .then(body => summarizeExecutions(readExecutionPage(body, undefined, i18n.locale)))
+      .catch(() => null)
+      .then(next => { if (!controller.signal.aborted && isInboxCacheScopeActive(scope)) setHistory(next) })
     return () => controller.abort()
   }, [scope, refreshKey, i18n])
-  return summary
+  return history
 }
 
 function HistoryPanel() {
@@ -83,9 +66,16 @@ function HistoryPanel() {
  * 「全部任务」总览：上面是各来源的汇总（点卡片进对应页签做操作），下面是按状态筛选的统一列表。
  * 汇总只在总览里出现，不在每个页签上方重复一遍页签导航。
  */
-function OverviewPanel({ summary, open }: { summary: TaskHubSummary; open: (tab: TaskTabId) => void }) {
+function OverviewPanel({ history, sources, onSources, open }: {
+  history: TaskHubSummary['history']
+  /** What the 全部任务 table last read for this connection (null until it has); the cards are built from it. */
+  sources: TaskOverviewSources | null
+  onSources: (sources: TaskOverviewSources) => void
+  open: (tab: TaskTabId) => void
+}) {
   const i18n = useI18n()
   const scope = useInboxCacheScope()
+  const summary: TaskHubSummary = { ...summarizeOverviewSources(sources, i18n.locale), history }
   if (!scope || !isInboxCacheScopeActive(scope)) return <StatusState kind="disconnected" />
   const unknown = '—'
   return <div className="space-y-4">
@@ -133,7 +123,7 @@ function OverviewPanel({ summary, open }: { summary: TaskHubSummary; open: (tab:
         onOpen={() => open('history')}
       />
     </StatGrid>
-    <TaskOverview key={scope} connectionScope={scope} />
+    <TaskOverview key={scope} connectionScope={scope} onSources={onSources} />
   </div>
 }
 
@@ -144,9 +134,14 @@ export default function TaskHubPage() {
   const active = resolveTaskTab(params.get('tab'), tabs)
   const select = (next: string) => setParams({ tab: next })
   const scope = useInboxCacheScope()
-  const summary = useTaskHubSummary(active === 'overview' ? scope : null, active)
+  const history = useRecentExecutions(active === 'overview' ? scope : null, active)
+  // Kept on the page, so returning to 总览 shows the last numbers while the table reads again; tagged
+  // with its connection, so another connection never shows them.
+  const [overviewRead, setOverviewRead] = useState<{ scope: string; sources: TaskOverviewSources } | null>(null)
+  const onSources = useCallback((sources: TaskOverviewSources) => { if (scope) setOverviewRead({ scope, sources }) }, [scope])
+  const overviewSources = overviewRead && overviewRead.scope === scope ? overviewRead.sources : null
   const panels: Record<TaskTabId, ReactNode> = {
-    overview: <OverviewPanel summary={summary} open={select} />, admin: <TaskCenterPage />, schedule: <CronPage />, assistant: <AssistantJobsPage />, history: <HistoryPanel />,
+    overview: <OverviewPanel history={history} sources={overviewSources} onSources={onSources} open={select} />, admin: <TaskCenterPage />, schedule: <CronPage />, assistant: <AssistantJobsPage />, history: <HistoryPanel />,
   }
   return <PageShell className="console-resource-page console-tasks-hub">
     <PageHeader title={i18n.t("定时任务")} description={i18n.t("「全部任务」汇总每个任务的状态、下次运行、最近结果、目标与审批；创建、暂停和查看记录在各自页签。")} />

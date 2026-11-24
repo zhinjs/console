@@ -66,3 +66,17 @@ export function summarizeExecutions(page) {
   const running = page.runs.filter((run) => run?.status === 'running' || run?.status === 'queued').length
   return { recent: page.runs.length, hasMore: Boolean(page.nextCursor), failed, running }
 }
+
+/**
+ * The 管理员任务 / 定时提醒 / 助手任务 cards from what the 全部任务 table already read
+ * (`TaskOverviewSources`), so 总览 reads each source once (#64 `task-hub-overview-double-read`).
+ * Null sources (still loading, or a read that failed) stay null: the card shows 「—」.
+ * A persistent reminder is also an assistant job: it is counted once, on the reminder card.
+ */
+export function summarizeOverviewSources(sources, locale = 'zh-CN') {
+  const schedules = sources?.schedules ?? null
+  const reminderIds = (Array.isArray(schedules?.persistent) ? schedules.persistent : []).flatMap(item => typeof item?.id === 'string' ? [item.id] : [])
+  let assistant = null
+  try { assistant = sources?.assistant ? summarizeAssistantJobs(sources.assistant, locale, reminderIds) : null } catch { assistant = null }
+  return { admin: summarizeAdminTasks(sources?.admin ?? null), schedule: summarizeSchedules(schedules), assistant }
+}
