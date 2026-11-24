@@ -32,7 +32,7 @@ export interface ChatRoleImportPersonalRow {
   readonly id: string
   readonly consoleUserId: string
   readonly adapter: string
-  /** The bot account, when the Host names it (protocol 1.9 does not yet). */
+  /** The bot account, when the Host names it (protocol 1.10 does not yet). */
   readonly endpoint?: string
   readonly configAccount?: undefined
   readonly userId: string

@@ -33,7 +33,7 @@ test('the account is named 「账号 <endpoint>」 whenever the reply carries it
     pending: [
       // An account-level scope names the account.
       { id: 'e', source: 'qq.endpoints[0].master', level: 'endpoint', key: 'qq/bot-a', adapter: 'qq', userId: '10001', role: 'owner' },
-      // A Host that sends `endpoint` on the candidate (not in protocol 1.9 yet) is shown as is.
+      // A Host that sends `endpoint` on the candidate (not in protocol 1.10 yet) is shown as is.
       { id: 'f', source: 'qq.endpoints[1].master', level: 'adapter', key: 'qq', adapter: 'qq', userId: '10001', role: 'trusted', endpoint: 'bot-b' },
     ],
     personalPending: [{ id: 'p', consoleUserId: 'u-1', adapter: 'qq', userId: '10001', endpoint: 'bot-a', seenAt: 1 }],

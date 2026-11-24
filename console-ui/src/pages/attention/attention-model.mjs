@@ -79,7 +79,7 @@ export function normalizeAttentionItem(raw) {
  */
 function sandboxOnlyOwnerItem(kind, raw) {
   if (kind !== 'chat-roles.no-owner') return false
-  return (isRecord(raw.state) && raw.state.simulationOnly === true) || raw.simulationOnly === true
+  return isRecord(raw.state) && raw.state.simulationOnly === true
 }
 
 /**
