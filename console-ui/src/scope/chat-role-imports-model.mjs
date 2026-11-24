@@ -51,7 +51,7 @@ const IMPORT_ROLES = Object.freeze(['owner', 'trusted'])
 /**
  * Which bot account a candidate belongs to (#64 `import-card-missing-endpoint`): the same person under
  * two accounts otherwise reads the same on two cards. An account-level scope names it first (that is
- * what the grant targets); else an `endpoint` the reply carries (protocol 1.9 has none on candidates
+ * what the grant targets); else an `endpoint` the reply carries (protocol 1.10 has none on candidates
  * yet); else a `<adapter>.endpoints[N]` configuration path gives where in the configuration the entry
  * came from (1-based) — provenance only: the grant's reach is still its scope (e.g. the whole adapter).
  */

@@ -13,8 +13,6 @@ export type ChatIdentityLinkMethod = ConsoleChatIdentityLinkMethod
 /** A validated `ConsoleChatIdentity` (`chat-identities.recent` rows also carry `principalId`). */
 export interface ChatIdentityView extends ConsoleChatIdentity {
   readonly principalId?: string
-  /** zhinjs/zhin#1250 第 87 批: an id on a simulation adapter that never speaks (absent from older Hosts and protocol 1.9.0). */
-  readonly simulatedSender?: true
 }
 
 /** A validated `ConsoleChatRoleEntry` (`source` is implied: zhin chat roles come only from grants). */
