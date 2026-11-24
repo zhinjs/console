@@ -38,7 +38,7 @@ function SessionIdentity({ sessionKey, activity }: { sessionKey: string; activit
   return (
     <span className="min-w-0 flex-1 text-left">
       <span className="flex min-w-0 items-center gap-1.5">
-        <span className="truncate text-sm font-semibold">{parsed.sceneId}</span>
+        <span className="truncate text-sm font-semibold" title={parsed.sceneId}>{activity?.sceneLabel || parsed.sceneId}</span>
         <span className="shrink-0 text-xs text-muted-foreground">
           {i18n.t(SESSION_SCOPE_LABELS[parsed.scope])}
         </span>

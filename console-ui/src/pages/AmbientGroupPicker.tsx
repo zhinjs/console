@@ -33,16 +33,23 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-/** Group lists of every connected account, read only while the picker is shown. One account failing does not hide the others. */
-export function useAmbientGroupCatalog(): AmbientGroupCatalogRead {
+/**
+ * Group lists of every connected account, read only while the picker is shown (or, with `enabled`
+ * false, not at all until it turns true). One account failing does not hide the others.
+ */
+export function useAmbientGroupCatalog(enabled = true): AmbientGroupCatalogRead {
   const i18n = useI18n()
   const scope = useInboxCacheScope()
+  // What a read belongs to: a list read for another connection (or language) is never shown.
+  const readKey = `${scope ?? ''}\u0000${i18n.locale}`
   const sequence = useRef(0)
-  const [state, setState] = useState<Omit<AmbientGroupCatalogRead, 'retry'>>({ loading: true, error: null, catalog: null })
+  // The last read that finished for `readKey`: turning `enabled` off and on again does not re-read it.
+  const finished = useRef('')
+  const [state, setState] = useState<Omit<AmbientGroupCatalogRead, 'retry'> & { readFor: string }>({ loading: true, error: null, catalog: null, readFor: '' })
   const load = useCallback(async () => {
     const request = ++sequence.current
     const current = () => request === sequence.current && isInboxCacheScopeActive(scope)
-    setState({ loading: true, error: null, catalog: null })
+    setState({ loading: true, error: null, catalog: null, readFor: readKey })
     try {
       const all = readGroupEndpoints(await requestConsole({ type: ENDPOINT_RPC.LIST }), i18n.locale)
       const endpoints = all.filter((endpoint) => endpoint.connected)
@@ -51,16 +58,18 @@ export function useAmbientGroupCatalog(): AmbientGroupCatalogRead {
           (result) => ({ adapter: endpoint.adapter, endpoint: endpoint.name, groups: result?.groups ?? [] }),
           (error: unknown) => ({ adapter: endpoint.adapter, endpoint: endpoint.name, error: errorText(error) }),
         )))
-      if (current()) setState({ loading: false, error: null, catalog: buildGroupCatalog(results, all) })
+      if (current()) { finished.current = readKey; setState({ loading: false, error: null, catalog: buildGroupCatalog(results, all), readFor: readKey }) }
     } catch (error) {
-      if (current()) setState({ loading: false, error: errorText(error), catalog: null })
+      if (current()) setState({ loading: false, error: errorText(error), catalog: null, readFor: readKey })
     }
-  }, [scope, i18n.locale])
+  }, [scope, i18n.locale, readKey])
   useEffect(() => {
+    if (!enabled || finished.current === readKey) return
     void load()
     return () => { sequence.current += 1 }
-  }, [load])
-  return { ...state, retry: () => { void load() } }
+  }, [load, enabled, readKey])
+  const { readFor, ...read } = state
+  return { ...(readFor === readKey ? read : { loading: enabled, error: null, catalog: null }), retry: () => { void load() } }
 }
 
 /** Why a selected group is not in the group lists (shown under it, next to 「不在群列表中」). */
