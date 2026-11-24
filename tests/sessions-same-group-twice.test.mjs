@@ -38,6 +38,7 @@ test('only hashed sessions of a group get the word; the rest read as before', ()
   assert.equal(sessionLabel({ sessionKey: shared, platform: 'icqq' }), 'icqq · 群聊 #9f8e7d6c')
   // A channel's shared session is not called a group chat.
   assert.equal(sessionLabel({ sessionKey: shared, platform: 'kook', scopeKind: 'channel', sceneLabel: '公告' }), 'kook · 频道 公告 · 共享会话')
+  assert.equal(sessionLabel({ sessionKey: personal, platform: 'kook', scopeKind: 'guild', sceneLabel: '公告' }), 'kook · 频道 公告 · 个人会话')
 })
 
 test('the narrow session picker puts 「群聊 / 个人会话」 on the second line, where truncation does not hide it', () => {
