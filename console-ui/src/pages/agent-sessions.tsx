@@ -21,7 +21,9 @@ import { loadAgentSessionHistory, pushAgentSessionHistory } from '../utils/agent
 import { AgentSessionPicker } from '../components/AgentSessionPicker'
 import { CONSOLE_REST } from '../contracts/zhin-console'
 import { hasConsolePermission } from '../utils/console-access.mjs'
-import { readRecentSessions, summarizeRecentSessions, type RecentSession, type RecentSessionSummary } from './agent-session-recent.mjs'
+import { readRecentSessions, sessionsNeedingGroupNames, summarizeRecentSessions, withGroupNames, type RecentSession, type RecentSessionSummary } from './agent-session-recent.mjs'
+import { useAmbientGroupCatalog } from './AmbientGroupPicker'
+import { groupNamesFromCatalog } from './ambient-group-picker-model.mjs'
 import { sessionConversationScope, sessionKeyInScope } from './scope/records-model.mjs'
 import { readScopeFilterParams } from './insights/scope-filter.mjs'
 import { scopeHref, scopeIdentity } from '../scope/scope-tree.mjs'
@@ -75,7 +77,15 @@ export default function AgentSessionsPage() {
   const [recentFailed, setRecentFailed] = useState(false)
   const [recentResult, setRecent] = useState<{ connectionScope?: string; rows: RecentSession[]; summary: RecentSessionSummary | null } | null>(null)
   const recentCurrent = recentResult && isInboxCacheScopeActive(scope) && recentResult.connectionScope === scope ? recentResult : null
-  const recent = recentCurrent ? (scopeFilter ? recentCurrent.rows.filter(row => sessionKeyInScope(row.sessionKey, scopeFilter)) : recentCurrent.rows).slice(0, 12) : null
+  const recentRows = recentCurrent ? (scopeFilter ? recentCurrent.rows.filter(row => sessionKeyInScope(row.sessionKey, scopeFilter)) : recentCurrent.rows).slice(0, 12) : null
+  const selectedRecentRow = recentCurrent?.rows.find(row => row.sessionKey === selectedKey)
+  // Groups whose record kept no name (#64 `session-group-name-missing`) take the name the adapter has
+  // now; the group lists are read only when one of the listed groups shows just its number.
+  const needGroupNames = sessionsNeedingGroupNames([...(recentRows ?? []), ...(selectedRecentRow ? [selectedRecentRow] : [])])
+  const groupCatalog = useAmbientGroupCatalog(needGroupNames)
+  const groupNames = needGroupNames && groupCatalog.catalog ? groupNamesFromCatalog(groupCatalog.catalog) : null
+  const recent = recentRows ? withGroupNames(recentRows, groupNames) : null
+  const selectedRecent = selectedRecentRow ? withGroupNames([selectedRecentRow], groupNames)[0] : undefined
   const sessionSummary = recentCurrent?.summary ?? null
   const [loadedTree, setTree] = useState<SessionTree | null>(null)
   const tree =
@@ -369,7 +379,7 @@ export default function AgentSessionsPage() {
               <header className="console-session-heading">
                 <div className="min-w-0">
                   {/* The full key only in the tooltip: a hashed key names no conversation. */}
-                  <h2 title={selectedKey}>{selected ? selected.sceneId : sessionLabel({ ...recentCurrent?.rows.find(row => row.sessionKey === selectedKey), sessionKey: selectedKey }, i18n.locale)}</h2>
+                  <h2 title={selectedKey}>{selected ? selectedRecent?.sceneLabel || selected.sceneId : sessionLabel({ ...selectedRecent, sessionKey: selectedKey }, i18n.locale)}</h2>
                   {selected ? <p>{selected.platform} · {selected.endpointId}</p> : personal ? <p>{i18n.t('个人会话')}</p> : null}
                 </div>
                 {/* A conversation session can be continued in its chat; anything else is history only. */}

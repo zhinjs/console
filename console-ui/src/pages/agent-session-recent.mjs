@@ -1,5 +1,6 @@
 import { translate } from '../i18n/locale.mjs'
 import { isKeyOnlySessionKey, parseImConversationKey, sessionKind } from '../utils/session-label.mjs'
+import { sessionRowOrigin } from './scope/records-model.mjs'
 /**
  * Every Agent session the picker can open — and so every one the summary counts, so the two agree:
  * legacy `platform:endpoint:scope:sceneId` keys, hashed keys (`personal-session:v1:`,
@@ -19,6 +20,54 @@ function describedFields(row) {
 }
 
 /**
+ * The group a row is about: from the origin the Host recorded (zhin 1.10), else from an address key
+ * (`platform:endpoint:group:id`). `name` is the group name the record kept, '' when it kept none.
+ */
+function groupOfRow(row) {
+  const origin = sessionRowOrigin(row)
+  if (origin?.im && origin.kind === 'group' && origin.id) return { adapter: origin.adapter, id: origin.id, name: origin.name ?? '' }
+  const parsed = parseImConversationKey(row.session_key)
+  return parsed?.kind === 'group' ? { adapter: parsed.platform, id: parsed.id, name: '' } : null
+}
+
+/** A row with what it says about its group: `group` (adapter and id), and the recorded name as its scene label. */
+function withGroupFields(fields, row) {
+  const group = groupOfRow(row)
+  if (!group) return fields
+  const named = !fields.sceneLabel && group.name ? { platform: fields.platform || group.adapter, scopeKind: fields.scopeKind || 'group', sceneLabel: group.name } : {}
+  return { ...fields, ...named, group: { adapter: group.adapter, id: group.id } }
+}
+
+/** The group name a row shows (scene label, else the name part of 「平台 · 群 名称」), '' when it shows only the number. */
+function shownGroupName(row) {
+  const scene = typeof row.sceneLabel === 'string' ? row.sceneLabel.trim() : ''
+  if (scene) return scene === row.group.id ? '' : scene
+  const display = typeof row.displayName === 'string' ? /^.+? · 群(?: (.+))?$/u.exec(row.displayName.trim()) : null
+  return display?.[1] && display[1] !== row.group.id ? display[1] : ''
+}
+
+/**
+ * Whether a group in the list shows only its number (#64 `session-group-name-missing`: older traces kept
+ * no `conversation.name`), so the page should read the group lists for its name.
+ */
+export function sessionsNeedingGroupNames(rows) {
+  return (Array.isArray(rows) ? rows : []).some(row => row?.group && !shownGroupName(row))
+}
+
+/**
+ * Rows whose group shows only its number get the name the adapter has now (`names`: 「平台:群号」 →
+ * 群名, from the group lists); a name the record has is kept, and groups in no list keep the number.
+ */
+export function withGroupNames(rows, names) {
+  if (!names || names.size === 0) return rows
+  return rows.map(row => {
+    if (!row.group || shownGroupName(row)) return row
+    const name = names.get(`${row.group.adapter}:${row.group.id}`)
+    return name ? { ...row, platform: row.platform || row.group.adapter, scopeKind: row.scopeKind || 'group', sceneLabel: name } : row
+  })
+}
+
+/**
  * Host trace-archive session rows → recent conversations, newest first.
  * Malformed rows are dropped rather than failing the page: this list only helps choose a session.
  */
@@ -31,7 +80,7 @@ export function readRecentSessions(body, limit = 12) {
     .sort((a, b) => b.last_started_at - a.last_started_at)
     .filter(row => !seen.has(row.session_key) && seen.add(row.session_key))
     .slice(0, limit)
-    .map(row => ({ sessionKey: row.session_key, turns: row.turns, lastAt: row.last_started_at, lastStatus: typeof row.last_status === 'string' ? row.last_status : '', ...describedFields(row) }))
+    .map(row => ({ sessionKey: row.session_key, turns: row.turns, lastAt: row.last_started_at, lastStatus: typeof row.last_status === 'string' ? row.last_status : '', ...withGroupFields(describedFields(row), row) }))
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000

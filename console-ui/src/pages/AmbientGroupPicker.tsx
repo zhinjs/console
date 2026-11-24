@@ -33,8 +33,11 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-/** Group lists of every connected account, read only while the picker is shown. One account failing does not hide the others. */
-export function useAmbientGroupCatalog(): AmbientGroupCatalogRead {
+/**
+ * Group lists of every connected account, read only while the picker is shown (or, with `enabled`
+ * false, not at all until it turns true). One account failing does not hide the others.
+ */
+export function useAmbientGroupCatalog(enabled = true): AmbientGroupCatalogRead {
   const i18n = useI18n()
   const scope = useInboxCacheScope()
   const sequence = useRef(0)
@@ -57,9 +60,10 @@ export function useAmbientGroupCatalog(): AmbientGroupCatalogRead {
     }
   }, [scope, i18n.locale])
   useEffect(() => {
+    if (!enabled) return
     void load()
     return () => { sequence.current += 1 }
-  }, [load])
+  }, [load, enabled])
   return { ...state, retry: () => { void load() } }
 }
 
