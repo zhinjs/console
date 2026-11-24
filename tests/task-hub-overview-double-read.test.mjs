@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import test from 'node:test'
 import ts from 'typescript'
@@ -17,6 +18,7 @@ const url = new URL('../console-ui/src/pages/task-hub.tsx', import.meta.url)
 const source = await readFile(url, 'utf8')
 
 function mount() {
+  let tab = 'overview', scope = 'scope-a'
   const slots = []; let cursor = 0; let effects = []
   const react = {
     useState(initial) { const i = cursor++; if (!(i in slots)) slots[i] = typeof initial === 'function' ? initial() : initial; return [slots[i], next => { slots[i] = typeof next === 'function' ? next(slots[i]) : next }] },
@@ -38,9 +40,9 @@ function mount() {
   const tag = name => name
   const mocks = {
     react, 'react/jsx-runtime': { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }), Fragment: 'fragment' },
-    'lucide-react': new Proxy({}, { get: () => 'icon' }), 'react-router-dom': { useSearchParams: () => [new URLSearchParams(), () => {}] },
+    'lucide-react': new Proxy({}, { get: () => 'icon' }), 'react-router-dom': { useSearchParams: () => [new URLSearchParams({ tab }), next => { tab = next.tab }] },
     '@zhin.js/console-ui': new Proxy({}, { get: (_, name) => tag(String(name)) }),
-    '../utils/useInboxCacheScope': { useInboxCacheScope: () => 'scope-a' }, '../utils/inbox-cache': { isInboxCacheScopeActive: scope => scope === 'scope-a' },
+    '../utils/useInboxCacheScope': { useInboxCacheScope: () => scope }, '../utils/inbox-cache': { isInboxCacheScopeActive: value => value === scope },
     './task-center': { default: 'task-center' }, './cron': { default: 'cron' }, './assistant-jobs': { default: 'assistant-jobs' },
     './ScheduleExecutions': { ScheduleExecutions: 'schedule-executions' }, './TaskOverview': { TaskOverview: 'task-overview' },
     '../components/StatusState': { StatusState: 'status-state' },
@@ -57,11 +59,11 @@ function mount() {
     cursor = 0
     const page = module.exports.default()
     const panelElement = elements(page).find(node => typeof node.type === 'function')
-    const panel = panelElement.type(panelElement.props)
+    const panel = panelElement ? panelElement.type(panelElement.props) : null
     const run = effects; effects = []; run.forEach(fn => fn())
     return elements(panel)
   }
-  return { reads, render }
+  return { reads, render, setTab(next) { tab = next }, setScope(next) { scope = next } }
 }
 const settle = () => new Promise(resolve => setTimeout(resolve, 0))
 
@@ -91,4 +93,26 @@ test('the cards from the table sources: a null source stays unknown, reminders a
   assert.equal(summary.admin, null, 'a failed read is 「—」, not 0')
   assert.equal(summary.schedule.total, 1)
   assert.equal(summary.assistant.total, 1, 'the reminder is counted on 定时提醒 only')
+})
+
+test('back on 总览 the cards keep their numbers while the table reads again; another connection never shows them', async () => {
+  const page = mount()
+  let tree = page.render(); await settle()
+  tree.find(node => node.type === 'task-overview').props.onSources({ admin: { providers: [] }, schedules: { memory: [], persistent: [{ id: 'r1' }, { id: 'r2' }] }, assistant: { jobs: [] } })
+  tree = page.render()
+  const values = () => tree.filter(node => node.type === 'StatCard').slice(0, 3).map(card => card.props.value)
+  assert.deepEqual(values(), [0, 2, 0])
+  page.setTab('admin'); page.render(); await settle()
+  page.setTab('overview'); tree = page.render(); await settle()
+  assert.deepEqual(values(), [0, 2, 0], 'not blanked to 「—」 (「未启用或暂时无法读取」) while the table reads again')
+  const executions = page.reads.filter(path => path === '/api/assistant/executions').length
+  assert.equal(executions, 2, '近期执行 is read again on returning to 总览')
+  page.setScope('scope-b'); tree = page.render(); await settle()
+  assert.deepEqual(values(), ['—', '—', '—'], "scope A's numbers are not shown for scope B")
+})
+
+test('TaskOverview hands its read to the page through a ref, so an inline callback does not re-read', () => {
+  const overview = readFileSync(new URL('../console-ui/src/pages/TaskOverview.tsx', import.meta.url), 'utf8')
+  assert.match(overview, /sourcesListener\.current\?\.\(next\)/)
+  assert.match(overview, /\}, \[connectionScope, i18n, approvalsReadable\]\)/, 'the callback is not a dependency of the read')
 })

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { RefreshCw } from 'lucide-react'
 import { useI18n } from '../i18n'
@@ -36,6 +36,9 @@ export function TaskOverview({ connectionScope, onSources }: {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<TaskOverviewFilter>('all')
   const approvalsReadable = hasConsolePermission('agent.configure')
+  // Held in a ref: a new callback each render must not start a new read.
+  const sourcesListener = useRef(onSources)
+  sourcesListener.current = onSources
 
   const load = useCallback(async () => {
     if (!isInboxCacheScopeActive(connectionScope)) return
@@ -57,8 +60,8 @@ export function TaskOverview({ connectionScope, onSources }: {
     const next = { admin, schedules, assistant, ...(approvals === undefined ? {} : { approvals }) } as TaskOverviewSources
     setSources(next)
     setLoading(false)
-    onSources?.(next)
-  }, [connectionScope, i18n, approvalsReadable, onSources])
+    sourcesListener.current?.(next)
+  }, [connectionScope, i18n, approvalsReadable])
 
   useEffect(() => { void load() }, [load])
 

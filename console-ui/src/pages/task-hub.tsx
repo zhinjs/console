@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Bot, CalendarClock, ClipboardList, History } from 'lucide-react'
 import { useI18n } from '../i18n'
 import { useSearchParams } from 'react-router-dom'
@@ -66,11 +66,15 @@ function HistoryPanel() {
  * 「全部任务」总览：上面是各来源的汇总（点卡片进对应页签做操作），下面是按状态筛选的统一列表。
  * 汇总只在总览里出现，不在每个页签上方重复一遍页签导航。
  */
-function OverviewPanel({ history, open }: { history: TaskHubSummary['history']; open: (tab: TaskTabId) => void }) {
+function OverviewPanel({ history, sources, onSources, open }: {
+  history: TaskHubSummary['history']
+  /** What the 全部任务 table last read for this connection (null until it has); the cards are built from it. */
+  sources: TaskOverviewSources | null
+  onSources: (sources: TaskOverviewSources) => void
+  open: (tab: TaskTabId) => void
+}) {
   const i18n = useI18n()
   const scope = useInboxCacheScope()
-  // What the 全部任务 table read; the cards are built from it instead of reading it again.
-  const [sources, setSources] = useState<TaskOverviewSources | null>(null)
   const summary: TaskHubSummary = { ...summarizeOverviewSources(sources, i18n.locale), history }
   if (!scope || !isInboxCacheScopeActive(scope)) return <StatusState kind="disconnected" />
   const unknown = '—'
@@ -119,7 +123,7 @@ function OverviewPanel({ history, open }: { history: TaskHubSummary['history']; 
         onOpen={() => open('history')}
       />
     </StatGrid>
-    <TaskOverview key={scope} connectionScope={scope} onSources={setSources} />
+    <TaskOverview key={scope} connectionScope={scope} onSources={onSources} />
   </div>
 }
 
@@ -131,8 +135,13 @@ export default function TaskHubPage() {
   const select = (next: string) => setParams({ tab: next })
   const scope = useInboxCacheScope()
   const history = useRecentExecutions(active === 'overview' ? scope : null, active)
+  // Kept on the page, so returning to 总览 shows the last numbers while the table reads again; tagged
+  // with its connection, so another connection never shows them.
+  const [overviewRead, setOverviewRead] = useState<{ scope: string; sources: TaskOverviewSources } | null>(null)
+  const onSources = useCallback((sources: TaskOverviewSources) => { if (scope) setOverviewRead({ scope, sources }) }, [scope])
+  const overviewSources = overviewRead && overviewRead.scope === scope ? overviewRead.sources : null
   const panels: Record<TaskTabId, ReactNode> = {
-    overview: <OverviewPanel history={history} open={select} />, admin: <TaskCenterPage />, schedule: <CronPage />, assistant: <AssistantJobsPage />, history: <HistoryPanel />,
+    overview: <OverviewPanel history={history} sources={overviewSources} onSources={onSources} open={select} />, admin: <TaskCenterPage />, schedule: <CronPage />, assistant: <AssistantJobsPage />, history: <HistoryPanel />,
   }
   return <PageShell className="console-resource-page console-tasks-hub">
     <PageHeader title={i18n.t("定时任务")} description={i18n.t("「全部任务」汇总每个任务的状态、下次运行、最近结果、目标与审批；创建、暂停和查看记录在各自页签。")} />
