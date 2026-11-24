@@ -8,6 +8,7 @@ import {
 import { Link } from 'react-router-dom'
 import { useLogPanel } from '../components/log-panel/LogPanel'
 import { apiFetch } from '../utils/auth'
+import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { Alert, AlertDescription, Badge, Button, Card, CardContent, createPageChromeStore, InlineCode, PageChromeActions, PageChromeProvider, PageHeader, PageShell, Skeleton, useConfirm, usePageChromeState } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import { requestConsole } from '../utils/console-rpc'
@@ -159,12 +160,16 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
   const packageName = plugin?.packageName ?? name ?? ''
   const [packages, refreshPackages] = useOptionalRead(hasConsolePermission('feature.view'),
     async () => readPackageList(await gatewayRequest(GATEWAY_RPC.PACKAGES_LIST, {}, i18n.t)), [i18n])
-  const [latest, refreshLatest] = useOptionalRead(Boolean(packageName), async () => {
+  // The whole 「可更新」 list (on a real Host it queries the npm registry): read once per connection and
+  // language, not again when the instance arrives and the package name changes from the route name
+  // (#64 `plugin-detail-updates-refetch`); this package's entry is picked when rendering.
+  const connection = useInboxCacheScope()
+  const [updates, refreshLatest] = useOptionalRead(Boolean(name), async () => {
     const response = await apiFetch('/api/marketplace/updates')
     const result = classifyUpdateCheck({ ok: response.ok, status: response.status, body: await response.json().catch(() => null) }, i18n.locale)
     if (result.kind === 'failed') throw new Error(result.reason)
-    return result.updates.find(item => item.name === packageName) ?? null
-  }, [packageName, i18n])
+    return result.updates
+  }, [connection, i18n])
   const instanceKey = plugin?.instanceKey ?? name ?? ''
   const [matrix, refreshMatrix] = useOptionalRead<FeatureMatrix>(hasConsolePermission('feature.view') && Boolean(instanceKey),
     async () => readFeatureMatrix(await requestConsole<unknown>({ type: FEATURE_RPC.MATRIX })), [instanceKey])
@@ -367,7 +372,7 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
   const detailView = pluginDetailView({ loading, plugin, error })
   const entry: PackageListEntry | null = packages.status === 'ready' ? installedPackage(packages.value, packageName) : null
   const installedVersion = entry?.installedVersion ?? plugin?.version ?? null
-  const update = latest.status === 'ready' ? latest.value : null
+  const update = updates.status === 'ready' ? updates.value.find(item => item.name === packageName) ?? null : null
   const scopeSummary = matrix.status === 'ready' ? pluginScopeSummary(matrix.value, instanceKey) : null
   const settableLevels = featureList.status === 'ready' ? pluginSettableLevels(featureList.value, instanceKey) : null
   const permissionGroups = permissions.status === 'ready' ? pluginPermissionGroups(permissions.value, [instanceKey, packageName.split('/').pop()?.replace(/^(adapter|plugin|service)-/u, '')]) : []
@@ -468,7 +473,7 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
           <Card><CardContent className="space-y-3 p-4">
             <dl className="console-object-facts">
               <div><dt>{i18n.t("已安装版本")}</dt><dd className="font-mono">{installedVersion ?? i18n.t("未知")}</dd></div>
-              <div><dt>{i18n.t("注册表 latest")}</dt><dd className="font-mono">{update?.latest ?? (latest.status === 'ready' ? installedVersion ?? '—' : latest.status === 'loading' ? '…' : i18n.t("未知"))}</dd></div>
+              <div><dt>{i18n.t("注册表 latest")}</dt><dd className="font-mono">{update?.latest ?? (updates.status === 'ready' ? installedVersion ?? '—' : updates.status === 'loading' ? '…' : i18n.t("未知"))}</dd></div>
               <div><dt>{i18n.t("声明范围")}</dt><dd className="font-mono">{entry?.range || '—'}</dd></div>
               <div><dt>{i18n.t("依赖类型")}</dt><dd>{entry ? entry.dependencyType : '—'}</dd></div>
               {entry?.catalog ? <div><dt>{i18n.t("目录")}</dt><dd>{sourceLabel(entry.catalog, i18n.t)}</dd></div> : null}
