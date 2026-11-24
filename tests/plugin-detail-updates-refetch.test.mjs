@@ -29,6 +29,9 @@ test('the updates list is read once: the read depends on neither the package nam
   assert.ok(!names.some(name => /packageName|plugin/.test(name)), `deps: ${names.join(', ')}`)
   assert.doesNotMatch(enabled.getText(), /packageName|plugin\b/, 'enabled does not flip when the instance arrives')
   assert.doesNotMatch(loader.getText(), /packageName/, 'the loader keeps the whole list; the package is picked when rendering')
+  // Read again for another connection (the list is the Host's) or language, as the item asks.
+  assert.deepEqual(names, ['connection', 'i18n'])
+  assert.match(source, /const connection = useInboxCacheScope\(\)/)
 })
 
 test('the package\'s own update is picked from the list when rendering', () => {

@@ -8,6 +8,7 @@ import {
 import { Link } from 'react-router-dom'
 import { useLogPanel } from '../components/log-panel/LogPanel'
 import { apiFetch } from '../utils/auth'
+import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { Alert, AlertDescription, Badge, Button, Card, CardContent, createPageChromeStore, InlineCode, PageChromeActions, PageChromeProvider, PageHeader, PageShell, Skeleton, useConfirm, usePageChromeState } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import { requestConsole } from '../utils/console-rpc'
@@ -159,15 +160,16 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
   const packageName = plugin?.packageName ?? name ?? ''
   const [packages, refreshPackages] = useOptionalRead(hasConsolePermission('feature.view'),
     async () => readPackageList(await gatewayRequest(GATEWAY_RPC.PACKAGES_LIST, {}, i18n.t)), [i18n])
-  // The whole 「可更新」 list (on a real Host it queries the npm registry): read once per page, not again
-  // when the instance arrives and the package name changes from the route name (#64
-  // `plugin-detail-updates-refetch`); this package's entry is picked when rendering.
+  // The whole 「可更新」 list (on a real Host it queries the npm registry): read once per connection and
+  // language, not again when the instance arrives and the package name changes from the route name
+  // (#64 `plugin-detail-updates-refetch`); this package's entry is picked when rendering.
+  const connection = useInboxCacheScope()
   const [updates, refreshLatest] = useOptionalRead(Boolean(name), async () => {
     const response = await apiFetch('/api/marketplace/updates')
     const result = classifyUpdateCheck({ ok: response.ok, status: response.status, body: await response.json().catch(() => null) }, i18n.locale)
     if (result.kind === 'failed') throw new Error(result.reason)
     return result.updates
-  }, [i18n])
+  }, [connection, i18n])
   const instanceKey = plugin?.instanceKey ?? name ?? ''
   const [matrix, refreshMatrix] = useOptionalRead<FeatureMatrix>(hasConsolePermission('feature.view') && Boolean(instanceKey),
     async () => readFeatureMatrix(await requestConsole<unknown>({ type: FEATURE_RPC.MATRIX })), [instanceKey])
