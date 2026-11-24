@@ -26,7 +26,11 @@ const SOURCE_LABELS: Record<string, string> = { admin: '管理员任务', schedu
  * 「全部任务」：四个来源各读一次，任一失败只在顶部列出，其余照常显示。
  * 按类型看由上方页签负责，这里只按状态筛（需要处理 / 已暂停），类型作为表格的一列。
  */
-export function TaskOverview({ connectionScope }: { connectionScope: string }) {
+export function TaskOverview({ connectionScope, onSources }: {
+  connectionScope: string
+  /** Called with every finished read, so the page's summary cards use it instead of reading again. */
+  onSources?: (sources: TaskOverviewSources) => void
+}) {
   const i18n = useI18n()
   const [sources, setSources] = useState<TaskOverviewSources | null>(null)
   const [loading, setLoading] = useState(true)
@@ -50,9 +54,11 @@ export function TaskOverview({ connectionScope }: { connectionScope: string }) {
       approvalsReadable ? settle(pluginRpc('root', 'tool-approvals', undefined, { signal }).then(body => readToolApprovals(body, i18n.locale))) : Promise.resolve(undefined),
     ])
     if (!isInboxCacheScopeActive(connectionScope)) return
-    setSources({ admin, schedules, assistant, ...(approvals === undefined ? {} : { approvals }) } as TaskOverviewSources)
+    const next = { admin, schedules, assistant, ...(approvals === undefined ? {} : { approvals }) } as TaskOverviewSources
+    setSources(next)
     setLoading(false)
-  }, [connectionScope, i18n, approvalsReadable])
+    onSources?.(next)
+  }, [connectionScope, i18n, approvalsReadable, onSources])
 
   useEffect(() => { void load() }, [load])
 
