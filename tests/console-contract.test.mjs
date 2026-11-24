@@ -408,14 +408,14 @@ test('released Zhin rich-message renderer is the single Markdown implementation'
 
 test('package manifest targets the released Zhin contract generation', () => {
   const manifest = JSON.parse(sourceText(join(ROOT, 'package.json')))
-  // One SDK generation (zhin 1.4): the tilde ranges keep npm from resolving the unrelated client 2.x line
+  // One SDK generation (zhin 1.11): the tilde ranges keep npm from resolving the unrelated client 2.x line
   // or a later minor that has not been checked against this Console.
-  assert.equal(manifest.dependencies['@zhin.js/client'], '~1.4.2')
-  assert.equal(manifest.dependencies['@zhin.js/contract'], '~1.1.32')
-  assert.equal(manifest.dependencies['@zhin.js/ai'], '~1.7.0')
-  assert.equal(manifest.dependencies['@zhin.js/console-protocol'], '~1.8.0')
+  assert.equal(manifest.dependencies['@zhin.js/client'], '~1.5.1')
+  assert.equal(manifest.dependencies['@zhin.js/contract'], '~1.1.34')
+  assert.equal(manifest.dependencies['@zhin.js/ai'], '~1.9.1')
+  assert.equal(manifest.dependencies['@zhin.js/console-protocol'], '~1.10.0')
   // The component library (ADR 0063 P1a); 1.1 (ADR 0063 color roles, primary / destructive-solid, EmptyState illustrations) is taken deliberately.
-  assert.equal(manifest.dependencies['@zhin.js/console-ui'], '~1.2.0')
+  assert.equal(manifest.dependencies['@zhin.js/console-ui'], '~1.2.1')
   for (const [name, range] of Object.entries(manifest.dependencies)) {
     if (name.startsWith('@zhin.js/')) assert.match(range, /^~\d+\.\d+\.\d+$/, `${name} uses a tilde range`)
   }

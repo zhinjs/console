@@ -67,7 +67,19 @@ export function normalizeAttentionItem(raw) {
     action: Object.freeze({ label: text(action.label), path: attentionActionPath(kind, path) }),
     source: text(raw.source),
     ...(links.length ? { links } : {}),
+    ...(sandboxOnlyOwnerItem(kind, raw) ? { simulationOnly: true } : {}),
   })
+}
+
+/**
+ * `chat-roles.no-owner` of a project that only loads simulation adapters (zhinjs/zhin#1250 第 87 批,
+ * `state.simulationOnly`): claims and bind codes are refused there, so the item also offers
+ * 「打开 Sandbox」. The Host's `detail` already says what to do and is shown as sent. Optional: a Host
+ * that does not send the flag gets the plain item.
+ */
+function sandboxOnlyOwnerItem(kind, raw) {
+  if (kind !== 'chat-roles.no-owner') return false
+  return isRecord(raw.state) && raw.state.simulationOnly === true
 }
 
 /**

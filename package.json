@@ -15,11 +15,11 @@
     "pages:prepare": "node scripts/prepare-github-pages.mjs"
   },
   "dependencies": {
-    "@zhin.js/ai": "~1.7.0",
-    "@zhin.js/client": "~1.4.2",
-    "@zhin.js/console-protocol": "~1.8.0",
-    "@zhin.js/console-ui": "~1.2.0",
-    "@zhin.js/contract": "~1.1.32",
+    "@zhin.js/ai": "~1.9.1",
+    "@zhin.js/client": "~1.5.1",
+    "@zhin.js/console-protocol": "~1.10.0",
+    "@zhin.js/console-ui": "~1.2.1",
+    "@zhin.js/contract": "~1.1.34",
     "zod": "^4.6.7"
   },
   "devDependencies": {

@@ -6,6 +6,7 @@ import ts from 'typescript'
 import { translate } from '../console-ui/src/i18n/locale.mjs'
 import * as usageModel from '../console-ui/src/pages/token-usage-model.mjs'
 import { createConsoleAccess } from '../console-ui/src/utils/console-access.mjs'
+import * as tabPanelLink from '../console-ui/src/utils/tab-panel-link.mjs'
 
 // zhinjs/zhin#1250 第 59 批：Token 用量页重排（汇总环比、服务 → 模型、Agent / 用途、详情 Sheet）
 // 与第 57 批审查遗留（同名会话短键、ID 计数、ⓘ 可访问名、不透明 series 键、渲染级「原始 ID 只在 ⓘ / Sheet」）。
@@ -265,7 +266,7 @@ test('session names: the platform comes from bySession[].platform first, hashed 
   assert.equal(usageSessionLabel({ sessionKey: HASHED, platform: 'sandbox' }, 'en'), `sandbox · ${translate('en', '私聊会话')} #ab12cd34`)
   const scene = `scene-task:v1:${'9f8e7d6c'.padEnd(64, '0')}`
   // A hashed key with a scope but no name: its short hash, never the raw key.
-  assert.equal(usageSessionLabel({ sessionKey: scene, platform: 'icqq', scopeKind: 'group' }), 'icqq · 群 #9f8e7d6c')
+  assert.equal(usageSessionLabel({ sessionKey: scene, platform: 'icqq', scopeKind: 'group' }), 'icqq · 群 #9f8e7d6c · 群聊')
   assert.equal(usageSessionLabel({ sessionKey: scene, platform: 'icqq', scopeKind: 'private', sceneLabel: '小明' }), 'icqq · 私聊 小明')
   // The Host's platform wins over the first part of the key.
   assert.equal(usageSessionLabel({ sessionKey: 'icqq:bot:group:1', platform: 'onebot', scopeKind: 'group', sceneLabel: '群名' }), 'onebot · 群 群名')
@@ -313,12 +314,29 @@ const chartsSource = await readFile(new URL('../console-ui/src/pages/token-usage
 function renderReport(stats, { narrow = false, locale = 'zh-CN', selection = null, view = 'models' } = {}) {
   const i18n = { locale, t: (message, values) => translate(locale, message, values) }
   const ui = consoleUi({ narrow })
-  const base = { '../i18n': { useI18n: () => i18n }, '@zhin.js/console-ui': ui, './token-usage-model.mjs': usageModel, 'lucide-react': new Proxy({}, { get: () => 'svg' }) }
+  const base = { '../utils/tab-panel-link.mjs': tabPanelLink, '../i18n': { useI18n: () => i18n }, '@zhin.js/console-ui': ui, './token-usage-model.mjs': usageModel, 'lucide-react': new Proxy({}, { get: () => 'svg' }) }
   const charts = compile(chartsSource, base)
   const report = compile(reportSource, { ...base, './token-usage-charts': charts, './features/conversation-list': { ConversationKindBadge: ({ kind }) => h('kind-badge', null, kind) }, './clipboard-copy.mjs': { copyText: async () => true } })
   const merged = mergeUsageModels(validateUsageStats(stats, locale), locale)
   return renderToStaticMarkup(h(report.UsageReport, { stats: merged, previous: hostPreviousTotals(merged), view, onViewChange() {}, onPickSession() {}, initialSelection: selection }))
 }
+// #64 `tabs-without-panels`: in the rendered report every tab's aria-controls names an element that exists,
+// that element is a tabpanel, and it is labelled by a tab that exists; narrow (a select) has no tabpanel.
+test('rendered dimension tabs point at a real tabpanel labelled by the active tab', () => {
+  for (const view of ['models', 'sessions']) {
+    const html = renderReport(v2Stats(), { view })
+    const ids = new Set([...html.matchAll(/ id="([^"]+)"/g)].map(match => match[1]))
+    const controls = [...html.matchAll(/aria-controls="([^"]+)"/g)].map(match => match[1])
+    assert.ok(controls.length >= 4, 'both cards render their tabs')
+    for (const target of controls) assert.ok(ids.has(target), `aria-controls ${target} exists`)
+    const panels = [...html.matchAll(/<[^>]*role="tabpanel"[^>]*>/g)].map(match => match[0])
+    assert.equal(panels.length, 2)
+    for (const panel of panels) assert.ok(ids.has(panel.match(/aria-labelledby="([^"]+)"/)[1]), 'labelled by an existing tab')
+  }
+  const narrow = renderReport(v2Stats(), { narrow: true })
+  assert.doesNotMatch(narrow, /role="tabpanel"|aria-controls=/)
+})
+
 const RAW = /(?:services|accounts|profiles):[0-9a-f]|personal-session:v1:|http:api:session:/
 /** The markup with every place a raw id may appear (ⓘ panel, tooltip, Sheet) cut out. */
 const mainView = html => html.replace(/<info-hint>[\s\S]*?<\/info-hint>/g, '').replace(/<tooltip-content[^>]*>[\s\S]*?<\/tooltip-content>/g, '').replace(/<sheet-root>[\s\S]*<\/sheet-root>/g, '')
@@ -474,7 +492,7 @@ function hookHarness() {
     },
   }
   return {
-    react: { ...React, ...api },
+    react: { ...React, ...api, useId: () => ':r0:' },
     invalidate() { dirty = true },
     render(component, props) {
       let tree, n = 0
@@ -498,7 +516,7 @@ const settle = async () => { for (let i = 0; i < 20; i++) await new Promise(reso
 function reportParts(runtime, locale = 'zh-CN') {
   const i18n = { locale, t: (message, values) => translate(locale, message, values) }
   const ui = consoleUi({ narrow: false })
-  const base = { react: runtime.react, '../i18n': { useI18n: () => i18n }, '@zhin.js/console-ui': ui, './token-usage-model.mjs': usageModel, 'lucide-react': new Proxy({}, { get: () => 'svg' }) }
+  const base = { react: runtime.react, '../utils/tab-panel-link.mjs': tabPanelLink, '../i18n': { useI18n: () => i18n }, '@zhin.js/console-ui': ui, './token-usage-model.mjs': usageModel, 'lucide-react': new Proxy({}, { get: () => 'svg' }) }
   return compile(`${reportSource}\nexport { SessionTable, ModelTable, UsageIdList, UsageDetails };`, {
     ...base, './token-usage-charts': {}, './features/conversation-list': { ConversationKindBadge: 'kind-badge' }, './clipboard-copy.mjs': { copyText: async () => true },
   })

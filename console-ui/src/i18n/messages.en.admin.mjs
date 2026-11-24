@@ -114,7 +114,7 @@ export const adminMessages = Object.freeze({
   "检查 zhin.config.yml 的 database 配置，或在服务器上运行 zhin console init --status 查看原因。": "Check database in zhin.config.yml, or run zhin console init --status on the server to see why.",
   "重试；仍然失败时查看网关日志（zhin logs）。": "Retry; if it still fails, check the gateway logs (zhin logs).",
   "数据库已保存。重启 Host 后新数据库才会生效：在服务器上运行 zhin restart（前台运行时先停止再 zhin start），然后点下面的按钮继续。": "The database is saved and takes effect after a restart: run zhin restart on the server (in the foreground, stop it and run zhin start), then press the button below.",
-  "账号、角色与审计日志存放在这里。可以先保持当前数据库，以后在「运维 → 配置文件」里修改。每一步都会保存在 Host 上，中途关闭页面后用同一个初始化链接回来会从这里继续。": "Accounts, roles and the audit log are stored here. You can keep the current database and change it later under Operations → Configuration. Each step is saved on the Host: close the page and return with the same setup link to continue from here.",
+  "插件数据、聊天记录等存放在这里；Console 账号由网关单独保存。可以先保持当前数据库，以后在「运维 → 配置文件」里修改。每一步都会保存在 Host 上，中途关闭页面后用同一个初始化链接回来会从这里继续。": "Plugin data, chat history and the like are stored here; Console accounts are kept separately by the gateway. You can keep the current database and change it later under Operations → Configuration. Each step is saved on the Host: close the page and return with the same setup link to continue from here.",
   "{0}由 Zhin 实例提供，实例现在没有响应。到「运维 → 实例」查看状态与日志，恢复后重试。": "{0} comes from the Zhin instance, which is not answering. Check its state and logs under Operations → Instance, then retry once it is back.",
   "数据库正忙，暂时读不到{0}。请稍后重试。": "The database is busy, so {0} cannot be read right now. Try again shortly.",
   "浏览和管理项目数据库中的数据；数据库由 Zhin 实例提供。": "Browse and manage the project database; the Zhin instance serves it.",

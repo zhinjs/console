@@ -4,6 +4,7 @@ import {
   SIDE_EVENT_PUSH,
   SIDE_EVENT_RPC,
 } from '@zhin.js/contract'
+import { CONSOLE_MCP_TEST_PATH } from '@zhin.js/console-protocol'
 
 /**
  * Console 只面向当前 Zhin 协议。
@@ -38,7 +39,7 @@ export const CONSOLE_REST = {
   INTROSPECTION: '/api/introspection',
   COMPONENT_PREVIEW: '/api/introspection/components/render',
   /** `POST`, body `{ name }`：对一个已配置的 MCP 服务做一次性连接测试（`agent.configure`）。 */
-  MCP_TEST: '/api/introspection/mcp/test',
+  MCP_TEST: `/api${CONSOLE_MCP_TEST_PATH}`,
   MESSAGE_DIAGNOSTICS: '/api/messages/diagnostics',
   COMMAND_PERMISSIONS: '/api/commands/permissions',
   COMMAND_PERMISSION_EXPLAIN: '/api/commands/permissions/explain',

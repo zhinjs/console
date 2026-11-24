@@ -32,7 +32,7 @@ const cn = (...names) => names.filter(Boolean).join(' ')
 function attentionModules({ state } = {}) {
   const t = (message, values) => translate('zh-CN', message, values)
   const react = { useState: initial => [state ?? (typeof initial === 'function' ? initial() : initial), () => {}] }
-  const common = { react, 'lucide-react': icons, 'react-router-dom': { Link: 'Link' }, '../../i18n': { useI18n: () => ({ t, locale: 'zh-CN' }) }, '@zhin.js/console-ui': { cn, Button: 'Button' }, './attention-model.mjs': model }
+  const common = { react, 'lucide-react': icons, 'react-router-dom': { Link: 'Link' }, '../../i18n': { useI18n: () => ({ t, locale: 'zh-CN' }) }, '@zhin.js/console-ui': { cn, Button: 'Button' }, './attention-model.mjs': model, '../../console-routes.mjs': { CONSOLE_PATHS: { sandbox: '/sandbox' } } }
   const more = compile('pages/attention/AttentionMore.tsx', common)
   const row = compile('pages/attention/AttentionItemRow.tsx', { ...common, './AttentionMore': more })
   const list = compile('pages/attention/AttentionSummaryList.tsx', { ...common, './AttentionMore': more, './AttentionItemRow': row })

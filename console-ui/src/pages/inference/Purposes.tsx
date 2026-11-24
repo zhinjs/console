@@ -617,6 +617,7 @@ export function Purposes({ management: m, focus, onDirtyChange }: { management: 
         <div className="flex flex-wrap gap-2">
           <SelectField
             className="w-36"
+            aria-label={i18n.t("选择层级")}
             value={level}
             onValueChange={(value) => {
               setLevel(value as typeof level)

@@ -9,10 +9,10 @@ import { statusFromError } from '../components/status-state-model.mjs'
 import { ObjectSection } from './ObjectPageLayout'
 import { useConsoleAccess } from '../hooks/use-console-access'
 import { hasConsolePermission } from '../utils/console-access.mjs'
-import { CHAT_ROLE_LABELS } from './chat-roles-model.mjs'
+import { CHAT_ROLE_COPY, CHAT_ROLE_LABELS } from './chat-roles-model.mjs'
 import {
   CHAT_IDENTITY_SELF_PERMISSION, CHAT_PRINCIPALS_RPC, LINK_METHOD_LABELS, bindCountdown, bindInstruction, grantCandidates, isMissingIdentityRpc, principalName,
-  promoteGlobalOwnerRequest, readBindCode, readIdentityMe, readPrincipals, readRecentIdentities, recentIdentitiesRequest, principalsListRequest,
+  promoteGlobalOwnerRequest, readBindCode, readIdentityMe, readPrincipals, readRecentIdentities, readSimulatedSendersOmitted, recentIdentitiesRequest, principalsListRequest,
   type ChatGrantCandidate, type ChatIdentityMe, type ChatIdentityView, type ChatPrincipalView,
 } from './chat-identity-model.mjs'
 import type { ScopeRef } from './scope-tree.mjs'
@@ -58,6 +58,7 @@ export function IdentityChip({ identity }: { identity: ChatIdentityView }) {
       <code>{identity.adapter} / {identity.userId}</code>
       {identity.lastDisplayName ? <span>{identity.lastDisplayName}</span> : null}
       {identity.linkMethod && identity.linkMethod !== 'implicit' ? <em>{i18n.t(LINK_METHOD_LABELS[identity.linkMethod])}</em> : null}
+      {identity.simulatedSender ? <em>{i18n.t(CHAT_ROLE_COPY.simulatedSender)}</em> : null}
     </span>
   )
 }
@@ -80,6 +81,8 @@ export function MyChatIdentitySection({ highlight = false }: { highlight?: boole
   const sectionRef = useRef<HTMLDivElement>(null)
   const linkedBefore = useRef<string | null>(null)
   const me = state.status === 'ready' ? state.me : null
+  // A simulated sender never speaks: 「设为全局 owner」 needs an identity that does (the Host refuses the rest).
+  const speaks = !!me?.principal?.identities.some(identity => !identity.simulatedSender)
   const linkedId = me?.principal?.id ?? null
   // While a code is open, look again every few seconds so 「已绑定」 shows once the chat side used it.
   useEffect(() => {
@@ -153,7 +156,8 @@ export function MyChatIdentitySection({ highlight = false }: { highlight?: boole
                 <div className="console-chat-me-owner" role="note">
                   <Crown aria-hidden="true" />
                   <span>{i18n.t('还没有聊天主人（全局 owner）。你持有全局 iam.manage，可以把这个人设为全局 owner。')}</span>
-                  <Button size="sm" onClick={() => setConfirmOwner(true)} disabled={busy}>{i18n.t('设为全局 owner')}</Button>
+                  <Button size="sm" onClick={() => setConfirmOwner(true)} disabled={busy || !speaks}
+                    title={speaks ? undefined : i18n.t(CHAT_ROLE_COPY.noSpeakingIdentity)}>{i18n.t('设为全局 owner')}</Button>
                 </div>
               ) : null}
               <div className="console-chat-bind">
@@ -197,11 +201,17 @@ export function MyChatIdentitySection({ highlight = false }: { highlight?: boole
   )
 }
 
-type PickerSource = { status: 'loading' | 'ready' | 'unsupported'; recent: ChatIdentityView[]; principals: ChatPrincipalView[] }
+type PickerSource = {
+  status: 'loading' | 'ready' | 'unsupported'
+  recent: ChatIdentityView[]
+  principals: ChatPrincipalView[]
+  /** Simulation adapters whose typed-in senders the Host never lists (`simulatedSendersOmitted`, zhinjs/zhin#1250 第 87 批). */
+  simulatedOmitted: string[]
+}
 
 /** Recent speakers at the scope and known people (both best effort); `unsupported` on an older Host. */
 export function useGrantCandidates(scope: ScopeRef) {
-  const [source, setSource] = useState<PickerSource>({ status: 'loading', recent: [], principals: [] })
+  const [source, setSource] = useState<PickerSource>({ status: 'loading', recent: [], principals: [], simulatedOmitted: [] })
   const body = JSON.stringify(scope)
   useEffect(() => {
     let alive = true
@@ -217,6 +227,7 @@ export function useGrantCandidates(scope: ScopeRef) {
         status: missing ? 'unsupported' : 'ready',
         recent: recent.status === 'fulfilled' ? readRecentIdentities(recent.value) : [],
         principals: people.status === 'fulfilled' ? readPrincipals(people.value) : [],
+        simulatedOmitted: recent.status === 'fulfilled' ? readSimulatedSendersOmitted(recent.value) : [],
       })
     })
     return () => { alive = false }
@@ -243,6 +254,8 @@ export function GrantIdentityPicker({ scope, alias, value, onPick, onUnsupported
   useEffect(() => { if (source.status === 'unsupported') onUnsupported?.() }, [source.status, onUnsupported])
   if (source.status === 'unsupported') return null
   const candidates = grantCandidates({ recent: source.recent, principals: source.principals, alias, query }).slice(0, 30)
+  const anySimulated = candidates.some(candidate => candidate.simulatedSender === true)
+  const simulatedNoteId = `${listId}-simulated`
   return (
     <div className="console-chat-picker">
       <label className="console-chat-picker-search">
@@ -253,16 +266,28 @@ export function GrantIdentityPicker({ scope, alias, value, onPick, onUnsupported
         {source.status === 'loading' ? <p className="console-admin-note">{i18n.t('正在读取最近发言人…')}</p>
           : candidates.length ? candidates.map(candidate => {
             const selected = value?.adapter === candidate.adapter && value.userId === candidate.userId
+            // A simulated sender never speaks; the Host refuses a grant to it (400 `simulated-identity`).
+            const simulated = candidate.simulatedSender === true
+            // A disabled option is skipped by Tab and its greyed look says nothing to a screen reader:
+            // its accessible name carries the reason, and the note under the list explains it.
             return (
-              <button key={candidate.key} type="button" role="option" aria-selected={selected}
-                className={selected ? 'console-chat-picker-option is-selected' : 'console-chat-picker-option'} onClick={() => onPick(candidate)}>
+              <button key={candidate.key} type="button" role="option" aria-selected={selected} aria-disabled={simulated || undefined} disabled={simulated}
+                aria-label={simulated ? i18n.t('{0}：{1}', [`${candidate.label} (${candidate.adapter} / ${candidate.userId})`, i18n.t(CHAT_ROLE_COPY.simulatedCannotGrant)]) : undefined}
+                aria-describedby={simulated ? simulatedNoteId : undefined}
+                className={selected ? 'console-chat-picker-option is-selected' : 'console-chat-picker-option'} onClick={() => { if (!simulated) onPick(candidate) }}>
                 <span className="console-chat-picker-name">{candidate.label}</span>
                 <code>{candidate.adapter} / {candidate.userId}</code>
-                <em>{candidate.source === 'recent' ? i18n.t('最近发言') : candidate.personName && candidate.personName !== candidate.label ? candidate.personName : i18n.t('已知的人')}</em>
+                <em>{simulated ? i18n.t(CHAT_ROLE_COPY.simulatedSender) : candidate.source === 'recent' ? i18n.t('最近发言') : candidate.personName && candidate.personName !== candidate.label ? candidate.personName : i18n.t('已知的人')}</em>
               </button>
             )
           }) : <p className="console-admin-note">{query ? i18n.t('没有匹配的人。') : i18n.t('这一层最近没有人发言，可展开「高级」手动填写。')}</p>}
       </div>
+      {source.status === 'ready' && anySimulated ? (
+        <p id={simulatedNoteId} className="console-admin-note" role="note">{i18n.t(CHAT_ROLE_COPY.simulatedOptionsNote)}</p>
+      ) : null}
+      {source.status === 'ready' && source.simulatedOmitted.length ? (
+        <p className="console-admin-note" role="note">{i18n.t(CHAT_ROLE_COPY.simulatedSendersOmitted)}</p>
+      ) : null}
     </div>
   )
 }

@@ -1,3 +1,4 @@
+import { parseConversationSessionKey } from '@zhin.js/console-protocol'
 import { translate } from '../i18n/locale.mjs'
 
 /**
@@ -36,14 +37,16 @@ export function middleEllipsis(text, max = 32) {
 }
 
 /**
- * 拆 sessionKey：真实格式是 `platform:endpoint:scope:sceneId`（sceneId 里允许再有冒号）。
+ * 拆 sessionKey：真实格式是 `platform:endpoint:scope:sceneId`（sceneId 里允许再有冒号），由
+ * `@zhin.js/console-protocol` 的 `parseConversationSessionKey` 解析。
  * 优先用 Host 给的 platform / endpoint / scope / sceneId；缺失时按上面拆，
- * 少于 4 段（如 `schedule:assistant-profile-weatherReport`）不猜，整条 key 当作会话 ID 显示。
+ * 拆不出来（少于 4 段，如 `schedule:assistant-profile-weatherReport`；或平台、类型、会话 ID 为空）不猜，
+ * 整条 key 当作会话 ID 显示。
  */
 export function splitSessionKey(row) {
-  const parts = String(row.sessionKey).split(':')
-  const fallback = parts.length >= 4
-    ? { platform: parts[0], endpoint: parts[1], scope: parts[2], sceneId: parts.slice(3).join(':') }
+  const parsed = parseConversationSessionKey(String(row.sessionKey))
+  const fallback = parsed
+    ? { platform: parsed.adapter, endpoint: parsed.endpointKey, scope: parsed.kind, sceneId: parsed.id }
     : { platform: '', endpoint: '', scope: '', sceneId: row.sessionKey }
   return {
     sessionKey: row.sessionKey,
@@ -52,6 +55,22 @@ export function splitSessionKey(row) {
     scope: row.scope || fallback.scope,
     sceneId: row.sceneId || fallback.sceneId,
   }
+}
+
+const IM_CONVERSATION_KINDS = new Set(['private', 'group', 'channel'])
+
+/**
+ * The conversation an IM session key names, as the Console reads it: the protocol's
+ * `parseConversationSessionKey` (on the trimmed key), narrowed to what a Console link needs — a
+ * non-blank platform, account and conversation id, and a `private` / `group` / `channel` kind.
+ * The protocol also accepts an empty account (`qq::private:1`, written for a scene without one,
+ * #1250 b80); such a key has no account page to open, so the Console still treats it as no
+ * conversation. Null when the key is not one.
+ */
+export function parseImConversationKey(key) {
+  const parsed = parseConversationSessionKey(String(key ?? '').trim())
+  if (!parsed || !parsed.adapter.trim() || !parsed.endpointKey.trim() || !parsed.id.trim() || !IM_CONVERSATION_KINDS.has(parsed.kind)) return null
+  return { platform: parsed.adapter, endpoint: parsed.endpointKey, kind: parsed.kind, id: parsed.id }
 }
 
 /** The id of a `schedule:<id>` key, '' for other keys. */
@@ -88,7 +107,8 @@ export function sessionKind(row) {
   const own = label(row?.scopeKind)
   if (own) return KIND_ALIASES[own] ?? own
   const key = String(row?.sessionKey ?? '')
-  const scope = label(row?.scope) || (key.split(':').length >= 4 && label(key.split(':').slice(3).join(':')) ? key.split(':')[2] : '')
+  const parsed = parseConversationSessionKey(key)
+  const scope = label(row?.scope) || (parsed && label(parsed.id) ? parsed.kind : '')
   if (IM_SCOPES.has(scope)) return KIND_ALIASES[scope] ?? scope
   const hashed = HASHED_KEY.exec(key)
   if (hashed && HASHED_KINDS[hashed[1]]) return HASHED_KINDS[hashed[1]]
@@ -133,6 +153,21 @@ function sessionLabelFromParts(row, locale) {
 }
 
 /**
+ * A group (or channel) has two kinds of hashed session under the same name: its shared one
+ * (`scene-task:`) and each member's personal one (`personal-session:`). Their names gain
+ * 「· 群聊」 (「· 共享会话」 for a channel) / 「· 个人会话」 so the two rows differ (#64
+ * `sessions-same-group-twice`). Old-style keys name the conversation itself and stay as they are.
+ */
+function groupSessionWord(row, kind, locale) {
+  if (kind !== 'group' && kind !== 'channel') return ''
+  const hashed = HASHED_KEY.exec(String(row?.sessionKey ?? ''))
+  if (!hashed) return ''
+  if (hashed[1] === 'personal-session') return translate(locale, '个人会话')
+  if (hashed[1] === 'scene-task') return translate(locale, kind === 'group' ? '群聊' : '共享会话')
+  return ''
+}
+
+/**
  * The name a session shows: 「平台 · 类型 名称」 from `scopeKind` / `sceneLabel` in the UI language
  * when the Host sends them (zhin 第 58 批), else the Host's `displayName` (`label` / `name` from older
  * shapes; its Chinese type word is translated), else 「平台 · 类型 sceneId」 from a
@@ -142,24 +177,36 @@ function sessionLabelFromParts(row, locale) {
  * key shortened in the middle. Never 「自定义会话」.
  */
 export function sessionLabel(row, locale = 'zh-CN') {
+  const { name, kind } = sessionLabelParts(row, locale)
+  return kind ? `${name} · ${kind}` : name
+}
+
+/**
+ * `sessionLabel` in two parts, for a list too narrow to show the whole name: `name` without the
+ * 「群聊 / 个人会话」 word, and that word as `kind` ('' when the name needs none).
+ */
+export function sessionLabelParts(row, locale = 'zh-CN') {
   const fromParts = sessionLabelFromParts(row, locale)
-  if (fromParts) return fromParts
+  if (fromParts) return { name: fromParts, kind: groupSessionWord(row, KIND_ALIASES[label(row.scopeKind)] ?? label(row.scopeKind), locale) }
   const own = label(row?.displayName) || label(row?.label) || label(row?.name)
   if (own) {
     const chinese = CHINESE_SCOPE_LABEL.exec(own)
-    if (chinese) return `${chinese[1]} · ${`${scopeWord(CHINESE_SCOPE_KINDS[chinese[2]], locale)} ${chinese[3] ?? ''}`.trim()}`
+    if (chinese) {
+      const kind = CHINESE_SCOPE_KINDS[chinese[2]]
+      return { name: `${chinese[1]} · ${`${scopeWord(kind, locale)} ${chinese[3] ?? ''}`.trim()}`, kind: groupSessionWord(row, kind, locale) }
+    }
     const task = CHINESE_TASK_LABEL.exec(own)
-    if (task) return translate(locale, CHINESE_TASK_MESSAGES[task[1]], [task[2] ?? '']).trim()
-    return own
+    if (task) return { name: translate(locale, CHINESE_TASK_MESSAGES[task[1]], [task[2] ?? '']).trim(), kind: '' }
+    return { name: own, kind: '' }
   }
   const key = String(row?.sessionKey ?? '')
   const hashed = HASHED_KEY.exec(key)
-  if (hashed) return withPlatform(sessionPlatform(row), `${translate(locale, HASHED_NAMES[hashed[1]] ?? '会话')} #${hashed[2].slice(0, 8)}`)
+  if (hashed) return { name: withPlatform(sessionPlatform(row), `${translate(locale, HASHED_NAMES[hashed[1]] ?? '会话')} #${hashed[2].slice(0, 8)}`), kind: '' }
   const scheduleId = scheduleIdOfKey(key)
-  if (scheduleId) return translate(locale, '定时任务 {0}', [middleEllipsis(scheduleId)])
+  if (scheduleId) return { name: translate(locale, '定时任务 {0}', [middleEllipsis(scheduleId)]), kind: '' }
   const parts = splitSessionKey({ ...row, sessionKey: key })
-  if (parts.platform && parts.scope) return `${parts.platform} · ${scopeWord(parts.scope, locale)} ${middleEllipsis(parts.sceneId)}`.trim()
-  return middleEllipsis(key)
+  if (parts.platform && parts.scope) return { name: `${parts.platform} · ${scopeWord(parts.scope, locale)} ${middleEllipsis(parts.sceneId)}`.trim(), kind: '' }
+  return { name: middleEllipsis(key), kind: '' }
 }
 
 /**

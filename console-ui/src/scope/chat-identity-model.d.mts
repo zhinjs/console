@@ -44,12 +44,16 @@ export interface ChatGrantCandidate {
   readonly personName?: string
   readonly principalId?: string
   readonly lastSeenAt?: number
+  /** The identity never speaks; roles cannot be granted to it. */
+  readonly simulatedSender?: true
 }
 
 export declare function isMissingIdentityRpc(error: unknown): boolean
 export declare function readPrincipal(item: unknown): ChatPrincipalView | null
 export declare function readPrincipals(payload: unknown): ChatPrincipalView[]
 export declare function readRecentIdentities(payload: unknown): ChatIdentityView[]
+export declare function readSimulatedSendersOmitted(payload: unknown): string[]
+export declare function isSimulatedOnly(principal: ChatPrincipalView): boolean
 export declare function readIdentityMe(payload: unknown): ChatIdentityMe
 export declare function readBindCode(payload: unknown): ConsoleChatBindCodeResult
 export declare function bindInstruction(code: string, locale?: 'zh-CN' | 'en'): string

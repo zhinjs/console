@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import vm from 'node:vm'
 import ts from 'typescript'
 import { localeModule, isLocaleImport } from './locale-fixture.mjs'
+import * as retryAfter from '../console-ui/src/utils/retry-after.mjs'
 
 const authSource = await readFile(new URL('../console-ui/src/utils/auth.ts', import.meta.url), 'utf8')
 const rpcSource = await readFile(new URL('../console-ui/src/utils/plugin-rpc.ts', import.meta.url), 'utf8')
@@ -17,7 +18,7 @@ function fixture() {
   const storage = { getItem: key => items.get(key) ?? null, setItem: (key, value) => items.set(key, value), removeItem: key => items.delete(key) }
   const globals = { Headers, URL, localStorage: storage, sessionStorage: storage, window: { location: { origin: 'http://console.invalid' }, dispatchEvent() {} },
     CustomEvent: class {}, fetch: (url, init) => new Promise(resolve => requests.push({ url, init, resolve })) }
-  vm.runInNewContext(authCode, { ...globals, exports: auth, require: name => { assert(isLocaleImport(name)); return localeModule } })
+  vm.runInNewContext(authCode, { ...globals, exports: auth, require: name => { if (name === './retry-after.mjs') return retryAfter; assert(isLocaleImport(name)); return localeModule } })
   vm.runInNewContext(rpcCode, { ...globals, exports: rpc, require: name => name === '@zhin.js/client' ? { PluginRpcError: sdkPluginRpcError } : (assert.equal(name, './auth'), auth) })
   auth.setApiBase('https://host-a.invalid'); auth.setToken('synthetic-A')
   return { auth, rpc, requests }

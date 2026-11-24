@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { AlertCircle, AlertTriangle, ArrowUpRight, BellOff, Info, RotateCcw, Clock } from 'lucide-react'
+import { AlertCircle, AlertTriangle, ArrowUpRight, BellOff, FlaskConical, Info, RotateCcw, Clock } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { CONSOLE_PATHS } from '../../console-routes.mjs'
 import { Button, cn } from '@zhin.js/console-ui'
 import { useI18n } from '../../i18n'
 import { formatAttentionSince, type AttentionItem, type AttentionSeverity } from './attention-model.mjs'
@@ -53,6 +54,11 @@ export function AttentionItemRow({ item, now, hidden, onSnooze, onIgnore, onRest
             {i18n.t('去处理')}<ArrowUpRight />
           </Link>
         </Button>
+        {item.simulationOnly ? (
+          <Button asChild variant="outline" size="sm">
+            <Link to={CONSOLE_PATHS.sandbox}><FlaskConical />{i18n.t('打开 Sandbox')}</Link>
+          </Button>
+        ) : null}
         {hidden ? (
           <Button variant="outline" size="sm" onClick={() => onRestore?.(item.id)}>
             <RotateCcw />{i18n.t('恢复')}

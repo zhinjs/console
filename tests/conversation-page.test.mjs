@@ -5,11 +5,12 @@ import { createRequire } from 'node:module'
 import ts from 'typescript'
 import { localeModule, isLocaleImport } from './locale-fixture.mjs'
 import * as personalModels from '../console-ui/src/pages/personal-session-model.mjs'
-import { readRecentSessions, summarizeRecentSessions } from '../console-ui/src/pages/agent-session-recent.mjs'
+import { readRecentSessions, sessionsNeedingGroupNames, summarizeRecentSessions, withGroupNames } from '../console-ui/src/pages/agent-session-recent.mjs'
 import * as recordsModel from '../console-ui/src/pages/scope/records-model.mjs'
 import * as scopeTree from '../console-ui/src/scope/scope-tree.mjs'
 import * as scopeFilter from '../console-ui/src/pages/insights/scope-filter.mjs'
 import * as sessionLabels from '../console-ui/src/utils/session-label.mjs'
+import * as consoleProtocol from '@zhin.js/console-protocol'
 
 const require = createRequire(import.meta.url)
 const options = { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX }
@@ -19,7 +20,7 @@ function compile(source, mocks = {}) {
   return module.exports
 }
 const source = await readFile(new URL('../console-ui/src/pages/agent-sessions.tsx', import.meta.url), 'utf8')
-const sessions = compile(await readFile(new URL('../console-ui/src/utils/agent-session.ts', import.meta.url), 'utf8'), { '../pages/personal-session-model.mjs': personalModels, './session-label.mjs': sessionLabels })
+const sessions = compile(await readFile(new URL('../console-ui/src/utils/agent-session.ts', import.meta.url), 'utf8'), { '../pages/personal-session-model.mjs': personalModels, './session-label.mjs': sessionLabels, '@zhin.js/console-protocol': consoleProtocol })
 const elements = node => node && typeof node === 'object' ? [node, ...[node.props?.children].flat(Infinity).flatMap(elements)] : []
 // Radix Dialog does not mount its content while closed.
 const text = node => typeof node === 'string' ? node : node && typeof node === 'object' ? node.type === 'Dialog' && !node.props.open ? '' : [node.props?.children].flat(Infinity).map(text).join('') : ''
@@ -49,7 +50,7 @@ function fixture(initialKey = 'icqq:bot:group:room') {
     './SessionMessageDetails':{SessionMessageDetails:'message-details'}, './ConversationHistory':{ConversationHistory:'conversation-history'},
     './ConversationTrace':{ConversationTrace:'conversation-trace'}, './useConversationTraces':{useConversationTraces:(...args)=>{ traceReads.push(args); return {turns:[],loading:false,error:null,refresh(){}} }},
     '@zhin.js/client':{cn:(...parts)=>parts.filter(Boolean).join(' ')}, '../contracts/zhin-console':{CONSOLE_REST:{AGENT_SESSIONS:'/api/agent/sessions'}},
-    '../utils/console-access.mjs':{hasConsolePermission:()=>true}, './agent-session-recent.mjs':{readRecentSessions,summarizeRecentSessions}, })
+    '../utils/console-access.mjs':{hasConsolePermission:()=>true}, './agent-session-recent.mjs':{readRecentSessions,summarizeRecentSessions,sessionsNeedingGroupNames,withGroupNames}, './AmbientGroupPicker':{useAmbientGroupCatalog:()=>({loading:false,error:null,catalog:null,retry(){}})}, './ambient-group-picker-model.mjs':{groupNamesFromCatalog:()=>new Map()}, })
   const f = {calls,traceReads,render(){cursor=0;tree=module.default(); const run=effects;effects=[];run.forEach(fn=>fn());return tree},get tree(){return tree},setScope(value){scope=value},navigate(key){params=new URLSearchParams({sessionKey:key})},close(){slots.forEach(slot=>slot?.cleanup?.())}}
   f.render();return f
 }
