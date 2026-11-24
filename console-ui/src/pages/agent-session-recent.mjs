@@ -30,10 +30,14 @@ function groupOfRow(row) {
   return parsed?.kind === 'group' ? { adapter: parsed.platform, id: parsed.id, name: '' } : null
 }
 
+/** No kind yet, or a group: the only rows a group name may be given to. */
+const groupKind = kind => !kind || kind === 'group'
+
 /** A row with what it says about its group: `group` (adapter and id), and the recorded name as its scene label. */
 function withGroupFields(fields, row) {
   const group = groupOfRow(row)
-  if (!group) return fields
+  // A row the Host calls something other than a group (`scope_kind`) is not named as one.
+  if (!group || !groupKind(fields.scopeKind)) return fields
   const named = !fields.sceneLabel && group.name ? { platform: fields.platform || group.adapter, scopeKind: fields.scopeKind || 'group', sceneLabel: group.name } : {}
   return { ...fields, ...named, group: { adapter: group.adapter, id: group.id } }
 }
@@ -51,7 +55,7 @@ function shownGroupName(row) {
  * no `conversation.name`), so the page should read the group lists for its name.
  */
 export function sessionsNeedingGroupNames(rows) {
-  return (Array.isArray(rows) ? rows : []).some(row => row?.group && !shownGroupName(row))
+  return (Array.isArray(rows) ? rows : []).some(row => row?.group && groupKind(row.scopeKind) && !shownGroupName(row))
 }
 
 /**
@@ -61,7 +65,7 @@ export function sessionsNeedingGroupNames(rows) {
 export function withGroupNames(rows, names) {
   if (!names || names.size === 0) return rows
   return rows.map(row => {
-    if (!row.group || shownGroupName(row)) return row
+    if (!row.group || !groupKind(row.scopeKind) || shownGroupName(row)) return row
     const name = names.get(`${row.group.adapter}:${row.group.id}`)
     return name ? { ...row, platform: row.platform || row.group.adapter, scopeKind: row.scopeKind || 'group', sceneLabel: name } : row
   })
