@@ -30,5 +30,9 @@ export function taskActionDescription(action: string, locale?: 'zh-CN' | 'en'): 
 export function taskMutationBody(input: { generation: number; provider: TaskProvider; requestId: string; target?: DiagnosticConversation; parameters?: Record<string, unknown>; id?: string; action?: TaskAction }, locale?: 'zh-CN' | 'en'): TaskMutationBody
 /** Permissions the Host requires for POST /tasks/create and /tasks/change (from the protocol table). */
 export const TASK_WRITE_PERMISSIONS: readonly string[]
+/** True when the protocol does not map a task write route to a permission (the Host then denies it). */
+export const TASK_WRITE_UNMAPPED: boolean
+/** A write route's permission: its name, '' when any signed-in identity may, null when the Host denies it. */
+export function taskRoutePermission(rule: { permission: string } | null | undefined): string | null
 /** Whether the current identity may create or change tasks, and the permissions it lacks. */
-export function taskWriteAccess(has: (permission: string) => boolean): { allowed: boolean; missing: string[] }
+export function taskWriteAccess(has: (permission: string) => boolean, unmapped?: boolean): { allowed: boolean; missing: string[] }

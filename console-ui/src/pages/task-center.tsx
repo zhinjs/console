@@ -225,7 +225,9 @@ export default function TaskCenterPage() {
     <div className="flex justify-end"><Button variant="outline" size="sm" disabled={loading || busy || !current} onClick={() => { void refresh(); void loadUseCases() }}><RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新核对")}</Button></div>
     <HostToolApprovalsPanel />
     <HostSelfChangesPanel />
-    {readOnly && <Alert><AlertDescription>{i18n.t("当前身份缺少「{0}」权限，创建、修改、暂停、恢复和取消均已禁用。", [writeAccess.missing.map(name => permissionLabel(name, i18n.t)).join('、')])}</AlertDescription></Alert>}
+    {readOnly && <Alert><AlertDescription>{writeAccess.missing.length
+      ? i18n.t("当前身份缺少「{0}」权限，创建、修改、暂停、恢复和取消均已禁用。", [writeAccess.missing.map(name => permissionLabel(name, i18n.t)).join(i18n.t('、'))])
+      : i18n.t("当前协议没有登记管理员任务的写入权限，Host 会拒绝写入；创建、修改、暂停、恢复和取消均已禁用。")}</AlertDescription></Alert>}
     {error && current && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
     {notice && current && <Alert><AlertDescription>{notice}</AlertDescription></Alert>}
     {pending && current && <Alert><AlertDescription>{i18n.t("保留操作 ID：")}<code className="break-all">{pending.requestId}</code>。{busy ? i18n.t("等待当前操作回执。") : i18n.t("结果尚未确认，写操作已锁定。请只读核对任务与目标会话；没有匹配的持久确认不能视为未执行。")}
