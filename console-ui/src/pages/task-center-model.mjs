@@ -1,3 +1,4 @@
+import { resolveConsoleHttpPermission } from '@zhin.js/console-protocol'
 import { translate, localizeSchemaField } from '../i18n/locale.mjs'
 import { validDiagnosticConversation } from './endpoint-detail/message-diagnostics.mjs'
 const string = value => typeof value === 'string' && value.length > 0
@@ -152,4 +153,36 @@ export function taskMutationBody({ generation, provider, requestId, target, para
   }
   if (!validDiagnosticConversation(target) || !object(parameters)) throw new Error(translate(locale, "请提供完整投递目标与参数。"))
   return { ...base, target: structuredClone(target), parameters: structuredClone(parameters) }
+}
+
+const TASK_WRITE_ROUTES = Object.freeze(['/tasks/create', '/tasks/change'])
+/** Rules a signed-in identity passes without a named permission. */
+const OPEN_RULES = new Set(['authenticated', 'public'])
+
+/** The permission one write route needs: a permission name, '' when any signed-in identity may, null when the protocol would deny it. */
+export function taskRoutePermission(rule) {
+  if (!rule) return null
+  if (OPEN_RULES.has(rule.permission)) return ''
+  return typeof rule.permission === 'string' && rule.permission.includes('.') ? rule.permission : null
+}
+
+const taskRoutePermissions = TASK_WRITE_ROUTES.map(path => taskRoutePermission(resolveConsoleHttpPermission('POST', path)))
+
+/**
+ * What the Host requires to create or change an administrator task: the permissions of
+ * POST /tasks/create and /tasks/change in the protocol's `CONSOLE_HTTP_PERMISSIONS` (`feature.configure`
+ * in 1.10), so the page enables writing exactly when the Host would accept it (#64
+ * `task-center-permission-mismatch`). A route the protocol does not map (or maps to RPC / bootstrap)
+ * is denied by the Host, so writing then stays disabled for everyone (`TASK_WRITE_UNMAPPED`).
+ */
+export const TASK_WRITE_PERMISSIONS = Object.freeze([...new Set(taskRoutePermissions.filter(Boolean))])
+export const TASK_WRITE_UNMAPPED = taskRoutePermissions.some(permission => permission === null)
+
+/**
+ * Whether the current identity may write tasks (`has` checks one permission), and which permissions it
+ * lacks; `unmapped` routes are never writable.
+ */
+export function taskWriteAccess(has, unmapped = TASK_WRITE_UNMAPPED) {
+  const missing = TASK_WRITE_PERMISSIONS.filter(permission => !has(permission))
+  return { allowed: !unmapped && missing.length === 0, missing }
 }

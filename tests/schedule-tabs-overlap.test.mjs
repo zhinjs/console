@@ -23,7 +23,10 @@ test('the assistant card does not count jobs that are already counted as reminde
 
 test('the task hub passes the reminder ids, and 全部任务 shows the next run like 定时提醒', () => {
   const hub = readFileSync(new URL('../console-ui/src/pages/task-hub.tsx', import.meta.url), 'utf8')
-  assert.match(hub, /summarizeAssistantJobs\(validateAssistantJobs\(assistantBody, i18n\.locale\), i18n\.locale, reminderIds\)/)
+  // The cards are built from what 全部任务 read (#64 task-hub-overview-double-read); the reminder ids go along.
+  assert.match(hub, /summarizeOverviewSources\(sources, i18n\.locale\)/)
+  const model = readFileSync(new URL('../console-ui/src/pages/task-hub-summary-model.mjs', import.meta.url), 'utf8')
+  assert.match(model, /summarizeAssistantJobs\(sources\.assistant, locale, reminderIds\)/)
   assert.match(hub, /i18n\.t\("另有 \{0\} 个来自定时提醒，已算在「定时提醒」里"/)
   const overview = readFileSync(new URL('../console-ui/src/pages/TaskOverview.tsx', import.meta.url), 'utf8')
   assert.match(overview, /relativeUntil\(value, Date\.now\(\), i18n\.locale\)/)

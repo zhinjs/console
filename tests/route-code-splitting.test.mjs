@@ -29,6 +29,6 @@ test('首页 stays in the first screen', () => {
 
 test('a lazy page shows the shared loading state while its code downloads', () => {
   const helper = read('lazy-page.tsx')
-  assert.match(helper, /const Page = lazy\(load\)/)
-  assert.match(helper, /<Suspense fallback=\{<StatusState kind="loading" \/>\}><Page \/><\/Suspense>/)
+  assert.match(helper, /lazy\(\(\) => load\(\)/)
+  assert.match(helper, /<Suspense fallback=\{<StatusState kind="loading" \/>\}><Page \{\.\.\.props\} \/><\/Suspense>/)
 })

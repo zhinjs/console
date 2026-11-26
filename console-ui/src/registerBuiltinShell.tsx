@@ -1,39 +1,8 @@
 import { app } from './utils/console-client'
 import HomePage from './pages/dashboard'
-import AttentionPage from './pages/attention'
-import PluginsPage from './pages/plugins'
-import PluginDetailPage from './pages/plugin-detail'
-import ScopeObjectRoute from './pages/scope'
-import LogsPage from './pages/logs'
-import ConfigPage from './pages/config'
-import EnvManagePage from './pages/env'
-import MarketplacePage from './pages/marketplace'
-import TaskHubPage from './pages/task-hub'
-import WelcomeUseCasePage from './pages/welcome-use-case'
-import ScenarioLabPage from './pages/scenario-lab'
-import CommandPermissionsPage from './pages/command-permissions'
-import AgentWorkbenchPage from './pages/agent-workbench'
-import AgentSessionsPage from './pages/agent-sessions'
-import BotReplayPage from './pages/bot-replay'
 import { REPLAY_PERMISSION } from './pages/bot-replay-model.mjs'
-import AmbientEngagementPage from './pages/ambient-engagement'
 import { AMBIENT_STATUS_PERMISSION } from './pages/ambient-engagement-model.mjs'
-import TokenUsagePage from './pages/token-usage'
-import SkillsAssistantPage from './pages/skills-assistant'
 import { SKILLS_STATUS_PERMISSION } from './pages/skills-assistant-model.mjs'
-import WorkroomsPage from './pages/workrooms'
-import WorkroomCatalogPage from './pages/workroom-catalog'
-import FeatureMatrixPage from './pages/features/feature-matrix'
-import GlobalFeatureConfigPage from './pages/features/global-config'
-import OnboardingPage from './pages/onboarding'
-import AccountPage from './pages/account'
-import OpsInstancePage from './pages/ops/instance'
-import SelfCheckPage from './pages/ops/self-check'
-import AccessUsersPage from './pages/access/users'
-import AccessRolesPage from './pages/access/roles'
-import AccessTokensPage from './pages/access/tokens'
-import AccessAuditPage from './pages/access/audit'
-import ChatMembersPage from './pages/chat-members'
 import { LegacyRedirect } from './components/legacy-redirect'
 import { CONSOLE_PATHS as P, LEGACY_ROUTE_REDIRECTS } from './console-routes.mjs'
 import { NAV_GROUPS } from './navigation-taxonomy'
@@ -46,6 +15,40 @@ const DatabasePage = lazyPage(() => import('./pages/database/database-page'))
 const IntrospectionPage = lazyPage(() => import('./pages/introspection'))
 const PersonalModelsPage = lazyPage(() => import('./pages/personal-models'))
 const OpsTerminalPage = lazyPage(() => import('./pages/ops/terminal'))
+
+// Every other page too (#64 `route-code-splitting-rest`): the sign-in page downloaded them all. Only 首页,
+// the first page after signing in, is in the first screen; `scripts/first-screen-size.mjs` keeps it so.
+const AttentionPage = lazyPage(() => import('./pages/attention'))
+const PluginsPage = lazyPage(() => import('./pages/plugins'))
+const PluginDetailPage = lazyPage(() => import('./pages/plugin-detail'))
+const ScopeObjectRoute = lazyPage(() => import('./pages/scope'))
+const LogsPage = lazyPage(() => import('./pages/logs'))
+const ConfigPage = lazyPage(() => import('./pages/config'))
+const EnvManagePage = lazyPage(() => import('./pages/env'))
+const MarketplacePage = lazyPage(() => import('./pages/marketplace'))
+const TaskHubPage = lazyPage(() => import('./pages/task-hub'))
+const WelcomeUseCasePage = lazyPage(() => import('./pages/welcome-use-case'))
+const ScenarioLabPage = lazyPage(() => import('./pages/scenario-lab'))
+const CommandPermissionsPage = lazyPage(() => import('./pages/command-permissions'))
+const AgentWorkbenchPage = lazyPage(() => import('./pages/agent-workbench'))
+const AgentSessionsPage = lazyPage(() => import('./pages/agent-sessions'))
+const BotReplayPage = lazyPage(() => import('./pages/bot-replay'))
+const AmbientEngagementPage = lazyPage(() => import('./pages/ambient-engagement'))
+const TokenUsagePage = lazyPage(() => import('./pages/token-usage'))
+const SkillsAssistantPage = lazyPage(() => import('./pages/skills-assistant'))
+const WorkroomsPage = lazyPage(() => import('./pages/workrooms'))
+const WorkroomCatalogPage = lazyPage(() => import('./pages/workroom-catalog'))
+const FeatureMatrixPage = lazyPage(() => import('./pages/features/feature-matrix'))
+const GlobalFeatureConfigPage = lazyPage(() => import('./pages/features/global-config'))
+const OnboardingPage = lazyPage(() => import('./pages/onboarding'))
+const AccountPage = lazyPage(() => import('./pages/account'))
+const OpsInstancePage = lazyPage(() => import('./pages/ops/instance'))
+const SelfCheckPage = lazyPage(() => import('./pages/ops/self-check'))
+const AccessUsersPage = lazyPage(() => import('./pages/access/users'))
+const AccessRolesPage = lazyPage(() => import('./pages/access/roles'))
+const AccessTokensPage = lazyPage(() => import('./pages/access/tokens'))
+const AccessAuditPage = lazyPage(() => import('./pages/access/audit'))
+const ChatMembersPage = lazyPage(() => import('./pages/chat-members'))
 
 let builtinPagesRegistered = false
 

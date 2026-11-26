@@ -144,7 +144,8 @@ test('schedules: plugin housekeeping is its own folded type with a readable titl
   const { main, internal } = splitInternalTasks(rows)
   assert.deepEqual(internal.map(row => row.title), ['轮询 RSS 订阅'])
   assert.ok(main.some(row => row.title === 'B 站轮询'), 'a failing internal task stays where problems are read')
-  for (const page of ['pages/cron.tsx', 'pages/TaskOverview.tsx', 'pages/task-hub.tsx']) {
+  // task-hub.tsx no longer reads schedule:list itself: its cards use what TaskOverview read (#64 task-hub-overview-double-read).
+  for (const page of ['pages/cron.tsx', 'pages/TaskOverview.tsx']) {
     assert.match(src(page), /SCHEDULE_LIST, locale: i18n\.locale/, `${page} asks for localized titles`)
   }
 })
