@@ -2,6 +2,8 @@ import { resolveConsoleHttpPermission } from '@zhin.js/console-protocol'
 
 /** Rules any signed-in identity passes without a named permission. */
 const OPEN_RULES = new Set(['authenticated', 'public'])
+/** Rules no identity passes through a plain request (RPC envelopes are checked per message; bootstrap is setup only). */
+const CLOSED_RULES = new Set(['rpc', 'bootstrap'])
 
 /**
  * The permission the Host requires for one Console HTTP request (`relativePath` under the API base,
@@ -14,7 +16,7 @@ export function httpRoutePermission(method, relativePath) {
   const rule = resolveConsoleHttpPermission(method, relativePath)
   if (!rule) return null
   if (OPEN_RULES.has(rule.permission)) return ''
-  return typeof rule.permission === 'string' && rule.permission.includes('.') ? rule.permission : null
+  return typeof rule.permission === 'string' && rule.permission && !CLOSED_RULES.has(rule.permission) ? rule.permission : null
 }
 
 /**

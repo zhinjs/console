@@ -21,3 +21,12 @@ test('the page no longer gates the switch on endpoint.operate, and the note is t
   assert.doesNotMatch(translate('en', '需要「{0}」权限才能从其他消息继续。', ['x']), /[一-鿿]/u)
   assert.doesNotMatch(translate('en', '当前协议没有登记切换会话分支的权限，不能从其他消息继续。'), /[一-鿿]/u)
 })
+
+test('rpc and bootstrap rules are closed, any other named permission (plugin ones too) is required as is', async () => {
+  const { CONSOLE_HTTP_PERMISSIONS } = await import('@zhin.js/console-protocol')
+  for (const rule of CONSOLE_HTTP_PERMISSIONS) {
+    if (rule.method === '*' || rule.prefix) continue
+    const expected = ['rpc', 'bootstrap'].includes(rule.permission) ? null : ['authenticated', 'public'].includes(rule.permission) ? '' : rule.permission
+    assert.equal(httpRoutePermission(rule.method, rule.path), expected, `${rule.method} ${rule.path}`)
+  }
+})
