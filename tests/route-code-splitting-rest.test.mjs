@@ -49,3 +49,21 @@ test('pnpm build fails when the first screen grows past its budget', () => {
   // 903 KB (gzip) before this change; the budget must stay well below it.
   assert.ok(FIRST_SCREEN_GZIP_BUDGET <= 600 * 1024, `budget ${FIRST_SCREEN_GZIP_BUDGET}`)
 })
+
+test('the size check follows the site base and ignores comments, queries and data-src', () => {
+  const html = '<!-- <script src=/old.js></script> --><script src=/console/a.js?v=1 data-farm-resource=true></script><script type=module src="/console/b.js#x" data-src=c.js></script>'
+  assert.deepEqual(firstScreenScripts(html, '/console'), ['a.js', 'b.js'])
+  assert.deepEqual(firstScreenScripts(html, '/console/'), ['a.js', 'b.js'])
+  assert.deepEqual(firstScreenScripts('<script src=https://cdn.example/x.js></script><script src=//cdn.example/y.js></script>'), [], 'remote scripts are not ours')
+  const dir = mkdtempSync(join(tmpdir(), 'first-screen-base-'))
+  writeFileSync(join(dir, 'a.js'), 'a'); writeFileSync(join(dir, 'b.js'), 'b')
+  writeFileSync(join(dir, 'index.html'), html)
+  assert.equal(firstScreenSize(dir, '/console').files, 2)
+  assert.throws(() => firstScreenSize(dir), /not in .*CONSOLE_PAGES_BASE/u, 'a missing file says why, not a bare ENOENT')
+})
+
+test('a page whose code failed to load is loaded again on retry', () => {
+  const helper = read('lazy-page.tsx')
+  assert.match(helper, /const create = \(\) => lazy\(\(\) => load\(\)\.catch\(\(error: unknown\) => \{ Page = create\(\); throw error \}\)\)/)
+  assert.match(helper, /let Page = create\(\)/)
+})

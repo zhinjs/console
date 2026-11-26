@@ -9,7 +9,10 @@ import { StatusState } from './components/StatusState'
  * fails to load reaches the page error boundary.
  */
 export function lazyPage<P extends object = Record<string, never>>(load: () => Promise<{ default: ComponentType<P> }>): ComponentType<P> {
-  const Page = lazy(load)
+  // React.lazy keeps a failed load (a network blip, or chunks replaced by a deploy while the tab was
+  // open): a fresh lazy component then lets 「重试当前页面」 load the page again instead of failing again.
+  const create = () => lazy(() => load().catch((error: unknown) => { Page = create(); throw error }))
+  let Page = create()
   function LazyPage(props: P) {
     return <Suspense fallback={<StatusState kind="loading" />}><Page {...props} /></Suspense>
   }
