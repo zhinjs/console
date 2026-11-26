@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "farm start",
-    "build": "farm build",
+    "build": "farm build && node scripts/first-screen-size.mjs dist",
     "build:demo": "farm build",
     "typecheck": "tsc --noEmit",
     "test": "node --import ./tests/helpers/english-catalog.mjs --test tests/*.test.mjs",

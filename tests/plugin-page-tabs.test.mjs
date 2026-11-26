@@ -89,7 +89,7 @@ test('the detail page mounts the tabs with the plugin header, and page tabs are 
   assert.match(detail, /\{tab && pageChrome\?\.refresh \? null : \(/, 'a page with its own refresh control replaces the header 刷新')
   assert.match(detail, /const name = pluginName \?\? params\.name/)
   const entries = await source('bootstrap/loadConsoleEntries.ts')
-  assert.match(entries, /React\.createElement\(PluginDetailPage as React\.ComponentType<PluginDetailPageProps>, \{ plugin: tab\.plugin, tab: \{ href: tab\.href, content: route\.element \} \}\)/)
+  assert.match(entries, /React\.createElement\(PluginDetailPage, \{ plugin: tab\.plugin, tab: \{ href: tab\.href, content: route\.element \} \}\)/)
   assert.match(entries, /registerPluginPageRedirect\(plan\.redirect\.path, plan\.redirectTo\)/)
   assert.match(entries, /warnIgnoredSection\(route\.path, plan\.sectionIgnored\)/)
   assert.match(entries, /clearPluginPageRedirects\(\)/)
