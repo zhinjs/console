@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { PageHeader, PageShell } from '@zhin.js/console-ui'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { LogViewer } from './logs/LogViewer'
+import { logManageAccess } from './logs/read-state.mjs'
 
 /**
  * /logs：筛选写在地址栏（`?q=` `?level=` `?adapter=&endpoint=` …），深链与书签照旧可用。
@@ -10,8 +11,8 @@ import { LogViewer } from './logs/LogViewer'
  */
 export default function LogsPage() {
   const i18n = useI18n()
-  // Clearing logs is a host operation; viewers only read.
-  const readOnly = !hasConsolePermission('ops.config.write')
+  // Clearing logs is a host operation; viewers only read. Decided as LogViewer does (#64 logs-manage-permission-mismatch).
+  const readOnly = !logManageAccess(name => hasConsolePermission(name)).allowed
   const [searchParams, setSearchParams] = useSearchParams()
   return (
     <PageShell className="console-logs-page">

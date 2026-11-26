@@ -157,14 +157,14 @@ test('the panel is offered only to principals who can see /logs, and steps aside
 // ---------- LogViewer: controlled filter state ----------
 
 const viewerSource = await source('pages/logs/LogViewer.tsx')
-function renderViewer(params, onParamsChange, variant) {
+function renderViewer(params, onParamsChange, variant, has = () => true) {
   const runtime = hookRuntime()
   const mod = compile(viewerSource, {
     react: { ...runtime.hooks, useEffect() {}, useLayoutEffect() {} },
     '../../i18n': { useI18n: () => i18n }, '../../utils/auth': { apiFetch: async () => { throw new Error('no network in tests') } },
     '../../components/toast': { useToast: () => ({ success() {}, error() {} }) }, '@zhin.js/console-ui': { ConfirmDialog: 'confirm-dialog' },
     '../../contracts/zhin-console': { CONSOLE_REST: { LOGS: '/api/logs', LOGS_STATS: '/api/logs/stats', LOGS_CLEANUP: '/api/logs/cleanup' } },
-    '../../utils/read-error.mjs': readError, './read-state.mjs': readState, '../../utils/console-access.mjs': { hasConsolePermission: () => true },
+    '../../utils/read-error.mjs': readError, './read-state.mjs': readState, '../../utils/console-access.mjs': { hasConsolePermission: name => has(name) },
     './LogWorkbench': { LogWorkbench: 'log-workbench' }, './LogPanelWorkbench': { LogPanelWorkbench: 'log-panel-workbench' },
     '../insights/ScopeFilterBar': { ScopeFilterBar: 'scope-filter-bar' },
     '../insights/scope-filter.mjs': scopeFilter, './history-model.mjs': historyModel,
@@ -204,7 +204,7 @@ test('/logs keeps URL-backed filters: deep links like /logs?q=… render and cha
   const page = compile(await source('pages/logs.tsx'), {
     react: runtime.hooks, '../i18n': { useI18n: () => i18n },
     'react-router-dom': { useSearchParams: () => [urlParams, (next, options) => writes.push([next.toString(), options])] },
-    '@zhin.js/console-ui': { PageHeader: 'page-header', PageShell: 'page-shell' }, '../utils/console-access.mjs': { hasConsolePermission: () => false }, './logs/LogViewer': { LogViewer: 'log-viewer' },
+    '@zhin.js/console-ui': { PageHeader: 'page-header', PageShell: 'page-shell' }, '../utils/console-access.mjs': { hasConsolePermission: () => false }, './logs/LogViewer': { LogViewer: 'log-viewer' }, './logs/read-state.mjs': readState,
   })
   const tree = runtime.render(() => page.default())
   const viewer = nodes(tree).find(node => node.type === 'log-viewer')
@@ -463,4 +463,14 @@ test('panel header: the range is a chip with open-object and clear; the text-mat
     assert.equal(storeModule.logPanelStore.get().params, 'q=boom', 'clearing the range keeps the other filters')
     assert.ok(!nodes(f.render()).some(node => node.props?.className === 'console-log-panel-scope'))
   } finally { f.close() }
+})
+
+// #64 `logs-manage-permission-mismatch`: 清理 / 清空 follow ops.database.write (the protocol), not ops.config.write.
+test('log maintenance (menu and confirmations) follows ops.database.write', () => {
+  const view = granted => {
+    const { tree, workbench } = renderViewer(new URLSearchParams(), () => {}, undefined, name => granted.includes(name))
+    return { readOnly: workbench.props.state.readOnly, dialogs: nodes(tree).filter(node => node.type === 'confirm-dialog').length }
+  }
+  assert.deepEqual(view(['status.view', 'ops.config.write']), { readOnly: true, dialogs: 0 }, 'ops.config.write alone cannot clear logs')
+  assert.deepEqual(view(['status.view', 'ops.database.write']), { readOnly: false, dialogs: 2 }, 'ops.database.write alone can')
 })

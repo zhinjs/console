@@ -5,7 +5,7 @@ import { useToast } from '../../components/toast'
 import { ConfirmDialog } from '@zhin.js/console-ui'
 import { CONSOLE_REST } from '../../contracts/zhin-console'
 import { readErrorSummary } from '../../utils/read-error.mjs'
-import { logReadState, logPayloadAvailability } from './read-state.mjs'
+import { logReadState, logPayloadAvailability, logManageAccess } from './read-state.mjs'
 import { hasConsolePermission } from '../../utils/console-access.mjs'
 import { LogWorkbench, type LogEntry, type LogStats, type LogWorkbenchActions, type LogWorkbenchState } from './LogWorkbench'
 import { LogPanelWorkbench } from './LogPanelWorkbench'
@@ -35,7 +35,8 @@ export interface LogViewerProps {
 export function LogViewer({ params, onParamsChange, variant = 'page' }: LogViewerProps) {
   const i18n = useI18n()
   // Clearing logs is a host operation; viewers only read.
-  const readOnly = !hasConsolePermission('ops.config.write')
+  // 清理 / 清空 need what the Host requires for them (ops.database.write in protocol 1.10, #64 logs-manage-permission-mismatch).
+  const readOnly = !logManageAccess(name => hasConsolePermission(name)).allowed
   const paramsRef = useRef(params)
   paramsRef.current = params
   const onParamsChangeRef = useRef(onParamsChange)
