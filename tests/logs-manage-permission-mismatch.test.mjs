@@ -25,3 +25,8 @@ test('both the log page and the log viewer decide with logManageAccess, not ops.
     assert.match(source, /const readOnly = !logManageAccess\(name => hasConsolePermission\(name\)\)\.allowed/u, file)
   }
 })
+
+test('an unmapped route is never manageable', async () => {
+  const { httpRouteAccess } = await import('../console-ui/src/utils/http-permission.mjs')
+  assert.deepEqual(httpRouteAccess('DELETE', '/no/such/logs', () => true), { allowed: false, missing: null })
+})
