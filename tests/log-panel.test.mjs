@@ -204,7 +204,7 @@ test('/logs keeps URL-backed filters: deep links like /logs?q=… render and cha
   const page = compile(await source('pages/logs.tsx'), {
     react: runtime.hooks, '../i18n': { useI18n: () => i18n },
     'react-router-dom': { useSearchParams: () => [urlParams, (next, options) => writes.push([next.toString(), options])] },
-    '@zhin.js/console-ui': { PageHeader: 'page-header', PageShell: 'page-shell' }, '../utils/console-access.mjs': { hasConsolePermission: () => false }, './logs/LogViewer': { LogViewer: 'log-viewer' },
+    '@zhin.js/console-ui': { PageHeader: 'page-header', PageShell: 'page-shell' }, '../utils/console-access.mjs': { hasConsolePermission: () => false }, './logs/LogViewer': { LogViewer: 'log-viewer' }, './logs/read-state.mjs': readState,
   })
   const tree = runtime.render(() => page.default())
   const viewer = nodes(tree).find(node => node.type === 'log-viewer')

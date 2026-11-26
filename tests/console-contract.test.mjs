@@ -363,8 +363,6 @@ test('mutation pages derive their read-only state from Host-reported permissions
     ['pages/database/database-page.tsx', 'ops.database.write'],
     ['pages/agent-sessions.tsx', 'endpoint.operate'],
     ['pages/endpoint-detail/index.tsx', 'endpoint.operate'],
-    ['pages/logs.tsx', 'ops.config.write'],
-    ['pages/logs/LogViewer.tsx', 'ops.config.write'],
     ['pages/cron.tsx', 'ops.schedule.write'],
     ['pages/dashboard.tsx', 'agent.configure'],
     ['pages/workroom-catalog.tsx', 'agent.configure'],
