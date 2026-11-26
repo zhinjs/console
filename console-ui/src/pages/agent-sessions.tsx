@@ -21,6 +21,8 @@ import { loadAgentSessionHistory, pushAgentSessionHistory } from '../utils/agent
 import { AgentSessionPicker } from '../components/AgentSessionPicker'
 import { CONSOLE_REST } from '../contracts/zhin-console'
 import { hasConsolePermission } from '../utils/console-access.mjs'
+import { httpRouteAccess } from '../utils/http-permission.mjs'
+import { permissionLabel } from './access/access-model.mjs'
 import { readRecentSessions, sessionsNeedingGroupNames, summarizeRecentSessions, withGroupNames, type RecentSession, type RecentSessionSummary } from './agent-session-recent.mjs'
 import { useAmbientGroupCatalog } from './AmbientGroupPicker'
 import { groupNamesFromCatalog } from './ambient-group-picker-model.mjs'
@@ -49,6 +51,10 @@ interface SessionTree {
 export default function AgentSessionsPage() {
   const i18n = useI18n()
   const readOnly = !hasConsolePermission('endpoint.operate')
+  // 「从这里继续」 sends POST /agent/sessions/<key>/leaf: allowed exactly when the Host allows it
+  // (agent.configure in protocol 1.10), not by endpoint.operate (#64 session-leaf-permission-mismatch).
+  const leafAccess = httpRouteAccess('POST', '/agent/sessions/_/leaf', name => hasConsolePermission(name))
+  const canSwitchLeaf = leafAccess.allowed
   const scope = useInboxCacheScope()
   const [searchParams, setSearchParams] = useSearchParams()
   const sessionKeyFromUrl = parseSessionKeyFromQuery(searchParams.get('sessionKey'))
@@ -168,7 +174,7 @@ export default function AgentSessionsPage() {
 
   const handleSwitchLeaf = async (point: TreePoint & { sessionKey: string }) => {
     if (
-      readOnly ||
+      !canSwitchLeaf ||
       switchInFlight.current ||
       !isInboxCacheScopeActive(scope) ||
       identityRef.current !== JSON.stringify([scope, point.sessionKey])
@@ -481,6 +487,13 @@ export default function AgentSessionsPage() {
                           </div>
                         </details>
 
+                        {tree.points.length > 0 && !canSwitchLeaf ? (
+                          <p className="px-4 pt-3 text-xs text-muted-foreground" role="note">
+                            {leafAccess.missing
+                              ? i18n.t('需要「{0}」权限才能从其他消息继续。', [permissionLabel(leafAccess.missing, i18n.t)])
+                              : i18n.t('当前协议没有登记切换会话分支的权限，不能从其他消息继续。')}
+                          </p>
+                        ) : null}
                         {tree.points.length === 0 ? (
                           <EmptyState compact illustration="messages" title={i18n.t('暂无可继续的消息')} />
                         ) : (
@@ -519,7 +532,7 @@ export default function AgentSessionsPage() {
                                           ` · ${point.activePath ? i18n.t('当前路径') : i18n.t('其他分支')}`}
                                       </p>
                                     )}
-                                    {!readOnly && (
+                                    {canSwitchLeaf && (
                                       <Button
                                         variant="outline"
                                         size="sm"
@@ -558,7 +571,7 @@ export default function AgentSessionsPage() {
         </section>
       </div>
 
-      {!readOnly && (
+      {canSwitchLeaf && (
         <Dialog
           open={!!confirmPoint && tree?.sessionKey === confirmPoint.sessionKey}
           onOpenChange={(open) => !open && !switching && setConfirmPoint(null)}

@@ -5,6 +5,8 @@ import { createRequire } from 'node:module'
 import ts from 'typescript'
 import { localeModule, isLocaleImport } from './locale-fixture.mjs'
 import * as personalModels from '../console-ui/src/pages/personal-session-model.mjs'
+import * as httpPermission from '../console-ui/src/utils/http-permission.mjs'
+import * as accessModel from '../console-ui/src/pages/access/access-model.mjs'
 import { readRecentSessions, sessionsNeedingGroupNames, summarizeRecentSessions, withGroupNames } from '../console-ui/src/pages/agent-session-recent.mjs'
 import * as recordsModel from '../console-ui/src/pages/scope/records-model.mjs'
 import * as scopeTree from '../console-ui/src/scope/scope-tree.mjs'
@@ -25,7 +27,7 @@ const elements = node => node && typeof node === 'object' ? [node, ...[node.prop
 // Radix Dialog does not mount its content while closed.
 const text = node => typeof node === 'string' ? node : node && typeof node === 'object' ? node.type === 'Dialog' && !node.props.open ? '' : [node.props?.children].flat(Infinity).map(text).join('') : ''
 const settle = () => new Promise(resolve => setImmediate(resolve))
-function fixture(initialKey = 'icqq:bot:group:room') {
+function fixture(initialKey = 'icqq:bot:group:room', granted = null) {
   const slots = [], calls = [], traceReads = []; let cursor = 0, effects = [], scope = 'scope-a', params = new URLSearchParams({ sessionKey: initialKey }), tree
   const same = (a,b) => a && a.length === b.length && a.every((value,index) => Object.is(value,b[index]))
   const hooks = {
@@ -50,7 +52,7 @@ function fixture(initialKey = 'icqq:bot:group:room') {
     './SessionMessageDetails':{SessionMessageDetails:'message-details'}, './ConversationHistory':{ConversationHistory:'conversation-history'},
     './ConversationTrace':{ConversationTrace:'conversation-trace'}, './useConversationTraces':{useConversationTraces:(...args)=>{ traceReads.push(args); return {turns:[],loading:false,error:null,refresh(){}} }},
     '@zhin.js/client':{cn:(...parts)=>parts.filter(Boolean).join(' ')}, '../contracts/zhin-console':{CONSOLE_REST:{AGENT_SESSIONS:'/api/agent/sessions'}},
-    '../utils/console-access.mjs':{hasConsolePermission:()=>true}, './agent-session-recent.mjs':{readRecentSessions,summarizeRecentSessions,sessionsNeedingGroupNames,withGroupNames}, './AmbientGroupPicker':{useAmbientGroupCatalog:()=>({loading:false,error:null,catalog:null,retry(){}})}, './ambient-group-picker-model.mjs':{groupNamesFromCatalog:()=>new Map()}, })
+    '../utils/console-access.mjs':{hasConsolePermission:name=>!granted||granted.has(name)}, '../utils/http-permission.mjs':httpPermission, './access/access-model.mjs':accessModel, './agent-session-recent.mjs':{readRecentSessions,summarizeRecentSessions,sessionsNeedingGroupNames,withGroupNames}, './AmbientGroupPicker':{useAmbientGroupCatalog:()=>({loading:false,error:null,catalog:null,retry(){}})}, './ambient-group-picker-model.mjs':{groupNamesFromCatalog:()=>new Map()}, })
   const f = {calls,traceReads,render(){cursor=0;tree=module.default(); const run=effects;effects=[];run.forEach(fn=>fn());return tree},get tree(){return tree},setScope(value){scope=value},navigate(key){params=new URLSearchParams({sessionKey:key})},close(){slots.forEach(slot=>slot?.cleanup?.())}}
   f.render();return f
 }
@@ -272,4 +274,29 @@ test('scene-task and schedule sessions are listed, selectable by URL, open on th
     assert.equal(find(f, 'personal-session-panel'), undefined)
   }
   f.close()
+})
+
+// #64 `session-leaf-permission-mismatch`: 「从这里继续」 (POST /agent/sessions/<key>/leaf) was gated on
+// endpoint.operate, but the protocol requires agent.configure: the built-in operator (endpoint.operate,
+// no agent.configure) saw the button and was refused.
+test('「从这里继续」 follows the protocol (agent.configure), not endpoint.operate', async () => {
+  const branches = async granted => {
+    const f = fixture('icqq:bot:group:room', granted); find(f, 'tabs').props.onValueChange('branches'); f.render()
+    answerTree(f.calls.find(call => call.url.endsWith('/tree'))); await settle(); f.render()
+    return f
+  }
+  const operator = await branches(new Set(['endpoint.view', 'endpoint.operate', 'agent.view', 'feature.view']))
+  assert.ok(elements(operator.tree).some(node => node.type === 'p' && text(node) === 'FULL BRANCH PREVIEW'), 'the branch points are still shown')
+  assert.equal(elements(operator.tree).find(node => node.type === 'button' && text(node) === '从这里继续'), undefined, 'no button the Host would refuse')
+  assert.equal(find(operator, 'Dialog'), undefined)
+  assert.match(text(operator.tree), /需要「修改 AI 与 Agent 设置」权限才能从其他消息继续/)
+  operator.close()
+  const configurer = await branches(new Set(['endpoint.view', 'agent.view', 'agent.configure']))
+  const button = elements(configurer.tree).find(node => node.type === 'button' && text(node) === '从这里继续')
+  assert.ok(button, 'agent.configure without endpoint.operate may switch')
+  button.props.onClick(); configurer.render()
+  elements(configurer.tree).find(node => node.type === 'button' && text(node) === '确认切换').props.onClick()
+  assert.equal(configurer.calls.filter(call => call.init.method === 'POST').length, 1)
+  assert.doesNotMatch(text(configurer.tree), /需要「修改 AI 与 Agent 设置」权限/)
+  configurer.close()
 })
