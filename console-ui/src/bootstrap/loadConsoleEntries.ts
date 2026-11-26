@@ -18,7 +18,11 @@ import { withSandboxConversationDetails } from './sandbox-conversation-details'
 import { clearPluginPageRedirects, registerPluginPageRedirect } from '../console-routes.mjs'
 import { describePluginPage, readPluginDirectory, setPluginDirectory, warnIgnoredSection, type PluginPageDescriptor, type PluginTabMeta } from '../plugin-pages.mjs'
 import { LegacyRedirect } from '../components/legacy-redirect'
-import PluginDetailPage, { type PluginDetailPageProps } from '../pages/plugin-detail'
+import type { PluginDetailPageProps } from '../pages/plugin-detail'
+import { lazyPage } from '../lazy-page'
+
+// Loaded with the first plugin page tab opened, not in the first screen (#64 `route-code-splitting-rest`).
+const PluginDetailPage = lazyPage<PluginDetailPageProps>(() => import('../pages/plugin-detail'))
 
 const g = globalThis as unknown as {
   __ZHIN_RENDER_BLUEPRINT__?: (specOrBp: unknown, pageProps?: DeclarativePageComponentProps) => React.ReactElement
@@ -113,7 +117,7 @@ async function doLoadConsoleEntries(options?: LoadConsoleEntriesOptions, locale:
         const tab = (plan.page.meta as { pluginTab?: PluginTabMeta } | undefined)?.pluginTab
         // A tab renders inside the plugin detail page: its header, the plugin's tabs, then the page.
         add(withSandboxConversationDetails(tab
-          ? { ...plan.page, element: React.createElement(PluginDetailPage as React.ComponentType<PluginDetailPageProps>, { plugin: tab.plugin, tab: { href: tab.href, content: route.element } }) }
+          ? { ...plan.page, element: React.createElement(PluginDetailPage, { plugin: tab.plugin, tab: { href: tab.href, content: route.element } }) }
           : plan.page))
       }
       if (plan.redirect && plan.redirectTo) {
