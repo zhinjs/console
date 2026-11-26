@@ -1,3 +1,4 @@
+import { resolveConsoleHttpPermission } from '@zhin.js/console-protocol'
 import { translate, localizeSchemaField } from '../i18n/locale.mjs'
 import { validDiagnosticConversation } from './endpoint-detail/message-diagnostics.mjs'
 const string = value => typeof value === 'string' && value.length > 0
@@ -152,4 +153,20 @@ export function taskMutationBody({ generation, provider, requestId, target, para
   }
   if (!validDiagnosticConversation(target) || !object(parameters)) throw new Error(translate(locale, "请提供完整投递目标与参数。"))
   return { ...base, target: structuredClone(target), parameters: structuredClone(parameters) }
+}
+
+/**
+ * What the Host requires to create or change an administrator task: the permissions of
+ * POST /tasks/create and /tasks/change in the protocol's `CONSOLE_HTTP_PERMISSIONS` (`feature.configure`
+ * in 1.10), so the page enables writing exactly when the Host would accept it (#64
+ * `task-center-permission-mismatch`).
+ */
+export const TASK_WRITE_PERMISSIONS = Object.freeze([...new Set(['/tasks/create', '/tasks/change']
+  .map(path => resolveConsoleHttpPermission('POST', path)?.permission)
+  .filter(permission => typeof permission === 'string' && permission.includes('.')))])
+
+/** Whether the current identity may write tasks (`has` checks one permission), and which permissions it lacks. */
+export function taskWriteAccess(has) {
+  const missing = TASK_WRITE_PERMISSIONS.filter(permission => !has(permission))
+  return { allowed: missing.length === 0, missing }
 }

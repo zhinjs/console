@@ -182,7 +182,7 @@ test('task language refresh preserves the operation epoch, target and draft whil
   ...runtime.api,useI18n:()=>locale,useInboxCacheScope:()=>scope,createDiagnosticRequestGate,getInboxCacheScope:()=>scope,isInboxCacheScopeActive:v=>v===scope,
   emptyTarget:{kind:'private',id:'',parentKind:'',parentId:'',threadId:''},savedPending:()=>null,hasConsolePermission:()=>true,
   apiFetch:async path=>{requests.push(path);return {ok:true,json:async()=>({success:true,data:path.includes('use-cases')?[]:{generation:1,providers:[]}})}},
-  readTaskProviders,readTaskUseCases,reconcileTaskMutation,CONSOLE_REST:{TASK_PROVIDERS:'/providers',TASK_USE_CASES:'/use-cases'},window:{addEventListener(){},removeEventListener(){}},
+  readTaskProviders,readTaskUseCases,reconcileTaskMutation,taskWriteAccess:taskModel.taskWriteAccess,CONSOLE_REST:{TASK_PROVIDERS:'/providers',TASK_USE_CASES:'/use-cases'},window:{addEventListener(){},removeEventListener(){}},
  })
  runtime.mount(()=>component());await runtime.settle()
  runtime.value.setParameters({text:'原始正文'});runtime.value.setTargetFields({kind:'group',id:'room',parentKind:'',parentId:'',threadId:'topic'});runtime.value.setReview({title:'existing review'});runtime.render()

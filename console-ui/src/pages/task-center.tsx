@@ -19,7 +19,8 @@ import { createDiagnosticRequestGate } from './endpoint-detail/message-diagnosti
 import type { DiagnosticConversation } from './endpoint-detail/types'
 import { readTaskProviders, readTaskMutation, readTaskUseCases, readPendingTask, reconcileTaskMutation, taskBusinessError, taskParameterFields, taskDefaults, validateTaskParameters, taskMutationBody,
   availableTaskActions, taskTimeLabel, taskParameterSummary, taskActionDescription, TASK_STATE_LABELS, TASK_ACTION_LABELS, type AdminTask, type TaskAction,
-  type TaskProvider, type TaskProviders, type TaskMutationBody, type PendingTask, type TaskUseCase } from './task-center-model.mjs'
+  taskWriteAccess, type TaskProvider, type TaskProviders, type TaskMutationBody, type PendingTask, type TaskUseCase } from './task-center-model.mjs'
+import { permissionLabel } from './access/access-model.mjs'
 
 type Review = { body: TaskMutationBody; target: DiagnosticConversation; effects: string[]; action: 'create' | TaskAction; parameters: Record<string, unknown>; schema: Record<string, unknown>; timezone?: string }
 type TargetFields = { kind: string; id: string; parentKind: string; parentId: string; threadId: string }
@@ -78,7 +79,9 @@ export default function TaskCenterPage() {
   const [loading, setLoading] = useState(false), [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null), [notice, setNotice] = useState<string | null>(null)
   const [endpointError, setEndpointError] = useState<string | null>(null)
-  const readOnly = !hasConsolePermission('ops.schedule.write'), provider = catalog?.providers.find(item => item.owner === selectedOwner)
+  // Writing needs what the Host requires for /tasks/create and /tasks/change (#64 task-center-permission-mismatch).
+  const writeAccess = taskWriteAccess(name => hasConsolePermission(name))
+  const readOnly = !writeAccess.allowed, provider = catalog?.providers.find(item => item.owner === selectedOwner)
   const selectedEndpoint = endpoints.find(item => JSON.stringify(item.endpoint) === endpointKey)
   const accountName = (target: DiagnosticConversation) => endpoints.find(item => item.endpoint.id === target.endpoint.id && item.endpoint.adapter === target.endpoint.adapter)?.name
   const current = isInboxCacheScopeActive(scope)
@@ -222,7 +225,7 @@ export default function TaskCenterPage() {
     <div className="flex justify-end"><Button variant="outline" size="sm" disabled={loading || busy || !current} onClick={() => { void refresh(); void loadUseCases() }}><RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新核对")}</Button></div>
     <HostToolApprovalsPanel />
     <HostSelfChangesPanel />
-    {readOnly && <Alert><AlertDescription>{i18n.t("当前身份只读；创建、修改、暂停、恢复和取消均已禁用。")}</AlertDescription></Alert>}
+    {readOnly && <Alert><AlertDescription>{i18n.t("当前身份缺少「{0}」权限，创建、修改、暂停、恢复和取消均已禁用。", [writeAccess.missing.map(name => permissionLabel(name, i18n.t)).join('、')])}</AlertDescription></Alert>}
     {error && current && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
     {notice && current && <Alert><AlertDescription>{notice}</AlertDescription></Alert>}
     {pending && current && <Alert><AlertDescription>{i18n.t("保留操作 ID：")}<code className="break-all">{pending.requestId}</code>。{busy ? i18n.t("等待当前操作回执。") : i18n.t("结果尚未确认，写操作已锁定。请只读核对任务与目标会话；没有匹配的持久确认不能视为未执行。")}

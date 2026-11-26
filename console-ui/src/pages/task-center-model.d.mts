@@ -28,3 +28,7 @@ export function taskDateTimeLabel(value: unknown, timezone?: string, locale?: 'z
 export function taskParameterSummary(schema: Record<string, unknown>, parameters: Record<string, unknown>, timezone?: string, locale?: 'zh-CN' | 'en'): Array<{ key: string; title: string; value: string }>
 export function taskActionDescription(action: string, locale?: 'zh-CN' | 'en'): string
 export function taskMutationBody(input: { generation: number; provider: TaskProvider; requestId: string; target?: DiagnosticConversation; parameters?: Record<string, unknown>; id?: string; action?: TaskAction }, locale?: 'zh-CN' | 'en'): TaskMutationBody
+/** Permissions the Host requires for POST /tasks/create and /tasks/change (from the protocol table). */
+export const TASK_WRITE_PERMISSIONS: readonly string[]
+/** Whether the current identity may create or change tasks, and the permissions it lacks. */
+export function taskWriteAccess(has: (permission: string) => boolean): { allowed: boolean; missing: string[] }
