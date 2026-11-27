@@ -424,12 +424,26 @@ function DependencyPanel({ canManage, onActiveChange, onFinished }: { canManage:
           <StatusState kind="empty" title={i18n.t("没有依赖")} description={i18n.t("package.json 里还没有声明依赖。用上面的「安装依赖」添加。")} />
         ) : (
           <Card className="overflow-hidden p-0">
+            {/* Card mode (< 40rem) clips the table header and its 「全选依赖」 checkbox to 1px: the same
+                select-all, visible above the rows (#64 deps-select-all-hidden-mobile). It shares the table's
+                `console-cq` box, so both switch at the same width. */}
+            <div className="console-cq">
+            {canManage ? (
+              <div className="hidden @max-[40rem]/console:flex items-center gap-2 border-b px-4 py-2" data-card-select-all="">
+                <label className="flex min-h-11 items-center gap-2 text-sm">
+                  <Checkbox checked={headerState} disabled={busy}
+                    onCheckedChange={value => setSelected(toggleAllSelection(listedNames, value === true))} />
+                  {i18n.t("全选依赖")}
+                </label>
+              </div>
+            ) : null}
             <Table aria-label={i18n.t("项目依赖")}>
               <TableHeader>
                 <TableRow>
                   {canManage ? (
                     <TableHead className="w-10">
-                      <Checkbox checked={headerState} disabled={busy} aria-label={i18n.t("全选依赖")}
+                      {/* Invisible in card mode, where the header is clipped: not focusable there. */}
+                      <Checkbox checked={headerState} disabled={busy} aria-label={i18n.t("全选依赖")} className="@max-[40rem]/console:invisible"
                         onCheckedChange={value => setSelected(toggleAllSelection(listedNames, value === true))} />
                     </TableHead>
                   ) : null}
@@ -463,6 +477,7 @@ function DependencyPanel({ canManage, onActiveChange, onFinished }: { canManage:
                 ))}
               </TableBody>
             </Table>
+            </div>
           </Card>
         )}
       </ObjectSection>
