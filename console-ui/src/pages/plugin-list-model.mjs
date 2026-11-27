@@ -168,6 +168,18 @@ function compareVersions(a, b) {
   return 0
 }
 
+/** The columns the inventory sorts by, in the order the controls list them. */
+export const INVENTORY_SORT_KEYS = Object.freeze(['name', 'type', 'source', 'version', 'status'])
+
+/**
+ * Writes a sort into the page's `?sort=&dir=` parameters (name ascending, the default, removes both), so the
+ * table header and the card-mode 「排序」 control (#64 `plugins-sort-hidden-mobile`) change the same state.
+ */
+export function applyInventorySort(params, key, direction) {
+  if (key === 'name' && direction === 'asc') { params.delete('sort'); params.delete('dir') } else { params.set('sort', key); params.set('dir', direction) }
+  return params
+}
+
 /** Rows sorted by `name` / `type` / `source` / `version` / `status`; ties keep name order. */
 export function sortInventory(rows, key = 'name', direction = 'asc') {
   const byName = (a, b) => a.name.localeCompare(b.name)

@@ -362,6 +362,7 @@ export const englishMessages = Object.freeze({
   "摘要": "Summary",
   "角色设置": "Role settings",
   "个人会话": "Personal session",
+  "排序字段": "Sort by",
   "需要「{0}」权限才能从其他消息继续。": "You need the “{0}” permission to continue from another message.",
   "当前协议没有登记切换会话分支的权限，不能从其他消息继续。": "The protocol maps no permission for switching a session branch, so you cannot continue from another message.",
   "当前身份缺少「{0}」权限，创建、修改、暂停、恢复和取消均已禁用。": "Your identity lacks the “{0}” permission; creating, changing, pausing, resuming and cancelling are disabled.",

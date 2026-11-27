@@ -6,11 +6,11 @@ import { ArrowDown, ArrowUp, ArrowUpDown, Blocks, CheckCircle2, Clock, Package, 
 import { apiFetch } from '../utils/auth'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { CONSOLE_PATHS, featureGlobalHref } from '../console-routes.mjs'
-import { Badge, Button, Card, Input, PageHeader, PageShell, Skeleton, StatCard, StatGrid, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
+import { Badge, Button, Card, cn, Input, PageHeader, PageShell, SelectField, Skeleton, StatCard, StatGrid, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import { useConsoleRead } from '../hooks/use-console-read'
 import {
-  groupInventory, inventoryCounts, matchesHealthFilter, needsStateLabel, pluginInventory, pluginsFirstReadPending, pluginIconType, pluginSource, pluginType, sortInventory, validatePluginList,
+  applyInventorySort, INVENTORY_SORT_KEYS, groupInventory, inventoryCounts, matchesHealthFilter, needsStateLabel, pluginInventory, pluginsFirstReadPending, pluginIconType, pluginSource, pluginType, sortInventory, validatePluginList,
   type HealthFilter, type InventoryGroupBy, type InventoryPlugin, type InventoryRow, type InventorySortKey, type PluginHealth, type PluginSource, type PluginType,
 } from './plugin-list-model.mjs'
 import { managementLabel } from './plugin-management-model.mjs'
@@ -47,7 +47,8 @@ const GROUPS: { key: InventoryGroupBy; label: string }[] = [
   { key: 'type', label: '按类型' },
   { key: 'source', label: '按来源' },
 ]
-const SORT_KEYS: readonly InventorySortKey[] = ['name', 'type', 'source', 'version', 'status']
+const SORT_KEYS = INVENTORY_SORT_KEYS
+const SORT_LABELS: Record<InventorySortKey, string> = { name: '名称', type: '类型', source: '来源', version: '版本', status: '状态' }
 
 type PackagesState = { status: 'loading' | 'skipped' } | { status: 'ready'; value: ReturnType<typeof readPackageList> } | { status: 'failed'; error: unknown }
 
@@ -108,10 +109,9 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
     change(next)
     setSearchParams(next, { replace: true })
   }
-  const setSort = (key: InventorySortKey) => updateParams(next => {
-    const direction = key === sortKey && sortDirection === 'asc' ? 'desc' : 'asc'
-    if (key === 'name' && direction === 'asc') { next.delete('sort'); next.delete('dir') } else { next.set('sort', key); next.set('dir', direction) }
-  })
+  const setSortTo = (key: InventorySortKey, direction: 'asc' | 'desc') => updateParams(next => { applyInventorySort(next, key, direction) })
+  // A header click sorts by that column, or flips the direction of the current one.
+  const setSort = (key: InventorySortKey) => setSortTo(key, key === sortKey && sortDirection === 'asc' ? 'desc' : 'asc')
   const setGroupBy = (value: InventoryGroupBy) => updateParams(next => { if (value === 'none') next.delete('group'); else next.set('group', value) })
   const setSearch = (value: string) => {
     const next = new URLSearchParams(searchParams)
@@ -211,6 +211,23 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
 
         {filtered.length ? (
           <Card className="overflow-hidden p-0">
+            {/* Card mode (< 40rem) hides the table header, and its sort buttons with it: the same sort,
+                on the same ?sort=&dir=, as a control above the cards (#64 plugins-sort-hidden-mobile). It
+                sits in the same `console-cq` box as the table, so both switch at the same width. */}
+            <div className="console-cq">
+            <div className="hidden @max-[40rem]/console:flex items-center gap-2 border-b px-4 py-3" data-card-sort="">
+              <span className="shrink-0 text-sm text-muted-foreground">{i18n.t("排序")}</span>
+              <div className="min-w-0 flex-1">
+                <SelectField aria-label={i18n.t("排序字段")} value={sortKey}
+                  onValueChange={value => { if (SORT_KEYS.includes(value as InventorySortKey)) setSortTo(value as InventorySortKey, sortDirection) }}
+                  options={SORT_KEYS.map(key => ({ value: key, label: i18n.t(SORT_LABELS[key]) }))} />
+              </div>
+              <Button type="button" variant="outline" className="shrink-0 min-h-11"
+                onClick={() => setSortTo(sortKey, sortDirection === 'asc' ? 'desc' : 'asc')}>
+                {sortDirection === 'asc' ? <ArrowUp aria-hidden="true" /> : <ArrowDown aria-hidden="true" />}
+                {sortDirection === 'asc' ? i18n.t("升序") : i18n.t("降序")}
+              </Button>
+            </div>
             <Table className="console-plugin-table" aria-label={i18n.t("已安装的插件")}>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
@@ -236,6 +253,7 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
                 </TableBody>
               ))}
             </Table>
+            </div>
           </Card>
         ) : rows.length ? (
           <StatusState kind="empty" title={i18n.t("没有匹配的插件")} description={i18n.t("试试其他名称，或清除筛选。")}
@@ -256,7 +274,8 @@ function SortableHead({ label, column, sortKey, direction, onSort, className }: 
   const Icon = !active ? ArrowUpDown : direction === 'asc' ? ArrowUp : ArrowDown
   return (
     <TableHead className={className} aria-sort={active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}>
-      <button type="button" className={active ? 'console-plugin-sort is-active' : 'console-plugin-sort'} onClick={() => onSort(column)}>
+      {/* In card mode the header is clipped to 1px: invisible there, so the button is not focusable either. */}
+      <button type="button" className={cn(active ? 'console-plugin-sort is-active' : 'console-plugin-sort', '@max-[40rem]/console:invisible')} onClick={() => onSort(column)}>
         {label}<Icon aria-hidden="true" />
       </button>
     </TableHead>
