@@ -516,7 +516,8 @@ function ProfileUsageLine({ usages, onOpen }: { usages: ProfileUsage[] | null; o
           {ignored.map((usage) => i18n.t("{0}（未生效：{1}）", [usage.label, ignoredReasonText(usage.reason, i18n.locale)])).join(' · ')}
         </span>
       ) : null}
-      <span className="ml-1">{onOpen ? i18n.t("（点名称到「用途」页签修改）") : i18n.t("（在「用途」页签修改）")}</span>
+      {/* c111-repeated-help-text: clickable names need no 「点名称到用途页签修改」 after every model. */}
+      {onOpen ? null : <span className="ml-1">{i18n.t("（在「用途」页签修改）")}</span>}
     </p>
   )
 }

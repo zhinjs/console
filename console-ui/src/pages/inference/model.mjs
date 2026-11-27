@@ -871,3 +871,11 @@ export function newlyBoundLanguageProfiles(draft, original) {
   const before = collect(original)
   return [...collect(draft)].filter((id) => !before.has(id))
 }
+
+/**
+ * When a purpose switches to its fallback models (zhinjs/zhin `docs/ai/model-policy.md` 备用模型), in
+ * the interface language. The rules live in the Host (`packages/im/ai/src/llm/model-fallback.ts`).
+ */
+export function fallbackDocUrl(locale = 'zh-CN') {
+  return locale === 'en' ? 'https://zhin.js.org/en/ai/model-policy#fallback-models' : 'https://zhin.js.org/ai/model-policy#%E5%A4%87%E7%94%A8%E6%A8%A1%E5%9E%8Bfallbacks'
+}

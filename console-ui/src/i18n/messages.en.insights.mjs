@@ -74,7 +74,6 @@ export const insightsMessages = Object.freeze({
   "还没有用途引用它": "No purpose uses it yet",
   " 等 {0} 处": " and more ({0} in all)",
   "（在「用途」页签修改）": " (change it in the Purposes tab)",
-  "（点名称到「用途」页签修改）": " (click a name to change it in the Purposes tab)",
   "默认聊天": "Default chat",
   "默认摘要": "Default summary",
   "默认旁听": "Default ambient",

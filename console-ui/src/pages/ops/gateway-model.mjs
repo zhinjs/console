@@ -284,6 +284,8 @@ export function mergeLogLines(existing, incoming, cap = MAX_LOG_LINES) {
   return merged.length > cap ? merged.slice(merged.length - cap) : merged
 }
 
+const PACKAGE_KINDS = new Set(['plugin', 'feature', 'library'])
+
 export function readPackageList(value) {
   if (!isRecord(value)) return { packageManager: '', packages: [] }
   const packages = (Array.isArray(value.packages) ? value.packages : []).filter(item => isRecord(item) && typeof item.name === 'string').map(item => ({
@@ -292,6 +294,8 @@ export function readPackageList(value) {
     dependencyType: ['dependencies', 'optionalDependencies', 'devDependencies'].includes(item.dependencyType) ? item.dependencyType : 'dependencies',
     installedVersion: typeof item.installedVersion === 'string' ? item.installedVersion : null,
     ...(typeof item.catalog === 'string' ? { catalog: item.catalog } : {}),
+    // What the package is to Zhin (#1250, `package.json#zhin.type`); absent on older gateways.
+    ...(PACKAGE_KINDS.has(item.kind) ? { kind: item.kind } : {}),
   })).sort((a, b) => a.name.localeCompare(b.name))
   return { packageManager: typeof value.packageManager === 'string' ? value.packageManager : '', packages }
 }
