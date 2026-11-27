@@ -118,6 +118,7 @@ Console 需要的协议常量、类型与打码规则都直接从已发布的包
 
 - `.github/workflows/ci.yml`：对 `main` 的 pull request 以及 push 到 `main` / `codex/**` 时运行 typecheck、test、build。
 - `.github/workflows/pages.yml`：push `main` 时先跑 typecheck 和 test，通过后构建并部署 GitHub Pages。
+- `ci.yml` 的 `layout-audit` job（只在 pull request 上运行，只出报告，`continue-on-error: true`，不拦合并）：用 `@zhin.js/console-ui/audit`（zhinjs/zhin ADR 0063 D20）对 Console 自己的主要页面跑布局审计，登录合成数据的 `scripts/ui-preview-host.mjs`，375 / 768 / 1280 / 1920 × 浅色 / 深色，报告写进 job summary。本地：`pnpm build`，启动 `node scripts/ui-preview-host.mjs` 与 `pnpm preview`，再 `pnpm exec playwright install chromium`（或设 `CHROME_PATH` 用本机 Chrome）后 `pnpm check:layout-audit [路由 …]`，报告写到 `layout-audit-report.txt`。
 
 可选仓库变量：
 

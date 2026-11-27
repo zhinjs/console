@@ -12,7 +12,7 @@ import { useInboxCacheScope } from '../utils/useInboxCacheScope'
 import { Alert, AlertDescription, Badge, Button, Card, CardContent, createPageChromeStore, InlineCode, PageChromeActions, PageChromeProvider, PageHeader, PageShell, Skeleton, useConfirm, usePageChromeState } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import { requestConsole } from '../utils/console-rpc'
-import { validatePluginDetail, pluginDiagnosticSummary, pluginDetailView } from './plugin-detail-model.mjs'
+import { validatePluginDetail, pluginDiagnosticSummary, pluginDetailView, detailPackageState } from './plugin-detail-model.mjs'
 import { JsonViewer } from './introspection/JsonViewer'
 import { PluginManagementSummary } from './PluginManagementSummary'
 import { hasConsolePermission } from '../utils/console-access.mjs'
@@ -376,8 +376,10 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
   const scopeSummary = matrix.status === 'ready' ? pluginScopeSummary(matrix.value, instanceKey) : null
   const settableLevels = featureList.status === 'ready' ? pluginSettableLevels(featureList.value, instanceKey) : null
   const permissionGroups = permissions.status === 'ready' ? pluginPermissionGroups(permissions.value, [instanceKey, packageName.split('/').pop()?.replace(/^(adapter|plugin|service)-/u, '')]) : []
-  // Installed (the gateway lists it) but no instance plugin uses it: waiting for its first configuration.
-  const undeclaredPackage = !plugin && Boolean(entry) && (detailError as { status?: number } | null)?.status === 404
+  // Installed (the gateway lists it) but no instance plugin uses it: a plugin package waits for its first
+  // configuration; the framework and ordinary dependencies (`/plugins/ai`) are not plugins (#1250, `isPluginPackage`).
+  const packageState = detailPackageState({ plugin, entry, detailStatus: (detailError as { status?: number } | null)?.status })
+  const undeclaredPackage = packageState === 'undeclared'
   const canDeclare = canManagePackages && (undeclaredPackage || plugin?.management?.declared === false)
   const declareNeed = plugin
     ? { name: plugin.packageName, instanceKey: plugin.instanceKey, missing: plugin.management?.validation?.errors.map(issue => relativeConfigPath(issue.path)) ?? [], missingEnv: plugin.management?.validation?.missingEnv ?? [] }
@@ -418,7 +420,7 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
   const statusBadge = plugin?.management
     ? <Badge variant={plugin.management.status === 'enabled' ? 'outline' : plugin.management.status === 'missing-config' || plugin.management.status === 'degraded' ? 'warning' : 'secondary'}>{managementLabel(plugin.management, i18n.locale)}</Badge>
     : plugin ? <Badge variant={plugin.status === 'active' ? 'outline' : 'secondary'}>{plugin.status === 'active' ? i18n.t("代内已加载") : i18n.t("未加载")}</Badge>
-      : <Badge variant={undeclaredPackage ? 'secondary' : 'warning'}>{undeclaredPackage ? i18n.t("已安装，待配置") : i18n.t("实例未报告")}</Badge>
+      : <Badge variant={packageState ? 'secondary' : 'warning'}>{undeclaredPackage ? i18n.t("已安装，待配置") : packageState === 'dependency' ? i18n.t("依赖包，不是插件") : i18n.t("实例未报告")}</Badge>
 
   return (
     <PageShell className="console-plugin-detail-page">

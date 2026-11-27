@@ -31,3 +31,43 @@ jobs:
       - run: pnpm lint:css
       - run: pnpm test
       - run: pnpm build
+
+  # c111-layout-audit-console-pages: zhinjs/zhin ADR 0063 D20 layout audit (`@zhin.js/console-ui/audit`)
+  # over the Console's own main pages, against the read-only UI fixture. Report only, never blocks a
+  # merge: the report goes to the job summary. Pull requests only (a push would repeat the same report).
+  # Locally: see scripts/layout-audit.mjs.
+  layout-audit:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271
+        with:
+          version: 9.0.2
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Start the UI fixture and the production build
+        run: |
+          node scripts/ui-preview-host.mjs > ui-preview-host.log 2>&1 &
+          pnpm preview > preview.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            curl -fsS -o /dev/null http://127.0.0.1:5173/ && curl -sS -o /dev/null http://127.0.0.1:18087/ && exit 0
+            sleep 1
+          done
+          cat ui-preview-host.log preview.log
+          exit 1
+      - name: Layout audit (report only)
+        run: |
+          pnpm check:layout-audit || echo "::warning::layout audit could not run"
+          if [ -f layout-audit-report.txt ]; then
+            { echo '## Console layout audit (report only)'; echo; echo '```'; cat layout-audit-report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          fi

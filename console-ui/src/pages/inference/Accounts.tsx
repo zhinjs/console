@@ -705,7 +705,7 @@ function AccountForm({
             />
             {!updating ? (
               <span className="block text-muted-foreground">
-                {i18n.t("只能引用以 _API_KEY 结尾的变量；服务需为已有服务或内置服务的官方地址。")}
+                {i18n.t("只能引用以 _API_KEY 结尾的变量。env:// 引用保存后不能在 Console 修改（首次调用或测试连接成功时激活）；要随时重设，请在「设置密钥」里填写 ${VAR:-}。")}
               </span>
             ) : null}
           </label>

@@ -495,6 +495,10 @@ function ProfileUsageLine({ usages, onOpen }: { usages: ProfileUsage[] | null; o
   // References that do not take effect (ADR 0066 D7) are listed after, dimmed, with the reason.
   const ignored = usages.filter((usage) => usage.ignored)
   const shown = effective.slice(0, 4)
+  // c111-repeated-help-text: when every name shown is a button, 「（在「用途」页签修改）」 would only repeat
+  // itself. A plain-text name (a usage 用途 cannot focus, an ignored reference) or no usage in effect
+  // leaves nothing to click, so the hint stays (review L1).
+  const allLinked = Boolean(onOpen) && shown.length > 0 && !ignored.length && shown.every((usage) => usagePurposeFocus(usage.key))
   return (
     <p className="mt-1 text-xs text-muted-foreground">
       <span className="font-medium text-foreground">{i18n.t("谁在用：")}</span>
@@ -516,7 +520,7 @@ function ProfileUsageLine({ usages, onOpen }: { usages: ProfileUsage[] | null; o
           {ignored.map((usage) => i18n.t("{0}（未生效：{1}）", [usage.label, ignoredReasonText(usage.reason, i18n.locale)])).join(' · ')}
         </span>
       ) : null}
-      <span className="ml-1">{onOpen ? i18n.t("（点名称到「用途」页签修改）") : i18n.t("（在「用途」页签修改）")}</span>
+      {allLinked ? null : <span className="ml-1">{i18n.t("（在「用途」页签修改）")}</span>}
     </p>
   )
 }

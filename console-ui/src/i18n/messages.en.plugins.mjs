@@ -70,6 +70,7 @@ export const pluginsMessages = Object.freeze({
   "运行正常": "Healthy",
   "需要处理": "Needs attention",
   "已安装，待配置": "Installed, needs configuration",
+  "依赖包，不是插件": "Dependency, not a plugin",
   "已安装的插件：来源、版本与健康状态。插件在哪些范围开启，在功能矩阵和对象树里设置。": "Installed plugins: source, version and health. Where a plugin is switched on is set in the feature matrix and the object tree.",
   "刷新失败，以下是上次读取的列表。": "Refresh failed; showing the list read last.",
   "实例没有返回插件列表；下面是网关记录的已安装包，健康状态要等实例恢复后才能读取。": "The instance returned no plugin list; below are the packages the gateway has installed. Health can be read once the instance is back.",

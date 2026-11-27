@@ -339,3 +339,5 @@ export function usagePurposeFocus(key: string): string | undefined
 export function purposeElementId(focus: PurposeFocus | undefined): string
 /** Whether the 用途 draft would save anything compared with what was read. */
 export function purposesDirty(draft: Purposes, original: Purposes, options?: { fallbacks?: boolean }): boolean
+/** zhin.js.org: when a purpose switches to its fallback models, in the interface language. */
+export function fallbackDocUrl(locale?: 'zh-CN' | 'en'): string

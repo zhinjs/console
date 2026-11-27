@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import ./tests/helpers/english-catalog.mjs --test tests/*.test.mjs",
     "lint:css": "stylelint \"console-ui/src/**/*.css\" \"client/**/*.css\" --quiet",
+    "check:layout-audit": "node scripts/layout-audit.mjs",
     "lint:css:all": "stylelint \"console-ui/src/**/*.css\" \"client/**/*.css\"",
     "preview": "serve -s dist -l tcp://127.0.0.1:5173",
     "pages:prepare": "node scripts/prepare-github-pages.mjs"
@@ -39,6 +40,7 @@
     "clsx": "^2",
     "highlight.js": "11.11.1",
     "lucide-react": "^1.16.0",
+    "playwright": "1.62.1",
     "postcss": "^8.5.32",
     "radix-ui": "^1.4.3",
     "react": "^19.2.6",

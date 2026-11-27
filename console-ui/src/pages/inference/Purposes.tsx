@@ -57,6 +57,7 @@ import {
   type Kind,
   type Targets,
   type DecisionPolicy,
+  fallbackDocUrl,
 } from './model.mjs'
 import type { InferenceManagement } from './useInferenceManagement'
 import { SaveButton, useSaveFeedback } from '../../components/SaveButton'
@@ -380,7 +381,10 @@ export function Purposes({ management: m, focus, onDirtyChange }: { management: 
       </div>
       <p className="text-sm text-muted-foreground">
         {i18n.t("聊天模型的优先级：子 Agent 的绑定高于适配器、账号和会话场景的聊天覆盖，这些覆盖又高于默认聊天模型。")}
-        {fallbacks ? ' ' + i18n.t("主模型额度用完、余额不足或密钥被拒时，按顺序换用这一层配置的备用模型。") : null}
+        {fallbacks ? <>
+          {' ' + i18n.t("主模型额度用完、余额不足、密钥被拒、连续超时，或网络错误和 5xx 在同模型重试后仍失败时，按顺序换用这一层配置的备用模型。")}{' '}
+          <a className="underline underline-offset-2" href={fallbackDocUrl(i18n.locale)} target="_blank" rel="noreferrer">{i18n.t("切换规则")}</a>
+        </> : null}
       </p>
       <Card className="p-4 space-y-4" id={purposeElementId({ section: 'defaults' })}>
         <h4 className="font-medium">{i18n.t("默认模型")}</h4>

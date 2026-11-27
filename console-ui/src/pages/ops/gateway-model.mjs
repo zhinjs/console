@@ -284,6 +284,8 @@ export function mergeLogLines(existing, incoming, cap = MAX_LOG_LINES) {
   return merged.length > cap ? merged.slice(merged.length - cap) : merged
 }
 
+const PACKAGE_KINDS = new Set(['plugin', 'feature', 'library'])
+
 export function readPackageList(value) {
   if (!isRecord(value)) return { packageManager: '', packages: [] }
   const packages = (Array.isArray(value.packages) ? value.packages : []).filter(item => isRecord(item) && typeof item.name === 'string').map(item => ({
@@ -292,6 +294,10 @@ export function readPackageList(value) {
     dependencyType: ['dependencies', 'optionalDependencies', 'devDependencies'].includes(item.dependencyType) ? item.dependencyType : 'dependencies',
     installedVersion: typeof item.installedVersion === 'string' ? item.installedVersion : null,
     ...(typeof item.catalog === 'string' ? { catalog: item.catalog } : {}),
+    // What the package is to Zhin (#1250, `package.json#zhin.type`); absent on older gateways. A kind
+    // this Console does not know is kept as `other`: the gateway did report one, so the catalog rule of
+    // older gateways must not come back (`isPluginPackage`).
+    ...(typeof item.kind === 'string' ? { kind: PACKAGE_KINDS.has(item.kind) ? item.kind : 'other' } : {}),
   })).sort((a, b) => a.name.localeCompare(b.name))
   return { packageManager: typeof value.packageManager === 'string' ? value.packageManager : '', packages }
 }

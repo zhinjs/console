@@ -5,7 +5,8 @@
 export const batch3Messages = Object.freeze({
   // Purpose fallbacks
   "聊天模型的优先级：子 Agent 的绑定高于适配器、账号和会话场景的聊天覆盖，这些覆盖又高于默认聊天模型。": "Chat model priority: a sub-agent's binding wins over the chat overrides of adapters, accounts and conversations, and those win over the default chat model.",
-  "主模型额度用完、余额不足或密钥被拒时，按顺序换用这一层配置的备用模型。": "When the main model runs out of quota or credit, or its key is rejected, the fallback models set on the same level are tried in order.",
+  "主模型额度用完、余额不足、密钥被拒、连续超时，或网络错误和 5xx 在同模型重试后仍失败时，按顺序换用这一层配置的备用模型。": "When the main model runs out of quota or credit, its key is rejected, it times out repeatedly, or network errors and 5xx responses outlast the same-model retries, the fallback models set on the same level are tried in order.",
+  "切换规则": "Switching rules",
   "{0}备用模型 {1}": "{0} fallback model {1}",
   "调整{0}备用模型 {1}": "Adjust {0} fallback model {1}",
   "添加{0}备用模型": "Add {0} fallback model",

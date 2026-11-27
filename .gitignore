@@ -3,3 +3,5 @@ dist
 .pnpm-store
 .DS_Store
 .codegraph/
+layout-audit-report.txt
+layout-audit-report.json
