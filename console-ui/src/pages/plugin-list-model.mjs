@@ -14,15 +14,26 @@ export function validatePluginList(payload, locale = 'zh-CN') {
 
 const CATALOG_PLUGINS = new Set(['adapter', 'ai', 'market'])
 const PLUGIN_NAME = /(^|\/)(zhin-|plugin-|adapter-)|^@zhin\.js\//u
+/**
+ * The framework, never a plugin row. `zhin.js` is the facade and `@zhin.js/core` its Feature carrier
+ * (the gateway's `instance-declarations.ts` resolves it as such): both declare
+ * `package.json#zhin.type: "plugin"`, so the gateway reports them as `kind: plugin`, yet the instance
+ * never lists them in `/api/plugins`. Same rule as `zhin packages list` (zhin CLI
+ * `basic/cli/src/utils/project-packages.ts` `groupOf`: `zhin.js` and `type: "feature"` packages are
+ * the framework), plus `@zhin.js/core`, which that `groupOf` still files as a plugin.
+ */
+const FRAMEWORK_PACKAGES = new Set(['zhin.js', '@zhin.js/core'])
 
 /**
- * Whether a gateway package belongs in the 插件 list (#1250 `plugins-page-deps-as-plugins`). The
- * gateway reports `kind` from `package.json#zhin.type`: only `plugin` packages are plugins (adapters
- * included); `feature` and `library` packages (`@zhin.js/tool`, `ai`, `zod`, `@ai-sdk/*`) are ordinary
- * dependencies, even when an install catalog lists them. Older gateways send no `kind`: then the
- * catalog decides, and with the instance down a plugin-like name too.
+ * Whether a gateway package belongs in the 插件 list (#1250 `plugins-page-deps-as-plugins`), shared by
+ * the list and the plugin detail page. Framework packages never do. The gateway reports `kind` from
+ * `package.json#zhin.type`: once it reports one, only `plugin` packages are plugins (adapters included);
+ * `feature`, `library` and kinds this Console does not know (`other`, see `readPackageList`) are
+ * ordinary dependencies, even when an install catalog lists them. Older gateways send no `kind`: then
+ * the catalog decides, and with the instance down a plugin-like name too.
  */
-function isPluginPackage(item, instanceAnswered) {
+export function isPluginPackage(item, instanceAnswered = true) {
+  if (!item?.name || FRAMEWORK_PACKAGES.has(item.name)) return false
   if (typeof item.kind === 'string') return item.kind === 'plugin'
   if (CATALOG_PLUGINS.has(item.catalog)) return true
   return !instanceAnswered && PLUGIN_NAME.test(item.name)

@@ -105,12 +105,13 @@ export interface GatewayInstalledPackage {
   /**
    * What the installed package is to Zhin (zhinjs/zhin #1250), from its `package.json#zhin.type`:
    * only `plugin` packages are plugins; `feature` / `library` packages (`@zhin.js/tool`, `ai`, `zod`,
-   * `@ai-sdk/*`) are ordinary dependencies. Absent when not installed, or on older gateways.
+   * `@ai-sdk/*`) are ordinary dependencies. Absent when not installed, or on older gateways. `other`
+   * is the Console's own value for a kind it does not know (`readPackageList`).
    */
   readonly kind?: GatewayInstalledPackageKind
 }
 
-export type GatewayInstalledPackageKind = 'plugin' | 'feature' | 'library'
+export type GatewayInstalledPackageKind = 'plugin' | 'feature' | 'library' | 'other'
 
 export interface GatewayPackageList {
   readonly packageManager: string

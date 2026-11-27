@@ -3500,7 +3500,7 @@ export const englishMessages = Object.freeze({
   "在 Host 上设置该变量后点「测试连接」，成功即完成激活。": "Set the variable on the Host, then click “Test connection”; a successful test activates it.",
   "要改用另一个变量，请 Host 管理员在本机运行 zhin ai account rename-env。": "To use another variable, the Host administrator runs zhin ai account rename-env locally.",
   "或新增替代账号，直接填写密钥。": "Or add a replacement account and enter the key directly.",
-  "只能引用以 _API_KEY 结尾的变量。env:// 引用在首次调用时激活，之后不能在 Console 修改；要随时重设，请在「设置密钥」里填写 ${VAR:-}。": "Only variables ending in _API_KEY. An env:// reference is activated on the first call and cannot be changed in the Console afterwards; to be able to reset it at any time, enter ${VAR:-} under Set key instead.",
+  "只能引用以 _API_KEY 结尾的变量。env:// 引用保存后不能在 Console 修改（首次调用或测试连接成功时激活）；要随时重设，请在「设置密钥」里填写 ${VAR:-}。": "Only variables ending in _API_KEY. An env:// reference cannot be changed in the Console once saved (it is activated by the first call or a successful connection test); to be able to reset it at any time, enter ${VAR:-} under Set key instead.",
   "新绑定的模型连通性测试未通过": "A newly bound model failed the connectivity test",
   "仍然保存的话，使用这些用途的对话可能没有回复。确定保存吗？": "If you save anyway, conversations using these purposes may get no reply. Save anyway?",
   "仍然保存": "Save anyway",

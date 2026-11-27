@@ -34,13 +34,17 @@ jobs:
 
   # c111-layout-audit-console-pages: zhinjs/zhin ADR 0063 D20 layout audit (`@zhin.js/console-ui/audit`)
   # over the Console's own main pages, against the read-only UI fixture. Report only, never blocks a
-  # merge: the report goes to the job summary. Locally: see scripts/layout-audit.mjs.
+  # merge: the report goes to the job summary. Pull requests only (a push would repeat the same report).
+  # Locally: see scripts/layout-audit.mjs.
   layout-audit:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     continue-on-error: true
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271
         with:
           version: 9.0.2
@@ -63,7 +67,7 @@ jobs:
           exit 1
       - name: Layout audit (report only)
         run: |
-          pnpm audit:layout || echo "::warning::layout audit could not run"
+          pnpm check:layout-audit || echo "::warning::layout audit could not run"
           if [ -f layout-audit-report.txt ]; then
             { echo '## Console layout audit (report only)'; echo; echo '```'; cat layout-audit-report.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           fi

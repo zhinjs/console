@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import ./tests/helpers/english-catalog.mjs --test tests/*.test.mjs",
     "lint:css": "stylelint \"console-ui/src/**/*.css\" \"client/**/*.css\" --quiet",
-    "audit:layout": "node scripts/layout-audit.mjs",
+    "check:layout-audit": "node scripts/layout-audit.mjs",
     "lint:css:all": "stylelint \"console-ui/src/**/*.css\" \"client/**/*.css\"",
     "preview": "serve -s dist -l tcp://127.0.0.1:5173",
     "pages:prepare": "node scripts/prepare-github-pages.mjs"

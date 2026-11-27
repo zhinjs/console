@@ -877,5 +877,8 @@ export function newlyBoundLanguageProfiles(draft, original) {
  * the interface language. The rules live in the Host (`packages/im/ai/src/llm/model-fallback.ts`).
  */
 export function fallbackDocUrl(locale = 'zh-CN') {
-  return locale === 'en' ? 'https://zhin.js.org/en/ai/model-policy#fallback-models' : 'https://zhin.js.org/ai/model-policy#%E5%A4%87%E7%94%A8%E6%A8%A1%E5%9E%8Bfallbacks'
+  // VitePress slugs the heading 「备用模型（fallbacks）」 as `备用模型-fallbacks` (checked on zhin.js.org). Kept
+  // percent-encoded: this directory allows no Chinese literal outside t() (tests/localization.test.mjs);
+  // tests/console-small-1250.test.mjs checks it equals encodeURIComponent of that id.
+  return locale === 'en' ? 'https://zhin.js.org/en/ai/model-policy#fallback-models' : 'https://zhin.js.org/ai/model-policy#%E5%A4%87%E7%94%A8%E6%A8%A1%E5%9E%8B-fallbacks'
 }

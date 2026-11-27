@@ -27,9 +27,14 @@ export interface InventoryRow {
   /** Gateway catalog of a package row (`adapter`, `ai`, `market`), when known. */
   catalog?: string
 }
+/**
+ * Whether a gateway package is a plugin row: never the framework (`zhin.js`, `@zhin.js/core`); with a
+ * reported `kind` only `plugin`; without one the catalog rule (`instanceAnswered` defaults to true).
+ */
+export function isPluginPackage(item: { name: string; kind?: string; catalog?: string } | null | undefined, instanceAnswered?: boolean): boolean
 export function pluginHealth(plugin: InventoryPlugin | null | undefined): 'healthy' | 'pending' | 'inactive'
 export function pluginInventory(plugins: readonly InventoryPlugin[] | null | undefined,
-  packageList: { packages: readonly { name: string; installedVersion: string | null; dependencyType?: string; catalog?: string }[] } | null | undefined): InventoryRow[]
+  packageList: { packages: readonly { name: string; installedVersion: string | null; dependencyType?: string; catalog?: string; kind?: string }[] } | null | undefined): InventoryRow[]
 export function inventoryCounts(rows: readonly InventoryRow[]): { all: number; healthy: number; pending: number; inactive: number }
 export function matchesHealthFilter(row: InventoryRow, filter: HealthFilter): boolean
 export type PluginType = 'adapter' | 'ai' | 'feature'

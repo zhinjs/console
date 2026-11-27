@@ -11,6 +11,7 @@ export interface PackageListEntry {
   readonly dependencyType: 'dependencies' | 'optionalDependencies' | 'devDependencies'
   readonly installedVersion: string | null
   readonly catalog?: string
+  readonly kind?: string
 }
 
 export declare const PACKAGE_OPERATION_RPC: Readonly<Record<GatewayPackageOperation, string>>

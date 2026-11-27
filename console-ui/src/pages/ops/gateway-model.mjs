@@ -294,8 +294,10 @@ export function readPackageList(value) {
     dependencyType: ['dependencies', 'optionalDependencies', 'devDependencies'].includes(item.dependencyType) ? item.dependencyType : 'dependencies',
     installedVersion: typeof item.installedVersion === 'string' ? item.installedVersion : null,
     ...(typeof item.catalog === 'string' ? { catalog: item.catalog } : {}),
-    // What the package is to Zhin (#1250, `package.json#zhin.type`); absent on older gateways.
-    ...(PACKAGE_KINDS.has(item.kind) ? { kind: item.kind } : {}),
+    // What the package is to Zhin (#1250, `package.json#zhin.type`); absent on older gateways. A kind
+    // this Console does not know is kept as `other`: the gateway did report one, so the catalog rule of
+    // older gateways must not come back (`isPluginPackage`).
+    ...(typeof item.kind === 'string' ? { kind: PACKAGE_KINDS.has(item.kind) ? item.kind : 'other' } : {}),
   })).sort((a, b) => a.name.localeCompare(b.name))
   return { packageManager: typeof value.packageManager === 'string' ? value.packageManager : '', packages }
 }
