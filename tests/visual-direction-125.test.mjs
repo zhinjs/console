@@ -2,18 +2,19 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
-import { DEFAULT_PALETTE, THEME_PALETTES } from '../console-ui/src/theme/index.ts'
+import * as theme from '../console-ui/src/theme/index.ts'
 import { visibleActivityRange } from '../console-ui/src/pages/dashboard-activity-model.mjs'
 import { normalizeEngagementSummary, collaborationEventSummary, venueLabel, engagementTotals } from '../console-ui/src/pages/engagements-model.mjs'
 import { outcomeVariant } from '../console-ui/src/pages/access/access-model.mjs'
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 
-test('Zhin green is a palette of its own and the default; saved palettes keep working', () => {
-  assert.equal(DEFAULT_PALETTE, 'zhin')
-  assert.deepEqual(THEME_PALETTES.filter(palette => palette.group === 'brand').map(palette => palette.id), ['zhin'])
-  assert.match(read('client/index.html'), /let mode = 'system', palette = 'zhin';/)
-  assert.match(read('console-ui/src/components/ThemeToggle.tsx'), /id: 'brand', title: i18n\.t\('品牌配色'\)/)
+test('one fixed soft-card palette (console-ui 1.3.0): no palette picker; Zhin green stays the brand mark only', () => {
+  assert.equal('THEME_PALETTES' in theme, false)
+  assert.equal('DEFAULT_PALETTE' in theme, false)
+  assert.match(read('client/index.html'), /let mode = 'system';/)
+  assert.doesNotMatch(read('client/index.html'), /palette/)
+  assert.equal(existsSync(new URL('../console-ui/src/components/ThemeToggle.tsx', import.meta.url)), false)
 })
 
 test('one brand mark (the favicon shape) and one product name replace the lettered Z badges', () => {
@@ -38,8 +39,8 @@ test('received / sent use chart colors, and short activity drops the leading emp
   const css = read('console-ui/src/pages/dashboard.css')
   assert.match(css, /\.console-volume-legend i\.is-inbound \{ background: hsl\(var\(--zc-chart-inbound\)\); \}/)
   assert.match(css, /\.console-volume-legend i\.is-reply \{ background: hsl\(var\(--zc-chart-outbound\)\); \}/)
-  // Phase 2: sent moved off the amber chart-2 (it read as the warning color).
-  assert.match(read('console-ui/src/design-system.css'), /--zc-chart-inbound: var\(--console-chart-1\);\s*--zc-chart-outbound: var\(--console-chart-3\);/)
+  // console-ui 1.3.0: chart-1 apricot (received), chart-2 peacock teal (sent) — chart-3 is rose, too near apricot.
+  assert.match(read('console-ui/src/design-system.css'), /--zc-chart-inbound: var\(--console-chart-1\);\s*--zc-chart-outbound: var\(--console-chart-2\);/)
   const hours = Array.from({ length: 24 }, (_, index) => ({ start: index, inbound: 0, outbound: 0 }))
   assert.equal(visibleActivityRange(hours).length, 24, 'no data: the whole day')
   hours[23].inbound = 3
@@ -58,15 +59,16 @@ test('numbers are tabular everywhere, and full-width pages widen only the conten
 test('an unknown address gets a not-found page and no 其他 › 首页 breadcrumb', () => {
   const host = read('client/host/ConsoleWebHost.tsx'), layout = read('console-ui/src/layouts/dashboard.tsx'), page = read('console-ui/src/pages/not-found.tsx')
   assert.match(host, /<Route path="\*" element=\{<NotFoundPage homePath=\{defaultHomePath\} \/>\} \/>/)
-  assert.match(layout, /onHome \|\| !navigation\.current \|\| objectPageOwnsBreadcrumb/)
+  assert.match(layout, /const showBreadcrumb = !onHome && Boolean\(navigation\.current\) && !firstLevel && !objectPageOwnsBreadcrumb/)
   assert.match(page, /i18n\.t\('找不到这个页面'\)/)
   assert.match(page, /openCommandCenter\(\)/)
   assert.match(page, /location\.pathname/)
 })
 
-test('the ⌘K field has no ring of its own, and a menu closed with the mouse does not refocus its trigger', () => {
+test('the ⌘K field has no ring of its own, and the top bar has no section menus left to refocus', () => {
   assert.match(read('client/style.css'), /\.console-command-search input:focus-visible \{\s*outline: none;/)
-  assert.match(read('console-ui/src/layouts/dashboard.tsx'), /onCloseAutoFocus=\{\(event\) => \{ if \(lastInputWasPointer\(\)\) event\.preventDefault\(\) \}\}/)
+  // Sections are links now (NavPill / NavIcon, console-ui 1.3.0): no DropdownMenu whose closing could refocus a trigger.
+  assert.doesNotMatch(read('console-ui/src/layouts/dashboard.tsx'), /DropdownMenu|onCloseAutoFocus/)
 })
 
 test('steady states carry no signal color: audit successes are plain text, failures stand out', () => {

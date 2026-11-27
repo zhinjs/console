@@ -4,7 +4,6 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { hslTokens } from './helpers/token-cascade.mjs'
-import { THEME_PALETTES } from '../console-ui/src/theme/index.ts'
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 const rgb = ({ h, s, l }) => {
@@ -22,14 +21,14 @@ test('inactive tabs use their own token; hover and disabled keep the library sty
   assert.match(css, /\.console-tabs-trigger\[data-state="inactive"\]:not\(:hover, :disabled\) \{ color: hsl\(var\(--zc-tab-inactive\)\); \}/)
 })
 
-for (const palette of THEME_PALETTES) for (const dark of [false, true]) {
-  test(`${palette.id}/${dark ? 'dark' : 'light'}: inactive tab labels reach 4.5:1 on the tab list fill`, () => {
-    const tokens = hslTokens(palette.id, dark)
+for (const dark of [false, true]) {
+  test(`${dark ? 'dark' : 'light'}: inactive tab labels reach 4.5:1 on the segmented track and its hover`, () => {
+    // console-ui 1.3.0: Tabs are the soft-card segmented control — a sunken track; hover lays 4% ink over it.
+    const tokens = hslTokens(dark)
     assert.ok(tokens['zc-tab-inactive'], 'the token resolves')
-    for (const surface of ['background', 'card']) {
-      const fill = over(rgb(tokens.foreground), 0.06, rgb(tokens[surface]))
+    for (const [name, fill] of [['sunken', rgb(tokens['console-sunken'])], ['sunken + hover', over(rgb(tokens['console-ink']), 0.04, rgb(tokens['console-sunken']))]]) {
       const value = ratio(rgb(tokens['zc-tab-inactive']), fill)
-      assert.ok(value >= 4.5, `${surface}: ${value.toFixed(2)}`)
+      assert.ok(value >= 4.5, `${name}: ${value.toFixed(2)}`)
     }
   })
 }

@@ -98,10 +98,8 @@ export const authMessages = Object.freeze({
   "完成，进入首页": "Finish and go to Home",
   "已完成，下一步": "Done, next",
   "初始化": "Setup",
-  "这台 Host 没有设置访问令牌，也还没有所有者：任何能访问它的人都有全部权限。创建所有者后改用账号登录。": "This Host has no access token and no owner yet: anyone who can reach it has every permission. Create an owner to switch to account sign-in.",
   "暂时隐藏": "Hide for now",
   "引导": "Onboarding",
-  "还有几步就能让机器人上线：接入 AI 和聊天平台。": "A few steps left to get the bot online: connect AI and chat platforms.",
   "继续引导": "Continue onboarding",
   "接入 AI 和聊天平台，完成首次引导": "Connect AI and chat platforms to finish onboarding",
   // Personal settings

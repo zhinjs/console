@@ -138,9 +138,9 @@
     align-items: center;
     gap: var(--console-space-1);
     border-radius: var(--console-radius-full);
-    background: hsl(var(--primary-action));
+    background: hsl(var(--console-primary-soft));
     padding: 0 var(--console-space-1) 0 var(--console-space-3);
-    color: hsl(var(--primary-action-foreground));
+    color: hsl(var(--console-ink));
   }
 
   .console-log-panel-scope > svg { width: 0.875rem; height: 0.875rem; flex: none; }
@@ -164,7 +164,7 @@
     cursor: pointer;
   }
 
-  .console-log-panel-chip-button:hover { background: hsl(var(--primary-action-foreground) / 0.12); }
+  .console-log-panel-chip-button:hover { background: hsl(var(--console-ink) / 0.08); }
   .console-log-panel-chip-button svg { width: 0.875rem; height: 0.875rem; }
 
   /* Dense workbench (pages/logs/LogPanelWorkbench.tsx): one toolbar row, single-line rows, one-line footer. */
@@ -204,7 +204,7 @@
   }
 
   .console-log-panel-tool.console-control { width: var(--log-panel-control); height: var(--log-panel-control); min-height: var(--log-panel-control); flex: none; }
-  .console-log-panel-tool.is-active { background: hsl(var(--primary-action)); color: hsl(var(--primary-action-foreground)); }
+  .console-log-panel-tool.is-active { background: hsl(var(--console-primary)); color: hsl(var(--console-on-primary)); }
 
   .console-log-panel-layout {
     display: grid;
@@ -239,7 +239,7 @@
   }
 
   .console-log-panel-row:hover { background: hsl(var(--muted) / 0.6); }
-  .console-log-panel-row.is-selected { background: hsl(var(--primary-action)); }
+  .console-log-panel-row.is-selected { background: hsl(var(--console-primary-soft)); box-shadow: var(--console-selected-bar); }
   .console-log-panel-row:focus-visible { outline-offset: -2px; }
   .console-log-panel-row time { color: hsl(var(--muted-foreground)); font-family: var(--console-font-mono); }
   .console-log-panel-row > svg { width: 0.875rem; height: 0.875rem; color: hsl(var(--muted-foreground)); }
@@ -276,8 +276,8 @@
 
   /* Top-bar toggle: highlighted while the panel is open. */
   .console-log-panel-trigger.is-active {
-    background: hsl(var(--primary-action));
-    color: hsl(var(--primary-action-foreground));
+    background: hsl(var(--console-primary));
+    color: hsl(var(--console-on-primary));
   }
 
   .console-log-panel-trigger:disabled { cursor: default; opacity: 0.45; }

@@ -26,8 +26,6 @@ export const insightsMessages = Object.freeze({
   "覆盖最近 24 小时": "Covers the last 24 hours",
   "缓冲只保留到 {0}，更早的消息未计入": "The buffer only reaches back to {0}; earlier messages are not counted",
   "自 {0} 起（缓冲里最早的一条）": "Since {0} (the oldest message in the buffer)",
-  "页面导航、配置入口和能力目录保持可用。重新连接后，聊天账号、Agent 与运行状态会在这里恢复。": "Navigation, configuration and the capability catalog stay available. Chat accounts, Agent and runtime status return here after reconnecting.",
-  "现在需要处理什么、消息量和最近的消息。": "What needs attention now, message volume and recent messages.",
   "已运行 {0}": "Up {0}",
   "实时推送已连接": "Live updates connected",
   "实时推送未连接": "Live updates disconnected",

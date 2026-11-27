@@ -1,25 +1,22 @@
 // Browser presentation only. CSS owns colors; preferences never enter Bot configuration.
+//
+// Colors come from @zhin.js/console-ui 1.3.0 (「柔光卡片」, ADR 0063 D34–D38): one fixed soft-card
+// palette, light and dark. The Console only picks the mode:
+//   light  → `.light` on <html>, no `data-theme` (the library is light when nothing is written);
+//   dark   → `.dark` on <html>;
+//   system → `data-theme="system"` on <html> (the library's opt-in `prefers-color-scheme` rule) plus
+//            the resolved `.light` / `.dark` class, kept in step with the system, for the Console's
+//            own `.dark` rules and Tailwind's `dark:` variant.
+// There is no palette any more: a saved `zhin.console.palette` is ignored and removed.
 export type Theme = 'light' | 'dark'
 export const THEME_MODES = ['light', 'dark', 'system'] as const
 export type ThemeMode = typeof THEME_MODES[number]
-export const THEME_PALETTES = [
-  // The brand palette (default): Zhin green. The brand mark keeps its own colors in every palette.
-  { id: 'zhin', group: 'brand', label: 'Zhin 绿', swatch: '#76eec6', light: '#f2f5f4', dark: '#0b0e0d' },
-  { id: 'sky', group: 'fresh', label: '晴空', swatch: '#2c9ff2', light: '#f2f4f5', dark: '#0b0d0e' },
-  { id: 'peach', group: 'fresh', label: '蜜桃', swatch: '#f58266', light: '#f5f2f2', dark: '#0e0c0b' },
-  { id: 'sunny', group: 'fresh', label: '暖阳', swatch: '#fbc64b', light: '#f5f4f2', dark: '#0e0d0b' },
-  { id: 'mint', group: 'fresh', label: '薄荷', swatch: '#2ee5b7', light: '#f2f5f4', dark: '#0b0e0d' },
-  { id: 'ocean', group: 'calm', label: '海蓝', swatch: '#1668dc', light: '#f2f3f5', dark: '#0b0d0e' },
-  { id: 'forest', group: 'calm', label: '松青', swatch: '#2e765b', light: '#f2f5f4', dark: '#0b0e0d' },
-  { id: 'plum', group: 'calm', label: '暮紫', swatch: '#764899', light: '#f3f2f5', dark: '#0d0b0e' },
-  { id: 'graphite', group: 'calm', label: '石墨', swatch: '#3d3d3d', light: '#f3f3f3', dark: '#0d0d0d' },
-] as const
-export type Palette = typeof THEME_PALETTES[number]['id']
-/** Default palette: neutral surfaces with the Zhin green accent. A saved choice is kept as is. */
-export const DEFAULT_PALETTE: Palette = 'zhin'
-export interface ThemePreferences { mode: ThemeMode; palette: Palette }
+export interface ThemePreferences { mode: ThemeMode }
 export const THEME_STORAGE_KEY = 'theme'
-export const PALETTE_STORAGE_KEY = 'zhin.console.palette'
+/** The palette preference of Console ≤ 1.2 (console-ui ≤ 1.2.x); read only to delete it. */
+export const LEGACY_PALETTE_STORAGE_KEY = 'zhin.console.palette'
+/** `<meta name="theme-color">`: the soft-card page background (`--console-bg`). */
+export const THEME_COLORS: Readonly<Record<Theme, string>> = Object.freeze({ light: '#F7F5F3', dark: '#121010' })
 const THEME_EVENT = 'zhin:appearance-change'
 const runtimes = new WeakMap<Window, () => void>()
 const legacyThemeVariables = [
@@ -30,18 +27,17 @@ const legacyThemeVariables = [
   'sidebar-primary-foreground','sidebar-accent','sidebar-accent-foreground','sidebar-border','sidebar-ring',
 ] as const
 export function isThemeMode(value: unknown): value is ThemeMode { return THEME_MODES.some(mode => mode === value) }
-export function isPalette(value: unknown): value is Palette { return THEME_PALETTES.some(palette => palette.id === value) }
 function storage(): Storage | undefined { try { return typeof window === 'undefined' ? undefined : window.localStorage } catch { return undefined } }
 function stored(key: string): string | null { try { return storage()?.getItem(key) ?? null } catch { return null } }
 function readStoredPreferences(): ThemePreferences {
-  const mode = stored(THEME_STORAGE_KEY), palette = stored(PALETTE_STORAGE_KEY)
-  return { mode: isThemeMode(mode) ? mode : 'system', palette: isPalette(palette) ? palette : DEFAULT_PALETTE }
+  const mode = stored(THEME_STORAGE_KEY)
+  return { mode: isThemeMode(mode) ? mode : 'system' }
 }
 export function getThemePreferences(): ThemePreferences {
   const saved = readStoredPreferences()
   if (typeof document === 'undefined') return saved
-  const { themeMode, palette } = document.documentElement.dataset
-  return { mode: isThemeMode(themeMode) ? themeMode : saved.mode, palette: isPalette(palette) ? palette : saved.palette }
+  const { themeMode } = document.documentElement.dataset
+  return { mode: isThemeMode(themeMode) ? themeMode : saved.mode }
 }
 export function resolveTheme(mode: ThemeMode): Theme {
   if (mode !== 'system') return mode
@@ -54,21 +50,21 @@ function renderTheme(preferences: ThemePreferences): Theme {
   root.classList.remove('light', 'dark')
   root.classList.add(theme)
   root.dataset.themeMode = preferences.mode
-  root.dataset.palette = preferences.palette
+  if (preferences.mode === 'system') root.dataset.theme = 'system'
+  else delete root.dataset.theme
+  delete root.dataset.palette
   for (const key of legacyThemeVariables) root.style.removeProperty(`--${key}`)
-  const palette = THEME_PALETTES.find(value => value.id === preferences.palette)!
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', palette[theme])
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLORS[theme])
   return theme
 }
 function notify() { if (typeof window !== 'undefined') window.dispatchEvent(new Event(THEME_EVENT)) }
 export function setThemePreferences(update: Partial<ThemePreferences>): void {
-  if (update.mode !== undefined && !isThemeMode(update.mode) || update.palette !== undefined && !isPalette(update.palette)) throw new TypeError('Invalid appearance preference')
+  if (update.mode !== undefined && !isThemeMode(update.mode)) throw new TypeError('Invalid appearance preference')
   const preferences = getThemePreferences()
-  if (update.mode !== undefined) preferences.mode = update.mode
-  if (update.palette !== undefined) preferences.palette = update.palette
-  // Only two bounded, validated scalar preferences. Blocked storage keeps the current session usable.
-  for (const [key, value] of [[THEME_STORAGE_KEY, update.mode], [PALETTE_STORAGE_KEY, update.palette]] as const) {
-    if (value !== undefined) { try { storage()?.setItem(key, value) } catch { /* session-only preference */ } }
+  if (update.mode !== undefined) {
+    preferences.mode = update.mode
+    // One bounded, validated scalar preference. Blocked storage keeps the current session usable.
+    try { storage()?.setItem(THEME_STORAGE_KEY, update.mode) } catch { /* session-only preference */ }
   }
   renderTheme(preferences)
   notify()
@@ -78,7 +74,7 @@ export function applyTheme(theme: Theme) { setThemePreferences({ mode: theme }) 
 /** Stable primitive snapshot shared by every theme control, including other browser tabs. */
 export function getThemeSnapshot(): string {
   const preferences = getThemePreferences()
-  return `${preferences.mode}:${preferences.palette}:${resolveTheme(preferences.mode)}`
+  return `${preferences.mode}:${resolveTheme(preferences.mode)}`
 }
 export function subscribeTheme(listener: () => void): () => void {
   if (typeof window === 'undefined') return () => {}
@@ -88,6 +84,8 @@ export function subscribeTheme(listener: () => void): () => void {
 export function initializeTheme(): Theme {
   if (typeof window === 'undefined') return 'light'
   runtimes.get(window)?.()
+  // The palette picker is gone (console-ui 1.3.0): drop its saved choice once.
+  try { if (stored(LEGACY_PALETTE_STORAGE_KEY) !== null) storage()?.removeItem(LEGACY_PALETTE_STORAGE_KEY) } catch { /* nothing to clean */ }
   const theme = renderTheme(readStoredPreferences())
   const media = window.matchMedia?.('(prefers-color-scheme: dark)')
   const onSystemChange = () => {
@@ -95,7 +93,7 @@ export function initializeTheme(): Theme {
     if (preferences.mode === 'system') { renderTheme(preferences); notify() }
   }
   const onStorage = (event: StorageEvent) => {
-    if (event.key !== null && event.key !== THEME_STORAGE_KEY && event.key !== PALETTE_STORAGE_KEY) return
+    if (event.key !== null && event.key !== THEME_STORAGE_KEY) return
     if (event.storageArea && event.storageArea !== storage()) return
     renderTheme(readStoredPreferences())
     notify()

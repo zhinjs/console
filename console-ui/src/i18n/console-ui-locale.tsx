@@ -29,6 +29,9 @@ export function ConsoleUiLocale({ children }: { children?: ReactNode }) {
     'refresh.interval': i18n.t('自动刷新间隔'),
     'refresh.manual': i18n.t('手动刷新'),
     'refresh.auto': i18n.t('{0}s 自动'),
+    'stepper.decrease': i18n.t('减少'),
+    'stepper.increase': i18n.t('增加'),
+    'toast.undo': i18n.t('撤销', [], 'toast'),
   }), [i18n])
   return <ConsoleUiI18nProvider locale={i18n.locale} messages={messages}>{children}</ConsoleUiI18nProvider>
 }

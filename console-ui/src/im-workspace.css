@@ -176,8 +176,9 @@
 .im-composer-textarea:not(.font-mono) { font-family: var(--console-font-sans); }
 .im-composer-textarea { padding: var(--console-space-3) var(--console-space-3); }
 .im-media-input:focus-visible, .im-composer-textarea:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
-.im-insert-button, .im-send-button { background: hsl(var(--primary-action)); color: hsl(var(--primary-action-foreground)); box-shadow: none; }
-.im-insert-button:hover:not(:disabled), .im-send-button:hover:not(:disabled) { background: hsl(var(--primary-action) / .9); }
+/* Send is the composer's one primary action (soft cards: solid black / white); --primary-action is the sunken secondary fill now. */
+.im-insert-button, .im-send-button { background: hsl(var(--console-primary)); color: hsl(var(--console-on-primary)); box-shadow: none; }
+.im-insert-button:hover:not(:disabled), .im-send-button:hover:not(:disabled) { background: hsl(var(--console-primary-hover)); }
 .im-composer-hint { font-size: var(--console-text-label); color: hsl(var(--muted-foreground)); }
 .im-system-page { background: hsl(var(--im-chat-bg)); }
 .im-system-page-header h2 { letter-spacing: 0; }

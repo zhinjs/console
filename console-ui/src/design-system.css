@@ -1,6 +1,11 @@
 /**
  * Console 设计规范 — 由 client/style.css 引入
  * 间距 / 圆角 / 边框 / 阴影 / 表面组件类
+ *
+ * 尺度与颜色来自 @zhin.js/console-ui 1.3.0（「柔光卡片」，ADR 0063 D34–D41）。Console 不再重新定义
+ * 与组件库同名的 --console-* 变量（字号、行高、控件高度、圆角、表面、边框、字体、动效、内容宽度、
+ * 页边距、分区间距、触控尺寸……，ADR 0063 第 37 条）；这里只保留组件库没有的旧名字，并把它们指向
+ * 组件库的令牌。
  */
 
 @import "./theme-tokens.css";
@@ -11,161 +16,82 @@
     font-size: medium;
   }
 
-  /*
-   * Base tier (light and dark alike): type, radii, control sizes, spacing.
-   * Radii 6 / 10 / 14 / 18 / 22 px; every button, input and select uses one of three heights
-   * (32 / 36 / 40 px) on pointer screens, and at least 44 px on touch-sized layouts.
-   */
-  :root {
-    /* Inter and JetBrains Mono are self-hosted (fonts.css, Latin subset); Chinese falls through to system fonts. */
-    --console-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'MiSans', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
-    --console-font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, 'PingFang SC', 'Noto Sans Mono CJK SC', monospace;
-    --console-text-label: 0.8125rem;
+  :root, .light, .dark, [data-theme="light"], [data-theme="dark"], [data-theme="system"] {
+    /* Older Console names → the library's 8-step type scale. */
     --console-text-caption: var(--console-text-label);
-    --console-text-code: 0.8125rem;
-    --console-text-body-sm: 0.8125rem;
-    --console-text-title-compact: 1.25rem;
-    --console-text-section-sm: 0.9375rem;
-    --console-line-code: 1.25rem;
-    --console-leading-title: 1.25;
-    --console-leading-section: 1.4;
-    --console-leading-body: 1.6;
-    --console-leading-label: 1.45;
-    --console-leading-code: 1.6;
-    --console-border-width: 1px;
-    --console-focus-width: 2px;
-    --console-text-body: 0.875rem;
-    --console-text-section: 1rem;
-    --console-text-title: 1.375rem;
-    --console-control-height-compact: 2rem;
-    --console-control-height: 2.25rem;
-    --console-control-height-lg: 2.5rem;
-    --console-touch-target: 2.75rem;
-    --console-radius-sm: 0.375rem;
-    --console-radius-md: 0.625rem;
-    --console-radius-lg: 0.875rem;
-    --console-radius-xl: 1.125rem;
-    --console-radius-2xl: 1.375rem;
-    --console-control-radius: var(--console-radius-2);
-    --console-page-padding-inline: 1.5rem;
-    --console-page-padding-block: 2rem;
-    --console-section-gap: 1.25rem;
-    --console-space-stack: 0.75rem;
-    --console-space-card: 1.25rem;
-    --console-space-card-sm: 1rem;
-    /* Content column: 1440px wide at most, centered on the canvas. */
-    --console-content-max: 90rem;
+    --console-text-code: var(--console-text-sm);
+    --console-text-body-sm: var(--console-text-sm);
+    --console-text-title-compact: var(--console-text-2xl);
+    --console-text-section-sm: var(--console-text-lg);
+    --console-border-width: var(--console-border-hairline);
+    --console-focus-width: var(--console-border-focus);
+    --console-control-height-lg: var(--console-size-control-lg);
+    /* Older radius names → the soft-card radii (10 / 14 / 18 / 24 / 28). */
+    --console-radius-sm: var(--console-radius-2);
+    --console-radius-md: var(--console-radius-3);
+    --console-radius-lg: var(--console-radius-4);
+    --console-radius-xl: var(--console-radius-6);
+    --console-radius-2xl: var(--console-radius-7);
+    --console-space-stack: var(--console-stack-gap);
+    --console-space-card: var(--console-card-padding);
+    --console-space-card-sm: var(--console-space-4);
 
-    /* Semantic surfaces derived from the color tokens (theme-tokens.css). */
-    --console-surface-raised: hsl(var(--card));
-    --console-surface-muted: hsl(var(--secondary));
-    --console-surface-inset: hsl(var(--secondary));
-    --console-surface-hover: hsl(var(--foreground) / 0.045);
-    --console-surface-active: hsl(var(--foreground) / 0.08);
-    --console-border-subtle: hsl(var(--border) / 0.7);
-    --console-border-default: hsl(var(--border));
-    --console-border-strong: hsl(var(--border-strong));
-
-    /* Shadows: a hairline ring plus a short, soft drop. Cards carry no border of their own. */
-    --console-shadow-color: 222 30% 12%;
-    --zc-shadow-ring: 0 0 0 1px hsl(var(--console-shadow-color) / 0.045);
-    --console-shadow-xs: 0 1px 2px hsl(var(--console-shadow-color) / 0.05);
-    --console-shadow-sm: 0 1px 2px hsl(var(--console-shadow-color) / 0.06), var(--zc-shadow-ring);
-    --console-shadow-md: 0 6px 16px -4px hsl(var(--console-shadow-color) / 0.1), 0 0 0 1px hsl(var(--console-shadow-color) / 0.05);
-    --console-shadow-lg: 0 24px 48px -12px hsl(var(--console-shadow-color) / 0.18), 0 0 0 1px hsl(var(--console-shadow-color) / 0.06);
+    /* Shadows: the library's warm shadow-sm / md / lg (dark: inner hairline and top highlight). */
+    --zc-shadow-ring: 0 0 #0000;
+    --console-shadow-xs: var(--console-elevation-1);
+    --console-shadow-sm: var(--console-elevation-1);
+    --console-shadow-md: var(--console-elevation-2);
+    --console-shadow-lg: var(--console-elevation-3);
     --console-shadow-xl: var(--console-elevation-3);
     --console-shadow-hover: var(--console-elevation-2);
     --console-shadow-button: none;
-    --console-shadow-panel: 0 1px 2px hsl(var(--console-shadow-color) / 0.04), 0 8px 24px -12px hsl(var(--console-shadow-color) / 0.08);
+    --console-shadow-panel: var(--console-elevation-1);
 
     /*
-     * Motion (console#125): three durations and one curve. fast = hover / press, base = expand,
-     * popover, toast, page enter, slow = drawers and sheets; loop = ambient pulses and shimmer;
-     * countdown = the 1s tick of a login QR ring. Every token is 0ms unless the viewer allows
-     * motion (the no-preference block below), so prefers-reduced-motion: reduce turns them all off.
-     * The older --console-duration-* names (still read by @zhin.js/console-ui) follow the same tokens.
+     * Motion: the library's --console-motion-* / --console-ease-* (not redefined here). Ambient loops
+     * (the progress pulse, skeleton shimmer) and the 1s tick of a login QR ring are Console-only.
      */
-    --console-ease-out: cubic-bezier(0.25, 1, 0.5, 1);
-    --console-motion-fast: 0ms;
-    --console-motion-base: 0ms;
-    --console-motion-slow: 0ms;
-    --zc-motion-loop: 0ms;
-    --zc-motion-countdown: 0ms;
     --console-duration-fast: var(--console-motion-fast);
     --console-duration-page: var(--console-motion-base);
+    --zc-motion-loop: 0ms;
+    --zc-motion-countdown: 0ms;
 
     /*
-     * Charts (console#125): data always takes --chart-* (palette-independent categories), never the accent or a
-     * status color. Gridlines are hairlines. Message volume: received = chart-1 (blue), sent = chart-3 (green) —
-     * chart-2 is amber and reads as the warning color (ΔE2000 < 20), so no Console chart uses it for a two-series view.
+     * Charts: data takes --chart-* (never a status color). Message volume: received = chart-1
+     * (apricot, accent-1), sent = chart-2 (peacock teal) — the soft-card chart-3 is rose, too close to
+     * apricot for a two-series view; chart-2 is set apart from the ok green. Gridlines are hairlines.
      */
     --zc-chart-grid: hsl(var(--foreground) / 0.08);
     --zc-chart-baseline: hsl(var(--foreground) / 0.18);
     --zc-hairline: 1px;
     --zc-chart-inbound: var(--console-chart-1);
-    --zc-chart-outbound: var(--console-chart-3);
+    --zc-chart-outbound: var(--console-chart-2);
     --zc-chart-quantity: var(--console-chart-1);
   }
 
   @media (prefers-reduced-motion: no-preference) {
     :root {
-      --console-motion-fast: 120ms;
-      --console-motion-base: 200ms;
-      --console-motion-slow: 280ms;
-      --zc-motion-loop: 1.4s;
+      --zc-motion-loop: var(--console-motion-pulse);
       --zc-motion-countdown: 1s;
+    }
+  }
+
+  /*
+   * Reduced motion: the library's durations are not zeroed by the tokens themselves (console-ui 1.3.0
+   * keeps only fades in its components), so the Console stops every remaining transition and
+   * animation of its own pages here instead of redefining the same-named motion tokens.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
     }
   }
 
   /* stylelint-disable-next-line console/media-queries -- 高分屏上图表网格线用 0.5px（--zc-hairline）；分辨率不是断点也不在允许的用户偏好里 */
   @media (min-resolution: 2dppx) {
     :root { --zc-hairline: 0.5px; }
-  }
-
-  .dark {
-    --console-surface-hover: hsl(0 0% 100% / 0.05);
-    --console-surface-active: hsl(0 0% 100% / 0.09);
-    --console-shadow-color: 0 0% 0%;
-    --zc-shadow-ring: 0 0 0 1px hsl(0 0% 100% / 0.05);
-    --console-shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.4);
-    --console-shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.4), var(--zc-shadow-ring);
-    --console-shadow-md: 0 6px 16px -4px hsl(0 0% 0% / 0.5), 0 0 0 1px hsl(0 0% 100% / 0.06);
-    --console-shadow-lg: 0 24px 48px -12px hsl(0 0% 0% / 0.7), 0 0 0 1px hsl(0 0% 100% / 0.08);
-    --console-shadow-panel: 0 0 0 1px hsl(0 0% 100% / 0.06);
-  }
-
-  @media (width < 48rem) {
-    :root {
-      --console-page-padding-inline: 1rem;
-      --console-page-padding-block: 1.25rem;
-      --console-section-gap: 0.875rem;
-      --console-space-card: 1rem;
-      /* Touch-sized controls on phones. */
-      --console-control-height-compact: 2.75rem;
-      --console-control-height: 2.75rem;
-      --console-control-height-lg: 2.75rem;
-    }
-  }
-
-  @media (width >= 48rem) {
-    :root {
-      --console-text-label: 0.8125rem; --console-text-code: 0.8125rem;
-      --console-text-title: 1.375rem; --console-text-title-compact: 1.25rem;
-    }
-  }
-  @media (width >= 48rem) and (width < 64rem) {
-    :root {
-      --console-page-padding-inline: 1.25rem;
-      --console-page-padding-block: 1.5rem;
-    }
-  }
-
-  @media (width >= 90rem) {
-    :root {
-      --console-page-padding-inline: 1.5rem;
-      --console-page-padding-block: 2rem;
-      --console-section-gap: 1.5rem;
-    }
   }
 
   html, body {
@@ -558,12 +484,6 @@
     box-shadow: var(--console-card-elevation);
   }
 
-  .console-surface-inset {
-    border-radius: var(--console-radius-3);
-    border: var(--console-border-hairline) solid transparent;
-    background: var(--console-surface-inset);
-  }
-
   .console-skip-link {
     position: fixed;
     top: 0.75rem;
@@ -856,8 +776,8 @@
   }
 
   .console-dashboard-panel {
-    border: var(--console-border-hairline) solid transparent;
-    border-radius: var(--console-radius-3);
+    border: 0;
+    border-radius: var(--console-card-radius);
     padding: var(--console-card-padding);
     background: hsl(var(--card));
     box-shadow: var(--console-card-elevation);
@@ -2563,45 +2483,11 @@
 
 @layer components {
   /* Page header: a 22px title with one line of muted description; actions align to the title's baseline row. */
-  .console-page-header { display: flex; flex-direction: column; gap: var(--console-space-4); padding-bottom: var(--console-space-1); }
-  .console-page-title { margin: 0; font-size: var(--console-text-title); font-weight: var(--console-weight-strong); line-height: var(--console-leading-title); letter-spacing: -0.02em; color: hsl(var(--foreground)); text-wrap: balance; }
-  .console-page-description { max-width: 70ch; margin-top: var(--console-space-1); font-size: var(--console-text-label); line-height: var(--console-leading-body); color: hsl(var(--muted-foreground)); text-wrap: pretty; }
   .console-page-header-actions { display: flex; flex-wrap: wrap; flex-shrink: 0; align-items: center; gap: var(--console-space-2); }
-  .console-control { border-radius: var(--console-control-radius); line-height: var(--console-leading-label); }
-  .console-control:focus-visible { outline: var(--console-border-focus) solid hsl(var(--ring)); outline-offset: 2px; }
-  .console-control[aria-invalid="true"] { border-color: hsl(var(--destructive)); }
-  .console-control[aria-invalid="true"]:focus-visible { outline-color: hsl(var(--destructive)); }
-  .console-control:disabled { cursor: not-allowed; }
-  .console-control[data-disabled] { opacity: 0.5; cursor: not-allowed; }
   /* Cards: white on the gray canvas, no border of their own — a hairline ring and a short drop. */
-  .console-card {
-    border: var(--console-border-hairline) solid transparent;
-    border-radius: var(--console-radius-4);
-    background: var(--console-surface-raised);
-    box-shadow: var(--console-card-elevation);
-    transition: border-color var(--console-motion-fast) var(--console-ease-out), box-shadow var(--console-motion-fast) var(--console-ease-out), transform var(--console-motion-fast) var(--console-ease-out);
-  }
-  .console-card--interactive {
-    cursor: pointer;
-  }
-  .console-card--interactive:hover {
-    box-shadow: var(--console-elevation-2);
-    transform: translateY(-1px);
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .console-card--interactive:hover { transform: none; }
-  }
   /* Grouped content inside a card: a light-gray fill, no border. */
-  .console-card .console-card,
-  .console-card .console-surface-inset {
-    background: var(--console-surface-inset);
-    box-shadow: none;
-  }
-  .console-section-title { font-size: var(--console-text-section); line-height: var(--console-leading-section); font-weight: var(--console-weight-strong); letter-spacing: 0; }
   @media (width >= 40rem) {
     /* Actions wrap under the title once the title block would drop below ~24rem (Pad widths), instead of squeezing the description. */
-    .console-page-header { flex-direction: row; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--console-space-4) var(--console-space-5); }
-    .console-page-header > :first-child { flex: 1 1 24rem; }
   }
 }
 
@@ -2613,14 +2499,9 @@
 
 @layer components {
   /* Status badges: a tint of the bright fill, text in the darker (light) / lighter (dark) text value. */
-  .console-badge-success { border-color: hsl(var(--success-fill) / 0.3); background: hsl(var(--success-fill) / 0.1); color: hsl(var(--success)); }
-  .console-badge-info { border-color: hsl(var(--info-fill) / 0.3); background: hsl(var(--info-fill) / 0.1); color: hsl(var(--info)); }
-  .console-badge-warning { border-color: hsl(var(--warning-fill) / 0.45); background: hsl(var(--warning-fill) / 0.14); color: hsl(var(--warning)); }
 }
 
 @layer components {
-  .console-text-body { font-size: var(--console-text-body); line-height: var(--console-leading-body); }
-  .console-text-label { font-size: var(--console-text-label); line-height: var(--console-leading-label); }
   /* Every lucide icon draws a 1.75 stroke (console#125), whatever size it is drawn at. */
   svg.lucide { stroke-width: 1.75; }
   .console-text-code { font-family: var(--console-font-mono); font-size: var(--console-text-label); line-height: var(--console-leading-code); }
@@ -2630,7 +2511,6 @@
    * Lists of them sit side by side with a gap, not as chips.
    */
   .console-code-list { display: flex; flex-wrap: wrap; gap: var(--console-space-1) var(--console-space-4); min-width: 0; }
-  .console-menu-item { min-height: var(--console-control-height-compact); }
 }
 
 @layer components {
@@ -2780,42 +2660,6 @@
 
 @layer components {
 
-  .console-table {
-    width: 100%;
-    border-collapse: collapse;
-    line-height: var(--console-leading-body);
-    font-size: var(--console-text-body);
-  }
-
-  .console-table th {
-    border-bottom: var(--console-border-hairline) solid var(--console-border-default);
-    background: var(--console-surface-inset);
-    padding: var(--console-space-3) var(--console-space-4);
-    color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-label);
-    font-weight: var(--console-weight-medium);
-    text-align: left;
-    white-space: nowrap;
-  }
-
-  .console-table td {
-    border-bottom: var(--console-border-hairline) solid var(--console-border-subtle);
-    padding: var(--console-space-4) var(--console-space-4);
-    vertical-align: middle;
-  }
-
-  .console-table tbody tr:last-child td {
-    border-bottom: 0;
-  }
-
-  .console-table tbody tr {
-    transition: background-color var(--console-motion-fast) var(--console-ease-out);
-  }
-
-  .console-table tbody tr:hover {
-    background: var(--console-surface-inset);
-  }
-
   .console-table-sub {
     display: block;
     margin-top: var(--console-space-1);
@@ -2904,136 +2748,6 @@
 
 @layer components {
   /* ── Dialog, ConfirmDialog & Sheet / Drawer Primitives ── */
-  .console-dialog-overlay,
-  .console-sheet-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 50;
-    background: hsl(0 0% 0% / 0.4);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-  }
-
-  .dark .console-dialog-overlay,
-  .dark .console-sheet-overlay {
-    background: hsl(0 0% 0% / 0.6);
-  }
-
-  .console-dialog-close {
-    position: absolute;
-    right: 0.875rem;
-    top: 0.875rem;
-    display: inline-grid;
-    place-items: center;
-    width: 2rem;
-    height: 2rem;
-    border-radius: var(--console-radius-2);
-    border: var(--console-border-hairline) solid transparent;
-    background: transparent;
-    color: hsl(var(--muted-foreground));
-    cursor: pointer;
-    transition: background-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out), border-color var(--console-motion-fast) var(--console-ease-out);
-  }
-
-  .console-dialog-close:hover {
-    background: var(--console-surface-muted);
-    border-color: var(--console-border-subtle);
-    color: hsl(var(--foreground));
-  }
-
-  .console-dialog-close:focus-visible {
-    outline: var(--console-border-focus) solid hsl(var(--ring));
-    outline-offset: 2px;
-  }
-
-  .console-sheet-content {
-    position: fixed;
-    z-index: 50;
-    display: flex;
-    flex-direction: column;
-    gap: var(--console-space-4);
-    background: hsl(var(--popover));
-    color: hsl(var(--popover-foreground));
-    box-shadow: var(--console-elevation-3);
-    padding: var(--console-space-5);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-
-  .console-sheet-content[data-side="right"] {
-    inset: 0 0 0 auto;
-    width: min(34rem, 94vw);
-    height: 100dvh;
-    border-left: var(--console-border-hairline) solid var(--console-border-default);
-    border-radius: var(--console-radius-4) 0 0 var(--console-radius-4);
-    animation: console-sheet-in-right var(--console-motion-slow) var(--console-ease-out);
-  }
-
-  .console-sheet-content[data-side="left"] {
-    inset: 0 auto 0 0;
-    width: min(24rem, 90vw);
-    height: 100dvh;
-    border-right: var(--console-border-hairline) solid var(--console-border-default);
-    border-radius: 0 var(--console-radius-4) var(--console-radius-4) 0;
-    animation: console-sheet-in-left var(--console-motion-slow) var(--console-ease-out);
-  }
-
-  .console-sheet-content[data-side="bottom"] {
-    inset: auto 0 0 0;
-    width: 100%;
-    max-height: 86dvh;
-    border-top: var(--console-border-hairline) solid var(--console-border-default);
-    border-radius: var(--console-radius-4) var(--console-radius-4) 0 0;
-    animation: console-sheet-in-bottom var(--console-motion-slow) var(--console-ease-out);
-  }
-
-  @media (width < 40rem) {
-    .console-sheet-content[data-side="right"] {
-      width: 100vw;
-      border-radius: 0;
-      padding: var(--console-space-4);
-    }
-  }
-
-  .console-sheet-header {
-    display: flex;
-    flex-direction: column;
-    gap: var(--console-space-1);
-    padding-right: var(--console-space-6);
-    padding-bottom: var(--console-space-4);
-    border-bottom: var(--console-border-hairline) solid var(--console-border-subtle);
-  }
-
-  .console-sheet-body {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--console-space-4);
-  }
-
-  .console-sheet-footer {
-    margin-top: auto;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: flex-end;
-    gap: var(--console-space-2);
-    padding-top: var(--console-space-4);
-    border-top: var(--console-border-hairline) solid var(--console-border-subtle);
-  }
-
-  .console-confirm-icon {
-    display: inline-grid;
-    place-items: center;
-    width: 2.5rem;
-    height: 2.5rem;
-    flex-shrink: 0;
-    border-radius: var(--console-radius-2);
-    background: hsl(var(--primary) / 0.1);
-    border: var(--console-border-hairline) solid hsl(var(--primary) / 0.22);
-    color: hsl(var(--primary));
-  }
 
   .console-confirm-icon.is-destructive {
     background: hsl(var(--destructive) / 0.1);
@@ -3043,36 +2757,14 @@
 
   /* ── Dashboard & Telemetry Visual Meters ── */
 
-  .console-ring-gauge {
-    position: relative;
-    display: inline-grid;
-    place-items: center;
-    width: 2.65rem;
-    height: 2.65rem;
-    flex-shrink: 0;
-  }
-
-  .console-ring-gauge svg {
-    width: 100%;
-    height: 100%;
-    transform: rotate(-90deg);
-  }
-
-  /* The ring shows a quantity (online share): a chart color, never the accent; the warning fill only when an account is
+  /* The ring shows a quantity (online share): a chart color, never the primary; the warning fill only when an account is
      offline. CSS outranks the component's stroke attribute. console#125. */
   .console-ring-gauge circle[stroke="hsl(var(--primary))"] { stroke: hsl(var(--zc-chart-quantity)); }
   .console-ring-gauge circle[stroke="hsl(var(--warning))"] { stroke: hsl(var(--warning-fill)); }
   .console-ring-gauge circle[stroke="hsl(var(--success))"] { stroke: hsl(var(--zc-chart-quantity)); }
 
-  .console-ring-gauge-label {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    font-size: var(--console-text-label);
-    font-weight: var(--console-weight-strong);
-    color: hsl(var(--foreground));
-  }
+  /* The ring shows a quantity (online share): a chart color, never the accent; the warning fill only when an account is
+     offline. CSS outranks the component's stroke attribute. console#125. */
 
   .console-severity-strip {
     display: flex;
@@ -3140,10 +2832,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     .console-log-inspector,
-    .console-capability-inspector,
-    .console-sheet-content[data-side="right"],
-    .console-sheet-content[data-side="left"],
-    .console-sheet-content[data-side="bottom"] {
+    .console-capability-inspector {
       animation: none !important;
     }
   }
@@ -3151,32 +2840,6 @@
 
 @layer components {
   /* 指标卡：总览页与列表页共用（components/StatCard.tsx） */
-  .console-stat-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: var(--console-space-4);
-  }
-
-  .console-stat-card {
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
-    gap: var(--console-space-2);
-    border: var(--console-border-hairline) solid transparent;
-    border-radius: var(--console-radius-3);
-    background: hsl(var(--card));
-    padding: var(--console-space-4) var(--console-space-4) var(--console-space-4);
-    box-shadow: var(--console-card-elevation);
-  }
-
-  button.console-stat-card {
-    width: 100%;
-    color: inherit;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-    transition: border-color var(--console-motion-fast) var(--console-ease-out), box-shadow var(--console-motion-fast) var(--console-ease-out);
-  }
 
   .console-stat-card.is-link:hover {
     border-color: hsl(var(--primary) / 0.35);
@@ -3188,53 +2851,6 @@
     outline-offset: 2px;
   }
 
-  .console-stat-value-row {
-    display: flex;
-    min-width: 0;
-    /* 与环形进度同高，保证四张卡片的数字在同一水平线上 */
-    min-height: 2.65rem;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--console-space-3);
-  }
-
-  .console-stat-label {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--console-space-2);
-    color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-label);
-    font-weight: var(--console-weight-medium);
-  }
-
-  .console-stat-label svg { width: 0.95rem; height: 0.95rem; }
-
-  .console-stat-value {
-    overflow: hidden;
-    font-size: var(--console-text-display);
-    font-weight: var(--console-weight-strong);
-    line-height: 1.15;
-    letter-spacing: -0.03em;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .console-stat-value small {
-    margin-left: var(--console-space-1);
-    color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-section);
-    font-weight: var(--console-weight-medium);
-    letter-spacing: 0;
-  }
-
-  .console-stat-sub {
-    overflow: hidden;
-    color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-label);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   .console-stat-card.is-danger .console-stat-value,
   .console-stat-card.is-danger .console-stat-label svg { color: hsl(var(--destructive)); }
   .console-stat-card.is-warning .console-stat-value,
@@ -3244,36 +2860,11 @@
     border-color: hsl(var(--primary) / 0.55);
     background: hsl(var(--primary) / 0.05);
   }
-
-  @media (width < 64rem) {
-    .console-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--console-space-3); }
-  }
-
-  @media (width < 40rem) {
-    .console-stat-value { font-size: var(--console-text-title); }
-  }
 }
 
 @layer components {
   /* InfoHint: a visible label with ⓘ; the explanation opens in a popover. */
-  .console-info-hint {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--console-space-1);
-    border: 0;
-    border-radius: var(--console-radius-full);
-    background: hsl(var(--muted));
-    padding: var(--console-space-1) var(--console-space-2);
-    color: hsl(var(--foreground));
-    font-size: var(--console-text-label);
-    font-weight: var(--console-weight-medium);
-    cursor: pointer;
-  }
-  .console-info-hint:hover { background: hsl(var(--accent)); }
-  .console-info-hint > svg { width: 0.875rem; height: 0.875rem; color: hsl(var(--muted-foreground)); }
   .console-info-hint.is-warning { background: hsl(var(--warning) / 0.12); color: hsl(var(--warning)); }
   .console-info-hint.is-warning > svg { color: currentColor; }
-  .console-info-hint-panel { width: min(22rem, calc(100vw - 2rem)); font-size: var(--console-text-label); line-height: var(--console-leading-body); }
-  .console-info-hint-panel > p + p { margin-top: var(--console-space-2); color: hsl(var(--muted-foreground)); }
   .console-info-hint-panel > p.is-partial { color: hsl(var(--warning)); }
 }
