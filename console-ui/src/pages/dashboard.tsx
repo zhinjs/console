@@ -23,7 +23,7 @@ import { CONVERSATION_KINDS, type ConversationKind } from './features/feature-mo
 import { conversationHref, CONSOLE_PATHS } from '../console-routes.mjs'
 import { instanceSectionHref } from './ops/instance-sections.mjs'
 import { VersionHintRow } from './ops/version-panel'
-import { Alert, AlertDescription, Button, InfoHint, ListItemButton, MiniRingGauge, PageHeader, PageShell, Sheet, SheetBody, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, Skeleton, StatCard, StatGrid, useConfirm } from '@zhin.js/console-ui'
+import { Alert, AlertDescription, Badge, Button, Card, HeroCard, InfoHint, ListCaption, ListGroup, ListItemButton, ListRow, MiniRingGauge, PageHeader, PageShell, Sheet, SheetBody, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, Skeleton, StatCard, StatGrid, StatusDot, Tile, useConfirm } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import './insights/insights.css'
 import type { LucideIcon } from 'lucide-react'
@@ -63,6 +63,8 @@ import './dashboard.css'
 import { ATTENTION_PATH, DASHBOARD_ATTENTION_LIMIT } from './attention/attention-model.mjs'
 import { AttentionSummaryList } from './attention/AttentionSummaryList'
 import { useAttention } from './attention/use-attention'
+import { endpointStatusLabel, endpointStatusTone, latestConversations } from './dashboard-overview-model.mjs'
+import { useEndpointsAndLogin } from './scope/login-tasks'
 import { mcpDashboardDetail, summarizeMcp, type McpSummary } from './introspection/mcp-status-model.mjs'
 import './attention/attention.css'
 
@@ -446,6 +448,10 @@ export default function HomePage() {
   const { success, error: toastError } = useToast()
   const connected = useConsoleConnected()
   const attention = useAttention()
+  // 聊天账号 list of the Main design: the object tree's own `endpoint.list` read, when the identity may see accounts.
+  const accountsAllowed = hasConsolePermission('endpoint.view')
+  const accountState = useEndpointsAndLogin(accountsAllowed)
+  const accounts = { ...accountState, allowed: accountsAllowed }
   const [messageEvents, setMessageEvents] = useState<unknown[]>([])
   const [messagesLoaded, setMessagesLoaded] = useState(false)
   const [messagesTruncated, setMessagesTruncated] = useState(false)
@@ -496,6 +502,7 @@ export default function HomePage() {
   const activity = useMemo(() => visibleActivityRange(hourlyMessageActivity(records, activityNow, 24)), [records, activityNow])
   const messageSummary = useMemo(() => summarizeMessages(records, activityNow - DAY_MS), [records, activityNow])
   const messageFeed = useMemo(() => buildMessageFeed(records, FEED_LIMIT), [records])
+  const recentConversations = useMemo(() => latestConversations(records, 4), [records])
   const latestMessageAt = records[records.length - 1]?.timestamp ?? null
 
   const fetchDashboard = useCallback(async (background = false) => {
@@ -727,44 +734,20 @@ export default function HomePage() {
     )
   }
 
+  const heroTitle = !hostAvailable ? i18n.t("Host 暂时不可达") : healthy ? i18n.t("实例运行正常") : i18n.t("有事项需要处理")
+  const accountRows = accounts.endpoints.slice(0, 6)
+  const attentionCount = attention.allowed ? attention.active.length : null
+
   return (
     <PageShell className="console-dashboard console-overview-page">
       <PageHeader
-        title={!hostAvailable ? `${i18n.t("Host 暂时不可达，")}${i18n.t("控制面仍可继续使用")}` : i18n.t("首页")}
-        description={!hostAvailable
-          ? i18n.t("页面导航、配置入口和能力目录保持可用。重新连接后，聊天账号、Agent 与运行状态会在这里恢复。")
-          : i18n.t("现在需要处理什么、消息量和最近的消息。")}
-        actions={<>
-          {!readOnly ? (
-            <Button variant="destructive-outline" disabled={restarting} onClick={() => { void confirmRestart() }}>
-              <Power />
-              {i18n.t("重启")}
-            </Button>
-          ) : null}
-          <Button variant="outline" onClick={refreshAll} disabled={refreshing} aria-label={hostAvailable ? i18n.t("刷新工作台") : undefined}>
-            <RefreshCw className={refreshing ? 'animate-spin' : ''} />
-            {hostAvailable ? i18n.t("刷新") : i18n.t("重新连接")}
-          </Button>
-          {hostAvailable ? (
-            <Button variant="primary" onClick={() => navigate('/scope')}>
-              <Bot className="h-4 w-4" />
-              {i18n.t("进入会话")}
-            </Button>
-          ) : null}
-        </>}
+        title={i18n.t("首页")}
+        actions={<Button variant="secondary" onClick={refreshAll} disabled={refreshing} aria-label={hostAvailable ? i18n.t("刷新工作台") : undefined}>
+          <RefreshCw className={refreshing ? 'animate-spin' : ''} />
+          {hostAvailable ? i18n.t("刷新") : i18n.t("重新连接")}
+        </Button>}
       />
       <RestartProgress onRestarted={refreshAll} />
-
-      <div className="console-overview-status">
-        <span className={healthy ? 'console-health-pill' : 'console-health-pill is-warning'}>
-          <span className={healthy ? 'console-status-dot' : 'console-status-dot is-warning'} />
-          {!hostAvailable ? i18n.t("Host 连接需要恢复") : healthy ? i18n.t("所有核心服务运行正常") : i18n.t("有事项需要处理")}
-        </span>
-        {systemStatus ? <span>{i18n.t("已运行 {0}", [formatUptime(systemStatus.uptime, i18n.locale)])}</span> : null}
-        <span>{connected ? i18n.t("实时推送已连接") : i18n.t("实时推送未连接")}</span>
-        {lastUpdatedAt ? <span>{i18n.t("上次更新 {0}", [new Date(lastUpdatedAt).toLocaleTimeString(i18n.locale)])}</span> : null}
-        <Link to={CONSOLE_PATHS.opsInstance}>{i18n.t("查看实例")}</Link>
-      </div>
 
       {error ? (
         <Alert variant="destructive">
@@ -776,21 +759,68 @@ export default function HomePage() {
         </Alert>
       ) : null}
 
-      {attention.allowed && (attention.active.length > 0 || (attention.state.status === 'error' && !attention.state.data)) ? (
-        <section className="console-dashboard-panel" aria-labelledby="attention-title">
-          <div className="console-card-heading">
-            <h2 id="attention-title">{i18n.t("需要你处理")}</h2>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to={ATTENTION_PATH}>{i18n.t("查看全部 ({0})", [attention.active.length])}<ArrowUpRight /></Link>
-            </Button>
+      {/* The Main design: the instance as the page's one hero card, 需处理 next to it. */}
+      <div className="console-overview-hero-row" data-attention={attentionCount !== null ? 'true' : undefined}>
+        <HeroCard className="console-overview-hero" aria-label={i18n.t("实例")}>
+          <div className="console-overview-hero-head">
+            {/* On the gradient only ink text: the state is a progress dot or plain words (D34). */}
+            <StatusDot tone={healthy ? 'neutral' : 'progress'}>{!hostAvailable ? i18n.t("连接需要恢复") : healthy ? i18n.t("运行中") : i18n.t("需留意")}</StatusDot>
+            {systemStatus ? <span className="console-overview-hero-muted">{i18n.t("已运行 {0}", [formatUptime(systemStatus.uptime, i18n.locale)])}</span> : null}
           </div>
-          {attention.active.length > 0 ? (
-            <AttentionSummaryList items={attention.active.slice(0, DASHBOARD_ATTENTION_LIMIT)} />
-          ) : (
-            <StatusState compact error={attention.state.error} onRetry={attention.refresh} />
-          )}
-        </section>
-      ) : null}
+          <h2 className="console-hero-title">{heroTitle}</h2>
+          {!hostAvailable ? <p className="console-overview-hero-muted">{i18n.t("控制面仍可继续使用")}</p> : null}
+          <dl className="console-overview-hero-stats">
+            <div>
+              <dd>{stats ? <>{stats.endpoints.online}<small> / {i18n.t("{0} 在线", [stats.endpoints.total])}</small></> : '—'}</dd>
+              <dt>{i18n.t("聊天账号")}</dt>
+            </div>
+            <div>
+              <dd>{stats ? <>{stats.plugins.active}<small> {i18n.t("个")}</small></> : '—'}</dd>
+              <dt>{i18n.t("已启用插件")}</dt>
+            </div>
+            <div>
+              <dd>{readingValue(inboundReading)}{inboundReading.kind === 'value' ? <small> {i18n.t("条")}</small> : null}</dd>
+              <dt>{i18n.t("24 小时消息")}</dt>
+            </div>
+          </dl>
+          <div className="console-overview-hero-actions">
+            {/* The page's one primary action; on the hero card the others are white / text (soft cards). */}
+            {hostAvailable ? <Button variant="primary" size="sm" onClick={() => navigate('/scope')}>{i18n.t("进入会话")}</Button> : null}
+            {!readOnly ? (
+              <Button variant="white" size="sm" disabled={restarting} onClick={() => { void confirmRestart() }}>
+                <Power />
+                {i18n.t("重启")}
+              </Button>
+            ) : null}
+            <Button variant="text" size="sm" asChild><Link to="/logs">{i18n.t("看日志")}</Link></Button>
+            <span className="console-overview-hero-muted">
+              {connected ? i18n.t("实时推送已连接") : i18n.t("实时推送未连接")}
+              {lastUpdatedAt ? ` · ${i18n.t("上次更新 {0}", [new Date(lastUpdatedAt).toLocaleTimeString(i18n.locale)])}` : ''}
+            </span>
+          </div>
+        </HeroCard>
+
+        {attentionCount !== null ? (
+          <Card className="console-overview-attention" aria-labelledby="attention-title">
+            <div className="console-overview-attention-head">
+              <h2 id="attention-title">{i18n.t("需处理")}</h2>
+              <span className="console-overview-attention-count">{attentionCount}</span>
+            </div>
+            {attention.active.length > 0 ? (
+              <AttentionSummaryList items={attention.active.slice(0, DASHBOARD_ATTENTION_LIMIT)} />
+            ) : attention.state.status === 'error' && !attention.state.data ? (
+              <StatusState compact error={attention.state.error} onRetry={attention.refresh} />
+            ) : (
+              <p className="console-overview-hero-muted">{i18n.t("没有要处理的")}</p>
+            )}
+            {attention.active.length > 0 ? (
+              <Button variant="text" size="sm" asChild className="self-start">
+                <Link to={ATTENTION_PATH}>{i18n.t("查看全部 ({0})", [attention.active.length])}</Link>
+              </Button>
+            ) : null}
+          </Card>
+        ) : null}
+      </div>
 
       <StatGrid label={i18n.t("关键指标")}>
         <StatCard
@@ -847,55 +877,112 @@ export default function HomePage() {
       </div>
 
       <div className="console-overview-row">
-        <section className="console-dashboard-panel console-volume-panel" aria-labelledby="volume-title">
-          <div className="console-card-heading">
-            <h2 id="volume-title">{i18n.t("最近 24 小时消息量")}</h2>
-            {latestMessageAt !== null
-              ? <span className="console-soft-badge">{i18n.t("最近消息 {0}", [formatAgo(latestMessageAt, Date.now(), i18n.locale)])}</span>
-              : null}
-          </div>
-          {coverage.kind === 'none' && messagesLoaded ? (
-            <StatusState kind="empty" compact illustration="messages" title={i18n.t("缓冲里还没有消息")} description={i18n.t("机器人收到或发出消息后会出现在这里；实例重启会清空缓冲。")} />
-          ) : (
-            <MessageVolumeChart
-              buckets={activity}
-              summary={i18n.t("最近 24 小时收到 {0} 条消息，机器人发出 {1} 条", [messageSummary.inbound, messageSummary.outbound])}
-              describe={(bucket) => i18n.t("{0} · 收到 {1} · 发出 {2}", [formatHour(bucket.start), bucket.inbound, bucket.outbound])}
-            />
-          )}
-          <div className="console-volume-legend">
-            <span><i className="is-inbound" aria-hidden="true" />{i18n.t("收到")}</span>
-            <span><i className="is-reply" aria-hidden="true" />{i18n.t("发出")}</span>
-            <small className={coverage.kind === 'partial' ? 'text-[hsl(var(--warning))]' : undefined}>{i18n.t("缓冲内观察")} · {coverageText}</small>
-          </div>
-        </section>
+        <div className="console-overview-column">
+          {accounts.allowed ? (
+            <section className="console-overview-list" aria-labelledby="accounts-title">
+              <ListCaption id="accounts-title" level={2}>{i18n.t("聊天账号")}</ListCaption>
+              {accountRows.length > 0 ? (
+                <ListGroup>
+                  {accountRows.map((endpoint) => {
+                    const tone = endpointStatusTone(endpoint)
+                    return (
+                      <ListRow key={`${endpoint.adapter}/${endpoint.name}`} asChild title={null}>
+                        <Link to={`/scope/${encodeURIComponent(endpoint.adapter)}/${encodeURIComponent(endpoint.name)}`}>
+                          <Tile tone={1}><AtSign /></Tile>
+                          <span className="console-list-row-body">
+                            <span className="console-list-row-title">{endpoint.name}</span>
+                            <span className="console-list-row-description">{endpoint.transportLabel ? `${endpoint.adapter} · ${endpoint.transportLabel}` : endpoint.adapter}</span>
+                          </span>
+                          <span className="console-list-row-end"><StatusDot tone={tone}>{endpointStatusLabel(endpoint, i18n.t)}</StatusDot></span>
+                        </Link>
+                      </ListRow>
+                    )
+                  })}
+                </ListGroup>
+              ) : accounts.loaded ? (
+                <Card><StatusState kind="empty" compact title={i18n.t("还没有聊天账号")} /></Card>
+              ) : (
+                <ListGroup aria-label={i18n.t("正在读取聊天账号")}><Skeleton className="h-14" /><Skeleton className="h-14" /></ListGroup>
+              )}
+            </section>
+          ) : null}
 
-        <section className="console-dashboard-panel" aria-labelledby="resource-title">
-          <div className="console-card-heading">
-            <h2 id="resource-title">{i18n.t("进程与资源")}</h2>
-            <Button variant="ghost" size="sm" asChild><Link to={instanceSectionHref('status', CONSOLE_PATHS.opsInstance)}>{i18n.t("实例")}<ArrowUpRight /></Link></Button>
-          </div>
-          <dl className="console-kv-list">
-            <div>
-              <dt>{i18n.t("堆内存")}</dt>
-              <dd>{systemStatus ? `${formatMemory(systemStatus.memory.heapUsed)} / ${formatMemory(systemStatus.memory.heapTotal)}` : '—'}</dd>
-              {heapRate !== null ? <span className="console-meter" aria-hidden="true"><span style={{ width: `${heapRate}%` }} /></span> : null}
+          <section className="console-dashboard-panel" aria-labelledby="resource-title">
+            <div className="console-card-heading">
+              <h2 id="resource-title">{i18n.t("进程与资源")}</h2>
+              <Button variant="text" size="sm" asChild><Link to={instanceSectionHref('status', CONSOLE_PATHS.opsInstance)}>{i18n.t("实例")}</Link></Button>
             </div>
-            <div><dt>{i18n.t("RSS 内存")}</dt><dd>{systemStatus ? formatMemory(systemStatus.memory.rss) : '—'}</dd></div>
-            <div>
-              <dt>{i18n.t("系统内存")}</dt>
-              <dd>{osMemoryRate !== null ? `${osMemoryRate}%` : '—'}</dd>
-              {osMemoryRate !== null ? <span className="console-meter" aria-hidden="true"><span style={{ width: `${osMemoryRate}%` }} className={osMemoryRate >= 85 ? 'is-warning' : ''} /></span> : null}
+            <dl className="console-kv-list">
+              <div>
+                <dt>{i18n.t("堆内存")}</dt>
+                <dd>{systemStatus ? `${formatMemory(systemStatus.memory.heapUsed)} / ${formatMemory(systemStatus.memory.heapTotal)}` : '—'}</dd>
+                {heapRate !== null ? <span className="console-meter" aria-hidden="true"><span style={{ width: `${heapRate}%` }} /></span> : null}
+              </div>
+              <div><dt>{i18n.t("RSS 内存")}</dt><dd>{systemStatus ? formatMemory(systemStatus.memory.rss) : '—'}</dd></div>
+              <div>
+                <dt>{i18n.t("系统内存")}</dt>
+                <dd>{osMemoryRate !== null ? `${osMemoryRate}%` : '—'}</dd>
+                {osMemoryRate !== null ? <span className="console-meter" aria-hidden="true"><span style={{ width: `${osMemoryRate}%` }} className={osMemoryRate >= 85 ? 'is-warning' : ''} /></span> : null}
+              </div>
+              <div>
+                <dt>{i18n.t("CPU 占用")}</dt>
+                <dd title={i18n.t("进程 CPU 时间占单核的比例，按两次刷新之间的差值计算")}>{cpuRate !== null ? `${cpuRate}%` : '—'}</dd>
+                {cpuRate !== null ? <span className="console-meter" aria-hidden="true"><span style={{ width: `${cpuMeterWidth(cpuRate)}%` }} className={cpuRate >= 85 ? 'is-warning' : ''} /></span> : null}
+              </div>
+              <div><dt>{i18n.t("运行环境")}</dt><dd>{systemStatus ? `Node ${systemStatus.nodeVersion} · ${systemStatus.platform}` : '—'}</dd></div>
+              <VersionHintRow enabled={hasConsolePermission('status.view')} />
+            </dl>
+          </section>
+        </div>
+
+        <div className="console-overview-column">
+          <section className="console-dashboard-panel console-volume-panel" aria-labelledby="volume-title">
+            <div className="console-card-heading">
+              <h2 id="volume-title">{i18n.t("最近 24 小时消息量")}</h2>
+              {latestMessageAt !== null
+                ? <Badge variant="neutral">{i18n.t("最近消息 {0}", [formatAgo(latestMessageAt, Date.now(), i18n.locale)])}</Badge>
+                : null}
             </div>
-            <div>
-              <dt>{i18n.t("CPU 占用")}</dt>
-              <dd title={i18n.t("进程 CPU 时间占单核的比例，按两次刷新之间的差值计算")}>{cpuRate !== null ? `${cpuRate}%` : '—'}</dd>
-              {cpuRate !== null ? <span className="console-meter" aria-hidden="true"><span style={{ width: `${cpuMeterWidth(cpuRate)}%` }} className={cpuRate >= 85 ? 'is-warning' : ''} /></span> : null}
+            {coverage.kind === 'none' && messagesLoaded ? (
+              <StatusState kind="empty" compact illustration="messages" title={i18n.t("缓冲里还没有消息")} description={i18n.t("机器人收到或发出消息后会出现在这里；实例重启会清空缓冲。")} />
+            ) : (
+              <MessageVolumeChart
+                buckets={activity}
+                summary={i18n.t("最近 24 小时收到 {0} 条消息，机器人发出 {1} 条", [messageSummary.inbound, messageSummary.outbound])}
+                describe={(bucket) => i18n.t("{0} · 收到 {1} · 发出 {2}", [formatHour(bucket.start), bucket.inbound, bucket.outbound])}
+              />
+            )}
+            <div className="console-volume-legend">
+              <span><i className="is-inbound" aria-hidden="true" />{i18n.t("收到")}</span>
+              <span><i className="is-reply" aria-hidden="true" />{i18n.t("发出")}</span>
+              <small className={coverage.kind === 'partial' ? 'text-[hsl(var(--warning))]' : undefined}>{i18n.t("缓冲内观察")} · {coverageText}</small>
             </div>
-            <div><dt>{i18n.t("运行环境")}</dt><dd>{systemStatus ? `Node ${systemStatus.nodeVersion} · ${systemStatus.platform}` : '—'}</dd></div>
-            <VersionHintRow enabled={hasConsolePermission('status.view')} />
-          </dl>
-        </section>
+          </section>
+
+          {recentConversations.length > 0 ? (
+            <section className="console-overview-list" aria-labelledby="recent-conversations-title">
+              <ListCaption id="recent-conversations-title" level={2}>{i18n.t("最近会话")}</ListCaption>
+              <ListGroup>
+                {recentConversations.map((item) => {
+                  const href = item.adapter && item.endpoint && CONVERSATION_KINDS.includes(item.kind as never) && item.channelId
+                    ? conversationHref(item.adapter, item.endpoint, item.kind as ConversationKind, item.channelId, 'records')
+                    : null
+                  const body = <>
+                    <Tile tone={4}><MessageSquare /></Tile>
+                    <span className="console-list-row-body">
+                      <span className="console-list-row-title">{item.conversationName || item.channelId || i18n.t("会话")}</span>
+                      <span className="console-list-row-description">{item.text || '—'}</span>
+                    </span>
+                    <span className="console-list-row-end console-overview-hero-muted">{formatAgo(item.timestamp, Date.now(), i18n.locale)}</span>
+                  </>
+                  return href
+                    ? <ListRow key={item.id} asChild title={null}><Link to={href}>{body}</Link></ListRow>
+                    : <ListRow key={item.id} asChild title={null}><div>{body}</div></ListRow>
+                })}
+              </ListGroup>
+            </section>
+          ) : null}
+        </div>
       </div>
 
       <section className="console-dashboard-panel console-event-feed-panel" aria-labelledby="event-feed-title">
