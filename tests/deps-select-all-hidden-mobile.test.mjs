@@ -19,6 +19,9 @@ test('card mode shows a visible 「全选」 with the same toggle and mixed stat
   assert.match(block, /checked=\{headerState\}/u, 'the same checked / mixed state as the header checkbox')
   assert.match(block, /setSelected\(toggleAllSelection\(listedNames, value === true\)\)/u)
   assert.match(block, /min-h-11/u, '44px touch target')
+  assert.match(block, /disabled=\{busy\}/u, 'disabled while an operation runs, like the header one')
+  assert.match(card.slice(wrapper, control), /\{canManage \? \(/u, 'only for identities that can manage packages')
+  assert.match(block, /<label[^>]*>\s*<Checkbox[\s\S]*?\{i18n\.t\("全选依赖"\)\}\s*<\/label>/u, 'the label names the checkbox')
 })
 
 test('the header checkbox leaves the tab order in card mode', () => {
