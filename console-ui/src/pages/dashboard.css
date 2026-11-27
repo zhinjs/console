@@ -319,6 +319,9 @@
     font-size: var(--console-text-label);
   }
 
+  /* 运行事件详情 (sheet): the message on the library's inset surface. */
+  .console-event-detail-message { padding: var(--console-space-4); border-radius: var(--console-radius-3); background: var(--console-surface-inset); }
+
   .console-message-feed { display: flex; flex-direction: column; }
 
   .console-message-row {

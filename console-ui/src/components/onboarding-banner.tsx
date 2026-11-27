@@ -25,13 +25,14 @@ export function OnboardingBanner() {
 
   const me = session.me
   if (me?.kind === 'bootstrap' && me.open && me.setupRequired) {
-    // Soft-card banner: one short state and one white button; the risk itself is the detail line.
+    // Soft-card banner: one short state and one white button; the risk itself (no token, no owner:
+    // full access for anyone who can reach the Host) is the detail line.
     return <section className="console-onboarding-banner" aria-label={i18n.t('初始化')}>
       <Banner tone="danger" icon={<ShieldAlert aria-hidden="true" />}
         action={<><Button size="sm" variant="white" onClick={() => requestSetup(true)}>{i18n.t('创建所有者')}</Button>
           <IconButton variant="flat" aria-label={i18n.t('暂时隐藏')} onClick={() => setDismissed(true)}><X aria-hidden="true" /></IconButton></>}>
         {i18n.t('还没有所有者')}
-        <span className="console-banner-detail"> · {i18n.t('任何人都有全部权限')}</span>
+        <span className="console-banner-detail"> · {i18n.t('没有访问令牌也没有所有者，任何能访问的人都有全部权限')}</span>
       </Banner>
     </section>
   }

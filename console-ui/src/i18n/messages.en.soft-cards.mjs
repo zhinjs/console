@@ -13,10 +13,11 @@ export const softCardMessages = Object.freeze({
   "更多": "More",
   // Onboarding banners
   "还没有所有者": "No owner yet",
-  "任何人都有全部权限": "anyone has full access",
+  "没有访问令牌也没有所有者，任何能访问的人都有全部权限": "no access token and no owner, so anyone who can reach it has full access",
   "机器人还没上线": "Bot not live yet",
   // Overview (Main design)
   "待登录": "Sign-in needed",
+  "页面导航、配置入口和能力目录保持可用。重新连接后，聊天账号、Agent 与运行状态会在这里恢复。": "Navigation, configuration and the capability catalog stay available. Chat accounts, Agent and runtime status return here after reconnecting.",
   "实例运行正常": "Instance is healthy",
   "连接需要恢复": "Reconnect needed",
   "需留意": "Needs a look",
@@ -42,8 +43,8 @@ export const softCardMessages = Object.freeze({
   // 插件 (Plugins design)
   "安装插件": "Install",
   "{0} 个插件需处理": { "one": "{0} plugin needs a look", "other": "{0} plugins need a look" },
-  // 运维 · 实例 (Ops design)
-  "次": "times",
+  // 运维 · 实例 (Ops design): the unit after a count shown on its own (pass the count as {0}).
+  "次": { "one": "time", "other": "times" },
   // Appearance
   "浅色": "Light",
   "深色": "Dark",

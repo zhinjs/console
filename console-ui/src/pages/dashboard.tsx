@@ -768,7 +768,11 @@ export default function HomePage() {
             {systemStatus ? <span className="console-overview-hero-muted">{i18n.t("已运行 {0}", [formatUptime(systemStatus.uptime, i18n.locale)])}</span> : null}
           </div>
           <h2 className="console-hero-title">{heroTitle}</h2>
-          {!hostAvailable ? <p className="console-overview-hero-muted">{i18n.t("控制面仍可继续使用")}</p> : null}
+          {/* Host unreachable: the short state, then what still works and what comes back (secondary text). */}
+          {!hostAvailable ? <div className="console-overview-hero-muted">
+            <p>{i18n.t("控制面仍可继续使用")}</p>
+            <p>{i18n.t("页面导航、配置入口和能力目录保持可用。重新连接后，聊天账号、Agent 与运行状态会在这里恢复。")}</p>
+          </div> : null}
           <dl className="console-overview-hero-stats">
             <div>
               <dd>{stats ? <>{stats.endpoints.online}<small> / {i18n.t("{0} 在线", [stats.endpoints.total])}</small></> : '—'}</dd>
@@ -884,7 +888,7 @@ export default function HomePage() {
               {accountRows.length > 0 ? (
                 <ListGroup>
                   {accountRows.map((endpoint) => {
-                    const tone = endpointStatusTone(endpoint)
+                    const tone = endpointStatusTone(endpoint, accounts.tasks)
                     return (
                       <ListRow key={`${endpoint.adapter}/${endpoint.name}`} asChild title={null}>
                         <Link to={`/scope/${encodeURIComponent(endpoint.adapter)}/${encodeURIComponent(endpoint.name)}`}>
@@ -893,12 +897,14 @@ export default function HomePage() {
                             <span className="console-list-row-title">{endpoint.name}</span>
                             <span className="console-list-row-description">{endpoint.transportLabel ? `${endpoint.adapter} · ${endpoint.transportLabel}` : endpoint.adapter}</span>
                           </span>
-                          <span className="console-list-row-end"><StatusDot tone={tone}>{endpointStatusLabel(endpoint, i18n.t)}</StatusDot></span>
+                          <span className="console-list-row-end"><StatusDot tone={tone}>{endpointStatusLabel(endpoint, i18n.t, accounts.tasks)}</StatusDot></span>
                         </Link>
                       </ListRow>
                     )
                   })}
                 </ListGroup>
+              ) : accounts.error && !accounts.loaded ? (
+                <Card><StatusState compact error={accounts.error} onRetry={accounts.refresh} /></Card>
               ) : accounts.loaded ? (
                 <Card><StatusState kind="empty" compact title={i18n.t("还没有聊天账号")} /></Card>
               ) : (
@@ -1127,7 +1133,7 @@ export default function HomePage() {
           </SheetHeader>
           {selectedEvent ? (
             <SheetBody>
-              <div className="console-surface-inset p-4">
+              <div className="console-event-detail-message">
                 <p className="font-mono text-xs leading-relaxed whitespace-pre-wrap break-words text-foreground">
                   {selectedEvent.message}
                 </p>

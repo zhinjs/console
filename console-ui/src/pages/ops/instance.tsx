@@ -168,7 +168,7 @@ function InstanceStatusSection({ status, canControl, locked }: {
             </Card>
             <Card className="console-ops-status-card">
               <span className="console-ops-status-label">{i18n.t("近一分钟重启次数")}</span>
-              <span className="console-ops-status-value">{data.recentRestarts}<small> {i18n.t("次")}</small></span>
+              <span className="console-ops-status-value">{data.recentRestarts}<small> {i18n.t("次", [data.recentRestarts])}</small></span>
             </Card>
             <Card className="console-ops-status-card">
               <span className="console-ops-status-label">{i18n.t("运行代次")}</span>

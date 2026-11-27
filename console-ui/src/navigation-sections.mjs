@@ -232,6 +232,17 @@ export function sectionEntryPath(section) {
   return section?.routes?.[0]?.path ?? null
 }
 
+const trimPath = (path) => typeof path === 'string' && path.length > 1 ? path.replace(/\/+$/, '') || '/' : path
+
+/**
+ * `aria-current` of the current section's link (top-bar NavPill, phone TabBar item). The link opens
+ * the section's first page, so it is `"page"` only on that page; on any other page of the section
+ * it is `"true"` (the current item of the set, not the current page).
+ */
+export function sectionLinkCurrent(to, pathname) {
+  return to != null && trimPath(to) === trimPath(pathname) ? 'page' : 'true'
+}
+
 /**
  * The Chips under the top bar for one section: its pages by group (功能 splits 核心 / 插件页面).
  * A section with a single page needs no sub-navigation (empty list).

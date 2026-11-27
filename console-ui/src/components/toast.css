@@ -6,6 +6,11 @@
  */
 @layer components {
   .console-notice-stack { position: fixed; bottom: calc(max(16px, env(safe-area-inset-bottom)) + var(--zc-log-panel-reserve, 0px) + var(--zc-tabbar-reserve, 0px)); right: 16px; z-index: 100; display: grid; gap: var(--console-space-3); width: min(400px, calc(100vw - 32px)); pointer-events: none; }
+  /*
+   * The library's Toaster (one-line toasts) sits 1.5rem above the edge; on phones above the TabBar and
+   * the docked log panel too. [data-slot] outranks the library rule whichever stylesheet loads first.
+   */
+  .console-toaster[data-slot="toaster"] { bottom: calc(1.5rem + var(--zc-log-panel-reserve, 0px) + var(--zc-tabbar-reserve, 0px)); }
   .console-notice { display: flex; align-items: flex-start; gap: var(--console-space-3); padding: var(--console-space-4); border-radius: var(--console-radius-5); background: hsl(var(--console-raised)); color: hsl(var(--console-ink)); box-shadow: var(--console-elevation-3); pointer-events: auto; }
   .console-notice-icon { display: grid; place-items: center; flex: none; width: 2rem; height: 2rem; border-radius: var(--console-radius-full); background: hsl(var(--console-sunken)); color: hsl(var(--console-ink)); }
   .console-notice-icon svg { width: 1.125rem; height: 1.125rem; }

@@ -185,9 +185,6 @@
     min-width: 0;
   }
 
-  .console-section-segmented { width: min(34rem, 100%); }
-  @media (width >= 40rem) { .console-section-segmented .console-segment { white-space: nowrap; } }
-
   .console-section-nav-label {
     color: hsl(var(--console-muted));
     font-size: var(--console-text-xs);
@@ -338,7 +335,9 @@
 
   /* ---------- Phone tab bar (library TabBar, floating) ---------- */
   .console-shell-tabbar { z-index: 40; }
-  .console-shell-tabbar .console-tabbar-item[data-active="true"] { background: hsl(var(--console-primary-soft)); color: hsl(var(--console-ink)); }
+  /* The current section on another of its pages carries aria-current="true" (the library styles only "page"). */
+  .console-shell-tabbar .console-tabbar-item[data-active="true"],
+  .console-shell-tabbar .console-tabbar-item[aria-current="true"] { background: hsl(var(--console-primary-soft)); color: hsl(var(--console-ink)); }
 
   /* ---------- Content column ---------- */
   /* The docked log panel sets --zc-log-panel-reserve on <html>; the page keeps its last rows reachable above it. */
@@ -419,9 +418,14 @@
     .console-topnav .console-brand-name { display: none; }
   }
 
-  /* Phones: brand and actions on top, the sections in the floating TabBar at the bottom. */
+  /*
+   * Phones: brand and actions on top, the sections in the floating TabBar at the bottom.
+   * --zc-tabbar-reserve is the TabBar's whole extent from the bottom edge (library `.console-tabbar`:
+   * 4.25rem high, floating max(0.875rem, safe area) above the edge). It lives on <html>, so the page
+   * padding, html's own scroll-padding and the notice stack / Toaster (siblings of the shell) all read it.
+   */
   @media (width < 48rem) {
-    .console-app-shell { --zc-tabbar-reserve: 4rem; }
+    html:has(.console-app-shell) { --zc-tabbar-reserve: calc(4.25rem + max(0.875rem, env(safe-area-inset-bottom))); }
     .console-topnav-bar { flex-wrap: nowrap; gap: var(--console-space-2); }
     .console-topnav-actions { min-width: 0; gap: var(--console-space-1); }
     .console-connection-dot { display: none; }

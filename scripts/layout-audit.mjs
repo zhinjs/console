@@ -43,6 +43,22 @@ await page.waitForURL(url => url.pathname !== '/' && !url.pathname.endsWith('/lo
   throw new Error('could not sign in to the UI fixture (is scripts/ui-preview-host.mjs running?)')
 })
 
+/**
+ * Waits until the page's finite animations and transitions (theme colour fades, route enter) have
+ * finished, at most `timeoutMs`. Two frames first, so transitions a theme switch just triggered have
+ * started; infinite ones (spinners, the live dot) never finish and are not waited for.
+ */
+async function settleAnimations(target, timeoutMs = 2_000) {
+  await target.evaluate(async (limit) => {
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    const running = document.getAnimations().filter(animation => animation.effect?.getComputedTiming().iterations !== Infinity)
+    await Promise.race([
+      Promise.allSettled(running.map(animation => animation.finished)),
+      new Promise(resolve => setTimeout(resolve, limit)),
+    ])
+  }, timeoutMs)
+}
+
 const results = []
 for (const route of routes) {
   try {
@@ -52,7 +68,7 @@ for (const route of routes) {
       // mid-transition, a row still has its light background under dark text (a false contrast failure).
       setTheme: async (target, theme) => {
         await setConsoleTheme(target, theme)
-        await target.waitForTimeout(600)
+        await settleAnimations(target)
       },
       open: async (target) => {
         // Not `networkidle`: the Console keeps an SSE stream (`/api/events`) open.

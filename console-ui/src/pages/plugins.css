@@ -144,6 +144,8 @@
   .console-provider-row-summary { min-width: 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
   .console-plugin-scope-chip > code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .console-marketplace-categories { max-width: 100%; overflow-x: auto; flex-wrap: nowrap; }
+  /* 「共 N 个插件」 under the market filters: secondary text. */
+  .console-plugin-catalog-count { margin: 0; color: hsl(var(--console-muted)); font-size: var(--console-text-sm); font-variant-numeric: tabular-nums; }
 }
 
 /* 插件表：一行一个插件；名称、类型、来源、版本（完整显示）、状态（只在异常时是标签）、操作。 */

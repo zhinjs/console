@@ -6,17 +6,25 @@
  * library's status tones (StatusDot), not category colors.
  */
 
-/** StatusDot tone of an account row: 待登录 warn, 在线 ok, 连接中 progress, 离线 neutral. */
-export function endpointStatusTone(endpoint) {
-  if (endpoint?.pendingLogin) return 'warn'
-  if (endpoint?.connected || endpoint?.status === 'online') return 'ok'
-  if (endpoint?.transportState === 'connecting' || endpoint?.transportState === 'reconnecting') return 'progress'
+import { waitingLogin } from './scope/scope-overview-model.mjs'
+
+/**
+ * StatusDot tone of an account row: 在线 ok, 待登录 warn, 连接中 progress, 离线 neutral. 「待登录」 is
+ * the object pages' own test (`waitingLogin`: `pendingLogin`, an unfinished `loginStep` or a
+ * LoginAssist task in `tasks`), and a connected account reads 在线 as it does there (`accountStatus`).
+ */
+export function endpointStatusTone(endpoint, tasks = []) {
+  if (!endpoint) return 'neutral'
+  if (endpoint.connected === true) return 'ok'
+  if (waitingLogin(endpoint, tasks)) return 'warn'
+  if (endpoint.status === 'online') return 'ok'
+  if (endpoint.transportState === 'connecting' || endpoint.transportState === 'reconnecting') return 'progress'
   return 'neutral'
 }
 
 /** The one status word of an account row (`t` translates the Chinese source). */
-export function endpointStatusLabel(endpoint, t = (text) => text) {
-  const tone = endpointStatusTone(endpoint)
+export function endpointStatusLabel(endpoint, t = (text) => text, tasks = []) {
+  const tone = endpointStatusTone(endpoint, tasks)
   return tone === 'warn' ? t('待登录') : tone === 'ok' ? t('在线') : tone === 'progress' ? t('连接中') : t('离线')
 }
 

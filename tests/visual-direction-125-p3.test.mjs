@@ -140,6 +140,7 @@ test('icons: one stroke, 18px in navigation, no tiles in lists or ⌘K, and the 
   assert.match(shell, /\.console-nav-icon svg \{\s*width: 1\.125rem;/)
   // Top-bar sections are the library's NavPill / NavIcon (20px icons, console-ui 1.3.0); no menu tiles any more.
   assert.doesNotMatch(shell, /console-topnav-menu-icon/)
+  assert.doesNotMatch(read('console-ui/src/layouts/workspace-navigation.css'), /console-topnav-menu/, 'no rules left for the removed top-bar menus')
   const command = /\.console-command-icon \{([^}]*)\}/.exec(read('console-ui/src/design-system.css'))[1]
   assert.doesNotMatch(command, /background/)
   assert.doesNotMatch(/\.console-plugin-catalog-icon \{([^}]*)\}/.exec(read('console-ui/src/pages/plugins.css'))[1], /background/)

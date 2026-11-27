@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { readFileSync } from 'node:fs'
 import { translate } from '../console-ui/src/i18n/locale.mjs'
 import { englishMessages } from '../console-ui/src/i18n/messages.en.mjs'
 
@@ -30,4 +31,14 @@ test('every { one, other } entry is a pair of strings that differ', () => {
     assert.deepEqual(Object.keys(value).sort(), ['one', 'other'], key)
     assert.ok(typeof value.one === 'string' && typeof value.other === 'string' && value.one !== value.other, key)
   }
+})
+
+test('the restart count unit follows its count (近一分钟重启次数: 「1 time」, not 「1 times」)', () => {
+  assert.equal(en('次', 1), 'time')
+  assert.equal(en('次', 0), 'times')
+  assert.equal(en('次', 3), 'times')
+  assert.equal(translate('zh-CN', '次', [1]), '次')
+  const instance = readFileSync(new URL('../console-ui/src/pages/ops/instance.tsx', import.meta.url), 'utf8')
+  assert.match(instance, /\{data\.recentRestarts\}<small> \{i18n\.t\("次", \[data\.recentRestarts\]\)\}<\/small>/)
+  assert.doesNotMatch(instance, /i18n\.t\("次"\)/, 'never without its count')
 })

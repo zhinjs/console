@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import postcss from 'postcss'
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 const shell = read('console-ui/src/shell.css')
@@ -44,4 +45,46 @@ test('the language picker is not in the top bar; it stays reachable in the drawe
   const footer = layout.slice(layout.indexOf('console-nav-drawer-footer'), layout.indexOf('</aside>'))
   assert.match(footer, /<LanguageSelect \/>/)
   assert.match(read('console-ui/src/components/UserMenu.tsx'), /界面语言/)
+})
+
+test('phones: --zc-tabbar-reserve is declared on <html> as the TabBar’s whole extent, and every fixed or scroll consumer reads it', () => {
+  const sources = {
+    shell: postcss.parse(shell),
+    toast: postcss.parse(read('console-ui/src/components/toast.css')),
+    library: postcss.parse(read('node_modules/@zhin.js/console-ui/dist/styles.css')),
+  }
+  const declarations = []
+  for (const [file, root] of Object.entries(sources)) root.walkDecls('--zc-tabbar-reserve', decl => declarations.push({ file, decl }))
+  assert.equal(declarations.length, 1, 'one declaration, so nothing narrower shadows it')
+  const [{ file, decl }] = declarations
+  assert.equal(file, 'shell')
+  // On <html>: the notice stack and the Toaster are siblings of the shell, and html's own
+  // scroll-padding reads its own custom property — a declaration on .console-app-shell reaches neither.
+  assert.equal(decl.parent.selector, 'html:has(.console-app-shell)')
+  assert.equal(decl.parent.parent.type, 'atrule')
+  assert.equal(`${decl.parent.parent.name} ${decl.parent.parent.params}`, 'media (width < 48rem)', 'only while the TabBar is shown')
+
+  // The value is the library TabBar's height plus its floating offset from the bottom edge.
+  const libraryDecl = (selector, prop) => {
+    let value
+    sources.library.walkRules(rule => { if (rule.selector === selector) rule.walkDecls(prop, d => { value = d.value }) })
+    assert.ok(value, `library ${selector} { ${prop} }`)
+    return value
+  }
+  const height = libraryDecl('.console-tabbar', 'height')
+  const bottom = libraryDecl('.console-tabbar[data-floating]', 'inset').match(/^\S+\s+\S+\s+(max\([^)]*\)\)|\S+)/)[1]
+  assert.equal(decl.value, `calc(${height} + ${bottom})`)
+
+  const reads = (root, selector, prop) => {
+    let value
+    root.walkRules(rule => { if (rule.selector === selector) rule.walkDecls(prop, d => { value = d.value }) })
+    return value ?? ''
+  }
+  assert.match(reads(sources.shell, 'html:has(.console-app-shell)', 'scroll-padding-bottom'), /var\(--zc-tabbar-reserve, 0px\)/, 'keyboard focus scrolls clear of the TabBar')
+  assert.match(reads(sources.shell, '.console-main-scroll', 'padding-bottom'), /var\(--zc-tabbar-reserve, 0px\)/)
+  assert.match(reads(sources.toast, '.console-notice-stack', 'bottom'), /var\(--zc-tabbar-reserve, 0px\)/, 'the Console notices stay above the TabBar')
+  // The library Toaster sits 1.5rem above the edge (inset: auto 0 1.5rem 0); ours adds the reserves.
+  assert.match(libraryDecl('.console-toaster', 'inset'), /^auto 0 1\.5rem 0$/)
+  // Ours outranks the library's `.console-toaster { inset }` (the two stylesheets load in either order).
+  assert.equal(reads(sources.toast, '.console-toaster[data-slot="toaster"]', 'bottom'), 'calc(1.5rem + var(--zc-log-panel-reserve, 0px) + var(--zc-tabbar-reserve, 0px))')
 })

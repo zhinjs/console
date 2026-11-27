@@ -32,6 +32,8 @@ export function overviewTotals(adapters: readonly AdapterOverviewItem[]): { adap
 export function loginTasksFor<T extends OverviewLoginTask>(tasks: readonly T[] | undefined, adapter: string, endpoint?: string): T[]
 export const ACCOUNT_FILTERS: readonly AccountFilter[]
 export const ACCOUNT_FILTER_LABELS: Readonly<Record<AccountFilter, string>>
+/** 「待登录」: `pendingLogin`, an unfinished `loginStep` (ADR 0058) or a LoginAssist task for the account. */
+export function waitingLogin(endpoint: (Pick<OverviewEndpoint, 'name' | 'adapter'> & { readonly pendingLogin?: boolean; readonly loginStep?: unknown }) | null | undefined, tasks?: readonly OverviewLoginTask[] | null): boolean
 export function accountStatus(endpoint: OverviewEndpoint, tasks?: readonly OverviewLoginTask[]): Exclude<AccountFilter, 'all'>
 export function filterAccounts<E extends OverviewEndpoint>(endpoints: readonly E[] | undefined, options?: { filter?: AccountFilter; query?: string; tasks?: readonly OverviewLoginTask[] }): E[]
 export function accountCounts(endpoints?: readonly OverviewEndpoint[], tasks?: readonly OverviewLoginTask[]): Record<AccountFilter, number>

@@ -2,9 +2,9 @@ import { routeLabel } from '../i18n/navigation'
 import { LanguageSelect } from '../components/LanguageSelect'
 import { useI18n } from '../i18n'
 import { useMemo, useRef, useState, useEffect, useLayoutEffect, useSyncExternalStore } from "react"
-import { Outlet, Link, useLocation, useNavigate, matchPath } from "react-router-dom"
+import { Outlet, Link, useLocation, matchPath } from "react-router-dom"
 import { Menu, X, ChevronRight } from "lucide-react"
-import { Aurora, BrandMark, Chip, cn, CONSOLE_PRODUCT_NAME, IconButton, ListItemButton, NavIcon, NavPill, ScrollArea, Segmented, StatusDot, TabBar, TabBarItem } from '@zhin.js/console-ui'
+import { Aurora, BrandMark, Chip, cn, CONSOLE_PRODUCT_NAME, IconButton, ListItemButton, NavIcon, NavPill, ScrollArea, StatusDot, TabBar, TabBarItem } from '@zhin.js/console-ui'
 import { type ConsoleRouteRecord } from "@zhin.js/client"
 import { useConsoleConnected } from "../hooks/use-console-connected"
 import { app } from "../utils/console-client"
@@ -23,7 +23,7 @@ import { LogPanel, LogPanelButton, useLogPanelLayout } from "../components/log-p
 import { AttentionBadge } from "../pages/attention/AttentionBadge"
 import "./workspace-navigation.css"
 import { resolveNavigationLocation } from "../navigation-location.mjs"
-import { activeSectionId, buildNavigation, deniedRoutePermissions, navSections, routeSectionId, sectionById, sectionEntryPath, sectionSubnav, tabBarModel } from "../navigation-sections.mjs"
+import { activeSectionId, buildNavigation, deniedRoutePermissions, navSections, routeSectionId, sectionById, sectionEntryPath, sectionLinkCurrent, sectionSubnav, tabBarModel } from "../navigation-sections.mjs"
 import { StatusState } from "../components/StatusState"
 import { useConsoleAccess } from "../hooks/use-console-access"
 
@@ -64,7 +64,6 @@ function useRouteMetaFlag(
 export default function DashboardLayout() {
   const i18n = useI18n()
   const location = useLocation()
-  const navigate = useNavigate()
   const compact = useIsCompactNav()
   const drawerRef = useRef<HTMLElement>(null)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
@@ -140,7 +139,11 @@ export default function DashboardLayout() {
   // A page below its menu page (plugin detail, object pages …) keeps a breadcrumb back to it.
   const showBreadcrumb = !onHome && Boolean(navigation.current) && !firstLevel && !objectPageOwnsBreadcrumb(location.pathname)
 
-  /** Top bar: one NavPill (the current section, with its name) or NavIcon (the others) per section. */
+  /**
+   * Top bar: one NavPill (the current section, with its name) or NavIcon (the others) per section.
+   * A section link opens the section's first page: `aria-current="page"` only there, `"true"` on the
+   * section's other pages (the library NavPill defaults to `"page"`; our prop comes after it).
+   */
   const barNavigation = (
     <nav className="console-topnav-nav" aria-label={i18n.t("主导航")}>
       {sections.map((section) => {
@@ -148,28 +151,17 @@ export default function DashboardLayout() {
         if (!to) return null
         const label = i18n.t(section.label)
         return section.id === activeSection
-          ? <NavPill key={section.id} asChild data-section={section.id}><Link to={to}><SectionIcon icon={section.icon} />{label}</Link></NavPill>
+          ? <NavPill key={section.id} asChild data-section={section.id} aria-current={sectionLinkCurrent(to, location.pathname)}><Link to={to}><SectionIcon icon={section.icon} />{label}</Link></NavPill>
           : <NavIcon key={section.id} asChild label={label} data-section={section.id}><Link to={to}><SectionIcon icon={section.icon} /></Link></NavIcon>
       })}
     </nav>
   )
 
   /**
-   * The current section's pages (Chips, like the design's 聊天账号 · 模型与用途 row). 访问控制 has a
-   * few fixed peers (用户 / 角色 / 令牌 / 审计): the Access design switches them with a Segmented.
+   * The current section's pages (Chips, like the design's 聊天账号 · 模型与用途 row): links, so the
+   * arrow keys never switch pages (访问控制's 用户 / 角色 / 令牌 / 审计 included).
    */
-  const segmentedSection = currentSection?.id === "access" && subnav.length === 1 && subnav[0].routes.length <= 4 && activePath
-  const sectionNavigation = segmentedSection ? (
-    <nav className="console-section-nav" aria-label={i18n.t("{0}的页面", [i18n.t(currentSection!.label)])} data-section={currentSection!.id}>
-      <Segmented
-        aria-label={i18n.t("{0}的页面", [i18n.t(currentSection!.label)])}
-        className="console-section-segmented"
-        value={activePath}
-        onValueChange={(path) => navigate(path)}
-        options={subnav[0].routes.map((route) => ({ value: route.path, label: routeLabel(route, i18n.locale) }))}
-      />
-    </nav>
-  ) : subnav.length ? (
+  const sectionNavigation = subnav.length ? (
     <nav className="console-section-nav" aria-label={i18n.t("{0}的页面", [i18n.t(currentSection!.label)])} data-section={currentSection!.id}>
       {subnav.map((group) => (
         <div key={group.id} className="console-section-nav-group" data-group={group.id} role={group.labelled ? "group" : undefined} aria-label={group.labelled ? i18n.t(group.label) : undefined}>
@@ -316,7 +308,7 @@ export default function DashboardLayout() {
             if (!to) return null
             return (
               <TabBarItem key={section.id} asChild icon={null} current={section.id === activeSection} data-section={section.id}>
-                <Link to={to} aria-current={section.id === activeSection ? "page" : undefined}><SectionIcon icon={section.icon} />{i18n.t(section.label)}</Link>
+                <Link to={to} aria-current={section.id === activeSection ? sectionLinkCurrent(to, location.pathname) : undefined}><SectionIcon icon={section.icon} />{i18n.t(section.label)}</Link>
               </TabBarItem>
             )
           })}

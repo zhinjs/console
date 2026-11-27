@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import ts from 'typescript'
 import { matchPath } from 'react-router-dom'
@@ -501,4 +502,55 @@ test('the command palette finds installed plugins without a page of their own, o
     assert.ok(searchPalette(f, '天气').includes('/plugins/weather'), 'the description matches')
     assert.ok(searchPalette(f, '签到').includes('/plugins/sign-in'), '“签到” finds the sign-in plugin')
   } finally { f.close(); pluginPages.setPluginDirectory(null) }
+})
+
+test('a section link is aria-current="page" only on the page it opens, "true" on the section’s other pages', () => {
+  assert.equal(sections.sectionLinkCurrent('/ops/config', '/ops/config'), 'page')
+  assert.equal(sections.sectionLinkCurrent('/ops/config', '/ops/config/'), 'page', 'a trailing slash is the same page')
+  assert.equal(sections.sectionLinkCurrent('/ops/config', '/ops/schedules'), 'true')
+  assert.equal(sections.sectionLinkCurrent('/scope', '/scope/qq/bot'), 'true')
+  assert.equal(sections.sectionLinkCurrent(null, '/'), 'true')
+  // Top bar: the NavPill links to the section's first page (/ops/config).
+  for (const [path, current] of [['/ops/config', 'page'], ['/ops/schedules', 'true'], ['/backup', 'true']]) {
+    const f = fixture({ routes, path })
+    try {
+      const pill = nodes(nav(f.render(), '主导航')).find(node => node.type === 'NavPill')
+      assert.equal(pill.props['data-section'], 'ops')
+      assert.equal(pill.props['aria-current'], current, path)
+      assert.equal(nodes(pill).find(node => node.type === 'a').props['aria-current'], undefined, 'the Link does not override the NavPill prop')
+    } finally { f.close() }
+  }
+  // Phone TabBar: 会话 opens /sandbox; on /scope the item is the current one of the set, not the page.
+  for (const [path, current] of [['/sandbox', 'page'], ['/scope', 'true'], ['/scope/qq/bot', 'true']]) {
+    const f = fixture({ routes, path, mobile: true })
+    try {
+      const item = nodes(tabBar(f.render())).find(node => node.type === 'TabBarItem' && node.props['data-section'] === 'sessions')
+      assert.equal(item.props.current, true)
+      assert.equal(nodes(item).find(node => node.type === 'a').props['aria-current'], current, path)
+      const others = nodes(tabBar(f.tree)).filter(node => node.type === 'a' && node.props.to !== '/sandbox')
+      assert.ok(others.every(node => node.props['aria-current'] === undefined), 'other sections carry no aria-current')
+    } finally { f.close() }
+  }
+  // The library styles only aria-current="page"; the shell styles "true" the same way.
+  assert.match(readFileSync(new URL('../console-ui/src/shell.css', import.meta.url), 'utf8'), /\.console-shell-tabbar \.console-tabbar-item\[aria-current="true"\]\s*\{\s*background: hsl\(var\(--console-primary-soft\)\)/)
+})
+
+test('访问控制 switches its pages with Chip links, not a Segmented whose arrow keys would change the route', () => {
+  const accessRoutes = [
+    ...routes,
+    { path: '/access/users', name: '用户', meta: { group: '访问控制', order: 0 } },
+    { path: '/access/roles', name: '角色', meta: { group: '访问控制', order: 1 } },
+    { path: '/access/tokens', name: '令牌', meta: { group: '访问控制', order: 2 } },
+    { path: '/access/audit', name: '审计', meta: { group: '访问控制', order: 3 } },
+  ]
+  const f = fixture({ routes: accessRoutes, path: '/access/roles' })
+  try {
+    const tree = f.render()
+    assert.ok(!nodes(tree).some(node => node.type === 'Segmented'))
+    assert.deepEqual(chipLinks(tree), ['/access/users', '/access/roles', '/access/tokens', '/access/audit'])
+    assert.equal(nodes(subnav(tree)).find(node => node.props?.['aria-current'] === 'page').props.to, '/access/roles')
+    assert.ok(nodes(subnav(tree)).filter(node => node.type === 'a').every(node => nodes(subnav(tree)).some(chip => chip.type === 'Chip' && nodes(chip).includes(node))))
+    assert.equal(f.events.length, 0)
+  } finally { f.close() }
+  assert.doesNotMatch(layoutSource, /<Segmented|useNavigate/)
 })
