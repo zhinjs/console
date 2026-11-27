@@ -49,3 +49,7 @@ export function groupInventory(rows: readonly InventoryRow[], by?: InventoryGrou
 export function needsStateLabel(row: InventoryRow): boolean
 /** Whether the plugins page is still waiting for the instance's first plugin list. */
 export function pluginsFirstReadPending(state: { loaded: boolean; error: unknown }): boolean
+/** Sortable inventory columns, in control order. */
+export const INVENTORY_SORT_KEYS: readonly InventorySortKey[]
+/** Writes a sort into `?sort=&dir=` (name ascending removes both) and returns the same params. */
+export function applyInventorySort(params: URLSearchParams, key: InventorySortKey, direction: 'asc' | 'desc'): URLSearchParams
