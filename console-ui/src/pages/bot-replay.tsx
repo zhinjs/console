@@ -194,7 +194,7 @@ export default function BotReplayPage() {
       description={i18n.t("机器人每一次回或不回、调没调模型、发没发消息，都记在这里。新的在前，点回合可以看完整过程。")}
       actions={<div className="flex flex-wrap gap-2">
         <Button variant="ghost" size="sm" asChild><Link to="/agent/workbench"><ArrowLeft />{i18n.t("机器人状态")}</Link></Button>
-        <Button variant="outline" size="sm" onClick={() => void refresh(filter)} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
+        <Button variant="secondary" size="sm" onClick={() => void refresh(filter)} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
       </div>}
     />
 
@@ -215,7 +215,7 @@ export default function BotReplayPage() {
           <Button size="sm" onClick={() => setFilter(buildReplayFilter(draft))}>{i18n.t("筛选")}</Button>
           <span className="flex-1" />
           <SelectField aria-label={i18n.t("导出范围")} className="w-auto" value={windowChoice} onValueChange={setWindowChoice} options={EXPORT_WINDOWS.map(choice => ({ value: String(choice.value), label: i18n.t(choice.label) }))} />
-          <Button size="sm" variant="outline" onClick={() => void runExport()} disabled={exporting}><Download />{exporting ? i18n.t("导出中…") : i18n.t("导出 JSON")}</Button>
+          <Button size="sm" variant="secondary" onClick={() => void runExport()} disabled={exporting}><Download />{exporting ? i18n.t("导出中…") : i18n.t("导出 JSON")}</Button>
         </CardContent>
         {exportNote ? <p className="px-6 pb-4 text-xs text-muted-foreground">{exportNote}</p> : null}
       </Card>
@@ -273,8 +273,8 @@ export default function BotReplayPage() {
                   </li>
                 })}
               </ul> : <StatusState kind="empty" compact title={i18n.t("还没有决策记录。")} description={Object.keys(filter).length ? i18n.t("当前筛选条件下没有记录，换一个条件或清除范围试试。") : i18n.t("机器人每次判断回不回、调不调模型都会记在这里。")}
-                actions={Object.keys(filter).length ? <Button size="sm" variant="outline" onClick={() => setFilter({})}>{i18n.t("清除筛选")}</Button> : undefined} />}
-              {list.nextBefore !== null ? <Button variant="outline" size="sm" onClick={() => void loadMore()} disabled={loadingMore}>{loadingMore ? i18n.t("加载中…") : i18n.t("加载更多")}</Button> : null}
+                actions={Object.keys(filter).length ? <Button size="sm" variant="secondary" onClick={() => setFilter({})}>{i18n.t("清除筛选")}</Button> : undefined} />}
+              {list.nextBefore !== null ? <Button variant="secondary" size="sm" onClick={() => void loadMore()} disabled={loadingMore}>{loadingMore ? i18n.t("加载中…") : i18n.t("加载更多")}</Button> : null}
             </CardContent>
           </Card> : null}
     </>}

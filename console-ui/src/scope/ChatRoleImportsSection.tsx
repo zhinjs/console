@@ -173,7 +173,7 @@ function ChatRoleImportsList({ scope, imports, onChanged }: { scope?: string; im
       className="console-chat-imports"
       title={i18n.t('待确认的导入')}
       description={i18n.t('配置里再次出现的人员名单与个人身份关联，确认前不会生效。逐条「导入」或「忽略」。')}
-      actions={<Button variant="outline" size="sm" onClick={imports.refresh} disabled={imports.status === 'loading'}><RefreshCw className={imports.status === 'loading' ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>}
+      actions={<Button variant="secondary" size="sm" onClick={imports.refresh} disabled={imports.status === 'loading'}><RefreshCw className={imports.status === 'loading' ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>}
     >
       {imports.status === 'failed' && imports.failure ? (
         <StatusState compact error={imports.error} onRetry={imports.refresh} />

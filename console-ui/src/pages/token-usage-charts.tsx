@@ -47,14 +47,14 @@ export function ModelLegend({ keys, colors, hasOther }: { keys: string[]; colors
       {keys.map(key => (
         <li
           key={key}
-          className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--console-border-subtle)] bg-[color:var(--console-surface-inset)] px-2.5 py-1 text-foreground/90"
+          className="inline-flex items-center gap-2 rounded-full border border-[color:var(--console-border-subtle)] bg-[color:var(--console-surface-inset)] px-3 py-1 text-foreground/90"
         >
           <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorFor(colors, key) }} />
           <span className="max-w-[16rem] truncate font-medium" title={key}>{key}</span>
         </li>
       ))}
       {hasOther ? (
-        <li className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--console-border-subtle)] bg-[color:var(--console-surface-inset)] px-2.5 py-1">
+        <li className="inline-flex items-center gap-2 rounded-full border border-[color:var(--console-border-subtle)] bg-[color:var(--console-surface-inset)] px-3 py-1">
           <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: OTHER_COLOR }} />
           <span>{i18n.t("其他")}</span>
         </li>
@@ -81,7 +81,7 @@ export function StackedBarChart({ series, keys, colors, bucket }: { series: Usag
   const activeIsHover = hovered !== null
 
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-3">
       {activeBar ? (
         <div className="console-chart-readout" aria-live="polite">
           <div className="flex flex-wrap items-center gap-2">
@@ -91,7 +91,7 @@ export function StackedBarChart({ series, keys, colors, bucket }: { series: Usag
             <strong className="font-semibold text-foreground">
               {formatBucketLabel(activeBar.bucketStart, bucket, i18n.locale)}
             </strong>
-            <span className="rounded-full bg-[hsl(var(--foreground)/0.06)] px-2 py-0.5 font-semibold text-foreground">
+            <span className="rounded-full bg-[hsl(var(--foreground)/0.06)] px-2 py-1 font-semibold text-foreground">
               {formatTokens(activeBar.total, i18n.locale)} tok
             </span>
           </div>
@@ -234,7 +234,7 @@ export function CacheLineChart({
       })()
 
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-3">
       {activePoint && activePoint.point.value !== null ? (
         <div className="console-chart-readout" aria-live="polite">
           <div className="flex flex-wrap items-center gap-2">
@@ -244,7 +244,7 @@ export function CacheLineChart({
             <strong className="font-semibold text-foreground">
               {formatBucketLabel(activePoint.point.bucketStart, bucket, i18n.locale)}
             </strong>
-            <span className="rounded-full bg-[hsl(var(--chart-3)/0.14)] px-2 py-0.5 font-semibold text-foreground">
+            <span className="rounded-full bg-[hsl(var(--chart-3)/0.14)] px-2 py-1 font-semibold text-foreground">
               {formatPercent(activePoint.point.value, i18n.locale)}
             </span>
           </div>

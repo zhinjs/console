@@ -128,7 +128,7 @@ function AmbientEngagementSession() {
     <PageHeader
       title={i18n.t("群聊插话")}
       description={i18n.t("没人 @ 机器人的时候，它要不要自己在群里接话。")}
-      actions={<Button variant="outline" size="sm" onClick={refreshAll} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>}
+      actions={<Button variant="secondary" size="sm" onClick={refreshAll} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>}
     />
     <ScopeFilterBar
       filter={scopeFilter}
@@ -260,7 +260,7 @@ function AmbientRecentActivity({ recent }: { recent: AmbientStatusView['recent']
             const label = ambientGroupLabel(row.group, names)
             return <TableRow key={row.group}>
               <TableCell><span className="block font-medium">{label.name}</span>{label.id ? <span className="console-table-sub">{label.id}</span> : null}</TableCell>
-              <TableCell><div className="flex flex-wrap gap-1.5">{row.outcomes.map((item) => <span key={item.outcome} className={`console-outcome-chip is-${item.outcome}`}>{item.label} × {item.count}</span>)}</div></TableCell>
+              <TableCell><div className="flex flex-wrap gap-2">{row.outcomes.map((item) => <span key={item.outcome} className={`console-outcome-chip is-${item.outcome}`}>{item.label} × {item.count}</span>)}</div></TableCell>
               <TableCell><span className="block">{row.lastText}</span><span className="console-table-sub">{formatTime(row.lastAt, i18n.locale)}</span></TableCell>
             </TableRow>
           })}
@@ -447,7 +447,7 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
             ? groupScope === 'all' ? i18n.t("群 {0} 已包含在「所有群」里。", [focusGroup]) : i18n.t("群 {0} 已在下面的群列表里。", [focusGroup])
             : behavior === 'off' ? i18n.t("插话目前关闭，群 {0} 不会被接话。", [focusGroup]) : i18n.t("群 {0} 不在插话范围里。", [focusGroup])}
         </span>
-        {!focusIncluded ? <Button size="sm" variant="outline" onClick={includeFocusGroup}>{behavior === 'off' ? i18n.t("开启只观察并加入这个群") : i18n.t("加入这个群")}</Button> : null}
+        {!focusIncluded ? <Button size="sm" variant="secondary" onClick={includeFocusGroup}>{behavior === 'off' ? i18n.t("开启只观察并加入这个群") : i18n.t("加入这个群")}</Button> : null}
         {!focusIncluded ? <span className="basis-full text-xs text-muted-foreground">{i18n.t("只改动草稿，保存后才会生效。")}</span> : null}
       </div> : null}
       <fieldset className="space-y-2">
@@ -466,7 +466,7 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
         {judge.state === 'merged' && behavior !== 'off' ? <p className="text-xs text-muted-foreground">{i18n.t("「只观察」保存在插话判断里（AI 与模型 → 用途），对所有开启的群生效。")}</p> : null}
         {judge.state === 'unknown' ? <div className="flex flex-wrap items-center gap-2 text-xs text-warning" role="status" data-ambient-mode-unknown="">
           <span>{i18n.t("无法确认实例版本或读取插话判断，暂不能修改只观察，也不能扩大插话范围。上面显示的是配置文件里的值，不一定是实际生效的模式。没有读取群聊插话状态的权限时，旧版本实例也会这样显示。")}</span>
-          <Button type="button" size="sm" variant="outline" onClick={() => { void onReload().catch(() => {}) }}>{i18n.t("重新读取")}</Button>
+          <Button type="button" size="sm" variant="secondary" onClick={() => { void onReload().catch(() => {}) }}>{i18n.t("重新读取")}</Button>
         </div> : null}
       </fieldset>
 

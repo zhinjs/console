@@ -70,7 +70,7 @@ export function InferenceWorkspace({ connectionScope }: { connectionScope?: stri
             {i18n.t("导出")}
           </Button>
           <Button
-            variant="outline"
+            variant="secondary"
             size="icon"
             aria-label={i18n.t("重新读取模型配置")}
             onClick={() => void m.load()}
@@ -91,7 +91,7 @@ export function InferenceWorkspace({ connectionScope }: { connectionScope?: stri
           <AlertDescription className="flex flex-wrap items-center gap-3">
             <span>{i18n.t("上次保存结果待确认。")}</span>
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={() => void m.queryPending()}
               disabled={m.busy}
@@ -108,7 +108,7 @@ export function InferenceWorkspace({ connectionScope }: { connectionScope?: stri
             <ul className="list-disc space-y-1 pl-5" role="list">
               {importWarnings.map((warning, index) => <li key={index}>{planWarningText(warning, i18n.locale)}</li>)}
             </ul>
-            <Button type="button" size="sm" variant="outline" onClick={() => setImportWarnings([])}>{i18n.t("知道了")}</Button>
+            <Button type="button" size="sm" variant="secondary" onClick={() => setImportWarnings([])}>{i18n.t("知道了")}</Button>
           </AlertDescription>
         </Alert>
       ) : null}

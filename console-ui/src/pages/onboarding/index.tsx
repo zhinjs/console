@@ -98,8 +98,8 @@ export default function OnboardingPage() {
         <p>{i18n.t('如果要让机器人用大模型对话：先在插件市场安装 @zhin.js/agent 和所选模型服务的 SDK，再到「AI 与模型」添加第一个模型并测试。')}</p>
         <p className="text-muted-foreground">{i18n.t('只用聊天功能（命令、插件、定时任务）不需要 AI：选「不接入 AI」即可，以后随时可以再接入。')}</p>
         <div className="console-onboarding-links">
-          <Button asChild variant="outline"><Link to={P.marketplace}>{i18n.t('打开插件市场')}</Link></Button>
-          <Button asChild variant="outline"><Link to={P.ai}>{i18n.t('打开 AI 与模型')}</Link></Button>
+          <Button asChild variant="secondary"><Link to={P.marketplace}>{i18n.t('打开插件市场')}</Link></Button>
+          <Button asChild variant="secondary"><Link to={P.ai}>{i18n.t('打开 AI 与模型')}</Link></Button>
         </div>
         <StepActions saving={saving} onDone={() => void mark('ai', 'done')} onSkip={() => void mark('ai', 'skipped')} skipLabel={i18n.t('不接入 AI，只用聊天功能')} />
       </CardContent>
@@ -113,8 +113,8 @@ export default function OnboardingPage() {
         {canInstall && <AdapterInstallSection onAdapterReady={() => setAdapterReady(true)} />}
         {adapterReady && <p role="status" className="text-sm">{i18n.t('适配器已启用。可以到「查看聊天账号」确认账号上线，或继续安装其他平台。')}</p>}
         <div className="console-onboarding-links">
-          <Button asChild variant="outline"><Link to={P.marketplace}>{i18n.t('打开插件市场')}</Link></Button>
-          <Button asChild variant="outline"><Link to={P.scope}>{i18n.t('查看聊天账号')}</Link></Button>
+          <Button asChild variant="secondary"><Link to={P.marketplace}>{i18n.t('打开插件市场')}</Link></Button>
+          <Button asChild variant="secondary"><Link to={P.scope}>{i18n.t('查看聊天账号')}</Link></Button>
         </div>
         <StepActions saving={saving} onDone={() => void mark('adapters', 'done')} onSkip={() => void mark('adapters', 'skipped')} />
       </CardContent>

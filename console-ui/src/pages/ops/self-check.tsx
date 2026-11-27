@@ -89,7 +89,7 @@ export default function SelfCheckPage() {
       <PageHeader
         title={i18n.t('连接自检')}
         description={i18n.t('在这个浏览器里检查 Console 到 Host 的每一段连接，找出一直「正在连接」的原因。')}
-        actions={<Button variant="outline" onClick={start} disabled={running}>
+        actions={<Button variant="secondary" onClick={start} disabled={running}>
           {running ? <Loader2 className="animate-spin" /> : <RefreshCw />}{running ? i18n.t('检查中…') : i18n.t('重新检查')}
         </Button>}
       />
@@ -124,7 +124,7 @@ export default function SelfCheckPage() {
                 <p className="console-self-check-explain">{copy.explain}</p>
                 {detail ? <p className="console-self-check-detail">{detail}</p> : null}
                 {id === 'websocket' && check?.detail === 'ws-on-demand' ? (
-                  <div><Button size="sm" variant="outline" onClick={checkSocket} disabled={socketChecking || running}>
+                  <div><Button size="sm" variant="secondary" onClick={checkSocket} disabled={socketChecking || running}>
                     {socketChecking ? <Loader2 className="animate-spin" /> : <RefreshCw />}{i18n.t('检查 WebSocket 升级')}
                   </Button></div>
                 ) : null}

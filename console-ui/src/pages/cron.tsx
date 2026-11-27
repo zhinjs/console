@@ -354,7 +354,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
         {logPanel.available ? <Button variant="ghost" size="sm" onClick={() => logPanel.open({ q: 'schedule' })}><Activity />{i18n.t("调度日志")}</Button> : <Button variant="ghost" size="sm" asChild>
           <Link to="/logs?q=schedule"><Activity />{i18n.t("调度日志")}</Link>
         </Button>}
-        <Button variant="outline" size="sm" onClick={() => { setLoading(true); fetchCrons() }}>
+        <Button variant="secondary" size="sm" onClick={() => { setLoading(true); fetchCrons() }}>
           <RefreshCw className="w-4 h-4 mr-1" /> {i18n.t(" 刷新")}</Button>
         {!readOnly && persistentAvailable && !loading && !error && (
           <Button size="sm" onClick={() => setAddDialogOpen(true)}>
@@ -365,7 +365,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
       <div>
           {loading ? <StatusState kind="loading" placeholder={<div className="grid grid-cols-1 gap-4">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32" />)}</div>} /> : error ? <div className="space-y-3">
             <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert>
-            <Button variant="outline" size="sm" onClick={() => { setError(null); setLoading(true); void fetchCrons() }}><RefreshCw />{i18n.t("重试")}</Button>
+            <Button variant="secondary" size="sm" onClick={() => { setError(null); setLoading(true); void fetchCrons() }}><RefreshCw />{i18n.t("重试")}</Button>
           </div> : <>
       {assistantOff ? <Alert role="status">
         <AlertDescription><strong>{i18n.t("定时 AI 任务未启用")}</strong> {assistantOff}</AlertDescription>
@@ -377,7 +377,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
       {(persistentCrons.length > 0 || memoryCrons.length > 0) && <div className="console-cron-toolbar">
         <div className="console-cron-search">
           <Search aria-hidden="true" />
-          <Input type="search" aria-label={i18n.t("搜索定时任务")} placeholder={i18n.t("搜索任务内容或名称…")} value={search} onChange={event => setSearch(event.target.value)} className="pl-9" />
+          <Input type="search" aria-label={i18n.t("搜索定时任务")} placeholder={i18n.t("搜索任务内容或名称…")} value={search} onChange={event => setSearch(event.target.value)} className="pl-10" />
         </div>
         <SelectField aria-label={i18n.t("任务状态")} className="w-full sm:w-auto" value={statusFilter} onValueChange={setStatusFilter} options={[
           { value: 'all', label: i18n.t("全部状态") },
@@ -399,7 +399,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
             description={readOnly ? i18n.t("当前身份只能查看实例中已存在的任务") : persistentAvailable ? i18n.t("新建一个定时 AI 任务，它会按计划自动运行。") : i18n.t("启用持久化 AI 调度后可在这里管理任务")}
             action={!readOnly && persistentAvailable ? { label: i18n.t("新建定时任务"), icon: Plus, onSelect: () => setAddDialogOpen(true) } : undefined} />
         ) : visiblePersistentCrons.length === 0 ? <StatusState kind="empty" compact title={i18n.t("没有匹配的任务")} description={i18n.t("换一个关键词或状态，或清除筛选。")}
-          actions={<Button size="sm" variant="outline" onClick={() => { setSearch(''); setStatusFilter('all') }}>{i18n.t("清除筛选")}</Button>} /> : (
+          actions={<Button size="sm" variant="secondary" onClick={() => { setSearch(''); setStatusFilter('all') }}>{i18n.t("清除筛选")}</Button>} /> : (
           <div className="console-resource-list console-schedule-list">
             {visiblePersistentCrons.map((job) => {
               const isExpanded = expandedId === job.id
@@ -450,7 +450,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
                             <span>{agentView.label}</span>
                             {agentView.missing ? <Badge variant="warning">{i18n.t("⚠ Agent 不存在")}</Badge> : null}
                           </span>
-                          {canWrite && agents !== null ? <Button variant="outline" size="sm" disabled={!agentEditable || togglePending !== null} aria-describedby={agentBlock ? agentNoteId : undefined} onClick={() => openAgentDialog(job)}><Bot />{i18n.t("修改 Agent")}</Button> : null}
+                          {canWrite && agents !== null ? <Button variant="secondary" size="sm" disabled={!agentEditable || togglePending !== null} aria-describedby={agentBlock ? agentNoteId : undefined} onClick={() => openAgentDialog(job)}><Bot />{i18n.t("修改 Agent")}</Button> : null}
                           {agentBlock && canWrite && agents !== null ? <p id={agentNoteId} className="console-cron-agent-note">{agentBlock.reason}</p> : null}
                         </dd></div>}
                         <div><dt>{i18n.t("创建时间")}</dt><dd>{job.createdAt ? new Date(job.createdAt).toLocaleString(i18n.locale) : '—'}</dd></div>
@@ -517,7 +517,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
-              <label className="text-sm font-medium mb-1.5 block">{i18n.t("标签（可选）")}</label>
+              <label className="text-sm font-medium mb-2 block">{i18n.t("标签（可选）")}</label>
               <Input
                 placeholder={i18n.t("例如：每日摘要")}
                 value={newCron.label}
@@ -525,7 +525,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1.5 block">{i18n.t("Cron 表达式")}</label>
+              <label className="text-sm font-medium mb-2 block">{i18n.t("Cron 表达式")}</label>
               <Input
                 placeholder={i18n.t("秒 分 时 日 月 周，例如：0 0 9 * * *")}
                 value={newCron.cronExpression}
@@ -538,7 +538,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
               {cronValidation ? cronValidation.valid ? i18n.t("表达式校验通过") : i18n.t("表达式无效：{0}", [cronValidationMessage(cronValidation.error, i18n.locale)]) : i18n.t("正在校验表达式…")}
             </p>}
             {agents !== null && <div>
-              <label id="cron-new-agent-label" className="text-sm font-medium mb-1.5 block">{i18n.t("执行的 Agent")}</label>
+              <label id="cron-new-agent-label" className="text-sm font-medium mb-2 block">{i18n.t("执行的 Agent")}</label>
               <SelectField aria-labelledby="cron-new-agent-label" className="w-full" value={newCron.agent}
                 onValueChange={(agent) => { setAddError(null); setNewCron((p) => ({ ...p, agent })) }}
                 options={scheduleAgentOptions(agents, i18n.locale, newCron.agent) ?? []} />
@@ -546,7 +546,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
               {newAgentMissing ? <p id="cron-new-agent-missing" className="text-xs text-destructive mt-1">{i18n.t("所选 Agent「{0}」不存在，请改选可用的 Agent 或默认 Agent。", [newCron.agent])}</p> : null}
             </div>}
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Prompt</label>
+              <label className="text-sm font-medium mb-2 block">Prompt</label>
               <Textarea
                 placeholder={i18n.t("触发时发送给 AI 的指令...")}
                 rows={4}
@@ -558,7 +558,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" disabled={submitting}>{i18n.t("取消")}</Button>
+              <Button variant="secondary" disabled={submitting}>{i18n.t("取消")}</Button>
             </DialogClose>
             <Button
               onClick={handleAdd}
@@ -581,7 +581,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div>
-              <label id="cron-set-agent-label" className="text-sm font-medium mb-1.5 block">{i18n.t("执行的 Agent")}</label>
+              <label id="cron-set-agent-label" className="text-sm font-medium mb-2 block">{i18n.t("执行的 Agent")}</label>
               <SelectField aria-labelledby="cron-set-agent-label" className="w-full" value={agentDraft}
                 onValueChange={(value) => { setAgentError(null); setAgentDraft(value) }}
                 options={scheduleAgentOptions(agents, i18n.locale, [agentTarget?.agent, agentDraft]) ?? []} />
@@ -592,9 +592,9 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" disabled={submitting}>{i18n.t("取消")}</Button>
+              <Button variant="secondary" disabled={submitting}>{i18n.t("取消")}</Button>
             </DialogClose>
-            {agentTarget && scheduleAgentValue(agentTarget) !== '' && <Button variant="outline" disabled={submitting} onClick={() => { setAgentDraft(''); void handleSetAgent('') }}>{i18n.t("恢复默认")}</Button>}
+            {agentTarget && scheduleAgentValue(agentTarget) !== '' && <Button variant="secondary" disabled={submitting} onClick={() => { setAgentDraft(''); void handleSetAgent('') }}>{i18n.t("恢复默认")}</Button>}
             <Button onClick={() => handleSetAgent(agentDraft)} disabled={submitting || !agentTarget || agentDraft === scheduleAgentValue(agentTarget) || scheduleAgentMissing(agents, agentDraft)}
               aria-describedby={draftAgentRefused ? 'cron-set-agent-missing' : undefined}>
               {submitting ? i18n.t("保存中...") : i18n.t("保存")}
@@ -613,7 +613,7 @@ function CronPageSession({ connectionScope }: { connectionScope: string }) {
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" disabled={submitting}>{i18n.t("取消")}</Button>
+              <Button variant="secondary" disabled={submitting}>{i18n.t("取消")}</Button>
             </DialogClose>
             <Button variant="destructive-solid" onClick={handleDelete} disabled={submitting}>
               {submitting ? i18n.t("删除中...") : i18n.t("删除")}

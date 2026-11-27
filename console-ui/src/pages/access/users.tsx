@@ -242,7 +242,7 @@ function ProfileDialog({ user, onClose, onSaved }: { user: IamUser; onClose: () 
           </FormField>
           {error ? <StatusState compact error={error} /> : null}
           <DialogFooter>
-            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={saving}>{i18n.t("取消")}</Button>
+            <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={saving}>{i18n.t("取消")}</Button>
             <Button type="submit" size="sm" disabled={saving}>{saving ? i18n.t("处理中...") : i18n.t("保存")}</Button>
           </DialogFooter>
         </form>
@@ -311,7 +311,7 @@ function CreateUserDialog({ roles, onClose, onCreated }: { roles: readonly IamRo
           </section>
           {error ? <p role="alert" className="text-sm text-destructive break-words">{error}</p> : null}
           <DialogFooter>
-            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={saving}>{i18n.t("取消")}</Button>
+            <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={saving}>{i18n.t("取消")}</Button>
             <Button type="submit" size="sm" disabled={saving}>{saving ? i18n.t("处理中...") : i18n.t("创建")}</Button>
           </DialogFooter>
         </form>
@@ -353,7 +353,7 @@ function BindingsDialog({ user, users, roles, onClose, onSaved }: {
           ? <p role="note" className="text-sm text-muted-foreground">{i18n.t("该用户将不再是所有者。")}</p> : null}
         {error ? <p role="alert" className="text-sm text-destructive break-words">{error}</p> : null}
         <DialogFooter>
-          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={saving}>{i18n.t("取消")}</Button>
+          <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={saving}>{i18n.t("取消")}</Button>
           <Button type="button" size="sm" onClick={() => void save()} disabled={saving}>{saving ? i18n.t("处理中...") : i18n.t("保存")}</Button>
         </DialogFooter>
       </DialogContent>
@@ -400,7 +400,7 @@ function ResetPasswordDialog({ user, onClose, onDone }: { user: IamUser; onClose
           </FormField>
           {error ? <p role="alert" className="text-sm text-destructive break-words">{error}</p> : null}
           <DialogFooter>
-            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={saving}>{i18n.t("取消")}</Button>
+            <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={saving}>{i18n.t("取消")}</Button>
             <Button type="submit" size="sm" variant="destructive-solid" disabled={saving}>{saving ? i18n.t("处理中...") : i18n.t("重置密码")}</Button>
           </DialogFooter>
         </form>

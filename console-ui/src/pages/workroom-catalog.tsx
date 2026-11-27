@@ -341,8 +341,8 @@ export default function WorkroomCatalogPage() {
         description={i18n.t("配置协作空间、成员和消息渠道。")}
         actions={
           <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm"><Link to="/features/ai/workrooms"><LayoutDashboard />{i18n.t("任务看板")}</Link></Button>
-            <Button variant="outline" size="sm" disabled={loading || saving} onClick={() => void load(false)}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
+            <Button asChild variant="secondary" size="sm"><Link to="/features/ai/workrooms"><LayoutDashboard />{i18n.t("任务看板")}</Link></Button>
+            <Button variant="secondary" size="sm" disabled={loading || saving} onClick={() => void load(false)}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
             {!readOnly ? <Button size="sm" disabled={!availability.canPublish || publishUnconfirmed || Boolean(firstProjectIdIssue || firstBasicIssue || firstMemberIssue || firstMessageRouteIssue || firstSponsorIssue)} onClick={() => void save()}>{saving ? <Loader2 className="animate-spin" /> : <Save />}{saving ? i18n.t("发布中") : i18n.t("发布目录")}</Button> : null}
           </div>
         }
@@ -357,7 +357,7 @@ export default function WorkroomCatalogPage() {
           onRetry={() => void load(false, true)} />
       ) : null}
       {catalog && catalogError ? <div className="rounded-lg border bg-muted/25 px-4 py-3 text-sm text-muted-foreground">{i18n.t("刷新失败，以下是上次成功加载的目录；本地修改仍保留，恢复目录连接前暂停编辑和发布。")}</div> : null}
-      {dirty ? <Button variant="outline" size="sm" disabled={loading || saving} onClick={() => setReloadOpen(true)}>{i18n.t("放弃未发布修改")}</Button> : null}
+      {dirty ? <Button variant="secondary" size="sm" disabled={loading || saving} onClick={() => setReloadOpen(true)}>{i18n.t("放弃未发布修改")}</Button> : null}
       {endpointError ? <div className="rounded-lg border border-warning/25 bg-warning/[0.06] px-4 py-3 text-sm text-warning">{i18n.t("Endpoint 列表暂不可用；Catalog 仍可查看和编辑，已有消息出口会保持原值。发布时 Runtime 仍会执行最终校验。")}</div> : null}
       {notice ? <div className="rounded-lg border bg-muted/25 px-4 py-3 text-sm text-muted-foreground">{notice}</div> : null}
 
@@ -393,7 +393,7 @@ export default function WorkroomCatalogPage() {
             ))}
             {!drafts.length ? <EmptyState title={i18n.t("尚未配置 Workroom")} description={i18n.t("创建第一个 Project，将协作空间绑定到 Orchestrator Agent。")} /> : null}
             {!readOnly ? (
-              <Button variant="outline" disabled={!availability.canEdit} className="w-full border-dashed py-7" onClick={() => change((current) => {
+              <Button variant="secondary" disabled={!availability.canEdit} className="w-full border-dashed py-8" onClick={() => change((current) => {
                 const agent = agentNames[0] ?? ''
                 return [...current, createNewWorkroomDraft({
                   projectId: nextProjectId(current),
@@ -459,7 +459,7 @@ function WorkroomEditor(props: {
           <div><Field label={i18n.t("名称")}><Input value={value.name} required aria-invalid={Boolean(props.basicIssues.name)} aria-describedby={props.basicIssues.name ? nameErrorId : undefined} disabled={readOnly} onChange={(event) => patch({ name: event.target.value })} placeholder={i18n.t("协作项目名称")} /></Field>{props.basicIssues.name ? <p id={nameErrorId} className="mt-1 text-xs text-destructive">{props.basicIssues.name}</p> : null}</div>
         </div>
         <div className="flex items-center gap-2">
-          {props.persisted ? <Button asChild variant="outline" size="sm"><Link to={`/features/ai/workrooms?projectId=${encodeURIComponent(value.projectId.trim())}`}><LayoutDashboard />{i18n.t("查看任务")}</Link></Button> : null}
+          {props.persisted ? <Button asChild variant="secondary" size="sm"><Link to={`/features/ai/workrooms?projectId=${encodeURIComponent(value.projectId.trim())}`}><LayoutDashboard />{i18n.t("查看任务")}</Link></Button> : null}
           <label className="flex cursor-pointer items-center gap-2 text-sm"><Checkbox checked={value.enabled !== false} disabled={readOnly} onCheckedChange={checked => patch({ enabled: checked === true })} />{i18n.t("启用")}</label>
           {!readOnly ? <Button variant="ghost" size="icon" aria-label={i18n.t("删除 {0}", [value.projectId])} onClick={props.onDelete}><Trash2 /></Button> : null}
         </div>
@@ -476,7 +476,7 @@ function WorkroomEditor(props: {
 
         <section aria-labelledby={`members-${value.projectId}`}>
           <div className="mb-3 flex items-center justify-between gap-3">
-            <div><h3 id={`members-${value.projectId}`} className="text-sm font-semibold">{i18n.t("成员")}</h3><p className="mt-0.5 text-xs text-muted-foreground">{i18n.t("选择参与项目的 Agent 和角色。")}</p></div>
+            <div><h3 id={`members-${value.projectId}`} className="text-sm font-semibold">{i18n.t("成员")}</h3><p className="mt-1 text-xs text-muted-foreground">{i18n.t("选择参与项目的 Agent 和角色。")}</p></div>
             <Badge variant="outline">{value.members.length}</Badge>
           </div>
           {props.memberIssues.orchestrator ? <p className="mb-2 text-xs text-destructive">{props.memberIssues.orchestrator}</p> : null}
@@ -495,8 +495,8 @@ function WorkroomEditor(props: {
                 <div className="grid gap-3 pt-3 lg:grid-cols-2">
                   <div className="rounded-lg border bg-background/70 p-3">
                     <div className="mb-3 flex items-start gap-2">
-                      <Route className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                      <div><h4 className="text-xs font-semibold">{i18n.t("任务执行入口")}</h4><p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{i18n.t("本机执行，或精确路由到远程 Agent Endpoint。")}</p></div>
+                      <Route className="mt-1 h-4 w-4 text-muted-foreground" />
+                      <div><h4 className="text-xs font-semibold">{i18n.t("任务执行入口")}</h4><p className="mt-1 text-xs leading-relaxed text-muted-foreground">{i18n.t("本机执行，或精确路由到远程 Agent Endpoint。")}</p></div>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <Field label="Execution"><SelectField value={member.assignmentRoute?.kind ?? 'local'} disabled={readOnly} onValueChange={(kind) => setMember(index, { ...member, assignmentRoute: kind === 'remote' ? { kind: 'remote', endpointId: '' } : { kind: 'local' } })} options={[{value: 'local', label: 'local'}, {value: 'remote', label: 'remote'}]} /></Field>
@@ -518,7 +518,7 @@ function WorkroomEditor(props: {
                 </MemberOptions>
               </div>
             ))}
-            {!readOnly ? <Button variant="outline" size="sm" onClick={() => patch({ members: [...value.members, { agent: props.agents[0] ?? '', role: value.members.some((member) => member.role === 'orchestrator') ? 'executor' : 'orchestrator' }] })}><Plus />{i18n.t("添加成员")}</Button> : null}
+            {!readOnly ? <Button variant="secondary" size="sm" onClick={() => patch({ members: [...value.members, { agent: props.agents[0] ?? '', role: value.members.some((member) => member.role === 'orchestrator') ? 'executor' : 'orchestrator' }] })}><Plus />{i18n.t("添加成员")}</Button> : null}
           </div>
         </section>
       </div>
@@ -558,10 +558,10 @@ function MessageRouteEditor(props: {
     <div className="rounded-lg border bg-background/70 p-3">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="flex items-start gap-2">
-          <RadioTower className="mt-0.5 h-4 w-4 text-muted-foreground" />
+          <RadioTower className="mt-1 h-4 w-4 text-muted-foreground" />
           <div>
             <h4 className="text-xs font-semibold">{i18n.t("消息出口投影")}</h4>
-            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{i18n.t("选择该 Agent 在主协作空间发言时使用的 Bot 身份。")}</p>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{i18n.t("选择该 Agent 在主协作空间发言时使用的 Bot 身份。")}</p>
           </div>
         </div>
         <Badge variant={props.issue ? 'destructive' : member.messageRoute ? 'outline' : 'secondary'}>
@@ -643,7 +643,7 @@ function ConversationEditor(props: {
 }
 
 function Field(props: { label: string; hint?: string; children: ReactNode }) {
-  return <label className="block min-w-0"><span className="mb-1.5 flex items-center gap-1 text-xs font-medium text-muted-foreground">{props.label}{props.hint ? <span className="font-normal">· {props.hint}</span> : null}</span>{props.children}</label>
+  return <label className="block min-w-0"><span className="mb-2 flex items-center gap-1 text-xs font-medium text-muted-foreground">{props.label}{props.hint ? <span className="font-normal">· {props.hint}</span> : null}</span>{props.children}</label>
 }
 
 function Metric(props: { icon: typeof Boxes; label: string; value: number | string; detail: string }) {

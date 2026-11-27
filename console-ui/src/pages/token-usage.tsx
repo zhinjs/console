@@ -171,7 +171,7 @@ export default function TokenUsagePage() {
     <PageHeader
       title={i18n.t("Token 用量")}
       description={i18n.t("机器人调用模型花了多少 token、花在谁身上，和上一周期相比是多是少。")}
-      actions={<Button variant="outline" size="sm" onClick={retry} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>}
+      actions={<Button variant="secondary" size="sm" onClick={retry} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>}
       moreActions={[{ key: 'session-key', label: i18n.t("按会话键筛选…"), onSelect: () => { setKeyDraft(session); setKeyDialog(true) } }]}
     />
 
@@ -205,8 +205,8 @@ export default function TokenUsagePage() {
             <UsageReport stats={stats} previous={previous} view={view} onViewChange={setView} onPickSession={applySession}
               empty={empty ? <StatusState kind="empty" title={i18n.t("这段时间没有模型调用记录。")} description={i18n.t("换一个时间范围或清除会话筛选试试。")}
                 actions={<>
-                  {range !== '30d' ? <Button size="sm" variant="outline" onClick={() => setRange('30d')}>{i18n.t("查看最近 30 天")}</Button> : null}
-                  {session ? <Button size="sm" variant="outline" onClick={() => applySession('')}>{i18n.t("清除会话筛选")}</Button> : null}
+                  {range !== '30d' ? <Button size="sm" variant="secondary" onClick={() => setRange('30d')}>{i18n.t("查看最近 30 天")}</Button> : null}
+                  {session ? <Button size="sm" variant="secondary" onClick={() => applySession('')}>{i18n.t("清除会话筛选")}</Button> : null}
                 </>} /> : undefined} />
           </div> : null}
     </>}

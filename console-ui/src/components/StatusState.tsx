@@ -117,8 +117,8 @@ function LoadingState({ title, description, onRetry, actions, compact, className
           {SLOW_LOADING_COPY.causes.map(cause => <li key={cause}>{i18n.t(cause)}</li>)}
         </ul>
         <div className="console-status-state-actions">
-          {onRetry ? <Button size="sm" variant="outline" onClick={onRetry}><RefreshCw />{i18n.t('重试')}</Button> : null}
-          <Button asChild size="sm" variant="outline"><Link to={CONSOLE_PATHS.opsSelfCheck}><Stethoscope />{i18n.t('运行连接自检')}</Link></Button>
+          {onRetry ? <Button size="sm" variant="secondary" onClick={onRetry}><RefreshCw />{i18n.t('重试')}</Button> : null}
+          <Button asChild size="sm" variant="secondary"><Link to={CONSOLE_PATHS.opsSelfCheck}><Stethoscope />{i18n.t('运行连接自检')}</Link></Button>
           {actions}
         </div>
       </div>
@@ -182,10 +182,10 @@ function SettledState({
         ) : null}
         {retry || onVerify || actions || (resolved === 'locked' && lockHref) || resolved === 'instance-unavailable' ? (
           <div className="console-status-state-actions">
-            {resolved === 'unknown' && onVerify ? <Button size="sm" variant="outline" onClick={onVerify}><RefreshCw />{i18n.t('核对当前状态')}</Button> : null}
-            {retry ? <Button size="sm" variant="outline" onClick={retry}><RefreshCw />{i18n.t('重试')}</Button> : null}
-            {resolved === 'locked' && lockHref ? <Button asChild size="sm" variant="outline"><Link to={lockHref}><Lock />{i18n.t('查看上级设置')}</Link></Button> : null}
-            {resolved === 'instance-unavailable' ? <Button asChild size="sm" variant="outline"><Link to="/ops/instance"><ServerOff />{i18n.t('查看实例')}</Link></Button> : null}
+            {resolved === 'unknown' && onVerify ? <Button size="sm" variant="secondary" onClick={onVerify}><RefreshCw />{i18n.t('核对当前状态')}</Button> : null}
+            {retry ? <Button size="sm" variant="secondary" onClick={retry}><RefreshCw />{i18n.t('重试')}</Button> : null}
+            {resolved === 'locked' && lockHref ? <Button asChild size="sm" variant="secondary"><Link to={lockHref}><Lock />{i18n.t('查看上级设置')}</Link></Button> : null}
+            {resolved === 'instance-unavailable' ? <Button asChild size="sm" variant="secondary"><Link to="/ops/instance"><ServerOff />{i18n.t('查看实例')}</Link></Button> : null}
             {actions}
           </div>
         ) : null}

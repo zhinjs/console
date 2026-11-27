@@ -278,7 +278,7 @@ export default function SetupWizard({ onComplete, onCancel }: SetupWizardProps) 
           <div className="console-setup-actions">
             {driver
               ? <>
-                <Button type="button" variant="outline" disabled={busy !== null} onClick={() => void runTest()}>
+                <Button type="button" variant="secondary" disabled={busy !== null} onClick={() => void runTest()}>
                   {busy === 'test' ? i18n.t('测试中…') : i18n.t('测试连接')}</Button>
                 <Button type="button" disabled={busy !== null || !tested} onClick={() => void save()}
                   title={tested ? undefined : i18n.t('先测试连接，成功后才能保存')}>

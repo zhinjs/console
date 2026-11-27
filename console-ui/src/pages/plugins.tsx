@@ -192,7 +192,7 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
           <div className="console-plugin-catalog-search">
             <Search aria-hidden="true" />
             <Input type="search" aria-label={i18n.t("搜索插件…")} placeholder={i18n.t("搜索插件…")} value={search}
-              onChange={e => setSearch(e.target.value)} className="pl-9" />
+              onChange={e => setSearch(e.target.value)} className="pl-10" />
           </div>
         </div>
 
@@ -209,7 +209,7 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
                   onValueChange={value => { if (SORT_KEYS.includes(value as InventorySortKey)) setSortTo(value as InventorySortKey, sortDirection) }}
                   options={SORT_KEYS.map(key => ({ value: key, label: i18n.t(SORT_LABELS[key]) }))} />
               </div>
-              <Button type="button" variant="outline" className="shrink-0 min-h-11"
+              <Button type="button" variant="secondary" className="shrink-0 min-h-11"
                 onClick={() => setSortTo(sortKey, sortDirection === 'asc' ? 'desc' : 'asc')}>
                 {sortDirection === 'asc' ? <ArrowUp aria-hidden="true" /> : <ArrowDown aria-hidden="true" />}
                 {sortDirection === 'asc' ? i18n.t("升序") : i18n.t("降序")}
@@ -244,7 +244,7 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
           </Card>
         ) : rows.length ? (
           <StatusState kind="empty" title={i18n.t("没有匹配的插件")} description={i18n.t("试试其他名称，或清除筛选。")}
-            actions={<Button variant="outline" size="sm" onClick={clearFilters}>{i18n.t("清除筛选")}</Button>} />
+            actions={<Button variant="secondary" size="sm" onClick={clearFilters}>{i18n.t("清除筛选")}</Button>} />
         ) : !instanceDown ? (
           <StatusState kind="empty" title={i18n.t("还没有安装插件")} description={i18n.t("从插件市场安装，网关会停止实例、安装、校验并重新启动。")}
             actions={<Button size="sm" asChild><Link to={CONSOLE_PATHS.marketplace}><Store />{i18n.t("去插件市场")}</Link></Button>} />

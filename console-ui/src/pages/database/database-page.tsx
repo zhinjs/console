@@ -83,7 +83,7 @@ export default function DatabasePage() {
                 {DIALECT_LABELS[info.dialect] || info.dialect} · {i18n.t(DB_TYPE_LABELS[info.type])}
               </Badge>
             )}
-            <Button variant="outline" size="sm" onClick={refreshAll} disabled={loading}>
+            <Button variant="secondary" size="sm" onClick={refreshAll} disabled={loading}>
               <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新")}</Button>
           </div>
         }
@@ -118,7 +118,7 @@ export default function DatabasePage() {
               {/* Every SQL statement, read-only queries included, needs `ops.database.schema` (`db:query` / `db:execute`). */}
               {showTools && canSchema ? (
                 <button type="button" data-tool="sql" aria-current={tool === 'sql' ? 'true' : undefined}
-                  className={`flex items-center gap-2 px-3 py-1.5 text-sm text-left border-b hover:bg-accent transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${tool === 'sql' ? 'bg-accent text-accent-foreground font-medium' : ''}`}
+                  className={`flex items-center gap-2 px-3 py-2 text-sm text-left border-b hover:bg-accent transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${tool === 'sql' ? 'bg-accent text-accent-foreground font-medium' : ''}`}
                   onClick={() => openTool('sql')}>
                   <TerminalSquare className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                   <span className="truncate">{i18n.t('SQL 查询')}</span>
@@ -142,7 +142,7 @@ export default function DatabasePage() {
                       aria-current={selectedTable === t.name ? 'true' : undefined}
                       title={t.name}
                       className={`
-                        w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left
+                        w-full flex items-center gap-2 px-3 py-2 text-sm text-left
                         hover:bg-accent transition-colors rounded-sm cursor-pointer
                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset
                         ${selectedTable === t.name ? 'bg-accent text-accent-foreground font-medium' : ''}
@@ -167,7 +167,7 @@ export default function DatabasePage() {
             >
               {tool ? (
                 <>
-                  <div className="flex items-center gap-2 px-3 sm:px-4 py-2.5 border-b bg-muted/20 min-w-0 shrink-0">
+                  <div className="flex items-center gap-2 px-3 sm:px-4 py-3 border-b bg-muted/20 min-w-0 shrink-0">
                     <Button type="button" variant="ghost" size="sm" className="md:hidden shrink-0 -ml-1 px-2" onClick={closeDetail} aria-label={i18n.t("返回{0}列表", [objectLabel])}>
                       <ArrowLeft className="w-4 h-4 mr-1" />{i18n.t("返回")}</Button>
                     <h2 className="text-base sm:text-lg font-semibold truncate min-w-0">{tool === 'sql' ? i18n.t('SQL 查询') : i18n.t('新建表')}</h2>
@@ -185,7 +185,7 @@ export default function DatabasePage() {
                 </>
               ) : selectedTable ? (
                 <>
-                  <div className="flex flex-wrap items-center gap-2 max-sm:gap-y-1 px-3 sm:px-4 py-2.5 border-b bg-muted/20 min-w-0 shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 max-sm:gap-y-1 px-3 sm:px-4 py-3 border-b bg-muted/20 min-w-0 shrink-0">
                     <Button
                       type="button"
                       variant="ghost"
@@ -207,8 +207,8 @@ export default function DatabasePage() {
                     {showTools ? (
                       <Tabs value={mode} onValueChange={value => setMode(value as DetailMode)} className="shrink-0">
                         <TabsList className="h-8">
-                          <TabsTrigger value="data" className="text-xs px-2.5" data-tab="data" {...tabTriggerProps(modeTabsId, 'data')}>{i18n.t('数据')}</TabsTrigger>
-                          <TabsTrigger value="structure" className="text-xs px-2.5" data-tab="structure" {...tabTriggerProps(modeTabsId, 'structure')}>{i18n.t('结构')}</TabsTrigger>
+                          <TabsTrigger value="data" className="text-xs px-3" data-tab="data" {...tabTriggerProps(modeTabsId, 'data')}>{i18n.t('数据')}</TabsTrigger>
+                          <TabsTrigger value="structure" className="text-xs px-3" data-tab="structure" {...tabTriggerProps(modeTabsId, 'structure')}>{i18n.t('结构')}</TabsTrigger>
                         </TabsList>
                       </Tabs>
                     ) : null}

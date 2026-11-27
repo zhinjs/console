@@ -222,7 +222,7 @@ export default function AgentWorkbenchPage() {
         description={i18n.t("AI 是否就绪、Agent 绑定了哪些模型与服务、下一步做什么。进程与实例的运行状态在「实例」页。")}
         actions={<>
           <Button variant="ghost" size="sm" asChild><Link to={instanceSectionHref('status', CONSOLE_PATHS.opsInstance)}><Server />{i18n.t("实例运行状态")}<ArrowUpRight /></Link></Button>
-          <Button variant="outline" size="sm" onClick={() => void loadWorkbench(true)} disabled={refreshing}>
+          <Button variant="secondary" size="sm" onClick={() => void loadWorkbench(true)} disabled={refreshing}>
             <RefreshCw className={refreshing ? 'animate-spin' : ''} />
             {i18n.t("刷新")}</Button>
         </>}
@@ -252,8 +252,8 @@ export default function AgentWorkbenchPage() {
             ) : null}
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
-            {error ? <Button variant="outline" onClick={() => void loadWorkbench(true)} disabled={refreshing}><RefreshCw />{i18n.t("重试读取")}</Button>
-              : imOnly ? <Button variant="outline" asChild><Link to="/scope"><Bot />{i18n.t("查看聊天账号")}</Link></Button>
+            {error ? <Button variant="secondary" onClick={() => void loadWorkbench(true)} disabled={refreshing}><RefreshCw />{i18n.t("重试读取")}</Button>
+              : imOnly ? <Button variant="secondary" asChild><Link to="/scope"><Bot />{i18n.t("查看聊天账号")}</Link></Button>
               : ready ? <Button asChild><Link to="/agent/sessions"><GitBranch />{i18n.t("打开聊天记录")}</Link></Button>
                 : <Button asChild><Link to={bindings.length === 0 ? CONSOLE_PATHS.ai : '/scope'}><Settings2 />{bindings.length === 0 ? i18n.t("配置 Agent") : i18n.t("查看聊天账号")}</Link></Button>}
           </div>
@@ -304,7 +304,7 @@ export default function AgentWorkbenchPage() {
                         {line.source === 'default' ? <span className="text-muted-foreground"> {i18n.t("（跟随「AI 与模型 → 用途」）")}</span> : null}
                       </p>
                     })()}
-                    <div className="mt-2 flex flex-wrap gap-1.5 empty:hidden">
+                    <div className="mt-2 flex flex-wrap gap-2 empty:hidden">
                       {(binding.mcpServers ?? []).map((server) => (
                         <span key={server}><PlugZap />{server}</span>
                       ))}
@@ -325,7 +325,7 @@ export default function AgentWorkbenchPage() {
               kind={agentStatus === 'unavailable' ? 'not-installed' : 'empty'}
               title={agentStatus === 'unavailable' ? i18n.t("未安装 Agent") : i18n.t("尚未发现 Agent 绑定")}
               description={agentStatus === 'unavailable' ? i18n.t("IM 核心可独立使用；需要 AI 时先安装 @zhin.js/agent、zod、ai 和所选 Provider，再配置模型。") : i18n.t("Agent 是可选能力，IM 核心可独立使用。需要 AI 时安装 @zhin.js/agent、zod、ai 和所选 Provider，然后配置模型与 Agent。")}
-              actions={<Button size="sm" variant="outline" asChild><Link to={agentStatus === 'unavailable' ? '/ops/config' : CONSOLE_PATHS.ai}>{agentStatus === 'unavailable' ? i18n.t("打开配置") : i18n.t("AI 与模型")}</Link></Button>}
+              actions={<Button size="sm" variant="secondary" asChild><Link to={agentStatus === 'unavailable' ? '/ops/config' : CONSOLE_PATHS.ai}>{agentStatus === 'unavailable' ? i18n.t("打开配置") : i18n.t("AI 与模型")}</Link></Button>}
             />
           )}
         </section>

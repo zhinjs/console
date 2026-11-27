@@ -3,8 +3,7 @@
     display: grid;
     grid-template-columns: 13rem minmax(0, 1fr);
     align-items: start;
-    /* stylelint-disable-next-line console/scale-values -- 设置页两栏间距随视口在 space-4 与 space-7 之间连续缩放（3vw），尺度里没有对应写法 */
-    gap: clamp(var(--console-space-4), 3vw, var(--console-space-7));
+    gap: var(--console-section-gap);
   }
 
   .console-settings-nav {

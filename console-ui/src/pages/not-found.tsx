@@ -23,7 +23,7 @@ export default function NotFoundPage({ homePath }: { homePath: string }) {
       <code className="console-not-found-address">{address}</code>
       <div className="console-not-found-actions">
         <Button variant="primary" asChild><Link to={homePath}><Home />{i18n.t('返回首页')}</Link></Button>
-        <Button type="button" variant="outline" onClick={() => openCommandCenter()}><Search />{i18n.t('打开 {0} 搜索', [commandCenterShortcut().replace('⌘ K', '⌘K')])}</Button>
+        <Button type="button" variant="secondary" onClick={() => openCommandCenter()}><Search />{i18n.t('打开 {0} 搜索', [commandCenterShortcut().replace('⌘ K', '⌘K')])}</Button>
       </div>
     </section>
   )

@@ -250,11 +250,11 @@ function InstanceLogsSection() {
           <Button size="sm" variant={stream === 'stderr' ? 'secondary' : 'outline'} aria-pressed={stream === 'stderr'} onClick={() => setStream(stream === 'all' ? 'stderr' : 'all')}>
             {i18n.t("只看错误输出")}
           </Button>
-          <Button size="sm" variant="outline" aria-pressed={live} onClick={() => setLive(!live)}>
+          <Button size="sm" variant="secondary" aria-pressed={live} onClick={() => setLive(!live)}>
             {live ? <Pause /> : <Play />}{live ? i18n.t("暂停") : i18n.t("实时")}
           </Button>
           {!follow ? (
-            <Button size="sm" variant="outline" onClick={() => setFollow(true)}><ArrowDownToLine />{i18n.t("跳到最新")}</Button>
+            <Button size="sm" variant="secondary" onClick={() => setFollow(true)}><ArrowDownToLine />{i18n.t("跳到最新")}</Button>
           ) : null}
         </>}>
         {logs.error && logs.errorKind !== 'unsupported' ? <GatewayLoadError error={logs.error} kind={logs.errorKind} failure={logs.failure} onRetry={logs.refresh} permissions={['status.view']} /> : null}
@@ -391,9 +391,9 @@ function DependencyPanel({ canManage, onActiveChange, onFinished }: { canManage:
       <ObjectSection title={i18n.t("项目依赖")}
         description={`${list.data.packageManager ? i18n.t("包管理器：{0}。", [list.data.packageManager]) : ''}${i18n.t("安装、卸载或更新时：备份 → 停止实例 → 执行 → 启动并等待就绪；任何一步失败都会恢复备份并启动旧版本。")}`}
         actions={<>
-          <Button size="sm" variant="outline" onClick={list.refresh} disabled={list.loading || busy}><RefreshCw className={list.loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
+          <Button size="sm" variant="secondary" onClick={list.refresh} disabled={list.loading || busy}><RefreshCw className={list.loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
           {canManage && !unsupported ? (
-            <Button size="sm" variant="outline" onClick={() => void prepare('update', 'all')} disabled={busy || !list.data.packages.length}><Upload />{i18n.t("全部更新")}</Button>
+            <Button size="sm" variant="secondary" onClick={() => void prepare('update', 'all')} disabled={busy || !list.data.packages.length}><Upload />{i18n.t("全部更新")}</Button>
           ) : null}
         </>}>
         {list.error ? <GatewayLoadError error={list.error} kind={list.errorKind} failure={list.failure} onRetry={list.refresh} permissions={['feature.view']} /> : null}
@@ -405,7 +405,7 @@ function DependencyPanel({ canManage, onActiveChange, onFinished }: { canManage:
             <div className="flex flex-col gap-2 text-left sm:flex-row sm:flex-wrap sm:items-center">
             <span className="text-sm font-medium" aria-live="polite">{i18n.t("已选 {0} 个", [selectedNames.length])}</span>
             <div className="flex flex-wrap gap-2 sm:ml-auto">
-              <Button size="sm" variant="outline" disabled={busy || Boolean(selectionProblem)} onClick={() => void prepare('update', selectedNames)}><Upload />{i18n.t("更新所选")}</Button>
+              <Button size="sm" variant="secondary" disabled={busy || Boolean(selectionProblem)} onClick={() => void prepare('update', selectedNames)}><Upload />{i18n.t("更新所选")}</Button>
               <Button size="sm" variant="destructive-outline" disabled={busy || Boolean(selectionProblem)} onClick={() => void prepare('uninstall', selectedNames)}><Trash2 />{i18n.t("卸载所选")}</Button>
               <Button size="sm" variant="ghost" disabled={busy} onClick={() => setSelected(new Set())}>{i18n.t("清除选择")}</Button>
             </div>

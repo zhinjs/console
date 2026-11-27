@@ -405,13 +405,13 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
   if (!tab && (detailView.view === 'error' || !plugin) && !entry) {
     return (
       <PageShell>
-        <PageHeader title={title} actions={<Button variant="outline" size="sm" asChild><Link to={listUrl}><ArrowLeft />{i18n.t("返回插件")}</Link></Button>} />
+        <PageHeader title={title} actions={<Button variant="secondary" size="sm" asChild><Link to={listUrl}><ArrowLeft />{i18n.t("返回插件")}</Link></Button>} />
         {detailView.view === 'skeleton' ? <Skeleton className="h-36" /> : (
           <StatusState error={detailError ?? error} kind={(detailError as { status?: number } | null)?.status === 404 ? 'not-installed' : undefined}
             title={(detailError as { status?: number } | null)?.status === 404 ? i18n.t("插件不存在") : undefined}
             description={(detailError as { status?: number } | null)?.status === 404 ? i18n.t("此 Host 上没有名为 {0} 的插件实例，也没有同名依赖。可以去插件市场安装。", [title]) : undefined}
             onRetry={name ? () => void fetchPluginDetail(name) : undefined}
-            actions={<Button variant="outline" size="sm" asChild><Link to={CONSOLE_PATHS.marketplace}>{i18n.t("插件市场")}</Link></Button>} />
+            actions={<Button variant="secondary" size="sm" asChild><Link to={CONSOLE_PATHS.marketplace}>{i18n.t("插件市场")}</Link></Button>} />
         )}
       </PageShell>
     )
@@ -429,10 +429,10 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
         description={plugin?.description || i18n.t("插件本身的信息：版本与依赖、声明与配置、权限和能力。在哪些范围开启，请到对象树的「功能」页签。")}
         actions={<>
           {tab ? <PageChromeActions store={chromeStore} /> : null}
-          <Button variant="outline" size="sm" asChild><Link to={listUrl}><ArrowLeft />{i18n.t("返回插件")}</Link></Button>
+          <Button variant="secondary" size="sm" asChild><Link to={listUrl}><ArrowLeft />{i18n.t("返回插件")}</Link></Button>
           {/* A page that brings its own refresh control refreshes the open tab; a second 刷新 would be ambiguous. */}
           {tab && pageChrome?.refresh ? null : (
-            <Button variant="outline" size="sm" disabled={loading} aria-busy={loading || undefined} onClick={refreshAll}>
+            <Button variant="secondary" size="sm" disabled={loading} aria-busy={loading || undefined} onClick={refreshAll}>
               <RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
           )}
           {plugin ? (
@@ -465,7 +465,7 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
       <div className="console-plugin-detail-grid">
         <ObjectSection title={i18n.t("版本与依赖")} description={i18n.t("依赖写在项目 package.json；安装、更新与卸载由管理网关作为事务执行，失败自动回滚。")}
           actions={canManagePackages ? <>
-            <Button size="sm" variant="outline" disabled={actionBusy || !update || !entry}
+            <Button size="sm" variant="secondary" disabled={actionBusy || !update || !entry}
               onClick={() => update && void packageAction.prepare('update', { name: packageName, version: update.latest, from: installedVersion })}>
               <ArrowUpCircle />{i18n.t("更新")}</Button>
             <Button size="sm" variant="destructive-outline" disabled={actionBusy || !entry}
@@ -486,13 +486,13 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
             {!canManagePackages ? <p className="text-xs text-muted-foreground">{i18n.t("安装、更新与卸载需要 plugin.manage 权限。")}</p> : null}
             <PackageActionPanel action={packageAction} readOnly={!canManagePackages} onDeclared={() => name && void fetchPluginDetail(name)} />
             {packageAction.operation === 'uninstall' && packageAction.receipt.state.phase === 'succeeded' ? (
-              <Button size="sm" variant="outline" asChild><Link to={listUrl}><ArrowLeft />{i18n.t("返回插件")}</Link></Button>
+              <Button size="sm" variant="secondary" asChild><Link to={listUrl}><ArrowLeft />{i18n.t("返回插件")}</Link></Button>
             ) : null}
           </CardContent></Card>
         </ObjectSection>
 
         <ObjectSection title={i18n.t("在哪开了")} description={i18n.t("开关与覆盖在对象树里设置；这里只汇总。")}
-          actions={<Button size="sm" variant="outline" asChild><Link to={scopeSummary?.matrixHref ?? '/scope?tab=features'}><ToggleLeft />{i18n.t("功能矩阵")}</Link></Button>}>
+          actions={<Button size="sm" variant="secondary" asChild><Link to={scopeSummary?.matrixHref ?? '/scope?tab=features'}><ToggleLeft />{i18n.t("功能矩阵")}</Link></Button>}>
           <Card><CardContent className="space-y-3 p-4">
             {matrix.status === 'loading' ? <Skeleton className="h-20" /> : matrix.status === 'skipped' ? (
               <StatusState compact kind="forbidden" permissions={['feature.view']} />
@@ -508,15 +508,15 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
           actions={<>
             {canDeclare ? <Button size="sm" disabled={actionBusy} onClick={() => setDeclaring(true)}><Settings />{i18n.t("填写配置并启用")}</Button> : null}
             {!plugin?.readOnly ? logPanel.available
-              ? <Button size="sm" variant="outline" onClick={() => logPanel.open({ q: title })}><Activity />{i18n.t("相关日志")}</Button>
-              : <Button size="sm" variant="outline" asChild><Link to={`/logs?q=${encodeURIComponent(title)}`}><Activity />{i18n.t("相关日志")}</Link></Button> : null}
+              ? <Button size="sm" variant="secondary" onClick={() => logPanel.open({ q: title })}><Activity />{i18n.t("相关日志")}</Button>
+              : <Button size="sm" variant="secondary" asChild><Link to={`/logs?q=${encodeURIComponent(title)}`}><Activity />{i18n.t("相关日志")}</Link></Button> : null}
           </>}>
           <Card><CardContent className="space-y-3 p-4">
             {plugin ? <PluginManagementSummary state={plugin.management} error={plugin.managementError} readOnly={!writable} showNavigation={false} />
               : undeclaredPackage ? <p className="text-sm text-muted-foreground">{i18n.t("还没有声明：根配置里没有使用这个包的插件实例。")}</p>
                 : <StatusState compact error={detailError ?? error} onRetry={name ? () => void fetchPluginDetail(name) : undefined} />}
             {unconfirmedCheck && <Alert variant="destructive"><AlertDescription>
-              {i18n.t("检查「")}{unconfirmedCheck}{i18n.t("」的结果仍未知。当前插件状态不代表之前的外部操作未发生。")}<Button variant="outline" size="sm" className="mt-2" onClick={async () => {
+              {i18n.t("检查「")}{unconfirmedCheck}{i18n.t("」的结果仍未知。当前插件状态不代表之前的外部操作未发生。")}<Button variant="secondary" size="sm" className="mt-2" onClick={async () => {
                 if (!await confirm({ title: i18n.t("已核对未知检查的结果？"), description: i18n.t("请先确认日志和外部结果。继续只解除操作锁定，不会重试检查；如需再次执行，仍须读取新计划并单独批准。"), confirmLabel: i18n.t("已核对，解除锁定") })) return
                 setUnconfirmedCheck(null)
                 setActionUnconfirmed(false)
@@ -527,15 +527,15 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
             </AlertDescription></Alert>}
             {writable && (
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={() => void applyPlugin()} disabled={actionBusy || actionUnconfirmed || !canApplyPlugin(plugin?.management)}>{i18n.t("应用变更")}</Button>
-                <Button variant="outline" size="sm" onClick={() => void loadVerificationPlan()} disabled={actionBusy || actionUnconfirmed || !canVerifyPlugin(plugin?.management)}>{i18n.t("查看业务检查")}</Button>
-                <Button variant="outline" size="sm" onClick={() => void diagnose()} disabled={actionBusy || actionUnconfirmed}><Stethoscope />{i18n.t("诊断")}</Button>
+                <Button variant="secondary" size="sm" onClick={() => void applyPlugin()} disabled={actionBusy || actionUnconfirmed || !canApplyPlugin(plugin?.management)}>{i18n.t("应用变更")}</Button>
+                <Button variant="secondary" size="sm" onClick={() => void loadVerificationPlan()} disabled={actionBusy || actionUnconfirmed || !canVerifyPlugin(plugin?.management)}>{i18n.t("查看业务检查")}</Button>
+                <Button variant="secondary" size="sm" onClick={() => void diagnose()} disabled={actionBusy || actionUnconfirmed}><Stethoscope />{i18n.t("诊断")}</Button>
               </div>
             )}
             {actionMessage && <Alert><AlertDescription>{actionMessage}</AlertDescription></Alert>}
             {actionError && (
               <Alert variant="destructive">
-                <AlertDescription>{actionError}{actionErrorDetail && <details className="mt-2 text-xs"><summary className="cursor-pointer">{i18n.t("错误详情")}</summary><p className="mt-2 break-all">{actionErrorDetail}</p></details>}{actionUnconfirmed && plugin && <Button variant="outline" size="sm" disabled={loading} aria-busy={loading} onClick={() => void fetchPluginDetail(plugin.instanceKey)}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新核对状态")}</Button>}</AlertDescription>
+                <AlertDescription>{actionError}{actionErrorDetail && <details className="mt-2 text-xs"><summary className="cursor-pointer">{i18n.t("错误详情")}</summary><p className="mt-2 break-all">{actionErrorDetail}</p></details>}{actionUnconfirmed && plugin && <Button variant="secondary" size="sm" disabled={loading} aria-busy={loading} onClick={() => void fetchPluginDetail(plugin.instanceKey)}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新核对状态")}</Button>}</AlertDescription>
               </Alert>
             )}
             {verificationPlan && <section aria-label={i18n.t("业务验证计划")} className="space-y-3 rounded-md border p-3"><p className="font-medium">{i18n.t("第 ")}{verificationPlan.generation} {i18n.t(" 代业务检查 · 尚未执行")}</p>{verificationPlan.checks.length === 0 ? <p>{i18n.t("插件未提供可执行检查。")}</p> : verificationPlan.checks.map(check => { const display = verificationCheckDisplay(check, i18n.locale); return <div key={check.id} className="space-y-2"><p>{display.title} <Badge variant="secondary">{check.scope === 'local' ? i18n.t("本地") : i18n.t("平台")}</Badge></p><ul className="list-disc pl-5 text-xs text-muted-foreground">{display.effects.map((effect,index) => <li key={index}>{effect}</li>)}</ul><Button size="sm" disabled={actionLoading || actionUnconfirmed} onClick={() => void runVerification(check.id)}>{i18n.t("审阅并批准一次")}</Button></div> })}</section>}
@@ -550,7 +550,7 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
         </ObjectSection>
 
         <ObjectSection title={i18n.t("权限")} description={i18n.t("插件为自己的页面和 RPC 声明的权限。角色按级别授予：查看 / 操作 / 管理。")}
-          actions={hasConsolePermission('iam.view') ? <Button size="sm" variant="outline" asChild><Link to={CONSOLE_PATHS.accessRoles}><Shield />{i18n.t("角色")}</Link></Button> : undefined}>
+          actions={hasConsolePermission('iam.view') ? <Button size="sm" variant="secondary" asChild><Link to={CONSOLE_PATHS.accessRoles}><Shield />{i18n.t("角色")}</Link></Button> : undefined}>
           <Card><CardContent className="space-y-3 p-4">
             {permissions.status === 'skipped' ? <StatusState compact kind="forbidden" permissions={['iam.view']} description={i18n.t("插件权限目录随角色列表一起提供，需要访问控制的查看权限。")} />
               : permissions.status === 'loading' ? <Skeleton className="h-16" />
@@ -576,7 +576,7 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
       </div>
 
       <ObjectSection title={i18n.t("能力清单")} description={i18n.t("这个插件在当前运行代注册的命令、中间件、组件与工具。原始视图在「运行时能力」。")}
-        actions={<Button size="sm" variant="outline" asChild><Link to={`${CONSOLE_PATHS.introspection}?filter=${encodeURIComponent(instanceKey)}`}><Blocks />{i18n.t("运行时能力")}</Link></Button>}>
+        actions={<Button size="sm" variant="secondary" asChild><Link to={`${CONSOLE_PATHS.introspection}?filter=${encodeURIComponent(instanceKey)}`}><Blocks />{i18n.t("运行时能力")}</Link></Button>}>
         {!plugin ? <StatusState compact error={detailError ?? error} description={i18n.t("能力清单由实例报告；实例恢复后再查看。")} />
           : plugin.features.length === 0 ? <StatusState compact kind="empty" title={i18n.t("暂无已加载能力")} description={i18n.t("插件在当前运行代没有注册命令、中间件或工具；它可能只提供配置或后台任务。")} />
             : (
@@ -596,7 +596,7 @@ export default function PluginDetailPage({ plugin: pluginName, tab }: PluginDeta
                         {feature.items.length ? (
                           <ul className="max-h-48 divide-y divide-border overflow-y-auto pr-1">
                             {feature.items.map((item, index) => (
-                              <li key={index} className="py-1.5">
+                              <li key={index} className="py-2">
                                 <InlineCode className="text-xs font-medium">{item.name}</InlineCode>
                                 {item.desc ? <p className="text-xs text-muted-foreground">{item.desc}</p> : null}
                               </li>
@@ -676,7 +676,7 @@ function PluginDiagnostic({ value }: { value: unknown }) {
   return <section aria-label={i18n.t("插件诊断结果")} className="space-y-3 rounded-md bg-muted/40 p-3 text-sm">
     <Badge variant={status === 'valid' ? 'outline' : status === 'unknown' ? 'secondary' : 'warning'}>{title}</Badge>
     {errors.length > 0 && <div><p className="mb-1 font-medium">{i18n.t("配置错误")}</p><ul className="list-disc space-y-1 pl-5">{errors.map((error, index) => <li key={index} className="break-words">{error}</li>)}</ul></div>}
-    {missingEnv.length > 0 && <div><p className="mb-1 font-medium">{i18n.t("缺少环境变量")}</p><div className="flex flex-wrap gap-1">{missingEnv.map(name => <code key={name} className="break-all rounded bg-muted px-1.5 py-0.5 text-xs">{name}</code>)}</div></div>}
+    {missingEnv.length > 0 && <div><p className="mb-1 font-medium">{i18n.t("缺少环境变量")}</p><div className="flex flex-wrap gap-1">{missingEnv.map(name => <code key={name} className="break-all rounded bg-muted px-2 py-1 text-xs">{name}</code>)}</div></div>}
     {warnings.length > 0 && <div><p className="mb-1 font-medium">{i18n.t("提示")}</p><ul className="list-disc space-y-1 pl-5">{warnings.map((warning, index) => <li key={index} className="break-words">{warning}</li>)}</ul></div>}
     <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">{i18n.t("原始诊断数据")}</summary><div className="mt-2"><JsonViewer value={value} /></div></details>
   </section>

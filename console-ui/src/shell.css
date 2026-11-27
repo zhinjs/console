@@ -20,7 +20,7 @@
 
   /* ---------- Top bar ---------- */
   .console-topnav {
-    padding-top: var(--console-page-padding-block);
+    padding: var(--console-page-padding-block) var(--console-page-padding-inline) 0;
   }
 
   .console-topnav-bar {
@@ -30,8 +30,6 @@
     justify-content: space-between;
     gap: var(--console-space-4);
     margin-inline: auto;
-    /* Same frame as the content column (.console-main): 1280 at most, the page padding inside. */
-    padding-inline: var(--console-page-padding-inline);
   }
 
   .console-topnav-bar[data-wide="true"] { max-width: none; }
@@ -42,7 +40,7 @@
     flex-shrink: 0;
     align-items: center;
     gap: var(--console-space-3);
-    min-width: 0;
+    min-width: var(--console-touch-target);
     min-height: var(--console-touch-target);
     border-radius: var(--console-radius-full);
     color: hsl(var(--console-ink));
@@ -347,6 +345,8 @@
     display: block;
     min-width: 0;
     overflow-x: clip;
+    /* Same frame as the top bar: the page padding outside, the 1280 content column inside. */
+    padding-inline: var(--console-page-padding-inline);
     padding-bottom: calc(var(--zc-log-panel-reserve, 0px) + var(--zc-tabbar-reserve, 0px));
   }
 
@@ -356,10 +356,11 @@
   }
 
   /* Banners, section pages, breadcrumb and the page stack in one column. */
-  .console-main {
+  .console-main.console-main {
     display: flex;
     flex-direction: column;
     gap: var(--console-section-gap);
+    padding-inline: 0;
     padding-bottom: var(--console-space-8);
   }
 
@@ -419,7 +420,7 @@
 
   /* Phones: brand and actions on top, the sections in the floating TabBar at the bottom. */
   @media (width < 48rem) {
-    .console-app-shell { --zc-tabbar-reserve: 6.5rem; }
+    .console-app-shell { --zc-tabbar-reserve: 4rem; }
     .console-topnav-bar { flex-wrap: nowrap; gap: var(--console-space-2); }
     .console-topnav-actions { min-width: 0; gap: var(--console-space-1); }
     .console-connection-dot { display: none; }

@@ -208,7 +208,7 @@ export function LoginTaskCard({ task, onSettled, readOnly }: { task: LoginTask; 
             </a>
           ) : null}
           {asksInput && !readOnly ? (
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Input value={input} disabled={busy} onChange={event => setInput(event.target.value)}
                 placeholder={i18n.t('输入验证码，或直接粘贴含 ticket 的 JSON / 回调链接…')} aria-label={i18n.t('输入验证码，或直接粘贴含 ticket 的 JSON / 回调链接…')} />
               {extracted.extractedFrom ? (

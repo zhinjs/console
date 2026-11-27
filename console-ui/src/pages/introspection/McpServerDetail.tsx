@@ -93,8 +93,8 @@ export function McpServerDetail({ item }: { item: CapabilityItem }) {
             </Alert>
           ) : null}
           <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" size="sm" variant="outline" disabled={testing} onClick={() => void runTest()}>
-              {testing ? <Loader2 className="size-3.5 animate-spin mr-1.5" /> : <PlugZap className="size-3.5 mr-1.5" />}
+            <Button type="button" size="sm" variant="secondary" disabled={testing} onClick={() => void runTest()}>
+              {testing ? <Loader2 className="size-3.5 animate-spin mr-2" /> : <PlugZap className="size-3.5 mr-2" />}
               {testing ? i18n.t('正在测试…') : i18n.t('测试连接')}
             </Button>
             <span className="text-xs text-muted-foreground">{i18n.t('只做一次临时连接，不改变 Agent 的连接和上面的状态。')}</span>
@@ -121,7 +121,7 @@ export function McpServerDetail({ item }: { item: CapabilityItem }) {
       {canConfigure ? (
         <div className="mt-3">
           <Button asChild size="sm" variant="ghost">
-            <Link to={MCP_CONFIG_HREF}><Settings className="size-3.5 mr-1.5" />{i18n.t('在配置中修改（ai.mcpServers）')}</Link>
+            <Link to={MCP_CONFIG_HREF}><Settings className="size-3.5 mr-2" />{i18n.t('在配置中修改（ai.mcpServers）')}</Link>
           </Button>
         </div>
       ) : null}

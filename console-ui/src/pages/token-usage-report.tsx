@@ -123,7 +123,7 @@ function UsageIdList({ groups }: { groups: Array<{ kind: string; ids: string[] }
           <ul className="space-y-1">{group.ids.map(id => <li key={id}><InlineCode className="break-all">{id}</InlineCode></li>)}</ul>
         </div>
       ))}
-      <Button type="button" size="sm" variant="outline" onClick={() => { void copyText(all.join('\n'), navigator.clipboard, document).then(ok => setCopied(ok)) }}>
+      <Button type="button" size="sm" variant="secondary" onClick={() => { void copyText(all.join('\n'), navigator.clipboard, document).then(ok => setCopied(ok)) }}>
         <Copy />{copied ? i18n.t("已复制") : i18n.t("复制 ID")}
       </Button>
     </div>
@@ -506,7 +506,7 @@ function UsageDetailSheet({ stats, groups, selection, narrow, onClose, onPickSes
         ...(kind === 'group' || kind === 'private' || kind === 'channel' ? [{ key: 'kind', label: t("类型"), value: <ConversationKindBadge kind={kind} /> }] : []),
       ]
       idGroups = [{ kind: 'session', ids: [session.sessionKey] }]
-      if (onPickSession) action = <Button type="button" variant="outline" onClick={() => { onPickSession(session.sessionKey); onClose() }}>{t("只看这个会话")}</Button>
+      if (onPickSession) action = <Button type="button" variant="secondary" onClick={() => { onPickSession(session.sessionKey); onClose() }}>{t("只看这个会话")}</Button>
     }
   } else if (selection?.kind === 'agent') {
     const agent = caps.agents.find(item => item.agent === selection.key)

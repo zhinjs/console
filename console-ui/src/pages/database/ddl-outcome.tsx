@@ -60,7 +60,7 @@ export function DdlCheckNotice({ controller, className }: { controller: DdlCheck
           <p>{held.text}</p>
           {checkError ? <p role="alert">{checkError}</p> : null}
           {held.details ? <details className="text-xs"><summary className="cursor-pointer">{i18n.t('技术详情')}</summary><p className="mt-2 whitespace-pre-wrap break-words">{held.details}</p></details> : null}
-          <Button type="button" size="sm" variant="outline" disabled={checking} data-action="ddl-check" onClick={() => { void controller.check() }}>
+          <Button type="button" size="sm" variant="secondary" disabled={checking} data-action="ddl-check" onClick={() => { void controller.check() }}>
             {checking ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <SearchCheck className="mr-1 h-3.5 w-3.5" />}
             {checking ? i18n.t('正在核对…') : i18n.t('核对')}
           </Button>

@@ -85,11 +85,13 @@ export default {
           ring: 'hsl(var(--sidebar-ring))',
         },
       },
+      // The soft-card radii (console-ui 1.3.0): 6 · 10 · 14 · 18 · 24, all on the library's r-1 … r-6.
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
-        xl: 'var(--console-radius-xl)',
+        DEFAULT: 'var(--console-radius-1)',
+        sm: 'var(--console-radius-2)',
+        md: 'var(--console-radius-3)',
+        lg: 'var(--console-radius-4)',
+        xl: 'var(--console-radius-6)',
       },
       boxShadow: {
         'console-xs': 'var(--console-shadow-xs)',

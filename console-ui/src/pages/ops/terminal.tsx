@@ -104,7 +104,7 @@ export default function OpsTerminalPage() {
       <PageHeader
         title={i18n.t("终端")}
         description={i18n.t("宿主机 Shell 与白名单里的 SSH 目标。终端等同宿主机的完整 Shell 权限；断开连接即结束会话，不做后台保活。")}
-        actions={<Button variant="outline" size="sm" onClick={load} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新目标")}</Button>}
+        actions={<Button variant="secondary" size="sm" onClick={load} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新目标")}</Button>}
       />
       {error ? (
         error.kind === 'forbidden'
@@ -305,7 +305,7 @@ function TerminalPane({ target, active }: { target: TerminalTarget; active: bool
           <Button size="sm" variant="ghost" onClick={() => void paste()} disabled={status.phase !== 'ready'} title="Ctrl+Shift+V"><ClipboardPaste />{i18n.t("粘贴")}</Button>
           <Button size="sm" variant="ghost" onClick={() => term.current?.clear()}><Eraser />{i18n.t("清屏")}</Button>
           {status.phase === 'ended'
-            ? <Button size="sm" variant="outline" onClick={() => setAttempt(value => value + 1)}><RotateCcw />{i18n.t("重新连接")}</Button>
+            ? <Button size="sm" variant="secondary" onClick={() => setAttempt(value => value + 1)}><RotateCcw />{i18n.t("重新连接")}</Button>
             : <Button size="sm" variant="ghost" onClick={() => connection.current?.dispose()}><Unplug />{i18n.t("断开")}</Button>}
         </div>
       </div>

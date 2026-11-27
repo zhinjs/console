@@ -63,7 +63,7 @@ export function PersonalSessions({
               {row.address.conversation.threadId ? ` / ${row.address.conversation.threadId}` : ''}
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setSelected(row)}>
+              <Button variant="secondary" size="sm" onClick={() => setSelected(row)}>
                 {i18n.t("选择模型")}
               </Button>
               <Button variant="ghost" size="sm" asChild>
@@ -83,7 +83,7 @@ export function PersonalSessions({
         <p className="text-sm text-muted-foreground">{i18n.t("暂无已保存的个人会话。")}</p>
       ) : null}
       {hasMore ? (
-        <Button variant="outline" onClick={() => void load()} disabled={loading}>
+        <Button variant="secondary" onClick={() => void load()} disabled={loading}>
           {i18n.t("加载更多")}
         </Button>
       ) : null}

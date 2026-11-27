@@ -27,7 +27,7 @@ export function ScopePicker({ scope, tab, className }: ScopePickerProps) {
   const [open, setOpen] = useState(false)
   const level = scopeLevel(scope)
   const trigger = (
-    <Button variant="outline" size="sm" className={cn('console-scope-picker-trigger', className)} aria-haspopup="dialog" aria-expanded={open}
+    <Button variant="secondary" size="sm" className={cn('console-scope-picker-trigger', className)} aria-haspopup="dialog" aria-expanded={open}
       onClick={mobile ? () => setOpen(true) : undefined}>
       <ChevronsUpDown aria-hidden="true" />
       <span>{i18n.t('切换范围')}</span>

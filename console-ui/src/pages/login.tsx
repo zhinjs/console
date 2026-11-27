@@ -263,7 +263,7 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
                 <SelectTrigger id="console-login-saved"><SelectValue placeholder={i18n.t('选择 Host 快速填入…')} /></SelectTrigger>
                 <SelectContent>{savedLogins.map(saved => <SelectItem key={saved.apiBase} value={normalizeApiBase(saved.apiBase)}>{saved.apiBase}</SelectItem>)}</SelectContent>
               </Select>
-              <Button type="button" variant="outline" size="icon" disabled={loading || !selectedSavedBase} onClick={handleRemoveSaved} title={i18n.t('删除此保存')} aria-label={i18n.t('删除此保存')}><Trash2 /></Button>
+              <Button type="button" variant="secondary" size="icon" disabled={loading || !selectedSavedBase} onClick={handleRemoveSaved} title={i18n.t('删除此保存')} aria-label={i18n.t('删除此保存')}><Trash2 /></Button>
             </div>
           </div>}
           <div className="console-login-field">

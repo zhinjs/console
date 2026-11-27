@@ -192,7 +192,7 @@ export function ActionReceipt({ controller, className, lockHref, onRestarted, ve
           description={transactionFailureCopy(state.status.transaction.outcome, i18n.t).description}
           error={transactionDetailText(state.status, i18n.t) || undefined}
           actions={transactionNeedsInstanceCheck(state.status.transaction)
-            ? <Button asChild size="sm" variant="outline"><Link to="/ops/instance"><ServerOff />{i18n.t('查看实例')}</Link></Button>
+            ? <Button asChild size="sm" variant="secondary"><Link to="/ops/instance"><ServerOff />{i18n.t('查看实例')}</Link></Button>
             : undefined} />
       ) : state.phase === 'failed' && state.status ? (
         // A write that was not applied never reads as 读取失败: a plain failure is 操作没有完成; the
@@ -207,20 +207,20 @@ export function ActionReceipt({ controller, className, lockHref, onRestarted, ve
       <footer className="console-receipt-actions">
         {state.phase === 'prepared' ? <>
           <Button key="confirm" size="sm" variant={plan?.danger ? 'destructive' : 'soft'} onClick={confirm}>{plan?.confirmLabel ?? i18n.t('确认')}</Button>
-          <Button key="cancel" size="sm" variant="outline" onClick={cancel}>{i18n.t('取消')}</Button>
+          <Button key="cancel" size="sm" variant="secondary" onClick={cancel}>{i18n.t('取消')}</Button>
         </> : null}
         {/* The second step puts 取消 first (it takes the focus) and 确认执行 where 取消 was, so a double
             click or a repeated Enter on 「确认」 lands on 取消; the reducer also ignores confirms for
             CONFIRM_GUARD_MS after this step appeared. */}
         {state.phase === 'confirming' ? <>
-          <Button key="cancel" size="sm" variant="outline" onClick={cancel} data-receipt-cancel>{i18n.t('取消')}</Button>
+          <Button key="cancel" size="sm" variant="secondary" onClick={cancel} data-receipt-cancel>{i18n.t('取消')}</Button>
           <Button key="execute" size="sm" variant="destructive-solid" onClick={confirm} data-receipt-execute>{i18n.t('确认执行')}</Button>
         </> : null}
         {state.phase === 'unknown' ? (
-          <Button size="sm" variant="outline" onClick={verify} disabled={!canVerify}><RefreshCw />{verifyLabel ?? i18n.t('核对当前状态')}</Button>
+          <Button size="sm" variant="secondary" onClick={verify} disabled={!canVerify}><RefreshCw />{verifyLabel ?? i18n.t('核对当前状态')}</Button>
         ) : null}
         {state.phase === 'failed' && state.verified ? (
-          <Button size="sm" variant="outline" onClick={reset}><RotateCcw />{i18n.t('放弃并重新开始')}</Button>
+          <Button size="sm" variant="secondary" onClick={reset}><RotateCcw />{i18n.t('放弃并重新开始')}</Button>
         ) : null}
       </footer>
     </section>

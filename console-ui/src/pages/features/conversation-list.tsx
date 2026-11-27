@@ -21,7 +21,7 @@ export function ConversationOverrideLinks({ counts, adapter, linkClassName }: { 
   const entries = conversationOverrideCounts(counts, adapter)
   if (!entries.length) return null
   return (
-    <span className="flex flex-col gap-0.5 font-normal">
+    <span className="flex flex-col gap-1 font-normal">
       {entries.map(({ endpoint, count }) => (
         <Link key={endpoint} to={endpointHref(adapter, endpoint)} className={['text-xs text-muted-foreground hover:underline', linkClassName].filter(Boolean).join(' ')}>
           {i18n.t("{0}：{1} 个会话有覆盖", [endpoint, count])}
@@ -84,7 +84,7 @@ export function ConversationList({ adapter, endpoint, list, query, onQueryChange
           <Checkbox checked={onlyOverridden} onCheckedChange={checked => setOnlyOverridden(checked === true)} />
           {i18n.t("只看有覆盖的会话")}
         </label>
-        <Button variant="outline" size="sm" onClick={list.refresh} disabled={list.status === 'loading'}>
+        <Button variant="secondary" size="sm" onClick={list.refresh} disabled={list.status === 'loading'}>
           <RefreshCw className={list.status === 'loading' ? 'animate-spin' : ''} />{i18n.t("刷新")}
         </Button>
       </div>
@@ -99,8 +99,8 @@ export function ConversationList({ adapter, endpoint, list, query, onQueryChange
               ? i18n.t("机器人在会话里收到消息后，会话会出现在这里。")
               : i18n.t("在会话里改过开关或参数后，它会出现在这里。")}
             actions={query || onlyOverridden
-              ? <Button size="sm" variant="outline" onClick={() => { setDraft(''); onQueryChange(''); setOnlyOverridden(false) }}>{i18n.t("清除筛选")}</Button>
-              : <Button asChild size="sm" variant="outline"><Link to="/scope">{i18n.t("打开账号与会话")}</Link></Button>} />
+              ? <Button size="sm" variant="secondary" onClick={() => { setDraft(''); onQueryChange(''); setOnlyOverridden(false) }}>{i18n.t("清除筛选")}</Button>
+              : <Button asChild size="sm" variant="secondary"><Link to="/scope">{i18n.t("打开账号与会话")}</Link></Button>} />
         ) : (
           <Table aria-label={i18n.t("会话")}>
             <TableHeader>
@@ -121,7 +121,7 @@ export function ConversationList({ adapter, endpoint, list, query, onQueryChange
                   </TableCell>
                   <TableCell><OverrideSummary item={item} /></TableCell>
                   <TableCell className="text-right">
-                    <Button asChild variant="outline" size="sm">
+                    <Button asChild variant="secondary" size="sm">
                       <Link to={conversationHref(adapter, endpoint, item.kind, item.id, 'features')}>{i18n.t("功能配置")}</Link>
                     </Button>
                   </TableCell>
@@ -133,7 +133,7 @@ export function ConversationList({ adapter, endpoint, list, query, onQueryChange
       </Card>
       {list.page?.cursor ? (
         <div className="flex justify-center">
-          <Button variant="outline" size="sm" disabled={list.loadingMore} onClick={list.loadMore}>{i18n.t("加载更多")}</Button>
+          <Button variant="secondary" size="sm" disabled={list.loadingMore} onClick={list.loadMore}>{i18n.t("加载更多")}</Button>
         </div>
       ) : null}
     </section>

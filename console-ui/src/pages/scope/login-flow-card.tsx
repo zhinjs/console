@@ -282,8 +282,8 @@ export function LoginFlowCard({ flow, endpoint, declaration, canOperate, readErr
         </p>
       </div>
       <div className="console-login-flow-tools">
-        {controls.refresh ? <Button size="sm" variant="outline" disabled={controlBusy} onClick={() => runControl('refresh')}><RefreshCw />{challenge?.kind === 'qrcode' ? i18n.t('刷新二维码') : i18n.t('刷新验证')}</Button> : null}
-        {controls.relogin ? <Button size="sm" variant="outline" disabled={controlBusy} onClick={() => runControl('relogin')}><RotateCcw />{i18n.t('重新登录')}</Button> : null}
+        {controls.refresh ? <Button size="sm" variant="secondary" disabled={controlBusy} onClick={() => runControl('refresh')}><RefreshCw />{challenge?.kind === 'qrcode' ? i18n.t('刷新二维码') : i18n.t('刷新验证')}</Button> : null}
+        {controls.relogin ? <Button size="sm" variant="secondary" disabled={controlBusy} onClick={() => runControl('relogin')}><RotateCcw />{i18n.t('重新登录')}</Button> : null}
         {controls.cancel ? <Button size="sm" variant="ghost" disabled={controlBusy || busy} onClick={() => runControl('cancel')}><X />{i18n.t('取消')}</Button> : null}
         {logPanel.available ? (
           <Button size="sm" variant="ghost" aria-label={i18n.t('查看 {0} 的日志', [endpointKey])} onClick={() => logPanel.open({ adapter, endpoint: endpointKey })}>
@@ -446,7 +446,7 @@ function StepOutcome({ outcome, at, onNext, nextAllowed, disabled }: {
       {outcome.message && outcome.description ? <p className="console-login-muted">{i18n.t(outcome.description)}</p> : null}
       {waiting ? <p className="console-login-muted">{i18n.t('{0} 后可以再试', [formatCountdown(waiting / 1000)])}</p> : null}
       {next && next !== 'wait' && onNext && nextAllowed(next) ? (
-        <Button size="sm" variant="outline" disabled={disabled || Boolean(waiting)} onClick={() => onNext(next)} title={i18n.t(NEXT_ACTION_COPY[next].hint)}>
+        <Button size="sm" variant="secondary" disabled={disabled || Boolean(waiting)} onClick={() => onNext(next)} title={i18n.t(NEXT_ACTION_COPY[next].hint)}>
           {next === 'retry_input' ? <RotateCcw /> : <RefreshCw />}{i18n.t(NEXT_ACTION_COPY[next].label)}
         </Button>
       ) : null}

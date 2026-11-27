@@ -124,7 +124,7 @@ function DriftActionButton({ entry, action, permission }: { entry: ConfigDriftEn
   }
   const pending = context?.busy === `${action}\u0000${entry.id}`
   return (
-    <Button variant="outline" size="sm" disabled={Boolean(context?.busy)} aria-busy={pending || undefined}
+    <Button variant="secondary" size="sm" disabled={Boolean(context?.busy)} aria-busy={pending || undefined}
       aria-label={`${label} · ${entry.id}`} onClick={() => { void context?.run(entry, action) }}>
       {action === 'import' ? <FileDown /> : <FileUp />}{label}
     </Button>

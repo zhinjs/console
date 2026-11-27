@@ -110,7 +110,7 @@ export function ScopeRecordsPanel({ scope }: { scope: Scope }) {
       <ObjectSection
         title={i18n.t('聊天记录')}
         description={level === 'conversation' ? i18n.t('这个会话的 Agent 会话：对话、轨迹与分支。') : level === 'global' ? i18n.t('最近活跃的 Agent 会话。') : i18n.t('属于这个范围的 Agent 会话，按记录的来源或会话标识匹配。')}
-        actions={<Button asChild variant="outline" size="sm"><Link to={sessionsLink.href}><ArrowUpRight />{i18n.t('在聊天记录中打开')}</Link></Button>}
+        actions={<Button asChild variant="secondary" size="sm"><Link to={sessionsLink.href}><ArrowUpRight />{i18n.t('在聊天记录中打开')}</Link></Button>}
       >
         <Card className="overflow-hidden p-0">
           {sessions.status === 'loading' ? (
@@ -120,13 +120,13 @@ export function ScopeRecordsPanel({ scope }: { scope: Scope }) {
           ) : sessions.state === 'unattributed' ? (
             <StatusState compact kind="empty" illustration="messages" title={i18n.t(UNATTRIBUTED_TITLES[level === 'global' ? 'endpoint' : level])}
               description={i18n.t('现在的会话记录没有写明来自哪个账号（需要更新的 Host），{0} 个会话无法确定是否属于这里。可以在「会话 → 聊天记录」查看全部会话。', [sessions.unattributed])}
-              actions={<Button asChild size="sm" variant="outline"><Link to={CONSOLE_PATHS.agentSessions}>{i18n.t('查看全部会话')}</Link></Button>} />
+              actions={<Button asChild size="sm" variant="secondary"><Link to={CONSOLE_PATHS.agentSessions}>{i18n.t('查看全部会话')}</Link></Button>} />
           ) : sessions.rows.length === 0 ? (
             <StatusState compact kind="empty" illustration="messages" title={i18n.t('还没有聊天记录')}
               description={i18n.t('机器人在这个范围里处理过消息后，会话会出现在这里。')}
               actions={level === 'endpoint' || level === 'conversation'
-                ? <Button asChild size="sm" variant="outline"><Link to={scopeHref(scope, 'chat')}>{i18n.t('打开聊天')}</Link></Button>
-                : <Button asChild size="sm" variant="outline"><Link to={scopeHref(scope)}>{i18n.t('查看聊天账号')}</Link></Button>} />
+                ? <Button asChild size="sm" variant="secondary"><Link to={scopeHref(scope, 'chat')}>{i18n.t('打开聊天')}</Link></Button>
+                : <Button asChild size="sm" variant="secondary"><Link to={scopeHref(scope)}>{i18n.t('查看聊天账号')}</Link></Button>} />
           ) : (
             <>
               <ul className="console-records-sessions">
@@ -162,7 +162,7 @@ export function ScopeRecordsPanel({ scope }: { scope: Scope }) {
                   <p className="console-records-source-description">{i18n.t(copy.description)}</p>
                   <p className="console-records-source-note">{i18n.t(source.note)}</p>
                   {source.filter ? <p className="console-records-source-filter"><span className="shrink-0 whitespace-nowrap">{i18n.t('筛选：')}</span><code title={source.filter}>{source.filter}</code></p> : null}
-                  <Button asChild variant="outline" size="sm" className="console-records-source-open">
+                  <Button asChild variant="secondary" size="sm" className="console-records-source-open">
                     <Link to={source.href}>{i18n.t('打开{0}', [i18n.t(copy.title)])}<ArrowUpRight /></Link>
                   </Button>
                 </Card>

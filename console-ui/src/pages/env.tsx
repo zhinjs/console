@@ -251,13 +251,13 @@ function EnvFileEditor({
         </Alert>
       )}
 
-      {!loaded && !loading ? <Button variant="outline" size="sm" onClick={() => void loadContent()}>{i18n.t("重试读取")}</Button> : null}
+      {!loaded && !loading ? <Button variant="secondary" size="sm" onClick={() => void loadContent()}>{i18n.t("重试读取")}</Button> : null}
       {dirty ? <p className="text-xs text-muted-foreground">{i18n.t("未保存修改只在本标签页内保留；切换页面或文件可恢复，刷新前请保存。")}</p> : null}
       {loaded ? (
         <ul className="space-y-2" aria-label={i18n.t("{0} 中的变量", [filename])}>
           {rows.length === 0 && !editor ? <li><StatusState kind="empty" compact title={i18n.t("还没有变量")}
             description={readOnly ? i18n.t("这个文件里还没有 KEY=VALUE 行。") : i18n.t("新增变量后保存，重启 Host 后生效。")}
-            actions={!readOnly ? <Button size="sm" variant="outline" disabled={!access.canEdit} onClick={() => startEdit(null)}><Plus className="w-4 h-4 mr-1" />{i18n.t("新增变量")}</Button> : undefined} /></li> : null}
+            actions={!readOnly ? <Button size="sm" variant="secondary" disabled={!access.canEdit} onClick={() => startEdit(null)}><Plus className="w-4 h-4 mr-1" />{i18n.t("新增变量")}</Button> : undefined} /></li> : null}
           {rows.map(row => {
             const opened = editorRow(row.key)
             if (opened) return opened
@@ -300,11 +300,11 @@ function EnvFileEditor({
             : <><Save className="w-4 h-4 mr-1" />{i18n.t("保存")}</>}
         </Button>}
         {!readOnly && loaded && (
-          <Button variant="outline" size="sm" disabled={!access.canEdit || editor !== null} onClick={() => startEdit(null)}>
+          <Button variant="secondary" size="sm" disabled={!access.canEdit || editor !== null} onClick={() => startEdit(null)}>
             <Plus className="w-4 h-4 mr-1" />{i18n.t("新增变量")}</Button>
         )}
         {!readOnly && dirty && (
-          <Button variant="outline" size="sm" disabled={saving} onClick={() => setDiscardOpen(true)}>
+          <Button variant="secondary" size="sm" disabled={saving} onClick={() => setDiscardOpen(true)}>
             {i18n.t("撤销")}</Button>
         )}
         {readOnly && <span className="text-xs text-muted-foreground">{i18n.t("只读 · 敏感值始终遮罩")}</span>}
@@ -543,13 +543,13 @@ function MaskedEnvFileEditor({
           </AlertDescription>
         </Alert>
       )}
-      {!loaded && !loading ? <Button variant="outline" size="sm" onClick={() => void loadView()}>{i18n.t("重试读取")}</Button> : null}
+      {!loaded && !loading ? <Button variant="secondary" size="sm" onClick={() => void loadView()}>{i18n.t("重试读取")}</Button> : null}
       {dirty ? <p className="text-xs text-muted-foreground">{i18n.t("未保存修改在切换文件时保留；离开本页前会先确认，离开后丢弃（其中可能有密钥）。刷新前请保存。")}</p> : null}
       {loaded ? (
         <ul className="space-y-2" aria-label={i18n.t("{0} 中的变量", [filename])}>
           {rows.length === 0 && !editor ? <li><StatusState kind="empty" compact title={i18n.t("还没有变量")}
             description={readOnly ? i18n.t("这个文件里还没有 KEY=VALUE 行。") : i18n.t("新增变量后保存，重启 Host 后生效。")}
-            actions={!readOnly ? <Button size="sm" variant="outline" disabled={!access.canEdit} onClick={() => startEdit(null)}><Plus className="w-4 h-4 mr-1" />{i18n.t("新增变量")}</Button> : undefined} /></li> : null}
+            actions={!readOnly ? <Button size="sm" variant="secondary" disabled={!access.canEdit} onClick={() => startEdit(null)}><Plus className="w-4 h-4 mr-1" />{i18n.t("新增变量")}</Button> : undefined} /></li> : null}
           {rows.map(row => {
             const opened = editorRow(row.key)
             if (opened) return opened
@@ -595,11 +595,11 @@ function MaskedEnvFileEditor({
             : <><Save className="w-4 h-4 mr-1" />{i18n.t("保存")}</>}
         </Button>}
         {!readOnly && loaded && (
-          <Button variant="outline" size="sm" disabled={!access.canEdit || editor !== null} onClick={() => startEdit(null)}>
+          <Button variant="secondary" size="sm" disabled={!access.canEdit || editor !== null} onClick={() => startEdit(null)}>
             <Plus className="w-4 h-4 mr-1" />{i18n.t("新增变量")}</Button>
         )}
         {!readOnly && dirty && (
-          <Button variant="outline" size="sm" disabled={saving} onClick={() => setDiscardOpen(true)}>
+          <Button variant="secondary" size="sm" disabled={saving} onClick={() => setDiscardOpen(true)}>
             {i18n.t("撤销")}</Button>
         )}
         {readOnly && <span className="text-xs text-muted-foreground">{i18n.t("只读 · 值始终打码")}</span>}
@@ -711,7 +711,7 @@ export default function EnvManagePage() {
         title={i18n.t("环境变量")}
         description={readOnly ? i18n.t("查看 .env / .env.* 中的变量；只读，值始终打码。") : i18n.t("值默认打码，可逐个显示（记入审计）或编辑；保存只写入改动的变量，需重启 Host 后生效。")}
         actions={
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
+          <Button variant="secondary" size="sm" onClick={handleRefresh} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
             {i18n.t("刷新")}</Button>
         }
@@ -726,7 +726,7 @@ export default function EnvManagePage() {
           {['.env', '.env.development', '.env.production'].map(name => {
             const fileInfo = files.find(f => f.name === name)
             return (
-              <TabsTrigger key={name} value={name} className="gap-1.5 data-[state=active]:shadow-sm">
+              <TabsTrigger key={name} value={name} className="gap-2">
                 <KeyRound className="w-3.5 h-3.5" />
                 {name}
                 {fileInfo && !fileInfo.exists && (
@@ -739,11 +739,11 @@ export default function EnvManagePage() {
 
         {['.env', '.env.development', '.env.production'].map(name => (
           <TabsContent key={name} value={name} className="mt-0">
-            <Card className="border-border/80 shadow-sm">
+            <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base font-semibold">{name}</CardTitle>
                 <CardDescription>
-                  {i18n.t("格式 ")}<code className="rounded bg-muted px-1 py-0.5 text-xs">KEY=VALUE</code>
+                  {i18n.t("格式 ")}<code className="rounded bg-muted px-1 py-1 text-xs">KEY=VALUE</code>
                   {i18n.t("，支持带引号的多行值。")}</CardDescription>
               </CardHeader>
               <CardContent>

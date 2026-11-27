@@ -335,7 +335,7 @@ export default function AgentSessionsPage() {
       <div className="console-session-workspace">
         <aside className={cn('console-session-directory', directoryOpen && 'is-open')}>
           <Button
-            variant="outline"
+            variant="secondary"
             className="console-session-directory-toggle"
             aria-expanded={directoryOpen}
             aria-controls="session-directory"
@@ -390,7 +390,7 @@ export default function AgentSessionsPage() {
                 </div>
                 {/* A conversation session can be continued in its chat; anything else is history only. */}
                 {continueScope ? (
-                  <Button asChild variant="outline" size="sm">
+                  <Button asChild variant="secondary" size="sm">
                     <Link to={scopeHref(continueScope, 'chat')}><MessageSquare />{i18n.t('在会话中继续聊天')}</Link>
                   </Button>
                 ) : <span className="console-session-readonly">{i18n.t('仅可查看')}</span>}
@@ -534,7 +534,7 @@ export default function AgentSessionsPage() {
                                     )}
                                     {canSwitchLeaf && (
                                       <Button
-                                        variant="outline"
+                                        variant="secondary"
                                         size="sm"
                                         disabled={isActive || switching}
                                         onClick={() =>
@@ -588,7 +588,7 @@ export default function AgentSessionsPage() {
             )}
             <DialogFooter>
               <DialogClose asChild>
-                <Button variant="outline" disabled={switching}>
+                <Button variant="secondary" disabled={switching}>
                   {i18n.t('取消')}
                 </Button>
               </DialogClose>

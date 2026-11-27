@@ -147,7 +147,7 @@ export function KvBucketView({
       {editEntry === null && !addEntry ? <DdlCheckNotice controller={check} className="shrink-0" /> : null}
 
       <div className="flex flex-wrap items-center gap-2 shrink-0">
-        <Button size="sm" variant="outline" onClick={load} disabled={loading || busy}>
+        <Button size="sm" variant="secondary" onClick={load} disabled={loading || busy}>
           <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新")}</Button>
         {!readOnly && <Button size="sm" disabled={locked} onClick={() => { setAddEntry(true); setKeyInput(''); setValueInput('') }}>
           <Plus className="w-3.5 h-3.5 mr-1" />{i18n.t("添加键值")}</Button>}
@@ -176,7 +176,7 @@ export function KvBucketView({
               <TableRow key={entry.key}>
                 <TableCell className="align-top">
                   <div className="flex min-w-0 items-start gap-1">
-                    <Key className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" />
+                    <Key className="mt-1 h-3 w-3 shrink-0 text-muted-foreground" />
                     <span className="line-clamp-2 break-all font-mono text-xs" title={entry.key}>{entry.key}</span>
                   </div>
                 </TableCell>
@@ -184,7 +184,7 @@ export function KvBucketView({
                   <RecordValueDisclosure value={entry.value} />
                 </TableCell>
                 {!readOnly && <TableCell numeric className="space-x-1 whitespace-nowrap align-top">
-                  <Button size="sm" variant="outline" disabled={locked} aria-label={i18n.t("编辑记录")} onClick={() => {
+                  <Button size="sm" variant="secondary" disabled={locked} aria-label={i18n.t("编辑记录")} onClick={() => {
                     setEditEntry(entry)
                     setAddEntry(false)
                     setKeyInput(entry.key)
@@ -222,7 +222,7 @@ export function KvBucketView({
           {msg?.type === 'error' && <div role="alert" className="space-y-2 text-sm text-destructive"><p>{msg.text}</p>{msg.details ? <details className="text-xs"><summary className="cursor-pointer">{i18n.t("技术详情")}</summary><p className="mt-2 whitespace-pre-wrap break-words">{msg.details}</p></details> : null}</div>}
           <DdlCheckNotice controller={check} />
           <DialogFooter>
-            <DialogClose asChild><Button variant="outline" size="sm" disabled={locked}>{i18n.t("取消")}</Button></DialogClose>
+            <DialogClose asChild><Button variant="secondary" size="sm" disabled={locked}>{i18n.t("取消")}</Button></DialogClose>
             <Button size="sm" disabled={locked || !keyInput.trim() || (addEntry && entries.some(entry => entry.key === keyInput.trim()))} onClick={() => handleSave(addEntry)}><Save className="w-3.5 h-3.5 mr-1" />{i18n.t("保存")}</Button>
           </DialogFooter>
         </DialogContent>

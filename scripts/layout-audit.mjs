@@ -17,7 +17,7 @@
  */
 import { writeFile } from 'node:fs/promises'
 import { chromium } from 'playwright'
-import { AUDIT_WIDTHS, formatAuditReport, runLayoutAudit } from '@zhin.js/console-ui/audit'
+import { AUDIT_WIDTHS, formatAuditReport, runLayoutAudit, setConsoleTheme } from '@zhin.js/console-ui/audit'
 
 const consoleUrl = (process.env.CONSOLE_URL ?? 'http://127.0.0.1:5173').replace(/\/$/u, '')
 const host = process.env.UI_PREVIEW_HOST ?? 'http://127.0.0.1:18087'
@@ -48,6 +48,12 @@ for (const route of routes) {
   try {
     const report = await runLayoutAudit(page, {
       widths,
+      // Switch the theme the library's way, then let the 120–280ms colour transitions finish: measured
+      // mid-transition, a row still has its light background under dark text (a false contrast failure).
+      setTheme: async (target, theme) => {
+        await setConsoleTheme(target, theme)
+        await target.waitForTimeout(600)
+      },
       open: async (target) => {
         // Not `networkidle`: the Console keeps an SSE stream (`/api/events`) open.
         await target.goto(`${consoleUrl}${route}`, { waitUntil: 'load' })

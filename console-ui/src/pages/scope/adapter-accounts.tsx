@@ -107,7 +107,7 @@ export function ManagedAccountsStatus({ accounts }: { accounts: HeadlessAccounts
         <Alert variant="destructive" className="console-account-notice">
           <AlertDescription className="flex flex-wrap items-center gap-2">
             <span className="min-w-0 flex-1">{i18n.t('请刷新账号清单后再操作。')}</span>
-            <Button variant="outline" size="sm" onClick={() => void accounts.refresh()}>{i18n.t('刷新')}</Button>
+            <Button variant="secondary" size="sm" onClick={() => void accounts.refresh()}>{i18n.t('刷新')}</Button>
           </AlertDescription>
         </Alert>
       ) : null}
@@ -118,7 +118,7 @@ export function ManagedAccountsStatus({ accounts }: { accounts: HeadlessAccounts
             <p className="font-mono text-xs">{migration.ids.join('、')}</p>
             <span className="mt-2 flex flex-wrap gap-2">
               <Button size="sm" disabled={migration.busy} onClick={() => void migration.confirm()}>{i18n.t('确认迁移')}</Button>
-              <Button size="sm" variant="outline" disabled={migration.busy} onClick={migration.cancel}>{i18n.t('取消')}</Button>
+              <Button size="sm" variant="secondary" disabled={migration.busy} onClick={migration.cancel}>{i18n.t('取消')}</Button>
             </span>
           </AlertDescription>
         </Alert>

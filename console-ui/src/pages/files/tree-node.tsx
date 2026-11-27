@@ -35,7 +35,7 @@ export function TreeNode({
       <button
         ref={buttonRef}
         className={`
-          w-full min-w-0 flex items-center gap-1.5 px-2 py-1 text-sm rounded-sm text-left
+          w-full min-w-0 flex items-center gap-2 px-2 py-1 text-sm rounded-sm text-left
           hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset
           ${isSelected ? 'bg-accent text-accent-foreground font-medium' : ''}
         `}

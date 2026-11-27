@@ -55,17 +55,17 @@ export function AttentionItemRow({ item, now, hidden, onSnooze, onIgnore, onRest
           </Link>
         </Button>
         {item.simulationOnly ? (
-          <Button asChild variant="outline" size="sm">
+          <Button asChild variant="secondary" size="sm">
             <Link to={CONSOLE_PATHS.sandbox}><FlaskConical />{i18n.t('打开 Sandbox')}</Link>
           </Button>
         ) : null}
         {hidden ? (
-          <Button variant="outline" size="sm" onClick={() => onRestore?.(item.id)}>
+          <Button variant="secondary" size="sm" onClick={() => onRestore?.(item.id)}>
             <RotateCcw />{i18n.t('恢复')}
           </Button>
         ) : (
           <>
-            <Button variant="outline" size="sm" onClick={() => onSnooze?.(item)} title={i18n.t('24 小时内不再显示')}>
+            <Button variant="secondary" size="sm" onClick={() => onSnooze?.(item)} title={i18n.t('24 小时内不再显示')}>
               <Clock />{i18n.t('稍后提醒')}
             </Button>
             <Button variant="ghost" size="sm" onClick={() => onIgnore?.(item)} title={i18n.t('情况变化前不再显示')}>

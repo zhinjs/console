@@ -570,7 +570,7 @@ function LinkBlock({ block, onProgress, tag }: { block: LoginLinkBlock; onProgre
         <p className="console-login-block-label">{tag}<ExternalLink aria-hidden="true" />{i18n.t(block.label)}</p>
         {host ? <p className="console-login-muted"><code title={block.url}>{host}</code></p> : null}
         <div className="console-login-actions">
-          <Button asChild size="sm" variant="outline"><a href={block.url} target="_blank" rel="noopener noreferrer" onClick={opened} onAuxClick={opened}><ExternalLink />{i18n.t('打开')}</a></Button>
+          <Button asChild size="sm" variant="secondary"><a href={block.url} target="_blank" rel="noopener noreferrer" onClick={opened} onAuxClick={opened}><ExternalLink />{i18n.t('打开')}</a></Button>
           <Button size="sm" variant="ghost" onClick={() => { void copyText(block.url, navigator.clipboard, document).then(ok => { if (ok) markCopied() }) }}>
             {copied ? <Check /> : <Copy />}{copied ? i18n.t('已复制') : i18n.t('复制链接')}
           </Button>

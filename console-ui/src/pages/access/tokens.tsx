@@ -77,7 +77,7 @@ export default function AccessTokensPage() {
         actions={<>
           <SelectField className="h-8 w-full sm:w-48" aria-label={i18n.t("按用户筛选")} value={userFilter} onValueChange={setUserFilter}
             options={[{ value: ALL, label: i18n.t("全部用户") }, ...users.data.map(user => ({ value: user.id, label: user.username }))]} />
-          <Button variant="outline" size="sm" onClick={() => { tokens.refresh(); users.refresh() }} disabled={tokens.loading}><RefreshCw className={tokens.loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
+          <Button variant="secondary" size="sm" onClick={() => { tokens.refresh(); users.refresh() }} disabled={tokens.loading}><RefreshCw className={tokens.loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
           {canManage ? <Button size="sm" onClick={() => setIssuing(true)} disabled={!users.loaded}><Plus />{i18n.t("为用户签发")}</Button> : null}
         </>}
       />
@@ -93,7 +93,7 @@ export default function AccessTokensPage() {
             <StatusState kind="empty" title={i18n.t("没有 API 令牌")}
               description={i18n.t("自动化脚本用 API 令牌访问 Console（环境变量 ZHIN_CONSOLE_TOKEN）。在个人设置里签发自己的令牌，或用「为用户签发」。")}
               actions={<>
-                <Button asChild size="sm" variant="outline"><Link to={CONSOLE_PATHS.account}>{i18n.t("去个人设置签发")}</Link></Button>
+                <Button asChild size="sm" variant="secondary"><Link to={CONSOLE_PATHS.account}>{i18n.t("去个人设置签发")}</Link></Button>
                 {canManage ? <Button size="sm" onClick={() => setIssuing(true)} disabled={!users.loaded}><Plus />{i18n.t("为用户签发")}</Button> : null}
               </>} />
           ) : (
@@ -214,7 +214,7 @@ function IssueTokenDialog({ users, initialUser, onClose, onIssued }: {
           </FormField>
           {error ? <StatusState compact error={error} /> : null}
           <DialogFooter>
-            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={saving}>{i18n.t("取消")}</Button>
+            <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={saving}>{i18n.t("取消")}</Button>
             <Button type="submit" size="sm" disabled={saving || !userId}>{saving ? i18n.t("处理中...") : i18n.t("签发")}</Button>
           </DialogFooter>
         </form>
@@ -240,7 +240,7 @@ export function IssuedTokenDialog({ issued, onClose }: { issued: { name: string;
         </DialogHeader>
         <div className="flex gap-2">
           <Input readOnly value={issued?.token ?? ''} aria-label={i18n.t('新令牌')} spellCheck={false} className="font-mono" onFocus={event => event.target.select()} />
-          <Button variant="outline" size="icon" aria-label={i18n.t('复制令牌')} onClick={async () => {
+          <Button variant="secondary" size="icon" aria-label={i18n.t('复制令牌')} onClick={async () => {
             const ok = await copyText(issued?.token ?? '', navigator.clipboard, document)
             setCopied(ok)
             if (!ok) toast.warning(i18n.t('无法自动复制，请手动选中复制。'))

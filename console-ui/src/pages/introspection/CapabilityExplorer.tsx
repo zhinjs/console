@@ -179,7 +179,7 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
         <div>
           <strong>{empty.title}</strong>
           <p>{empty.description}</p>
-          {empty.clearFilter && onClearFilter ? <Button variant="outline" size="sm" className="mt-3" onClick={onClearFilter}>{i18n.t("清除筛选")}</Button> : null}
+          {empty.clearFilter && onClearFilter ? <Button variant="secondary" size="sm" className="mt-3" onClick={onClearFilter}>{i18n.t("清除筛选")}</Button> : null}
         </div>
       </div>
     )
@@ -195,7 +195,7 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
           {kind !== 'components' ? <p>{meta.description}</p> : null}
         </div>
         <div className="console-capability-count"><strong>{counts.count}</strong><span>{kind === 'components' ? (counts.pageOnly ? i18n.t("个组件（本页）") : i18n.t("个组件")) : (counts.pageOnly ? i18n.t("项（本页）") : i18n.t("项"))}</span></div>
-        {kind === 'commands' && <Button asChild size="sm" variant="outline"><Link to="/permissions"><ShieldCheck className="size-4 mr-2" />{i18n.t("查看权限说明")}</Link></Button>}
+        {kind === 'commands' && <Button asChild size="sm" variant="secondary"><Link to="/permissions"><ShieldCheck className="size-4 mr-2" />{i18n.t("查看权限说明")}</Link></Button>}
       </header>
 
       {ownerGroups.length > 1 ? (
@@ -263,7 +263,7 @@ export function CapabilityExplorer<K extends IntrospectionTab>({ kind, items, re
           <SheetContent side="right" className="console-capability-sheet" aria-describedby={undefined}>
             <SheetTitle className="sr-only">{i18n.t("能力详情")}</SheetTitle>
             <SheetClose asChild>
-              <Button type="button" variant="ghost" size="sm" className="console-capability-sheet-back"><ArrowLeft className="size-4 mr-1.5" />{i18n.t("返回列表")}</Button>
+              <Button type="button" variant="ghost" size="sm" className="console-capability-sheet-back"><ArrowLeft className="size-4 mr-2" />{i18n.t("返回列表")}</Button>
             </SheetClose>
             <CapabilityInspector kind={kind} item={selected} readOnly={readOnly} />
           </SheetContent>
@@ -448,7 +448,7 @@ function EndpointGrid({ entries, selectedId, onSelect }: CollectionProps<'endpoi
               <span className="console-runtime-card-main">
                 <span className="flex items-center justify-between gap-2">
                   <small>{text(entry.item.adapter, 'adapter')}</small>
-                  <span className="inline-flex items-center gap-1.5 text-xs">
+                  <span className="inline-flex items-center gap-2 text-xs">
                     <span className={cn('console-runtime-status-dot', online ? 'is-online' : 'is-offline')} aria-hidden="true" />
                     <span>{online ? i18n.t("已连接") : i18n.t("未连接")}</span>
                   </span>
@@ -722,16 +722,16 @@ function CommandRunnerPanel({ item }: { item: CapabilityItem }) {
   return (
     <section className="console-command-runner" aria-label={i18n.t("在线试跑 / 发送命令测试")}>
       <div className="flex items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground">
+        <span className="inline-flex items-center gap-2 text-xs font-semibold text-foreground">
           <Play className="size-3.5 text-primary" />
           {i18n.t("在线试跑 / 发送命令测试")}
         </span>
-        <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={loadingEndpoints} onClick={() => void loadChannels()}>
+        <Button type="button" size="sm" variant="secondary" className="h-7 px-2 text-xs" disabled={loadingEndpoints} onClick={() => void loadChannels()}>
           {loadingEndpoints ? <Loader2 className="size-3 animate-spin mr-1" /> : <RefreshCw className="size-3 mr-1" />}
           {i18n.t("加载账号")}
         </Button>
       </div>
-      <div className="mt-2.5 grid gap-2 text-xs">
+      <div className="mt-3 grid gap-2 text-xs">
         <label className="grid gap-1">
           <span className="text-muted-foreground">{i18n.t("命令内容")}</span>
           <Input
@@ -790,7 +790,7 @@ function CommandRunnerPanel({ item }: { item: CapabilityItem }) {
             <p className="font-medium text-foreground">
               {i18n.t("已发送执行")}{receipt.messageId ? ` · ID: ${receipt.messageId}` : ''}
             </p>
-            <p className="mt-0.5 text-muted-foreground">
+            <p className="mt-1 text-muted-foreground">
               {receipt.adapter} / {receipt.endpointKey} → {receipt.channelType}:{receipt.channelId}
             </p>
             <Link
@@ -803,9 +803,9 @@ function CommandRunnerPanel({ item }: { item: CapabilityItem }) {
             </Link>
           </div>
         ) : null}
-        <div className="flex flex-wrap items-center gap-2 pt-0.5">
+        <div className="flex flex-wrap items-center gap-2 pt-1">
           <Button type="button" size="sm" disabled={sending || endpointIndex === '' || !targetId.trim() || !commandText.trim()} onClick={() => void runCommand()}>
-            {sending ? <Loader2 className="size-3.5 animate-spin mr-1.5" /> : <Play className="size-3.5 mr-1.5" />}
+            {sending ? <Loader2 className="size-3.5 animate-spin mr-2" /> : <Play className="size-3.5 mr-2" />}
             {i18n.t("发送执行")}
           </Button>
           <Button asChild size="sm" variant="ghost" className="h-8 text-xs">
@@ -869,12 +869,12 @@ function CapabilityInspector(props: {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="console-eyebrow">{kind === 'components' ? i18n.t("组件详情") : i18n.t("能力详情")}</span>
           {mcpState ? (
-            <span className="inline-flex items-center gap-1.5 text-xs font-medium">
+            <span className="inline-flex items-center gap-2 text-xs font-medium">
               <span className={cn('console-runtime-status-dot', mcpState.dot)} aria-hidden="true" />
               <span>{mcpState.label}</span>
             </span>
           ) : kind === 'endpoints' ? (
-            <span className="inline-flex items-center gap-1.5 text-xs font-medium">
+            <span className="inline-flex items-center gap-2 text-xs font-medium">
               <span className={cn('console-runtime-status-dot', endpointOnline ? 'is-online' : 'is-offline')} aria-hidden="true" />
               <span>{endpointOnline ? i18n.t("已连接") : i18n.t("未连接")}</span>
             </span>
@@ -888,13 +888,13 @@ function CapabilityInspector(props: {
 
       <div className="console-capability-inspector-actions">
         {kind === 'commands' ? (
-          <Button type="button" size="sm" variant="outline" onClick={() => void copyCommandText()}>
-            {copied ? <Check className="size-3.5 mr-1.5" /> : <Copy className="size-3.5 mr-1.5" />}
+          <Button type="button" size="sm" variant="secondary" onClick={() => void copyCommandText()}>
+            {copied ? <Check className="size-3.5 mr-2" /> : <Copy className="size-3.5 mr-2" />}
             {copied ? i18n.t("已复制") : i18n.t("复制命令")}
           </Button>
         ) : null}
         {kind === 'commands' && extractCommandTrigger(item, true) ? (
-          <Button asChild size="sm" variant="outline"><Link to={permissionLinkFor(extractCommandTrigger(item, true), owner)}><ShieldCheck className="size-3.5 mr-1.5" />{i18n.t("查看此命令的权限说明")}</Link></Button>
+          <Button asChild size="sm" variant="secondary"><Link to={permissionLinkFor(extractCommandTrigger(item, true), owner)}><ShieldCheck className="size-3.5 mr-2" />{i18n.t("查看此命令的权限说明")}</Link></Button>
         ) : null}
         {kind === 'bindings' ? (
           <Button asChild size="sm"><Link to="/agent/workbench">{i18n.t("查看机器人状态")}<ArrowRight /></Link></Button>
@@ -902,7 +902,7 @@ function CapabilityInspector(props: {
         {kind === 'endpoints' ? (
           <>
             <Button asChild size="sm"><Link to="/scope">{i18n.t("进入会话工作台")}<ArrowRight /></Link></Button>
-            <Button asChild size="sm" variant="outline"><Link to="/ops/config"><Settings className="size-3.5 mr-1.5" />{i18n.t("管理配置")}</Link></Button>
+            <Button asChild size="sm" variant="secondary"><Link to="/ops/config"><Settings className="size-3.5 mr-2" />{i18n.t("管理配置")}</Link></Button>
           </>
         ) : null}
       </div>
@@ -984,12 +984,12 @@ function CapabilityInspector(props: {
       {kind === 'commands' && !readOnly ? <CommandRunnerPanel item={item} /> : null}
 
       {Object.prototype.hasOwnProperty.call(item, 'previewProps') ? (
-        <details className="mt-3 rounded-lg border border-border/70 bg-muted/20 p-2.5 text-xs">
+        <details className="mt-3 rounded-lg border border-border/70 bg-muted/20 p-3 text-xs">
           <summary className="cursor-pointer font-medium text-muted-foreground">{i18n.t("示例参数")}</summary>
           <div className="mt-2"><JsonViewer value={item.previewProps} /></div>
         </details>
       ) : null}
-      <details className="mt-3 rounded-lg border border-border/70 bg-muted/20 p-2.5 text-xs">
+      <details className="mt-3 rounded-lg border border-border/70 bg-muted/20 p-3 text-xs">
         <summary className="cursor-pointer font-medium text-muted-foreground">{i18n.t("查看 JSON 原文")}</summary>
         <div className="mt-2">
           <JsonViewer value={item} />

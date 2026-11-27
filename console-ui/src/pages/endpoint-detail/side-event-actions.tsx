@@ -53,7 +53,7 @@ export function PendingRequestActions({ adapter, endpointKey, request, reload, o
       <div className="flex flex-wrap gap-2">
         {request.canAct === true ? <>
           <Button size="sm" disabled={blocked} onClick={() => act('approve')}>{i18n.t('同意')}</Button>
-          <Button size="sm" variant="outline" disabled={blocked} onClick={() => act('reject')}>{i18n.t('拒绝')}</Button>
+          <Button size="sm" variant="secondary" disabled={blocked} onClick={() => act('reject')}>{i18n.t('拒绝')}</Button>
         </> : null}
         <Button size="sm" variant="ghost" disabled={blocked || request.id === undefined} onClick={() => act('consume')}>{i18n.t('标记已处理')}</Button>
       </div>
@@ -86,7 +86,7 @@ export function NoticeReadAction({ adapter, endpointKey, id, reload, onDone }: {
   }
   return (
     <div className="flex shrink-0 flex-col items-end gap-2" data-notice-actions={id}>
-      <Button size="sm" variant="outline" disabled={blocked} onClick={read}>{i18n.t('已读')}</Button>
+      <Button size="sm" variant="secondary" disabled={blocked} onClick={read}>{i18n.t('已读')}</Button>
       <ActionReceipt controller={receipt} verifyLabel={i18n.t('刷新通知列表')} />
     </div>
   )

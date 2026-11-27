@@ -987,7 +987,7 @@ export default function HomePage() {
 
       <section className="console-dashboard-panel console-event-feed-panel" aria-labelledby="event-feed-title">
         <div className="console-card-heading">
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-3">
             <h2 id="event-feed-title">{i18n.t("最近的消息")}</h2>
             <span className={connected ? 'console-event-live-badge' : 'console-event-live-badge is-offline'}>
               <span className="console-event-live-dot" aria-hidden="true" />
@@ -1016,13 +1016,13 @@ export default function HomePage() {
           <>
             <div className="console-event-feed-hint">
               <span>{i18n.t("缓冲里还没有消息，先显示最近的运行日志。")}</span>
-              <span className="flex items-center gap-1.5 text-xs">
-                <span className="rounded-full bg-[hsl(var(--foreground)/0.06)] px-2 py-0.5 font-medium text-muted-foreground">INFO {eventCounts.info}</span>
+              <span className="flex items-center gap-2 text-xs">
+                <span className="rounded-full bg-[hsl(var(--foreground)/0.06)] px-2 py-1 font-medium text-muted-foreground">INFO {eventCounts.info}</span>
                 {eventCounts.warn > 0 ? (
-                  <span className="rounded-full bg-[hsl(var(--warning)/0.12)] px-2 py-0.5 font-medium text-[hsl(var(--warning))]">WARN {eventCounts.warn}</span>
+                  <span className="rounded-full bg-[hsl(var(--warning)/0.12)] px-2 py-1 font-medium text-[hsl(var(--warning))]">WARN {eventCounts.warn}</span>
                 ) : null}
                 {eventCounts.error > 0 ? (
-                  <span className="rounded-full bg-destructive/12 px-2 py-0.5 font-medium text-destructive">ERROR {eventCounts.error}</span>
+                  <span className="rounded-full bg-destructive/12 px-2 py-1 font-medium text-destructive">ERROR {eventCounts.error}</span>
                 ) : null}
               </span>
             </div>
@@ -1100,7 +1100,7 @@ export default function HomePage() {
                 <span className="console-capability-icon"><Icon /></span>
                 <span className="min-w-0 flex-1 text-left">
                   <span className="block text-sm font-semibold">{capability.label}</span>
-                  <span className="mt-0.5 block truncate text-xs text-muted-foreground">{capability.detail}</span>
+                  <span className="mt-1 block truncate text-xs text-muted-foreground">{capability.detail}</span>
                 </span>
                 <strong>{capability.value ?? '—'}</strong>
               </ListItemButton>
@@ -1127,7 +1127,7 @@ export default function HomePage() {
           </SheetHeader>
           {selectedEvent ? (
             <SheetBody>
-              <div className="console-surface-inset p-3.5">
+              <div className="console-surface-inset p-4">
                 <p className="font-mono text-xs leading-relaxed whitespace-pre-wrap break-words text-foreground">
                   {selectedEvent.message}
                 </p>
@@ -1147,7 +1147,7 @@ export default function HomePage() {
           <SheetFooter>
             {selectedEvent ? (
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={async () => {
                   try {

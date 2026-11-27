@@ -66,7 +66,7 @@ test('the dashboard 「需要你处理」 is one list: each row an icon, one sen
   // The Host's own action label, or 「去处理」 when it sends none.
   assert.deepEqual(rows.map(row => text(nodes(row).find(node => node.type === 'Link'))), ['去审批', '去处理', '打开错误日志'])
   // No solid button in the list: the page keeps one primary action at most.
-  for (const button of nodes(tree).filter(node => node.type === 'Button')) assert.ok(['ghost', 'outline'].includes(button.props.variant), button.props.variant)
+  for (const button of nodes(tree).filter(node => node.type === 'Button')) assert.ok(['ghost', 'secondary'].includes(button.props.variant), button.props.variant)
 })
 
 test('raw ids and long text stay collapsed until 「详情」 opens them', () => {

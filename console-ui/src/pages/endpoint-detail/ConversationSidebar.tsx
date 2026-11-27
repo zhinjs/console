@@ -85,7 +85,7 @@ export function ConversationSidebar({
           onChange={(e) => onListSearchChange(e.target.value)}
           aria-label={i18n.t("搜索会话")}
           placeholder={i18n.t("搜索会话名称或 ID")}
-          className="im-sidebar-search-input h-9 text-sm pl-9 border-0 shadow-none bg-transparent focus-visible:ring-0"
+          className="im-sidebar-search-input h-9 text-sm pl-10 border-0 shadow-none bg-transparent focus-visible:ring-0"
         />
       </div>
 

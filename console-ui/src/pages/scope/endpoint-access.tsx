@@ -35,7 +35,7 @@ function ConnectionTest({ endpoint }: { endpoint: ScopeEndpoint }) {
   const presentation = state.result ? endpointTestPresentation(state.result, i18n.locale) : null
   return (
     <div className="console-scope-test">
-      <Button variant="outline" size="sm" disabled={state.loading} onClick={() => void run()}>
+      <Button variant="secondary" size="sm" disabled={state.loading} onClick={() => void run()}>
         <Zap className={state.loading ? 'animate-pulse' : ''} />{state.loading ? i18n.t('测试中…') : i18n.t('测试连接')}
       </Button>
       {presentation && !state.loading ? (
@@ -64,7 +64,7 @@ export function EndpointAccessPanel({ scope, data }: { scope: Scope; data: Endpo
   // An adapter / account-scoped operator may answer this account's login (ADR 0058 §8).
   const canOperate = hasConsolePermission('endpoint.operate', access, scopePermissionTarget(scope))
   const canManage = hasConsolePermission('endpoint.manage', access)
-  const refresh = <Button variant="outline" size="sm" onClick={data.refresh} disabled={data.loading}><RefreshCw className={data.loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>
+  const refresh = <Button variant="secondary" size="sm" onClick={data.refresh} disabled={data.loading}><RefreshCw className={data.loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>
   const configSection = (
     <ObjectSection title={i18n.t('配置')} description={i18n.t('账号的连接参数（Token、地址、登录方式）在适配器的连接管理里修改；按账号的功能设置在「功能」页签。')}>
       <Card className="console-scope-links p-4">
@@ -93,8 +93,8 @@ export function EndpointAccessPanel({ scope, data }: { scope: Scope; data: Endpo
             ? i18n.t('Host 正在运行适配器 {0} 的其他账号，但列表里没有这个账号。它可能已从配置中移除、被停用，或还没有启动。', [adapter])
             : i18n.t('Host 当前没有运行适配器 {0} 的任何账号。请检查适配器插件是否启用、账号配置是否完整。', [adapter])}
           actions={<>
-            <Button asChild size="sm" variant="outline"><Link to={adapterHref(adapter)}><Cable />{i18n.t('打开适配器')}</Link></Button>
-            <Button size="sm" variant="outline" onClick={data.refresh}><RefreshCw />{i18n.t('重新读取')}</Button>
+            <Button asChild size="sm" variant="secondary"><Link to={adapterHref(adapter)}><Cable />{i18n.t('打开适配器')}</Link></Button>
+            <Button size="sm" variant="secondary" onClick={data.refresh}><RefreshCw />{i18n.t('重新读取')}</Button>
           </>} />
         {configSection}
       </>

@@ -43,7 +43,7 @@ export function VersionSection({ canUpdate }: { canUpdate: boolean }) {
     <div id={INSTANCE_SECTION_IDS.versions} className="scroll-mt-4">
       <ObjectSection title={i18n.t("版本")}
         description={i18n.t("网关按项目的 npm 配置查询最新版本，约每 6 小时检查一次。框架升级只通过命令行的 zhin migrate 完成。")}
-        actions={<Button size="sm" variant="outline" onClick={check.refresh} disabled={check.loading}><RefreshCw className={check.loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>}>
+        actions={<Button size="sm" variant="secondary" onClick={check.refresh} disabled={check.loading}><RefreshCw className={check.loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>}>
         {check.error ? <StatusState compact error={check.failure ?? check.error} permissions={['status.view']} onRetry={check.refresh} /> : null}
         {!check.loaded && check.loading ? <StatusState kind="loading" placeholder={<Skeleton className="h-24" />} /> : null}
         {report && !report.registryReachable ? (
@@ -127,13 +127,13 @@ function MigrateHint() {
         <p>{i18n.t("这类升级会修改 package.json 的版本范围并可能运行迁移，Console 不会代为执行。请在项目目录先预览：")}</p>
         <div className="flex min-w-0 items-center gap-2">
           <InlineCode className="min-w-0 flex-1 break-all px-2 py-1 text-xs">{VERSION_MIGRATE_COMMAND}</InlineCode>
-          <Button size="sm" variant="outline" onClick={copy} aria-label={copied ? i18n.t("已复制") : i18n.t("复制命令")}>
+          <Button size="sm" variant="secondary" onClick={copy} aria-label={copied ? i18n.t("已复制") : i18n.t("复制命令")}>
             {copied ? <Check /> : <Copy />}{copied ? i18n.t("已复制") : i18n.t("复制")}
           </Button>
         </div>
         <p className="text-xs">
           {i18n.t("确认无误后去掉 --dry-run 执行。")}{' '}
-          <a className="inline-flex items-center gap-0.5 underline underline-offset-2" href={migrateDocsHref(i18n.locale)} target="_blank" rel="noreferrer">
+          <a className="inline-flex items-center gap-1 underline underline-offset-2" href={migrateDocsHref(i18n.locale)} target="_blank" rel="noreferrer">
             {i18n.t("zhin migrate 文档")}<ArrowUpRight className="size-3" aria-hidden="true" />
           </a>
         </p>

@@ -45,7 +45,7 @@ export default function AttentionPage() {
       title={i18n.t('需要你处理')}
       description={i18n.t('登录、账号、插件、配置、审批等需要你动手的事项都汇总在这里，点「去处理」直达修复的位置。')}
       actions={(
-        <Button variant="outline" onClick={attention.refresh} disabled={state.refreshing}>
+        <Button variant="secondary" onClick={attention.refresh} disabled={state.refreshing}>
           <RefreshCw className={state.refreshing ? 'animate-spin' : ''} />
           {i18n.t('刷新')}
         </Button>
@@ -83,7 +83,7 @@ export default function AttentionPage() {
             {checkedAt ? ` ${i18n.t('上次检查 {0}', [checkedAt])}` : ''}
           </p>
           <div className="console-attention-empty-actions">
-            <Button variant="outline" size="sm" onClick={attention.refresh} disabled={state.refreshing}>
+            <Button variant="secondary" size="sm" onClick={attention.refresh} disabled={state.refreshing}>
               <RefreshCw className={state.refreshing ? 'animate-spin' : ''} />
               {i18n.t('重试')}
             </Button>

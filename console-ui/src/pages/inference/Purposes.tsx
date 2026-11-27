@@ -454,7 +454,7 @@ export function Purposes({ management: m, focus, onDirtyChange }: { management: 
               <p className="text-sm text-destructive" role="alert">
                 {i18n.t("插话判断没有读到：{0}。读到之前不能修改，保存其他用途时也不会改动它。", [inferenceError(judgeRead.error ?? new InferenceRequestError('unavailable'), i18n.locale)])}
               </p>
-              <Button type="button" size="sm" variant="outline" onClick={() => { setJudgeRead(null); void readJudge() }}>{i18n.t("重新读取")}</Button>
+              <Button type="button" size="sm" variant="secondary" onClick={() => { setJudgeRead(null); void readJudge() }}>{i18n.t("重新读取")}</Button>
             </>}
         </Card>
       ) : null}
@@ -463,7 +463,7 @@ export function Purposes({ management: m, focus, onDirtyChange }: { management: 
         // (migration record, which members are being skipped) are missing.
         <div className="flex flex-wrap items-center gap-2 text-xs text-warning" role="status" data-ambient-judge-details-missing="">
           <span>{i18n.t("插话判断详情没有读到（迁移信息和跳过状态暂不显示）：{0}", [inferenceError(judgeRead.error, i18n.locale)])}</span>
-          <Button type="button" size="sm" variant="outline" onClick={() => { setJudgeRead(null); void readJudge() }}>{i18n.t("重新读取")}</Button>
+          <Button type="button" size="sm" variant="secondary" onClick={() => { setJudgeRead(null); void readJudge() }}>{i18n.t("重新读取")}</Button>
         </div>
       ) : null}
       {merged && judgeBase ? (
@@ -643,7 +643,7 @@ export function Purposes({ management: m, focus, onDirtyChange }: { management: 
           />
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             disabled={!target || disabled}
             onClick={() => changeScope(target, draft[level]?.[target] ?? {})}
           >
@@ -700,7 +700,7 @@ export function Purposes({ management: m, focus, onDirtyChange }: { management: 
           </fieldset>
         ))}
         {level === 'scenes' && targets?.sceneHasMore ? (
-          <Button type="button" variant="outline" onClick={() => void loadScenes()}>
+          <Button type="button" variant="secondary" onClick={() => void loadScenes()}>
             {i18n.t("加载更多场景")}
           </Button>
         ) : null}
@@ -964,8 +964,8 @@ function AmbientJudgeSection({
             </p>
             <div className="flex flex-wrap items-center gap-2">
               {canNotice
-                ? <Button type="button" size="sm" variant="outline" disabled={noticing} onClick={() => void notice_()}>{i18n.t("知道了")}</Button>
-                : <Button type="button" size="sm" variant="outline" onClick={hideLocally}>{i18n.t("在这个浏览器里隐藏")}</Button>}
+                ? <Button type="button" size="sm" variant="secondary" disabled={noticing} onClick={() => void notice_()}>{i18n.t("知道了")}</Button>
+                : <Button type="button" size="sm" variant="secondary" onClick={hideLocally}>{i18n.t("在这个浏览器里隐藏")}</Button>}
               <Button type="button" size="sm" variant="ghost" asChild>
                 <a href={ambientJudgeDocUrl(i18n.locale)} target="_blank" rel="noreferrer">{i18n.t("查看迁移说明")}</a>
               </Button>
@@ -1081,7 +1081,7 @@ function AmbientAgreementLine({ agreement }: { agreement: AmbientAgreement }) {
       <p className="font-medium text-foreground">{agreement.text}</p>
       <p>{agreement.detail}</p>
       {agreement.byMember.length > 1 ? (
-        <ul className="mt-1 space-y-0.5" role="list">
+        <ul className="mt-1 space-y-1" role="list">
           {agreement.byMember.map((row) => <li key={row.key}>{i18n.t("{0}：{1}", [row.label, row.text])}</li>)}
         </ul>
       ) : null}

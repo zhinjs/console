@@ -145,7 +145,7 @@ export function FileEditor({
             <AlertDescription className="space-y-2">
               <p>{message.text}</p>
               {message.details ? <details><summary className="cursor-pointer">{i18n.t("技术详情")}</summary><pre className="mt-2 whitespace-pre-wrap break-words text-xs">{message.details}</pre></details> : null}
-              <Button className="file-control" variant="outline" size="sm" onClick={() => loadContent()}>
+              <Button className="file-control" variant="secondary" size="sm" onClick={() => loadContent()}>
                 <RefreshCw className="w-4 h-4 mr-1" />
                 {i18n.t("重试")}</Button>
             </AlertDescription>
@@ -178,7 +178,7 @@ export function FileEditor({
             : <><Save className="w-4 h-4 mr-1" />{i18n.t("保存")}</>}
         </Button>}
         {!readOnly && dirty && (
-          <Button className="file-control" variant="outline" size="sm" disabled={saving} onClick={() => setDiscardOpen(true)}>
+          <Button className="file-control" variant="secondary" size="sm" disabled={saving} onClick={() => setDiscardOpen(true)}>
             {i18n.t("撤销更改")}</Button>
         )}
         <span className="text-xs text-muted-foreground sm:ml-auto basis-full sm:basis-auto">

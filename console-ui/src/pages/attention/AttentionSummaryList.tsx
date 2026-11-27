@@ -36,11 +36,11 @@ export function AttentionSummaryList({ items }: { items: readonly AttentionItem[
             <div className="console-attention-row-actions">
               <AttentionMoreToggle expanded={expanded} controls={moreId} onToggle={() => toggle(item.id)} />
               {item.simulationOnly ? (
-                <Button asChild variant="outline" size="sm">
+                <Button asChild variant="secondary" size="sm">
                   <Link to={CONSOLE_PATHS.sandbox}><FlaskConical />{i18n.t('打开 Sandbox')}</Link>
                 </Button>
               ) : null}
-              <Button asChild variant="outline" size="sm">
+              <Button asChild variant="secondary" size="sm">
                 <Link to={item.action.path}>{item.action.label || i18n.t('去处理')}<ArrowUpRight /></Link>
               </Button>
             </div>

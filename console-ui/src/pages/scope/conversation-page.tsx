@@ -38,8 +38,8 @@ export function ConversationObjectPage({ scope }: { scope: Scope & { level: 'con
       names={name ? { conversation: name } : undefined}
       status={item?.hasOverrides ? <Badge variant="info" size="sm">{i18n.t('有覆盖')}</Badge> : null}
       actions={<>
-        <Button variant="outline" size="sm" onClick={() => selectTab('chat')}><MessageSquare />{i18n.t('打开聊天')}</Button>
-        {ambient ? <Button asChild variant="outline" size="sm"><Link to={ambient}><Radio />{i18n.t('群聊插话设置')}</Link></Button> : null}
+        <Button variant="secondary" size="sm" onClick={() => selectTab('chat')}><MessageSquare />{i18n.t('打开聊天')}</Button>
+        {ambient ? <Button asChild variant="secondary" size="sm"><Link to={ambient}><Radio />{i18n.t('群聊插话设置')}</Link></Button> : null}
       </>}
       flushTabs={['chat']}
       panels={{
@@ -63,7 +63,7 @@ export function InvalidConversationPage({ scope, segment }: { scope: Scope; segm
     <ObjectSection title={i18n.t('会话地址无效')}>
       <StatusState kind="error" title={i18n.t('会话地址无效：{0}', [segment])}
         description={i18n.t('会话段应为「类型:ID」，类型是 group、private 或 channel。')}
-        actions={<Button asChild size="sm" variant="outline"><Link to={scopeHref(scope)}>{i18n.t('返回 {0}', [scope.endpoint ?? ''])}</Link></Button>} />
+        actions={<Button asChild size="sm" variant="secondary"><Link to={scopeHref(scope)}>{i18n.t('返回 {0}', [scope.endpoint ?? ''])}</Link></Button>} />
     </ObjectSection>
   )
 }

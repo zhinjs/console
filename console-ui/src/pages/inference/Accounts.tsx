@@ -190,7 +190,7 @@ export function Accounts({ management: m, focusAccount, onAddModel }: { manageme
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {!hasModels && onAddModel ? (
-                    <Button variant="outline" size="sm" onClick={() => onAddModel(account.id)} disabled={disabled}>
+                    <Button variant="secondary" size="sm" onClick={() => onAddModel(account.id)} disabled={disabled}>
                       <Plus />
                       {i18n.t("添加模型")}
                     </Button>
@@ -225,7 +225,7 @@ export function Accounts({ management: m, focusAccount, onAddModel }: { manageme
                   ) : null}
                   {account.authentication.method === 'api-key' ? (
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       onClick={() => setCredential({ account, source: m.source! })}
                       disabled={disabled}
@@ -237,7 +237,7 @@ export function Accounts({ management: m, focusAccount, onAddModel }: { manageme
                   {account.authentication.method === 'oauth' && view.hostAdministrator ? (
                     <>
                       <Button
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
                         disabled={disabled}
                         onClick={() => void begin(account)}
@@ -255,7 +255,7 @@ export function Accounts({ management: m, focusAccount, onAddModel }: { manageme
                       </Button>
                       {status?.preparation === 'required' ? (
                         <Button
-                          variant="outline"
+                          variant="secondary"
                           size="sm"
                           disabled={disabled}
                           onClick={() =>
@@ -368,7 +368,7 @@ export function Accounts({ management: m, focusAccount, onAddModel }: { manageme
                 {supportsConnectionTest(credential.source.view) ? (
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="secondary"
                     disabled={disabled}
                     onClick={() => {
                       const account = credential.account
@@ -478,7 +478,7 @@ export function Accounts({ management: m, focusAccount, onAddModel }: { manageme
                 }
               }}
             >
-              <Button asChild variant="outline">
+              <Button asChild variant="secondary">
                 <a href={login.challenge.authorizationUrl} target="_blank" rel="noreferrer">
                   {i18n.t("打开授权页面")}
                 </a>
@@ -506,7 +506,7 @@ export function Accounts({ management: m, focusAccount, onAddModel }: { manageme
                   {i18n.t("完成登录")}
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   type="button"
                   disabled={disabled}
                   onClick={async () => {

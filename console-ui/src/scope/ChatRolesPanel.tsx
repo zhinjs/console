@@ -240,7 +240,7 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
       <ObjectSection
         title={i18n.t('聊天角色')}
         description={i18n.t('所有者 ⊃ 管理员 ⊃ 受信任。在某一层授予的角色对其下所有范围有效。zhin 角色只来自授予；平台群主/管理员是平台身份，单独影响平台相关能力。')}
-        actions={<Button variant="outline" size="sm" onClick={roles.refresh} disabled={roles.status === 'loading'}><RefreshCw className={roles.status === 'loading' ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>}
+        actions={<Button variant="secondary" size="sm" onClick={roles.refresh} disabled={roles.status === 'loading'}><RefreshCw className={roles.status === 'loading' ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>}
       >
         {roles.status === 'failed' && roles.failure ? (
           <StatusState error={roles.error} onRetry={roles.refresh}
@@ -249,7 +249,7 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
           <StatusState kind="loading" placeholder={<div className="space-y-2">{[0, 1, 2].map(index => <Skeleton key={index} className="h-10" />)}</div>} />
         ) : !rows.length ? (
           <StatusState kind="empty" title={i18n.t('这一层还没有聊天角色')} description={i18n.t('在下方授予，或在聊天里用「角色 授予」命令。')}
-            actions={<Button size="sm" variant="outline" onClick={() => {
+            actions={<Button size="sm" variant="secondary" onClick={() => {
               const form = document.querySelector<HTMLElement>('.console-chat-role-grant')
               form?.scrollIntoView({ behavior: 'smooth', block: 'start' })
               form?.querySelector<HTMLElement>('input, button, [role="combobox"]')?.focus({ preventScroll: true })
@@ -312,7 +312,7 @@ export function ChatRolesPanel({ scope }: { scope: Scope }) {
         </Card>
         {!globalManage ? <p className="text-xs text-muted-foreground">{i18n.t('授予或撤销所有者需要全局 iam.manage 权限；当前身份可以授予管理员和受信任。')}</p> : null}
         {formError ? <p role="alert" className="text-sm text-destructive">{i18n.t('无法授予：{0}', [formError])}</p> : null}
-        <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />{i18n.t('聊天角色只影响机器人在聊天里的权限，不影响 Console 登录与权限。')}</p>
+        <p className="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />{i18n.t('聊天角色只影响机器人在聊天里的权限，不影响 Console 登录与权限。')}</p>
       </ObjectSection>
     </>
   )

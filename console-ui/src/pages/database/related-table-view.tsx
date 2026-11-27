@@ -336,7 +336,7 @@ export function RelatedTableView({
       </div> : null}
 
       <div className="flex flex-wrap items-center gap-2 shrink-0">
-        <Button size="sm" variant="outline" onClick={load} disabled={loading || busy}>
+        <Button size="sm" variant="secondary" onClick={load} disabled={loading || busy}>
           <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新")}</Button>
         {!readOnly && <Button size="sm" disabled={loading || busy || !!readError || write.held} onClick={openAdd}><Plus className="w-3.5 h-3.5 mr-1" />{i18n.t("添加")}</Button>}
         <span className="text-xs text-muted-foreground sm:ml-auto basis-full sm:basis-auto">
@@ -360,11 +360,11 @@ export function RelatedTableView({
             onChange={(event: ChangeEvent<HTMLInputElement>) => { const value = event.target.value; setFilterDraft(prev => ({ ...prev, value })); setFilterError(null) }} />
           {filterError ? <p role="alert" className="text-xs text-destructive">{filterError}</p> : null}
         </div>
-        <Button type="submit" size="sm" variant="outline" disabled={loading || busy}><Search className="w-3.5 h-3.5 mr-1" />{i18n.t("查找")}</Button>
+        <Button type="submit" size="sm" variant="secondary" disabled={loading || busy}><Search className="w-3.5 h-3.5 mr-1" />{i18n.t("查找")}</Button>
       </form> : null}
       {applied ? <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground shrink-0" data-filter-summary>
         {applied.filters.map(filter => (
-          <span key={filter.column} className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2 py-0.5" data-filter-chip={filter.column}>
+          <span key={filter.column} className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2 py-1" data-filter-chip={filter.column}>
             {operatorNeedsValue(filter.operator)
               ? i18n.t("全表查找：{0} {1} “{2}”", [filter.column, operatorLabel(filter.operator, i18n.locale), filter.value])
               : i18n.t("全表查找：{0} {1}", [filter.column, operatorLabel(filter.operator, i18n.locale)])}
@@ -398,7 +398,7 @@ export function RelatedTableView({
                     key={col}
                     aria-sort={direction === 'asc' ? 'ascending' : direction === 'desc' ? 'descending' : 'none'}
                   >
-                    <span className="inline-flex items-center gap-0.5">
+                    <span className="inline-flex items-center gap-1">
                       <button type="button" disabled={loading || busy}
                         aria-label={serverSort
                           ? i18n.t("按 {0} 排序：{1}", [col, direction === 'asc' ? i18n.t("降序") : direction === 'desc' ? i18n.t("取消排序") : i18n.t("升序")])
@@ -442,7 +442,7 @@ export function RelatedTableView({
                   return (
                     <TableCell
                       key={col}
-                      className="whitespace-nowrap py-1.5 align-top font-mono text-xs"
+                      className="whitespace-nowrap py-2 align-top font-mono text-xs"
                       title={shown ? cellText(value) : undefined}
                     >
                       {sensitive ? (
@@ -456,7 +456,7 @@ export function RelatedTableView({
                     </TableCell>
                   )
                 })}
-                {!readOnly && <TableCell numeric className="w-24 min-w-[5.5rem] space-x-1 whitespace-nowrap py-1.5">
+                {!readOnly && <TableCell numeric className="w-24 min-w-[5.5rem] space-x-1 whitespace-nowrap py-2">
                   <Button size="icon" variant="ghost" disabled={loading || busy || !!readError || !canIdentify || write.held} aria-label={i18n.t("编辑记录")} onClick={() => openEdit(row)}><Pencil /></Button>
                   <Button size="icon" variant="destructive" disabled={loading || busy || !!readError || !canIdentify || write.held} aria-label={i18n.t("删除记录")} onClick={() => { void handleDelete(row) }}><Trash2 /></Button>
                 </TableCell>}
@@ -468,9 +468,9 @@ export function RelatedTableView({
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 shrink-0">
-          <Button size="sm" variant="outline" aria-label={i18n.t("上一页")} disabled={loading || busy || page <= 1} onClick={() => setPage((p: number) => p - 1)}><ChevronLeft className="w-4 h-4" /></Button>
+          <Button size="sm" variant="secondary" aria-label={i18n.t("上一页")} disabled={loading || busy || page <= 1} onClick={() => setPage((p: number) => p - 1)}><ChevronLeft className="w-4 h-4" /></Button>
           <span className="text-xs text-muted-foreground">{page} / {totalPages}</span>
-          <Button size="sm" variant="outline" aria-label={i18n.t("下一页")} disabled={loading || busy || page >= totalPages} onClick={() => setPage((p: number) => p + 1)}><ChevronRight className="w-4 h-4" /></Button>
+          <Button size="sm" variant="secondary" aria-label={i18n.t("下一页")} disabled={loading || busy || page >= totalPages} onClick={() => setPage((p: number) => p + 1)}><ChevronRight className="w-4 h-4" /></Button>
         </div>
       )}
 
@@ -494,7 +494,7 @@ export function RelatedTableView({
           {write.held || write.result ? <WriteCheckNotice controller={write} onCheck={() => { void checkWrite() }} /> : null}
           {msg?.type === 'error' && <div role="alert" className="space-y-2 text-sm text-destructive"><p>{msg.text}</p>{msg.details ? <details className="text-xs"><summary className="cursor-pointer">{i18n.t("技术详情")}</summary><p className="mt-2 whitespace-pre-wrap break-words">{msg.details}</p></details> : null}</div>}
           <DialogFooter>
-            <DialogClose asChild><Button variant="outline" size="sm" disabled={busy || write.locked}>{i18n.t("取消")}</Button></DialogClose>
+            <DialogClose asChild><Button variant="secondary" size="sm" disabled={busy || write.locked}>{i18n.t("取消")}</Button></DialogClose>
             <Button size="sm" disabled={busy || invalidDraft || write.held} onClick={() => handleSave(addRow)}><Save className="w-3.5 h-3.5 mr-1" />{i18n.t("保存")}</Button>
           </DialogFooter>
         </DialogContent>

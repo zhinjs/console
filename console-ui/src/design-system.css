@@ -993,9 +993,9 @@
   .console-capability-item > strong {
     min-width: 2rem;
     text-align: right;
-    font-family: var(--console-font-mono);
     font-size: var(--console-text-title);
-    letter-spacing: -0.04em;
+    font-weight: var(--console-weight-strong);
+    font-variant-numeric: tabular-nums;
   }
 
   .console-capability-icon {

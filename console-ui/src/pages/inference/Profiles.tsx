@@ -378,7 +378,7 @@ function ProfileForm({
                 {manualEntry ? i18n.t("从目录选择") : i18n.t("输入模型 ID")}
               </Button> : null}
               {driver?.discovery === true ? (
-                <Button type="button" variant="outline" size="sm" onClick={() => void discover()}>
+                <Button type="button" variant="secondary" size="sm" onClick={() => void discover()}>
                   <RefreshCw />
                   {i18n.t("从服务读取模型")}
                 </Button>
@@ -415,7 +415,7 @@ function ProfileForm({
             <ErrorAlert error={schemaError} />
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={() => void readSchema()}
             >
               {i18n.t("重新读取参数")}

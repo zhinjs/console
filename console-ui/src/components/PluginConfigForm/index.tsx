@@ -157,7 +157,7 @@ function PluginConfigFormSession({ pluginName, onSuccess, onDirtyChange, sourceR
     finally { if (currentOperation()) setSaving(false) }
   }
   if (!form.loaded && !form.error) return <StatusState kind="loading" className="mt-4" title={i18n.t("正在读取插件配置和字段定义…")} onRetry={() => void form.load()} />
-  if (form.error && !form.loaded) return <Card className="mt-4 p-4 space-y-2" role="alert"><p>{i18n.t("配置读取失败。")}</p><p className="text-xs">{form.error}</p><Button variant="outline" onClick={() => void form.load()}>{i18n.t("重试读取")}</Button><Link className="text-sm underline" to="/ops/files">{i18n.t("打开文件管理")}</Link></Card>
+  if (form.error && !form.loaded) return <Card className="mt-4 p-4 space-y-2" role="alert"><p>{i18n.t("配置读取失败。")}</p><p className="text-xs">{form.error}</p><Button variant="secondary" onClick={() => void form.load()}>{i18n.t("重试读取")}</Button><Link className="text-sm underline" to="/ops/files">{i18n.t("打开文件管理")}</Link></Card>
   if (form.schemaError || !form.schema) return <Card className="mt-4 p-4 space-y-2" role="alert">
     <p>{i18n.t("配置字段定义不可用，请在文件管理中查看配置。")}</p>
     {form.schemaError ? <p className="text-xs text-muted-foreground">{form.schemaError}</p> : null}
@@ -168,7 +168,7 @@ function PluginConfigFormSession({ pluginName, onSuccess, onDirtyChange, sourceR
       <div className="flex min-w-0 items-center gap-2"><Settings className="h-4 w-4 shrink-0" /><h3 className="truncate font-semibold">{displayTitle ?? `${i18n.t("配置 · ")}${pluginName}`}</h3>{dirty ? <span className="console-dirty-pill" role="status">{i18n.t("有未保存的修改")}</span> : null}</div>
       <SaveButton size="sm" onClick={() => void handleSave()} saving={saving} saved={saveFeedback.saved} disabled={saving || draftName !== pluginName || form.loading || !!form.error || hasInvalidFields}><Save className="h-4 w-4" />{scoped && pluginName === 'ai' ? i18n.t("保存全部修改") : i18n.t("保存配置")}</SaveButton>
     </div>
-    {(saveError || form.error) ? <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{saveError ?? form.error}{i18n.t("。草稿已保留。")}<Link className="ml-2 underline" to="/ops/files">{i18n.t("打开文件管理")}</Link>{form.errorOperation === 'read' ? <Button variant="outline" size="sm" onClick={() => void form.load()}>{i18n.t("重试读取")}</Button> : null}</AlertDescription></Alert> : null}
+    {(saveError || form.error) ? <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{saveError ?? form.error}{i18n.t("。草稿已保留。")}<Link className="ml-2 underline" to="/ops/files">{i18n.t("打开文件管理")}</Link>{form.errorOperation === 'read' ? <Button variant="secondary" size="sm" onClick={() => void form.load()}>{i18n.t("重试读取")}</Button> : null}</AlertDescription></Alert> : null}
     {validation && (!validation.valid || validation.missingEnv.length > 0) ? <Alert variant={validation.valid && !validation.missingEnv.length ? 'default' : 'destructive'}><AlertDescription><p>{hostValidationSummary(validation, i18n.locale)}</p>{validation.errors.map(item => <p key={`${item.path}:${item.message}`}>{item.path}: {item.message}</p>)}{validation.missingEnv.length ? <p>{i18n.t("缺少环境变量：")}{validation.missingEnv.join('、')}。<Link className="underline" to="/ops/env">{i18n.t("配置环境变量")}</Link>{i18n.t("后重新校验。")}</p> : null}</AlertDescription></Alert> : null}
     {message ? <ApplyFeedback outcome={message.outcome} mismatch={message.mismatch} unverified={message.unverified} onRestarted={async () => {
       // After the restart the file's application status for its revision is the evidence.

@@ -66,7 +66,7 @@ export default function AccessAuditPage() {
       <PageHeader
         title={i18n.t("审计日志")}
         description={i18n.t("登录、访问控制变更、被拒绝的请求和所有写操作。只记录参数名，不记录参数值；保留 180 天。")}
-        actions={<Button variant="outline" size="sm" onClick={() => load()} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>}
+        actions={<Button variant="secondary" size="sm" onClick={() => load()} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>}
       />
       <Card className="p-4">
         <form className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto]" onSubmit={event => { event.preventDefault(); setFilter({ ...draft }) }}>
@@ -111,8 +111,8 @@ export default function AccessAuditPage() {
             description={target && entries.length ? i18n.t("已读取的记录里没有这个目标，可以加载更早的记录继续查找。")
               : hasFilter ? i18n.t("主体与动作按完整值匹配。换一个条件，或清除筛选。") : i18n.t("登录、访问控制变更和写操作发生后会记录在这里。")}
             actions={hasFilter || target ? <>
-              {hasFilter ? <Button size="sm" variant="outline" onClick={() => { setDraft(EMPTY_FILTER); setFilter(EMPTY_FILTER) }}><X />{i18n.t("清除筛选")}</Button> : null}
-              {target ? <Button size="sm" variant="outline" onClick={clearTarget}><X />{i18n.t("显示全部目标")}</Button> : null}
+              {hasFilter ? <Button size="sm" variant="secondary" onClick={() => { setDraft(EMPTY_FILTER); setFilter(EMPTY_FILTER) }}><X />{i18n.t("清除筛选")}</Button> : null}
+              {target ? <Button size="sm" variant="secondary" onClick={clearTarget}><X />{i18n.t("显示全部目标")}</Button> : null}
             </> : undefined} />
         ) : (
           <Table aria-label={i18n.t("审计日志")}>
@@ -132,7 +132,7 @@ export default function AccessAuditPage() {
                 <TableRow key={entry.id}>
                   <TableCell className="text-muted-foreground">
                     <span className="md:whitespace-nowrap">{i18n.date(entry.at, { dateStyle: 'medium', timeStyle: 'medium' })}</span>
-                    <span className="mt-0.5 block text-xs text-foreground md:hidden" title={entry.actor}>{actorLabel(entry.actor, usersById, i18n.t)}</span>
+                    <span className="mt-1 block text-xs text-foreground md:hidden" title={entry.actor}>{actorLabel(entry.actor, usersById, i18n.t)}</span>
                   </TableCell>
                   <TableCell className="hidden md:table-cell"><span title={entry.actor}>{actorLabel(entry.actor, usersById, i18n.t)}</span></TableCell>
                   <TableCell className="min-w-[8rem] text-xs"><InlineCode>{entry.action}</InlineCode></TableCell>
@@ -157,7 +157,7 @@ export default function AccessAuditPage() {
       </Card>
       {next !== null ? (
         <div className="flex justify-center">
-          <Button variant="outline" size="sm" onClick={() => load(next)} disabled={loading}>{loading ? i18n.t("处理中...") : i18n.t("加载更早的记录")}</Button>
+          <Button variant="secondary" size="sm" onClick={() => load(next)} disabled={loading}>{loading ? i18n.t("处理中...") : i18n.t("加载更早的记录")}</Button>
         </div>
       ) : null}
     </PageShell>
