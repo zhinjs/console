@@ -185,7 +185,8 @@
     min-width: 0;
   }
 
-  .console-section-segmented { width: min(26rem, 100%); }
+  .console-section-segmented { width: min(34rem, 100%); }
+  @media (width >= 40rem) { .console-section-segmented .console-segment { white-space: nowrap; } }
 
   .console-section-nav-label {
     color: hsl(var(--console-muted));
