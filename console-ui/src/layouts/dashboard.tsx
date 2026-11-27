@@ -2,9 +2,9 @@ import { routeLabel } from '../i18n/navigation'
 import { LanguageSelect } from '../components/LanguageSelect'
 import { useI18n } from '../i18n'
 import { useMemo, useRef, useState, useEffect, useLayoutEffect, useSyncExternalStore } from "react"
-import { Outlet, Link, useLocation, matchPath } from "react-router-dom"
+import { Outlet, Link, useLocation, useNavigate, matchPath } from "react-router-dom"
 import { Menu, X, ChevronRight } from "lucide-react"
-import { Aurora, BrandMark, Chip, cn, CONSOLE_PRODUCT_NAME, IconButton, ListItemButton, NavIcon, NavPill, ScrollArea, StatusDot, TabBar, TabBarItem } from '@zhin.js/console-ui'
+import { Aurora, BrandMark, Chip, cn, CONSOLE_PRODUCT_NAME, IconButton, ListItemButton, NavIcon, NavPill, ScrollArea, Segmented, StatusDot, TabBar, TabBarItem } from '@zhin.js/console-ui'
 import { type ConsoleRouteRecord } from "@zhin.js/client"
 import { useConsoleConnected } from "../hooks/use-console-connected"
 import { app } from "../utils/console-client"
@@ -64,6 +64,7 @@ function useRouteMetaFlag(
 export default function DashboardLayout() {
   const i18n = useI18n()
   const location = useLocation()
+  const navigate = useNavigate()
   const compact = useIsCompactNav()
   const drawerRef = useRef<HTMLElement>(null)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
@@ -153,8 +154,22 @@ export default function DashboardLayout() {
     </nav>
   )
 
-  /** The current section's pages (Chips, like the design's 聊天账号 · 模型与用途 row). */
-  const sectionNavigation = subnav.length ? (
+  /**
+   * The current section's pages (Chips, like the design's 聊天账号 · 模型与用途 row). 访问控制 has a
+   * few fixed peers (用户 / 角色 / 令牌 / 审计): the Access design switches them with a Segmented.
+   */
+  const segmentedSection = currentSection?.id === "access" && subnav.length === 1 && subnav[0].routes.length <= 4 && activePath
+  const sectionNavigation = segmentedSection ? (
+    <nav className="console-section-nav" aria-label={i18n.t("{0}的页面", [i18n.t(currentSection!.label)])} data-section={currentSection!.id}>
+      <Segmented
+        aria-label={i18n.t("{0}的页面", [i18n.t(currentSection!.label)])}
+        className="console-section-segmented"
+        value={activePath}
+        onValueChange={(path) => navigate(path)}
+        options={subnav[0].routes.map((route) => ({ value: route.path, label: routeLabel(route, i18n.locale) }))}
+      />
+    </nav>
+  ) : subnav.length ? (
     <nav className="console-section-nav" aria-label={i18n.t("{0}的页面", [i18n.t(currentSection!.label)])} data-section={currentSection!.id}>
       {subnav.map((group) => (
         <div key={group.id} className="console-section-nav-group" data-group={group.id} role={group.labelled ? "group" : undefined} aria-label={group.labelled ? i18n.t(group.label) : undefined}>

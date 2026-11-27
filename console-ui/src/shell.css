@@ -187,6 +187,8 @@
     min-width: 0;
   }
 
+  .console-section-segmented { width: min(26rem, 100%); }
+
   .console-section-nav-label {
     color: hsl(var(--console-muted));
     font-size: var(--console-text-xs);

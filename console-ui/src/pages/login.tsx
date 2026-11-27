@@ -2,7 +2,7 @@ import { LanguageSelect } from '../components/LanguageSelect'
 import { useI18n } from '../i18n'
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { Trash2, ShieldCheck, Eye, EyeOff, KeyRound, UserRound } from 'lucide-react'
-import { BrandMark, Button, Checkbox, ConfirmDialog, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@zhin.js/console-ui'
+import { Aurora, BrandMark, Button, Checkbox, ConfirmDialog, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@zhin.js/console-ui'
 import {
   getSavedLogin, getStoredApiBase, listSavedLogins, normalizeApiBase, removeSavedLogin,
   touchSavedLogin, upsertSavedLogin, verifyAndStoreCredentials,
@@ -13,7 +13,6 @@ import {
   hostNeedsSetup, initialLoginMode, linkNeedsConfirmation, lockoutMs, loginFailureField, normalizeHostAddress, passwordFailureField, saveLoginMode,
   type HostAddressResult, type LoginField, type LoginMode,
 } from './login-model.mjs'
-import { LoginPreview } from './login-preview'
 import './login.css'
 
 interface LoginPageProps {
@@ -234,14 +233,15 @@ export default function LoginPage({ onSuccess, initialApiBase, initialToken, que
 
   const describedBy = (...ids: Array<string | false | undefined>) => ids.filter(Boolean).join(' ') || undefined
 
-  return <div className="console-login">
+  // The Login design: one centered column over the Aurora — brand and title, then the sign-in card.
+  return <div className="console-login console-aurora-host">
+    <Aurora className="console-login-aurora" />
     <div className="console-login-layout">
       <section className="console-login-intro">
         <BrandMark size={36} withText className="console-login-brand" />
         <h1>{i18n.t('连接你的机器人')}</h1>
         <p>{i18n.t('连接运行 Zhin 的设备，管理会话、账号和任务。')}</p>
         <div className="console-login-notes"><ShieldCheck aria-hidden="true" /><span>{i18n.t('账号与令牌由管理网关验证：机器人实例停止时也能登录，查看实例日志并重新启动。')}</span></div>
-        <LoginPreview />
       </section>
       <section className="console-login-panel" aria-label={i18n.t('连接设置')}>
         <div className="console-login-panel-head"><LanguageSelect /></div>

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowDownToLine, Download, Pause, Play, RefreshCw, RotateCcw, Square, Trash2, Upload } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { Alert, AlertDescription, AlertTitle, Badge, Button, Card, Checkbox, Input, PageHeader, PageShell, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
+import { Alert, AlertDescription, AlertTitle, Badge, Button, Card, Checkbox, Input, PageHeader, PageShell, Skeleton, StatusDot, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
 import { AnsiLines, AnsiText } from '../../components/AnsiText'
 import { hasLeadingTime } from '../../utils/ansi-log.mjs'
@@ -58,7 +58,7 @@ export default function OpsInstancePage() {
         title={i18n.t("实例")}
         description={i18n.t("运行状态的唯一详情页：网关托管的 Zhin 实例的状态、启停、实时日志与项目依赖。实例离线时本页仍由网关提供。")}
         actions={canRead ? (
-          <Button variant="outline" size="sm" onClick={status.refresh} disabled={status.loading}>
+          <Button variant="secondary" size="sm" onClick={status.refresh} disabled={status.loading}>
             <RefreshCw className={status.loading ? 'animate-spin' : ''} />{i18n.t("刷新")}
           </Button>
         ) : null}
@@ -157,28 +157,43 @@ function InstanceStatusSection({ status, canControl, locked }: {
     <div id={INSTANCE_SECTION_IDS.status} className="scroll-mt-4">
       <ObjectSection title={i18n.t("运行状态")}
         description={i18n.t("崩溃后网关会自动重启；一分钟内重启超过 10 次则停在「已崩溃」，等待人工处理。")}
-        actions={canControl ? <>
-          <Button size="sm" variant="outline" disabled={!data || !actions.start || locked || pending} onClick={() => prepare('start')}><Play />{i18n.t("启动")}</Button>
-          <Button size="sm" variant="outline" disabled={!data || !actions.restart || locked || pending} onClick={() => prepare('restart')}><RotateCcw />{i18n.t("重启")}</Button>
-          <Button size="sm" variant="destructive-outline" disabled={!data || !actions.stop || locked || pending} onClick={() => prepare('stop')}><Square />{i18n.t("停止")}</Button>
-        </> : null}>
+>
+        {/* The Ops design: status cards in a row, then the actions as white buttons (停止 a danger text button). */}
+        {data ? (
+          <div className="console-ops-status-grid">
+            <Card className="console-ops-status-card">
+              <span className="console-ops-status-label">{i18n.t("实例")}</span>
+              <StatusDot tone={statusDotTone(instanceStateTone(data.state))}>{instanceStateLabel(data.state, i18n.t)}</StatusDot>
+              <span className="console-ops-status-sub">PID {data.pid ?? '—'} · {uptime === null ? '—' : formatDuration(uptime, i18n.t)}</span>
+            </Card>
+            <Card className="console-ops-status-card">
+              <span className="console-ops-status-label">{i18n.t("近一分钟重启次数")}</span>
+              <span className="console-ops-status-value">{data.recentRestarts}<small> {i18n.t("次")}</small></span>
+            </Card>
+            <Card className="console-ops-status-card">
+              <span className="console-ops-status-label">{i18n.t("运行代次")}</span>
+              <span className="console-ops-status-value">{data.generation ?? '—'}</span>
+              {data.startedAt ? <span className="console-ops-status-sub">{i18n.t("启动于")} {when(data.startedAt)}</span> : null}
+            </Card>
+            <Card className="console-ops-status-card">
+              <span className="console-ops-status-label">{i18n.t("上次退出")}</span>
+              <span className="console-ops-status-value font-mono">{data.lastExitCode ?? data.lastExitSignal ?? '—'}</span>
+              <span className="console-ops-status-sub"><code className="console-access-id" title={data.instanceId}>{data.instanceId}</code></span>
+            </Card>
+          </div>
+        ) : null}
+        {canControl ? (
+          <div className="console-ops-actions">
+            <Button size="sm" variant="white" disabled={!data || !actions.start || locked || pending} onClick={() => prepare('start')}><Play />{i18n.t("启动")}</Button>
+            <Button size="sm" variant="white" disabled={!data || !actions.restart || locked || pending} onClick={() => prepare('restart')}><RotateCcw />{i18n.t("重启")}</Button>
+            <Button size="sm" variant="danger-text" disabled={!data || !actions.stop || locked || pending} onClick={() => prepare('stop')}><Square />{i18n.t("停止")}</Button>
+          </div>
+        ) : null}
         <ActionReceipt controller={receipt} />
-        <Card className="console-admin-card">
+        {status.error || locked || (!data && !status.loaded) || data?.lastFailure ? <Card className="console-admin-card">
           {status.error && status.errorKind !== 'unsupported' ? <GatewayLoadError error={status.error} kind={status.errorKind} failure={status.failure} onRetry={status.refresh} permissions={['status.view']} /> : null}
           {locked ? <p className="console-admin-note" role="status">{i18n.t("依赖事务进行中，实例由事务停启。")}</p> : null}
           {!data && !status.loaded ? <StatusState kind="loading" onRetry={status.refresh} placeholder={<Skeleton className="h-20" />} /> : null}
-          {data ? (
-            <dl className="console-object-facts">
-              <div><dt>{i18n.t("状态")}</dt><dd><Badge variant={instanceStateTone(data.state)}>{instanceStateLabel(data.state, i18n.t)}</Badge></dd></div>
-              <div><dt>{i18n.t("进程 PID")}</dt><dd className="font-mono">{data.pid ?? '—'}</dd></div>
-              <div><dt>{i18n.t("已运行")}</dt><dd>{uptime === null ? '—' : formatDuration(uptime, i18n.t)}</dd></div>
-              <div><dt>{i18n.t("近一分钟重启次数")}</dt><dd>{data.recentRestarts}</dd></div>
-              {data.startedAt ? <div><dt>{i18n.t("启动于")}</dt><dd>{when(data.startedAt)}</dd></div> : null}
-              {data.generation !== undefined ? <div><dt>{i18n.t("运行代次")}</dt><dd className="font-mono">{data.generation}</dd></div> : null}
-              <div><dt>{i18n.t("上次退出")}</dt><dd className="font-mono">{data.lastExitCode ?? data.lastExitSignal ?? '—'}</dd></div>
-              <div><dt>{i18n.t("实例 ID")}</dt><dd><code className="console-access-id" title={data.instanceId}>{data.instanceId}</code></dd></div>
-            </dl>
-          ) : null}
           {data?.lastFailure ? (
             <Alert variant={data.state === 'crashed' ? 'destructive' : 'warning'}>
               <AlertTitle>{i18n.t("最近一次失败：{0}", [failureReasonLabel(data.lastFailure.reason, i18n.t)])}</AlertTitle>
@@ -196,10 +211,15 @@ function InstanceStatusSection({ status, canControl, locked }: {
               </AlertDescription>
             </Alert>
           ) : null}
-        </Card>
+        </Card> : null}
       </ObjectSection>
     </div>
   )
+}
+
+/** Badge tone of an instance state → StatusDot tone (the design's glossary: 运行中 is the ok dot, with its word). */
+function statusDotTone(tone: ReturnType<typeof instanceStateTone>): 'ok' | 'warn' | 'danger' | 'neutral' | 'progress' {
+  return tone === 'destructive' ? 'danger' : tone === 'warning' ? 'warn' : tone === 'secondary' ? 'progress' : 'ok'
 }
 
 function InstanceLogsSection() {

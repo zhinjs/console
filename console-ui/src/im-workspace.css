@@ -8,7 +8,7 @@
 .im-center { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; background: hsl(var(--im-chat-bg)); }
 .im-chat-header { display: flex; flex-shrink: 0; align-items: center; gap: var(--console-space-3); min-height: 3.5rem; padding: var(--console-space-2) var(--console-space-3); border-bottom: var(--console-border-hairline) solid hsl(var(--border)); background: hsl(var(--card)); }
 .im-chat-header h2, .im-conversation-name { letter-spacing: 0; }
-.im-chat-avatar { display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; border-radius: var(--console-radius-2); background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
+.im-chat-avatar { display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; border-radius: var(--console-radius-full); background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
 .im-chat-title { flex: 1 1 auto; min-width: 0; }
 .im-chat-title h2 { overflow: hidden; margin: 0; font-size: var(--console-text-body); font-weight: var(--console-weight-strong); line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
 .im-chat-title p { display: flex; min-width: 0; align-items: center; gap: var(--console-space-2); margin: var(--console-space-1) 0 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); white-space: nowrap; }
@@ -25,7 +25,7 @@
 .im-sidebar-count { min-width: 1.25rem; padding: 0 var(--console-space-2); border-radius: var(--console-radius-full); background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-weight: var(--console-weight-medium); line-height: 1.25rem; text-align: center; }
 .im-sidebar-notice { margin: 0 var(--console-space-3) var(--console-space-2); font-size: var(--console-text-label); line-height: 1.5; overflow-wrap: anywhere; }
 .im-attachment-menu .console-menu-item { min-height: 44px; }
-.im-sidebar-search { position: relative; flex-shrink: 0; margin: var(--console-space-3) var(--console-space-3); border: var(--console-border-hairline) solid hsl(var(--border)); border-radius: var(--console-radius-2); background: hsl(var(--card)); }
+.im-sidebar-search { position: relative; flex-shrink: 0; margin: var(--console-space-3) var(--console-space-3); border: 0; border-radius: var(--console-radius-full); background: hsl(var(--console-sunken)); }
 .im-sidebar-search:focus-within { outline: 2px solid hsl(var(--ring)); outline-offset: 1px; }
 .im-sidebar-search-icon { position: absolute; left: 10px; top: 50%; color: hsl(var(--muted-foreground)); transform: translateY(-50%); pointer-events: none; }
 .im-sidebar-search-input, .im-sidebar-search input { padding-left: var(--console-space-6) !important; border: 0 !important; background: transparent !important; box-shadow: none !important; }
@@ -41,16 +41,17 @@
 .im-section-empty { padding: var(--console-space-4) var(--console-space-3); text-align: center; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .im-conversation-row { display: grid; grid-template-columns: 36px minmax(0,1fr); align-items: center; gap: var(--console-space-3); width: 100%; min-height: 60px; padding: var(--console-space-2); border: 0; border-radius: var(--console-radius-2); background: transparent; color: inherit; cursor: pointer; text-align: left; transition: background-color var(--console-motion-fast) var(--console-ease-out); }
 .im-conversation-row:hover:not(.active), .im-system-row:hover:not(.active) { background: hsl(var(--im-row-hover)); }
-.im-conversation-row.active, .im-system-row.active { background: hsl(var(--im-row-active)); color: hsl(var(--im-row-active-fg)); }
+/* Selected row (soft cards): primary-soft with the 3px primary bar. */
+.im-conversation-row.active, .im-system-row.active { background: hsl(var(--im-row-active)); box-shadow: var(--console-selected-bar); color: hsl(var(--im-row-active-fg)); }
 .im-conversation-row.active .im-conversation-preview, .im-conversation-row.active .im-conversation-time, .im-system-row.active .im-system-desc { color: hsl(var(--im-row-active-muted)); }
-.im-conversation-avatar { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: var(--console-radius-2); font-size: var(--console-text-label); font-weight: var(--console-weight-strong); user-select: none; }
+.im-conversation-avatar { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: var(--console-radius-full); font-size: var(--console-text-label); font-weight: var(--console-weight-strong); user-select: none; }
 .im-conversation-body { display: flex; flex-direction: column; gap: var(--console-space-1); min-width: 0; }
 .im-conversation-title-row, .im-conversation-preview-row { display: flex; align-items: center; gap: var(--console-space-2); min-width: 0; }
 .im-conversation-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--console-text-body); font-weight: var(--console-weight-strong); line-height: 1.4; }
 .im-conversation-time { flex-shrink: 0; font-size: var(--console-text-label); color: hsl(var(--muted-foreground)); }
 .im-conversation-preview { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--console-text-label); line-height: 1.5; color: hsl(var(--muted-foreground)); }
 .im-conversation-preview--empty { color: hsl(var(--muted-foreground)); }
-.im-conversation-unread { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; padding: 0 var(--console-space-1); border-radius: var(--console-radius-1); background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); font-size: var(--console-text-label); font-weight: var(--console-weight-strong); }
+.im-conversation-unread { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; padding: 0 var(--console-space-1); border-radius: var(--console-radius-full); background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); font-size: var(--console-text-label); font-weight: var(--console-weight-strong); }
 .im-system-section { margin-top: var(--console-space-2); }
 .im-system-row { display: flex; align-items: center; gap: var(--console-space-3); width: 100%; padding: var(--console-space-3) var(--console-space-2); border: 0; border-radius: var(--console-radius-2); background: transparent; color: inherit; text-align: left; cursor: pointer; }
 .im-system-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: var(--console-radius-2); flex-shrink: 0; background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
@@ -71,12 +72,13 @@
 .im-message-row--out .im-message-main { align-items: flex-end; }
 .im-meta { display: flex; align-items: baseline; gap: var(--console-space-2); padding: 0 var(--console-space-1); font-size: var(--console-text-label); color: hsl(var(--muted-foreground)); }
 .im-meta-sender { color: hsl(var(--foreground) / 0.85); font-weight: var(--console-weight-strong); }
-.im-bubble { position: relative; max-width: 100%; padding: var(--console-space-2) var(--console-space-3); border: var(--console-border-hairline) solid hsl(var(--border)); font-size: var(--console-text-body); }
-.im-bubble-in { border-radius: var(--console-radius-1) var(--console-radius-3) var(--console-radius-3) var(--console-radius-3); background: hsl(var(--im-bubble-in)); color: hsl(var(--foreground)); }
-.im-bubble-out { border-radius: var(--console-radius-3) var(--console-radius-1) var(--console-radius-3) var(--console-radius-3); border-color: transparent; background: hsl(var(--im-bubble-out)); color: hsl(var(--im-bubble-out-fg)); }
-.im-message-row--continued .im-bubble-in { border-top-left-radius: var(--console-radius-3); }
-.im-message-row--continued .im-bubble-out { border-top-right-radius: var(--console-radius-3); }
-.im-bubble--pending { border-style: dashed; border-color: hsl(var(--border)); }
+/* CChat: received bubbles are white with shadow-sm, sent bubbles sunken; 18 radius with a 6 tail corner. */
+.im-bubble { position: relative; max-width: 100%; padding: var(--console-space-2) var(--console-space-3); border: 0; font-size: var(--console-text-body); }
+.im-bubble-in { border-radius: var(--console-radius-4) var(--console-radius-4) var(--console-radius-4) var(--console-radius-1); background: hsl(var(--im-bubble-in)); color: hsl(var(--foreground)); box-shadow: var(--console-elevation-1); }
+.im-bubble-out { border-radius: var(--console-radius-4) var(--console-radius-4) var(--console-radius-1) var(--console-radius-4); background: hsl(var(--im-bubble-out)); color: hsl(var(--im-bubble-out-fg)); }
+.im-message-row--continued .im-bubble-in { border-bottom-left-radius: var(--console-radius-4); }
+.im-message-row--continued .im-bubble-out { border-bottom-right-radius: var(--console-radius-4); }
+.im-bubble--pending { outline: var(--console-border-hairline) dashed hsl(var(--border)); outline-offset: calc(var(--console-border-hairline) * -1); }
 .im-delivery { display: flex; max-width: 100%; flex-direction: column; align-items: flex-end; gap: var(--console-space-1); padding: 0 var(--console-space-1); color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
 .im-delivery-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--console-space-1) var(--console-space-2); }
 .im-delivery-state { display: inline-flex; align-items: center; gap: var(--console-space-1); font-weight: var(--console-weight-medium); }
@@ -121,7 +123,7 @@
 .im-media-caption { justify-content: space-between; border-top: var(--console-border-hairline) solid hsl(var(--border)); }
 .im-media-caption a, .im-file-action { color: hsl(var(--primary)); }
 .im-audio-card { display: flex; align-items: center; gap: var(--console-space-3); padding: var(--console-space-3); border: var(--console-border-hairline) solid hsl(var(--border)); border-radius: var(--console-radius-2); background: hsl(var(--card)); }
-.im-audio-play { display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: var(--console-radius-2); background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); cursor: pointer; }
+.im-audio-play { display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: var(--console-radius-full); background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); cursor: pointer; }
 .im-audio-main { flex: 1; min-width: 0; }
 .im-audio-title { display: flex; align-items: center; gap: var(--console-space-1); font-size: var(--console-text-label); font-weight: var(--console-weight-strong); }
 .im-audio-time { margin-left: auto; font-size: var(--console-text-label); color: hsl(var(--muted-foreground)); }

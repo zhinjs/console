@@ -2,7 +2,7 @@
 // dashboard's 「需要你处理」 as one list with ids / long text collapsed. Console source only.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import ts from 'typescript'
 import { translate } from '../console-ui/src/i18n/locale.mjs'
@@ -120,39 +120,17 @@ test('only real problems are red or amber, icons included: 留意 (info) is neut
   assert.match(css, /\.console-attention-list\.is-summary \{[^}]*background: transparent;[^}]*box-shadow: none;/)
 })
 
-function loginPreview() {
-  const t = (message, values) => translate('en', message, values)
-  return compile('pages/login-preview.tsx', {
-    'lucide-react': icons,
-    '@zhin.js/console-ui': { BrandMark: 'brand-mark', StatCard: props => ({ type: 'stat-card', props: { ...props, children: [props.label, props.value, props.sub] } }) },
-    '../i18n': { useI18n: () => ({ t, locale: 'en' }) },
-  })
-}
-
-test('the login sketch is hidden from assistive technology, takes no focus and sends no request', () => {
-  const tree = render(loginPreview().LoginPreview())
-  assert.equal(tree.props['aria-hidden'], 'true')
-  assert.equal(tree.props.inert, true)
-  const cards = nodes(tree).filter(node => node.type === 'stat-card')
-  assert.deepEqual(cards.map(card => card.props.label), ['Messages received', 'Sent by the bot'])
-  for (const card of cards) assert.equal(card.props.onOpen, undefined, 'not a link: nothing to click in a sketch')
-  assert.ok(nodes(tree).some(node => /\bim-bubble-in\b/.test(node.props?.className ?? '')), 'a user message bubble')
-  assert.ok(nodes(tree).some(node => /\bim-bubble-out\b/.test(node.props?.className ?? '')), 'a bot reply bubble')
-  assert.ok(!nodes(tree).some(node => ['img', 'button', 'a', 'input'].includes(node.type)), 'no bitmap and nothing interactive')
-  const source = read('pages/login-preview.tsx')
-  assert.doesNotMatch(source, /\bfetch\(|apiFetch|useEffect|utils\/|console-client|pluginRpc|\.png|\.jpe?g|\.webp/, 'static sample data only')
-})
-
-test('the login page shows the sketch under the title, hides it on phones and narrows the gap', () => {
+test('the Login design: one centered column over the Aurora, no product sketch beside the form', () => {
+  // console-ui 1.3.0 「柔光卡片」: brand and title centered above the sign-in card (440 wide); the static
+  // sketch (login-preview.tsx) that sat beside the form is gone with the two-column layout.
+  assert.equal(existsSync(new URL('../console-ui/src/pages/login-preview.tsx', import.meta.url)), false)
   const page = read('pages/login.tsx')
-  const intro = page.slice(page.indexOf('<section className="console-login-intro">'), page.indexOf('<section className="console-login-panel"'))
-  assert.match(intro, /<LoginPreview \/>/)
+  assert.doesNotMatch(page, /LoginPreview/)
+  assert.match(page, /<div className="console-login console-aurora-host">\s*<Aurora className="console-login-aurora" \/>/)
   const css = read('pages/login.css')
-  assert.match(css, /\.console-login-layout \{[^}]*gap: var\(--console-space-7\);/)
-  const phone = css.slice(css.indexOf('@media (width < 48rem)'))
-  assert.match(phone, /\.console-login-preview \{ display: none; \}/)
-  assert.match(css, /\.console-login-preview-swatch\.is-inbound \{ background: hsl\(var\(--zc-chart-inbound\)\); \}/)
-  assert.match(css, /\.console-login-preview-swatch\.is-outbound \{ background: hsl\(var\(--zc-chart-outbound\)\); \}/)
+  assert.match(css, /\.console-login-layout \{[^}]*grid-template-columns: minmax\(0,1fr\);[^}]*width: min\(100%,440px\);/)
+  assert.match(css, /\.console-login-intro \{[^}]*align-items: center;[^}]*text-align: center;/)
+  assert.doesNotMatch(css, /console-login-preview/)
 })
 
 // WCAG contrast from HSL triples.

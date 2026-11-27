@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Bot, Cable, ChevronRight, KeyRound, MessageSquare, MessagesSquare, Plus, RefreshCw, Search, SlidersHorizontal } from 'lucide-react'
-import { Badge, Button, Card, cn, Input, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
+import { Badge, Button, Card, cn, HeroCard, Input, Segmented, Skeleton, StatusDot, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tile } from '@zhin.js/console-ui'
 import { useI18n } from '../../i18n'
 import { StatusState } from '../../components/StatusState'
 import { adapterHref, conversationHref, endpointHref } from '../../console-routes.mjs'
@@ -181,16 +181,29 @@ function ManagedOnlyRow({ adapter, row, showAdapter }: { adapter: string; row: H
   )
 }
 
-/** Logins waiting for someone, each linking to its account's 接入 tab (where it is completed). */
+/**
+ * Logins waiting for someone (the Accounts design's hero-2 card): the first one with its one primary
+ * action, the others as rows; each links to its account's 接入 tab (where it is completed).
+ */
 function WaitingLoginSection({ tasks }: { tasks: EndpointsAndLogin['tasks'] }) {
   const i18n = useI18n()
   const typeLabel = useLoginTaskTypeLabel()
   if (!tasks.length) return null
+  const [first, ...rest] = tasks
   return (
-    <ObjectSection title={i18n.t('等待登录')} description={i18n.t('这些账号需要扫码或验证后才能上线。在账号的「接入」页签完成。')}>
-      <Card className="overflow-hidden p-0">
+    <HeroCard variant="hero-2" className="console-scope-login-hero" aria-label={i18n.t('等待登录')}>
+      <div className="console-scope-login-hero-main">
+        <Tile tone={1} size="lg"><KeyRound /></Tile>
+        <div className="console-scope-login-hero-copy">
+          <StatusDot tone="progress">{i18n.t('待登录')}</StatusDot>
+          <h2 className="console-hero-title">{i18n.t('{0} 需要{1}', [first.endpointKey, typeLabel(first.type)])}</h2>
+          <span className="console-scope-login-hero-sub"><code>{first.adapter}</code>{rest.length ? ` · ${i18n.t('还有 {0} 个', [rest.length])}` : ''}</span>
+        </div>
+        <Button asChild variant="primary"><Link to={endpointHref(first.adapter, first.endpointKey, 'access')}>{i18n.t('去登录')}</Link></Button>
+      </div>
+      {rest.length ? (
         <ul className="console-scope-task-list">
-          {tasks.map(task => (
+          {rest.map(task => (
             <li key={task.id}>
               <Link to={endpointHref(task.adapter, task.endpointKey, 'access')} className="console-scope-task">
                 <WaitingLoginBadge />
@@ -201,8 +214,8 @@ function WaitingLoginSection({ tasks }: { tasks: EndpointsAndLogin['tasks'] }) {
             </li>
           ))}
         </ul>
-      </Card>
-    </ObjectSection>
+      ) : null}
+    </HeroCard>
   )
 }
 
@@ -235,6 +248,26 @@ export function GlobalOverview() {
       ) : <Skeleton className="h-20" />}
       {data.error ? <StatusState compact error={data.error} onRetry={data.refresh} description={i18n.t('刷新失败，下面是上一次读取的内容。')} /> : null}
       <WaitingLoginSection tasks={data.tasks} />
+      {data.loaded && data.endpoints.length ? (
+        <ObjectSection title={i18n.t('聊天账号')} description={i18n.t('点账号进入它的页面：会话、聊天、接入、功能与角色。')}>
+          {data.endpoints.length > 3 ? (
+            <div className="console-scope-toolbar">
+              <Segmented role="radiogroup" aria-label={i18n.t('账号状态')} value={filter} onValueChange={value => setFilter(value)} className="console-scope-filter"
+                options={ACCOUNT_FILTERS.map(id => ({ value: id, label: <>{i18n.t(ACCOUNT_FILTER_LABELS[id])} <span className="console-feature-filter-count">{counts[id]}</span></> }))} />
+              <label className="console-feature-search">
+                <Search aria-hidden="true" />
+                <Input className="h-8" type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={i18n.t('搜索账号…')} aria-label={i18n.t('搜索账号…')} />
+              </label>
+            </div>
+          ) : null}
+          <Card className="overflow-hidden p-0">
+            {accounts.length ? <AccountTable endpoints={accounts} tasks={data.tasks} showAdapter label={i18n.t('聊天账号')} /> : (
+              <StatusState kind="empty" compact className="m-3" title={i18n.t('没有符合筛选条件的聊天账号')}
+                actions={<Button size="sm" variant="outline" onClick={() => { setFilter('all'); setQuery('') }}>{i18n.t('清除筛选')}</Button>} />
+            )}
+          </Card>
+        </ObjectSection>
+      ) : null}
       <ObjectSection title={i18n.t('适配器')} description={i18n.t('每个适配器一页：账号、连接管理与功能覆盖。')} actions={refresh}>
         <Card className="overflow-hidden p-0">
           {!data.loaded ? <TableSkeleton /> : !adapters.length ? (
@@ -275,31 +308,6 @@ export function GlobalOverview() {
           )}
         </Card>
       </ObjectSection>
-      {data.loaded && data.endpoints.length ? (
-        <ObjectSection title={i18n.t('聊天账号')} description={i18n.t('点账号进入它的页面：会话、聊天、接入、功能与角色。')}>
-          {data.endpoints.length > 3 ? (
-            <div className="console-scope-toolbar">
-              <div className="console-feature-filters" role="group" aria-label={i18n.t('账号状态')}>
-                {ACCOUNT_FILTERS.map(id => (
-                  <button key={id} type="button" aria-pressed={filter === id} onClick={() => setFilter(id)} className={cn('console-feature-filter', filter === id && 'is-active')}>
-                    {i18n.t(ACCOUNT_FILTER_LABELS[id])}<span className="console-feature-filter-count">{counts[id]}</span>
-                  </button>
-                ))}
-              </div>
-              <label className="console-feature-search">
-                <Search aria-hidden="true" />
-                <Input className="h-8" type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={i18n.t('搜索账号…')} aria-label={i18n.t('搜索账号…')} />
-              </label>
-            </div>
-          ) : null}
-          <Card className="overflow-hidden p-0">
-            {accounts.length ? <AccountTable endpoints={accounts} tasks={data.tasks} showAdapter label={i18n.t('聊天账号')} /> : (
-              <StatusState kind="empty" compact className="m-3" title={i18n.t('没有符合筛选条件的聊天账号')}
-                actions={<Button size="sm" variant="outline" onClick={() => { setFilter('all'); setQuery('') }}>{i18n.t('清除筛选')}</Button>} />
-            )}
-          </Card>
-        </ObjectSection>
-      ) : null}
       {data.loaded ? <OnboardingSection first={!data.endpoints.length} /> : null}
     </>
   )

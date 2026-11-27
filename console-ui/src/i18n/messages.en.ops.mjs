@@ -6,8 +6,6 @@ export const opsMessages = Object.freeze({
   "启动": "Start",
   "停止": "Stop",
   "依赖事务进行中，实例由事务停启。": "A dependency transaction is running and controls the instance until it ends.",
-  "进程 PID": "Process PID",
-  "已运行": "Uptime",
   "近一分钟重启次数": "Restarts in the last minute",
   "启动于": "Started at",
   "运行代次": "Generation",

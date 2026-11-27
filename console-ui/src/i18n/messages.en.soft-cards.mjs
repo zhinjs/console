@@ -30,6 +30,20 @@ export const softCardMessages = Object.freeze({
   "没有要处理的": "Nothing to do",
   "正在读取聊天账号": "Loading chat accounts",
   "最近会话": "Recent chats",
+  // 账号与会话 (Accounts design)
+  "{0} 需要{1}": "{0} needs {1}",
+  "还有 {0} 个": "{0} more",
+  "去登录": "Sign in",
+  // AI 与模型 (Models design)
+  "默认聊天模型": "Default chat model",
+  "失败时依次换到 {0} 个备用模型": { "one": "Falls back to {0} backup model", "other": "Falls back to {0} backup models in turn" },
+  "没有备用模型": "No backup model",
+  "换模型": "Change",
+  // 插件 (Plugins design)
+  "安装插件": "Install",
+  "{0} 个插件需处理": { "one": "{0} plugin needs a look", "other": "{0} plugins need a look" },
+  // 运维 · 实例 (Ops design)
+  "次": "times",
   // Appearance
   "浅色": "Light",
   "深色": "Dark",

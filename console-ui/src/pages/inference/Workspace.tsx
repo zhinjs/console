@@ -3,7 +3,7 @@ import { useI18n } from '../../i18n'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { RefreshCw, Download, Upload } from 'lucide-react'
-import { Alert, AlertDescription, AlertTitle, Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, ErrorAlert, SelectField, Tabs, TabsContent, TabsList, TabsTrigger, Textarea, useConfirm } from '@zhin.js/console-ui'
+import { Alert, AlertDescription, AlertTitle, Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, ErrorAlert, HeroCard, SelectField, Tabs, TabsContent, TabsList, TabsTrigger, Textarea, useConfirm } from '@zhin.js/console-ui'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import { useInferenceManagement, type InferenceSource, type InferenceManagement } from './useInferenceManagement'
 import { Profiles } from './Profiles'
@@ -202,7 +202,25 @@ function InferencePages({ management: m, connectionScope }: { management: Infere
   // 「添加模型」 on an account card: switch to 模型 and open its add dialog with that account.
   const [addModelFor, setAddModelFor] = useState<string | null>(null)
   if (!m.view) return null
+  // The Models design's hero-2: the default chat model and its fallback chain, the page's one most important thing.
+  const chatId = m.view.purposes?.defaults?.chat
+  const chatProfile = chatId ? m.view.profiles[chatId] : undefined
+  const chatFallbacks = m.view.purposes?.defaults?.chatFallbacks?.length ?? 0
+  const chatAccount = chatProfile ? m.view.accounts[chatProfile.accountId] : undefined
   return (
+      <>
+        {chatId ? (
+          <HeroCard variant="hero-2" className="flex flex-wrap items-center gap-6" aria-label={i18n.t("默认聊天模型")}>
+            <div className="flex min-w-0 flex-1 basis-80 flex-col gap-1">
+              <span className="text-sm text-muted-foreground">{i18n.t("默认聊天模型")}</span>
+              <h2 className="console-hero-title">{chatProfile ? [chatAccount?.label, chatProfile.model].filter(Boolean).join(' · ') : chatId}</h2>
+              <span className="text-sm text-muted-foreground">{chatFallbacks ? i18n.t("失败时依次换到 {0} 个备用模型", [chatFallbacks]) : i18n.t("没有备用模型")}</span>
+            </div>
+            {m.view.hostAdministrator && tab !== 'purposes' ? (
+              <Button variant="white" size="sm" onClick={() => void setTab('purposes')}>{i18n.t("换模型")}</Button>
+            ) : null}
+          </HeroCard>
+        ) : null}
         <Tabs value={tab} onValueChange={setTab}>
           {leaveTabDialog}
           <TabsList>
@@ -233,5 +251,6 @@ function InferencePages({ management: m, connectionScope }: { management: Infere
             </TabsContent>
           )}
         </Tabs>
+      </>
   )
 }

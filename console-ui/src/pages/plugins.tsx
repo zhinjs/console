@@ -2,11 +2,11 @@ import { startVisiblePolling } from '../hooks/visible-polling.mjs'
 import { useI18n } from '../i18n'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowDown, ArrowUp, ArrowUpDown, Blocks, CheckCircle2, Clock, Package, PauseCircle, Plug, Puzzle, RefreshCw, Sparkles, Search, Store, ToggleLeft } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, Blocks, Clock, Plug, Puzzle, RefreshCw, Sparkles, Search, Store, ToggleLeft } from 'lucide-react'
 import { apiFetch } from '../utils/auth'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { CONSOLE_PATHS, featureGlobalHref } from '../console-routes.mjs'
-import { Badge, Button, Card, cn, Input, PageHeader, PageShell, SelectField, Skeleton, StatCard, StatGrid, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
+import { Badge, Banner, Button, Card, cn, Input, PageHeader, PageShell, Segmented, SelectField, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import { useConsoleRead } from '../hooks/use-console-read'
 import {
@@ -153,11 +153,12 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
         title={i18n.t("插件")}
         description={i18n.t("已安装的插件：来源、版本与健康状态。插件在哪些范围开启，在功能矩阵和对象树里设置。")}
         actions={<>
-          <Button variant="outline" size="sm" asChild><Link to={CONSOLE_PATHS.marketplace}><Store />{i18n.t("插件市场")}</Link></Button>
-          <Button variant="outline" size="sm" asChild><Link to={CONSOLE_PATHS.introspection}><Blocks />{i18n.t("运行时能力")}</Link></Button>
-          <Button variant="outline" size="sm" disabled={loading} aria-busy={loading || undefined} onClick={() => void refreshCurrent()}>
+          <Button variant="text" size="sm" asChild><Link to={CONSOLE_PATHS.introspection}><Blocks />{i18n.t("运行时能力")}</Link></Button>
+          <Button variant="secondary" size="sm" disabled={loading} aria-busy={loading || undefined} onClick={() => void refreshCurrent()}>
             <RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}
           </Button>
+          {/* The page's one primary action (the Plugins design): install from the marketplace. */}
+          <Button variant="primary" size="sm" asChild><Link to={CONSOLE_PATHS.marketplace}><Store />{i18n.t("安装插件")}</Link></Button>
         </>}
       />
       {error && loaded ? <StatusState compact error={error} description={i18n.t("刷新失败，以下是上次读取的列表。")} onRetry={() => void refreshCurrent()} /> : null}
@@ -172,35 +173,21 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
           {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 rounded-[var(--console-radius-md)]" />)}
         </div>} />
       ) : <>
-        <StatGrid label={i18n.t("插件概况")}>
-          <StatCard icon={Package} label={i18n.t("已安装")} value={counts.all} sub={i18n.t("实例插件与待配置的包")} onOpen={() => setStatusFilter('all')} pressed={statusFilter === 'all'} />
-          <StatCard icon={CheckCircle2} label={i18n.t("运行正常")} value={counts.healthy} sub={i18n.t("当前代已应用")} onOpen={() => setStatusFilter('healthy')} pressed={statusFilter === 'healthy'} />
-          <StatCard icon={Clock} label={i18n.t("需要处理")} value={counts.pending} sub={counts.pending > 0 ? i18n.t("缺少配置、待应用或运行异常") : i18n.t("无需处理")}
-            tone={counts.pending > 0 ? 'warning' : undefined} onOpen={() => setStatusFilter('pending')} pressed={statusFilter === 'pending'} />
-          <StatCard icon={PauseCircle} label={i18n.t("未加载")} value={counts.inactive} sub={i18n.t("已停用或未在当前代加载")} onOpen={() => setStatusFilter('inactive')} pressed={statusFilter === 'inactive'} />
-        </StatGrid>
+        {counts.pending > 0 && statusFilter !== 'pending' ? (
+          <Banner tone="warn" icon={<Clock aria-hidden="true" />}
+            action={<Button variant="white" size="sm" onClick={() => setStatusFilter('pending')}>{i18n.t("去处理")}</Button>}>
+            {i18n.t("{0} 个插件需处理", [counts.pending])}
+          </Banner>
+        ) : null}
 
         <div className="console-plugin-catalog-toolbar">
           <div className="console-plugin-catalog-toolbar-meta">
-            <p className="console-plugin-catalog-count">{i18n.t("共 {0} 个", [rows.length])}</p>
-            <div className="console-plugin-catalog-filters" role="group" aria-label={i18n.t("健康状态")}>
-              {FILTERS.map(option => (
-                <button key={option.key} type="button" aria-pressed={statusFilter === option.key}
-                  className={statusFilter === option.key ? 'console-plugin-filter-pill is-active' : 'console-plugin-filter-pill'}
-                  onClick={() => setStatusFilter(option.key)}>
-                  {i18n.t(option.label)}
-                </button>
-              ))}
-            </div>
-            <div className="console-plugin-catalog-filters" role="group" aria-label={i18n.t("分组方式")}>
-              {GROUPS.map(option => (
-                <button key={option.key} type="button" aria-pressed={groupBy === option.key}
-                  className={groupBy === option.key ? 'console-plugin-filter-pill is-active' : 'console-plugin-filter-pill'}
-                  onClick={() => setGroupBy(option.key)}>
-                  {i18n.t(option.label)}
-                </button>
-              ))}
-            </div>
+            <p className="sr-only">{i18n.t("共 {0} 个", [rows.length])}</p>
+            {/* The Plugins design's filter: one segmented control with the counts (formerly the four stat cards). */}
+            <Segmented role="radiogroup" aria-label={i18n.t("健康状态")} value={statusFilter} onValueChange={setStatusFilter} className="console-plugin-catalog-filters"
+              options={FILTERS.map(option => ({ value: option.key, label: <>{i18n.t(option.label)} <span className="console-plugin-filter-count">{counts[option.key]}</span></> }))} />
+            <Segmented role="radiogroup" aria-label={i18n.t("分组方式")} value={groupBy} onValueChange={setGroupBy} className="console-plugin-catalog-groups"
+              options={GROUPS.map(option => ({ value: option.key, label: i18n.t(option.label) }))} />
           </div>
           <div className="console-plugin-catalog-search">
             <Search aria-hidden="true" />

@@ -25,3 +25,15 @@
   .console-admin-log { height: 16rem; }
   .console-admin-actions > * { flex: 1 1 auto; }
 }
+
+/* 运维 · 实例 (the Ops design): four status cards in a row, the lifecycle actions under them. */
+@layer components {
+  .console-ops-status-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--console-grid-gap); }
+  .console-ops-status-card { display: flex; min-width: 0; flex-direction: column; gap: var(--console-space-2); padding: var(--console-space-4-5); }
+  .console-ops-status-label { color: hsl(var(--console-muted)); font-size: var(--console-text-sm); }
+  .console-ops-status-value { font-size: var(--console-text-display); line-height: var(--console-leading-display); font-weight: var(--console-weight-strong); font-variant-numeric: tabular-nums; }
+  .console-ops-status-value small { color: hsl(var(--console-muted)); font-size: var(--console-text-md); font-weight: var(--console-weight-regular); }
+  .console-ops-status-sub { min-width: 0; overflow: hidden; color: hsl(var(--console-muted)); font-size: var(--console-text-sm); text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .console-ops-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--console-space-3); }
+  @media (width < 64rem) { .console-ops-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+}
