@@ -2,10 +2,11 @@ import { useSyncExternalStore } from 'react'
 
 const MOBILE_QUERY = '(width < 48rem)'
 /**
- * Below this width the top bar cannot hold every section, so navigation moves into a drawer. Not a
- * Console breakpoint: the sections need 1100px (shell.css pairs its `@media (width < 1100px)`).
+ * Phones (the Console's md breakpoint, 48rem): the section NavPill / NavIcons leave the top bar for
+ * the floating TabBar, and 「更多」 opens the drawer with every page (shell.css pairs its
+ * `@media (width < 48rem)`). The round section icons fit the top bar from 48rem up.
  */
-const COMPACT_NAV_QUERY = '(width < 1100px)'
+const COMPACT_NAV_QUERY = '(width < 48rem)'
 
 function useMediaQuery(query: string): boolean {
   return useSyncExternalStore(
@@ -24,7 +25,7 @@ export function useIsMobile() {
   return useMediaQuery(MOBILE_QUERY)
 }
 
-/** Shell navigation switches from the top bar to the drawer at the same width as shell.css. */
+/** Shell navigation switches from the top bar to the TabBar + drawer at the same width as shell.css. */
 export function useIsCompactNav() {
   return useMediaQuery(COMPACT_NAV_QUERY)
 }

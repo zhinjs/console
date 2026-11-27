@@ -70,8 +70,8 @@ function fixture({ routes, path = '/sandbox', mobile = false, locale = 'zh-CN', 
     '../i18n': { useI18n: () => i18n }, '../i18n/locale.mjs': { translate }, '../i18n/navigation': navigation,
     '../navigation-taxonomy': taxonomy, '../navigation-location.mjs': { resolveNavigationLocation },
     '../components/sidebarMenuIcons': { getSidebarLucideIcon: () => 'icon' }, './sidebarMenuIcons': { getSidebarLucideIcon: () => 'icon' },
-    '../components/LanguageSelect': { LanguageSelect: 'language-select' }, '../components/ThemeToggle': { ThemeToggle: 'theme-toggle' }, '../components/UserMenu': { UserMenu: 'user-menu' },
-    '@zhin.js/console-ui': { cn: (...values) => values.filter(Boolean).join(' '), BrandMark: 'brand-mark', CONSOLE_PRODUCT_NAME: 'Zhin Console', ListItemButton: 'button', Button: 'button', buttonVariants: () => '', ScrollArea: 'scroll-area', ...(ui(['Tooltip', 'TooltipTrigger', 'TooltipContent'])), ...(ui(['DropdownMenu', 'DropdownMenuTrigger', 'DropdownMenuContent', 'DropdownMenuGroup', 'DropdownMenuItem', 'DropdownMenuLabel'])), ...(ui(['Dialog', 'DialogContent', 'DialogDescription', 'DialogTitle'])) }, './command-center-model.mjs': commandCenterModel,
+    '../components/LanguageSelect': { LanguageSelect: 'language-select' }, '../components/UserMenu': { UserMenu: 'user-menu' },
+    '@zhin.js/console-ui': { cn: (...values) => values.filter(Boolean).join(' '), BrandMark: 'brand-mark', CONSOLE_PRODUCT_NAME: 'Zhin Console', ListItemButton: 'button', Button: 'button', buttonVariants: () => '', ScrollArea: 'scroll-area', ...(ui(['Tooltip', 'TooltipTrigger', 'TooltipContent'])), ...(ui(['DropdownMenu', 'DropdownMenuTrigger', 'DropdownMenuContent', 'DropdownMenuGroup', 'DropdownMenuItem', 'DropdownMenuLabel'])), ...(ui(['Dialog', 'DialogContent', 'DialogDescription', 'DialogTitle'])), ...(ui(['Aurora', 'Chip', 'IconButton', 'NavIcon', 'NavPill', 'StatusDot', 'TabBar', 'TabBarItem'])) }, './command-center-model.mjs': commandCenterModel,
     '../utils/auth': { notifyAuthRequired() {}, apiFetch: async () => ({ ok: false, json: async () => null }) },
     '../contracts/zhin-console': { CONSOLE_REST: { INTROSPECTION: '/api/introspection' } }, '../components/ConsoleCommandCenter': { ConsoleCommandCenter: 'command-center' },
     '../navigation-sections.mjs': sections, '../hooks/use-console-access': { useConsoleAccess: () => access },
@@ -115,50 +115,63 @@ const routes = [
   { path: '/unclassified', name: 'Another plugin' },
   { path: '/backup', name: 'Backup', meta: { group: 'My tools', section: 'ops', order: 9 } },
 ]
+const nav = (tree, label) => nodes(tree).find(node => node.type === 'nav' && node.props['aria-label'] === label)
 const navLinks = tree => nodes(nav(tree, '主导航')).filter(node => node.type === 'a').map(node => node.props.to)
 const sectionIds = tree => nodes(nav(tree, '主导航')).filter(node => node.props?.['data-section']).map(node => node.props['data-section'])
-// The top bar names each tier on its group; the drawer prints the tier label.
+// The drawer prints the tier labels (日常 / 管理); the top bar is one flat row of sections.
 const tierLabels = tree => nodes(nav(tree, '主导航')).filter(node => node.props?.className === 'console-nav-tier')
-  .map(node => node.props['aria-label'] ?? text(nodes(node).find(child => child.props?.className === 'console-nav-tier-label')))
-const nav = (tree, label) => nodes(tree).find(node => node.type === 'nav' && node.props['aria-label'] === label)
+  .map(node => text(nodes(node).find(child => child.props?.className === 'console-nav-tier-label')))
+/** The current section's pages: the Chips under the top bar (console-ui 1.3.0). */
+const subnav = tree => nodes(tree).find(node => node.type === 'nav' && node.props?.className === 'console-section-nav')
+const chipLinks = tree => nodes(subnav(tree)).filter(node => node.type === 'a').map(node => node.props.to)
+const tabBar = tree => nodes(tree).find(node => node.type === 'TabBar')
+const moreButton = tree => nodes(tabBar(tree)).find(node => node.type === 'button')
+const ALL_PAGES = ['/dashboard', '/logs', '/sandbox', '/scope', '/features', '/calendar', '/unclassified', '/plugins', '/ops/config', '/ops/schedules', '/backup']
 
 test('six sections in two tiers (日常 / 管理); plugin pages without a section land in 功能 and a declared section is honoured', () => {
   const f = fixture({ routes })
   try {
     const tree = f.render()
-    assert.deepEqual(tierLabels(tree), ['日常', '管理'])
+    // Top bar: one item per section, opening the section's first page.
     assert.deepEqual(sectionIds(tree), ['overview', 'sessions', 'features', 'plugins', 'ops'])
-    assert.deepEqual(navLinks(tree), ['/dashboard', '/logs', '/sandbox', '/scope', '/features', '/calendar', '/unclassified', '/plugins', '/ops/config', '/ops/schedules', '/backup'])
+    assert.deepEqual(navLinks(tree), ['/dashboard', '/sandbox', '/features', '/plugins', '/ops/config'])
     assert.equal(nav(tree, '设置菜单'), undefined, 'settings no longer live in a footer menu')
     assert.equal(nodes(tree).find(node => node.props?.className === 'console-brand-link').props.to, '/')
   } finally { f.close() }
+  for (const path of ['/features', '/ops/config']) {
+    const f = fixture({ routes, path })
+    try {
+      // The section's pages, including plugin pages that land in it, are the Chips under the bar.
+      assert.deepEqual(chipLinks(f.render()), path === '/features' ? ['/features', '/calendar', '/unclassified'] : ['/ops/config', '/ops/schedules', '/backup'])
+    } finally { f.close() }
+  }
   const drawer = fixture({ routes, mobile: true })
   try {
     const tree = drawer.render()
-    assert.deepEqual(tierLabels(tree), ['日常', '管理'], 'the drawer keeps the same two tiers')
-    assert.deepEqual(navLinks(tree), ['/dashboard', '/logs', '/sandbox', '/scope', '/features', '/calendar', '/unclassified', '/plugins', '/ops/config', '/ops/schedules', '/backup'])
+    assert.deepEqual(tierLabels(tree), ['日常', '管理'], 'the drawer keeps the two tiers')
+    assert.deepEqual(navLinks(tree), ALL_PAGES)
   } finally { drawer.close() }
 })
 
-test('the top bar shows a one-page section as a link and opens a menu for a section with several pages', () => {
+test('the current section is a NavPill with its name, the others round NavIcons with a label; its pages are Chips', () => {
   const f = fixture({ routes, path: '/ops/config' })
   try {
-    const bar = nav(f.render(), '主导航')
-    const section = id => nodes(bar).find(node => node.props?.['data-section'] === id)
-    // 插件 has one page: a direct link carrying the page name.
-    const plugins = nodes(section('plugins'))
-    assert.ok(!plugins.some(node => node.type === 'DropdownMenu'))
-    assert.equal(plugins.find(node => node.type === 'a').props.to, '/plugins')
-    // 运维 has several: a menu trigger named after the section, marked active when one of its pages is open.
-    const ops = nodes(section('ops'))
-    const trigger = ops.find(node => node.type === 'button')
-    assert.ok(ops.some(node => node.type === 'DropdownMenu'))
-    assert.equal(text(trigger), '运维')
-    assert.equal(trigger.props['data-active'], 'true')
-    assert.deepEqual(ops.filter(node => node.type === 'a').map(node => node.props.to), ['/ops/config', '/ops/schedules', '/backup'])
-    assert.equal(ops.find(node => node.type === 'a' && node.props.to === '/ops/config').props['aria-current'], 'page')
-    assert.equal(nodes(section('overview')).find(node => node.type === 'button').props['data-active'], undefined)
+    const tree = f.render(), bar = nav(tree, '主导航')
+    const items = nodes(bar).filter(node => node.props?.['data-section'])
+    assert.deepEqual(items.map(node => node.type), ['NavIcon', 'NavIcon', 'NavIcon', 'NavIcon', 'NavPill'])
+    const pill = items.find(node => node.type === 'NavPill')
+    assert.equal(pill.props['data-section'], 'ops'); assert.equal(text(pill), '运维')
+    for (const icon of items.filter(node => node.type === 'NavIcon')) assert.ok(icon.props.label, `${icon.props['data-section']} is named`)
+    assert.ok(!nodes(bar).some(node => node.type === 'DropdownMenu'), 'no section menus any more')
+    const chips = subnav(tree)
+    assert.equal(chips.props['aria-label'], '运维的页面')
+    assert.ok(nodes(chips).every(node => node.type !== 'a' || nodes(chips).some(chip => chip.type === 'Chip')))
+    assert.equal(nodes(chips).find(node => node.type === 'a' && node.props.to === '/ops/config').props['aria-current'], 'page')
+    assert.equal(nodes(chips).find(node => node.type === 'a' && node.props.to === '/backup').props['aria-current'], undefined)
   } finally { f.close() }
+  // A section with one page has no sub-navigation.
+  const plugins = fixture({ routes, path: '/plugins' })
+  try { assert.equal(subnav(plugins.render()), undefined) } finally { plugins.close() }
 })
 
 test('a section with no visible page is hidden, and so is a tier left empty', () => {
@@ -169,40 +182,55 @@ test('a section with no visible page is hidden, and so is a tier left empty', ()
   try {
     const tree = viewer.render()
     assert.deepEqual(sectionIds(tree), ['overview', 'sessions', 'features'])
-    assert.deepEqual(tierLabels(tree), ['日常'])
     assert.ok(!navLinks(tree).includes('/ops/config') && !navLinks(tree).includes('/plugins'))
   } finally { viewer.close() }
-  const scheduler = fixture({ routes, access: createConsoleAccess({ permissions: ['ops.schedule.read'] }) })
+  const viewerDrawer = fixture({ routes, mobile: true, access: createConsoleAccess({ permissions: ['status.view', 'endpoint.view', 'feature.view'] }) })
+  try { assert.deepEqual(tierLabels(viewerDrawer.render()), ['日常']) } finally { viewerDrawer.close() }
+  const scheduler = fixture({ routes, path: '/ops/schedules', access: createConsoleAccess({ permissions: ['ops.schedule.read'] }) })
   try {
     const tree = scheduler.render()
     assert.deepEqual(sectionIds(tree), ['ops'])
-    assert.deepEqual(navLinks(tree), ['/ops/schedules', '/backup'], 'a plugin page in 运维 follows the section permission set')
+    assert.deepEqual(navLinks(tree), ['/ops/schedules'])
+    assert.deepEqual(chipLinks(tree), ['/ops/schedules', '/backup'], 'a plugin page in 运维 follows the section permission set')
   } finally { scheduler.close() }
 })
 
-test('a nested channel URL selects the account menu and an 运维 route is selected in primary navigation', () => {
+test('a nested channel URL selects the account page and an 运维 route is selected in primary navigation', () => {
   const account = fixture({ routes, path: '/scope/qq/bot' })
-  try { assert.equal(nodes(nav(account.render(), '主导航')).find(node => node.props?.['aria-current'] === 'page').props.to, '/scope') } finally { account.close() }
-  for (const path of ['/logs', '/ops/config']) {
+  try {
+    const tree = account.render()
+    assert.equal(nodes(nav(tree, '主导航')).find(node => node.type === 'NavPill').props['data-section'], 'sessions')
+    assert.equal(nodes(subnav(tree)).find(node => node.props?.['aria-current'] === 'page').props.to, '/scope')
+  } finally { account.close() }
+  for (const [path, section] of [['/logs', 'overview'], ['/ops/config', 'ops']]) {
     const f = fixture({ routes, path })
-    try { assert.equal(nodes(nav(f.render(), '主导航')).find(node => node.props?.['aria-current'] === 'page').props.to, path) } finally { f.close() }
+    try {
+      const tree = f.render()
+      assert.equal(nodes(nav(tree, '主导航')).find(node => node.type === 'NavPill').props['data-section'], section)
+      assert.equal(nodes(subnav(tree)).find(node => node.props?.['aria-current'] === 'page').props.to, path)
+    } finally { f.close() }
   }
 })
 
-test('every navigation item is named, and the closed drawer on narrow screens cannot receive focus', () => {
+test('every navigation item is named, and the closed drawer on phones cannot receive focus', () => {
   const wide = fixture({ routes })
   try {
     const tree = wide.render()
     assert.equal(nodes(tree).find(node => node.type === 'aside'), undefined, 'wide screens have no drawer')
-    for (const link of nodes(nav(tree, '主导航')).filter(node => node.type === 'a')) assert.ok(text(link).trim(), `${link.props.to} has a visible name`)
+    assert.equal(tabBar(tree), undefined, 'nor a tab bar')
+    for (const item of nodes(nav(tree, '主导航')).filter(node => node.props?.['data-section'])) assert.ok(item.type === 'NavIcon' ? item.props.label : text(item).trim(), `${item.props['data-section']} has a name`)
   } finally { wide.close() }
   const mobile = fixture({ routes, mobile: true })
   try {
     let tree = mobile.render()
+    assert.equal(nav(tree, '主导航').props.className, 'console-drawer-nav', 'phones keep the sections out of the top bar')
+    assert.deepEqual(nodes(tabBar(tree)).filter(node => node.type === 'TabBarItem' && node.props['data-section']).map(node => node.props['data-section']), ['overview', 'sessions', 'features', 'plugins'], 'the tab bar holds four sections')
+    assert.equal(text(moreButton(tree)).trim().endsWith('更多'), true)
     assert.equal(nodes(tree).find(node => node.type === 'aside').props.inert, true)
-    nodes(tree).find(node => node.type === 'button' && node.props['aria-label'] === '打开菜单').props.onClick()
+    moreButton(tree).props.onClick()
     tree = mobile.render()
     assert.equal(nodes(tree).find(node => node.type === 'aside').props.inert, false)
+    assert.equal(moreButton(tree).props['aria-expanded'], true)
     assert.equal(nodes(tree).find(node => node.type === 'main').props.inert, true, 'the page behind the open drawer is inert')
     assert.equal(nodes(tree).find(node => node.type === 'header').props.inert, true, 'so is the top bar')
     nodes(nav(tree, '主导航')).find(node => node.type === 'a' && node.props.to === '/ops/config').props.onClick()
@@ -210,23 +238,32 @@ test('every navigation item is named, and the closed drawer on narrow screens ca
   } finally { mobile.close() }
 })
 
-test('legacy plugin groups that are not sections show under 功能', () => {
-  const f = fixture({ routes: [...routes, { path: '/legacy', name: 'Legacy tools', meta: { group: '高级' } }] })
+test('the tab bar marks 更多 as current when the page belongs to a section beyond the first four', () => {
+  const f = fixture({ routes, mobile: true, path: '/ops/config' })
   try {
     const tree = f.render()
-    const features = nodes(nav(tree, '主导航')).find(node => node.props?.['data-section'] === 'features')
-    assert.ok(nodes(features).some(node => node.type === 'a' && node.props.to === '/legacy'))
+    assert.ok(!nodes(tabBar(tree)).some(node => node.type === 'TabBarItem' && node.props.current && node.props['data-section']))
+    assert.equal(moreButton(tree).props['data-active'], 'true')
   } finally { f.close() }
 })
 
-test('breadcrumbs omit repeated group names and explicit translated plugin titles are preserved', () => {
-  const f = fixture({ routes: [...routes, { path: '/translated', name: '日历', meta: { group: '插件', titleI18n: { en: 'Team calendar' } } }], path: '/scope', locale: 'en' })
+test('legacy plugin groups that are not sections show under 功能', () => {
+  const f = fixture({ routes: [...routes, { path: '/legacy', name: 'Legacy tools', meta: { group: '高级' } }], path: '/features' })
+  try { assert.ok(chipLinks(f.render()).includes('/legacy')) } finally { f.close() }
+})
+
+test('breadcrumbs lead back to the menu page and explicit translated plugin titles are preserved', () => {
+  const extra = [{ path: '/translated', name: '日历', meta: { group: '插件', titleI18n: { en: 'Team calendar' } } }, { path: '/ops/config/detail', name: '配置详情', parent: '/ops/config', meta: { hideInMenu: true, group: '运维' } }]
+  const f = fixture({ routes: [...routes, ...extra], path: '/ops/config/detail', locale: 'en' })
   try {
     const tree = f.render(), breadcrumb = nav(tree, translate('en', '当前位置'))
-    // The breadcrumb leads with the page's section (会话), then the page.
-    assert.equal(text(breadcrumb), `${translate('en', '会话')}Accounts and conversations`)
-    assert.ok(nodes(nav(tree, translate('en', '主导航'))).some(node => node.type === 'a' && text(node) === 'Team calendar'))
+    // Below a menu page: its parent, then the page; the section is already named by the Chips.
+    assert.ok(text(breadcrumb).startsWith(translate('en', '配置文件')))
   } finally { f.close() }
+  const menu = fixture({ routes: [...routes, ...extra], path: '/scope', locale: 'en' })
+  try { assert.equal(nav(menu.render(), translate('en', '当前位置')), undefined, 'a menu page needs no breadcrumb: its Chip is current') } finally { menu.close() }
+  const plugins = fixture({ routes: [...routes, ...extra], path: '/plugins', locale: 'en' })
+  try { assert.ok(nodes(subnav(plugins.render())).some(node => node.type === 'a' && text(node) === 'Team calendar'), 'the translated title names its Chip') } finally { plugins.close() }
 })
 
 test('object pages below 全局 keep only their own scope breadcrumb; the top bar drops its one', () => {
@@ -365,7 +402,7 @@ test('mobile Escape leaves a top-level Radix dismissal consumed before closing t
   const f = fixture({ routes, mobile: true, runEffects: true })
   try {
     let tree = f.render()
-    nodes(tree).find(node => node.type === 'button' && node.props['aria-label'] === '打开菜单').props.onClick()
+    moreButton(tree).props.onClick()
     assert.equal(nodes(f.render()).find(node => node.type === 'aside').props.inert, false)
     // Radix's document-capture DismissableLayer consumes this same event before window bubbling.
     const menuEscape = new Event('keydown', { cancelable: true })

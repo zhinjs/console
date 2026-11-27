@@ -21,7 +21,7 @@ export function AttentionBadge() {
     : badgeCount > 0 ? i18n.t('需要你处理：{0} 项', [badgeCount]) : i18n.t('需要你处理：没有待办')
   return (
     <Link to={ATTENTION_PATH} className="console-attention-badge" data-tooltip={label} aria-label={label}>
-      <Bell className="h-4 w-4" aria-hidden="true" />
+      <Bell aria-hidden="true" />
       {badgeCount > 0 ? (
         <span className={cn('console-attention-badge-count', danger && 'is-danger')} aria-hidden="true">
           {badgeCount > 99 ? '99+' : badgeCount}

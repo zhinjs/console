@@ -472,11 +472,11 @@ function AmbientSettingsForm({ initial, onReload, currentReadEpoch, focusGroup =
 
       {showsGroupOptions && <fieldset className="space-y-2">
         <legend className="text-sm font-medium">{i18n.t("在哪些群里？")}</legend>
-        <RadioGroup aria-label={i18n.t("在哪些群里？")} name="ambient-group-scope" value={groupScope} onValueChange={value => setGroupScope(value as AmbientSettings['groupScope'])} className="console-segmented flex gap-1">
-        <label>
+        <RadioGroup aria-label={i18n.t("在哪些群里？")} name="ambient-group-scope" value={groupScope} onValueChange={value => setGroupScope(value as AmbientSettings['groupScope'])} className="flex flex-wrap gap-4">
+        <label className="flex items-center gap-2">
           <RadioGroupItem value="all" />
           <span>{i18n.t("所有群")}</span></label>
-        <label>
+        <label className="flex items-center gap-2">
           <RadioGroupItem value="some" />
           <span>{i18n.t("只在这些群")}</span></label>
         </RadioGroup>

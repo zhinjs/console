@@ -3,8 +3,8 @@ import { LanguageSelect } from '../components/LanguageSelect'
 import { useI18n } from '../i18n'
 import { useMemo, useRef, useState, useEffect, useLayoutEffect, useSyncExternalStore } from "react"
 import { Outlet, Link, useLocation, matchPath } from "react-router-dom"
-import { Menu, X, ChevronRight, ChevronDown } from "lucide-react"
-import { BrandMark, Button, cn, CONSOLE_PRODUCT_NAME, DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, ListItemButton, ScrollArea } from '@zhin.js/console-ui'
+import { Menu, X, ChevronRight } from "lucide-react"
+import { Aurora, BrandMark, Chip, cn, CONSOLE_PRODUCT_NAME, IconButton, ListItemButton, NavIcon, NavPill, ScrollArea, StatusDot, TabBar, TabBarItem } from '@zhin.js/console-ui'
 import { type ConsoleRouteRecord } from "@zhin.js/client"
 import { useConsoleConnected } from "../hooks/use-console-connected"
 import { app } from "../utils/console-client"
@@ -23,18 +23,18 @@ import { LogPanel, LogPanelButton, useLogPanelLayout } from "../components/log-p
 import { AttentionBadge } from "../pages/attention/AttentionBadge"
 import "./workspace-navigation.css"
 import { resolveNavigationLocation } from "../navigation-location.mjs"
-import { buildNavigation, deniedRoutePermissions, routeSectionId, sectionById } from "../navigation-sections.mjs"
+import { activeSectionId, buildNavigation, deniedRoutePermissions, navSections, routeSectionId, sectionById, sectionEntryPath, sectionSubnav, tabBarModel } from "../navigation-sections.mjs"
 import { StatusState } from "../components/StatusState"
 import { useConsoleAccess } from "../hooks/use-console-access"
 
 import { useIsCompactNav } from '../hooks/useIsMobile'
 const HOME_PATH = "/dashboard"
 
-function NavIcon({ icon }: { icon?: React.ReactNode | string }) {
+function SectionIcon({ icon }: { icon?: React.ReactNode | string }) {
   if (icon == null) return null
   if (typeof icon === "string") {
     const Cmp = getSidebarLucideIcon(icon)
-    return <Cmp className="w-4 h-4" />
+    return <Cmp aria-hidden="true" />
   }
   return <>{icon}</>
 }
@@ -54,17 +54,12 @@ function useRouteMetaFlag(
 }
 
 /**
- * Console shell: a floating capsule navigation bar over a gray canvas, content centered below it.
- * Wide screens show the six sections in the bar (a section with one page is a link, a section with
- * several pages opens a menu); narrower screens move the same navigation into a drawer.
+ * Console shell (console-ui 1.3.0 「柔光卡片」, the Main design): a top bar in the page flow — brand,
+ * the six sections (the current one a black NavPill with its name, the others round NavIcons that
+ * open the section's first page) and the actions — over the Aurora of a first-level page. A
+ * section's pages are the Chips under the bar. Phones get the floating TabBar (four sections and
+ * 「更多」, which opens the drawer with every page).
  */
-/** Whether the latest user input was a pointer (mouse, touch, pen) rather than a key. */
-let pointerInput = false
-if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
-  window.addEventListener("pointerdown", () => { pointerInput = true }, { capture: true, passive: true })
-  window.addEventListener("keydown", () => { pointerInput = false }, { capture: true, passive: true })
-}
-function lastInputWasPointer(): boolean { return pointerInput }
 
 export default function DashboardLayout() {
   const i18n = useI18n()
@@ -73,7 +68,6 @@ export default function DashboardLayout() {
   const drawerRef = useRef<HTMLElement>(null)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
   const connected = useConsoleConnected()
 
   const routes = useSyncExternalStore(
@@ -116,14 +110,6 @@ export default function DashboardLayout() {
     window.scrollTo({ top: 0 })
   }, [location.pathname])
 
-  // The bar turns more opaque once content scrolls beneath it.
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 4)
-    onScroll()
-    window.addEventListener("scroll", onScroll, { passive: true })
-    return () => window.removeEventListener("scroll", onScroll)
-  }, [])
-
   useEffect(() => {
     if (!drawerVisible) return
     const onKeyDown = (e: globalThis.KeyboardEvent) => {
@@ -143,70 +129,50 @@ export default function DashboardLayout() {
 
   const connectionTitle = connected ? i18n.t("Console 实时事件已连接") : i18n.t("Console 实时事件未连接")
 
-  /** Wide-screen bar: one item per section, separated into the 日常 and 管理 tiers. */
+  const sections = navSections(navTiers)
+  const activeSection = activeSectionId(navTiers, activePath, navOwner)
+  const currentSection = sections.find((section) => section.id === activeSection) ?? null
+  const subnav = sectionSubnav(currentSection)
+  const tabBar = tabBarModel(navTiers, activeSection)
+  // A first-level page (one listed in the navigation) gets the Aurora behind the top of the page.
+  const firstLevel = Boolean(navigation.current && activePath === navigation.current.path)
+  // A page below its menu page (plugin detail, object pages …) keeps a breadcrumb back to it.
+  const showBreadcrumb = !onHome && Boolean(navigation.current) && !firstLevel && !objectPageOwnsBreadcrumb(location.pathname)
+
+  /** Top bar: one NavPill (the current section, with its name) or NavIcon (the others) per section. */
   const barNavigation = (
     <nav className="console-topnav-nav" aria-label={i18n.t("主导航")}>
-      {navTiers.map((tier, tierIndex) => <div key={tier.id} className="console-nav-tier" data-tier={tier.id} role="group" aria-label={i18n.t(tier.label)}>
-        {tierIndex > 0 ? <span className="console-nav-tier-rule" aria-hidden="true" /> : null}
-        {tier.sections.map((section) => {
-          const sectionActive = section.routes.some((route) => route.path === activePath)
-          if (section.routes.length === 1) {
-            const route = section.routes[0]
-            const isActive = route.path === activePath
-            return (
-              <div key={section.id} className="console-nav-group" data-section={section.id}>
-                <Link
-                  to={route.path}
-                  aria-current={isActive ? "page" : undefined}
-                  className={cn("console-topnav-item", isActive && "is-active")}
-                >
-                  <span className="console-nav-icon"><NavIcon icon={route.icon ?? section.icon} /></span>
-                  <span className="truncate">{routeLabel(route, i18n.locale)}</span>
-                </Link>
-              </div>
-            )
-          }
-          return (
-            <div key={section.id} className="console-nav-group" data-section={section.id}>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button type="button" className={cn("console-topnav-item", sectionActive && "is-active")} data-active={sectionActive ? "true" : undefined}>
-                    <span className="console-nav-icon"><NavIcon icon={section.icon} /></span>
-                    <span className="truncate">{i18n.t(section.label)}</span>
-                    <ChevronDown aria-hidden="true" className="console-topnav-chevron" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" sideOffset={10} className={cn("console-topnav-menu", section.groups.length > 1 && "is-grouped")}
-                  // A menu closed with the mouse does not hand focus back to its trigger: browsers may then
-                  // draw the keyboard focus ring on it. Keyboard users (Escape, Enter) still get focus back.
-                  onCloseAutoFocus={(event) => { if (lastInputWasPointer()) event.preventDefault() }}>
-                  {section.groups.map((group) => (
-                    // 功能 splits into 核心 and 插件页面 (two columns); other sections are one unlabeled group.
-                    <DropdownMenuGroup key={group.id} className="console-topnav-menu-group" data-group={group.id}>
-                      {section.groups.length > 1 ? <DropdownMenuLabel className="console-topnav-menu-label">{i18n.t(group.label)}</DropdownMenuLabel> : null}
-                      {group.routes.map((route, index) => {
-                        const isActive = route.path === activePath
-                        return (
-                          <DropdownMenuItem key={route.path || `menu-item-${section.id}-${index}`} asChild>
-                            <Link to={route.path} aria-current={isActive ? "page" : undefined} className={cn("console-topnav-menu-item", isActive && "is-active")}>
-                              <span className="console-topnav-menu-icon"><NavIcon icon={route.icon} /></span>
-                              <span className="min-w-0 truncate">{routeLabel(route, i18n.locale)}</span>
-                            </Link>
-                          </DropdownMenuItem>
-                        )
-                      })}
-                    </DropdownMenuGroup>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )
-        })}
-      </div>)}
+      {sections.map((section) => {
+        const to = sectionEntryPath(section)
+        if (!to) return null
+        const label = i18n.t(section.label)
+        return section.id === activeSection
+          ? <NavPill key={section.id} asChild data-section={section.id}><Link to={to}><SectionIcon icon={section.icon} />{label}</Link></NavPill>
+          : <NavIcon key={section.id} asChild label={label} data-section={section.id}><Link to={to}><SectionIcon icon={section.icon} /></Link></NavIcon>
+      })}
     </nav>
   )
 
-  /** Drawer navigation (narrow screens): every page listed under its tier and section. */
+  /** The current section's pages (Chips, like the design's 聊天账号 · 模型与用途 row). */
+  const sectionNavigation = subnav.length ? (
+    <nav className="console-section-nav" aria-label={i18n.t("{0}的页面", [i18n.t(currentSection!.label)])} data-section={currentSection!.id}>
+      {subnav.map((group) => (
+        <div key={group.id} className="console-section-nav-group" data-group={group.id} role={group.labelled ? "group" : undefined} aria-label={group.labelled ? i18n.t(group.label) : undefined}>
+          {group.labelled && group.id !== "core" ? <span className="console-section-nav-label" aria-hidden="true">{i18n.t(group.label)}</span> : null}
+          {group.routes.map((route, index) => {
+            const isActive = route.path === activePath
+            return (
+              <Chip key={route.path || `section-${group.id}-${index}`} asChild>
+                <Link to={route.path} aria-current={isActive ? "page" : undefined}>{routeLabel(route, i18n.locale)}</Link>
+              </Chip>
+            )
+          })}
+        </div>
+      ))}
+    </nav>
+  ) : null
+
+  /** Drawer navigation (phones, opened from 「更多」): every page listed under its tier and section. */
   const drawerNavigation = (
     <nav className="console-drawer-nav" aria-label={i18n.t("主导航")}>
       {navTiers.map((tier) => <div key={tier.id} className="console-nav-tier" data-tier={tier.id}>
@@ -229,7 +195,7 @@ export default function DashboardLayout() {
                       onClick={() => setDrawerOpen(false)}
                       className={cn("console-nav-item", isActive && "is-active")}
                     >
-                      <span className="console-nav-icon"><NavIcon icon={route.icon} /></span>
+                      <span className="console-nav-icon" aria-hidden="true"><SectionIcon icon={route.icon} /></span>
                       <span className="truncate">{routeLabel(route, i18n.locale)}</span>
                     </Link>
                   )
@@ -243,24 +209,12 @@ export default function DashboardLayout() {
   )
 
   return (
-    <div className="console-app-shell" data-wide={contentFullWidth ? "true" : undefined}>
+    <div className="console-app-shell console-aurora-host" data-wide={contentFullWidth ? "true" : undefined} data-first-level={firstLevel ? "true" : undefined}>
+      {firstLevel ? <Aurora className="console-shell-aurora" /> : null}
       <a href="#console-main-content" className="console-skip-link">{i18n.t("跳到主要内容")}</a>
 
-      <header className={cn("console-topnav", scrolled && "is-scrolled")} inert={pageInert}>
-        <div className="console-topnav-capsule">
-          {compact ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="console-topnav-menu-button"
-              ref={menuButtonRef}
-              onClick={() => setDrawerOpen((v) => !v)}
-              aria-label={drawerOpen ? i18n.t("关闭菜单") : i18n.t("打开菜单")}
-              aria-expanded={drawerOpen}
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-          ) : null}
+      <header className="console-topnav" inert={pageInert}>
+        <div className="console-topnav-bar console-content-frame" data-wide={contentFullWidth ? "true" : undefined}>
           <Link to="/" className="console-brand-link" aria-label={CONSOLE_PRODUCT_NAME}>
             <BrandMark withText />
           </Link>
@@ -299,17 +253,15 @@ export default function DashboardLayout() {
             <Link to="/" className="console-brand-link" aria-label={CONSOLE_PRODUCT_NAME} onClick={() => setDrawerOpen(false)}>
               <BrandMark withText />
             </Link>
-            <Button variant="ghost" size="icon" className="shrink-0" onClick={() => setDrawerOpen(false)} aria-label={i18n.t("关闭菜单")}>
-              <X className="h-4 w-4" />
-            </Button>
+            <IconButton variant="flat" className="shrink-0" onClick={() => setDrawerOpen(false)} aria-label={i18n.t("关闭菜单")}>
+              <X aria-hidden="true" />
+            </IconButton>
           </div>
           <ScrollArea className="flex-1 min-h-0">{drawerNavigation}</ScrollArea>
           <div className="console-nav-drawer-footer">
-            <span className={cn("console-connection-state", connected ? "is-online" : "is-offline")} title={connectionTitle} role="status">
-              <span aria-hidden="true" />
-              <span>{connected ? i18n.t("实时事件已连接") : i18n.t("实时事件未连接")}</span>
-            </span>
-            {/* Phones hide the top-bar language picker; keep it reachable here. */}
+            <span title={connectionTitle} role="status"><StatusDot tone={connected ? "neutral" : "warn"}>
+              {connected ? i18n.t("实时事件已连接") : i18n.t("实时事件未连接")}
+            </StatusDot></span>
             <LanguageSelect />
           </div>
         </aside>
@@ -328,18 +280,38 @@ export default function DashboardLayout() {
         >
           <InstanceUnavailableBanner />
           <OnboardingBanner />
+          {sectionNavigation}
           {/* Object pages below 全局 render their own scope breadcrumb; one breadcrumb per page. An address no
               page matches gets none: the not-found page names the address itself (console#125). */}
-          {onHome || !navigation.current || objectPageOwnsBreadcrumb(location.pathname) ? null : <nav aria-label={i18n.t("当前位置")} className="console-breadcrumb">
-            {groupLabel !== currentLabel && groupLabel !== parentLabel ? <><span className="console-breadcrumb-group">{groupLabel}</span><ChevronRight aria-hidden="true" className="console-breadcrumb-sep" /></> : null}
+          {showBreadcrumb ? <nav aria-label={i18n.t("当前位置")} className="console-breadcrumb">
+            {!subnav.length && groupLabel !== currentLabel && groupLabel !== parentLabel ? <><span className="console-breadcrumb-group">{groupLabel}</span><ChevronRight aria-hidden="true" className="console-breadcrumb-sep" /></> : null}
             {navigation.parent && parentLabel !== currentLabel ? <><Link className="console-breadcrumb-link" to={navigation.parent.path}>{parentLabel}</Link><ChevronRight aria-hidden="true" className="console-breadcrumb-sep" /></> : null}
             <span aria-current="page" className="console-breadcrumb-current">{currentLabel}</span>
-          </nav>}
+          </nav> : null}
           <div key={location.pathname} className="console-route-view">
             {deniedPermissions ? <StatusState kind="forbidden" permissions={deniedPermissions} /> : <Outlet />}
           </div>
         </div>
       </main>
+
+      {compact ? (
+        <TabBar floating aria-label={i18n.t("主导航")} className="console-shell-tabbar" inert={pageInert}>
+          {tabBar.tabs.map((section) => {
+            const to = sectionEntryPath(section)
+            if (!to) return null
+            return (
+              <TabBarItem key={section.id} asChild icon={null} current={section.id === activeSection} data-section={section.id}>
+                <Link to={to} aria-current={section.id === activeSection ? "page" : undefined}><SectionIcon icon={section.icon} />{i18n.t(section.label)}</Link>
+              </TabBarItem>
+            )
+          })}
+          <TabBarItem asChild icon={null} current={tabBar.moreActive || drawerOpen}>
+            <button type="button" ref={menuButtonRef} onClick={() => setDrawerOpen((v) => !v)} aria-expanded={drawerOpen} aria-current={undefined} data-active={tabBar.moreActive ? "true" : undefined}>
+              <Menu aria-hidden="true" />{i18n.t("更多")}
+            </button>
+          </TabBarItem>
+        </TabBar>
+      ) : null}
 
       {/* Mounted once for every page; opened from the top bar, Ctrl + `, the command center or openLogPanel(). */}
       <LogPanel />
