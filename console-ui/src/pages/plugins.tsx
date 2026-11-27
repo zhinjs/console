@@ -209,24 +209,25 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
           </div>
         </div>
 
-        {filtered.length ? (<>
-          {/* Card mode (the shared `console` container < 40rem) hides the table header, and its sort
-              buttons with it: the same sort, on the same ?sort=&dir=, as a control above the cards
-              (#64 plugins-sort-hidden-mobile). */}
-          <div className="hidden @max-[40rem]/console:flex items-center gap-2" data-card-sort="">
-            <span className="shrink-0 text-sm text-muted-foreground">{i18n.t("排序")}</span>
-            <div className="min-w-0 flex-1">
-              <SelectField aria-label={i18n.t("排序字段")} value={sortKey}
-                onValueChange={value => { if (SORT_KEYS.includes(value as InventorySortKey)) setSortTo(value as InventorySortKey, sortDirection) }}
-                options={SORT_KEYS.map(key => ({ value: key, label: i18n.t(SORT_LABELS[key]) }))} />
-            </div>
-            <Button type="button" variant="outline" className="shrink-0 min-h-11" aria-pressed={sortDirection === 'desc'}
-              onClick={() => setSortTo(sortKey, sortDirection === 'asc' ? 'desc' : 'asc')}>
-              {sortDirection === 'asc' ? <ArrowUp aria-hidden="true" /> : <ArrowDown aria-hidden="true" />}
-              {sortDirection === 'asc' ? i18n.t("升序") : i18n.t("降序")}
-            </Button>
-          </div>
+        {filtered.length ? (
           <Card className="overflow-hidden p-0">
+            {/* Card mode (< 40rem) hides the table header, and its sort buttons with it: the same sort,
+                on the same ?sort=&dir=, as a control above the cards (#64 plugins-sort-hidden-mobile). It
+                sits in the same `console-cq` box as the table, so both switch at the same width. */}
+            <div className="console-cq">
+            <div className="hidden @max-[40rem]/console:flex items-center gap-2 border-b px-4 py-3" data-card-sort="">
+              <span className="shrink-0 text-sm text-muted-foreground">{i18n.t("排序")}</span>
+              <div className="min-w-0 flex-1">
+                <SelectField aria-label={i18n.t("排序字段")} value={sortKey}
+                  onValueChange={value => { if (SORT_KEYS.includes(value as InventorySortKey)) setSortTo(value as InventorySortKey, sortDirection) }}
+                  options={SORT_KEYS.map(key => ({ value: key, label: i18n.t(SORT_LABELS[key]) }))} />
+              </div>
+              <Button type="button" variant="outline" className="shrink-0 min-h-11"
+                onClick={() => setSortTo(sortKey, sortDirection === 'asc' ? 'desc' : 'asc')}>
+                {sortDirection === 'asc' ? <ArrowUp aria-hidden="true" /> : <ArrowDown aria-hidden="true" />}
+                {sortDirection === 'asc' ? i18n.t("升序") : i18n.t("降序")}
+              </Button>
+            </div>
             <Table className="console-plugin-table" aria-label={i18n.t("已安装的插件")}>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
@@ -252,8 +253,9 @@ function PluginsPageSession({ connectionScope }: { connectionScope: string }) {
                 </TableBody>
               ))}
             </Table>
+            </div>
           </Card>
-        </>) : rows.length ? (
+        ) : rows.length ? (
           <StatusState kind="empty" title={i18n.t("没有匹配的插件")} description={i18n.t("试试其他名称，或清除筛选。")}
             actions={<Button variant="outline" size="sm" onClick={clearFilters}>{i18n.t("清除筛选")}</Button>} />
         ) : !instanceDown ? (

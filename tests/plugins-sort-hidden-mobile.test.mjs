@@ -24,5 +24,14 @@ test('card mode shows a sort control (field and direction); the header buttons l
   assert.match(control, /setSortTo\(sortKey, sortDirection === 'asc' \? 'desc' : 'asc'\)/u, 'the direction toggles on the same parameters')
   assert.match(control, /i18n\.t\("升序"\)/u)
   assert.match(page, /'@max-\[40rem\]\/console:invisible'/u, 'header sort buttons are invisible (not focusable) in card mode')
+  assert.doesNotMatch(control, /aria-pressed/u, 'the label already says the direction')
   assert.doesNotMatch(page, /next\.set\('sort'/u, 'the URL is written by applyInventorySort only')
+})
+
+test('the control and the table measure the same container, so they switch to cards at the same width', () => {
+  // The shared Table is its own `console-cq` box; a control outside it would measure the wider page frame.
+  const card = page.slice(page.indexOf('<Card className="overflow-hidden p-0">'), page.indexOf('</Card>', page.indexOf('<Card className="overflow-hidden p-0">')))
+  const wrapper = card.indexOf('<div className="console-cq">')
+  assert.ok(wrapper > 0, 'a console-cq box inside the card')
+  assert.ok(wrapper < card.indexOf('data-card-sort') && card.indexOf('data-card-sort') < card.indexOf('<Table'), 'the control and the table are both inside it')
 })
