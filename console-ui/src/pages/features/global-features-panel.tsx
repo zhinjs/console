@@ -4,6 +4,7 @@ import { Grid3x3, List, RefreshCw } from 'lucide-react'
 import { useI18n } from '../../i18n'
 import { Alert, AlertDescription, Badge, Button, Card, Skeleton, Switch, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
+import { featureListView } from './feature-list-view.mjs'
 import { ActionReceipt } from '../../components/ActionReceipt'
 import { adapterHref, endpointHref, featureGlobalHref } from '../../console-routes.mjs'
 import { useConsoleAccess } from '../../hooks/use-console-access'
@@ -53,6 +54,8 @@ function GlobalFeatureList({ switcher }: { switcher: ReactNode }) {
   const matrix = useFeatureMatrix()
   const list = useFeatureList()
   const rows = globalFeatureOverview(matrix.rows, matrix.source === 'rpc' ? matrix.adapters : [], list.value?.features ?? null)
+  // A failed read with nothing listed is the error state, never 「还没有功能」 (#64 feature-matrix-error-false-empty).
+  const listState = featureListView({ loading: matrix.loading, error: matrix.error, hasRows: rows.length > 0 })
   const counts = globalFeatureCounts(rows)
   // The global switch is a management gateway transaction (stop → write → start, rollback):
   // `plugin.manage`, not `feature.toggle` (upstream FEATURE_GLOBAL_SWITCH_PERMISSION).
@@ -78,12 +81,14 @@ function GlobalFeatureList({ switcher }: { switcher: ReactNode }) {
         </AlertDescription></Alert>
       ) : null}
       {permissionNote ? <Alert role="status"><AlertDescription>{permissionNote}</AlertDescription></Alert> : null}
-      {matrix.error ? <StatusState error={matrix.error} onRetry={matrix.refresh} /> : null}
+      {matrix.error && listState === 'list' ? <StatusState error={matrix.failure ?? matrix.error} onRetry={matrix.refresh} /> : null}
       <ActionReceipt controller={receipt} />
       <Card className="overflow-hidden p-0">
-        {matrix.loading && !rows.length ? (
+        {listState === 'loading' ? (
           <StatusState kind="loading" className="m-4" placeholder={<div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-10" />)}</div>} />
-        ) : !rows.length ? (
+        ) : listState === 'failed' ? (
+          <StatusState error={matrix.failure ?? matrix.error} className="m-3" onRetry={matrix.refresh} />
+        ) : listState === 'empty' ? (
           <StatusState kind="empty" compact className="m-3" title={i18n.t('还没有功能')} description={i18n.t('安装插件后，它们的功能会出现在这里。')}
             actions={<Button asChild size="sm" variant="outline"><Link to="/marketplace">{i18n.t('去插件市场')}</Link></Button>} />
         ) : (
