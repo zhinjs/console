@@ -1,3 +1,5 @@
+import { httpRoutePermission } from '../utils/http-permission.mjs'
+import { consoleRpcPermission } from '@zhin.js/console-protocol'
 // Task hub: one /tasks entry that opens on a unified list of every task, then hosts the administrator task catalog, scheduled reminders,
 // assistant job status and execution history. Tab state lives in the URL (?tab=...).
 export const TASK_HUB_PATH = '/ops/schedules'
@@ -10,6 +12,49 @@ export const TASK_HUB_TABS = Object.freeze([
   Object.freeze({ id: 'history', label: '执行记录' }),
 ])
 export const DEFAULT_TASK_TAB = 'overview'
+
+/**
+ * What each tab reads, as the Host checks it (#64 `schedules-nav-task-center-permission`): 管理员任务
+ * GET /tasks/providers, 定时提醒 the `schedule:list` RPC, 助手任务 GET /assistant/jobs, 执行记录
+ * GET /assistant/executions. 全部任务 combines them and shows what it can read.
+ */
+const TAB_READS = Object.freeze({
+  admin: () => httpRoutePermission('GET', '/tasks/providers'),
+  schedule: () => consoleRpcPermission('schedule:list'),
+  assistant: () => httpRoutePermission('GET', '/assistant/jobs'),
+  history: () => httpRoutePermission('GET', '/assistant/executions'),
+})
+/** The permission each source tab needs to read (null: the Host denies it for everyone). */
+const TAB_PERMISSIONS = Object.freeze(Object.fromEntries(Object.entries(TAB_READS).map(([id, read]) => [id, read() || null])))
+
+/** Every permission that lets an identity read at least one tab: who may open 定时任务. */
+export const TASK_HUB_READ_PERMISSIONS = Object.freeze([...new Set(Object.values(TAB_PERMISSIONS).filter(Boolean))])
+
+/**
+ * The tabs an identity can read (`has` checks one permission), in order: each source tab by what it
+ * reads, and 全部任务 when it combines at least two of them (with one source it would only repeat that tab
+ * and report the others as unreadable). An unreadable `?tab=` then falls back to the first of these.
+ */
+export function readableTaskTabs(has, tabs = TASK_HUB_TABS) {
+  const readable = id => TAB_PERMISSIONS[id] ? has(TAB_PERMISSIONS[id]) : false
+  const sources = Object.keys(TAB_PERMISSIONS).filter(readable).length
+  return tabs.filter(tab => tab.id === 'overview' ? sources >= 2 : readable(tab.id))
+}
+
+/** The permission `tab` needs to be read, or null (全部任务, unknown ids, or a tab no one can read). */
+export function taskTabPermission(tab) {
+  return TAB_PERMISSIONS[tab] ?? null
+}
+
+/**
+ * A `?tab=` this identity cannot read, with the permission it needs, so the page can say why it opened
+ * another tab instead of falling back silently; null when the tab is readable, unknown or absent.
+ */
+export function unreadableTaskTab(value, tabs, all = TASK_HUB_TABS) {
+  const tab = all.find(item => item.id === value)
+  if (!tab || tabs.some(item => item.id === value)) return null
+  return { tab: tab.id, label: tab.label, permission: taskTabPermission(tab.id) }
+}
 
 /** Unknown or missing tab ids fall back to the first tab. */
 export function resolveTaskTab(value, tabs = TASK_HUB_TABS) {

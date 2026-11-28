@@ -132,4 +132,8 @@ export const insightsMessages = Object.freeze({
   "会话列表暂时读不到，可以在下方手动填写。": "The conversation list is unavailable; you can enter one manually below.",
   "没有匹配的会话，可以换个关键词或手动填写。": "No matching conversations; try another keyword or enter one manually.",
   "这个账号还没有已知的会话，可以手动填写。": "This account has no known conversations yet; you can enter one manually.",
+  "{0}都没有读到；连接恢复后刷新。": "{0} could not be read; refresh once the connection is back.",
+  "定时提醒由插件或 AI 助手创建。": "Reminders are created by plugins or the AI assistant.",
+  "需要「{0}」权限才能查看「{1}」，已打开「{2}」。": "Viewing “{1}” needs the “{0}” permission, so “{2}” is open instead.",
+  "当前身份不能查看「{0}」，已打开「{1}」。": "This identity cannot view “{0}”, so “{1}” is open instead.",
 })

@@ -68,6 +68,7 @@ function assistantTarget(target, nextRunAt, locale) {
  * `sources`：`{ admin: TaskProviders | null, schedules: { memory, persistent } | null,
  * assistant: { jobs } | null, approvals: { pending } | null }`。
  * 返回 `{ rows, unavailable }`；`unavailable` 是读取失败的来源 id（`admin` / `schedule` / `assistant` / `approvals`）。
+ * 某个来源是 `undefined` 表示没有去读（当前身份没有它的读取权限），不算失败。
  */
 export function taskOverviewRows(sources, locale = 'zh-CN') {
   const t = (text, values) => translate(locale, text, values)
@@ -95,7 +96,7 @@ export function taskOverviewRows(sources, locale = 'zh-CN') {
         })
       }
     }
-  } else unavailable.push('admin')
+  } else if (admin !== undefined) unavailable.push('admin')
 
   const persistentIds = new Set()
   if (schedules && typeof schedules === 'object') {
@@ -134,7 +135,7 @@ export function taskOverviewRows(sources, locale = 'zh-CN') {
         tab: 'schedule',
       })
     }
-  } else unavailable.push('schedule')
+  } else if (schedules !== undefined) unavailable.push('schedule')
 
   if (assistant && Array.isArray(assistant.jobs)) {
     for (const job of assistant.jobs) {
@@ -155,7 +156,7 @@ export function taskOverviewRows(sources, locale = 'zh-CN') {
         tab: 'assistant',
       })
     }
-  } else unavailable.push('assistant')
+  } else if (assistant !== undefined) unavailable.push('assistant')
 
   if (approvals && Array.isArray(approvals.pending)) {
     for (const card of approvals.pending) {
