@@ -11,7 +11,8 @@ import AssistantJobsPage from './assistant-jobs'
 import { ScheduleExecutions } from './ScheduleExecutions'
 import { TaskOverview } from './TaskOverview'
 import { StatusState } from '../components/StatusState'
-import { resolveTaskTab, TASK_HUB_TABS, type TaskTabId } from './task-hub-model.mjs'
+import { readableTaskTabs, resolveTaskTab, type TaskTabId } from './task-hub-model.mjs'
+import { hasConsolePermission } from '../utils/console-access.mjs'
 import { apiFetch } from '../utils/auth'
 import { executionQuery, readExecutionPage } from './schedule-executions-model.mjs'
 import {
@@ -130,7 +131,8 @@ function OverviewPanel({ history, sources, onSources, open }: {
 export default function TaskHubPage() {
   const i18n = useI18n()
   const [params, setParams] = useSearchParams()
-  const tabs = TASK_HUB_TABS
+  // Only the tabs this identity can read; an unreadable ?tab= opens the first readable one.
+  const tabs = readableTaskTabs(name => hasConsolePermission(name))
   const active = resolveTaskTab(params.get('tab'), tabs)
   const select = (next: string) => setParams({ tab: next })
   const scope = useInboxCacheScope()
