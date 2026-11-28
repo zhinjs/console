@@ -301,3 +301,12 @@ test('「从这里继续」 follows the protocol (agent.configure), not endpoint
   assert.doesNotMatch(text(configurer.tree), /需要「修改 AI 与 Agent 设置」权限/)
   configurer.close()
 })
+
+test('the page description follows both abilities: chatting (endpoint.operate) and continuing from another message (the leaf route)', () => {
+  // #64 sessions-description-permission-mismatch
+  const description = granted => { const f = fixture('icqq:bot:group:room', granted); const value = find(f, 'page-header').props.description; f.close(); return value }
+  assert.equal(description(new Set()), '按聊天账号和会话查看机器人和大家聊过什么（只读）。')
+  assert.equal(description(new Set(['endpoint.operate'])), '按聊天账号和会话查看机器人和大家聊过什么，也可以接着聊。')
+  assert.equal(description(new Set(['agent.configure'])), '按聊天账号和会话查看机器人和大家聊过什么，也可以从其他消息继续。')
+  assert.equal(description(new Set(['endpoint.operate', 'agent.configure'])), '按聊天账号和会话查看机器人和大家聊过什么，可以接着聊，也可以从其他消息继续。')
+})
