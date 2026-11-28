@@ -12,6 +12,7 @@ import {
   type FeatureRpcFailure,
 } from './feature-model.mjs'
 import { globalFeatureReadRequest } from './global-config-model.mjs'
+import { pluginListReadError } from './feature-list-view.mjs'
 
 export type MatrixSource = 'loading' | 'rpc' | FeatureRpcFailure
 
@@ -30,6 +31,8 @@ export interface FeatureMatrixState {
   source: MatrixSource
   loading: boolean
   error: string | null
+  /** The failed read itself (HTTP status, Host code), for `StatusState error=`; null when the last read worked. */
+  failure: unknown
   refresh: () => void
 }
 
@@ -40,13 +43,13 @@ export interface FeatureMatrixState {
  */
 export function useFeatureMatrix(): FeatureMatrixState {
   const i18n = useI18n()
-  const [state, setState] = useState<Omit<FeatureMatrixState, 'refresh'>>({ rows: [], adapters: [], endpoints: {}, revision: '', source: 'loading', loading: true, error: null })
+  const [state, setState] = useState<Omit<FeatureMatrixState, 'refresh'>>({ rows: [], adapters: [], endpoints: {}, revision: '', source: 'loading', loading: true, error: null, failure: null })
   const sequence = useRef(0)
   const load = useCallback(() => {
     const request = ++sequence.current
     setState(previous => ({ ...previous, loading: true }))
     const plugins = apiFetch('/api/plugins').then(async response => {
-      if (!response.ok) throw new Error(response.status === 403 ? i18n.t("当前身份无权读取插件列表") : i18n.t("插件读取失败（HTTP {0}）", [response.status]))
+      if (!response.ok) throw pluginListReadError(response.status, await response.json().catch(() => null), i18n.t, response.headers.get('retry-after'))
       return globalFeatureRows(validatePluginList(await response.json(), i18n.locale))
     })
     const matrix = requestConsole<unknown>({ type: FEATURE_RPC.MATRIX })
@@ -57,10 +60,10 @@ export function useFeatureMatrix(): FeatureMatrixState {
       const merged = mergeFeatureMatrix(globalRows, remote.matrix)
       setState({ rows: merged.rows, adapters: merged.adapters, endpoints: merged.endpoints, revision: merged.revision,
         ...(merged.conversationOverrides ? { conversationOverrides: merged.conversationOverrides } : {}),
-        ...(merged.root ? { root: merged.root } : {}), source: remote.source, loading: false, error: null })
+        ...(merged.root ? { root: merged.root } : {}), source: remote.source, loading: false, error: null, failure: null })
     }, (error: unknown) => {
       if (request !== sequence.current) return
-      setState(previous => ({ ...previous, source: previous.source === 'loading' ? 'error' : previous.source, loading: false, error: error instanceof Error ? error.message : String(error) }))
+      setState(previous => ({ ...previous, source: previous.source === 'loading' ? 'error' : previous.source, loading: false, error: error instanceof Error ? error.message : String(error), failure: error }))
     })
   }, [i18n])
   useEffect(() => {

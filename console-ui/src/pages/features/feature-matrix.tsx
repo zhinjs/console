@@ -2,8 +2,9 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Lock, RefreshCw } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { Alert, AlertDescription, Badge, Button, Card, ErrorAlert, PageHeader, PageShell, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
+import { Alert, AlertDescription, Badge, Button, Card, PageHeader, PageShell, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
+import { featureListView } from './feature-list-view.mjs'
 import { adapterHref, featureGlobalHref } from '../../console-routes.mjs'
 import { cellState, rootFeatureName, type FeatureCell, type FeatureMatrixRow, type FeatureRootRow } from './feature-model.mjs'
 import { ConversationOverrideLinks } from './conversation-list'
@@ -123,7 +124,9 @@ export default function FeatureMatrixPage({ embedded = false, heading }: {
   heading?: { title: string; description: string; actions?: ReactNode }
 } = {}) {
   const i18n = useI18n()
-  const { rows, adapters, revision, conversationOverrides, root, source, loading, error, refresh } = useFeatureMatrix()
+  const { rows, adapters, revision, conversationOverrides, root, source, loading, error, failure, refresh } = useFeatureMatrix()
+  // A failed read with nothing listed is the error state, never 「还没有功能」 (#64 feature-matrix-error-false-empty).
+  const listState = featureListView({ loading, error, hasRows: rows.length > 0 || Boolean(root) })
   const adapterColumns = source === 'rpc' ? adapters : []
   const access = useConsoleAccess()
   // Adapter cells are feature switches (`feature.toggle`); the 全局 column is the global plugin
@@ -161,15 +164,17 @@ export default function FeatureMatrixPage({ embedded = false, heading }: {
         </Alert>
       ) : null}
       {permissionNote ? <Alert role="status"><AlertDescription>{permissionNote}</AlertDescription></Alert> : null}
-      {error ? <ErrorAlert error={error} onRetry={refresh} /> : null}
+      {error && listState === 'list' ? <StatusState compact error={failure ?? error} onRetry={refresh} description={i18n.t('刷新失败，下面是上一次读取的内容。')} /> : null}
       <ActionReceipt controller={globalSwitch.receipt} />
       {canToggle ? rows.flatMap(row => adapterColumns.filter(adapter => row.adapters[adapter]).map(adapter => (
         <AdapterSwitchReceipt key={`${row.plugin}\u0000${adapter}`} plugin={row.plugin} adapter={adapter} reload={refresh} />
       ))) : null}
       <Card className="overflow-hidden p-0">
-        {loading && !rows.length && !root ? (
+        {listState === 'loading' ? (
           <StatusState kind="loading" className="m-4" placeholder={<div className="space-y-2 p-4">{[0, 1, 2, 3].map(index => <Skeleton key={index} className="h-9" />)}</div>} />
-        ) : !rows.length && !root ? (
+        ) : listState === 'failed' ? (
+          <StatusState error={failure ?? error} className="m-3" onRetry={refresh} />
+        ) : listState === 'empty' ? (
           <StatusState kind="empty" className="m-3" title={i18n.t("还没有功能")} description={i18n.t("安装插件后，它们的功能会出现在这里。")}
             actions={<Button asChild size="sm" variant="outline"><Link to="/marketplace">{i18n.t("去插件市场")}</Link></Button>} />
         ) : (
