@@ -20,6 +20,7 @@ export const hostFieldMessages = Object.freeze({
   "助手没有启用。在配置中设置 assistant.enabled: true 后可用。": "The assistant is not enabled. Set assistant.enabled: true in the configuration to use this.",
   "这里需要 AI 智能体（@zhin.js/agent），当前实例没有安装或没有启用它。运行 zhin setup --ai，或到「AI 与模型」接入 AI 后可用。": "This needs the AI agent (@zhin.js/agent), which this instance has not installed or enabled. Run zhin setup --ai, or set up AI in AI & models, to use this.",
   "Workroom 未启用": "Workroom is not enabled",
+  "Agent 会话记录未启用": "Agent session records are not enabled",
   "AI 智能体未启用": "AI agent not enabled",
   "最近会话需要 AI 智能体（@zhin.js/agent），当前实例没有安装或没有启用它；下面只显示本机历史。": "Recent sessions need the AI agent (@zhin.js/agent), which this instance has not installed or enabled; only this browser's history is shown below.",
   "此功能没有启用。": "This feature is not enabled.",

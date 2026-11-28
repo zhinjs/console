@@ -6,6 +6,7 @@ import { Badge, Button, Card, Skeleton } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
 import { apiFetch } from '../../utils/auth'
 import { CONSOLE_PATHS } from '../../console-routes.mjs'
+import { featureUnavailableState } from '../../utils/feature-disabled.mjs'
 import { agentSessionsPath, parseImSessionKey, SESSION_SCOPE_LABELS } from '../../utils/agent-session'
 import { isPersonalSessionKey } from '../personal-session-model.mjs'
 import { relativeSince } from '../agent-session-recent.mjs'
@@ -31,7 +32,8 @@ const UNATTRIBUTED_TITLES: Record<'adapter' | 'endpoint' | 'conversation', strin
 const SOURCE_ICONS: Record<RecordSourceId, LucideIcon> = { sessions: MessagesSquare, replay: BrainCircuit, logs: FileText, audit: Activity }
 const ASSOCIATION_VARIANT: Record<RecordAssociation, 'warning' | 'outline' | 'secondary'> = { exact: 'outline', partial: 'warning', text: 'outline', all: 'secondary' }
 
-type SessionsState = { status: 'loading' } | { status: 'error'; error: unknown } | ({ status: 'ready' } & ScopeSessionRecords)
+/** `off`: the trace archive needs the Agent and the instance has none (503), not a failed read (zhinjs/zhin#1250). */
+type SessionsState = { status: 'loading' } | { status: 'error'; error: unknown } | { status: 'off'; reply: { status: number; body: unknown } } | ({ status: 'ready' } & ScopeSessionRecords)
 
 /**
  * Sessions of the scope, newest first: matched by the origin the Host recorded, else by an old-style
@@ -45,7 +47,12 @@ function useScopeSessions(scope: Scope): SessionsState {
     setState({ status: 'loading' })
     apiFetch(RECENT_SESSIONS_PATH, { cache: 'no-store' })
       .then(async (response) => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        if (!response.ok) {
+          const body: unknown = await response.json().catch(() => null)
+          const reply = { status: response.status, body }
+          if (featureUnavailableState(reply)) { if (active) setState({ status: 'off', reply }); return }
+          throw new Error(`HTTP ${response.status}`)
+        }
         const body: unknown = await response.json()
         if (active) setState({ status: 'ready', ...scopeSessionRecords(body, scope, SESSION_LIMIT) })
       })
@@ -115,6 +122,10 @@ export function ScopeRecordsPanel({ scope }: { scope: Scope }) {
         <Card className="overflow-hidden p-0">
           {sessions.status === 'loading' ? (
             <StatusState kind="loading" className="m-4" placeholder={<div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-10" />)}</div>} />
+          ) : sessions.status === 'off' ? (
+            <StatusState compact kind="empty" illustration="messages" title={i18n.t('Agent 会话记录未启用')}
+              description={featureUnavailableState(sessions.reply, i18n.locale)?.description}
+              actions={<Button asChild size="sm" variant="secondary"><Link to={CONSOLE_PATHS.ai}>{i18n.t('打开 AI 与模型')}</Link></Button>} />
           ) : sessions.status === 'error' ? (
             <StatusState compact error={sessions.error} permissions={['status.view']} />
           ) : sessions.state === 'unattributed' ? (
