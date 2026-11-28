@@ -6,6 +6,7 @@ import ts from 'typescript'
 import { localeModule, isLocaleImport } from './locale-fixture.mjs'
 import * as personalModels from '../console-ui/src/pages/personal-session-model.mjs'
 import * as httpPermission from '../console-ui/src/utils/http-permission.mjs'
+import * as sessionsDescription from '../console-ui/src/pages/agent-sessions-description.mjs'
 import * as accessModel from '../console-ui/src/pages/access/access-model.mjs'
 import { readRecentSessions, sessionsNeedingGroupNames, summarizeRecentSessions, withGroupNames } from '../console-ui/src/pages/agent-session-recent.mjs'
 import * as recordsModel from '../console-ui/src/pages/scope/records-model.mjs'
@@ -52,7 +53,7 @@ function fixture(initialKey = 'icqq:bot:group:room', granted = null) {
     './SessionMessageDetails':{SessionMessageDetails:'message-details'}, './ConversationHistory':{ConversationHistory:'conversation-history'},
     './ConversationTrace':{ConversationTrace:'conversation-trace'}, './useConversationTraces':{useConversationTraces:(...args)=>{ traceReads.push(args); return {turns:[],loading:false,error:null,refresh(){}} }},
     '@zhin.js/client':{cn:(...parts)=>parts.filter(Boolean).join(' ')}, '../contracts/zhin-console':{CONSOLE_REST:{AGENT_SESSIONS:'/api/agent/sessions'}},
-    '../utils/console-access.mjs':{hasConsolePermission:name=>!granted||granted.has(name)}, '../utils/http-permission.mjs':httpPermission, './access/access-model.mjs':accessModel, './agent-session-recent.mjs':{readRecentSessions,summarizeRecentSessions,sessionsNeedingGroupNames,withGroupNames}, './AmbientGroupPicker':{useAmbientGroupCatalog:()=>({loading:false,error:null,catalog:null,retry(){}})}, './ambient-group-picker-model.mjs':{groupNamesFromCatalog:()=>new Map()}, })
+    '../utils/console-access.mjs':{hasConsolePermission:name=>!granted||granted.has(name)}, '../utils/http-permission.mjs':httpPermission, './agent-sessions-description.mjs':sessionsDescription, './access/access-model.mjs':accessModel, './agent-session-recent.mjs':{readRecentSessions,summarizeRecentSessions,sessionsNeedingGroupNames,withGroupNames}, './AmbientGroupPicker':{useAmbientGroupCatalog:()=>({loading:false,error:null,catalog:null,retry(){}})}, './ambient-group-picker-model.mjs':{groupNamesFromCatalog:()=>new Map()}, })
   const f = {calls,traceReads,render(){cursor=0;tree=module.default(); const run=effects;effects=[];run.forEach(fn=>fn());return tree},get tree(){return tree},setScope(value){scope=value},navigate(key){params=new URLSearchParams({sessionKey:key})},close(){slots.forEach(slot=>slot?.cleanup?.())}}
   f.render();return f
 }

@@ -22,6 +22,7 @@ import { AgentSessionPicker } from '../components/AgentSessionPicker'
 import { CONSOLE_REST } from '../contracts/zhin-console'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { httpRouteAccess } from '../utils/http-permission.mjs'
+import { sessionsPageDescription } from './agent-sessions-description.mjs'
 import { permissionLabel } from './access/access-model.mjs'
 import { readRecentSessions, sessionsNeedingGroupNames, summarizeRecentSessions, withGroupNames, type RecentSession, type RecentSessionSummary } from './agent-session-recent.mjs'
 import { useAmbientGroupCatalog } from './AmbientGroupPicker'
@@ -293,7 +294,7 @@ export default function AgentSessionsPage() {
     <div className="console-page console-conversations-page">
       <PageHeader
         title={i18n.t('聊天记录')}
-        description={readOnly ? i18n.t('按聊天账号和会话查看机器人和大家聊过什么（只读）。') : i18n.t('按聊天账号和会话查看机器人和大家聊过什么，也可以接着聊。')}
+        description={i18n.t(sessionsPageDescription({ canChat: !readOnly, canBranch: canSwitchLeaf }))}
       />
 
       {!personal && recentResult ? (
