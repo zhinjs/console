@@ -1,6 +1,7 @@
 import { translate } from '../i18n/locale.mjs'
 import { configurationRuntimeStatus } from '../components/PluginConfigForm/config-live-status.mjs'
 import { outcomeFromConfigSave, readBackMismatch } from '../components/apply-outcome-model.mjs'
+import { statusFromError } from '../components/status-state-model.mjs'
 /**
  * 群聊插话页（zhinjs/zhin#970）的纯逻辑：校验 Host 状态、把设置翻成大白话、生成 config:patch。
  * 页面面向普通用户，这里不输出判官、决策模型、置信度等内部细节。
@@ -378,11 +379,15 @@ export function isPermissionDenied(error) {
   return PERMISSION_DENIED_TEXT.test(text.trim())
 }
 
-/** 读取失败时给用户看的提示：只有权限问题才说权限，其余带上真实原因。 */
+/**
+ * 读取失败时给用户看的提示（#64 `ambient-read-error-raw`）：无权限按 `statusFromError` 判断（Host 的
+ * `forbidden` 码、401/403、拒绝文字），与页面上 StatusState 的判断一致；其余只说哪一部分没读到，
+ * 不把 Host 原文拼进来——原因由 `StatusState error=` 按类型说明，原文只在 `detail`（技术详情）里。
+ */
 export function describeReadFailure(error, resource, locale = 'zh-CN') {
   const reason = (typeof error === 'string' ? error : error instanceof Error ? error.message : String(error ?? '')).trim()
-  if (isPermissionDenied(error)) return { denied: true, text: translate(locale, "当前账号没有读取{0}的权限，请联系管理员开通。", [resource]), detail: reason }
-  return { denied: false, text: reason ? translate(locale, "{0}读取失败：{1}", [resource, reason]) : translate(locale, "{0}读取失败，请稍后重试。", [resource]), detail: reason }
+  if (isPermissionDenied(error) || statusFromError(error).kind === 'forbidden') return { denied: true, text: translate(locale, "当前账号没有读取{0}的权限，请联系管理员开通。", [resource]), detail: reason }
+  return { denied: false, text: translate(locale, "{0}读取失败，请稍后重试。", [resource]), detail: reason }
 }
 
 const SHORT_OUTCOME_LABELS = Object.freeze({ spoke: '接了话', watched: '想接话', stayed_quiet: '不接话', skipped: '未判断' })

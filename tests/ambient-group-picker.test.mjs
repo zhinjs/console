@@ -67,7 +67,9 @@ test('only 401/403 count as a permission problem; other failures keep their real
   }
   const failure = describeReadFailure('HTTP 502', '群聊插话设置')
   assert.equal(failure.denied, false)
-  assert.equal(failure.text, '群聊插话设置读取失败：HTTP 502')
+  // #64 ambient-read-error-raw: the Host text stays in detail (技术详情), not in the summary.
+  assert.equal(failure.text, '群聊插话设置读取失败，请稍后重试。')
+  assert.equal(failure.detail, 'HTTP 502')
   assert.doesNotMatch(failure.text, /权限|管理员/)
   assert.match(describeReadFailure('Token scope does not allow this route', '群列表').text, /没有读取群列表的权限/)
   assert.equal(describeReadFailure(new Error('boom'), '群列表').detail, 'boom')

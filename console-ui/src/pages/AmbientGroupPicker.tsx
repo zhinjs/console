@@ -98,6 +98,7 @@ export function AmbientGroupPickerView({ groups, onChange, read }: { groups: str
   const outside = new Set(read.catalog ? groupsOutsideCatalog(groups, read.catalog) : groups)
   const listUsable = view.kind === 'ready' || view.kind === 'no-match'
   const groupListLabel = i18n.t("群列表")
+  const groupListError = (failure: { text: string; detail: string }) => failure.detail ? i18n.t("{0}读取失败：{1}", [groupListLabel, failure.detail]) : failure.text
 
   const addManual = () => {
     const result = addManualGroups(groups, manualText)
@@ -140,7 +141,8 @@ export function AmbientGroupPickerView({ groups, onChange, read }: { groups: str
       />
       {view.kind === 'loading' ? <StatusState kind="loading" compact title={i18n.t("正在读取群列表…")} onRetry={read.retry} /> : null}
       {view.kind === 'denied' ? <p role="status" className="text-sm text-muted-foreground">{describeReadFailure(view.error, groupListLabel, i18n.locale).text} {i18n.t("可以在下面手动填写群号。")}</p> : null}
-      {view.kind === 'error' ? <ErrorAlert error={describeReadFailure(view.error, groupListLabel, i18n.locale).text} onRetry={read.retry} /> : null}
+      {/* The group picker keeps the reason inline: ErrorAlert has no 技术详情 (#64 ambient-read-error-raw covers status / settings only). */}
+      {view.kind === 'error' ? <ErrorAlert error={groupListError(describeReadFailure(view.error, groupListLabel, i18n.locale))} onRetry={read.retry} /> : null}
       {view.kind === 'empty' ? <p className="text-sm text-muted-foreground">{view.noOnlineAccount ? i18n.t("没有在线的账号，读不到群列表。可以在下面手动填写群号。") : i18n.t("在线账号里没有读到群。可以在下面手动填写群号。")}</p> : null}
       {view.kind === 'no-match' ? <p className="text-sm text-muted-foreground">{i18n.t("没有群名、群号或账号包含「{0}」的群。", [query.trim()])}</p> : null}
       {view.kind === 'ready' ? <div className="max-h-72 space-y-3 overflow-y-auto">
