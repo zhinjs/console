@@ -11,7 +11,9 @@ import AssistantJobsPage from './assistant-jobs'
 import { ScheduleExecutions } from './ScheduleExecutions'
 import { TaskOverview } from './TaskOverview'
 import { StatusState } from '../components/StatusState'
-import { readableTaskTabs, resolveTaskTab, type TaskTabId } from './task-hub-model.mjs'
+import { readableTaskTabs, resolveTaskTab, unreadableTaskTab, type TaskTabId } from './task-hub-model.mjs'
+import { permissionLabel } from './access/access-model.mjs'
+import { useConsoleAccess } from '../hooks/use-console-access'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { apiFetch } from '../utils/auth'
 import { executionQuery, readExecutionPage } from './schedule-executions-model.mjs'
@@ -67,12 +69,14 @@ function HistoryPanel() {
  * 「全部任务」总览：上面是各来源的汇总（点卡片进对应页签做操作），下面是按状态筛选的统一列表。
  * 汇总只在总览里出现，不在每个页签上方重复一遍页签导航。
  */
-function OverviewPanel({ history, sources, onSources, open }: {
+function OverviewPanel({ history, sources, onSources, open, readable }: {
   history: TaskHubSummary['history']
   /** What the 全部任务 table last read for this connection (null until it has); the cards are built from it. */
   sources: TaskOverviewSources | null
   onSources: (sources: TaskOverviewSources) => void
   open: (tab: TaskTabId) => void
+  /** The tabs this identity can read: only their cards are shown, and only their sources are read. */
+  readable: readonly TaskTabId[]
 }) {
   const i18n = useI18n()
   const scope = useInboxCacheScope()
@@ -81,6 +85,7 @@ function OverviewPanel({ history, sources, onSources, open }: {
   const unknown = '—'
   return <div className="space-y-4">
     <StatGrid label={i18n.t("任务概况")}>
+      {readable.includes('admin') ? (
       <StatCard
         icon={ClipboardList}
         label={i18n.t("管理员任务")}
@@ -91,6 +96,8 @@ function OverviewPanel({ history, sources, onSources, open }: {
         tone={summary.admin && summary.admin.failed > 0 ? 'danger' : undefined}
         onOpen={() => open('admin')}
       />
+      ) : null}
+      {readable.includes('schedule') ? (
       <StatCard
         icon={CalendarClock}
         label={i18n.t("定时提醒")}
@@ -100,6 +107,8 @@ function OverviewPanel({ history, sources, onSources, open }: {
           : i18n.t("未启用或暂时无法读取")}
         onOpen={() => open('schedule')}
       />
+      ) : null}
+      {readable.includes('assistant') ? (
       <StatCard
         icon={Bot}
         label={i18n.t("助手任务")}
@@ -113,6 +122,8 @@ function OverviewPanel({ history, sources, onSources, open }: {
         tone={summary.assistant && summary.assistant.failing > 0 ? 'danger' : undefined}
         onOpen={() => open('assistant')}
       />
+      ) : null}
+      {readable.includes('history') ? (
       <StatCard
         icon={History}
         label={i18n.t("近期执行")}
@@ -123,30 +134,42 @@ function OverviewPanel({ history, sources, onSources, open }: {
         tone={summary.history && summary.history.failed > 0 ? 'danger' : undefined}
         onOpen={() => open('history')}
       />
+      ) : null}
     </StatGrid>
-    <TaskOverview key={scope} connectionScope={scope} onSources={onSources} />
+    <TaskOverview key={scope} connectionScope={scope} onSources={onSources} readable={readable} />
   </div>
 }
 
 export default function TaskHubPage() {
   const i18n = useI18n()
   const [params, setParams] = useSearchParams()
-  // Only the tabs this identity can read; an unreadable ?tab= opens the first readable one.
+  // Only the tabs this identity can read; an unreadable ?tab= opens the first readable one and says why.
+  // Subscribed to access, so the tabs follow when permissions arrive or change.
+  useConsoleAccess()
   const tabs = readableTaskTabs(name => hasConsolePermission(name))
+  const readable = tabs.map(tab => tab.id)
   const active = resolveTaskTab(params.get('tab'), tabs)
+  const denied = unreadableTaskTab(params.get('tab'), tabs)
   const select = (next: string) => setParams({ tab: next })
   const scope = useInboxCacheScope()
-  const history = useRecentExecutions(active === 'overview' ? scope : null, active)
+  const history = useRecentExecutions(active === 'overview' && readable.includes('history') ? scope : null, active)
   // Kept on the page, so returning to 总览 shows the last numbers while the table reads again; tagged
   // with its connection, so another connection never shows them.
   const [overviewRead, setOverviewRead] = useState<{ scope: string; sources: TaskOverviewSources } | null>(null)
   const onSources = useCallback((sources: TaskOverviewSources) => { if (scope) setOverviewRead({ scope, sources }) }, [scope])
   const overviewSources = overviewRead && overviewRead.scope === scope ? overviewRead.sources : null
   const panels: Record<TaskTabId, ReactNode> = {
-    overview: <OverviewPanel history={history} sources={overviewSources} onSources={onSources} open={select} />, admin: <TaskCenterPage />, schedule: <CronPage />, assistant: <AssistantJobsPage />, history: <HistoryPanel />,
+    overview: <OverviewPanel history={history} sources={overviewSources} onSources={onSources} open={select} readable={readable} />, admin: <TaskCenterPage />, schedule: <CronPage />, assistant: <AssistantJobsPage />, history: <HistoryPanel />,
   }
   return <PageShell className="console-resource-page console-tasks-hub">
     <PageHeader title={i18n.t("定时任务")} description={i18n.t("「全部任务」汇总每个任务的状态、下次运行、最近结果、目标与审批；创建、暂停和查看记录在各自页签。")} />
+    {denied ? (
+      <p className="text-sm text-muted-foreground" role="status">
+        {denied.permission
+          ? i18n.t("需要「{0}」权限才能查看「{1}」，已打开「{2}」。", [permissionLabel(denied.permission, i18n.t), i18n.t(denied.label), i18n.t(tabs.find(tab => tab.id === active)?.label ?? '')])
+          : i18n.t("当前身份不能查看「{0}」，已打开「{1}」。", [i18n.t(denied.label), i18n.t(tabs.find(tab => tab.id === active)?.label ?? '')])}
+      </p>
+    ) : null}
     <Tabs value={active} onValueChange={select}>
       <TabsList aria-label={i18n.t("任务视图")} className="h-auto max-w-full justify-start overflow-x-auto whitespace-nowrap">
         {tabs.map(tab => <TabsTrigger key={tab.id} value={tab.id}>{i18n.t(tab.label)}</TabsTrigger>)}

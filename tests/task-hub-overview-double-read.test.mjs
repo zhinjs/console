@@ -49,6 +49,8 @@ function mount() {
     './task-hub-model.mjs': hubModel, './task-hub-summary-model.mjs': summaryModel, './task-center-model.mjs': providersModel,
     './assistant-jobs-model.mjs': assistantModel, './schedule-executions-model.mjs': executionsModel,
     '../utils/auth': { apiFetch }, '../utils/console-rpc': { requestConsole },
+    // An identity that can read every tab (#64 schedules-nav-task-center-permission narrows them by permission).
+    '../utils/console-access.mjs': { hasConsolePermission: () => true }, '../hooks/use-console-access': { useConsoleAccess: () => ({}) },
     '../contracts/zhin-console': { CONSOLE_REST: { TASK_PROVIDERS: '/api/tasks/providers' }, CONSOLE_RPC: { SCHEDULE_LIST: 'schedule:list' } },
   }
   const require = createRequire(url)
@@ -114,5 +116,5 @@ test('back on 总览 the cards keep their numbers while the table reads again; a
 test('TaskOverview hands its read to the page through a ref, so an inline callback does not re-read', () => {
   const overview = readFileSync(new URL('../console-ui/src/pages/TaskOverview.tsx', import.meta.url), 'utf8')
   assert.match(overview, /sourcesListener\.current\?\.\(next\)/)
-  assert.match(overview, /\}, \[connectionScope, i18n, approvalsReadable\]\)/, 'the callback is not a dependency of the read')
+  assert.match(overview, /\}, \[connectionScope, i18n, approvalsReadable, readsAdmin, readsSchedule, readsAssistant\]\)/, 'the callback is not a dependency of the read')
 })

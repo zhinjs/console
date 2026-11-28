@@ -41,6 +41,21 @@ export function readableTaskTabs(has, tabs = TASK_HUB_TABS) {
   return tabs.filter(tab => tab.id === 'overview' ? sources >= 2 : readable(tab.id))
 }
 
+/** The permission `tab` needs to be read, or null (全部任务, unknown ids, or a tab no one can read). */
+export function taskTabPermission(tab) {
+  return TAB_PERMISSIONS[tab] ?? null
+}
+
+/**
+ * A `?tab=` this identity cannot read, with the permission it needs, so the page can say why it opened
+ * another tab instead of falling back silently; null when the tab is readable, unknown or absent.
+ */
+export function unreadableTaskTab(value, tabs, all = TASK_HUB_TABS) {
+  const tab = all.find(item => item.id === value)
+  if (!tab || tabs.some(item => item.id === value)) return null
+  return { tab: tab.id, label: tab.label, permission: taskTabPermission(tab.id) }
+}
+
 /** Unknown or missing tab ids fall back to the first tab. */
 export function resolveTaskTab(value, tabs = TASK_HUB_TABS) {
   return tabs.find(tab => tab.id === value)?.id ?? tabs[0]?.id ?? DEFAULT_TASK_TAB

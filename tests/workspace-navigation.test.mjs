@@ -171,6 +171,7 @@ test('a section with no visible page is hidden, and so is a tier left empty', ()
     // feature.view reads 管理员任务 (GET /tasks/providers), so 定时任务 — and with it 运维 — is shown
     // (#64 schedules-nav-task-center-permission); nothing else in 运维 is.
     assert.deepEqual(sectionIds(tree), ['overview', 'sessions', 'features', 'ops'])
+    assert.deepEqual(tierLabels(tree), ['日常', '管理'])
     assert.ok(navLinks(tree).includes('/ops/schedules'))
     assert.ok(!navLinks(tree).includes('/ops/config') && !navLinks(tree).includes('/plugins'))
   } finally { viewer.close() }
