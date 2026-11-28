@@ -182,11 +182,14 @@ test('a section with no visible page is hidden, and so is a tier left empty', ()
   const viewer = fixture({ routes, access: createConsoleAccess({ permissions: ['status.view', 'endpoint.view', 'feature.view'] }) })
   try {
     const tree = viewer.render()
-    assert.deepEqual(sectionIds(tree), ['overview', 'sessions', 'features'])
+    // feature.view reads 管理员任务 (GET /tasks/providers), so 定时任务 — and with it 运维 — is shown
+    // (#64 schedules-nav-task-center-permission); nothing else in 运维 is.
+    assert.deepEqual(sectionIds(tree), ['overview', 'sessions', 'features', 'ops'])
+    assert.ok(navLinks(tree).includes('/ops/schedules'))
     assert.ok(!navLinks(tree).includes('/ops/config') && !navLinks(tree).includes('/plugins'))
   } finally { viewer.close() }
   const viewerDrawer = fixture({ routes, mobile: true, access: createConsoleAccess({ permissions: ['status.view', 'endpoint.view', 'feature.view'] }) })
-  try { assert.deepEqual(tierLabels(viewerDrawer.render()), ['日常']) } finally { viewerDrawer.close() }
+  try { assert.deepEqual(tierLabels(viewerDrawer.render()), ['日常', '管理']) } finally { viewerDrawer.close() }
   const scheduler = fixture({ routes, path: '/ops/schedules', access: createConsoleAccess({ permissions: ['ops.schedule.read'] }) })
   try {
     const tree = scheduler.render()

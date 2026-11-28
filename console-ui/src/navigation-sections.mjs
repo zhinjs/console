@@ -1,3 +1,4 @@
+import { TASK_HUB_READ_PERMISSIONS } from './pages/task-hub-model.mjs'
 import { ANY_TARGET, hasAnyConsolePermission, hasConsolePermission, scopedAdapters, UNRESTRICTED_ACCESS } from './utils/console-access.mjs'
 
 /**
@@ -83,7 +84,8 @@ export const ROUTE_PERMISSIONS = Object.freeze({
   '/ops/database': ['ops.database.read', 'ops.database.write'],
   '/ops/config': ['ops.config.read', 'ops.config.write'],
   '/ops/env': ['ops.env.read', 'ops.env.write'],
-  '/ops/schedules': ['ops.schedule.read', 'ops.schedule.write'],
+  // Any tab it can read (#64 schedules-nav-task-center-permission): 管理员任务 needs only feature.view; write alone lists nothing.
+  '/ops/schedules': TASK_HUB_READ_PERMISSIONS,
   '/ops/files': ['ops.files.read', 'ops.files.write'],
   // Instance status / logs need status.view, lifecycle ops.restart, dependencies plugin.manage (ADR 0054 §4–§5).
   '/ops/instance': ['status.view', 'ops.restart', 'plugin.manage'],
